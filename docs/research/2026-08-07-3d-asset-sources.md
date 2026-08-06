@@ -129,7 +129,7 @@ Obecne `createHut` / `createWell` zostają jako **fallback** do czasu loadera; z
 ## Follow-ups
 
 - [x] Werdykt: primary pack Quaternius
-- [ ] `docs/assets/CREDITS.md` + folder `public/models/`
-- [ ] Spike: `loadGltf` + podmiana jednej chaty w `createSettlement`
-- [ ] Issue / plan: „v0.2 art pass — external GLB props”
-- [ ] v0.3: lista konkretnych plików zwierząt z Animal Pack
+- [x] `docs/assets/CREDITS.md` + folder `public/models/`
+- [x] Spike: `loadGltf` + podmiana chat / drzew / logs / garden (procedural well zostaje)
+- [ ] Issue / plan: „v0.2 art pass — external GLB props” (studnia, storage, pełna osada)
+- [ ] v0.3: lista konkretnych plików zwierząt z Animal Pack (+ podmiana capsule fauna)

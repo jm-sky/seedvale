@@ -1,13 +1,12 @@
 import {
   type Material,
-  type Mesh,
   type Scene,
   Vector3,
 } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
 import { NpcAgent } from '../ai/NpcAgent'
 import { findSettlementSite } from './findSettlementSite'
-import { buildSettlementProps } from './props'
+import { buildSettlementProps, disposeSettlementGroup } from './props'
 
 export type Settlement = {
   spawn: Vector3
@@ -16,15 +15,15 @@ export type Settlement = {
   dispose: () => void
 }
 
-export function createSettlement(
+export async function createSettlement(
   scene: Scene,
   sampleHeight: HeightSampler,
   waterLevel: number,
   halfExtent: number,
   seed: number,
-): Settlement {
+): Promise<Settlement> {
   const site = findSettlementSite(sampleHeight, waterLevel, halfExtent, seed)
-  const { group, landmarks } = buildSettlementProps(site, sampleHeight)
+  const { group, landmarks } = await buildSettlementProps(site, sampleHeight)
   scene.add(group)
 
   const agents: NpcAgent[] = []
@@ -63,14 +62,7 @@ export function createSettlement(
         agent.mesh.geometry.dispose()
         ;(agent.mesh.material as Material).dispose()
       }
-      group.traverse((obj) => {
-        const mesh = obj as Mesh
-        if (!mesh.isMesh) return
-        mesh.geometry.dispose()
-        const mat = mesh.material
-        if (Array.isArray(mat)) mat.forEach((m) => m.dispose())
-        else mat.dispose()
-      })
+      disposeSettlementGroup(group)
       group.removeFromParent()
     },
   }

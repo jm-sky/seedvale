@@ -5,4 +5,4 @@ if (!root) {
   throw new Error('#app not found')
 }
 
-createApp(root)
+void createApp(root)

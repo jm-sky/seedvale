@@ -27,7 +27,7 @@ import {
 } from '../world/dayNight'
 import { syncSeedInUrl } from '../world/parseSeed'
 
-export function createApp(container: HTMLElement): () => void {
+export async function createApp(container: HTMLElement): Promise<() => void> {
   const config = createWorldConfig()
   saveWorldConfig(config)
 
@@ -53,7 +53,7 @@ export function createApp(container: HTMLElement): () => void {
 
   let terrain = buildTerrain(scene, config)
   let water = buildWater(scene, terrain)
-  let settlement = buildSettlement(scene, terrain, config.seed)
+  let settlement = await buildSettlement(scene, terrain, config.seed)
   let fauna = buildFauna(scene, terrain, settlement, config.seed)
 
   const keyboard = createKeyboard()
@@ -72,7 +72,7 @@ export function createApp(container: HTMLElement): () => void {
   hud.setSeed(config.seed)
   hud.setTime(dayNight.timeOfDay)
 
-  const rebuildWorld = () => {
+  const rebuildWorld = async () => {
     syncSeedInUrl(config.seed)
     saveWorldConfig(config)
     fauna.dispose()
@@ -82,7 +82,7 @@ export function createApp(container: HTMLElement): () => void {
     terrain.dispose()
     terrain = buildTerrain(scene, config)
     water = buildWater(scene, terrain)
-    settlement = buildSettlement(scene, terrain, config.seed)
+    settlement = await buildSettlement(scene, terrain, config.seed)
     fauna = buildFauna(scene, terrain, settlement, config.seed)
     player.setGround(terrain.sampleHeight, terrain.halfExtent)
     player.setPosition(settlement.spawn.x, settlement.spawn.z)
@@ -103,7 +103,9 @@ export function createApp(container: HTMLElement): () => void {
 
   const gui = config.showGui
     ? createDebugGui(config, dayNight, {
-        onTerrainChange: rebuildWorld,
+        onTerrainChange: () => {
+          void rebuildWorld()
+        },
         onSkyChange: updateSkyFromGui,
         onDayNightChange,
       })
@@ -208,7 +210,7 @@ function buildSettlement(
   scene: Scene,
   terrain: Terrain,
   seed: number,
-): Settlement {
+): Promise<Settlement> {
   return createSettlement(
     scene,
     terrain.sampleHeight,

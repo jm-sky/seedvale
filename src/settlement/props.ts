@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { SettlementSite } from './findSettlementSite'
+import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
@@ -9,6 +10,17 @@ export type SettlementLandmarks = {
   trees: THREE.Vector3[]
 }
 
+const HUT_URLS = [
+  '/models/settlement/hut_a.glb',
+  '/models/settlement/hut_b.glb',
+  '/models/settlement/hut_c.glb',
+] as const
+
+const TREE_URLS = [
+  '/models/nature/tree_a.glb',
+  '/models/nature/tree_b.glb',
+] as const
+
 function placeOnGround(
   mesh: THREE.Object3D,
   x: number,
@@ -16,7 +28,15 @@ function placeOnGround(
   sampleHeight: (x: number, z: number) => number,
   yOffset = 0,
 ): void {
-  mesh.position.set(x, sampleHeight(x, z) + yOffset, z)
+  // Preserve local offsets from prepareProp (foot / center).
+  const ox = mesh.position.x
+  const oy = mesh.position.y
+  const oz = mesh.position.z
+  mesh.position.set(
+    x + ox,
+    sampleHeight(x, z) + yOffset + oy,
+    z + oz,
+  )
 }
 
 export function createHut(): THREE.Group {
@@ -125,10 +145,25 @@ export function createGarden(): THREE.Group {
   return garden
 }
 
-export function buildSettlementProps(
+async function loadPropOrFallback(
+  url: string,
+  targetHeight: number,
+  fallback: () => THREE.Object3D,
+): Promise<THREE.Object3D> {
+  try {
+    const model = await loadGltf(url)
+    prepareProp(model, targetHeight)
+    return model
+  } catch (err) {
+    console.warn(`[settlement] failed to load ${url}, using fallback`, err)
+    return fallback()
+  }
+}
+
+export async function buildSettlementProps(
   site: SettlementSite,
   sampleHeight: (x: number, z: number) => number,
-): { group: THREE.Group, landmarks: SettlementLandmarks } {
+): Promise<{ group: THREE.Group, landmarks: SettlementLandmarks }> {
   const group = new THREE.Group()
   group.name = 'settlement'
 
@@ -147,14 +182,22 @@ export function buildSettlementProps(
 
   const stockX = site.x + 4
   const stockZ = site.z + 1.5
-  const stockpile = createStockpile()
+  const stockpile = await loadPropOrFallback(
+    '/models/settlement/logs.glb',
+    0.9,
+    createStockpile,
+  )
   placeOnGround(stockpile, stockX, stockZ, sampleHeight)
   group.add(stockpile)
   landmarks.stockpile.set(stockX, sampleHeight(stockX, stockZ), stockZ)
 
   const gardenX = site.x - 2.5
   const gardenZ = site.z + 5
-  const garden = createGarden()
+  const garden = await loadPropOrFallback(
+    '/models/settlement/garden.glb',
+    1.2,
+    createGarden,
+  )
   placeOnGround(garden, gardenX, gardenZ, sampleHeight)
   group.add(garden)
   landmarks.garden.set(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
@@ -164,10 +207,15 @@ export function buildSettlementProps(
     [-4, 4],
     [5, -3],
   ] as const
-  for (const [dx, dz] of homeOffsets) {
+  for (let i = 0; i < homeOffsets.length; i++) {
+    const [dx, dz] = homeOffsets[i]!
     const hx = site.x + dx
     const hz = site.z + dz
-    const hut = createHut()
+    const hut = await loadPropOrFallback(
+      HUT_URLS[i % HUT_URLS.length]!,
+      2.8,
+      createHut,
+    )
     placeOnGround(hut, hx, hz, sampleHeight)
     group.add(hut)
     landmarks.homes.push(new THREE.Vector3(hx, sampleHeight(hx, hz), hz))
@@ -181,14 +229,23 @@ export function buildSettlementProps(
     [-9, -4],
     [3, 9],
   ] as const
-  for (const [dx, dz] of treeOffsets) {
+  for (let i = 0; i < treeOffsets.length; i++) {
+    const [dx, dz] = treeOffsets[i]!
     const tx = site.x + dx
     const tz = site.z + dz
-    const tree = createTree()
+    const tree = await loadPropOrFallback(
+      TREE_URLS[i % TREE_URLS.length]!,
+      4.2,
+      createTree,
+    )
     placeOnGround(tree, tx, tz, sampleHeight)
     group.add(tree)
     landmarks.trees.push(new THREE.Vector3(tx, sampleHeight(tx, tz), tz))
   }
 
   return { group, landmarks }
+}
+
+export function disposeSettlementGroup(group: THREE.Group): void {
+  disposeObject3D(group)
 }
