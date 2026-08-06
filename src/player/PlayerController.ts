@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { KeyState } from '../input/Keyboard'
 import type { LookState } from '../input/MouseLook'
 import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
@@ -7,6 +8,7 @@ const MOVE_SPEED = 8
 const CAMERA_DISTANCE = 12
 const LOOK_AT_OFFSET = 0.9
 const PLAYER_HEIGHT = 1.8
+const PLAYER_LABEL = 'Ja'
 
 /** Quaternius Ultimate Modular Men — distinct from the NPC roster. */
 export const PLAYER_MODEL_URL = '/models/characters/Adventurer.glb'
@@ -31,6 +33,8 @@ export class PlayerController {
   private readonly right = new THREE.Vector3()
   private readonly wish = new THREE.Vector3()
   private readonly camOffset = new THREE.Vector3()
+  private readonly label: CSS2DObject
+  private readonly labelEl: HTMLDivElement
 
   private constructor(
     root: THREE.Object3D,
@@ -63,6 +67,13 @@ export class PlayerController {
       this.idleAction = null
       this.walkAction = null
     }
+
+    this.labelEl = document.createElement('div')
+    this.labelEl.className = 'npc-label'
+    this.labelEl.textContent = PLAYER_LABEL
+    this.label = new CSS2DObject(this.labelEl)
+    this.label.position.set(0, PLAYER_HEIGHT + 0.55, 0)
+    this.mesh.add(this.label)
 
     this.snapToGround()
     this.syncCamera()
@@ -181,6 +192,8 @@ export class PlayerController {
   }
 
   dispose(): void {
+    this.label.removeFromParent()
+    this.labelEl.remove()
     this.mixer?.stopAllAction()
     // GLB clones share GPU resources with the loader cache — only free the capsule fallback.
     if (this.isCapsule) disposeObject3D(this.mesh)

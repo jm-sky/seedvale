@@ -29,6 +29,18 @@ export const NPC_MODEL_URLS = [
   '/models/characters/Casual_2.glb',
 ] as const
 
+/** Placeholder pool until the character DB (names + traits) lands. */
+const NPC_NAMES = [
+  'Anna',
+  'Piotr',
+  'Kasia',
+  'Marek',
+  'Ola',
+  'Tomek',
+  'Zofia',
+  'Jacek',
+] as const
+
 type Phase =
   | 'choose'
   | 'chop'
@@ -44,6 +56,7 @@ type Phase =
 export class NpcAgent {
   readonly mesh: THREE.Object3D
   readonly label: CSS2DObject
+  readonly name: string
   private readonly sampleHeight: HeightSampler
   private readonly landmarks: SettlementLandmarks
   private readonly needs: NeedState
@@ -74,6 +87,7 @@ export class NpcAgent {
     this.sampleHeight = sampleHeight
     this.landmarks = landmarks
     this.home = home.clone()
+    this.name = NPC_NAMES[treeIndex % NPC_NAMES.length]!
     this.treeIndex = treeIndex % Math.max(1, landmarks.trees.length)
     this.needs = createNeedState(needOffset)
 
@@ -103,7 +117,7 @@ export class NpcAgent {
 
     this.labelEl = document.createElement('div')
     this.labelEl.className = 'npc-label'
-    this.labelEl.textContent = needLabel('idle')
+    this.labelEl.textContent = `${this.name} · ${needLabel('idle')}`
     this.label = new CSS2DObject(this.labelEl)
     this.label.position.set(0, NPC_HEIGHT + 0.55, 0)
     this.mesh.add(this.label)
@@ -246,7 +260,7 @@ export class NpcAgent {
     ;(this.needMarker.material as THREE.MeshStandardMaterial).emissive.setHex(
       needColor(this.activeNeed),
     )
-    this.labelEl.textContent = needLabel(this.activeNeed)
+    this.labelEl.textContent = `${this.name} · ${needLabel(this.activeNeed)}`
     this.mixer.update(dt)
   }
 

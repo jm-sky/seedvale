@@ -1,9 +1,17 @@
 import * as THREE from 'three'
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 
 export type AnimalRole = 'predator' | 'prey'
 /** Matches Quaternius Ultimate Animated Animal Pack kinds used in Seedvale. */
 export type AnimalKind = 'wolf' | 'fox' | 'deer' | 'stag'
+
+const ANIMAL_LABELS: Record<AnimalKind, string> = {
+  wolf: 'wilk',
+  fox: 'lis',
+  deer: 'sarna',
+  stag: 'jeleń',
+}
 
 export type AnimalDef = {
   kind: AnimalKind
@@ -85,6 +93,8 @@ export class AnimalAgent {
   private readonly walkAction: THREE.AnimationAction | null
   private readonly gallopAction: THREE.AnimationAction | null
   private currentAction: THREE.AnimationAction | null = null
+  private readonly label: CSS2DObject
+  private readonly labelEl: HTMLDivElement
 
   constructor(
     def: AnimalDef,
@@ -138,6 +148,16 @@ export class AnimalAgent {
       this.gallopAction = null
     }
 
+    this.labelEl = document.createElement('div')
+    this.labelEl.className = 'npc-label'
+    this.labelEl.textContent = ANIMAL_LABELS[def.kind]
+    this.label = new CSS2DObject(this.labelEl)
+    const labelHeight = this.isCapsule
+      ? 0.45 * def.scale + 0.3
+      : def.modelHeight + 0.3
+    this.label.position.set(0, labelHeight, 0)
+    this.mesh.add(this.label)
+
     this.snapY()
     this.pickWanderTarget()
   }
@@ -145,6 +165,12 @@ export class AnimalAgent {
   /** World XZ position for proximity queries. */
   get xz(): THREE.Vector2 {
     return new THREE.Vector2(this.mesh.position.x, this.mesh.position.z)
+  }
+
+  dispose(): void {
+    this.label.removeFromParent()
+    this.labelEl.remove()
+    this.mixer?.stopAllAction()
   }
 
   update(dt: number, others: AnimalAgent[]): void {

@@ -127,6 +127,7 @@ export async function createFauna(
     },
     dispose() {
       for (const a of agents) {
+        a.dispose()
         a.mesh.removeFromParent()
         // GLB clones share GPU resources with the loader cache — only free capsules.
         if (a.mesh.userData.faunaCapsule) disposeObject3D(a.mesh)
