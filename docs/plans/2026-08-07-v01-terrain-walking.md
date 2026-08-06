@@ -1,6 +1,6 @@
 # Plan: v0.1 — teren + chodzenie
 
-**Status:** `in progress`  
+**Status:** `done`  
 **Created:** 2026-08-07  
 **Scope:** [ROADMAP.md](../ROADMAP.md) v0.1  
 
@@ -10,20 +10,20 @@ W przeglądarce: **proceduralny teren** (góry / doliny / woda jako niski poziom
 
 ## Done when
 
-- [x] `npm run dev` → scena Three.js *(spike 1–2: flat + chodzenie)*
-- [ ] Seedowany teren (FBM) z widocznymi wzniesieniami i „wodą” (threshold wysokości)
-- [ ] Kamera za postacią, WASD / strzałki, postać trzyma się powierzchni terenu
-- [ ] Jedna mapa o skończonym rozmiarze (nie infinite streaming) — wystarczy na dolinę
+- [x] `npm run dev` → scena Three.js
+- [x] Seedowany teren (FBM) z widocznymi wzniesieniami i „wodą” (threshold wysokości)
+- [x] Kamera za postacią, WASD / strzałki, postać trzyma się powierzchni terenu
+- [x] Jedna mapa o skończonym rozmiarze (nie infinite streaming) — wystarczy na dolinę
 
 ## Spike’y (kolejność)
 
 | # | Spike | Wynik |
 |---|--------|--------|
-| 1 | **Bootstrap** — Vite + TS + Three (WebGL2), canvas, resize, loop | ✅ puste niebo + ziemia flat |
-| 2 | **Kamera 3rd person** — orbit za kapsułą/kostką, input ruchu na flat | ✅ chodzenie po płaszczyźnie (WASD) |
-| 3 | **Heightmap** — simplex/FBM → `PlaneGeometry` displacement (CPU), kolor po wysokości (trawa / skała / woda) | wygląda jak krajobraz |
-| 4 | **Grounding** — raycast / sample height pod stopami + normal (opcjonalnie lekki slope limit) | chodzenie po górach |
-| 5 | **Polish lite** — directional + ambient, fog, seed w URL (`?seed=`), prosty low-poly shading | portfolio-ready screenshot |
+| 1 | **Bootstrap** — Vite + TS + Three (WebGL2), canvas, resize, loop | ✅ |
+| 2 | **Kamera 3rd person** — orbit za kapsułą, input ruchu na flat | ✅ |
+| 3 | **Heightmap** — simplex/FBM + kolory (woda / piasek / trawa / skała) | ✅ |
+| 4 | **Grounding** — sample height + clamp do mapy | ✅ |
+| 5 | **Polish lite** — lights, fog, `?seed=`, flatShading | ✅ (wystarczy na v0.1) |
 
 ## Świadomie poza v0.1
 
@@ -38,15 +38,20 @@ Chunk streaming, Rapier, navmesh, trawa GPU, biomy z drzewami, osada, fauna.
 
 Fizyka: **raycast / sample height** — Rapier dopiero gdy będzie potrzebny (v0.2+).
 
-## Szkic katalogów (po spike 1)
+## Szkic katalogów
 
 ```
 src/
   main.ts
   app/createApp.ts
+  render/createRenderer.ts
+  scene/createScene.ts
+  scene/createCamera.ts
+  world/createLights.ts
+  world/parseSeed.ts
   player/PlayerController.ts
   terrain/generateHeightmap.ts
-  terrain/TerrainMesh.ts
+  terrain/createTerrainMesh.ts
   input/Keyboard.ts
 ```
 

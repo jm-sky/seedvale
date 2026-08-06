@@ -14,6 +14,6 @@ Statuses: `todo`, `planned`, `in progress`, `done`, `verification needed`. New i
 
 ## Aktualny stan
 
-- Kod aplikacji: bootstrap Vite + Three (v0.1 w toku)
+- Kod: **v0.1 done** — heightmap FBM + chodzenie 3rd person ([plan](docs/plans/2026-08-07-v01-terrain-walking.md))
 - Research tech: [docs/research/2026-08-06-threejs-terrain-ai-tech-research.md](docs/research/2026-08-06-threejs-terrain-ai-tech-research.md)
 - PR / roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)

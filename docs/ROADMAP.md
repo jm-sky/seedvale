@@ -26,7 +26,7 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 
 | Wersja | Zakres | Status |
 |--------|--------|--------|
-| **v0.1** | Proceduralny teren (heightmap / chunki) + chodzenie 3rd person | `in progress` |
+| **v0.1** | Proceduralny teren (heightmap / chunki) + chodzenie 3rd person | `done` |
 | **v0.2** | Osada: 3–5 NPC, potrzeby drewno / woda / jedzenie (ścinanie, studnia, …) | `todo` |
 | **v0.3** | Fauna w lesie: predators & prey (np. wilk, niedźwiedź / sarna, zając) — chase/flee | `todo` |
 | **v0.4+** | Proste questy z sytuacji świata → później generator (+ OpenRouter) | później |
@@ -46,6 +46,5 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 
 1. ~~Nazwa~~ → Seedvale  
 2. ~~Styl art~~ → stylized / low-poly  
-3. ~~Plan v0.1~~ → [plans/2026-08-07-v01-terrain-walking.md](./plans/2026-08-07-v01-terrain-walking.md)  
-4. ~~Spike 1–2~~ → bootstrap + chodzenie na flat  
-5. Spike 3 — heightmap FBM + kolory (trawa / skała / woda)  
+3. ~~Plan / implementacja v0.1~~ → teren + chodzenie  
+4. Plan v0.2 — osada + NPC z potrzebami  
