@@ -4,13 +4,17 @@ import { colorForTerrain } from './biomeColors'
 
 export type Terrain = {
   mesh: THREE.Mesh
+  heightmap: Heightmap
   sampleHeight: (x: number, z: number) => number
   halfExtent: number
   waterLevel: number
   dispose: () => void
 }
 
-export function createTerrainMesh(heightmap: Heightmap): Terrain {
+export function createTerrainMesh(
+  heightmap: Heightmap,
+  flatShading = false,
+): Terrain {
   const { size, resolution, waterLevel, heightScale } = heightmap.params
   const segments = resolution - 1
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments)
@@ -37,7 +41,7 @@ export function createTerrainMesh(heightmap: Heightmap): Terrain {
 
   const material = new THREE.MeshStandardMaterial({
     vertexColors: true,
-    flatShading: true,
+    flatShading,
     roughness: 0.92,
     metalness: 0.04,
   })
@@ -48,6 +52,7 @@ export function createTerrainMesh(heightmap: Heightmap): Terrain {
 
   return {
     mesh,
+    heightmap,
     sampleHeight: heightmap.sample,
     halfExtent: size / 2,
     waterLevel,

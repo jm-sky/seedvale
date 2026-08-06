@@ -4,6 +4,7 @@ import type { SettlementSite } from './findSettlementSite'
 export type SettlementLandmarks = {
   well: THREE.Vector3
   stockpile: THREE.Vector3
+  garden: THREE.Vector3
   homes: THREE.Vector3[]
   trees: THREE.Vector3[]
 }
@@ -101,6 +102,29 @@ export function createTree(): THREE.Group {
   return tree
 }
 
+export function createGarden(): THREE.Group {
+  const garden = new THREE.Group()
+  const bed = new THREE.Mesh(
+    new THREE.BoxGeometry(2.4, 0.2, 1.6),
+    new THREE.MeshStandardMaterial({ color: 0x5a3d24, flatShading: true }),
+  )
+  bed.position.y = 0.1
+  bed.receiveShadow = true
+  garden.add(bed)
+
+  const cropMat = new THREE.MeshStandardMaterial({
+    color: 0x6db33f,
+    flatShading: true,
+  })
+  for (let i = 0; i < 6; i++) {
+    const crop = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 4), cropMat)
+    crop.position.set(-0.8 + (i % 3) * 0.8, 0.4, i < 3 ? -0.35 : 0.35)
+    crop.castShadow = true
+    garden.add(crop)
+  }
+  return garden
+}
+
 export function buildSettlementProps(
   site: SettlementSite,
   sampleHeight: (x: number, z: number) => number,
@@ -111,6 +135,7 @@ export function buildSettlementProps(
   const landmarks: SettlementLandmarks = {
     well: new THREE.Vector3(),
     stockpile: new THREE.Vector3(),
+    garden: new THREE.Vector3(),
     homes: [],
     trees: [],
   }
@@ -126,6 +151,13 @@ export function buildSettlementProps(
   placeOnGround(stockpile, stockX, stockZ, sampleHeight)
   group.add(stockpile)
   landmarks.stockpile.set(stockX, sampleHeight(stockX, stockZ), stockZ)
+
+  const gardenX = site.x - 2.5
+  const gardenZ = site.z + 5
+  const garden = createGarden()
+  placeOnGround(garden, gardenX, gardenZ, sampleHeight)
+  group.add(garden)
+  landmarks.garden.set(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
 
   const homeOffsets = [
     [-5, -2],

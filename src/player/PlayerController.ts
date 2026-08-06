@@ -54,6 +54,13 @@ export class PlayerController {
     this.snapToGround()
   }
 
+  setPosition(x: number, z: number): void {
+    this.mesh.position.x = x
+    this.mesh.position.z = z
+    this.snapToGround()
+    this.syncCamera()
+  }
+
   update(dt: number): void {
     const { yaw } = this.look
     this.forward.set(-Math.sin(yaw), 0, -Math.cos(yaw))

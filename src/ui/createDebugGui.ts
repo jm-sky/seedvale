@@ -1,15 +1,18 @@
 import GUI from 'lil-gui'
 import type { WorldConfig } from '../config/worldConfig'
+import type { DayNightState } from '../world/dayNight'
 import { triangleCount } from '../config/worldConfig'
 
 export type DebugGuiHandlers = {
   onTerrainChange: () => void
   onSkyChange: () => void
+  onDayNightChange?: () => void
 }
 
-/** On-screen panel; mutates `config` in place, then calls handlers. */
+/** On-screen panel; mutates `config` / `dayNight` in place, then calls handlers. */
 export function createDebugGui(
   config: WorldConfig,
+  dayNight: DayNightState,
   handlers: DebugGuiHandlers,
 ): { dispose: () => void } {
   const gui = new GUI({ title: 'Seedvale' })
@@ -23,15 +26,41 @@ export function createDebugGui(
   const world = gui.addFolder('World')
   world.add(config, 'seed', 0, 9999, 1).name('Seed').onFinishChange(handlers.onTerrainChange)
 
+  const clock = gui.addFolder('Day / night')
+  clock
+    .add(dayNight, 'enabled')
+    .name('Enabled')
+    .onChange(() => handlers.onDayNightChange?.())
+  clock
+    .add(dayNight, 'timeMultiplier', 0, 20, 0.1)
+    .name('Time multiplier')
+    .onChange(() => handlers.onDayNightChange?.())
+  clock
+    .add(dayNight, 'dayLengthSec', 60, 1200, 10)
+    .name('Day length (s)')
+    .onChange(() => handlers.onDayNightChange?.())
+  clock
+    .add(dayNight, 'timeOfDay', 0, 1, 0.001)
+    .name('Time of day')
+    .listen()
+    .onChange(() => handlers.onDayNightChange?.())
+
   const terrain = gui.addFolder('Terrain mesh')
   terrain
     .add(config.terrain, 'resolution', {
       'Low (65)': 65,
-      'Default (129)': 129,
+      'Medium (129)': 129,
       'High (193)': 193,
-      'Ultra (257)': 257,
+      'Higher (257)': 257,
+      'Ultra (385)': 385,
+      'Extreme (513)': 513,
+      'Insane (769)': 769,
     })
     .name('Resolution')
+    .onFinishChange(handlers.onTerrainChange)
+  terrain
+    .add(config.terrain, 'flatShading')
+    .name('Flat shading (low-poly)')
     .onFinishChange(handlers.onTerrainChange)
   terrain.add(info, 'triangles').name('Triangles').listen().disable()
   terrain
@@ -66,7 +95,7 @@ export function createDebugGui(
     .name('Exponentiation')
     .onFinishChange(handlers.onTerrainChange)
 
-  const sky = gui.addFolder('Sky')
+  const sky = gui.addFolder('Sky (manual)')
   sky
     .add(config.sky, 'inclination', 0, 1, 0.01)
     .onChange(handlers.onSkyChange)

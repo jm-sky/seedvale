@@ -1,10 +1,12 @@
 import * as THREE from 'three'
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import type { SettlementLandmarks } from '../settlement/props'
 import {
   createNeedState,
   needColor,
   type NeedId,
+  needLabel,
   type NeedState,
   pickNeed,
   tickNeeds,
@@ -16,16 +18,19 @@ const HALF_HEIGHT = 0.75
 
 type Phase =
   | 'choose'
-  | 'goWell'
-  | 'drink'
-  | 'goTree'
   | 'chop'
-  | 'goStock'
   | 'deposit'
+  | 'drink'
+  | 'eat'
+  | 'goGarden'
+  | 'goStock'
+  | 'goTree'
+  | 'goWell'
   | 'wander'
 
 export class NpcAgent {
   readonly mesh: THREE.Mesh
+  readonly label: CSS2DObject
   private readonly sampleHeight: HeightSampler
   private readonly landmarks: SettlementLandmarks
   private readonly needs: NeedState
@@ -36,6 +41,7 @@ export class NpcAgent {
   private treeIndex: number
   private wait = 0
   private readonly tmp = new THREE.Vector3()
+  private readonly labelEl: HTMLDivElement
 
   constructor(
     sampleHeight: HeightSampler,
@@ -59,6 +65,17 @@ export class NpcAgent {
     this.mesh.castShadow = true
     this.mesh.position.copy(home)
     this.mesh.position.y = sampleHeight(home.x, home.z) + HALF_HEIGHT
+
+    this.labelEl = document.createElement('div')
+    this.labelEl.className = 'npc-label'
+    this.labelEl.textContent = needLabel('idle')
+    this.label = new CSS2DObject(this.labelEl)
+    this.label.position.set(0, 1.35, 0)
+    this.mesh.add(this.label)
+  }
+
+  getActiveNeed(): NeedId {
+    return this.activeNeed
   }
 
   update(dt: number): void {
@@ -70,9 +87,7 @@ export class NpcAgent {
         break
       case 'chop':
         this.wait -= dt
-        if (this.wait <= 0) {
-          this.phase = 'goStock'
-        }
+        if (this.wait <= 0) this.phase = 'goStock'
         break
       case 'deposit':
         this.wait -= dt
@@ -86,6 +101,19 @@ export class NpcAgent {
         if (this.wait <= 0) {
           this.needs.thirst = Math.max(0, this.needs.thirst - 0.65)
           this.phase = 'choose'
+        }
+        break
+      case 'eat':
+        this.wait -= dt
+        if (this.wait <= 0) {
+          this.needs.hunger = Math.max(0, this.needs.hunger - 0.6)
+          this.phase = 'choose'
+        }
+        break
+      case 'goGarden':
+        if (this.steerTo(this.landmarks.garden, dt)) {
+          this.phase = 'eat'
+          this.wait = 1.4
         }
         break
       case 'goStock':
@@ -107,9 +135,7 @@ export class NpcAgent {
         }
         break
       case 'wander':
-        if (this.steerTo(this.target, dt)) {
-          this.phase = 'choose'
-        }
+        if (this.steerTo(this.target, dt)) this.phase = 'choose'
         break
     }
 
@@ -118,12 +144,22 @@ export class NpcAgent {
     ;(this.mesh.material as THREE.MeshStandardMaterial).color.setHex(
       needColor(this.activeNeed),
     )
+    this.labelEl.textContent = needLabel(this.activeNeed)
+  }
+
+  disposeLabel(): void {
+    this.label.removeFromParent()
+    this.labelEl.remove()
   }
 
   private beginNeed(need: NeedId): void {
     this.activeNeed = need
     if (need === 'water') {
       this.phase = 'goWell'
+      return
+    }
+    if (need === 'food') {
+      this.phase = 'goGarden'
       return
     }
     if (need === 'wood' && this.landmarks.trees.length > 0) {

@@ -14,6 +14,7 @@ Statuses: `todo`, `planned`, `in progress`, `done`, `verification needed`. New i
 
 ## Aktualny stan
 
-- Kod: **v0.1 done** — heightmap FBM + chodzenie 3rd person ([plan](docs/plans/2026-08-07-v01-terrain-walking.md))
-- Research tech: [docs/research/2026-08-06-threejs-terrain-ai-tech-research.md](docs/research/2026-08-06-threejs-terrain-ai-tech-research.md)
-- PR / roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)
+- Kod: **v0.3 in progress** — fauna chase/flee (kapsuły); v0.2 osada done; dzień/noc + HUD
+- Modele GLB: drugi agent / [research assets](docs/research/2026-08-07-3d-asset-sources.md) → `public/models/`
+- Głębsze tematy → `docs/reviews/to-do--*.md` (np. woda)
+- Plans / roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)

@@ -2,6 +2,7 @@ import {
   type Material,
   type Mesh,
   type Scene,
+  Vector3,
 } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
 import { NpcAgent } from '../ai/NpcAgent'
@@ -9,6 +10,8 @@ import { findSettlementSite } from './findSettlementSite'
 import { buildSettlementProps } from './props'
 
 export type Settlement = {
+  spawn: Vector3
+  center: Vector3
   update: (dt: number) => void
   dispose: () => void
 }
@@ -41,12 +44,21 @@ export function createSettlement(
     agents.push(agent)
   }
 
+  const spawn = new Vector3(
+    site.x + 3.5,
+    sampleHeight(site.x + 3.5, site.z - 3),
+    site.z - 3,
+  )
+
   return {
+    spawn,
+    center: new Vector3(site.x, site.y, site.z),
     update(dt) {
       for (const agent of agents) agent.update(dt)
     },
     dispose() {
       for (const agent of agents) {
+        agent.disposeLabel()
         agent.mesh.removeFromParent()
         agent.mesh.geometry.dispose()
         ;(agent.mesh.material as Material).dispose()
