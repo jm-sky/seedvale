@@ -59,4 +59,4 @@ Wziąć gdy: (a) jedna mapa 128–256 za mała / za ciężka, albo (b) potrzeba 
 
 - [2026-08-07-3d-portfolio-library-audit.md](../research/2026-08-07-3d-portfolio-library-audit.md) — chunk manager jako wzorzec  
 - [ROADMAP.md](../ROADMAP.md)  
-- [2026-08-07-game-ui-screens.md](./2026-08-07-game-ui-screens.md) — UI save/load  
+- [2026-08-07--game-ui-screens.md](./2026-08-07--game-ui-screens.md) — UI save/load  

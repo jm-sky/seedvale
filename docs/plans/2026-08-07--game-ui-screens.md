@@ -16,7 +16,7 @@ Obok debug panelu (`lil-gui`) przyda się **UI jak w grach**: pełnoekranowe / p
 | **World config** | Przyjazna wersja parametrów terenu (resolution, seed, …) bez lil-gui |
 | **Notes / journal** | Notatki o osadzie, fauna, questach (lore + debug tips) |
 | **NPC / quest dialog** | Proste okna rozmowy (v0.4+) |
-| **HUD** | Minimal: seed, wskazówka „kliknij = look”, potrzeby NPC, **godzina / pora dnia** (→ [day-night-clock](./2026-08-07-day-night-clock.md)) |
+| **HUD** | Minimal: seed, wskazówka „kliknij = look”, potrzeby NPC, **godzina / pora dnia** (→ [day-night-clock](./2026-08-07--day-night-clock.md)) |
 
 ## Kierunek techniczny (do decyzji przy starcie)
 
