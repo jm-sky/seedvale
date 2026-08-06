@@ -1,6 +1,6 @@
 # Plan: v0.1 — teren + chodzenie
 
-**Status:** `planned`  
+**Status:** `in progress`  
 **Created:** 2026-08-07  
 **Scope:** [ROADMAP.md](../ROADMAP.md) v0.1  
 
@@ -10,7 +10,7 @@ W przeglądarce: **proceduralny teren** (góry / doliny / woda jako niski poziom
 
 ## Done when
 
-- [ ] `npm run dev` → scena Three.js
+- [x] `npm run dev` → scena Three.js *(spike 1–2: flat + chodzenie)*
 - [ ] Seedowany teren (FBM) z widocznymi wzniesieniami i „wodą” (threshold wysokości)
 - [ ] Kamera za postacią, WASD / strzałki, postać trzyma się powierzchni terenu
 - [ ] Jedna mapa o skończonym rozmiarze (nie infinite streaming) — wystarczy na dolinę
@@ -19,8 +19,8 @@ W przeglądarce: **proceduralny teren** (góry / doliny / woda jako niski poziom
 
 | # | Spike | Wynik |
 |---|--------|--------|
-| 1 | **Bootstrap** — Vite + TS + Three (WebGL2), canvas, resize, loop | puste niebo + ziemia flat |
-| 2 | **Kamera 3rd person** — orbit za kapsułą/kostką, input ruchu na flat | chodzenie po płaszczyźnie |
+| 1 | **Bootstrap** — Vite + TS + Three (WebGL2), canvas, resize, loop | ✅ puste niebo + ziemia flat |
+| 2 | **Kamera 3rd person** — orbit za kapsułą/kostką, input ruchu na flat | ✅ chodzenie po płaszczyźnie (WASD) |
 | 3 | **Heightmap** — simplex/FBM → `PlaneGeometry` displacement (CPU), kolor po wysokości (trawa / skała / woda) | wygląda jak krajobraz |
 | 4 | **Grounding** — raycast / sample height pod stopami + normal (opcjonalnie lekki slope limit) | chodzenie po górach |
 | 5 | **Polish lite** — directional + ambient, fog, seed w URL (`?seed=`), prosty low-poly shading | portfolio-ready screenshot |

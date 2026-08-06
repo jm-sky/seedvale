@@ -10,7 +10,7 @@ Implementation plans for features and larger changes.
 
 | File | Summary | Status |
 |------|---------|--------|
-| [2026-08-07-v01-terrain-walking.md](./2026-08-07-v01-terrain-walking.md) | v0.1: teren heightmap + chodzenie 3rd person | `planned` |
+| [2026-08-07-v01-terrain-walking.md](./2026-08-07-v01-terrain-walking.md) | v0.1: teren heightmap + chodzenie 3rd person | `in progress` |
 
 When adding a new plan: create `YYYY-MM-DD-slug.md`, add a row here.
 

@@ -104,7 +104,7 @@ Najlepszy stosunek efekt/koszt: zwykle **B** lub **C**, nie pełne MMO.
 
 ## Decision
 
-**2026-08-07 (użytkownik):** hybryda B+C — życie wioski + fauna; v0.1 teren+chodzenie → v0.2 osada (potrzeby) → v0.3 predators/prey; bez MMO; 3rd person; questy później (proste → generator / OpenRouter). Szczegóły: [ROADMAP.md](../ROADMAP.md).
+**2026-08-07 (użytkownik):** hybryda B+C — życie wioski + fauna; v0.1 teren+chodzenie → v0.2 osada (potrzeby) → v0.3 predators/prey; bez MMO; 3rd person; questy później (proste → generator / OpenRouter). Nazwa: **Seedvale**. Szczegóły: [ROADMAP.md](../ROADMAP.md).
 
 ## Follow-ups
 

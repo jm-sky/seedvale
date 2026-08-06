@@ -1,6 +1,7 @@
-# three-js-dev
+# Seedvale
 
-Sandbox / projekt Three.js: proceduralny teren + AI postaci.
+Sandbox / projekt Three.js: proceduralny teren + AI postaci.  
+Katalog repo: `three-js-dev` (working dir); nazwa produktu: **Seedvale**.
 
 ## Docs workflow
 
@@ -13,6 +14,6 @@ Statuses: `todo`, `planned`, `in progress`, `done`, `verification needed`. New i
 
 ## Aktualny stan
 
-- Kod aplikacji: brak (greenfield)
+- Kod aplikacji: bootstrap Vite + Three (v0.1 w toku)
 - Research tech: [docs/research/2026-08-06-threejs-terrain-ai-tech-research.md](docs/research/2026-08-06-threejs-terrain-ai-tech-research.md)
-- PR / roadmap: do ustalenia — [docs/ROADMAP.md](docs/ROADMAP.md)
+- PR / roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)

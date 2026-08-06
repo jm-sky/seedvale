@@ -1,6 +1,6 @@
-# Dokumentacja three-js-dev
+# Dokumentacja Seedvale
 
-Ten katalog zawiera dokumentację projektu (Three.js — proceduralny teren + AI postaci).
+Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — proceduralny teren + AI postaci).
 
 ## Główne dokumenty
 
