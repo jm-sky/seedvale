@@ -1,28 +1,41 @@
 import * as THREE from 'three'
 import type { KeyState } from '../input/Keyboard'
 import type { LookState } from '../input/MouseLook'
+import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
 
 const MOVE_SPEED = 8
 const CAMERA_DISTANCE = 12
-/** CapsuleGeometry(0.35, 0.9) ≈ 1.6 total height; center offset from feet. */
-const HALF_HEIGHT = 0.8
 const LOOK_AT_OFFSET = 0.9
+const PLAYER_HEIGHT = 1.8
+
+/** Quaternius Ultimate Modular Men — distinct from the NPC roster. */
+export const PLAYER_MODEL_URL = '/models/characters/Adventurer.glb'
 
 export type HeightSampler = (x: number, z: number) => number
 
 export class PlayerController {
-  readonly mesh: THREE.Mesh
+  /** Wrapper group; feet sit at local y=0, world y is set in snapToGround. */
+  readonly mesh: THREE.Object3D
   private readonly camera: THREE.PerspectiveCamera
   private readonly keys: KeyState
   private readonly look: LookState
   private sampleHeight: HeightSampler
   private halfExtent: number
+  private readonly isCapsule: boolean
+  private readonly mixer: THREE.AnimationMixer | null
+  private readonly idleAction: THREE.AnimationAction | null
+  private readonly walkAction: THREE.AnimationAction | null
+  private currentAction: THREE.AnimationAction | null = null
+  private moving = false
   private readonly forward = new THREE.Vector3()
   private readonly right = new THREE.Vector3()
   private readonly wish = new THREE.Vector3()
   private readonly camOffset = new THREE.Vector3()
 
-  constructor(
+  private constructor(
+    root: THREE.Object3D,
+    animations: THREE.AnimationClip[],
+    isCapsule: boolean,
     camera: THREE.PerspectiveCamera,
     keys: KeyState,
     look: LookState,
@@ -34,17 +47,86 @@ export class PlayerController {
     this.look = look
     this.sampleHeight = sampleHeight
     this.halfExtent = halfExtent - 1
+    this.isCapsule = isCapsule
 
-    const geometry = new THREE.CapsuleGeometry(0.35, 0.9, 4, 8)
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xc45c26,
-      flatShading: true,
-    })
-    this.mesh = new THREE.Mesh(geometry, material)
-    this.mesh.castShadow = true
+    this.mesh = new THREE.Group()
+    this.mesh.add(root)
     this.mesh.position.set(0, 0, 0)
+
+    if (animations.length > 0) {
+      this.mixer = new THREE.AnimationMixer(root)
+      this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral'])
+      this.walkAction = this.findAction(animations, ['Walk', 'Run'])
+      this.playAction(this.idleAction)
+    } else {
+      this.mixer = null
+      this.idleAction = null
+      this.walkAction = null
+    }
+
     this.snapToGround()
     this.syncCamera()
+  }
+
+  static async create(
+    camera: THREE.PerspectiveCamera,
+    keys: KeyState,
+    look: LookState,
+    sampleHeight: HeightSampler,
+    halfExtent: number,
+    modelUrl = PLAYER_MODEL_URL,
+  ): Promise<PlayerController> {
+    try {
+      const { scene, animations } = await loadGltfAnimated(modelUrl)
+      prepareProp(scene, PLAYER_HEIGHT)
+      return new PlayerController(
+        scene,
+        animations,
+        false,
+        camera,
+        keys,
+        look,
+        sampleHeight,
+        halfExtent,
+      )
+    } catch (err) {
+      console.warn(`[player] failed to load ${modelUrl}, using capsule`, err)
+      return PlayerController.createCapsuleFallback(
+        camera,
+        keys,
+        look,
+        sampleHeight,
+        halfExtent,
+      )
+    }
+  }
+
+  private static createCapsuleFallback(
+    camera: THREE.PerspectiveCamera,
+    keys: KeyState,
+    look: LookState,
+    sampleHeight: HeightSampler,
+    halfExtent: number,
+  ): PlayerController {
+    const body = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.35, 0.9, 4, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0xc45c26,
+        flatShading: true,
+      }),
+    )
+    body.position.y = 0.8
+    body.castShadow = true
+    return new PlayerController(
+      body,
+      [],
+      true,
+      camera,
+      keys,
+      look,
+      sampleHeight,
+      halfExtent,
+    )
   }
 
   /** Call after terrain rebuild. */
@@ -72,7 +154,8 @@ export class PlayerController {
     if (this.keys.left) this.wish.sub(this.right)
     if (this.keys.right) this.wish.add(this.right)
 
-    if (this.wish.lengthSq() > 0) {
+    this.moving = this.wish.lengthSq() > 0
+    if (this.moving) {
       this.wish.normalize().multiplyScalar(MOVE_SPEED * dt)
       this.mesh.position.x += this.wish.x
       this.mesh.position.z += this.wish.z
@@ -93,6 +176,39 @@ export class PlayerController {
 
     this.snapToGround()
     this.syncCamera()
+    this.syncAnimation()
+    this.mixer?.update(dt)
+  }
+
+  dispose(): void {
+    this.mixer?.stopAllAction()
+    // GLB clones share GPU resources with the loader cache — only free the capsule fallback.
+    if (this.isCapsule) disposeObject3D(this.mesh)
+  }
+
+  private findAction(
+    animations: THREE.AnimationClip[],
+    names: string[],
+  ): THREE.AnimationAction | null {
+    if (!this.mixer) return null
+    for (const name of names) {
+      const clip = animations.find((c) => c.name === name)
+      if (clip) return this.mixer.clipAction(clip)
+    }
+    return null
+  }
+
+  private playAction(action: THREE.AnimationAction | null): void {
+    if (!action || action === this.currentAction) return
+    this.currentAction?.fadeOut(0.2)
+    action.reset().setEffectiveWeight(1).fadeIn(0.2).play()
+    this.currentAction = action
+  }
+
+  private syncAnimation(): void {
+    this.playAction(
+      this.moving ? (this.walkAction ?? this.idleAction) : this.idleAction,
+    )
   }
 
   private snapToGround(): void {
@@ -100,7 +216,7 @@ export class PlayerController {
       this.mesh.position.x,
       this.mesh.position.z,
     )
-    this.mesh.position.y = groundY + HALF_HEIGHT
+    this.mesh.position.y = groundY
   }
 
   private syncCamera(): void {

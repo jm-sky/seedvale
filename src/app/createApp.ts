@@ -1,4 +1,4 @@
-import { Clock, Fog, type Material, type Scene } from 'three'
+import { Clock, Fog, type Scene } from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { saveWorldConfig } from '../config/persistConfig'
 import { createWorldConfig } from '../config/worldConfig'
@@ -58,7 +58,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
 
   const keyboard = createKeyboard()
   const mouseLook = createMouseLook(renderer.domElement)
-  const player = new PlayerController(
+  const player = await PlayerController.create(
     camera,
     keyboard.state,
     mouseLook.state,
@@ -155,8 +155,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     fauna.dispose()
     settlement.dispose()
     terrain.dispose()
-    player.mesh.geometry.dispose()
-    ;(player.mesh.material as Material).dispose()
+    player.dispose()
     labelRenderer.domElement.remove()
     renderer.dispose()
     renderer.domElement.remove()
