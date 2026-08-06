@@ -16,7 +16,7 @@
 | Świat | Losowy obszar: góry, doliny, morza/jeziora + las + osada |
 | AI v1 | Osada z potrzebami (drewno / woda / jedzenie) + fauna chase/flee |
 | Questy | Później: najpierw proste, potem generator (opcjonalnie LLM / OpenRouter) |
-| Styl art | ❓ otwarte — rekomendacja: **stylized / low-poly** (szybszy wow, czytelniejsze AI) |
+| Styl art | **stylized / low-poly** |
 | Stack start | WebGL2, Vanilla Three + Vite + TS (z research) |
 
 Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06-threejs-terrain-ai-tech-research.md)
@@ -39,12 +39,11 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 
 ## Otwarte
 
-- [ ] Art direction (stylized vs bardziej realistyczny)  
 - [ ] Nazwa projektu / working title  
-- [ ] Features (`FEATURE-001+`) i plan implementacji v0.1 w `plans/`
+- [ ] Features (`FEATURE-001+`) przy starcie implementacji  
 
 ## Następne kroki
 
-1. Domknąć styl art (lub przyjąć low-poly na start)  
-2. Plan spike’ów v0.1 (Vite + Three + teren + kamera)  
-3. Potem FEATURE-y pod v0.1 / v0.2 / v0.3  
+1. ~~Styl art~~ → stylized / low-poly  
+2. ~~Plan v0.1~~ → [plans/2026-08-07-v01-terrain-walking.md](./plans/2026-08-07-v01-terrain-walking.md)  
+3. Implementacja spike 1 (bootstrap Vite + Three)  
