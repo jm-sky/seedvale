@@ -64,7 +64,7 @@ export class PlayerController {
   update(dt: number): void {
     const { yaw } = this.look
     this.forward.set(-Math.sin(yaw), 0, -Math.cos(yaw))
-    this.right.set(this.forward.z, 0, this.forward.x)
+    this.right.set(-this.forward.z, 0, this.forward.x)
 
     this.wish.set(0, 0, 0)
     if (this.keys.forward) this.wish.add(this.forward)
