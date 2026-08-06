@@ -6,6 +6,7 @@ export type Terrain = {
   mesh: THREE.Mesh
   sampleHeight: (x: number, z: number) => number
   halfExtent: number
+  waterLevel: number
   dispose: () => void
 }
 
@@ -49,6 +50,7 @@ export function createTerrainMesh(heightmap: Heightmap): Terrain {
     mesh,
     sampleHeight: heightmap.sample,
     halfExtent: size / 2,
+    waterLevel,
     dispose: () => {
       geometry.dispose()
       material.dispose()

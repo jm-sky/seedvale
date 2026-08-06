@@ -27,16 +27,18 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 | Wersja | Zakres | Status |
 |--------|--------|--------|
 | **v0.1** | Proceduralny teren (heightmap / chunki) + chodzenie 3rd person | `done` |
-| **v0.2** | Osada: 3–5 NPC, potrzeby drewno / woda / jedzenie (ścinanie, studnia, …) | `todo` |
+| **v0.2** | Osada: 3–5 NPC, potrzeby drewno / woda / jedzenie (ścinanie, studnia, …) | `in progress` |
 | **v0.3** | Fauna w lesie: predators & prey (np. wilk, niedźwiedź / sarna, zając) — chase/flee | `todo` |
 | **v0.4+** | Proste questy z sytuacji świata → później generator (+ OpenRouter) | później |
+| **później** | Chunk streaming przy ruchu + zapis świata (lokalnie → baza) | `planned` |
+| **później** | Zegar dnia/nocy (sun + ambient) | `planned` |
 
 ## Poza zakresem v0.1–v0.3
 
 - Multiplayer / netcode  
 - WebGPU-first  
 - Pełny RPG / inventory / combat deep  
-- Nieskończony open world (wystarczy „jedna dolina + las + woda”)
+- Infinite / streaming world *(zaplanowane osobno — [plans/2026-08-07-world-streaming-persistence.md](./plans/2026-08-07-world-streaming-persistence.md))*
 
 ## Otwarte
 
@@ -47,4 +49,7 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 1. ~~Nazwa~~ → Seedvale  
 2. ~~Styl art~~ → stylized / low-poly  
 3. ~~Plan / implementacja v0.1~~ → teren + chodzenie  
-4. Plan v0.2 — osada + NPC z potrzebami  
+4. Plan / implementacja v0.2 → [plans/2026-08-07-v02-settlement-npc.md](./plans/2026-08-07-v02-settlement-npc.md)  
+5. Później: game UI → [plans/2026-08-07-game-ui-screens.md](./plans/2026-08-07-game-ui-screens.md)  
+6. Później: streaming + save → [plans/2026-08-07-world-streaming-persistence.md](./plans/2026-08-07-world-streaming-persistence.md)  
+7. Później: dzień/noc → [plans/2026-08-07-day-night-clock.md](./plans/2026-08-07-day-night-clock.md)  

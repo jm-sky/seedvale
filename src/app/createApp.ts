@@ -6,6 +6,7 @@ import { PlayerController } from '../player/PlayerController'
 import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
+import { createSettlement, type Settlement } from '../settlement/createSettlement'
 import { createTerrainMesh, type Terrain } from '../terrain/createTerrainMesh'
 import {
   generateHeightmap,
@@ -14,6 +15,7 @@ import {
 import { createDebugGui } from '../ui/createDebugGui'
 import { createLights } from '../world/createLights'
 import { createSky } from '../world/createSky'
+import { createWater, type WorldWater } from '../world/createWater'
 import { syncSeedInUrl } from '../world/parseSeed'
 
 export function createApp(container: HTMLElement): () => void {
@@ -31,6 +33,8 @@ export function createApp(container: HTMLElement): () => void {
   sky.applySun(lights.sun)
 
   let terrain = buildTerrain(scene, config)
+  let water = buildWater(scene, config.terrain.size, terrain.waterLevel)
+  let settlement = buildSettlement(scene, terrain, config.seed)
 
   const keyboard = createKeyboard()
   const mouseLook = createMouseLook(renderer.domElement)
@@ -45,9 +49,13 @@ export function createApp(container: HTMLElement): () => void {
 
   const rebuildTerrain = () => {
     syncSeedInUrl(config.seed)
+    settlement.dispose()
+    water.dispose()
     terrain.mesh.removeFromParent()
     terrain.dispose()
     terrain = buildTerrain(scene, config)
+    water = buildWater(scene, config.terrain.size, terrain.waterLevel)
+    settlement = buildSettlement(scene, terrain, config.seed)
     player.setGround(terrain.sampleHeight, terrain.halfExtent)
   }
 
@@ -78,6 +86,8 @@ export function createApp(container: HTMLElement): () => void {
     frameId = requestAnimationFrame(tick)
     const dt = Math.min(clock.getDelta(), 0.05)
     player.update(dt)
+    settlement.update(dt)
+    water.update(dt)
     renderer.render(scene, camera)
   }
   tick()
@@ -89,6 +99,8 @@ export function createApp(container: HTMLElement): () => void {
     keyboard.dispose()
     mouseLook.dispose()
     sky.dispose()
+    water.dispose()
+    settlement.dispose()
     terrain.dispose()
     player.mesh.geometry.dispose()
     ;(player.mesh.material as Material).dispose()
@@ -105,4 +117,24 @@ function buildTerrain(
   const terrain = createTerrainMesh(heightmap)
   scene.add(terrain.mesh)
   return terrain
+}
+
+function buildWater(scene: Scene, size: number, level: number): WorldWater {
+  const water = createWater(size, level)
+  water.addTo(scene)
+  return water
+}
+
+function buildSettlement(
+  scene: Scene,
+  terrain: Terrain,
+  seed: number,
+): Settlement {
+  return createSettlement(
+    scene,
+    terrain.sampleHeight,
+    terrain.waterLevel,
+    terrain.halfExtent,
+    seed,
+  )
 }

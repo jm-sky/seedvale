@@ -1,7 +1,7 @@
 import { Color } from 'three'
 import { LinearSpline } from '../math/linearSpline'
 
-const OCEAN = new Color(0x3a7ca5)
+const SEABED = new Color(0x3d5c4a)
 const SAND = new Color(0xc2b280)
 const SNOW = new Color(0xdfe6ee)
 const FOREST = new Color(0x3f6b3a)
@@ -47,7 +47,7 @@ export function colorForTerrain(
   out: Color,
 ): void {
   if (height <= waterLevel + 0.05) {
-    out.copy(OCEAN)
+    out.copy(SEABED)
     return
   }
   if (height < waterLevel + 1.0) {

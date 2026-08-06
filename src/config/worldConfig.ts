@@ -69,10 +69,10 @@ export function createWorldConfig(): WorldConfig {
       },
     },
     sky: {
-      inclination: 0.42,
-      azimuth: 0.28,
-      turbidity: 4,
-      rayleigh: 1.2,
+      inclination: 0.36,
+      azimuth: 0.25,
+      turbidity: 2.2,
+      rayleigh: 2.4,
     },
     showGui: params.get('gui') !== '0',
   }
