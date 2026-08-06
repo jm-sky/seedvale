@@ -28,7 +28,7 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 |--------|--------|--------|
 | **v0.1** | Teren heightmap + chodzenie 3rd person + mysz | `done` |
 | **v0.2** | Osada + 3–5 NPC (woda / drewno / jedzenie) + etykiety + spawn | `done` |
-| **v0.3** | Fauna predators & prey (chase/flee); kapsuły OK | `done` (logika) |
+| **v0.3** | Fauna predators & prey (chase/flee) + GLB art | `done` |
 | **v0.3 art** | Swap fauny na GLB z `public/models/fauna/` (wolf/fox/deer/stag) | `done` |
 | **v0.4+** | Proste questy → później generator (+ OpenRouter) | później |
 | **później** | Chunk streaming + zapis (IndexedDB → DB) | `planned` |
