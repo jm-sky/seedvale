@@ -15,8 +15,8 @@ export class PlayerController {
   private readonly camera: THREE.PerspectiveCamera
   private readonly keys: KeyState
   private readonly look: LookState
-  private readonly sampleHeight: HeightSampler
-  private readonly halfExtent: number
+  private sampleHeight: HeightSampler
+  private halfExtent: number
   private readonly forward = new THREE.Vector3()
   private readonly right = new THREE.Vector3()
   private readonly wish = new THREE.Vector3()
@@ -45,6 +45,13 @@ export class PlayerController {
     this.mesh.position.set(0, 0, 0)
     this.snapToGround()
     this.syncCamera()
+  }
+
+  /** Call after terrain rebuild. */
+  setGround(sampleHeight: HeightSampler, halfExtent: number): void {
+    this.sampleHeight = sampleHeight
+    this.halfExtent = halfExtent - 1
+    this.snapToGround()
   }
 
   update(dt: number): void {

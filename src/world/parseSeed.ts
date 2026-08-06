@@ -20,3 +20,10 @@ export function parseSeedFromUrl(
   const n = Number(raw)
   return Number.isFinite(n) ? Math.floor(n) : fallback
 }
+
+/** Keep `?seed=` in the address bar without reload. */
+export function syncSeedInUrl(seed: number): void {
+  const url = new URL(window.location.href)
+  url.searchParams.set('seed', String(seed))
+  window.history.replaceState({}, '', url)
+}

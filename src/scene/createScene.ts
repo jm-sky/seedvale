@@ -1,10 +1,8 @@
 import * as THREE from 'three'
 
-const SKY = 0x87b5d4
-
+/** Soft horizon haze — pairs with Preetham Sky (no solid background). */
 export function createScene(): THREE.Scene {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(SKY)
-  scene.fog = new THREE.Fog(SKY, 50, 160)
+  scene.fog = new THREE.FogExp2(0xa8c4d8, 0.012)
   return scene
 }

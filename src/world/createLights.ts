@@ -7,9 +7,9 @@ export type WorldLights = {
 }
 
 export function createLights(): WorldLights {
-  const ambient = new THREE.AmbientLight(0xffffff, 0.45)
+  const ambient = new THREE.AmbientLight(0xb0c4de, 0.4)
 
-  const sun = new THREE.DirectionalLight(0xfff2d6, 1.1)
+  const sun = new THREE.DirectionalLight(0xfff2d6, 1.15)
   sun.position.set(40, 70, 30)
   sun.castShadow = true
   sun.shadow.mapSize.set(2048, 2048)
@@ -19,6 +19,7 @@ export function createLights(): WorldLights {
   sun.shadow.camera.right = 80
   sun.shadow.camera.top = 80
   sun.shadow.camera.bottom = -80
+  sun.shadow.bias = -0.0002
 
   return {
     ambient,
@@ -26,6 +27,7 @@ export function createLights(): WorldLights {
     addTo(scene) {
       scene.add(ambient)
       scene.add(sun)
+      scene.add(sun.target)
     },
   }
 }
