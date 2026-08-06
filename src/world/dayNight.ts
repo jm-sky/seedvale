@@ -37,6 +37,8 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
   fogNear: number
   fogFar: number
   fogColor: number
+  /** 0 = full night, 1 = full day — shared by lights/fog/water. */
+  dayFactor: number
 } {
   // elev: -1 night … 0 horizon … +1 noon
   const elev = Math.sin((timeOfDay - 0.25) * Math.PI * 2)
@@ -71,6 +73,7 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
     fogNear,
     fogFar,
     fogColor,
+    dayFactor,
   }
 }
 

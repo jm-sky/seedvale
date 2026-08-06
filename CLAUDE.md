@@ -24,7 +24,7 @@ New issues: `YYYY-MM-DD--NNN--slug.md`; reviews/research/plans: `YYYY-MM-DD-slug
 |--------|------|
 | **v0.1** teren + 3rd person + mysz | done |
 | **v0.2** osada + NPC (woda / drewno / jedzenie) + etykiety | done |
-| **v0.3** fauna chase/flee (kapsuły) | done (logika); GLB fauna — open |
+| **v0.3** fauna chase/flee + GLB (wolf/fox/deer/stag) | done |
 | Dzień/noc + HUD + time multiplier | done |
 | Config + lil-gui + `localStorage` | done |
 | Lasy: klastry drzew skalowane do `halfExtent` mapy | done |
@@ -48,7 +48,7 @@ src/ai/                       # Needs, NpcAgent
 src/fauna/                    # AnimalAgent, createFauna
 src/ui/                       # lil-gui, HUD
 src/assets/loadGltf.ts        # GLTF loader helpers
-public/models/                # settlement / nature / (fauna later)
+public/models/                # settlement / nature / fauna / characters
 ```
 
 ### Konfiguracja (GUI / storage)
@@ -61,10 +61,9 @@ public/models/                # settlement / nature / (fauna later)
 ### Otwarte / kolejka
 
 1. Woda: fix brzegu + dzień/noc → [issues 001](docs/issues/2026-08-07--001--water-shore-color-banding.md), [002](docs/issues/2026-08-07--002--water-daynight-integration.md) (review done: [docs/reviews/2026-08-07-water-quality.md](docs/reviews/2026-08-07-water-quality.md))
-2. Podpięcie GLB fauny (`public/models/fauna/`) pod `userData.animalKind`
-3. Game UI screens (nie lil-gui) → [plans/2026-08-07--game-ui-screens.md](docs/plans/2026-08-07--game-ui-screens.md)
-4. Streaming + save DB → [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md)
-5. v0.4+ questy
+2. Game UI screens (nie lil-gui) → [plans/2026-08-07--game-ui-screens.md](docs/plans/2026-08-07--game-ui-screens.md)
+3. Streaming + save DB → [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md)
+4. v0.4+ questy
 
 ### Research
 

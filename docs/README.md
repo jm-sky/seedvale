@@ -4,8 +4,10 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 
 ## Główne dokumenty
 
-- **[ROADMAP.md](./ROADMAP.md)** — punkt wejścia (PR v0.1–v0.3: wioska + teren + fauna)
-- **[features/](./features/)** — szczegółowe plany implementacji funkcji
+- **[ROADMAP.md](./ROADMAP.md)** — punkt wejścia + handoff  
+- **[../CLAUDE.md](../CLAUDE.md)** — aktualny stan kodu (czytaj na start sesji)  
+- **[features/](./features/)** — FEATURE-y (jeszcze puste)  
+- **[reviews/](./reviews/README.md)** — kolejka `to-do--*` (woda)  
 
 ## Workflow (issues, reviews, research, plans)
 
@@ -49,4 +51,4 @@ Meta-prompty do powtarzalnych zadań (struktura docs, review, itd.).
 
 ---
 
-**Ostatnia aktualizacja:** 2026-08-07
+**Ostatnia aktualizacja:** 2026-08-07 (handoff sesji)

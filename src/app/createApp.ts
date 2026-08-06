@@ -54,7 +54,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
   let terrain = buildTerrain(scene, config)
   let water = buildWater(scene, terrain)
   let settlement = await buildSettlement(scene, terrain, config.seed)
-  let fauna = buildFauna(scene, terrain, settlement, config.seed)
+  let fauna = await buildFauna(scene, terrain, settlement, config.seed)
 
   const keyboard = createKeyboard()
   const mouseLook = createMouseLook(renderer.domElement)
@@ -83,7 +83,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     terrain = buildTerrain(scene, config)
     water = buildWater(scene, terrain)
     settlement = await buildSettlement(scene, terrain, config.seed)
-    fauna = buildFauna(scene, terrain, settlement, config.seed)
+    fauna = await buildFauna(scene, terrain, settlement, config.seed)
     player.setGround(terrain.sampleHeight, terrain.halfExtent)
     player.setPosition(settlement.spawn.x, settlement.spawn.z)
     hud.setSeed(config.seed)
@@ -97,7 +97,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
 
   const onDayNightChange = () => {
     if (dayNight.enabled) {
-      applyDayNight(dayNight.timeOfDay, sky, lights, scene)
+      applyDayNight(dayNight.timeOfDay, sky, lights, scene, water)
     }
   }
 
@@ -111,7 +111,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
       })
     : null
 
-  applyDayNight(dayNight.timeOfDay, sky, lights, scene)
+  applyDayNight(dayNight.timeOfDay, sky, lights, scene, water)
 
   const clock = new Clock()
   let frameId = 0
@@ -131,7 +131,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     const dt = Math.min(clock.getDelta(), 0.05)
     tickDayNight(dayNight, dt)
     if (dayNight.enabled) {
-      applyDayNight(dayNight.timeOfDay, sky, lights, scene)
+      applyDayNight(dayNight.timeOfDay, sky, lights, scene, water)
     }
     hud.setTime(dayNight.timeOfDay)
     player.update(dt)
@@ -168,6 +168,7 @@ function applyDayNight(
   sky: ReturnType<typeof createSky>,
   lights: ReturnType<typeof createLights>,
   scene: Scene,
+  water: WorldWater,
 ): void {
   const p = skyParamsFromTime(timeOfDay)
   sky.setParams(
@@ -188,6 +189,7 @@ function applyDayNight(
     fog.near = p.fogNear
     fog.far = p.fogFar
   }
+  water.setDayNight(p.dayFactor)
 }
 
 function buildTerrain(
@@ -225,7 +227,7 @@ function buildFauna(
   terrain: Terrain,
   settlement: Settlement,
   seed: number,
-): Fauna {
+): Promise<Fauna> {
   return createFauna(
     scene,
     terrain.sampleHeight,

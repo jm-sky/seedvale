@@ -16,9 +16,18 @@ import type { Heightmap } from '../terrain/generateHeightmap'
 export type WorldWater = {
   mesh: Mesh
   update: (dt: number) => void
+  /** 0 = full night, 1 = full day — darkens/tints water in step with sky/fog/lights. */
+  setDayNight: (dayFactor: number) => void
   addTo: (scene: Scene) => void
   dispose: () => void
 }
+
+const DAY_DEEP = new Color(0x1a4d6b)
+const DAY_SHALLOW = new Color(0x4fa3c8)
+const DAY_FOAM = new Color(0xc8e8f4)
+const NIGHT_DEEP = new Color(0x060f18)
+const NIGHT_SHALLOW = new Color(0x14283a)
+const NIGHT_FOAM = new Color(0x4a6a78)
 
 function createHeightTexture(heightmap: Heightmap): DataTexture {
   const { resolution } = heightmap.params
@@ -49,9 +58,9 @@ export function createWater(heightmap: Heightmap): WorldWater {
     side: DoubleSide,
     uniforms: {
       uTime: { value: 0 },
-      uDeep: { value: new Color(0x1a4d6b) },
-      uShallow: { value: new Color(0x4fa3c8) },
-      uFoam: { value: new Color(0xc8e8f4) },
+      uDeep: { value: DAY_DEEP.clone() },
+      uShallow: { value: DAY_SHALLOW.clone() },
+      uFoam: { value: DAY_FOAM.clone() },
       uOpacity: { value: 0.82 },
       uHeightmap: { value: heightTex },
       uMapSize: { value: size },
@@ -114,6 +123,14 @@ export function createWater(heightmap: Heightmap): WorldWater {
     mesh,
     update(dt) {
       material.uniforms.uTime!.value += dt
+    },
+    setDayNight(dayFactor) {
+      const deep = material.uniforms.uDeep!.value as Color
+      const shallow = material.uniforms.uShallow!.value as Color
+      const foam = material.uniforms.uFoam!.value as Color
+      deep.copy(NIGHT_DEEP).lerp(DAY_DEEP, dayFactor)
+      shallow.copy(NIGHT_SHALLOW).lerp(DAY_SHALLOW, dayFactor)
+      foam.copy(NIGHT_FOAM).lerp(DAY_FOAM, dayFactor)
     },
     addTo(scene) {
       scene.add(mesh)

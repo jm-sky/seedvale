@@ -1,5 +1,6 @@
 import {
   Box3,
+  type AnimationClip,
   type Group,
   type Material,
   type Mesh,
@@ -7,12 +8,25 @@ import {
   Vector3,
 } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 
 const loader = new GLTFLoader()
-const cache = new Map<string, Promise<Group>>()
 
-/** Load a GLB/glTF from `/public` (e.g. `/models/settlement/hut_a.glb`). Cached by URL. */
-export function loadGltf(url: string): Promise<Group> {
+type CachedGltf = {
+  root: Group
+  animations: AnimationClip[]
+}
+
+const cache = new Map<string, Promise<CachedGltf>>()
+
+export type GltfAsset = {
+  root: Group
+  animations: AnimationClip[]
+  /** Skinned-safe clone of the prepared root. */
+  clone: () => Group
+}
+
+function loadCached(url: string): Promise<CachedGltf> {
   let pending = cache.get(url)
   if (!pending) {
     pending = loader.loadAsync(url).then((gltf) => {
@@ -23,11 +37,34 @@ export function loadGltf(url: string): Promise<Group> {
         mesh.castShadow = true
         mesh.receiveShadow = true
       })
-      return root
+      return { root, animations: gltf.animations ?? [] }
     })
     cache.set(url, pending)
   }
-  return pending.then((root) => root.clone(true))
+  return pending
+}
+
+/** Load a GLB/glTF from `/public` (e.g. `/models/settlement/hut_a.glb`). Cached by URL. */
+export function loadGltf(url: string): Promise<Group> {
+  return loadCached(url).then((asset) => cloneSkinned(asset.root) as Group)
+}
+
+/** Load GLB with animation clips (shared); clones use SkeletonUtils. */
+export async function loadGltfAsset(url: string): Promise<GltfAsset> {
+  const asset = await loadCached(url)
+  return {
+    root: asset.root,
+    animations: asset.animations,
+    clone: () => cloneSkinned(asset.root) as Group,
+  }
+}
+
+/** Alias for NPC code: `{ scene, animations }` with a skinned-safe scene clone. */
+export async function loadGltfAnimated(
+  url: string,
+): Promise<{ scene: Group, animations: AnimationClip[] }> {
+  const asset = await loadGltfAsset(url)
+  return { scene: asset.clone(), animations: asset.animations }
 }
 
 const _box = new Box3()

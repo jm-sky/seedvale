@@ -102,21 +102,21 @@ export function createStockpile(): THREE.Group {
   return pile
 }
 
-export function createTree(): THREE.Group {
+export function createTree(scale = 1): THREE.Group {
   const tree = new THREE.Group()
   const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.18, 0.25, 1.6, 6),
+    new THREE.CylinderGeometry(0.18 * scale, 0.25 * scale, 1.6 * scale, 6),
     new THREE.MeshStandardMaterial({ color: 0x5c4033, flatShading: true }),
   )
-  trunk.position.y = 0.8
+  trunk.position.y = 0.8 * scale
   trunk.castShadow = true
   tree.add(trunk)
 
   const crown = new THREE.Mesh(
-    new THREE.ConeGeometry(1.1, 2.2, 6),
+    new THREE.ConeGeometry(1.1 * scale, 2.2 * scale, 6),
     new THREE.MeshStandardMaterial({ color: 0x2f6b3a, flatShading: true }),
   )
-  crown.position.y = 2.3
+  crown.position.y = 2.3 * scale
   crown.castShadow = true
   tree.add(crown)
   return tree
@@ -160,9 +160,80 @@ async function loadPropOrFallback(
   }
 }
 
+type ClusterSize = 'medium' | 'small'
+
+function mulberry(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+async function loadTreeTemplates(): Promise<THREE.Object3D[]> {
+  const loaded = await Promise.all(
+    TREE_URLS.map((url) => loadPropOrFallback(url, 4.2, () => createTree(1))),
+  )
+  return loaded
+}
+
+function cloneTree(
+  templates: THREE.Object3D[],
+  index: number,
+  scale: number,
+): THREE.Object3D {
+  const src = templates[index % templates.length]!
+  const tree = src.clone(true)
+  tree.scale.multiplyScalar(scale)
+  tree.rotation.y = Math.random() * Math.PI * 2
+  return tree
+}
+
+function plantTreeCluster(
+  group: THREE.Group,
+  landmarks: SettlementLandmarks,
+  templates: THREE.Object3D[],
+  cx: number,
+  cz: number,
+  size: ClusterSize,
+  sampleHeight: (x: number, z: number) => number,
+  waterLevel: number,
+  halfExtent: number,
+  random: () => number,
+  treeCounter: { n: number },
+): void {
+  const count =
+    size === 'small' ? 4 + Math.floor(random() * 4) : 7 + Math.floor(random() * 6)
+  const radius = size === 'small' ? 3.2 : 6.5
+  const limit = halfExtent - 2
+
+  for (let i = 0; i < count; i++) {
+    const a = random() * Math.PI * 2
+    const d = Math.sqrt(random()) * radius
+    const tx = cx + Math.cos(a) * d
+    const tz = cz + Math.sin(a) * d
+    if (Math.abs(tx) > limit || Math.abs(tz) > limit) continue
+
+    const y = sampleHeight(tx, tz)
+    if (y <= waterLevel + 0.55) continue
+
+    const scale = 0.7 + random() * 0.6
+    const tree = cloneTree(templates, treeCounter.n++, scale)
+    placeOnGround(tree, tx, tz, sampleHeight)
+    group.add(tree)
+    landmarks.trees.push(new THREE.Vector3(tx, y, tz))
+  }
+}
+
 export async function buildSettlementProps(
   site: SettlementSite,
   sampleHeight: (x: number, z: number) => number,
+  waterLevel: number,
+  halfExtent: number,
+  seed: number,
 ): Promise<{ group: THREE.Group, landmarks: SettlementLandmarks }> {
   const group = new THREE.Group()
   group.name = 'settlement'
@@ -221,26 +292,98 @@ export async function buildSettlementProps(
     landmarks.homes.push(new THREE.Vector3(hx, sampleHeight(hx, hz), hz))
   }
 
-  const treeOffsets = [
-    [8, 6],
-    [10, 2],
-    [7, -5],
-    [-8, 7],
-    [-9, -4],
-    [3, 9],
-  ] as const
-  for (let i = 0; i < treeOffsets.length; i++) {
-    const [dx, dz] = treeOffsets[i]!
-    const tx = site.x + dx
-    const tz = site.z + dz
-    const tree = await loadPropOrFallback(
-      TREE_URLS[i % TREE_URLS.length]!,
-      4.2,
-      createTree,
+  const random = mulberry(seed ^ 0x7e3d)
+  const templates = await loadTreeTemplates()
+  const treeCounter = { n: 0 }
+
+  // Scale forests to map size (halfExtent), not fixed village yards.
+  const nearR = Math.min(18, halfExtent * 0.22)
+  const midMin = halfExtent * 0.32
+  const midMax = halfExtent * 0.55
+  const farMin = halfExtent * 0.55
+  const farMax = halfExtent * 0.88
+
+  // Only a couple of small woodlots by the village (NPC wood).
+  const nearCenters: Array<[number, number]> = [
+    [nearR * 0.7, nearR * 0.35],
+    [-nearR * 0.75, nearR * 0.4],
+  ]
+  for (const [dx, dz] of nearCenters) {
+    plantTreeCluster(
+      group,
+      landmarks,
+      templates,
+      site.x + dx,
+      site.z + dz,
+      'small',
+      sampleHeight,
+      waterLevel,
+      halfExtent,
+      random,
+      treeCounter,
     )
-    placeOnGround(tree, tx, tz, sampleHeight)
-    group.add(tree)
-    landmarks.trees.push(new THREE.Vector3(tx, sampleHeight(tx, tz), tz))
+  }
+
+  // Mid forest belt — away from houses, still walkable from village.
+  const midCount = 12 + Math.floor(random() * 5)
+  for (let i = 0; i < midCount; i++) {
+    const angle = (i / midCount) * Math.PI * 2 + (random() - 0.5) * 0.55
+    const dist = midMin + random() * (midMax - midMin)
+    plantTreeCluster(
+      group,
+      landmarks,
+      templates,
+      site.x + Math.cos(angle) * dist,
+      site.z + Math.sin(angle) * dist,
+      random() < 0.35 ? 'small' : 'medium',
+      sampleHeight,
+      waterLevel,
+      halfExtent,
+      random,
+      treeCounter,
+    )
+  }
+
+  // Far belt toward map edges.
+  const farCount = 14 + Math.floor(random() * 6)
+  for (let i = 0; i < farCount; i++) {
+    const angle = random() * Math.PI * 2
+    const dist = farMin + random() * (farMax - farMin)
+    plantTreeCluster(
+      group,
+      landmarks,
+      templates,
+      site.x + Math.cos(angle) * dist,
+      site.z + Math.sin(angle) * dist,
+      random() < 0.3 ? 'small' : 'medium',
+      sampleHeight,
+      waterLevel,
+      halfExtent,
+      random,
+      treeCounter,
+    )
+  }
+
+  // Fill the rest of the map with scattered clumps (not centered on village).
+  const fillCount = 10 + Math.floor(random() * 6)
+  for (let i = 0; i < fillCount; i++) {
+    const tx = (random() * 2 - 1) * (halfExtent * 0.9)
+    const tz = (random() * 2 - 1) * (halfExtent * 0.9)
+    // Keep a clear meadow around the settlement.
+    if (Math.hypot(tx - site.x, tz - site.z) < midMin * 0.85) continue
+    plantTreeCluster(
+      group,
+      landmarks,
+      templates,
+      tx,
+      tz,
+      random() < 0.4 ? 'small' : 'medium',
+      sampleHeight,
+      waterLevel,
+      halfExtent,
+      random,
+      treeCounter,
+    )
   }
 
   return { group, landmarks }

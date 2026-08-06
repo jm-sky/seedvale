@@ -14,13 +14,13 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 
 | Review | Scope | Status | File |
 |--------|-------|--------|------|
-| Water quality | Stylized woda — brzegi, shader, vs Water.js | `todo` | [to-do--water-quality.md](./to-do--water-quality.md) |
+| — | — | — | — |
 
 ## Completed / scheduled
 
 | Review | Scope | Status | File |
 |--------|-------|--------|------|
-| — | — | — | — |
+| Water quality | Stylized woda — brzegi, shader, vs Water.js | `done` | [2026-08-07-water-quality.md](./2026-08-07-water-quality.md) |
 
 ## After each run
 

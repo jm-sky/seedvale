@@ -29,7 +29,7 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 | **v0.1** | Teren heightmap + chodzenie 3rd person + mysz | `done` |
 | **v0.2** | Osada + 3–5 NPC (woda / drewno / jedzenie) + etykiety + spawn | `done` |
 | **v0.3** | Fauna predators & prey (chase/flee); kapsuły OK | `done` (logika) |
-| **v0.3 art** | Swap fauny na GLB z `public/models/fauna/` | open |
+| **v0.3 art** | Swap fauny na GLB z `public/models/fauna/` (wolf/fox/deer/stag) | `done` |
 | **v0.4+** | Proste questy → później generator (+ OpenRouter) | później |
 | **później** | Chunk streaming + zapis (IndexedDB → DB) | `planned` |
 | **później** | Game UI (ekrany/dialogi, nie tylko lil-gui) | `planned` |
@@ -45,7 +45,7 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 ## Następne kroki (dla nowej sesji)
 
 1. [x] Review wody (Claude): [reviews/2026-08-07-water-quality.md](./reviews/2026-08-07-water-quality.md) → follow-up: [issues 001](./issues/2026-08-07--001--water-shore-color-banding.md), [002](./issues/2026-08-07--002--water-daynight-integration.md)  
-2. [ ] GLB fauna pod `AnimalAgent` / `userData.animalKind`  
+2. [x] GLB fauna pod `AnimalAgent` / `userData.animalKind` (Quaternius: wolf/fox/deer/stag; Idle/Walk/Gallop)  
 3. [ ] Opcjonalnie: game UI → [plans/2026-08-07--game-ui-screens.md](./plans/2026-08-07--game-ui-screens.md)  
 4. [ ] v0.4 questy — dopiero po decyzji scope  
 

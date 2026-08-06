@@ -1,5 +1,4 @@
 import {
-  type Material,
   type Scene,
   Vector3,
 } from 'three'
@@ -23,25 +22,32 @@ export async function createSettlement(
   seed: number,
 ): Promise<Settlement> {
   const site = findSettlementSite(sampleHeight, waterLevel, halfExtent, seed)
-  const { group, landmarks } = await buildSettlementProps(site, sampleHeight)
+  const { group, landmarks } = await buildSettlementProps(
+    site,
+    sampleHeight,
+    waterLevel,
+    halfExtent,
+    seed,
+  )
   scene.add(group)
 
-  const agents: NpcAgent[] = []
   const count = Math.min(5, Math.max(3, landmarks.homes.length + 1))
-  for (let i = 0; i < count; i++) {
-    const home =
-      landmarks.homes[i % landmarks.homes.length] ??
-      landmarks.well.clone()
-    const agent = new NpcAgent(
-      sampleHeight,
-      landmarks,
-      home,
-      i,
-      i / Math.max(1, count - 1),
-    )
-    scene.add(agent.mesh)
-    agents.push(agent)
-  }
+  const agents = await Promise.all(
+    Array.from({ length: count }, async (_, i) => {
+      const home =
+        landmarks.homes[i % landmarks.homes.length] ??
+        landmarks.well.clone()
+      const agent = await NpcAgent.create(
+        sampleHeight,
+        landmarks,
+        home,
+        i,
+        i / Math.max(1, count - 1),
+      )
+      scene.add(agent.mesh)
+      return agent
+    }),
+  )
 
   const spawn = new Vector3(
     site.x + 3.5,
@@ -57,10 +63,8 @@ export async function createSettlement(
     },
     dispose() {
       for (const agent of agents) {
-        agent.disposeLabel()
+        agent.dispose()
         agent.mesh.removeFromParent()
-        agent.mesh.geometry.dispose()
-        ;(agent.mesh.material as Material).dispose()
       }
       disposeSettlementGroup(group)
       group.removeFromParent()
