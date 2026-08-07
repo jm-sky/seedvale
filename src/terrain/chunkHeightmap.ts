@@ -49,6 +49,49 @@ export type RegionParams = {
    *  `waterLevel` — see `biomeRegions.ts`. */
   swampThreshold: number
   swampThresholdWidth: number
+  /** Tunables for road/path corridor width + strength — see `roadNetwork.ts`. */
+  roadNetwork: RoadNetworkParams
+}
+
+export type RoadNetworkParams = {
+  /** Corridor half-width (world units) for inter-settlement roads. */
+  roadHalfWidth: number
+  /** How strongly terrain height blends toward the route's smoothed profile
+   *  inside a road corridor (0 = untouched, 1 = fully replaced). */
+  roadHeightStrength: number
+  /** How strongly the ground color blends toward `DIRT` inside a road corridor. */
+  roadTintStrength: number
+  /** Corridor half-width (world units) for settlement↔minor-location paths —
+   *  narrower than a road, barely reshapes the terrain. */
+  pathHalfWidth: number
+  pathHeightStrength: number
+  pathTintStrength: number
+  /** Arc-length window (world units) for the moving-average smoothing pass
+   *  applied to a route's raw elevation profile. */
+  smoothingWindow: number
+  /** Max nearest-neighbor settlements a settlement connects a road to. */
+  maxNeighborRoads: number
+  /** Max radius (world units) searched outward from a settlement for a
+   *  coastline to place its dock/pier minor location. */
+  dockSearchRadius: number
+}
+
+/** A single road/path segment's terrain-shaping data, already resolved to
+ *  world-space endpoints + strengths — plain numeric, worker-safe. Computed
+ *  main-thread-only by `settlement/roadNetwork.ts` (routing/settlement-graph
+ *  logic doesn't belong in the worker-safe terrain module), passed in as
+ *  per-chunk input data like `isHomeChunk`. */
+export type RoadCorridorSegment = {
+  ax: number
+  az: number
+  /** Smoothed route height at endpoint `a` (already blended, not raw terrain). */
+  ah: number
+  bx: number
+  bz: number
+  bh: number
+  halfWidth: number
+  heightStrength: number
+  tintStrength: number
 }
 
 export type ChunkTileParams = {
@@ -76,6 +119,15 @@ export type ChunkTileParams = {
    *  `CACTUS_SPECS`/`REED_SPECS` from `props.ts` there, so worker-side code
    *  never pulls in THREE mesh-building/GLTF-loader code it will never run. */
   vegetationSpeciesCount: { tree: number; bush: number; cactus: number; reed: number }
+  /** Road/path corridors near this chunk — see `RoadCorridorSegment`. Usually
+   *  0–6 entries. Excluded from `RawSampleParams`: the analytic samplers below
+   *  (`sampleHeightAt` etc.) are what `roadNetwork.ts` itself uses to find
+   *  routes/dock sites in the first place, so they must stay road-agnostic to
+   *  avoid a circular dependency (a route smoothing based on a height function
+   *  that already depends on that same route). Road smoothing is applied only
+   *  in `computeChunkTile`'s tile-building loop, layered on top of the raw
+   *  analytic height. */
+  roadSegments: RoadCorridorSegment[]
 }
 
 export type RawSampleParams = Omit<
@@ -86,6 +138,7 @@ export type RawSampleParams = Omit<
   | 'resolution'
   | 'isHomeChunk'
   | 'vegetationSpeciesCount'
+  | 'roadSegments'
 >
 
 export type ChunkTileData = {
@@ -102,6 +155,11 @@ export type ChunkTileData = {
    *  region classification — see `biomeRegions.ts`. Independent of `biomes`
    *  (fine-grained detail moisture, unchanged). */
   moistureRegion: Float32Array
+  /** 0 (no road nearby) .. 1 (road/path center) — corridor falloff × tint
+   *  strength of the nearest/strongest `roadSegments` entry. Height is baked
+   *  directly into `heights`/`floorHeights` instead; this grid exists only for
+   *  `applyRoadTint` (`biomeColors.ts`) and vegetation/grass rejection. */
+  roadTint: Float32Array
 }
 
 type NoiseHandles = {
@@ -326,6 +384,74 @@ export function extractCoreGrid(
   return out
 }
 
+/** Perpendicular-distance-squared from `(px,pz)` to segment `(ax,az)-(bx,bz)`,
+ *  plus the clamped [0,1] projection fraction `t` along it. */
+function projectOntoSegment(
+  px: number,
+  pz: number,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): { distSq: number; t: number } {
+  const dx = bx - ax
+  const dz = bz - az
+  const lenSq = dx * dx + dz * dz
+  if (lenSq < 1e-6) {
+    const ddx = px - ax
+    const ddz = pz - az
+    return { distSq: ddx * ddx + ddz * ddz, t: 0 }
+  }
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / lenSq))
+  const cx = ax + dx * t
+  const cz = az + dz * t
+  const ddx = px - cx
+  const ddz = pz - cz
+  return { distSq: ddx * ddx + ddz * ddz, t }
+}
+
+/** Fraction of a corridor's `halfWidth` over which the road/path is at full
+ *  strength before tapering off — keeps the edge soft instead of a hard cutoff,
+ *  same idea as `SEABED_BLEND`/`LAND_BLEND` in `biomeColors.ts`. */
+const ROAD_INNER_FRACTION = 0.6
+
+/** Blends a texel's `floorH` toward the nearest/strongest road corridor's
+ *  smoothed route profile, and returns the tint strength for `applyRoadTint`.
+ *  Segments are plain per-chunk input data (`ChunkTileParams.roadSegments`) —
+ *  see its doc comment for why this lives here and not in `sampleRawTexel`. */
+function applyRoadCorridor(
+  wx: number,
+  wz: number,
+  floorH: number,
+  segments: readonly RoadCorridorSegment[],
+): { floorH: number; tint: number } {
+  let bestFalloff = 0
+  let bestTargetH = 0
+  let bestHeightStrength = 0
+  let bestTint = 0
+
+  for (const seg of segments) {
+    const { distSq, t } = projectOntoSegment(wx, wz, seg.ax, seg.az, seg.bx, seg.bz)
+    if (distSq >= seg.halfWidth * seg.halfWidth) continue
+    const dist = Math.sqrt(distSq)
+    const inner = seg.halfWidth * ROAD_INNER_FRACTION
+    const falloff = 1 - MathUtils.smoothstep(dist, inner, seg.halfWidth)
+    if (falloff > bestFalloff) {
+      bestFalloff = falloff
+      bestTargetH = MathUtils.lerp(seg.ah, seg.bh, t)
+      bestHeightStrength = seg.heightStrength
+    }
+    const tint = falloff * seg.tintStrength
+    if (tint > bestTint) bestTint = tint
+  }
+
+  if (bestFalloff <= 0) return { floorH, tint: 0 }
+  return {
+    floorH: MathUtils.lerp(floorH, bestTargetH, bestFalloff * bestHeightStrength),
+    tint: bestTint,
+  }
+}
+
 /**
  * Computes one chunk's apron-inclusive heightmap tile. Pure, environment-agnostic —
  * safe on the main thread or inside a worker. No map-edge concept (no guaranteed
@@ -349,6 +475,7 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
   const continentalness = new Float32Array(apronRes * apronRes)
   const mountainRidge = new Float32Array(apronRes * apronRes)
   const moistureRegion = new Float32Array(apronRes * apronRes)
+  const roadTint = new Float32Array(apronRes * apronRes)
 
   for (let iz = 0; iz < apronRes; iz++) {
     for (let ix = 0; ix < apronRes; ix++) {
@@ -356,17 +483,36 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
       const wz = originZ + iz * step
       const sample = sampleRawTexel(wx, wz, noise, params)
       const idx = iz * apronRes + ix
-      heights[idx] = sample.h
-      floorHeights[idx] = sample.floorH
+
+      let floorH = sample.floorH
+      let tint = 0
+      if (params.roadSegments.length > 0) {
+        const road = applyRoadCorridor(wx, wz, floorH, params.roadSegments)
+        floorH = road.floorH
+        tint = road.tint
+      }
+
+      heights[idx] = floorH < waterLevel ? waterLevel : floorH
+      floorHeights[idx] = floorH
       biomes[idx] = sample.m
       continentalness[idx] = sample.continentalness
       mountainRidge[idx] = sample.mountainRidge
       moistureRegion[idx] = sample.moistureRegion
+      roadTint[idx] = tint
     }
   }
 
   const waterBodies = detectWaterBodies(heights, apronRes, waterLevel, step)
   const bodyScale = computeBodyScale(waterBodies)
 
-  return { heights, floorHeights, biomes, bodyScale, continentalness, mountainRidge, moistureRegion }
+  return {
+    heights,
+    floorHeights,
+    biomes,
+    bodyScale,
+    continentalness,
+    mountainRidge,
+    moistureRegion,
+    roadTint,
+  }
 }

@@ -81,6 +81,7 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
             continentalness: msg.continentalness,
             mountainRidge: msg.mountainRidge,
             moistureRegion: msg.moistureRegion,
+            roadTint: msg.roadTint,
             vegetation: msg.vegetation,
             items: msg.items,
           })

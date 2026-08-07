@@ -41,6 +41,8 @@ const TREELINE_ALTITUDE = 0.5
 const TREELINE_FADE_START = TREELINE_ALTITUDE * 0.6
 /** Reject candidates sitting on a strong mountain ridge crest, regardless of altitude. */
 const MOUNTAIN_RIDGE_REJECT = 0.3
+/** Reject candidates sitting on a road/path corridor (`tile.roadTint`, `chunkHeightmap.ts`). */
+const ROAD_TINT_REJECT = 0.15
 
 /** Small upward bias on the blade base — the sampled height is bilinearly
  *  interpolated across a heightmap cell while the *rendered* terrain surface is
@@ -233,6 +235,8 @@ export function createGrassSystem(): GrassSystem {
 
       const ridge = sample(tile.mountainRidge, wx, wz)
       if (ridge > MOUNTAIN_RIDGE_REJECT) continue // bare ridge crest
+
+      if (sample(tile.roadTint, wx, wz) > ROAD_TINT_REJECT) continue // road/path corridor
 
       const moisture = sample(tile.biomes, wx, wz)
       const moistureRegion = sample(tile.moistureRegion, wx, wz)

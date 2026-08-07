@@ -9,6 +9,8 @@ const SNOW = new Color(0xdfe6ee)
 const ABYSS = new Color(0x122622)
 /** Swamp shoreline — replaces the default tan `SAND` band with muddy ground. */
 const MUD = new Color(0x4a3f2a)
+/** Road/path corridor — packed dirt/gravel. */
+const DIRT = new Color(0x9c8563)
 
 /** Shore sand band above water (world units). */
 export const SAND_BAND = 0.6
@@ -192,6 +194,17 @@ export function applyOceanDepthTint(
   const abyssT = 1 - MathUtils.smoothstep(continentalness, 0.0, 0.3)
   if (abyssT <= 0) return
   color.lerpHSL(ABYSS, abyssT * 0.7)
+}
+
+/**
+ * Blends toward packed dirt/gravel inside a road/path corridor. `roadTint`
+ * is `tile.roadTint` (`chunkHeightmap.ts`) — already the corridor falloff ×
+ * per-segment tint strength, so a wide/strong road reads as clearly worn
+ * ground while a narrow/weak path barely tints the grass under it.
+ */
+export function applyRoadTint(color: Color, roadTint: number): void {
+  if (roadTint <= 0) return
+  color.lerpHSL(DIRT, Math.min(1, roadTint))
 }
 
 /**

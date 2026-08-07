@@ -3,6 +3,7 @@ import {
   applyMicroTint,
   applyMountainRock,
   applyOceanDepthTint,
+  applyRoadTint,
   applySlopeRock,
   colorForTerrain,
 } from './biomeColors'
@@ -115,6 +116,15 @@ export function buildChunkGeometry(
       x,
       z,
     )
+    const roadTint = sampleApronGrid(
+      tile.roadTint,
+      apronRes,
+      apronOriginX,
+      apronOriginZ,
+      step,
+      x,
+      z,
+    )
     const steepness = 1 - n.y
     const altitude01 = (h - waterLevel) / Math.max(heightScale, 0.001)
     const biomeWeights = biomeWeightsAt(moistureRegion, altitude01, region)
@@ -124,6 +134,7 @@ export function buildChunkGeometry(
     applyMountainRock(tmp, mountainRidge, h, waterLevel, heightScale)
     applyOceanDepthTint(tmp, continentalness, h, waterLevel)
     applyMicroTint(tmp, h, waterLevel, chunkOriginX + x, chunkOriginZ + z)
+    applyRoadTint(tmp, roadTint)
 
     colors[i * 3] = tmp.r
     colors[i * 3 + 1] = tmp.g

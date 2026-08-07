@@ -28,6 +28,8 @@ const SLOPE_REJECT = 0.9
 const TREELINE_ALTITUDE = 0.6
 /** Reject candidates sitting on a strong mountain ridge crest, regardless of altitude. */
 const MOUNTAIN_RIDGE_REJECT = 0.35
+/** Reject candidates sitting on a road/path corridor (`tile.roadTint`, `chunkHeightmap.ts`). */
+const ROAD_TINT_REJECT = 0.15
 
 /** Per-chunk hash so nearby chunks don't get correlated candidate layouts. */
 function hashChunk(cx: number, cz: number): number {
@@ -89,6 +91,8 @@ export function computeChunkVegetation(
 
     const ridge = sample(tile.mountainRidge, wx, wz)
     if (ridge > MOUNTAIN_RIDGE_REJECT) continue // bare ridge crest
+
+    if (sample(tile.roadTint, wx, wz) > ROAD_TINT_REJECT) continue // road/path corridor
 
     const moisture = sample(tile.biomes, wx, wz)
     const continentalness = sample(tile.continentalness, wx, wz)
