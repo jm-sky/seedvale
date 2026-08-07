@@ -69,4 +69,5 @@ Odrzucone: reużycie pełnego `createTerrainMesh` w mniejszej rozdzielczości na
 - [research/2026-08-07-simodev-refs-review.md](../research/2026-08-07-simodev-refs-review.md) — audyt referencji SimonDev
 - [plans/2026-08-07--terrain-worker-pool.md](./2026-08-07--terrain-worker-pool.md) — blokuje start (kolejność)
 - [plans/2026-08-07--world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md) — osobna inicjatywa, nie mylić z góralnym tłem tutaj
+- [plans/2026-08-07--biome-regions.md](./2026-08-07--biome-regions.md) — kontynuacja "więcej roślinności" w stronę makro-obszarów o odrębnym charakterze (pustynia/bagno/las)
 - `src/settlement/props.ts`, `src/world/createSky.ts`, `src/world/dayNight.ts`, `src/terrain/fbm.ts`, `src/app/createApp.ts`, `src/scene/createCamera.ts`
