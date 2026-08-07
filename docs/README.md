@@ -4,6 +4,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 
 ## Główne dokumenty
 
+- **[VISION.md](./VISION.md)** — wizja i kontekst produktu (czym jest Seedvale, dla kogo, filozofia projektowania — czytaj przed planowaniem nowych funkcji)
 - **[ROADMAP.md](./ROADMAP.md)** — punkt wejścia + handoff  
 - **[../CLAUDE.md](../CLAUDE.md)** — aktualny stan kodu (czytaj na start sesji)  
 - **[features/](./features/)** — FEATURE-y (jeszcze puste)  

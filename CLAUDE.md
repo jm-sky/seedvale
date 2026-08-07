@@ -14,6 +14,7 @@ Katalog repo: `three-js-dev` (working dir); nazwa produktu: **Seedvale**.
 
 ## Docs workflow
 
+- **Vision:** [docs/VISION.md](docs/VISION.md) — czym jest Seedvale, filozofia projektowania, kierunki rozwoju (czytaj przed planowaniem nowych funkcji)
 - **Issues:** [docs/issues/README.md](docs/issues/README.md)
 - **Reviews:** [docs/reviews/README.md](docs/reviews/README.md) — głęboka analiza: `to-do--<slug>.md`
 - **Research:** [docs/research/README.md](docs/research/README.md)
