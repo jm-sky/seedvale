@@ -18,6 +18,7 @@ Implementation plans for features and larger changes.
 | [2026-08-07--terrain-worker-pool.md](./2026-08-07--terrain-worker-pool.md) | Worker pool dla generacji terenu (offload heightmap) | `planned` — priorytet |
 | [2026-08-07--world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md) | Chunk streaming (kierunek: duży/sferyczny świat) + zapis | `planned` |
 | [2026-08-07--post-processing-pipeline.md](./2026-08-07--post-processing-pipeline.md) | Post-processing pipeline (EffectComposer) + N8AO ambient occlusion | `planned` |
+| [2026-08-07--npc-interactions.md](./2026-08-07--npc-interactions.md) | Interakcje gracz↔NPC: proximity prompt + prosty dialog ([E]) | `verification needed` |
 
 When adding a new plan: create `YYYY-MM-DD--slug.md`, add a row here.
 

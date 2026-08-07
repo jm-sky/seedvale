@@ -1,5 +1,6 @@
-import { Clock, Fog, type Scene } from 'three'
+import { Clock, Fog, type Scene, type Vector3 } from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { NpcAgent } from '../ai/NpcAgent'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import { saveWorldConfig } from '../config/persistConfig'
 import { createWorldConfig } from '../config/worldConfig'
@@ -20,6 +21,7 @@ import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
 import { createLoadingScreen } from '../ui/createLoadingScreen'
+import { createNpcDialog } from '../ui/createNpcDialog'
 import { createPauseMenu } from '../ui/createPauseMenu'
 import { createLights } from '../world/createLights'
 import { createOcean, type WorldOcean } from '../world/createOcean'
@@ -36,6 +38,12 @@ import { syncSeedInUrl } from '../world/parseSeed'
  *  animals behave identically whether the player is standing right there or has
  *  wandered many chunks away. */
 const HOME_RADIUS = 56
+
+/** How close (world units) the player must be to an NPC before it becomes interactable. */
+const INTERACT_RANGE = 2.5
+/** Minimum dot(playerForward, toNpc) to count as "looking at" — ~60° half-angle cone,
+ *  needed so a dense cluster of NPCs doesn't pick whichever is merely nearest. */
+const INTERACT_MIN_DOT = 0.5
 
 /** 3×3 block of chunks around the origin, pinned so the settlement never streams
  *  out from under itself. */
@@ -150,6 +158,10 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
   })
   if (!config.showGui) gui.toggle()
 
+  // Created before pauseMenu so its Escape listener registers first — see
+  // createNpcDialog's onKeyDown comment for why registration order matters here.
+  const npcDialog = createNpcDialog(container)
+
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
     onPause: () => {
       if (document.pointerLockElement === renderer.domElement) {
@@ -183,7 +195,26 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
   const tick = () => {
     frameId = requestAnimationFrame(tick)
     const dt = Math.min(clock.getDelta(), 0.05)
-    if (!pauseMenu.isPaused()) {
+    const menuPaused = pauseMenu.isPaused()
+
+    if (menuPaused) {
+      keyboard.consumeInteract() // drop a stale press so it can't fire right after resume
+    } else if (npcDialog.isOpen()) {
+      npcDialog.setPrompt(null)
+      if (keyboard.consumeInteract()) npcDialog.close()
+    } else {
+      const target = findInteractionTarget(
+        player.mesh.position,
+        mouseLook.state.yaw,
+        settlement.npcs,
+      )
+      npcDialog.setPrompt(target ? target.name : null)
+      if (target && keyboard.consumeInteract()) {
+        npcDialog.open(target.name, target.getDialogueLine())
+      }
+    }
+
+    if (!menuPaused && !npcDialog.isOpen()) {
       tickDayNight(dayNight, dt)
       if (dayNight.enabled) {
         applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
@@ -209,6 +240,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     window.removeEventListener('resize', onResize)
     gui.dispose()
     pauseMenu.dispose()
+    npcDialog.dispose()
     hud.dispose()
     keyboard.dispose()
     mouseLook.dispose()
@@ -223,6 +255,31 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     renderer.dispose()
     renderer.domElement.remove()
   }
+}
+
+/** Nearest-in-front NPC within range, using dot(playerForward, toNpc) so a dense
+ *  cluster resolves to whichever one the player is actually looking at. */
+function findInteractionTarget(
+  playerPos: Vector3,
+  playerYaw: number,
+  npcs: readonly NpcAgent[],
+): NpcAgent | null {
+  const forwardX = -Math.sin(playerYaw)
+  const forwardZ = -Math.cos(playerYaw)
+  let best: NpcAgent | null = null
+  let bestDot = INTERACT_MIN_DOT
+  for (const npc of npcs) {
+    const dx = npc.mesh.position.x - playerPos.x
+    const dz = npc.mesh.position.z - playerPos.z
+    const dist = Math.hypot(dx, dz)
+    if (dist < 1e-4 || dist > INTERACT_RANGE) continue
+    const dot = (dx / dist) * forwardX + (dz / dist) * forwardZ
+    if (dot > bestDot) {
+      bestDot = dot
+      best = npc
+    }
+  }
+  return best
 }
 
 function applyDayNight(

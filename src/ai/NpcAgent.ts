@@ -8,6 +8,7 @@ import {
   prepareProp,
 } from '../assets/loadGltf'
 import { labelOpacityForDistance } from '../ui/labelDistance'
+import { NPC_PERSONALITIES, type Personality, pickDialogueLine } from './dialogue'
 import {
   createNeedState,
   needColor,
@@ -60,6 +61,7 @@ export class NpcAgent {
   readonly mesh: THREE.Object3D
   readonly label: CSS2DObject
   readonly name: string
+  readonly personality: Personality
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
   private readonly landmarks: SettlementLandmarks
@@ -94,6 +96,7 @@ export class NpcAgent {
     this.landmarks = landmarks
     this.home = home.clone()
     this.name = NPC_NAMES[treeIndex % NPC_NAMES.length]!
+    this.personality = NPC_PERSONALITIES[treeIndex % NPC_PERSONALITIES.length]!
     this.treeIndex = treeIndex % Math.max(1, landmarks.trees.length)
     this.needs = createNeedState(needOffset)
 
@@ -196,6 +199,10 @@ export class NpcAgent {
 
   getActiveNeed(): NeedId {
     return this.activeNeed
+  }
+
+  getDialogueLine(): string {
+    return pickDialogueLine(this.personality, this.activeNeed, this.isBusyPhase())
   }
 
   update(dt: number, observerPos: THREE.Vector3): void {
@@ -301,19 +308,22 @@ export class NpcAgent {
   }
 
   private syncAnimation(): void {
-    const busy =
-      this.phase === 'chop' ||
-      this.phase === 'deposit' ||
-      this.phase === 'drink' ||
-      this.phase === 'eat'
-
     if (this.moving && this.walkAction) {
       this.crossfade(this.walkAction)
-    } else if (busy && this.interactAction) {
+    } else if (this.isBusyPhase() && this.interactAction) {
       this.crossfade(this.interactAction)
     } else if (this.idleAction) {
       this.crossfade(this.idleAction)
     }
+  }
+
+  private isBusyPhase(): boolean {
+    return (
+      this.phase === 'chop' ||
+      this.phase === 'deposit' ||
+      this.phase === 'drink' ||
+      this.phase === 'eat'
+    )
   }
 
   private crossfade(next: THREE.AnimationAction): void {

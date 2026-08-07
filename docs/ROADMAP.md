@@ -31,7 +31,7 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 | **v0.2** | Osada + 3–5 NPC (woda / drewno / jedzenie) + etykiety + spawn | `done` |
 | **v0.3** | Fauna predators & prey (chase/flee) + GLB art | `done` |
 | **v0.3 art** | Swap fauny na GLB z `public/models/fauna/` (wolf/fox/deer/stag) | `done` |
-| **v0.4+** | Proste questy → później generator (+ OpenRouter) | później |
+| **v0.4+** | Proste questy → później generator (+ OpenRouter); pierwszy krok: [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) | później |
 | **next** | Worker pool dla generacji terenu (offload heightmap) | `planned` — priorytet |
 | **później** | Duży/sferyczny świat: chunk streaming + zapis (IndexedDB → DB) | `planned` |
 | **później** | Game UI (ekrany/dialogi, nie tylko lil-gui) | `planned` |
@@ -51,7 +51,7 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 2. [x] GLB fauna pod `AnimalAgent` / `userData.animalKind` (Quaternius: wolf/fox/deer/stag; Idle/Walk/Gallop)  
 3. [ ] **Priorytet (user, 2026-08-07):** worker pool dla generacji terenu → [plans/2026-08-07--terrain-worker-pool.md](./plans/2026-08-07--terrain-worker-pool.md)
 4. [ ] Opcjonalnie: game UI → [plans/2026-08-07--game-ui-screens.md](./plans/2026-08-07--game-ui-screens.md)  
-5. [ ] v0.4 questy — dopiero po decyzji scope  
+5. [ ] v0.4 questy — dopiero po decyzji scope; poprzedzone przez interakcje NPC → [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) (`planned`)  
 6. [ ] Duży/sferyczny świat — osobna sesja research/plan zanim implementacja (patrz [plans/2026-08-07--world-streaming-persistence.md](./plans/2026-08-07--world-streaming-persistence.md))
 
 Handoff szczegółowy: [CLAUDE.md](../CLAUDE.md)

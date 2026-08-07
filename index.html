@@ -189,6 +189,63 @@
           transform: rotate(360deg);
         }
       }
+      .seedvale-interact-prompt {
+        position: absolute;
+        left: 50%;
+        bottom: 90px;
+        transform: translateX(-50%);
+        z-index: 6;
+        padding: 6px 14px;
+        border-radius: 6px;
+        background: rgba(20, 24, 28, 0.72);
+        color: #f4f7fa;
+        font-size: 13px;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        white-space: nowrap;
+        pointer-events: none;
+        user-select: none;
+      }
+      .seedvale-interact-prompt[hidden] {
+        display: none;
+      }
+      .seedvale-npc-dialog {
+        position: absolute;
+        inset: 0;
+        z-index: 8;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: 80px;
+        background: rgba(10, 14, 18, 0.25);
+      }
+      .seedvale-npc-dialog[hidden] {
+        display: none;
+      }
+      .seedvale-npc-dialog__panel {
+        min-width: 320px;
+        max-width: 480px;
+        padding: 20px 24px;
+        border-radius: 10px;
+        background: rgba(20, 24, 28, 0.92);
+        color: #f2f6fa;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      }
+      .seedvale-npc-dialog__name {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        margin-bottom: 8px;
+      }
+      .seedvale-npc-dialog__line {
+        font-size: 14px;
+        line-height: 1.5;
+        opacity: 0.92;
+      }
+      .seedvale-npc-dialog__hint {
+        margin-top: 14px;
+        font-size: 11px;
+        opacity: 0.6;
+      }
       .npc-label {
         padding: 2px 6px;
         border-radius: 4px;
