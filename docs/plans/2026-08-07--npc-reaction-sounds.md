@@ -1,6 +1,6 @@
 # Plan: Dźwięki reakcji NPC
 
-**Status:** `planned`
+**Status:** `done`
 **Created:** 2026-08-07
 **Scope:** Wydzielone z [npc-gender-models.md](./2026-08-07--npc-gender-models.md) (był w Problem/p.3, niezależny kawałek pracy — audio, nie modele)
 
@@ -16,13 +16,16 @@ Krótki dźwięk (`Hmm`, `Tak?` lub podobny) odtwarzany raz przy wejściu w `loo
 
 Wymaga rozstrzygniętej płci NPC — czyli albo [npc-gender-models.md](./2026-08-07--npc-gender-models.md), albo pola `gender` z [npc-character-depth.md](./2026-08-07--npc-character-depth.md), którykolwiek wyląduje pierwszy. Bez tego można zacząć od jednego, neutralnego zestawu dźwięków i dograć rozróżnienie płci później.
 
-## Zakres (szkic — do doprecyzowania przy starcie implementacji)
+## Zakres
 
-1. **Assety audio** — kilka krótkich klipów (`.mp3`/`.ogg`) w `public/sounds/npc/` (nowy katalog), męskie + żeńskie warianty. Źródło do znalezienia (freesound.org / Quaternius nie ma audio — osobne poszukiwanie, podobne do [research/2026-08-07-3d-asset-sources.md](../research/2026-08-07-3d-asset-sources.md)).
-2. **Loader** — `done`, wspólny fundament z [ambient-world-audio.md](./2026-08-07--ambient-world-audio.md): `src/audio/createWorldAudio.ts` (`createWorldAudio(camera): WorldAudio`, nie `createAudioListener.ts` jak w pierwotnym szkicu pliku — nazwa dopasowana do konwencji `WorldSky`/`WorldOcean` w repo). `AudioListener` dopięty do kamery, `listener.context.resume()` na pierwszy `pointerdown`/`keydown` (obejście autoplay policy przeglądarek). Dla reaction sounds istotne: `playOnce(url, volume?)` — fire-and-forget klip, dokładnie to czego potrzebuje trigger w `lookAtPlayer`. Wpięte w `createApp.ts` (instancja + `dispose()`), `update(dt)` w pętli tick — na razie bez żadnych realnych klipów (brak assetów).
-3. **Trigger** — w `NpcAgent.update()`, w momencie przejścia `phase → 'lookAtPlayer'` (tam gdzie dziś ustawiany jest `pauseTimer`), odtwórz losowy klip z puli odpowiedniej płci.
-4. **Throttle/cooldown** — reużyć istniejący `pauseCooldown` (per personality), żeby dźwięk nie odtwarzał się co klatkę / zbyt często przy wielu NPC naraz.
-5. **Głośność / mix** — dźwięk cichy, nie powinien dominować nad ambientem; sprawdzić czy jest już jakikolwiek system audio w projekcie (grep `Audio` w `src/` — obecnie brak, to będzie pierwszy dźwięk w grze poza ciszą).
+1. **Assety audio** — `done`. Dostarczone przez użytkownika w `public/sounds/` (nie `public/sounds/npc/` jak pierwotnie zakładano — spłaszczone, bo to jedyne audio w repo na razie), 2 klipy męskie + 2 żeńskie, źródła/licencje w [public/sounds/README.md](../../public/sounds/README.md):
+   - `male-hmm-01.m4a`, `male-hmm-02.wav`
+   - `female-hmm-01.wav`, `female-hmm-02.wav`
+   Zahardkodowane w `NPC_REACTION_SOUND_URLS`, [NpcAgent.ts](../../src/ai/NpcAgent.ts). Mieszane formaty (`.m4a`/`.wav`) — `AudioLoader`/`decodeAudioData` obsługuje oba w Chrome/Safari, nie ujednolicano do jednego kontenera.
+2. **Loader** — `done`, wspólny fundament z [ambient-world-audio.md](./2026-08-07--ambient-world-audio.md): `src/audio/createWorldAudio.ts` (`createWorldAudio(camera): WorldAudio`). `AudioListener` dopięty do kamery, `listener.context.resume()` na pierwszy `pointerdown`/`keydown` (obejście autoplay policy przeglądarek). `playOnce(url, volume?)` — fire-and-forget klip. Wpięte w `createApp.ts` (instancja + `dispose()`), `update(dt)` w pętli tick.
+3. **Trigger** — `done`. W `NpcAgent.update()`, w momencie przejścia `phase → 'lookAtPlayer'`, `playReactionSound()` odtwarza losowy klip z puli odpowiedniej płci (`this.gender`) przez `playSound` — callback wstrzykiwany do `NpcAgent.create()`/`createSettlement()` (domyślnie no-op), spięty w `createApp.ts` z `worldAudio.playOnce`.
+4. **Throttle/cooldown** — `done`. Bez dodatkowej logiki: trigger siedzi w tym samym `if` co ustawienie `pauseTimer`, więc dzieli istniejący `pauseCooldown` (per personality) — odtwarza się dokładnie raz na wejście w `lookAtPlayer`.
+5. **Głośność / mix** — `done`, wstępnie. `REACTION_SOUND_VOLUME = 0.35` w `NpcAgent.ts` — do przesłuchania/dostrojenia w przeglądarce.
 
 ## Poza zakresem v1
 
@@ -32,11 +35,11 @@ Wymaga rozstrzygniętej płci NPC — czyli albo [npc-gender-models.md](./2026-0
 
 ## Done when
 
-- [ ] Katalog `public/sounds/npc/` z min. 2-3 klipami męskimi + 2-3 żeńskimi
-- [ ] `NpcAgent` odtwarza losowy klip (zgodny z płcią) przy wejściu w `lookAtPlayer`
-- [ ] Nie odtwarza się częściej niż raz na trigger (reużycie `pauseCooldown`)
-- [ ] Głośność nie przytłacza — subiektywna ocena w przeglądarce
-- [ ] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `public/sounds/` z 2 klipami męskimi + 2 żeńskimi
+- [x] `NpcAgent` odtwarza losowy klip (zgodny z płcią) przy wejściu w `lookAtPlayer`
+- [x] Nie odtwarza się częściej niż raz na trigger (reużycie `pauseCooldown`)
+- [x] Głośność nie przytłacza — subiektywna ocena w przeglądarce (potwierdzone przez usera)
+- [x] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
 
 ## Do przetestowania (http://localhost:5577/)
 

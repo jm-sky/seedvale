@@ -291,6 +291,97 @@
         font-size: 11px;
         opacity: 0.6;
       }
+      .seedvale-quest-log {
+        position: absolute;
+        inset: 0;
+        z-index: 9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(10, 14, 18, 0.55);
+        backdrop-filter: blur(2px);
+      }
+      .seedvale-quest-log[hidden] {
+        display: none;
+      }
+      .seedvale-quest-log__panel {
+        min-width: 360px;
+        max-width: 480px;
+        max-height: 70vh;
+        overflow-y: auto;
+        padding: 24px 28px;
+        border-radius: 10px;
+        background: rgba(20, 24, 28, 0.92);
+        color: #f2f6fa;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      }
+      .seedvale-quest-log__panel h1 {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+      .seedvale-quest-log__exp {
+        font-size: 13px;
+        opacity: 0.8;
+        margin-bottom: 16px;
+      }
+      .seedvale-quest-log__filters {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .seedvale-quest-log__filter {
+        padding: 6px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        background: transparent;
+        color: #f2f6fa;
+        font-size: 12px;
+        font-family: inherit;
+        cursor: pointer;
+        opacity: 0.75;
+      }
+      .seedvale-quest-log__filter:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .seedvale-quest-log__filter--active {
+        background: #3d7bd1;
+        opacity: 1;
+      }
+      .seedvale-quest-log__list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .seedvale-quest-log__row {
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .seedvale-quest-log__row-title {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .seedvale-quest-log__row-state {
+        font-size: 12px;
+        opacity: 0.75;
+        margin-top: 2px;
+      }
+      .seedvale-quest-log__row-relation {
+        font-size: 12px;
+        opacity: 0.6;
+        margin-top: 4px;
+      }
+      .seedvale-quest-log__empty {
+        font-size: 13px;
+        opacity: 0.6;
+      }
+      .seedvale-quest-log__hint {
+        margin-top: 16px;
+        font-size: 11px;
+        opacity: 0.6;
+      }
       .npc-label {
         padding: 2px 6px;
         border-radius: 4px;

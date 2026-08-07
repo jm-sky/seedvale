@@ -8,6 +8,7 @@ export type PauseMenuHandlers = {
   onNameCommit?: (name: string) => void
   onSave?: () => void
   onNewGame?: () => void
+  onQuestLog?: () => void
 }
 
 export type PauseMenu = {
@@ -44,6 +45,7 @@ export function createPauseMenu(
       </div>
       <div class="seedvale-pause__row"><span>Seed</span><span data-seed></span></div>
       <button type="button" data-resume class="seedvale-pause__button">Resume</button>
+      <button type="button" data-quest-log class="seedvale-pause__button seedvale-pause__button--ghost">Zadania [L]</button>
       <button type="button" data-save class="seedvale-pause__button seedvale-pause__button--ghost">Save<span data-save-status class="seedvale-pause__save-status"></span></button>
       <button type="button" data-gui class="seedvale-pause__button seedvale-pause__button--ghost">Toggle debug panel</button>
       <button type="button" data-new-game class="seedvale-pause__button seedvale-pause__button--danger">New Game</button>
@@ -54,6 +56,7 @@ export function createPauseMenu(
 
   const seedEl = root.querySelector<HTMLElement>('[data-seed]')!
   const resumeButton = root.querySelector<HTMLButtonElement>('[data-resume]')!
+  const questLogButton = root.querySelector<HTMLButtonElement>('[data-quest-log]')!
   const guiButton = root.querySelector<HTMLButtonElement>('[data-gui]')!
   const saveButton = root.querySelector<HTMLButtonElement>('[data-save]')!
   const saveStatusEl = root.querySelector<HTMLElement>('[data-save-status]')!
@@ -100,6 +103,10 @@ export function createPauseMenu(
   }
 
   resumeButton.addEventListener('click', () => setPaused(false))
+  questLogButton.addEventListener('click', () => {
+    setPaused(false)
+    handlers.onQuestLog?.()
+  })
   guiButton.addEventListener('click', () => handlers.onToggleGui?.())
   window.addEventListener('keydown', onKeyDown)
 

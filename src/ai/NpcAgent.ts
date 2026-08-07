@@ -52,6 +52,23 @@ export const NPC_MODEL_URLS: Record<NpcGender, readonly string[]> = {
   ],
 }
 
+/** Short reaction clips played once when an NPC enters `lookAtPlayer` — one pool
+ *  per gender. Sources/licenses: public/sounds/README.md. */
+export const NPC_REACTION_SOUND_URLS: Record<NpcGender, readonly string[]> = {
+  male: ['/sounds/male-hmm-01.m4a', '/sounds/male-hmm-02.wav'],
+  female: ['/sounds/female-hmm-01.wav', '/sounds/female-hmm-02.wav'],
+}
+
+/** Short "thank you" clips played once a quest is turned in — one pool per
+ *  gender, keyed by the giver's gender. Sources/licenses: public/sounds/README.md. */
+export const NPC_QUEST_COMPLETE_SOUND_URLS: Record<NpcGender, readonly string[]> = {
+  male: ['/sounds/male-thank-you-01.mp3', '/sounds/male-thank-you-02.wav'],
+  female: ['/sounds/female-thank-you-01.mp3'],
+}
+
+/** Quiet enough to stay under dialogue/ambient, audible enough to register. */
+const REACTION_SOUND_VOLUME = 0.35
+
 /** Placeholder pool until the character DB (names + traits) lands. */
 const NPC_NAMES = [
   'Anna',
@@ -77,6 +94,12 @@ const NPC_GENDERS: Record<(typeof NPC_NAMES)[number], NpcGender> = {
 
 function nameForIndex(treeIndex: number): (typeof NPC_NAMES)[number] {
   return NPC_NAMES[treeIndex % NPC_NAMES.length]!
+}
+
+/** Gender for a placeholder NPC name, or null for names outside the pool
+ *  (defensive — quest defs reference these names by hand). */
+export function genderForName(name: string): NpcGender | null {
+  return (NPC_GENDERS as Record<string, NpcGender>)[name] ?? null
 }
 
 function modelUrlForIndex(treeIndex: number): string {
@@ -134,6 +157,9 @@ export class NpcAgent {
   private pauseCooldown = 0
   private readonly tmp = new THREE.Vector3()
   private readonly labelEl: HTMLDivElement
+  /** Set externally (e.g. by a QuestManager) — NpcAgent stays quest-agnostic. */
+  private questMarker: string | null = null
+  private readonly playSound: (url: string, volume?: number) => void
 
   private constructor(
     root: THREE.Object3D,
@@ -144,7 +170,9 @@ export class NpcAgent {
     home: THREE.Vector3,
     treeIndex: number,
     needOffset: number,
+    playSound: (url: string, volume?: number) => void,
   ) {
+    this.playSound = playSound
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.landmarks = landmarks
@@ -195,6 +223,7 @@ export class NpcAgent {
     home: THREE.Vector3,
     treeIndex: number,
     needOffset: number,
+    playSound: (url: string, volume?: number) => void = () => {},
     modelUrl = modelUrlForIndex(treeIndex),
   ): Promise<NpcAgent> {
     try {
@@ -208,6 +237,7 @@ export class NpcAgent {
         home,
         treeIndex,
         needOffset,
+        playSound,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -218,6 +248,7 @@ export class NpcAgent {
         home,
         treeIndex,
         needOffset,
+        playSound,
       )
     }
   }
@@ -229,6 +260,7 @@ export class NpcAgent {
     home: THREE.Vector3,
     treeIndex: number,
     needOffset: number,
+    playSound: (url: string, volume?: number) => void,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -250,6 +282,7 @@ export class NpcAgent {
       home,
       treeIndex,
       needOffset,
+      playSound,
     )
   }
 
@@ -259,6 +292,10 @@ export class NpcAgent {
 
   getDialogueLine(): string {
     return pickDialogueLine(this.personality, this.activeNeed, this.isBusyPhase())
+  }
+
+  setQuestMarker(marker: string | null): void {
+    this.questMarker = marker
   }
 
   update(dt: number, observerPos: THREE.Vector3): void {
@@ -274,6 +311,7 @@ export class NpcAgent {
         this.previousPhase = this.phase
         this.phase = 'lookAtPlayer'
         this.pauseTimer = randRange(params.lookDurationRange)
+        this.playReactionSound()
       }
     }
 
@@ -358,7 +396,8 @@ export class NpcAgent {
     ;(this.needMarker.material as THREE.MeshStandardMaterial).emissive.setHex(
       needColor(this.activeNeed),
     )
-    this.labelEl.textContent = `${this.name} · ${needLabel(this.activeNeed)}`
+    const questSuffix = this.questMarker ? ` · ${this.questMarker}` : ''
+    this.labelEl.textContent = `${this.name} · ${needLabel(this.activeNeed)}${questSuffix}`
     this.labelEl.style.opacity = String(
       labelOpacityForDistance(this.mesh.position.distanceTo(observerPos)),
     )
@@ -443,6 +482,12 @@ export class NpcAgent {
     }
     this.target.copy(this.home)
     this.phase = 'wander'
+  }
+
+  private playReactionSound(): void {
+    const pool = NPC_REACTION_SOUND_URLS[this.gender]
+    const url = pool[Math.floor(Math.random() * pool.length)]
+    if (url) this.playSound(url, REACTION_SOUND_VOLUME)
   }
 
   private isWalkable(x: number, z: number): boolean {

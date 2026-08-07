@@ -2,10 +2,23 @@ export type NpcDialogHandlers = {
   onClose?: () => void
 }
 
+export type NpcDialogOffer = {
+  onAccept: () => void
+  onDecline: () => void
+}
+
+const DEFAULT_HINT = 'Esc / E — zamknij'
+const OFFER_HINT = '[E] Przyjmij  ·  [Esc] Odmów'
+
 export type NpcDialog = {
   /** Pass null to hide. Ignored while a dialog is open. */
   setPrompt: (name: string | null) => void
-  open: (name: string, line: string) => void
+  /** `offer` swaps the "close" hint for accept/decline; call `accept()` to accept. */
+  open: (name: string, line: string, offer?: NpcDialogOffer) => void
+  /** True while an accept/decline offer is showing (Esc/close = decline). */
+  isOffer: () => boolean
+  /** Accepts the current offer. No-op outside offer mode. */
+  accept: () => void
   close: () => void
   isOpen: () => boolean
   dispose: () => void
@@ -16,6 +29,7 @@ export function createNpcDialog(
   handlers: NpcDialogHandlers = {},
 ): NpcDialog {
   let openState = false
+  let currentOffer: NpcDialogOffer | null = null
 
   const prompt = document.createElement('div')
   prompt.className = 'seedvale-interact-prompt'
@@ -29,18 +43,32 @@ export function createNpcDialog(
     <div class="seedvale-npc-dialog__panel">
       <h2 class="seedvale-npc-dialog__name" data-name></h2>
       <p class="seedvale-npc-dialog__line" data-line></p>
-      <div class="seedvale-npc-dialog__hint">Esc / E — zamknij</div>
+      <div class="seedvale-npc-dialog__hint" data-hint>${DEFAULT_HINT}</div>
     </div>
   `
   parent.appendChild(root)
 
   const nameEl = root.querySelector<HTMLElement>('[data-name]')!
   const lineEl = root.querySelector<HTMLElement>('[data-line]')!
+  const hintEl = root.querySelector<HTMLElement>('[data-hint]')!
 
   const close = () => {
     if (!openState) return
     openState = false
     root.hidden = true
+    const offer = currentOffer
+    currentOffer = null
+    offer?.onDecline()
+    handlers.onClose?.()
+  }
+
+  const accept = () => {
+    if (!openState || !currentOffer) return
+    const offer = currentOffer
+    currentOffer = null
+    openState = false
+    root.hidden = true
+    offer.onAccept()
     handlers.onClose?.()
   }
 
@@ -70,13 +98,17 @@ export function createNpcDialog(
       prompt.hidden = false
       prompt.textContent = `[E] Rozmawiaj z ${name}`
     },
-    open(name, line) {
+    open(name, line, offer) {
       openState = true
+      currentOffer = offer ?? null
       prompt.hidden = true
       nameEl.textContent = name
       lineEl.textContent = line
+      hintEl.textContent = offer ? OFFER_HINT : DEFAULT_HINT
       root.hidden = false
     },
+    isOffer: () => openState && currentOffer !== null,
+    accept,
     close,
     isOpen: () => openState,
     dispose() {

@@ -21,6 +21,7 @@ export async function createSettlement(
   waterLevel: number,
   halfExtent: number,
   seed: number,
+  playSound: (url: string, volume?: number) => void = () => {},
 ): Promise<Settlement> {
   const site = findSettlementSite(sampleHeight, waterLevel, halfExtent, seed)
   const { group, landmarks } = await buildSettlementProps(
@@ -45,6 +46,7 @@ export async function createSettlement(
         home,
         i,
         i / Math.max(1, count - 1),
+        playSound,
       )
       scene.add(agent.mesh)
       return agent

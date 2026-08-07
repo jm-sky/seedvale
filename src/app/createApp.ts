@@ -11,6 +11,7 @@ import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook } from '../input/MouseLook'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
+import { QuestManager } from '../quests/QuestManager'
 import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
@@ -28,6 +29,7 @@ import { createLoadingScreen } from '../ui/createLoadingScreen'
 import { createMinimap } from '../ui/createMinimap'
 import { createNpcDialog } from '../ui/createNpcDialog'
 import { createPauseMenu } from '../ui/createPauseMenu'
+import { createQuestLog } from '../ui/createQuestLog'
 import { createLights } from '../world/createLights'
 import { createOcean, type WorldOcean } from '../world/createOcean'
 import { createSky } from '../world/createSky'
@@ -110,7 +112,7 @@ export async function createApp(
   await chunkManager.waitForChunks(homeChunks())
 
   let ocean = buildOcean(scene, config)
-  let settlement = await buildSettlement(scene, chunkManager, config.seed)
+  let settlement = await buildSettlement(scene, chunkManager, config.seed, worldAudio.playOnce)
   let fauna = await buildFauna(scene, chunkManager, settlement, config.seed)
 
   const keyboard = createKeyboard()
@@ -139,6 +141,7 @@ export async function createApp(
   hud.setTime(dayNight.timeOfDay)
 
   const minimap = createMinimap(container)
+  const questManager = new QuestManager()
 
   let rebuilding = false
   const rebuildWorld = async () => {
@@ -158,7 +161,7 @@ export async function createApp(
       await chunkManager.waitForChunks(homeChunks())
 
       ocean = buildOcean(scene, config)
-      settlement = await buildSettlement(scene, chunkManager, config.seed)
+      settlement = await buildSettlement(scene, chunkManager, config.seed, worldAudio.playOnce)
       fauna = await buildFauna(scene, chunkManager, settlement, config.seed)
       player.setGround(chunkManager.sampleHeight, chunkManager.sampleFloor, chunkManager.waterLevel)
       player.setPosition(settlement.spawn.x, settlement.spawn.z)
@@ -214,9 +217,16 @@ export async function createApp(
   })
   if (!config.showGui) gui.toggle()
 
-  // Created before pauseMenu so its Escape listener registers first — see
+  // Created before pauseMenu so their Escape listeners register first — see
   // createNpcDialog's onKeyDown comment for why registration order matters here.
   const npcDialog = createNpcDialog(container)
+  const questLog = createQuestLog(container)
+  const openQuestLog = () => {
+    questLog.open()
+    questLog.refresh(questManager.list(), questManager.getExp(), (name) =>
+      questManager.getRelation(name),
+    )
+  }
 
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
     onPause: () => {
@@ -225,6 +235,7 @@ export async function createApp(
       }
     },
     onResume: () => {},
+    onQuestLog: openQuestLog,
     onToggleGui: () => gui.toggle(),
     onNameChange: (name) => player.setName(name),
     onNameCommit: (name) => {
@@ -269,10 +280,19 @@ export async function createApp(
     const menuPaused = pauseMenu.isPaused()
 
     if (menuPaused) {
-      keyboard.consumeInteract() // drop a stale press so it can't fire right after resume
+      // drop stale presses so they can't fire right after resume
+      keyboard.consumeInteract()
+      keyboard.consumeQuestLog()
     } else if (npcDialog.isOpen()) {
       npcDialog.setPrompt(null)
-      if (keyboard.consumeInteract()) npcDialog.close()
+      keyboard.consumeQuestLog()
+      if (keyboard.consumeInteract()) {
+        if (npcDialog.isOffer()) npcDialog.accept()
+        else npcDialog.close()
+      }
+    } else if (questLog.isOpen()) {
+      keyboard.consumeInteract()
+      if (keyboard.consumeQuestLog()) questLog.close()
     } else {
       const target = findInteractionTarget(
         player.mesh.position,
@@ -282,16 +302,26 @@ export async function createApp(
       npcDialog.setPrompt(target ? target.name : null)
       const interactPressed = keyboard.consumeInteract()
       if (target && interactPressed) {
-        npcDialog.open(target.name, target.getDialogueLine())
+        const questOverride = questManager.onInteract(target.name)
+        if (questOverride) {
+          npcDialog.open(target.name, questOverride.line, questOverride.offer)
+        } else {
+          npcDialog.open(target.name, target.getDialogueLine())
+        }
       }
+      if (keyboard.consumeQuestLog()) openQuestLog()
     }
 
-    if (!menuPaused && !npcDialog.isOpen()) {
+    if (!menuPaused && !npcDialog.isOpen() && !questLog.isOpen()) {
+      for (const npc of settlement.npcs) {
+        npc.setQuestMarker(questManager.labelMarker(npc.name))
+      }
       tickDayNight(dayNight, dt)
       if (dayNight.enabled) {
         applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
       }
       hud.setTime(dayNight.timeOfDay)
+      hud.setExp(questManager.getExp())
       player.update(dt)
       chunkManager.update(player.mesh.position.x, player.mesh.position.z)
       lights.follow(player.mesh.position.x, player.mesh.position.z)
@@ -317,6 +347,7 @@ export async function createApp(
     gui.dispose()
     pauseMenu.dispose()
     npcDialog.dispose()
+    questLog.dispose()
     hud.dispose()
     minimap.dispose()
     keyboard.dispose()
@@ -432,6 +463,7 @@ function buildSettlement(
   scene: Scene,
   chunkManager: ChunkManager,
   seed: number,
+  playSound: (url: string, volume?: number) => void,
 ): Promise<Settlement> {
   return createSettlement(
     scene,
@@ -439,6 +471,7 @@ function buildSettlement(
     chunkManager.waterLevel,
     HOME_RADIUS,
     seed,
+    playSound,
   )
 }
 
