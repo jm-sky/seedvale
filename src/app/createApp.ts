@@ -4,6 +4,7 @@ import type { NpcAgent } from '../ai/NpcAgent'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { SaveData } from '../persistence/saveData'
+import type { Settlement } from '../settlement/createSettlement'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
@@ -28,7 +29,7 @@ import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
-import { createSettlement, type Settlement } from '../settlement/createSettlement'
+import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
 import {
   type ChunkManager,
   type ChunkManagerConfig,
@@ -38,7 +39,7 @@ import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
 import { createLoadingScreen } from '../ui/createLoadingScreen'
-import { createMinimap } from '../ui/createMinimap'
+import { createMinimap, type MinimapSettlement } from '../ui/createMinimap'
 import { createNpcDialog } from '../ui/createNpcDialog'
 import { createPauseMenu } from '../ui/createPauseMenu'
 import { createQuestLog } from '../ui/createQuestLog'
@@ -58,6 +59,13 @@ import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
  *  animals behave identically whether the player is standing right there or has
  *  wandered many chunks away. */
 const HOME_RADIUS = 56
+
+/** How far (world units) from the player a settlement streams in. Analogous to
+ *  chunk load/unload radii — see multi-settlements plan. */
+const SETTLEMENT_LOAD_RADIUS = 300
+/** Must be > SETTLEMENT_LOAD_RADIUS — hysteresis ring avoiding load/unload
+ *  thrashing right at the boundary. */
+const SETTLEMENT_UNLOAD_RADIUS = 420
 
 /** How close (world units) the player must be to an interactable before it's
  *  picked up by `[E]`. */
@@ -135,9 +143,9 @@ export async function createApp(
   await chunkManager.waitForChunks(homeChunks())
 
   let ocean = buildOcean(scene, config)
-  let settlement = await buildSettlement(scene, chunkManager, config.seed, worldAudio.playOnce)
-  let fauna = await buildFauna(scene, chunkManager, settlement, config.seed)
-  let itemSpawners = buildItemSpawners(scene, chunkManager, settlement, config.seed)
+  let settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce)
+  let fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
+  let itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   let droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialSave?.droppedItems ?? [])
   const inventory = new Inventory(initialSave?.inventory)
 
@@ -157,7 +165,7 @@ export async function createApp(
     mouseLook.state.pitch = initialSave.player.pitch
     player.setPosition(initialSave.player.x, initialSave.player.z)
   } else {
-    player.setPosition(settlement.spawn.x, settlement.spawn.z)
+    player.setPosition(settlementsManager.home.spawn.x, settlementsManager.home.spawn.z)
   }
   player.setName(config.player.name)
   scene.add(player.mesh)
@@ -206,7 +214,7 @@ export async function createApp(
       // internal array, and dispose() clears it in place.
       const carriedDrops = resetCollectedItems ? [] : [...droppedItems.nodes()]
       droppedItems.dispose()
-      settlement.dispose()
+      settlementsManager.dispose()
       ocean.dispose()
       chunkManager.dispose()
       if (resetCollectedItems) collectedItemIds = new Set()
@@ -216,12 +224,12 @@ export async function createApp(
       await chunkManager.waitForChunks(homeChunks())
 
       ocean = buildOcean(scene, config)
-      settlement = await buildSettlement(scene, chunkManager, config.seed, worldAudio.playOnce)
-      fauna = await buildFauna(scene, chunkManager, settlement, config.seed)
-      itemSpawners = buildItemSpawners(scene, chunkManager, settlement, config.seed)
+      settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce)
+      fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
+      itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
       droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, carriedDrops)
       player.setGround(chunkManager.sampleHeight, chunkManager.sampleFloor, chunkManager.waterLevel)
-      player.setPosition(settlement.spawn.x, settlement.spawn.z)
+      player.setPosition(settlementsManager.home.spawn.x, settlementsManager.home.spawn.z)
       hud.setSeed(config.seed)
       pauseMenu.setSeed(config.seed)
     } finally {
@@ -295,7 +303,7 @@ export async function createApp(
   }
   const openVillagers = () => {
     villagersScreen.open()
-    villagersScreen.refresh(settlement.npcs)
+    villagersScreen.refresh(settlementsManager.getLoaded().flatMap((s) => s.npcs))
   }
 
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
@@ -383,7 +391,7 @@ export async function createApp(
       setHighlight(null)
     } else {
       const interactables = buildInteractables(
-        settlement,
+        settlementsManager.getLoaded(),
         fauna,
         chunkManager,
         itemSpawners,
@@ -443,8 +451,10 @@ export async function createApp(
     }
 
     if (!menuPaused && !npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen()) {
-      for (const npc of settlement.npcs) {
-        npc.setQuestMarker(questManager.labelMarker(npc.name))
+      for (const s of settlementsManager.getLoaded()) {
+        for (const npc of s.npcs) {
+          npc.setQuestMarker(questManager.labelMarker(npc.name))
+        }
       }
       for (const spawner of fauna.getSpawners()) {
         fauna.setSpawnerMarker(spawner.type, questManager.spawnerMarker(spawner.type))
@@ -460,14 +470,17 @@ export async function createApp(
       chunkManager.update(player.mesh.position.x, player.mesh.position.z)
       lights.follow(player.mesh.position.x, player.mesh.position.z)
       ocean.follow(player.mesh.position.x, player.mesh.position.z)
-      settlement.update(dt, player.mesh.position)
+      settlementsManager.update(dt, player.mesh.position)
       fauna.update(dt, player.mesh.position, dayNight.timeOfDay)
       itemSpawners.update(dt, player.mesh.position)
       chunkManager.tickWater(dt)
       chunkManager.tickGrass(dt)
       ocean.update(dt)
       worldAudio.update(dt)
-      minimap.update(player.mesh.position, settlement.center, settlement.npcs)
+      minimap.update(
+        player.mesh.position,
+        settlementsManager.getLoaded().map((s): MinimapSettlement => ({ position: s.center, npcs: s.npcs })),
+      )
     }
     postProcessing.render()
     labelRenderer.render(scene, camera)
@@ -496,7 +509,7 @@ export async function createApp(
     fauna.dispose()
     itemSpawners.dispose()
     droppedItems.dispose()
-    settlement.dispose()
+    settlementsManager.dispose()
     chunkManager.dispose()
     player.dispose()
     disposeChunkWorkerPool()
@@ -512,7 +525,7 @@ export async function createApp(
  *  and nearby pickup items (world-generated + the renewable pool + player-dropped).
  *  Cheap: a few dozen objects total, dominated by settlement trees. */
 function buildInteractables(
-  settlement: Settlement,
+  settlements: readonly Settlement[],
   fauna: Fauna,
   chunkManager: ChunkManager,
   itemSpawners: ItemSpawners,
@@ -521,12 +534,24 @@ function buildInteractables(
 ): Interactable[] {
   const list: Interactable[] = []
 
-  for (const npc of settlement.npcs) {
+  for (const settlement of settlements) {
+    for (const npc of settlement.npcs) {
+      list.push({
+        kind: 'npc',
+        position: npc.mesh.position,
+        promptLabel: `Rozmawiaj z ${npc.name}`,
+        npc,
+      })
+    }
+
     list.push({
-      kind: 'npc',
-      position: npc.mesh.position,
-      promptLabel: `Rozmawiaj z ${npc.name}`,
-      npc,
+      kind: 'well',
+      position: settlement.landmarks.well,
+      promptLabel: 'Zaczerpnij wody',
+    })
+
+    settlement.landmarks.trees.forEach((position, i) => {
+      list.push({ kind: 'tree', position, promptLabel: 'Obejrzyj drzewo', id: `tree-${settlement.id}-${i}` })
     })
   }
 
@@ -539,16 +564,6 @@ function buildInteractables(
       animal,
     })
   }
-
-  list.push({
-    kind: 'well',
-    position: settlement.landmarks.well,
-    promptLabel: 'Zaczerpnij wody',
-  })
-
-  settlement.landmarks.trees.forEach((position, i) => {
-    list.push({ kind: 'tree', position, promptLabel: 'Obejrzyj drzewo', id: `tree-${i}` })
-  })
 
   for (const spawner of fauna.getSpawners()) {
     list.push({
@@ -678,19 +693,21 @@ function buildOcean(
   return ocean
 }
 
-function buildSettlement(
+function buildSettlementsManager(
   scene: Scene,
   chunkManager: ChunkManager,
   seed: number,
   playSound: (url: string, volume?: number) => void,
-): Promise<Settlement> {
-  return createSettlement(
+): Promise<SettlementsManager> {
+  return createSettlementsManager(
     scene,
     chunkManager.sampleHeight,
     chunkManager.waterLevel,
     HOME_RADIUS,
     seed,
     playSound,
+    SETTLEMENT_LOAD_RADIUS,
+    SETTLEMENT_UNLOAD_RADIUS,
   )
 }
 
