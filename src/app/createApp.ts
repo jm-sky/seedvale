@@ -17,6 +17,7 @@ import {
 } from '../terrain/generateHeightmap'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
+import { createPauseMenu } from '../ui/createPauseMenu'
 import { createLights } from '../world/createLights'
 import { createSky } from '../world/createSky'
 import { createWater, type WorldWater } from '../world/createWater'
@@ -66,6 +67,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     terrain.halfExtent,
   )
   player.setPosition(settlement.spawn.x, settlement.spawn.z)
+  player.setName(config.player.name)
   scene.add(player.mesh)
 
   const hud = createHud(container)
@@ -87,6 +89,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     player.setGround(terrain.sampleHeight, terrain.halfExtent)
     player.setPosition(settlement.spawn.x, settlement.spawn.z)
     hud.setSeed(config.seed)
+    pauseMenu.setSeed(config.seed)
   }
 
   const updateSkyFromGui = () => {
@@ -101,15 +104,29 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     }
   }
 
-  const gui = config.showGui
-    ? createDebugGui(config, dayNight, {
-        onTerrainChange: () => {
-          void rebuildWorld()
-        },
-        onSkyChange: updateSkyFromGui,
-        onDayNightChange,
-      })
-    : null
+  const gui = createDebugGui(config, dayNight, {
+    onTerrainChange: () => {
+      void rebuildWorld()
+    },
+    onSkyChange: updateSkyFromGui,
+    onDayNightChange,
+  })
+  if (!config.showGui) gui.toggle()
+
+  const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
+    onPause: () => {
+      if (document.pointerLockElement === renderer.domElement) {
+        document.exitPointerLock()
+      }
+    },
+    onResume: () => {},
+    onToggleGui: () => gui.toggle(),
+    onNameChange: (name) => player.setName(name),
+    onNameCommit: (name) => {
+      config.player.name = name
+      saveWorldConfig(config)
+    },
+  })
 
   applyDayNight(dayNight.timeOfDay, sky, lights, scene, water)
 
@@ -129,15 +146,17 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
   const tick = () => {
     frameId = requestAnimationFrame(tick)
     const dt = Math.min(clock.getDelta(), 0.05)
-    tickDayNight(dayNight, dt)
-    if (dayNight.enabled) {
-      applyDayNight(dayNight.timeOfDay, sky, lights, scene, water)
+    if (!pauseMenu.isPaused()) {
+      tickDayNight(dayNight, dt)
+      if (dayNight.enabled) {
+        applyDayNight(dayNight.timeOfDay, sky, lights, scene, water)
+      }
+      hud.setTime(dayNight.timeOfDay)
+      player.update(dt)
+      settlement.update(dt, player.mesh.position)
+      fauna.update(dt, player.mesh.position)
+      water.update(dt)
     }
-    hud.setTime(dayNight.timeOfDay)
-    player.update(dt)
-    settlement.update(dt)
-    fauna.update(dt)
-    water.update(dt)
     renderer.render(scene, camera)
     labelRenderer.render(scene, camera)
   }
@@ -146,7 +165,8 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
   return () => {
     cancelAnimationFrame(frameId)
     window.removeEventListener('resize', onResize)
-    gui?.dispose()
+    gui.dispose()
+    pauseMenu.dispose()
     hud.dispose()
     keyboard.dispose()
     mouseLook.dispose()

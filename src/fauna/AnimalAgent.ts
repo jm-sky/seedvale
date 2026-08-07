@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
+import { labelOpacityForDistance } from '../ui/labelDistance'
 
 export type AnimalRole = 'predator' | 'prey'
 /** Matches Quaternius Ultimate Animated Animal Pack kinds used in Seedvale. */
@@ -173,7 +174,7 @@ export class AnimalAgent {
     this.mixer?.stopAllAction()
   }
 
-  update(dt: number, others: AnimalAgent[]): void {
+  update(dt: number, others: AnimalAgent[], observerPos: THREE.Vector3): void {
     this.moving = false
     this.sprinting = false
     if (this.def.role === 'predator') {
@@ -184,6 +185,9 @@ export class AnimalAgent {
     this.clampBounds()
     this.snapY()
     this.updateAnim()
+    this.labelEl.style.opacity = String(
+      labelOpacityForDistance(this.mesh.position.distanceTo(observerPos)),
+    )
     this.mixer?.update(dt)
   }
 

@@ -10,7 +10,7 @@ import { createSeededRandom } from '../world/parseSeed'
 import { ANIMAL_DEFS, AnimalAgent, type AnimalKind } from './AnimalAgent'
 
 export type Fauna = {
-  update: (dt: number) => void
+  update: (dt: number, observerPos: Vector3) => void
   dispose: () => void
 }
 
@@ -122,8 +122,8 @@ export async function createFauna(
   }
 
   return {
-    update(dt) {
-      for (const a of agents) a.update(dt, agents)
+    update(dt, observerPos) {
+      for (const a of agents) a.update(dt, agents, observerPos)
     },
     dispose() {
       for (const a of agents) {

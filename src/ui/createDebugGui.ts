@@ -14,7 +14,7 @@ export function createDebugGui(
   config: WorldConfig,
   dayNight: DayNightState,
   handlers: DebugGuiHandlers,
-): { dispose: () => void } {
+): { dispose: () => void; toggle: () => void } {
   const gui = new GUI({ title: 'Seedvale' })
 
   const info = {
@@ -113,5 +113,6 @@ export function createDebugGui(
 
   return {
     dispose: () => gui.destroy(),
+    toggle: () => gui.show(gui._hidden),
   }
 }

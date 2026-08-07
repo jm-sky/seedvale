@@ -36,7 +36,12 @@ export type WorldConfig = {
   }
   /** Show lil-gui panel (`?gui=0` to hide). */
   showGui: boolean
+  player: {
+    name: string
+  }
 }
+
+const DEFAULT_PLAYER_NAME = 'Ja'
 
 const DEFAULT_RESOLUTION = 193
 
@@ -73,6 +78,9 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       rayleigh: 2.4,
     },
     showGui: true,
+    player: {
+      name: DEFAULT_PLAYER_NAME,
+    },
   }
 }
 
@@ -126,6 +134,10 @@ export function createWorldConfig(): WorldConfig {
 
   if (stored?.sky && typeof stored.sky === 'object') {
     config.sky = { ...config.sky, ...stored.sky }
+  }
+
+  if (typeof stored?.player?.name === 'string' && stored.player.name.trim()) {
+    config.player.name = stored.player.name
   }
 
   config.showGui = params.get('gui') !== '0'

@@ -10,7 +10,7 @@ import { buildSettlementProps, disposeSettlementGroup } from './props'
 export type Settlement = {
   spawn: Vector3
   center: Vector3
-  update: (dt: number) => void
+  update: (dt: number, observerPos: Vector3) => void
   dispose: () => void
 }
 
@@ -58,8 +58,8 @@ export async function createSettlement(
   return {
     spawn,
     center: new Vector3(site.x, site.y, site.z),
-    update(dt) {
-      for (const agent of agents) agent.update(dt)
+    update(dt, observerPos) {
+      for (const agent of agents) agent.update(dt, observerPos)
     },
     dispose() {
       for (const agent of agents) {

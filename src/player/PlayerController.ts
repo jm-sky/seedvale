@@ -147,6 +147,10 @@ export class PlayerController {
     this.snapToGround()
   }
 
+  setName(name: string): void {
+    this.labelEl.textContent = name.trim() || PLAYER_LABEL
+  }
+
   setPosition(x: number, z: number): void {
     this.mesh.position.x = x
     this.mesh.position.z = z

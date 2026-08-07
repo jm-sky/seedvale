@@ -7,6 +7,7 @@ import {
   loadGltfAnimated,
   prepareProp,
 } from '../assets/loadGltf'
+import { labelOpacityForDistance } from '../ui/labelDistance'
 import {
   createNeedState,
   needColor,
@@ -187,7 +188,7 @@ export class NpcAgent {
     return this.activeNeed
   }
 
-  update(dt: number): void {
+  update(dt: number, observerPos: THREE.Vector3): void {
     tickNeeds(this.needs, dt)
     this.moving = false
 
@@ -261,6 +262,9 @@ export class NpcAgent {
       needColor(this.activeNeed),
     )
     this.labelEl.textContent = `${this.name} · ${needLabel(this.activeNeed)}`
+    this.labelEl.style.opacity = String(
+      labelOpacityForDistance(this.mesh.position.distanceTo(observerPos)),
+    )
     this.mixer.update(dt)
   }
 

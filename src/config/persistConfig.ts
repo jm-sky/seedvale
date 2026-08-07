@@ -6,6 +6,7 @@ type StoredConfig = {
   seed: number
   terrain: WorldConfig['terrain']
   sky: WorldConfig['sky']
+  player: WorldConfig['player']
 }
 
 export function loadStoredConfig(): Partial<StoredConfig> | null {
@@ -25,6 +26,7 @@ export function saveWorldConfig(config: WorldConfig): void {
     seed: config.seed,
     terrain: structuredClone(config.terrain),
     sky: { ...config.sky },
+    player: { ...config.player },
   }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))

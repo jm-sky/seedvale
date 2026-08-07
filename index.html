@@ -53,6 +53,101 @@
         font-size: 12px;
         opacity: 0.7;
       }
+      .seedvale-pause {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(10, 14, 18, 0.55);
+        backdrop-filter: blur(2px);
+      }
+      .seedvale-pause[hidden] {
+        display: none;
+      }
+      .seedvale-pause__panel {
+        min-width: 280px;
+        padding: 28px 32px;
+        border-radius: 10px;
+        background: rgba(20, 24, 28, 0.92);
+        color: #f2f6fa;
+        text-align: center;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      }
+      .seedvale-pause__panel h1 {
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        margin-bottom: 18px;
+      }
+      .seedvale-pause__section {
+        text-align: left;
+        margin-bottom: 20px;
+      }
+      .seedvale-pause__subtitle {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.6;
+        margin-bottom: 8px;
+      }
+      .seedvale-pause__label {
+        display: block;
+        font-size: 12px;
+        opacity: 0.75;
+        margin-bottom: 4px;
+      }
+      .seedvale-pause__input {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #f2f6fa;
+        font-size: 14px;
+        font-family: inherit;
+      }
+      .seedvale-pause__input:focus {
+        outline: none;
+        border-color: #4a89e0;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .seedvale-pause__row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        opacity: 0.85;
+        margin-bottom: 20px;
+      }
+      .seedvale-pause__button {
+        display: block;
+        width: 100%;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        background: #3d7bd1;
+        color: #f2f6fa;
+        font-size: 14px;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      .seedvale-pause__button:hover {
+        background: #4a89e0;
+      }
+      .seedvale-pause__button--ghost {
+        background: transparent;
+      }
+      .seedvale-pause__button--ghost:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .seedvale-pause__hint {
+        margin-top: 4px;
+        font-size: 11px;
+        opacity: 0.6;
+      }
       .npc-label {
         padding: 2px 6px;
         border-radius: 4px;

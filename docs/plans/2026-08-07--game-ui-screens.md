@@ -1,8 +1,15 @@
 # Plan: UI warstwa gry (ekrany / dialogi / modale)
 
-**Status:** `planned`  
+**Status:** `in progress`  
 **Created:** 2026-08-07  
+**Updated:** 2026-08-07  
 **Priority:** później (po v0.2 gameplay) — lil-gui zostaje na debug  
+
+## Postęp
+
+- [x] **Pause / menu** — `src/ui/createPauseMenu.ts`, wpięty w `src/app/createApp.ts`. Esc toggluje overlay, zatrzymuje tick świata (dayNight/player/settlement/fauna/water) i pointer lock; przycisk „Toggle debug panel” pokazuje/ukrywa lil-gui (`createDebugGui` zwraca teraz `toggle()`).
+- [x] **Character panel** — sekcja w pause menu (input `Name`). `config.player.name` w `worldConfig.ts` (default „Ja”), persist w `persistConfig.ts`. `PlayerController.setName()` aktualizuje etykietę 3D na żywo (`input`); zapis do localStorage na `change`/blur (`onNameCommit`).
+- [ ] World config screen, Notes/journal, NPC dialog, rozszerzony HUD — patrz zakres niżej.
 
 ## Potrzeba
 
