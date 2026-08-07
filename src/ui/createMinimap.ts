@@ -1,6 +1,11 @@
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { Vector3 } from 'three'
 
+export type MinimapSettlement = {
+  position: Vector3
+  npcs: readonly NpcAgent[]
+}
+
 /** Canvas size in CSS px (square). */
 const SIZE = 200
 /** World units → minimap px. */
@@ -13,7 +18,7 @@ const ARROW_RADIUS = SIZE / 2 - 14
 
 export type Minimap = {
   root: HTMLDivElement
-  update: (playerPos: Vector3, settlementPos: Vector3, npcs: readonly NpcAgent[]) => void
+  update: (playerPos: Vector3, settlements: readonly MinimapSettlement[]) => void
   toggle: () => void
   dispose: () => void
 }
@@ -48,7 +53,7 @@ export function createMinimap(parent: HTMLElement): Minimap {
 
   return {
     root,
-    update(playerPos, settlementPos, npcs) {
+    update(playerPos, settlements) {
       if (collapsed) return
 
       ctx.fillStyle = 'rgba(20, 24, 28, 0.72)'
@@ -62,28 +67,32 @@ export function createMinimap(parent: HTMLElement): Minimap {
 
       // NPCs — blue dots, only when on-map.
       ctx.fillStyle = '#4a89e0'
-      for (const npc of npcs) {
-        const x = toMapX(npc.mesh.position.x)
-        const y = toMapY(npc.mesh.position.z)
-        if (x < 0 || x > SIZE || y < 0 || y > SIZE) continue
-        ctx.beginPath()
-        ctx.arc(x, y, 2.5, 0, Math.PI * 2)
-        ctx.fill()
+      for (const settlement of settlements) {
+        for (const npc of settlement.npcs) {
+          const x = toMapX(npc.mesh.position.x)
+          const y = toMapY(npc.mesh.position.z)
+          if (x < 0 || x > SIZE || y < 0 || y > SIZE) continue
+          ctx.beginPath()
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2)
+          ctx.fill()
+        }
       }
 
-      // Settlement — yellow square, on-map or clamped to an edge arrow.
-      const dx = settlementPos.x - playerPos.x
-      const dz = settlementPos.z - playerPos.z
-      const dist = Math.hypot(dx, dz)
+      // Settlements — yellow squares, on-map or clamped to an edge arrow.
       ctx.fillStyle = '#e0b34a'
-      if (dist <= HALF_RANGE) {
-        const x = toMapX(settlementPos.x)
-        const y = toMapY(settlementPos.z)
-        ctx.fillRect(x - 4, y - 4, 8, 8)
-      } else if (dist > 1e-4) {
-        const dirX = dx / dist
-        const dirY = dz / dist
-        drawArrow(ctx, centerX + dirX * ARROW_RADIUS, centerY + dirY * ARROW_RADIUS, dirX, dirY)
+      for (const settlement of settlements) {
+        const dx = settlement.position.x - playerPos.x
+        const dz = settlement.position.z - playerPos.z
+        const dist = Math.hypot(dx, dz)
+        if (dist <= HALF_RANGE) {
+          const x = toMapX(settlement.position.x)
+          const y = toMapY(settlement.position.z)
+          ctx.fillRect(x - 4, y - 4, 8, 8)
+        } else if (dist > 1e-4) {
+          const dirX = dx / dist
+          const dirY = dz / dist
+          drawArrow(ctx, centerX + dirX * ARROW_RADIUS, centerY + dirY * ARROW_RADIUS, dirX, dirY)
+        }
       }
 
       // Player — white diamond, always centered.

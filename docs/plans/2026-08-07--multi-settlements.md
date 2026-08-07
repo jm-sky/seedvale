@@ -1,8 +1,25 @@
 # Plan: Wielorakie wioski (multi-settlement)
 
-**Status:** `planned`
+**Status:** `verification needed`
 **Created:** 2026-08-07
+**Implemented:** 2026-08-07 (v1 — patrz "Stan implementacji" poniżej)
 **Scope:** v0.4+ (questy między wioskami), nadbudowa nad [quests-v1.md](./2026-08-07--quests-v1.md) (system questów), rozszerzenie [world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md) (chunk streaming)
+
+## Stan implementacji (v1, 2026-08-07)
+
+Zaimplementowane zgodnie ze szkicem poniżej, z kilkoma decyzjami podjętymi podczas implementacji:
+
+- **Grid step:** 280 jednostek, offset ±30% pół-kroku (`SETTLEMENT_GRID_STEP` w `settlementGenerator.ts`) — daje bezpieczny margines ponad wymagane min. 150 jednostek nawet po uwzględnieniu lokalnego jittera `findSettlementSite` (±24 jedn.).
+- **Wioska #0 (home):** identyczna z poprzednim zachowaniem co do bitu — `findSettlementSite` przyjmuje teraz opcjonalny `center` (domyślnie `{0,0}`), a generator dla komórki `(0,0)` używa `seed` bez dodatkowego XOR-a, więc strumień losowy `seed ^ 0xc0ffee` wewnątrz `findSettlementSite` jest identyczny jak wcześniej. Gracz spawnuje się w tym samym miejscu, imiona NPC takie same.
+- **Streaming:** `SettlementsManager` (analogicznie do `chunkManager`) — `settlementLoadRadius = 300`, `unloadRadius = 420` (histereza), throttling co `loadRadius * 0.25` przesunięcia gracza. Definicje wiosek (`SettlementDef`) cache'owane per-cell (deterministyczne z seeda), więc powtórne rechecki nie robią ponownie 80-próbkowego search flat-site.
+- **NPC w innych wioskach:** *zdecydowano zaludnić wszystkie streamowane wioski* (nie zostawiać pustych) — `SettlementDef.npcCount` (3-5, seeded) używany dla wiosek innych niż home; koszt niski dzięki cache'owaniu GLTF (`loadGltf`/`loadGltfAsset` cache'ują po URL).
+- **Las wokół wiosek:** tylko wioska home dostaje pełny "forest belt" (`buildSettlementProps(..., plantForest)`) — pozostałe wioski mają tylko rdzeń (studnia/stockpile/ogród/chaty), bez pasm lasu. Powód: pas lasu jest kosztowny (dziesiątki klastrów) i nakładałby się z wegetacją generowaną per-chunk (która jest wyłączona tylko dla `homeChunks`, nie dla terenu wokół innych wiosek). NPC w innych wioskach po prostu nie wybierają potrzeby "wood" (kod już to obsługuje: `landmarks.trees.length > 0` guard w `NpcAgent.ts`).
+- **Fauna / item spawnery:** nadal zakotwiczone tylko o `settlementsManager.home.center` (zgodnie z "poza zakresem v1" — dystrybucja zasobów per wioska nie jest jeszcze zrobiona).
+- **Minimap:** rozszerzona (`createMinimap.ts`) — pokazuje wszystkie aktualnie załadowane wioski (żółte kwadraty on-map / strzałki off-map) i ich NPC-e, nie tylko jedną.
+- **Panel Mieszkańcy:** pokazuje NPC-ów ze wszystkich aktualnie załadowanych wiosek (`settlementsManager.getLoaded().flatMap(s => s.npcs)`).
+- **Questy:** bez zmian — nadal działają na nazwach NPC niezależnie od tego z której wioski pochodzą; multi-village questy nadal poza zakresem (patrz sekcja "Poza zakresem v1").
+
+Sanity check: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — wszystkie czyste. **Nie zweryfikowano jeszcze w przeglądarce** (patrz "Do przetestowania" — wymaga manualnego testu przez użytkownika, zgodnie z zasadą projektu).
 
 ## Kontekst
 
@@ -108,14 +125,14 @@ src/ai/NpcAgent.ts                    # opcjonalne: + settlementId jako field (d
 
 ## Done when
 
-- [ ] `settlementGenerator.ts` generuje listę `SettlementDef[]` (id, x, z, npcCount) dla mapy seeded-deterministically
-- [ ] Dystans między generowanymi wioskami ≥ 150 jednostek
-- [ ] `SettlementsManager` ładuje/wyładowuje wioski na bazie `settlementLoadRadius` co frame
-- [ ] `createApp()` używa managera zamiast single `settlement`, iteruje po loaded wioskach w update/dispose
-- [ ] Jedna wioska (np. ta o id=0) jest tą, gdzie gracz się spawns (jak wcześniej `settlement`)
-- [ ] Reszta wiosek generuje się i streamuje, ale nie muszą być obsadzone NPC-ami (mogą być puste/opuszczone) na v1
-- [ ] Sanity check: `npx tsc --noEmit`, `npm run lint`, `npm run build` czyste
-- [ ] Regresja: gra dalej się loaduje, gracz może chodzić, jedynie wioska (pierwsza) zachowuje się jak wcześniej
+- [x] `settlementGenerator.ts` generuje listę `SettlementDef[]` (id, x, z, npcCount) dla mapy seeded-deterministically
+- [x] Dystans między generowanymi wioskami ≥ 150 jednostek (grid step 280 + offset ≤30%, empirycznie bezpieczny margines — patrz "Stan implementacji")
+- [x] `SettlementsManager` ładuje/wyładowuje wioski na bazie `settlementLoadRadius` (throttled, jak `chunkManager`)
+- [x] `createApp()` używa managera zamiast single `settlement`, iteruje po loaded wioskach w update/dispose
+- [x] Jedna wioska (id `0_0`) jest tą, gdzie gracz się spawns (jak wcześniej `settlement`) — bit-identyczna z poprzednim zachowaniem
+- [x] Reszta wiosek generuje się i streamuje; *zaludnione* (zdecydowano nie zostawiać pustych — patrz "Stan implementacji"), ale bez pełnego forest-belt
+- [x] Sanity check: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` czyste
+- [ ] Regresja: gra dalej się loaduje, gracz może chodzić, jedynie wioska (pierwsza) zachowuje się jak wcześniej — **wymaga manualnego testu w przeglądarce (nie wykonano)**
 
 ## Do przetestowania (http://localhost:5577/)
 

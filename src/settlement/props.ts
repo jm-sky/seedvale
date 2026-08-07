@@ -268,6 +268,11 @@ export async function buildSettlementProps(
   waterLevel: number,
   halfExtent: number,
   seed: number,
+  /** Non-home settlements skip the forest belt: it's expensive (dozens of
+   *  clusters) and would double up with the per-chunk terrain vegetation that,
+   *  unlike home chunks, isn't suppressed around them. They still get their
+   *  well/stockpile/garden/huts. */
+  plantForest = true,
 ): Promise<{ group: THREE.Group, landmarks: SettlementLandmarks }> {
   const group = new THREE.Group()
   group.name = 'settlement'
@@ -326,108 +331,110 @@ export async function buildSettlementProps(
     landmarks.homes.push(new THREE.Vector3(hx, sampleHeight(hx, hz), hz))
   }
 
-  const random = mulberry(seed ^ 0x7e3d)
-  const treeTemplates = await loadPropTemplates(TREE_SPECS, () => createTree(1))
-  const bushTemplates = await loadPropTemplates(BUSH_SPECS, () => createBush(1))
-  const treeCounter = { n: 0 }
-  const bushCounter = { n: 0 }
+  if (plantForest) {
+    const random = mulberry(seed ^ 0x7e3d)
+    const treeTemplates = await loadPropTemplates(TREE_SPECS, () => createTree(1))
+    const bushTemplates = await loadPropTemplates(BUSH_SPECS, () => createBush(1))
+    const treeCounter = { n: 0 }
+    const bushCounter = { n: 0 }
 
-  // Scale forests to map size (halfExtent), not fixed village yards.
-  const nearR = Math.min(18, halfExtent * 0.22)
-  const midMin = halfExtent * 0.32
-  const midMax = halfExtent * 0.55
-  const farMin = halfExtent * 0.55
-  const farMax = halfExtent * 0.88
+    // Scale forests to map size (halfExtent), not fixed village yards.
+    const nearR = Math.min(18, halfExtent * 0.22)
+    const midMin = halfExtent * 0.32
+    const midMax = halfExtent * 0.55
+    const farMin = halfExtent * 0.55
+    const farMax = halfExtent * 0.88
 
-  // Only a couple of small woodlots by the village (NPC wood).
-  const nearCenters: Array<[number, number]> = [
-    [nearR * 0.7, nearR * 0.35],
-    [-nearR * 0.75, nearR * 0.4],
-  ]
-  for (const [dx, dz] of nearCenters) {
-    plantTreeCluster(
-      group,
-      landmarks,
-      treeTemplates,
-      bushTemplates,
-      site.x + dx,
-      site.z + dz,
-      'small',
-      sampleHeight,
-      waterLevel,
-      halfExtent,
-      random,
-      treeCounter,
-      bushCounter,
-    )
-  }
+    // Only a couple of small woodlots by the village (NPC wood).
+    const nearCenters: Array<[number, number]> = [
+      [nearR * 0.7, nearR * 0.35],
+      [-nearR * 0.75, nearR * 0.4],
+    ]
+    for (const [dx, dz] of nearCenters) {
+      plantTreeCluster(
+        group,
+        landmarks,
+        treeTemplates,
+        bushTemplates,
+        site.x + dx,
+        site.z + dz,
+        'small',
+        sampleHeight,
+        waterLevel,
+        halfExtent,
+        random,
+        treeCounter,
+        bushCounter,
+      )
+    }
 
-  // Mid forest belt — away from houses, still walkable from village.
-  const midCount = 12 + Math.floor(random() * 5)
-  for (let i = 0; i < midCount; i++) {
-    const angle = (i / midCount) * Math.PI * 2 + (random() - 0.5) * 0.55
-    const dist = midMin + random() * (midMax - midMin)
-    plantTreeCluster(
-      group,
-      landmarks,
-      treeTemplates,
-      bushTemplates,
-      site.x + Math.cos(angle) * dist,
-      site.z + Math.sin(angle) * dist,
-      random() < 0.35 ? 'small' : 'medium',
-      sampleHeight,
-      waterLevel,
-      halfExtent,
-      random,
-      treeCounter,
-      bushCounter,
-    )
-  }
+    // Mid forest belt — away from houses, still walkable from village.
+    const midCount = 12 + Math.floor(random() * 5)
+    for (let i = 0; i < midCount; i++) {
+      const angle = (i / midCount) * Math.PI * 2 + (random() - 0.5) * 0.55
+      const dist = midMin + random() * (midMax - midMin)
+      plantTreeCluster(
+        group,
+        landmarks,
+        treeTemplates,
+        bushTemplates,
+        site.x + Math.cos(angle) * dist,
+        site.z + Math.sin(angle) * dist,
+        random() < 0.35 ? 'small' : 'medium',
+        sampleHeight,
+        waterLevel,
+        halfExtent,
+        random,
+        treeCounter,
+        bushCounter,
+      )
+    }
 
-  // Far belt toward map edges.
-  const farCount = 14 + Math.floor(random() * 6)
-  for (let i = 0; i < farCount; i++) {
-    const angle = random() * Math.PI * 2
-    const dist = farMin + random() * (farMax - farMin)
-    plantTreeCluster(
-      group,
-      landmarks,
-      treeTemplates,
-      bushTemplates,
-      site.x + Math.cos(angle) * dist,
-      site.z + Math.sin(angle) * dist,
-      random() < 0.3 ? 'small' : 'medium',
-      sampleHeight,
-      waterLevel,
-      halfExtent,
-      random,
-      treeCounter,
-      bushCounter,
-    )
-  }
+    // Far belt toward map edges.
+    const farCount = 14 + Math.floor(random() * 6)
+    for (let i = 0; i < farCount; i++) {
+      const angle = random() * Math.PI * 2
+      const dist = farMin + random() * (farMax - farMin)
+      plantTreeCluster(
+        group,
+        landmarks,
+        treeTemplates,
+        bushTemplates,
+        site.x + Math.cos(angle) * dist,
+        site.z + Math.sin(angle) * dist,
+        random() < 0.3 ? 'small' : 'medium',
+        sampleHeight,
+        waterLevel,
+        halfExtent,
+        random,
+        treeCounter,
+        bushCounter,
+      )
+    }
 
-  // Fill the rest of the map with scattered clumps (not centered on village).
-  const fillCount = 10 + Math.floor(random() * 6)
-  for (let i = 0; i < fillCount; i++) {
-    const tx = (random() * 2 - 1) * (halfExtent * 0.9)
-    const tz = (random() * 2 - 1) * (halfExtent * 0.9)
-    // Keep a clear meadow around the settlement.
-    if (Math.hypot(tx - site.x, tz - site.z) < midMin * 0.85) continue
-    plantTreeCluster(
-      group,
-      landmarks,
-      treeTemplates,
-      bushTemplates,
-      tx,
-      tz,
-      random() < 0.4 ? 'small' : 'medium',
-      sampleHeight,
-      waterLevel,
-      halfExtent,
-      random,
-      treeCounter,
-      bushCounter,
-    )
+    // Fill the rest of the map with scattered clumps (not centered on village).
+    const fillCount = 10 + Math.floor(random() * 6)
+    for (let i = 0; i < fillCount; i++) {
+      const tx = (random() * 2 - 1) * (halfExtent * 0.9)
+      const tz = (random() * 2 - 1) * (halfExtent * 0.9)
+      // Keep a clear meadow around the settlement.
+      if (Math.hypot(tx - site.x, tz - site.z) < midMin * 0.85) continue
+      plantTreeCluster(
+        group,
+        landmarks,
+        treeTemplates,
+        bushTemplates,
+        tx,
+        tz,
+        random() < 0.4 ? 'small' : 'medium',
+        sampleHeight,
+        waterLevel,
+        halfExtent,
+        random,
+        treeCounter,
+        bushCounter,
+      )
+    }
   }
 
   return { group, landmarks }

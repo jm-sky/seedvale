@@ -3,11 +3,13 @@ import {
   Vector3,
 } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
+import type { SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
-import { findSettlementSite } from './findSettlementSite'
 import { buildSettlementProps, disposeSettlementGroup, type SettlementLandmarks } from './props'
 
 export type Settlement = {
+  id: string
+  isHome: boolean
   spawn: Vector3
   center: Vector3
   npcs: readonly NpcAgent[]
@@ -20,21 +22,28 @@ export async function createSettlement(
   scene: Scene,
   sampleHeight: HeightSampler,
   waterLevel: number,
-  halfExtent: number,
+  localRadius: number,
   seed: number,
+  def: SettlementDef,
   playSound: (url: string, volume?: number) => void = () => {},
 ): Promise<Settlement> {
-  const site = findSettlementSite(sampleHeight, waterLevel, halfExtent, seed)
+  const site = { x: def.x, z: def.z, y: def.y }
   const { group, landmarks } = await buildSettlementProps(
     site,
     sampleHeight,
     waterLevel,
-    halfExtent,
+    localRadius,
     seed,
+    def.isHome,
   )
   scene.add(group)
 
-  const count = Math.min(5, Math.max(3, landmarks.homes.length + 1))
+  // Home keeps its original sizing rule (derived from how many huts actually
+  // got placed); other settlements use the generator's rolled `npcCount`.
+  const count = def.isHome
+    ? Math.min(5, Math.max(3, landmarks.homes.length + 1))
+    : def.npcCount
+
   const agents = await Promise.all(
     Array.from({ length: count }, async (_, i) => {
       const home =
@@ -61,6 +70,8 @@ export async function createSettlement(
   )
 
   return {
+    id: def.id,
+    isHome: def.isHome,
     spawn,
     center: new Vector3(site.x, site.y, site.z),
     npcs: agents,
