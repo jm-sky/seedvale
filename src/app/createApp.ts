@@ -329,6 +329,7 @@ function buildChunkManager(
     noiseScale: config.terrain.noiseScale,
     fbm: config.terrain.fbm,
     biome: config.terrain.biome,
+    region: config.terrain.region,
     flatShading: config.terrain.flatShading,
   }
   return createChunkManager(scene, cfg)

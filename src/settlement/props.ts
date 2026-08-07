@@ -16,12 +16,18 @@ const HUT_URLS = [
   '/models/settlement/hut_c.glb',
 ] as const
 
-const TREE_URLS = [
-  '/models/nature/tree_a.glb',
-  '/models/nature/tree_b.glb',
+export const TREE_SPECS = [
+  { url: '/models/nature/tree_a.glb', height: 4.2 },
+  { url: '/models/nature/tree_b.glb', height: 3.8 },
+  { url: '/models/nature/tree_c.glb', height: 4.6 },
 ] as const
 
-function placeOnGround(
+export const BUSH_SPECS = [
+  { url: '/models/nature/bush_a.glb', height: 1.0 },
+  { url: '/models/nature/bush_b.glb', height: 1.3 },
+] as const
+
+export function placeOnGround(
   mesh: THREE.Object3D,
   x: number,
   z: number,
@@ -122,6 +128,19 @@ export function createTree(scale = 1): THREE.Group {
   return tree
 }
 
+export function createBush(scale = 1): THREE.Group {
+  const bush = new THREE.Group()
+  const body = new THREE.Mesh(
+    new THREE.SphereGeometry(0.55 * scale, 6, 4),
+    new THREE.MeshStandardMaterial({ color: 0x3d7a3a, flatShading: true }),
+  )
+  body.scale.y = 0.75
+  body.position.y = 0.42 * scale
+  body.castShadow = true
+  bush.add(body)
+  return bush
+}
+
 export function createGarden(): THREE.Group {
   const garden = new THREE.Group()
   const bed = new THREE.Mesh(
@@ -173,29 +192,32 @@ function mulberry(seed: number): () => number {
   }
 }
 
-async function loadTreeTemplates(): Promise<THREE.Object3D[]> {
-  const loaded = await Promise.all(
-    TREE_URLS.map((url) => loadPropOrFallback(url, 4.2, () => createTree(1))),
+export async function loadPropTemplates(
+  specs: ReadonlyArray<{ url: string, height: number }>,
+  fallback: () => THREE.Object3D,
+): Promise<THREE.Object3D[]> {
+  return Promise.all(
+    specs.map((spec) => loadPropOrFallback(spec.url, spec.height, fallback)),
   )
-  return loaded
 }
 
-function cloneTree(
+export function cloneProp(
   templates: THREE.Object3D[],
   index: number,
   scale: number,
 ): THREE.Object3D {
   const src = templates[index % templates.length]!
-  const tree = src.clone(true)
-  tree.scale.multiplyScalar(scale)
-  tree.rotation.y = Math.random() * Math.PI * 2
-  return tree
+  const prop = src.clone(true)
+  prop.scale.multiplyScalar(scale)
+  prop.rotation.y = Math.random() * Math.PI * 2
+  return prop
 }
 
 function plantTreeCluster(
   group: THREE.Group,
   landmarks: SettlementLandmarks,
-  templates: THREE.Object3D[],
+  treeTemplates: THREE.Object3D[],
+  bushTemplates: THREE.Object3D[],
   cx: number,
   cz: number,
   size: ClusterSize,
@@ -204,6 +226,7 @@ function plantTreeCluster(
   halfExtent: number,
   random: () => number,
   treeCounter: { n: number },
+  bushCounter: { n: number },
 ): void {
   const count =
     size === 'small' ? 4 + Math.floor(random() * 4) : 7 + Math.floor(random() * 6)
@@ -220,11 +243,22 @@ function plantTreeCluster(
     const y = sampleHeight(tx, tz)
     if (y <= waterLevel + 0.55) continue
 
-    const scale = 0.7 + random() * 0.6
-    const tree = cloneTree(templates, treeCounter.n++, scale)
-    placeOnGround(tree, tx, tz, sampleHeight)
-    group.add(tree)
-    landmarks.trees.push(new THREE.Vector3(tx, y, tz))
+    // Bushes cluster toward the cluster's outer rim; big trees dominate the core.
+    const edgeFactor = d / radius
+    const isBush = random() < 0.12 + edgeFactor * 0.45
+
+    if (isBush) {
+      const scale = 0.6 + random() * 0.5
+      const bush = cloneProp(bushTemplates, bushCounter.n++, scale)
+      placeOnGround(bush, tx, tz, sampleHeight)
+      group.add(bush)
+    } else {
+      const scale = 0.7 + random() * 0.6
+      const tree = cloneProp(treeTemplates, treeCounter.n++, scale)
+      placeOnGround(tree, tx, tz, sampleHeight)
+      group.add(tree)
+      landmarks.trees.push(new THREE.Vector3(tx, y, tz))
+    }
   }
 }
 
@@ -293,8 +327,10 @@ export async function buildSettlementProps(
   }
 
   const random = mulberry(seed ^ 0x7e3d)
-  const templates = await loadTreeTemplates()
+  const treeTemplates = await loadPropTemplates(TREE_SPECS, () => createTree(1))
+  const bushTemplates = await loadPropTemplates(BUSH_SPECS, () => createBush(1))
   const treeCounter = { n: 0 }
+  const bushCounter = { n: 0 }
 
   // Scale forests to map size (halfExtent), not fixed village yards.
   const nearR = Math.min(18, halfExtent * 0.22)
@@ -312,7 +348,8 @@ export async function buildSettlementProps(
     plantTreeCluster(
       group,
       landmarks,
-      templates,
+      treeTemplates,
+      bushTemplates,
       site.x + dx,
       site.z + dz,
       'small',
@@ -321,6 +358,7 @@ export async function buildSettlementProps(
       halfExtent,
       random,
       treeCounter,
+      bushCounter,
     )
   }
 
@@ -332,7 +370,8 @@ export async function buildSettlementProps(
     plantTreeCluster(
       group,
       landmarks,
-      templates,
+      treeTemplates,
+      bushTemplates,
       site.x + Math.cos(angle) * dist,
       site.z + Math.sin(angle) * dist,
       random() < 0.35 ? 'small' : 'medium',
@@ -341,6 +380,7 @@ export async function buildSettlementProps(
       halfExtent,
       random,
       treeCounter,
+      bushCounter,
     )
   }
 
@@ -352,7 +392,8 @@ export async function buildSettlementProps(
     plantTreeCluster(
       group,
       landmarks,
-      templates,
+      treeTemplates,
+      bushTemplates,
       site.x + Math.cos(angle) * dist,
       site.z + Math.sin(angle) * dist,
       random() < 0.3 ? 'small' : 'medium',
@@ -361,6 +402,7 @@ export async function buildSettlementProps(
       halfExtent,
       random,
       treeCounter,
+      bushCounter,
     )
   }
 
@@ -374,7 +416,8 @@ export async function buildSettlementProps(
     plantTreeCluster(
       group,
       landmarks,
-      templates,
+      treeTemplates,
+      bushTemplates,
       tx,
       tz,
       random() < 0.4 ? 'small' : 'medium',
@@ -383,6 +426,7 @@ export async function buildSettlementProps(
       halfExtent,
       random,
       treeCounter,
+      bushCounter,
     )
   }
 

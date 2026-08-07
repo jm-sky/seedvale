@@ -5,6 +5,7 @@ const SEABED = new Color(0x2f5244)
 const SAND = new Color(0xd4c090)
 const ROCK = new Color(0x6a6560)
 const SNOW = new Color(0xdfe6ee)
+const ABYSS = new Color(0x122622)
 
 /** Shore sand band above water (world units). */
 const SAND_BAND = 0.6
@@ -113,6 +114,48 @@ export function applySlopeRock(
       : 1
 
   color.lerp(ROCK, t * shoreFade)
+}
+
+/**
+ * Blends toward bare rock/snow on mountain-range ridge crests (`mountainRidge`,
+ * the gated Worley-ridge value from `chunkHeightmap.ts`) — makes a "mountain
+ * range" region read as bare stone/snow even before `applySlopeRock`'s
+ * steepness-driven rock kicks in on individual steep faces, visually
+ * distinguishing a whole range from an ordinary steep hill.
+ */
+export function applyMountainRock(
+  color: Color,
+  mountainRidge: number,
+  height: number,
+  waterLevel: number,
+  heightScale: number,
+): void {
+  if (height <= waterLevel + 0.05 || mountainRidge <= 0) return
+
+  const altitude = Math.max(0, (height - waterLevel) / Math.max(heightScale, 0.001))
+  const rockT = Math.min(1, mountainRidge * 1.4)
+  color.lerp(ROCK, rockT * 0.85)
+
+  const snowT = Math.max(0, Math.min(1, (altitude - 0.55) / 0.3)) * mountainRidge
+  if (snowT > 0) color.lerp(SNOW, snowT)
+}
+
+/**
+ * Darkens submerged seabed further as `continentalness` drops well below the
+ * ocean/coast boundary — distinguishes deep abyssal ocean floor from shallow
+ * coastal seabed, so the ocean *region* reads visually distinct, not just
+ * "wherever noise happened to dip below waterLevel" as before regions existed.
+ */
+export function applyOceanDepthTint(
+  color: Color,
+  continentalness: number,
+  height: number,
+  waterLevel: number,
+): void {
+  if (height > waterLevel - 0.05) return
+  const abyssT = 1 - MathUtils.smoothstep(continentalness, 0.0, 0.3)
+  if (abyssT <= 0) return
+  color.lerpHSL(ABYSS, abyssT * 0.7)
 }
 
 /**

@@ -33,6 +33,7 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 | **v0.3 art** | Swap fauny na GLB z `public/models/fauna/` (wolf/fox/deer/stag) | `done` |
 | **v0.4+** | Proste questy → później generator (+ OpenRouter); pierwszy krok: [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) | później |
 | **next** | Worker pool dla generacji terenu (offload heightmap) | `planned` — priorytet |
+| **później** | Wizualny overhaul: rośliny (krzewy), niebo/chmury, góry w tle | `planned` — po worker poolu |
 | **później** | Duży/sferyczny świat: chunk streaming + zapis (IndexedDB → DB) | `planned` |
 | **później** | Game UI (ekrany/dialogi, nie tylko lil-gui) | `planned` |
 | **polish** | Dzień/noc + HUD + time multiplier | `done` |
@@ -50,8 +51,9 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 1. [x] Review wody (Claude): [reviews/2026-08-07-water-quality.md](./reviews/2026-08-07-water-quality.md) → follow-up: [issues 001](./issues/2026-08-07--001--water-shore-color-banding.md) (`done`), [002](./issues/2026-08-07--002--water-daynight-integration.md) (`done`)  
 2. [x] GLB fauna pod `AnimalAgent` / `userData.animalKind` (Quaternius: wolf/fox/deer/stag; Idle/Walk/Gallop)  
 3. [ ] **Priorytet (user, 2026-08-07):** worker pool dla generacji terenu → [plans/2026-08-07--terrain-worker-pool.md](./plans/2026-08-07--terrain-worker-pool.md)
-4. [ ] Opcjonalnie: game UI → [plans/2026-08-07--game-ui-screens.md](./plans/2026-08-07--game-ui-screens.md)  
-5. [ ] v0.4 questy — dopiero po decyzji scope; poprzedzone przez interakcje NPC → [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) (`planned`)  
-6. [ ] Duży/sferyczny świat — osobna sesja research/plan zanim implementacja (patrz [plans/2026-08-07--world-streaming-persistence.md](./plans/2026-08-07--world-streaming-persistence.md))
+4. [ ] Wizualny overhaul (rośliny/niebo-chmury/góry w tle, insp. SimonDev) — **po** worker poolu → [plans/2026-08-07--world-visual-overhaul.md](./plans/2026-08-07--world-visual-overhaul.md)
+5. [ ] Opcjonalnie: game UI → [plans/2026-08-07--game-ui-screens.md](./plans/2026-08-07--game-ui-screens.md)  
+6. [ ] v0.4 questy — dopiero po decyzji scope; poprzedzone przez interakcje NPC → [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) (`planned`)  
+7. [ ] Duży/sferyczny świat — osobna sesja research/plan zanim implementacja (patrz [plans/2026-08-07--world-streaming-persistence.md](./plans/2026-08-07--world-streaming-persistence.md))
 
 Handoff szczegółowy: [CLAUDE.md](../CLAUDE.md)

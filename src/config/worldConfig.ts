@@ -1,3 +1,4 @@
+import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { FbmParams } from '../terrain/fbm'
 import { parseSeedFromUrl } from '../world/parseSeed'
 import { loadStoredConfig } from './persistConfig'
@@ -31,6 +32,8 @@ export type WorldConfig = {
       noiseScale: number
       fbm: FbmParams
     }
+    /** Macro region axes (ocean/lowland/highland/mountains) — see `RegionParams`. */
+    region: RegionParams
   }
   sky: {
     inclination: number
@@ -75,6 +78,20 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
           lacunarity: 2.0,
           exponentiation: 1.0,
         },
+      },
+      region: {
+        continentScale: 2200,
+        continentFbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+        mountainScale: 1800,
+        mountainFbm: { octaves: 2, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.2 },
+        mountainThreshold: 0.62,
+        mountainThresholdWidth: 0.12,
+        worleyCellSize: 260,
+        ridgeSharpness: 2.2,
+        mountainGain: 0.75,
+        oceanThreshold: 0.32,
+        coastThreshold: 0.45,
+        oceanDetailWeight: 0.25,
       },
     },
     sky: {
@@ -130,6 +147,22 @@ export function createWorldConfig(): WorldConfig {
         config.terrain.biome.fbm = {
           ...config.terrain.biome.fbm,
           ...t.biome.fbm,
+        }
+      }
+    }
+    if (t.region && typeof t.region === 'object') {
+      const r = t.region
+      config.terrain.region = { ...config.terrain.region, ...r }
+      if (r.continentFbm && typeof r.continentFbm === 'object') {
+        config.terrain.region.continentFbm = {
+          ...config.terrain.region.continentFbm,
+          ...r.continentFbm,
+        }
+      }
+      if (r.mountainFbm && typeof r.mountainFbm === 'object') {
+        config.terrain.region.mountainFbm = {
+          ...config.terrain.region.mountainFbm,
+          ...r.mountainFbm,
         }
       }
     }

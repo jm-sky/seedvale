@@ -15,15 +15,18 @@ export type WaterBodyDetection = {
 
 const WATER_EPS = 1e-4
 const LAKE_AREA_SATURATE = 300
-/** World-area threshold (world units²) above which a body renders as "large" water.
- *  Area-based rather than grid-boundary-touch so per-chunk BFS (no shared grid edge
- *  to test against) still classifies bodies sensibly. */
-const LARGE_BODY_AREA_THRESHOLD = 1800
+/** Fraction of one chunk's (apron) grid area above which a body renders as "large"
+ *  water. Relative rather than a fixed world-area constant so the classification
+ *  doesn't depend on the user's chosen `chunkSize` (a fixed threshold could sit
+ *  *above* the total area of a fully-flooded chunk at small chunk sizes, making
+ *  "isLarge" unreachable regardless of how much water actually surrounds it). Also
+ *  area-based rather than grid-boundary-touch, since per-chunk BFS has no shared
+ *  grid edge to test a body against. */
+const LARGE_BODY_AREA_FRACTION = 0.35
 
 /**
  * BFS flood-fill over `h <= waterLevel` cells (4-connectivity) to find discrete
- * water bodies. A body touching the grid boundary is the ocean ring guaranteed
- * by generateHeightmap's edge blend — land always separates it from interior lakes.
+ * water bodies within one chunk's (apron-inclusive) grid.
  */
 export function detectWaterBodies(
   heights: Float32Array,
@@ -34,6 +37,8 @@ export function detectWaterBodies(
   const bodyId = new Int32Array(resolution * resolution).fill(-1)
   const bodies: WaterBody[] = []
   const queue = new Int32Array(resolution * resolution)
+  const gridSide = (resolution - 1) * step
+  const largeAreaThreshold = LARGE_BODY_AREA_FRACTION * gridSide * gridSide
 
   for (let start = 0; start < resolution * resolution; start++) {
     if (bodyId[start] !== -1 || heights[start]! > waterLevel + WATER_EPS) continue
@@ -68,7 +73,7 @@ export function detectWaterBodies(
     }
 
     const worldArea = cellCount * step * step
-    bodies.push({ id, cellCount, worldArea, isLarge: worldArea >= LARGE_BODY_AREA_THRESHOLD })
+    bodies.push({ id, cellCount, worldArea, isLarge: worldArea >= largeAreaThreshold })
   }
 
   return { bodyId, bodies }

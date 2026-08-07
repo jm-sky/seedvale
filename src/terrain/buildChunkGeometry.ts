@@ -1,5 +1,11 @@
 import * as THREE from 'three'
-import { applyMicroTint, applySlopeRock, colorForTerrain } from './biomeColors'
+import {
+  applyMicroTint,
+  applyMountainRock,
+  applyOceanDepthTint,
+  applySlopeRock,
+  colorForTerrain,
+} from './biomeColors'
 import { type ChunkTileData, sampleApronGrid } from './chunkHeightmap'
 
 export type ChunkMeshResult = {
@@ -80,10 +86,30 @@ export function buildChunkGeometry(
     normalAttr[i * 3 + 2] = n.z
 
     const m = sampleApronGrid(tile.biomes, apronRes, apronOriginX, apronOriginZ, step, x, z)
+    const continentalness = sampleApronGrid(
+      tile.continentalness,
+      apronRes,
+      apronOriginX,
+      apronOriginZ,
+      step,
+      x,
+      z,
+    )
+    const mountainRidge = sampleApronGrid(
+      tile.mountainRidge,
+      apronRes,
+      apronOriginX,
+      apronOriginZ,
+      step,
+      x,
+      z,
+    )
     const steepness = 1 - n.y
 
     colorForTerrain(h, m, waterLevel, heightScale, tmp)
     applySlopeRock(tmp, h, waterLevel, steepness)
+    applyMountainRock(tmp, mountainRidge, h, waterLevel, heightScale)
+    applyOceanDepthTint(tmp, continentalness, h, waterLevel)
     applyMicroTint(tmp, h, waterLevel, chunkOriginX + x, chunkOriginZ + z)
 
     colors[i * 3] = tmp.r

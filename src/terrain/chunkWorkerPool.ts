@@ -1,7 +1,8 @@
-import type { ChunkTileData, ChunkTileParams } from './chunkHeightmap'
+import type { ChunkTileParams } from './chunkHeightmap'
 import type {
   ChunkTileRequest,
   ChunkTileResponse,
+  ChunkTileResult,
 } from './chunkHeightmapProtocol'
 
 export class HeightmapGenerationCancelledError extends Error {
@@ -17,7 +18,7 @@ export class HeightmapGenerationCancelledError extends Error {
 // its whole lifetime and cancels by discarding the eventual result instead.
 
 export type ChunkWorkerPool = {
-  requestChunk(key: string, params: ChunkTileParams): Promise<ChunkTileData>
+  requestChunk(key: string, params: ChunkTileParams): Promise<ChunkTileResult>
   cancel(key: string): void
   dispose(): void
   readonly pendingCount: number
@@ -28,7 +29,7 @@ type ChunkJob = {
   id: number
   key: string
   params: ChunkTileParams
-  resolve: (data: ChunkTileData) => void
+  resolve: (data: ChunkTileResult) => void
   reject: (err: Error) => void
 }
 
@@ -77,6 +78,9 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
             floorHeights: msg.floorHeights,
             biomes: msg.biomes,
             bodyScale: msg.bodyScale,
+            continentalness: msg.continentalness,
+            mountainRidge: msg.mountainRidge,
+            vegetation: msg.vegetation,
           })
         } else {
           job.reject(new Error(msg.error))
@@ -116,11 +120,11 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
     }
   }
 
-  function requestChunk(key: string, params: ChunkTileParams): Promise<ChunkTileData> {
+  function requestChunk(key: string, params: ChunkTileParams): Promise<ChunkTileResult> {
     cancel(key)
     const id = nextId++
     keyToId.set(key, id)
-    return new Promise<ChunkTileData>((resolve, reject) => {
+    return new Promise<ChunkTileResult>((resolve, reject) => {
       queue.push({ id, key, params, resolve, reject })
       pump()
     })
@@ -159,7 +163,7 @@ function getChunkPool(): ChunkWorkerPool {
 export function requestChunkTile(
   key: string,
   params: ChunkTileParams,
-): Promise<ChunkTileData> {
+): Promise<ChunkTileResult> {
   return getChunkPool().requestChunk(key, params)
 }
 

@@ -1,6 +1,17 @@
 import * as THREE from 'three'
 import type { HeightSampler } from '../player/PlayerController'
+import type { ChunkTileResult } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
+import { disposeObject3D } from '../assets/loadGltf'
+import {
+  BUSH_SPECS,
+  cloneProp,
+  createBush,
+  createTree,
+  loadPropTemplates,
+  placeOnGround,
+  TREE_SPECS,
+} from '../settlement/props'
 import { createChunkWater, type WorldWater } from '../world/createWater'
 import { buildChunkGeometry } from './buildChunkGeometry'
 import {
@@ -12,20 +23,35 @@ import {
 } from './chunkGrid'
 import {
   apronOriginWorld,
-  type ChunkTileData,
   type ChunkTileParams,
   extractCoreGrid,
   type RawSampleParams,
+  type RegionParams,
   sampleApronGrid,
   sampleBiomeAt,
+  sampleContinentalnessAt,
   sampleFloorAt,
   sampleHeightAt,
+  sampleMountainRidgeAt,
 } from './chunkHeightmap'
 import {
   cancelChunkTile,
   HeightmapGenerationCancelledError,
   requestChunkTile,
 } from './chunkWorkerPool'
+
+// Loaded once and reused across every chunk (GLTF loader also caches by URL, but
+// this avoids rebuilding the template array + re-running `prepareProp` per chunk).
+let treeTemplatesPromise: Promise<THREE.Object3D[]> | null = null
+let bushTemplatesPromise: Promise<THREE.Object3D[]> | null = null
+function getTreeTemplates(): Promise<THREE.Object3D[]> {
+  treeTemplatesPromise ??= loadPropTemplates(TREE_SPECS, () => createTree(1))
+  return treeTemplatesPromise
+}
+function getBushTemplates(): Promise<THREE.Object3D[]> {
+  bushTemplatesPromise ??= loadPropTemplates(BUSH_SPECS, () => createBush(1))
+  return bushTemplatesPromise
+}
 
 export type ChunkManagerConfig = {
   chunkSize: number
@@ -43,6 +69,7 @@ export type ChunkManagerConfig = {
   noiseScale: number
   fbm: FbmParams
   biome: { noiseScale: number; fbm: FbmParams }
+  region: RegionParams
   flatShading: boolean
 }
 
@@ -52,10 +79,11 @@ type ChunkRecord = {
   key: string
   state: ChunkState
   pinned: boolean
-  tile?: ChunkTileData
+  tile?: ChunkTileResult
   mesh?: THREE.Mesh
   meshDispose?: () => void
   water?: WorldWater | null
+  vegetation?: THREE.Group
   pendingPromise?: Promise<void>
 }
 
@@ -67,6 +95,8 @@ export type ChunkManager = {
   sampleHeight: HeightSampler
   sampleFloor: HeightSampler
   sampleBiome: (x: number, z: number) => number
+  sampleContinentalness: (x: number, z: number) => number
+  sampleMountainRidge: (x: number, z: number) => number
   waterLevel: number
   loadedChunkCount: () => number
   /** Resolves once every listed chunk has finished generating (or failed/cancelled). */
@@ -90,6 +120,7 @@ export function createChunkManager(
     noiseScale: config.noiseScale,
     fbm: config.fbm,
     biome: config.biome,
+    region: config.region,
   }
 
   function paramsFor(coord: ChunkCoord): ChunkTileParams {
@@ -104,6 +135,13 @@ export function createChunkManager(
       noiseScale: config.noiseScale,
       fbm: { ...config.fbm },
       biome: { noiseScale: config.biome.noiseScale, fbm: { ...config.biome.fbm } },
+      region: {
+        ...config.region,
+        continentFbm: { ...config.region.continentFbm },
+        mountainFbm: { ...config.region.mountainFbm },
+      },
+      isHomeChunk: isHomeChunk(coord),
+      vegetationSpeciesCount: { tree: TREE_SPECS.length, bush: BUSH_SPECS.length },
     }
   }
 
@@ -125,7 +163,7 @@ export function createChunkManager(
     chunks.set(key, record)
 
     const promise = requestChunkTile(key, paramsFor(coord))
-      .then((tile) => {
+      .then(async (tile) => {
         const rec = chunks.get(key)
         if (!rec) return // unloaded while generating
         rec.tile = tile
@@ -160,6 +198,31 @@ export function createChunkManager(
         if (rec.water) scene.add(rec.water.mesh)
 
         rec.state = 'ready'
+
+        if (tile.vegetation.length > 0) {
+          const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
+          const sampleTileHeight: HeightSampler = (sx, sz) =>
+            sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
+
+          const [treeTemplates, bushTemplates] = await Promise.all([
+            getTreeTemplates(),
+            getBushTemplates(),
+          ])
+          // Re-check after the await — chunk may have unloaded while templates loaded.
+          if (!chunks.has(key)) return
+
+          const group = new THREE.Group()
+          group.name = 'chunk-vegetation'
+          for (const placement of tile.vegetation) {
+            const templates = placement.kind === 'tree' ? treeTemplates : bushTemplates
+            const prop = cloneProp(templates, placement.speciesIndex, placement.scale)
+            prop.rotation.y = placement.rotationY // deterministic — overrides cloneProp's own Math.random()
+            placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
+            group.add(prop)
+          }
+          scene.add(group)
+          rec.vegetation = group
+        }
       })
       .catch((err: unknown) => {
         if (!(err instanceof HeightmapGenerationCancelledError)) {
@@ -181,6 +244,10 @@ export function createChunkManager(
     record.mesh?.removeFromParent()
     record.meshDispose?.()
     record.water?.dispose()
+    if (record.vegetation) {
+      disposeObject3D(record.vegetation)
+      record.vegetation.removeFromParent()
+    }
     chunks.delete(record.key)
   }
 
@@ -218,7 +285,7 @@ export function createChunkManager(
   }
 
   function readField(
-    field: 'heights' | 'floorHeights' | 'biomes',
+    field: 'heights' | 'floorHeights' | 'biomes' | 'continentalness' | 'mountainRidge',
     worldX: number,
     worldZ: number,
   ): number {
@@ -228,9 +295,18 @@ export function createChunkManager(
       const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
       return sampleApronGrid(rec.tile[field], o.apronRes, o.x, o.z, o.step, worldX, worldZ)
     }
-    if (field === 'heights') return sampleHeightAt(worldX, worldZ, fallbackParams)
-    if (field === 'floorHeights') return sampleFloorAt(worldX, worldZ, fallbackParams)
-    return sampleBiomeAt(worldX, worldZ, fallbackParams)
+    switch (field) {
+      case 'continentalness':
+        return sampleContinentalnessAt(worldX, worldZ, fallbackParams)
+      case 'floorHeights':
+        return sampleFloorAt(worldX, worldZ, fallbackParams)
+      case 'heights':
+        return sampleHeightAt(worldX, worldZ, fallbackParams)
+      case 'mountainRidge':
+        return sampleMountainRidgeAt(worldX, worldZ, fallbackParams)
+      default:
+        return sampleBiomeAt(worldX, worldZ, fallbackParams)
+    }
   }
 
   return {
@@ -244,6 +320,8 @@ export function createChunkManager(
     sampleHeight: (x, z) => readField('heights', x, z),
     sampleFloor: (x, z) => readField('floorHeights', x, z),
     sampleBiome: (x, z) => readField('biomes', x, z),
+    sampleContinentalness: (x, z) => readField('continentalness', x, z),
+    sampleMountainRidge: (x, z) => readField('mountainRidge', x, z),
     waterLevel: config.waterLevel,
     loadedChunkCount: () => chunks.size,
     waitForChunks: (coords) => Promise.all(coords.map((c) => ensureLoaded(c))).then(() => undefined),

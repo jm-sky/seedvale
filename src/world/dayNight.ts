@@ -47,8 +47,14 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
   const inclination = 0.5 - elev * 0.18
   const azimuth = 0.22 + timeOfDay * 0.15
 
-  let turbidity = 2 + (1 - Math.abs(elev)) * 4
-  let rayleigh = 1.2 + dayFactor * 1.4
+  // Sky.js's own default rayleigh is 1 — pushing it much higher (as this code
+  // used to, up to 2.6-3.4 at noon) drives the shader's extinction term
+  // toward 0 across the whole dome, saturating every channel and erasing the
+  // per-wavelength falloff that reads as "blue" instead of washed-out white.
+  // Keep rayleigh close to that native scale; use turbidity for the
+  // warm/hazy horizon look at low sun angles instead.
+  let turbidity = 1.6 + (1 - Math.abs(elev)) * 2.8
+  let rayleigh = 0.85 + dayFactor * 0.95
   if (elev < -0.15) {
     turbidity = 1.2
     rayleigh = 0.6

@@ -139,6 +139,68 @@ export function createDebugGui(
       .onFinishChange(handlers.onTerrainChange),
   )
 
+  const region = terrain.addFolder('Regions')
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'oceanThreshold', 0, 1, 0.01)
+      .name('Ocean threshold')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'coastThreshold', 0, 1, 0.01)
+      .name('Coast threshold')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'oceanDetailWeight', 0, 1, 0.01)
+      .name('Ocean detail weight')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'continentScale', 400, 6000, 50)
+      .name('Continent scale')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'mountainScale', 400, 6000, 50)
+      .name('Mountain scale')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'mountainThreshold', 0, 1, 0.01)
+      .name('Mountain threshold')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'mountainThresholdWidth', 0.01, 0.5, 0.01)
+      .name('Mountain blend width')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'worleyCellSize', 40, 800, 10)
+      .name('Ridge cell size')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'ridgeSharpness', 0.5, 6, 0.1)
+      .name('Ridge sharpness')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'mountainGain', 0, 2, 0.05)
+      .name('Mountain gain')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+
   const sky = gui.addFolder('Sky (manual)')
   sky
     .add(config.sky, 'inclination', 0, 1, 0.01)
