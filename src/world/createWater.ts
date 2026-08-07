@@ -11,7 +11,6 @@ import {
   type Scene,
   ShaderMaterial,
 } from 'three'
-import type { Heightmap } from '../terrain/generateHeightmap'
 
 export type WorldWater = {
   mesh: Mesh
@@ -29,9 +28,7 @@ const NIGHT_DEEP = new Color(0x060f18)
 const NIGHT_SHALLOW = new Color(0x14283a)
 const NIGHT_FOAM = new Color(0x4a6a78)
 
-function createHeightTexture(heightmap: Heightmap): DataTexture {
-  const { resolution } = heightmap.params
-  const data = new Float32Array(heightmap.heights)
+function createDataTexture(data: Float32Array, resolution: number): DataTexture {
   const tex = new DataTexture(data, resolution, resolution, RedFormat, FloatType)
   tex.wrapS = ClampToEdgeWrapping
   tex.wrapT = ClampToEdgeWrapping
@@ -41,39 +38,39 @@ function createHeightTexture(heightmap: Heightmap): DataTexture {
   return tex
 }
 
-function createBodyScaleTexture(heightmap: Heightmap): DataTexture {
-  const { resolution } = heightmap.params
-  const data = new Float32Array(heightmap.bodyScale)
-  const tex = new DataTexture(data, resolution, resolution, RedFormat, FloatType)
-  tex.wrapS = ClampToEdgeWrapping
-  tex.wrapT = ClampToEdgeWrapping
-  tex.minFilter = LinearFilter
-  tex.magFilter = LinearFilter
-  tex.needsUpdate = true
-  return tex
-}
-
-/**
- * Stylized water — waves only where terrain ≤ waterLevel (heightmap mask).
- * Fixes flicker of the plane poking through land.
- */
 /** Cap on water mesh segments — keeps the shoreline mask sharp without matching
  *  the terrain 1:1 at very high resolutions (water doesn't need that much detail). */
 const MAX_WATER_SEGMENTS = 256
 
-export function createWater(heightmap: Heightmap): WorldWater {
-  const { size, waterLevel, resolution } = heightmap.params
-  // Track terrain resolution so the vCover mask (sampled per water-mesh vertex,
-  // then linearly interpolated) follows the actual shoreline shape closely enough
-  // to avoid "holes" where a whole water quad falls on land vertices despite
-  // submerged terrain between them — see docs/reviews/2026-08-07-water-quality.md
-  // Finding 3.
+/**
+ * Per-chunk stylized water — waves only where terrain ≤ waterLevel (heightmap mask).
+ * Returns `null` when the chunk has no submerged texels at all, so dry chunks (the
+ * common case in an open world) cost nothing.
+ */
+export function createChunkWater(
+  heights: Float32Array,
+  bodyScale: Float32Array,
+  resolution: number,
+  chunkOriginX: number,
+  chunkOriginZ: number,
+  chunkSize: number,
+  waterLevel: number,
+): WorldWater | null {
+  let hasWater = false
+  for (let i = 0; i < heights.length; i++) {
+    if (heights[i]! <= waterLevel + 0.35) {
+      hasWater = true
+      break
+    }
+  }
+  if (!hasWater) return null
+
   const segments = Math.min(resolution - 1, MAX_WATER_SEGMENTS)
-  const geometry = new PlaneGeometry(size * 1.02, size * 1.02, segments, segments)
+  const geometry = new PlaneGeometry(chunkSize * 1.02, chunkSize * 1.02, segments, segments)
   geometry.rotateX(-Math.PI / 2)
 
-  const heightTex = createHeightTexture(heightmap)
-  const bodyScaleTex = createBodyScaleTexture(heightmap)
+  const heightTex = createDataTexture(heights, resolution)
+  const bodyScaleTex = createDataTexture(bodyScale, resolution)
 
   const material = new ShaderMaterial({
     transparent: true,
@@ -87,7 +84,7 @@ export function createWater(heightmap: Heightmap): WorldWater {
       uOpacity: { value: 0.82 },
       uHeightmap: { value: heightTex },
       uBodyScale: { value: bodyScaleTex },
-      uMapSize: { value: size },
+      uMapSize: { value: chunkSize },
       uWaterLevel: { value: waterLevel },
     },
     vertexShader: /* glsl */ `
@@ -108,7 +105,7 @@ export function createWater(heightmap: Heightmap): WorldWater {
         float terrainH = texture2D(uHeightmap, uv).r;
         vCover = 1.0 - smoothstep(uWaterLevel - 0.05, uWaterLevel + 0.35, terrainH);
 
-        // 0 = small lake .. 1 = ocean; blends wave amplitude between the two.
+        // 0 = small lake .. 1 = large body; blends wave amplitude between the two.
         float bodyScale = texture2D(uBodyScale, uv).r;
         vBodyScale = bodyScale;
         float ampScale = mix(0.06, 0.24, bodyScale);
@@ -138,8 +135,8 @@ export function createWater(heightmap: Heightmap): WorldWater {
 
       void main() {
         if (vCover < 0.02) discard;
-        // True ocean cells are rendered by the reflective Water.js mesh instead —
-        // step aside so the two don't double-render/z-fight over the same area.
+        // Large bodies are rendered by the reflective Water.js ocean singleton
+        // instead — step aside so the two don't double-render/z-fight.
         if (vBodyScale > 0.9) discard;
 
         float fresnel = pow(1.0 - max(dot(normalize(vViewDir), vec3(0.0, 1.0, 0.0)), 0.0), 2.2);
@@ -153,9 +150,9 @@ export function createWater(heightmap: Heightmap): WorldWater {
   })
 
   const mesh = new Mesh(geometry, material)
-  mesh.position.y = waterLevel + 0.07
+  mesh.position.set(chunkOriginX, waterLevel + 0.07, chunkOriginZ)
   mesh.renderOrder = 1
-  mesh.name = 'water'
+  mesh.name = 'chunk-water'
 
   return {
     mesh,

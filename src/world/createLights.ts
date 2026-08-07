@@ -5,6 +5,10 @@ export type WorldLights = {
   hemi: THREE.HemisphereLight
   sun: THREE.DirectionalLight
   addTo: (scene: THREE.Scene) => void
+  /** Recenter the sun/shadow frustum on the player — in a streamed world the
+   *  frustum only needs to cover the area immediately around the camera, not
+   *  the whole loaded region, so its size stays fixed and only the target moves. */
+  follow: (x: number, z: number) => void
 }
 
 export function createLights(): WorldLights {
@@ -32,6 +36,11 @@ export function createLights(): WorldLights {
       scene.add(hemi)
       scene.add(sun)
       scene.add(sun.target)
+    },
+    follow(x, z) {
+      sun.position.set(x + 40, 70, z + 30)
+      sun.target.position.set(x, 0, z)
+      sun.target.updateMatrixWorld()
     },
   }
 }

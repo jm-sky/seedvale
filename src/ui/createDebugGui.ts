@@ -64,13 +64,12 @@ export function createDebugGui(
   terrainControllers.push(
     terrain
       .add(config.terrain, 'resolution', {
-        'Low (65)': 65,
-        'Medium (129)': 129,
-        'High (193)': 193,
-        'Higher (257)': 257,
-        'Ultra (385)': 385,
-        'Extreme (513)': 513,
-        'Insane (769)': 769,
+        'Low (33)': 33,
+        'Medium (49)': 49,
+        'High (65)': 65,
+        'Higher (97)': 97,
+        'Ultra (129)': 129,
+        'Insane (193)': 193,
       })
       .name('Resolution')
       .onFinishChange(handlers.onTerrainChange),
@@ -81,11 +80,23 @@ export function createDebugGui(
       .name('Flat shading (low-poly)')
       .onFinishChange(handlers.onTerrainChange),
   )
-  terrain.add(info, 'triangles').name('Triangles').listen().disable()
+  terrain.add(info, 'triangles').name('Triangles / chunk').listen().disable()
   terrainControllers.push(
     terrain
-      .add(config.terrain, 'size', 64, 256, 8)
-      .name('Map size')
+      .add(config.terrain, 'chunkSize', 32, 128, 8)
+      .name('Chunk size')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    terrain
+      .add(config.terrain, 'loadRadius', 1, 6, 1)
+      .name('Load radius')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    terrain
+      .add(config.terrain, 'unloadRadius', 2, 8, 1)
+      .name('Unload radius')
       .onFinishChange(handlers.onTerrainChange),
   )
   terrainControllers.push(
@@ -143,7 +154,7 @@ export function createDebugGui(
     .onChange(handlers.onSkyChange)
 
   terrainControllers.push(
-    gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild terrain'),
+    gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild world'),
   )
 
   function setBusy(busy: boolean): void {

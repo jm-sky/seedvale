@@ -1,11 +1,11 @@
-import type { HeightmapParams } from './generateHeightmap'
+import type { ChunkTileParams } from './chunkHeightmap'
 
-export type HeightmapWorkerRequest = {
+export type ChunkTileRequest = {
   id: number
-  params: HeightmapParams
+  params: ChunkTileParams
 }
 
-export type HeightmapWorkerResponse =
+export type ChunkTileResponse =
   | {
       id: number
       ok: true

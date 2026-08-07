@@ -5,6 +5,12 @@ import { labelOpacityForDistance } from '../ui/labelDistance'
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
 const WATER_MARGIN = 0.3
+/** How far an animal will roam from its own spawn point — home-relative, not tied
+ *  to any world/loaded-region bound, so fauna behaves the same near spawn or far
+ *  away in a streamed world. Generous relative to wander/chase/flee radii (6–18),
+ *  so it's only ever hit by a pathological long chase, where pulling back toward
+ *  home is the desired behavior anyway. */
+const ROAM_RADIUS = 50
 
 export type AnimalRole = 'predator' | 'prey'
 /** Matches Quaternius Ultimate Animated Animal Pack kinds used in Seedvale. */
@@ -84,7 +90,6 @@ export class AnimalAgent {
   readonly def: AnimalDef
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
-  private readonly halfExtent: number
   private readonly isCapsule: boolean
   private target = new THREE.Vector3()
   private readonly fleeTarget = new THREE.Vector3()
@@ -105,7 +110,6 @@ export class AnimalAgent {
     def: AnimalDef,
     sampleHeight: HeightSampler,
     waterLevel: number,
-    halfExtent: number,
     x: number,
     z: number,
     visual?: THREE.Object3D,
@@ -114,7 +118,6 @@ export class AnimalAgent {
     this.def = def
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
-    this.halfExtent = halfExtent - 2
     this.home.set(x, 0, z)
 
     if (visual) {
@@ -311,9 +314,16 @@ export class AnimalAgent {
   }
 
   private clampBounds(): void {
-    const lim = this.halfExtent
-    this.mesh.position.x = THREE.MathUtils.clamp(this.mesh.position.x, -lim, lim)
-    this.mesh.position.z = THREE.MathUtils.clamp(this.mesh.position.z, -lim, lim)
+    this.mesh.position.x = THREE.MathUtils.clamp(
+      this.mesh.position.x,
+      this.home.x - ROAM_RADIUS,
+      this.home.x + ROAM_RADIUS,
+    )
+    this.mesh.position.z = THREE.MathUtils.clamp(
+      this.mesh.position.z,
+      this.home.z - ROAM_RADIUS,
+      this.home.z + ROAM_RADIUS,
+    )
   }
 
   private snapY(): void {

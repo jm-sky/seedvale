@@ -4,7 +4,8 @@ export type WaterBody = {
   id: number
   cellCount: number
   worldArea: number
-  isOcean: boolean
+  /** Large enough to render as reflective open water rather than a small stylized lake. */
+  isLarge: boolean
 }
 
 export type WaterBodyDetection = {
@@ -14,6 +15,10 @@ export type WaterBodyDetection = {
 
 const WATER_EPS = 1e-4
 const LAKE_AREA_SATURATE = 300
+/** World-area threshold (world units²) above which a body renders as "large" water.
+ *  Area-based rather than grid-boundary-touch so per-chunk BFS (no shared grid edge
+ *  to test against) still classifies bodies sensibly. */
+const LARGE_BODY_AREA_THRESHOLD = 1800
 
 /**
  * BFS flood-fill over `h <= waterLevel` cells (4-connectivity) to find discrete
@@ -40,16 +45,12 @@ export function detectWaterBodies(
     bodyId[start] = id
 
     let cellCount = 0
-    let isOcean = false
 
     while (head < tail) {
       const idx = queue[head++]!
       const ix = idx % resolution
       const iz = (idx / resolution) | 0
       cellCount++
-      if (ix === 0 || iz === 0 || ix === resolution - 1 || iz === resolution - 1) {
-        isOcean = true
-      }
 
       const neighbors: [number, number][] = [
         [ix + 1, iz],
@@ -66,7 +67,8 @@ export function detectWaterBodies(
       }
     }
 
-    bodies.push({ id, cellCount, worldArea: cellCount * step * step, isOcean })
+    const worldArea = cellCount * step * step
+    bodies.push({ id, cellCount, worldArea, isLarge: worldArea >= LARGE_BODY_AREA_THRESHOLD })
   }
 
   return { bodyId, bodies }
@@ -88,7 +90,7 @@ export function computeBodyScale(detection: WaterBodyDetection): Float32Array {
       continue
     }
     const body = bodies[id]!
-    scale[i] = body.isOcean ? 1.0 : lakeScaleFor(body.worldArea)
+    scale[i] = body.isLarge ? 1.0 : lakeScaleFor(body.worldArea)
   }
   return scale
 }

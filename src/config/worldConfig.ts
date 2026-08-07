@@ -12,10 +12,14 @@ import { loadStoredConfig } from './persistConfig'
 export type WorldConfig = {
   seed: number
   terrain: {
-    /** World size on XZ (units). */
-    size: number
-    /** Vertices per side (odd): 65 / 129 / 193 / 257 / 385 / 513 / 769. */
+    /** World size of one chunk on XZ (units). */
+    chunkSize: number
+    /** Core vertices per chunk edge: 33 / 49 / 65 / 97 / 129 / 193. */
     resolution: number
+    /** Chunks (Chebyshev distance) kept loaded around the player. */
+    loadRadius: number
+    /** Must be > loadRadius — hysteresis ring, avoids load/unload thrashing. */
+    unloadRadius: number
     /** true = low-poly facets; false = smooth hills (lepiej przy wysokim res). */
     flatShading: boolean
     heightScale: number
@@ -43,14 +47,16 @@ export type WorldConfig = {
 
 const DEFAULT_PLAYER_NAME = 'Ja'
 
-const DEFAULT_RESOLUTION = 193
+const DEFAULT_RESOLUTION = 65
 
 function baseConfig(seed: number, resolution: number): WorldConfig {
   return {
     seed,
     terrain: {
-      size: 128,
+      chunkSize: 64,
       resolution,
+      loadRadius: 3,
+      unloadRadius: 4,
       flatShading: false,
       heightScale: 18,
       waterLevel: 0.45,
@@ -106,7 +112,9 @@ export function createWorldConfig(): WorldConfig {
 
   if (stored?.terrain) {
     const t = stored.terrain
-    if (typeof t.size === 'number') config.terrain.size = t.size
+    if (typeof t.chunkSize === 'number') config.terrain.chunkSize = t.chunkSize
+    if (typeof t.loadRadius === 'number') config.terrain.loadRadius = t.loadRadius
+    if (typeof t.unloadRadius === 'number') config.terrain.unloadRadius = t.unloadRadius
     if (typeof t.flatShading === 'boolean') config.terrain.flatShading = t.flatShading
     if (typeof t.heightScale === 'number') config.terrain.heightScale = t.heightScale
     if (typeof t.waterLevel === 'number') config.terrain.waterLevel = t.waterLevel

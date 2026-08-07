@@ -33,7 +33,6 @@ export class PlayerController {
   private sampleHeight: HeightSampler
   private sampleFloor: HeightSampler
   private waterLevel: number
-  private halfExtent: number
   private readonly isCapsule: boolean
   private readonly mixer: THREE.AnimationMixer | null
   private readonly idleAction: THREE.AnimationAction | null
@@ -59,7 +58,6 @@ export class PlayerController {
     sampleHeight: HeightSampler,
     sampleFloor: HeightSampler,
     waterLevel: number,
-    halfExtent: number,
   ) {
     this.camera = camera
     this.keys = keys
@@ -67,7 +65,6 @@ export class PlayerController {
     this.sampleHeight = sampleHeight
     this.sampleFloor = sampleFloor
     this.waterLevel = waterLevel
-    this.halfExtent = halfExtent - 1
     this.isCapsule = isCapsule
 
     this.mesh = new THREE.Group()
@@ -105,7 +102,6 @@ export class PlayerController {
     sampleHeight: HeightSampler,
     sampleFloor: HeightSampler,
     waterLevel: number,
-    halfExtent: number,
     modelUrl = PLAYER_MODEL_URL,
   ): Promise<PlayerController> {
     try {
@@ -121,7 +117,6 @@ export class PlayerController {
         sampleHeight,
         sampleFloor,
         waterLevel,
-        halfExtent,
       )
     } catch (err) {
       console.warn(`[player] failed to load ${modelUrl}, using capsule`, err)
@@ -132,7 +127,6 @@ export class PlayerController {
         sampleHeight,
         sampleFloor,
         waterLevel,
-        halfExtent,
       )
     }
   }
@@ -144,7 +138,6 @@ export class PlayerController {
     sampleHeight: HeightSampler,
     sampleFloor: HeightSampler,
     waterLevel: number,
-    halfExtent: number,
   ): PlayerController {
     const body = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.35, 0.9, 4, 8),
@@ -165,7 +158,6 @@ export class PlayerController {
       sampleHeight,
       sampleFloor,
       waterLevel,
-      halfExtent,
     )
   }
 
@@ -174,12 +166,10 @@ export class PlayerController {
     sampleHeight: HeightSampler,
     sampleFloor: HeightSampler,
     waterLevel: number,
-    halfExtent: number,
   ): void {
     this.sampleHeight = sampleHeight
     this.sampleFloor = sampleFloor
     this.waterLevel = waterLevel
-    this.halfExtent = halfExtent - 1
     this.snapToGround()
   }
 
@@ -214,18 +204,6 @@ export class PlayerController {
       this.mesh.position.z += this.wish.z
       this.mesh.rotation.y = Math.atan2(this.wish.x, this.wish.z)
     }
-
-    const limit = this.halfExtent
-    this.mesh.position.x = THREE.MathUtils.clamp(
-      this.mesh.position.x,
-      -limit,
-      limit,
-    )
-    this.mesh.position.z = THREE.MathUtils.clamp(
-      this.mesh.position.z,
-      -limit,
-      limit,
-    )
 
     this.snapToGround()
     this.syncCamera()

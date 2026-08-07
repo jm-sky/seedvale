@@ -72,7 +72,7 @@ export async function createFauna(
   scene: Scene,
   sampleHeight: HeightSampler,
   waterLevel: number,
-  halfExtent: number,
+  homeRadius: number,
   settlementCenter: Vector3,
   seed: number,
 ): Promise<Fauna> {
@@ -86,7 +86,7 @@ export async function createFauna(
       const dist = 18 + random() * 22
       const x = settlementCenter.x + Math.cos(angle) * dist
       const z = settlementCenter.z + Math.sin(angle) * dist
-      if (Math.abs(x) > halfExtent - 4 || Math.abs(z) > halfExtent - 4) continue
+      if (Math.abs(x) > homeRadius - 4 || Math.abs(z) > homeRadius - 4) continue
       const y = sampleHeight(x, z)
       if (y <= waterLevel + 0.6) continue
 
@@ -102,7 +102,6 @@ export async function createFauna(
         ANIMAL_DEFS[kind],
         sampleHeight,
         waterLevel,
-        halfExtent,
         x,
         z,
         visual,

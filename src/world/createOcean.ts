@@ -10,12 +10,14 @@ import {
   Vector3,
 } from 'three'
 import { Water } from 'three/addons/objects/Water.js'
-import type { Heightmap } from '../terrain/generateHeightmap'
 
 export type WorldOcean = {
   mesh: Water
   update: (dt: number) => void
   setDayNight: (dayFactor: number, sunDirection: Vector3) => void
+  /** Recenters the ocean plane under the player — cheap (position only, no
+   *  geometry/texture rebuild), unlike a chunked world's terrain/water. */
+  follow: (x: number, z: number) => void
   addTo: (scene: Scene) => void
   dispose: () => void
 }
@@ -77,15 +79,17 @@ function createProceduralWaterNormals(): DataTexture {
 }
 
 /**
- * Reflective ocean (three/addons Water.js) — covers the whole map footprint,
- * but only ever becomes visible where nothing else occludes it: opaque
- * terrain hides it under dry land, and the stylized lake water (createWater.ts)
- * sits above it and discards itself over true-ocean cells, so this is only
- * seen where the flood-fill classified the water body as ocean.
+ * Reflective ocean (three/addons Water.js) — a single app-level plane sized to
+ * generously cover the loaded chunk region and re-centered under the player via
+ * `follow()` rather than rebuilt per chunk (Water.js does its own mirror-camera
+ * render pass per frame; per-chunk instances would mean dozens of extra scene
+ * renders per frame). Only ever becomes visible where nothing else occludes it:
+ * opaque terrain hides it under dry land, and each chunk's stylized water
+ * (createChunkWater) sits above it and discards itself over large-body cells, so
+ * this is only seen where the flood-fill classified a body as large.
  */
-export function createOcean(heightmap: Heightmap): WorldOcean {
-  const { size, waterLevel } = heightmap.params
-  const geometry = new PlaneGeometry(size * 1.1, size * 1.1)
+export function createOcean(size: number, waterLevel: number): WorldOcean {
+  const geometry = new PlaneGeometry(size, size)
   const waterNormals = createProceduralWaterNormals()
 
   const water = new Water(geometry, {
@@ -137,6 +141,10 @@ export function createOcean(heightmap: Heightmap): WorldOcean {
       waterColor.copy(NIGHT_WATER_COLOR).lerp(DAY_WATER_COLOR, dayFactor)
       const uniformSunDir = water.material.uniforms.sunDirection!.value as Vector3
       uniformSunDir.copy(sunDirection)
+    },
+    follow(x, z) {
+      water.position.x = x
+      water.position.z = z
     },
     addTo(scene) {
       scene.add(water)

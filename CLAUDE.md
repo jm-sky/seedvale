@@ -37,6 +37,8 @@ New issues: `YYYY-MM-DD--NNN--slug.md`; reviews/research/plans: `YYYY-MM-DD--slu
 | Lasy: klastry drzew skalowane do `halfExtent` mapy | done |
 | Flat shading toggle (default: smooth) | done |
 | Assety GLB osada/natura (2. agent) | w toku / częściowo w `public/models/` |
+| Scroll-wheel zoom kamery (distance-aware pitch) | done |
+| Bieganie [Shift] (Run animation z Quaternius GLB) | done |
 
 ### Stack
 
@@ -68,9 +70,10 @@ public/models/                # settlement / nature / fauna / characters
 ### Otwarte / kolejka
 
 0. **Priorytet (user, 2026-08-07):** worker pool dla generacji terenu → [plans/2026-08-07--terrain-worker-pool.md](docs/plans/2026-08-07--terrain-worker-pool.md) (`planned`, robimy najpierw — offload `generateHeightmap.ts` do Web Workera)
-1. Game UI screens (nie lil-gui) → [plans/2026-08-07--game-ui-screens.md](docs/plans/2026-08-07--game-ui-screens.md) (`in progress`: pause menu + Character (imię gracza) done — `src/ui/createPauseMenu.ts`; World config / Notes / NPC dialog open)
-2. Streaming + save DB → [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md) — kierunek zmieniony na **duży/sferyczny świat** (nie tylko flat chunk grid); wymaga osobnej sesji research/plan przed implementacją. Real textures/triplanar dopuszczone jako opcjonalny feature później (nie trzymamy się low-poly na sztywno) — patrz [research/2026-08-07-simodev-refs-review.md](docs/research/2026-08-07-simodev-refs-review.md) Update note
-3. v0.4+ questy
+1. Wizualny overhaul (rośliny/krzewy, niebo/chmury, góry w tle — insp. SimonDev MMORPG devlog) → [plans/2026-08-07--world-visual-overhaul.md](docs/plans/2026-08-07--world-visual-overhaul.md) (`planned`, **po** worker poolu; Mixamo→Blender pipeline rozważony i odłożony — Quaternius modele już mają pełny zestaw animacji)
+2. Game UI screens (nie lil-gui) → [plans/2026-08-07--game-ui-screens.md](docs/plans/2026-08-07--game-ui-screens.md) (`in progress`: pause menu + Character (imię gracza) done — `src/ui/createPauseMenu.ts`; World config / Notes / NPC dialog open)
+3. Streaming + save DB → [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md) — kierunek zmieniony na **duży/sferyczny świat** (nie tylko flat chunk grid); wymaga osobnej sesji research/plan przed implementacją. Real textures/triplanar dopuszczone jako opcjonalny feature później (nie trzymamy się low-poly na sztywno) — patrz [research/2026-08-07-simodev-refs-review.md](docs/research/2026-08-07-simodev-refs-review.md) Update note
+4. v0.4+ questy
 
 Woda (brzeg + dzień/noc): `done` → [issues 001](docs/issues/2026-08-07--001--water-shore-color-banding.md), [002](docs/issues/2026-08-07--002--water-daynight-integration.md) (review: [docs/reviews/2026-08-07-water-quality.md](docs/reviews/2026-08-07-water-quality.md))
 
