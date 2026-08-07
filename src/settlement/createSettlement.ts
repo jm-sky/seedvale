@@ -58,6 +58,7 @@ export async function createSettlement(
         i,
         i / Math.max(1, count - 1),
         playSound,
+        def.isHome ? undefined : def.npcNames[i],
       )
       scene.add(agent.mesh)
       return agent

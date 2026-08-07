@@ -206,6 +206,7 @@ export class NpcAgent {
     treeIndex: number,
     needOffset: number,
     playSound: (url: string, volume?: number) => void,
+    nameOverride?: string,
   ) {
     this.playSound = playSound
     this.sampleHeight = sampleHeight
@@ -213,7 +214,7 @@ export class NpcAgent {
     this.landmarks = landmarks
     this.home = home.clone()
     const character = characterForIndex(treeIndex)
-    this.name = character.name
+    this.name = nameOverride ?? character.name
     this.gender = character.gender
     this.role = character.role
     this.traits = character.traits
@@ -268,6 +269,7 @@ export class NpcAgent {
     treeIndex: number,
     needOffset: number,
     playSound: (url: string, volume?: number) => void = () => {},
+    nameOverride?: string,
     modelUrl = modelUrlForIndex(treeIndex),
   ): Promise<NpcAgent> {
     try {
@@ -282,6 +284,7 @@ export class NpcAgent {
         treeIndex,
         needOffset,
         playSound,
+        nameOverride,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -293,6 +296,7 @@ export class NpcAgent {
         treeIndex,
         needOffset,
         playSound,
+        nameOverride,
       )
     }
   }
@@ -305,6 +309,7 @@ export class NpcAgent {
     treeIndex: number,
     needOffset: number,
     playSound: (url: string, volume?: number) => void,
+    nameOverride?: string,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -327,6 +332,7 @@ export class NpcAgent {
       treeIndex,
       needOffset,
       playSound,
+      nameOverride,
     )
   }
 

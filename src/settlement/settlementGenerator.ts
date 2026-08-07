@@ -1,5 +1,7 @@
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
+import { characterForIndex } from '../ai/characters'
+import { generateNpcName, type NameCulture, pickNameCulture } from '../ai/nameCultures'
 import { generateSettlementName, type SettlementTerrain } from '../shared/SettlementName'
 import { createSeededRandom } from '../world/parseSeed'
 import { findSettlementSite } from './findSettlementSite'
@@ -34,6 +36,18 @@ export type SettlementDef = {
    *  `settlementTerrain.ts`. Kept alongside `name` mostly for debugging. */
   terrain: SettlementTerrain
   name: string
+  /** The settlement's dominant name culture — most NPCs draw their name from
+   *  this pool (`ai/nameCultures.ts`), with a small chance per NPC of a name
+   *  from elsewhere. Not applied to the home settlement — see `npcNames`. */
+  nameCulture: NameCulture
+  /** Pre-rolled name per NPC slot (index-aligned with `npcCount`), so
+   *  `createSettlement.ts` doesn't need its own seeded RNG. Unused for the
+   *  home settlement, whose NPCs keep `characters.ts`'s fixed roster names —
+   *  quest defs (`quests/quests.ts`) hardcode giver names like "Anna" against
+   *  that roster, and multi-settlement quests are out of scope (see
+   *  multi-settlements plan), so randomizing home names would silently break
+   *  the only quests the game has. */
+  npcNames: readonly string[]
 }
 
 export function cellKey(cell: SettlementCell): string {
@@ -112,6 +126,11 @@ export function generateSettlementDef(
   )
   const name = generateSettlementName(seedForCell, terrain)
 
+  const nameCulture = pickNameCulture(seedForCell)
+  const npcNames = Array.from({ length: npcCount }, (_, i) =>
+    generateNpcName(seedForCell, i, characterForIndex(i).gender, nameCulture),
+  )
+
   return {
     id: cellKey(cell),
     gx: cell.gx,
@@ -123,5 +142,7 @@ export function generateSettlementDef(
     isHome,
     terrain,
     name,
+    nameCulture,
+    npcNames,
   }
 }
