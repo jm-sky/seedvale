@@ -145,6 +145,75 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
 }
 
 /**
+ * Merges a partial/possibly-stale terrain config (localStorage, or an older
+ * game save) onto `target` field by field, so any field missing from the
+ * source — e.g. a save made before a `RegionParams` field like
+ * `moistureRegionScale` existed — keeps `target`'s current default instead of
+ * becoming `undefined`. Never wholesale-replaces `target` or its sub-objects.
+ */
+export function applyStoredTerrain(
+  target: WorldConfig['terrain'],
+  t: Partial<WorldConfig['terrain']> | undefined,
+): void {
+  if (!t) return
+  if (typeof t.chunkSize === 'number') target.chunkSize = t.chunkSize
+  if (typeof t.loadRadius === 'number') target.loadRadius = t.loadRadius
+  if (typeof t.unloadRadius === 'number') target.unloadRadius = t.unloadRadius
+  if (typeof t.flatShading === 'boolean') target.flatShading = t.flatShading
+  if (typeof t.heightScale === 'number') target.heightScale = t.heightScale
+  if (typeof t.waterLevel === 'number') target.waterLevel = t.waterLevel
+  if (typeof t.noiseScale === 'number') target.noiseScale = t.noiseScale
+  if (t.fbm && typeof t.fbm === 'object') {
+    target.fbm = { ...target.fbm, ...t.fbm }
+  }
+  if (t.biome && typeof t.biome === 'object') {
+    if (typeof t.biome.noiseScale === 'number') {
+      target.biome.noiseScale = t.biome.noiseScale
+    }
+    if (t.biome.fbm && typeof t.biome.fbm === 'object') {
+      target.biome.fbm = { ...target.biome.fbm, ...t.biome.fbm }
+    }
+  }
+  if (t.region && typeof t.region === 'object') {
+    const r = t.region
+    target.region = { ...target.region, ...r }
+    if (r.continentFbm && typeof r.continentFbm === 'object') {
+      target.region.continentFbm = { ...target.region.continentFbm, ...r.continentFbm }
+    }
+    if (r.mountainFbm && typeof r.mountainFbm === 'object') {
+      target.region.mountainFbm = { ...target.region.mountainFbm, ...r.mountainFbm }
+    }
+    if (r.moistureRegionFbm && typeof r.moistureRegionFbm === 'object') {
+      target.region.moistureRegionFbm = {
+        ...target.region.moistureRegionFbm,
+        ...r.moistureRegionFbm,
+      }
+    }
+  }
+  if (t.grass && typeof t.grass === 'object') {
+    if (typeof t.grass.enabled === 'boolean') target.grass.enabled = t.grass.enabled
+    if (typeof t.grass.radius === 'number') target.grass.radius = t.grass.radius
+    if (typeof t.grass.density === 'number') target.grass.density = t.grass.density
+  }
+}
+
+/** Same missing-field-keeps-default guarantee as `applyStoredTerrain`, for `sky`. */
+export function applyStoredSky(
+  target: WorldConfig['sky'],
+  s: Partial<WorldConfig['sky']> | undefined,
+): void {
+  if (s && typeof s === 'object') Object.assign(target, s)
+}
+
+/** Same missing-field-keeps-default guarantee as `applyStoredTerrain`, for `player`. */
+export function applyStoredPlayer(
+  target: WorldConfig['player'],
+  p: Partial<WorldConfig['player']> | undefined,
+): void {
+  if (typeof p?.name === 'string' && p.name.trim()) target.name = p.name
+}
+
+/**
  * Priority: URL query (`seed`, `res`, `gui`) > localStorage > defaults.
  */
 export function createWorldConfig(): WorldConfig {
@@ -165,73 +234,21 @@ export function createWorldConfig(): WorldConfig {
   const config = baseConfig(seed, resolution)
 
   if (stored?.terrain) {
-    const t = stored.terrain
-    if (typeof t.chunkSize === 'number') config.terrain.chunkSize = t.chunkSize
-    if (typeof t.loadRadius === 'number') config.terrain.loadRadius = t.loadRadius
-    if (typeof t.unloadRadius === 'number') config.terrain.unloadRadius = t.unloadRadius
-    if (typeof t.flatShading === 'boolean') config.terrain.flatShading = t.flatShading
-    if (typeof t.heightScale === 'number') config.terrain.heightScale = t.heightScale
-    if (typeof t.waterLevel === 'number') config.terrain.waterLevel = t.waterLevel
-    if (typeof t.noiseScale === 'number') config.terrain.noiseScale = t.noiseScale
-    if (t.fbm && typeof t.fbm === 'object') {
-      config.terrain.fbm = { ...config.terrain.fbm, ...t.fbm }
-    }
-    if (t.biome && typeof t.biome === 'object') {
-      if (typeof t.biome.noiseScale === 'number') {
-        config.terrain.biome.noiseScale = t.biome.noiseScale
-      }
-      if (t.biome.fbm && typeof t.biome.fbm === 'object') {
-        config.terrain.biome.fbm = {
-          ...config.terrain.biome.fbm,
-          ...t.biome.fbm,
-        }
-      }
-    }
-    if (t.region && typeof t.region === 'object') {
-      const r = t.region
-      config.terrain.region = { ...config.terrain.region, ...r }
-      if (r.continentFbm && typeof r.continentFbm === 'object') {
-        config.terrain.region.continentFbm = {
-          ...config.terrain.region.continentFbm,
-          ...r.continentFbm,
-        }
-      }
-      if (r.mountainFbm && typeof r.mountainFbm === 'object') {
-        config.terrain.region.mountainFbm = {
-          ...config.terrain.region.mountainFbm,
-          ...r.mountainFbm,
-        }
-      }
-      if (r.moistureRegionFbm && typeof r.moistureRegionFbm === 'object') {
-        config.terrain.region.moistureRegionFbm = {
-          ...config.terrain.region.moistureRegionFbm,
-          ...r.moistureRegionFbm,
-        }
-      }
-    }
-    if (t.grass && typeof t.grass === 'object') {
-      if (typeof t.grass.enabled === 'boolean') config.terrain.grass.enabled = t.grass.enabled
-      if (typeof t.grass.radius === 'number') config.terrain.grass.radius = t.grass.radius
-      if (typeof t.grass.density === 'number') config.terrain.grass.density = t.grass.density
-    }
+    applyStoredTerrain(config.terrain, stored.terrain)
     // URL res wins; otherwise keep stored resolution already applied above
     // unless URL overrode — then don't let stored overwrite.
-    if (resFromUrl == null && typeof t.resolution === 'number') {
-      config.terrain.resolution = t.resolution
+    if (resFromUrl == null && typeof stored.terrain.resolution === 'number') {
+      config.terrain.resolution = stored.terrain.resolution
     }
   }
 
-  if (stored?.sky && typeof stored.sky === 'object') {
-    config.sky = { ...config.sky, ...stored.sky }
-  }
+  applyStoredSky(config.sky, stored?.sky)
 
   if (stored?.postProcessing && typeof stored.postProcessing === 'object') {
     config.postProcessing = { ...config.postProcessing, ...stored.postProcessing }
   }
 
-  if (typeof stored?.player?.name === 'string' && stored.player.name.trim()) {
-    config.player.name = stored.player.name
-  }
+  applyStoredPlayer(config.player, stored?.player)
 
   config.showGui = params.get('gui') !== '0'
   return config

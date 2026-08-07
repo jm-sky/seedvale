@@ -7,7 +7,7 @@
 
 ## Zaimplementowane (odbiega od szkicu niżej — patrz kod)
 
-Zamiast pojedynczego workera dla jednej heightmapy, poszło od razu w pełny worker **pool** wpięty w chunk streaming (bo oba tematy okazały się nierozdzielne — patrz [world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md)):
+Zamiast pojedynczego workera dla jednej heightmapy, poszło od razu w pełny worker **pool** wpięty w chunk streaming (bo oba tematy okazały się nierozdzielne — patrz [world-streaming-persistence.md](./2026-08-07--007--world-streaming-persistence.md)):
 
 - `src/terrain/chunkWorkerPool.ts` — pula workerów
 - `src/terrain/chunkHeightmap.worker.ts` + `chunkHeightmapProtocol.ts` — protokół komunikacji, transferable `Float32Array`
@@ -32,7 +32,7 @@ Pełny audyt: [research/2026-08-07-simodev-refs-review.md](../research/2026-08-0
 | Element | Szkic |
 |---------|-------|
 | Worker | 1 plik `src/terrain/heightmap.worker.ts`, `postMessage({ seed, resolution, ...worldConfig })` → zwraca `Float32Array` (transferable) |
-| Pool | Zacząć od 1 workera (jedna heightmapa na raz — dziś nie ma wielu równoległych regionów). Rozszerzyć do puli dopiero z chunk streamingiem ([world-streaming-persistence](./2026-08-07--world-streaming-persistence.md)) |
+| Pool | Zacząć od 1 workera (jedna heightmapa na raz — dziś nie ma wielu równoległych regionów). Rozszerzyć do puli dopiero z chunk streamingiem ([world-streaming-persistence](./2026-08-07--007--world-streaming-persistence.md)) |
 | API | `generateHeightmapAsync(params): Promise<Float32Array>` jako drop-in obok istniejącego synchronicznego `generateHeightmap` — call site w `createApp.ts` / GUI regen handler przechodzi na async |
 | UI podczas generacji | Loading state / disabled GUI controls, żeby uniknąć race (dwie regeneracje naraz) |
 | `waterBodies.ts` | Sprawdzić czy detekcja zbiorników wody też powinna iść do workera (zależy od heightmapy) czy zostać na main po odebraniu wyniku |
@@ -47,5 +47,5 @@ Pełny audyt: [research/2026-08-07-simodev-refs-review.md](../research/2026-08-0
 ## Powiązane
 
 - [research/2026-08-07-simodev-refs-review.md](../research/2026-08-07-simodev-refs-review.md) — finding #1, oryginalnie `adopt later`, podniesiony do wysokiego priorytetu
-- [plans/2026-08-07--world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md) — worker pool tu jest fundamentem pod przyszły chunk streaming
+- [plans/2026-08-07--007--world-streaming-persistence.md](./2026-08-07--007--world-streaming-persistence.md) — worker pool tu jest fundamentem pod przyszły chunk streaming
 - `src/terrain/generateHeightmap.ts`, `src/terrain/waterBodies.ts`, `src/config/worldConfig.ts`

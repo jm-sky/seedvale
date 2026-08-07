@@ -2,7 +2,7 @@
 
 **Status:** `planned`
 **Created:** 2026-08-07
-**Priority:** średni — rozszerzenie [multi-settlements](./2026-08-07--multi-settlements.md) (grafuje istniejącą siatkę wiosek) i [biome-regions](./2026-08-07--biome-regions.md) (kolejna warstwa na tym samym `sampleRawTexel`). Nie blokuje ani nie jest blokowany przez inne kolejkowane plany.
+**Priority:** średni — rozszerzenie [multi-settlements](./2026-08-07--025--multi-settlements.md) (grafuje istniejącą siatkę wiosek) i [biome-regions](./2026-08-07--028--biome-regions.md) (kolejna warstwa na tym samym `sampleRawTexel`). Nie blokuje ani nie jest blokowany przez inne kolejkowane plany.
 **Zakres (zdecydowane z userem 2026-08-07):** drogi **też międzyosadowe** (nie tylko osada↔port), oraz wygładzenie terenu **+ blend koloru** (nie samo wygładzenie).
 
 ## Potrzeba
@@ -56,7 +56,7 @@ Sieć nie może wymagać globalnej, z góry policzonej listy wszystkich osad —
 Zgodnie z prośbą — **żadnego nowego mechanizmu ruchu**. `NpcAgent.ts` dziś ma `target: THREE.Vector3` + `steerTo(target, dt)` + proste fazy (`wander`, `goWell`, `goGarden`, `goTree`) sterowane przez `beginNeed()`. Rozszerzenie:
 
 - **v1 (w zakresie):** tylko **ścieżka lokalna** (osada → własna `MinorLocation`, np. port). W `beginNeed()`/wyborze wander-celu dopisać niski-prawdopodobieństwa branch: czasem (np. 5–10% szansy zamiast zwykłego losowego punktu ~4 jedn. od `home`) NPC idzie do portu swojej osady zamiast błąkać się lokalnie. Ponieważ trasa ma realne waypointy (nie prostą linię), potrzebna jedna nowa faza `followPath` z kursorem indeksu po `RoutePoint[]`, przechodząca do kolejnego punktu przez ten sam `steerTo` (`if (this.steerTo(waypoint, dt)) index++`) — identyczny idiom, jaki już jest w kodzie (`case 'wander': if (this.steerTo(...)) this.phase = 'choose'`), tylko z kilkoma punktami zamiast jednego. Po dotarciu: chwila przy porcie (reużycie istniejącego "postój"/`REST_PHASES` wzorca), potem powrót tą samą trasą lub `wander` do domu.
-- **Poza zakresem v1:** NPC podróżujący **między osadami** po drogach (`kind: 'road'`) — to wymaga przekroczenia granicy własności NPC (dziś NPC należy do jednej `SettlementDef`, `SettlementsManager` streamuje osady niezależnie) i wiąże się z tym samym nierozstrzygniętym obszarem co "questy między wioskami" w [multi-settlements](./2026-08-07--multi-settlements.md) oraz odłożonym systemem workplace/schedule w [npc-2-daily-routine-and-place](./2026-08-07--npc-2-daily-routine-and-place.md). Droga i tak jest widoczna/użyteczna dla **gracza** bez tego — NPC-migracja między wioskami to naturalny follow-up, nie blokuje pierwszej iteracji.
+- **Poza zakresem v1:** NPC podróżujący **między osadami** po drogach (`kind: 'road'`) — to wymaga przekroczenia granicy własności NPC (dziś NPC należy do jednej `SettlementDef`, `SettlementsManager` streamuje osady niezależnie) i wiąże się z tym samym nierozstrzygniętym obszarem co "questy między wioskami" w [multi-settlements](./2026-08-07--025--multi-settlements.md) oraz odłożonym systemem workplace/schedule w [npc-2-daily-routine-and-place](./2026-08-07--020--npc-2-daily-routine-and-place.md). Droga i tak jest widoczna/użyteczna dla **gracza** bez tego — NPC-migracja między wioskami to naturalny follow-up, nie blokuje pierwszej iteracji.
 
 ## Konfiguracja / GUI
 
@@ -86,8 +86,8 @@ Nowa sekcja `region.roads` w `worldConfig.ts` (`roadHalfWidth`, `roadHeightStren
 
 ## Powiązane
 
-- [multi-settlements](./2026-08-07--multi-settlements.md) — siatka osad, `settlementGenerator.ts` (`generateSettlementDef`, `SETTLEMENT_GRID_STEP`, `cellsWithinRadius`) reużyte 1:1
-- [biome-regions](./2026-08-07--biome-regions.md) — ta sama warstwa `sampleRawTexel`/`ChunkTileData`, ten sam wzorzec (nowa makro-cecha → blend koloru + wpływ na roślinność)
-- [npc-2-daily-routine-and-place](./2026-08-07--npc-2-daily-routine-and-place.md) — naturalny punkt zaczepienia dla przyszłego NPC-ruchu międzyosadowego
-- [world-visual-overhaul](./2026-08-07--world-visual-overhaul.md) — `props.ts` wzorzec fallbacków, ten sam mechanizm dla `DOCK_SPECS`
+- [multi-settlements](./2026-08-07--025--multi-settlements.md) — siatka osad, `settlementGenerator.ts` (`generateSettlementDef`, `SETTLEMENT_GRID_STEP`, `cellsWithinRadius`) reużyte 1:1
+- [biome-regions](./2026-08-07--028--biome-regions.md) — ta sama warstwa `sampleRawTexel`/`ChunkTileData`, ten sam wzorzec (nowa makro-cecha → blend koloru + wpływ na roślinność)
+- [npc-2-daily-routine-and-place](./2026-08-07--020--npc-2-daily-routine-and-place.md) — naturalny punkt zaczepienia dla przyszłego NPC-ruchu międzyosadowego
+- [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) — `props.ts` wzorzec fallbacków, ten sam mechanizm dla `DOCK_SPECS`
 - `src/settlement/settlementGenerator.ts`, `src/settlement/findSettlementSite.ts`, `src/terrain/chunkHeightmap.ts`, `src/terrain/biomeColors.ts`, `src/terrain/chunkManager.ts`, `src/terrain/buildChunkGeometry.ts`, `src/ai/NpcAgent.ts`, `src/settlement/props.ts`

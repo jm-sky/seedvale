@@ -2,25 +2,25 @@
 
 **Status:** `verification needed` — wszystkie sekcje (Character DB, role, Big Five, traits, wspólny `HealthState`, ekran Mieszkańcy) zaimplementowane i zielone na `tsc`/`lint`/`build`/`vitest`; browser regression fauny (`predator-prey-system.md`) i wizualna weryfikacja ekranu Mieszkańcy/traits/HP nadal do zrobienia przez użytkownika, patrz „Do przetestowania”. Przy okazji dodano `vitest` jako test runner projektu (nie było w oryginalnym zakresie planu) — `src/ai/dialogue.test.ts`, `src/ai/Needs.test.ts`, `src/shared/HealthState.test.ts`, `src/fauna/HealthState.test.ts`.
 **Created:** 2026-08-07
-**Scope:** Rozszerza [npc-interactions.md](./2026-08-07--npc-interactions.md) (personality już istnieje, tu idziemy głębiej); character DB wspomniana w [npc-labels.md](./2026-08-07--npc-labels.md) i „Następne” z `npc-interactions.md`; UI ekran nadbudowuje [game-ui-screens.md](./2026-08-07--game-ui-screens.md); **scala [npc-1-identity.md](./2026-08-07--npc-1-identity.md)** (ChatGPT draft, review + decyzja scalenia: 2026-08-07 — `role`/`traits`/Big Five wchodzą tutaj, tamten plik nie jest wdrażany osobno)
+**Scope:** Rozszerza [npc-interactions.md](./2026-08-07--011--npc-interactions.md) (personality już istnieje, tu idziemy głębiej); character DB wspomniana w [npc-labels.md](./2026-08-07--012--npc-labels.md) i „Następne” z `npc-interactions.md`; UI ekran nadbudowuje [game-ui-screens.md](./2026-08-07--005--game-ui-screens.md); **scala [npc-1-identity.md](./2026-08-07--019--npc-1-identity.md)** (ChatGPT draft, review + decyzja scalenia: 2026-08-07 — `role`/`traits`/Big Five wchodzą tutaj, tamten plik nie jest wdrażany osobno)
 
 ## Stan obecny
 
 - `NpcAgent` ma dziś: `name` (z `NPC_NAMES`, 8 imion) i `personality` (z `NPC_PERSONALITIES`, 4 archetypy: `cheerful/calm/grumpy/curious`) — dwie **osobne** tablice indeksowane tym samym `treeIndex` w [NpcAgent.ts](../../src/ai/NpcAgent.ts).
 - `personality` wpływa dziś na dwie rzeczy: `PAUSE_PARAMS` (jak reaguje na obecność gracza) i wybór puli linijek w `pickDialogueLine()` — patrz [dialogue.ts](../../src/ai/dialogue.ts). Nie wpływa na FSM/needs/prędkość.
-- Brak jakiegokolwiek pojęcia zdrowia/energii/zdolności po stronie NPC. Fauna (`AnimalAgent`) ma już **zaimplementowany** (working tree, `verification needed`) system HP z realnym combat/damage — `src/fauna/HealthState.ts`, patrz [predator-prey-system.md](./2026-08-07--predator-prey-system.md). To już istniejący kod, nie hipoteza — patrz „Zależność” niżej.
+- Brak jakiegokolwiek pojęcia zdrowia/energii/zdolności po stronie NPC. Fauna (`AnimalAgent`) ma już **zaimplementowany** (working tree, `verification needed`) system HP z realnym combat/damage — `src/fauna/HealthState.ts`, patrz [predator-prey-system.md](./2026-08-07--010--predator-prey-system.md). To już istniejący kod, nie hipoteza — patrz „Zależność” niżej.
 - Brak jakiegokolwiek ekranu do przeglądania mieszkańców — jedyny wgląd to etykiety CSS2D nad głową (imię + potrzeba) i dialog jednego NPC na raz.
 - `Settlement.npcs: readonly NpcAgent[]` już jest wyeksponowane z [createSettlement.ts](../../src/settlement/createSettlement.ts) — gotowa lista do wypełnienia UI.
 
 ## Decyzje (2026-08-07)
 
-- **Jeden system HP w całej grze, nie dwa.** Pierwsza wersja tego planu proponowała osobny, niezależnie wynaleziony `EnergyState` tylko dla NPC, obok planowanego `HealthState` dla fauny w [predator-prey-system.md](./2026-08-07--predator-prey-system.md) — **odrzucone**, bo to rozjeżdża spójność app: dwa różne typy/pliki robiące konceptualnie to samo (liczba 0-100, pasek w UI, tick w czasie). Zamiast tego NPC **reużywa ten sam** `HealthState { maxHp, currentHp, dead }`, który staje się typem współdzielonym (patrz „Zależność” niżej), nie fauna-only.
+- **Jeden system HP w całej grze, nie dwa.** Pierwsza wersja tego planu proponowała osobny, niezależnie wynaleziony `EnergyState` tylko dla NPC, obok planowanego `HealthState` dla fauny w [predator-prey-system.md](./2026-08-07--010--predator-prey-system.md) — **odrzucone**, bo to rozjeżdża spójność app: dwa różne typy/pliki robiące konceptualnie to samo (liczba 0-100, pasek w UI, tick w czasie). Zamiast tego NPC **reużywa ten sam** `HealthState { maxHp, currentHp, dead }`, który staje się typem współdzielonym (patrz „Zależność” niżej), nie fauna-only.
 - **Zero combat, ale ten sam pool.** NPC nie ginie i fauna go nie atakuje (decyzja bez zmian) — ale zmęczenie pracą **zmienia to samo pole `currentHp`**, co zrobiłby combat damage u fauny, tylko przez inny call site (`applyFatigue`/`rest` zamiast `takeDamage`). NPC-owy tick ma **dolny próg** (np. nigdy poniżej 15/100) — nie osiąga 0, więc `dead`/`onDeath()` nigdy się nie odpala dla NPC w v1. Gdyby kiedyś doszedł combat gracz/fauna→NPC, mechanizm już tam jest, zero refaktoru typu.
 - **UI = in-game DOM ekran**, nie lil-gui — wzorzec `createPauseMenu.ts` (overlay, własny CSS), player-facing, nie tylko debug.
 
 ## Decyzje (2026-08-07, update — merge ChatGPT draftów po review)
 
-- **Merge z `npc-1-identity.md`.** Ten draft (review: [npc-1-identity.md](./2026-08-07--npc-1-identity.md)) proponował równoległy `role`+`traits` model pokrywający tę samą przestrzeń („co czyni NPC innym”) co `CharacterDef`/`Ability` tutaj — ten sam błąd, jaki `EnergyState` robił dla HP (patrz decyzja wyżej). Zdecydowano scalić: `CharacterDef` niżej rośnie o `role` (dana, bez zachowania w v1) i `traits` (zastępuje dawne pojęcie `Ability` — jedna pula, nie dwie równoległe).
+- **Merge z `npc-1-identity.md`.** Ten draft (review: [npc-1-identity.md](./2026-08-07--019--npc-1-identity.md)) proponował równoległy `role`+`traits` model pokrywający tę samą przestrzeń („co czyni NPC innym”) co `CharacterDef`/`Ability` tutaj — ten sam błąd, jaki `EnergyState` robił dla HP (patrz decyzja wyżej). Zdecydowano scalić: `CharacterDef` niżej rośnie o `role` (dana, bez zachowania w v1) i `traits` (zastępuje dawne pojęcie `Ability` — jedna pula, nie dwie równoległe).
 - **Personality → Big Five (OCEAN) zamiast prostego rozszerzenia enuma.** Wcześniejsza wersja tego planu (sekcja „Szersze osobowości” niżej) proponowała rozszerzyć `Personality` z 4 do 6-8 archetypów — prostsze, bo pasuje 1:1 do struktury `dialogue.ts` (`BANK` kluczowany dyskretnym enumem). Zdecydowano jednak pójść w kierunek z `npc-1-identity.md`: model wymiarowy Big Five. To większy nakład (patrz sekcja „2. Personality → Big Five” niżej — wymaga warstwy tłumaczącej wektor OCEAN na dyskretny dialogue-bucket, żeby nie przepisywać całego `BANK`), świadomie zaakceptowany koszt za ciągłe sygnały pod przyszłe systemy (traits, `npc-2` schedule).
 
 ## Zależność: współdzielony `HealthState` — wymaga refaktoru istniejącego kodu, nie tylko nowego pliku
@@ -137,7 +137,7 @@ export function rest(health: HealthState, amount: number): void                 
 - Combat/damage/śmierć NPC (nikt nie woła `takeDamage()` na NPC — fauna→NPC combat to osobna decyzja, poza tym planem i poza `predator-prey-system.md` w ich obecnych zakresach).
 - Inventory/przedmioty niesione przez NPC.
 - Edytowalne UI (zmiana osobowości/imienia z poziomu ekranu) — read-only na start.
-- Voice/audio (→ [npc-reaction-sounds.md](./2026-08-07--npc-reaction-sounds.md)).
+- Voice/audio (→ [npc-reaction-sounds.md](./2026-08-07--014--npc-reaction-sounds.md)).
 - Persystencja HP w save (obecny `SaveData` nie zapisuje stanu NPC w ogóle — HP startuje od `maxHp` po Continue, tak jak dziś `needs`).
 
 ## Szkic zmian (pliki)

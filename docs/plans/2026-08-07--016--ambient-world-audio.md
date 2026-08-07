@@ -2,7 +2,7 @@
 
 **Status:** `in progress` — fundament audio (`src/audio/createWorldAudio.ts`) + warstwa dzień/noc (`src/audio/createAmbientAudio.ts`, świerszcze w nocy, crossfade po `dayFactor`) zaimplementowane; sampler obszaru (ocean/las/góry) i pozostałe assety nadal `planned`
 **Created:** 2026-08-07
-**Scope:** [world/](../../src/world/) (ocean/water/dayNight), [terrain/](../../src/terrain/) (biomy/regiony); niezależne od NPC, ale dzieli fundament audio z [npc-reaction-sounds.md](./2026-08-07--npc-reaction-sounds.md)
+**Scope:** [world/](../../src/world/) (ocean/water/dayNight), [terrain/](../../src/terrain/) (biomy/regiony); niezależne od NPC, ale dzieli fundament audio z [npc-reaction-sounds.md](./2026-08-07--014--npc-reaction-sounds.md)
 
 ## Problem
 
@@ -19,7 +19,7 @@ W grze nie ma żadnego dźwięku tła — cisza niezależnie od tego, gdzie stoi
 
 ## Stan obecny (kontekst techniczny)
 
-- **Brak systemu audio w projekcie w ogóle** — to nakłada się z [npc-reaction-sounds.md](./2026-08-07--npc-reaction-sounds.md), które też zakłada "pierwszy dźwięk w grze poza ciszą". **Który plan wyląduje pierwszy, buduje bazowy `AudioListener`/mixer** (`THREE.AudioListener` dopięty do kamery + `THREE.Audio`/`THREE.PositionalAudio`), drugi go reużywa zamiast duplikować.
+- **Brak systemu audio w projekcie w ogóle** — to nakłada się z [npc-reaction-sounds.md](./2026-08-07--014--npc-reaction-sounds.md), które też zakłada "pierwszy dźwięk w grze poza ciszą". **Który plan wyląduje pierwszy, buduje bazowy `AudioListener`/mixer** (`THREE.AudioListener` dopięty do kamery + `THREE.Audio`/`THREE.PositionalAudio`), drugi go reużywa zamiast duplikować.
 - Dane o obszarze już istnieją, ale są rozproszone po workerach terenu (`chunkHeightmap.worker.ts`, `buildChunkGeometry.ts` — `moisture`, `continentalness`/`mountainness`) — trzeba sprawdzić, czy jest już jakaś **main-thread** funkcja "co jest pod graczem" (np. używana przez minimapę do kolorowania), czy trzeba dorobić lekki sampler dla pozycji gracza per klatkę (nie generować pełnego chunku, tylko odczytać wartość noise).
 - `waterLevel` jest znany globalnie (używany przez `NpcAgent`/`AnimalAgent` do "isWalkable"), więc "blisko oceanu" można na start uprościć do **dystansu do brzegu / głębokiej wody** zamiast pełnej klasyfikacji ocean vs jezioro/rzeka — do doprecyzowania czy world ma w ogóle rozróżnienie ocean vs lokalna woda (`createOcean.ts` vs `createWater.ts` per-chunk — do sprawdzenia, czy to różne systemy czy jeden).
 - `dayNight.ts` ma `phaseName(timeOfDay)` — gotowy sygnał do krzyżowania warstwy dzień/noc.

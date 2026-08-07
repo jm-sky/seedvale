@@ -2,7 +2,7 @@
 
 **Status:** `verification needed`
 **Created:** 2026-08-07
-**Scope:** nadbudowa nad [quests-v1.md](./2026-08-07--quests-v1.md) (`verification needed`), domyka generalizację interakcji zaproponowaną (ale niezaimplementowaną) w [gaze-highlight-labels.md](./2026-08-07--gaze-highlight-labels.md)
+**Scope:** nadbudowa nad [quests-v1.md](./2026-08-07--015--quests-v1.md) (`verification needed`), domyka generalizację interakcji zaproponowaną (ale niezaimplementowaną) w [gaze-highlight-labels.md](./2026-08-07--017--gaze-highlight-labels.md)
 
 ## Kontekst
 
@@ -211,6 +211,6 @@ index.html                               # + CSS dla wiersza etapu w quest logu
 
 ## Następnie
 
-- ~~Wizualny highlight na gaze~~ → zaimplementowany tą samą sesją, reużywając `pickInGaze`/`Interactable` z tego planu, patrz [gaze-highlight-labels.md](./2026-08-07--gaze-highlight-labels.md) (`verification needed`).
+- ~~Wizualny highlight na gaze~~ → zaimplementowany tą samą sesją, reużywając `pickInGaze`/`Interactable` z tego planu, patrz [gaze-highlight-labels.md](./2026-08-07--017--gaze-highlight-labels.md) (`verification needed`).
 - Multi-settlement quest routing, gdy `multi-settlements.md` faktycznie wyląduje w kodzie.
 - Więcej typów itemów (drewno ze stockpile, zioła z ogrodu) — ten sam wzorzec `ItemNode`/`Inventory` się skaluje.

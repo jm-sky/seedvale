@@ -38,7 +38,7 @@ src/
 
 ## Poza v0.2
 
-Fauna, questy, prawdziwe ścinanie drzew (despawn mesh), dialogi gracza, game UI screens → [2026-08-07--game-ui-screens.md](./2026-08-07--game-ui-screens.md)
+Fauna, questy, prawdziwe ścinanie drzew (despawn mesh), dialogi gracza, game UI screens → [2026-08-07--005--game-ui-screens.md](./2026-08-07--005--game-ui-screens.md)
 
 ## Następne
 

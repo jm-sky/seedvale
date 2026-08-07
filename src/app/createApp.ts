@@ -9,7 +9,12 @@ import type { ChunkCoord } from '../terrain/chunkGrid'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { saveWorldConfig } from '../config/persistConfig'
-import { createWorldConfig } from '../config/worldConfig'
+import {
+  applyStoredPlayer,
+  applyStoredSky,
+  applyStoredTerrain,
+  createWorldConfig,
+} from '../config/worldConfig'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { createFauna, type Fauna, SPAWNER_LABELS } from '../fauna/createFauna'
 import { createTouchControls } from '../input/createTouchControls'
@@ -100,9 +105,17 @@ export async function createApp(
   const config = createWorldConfig()
   if (initialSave) {
     config.seed = initialSave.config.seed
-    config.terrain = structuredClone(initialSave.config.terrain)
-    config.sky = { ...initialSave.config.sky }
-    config.player = { ...initialSave.config.player }
+    // Merge field-by-field rather than replacing `config.terrain` wholesale —
+    // an older save can predate `RegionParams` fields added since (e.g.
+    // `moistureRegionScale`), and a wholesale replace would leave those
+    // `undefined` instead of keeping the fresh defaults `createWorldConfig`
+    // already applied.
+    applyStoredTerrain(config.terrain, initialSave.config.terrain)
+    if (typeof initialSave.config.terrain.resolution === 'number') {
+      config.terrain.resolution = initialSave.config.terrain.resolution
+    }
+    applyStoredSky(config.sky, initialSave.config.sky)
+    applyStoredPlayer(config.player, initialSave.config.player)
   }
   saveWorldConfig(config)
 
@@ -143,7 +156,7 @@ export async function createApp(
   await chunkManager.waitForChunks(homeChunks())
 
   let ocean = buildOcean(scene, config)
-  let settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce)
+  let settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce, config)
   let fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
   let itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   let droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialSave?.droppedItems ?? [])
@@ -224,7 +237,7 @@ export async function createApp(
       await chunkManager.waitForChunks(homeChunks())
 
       ocean = buildOcean(scene, config)
-      settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce)
+      settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce, config)
       fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
       itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
       droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, carriedDrops)
@@ -303,7 +316,11 @@ export async function createApp(
   }
   const openVillagers = () => {
     villagersScreen.open()
-    villagersScreen.refresh(settlementsManager.getLoaded().flatMap((s) => s.npcs))
+    villagersScreen.refresh(
+      settlementsManager
+        .getLoaded()
+        .flatMap((s) => s.npcs.map((npc) => ({ npc, settlementName: s.name }))),
+    )
   }
 
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
@@ -479,7 +496,9 @@ export async function createApp(
       worldAudio.update(dt)
       minimap.update(
         player.mesh.position,
-        settlementsManager.getLoaded().map((s): MinimapSettlement => ({ position: s.center, npcs: s.npcs })),
+        settlementsManager
+          .getLoaded()
+          .map((s): MinimapSettlement => ({ position: s.center, npcs: s.npcs, name: s.name })),
       )
     }
     postProcessing.render()
@@ -698,6 +717,7 @@ function buildSettlementsManager(
   chunkManager: ChunkManager,
   seed: number,
   playSound: (url: string, volume?: number) => void,
+  config: ReturnType<typeof createWorldConfig>,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -708,6 +728,13 @@ function buildSettlementsManager(
     playSound,
     SETTLEMENT_LOAD_RADIUS,
     SETTLEMENT_UNLOAD_RADIUS,
+    {
+      sampleContinentalness: chunkManager.sampleContinentalness,
+      sampleMountainRidge: chunkManager.sampleMountainRidge,
+      sampleMoistureRegion: chunkManager.sampleMoistureRegion,
+    },
+    config.terrain.heightScale,
+    config.terrain.region,
   )
 }
 

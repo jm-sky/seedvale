@@ -2,7 +2,7 @@
 
 **Status:** `done`
 **Created:** 2026-08-07
-**Priority:** niski — pomysł na boku, nie blokuje ani nie jest blokowany przez [terrain-worker-pool](./2026-08-07--terrain-worker-pool.md) / [world-visual-overhaul](./2026-08-07--world-visual-overhaul.md); zero styku plików z tym, co dziś w toku (nowy plik + wpięcie w `chunkManager.ts` dopiero przy implementacji)
+**Priority:** niski — pomysł na boku, nie blokuje ani nie jest blokowany przez [terrain-worker-pool](./2026-08-07--006--terrain-worker-pool.md) / [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md); zero styku plików z tym, co dziś w toku (nowy plik + wpięcie w `chunkManager.ts` dopiero przy implementacji)
 
 ## Stan implementacji (2026-08-07)
 
@@ -21,7 +21,7 @@ Nie zrobione (odłożone jak w planie): faza 5 (worker offload pozycji), faza 6-
 
 ## Kontekst
 
-Wejście: [research/2026-08-07--grass-generation.md](../research/2026-08-07--grass-generation.md) — ogólny prompt o architekturze trawy AAA-style (Ghost of Tsushima-inspired), pisany bez znajomości obecnego kodu. Ten plan odpowiada na jego pytania **skonfrontowane z tym, co już istnieje w Seedvale**, nie od zera.
+Wejście: [research/2026-08-07--grass-generation.md](../research/2026-08-07--004--grass-generation.md) — ogólny prompt o architekturze trawy AAA-style (Ghost of Tsushima-inspired), pisany bez znajomości obecnego kodu. Ten plan odpowiada na jego pytania **skonfrontowane z tym, co już istnieje w Seedvale**, nie od zera.
 
 **Baseline (sprawdzone grepem):** `InstancedMesh`/`InstancedBufferGeometry` nie występuje nigdzie w `src/` — trawa byłaby pierwszym instancingiem w projekcie. Dziś nie ma żadnej trawy — grunt to sam pomalowany mesh terenu (`buildChunkGeometry.ts`, vertex colors z `biomeColors.ts`).
 
@@ -66,13 +66,13 @@ Nie ma dziś w projekcie żadnego pomiaru FPS z instancingiem, więc liczby niż
 
 - Wszystko z fazy "Nice to have" wyżej (noise wiatr, billboard LOD, interakcja gracza, `InstancedBufferGeometry`, WebGPU)
 - Density maps jako osobne tekstury malowane ręcznie — na start wystarczy istniejący biome/height/slope sygnał
-- Integracja z post-processingiem/AO ([post-processing-pipeline.md](./2026-08-07--post-processing-pipeline.md)) — fake AO w shaderze trawy (faza 2) to tymczasowy substytut, nie zależność
+- Integracja z post-processingiem/AO ([post-processing-pipeline.md](./2026-08-07--009--post-processing-pipeline.md)) — fake AO w shaderze trawy (faza 2) to tymczasowy substytut, nie zależność
 
 ## Powiązane
 
-- [research/2026-08-07--grass-generation.md](../research/2026-08-07--grass-generation.md) — oryginalny prompt/research
+- [research/2026-08-07--grass-generation.md](../research/2026-08-07--004--grass-generation.md) — oryginalny prompt/research
 - `src/terrain/chunkManager.ts`, `src/terrain/chunkWorkerPool.ts`, `src/terrain/chunkHeightmap.worker.ts`, `src/terrain/chunkHeightmapProtocol.ts` — istniejący chunk/worker system do reużycia
 - `src/terrain/biomeColors.ts` — height/moisture/slope sygnały do density/eligibility
 - `src/terrain/buildChunkGeometry.ts` — wzorzec integracji per-chunk (gdzie w cyklu życia chunka wpiąć budowę instancji)
-- [plans/2026-08-07--world-visual-overhaul.md](./2026-08-07--world-visual-overhaul.md) — sąsiednia inicjatywa roślinności (drzewa/krzewy jako dyskretne propsy, nie ground cover — różny mechanizm, nie mylić)
-- [plans/2026-08-07--terrain-worker-pool.md](./2026-08-07--terrain-worker-pool.md) — `done`, status odświeżony 2026-08-07 (worker pool per chunk realnie istnieje w kodzie)
+- [plans/2026-08-07--024--world-visual-overhaul.md](./2026-08-07--024--world-visual-overhaul.md) — sąsiednia inicjatywa roślinności (drzewa/krzewy jako dyskretne propsy, nie ground cover — różny mechanizm, nie mylić)
+- [plans/2026-08-07--006--terrain-worker-pool.md](./2026-08-07--006--terrain-worker-pool.md) — `done`, status odświeżony 2026-08-07 (worker pool per chunk realnie istnieje w kodzie)

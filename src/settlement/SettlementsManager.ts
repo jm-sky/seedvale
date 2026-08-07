@@ -1,5 +1,7 @@
 import { type Scene, type Vector3 } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
+import type { RegionParams } from '../terrain/chunkHeightmap'
+import type { TerrainSamplers } from './settlementTerrain'
 import { createSettlement, type Settlement } from './createSettlement'
 import {
   cellsWithinRadius,
@@ -36,6 +38,9 @@ export async function createSettlementsManager(
   playSound: (url: string, volume?: number) => void,
   loadRadius: number,
   unloadRadius: number,
+  terrainSamplers: TerrainSamplers,
+  heightScale: number,
+  region: RegionParams,
 ): Promise<SettlementsManager> {
   // Defs are pure functions of (seed, cell) — cached so repeated streaming
   // rechecks don't redo the ~80-sample flat-site search for cells we've
@@ -45,7 +50,16 @@ export async function createSettlementsManager(
     const key = `${cell.gx}_${cell.gz}`
     let def = defCache.get(key)
     if (!def) {
-      def = generateSettlementDef(cell, seed, sampleHeight, waterLevel, localRadius)
+      def = generateSettlementDef(
+        cell,
+        seed,
+        sampleHeight,
+        waterLevel,
+        localRadius,
+        terrainSamplers,
+        heightScale,
+        region,
+      )
       defCache.set(key, def)
     }
     return def

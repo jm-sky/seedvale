@@ -2,7 +2,7 @@
 
 **Status:** `verification needed` — zaimplementowane w working tree zgodnie z opisem poniżej, brak jeszcze wizualnej weryfikacji w przeglądarce
 **Created:** 2026-08-07
-**Priority:** średni — rozszerza istniejący system dużych regionów ([world-streaming-persistence](./2026-08-07--world-streaming-persistence.md)), naturalne uzupełnienie [world-visual-overhaul](./2026-08-07--world-visual-overhaul.md) (roślinność). Nie blokuje ani nie jest blokowany przez inne kolejkowane plany — czysto terenowo/wizualny dodatek.
+**Priority:** średni — rozszerza istniejący system dużych regionów ([world-streaming-persistence](./2026-08-07--007--world-streaming-persistence.md)), naturalne uzupełnienie [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) (roślinność). Nie blokuje ani nie jest blokowany przez inne kolejkowane plany — czysto terenowo/wizualny dodatek.
 
 ## Potrzeba
 
@@ -65,8 +65,8 @@ Klasyfikacja wagowa (`BiomeWeights`) jest zaprojektowana tak, by dodanie czwarte
 ## Poza zakresem teraz
 
 - Sawanna/tundra i inne dodatkowe biomy (patrz wyżej — architektura na to pozwala, nie implementujemy dziś)
-- Ambient audio zależne od biomu (świerszcze pustyni, żaby bagna) — naturalny follow-up do [ambient-world-audio](./2026-08-07--ambient-world-audio.md), osobny plan
-- Unikalna fauna per biom (skorpiony pustyni, żaby bagna) — [predator-prey-system](./2026-08-07--predator-prey-system.md) już ma role/spawnery; przypisanie spawnerów do biomu to osobny, większy temat
+- Ambient audio zależne od biomu (świerszcze pustyni, żaby bagna) — naturalny follow-up do [ambient-world-audio](./2026-08-07--016--ambient-world-audio.md), osobny plan
+- Unikalna fauna per biom (skorpiony pustyni, żaby bagna) — [predator-prey-system](./2026-08-07--010--predator-prey-system.md) już ma role/spawnery; przypisanie spawnerów do biomu to osobny, większy temat
 - Zmiana `findSettlementSite` pod kątem biomu — patrz "Otwarte pytanie" wyżej
 - Wpływ na `waterBodies.ts`/kolor wody w obrębie bagna (dziś jedna globalna woda) — kosmetyczne dopracowanie bagna, nie blokuje pierwszej iteracji
 
@@ -79,9 +79,9 @@ Klasyfikacja wagowa (`BiomeWeights`) jest zaprojektowana tak, by dodanie czwarte
 
 ## Powiązane
 
-- [roads-and-paths](./2026-08-07--roads-and-paths.md) — kolejna warstwa na tym samym `sampleRawTexel`/`ChunkTileData` (droga/ścieżka jako jeszcze jeden blend koloru + wpływ na roślinność, ten sam wzorzec)
-- [world-streaming-persistence](./2026-08-07--world-streaming-persistence.md) — makro regiony (oceany/góry), ten plan to ta sama oś rozszerzona o wilgotność
-- [world-visual-overhaul](./2026-08-07--world-visual-overhaul.md) — kierunek "więcej roślinności", kaktus/trzcina to jego naturalna kontynuacja
-- [ambient-world-audio](./2026-08-07--ambient-world-audio.md) — przyszły follow-up (dźwięki per biom)
-- [research/2026-08-07--3d-asset-sources.md](../research/2026-08-07--3d-asset-sources.md) — Quaternius jako źródło assetów; brak jeszcze zidentyfikowanego pack'u z kaktusem/trzciną, do sprawdzenia przy implementacji (nieblokujące — fallback proceduralny)
+- [roads-and-paths](./2026-08-07--026--roads-and-paths.md) — kolejna warstwa na tym samym `sampleRawTexel`/`ChunkTileData` (droga/ścieżka jako jeszcze jeden blend koloru + wpływ na roślinność, ten sam wzorzec)
+- [world-streaming-persistence](./2026-08-07--007--world-streaming-persistence.md) — makro regiony (oceany/góry), ten plan to ta sama oś rozszerzona o wilgotność
+- [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) — kierunek "więcej roślinności", kaktus/trzcina to jego naturalna kontynuacja
+- [ambient-world-audio](./2026-08-07--016--ambient-world-audio.md) — przyszły follow-up (dźwięki per biom)
+- [research/2026-08-07--3d-asset-sources.md](../research/2026-08-07--002--3d-asset-sources.md) — Quaternius jako źródło assetów; brak jeszcze zidentyfikowanego pack'u z kaktusem/trzciną, do sprawdzenia przy implementacji (nieblokujące — fallback proceduralny)
 - `src/terrain/chunkHeightmap.ts`, `src/terrain/biomeColors.ts`, `src/terrain/chunkVegetation.ts`, `src/terrain/grass.ts`, `src/settlement/props.ts`, `src/terrain/chunkManager.ts`, `src/config/worldConfig.ts`, `src/ui/createDebugGui.ts`

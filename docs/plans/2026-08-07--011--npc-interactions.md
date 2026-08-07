@@ -2,11 +2,11 @@
 
 **Status:** `done`
 **Created:** 2026-08-07
-**Scope:** [ROADMAP.md](../ROADMAP.md) v0.4+ (questy), [game-ui-screens.md](./2026-08-07--game-ui-screens.md) (NPC dialog)
+**Scope:** [ROADMAP.md](../ROADMAP.md) v0.4+ (questy), [game-ui-screens.md](./2026-08-07--005--game-ui-screens.md) (NPC dialog)
 
 ## Cel
 
-Gracz obecnie tylko obserwuje NPC (etykieta imię + potrzeba nad głową, [npc-labels.md](./2026-08-07--npc-labels.md)). Chcemy pierwszy krok w stronę realnej interakcji: podejście + dialog. To baza pod przyszłe questy (v0.4+) i handel, nie finalny system dialogowy.
+Gracz obecnie tylko obserwuje NPC (etykieta imię + potrzeba nad głową, [npc-labels.md](./2026-08-07--012--npc-labels.md)). Chcemy pierwszy krok w stronę realnej interakcji: podejście + dialog. To baza pod przyszłe questy (v0.4+) i handel, nie finalny system dialogowy.
 
 ## Stan obecny (dla kontekstu)
 
@@ -14,7 +14,7 @@ Gracz obecnie tylko obserwuje NPC (etykieta imię + potrzeba nad głową, [npc-l
 - Brak jakiejkolwiek reakcji NPC na obecność/input gracza. Brak raycastera w projekcie (`createApp.ts` ma tylko pointer-lock exit na Esc).
 - Input: [Keyboard.ts](../../src/input/Keyboard.ts) — mapa `KeyCode → akcja` (`forward/backward/left/right/sprint`), łatwo rozszerzalna o np. `KeyE → interact`.
 - UI overlay wzorzec: [createPauseMenu.ts](../../src/ui/createPauseMenu.ts) — DOM element w `parent`, `root.hidden` toggle, własny CSS (nie lil-gui). Ten sam wzorzec nadaje się pod dialog box.
-- Brak bazy postaci (imiona są z hardcoded puli `NPC_NAMES`, bez cech charakteru) — wspomniana jako „potem” w [npc-labels.md](./2026-08-07--npc-labels.md).
+- Brak bazy postaci (imiona są z hardcoded puli `NPC_NAMES`, bez cech charakteru) — wspomniana jako „potem” w [npc-labels.md](./2026-08-07--012--npc-labels.md).
 
 ## Zakres v1 (ten plan)
 
@@ -30,7 +30,7 @@ Gracz obecnie tylko obserwuje NPC (etykieta imię + potrzeba nad głową, [npc-l
 
 - Drzewo dialogowe / wybory gracza (tylko jednostronna kwestia NPC na start).
 - Quest hooks, handel, dawanie przedmiotów.
-- Pełna baza postaci (backstory, relacje, unikalne imiona-cechy per postać) — lekki `personality` tag z punktu 5 to celowo tylko tyle, ile trzeba pod wariację dialogu; pełniejsza baza zostaje osobnym planem (wspomnianym w [npc-labels.md](./2026-08-07--npc-labels.md)).
+- Pełna baza postaci (backstory, relacje, unikalne imiona-cechy per postać) — lekki `personality` tag z punktu 5 to celowo tylko tyle, ile trzeba pod wariację dialogu; pełniejsza baza zostaje osobnym planem (wspomnianym w [npc-labels.md](./2026-08-07--012--npc-labels.md)).
 - Interakcje z fauną (`AnimalAgent`) — inny system (chase/flee), nie dialog.
 - Voice/audio.
 
@@ -76,5 +76,5 @@ src/app/createApp.ts          # orchestration: target selection (dystans+dot) pe
 
 ## Następne (poza tym planem)
 
-- Pełna baza postaci (backstory, relacje) → osobny plan, wspomniany w [npc-labels.md](./2026-08-07--npc-labels.md)
+- Pełna baza postaci (backstory, relacje) → osobny plan, wspomniany w [npc-labels.md](./2026-08-07--012--npc-labels.md)
 - v0.4 questy — nadbudowa nad tym dialogiem (opcje wyboru, quest state)

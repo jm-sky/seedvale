@@ -9,6 +9,7 @@ import { buildSettlementProps, disposeSettlementGroup, type SettlementLandmarks 
 
 export type Settlement = {
   id: string
+  name: string
   isHome: boolean
   spawn: Vector3
   center: Vector3
@@ -57,6 +58,7 @@ export async function createSettlement(
         i,
         i / Math.max(1, count - 1),
         playSound,
+        def.isHome ? undefined : def.npcNames[i],
       )
       scene.add(agent.mesh)
       return agent
@@ -71,6 +73,7 @@ export async function createSettlement(
 
   return {
     id: def.id,
+    name: def.name,
     isHome: def.isHome,
     spawn,
     center: new Vector3(site.x, site.y, site.z),

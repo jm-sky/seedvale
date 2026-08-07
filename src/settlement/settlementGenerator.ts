@@ -1,6 +1,11 @@
 import type { HeightSampler } from '../player/PlayerController'
+import type { RegionParams } from '../terrain/chunkHeightmap'
+import { characterForIndex } from '../ai/characters'
+import { generateNpcName, type NameCulture, pickNameCulture } from '../ai/nameCultures'
+import { generateSettlementName, type SettlementTerrain } from '../shared/SettlementName'
 import { createSeededRandom } from '../world/parseSeed'
 import { findSettlementSite } from './findSettlementSite'
+import { classifySettlementTerrain, type TerrainSamplers } from './settlementTerrain'
 
 /** World-unit spacing between settlement grid cells. Large enough that even
  *  the worst-case combination of per-cell noise offset and the local flat-site
@@ -27,6 +32,22 @@ export type SettlementDef = {
   /** True only for cell (0,0) — the settlement the player spawns in, always
    *  loaded, and the only one built with the full forest belt in v1. */
   isHome: boolean
+  /** Terrain feature the naming generator picked up around the site — see
+   *  `settlementTerrain.ts`. Kept alongside `name` mostly for debugging. */
+  terrain: SettlementTerrain
+  name: string
+  /** The settlement's dominant name culture — most NPCs draw their name from
+   *  this pool (`ai/nameCultures.ts`), with a small chance per NPC of a name
+   *  from elsewhere. Not applied to the home settlement — see `npcNames`. */
+  nameCulture: NameCulture
+  /** Pre-rolled name per NPC slot (index-aligned with `npcCount`), so
+   *  `createSettlement.ts` doesn't need its own seeded RNG. Unused for the
+   *  home settlement, whose NPCs keep `characters.ts`'s fixed roster names —
+   *  quest defs (`quests/quests.ts`) hardcode giver names like "Anna" against
+   *  that roster, and multi-settlement quests are out of scope (see
+   *  multi-settlements plan), so randomizing home names would silently break
+   *  the only quests the game has. */
+  npcNames: readonly string[]
 }
 
 export function cellKey(cell: SettlementCell): string {
@@ -81,6 +102,9 @@ export function generateSettlementDef(
   sampleHeight: HeightSampler,
   waterLevel: number,
   localSearchRadius: number,
+  terrainSamplers: TerrainSamplers,
+  heightScale: number,
+  region: RegionParams,
 ): SettlementDef {
   const isHome = cell.gx === 0 && cell.gz === 0
   const seedForCell = cellSeed(seed, cell)
@@ -91,6 +115,22 @@ export function generateSettlementDef(
   const sizeRandom = createSeededRandom(seedForCell ^ 0x51235)
   const npcCount = 3 + Math.floor(sizeRandom() * 3)
 
+  const terrain = classifySettlementTerrain(
+    site.x,
+    site.z,
+    site.y,
+    waterLevel,
+    heightScale,
+    region,
+    terrainSamplers,
+  )
+  const name = generateSettlementName(seedForCell, terrain)
+
+  const nameCulture = pickNameCulture(seedForCell)
+  const npcNames = Array.from({ length: npcCount }, (_, i) =>
+    generateNpcName(seedForCell, i, characterForIndex(i).gender, nameCulture),
+  )
+
   return {
     id: cellKey(cell),
     gx: cell.gx,
@@ -100,5 +140,9 @@ export function generateSettlementDef(
     y: site.y,
     npcCount,
     isHome,
+    terrain,
+    name,
+    nameCulture,
+    npcNames,
   }
 }
