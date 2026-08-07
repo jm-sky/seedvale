@@ -56,7 +56,7 @@ export function createPauseMenu(
       <button type="button" data-new-game class="seedvale-pause__button seedvale-pause__button--danger">New Game</button>
       <div class="seedvale-pause__hint">${
         isTouchDevice()
-          ? 'Joystick — ruch · przeciągnij ekran — rozglądanie · ☰ — pauza'
+          ? 'Joystick — ruch · przeciągnij ekran — rozglądanie · dotknij poza oknem — zamknij'
           : 'WASD — ruch · mysz (klik) — rozglądanie · Esc — pauza'
       }</div>
     </div>
@@ -112,6 +112,14 @@ export function createPauseMenu(
     setPaused(!paused)
   }
 
+  // Tapping the backdrop closes the menu — same convention as the other
+  // touch-friendly panels (NPC dialog, quest log, villagers). Without this,
+  // touch users had no way back once open: the ☰ button that opens the menu
+  // sits underneath the full-screen overlay once it's up.
+  const onRootClick = (event: MouseEvent) => {
+    if (event.target === root) setPaused(false)
+  }
+
   resumeButton.addEventListener('click', () => setPaused(false))
   questLogButton.addEventListener('click', () => {
     setPaused(false)
@@ -123,6 +131,7 @@ export function createPauseMenu(
   })
   guiButton.addEventListener('click', () => handlers.onToggleGui?.())
   window.addEventListener('keydown', onKeyDown)
+  root.addEventListener('click', onRootClick)
 
   return {
     isPaused: () => paused,
@@ -132,6 +141,7 @@ export function createPauseMenu(
     },
     dispose() {
       window.removeEventListener('keydown', onKeyDown)
+      root.removeEventListener('click', onRootClick)
       window.clearTimeout(saveStatusTimeout)
       root.remove()
     },

@@ -1,4 +1,5 @@
 import type { NpcAgent } from '../ai/NpcAgent'
+import { isTouchDevice } from '../input/isTouchDevice'
 import type { Vector3 } from 'three'
 
 export type MinimapSettlement = {
@@ -7,8 +8,10 @@ export type MinimapSettlement = {
   name: string
 }
 
-/** Canvas size in CSS px (square). */
-const SIZE = 200
+/** Canvas size in CSS px (square) — smaller on touch so the expanded map has
+ *  less chance of reaching into the bottom-right action-button cluster on a
+ *  short landscape viewport (it starts collapsed there anyway — see below). */
+const SIZE = isTouchDevice() ? 130 : 200
 /** World units → minimap px. */
 const SCALE = 2
 /** Half-extent of the visible world window, in world units (SIZE / 2 / SCALE). */
@@ -44,7 +47,12 @@ export function createMinimap(parent: HTMLElement): Minimap {
   canvas.style.height = `${SIZE}px`
   ctx.scale(dpr, dpr)
 
-  let collapsed = false
+  // Starts collapsed on touch — expanded by default it can reach far enough
+  // down the right edge to overlap the action-button cluster (L/G/RUN/E) on
+  // a short landscape viewport; collapsed, it's just the toggle button.
+  let collapsed = isTouchDevice()
+  canvas.hidden = collapsed
+  toggleButton.textContent = collapsed ? '[+]' : '[-]'
   const onToggleClick = () => {
     collapsed = !collapsed
     canvas.hidden = collapsed
