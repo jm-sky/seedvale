@@ -1,4 +1,4 @@
-import { Color } from 'three'
+import { Color, MathUtils } from 'three'
 import { LinearSpline } from '../math/linearSpline'
 
 const SEABED = new Color(0x2f5244)
@@ -8,6 +8,13 @@ const SNOW = new Color(0xdfe6ee)
 
 /** Shore sand band above water (world units). */
 const SAND_BAND = 0.6
+
+/** Half-width of the smoothed seabed → sand transition (world units). */
+const SEABED_BLEND = 0.25
+/** Half-width of the smoothed sand → land transition (world units). */
+const LAND_BLEND = 0.35
+
+const landTmp = new Color()
 
 /** Steepness (1 - normal.y) where rock starts / fully takes over. */
 export const ROCK_SLOPE_START = 0.35
@@ -55,22 +62,27 @@ export function colorForTerrain(
   heightScale: number,
   out: Color,
 ): void {
-  if (height <= waterLevel + 0.05) {
-    out.copy(SEABED)
-    return
-  }
-  if (height < waterLevel + SAND_BAND) {
-    out.copy(SAND)
-    return
-  }
-
   const hNorm = Math.min(
     1,
     Math.max(0, (height - waterLevel) / Math.max(heightScale, 0.001)),
   )
   const cArid = arid.get(hNorm)
   const cHumid = humid.get(hNorm)
-  out.copy(cArid).lerpHSL(cHumid, moisture)
+  landTmp.copy(cArid).lerpHSL(cHumid, moisture)
+
+  const seabedToSand = MathUtils.smoothstep(
+    height,
+    waterLevel - SEABED_BLEND,
+    waterLevel + SEABED_BLEND,
+  )
+  out.copy(SEABED).lerpHSL(SAND, seabedToSand)
+
+  const sandToLand = MathUtils.smoothstep(
+    height,
+    waterLevel + SAND_BAND - LAND_BLEND,
+    waterLevel + SAND_BAND + LAND_BLEND,
+  )
+  out.lerpHSL(landTmp, sandToLand)
 }
 
 /**

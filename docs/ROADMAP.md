@@ -44,7 +44,7 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 
 ## Następne kroki (dla nowej sesji)
 
-1. [x] Review wody (Claude): [reviews/2026-08-07-water-quality.md](./reviews/2026-08-07-water-quality.md) → follow-up: [issues 001](./issues/2026-08-07--001--water-shore-color-banding.md), [002](./issues/2026-08-07--002--water-daynight-integration.md)  
+1. [x] Review wody (Claude): [reviews/2026-08-07-water-quality.md](./reviews/2026-08-07-water-quality.md) → follow-up: [issues 001](./issues/2026-08-07--001--water-shore-color-banding.md) (`done`), [002](./issues/2026-08-07--002--water-daynight-integration.md) (`done`)  
 2. [x] GLB fauna pod `AnimalAgent` / `userData.animalKind` (Quaternius: wolf/fox/deer/stag; Idle/Walk/Gallop)  
 3. [ ] Opcjonalnie: game UI → [plans/2026-08-07--game-ui-screens.md](./plans/2026-08-07--game-ui-screens.md)  
 4. [ ] v0.4 questy — dopiero po decyzji scope  

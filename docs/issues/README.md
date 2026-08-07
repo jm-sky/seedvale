@@ -16,8 +16,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 
 | ID | File | Summary | Status |
 |----|------|---------|--------|
-| 001 | [2026-08-07--001--water-shore-color-banding.md](./2026-08-07--001--water-shore-color-banding.md) | Brzeg jeziora w schodkach — twarde progi koloru terenu | `todo` |
-| 002 | [2026-08-07--002--water-daynight-integration.md](./2026-08-07--002--water-daynight-integration.md) | Woda nie reaguje na dzień/noc | `verification needed` |
+| 001 | [2026-08-07--001--water-shore-color-banding.md](./2026-08-07--001--water-shore-color-banding.md) | Brzeg jeziora w schodkach — twarde progi koloru terenu | `done` |
+| 002 | [2026-08-07--002--water-daynight-integration.md](./2026-08-07--002--water-daynight-integration.md) | Woda nie reaguje na dzień/noc | `done` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
