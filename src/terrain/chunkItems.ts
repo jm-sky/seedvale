@@ -25,6 +25,12 @@ const SLOPE_REJECT = 0.9
  *  placement — lower than the terrain-shaping `mountainThreshold` so foothills
  *  qualify too, not just bare ridge crests. */
 const MOUNTAIN_ITEM_MIN_RIDGE = 0.35
+/** Max local height above `waterLevel` for shell placement, in world units
+ *  (heightScale default 18). `continentalness` alone is too low-frequency to
+ *  guarantee a spot is actually near the shoreline — a "coastal band" point can
+ *  still sit high and dry deep inland (e.g. in a forest). This keeps shells tied
+ *  to the terrain that's actually rendered near sea level. */
+const SHELL_MAX_HEIGHT_ABOVE_WATER = 3
 /** Fraction of otherwise-eligible candidates kept — these are meant to be rare
  *  finds, not litter. */
 const KEEP_CHANCE = 0.3
@@ -39,8 +45,9 @@ function hashChunk(cx: number, cz: number): number {
  * Deterministic, worker-safe per-chunk item placement — mirrors
  * `chunkVegetation.ts` (pure data, instantiated into meshes on the main thread
  * by `chunkManager.ts`). Shells land in the coastal band (continentalness
- * between `oceanThreshold`/`coastThreshold`, where waves would wash them up);
- * stones land on strong mountain-ridge terrain. Finite — no respawn — the
+ * between `oceanThreshold`/`coastThreshold` *and* close to `waterLevel` in
+ * local height, where waves would actually wash them up); stones land on
+ * strong mountain-ridge terrain. Finite — no respawn — the
  * caller filters out ids already recorded as collected.
  */
 export function computeChunkItems(
@@ -82,7 +89,8 @@ export function computeChunkItems(
     let kind: ItemKind | null = null
     if (
       continentalness >= params.region.oceanThreshold &&
-      continentalness <= params.region.coastThreshold
+      continentalness <= params.region.coastThreshold &&
+      h <= waterLevel + SHELL_MAX_HEIGHT_ABOVE_WATER
     ) {
       kind = 'shell'
     } else if (ridge >= MOUNTAIN_ITEM_MIN_RIDGE) {

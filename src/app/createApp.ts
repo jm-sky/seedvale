@@ -9,7 +9,12 @@ import type { ChunkCoord } from '../terrain/chunkGrid'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { saveWorldConfig } from '../config/persistConfig'
-import { createWorldConfig } from '../config/worldConfig'
+import {
+  applyStoredPlayer,
+  applyStoredSky,
+  applyStoredTerrain,
+  createWorldConfig,
+} from '../config/worldConfig'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { createFauna, type Fauna, SPAWNER_LABELS } from '../fauna/createFauna'
 import { createTouchControls } from '../input/createTouchControls'
@@ -100,9 +105,17 @@ export async function createApp(
   const config = createWorldConfig()
   if (initialSave) {
     config.seed = initialSave.config.seed
-    config.terrain = structuredClone(initialSave.config.terrain)
-    config.sky = { ...initialSave.config.sky }
-    config.player = { ...initialSave.config.player }
+    // Merge field-by-field rather than replacing `config.terrain` wholesale —
+    // an older save can predate `RegionParams` fields added since (e.g.
+    // `moistureRegionScale`), and a wholesale replace would leave those
+    // `undefined` instead of keeping the fresh defaults `createWorldConfig`
+    // already applied.
+    applyStoredTerrain(config.terrain, initialSave.config.terrain)
+    if (typeof initialSave.config.terrain.resolution === 'number') {
+      config.terrain.resolution = initialSave.config.terrain.resolution
+    }
+    applyStoredSky(config.sky, initialSave.config.sky)
+    applyStoredPlayer(config.player, initialSave.config.player)
   }
   saveWorldConfig(config)
 

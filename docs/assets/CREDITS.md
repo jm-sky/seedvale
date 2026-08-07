@@ -8,7 +8,10 @@ Modele 3D użyte w projekcie. Preferujemy CC0; przy CC-BY wpisz wymagany kredyt.
 | `public/models/settlement/logs.glb` | j.w. | j.w. | CC0 1.0 | `Logs` |
 | `public/models/settlement/garden.glb` | j.w. | j.w. | CC0 1.0 | `Farm_FirstAge_Level1_Wheat` |
 | `public/models/settlement/storage.glb` | j.w. | j.w. | CC0 1.0 | `Storage_FirstAge_Level1` |
-| `public/models/nature/tree_*.glb` | j.w. | j.w. | CC0 1.0 | `Resource_Tree1` / `Resource_Tree2` |
+| `public/models/nature/tree_a.glb`, `tree_b.glb` | j.w. | j.w. | CC0 1.0 | `Resource_Tree1` / `Resource_Tree2` |
+| `public/models/nature/tree_c.glb` | Ultimate Stylized Nature / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatestylizednature.html) | CC0 1.0 | `MapleTree_3` (textures resized 2048→512 + WebP via `gltf-transform`, 23MB→320KB) |
+| `public/models/nature/bush_a.glb` | j.w. | j.w. | CC0 1.0 | `Bush_Small` (WebP-compressed via `gltf-transform`) |
+| `public/models/nature/bush_b.glb` | j.w. | j.w. | CC0 1.0 | `Bush_Large` (WebP-compressed via `gltf-transform`) |
 | `public/models/characters/*.glb` (NPC, male) | Ultimate Modular Men Pack / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatemodularcharacters.html) | CC0 1.0 | `Farmer`, `Worker`, `Casual_Hoodie`, `Casual_2` |
 | `public/models/characters/Female_*.glb` (NPC, female) | Ultimate Modular Women Pack / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatemodularwomen.html) | CC0 1.0 | `Worker`, `Casual`, `Medieval`, `Formal` (converted `.gltf` → `.glb` via `gltf-transform copy`) |
 | `public/models/characters/Adventurer.glb` (player) | j.w. | [poly.pizza mirror](https://poly.pizza/m/5EGWBMpuXq) | CC0 1.0 | `Adventurer` (anim clip names stripped of `CharacterArmature\|` prefix via `gltf-transform`) |
@@ -23,5 +26,7 @@ Modular Women: [quaternius-ultimate-modular-women-license.txt](./quaternius-ulti
 Fauna: [quaternius-ultimate-animated-animals-license.txt](./quaternius-ultimate-animated-animals-license.txt).
 
 **Uwaga:** paczka Quaternius nie ma bear/rabbit — Seedvale mapuje drapieżniki na `wolf`/`fox`, ofiary na `deer`/`stag`.
+
+**Uwaga (tree_c/bush_*):** Ultimate Stylized Nature nie ma osobnego pliku licencji w pobranym zestawie (Blends/FBX/gITF/OBJ/PNG) — jak wszystkie paczki Quaternius, licencja to CC0 1.0.
 
 Research: [../research/2026-08-07-3d-asset-sources.md](../research/2026-08-07-3d-asset-sources.md).

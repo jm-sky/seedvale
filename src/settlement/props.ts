@@ -23,8 +23,8 @@ export const TREE_SPECS = [
 ] as const
 
 export const BUSH_SPECS = [
-  { url: '/models/nature/bush_a.glb', height: 1.0 },
-  { url: '/models/nature/bush_b.glb', height: 1.3 },
+  { url: '/models/nature/bush_a.glb', height: 1.4 },
+  { url: '/models/nature/bush_b.glb', height: 1.8 },
 ] as const
 
 export const CACTUS_SPECS = [

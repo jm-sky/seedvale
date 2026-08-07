@@ -111,11 +111,12 @@ export function createItemSpawners(
       points.forEach((p, i) => {
         if (wasCollected[i] && !p.collected) spawnMeshAt(i)
       })
-      for (const { object, el } of labels) {
-        el.style.opacity = String(
-          labelOpacityForDistance(object.position.distanceTo(observerPos)),
-        )
-      }
+      points.forEach((p, i) => {
+        const { object, el } = labels[i]!
+        el.style.opacity = p.collected
+          ? '0'
+          : String(labelOpacityForDistance(object.position.distanceTo(observerPos)))
+      })
     },
     dispose() {
       for (const mesh of meshes) {
