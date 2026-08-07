@@ -3,6 +3,7 @@ import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { SaveData } from '../persistence/saveData'
 import type { ChunkCoord } from '../terrain/chunkGrid'
+import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { saveWorldConfig } from '../config/persistConfig'
 import { createWorldConfig } from '../config/worldConfig'
@@ -90,6 +91,7 @@ export async function createApp(
   const scene = createScene()
   const camera = createCamera(container.clientWidth / container.clientHeight)
   const worldAudio = createWorldAudio(camera)
+  const ambientAudio = createAmbientAudio(worldAudio)
 
   const postProcessing = createPostProcessing(
     renderer,
@@ -320,6 +322,7 @@ export async function createApp(
       if (dayNight.enabled) {
         applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
       }
+      ambientAudio.update(skyParamsFromTime(dayNight.timeOfDay).dayFactor)
       hud.setTime(dayNight.timeOfDay)
       hud.setExp(questManager.getExp())
       player.update(dt)
@@ -354,6 +357,7 @@ export async function createApp(
     mouseLook.dispose()
     sky.dispose()
     ocean.dispose()
+    ambientAudio.dispose()
     worldAudio.dispose()
     fauna.dispose()
     settlement.dispose()

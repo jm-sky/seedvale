@@ -1,6 +1,6 @@
 # Plan: Ambient audio świata (dźwięki tła, zależne od obszaru)
 
-**Status:** `in progress` — fundament audio (`src/audio/createWorldAudio.ts`) zaimplementowany; assety, sampler obszaru i mixer runtime nadal `planned`
+**Status:** `in progress` — fundament audio (`src/audio/createWorldAudio.ts`) + warstwa dzień/noc (`src/audio/createAmbientAudio.ts`, świerszcze w nocy, crossfade po `dayFactor`) zaimplementowane; sampler obszaru (ocean/las/góry) i pozostałe assety nadal `planned`
 **Created:** 2026-08-07
 **Scope:** [world/](../../src/world/) (ocean/water/dayNight), [terrain/](../../src/terrain/) (biomy/regiony); niezależne od NPC, ale dzieli fundament audio z [npc-reaction-sounds.md](./2026-08-07--npc-reaction-sounds.md)
 
@@ -25,6 +25,15 @@ W grze nie ma żadnego dźwięku tła — cisza niezależnie od tego, gdzie stoi
 - `dayNight.ts` ma `phaseName(timeOfDay)` — gotowy sygnał do krzyżowania warstwy dzień/noc.
 
 ## Zakres (szkic — do doprecyzowania przy starcie)
+
+### 0. Warstwa dzień/noc (świerszcze) — `done`
+
+Zawężony pierwszy krok (na prośbę usera: "nocne dźwięki - tylko w nocy"), przed sekcjami 2-4 pełnego planu. `src/audio/createAmbientAudio.ts` (`createAmbientAudio(worldAudio): AmbientAudio`):
+
+- Jedna pętla — `public/sounds/ambient-night-crickets-loop-01.wav` — przez `worldAudio.createLoop()`.
+- `update(dayFactor)` ustawia target gain na `(1 - dayFactor) * 0.35` — pełna głośność w nocy, cichnie płynnie w dzień, bez twardego przełącznika po zegarze; crossfade robi już `WorldAudio.update()` (gain lerp).
+- Wpięte w `createApp.ts`: `ambientAudio.update(skyParamsFromTime(dayNight.timeOfDay).dayFactor)` w pętli tick (niezależnie od `dayNight.enabled`), `dispose()` w cleanup.
+- Poza zakresem tego kroku: warstwa dzienna (ptaki/owady) i warstwy terenowe (ocean/las/góry) — nadal `planned` w sekcjach 2-4 niżej.
 
 ### 1. Fundament audio — `done`
 
