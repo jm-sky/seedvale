@@ -17,6 +17,7 @@ export function createDebugGui(
   handlers: DebugGuiHandlers,
 ): { dispose: () => void; toggle: () => void; setBusy: (busy: boolean) => void } {
   const gui = new GUI({ title: 'Seedvale' })
+  gui.close()
 
   const info = {
     get triangles() {
