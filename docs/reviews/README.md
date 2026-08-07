@@ -10,7 +10,7 @@ Planned review runs — **one AI session per file**. Split scopes where useful.
 
 Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): plik  
 `docs/reviews/to-do--<slug>.md`  
-→ użytkownik zleca Claude osobno. Po starcie: przenieś/przemianuj na `YYYY-MM-DD--slug.md` i zaktualizuj tabelę.
+→ użytkownik zleca Claude osobno. Po starcie: przenieś/przemianuj na `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in reviews) i zaktualizuj tabelę.
 
 | Review | Scope | Status | File |
 |--------|-------|--------|------|
@@ -20,7 +20,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 
 | Review | Scope | Status | File |
 |--------|-------|--------|------|
-| Water quality | Stylized woda — brzegi, shader, vs Water.js | `done` | [2026-08-07-water-quality.md](./2026-08-07-water-quality.md) |
+| Water quality | Stylized woda — brzegi, shader, vs Water.js | `done` | [2026-08-07--001--water-quality.md](./2026-08-07--001--water-quality.md) |
 
 ## After each run
 

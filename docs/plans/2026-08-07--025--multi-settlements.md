@@ -3,7 +3,7 @@
 **Status:** `verification needed`
 **Created:** 2026-08-07
 **Implemented:** 2026-08-07 (v1 — patrz "Stan implementacji" poniżej)
-**Scope:** v0.4+ (questy między wioskami), nadbudowa nad [quests-v1.md](./2026-08-07--quests-v1.md) (system questów), rozszerzenie [world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md) (chunk streaming)
+**Scope:** v0.4+ (questy między wioskami), nadbudowa nad [quests-v1.md](./2026-08-07--015--quests-v1.md) (system questów), rozszerzenie [world-streaming-persistence.md](./2026-08-07--007--world-streaming-persistence.md) (chunk streaming)
 
 ## Stan implementacji (v1, 2026-08-07)
 
@@ -23,7 +23,7 @@ Sanity check: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test
 
 ## Kontekst
 
-Aktualnie: **jedna wioska** na mapie, zawsze generowana w tym samym miejscu (seeded `findSettlementSite` przy stałym seed). System questów v1 (patrz [quests-v1.md](./2026-08-07--quests-v1.md)) pracuje na NPCs w jednej osadzie. Chcemy rozszerzyć na **wielorakie wioski** rozproszone na mapie, oddalone od siebie, żeby:
+Aktualnie: **jedna wioska** na mapie, zawsze generowana w tym samym miejscu (seeded `findSettlementSite` przy stałym seed). System questów v1 (patrz [quests-v1.md](./2026-08-07--015--quests-v1.md)) pracuje na NPCs w jednej osadzie. Chcemy rozszerzyć na **wielorakie wioski** rozproszone na mapie, oddalone od siebie, żeby:
 
 - Questy mogły wysyłać gracza między wioskami (potem + bardziej zaawansowany quest system)
 - Zwiększyć skalę zabawy i poczucie odkrywania
@@ -34,7 +34,7 @@ Aktualnie: **jedna wioska** na mapie, zawsze generowana w tym samym miejscu (see
 - `findSettlementSite()` → wyszukuje jedno miejsce na mapie dla osady, seeded deterministycznie
 - `createSettlement()` → tworzy budynki + NPC-e dla jednej wioski
 - `createApp()` → loaduje jedną osadę: `const settlement = await buildSettlement(...)`
-- Teren: chunk streaming ([world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md)) — ładuje/wyładowuje chunki wokół gracza, brak globalnego limitu
+- Teren: chunk streaming ([world-streaming-persistence.md](./2026-08-07--007--world-streaming-persistence.md)) — ładuje/wyładowuje chunki wokół gracza, brak globalnego limitu
 - NPC imiona: pool `NPC_NAMES` w `NpcAgent.ts`, losowo/indeksowo przydzielane w ramach jednej osady
 - Questy v1: hardcoded dwaj NPC-e z jednej osady
 
@@ -87,7 +87,7 @@ Aktualnie: `NPC_NAMES` to pool 20-50 imion; każda wioska losuje z tej samej pul
 
 ### 5. Integracja z quest systemem
 
-[quests-v1.md](./2026-08-07--quests-v1.md) definiuje jeden hardcoded quest (giver Anna → target Piotr, obie z tej samej wioski).
+[quests-v1.md](./2026-08-07--015--quests-v1.md) definiuje jeden hardcoded quest (giver Anna → target Piotr, obie z tej samej wioski).
 
 Dla multi-settlement:
 
@@ -141,13 +141,13 @@ src/ai/NpcAgent.ts                    # opcjonalne: + settlementId jako field (d
    - Jakie wioski są loaded/unloaded przy ruchu
    - Czy load/unload dzieje się bez artefaktów (flickeringu, tekstur które nie loadują)
 3. Config `?seed=12345` — ta sama mapa powinna mieć wioski w tych samych miejscach (seeded deterministically)
-4. Minimap (`M`) — jeśli jest aktywna, powinna pokazywać settlementy (wymagana integracja z minimap, por. [minimap.md](./2026-08-07--minimap.md))
+4. Minimap (`M`) — jeśli jest aktywna, powinna pokazywać settlementy (wymagana integracja z minimap, por. [minimap.md](./2026-08-07--029--minimap.md))
 5. Sanity check regresji: wioska #0 tam, gdzie była: gracz spawns w tym samym miejscu, imiona NPC-ów znowu takie same
 
 ## Następnie
 
 - Questy między wioskami (wymaga compass/marker wskazującego cel)
-- Integracja z pełną bazą postaci ([npc-character-depth.md](./2026-08-07--npc-character-depth.md))
-- Persystencja quest state w save ([quests-v1.md](./2026-08-07--quests-v1.md) v2)
+- Integracja z pełną bazą postaci ([npc-character-depth.md](./2026-08-07--022--npc-character-depth.md))
+- Persystencja quest state w save ([quests-v1.md](./2026-08-07--015--quests-v1.md) v2)
 - Dynamiczne zdarzenia w wioskach (osobny plan)
-- Drogi między osadami + ścieżki do mniejszych lokalizacji (port/przystań) — [roads-and-paths.md](./2026-08-07--roads-and-paths.md), reużywa `generateSettlementDef`/`SETTLEMENT_GRID_STEP`/`cellsWithinRadius` 1:1
+- Drogi między osadami + ścieżki do mniejszych lokalizacji (port/przystań) — [roads-and-paths.md](./2026-08-07--026--roads-and-paths.md), reużywa `generateSettlementDef`/`SETTLEMENT_GRID_STEP`/`cellsWithinRadius` 1:1

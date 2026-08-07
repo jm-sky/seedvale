@@ -2,7 +2,7 @@
 
 **Status:** `done`  
 **Created:** 2026-08-07  
-**Scope:** Rozszerzenie systemu [npc-interactions.md](./2026-08-07--npc-interactions.md)
+**Scope:** Rozszerzenie systemu [npc-interactions.md](./2026-08-07--011--npc-interactions.md)
 
 ## Problem
 
@@ -11,7 +11,7 @@ NPC otrzymują imiona z puli `['Anna', 'Piotr', 'Kasia', 'Marek', 'Ola', 'Tomek'
 - Obecne modele: `Farmer`, `Worker`, `Casual_2`, `Casual_Hoodie` — wszystkie postacie **męskie** (Quaternius Modular Men)
 - Brak modeli żeńskich → Kasia, Ola, Zofia, Anna (imiona żeńskie) wyglądają jak mężczyzni
 
-**Poza zakresem tego planu:** dźwięki reakcji NPC (męski/żeński `Hmm`/`Tak?` przy `lookAtPlayer`) — wydzielone do osobnego planu, [npc-reaction-sounds.md](./2026-08-07--npc-reaction-sounds.md), bo to niezależny kawałek pracy (audio, nie modele).
+**Poza zakresem tego planu:** dźwięki reakcji NPC (męski/żeński `Hmm`/`Tak?` przy `lookAtPlayer`) — wydzielone do osobnego planu, [npc-reaction-sounds.md](./2026-08-07--014--npc-reaction-sounds.md), bo to niezależny kawałek pracy (audio, nie modele).
 
 ## Rozwiązanie
 
@@ -50,9 +50,9 @@ NPC otrzymują imiona z puli `['Anna', 'Piotr', 'Kasia', 'Marek', 'Ola', 'Tomek'
 
 ## Uwaga: możliwe nakładanie się z character DB
 
-`NPC_NAMES` i `NPC_PERSONALITIES` w `NpcAgent.ts` to dziś dwie osobne tablice indeksowane tym samym `treeIndex`. Jeśli [npc-character-depth.md](./2026-08-07--npc-character-depth.md) (character DB: imię+płeć+osobowość+abilities w jednym miejscu) wyląduje **przed** tym planem, punkt 2 („Mapa płci imienia”) tutaj staje się zbędny — płeć będzie już polem w tamtej strukturze. Który plan implementować pierwszy, nie ma znaczenia dla działania gry — tylko dla tego, który dokument dostaje pole `gender` jako pierwszy.
+`NPC_NAMES` i `NPC_PERSONALITIES` w `NpcAgent.ts` to dziś dwie osobne tablice indeksowane tym samym `treeIndex`. Jeśli [npc-character-depth.md](./2026-08-07--022--npc-character-depth.md) (character DB: imię+płeć+osobowość+abilities w jednym miejscu) wyląduje **przed** tym planem, punkt 2 („Mapa płci imienia”) tutaj staje się zbędny — płeć będzie już polem w tamtej strukturze. Który plan implementować pierwszy, nie ma znaczenia dla działania gry — tylko dla tego, który dokument dostaje pole `gender` jako pierwszy.
 
 ## Następnie
 
-- Rozszerzona charakteryzacja (osobowość/abilities/energia + przeglądarka NPC) → [npc-character-depth.md](./2026-08-07--npc-character-depth.md)
-- Dźwięki reakcji NPC → [npc-reaction-sounds.md](./2026-08-07--npc-reaction-sounds.md)
+- Rozszerzona charakteryzacja (osobowość/abilities/energia + przeglądarka NPC) → [npc-character-depth.md](./2026-08-07--022--npc-character-depth.md)
+- Dźwięki reakcji NPC → [npc-reaction-sounds.md](./2026-08-07--014--npc-reaction-sounds.md)

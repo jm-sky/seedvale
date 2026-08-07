@@ -24,7 +24,7 @@ To bezpośrednio zawraca do findingu, który wcześniej odrzucono jako "skip":
 
 **Otwarte pytanie (wymaga osobnej sesji research/plan, nie rozstrzygnięte tu):** pełny cube-sphere planet renderer (6 ścian, LOD po odległości kamery) vs. prostszy model — np. duży bounded flat/curved teren z ring-based chunk loadingiem, który "czuje się" bezkrawędziowy bez pełnej geometrii sfery. Cube-sphere to ~450 linii nietrywialnego kodu (node stitching, seam handling) — warto rozważyć koszt/benefit względem prostszego przybliżenia zanim zacznie się implementację.
 
-Fundament pod to: [worker pool dla generacji terenu](./2026-08-07--terrain-worker-pool.md) (osobny plan, wyższy priorytet, robimy najpierw) — chunk generation i tak musi iść do workera.
+Fundament pod to: [worker pool dla generacji terenu](./2026-08-07--006--terrain-worker-pool.md) (osobny plan, wyższy priorytet, robimy najpierw) — chunk generation i tak musi iść do workera.
 
 ## Potrzeba
 
@@ -83,4 +83,4 @@ Wziąć gdy: (a) jedna mapa 128–256 za mała / za ciężka, albo (b) potrzeba 
 
 - [2026-08-07-3d-portfolio-library-audit.md](../research/2026-08-07-3d-portfolio-library-audit.md) — chunk manager jako wzorzec  
 - [ROADMAP.md](../ROADMAP.md)  
-- [2026-08-07--game-ui-screens.md](./2026-08-07--game-ui-screens.md) — UI save/load  
+- [2026-08-07--005--game-ui-screens.md](./2026-08-07--005--game-ui-screens.md) — UI save/load  

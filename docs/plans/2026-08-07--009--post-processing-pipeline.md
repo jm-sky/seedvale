@@ -2,7 +2,7 @@
 
 **Status:** `done`
 **Created:** 2026-08-07
-**Priority:** normalny — user chce zrobić niedługo, nie pilne teraz (priorytet: [terrain-worker-pool](./2026-08-07--terrain-worker-pool.md))
+**Priority:** normalny — user chce zrobić niedługo, nie pilne teraz (priorytet: [terrain-worker-pool](./2026-08-07--006--terrain-worker-pool.md))
 
 ## Potrzeba
 
@@ -41,4 +41,4 @@ Dziś render jest czysto forward — brak `EffectComposer`/`RenderPass` gdziekol
 - `src/app/createApp.ts` — wpięcie composera
 - `src/render/createPostProcessing.ts` — pipeline
 - `src/ui/createDebugGui.ts`, `src/config/worldConfig.ts`, `src/config/persistConfig.ts` — GUI/config AO
-- [plans/2026-08-07--terrain-worker-pool.md](./2026-08-07--terrain-worker-pool.md)
+- [plans/2026-08-07--006--terrain-worker-pool.md](./2026-08-07--006--terrain-worker-pool.md)

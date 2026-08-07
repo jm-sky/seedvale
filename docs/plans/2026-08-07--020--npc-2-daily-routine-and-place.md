@@ -6,7 +6,7 @@ Part 2 of ChatGPT plans.
 
 ## Review (2026-08-07, Claude) — vs. realia kodu
 
-- **Zależy od `role`** z [npc-1-identity.md](./2026-08-07--npc-1-identity.md) — nierozstrzygnięty, patrz review tamtego planu.
+- **Zależy od `role`** z [npc-1-identity.md](./2026-08-07--019--npc-1-identity.md) — nierozstrzygnięty, patrz review tamtego planu.
 - **„Home Assignment" częściowo już istnieje.** Plan opisuje to jako brakujący system do zbudowania, ale `createSettlement.ts:36-39` już trywialnie przypisuje dom każdemu NPC przy tworzeniu osady (`landmarks.homes[i % landmarks.homes.length]`). Brakuje tylko formalnego typu `Place` — sama funkcjonalność (dom przypisany automatycznie, nie ręcznie) już działa.
 - **`workplace: Place` per rola zakłada nowy world content, którego dziś nie ma.** `SettlementLandmarks` ma dziś **jeden wspólny** well/garden/stockpile dla całej osady ([props.ts:5-9](../../src/settlement/props.ts)) — nie ma per-rola workplace (farma, posterunek strażnika, stoisko handlarza). Zrobienie tego wymaga nowej generacji zawartości świata (nowe propsy/lokacje per rola), nie tylko logiki FSM/schedule — plan to zaniża, opisując jako „dodajemy Schedule Template + Place system".
 - **Obecny FSM jest zasobowo-specyficzny, nie generyczny.** `Phase` w `NpcAgent.ts` to `goWell/goGarden/goTree/goStock/chop/deposit/drink/eat/wander/...` — zaszyte 1:1 z konkretnymi needs (woda/jedzenie/drewno). Plan zakłada generyczny `goTo(location) → execute(action) → return`, czego dziś nie ma — integracja „Schedule → FSM" to refaktor fazowego automatu, nie tylko nakładka nad nim.

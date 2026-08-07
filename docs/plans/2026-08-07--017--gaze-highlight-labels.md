@@ -2,11 +2,11 @@
 
 **Status:** `verification needed`
 **Created:** 2026-08-07
-**Scope:** [npc-labels.md](./2026-08-07--npc-labels.md), [npc-interactions.md](./2026-08-07--npc-interactions.md)
+**Scope:** [npc-labels.md](./2026-08-07--012--npc-labels.md), [npc-interactions.md](./2026-08-07--011--npc-interactions.md)
 
 ## Implementacja (2026-08-07, po quests-v2)
 
-Zaimplementowane bezpośrednio na bazie generalizacji z [quests-v2-world-interactions.md](./2026-08-07--quests-v2-world-interactions.md) — `pickInGaze<T>` (`src/interaction/findInteractionTarget.ts`) już istniał, nie trzeba go było wydzielać od nowa.
+Zaimplementowane bezpośrednio na bazie generalizacji z [quests-v2-world-interactions.md](./2026-08-07--018--quests-v2-world-interactions.md) — `pickInGaze<T>` (`src/interaction/findInteractionTarget.ts`) już istniał, nie trzeba go było wydzielać od nowa.
 
 - `setHighlighted(active: boolean)` dodane do `NpcAgent` (`src/ai/NpcAgent.ts`) i `AnimalAgent` (`src/fauna/AnimalAgent.ts`) — idempotentne (`if (this.highlighted === active) return`), `labelEl.classList.toggle('npc-label--highlighted', active)`.
 - `.npc-label--highlighted` w `index.html` — **`box-shadow`, nie `border`** (świadoma zmiana względem szkicu w tym planie), żeby glow nigdy nie przesuwał layoutu/pozycji etykiety: dwuwarstwowy `box-shadow` (cienki jasny obrys 1px + rozmyta poświata), kolor ciepły bursztynowy (`rgba(255, 196, 92, ...)`), odróżnia się od niebieskiego akcentu reszty UI.
@@ -31,7 +31,7 @@ Gdy gracz kieruje wzrok/kamerę w stronę NPC lub zwierzęcia, jego etykieta (`.
 
 - **Etykiety:** [NpcAgent.ts](../../src/ai/NpcAgent.ts) i [AnimalAgent.ts](../../src/fauna/AnimalAgent.ts) tworzą każdy `labelEl: HTMLDivElement` z `className = 'npc-label'` (współdzielona klasa CSS, zdefiniowana inline w `index.html`), owinięty w `CSS2DObject`. Oba mają `readonly mesh: THREE.Object3D`.
 - **Detekcja „na co gracz patrzy” już istnieje**, ale tylko dla NPC i tylko w kontekście interakcji: `findInteractionTarget()` w [createApp.ts](../../src/app/createApp.ts) (dystans ≤ `INTERACT_RANGE` 2.5m **i** `dot(playerForward, toNpc) > INTERACT_MIN_DOT`, wygrywa najwyższy dot). Wynik steruje promptem „[E] Rozmawiaj z {Imię}” w `npcDialog`.
-- **Zwierzęta nie mają żadnej interakcji** — `AnimalAgent` to inny system (chase/flee), explicit poza zakresem w [npc-interactions.md](./2026-08-07--npc-interactions.md). Nie są dziś w ogóle brane pod uwagę w `findInteractionTarget`.
+- **Zwierzęta nie mają żadnej interakcji** — `AnimalAgent` to inny system (chase/flee), explicit poza zakresem w [npc-interactions.md](./2026-08-07--011--npc-interactions.md). Nie są dziś w ogóle brane pod uwagę w `findInteractionTarget`.
 - Lista zwierząt: `fauna.getAgents(): AnimalAgent[]` z [createFauna.ts](../../src/fauna/createFauna.ts).
 - Highlight ma być **czysto wizualny** dla zwierząt (bez promptu/E — to nie zmienia się w tym planie), a dla NPC — dodatkowa warstwa feedbacku *przed* pojawieniem się promptu interakcji.
 

@@ -2,7 +2,7 @@
 
 **Status:** `in progress` — część 1 (roślinność) i 2 (kolor nieba, bez chmur) zaimplementowane; część 3 (góry) i chmury z części 2 nadal `planned`
 **Created:** 2026-08-07
-**Priority:** średni — kolejkowane **po** [terrain-worker-pool](./2026-08-07--terrain-worker-pool.md) (obecny priorytet #1); nie zakłada istnienia workerów, tylko dzisiejszy main-thread kod. Części 1+2 wykonane równolegle do worker-poola (zero styku plików), część 3 (wymaga `createApp.ts`) odłożona do po scaleniu worker-poola.
+**Priority:** średni — kolejkowane **po** [terrain-worker-pool](./2026-08-07--006--terrain-worker-pool.md) (obecny priorytet #1); nie zakłada istnienia workerów, tylko dzisiejszy main-thread kod. Części 1+2 wykonane równolegle do worker-poola (zero styku plików), część 3 (wymaga `createApp.ts`) odłożona do po scaleniu worker-poola.
 
 ## Potrzeba
 
@@ -41,7 +41,7 @@ Odrzucone: noise-shader na kopule (custom `ShaderMaterial` — nikt dziś w proj
 
 ## 3. Górski horyzont
 
-Jeden statyczny mesh — pierścień/sylwetka gór, promień poza `halfExtent` (dziś 64, z `worldConfig.terrain.size=128`) + margines, np. r≈180–220 (mieści się przed `fogFar` 260 i `camera.far` 500). Wierzchołki górnej krawędzi przesunięte pionowo przez `fbm01()` z `src/terrain/fbm.ts` (reużycie istniejącej funkcji, nowy seed tylko na sylwetkę szczytów). Materiał: `flatShading: true` (spójne z `biomeColors.ts`/`props.ts`), stonowany fioletowo-niebieski, `fog: true` żeby wtapiał się o zmierzchu/nocy, bez cieni (`castShadow`/`receiveShadow` = false — to tło, nie gameplay). Brak LOD/streamingu — to **nie** jest to samo co duży/sferyczny świat ([world-streaming-persistence](./2026-08-07--world-streaming-persistence.md), osobna dużo większa inicjatywa) — statyczna geometria budowana raz przy starcie/rebuildzie świata, tak jak `terrain.mesh`.
+Jeden statyczny mesh — pierścień/sylwetka gór, promień poza `halfExtent` (dziś 64, z `worldConfig.terrain.size=128`) + margines, np. r≈180–220 (mieści się przed `fogFar` 260 i `camera.far` 500). Wierzchołki górnej krawędzi przesunięte pionowo przez `fbm01()` z `src/terrain/fbm.ts` (reużycie istniejącej funkcji, nowy seed tylko na sylwetkę szczytów). Materiał: `flatShading: true` (spójne z `biomeColors.ts`/`props.ts`), stonowany fioletowo-niebieski, `fog: true` żeby wtapiał się o zmierzchu/nocy, bez cieni (`castShadow`/`receiveShadow` = false — to tło, nie gameplay). Brak LOD/streamingu — to **nie** jest to samo co duży/sferyczny świat ([world-streaming-persistence](./2026-08-07--007--world-streaming-persistence.md), osobna dużo większa inicjatywa) — statyczna geometria budowana raz przy starcie/rebuildzie świata, tak jak `terrain.mesh`.
 
 Parametry (promień, wysokość szczytów, kolor) na sztywno w kodzie, nie w `worldConfig.ts`/GUI — kosmetyczne tło, nie wymaga live-tuningu.
 
@@ -67,7 +67,7 @@ Odrzucone: reużycie pełnego `createTerrainMesh` w mniejszej rozdzielczości na
 
 - [research/2026-08-07-3d-asset-sources.md](../research/2026-08-07-3d-asset-sources.md) — Quaternius pack
 - [research/2026-08-07-simodev-refs-review.md](../research/2026-08-07-simodev-refs-review.md) — audyt referencji SimonDev
-- [plans/2026-08-07--terrain-worker-pool.md](./2026-08-07--terrain-worker-pool.md) — blokuje start (kolejność)
-- [plans/2026-08-07--world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md) — osobna inicjatywa, nie mylić z góralnym tłem tutaj
-- [plans/2026-08-07--biome-regions.md](./2026-08-07--biome-regions.md) — kontynuacja "więcej roślinności" w stronę makro-obszarów o odrębnym charakterze (pustynia/bagno/las)
+- [plans/2026-08-07--006--terrain-worker-pool.md](./2026-08-07--006--terrain-worker-pool.md) — blokuje start (kolejność)
+- [plans/2026-08-07--007--world-streaming-persistence.md](./2026-08-07--007--world-streaming-persistence.md) — osobna inicjatywa, nie mylić z góralnym tłem tutaj
+- [plans/2026-08-07--028--biome-regions.md](./2026-08-07--028--biome-regions.md) — kontynuacja "więcej roślinności" w stronę makro-obszarów o odrębnym charakterze (pustynia/bagno/las)
 - `src/settlement/props.ts`, `src/world/createSky.ts`, `src/world/dayNight.ts`, `src/terrain/fbm.ts`, `src/app/createApp.ts`, `src/scene/createCamera.ts`
