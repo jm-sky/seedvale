@@ -8,13 +8,18 @@ export type VillagersScreenHandlers = {
   onClose?: () => void
 }
 
+export type VillagerEntry = {
+  npc: NpcAgent
+  settlementName: string
+}
+
 export type VillagersScreen = {
   isOpen: () => boolean
   open: () => void
   close: () => void
   toggle: () => void
   /** Static snapshot, re-rendered on open — not a live subscription (v1, see plan). */
-  refresh: (npcs: readonly NpcAgent[]) => void
+  refresh: (entries: readonly VillagerEntry[]) => void
   dispose: () => void
 }
 
@@ -49,7 +54,7 @@ export function createVillagersScreen(
   handlers: VillagersScreenHandlers = {},
 ): VillagersScreen {
   let openState = false
-  let lastNpcs: readonly NpcAgent[] = []
+  let lastEntries: readonly VillagerEntry[] = []
 
   const root = document.createElement('div')
   root.className = 'seedvale-villagers'
@@ -68,14 +73,21 @@ export function createVillagersScreen(
   const listEl = root.querySelector<HTMLElement>('[data-list]')!
 
   const render = () => {
-    listEl.innerHTML = lastNpcs.length
+    listEl.innerHTML = lastEntries.length
       ? ''
       : '<div class="seedvale-villagers__empty">Brak mieszkańców.</div>'
-    for (const npc of lastNpcs) {
+    // Only show which village a villager belongs to once there's more than
+    // one loaded — with a single settlement it's always the same, so the
+    // badge would just be visual noise.
+    const showSettlement = new Set(lastEntries.map((e) => e.settlementName)).size > 1
+    for (const { npc, settlementName } of lastEntries) {
       const hpPct = Math.round((npc.health.currentHp / npc.health.maxHp) * 100)
       const traitTags = npc.traits.length
         ? npc.traits.map((t) => `<span class="seedvale-villagers__tag">${TRAIT_LABEL[t]}</span>`).join('')
         : '<span class="seedvale-villagers__tag seedvale-villagers__tag--muted">brak cech</span>'
+      const settlementBadge = showSettlement
+        ? `<span class="seedvale-villagers__row-settlement">${settlementName}</span>`
+        : ''
       const row = document.createElement('div')
       row.className = 'seedvale-villagers__row'
       row.innerHTML = `
@@ -84,7 +96,7 @@ export function createVillagersScreen(
           <span class="seedvale-villagers__row-role">${ROLE_LABEL[npc.role]}</span>
         </div>
         <div class="seedvale-villagers__row-meta">
-          ${PERSONALITY_LABEL[nearestArchetype(npc.personality)]} · ${needLabel(npc.getActiveNeed())}
+          ${PERSONALITY_LABEL[nearestArchetype(npc.personality)]} · ${needLabel(npc.getActiveNeed())}${settlementBadge}
         </div>
         <div class="seedvale-villagers__hp" title="${npc.health.currentHp}/${npc.health.maxHp} HP">
           <div class="seedvale-villagers__hp-fill" style="width:${hpPct}%"></div>
@@ -133,8 +145,8 @@ export function createVillagersScreen(
         render()
       }
     },
-    refresh(npcs) {
-      lastNpcs = npcs
+    refresh(entries) {
+      lastEntries = entries
       if (openState) render()
     },
     dispose() {

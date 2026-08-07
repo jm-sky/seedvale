@@ -1,6 +1,9 @@
 import type { HeightSampler } from '../player/PlayerController'
+import type { RegionParams } from '../terrain/chunkHeightmap'
+import { generateSettlementName, type SettlementTerrain } from '../shared/SettlementName'
 import { createSeededRandom } from '../world/parseSeed'
 import { findSettlementSite } from './findSettlementSite'
+import { classifySettlementTerrain, type TerrainSamplers } from './settlementTerrain'
 
 /** World-unit spacing between settlement grid cells. Large enough that even
  *  the worst-case combination of per-cell noise offset and the local flat-site
@@ -27,6 +30,10 @@ export type SettlementDef = {
   /** True only for cell (0,0) — the settlement the player spawns in, always
    *  loaded, and the only one built with the full forest belt in v1. */
   isHome: boolean
+  /** Terrain feature the naming generator picked up around the site — see
+   *  `settlementTerrain.ts`. Kept alongside `name` mostly for debugging. */
+  terrain: SettlementTerrain
+  name: string
 }
 
 export function cellKey(cell: SettlementCell): string {
@@ -81,6 +88,9 @@ export function generateSettlementDef(
   sampleHeight: HeightSampler,
   waterLevel: number,
   localSearchRadius: number,
+  terrainSamplers: TerrainSamplers,
+  heightScale: number,
+  region: RegionParams,
 ): SettlementDef {
   const isHome = cell.gx === 0 && cell.gz === 0
   const seedForCell = cellSeed(seed, cell)
@@ -91,6 +101,17 @@ export function generateSettlementDef(
   const sizeRandom = createSeededRandom(seedForCell ^ 0x51235)
   const npcCount = 3 + Math.floor(sizeRandom() * 3)
 
+  const terrain = classifySettlementTerrain(
+    site.x,
+    site.z,
+    site.y,
+    waterLevel,
+    heightScale,
+    region,
+    terrainSamplers,
+  )
+  const name = generateSettlementName(seedForCell, terrain)
+
   return {
     id: cellKey(cell),
     gx: cell.gx,
@@ -100,5 +121,7 @@ export function generateSettlementDef(
     y: site.y,
     npcCount,
     isHome,
+    terrain,
+    name,
   }
 }

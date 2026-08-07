@@ -37,6 +37,7 @@ import {
   sampleContinentalnessAt,
   sampleFloorAt,
   sampleHeightAt,
+  sampleMoistureRegionAt,
   sampleMountainRidgeAt,
 } from './chunkHeightmap'
 import {
@@ -134,6 +135,7 @@ export type ChunkManager = {
   sampleBiome: (x: number, z: number) => number
   sampleContinentalness: (x: number, z: number) => number
   sampleMountainRidge: (x: number, z: number) => number
+  sampleMoistureRegion: (x: number, z: number) => number
   /** World-generated pickup items (`terrain/chunkItems.ts`) within `radius` of
    *  `pos` among currently loaded chunks — sufficient given `radius` is only
    *  ever the small interact range, and the player's own chunk is always loaded. */
@@ -416,7 +418,7 @@ export function createChunkManager(
   }
 
   function readField(
-    field: 'heights' | 'floorHeights' | 'biomes' | 'continentalness' | 'mountainRidge',
+    field: 'heights' | 'floorHeights' | 'biomes' | 'continentalness' | 'mountainRidge' | 'moistureRegion',
     worldX: number,
     worldZ: number,
   ): number {
@@ -433,6 +435,8 @@ export function createChunkManager(
         return sampleFloorAt(worldX, worldZ, fallbackParams)
       case 'heights':
         return sampleHeightAt(worldX, worldZ, fallbackParams)
+      case 'moistureRegion':
+        return sampleMoistureRegionAt(worldX, worldZ, fallbackParams)
       case 'mountainRidge':
         return sampleMountainRidgeAt(worldX, worldZ, fallbackParams)
       default:
@@ -459,6 +463,7 @@ export function createChunkManager(
     sampleBiome: (x, z) => readField('biomes', x, z),
     sampleContinentalness: (x, z) => readField('continentalness', x, z),
     sampleMountainRidge: (x, z) => readField('mountainRidge', x, z),
+    sampleMoistureRegion: (x, z) => readField('moistureRegion', x, z),
     getNearbyItems(pos, radius) {
       const out: { id: string, kind: ItemKind, x: number, z: number }[] = []
       for (const rec of chunks.values()) {

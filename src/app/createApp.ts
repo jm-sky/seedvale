@@ -156,7 +156,7 @@ export async function createApp(
   await chunkManager.waitForChunks(homeChunks())
 
   let ocean = buildOcean(scene, config)
-  let settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce)
+  let settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce, config)
   let fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
   let itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   let droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialSave?.droppedItems ?? [])
@@ -237,7 +237,7 @@ export async function createApp(
       await chunkManager.waitForChunks(homeChunks())
 
       ocean = buildOcean(scene, config)
-      settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce)
+      settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce, config)
       fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
       itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
       droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, carriedDrops)
@@ -316,7 +316,11 @@ export async function createApp(
   }
   const openVillagers = () => {
     villagersScreen.open()
-    villagersScreen.refresh(settlementsManager.getLoaded().flatMap((s) => s.npcs))
+    villagersScreen.refresh(
+      settlementsManager
+        .getLoaded()
+        .flatMap((s) => s.npcs.map((npc) => ({ npc, settlementName: s.name }))),
+    )
   }
 
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
@@ -492,7 +496,9 @@ export async function createApp(
       worldAudio.update(dt)
       minimap.update(
         player.mesh.position,
-        settlementsManager.getLoaded().map((s): MinimapSettlement => ({ position: s.center, npcs: s.npcs })),
+        settlementsManager
+          .getLoaded()
+          .map((s): MinimapSettlement => ({ position: s.center, npcs: s.npcs, name: s.name })),
       )
     }
     postProcessing.render()
@@ -711,6 +717,7 @@ function buildSettlementsManager(
   chunkManager: ChunkManager,
   seed: number,
   playSound: (url: string, volume?: number) => void,
+  config: ReturnType<typeof createWorldConfig>,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -721,6 +728,13 @@ function buildSettlementsManager(
     playSound,
     SETTLEMENT_LOAD_RADIUS,
     SETTLEMENT_UNLOAD_RADIUS,
+    {
+      sampleContinentalness: chunkManager.sampleContinentalness,
+      sampleMountainRidge: chunkManager.sampleMountainRidge,
+      sampleMoistureRegion: chunkManager.sampleMoistureRegion,
+    },
+    config.terrain.heightScale,
+    config.terrain.region,
   )
 }
 

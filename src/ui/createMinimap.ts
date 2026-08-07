@@ -4,6 +4,7 @@ import type { Vector3 } from 'three'
 export type MinimapSettlement = {
   position: Vector3
   npcs: readonly NpcAgent[]
+  name: string
 }
 
 /** Canvas size in CSS px (square). */
@@ -78,8 +79,8 @@ export function createMinimap(parent: HTMLElement): Minimap {
         }
       }
 
-      // Settlements — yellow squares, on-map or clamped to an edge arrow.
-      ctx.fillStyle = '#e0b34a'
+      // Settlements — yellow squares (+ name label), on-map or clamped to an
+      // edge arrow. Label keeps the player oriented among lookalike villages.
       for (const settlement of settlements) {
         const dx = settlement.position.x - playerPos.x
         const dz = settlement.position.z - playerPos.z
@@ -87,10 +88,18 @@ export function createMinimap(parent: HTMLElement): Minimap {
         if (dist <= HALF_RANGE) {
           const x = toMapX(settlement.position.x)
           const y = toMapY(settlement.position.z)
+          ctx.fillStyle = '#e0b34a'
           ctx.fillRect(x - 4, y - 4, 8, 8)
+          ctx.font = '10px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.fillStyle = 'rgba(20, 24, 28, 0.85)'
+          ctx.fillText(settlement.name, x + 1, y + 17)
+          ctx.fillStyle = '#f2f6fa'
+          ctx.fillText(settlement.name, x, y + 16)
         } else if (dist > 1e-4) {
           const dirX = dx / dist
           const dirY = dz / dist
+          ctx.fillStyle = '#e0b34a'
           drawArrow(ctx, centerX + dirX * ARROW_RADIUS, centerY + dirY * ARROW_RADIUS, dirX, dirY)
         }
       }
