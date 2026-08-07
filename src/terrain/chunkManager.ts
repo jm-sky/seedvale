@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { HeightSampler } from '../player/PlayerController'
+import type { EnvironmentKind } from './chunkEnvironment'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
 import { disposeObject3D } from '../assets/loadGltf'
@@ -10,7 +11,11 @@ import {
   cloneProp,
   createBush,
   createCactus,
+  createCampfire,
+  createFallenLog,
+  createLargeRock,
   createReed,
+  createRockCluster,
   createTree,
   loadPropTemplates,
   placeOnGround,
@@ -71,6 +76,22 @@ function getReedTemplates(): Promise<THREE.Object3D[]> {
   return reedTemplatesPromise
 }
 
+/** Procedural (no-GLB) decorative prop for one `EnvironmentPlacement` — unlike
+ *  vegetation, these never need template loading, so `ensureLoaded` can build
+ *  them synchronously. */
+function createEnvironmentProp(kind: EnvironmentKind, scale: number, variant: number): THREE.Object3D {
+  switch (kind) {
+    case 'campfire':
+      return createCampfire(scale)
+    case 'fallenLog':
+      return createFallenLog(scale, variant)
+    case 'largeRock':
+      return createLargeRock(scale, variant)
+    case 'rockCluster':
+      return createRockCluster(scale, variant)
+  }
+}
+
 export type ChunkManagerConfig = {
   chunkSize: number
   /** Core texels per chunk edge. */
@@ -123,6 +144,7 @@ type ChunkRecord = {
   water?: WorldWater | null
   vegetation?: THREE.Group
   items?: THREE.Group
+  environment?: THREE.Group
   /** `undefined` = not yet decided (chunk not ready or outside grass radius);
    *  `null` = decided ineligible (no blades survived rejection, e.g. all rock/sand). */
   grass?: WorldGrassChunk | null
@@ -374,6 +396,23 @@ export function createChunkManager(
           scene.add(group)
           rec.items = group
         }
+
+        if (tile.environment.length > 0) {
+          const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
+          const sampleTileHeight: HeightSampler = (sx, sz) =>
+            sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
+
+          const group = new THREE.Group()
+          group.name = 'chunk-environment'
+          for (const placement of tile.environment) {
+            const prop = createEnvironmentProp(placement.kind, placement.scale, placement.variant)
+            prop.rotation.y = placement.rotationY
+            placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
+            group.add(prop)
+          }
+          scene.add(group)
+          rec.environment = group
+        }
       })
       .catch((err: unknown) => {
         if (!(err instanceof HeightmapGenerationCancelledError)) {
@@ -403,6 +442,10 @@ export function createChunkManager(
     if (record.items) {
       disposeObject3D(record.items)
       record.items.removeFromParent()
+    }
+    if (record.environment) {
+      disposeObject3D(record.environment)
+      record.environment.removeFromParent()
     }
     chunks.delete(record.key)
   }
