@@ -1,12 +1,12 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { KeyState } from '../input/Keyboard'
+import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
 import {
   CAMERA_DISTANCE_DEFAULT,
   CAMERA_DISTANCE_MIN,
   type LookState,
 } from '../input/MouseLook'
-import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
 
 const MOVE_SPEED = 8
 const SPRINT_MULTIPLIER = 1.8

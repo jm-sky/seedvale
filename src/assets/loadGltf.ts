@@ -1,6 +1,6 @@
 import {
-  Box3,
   type AnimationClip,
+  Box3,
   type Group,
   type Material,
   type Mesh,
