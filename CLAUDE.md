@@ -59,7 +59,10 @@ src/terrain/                  # chunked heightmap/mesh (worker pool), biom color
 src/world/                    # sky, water, lights, dayNight
 src/settlement/               # site, props (GLB+fallback), NPC wiring
 src/ai/                       # Needs, NpcAgent
-src/fauna/                    # AnimalAgent, createFauna
+src/fauna/                    # AnimalAgent, createFauna, AnimalSpawner, animalDialogue
+src/interaction/               # Interactable union, pickInGaze, resolveInteraction (NPC/animal/well/tree/spawner/item)
+src/items/                    # ItemKind/Inventory, ItemSpawner (renewable pool), createItemSpawners
+src/quests/                   # QuestDef/QuestObjective/QuestStage, QuestManager
 src/ui/                       # lil-gui, HUD
 src/assets/loadGltf.ts        # GLTF loader helpers
 public/models/                # settlement / nature / fauna / characters
@@ -79,7 +82,7 @@ public/models/                # settlement / nature / fauna / characters
 2. Game UI screens (nie lil-gui) → [plans/2026-08-07--game-ui-screens.md](docs/plans/2026-08-07--game-ui-screens.md) (`in progress`: pause menu + Character (imię gracza) done — `src/ui/createPauseMenu.ts`; World config / Notes / NPC dialog open)
 3. Cube-sphere / pełny sferyczny świat — nadal otwarte pytanie (nie rozstrzygnięte, obecny streaming to flat chunk grid z ringiem, nie sfera), patrz [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md) "Kierunek świata". Real textures/triplanar dopuszczone jako opcjonalny feature później (nie trzymamy się low-poly na sztywno) — patrz [research/2026-08-07-simodev-refs-review.md](docs/research/2026-08-07-simodev-refs-review.md) Update note
 4. Nowe pomysły (`planned`, nieskolejkowane): [plans/2026-08-07--npc-character-depth.md](docs/plans/2026-08-07--npc-character-depth.md), [plans/2026-08-07--ambient-world-audio.md](docs/plans/2026-08-07--ambient-world-audio.md). ~~Predator-prey system~~ → `done` ([plans/2026-08-07--predator-prey-system.md](docs/plans/2026-08-07--predator-prey-system.md) — zaimplementowany w working tree, niezacommitowany). ~~NPC gender-matched models~~ → `done` ([plans/2026-08-07--npc-gender-models.md](docs/plans/2026-08-07--npc-gender-models.md) — Quaternius Ultimate Modular Women pobrany i skonwertowany, `NPC_MODEL_URLS`/`NPC_GENDERS` w `NpcAgent.ts`). ~~NPC reaction sounds~~ → `done` ([plans/2026-08-07--npc-reaction-sounds.md](docs/plans/2026-08-07--npc-reaction-sounds.md) — trigger/cooldown/gender pool w `NpcAgent.ts`, klipy w `public/sounds/`, potwierdzone w przeglądarce)
-5. v0.4+ questy i wioski → [plans/2026-08-07--quests-v1.md](docs/plans/2026-08-07--quests-v1.md) (`verification needed` — relay quest + quest log panel `[L]` z filtrem, exp, relation/sympathy per NPC), [plans/2026-08-07--multi-settlements.md](docs/plans/2026-08-07--multi-settlements.md) (`planned` — generator wiosek, streaming, questy między wioskami)
+5. v0.4+ questy i wioski → [plans/2026-08-07--quests-v1.md](docs/plans/2026-08-07--quests-v1.md) (`verification needed` — relay quest + quest log panel `[L]` z filtrem, exp, relation/sympathy per NPC); [plans/2026-08-07--quests-v2-world-interactions.md](docs/plans/2026-08-07--quests-v2-world-interactions.md) (`verification needed` — multi-stage questy, interakcje ze studnią/drzewami/żywymi zwierzętami/spawnerami fauny, itemy: muszle/kamienie world-gen per-chunk + odnawialna pula blisko osady, `src/interaction/`, `src/items/`, `SaveData` v2), [plans/2026-08-07--multi-settlements.md](docs/plans/2026-08-07--multi-settlements.md) (`planned` — generator wiosek, streaming, questy między wioskami)
 
 Woda (brzeg + dzień/noc): `done` → [issues 001](docs/issues/2026-08-07--001--water-shore-color-banding.md), [002](docs/issues/2026-08-07--002--water-daynight-integration.md) (review: [docs/reviews/2026-08-07-water-quality.md](docs/reviews/2026-08-07-water-quality.md))
 

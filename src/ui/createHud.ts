@@ -1,3 +1,4 @@
+import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { formatClock, phaseName } from '../world/dayNight'
 
 export type Hud = {
@@ -5,6 +6,7 @@ export type Hud = {
   setSeed: (seed: number) => void
   setTime: (timeOfDay: number) => void
   setExp: (exp: number) => void
+  setInventory: (counts: Partial<Record<ItemKind, number>>) => void
   dispose: () => void
 }
 
@@ -17,6 +19,7 @@ export function createHud(parent: HTMLElement): Hud {
       <span data-phase></span>
       <span data-seed></span>
       <span data-exp></span>
+      <span data-inventory></span>
     </div>
     <div class="seedvale-hud__hint">WASD · klik = mysz · Esc = kursor · L = zadania</div>
   `
@@ -26,6 +29,7 @@ export function createHud(parent: HTMLElement): Hud {
   const phaseEl = root.querySelector('[data-phase]')!
   const seedEl = root.querySelector('[data-seed]')!
   const expEl = root.querySelector('[data-exp]')!
+  const inventoryEl = root.querySelector('[data-inventory]')!
 
   return {
     root,
@@ -38,6 +42,11 @@ export function createHud(parent: HTMLElement): Hud {
     },
     setExp(exp) {
       expEl.textContent = `exp ${exp}`
+    },
+    setInventory(counts) {
+      inventoryEl.textContent = (Object.keys(ITEM_DEFS) as ItemKind[])
+        .map((kind) => `${ITEM_DEFS[kind].label} ${counts[kind] ?? 0}`)
+        .join(' · ')
     },
     dispose() {
       root.remove()

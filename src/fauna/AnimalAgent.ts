@@ -29,7 +29,7 @@ export type AnimalRole = 'predator' | 'prey'
 /** Matches Quaternius Ultimate Animated Animal Pack kinds used in Seedvale. */
 export type AnimalKind = 'wolf' | 'fox' | 'deer' | 'stag'
 
-const ANIMAL_LABELS: Record<AnimalKind, string> = {
+export const ANIMAL_LABELS: Record<AnimalKind, string> = {
   wolf: 'wilk',
   fox: 'lis',
   deer: 'sarna',

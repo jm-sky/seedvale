@@ -3,6 +3,7 @@ import type {
   ChunkTileResponse,
 } from './chunkHeightmapProtocol'
 import { computeChunkTile } from './chunkHeightmap'
+import { computeChunkItems } from './chunkItems'
 import { computeChunkVegetation } from './chunkVegetation'
 
 // `self` is cast rather than adding the `webworker` TS lib, which can't coexist
@@ -17,6 +18,7 @@ ctx.onmessage = ({ data: { id, params } }) => {
     const tile = computeChunkTile(params)
     const { heights, floorHeights, biomes, bodyScale, continentalness, mountainRidge } = tile
     const vegetation = computeChunkVegetation({ cx: params.cx, cz: params.cz }, tile, params)
+    const items = computeChunkItems({ cx: params.cx, cz: params.cz }, tile, params)
     ctx.postMessage(
       {
         id,
@@ -28,6 +30,7 @@ ctx.onmessage = ({ data: { id, params } }) => {
         continentalness,
         mountainRidge,
         vegetation,
+        items,
       },
       [
         heights.buffer,
