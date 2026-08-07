@@ -218,6 +218,105 @@ export function createReed(scale = 1): THREE.Group {
   return reed
 }
 
+/** Irregular boulder — `IcosahedronGeometry` squashed/stretched per axis from
+ *  `variant` (deterministic, no `Math.random()`: the caller already rolled a
+ *  seeded `variant` in `chunkEnvironment.ts`, so re-rolling here would break
+ *  the "same chunk reload = same world" guarantee). */
+export function createLargeRock(scale = 1, variant = 0.5): THREE.Group {
+  const rock = new THREE.Group()
+  const mesh = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(0.9 * scale, 0),
+    new THREE.MeshStandardMaterial({ color: 0x7d7a72, flatShading: true, roughness: 1 }),
+  )
+  mesh.scale.set(
+    0.75 + variant * 0.6,
+    0.55 + ((variant * 7) % 1) * 0.5,
+    0.75 + ((variant * 13) % 1) * 0.6,
+  )
+  mesh.position.y = 0.35 * scale
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+  rock.add(mesh)
+  return rock
+}
+
+/** Small cluster of pebbles (same geometry as the collectible `stone` item,
+ *  `items.ts` — pure visual reuse) scattered deterministically from `variant`
+ *  via trig offsets rather than `Math.random()`. */
+export function createRockCluster(scale = 1, variant = 0.5): THREE.Group {
+  const cluster = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8c8c8c, flatShading: true })
+  const count = 3 + Math.floor(variant * 5) % 3
+  for (let i = 0; i < count; i++) {
+    const a = variant * Math.PI * 2 + i * 2.4
+    const r = 0.15 + ((variant * (i + 3)) % 1) * 0.25
+    const pebble = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(0.16 * scale * (0.7 + (i % 3) * 0.15), 0),
+      mat,
+    )
+    pebble.position.set(Math.cos(a) * r, 0.08 * scale, Math.sin(a) * r)
+    pebble.rotation.set(a, a * 1.3, 0)
+    pebble.castShadow = true
+    cluster.add(pebble)
+  }
+  return cluster
+}
+
+/** Fallen tree trunk lying on its side — `length` (world units) comes from
+ *  `EnvironmentPlacement.variant`. Reuses `createTree`'s trunk color. */
+export function createFallenLog(scale = 1, length = 2.4): THREE.Group {
+  const log = new THREE.Group()
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22 * scale, 0.26 * scale, length * scale, 7),
+    new THREE.MeshStandardMaterial({ color: 0x5c4033, flatShading: true }),
+  )
+  trunk.rotation.z = Math.PI / 2
+  trunk.position.y = 0.22 * scale
+  trunk.castShadow = true
+  trunk.receiveShadow = true
+  log.add(trunk)
+  return log
+}
+
+/** Old campfire remains — stone ring + ash patch + a few branches. Purely
+ *  decorative, not an `Interactable` (see plans/2026-08-07--030). */
+export function createCampfire(scale = 1): THREE.Group {
+  const fire = new THREE.Group()
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x6f6b63, flatShading: true })
+  const ashMat = new THREE.MeshStandardMaterial({ color: 0x2b2724, flatShading: true, roughness: 1 })
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a3524, flatShading: true })
+
+  const ash = new THREE.Mesh(new THREE.CircleGeometry(0.55 * scale, 10), ashMat)
+  ash.rotation.x = -Math.PI / 2
+  ash.position.y = 0.02
+  ash.receiveShadow = true
+  fire.add(ash)
+
+  const ringCount = 8
+  for (let i = 0; i < ringCount; i++) {
+    const a = (i / ringCount) * Math.PI * 2
+    const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12 * scale, 0), stoneMat)
+    stone.position.set(Math.cos(a) * 0.6 * scale, 0.08 * scale, Math.sin(a) * 0.6 * scale)
+    stone.rotation.set(a, a * 0.7, 0)
+    stone.castShadow = true
+    fire.add(stone)
+  }
+
+  for (let i = 0; i < 3; i++) {
+    const a = i * 2.1
+    const branch = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025 * scale, 0.03 * scale, 0.7 * scale, 5),
+      woodMat,
+    )
+    branch.rotation.set(Math.PI / 2 - 0.25, 0, a)
+    branch.position.y = 0.05 * scale
+    branch.castShadow = true
+    fire.add(branch)
+  }
+
+  return fire
+}
+
 export function createGarden(): THREE.Group {
   const garden = new THREE.Group()
   const bed = new THREE.Mesh(

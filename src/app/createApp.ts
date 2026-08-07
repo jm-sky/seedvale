@@ -453,9 +453,10 @@ export async function createApp(
       if (keyboard.consumeQuestLog()) openQuestLog()
       if (keyboard.consumeDrop()) {
         let dropOffset = 0
-        for (const kind of Object.keys(ITEM_DEFS) as ItemKind[]) {
+        const itemKinds = Object.keys(ITEM_DEFS) as ItemKind[]
+        for (const kind of itemKinds) {
           if (!inventory.remove(kind, 1)) continue
-          const angle = dropOffset * ((Math.PI * 2) / 3)
+          const angle = dropOffset * ((Math.PI * 2) / itemKinds.length)
           droppedItems.drop(
             kind,
             player.mesh.position.x + Math.cos(angle) * 0.6,
