@@ -1,6 +1,6 @@
 # Plan: Głębsza charakteryzacja NPC (role/traits/Big Five personality/HP) + ekran „Mieszkańcy”
 
-**Status:** `in progress` — sekcja 2 (Personality → Big Five) zaimplementowana, reszta (`CharacterDef`, role, traits, wspólny `HealthState`, ekran Mieszkańcy) nadal `planned`
+**Status:** `verification needed` — wszystkie sekcje (Character DB, role, Big Five, traits, wspólny `HealthState`, ekran Mieszkańcy) zaimplementowane i zielone na `tsc`/`lint`/`build`/`vitest`; browser regression fauny (`predator-prey-system.md`) i wizualna weryfikacja ekranu Mieszkańcy/traits/HP nadal do zrobienia przez użytkownika, patrz „Do przetestowania”. Przy okazji dodano `vitest` jako test runner projektu (nie było w oryginalnym zakresie planu) — `src/ai/dialogue.test.ts`, `src/ai/Needs.test.ts`, `src/shared/HealthState.test.ts`, `src/fauna/HealthState.test.ts`.
 **Created:** 2026-08-07
 **Scope:** Rozszerza [npc-interactions.md](./2026-08-07--npc-interactions.md) (personality już istnieje, tu idziemy głębiej); character DB wspomniana w [npc-labels.md](./2026-08-07--npc-labels.md) i „Następne” z `npc-interactions.md`; UI ekran nadbudowuje [game-ui-screens.md](./2026-08-07--game-ui-screens.md); **scala [npc-1-identity.md](./2026-08-07--npc-1-identity.md)** (ChatGPT draft, review + decyzja scalenia: 2026-08-07 — `role`/`traits`/Big Five wchodzą tutaj, tamten plik nie jest wdrażany osobno)
 
@@ -155,14 +155,14 @@ src/ui/createPauseMenu.ts     # + przycisk otwierający ekran Mieszkańcy
 
 ## Done when
 
-- [ ] `CharacterDef`/`characters.ts` (name/role/personality/traits) zastępuje równoległe tablice, `NpcAgent` z niego korzysta
-- [ ] `role` (`woodcutter`/`farmer`/`guard`/`trader`) obecny jako dana w `CharacterDef` — bez zachowania w v1 (patrz `npc-2-daily-routine-and-place.md`)
+- [x] `CharacterDef`/`characters.ts` (name/role/personality/traits) zastępuje równoległe tablice, `NpcAgent` z niego korzysta (`src/ai/characters.ts`: `CHARACTERS`/`characterForIndex`/`genderForName`, zastępuje dawne `NPC_NAMES`/`NPC_GENDERS` z `NpcAgent.ts`, re-eksportowane stamtąd dla `QuestManager.ts`)
+- [x] `role` (`woodcutter`/`farmer`/`guard`/`trader`) obecny jako dana w `CharacterDef` — bez zachowania w v1 (patrz `npc-2-daily-routine-and-place.md`)
 - [x] `BigFivePersonality` (OCEAN) zastępuje dyskretny `Personality` jako źródło danych; `nearestArchetype()` mapuje na istniejący `BANK`/`PAUSE_PARAMS` (bucket) bez regresji w dialogu; `PAUSE_PARAMS` liczone formułą z surowych wymiarów (nie z bucketu) — patrz „2. Personality → Big Five” (`src/ai/dialogue.ts`: `personalityForIndex`/`nearestArchetype`/`pausePersonalityParams`; `NpcAgent.personality` teraz `BigFivePersonality`, cache'owane `dialogueArchetype`/`pauseParams` w konstruktorze; deterministyczny per-NPC jitter wokół archetype-anchora, sin-hash jak `terrainTintNoise` w `biomeColors.ts`)
-- [ ] 1-2 traits per NPC (zamiast dawnych „abilities”), każdy realnie zmienia liczbę w `NpcAgent` (nie tylko tag w UI)
-- [ ] NPC korzysta ze **współdzielonego** `HealthState` (`src/shared/HealthState.ts`), nie osobnego typu — `currentHp` spada/regeneruje się widocznie, wpływa na prędkość/czas pracy przy niskim poziomie, nigdy nie osiąga 0
-- [ ] Refaktor `src/fauna/HealthState.ts`/`AnimalAgent.ts` nie zmienił zachowania fauny — regresja: powtórz test z `predator-prey-system.md` (wilk/lis łapie sarnę/jelenia, respawn działa)
-- [ ] Ekran „Mieszkańcy” otwiera się (przycisk w pause menu), pokazuje wszystkich `Settlement.npcs` z aktualnymi danymi
-- [ ] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] 1-2 traits per NPC (zamiast dawnych „abilities”), każdy realnie zmienia liczbę w `NpcAgent` (nie tylko tag w UI) — `fast_worker` skraca `wait` w chop/deposit/drink/eat (×0.8), `energetic` zwalnia zużycie HP przy pracy i przyspiesza regenerację, `night_owl` łagodzi spadek prędkości przy niskim HP, `sociable` mnoży `triggerDistance`/`lookDurationRange` z `PAUSE_PARAMS` (×1.3/×1.2)
+- [x] NPC korzysta ze **współdzielonego** `HealthState` (`src/shared/HealthState.ts`), nie osobnego typu — `currentHp` spada/regeneruje się widocznie (`applyFatigue`/`rest` w `update()`), wpływa na prędkość w `steerTo()` poniżej 30% HP, floor 15/100 — nigdy nie osiąga 0
+- [x] Refaktor `src/fauna/HealthState.ts` nie zmienił zachowania fauny (statycznie: `tsc`/`lint`/`build`/vitest zielone, `AnimalAgent.ts` import niezmieniony — `fauna/HealthState.ts` teraz re-eksportuje `HealthState`/`createHealthState` z `shared/`, `MAX_HP`/`damageFor` zostały fauna-local; dodano `src/fauna/HealthState.test.ts` sanity-checking re-eksportu) — **browser regression z `predator-prey-system.md` (wilk/lis łapie sarnę/jelenia, respawn) nadal do zrobienia przez użytkownika**, patrz „Do przetestowania”
+- [x] Ekran „Mieszkańcy” otwiera się (przycisk w pause menu), pokazuje wszystkich `Settlement.npcs` z aktualnymi danymi (`src/ui/createVillagersScreen.ts`, wzorzec `createQuestLog.ts`) — **wizualna weryfikacja w przeglądarce nadal do zrobienia przez użytkownika**
+- [x] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` (vitest — nowość względem oryginalnego planu, patrz niżej)
 
 ## Do przetestowania (http://localhost:5577/)
 

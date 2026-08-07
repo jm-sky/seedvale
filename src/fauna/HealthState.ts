@@ -1,14 +1,7 @@
 import type { AnimalKind } from './AnimalAgent'
 
-export type HealthState = {
-  maxHp: number
-  currentHp: number
-  dead: boolean
-}
-
-export function createHealthState(maxHp: number): HealthState {
-  return { maxHp, currentHp: maxHp, dead: false }
-}
+export type { HealthState } from '../shared/HealthState'
+export { createHealthState } from '../shared/HealthState'
 
 export const MAX_HP: Record<AnimalKind, number> = {
   wolf: 50,

@@ -40,6 +40,7 @@ import { createMinimap } from '../ui/createMinimap'
 import { createNpcDialog } from '../ui/createNpcDialog'
 import { createPauseMenu } from '../ui/createPauseMenu'
 import { createQuestLog } from '../ui/createQuestLog'
+import { createVillagersScreen } from '../ui/createVillagersScreen'
 import { createLights } from '../world/createLights'
 import { createOcean, type WorldOcean } from '../world/createOcean'
 import { createSky } from '../world/createSky'
@@ -281,11 +282,16 @@ export async function createApp(
   // createNpcDialog's onKeyDown comment for why registration order matters here.
   const npcDialog = createNpcDialog(container)
   const questLog = createQuestLog(container)
+  const villagersScreen = createVillagersScreen(container)
   const openQuestLog = () => {
     questLog.open()
     questLog.refresh(questManager.list(), questManager.getExp(), (name) =>
       questManager.getRelation(name),
     )
+  }
+  const openVillagers = () => {
+    villagersScreen.open()
+    villagersScreen.refresh(settlement.npcs)
   }
 
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
@@ -296,6 +302,7 @@ export async function createApp(
     },
     onResume: () => {},
     onQuestLog: openQuestLog,
+    onVillagers: openVillagers,
     onToggleGui: () => gui.toggle(),
     onNameChange: (name) => player.setName(name),
     onNameCommit: (name) => {
@@ -359,6 +366,11 @@ export async function createApp(
       keyboard.consumeDrop()
       setHighlight(null)
       if (keyboard.consumeQuestLog()) questLog.close()
+    } else if (villagersScreen.isOpen()) {
+      keyboard.consumeInteract()
+      keyboard.consumeQuestLog()
+      keyboard.consumeDrop()
+      setHighlight(null)
     } else {
       const interactables = buildInteractables(
         settlement,
@@ -420,7 +432,7 @@ export async function createApp(
       }
     }
 
-    if (!menuPaused && !npcDialog.isOpen() && !questLog.isOpen()) {
+    if (!menuPaused && !npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen()) {
       for (const npc of settlement.npcs) {
         npc.setQuestMarker(questManager.labelMarker(npc.name))
       }
@@ -461,6 +473,7 @@ export async function createApp(
     pauseMenu.dispose()
     npcDialog.dispose()
     questLog.dispose()
+    villagersScreen.dispose()
     hud.dispose()
     minimap.dispose()
     keyboard.dispose()
