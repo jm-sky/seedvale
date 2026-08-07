@@ -201,6 +201,26 @@ export function createDebugGui(
       .onFinishChange(handlers.onTerrainChange),
   )
 
+  const grass = gui.addFolder('Grass')
+  terrainControllers.push(
+    grass
+      .add(config.terrain.grass, 'enabled')
+      .name('Enabled')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    grass
+      .add(config.terrain.grass, 'radius', 1, 12, 1)
+      .name('Render radius (chunks)')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    grass
+      .add(config.terrain.grass, 'density', 120000, 400000, 1000)
+      .name('Density (candidates/chunk)')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+
   const sky = gui.addFolder('Sky (manual)')
   sky
     .add(config.sky, 'inclination', 0, 1, 0.01)

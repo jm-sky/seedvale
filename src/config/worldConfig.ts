@@ -34,6 +34,14 @@ export type WorldConfig = {
     }
     /** Macro region axes (ocean/lowland/highland/mountains) — see `RegionParams`. */
     region: RegionParams
+    grass: {
+      enabled: boolean
+      /** Chunks (Chebyshev distance) that get grass — smaller than `loadRadius`. */
+      radius: number
+      /** Raw position candidates rolled per chunk before eligibility/density
+       *  rejection — higher reads as thicker grass. */
+      density: number
+    }
   }
   sky: {
     inclination: number
@@ -92,6 +100,13 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         oceanThreshold: 0.32,
         coastThreshold: 0.45,
         oceanDetailWeight: 0.25,
+      },
+      grass: {
+        enabled: true,
+        // TEMP: high on purpose while tuning density/visuals — dial back down
+        // (toward ~2) once look/perf is settled; see grass-rendering plan phase 4.
+        radius: 10,
+        density: 12000,
       },
     },
     sky: {
@@ -165,6 +180,11 @@ export function createWorldConfig(): WorldConfig {
           ...r.mountainFbm,
         }
       }
+    }
+    if (t.grass && typeof t.grass === 'object') {
+      if (typeof t.grass.enabled === 'boolean') config.terrain.grass.enabled = t.grass.enabled
+      if (typeof t.grass.radius === 'number') config.terrain.grass.radius = t.grass.radius
+      if (typeof t.grass.density === 'number') config.terrain.grass.density = t.grass.density
     }
     // URL res wins; otherwise keep stored resolution already applied above
     // unless URL overrode — then don't let stored overwrite.

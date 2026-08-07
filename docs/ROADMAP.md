@@ -55,10 +55,11 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 4. [x] Chunk streaming + duże regiony (oceany/wybrzeża/pasma górskie) + roślinność per-chunk → [plans/2026-08-07--world-streaming-persistence.md](./plans/2026-08-07--world-streaming-persistence.md) (streaming część `done`; cube-sphere/sferyczny świat nadal otwarte pytanie)
 5. [x] NPC dialog (proximity-based, personality lines) → [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) (`verification needed`)
 5b. [x] Minimapa (collapsible, kierunek do osady) → [plans/2026-08-07--minimap.md](./plans/2026-08-07--minimap.md) (`verification needed`)
+5c. [x] Trawa (instanced ground cover, fazy 1-4 Must) → [plans/2026-08-07--grass-rendering.md](./plans/2026-08-07--grass-rendering.md) (`done`; worker offload + noise wiatr/billboard LOD nadal odłożone)
 6. [ ] Wizualny overhaul: dokończyć góry w tle + chmury → [plans/2026-08-07--world-visual-overhaul.md](./plans/2026-08-07--world-visual-overhaul.md) (`in progress`)
 7. [ ] Zapis/save (IndexedDB) — "Continue" po demie osady → [plans/2026-08-07--world-streaming-persistence.md](./plans/2026-08-07--world-streaming-persistence.md) (persystencja, nadal `planned`)
 8. [ ] Opcjonalnie: game UI (World config/Notes/NPC dialog screen) → [plans/2026-08-07--game-ui-screens.md](./plans/2026-08-07--game-ui-screens.md) (`in progress`)  
-9. [ ] Nowe pomysły od `7c2969f`: [plans/2026-08-07--grass-rendering.md](./plans/2026-08-07--grass-rendering.md), [plans/2026-08-07--npc-gender-models.md](./plans/2026-08-07--npc-gender-models.md), [plans/2026-08-07--predator-prey-system.md](./plans/2026-08-07--predator-prey-system.md), [plans/2026-08-07--post-processing-pipeline.md](./plans/2026-08-07--post-processing-pipeline.md) — wszystkie `planned`, nieskolejkowane
+9. [ ] Nowe pomysły od `7c2969f`: [plans/2026-08-07--npc-gender-models.md](./plans/2026-08-07--npc-gender-models.md), [plans/2026-08-07--predator-prey-system.md](./plans/2026-08-07--predator-prey-system.md), [plans/2026-08-07--post-processing-pipeline.md](./plans/2026-08-07--post-processing-pipeline.md) — wszystkie `planned`, nieskolejkowane
 10. [ ] v0.4 questy — dopiero po decyzji scope, po NPC interactions (punkt 5)
 
 Handoff szczegółowy: [CLAUDE.md](../CLAUDE.md)

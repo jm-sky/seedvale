@@ -39,6 +39,7 @@ import {
   HeightmapGenerationCancelledError,
   requestChunkTile,
 } from './chunkWorkerPool'
+import { createGrassSystem, type WorldGrassChunk } from './grass'
 
 // Loaded once and reused across every chunk (GLTF loader also caches by URL, but
 // this avoids rebuilding the template array + re-running `prepareProp` per chunk).
@@ -71,6 +72,16 @@ export type ChunkManagerConfig = {
   biome: { noiseScale: number; fbm: FbmParams }
   region: RegionParams
   flatShading: boolean
+  grass: {
+    enabled: boolean
+    /** Chunks (Chebyshev distance) that get grass — deliberately smaller than
+     *  `loadRadius`; grass hides one ring earlier than that (`radius + 1`) so it
+     *  doesn't pop in/out right at the terrain load boundary. */
+    radius: number
+    /** Raw position candidates rolled per chunk before eligibility/density
+     *  rejection — the GUI "density" knob. */
+    density: number
+  }
 }
 
 type ChunkState = 'generating' | 'ready'
@@ -84,6 +95,9 @@ type ChunkRecord = {
   meshDispose?: () => void
   water?: WorldWater | null
   vegetation?: THREE.Group
+  /** `undefined` = not yet decided (chunk not ready or outside grass radius);
+   *  `null` = decided ineligible (no blades survived rejection, e.g. all rock/sand). */
+  grass?: WorldGrassChunk | null
   pendingPromise?: Promise<void>
 }
 
@@ -92,6 +106,8 @@ export type ChunkManager = {
   update: (playerX: number, playerZ: number) => void
   tickWater: (dt: number) => void
   setWaterDayNight: (dayFactor: number) => void
+  tickGrass: (dt: number) => void
+  setGrassDayNight: (dayFactor: number) => void
   sampleHeight: HeightSampler
   sampleFloor: HeightSampler
   sampleBiome: (x: number, z: number) => number
@@ -109,9 +125,11 @@ export function createChunkManager(
   config: ChunkManagerConfig,
 ): ChunkManager {
   const chunks = new Map<string, ChunkRecord>()
+  const grassSystem = createGrassSystem()
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
   const recheckDistance = config.chunkSize * 0.25
+  const grassUnloadRadius = config.grass.radius + 1
 
   const fallbackParams: RawSampleParams = {
     seed: config.seed,
@@ -147,6 +165,43 @@ export function createChunkManager(
 
   function isHomeChunk(coord: ChunkCoord): boolean {
     return config.homeChunks.some((h) => h.cx === coord.cx && h.cz === coord.cz)
+  }
+
+  let lastPlayerChunk: ChunkCoord = { cx: 0, cz: 0 }
+
+  function ensureGrass(record: ChunkRecord): void {
+    if (record.grass !== undefined || !record.tile) return
+    const { x, z } = chunkCenter(record.coord, config.chunkSize)
+    const grass = grassSystem.createChunkGrass(
+      record.coord,
+      record.tile,
+      config.resolution,
+      config.chunkSize,
+      x,
+      z,
+      config.waterLevel,
+      config.heightScale,
+      config.seed,
+      config.grass.density,
+    )
+    record.grass = grass
+    if (grass) scene.add(grass.mesh)
+  }
+
+  function removeGrass(record: ChunkRecord): void {
+    record.grass?.dispose()
+    record.grass = undefined
+  }
+
+  /** Grass gets its own (smaller) show/hide radius than the terrain `loadRadius` —
+   *  hysteresis between `config.grass.radius` (show) and `grassUnloadRadius` (hide)
+   *  avoids build/dispose thrashing right at the boundary, same idea as
+   *  `loadRadius`/`unloadRadius` for whole chunks. */
+  function syncGrassForRecord(record: ChunkRecord, playerChunk: ChunkCoord): void {
+    if (!config.grass.enabled || record.state !== 'ready') return
+    const dist = chebyshevDistance(record.coord, playerChunk)
+    if (dist <= config.grass.radius) ensureGrass(record)
+    else if (dist > grassUnloadRadius && record.grass !== undefined) removeGrass(record)
   }
 
   function ensureLoaded(coord: ChunkCoord): Promise<void> {
@@ -198,6 +253,7 @@ export function createChunkManager(
         if (rec.water) scene.add(rec.water.mesh)
 
         rec.state = 'ready'
+        syncGrassForRecord(rec, lastPlayerChunk)
 
         if (tile.vegetation.length > 0) {
           const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
@@ -244,6 +300,7 @@ export function createChunkManager(
     record.mesh?.removeFromParent()
     record.meshDispose?.()
     record.water?.dispose()
+    removeGrass(record)
     if (record.vegetation) {
       disposeObject3D(record.vegetation)
       record.vegetation.removeFromParent()
@@ -255,6 +312,7 @@ export function createChunkManager(
     lastCheckX = playerX
     lastCheckZ = playerZ
     const playerChunk = worldToChunk(playerX, playerZ, config.chunkSize)
+    lastPlayerChunk = playerChunk
 
     const desired: ChunkCoord[] = []
     for (let dz = -config.loadRadius; dz <= config.loadRadius; dz++) {
@@ -274,6 +332,7 @@ export function createChunkManager(
       if (!chunks.has(chunkKey(coord))) void ensureLoaded(coord)
     }
     for (const record of [...chunks.values()]) {
+      syncGrassForRecord(record, playerChunk)
       if (record.pinned || desiredKeys.has(record.key)) continue
       if (chebyshevDistance(record.coord, playerChunk) > config.unloadRadius) unload(record)
     }
@@ -317,6 +376,12 @@ export function createChunkManager(
     setWaterDayNight(dayFactor) {
       for (const rec of chunks.values()) rec.water?.setDayNight(dayFactor)
     },
+    tickGrass(dt) {
+      grassSystem.update(dt)
+    },
+    setGrassDayNight(dayFactor) {
+      grassSystem.setDayNight(dayFactor)
+    },
     sampleHeight: (x, z) => readField('heights', x, z),
     sampleFloor: (x, z) => readField('floorHeights', x, z),
     sampleBiome: (x, z) => readField('biomes', x, z),
@@ -327,6 +392,7 @@ export function createChunkManager(
     waitForChunks: (coords) => Promise.all(coords.map((c) => ensureLoaded(c))).then(() => undefined),
     dispose() {
       for (const record of [...chunks.values()]) unload(record)
+      grassSystem.dispose()
     },
   }
 }

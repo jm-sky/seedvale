@@ -1,8 +1,23 @@
 # Plan: Trawa (instanced ground cover)
 
-**Status:** `planned`
+**Status:** `done`
 **Created:** 2026-08-07
 **Priority:** niski — pomysł na boku, nie blokuje ani nie jest blokowany przez [terrain-worker-pool](./2026-08-07--terrain-worker-pool.md) / [world-visual-overhaul](./2026-08-07--world-visual-overhaul.md); zero styku plików z tym, co dziś w toku (nowy plik + wpięcie w `chunkManager.ts` dopiero przy implementacji)
+
+## Stan implementacji (2026-08-07)
+
+Fazy 1-4 (**Must**) zrobione — [src/terrain/grass.ts](../../src/terrain/grass.ts):
+
+- Faza 1: `InstancedMesh` krzyżowych quadów per chunk, pozycje z PRNG `(seed,cx,cz)` (własna sól, zdekorelowana od `chunkVegetation.ts`), odrzucanie po `waterLevel+SAND_BAND`/`ROCK_SLOPE_FULL`/treeline altitude/`mountainRidge` (reużycie `biomeColors.ts` — `SAND_BAND` odkryte jako `export`).
+- Faza 2: jeden współdzielony `ShaderMaterial` (nie per-chunk) — `sin/cos`-wiatr z per-instance fazą (kwadratowy falloff od podstawy do czubka), gradient kolor podstawa→czubek, jitter jasności per-instancja. Bez tekstury/alphaTest — projekt i tak nie używa tekstur na terenie (vertex colors), więc lite jednolite quady zamiast alpha-cut liści to zamierzone odejście od research doc, nie przeoczenie.
+- Faza 3: gęstość z `tile.biomes` (moisture) + fade wysokościowy przy treeline; zero na plaży/wodzie/skale/grzbietach górskich.
+- Faza 4: własny promień (`config.terrain.grass.radius`, domyślnie 2) mniejszy niż `loadRadius`, z histerezą `radius+1` do show/hide w `chunkManager.ts` (`syncGrassForRecord`), osobno od load/unload całego chunka.
+
+Dodatkowo: dzień/noc (`setGrassDayNight`/`uDayFactor` przygasza trawę nocą, spięte z `applyDayNight` w `createApp.ts`), GUI toggle+radius w lil-gui (`Grass` folder), `InstancedMesh.dispose()` + `computeBoundingSphere()` wywołane poprawnie (łatwo przeoczyć — `geometry.dispose()` sam nie zwalnia `instanceMatrix`).
+
+Nie zrobione (odłożone jak w planie): faza 5 (worker offload pozycji), faza 6-7 (noise wiatr/curl, billboard LOD, ugięcie pod graczem, `InstancedBufferGeometry`/WebGPU) — **Should**/**Nice to have**, bez zmierzonego bottlenecku.
+
+`npx tsc --noEmit`, `npm run lint`, `npm run build` — czyste. Wizualnie nie zweryfikowane w przeglądarce (patrz `CLAUDE.md` — nie testuję headless sam).
 
 ## Kontekst
 

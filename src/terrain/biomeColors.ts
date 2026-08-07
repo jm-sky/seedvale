@@ -8,7 +8,7 @@ const SNOW = new Color(0xdfe6ee)
 const ABYSS = new Color(0x122622)
 
 /** Shore sand band above water (world units). */
-const SAND_BAND = 0.6
+export const SAND_BAND = 0.6
 
 /** Half-width of the smoothed seabed → sand transition (world units). */
 const SEABED_BLEND = 0.25
