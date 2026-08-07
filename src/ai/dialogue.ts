@@ -10,6 +10,21 @@ export const NPC_PERSONALITIES: readonly Personality[] = [
   'curious',
 ]
 
+export type PausePersonalityParams = {
+  triggerDistance: number
+  lookDurationRange: [number, number]
+  cooldownRange: [number, number]
+}
+
+/** How close the player must get to make an NPC stop and look, how long it
+ *  holds the look, and how long before it can trigger again — per personality. */
+export const PAUSE_PARAMS: Record<Personality, PausePersonalityParams> = {
+  cheerful: { triggerDistance: 4, lookDurationRange: [2, 4], cooldownRange: [3, 6] },
+  calm: { triggerDistance: 3, lookDurationRange: [2, 5], cooldownRange: [4, 8] },
+  grumpy: { triggerDistance: 2.5, lookDurationRange: [2, 3], cooldownRange: [6, 10] },
+  curious: { triggerDistance: 5, lookDurationRange: [3, 5], cooldownRange: [3, 5] },
+}
+
 type Bucket = 'doing' | 'seeking'
 
 type PersonalityLines = Record<Personality, Record<Bucket, string[]>>

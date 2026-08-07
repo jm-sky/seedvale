@@ -209,7 +209,8 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
         settlement.npcs,
       )
       npcDialog.setPrompt(target ? target.name : null)
-      if (target && keyboard.consumeInteract()) {
+      const interactPressed = keyboard.consumeInteract()
+      if (target && interactPressed) {
         npcDialog.open(target.name, target.getDialogueLine())
       }
     }

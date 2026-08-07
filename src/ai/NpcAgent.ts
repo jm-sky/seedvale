@@ -8,7 +8,12 @@ import {
   prepareProp,
 } from '../assets/loadGltf'
 import { labelOpacityForDistance } from '../ui/labelDistance'
-import { NPC_PERSONALITIES, type Personality, pickDialogueLine } from './dialogue'
+import {
+  NPC_PERSONALITIES,
+  PAUSE_PARAMS,
+  type Personality,
+  pickDialogueLine,
+} from './dialogue'
 import {
   createNeedState,
   needColor,
@@ -18,6 +23,10 @@ import {
   pickNeed,
   tickNeeds,
 } from './Needs'
+
+function randRange([min, max]: [number, number]): number {
+  return min + Math.random() * (max - min)
+}
 
 const WALK_SPEED = 2.4
 const ARRIVE = 0.55
@@ -55,7 +64,18 @@ type Phase =
   | 'goStock'
   | 'goTree'
   | 'goWell'
+  | 'lookAtPlayer'
   | 'wander'
+
+/** Phases the player's approach may interrupt to trigger a lookAtPlayer pause. */
+const PAUSE_INTERRUPTIBLE_PHASES: readonly Phase[] = [
+  'choose',
+  'wander',
+  'goGarden',
+  'goStock',
+  'goTree',
+  'goWell',
+]
 
 export class NpcAgent {
   readonly mesh: THREE.Object3D
@@ -78,6 +98,9 @@ export class NpcAgent {
   private treeIndex: number
   private wait = 0
   private moving = false
+  private previousPhase: Phase | null = null
+  private pauseTimer = 0
+  private pauseCooldown = 0
   private readonly tmp = new THREE.Vector3()
   private readonly labelEl: HTMLDivElement
 
@@ -209,6 +232,18 @@ export class NpcAgent {
     tickNeeds(this.needs, dt)
     this.moving = false
 
+    if (this.pauseCooldown > 0) this.pauseCooldown -= dt
+    if (this.pauseCooldown <= 0 && PAUSE_INTERRUPTIBLE_PHASES.includes(this.phase)) {
+      const dx = this.mesh.position.x - observerPos.x
+      const dz = this.mesh.position.z - observerPos.z
+      const params = PAUSE_PARAMS[this.personality]
+      if (Math.hypot(dx, dz) < params.triggerDistance) {
+        this.previousPhase = this.phase
+        this.phase = 'lookAtPlayer'
+        this.pauseTimer = randRange(params.lookDurationRange)
+      }
+    }
+
     switch (this.phase) {
       case 'choose':
         this.beginNeed(pickNeed(this.needs))
@@ -262,6 +297,18 @@ export class NpcAgent {
           this.wait = 1.2
         }
         break
+      case 'lookAtPlayer': {
+        const dx = observerPos.x - this.mesh.position.x
+        const dz = observerPos.z - this.mesh.position.z
+        this.mesh.rotation.y = Math.atan2(dx, dz)
+        this.pauseTimer -= dt
+        if (this.pauseTimer <= 0) {
+          this.phase = this.previousPhase ?? 'choose'
+          this.previousPhase = null
+          this.pauseCooldown = randRange(PAUSE_PARAMS[this.personality].cooldownRange)
+        }
+        break
+      }
       case 'wander':
         if (this.steerTo(this.target, dt)) this.phase = 'choose'
         break
@@ -322,7 +369,8 @@ export class NpcAgent {
       this.phase === 'chop' ||
       this.phase === 'deposit' ||
       this.phase === 'drink' ||
-      this.phase === 'eat'
+      this.phase === 'eat' ||
+      this.phase === 'lookAtPlayer'
     )
   }
 
