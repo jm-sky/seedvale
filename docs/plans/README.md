@@ -30,6 +30,11 @@ Implementation plans for features and larger changes.
 | [2026-08-07--predator-prey-system.md](./2026-08-07--predator-prey-system.md) | Predator-prey z HP, damage na kontakt, spawner + respawn | `done` |
 | [2026-08-07--gaze-highlight-labels.md](./2026-08-07--gaze-highlight-labels.md) | Hover/gaze highlight (border/glow) na etykietach NPC + zwierząt, generalny pod przyszłe interakcje (drzewa/woda) | `planned` |
 
+New:
+- docs/plans/2026-08-07--npc-1-identity.md
+- docs/plans/2026-08-07--npc-2-daily-routine-and-place.md
+- docs/plans/2026-08-07--npc-3-animal-life.md
+
 When adding a new plan: create `YYYY-MM-DD--slug.md`, add a row here.
 
 ## Related
