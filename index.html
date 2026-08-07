@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>Seedvale</title>
     <link rel="icon" type="image/x-icon" href="/icons/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png" />
@@ -20,9 +23,20 @@
       body {
         width: 100%;
         height: 100%;
+        height: 100dvh;
         overflow: hidden;
+        overscroll-behavior: none;
+        touch-action: none;
         background: #87b5d4;
         font-family: 'Segoe UI', system-ui, sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      input,
+      textarea {
+        -webkit-user-select: text;
+        user-select: text;
       }
       #app {
         width: 100%;
@@ -31,6 +45,34 @@
       }
       canvas {
         display: block;
+        touch-action: none;
+      }
+      .seedvale-rotate-hint {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 14px;
+        background: rgba(10, 14, 18, 0.94);
+        color: #f2f6fa;
+        text-align: center;
+        padding: 24px;
+      }
+      .seedvale-rotate-hint__icon {
+        font-size: 40px;
+      }
+      .seedvale-rotate-hint__text {
+        font-size: 15px;
+        opacity: 0.85;
+        max-width: 260px;
+      }
+      @media (orientation: portrait) and (pointer: coarse) {
+        .seedvale-rotate-hint {
+          display: flex;
+        }
       }
       .seedvale-hud {
         position: absolute;
@@ -63,7 +105,9 @@
         position: absolute;
         bottom: 10px;
         left: 10px;
-        z-index: 5;
+        /* Above .seedvale-touch's full-screen look-drag layer (z-index 7) so its
+           collapse toggle stays tappable on touch devices. */
+        z-index: 8;
         display: flex;
         flex-direction: column-reverse;
         align-items: flex-start;
@@ -500,10 +544,143 @@
           0 0 0 1px rgba(255, 196, 92, 0.9),
           0 0 10px 2px rgba(255, 196, 92, 0.5);
       }
+
+      /* --- Touch controls (joystick / look-drag / action buttons) --- */
+      .seedvale-touch {
+        position: absolute;
+        inset: 0;
+        z-index: 7;
+        pointer-events: none;
+      }
+      .seedvale-touch__look {
+        position: absolute;
+        inset: 0;
+        touch-action: none;
+        pointer-events: auto;
+      }
+      .seedvale-touch__joystick {
+        position: absolute;
+        left: max(20px, env(safe-area-inset-left));
+        bottom: max(20px, env(safe-area-inset-bottom));
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: rgba(20, 24, 28, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        touch-action: none;
+        pointer-events: auto;
+      }
+      .seedvale-touch__joystick-knob {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 50px;
+        height: 50px;
+        margin-left: -25px;
+        margin-top: -25px;
+        border-radius: 50%;
+        background: rgba(242, 246, 250, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        pointer-events: none;
+        will-change: transform;
+      }
+      .seedvale-touch__buttons {
+        position: absolute;
+        right: max(20px, env(safe-area-inset-right));
+        bottom: max(20px, env(safe-area-inset-bottom));
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+      .seedvale-touch__button {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(20, 24, 28, 0.6);
+        color: #f2f6fa;
+        font-size: 15px;
+        font-family: inherit;
+        font-weight: 600;
+        touch-action: manipulation;
+        pointer-events: auto;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .seedvale-touch__button--primary {
+        width: 68px;
+        height: 68px;
+        font-size: 18px;
+        background: rgba(61, 123, 209, 0.75);
+      }
+      .seedvale-touch__button--sprint.seedvale-touch__button--active {
+        background: rgba(224, 179, 74, 0.75);
+        border-color: rgba(224, 179, 74, 0.9);
+      }
+      .seedvale-touch__pause {
+        position: absolute;
+        top: max(16px, env(safe-area-inset-top));
+        right: max(16px, env(safe-area-inset-right));
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(20, 24, 28, 0.6);
+        color: #f2f6fa;
+        font-size: 18px;
+        font-family: inherit;
+        touch-action: manipulation;
+        pointer-events: auto;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* Bottom-left minimap collides with the joystick — move it out of the way. */
+      body.seedvale-touch .seedvale-minimap {
+        left: auto;
+        right: max(20px, env(safe-area-inset-right));
+        bottom: auto;
+        top: max(68px, calc(env(safe-area-inset-top) + 68px));
+        flex-direction: column;
+      }
+      body.seedvale-touch .seedvale-interact-prompt {
+        bottom: 160px;
+      }
+
+      /* --- Small screens: keep modal panels within the viewport --- */
+      @media (max-width: 700px), (max-height: 500px) {
+        .seedvale-pause__panel,
+        .seedvale-npc-dialog__panel,
+        .seedvale-quest-log__panel,
+        .seedvale-villagers__panel {
+          min-width: 0;
+          width: min(420px, calc(100vw - 32px));
+          max-width: calc(100vw - 32px);
+          max-height: calc(100dvh - 32px);
+          padding: 18px 20px;
+        }
+        .seedvale-hud {
+          left: max(12px, env(safe-area-inset-left));
+          top: max(12px, env(safe-area-inset-top));
+        }
+        .seedvale-hud__time {
+          font-size: 22px;
+        }
+        .seedvale-hud__hint {
+          display: none;
+        }
+        .seedvale-minimap__canvas {
+          width: 120px !important;
+          height: 120px !important;
+        }
+      }
     </style>
   </head>
   <body>
     <div id="app"></div>
+    <div class="seedvale-rotate-hint">
+      <div class="seedvale-rotate-hint__icon">🔄</div>
+      <div class="seedvale-rotate-hint__text">Obróć urządzenie poziomo, aby wygodniej sterować postacią.</div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

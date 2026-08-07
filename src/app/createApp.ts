@@ -11,6 +11,8 @@ import { saveWorldConfig } from '../config/persistConfig'
 import { createWorldConfig } from '../config/worldConfig'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { createFauna, type Fauna, SPAWNER_LABELS } from '../fauna/createFauna'
+import { createTouchControls } from '../input/createTouchControls'
+import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
@@ -83,6 +85,8 @@ export async function createApp(
   container: HTMLElement,
   initialSave?: SaveData | null,
 ): Promise<() => void> {
+  document.body.classList.toggle('seedvale-touch', isTouchDevice())
+
   const loadingScreen = createLoadingScreen(container)
 
   const config = createWorldConfig()
@@ -320,6 +324,12 @@ export async function createApp(
     },
   })
 
+  const touchControls = isTouchDevice()
+    ? createTouchControls(container, keyboard.state, mouseLook.state, {
+        onPauseToggle: () => pauseMenu.togglePause(),
+      })
+    : null
+
   const onBeforeUnload = () => {
     void writeSave(buildSaveData())
   }
@@ -478,6 +488,7 @@ export async function createApp(
     minimap.dispose()
     keyboard.dispose()
     mouseLook.dispose()
+    touchControls?.dispose()
     sky.dispose()
     ocean.dispose()
     ambientAudio.dispose()

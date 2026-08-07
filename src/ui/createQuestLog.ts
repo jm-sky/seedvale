@@ -1,5 +1,6 @@
 import type { QuestListEntry } from '../quests/QuestManager'
 import type { QuestState } from '../quests/quests'
+import { isTouchDevice } from '../input/isTouchDevice'
 
 export type QuestLogHandlers = {
   onClose?: () => void
@@ -51,7 +52,9 @@ export function createQuestLog(parent: HTMLElement, handlers: QuestLogHandlers =
         <button type="button" data-filter="complete" class="seedvale-quest-log__filter">Zakończone</button>
       </div>
       <div class="seedvale-quest-log__list" data-list></div>
-      <div class="seedvale-quest-log__hint">L / Esc — zamknij</div>
+      <div class="seedvale-quest-log__hint">${
+        isTouchDevice() ? 'Dotknij poza oknem — zamknij' : 'L / Esc — zamknij'
+      }</div>
     </div>
   `
   parent.appendChild(root)

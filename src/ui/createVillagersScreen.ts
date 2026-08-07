@@ -2,6 +2,7 @@ import type { Role, Trait } from '../ai/characters'
 import type { NpcAgent } from '../ai/NpcAgent'
 import { nearestArchetype, type Personality } from '../ai/dialogue'
 import { needLabel } from '../ai/Needs'
+import { isTouchDevice } from '../input/isTouchDevice'
 
 export type VillagersScreenHandlers = {
   onClose?: () => void
@@ -57,7 +58,9 @@ export function createVillagersScreen(
     <div class="seedvale-villagers__panel">
       <h1>Mieszkańcy</h1>
       <div class="seedvale-villagers__list" data-list></div>
-      <div class="seedvale-villagers__hint">Esc — zamknij</div>
+      <div class="seedvale-villagers__hint">${
+        isTouchDevice() ? 'Dotknij poza oknem — zamknij' : 'Esc — zamknij'
+      }</div>
     </div>
   `
   parent.appendChild(root)
