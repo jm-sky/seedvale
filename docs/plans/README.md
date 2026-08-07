@@ -28,7 +28,8 @@ Implementation plans for features and larger changes.
 | [2026-08-07--ambient-world-audio.md](./2026-08-07--ambient-world-audio.md) | Ambient audio zależne od obszaru (świerszcze/ptaki dzień-noc, szum fal blisko oceanu) | `planned` |
 | [2026-08-07--minimap.md](./2026-08-07--minimap.md) | Mini-mapa (bottom-left, collapsible, kierunek do osady) | `done` |
 | [2026-08-07--predator-prey-system.md](./2026-08-07--predator-prey-system.md) | Predator-prey z HP, damage na kontakt, spawner + respawn | `done` |
-| [2026-08-07--gaze-highlight-labels.md](./2026-08-07--gaze-highlight-labels.md) | Hover/gaze highlight (border/glow) na etykietach NPC + zwierząt, generalny pod przyszłe interakcje (drzewa/woda) | `planned` |
+| [2026-08-07--gaze-highlight-labels.md](./2026-08-07--gaze-highlight-labels.md) | Hover/gaze highlight (glow) na etykietach NPC + zwierząt, reużywa `pickInGaze` z quests-v2 | `verification needed` |
+| [2026-08-07--quests-v2-world-interactions.md](./2026-08-07--quests-v2-world-interactions.md) | Questy v2: multi-stage + interakcje ze światem (zwierzęta/studnia/drzewa/spawnery) + itemy (muszle/kamienie, world-gen + odnawialna pula) | `verification needed` |
 
 New:
 - docs/plans/2026-08-07--npc-1-identity.md

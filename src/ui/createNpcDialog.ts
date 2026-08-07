@@ -11,8 +11,10 @@ const DEFAULT_HINT = 'Esc / E — zamknij'
 const OFFER_HINT = '[E] Przyjmij  ·  [Esc] Odmów'
 
 export type NpcDialog = {
-  /** Pass null to hide. Ignored while a dialog is open. */
-  setPrompt: (name: string | null) => void
+  /** `text` is the full action description (e.g. "Rozmawiaj z Anna", "Zaczerpnij
+   *  wody") — the caller formats it per interactable kind. Pass null to hide.
+   *  Ignored while a dialog is open. */
+  setPrompt: (text: string | null) => void
   /** `offer` swaps the "close" hint for accept/decline; call `accept()` to accept. */
   open: (name: string, line: string, offer?: NpcDialogOffer) => void
   /** True while an accept/decline offer is showing (Esc/close = decline). */
@@ -89,14 +91,14 @@ export function createNpcDialog(
   window.addEventListener('keydown', onKeyDown)
 
   return {
-    setPrompt(name) {
+    setPrompt(text) {
       if (openState) return
-      if (name === null) {
+      if (text === null) {
         prompt.hidden = true
         return
       }
       prompt.hidden = false
-      prompt.textContent = `[E] Rozmawiaj z ${name}`
+      prompt.textContent = `[E] ${text}`
     },
     open(name, line, offer) {
       openState = true

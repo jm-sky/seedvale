@@ -17,6 +17,10 @@ export type Fauna = {
   update: (dt: number, observerPos: Vector3, timeOfDay: number) => void
   dispose: () => void
   getAgents: () => AnimalAgent[]
+  getSpawners: () => readonly PreySpawner[]
+  /** Label suffix (e.g. quest `!`/`?`) for a spawner type's CSS2D label — set
+   *  externally (e.g. by a QuestManager), mirrors `NpcAgent.setQuestMarker`. */
+  setSpawnerMarker: (type: PreySpawner['type'], marker: string | null) => void
 }
 
 type SpawnSpec = { kind: AnimalKind, count: number }
@@ -34,7 +38,7 @@ const SPAWNER_SPECS: { type: PreySpawner['type'], kind: AnimalKind, respawnTime:
   { type: 'thicket', kind: 'stag', respawnTime: 12, maxPreyCount: 2 },
 ]
 
-const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
+export const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
   cave: 'jaskinia',
   thicket: 'zagajnik',
   grove: 'gaj',
@@ -145,7 +149,12 @@ export async function createFauna(
   }
 
   const spawners: PreySpawner[] = []
-  const spawnerLabels: { object: CSS2DObject, el: HTMLDivElement }[] = []
+  const spawnerLabels: {
+    type: PreySpawner['type']
+    object: CSS2DObject
+    el: HTMLDivElement
+    marker: string | null
+  }[] = []
   for (const spec of SPAWNER_SPECS) {
     const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 45, 65)
     if (!pos) continue
@@ -157,7 +166,7 @@ export async function createFauna(
     const label = new CSS2DObject(el)
     label.position.set(pos.x, sampleHeight(pos.x, pos.z) + 0.6, pos.z)
     scene.add(label)
-    spawnerLabels.push({ object: label, el })
+    spawnerLabels.push({ type: spec.type, object: label, el, marker: null })
   }
 
   return {
@@ -204,5 +213,15 @@ export async function createFauna(
       spawnerLabels.length = 0
     },
     getAgents: () => agents,
+    getSpawners: () => spawners,
+    setSpawnerMarker(type, marker) {
+      for (const entry of spawnerLabels) {
+        if (entry.type !== type || entry.marker === marker) continue
+        entry.marker = marker
+        entry.el.textContent = marker
+          ? `${SPAWNER_LABELS[type]} · ${marker}`
+          : SPAWNER_LABELS[type]
+      }
+    },
   }
 }

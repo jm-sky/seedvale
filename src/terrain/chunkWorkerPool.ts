@@ -81,6 +81,7 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
             continentalness: msg.continentalness,
             mountainRidge: msg.mountainRidge,
             vegetation: msg.vegetation,
+            items: msg.items,
           })
         } else {
           job.reject(new Error(msg.error))

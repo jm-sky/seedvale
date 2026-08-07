@@ -31,7 +31,7 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 | **v0.2** | Osada + 3–5 NPC (woda / drewno / jedzenie) + etykiety + spawn | `done` |
 | **v0.3** | Fauna predators & prey (chase/flee) + GLB art | `done` |
 | **v0.3 art** | Swap fauny na GLB z `public/models/fauna/` (wolf/fox/deer/stag) | `done` |
-| **v0.4+** | Proste questy → później generator (+ OpenRouter); dialog fundament: [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) (`done`); quest v1: [plans/2026-08-07--quests-v1.md](./plans/2026-08-07--quests-v1.md) (`verification needed`) | później |
+| **v0.4+** | Proste questy → później generator (+ OpenRouter); dialog fundament: [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) (`done`); quest v1: [plans/2026-08-07--quests-v1.md](./plans/2026-08-07--quests-v1.md) (`verification needed`); quest v2 (multi-stage + interakcje ze światem + itemy): [plans/2026-08-07--quests-v2-world-interactions.md](./plans/2026-08-07--quests-v2-world-interactions.md) (`verification needed`) | później |
 | ~~next~~ | ~~Worker pool dla generacji terenu (offload heightmap)~~ | `done` → [plans/2026-08-07--terrain-worker-pool.md](./plans/2026-08-07--terrain-worker-pool.md) |
 | **później** | Wizualny overhaul: rośliny (krzewy), niebo/chmury, góry w tle | `in progress` — rośliny + niebo (bez chmur) done, góry w tle + chmury `planned` → [plans/2026-08-07--world-visual-overhaul.md](./plans/2026-08-07--world-visual-overhaul.md) |
 | **duży świat** | Chunk streaming (load/unload radius, worker gen, duże regiony/oceany/góry) | `done` → [plans/2026-08-07--world-streaming-persistence.md](./plans/2026-08-07--world-streaming-persistence.md) |
@@ -61,5 +61,6 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 8. [ ] Opcjonalnie: game UI (World config/Notes/NPC dialog screen) → [plans/2026-08-07--game-ui-screens.md](./plans/2026-08-07--game-ui-screens.md) (`in progress`)  
 9. [ ] Nowe pomysły od `7c2969f`: [plans/2026-08-07--npc-gender-models.md](./plans/2026-08-07--npc-gender-models.md), [plans/2026-08-07--npc-character-depth.md](./plans/2026-08-07--npc-character-depth.md), [plans/2026-08-07--ambient-world-audio.md](./plans/2026-08-07--ambient-world-audio.md) — `planned`, nieskolejkowane. [plans/2026-08-07--predator-prey-system.md](./plans/2026-08-07--predator-prey-system.md) → już `verification needed` (zaimplementowany w working tree). [plans/2026-08-07--npc-reaction-sounds.md](./plans/2026-08-07--npc-reaction-sounds.md) → `done`
 10. [x] v0.4 questy → [plans/2026-08-07--quests-v1.md](./plans/2026-08-07--quests-v1.md) (`verification needed`, minimalny relay quest nad dialogiem + quest log/exp/relacje)
+11. [x] v0.4 questy v2 → [plans/2026-08-07--quests-v2-world-interactions.md](./plans/2026-08-07--quests-v2-world-interactions.md) (`verification needed`, multi-stage questy + interakcje ze studnią/drzewami/zwierzętami/spawnerami + itemy world-gen/odnawialne + `SaveData` v2)
 
 Handoff szczegółowy: [CLAUDE.md](../CLAUDE.md)

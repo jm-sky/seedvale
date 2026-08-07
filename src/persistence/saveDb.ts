@@ -1,4 +1,4 @@
-import { isSaveData, type SaveData } from './saveData'
+import { loadSaveData, type SaveData } from './saveData'
 
 const DB_NAME = 'seedvale'
 const DB_VERSION = 1
@@ -29,7 +29,7 @@ export async function readSave(): Promise<SaveData | null> {
       req.onerror = () => reject(req.error)
     })
     db.close()
-    return isSaveData(result) ? result : null
+    return loadSaveData(result)
   } catch {
     return null
   }

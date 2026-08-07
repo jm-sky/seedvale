@@ -5,12 +5,13 @@ import {
 import type { HeightSampler } from '../player/PlayerController'
 import { NpcAgent } from '../ai/NpcAgent'
 import { findSettlementSite } from './findSettlementSite'
-import { buildSettlementProps, disposeSettlementGroup } from './props'
+import { buildSettlementProps, disposeSettlementGroup, type SettlementLandmarks } from './props'
 
 export type Settlement = {
   spawn: Vector3
   center: Vector3
   npcs: readonly NpcAgent[]
+  landmarks: SettlementLandmarks
   update: (dt: number, observerPos: Vector3) => void
   dispose: () => void
 }
@@ -63,6 +64,7 @@ export async function createSettlement(
     spawn,
     center: new Vector3(site.x, site.y, site.z),
     npcs: agents,
+    landmarks,
     update(dt, observerPos) {
       for (const agent of agents) agent.update(dt, observerPos)
     },
