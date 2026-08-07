@@ -23,18 +23,15 @@ Implementation plans for features and larger changes.
 | [2026-08-07--npc-interactions.md](./2026-08-07--npc-interactions.md) | Interakcje gracz↔NPC: proximity prompt + prosty dialog ([E]) | `done` |
 | [2026-08-07--npc-gender-models.md](./2026-08-07--npc-gender-models.md) | Modele NPC zsynchronizowane z płcią imienia (żeńskie & męskie) | `done` |
 | [2026-08-07--npc-reaction-sounds.md](./2026-08-07--npc-reaction-sounds.md) | Dźwięki reakcji NPC (Hmm/Tak? przy lookAtPlayer, męskie/żeńskie) | `done` |
-| [2026-08-07--npc-character-depth.md](./2026-08-07--npc-character-depth.md) | Character DB: szersze osobowości, abilities, HP (współdzielony z fauną) + ekran „Mieszkańcy” | `planned` |
+| [2026-08-07--npc-character-depth.md](./2026-08-07--npc-character-depth.md) | Character DB: role + traits (scalone z `npc-1-identity.md`), personality→Big Five, HP (współdzielony z fauną) + ekran „Mieszkańcy” | `planned` |
 | [2026-08-07--quests-v1.md](./2026-08-07--quests-v1.md) | Questy v1: minimalny relay quest nad istniejącym dialogiem + quest log/exp/relacje | `verification needed` |
 | [2026-08-07--ambient-world-audio.md](./2026-08-07--ambient-world-audio.md) | Ambient audio zależne od obszaru (świerszcze/ptaki dzień-noc, szum fal blisko oceanu) | `planned` |
 | [2026-08-07--minimap.md](./2026-08-07--minimap.md) | Mini-mapa (bottom-left, collapsible, kierunek do osady) | `done` |
 | [2026-08-07--predator-prey-system.md](./2026-08-07--predator-prey-system.md) | Predator-prey z HP, damage na kontakt, spawner + respawn | `done` |
 | [2026-08-07--gaze-highlight-labels.md](./2026-08-07--gaze-highlight-labels.md) | Hover/gaze highlight (glow) na etykietach NPC + zwierząt, reużywa `pickInGaze` z quests-v2 | `verification needed` |
 | [2026-08-07--quests-v2-world-interactions.md](./2026-08-07--quests-v2-world-interactions.md) | Questy v2: multi-stage + interakcje ze światem (zwierzęta/studnia/drzewa/spawnery) + itemy (muszle/kamienie, world-gen + odnawialna pula) | `verification needed` |
-
-New:
-- docs/plans/2026-08-07--npc-1-identity.md
-- docs/plans/2026-08-07--npc-2-daily-routine-and-place.md
-- docs/plans/2026-08-07--npc-3-animal-life.md
+| [2026-08-07--npc-2-daily-routine-and-place.md](./2026-08-07--npc-2-daily-routine-and-place.md) | NPC Place system, przycięty do minimum: formalizacja `home` (już działa de facto); per-rola workplace/schedule odłożone | `planned` |
+| [2026-08-07--npc-3-animal-life.md](./2026-08-07--npc-3-animal-life.md) | Animal Life, przycięty do warstwy needs: hunger/thirst/energy → wander bias na `AnimalAgent`; memory/territory/population save odłożone | `planned` |
 
 When adding a new plan: create `YYYY-MM-DD--slug.md`, add a row here.
 
