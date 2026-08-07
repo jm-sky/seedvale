@@ -4,6 +4,15 @@ Part 1 of ChatGPT plans.
 
 > Draft from ChatGPT without repository files access. Review before implementation!
 
+## Review (2026-08-07, Claude) — vs. realia kodu
+
+- **Duplikacja zakresu z [npc-character-depth.md](./2026-08-07--npc-character-depth.md)** (status `planned`, już opisany szczegółowo). Ten plan już definiuje `CharacterDef` (imię/personality/ability), rozszerzenie `Personality` z 4 do 6-8 archetypów i `Ability` (2-4 lekkie, deterministyczne cechy modyfikujące realne liczby w `NpcAgent`). `npc-1-identity.md` proponuje równoległy model (`role` + `traits` + Big Five) pokrywający tę samą przestrzeń („co czyni NPC innym") innym słownictwem. `character-depth.md` explicite odrzucił taki scenariusz dla `HealthState` („Jeden system HP w całej grze, nie dwa") — to samo ryzyko dotyczy tu `traits` vs `Ability`.
+- **Big Five jest architektonicznie sprzeczny z obecnym `dialogue.ts`.** `BANK` to tabela literałów kluczowana dyskretnym enumem `Personality` (need × personality × bucket → linie, [dialogue.ts:37-122](../../src/ai/dialogue.ts)). Model ciągły (5 liczb 0-1) nie mapuje się na „wybierz pulę linii" bez warstwy translacji (bucketing / nearest-archetype) — nigdzie nieopisanej w planie, a to osobny, spory komponent.
+- **`role` dziś nie ma żadnego odpowiednika w kodzie** — wszystkie NPC mają identyczne zachowanie (te same 3 needs: water/food/wood, `src/ai/Needs.ts`), różnią się tylko modelem/personality/imieniem (`NpcAgent.ts:72-108`). Sam model danych `role` w izolacji (bez zachowania z planu 2) jest tani do dodania, ale nie ma żadnego widocznego efektu w grze, dopóki nie wyląduje `npc-2-daily-routine-and-place.md`.
+- **`traits`** (`strong`, `hardworking`, `skilled_woodworker`...) pokrywają się koncepcyjnie z `Ability` z `character-depth.md` (`fast_worker`, `energetic`, `night_owl`, `sociable`).
+
+**Decyzja (2026-08-07): scalony do [npc-character-depth.md](./2026-08-07--npc-character-depth.md).** Nie wdrażać jako osobny plan — `role`/`traits` i migracja personality→Big Five z tego draftu wchodzą do `CharacterDef` w `npc-character-depth.md` (sekcje „Character DB” i „Personality → Big Five” tamtego pliku). Ten plik zostaje jako referencja/historia draftu, usunięty z indeksu [plans/README.md](./README.md) (jak `npc-labels.md`).
+
 **Cel:**  
 Zbudowanie fundamentu danych opisujących mieszkańców Seedvale.
 
