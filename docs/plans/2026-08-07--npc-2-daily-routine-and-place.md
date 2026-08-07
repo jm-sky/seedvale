@@ -1,5 +1,9 @@
 # Plan: NPC Daily Routine & Place System
 
+Part 2 of ChatGPT plans.
+
+> Draft from ChatGPT without repository files access. Review before implementation!
+
 **Cel:**  
 Dodanie warstwy codziennego życia NPC. Każdy mieszkaniec otrzymuje elastyczny plan dnia, własne miejsca związane z życiem oraz możliwość modyfikowania zachowania przez Identity Model.
 
