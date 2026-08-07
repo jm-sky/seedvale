@@ -19,6 +19,7 @@ import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
 import { createPauseMenu } from '../ui/createPauseMenu'
 import { createLights } from '../world/createLights'
+import { createOcean, type WorldOcean } from '../world/createOcean'
 import { createSky } from '../world/createSky'
 import { createWater, type WorldWater } from '../world/createWater'
 import {
@@ -54,6 +55,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
 
   let terrain = buildTerrain(scene, config)
   let water = buildWater(scene, terrain)
+  let ocean = buildOcean(scene, terrain)
   let settlement = await buildSettlement(scene, terrain, config.seed)
   let fauna = await buildFauna(scene, terrain, settlement, config.seed)
 
@@ -80,10 +82,12 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     fauna.dispose()
     settlement.dispose()
     water.dispose()
+    ocean.dispose()
     terrain.mesh.removeFromParent()
     terrain.dispose()
     terrain = buildTerrain(scene, config)
     water = buildWater(scene, terrain)
+    ocean = buildOcean(scene, terrain)
     settlement = await buildSettlement(scene, terrain, config.seed)
     fauna = await buildFauna(scene, terrain, settlement, config.seed)
     player.setGround(terrain.sampleHeight, terrain.halfExtent)
@@ -100,7 +104,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
 
   const onDayNightChange = () => {
     if (dayNight.enabled) {
-      applyDayNight(dayNight.timeOfDay, sky, lights, scene, water)
+      applyDayNight(dayNight.timeOfDay, sky, lights, scene, water, ocean)
     }
   }
 
@@ -128,7 +132,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     },
   })
 
-  applyDayNight(dayNight.timeOfDay, sky, lights, scene, water)
+  applyDayNight(dayNight.timeOfDay, sky, lights, scene, water, ocean)
 
   const clock = new Clock()
   let frameId = 0
@@ -149,13 +153,14 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     if (!pauseMenu.isPaused()) {
       tickDayNight(dayNight, dt)
       if (dayNight.enabled) {
-        applyDayNight(dayNight.timeOfDay, sky, lights, scene, water)
+        applyDayNight(dayNight.timeOfDay, sky, lights, scene, water, ocean)
       }
       hud.setTime(dayNight.timeOfDay)
       player.update(dt)
       settlement.update(dt, player.mesh.position)
       fauna.update(dt, player.mesh.position)
       water.update(dt)
+      ocean.update(dt)
     }
     renderer.render(scene, camera)
     labelRenderer.render(scene, camera)
@@ -172,6 +177,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     mouseLook.dispose()
     sky.dispose()
     water.dispose()
+    ocean.dispose()
     fauna.dispose()
     settlement.dispose()
     terrain.dispose()
@@ -188,6 +194,7 @@ function applyDayNight(
   lights: ReturnType<typeof createLights>,
   scene: Scene,
   water: WorldWater,
+  ocean: WorldOcean,
 ): void {
   const p = skyParamsFromTime(timeOfDay)
   sky.setParams(
@@ -209,6 +216,7 @@ function applyDayNight(
     fog.far = p.fogFar
   }
   water.setDayNight(p.dayFactor)
+  ocean.setDayNight(p.dayFactor, sky.sunPosition)
 }
 
 function buildTerrain(
@@ -225,6 +233,12 @@ function buildWater(scene: Scene, terrain: Terrain): WorldWater {
   const water = createWater(terrain.heightmap)
   water.addTo(scene)
   return water
+}
+
+function buildOcean(scene: Scene, terrain: Terrain): WorldOcean {
+  const ocean = createOcean(terrain.heightmap)
+  ocean.addTo(scene)
+  return ocean
 }
 
 function buildSettlement(

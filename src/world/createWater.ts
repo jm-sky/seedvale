@@ -41,16 +41,39 @@ function createHeightTexture(heightmap: Heightmap): DataTexture {
   return tex
 }
 
+function createBodyScaleTexture(heightmap: Heightmap): DataTexture {
+  const { resolution } = heightmap.params
+  const data = new Float32Array(heightmap.bodyScale)
+  const tex = new DataTexture(data, resolution, resolution, RedFormat, FloatType)
+  tex.wrapS = ClampToEdgeWrapping
+  tex.wrapT = ClampToEdgeWrapping
+  tex.minFilter = LinearFilter
+  tex.magFilter = LinearFilter
+  tex.needsUpdate = true
+  return tex
+}
+
 /**
  * Stylized water — waves only where terrain ≤ waterLevel (heightmap mask).
  * Fixes flicker of the plane poking through land.
  */
+/** Cap on water mesh segments — keeps the shoreline mask sharp without matching
+ *  the terrain 1:1 at very high resolutions (water doesn't need that much detail). */
+const MAX_WATER_SEGMENTS = 256
+
 export function createWater(heightmap: Heightmap): WorldWater {
-  const { size, waterLevel } = heightmap.params
-  const geometry = new PlaneGeometry(size * 1.02, size * 1.02, 96, 96)
+  const { size, waterLevel, resolution } = heightmap.params
+  // Track terrain resolution so the vCover mask (sampled per water-mesh vertex,
+  // then linearly interpolated) follows the actual shoreline shape closely enough
+  // to avoid "holes" where a whole water quad falls on land vertices despite
+  // submerged terrain between them — see docs/reviews/2026-08-07-water-quality.md
+  // Finding 3.
+  const segments = Math.min(resolution - 1, MAX_WATER_SEGMENTS)
+  const geometry = new PlaneGeometry(size * 1.02, size * 1.02, segments, segments)
   geometry.rotateX(-Math.PI / 2)
 
   const heightTex = createHeightTexture(heightmap)
+  const bodyScaleTex = createBodyScaleTexture(heightmap)
 
   const material = new ShaderMaterial({
     transparent: true,
@@ -63,16 +86,20 @@ export function createWater(heightmap: Heightmap): WorldWater {
       uFoam: { value: DAY_FOAM.clone() },
       uOpacity: { value: 0.82 },
       uHeightmap: { value: heightTex },
+      uBodyScale: { value: bodyScaleTex },
       uMapSize: { value: size },
       uWaterLevel: { value: waterLevel },
     },
     vertexShader: /* glsl */ `
       uniform float uTime;
       uniform sampler2D uHeightmap;
+      uniform sampler2D uBodyScale;
       uniform float uMapSize;
       uniform float uWaterLevel;
       varying float vWave;
       varying float vCover;
+      varying float vAmpScale;
+      varying float vBodyScale;
       varying vec3 vViewDir;
 
       void main() {
@@ -81,10 +108,16 @@ export function createWater(heightmap: Heightmap): WorldWater {
         float terrainH = texture2D(uHeightmap, uv).r;
         vCover = 1.0 - smoothstep(uWaterLevel - 0.05, uWaterLevel + 0.35, terrainH);
 
+        // 0 = small lake .. 1 = ocean; blends wave amplitude between the two.
+        float bodyScale = texture2D(uBodyScale, uv).r;
+        vBodyScale = bodyScale;
+        float ampScale = mix(0.06, 0.24, bodyScale);
+        vAmpScale = ampScale;
+
         float w1 = sin(pos.x * 0.18 + uTime * 1.1) * 0.1;
         float w2 = cos(pos.z * 0.22 + uTime * 0.85) * 0.08;
         float w3 = sin((pos.x + pos.z) * 0.09 + uTime * 0.6) * 0.06;
-        vWave = (w1 + w2 + w3) * vCover;
+        vWave = (w1 + w2 + w3) * (ampScale / 0.24) * vCover;
         pos.y += vWave;
 
         vec4 world = modelMatrix * vec4(pos, 1.0);
@@ -99,14 +132,19 @@ export function createWater(heightmap: Heightmap): WorldWater {
       uniform float uOpacity;
       varying float vWave;
       varying float vCover;
+      varying float vAmpScale;
+      varying float vBodyScale;
       varying vec3 vViewDir;
 
       void main() {
         if (vCover < 0.02) discard;
+        // True ocean cells are rendered by the reflective Water.js mesh instead —
+        // step aside so the two don't double-render/z-fight over the same area.
+        if (vBodyScale > 0.9) discard;
 
         float fresnel = pow(1.0 - max(dot(normalize(vViewDir), vec3(0.0, 1.0, 0.0)), 0.0), 2.2);
         vec3 col = mix(uDeep, uShallow, fresnel);
-        float foam = smoothstep(0.12, 0.22, abs(vWave));
+        float foam = smoothstep(vAmpScale * 0.5, vAmpScale * 0.92, abs(vWave));
         col = mix(col, uFoam, foam * 0.4);
         float alpha = mix(uOpacity, 0.95, fresnel) * vCover;
         gl_FragColor = vec4(col, alpha);
@@ -115,7 +153,7 @@ export function createWater(heightmap: Heightmap): WorldWater {
   })
 
   const mesh = new Mesh(geometry, material)
-  mesh.position.y = waterLevel + 0.04
+  mesh.position.y = waterLevel + 0.07
   mesh.renderOrder = 1
   mesh.name = 'water'
 
@@ -139,6 +177,7 @@ export function createWater(heightmap: Heightmap): WorldWater {
       geometry.dispose()
       material.dispose()
       heightTex.dispose()
+      bodyScaleTex.dispose()
       mesh.removeFromParent()
     },
   }
