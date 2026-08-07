@@ -5,7 +5,18 @@ import {
 import type { HeightSampler } from '../player/PlayerController'
 import type { SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
-import { buildSettlementProps, disposeSettlementGroup, type SettlementLandmarks } from './props'
+import { minorLocationsFor } from './minorLocations'
+import {
+  buildSettlementProps,
+  cloneProp,
+  createDock,
+  disposeSettlementGroup,
+  DOCK_SPECS,
+  loadPropTemplates,
+  placeOnGround,
+  type SettlementLandmarks,
+} from './props'
+import { type RoadNetworkContext, routeToMinorLocation } from './roadNetwork'
 
 export type Settlement = {
   id: string
@@ -27,6 +38,7 @@ export async function createSettlement(
   seed: number,
   def: SettlementDef,
   playSound: (url: string, volume?: number) => void = () => {},
+  roadCtx?: RoadNetworkContext,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   const { group, landmarks } = await buildSettlementProps(
@@ -38,6 +50,27 @@ export async function createSettlement(
     def.isHome,
   )
   scene.add(group)
+
+  if (roadCtx) {
+    const [dock] = minorLocationsFor(
+      def,
+      roadCtx.sampleHeight,
+      roadCtx.terrainSamplers.sampleContinentalness,
+      roadCtx.region,
+      roadCtx.region.roadNetwork.dockSearchRadius,
+    )
+    if (dock) {
+      const dockTemplates = await loadPropTemplates(DOCK_SPECS, () => createDock())
+      const dockProp = cloneProp(dockTemplates, 0, 1)
+      dockProp.rotation.y = dock.angle
+      placeOnGround(dockProp, dock.x, dock.z, sampleHeight)
+      group.add(dockProp)
+      landmarks.dock = new Vector3(dock.x, dock.y, dock.z)
+
+      const route = routeToMinorLocation(def, 'dock', roadCtx)
+      landmarks.dockRoute = route.map((p) => new Vector3(p.x, sampleHeight(p.x, p.z), p.z))
+    }
+  }
 
   // Home keeps its original sizing rule (derived from how many huts actually
   // got placed); other settlements use the generator's rolled `npcCount`.

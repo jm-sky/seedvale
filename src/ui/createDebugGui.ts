@@ -233,6 +233,62 @@ export function createDebugGui(
       .onFinishChange(handlers.onTerrainChange),
   )
 
+  const roads = terrain.addFolder('Roads')
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'roadHalfWidth', 1, 12, 0.5)
+      .name('Road half-width')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'roadHeightStrength', 0, 1, 0.01)
+      .name('Road height strength')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'roadTintStrength', 0, 1, 0.01)
+      .name('Road tint strength')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'pathHalfWidth', 0.5, 6, 0.25)
+      .name('Path half-width')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'pathHeightStrength', 0, 1, 0.01)
+      .name('Path height strength')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'pathTintStrength', 0, 1, 0.01)
+      .name('Path tint strength')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'smoothingWindow', 2, 40, 1)
+      .name('Smoothing window')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'maxNeighborRoads', 0, 4, 1)
+      .name('Max neighbor roads')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'dockSearchRadius', 20, 300, 10)
+      .name('Dock search radius')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+
   const grass = gui.addFolder('Grass')
   terrainControllers.push(
     grass

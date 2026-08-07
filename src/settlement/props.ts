@@ -8,6 +8,13 @@ export type SettlementLandmarks = {
   garden: THREE.Vector3
   homes: THREE.Vector3[]
   trees: THREE.Vector3[]
+  /** Settlement's dock/pier, if it has one (near-coast settlements only) —
+   *  see `settlement/minorLocations.ts`. */
+  dock?: THREE.Vector3
+  /** Waypoints from the settlement center to `dock` (inclusive), already
+   *  height-sampled — empty when there's no dock. NPCs walk these in order
+   *  instead of a straight line (`NpcAgent.ts`'s `followPath` phase). */
+  dockRoute: THREE.Vector3[]
 }
 
 const HUT_URLS = [
@@ -34,6 +41,10 @@ export const CACTUS_SPECS = [
 
 export const REED_SPECS = [
   { url: '/models/nature/reed_a.glb', height: 1.1 },
+] as const
+
+export const DOCK_SPECS = [
+  { url: '/models/settlement/dock_a.glb', height: 1.0 },
 ] as const
 
 export function placeOnGround(
@@ -99,6 +110,32 @@ export function createWell(): THREE.Group {
   water.position.y = 0.55
   well.add(water)
   return well
+}
+
+/** A short wooden pier — deck extends along local +X (rotate by the
+ *  `MinorLocation.angle` to point out over the water). */
+export function createDock(): THREE.Group {
+  const dock = new THREE.Group()
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a6a45, flatShading: true })
+
+  const deckLength = 5
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(deckLength, 0.15, 1.4), woodMat)
+  deck.position.set(deckLength / 2, 0.4, 0)
+  deck.castShadow = true
+  deck.receiveShadow = true
+  dock.add(deck)
+
+  const postPositions = [0.6, deckLength - 0.6]
+  for (const px of postPositions) {
+    for (const pz of [-0.55, 0.55]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.8, 6), woodMat)
+      post.position.set(px, 0, pz)
+      post.castShadow = true
+      dock.add(post)
+    }
+  }
+
+  return dock
 }
 
 export function createStockpile(): THREE.Group {
@@ -323,6 +360,7 @@ export async function buildSettlementProps(
     garden: new THREE.Vector3(),
     homes: [],
     trees: [],
+    dockRoute: [],
   }
 
   const well = createWell()

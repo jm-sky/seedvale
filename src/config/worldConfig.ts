@@ -116,6 +116,17 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         desertThresholdWidth: 0.12,
         swampThreshold: 0.72,
         swampThresholdWidth: 0.15,
+        roadNetwork: {
+          roadHalfWidth: 5,
+          roadHeightStrength: 0.85,
+          roadTintStrength: 0.8,
+          pathHalfWidth: 1.5,
+          pathHeightStrength: 0.2,
+          pathTintStrength: 0.4,
+          smoothingWindow: 10,
+          maxNeighborRoads: 2,
+          dockSearchRadius: 140,
+        },
       },
       grass: {
         enabled: true,
@@ -188,6 +199,9 @@ export function applyStoredTerrain(
         ...target.region.moistureRegionFbm,
         ...r.moistureRegionFbm,
       }
+    }
+    if (r.roadNetwork && typeof r.roadNetwork === 'object') {
+      target.region.roadNetwork = { ...target.region.roadNetwork, ...r.roadNetwork }
     }
   }
   if (t.grass && typeof t.grass === 'object') {

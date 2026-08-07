@@ -1,4 +1,5 @@
-import { type RawSampleParams, sampleContinentalnessAt, sampleHeightAt } from '../terrain/chunkHeightmap'
+import type { HeightSampler } from '../player/PlayerController'
+import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementDef } from './settlementGenerator'
 
 export type MinorLocation = {
@@ -24,7 +25,9 @@ const SEARCH_STEP = 4
  */
 export function findDockLocation(
   def: SettlementDef,
-  params: RawSampleParams,
+  sampleHeight: HeightSampler,
+  sampleContinentalness: (x: number, z: number) => number,
+  region: RegionParams,
   maxRadius: number,
 ): MinorLocation | null {
   let best: { x: number; z: number; angle: number; dist: number } | null = null
@@ -37,8 +40,8 @@ export function findDockLocation(
     for (let dist = SEARCH_STEP; dist <= maxRadius; dist += SEARCH_STEP) {
       const x = def.x + dx * dist
       const z = def.z + dz * dist
-      const c = sampleContinentalnessAt(x, z, params)
-      if (c < params.region.coastThreshold) {
+      const c = sampleContinentalness(x, z)
+      if (c < region.coastThreshold) {
         if (!best || dist < best.dist) {
           // Step back half a stride so the dock sits on the shore, not in the water.
           const shoreX = x - dx * SEARCH_STEP * 0.5
@@ -55,7 +58,7 @@ export function findDockLocation(
     kind: 'dock',
     x: best.x,
     z: best.z,
-    y: sampleHeightAt(best.x, best.z, params),
+    y: sampleHeight(best.x, best.z),
     angle: best.angle,
   }
 }
@@ -65,12 +68,20 @@ const cache = new Map<string, MinorLocation[]>()
 
 export function minorLocationsFor(
   def: SettlementDef,
-  params: RawSampleParams,
+  sampleHeight: HeightSampler,
+  sampleContinentalness: (x: number, z: number) => number,
+  region: RegionParams,
   maxDockSearchRadius: number,
 ): MinorLocation[] {
   let locations = cache.get(def.id)
   if (!locations) {
-    const dock = findDockLocation(def, params, maxDockSearchRadius)
+    // Cheap pre-check: `def.terrain` already averages continentalness around
+    // the site for naming (`settlementTerrain.ts`) — only settlements that
+    // classified as coastal-ish ('ocean') are worth the full ray-march.
+    const dock =
+      def.terrain === 'ocean'
+        ? findDockLocation(def, sampleHeight, sampleContinentalness, region, maxDockSearchRadius)
+        : null
     locations = dock ? [dock] : []
     cache.set(def.id, locations)
   }

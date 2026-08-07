@@ -17,6 +17,7 @@ import {
   REED_SPECS,
   TREE_SPECS,
 } from '../settlement/props'
+import { type RoadNetworkContext, segmentsNear } from '../settlement/roadNetwork'
 import { createChunkWater, type WorldWater } from '../world/createWater'
 import { buildChunkGeometry } from './buildChunkGeometry'
 import {
@@ -87,6 +88,11 @@ export type ChunkManagerConfig = {
   fbm: FbmParams
   biome: { noiseScale: number; fbm: FbmParams }
   region: RegionParams
+  /** `findSettlementSite`'s local flat-site search radius (`HOME_RADIUS` in
+   *  `createApp.ts`) — needed here only to resolve `SettlementDef`s for road
+   *  segments near a chunk (`roadNetwork.ts`), same value `SettlementsManager`
+   *  uses so both sides resolve identical settlement sites. */
+  settlementSearchRadius: number
   flatShading: boolean
   /** Ids of world-generated items (`terrain/chunkItems.ts`) already collected —
    *  shared/mutated in place so a chunk regenerated after unload/reload skips
@@ -175,7 +181,25 @@ export function createChunkManager(
     region: config.region,
   }
 
+  // Built once, referencing `readField` (defined further below — safe, `function`
+  // declarations hoist) — used only to resolve nearby settlements'/routes' road
+  // segments (`roadNetwork.ts`), never to sample terrain for rendering itself.
+  const roadCtx: RoadNetworkContext = {
+    seed: config.seed,
+    sampleHeight: (x, z) => readField('heights', x, z),
+    waterLevel: config.waterLevel,
+    terrainSamplers: {
+      sampleContinentalness: (x, z) => readField('continentalness', x, z),
+      sampleMountainRidge: (x, z) => readField('mountainRidge', x, z),
+      sampleMoistureRegion: (x, z) => readField('moistureRegion', x, z),
+    },
+    heightScale: config.heightScale,
+    region: config.region,
+    localSearchRadius: config.settlementSearchRadius,
+  }
+
   function paramsFor(coord: ChunkCoord): ChunkTileParams {
+    const { x, z } = chunkCenter(coord, config.chunkSize)
     return {
       cx: coord.cx,
       cz: coord.cz,
@@ -200,6 +224,7 @@ export function createChunkManager(
         cactus: CACTUS_SPECS.length,
         reed: REED_SPECS.length,
       },
+      roadSegments: segmentsNear(x, z, config.chunkSize, roadCtx),
     }
   }
 

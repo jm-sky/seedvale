@@ -693,6 +693,7 @@ function buildChunkManager(
     fbm: config.terrain.fbm,
     biome: config.terrain.biome,
     region: config.terrain.region,
+    settlementSearchRadius: HOME_RADIUS,
     flatShading: config.terrain.flatShading,
     collectedItemIds,
     grass: config.terrain.grass,

@@ -1,6 +1,6 @@
 # Plan: Drogi i ścieżki między lokalizacjami
 
-**Status:** `planned`
+**Status:** `verification needed` — zaimplementowane zgodnie z opisem poniżej (`src/settlement/roadNetwork.ts`, `src/settlement/minorLocations.ts`, rozszerzenia `chunkHeightmap.ts`/`biomeColors.ts`/`NpcAgent.ts`), brak jeszcze wizualnej weryfikacji w przeglądarce
 **Created:** 2026-08-07
 **Priority:** średni — rozszerzenie [multi-settlements](./2026-08-07--025--multi-settlements.md) (grafuje istniejącą siatkę wiosek) i [biome-regions](./2026-08-07--028--biome-regions.md) (kolejna warstwa na tym samym `sampleRawTexel`). Nie blokuje ani nie jest blokowany przez inne kolejkowane plany.
 **Zakres (zdecydowane z userem 2026-08-07):** drogi **też międzyosadowe** (nie tylko osada↔port), oraz wygładzenie terenu **+ blend koloru** (nie samo wygładzenie).

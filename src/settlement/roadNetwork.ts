@@ -1,0 +1,415 @@
+import type { HeightSampler } from '../player/PlayerController'
+import type { RegionParams, RoadCorridorSegment } from '../terrain/chunkHeightmap'
+import type { TerrainSamplers } from './settlementTerrain'
+import { minorLocationsFor } from './minorLocations'
+import {
+  cellKey,
+  cellsWithinRadius,
+  generateSettlementDef,
+  type SettlementCell,
+  type SettlementDef,
+  worldToCell,
+} from './settlementGenerator'
+
+export type RoutePoint = {
+  x: number
+  z: number
+  /** Raw analytic terrain height at this waypoint. */
+  h: number
+  /** Smoothed height (moving average along the route's arc length) — what the
+   *  terrain actually blends toward inside the corridor. */
+  hs: number
+}
+
+export type RoadSegment = {
+  a: RoutePoint
+  b: RoutePoint
+  kind: 'road' | 'path'
+}
+
+/** Everything `roadNetwork.ts` needs to resolve settlement defs / find routes,
+ *  bundled so the many functions below don't each carry a dozen parameters.
+ *  Main-thread only — pulls in `settlementGenerator.ts` (naming/character
+ *  logic), never imported from `chunkHeightmap.worker.ts`. */
+export type RoadNetworkContext = {
+  seed: number
+  sampleHeight: HeightSampler
+  waterLevel: number
+  terrainSamplers: TerrainSamplers
+  heightScale: number
+  region: RegionParams
+  /** `findSettlementSite`'s local flat-site search radius — same value used
+   *  everywhere else a `SettlementDef` gets generated (`HOME_RADIUS` in
+   *  `createApp.ts`). */
+  localSearchRadius: number
+}
+
+// --- Settlement def cache — own copy of the same pattern `SettlementsManager`
+// uses internally, so repeated chunk requests near the same cells don't redo
+// the ~80-sample flat-site search + naming every time. ---
+const defCache = new Map<string, SettlementDef>()
+function defFor(cell: SettlementCell, ctx: RoadNetworkContext): SettlementDef {
+  const key = cellKey(cell)
+  let def = defCache.get(key)
+  if (!def) {
+    def = generateSettlementDef(
+      cell,
+      ctx.seed,
+      ctx.sampleHeight,
+      ctx.waterLevel,
+      ctx.localSearchRadius,
+      ctx.terrainSamplers,
+      ctx.heightScale,
+      ctx.region,
+    )
+    defCache.set(key, def)
+  }
+  return def
+}
+
+/** A settlement's 1–2 nearest neighbor settlements (by actual site distance,
+ *  not grid distance — `findSettlementSite` jitters each cell's center).
+ *  Deterministic and effectively symmetric: both sides resolve the same
+ *  `SettlementDef`s from the same seed, so whichever settlement asks first,
+ *  the edge (and its cached route, keyed by sorted id pair) comes out the
+ *  same either way. */
+export function neighborsFor(cell: SettlementCell, ctx: RoadNetworkContext): SettlementDef[] {
+  const self = defFor(cell, ctx)
+  const candidates = cellsWithinRadius(cell, 1)
+    .filter((c) => !(c.gx === cell.gx && c.gz === cell.gz))
+    .map((c) => defFor(c, ctx))
+    .map((def) => ({ def, dist: Math.hypot(def.x - self.x, def.z - self.z) }))
+    .sort((a, b) => a.dist - b.dist)
+  return candidates.slice(0, Math.max(0, ctx.region.roadNetwork.maxNeighborRoads)).map((c) => c.def)
+}
+
+// --- Routing: coarse-grid A*, cost = distance + elevation change, rejecting
+// water/steep mountain ridges. Small, one-time, cached per pair — see
+// `findRoute`'s doc comment for the walkability criteria. ---
+
+const NEIGHBOR_OFFSETS = [
+  [1, 0], [-1, 0], [0, 1], [0, -1],
+  [1, 1], [1, -1], [-1, 1], [-1, -1],
+] as const
+
+/** Above this `mountainRidge` value a route treats the cell as impassable —
+ *  same bar `chunkVegetation.ts`/`grass.ts` use to reject a ridge crest. */
+const ROUTE_MOUNTAIN_RIDGE_REJECT = 0.35
+/** Clearance above `waterLevel` a route needs to consider a cell dry land. */
+const ROUTE_WATER_CLEARANCE = 0.5
+
+type RoutingOptions = {
+  gridStep: number
+  elevationWeight: number
+  smoothingWindow: number
+}
+
+const DEFAULT_ROUTING_OPTIONS: RoutingOptions = {
+  gridStep: 9,
+  elevationWeight: 6,
+  smoothingWindow: 10,
+}
+
+/**
+ * Finds a route between two points that favors small elevation change over
+ * the shortest straight line, via A* over a coarse world-space grid bounded
+ * to the two points' bounding box (+ margin). Returns `null` if no walkable
+ * route exists within the search grid (e.g. `b` is across open water). Pure/
+ * analytic — safe to call before any chunk around the route is generated.
+ */
+export function findRoute(
+  a: { x: number, z: number },
+  b: { x: number, z: number },
+  sampleHeight: HeightSampler,
+  sampleMountainRidge: (x: number, z: number) => number,
+  waterLevel: number,
+  opts: RoutingOptions = DEFAULT_ROUTING_OPTIONS,
+): RoutePoint[] | null {
+  const { gridStep, elevationWeight, smoothingWindow } = opts
+  const margin = gridStep * 3
+
+  const minX = Math.min(a.x, b.x) - margin
+  const minZ = Math.min(a.z, b.z) - margin
+  const maxCols = Math.max(1, Math.ceil((Math.max(a.x, b.x) + margin - minX) / gridStep))
+  const maxRows = Math.max(1, Math.ceil((Math.max(a.z, b.z) + margin - minZ) / gridStep))
+
+  const toWorld = (ix: number, iz: number) => ({ x: minX + ix * gridStep, z: minZ + iz * gridStep })
+  const toGrid = (x: number, z: number) => ({
+    ix: Math.round((x - minX) / gridStep),
+    iz: Math.round((z - minZ) / gridStep),
+  })
+  const key = (ix: number, iz: number) => ix * (maxRows + 1) + iz
+
+  const heightCache = new Map<number, number>()
+  const heightAt = (ix: number, iz: number): number => {
+    const k = key(ix, iz)
+    let h = heightCache.get(k)
+    if (h === undefined) {
+      const w = toWorld(ix, iz)
+      h = sampleHeight(w.x, w.z)
+      heightCache.set(k, h)
+    }
+    return h
+  }
+  const walkable = (ix: number, iz: number): boolean => {
+    if (heightAt(ix, iz) <= waterLevel + ROUTE_WATER_CLEARANCE) return false
+    const w = toWorld(ix, iz)
+    if (sampleMountainRidge(w.x, w.z) > ROUTE_MOUNTAIN_RIDGE_REJECT) return false
+    return true
+  }
+
+  const start = toGrid(a.x, a.z)
+  const goal = toGrid(b.x, b.z)
+  const startKey = key(start.ix, start.iz)
+  const goalKey = key(goal.ix, goal.iz)
+  const dist = (ix: number, iz: number) => Math.hypot((ix - goal.ix) * gridStep, (iz - goal.iz) * gridStep)
+
+  const gScore = new Map<number, number>([[startKey, 0]])
+  const cameFrom = new Map<number, number>()
+  const open = new Map<number, { ix: number, iz: number, f: number }>()
+  open.set(startKey, { ix: start.ix, iz: start.iz, f: dist(start.ix, start.iz) })
+  const closed = new Set<number>()
+
+  while (open.size > 0) {
+    let curKey = -1
+    let cur: { ix: number, iz: number, f: number } | null = null
+    for (const [k, node] of open) {
+      if (!cur || node.f < cur.f) {
+        cur = node
+        curKey = k
+      }
+    }
+    if (!cur) break
+    if (curKey === goalKey) break
+    open.delete(curKey)
+    closed.add(curKey)
+
+    for (const [dx, dz] of NEIGHBOR_OFFSETS) {
+      const nix = cur.ix + dx
+      const niz = cur.iz + dz
+      if (nix < 0 || nix > maxCols || niz < 0 || niz > maxRows) continue
+      const nKey = key(nix, niz)
+      if (closed.has(nKey) || !walkable(nix, niz)) continue
+
+      const stepDist = Math.hypot(dx * gridStep, dz * gridStep)
+      const cost = stepDist + elevationWeight * Math.abs(heightAt(nix, niz) - heightAt(cur.ix, cur.iz))
+      const tentativeG = (gScore.get(curKey) ?? Infinity) + cost
+
+      if (tentativeG < (gScore.get(nKey) ?? Infinity)) {
+        cameFrom.set(nKey, curKey)
+        gScore.set(nKey, tentativeG)
+        open.set(nKey, { ix: nix, iz: niz, f: tentativeG + dist(nix, niz) })
+      }
+    }
+  }
+
+  if (!gScore.has(goalKey)) return null
+
+  const chain: number[] = [goalKey]
+  let k = goalKey
+  while (k !== startKey) {
+    const prev = cameFrom.get(k)
+    if (prev === undefined) return null
+    chain.push(prev)
+    k = prev
+  }
+  chain.reverse()
+
+  const raw = chain.map((k2) => {
+    const iz = k2 % (maxRows + 1)
+    const ix = (k2 - iz) / (maxRows + 1)
+    const w = toWorld(ix, iz)
+    return { x: w.x, z: w.z, h: heightAt(ix, iz) }
+  })
+
+  return smoothProfile(raw, smoothingWindow)
+}
+
+/** Moving-average smoothing pass over a route's raw elevation profile, by
+ *  arc-length window rather than point count — robust to `gridStep` changes.
+ *  `window` is a rough starting point (the user's own "10% per 10 meters"
+ *  guess), meant to be tuned visually, not a precise spec. */
+function smoothProfile(
+  points: { x: number, z: number, h: number }[],
+  window: number,
+): RoutePoint[] {
+  const arc: number[] = [0]
+  for (let i = 1; i < points.length; i++) {
+    const p = points[i]!
+    const prev = points[i - 1]!
+    arc.push(arc[i - 1]! + Math.hypot(p.x - prev.x, p.z - prev.z))
+  }
+  const half = window / 2
+  return points.map((p, i) => {
+    let sum = 0
+    let count = 0
+    for (let j = 0; j < points.length; j++) {
+      if (Math.abs(arc[j]! - arc[i]!) <= half) {
+        sum += points[j]!.h
+        count++
+      }
+    }
+    return { x: p.x, z: p.z, h: p.h, hs: count > 0 ? sum / count : p.h }
+  })
+}
+
+function toSegments(points: RoutePoint[], kind: RoadSegment['kind']): RoadSegment[] {
+  const segments: RoadSegment[] = []
+  for (let i = 0; i < points.length - 1; i++) {
+    segments.push({ a: points[i]!, b: points[i + 1]!, kind })
+  }
+  return segments
+}
+
+/** Route cache keyed by a sorted, order-independent pair id — whichever
+ *  settlement resolves an edge first, the other reuses the same result. */
+const routeCache = new Map<string, RoadSegment[] | null>()
+function pairKey(idA: string, idB: string): string {
+  return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`
+}
+
+function routingOptionsFrom(ctx: RoadNetworkContext): RoutingOptions {
+  return {
+    gridStep: DEFAULT_ROUTING_OPTIONS.gridStep,
+    elevationWeight: DEFAULT_ROUTING_OPTIONS.elevationWeight,
+    smoothingWindow: ctx.region.roadNetwork.smoothingWindow,
+  }
+}
+
+/** All road (inter-settlement) + path (settlement↔own minor location)
+ *  segments belonging to one settlement. Cached per pair/location key, so
+ *  resolving the same settlement from multiple nearby chunks is cheap after
+ *  the first A* search. */
+function roadSegmentsForSettlement(def: SettlementDef, ctx: RoadNetworkContext): RoadSegment[] {
+  const out: RoadSegment[] = []
+  const opts = routingOptionsFrom(ctx)
+
+  for (const neighbor of neighborsFor({ gx: def.gx, gz: def.gz }, ctx)) {
+    const key = pairKey(def.id, neighbor.id)
+    let segments = routeCache.get(key)
+    if (segments === undefined) {
+      const points = findRoute(
+        def,
+        neighbor,
+        ctx.sampleHeight,
+        ctx.terrainSamplers.sampleMountainRidge,
+        ctx.waterLevel,
+        opts,
+      )
+      segments = points ? toSegments(points, 'road') : null
+      routeCache.set(key, segments)
+    }
+    if (segments) out.push(...segments)
+  }
+
+  const locations = minorLocationsFor(
+    def,
+    ctx.sampleHeight,
+    ctx.terrainSamplers.sampleContinentalness,
+    ctx.region,
+    ctx.region.roadNetwork.dockSearchRadius,
+  )
+  for (const loc of locations) {
+    const key = `${def.id}:${loc.kind}`
+    let segments = routeCache.get(key)
+    if (segments === undefined) {
+      const points = findRoute(
+        def,
+        loc,
+        ctx.sampleHeight,
+        ctx.terrainSamplers.sampleMountainRidge,
+        ctx.waterLevel,
+        opts,
+      )
+      segments = points ? toSegments(points, 'path') : null
+      routeCache.set(key, segments)
+    }
+    if (segments) out.push(...segments)
+  }
+
+  return out
+}
+
+/** Resolved route (waypoints, not corridor data) from a settlement to its own
+ *  minor location of `kind`, if it has one — used by `createSettlement.ts` to
+ *  give NPCs real waypoints to walk instead of a straight line. Reuses the
+ *  same cache as `roadSegmentsForSettlement`. */
+export function routeToMinorLocation(
+  def: SettlementDef,
+  kind: 'dock',
+  ctx: RoadNetworkContext,
+): RoutePoint[] {
+  const locations = minorLocationsFor(
+    def,
+    ctx.sampleHeight,
+    ctx.terrainSamplers.sampleContinentalness,
+    ctx.region,
+    ctx.region.roadNetwork.dockSearchRadius,
+  )
+  const loc = locations.find((l) => l.kind === kind)
+  if (!loc) return []
+
+  const key = `${def.id}:${loc.kind}`
+  let segments = routeCache.get(key)
+  if (segments === undefined) {
+    const points = findRoute(
+      def,
+      loc,
+      ctx.sampleHeight,
+      ctx.terrainSamplers.sampleMountainRidge,
+      ctx.waterLevel,
+      routingOptionsFrom(ctx),
+    )
+    segments = points ? toSegments(points, 'path') : null
+    routeCache.set(key, segments)
+  }
+  if (!segments || segments.length === 0) return []
+  return [segments[0]!.a, ...segments.map((s) => s.b)]
+}
+
+/** Road/path corridor segments near a chunk's world-space footprint —
+ *  resolves (or reuses cached) settlement/route data for the grid cells
+ *  within 1 of the chunk's cell, filtered to segments whose corridor could
+ *  actually reach into this chunk. Called by `chunkManager.paramsFor()`,
+ *  main-thread only, once per chunk request. */
+export function segmentsNear(
+  worldX: number,
+  worldZ: number,
+  chunkSize: number,
+  ctx: RoadNetworkContext,
+): RoadCorridorSegment[] {
+  const cell = worldToCell(worldX, worldZ)
+  const half = chunkSize / 2
+  const minX = worldX - half
+  const maxX = worldX + half
+  const minZ = worldZ - half
+  const maxZ = worldZ + half
+
+  const out: RoadCorridorSegment[] = []
+  for (const c of cellsWithinRadius(cell, 1)) {
+    const def = defFor(c, ctx)
+    for (const seg of roadSegmentsForSettlement(def, ctx)) {
+      const isRoad = seg.kind === 'road'
+      const halfWidth = isRoad ? ctx.region.roadNetwork.roadHalfWidth : ctx.region.roadNetwork.pathHalfWidth
+      const margin = halfWidth + 2
+      const segMinX = Math.min(seg.a.x, seg.b.x) - margin
+      const segMaxX = Math.max(seg.a.x, seg.b.x) + margin
+      const segMinZ = Math.min(seg.a.z, seg.b.z) - margin
+      const segMaxZ = Math.max(seg.a.z, seg.b.z) + margin
+      if (segMaxX < minX || segMinX > maxX || segMaxZ < minZ || segMinZ > maxZ) continue
+
+      out.push({
+        ax: seg.a.x,
+        az: seg.a.z,
+        ah: seg.a.hs,
+        bx: seg.b.x,
+        bz: seg.b.z,
+        bh: seg.b.hs,
+        halfWidth,
+        heightStrength: isRoad ? ctx.region.roadNetwork.roadHeightStrength : ctx.region.roadNetwork.pathHeightStrength,
+        tintStrength: isRoad ? ctx.region.roadNetwork.roadTintStrength : ctx.region.roadNetwork.pathTintStrength,
+      })
+    }
+  }
+  return out
+}

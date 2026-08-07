@@ -91,6 +91,7 @@ type Phase =
   | 'deposit'
   | 'drink'
   | 'eat'
+  | 'followPath'
   | 'goGarden'
   | 'goStock'
   | 'goTree'
@@ -102,6 +103,7 @@ type Phase =
 const PAUSE_INTERRUPTIBLE_PHASES: readonly Phase[] = [
   'choose',
   'wander',
+  'followPath',
   'goGarden',
   'goStock',
   'goTree',
@@ -119,7 +121,14 @@ const FATIGUE_PHASES: readonly Phase[] = [
   'goTree',
   'goWell',
 ]
-const REST_PHASES: readonly Phase[] = ['wander', 'lookAtPlayer']
+const REST_PHASES: readonly Phase[] = ['wander', 'followPath', 'lookAtPlayer']
+
+/** Chance per `choose` cycle — when no active need routes the NPC anywhere
+ *  specific and it would otherwise wander a few units from home — that it
+ *  instead walks its settlement's dock path (`landmarks.dockRoute`, set by
+ *  `createSettlement.ts` only for settlements near enough to water to have
+ *  resolved one — see `settlement/roadNetwork.ts`). */
+const FOLLOW_DOCK_PATH_CHANCE = 0.08
 
 const MAX_HP = 100
 /** currentHp never drops below this — no NPC death/despawn in v1. */
@@ -183,6 +192,10 @@ export class NpcAgent {
   private phase: Phase = 'choose'
   private activeNeed: NeedId = 'idle'
   private target = new THREE.Vector3()
+  /** Waypoints for the `followPath` phase — a reference into
+   *  `landmarks.dockRoute`, walked one at a time via `steerTo`. */
+  private pathWaypoints: readonly THREE.Vector3[] = []
+  private pathIndex = 0
   private treeIndex: number
   private wait = 0
   private moving = false
@@ -408,6 +421,18 @@ export class NpcAgent {
           this.phase = 'choose'
         }
         break
+      case 'followPath': {
+        const waypoint = this.pathWaypoints[this.pathIndex]
+        if (!waypoint) {
+          this.phase = 'choose'
+          break
+        }
+        if (this.steerTo(waypoint, dt)) {
+          this.pathIndex++
+          if (this.pathIndex >= this.pathWaypoints.length) this.phase = 'choose'
+        }
+        break
+      }
       case 'goGarden':
         if (this.steerTo(this.landmarks.garden, dt)) {
           this.phase = 'eat'
@@ -533,6 +558,12 @@ export class NpcAgent {
       this.treeIndex = (this.treeIndex + 1) % this.landmarks.trees.length
       this.target.copy(tree)
       this.phase = 'goTree'
+      return
+    }
+    if (this.landmarks.dockRoute.length > 1 && Math.random() < FOLLOW_DOCK_PATH_CHANCE) {
+      this.pathWaypoints = this.landmarks.dockRoute
+      this.pathIndex = 0
+      this.phase = 'followPath'
       return
     }
     for (let attempt = 0; attempt < 6; attempt++) {

@@ -1,6 +1,7 @@
 import { type Scene, type Vector3 } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
+import type { RoadNetworkContext } from './roadNetwork'
 import type { TerrainSamplers } from './settlementTerrain'
 import { createSettlement, type Settlement } from './createSettlement'
 import {
@@ -42,6 +43,16 @@ export async function createSettlementsManager(
   heightScale: number,
   region: RegionParams,
 ): Promise<SettlementsManager> {
+  const roadCtx: RoadNetworkContext = {
+    seed,
+    sampleHeight,
+    waterLevel,
+    terrainSamplers,
+    heightScale,
+    region,
+    localSearchRadius: localRadius,
+  }
+
   // Defs are pure functions of (seed, cell) — cached so repeated streaming
   // rechecks don't redo the ~80-sample flat-site search for cells we've
   // already visited.
@@ -74,6 +85,7 @@ export async function createSettlementsManager(
     seed,
     homeDef,
     playSound,
+    roadCtx,
   )
 
   const entries = new Map<string, Entry>()
@@ -96,6 +108,7 @@ export async function createSettlementsManager(
       seed,
       def,
       playSound,
+      roadCtx,
     )
       .then((settlement) => {
         const cur = entries.get(def.id)
