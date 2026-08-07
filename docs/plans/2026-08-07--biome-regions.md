@@ -79,6 +79,7 @@ Klasyfikacja wagowa (`BiomeWeights`) jest zaprojektowana tak, by dodanie czwarte
 
 ## Powiązane
 
+- [roads-and-paths](./2026-08-07--roads-and-paths.md) — kolejna warstwa na tym samym `sampleRawTexel`/`ChunkTileData` (droga/ścieżka jako jeszcze jeden blend koloru + wpływ na roślinność, ten sam wzorzec)
 - [world-streaming-persistence](./2026-08-07--world-streaming-persistence.md) — makro regiony (oceany/góry), ten plan to ta sama oś rozszerzona o wilgotność
 - [world-visual-overhaul](./2026-08-07--world-visual-overhaul.md) — kierunek "więcej roślinności", kaktus/trzcina to jego naturalna kontynuacja
 - [ambient-world-audio](./2026-08-07--ambient-world-audio.md) — przyszły follow-up (dźwięki per biom)

@@ -150,3 +150,4 @@ src/ai/NpcAgent.ts                    # opcjonalne: + settlementId jako field (d
 - Integracja z pełną bazą postaci ([npc-character-depth.md](./2026-08-07--npc-character-depth.md))
 - Persystencja quest state w save ([quests-v1.md](./2026-08-07--quests-v1.md) v2)
 - Dynamiczne zdarzenia w wioskach (osobny plan)
+- Drogi między osadami + ścieżki do mniejszych lokalizacji (port/przystań) — [roads-and-paths.md](./2026-08-07--roads-and-paths.md), reużywa `generateSettlementDef`/`SETTLEMENT_GRID_STEP`/`cellsWithinRadius` 1:1

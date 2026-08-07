@@ -34,6 +34,7 @@ Implementation plans for features and larger changes.
 | [2026-08-07--npc-3-animal-life.md](./2026-08-07--npc-3-animal-life.md) | Animal Life, przycięty do warstwy needs: hunger/thirst/energy → wander bias na `AnimalAgent`; memory/territory/population save odłożone | `planned` |
 | [2026-08-07--mobile-touch-controls.md](./2026-08-07--mobile-touch-controls.md) | Sterowanie dotykowe (joystick + look-drag/pinch + przyciski) i responsywny layout (np. Samsung Galaxy A55), bez zmian w logice gry | `done` |
 | [2026-08-07--biome-regions.md](./2026-08-07--biome-regions.md) | Obszary biomów (pustynia/bagno/las) — makro-oś wilgotności + charakterystyczna roślinność (kaktus, trzcina) | `planned` |
+| [2026-08-07--roads-and-paths.md](./2026-08-07--roads-and-paths.md) | Drogi (międzyosadowe) i ścieżki (osada↔port/przystań) — trasowanie po małej zmianie wysokości + wygładzenie terenu + kolor | `planned` |
 
 When adding a new plan: create `YYYY-MM-DD--slug.md`, add a row here.
 
