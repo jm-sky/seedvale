@@ -7,6 +7,7 @@ export type DebugGuiHandlers = {
   onTerrainChange: () => void
   onSkyChange: () => void
   onDayNightChange?: () => void
+  onPostProcessingChange: () => void
 }
 
 /** On-screen panel; mutates `config` / `dayNight` in place, then calls handlers. */
@@ -234,6 +235,24 @@ export function createDebugGui(
   sky
     .add(config.sky, 'rayleigh', 0.1, 4, 0.05)
     .onChange(handlers.onSkyChange)
+
+  const postFx = gui.addFolder('Post-processing')
+  postFx
+    .add(config.postProcessing, 'aoEnabled')
+    .name('Ambient occlusion')
+    .onChange(handlers.onPostProcessingChange)
+  postFx
+    .add(config.postProcessing, 'aoQuality', ['Performance', 'Low', 'Medium', 'High', 'Ultra'])
+    .name('AO quality')
+    .onChange(handlers.onPostProcessingChange)
+  postFx
+    .add(config.postProcessing, 'aoRadius', 0.2, 10, 0.1)
+    .name('AO radius')
+    .onChange(handlers.onPostProcessingChange)
+  postFx
+    .add(config.postProcessing, 'aoIntensity', 0.5, 8, 0.1)
+    .name('AO intensity')
+    .onChange(handlers.onPostProcessingChange)
 
   terrainControllers.push(
     gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild world'),

@@ -3,6 +3,9 @@ import type { FbmParams } from '../terrain/fbm'
 import { parseSeedFromUrl } from '../world/parseSeed'
 import { loadStoredConfig } from './persistConfig'
 
+/** N8AO quality presets — trades AO/denoise sample counts for GPU cost. */
+export type AoQuality = 'Performance' | 'Low' | 'Medium' | 'High' | 'Ultra'
+
 /**
  * Tunables for Seedvale — edit here, via GUI, or localStorage.
  *
@@ -48,6 +51,13 @@ export type WorldConfig = {
     azimuth: number
     turbidity: number
     rayleigh: number
+  }
+  postProcessing: {
+    aoEnabled: boolean
+    /** World-space AO radius (units) — scene scale is chunkSize=64, heightScale~18. */
+    aoRadius: number
+    aoIntensity: number
+    aoQuality: AoQuality
   }
   /** Show lil-gui panel (`?gui=0` to hide). */
   showGui: boolean
@@ -114,6 +124,12 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       azimuth: 0.25,
       turbidity: 2.2,
       rayleigh: 2.4,
+    },
+    postProcessing: {
+      aoEnabled: true,
+      aoRadius: 2,
+      aoIntensity: 3,
+      aoQuality: 'Medium',
     },
     showGui: true,
     player: {
@@ -195,6 +211,10 @@ export function createWorldConfig(): WorldConfig {
 
   if (stored?.sky && typeof stored.sky === 'object') {
     config.sky = { ...config.sky, ...stored.sky }
+  }
+
+  if (stored?.postProcessing && typeof stored.postProcessing === 'object') {
+    config.postProcessing = { ...config.postProcessing, ...stored.postProcessing }
   }
 
   if (typeof stored?.player?.name === 'string' && stored.player.name.trim()) {

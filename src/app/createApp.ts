@@ -10,6 +10,7 @@ import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook } from '../input/MouseLook'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
+import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
@@ -85,6 +86,15 @@ export async function createApp(
 
   const scene = createScene()
   const camera = createCamera(container.clientWidth / container.clientHeight)
+
+  const postProcessing = createPostProcessing(
+    renderer,
+    scene,
+    camera,
+    container.clientWidth,
+    container.clientHeight,
+    config.postProcessing,
+  )
 
   const lights = createLights()
   lights.addTo(scene)
@@ -181,6 +191,11 @@ export async function createApp(
     saveWorldConfig(config)
   }
 
+  const updatePostProcessingFromGui = () => {
+    postProcessing.applyAoConfig(config.postProcessing)
+    saveWorldConfig(config)
+  }
+
   const onDayNightChange = () => {
     if (dayNight.enabled) {
       applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
@@ -193,6 +208,7 @@ export async function createApp(
     },
     onSkyChange: updateSkyFromGui,
     onDayNightChange,
+    onPostProcessingChange: updatePostProcessingFromGui,
   })
   if (!config.showGui) gui.toggle()
 
@@ -241,6 +257,7 @@ export async function createApp(
     camera.updateProjectionMatrix()
     renderer.setSize(width, height)
     labelRenderer.setSize(width, height)
+    postProcessing.setSize(width, height)
   }
   window.addEventListener('resize', onResize)
 
@@ -284,7 +301,7 @@ export async function createApp(
       ocean.update(dt)
       minimap.update(player.mesh.position, settlement.center, settlement.npcs)
     }
-    renderer.render(scene, camera)
+    postProcessing.render()
     labelRenderer.render(scene, camera)
   }
   tick()
@@ -308,6 +325,7 @@ export async function createApp(
     chunkManager.dispose()
     player.dispose()
     disposeChunkWorkerPool()
+    postProcessing.dispose()
     labelRenderer.domElement.remove()
     renderer.dispose()
     renderer.domElement.remove()

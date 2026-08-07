@@ -43,6 +43,7 @@ New issues: `YYYY-MM-DD--NNN--slug.md`; reviews/research/plans: `YYYY-MM-DD--slu
 | Duże regiony: oceany/wybrzeża/pasma górskie (macro noise: continentalness/mountainness + Worley ridge) | done |
 | NPC dialog (proximity-based, personality-flavored lines) | done — [plans/2026-08-07--npc-interactions.md](docs/plans/2026-08-07--npc-interactions.md) (`verification needed`) |
 | **Save/persystencja** (single-slot IndexedDB, Continue/New Game start screen, Save + New Game w pause menu) | done — [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md), `src/persistence/` |
+| **Post-processing pipeline** (EffectComposer + N8AO ambient occlusion + SMAA) | done — [plans/2026-08-07--post-processing-pipeline.md](docs/plans/2026-08-07--post-processing-pipeline.md), `src/render/createPostProcessing.ts` |
 
 ### Stack
 
@@ -77,7 +78,7 @@ public/models/                # settlement / nature / fauna / characters
 1. Wizualny overhaul (rośliny/krzewy, niebo/chmury, góry w tle — insp. SimonDev MMORPG devlog) → [plans/2026-08-07--world-visual-overhaul.md](docs/plans/2026-08-07--world-visual-overhaul.md) (`in progress`: rośliny + niebo done, góry w tle + chmury open; Mixamo→Blender pipeline rozważony i odłożony — Quaternius modele już mają pełny zestaw animacji)
 2. Game UI screens (nie lil-gui) → [plans/2026-08-07--game-ui-screens.md](docs/plans/2026-08-07--game-ui-screens.md) (`in progress`: pause menu + Character (imię gracza) done — `src/ui/createPauseMenu.ts`; World config / Notes / NPC dialog open)
 3. Cube-sphere / pełny sferyczny świat — nadal otwarte pytanie (nie rozstrzygnięte, obecny streaming to flat chunk grid z ringiem, nie sfera), patrz [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md) "Kierunek świata". Real textures/triplanar dopuszczone jako opcjonalny feature później (nie trzymamy się low-poly na sztywno) — patrz [research/2026-08-07-simodev-refs-review.md](docs/research/2026-08-07-simodev-refs-review.md) Update note
-4. Nowe pomysły (`planned`, nieskolejkowane): [plans/2026-08-07--npc-gender-models.md](docs/plans/2026-08-07--npc-gender-models.md), [plans/2026-08-07--predator-prey-system.md](docs/plans/2026-08-07--predator-prey-system.md), [plans/2026-08-07--post-processing-pipeline.md](docs/plans/2026-08-07--post-processing-pipeline.md)
+4. Nowe pomysły (`planned`, nieskolejkowane): [plans/2026-08-07--npc-gender-models.md](docs/plans/2026-08-07--npc-gender-models.md), [plans/2026-08-07--predator-prey-system.md](docs/plans/2026-08-07--predator-prey-system.md)
 5. v0.4+ questy
 
 Woda (brzeg + dzień/noc): `done` → [issues 001](docs/issues/2026-08-07--001--water-shore-color-banding.md), [002](docs/issues/2026-08-07--002--water-daynight-integration.md) (review: [docs/reviews/2026-08-07-water-quality.md](docs/reviews/2026-08-07-water-quality.md))

@@ -6,6 +6,7 @@ type StoredConfig = {
   seed: number
   terrain: WorldConfig['terrain']
   sky: WorldConfig['sky']
+  postProcessing: WorldConfig['postProcessing']
   player: WorldConfig['player']
 }
 
@@ -26,6 +27,7 @@ export function saveWorldConfig(config: WorldConfig): void {
     seed: config.seed,
     terrain: structuredClone(config.terrain),
     sky: { ...config.sky },
+    postProcessing: { ...config.postProcessing },
     player: { ...config.player },
   }
   try {
