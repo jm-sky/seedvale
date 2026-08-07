@@ -3,6 +3,7 @@ import type { HeightSampler } from '../player/PlayerController'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
 import { disposeObject3D } from '../assets/loadGltf'
+import { createItemMesh, type ItemKind } from '../items/items'
 import {
   BUSH_SPECS,
   cloneProp,
@@ -72,6 +73,11 @@ export type ChunkManagerConfig = {
   biome: { noiseScale: number; fbm: FbmParams }
   region: RegionParams
   flatShading: boolean
+  /** Ids of world-generated items (`terrain/chunkItems.ts`) already collected —
+   *  shared/mutated in place so a chunk regenerated after unload/reload skips
+   *  placements the player already picked up. Reset only on a genuinely new
+   *  world (new seed), not on unrelated terrain-param rebuilds. */
+  collectedItemIds: Set<string>
   grass: {
     enabled: boolean
     /** Chunks (Chebyshev distance) that get grass — deliberately smaller than
@@ -95,6 +101,7 @@ type ChunkRecord = {
   meshDispose?: () => void
   water?: WorldWater | null
   vegetation?: THREE.Group
+  items?: THREE.Group
   /** `undefined` = not yet decided (chunk not ready or outside grass radius);
    *  `null` = decided ineligible (no blades survived rejection, e.g. all rock/sand). */
   grass?: WorldGrassChunk | null
@@ -113,6 +120,17 @@ export type ChunkManager = {
   sampleBiome: (x: number, z: number) => number
   sampleContinentalness: (x: number, z: number) => number
   sampleMountainRidge: (x: number, z: number) => number
+  /** World-generated pickup items (`terrain/chunkItems.ts`) within `radius` of
+   *  `pos` among currently loaded chunks — sufficient given `radius` is only
+   *  ever the small interact range, and the player's own chunk is always loaded. */
+  getNearbyItems: (
+    pos: { x: number, z: number },
+    radius: number,
+  ) => { id: string, kind: ItemKind, x: number, z: number }[]
+  /** Removes a world-generated item's mesh (if its chunk is loaded) and records
+   *  its id as collected so it won't reappear on chunk reload. Null if `id`
+   *  isn't currently instantiated. */
+  collectItem: (id: string) => { kind: ItemKind, x: number, z: number } | null
   waterLevel: number
   loadedChunkCount: () => number
   /** Resolves once every listed chunk has finished generating (or failed/cancelled). */
@@ -279,6 +297,25 @@ export function createChunkManager(
           scene.add(group)
           rec.vegetation = group
         }
+
+        if (tile.items.length > 0) {
+          const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
+          const sampleTileHeight: HeightSampler = (sx, sz) =>
+            sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
+
+          const group = new THREE.Group()
+          group.name = 'chunk-items'
+          for (const placement of tile.items) {
+            if (config.collectedItemIds.has(placement.id)) continue
+            const itemMesh = createItemMesh(placement.kind)
+            itemMesh.userData.itemId = placement.id
+            itemMesh.userData.itemKind = placement.kind
+            placeOnGround(itemMesh, placement.x, placement.z, sampleTileHeight)
+            group.add(itemMesh)
+          }
+          scene.add(group)
+          rec.items = group
+        }
       })
       .catch((err: unknown) => {
         if (!(err instanceof HeightmapGenerationCancelledError)) {
@@ -304,6 +341,10 @@ export function createChunkManager(
     if (record.vegetation) {
       disposeObject3D(record.vegetation)
       record.vegetation.removeFromParent()
+    }
+    if (record.items) {
+      disposeObject3D(record.items)
+      record.items.removeFromParent()
     }
     chunks.delete(record.key)
   }
@@ -387,6 +428,41 @@ export function createChunkManager(
     sampleBiome: (x, z) => readField('biomes', x, z),
     sampleContinentalness: (x, z) => readField('continentalness', x, z),
     sampleMountainRidge: (x, z) => readField('mountainRidge', x, z),
+    getNearbyItems(pos, radius) {
+      const out: { id: string, kind: ItemKind, x: number, z: number }[] = []
+      for (const rec of chunks.values()) {
+        if (!rec.items) continue
+        for (const child of rec.items.children) {
+          const dx = child.position.x - pos.x
+          const dz = child.position.z - pos.z
+          if (Math.hypot(dx, dz) > radius) continue
+          out.push({
+            id: child.userData.itemId as string,
+            kind: child.userData.itemKind as ItemKind,
+            x: child.position.x,
+            z: child.position.z,
+          })
+        }
+      }
+      return out
+    },
+    collectItem(id) {
+      for (const rec of chunks.values()) {
+        if (!rec.items) continue
+        const mesh = rec.items.children.find((c) => c.userData.itemId === id)
+        if (!mesh) continue
+        const result = {
+          kind: mesh.userData.itemKind as ItemKind,
+          x: mesh.position.x,
+          z: mesh.position.z,
+        }
+        mesh.removeFromParent()
+        disposeObject3D(mesh)
+        config.collectedItemIds.add(id)
+        return result
+      }
+      return null
+    },
     waterLevel: config.waterLevel,
     loadedChunkCount: () => chunks.size,
     waitForChunks: (coords) => Promise.all(coords.map((c) => ensureLoaded(c))).then(() => undefined),

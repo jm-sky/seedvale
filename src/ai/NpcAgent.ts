@@ -159,6 +159,7 @@ export class NpcAgent {
   private readonly labelEl: HTMLDivElement
   /** Set externally (e.g. by a QuestManager) — NpcAgent stays quest-agnostic. */
   private questMarker: string | null = null
+  private highlighted = false
   private readonly playSound: (url: string, volume?: number) => void
 
   private constructor(
@@ -296,6 +297,14 @@ export class NpcAgent {
 
   setQuestMarker(marker: string | null): void {
     this.questMarker = marker
+  }
+
+  /** Toggles the gaze-highlight glow on this NPC's label. Idempotent — no
+   *  redundant DOM writes if the state doesn't actually change. */
+  setHighlighted(active: boolean): void {
+    if (this.highlighted === active) return
+    this.highlighted = active
+    this.labelEl.classList.toggle('npc-label--highlighted', active)
   }
 
   update(dt: number, observerPos: THREE.Vector3): void {

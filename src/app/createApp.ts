@@ -1,15 +1,24 @@
 import { Clock, Fog, type Scene, type Vector3 } from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { AnimalAgent } from '../fauna/AnimalAgent'
+import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { SaveData } from '../persistence/saveData'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { saveWorldConfig } from '../config/persistConfig'
 import { createWorldConfig } from '../config/worldConfig'
-import { createFauna, type Fauna } from '../fauna/createFauna'
+import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
+import { createFauna, type Fauna, SPAWNER_LABELS } from '../fauna/createFauna'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook } from '../input/MouseLook'
+import { pickInGaze } from '../interaction/findInteractionTarget'
+import { resolveInteraction } from '../interaction/resolveInteraction'
+import { createDroppedItems, type DroppedItems } from '../items/createDroppedItems'
+import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
+import { Inventory } from '../items/Inventory'
+import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
 import { QuestManager } from '../quests/QuestManager'
@@ -47,11 +56,17 @@ import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
  *  wandered many chunks away. */
 const HOME_RADIUS = 56
 
-/** How close (world units) the player must be to an NPC before it becomes interactable. */
+/** How close (world units) the player must be to an interactable before it's
+ *  picked up by `[E]`. */
 const INTERACT_RANGE = 2.5
-/** Minimum dot(playerForward, toNpc) to count as "looking at" — ~60° half-angle cone,
- *  needed so a dense cluster of NPCs doesn't pick whichever is merely nearest. */
+/** Minimum dot(playerForward, toTarget) to count as "looking at" — ~60° half-angle
+ *  cone, needed so a dense cluster doesn't pick whichever is merely nearest. */
 const INTERACT_MIN_DOT = 0.5
+/** Gaze-highlight range — deliberately larger than `INTERACT_RANGE` so the glow
+ *  reads as an "approaching" cue before the `[E]` prompt appears. */
+const GAZE_RANGE = INTERACT_RANGE * 2
+
+type Highlightable = NpcAgent | AnimalAgent
 
 /** 3×3 block of chunks around the origin, pinned so the settlement never streams
  *  out from under itself. */
@@ -109,13 +124,17 @@ export async function createApp(
   sky.addTo(scene)
   sky.applySun(lights.sun)
 
-  let chunkManager = buildChunkManager(scene, config)
+  let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
+  let chunkManager = buildChunkManager(scene, config, collectedItemIds)
   chunkManager.update(0, 0)
   await chunkManager.waitForChunks(homeChunks())
 
   let ocean = buildOcean(scene, config)
   let settlement = await buildSettlement(scene, chunkManager, config.seed, worldAudio.playOnce)
   let fauna = await buildFauna(scene, chunkManager, settlement, config.seed)
+  let itemSpawners = buildItemSpawners(scene, chunkManager, settlement, config.seed)
+  let droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialSave?.droppedItems ?? [])
+  const inventory = new Inventory(initialSave?.inventory)
 
   const keyboard = createKeyboard()
   const mouseLook = createMouseLook(renderer.domElement)
@@ -142,29 +161,60 @@ export async function createApp(
   hud.setSeed(config.seed)
   hud.setTime(dayNight.timeOfDay)
 
+  /** Currently gaze-highlighted NPC/animal, if any — tracked so we only toggle
+   *  the CSS class on change instead of writing every frame. */
+  let highlightedTarget: Highlightable | null = null
+  const setHighlight = (next: Highlightable | null): void => {
+    if (highlightedTarget === next) return
+    highlightedTarget?.setHighlighted(false)
+    next?.setHighlighted(true)
+    highlightedTarget = next
+  }
+
   const minimap = createMinimap(container)
-  const questManager = new QuestManager(undefined, worldAudio.playOnce)
+  const questManager = new QuestManager(
+    undefined,
+    worldAudio.playOnce,
+    inventory,
+    initialSave?.quests,
+  )
+  hud.setExp(questManager.getExp())
+  hud.setInventory(inventory.toJSON())
 
   let rebuilding = false
-  const rebuildWorld = async () => {
+  /** Pass `resetCollectedItems: true` only for a genuinely new world (new seed,
+   *  e.g. "New Game") — an unrelated terrain-param rebuild on the same seed
+   *  should keep it, since item ids are seed-derived and stay meaningful. */
+  const rebuildWorld = async (resetCollectedItems = false) => {
     if (rebuilding) return
     rebuilding = true
     gui.setBusy(true)
     try {
       syncSeedInUrl(config.seed)
       saveWorldConfig(config)
+      // Old agents are about to be disposed — drop the reference rather than
+      // toggling a class on a DOM node that's going away anyway.
+      highlightedTarget = null
       fauna.dispose()
+      itemSpawners.dispose()
+      // Copy before dispose() — nodes() returns a live reference to the
+      // internal array, and dispose() clears it in place.
+      const carriedDrops = resetCollectedItems ? [] : [...droppedItems.nodes()]
+      droppedItems.dispose()
       settlement.dispose()
       ocean.dispose()
       chunkManager.dispose()
+      if (resetCollectedItems) collectedItemIds = new Set()
 
-      chunkManager = buildChunkManager(scene, config)
+      chunkManager = buildChunkManager(scene, config, collectedItemIds)
       chunkManager.update(0, 0)
       await chunkManager.waitForChunks(homeChunks())
 
       ocean = buildOcean(scene, config)
       settlement = await buildSettlement(scene, chunkManager, config.seed, worldAudio.playOnce)
       fauna = await buildFauna(scene, chunkManager, settlement, config.seed)
+      itemSpawners = buildItemSpawners(scene, chunkManager, settlement, config.seed)
+      droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, carriedDrops)
       player.setGround(chunkManager.sampleHeight, chunkManager.sampleFloor, chunkManager.waterLevel)
       player.setPosition(settlement.spawn.x, settlement.spawn.z)
       hud.setSeed(config.seed)
@@ -176,7 +226,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 1,
+    version: 3,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -190,6 +240,14 @@ export async function createApp(
       pitch: mouseLook.state.pitch,
     },
     savedAt: Date.now(),
+    quests: {
+      progress: questManager.exportProgress(),
+      exp: questManager.getExp(),
+      relations: questManager.exportRelations(),
+    },
+    inventory: inventory.toJSON(),
+    collectedItemIds: [...collectedItemIds],
+    droppedItems: droppedItems.nodes().map((item) => ({ ...item })),
   })
 
   const updateSkyFromGui = () => {
@@ -251,7 +309,7 @@ export async function createApp(
       if (!window.confirm('Start a new game? Your saved progress will be cleared.')) return
       void clearSave()
       config.seed = randomSeed()
-      void rebuildWorld()
+      void rebuildWorld(true)
     },
   })
 
@@ -285,38 +343,89 @@ export async function createApp(
       // drop stale presses so they can't fire right after resume
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
+      keyboard.consumeDrop()
+      setHighlight(null)
     } else if (npcDialog.isOpen()) {
       npcDialog.setPrompt(null)
       keyboard.consumeQuestLog()
+      keyboard.consumeDrop()
+      setHighlight(null)
       if (keyboard.consumeInteract()) {
         if (npcDialog.isOffer()) npcDialog.accept()
         else npcDialog.close()
       }
     } else if (questLog.isOpen()) {
       keyboard.consumeInteract()
+      keyboard.consumeDrop()
+      setHighlight(null)
       if (keyboard.consumeQuestLog()) questLog.close()
     } else {
-      const target = findInteractionTarget(
+      const interactables = buildInteractables(
+        settlement,
+        fauna,
+        chunkManager,
+        itemSpawners,
+        droppedItems,
+        player.mesh.position,
+      )
+      const target = pickInGaze(
+        interactables,
         player.mesh.position,
         mouseLook.state.yaw,
-        settlement.npcs,
+        INTERACT_RANGE,
+        INTERACT_MIN_DOT,
       )
-      npcDialog.setPrompt(target ? target.name : null)
+      npcDialog.setPrompt(target ? target.promptLabel : null)
+
+      const gazeCandidates: { position: { x: number, z: number }, agent: Highlightable }[] = []
+      for (const item of interactables) {
+        if (item.kind === 'npc') gazeCandidates.push({ position: item.position, agent: item.npc })
+        else if (item.kind === 'animal') gazeCandidates.push({ position: item.position, agent: item.animal })
+      }
+      const gazed = pickInGaze(
+        gazeCandidates,
+        player.mesh.position,
+        mouseLook.state.yaw,
+        GAZE_RANGE,
+        INTERACT_MIN_DOT,
+      )
+      setHighlight(gazed?.agent ?? null)
       const interactPressed = keyboard.consumeInteract()
       if (target && interactPressed) {
-        const questOverride = questManager.onInteract(target.name)
-        if (questOverride) {
-          npcDialog.open(target.name, questOverride.line, questOverride.offer)
+        if (target.kind === 'item') {
+          const collected = collectItem(target.item, chunkManager, itemSpawners, droppedItems)
+          if (collected) {
+            inventory.add(collected.kind)
+            hud.setInventory(inventory.toJSON())
+          }
         } else {
-          npcDialog.open(target.name, target.getDialogueLine())
+          const outcome = resolveInteraction(target, questManager)
+          npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
         }
       }
       if (keyboard.consumeQuestLog()) openQuestLog()
+      if (keyboard.consumeDrop()) {
+        let dropOffset = 0
+        for (const kind of Object.keys(ITEM_DEFS) as ItemKind[]) {
+          if (!inventory.remove(kind, 1)) continue
+          const angle = dropOffset * ((Math.PI * 2) / 3)
+          droppedItems.drop(
+            kind,
+            player.mesh.position.x + Math.cos(angle) * 0.6,
+            player.mesh.position.z + Math.sin(angle) * 0.6,
+          )
+          dropOffset++
+        }
+        if (dropOffset > 0) hud.setInventory(inventory.toJSON())
+      }
     }
 
     if (!menuPaused && !npcDialog.isOpen() && !questLog.isOpen()) {
       for (const npc of settlement.npcs) {
         npc.setQuestMarker(questManager.labelMarker(npc.name))
+      }
+      for (const spawner of fauna.getSpawners()) {
+        fauna.setSpawnerMarker(spawner.type, questManager.spawnerMarker(spawner.type))
       }
       tickDayNight(dayNight, dt)
       if (dayNight.enabled) {
@@ -331,6 +440,7 @@ export async function createApp(
       ocean.follow(player.mesh.position.x, player.mesh.position.z)
       settlement.update(dt, player.mesh.position)
       fauna.update(dt, player.mesh.position, dayNight.timeOfDay)
+      itemSpawners.update(dt, player.mesh.position)
       chunkManager.tickWater(dt)
       chunkManager.tickGrass(dt)
       ocean.update(dt)
@@ -360,6 +470,8 @@ export async function createApp(
     ambientAudio.dispose()
     worldAudio.dispose()
     fauna.dispose()
+    itemSpawners.dispose()
+    droppedItems.dispose()
     settlement.dispose()
     chunkManager.dispose()
     player.dispose()
@@ -371,29 +483,106 @@ export async function createApp(
   }
 }
 
-/** Nearest-in-front NPC within range, using dot(playerForward, toNpc) so a dense
- *  cluster resolves to whichever one the player is actually looking at. */
-function findInteractionTarget(
+/** Assembles this frame's `Interactable` candidates from every world system —
+ *  NPCs, the well/trees (settlement landmarks), live fauna, fauna spawn points,
+ *  and nearby pickup items (world-generated + the renewable pool + player-dropped).
+ *  Cheap: a few dozen objects total, dominated by settlement trees. */
+function buildInteractables(
+  settlement: Settlement,
+  fauna: Fauna,
+  chunkManager: ChunkManager,
+  itemSpawners: ItemSpawners,
+  droppedItems: DroppedItems,
   playerPos: Vector3,
-  playerYaw: number,
-  npcs: readonly NpcAgent[],
-): NpcAgent | null {
-  const forwardX = -Math.sin(playerYaw)
-  const forwardZ = -Math.cos(playerYaw)
-  let best: NpcAgent | null = null
-  let bestDot = INTERACT_MIN_DOT
-  for (const npc of npcs) {
-    const dx = npc.mesh.position.x - playerPos.x
-    const dz = npc.mesh.position.z - playerPos.z
-    const dist = Math.hypot(dx, dz)
-    if (dist < 1e-4 || dist > INTERACT_RANGE) continue
-    const dot = (dx / dist) * forwardX + (dz / dist) * forwardZ
-    if (dot > bestDot) {
-      bestDot = dot
-      best = npc
-    }
+): Interactable[] {
+  const list: Interactable[] = []
+
+  for (const npc of settlement.npcs) {
+    list.push({
+      kind: 'npc',
+      position: npc.mesh.position,
+      promptLabel: `Rozmawiaj z ${npc.name}`,
+      npc,
+    })
   }
-  return best
+
+  for (const animal of fauna.getAgents()) {
+    if (animal.isDead()) continue
+    list.push({
+      kind: 'animal',
+      position: animal.mesh.position,
+      promptLabel: `Obserwuj: ${ANIMAL_LABELS[animal.def.kind]}`,
+      animal,
+    })
+  }
+
+  list.push({
+    kind: 'well',
+    position: settlement.landmarks.well,
+    promptLabel: 'Zaczerpnij wody',
+  })
+
+  settlement.landmarks.trees.forEach((position, i) => {
+    list.push({ kind: 'tree', position, promptLabel: 'Obejrzyj drzewo', id: `tree-${i}` })
+  })
+
+  for (const spawner of fauna.getSpawners()) {
+    list.push({
+      kind: 'spawner',
+      position: { x: spawner.x, z: spawner.z },
+      promptLabel: `Zbadaj: ${SPAWNER_LABELS[spawner.type]}`,
+      spawner,
+    })
+  }
+
+  for (const item of chunkManager.getNearbyItems(playerPos, INTERACT_RANGE)) {
+    list.push({
+      kind: 'item',
+      position: { x: item.x, z: item.z },
+      promptLabel: `Podnieś: ${ITEM_DEFS[item.kind].label}`,
+      item: { id: item.id, kind: item.kind, source: 'world' },
+    })
+  }
+
+  for (const node of itemSpawners.nodes()) {
+    if (node.collected) continue
+    list.push({
+      kind: 'item',
+      position: { x: node.x, z: node.z },
+      promptLabel: `Podnieś: ${ITEM_DEFS[node.kind].label}`,
+      item: { id: node.id, kind: node.kind, source: 'spawner' },
+    })
+  }
+
+  for (const item of droppedItems.nodes()) {
+    list.push({
+      kind: 'item',
+      position: { x: item.x, z: item.z },
+      promptLabel: `Podnieś: ${ITEM_DEFS[item.kind].label}`,
+      item: { id: item.id, kind: item.kind, source: 'dropped' },
+    })
+  }
+
+  return list
+}
+
+/** Routes a picked-up `WorldItemRef` to whichever registry it came from —
+ *  world-generated (finite, id-based collected set), the renewable pool near
+ *  the settlement, or a player drop. */
+function collectItem(
+  ref: WorldItemRef,
+  chunkManager: ChunkManager,
+  itemSpawners: ItemSpawners,
+  droppedItems: DroppedItems,
+): { kind: ItemKind, x: number, z: number } | null {
+  switch (ref.source) {
+    case 'dropped':
+      return droppedItems.collect(ref.id)
+    case 'spawner':
+      return itemSpawners.collect(ref.id)
+    case 'world':
+      return chunkManager.collectItem(ref.id)
+  }
 }
 
 function applyDayNight(
@@ -431,6 +620,7 @@ function applyDayNight(
 function buildChunkManager(
   scene: Scene,
   config: ReturnType<typeof createWorldConfig>,
+  collectedItemIds: Set<string>,
 ): ChunkManager {
   const cfg: ChunkManagerConfig = {
     chunkSize: config.terrain.chunkSize,
@@ -446,6 +636,7 @@ function buildChunkManager(
     biome: config.terrain.biome,
     region: config.terrain.region,
     flatShading: config.terrain.flatShading,
+    collectedItemIds,
     grass: config.terrain.grass,
   }
   return createChunkManager(scene, cfg)
@@ -486,6 +677,22 @@ function buildFauna(
   seed: number,
 ): Promise<Fauna> {
   return createFauna(
+    scene,
+    chunkManager.sampleHeight,
+    chunkManager.waterLevel,
+    HOME_RADIUS,
+    settlement.center,
+    seed,
+  )
+}
+
+function buildItemSpawners(
+  scene: Scene,
+  chunkManager: ChunkManager,
+  settlement: Settlement,
+  seed: number,
+): ItemSpawners {
+  return createItemSpawners(
     scene,
     chunkManager.sampleHeight,
     chunkManager.waterLevel,

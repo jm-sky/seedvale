@@ -1,8 +1,27 @@
 # Plan: Hover/gaze highlight na etykietach (NPC + zwierzęta)
 
-**Status:** `planned`
+**Status:** `verification needed`
 **Created:** 2026-08-07
 **Scope:** [npc-labels.md](./2026-08-07--npc-labels.md), [npc-interactions.md](./2026-08-07--npc-interactions.md)
+
+## Implementacja (2026-08-07, po quests-v2)
+
+Zaimplementowane bezpośrednio na bazie generalizacji z [quests-v2-world-interactions.md](./2026-08-07--quests-v2-world-interactions.md) — `pickInGaze<T>` (`src/interaction/findInteractionTarget.ts`) już istniał, nie trzeba go było wydzielać od nowa.
+
+- `setHighlighted(active: boolean)` dodane do `NpcAgent` (`src/ai/NpcAgent.ts`) i `AnimalAgent` (`src/fauna/AnimalAgent.ts`) — idempotentne (`if (this.highlighted === active) return`), `labelEl.classList.toggle('npc-label--highlighted', active)`.
+- `.npc-label--highlighted` w `index.html` — **`box-shadow`, nie `border`** (świadoma zmiana względem szkicu w tym planie), żeby glow nigdy nie przesuwał layoutu/pozycji etykiety: dwuwarstwowy `box-shadow` (cienki jasny obrys 1px + rozmyta poświata), kolor ciepły bursztynowy (`rgba(255, 196, 92, ...)`), odróżnia się od niebieskiego akcentu reszty UI.
+- `GAZE_RANGE = INTERACT_RANGE * 2` (5m) w `src/app/createApp.ts` — większy niż `INTERACT_RANGE`, tak jak zakładał ten plan.
+- `tick()` w `createApp.ts`: `buildInteractables()` liczony raz na klatkę (reużyty przez picker interakcji **i** gaze-highlight — nie duplikujemy skanu); z tej samej listy filtrowane `kind==='npc'|'animal'` do osobnego `pickInGaze(..., GAZE_RANGE, ...)`; `setHighlight(next)` — helper trzymający `highlightedTarget`, toggle'uje tylko przy zmianie celu. Highlight czyszczony (`setHighlight(null)`) przy pauzie/otwartym dialogu/quest logu i na starcie `rebuildWorld()` (stare agenty i tak zaraz disposed).
+- **Bez rozszerzenia na drzewa/studnię/spawnery/itemy** — mimo że `Interactable` (quests-v2) już je obejmuje, ten plan świadomie został przy pierwotnym zakresie (NPC + zwierzęta) — reszta nie ma stałych etykiet CSS2D poza spawnerami fauny, a dodawanie im etykiet tylko pod glow byłoby osobną decyzją projektową, nie tym planem.
+
+## Done when
+
+- [x] Etykieta NPC dostaje glow, gdy gracz patrzy w jego stronę w zasięgu `GAZE_RANGE`
+- [x] To samo działa dla zwierząt (bez promptu/E — tylko wizualnie)
+- [x] Highlight znika przy pauzie / otwartym dialogu/quest logu / gdy cel wypada z zasięgu lub kąta patrzenia
+- [x] Przy kilku celach blisko siebie wygrywa jeden (ten sam `pickInGaze` co interakcja — najwyższy dot wygrywa) — bez migania
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build` czyste
+- [ ] Reszta: **verification needed** w przeglądarce
 
 ## Cel
 
@@ -41,19 +60,10 @@ src/app/createApp.ts       # generalny helper (dystans+dot) reużyty przez findI
                             # i nowy gaze-target scan po NPC+zwierzętach; wire w tick()
 ```
 
-## Otwarte pytania (do ustalenia przy implementacji)
+## Otwarte pytania (rozstrzygnięte przy implementacji)
 
-- Dokładny wygląd: sam border, sam glow (box-shadow), czy oba? Kolor?
-- Wartość `GAZE_RANGE` względem `INTERACT_RANGE` — testować w przeglądarce, dostroić „na oko”.
-
-## Done when
-
-- [ ] Etykieta NPC dostaje border/glow, gdy gracz patrzy w jego stronę w zasięgu
-- [ ] To samo działa dla zwierząt (bez promptu/E — tylko wizualnie)
-- [ ] Highlight znika przy pauzie / otwartym dialogu / gdy cel wypada z zasięgu lub kąta patrzenia
-- [ ] Przy kilku celach blisko siebie wygrywa jeden (ten, na który gracz faktycznie patrzy) — bez migania
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build` czyste
-- [ ] Reszta: **verification needed** w przeglądarce
+- Wygląd: sam glow (`box-shadow`, dwuwarstwowy), bez `border` — patrz "Implementacja" wyżej.
+- `GAZE_RANGE = INTERACT_RANGE * 2` (5m) — nieprzetestowane w przeglądarce, może wymagać dostrojenia.
 
 ## Następne (poza tym planem)
 

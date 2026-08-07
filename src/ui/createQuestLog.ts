@@ -75,12 +75,18 @@ export function createQuestLog(parent: HTMLElement, handlers: QuestLogHandlers =
       ? ''
       : '<div class="seedvale-quest-log__empty">Brak zadań w tej kategorii.</div>'
     for (const entry of visible) {
+      const stageSuffix =
+        entry.totalStages > 1 ? ` — Etap ${entry.stageIndex + 1}/${entry.totalStages}` : ''
+      const objectiveRow = entry.currentObjective
+        ? `<div class="seedvale-quest-log__row-objective">${entry.currentObjective}</div>`
+        : ''
       const row = document.createElement('div')
       row.className = 'seedvale-quest-log__row'
       row.innerHTML = `
-        <div class="seedvale-quest-log__row-title">${entry.giverName} → ${entry.targetName}</div>
-        <div class="seedvale-quest-log__row-state">${STATE_LABEL[entry.state]}</div>
-        <div class="seedvale-quest-log__row-relation">♥ ${entry.giverName} ${lastRelation(entry.giverName)} · ♥ ${entry.targetName} ${lastRelation(entry.targetName)}</div>
+        <div class="seedvale-quest-log__row-title">${entry.giverName}</div>
+        <div class="seedvale-quest-log__row-state">${STATE_LABEL[entry.state]}${stageSuffix}</div>
+        ${objectiveRow}
+        <div class="seedvale-quest-log__row-relation">♥ ${entry.giverName} ${lastRelation(entry.giverName)}</div>
       `
       listEl.appendChild(row)
     }

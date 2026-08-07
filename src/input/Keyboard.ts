@@ -8,6 +8,8 @@ export type KeyState = {
   interact: boolean
   /** Edge-triggered: set true on KeyL keydown, cleared by consumeQuestLog(). */
   questLog: boolean
+  /** Edge-triggered: set true on KeyG keydown, cleared by consumeDrop(). */
+  drop: boolean
 }
 
 const KEY_MAP: Record<string, keyof KeyState> = {
@@ -23,11 +25,12 @@ const KEY_MAP: Record<string, keyof KeyState> = {
   ShiftRight: 'sprint',
   KeyE: 'interact',
   KeyL: 'questLog',
+  KeyG: 'drop',
 }
 
 /** Actions that latch true on keydown and are cleared by the consumer, not by keyup —
  *  so a tap registers exactly once regardless of how long the key stays down. */
-const EDGE_TRIGGERED = new Set<keyof KeyState>(['interact', 'questLog'])
+const EDGE_TRIGGERED = new Set<keyof KeyState>(['drop', 'interact', 'questLog'])
 
 export function createKeyboard(): {
   state: KeyState
@@ -35,6 +38,8 @@ export function createKeyboard(): {
   consumeInteract: () => boolean
   /** Reads and clears the pending quest-log press. Returns true at most once per keydown. */
   consumeQuestLog: () => boolean
+  /** Reads and clears the pending drop press. Returns true at most once per keydown. */
+  consumeDrop: () => boolean
   dispose: () => void
 } {
   const state: KeyState = {
@@ -45,6 +50,7 @@ export function createKeyboard(): {
     sprint: false,
     interact: false,
     questLog: false,
+    drop: false,
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -78,6 +84,11 @@ export function createKeyboard(): {
     consumeQuestLog: () => {
       if (!state.questLog) return false
       state.questLog = false
+      return true
+    },
+    consumeDrop: () => {
+      if (!state.drop) return false
+      state.drop = false
       return true
     },
     dispose: () => {
