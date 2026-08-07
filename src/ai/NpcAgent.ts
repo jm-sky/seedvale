@@ -7,10 +7,20 @@ import {
   loadGltfAnimated,
   prepareProp,
 } from '../assets/loadGltf'
+import { applyFatigue, createHealthState, type HealthState, rest } from '../shared/HealthState'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import {
-  NPC_PERSONALITIES,
-  PAUSE_PARAMS,
+  type CharacterDef,
+  characterForIndex,
+  genderForName,
+  type NpcGender,
+  type Role,
+  type Trait,
+} from './characters'
+import {
+  nearestArchetype,
+  pausePersonalityParams,
+  type PausePersonalityParams,
   type Personality,
   pickDialogueLine,
 } from './dialogue'
@@ -34,7 +44,8 @@ const NPC_HEIGHT = 1.75
 /** Minimum clearance above waterLevel an NPC will walk into or wander toward. */
 const WATER_MARGIN = 0.3
 
-export type NpcGender = 'male' | 'female'
+export type { NpcGender }
+export { genderForName }
 
 /** Quaternius Modular Men/Women — village-flavoured variants, one pool per gender. */
 export const NPC_MODEL_URLS: Record<NpcGender, readonly string[]> = {
@@ -69,41 +80,8 @@ export const NPC_QUEST_COMPLETE_SOUND_URLS: Record<NpcGender, readonly string[]>
 /** Quiet enough to stay under dialogue/ambient, audible enough to register. */
 const REACTION_SOUND_VOLUME = 0.35
 
-/** Placeholder pool until the character DB (names + traits) lands. */
-const NPC_NAMES = [
-  'Anna',
-  'Piotr',
-  'Kasia',
-  'Marek',
-  'Ola',
-  'Tomek',
-  'Zofia',
-  'Jacek',
-] as const
-
-const NPC_GENDERS: Record<(typeof NPC_NAMES)[number], NpcGender> = {
-  Anna: 'female',
-  Piotr: 'male',
-  Kasia: 'female',
-  Marek: 'male',
-  Ola: 'female',
-  Tomek: 'male',
-  Zofia: 'female',
-  Jacek: 'male',
-}
-
-function nameForIndex(treeIndex: number): (typeof NPC_NAMES)[number] {
-  return NPC_NAMES[treeIndex % NPC_NAMES.length]!
-}
-
-/** Gender for a placeholder NPC name, or null for names outside the pool
- *  (defensive — quest defs reference these names by hand). */
-export function genderForName(name: string): NpcGender | null {
-  return (NPC_GENDERS as Record<string, NpcGender>)[name] ?? null
-}
-
 function modelUrlForIndex(treeIndex: number): string {
-  const pool = NPC_MODEL_URLS[NPC_GENDERS[nameForIndex(treeIndex)]]
+  const pool = NPC_MODEL_URLS[characterForIndex(treeIndex).gender]
   return pool[treeIndex % pool.length]!
 }
 
@@ -130,12 +108,68 @@ const PAUSE_INTERRUPTIBLE_PHASES: readonly Phase[] = [
   'goWell',
 ]
 
+/** Phases that drain `health.currentHp` (fatigue) vs. ones that regenerate it. */
+const FATIGUE_PHASES: readonly Phase[] = [
+  'chop',
+  'deposit',
+  'drink',
+  'eat',
+  'goGarden',
+  'goStock',
+  'goTree',
+  'goWell',
+]
+const REST_PHASES: readonly Phase[] = ['wander', 'lookAtPlayer']
+
+const MAX_HP = 100
+/** currentHp never drops below this — no NPC death/despawn in v1. */
+const HP_FLOOR = 15
+const BASE_FATIGUE_RATE = 3 // hp/sec while in a FATIGUE_PHASES phase
+const BASE_REST_RATE = 6 // hp/sec while in a REST_PHASES phase
+const ENERGETIC_FATIGUE_MULT = 0.6
+const ENERGETIC_REST_MULT = 1.5
+
+/** Below this currentHp/maxHp fraction, walk speed starts dropping toward the floor. */
+const HP_SLOW_THRESHOLD = 0.3
+const HP_SLOW_FLOOR = 0.55
+/** `night_owl` blunts the low-HP slowdown instead of removing it. */
+const HP_SLOW_FLOOR_NIGHT_OWL = 0.8
+
+const FAST_WORKER_WAIT_MULT = 0.8
+const SOCIABLE_TRIGGER_MULT = 1.3
+const SOCIABLE_LOOK_MULT = 1.2
+
+/** `sociable` NPCs notice the player sooner and linger on the look longer —
+ *  multiplies on top of the personality-derived params rather than replacing them. */
+function applySociableBoost(
+  params: PausePersonalityParams,
+  traits: readonly Trait[],
+): PausePersonalityParams {
+  if (!traits.includes('sociable')) return params
+  return {
+    triggerDistance: params.triggerDistance * SOCIABLE_TRIGGER_MULT,
+    lookDurationRange: [
+      params.lookDurationRange[0] * SOCIABLE_LOOK_MULT,
+      params.lookDurationRange[1] * SOCIABLE_LOOK_MULT,
+    ],
+    cooldownRange: params.cooldownRange,
+  }
+}
+
 export class NpcAgent {
   readonly mesh: THREE.Object3D
   readonly label: CSS2DObject
   readonly name: string
   readonly gender: NpcGender
-  readonly personality: Personality
+  readonly role: Role
+  readonly traits: readonly Trait[]
+  readonly personality: CharacterDef['personality']
+  readonly health: HealthState
+  private readonly dialogueArchetype: Personality
+  private readonly pauseParams: PausePersonalityParams
+  private readonly fatigueRate: number
+  private readonly restRate: number
+  private readonly waitMultiplier: number
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
   private readonly landmarks: SettlementLandmarks
@@ -178,10 +212,19 @@ export class NpcAgent {
     this.waterLevel = waterLevel
     this.landmarks = landmarks
     this.home = home.clone()
-    const name = nameForIndex(treeIndex)
-    this.name = name
-    this.gender = NPC_GENDERS[name]
-    this.personality = NPC_PERSONALITIES[treeIndex % NPC_PERSONALITIES.length]!
+    const character = characterForIndex(treeIndex)
+    this.name = character.name
+    this.gender = character.gender
+    this.role = character.role
+    this.traits = character.traits
+    this.personality = character.personality
+    this.health = createHealthState(MAX_HP)
+    this.dialogueArchetype = nearestArchetype(this.personality)
+    this.pauseParams = applySociableBoost(pausePersonalityParams(this.personality), this.traits)
+    const energetic = this.traits.includes('energetic')
+    this.fatigueRate = BASE_FATIGUE_RATE * (energetic ? ENERGETIC_FATIGUE_MULT : 1)
+    this.restRate = BASE_REST_RATE * (energetic ? ENERGETIC_REST_MULT : 1)
+    this.waitMultiplier = this.traits.includes('fast_worker') ? FAST_WORKER_WAIT_MULT : 1
     this.treeIndex = treeIndex % Math.max(1, landmarks.trees.length)
     this.needs = createNeedState(needOffset)
 
@@ -292,7 +335,7 @@ export class NpcAgent {
   }
 
   getDialogueLine(): string {
-    return pickDialogueLine(this.personality, this.activeNeed, this.isBusyPhase())
+    return pickDialogueLine(this.dialogueArchetype, this.activeNeed, this.isBusyPhase())
   }
 
   setQuestMarker(marker: string | null): void {
@@ -311,11 +354,17 @@ export class NpcAgent {
     tickNeeds(this.needs, dt)
     this.moving = false
 
+    if (FATIGUE_PHASES.includes(this.phase)) {
+      applyFatigue(this.health, this.fatigueRate * dt, HP_FLOOR)
+    } else if (REST_PHASES.includes(this.phase)) {
+      rest(this.health, this.restRate * dt)
+    }
+
     if (this.pauseCooldown > 0) this.pauseCooldown -= dt
     if (this.pauseCooldown <= 0 && PAUSE_INTERRUPTIBLE_PHASES.includes(this.phase)) {
       const dx = this.mesh.position.x - observerPos.x
       const dz = this.mesh.position.z - observerPos.z
-      const params = PAUSE_PARAMS[this.personality]
+      const params = this.pauseParams
       if (Math.hypot(dx, dz) < params.triggerDistance) {
         this.previousPhase = this.phase
         this.phase = 'lookAtPlayer'
@@ -356,25 +405,25 @@ export class NpcAgent {
       case 'goGarden':
         if (this.steerTo(this.landmarks.garden, dt)) {
           this.phase = 'eat'
-          this.wait = 1.4
+          this.wait = 1.4 * this.waitMultiplier
         }
         break
       case 'goStock':
         if (this.steerTo(this.landmarks.stockpile, dt)) {
           this.phase = 'deposit'
-          this.wait = 0.8
+          this.wait = 0.8 * this.waitMultiplier
         }
         break
       case 'goTree':
         if (this.steerTo(this.target, dt)) {
           this.phase = 'chop'
-          this.wait = 1.6
+          this.wait = 1.6 * this.waitMultiplier
         }
         break
       case 'goWell':
         if (this.steerTo(this.landmarks.well, dt)) {
           this.phase = 'drink'
-          this.wait = 1.2
+          this.wait = 1.2 * this.waitMultiplier
         }
         break
       case 'lookAtPlayer': {
@@ -385,7 +434,7 @@ export class NpcAgent {
         if (this.pauseTimer <= 0) {
           this.phase = this.previousPhase ?? 'choose'
           this.previousPhase = null
-          this.pauseCooldown = randRange(PAUSE_PARAMS[this.personality].cooldownRange)
+          this.pauseCooldown = randRange(this.pauseParams.cooldownRange)
         }
         break
       }
@@ -503,6 +552,15 @@ export class NpcAgent {
     return this.sampleHeight(x, z) > this.waterLevel + WATER_MARGIN
   }
 
+  /** 1 above HP_SLOW_THRESHOLD, tapering toward a floor as currentHp drops
+   *  further — `night_owl` blunts how low that floor goes. */
+  private healthSpeedMultiplier(): number {
+    const factor = this.health.currentHp / this.health.maxHp
+    if (factor >= HP_SLOW_THRESHOLD) return 1
+    const floor = this.traits.includes('night_owl') ? HP_SLOW_FLOOR_NIGHT_OWL : HP_SLOW_FLOOR
+    return floor + (1 - floor) * (factor / HP_SLOW_THRESHOLD)
+  }
+
   private steerTo(dest: THREE.Vector3, dt: number): boolean {
     this.tmp.set(dest.x, 0, dest.z)
     this.tmp.x -= this.mesh.position.x
@@ -510,8 +568,9 @@ export class NpcAgent {
     const dist = Math.hypot(this.tmp.x, this.tmp.z)
     if (dist < ARRIVE) return true
     this.tmp.multiplyScalar(1 / dist)
-    const stepX = this.tmp.x * WALK_SPEED * dt
-    const stepZ = this.tmp.z * WALK_SPEED * dt
+    const speed = WALK_SPEED * this.healthSpeedMultiplier()
+    const stepX = this.tmp.x * speed * dt
+    const stepZ = this.tmp.z * speed * dt
     this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
     this.moving = true
     const x = this.mesh.position.x
