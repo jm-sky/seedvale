@@ -6,6 +6,8 @@ export type PauseMenuHandlers = {
   onNameChange?: (name: string) => void
   /** Fired on blur/Enter with the trimmed, non-empty name — persist here. */
   onNameCommit?: (name: string) => void
+  onSave?: () => void
+  onNewGame?: () => void
 }
 
 export type PauseMenu = {
@@ -42,7 +44,9 @@ export function createPauseMenu(
       </div>
       <div class="seedvale-pause__row"><span>Seed</span><span data-seed></span></div>
       <button type="button" data-resume class="seedvale-pause__button">Resume</button>
+      <button type="button" data-save class="seedvale-pause__button seedvale-pause__button--ghost">Save<span data-save-status class="seedvale-pause__save-status"></span></button>
       <button type="button" data-gui class="seedvale-pause__button seedvale-pause__button--ghost">Toggle debug panel</button>
+      <button type="button" data-new-game class="seedvale-pause__button seedvale-pause__button--danger">New Game</button>
       <div class="seedvale-pause__hint">WASD — ruch · mysz (klik) — rozglądanie · Esc — pauza</div>
     </div>
   `
@@ -51,9 +55,23 @@ export function createPauseMenu(
   const seedEl = root.querySelector<HTMLElement>('[data-seed]')!
   const resumeButton = root.querySelector<HTMLButtonElement>('[data-resume]')!
   const guiButton = root.querySelector<HTMLButtonElement>('[data-gui]')!
+  const saveButton = root.querySelector<HTMLButtonElement>('[data-save]')!
+  const saveStatusEl = root.querySelector<HTMLElement>('[data-save-status]')!
+  const newGameButton = root.querySelector<HTMLButtonElement>('[data-new-game]')!
   const nameInput = root.querySelector<HTMLInputElement>('[data-name]')!
   seedEl.textContent = String(seed)
   nameInput.value = playerName
+
+  let saveStatusTimeout = 0
+  saveButton.addEventListener('click', () => {
+    handlers.onSave?.()
+    saveStatusEl.textContent = 'Saved'
+    window.clearTimeout(saveStatusTimeout)
+    saveStatusTimeout = window.setTimeout(() => {
+      saveStatusEl.textContent = ''
+    }, 1500)
+  })
+  newGameButton.addEventListener('click', () => handlers.onNewGame?.())
 
   const commitName = () => {
     const name = nameInput.value.trim()
@@ -92,6 +110,7 @@ export function createPauseMenu(
     },
     dispose() {
       window.removeEventListener('keydown', onKeyDown)
+      window.clearTimeout(saveStatusTimeout)
       root.remove()
     },
   }

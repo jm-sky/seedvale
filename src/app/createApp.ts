@@ -1,12 +1,14 @@
 import { Clock, Fog, type Scene, type Vector3 } from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { SaveData } from '../persistence/saveData'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import { saveWorldConfig } from '../config/persistConfig'
 import { createWorldConfig } from '../config/worldConfig'
 import { createFauna, type Fauna } from '../fauna/createFauna'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook } from '../input/MouseLook'
+import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
 import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
@@ -32,7 +34,7 @@ import {
   skyParamsFromTime,
   tickDayNight,
 } from '../world/dayNight'
-import { syncSeedInUrl } from '../world/parseSeed'
+import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
 
 /** Fixed radius (world units) for settlement/fauna spatial logic — deliberately
  *  independent of the streamed terrain's loaded region, so the village and its
@@ -56,10 +58,19 @@ function homeChunks(): ChunkCoord[] {
   return coords
 }
 
-export async function createApp(container: HTMLElement): Promise<() => void> {
+export async function createApp(
+  container: HTMLElement,
+  initialSave?: SaveData | null,
+): Promise<() => void> {
   const loadingScreen = createLoadingScreen(container)
 
   const config = createWorldConfig()
+  if (initialSave) {
+    config.seed = initialSave.config.seed
+    config.terrain = structuredClone(initialSave.config.terrain)
+    config.sky = { ...initialSave.config.sky }
+    config.player = { ...initialSave.config.player }
+  }
   saveWorldConfig(config)
 
   const dayNight = createDayNightState()
@@ -100,7 +111,14 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     chunkManager.sampleFloor,
     chunkManager.waterLevel,
   )
-  player.setPosition(settlement.spawn.x, settlement.spawn.z)
+  if (initialSave) {
+    // Set look before position — setPosition() calls syncCamera(), which reads yaw/pitch.
+    mouseLook.state.yaw = initialSave.player.yaw
+    mouseLook.state.pitch = initialSave.player.pitch
+    player.setPosition(initialSave.player.x, initialSave.player.z)
+  } else {
+    player.setPosition(settlement.spawn.x, settlement.spawn.z)
+  }
   player.setName(config.player.name)
   scene.add(player.mesh)
 
@@ -140,6 +158,23 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     }
   }
 
+  const buildSaveData = (): SaveData => ({
+    version: 1,
+    config: {
+      seed: config.seed,
+      terrain: structuredClone(config.terrain),
+      sky: { ...config.sky },
+      player: { ...config.player },
+    },
+    player: {
+      x: player.mesh.position.x,
+      z: player.mesh.position.z,
+      yaw: mouseLook.state.yaw,
+      pitch: mouseLook.state.pitch,
+    },
+    savedAt: Date.now(),
+  })
+
   const updateSkyFromGui = () => {
     dayNight.enabled = false
     sky.setParams(config.sky, lights.sun)
@@ -178,7 +213,21 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
       config.player.name = name
       saveWorldConfig(config)
     },
+    onSave: () => {
+      void writeSave(buildSaveData())
+    },
+    onNewGame: () => {
+      if (!window.confirm('Start a new game? Your saved progress will be cleared.')) return
+      void clearSave()
+      config.seed = randomSeed()
+      void rebuildWorld()
+    },
   })
+
+  const onBeforeUnload = () => {
+    void writeSave(buildSaveData())
+  }
+  window.addEventListener('beforeunload', onBeforeUnload)
 
   applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
 
@@ -231,6 +280,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
       settlement.update(dt, player.mesh.position)
       fauna.update(dt, player.mesh.position)
       chunkManager.tickWater(dt)
+      chunkManager.tickGrass(dt)
       ocean.update(dt)
       minimap.update(player.mesh.position, settlement.center, settlement.npcs)
     }
@@ -243,6 +293,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
   return () => {
     cancelAnimationFrame(frameId)
     window.removeEventListener('resize', onResize)
+    window.removeEventListener('beforeunload', onBeforeUnload)
     gui.dispose()
     pauseMenu.dispose()
     npcDialog.dispose()
@@ -316,6 +367,7 @@ function applyDayNight(
     fog.far = p.fogFar
   }
   chunkManager.setWaterDayNight(p.dayFactor)
+  chunkManager.setGrassDayNight(p.dayFactor)
   ocean.setDayNight(p.dayFactor, sky.sunPosition)
 }
 
@@ -337,6 +389,7 @@ function buildChunkManager(
     biome: config.terrain.biome,
     region: config.terrain.region,
     flatShading: config.terrain.flatShading,
+    grass: config.terrain.grass,
   }
   return createChunkManager(scene, cfg)
 }

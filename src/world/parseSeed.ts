@@ -21,6 +21,11 @@ export function parseSeedFromUrl(
   return Number.isFinite(n) ? Math.floor(n) : fallback
 }
 
+/** Fresh 32-bit seed for "New Game" — distinct from the deterministic URL fallback. */
+export function randomSeed(): number {
+  return Math.floor(Math.random() * 0xffffffff)
+}
+
 /** Keep `?seed=` in the address bar without reload. */
 export function syncSeedInUrl(seed: number): void {
   const url = new URL(window.location.href)

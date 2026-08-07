@@ -1,9 +1,9 @@
 # Plan: streaming świata + zapis (później)
 
-**Status:** `in progress` — streaming części (chunk grid, load/unload radius, worker generacja, duże regiony) **zaimplementowane**; persystencja/zapis (sekcja niżej) wciąż `planned`
+**Status:** `done` — streaming (chunk grid, load/unload radius, worker generacja, duże regiony) i persystencja (IndexedDB save/continue) zaimplementowane i przetestowane w przeglądarce
 **Created:** 2026-08-07  
-**Updated:** 2026-08-07 — streaming zaimplementowany w `2ee894d` (chunk streaming + worker offload) i rozszerzony w `7c2969f` (duże regiony: oceany/wybrzeża/pasma górskie z macro noise, roślinność per-chunk); zapis do bazy **nie ruszony** — brak IndexedDB/save w repo (sprawdzone grepem po `src/`)
-**Priority:** persystencja (save/continue) — jedyna otwarta część tego planu
+**Updated:** 2026-08-07 — streaming zaimplementowany w `2ee894d` (chunk streaming + worker offload) i rozszerzony w `7c2969f` (duże regiony: oceany/wybrzeża/pasma górskie z macro noise, roślinność per-chunk); **persystencja dograna** — single-slot IndexedDB save (`src/persistence/`), ekran Continue/New Game przy boot (`src/ui/createStartScreen.ts`, wpięty w `src/main.ts`), przycisk Save + New Game w pause menu (`src/ui/createPauseMenu.ts`), autosave na `beforeunload` (best-effort) — patrz `src/app/createApp.ts`
+**Priority:** —
 
 ## Co jest zrobione (streaming)
 
@@ -44,26 +44,30 @@ Wzorce: SimonDev / `3d-portfolio` `TerrainChunkManager` (referencja, nie kopiowa
 | Woda / sky | woda per-chunk lub jedna tafla w AABB załadowanych; sky bez zmian | `done` — woda zaadaptowana do chunków (`2ee894d`) |
 | Osada / NPC | pinned do chunka „home”; fauna spawn w załadowanych | `done` |
 
-## Persistencja (kierunek — nadal `planned`, nic z tego nie zaimplementowane)
+## Persistencja — `done`
 
-| Warstwa | Kandydaci | Co trzymać |
-|---------|-----------|------------|
-| Lokalnie (start) | `IndexedDB` / opfs | seed, config, player pos, settlement flags |
-| Backend (później) | SQLite / Postgres / Supabase — TBD | to samo + multi-save slots |
+Zaimplementowane jako jeden IndexedDB slot (`src/persistence/saveDb.ts`, DB `seedvale`, store `saves`, klucz `'current'`) — multi-slot / backend DB zostaje jako możliwe „później”, nie teraz.
 
-Minimalny save v1:
+Rzeczywisty kształt save'u (`src/persistence/saveData.ts`) — bez `y` (zawsze przeliczane z terenu przez `PlayerController.setPosition`/`snapToGround`, więc nie ma sensu go zapisywać):
 
 ```ts
 {
   version: 1,
-  seed: number,
-  config: Partial<WorldConfig>,
-  player: { x, y, z, yaw, pitch },
-  // później: npc needs, chopped trees, quests
+  config: { seed, terrain, sky, player }, // = StoredConfig z config/persistConfig.ts
+  player: { x, z, yaw, pitch },
+  savedAt: number,
 }
 ```
 
-Baza „prawdziwa” dopiero gdy będzie sens sync / wielu sesji — wcześniej IndexedDB wystarczy pod portfolio.
+Flow:
+- **Boot** (`src/main.ts`) — jeśli `readSave()` zwróci zapis, pokazuje `createStartScreen` (Continue / New Game) zanim wystartuje `createApp`. Brak zapisu = jak dawniej, prosto do świata.
+- **Continue** — `createApp(container, save)` nadpisuje `config.seed/terrain/sky/player` zapisem, potem po stworzeniu gracza ustawia `mouseLook.state.yaw/pitch` i woła `player.setPosition(x, z)` (kolejność ważna — `setPosition` czyta `look` przez `syncCamera()`).
+- **New Game** (ekran startowy) — `clearSave()` + normalny boot bez `initialSave` (nowy losowy seed pochodzi z domyślnego `parseSeedFromUrl` fallbacku/URL/localStorage jak dotąd).
+- **Save** (pause menu, przycisk) — `writeSave(buildSaveData())`, krótki „Saved” feedback w UI.
+- **New Game** (pause menu, w trakcie gry) — `window.confirm` → `clearSave()` + `config.seed = randomSeed()` (`src/world/parseSeed.ts`) + `rebuildWorld()` (istniejący path, ten sam co zmiana seeda w GUI).
+- **Autosave** — `beforeunload` → `writeSave(buildSaveData())`, best-effort (IndexedDB nie gwarantuje ukończenia transakcji przy zamykaniu karty we wszystkich przeglądarkach — zaakceptowany kompromis, nie hard guarantee).
+
+Świadomie poza zakresem: stan NPC/needs/settlement (deterministyczne z seeda, brak mutowalnego stanu wart zapisu — sprawdzone), migracje między wersjami save'u (jest tylko `version: 1`).
 
 ## Świadomie poza teraz
 
