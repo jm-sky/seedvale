@@ -1,5 +1,7 @@
 import { Clock, Fog, type Scene, type Vector3 } from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { NpcAgent } from '../ai/NpcAgent'
+import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { SaveData } from '../persistence/saveData'
 import type { ChunkCoord } from '../terrain/chunkGrid'
@@ -60,6 +62,11 @@ const INTERACT_RANGE = 2.5
 /** Minimum dot(playerForward, toTarget) to count as "looking at" — ~60° half-angle
  *  cone, needed so a dense cluster doesn't pick whichever is merely nearest. */
 const INTERACT_MIN_DOT = 0.5
+/** Gaze-highlight range — deliberately larger than `INTERACT_RANGE` so the glow
+ *  reads as an "approaching" cue before the `[E]` prompt appears. */
+const GAZE_RANGE = INTERACT_RANGE * 2
+
+type Highlightable = NpcAgent | AnimalAgent
 
 /** 3×3 block of chunks around the origin, pinned so the settlement never streams
  *  out from under itself. */
@@ -154,6 +161,16 @@ export async function createApp(
   hud.setSeed(config.seed)
   hud.setTime(dayNight.timeOfDay)
 
+  /** Currently gaze-highlighted NPC/animal, if any — tracked so we only toggle
+   *  the CSS class on change instead of writing every frame. */
+  let highlightedTarget: Highlightable | null = null
+  const setHighlight = (next: Highlightable | null): void => {
+    if (highlightedTarget === next) return
+    highlightedTarget?.setHighlighted(false)
+    next?.setHighlighted(true)
+    highlightedTarget = next
+  }
+
   const minimap = createMinimap(container)
   const questManager = new QuestManager(
     undefined,
@@ -175,6 +192,9 @@ export async function createApp(
     try {
       syncSeedInUrl(config.seed)
       saveWorldConfig(config)
+      // Old agents are about to be disposed — drop the reference rather than
+      // toggling a class on a DOM node that's going away anyway.
+      highlightedTarget = null
       fauna.dispose()
       itemSpawners.dispose()
       // Copy before dispose() — nodes() returns a live reference to the
@@ -324,10 +344,12 @@ export async function createApp(
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
+      setHighlight(null)
     } else if (npcDialog.isOpen()) {
       npcDialog.setPrompt(null)
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
+      setHighlight(null)
       if (keyboard.consumeInteract()) {
         if (npcDialog.isOffer()) npcDialog.accept()
         else npcDialog.close()
@@ -335,16 +357,39 @@ export async function createApp(
     } else if (questLog.isOpen()) {
       keyboard.consumeInteract()
       keyboard.consumeDrop()
+      setHighlight(null)
       if (keyboard.consumeQuestLog()) questLog.close()
     } else {
+      const interactables = buildInteractables(
+        settlement,
+        fauna,
+        chunkManager,
+        itemSpawners,
+        droppedItems,
+        player.mesh.position,
+      )
       const target = pickInGaze(
-        buildInteractables(settlement, fauna, chunkManager, itemSpawners, droppedItems, player.mesh.position),
+        interactables,
         player.mesh.position,
         mouseLook.state.yaw,
         INTERACT_RANGE,
         INTERACT_MIN_DOT,
       )
       npcDialog.setPrompt(target ? target.promptLabel : null)
+
+      const gazeCandidates: { position: { x: number, z: number }, agent: Highlightable }[] = []
+      for (const item of interactables) {
+        if (item.kind === 'npc') gazeCandidates.push({ position: item.position, agent: item.npc })
+        else if (item.kind === 'animal') gazeCandidates.push({ position: item.position, agent: item.animal })
+      }
+      const gazed = pickInGaze(
+        gazeCandidates,
+        player.mesh.position,
+        mouseLook.state.yaw,
+        GAZE_RANGE,
+        INTERACT_MIN_DOT,
+      )
+      setHighlight(gazed?.agent ?? null)
       const interactPressed = keyboard.consumeInteract()
       if (target && interactPressed) {
         if (target.kind === 'item') {

@@ -126,6 +126,7 @@ export class AnimalAgent {
   private attackCooldown = 0
   private timeSinceDeath = 0
   private isNight = false
+  private highlighted = false
 
   constructor(
     def: AnimalDef,
@@ -205,6 +206,14 @@ export class AnimalAgent {
 
   isDead(): boolean {
     return this.health.dead
+  }
+
+  /** Toggles the gaze-highlight glow on this animal's label. Idempotent — no
+   *  redundant DOM writes if the state doesn't actually change. */
+  setHighlighted(active: boolean): void {
+    if (this.highlighted === active) return
+    this.highlighted = active
+    this.labelEl.classList.toggle('npc-label--highlighted', active)
   }
 
   /** True once a dead agent's corpse has lingered long enough to be disposed. */

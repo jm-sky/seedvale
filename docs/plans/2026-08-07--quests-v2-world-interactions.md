@@ -211,6 +211,6 @@ index.html                               # + CSS dla wiersza etapu w quest logu
 
 ## Następnie
 
-- Wizualny highlight na gaze (`gaze-highlight-labels.md`) — teraz może bezpośrednio reużyć `pickInGaze`/`Interactable` z tego planu zamiast budować własną generalizację od zera.
+- ~~Wizualny highlight na gaze~~ → zaimplementowany tą samą sesją, reużywając `pickInGaze`/`Interactable` z tego planu, patrz [gaze-highlight-labels.md](./2026-08-07--gaze-highlight-labels.md) (`verification needed`).
 - Multi-settlement quest routing, gdy `multi-settlements.md` faktycznie wyląduje w kodzie.
 - Więcej typów itemów (drewno ze stockpile, zioła z ogrodu) — ten sam wzorzec `ItemNode`/`Inventory` się skaluje.

@@ -399,6 +399,12 @@
         pointer-events: none;
         user-select: none;
       }
+      .npc-label--highlighted {
+        /* box-shadow (not border) so the glow never shifts label layout/position. */
+        box-shadow:
+          0 0 0 1px rgba(255, 196, 92, 0.9),
+          0 0 10px 2px rgba(255, 196, 92, 0.5);
+      }
     </style>
   </head>
   <body>
