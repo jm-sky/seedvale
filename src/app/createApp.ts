@@ -295,7 +295,7 @@ export async function createApp(
       lights.follow(player.mesh.position.x, player.mesh.position.z)
       ocean.follow(player.mesh.position.x, player.mesh.position.z)
       settlement.update(dt, player.mesh.position)
-      fauna.update(dt, player.mesh.position)
+      fauna.update(dt, player.mesh.position, dayNight.timeOfDay)
       chunkManager.tickWater(dt)
       chunkManager.tickGrass(dt)
       ocean.update(dt)

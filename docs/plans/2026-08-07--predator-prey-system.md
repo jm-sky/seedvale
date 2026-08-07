@@ -1,6 +1,6 @@
 # Plan: Predator-Prey system z HP i spawnerami
 
-**Status:** `planned`  
+**Status:** `done`  
 **Created:** 2026-08-07  
 **Scope:** Fauna ([src/fauna/](../../src/fauna/)), mechanika gry
 
@@ -25,6 +25,19 @@ Obecny system fauna:
 - `AnimalAgent` ([src/fauna/AnimalAgent.ts](../../src/fauna/AnimalAgent.ts)): rola (predator/prey), chase/flee logika, brak HP
 - `createFauna` ([src/fauna/createFauna.ts](../../src/fauna/createFauna.ts)): spawuje zwierzęta w pierścieniu wokół osady (18-40m), fixed pool (2 wolf, 2 fox, 4 deer, 2 stag)
 - `NpcAgent` ([src/ai/NpcAgent.ts](../../src/ai/NpcAgent.ts)): NPC są nieśmiertelne, brak HP
+
+## Zależność: `HealthState` jest współdzielony, nie fauna-only
+
+**Aktualizacja:** ten plan jest już zaimplementowany w working tree (niezacommitowane zmiany: `src/fauna/HealthState.ts`, `src/fauna/AnimalSpawner.ts`, zmienione `AnimalAgent.ts`/`createFauna.ts` — status wyżej i „Done when” odzwierciedlają rzeczywisty kod, nie tylko plan). `HealthState` istnieje **naprawdę**, pod `src/fauna/HealthState.ts`:
+
+```ts
+export type HealthState = { maxHp: number; currentHp: number; dead: boolean }
+export function createHealthState(maxHp: number): HealthState { ... }
+export const MAX_HP: Record<AnimalKind, number> = { ... }        // fauna-specific
+export function damageFor(predator: AnimalKind, prey: AnimalKind): number { ... }  // fauna-specific
+```
+
+Sam typ `HealthState` jest generyczny (żadnej zależności od `AnimalKind`), ale plik jako całość importuje `AnimalKind` z `./AnimalAgent` — więc NPC (w `src/ai/`) nie może po prostu zaimportować stąd bez ciągnięcia zależności do `src/fauna/`. [npc-character-depth.md](./2026-08-07--npc-character-depth.md) planuje reużyć ten sam typ dla NPC (zmęczenie pracą zamiast combat damage). Żeby to zrobić bez odwróconej zależności `ai → fauna`, potrzebny jest mały refaktor **teraz**, nie "kto pierwszy": wydzielić `HealthState`/`createHealthState` (generyczna część) do `src/shared/HealthState.ts`, zostawiając `MAX_HP`/`damageFor` (fauna-specific, zależne od `AnimalKind`) w `src/fauna/HealthState.ts`, który importuje typ ze `shared`. Ten refaktor wchodzi w zakres `npc-character-depth.md`, nie tego planu (ten jest już `verification needed` — nie re-otwieramy go dla przenosin pliku).
 
 ## Zakres
 
@@ -179,14 +192,24 @@ export type Fauna = {
 
 ## Done when
 
-- [ ] `HealthState` typ + HP constants per species
-- [ ] `AnimalAgent.health`, `takeDamage(damage)`, `onDeath()` callback
-- [ ] Kontakt: predator damage prey co `dt` jeśli `dist < 0.8m`
-- [ ] Dead agents: `createFauna` usuwa martwych agentów ze sceny i arrays
-- [ ] Spawner type defined; co najmniej **1-2 harcoded spawnery** (jaskinia, zagajnik) — proceduralna generacja = opcja
-- [ ] Respawn loop: prey regeneruje się co N sekund w spawnerze (gdy poniżej max count)
-- [ ] Obserwacja: wyłów jedną sarną (chase + contact) → znika, nowa pojawia się po ~5-10 sek
-- [ ] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `HealthState` typ + HP constants per species — `src/fauna/HealthState.ts`
+- [x] `AnimalAgent.health`, `takeDamage(damage)`, `isDead()` — `onDeath()` callback dropped (unused; `createFauna` polls `isDead()` each frame instead, see Implementation notes)
+- [x] Kontakt: predator damage prey gdy `dist < 0.8m` — z cooldownem 0.6s/atak (patrz notatka niżej), nie co `dt` dosłownie
+- [x] Dead agents: `createFauna` usuwa martwych agentów ze sceny i arrays
+- [x] Spawner type defined; **2 harcoded spawnery** (cave → deer, thicket → stag), pozycjonowane losowo 45–65m od settlementu z walkability check — proceduralna biome-based generacja odłożona (opcja z planu)
+- [x] Respawn loop: prey regeneruje się co N sekund w spawnerze (gdy poniżej max count)
+- [x] Obserwacja: wyłów jedną sarną (chase + contact) → ciało zostaje (collapse pose, linger 8s) → nowa pojawia się w spawnerze — potwierdzone przez użytkownika w przeglądarce
+- [x] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
+
+### Implementation notes (odchylenia od planu)
+
+- **Attack cooldown (0.6s)**: plan mówił o damage "co `dt`" przy kontakcie, ale przy 60fps i wolf→deer 15dmg to zabiłoby sarnę (30 HP) w 2 klatki (~33ms) — sprzeczne z "obserwacja: powinno zająć <5 sek". Dodano `ATTACK_COOLDOWN = 0.6s` w `AnimalAgent`, więc wolf zabija sarnę w ~2 ataki / ~1.2s.
+- **`onDeath()` callback pominięty**: plan proponował callback z konstruktora do natychmiastowego czyszczenia. Zamiast tego `takeDamage()` ustawia `health.dead` synchronicznie, a `createFauna.update()` co klatkę filtruje `agents.filter(readyToRemove)` i disposuje — prostsze, bez dodatkowego API surface.
+- **Spawner types "cave"/"thicket"** to na razie tylko etykiety/flavor (brak biome-aware placement) — pozycja wybierana tym samym walkability-search co reszta fauny (unikanie wody + homeRadius bounds), nie ma dedykowanej detekcji jaskiń/lasu. Każdy spawner ma teraz też CSS2D label nad nim (nazwa typu, np. "jaskinia"/"zagajnik"), fade-by-distance jak etykiety zwierząt/NPC.
+- **`fox` → `stag` damage** nie było zdefiniowane w planie — dodano `DEFAULT_DAMAGE = 8` jako fallback w `damageFor()` dla par predator/prey spoza tabeli.
+- **UI (sekcja 6)**: pominięte celowo — plan oznacza to jako opcjonalne v1+, poza "Done when".
+- **Corpse linger (feedback po review)**: ciało po śmierci zostawało niewidoczne od razu (`mesh.visible = false` w `takeDamage`), znikało "za szybko". Zmieniono: ciało zostaje widoczne (zamrożona poza — mixer przestaje się aktualizować) przez `CORPSE_LINGER_SECONDS = 8s`, dopiero potem `createFauna` je usuwa (`AnimalAgent.readyToRemove()`). Przy okazji naprawiono bug: `updateSpawners` liczył martwe-ale-jeszcze-widoczne zwłoki jako "żywy prey w pobliżu", co mogło blokować respawn przy dłuższym lingerze — dodano `!a.isDead()` do filtra.
+- **Night speed penalty dla prey (feedback po review)**: `AnimalAgent.update()` przyjmuje teraz `isNight` (liczone w `createFauna` z `skyParamsFromTime(timeOfDay).dayFactor <= 0`, ten sam próg co reszta świata — światła/mgła/woda). Tylko `role === 'prey'`: wander ×`NIGHT_PREY_WALK_MULT = 0.5`, ucieczka/sprint ×`NIGHT_PREY_SPRINT_MULT = 0.9`. Predators bez zmian. Twardy próg (nie płynna interpolacja) — do ew. zmiany jeśli przejście dzień/noc będzie wyglądać na "pop".
 
 ## Do przetestowania (http://localhost:5577/)
 

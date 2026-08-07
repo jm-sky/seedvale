@@ -2,9 +2,22 @@ import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import { labelOpacityForDistance } from '../ui/labelDistance'
+import { createHealthState, damageFor, type HealthState, MAX_HP } from './HealthState'
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
 const WATER_MARGIN = 0.3
+/** Distance at which a predator can bite the prey it's chasing. */
+const CONTACT_RANGE = 0.8
+/** Minimum seconds between bites from the same predator, so contact doesn't
+ *  melt prey HP in a single frame. */
+const ATTACK_COOLDOWN = 0.6
+/** Seconds a corpse stays in the scene (frozen pose) before it's disposed. */
+const CORPSE_LINGER_SECONDS = 8
+/** Prey wander speed at night vs. day (half speed — cautious/less active). */
+const NIGHT_PREY_WALK_MULT = 0.5
+/** Prey flee/sprint speed at night vs. day — smaller penalty than wander,
+ *  since prey still needs to outrun predators, just not as well as by day. */
+const NIGHT_PREY_SPRINT_MULT = 0.9
 /** How far an animal will roam from its own spawn point — home-relative, not tied
  *  to any world/loaded-region bound, so fauna behaves the same near spawn or far
  *  away in a streamed world. Generous relative to wander/chase/flee radii (6–18),
@@ -33,7 +46,11 @@ export type AnimalDef = {
   modelHeight: number
   walkSpeed: number
   sprintSpeed: number
+  /** Predator-only: radius (m) within which it spots and chases the nearest prey.
+   *  Meaningless for prey defs (their threat detection uses `fleeRange` instead). */
   detectRange: number
+  /** Prey-only: radius (m) within which it notices the nearest predator and flees.
+   *  Meaningless for predator defs (set to 0 — predators don't flee). */
   fleeRange: number
 }
 
@@ -105,6 +122,10 @@ export class AnimalAgent {
   private currentAction: THREE.AnimationAction | null = null
   private readonly label: CSS2DObject
   private readonly labelEl: HTMLDivElement
+  readonly health: HealthState
+  private attackCooldown = 0
+  private timeSinceDeath = 0
+  private isNight = false
 
   constructor(
     def: AnimalDef,
@@ -119,6 +140,7 @@ export class AnimalAgent {
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.home.set(x, 0, z)
+    this.health = createHealthState(MAX_HP[def.kind])
 
     if (visual) {
       this.mesh = visual
@@ -181,7 +203,45 @@ export class AnimalAgent {
     this.mixer?.stopAllAction()
   }
 
-  update(dt: number, others: AnimalAgent[], observerPos: THREE.Vector3): void {
+  isDead(): boolean {
+    return this.health.dead
+  }
+
+  /** True once a dead agent's corpse has lingered long enough to be disposed. */
+  readyToRemove(): boolean {
+    return this.health.dead && this.timeSinceDeath >= CORPSE_LINGER_SECONDS
+  }
+
+  takeDamage(damage: number): void {
+    if (this.health.dead) return
+    this.health.currentHp = Math.max(0, this.health.currentHp - damage)
+    if (this.health.currentHp <= 0) {
+      this.health.dead = true
+      this.collapse()
+    }
+  }
+
+  /** Tip the corpse onto its side (relative to its facing direction) instead
+   *  of leaving it frozen standing up. */
+  private collapse(): void {
+    this.mixer?.stopAllAction()
+    const side = Math.random() < 0.5 ? 1 : -1
+    this.mesh.rotation.z = side * (Math.PI / 2)
+    this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
+  }
+
+  update(
+    dt: number,
+    others: AnimalAgent[],
+    observerPos: THREE.Vector3,
+    isNight = false,
+  ): void {
+    if (this.health.dead) {
+      this.timeSinceDeath += dt
+      return
+    }
+    if (this.attackCooldown > 0) this.attackCooldown -= dt
+    this.isNight = isNight
     this.moving = false
     this.sprinting = false
     if (this.def.role === 'predator') {
@@ -198,14 +258,43 @@ export class AnimalAgent {
     this.mixer?.update(dt)
   }
 
+  /** Prey move slower at night; predators are unaffected. */
+  private walkSpeedNow(): number {
+    if (this.isNight && this.def.role === 'prey') {
+      return this.def.walkSpeed * NIGHT_PREY_WALK_MULT
+    }
+    return this.def.walkSpeed
+  }
+
+  private sprintSpeedNow(): number {
+    if (this.isNight && this.def.role === 'prey') {
+      return this.def.sprintSpeed * NIGHT_PREY_SPRINT_MULT
+    }
+    return this.def.sprintSpeed
+  }
+
   private updatePredator(dt: number, others: AnimalAgent[]): void {
     const prey = this.nearest(others, 'prey', this.def.detectRange)
     if (prey) {
       this.sprinting = true
-      this.steerToward(prey.mesh.position, this.def.sprintSpeed, dt)
+      const dist = Math.hypot(
+        prey.mesh.position.x - this.mesh.position.x,
+        prey.mesh.position.z - this.mesh.position.z,
+      )
+      if (dist < CONTACT_RANGE) {
+        this.attack(prey)
+      } else {
+        this.steerToward(prey.mesh.position, this.sprintSpeedNow(), dt)
+      }
       return
     }
     this.wander(dt)
+  }
+
+  private attack(prey: AnimalAgent): void {
+    if (this.attackCooldown > 0) return
+    this.attackCooldown = ATTACK_COOLDOWN
+    prey.takeDamage(damageFor(this.def.kind, prey.def.kind))
   }
 
   private updatePrey(dt: number, others: AnimalAgent[]): void {
@@ -226,7 +315,7 @@ export class AnimalAgent {
         0,
         this.mesh.position.z + this.tmp.z * 8,
       )
-      this.steerToward(this.fleeTarget, this.def.sprintSpeed, dt)
+      this.steerToward(this.fleeTarget, this.sprintSpeedNow(), dt)
       return
     }
     this.wander(dt)
@@ -237,7 +326,7 @@ export class AnimalAgent {
     if (this.wanderTimer <= 0 || this.arrived(this.target, 1.2)) {
       this.pickWanderTarget()
     }
-    this.steerToward(this.target, this.def.walkSpeed, dt)
+    this.steerToward(this.target, this.walkSpeedNow(), dt)
   }
 
   private pickWanderTarget(): void {
@@ -268,7 +357,7 @@ export class AnimalAgent {
     let best: AnimalAgent | null = null
     let bestD = range
     for (const o of others) {
-      if (o === this || o.def.role !== role) continue
+      if (o === this || o.def.role !== role || o.health.dead) continue
       const d = Math.hypot(
         o.mesh.position.x - this.mesh.position.x,
         o.mesh.position.z - this.mesh.position.z,
