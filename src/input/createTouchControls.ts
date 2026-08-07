@@ -12,6 +12,9 @@ const JOYSTICK_DEADZONE = 0.2
 /** A component (nx/ny) must clear this before its direction flag latches — gives
  *  clean 4-way holds near the axes and diagonals near the corners, mirroring WASD. */
 const JOYSTICK_DIRECTION_THRESHOLD = 0.35
+/** Pushing the knob past this fraction of the radius auto-sprints (push-to-run),
+ *  same idea as a twin-stick mobile game — no separate button tap needed. */
+const JOYSTICK_SPRINT_THRESHOLD = 0.85
 
 const LOOK_SENSITIVITY = 0.0055
 const PINCH_ZOOM_SPEED = 0.02
@@ -51,7 +54,7 @@ export function createTouchControls(
     <div class="seedvale-touch__buttons">
       <button type="button" class="seedvale-touch__button" data-quest-log>L</button>
       <button type="button" class="seedvale-touch__button" data-drop>G</button>
-      <button type="button" class="seedvale-touch__button seedvale-touch__button--sprint" data-sprint>⚡</button>
+      <button type="button" class="seedvale-touch__button seedvale-touch__button--sprint" data-sprint>RUN</button>
       <button type="button" class="seedvale-touch__button seedvale-touch__button--primary" data-interact>E</button>
     </div>
     <button type="button" class="seedvale-touch__pause" data-pause>☰</button>
@@ -70,6 +73,9 @@ export function createTouchControls(
   // --- Joystick (single touch, tracked by identifier) ---
   let joystickTouchId: number | null = null
   let joystickCenter: Point = { x: 0, y: 0 }
+  /** Manual override from the RUN button — kept separate from the joystick-driven
+   *  push-to-run so releasing/re-centering the knob doesn't clobber a toggle-on. */
+  let sprintButtonActive = false
 
   const updateJoystick = (clientX: number, clientY: number) => {
     const dx = clientX - joystickCenter.x
@@ -82,6 +88,7 @@ export function createTouchControls(
     joystickKnob.style.transform = `translate(${kx}px, ${ky}px)`
 
     const mag = clamped / JOYSTICK_RADIUS
+    keys.sprint = sprintButtonActive || mag > JOYSTICK_SPRINT_THRESHOLD
     if (mag < JOYSTICK_DEADZONE) {
       keys.forward = false
       keys.backward = false
@@ -103,6 +110,7 @@ export function createTouchControls(
     keys.backward = false
     keys.left = false
     keys.right = false
+    keys.sprint = sprintButtonActive
   }
 
   const onJoystickTouchStart = (event: TouchEvent) => {
@@ -200,8 +208,9 @@ export function createTouchControls(
     keys.drop = true
   }
   const onSprintToggle = () => {
-    keys.sprint = !keys.sprint
-    sprintButton.classList.toggle('seedvale-touch__button--active', keys.sprint)
+    sprintButtonActive = !sprintButtonActive
+    keys.sprint = sprintButtonActive
+    sprintButton.classList.toggle('seedvale-touch__button--active', sprintButtonActive)
   }
   const onPause = () => handlers.onPauseToggle()
 
