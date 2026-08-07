@@ -68,6 +68,15 @@ export class QuestManager {
     this.relations.set(npcName, this.getRelation(npcName) + amount)
   }
 
+  /** Plays a "thank you" clip matching the giver's gender, or a random one if
+   *  the name falls outside the placeholder NPC pool. */
+  private playQuestCompleteSound(giverName: string): void {
+    const gender = genderForName(giverName) ?? (Math.random() < 0.5 ? 'male' : 'female')
+    const pool = NPC_QUEST_COMPLETE_SOUND_URLS[gender]
+    const url = pool[Math.floor(Math.random() * pool.length)]
+    if (url) this.playSound(url, QUEST_COMPLETE_SOUND_VOLUME)
+  }
+
   /** Quest-driven line/offer for talking to `npcName` right now, or null if
    *  this NPC has nothing quest-related to say (caller falls back to normal dialogue). */
   onInteract(npcName: string): QuestDialogOverride | null {
@@ -90,6 +99,7 @@ export class QuestManager {
           this.exp += QUEST_EXP_REWARD
           this.bumpRelation(def.giverName, QUEST_RELATION_REWARD)
           this.bumpRelation(def.targetName, QUEST_RELATION_REWARD)
+          this.playQuestCompleteSound(def.giverName)
           return { line: def.reportLine }
         }
       }

@@ -141,7 +141,7 @@ export async function createApp(
   hud.setTime(dayNight.timeOfDay)
 
   const minimap = createMinimap(container)
-  const questManager = new QuestManager()
+  const questManager = new QuestManager(undefined, worldAudio.playOnce)
 
   let rebuilding = false
   const rebuildWorld = async () => {
