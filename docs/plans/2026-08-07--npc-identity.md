@@ -1,5 +1,7 @@
 # Plan: NPC Identity Model
 
+Part 1 of ChatGPT plans. 
+
 > Draft from ChatGPT without repository files access. Review before implementation!
 
 **Cel:**  
