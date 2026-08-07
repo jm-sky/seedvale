@@ -8,7 +8,7 @@
 
 Quest v1 udowodnił pipeline na jednym typie questa: relay NPC→NPC, bez itemów, bez zapisu (świadomie pominięty — patrz `quests-v1.md` "Poza zakresem"). Użytkownik chce realnego rozszerzenia: **więcej typów questów i questy wieloetapowe**, **interakcje ze światem** (żywe zwierzęta + ich punkty spawnu, studnia, drzewa), oraz **prawdziwe przedmioty**: muszle nad morzem (wyrzucane przez fale), kamienie w górach — generowane przy generacji świata, bez respawnu, plus osobna pula przedmiotów odnawialnych blisko osady. Gracz zbiera i oddaje NPC-om w ramach questów. To wymagało czterech powiązanych rozszerzeń: generalizacji systemu interakcji (dziś twardo zakodowanego pod `NpcAgent`), zbudowania minimalnego inventory + world-item generation od zera, przebudowy modelu questa z płaskiego relay na wieloetapowy z różnymi typami celów, i contentu na nowych typach.
 
-**Odrzucanie/wyrzucanie przedmiotów w świecie** — wspomniane przez użytkownika jako pomysł, ale świadomie odłożone na **następną sesję** (patrz "Poza zakresem"). Ten plan buduje tylko collect → carry → oddaj NPC.
+**Odrzucanie/wyrzucanie przedmiotów w świecie** — wspomniane przez użytkownika jako pomysł, świadomie odłożone na "następną sesję" w pierwszej wersji tego planu; ta sesja **jest** tą następną sesją, więc doszła jako Faza 6 (patrz niżej).
 
 ## Stan przed tym planem
 
@@ -47,7 +47,7 @@ Dwa niezależne źródła tego samego `ItemKind` (`'shell' | 'stone'`):
 
 `ItemKind`/`ITEM_DEFS` (`src/items/items.ts`) i `Inventory` (`src/items/Inventory.ts`) są wspólne dla obu źródeł.
 
-**Odrzucanie/wyrzucanie itemów — odłożone na następną sesję.**
+**C. Upuszczone przez gracza** (`src/items/createDroppedItems.ts`) — trzecie źródło, patrz Faza 6.
 
 ## Decyzja 3 — model questa: `QuestStage[]` z `QuestObjective` union
 
@@ -62,11 +62,13 @@ Dwa niezależne źródła tego samego `ItemKind` (`'shell' | 'stone'`):
 - Nowa `spawnerMarker(spawnerType)` — analogiczna do `labelMarker`, dla etykiet spawnerów fauny.
 - `list()` rozszerzony o `stageIndex`, `totalStages`, `currentObjective` (z live-countem dla `gather_item`).
 
-## Decyzja 4 — persystencja: `SaveData` v1→v2 z migracją
+## Decyzja 4 — persystencja: `SaveData` v1→v2→v3 z łańcuchową migracją
 
 Questy stają się wieloetapowe (utrata postępu przy reload byłaby dotkliwsza niż w v1) i dochodzi inventory + zebrane itemy — **persystujemy**: quest progress (stan + `stageIndex`, exp, relacje), inventory, `collectedItemIds`. **Nie** persystujemy stanu odnawialnej puli (jak `PreySpawner` dziś).
 
-Zamiast twardo podbić `version` i odrzucać stare save'y, zrobiono **migrację**: `isSaveDataV1`/`isSaveDataV2` + `loadSaveData(value)` w `src/persistence/saveData.ts` — v1 dogenerowuje puste `quests`/`inventory`/`collectedItemIds`. `saveDb.ts` używa `loadSaveData` zamiast starego `isSaveData`.
+Zamiast twardo podbić `version` i odrzucać stare save'y, zrobiono **migrację**: `isSaveDataV1`/`isSaveDataV2`/`isSaveDataV3` + `loadSaveData(value)` w `src/persistence/saveData.ts` — v1 dogenerowuje puste `quests`/`inventory`/`collectedItemIds`/`droppedItems`, v2 dogenerowuje puste `droppedItems`. `saveDb.ts` używa `loadSaveData` zamiast starego `isSaveData`.
+
+Faza 6 (upuszczanie itemów, ta sama sesja) podbiła to jeszcze raz do **v3**: `droppedItems: {id, kind, x, z}[]` — w przeciwieństwie do `collectedItemIds` (tylko zbiór id, bo world-gen itemy są odtwarzalne z seeda), pozycje upuszczonych itemów **nie** są wyprowadzalne z seeda, więc cały rekord musi round-tripować przez save.
 
 ## Zakres — zaimplementowane
 
@@ -99,15 +101,29 @@ Zamiast twardo podbić `version` i odrzucać stare save'y, zrobiono **migrację*
 3. `woda-dla-marka` — 1 etap `interact_well`.
 4. `zwiadowca` (giver Piotr, 3 etapy) — `interact_spawner cave` → `spot_animal stag` → `gather_item stone×2`.
 
+### Faza 6 — upuszczanie itemów (ta sama sesja, po scaleniu Faz 1-5)
+
+Jedyna rzecz świadomie odłożona w pierwszej wersji tego planu — dograna po tym, jak Fazy 1-5 wylądowały na branchu (`b5242cb`).
+
+- **`[G]`** (nowy klawisz, edge-triggered jak `[E]`/`[L]`) — `src/input/Keyboard.ts`: `KeyState.drop` + `consumeDrop()`.
+- **`src/items/createDroppedItems.ts`** (nowy) — trzeci rejestr itemów, `DroppedItem = {id, kind, x, z}`; `drop(kind,x,z)` / `collect(id)` / `nodes()` / `dispose()`. Bez respawnu, bez limitu liczby, mesh przez współdzielone `createItemMesh`.
+- `Interactable`/`WorldItemRef.source` (`src/interaction/Interactable.ts`) rozszerzony o `'dropped'`.
+- `createApp.ts`: `[G]` w bloku "nie pauza/dialog/questlog" — dla każdego `ItemKind` z niezerowym stanem w `Inventory` zdejmuje 1 sztukę i upuszcza ją przy graczu (offset na okręgu r=0.6, żeby kilka itemów naraz się nie nakładało); nowa funkcja `collectItem(ref, chunkManager, itemSpawners, droppedItems)` ujednolica pickup z trzech źródeł (`world`/`spawner`/`dropped`) zamiast inline'owego trójskładnikowego warunku; `buildInteractables()` dokłada pętlę po `droppedItems.nodes()`; `rebuildWorld()` przenosi istniejące dropy do przebudowanego świata (chyba że `resetCollectedItems` — wtedy czyści razem z `collectedItemIds`, jak "New Game").
+- `createHud.ts` — hint dopisany o `G = upuść`.
+- `SaveData` v2→v3 (Decyzja 4) — `droppedItems` w `buildSaveData()`/`initialSave`.
+
+**Znaleziony i naprawiony w trakcie bug:** `droppedItems.nodes()` zwraca żywą referencję do wewnętrznej tablicy, a `dispose()` czyści ją w miejscu (`items.length = 0`) — naiwne `const carried = droppedItems.nodes(); droppedItems.dispose()` w `rebuildWorld()` zerowałoby `carried` razem z oryginałem. Naprawione kopiowaniem (`[...droppedItems.nodes()]`) przed `dispose()`.
+
 ## Poza zakresem
 
-- **Upuszczanie/wyrzucanie itemów w świecie** — odłożone na następną sesję.
 - **Zmiana AI zwierząt** (pacyfikacja/oswajanie/karmienie) — interakcja z żywym zwierzęciem jest czysto informacyjna + trigger questowy.
 - **Wizualny glow/highlight na gaze** — osobny plan (`gaze-highlight-labels.md`); ten plan tylko przygotował wspólny `pickInGaze`.
 - **Markery `!`/`?` na studni/drzewach/zwierzętach/itemach** — tylko NPC + spawnery fauny.
 - **Sprawdzanie nachylenia terenu** przy world-gen kamieni ponad już istniejący `SLOPE_REJECT`.
 - **Gwarancja pojawienia się itemu blisko startu** — world-gen itemy pojawiają się tam, gdzie biom pasuje; odnawialna pula blisko osady to świadomy fallback, nie pełne rozwiązanie.
 - **Ikony/sprite'y itemów, UI drag&drop, stackowanie z limitem, crafting.**
+- **Wybór konkretnego itemu do zrzucenia** — `[G]` zawsze upuszcza po 1 sztuce z każdego posiadanego rodzaju naraz, bez selektora.
+- **Limit liczby jednocześnie leżących upuszczonych itemów w świecie.**
 - **Rozgałęzienia dialogowe** poza istniejącym binarnym accept/decline.
 - **Multi-settlement quest routing.**
 - **Generator questów (LLM).**
@@ -124,6 +140,9 @@ src/items/items.ts                       # nowy: ItemKind, ITEM_DEFS, createItem
 src/items/Inventory.ts                   # nowy: klasa Inventory
 src/items/ItemSpawner.ts                 # nowy: odnawialna pula blisko osady (mirror AnimalSpawner.ts)
 src/items/createItemSpawners.ts          # nowy: placement + mesh lifecycle (mirror createFauna.ts)
+src/items/createDroppedItems.ts          # nowy (Faza 6): trzeci rejestr itemów — player-dropped, bez respawnu
+
+src/input/Keyboard.ts                    # + drop (KeyG, edge-triggered), consumeDrop() (Faza 6)
 
 src/terrain/chunkItems.ts                # nowy: computeChunkItems (mirror chunkVegetation.ts), bez respawnu
 src/terrain/chunkHeightmap.worker.ts     # + woła computeChunkItems obok computeChunkVegetation
@@ -145,14 +164,15 @@ src/ui/createNpcDialog.ts                # setPrompt(name) → setPrompt(text)
 src/ui/createQuestLog.ts                 # + render stageIndex/totalStages/currentObjective per wiersz
 src/ui/createHud.ts                      # + setInventory(counts), nowy <span data-inventory>
 
-src/persistence/saveData.ts              # SaveData v1→v2: quests + inventory + collectedItemIds,
-                                          #   isSaveDataV1/V2, loadSaveData migrator
+src/persistence/saveData.ts              # SaveData v1→v2→v3: quests + inventory + collectedItemIds + droppedItems,
+                                          #   isSaveDataV1/V2/V3, loadSaveData migrator (Faza 6: v3)
 src/persistence/saveDb.ts                # readSave() używa loadSaveData zamiast isSaveData
 
 src/app/createApp.ts                     # wiring: Inventory + QuestManager(inventory) + item spawnery/collectedItemIds,
                                           #   buildInteractables(), pickInGaze zamiast findInteractionTarget,
                                           #   resolveInteraction() w handlerze [E], hud.setInventory,
-                                          #   spawner marker per-frame, buildSaveData/initialSave rozszerzone
+                                          #   spawner marker per-frame, buildSaveData/initialSave rozszerzone,
+                                          #   [G] drop handler + collectItem() dispatch + droppedItems (Faza 6)
 
 index.html                               # + CSS dla wiersza etapu w quest logu
 ```
@@ -166,7 +186,8 @@ index.html                               # + CSS dla wiersza etapu w quest logu
 - [x] `shells-dla-kasi`, `woda-dla-marka` — logika end-to-end (offer → reminder przy niepełnym stanie → complete → exp/relation)
 - [x] `zwiadowca` (3 etapy: spawner → spot_animal → gather_item) — logika przechodzenia po kolei, quest log pokazuje `Etap N/3` + opis celu
 - [x] Marker `?`/`!` na etykiecie spawnera fauny reaguje na aktywny quest
-- [x] Save/load: quest progress (w tym `stageIndex`), inventory, `collectedItemIds` w `SaveData` v2; stary save v1 migruje bez błędu (puste quest/inventory/collected)
+- [x] Save/load: quest progress (w tym `stageIndex`), inventory, `collectedItemIds`, `droppedItems` w `SaveData` v3; stare save'y v1/v2 migrują bez błędu
+- [x] `[G]` upuszcza po 1 sztuce każdego posiadanego rodzaju przy graczu; `[E]` na upuszczonym itemie zbiera go z powrotem; dropy przetrwają save/reload i rebuild świata (nie New Game)
 - [x] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
 
 ## Do przetestowania (http://localhost:5577/)
@@ -183,11 +204,13 @@ index.html                               # + CSS dla wiersza etapu w quest logu
 10. **`zwiadowca` (multi-stage)** — accept od Piotra → `[L]` pokazuje "Etap 1/3" → spawner cave → etap 2/3 → wypatrz jelenia (`[E]`) → etap 3/3 → zbierz 2 kamienie → wróć do Piotra → report.
 11. **Quest log** — `[L]`, 4 questy, filtry działają, wiersz multi-stage pokazuje etap+opis.
 12. **Save/load** — zbierz itemy, częściowo ukończ `zwiadowca`, zapisz, wczytaj (Continue) — stan (etap!, inventory, collected ids) identyczny.
-13. **Stary save v1** (jeśli dostępny sprzed tego planu) — wczytanie nie crashuje, questy startują od zera, inventory puste.
+13. **Stary save v1/v2** (jeśli dostępny sprzed tego planu/Fazy 6) — wczytanie nie crashuje, brakujące pola startują puste.
+14. **Upuszczanie (`[G]`)** — zbierz muszlę/kamień, `[G]` — item ląduje przy graczu, HUD spada o 1; `[E]` na nim — wraca do inventory. Upuść oba rodzaje naraz — dwa osobne, nienachodzące na siebie obiekty.
+15. **Upuszczanie + save/reload** — upuść coś, zapisz, wczytaj (Continue) — leży w tym samym miejscu.
+16. **Upuszczanie + New Game** — dropy z poprzedniego świata nie pojawiają się w nowym.
 
 ## Następnie
 
-- **Upuszczanie/wyrzucanie itemów** (odłożone z tej sesji) — dynamiczne, player-tworzone instancje w świecie + ich persystencja pozycji.
 - Wizualny highlight na gaze (`gaze-highlight-labels.md`) — teraz może bezpośrednio reużyć `pickInGaze`/`Interactable` z tego planu zamiast budować własną generalizację od zera.
 - Multi-settlement quest routing, gdy `multi-settlements.md` faktycznie wyląduje w kodzie.
 - Więcej typów itemów (drewno ze stockpile, zioła z ogrodu) — ten sam wzorzec `ItemNode`/`Inventory` się skaluje.

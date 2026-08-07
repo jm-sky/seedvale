@@ -21,7 +21,7 @@ export function createHud(parent: HTMLElement): Hud {
       <span data-exp></span>
       <span data-inventory></span>
     </div>
-    <div class="seedvale-hud__hint">WASD · klik = mysz · Esc = kursor · L = zadania</div>
+    <div class="seedvale-hud__hint">WASD · klik = mysz · Esc = kursor · L = zadania · G = upuść</div>
   `
   parent.appendChild(root)
 

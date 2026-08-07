@@ -6,7 +6,7 @@ import type { ItemKind } from '../items/items'
 export type WorldItemRef = {
   id: string
   kind: ItemKind
-  source: 'world' | 'spawner'
+  source: 'world' | 'spawner' | 'dropped'
 }
 
 /** A thin, per-frame adapter over the game's otherwise-incompatible world-object

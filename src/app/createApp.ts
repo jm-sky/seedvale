@@ -1,6 +1,6 @@
 import { Clock, Fog, type Scene, type Vector3 } from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
-import type { Interactable } from '../interaction/Interactable'
+import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { SaveData } from '../persistence/saveData'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
@@ -13,9 +13,10 @@ import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
+import { createDroppedItems, type DroppedItems } from '../items/createDroppedItems'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
 import { Inventory } from '../items/Inventory'
-import { ITEM_DEFS } from '../items/items'
+import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
 import { QuestManager } from '../quests/QuestManager'
@@ -125,6 +126,7 @@ export async function createApp(
   let settlement = await buildSettlement(scene, chunkManager, config.seed, worldAudio.playOnce)
   let fauna = await buildFauna(scene, chunkManager, settlement, config.seed)
   let itemSpawners = buildItemSpawners(scene, chunkManager, settlement, config.seed)
+  let droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialSave?.droppedItems ?? [])
   const inventory = new Inventory(initialSave?.inventory)
 
   const keyboard = createKeyboard()
@@ -175,6 +177,10 @@ export async function createApp(
       saveWorldConfig(config)
       fauna.dispose()
       itemSpawners.dispose()
+      // Copy before dispose() — nodes() returns a live reference to the
+      // internal array, and dispose() clears it in place.
+      const carriedDrops = resetCollectedItems ? [] : [...droppedItems.nodes()]
+      droppedItems.dispose()
       settlement.dispose()
       ocean.dispose()
       chunkManager.dispose()
@@ -188,6 +194,7 @@ export async function createApp(
       settlement = await buildSettlement(scene, chunkManager, config.seed, worldAudio.playOnce)
       fauna = await buildFauna(scene, chunkManager, settlement, config.seed)
       itemSpawners = buildItemSpawners(scene, chunkManager, settlement, config.seed)
+      droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, carriedDrops)
       player.setGround(chunkManager.sampleHeight, chunkManager.sampleFloor, chunkManager.waterLevel)
       player.setPosition(settlement.spawn.x, settlement.spawn.z)
       hud.setSeed(config.seed)
@@ -199,7 +206,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 2,
+    version: 3,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -220,6 +227,7 @@ export async function createApp(
     },
     inventory: inventory.toJSON(),
     collectedItemIds: [...collectedItemIds],
+    droppedItems: droppedItems.nodes().map((item) => ({ ...item })),
   })
 
   const updateSkyFromGui = () => {
@@ -315,19 +323,22 @@ export async function createApp(
       // drop stale presses so they can't fire right after resume
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
+      keyboard.consumeDrop()
     } else if (npcDialog.isOpen()) {
       npcDialog.setPrompt(null)
       keyboard.consumeQuestLog()
+      keyboard.consumeDrop()
       if (keyboard.consumeInteract()) {
         if (npcDialog.isOffer()) npcDialog.accept()
         else npcDialog.close()
       }
     } else if (questLog.isOpen()) {
       keyboard.consumeInteract()
+      keyboard.consumeDrop()
       if (keyboard.consumeQuestLog()) questLog.close()
     } else {
       const target = pickInGaze(
-        buildInteractables(settlement, fauna, chunkManager, itemSpawners, player.mesh.position),
+        buildInteractables(settlement, fauna, chunkManager, itemSpawners, droppedItems, player.mesh.position),
         player.mesh.position,
         mouseLook.state.yaw,
         INTERACT_RANGE,
@@ -337,10 +348,7 @@ export async function createApp(
       const interactPressed = keyboard.consumeInteract()
       if (target && interactPressed) {
         if (target.kind === 'item') {
-          const collected =
-            target.item.source === 'world'
-              ? chunkManager.collectItem(target.item.id)
-              : itemSpawners.collect(target.item.id)
+          const collected = collectItem(target.item, chunkManager, itemSpawners, droppedItems)
           if (collected) {
             inventory.add(collected.kind)
             hud.setInventory(inventory.toJSON())
@@ -351,6 +359,20 @@ export async function createApp(
         }
       }
       if (keyboard.consumeQuestLog()) openQuestLog()
+      if (keyboard.consumeDrop()) {
+        let dropOffset = 0
+        for (const kind of Object.keys(ITEM_DEFS) as ItemKind[]) {
+          if (!inventory.remove(kind, 1)) continue
+          const angle = dropOffset * ((Math.PI * 2) / 3)
+          droppedItems.drop(
+            kind,
+            player.mesh.position.x + Math.cos(angle) * 0.6,
+            player.mesh.position.z + Math.sin(angle) * 0.6,
+          )
+          dropOffset++
+        }
+        if (dropOffset > 0) hud.setInventory(inventory.toJSON())
+      }
     }
 
     if (!menuPaused && !npcDialog.isOpen() && !questLog.isOpen()) {
@@ -404,6 +426,7 @@ export async function createApp(
     worldAudio.dispose()
     fauna.dispose()
     itemSpawners.dispose()
+    droppedItems.dispose()
     settlement.dispose()
     chunkManager.dispose()
     player.dispose()
@@ -417,13 +440,14 @@ export async function createApp(
 
 /** Assembles this frame's `Interactable` candidates from every world system —
  *  NPCs, the well/trees (settlement landmarks), live fauna, fauna spawn points,
- *  and nearby pickup items (world-generated + the renewable pool). Cheap: a few
- *  dozen objects total, dominated by settlement trees. */
+ *  and nearby pickup items (world-generated + the renewable pool + player-dropped).
+ *  Cheap: a few dozen objects total, dominated by settlement trees. */
 function buildInteractables(
   settlement: Settlement,
   fauna: Fauna,
   chunkManager: ChunkManager,
   itemSpawners: ItemSpawners,
+  droppedItems: DroppedItems,
   playerPos: Vector3,
 ): Interactable[] {
   const list: Interactable[] = []
@@ -485,7 +509,35 @@ function buildInteractables(
     })
   }
 
+  for (const item of droppedItems.nodes()) {
+    list.push({
+      kind: 'item',
+      position: { x: item.x, z: item.z },
+      promptLabel: `Podnieś: ${ITEM_DEFS[item.kind].label}`,
+      item: { id: item.id, kind: item.kind, source: 'dropped' },
+    })
+  }
+
   return list
+}
+
+/** Routes a picked-up `WorldItemRef` to whichever registry it came from —
+ *  world-generated (finite, id-based collected set), the renewable pool near
+ *  the settlement, or a player drop. */
+function collectItem(
+  ref: WorldItemRef,
+  chunkManager: ChunkManager,
+  itemSpawners: ItemSpawners,
+  droppedItems: DroppedItems,
+): { kind: ItemKind, x: number, z: number } | null {
+  switch (ref.source) {
+    case 'dropped':
+      return droppedItems.collect(ref.id)
+    case 'spawner':
+      return itemSpawners.collect(ref.id)
+    case 'world':
+      return chunkManager.collectItem(ref.id)
+  }
 }
 
 function applyDayNight(
