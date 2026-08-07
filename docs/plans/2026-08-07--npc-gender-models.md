@@ -11,6 +11,8 @@ NPC otrzymują imiona z puli `['Anna', 'Piotr', 'Kasia', 'Marek', 'Ola', 'Tomek'
 - Obecne modele: `Farmer`, `Worker`, `Casual_2`, `Casual_Hoodie` — wszystkie postacie **męskie** (Quaternius Modular Men)
 - Brak modeli żeńskich → Kasia, Ola, Zofia, Anna (imiona żeńskie) wyglądają jak mężczyzni
 
+**Poza zakresem tego planu:** dźwięki reakcji NPC (męski/żeński `Hmm`/`Tak?` przy `lookAtPlayer`) — wydzielone do osobnego planu, [npc-reaction-sounds.md](./2026-08-07--npc-reaction-sounds.md), bo to niezależny kawałek pracy (audio, nie modele).
+
 ## Rozwiązanie
 
 1. **Pobierz modele żeńskie** z Quaternius Modular Women (analogiczny zestaw postaci)
@@ -46,6 +48,11 @@ NPC otrzymują imiona z puli `['Anna', 'Piotr', 'Kasia', 'Marek', 'Ola', 'Tomek'
 - [ ] Wizualnie: co najmniej 4+ NPC widoczne, mix płci (mężczyźni i kobiety)
 - [ ] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
 
+## Uwaga: możliwe nakładanie się z character DB
+
+`NPC_NAMES` i `NPC_PERSONALITIES` w `NpcAgent.ts` to dziś dwie osobne tablice indeksowane tym samym `treeIndex`. Jeśli [npc-character-depth.md](./2026-08-07--npc-character-depth.md) (character DB: imię+płeć+osobowość+abilities w jednym miejscu) wyląduje **przed** tym planem, punkt 2 („Mapa płci imienia”) tutaj staje się zbędny — płeć będzie już polem w tamtej strukturze. Który plan implementować pierwszy, nie ma znaczenia dla działania gry — tylko dla tego, który dokument dostaje pole `gender` jako pierwszy.
+
 ## Następnie
 
-- Opcjonalnie: rozszerzyć charakteryzację (imię + cechy backstory) — osobny plan (wspomniane w `npc-interactions.md` i `npc-labels.md` poza v1)
+- Rozszerzona charakteryzacja (osobowość/abilities/energia + przeglądarka NPC) → [npc-character-depth.md](./2026-08-07--npc-character-depth.md)
+- Dźwięki reakcji NPC → [npc-reaction-sounds.md](./2026-08-07--npc-reaction-sounds.md)

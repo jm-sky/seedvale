@@ -3,6 +3,7 @@ import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { SaveData } from '../persistence/saveData'
 import type { ChunkCoord } from '../terrain/chunkGrid'
+import { createWorldAudio } from '../audio/createWorldAudio'
 import { saveWorldConfig } from '../config/persistConfig'
 import { createWorldConfig } from '../config/worldConfig'
 import { createFauna, type Fauna } from '../fauna/createFauna'
@@ -86,6 +87,7 @@ export async function createApp(
 
   const scene = createScene()
   const camera = createCamera(container.clientWidth / container.clientHeight)
+  const worldAudio = createWorldAudio(camera)
 
   const postProcessing = createPostProcessing(
     renderer,
@@ -299,6 +301,7 @@ export async function createApp(
       chunkManager.tickWater(dt)
       chunkManager.tickGrass(dt)
       ocean.update(dt)
+      worldAudio.update(dt)
       minimap.update(player.mesh.position, settlement.center, settlement.npcs)
     }
     postProcessing.render()
@@ -320,6 +323,7 @@ export async function createApp(
     mouseLook.dispose()
     sky.dispose()
     ocean.dispose()
+    worldAudio.dispose()
     fauna.dispose()
     settlement.dispose()
     chunkManager.dispose()

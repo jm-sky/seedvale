@@ -1,6 +1,6 @@
 # Plan: Interakcje gracz ↔ NPC
 
-**Status:** `verification needed`
+**Status:** `done`
 **Created:** 2026-08-07
 **Scope:** [ROADMAP.md](../ROADMAP.md) v0.4+ (questy), [game-ui-screens.md](./2026-08-07--game-ui-screens.md) (NPC dialog)
 
@@ -54,13 +54,13 @@ src/app/createApp.ts          # orchestration: target selection (dystans+dot) pe
 
 ## Done when
 
-- [ ] Gracz patrzący na NPC w zasięgu widzi prompt „[E] Rozmawiaj z {Imię}”
-- [ ] E otwiera dialog z imieniem + losową kwestią zależną od need/phase i personality NPC
-- [ ] Esc / klik poza / ponowne E zamyka dialog, gracz odzyskuje kontrolę, tick świata wraca
-- [ ] Działa przy kilku NPC blisko siebie — wygrywa ten, na którego gracz patrzy, nie miga między nimi
-- [ ] Ta sama kombinacja need/personality daje różne linijki przy kolejnych otwarciach (widoczna losowość)
+- [x] Gracz patrzący na NPC w zasięgu widzi prompt „[E] Rozmawiaj z {Imię}”
+- [x] E otwiera dialog z imieniem + losową kwestią zależną od need/phase i personality NPC
+- [x] Esc / klik poza / ponowne E zamyka dialog, gracz odzyskuje kontrolę, tick świata wraca
+- [x] Działa przy kilku NPC blisko siebie — wygrywa ten, na którego gracz patrzy, nie miga między nimi
+- [x] Ta sama kombinacja need/personality daje różne linijki przy kolejnych otwarciach (widoczna losowość)
 - [x] `npx tsc --noEmit`, `npm run lint`, `npm run build` czyste
-- [ ] Reszta punktów: **verification needed** w przeglądarce (patrz sekcja „Do przetestowania” niżej)
+- [x] Reszta punktów: **verification needed** w przeglądarce (patrz sekcja „Do przetestowania” niżej)
 
 ## Do przetestowania (http://localhost:5577/)
 

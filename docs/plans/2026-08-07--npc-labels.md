@@ -1,9 +1,13 @@
 # NPC labels
 
 Dodajmy labels dla ludzi i zwierząt.
-Zwierzęta - gatunek
-Ludzie:
-- imię
-- potrzeba
+
+Lebels dzielimy na rodzaj NPC:
+- Zwierzęta - gatunek, np. `Lis`
+- Ludzie:
+  - imię
+  - potrzeba
 
 Potem dodajmy plan: Chcę mieć bazę postaci - z imionami, oraz cechami charakteru (do określenia)
+
+→ Baza postaci: [npc-character-depth.md](./2026-08-07--npc-character-depth.md) (osobowość/abilities/energy + ekran „Mieszkańcy”)

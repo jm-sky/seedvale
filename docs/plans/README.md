@@ -22,8 +22,12 @@ Implementation plans for features and larger changes.
 | [2026-08-07--grass-rendering.md](./2026-08-07--grass-rendering.md) | Trawa: instanced ground cover per chunk, reużycie chunk/worker systemu | `done` |
 | [2026-08-07--npc-interactions.md](./2026-08-07--npc-interactions.md) | Interakcje gracz↔NPC: proximity prompt + prosty dialog ([E]) | `done` |
 | [2026-08-07--npc-gender-models.md](./2026-08-07--npc-gender-models.md) | Modele NPC zsynchronizowane z płcią imienia (żeńskie & męskie) | `planned` |
+| [2026-08-07--npc-reaction-sounds.md](./2026-08-07--npc-reaction-sounds.md) | Dźwięki reakcji NPC (Hmm/Tak? przy lookAtPlayer, męskie/żeńskie) | `planned` |
+| [2026-08-07--npc-character-depth.md](./2026-08-07--npc-character-depth.md) | Character DB: szersze osobowości, abilities, HP (współdzielony z fauną) + ekran „Mieszkańcy” | `planned` |
+| [2026-08-07--quests-v1.md](./2026-08-07--quests-v1.md) | Questy v1: minimalny relay quest nad istniejącym dialogiem | `planned` |
+| [2026-08-07--ambient-world-audio.md](./2026-08-07--ambient-world-audio.md) | Ambient audio zależne od obszaru (świerszcze/ptaki dzień-noc, szum fal blisko oceanu) | `planned` |
 | [2026-08-07--minimap.md](./2026-08-07--minimap.md) | Mini-mapa (bottom-left, collapsible, kierunek do osady) | `done` |
-| [2026-08-07--predator-prey-system.md](./2026-08-07--predator-prey-system.md) | Predator-prey z HP, damage na kontakt, spawner + respawn | `planned` |
+| [2026-08-07--predator-prey-system.md](./2026-08-07--predator-prey-system.md) | Predator-prey z HP, damage na kontakt, spawner + respawn | `verification needed` |
 
 When adding a new plan: create `YYYY-MM-DD--slug.md`, add a row here.
 
