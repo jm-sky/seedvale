@@ -2,6 +2,7 @@ import type {
   ChunkTileRequest,
   ChunkTileResponse,
 } from './chunkHeightmapProtocol'
+import { computeChunkEnvironment } from './chunkEnvironment'
 import { computeChunkTile } from './chunkHeightmap'
 import { computeChunkItems } from './chunkItems'
 import { computeChunkVegetation } from './chunkVegetation'
@@ -27,7 +28,8 @@ ctx.onmessage = ({ data: { id, params } }) => {
       roadTint,
     } = tile
     const vegetation = computeChunkVegetation({ cx: params.cx, cz: params.cz }, tile, params)
-    const items = computeChunkItems({ cx: params.cx, cz: params.cz }, tile, params)
+    const items = computeChunkItems({ cx: params.cx, cz: params.cz }, tile, params, vegetation)
+    const environment = computeChunkEnvironment({ cx: params.cx, cz: params.cz }, tile, params, vegetation)
     ctx.postMessage(
       {
         id,
@@ -42,6 +44,7 @@ ctx.onmessage = ({ data: { id, params } }) => {
         roadTint,
         vegetation,
         items,
+        environment,
       },
       [
         heights.buffer,

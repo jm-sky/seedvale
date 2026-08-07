@@ -1,3 +1,4 @@
+import type { EnvironmentPlacement } from './chunkEnvironment'
 import type { ChunkTileData, ChunkTileParams } from './chunkHeightmap'
 import type { ItemPlacement } from './chunkItems'
 import type { VegetationPlacement } from './chunkVegetation'
@@ -7,11 +8,13 @@ export type ChunkTileRequest = {
   params: ChunkTileParams
 }
 
-/** A resolved tile's terrain grids plus its vegetation/item placements — what
- *  the worker pool ultimately hands back to `chunkManager.ts`. */
+/** A resolved tile's terrain grids plus its vegetation/item/decorative
+ *  placements — what the worker pool ultimately hands back to
+ *  `chunkManager.ts`. */
 export type ChunkTileResult = ChunkTileData & {
   vegetation: VegetationPlacement[]
   items: ItemPlacement[]
+  environment: EnvironmentPlacement[]
 }
 
 export type ChunkTileResponse =

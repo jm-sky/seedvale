@@ -84,6 +84,7 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
             roadTint: msg.roadTint,
             vegetation: msg.vegetation,
             items: msg.items,
+            environment: msg.environment,
           })
         } else {
           job.reject(new Error(msg.error))

@@ -35,6 +35,7 @@ Implementation plans for features and larger changes.
 | [2026-08-07--023--mobile-touch-controls.md](./2026-08-07--023--mobile-touch-controls.md) | Sterowanie dotykowe (joystick + look-drag/pinch + przyciski) i responsywny layout (np. Samsung Galaxy A55), bez zmian w logice gry | `done` |
 | [2026-08-07--028--biome-regions.md](./2026-08-07--028--biome-regions.md) | Obszary biomów (pustynia/bagno/las) — makro-oś wilgotności + charakterystyczna roślinność (kaktus, trzcina) | `verification needed` |
 | [2026-08-07--026--roads-and-paths.md](./2026-08-07--026--roads-and-paths.md) | Drogi (międzyosadowe) i ścieżki (osada↔port/przystań) — trasowanie po małej zmianie wysokości + wygładzenie terenu + kolor | `verification needed` |
+| [2026-08-07--030--world-elements-interactions.md](./2026-08-07--030--world-elements-interactions.md) | Naturalne elementy świata: głazy/kamienie/powalone pnie/ogniska (dekoracje) + gałęzie/grzyby/kwiaty/szyszki (zbieralne), preferencje środowiskowe per chunk | `verification needed` |
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
 
