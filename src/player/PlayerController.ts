@@ -1,12 +1,17 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { KeyState } from '../input/Keyboard'
-import type { LookState } from '../input/MouseLook'
+import {
+  CAMERA_DISTANCE_DEFAULT,
+  CAMERA_DISTANCE_MIN,
+  type LookState,
+} from '../input/MouseLook'
 import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
 
 const MOVE_SPEED = 8
-const CAMERA_DISTANCE = 12
-const LOOK_AT_OFFSET = 0.9
+/** Look-at height eases from chest-level (far/default zoom) up toward eye-level as the camera zooms in. */
+const LOOK_AT_OFFSET_FAR = 0.9
+const LOOK_AT_OFFSET_NEAR = 1.6
 const PLAYER_HEIGHT = 1.8
 const PLAYER_LABEL = 'Ja'
 
@@ -237,16 +242,27 @@ export class PlayerController {
   }
 
   private syncCamera(): void {
-    const { yaw, pitch } = this.look
+    const { yaw, pitch, distance } = this.look
     const cosPitch = Math.cos(pitch)
     this.camOffset.set(
       Math.sin(yaw) * cosPitch,
       Math.sin(pitch),
       Math.cos(yaw) * cosPitch,
     )
-    this.camOffset.multiplyScalar(CAMERA_DISTANCE)
+    this.camOffset.multiplyScalar(distance)
 
-    const targetY = this.mesh.position.y + LOOK_AT_OFFSET
+    const zoomT = THREE.MathUtils.clamp(
+      (distance - CAMERA_DISTANCE_MIN) /
+        (CAMERA_DISTANCE_DEFAULT - CAMERA_DISTANCE_MIN),
+      0,
+      1,
+    )
+    const lookAtOffset = THREE.MathUtils.lerp(
+      LOOK_AT_OFFSET_NEAR,
+      LOOK_AT_OFFSET_FAR,
+      zoomT,
+    )
+    const targetY = this.mesh.position.y + lookAtOffset
     this.camera.position.set(
       this.mesh.position.x + this.camOffset.x,
       targetY + this.camOffset.y,
