@@ -21,6 +21,7 @@ import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
 import { createLoadingScreen } from '../ui/createLoadingScreen'
+import { createMinimap } from '../ui/createMinimap'
 import { createNpcDialog } from '../ui/createNpcDialog'
 import { createPauseMenu } from '../ui/createPauseMenu'
 import { createLights } from '../world/createLights'
@@ -106,6 +107,8 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
   const hud = createHud(container)
   hud.setSeed(config.seed)
   hud.setTime(dayNight.timeOfDay)
+
+  const minimap = createMinimap(container)
 
   let rebuilding = false
   const rebuildWorld = async () => {
@@ -229,6 +232,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
       fauna.update(dt, player.mesh.position)
       chunkManager.tickWater(dt)
       ocean.update(dt)
+      minimap.update(player.mesh.position, settlement.center, settlement.npcs)
     }
     renderer.render(scene, camera)
     labelRenderer.render(scene, camera)
@@ -243,6 +247,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     pauseMenu.dispose()
     npcDialog.dispose()
     hud.dispose()
+    minimap.dispose()
     keyboard.dispose()
     mouseLook.dispose()
     sky.dispose()

@@ -1,0 +1,124 @@
+import type { NpcAgent } from '../ai/NpcAgent'
+import type { Vector3 } from 'three'
+
+/** Canvas size in CSS px (square). */
+const SIZE = 200
+/** World units → minimap px. */
+const SCALE = 2
+/** Half-extent of the visible world window, in world units (SIZE / 2 / SCALE). */
+const HALF_RANGE = SIZE / 2 / SCALE
+/** How far from center the settlement direction arrow is drawn when the settlement
+ *  itself is off-map. */
+const ARROW_RADIUS = SIZE / 2 - 14
+
+export type Minimap = {
+  root: HTMLDivElement
+  update: (playerPos: Vector3, settlementPos: Vector3, npcs: readonly NpcAgent[]) => void
+  toggle: () => void
+  dispose: () => void
+}
+
+export function createMinimap(parent: HTMLElement): Minimap {
+  const root = document.createElement('div')
+  root.className = 'seedvale-minimap'
+  root.innerHTML = `
+    <button type="button" class="seedvale-minimap__toggle" data-toggle>[-]</button>
+    <canvas class="seedvale-minimap__canvas" data-canvas></canvas>
+  `
+  parent.appendChild(root)
+
+  const toggleButton = root.querySelector<HTMLButtonElement>('[data-toggle]')!
+  const canvas = root.querySelector<HTMLCanvasElement>('[data-canvas]')!
+  const ctx = canvas.getContext('2d')!
+
+  const dpr = window.devicePixelRatio || 1
+  canvas.width = SIZE * dpr
+  canvas.height = SIZE * dpr
+  canvas.style.width = `${SIZE}px`
+  canvas.style.height = `${SIZE}px`
+  ctx.scale(dpr, dpr)
+
+  let collapsed = false
+  const onToggleClick = () => {
+    collapsed = !collapsed
+    canvas.hidden = collapsed
+    toggleButton.textContent = collapsed ? '[+]' : '[-]'
+  }
+  toggleButton.addEventListener('click', onToggleClick)
+
+  return {
+    root,
+    update(playerPos, settlementPos, npcs) {
+      if (collapsed) return
+
+      ctx.fillStyle = 'rgba(20, 24, 28, 0.72)'
+      ctx.fillRect(0, 0, SIZE, SIZE)
+
+      const centerX = SIZE / 2
+      const centerY = SIZE / 2
+      // World Z grows "south"; map down is +y, so this matches without flipping.
+      const toMapX = (worldX: number) => centerX + (worldX - playerPos.x) * SCALE
+      const toMapY = (worldZ: number) => centerY + (worldZ - playerPos.z) * SCALE
+
+      // NPCs — blue dots, only when on-map.
+      ctx.fillStyle = '#4a89e0'
+      for (const npc of npcs) {
+        const x = toMapX(npc.mesh.position.x)
+        const y = toMapY(npc.mesh.position.z)
+        if (x < 0 || x > SIZE || y < 0 || y > SIZE) continue
+        ctx.beginPath()
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      // Settlement — yellow square, on-map or clamped to an edge arrow.
+      const dx = settlementPos.x - playerPos.x
+      const dz = settlementPos.z - playerPos.z
+      const dist = Math.hypot(dx, dz)
+      ctx.fillStyle = '#e0b34a'
+      if (dist <= HALF_RANGE) {
+        const x = toMapX(settlementPos.x)
+        const y = toMapY(settlementPos.z)
+        ctx.fillRect(x - 4, y - 4, 8, 8)
+      } else if (dist > 1e-4) {
+        const dirX = dx / dist
+        const dirY = dz / dist
+        drawArrow(ctx, centerX + dirX * ARROW_RADIUS, centerY + dirY * ARROW_RADIUS, dirX, dirY)
+      }
+
+      // Player — white diamond, always centered.
+      ctx.fillStyle = '#f2f6fa'
+      ctx.beginPath()
+      ctx.moveTo(centerX, centerY - 5)
+      ctx.lineTo(centerX + 5, centerY)
+      ctx.lineTo(centerX, centerY + 5)
+      ctx.lineTo(centerX - 5, centerY)
+      ctx.closePath()
+      ctx.fill()
+    },
+    toggle: onToggleClick,
+    dispose() {
+      toggleButton.removeEventListener('click', onToggleClick)
+      root.remove()
+    },
+  }
+}
+
+/** Small filled triangle at (x, y) pointing along the unit direction (dirX, dirY). */
+function drawArrow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  dirX: number,
+  dirY: number,
+): void {
+  const size = 7
+  const perpX = -dirY
+  const perpY = dirX
+  ctx.beginPath()
+  ctx.moveTo(x + dirX * size, y + dirY * size)
+  ctx.lineTo(x - dirX * size + perpX * size * 0.6, y - dirY * size + perpY * size * 0.6)
+  ctx.lineTo(x - dirX * size - perpX * size * 0.6, y - dirY * size - perpY * size * 0.6)
+  ctx.closePath()
+  ctx.fill()
+}

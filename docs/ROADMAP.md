@@ -31,11 +31,12 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 | **v0.2** | Osada + 3–5 NPC (woda / drewno / jedzenie) + etykiety + spawn | `done` |
 | **v0.3** | Fauna predators & prey (chase/flee) + GLB art | `done` |
 | **v0.3 art** | Swap fauny na GLB z `public/models/fauna/` (wolf/fox/deer/stag) | `done` |
-| **v0.4+** | Proste questy → później generator (+ OpenRouter); pierwszy krok: [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) | później |
-| **next** | Worker pool dla generacji terenu (offload heightmap) | `planned` — priorytet |
-| **później** | Wizualny overhaul: rośliny (krzewy), niebo/chmury, góry w tle | `planned` — po worker poolu |
-| **później** | Duży/sferyczny świat: chunk streaming + zapis (IndexedDB → DB) | `planned` |
-| **później** | Game UI (ekrany/dialogi, nie tylko lil-gui) | `planned` |
+| **v0.4+** | Proste questy → później generator (+ OpenRouter); pierwszy krok: [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) (`verification needed`) | później |
+| ~~next~~ | ~~Worker pool dla generacji terenu (offload heightmap)~~ | `done` → [plans/2026-08-07--terrain-worker-pool.md](./plans/2026-08-07--terrain-worker-pool.md) |
+| **później** | Wizualny overhaul: rośliny (krzewy), niebo/chmury, góry w tle | `in progress` — rośliny + niebo (bez chmur) done, góry w tle + chmury `planned` → [plans/2026-08-07--world-visual-overhaul.md](./plans/2026-08-07--world-visual-overhaul.md) |
+| **duży świat** | Chunk streaming (load/unload radius, worker gen, duże regiony/oceany/góry) | `done` → [plans/2026-08-07--world-streaming-persistence.md](./plans/2026-08-07--world-streaming-persistence.md) |
+| **później** | Zapis/save (IndexedDB → DB) — "Continue" po demie osady | `planned`, nie ruszone → tamże |
+| **później** | Game UI (ekrany/dialogi, nie tylko lil-gui) | `in progress` — pause menu + character panel done, reszta `planned` |
 | **polish** | Dzień/noc + HUD + time multiplier | `done` |
 
 ## Poza zakresem v0.1–v0.3
@@ -50,10 +51,14 @@ Research: [2026-08-06-threejs-terrain-ai-tech-research.md](./research/2026-08-06
 
 1. [x] Review wody (Claude): [reviews/2026-08-07-water-quality.md](./reviews/2026-08-07-water-quality.md) → follow-up: [issues 001](./issues/2026-08-07--001--water-shore-color-banding.md) (`done`), [002](./issues/2026-08-07--002--water-daynight-integration.md) (`done`)  
 2. [x] GLB fauna pod `AnimalAgent` / `userData.animalKind` (Quaternius: wolf/fox/deer/stag; Idle/Walk/Gallop)  
-3. [ ] **Priorytet (user, 2026-08-07):** worker pool dla generacji terenu → [plans/2026-08-07--terrain-worker-pool.md](./plans/2026-08-07--terrain-worker-pool.md)
-4. [ ] Wizualny overhaul (rośliny/niebo-chmury/góry w tle, insp. SimonDev) — **po** worker poolu → [plans/2026-08-07--world-visual-overhaul.md](./plans/2026-08-07--world-visual-overhaul.md)
-5. [ ] Opcjonalnie: game UI → [plans/2026-08-07--game-ui-screens.md](./plans/2026-08-07--game-ui-screens.md)  
-6. [ ] v0.4 questy — dopiero po decyzji scope; poprzedzone przez interakcje NPC → [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) (`planned`)  
-7. [ ] Duży/sferyczny świat — osobna sesja research/plan zanim implementacja (patrz [plans/2026-08-07--world-streaming-persistence.md](./plans/2026-08-07--world-streaming-persistence.md))
+3. [x] Worker pool dla generacji terenu → [plans/2026-08-07--terrain-worker-pool.md](./plans/2026-08-07--terrain-worker-pool.md) (`done`)
+4. [x] Chunk streaming + duże regiony (oceany/wybrzeża/pasma górskie) + roślinność per-chunk → [plans/2026-08-07--world-streaming-persistence.md](./plans/2026-08-07--world-streaming-persistence.md) (streaming część `done`; cube-sphere/sferyczny świat nadal otwarte pytanie)
+5. [x] NPC dialog (proximity-based, personality lines) → [plans/2026-08-07--npc-interactions.md](./plans/2026-08-07--npc-interactions.md) (`verification needed`)
+5b. [x] Minimapa (collapsible, kierunek do osady) → [plans/2026-08-07--minimap.md](./plans/2026-08-07--minimap.md) (`verification needed`)
+6. [ ] Wizualny overhaul: dokończyć góry w tle + chmury → [plans/2026-08-07--world-visual-overhaul.md](./plans/2026-08-07--world-visual-overhaul.md) (`in progress`)
+7. [ ] Zapis/save (IndexedDB) — "Continue" po demie osady → [plans/2026-08-07--world-streaming-persistence.md](./plans/2026-08-07--world-streaming-persistence.md) (persystencja, nadal `planned`)
+8. [ ] Opcjonalnie: game UI (World config/Notes/NPC dialog screen) → [plans/2026-08-07--game-ui-screens.md](./plans/2026-08-07--game-ui-screens.md) (`in progress`)  
+9. [ ] Nowe pomysły od `7c2969f`: [plans/2026-08-07--grass-rendering.md](./plans/2026-08-07--grass-rendering.md), [plans/2026-08-07--npc-gender-models.md](./plans/2026-08-07--npc-gender-models.md), [plans/2026-08-07--predator-prey-system.md](./plans/2026-08-07--predator-prey-system.md), [plans/2026-08-07--post-processing-pipeline.md](./plans/2026-08-07--post-processing-pipeline.md) — wszystkie `planned`, nieskolejkowane
+10. [ ] v0.4 questy — dopiero po decyzji scope, po NPC interactions (punkt 5)
 
 Handoff szczegółowy: [CLAUDE.md](../CLAUDE.md)

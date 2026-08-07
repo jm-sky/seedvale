@@ -1,8 +1,21 @@
 # Plan: Worker pool dla generacji terenu
 
-**Status:** `planned`
+**Status:** `done`
 **Created:** 2026-08-07
+**Done:** 2026-08-07 — `2ee894d` ("Stream terrain in chunks around the player; offload heightmap gen to workers") + extended in `7c2969f` (large-scale regions, per-chunk vegetation in worker)
 **Priority:** wysoki — user chce zaadresować jak najszybciej (nie czekać na lag jako trigger)
+
+## Zaimplementowane (odbiega od szkicu niżej — patrz kod)
+
+Zamiast pojedynczego workera dla jednej heightmapy, poszło od razu w pełny worker **pool** wpięty w chunk streaming (bo oba tematy okazały się nierozdzielne — patrz [world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md)):
+
+- `src/terrain/chunkWorkerPool.ts` — pula workerów
+- `src/terrain/chunkHeightmap.worker.ts` + `chunkHeightmapProtocol.ts` — protokół komunikacji, transferable `Float32Array`
+- `src/terrain/chunkHeightmap.ts`, `chunkManager.ts`, `chunkGrid.ts`, `buildChunkGeometry.ts` — generacja + lifecycle chunków, wszystko poza main threadem
+- `src/terrain/chunkVegetation.ts` — placement roślinności też liczony w workerze (dodane w `7c2969f`), nie tylko heightmap
+- Loading screen na starcie (async chunk gen + asset loads) — wcześniej blank sky bez feedbacku
+
+Szkic poniżej (jeden worker, brak puli) jest **historyczny** — zostawiony dla kontekstu decyzji, nie odzwierciedla finalnej implementacji.
 
 ## Potrzeba
 

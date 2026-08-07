@@ -1,9 +1,19 @@
 # Plan: streaming świata + zapis (później)
 
-**Status:** `planned`  
+**Status:** `in progress` — streaming części (chunk grid, load/unload radius, worker generacja, duże regiony) **zaimplementowane**; persystencja/zapis (sekcja niżej) wciąż `planned`
 **Created:** 2026-08-07  
-**Updated:** 2026-08-07 — kierunek zmieniony na duży/sferyczny świat (patrz "Kierunek świata" niżej), user priority
-**Priority:** streaming/duży świat — następna duża decyzja architektoniczna (po worker poolu); zapis do bazy dalej po v0.2–v0.3 flow
+**Updated:** 2026-08-07 — streaming zaimplementowany w `2ee894d` (chunk streaming + worker offload) i rozszerzony w `7c2969f` (duże regiony: oceany/wybrzeża/pasma górskie z macro noise, roślinność per-chunk); zapis do bazy **nie ruszony** — brak IndexedDB/save w repo (sprawdzone grepem po `src/`)
+**Priority:** persystencja (save/continue) — jedyna otwarta część tego planu
+
+## Co jest zrobione (streaming)
+
+- `src/terrain/chunkManager.ts` — load/unload radius wokół gracza (Chebyshev distance, hysteresis), pinned home chunk pod osadę
+- `src/terrain/chunkHeightmap.worker.ts` + `chunkWorkerPool.ts` — generacja w workerze, brak reachable edge, RAM ograniczony promieniem załadowanych chunków
+- `src/terrain/chunkVegetation.ts` — roślinność per-chunk, też w workerze
+- Macro noise (continentalness/mountainness + Worley ridge) → realne oceany/wybrzeża/pasma górskie zamiast jednorodnego szumu (`7c2969f`)
+- Woda/ocean, lighting, settlement, fauna zaadaptowane do chunkowanego terenu
+
+**Nie zrobione:** pełny cube-sphere / sferyczny świat (poniższa sekcja "Kierunek świata" — cube-sphere quadtree — pozostaje otwartym pytaniem, nierozstrzygniętym; obecny streaming to flat chunk grid z ringiem wokół gracza, nie sfera). Do zdecydowania czy w ogóle potrzebne, czy dzisiejszy flat/ring streaming "czuje się" wystarczająco bezkrawędziowy.
 
 ## Kierunek świata (decyzja użytkownika, 2026-08-07)
 
@@ -21,22 +31,20 @@ Fundament pod to: [worker pool dla generacji terenu](./2026-08-07--terrain-worke
 1. **Progresywna generacja** — chunki terenu (i potem encji) w miarę ruchu gracza, zamiast jednej `PlaneGeometry` na całą mapę. Docelowo w kierunku dużego/sferycznego świata (patrz wyżej), nie tylko perf-optymalizacja istniejącej jednej mapy.
 2. **Zapis do bazy** — seed, stan świata / gracza / osady, żeby wracać do tej samej doliny i nie tracić postępu.
 
-## Streaming (kierunek)
+## Streaming (kierunek — `done`, szkic niżej zastąpiony realną implementacją)
 
 Wzorce: SimonDev / `3d-portfolio` `TerrainChunkManager` (referencja, nie kopiować legacy Three).
 
-| Element | Szkic |
-|---------|--------|
-| Chunk grid | stały rozmiar (np. 32–64 u), klucz `cx,cz` |
-| Load radius | N chunków wokół gracza; unload poza ringiem |
-| Generacja | worker (FBM + biom) → `Float32Array` → mesh na main |
-| Seams | overlap 1 vertex / shared border heights |
-| Woda / sky | woda per-chunk lub jedna tafla w AABB załadowanych; sky bez zmian |
-| Osada / NPC | pinned do chunka „home”; fauna spawn w załadowanych |
+| Element | Szkic | Stan |
+|---------|--------|------|
+| Chunk grid | stały rozmiar (np. 32–64 u), klucz `cx,cz` | `done` — `chunkGrid.ts` |
+| Load radius | N chunków wokół gracza; unload poza ringiem | `done` — `chunkManager.ts`, hysteresis load/unload |
+| Generacja | worker (FBM + biom) → `Float32Array` → mesh na main | `done` — `chunkHeightmap.worker.ts` + `chunkWorkerPool.ts`, rozszerzone o macro noise/roślinność |
+| Seams | overlap 1 vertex / shared border heights | `done` — `buildChunkGeometry.ts` |
+| Woda / sky | woda per-chunk lub jedna tafla w AABB załadowanych; sky bez zmian | `done` — woda zaadaptowana do chunków (`2ee894d`) |
+| Osada / NPC | pinned do chunka „home”; fauna spawn w załadowanych | `done` |
 
-v0.1–v0.3 celowo **jedna mapa** — streaming gdy mapa / performance przestanie wystarczać.
-
-## Persistencja (kierunek)
+## Persistencja (kierunek — nadal `planned`, nic z tego nie zaimplementowane)
 
 | Warstwa | Kandydaci | Co trzymać |
 |---------|-----------|------------|

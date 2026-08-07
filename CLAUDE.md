@@ -23,7 +23,7 @@ Katalog repo: `three-js-dev` (working dir); nazwa produktu: **Seedvale**.
 Statuses: `todo` · `planned` · `in progress` · `done` · `verification needed`.  
 New issues: `YYYY-MM-DD--NNN--slug.md`; reviews/research/plans: `YYYY-MM-DD--slug.md`.
 
-## Aktualny stan (2026-08-07, koniec sesji)
+## Aktualny stan (2026-08-07, po worker pool + duże regiony)
 
 ### Gotowe
 
@@ -34,11 +34,14 @@ New issues: `YYYY-MM-DD--NNN--slug.md`; reviews/research/plans: `YYYY-MM-DD--slu
 | **v0.3** fauna chase/flee + GLB (wolf/fox/deer/stag) | done |
 | Dzień/noc + HUD + time multiplier | done |
 | Config + lil-gui + `localStorage` | done |
-| Lasy: klastry drzew skalowane do `halfExtent` mapy | done |
 | Flat shading toggle (default: smooth) | done |
 | Assety GLB osada/natura (2. agent) | w toku / częściowo w `public/models/` |
 | Scroll-wheel zoom kamery (distance-aware pitch) | done |
 | Bieganie [Shift] (Run animation z Quaternius GLB) | done |
+| **Worker pool dla generacji terenu** (offload heightmap z main thread) | done — [plans/2026-08-07--terrain-worker-pool.md](docs/plans/2026-08-07--terrain-worker-pool.md) |
+| **Chunk streaming** (load/unload radius wokół gracza, brak reachable edge) + roślinność per-chunk w workerze | done — [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md) (streaming część; zapis/save nadal `planned`) |
+| Duże regiony: oceany/wybrzeża/pasma górskie (macro noise: continentalness/mountainness + Worley ridge) | done |
+| NPC dialog (proximity-based, personality-flavored lines) | done — [plans/2026-08-07--npc-interactions.md](docs/plans/2026-08-07--npc-interactions.md) (`verification needed`) |
 
 ### Stack
 
@@ -50,7 +53,7 @@ Vite + TS + Three (WebGL2) + `simplex-noise` + `lil-gui`. Vanilla (bez R3F).
 src/app/createApp.ts          # orchestration
 src/config/worldConfig.ts     # defaults + URL/storage merge
 src/config/persistConfig.ts   # localStorage key: seedvale:worldConfig:v1
-src/terrain/                  # heightmap, mesh, biom colors, FBM
+src/terrain/                  # chunked heightmap/mesh (worker pool), biom colors, FBM, macro regions, vegetation
 src/world/                    # sky, water, lights, dayNight
 src/settlement/               # site, props (GLB+fallback), NPC wiring
 src/ai/                       # Needs, NpcAgent
@@ -69,11 +72,12 @@ public/models/                # settlement / nature / fauna / characters
 
 ### Otwarte / kolejka
 
-0. **Priorytet (user, 2026-08-07):** worker pool dla generacji terenu → [plans/2026-08-07--terrain-worker-pool.md](docs/plans/2026-08-07--terrain-worker-pool.md) (`planned`, robimy najpierw — offload `generateHeightmap.ts` do Web Workera)
-1. Wizualny overhaul (rośliny/krzewy, niebo/chmury, góry w tle — insp. SimonDev MMORPG devlog) → [plans/2026-08-07--world-visual-overhaul.md](docs/plans/2026-08-07--world-visual-overhaul.md) (`planned`, **po** worker poolu; Mixamo→Blender pipeline rozważony i odłożony — Quaternius modele już mają pełny zestaw animacji)
+0. ~~Worker pool dla generacji terenu~~ → `done` ([plans/2026-08-07--terrain-worker-pool.md](docs/plans/2026-08-07--terrain-worker-pool.md)); ~~chunk streaming + duże regiony (oceany/góry)~~ → `done` ([plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md), streaming część); ~~NPC dialog~~ → `verification needed` ([plans/2026-08-07--npc-interactions.md](docs/plans/2026-08-07--npc-interactions.md)); ~~Minimapa~~ → `verification needed` ([plans/2026-08-07--minimap.md](docs/plans/2026-08-07--minimap.md))
+1. Wizualny overhaul (rośliny/krzewy, niebo/chmury, góry w tle — insp. SimonDev MMORPG devlog) → [plans/2026-08-07--world-visual-overhaul.md](docs/plans/2026-08-07--world-visual-overhaul.md) (`in progress`: rośliny + niebo done, góry w tle + chmury open; Mixamo→Blender pipeline rozważony i odłożony — Quaternius modele już mają pełny zestaw animacji)
 2. Game UI screens (nie lil-gui) → [plans/2026-08-07--game-ui-screens.md](docs/plans/2026-08-07--game-ui-screens.md) (`in progress`: pause menu + Character (imię gracza) done — `src/ui/createPauseMenu.ts`; World config / Notes / NPC dialog open)
-3. Streaming + save DB → [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md) — kierunek zmieniony na **duży/sferyczny świat** (nie tylko flat chunk grid); wymaga osobnej sesji research/plan przed implementacją. Real textures/triplanar dopuszczone jako opcjonalny feature później (nie trzymamy się low-poly na sztywno) — patrz [research/2026-08-07-simodev-refs-review.md](docs/research/2026-08-07-simodev-refs-review.md) Update note
-4. v0.4+ questy
+3. Save/persystencja (IndexedDB) → [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md) — jedyna nieruszona część tego planu; cube-sphere/pełny sferyczny świat nadal otwarte pytanie (nie rozstrzygnięte, obecny streaming to flat chunk grid z ringiem, nie sfera). Real textures/triplanar dopuszczone jako opcjonalny feature później (nie trzymamy się low-poly na sztywno) — patrz [research/2026-08-07-simodev-refs-review.md](docs/research/2026-08-07-simodev-refs-review.md) Update note
+4. Nowe pomysły (`planned`, nieskolejkowane): [plans/2026-08-07--grass-rendering.md](docs/plans/2026-08-07--grass-rendering.md), [plans/2026-08-07--npc-gender-models.md](docs/plans/2026-08-07--npc-gender-models.md), [plans/2026-08-07--predator-prey-system.md](docs/plans/2026-08-07--predator-prey-system.md), [plans/2026-08-07--post-processing-pipeline.md](docs/plans/2026-08-07--post-processing-pipeline.md)
+5. v0.4+ questy
 
 Woda (brzeg + dzień/noc): `done` → [issues 001](docs/issues/2026-08-07--001--water-shore-color-banding.md), [002](docs/issues/2026-08-07--002--water-daynight-integration.md) (review: [docs/reviews/2026-08-07-water-quality.md](docs/reviews/2026-08-07-water-quality.md))
 

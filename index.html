@@ -59,6 +59,38 @@
         font-size: 12px;
         opacity: 0.7;
       }
+      .seedvale-minimap {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        z-index: 5;
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: flex-start;
+        gap: 4px;
+      }
+      .seedvale-minimap__canvas {
+        display: block;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      }
+      .seedvale-minimap__canvas[hidden] {
+        display: none;
+      }
+      .seedvale-minimap__toggle {
+        padding: 2px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 4px;
+        background: rgba(20, 24, 28, 0.72);
+        color: #f2f6fa;
+        font-size: 11px;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      .seedvale-minimap__toggle:hover {
+        background: rgba(20, 24, 28, 0.9);
+      }
       .seedvale-pause {
         position: absolute;
         inset: 0;
