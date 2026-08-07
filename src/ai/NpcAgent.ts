@@ -34,13 +34,23 @@ const NPC_HEIGHT = 1.75
 /** Minimum clearance above waterLevel an NPC will walk into or wander toward. */
 const WATER_MARGIN = 0.3
 
-/** Quaternius Modular Men — village-flavoured variants. */
-export const NPC_MODEL_URLS = [
-  '/models/characters/Farmer.glb',
-  '/models/characters/Worker.glb',
-  '/models/characters/Casual_Hoodie.glb',
-  '/models/characters/Casual_2.glb',
-] as const
+export type NpcGender = 'male' | 'female'
+
+/** Quaternius Modular Men/Women — village-flavoured variants, one pool per gender. */
+export const NPC_MODEL_URLS: Record<NpcGender, readonly string[]> = {
+  male: [
+    '/models/characters/Farmer.glb',
+    '/models/characters/Worker.glb',
+    '/models/characters/Casual_Hoodie.glb',
+    '/models/characters/Casual_2.glb',
+  ],
+  female: [
+    '/models/characters/Female_Worker.glb',
+    '/models/characters/Female_Casual.glb',
+    '/models/characters/Female_Medieval.glb',
+    '/models/characters/Female_Formal.glb',
+  ],
+}
 
 /** Placeholder pool until the character DB (names + traits) lands. */
 const NPC_NAMES = [
@@ -53,6 +63,26 @@ const NPC_NAMES = [
   'Zofia',
   'Jacek',
 ] as const
+
+const NPC_GENDERS: Record<(typeof NPC_NAMES)[number], NpcGender> = {
+  Anna: 'female',
+  Piotr: 'male',
+  Kasia: 'female',
+  Marek: 'male',
+  Ola: 'female',
+  Tomek: 'male',
+  Zofia: 'female',
+  Jacek: 'male',
+}
+
+function nameForIndex(treeIndex: number): (typeof NPC_NAMES)[number] {
+  return NPC_NAMES[treeIndex % NPC_NAMES.length]!
+}
+
+function modelUrlForIndex(treeIndex: number): string {
+  const pool = NPC_MODEL_URLS[NPC_GENDERS[nameForIndex(treeIndex)]]
+  return pool[treeIndex % pool.length]!
+}
 
 type Phase =
   | 'choose'
@@ -81,6 +111,7 @@ export class NpcAgent {
   readonly mesh: THREE.Object3D
   readonly label: CSS2DObject
   readonly name: string
+  readonly gender: NpcGender
   readonly personality: Personality
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
@@ -118,7 +149,9 @@ export class NpcAgent {
     this.waterLevel = waterLevel
     this.landmarks = landmarks
     this.home = home.clone()
-    this.name = NPC_NAMES[treeIndex % NPC_NAMES.length]!
+    const name = nameForIndex(treeIndex)
+    this.name = name
+    this.gender = NPC_GENDERS[name]
     this.personality = NPC_PERSONALITIES[treeIndex % NPC_PERSONALITIES.length]!
     this.treeIndex = treeIndex % Math.max(1, landmarks.trees.length)
     this.needs = createNeedState(needOffset)
@@ -162,7 +195,7 @@ export class NpcAgent {
     home: THREE.Vector3,
     treeIndex: number,
     needOffset: number,
-    modelUrl = NPC_MODEL_URLS[treeIndex % NPC_MODEL_URLS.length]!,
+    modelUrl = modelUrlForIndex(treeIndex),
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)

@@ -1,6 +1,6 @@
 # Plan: Modele NPC zsynchronizowane z płcią imienia
 
-**Status:** `planned`  
+**Status:** `done`  
 **Created:** 2026-08-07  
 **Scope:** Rozszerzenie systemu [npc-interactions.md](./2026-08-07--npc-interactions.md)
 
@@ -41,12 +41,12 @@ NPC otrzymują imiona z puli `['Anna', 'Piotr', 'Kasia', 'Marek', 'Ola', 'Tomek'
 
 ## Done when
 
-- [ ] Quaternius żeńskie modele są w `public/models/characters/Female_*.glb`
-- [ ] `NPC_GENDERS` lub mapowanie płci działa w `NpcAgent`
-- [ ] `NPC_MODEL_URLS` jest rozszerzone na `{ male: [...], female: [...] }`
-- [ ] `NpcAgent.create()` wybiera model na podstawie płci imienia
-- [ ] Wizualnie: co najmniej 4+ NPC widoczne, mix płci (mężczyźni i kobiety)
-- [ ] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] Quaternius żeńskie modele są w `public/models/characters/Female_*.glb` (`Female_Worker`, `Female_Casual`, `Female_Medieval`, `Female_Formal` — Ultimate Modular Women pack, konwersja `.gltf`→`.glb` przez `gltf-transform copy`, zamiast dokładnych nazw z planu bo pack ma inny zestaw strojów niż męski)
+- [x] `NPC_GENDERS` lub mapowanie płci działa w `NpcAgent`
+- [x] `NPC_MODEL_URLS` jest rozszerzone na `{ male: [...], female: [...] }`
+- [x] `NpcAgent.create()` wybiera model na podstawie płci imienia
+- [x] Wizualnie: co najmniej 4+ NPC widoczne, mix płci (mężczyźni i kobiety) — potwierdzone przez użytkownika w przeglądarce (2026-08-07)
+- [x] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
 
 ## Uwaga: możliwe nakładanie się z character DB
 
