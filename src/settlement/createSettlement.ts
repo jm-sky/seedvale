@@ -3,6 +3,7 @@ import {
   Vector3,
 } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
+import type { Place } from './places'
 import type { SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { minorLocationsFor } from './minorLocations'
@@ -78,11 +79,19 @@ export async function createSettlement(
     ? Math.min(5, Math.max(3, landmarks.homes.length + 1))
     : def.npcCount
 
+  // Place v1: formalizes the home assignment that already existed
+  // (`landmarks.homes[i % length]`) as a `Place` instead of a bare
+  // `Vector3` — see `places.ts`. Same fallback as before when a settlement
+  // somehow has no huts (shouldn't happen, but `findSettlementSite` doesn't
+  // guarantee it).
+  const homePlaces: Place[] =
+    landmarks.homes.length > 0
+      ? landmarks.homes.map((position, i) => ({ id: `${def.id}:home:${i}`, type: 'home', position }))
+      : [{ id: `${def.id}:home:fallback`, type: 'home', position: landmarks.well.clone() }]
+
   const agents = await Promise.all(
     Array.from({ length: count }, async (_, i) => {
-      const home =
-        landmarks.homes[i % landmarks.homes.length] ??
-        landmarks.well.clone()
+      const home = homePlaces[i % homePlaces.length]!
       const agent = await NpcAgent.create(
         sampleHeight,
         waterLevel,

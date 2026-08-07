@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
+import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import {
   disposeObject3D,
@@ -215,7 +216,7 @@ export class NpcAgent {
     sampleHeight: HeightSampler,
     waterLevel: number,
     landmarks: SettlementLandmarks,
-    home: THREE.Vector3,
+    home: Place,
     treeIndex: number,
     needOffset: number,
     playSound: (url: string, volume?: number) => void,
@@ -225,7 +226,7 @@ export class NpcAgent {
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.landmarks = landmarks
-    this.home = home.clone()
+    this.home = home.position.clone()
     const character = characterForIndex(treeIndex)
     this.name = nameOverride ?? character.name
     this.gender = character.gender
@@ -246,8 +247,8 @@ export class NpcAgent {
     const wrapper = new THREE.Group()
     wrapper.add(root)
     this.mesh = wrapper
-    this.mesh.position.copy(home)
-    this.mesh.position.y = sampleHeight(home.x, home.z)
+    this.mesh.position.copy(home.position)
+    this.mesh.position.y = sampleHeight(home.position.x, home.position.z)
 
     this.mixer = new THREE.AnimationMixer(root)
     this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral'])
@@ -278,7 +279,7 @@ export class NpcAgent {
     sampleHeight: HeightSampler,
     waterLevel: number,
     landmarks: SettlementLandmarks,
-    home: THREE.Vector3,
+    home: Place,
     treeIndex: number,
     needOffset: number,
     playSound: (url: string, volume?: number) => void = () => {},
@@ -318,7 +319,7 @@ export class NpcAgent {
     sampleHeight: HeightSampler,
     waterLevel: number,
     landmarks: SettlementLandmarks,
-    home: THREE.Vector3,
+    home: Place,
     treeIndex: number,
     needOffset: number,
     playSound: (url: string, volume?: number) => void,
