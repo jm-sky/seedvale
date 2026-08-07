@@ -6,4 +6,4 @@ Notatki i raporty testowe (manual, perf, visual).
 |------|---------|--------|
 | — | (brak) | — |
 
-When adding a new entry: create `YYYY-MM-DD-slug.md`, add a row here.
+When adding a new entry: create `YYYY-MM-DD--slug.md`, add a row here.

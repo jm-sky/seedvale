@@ -10,7 +10,7 @@ Planned review runs — **one AI session per file**. Split scopes where useful.
 
 Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): plik  
 `docs/reviews/to-do--<slug>.md`  
-→ użytkownik zleca Claude osobno. Po starcie: przenieś/przemianuj na `YYYY-MM-DD-slug.md` i zaktualizuj tabelę.
+→ użytkownik zleca Claude osobno. Po starcie: przenieś/przemianuj na `YYYY-MM-DD--slug.md` i zaktualizuj tabelę.
 
 | Review | Scope | Status | File |
 |--------|-------|--------|------|

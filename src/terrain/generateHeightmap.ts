@@ -1,14 +1,6 @@
-import { createNoise2D } from 'simplex-noise'
-import { MathUtils } from 'three'
 import type { WorldConfig } from '../config/worldConfig'
-import { createSeededRandom } from '../world/parseSeed'
-import { fbm01, type FbmParams } from './fbm'
-import { computeBodyScale, detectWaterBodies } from './waterBodies'
-
-/** Normalized radius (0 center, 1 at edge midpoints) where the guaranteed ocean ring starts. */
-const OCEAN_RING_START = 0.95
-/** Normalized radius by which submersion is fully guaranteed, regardless of noise. */
-const OCEAN_RING_END = 1.02
+import type { FbmParams } from './fbm'
+import { computeHeightmapData, type HeightmapData } from './heightmapCompute'
 
 export type HeightmapParams = {
   size: number
@@ -85,79 +77,16 @@ function sampleGrid(
   return hx0 * (1 - tz) + hx1 * tz
 }
 
-export function generateHeightmap(params: HeightmapParams): Heightmap {
-  const {
-    size,
-    resolution,
-    seed,
-    heightScale,
-    waterLevel,
-    noiseScale,
-    fbm,
-    biome,
-  } = params
-
-  const heightNoise = createNoise2D(createSeededRandom(seed))
-  const warp = createNoise2D(createSeededRandom(seed ^ 0x9e3779b9))
-  const biomeNoise = createNoise2D(createSeededRandom(seed ^ 0x85ebca6b))
-
-  const heights = new Float32Array(resolution * resolution)
-  const floorHeights = new Float32Array(resolution * resolution)
-  const biomes = new Float32Array(resolution * resolution)
+/** Reconstructs a `Heightmap` (incl. `sample*` closures) from raw arrays, whether
+ *  they came from the synchronous compute below or a worker's transferred result. */
+export function buildHeightmapFromData(
+  params: HeightmapParams,
+  data: HeightmapData,
+): Heightmap {
+  const { size, resolution } = params
   const half = size / 2
   const step = size / (resolution - 1)
-
-  for (let iz = 0; iz < resolution; iz++) {
-    for (let ix = 0; ix < resolution; ix++) {
-      const wx = -half + ix * step
-      const wz = -half + iz * step
-
-      const wxw = wx + warp(wx * 0.02, wz * 0.02) * 12
-      const wzw = wz + warp(wx * 0.02 + 40, wz * 0.02 + 40) * 12
-
-      const n = fbm01(heightNoise, wxw / noiseScale, wzw / noiseScale, fbm)
-
-      const nx = wx / half
-      const nz = wz / half
-      const edge = Math.sqrt(nx * nx + nz * nz)
-      const falloff = 1 - Math.min(1, edge ** 1.35 * 0.88)
-
-      let h = n * heightScale * (0.25 + 0.75 * falloff)
-
-      // Guaranteed ocean ring: force height toward a (virtual, far-below-waterLevel)
-      // floor as we approach the map edge, independent of noise, so a contiguous sea
-      // forms for every seed. Blending `h` toward a floor only slightly below
-      // waterLevel wouldn't guarantee anything — noise can push the raw height up to
-      // heightScale, so the blend needs a floor steep enough that it crosses below
-      // waterLevel early in the ring band rather than only at ringT=1. The exact
-      // floor value has no visual meaning beyond "below waterLevel": the clamp right
-      // below flattens every submerged cell to exactly waterLevel anyway.
-      const ringT = MathUtils.smoothstep(edge, OCEAN_RING_START, OCEAN_RING_END)
-      if (ringT > 0) {
-        const virtualOceanFloor = waterLevel - heightScale * 3
-        h = MathUtils.lerp(h, virtualOceanFloor, ringT)
-      }
-
-      const idx = iz * resolution + ix
-      floorHeights[idx] = h
-
-      if (h < waterLevel) h = waterLevel
-
-      const m = fbm01(
-        biomeNoise,
-        wx / biome.noiseScale,
-        wz / biome.noiseScale,
-        biome.fbm,
-      )
-
-      heights[idx] = h
-      biomes[idx] = m
-    }
-  }
-
-  const waterBodies = detectWaterBodies(heights, resolution, waterLevel, step)
-  const bodyScale = computeBodyScale(waterBodies)
-
+  const { heights, floorHeights, biomes, bodyScale } = data
   return {
     params,
     heights,
@@ -168,4 +97,8 @@ export function generateHeightmap(params: HeightmapParams): Heightmap {
     sampleFloor: (x, z) => sampleGrid(floorHeights, resolution, half, step, x, z),
     sampleBiome: (x, z) => sampleGrid(biomes, resolution, half, step, x, z),
   }
+}
+
+export function generateHeightmap(params: HeightmapParams): Heightmap {
+  return buildHeightmapFromData(params, computeHeightmapData(params))
 }

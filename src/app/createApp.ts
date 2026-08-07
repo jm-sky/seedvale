@@ -11,10 +11,12 @@ import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
 import { createSettlement, type Settlement } from '../settlement/createSettlement'
 import { createTerrainMesh, type Terrain } from '../terrain/createTerrainMesh'
+import { heightmapParamsFromConfig } from '../terrain/generateHeightmap'
 import {
-  generateHeightmap,
-  heightmapParamsFromConfig,
-} from '../terrain/generateHeightmap'
+  disposeHeightmapWorker,
+  generateHeightmapAsync,
+  HeightmapGenerationCancelledError,
+} from '../terrain/heightmapWorkerPool'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
 import { createPauseMenu } from '../ui/createPauseMenu'
@@ -53,7 +55,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
   sky.addTo(scene)
   sky.applySun(lights.sun)
 
-  let terrain = buildTerrain(scene, config)
+  let terrain = await buildTerrain(scene, config)
   let water = buildWater(scene, terrain)
   let ocean = buildOcean(scene, terrain)
   let settlement = await buildSettlement(scene, terrain, config.seed)
@@ -78,29 +80,40 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
   hud.setSeed(config.seed)
   hud.setTime(dayNight.timeOfDay)
 
+  let rebuilding = false
   const rebuildWorld = async () => {
-    syncSeedInUrl(config.seed)
-    saveWorldConfig(config)
-    fauna.dispose()
-    settlement.dispose()
-    water.dispose()
-    ocean.dispose()
-    terrain.mesh.removeFromParent()
-    terrain.dispose()
-    terrain = buildTerrain(scene, config)
-    water = buildWater(scene, terrain)
-    ocean = buildOcean(scene, terrain)
-    settlement = await buildSettlement(scene, terrain, config.seed)
-    fauna = await buildFauna(scene, terrain, settlement, config.seed)
-    player.setGround(
-      terrain.sampleHeight,
-      terrain.sampleFloor,
-      terrain.waterLevel,
-      terrain.halfExtent,
-    )
-    player.setPosition(settlement.spawn.x, settlement.spawn.z)
-    hud.setSeed(config.seed)
-    pauseMenu.setSeed(config.seed)
+    if (rebuilding) return
+    rebuilding = true
+    gui.setBusy(true)
+    try {
+      syncSeedInUrl(config.seed)
+      saveWorldConfig(config)
+      fauna.dispose()
+      settlement.dispose()
+      water.dispose()
+      ocean.dispose()
+      terrain.mesh.removeFromParent()
+      terrain.dispose()
+      terrain = await buildTerrain(scene, config)
+      water = buildWater(scene, terrain)
+      ocean = buildOcean(scene, terrain)
+      settlement = await buildSettlement(scene, terrain, config.seed)
+      fauna = await buildFauna(scene, terrain, settlement, config.seed)
+      player.setGround(
+        terrain.sampleHeight,
+        terrain.sampleFloor,
+        terrain.waterLevel,
+        terrain.halfExtent,
+      )
+      player.setPosition(settlement.spawn.x, settlement.spawn.z)
+      hud.setSeed(config.seed)
+      pauseMenu.setSeed(config.seed)
+    } catch (err) {
+      if (!(err instanceof HeightmapGenerationCancelledError)) throw err
+    } finally {
+      gui.setBusy(false)
+      rebuilding = false
+    }
   }
 
   const updateSkyFromGui = () => {
@@ -189,6 +202,7 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     settlement.dispose()
     terrain.dispose()
     player.dispose()
+    disposeHeightmapWorker()
     labelRenderer.domElement.remove()
     renderer.dispose()
     renderer.domElement.remove()
@@ -226,11 +240,11 @@ function applyDayNight(
   ocean.setDayNight(p.dayFactor, sky.sunPosition)
 }
 
-function buildTerrain(
+async function buildTerrain(
   scene: Scene,
   config: ReturnType<typeof createWorldConfig>,
-): Terrain {
-  const heightmap = generateHeightmap(heightmapParamsFromConfig(config))
+): Promise<Terrain> {
+  const heightmap = await generateHeightmapAsync(heightmapParamsFromConfig(config))
   const terrain = createTerrainMesh(heightmap, config.terrain.flatShading)
   scene.add(terrain.mesh)
   return terrain

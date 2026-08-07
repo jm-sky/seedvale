@@ -5,4 +5,7 @@ export default defineConfig({
     port: 5577,
     strictPort: true,
   },
+  worker: {
+    format: 'es',
+  },
 })

@@ -5,6 +5,13 @@ Katalog repo: `three-js-dev` (working dir); nazwa produktu: **Seedvale**.
 
 **Dev:** `npm run dev` → http://localhost:5577/ (`vite.config.ts`, `strictPort`)
 
+## Testowanie zmian w przeglądarce
+
+**Nie uruchamiaj headless Chrome/Playwright samodzielnie do testowania zmian** (wolne, marudne selektory, słaba jakość sygnału). Zamiast tego:
+
+1. Zweryfikuj technicznie: `npx tsc --noEmit`, `npm run lint` (ewentualnie `npx eslint <zmienione pliki>`), `npm run build`.
+2. Dev server zwykle już działa na `localhost:5577` — **poproś użytkownika o przetestowanie w jego przeglądarce** (konkretne kroki: co kliknąć, czego się spodziewać) zamiast robić to sam.
+
 ## Docs workflow
 
 - **Issues:** [docs/issues/README.md](docs/issues/README.md)
@@ -14,7 +21,7 @@ Katalog repo: `three-js-dev` (working dir); nazwa produktu: **Seedvale**.
 - **Roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Statuses: `todo` · `planned` · `in progress` · `done` · `verification needed`.  
-New issues: `YYYY-MM-DD--NNN--slug.md`; reviews/research/plans: `YYYY-MM-DD-slug.md`.
+New issues: `YYYY-MM-DD--NNN--slug.md`; reviews/research/plans: `YYYY-MM-DD--slug.md`.
 
 ## Aktualny stan (2026-08-07, koniec sesji)
 

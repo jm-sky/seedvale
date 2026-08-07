@@ -1,4 +1,4 @@
-import GUI from 'lil-gui'
+import GUI, { type Controller } from 'lil-gui'
 import type { WorldConfig } from '../config/worldConfig'
 import type { DayNightState } from '../world/dayNight'
 import { triangleCount } from '../config/worldConfig'
@@ -14,7 +14,7 @@ export function createDebugGui(
   config: WorldConfig,
   dayNight: DayNightState,
   handlers: DebugGuiHandlers,
-): { dispose: () => void; toggle: () => void } {
+): { dispose: () => void; toggle: () => void; setBusy: (busy: boolean) => void } {
   const gui = new GUI({ title: 'Seedvale' })
 
   const info = {
@@ -23,8 +23,23 @@ export function createDebugGui(
     },
   }
 
+  /** Every controller that triggers a terrain regen — disabled while one is in flight. */
+  const terrainControllers: Controller[] = []
+  const status = {
+    busy: false,
+    get state() {
+      return status.busy ? 'Regenerating…' : 'Idle'
+    },
+  }
+
   const world = gui.addFolder('World')
-  world.add(config, 'seed', 0, 9999, 1).name('Seed').onFinishChange(handlers.onTerrainChange)
+  world.add(status, 'state').name('Terrain status').listen().disable()
+  terrainControllers.push(
+    world
+      .add(config, 'seed', 0, 9999, 1)
+      .name('Seed')
+      .onFinishChange(handlers.onTerrainChange),
+  )
 
   const clock = gui.addFolder('Day / night')
   clock
@@ -46,54 +61,72 @@ export function createDebugGui(
     .onChange(() => handlers.onDayNightChange?.())
 
   const terrain = gui.addFolder('Terrain mesh')
-  terrain
-    .add(config.terrain, 'resolution', {
-      'Low (65)': 65,
-      'Medium (129)': 129,
-      'High (193)': 193,
-      'Higher (257)': 257,
-      'Ultra (385)': 385,
-      'Extreme (513)': 513,
-      'Insane (769)': 769,
-    })
-    .name('Resolution')
-    .onFinishChange(handlers.onTerrainChange)
-  terrain
-    .add(config.terrain, 'flatShading')
-    .name('Flat shading (low-poly)')
-    .onFinishChange(handlers.onTerrainChange)
+  terrainControllers.push(
+    terrain
+      .add(config.terrain, 'resolution', {
+        'Low (65)': 65,
+        'Medium (129)': 129,
+        'High (193)': 193,
+        'Higher (257)': 257,
+        'Ultra (385)': 385,
+        'Extreme (513)': 513,
+        'Insane (769)': 769,
+      })
+      .name('Resolution')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    terrain
+      .add(config.terrain, 'flatShading')
+      .name('Flat shading (low-poly)')
+      .onFinishChange(handlers.onTerrainChange),
+  )
   terrain.add(info, 'triangles').name('Triangles').listen().disable()
-  terrain
-    .add(config.terrain, 'size', 64, 256, 8)
-    .name('Map size')
-    .onFinishChange(handlers.onTerrainChange)
-  terrain
-    .add(config.terrain, 'heightScale', 4, 40, 0.5)
-    .name('Height scale')
-    .onFinishChange(handlers.onTerrainChange)
-  terrain
-    .add(config.terrain, 'waterLevel', 0, 4, 0.05)
-    .name('Water level')
-    .onFinishChange(handlers.onTerrainChange)
-  terrain
-    .add(config.terrain, 'noiseScale', 24, 200, 1)
-    .name('Noise scale')
-    .onFinishChange(handlers.onTerrainChange)
+  terrainControllers.push(
+    terrain
+      .add(config.terrain, 'size', 64, 256, 8)
+      .name('Map size')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    terrain
+      .add(config.terrain, 'heightScale', 4, 40, 0.5)
+      .name('Height scale')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    terrain
+      .add(config.terrain, 'waterLevel', 0, 4, 0.05)
+      .name('Water level')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    terrain
+      .add(config.terrain, 'noiseScale', 24, 200, 1)
+      .name('Noise scale')
+      .onFinishChange(handlers.onTerrainChange),
+  )
 
   const fbm = terrain.addFolder('FBM')
-  fbm
-    .add(config.terrain.fbm, 'octaves', 1, 8, 1)
-    .onFinishChange(handlers.onTerrainChange)
-  fbm
-    .add(config.terrain.fbm, 'persistence', 0.2, 0.9, 0.01)
-    .onFinishChange(handlers.onTerrainChange)
-  fbm
-    .add(config.terrain.fbm, 'lacunarity', 1.2, 3, 0.05)
-    .onFinishChange(handlers.onTerrainChange)
-  fbm
-    .add(config.terrain.fbm, 'exponentiation', 0.5, 5, 0.05)
-    .name('Exponentiation')
-    .onFinishChange(handlers.onTerrainChange)
+  terrainControllers.push(
+    fbm.add(config.terrain.fbm, 'octaves', 1, 8, 1).onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    fbm
+      .add(config.terrain.fbm, 'persistence', 0.2, 0.9, 0.01)
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    fbm
+      .add(config.terrain.fbm, 'lacunarity', 1.2, 3, 0.05)
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    fbm
+      .add(config.terrain.fbm, 'exponentiation', 0.5, 5, 0.05)
+      .name('Exponentiation')
+      .onFinishChange(handlers.onTerrainChange),
+  )
 
   const sky = gui.addFolder('Sky (manual)')
   sky
@@ -109,10 +142,18 @@ export function createDebugGui(
     .add(config.sky, 'rayleigh', 0.1, 4, 0.05)
     .onChange(handlers.onSkyChange)
 
-  gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild terrain')
+  terrainControllers.push(
+    gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild terrain'),
+  )
+
+  function setBusy(busy: boolean): void {
+    status.busy = busy
+    for (const c of terrainControllers) c.disable(busy)
+  }
 
   return {
     dispose: () => gui.destroy(),
     toggle: () => gui.show(gui._hidden),
+    setBusy,
   }
 }
