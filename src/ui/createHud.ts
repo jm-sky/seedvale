@@ -1,3 +1,4 @@
+import { isTouchDevice } from '../input/isTouchDevice'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { formatClock, phaseName } from '../world/dayNight'
 
@@ -21,7 +22,11 @@ export function createHud(parent: HTMLElement): Hud {
       <span data-exp></span>
       <span data-inventory></span>
     </div>
-    <div class="seedvale-hud__hint">WASD · klik = mysz · Esc = kursor · L = zadania · G = upuść</div>
+    <div class="seedvale-hud__hint">${
+      isTouchDevice()
+        ? 'Joystick = ruch · przeciągnij = kamera · E = interakcja'
+        : 'WASD · klik = mysz · Esc = kursor · L = zadania · G = upuść'
+    }</div>
   `
   parent.appendChild(root)
 

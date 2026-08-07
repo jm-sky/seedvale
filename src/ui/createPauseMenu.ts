@@ -1,3 +1,5 @@
+import { isTouchDevice } from '../input/isTouchDevice'
+
 export type PauseMenuHandlers = {
   onPause: () => void
   onResume: () => void
@@ -14,6 +16,7 @@ export type PauseMenuHandlers = {
 
 export type PauseMenu = {
   isPaused: () => boolean
+  togglePause: () => void
   setSeed: (seed: number) => void
   dispose: () => void
 }
@@ -51,7 +54,11 @@ export function createPauseMenu(
       <button type="button" data-save class="seedvale-pause__button seedvale-pause__button--ghost">Save<span data-save-status class="seedvale-pause__save-status"></span></button>
       <button type="button" data-gui class="seedvale-pause__button seedvale-pause__button--ghost">Toggle debug panel</button>
       <button type="button" data-new-game class="seedvale-pause__button seedvale-pause__button--danger">New Game</button>
-      <div class="seedvale-pause__hint">WASD — ruch · mysz (klik) — rozglądanie · Esc — pauza</div>
+      <div class="seedvale-pause__hint">${
+        isTouchDevice()
+          ? 'Joystick — ruch · przeciągnij ekran — rozglądanie · ☰ — pauza'
+          : 'WASD — ruch · mysz (klik) — rozglądanie · Esc — pauza'
+      }</div>
     </div>
   `
   parent.appendChild(root)
@@ -119,6 +126,7 @@ export function createPauseMenu(
 
   return {
     isPaused: () => paused,
+    togglePause: () => setPaused(!paused),
     setSeed(nextSeed) {
       seedEl.textContent = String(nextSeed)
     },

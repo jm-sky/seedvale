@@ -1,3 +1,5 @@
+import { isTouchDevice } from '../input/isTouchDevice'
+
 export type NpcDialogHandlers = {
   onClose?: () => void
 }
@@ -7,8 +9,10 @@ export type NpcDialogOffer = {
   onDecline: () => void
 }
 
-const DEFAULT_HINT = 'Esc / E — zamknij'
-const OFFER_HINT = '[E] Przyjmij  ·  [Esc] Odmów'
+const DEFAULT_HINT = isTouchDevice() ? 'Dotknij poza oknem — zamknij' : 'Esc / E — zamknij'
+const OFFER_HINT = isTouchDevice()
+  ? '[E] Przyjmij  ·  dotknij poza oknem — odmów'
+  : '[E] Przyjmij  ·  [Esc] Odmów'
 
 export type NpcDialog = {
   /** `text` is the full action description (e.g. "Rozmawiaj z Anna", "Zaczerpnij

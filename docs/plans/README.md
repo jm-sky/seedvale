@@ -32,6 +32,7 @@ Implementation plans for features and larger changes.
 | [2026-08-07--quests-v2-world-interactions.md](./2026-08-07--quests-v2-world-interactions.md) | Questy v2: multi-stage + interakcje ze światem (zwierzęta/studnia/drzewa/spawnery) + itemy (muszle/kamienie, world-gen + odnawialna pula) | `verification needed` |
 | [2026-08-07--npc-2-daily-routine-and-place.md](./2026-08-07--npc-2-daily-routine-and-place.md) | NPC Place system, przycięty do minimum: formalizacja `home` (już działa de facto); per-rola workplace/schedule odłożone | `planned` |
 | [2026-08-07--npc-3-animal-life.md](./2026-08-07--npc-3-animal-life.md) | Animal Life, przycięty do warstwy needs: hunger/thirst/energy → wander bias na `AnimalAgent`; memory/territory/population save odłożone | `planned` |
+| [2026-08-07--mobile-touch-controls.md](./2026-08-07--mobile-touch-controls.md) | Sterowanie dotykowe (joystick + look-drag/pinch + przyciski) i responsywny layout (np. Samsung Galaxy A55), bez zmian w logice gry | `done` |
 
 When adding a new plan: create `YYYY-MM-DD--slug.md`, add a row here.
 

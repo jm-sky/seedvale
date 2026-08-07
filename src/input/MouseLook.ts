@@ -1,3 +1,5 @@
+import { isTouchDevice } from './isTouchDevice'
+
 export type LookState = {
   yaw: number
   pitch: number
@@ -29,6 +31,15 @@ function pitchMaxFor(distance: number): number {
     1,
   )
   return PITCH_MAX_NEAR + (PITCH_MAX_FAR - PITCH_MAX_NEAR) * t
+}
+
+/** Shared with touch-drag look / pinch-zoom so every input source clamps identically. */
+export function clampDistance(distance: number): number {
+  return clamp(distance, CAMERA_DISTANCE_MIN, CAMERA_DISTANCE_MAX)
+}
+
+export function clampPitch(pitch: number, distance: number): number {
+  return clamp(pitch, PITCH_MIN, pitchMaxFor(distance))
 }
 
 export function createMouseLook(target: HTMLElement): {
@@ -64,15 +75,22 @@ export function createMouseLook(target: HTMLElement): {
     event.preventDefault()
   }
 
-  target.addEventListener('click', onClick)
-  document.addEventListener('mousemove', onMouseMove)
+  // Touch devices drive yaw/pitch/distance from createTouchControls instead —
+  // pointer lock needs real `mousemove` events, which touch drags never fire.
+  const touch = isTouchDevice()
+  if (!touch) {
+    target.addEventListener('click', onClick)
+    document.addEventListener('mousemove', onMouseMove)
+  }
   target.addEventListener('wheel', onWheel, { passive: false })
 
   return {
     state,
     dispose: () => {
-      target.removeEventListener('click', onClick)
-      document.removeEventListener('mousemove', onMouseMove)
+      if (!touch) {
+        target.removeEventListener('click', onClick)
+        document.removeEventListener('mousemove', onMouseMove)
+      }
       target.removeEventListener('wheel', onWheel)
       if (document.pointerLockElement === target) {
         document.exitPointerLock()

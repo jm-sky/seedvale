@@ -45,6 +45,7 @@ New issues: `YYYY-MM-DD--NNN--slug.md`; reviews/research/plans: `YYYY-MM-DD--slu
 | NPC dialog (proximity-based, personality-flavored lines) | done — [plans/2026-08-07--npc-interactions.md](docs/plans/2026-08-07--npc-interactions.md) (`verification needed`) |
 | **Save/persystencja** (single-slot IndexedDB, Continue/New Game start screen, Save + New Game w pause menu) | done — [plans/2026-08-07--world-streaming-persistence.md](docs/plans/2026-08-07--world-streaming-persistence.md), `src/persistence/` |
 | **Post-processing pipeline** (EffectComposer + N8AO ambient occlusion + SMAA) | done — [plans/2026-08-07--post-processing-pipeline.md](docs/plans/2026-08-07--post-processing-pipeline.md), `src/render/createPostProcessing.ts` |
+| **Sterowanie dotykowe / mobile** (joystick + look-drag/pinch-zoom + przyciski E/Sprint/G/L/☰, responsywny CSS) | done — [plans/2026-08-07--mobile-touch-controls.md](docs/plans/2026-08-07--mobile-touch-controls.md), `src/input/createTouchControls.ts` |
 
 ### Stack
 
