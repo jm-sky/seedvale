@@ -9,9 +9,12 @@ import {
 } from '../assets/loadGltf'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import {
-  NPC_PERSONALITIES,
-  PAUSE_PARAMS,
+  type BigFivePersonality,
+  nearestArchetype,
+  pausePersonalityParams,
+  type PausePersonalityParams,
   type Personality,
+  personalityForIndex,
   pickDialogueLine,
 } from './dialogue'
 import {
@@ -135,7 +138,9 @@ export class NpcAgent {
   readonly label: CSS2DObject
   readonly name: string
   readonly gender: NpcGender
-  readonly personality: Personality
+  readonly personality: BigFivePersonality
+  private readonly dialogueArchetype: Personality
+  private readonly pauseParams: PausePersonalityParams
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
   private readonly landmarks: SettlementLandmarks
@@ -181,7 +186,9 @@ export class NpcAgent {
     const name = nameForIndex(treeIndex)
     this.name = name
     this.gender = NPC_GENDERS[name]
-    this.personality = NPC_PERSONALITIES[treeIndex % NPC_PERSONALITIES.length]!
+    this.personality = personalityForIndex(treeIndex)
+    this.dialogueArchetype = nearestArchetype(this.personality)
+    this.pauseParams = pausePersonalityParams(this.personality)
     this.treeIndex = treeIndex % Math.max(1, landmarks.trees.length)
     this.needs = createNeedState(needOffset)
 
@@ -292,7 +299,7 @@ export class NpcAgent {
   }
 
   getDialogueLine(): string {
-    return pickDialogueLine(this.personality, this.activeNeed, this.isBusyPhase())
+    return pickDialogueLine(this.dialogueArchetype, this.activeNeed, this.isBusyPhase())
   }
 
   setQuestMarker(marker: string | null): void {
@@ -315,7 +322,7 @@ export class NpcAgent {
     if (this.pauseCooldown <= 0 && PAUSE_INTERRUPTIBLE_PHASES.includes(this.phase)) {
       const dx = this.mesh.position.x - observerPos.x
       const dz = this.mesh.position.z - observerPos.z
-      const params = PAUSE_PARAMS[this.personality]
+      const params = this.pauseParams
       if (Math.hypot(dx, dz) < params.triggerDistance) {
         this.previousPhase = this.phase
         this.phase = 'lookAtPlayer'
@@ -385,7 +392,7 @@ export class NpcAgent {
         if (this.pauseTimer <= 0) {
           this.phase = this.previousPhase ?? 'choose'
           this.previousPhase = null
-          this.pauseCooldown = randRange(PAUSE_PARAMS[this.personality].cooldownRange)
+          this.pauseCooldown = randRange(this.pauseParams.cooldownRange)
         }
         break
       }

@@ -1,6 +1,6 @@
 # Plan: Głębsza charakteryzacja NPC (role/traits/Big Five personality/HP) + ekran „Mieszkańcy”
 
-**Status:** `planned`
+**Status:** `in progress` — sekcja 2 (Personality → Big Five) zaimplementowana, reszta (`CharacterDef`, role, traits, wspólny `HealthState`, ekran Mieszkańcy) nadal `planned`
 **Created:** 2026-08-07
 **Scope:** Rozszerza [npc-interactions.md](./2026-08-07--npc-interactions.md) (personality już istnieje, tu idziemy głębiej); character DB wspomniana w [npc-labels.md](./2026-08-07--npc-labels.md) i „Następne” z `npc-interactions.md`; UI ekran nadbudowuje [game-ui-screens.md](./2026-08-07--game-ui-screens.md); **scala [npc-1-identity.md](./2026-08-07--npc-1-identity.md)** (ChatGPT draft, review + decyzja scalenia: 2026-08-07 — `role`/`traits`/Big Five wchodzą tutaj, tamten plik nie jest wdrażany osobno)
 
@@ -157,7 +157,7 @@ src/ui/createPauseMenu.ts     # + przycisk otwierający ekran Mieszkańcy
 
 - [ ] `CharacterDef`/`characters.ts` (name/role/personality/traits) zastępuje równoległe tablice, `NpcAgent` z niego korzysta
 - [ ] `role` (`woodcutter`/`farmer`/`guard`/`trader`) obecny jako dana w `CharacterDef` — bez zachowania w v1 (patrz `npc-2-daily-routine-and-place.md`)
-- [ ] `BigFivePersonality` (OCEAN) zastępuje dyskretny `Personality` jako źródło danych; `nearestArchetype()` mapuje na istniejący `BANK`/`PAUSE_PARAMS` (bucket) bez regresji w dialogu; `PAUSE_PARAMS` liczone formułą z surowych wymiarów (nie z bucketu) — patrz „2. Personality → Big Five”
+- [x] `BigFivePersonality` (OCEAN) zastępuje dyskretny `Personality` jako źródło danych; `nearestArchetype()` mapuje na istniejący `BANK`/`PAUSE_PARAMS` (bucket) bez regresji w dialogu; `PAUSE_PARAMS` liczone formułą z surowych wymiarów (nie z bucketu) — patrz „2. Personality → Big Five” (`src/ai/dialogue.ts`: `personalityForIndex`/`nearestArchetype`/`pausePersonalityParams`; `NpcAgent.personality` teraz `BigFivePersonality`, cache'owane `dialogueArchetype`/`pauseParams` w konstruktorze; deterministyczny per-NPC jitter wokół archetype-anchora, sin-hash jak `terrainTintNoise` w `biomeColors.ts`)
 - [ ] 1-2 traits per NPC (zamiast dawnych „abilities”), każdy realnie zmienia liczbę w `NpcAgent` (nie tylko tag w UI)
 - [ ] NPC korzysta ze **współdzielonego** `HealthState` (`src/shared/HealthState.ts`), nie osobnego typu — `currentHp` spada/regeneruje się widocznie, wpływa na prędkość/czas pracy przy niskim poziomie, nigdy nie osiąga 0
 - [ ] Refaktor `src/fauna/HealthState.ts`/`AnimalAgent.ts` nie zmienił zachowania fauny — regresja: powtórz test z `predator-prey-system.md` (wilk/lis łapie sarnę/jelenia, respawn działa)
