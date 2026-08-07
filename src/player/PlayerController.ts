@@ -9,11 +9,15 @@ import {
 import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
 
 const MOVE_SPEED = 8
+const SPRINT_MULTIPLIER = 1.8
 /** Look-at height eases from chest-level (far/default zoom) up toward eye-level as the camera zooms in. */
 const LOOK_AT_OFFSET_FAR = 0.9
 const LOOK_AT_OFFSET_NEAR = 1.6
 const PLAYER_HEIGHT = 1.8
 const PLAYER_LABEL = 'Ja'
+/** How far below the surface the player can sink while swimming — caps out in deep
+ *  water so the head still breaks the surface instead of vanishing into the seabed. */
+const MAX_SWIM_DEPTH = 1.2
 
 /** Quaternius Ultimate Modular Men — distinct from the NPC roster. */
 export const PLAYER_MODEL_URL = '/models/characters/Adventurer.glb'
@@ -27,13 +31,17 @@ export class PlayerController {
   private readonly keys: KeyState
   private readonly look: LookState
   private sampleHeight: HeightSampler
+  private sampleFloor: HeightSampler
+  private waterLevel: number
   private halfExtent: number
   private readonly isCapsule: boolean
   private readonly mixer: THREE.AnimationMixer | null
   private readonly idleAction: THREE.AnimationAction | null
   private readonly walkAction: THREE.AnimationAction | null
+  private readonly runAction: THREE.AnimationAction | null
   private currentAction: THREE.AnimationAction | null = null
   private moving = false
+  private sprinting = false
   private readonly forward = new THREE.Vector3()
   private readonly right = new THREE.Vector3()
   private readonly wish = new THREE.Vector3()
@@ -49,12 +57,16 @@ export class PlayerController {
     keys: KeyState,
     look: LookState,
     sampleHeight: HeightSampler,
+    sampleFloor: HeightSampler,
+    waterLevel: number,
     halfExtent: number,
   ) {
     this.camera = camera
     this.keys = keys
     this.look = look
     this.sampleHeight = sampleHeight
+    this.sampleFloor = sampleFloor
+    this.waterLevel = waterLevel
     this.halfExtent = halfExtent - 1
     this.isCapsule = isCapsule
 
@@ -66,11 +78,13 @@ export class PlayerController {
       this.mixer = new THREE.AnimationMixer(root)
       this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral'])
       this.walkAction = this.findAction(animations, ['Walk', 'Run'])
+      this.runAction = this.findAction(animations, ['Run'])
       this.playAction(this.idleAction)
     } else {
       this.mixer = null
       this.idleAction = null
       this.walkAction = null
+      this.runAction = null
     }
 
     this.labelEl = document.createElement('div')
@@ -89,6 +103,8 @@ export class PlayerController {
     keys: KeyState,
     look: LookState,
     sampleHeight: HeightSampler,
+    sampleFloor: HeightSampler,
+    waterLevel: number,
     halfExtent: number,
     modelUrl = PLAYER_MODEL_URL,
   ): Promise<PlayerController> {
@@ -103,6 +119,8 @@ export class PlayerController {
         keys,
         look,
         sampleHeight,
+        sampleFloor,
+        waterLevel,
         halfExtent,
       )
     } catch (err) {
@@ -112,6 +130,8 @@ export class PlayerController {
         keys,
         look,
         sampleHeight,
+        sampleFloor,
+        waterLevel,
         halfExtent,
       )
     }
@@ -122,6 +142,8 @@ export class PlayerController {
     keys: KeyState,
     look: LookState,
     sampleHeight: HeightSampler,
+    sampleFloor: HeightSampler,
+    waterLevel: number,
     halfExtent: number,
   ): PlayerController {
     const body = new THREE.Mesh(
@@ -141,13 +163,22 @@ export class PlayerController {
       keys,
       look,
       sampleHeight,
+      sampleFloor,
+      waterLevel,
       halfExtent,
     )
   }
 
   /** Call after terrain rebuild. */
-  setGround(sampleHeight: HeightSampler, halfExtent: number): void {
+  setGround(
+    sampleHeight: HeightSampler,
+    sampleFloor: HeightSampler,
+    waterLevel: number,
+    halfExtent: number,
+  ): void {
     this.sampleHeight = sampleHeight
+    this.sampleFloor = sampleFloor
+    this.waterLevel = waterLevel
     this.halfExtent = halfExtent - 1
     this.snapToGround()
   }
@@ -175,8 +206,10 @@ export class PlayerController {
     if (this.keys.right) this.wish.add(this.right)
 
     this.moving = this.wish.lengthSq() > 0
+    this.sprinting = this.moving && this.keys.sprint
     if (this.moving) {
-      this.wish.normalize().multiplyScalar(MOVE_SPEED * dt)
+      const speed = this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED
+      this.wish.normalize().multiplyScalar(speed * dt)
       this.mesh.position.x += this.wish.x
       this.mesh.position.z += this.wish.z
       this.mesh.rotation.y = Math.atan2(this.wish.x, this.wish.z)
@@ -228,17 +261,28 @@ export class PlayerController {
   }
 
   private syncAnimation(): void {
-    this.playAction(
-      this.moving ? (this.walkAction ?? this.idleAction) : this.idleAction,
-    )
+    if (!this.moving) {
+      this.playAction(this.idleAction)
+      return
+    }
+    const moveAction = this.sprinting
+      ? (this.runAction ?? this.walkAction)
+      : this.walkAction
+    this.playAction(moveAction ?? this.idleAction)
   }
 
   private snapToGround(): void {
-    const groundY = this.sampleHeight(
-      this.mesh.position.x,
-      this.mesh.position.z,
-    )
-    this.mesh.position.y = groundY
+    const { x, z } = this.mesh.position
+    const groundY = this.sampleHeight(x, z)
+    if (groundY <= this.waterLevel) {
+      // Underwater: sink toward the real seabed instead of the flattened-to-waterLevel
+      // mesh, capped so deep water still leaves the head above the surface.
+      const floorY = this.sampleFloor(x, z)
+      const depth = Math.min(this.waterLevel - floorY, MAX_SWIM_DEPTH)
+      this.mesh.position.y = this.waterLevel - depth
+    } else {
+      this.mesh.position.y = groundY
+    }
   }
 
   private syncCamera(): void {

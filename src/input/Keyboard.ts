@@ -3,6 +3,7 @@ export type KeyState = {
   backward: boolean
   left: boolean
   right: boolean
+  sprint: boolean
 }
 
 const KEY_MAP: Record<string, keyof KeyState> = {
@@ -14,6 +15,8 @@ const KEY_MAP: Record<string, keyof KeyState> = {
   ArrowLeft: 'left',
   KeyD: 'right',
   ArrowRight: 'right',
+  ShiftLeft: 'sprint',
+  ShiftRight: 'sprint',
 }
 
 export function createKeyboard(): {
@@ -25,6 +28,7 @@ export function createKeyboard(): {
     backward: false,
     left: false,
     right: false,
+    sprint: false,
   }
 
   const onKeyDown = (event: KeyboardEvent) => {

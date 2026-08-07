@@ -66,6 +66,8 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     keyboard.state,
     mouseLook.state,
     terrain.sampleHeight,
+    terrain.sampleFloor,
+    terrain.waterLevel,
     terrain.halfExtent,
   )
   player.setPosition(settlement.spawn.x, settlement.spawn.z)
@@ -90,7 +92,12 @@ export async function createApp(container: HTMLElement): Promise<() => void> {
     ocean = buildOcean(scene, terrain)
     settlement = await buildSettlement(scene, terrain, config.seed)
     fauna = await buildFauna(scene, terrain, settlement, config.seed)
-    player.setGround(terrain.sampleHeight, terrain.halfExtent)
+    player.setGround(
+      terrain.sampleHeight,
+      terrain.sampleFloor,
+      terrain.waterLevel,
+      terrain.halfExtent,
+    )
     player.setPosition(settlement.spawn.x, settlement.spawn.z)
     hud.setSeed(config.seed)
     pauseMenu.setSeed(config.seed)

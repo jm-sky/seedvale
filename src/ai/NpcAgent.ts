@@ -21,6 +21,8 @@ import {
 const WALK_SPEED = 2.4
 const ARRIVE = 0.55
 const NPC_HEIGHT = 1.75
+/** Minimum clearance above waterLevel an NPC will walk into or wander toward. */
+const WATER_MARGIN = 0.3
 
 /** Quaternius Modular Men — village-flavoured variants. */
 export const NPC_MODEL_URLS = [
@@ -59,6 +61,7 @@ export class NpcAgent {
   readonly label: CSS2DObject
   readonly name: string
   private readonly sampleHeight: HeightSampler
+  private readonly waterLevel: number
   private readonly landmarks: SettlementLandmarks
   private readonly needs: NeedState
   private readonly home: THREE.Vector3
@@ -80,12 +83,14 @@ export class NpcAgent {
     root: THREE.Object3D,
     animations: THREE.AnimationClip[],
     sampleHeight: HeightSampler,
+    waterLevel: number,
     landmarks: SettlementLandmarks,
     home: THREE.Vector3,
     treeIndex: number,
     needOffset: number,
   ) {
     this.sampleHeight = sampleHeight
+    this.waterLevel = waterLevel
     this.landmarks = landmarks
     this.home = home.clone()
     this.name = NPC_NAMES[treeIndex % NPC_NAMES.length]!
@@ -126,6 +131,7 @@ export class NpcAgent {
 
   static async create(
     sampleHeight: HeightSampler,
+    waterLevel: number,
     landmarks: SettlementLandmarks,
     home: THREE.Vector3,
     treeIndex: number,
@@ -138,6 +144,7 @@ export class NpcAgent {
         scene,
         animations,
         sampleHeight,
+        waterLevel,
         landmarks,
         home,
         treeIndex,
@@ -147,6 +154,7 @@ export class NpcAgent {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
       return NpcAgent.createCapsuleFallback(
         sampleHeight,
+        waterLevel,
         landmarks,
         home,
         treeIndex,
@@ -157,6 +165,7 @@ export class NpcAgent {
 
   private static createCapsuleFallback(
     sampleHeight: HeightSampler,
+    waterLevel: number,
     landmarks: SettlementLandmarks,
     home: THREE.Vector3,
     treeIndex: number,
@@ -177,6 +186,7 @@ export class NpcAgent {
       capsule,
       [],
       sampleHeight,
+      waterLevel,
       landmarks,
       home,
       treeIndex,
@@ -331,12 +341,21 @@ export class NpcAgent {
       this.phase = 'goTree'
       return
     }
-    this.target.set(
-      this.home.x + (Math.random() - 0.5) * 4,
-      0,
-      this.home.z + (Math.random() - 0.5) * 4,
-    )
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const x = this.home.x + (Math.random() - 0.5) * 4
+      const z = this.home.z + (Math.random() - 0.5) * 4
+      if (this.isWalkable(x, z)) {
+        this.target.set(x, 0, z)
+        this.phase = 'wander'
+        return
+      }
+    }
+    this.target.copy(this.home)
     this.phase = 'wander'
+  }
+
+  private isWalkable(x: number, z: number): boolean {
+    return this.sampleHeight(x, z) > this.waterLevel + WATER_MARGIN
   }
 
   private steerTo(dest: THREE.Vector3, dt: number): boolean {
@@ -346,10 +365,20 @@ export class NpcAgent {
     const dist = Math.hypot(this.tmp.x, this.tmp.z)
     if (dist < ARRIVE) return true
     this.tmp.multiplyScalar(1 / dist)
-    this.mesh.position.x += this.tmp.x * WALK_SPEED * dt
-    this.mesh.position.z += this.tmp.z * WALK_SPEED * dt
+    const stepX = this.tmp.x * WALK_SPEED * dt
+    const stepZ = this.tmp.z * WALK_SPEED * dt
     this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
     this.moving = true
+    const x = this.mesh.position.x
+    const z = this.mesh.position.z
+    if (this.isWalkable(x + stepX, z + stepZ)) {
+      this.mesh.position.x += stepX
+      this.mesh.position.z += stepZ
+    } else if (this.isWalkable(x + stepX, z)) {
+      this.mesh.position.x += stepX
+    } else if (this.isWalkable(x, z + stepZ)) {
+      this.mesh.position.z += stepZ
+    }
     return false
   }
 }

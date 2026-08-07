@@ -10,6 +10,7 @@ export type Terrain = {
   mesh: THREE.Mesh
   heightmap: Heightmap
   sampleHeight: (x: number, z: number) => number
+  sampleFloor: (x: number, z: number) => number
   halfExtent: number
   waterLevel: number
   dispose: () => void
@@ -72,6 +73,7 @@ export function createTerrainMesh(
     mesh,
     heightmap,
     sampleHeight: heightmap.sample,
+    sampleFloor: heightmap.sampleFloor,
     halfExtent: size / 2,
     waterLevel,
     dispose: () => {

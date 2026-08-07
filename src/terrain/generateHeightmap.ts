@@ -27,10 +27,15 @@ export type HeightmapParams = {
 export type Heightmap = {
   params: HeightmapParams
   heights: Float32Array
+  /** Pre-clamp heights — the true seabed/lakebed shape hidden under `heights` by the
+   *  `waterLevel` floor. Lets swimmers sink toward the actual bottom instead of the
+   *  flattened-to-waterLevel mesh. Equal to `heights` on dry land. */
+  floorHeights: Float32Array
   biomes: Float32Array
   /** Per-texel wave-amplitude scale for water shading: 0 land/small lake .. 1 ocean. */
   bodyScale: Float32Array
   sample: (worldX: number, worldZ: number) => number
+  sampleFloor: (worldX: number, worldZ: number) => number
   sampleBiome: (worldX: number, worldZ: number) => number
 }
 
@@ -97,6 +102,7 @@ export function generateHeightmap(params: HeightmapParams): Heightmap {
   const biomeNoise = createNoise2D(createSeededRandom(seed ^ 0x85ebca6b))
 
   const heights = new Float32Array(resolution * resolution)
+  const floorHeights = new Float32Array(resolution * resolution)
   const biomes = new Float32Array(resolution * resolution)
   const half = size / 2
   const step = size / (resolution - 1)
@@ -132,6 +138,9 @@ export function generateHeightmap(params: HeightmapParams): Heightmap {
         h = MathUtils.lerp(h, virtualOceanFloor, ringT)
       }
 
+      const idx = iz * resolution + ix
+      floorHeights[idx] = h
+
       if (h < waterLevel) h = waterLevel
 
       const m = fbm01(
@@ -141,7 +150,6 @@ export function generateHeightmap(params: HeightmapParams): Heightmap {
         biome.fbm,
       )
 
-      const idx = iz * resolution + ix
       heights[idx] = h
       biomes[idx] = m
     }
@@ -153,9 +161,11 @@ export function generateHeightmap(params: HeightmapParams): Heightmap {
   return {
     params,
     heights,
+    floorHeights,
     biomes,
     bodyScale,
     sample: (x, z) => sampleGrid(heights, resolution, half, step, x, z),
+    sampleFloor: (x, z) => sampleGrid(floorHeights, resolution, half, step, x, z),
     sampleBiome: (x, z) => sampleGrid(biomes, resolution, half, step, x, z),
   }
 }

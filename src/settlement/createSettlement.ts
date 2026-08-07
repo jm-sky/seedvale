@@ -39,6 +39,7 @@ export async function createSettlement(
         landmarks.well.clone()
       const agent = await NpcAgent.create(
         sampleHeight,
+        waterLevel,
         landmarks,
         home,
         i,

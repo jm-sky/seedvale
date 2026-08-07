@@ -3,6 +3,9 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 
+/** Minimum clearance above waterLevel an animal will walk into or wander toward. */
+const WATER_MARGIN = 0.3
+
 export type AnimalRole = 'predator' | 'prey'
 /** Matches Quaternius Ultimate Animated Animal Pack kinds used in Seedvale. */
 export type AnimalKind = 'wolf' | 'fox' | 'deer' | 'stag'
@@ -84,6 +87,7 @@ export class AnimalAgent {
   private readonly halfExtent: number
   private readonly isCapsule: boolean
   private target = new THREE.Vector3()
+  private readonly fleeTarget = new THREE.Vector3()
   private wanderTimer = 0
   private readonly tmp = new THREE.Vector3()
   private readonly home = new THREE.Vector3()
@@ -213,11 +217,13 @@ export class AnimalAgent {
         this.tmp.set(1, 0, 0)
       }
       this.tmp.normalize()
-      this.mesh.position.x += this.tmp.x * this.def.sprintSpeed * dt
-      this.mesh.position.z += this.tmp.z * this.def.sprintSpeed * dt
-      this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
-      this.moving = true
       this.sprinting = true
+      this.fleeTarget.set(
+        this.mesh.position.x + this.tmp.x * 8,
+        0,
+        this.mesh.position.z + this.tmp.z * 8,
+      )
+      this.steerToward(this.fleeTarget, this.def.sprintSpeed, dt)
       return
     }
     this.wander(dt)
@@ -232,14 +238,23 @@ export class AnimalAgent {
   }
 
   private pickWanderTarget(): void {
-    const r = 6 + Math.random() * 10
-    const a = Math.random() * Math.PI * 2
-    this.target.set(
-      this.home.x + Math.cos(a) * r,
-      0,
-      this.home.z + Math.sin(a) * r,
-    )
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const r = 6 + Math.random() * 10
+      const a = Math.random() * Math.PI * 2
+      const x = this.home.x + Math.cos(a) * r
+      const z = this.home.z + Math.sin(a) * r
+      if (this.isWalkable(x, z)) {
+        this.target.set(x, 0, z)
+        this.wanderTimer = 3 + Math.random() * 4
+        return
+      }
+    }
+    this.target.copy(this.home)
     this.wanderTimer = 3 + Math.random() * 4
+  }
+
+  private isWalkable(x: number, z: number): boolean {
+    return this.sampleHeight(x, z) > this.waterLevel + WATER_MARGIN
   }
 
   private nearest(
@@ -268,10 +283,22 @@ export class AnimalAgent {
     const dist = this.tmp.length()
     if (dist < 0.4) return
     this.tmp.multiplyScalar(1 / dist)
-    this.mesh.position.x += this.tmp.x * speed * dt
-    this.mesh.position.z += this.tmp.z * speed * dt
     this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
     this.moving = true
+
+    const stepX = this.tmp.x * speed * dt
+    const stepZ = this.tmp.z * speed * dt
+    const x = this.mesh.position.x
+    const z = this.mesh.position.z
+    // Avoid water: slide along the shore rather than wading/chasing into it.
+    if (this.isWalkable(x + stepX, z + stepZ)) {
+      this.mesh.position.x += stepX
+      this.mesh.position.z += stepZ
+    } else if (this.isWalkable(x + stepX, z)) {
+      this.mesh.position.x += stepX
+    } else if (this.isWalkable(x, z + stepZ)) {
+      this.mesh.position.z += stepZ
+    }
   }
 
   private arrived(dest: THREE.Vector3, radius: number): boolean {
