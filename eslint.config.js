@@ -6,7 +6,7 @@ import perfectionist from 'eslint-plugin-perfectionist'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist/**'] },
+  { ignores: ['dist/**', 'docs/refs/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   perfectionist.configs['recommended-natural'],
