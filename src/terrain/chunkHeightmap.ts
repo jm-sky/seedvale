@@ -32,6 +32,23 @@ export type RegionParams = {
   /** Detail-noise amplitude multiplier deep in the ocean (< 1 suppresses stray
    *  islands poking through the forced ocean floor). */
   oceanDetailWeight: number
+  /** Very-low-frequency noise scale (world units) classifying dry ↔ humid land
+   *  into desert/forest/swamp *regions* — decorrelated from `continentScale`/
+   *  `mountainScale` (own noise handle), so deserts/swamps can sit anywhere on
+   *  land regardless of the height/mountain bands. Independent of the existing
+   *  fine-grained `biome.noiseScale` field, which stays a small-scale detail/
+   *  dither on top of whichever region this axis picks. */
+  moistureRegionScale: number
+  moistureRegionFbm: FbmParams
+  /** Moisture-region value below which land reads as desert; ramps in over
+   *  `desertThresholdWidth`. */
+  desertThreshold: number
+  desertThresholdWidth: number
+  /** Moisture-region value above which land reads as swamp; ramps in over
+   *  `swampThresholdWidth`. Swamp is additionally gated to low altitude near
+   *  `waterLevel` — see `biomeRegions.ts`. */
+  swampThreshold: number
+  swampThresholdWidth: number
 }
 
 export type ChunkTileParams = {
@@ -55,10 +72,10 @@ export type ChunkTileParams = {
    *  forest layout (`src/settlement/props.ts`). */
   isHomeChunk: boolean
   /** Species counts for per-chunk vegetation placement (`chunkVegetation.ts`) —
-   *  passed as plain numbers rather than importing `TREE_SPECS`/`BUSH_SPECS` from
-   *  `props.ts` there, so worker-side code never pulls in THREE mesh-building/
-   *  GLTF-loader code it will never run. */
-  vegetationSpeciesCount: { tree: number; bush: number }
+   *  passed as plain numbers rather than importing `TREE_SPECS`/`BUSH_SPECS`/
+   *  `CACTUS_SPECS`/`REED_SPECS` from `props.ts` there, so worker-side code
+   *  never pulls in THREE mesh-building/GLTF-loader code it will never run. */
+  vegetationSpeciesCount: { tree: number; bush: number; cactus: number; reed: number }
 }
 
 export type RawSampleParams = Omit<
@@ -81,6 +98,10 @@ export type ChunkTileData = {
   continentalness: Float32Array
   /** 0 (no ridge) .. 1 (ridge crest), already gated by mountainness/land-ness. */
   mountainRidge: Float32Array
+  /** Macro dry↔humid axis (0 arid .. 1 humid) driving desert/forest/swamp
+   *  region classification — see `biomeRegions.ts`. Independent of `biomes`
+   *  (fine-grained detail moisture, unchanged). */
+  moistureRegion: Float32Array
 }
 
 type NoiseHandles = {
@@ -89,6 +110,7 @@ type NoiseHandles = {
   biome: NoiseFunction2D
   continent: NoiseFunction2D
   mountain: NoiseFunction2D
+  moistureRegion: NoiseFunction2D
 }
 
 /** Piecewise-linear continentalness → height bias, in the same normalized units as
@@ -115,6 +137,7 @@ function noiseHandlesFor(seed: number): NoiseHandles {
       biome: createNoise2D(createSeededRandom(seed ^ 0x85ebca6b)),
       continent: createNoise2D(createSeededRandom(seed ^ 0xc2b2ae35)),
       mountain: createNoise2D(createSeededRandom(seed ^ 0x27d4eb2f)),
+      moistureRegion: createNoise2D(createSeededRandom(seed ^ 0x1b873593)),
     }
     noiseCache.set(seed, handles)
   }
@@ -126,7 +149,14 @@ function sampleRawTexel(
   wz: number,
   noise: NoiseHandles,
   params: RawSampleParams,
-): { h: number; floorH: number; m: number; continentalness: number; mountainRidge: number } {
+): {
+  h: number
+  floorH: number
+  m: number
+  continentalness: number
+  mountainRidge: number
+  moistureRegion: number
+} {
   const { heightScale, waterLevel, noiseScale, fbm, biome, region } = params
 
   // Macro region axes — decorrelated so mountain ranges can cut across continents
@@ -181,7 +211,17 @@ function sampleRawTexel(
 
   const m = fbm01(noise.biome, wx / biome.noiseScale, wz / biome.noiseScale, biome.fbm)
 
-  return { h, floorH, m, continentalness: c, mountainRidge }
+  // Macro dry↔humid axis — own noise/scale, so desert/swamp regions don't
+  // coincide with continentalness bands (a "wet coast, dry inland" pattern
+  // reads as one bullseye, same reasoning as the continent/mountain split above).
+  const moistureRegion = fbm01(
+    noise.moistureRegion,
+    wx / region.moistureRegionScale,
+    wz / region.moistureRegionScale,
+    region.moistureRegionFbm,
+  )
+
+  return { h, floorH, m, continentalness: c, mountainRidge, moistureRegion }
 }
 
 /** Exact analytic height at a single world point — no grid, no worker round-trip.
@@ -205,6 +245,14 @@ export function sampleContinentalnessAt(
   params: RawSampleParams,
 ): number {
   return sampleRawTexel(worldX, worldZ, noiseHandlesFor(params.seed), params).continentalness
+}
+
+export function sampleMoistureRegionAt(
+  worldX: number,
+  worldZ: number,
+  params: RawSampleParams,
+): number {
+  return sampleRawTexel(worldX, worldZ, noiseHandlesFor(params.seed), params).moistureRegion
 }
 
 export function sampleMountainRidgeAt(
@@ -300,6 +348,7 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
   const biomes = new Float32Array(apronRes * apronRes)
   const continentalness = new Float32Array(apronRes * apronRes)
   const mountainRidge = new Float32Array(apronRes * apronRes)
+  const moistureRegion = new Float32Array(apronRes * apronRes)
 
   for (let iz = 0; iz < apronRes; iz++) {
     for (let ix = 0; ix < apronRes; ix++) {
@@ -312,11 +361,12 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
       biomes[idx] = sample.m
       continentalness[idx] = sample.continentalness
       mountainRidge[idx] = sample.mountainRidge
+      moistureRegion[idx] = sample.moistureRegion
     }
   }
 
   const waterBodies = detectWaterBodies(heights, apronRes, waterLevel, step)
   const bodyScale = computeBodyScale(waterBodies)
 
-  return { heights, floorHeights, biomes, bodyScale, continentalness, mountainRidge }
+  return { heights, floorHeights, biomes, bodyScale, continentalness, mountainRidge, moistureRegion }
 }

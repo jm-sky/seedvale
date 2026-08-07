@@ -6,11 +6,15 @@ import { disposeObject3D } from '../assets/loadGltf'
 import { createItemMesh, type ItemKind } from '../items/items'
 import {
   BUSH_SPECS,
+  CACTUS_SPECS,
   cloneProp,
   createBush,
+  createCactus,
+  createReed,
   createTree,
   loadPropTemplates,
   placeOnGround,
+  REED_SPECS,
   TREE_SPECS,
 } from '../settlement/props'
 import { createChunkWater, type WorldWater } from '../world/createWater'
@@ -46,6 +50,8 @@ import { createGrassSystem, type WorldGrassChunk } from './grass'
 // this avoids rebuilding the template array + re-running `prepareProp` per chunk).
 let treeTemplatesPromise: Promise<THREE.Object3D[]> | null = null
 let bushTemplatesPromise: Promise<THREE.Object3D[]> | null = null
+let cactusTemplatesPromise: Promise<THREE.Object3D[]> | null = null
+let reedTemplatesPromise: Promise<THREE.Object3D[]> | null = null
 function getTreeTemplates(): Promise<THREE.Object3D[]> {
   treeTemplatesPromise ??= loadPropTemplates(TREE_SPECS, () => createTree(1))
   return treeTemplatesPromise
@@ -53,6 +59,14 @@ function getTreeTemplates(): Promise<THREE.Object3D[]> {
 function getBushTemplates(): Promise<THREE.Object3D[]> {
   bushTemplatesPromise ??= loadPropTemplates(BUSH_SPECS, () => createBush(1))
   return bushTemplatesPromise
+}
+function getCactusTemplates(): Promise<THREE.Object3D[]> {
+  cactusTemplatesPromise ??= loadPropTemplates(CACTUS_SPECS, () => createCactus(1))
+  return cactusTemplatesPromise
+}
+function getReedTemplates(): Promise<THREE.Object3D[]> {
+  reedTemplatesPromise ??= loadPropTemplates(REED_SPECS, () => createReed(1))
+  return reedTemplatesPromise
 }
 
 export type ChunkManagerConfig = {
@@ -175,9 +189,15 @@ export function createChunkManager(
         ...config.region,
         continentFbm: { ...config.region.continentFbm },
         mountainFbm: { ...config.region.mountainFbm },
+        moistureRegionFbm: { ...config.region.moistureRegionFbm },
       },
       isHomeChunk: isHomeChunk(coord),
-      vegetationSpeciesCount: { tree: TREE_SPECS.length, bush: BUSH_SPECS.length },
+      vegetationSpeciesCount: {
+        tree: TREE_SPECS.length,
+        bush: BUSH_SPECS.length,
+        cactus: CACTUS_SPECS.length,
+        reed: REED_SPECS.length,
+      },
     }
   }
 
@@ -201,6 +221,7 @@ export function createChunkManager(
       config.heightScale,
       config.seed,
       config.grass.density,
+      config.region,
     )
     record.grass = grass
     if (grass) scene.add(grass.mesh)
@@ -251,6 +272,7 @@ export function createChunkManager(
           config.waterLevel,
           config.heightScale,
           config.flatShading,
+          config.region,
         )
         scene.add(mesh)
         rec.mesh = mesh
@@ -278,17 +300,26 @@ export function createChunkManager(
           const sampleTileHeight: HeightSampler = (sx, sz) =>
             sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
 
-          const [treeTemplates, bushTemplates] = await Promise.all([
+          const [treeTemplates, bushTemplates, cactusTemplates, reedTemplates] = await Promise.all([
             getTreeTemplates(),
             getBushTemplates(),
+            getCactusTemplates(),
+            getReedTemplates(),
           ])
           // Re-check after the await — chunk may have unloaded while templates loaded.
           if (!chunks.has(key)) return
 
+          const templatesByKind = {
+            tree: treeTemplates,
+            bush: bushTemplates,
+            cactus: cactusTemplates,
+            reed: reedTemplates,
+          }
+
           const group = new THREE.Group()
           group.name = 'chunk-vegetation'
           for (const placement of tile.vegetation) {
-            const templates = placement.kind === 'tree' ? treeTemplates : bushTemplates
+            const templates = templatesByKind[placement.kind]
             const prop = cloneProp(templates, placement.speciesIndex, placement.scale)
             prop.rotation.y = placement.rotationY // deterministic — overrides cloneProp's own Math.random()
             placeOnGround(prop, placement.x, placement.z, sampleTileHeight)

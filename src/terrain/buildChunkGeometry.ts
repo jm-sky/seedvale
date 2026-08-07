@@ -6,7 +6,8 @@ import {
   applySlopeRock,
   colorForTerrain,
 } from './biomeColors'
-import { type ChunkTileData, sampleApronGrid } from './chunkHeightmap'
+import { biomeWeightsAt } from './biomeRegions'
+import { type ChunkTileData, type RegionParams, sampleApronGrid } from './chunkHeightmap'
 
 export type ChunkMeshResult = {
   mesh: THREE.Mesh
@@ -30,6 +31,7 @@ export function buildChunkGeometry(
   waterLevel: number,
   heightScale: number,
   flatShading: boolean,
+  region: RegionParams,
 ): ChunkMeshResult {
   const step = chunkSize / (resolution - 1)
   const apronRes = resolution + 2
@@ -104,9 +106,20 @@ export function buildChunkGeometry(
       x,
       z,
     )
+    const moistureRegion = sampleApronGrid(
+      tile.moistureRegion,
+      apronRes,
+      apronOriginX,
+      apronOriginZ,
+      step,
+      x,
+      z,
+    )
     const steepness = 1 - n.y
+    const altitude01 = (h - waterLevel) / Math.max(heightScale, 0.001)
+    const biomeWeights = biomeWeightsAt(moistureRegion, altitude01, region)
 
-    colorForTerrain(h, m, waterLevel, heightScale, tmp)
+    colorForTerrain(h, m, waterLevel, heightScale, biomeWeights, tmp)
     applySlopeRock(tmp, h, waterLevel, steepness)
     applyMountainRock(tmp, mountainRidge, h, waterLevel, heightScale)
     applyOceanDepthTint(tmp, continentalness, h, waterLevel)

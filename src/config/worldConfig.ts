@@ -110,6 +110,12 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         oceanThreshold: 0.32,
         coastThreshold: 0.45,
         oceanDetailWeight: 0.25,
+        moistureRegionScale: 2000,
+        moistureRegionFbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+        desertThreshold: 0.35,
+        desertThresholdWidth: 0.12,
+        swampThreshold: 0.72,
+        swampThresholdWidth: 0.15,
       },
       grass: {
         enabled: true,
@@ -194,6 +200,12 @@ export function createWorldConfig(): WorldConfig {
         config.terrain.region.mountainFbm = {
           ...config.terrain.region.mountainFbm,
           ...r.mountainFbm,
+        }
+      }
+      if (r.moistureRegionFbm && typeof r.moistureRegionFbm === 'object') {
+        config.terrain.region.moistureRegionFbm = {
+          ...config.terrain.region.moistureRegionFbm,
+          ...r.moistureRegionFbm,
         }
       }
     }

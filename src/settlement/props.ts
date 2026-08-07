@@ -27,6 +27,15 @@ export const BUSH_SPECS = [
   { url: '/models/nature/bush_b.glb', height: 1.3 },
 ] as const
 
+export const CACTUS_SPECS = [
+  { url: '/models/nature/cactus_a.glb', height: 1.4 },
+  { url: '/models/nature/cactus_b.glb', height: 2.0 },
+] as const
+
+export const REED_SPECS = [
+  { url: '/models/nature/reed_a.glb', height: 1.1 },
+] as const
+
 export function placeOnGround(
   mesh: THREE.Object3D,
   x: number,
@@ -139,6 +148,37 @@ export function createBush(scale = 1): THREE.Group {
   body.castShadow = true
   bush.add(body)
   return bush
+}
+
+export function createCactus(scale = 1): THREE.Group {
+  const cactus = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x4d7a4a, flatShading: true })
+
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22 * scale, 0.28 * scale, 1.6 * scale, 7), mat)
+  trunk.position.y = 0.8 * scale
+  trunk.castShadow = true
+  cactus.add(trunk)
+
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.14 * scale, 0.16 * scale, 0.7 * scale, 6), mat)
+  arm.position.set(0.28 * scale, 1.05 * scale, 0)
+  arm.rotation.z = -0.5
+  arm.castShadow = true
+  cactus.add(arm)
+
+  return cactus
+}
+
+export function createReed(scale = 1): THREE.Group {
+  const reed = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x6f8a4a, flatShading: true })
+  for (let i = 0; i < 5; i++) {
+    const height = (0.8 + Math.random() * 0.5) * scale
+    const blade = new THREE.Mesh(new THREE.ConeGeometry(0.035 * scale, height, 4), mat)
+    blade.position.set((Math.random() - 0.5) * 0.3 * scale, height / 2, (Math.random() - 0.5) * 0.3 * scale)
+    blade.castShadow = true
+    reed.add(blade)
+  }
+  return reed
 }
 
 export function createGarden(): THREE.Group {

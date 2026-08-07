@@ -1,5 +1,6 @@
 import type { ChunkCoord } from './chunkGrid'
 import { createSeededRandom } from '../world/parseSeed'
+import { biomeWeightsAt } from './biomeRegions'
 import {
   apronOriginWorld,
   type ChunkTileData,
@@ -10,8 +11,9 @@ import {
 export type VegetationPlacement = {
   x: number
   z: number
-  kind: 'tree' | 'bush'
-  /** Index into `TREE_SPECS`/`BUSH_SPECS` (`props.ts`), resolved on the main thread. */
+  kind: 'tree' | 'bush' | 'cactus' | 'reed'
+  /** Index into `TREE_SPECS`/`BUSH_SPECS`/`CACTUS_SPECS`/`REED_SPECS`
+   *  (`props.ts`), resolved on the main thread. */
   speciesIndex: number
   scale: number
   rotationY: number
@@ -50,7 +52,7 @@ export function computeChunkVegetation(
 ): VegetationPlacement[] {
   if (params.isHomeChunk) return []
 
-  const { chunkSize, resolution, waterLevel, heightScale } = params
+  const { chunkSize, resolution, waterLevel, heightScale, region } = params
   const o = apronOriginWorld(coord.cx, coord.cz, chunkSize, resolution)
   const random = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz) ^ 0x76a5c)
 
@@ -67,7 +69,14 @@ export function computeChunkVegetation(
     const wz = coord.cz * chunkSize + localZ
 
     const h = sample(tile.heights, wx, wz)
-    if (h <= waterLevel + 0.5) continue // underwater/shoreline
+    const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
+    const moistureRegion = sample(tile.moistureRegion, wx, wz)
+    const biome = biomeWeightsAt(moistureRegion, altitude, region)
+
+    // Reeds tolerate growing right at the waterline; everything else needs
+    // to clear the shore like today.
+    const waterClearance = biome.swamp > 0.4 ? 0.05 : 0.5
+    if (h <= waterLevel + waterClearance) continue // underwater/shoreline
 
     const d = SLOPE_SAMPLE_STEP
     const slope =
@@ -76,7 +85,6 @@ export function computeChunkVegetation(
       (2 * d)
     if (slope > SLOPE_REJECT) continue // cliff/steep face
 
-    const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
     if (altitude > TREELINE_ALTITUDE) continue // above treeline
 
     const ridge = sample(tile.mountainRidge, wx, wz)
@@ -85,20 +93,24 @@ export function computeChunkVegetation(
     const moisture = sample(tile.biomes, wx, wz)
     const continentalness = sample(tile.continentalness, wx, wz)
     // Denser on humid lowlands/coasts (continentalness near the coastal band),
-    // sparser further inland/toward highlands.
-    const density = Math.max(
-      0,
-      Math.min(1, moisture * 0.7 + (1 - Math.abs(continentalness - 0.55)) * 0.3),
-    )
+    // sparser further inland/toward highlands; deserts thin out further still.
+    const density =
+      Math.max(0, Math.min(1, moisture * 0.7 + (1 - Math.abs(continentalness - 0.55)) * 0.3)) *
+      (1 - biome.desert * 0.6)
     if (random() > density) continue
 
-    const isBush = random() < 0.15 + (1 - moisture) * 0.35
-    const kind: 'tree' | 'bush' = isBush ? 'bush' : 'tree'
-    const speciesCount = isBush
-      ? params.vegetationSpeciesCount.bush
-      : params.vegetationSpeciesCount.tree
+    let kind: VegetationPlacement['kind']
+    if (biome.desert > 0.5 && random() < biome.desert) {
+      kind = random() < 0.75 ? 'cactus' : 'bush'
+    } else if (biome.swamp > 0.5 && random() < biome.swamp) {
+      kind = random() < 0.8 ? 'reed' : 'tree'
+    } else {
+      kind = random() < 0.15 + (1 - moisture) * 0.35 ? 'bush' : 'tree'
+    }
+
+    const speciesCount = params.vegetationSpeciesCount[kind]
     const speciesIndex = Math.floor(random() * Math.max(1, speciesCount))
-    const scale = isBush ? 0.6 + random() * 0.5 : 0.7 + random() * 0.6
+    const scale = kind === 'bush' || kind === 'cactus' ? 0.6 + random() * 0.5 : 0.7 + random() * 0.6
     const rotationY = random() * Math.PI * 2
 
     placements.push({ x: wx, z: wz, kind, speciesIndex, scale, rotationY })

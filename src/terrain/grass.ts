@@ -2,7 +2,8 @@ import * as THREE from 'three'
 import type { ChunkCoord } from './chunkGrid'
 import { createSeededRandom } from '../world/parseSeed'
 import { ROCK_SLOPE_FULL, SAND_BAND } from './biomeColors'
-import { apronOriginWorld, type ChunkTileData, sampleApronGrid } from './chunkHeightmap'
+import { biomeWeightsAt } from './biomeRegions'
+import { apronOriginWorld, type ChunkTileData, type RegionParams, sampleApronGrid } from './chunkHeightmap'
 
 export type WorldGrassChunk = {
   mesh: THREE.InstancedMesh
@@ -23,6 +24,7 @@ export type GrassSystem = {
     /** Raw position candidates rolled before eligibility/density rejection —
      *  the GUI-exposed "density" knob (`config.terrain.grass.density`). */
     candidatesPerChunk: number,
+    region: RegionParams,
   ) => WorldGrassChunk | null
   /** Advances the shared wind clock — call once per frame, not per chunk. */
   update: (dt: number) => void
@@ -60,6 +62,8 @@ const CURVE_STRENGTH = 1.2
 
 const ARID_GRASS = new THREE.Color(0x9c9a54)
 const HUMID_GRASS = new THREE.Color(0x5fb03f)
+/** Swamp tint — darker, more olive than even `HUMID_GRASS`. */
+const SWAMP_GRASS = new THREE.Color(0x4a5c34)
 
 /** Per-chunk hash so nearby chunks don't get correlated blade layouts (own salt,
  *  decorrelated from `chunkVegetation.ts`'s hash/salt for the same chunk). */
@@ -194,6 +198,7 @@ export function createGrassSystem(): GrassSystem {
     heightScale: number,
     seed: number,
     candidatesPerChunk: number,
+    region: RegionParams,
   ): WorldGrassChunk | null {
     const o = apronOriginWorld(coord.cx, coord.cz, chunkSize, resolution)
     const sample = (grid: Float32Array, x: number, z: number) =>
@@ -230,14 +235,18 @@ export function createGrassSystem(): GrassSystem {
       if (ridge > MOUNTAIN_RIDGE_REJECT) continue // bare ridge crest
 
       const moisture = sample(tile.biomes, wx, wz)
+      const moistureRegion = sample(tile.moistureRegion, wx, wz)
+      const biome = biomeWeightsAt(moistureRegion, altitude, region)
       const altitudeFade =
         1 -
         Math.max(
           0,
           Math.min(1, (altitude - TREELINE_FADE_START) / (TREELINE_ALTITUDE - TREELINE_FADE_START)),
         )
-      // Sparse-but-present even on dry ground; thick on humid lowlands.
-      const density = Math.max(0, Math.min(1, 0.55 + moisture * 0.45)) * altitudeFade
+      // Sparse-but-present even on dry ground; thick on humid lowlands. Desert
+      // thins it out to near-nothing (bare sand, not a lawn).
+      const density =
+        Math.max(0, Math.min(1, 0.55 + moisture * 0.45)) * altitudeFade * (1 - biome.desert * 0.9)
       if (random() > density) continue
 
       const bladeHeight = 0.22 + random() * 0.22
@@ -254,6 +263,7 @@ export function createGrassSystem(): GrassSystem {
       phases.push(random() * Math.PI * 2)
 
       tmpColor.copy(ARID_GRASS).lerp(HUMID_GRASS, moisture)
+      if (biome.swamp > 0) tmpColor.lerp(SWAMP_GRASS, biome.swamp)
       baseColors.push(tmpColor.r * 0.55 * jitter, tmpColor.g * 0.55 * jitter, tmpColor.b * 0.55 * jitter)
       tipColors.push(tmpColor.r * 1.3 * jitter, tmpColor.g * 1.3 * jitter, tmpColor.b * 1.3 * jitter)
     }

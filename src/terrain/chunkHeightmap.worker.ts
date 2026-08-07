@@ -16,7 +16,7 @@ const ctx = self as unknown as {
 ctx.onmessage = ({ data: { id, params } }) => {
   try {
     const tile = computeChunkTile(params)
-    const { heights, floorHeights, biomes, bodyScale, continentalness, mountainRidge } = tile
+    const { heights, floorHeights, biomes, bodyScale, continentalness, mountainRidge, moistureRegion } = tile
     const vegetation = computeChunkVegetation({ cx: params.cx, cz: params.cz }, tile, params)
     const items = computeChunkItems({ cx: params.cx, cz: params.cz }, tile, params)
     ctx.postMessage(
@@ -29,6 +29,7 @@ ctx.onmessage = ({ data: { id, params } }) => {
         bodyScale,
         continentalness,
         mountainRidge,
+        moistureRegion,
         vegetation,
         items,
       },
@@ -39,6 +40,7 @@ ctx.onmessage = ({ data: { id, params } }) => {
         bodyScale.buffer,
         continentalness.buffer,
         mountainRidge.buffer,
+        moistureRegion.buffer,
       ],
     )
   } catch (err) {

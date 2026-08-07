@@ -1,4 +1,5 @@
 import { Color, MathUtils } from 'three'
+import type { BiomeWeights } from './biomeRegions'
 import { LinearSpline } from '../math/linearSpline'
 
 const SEABED = new Color(0x2f5244)
@@ -6,6 +7,8 @@ const SAND = new Color(0xd4c090)
 const ROCK = new Color(0x6a6560)
 const SNOW = new Color(0xdfe6ee)
 const ABYSS = new Color(0x122622)
+/** Swamp shoreline — replaces the default tan `SAND` band with muddy ground. */
+const MUD = new Color(0x4a3f2a)
 
 /** Shore sand band above water (world units). */
 export const SAND_BAND = 0.6
@@ -49,18 +52,48 @@ function createHumidSpline(): LinearSpline<Color> {
   return s
 }
 
+/** Desert height ramp — pale dune sand → sun-baked clay/rock, low-lying (no
+ *  lush growth, no early snow — deserts stay bare well into the highlands). */
+function createDesertSpline(): LinearSpline<Color> {
+  const s = new LinearSpline(colourLerp)
+  s.addPoint(0.0, new Color(0xdcc27a))
+  s.addPoint(0.35, new Color(0xe3c98a))
+  s.addPoint(0.6, new Color(0xc9986a))
+  s.addPoint(0.85, new Color(0x9a7a5c))
+  s.addPoint(1.0, SNOW.clone())
+  return s
+}
+
+/** Swamp height ramp — dark, murky, narrow band near `waterLevel` (swamp
+ *  is gated out at altitude by `biomeWeightsAt`, so the top of this ramp
+ *  rarely shows). */
+function createSwampSpline(): LinearSpline<Color> {
+  const s = new LinearSpline(colourLerp)
+  s.addPoint(0.0, new Color(0x3a3524))
+  s.addPoint(0.3, new Color(0x4a4a2e))
+  s.addPoint(0.6, new Color(0x5c6b3a))
+  s.addPoint(1.0, new Color(0x6f7a4a))
+  return s
+}
+
 const arid = createAridSpline()
 const humid = createHumidSpline()
+const desert = createDesertSpline()
+const swamp = createSwampSpline()
 
 /**
  * Biome × height coloring (wzór z 3d-portfolio / SimonDev).
- * `moisture` ∈ [0,1]. Does not apply slope rock or micro-tint.
+ * `moisture` ∈ [0,1] (fine detail arid↔humid blend). `biomeWeights` (macro
+ * desert/swamp/forest, see `biomeRegions.ts`) overrides on top where their
+ * weight is > 0 — zero change where both are ~0 (today's default "forest").
+ * Does not apply slope rock or micro-tint.
  */
 export function colorForTerrain(
   height: number,
   moisture: number,
   waterLevel: number,
   heightScale: number,
+  biomeWeights: BiomeWeights,
   out: Color,
 ): void {
   const hNorm = Math.min(
@@ -70,6 +103,8 @@ export function colorForTerrain(
   const cArid = arid.get(hNorm)
   const cHumid = humid.get(hNorm)
   landTmp.copy(cArid).lerpHSL(cHumid, moisture)
+  if (biomeWeights.desert > 0) landTmp.lerpHSL(desert.get(hNorm), biomeWeights.desert)
+  if (biomeWeights.swamp > 0) landTmp.lerpHSL(swamp.get(hNorm), biomeWeights.swamp)
 
   const seabedToSand = MathUtils.smoothstep(
     height,
@@ -77,6 +112,7 @@ export function colorForTerrain(
     waterLevel + SEABED_BLEND,
   )
   out.copy(SEABED).lerpHSL(SAND, seabedToSand)
+  if (biomeWeights.swamp > 0) out.lerpHSL(MUD, biomeWeights.swamp * 0.6)
 
   const sandToLand = MathUtils.smoothstep(
     height,

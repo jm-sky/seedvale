@@ -202,6 +202,36 @@ export function createDebugGui(
       .name('Mountain gain')
       .onFinishChange(handlers.onTerrainChange),
   )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'moistureRegionScale', 400, 6000, 50)
+      .name('Moisture region scale')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'desertThreshold', 0, 1, 0.01)
+      .name('Desert threshold')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'desertThresholdWidth', 0.01, 0.5, 0.01)
+      .name('Desert blend width')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'swampThreshold', 0, 1, 0.01)
+      .name('Swamp threshold')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    region
+      .add(config.terrain.region, 'swampThresholdWidth', 0.01, 0.5, 0.01)
+      .name('Swamp blend width')
+      .onFinishChange(handlers.onTerrainChange),
+  )
 
   const grass = gui.addFolder('Grass')
   terrainControllers.push(
