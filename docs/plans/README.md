@@ -17,7 +17,7 @@ Implementation plans for features and larger changes.
 | [2026-08-07--game-ui-screens.md](./2026-08-07--game-ui-screens.md) | Ekrany/dialogi/modale jak w grach | `in progress` |
 | [2026-08-07--terrain-worker-pool.md](./2026-08-07--terrain-worker-pool.md) | Worker pool dla generacji terenu (offload heightmap) | `done` |
 | [2026-08-07--world-visual-overhaul.md](./2026-08-07--world-visual-overhaul.md) | Rośliny (krzewy), niebo/chmury, góry w tle (insp. SimonDev) | `in progress` |
-| [2026-08-07--world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md) | Chunk streaming (kierunek: duży/sferyczny świat) + zapis | `in progress` — streaming done, zapis `planned` |
+| [2026-08-07--world-streaming-persistence.md](./2026-08-07--world-streaming-persistence.md) | Chunk streaming (kierunek: duży/sferyczny świat) + zapis | `done` |
 | [2026-08-07--post-processing-pipeline.md](./2026-08-07--post-processing-pipeline.md) | Post-processing pipeline (EffectComposer) + N8AO ambient occlusion | `planned` |
 | [2026-08-07--grass-rendering.md](./2026-08-07--grass-rendering.md) | Trawa: instanced ground cover per chunk, reużycie chunk/worker systemu | `done` |
 | [2026-08-07--npc-interactions.md](./2026-08-07--npc-interactions.md) | Interakcje gracz↔NPC: proximity prompt + prosty dialog ([E]) | `done` |
@@ -27,7 +27,7 @@ Implementation plans for features and larger changes.
 | [2026-08-07--quests-v1.md](./2026-08-07--quests-v1.md) | Questy v1: minimalny relay quest nad istniejącym dialogiem | `planned` |
 | [2026-08-07--ambient-world-audio.md](./2026-08-07--ambient-world-audio.md) | Ambient audio zależne od obszaru (świerszcze/ptaki dzień-noc, szum fal blisko oceanu) | `planned` |
 | [2026-08-07--minimap.md](./2026-08-07--minimap.md) | Mini-mapa (bottom-left, collapsible, kierunek do osady) | `done` |
-| [2026-08-07--predator-prey-system.md](./2026-08-07--predator-prey-system.md) | Predator-prey z HP, damage na kontakt, spawner + respawn | `verification needed` |
+| [2026-08-07--predator-prey-system.md](./2026-08-07--predator-prey-system.md) | Predator-prey z HP, damage na kontakt, spawner + respawn | `done` |
 
 When adding a new plan: create `YYYY-MM-DD--slug.md`, add a row here.
 
