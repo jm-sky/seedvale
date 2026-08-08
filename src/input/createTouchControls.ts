@@ -3,6 +3,7 @@ import { clampDistance, clampPitch, type LookState } from './MouseLook'
 
 export type TouchControlsHandlers = {
   onPauseToggle: () => void
+  onQuickActions?: () => void
 }
 
 /** Knob travel radius in CSS px — matches `--seedvale-joystick-radius` in index.html. */
@@ -73,6 +74,7 @@ export function createTouchControls(
       <div class="seedvale-touch__joystick-knob" data-joystick-knob></div>
     </div>
     <div class="seedvale-touch__buttons">
+      <button type="button" class="seedvale-touch__button" data-quick-actions>⚡</button>
       <button type="button" class="seedvale-touch__button" data-drop hidden>G</button>
       <button type="button" class="seedvale-touch__button seedvale-touch__button--sprint" data-sprint>RUN</button>
       <button type="button" class="seedvale-touch__button seedvale-touch__button--primary" data-interact>E</button>
@@ -84,6 +86,7 @@ export function createTouchControls(
   const lookZone = root.querySelector<HTMLElement>('[data-look]')!
   const joystickBase = root.querySelector<HTMLElement>('[data-joystick-base]')!
   const joystickKnob = root.querySelector<HTMLElement>('[data-joystick-knob]')!
+  const quickActionsButton = root.querySelector<HTMLButtonElement>('[data-quick-actions]')!
   const dropButton = root.querySelector<HTMLButtonElement>('[data-drop]')!
   const sprintButton = root.querySelector<HTMLButtonElement>('[data-sprint]')!
   const interactButton = root.querySelector<HTMLButtonElement>('[data-interact]')!
@@ -229,11 +232,13 @@ export function createTouchControls(
     sprintButton.classList.toggle('seedvale-touch__button--active', sprintButtonActive)
   }
   const onPause = () => handlers.onPauseToggle()
+  const onQuickActions = () => handlers.onQuickActions?.()
 
   interactButton.addEventListener('click', onInteract)
   dropButton.addEventListener('click', onDrop)
   sprintButton.addEventListener('click', onSprintToggle)
   pauseButton.addEventListener('click', onPause)
+  quickActionsButton.addEventListener('click', onQuickActions)
 
   // Called every frame from createApp's tick loop — guard against redundant
   // DOM writes so an unchanged state doesn't force a style recalc (the
@@ -271,6 +276,7 @@ export function createTouchControls(
       dropButton.removeEventListener('click', onDrop)
       sprintButton.removeEventListener('click', onSprintToggle)
       pauseButton.removeEventListener('click', onPause)
+      quickActionsButton.removeEventListener('click', onQuickActions)
       // Relocated out of `root` into the shared top-right cluster (see
       // createApp) — root.remove() below won't reach it anymore.
       pauseButton.remove()

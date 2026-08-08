@@ -49,6 +49,7 @@ import { createMinimap, type MinimapSettlement } from '../ui/createMinimap'
 import { createNpcDialog } from '../ui/createNpcDialog'
 import { createPauseMenu } from '../ui/createPauseMenu'
 import { createQuestLog } from '../ui/createQuestLog'
+import { createQuickActions } from '../ui/createQuickActions'
 import { createVillagersScreen } from '../ui/createVillagersScreen'
 import { createLights } from '../world/createLights'
 import { createOcean, type WorldOcean } from '../world/createOcean'
@@ -330,6 +331,22 @@ export async function createApp(
   const npcDialog = createNpcDialog(container)
   const questLog = createQuestLog(container)
   const villagersScreen = createVillagersScreen(container)
+
+  // Shared by the pause menu's "Zbuduj ognisko" button and the quick-actions
+  // popup below — two UI entry points onto identical logic, not a duplicate.
+  const buildCampfire = (): boolean => {
+    if (!inventory.has('branch', CAMPFIRE_BRANCH_COST) || !inventory.has('stone', CAMPFIRE_STONE_COST)) {
+      return false
+    }
+    inventory.remove('branch', CAMPFIRE_BRANCH_COST)
+    inventory.remove('stone', CAMPFIRE_STONE_COST)
+    placedFires.place(player.mesh.position.x, player.mesh.position.z)
+    hud.setInventory(inventory.toJSON())
+    touchControls?.setDropAvailable(!inventory.isEmpty())
+    return true
+  }
+  const quickActions = createQuickActions(container, { onBuildCampfire: buildCampfire })
+
   const openQuestLog = () => {
     questLog.open()
     questLog.refresh(questManager.list(), questManager.getExp(), (name) =>
@@ -364,17 +381,7 @@ export async function createApp(
       void writeSave(buildSaveData())
     },
     onRefresh: () => window.location.reload(),
-    onBuildCampfire: () => {
-      if (!inventory.has('branch', CAMPFIRE_BRANCH_COST) || !inventory.has('stone', CAMPFIRE_STONE_COST)) {
-        return false
-      }
-      inventory.remove('branch', CAMPFIRE_BRANCH_COST)
-      inventory.remove('stone', CAMPFIRE_STONE_COST)
-      placedFires.place(player.mesh.position.x, player.mesh.position.z)
-      hud.setInventory(inventory.toJSON())
-      touchControls?.setDropAvailable(!inventory.isEmpty())
-      return true
-    },
+    onBuildCampfire: buildCampfire,
     onNewGame: () => {
       if (!window.confirm('Start a new game? Your saved progress will be cleared.')) return
       void clearSave()
@@ -393,6 +400,11 @@ export async function createApp(
         onPauseToggle: () => {
           if (!npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen()) {
             pauseMenu.togglePause()
+          }
+        },
+        onQuickActions: () => {
+          if (!npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen()) {
+            quickActions.toggle()
           }
         },
       })
@@ -464,7 +476,11 @@ export async function createApp(
     const dt = Math.min(clock.getDelta(), 0.05)
     const menuPaused = pauseMenu.isPaused()
     const anyModalOpen =
-      menuPaused || npcDialog.isOpen() || questLog.isOpen() || villagersScreen.isOpen()
+      menuPaused ||
+      npcDialog.isOpen() ||
+      questLog.isOpen() ||
+      villagersScreen.isOpen() ||
+      quickActions.isOpen()
     touchControls?.setInputEnabled(!anyModalOpen)
 
     if (menuPaused) {
@@ -488,6 +504,11 @@ export async function createApp(
       setHighlight(null)
       if (keyboard.consumeQuestLog()) questLog.close()
     } else if (villagersScreen.isOpen()) {
+      keyboard.consumeInteract()
+      keyboard.consumeQuestLog()
+      keyboard.consumeDrop()
+      setHighlight(null)
+    } else if (quickActions.isOpen()) {
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
@@ -580,7 +601,13 @@ export async function createApp(
       }
     }
 
-    if (!menuPaused && !npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen()) {
+    if (
+      !menuPaused &&
+      !npcDialog.isOpen() &&
+      !questLog.isOpen() &&
+      !villagersScreen.isOpen() &&
+      !quickActions.isOpen()
+    ) {
       for (const s of settlementsManager.getLoaded()) {
         for (const npc of s.npcs) {
           npc.setQuestMarker(questManager.labelMarker(npc.name))
@@ -632,6 +659,7 @@ export async function createApp(
     npcDialog.dispose()
     questLog.dispose()
     villagersScreen.dispose()
+    quickActions.dispose()
     hud.dispose()
     minimap.dispose()
     keyboard.dispose()
