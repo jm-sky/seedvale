@@ -2,7 +2,7 @@
 
 **Status:** `done` — streaming (chunk grid, load/unload radius, worker generacja, duże regiony) i persystencja (IndexedDB save/continue) zaimplementowane i przetestowane w przeglądarce
 **Created:** 2026-08-07  
-**Updated:** 2026-08-07 — streaming zaimplementowany w `2ee894d` (chunk streaming + worker offload) i rozszerzony w `7c2969f` (duże regiony: oceany/wybrzeża/pasma górskie z macro noise, roślinność per-chunk); **persystencja dograna** — single-slot IndexedDB save (`src/persistence/`), ekran Continue/New Game przy boot (`src/ui/createStartScreen.ts`, wpięty w `src/main.ts`), przycisk Save + New Game w pause menu (`src/ui/createPauseMenu.ts`), autosave na `beforeunload` (best-effort) — patrz `src/app/createApp.ts`
+**Updated:** 2026-08-07 — streaming zaimplementowany w `2ee894d` (chunk streaming + worker offload) i rozszerzony w `7c2969f` (duże regiony: oceany/wybrzeża/pasma górskie z macro noise, roślinność per-chunk); **persystencja dograna** — single-slot IndexedDB save (`src/persistence/`), ekran Continue/New Game przy boot (`src/ui/createStartScreen.ts`, wpięty w `src/main.ts`), przycisk Save + New Game w pause menu (`src/ui/createPauseMenu.ts`), autosave na `beforeunload` (best-effort) — patrz `src/app/createApp.ts`. **2026-08-10:** autosave rozszerzony o `visibilitychange`/`pagehide`/okresowy interwał po zgłoszeniu utraty postępu w PWA na Android — patrz „Co jest zrobione (persystencja)" niżej.
 **Priority:** —
 
 ## Co jest zrobione (streaming)
@@ -65,7 +65,7 @@ Flow:
 - **New Game** (ekran startowy) — `clearSave()` + normalny boot bez `initialSave` (nowy losowy seed pochodzi z domyślnego `parseSeedFromUrl` fallbacku/URL/localStorage jak dotąd).
 - **Save** (pause menu, przycisk) — `writeSave(buildSaveData())`, krótki „Saved” feedback w UI.
 - **New Game** (pause menu, w trakcie gry) — `window.confirm` → `clearSave()` + `config.seed = randomSeed()` (`src/world/parseSeed.ts`) + `rebuildWorld()` (istniejący path, ten sam co zmiana seeda w GUI).
-- **Autosave** — `beforeunload` → `writeSave(buildSaveData())`, best-effort (IndexedDB nie gwarantuje ukończenia transakcji przy zamykaniu karty we wszystkich przeglądarkach — zaakceptowany kompromis, nie hard guarantee).
+- **Autosave** — poprawione (2026-08-10) po zgłoszeniu utraty postępu w PWA na Android (zebrane przedmioty zniknęły po ponownym otwarciu): sam `beforeunload` nie wystarcza na mobile — Android/iOS rutynowo usypiają/zabijają zminimalizowaną w tle PWA/kartę bez wywołania tego eventu w ogóle. `src/app/createApp.ts` zapisuje teraz (`saveNow()`, wspólne dla wszystkich triggerów) także na `visibilitychange`→`document.hidden` (odpala natychmiast gdy user przełącza się z appki, zanim OS zdąży zabić proces) i `pagehide` (pokrywa nawigację/bfcache), plus okresowy autosave co 60s jako dodatkowe zabezpieczenie na wypadek zabicia procesu bez żadnego lifecycle eventu. `beforeunload` zostaje jako dodatkowe pokrycie na desktopie. Nadal best-effort (IndexedDB transaction nie ma twardej gwarancji ukończenia), ale znacznie mniejsze okno utraty niż wcześniej.
 
 Świadomie poza zakresem: stan NPC/needs/settlement (deterministyczne z seeda, brak mutowalnego stanu wart zapisu — sprawdzone), migracje między wersjami save'u (jest tylko `version: 1`).
 

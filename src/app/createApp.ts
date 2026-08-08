@@ -299,6 +299,10 @@ export async function createApp(
     placedFires: placedFires.nodes().map((fire) => ({ ...fire })),
   })
 
+  const saveNow = (): void => {
+    void writeSave(buildSaveData())
+  }
+
   const updateSkyFromGui = () => {
     dayNight.enabled = false
     sky.setParams(config.sky, lights.sun)
@@ -377,9 +381,7 @@ export async function createApp(
       config.player.name = name
       saveWorldConfig(config)
     },
-    onSave: () => {
-      void writeSave(buildSaveData())
-    },
+    onSave: saveNow,
     onRefresh: () => window.location.reload(),
     onBuildCampfire: buildCampfire,
     onNewGame: () => {
@@ -437,10 +439,24 @@ export async function createApp(
   // index.html + the manifest's display:standalone) — that path doesn't hit
   // this bug since it isn't the live Fullscreen API.
 
-  const onBeforeUnload = () => {
-    void writeSave(buildSaveData())
+  // `beforeunload` alone isn't enough on mobile: Android (and iOS) routinely
+  // suspend/kill a backgrounded PWA/tab without ever firing it — the reported
+  // failure mode ("collected items, reopened, gone") is exactly that. The
+  // reliable moment to persist is when the page is about to be hidden, not
+  // when it's about to close: `visibilitychange`→hidden fires the instant the
+  // user switches away (before the OS gets a chance to kill the process), and
+  // `pagehide` covers navigation/bfcache cases visibilitychange can miss.
+  // `beforeunload` stays too — free extra coverage on desktop.
+  window.addEventListener('beforeunload', saveNow)
+  const onVisibilityChange = () => {
+    if (document.hidden) saveNow()
   }
-  window.addEventListener('beforeunload', onBeforeUnload)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+  window.addEventListener('pagehide', saveNow)
+  // Defense in depth in case the app is killed with no lifecycle event at
+  // all (rare, but seen on some Android OEMs) — bounds how much progress a
+  // worst-case loss can cost.
+  const autoSaveInterval = window.setInterval(saveNow, 60_000)
 
   applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
 
@@ -653,7 +669,10 @@ export async function createApp(
     window.removeEventListener('resize', onResize)
     window.removeEventListener('orientationchange', onResize)
     window.visualViewport?.removeEventListener('resize', onResize)
-    window.removeEventListener('beforeunload', onBeforeUnload)
+    window.removeEventListener('beforeunload', saveNow)
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+    window.removeEventListener('pagehide', saveNow)
+    window.clearInterval(autoSaveInterval)
     gui.dispose()
     pauseMenu.dispose()
     npcDialog.dispose()
