@@ -1,0 +1,70 @@
+import type { DayNightState } from './dayNight'
+
+/** Real seconds held per skipped game-hour — 1h skip ≈ 1s, 8h skip ≈ 8s. */
+const SECONDS_PER_SKIPPED_HOUR = 1
+
+export type TimeSkipTickResult = {
+  label: string
+  fade: boolean
+  /** True on the exact frame the skip completes — the caller's cue to hide
+   *  the overlay (see `createTimeSkipOverlay.ts`). */
+  justFinished: boolean
+}
+
+export type TimeSkip = {
+  isActive: () => boolean
+  /** No-op if a skip is already in progress. `fade` picks the visual
+   *  treatment (`app/createApp.ts` wires this to `createTimeSkipOverlay`) —
+   *  the underlying mechanism is identical either way. */
+  start: (hours: number, opts: { fade: boolean, label: string }) => void
+  /** Call once per frame regardless of any modal/pause state — this is what
+   *  keeps `dayNight.timeMultiplier` boosted while the skip runs. Returns
+   *  null when no skip is active. */
+  tick: (dt: number) => TimeSkipTickResult | null
+  /** Restores `timeMultiplier` immediately without finishing normally — for
+   *  app teardown mid-skip. */
+  cancel: () => void
+}
+
+/**
+ * A "wait N hours" / "rest N hours" mechanism shared by both Quick Actions
+ * flavors (`createQuickActions.ts`) — advances the clock by temporarily
+ * boosting `dayNight.timeMultiplier` for `hours * SECONDS_PER_SKIPPED_HOUR`
+ * real seconds, then restoring it. Deliberately does *not* scale `dt` for
+ * anything else (NPC/fauna movement would fly off into the void at a large
+ * multiplier) — the world keeps simulating at its normal real-time pace
+ * underneath; only the sky/clock visibly races ahead. `app/createApp.ts` is
+ * responsible for blocking player input while active and for not gating this
+ * out of the per-frame world-update block (the clock needs to keep ticking).
+ */
+export function createTimeSkip(dayNight: DayNightState): TimeSkip {
+  let active: { remainingSec: number, previousMultiplier: number, fade: boolean, label: string } | null = null
+
+  return {
+    isActive: () => active !== null,
+    start(hours, opts) {
+      if (active) return
+      active = {
+        remainingSec: hours * SECONDS_PER_SKIPPED_HOUR,
+        previousMultiplier: dayNight.timeMultiplier,
+        fade: opts.fade,
+        label: opts.label,
+      }
+      dayNight.timeMultiplier = dayNight.dayLengthSec / (24 * SECONDS_PER_SKIPPED_HOUR)
+    },
+    tick(dt) {
+      if (!active) return null
+      active.remainingSec -= dt
+      const { label, fade } = active
+      if (active.remainingSec > 0) return { label, fade, justFinished: false }
+      dayNight.timeMultiplier = active.previousMultiplier
+      active = null
+      return { label, fade, justFinished: true }
+    },
+    cancel() {
+      if (!active) return
+      dayNight.timeMultiplier = active.previousMultiplier
+      active = null
+    },
+  }
+}

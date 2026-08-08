@@ -284,6 +284,41 @@
         font-family: monospace;
         opacity: 0.4;
       }
+      /* Visual layer for a "wait"/"rest" time skip (world/timeSkip.ts) —
+         above every other overlay (pause menu z-index 10) except the one-time
+         boot loading screen (20), which can never overlap this at runtime. */
+      .seedvale-time-skip {
+        position: absolute;
+        inset: 0;
+        z-index: 11;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .seedvale-time-skip[hidden] {
+        display: none;
+      }
+      .seedvale-time-skip__fade {
+        position: absolute;
+        inset: 0;
+        background: #000;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+      }
+      .seedvale-time-skip__fade--visible {
+        opacity: 1;
+      }
+      .seedvale-time-skip__label {
+        position: relative;
+        padding: 8px 18px;
+        border-radius: 8px;
+        background: rgba(20, 24, 28, 0.72);
+        color: #f4f7fa;
+        font-size: 15px;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      }
       .seedvale-loading {
         position: absolute;
         inset: 0;
@@ -722,6 +757,10 @@
         position: absolute;
         right: max(20px, env(safe-area-inset-right));
         bottom: max(190px, calc(env(safe-area-inset-bottom) + 190px));
+        max-height: calc(100dvh - 220px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
         z-index: 9;
         display: flex;
         flex-direction: column;
@@ -730,6 +769,20 @@
       }
       .seedvale-quick-actions[hidden] {
         display: none;
+      }
+      .seedvale-quick-actions__heading {
+        margin-top: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #f2f6fa;
+        opacity: 0.65;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+      }
+      .seedvale-quick-actions__row {
+        display: flex;
+        gap: 8px;
       }
       .seedvale-quick-actions__button {
         display: block;
@@ -748,6 +801,11 @@
       }
       .seedvale-quick-actions__button:hover {
         background: rgba(30, 36, 42, 0.95);
+      }
+      .seedvale-quick-actions__button--small {
+        width: auto;
+        flex: 1;
+        text-align: center;
       }
       .seedvale-quick-actions__status {
         display: block;

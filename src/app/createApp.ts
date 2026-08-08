@@ -50,6 +50,7 @@ import { createNpcDialog } from '../ui/createNpcDialog'
 import { createPauseMenu } from '../ui/createPauseMenu'
 import { createQuestLog } from '../ui/createQuestLog'
 import { createQuickActions } from '../ui/createQuickActions'
+import { createTimeSkipOverlay } from '../ui/createTimeSkipOverlay'
 import { createVillagersScreen } from '../ui/createVillagersScreen'
 import { createLights } from '../world/createLights'
 import { createOcean, type WorldOcean } from '../world/createOcean'
@@ -60,6 +61,7 @@ import {
   tickDayNight,
 } from '../world/dayNight'
 import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
+import { createTimeSkip } from '../world/timeSkip'
 
 /** Fixed radius (world units) for settlement/fauna spatial logic — deliberately
  *  independent of the streamed terrain's loaded region, so the village and its
@@ -91,6 +93,11 @@ const TREE_BRANCH_CHANCE = 0.25
  *  get it started. */
 const CAMPFIRE_BRANCH_COST = 2
 const CAMPFIRE_STONE_COST = 2
+/** How close (world units) to a settlement's center counts as "in town" for
+ *  the "Odpocznij w mieście" quick action — covers the default village
+ *  extent (core + house ring, `ringMax + houseRadius*2 ≈ 39.6` at default
+ *  `coreRadius`/`houseRadius`), not the much larger `HOME_RADIUS`. */
+const REST_IN_TOWN_RADIUS = 40
 
 type Highlightable = NpcAgent | AnimalAgent
 
@@ -349,7 +356,29 @@ export async function createApp(
     touchControls?.setDropAvailable(!inventory.isEmpty())
     return true
   }
-  const quickActions = createQuickActions(container, { onBuildCampfire: buildCampfire })
+
+  const timeSkip = createTimeSkip(dayNight)
+  const timeSkipOverlay = createTimeSkipOverlay(container)
+
+  const quickActions = createQuickActions(container, {
+    onBuildCampfire: buildCampfire,
+    onWait: (hours) => {
+      timeSkip.start(hours, { fade: false, label: `Czekasz... (${hours}h)` })
+    },
+    onRest: (variant) => {
+      if (variant === 'town') {
+        const nearSettlement = settlementsManager
+          .getLoaded()
+          .some((s) => s.center.distanceTo(player.mesh.position) <= REST_IN_TOWN_RADIUS)
+        if (!nearSettlement) return 'too-far'
+      }
+      timeSkip.start(8, {
+        fade: true,
+        label: variant === 'town' ? 'Odpoczywasz w mieście...' : 'Rozbijasz obóz...',
+      })
+      return 'ok'
+    },
+  })
 
   const openQuestLog = () => {
     questLog.open()
@@ -490,6 +519,22 @@ export async function createApp(
   const tick = () => {
     frameId = requestAnimationFrame(tick)
     const dt = Math.min(clock.getDelta(), 0.05)
+
+    // Runs regardless of any modal/pause state — the clock has to keep
+    // advancing (boosted) for the skip to actually pass game-time. Only
+    // player input is blocked below; world simulation stays on its normal
+    // per-frame path (see world/timeSkip.ts for why dt itself isn't scaled).
+    const skip = timeSkip.tick(dt)
+    if (skip) {
+      timeSkipOverlay.show(skip.label, skip.fade)
+      if (skip.justFinished) timeSkipOverlay.hide()
+      keyboard.state.forward = false
+      keyboard.state.backward = false
+      keyboard.state.left = false
+      keyboard.state.right = false
+      keyboard.state.sprint = false
+    }
+
     const menuPaused = pauseMenu.isPaused()
     const anyModalOpen =
       menuPaused ||
@@ -497,7 +542,7 @@ export async function createApp(
       questLog.isOpen() ||
       villagersScreen.isOpen() ||
       quickActions.isOpen()
-    touchControls?.setInputEnabled(!anyModalOpen)
+    touchControls?.setInputEnabled(!anyModalOpen && !timeSkip.isActive())
 
     if (menuPaused) {
       // drop stale presses so they can't fire right after resume
@@ -525,6 +570,11 @@ export async function createApp(
       keyboard.consumeDrop()
       setHighlight(null)
     } else if (quickActions.isOpen()) {
+      keyboard.consumeInteract()
+      keyboard.consumeQuestLog()
+      keyboard.consumeDrop()
+      setHighlight(null)
+    } else if (timeSkip.isActive()) {
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
@@ -673,6 +723,8 @@ export async function createApp(
     document.removeEventListener('visibilitychange', onVisibilityChange)
     window.removeEventListener('pagehide', saveNow)
     window.clearInterval(autoSaveInterval)
+    timeSkip.cancel()
+    timeSkipOverlay.dispose()
     gui.dispose()
     pauseMenu.dispose()
     npcDialog.dispose()

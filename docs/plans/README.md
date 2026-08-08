@@ -44,6 +44,7 @@ Implementation plans for features and larger changes.
 | [2026-08-08--037--npc-genealogy-lineages.md](./2026-08-08--037--npc-genealogy-lineages.md) | Rody NPC (Sem/Cham/Jafet) przypisane wg kierunku osady od (0,0) + kompas „N" na minimapie | `todo` |
 | [2026-08-08--038--campfire-lighting.md](./2026-08-08--038--campfire-lighting.md) | Zapalanie ognisk gałęziami (paliwo/czas palenia/dokładanie) + wolnostojące ogniska budowane przez gracza (2x gałąź + 2x kamień, menu pauzy) — zaimplementowane; 50% szans na już zapalone ognisko wioski w nocy — nadal `todo` | `verification needed` |
 | [2026-08-08--039--road-signposts.md](./2026-08-08--039--road-signposts.md) | Kierunkowskazy przy drogach międzyosadowych — nazwa docelowej osady, reużywa CSS2D etykiety jak NPC | `todo` |
+| [2026-08-10--040--wait-rest-time-skip.md](./2026-08-10--040--wait-rest-time-skip.md) | Czekaj (1/3/6h, widoczne przyspieszenie) + Odpoczynek (obóz/miasto, 8h, fade-to-black) w Quick Actions — czysty skok czasu, bez player-stat systemu | `verification needed` |
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
 

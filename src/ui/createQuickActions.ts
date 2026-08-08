@@ -1,3 +1,4 @@
+import { enableTouchScroll } from '../input/enableTouchScroll'
 import { isTouchDevice } from '../input/isTouchDevice'
 
 export type QuickActionsHandlers = {
@@ -5,6 +6,13 @@ export type QuickActionsHandlers = {
    *  second UI entry point onto identical logic, not a duplicate. Returns
    *  false (consumes nothing) if the player lacks the resources. */
   onBuildCampfire?: () => boolean
+  /** Starts a "wait" time skip (1/3/6h, visible fast-forward) — see
+   *  `world/timeSkip.ts`. */
+  onWait?: (hours: number) => void
+  /** Starts an 8h "rest" time skip (fades to black). `'town'` requires the
+   *  player to be near a settlement — returns `'too-far'` (consumes nothing)
+   *  if not; `'camp'` always succeeds. */
+  onRest?: (variant: 'camp' | 'town') => 'ok' | 'too-far'
 }
 
 export type QuickActions = {
@@ -40,8 +48,21 @@ export function createQuickActions(
       Zbuduj ognisko (2x gałąź, 2x kamień)
       <span data-build-campfire-status class="seedvale-quick-actions__status"></span>
     </button>
+    <div class="seedvale-quick-actions__heading">Czekaj</div>
+    <div class="seedvale-quick-actions__row">
+      <button type="button" data-wait="1" class="seedvale-quick-actions__button seedvale-quick-actions__button--small">1h</button>
+      <button type="button" data-wait="3" class="seedvale-quick-actions__button seedvale-quick-actions__button--small">3h</button>
+      <button type="button" data-wait="6" class="seedvale-quick-actions__button seedvale-quick-actions__button--small">6h</button>
+    </div>
+    <div class="seedvale-quick-actions__heading">Odpoczynek</div>
+    <button type="button" data-rest="camp" class="seedvale-quick-actions__button">Rozbij obóz (8h)</button>
+    <button type="button" data-rest="town" class="seedvale-quick-actions__button">
+      Odpocznij w mieście (8h)
+      <span data-rest-town-status class="seedvale-quick-actions__status"></span>
+    </button>
   `
   parent.appendChild(root)
+  const disposeTouchScroll = isTouchDevice() ? enableTouchScroll(root) : null
 
   const buildCampfireButton = root.querySelector<HTMLButtonElement>('[data-build-campfire]')!
   const buildCampfireStatusEl = root.querySelector<HTMLElement>('[data-build-campfire-status]')!
@@ -54,6 +75,36 @@ export function createQuickActions(
     buildCampfireStatusTimeout = window.setTimeout(() => {
       buildCampfireStatusEl.textContent = ''
     }, 1500)
+  })
+
+  root.querySelectorAll<HTMLButtonElement>('[data-wait]').forEach((button) => {
+    const hours = Number(button.dataset.wait)
+    button.addEventListener('click', () => {
+      close()
+      handlers.onWait?.(hours)
+    })
+  })
+
+  const campButton = root.querySelector<HTMLButtonElement>('[data-rest="camp"]')!
+  campButton.addEventListener('click', () => {
+    close()
+    handlers.onRest?.('camp')
+  })
+
+  const townButton = root.querySelector<HTMLButtonElement>('[data-rest="town"]')!
+  const townStatusEl = root.querySelector<HTMLElement>('[data-rest-town-status]')!
+  let townStatusTimeout = 0
+  townButton.addEventListener('click', () => {
+    const result = handlers.onRest?.('town') ?? 'too-far'
+    if (result === 'too-far') {
+      townStatusEl.textContent = 'Musisz być bliżej wioski'
+      window.clearTimeout(townStatusTimeout)
+      townStatusTimeout = window.setTimeout(() => {
+        townStatusEl.textContent = ''
+      }, 1500)
+      return
+    }
+    close()
   })
 
   // Touch already has its own trigger button (next to E, see
@@ -117,6 +168,8 @@ export function createQuickActions(
       window.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('click', onDocumentClick)
       window.clearTimeout(buildCampfireStatusTimeout)
+      window.clearTimeout(townStatusTimeout)
+      disposeTouchScroll?.()
       triggerButton?.remove()
       root.remove()
     },
