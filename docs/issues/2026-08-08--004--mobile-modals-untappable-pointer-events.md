@@ -1,6 +1,6 @@
 # Menu pauzy (i pozostałe modale) nie reagują na dotyk ani nie scrollują na mobile
 
-**Status:** `verification needed`
+**Status:** `done` — potwierdzone przez usera na realnym telefonie ("Menu działa! Good!")
 **Created:** 2026-08-08
 **Updated:** 2026-08-08
 **Źródło:** zgłoszenie użytkownika (Android, Firefox Mobile **oraz** Chrome Mobile — identyczny objaw), po trzech nieudanych rundach poprawek

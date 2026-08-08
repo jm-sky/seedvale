@@ -24,6 +24,16 @@ export class Inventory {
     return this.count(kind) >= n
   }
 
+  /** False as soon as any kind has a positive count — `remove()` can leave a
+   *  zeroed entry in `counts` rather than deleting it, so this can't just
+   *  check `counts.size`. */
+  isEmpty(): boolean {
+    for (const n of this.counts.values()) {
+      if (n > 0) return false
+    }
+    return true
+  }
+
   remove(kind: ItemKind, n: number): boolean {
     const current = this.count(kind)
     if (current < n) return false

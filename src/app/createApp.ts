@@ -371,6 +371,9 @@ export async function createApp(
         },
       })
     : null
+  // Reflects any inventory carried over from a loaded save — later changes are
+  // synced at each pickup/drop call site alongside hud.setInventory().
+  touchControls?.setDropAvailable(!inventory.isEmpty())
 
   // Shared flex column, right-aligned, holding the ☰ pause button + minimap —
   // replaces two independently absolutely-positioned corner widgets (which
@@ -501,6 +504,7 @@ export async function createApp(
           if (collected) {
             inventory.add(collected.kind)
             hud.setInventory(inventory.toJSON())
+            touchControls?.setDropAvailable(!inventory.isEmpty())
           }
         } else {
           const outcome = resolveInteraction(target, questManager)
@@ -521,7 +525,10 @@ export async function createApp(
           )
           dropOffset++
         }
-        if (dropOffset > 0) hud.setInventory(inventory.toJSON())
+        if (dropOffset > 0) {
+          hud.setInventory(inventory.toJSON())
+          touchControls?.setDropAvailable(!inventory.isEmpty())
+        }
       }
     }
 

@@ -724,13 +724,28 @@
         pointer-events: none;
       }
       .seedvale-top-right-cluster .seedvale-minimap {
-        position: static;
+        /* `relative`, not `static`: makes this the containing block for the
+           canvas below, which is deliberately taken out of flow (see next
+           rule) so expanding the map doesn't grow *this* element's box —
+           that box is what the cluster's flex column measures, so an
+           in-flow canvas pushed the whole cluster tall enough to reach down
+           into the bottom-right L/G/RUN/E buttons' territory (reported —
+           twice). Detaching it keeps the cluster a fixed ~84px (☰ + gap +
+           toggle) regardless of expand state; only the floated canvas
+           itself can still visually extend further down when opened. */
+        position: relative;
         /* Base rule uses column-reverse + flex-start for the desktop
            bottom-left anchor (toggle below canvas, both left-aligned). Here
            the cluster anchors top-right instead: toggle above canvas,
            right-aligned to line up with the ☰ button above it. */
         flex-direction: column;
         align-items: flex-end;
+      }
+      .seedvale-top-right-cluster .seedvale-minimap__canvas {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 4px;
       }
       /* Desktop toggle (2px/8px padding, ~11px font) is too small a touch target —
          enlarge it to a comfortable tap size on touch devices. */
