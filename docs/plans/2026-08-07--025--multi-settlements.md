@@ -21,6 +21,8 @@ Zaimplementowane zgodnie ze szkicem poniżej, z kilkoma decyzjami podjętymi pod
 
 Sanity check: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — wszystkie czyste. **Nie zweryfikowano jeszcze w przeglądarce** (patrz "Do przetestowania" — wymaga manualnego testu przez użytkownika, zgodnie z zasadą projektu).
 
+**Update (2026-08-08, po `village-generation.md`):** `SettlementDef.npcCount` (opisane wyżej jako "NPC w innych wioskach") **nie istnieje już w kodzie** — [village-generation.md](./2026-08-08--031--village-generation.md) zastąpiło je systemem rodzin (`src/settlement/families.ts`: `rollVillageSize`/`generateFamilies`), więc liczba i skład NPC per wioska (poza home) wynika dziś z wylosowanego rozmiaru wioski (SM/MD/LG) i rodzin, nie z pojedynczego `npcCount` 3-5. Reszta ustaleń w tej sekcji (grid step, streaming, minimap, panel Mieszkańcy, brak multi-village questów) pozostaje aktualna.
+
 ## Kontekst
 
 Aktualnie: **jedna wioska** na mapie, zawsze generowana w tym samym miejscu (seeded `findSettlementSite` przy stałym seed). System questów v1 (patrz [quests-v1.md](./2026-08-07--015--quests-v1.md)) pracuje na NPCs w jednej osadzie. Chcemy rozszerzyć na **wielorakie wioski** rozproszone na mapie, oddalone od siebie, żeby:
