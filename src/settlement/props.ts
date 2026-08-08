@@ -42,10 +42,15 @@ export const TREE_SPECS = [
   { url: '/models/nature/deadtree_1.glb', height: 3.6 },
 ] as const
 
+/** Indices 2-4 (the flower entries) are also referenced by exact position from
+ *  `terrain/chunkVegetation.ts`'s `FLOWER_BUSH_SPECIES_INDICES` for meadow
+ *  patches — keep flowers grouped at the end if this list changes. */
 export const BUSH_SPECS = [
   { url: '/models/nature/bush_a.glb', height: 1.4 },
   { url: '/models/nature/bush_b.glb', height: 1.8 },
   { url: '/models/nature/flower_clump_1.glb', height: 0.4 },
+  { url: '/models/nature/flower_clump_2.glb', height: 0.4 },
+  { url: '/models/nature/bush_flowers_1.glb', height: 0.6 },
 ] as const
 
 export const CACTUS_SPECS = [
@@ -103,27 +108,133 @@ export function createHut(): THREE.Group {
   return hut
 }
 
+/** Stone ring + roofed crossbeam + hanging bucket — more of a village
+ *  landmark than the bare cylinder this replaces (plan 044 §1.3), still
+ *  primitives-only (no GLB) since a well has no gameplay mechanic to justify
+ *  sourcing/loading a dedicated model. */
 export function createWell(): THREE.Group {
   const well = new THREE.Group()
-  const base = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.7, 0.85, 0.7, 8),
-    new THREE.MeshStandardMaterial({ color: 0x7a7a72, flatShading: true }),
-  )
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x7a7a72, flatShading: true, roughness: 0.95 })
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2e, flatShading: true })
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x5c3a24, flatShading: true })
+
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.85, 0.7, 10), stoneMat)
   base.position.y = 0.35
   base.castShadow = true
+  base.receiveShadow = true
   well.add(base)
 
+  // A slightly darker capstone ring reads as dressed stone rather than a
+  // single flat-shaded drum.
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.72, 0.09, 6, 12),
+    new THREE.MeshStandardMaterial({ color: 0x625f58, flatShading: true, roughness: 0.9 }),
+  )
+  rim.rotation.x = Math.PI / 2
+  rim.position.y = 0.72
+  rim.castShadow = true
+  well.add(rim)
+
   const water = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.45, 0.45, 0.1, 8),
-    new THREE.MeshStandardMaterial({
-      color: 0x3a7ca5,
-      flatShading: true,
-      roughness: 0.3,
-    }),
+    new THREE.CylinderGeometry(0.45, 0.45, 0.1, 10),
+    new THREE.MeshStandardMaterial({ color: 0x3a7ca5, flatShading: true, roughness: 0.3 }),
   )
   water.position.y = 0.55
   well.add(water)
+
+  const postGeo = new THREE.CylinderGeometry(0.07, 0.08, 1.6, 6)
+  for (const side of [-1, 1]) {
+    const post = new THREE.Mesh(postGeo, woodMat)
+    post.position.set(0, 0.35 + 0.8, side * 0.65)
+    post.castShadow = true
+    well.add(post)
+  }
+
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.5, 6), woodMat)
+  beam.rotation.z = Math.PI / 2
+  beam.position.set(0, 1.55, 0)
+  beam.castShadow = true
+  well.add(beam)
+
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.05, 0.6, 4), roofMat)
+  roof.position.y = 2.0
+  roof.rotation.y = Math.PI / 4
+  roof.castShadow = true
+  well.add(roof)
+
+  const bucket = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.13, 0.22, 8),
+    woodMat,
+  )
+  bucket.position.set(0, 1.1, 0)
+  bucket.castShadow = true
+  well.add(bucket)
+
   return well
+}
+
+/** Fallback if `barrel.glb`/`crate.glb` fail to load — plain flat-shaded
+ *  cylinder with a couple of darker hoop rings. */
+export function createBarrel(scale = 1): THREE.Group {
+  const barrel = new THREE.Group()
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a6a3e, flatShading: true })
+  const hoopMat = new THREE.MeshStandardMaterial({ color: 0x3d3630, flatShading: true })
+
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32 * scale, 0.3 * scale, 0.65 * scale, 10), woodMat)
+  body.position.y = 0.33 * scale
+  body.castShadow = true
+  barrel.add(body)
+
+  for (const t of [0.14, 0.52]) {
+    const hoop = new THREE.Mesh(
+      new THREE.TorusGeometry(0.32 * scale, 0.02 * scale, 5, 12),
+      hoopMat,
+    )
+    hoop.rotation.x = Math.PI / 2
+    hoop.position.y = t * scale
+    barrel.add(hoop)
+  }
+
+  return barrel
+}
+
+/** Small warm glow (emissive window pane + a short-range point light) meant
+ *  to sit near a house — toggled continuously via `setNightIntensity(t)`
+ *  (0 = daylight, off; 1 = full night glow), see `settlement/createSettlement.ts`'s
+ *  day/night wiring. Kept as one cheap emissive quad + one short-falloff,
+ *  unshadowed point light per house rather than anything more elaborate — a
+ *  handful of these per loaded settlement is the same order of magnitude as
+ *  the existing campfire flame light. */
+export type HouseLight = {
+  readonly object: THREE.Object3D
+  setNightIntensity: (t: number) => void
+}
+
+export function createHouseLight(): HouseLight {
+  const group = new THREE.Group()
+
+  const glowMat = new THREE.MeshStandardMaterial({
+    color: 0xffdb9e,
+    emissive: 0xffb35c,
+    emissiveIntensity: 0,
+    flatShading: true,
+  })
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), glowMat)
+  glow.position.set(0, 1.0, 0.55)
+  group.add(glow)
+
+  const light = new THREE.PointLight(0xffb35c, 0, 4.5, 2)
+  light.position.set(0, 1.0, 0.4)
+  group.add(light)
+
+  return {
+    object: group,
+    setNightIntensity(t) {
+      const clamped = Math.max(0, Math.min(1, t))
+      glowMat.emissiveIntensity = clamped * 2.2
+      light.intensity = clamped * 1.0
+    },
+  }
 }
 
 /** A short wooden pier — deck extends along local +X (rotate by the
@@ -280,10 +391,14 @@ export function createLargeRock(scale = 1, variant = 0.5): THREE.Group {
 export function createRockCluster(scale = 1, variant = 0.5): THREE.Group {
   const cluster = new THREE.Group()
   const mat = new THREE.MeshStandardMaterial({ color: 0x8c8c8c, flatShading: true })
-  const count = 3 + Math.floor(variant * 5) % 3
+  // Wider spread than a fixed 3-5: `variant` (already a random 0..1 roll from
+  // the caller) pushes some clusters up to 9 pebbles for visible size variety
+  // between clusters, not just within one.
+  const count = 3 + Math.floor(variant * 7)
+  const spread = 0.7 + variant * 0.6
   for (let i = 0; i < count; i++) {
     const a = variant * Math.PI * 2 + i * 2.4
-    const r = 0.15 + ((variant * (i + 3)) % 1) * 0.25
+    const r = (0.15 + ((variant * (i + 3)) % 1) * 0.3) * spread
     const pebble = new THREE.Mesh(
       new THREE.DodecahedronGeometry(0.16 * scale * (0.7 + (i % 3) * 0.15), 0),
       mat,
@@ -579,7 +694,7 @@ export async function buildSettlementProps(
    *  unlike home chunks, isn't suppressed around them. They still get their
    *  well/stockpile/garden/huts. */
   plantForest = true,
-): Promise<{ group: THREE.Group, landmarks: SettlementLandmarks }> {
+): Promise<{ group: THREE.Group, landmarks: SettlementLandmarks, houseLights: HouseLight[] }> {
   const group = new THREE.Group()
   group.name = 'settlement'
 
@@ -619,6 +734,7 @@ export async function buildSettlementProps(
   group.add(garden)
   landmarks.garden.set(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
 
+  const houseLights: HouseLight[] = []
   for (let i = 0; i < clearings.houses.length; i++) {
     const area = clearings.houses[i]!
     const hut = await loadPropOrFallback(
@@ -629,6 +745,23 @@ export async function buildSettlementProps(
     placeOnGround(hut, area.x, area.z, sampleHeight)
     group.add(hut)
     landmarks.homes.push(new THREE.Vector3(area.x, sampleHeight(area.x, area.z), area.z))
+
+    const houseLight = createHouseLight()
+    hut.add(houseLight.object)
+    houseLights.push(houseLight)
+  }
+
+  // A couple of barrels by the stockpile — everyday clutter, purely
+  // decorative (plan 044 §1.2).
+  const barrelTemplates = await loadPropTemplates(
+    [{ url: '/models/settlement/barrel.glb', height: 0.65 }],
+    () => createBarrel(1),
+  )
+  const barrelSpots: Array<[number, number]> = [[1.1, -0.6], [1.6, 0.4]]
+  for (const [dx, dz] of barrelSpots) {
+    const barrel = cloneProp(barrelTemplates, 0, 0.85 + coreRandom() * 0.3)
+    placeOnGround(barrel, stockX + dx, stockZ + dz, sampleHeight)
+    group.add(barrel)
   }
 
   if (size !== 'SM') {
@@ -765,7 +898,7 @@ export async function buildSettlementProps(
     }
   }
 
-  return { group, landmarks }
+  return { group, landmarks, houseLights }
 }
 
 export function disposeSettlementGroup(group: THREE.Group): void {

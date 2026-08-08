@@ -44,6 +44,10 @@ export type SettlementsManager = {
   home: Settlement
   /** Streams settlements in/out by distance and ticks every loaded one's NPCs. */
   update: (dt: number, playerPos: Vector3) => void
+  /** Forwarded to every loaded settlement's `setDayNight` (house window
+   *  glow) — also remembered so a settlement streamed in later starts at the
+   *  current time of day instead of flashing on/off at its own default. */
+  setDayNight: (t: number) => void
   getLoaded: () => Settlement[]
   dispose: () => void
 }
@@ -108,6 +112,11 @@ export async function createSettlementsManager(
 
   const entries = new Map<string, Entry>()
   entries.set(homeDef.id, { def: homeDef, settlement: homeSettlement, pendingPromise: null })
+
+  // Remembered so a settlement that streams in later (or finishes its async
+  // build after `setDayNight` already ran for this tick) starts its house
+  // lights at the current time of day instead of the door default.
+  let lastDayNight = 0
 
   // Midpoint road signposts (roads-and-paths plan, part 2) don't belong to
   // either settlement's own group/lifecycle — a pair only needs *some* known
@@ -200,6 +209,7 @@ export async function createSettlementsManager(
           return
         }
         cur.settlement = settlement
+        settlement.setDayNight(lastDayNight)
       })
       .catch((err: unknown) => {
         console.error('[SettlementsManager] failed to build settlement', def.id, err)
@@ -243,6 +253,10 @@ export async function createSettlementsManager(
 
   return {
     home: homeSettlement,
+    setDayNight(t) {
+      lastDayNight = t
+      for (const entry of entries.values()) entry.settlement?.setDayNight(t)
+    },
     update(dt, playerPos) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)

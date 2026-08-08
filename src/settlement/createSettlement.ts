@@ -34,6 +34,11 @@ export type Settlement = {
   /** Only present for MD/LG villages, see `props.ts`'s `buildSettlementProps`. */
   fire?: VillageFire
   update: (dt: number, observerPos: Vector3) => void
+  /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
+   *  night glow). Called from `SettlementsManager.setDayNight`, itself only
+   *  invoked on the same throttled day/night tick as `applyDayNight`
+   *  (`app/createApp.ts`), not every frame. */
+  setDayNight: (t: number) => void
   dispose: () => void
 }
 
@@ -48,7 +53,7 @@ export async function createSettlement(
   roadCtx?: RoadNetworkContext,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
-  const { group, landmarks } = await buildSettlementProps(
+  const { group, landmarks, houseLights } = await buildSettlementProps(
     site,
     sampleHeight,
     waterLevel,
@@ -165,6 +170,9 @@ export async function createSettlement(
       for (const sp of signposts) {
         sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))
       }
+    },
+    setDayNight(t) {
+      for (const light of houseLights) light.setNightIntensity(t)
     },
     dispose() {
       for (const agent of agents) {

@@ -93,6 +93,7 @@ export function computeChunkEnvironment(
     const wz = coord.cz * chunkSize + (rockRandom() * 2 - 1) * half
     const h = sample(tile.heights, wx, wz)
     if (h <= waterLevel + 0.3) continue
+    if (sample(tile.roadTint, wx, wz) > ROAD_TINT_REJECT) continue // road/path/clearing
 
     if (slopeAt(wx, wz) > SLOPE_REJECT_ROCK) continue
 
@@ -123,6 +124,7 @@ export function computeChunkEnvironment(
     const wz = coord.cz * chunkSize + (logRandom() * 2 - 1) * half
     const h = sample(tile.heights, wx, wz)
     if (h <= waterLevel + 0.4) continue
+    if (sample(tile.roadTint, wx, wz) > ROAD_TINT_REJECT) continue // road/path/clearing
     if (slopeAt(wx, wz) > SLOPE_REJECT_FLAT) continue
 
     const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)

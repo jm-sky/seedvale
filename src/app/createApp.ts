@@ -285,6 +285,9 @@ export async function createApp(
         lastAppliedTimeOfDay = dayNight.timeOfDay
       }
       settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce, config)
+      if (dayNight.enabled) {
+        settlementsManager.setDayNight(1 - skyParamsFromTime(dayNight.timeOfDay).dayFactor)
+      }
       fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
       itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
       droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, carriedDrops)
@@ -343,6 +346,7 @@ export async function createApp(
   const onDayNightChange = () => {
     if (dayNight.enabled) {
       applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
+      settlementsManager.setDayNight(1 - skyParamsFromTime(dayNight.timeOfDay).dayFactor)
       lastAppliedTimeOfDay = dayNight.timeOfDay
     }
   }
@@ -509,6 +513,7 @@ export async function createApp(
   const autoSaveInterval = window.setInterval(saveNow, 60_000)
 
   applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
+  settlementsManager.setDayNight(1 - skyParamsFromTime(dayNight.timeOfDay).dayFactor)
   let lastAppliedTimeOfDay = dayNight.timeOfDay
 
   const clock = new Clock()
@@ -713,6 +718,7 @@ export async function createApp(
         timeOfDayDelta(dayNight.timeOfDay, lastAppliedTimeOfDay) >= DAY_NIGHT_APPLY_THRESHOLD
       ) {
         applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
+        settlementsManager.setDayNight(1 - skyParamsFromTime(dayNight.timeOfDay).dayFactor)
         lastAppliedTimeOfDay = dayNight.timeOfDay
       }
       ambientAudio.update(skyParamsFromTime(dayNight.timeOfDay).dayFactor)

@@ -213,7 +213,15 @@ Jeżeli ich naprawa jest niewielka i naturalnie mieści się w zakresie tego mil
 
 Nie należy jednak rozszerzać planu do pełnego refaktoru generatora świata.
 
-### 4.5. Naturalne generowanie drzew
+### 4.5. Lekki normal/bump map na terenie
+
+Teren obecnie renderuje się przez `MeshStandardMaterial` z `vertexColors`, bez żadnej normal/bump mapy — cały detal cieniowania pochodzi z geometrii (`src/terrain/buildChunkGeometry.ts`). Przy niskiej gęstości siatki (i przy smooth shading) teren może z bliska wyglądać płasko.
+
+Rozważyć dodanie lekkiej normal mapy (lub prostszej bump mapy) jako detalu powierzchni bez dokładania geometrii — np. tileowana/proceduralna tekstura szumu modulująca `normalMap`/`normalScale` (lub `bumpMap`/`bumpScale`) na materiale terenu. Cel: subtelny detal z bliska, bez zmiany sylwetki terenu i bez dużego kosztu wydajnościowego.
+
+Szczegóły (tileowanie, siła efektu, ewentualna zależność od biomu) do ustalenia podczas implementacji.
+
+### 4.6. Naturalne generowanie drzew
 
 Poprawić naturalność rozmieszczenia drzew:
 
