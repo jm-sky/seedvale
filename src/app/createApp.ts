@@ -352,6 +352,7 @@ export async function createApp(
     onSave: () => {
       void writeSave(buildSaveData())
     },
+    onRefresh: () => window.location.reload(),
     onNewGame: () => {
       if (!window.confirm('Start a new game? Your saved progress will be cleared.')) return
       void clearSave()

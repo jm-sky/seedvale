@@ -10,6 +10,7 @@ export type PauseMenuHandlers = {
   /** Fired on blur/Enter with the trimmed, non-empty name — persist here. */
   onNameCommit?: (name: string) => void
   onSave?: () => void
+  onRefresh?: () => void
   onNewGame?: () => void
   onQuestLog?: () => void
   onVillagers?: () => void
@@ -54,6 +55,7 @@ export function createPauseMenu(
       <button type="button" data-villagers class="seedvale-pause__button seedvale-pause__button--ghost">Mieszkańcy</button>
       <button type="button" data-save class="seedvale-pause__button seedvale-pause__button--ghost">Save<span data-save-status class="seedvale-pause__save-status"></span></button>
       <button type="button" data-gui class="seedvale-pause__button seedvale-pause__button--ghost">Toggle debug panel</button>
+      <button type="button" data-refresh class="seedvale-pause__button seedvale-pause__button--ghost">Odśwież stronę</button>
       <button type="button" data-new-game class="seedvale-pause__button seedvale-pause__button--danger">New Game</button>
       <div class="seedvale-pause__hint">${
         isTouchDevice()
@@ -73,6 +75,7 @@ export function createPauseMenu(
   const questLogButton = root.querySelector<HTMLButtonElement>('[data-quest-log]')!
   const villagersButton = root.querySelector<HTMLButtonElement>('[data-villagers]')!
   const guiButton = root.querySelector<HTMLButtonElement>('[data-gui]')!
+  const refreshButton = root.querySelector<HTMLButtonElement>('[data-refresh]')!
   const saveButton = root.querySelector<HTMLButtonElement>('[data-save]')!
   const saveStatusEl = root.querySelector<HTMLElement>('[data-save-status]')!
   const newGameButton = root.querySelector<HTMLButtonElement>('[data-new-game]')!
@@ -135,6 +138,7 @@ export function createPauseMenu(
     handlers.onVillagers?.()
   })
   guiButton.addEventListener('click', () => handlers.onToggleGui?.())
+  refreshButton.addEventListener('click', () => handlers.onRefresh?.())
   window.addEventListener('keydown', onKeyDown)
   root.addEventListener('click', onRootClick)
 
