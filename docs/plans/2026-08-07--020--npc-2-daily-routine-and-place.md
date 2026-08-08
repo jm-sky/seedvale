@@ -1,6 +1,6 @@
 # Plan: NPC Daily Routine & Place System
 
-**Status:** `in progress` (~15% pełnego pierwotnego zakresu) — v1 (formalizacja `home` jako `Place`) zaimplementowane i zielone na `tsc`/`lint`/`build`/`test`, patrz „Stan implementacji” niżej; brak jeszcze wizualnej weryfikacji w przeglądarce. Pełny zakres (Schedule/workplace per rola/generyczny FSM) odłożony, patrz „Odłożone”.
+**Status:** `in progress` (~15% pełnego pierwotnego zakresu) — v1 (formalizacja `home` jako `Place`) zaimplementowane i zielone na `tsc`/`lint`/`build`/`test`, patrz „Stan implementacji” niżej; brak jeszcze wizualnej weryfikacji w przeglądarce. Pełny zakres (Schedule/workplace per rola/generyczny FSM) był odłożony (patrz „Odłożone”), **2026-08-09 odmrożony** — zakres i podejście ustalone z użytkownikiem, patrz „Decyzje (2026-08-09)” niżej; implementacja jeszcze nie ruszona.
 
 **Zweryfikowane 2026-08-08 wobec kodu — pełna lista braków (dla przyszłego planu domykającego):**
 Z sześciu punktów „Zakres pierwszego etapu” (patrz sekcja niżej) zrobione są tylko 1.5/6:
@@ -40,6 +40,22 @@ Otwarte decyzje do ustalenia z użytkownikiem przed implementacją — patrz wia
 - `food`/`social` typy `Place` — bez konsumenta dopóki nie ma schedule.
 
 Powód przycięcia: pełny zakres zależy od nierozstrzygniętego jeszcze zachowania `role` i wymaga nowej zawartości świata (dodatkowe lokacje per rola) — zbyt duży, nieprecyzyjny skok na raz. Wracamy do pełnego zakresu, gdy `role` z `npc-character-depth.md` wyląduje i będzie decyzja o kolejnych typach miejsc pracy.
+
+## Decyzje (2026-08-09) — odmrożenie pełnego zakresu (v2)
+
+`role` ma dziś realnych konsumentów poza samą daną (`src/settlement/families.ts` wymusza rolę per zasób — `RESOURCE_ROLE` dla miner/fisher-style outpostów, patrz [plan 032](./2026-08-08--032--natural-resources-economy.md)). Na tej podstawie ustalono z użytkownikiem odmrożenie pełnego zakresu tego planu. **Ten update to same decyzje/dokumentacja — implementacja jeszcze nie ruszyła**, kolejny krok to konkretny plan wdrożenia / kod.
+
+- **Zakres:** pełny — `Schedule Template` per rola, `workplace: Place`, generyczna integracja z FSM. Traits-modyfikacja harmonogramu (`night_owl`/`hardworking`/`social`) **świadomie osobno, później** — najpierw jednolity schedule per rola dla wszystkich NPC z tą rolą, weryfikacja w przeglądarce, dopiero potem traits jako nakładka.
+
+- **`workplace` — hybryda, nie jedna reguła dla wszystkich ról:**
+  - `woodcutter` → istniejący landmark `SettlementLandmarks.trees` (bez nowej geometrii).
+  - `farmer` → istniejący landmark `SettlementLandmarks.garden` (bez nowej geometrii).
+  - `trader` → **nowy prop**: `crate.glb` + `barrel.glb` (rezerwa, już pobrane, `public/models/settlement/`, patrz [CREDITS.md](../assets/CREDITS.md)) jako stoisko/market stall, postawione koło clearing. Wymaga nowego pola w `SettlementLandmarks` (lub osobnej generacji w `props.ts`/`villageClearing.ts`) i podpięcia w `buildSettlementProps`.
+  - `guard` → **na razie bez nowej geometrii**, reuse istniejącego landmarku (dokładny wybór — np. środek clearing / `well` jako centralny punkt patrolu — do ustalenia przy pisaniu kodu, nie blocker na etapie dokumentacji). `towerhouse.glb` (rezerwa) świadomie **nie** wchodzi w v2 — tylko trader dostaje nowy prop w tym kroku.
+
+- **FSM: pełny refaktor na generyczny model**, nie nakładka nad obecnym `Phase`. `goTo(location) → execute(action) → return` zastępuje dzisiejsze zasobowo-specyficzne `goWell/goGarden/goTree/goStock` w `NpcAgent.ts`. To dotyka istniejącego, działającego kodu FSM na raz — planować jako osobny krok z uważną regresją (`pickNeed`, istniejące testy `src/ai/Needs.test.ts`, ręczna weryfikacja w przeglądarce: woda/jedzenie/drewno nadal działają tak jak dziś, HP/traits z `npc-character-depth.md` nadal się wpinają w `steerTo()`/phase timery).
+
+- **Schedule ↔ zegar dnia/nocy: bezpośrednie skalowanie 24h → `timeOfDay`.** `timeOfDay` w `src/world/dayNight.ts` to 0-1 (0=północ, 0.5=południe) — godzina zegarowa mapuje się liniowo: `timeOfDay = hour / 24` (np. `07:00 → 0.2917`, `12:00 → 0.5`, `18:00 → 0.75`, `22:00 → 0.9167`). Prosty, dokładny mapping — harmonogram żyje w tych samych jednostkach co reszta gry (oświetlenie/mgła już czytają `timeOfDay`/`dayFactor` z tego samego stanu).
 
 **Cel:**  
 Dodanie warstwy codziennego życia NPC. Każdy mieszkaniec otrzymuje elastyczny plan dnia, własne miejsca związane z życiem oraz możliwość modyfikowania zachowania przez Identity Model.
