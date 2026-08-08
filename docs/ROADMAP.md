@@ -91,7 +91,7 @@ Cały ten obszar to jeden nowy plan, świadomie rozbity na etapy — patrz [032]
 
 ### Gracz
 
-- **Inventory system z limitem wagowym (weight capacity)** dla przedmiotów noszonych przez gracza — dziś `src/items/Inventory.ts` to `Map<ItemKind, number>` bez żadnego limitu (gracz może nosić nieograniczoną liczbę muszli/kamieni/gałęzi/grzybów/kwiatów/szyszek). Wspomniane jako świadomie odłożone w [032](./plans/2026-08-08--032--natural-resources-economy.md) (sekcja „Poza zakresem v1") — naturalny przyszły konsument tych samych `ItemKind`/`goods`, gdy crafting/handel kiedyś wyląduje, ale **jeszcze bez własnego planu**.
+- **Inventory system z limitem wagowym (weight capacity)** dla przedmiotów noszonych przez gracza — dziś `src/items/Inventory.ts` to `Map<ItemKind, number>` bez żadnego limitu (gracz może nosić nieograniczoną liczbę muszli/kamieni/gałęzi/grzybów/kwiatów/szyszek). Wspomniane jako świadomie odłożone w [032](./plans/2026-08-08--032--natural-resources-economy.md) (sekcja „Poza zakresem v1") — naturalny przyszły konsument tych samych `ItemKind`/`goods`, gdy crafting/handel kiedyś wyląduje, ale **jeszcze bez własnego planu**. UI: usunąć tekstowe liczniki przedmiotów z HUD (`data-inventory` w `src/ui/createHud.ts`, dziś np. „muszla 2 · kamień 1 · …”) na rzecz dedykowanego ekranu Inventory w menu (wzorzec `createPauseMenu.ts`/`createVillagersScreen.ts`), który pokaże listę przedmiotów wraz z limitem wagi.
 
 ### UI
 
