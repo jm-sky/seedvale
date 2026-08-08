@@ -173,7 +173,15 @@ const FRAGMENT_SHADER = /* glsl */ `
   varying float vFogDepth;
 
   void main() {
-    float brightness = mix(0.4, 1.0, uDayFactor);
+    // Grass is unlit (no scene lights/shadows in this shader, purely
+    // vColor * brightness) — the terrain around it IS lit
+    // (MeshStandardMaterial), and at night its ambient/hemi/sun intensities
+    // (world/dayNight.ts's skyParamsFromTime) drop to roughly 10-15% of their
+    // daytime peak. A 0.4 floor here (reported: grass glowing at night, way
+    // brighter than everything drowning in darkness around it) stayed far
+    // above that, so grass visually detached from the terrain instead of
+    // going dark with it. Matched down to the same rough floor.
+    float brightness = mix(0.08, 1.0, uDayFactor);
     vec3 color = vColor * brightness;
     // Same linear falloff as three.js's built-in fog_fragment chunk — matches
     // how the terrain (MeshStandardMaterial, scene.fog) fades, so the grass
