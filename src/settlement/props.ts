@@ -3,6 +3,7 @@ import type { VillageSize } from './families'
 import type { SettlementSite } from './findSettlementSite'
 import type { ClearingLayout } from './villageClearing'
 import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
+import { createSeededRandom } from '../world/parseSeed'
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
@@ -148,6 +149,26 @@ export function createDock(): THREE.Group {
   }
 
   return dock
+}
+
+/** A roadside signpost — post rises along Y, board's long axis (arrow-like)
+ *  extends along local +X (rotate by the target road's direction angle, same
+ *  convention as `createDock`). */
+export function createSignpost(): THREE.Group {
+  const signpost = new THREE.Group()
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x7a5c3e, flatShading: true })
+
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.2, 6), woodMat)
+  post.position.y = 1.1
+  post.castShadow = true
+  signpost.add(post)
+
+  const board = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.32, 0.06), woodMat)
+  board.position.set(0.55, 1.75, 0)
+  board.castShadow = true
+  signpost.add(board)
+
+  return signpost
 }
 
 export function createStockpile(): THREE.Group {
@@ -515,6 +536,51 @@ function plantTreeCluster(
   }
 }
 
+const CORE_PROP_SITE_ATTEMPTS = 5
+const CORE_PROP_JITTER = 3.5
+const CORE_PROP_WATER_MARGIN = 0.8
+
+/** Same 4-direction flatness cross-probe as `findSettlementSite.ts`, applied to
+ *  a prop's preferred offset from the village core — tries the exact offset
+ *  first (attempt 0, jitter 0), then a few jittered candidates, picks the
+ *  flattest dry one. Keeps props close to their intended relative layout via
+ *  a drift penalty rather than wandering toward the single flattest spot in
+ *  the whole clearing. */
+function findFlatSpot(
+  site: { x: number, z: number },
+  dx: number,
+  dz: number,
+  sampleHeight: (x: number, z: number) => number,
+  waterLevel: number,
+  random: () => number,
+): { x: number, z: number } {
+  let best = { x: site.x + dx, z: site.z + dz }
+  let bestScore = -Infinity
+  for (let attempt = 0; attempt < CORE_PROP_SITE_ATTEMPTS; attempt++) {
+    const jx = attempt === 0 ? dx : dx + (random() * 2 - 1) * CORE_PROP_JITTER
+    const jz = attempt === 0 ? dz : dz + (random() * 2 - 1) * CORE_PROP_JITTER
+    const x = site.x + jx
+    const z = site.z + jz
+    const y = sampleHeight(x, z)
+    if (y <= waterLevel + CORE_PROP_WATER_MARGIN) continue
+
+    const step = 2.5
+    const maxDelta = Math.max(
+      Math.abs(sampleHeight(x + step, z) - y),
+      Math.abs(sampleHeight(x - step, z) - y),
+      Math.abs(sampleHeight(x, z + step) - y),
+      Math.abs(sampleHeight(x, z - step) - y),
+    )
+    const driftPenalty = Math.hypot(jx - dx, jz - dz) * 0.3
+    const score = 8 - maxDelta * 3 - driftPenalty
+    if (score > bestScore) {
+      bestScore = score
+      best = { x, z }
+    }
+  }
+  return best
+}
+
 export async function buildSettlementProps(
   site: SettlementSite,
   sampleHeight: (x: number, z: number) => number,
@@ -548,13 +614,14 @@ export async function buildSettlementProps(
     dockRoute: [],
   }
 
+  const coreRandom = createSeededRandom(seed ^ 0x5a17e)
+
   const well = createWell()
   placeOnGround(well, site.x, site.z, sampleHeight)
   group.add(well)
   landmarks.well.set(site.x, sampleHeight(site.x, site.z), site.z)
 
-  const stockX = site.x + 4
-  const stockZ = site.z + 1.5
+  const { x: stockX, z: stockZ } = findFlatSpot(site, 4, 1.5, sampleHeight, waterLevel, coreRandom)
   const stockpile = await loadPropOrFallback(
     '/models/settlement/logs.glb',
     0.9,
@@ -564,8 +631,7 @@ export async function buildSettlementProps(
   group.add(stockpile)
   landmarks.stockpile.set(stockX, sampleHeight(stockX, stockZ), stockZ)
 
-  const gardenX = site.x - 2.5
-  const gardenZ = site.z + 5
+  const { x: gardenX, z: gardenZ } = findFlatSpot(site, -2.5, 5, sampleHeight, waterLevel, coreRandom)
   const garden = await loadPropOrFallback(
     '/models/settlement/garden.glb',
     1.2,
@@ -588,8 +654,7 @@ export async function buildSettlementProps(
   }
 
   if (size !== 'SM') {
-    const fireX = site.x - 4.5
-    const fireZ = site.z - 2
+    const { x: fireX, z: fireZ } = findFlatSpot(site, -4.5, -2, sampleHeight, waterLevel, coreRandom)
     const campfire = createCampfire()
     placeOnGround(campfire, fireX, fireZ, sampleHeight)
     group.add(campfire)
@@ -602,8 +667,7 @@ export async function buildSettlementProps(
     }
   }
   if (size === 'LG') {
-    const stock2X = site.x + 5.5
-    const stock2Z = site.z - 2.5
+    const { x: stock2X, z: stock2Z } = findFlatSpot(site, 5.5, -2.5, sampleHeight, waterLevel, coreRandom)
     const stockpile2 = await loadPropOrFallback(
       '/models/settlement/logs.glb',
       0.9,

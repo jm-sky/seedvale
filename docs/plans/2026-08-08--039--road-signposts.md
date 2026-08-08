@@ -1,6 +1,6 @@
 # Plan: Kierunkowskazy przy drogach do wiosek
 
-**Status:** `todo`
+**Status:** `verification needed` 🔍 (2/3 części zaimplementowane 2026-08-10: część 1 — krawędź osady — `signpostsForSettlement` w `roadNetwork.ts` + `createSignpost` w `props.ts`, wpięte w `createSettlement.ts`; część 2 — w połowie trasy — `midpointSignpostsFor` w `roadNetwork.ts`, dwa signposty (jeden na kierunek) zarządzane przez `SettlementsManager.ts` (nie należą do żadnej pojedynczej osady — trwają, dopóki choć jedna z dwóch jest znanym entry). Część 3 — na skrzyżowaniach — nadal `todo`, do oceny po weryfikacji części 1-2.)
 **Created:** 2026-08-08
 **Scope:** rozszerza [roads-and-paths](./2026-08-07--026--roads-and-paths.md) (`roadNetwork.ts` — grafowanie osad, nazwane trasy) i [village-generation](./2026-08-08--031--village-generation.md) (`SettlementDef.name`)
 

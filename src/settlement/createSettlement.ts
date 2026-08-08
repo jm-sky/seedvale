@@ -2,22 +2,25 @@ import {
   type Scene,
   Vector3,
 } from 'three'
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import type { Place } from './places'
 import type { SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
+import { labelOpacityForDistance } from '../ui/labelDistance'
 import { minorLocationsFor } from './minorLocations'
 import {
   buildSettlementProps,
   cloneProp,
   createDock,
+  createSignpost,
   disposeSettlementGroup,
   DOCK_SPECS,
   loadPropTemplates,
   placeOnGround,
   type SettlementLandmarks,
 } from './props'
-import { type RoadNetworkContext, routeToMinorLocation } from './roadNetwork'
+import { type RoadNetworkContext, routeToMinorLocation, signpostsForSettlement } from './roadNetwork'
 import { createVillageFire, type VillageFire } from './VillageFire'
 
 export type Settlement = {
@@ -57,6 +60,9 @@ export async function createSettlement(
   )
   scene.add(group)
 
+  type SignpostInstance = { labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
+  const signposts: SignpostInstance[] = []
+
   if (roadCtx) {
     const [dock] = minorLocationsFor(
       def,
@@ -75,6 +81,26 @@ export async function createSettlement(
 
       const route = routeToMinorLocation(def, 'dock', roadCtx)
       landmarks.dockRoute = route.map((p) => new Vector3(p.x, sampleHeight(p.x, p.z), p.z))
+    }
+
+    for (const sp of signpostsForSettlement(def, roadCtx)) {
+      const prop = createSignpost()
+      prop.rotation.y = sp.angle
+      placeOnGround(prop, sp.position.x, sp.position.z, sampleHeight)
+      group.add(prop)
+
+      const labelEl = document.createElement('div')
+      labelEl.className = 'npc-label'
+      labelEl.textContent = sp.targetName
+      const label = new CSS2DObject(labelEl)
+      label.position.set(0, 2.5, 0)
+      prop.add(label)
+
+      signposts.push({
+        labelEl,
+        label,
+        position: new Vector3(sp.position.x, sampleHeight(sp.position.x, sp.position.z), sp.position.z),
+      })
     }
   }
 
@@ -136,11 +162,18 @@ export async function createSettlement(
     update(dt, observerPos) {
       for (const agent of agents) agent.update(dt, observerPos)
       fire?.update(dt)
+      for (const sp of signposts) {
+        sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))
+      }
     },
     dispose() {
       for (const agent of agents) {
         agent.dispose()
         agent.mesh.removeFromParent()
+      }
+      for (const sp of signposts) {
+        sp.label.removeFromParent()
+        sp.labelEl.remove()
       }
       disposeSettlementGroup(group)
       group.removeFromParent()

@@ -366,6 +366,131 @@ function roadSegmentsForSettlement(def: SettlementDef, ctx: RoadNetworkContext):
   return out
 }
 
+export type SettlementSignpost = {
+  position: { x: number, z: number }
+  /** Radians — direction from `position` toward the neighbor, world XZ. */
+  angle: number
+  targetName: string
+}
+
+/** One signpost per connected neighbor road, placed just past the
+ *  settlement's own footprint (`clearings.regional.radius`) so it doesn't
+ *  land among houses/props. Reuses the same `routeCache` as
+ *  `roadSegmentsForSettlement` — no duplicate A* search if that already ran
+ *  for this def. */
+export function signpostsForSettlement(def: SettlementDef, ctx: RoadNetworkContext): SettlementSignpost[] {
+  const opts = routingOptionsFrom(ctx)
+  const maxRoads = Math.max(0, ctx.region.roadNetwork.maxNeighborRoads)
+  const minDist = def.clearings.regional.radius + 3
+  const out: SettlementSignpost[] = []
+
+  let connected = 0
+  for (const neighbor of neighborsFor({ gx: def.gx, gz: def.gz }, ctx)) {
+    if (connected >= maxRoads) break
+    const key = pairKey(def.id, neighbor.id)
+    let segments = routeCache.get(key)
+    if (segments === undefined) {
+      const points = findRoute(
+        def,
+        neighbor,
+        ctx.sampleHeight,
+        ctx.terrainSamplers.sampleMountainRidge,
+        ctx.waterLevel,
+        opts,
+      )
+      segments = points ? toSegments(points, 'road') : null
+      routeCache.set(key, segments)
+    }
+    if (!segments || segments.length === 0) continue
+    connected++
+
+    // routeCache is symmetric (pairKey) — whichever settlement resolved this
+    // edge first becomes `a`, so orient the waypoint list to start near `def`
+    // regardless of which side that was.
+    const firstA = segments[0]!.a
+    const lastB = segments[segments.length - 1]!.b
+    const distFirst = Math.hypot(firstA.x - def.x, firstA.z - def.z)
+    const distLast = Math.hypot(lastB.x - def.x, lastB.z - def.z)
+    const points = distFirst <= distLast
+      ? [segments[0]!.a, ...segments.map((s) => s.b)]
+      : [segments[segments.length - 1]!.b, ...[...segments].reverse().map((s) => s.a)]
+
+    let idx = points.findIndex((p) => Math.hypot(p.x - def.x, p.z - def.z) >= minDist)
+    if (idx <= 0) idx = points.length - 1
+    const at = points[idx]!
+    const prev = points[idx - 1] ?? points[0]!
+    const angle = Math.atan2(at.z - prev.z, at.x - prev.x)
+    out.push({ position: { x: at.x, z: at.z }, angle, targetName: neighbor.name })
+  }
+  return out
+}
+
+export type MidpointSignpost = {
+  position: { x: number, z: number }
+  angle: number
+  targetName: string
+}
+
+/** Two signposts roughly at the midpoint (by arc length) of the road between
+ *  `def` and `neighbor`, one facing each way — `[0]` faces toward `neighbor`
+ *  (labeled with `neighbor.name`), `[1]` faces back toward `def` (labeled
+ *  with `def.name`), offset a bit sideways from each other so they don't
+ *  clip. Doesn't belong to either settlement's own `group`/lifecycle —
+ *  `SettlementsManager` owns placing/removing these (see its dedup: created
+ *  once either endpoint is a known entry, removed once neither is). Returns
+ *  `null` if there's no road between them (no cached/reachable route). */
+export function midpointSignpostsFor(
+  def: SettlementDef,
+  neighbor: SettlementDef,
+  ctx: RoadNetworkContext,
+): [MidpointSignpost, MidpointSignpost] | null {
+  const key = pairKey(def.id, neighbor.id)
+  let segments = routeCache.get(key)
+  if (segments === undefined) {
+    const points = findRoute(
+      def,
+      neighbor,
+      ctx.sampleHeight,
+      ctx.terrainSamplers.sampleMountainRidge,
+      ctx.waterLevel,
+      routingOptionsFrom(ctx),
+    )
+    segments = points ? toSegments(points, 'road') : null
+    routeCache.set(key, segments)
+  }
+  if (!segments || segments.length === 0) return null
+
+  const firstA = segments[0]!.a
+  const lastB = segments[segments.length - 1]!.b
+  const distFirst = Math.hypot(firstA.x - def.x, firstA.z - def.z)
+  const distLast = Math.hypot(lastB.x - def.x, lastB.z - def.z)
+  const points = distFirst <= distLast
+    ? [segments[0]!.a, ...segments.map((s) => s.b)]
+    : [segments[segments.length - 1]!.b, ...[...segments].reverse().map((s) => s.a)]
+  if (points.length < 2) return null
+
+  const arc: number[] = [0]
+  for (let i = 1; i < points.length; i++) {
+    arc.push(arc[i - 1]! + Math.hypot(points[i]!.x - points[i - 1]!.x, points[i]!.z - points[i - 1]!.z))
+  }
+  const half = arc[arc.length - 1]! / 2
+  let idx = 1
+  for (let i = 1; i < arc.length; i++) {
+    idx = i
+    if (arc[i]! >= half) break
+  }
+  const at = points[idx]!
+  const prev = points[idx - 1]!
+  const toNeighborAngle = Math.atan2(at.z - prev.z, at.x - prev.x)
+  const perpX = -Math.sin(toNeighborAngle) * 0.7
+  const perpZ = Math.cos(toNeighborAngle) * 0.7
+
+  return [
+    { position: { x: at.x + perpX, z: at.z + perpZ }, angle: toNeighborAngle, targetName: neighbor.name },
+    { position: { x: at.x - perpX, z: at.z - perpZ }, angle: toNeighborAngle + Math.PI, targetName: def.name },
+  ]
+}
+
 /** Resolved route (waypoints, not corridor data) from a settlement to its own
  *  minor location of `kind`, if it has one — used by `createSettlement.ts` to
  *  give NPCs real waypoints to walk instead of a straight line. Reuses the

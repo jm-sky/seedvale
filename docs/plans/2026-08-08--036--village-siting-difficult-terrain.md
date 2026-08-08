@@ -1,6 +1,6 @@
 # Plan: Lepsze osadzanie wiosek w trudnym terenie (górzyste/nierówne działki)
 
-**Status:** `todo`
+**Status:** `verification needed` 🔍 (1/4 punktów zaimplementowany 2026-08-10 — Punkt 1: `findFlatSpot` retry w `props.ts` dla stockpile/garden/campfire/second stockpile; well zostawiony bez zmian, bo już siedzi dokładnie w `site.x,z`. Punkty 2-4 nadal `todo`.)
 **Created:** 2026-08-08
 **Scope:** rozszerza [village-generation](./2026-08-08--031--village-generation.md) (`findSettlementSite.ts`, `villageClearing.ts`, `props.ts`); potencjalna synergia z [world-elements-interactions](./2026-08-07--030--world-elements-interactions.md) (dekoracje naturalne — możliwe maskowanie różnic wysokości głazami/podporami)
 

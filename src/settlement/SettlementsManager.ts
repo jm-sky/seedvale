@@ -1,9 +1,18 @@
-import { type Scene, type Vector3 } from 'three'
+import { type Object3D, type Scene, Vector3 } from 'three'
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
+import { disposeObject3D } from '../assets/loadGltf'
+import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSettlement, type Settlement } from './createSettlement'
-import { neighborsFor, type RoadNetworkContext } from './roadNetwork'
+import { createSignpost, placeOnGround } from './props'
+import {
+  type MidpointSignpost,
+  midpointSignpostsFor,
+  neighborsFor,
+  type RoadNetworkContext,
+} from './roadNetwork'
 import {
   cellsWithinRadius,
   generateSettlementDef,
@@ -100,6 +109,69 @@ export async function createSettlementsManager(
   const entries = new Map<string, Entry>()
   entries.set(homeDef.id, { def: homeDef, settlement: homeSettlement, pendingPromise: null })
 
+  // Midpoint road signposts (roads-and-paths plan, part 2) don't belong to
+  // either settlement's own group/lifecycle — a pair only needs *some* known
+  // entry on each end (not even fully built) to place, and should persist
+  // until *neither* end is a known entry anymore, so they're tracked here
+  // rather than inside `createSettlement`. `midpointSignpostsFor` only reads
+  // each side's `SettlementDef` (cheap/deterministic), so this doesn't have
+  // to wait for either settlement's async build to finish.
+  type MidpointInstance = { prop: Object3D, labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
+  const midpoints = new Map<string, MidpointInstance[]>()
+
+  function midpointPairKey(a: string, b: string): string {
+    return a < b ? `${a}|${b}` : `${b}|${a}`
+  }
+
+  function buildMidpointInstance(sp: MidpointSignpost): MidpointInstance {
+    const prop = createSignpost()
+    prop.rotation.y = sp.angle
+    placeOnGround(prop, sp.position.x, sp.position.z, sampleHeight)
+    scene.add(prop)
+
+    const labelEl = document.createElement('div')
+    labelEl.className = 'npc-label'
+    labelEl.textContent = sp.targetName
+    const label = new CSS2DObject(labelEl)
+    label.position.set(0, 2.5, 0)
+    prop.add(label)
+
+    return {
+      prop,
+      labelEl,
+      label,
+      position: new Vector3(sp.position.x, sampleHeight(sp.position.x, sp.position.z), sp.position.z),
+    }
+  }
+
+  function disposeMidpointInstance(inst: MidpointInstance): void {
+    inst.label.removeFromParent()
+    inst.labelEl.remove()
+    disposeObject3D(inst.prop)
+    inst.prop.removeFromParent()
+  }
+
+  function syncMidpoints(): void {
+    const wanted = new Set<string>()
+    for (const entry of entries.values()) {
+      for (const neighborDef of neighborsFor({ gx: entry.def.gx, gz: entry.def.gz }, roadCtx)) {
+        if (!entries.has(neighborDef.id)) continue
+        const key = midpointPairKey(entry.def.id, neighborDef.id)
+        wanted.add(key)
+        if (midpoints.has(key)) continue
+        const result = midpointSignpostsFor(entry.def, neighborDef, roadCtx)
+        if (!result) continue
+        midpoints.set(key, result.map((sp) => buildMidpointInstance(sp)))
+      }
+    }
+    for (const [key, instances] of [...midpoints]) {
+      if (wanted.has(key)) continue
+      for (const inst of instances) disposeMidpointInstance(inst)
+      midpoints.delete(key)
+    }
+  }
+  syncMidpoints()
+
   const cellRadius = Math.max(1, Math.ceil(loadRadius / SETTLEMENT_GRID_STEP) + 1)
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
@@ -109,6 +181,7 @@ export async function createSettlementsManager(
     if (entries.has(def.id)) return
     const entry: Entry = { def, settlement: null, pendingPromise: null }
     entries.set(def.id, entry)
+    syncMidpoints()
     entry.pendingPromise = createSettlement(
       scene,
       sampleHeight,
@@ -148,6 +221,7 @@ export async function createSettlementsManager(
   function unload(id: string, entry: Entry): void {
     entry.settlement?.dispose()
     entries.delete(id)
+    syncMidpoints()
   }
 
   function recheck(playerX: number, playerZ: number): void {
@@ -174,6 +248,11 @@ export async function createSettlementsManager(
         recheck(playerPos.x, playerPos.z)
       }
       for (const entry of entries.values()) entry.settlement?.update(dt, playerPos)
+      for (const instances of midpoints.values()) {
+        for (const inst of instances) {
+          inst.labelEl.style.opacity = String(labelOpacityForDistance(inst.position.distanceTo(playerPos)))
+        }
+      }
     },
     getLoaded() {
       const out: Settlement[] = []
@@ -184,6 +263,10 @@ export async function createSettlementsManager(
     },
     dispose() {
       for (const entry of entries.values()) entry.settlement?.dispose()
+      for (const instances of midpoints.values()) {
+        for (const inst of instances) disposeMidpointInstance(inst)
+      }
+      midpoints.clear()
       entries.clear()
     },
   }
