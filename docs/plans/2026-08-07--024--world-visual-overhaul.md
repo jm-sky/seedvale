@@ -1,6 +1,6 @@
 # Plan: Wizualny overhaul świata (rośliny, niebo/chmury, góry w tle)
 
-**Status:** `in progress` — część 1 (roślinność) i 2 (kolor nieba, bez chmur) zaimplementowane; część 3 (góry) i chmury z części 2 nadal `planned`
+**Status:** `in progress` (~50%) — część 1 (roślinność) i 2 (kolor nieba, bez chmur) zaimplementowane; część 3 (góry) i chmury z części 2 nadal `planned`
 **Created:** 2026-08-07
 **Priority:** średni — kolejkowane **po** [terrain-worker-pool](./2026-08-07--006--terrain-worker-pool.md) (obecny priorytet #1); nie zakłada istnienia workerów, tylko dzisiejszy main-thread kod. Części 1+2 wykonane równolegle do worker-poola (zero styku plików), część 3 (wymaga `createApp.ts`) odłożona do po scaleniu worker-poola.
 

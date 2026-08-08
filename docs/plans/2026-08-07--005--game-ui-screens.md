@@ -1,6 +1,6 @@
 # Plan: UI warstwa gry (ekrany / dialogi / modale)
 
-**Status:** `in progress`  
+**Status:** `in progress` (2/4 — patrz „Postęp” niżej: Pause/menu + NPC dialog/Quest log/Villagers done; World config screen i Notes/journal nie rozpoczęte)  
 **Created:** 2026-08-07  
 **Updated:** 2026-08-08  
 **Priority:** później (po v0.2 gameplay) — lil-gui zostaje na debug  

@@ -1,6 +1,17 @@
 # Plan: NPC Daily Routine & Place System
 
-**Status:** `verification needed` — v1 (formalizacja `home` jako `Place`) zaimplementowane i zielone na `tsc`/`lint`/`build`/`test`, patrz „Stan implementacji” niżej; brak jeszcze wizualnej weryfikacji w przeglądarce. Pełny zakres (Schedule/workplace per rola/generyczny FSM) odłożony, patrz „Odłożone”.
+**Status:** `in progress` (~15% pełnego pierwotnego zakresu) — v1 (formalizacja `home` jako `Place`) zaimplementowane i zielone na `tsc`/`lint`/`build`/`test`, patrz „Stan implementacji” niżej; brak jeszcze wizualnej weryfikacji w przeglądarce. Pełny zakres (Schedule/workplace per rola/generyczny FSM) odłożony, patrz „Odłożone”.
+
+**Zweryfikowane 2026-08-08 wobec kodu — pełna lista braków (dla przyszłego planu domykającego):**
+Z sześciu punktów „Zakres pierwszego etapu” (patrz sekcja niżej) zrobione są tylko 1.5/6:
+1. System `Place` — **częściowo**: `src/settlement/places.ts` istnieje, ale `PlaceType` to dziś tylko `'home'` (potwierdzone w kodzie: `export type PlaceType = 'home'`). `workplace`/`food`/`social` nie istnieją nawet jako typ.
+2. Automatyczne przypisanie domów — **done** (już działało przed planem, teraz formalnie przez `Place`, `createSettlement.ts:107-123`).
+3. `Schedule Template` zależny od roli — **0%**, brak jakiegokolwiek kodu (`grep -rn “Schedule” src/ai src/settlement` nie zwraca żadnej implementacji, tylko komentarze odsyłające do tego planu).
+4. Generowanie osobistego harmonogramu NPC — **0%**, zależne od punktu 3.
+5. Modyfikacja harmonogramu przez traits — **0%**, zależne od punktu 3.
+6. Integracja harmonogramu z FSM (generyczny `goTo(location) → execute(action)`) — **0%**; dzisiejszy `Phase` w `NpcAgent.ts` jest wciąż zasobowo-specyficzny (`goWell/goGarden/goTree/goStock`), zero generycznej warstwy.
+
+Dodatkowo: `role` (z `npc-character-depth.md`) istnieje w `NpcAgent.ts:233` (`this.role = character.role`), ale to czyste dane — zero konsumenta/zachowania gdziekolwiek w kodzie (potwierdzone: brak `.role` poza tym jednym przypisaniem). Zegar dnia/nocy (`src/world/dayNight.ts`) nadal nie ma żadnego wiring do NPC-schedule.
 
 Part 2 of ChatGPT plans.
 

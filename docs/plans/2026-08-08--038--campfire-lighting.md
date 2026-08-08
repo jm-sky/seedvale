@@ -1,6 +1,6 @@
 # Plan: Zapalanie ognisk (gałęzie jako paliwo) + nocne szanse zapłonu w wiosce
 
-**Status:** `verification needed` — punkty 1-3 (stan ognia, interakcja `[E]`, płomień) i renewable branch-spawn zaimplementowane, patrz „Stan implementacji" niżej. Punkt 4 (nocne 50% szans) **nie zaimplementowany** — zostaje `todo`.
+**Status:** `verification needed` (3/4) — punkty 1-3 (stan ognia, interakcja `[E]`, płomień) i renewable branch-spawn zaimplementowane, patrz „Stan implementacji" niżej. Punkt 4 (nocne 50% szans) **nie zaimplementowany** — zostaje `todo`.
 **Created:** 2026-08-08
 
 ## Stan implementacji (2026-08-09)

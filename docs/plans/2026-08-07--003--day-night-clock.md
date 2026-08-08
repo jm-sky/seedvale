@@ -1,6 +1,6 @@
 # Plan: zegar świata — dzień / noc
 
-**Status:** `done`  
+**Status:** `in progress` (3/5) — zegar/sky/HUD zrobione; NPC sen zależny od pory i persystencja `timeOfDay` w save nadal nie zaimplementowane (patrz checklist niżej, oba świadomie oznaczone "później" w oryginalnym planie, ale nigdy nie wykonane — zweryfikowane 2026-08-08).  
 **Created:** 2026-08-07  
 **Priority:** polish po v0.2  
 

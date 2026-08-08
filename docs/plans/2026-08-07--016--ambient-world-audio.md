@@ -1,6 +1,6 @@
 # Plan: Ambient audio świata (dźwięki tła, zależne od obszaru)
 
-**Status:** `in progress` — fundament audio (`src/audio/createWorldAudio.ts`) + warstwa dzień/noc (`src/audio/createAmbientAudio.ts`, świerszcze w nocy, crossfade po `dayFactor`) zaimplementowane; sampler obszaru (ocean/las/góry) i mixer runtime mają teraz konkretny projekt gotowy do implementacji (2026-08-08 review — patrz sekcje 2-4: reużywają istniejący `ChunkManager`/`biomeWeightsAt`, dwa z trzech brakujących assetów już leżą w `public/sounds/` nieużywane), ale kod jeszcze nie napisany
+**Status:** `in progress` (2/5) — fundament audio (`src/audio/createWorldAudio.ts`) + warstwa dzień/noc (`src/audio/createAmbientAudio.ts`, świerszcze w nocy, crossfade po `dayFactor`) zaimplementowane; sampler obszaru (ocean/las/góry) i mixer runtime mają teraz konkretny projekt gotowy do implementacji (2026-08-08 review — patrz sekcje 2-4: reużywają istniejący `ChunkManager`/`biomeWeightsAt`, dwa z trzech brakujących assetów już leżą w `public/sounds/` nieużywane), ale kod jeszcze nie napisany
 **Created:** 2026-08-07
 **Scope:** [world/](../../src/world/) (ocean/water/dayNight), [terrain/](../../src/terrain/) (biomy/regiony); niezależne od NPC, ale dzieli fundament audio z [npc-reaction-sounds.md](./2026-08-07--014--npc-reaction-sounds.md)
 
