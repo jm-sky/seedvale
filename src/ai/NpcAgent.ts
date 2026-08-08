@@ -93,10 +93,12 @@ type Phase =
   | 'eat'
   | 'followPath'
   | 'goGarden'
+  | 'goSleep'
   | 'goStock'
   | 'goTree'
   | 'goWell'
   | 'lookAtPlayer'
+  | 'sleep'
   | 'wander'
 
 /** Phases the player's approach may interrupt to trigger a lookAtPlayer pause. */
@@ -121,7 +123,7 @@ const FATIGUE_PHASES: ReadonlySet<Phase> = new Set([
   'goTree',
   'goWell',
 ])
-const REST_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'lookAtPlayer', 'wander'])
+const REST_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'lookAtPlayer', 'sleep', 'wander'])
 
 /** Chance per `choose` cycle — when no active need routes the NPC anywhere
  *  specific and it would otherwise wander a few units from home — that it
@@ -169,6 +171,9 @@ export class NpcAgent {
   readonly mesh: THREE.Object3D
   readonly label: CSS2DObject
   readonly name: string
+  /** Display-only — `name` alone stays the matching key for quests/dialogue
+   *  (`quests/quests.ts` hardcodes `giverName` as first name only). */
+  readonly displayName: string
   readonly gender: NpcGender
   readonly role: Role
   readonly traits: readonly Trait[]
@@ -233,6 +238,7 @@ export class NpcAgent {
     this.home = home.position.clone()
     const character = member.character
     this.name = character.name
+    this.displayName = character.lastName ? `${character.name} ${character.lastName}` : character.name
     this.gender = character.gender
     this.role = character.role
     this.traits = character.traits
@@ -277,8 +283,8 @@ export class NpcAgent {
 
     this.labelEl = document.createElement('div')
     this.labelEl.className = 'npc-label'
-    this.labelEl.textContent = this.name
-    this.lastLabelText = this.name
+    this.labelEl.textContent = this.displayName
+    this.lastLabelText = this.displayName
     this.label = new CSS2DObject(this.labelEl)
     this.label.position.set(0, NPC_HEIGHT + 0.55, 0)
     this.mesh.add(this.label)
@@ -379,7 +385,10 @@ export class NpcAgent {
     this.labelEl.classList.toggle('npc-label--highlighted', active)
   }
 
-  update(dt: number, observerPos: THREE.Vector3): void {
+  /** `isNight` — from `dayNight.ts`'s clock, forwarded through
+   *  `Settlement`/`SettlementsManager.setDayNight` (see `createSettlement.ts`).
+   *  `night_owl` NPCs ignore it and keep their normal routine. */
+  update(dt: number, observerPos: THREE.Vector3, isNight: boolean): void {
     tickNeeds(this.needs, dt)
     this.moving = false
 
@@ -404,7 +413,8 @@ export class NpcAgent {
 
     switch (this.phase) {
       case 'choose':
-        this.beginNeed(pickNeed(this.needs))
+        if (isNight && !this.traits.includes('night_owl')) this.phase = 'goSleep'
+        else this.beginNeed(pickNeed(this.needs))
         break
       case 'chop':
         this.wait -= dt
@@ -449,6 +459,10 @@ export class NpcAgent {
           this.wait = 1.4 * this.waitMultiplier
         }
         break
+      case 'goSleep':
+        if (!isNight) this.phase = 'choose'
+        else if (this.steerTo(this.home, dt)) this.phase = 'sleep'
+        break
       case 'goStock':
         if (this.steerTo(this.landmarks.stockpile, dt)) {
           this.phase = 'deposit'
@@ -479,6 +493,9 @@ export class NpcAgent {
         }
         break
       }
+      case 'sleep':
+        if (!isNight) this.phase = 'choose'
+        break
       case 'wander':
         if (this.steerTo(this.target, dt)) this.phase = 'choose'
         break
@@ -496,7 +513,7 @@ export class NpcAgent {
       needColor(this.activeNeed),
     )
     const questSuffix = this.questMarker ? ` · ${this.questMarker}` : ''
-    const labelText = `${this.name}${questSuffix}`
+    const labelText = `${this.displayName}${questSuffix}`
     if (labelText !== this.lastLabelText) {
       this.lastLabelText = labelText
       this.labelEl.textContent = labelText

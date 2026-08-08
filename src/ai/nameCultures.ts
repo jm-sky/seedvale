@@ -48,6 +48,50 @@ const NAME_POOLS: Record<NameCulture, CultureNamePool> = {
  *  in, etc. */
 const OFF_CULTURE_CHANCE = 0.1
 
+/** Base (masculine, for `polish`) surname forms — one per family, shared by
+ *  all its members (see `generateFamilySurname`). `polish` forms are
+ *  feminized per-member via `formatSurname`; `spanish`/`english` surnames are
+ *  gender-invariant, used as-is. */
+const SURNAME_POOLS: Record<NameCulture, readonly string[]> = {
+  polish: [
+    'Kowalski', 'Nowak', 'Wiśniewski', 'Zieliński', 'Szymański', 'Lewandowski',
+    'Wójcik', 'Kamiński', 'Dąbrowski', 'Kaczmarek',
+  ],
+  spanish: [
+    'García', 'Martínez', 'Rodríguez', 'Fernández', 'López', 'Sánchez',
+    'Pérez', 'Gómez', 'Díaz', 'Torres',
+  ],
+  english: [
+    'Smith', 'Brown', 'Taylor', 'Wilson', 'Clarke', 'Baker',
+    'Hughes', 'Turner', 'Bennett', 'Foster',
+  ],
+}
+
+/** Polish surnames agree in grammatical gender with the bearer
+ *  (`Kowalski`/`Kowalska`) — other cultures in `SURNAME_POOLS` don't inflect. */
+function formatSurname(base: string, culture: NameCulture, gender: NpcGender): string {
+  if (culture !== 'polish' || gender !== 'female') return base
+  if (base.endsWith('ski')) return `${base.slice(0, -2)}ska`
+  if (base.endsWith('cki')) return `${base.slice(0, -2)}cka`
+  return base
+}
+
+/** Deterministic per-family surname (base/masculine form) — shared by every
+ *  member of the family, gender-agreed per member at display time via
+ *  `formatSurname`. `familySeed` is the same per-family seed
+ *  `families.ts::familySeed` already computes — passed in, not recomputed,
+ *  so this module doesn't need to know that formula. */
+export function generateFamilySurname(familySeed: number, culture: NameCulture): string {
+  const random = createSeededRandom(familySeed ^ 0x5352454e)
+  const pool = SURNAME_POOLS[culture]
+  return pool[Math.floor(random() * pool.length)]!
+}
+
+/** Gender-agreed surname for one family member — see `formatSurname`. */
+export function surnameForGender(base: string, culture: NameCulture, gender: NpcGender): string {
+  return formatSurname(base, culture, gender)
+}
+
 export function namesForCulture(culture: NameCulture, gender: NpcGender): readonly string[] {
   return NAME_POOLS[culture][gender]
 }

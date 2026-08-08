@@ -57,10 +57,22 @@ export type SaveDataV3 = {
   droppedItems: SaveDroppedItem[]
 }
 
-/** Canonical save shape used everywhere outside this module and `saveDb.ts` —
- *  always v4. `loadSaveData` migrates a stored v1/v2/v3 save up to this on read. */
-export type SaveData = {
+export type SaveDataV4 = {
   version: 4
+  config: SaveConfig
+  player: SavePlayer
+  savedAt: number
+  quests: SaveQuests
+  inventory: Partial<Record<ItemKind, number>>
+  collectedItemIds: string[]
+  droppedItems: SaveDroppedItem[]
+  placedFires: SavePlacedFire[]
+}
+
+/** Canonical save shape used everywhere outside this module and `saveDb.ts` —
+ *  always v5. `loadSaveData` migrates a stored v1/v2/v3/v4 save up to this on read. */
+export type SaveData = {
+  version: 5
   config: SaveConfig
   player: SavePlayer
   savedAt: number
@@ -72,6 +84,9 @@ export type SaveData = {
    *  derivable from the seed either, same reasoning as `droppedItems`. Lit/fuel
    *  state is intentionally not persisted (see `PlacedFires.ts`). */
   placedFires: SavePlacedFire[]
+  /** `world/dayNight.ts`'s `DayNightState.timeOfDay` — otherwise the clock
+   *  resets to the default dawn-ish start on every Continue. */
+  timeOfDay: number
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -131,7 +146,7 @@ export function isSaveDataV3(value: unknown): value is SaveDataV3 {
   return true
 }
 
-export function isSaveDataV4(value: unknown): value is SaveData {
+export function isSaveDataV4(value: unknown): value is SaveDataV4 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 4) return false
@@ -146,15 +161,49 @@ export function isSaveDataV4(value: unknown): value is SaveData {
   return true
 }
 
-/** Accepts a stored v1/v2/v3/v4 save and always returns the canonical v4
+export function isSaveDataV5(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 5) return false
+  if (!isSaveConfig(v.config)) return false
+  if (!isSavePlayer(v.player)) return false
+  if (typeof v.savedAt !== 'number') return false
+  if (!v.quests || typeof v.quests !== 'object') return false
+  if (!v.inventory || typeof v.inventory !== 'object') return false
+  if (!Array.isArray(v.collectedItemIds)) return false
+  if (!Array.isArray(v.droppedItems)) return false
+  if (!Array.isArray(v.placedFires)) return false
+  if (typeof v.timeOfDay !== 'number') return false
+  return true
+}
+
+/** Default `timeOfDay` for saves that predate persisting the clock (v1-v4) —
+ *  mirrors `dayNight.ts::createDayNightState`'s own default. */
+const DEFAULT_TIME_OF_DAY = 0.32
+
+/** Accepts a stored v1/v2/v3/v4/v5 save and always returns the canonical v5
  *  shape, migrating older versions with empty state for whatever fields
  *  didn't exist yet. Null if `value` matches none of them (missing/corrupted
  *  save). */
 export function loadSaveData(value: unknown): SaveData | null {
-  if (isSaveDataV4(value)) return value
+  if (isSaveDataV5(value)) return value
+  if (isSaveDataV4(value)) {
+    return {
+      version: 5,
+      config: value.config,
+      player: value.player,
+      savedAt: value.savedAt,
+      quests: value.quests,
+      inventory: value.inventory,
+      collectedItemIds: value.collectedItemIds,
+      droppedItems: value.droppedItems,
+      placedFires: value.placedFires,
+      timeOfDay: DEFAULT_TIME_OF_DAY,
+    }
+  }
   if (isSaveDataV3(value)) {
     return {
-      version: 4,
+      version: 5,
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -163,11 +212,12 @@ export function loadSaveData(value: unknown): SaveData | null {
       collectedItemIds: value.collectedItemIds,
       droppedItems: value.droppedItems,
       placedFires: [],
+      timeOfDay: DEFAULT_TIME_OF_DAY,
     }
   }
   if (isSaveDataV2(value)) {
     return {
-      version: 4,
+      version: 5,
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -176,11 +226,12 @@ export function loadSaveData(value: unknown): SaveData | null {
       collectedItemIds: value.collectedItemIds,
       droppedItems: [],
       placedFires: [],
+      timeOfDay: DEFAULT_TIME_OF_DAY,
     }
   }
   if (isSaveDataV1(value)) {
     return {
-      version: 4,
+      version: 5,
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -189,6 +240,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       collectedItemIds: [],
       droppedItems: [],
       placedFires: [],
+      timeOfDay: DEFAULT_TIME_OF_DAY,
     }
   }
   return null

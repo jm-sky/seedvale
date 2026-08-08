@@ -1,6 +1,6 @@
 # Etykiety NPC widoczne nad otwartym menu
 
-**Status:** `todo`
+**Status:** `verification needed` — naprawione 2026-08-09: `labelRenderer.domElement` (`src/app/createApp.ts`) dostał jawny `z-index: 1`, poniżej najniższego overlaya UI (`.seedvale-hud` ma `z-index: 5`). Wymaga wizualnego potwierdzenia w przeglądarce (otwórz dowolny modal przy widocznym NPC).
 **Created:** 2026-08-08
 **Źródło:** zgłoszenie użytkownika po teście generowania wiosek
 

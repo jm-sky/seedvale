@@ -8,6 +8,7 @@ import type { Place } from './places'
 import type { SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { labelOpacityForDistance } from '../ui/labelDistance'
+import { createSeededRandom } from '../world/parseSeed'
 import { minorLocationsFor } from './minorLocations'
 import {
   buildSettlementProps,
@@ -21,7 +22,21 @@ import {
   type SettlementLandmarks,
 } from './props'
 import { type RoadNetworkContext, routeToMinorLocation, signpostsForSettlement } from './roadNetwork'
+import { cellSeed } from './settlementGenerator'
 import { createVillageFire, type VillageFire } from './VillageFire'
+
+/** `setDayNight`'s `t` (0 day .. 1 full night) above this counts as "night"
+ *  for NPC sleep (`NpcAgent`'s `goSleep`/`sleep` phases) — a bit past dusk
+ *  rather than the instant it starts, so NPCs don't vanish home mid-dusk. */
+const NPC_SLEEP_NIGHT_THRESHOLD = 0.6
+
+/** Same threshold used for the village fire's dusk-triggered ignition roll
+ *  (see `nightIndex`/`setDayNight` below) — one "night falling" instant per
+ *  settlement, shared by both night-only NPC behaviors. */
+const NIGHT_FIRE_THRESHOLD = NPC_SLEEP_NIGHT_THRESHOLD
+/** Chance the settlement's own fire is already lit when night falls —
+ *  villagers keeping it going themselves, no player branch consumed. */
+const NIGHT_FIRE_IGNITE_CHANCE = 0.5
 
 export type Settlement = {
   id: string
@@ -155,6 +170,16 @@ export async function createSettlement(
     ? createVillageFire(landmarks.campfire.position, landmarks.campfire.flame)
     : undefined
 
+  let nightFactor = 0
+  /** Bumped each time `nightFactor` crosses `NIGHT_FIRE_THRESHOLD` upward —
+   *  feeds the ignition roll's seed so the same night (even across a
+   *  stream-out/stream-in of this settlement) always resolves the same way,
+   *  while a later night gets an independent roll. See `settlementGenerator
+   *  .ts`'s `cellSeed` for why this settlement's own seed is `def.gx/def.gz`
+   *  combined with the world seed rather than a hash of `def.id`. */
+  let nightIndex = 0
+  const settlementSeed = cellSeed(seed, { gx: def.gx, gz: def.gz })
+
   return {
     id: def.id,
     name: def.name,
@@ -165,13 +190,22 @@ export async function createSettlement(
     landmarks,
     fire,
     update(dt, observerPos) {
-      for (const agent of agents) agent.update(dt, observerPos)
+      const isNight = nightFactor > NPC_SLEEP_NIGHT_THRESHOLD
+      for (const agent of agents) agent.update(dt, observerPos, isNight)
       fire?.update(dt)
       for (const sp of signposts) {
         sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))
       }
     },
     setDayNight(t) {
+      if (fire && !fire.isLit() && nightFactor <= NIGHT_FIRE_THRESHOLD && t > NIGHT_FIRE_THRESHOLD) {
+        nightIndex++
+        const random = createSeededRandom(
+          settlementSeed ^ Math.imul(nightIndex, 0x9e3779b1) ^ 0x4e494748,
+        )
+        if (random() < NIGHT_FIRE_IGNITE_CHANCE) fire.light()
+      }
+      nightFactor = t
       for (const light of houseLights) light.setNightIntensity(t)
     },
     dispose() {

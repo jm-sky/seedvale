@@ -106,7 +106,7 @@ export function createVillagersScreen(
       row.className = 'seedvale-villagers__row'
       row.innerHTML = `
         <div class="seedvale-villagers__row-header">
-          <span class="seedvale-villagers__row-name">${npc.name} ${GENDER_LABEL[npc.gender]}</span>
+          <span class="seedvale-villagers__row-name">${npc.displayName} ${GENDER_LABEL[npc.gender]}</span>
           <span class="seedvale-villagers__row-role">${ROLE_LABEL[npc.role]}</span>
         </div>
         <div class="seedvale-villagers__row-meta">

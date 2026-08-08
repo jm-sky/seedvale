@@ -1,6 +1,7 @@
 import { Clock, Fog, type Scene, type Vector3 } from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { AmbientSamplers } from '../audio/ambientWeights'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { SaveData } from '../persistence/saveData'
@@ -145,7 +146,9 @@ export async function createApp(
   }
   saveWorldConfig(config)
 
-  const dayNight = createDayNightState()
+  const dayNight = createDayNightState(
+    initialSave ? { timeOfDay: initialSave.timeOfDay } : undefined,
+  )
 
   const renderer = createRenderer(container)
   const labelRenderer = new CSS2DRenderer()
@@ -153,12 +156,14 @@ export async function createApp(
   labelRenderer.domElement.style.position = 'absolute'
   labelRenderer.domElement.style.inset = '0'
   labelRenderer.domElement.style.pointerEvents = 'none'
+  // Below every UI overlay (lowest is .seedvale-hud at z-index:5, index.html) so
+  // NPC labels never draw over modals (pause menu, quest log, villagers, dialog).
+  labelRenderer.domElement.style.zIndex = '1'
   container.appendChild(labelRenderer.domElement)
 
   const scene = createScene()
   const camera = createCamera(container.clientWidth / container.clientHeight)
   const worldAudio = createWorldAudio(camera)
-  const ambientAudio = createAmbientAudio(worldAudio)
 
   const postProcessing = createPostProcessing(
     renderer,
@@ -180,6 +185,19 @@ export async function createApp(
   let chunkManager = buildChunkManager(scene, config, collectedItemIds)
   chunkManager.update(0, 0)
   await chunkManager.waitForChunks(homeChunks())
+
+  // Indirection (not a direct destructure) so this keeps sampling whichever
+  // chunkManager/config.terrain are current across `rebuildWorld()` reassignments.
+  const ambientSamplers: AmbientSamplers = {
+    sampleFloor: (x, z) => chunkManager.sampleFloor(x, z),
+    sampleContinentalness: (x, z) => chunkManager.sampleContinentalness(x, z),
+    sampleMountainRidge: (x, z) => chunkManager.sampleMountainRidge(x, z),
+    sampleMoistureRegion: (x, z) => chunkManager.sampleMoistureRegion(x, z),
+    get waterLevel() { return chunkManager.waterLevel },
+    get heightScale() { return config.terrain.heightScale },
+    get region() { return config.terrain.region },
+  }
+  const ambientAudio = createAmbientAudio(worldAudio, ambientSamplers)
 
   let ocean = buildOcean(scene, config)
   let settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce, config)
@@ -303,7 +321,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 4,
+    version: 5,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -326,6 +344,7 @@ export async function createApp(
     collectedItemIds: [...collectedItemIds],
     droppedItems: droppedItems.nodes().map((item) => ({ ...item })),
     placedFires: placedFires.nodes().map((fire) => ({ ...fire })),
+    timeOfDay: dayNight.timeOfDay,
   })
 
   const saveNow = (): void => {
@@ -721,7 +740,12 @@ export async function createApp(
         settlementsManager.setDayNight(1 - skyParamsFromTime(dayNight.timeOfDay).dayFactor)
         lastAppliedTimeOfDay = dayNight.timeOfDay
       }
-      ambientAudio.update(skyParamsFromTime(dayNight.timeOfDay).dayFactor)
+      ambientAudio.update(
+        dt,
+        skyParamsFromTime(dayNight.timeOfDay).dayFactor,
+        player.mesh.position.x,
+        player.mesh.position.z,
+      )
       hud.setTime(dayNight.timeOfDay)
       hud.setExp(questManager.getExp())
       player.update(dt)
@@ -825,7 +849,7 @@ function buildInteractables(
       list.push({
         kind: 'npc',
         position: npc.mesh.position,
-        promptLabel: `Rozmawiaj z ${npc.name}`,
+        promptLabel: `Rozmawiaj z ${npc.displayName}`,
         npc,
       })
     }
