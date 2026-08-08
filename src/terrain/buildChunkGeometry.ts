@@ -15,10 +15,31 @@ import {
   sampleApronGrid,
   sampleApronGridWeighted,
 } from './chunkHeightmap'
+import { createTerrainNormalMap } from './terrainDetailNormalMap'
 
 export type ChunkMeshResult = {
   mesh: THREE.Mesh
   dispose: () => void
+}
+
+/** How many times the detail normal map tiles across one chunk edge — high
+ *  enough that the pattern reads as fine ground grain, not a repeated motif,
+ *  which also hides the seam where one chunk's tiling restarts against its
+ *  neighbor's (each chunk's plane UVs run 0..1 independently, so the pattern
+ *  isn't phase-continuous across chunk borders — kept high-frequency and
+ *  low-amplitude specifically so that doesn't read as a grid). */
+const NORMAL_MAP_TILES_PER_CHUNK = 10
+
+/** Built once and shared by every chunk's material — same reasoning as
+ *  `createOcean.ts`'s procedural water normal map: no external asset, no
+ *  per-chunk cost beyond a cheap texture reference. */
+let terrainNormalMap: THREE.Texture | null = null
+function getTerrainNormalMap(): THREE.Texture {
+  if (!terrainNormalMap) {
+    terrainNormalMap = createTerrainNormalMap()
+    terrainNormalMap.repeat.set(NORMAL_MAP_TILES_PER_CHUNK, NORMAL_MAP_TILES_PER_CHUNK)
+  }
+  return terrainNormalMap
 }
 
 /**
@@ -120,11 +141,17 @@ export function buildChunkGeometry(
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
   apronGeometry.dispose()
 
+  const normalMap = getTerrainNormalMap()
   const material = new THREE.MeshStandardMaterial({
     vertexColors: true,
     flatShading,
     roughness: 0.92,
     metalness: 0.04,
+    normalMap,
+    // Subtle — this is close-up surface grain, not a substitute for real
+    // geometry; a strong value here reads as a repeating tiled pattern
+    // instead of "the ground isn't perfectly flat" (plan 044 §4.5).
+    normalScale: new THREE.Vector2(0.28, 0.28),
   })
 
   const mesh = new THREE.Mesh(geometry, material)
