@@ -11,6 +11,10 @@ export type PauseMenuHandlers = {
   onNameCommit?: (name: string) => void
   onSave?: () => void
   onRefresh?: () => void
+  /** Attempts to build a freeform campfire at the player's current position —
+   *  returns false (and consumes nothing) if the player doesn't have enough
+   *  branches/stones. */
+  onBuildCampfire?: () => boolean
   onNewGame?: () => void
   onQuestLog?: () => void
   onVillagers?: () => void
@@ -55,6 +59,7 @@ export function createPauseMenu(
       <button type="button" data-villagers class="seedvale-pause__button seedvale-pause__button--ghost">Mieszkańcy</button>
       <button type="button" data-save class="seedvale-pause__button seedvale-pause__button--ghost">Save<span data-save-status class="seedvale-pause__save-status"></span></button>
       <button type="button" data-gui class="seedvale-pause__button seedvale-pause__button--ghost">Toggle debug panel</button>
+      <button type="button" data-build-campfire class="seedvale-pause__button seedvale-pause__button--ghost">Zbuduj ognisko (2x gałąź, 2x kamień)<span data-build-campfire-status class="seedvale-pause__save-status"></span></button>
       <button type="button" data-refresh class="seedvale-pause__button seedvale-pause__button--ghost">Odśwież stronę</button>
       <button type="button" data-new-game class="seedvale-pause__button seedvale-pause__button--danger">New Game</button>
       <div class="seedvale-pause__hint">${
@@ -76,6 +81,8 @@ export function createPauseMenu(
   const villagersButton = root.querySelector<HTMLButtonElement>('[data-villagers]')!
   const guiButton = root.querySelector<HTMLButtonElement>('[data-gui]')!
   const refreshButton = root.querySelector<HTMLButtonElement>('[data-refresh]')!
+  const buildCampfireButton = root.querySelector<HTMLButtonElement>('[data-build-campfire]')!
+  const buildCampfireStatusEl = root.querySelector<HTMLElement>('[data-build-campfire-status]')!
   const saveButton = root.querySelector<HTMLButtonElement>('[data-save]')!
   const saveStatusEl = root.querySelector<HTMLElement>('[data-save-status]')!
   const newGameButton = root.querySelector<HTMLButtonElement>('[data-new-game]')!
@@ -93,6 +100,16 @@ export function createPauseMenu(
     }, 1500)
   })
   newGameButton.addEventListener('click', () => handlers.onNewGame?.())
+
+  let buildCampfireStatusTimeout = 0
+  buildCampfireButton.addEventListener('click', () => {
+    const built = handlers.onBuildCampfire?.() ?? false
+    buildCampfireStatusEl.textContent = built ? 'Zbudowano!' : 'Brakuje surowców'
+    window.clearTimeout(buildCampfireStatusTimeout)
+    buildCampfireStatusTimeout = window.setTimeout(() => {
+      buildCampfireStatusEl.textContent = ''
+    }, 1500)
+  })
 
   const commitName = () => {
     const name = nameInput.value.trim()
@@ -152,6 +169,7 @@ export function createPauseMenu(
       window.removeEventListener('keydown', onKeyDown)
       root.removeEventListener('click', onRootClick)
       window.clearTimeout(saveStatusTimeout)
+      window.clearTimeout(buildCampfireStatusTimeout)
       disposeTouchScroll?.()
       root.remove()
     },

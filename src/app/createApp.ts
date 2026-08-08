@@ -34,6 +34,7 @@ import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
+import { createPlacedFires, type PlacedFires } from '../settlement/PlacedFires'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
 import {
   type ChunkManager,
@@ -84,6 +85,11 @@ const GAZE_RANGE = INTERACT_RANGE * 2
 /** Chance an `[E]`-inspected tree also yields a branch, on top of the
  *  renewable branch spawn points (`createItemSpawners.ts`). */
 const TREE_BRANCH_CHANCE = 0.25
+/** Resource cost of building a freeform campfire from the pause menu
+ *  (`settlement/PlacedFires.ts`) — a stone "fire pit" ring plus branches to
+ *  get it started. */
+const CAMPFIRE_BRANCH_COST = 2
+const CAMPFIRE_STONE_COST = 2
 
 type Highlightable = NpcAgent | AnimalAgent
 
@@ -171,6 +177,7 @@ export async function createApp(
   let fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
   let itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   let droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialSave?.droppedItems ?? [])
+  let placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialSave?.placedFires ?? [])
   const inventory = new Inventory(initialSave?.inventory)
 
   const keyboard = createKeyboard()
@@ -238,6 +245,8 @@ export async function createApp(
       // internal array, and dispose() clears it in place.
       const carriedDrops = resetCollectedItems ? [] : [...droppedItems.nodes()]
       droppedItems.dispose()
+      const carriedFires = resetCollectedItems ? [] : [...placedFires.nodes()]
+      placedFires.dispose()
       settlementsManager.dispose()
       ocean.dispose()
       chunkManager.dispose()
@@ -252,6 +261,7 @@ export async function createApp(
       fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
       itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
       droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, carriedDrops)
+      placedFires = createPlacedFires(scene, chunkManager.sampleHeight, carriedFires)
       player.setGround(chunkManager.sampleHeight, chunkManager.sampleFloor, chunkManager.waterLevel)
       player.setPosition(settlementsManager.home.spawn.x, settlementsManager.home.spawn.z)
       hud.setSeed(config.seed)
@@ -263,7 +273,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 3,
+    version: 4,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -285,6 +295,7 @@ export async function createApp(
     inventory: inventory.toJSON(),
     collectedItemIds: [...collectedItemIds],
     droppedItems: droppedItems.nodes().map((item) => ({ ...item })),
+    placedFires: placedFires.nodes().map((fire) => ({ ...fire })),
   })
 
   const updateSkyFromGui = () => {
@@ -353,6 +364,17 @@ export async function createApp(
       void writeSave(buildSaveData())
     },
     onRefresh: () => window.location.reload(),
+    onBuildCampfire: () => {
+      if (!inventory.has('branch', CAMPFIRE_BRANCH_COST) || !inventory.has('stone', CAMPFIRE_STONE_COST)) {
+        return false
+      }
+      inventory.remove('branch', CAMPFIRE_BRANCH_COST)
+      inventory.remove('stone', CAMPFIRE_STONE_COST)
+      placedFires.place(player.mesh.position.x, player.mesh.position.z)
+      hud.setInventory(inventory.toJSON())
+      touchControls?.setDropAvailable(!inventory.isEmpty())
+      return true
+    },
     onNewGame: () => {
       if (!window.confirm('Start a new game? Your saved progress will be cleared.')) return
       void clearSave()
@@ -477,6 +499,7 @@ export async function createApp(
         chunkManager,
         itemSpawners,
         droppedItems,
+        placedFires,
         player.mesh.position,
       )
       const target = pickInGaze(
@@ -580,6 +603,7 @@ export async function createApp(
       settlementsManager.update(dt, player.mesh.position)
       fauna.update(dt, player.mesh.position, dayNight.timeOfDay)
       itemSpawners.update(dt, player.mesh.position)
+      placedFires.update(dt)
       chunkManager.tickWater(dt)
       chunkManager.tickGrass(dt)
       ocean.update(dt)
@@ -620,6 +644,7 @@ export async function createApp(
     fauna.dispose()
     itemSpawners.dispose()
     droppedItems.dispose()
+    placedFires.dispose()
     settlementsManager.dispose()
     chunkManager.dispose()
     player.dispose()
@@ -633,7 +658,8 @@ export async function createApp(
 
 /** Assembles this frame's `Interactable` candidates from every world system —
  *  NPCs, the well/trees (settlement landmarks), live fauna, fauna spawn points,
- *  and nearby pickup items (world-generated + the renewable pool + player-dropped).
+ *  player-built campfires, and nearby pickup items (world-generated + the
+ *  renewable pool + player-dropped).
  *  Cheap: a few dozen objects total, dominated by settlement trees. */
 function buildInteractables(
   settlements: readonly Settlement[],
@@ -641,9 +667,19 @@ function buildInteractables(
   chunkManager: ChunkManager,
   itemSpawners: ItemSpawners,
   droppedItems: DroppedItems,
+  placedFires: PlacedFires,
   playerPos: Vector3,
 ): Interactable[] {
   const list: Interactable[] = []
+
+  for (const pf of placedFires.list()) {
+    list.push({
+      kind: 'campfire',
+      position: { x: pf.x, z: pf.z },
+      promptLabel: pf.fire.isLit() ? 'Dołóż gałąź' : 'Zapal ognisko',
+      fire: pf.fire,
+    })
+  }
 
   for (const settlement of settlements) {
     for (const npc of settlement.npcs) {
