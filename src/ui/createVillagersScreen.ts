@@ -1,5 +1,6 @@
 import type { Role, Trait } from '../ai/characters'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { FamilyRelation } from '../settlement/families'
 import { nearestArchetype, type Personality } from '../ai/dialogue'
 import { needLabel } from '../ai/Needs'
 import { enableTouchScroll } from '../input/enableTouchScroll'
@@ -48,6 +49,15 @@ const TRAIT_LABEL: Record<Trait, string> = {
 const GENDER_LABEL: Record<NpcAgent['gender'], string> = {
   male: '♂',
   female: '♀',
+}
+
+/** Empty for `single` — a lone resident isn't part of a couple/family unit
+ *  worth calling out, unlike `husband`/`wife`/`child`. */
+const RELATION_LABEL: Record<FamilyRelation, string> = {
+  husband: 'mąż',
+  wife: 'żona',
+  child: 'dziecko',
+  single: '',
 }
 
 export function createVillagersScreen(
@@ -100,7 +110,9 @@ export function createVillagersScreen(
           <span class="seedvale-villagers__row-role">${ROLE_LABEL[npc.role]}</span>
         </div>
         <div class="seedvale-villagers__row-meta">
-          ${PERSONALITY_LABEL[nearestArchetype(npc.personality)]} · ${needLabel(npc.getActiveNeed())}${settlementBadge}
+          ${PERSONALITY_LABEL[nearestArchetype(npc.personality)]} · ${needLabel(npc.getActiveNeed())}${
+            RELATION_LABEL[npc.relation] ? ` · ${RELATION_LABEL[npc.relation]}` : ''
+          }${settlementBadge}
         </div>
         <div class="seedvale-villagers__hp" title="${npc.health.currentHp}/${npc.health.maxHp} HP">
           <div class="seedvale-villagers__hp-fill" style="width:${hpPct}%"></div>

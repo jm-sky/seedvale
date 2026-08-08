@@ -48,6 +48,8 @@ export async function createSettlement(
     waterLevel,
     localRadius,
     seed,
+    def.clearings,
+    def.size,
     def.isHome,
   )
   scene.add(group)
@@ -73,12 +75,6 @@ export async function createSettlement(
     }
   }
 
-  // Home keeps its original sizing rule (derived from how many huts actually
-  // got placed); other settlements use the generator's rolled `npcCount`.
-  const count = def.isHome
-    ? Math.min(5, Math.max(3, landmarks.homes.length + 1))
-    : def.npcCount
-
   // Place v1: formalizes the home assignment that already existed
   // (`landmarks.homes[i % length]`) as a `Place` instead of a bare
   // `Vector3` — see `places.ts`. Same fallback as before when a settlement
@@ -89,18 +85,26 @@ export async function createSettlement(
       ? landmarks.homes.map((position, i) => ({ id: `${def.id}:home:${i}`, type: 'home', position }))
       : [{ id: `${def.id}:home:fallback`, type: 'home', position: landmarks.well.clone() }]
 
+  // 1 family = 1 house: every member of a family shares that family's home
+  // place (`homePlaces[familyIndex]`), not a bare `i % homePlaces.length`
+  // cycle — flattened here so the NPC-creation `Promise.all` below stays a
+  // single parallel batch, same concurrency as before family grouping existed.
+  const flatMembers = def.families.flatMap((family, familyIndex) => {
+    const home = homePlaces[familyIndex % homePlaces.length]!
+    return family.members.map((member) => ({ home, member }))
+  })
+
   const agents = await Promise.all(
-    Array.from({ length: count }, async (_, i) => {
-      const home = homePlaces[i % homePlaces.length]!
+    flatMembers.map(async ({ home, member }, i) => {
       const agent = await NpcAgent.create(
         sampleHeight,
         waterLevel,
         landmarks,
         home,
         i,
-        i / Math.max(1, count - 1),
+        i / Math.max(1, flatMembers.length - 1),
+        member,
         playSound,
-        def.isHome ? undefined : def.npcNames[i],
       )
       scene.add(agent.mesh)
       return agent

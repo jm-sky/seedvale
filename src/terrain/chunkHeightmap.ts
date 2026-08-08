@@ -51,6 +51,21 @@ export type RegionParams = {
   swampThresholdWidth: number
   /** Tunables for road/path corridor width + strength — see `roadNetwork.ts`. */
   roadNetwork: RoadNetworkParams
+  /** Tunables for village clearing radius/strength — see `villageClearing.ts`. */
+  village: VillageClearingParams
+}
+
+export type VillageClearingParams = {
+  /** Radius (world units) of the shared "core" clearing (well/stockpile/garden). */
+  coreRadius: number
+  /** Radius (world units) of each family's house clearing. */
+  houseRadius: number
+  /** How strongly terrain height blends toward a clearing's flat target
+   *  height inside it (0 = untouched, 1 = fully replaced) — same idea as
+   *  `RoadNetworkParams.roadHeightStrength`. */
+  heightStrength: number
+  /** How strongly the ground color blends toward `DIRT` inside a clearing. */
+  tintStrength: number
 }
 
 export type RoadNetworkParams = {
@@ -94,6 +109,21 @@ export type RoadCorridorSegment = {
   tintStrength: number
 }
 
+/** A single village clearing's terrain-shaping data — the point-shaped
+ *  counterpart to `RoadCorridorSegment`, same worker-safe/plain-numeric
+ *  reasoning. Computed main-thread-only by `settlement/villageClearing.ts`
+ *  (`layoutClearings`, embedded in `SettlementDef.clearings`) and flattened
+ *  per-chunk by `settlement/roadNetwork.ts`'s `clearingSegmentsNear`. */
+export type ClearingSegment = {
+  x: number
+  z: number
+  radius: number
+  /** Pre-computed flat target height (already resolved, not raw terrain). */
+  targetH: number
+  heightStrength: number
+  tintStrength: number
+}
+
 export type ChunkTileParams = {
   cx: number
   cz: number
@@ -128,6 +158,13 @@ export type ChunkTileParams = {
    *  in `computeChunkTile`'s tile-building loop, layered on top of the raw
    *  analytic height. */
   roadSegments: RoadCorridorSegment[]
+  /** Village clearings near this chunk — see `ClearingSegment`. Same
+   *  road-agnostic-analytic-sampler reasoning as `roadSegments`: a clearing's
+   *  `targetH` is computed once (`villageClearing.ts`'s `layoutClearings`)
+   *  from the ambient, clearing-agnostic `sampleHeight`, so must not itself
+   *  already include clearing blending — excluded from `RawSampleParams` for
+   *  the same reason `roadSegments` is. */
+  clearings: ClearingSegment[]
 }
 
 export type RawSampleParams = Omit<
@@ -139,6 +176,7 @@ export type RawSampleParams = Omit<
   | 'isHomeChunk'
   | 'vegetationSpeciesCount'
   | 'roadSegments'
+  | 'clearings'
 >
 
 export type ChunkTileData = {
@@ -410,40 +448,76 @@ function projectOntoSegment(
   return { distSq: ddx * ddx + ddz * ddz, t }
 }
 
-/** Fraction of a corridor's `halfWidth` over which the road/path is at full
- *  strength before tapering off — keeps the edge soft instead of a hard cutoff,
- *  same idea as `SEABED_BLEND`/`LAND_BLEND` in `biomeColors.ts`. */
-const ROAD_INNER_FRACTION = 0.6
+/** Fraction of a corridor's half-width/radius over which it's at full
+ *  strength before tapering off — keeps the edge soft instead of a hard
+ *  cutoff, same idea as `SEABED_BLEND`/`LAND_BLEND` in `biomeColors.ts`.
+ *  Shared by roads/paths (line corridors) and village clearings (point
+ *  corridors) — both blend a texel toward a pre-resolved target height the
+ *  same way, just with a different distance metric. */
+const CORRIDOR_INNER_FRACTION = 0.6
 
-/** Blends a texel's `floorH` toward the nearest/strongest road corridor's
- *  smoothed route profile, and returns the tint strength for `applyRoadTint`.
- *  Segments are plain per-chunk input data (`ChunkTileParams.roadSegments`) —
- *  see its doc comment for why this lives here and not in `sampleRawTexel`. */
-function applyRoadCorridor(
+type CorridorCandidate = { falloff: number; targetH: number; heightStrength: number; tint: number }
+
+function roadCandidate(wx: number, wz: number, seg: RoadCorridorSegment): CorridorCandidate | null {
+  const { distSq, t } = projectOntoSegment(wx, wz, seg.ax, seg.az, seg.bx, seg.bz)
+  if (distSq >= seg.halfWidth * seg.halfWidth) return null
+  const dist = Math.sqrt(distSq)
+  const inner = seg.halfWidth * CORRIDOR_INNER_FRACTION
+  const falloff = 1 - MathUtils.smoothstep(dist, inner, seg.halfWidth)
+  return {
+    falloff,
+    targetH: MathUtils.lerp(seg.ah, seg.bh, t),
+    heightStrength: seg.heightStrength,
+    tint: falloff * seg.tintStrength,
+  }
+}
+
+function clearingCandidate(wx: number, wz: number, seg: ClearingSegment): CorridorCandidate | null {
+  const dx = wx - seg.x
+  const dz = wz - seg.z
+  const distSq = dx * dx + dz * dz
+  if (distSq >= seg.radius * seg.radius) return null
+  const dist = Math.sqrt(distSq)
+  const inner = seg.radius * CORRIDOR_INNER_FRACTION
+  const falloff = 1 - MathUtils.smoothstep(dist, inner, seg.radius)
+  return {
+    falloff,
+    targetH: seg.targetH,
+    heightStrength: seg.heightStrength,
+    tint: falloff * seg.tintStrength,
+  }
+}
+
+/** Blends a texel's `floorH` toward the nearest/strongest road/path corridor
+ *  or village clearing's target height, and returns the tint strength for
+ *  `applyRoadTint` (reused as-is for clearings — both read as "packed
+ *  ground", see `villageClearing.ts`). Segments are plain per-chunk input
+ *  data (`ChunkTileParams.roadSegments`/`clearings`) — see their doc comments
+ *  for why this lives here and not in `sampleRawTexel`. */
+function applyTerrainCorridors(
   wx: number,
   wz: number,
   floorH: number,
-  segments: readonly RoadCorridorSegment[],
+  roadSegments: readonly RoadCorridorSegment[],
+  clearingSegments: readonly ClearingSegment[],
 ): { floorH: number; tint: number } {
   let bestFalloff = 0
   let bestTargetH = 0
   let bestHeightStrength = 0
   let bestTint = 0
 
-  for (const seg of segments) {
-    const { distSq, t } = projectOntoSegment(wx, wz, seg.ax, seg.az, seg.bx, seg.bz)
-    if (distSq >= seg.halfWidth * seg.halfWidth) continue
-    const dist = Math.sqrt(distSq)
-    const inner = seg.halfWidth * ROAD_INNER_FRACTION
-    const falloff = 1 - MathUtils.smoothstep(dist, inner, seg.halfWidth)
-    if (falloff > bestFalloff) {
-      bestFalloff = falloff
-      bestTargetH = MathUtils.lerp(seg.ah, seg.bh, t)
-      bestHeightStrength = seg.heightStrength
+  const consider = (candidate: CorridorCandidate | null) => {
+    if (!candidate) return
+    if (candidate.falloff > bestFalloff) {
+      bestFalloff = candidate.falloff
+      bestTargetH = candidate.targetH
+      bestHeightStrength = candidate.heightStrength
     }
-    const tint = falloff * seg.tintStrength
-    if (tint > bestTint) bestTint = tint
+    if (candidate.tint > bestTint) bestTint = candidate.tint
   }
+
+  for (const seg of roadSegments) consider(roadCandidate(wx, wz, seg))
+  for (const seg of clearingSegments) consider(clearingCandidate(wx, wz, seg))
 
   if (bestFalloff <= 0) return { floorH, tint: 0 }
   return {
@@ -486,10 +560,10 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
 
       let floorH = sample.floorH
       let tint = 0
-      if (params.roadSegments.length > 0) {
-        const road = applyRoadCorridor(wx, wz, floorH, params.roadSegments)
-        floorH = road.floorH
-        tint = road.tint
+      if (params.roadSegments.length > 0 || params.clearings.length > 0) {
+        const corridor = applyTerrainCorridors(wx, wz, floorH, params.roadSegments, params.clearings)
+        floorH = corridor.floorH
+        tint = corridor.tint
       }
 
       heights[idx] = floorH < waterLevel ? waterLevel : floorH

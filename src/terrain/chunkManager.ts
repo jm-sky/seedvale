@@ -22,7 +22,7 @@ import {
   REED_SPECS,
   TREE_SPECS,
 } from '../settlement/props'
-import { type RoadNetworkContext, segmentsNear } from '../settlement/roadNetwork'
+import { clearingSegmentsNear, type RoadNetworkContext, segmentsNear } from '../settlement/roadNetwork'
 import { createChunkWater, type WorldWater } from '../world/createWater'
 import { buildChunkGeometry } from './buildChunkGeometry'
 import {
@@ -247,6 +247,7 @@ export function createChunkManager(
         reed: REED_SPECS.length,
       },
       roadSegments: segmentsNear(x, z, config.chunkSize, roadCtx),
+      clearings: clearingSegmentsNear(x, z, config.chunkSize, roadCtx),
     }
   }
 
