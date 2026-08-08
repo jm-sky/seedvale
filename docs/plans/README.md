@@ -49,6 +49,7 @@ Implementation plans for features and larger changes.
 | [2026-08-10--042--fauna-player-awareness.md](./2026-08-10--042--fauna-player-awareness.md) | Zwierzęta unikają zapalonych ognisk + uciekają przed zauważonym graczem (stożek widzenia, pora dnia, biom, gatunek) — HP/stamina odłożone do Fazy 2 | `verification needed` 🔍 |
 | [2026-08-08--043--player-inventory-equipment.md](./2026-08-08--043--player-inventory-equipment.md) | Ekwipunek gracza v1: dedykowany ekran, waga, akcje, zbieranie + nóż/krzesiwo/koc; zarys equipment, durability i craftingu na przyszłość | `planned` 📋 |
 | [2026-08-08--044--world-life-details.md](./2026-08-08--044--world-life-details.md) | Drobne życie i detale świata: światła w domach, nowe zwierzęta dzikie i gospodarskie, propsy, studnia, kwiaty/kamienie, naturalność drzew i fauna vs wioska | `planned` 📋 |
+| [2026-08-08--045--health-stamina-threat.md](./2026-08-08--045--health-stamina-threat.md) | Wspólny Health/Stamina/Threat: stamina dla NPC/fauny/gracza, exhaustion, attack/flee i reakcje na obrażenia | `planned` 📋 (draft) |
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
 
