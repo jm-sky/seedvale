@@ -4,6 +4,8 @@
 **Created:** 2026-08-08
 **Scope:** rozszerza [multi-settlements.md](./2026-08-07--025--multi-settlements.md) (siatka osad, streaming) i [npc-character-depth.md](./2026-08-07--022--npc-character-depth.md) (`CharacterDef`, Big Five, `HealthState`); reużywa wzorzec spłaszczania terenu z [roads-and-paths.md](./2026-08-07--026--roads-and-paths.md)
 
+**Update (2026-08-10):** `VillageSize` rozszerzony o `'OUTPOST'` — patrz [natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md) §7 (`families.ts`, nigdy nie losowany przez `rollVillageSize`, ustawiany jawnie przez `settlementGenerator.ts` przy znaczącym zasobie + trudnym terenie).
+
 ## Stan implementacji (2026-08-08)
 
 Zaimplementowane zgodnie ze szkicem poniżej, z kilkoma decyzjami podjętymi podczas implementacji (odpowiedzi na pytania doprecyzowujące zadane przed startem):

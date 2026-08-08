@@ -764,7 +764,10 @@ export async function buildSettlementProps(
     group.add(barrel)
   }
 
-  if (size !== 'SM') {
+  // `size !== 'SM'` would also be true for 'OUTPOST' (plan 032 §7) — a lone
+  // resident's cabin doesn't get a village campfire, so this is explicit
+  // about which two sizes actually qualify instead of just excluding SM.
+  if (size === 'MD' || size === 'LG') {
     const { x: fireX, z: fireZ } = findFlatSpot(site, -4.5, -2, sampleHeight, waterLevel, coreRandom)
     const campfire = createCampfire()
     placeOnGround(campfire, fireX, fireZ, sampleHeight)

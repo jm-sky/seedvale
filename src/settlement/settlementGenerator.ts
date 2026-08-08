@@ -1,12 +1,53 @@
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
+import type { NaturalResource } from '../terrain/naturalResources'
 import { type NameCulture, pickNameCulture } from '../ai/nameCultures'
 import { generateSettlementName, type SettlementTerrain } from '../shared/SettlementName'
+import {
+  dominantResourceNear,
+  RESOURCE_ROLE,
+  resourceAttractionAt,
+  type ResourceEnv,
+  resourcesNear,
+  SIGNIFICANT_RICHNESS,
+} from '../terrain/naturalResources'
 import { createSeededRandom } from '../world/parseSeed'
 import { type FamilyDef, generateFamilies, rollVillageSize, type VillageSize } from './families'
 import { findSettlementSite } from './findSettlementSite'
 import { classifySettlementTerrain, type TerrainSamplers } from './settlementTerrain'
 import { type ClearingLayout, layoutClearings } from './villageClearing'
+
+/** How a settlement's population mainly feeds itself (plan 032 §8) — v1 is
+ *  data/flavor only (no dedicated visual per type yet, see review note in
+ *  the plan doc): every settlement still gets the same `garden` prop
+ *  (`props.ts`) regardless of this field. Consumed today only by the
+ *  Villagers screen's settlement badge. */
+export type FoodSourceType = 'field' | 'fishing' | 'foraging' | 'garden'
+
+/** Search radius (world units) beyond `localSearchRadius` the pre-site
+ *  resource scan looks out to — a deposit just outside the site-search box
+ *  can still pull site selection toward it via `resourceAttractionAt`'s wide
+ *  falloff (up to `radius * 6`, see `naturalResources.ts`), so the scan has
+ *  to reach further than the search box itself to not miss that influence
+ *  right at the box's edge. */
+const RESOURCE_ATTRACTION_MARGIN = 130
+
+/** Radius (world units) around the *final* site a resource can be "the
+ *  settlement's" dominant one (plan 032 §5's "wioska nie musi znajdować się
+ *  przy zasobie" — moderate distance is fine). Comparable to half a
+ *  settlement grid cell (`SETTLEMENT_GRID_STEP` / 2) so neighboring
+ *  settlements don't typically both claim the same deposit. */
+const RESOURCE_INFLUENCE_RADIUS = 140
+
+/** How significant a resource needs to be, combined with harsh (`mountain`)
+ *  terrain, to spawn a Resource Outpost (§7) instead of a normal village —
+ *  stricter than `SIGNIFICANT_RICHNESS` (which only gates the *dedicated
+ *  family* on an otherwise-normal settlement): an outpost replaces the whole
+ *  village, so it should be reserved for genuinely exceptional deposits. */
+const OUTPOST_RICHNESS_THRESHOLD = 0.78
+/** Not every qualifying mountain+resource combo becomes an outpost —
+ *  "Opcjonalne resource outposts" (plan 032 §14 checklist item 7). */
+const OUTPOST_CHANCE = 0.45
 
 /** World-unit spacing between settlement grid cells. Large enough that even
  *  the worst-case combination of per-cell noise offset and the local flat-site
@@ -54,6 +95,14 @@ export type SettlementDef = {
    *  with a small chance per NPC of a name from elsewhere. Doesn't apply to
    *  the home settlement's 2 reserved families, whose names are fixed. */
   nameCulture: NameCulture
+  /** The most significant natural resource within `RESOURCE_INFLUENCE_RADIUS`
+   *  of the site (plan 032, `terrain/naturalResources.ts`), or `null` if none
+   *  is close enough to matter. Already factored into `size`/`families`/
+   *  `name` above where relevant — kept here too for future consumers
+   *  (production/goods, plan 032 §10-11) and UI flavor. */
+  dominantResource: NaturalResource | null
+  /** Plan 032 §8 — data/flavor only in v1, see `FoodSourceType`'s doc comment. */
+  foodSourceType: FoodSourceType
 }
 
 export function cellKey(cell: SettlementCell): string {
@@ -102,8 +151,33 @@ function offsetCellCenter(cell: SettlementCell, seedForCell: number): { x: numbe
   }
 }
 
+/** Deterministic seeded roll for whether a qualifying resource+terrain
+ *  combo actually becomes an outpost (`OUTPOST_CHANCE`) — separate xor salt
+ *  from every other per-cell roll so it doesn't correlate with them. */
+function rollIsOutpost(seedForCell: number): boolean {
+  const random = createSeededRandom(seedForCell ^ 0x0057057)
+  return random() < OUTPOST_CHANCE
+}
+
+function foodSourceTypeFor(terrain: SettlementTerrain, dominantResource: NaturalResource | null): FoodSourceType {
+  if (dominantResource && dominantResource.richness >= SIGNIFICANT_RICHNESS) {
+    if (dominantResource.type === 'fish') return 'fishing'
+    if (dominantResource.type === 'fertile_soil') return 'field'
+  }
+  if (terrain === 'forest') return 'foraging'
+  return 'garden'
+}
+
 /** Generates a settlement's site + metadata for a grid cell, seeded
- *  deterministically from the world seed — same seed ⇒ same layout. */
+ *  deterministically from the world seed — same seed ⇒ same layout.
+ *
+ *  Order follows plan 032 §1's "teren → środowisko → zasoby → wioski":
+ *  natural resources are sampled from the terrain/environment `sampleHeight`/
+ *  `terrainSamplers` already expose, *before* the site search runs, and feed
+ *  into it as an attractiveness bonus (§5) — resources aren't generated *for*
+ *  the settlement, the settlement's placement responds to resources that
+ *  would exist there regardless.
+ */
 export function generateSettlementDef(
   cell: SettlementCell,
   seed: number,
@@ -118,7 +192,25 @@ export function generateSettlementDef(
   const seedForCell = cellSeed(seed, cell)
   const center = isHome ? { x: 0, z: 0 } : offsetCellCenter(cell, seedForCell)
 
-  const site = findSettlementSite(sampleHeight, waterLevel, localSearchRadius, seedForCell, center)
+  const resourceEnv: ResourceEnv = {
+    sampleHeight,
+    sampleContinentalness: terrainSamplers.sampleContinentalness,
+    sampleMountainRidge: terrainSamplers.sampleMountainRidge,
+    sampleMoistureRegion: terrainSamplers.sampleMoistureRegion,
+    waterLevel,
+    heightScale,
+    region,
+  }
+  const candidateResources = resourcesNear(
+    center.x,
+    center.z,
+    localSearchRadius + RESOURCE_ATTRACTION_MARGIN,
+    seedForCell,
+    resourceEnv,
+  )
+  const resourceAttraction = (x: number, z: number): number => resourceAttractionAt(x, z, candidateResources)
+
+  const site = findSettlementSite(sampleHeight, waterLevel, localSearchRadius, seedForCell, center, resourceAttraction)
 
   const terrain = classifySettlementTerrain(
     site.x,
@@ -129,11 +221,25 @@ export function generateSettlementDef(
     region,
     terrainSamplers,
   )
-  const name = generateSettlementName(seedForCell, terrain)
+  const dominantResource = dominantResourceNear(site.x, site.z, RESOURCE_INFLUENCE_RADIUS, seedForCell, resourceEnv)
   const nameCulture = pickNameCulture(seedForCell)
 
-  const size = rollVillageSize(terrain, seedForCell)
-  const families = generateFamilies(seedForCell, size, isHome, nameCulture)
+  // Resource Outposts (§7) — a genuinely exceptional deposit ("złoto → wysokie
+  // góry → zbyt trudne miejsce na wioskę") in harsh (mountain) terrain
+  // sometimes replaces the whole village with a single lone resident tied to
+  // it, instead of the normal SM/MD/LG roll. Never for the home settlement —
+  // it always needs its full reserved-family roster (see `families.ts`).
+  const isOutpost =
+    !isHome &&
+    terrain === 'mountain' &&
+    dominantResource !== null &&
+    dominantResource.richness >= OUTPOST_RICHNESS_THRESHOLD &&
+    RESOURCE_ROLE[dominantResource.type] !== undefined &&
+    rollIsOutpost(seedForCell)
+
+  const size = isOutpost ? 'OUTPOST' : rollVillageSize(terrain, seedForCell)
+  const name = generateSettlementName(seedForCell, terrain, dominantResource)
+  const families = generateFamilies(seedForCell, size, isHome, nameCulture, dominantResource)
   const clearings = layoutClearings(site, families, terrain, seedForCell, sampleHeight, waterLevel, region.village)
 
   return {
@@ -150,5 +256,7 @@ export function generateSettlementDef(
     terrain,
     name,
     nameCulture,
+    dominantResource,
+    foodSourceType: foodSourceTypeFor(terrain, dominantResource),
   }
 }

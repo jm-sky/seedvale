@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { NaturalResource } from '../terrain/naturalResources'
 import { generateFamilies, rollVillageSize } from './families'
 
 describe('rollVillageSize', () => {
@@ -76,5 +77,45 @@ describe('generateFamilies', () => {
         }
       }
     }
+  })
+
+  describe('dominantResource (plan 032)', () => {
+    const ironDeposit: NaturalResource = { type: 'iron', x: 0, z: 0, radius: 10, richness: 0.9 }
+    const faintDeposit: NaturalResource = { type: 'iron', x: 0, z: 0, radius: 10, richness: 0.1 }
+    const unmappedDeposit: NaturalResource = { type: 'herbs', x: 0, z: 0, radius: 10, richness: 0.9 }
+
+    it('adds one extra dedicated-role family on top of the normal roster when the resource is significant', () => {
+      const without = generateFamilies(11, 'MD', false, 'polish')
+      const withResource = generateFamilies(11, 'MD', false, 'polish', ironDeposit)
+      expect(withResource.length).toBe(without.length + 1)
+      const dedicated = withResource[withResource.length - 1]!
+      expect(dedicated.members.some((m) => m.character.role === 'miner')).toBe(true)
+    })
+
+    it('does not add a dedicated family when the resource is below the significance threshold', () => {
+      const without = generateFamilies(11, 'MD', false, 'polish')
+      const withFaint = generateFamilies(11, 'MD', false, 'polish', faintDeposit)
+      expect(withFaint.length).toBe(without.length)
+    })
+
+    it('does not add a dedicated family for a resource type with no role mapping', () => {
+      const without = generateFamilies(11, 'MD', false, 'polish')
+      const withUnmapped = generateFamilies(11, 'MD', false, 'polish', unmappedDeposit)
+      expect(withUnmapped.length).toBe(without.length)
+    })
+
+    it('OUTPOST size produces exactly one single-member family with the resource-forced role', () => {
+      const outpost = generateFamilies(5, 'OUTPOST', false, 'polish', ironDeposit)
+      expect(outpost.length).toBe(1)
+      expect(outpost[0]!.members.length).toBe(1)
+      expect(outpost[0]!.members[0]!.relation).toBe('single')
+      expect(outpost[0]!.members[0]!.character.role).toBe('miner')
+    })
+
+    it('is deterministic including the dominantResource input', () => {
+      const a = generateFamilies(11, 'MD', false, 'polish', ironDeposit)
+      const b = generateFamilies(11, 'MD', false, 'polish', ironDeposit)
+      expect(a).toEqual(b)
+    })
   })
 })

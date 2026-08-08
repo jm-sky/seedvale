@@ -5,7 +5,7 @@ import {
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import type { Place } from './places'
-import type { SettlementDef } from './settlementGenerator'
+import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
@@ -42,6 +42,9 @@ export type Settlement = {
   id: string
   name: string
   isHome: boolean
+  /** Plan 032 §8 — surfaced today only in the Villagers screen's settlement
+   *  badge (`ui/createVillagersScreen.ts`). */
+  foodSourceType: FoodSourceType
   spawn: Vector3
   center: Vector3
   npcs: readonly NpcAgent[]
@@ -184,6 +187,7 @@ export async function createSettlement(
     id: def.id,
     name: def.name,
     isHome: def.isHome,
+    foodSourceType: def.foodSourceType,
     spawn,
     center: new Vector3(site.x, site.y, site.z),
     npcs: agents,

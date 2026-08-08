@@ -5,8 +5,12 @@ import { personalityForIndex } from './dialogue'
 export type NpcGender = 'male' | 'female'
 
 /** Function within the settlement — data only in v1, no schedule/workplace
- *  behavior yet (see npc-2-daily-routine-and-place.md). */
-export type Role = 'woodcutter' | 'farmer' | 'guard' | 'trader'
+ *  behavior yet (see npc-2-daily-routine-and-place.md). `miner`/`fisher`
+ *  added for plan 032 (natural-resources-economy) — a dedicated family near a
+ *  significant iron/gold/fish deposit gets one forced into its role
+ *  (`terrain/naturalResources.ts`'s `RESOURCE_ROLE`), but either can also
+ *  come up on any regular family via the normal random roll below. */
+export type Role = 'woodcutter' | 'farmer' | 'guard' | 'trader' | 'miner' | 'fisher'
 
 /** Closed pool of lightweight, deterministic modifiers — see NpcAgent for
  *  where each one actually changes a number (wait times, HP, PAUSE_PARAMS). */
@@ -25,7 +29,7 @@ export type CharacterDef = {
   traits: readonly Trait[]
 }
 
-const ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'trader']
+const ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'trader', 'miner', 'fisher']
 const TRAITS: readonly Trait[] = ['energetic', 'fast_worker', 'night_owl', 'sociable']
 
 type ReservedSeed = Omit<CharacterDef, 'personality'>

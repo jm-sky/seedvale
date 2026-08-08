@@ -7,11 +7,23 @@ export type SettlementSite = {
   y: number
 }
 
+/** How strongly a nearby natural resource (`resourceAttraction`, 0..1) can
+ *  tip the ranking between two similarly flat/dry candidates — comparable in
+ *  magnitude to the flatness term's typical spread, deliberately *not* large
+ *  enough to make an uneven/wet spot win outright (those are already
+ *  rejected above via `continue`, before this ever runs) — plan 032 §5:
+ *  "atrakcyjność lokalizacji", not "override the flatness gate". */
+const RESOURCE_SCORE_WEIGHT = 3
+
 /**
  * Pick a walkable, relatively flat patch above water for the village, searching
  * within `halfExtent` of `center`. Seeded search — same seed ⇒ same site.
  * `center` defaults to the origin, matching the original single-settlement
  * behavior exactly (used as-is by the home settlement in multi-settlement mode).
+ *
+ * `resourceAttraction`, if given, adds plan 032 §5's "resource → site
+ * attractiveness" bonus to each already-accepted candidate's score — see
+ * `terrain/naturalResources.ts::resourceAttractionAt`.
  */
 export function findSettlementSite(
   sampleHeight: HeightSampler,
@@ -19,6 +31,7 @@ export function findSettlementSite(
   halfExtent: number,
   seed: number,
   center: { x: number, z: number } = { x: 0, z: 0 },
+  resourceAttraction?: (x: number, z: number) => number,
 ): SettlementSite {
   const random = createSeededRandom(seed ^ 0xc0ffee)
   const margin = Math.min(24, halfExtent * 0.55)
@@ -41,9 +54,12 @@ export function findSettlementSite(
     const maxDelta = Math.max(...samples.map((h) => Math.abs(h - y)))
     if (maxDelta > 2.2) continue
 
-    // Prefer slightly inland flats closer to center.
+    // Prefer slightly inland flats closer to center, and (if given) ones near
+    // a significant natural resource.
     const dist = Math.hypot(x - center.x, z - center.z)
-    const score = 8 - maxDelta * 3 - dist * 0.05 + (y - waterLevel) * 0.15
+    const score =
+      8 - maxDelta * 3 - dist * 0.05 + (y - waterLevel) * 0.15 +
+      (resourceAttraction?.(x, z) ?? 0) * RESOURCE_SCORE_WEIGHT
     if (score > bestScore) {
       bestScore = score
       best = { x, z, y }
