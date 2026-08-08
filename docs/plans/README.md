@@ -47,6 +47,7 @@ Implementation plans for features and larger changes.
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku + pogoda (szkic od ChatGPT) — sezony wpływają na zasoby/roślinność, pogoda na widoczność/dźwięk | `planned` |
 | [2026-08-10--041--wait-rest-time-skip.md](./2026-08-10--041--wait-rest-time-skip.md) | Czekaj (1/3/6h, widoczne przyspieszenie) + Odpoczynek (obóz/miasto, 8h, fade-to-black) w Quick Actions — czysty skok czasu, bez player-stat systemu | `verification needed` |
 | [2026-08-10--042--fauna-player-awareness.md](./2026-08-10--042--fauna-player-awareness.md) | Zwierzęta unikają zapalonych ognisk + uciekają przed zauważonym graczem (stożek widzenia, pora dnia, biom, gatunek) — HP/stamina odłożone do Fazy 2 | `verification needed` |
+| [2026-08-08--043--player-inventory-equipment.md](./2026-08-08--043--player-inventory-equipment.md) | Ekwipunek gracza v1: dedykowany ekran, waga, akcje, zbieranie + nóż/krzesiwo/koc; zarys equipment, durability i craftingu na przyszłość | `planned` |
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
 
