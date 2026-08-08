@@ -1,10 +1,33 @@
 # Plan: Natural Resources, Food & Village Economy
 
-**Status:** `planned` (draft w oryginale oznaczony jako `"draft"` — niestandardowa wartość dla tego repo, patrz [plans/README.md](./README.md) „Status values"; zunifikowane do `planned`, bo to nierozstrzygnięty jeszcze szkic, bez decyzji/kodu)
+**Status:** `verification needed` 🔍 — checklist §14 punkty 1-6, 8-9 zaimplementowane 2026-08-10, punkt 7 (outposts) zaimplementowany jako opcjonalny/warunkowy mechanizm; wymaga wizualnej weryfikacji w przeglądarce na kilku ziarnach (patrz „Stan implementacji" niżej).
 **Created:** 2026-08-08
 **Scope:** kolejny etap po generowaniu wiosek ([village-generation.md](./2026-08-08--031--village-generation.md)), rozszerza [multi-settlements.md](./2026-08-07--025--multi-settlements.md) (tam „dystrybucja zasobów per wioska" jest jawnie poza zakresem v1 — to jest ten plan)
 
 > Draft od ChatGPT, bez dostępu do plików repo. Review przed implementacją — patrz „Review" niżej.
+
+## Stan implementacji (2026-08-10)
+
+Zaimplementowane wg checklisty §14, z konkretnymi decyzjami technicznymi tam, gdzie plan zostawiał otwarte pytanie:
+
+1. **Generowanie zasobów** — `src/terrain/naturalResources.ts` (nowy). Własna, rzadsza siatka (`RESOURCE_GRID_STEP = 90`, gęstsza niż `SETTLEMENT_GRID_STEP = 280`) z deterministycznym per-komórkowym seedem (ten sam xor/imul-hash idiom co `settlementGenerator.ts::cellSeed`), próbkowana on-demand (`resourcesNear`/`dominantResourceNear`) — bez pregeneracji/streamingu, bez geometrii w świecie (patrz punkt „Poza zakresem" niżej). Pula typów zawężona do 8 (`iron`/`gold`/`fish`/`fertile_soil`/`clay`/`salt`/`resin`/`herbs`) — generyczne drewno/kamień świadomie pominięte, bo teren już ma las/skały jako ambient (uzasadnienie w komentarzu modułu).
+2. **Preferencje terenowe** — `resourceWeights()` w tym samym pliku, komponuje istniejące osie (`continentalness`/`mountainRidge`/`moistureRegion` przez `biomeWeightsAt`) zamiast nowego podziału biomów, zgodnie z uwagą z „Review" wyżej. „Blisko wody" (rzeki/jeziora/wybrzeże) wykrywane przez ring-scan wokół kandydata (`isNearWater`, promień 24 jedn.) — taki sam wzorzec jak `villageClearing.ts::pathIsDry`.
+3. **Richness** — `0.2 + fit*0.5 + losowość*0.3`, `fit` = dopasowanie wylosowanego typu do środowiska względem najlepszego możliwego w tym miejscu.
+4. **Wpływ na atrakcyjność lokalizacji** — `findSettlementSite.ts` dostał opcjonalny param `resourceAttraction?: (x,z) => number`; `settlementGenerator.ts` skanuje zasoby w promieniu `localSearchRadius + 130` wokół `center` *przed* wyszukiwaniem site'u i przekazuje bonus do scoringu (waga `RESOURCE_SCORE_WEIGHT = 3`, porównywalna z karą za nierówność terenu) — **tylko ranking między już zaakceptowanymi płaskimi/suchymi kandydatami**, nigdy nie omija bramki płaskość/woda. Świadoma decyzja z „Review": nie zmienia się „czy w ogóle powstaje wioska w tej komórce" (dziś każda komórka siatki osad zawsze dostaje jakąś osadę) — tylko *które* miejsce w obrębie komórki zostanie wybrane.
+5. **Dedykowana rodzina + domek** — `families.ts::generateFamilies` dostał opcjonalny param `dominantResource`; przy istotności `>= SIGNIFICANT_RICHNESS (0.55)` i typie z mapowaniem na rolę (`RESOURCE_ROLE`: `iron`/`gold` → `miner`, `fish` → `fisher`, `fertile_soil` → `farmer` — nowe role w `ai/characters.ts`) dokłada jedną dodatkową rodzinę (normalny roll single/para/dziecko, wymuszona rola tylko na pierwszym dodanym członku). `clay`/`salt`/`resin`/`herbs` nie mają mapowania na rolę — zostają czystym smaczkiem nazewniczym/food-source (nie wymyślano sztucznej roli na siłę). Dom przydziela się automatycznie — `villageClearing.ts::layoutClearings` już liczy pierścień domów z `families.length`, więc dodatkowa rodzina = dodatkowy dom bez żadnej zmiany w tamtym module.
+6. **Resource Outposts** — `VillageSize` rozszerzony o `'OUTPOST'` (`families.ts`) — nigdy nie losowany przez `rollVillageSize` (zwraca teraz `Exclude<VillageSize, 'OUTPOST'>`), tylko jawnie ustawiany przez `settlementGenerator.ts`, gdy: `!isHome && terrain === 'mountain' && dominantResource.richness >= 0.78 && RESOURCE_ROLE[type] !== undefined` + rzut `OUTPOST_CHANCE = 0.45` (żeby nie każda kwalifikująca się góra+złoto kombinacja została outpostem — „Opcjonalne"). Outpost = dokładnie 1 rodzina, 1 osoba, `relation: 'single'`, wymuszona rola. Nadal dostaje standardowy rdzeń (studnia/skład/ogród) — bez tego istniejący system potrzeb NPC (`beginNeed`/`goWell`/`goGarden`/`goStock`) nie miałby czego użyć — ale **bez ogniska** (`props.ts`: warunek zmieniony z `size !== 'SM'` na jawne `size === 'MD' || size === 'LG'`, żeby nie objąć przy okazji outpostu).
+7. **Wpływ na nazwę** — `shared/SettlementName.ts::generateSettlementName` dostał opcjonalny 3. param `dominantResource`; przy istotnym zasobie (ten sam próg `SIGNIFICANT_RICHNESS`) i typie z wpisem w nowej `RESOURCE_WORDS` (polskie fragmenty, nie dosłowne tłumaczenia angielskich przykładów z planu — np. „Żelazna Kuźnia" zamiast „Ironvale", zachowuje konwencję nazewniczą reszty gry) — 50% szans (`RESOURCE_NAME_CHANCE`) na wmieszanie zasobowych przymiotników/rzeczowników do puli przed wylosowaniem wzorca terenowego. `soloNames` zostają czysto terenowe.
+8. **Food Source** — `settlementGenerator.ts::foodSourceTypeFor` — dane, nie nowa geometria (patrz „Poza zakresem"): `fish`/`fertile_soil` istotne → `fishing`/`field`; teren `forest` → `foraging`; reszta → `garden` (dzisiejszy domyślny prop, bez zmian wizualnych). Nowe pole `SettlementDef.foodSourceType`, przeniesione na `Settlement` (`createSettlement.ts`), skonsumowane w ekranie Mieszkańcy — badge przy nazwie osady (`ui/createVillagersScreen.ts`, widoczny tylko gdy >1 wioska załadowana, tak jak istniejący badge nazwy osady).
+9. **Przygotowanie danych pod production/goods** — uznane za pokryte samym modelem `NaturalResource`/`SettlementDef.dominantResource` (typ zasobu + richness już dostępne dla przyszłych konsumentów) — brak dodatkowego kodu.
+
+Testy: `src/terrain/naturalResources.test.ts` (nowy — determinizm, sparsity, `richness` w [0,1], bias iron/gold→góry i resin/herbs→las, `resourceAttractionAt`), `src/settlement/families.test.ts` (rozszerzony — dedykowana rodzina, próg istotności, brak mapowania roli, ścieżka OUTPOST). `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — czyste.
+
+### Świadome odstępstwa od dosłownego brzmienia planu
+
+- **Brak geometrii/interakcji w świecie dla zasobów** — `NaturalResource` to warstwa danych generowana on-demand przy tworzeniu osady, nie renderowalny/zbieralny obiekt (spójne z §4: „Na tym etapie nie tworzymy jeszcze pełnego inventory zasobu"). Gracz nie zobaczy żyły złota w terenie — zasoby wpływają na to, co generator zbuduje (rodzina/nazwa/food source), nie na to, co da się znaleźć i wykopać.
+- **§5 „szansa na wioskę"** zinterpretowane jako wpływ na *wybór miejsca w obrębie już istniejącej komórki siatki osad*, nie na to, czy komórka w ogóle dostaje osadę — dzisiejszy `SettlementsManager`/`generateSettlementDef` nie ma pojęcia „pusta komórka bez osady" i dodanie go byłoby osobną, większą zmianą architektoniczną (streaming, minimapa, itd.), nieproporcjonalną do tego pojedynczego punktu planu.
+- **Outpost nadal ma studnię/skład/ogród** (nie tylko „1 domek" z przykładu) — wymagane przez dzisiejszy system potrzeb NPC, który nie ma trybu „brak potrzeb". Bez ogniska.
+- **`plantForest` dla outpostów bez zmian** (nadal dostają standardowy pas lasu jak każda mała osada) — świadomie nieruszane w tej turze, potencjalny drobny dalszy smaczek („samotna chatka w lesie/na przełęczy górskiej" zamiast pełnego zagajnika) do rozważenia przy kolejnej iteracji, nie blokujący.
 
 ## Review (2026-08-08, Claude) — vs. realia kodu
 
@@ -445,15 +468,15 @@ Każdy kolejny etap powinien wykorzystywać dane wygenerowane wcześniej.
 
 Pierwsza wersja powinna obejmować tylko:
 
-1. Generowanie naturalnych zasobów.
-2. Preferencje zasobów względem terenu.
-3. „richness" zasobów.
-4. Wpływ zasobów na atrakcyjność lokalizacji wioski.
-5. Food source dla każdej wioski.
-6. Dedykowaną rodzinę + domek dla znaczącego zasobu.
-7. Opcjonalne resource outposts.
-8. Wpływ dominującego zasobu na nazwę wioski.
-9. Przygotowanie danych pod przyszłe „production" / „goods".
+1. ~~Generowanie naturalnych zasobów.~~ → `done`, `src/terrain/naturalResources.ts`
+2. ~~Preferencje zasobów względem terenu.~~ → `done`
+3. ~~„richness" zasobów.~~ → `done`
+4. ~~Wpływ zasobów na atrakcyjność lokalizacji wioski.~~ → `done` (ranking w obrębie już wybranej komórki siatki osad, patrz „Świadome odstępstwa" wyżej)
+5. ~~Food source dla każdej wioski.~~ → `done` (dane/flavor, bez nowej geometrii)
+6. ~~Dedykowaną rodzinę + domek dla znaczącego zasobu.~~ → `done`
+7. ~~Opcjonalne resource outposts.~~ → `done`
+8. ~~Wpływ dominującego zasobu na nazwę wioski.~~ → `done`
+9. ~~Przygotowanie danych pod przyszłe „production" / „goods".~~ → `done` (pokryte modelem `NaturalResource`)
 
 Bez pełnego craftingu, inventory, ekonomii i handlu na tym etapie.
 

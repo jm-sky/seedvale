@@ -1,6 +1,7 @@
 import type { Role, Trait } from '../ai/characters'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { FamilyRelation } from '../settlement/families'
+import type { FoodSourceType } from '../settlement/settlementGenerator'
 import { nearestArchetype, type Personality } from '../ai/dialogue'
 import { needLabel } from '../ai/Needs'
 import { enableTouchScroll } from '../input/enableTouchScroll'
@@ -13,6 +14,7 @@ export type VillagersScreenHandlers = {
 export type VillagerEntry = {
   npc: NpcAgent
   settlementName: string
+  foodSourceType: FoodSourceType
 }
 
 export type VillagersScreen = {
@@ -30,6 +32,8 @@ const ROLE_LABEL: Record<Role, string> = {
   farmer: 'Rolnik',
   guard: 'Strażnik',
   trader: 'Kupiec',
+  miner: 'Górnik',
+  fisher: 'Rybak',
 }
 
 const PERSONALITY_LABEL: Record<Personality, string> = {
@@ -58,6 +62,14 @@ const RELATION_LABEL: Record<FamilyRelation, string> = {
   wife: 'żona',
   child: 'dziecko',
   single: '',
+}
+
+/** Plan 032 §8 — shown next to the settlement badge below. */
+const FOOD_SOURCE_LABEL: Record<FoodSourceType, string> = {
+  field: '🌾 Pola',
+  fishing: '🐟 Rybołówstwo',
+  foraging: '🍄 Zbieractwo',
+  garden: '🥕 Ogród',
 }
 
 export function createVillagersScreen(
@@ -94,13 +106,13 @@ export function createVillagersScreen(
     // one loaded — with a single settlement it's always the same, so the
     // badge would just be visual noise.
     const showSettlement = new Set(lastEntries.map((e) => e.settlementName)).size > 1
-    for (const { npc, settlementName } of lastEntries) {
+    for (const { npc, settlementName, foodSourceType } of lastEntries) {
       const hpPct = Math.round((npc.health.currentHp / npc.health.maxHp) * 100)
       const traitTags = npc.traits.length
         ? npc.traits.map((t) => `<span class="seedvale-villagers__tag">${TRAIT_LABEL[t]}</span>`).join('')
         : '<span class="seedvale-villagers__tag seedvale-villagers__tag--muted">brak cech</span>'
       const settlementBadge = showSettlement
-        ? `<span class="seedvale-villagers__row-settlement">${settlementName}</span>`
+        ? `<span class="seedvale-villagers__row-settlement">${settlementName} · ${FOOD_SOURCE_LABEL[foodSourceType]}</span>`
         : ''
       const row = document.createElement('div')
       row.className = 'seedvale-villagers__row'

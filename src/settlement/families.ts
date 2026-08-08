@@ -1,10 +1,18 @@
 import type { NameCulture } from '../ai/nameCultures'
 import type { SettlementTerrain } from '../shared/SettlementName'
-import { type CharacterDef, characterForSeed, type NpcGender, RESERVED_CHARACTERS } from '../ai/characters'
+import type { NaturalResource } from '../terrain/naturalResources'
+import { type CharacterDef, characterForSeed, type NpcGender, RESERVED_CHARACTERS, type Role } from '../ai/characters'
 import { generateFamilySurname, generateNpcName, surnameForGender } from '../ai/nameCultures'
+import { RESOURCE_ROLE, SIGNIFICANT_RICHNESS } from '../terrain/naturalResources'
 import { createSeededRandom } from '../world/parseSeed'
 
-export type VillageSize = 'SM' | 'MD' | 'LG'
+/** `OUTPOST` (plan 032 §7) is a single-house, single-NPC settlement, decided
+ *  by `settlementGenerator.ts` before `rollVillageSize` even runs (a
+ *  significant resource in harsh terrain, not a weighted roll — see
+ *  `SIZE_WEIGHTS`'s `OUTPOST: 0` rows below) — never returned by
+ *  `rollVillageSize` itself, but part of the type since `generateFamilies`
+ *  needs to handle it. */
+export type VillageSize = 'SM' | 'MD' | 'LG' | 'OUTPOST'
 
 /** `single` isn't in the original draft's husband/wife/child trio, but a
  *  family of 1 (explicitly allowed — "1–3 osób") needs *some* relation, and
@@ -29,22 +37,28 @@ export type FamilyDef = {
   members: readonly FamilyMember[]
 }
 
+/** `OUTPOST`'s `[1, 1]` is never read by `familyCountForSize` in practice
+ *  (the outpost path in `generateFamilies` below skips it entirely) — present
+ *  only so this `Record<VillageSize, ...>` type-checks. */
 const FAMILY_COUNT_RANGE: Record<VillageSize, readonly [number, number]> = {
   SM: [1, 3],
   MD: [2, 4],
   LG: [3, 5],
+  OUTPOST: [1, 1],
 }
 
 /** Wstępne wagi rozmiaru per teren — do kalibracji w edytorze, jak reszta
  *  configu w projekcie. `forest` to dzisiejszy fallback/domyślna kategoria w
  *  `classifySettlementTerrain` — najbliżej odpowiada „przyjaznym równinom" z
- *  draftu, którym nie ma osobnej kategorii terenu w kodzie. */
+ *  draftu, którym nie ma osobnej kategorii terenu w kodzie. `OUTPOST: 0`
+ *  everywhere — `rollVillageSize` only ever iterates `SM`/`MD`/`LG` (see
+ *  below), outposts are decided separately by `settlementGenerator.ts`. */
 const SIZE_WEIGHTS: Record<SettlementTerrain, Record<VillageSize, number>> = {
-  forest: { SM: 0.2, MD: 0.4, LG: 0.4 },
-  ocean: { SM: 0.3, MD: 0.45, LG: 0.25 },
-  mountain: { SM: 0.65, MD: 0.3, LG: 0.05 },
-  desert: { SM: 0.65, MD: 0.3, LG: 0.05 },
-  swamp: { SM: 0.6, MD: 0.3, LG: 0.1 },
+  forest: { SM: 0.2, MD: 0.4, LG: 0.4, OUTPOST: 0 },
+  ocean: { SM: 0.3, MD: 0.45, LG: 0.25, OUTPOST: 0 },
+  mountain: { SM: 0.65, MD: 0.3, LG: 0.05, OUTPOST: 0 },
+  desert: { SM: 0.65, MD: 0.3, LG: 0.05, OUTPOST: 0 },
+  swamp: { SM: 0.6, MD: 0.3, LG: 0.1, OUTPOST: 0 },
 }
 
 /** Chance a family is a lone adult vs. a couple (`SOLO_CHANCE`), and — given
@@ -60,8 +74,10 @@ const COUPLE_WITH_CHILD_CHANCE = 0.35
 const CHILD_SCALE_RANGE: readonly [number, number] = [0.5, 0.8]
 
 /** Deterministic weighted roll: `terrain` biases which `VillageSize` a
- *  settlement's family count is drawn from (see `SIZE_WEIGHTS`). */
-export function rollVillageSize(terrain: SettlementTerrain, seed: number): VillageSize {
+ *  settlement's family count is drawn from (see `SIZE_WEIGHTS`). Never
+ *  `OUTPOST` — that's decided separately by `settlementGenerator.ts` (a
+ *  resource+terrain condition, not part of this weighted roll). */
+export function rollVillageSize(terrain: SettlementTerrain, seed: number): Exclude<VillageSize, 'OUTPOST'> {
   const random = createSeededRandom(seed ^ 0x5127e1)
   const weights = SIZE_WEIGHTS[terrain]
   const roll = random()
@@ -119,28 +135,42 @@ function childScale(random: () => number): number {
 /** Builds one procedurally generated family. `npcIndex` is a running index
  *  across the whole settlement's members (not just this family), threaded
  *  through so `generateNpcName`'s per-slot uniqueness hash keeps working the
- *  same way it already does for the rest of the settlement's NPCs. */
+ *  same way it already does for the rest of the settlement's NPCs.
+ *
+ *  `forcedRole` (plan 032 §6/§7 — dedicated resource family / outpost) locks
+ *  the *first* member added (whichever relation that turns out to be) to
+ *  that role instead of `characterForSeed`'s random pick; any other members
+ *  (spouse/child) still roll normally — only one person per family needs to
+ *  visibly "be" the miner/fisher/farmer the resource justified.
+ *  `forceSingle` (outposts only) skips the couple/child roll entirely. */
 function generateFamily(
   seed: number,
   familyIndex: number,
   npcIndex: number,
   nameCulture: NameCulture,
+  forcedRole?: Role,
+  forceSingle = false,
 ): { family: FamilyDef, nextIndex: number } {
   const fseed = familySeed(seed, familyIndex)
   const random = createSeededRandom(fseed ^ 0x1f3c5a)
   const baseSurname = generateFamilySurname(fseed, nameCulture)
   const members: FamilyMember[] = []
   let idx = npcIndex
+  let roleForced = false
 
   const addMember = (gender: NpcGender, relation: FamilyRelation, scale: number) => {
     const name = generateNpcName(seed, idx, gender, nameCulture)
     const lastName = surnameForGender(baseSurname, nameCulture, gender)
-    const character = characterForSeed(fseed ^ Math.imul(idx + 1, 0x2545f491), gender)
+    let character = characterForSeed(fseed ^ Math.imul(idx + 1, 0x2545f491), gender)
+    if (forcedRole && !roleForced) {
+      character = { ...character, role: forcedRole }
+      roleForced = true
+    }
     members.push({ name, lastName, relation, character: { ...character, name, lastName }, scale })
     idx++
   }
 
-  if (random() < SOLO_CHANCE) {
+  if (forceSingle || random() < SOLO_CHANCE) {
     addMember(random() < 0.5 ? 'male' : 'female', 'single', 1)
   } else {
     addMember('male', 'husband', 1)
@@ -159,15 +189,31 @@ function generateFamily(
  * `isHome` guarantees the 2 reserved families (`reservedHomeFamilies`) are
  * always present, on top of which — if the rolled `VillageSize` calls for
  * more — additional procedural families are generated, same as any other
- * settlement. Deterministic: same `seed`/`size`/`isHome`/`nameCulture` always
- * produces the same families.
+ * settlement. Deterministic: same `seed`/`size`/`isHome`/`nameCulture`/
+ * `dominantResource` always produces the same families.
+ *
+ * `dominantResource` (plan 032 §5-7, from `terrain/naturalResources.ts`) —
+ * when significant (`richness >= SIGNIFICANT_RICHNESS`) and its type has a
+ * role mapping (`RESOURCE_ROLE`; clay/salt/resin/herbs don't, and stay
+ * naming/food-source flavor only in v1) — adds one dedicated single-member
+ * family with that forced role, on top of the normal roster. `size ===
+ * 'OUTPOST'` bypasses the normal roster entirely: exactly one lone resident,
+ * role forced from the resource that justified the outpost in the first
+ * place (`settlementGenerator.ts` only ever rolls `OUTPOST` when there is one).
  */
 export function generateFamilies(
   seed: number,
   size: VillageSize,
   isHome: boolean,
   nameCulture: NameCulture,
+  dominantResource?: NaturalResource | null,
 ): FamilyDef[] {
+  if (size === 'OUTPOST') {
+    const forcedRole = dominantResource ? RESOURCE_ROLE[dominantResource.type] : undefined
+    const { family } = generateFamily(seed, 0, 0, nameCulture, forcedRole, true)
+    return [family]
+  }
+
   const families: FamilyDef[] = isHome ? reservedHomeFamilies() : []
   const targetCount = Math.max(familyCountForSize(size, seed), families.length)
 
@@ -177,6 +223,15 @@ export function generateFamilies(
     const { family, nextIndex } = generateFamily(seed, familyIndex, npcIndex, nameCulture)
     families.push(family)
     npcIndex = nextIndex
+  }
+
+  const dedicatedRole =
+    dominantResource && dominantResource.richness >= SIGNIFICANT_RICHNESS
+      ? RESOURCE_ROLE[dominantResource.type]
+      : undefined
+  if (dedicatedRole) {
+    const { family } = generateFamily(seed, families.length, npcIndex, nameCulture, dedicatedRole)
+    families.push(family)
   }
 
   return families

@@ -1,3 +1,5 @@
+import type { ResourceType } from '../terrain/naturalResources'
+import { SIGNIFICANT_RICHNESS } from '../terrain/naturalResources'
 import { createSeededRandom } from '../world/parseSeed'
 
 /** Dominant terrain feature near a settlement site — drives which word list
@@ -42,16 +44,57 @@ const WORDS: Record<SettlementTerrain, WordSet> = {
   },
 }
 
-/** Deterministic name for a settlement — same `(seed, terrain)` always
- *  produces the same name, so it doesn't need its own save-data slot (the
- *  same guarantee `settlementGenerator.ts` already relies on for site/families). */
-export function generateSettlementName(seed: number, terrain: SettlementTerrain): string {
+/** Word fragments a significant dominant resource (plan 032 §9) can mix into
+ *  the terrain-based name — e.g. a mountain village that also sits on an
+ *  iron deposit can become "Żelazna Turnia" instead of just any mountain
+ *  name. Not every `ResourceType` gets an entry: clay/salt/resin/herbs from
+ *  `naturalResources.ts` that lack one simply never influence the name (falls
+ *  back to terrain-only, same as no resource at all). No `soloNames` here —
+ *  those stay purely terrain-flavored; only the adjective+noun patterns
+ *  (70% of rolls) pick up resource flavor. */
+const RESOURCE_WORDS: Partial<Record<ResourceType, { adjectives: readonly string[], nouns: readonly string[] }>> = {
+  iron: { adjectives: ['Żelazna', 'Rudna'], nouns: ['Kuźnia', 'Ruda'] },
+  gold: { adjectives: ['Złota', 'Bogata'], nouns: ['Żyła', 'Skarbnica'] },
+  fish: { adjectives: ['Rybna'], nouns: ['Rybaki', 'Tonie'] },
+  fertile_soil: { adjectives: ['Żyzna', 'Urodzajna'], nouns: ['Niwa', 'Rola'] },
+  salt: { adjectives: ['Słona'], nouns: ['Solanka', 'Warzelnia'] },
+  resin: { adjectives: ['Żywiczna'], nouns: ['Smolarnia'] },
+}
+
+/** Chance a significant resource actually shows up in the name at all —
+ *  "Zasób nie powinien zawsze występować w nazwie — tylko gdy jest
+ *  wystarczająco znaczący" (§9); significance itself is already gated by
+ *  `SIGNIFICANT_RICHNESS`, this is the additional "not every single time" roll. */
+const RESOURCE_NAME_CHANCE = 0.5
+
+/** Deterministic name for a settlement — same `(seed, terrain, dominantResource)`
+ *  always produces the same name, so it doesn't need its own save-data slot
+ *  (the same guarantee `settlementGenerator.ts` already relies on for
+ *  site/families). `dominantResource` is optional and terrain-only naming
+ *  (no resource, or a resource type with no `RESOURCE_WORDS` entry, or a
+ *  resource below `SIGNIFICANT_RICHNESS`) behaves exactly as before. */
+export function generateSettlementName(
+  seed: number,
+  terrain: SettlementTerrain,
+  dominantResource?: { type: ResourceType, richness: number } | null,
+): string {
   const random = createSeededRandom(seed ^ 0x5e77e17)
-  const words = WORDS[terrain]
+  const terrainWords = WORDS[terrain]
+  const resourceWords =
+    dominantResource && dominantResource.richness >= SIGNIFICANT_RICHNESS
+      ? RESOURCE_WORDS[dominantResource.type]
+      : undefined
+  const useResourceFlavor = resourceWords !== undefined && random() < RESOURCE_NAME_CHANCE
+  const words = useResourceFlavor
+    ? {
+        adjectives: [...terrainWords.adjectives, ...resourceWords.adjectives],
+        nouns: [...terrainWords.nouns, ...resourceWords.nouns],
+      }
+    : terrainWords
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(random() * arr.length)]!
 
   const patternRoll = random()
   if (patternRoll < 0.35) return `${pick(words.adjectives)} ${pick(words.nouns)}`
   if (patternRoll < 0.7) return `${pick(words.nouns)} ${pick(words.adjectives)}`
-  return pick(words.soloNames)
+  return pick(terrainWords.soloNames)
 }

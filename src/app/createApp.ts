@@ -435,7 +435,7 @@ export async function createApp(
     villagersScreen.refresh(
       settlementsManager
         .getLoaded()
-        .flatMap((s) => s.npcs.map((npc) => ({ npc, settlementName: s.name }))),
+        .flatMap((s) => s.npcs.map((npc) => ({ npc, settlementName: s.name, foodSourceType: s.foodSourceType }))),
     )
   }
 
