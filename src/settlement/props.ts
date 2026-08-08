@@ -391,6 +391,42 @@ export function cloneProp(
   return prop
 }
 
+/** Perpendicular distance from `(px,pz)` to segment `(ax,az)-(bx,bz)` — small
+ *  local copy of `chunkHeightmap.ts`'s `projectOntoSegment` (not exported,
+ *  and pulling in the terrain module here just for this would be overkill). */
+function distanceToSegment(px: number, pz: number, ax: number, az: number, bx: number, bz: number): number {
+  const dx = bx - ax
+  const dz = bz - az
+  const lenSq = dx * dx + dz * dz
+  if (lenSq < 1e-6) return Math.hypot(px - ax, pz - az)
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / lenSq))
+  return Math.hypot(px - (ax + dx * t), pz - (az + dz * t))
+}
+
+/** Clearance (world units) a tree/bush must keep from a house↔core path —
+ *  a bit past the path's own half-width (`worldConfig.ts`'s `pathHalfWidth`,
+ *  ~1.5) so canopies don't visually hang over it either. */
+const PATH_TREE_CLEARANCE = 2.5
+
+/** Rejects candidates sitting on a clearing (well/stockpile/garden/hut pad)
+ *  or on the walking path between a house and the core — the settlement's
+ *  bespoke forest belt is independent of the per-chunk vegetation pipeline
+ *  (`chunkVegetation.ts`, which already rejects on `roadTint`), so without
+ *  this a "near" woodlot cluster (close to the village on purpose, for NPC
+ *  wood-chopping) can easily land trees right on top of the new house↔core
+ *  paths (`villageClearing.ts`). */
+function blocksPathOrClearing(tx: number, tz: number, clearings: ClearingLayout): boolean {
+  for (const area of [clearings.core, ...clearings.houses]) {
+    if (Math.hypot(tx - area.x, tz - area.z) < area.radius + 1) return true
+  }
+  for (const house of clearings.houses) {
+    if (distanceToSegment(tx, tz, clearings.core.x, clearings.core.z, house.x, house.z) < PATH_TREE_CLEARANCE) {
+      return true
+    }
+  }
+  return false
+}
+
 function plantTreeCluster(
   group: THREE.Group,
   landmarks: SettlementLandmarks,
@@ -402,6 +438,7 @@ function plantTreeCluster(
   sampleHeight: (x: number, z: number) => number,
   waterLevel: number,
   halfExtent: number,
+  clearings: ClearingLayout,
   random: () => number,
   treeCounter: { n: number },
   bushCounter: { n: number },
@@ -417,6 +454,7 @@ function plantTreeCluster(
     const tx = cx + Math.cos(a) * d
     const tz = cz + Math.sin(a) * d
     if (Math.abs(tx) > limit || Math.abs(tz) > limit) continue
+    if (blocksPathOrClearing(tx, tz, clearings)) continue
 
     const y = sampleHeight(tx, tz)
     if (y <= waterLevel + 0.55) continue
@@ -562,6 +600,7 @@ export async function buildSettlementProps(
         sampleHeight,
         waterLevel,
         halfExtent,
+        clearings,
         random,
         treeCounter,
         bushCounter,
@@ -584,6 +623,7 @@ export async function buildSettlementProps(
         sampleHeight,
         waterLevel,
         halfExtent,
+        clearings,
         random,
         treeCounter,
         bushCounter,
@@ -606,6 +646,7 @@ export async function buildSettlementProps(
         sampleHeight,
         waterLevel,
         halfExtent,
+        clearings,
         random,
         treeCounter,
         bushCounter,
@@ -630,6 +671,7 @@ export async function buildSettlementProps(
         sampleHeight,
         waterLevel,
         halfExtent,
+        clearings,
         random,
         treeCounter,
         bushCounter,

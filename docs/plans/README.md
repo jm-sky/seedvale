@@ -37,6 +37,10 @@ Implementation plans for features and larger changes.
 | [2026-08-07--026--roads-and-paths.md](./2026-08-07--026--roads-and-paths.md) | Drogi (międzyosadowe) i ścieżki (osada↔port/przystań) — trasowanie po małej zmianie wysokości + wygładzenie terenu + kolor | `verification needed` |
 | [2026-08-07--030--world-elements-interactions.md](./2026-08-07--030--world-elements-interactions.md) | Naturalne elementy świata: głazy/kamienie/powalone pnie/ogniska (dekoracje) + gałęzie/grzyby/kwiaty/szyszki (zbieralne), preferencje środowiskowe per chunk | `verification needed` |
 | [2026-08-08--031--village-generation.md](./2026-08-08--031--village-generation.md) | Generowanie wiosek: rozmiar (SM/MD/LG) ważony terenem → rodziny (husband/wife/child) → 1 dom na rodzinę → lokalnie wyrównane obszary terenu → obiekty wspólne | `verification needed` |
+| [2026-08-08--032--village-siting-difficult-terrain.md](./2026-08-08--032--village-siting-difficult-terrain.md) | Lepsze osadzanie wiosek w trudnym terenie — dziś płaskość sprawdzana tylko lokalnie (±2.5 jedn.), więc górskie osady wyglądają rozrzucone | `todo` |
+| [2026-08-08--033--npc-genealogy-lineages.md](./2026-08-08--033--npc-genealogy-lineages.md) | Rody NPC (Sem/Cham/Jafet) przypisane wg kierunku osady od (0,0) + kompas „N" na minimapie | `todo` |
+| [2026-08-08--034--campfire-lighting.md](./2026-08-08--034--campfire-lighting.md) | Zapalanie ognisk gałęziami (paliwo/czas palenia/dokładanie), 50% szans na już zapalone ognisko wioski w nocy | `todo` |
+| [2026-08-08--035--road-signposts.md](./2026-08-08--035--road-signposts.md) | Kierunkowskazy przy drogach międzyosadowych — nazwa docelowej osady, reużywa CSS2D etykiety jak NPC | `todo` |
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
 

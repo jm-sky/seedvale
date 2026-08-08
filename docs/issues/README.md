@@ -22,7 +22,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 004 | [2026-08-08--004--mobile-modals-untappable-pointer-events.md](./2026-08-08--004--mobile-modals-untappable-pointer-events.md) | Modale (pauza/zadania/mieszkańcy/dialog) nie reagują na dotyk ani nie scrollują — `pointer-events: none` odziedziczone z `<body>` | `done` |
 | 005 | [2026-08-08--005--mobile-touch-ui-icon-library.md](./2026-08-08--005--mobile-touch-ui-icon-library.md) | Guziki dotykowe (☰/mapa/G/L/RUN/E) używają gołego tekstu/emoji — rozważyć bibliotekę ikon | `todo` |
 | 006 | [2026-08-08--006--villagers-list-virtualization.md](./2026-08-08--006--villagers-list-virtualization.md) | Ekran Mieszkańcy renderuje całą listę naraz — dodać paginację/infinite/virtual scroll przy większej liczbie NPC | `todo` |
+| 007 | [2026-08-08--007--npc-labels-over-modals.md](./2026-08-08--007--npc-labels-over-modals.md) | Etykiety NPC widoczne nad otwartym menu (pauza/quest log/Mieszkańcy/dialog) — prawdopodobnie brak `z-index` na `labelRenderer.domElement` | `todo` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `007`
+**Next ID:** `008`
