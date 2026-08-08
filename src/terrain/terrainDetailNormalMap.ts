@@ -1,5 +1,13 @@
 import { createNoise2D } from 'simplex-noise'
-import { DataTexture, LinearFilter, RepeatWrapping, RGBAFormat, UnsignedByteType, Vector3 } from 'three'
+import {
+  DataTexture,
+  LinearFilter,
+  LinearMipmapLinearFilter,
+  RepeatWrapping,
+  RGBAFormat,
+  UnsignedByteType,
+  Vector3,
+} from 'three'
 import { createSeededRandom } from '../world/parseSeed'
 
 const SIZE = 256
@@ -59,8 +67,24 @@ export function createTerrainNormalMap(): DataTexture {
   const tex = new DataTexture(data, SIZE, SIZE, RGBAFormat, UnsignedByteType)
   tex.wrapS = RepeatWrapping
   tex.wrapT = RepeatWrapping
-  tex.minFilter = LinearFilter
+  // The real bug behind "normal map still too strong, tuning normalScale
+  // didn't help": this texture repeats `NORMAL_MAP_TILES_PER_CHUNK` times per
+  // chunk across the whole terrain, so at any distance/oblique angle it's
+  // heavily minified on screen. `minFilter: LinearFilter` (no mipmapping)
+  // can't handle that — the GPU samples the raw high-frequency texture
+  // without any downsampled level to blend into, which aliases into the
+  // sharp dark/light interference "zebra stripe" banding actually reported
+  // (screenshot), not a uniform "too bright" bump look normalScale alone
+  // could fix. Mipmapping (trilinear filtering + anisotropy) is the correct
+  // fix for repeating-texture minification aliasing.
+  tex.generateMipmaps = true
+  tex.minFilter = LinearMipmapLinearFilter
   tex.magFilter = LinearFilter
+  // Renderer clamps this to the device's actual max anisotropy — a generous
+  // request here is safe and sharpens the common "ground plane stretching
+  // toward the horizon" viewing angle specifically, where minification is
+  // worst in one direction (screen-space V) but not the other (U).
+  tex.anisotropy = 8
   tex.needsUpdate = true
   return tex
 }
