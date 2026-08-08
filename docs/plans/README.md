@@ -39,6 +39,7 @@ Implementation plans for features and larger changes.
 | [2026-08-07--027--npc-names.md](./2026-08-07--027--npc-names.md) | Imiona NPC: kulturowe pule imion per wioska (`nameCultures.ts`) zaimplementowane; pełny model `firstName/lastName/nickname` z ciała planu — nie | `planned` (kulturowe pule: `verification needed`) |
 | [2026-08-07--030--world-elements-interactions.md](./2026-08-07--030--world-elements-interactions.md) | Naturalne elementy świata: głazy/kamienie/powalone pnie/ogniska (dekoracje) + gałęzie/grzyby/kwiaty/szyszki (zbieralne), preferencje środowiskowe per chunk | `verification needed` |
 | [2026-08-08--031--village-generation.md](./2026-08-08--031--village-generation.md) | Generowanie wiosek: rozmiar (SM/MD/LG) ważony terenem → rodziny (husband/wife/child) → 1 dom na rodzinę → lokalnie wyrównane obszary terenu → obiekty wspólne | `verification needed` |
+| [2026-08-08--032--natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md) | Naturalne zasoby zależne od terenu → atrakcyjność lokalizacji wioski → dedykowane rodziny/outposty → food source → nazwa wioski → fundament pod przyszły crafting/production/handel | `planned` |
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
 

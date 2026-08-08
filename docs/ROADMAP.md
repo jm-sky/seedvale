@@ -74,9 +74,24 @@ Zebrane z sekcji „Poza zakresem"/„Odłożone"/„Następnie" istniejących p
 
 ### Wioski / świat społeczny
 
-- **Questy międzywioskowe** i **dystrybucja zasobów per wioska** (fauna/item spawnery nadal zakotwiczone tylko o wioskę domową) — poza zakresem v1 ([025](./plans/2026-08-07--025--multi-settlements.md))
+- **Questy międzywioskowe** i **dystrybucja zasobów per wioska** (fauna/item spawnery nadal zakotwiczone tylko o wioskę domową) — poza zakresem v1 ([025](./plans/2026-08-07--025--multi-settlements.md)); ten drugi punkt to dokładnie to, co ma zaadresować plan zasobów naturalnych niżej ([032](./plans/2026-08-08--032--natural-resources-economy.md))
 - Więcej rodzajów `MinorLocation`, podróże NPC między wioskami, mosty na drogach — odłożone ([026](./plans/2026-08-07--026--roads-and-paths.md))
 - Model/skala dziecka, potrzeby/dialog świadome rodziny, wzrost/migracja wiosek w czasie — odłożone ([031](./plans/2026-08-08--031--village-generation.md))
+
+### Zasoby / ekonomia (nowy plan, zero kodu jeszcze)
+
+Cały ten obszar to jeden nowy plan, świadomie rozbity na etapy — patrz [032](./plans/2026-08-08--032--natural-resources-economy.md) `planned`:
+
+- Generowanie naturalnych zasobów zależnych od terenu (`NaturalResource { type, position, radius, richness }`), wpływających na atrakcyjność lokalizacji wioski (dziś `findSettlementSite` w ogóle nie patrzy na zasoby)
+- Dedykowana rodzina + domek dla znaczącego zasobu w pobliżu wioski (żelazo→górnicy, żyzna gleba→rolnicy, jezioro→rybacy, las→drwale), reużywająca istniejący system rodzin
+- Opcjonalne „Resource Outposts" — pojedynczy domek + samotny NPC przy trudno dostępnym zasobie (np. złoto wysoko w górach)
+- Zróżnicowane food source per wioska zależnie od środowiska (pole/sad/hodowla/rybołówstwo/zbieractwo/polowanie), zamiast dzisiejszego jednego wspólnego ogrodu
+- Wpływ dominującego zasobu na nazwę wioski, rozszerzenie istniejącego `SettlementName.ts`
+- **Poza zakresem tego etapu (kolejne, dalsze plany):** crafting (resources → production → goods), pełna village economy (production/consumption/surplus/deficit), barter/trade między wioskami
+
+### Gracz
+
+- **Inventory system z limitem wagowym (weight capacity)** dla przedmiotów noszonych przez gracza — dziś `src/items/Inventory.ts` to `Map<ItemKind, number>` bez żadnego limitu (gracz może nosić nieograniczoną liczbę muszli/kamieni/gałęzi/grzybów/kwiatów/szyszek). Wspomniane jako świadomie odłożone w [032](./plans/2026-08-08--032--natural-resources-economy.md) (sekcja „Poza zakresem v1") — naturalny przyszły konsument tych samych `ItemKind`/`goods`, gdy crafting/handel kiedyś wyląduje, ale **jeszcze bez własnego planu**.
 
 ### UI
 
