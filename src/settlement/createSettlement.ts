@@ -3,12 +3,14 @@ import {
   Vector3,
 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { HeightSampler } from '../player/PlayerController'
 import type { Place } from './places'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
+import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
 import {
   buildSettlementProps,
@@ -48,10 +50,20 @@ export type Settlement = {
   spawn: Vector3
   center: Vector3
   npcs: readonly NpcAgent[]
+  /** Owned farm animals (horse/cow/sheep/chicken), one seeded roll per house
+   *  — see `settlement/livestock.ts`. Wild fauna (wolf/deer/etc.) stays in
+   *  the separate, home-settlement-only `Fauna` system (`fauna/createFauna.ts`). */
+  livestock: readonly AnimalAgent[]
   landmarks: SettlementLandmarks
   /** Only present for MD/LG villages, see `props.ts`'s `buildSettlementProps`. */
   fire?: VillageFire
-  update: (dt: number, observerPos: Vector3) => void
+  update: (
+    dt: number,
+    observerPos: Vector3,
+    dayFactor: number,
+    litFires: readonly { x: number, z: number }[],
+    villages: readonly { x: number, z: number }[],
+  ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
    *  invoked on the same throttled day/night tick as `applyDayNight`
@@ -71,6 +83,12 @@ export async function createSettlement(
   roadCtx?: RoadNetworkContext,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
+  // Pure function of (seed, gx, gz) — computed up front since both the
+  // livestock spawn below and the night-fire ignition roll further down need
+  // this settlement's own seed. See `settlementGenerator.ts`'s `cellSeed`
+  // for why it's `def.gx/def.gz` combined with the world seed rather than a
+  // hash of `def.id`.
+  const settlementSeed = cellSeed(seed, { gx: def.gx, gz: def.gz })
   const { group, landmarks, houseLights } = await buildSettlementProps(
     site,
     sampleHeight,
@@ -83,6 +101,8 @@ export async function createSettlement(
     def.foodSourceType,
   )
   scene.add(group)
+
+  const livestock = spawnLivestock(scene, sampleHeight, waterLevel, landmarks.homes, def.size, settlementSeed)
 
   type SignpostInstance = { labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
   const signposts: SignpostInstance[] = []
@@ -182,7 +202,6 @@ export async function createSettlement(
    *  .ts`'s `cellSeed` for why this settlement's own seed is `def.gx/def.gz`
    *  combined with the world seed rather than a hash of `def.id`. */
   let nightIndex = 0
-  const settlementSeed = cellSeed(seed, { gx: def.gx, gz: def.gz })
 
   return {
     id: def.id,
@@ -192,11 +211,17 @@ export async function createSettlement(
     spawn,
     center: new Vector3(site.x, site.y, site.z),
     npcs: agents,
+    livestock,
     landmarks,
     fire,
-    update(dt, observerPos) {
+    update(dt, observerPos, dayFactor, litFires, villages) {
       const isNight = nightFactor > NPC_SLEEP_NIGHT_THRESHOLD
       for (const agent of agents) agent.update(dt, observerPos, isNight)
+      // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef`
+      // has `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-
+      // modified branch of `isPlayerNoticed()` is structurally unreachable
+      // for these kinds regardless of the value passed.
+      for (const animal of livestock) animal.update(dt, livestock, observerPos, dayFactor, 0, litFires, villages)
       fire?.update(dt)
       for (const sp of signposts) {
         sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))
@@ -218,6 +243,7 @@ export async function createSettlement(
         agent.dispose()
         agent.mesh.removeFromParent()
       }
+      disposeLivestock(livestock)
       for (const sp of signposts) {
         sp.label.removeFromParent()
         sp.labelEl.remove()

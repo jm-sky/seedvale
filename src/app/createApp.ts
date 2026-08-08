@@ -771,13 +771,18 @@ export async function createApp(
       chunkManager.update(player.mesh.position.x, player.mesh.position.z)
       lights.follow(player.mesh.position.x, player.mesh.position.z)
       ocean.follow(player.mesh.position.x, player.mesh.position.z)
-      settlementsManager.update(dt, player.mesh.position)
-      resourceDeposits.update(player.mesh.position.x, player.mesh.position.z)
+      // Computed before `settlementsManager.update` (not after, as before
+      // livestock existed) so its per-settlement livestock `update()` calls
+      // can also use them — neither depends on `update()`'s effect this same
+      // frame (fire-lit state only changes via `setDayNight`, not `update`).
+      const dayFactor = skyParamsFromTime(dayNight.timeOfDay).dayFactor
       const litFires = [
         ...settlementsManager.getLoaded().flatMap((s) => (s.fire?.isLit() ? [s.fire.position] : [])),
         ...placedFires.list().filter((f) => f.fire.isLit()).map((f) => f.fire.position),
       ]
       const villages = settlementsManager.getLoaded().map((s) => ({ x: s.center.x, z: s.center.z }))
+      settlementsManager.update(dt, player.mesh.position, dayFactor, litFires, villages)
+      resourceDeposits.update(player.mesh.position.x, player.mesh.position.z)
       fauna.update(dt, player.mesh.position, dayNight.timeOfDay, litFires, villages)
       itemSpawners.update(dt, player.mesh.position)
       placedFires.update(dt)
@@ -872,6 +877,16 @@ function buildInteractables(
         position: npc.mesh.position,
         promptLabel: `Rozmawiaj z ${npc.displayName}`,
         npc,
+      })
+    }
+
+    for (const animal of settlement.livestock) {
+      if (animal.isDead()) continue
+      list.push({
+        kind: 'animal',
+        position: animal.mesh.position,
+        promptLabel: `Obserwuj: ${ANIMAL_LABELS[animal.def.kind]}`,
+        animal,
       })
     }
 
