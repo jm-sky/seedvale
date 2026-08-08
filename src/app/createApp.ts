@@ -372,8 +372,9 @@ export async function createApp(
           .some((s) => s.center.distanceTo(player.mesh.position) <= REST_IN_TOWN_RADIUS)
         if (!nearSettlement) return 'too-far'
       }
+      player.lieDown()
       timeSkip.start(8, {
-        fade: true,
+        fade: false,
         label: variant === 'town' ? 'Odpoczywasz w mieście...' : 'Rozbijasz obóz...',
       })
       return 'ok'
@@ -527,7 +528,10 @@ export async function createApp(
     const skip = timeSkip.tick(dt)
     if (skip) {
       timeSkipOverlay.show(skip.label, skip.fade)
-      if (skip.justFinished) timeSkipOverlay.hide()
+      if (skip.justFinished) {
+        timeSkipOverlay.hide()
+        player.standUp()
+      }
       keyboard.state.forward = false
       keyboard.state.backward = false
       keyboard.state.left = false
