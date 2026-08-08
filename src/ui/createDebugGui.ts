@@ -2,6 +2,7 @@ import GUI, { type Controller } from 'lil-gui'
 import type { WorldConfig } from '../config/worldConfig'
 import type { DayNightState } from '../world/dayNight'
 import { triangleCount } from '../config/worldConfig'
+import { isTouchDevice } from '../input/isTouchDevice'
 
 export type DebugGuiHandlers = {
   onTerrainChange: () => void
@@ -18,6 +19,9 @@ export function createDebugGui(
 ): { dispose: () => void; toggle: () => void; setBusy: (busy: boolean) => void } {
   const gui = new GUI({ title: 'Seedvale' })
   gui.close()
+  // lil-gui is a dev/debug panel, not part of the mobile UI — hidden by default
+  // on touch, reachable via the pause menu's "Toggle debug panel" button.
+  if (isTouchDevice()) gui.hide()
 
   const info = {
     get triangles() {
