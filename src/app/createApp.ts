@@ -506,6 +506,17 @@ export async function createApp(
             hud.setInventory(inventory.toJSON())
             touchControls?.setDropAvailable(!inventory.isEmpty())
           }
+        } else if (target.kind === 'campfire') {
+          if (inventory.remove('branch', 1)) {
+            const wasLit = target.fire.isLit()
+            if (wasLit) target.fire.addFuel()
+            else target.fire.light()
+            hud.setInventory(inventory.toJSON())
+            touchControls?.setDropAvailable(!inventory.isEmpty())
+            npcDialog.open('Ognisko', wasLit ? 'Dołożono gałąź do ogniska.' : 'Ognisko zapłonęło.')
+          } else {
+            npcDialog.open('Ognisko', 'Potrzebujesz gałęzi, żeby je zapalić.')
+          }
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
@@ -635,6 +646,15 @@ function buildInteractables(
       position: settlement.landmarks.well,
       promptLabel: 'Zaczerpnij wody',
     })
+
+    if (settlement.fire) {
+      list.push({
+        kind: 'campfire',
+        position: settlement.fire.position,
+        promptLabel: settlement.fire.isLit() ? 'Dołóż gałąź' : 'Zapal ognisko',
+        fire: settlement.fire,
+      })
+    }
 
     settlement.landmarks.trees.forEach((position, i) => {
       list.push({ kind: 'tree', position, promptLabel: 'Obejrzyj drzewo', id: `tree-${settlement.id}-${i}` })
@@ -834,6 +854,7 @@ function buildItemSpawners(
     chunkManager.waterLevel,
     HOME_RADIUS,
     settlement.center,
+    settlement.landmarks.trees,
     seed,
   )
 }

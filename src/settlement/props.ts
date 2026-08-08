@@ -17,6 +17,12 @@ export type SettlementLandmarks = {
    *  height-sampled — empty when there's no dock. NPCs walk these in order
    *  instead of a straight line (`NpcAgent.ts`'s `followPath` phase). */
   dockRoute: THREE.Vector3[]
+  /** The settlement's own lightable campfire (MD/LG only, see
+   *  `buildSettlementProps`) — `flame` is the toggleable fire visual
+   *  (`createCampfireFlame`), added as a child of the campfire prop but
+   *  hidden until `settlement/VillageFire.ts` lights it. Distinct from the
+   *  purely decorative world campfires in `terrain/chunkEnvironment.ts`. */
+  campfire?: { position: THREE.Vector3, flame: THREE.Object3D }
 }
 
 const HUT_URLS = [
@@ -319,6 +325,33 @@ export function createCampfire(scale = 1): THREE.Group {
   return fire
 }
 
+/** The lightable/toggleable fire visual for a settlement's own campfire —
+ *  separate from `createCampfire()`'s static stone-ring/ash/branches prop
+ *  (which stays purely decorative for the world-scattered "old campfire"
+ *  elements, `terrain/chunkEnvironment.ts`). A small emissive cone + a low-
+ *  range point light, both flat/simple like the rest of this file's props —
+ *  no particle system. Caller (`settlement/VillageFire.ts`) toggles
+ *  `.visible` on the returned group; starts hidden. */
+export function createCampfireFlame(scale = 1): THREE.Group {
+  const flame = new THREE.Group()
+  const flameMat = new THREE.MeshStandardMaterial({
+    color: 0xff9a3c,
+    emissive: 0xff6a1a,
+    emissiveIntensity: 1.4,
+    flatShading: true,
+  })
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.28 * scale, 0.6 * scale, 6), flameMat)
+  cone.position.y = 0.3 * scale
+  flame.add(cone)
+
+  const light = new THREE.PointLight(0xff8a3c, 3, 5 * scale, 2)
+  light.position.y = 0.35 * scale
+  flame.add(light)
+
+  flame.visible = false
+  return flame
+}
+
 export function createGarden(): THREE.Group {
   const garden = new THREE.Group()
   const bed = new THREE.Mesh(
@@ -556,6 +589,13 @@ export async function buildSettlementProps(
     const campfire = createCampfire()
     placeOnGround(campfire, fireX, fireZ, sampleHeight)
     group.add(campfire)
+
+    const flame = createCampfireFlame()
+    campfire.add(flame)
+    landmarks.campfire = {
+      position: new THREE.Vector3(fireX, sampleHeight(fireX, fireZ), fireZ),
+      flame,
+    }
   }
   if (size === 'LG') {
     const stock2X = site.x + 5.5

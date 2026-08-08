@@ -19,11 +19,20 @@ export type ItemSpawners = {
 
 /** One renewable pickup per kind, close to the settlement — a reliable fallback
  *  source for quests regardless of whether world-generated coast/mountain items
- *  (`terrain/chunkItems.ts`) happened to land nearby this seed. */
-const SPAWN_SPECS: { kind: ItemKind, respawnTime: number }[] = [
+ *  (`terrain/chunkItems.ts`) happened to land nearby this seed. `branch` is
+ *  positioned near one of the settlement's own trees instead of the settlement
+ *  center (`near: 'trees'`) — village campfires (`VillageFire.ts`) burn through
+ *  branches, and world-generated branches near trees don't respawn
+ *  (`terrain/chunkItems.ts`), so without this the supply would eventually run out. */
+const SPAWN_SPECS: { kind: ItemKind, respawnTime: number, near?: 'trees' }[] = [
   { kind: 'stone', respawnTime: 100 },
   { kind: 'shell', respawnTime: 90 },
+  { kind: 'branch', respawnTime: 45, near: 'trees' },
 ]
+
+/** How close to the chosen tree a `near: 'trees'` spawn point lands. */
+const TREE_SPAWN_MIN_DIST = 1.2
+const TREE_SPAWN_MAX_DIST = 3.5
 
 export function createItemSpawners(
   scene: Scene,
@@ -31,6 +40,7 @@ export function createItemSpawners(
   waterLevel: number,
   homeRadius: number,
   settlementCenter: Vector3,
+  trees: readonly Vector3[],
   seed: number,
 ): ItemSpawners {
   const random = createSeededRandom(seed ^ 0x17ea)
@@ -65,7 +75,13 @@ export function createItemSpawners(
   }
 
   for (const spec of SPAWN_SPECS) {
-    const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 20, 42)
+    const pos =
+      spec.near === 'trees' && trees.length > 0
+        ? (() => {
+            const tree = trees[Math.floor(random() * trees.length)]!
+            return findWalkableNear(tree.x, tree.z, TREE_SPAWN_MIN_DIST, TREE_SPAWN_MAX_DIST)
+          })()
+        : findWalkableNear(settlementCenter.x, settlementCenter.z, 20, 42)
     if (!pos) continue
     const index = points.length
     points.push({

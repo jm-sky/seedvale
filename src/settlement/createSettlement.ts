@@ -18,6 +18,7 @@ import {
   type SettlementLandmarks,
 } from './props'
 import { type RoadNetworkContext, routeToMinorLocation } from './roadNetwork'
+import { createVillageFire, type VillageFire } from './VillageFire'
 
 export type Settlement = {
   id: string
@@ -27,6 +28,8 @@ export type Settlement = {
   center: Vector3
   npcs: readonly NpcAgent[]
   landmarks: SettlementLandmarks
+  /** Only present for MD/LG villages, see `props.ts`'s `buildSettlementProps`. */
+  fire?: VillageFire
   update: (dt: number, observerPos: Vector3) => void
   dispose: () => void
 }
@@ -117,6 +120,10 @@ export async function createSettlement(
     site.z - 3,
   )
 
+  const fire = landmarks.campfire
+    ? createVillageFire(landmarks.campfire.position, landmarks.campfire.flame)
+    : undefined
+
   return {
     id: def.id,
     name: def.name,
@@ -125,8 +132,10 @@ export async function createSettlement(
     center: new Vector3(site.x, site.y, site.z),
     npcs: agents,
     landmarks,
+    fire,
     update(dt, observerPos) {
       for (const agent of agents) agent.update(dt, observerPos)
+      fire?.update(dt)
     },
     dispose() {
       for (const agent of agents) {

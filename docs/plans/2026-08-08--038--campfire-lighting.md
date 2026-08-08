@@ -1,7 +1,20 @@
 # Plan: Zapalanie ognisk (gałęzie jako paliwo) + nocne szanse zapłonu w wiosce
 
-**Status:** `todo`
+**Status:** `verification needed` — punkty 1-3 (stan ognia, interakcja `[E]`, płomień) i renewable branch-spawn zaimplementowane, patrz „Stan implementacji" niżej. Punkt 4 (nocne 50% szans) **nie zaimplementowany** — zostaje `todo`.
 **Created:** 2026-08-08
+
+## Stan implementacji (2026-08-09)
+
+Zaimplementowane: **punkty 1-3** (stan ognia, interakcja `[E]`, wizualny płomień) + dodatkowo renewable spawn gałęzi blisko drzew (żeby ognisko miało z czego się podtrzymywać — patrz niżej). **Punkt 4 (nocne 50% szans zapłonu) świadomie odłożony** — user poprosił konkretnie o te dwie rzeczy w tej turze implementacji, nie o cały plan.
+
+- `src/settlement/VillageFire.ts` (nowy) — `createVillageFire(position, flame)`: `lit`/`fuelRemaining` w closure, `light()`/`addFuel()`/`update(dt)`, `FUEL_PER_BRANCH = 75s`.
+- `src/settlement/props.ts`: nowa `createCampfireFlame()` (stożek emissive + `PointLight`, `visible=false` domyślnie — oddzielna od `createCampfire()`, która zostaje czysto dekoracyjna dla ognisk rozrzuconych po świecie z [world-elements-interactions](./2026-08-07--030--world-elements-interactions.md)). `SettlementLandmarks` += `campfire?: { position, flame }`, ustawiane tylko dla MD/LG.
+- `src/settlement/createSettlement.ts`: `Settlement` += `fire?: VillageFire`, tickowane w `update(dt)`.
+- `src/interaction/Interactable.ts` += wariant `campfire`; `resolveInteraction.ts` jawnie wyklucza `campfire` (obok `item`) ze swojego typu — obie potrzebują `Inventory`, więc obsługiwane bezpośrednio w `app/createApp.ts`, nie przez generyczny dialog.
+- `app/createApp.ts`: `buildInteractables` dodaje wpis `campfire` dla każdej osady z `settlement.fire` (prompt zależny od stanu: „Zapal ognisko" / „Dołóż gałąź"); obsługa `[E]` konsumuje `branch` z `Inventory` (`inventory.remove('branch', 1)`), woła `fire.light()`/`fire.addFuel()`, pokazuje krótki komunikat przez istniejący `npcDialog.open('Ognisko', ...)`. **Żadnego nowego kodu pod mobile/desktop** — `[E]` (desktop) i przycisk dotykowy `E` (`createTouchControls.ts`) już dziś ustawiają ten sam `keyboard.state`/`consumeInteract()`, więc działa automatycznie na obu (zweryfikowane w kodzie, nie tylko założone).
+- **Renewable branch spawn** (dodatkowe, potrzebne żeby ognisko miało z czego się podtrzymywać): `src/items/createItemSpawners.ts` — `SPAWN_SPECS` += `{ kind: 'branch', respawnTime: 45, near: 'trees' }`, nowy tryb pozycjonowania `near: 'trees'` wybiera losowe drzewo z `landmarks.trees` (przekazane teraz do `createItemSpawners`) zamiast promienia od centrum osady. World-generated gałęzie blisko drzew (`terrain/chunkItems.ts`) nadal **nie** respawnują (bez zmian, poza zakresem) — to jest osobne, dodatkowe, niezawodne źródło blisko wioski, ten sam wzorzec co istniejące `stone`/`shell` spawnery.
+
+Sanity check: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — czyste. **Wizualna weryfikacja w przeglądarce jeszcze nie zrobiona.**
 **Scope:** rozszerza [world-elements-interactions](./2026-08-07--030--world-elements-interactions.md) (`branch`/gałąź jako już istniejący `ItemKind`, dekoracyjne ogniska w `chunkEnvironment.ts`) i [village-generation](./2026-08-08--031--village-generation.md) (ognisko wioski w `props.ts` dla MD/LG); reużywa `src/interaction/` (wzorzec `well`/`tree`) i `src/world/dayNight.ts`
 
 ## Skąd to się wzięło
@@ -20,6 +33,8 @@ Propozycje użytkownika po teście wiosek:
 - `src/world/dayNight.ts` śledzi `timeOfDay`/dzień-noc — punkt zaczepienia dla „50% szans przy zapadnięciu nocy".
 
 ## Zakres v1 (świadomie ograniczony do ogniska wioski — patrz „Poza zakresem")
+
+Punkty 1-3 zaimplementowane (patrz „Stan implementacji" wyżej) — treść niżej to oryginalny szkic planu, zachowany jako zapis decyzji projektowych.
 
 ### 1. Stan ognia
 
@@ -47,7 +62,7 @@ type FireState = {
 
 - `createCampfire()` (`props.ts`) dostaje wariant „lit" — prosty efekt ognia spójny ze stylem reszty propsów (flat-shaded, bez systemu cząstek): mały stożek/sprite z materiałem `emissive` + `PointLight` o niskim zasięgu, włączane/wyłączane wraz z `fire.lit`. Szczegóły wizualne do dopracowania przy implementacji.
 
-### 4. Nocne szanse zapłonu (tylko ognisko wioski)
+### 4. Nocne szanse zapłonu (tylko ognisko wioski) — nadal `todo`, nie zaimplementowane
 
 - Przy przejściu dzień→noc (hook w `dayNight.ts`/`createApp.ts`, tam gdzie dziś śledzone jest `timeOfDay` przekraczające próg nocy) — dla każdej załadowanej osady z własnym ogniskiem (MD/LG): 50% szans, że `fire.lit = true` z pełnym paliwem, **bez zużywania gałęzi gracza** (wioska sama je podtrzymuje — fabularnie NPC-e dokładają). Losowane **przy każdym zapadnięciu nocy**, nie raz na zawsze — jeśli zgaśnie przed świtem, zostaje zgaszone do następnej nocy (chyba że gracz dołoży gałąź).
 - Deterministyczność: seedowany rzut per (osada, „numer nocy") żeby przeładowanie/re-streaming osady nie zmieniało wyniku w trakcie tej samej nocy — dokładny mechanizm (np. `createSeededRandom(seed ^ settlementId ^ nightIndex)`) do ustalenia przy implementacji.
@@ -61,9 +76,12 @@ type FireState = {
 
 ## Weryfikacja
 
-- Zbierz gałąź (`[G]`/zbieranie z `world-elements-interactions`), podejdź do ogniska wioski MD/LG, zapal `[E]`, sprawdź że się pali i gaśnie po czasie; dołóż gałąź żeby przedłużyć.
-- Poczekaj na noc kilka razy (różne osady/seedy) — ognisko czasem już zapalone, czasem nie (z grubsza 50/50 w wielu próbach).
-- `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test`.
+- **Do zrobienia przez użytkownika (`localhost:5577`):**
+  - Znajdź osadę MD/LG (ma własne ognisko). W okolicy jej drzew (`landmarks.trees`) powinna co jakiś czas (≈45s po zebraniu) pojawiać się gałąź do zebrania — sprawdź na desktop i mobile że `[E]`/przycisk dotykowy ją podnosi.
+  - Podejdź do ogniska z gałęzią, zapal `[E]` (desktop) i przyciskiem dotykowym `E` (mobile) — sprawdź oba. Sprawdź że płomień/światło się pojawia, gaśnie po ~75s, i że dokładanie gałęzi (`[E]` ponownie przy zapalonym ognisku) przedłuża palenie.
+  - Bez gałęzi w ekwipunku — `[E]` przy ognisku pokazuje komunikat „Potrzebujesz gałęzi", nic nie zużywa.
+- `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — czyste (zrobione, patrz „Stan implementacji").
+- Punkt 4 (nocne 50% szans) — osobna weryfikacja po jego implementacji.
 
 ## Powiązane
 

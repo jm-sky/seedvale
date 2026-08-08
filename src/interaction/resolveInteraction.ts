@@ -35,11 +35,12 @@ function capitalize(text: string): string {
   return text.length > 0 ? text[0]!.toUpperCase() + text.slice(1) : text
 }
 
-/** Dispatches an `[E]`-pressed `Interactable` (everything except `item`, which
- *  `app/createApp.ts` handles directly without opening the dialog) to the right
+/** Dispatches an `[E]`-pressed `Interactable` (everything except `item`/`campfire`,
+ *  which `app/createApp.ts` handles directly — both need `Inventory` access this
+ *  module doesn't have — without opening this generic dialog) to the right
  *  `QuestManager` call, falling back to flavor text when no active quest cares. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'item' }>,
+  target: Exclude<Interactable, { kind: 'item' | 'campfire' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

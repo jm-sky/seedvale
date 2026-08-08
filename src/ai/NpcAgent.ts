@@ -29,7 +29,6 @@ import {
   createNeedState,
   needColor,
   type NeedId,
-  needLabel,
   type NeedState,
   pickNeed,
   tickNeeds,
@@ -274,7 +273,7 @@ export class NpcAgent {
 
     this.labelEl = document.createElement('div')
     this.labelEl.className = 'npc-label'
-    this.labelEl.textContent = `${this.name} · ${needLabel('idle')}`
+    this.labelEl.textContent = this.name
     this.label = new CSS2DObject(this.labelEl)
     this.label.position.set(0, NPC_HEIGHT + 0.55, 0)
     this.mesh.add(this.label)
@@ -492,7 +491,7 @@ export class NpcAgent {
       needColor(this.activeNeed),
     )
     const questSuffix = this.questMarker ? ` · ${this.questMarker}` : ''
-    this.labelEl.textContent = `${this.name} · ${needLabel(this.activeNeed)}${questSuffix}`
+    this.labelEl.textContent = `${this.name}${questSuffix}`
     this.labelEl.style.opacity = String(
       labelOpacityForDistance(this.mesh.position.distanceTo(observerPos)),
     )
