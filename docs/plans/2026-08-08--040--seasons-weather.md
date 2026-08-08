@@ -346,48 +346,85 @@ Kluczowa zasada:
 
 ---
 
-## 14. Kolejność implementacji
+## 14. Etapy implementacji
 
-### Etap 1 — fundament
-- `Season`,
-- globalny sezon,
-- obliczanie sezonu z czasu świata,
-- debug/UI.
+Plan powinien być wdrażany warstwami. Pierwszy etap ma wartość sam w sobie i nie powinien wymagać gotowych systemów zasobów, ekonomii ani rozbudowanego AI.
 
-### Etap 2 — Weather
-- `WeatherState`,
-- generator zmian pogody,
-- prawdopodobieństwa zależne od sezonu,
-- debug controls.
+### Etap 1 — Sezony i pogoda jako efekt wizualny
 
-### Etap 3 — rendering
+Cel: świat zaczyna wyglądać i brzmieć inaczej zależnie od sezonu i pogody.
+
+- globalny `Season` wynikający z istniejącego czasu świata,
+- podstawowe stany pogody,
+- przejścia pomiędzy stanami pogody,
 - deszcz,
 - śnieg,
-- chmury,
 - mgła,
-- zmiana oświetlenia.
+- chmury,
+- zmiana oświetlenia / wyglądu świata,
+- podstawowe efekty środowiskowe,
+- debugowanie sezonu i pogody.
 
-### Etap 4 — wpływ na symulację
-- NPC reagują na pogodę,
-- zwierzęta reagują na pogodę,
-- temperatura jako modifier.
+Na tym etapie:
+- brak wpływu na AI,
+- brak wpływu na zasoby,
+- brak wpływu na potrzeby NPC,
+- brak ekonomii,
+- brak staminy.
 
-### Etap 5 — zasoby
-- sezonowa dostępność resource nodes,
-- sezonowe źródła żywności,
-- wpływ na osady.
+### Etap 2 — Pogoda → istniejące systemy
 
-### Etap 6 — ekonomia
-- sezonowa podaż,
-- niedobory,
-- wartość/barter,
-- przygotowanie osad do zimy.
+Pogoda i sezon zaczynają dostarczać modyfikatory istniejącym systemom.
+
+Przykłady:
+
+- NPC częściej szukają schronienia podczas złej pogody,
+- zwierzęta zmieniają aktywność,
+- temperatura wpływa na istniejące potrzeby,
+- sezon wpływa na aktywność zwierząt.
+
+Nie tworzymy osobnego `WeatherAI`.
+
+### Etap 3 — Sezony → zasoby i food sources
+
+Sezonowość zostaje połączona z planem `032`.
+
+Przykłady:
+
+- zmienna dostępność grzybów, owoców, jagód,
+- sezonowość pól i upraw,
+- zmienna dostępność ryb,
+- sezonowe zachowanie dzikich zwierząt,
+- przygotowywanie i zużywanie zapasów.
+
+To pierwszy krok, w którym sezon zaczyna mieć realne znaczenie dla życia wioski.
+
+### Etap 4 — Pogoda / temperatura → potrzeby i zmęczenie
+
+Dopiero później:
+
+- większe zużycie energii podczas mrozu lub upału,
+- większa potrzeba wody podczas upału,
+- potrzeba schronienia podczas ekstremalnej pogody,
+- przyszły system `stamina / energy` NPC.
+
+Stamina nie jest częścią pierwszej implementacji.
+
+### Etap 5 — Ekonomia i dalsze sprzężenia
+
+W dalszej przyszłości sezonowość może wpływać na:
+
+- produkcję,
+- konsumpcję,
+- nadwyżki i niedobory,
+- wartość dóbr,
+- barter i handel między wioskami.
 
 ---
 
 ## 15. Główna zasada
 
-Pory roku i pogoda nie powinny być tylko efektami wizualnymi.
+Pory roku i pogoda nie powinny być tylko efektami wizualnymi, ale też nie powinny od razu wymuszać implementacji wszystkich zależnych systemów.
 
 Docelowy przepływ:
 
@@ -398,11 +435,11 @@ SEASON
  ↓
 WEATHER / TEMPERATURE
  ↓
-ENVIRONMENT
- ↓
-RESOURCES
+VISUAL WORLD
  ↓
 NPC / ANIMALS
+ ↓
+RESOURCES / FOOD
  ↓
 ECONOMY
 ```
