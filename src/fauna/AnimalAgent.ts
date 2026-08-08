@@ -59,6 +59,12 @@ const VILLAGE_FLEE_INFLUENCE_RADIUS = 45
  *  044's "sarna uciekająca... powinna preferować ucieczkę poza wioskę,
  *  nawet jeśli oznacza to zmianę kierunku ucieczki" example. */
 const VILLAGE_FLEE_BIAS_WEIGHT = 0.9
+/** Default `[min, max]` wander radius (world units) from `home` — every
+ *  caller before house-anchored livestock (plan: village livestock
+ *  ownership) used this hardcoded range; now the default for the optional
+ *  constructor override, so `createFauna.ts`'s wild/wandering spawns are
+ *  unaffected. */
+const DEFAULT_WANDER_RADIUS: readonly [number, number] = [6, 16]
 
 export type AnimalRole = 'predator' | 'prey' | 'livestock'
 /** `wild` animals are wary of humans/the village and avoid it; `domestic`
@@ -292,6 +298,7 @@ export class AnimalAgent {
   private wanderTimer = 0
   private readonly tmp = new THREE.Vector3()
   private readonly home = new THREE.Vector3()
+  private readonly wanderRadius: readonly [number, number]
   private moving = false
   private sprinting = false
   private readonly mixer: THREE.AnimationMixer | null
@@ -323,11 +330,13 @@ export class AnimalAgent {
     z: number,
     visual?: THREE.Object3D,
     animations: THREE.AnimationClip[] = [],
+    wanderRadius: readonly [number, number] = DEFAULT_WANDER_RADIUS,
   ) {
     this.def = def
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.home.set(x, 0, z)
+    this.wanderRadius = wanderRadius
     this.health = createHealthState(MAX_HP[def.kind])
 
     if (visual) {
@@ -635,8 +644,9 @@ export class AnimalAgent {
   }
 
   private pickWanderTarget(): void {
+    const [minR, maxR] = this.wanderRadius
     for (let attempt = 0; attempt < 8; attempt++) {
-      const r = 6 + Math.random() * 10
+      const r = minR + Math.random() * (maxR - minR)
       const a = Math.random() * Math.PI * 2
       const x = this.home.x + Math.cos(a) * r
       const z = this.home.z + Math.sin(a) * r

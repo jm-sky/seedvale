@@ -12,15 +12,7 @@ import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
 import { ANIMAL_DEFS, AnimalAgent, type AnimalKind } from './AnimalAgent'
 import { type PreySpawner, updateSpawners } from './AnimalSpawner'
-import {
-  createBoarModel,
-  createChickenModel,
-  createCowModel,
-  createDuckModel,
-  createHorseModel,
-  createRabbitModel,
-  createSheepModel,
-} from './proceduralAnimals'
+import { createBoarModel, createDuckModel, createRabbitModel } from './proceduralAnimals'
 
 export type Fauna = {
   update: (
@@ -28,9 +20,11 @@ export type Fauna = {
     observerPos: Vector3,
     timeOfDay: number,
     litFires: readonly { x: number, z: number }[],
-    /** Loaded settlement centers (`SettlementsManager.getLoaded()`) — wild/
-     *  domestic animals react to proximity to any of these, see
-     *  `AnimalAgent.ts`'s village-avoidance/flee-bias (plan 044 §2.3/§2.4). */
+    /** Loaded settlement centers (`SettlementsManager.getLoaded()`) — wild
+     *  animals react to proximity to any of these, see `AnimalAgent.ts`'s
+     *  village-avoidance/flee-bias (plan 044 §2.3/§2.4). Owned livestock
+     *  (horse/cow/sheep/chicken) isn't spawned here at all — see
+     *  `settlement/livestock.ts`, spawned per-settlement instead. */
     villages: readonly { x: number, z: number }[],
   ) => void
   dispose: () => void
@@ -45,9 +39,11 @@ export type Fauna = {
  *  044 §2.1/§2.2's habitat preferences): `open` is the original ring used by
  *  wolf/fox/deer/stag (no habitat check beyond dry land), `meadow`/`forest`/
  *  `water` add a `sampleForestFactor`/shoreline check for the new wild
- *  species, `farmstead` spawns domestic animals in a tight ring right around
- *  the village instead of the wider wild-animal belt. */
-type SpawnProfile = 'open' | 'meadow' | 'forest' | 'water' | 'farmstead'
+ *  species. Domestic livestock used to have a `farmstead` profile here —
+ *  moved to `settlement/livestock.ts` (house-anchored, per-settlement, see
+ *  the village livestock ownership plan) since a settlement-center ring
+ *  can't express "belongs to this specific house". */
+type SpawnProfile = 'open' | 'meadow' | 'forest' | 'water'
 type SpawnSpec = { kind: AnimalKind, count: number, profile: SpawnProfile }
 
 const SPAWNS: SpawnSpec[] = [
@@ -58,23 +54,17 @@ const SPAWNS: SpawnSpec[] = [
   { kind: 'rabbit', count: 3, profile: 'meadow' },
   { kind: 'duck', count: 2, profile: 'water' },
   { kind: 'boar', count: 2, profile: 'forest' },
-  { kind: 'horse', count: 2, profile: 'farmstead' },
-  { kind: 'cow', count: 2, profile: 'farmstead' },
-  { kind: 'sheep', count: 3, profile: 'farmstead' },
-  { kind: 'chicken', count: 4, profile: 'farmstead' },
 ]
 
 /** [minDist, maxDist] from the settlement center for each `SpawnProfile` —
- *  wild profiles (everything but `farmstead`) start a bit past
- *  `AnimalAgent.ts`'s `VILLAGE_AVOID_RADIUS` (20) so a freshly-spawned wild
- *  animal's own home point isn't already inside the zone its wander logic
- *  then refuses to path back into. */
+ *  starts a bit past `AnimalAgent.ts`'s `VILLAGE_AVOID_RADIUS` (20) so a
+ *  freshly-spawned wild animal's own home point isn't already inside the
+ *  zone its wander logic then refuses to path back into. */
 const SPAWN_RING: Record<SpawnProfile, [number, number]> = {
   open: [24, 42],
   meadow: [24, 42],
   forest: [24, 45],
   water: [22, 42],
-  farmstead: [6, 16],
 }
 
 /** Hardcoded prey spawners (cave / thicket) — see docs/plans/2026-08-07--predator-prey-system.md. */
@@ -106,10 +96,6 @@ const PROCEDURAL_FALLBACKS: Partial<Record<AnimalKind, () => Object3D>> = {
   rabbit: createRabbitModel,
   duck: createDuckModel,
   boar: createBoarModel,
-  horse: createHorseModel,
-  cow: createCowModel,
-  sheep: createSheepModel,
-  chicken: createChickenModel,
 }
 
 type FaunaTemplate = GltfAsset

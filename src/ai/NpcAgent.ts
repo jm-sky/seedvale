@@ -93,6 +93,7 @@ type Phase =
   | 'eat'
   | 'followPath'
   | 'goGarden'
+  | 'goHomeDrink'
   | 'goSleep'
   | 'goStock'
   | 'goTree'
@@ -106,6 +107,7 @@ const PAUSE_INTERRUPTIBLE_PHASES: ReadonlySet<Phase> = new Set([
   'choose',
   'followPath',
   'goGarden',
+  'goHomeDrink',
   'goStock',
   'goTree',
   'goWell',
@@ -119,6 +121,7 @@ const FATIGUE_PHASES: ReadonlySet<Phase> = new Set([
   'drink',
   'eat',
   'goGarden',
+  'goHomeDrink',
   'goStock',
   'goTree',
   'goWell',
@@ -131,6 +134,13 @@ const REST_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'lookA
  *  `createSettlement.ts` only for settlements near enough to water to have
  *  resolved one — see `settlement/roadNetwork.ts`). */
 const FOLLOW_DOCK_PATH_CHANCE = 0.08
+
+/** Chance a `water` need routes the NPC to drink at home instead of the
+ *  village well — same destination-swap idea as `FOLLOW_DOCK_PATH_CHANCE`,
+ *  see `beginNeed()`. Not a "carry water" mechanic — drinking at home is
+ *  identical to drinking at the well (same `drink` phase, same instant
+ *  thirst reduction), just a different destination. */
+const HOME_WATER_CHANCE = 0.45
 
 const MAX_HP = 100
 /** currentHp never drops below this — no NPC death/despawn in v1. */
@@ -459,6 +469,12 @@ export class NpcAgent {
           this.wait = 1.4 * this.waitMultiplier
         }
         break
+      case 'goHomeDrink':
+        if (this.steerTo(this.home, dt)) {
+          this.phase = 'drink'
+          this.wait = 1.2 * this.waitMultiplier
+        }
+        break
       case 'goSleep':
         if (!isNight) this.phase = 'choose'
         else if (this.steerTo(this.home, dt)) this.phase = 'sleep'
@@ -575,7 +591,7 @@ export class NpcAgent {
   private beginNeed(need: NeedId): void {
     this.activeNeed = need
     if (need === 'water') {
-      this.phase = 'goWell'
+      this.phase = Math.random() < HOME_WATER_CHANCE ? 'goHomeDrink' : 'goWell'
       return
     }
     if (need === 'food') {

@@ -42,8 +42,18 @@ export type SettlementsManager = {
    *  Fauna/item spawners anchor to this one only (v1 scope: no per-settlement
    *  resource distribution, see multi-settlements plan). */
   home: Settlement
-  /** Streams settlements in/out by distance and ticks every loaded one's NPCs. */
-  update: (dt: number, playerPos: Vector3) => void
+  /** Streams settlements in/out by distance and ticks every loaded one's NPCs
+   *  (and owned livestock, see `createSettlement.ts`). `dayFactor`/`litFires`/
+   *  `villages` are forwarded straight through to each loaded `Settlement
+   *  .update` — same values `app/createApp.ts` already computes for the
+   *  global `Fauna.update` call. */
+  update: (
+    dt: number,
+    playerPos: Vector3,
+    dayFactor: number,
+    litFires: readonly { x: number, z: number }[],
+    villages: readonly { x: number, z: number }[],
+  ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the
    *  current time of day instead of flashing on/off at its own default. */
@@ -257,11 +267,11 @@ export async function createSettlementsManager(
       lastDayNight = t
       for (const entry of entries.values()) entry.settlement?.setDayNight(t)
     },
-    update(dt, playerPos) {
+    update(dt, playerPos, dayFactor, litFires, villages) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)
       }
-      for (const entry of entries.values()) entry.settlement?.update(dt, playerPos)
+      for (const entry of entries.values()) entry.settlement?.update(dt, playerPos, dayFactor, litFires, villages)
       for (const instances of midpoints.values()) {
         for (const inst of instances) {
           inst.labelEl.style.opacity = String(labelOpacityForDistance(inst.position.distanceTo(playerPos)))
