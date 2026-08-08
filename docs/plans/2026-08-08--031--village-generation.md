@@ -1,8 +1,23 @@
 # Plan: Generowanie wiosek (rozmiar → rodziny → domy → obszary terenu)
 
-**Status:** `planned`
+**Status:** `verification needed` — zaimplementowane zgodnie z opisem poniżej (`src/settlement/families.ts`, `src/settlement/villageClearing.ts`, rozszerzenia `settlementGenerator.ts`/`createSettlement.ts`/`props.ts`/`characters.ts`/`NpcAgent.ts`/`chunkHeightmap.ts`/`roadNetwork.ts`/`chunkManager.ts`/`worldConfig.ts`), `npx tsc --noEmit`/`npm run lint`/`npm run build`/`npm run test` czyste (w tym nowe testy jednostkowe `src/settlement/families.test.ts`) — **brak jeszcze wizualnej weryfikacji w przeglądarce**, patrz „Do przetestowania" niżej
 **Created:** 2026-08-08
 **Scope:** rozszerza [multi-settlements.md](./2026-08-07--025--multi-settlements.md) (siatka osad, streaming) i [npc-character-depth.md](./2026-08-07--022--npc-character-depth.md) (`CharacterDef`, Big Five, `HealthState`); reużywa wzorzec spłaszczania terenu z [roads-and-paths.md](./2026-08-07--026--roads-and-paths.md)
+
+## Stan implementacji (2026-08-08)
+
+Zaimplementowane zgodnie ze szkicem poniżej, z kilkoma decyzjami podjętymi podczas implementacji (odpowiedzi na pytania doprecyzowujące zadane przed startem):
+
+- **Spłaszczanie terenu: realna modyfikacja heightmapy** (nie tylko wyszukiwanie płaskich miejsc) — `ClearingSegment` w `terrain/chunkHeightmap.ts`, analogicznie do `RoadCorridorSegment`, ale z falloff liczonym od punktu (koło), nie od odcinka. `applyRoadCorridor` scalone z nowym `applyTerrainCorridors`, który bierze pod uwagę drogi i clearingi razem (najsilniejszy segment wygrywa), reużywa kanału `roadTint`/`applyRoadTint` dla koloru — brak osobnego systemu tintów.
+- **Generator rodzin dotyczy wszystkich osad, w tym home** — `families.ts`'s `generateFamilies(seed, size, isHome, nameCulture)` z podłogą 2 zarezerwowanych rodzin (Anna+Piotr, Kasia+Marek) dla `isHome`, chroniącą hardkodowane imiona w `quests/quests.ts`.
+- **Circular-import unikniętу przez podział na 2 moduły**: `settlement/villageClearing.ts` jest czystą/leaf funkcją (`layoutClearings`, bez importu z `settlementGenerator.ts`), a rozwiązywanie sąsiednich definicji osad dla pipeline'u czanków (`clearingSegmentsNear`) dopisano do już istniejącego `settlement/roadNetwork.ts` (ten sam cache `defFor`/`RoadNetworkContext` co dla dróg) — plan zakładał jeden plik `villageClearing.ts` z `segmentsNear()`, ale `settlementGenerator.ts` musi importować `layoutClearings` (do zbudowania `SettlementDef.clearings`), a resolver sąsiadów musi importować `settlementGenerator.ts` — trzymanie obu w jednym pliku dałoby cykl importów.
+- **`characters.ts`**: `SEEDS`/`CHARACTERS` (8 postaci) skurczone do `RESERVED_CHARACTERS` (4: Anna/Piotr/Kasia/Marek) + nowa `characterForSeed(seed, gender)` dla proceduralnych członków rodzin. Znaleziony i naprawiony bug: `personalityForIndex()` indeksuje tablicę przez `% length`, co dla ujemnych (xor-owanych) seedów dawało `undefined` — naprawione przez `personalityForIndex(seed >>> 0)` w `characterForSeed`.
+- **`FamilyRelation` rozszerzone o `'single'`** (poza husband/wife/child z draftu) — rodzina 1-osobowa (dozwolona w drafcie: "1–3 osób") potrzebowała jakiejś etykiety; użycie husband/wife dla samotnego mieszkańca sugerowałoby nieistniejącego małżonka.
+- **Dziecko: skala 0.5–0.8 na modelu dorosłym** (nie stały 0.75) — zakres, bo prawdziwe dzieci wahają się od małego dziecka po prawie-dorosłego nastolatka; `TODO: Use real child model` w `families.ts` przy `CHILD_SCALE_RANGE`.
+- **Domy/obiekty wioski**: `villageClearing.ts::layoutClearings` — 1 core clearing (studnia/skład/ogród, +ognisko dla MD/LG, +drugi skład dla LG) + 1 clearing per rodzina (chatka) na seeded pierścieniu wokół core, z retry (do 4 prób) jeśli kandydat wypada pod wodą.
+- **Config**: `RegionParams.village` (`coreRadius`, `houseRadius`, `heightStrength`, `tintStrength`) w `worldConfig.ts` + nowy folder „Village" w `createDebugGui.ts`, wzorem „Roads".
+
+Sanity check: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — wszystkie czyste. **Nie zweryfikowano jeszcze w przeglądarce** — patrz „Do przetestowania" (wymaga manualnego testu przez użytkownika, zgodnie z zasadą projektu).
 
 ## Kontekst
 
@@ -103,19 +118,20 @@ Konstruktor/`create()` przyjmuje gotowy `CharacterDef` (z `FamilyMember.characte
 
 ## Done when
 
-- [ ] `families.ts`: `rollVillageSize`/`generateFamilies` deterministyczne z seeda, floor 2 zarezerwowanych rodzin dla home, testy jednostkowe (vitest) na rozkład rozmiaru per terrain i na floor.
-- [ ] `SettlementDef` niesie `size`+`families`; `npcCount`/`npcNames` usunięte.
-- [ ] Liczba chatek = liczba rodzin (nie zawsze 3); NPC-e przypisane 1:1 do domu swojej rodziny.
-- [ ] Home-osada dalej ma NPC-ów o imionach Anna/Piotr/Kasia/Marek z tymi samymi rolami/traits co dziś — questy v1 bez regresji.
-- [ ] Teren pod klastrami domów/obiektów wspólnych widocznie płynniejszy (spłaszczony), ale nie idealnie płaski dysk — reużywa `sampleRawTexel`/`applyRoadTint`.
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` czyste.
+- [x] `families.ts`: `rollVillageSize`/`generateFamilies` deterministyczne z seeda, floor 2 zarezerwowanych rodzin dla home, testy jednostkowe (vitest) na rozkład rozmiaru per terrain i na floor (`src/settlement/families.test.ts`).
+- [x] `SettlementDef` niesie `size`+`families`; `npcCount`/`npcNames` usunięte.
+- [x] Liczba chatek = liczba rodzin (nie zawsze 3); NPC-e przypisane 1:1 do domu swojej rodziny.
+- [x] Home-osada dalej ma NPC-ów o imionach Anna/Piotr/Kasia/Marek z tymi samymi rolami/traits co dziś — questy v1 bez regresji (statycznie, patrz „Do przetestowania" dla weryfikacji w przeglądarce).
+- [x] Teren pod klastrami domów/obiektów wspólnych widocznie płynniejszy (spłaszczony), ale nie idealnie płaski dysk — reużywa `sampleRawTexel`/`applyRoadTint` (statycznie zaimplementowane, wizualna weryfikacja jeszcze do zrobienia).
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` czyste.
 
-## Do przetestowania (http://localhost:5577/)
+## Do przetestowania (http://localhost:5577/) — jeszcze nie wykonane
 
 1. Kilka seedów (`?seed=`) — rozmiar wiosek widocznie różny między osadami (SM/MD/LG), zgodnie z ich terenem (więcej domów w lesie/na równinie, mniej w górach/pustyni).
 2. Home-osada (spawn gracza) — Anna/Piotr/Kasia/Marek nadal obecni, dialog i questy v1 (`[E]`, quest log `[L]`) działają jak wcześniej.
 3. Domy nie zachodzą na siebie ani na studnię/skład; wioska nie wygląda jak jeden wielki płaski dysk, tylko kilka mniejszych spłaszczonych plam terenu.
-4. Sanity check regresji: chodzenie, sprint, drogi między osadami (`roads-and-paths.md`) nadal widoczne i nie kolidują wizualnie z nowymi obszarami wioski.
+4. Ekran „Mieszkańcy" pokazuje relację (mąż/żona/dziecko) obok roli/osobowości; dziecko widocznie mniejsze od dorosłych.
+5. Sanity check regresji: chodzenie, sprint, drogi między osadami (`roads-and-paths.md`) nadal widoczne i nie kolidują wizualnie z nowymi obszarami wioski.
 
 ## Następnie
 

@@ -36,7 +36,7 @@ Implementation plans for features and larger changes.
 | [2026-08-07--028--biome-regions.md](./2026-08-07--028--biome-regions.md) | Obszary biomów (pustynia/bagno/las) — makro-oś wilgotności + charakterystyczna roślinność (kaktus, trzcina) | `verification needed` |
 | [2026-08-07--026--roads-and-paths.md](./2026-08-07--026--roads-and-paths.md) | Drogi (międzyosadowe) i ścieżki (osada↔port/przystań) — trasowanie po małej zmianie wysokości + wygładzenie terenu + kolor | `verification needed` |
 | [2026-08-07--030--world-elements-interactions.md](./2026-08-07--030--world-elements-interactions.md) | Naturalne elementy świata: głazy/kamienie/powalone pnie/ogniska (dekoracje) + gałęzie/grzyby/kwiaty/szyszki (zbieralne), preferencje środowiskowe per chunk | `verification needed` |
-| [2026-08-08--031--village-generation.md](./2026-08-08--031--village-generation.md) | Generowanie wiosek: rozmiar (SM/MD/LG) ważony terenem → rodziny (husband/wife/child) → 1 dom na rodzinę → lokalnie wyrównane obszary terenu → obiekty wspólne | `planned` |
+| [2026-08-08--031--village-generation.md](./2026-08-08--031--village-generation.md) | Generowanie wiosek: rozmiar (SM/MD/LG) ważony terenem → rodziny (husband/wife/child) → 1 dom na rodzinę → lokalnie wyrównane obszary terenu → obiekty wspólne | `verification needed` |
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
 

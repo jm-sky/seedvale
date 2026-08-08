@@ -1,5 +1,7 @@
 import * as THREE from 'three'
+import type { VillageSize } from './families'
 import type { SettlementSite } from './findSettlementSite'
+import type { ClearingLayout } from './villageClearing'
 import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
 
 export type SettlementLandmarks = {
@@ -444,6 +446,15 @@ export async function buildSettlementProps(
   waterLevel: number,
   halfExtent: number,
   seed: number,
+  /** Where houses/well/stockpile/garden actually sit — one clearing per
+   *  family (its house) plus a shared core, see `villageClearing.ts`. Houses
+   *  are no longer a fixed 3-offset layout: their count and position follow
+   *  `clearings.houses` 1:1. */
+  clearings: ClearingLayout,
+  /** Bigger villages get a bit more shared infrastructure (draft: "większe
+   *  wioski mogą otrzymać dodatkowe obiekty") — a second stockpile/campfire,
+   *  not a structural change to the core clearing itself. */
+  size: VillageSize,
   /** Non-home settlements skip the forest belt: it's expensive (dozens of
    *  clusters) and would double up with the per-chunk terrain vegetation that,
    *  unlike home chunks, isn't suppressed around them. They still get their
@@ -489,23 +500,35 @@ export async function buildSettlementProps(
   group.add(garden)
   landmarks.garden.set(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
 
-  const homeOffsets = [
-    [-5, -2],
-    [-4, 4],
-    [5, -3],
-  ] as const
-  for (let i = 0; i < homeOffsets.length; i++) {
-    const [dx, dz] = homeOffsets[i]!
-    const hx = site.x + dx
-    const hz = site.z + dz
+  for (let i = 0; i < clearings.houses.length; i++) {
+    const area = clearings.houses[i]!
     const hut = await loadPropOrFallback(
       HUT_URLS[i % HUT_URLS.length]!,
       2.8,
       createHut,
     )
-    placeOnGround(hut, hx, hz, sampleHeight)
+    placeOnGround(hut, area.x, area.z, sampleHeight)
     group.add(hut)
-    landmarks.homes.push(new THREE.Vector3(hx, sampleHeight(hx, hz), hz))
+    landmarks.homes.push(new THREE.Vector3(area.x, sampleHeight(area.x, area.z), area.z))
+  }
+
+  if (size !== 'SM') {
+    const fireX = site.x - 4.5
+    const fireZ = site.z - 2
+    const campfire = createCampfire()
+    placeOnGround(campfire, fireX, fireZ, sampleHeight)
+    group.add(campfire)
+  }
+  if (size === 'LG') {
+    const stock2X = site.x + 5.5
+    const stock2Z = site.z - 2.5
+    const stockpile2 = await loadPropOrFallback(
+      '/models/settlement/logs.glb',
+      0.9,
+      createStockpile,
+    )
+    placeOnGround(stockpile2, stock2X, stock2Z, sampleHeight)
+    group.add(stockpile2)
   }
 
   if (plantForest) {

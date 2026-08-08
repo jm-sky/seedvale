@@ -1,11 +1,12 @@
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
-import { characterForIndex } from '../ai/characters'
-import { generateNpcName, type NameCulture, pickNameCulture } from '../ai/nameCultures'
+import { type NameCulture, pickNameCulture } from '../ai/nameCultures'
 import { generateSettlementName, type SettlementTerrain } from '../shared/SettlementName'
 import { createSeededRandom } from '../world/parseSeed'
+import { type FamilyDef, generateFamilies, rollVillageSize, type VillageSize } from './families'
 import { findSettlementSite } from './findSettlementSite'
 import { classifySettlementTerrain, type TerrainSamplers } from './settlementTerrain'
+import { type ClearingLayout, layoutClearings } from './villageClearing'
 
 /** World-unit spacing between settlement grid cells. Large enough that even
  *  the worst-case combination of per-cell noise offset and the local flat-site
@@ -28,7 +29,19 @@ export type SettlementDef = {
   x: number
   z: number
   y: number
-  npcCount: number
+  /** SM/MD/LG, rolled from `terrain` — see `families.ts`'s `rollVillageSize`.
+   *  Drives `families.length` (a floor of 2 reserved families for home, see
+   *  `families.ts`'s `generateFamilies`), which in turn drives NPC/house count. */
+  size: VillageSize
+  /** Each family gets one house (`props.ts`) and contributes its members as
+   *  NPCs (`createSettlement.ts`). The home settlement's first 2 families are
+   *  always the reserved Anna+Piotr/Kasia+Marek pairing — quest defs
+   *  (`quests/quests.ts`) hardcode those names, and randomizing them would
+   *  silently break the only quests the game has (see `families.ts`). */
+  families: readonly FamilyDef[]
+  /** Terrain clearing layout (well/stockpile/garden core + one patch per
+   *  family for its house) — see `villageClearing.ts`. */
+  clearings: ClearingLayout
   /** True only for cell (0,0) — the settlement the player spawns in, always
    *  loaded, and the only one built with the full forest belt in v1. */
   isHome: boolean
@@ -36,18 +49,11 @@ export type SettlementDef = {
    *  `settlementTerrain.ts`. Kept alongside `name` mostly for debugging. */
   terrain: SettlementTerrain
   name: string
-  /** The settlement's dominant name culture — most NPCs draw their name from
-   *  this pool (`ai/nameCultures.ts`), with a small chance per NPC of a name
-   *  from elsewhere. Not applied to the home settlement — see `npcNames`. */
+  /** The settlement's dominant name culture — most procedurally generated
+   *  family members draw their name from this pool (`ai/nameCultures.ts`),
+   *  with a small chance per NPC of a name from elsewhere. Doesn't apply to
+   *  the home settlement's 2 reserved families, whose names are fixed. */
   nameCulture: NameCulture
-  /** Pre-rolled name per NPC slot (index-aligned with `npcCount`), so
-   *  `createSettlement.ts` doesn't need its own seeded RNG. Unused for the
-   *  home settlement, whose NPCs keep `characters.ts`'s fixed roster names —
-   *  quest defs (`quests/quests.ts`) hardcode giver names like "Anna" against
-   *  that roster, and multi-settlement quests are out of scope (see
-   *  multi-settlements plan), so randomizing home names would silently break
-   *  the only quests the game has. */
-  npcNames: readonly string[]
 }
 
 export function cellKey(cell: SettlementCell): string {
@@ -112,9 +118,6 @@ export function generateSettlementDef(
 
   const site = findSettlementSite(sampleHeight, waterLevel, localSearchRadius, seedForCell, center)
 
-  const sizeRandom = createSeededRandom(seedForCell ^ 0x51235)
-  const npcCount = 3 + Math.floor(sizeRandom() * 3)
-
   const terrain = classifySettlementTerrain(
     site.x,
     site.z,
@@ -125,11 +128,11 @@ export function generateSettlementDef(
     terrainSamplers,
   )
   const name = generateSettlementName(seedForCell, terrain)
-
   const nameCulture = pickNameCulture(seedForCell)
-  const npcNames = Array.from({ length: npcCount }, (_, i) =>
-    generateNpcName(seedForCell, i, characterForIndex(i).gender, nameCulture),
-  )
+
+  const size = rollVillageSize(terrain, seedForCell)
+  const families = generateFamilies(seedForCell, size, isHome, nameCulture)
+  const clearings = layoutClearings(site, families, seedForCell, sampleHeight, waterLevel, region.village)
 
   return {
     id: cellKey(cell),
@@ -138,11 +141,12 @@ export function generateSettlementDef(
     x: site.x,
     z: site.z,
     y: site.y,
-    npcCount,
+    size,
+    families,
+    clearings,
     isHome,
     terrain,
     name,
     nameCulture,
-    npcNames,
   }
 }

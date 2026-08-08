@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
+import type { FamilyMember, FamilyRelation } from '../settlement/families'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import {
@@ -12,7 +13,6 @@ import { applyFatigue, createHealthState, type HealthState, rest } from '../shar
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import {
   type CharacterDef,
-  characterForIndex,
   genderForName,
   type NpcGender,
   type Role,
@@ -81,8 +81,8 @@ export const NPC_QUEST_COMPLETE_SOUND_URLS: Record<NpcGender, readonly string[]>
 /** Quiet enough to stay under dialogue/ambient, audible enough to register. */
 const REACTION_SOUND_VOLUME = 0.35
 
-function modelUrlForIndex(treeIndex: number): string {
-  const pool = NPC_MODEL_URLS[characterForIndex(treeIndex).gender]
+function modelUrlFor(gender: NpcGender, treeIndex: number): string {
+  const pool = NPC_MODEL_URLS[gender]
   return pool[treeIndex % pool.length]!
 }
 
@@ -174,6 +174,7 @@ export class NpcAgent {
   readonly role: Role
   readonly traits: readonly Trait[]
   readonly personality: CharacterDef['personality']
+  readonly relation: FamilyRelation
   readonly health: HealthState
   private readonly dialogueArchetype: Personality
   private readonly pauseParams: PausePersonalityParams
@@ -219,20 +220,21 @@ export class NpcAgent {
     home: Place,
     treeIndex: number,
     needOffset: number,
+    member: FamilyMember,
     playSound: (url: string, volume?: number) => void,
-    nameOverride?: string,
   ) {
     this.playSound = playSound
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.landmarks = landmarks
     this.home = home.position.clone()
-    const character = characterForIndex(treeIndex)
-    this.name = nameOverride ?? character.name
+    const character = member.character
+    this.name = character.name
     this.gender = character.gender
     this.role = character.role
     this.traits = character.traits
     this.personality = character.personality
+    this.relation = member.relation
     this.health = createHealthState(MAX_HP)
     this.dialogueArchetype = nearestArchetype(this.personality)
     this.pauseParams = applySociableBoost(pausePersonalityParams(this.personality), this.traits)
@@ -246,6 +248,9 @@ export class NpcAgent {
     prepareProp(root, NPC_HEIGHT)
     const wrapper = new THREE.Group()
     wrapper.add(root)
+    // No standalone child model yet — approximate one with a smaller scale
+    // on the adult model instead (`member.scale`, rolled in `families.ts`).
+    if (member.scale !== 1) wrapper.scale.setScalar(member.scale)
     this.mesh = wrapper
     this.mesh.position.copy(home.position)
     this.mesh.position.y = sampleHeight(home.position.x, home.position.z)
@@ -282,9 +287,9 @@ export class NpcAgent {
     home: Place,
     treeIndex: number,
     needOffset: number,
+    member: FamilyMember,
     playSound: (url: string, volume?: number) => void = () => {},
-    nameOverride?: string,
-    modelUrl = modelUrlForIndex(treeIndex),
+    modelUrl = modelUrlFor(member.character.gender, treeIndex),
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -297,8 +302,8 @@ export class NpcAgent {
         home,
         treeIndex,
         needOffset,
+        member,
         playSound,
-        nameOverride,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -309,8 +314,8 @@ export class NpcAgent {
         home,
         treeIndex,
         needOffset,
+        member,
         playSound,
-        nameOverride,
       )
     }
   }
@@ -322,8 +327,8 @@ export class NpcAgent {
     home: Place,
     treeIndex: number,
     needOffset: number,
+    member: FamilyMember,
     playSound: (url: string, volume?: number) => void,
-    nameOverride?: string,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -345,8 +350,8 @@ export class NpcAgent {
       home,
       treeIndex,
       needOffset,
+      member,
       playSound,
-      nameOverride,
     )
   }
 
