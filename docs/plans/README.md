@@ -41,11 +41,11 @@ Implementation plans for features and larger changes.
 | [2026-08-08--031--village-generation.md](./2026-08-08--031--village-generation.md) | Generowanie wiosek: rozmiar (SM/MD/LG) ważony terenem → rodziny (husband/wife/child) → 1 dom na rodzinę → lokalnie wyrównane obszary terenu → obiekty wspólne | `verification needed` |
 | [2026-08-08--032--natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md) | Naturalne zasoby zależne od terenu → atrakcyjność lokalizacji wioski → dedykowane rodziny/outposty → food source → nazwa wioski → fundament pod przyszły crafting/production/handel | `planned` |
 | [2026-08-08--036--village-siting-difficult-terrain.md](./2026-08-08--036--village-siting-difficult-terrain.md) | Lepsze osadzanie wiosek w trudnym terenie — dziś płaskość sprawdzana tylko lokalnie (±2.5 jedn.), więc górskie osady wyglądają rozrzucone | `todo` |
-| [2026-08-08--037--npc-genealogy-lineages.md](./2026-08-08--037--npc-genealogy-lineages.md) | Rody NPC (Sem/Cham/Jafet) przypisane wg kierunku osady od (0,0) + kompas „N" na minimapie | `todo` |
+| [2026-08-08--037--npc-genealogy-lineages.md](./2026-08-08--037--npc-genealogy-lineages.md) | Rody NPC (Sem/Cham/Jafet) przypisane wg kierunku osady od (0,0) + kompas „N” na minimapie | `todo` |
 | [2026-08-08--038--campfire-lighting.md](./2026-08-08--038--campfire-lighting.md) | Zapalanie ognisk gałęziami (paliwo/czas palenia/dokładanie) + wolnostojące ogniska budowane przez gracza (2x gałąź + 2x kamień, menu pauzy) — zaimplementowane; 50% szans na już zapalone ognisko wioski w nocy — nadal `todo` | `verification needed` |
 | [2026-08-08--039--road-signposts.md](./2026-08-08--039--road-signposts.md) | Kierunkowskazy przy drogach międzyosadowych — nazwa docelowej osady, reużywa CSS2D etykiety jak NPC | `todo` |
-| [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku + pogoda (szkic od ChatGPT) — sezony wpływają na zasoby/roślinność, pogoda na widoczność/dźwięk | `planned` |
-| [2026-08-10--041--wait-rest-time-skip.md](./2026-08-10--041--wait-rest-time-skip.md) | Czekaj (1/3/6h, widoczne przyspieszenie) + Odpoczynek (obóz/miasto, 8h, fade-to-black) w Quick Actions — czysty skok czasu, bez player-stat systemu | `verification needed` |
+| [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku + pogoda — etap 1 efekt wizualny, później wpływ na istniejące systemy | `planned` |
+| [2026-08-10--041--wait-rest-time-skip.md](./2026-08-10--041--wait-rest-time-skip.md) | Czekaj (1/3/6h) + Odpoczynek (8h) w Quick Actions — skok czasu bez player-stat systemu | `verification needed` |
 | [2026-08-08--042--health-stamina-threat.md](./2026-08-08--042--health-stamina-threat.md) | Wspólny Health/Stamina/Threat: stamina dla NPC/fauny/gracza, exhaustion, attack/flee i reakcje na obrażenia | `draft` |
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
