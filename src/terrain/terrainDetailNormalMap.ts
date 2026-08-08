@@ -27,10 +27,13 @@ export function createTerrainNormalMap(): DataTexture {
     // octave, giving a seamless tile without any blending pass.
     const a = u * Math.PI * 2
     const b = v * Math.PI * 2
+    // Finer octaves weighted down further (0.45/0.2 → 0.3/0.1) — high-frequency
+    // content is what the N8AO pass amplifies into visible speckle/noise, more
+    // than `buildChunkGeometry.ts`'s `normalScale` alone can fix.
     let h = 0
     h += noise(Math.cos(a) * 3.2, Math.sin(a) * 3.2 + Math.cos(b) * 3.2) * 1.0
-    h += noise(Math.cos(a) * 7.1 + 40, Math.sin(a) * 7.1 + Math.sin(b) * 7.1 + 40) * 0.45
-    h += noise(Math.cos(a) * 15.3 + 90, Math.sin(a) * 15.3 + Math.sin(b) * 15.3 + 90) * 0.2
+    h += noise(Math.cos(a) * 7.1 + 40, Math.sin(a) * 7.1 + Math.sin(b) * 7.1 + 40) * 0.3
+    h += noise(Math.cos(a) * 15.3 + 90, Math.sin(a) * 15.3 + Math.sin(b) * 15.3 + 90) * 0.1
     return h
   }
 

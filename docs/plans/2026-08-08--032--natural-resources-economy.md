@@ -6,6 +6,17 @@
 
 > Draft od ChatGPT, bez dostępu do plików repo. Review przed implementacją — patrz „Review" niżej.
 
+## Update (2026-08-10, wieczór): pierwsza widoczna geometria zasobów
+
+Pierwotna implementacja (sekcja niżej) świadomie nie miała **żadnej** geometrii w świecie — zasoby były czystą warstwą danych na czas generowania osady. Na życzenie użytkownika ("Chcę jakieś wizualnie widoczne geometrie/przedmioty") dodano pierwszą warstwę wizualną, bez interakcji:
+
+- **Kupki rudy** — `src/terrain/resourceDeposits.ts` (nowy): main-threadowy system strumieniowania po dystansie od gracza (wzorzec `SettlementsManager`/`ItemSpawners`, nie pipeline workera terenu — `naturalResources.ts` już działa na próbkach z `ChunkManager` wystawionych na główny wątek, ten sam trik co `audio/ambientWeights.ts`). Dla każdego znaczącego złoża **żelaza/węgla/złota** (dodano nowy typ `coal` — `naturalResources.ts`, rola `miner` jak iron/gold) w promieniu ~160 jedn. od gracza: 2-3 kupki po 3-4 kamienie (`createRockCluster` z `settlement/props.ts`, rozszerzone o opcjonalny `color`: rdzawy dla żelaza, prawie czarny dla węgla, złoty dla złota) + etykieta z polską nazwą (`.npc-label`, jak przy itemach/NPC). Bez interakcji — czysto dekoracyjne, zgodnie z życzeniem ("Mogą być bez interakcji").
+- **Pole pszenicy** — `settlement/props.ts::createWheatField`: gęsty krąg cienkich, żółtych, wysokich "źdźbeł" (stożki, ten sam styl co `createReed`, ale węższe i wyższe, kolor `0xd8b23c`) obok ogródka (`garden`), tylko dla osad z `foodSourceType === 'field'` (znaczący `fertile_soil` w pobliżu). Nie zastępuje istniejącego `garden` propa — dokłada się obok niego.
+- **Ważna poprawka spójności przy okazji**: `settlementGenerator.ts` próbkowało warstwę zasobów seedem **per-komórka osady** (`seedForCell`) zamiast surowym seedem świata — to samo miejsce w świecie mogło więc zwrócić różne zasoby w zależności od tego, która wioska pytała. Naprawione na zwykły `seed` (world seed), zgodnie z §1 planu ("Zasoby są generowane niezależnie od wiosek") — istotne teraz, gdy ten sam layer jest odpytywany zarówno przy generowaniu osady, jak i przez `resourceDeposits.ts` z pozycji gracza; bez tej poprawki kupka rudy w terenie mogłaby nie odpowiadać złożu, które wpłynęło na daną wioskę.
+- Nadal poza zakresem: zbieranie/inventory zasobów, `clay`/`salt`/`resin`/`herbs` bez wizualizacji (świadomie pominięte — brak naturalnej roli/koloru bez wymyślania na siłę).
+
+`npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — czyste. Wizualna weryfikacja w przeglądarce nadal potrzebna (kupki rudy w górach, pole pszenicy przy wiosce z polem).
+
 ## Stan implementacji (2026-08-10)
 
 Zaimplementowane wg checklisty §14, z konkretnymi decyzjami technicznymi tam, gdzie plan zostawiał otwarte pytanie:
@@ -24,7 +35,7 @@ Testy: `src/terrain/naturalResources.test.ts` (nowy — determinizm, sparsity, `
 
 ### Świadome odstępstwa od dosłownego brzmienia planu
 
-- **Brak geometrii/interakcji w świecie dla zasobów** — `NaturalResource` to warstwa danych generowana on-demand przy tworzeniu osady, nie renderowalny/zbieralny obiekt (spójne z §4: „Na tym etapie nie tworzymy jeszcze pełnego inventory zasobu"). Gracz nie zobaczy żyły złota w terenie — zasoby wpływają na to, co generator zbuduje (rodzina/nazwa/food source), nie na to, co da się znaleźć i wykopać.
+- **Brak interakcji/inventory dla zasobów** (geometria częściowo już jest — patrz „Update 2026-08-10, wieczór" na górze pliku: kupki rudy + pole pszenicy, czysto dekoracyjne) — `NaturalResource` nadal nie jest zbieralnym/interaktywnym obiektem, spójne z §4: „Na tym etapie nie tworzymy jeszcze pełnego inventory zasobu". Gracz widzi teraz *gdzie* jest złoże (kupka rudy + etykieta), ale nie może go jeszcze wykopać/zebrać.
 - **§5 „szansa na wioskę"** zinterpretowane jako wpływ na *wybór miejsca w obrębie już istniejącej komórki siatki osad*, nie na to, czy komórka w ogóle dostaje osadę — dzisiejszy `SettlementsManager`/`generateSettlementDef` nie ma pojęcia „pusta komórka bez osady" i dodanie go byłoby osobną, większą zmianą architektoniczną (streaming, minimapa, itd.), nieproporcjonalną do tego pojedynczego punktu planu.
 - **Outpost nadal ma studnię/skład/ogród** (nie tylko „1 domek" z przykładu) — wymagane przez dzisiejszy system potrzeb NPC, który nie ma trybu „brak potrzeb". Bez ogniska.
 - **`plantForest` dla outpostów bez zmian** (nadal dostają standardowy pas lasu jak każda mała osada) — świadomie nieruszane w tej turze, potencjalny drobny dalszy smaczek („samotna chatka w lesie/na przełęczy górskiej" zamiast pełnego zagajnika) do rozważenia przy kolejnej iteracji, nie blokujący.

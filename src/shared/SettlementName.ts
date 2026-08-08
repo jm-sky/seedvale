@@ -47,13 +47,14 @@ const WORDS: Record<SettlementTerrain, WordSet> = {
 /** Word fragments a significant dominant resource (plan 032 §9) can mix into
  *  the terrain-based name — e.g. a mountain village that also sits on an
  *  iron deposit can become "Żelazna Turnia" instead of just any mountain
- *  name. Not every `ResourceType` gets an entry: clay/salt/resin/herbs from
+ *  name. Not every `ResourceType` gets an entry: clay/herbs from
  *  `naturalResources.ts` that lack one simply never influence the name (falls
  *  back to terrain-only, same as no resource at all). No `soloNames` here —
  *  those stay purely terrain-flavored; only the adjective+noun patterns
  *  (70% of rolls) pick up resource flavor. */
 const RESOURCE_WORDS: Partial<Record<ResourceType, { adjectives: readonly string[], nouns: readonly string[] }>> = {
   iron: { adjectives: ['Żelazna', 'Rudna'], nouns: ['Kuźnia', 'Ruda'] },
+  coal: { adjectives: ['Węglowa', 'Czarna'], nouns: ['Kopalnia', 'Sztolnia'] },
   gold: { adjectives: ['Złota', 'Bogata'], nouns: ['Żyła', 'Skarbnica'] },
   fish: { adjectives: ['Rybna'], nouns: ['Rybaki', 'Tonie'] },
   fertile_soil: { adjectives: ['Żyzna', 'Urodzajna'], nouns: ['Niwa', 'Rola'] },

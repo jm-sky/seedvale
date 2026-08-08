@@ -73,23 +73,33 @@ export function createTouchControls(
     <div class="seedvale-touch__joystick" data-joystick-base>
       <div class="seedvale-touch__joystick-knob" data-joystick-knob></div>
     </div>
-    <div class="seedvale-touch__buttons">
-      <button type="button" class="seedvale-touch__button" data-quick-actions>⚡</button>
-      <button type="button" class="seedvale-touch__button" data-drop hidden>G</button>
-      <button type="button" class="seedvale-touch__button seedvale-touch__button--sprint" data-sprint>RUN</button>
-      <button type="button" class="seedvale-touch__button seedvale-touch__button--primary" data-interact>E</button>
-    </div>
     <button type="button" class="seedvale-touch__pause" data-pause>☰</button>
   `
   parent.appendChild(root)
 
+  // Not a child of `root` — a child's z-index can never escape its parent's own
+  // stacking context, and `.seedvale-touch` is pinned low (z-index 7) so its
+  // full-screen look-drag zone never floats above a modal. This cluster needs
+  // to clear `.seedvale-npc-dialog` instead (see index.html's CSS comment on
+  // `.seedvale-touch__buttons`), so it's its own top-level sibling, same
+  // reasoning as `pauseButton` below.
+  const buttons = document.createElement('div')
+  buttons.className = 'seedvale-touch__buttons'
+  buttons.innerHTML = `
+    <button type="button" class="seedvale-touch__button" data-quick-actions>⚡</button>
+    <button type="button" class="seedvale-touch__button" data-drop hidden>G</button>
+    <button type="button" class="seedvale-touch__button seedvale-touch__button--sprint" data-sprint>RUN</button>
+    <button type="button" class="seedvale-touch__button seedvale-touch__button--primary" data-interact>E</button>
+  `
+  parent.appendChild(buttons)
+
   const lookZone = root.querySelector<HTMLElement>('[data-look]')!
   const joystickBase = root.querySelector<HTMLElement>('[data-joystick-base]')!
   const joystickKnob = root.querySelector<HTMLElement>('[data-joystick-knob]')!
-  const quickActionsButton = root.querySelector<HTMLButtonElement>('[data-quick-actions]')!
-  const dropButton = root.querySelector<HTMLButtonElement>('[data-drop]')!
-  const sprintButton = root.querySelector<HTMLButtonElement>('[data-sprint]')!
-  const interactButton = root.querySelector<HTMLButtonElement>('[data-interact]')!
+  const quickActionsButton = buttons.querySelector<HTMLButtonElement>('[data-quick-actions]')!
+  const dropButton = buttons.querySelector<HTMLButtonElement>('[data-drop]')!
+  const sprintButton = buttons.querySelector<HTMLButtonElement>('[data-sprint]')!
+  const interactButton = buttons.querySelector<HTMLButtonElement>('[data-interact]')!
   const pauseButton = root.querySelector<HTMLButtonElement>('[data-pause]')!
 
   // --- Joystick (single touch, tracked by identifier) ---
@@ -249,6 +259,13 @@ export function createTouchControls(
     if (enabled === inputEnabled) return
     inputEnabled = enabled
     root.classList.toggle('seedvale-touch--disabled', !enabled)
+    // Separate subtree from `root` (see the buttons cluster's own comment
+    // above) — needs the same class toggled on it directly, the descendant
+    // selector on `root` doesn't reach it. `[data-interact]` stays clickable
+    // regardless (index.html's `.seedvale-touch__buttons.seedvale-touch
+    // --disabled [data-interact]` exemption) — the npc dialog's "[E] Przyjmij"
+    // quest-accept prompt needs it even while the dialog counts as a modal.
+    buttons.classList.toggle('seedvale-touch--disabled', !enabled)
     if (enabled) return
     joystickTouchId = null
     resetJoystick()
@@ -277,9 +294,11 @@ export function createTouchControls(
       sprintButton.removeEventListener('click', onSprintToggle)
       pauseButton.removeEventListener('click', onPause)
       quickActionsButton.removeEventListener('click', onQuickActions)
-      // Relocated out of `root` into the shared top-right cluster (see
-      // createApp) — root.remove() below won't reach it anymore.
+      // Both relocated out of `root` (pauseButton into the shared top-right
+      // cluster, see createApp; `buttons` is its own top-level sibling, see
+      // above) — root.remove() below won't reach either of them.
       pauseButton.remove()
+      buttons.remove()
       root.remove()
     },
   }

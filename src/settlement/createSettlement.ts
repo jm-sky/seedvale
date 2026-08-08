@@ -80,6 +80,7 @@ export async function createSettlement(
     def.clearings,
     def.size,
     def.isHome,
+    def.foodSourceType,
   )
   scene.add(group)
 

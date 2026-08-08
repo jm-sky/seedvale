@@ -165,7 +165,7 @@
       .seedvale-pause {
         position: absolute;
         inset: 0;
-        z-index: 10;
+        z-index: 11;
         pointer-events: auto;
         display: flex;
         align-items: center;
@@ -285,12 +285,12 @@
         opacity: 0.4;
       }
       /* Visual layer for a "wait"/"rest" time skip (world/timeSkip.ts) —
-         above every other overlay (pause menu z-index 10) except the one-time
+         above every other overlay (pause menu z-index 11) except the one-time
          boot loading screen (20), which can never overlap this at runtime. */
       .seedvale-time-skip {
         position: absolute;
         inset: 0;
-        z-index: 11;
+        z-index: 12;
         pointer-events: none;
         display: flex;
         align-items: center;
@@ -420,7 +420,7 @@
       .seedvale-quest-log {
         position: absolute;
         inset: 0;
-        z-index: 9;
+        z-index: 10;
         pointer-events: auto;
         display: flex;
         align-items: center;
@@ -520,7 +520,7 @@
       .seedvale-villagers {
         position: absolute;
         inset: 0;
-        z-index: 9;
+        z-index: 10;
         pointer-events: auto;
         display: flex;
         align-items: center;
@@ -686,10 +686,23 @@
         pointer-events: none;
         will-change: transform;
       }
+      /* Like `.seedvale-touch__pause` below, this cluster is *not* a descendant
+         of `.seedvale-touch` (createTouchControls.ts appends it directly to the
+         app container) — a child's z-index can never escape its ancestor's own
+         stacking context, and `.seedvale-touch` is pinned to z-index 7 so its
+         full-screen look-drag zone never floats above a modal (see the
+         `.seedvale-touch--disabled` comment below). Sitting outside it lets this
+         cluster clear `.seedvale-npc-dialog` (z-index 8) — needed so the `E`
+         button keeps working for the "[E] Przyjmij" quest-accept prompt (reported:
+         taps on `E` were swallowed as "tap outside → decline" instead of
+         accepting). Still *below* quest-log/villagers/quick-actions/pause-menu
+         (z-index 10+): those don't need `E` to reach through them, and staying
+         under them avoids this cluster ever front-running their own content. */
       .seedvale-touch__buttons {
         position: absolute;
         right: max(20px, env(safe-area-inset-right));
         bottom: max(20px, env(safe-area-inset-bottom));
+        z-index: 9;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -743,9 +756,23 @@
          still land on its buttons on some mobile browsers — this hard-disables
          the whole layer so a tap meant for the modal can never also toggle
          RUN/interact/etc. underneath it. Toggled from createApp's tick loop via
-         TouchControls.setInputEnabled(). */
+         TouchControls.setInputEnabled(), which applies the same class to both
+         `.seedvale-touch` (joystick/look) and `.seedvale-touch__buttons`
+         (quick-actions/drop/sprint/interact — a separate subtree, see above). */
       .seedvale-touch--disabled * {
         pointer-events: none !important;
+      }
+      /* `E` (interact) is exempt: it's the only button `.seedvale-npc-dialog`'s
+         "[E] Przyjmij" quest-accept prompt can use on touch, and it must keep
+         working while that dialog counts as an open modal (that's the whole
+         reason `.seedvale-touch__buttons` was pulled above `.seedvale-npc-dialog`
+         in the first place). Higher specificity than the rule above, still
+         `!important` so it actually wins over it. Harmless while any *other*
+         modal is open — `app/createApp.ts`'s tick loop already discards a stray
+         interact press in every modal branch (npcDialog's is the only one that
+         acts on it). */
+      .seedvale-touch__buttons.seedvale-touch--disabled [data-interact] {
+        pointer-events: auto !important;
       }
 
       /* Small anchored popover (not a full-screen modal) for quick in-game
@@ -761,7 +788,7 @@
         overflow-y: auto;
         overscroll-behavior: contain;
         touch-action: pan-y;
-        z-index: 9;
+        z-index: 10;
         display: flex;
         flex-direction: column;
         gap: 8px;
