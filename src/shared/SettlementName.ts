@@ -44,7 +44,7 @@ const WORDS: Record<SettlementTerrain, WordSet> = {
 
 /** Deterministic name for a settlement — same `(seed, terrain)` always
  *  produces the same name, so it doesn't need its own save-data slot (the
- *  same guarantee `settlementGenerator.ts` already relies on for site/npcCount). */
+ *  same guarantee `settlementGenerator.ts` already relies on for site/families). */
 export function generateSettlementName(seed: number, terrain: SettlementTerrain): string {
   const random = createSeededRandom(seed ^ 0x5e77e17)
   const words = WORDS[terrain]

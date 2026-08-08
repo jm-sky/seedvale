@@ -1,5 +1,5 @@
 import type { HeightSampler } from '../player/PlayerController'
-import type { RegionParams, RoadCorridorSegment } from '../terrain/chunkHeightmap'
+import type { ClearingSegment, RegionParams, RoadCorridorSegment } from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
 import { minorLocationsFor } from './minorLocations'
 import {
@@ -440,6 +440,43 @@ export function segmentsNear(
         heightStrength: isRoad ? ctx.region.roadNetwork.roadHeightStrength : ctx.region.roadNetwork.pathHeightStrength,
         tintStrength: isRoad ? ctx.region.roadNetwork.roadTintStrength : ctx.region.roadNetwork.pathTintStrength,
       })
+    }
+  }
+  return out
+}
+
+/** Village clearing segments near a chunk's world-space footprint — same
+ *  "resolve nearby settlement defs, filter to what could reach this chunk"
+ *  shape as `segmentsNear`, just reading `SettlementDef.clearings` (already
+ *  laid out by `village/villageClearing.ts`'s `layoutClearings` when the def
+ *  was resolved) instead of routing. Kept here rather than in
+ *  `villageClearing.ts` itself to reuse this module's existing `defFor`
+ *  cache/`RoadNetworkContext` and avoid a circular import: `villageClearing.ts`
+ *  stays a pure leaf module `settlementGenerator.ts` can import without this
+ *  module importing back into it. Called by `chunkManager.ts`'s `paramsFor()`,
+ *  main-thread only, once per chunk request. */
+export function clearingSegmentsNear(
+  worldX: number,
+  worldZ: number,
+  chunkSize: number,
+  ctx: RoadNetworkContext,
+): ClearingSegment[] {
+  const cell = worldToCell(worldX, worldZ)
+  const half = chunkSize / 2
+  const minX = worldX - half
+  const maxX = worldX + half
+  const minZ = worldZ - half
+  const maxZ = worldZ + half
+
+  const { heightStrength, tintStrength } = ctx.region.village
+  const out: ClearingSegment[] = []
+  for (const c of cellsWithinRadius(cell, 1)) {
+    const def = defFor(c, ctx)
+    for (const area of [def.clearings.core, ...def.clearings.houses]) {
+      const margin = area.radius + 2
+      if (area.x + margin < minX || area.x - margin > maxX) continue
+      if (area.z + margin < minZ || area.z - margin > maxZ) continue
+      out.push({ x: area.x, z: area.z, radius: area.radius, targetH: area.targetH, heightStrength, tintStrength })
     }
   }
   return out

@@ -293,6 +293,32 @@ export function createDebugGui(
       .onFinishChange(handlers.onTerrainChange),
   )
 
+  const village = terrain.addFolder('Village')
+  terrainControllers.push(
+    village
+      .add(config.terrain.region.village, 'coreRadius', 4, 20, 0.5)
+      .name('Core clearing radius')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    village
+      .add(config.terrain.region.village, 'houseRadius', 2, 10, 0.5)
+      .name('House clearing radius')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    village
+      .add(config.terrain.region.village, 'heightStrength', 0, 1, 0.01)
+      .name('Clearing height strength')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    village
+      .add(config.terrain.region.village, 'tintStrength', 0, 1, 0.01)
+      .name('Clearing tint strength')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+
   const grass = gui.addFolder('Grass')
   terrainControllers.push(
     grass

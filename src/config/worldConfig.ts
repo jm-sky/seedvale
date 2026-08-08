@@ -127,6 +127,12 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
           maxNeighborRoads: 3,
           dockSearchRadius: 140,
         },
+        village: {
+          coreRadius: 9,
+          houseRadius: 4.5,
+          heightStrength: 0.8,
+          tintStrength: 0.75,
+        },
       },
       grass: {
         enabled: true,
@@ -202,6 +208,9 @@ export function applyStoredTerrain(
     }
     if (r.roadNetwork && typeof r.roadNetwork === 'object') {
       target.region.roadNetwork = { ...target.region.roadNetwork, ...r.roadNetwork }
+    }
+    if (r.village && typeof r.village === 'object') {
+      target.region.village = { ...target.region.village, ...r.village }
     }
   }
   if (t.grass && typeof t.grass === 'object') {

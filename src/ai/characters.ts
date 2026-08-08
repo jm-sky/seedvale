@@ -1,4 +1,5 @@
 import type { BigFivePersonality } from './dialogue'
+import { createSeededRandom } from '../world/parseSeed'
 import { personalityForIndex } from './dialogue'
 
 export type NpcGender = 'male' | 'female'
@@ -19,32 +20,57 @@ export type CharacterDef = {
   traits: readonly Trait[]
 }
 
-type CharacterSeed = Omit<CharacterDef, 'personality'>
+const ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'trader']
+const TRAITS: readonly Trait[] = ['energetic', 'fast_worker', 'night_owl', 'sociable']
 
-/** Deterministic pool — assigned by index (treeIndex % length), not
- *  randomized per session, so a given NPC slot is stable across reloads. */
-const SEEDS: readonly CharacterSeed[] = [
+type ReservedSeed = Omit<CharacterDef, 'personality'>
+
+/** The 4 NPCs `quests/quests.ts` hardcodes by name as giver/target — must
+ *  always exist in the home settlement with this exact gender/role/traits
+ *  (village-generation's reserved-family floor guarantees that, see
+ *  `settlement/families.ts`). Randomizing these would silently break the
+ *  only quests the game has. */
+const RESERVED_SEEDS: readonly ReservedSeed[] = [
   { name: 'Anna', gender: 'female', role: 'farmer', traits: ['fast_worker'] },
   { name: 'Piotr', gender: 'male', role: 'woodcutter', traits: ['energetic'] },
   { name: 'Kasia', gender: 'female', role: 'trader', traits: ['night_owl'] },
   { name: 'Marek', gender: 'male', role: 'guard', traits: ['sociable'] },
-  { name: 'Ola', gender: 'female', role: 'guard', traits: ['fast_worker', 'sociable'] },
-  { name: 'Tomek', gender: 'male', role: 'farmer', traits: ['energetic', 'night_owl'] },
-  { name: 'Zofia', gender: 'female', role: 'woodcutter', traits: ['night_owl'] },
-  { name: 'Jacek', gender: 'male', role: 'trader', traits: ['sociable', 'fast_worker'] },
 ]
 
-export const CHARACTERS: readonly CharacterDef[] = SEEDS.map((seed, i) => ({
+export const RESERVED_CHARACTERS: readonly CharacterDef[] = RESERVED_SEEDS.map((seed, i) => ({
   ...seed,
   personality: personalityForIndex(i),
 }))
 
-export function characterForIndex(treeIndex: number): CharacterDef {
-  return CHARACTERS[treeIndex % CHARACTERS.length]!
+/** Gender for one of the 4 reserved quest-critical names, or null otherwise —
+ *  procedurally generated family members (everyone else) have no fixed
+ *  gender to look up here; callers already fall back when this returns null
+ *  (e.g. `QuestManager.ts`). */
+export function genderForName(name: string): NpcGender | null {
+  return RESERVED_CHARACTERS.find((c) => c.name === name)?.gender ?? null
 }
 
-/** Gender for a placeholder NPC name, or null for names outside the pool
- *  (defensive — quest defs reference these names by hand). */
-export function genderForName(name: string): NpcGender | null {
-  return CHARACTERS.find((c) => c.name === name)?.gender ?? null
+/** Deterministic role/traits/personality for a procedurally generated family
+ *  member — replaces the old `characterForIndex(treeIndex % 8)` fixed-roster
+ *  lookup. `name` isn't produced here: callers already have one (from
+ *  `nameCultures.ts`'s `generateNpcName` or a reserved character) before
+ *  they get here — see `settlement/families.ts`. */
+export function characterForSeed(seed: number, gender: NpcGender): Omit<CharacterDef, 'name'> {
+  const random = createSeededRandom(seed ^ 0x63a4e1)
+  const role = ROLES[Math.floor(random() * ROLES.length)]!
+  const traitCount = random() < 0.5 ? 1 : 2
+  const pool = [...TRAITS]
+  const traits: Trait[] = []
+  for (let i = 0; i < traitCount && pool.length > 0; i++) {
+    traits.push(pool.splice(Math.floor(random() * pool.length), 1)[0]!)
+  }
+  return {
+    gender,
+    role,
+    traits,
+    // `personalityForIndex` indexes a small fixed array by `% length` —
+    // needs an unsigned value, unlike the xor/imul-composed seeds callers
+    // pass in here, which are signed 32-bit and can be negative.
+    personality: personalityForIndex(seed >>> 0),
+  }
 }
