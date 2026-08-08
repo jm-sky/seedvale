@@ -1,4 +1,4 @@
-import { createNoise2D } from 'simplex-noise'
+import { createNoise4D } from 'simplex-noise'
 import {
   DataTexture,
   LinearFilter,
@@ -25,23 +25,25 @@ const NOISE_SEED = 0x7a11e5
  * than by mirroring/cropping.
  */
 export function createTerrainNormalMap(): DataTexture {
-  const noise = createNoise2D(createSeededRandom(NOISE_SEED))
+  const noise4D = createNoise4D(createSeededRandom(NOISE_SEED))
 
   const data = new Uint8Array(SIZE * SIZE * 4)
   const normal = new Vector3()
+  // Each axis gets its own independent circle (cos/sin pair) fed into a true
+  // 4D noise field — the standard technique for seamlessly tileable 2D noise.
+  // A prior version combined both axes into one 2D noise call, which isn't a
+  // real 2D field and produced coherent flow-line/ring artifacts (visible as
+  // "zebra stripe" banding under directional light) instead of organic grain.
   const heightAt = (u: number, v: number): number => {
-    // Sample on a circle in each axis so the noise field is periodic over
-    // [0,1) — u/v wrap around a full 2π turn at two different radii per
-    // octave, giving a seamless tile without any blending pass.
-    const a = u * Math.PI * 2
-    const b = v * Math.PI * 2
-    // Finer octaves weighted down further (0.45/0.2 → 0.3/0.1) — high-frequency
-    // content is what the N8AO pass amplifies into visible speckle/noise, more
-    // than `buildChunkGeometry.ts`'s `normalScale` alone can fix.
     let h = 0
-    h += noise(Math.cos(a) * 3.2, Math.sin(a) * 3.2 + Math.cos(b) * 3.2) * 1.0
-    h += noise(Math.cos(a) * 7.1 + 40, Math.sin(a) * 7.1 + Math.sin(b) * 7.1 + 40) * 0.3
-    h += noise(Math.cos(a) * 15.3 + 90, Math.sin(a) * 15.3 + Math.sin(b) * 15.3 + 90) * 0.1
+    const octave = (freq: number, weight: number): void => {
+      const a = u * Math.PI * 2 * freq
+      const b = v * Math.PI * 2 * freq
+      h += noise4D(Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)) * weight
+    }
+    octave(1, 1.0)
+    octave(2, 0.3)
+    octave(4, 0.1)
     return h
   }
 
@@ -67,16 +69,8 @@ export function createTerrainNormalMap(): DataTexture {
   const tex = new DataTexture(data, SIZE, SIZE, RGBAFormat, UnsignedByteType)
   tex.wrapS = RepeatWrapping
   tex.wrapT = RepeatWrapping
-  // The real bug behind "normal map still too strong, tuning normalScale
-  // didn't help": this texture repeats `NORMAL_MAP_TILES_PER_CHUNK` times per
-  // chunk across the whole terrain, so at any distance/oblique angle it's
-  // heavily minified on screen. `minFilter: LinearFilter` (no mipmapping)
-  // can't handle that — the GPU samples the raw high-frequency texture
-  // without any downsampled level to blend into, which aliases into the
-  // sharp dark/light interference "zebra stripe" banding actually reported
-  // (screenshot), not a uniform "too bright" bump look normalScale alone
-  // could fix. Mipmapping (trilinear filtering + anisotropy) is the correct
-  // fix for repeating-texture minification aliasing.
+  // Mipmapping + anisotropy: standard minification handling for a texture
+  // that repeats many times across the visible terrain.
   tex.generateMipmaps = true
   tex.minFilter = LinearMipmapLinearFilter
   tex.magFilter = LinearFilter
