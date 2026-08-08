@@ -98,7 +98,15 @@ export async function createApp(
   container: HTMLElement,
   initialSave?: SaveData | null,
 ): Promise<() => void> {
-  document.body.classList.toggle('seedvale-touch', isTouchDevice())
+  // NB: must NOT be `seedvale-touch` — that's the touch-overlay component's own
+  // block class (`.seedvale-touch { position:absolute; inset:0; z-index:7;
+  // pointer-events:none }` in index.html). Putting it on <body> made the whole
+  // document `pointer-events: none`, and since that property inherits, every
+  // modal (pause menu, quest log, villagers, NPC dialog) and its buttons became
+  // untappable and unscrollable on touch devices — only the few elements with an
+  // explicit `pointer-events: auto` (the joystick/look-zone/action buttons) still
+  // responded, which is why taps appeared to "fall through" the modal onto RUN.
+  document.body.classList.toggle('seedvale-touch-device', isTouchDevice())
 
   const loadingScreen = createLoadingScreen(container)
 

@@ -132,6 +132,11 @@
       }
       .seedvale-minimap__canvas {
         display: block;
+        /* Read-only widget: let touch look-drag / pinch pass straight through to
+           the full-screen .seedvale-touch__look zone underneath (the minimap
+           sits above it in the top-right cluster on touch). Only the collapse
+           toggle below is interactive. */
+        pointer-events: none;
         border: 1px solid rgba(255, 255, 255, 0.25);
         border-radius: 6px;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
@@ -148,14 +153,20 @@
         font-size: 11px;
         font-family: inherit;
         cursor: pointer;
+        pointer-events: auto;
       }
       .seedvale-minimap__toggle:hover {
         background: rgba(20, 24, 28, 0.9);
       }
+      /* Every full-screen modal root re-asserts `pointer-events: auto`: the
+         property inherits, so a modal must never depend on no ancestor having
+         turned it off (that exact bug made all four modals untappable on
+         touch — see the .seedvale-touch note below). */
       .seedvale-pause {
         position: absolute;
         inset: 0;
         z-index: 10;
+        pointer-events: auto;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -323,6 +334,7 @@
         position: absolute;
         inset: 0;
         z-index: 8;
+        pointer-events: auto;
         display: flex;
         align-items: flex-end;
         justify-content: center;
@@ -365,6 +377,7 @@
         position: absolute;
         inset: 0;
         z-index: 9;
+        pointer-events: auto;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -464,6 +477,7 @@
         position: absolute;
         inset: 0;
         z-index: 9;
+        pointer-events: auto;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -584,6 +598,12 @@
       }
 
       /* --- Touch controls (joystick / look-drag / action buttons) --- */
+      /* IMPORTANT: `.seedvale-touch` is the *component root* of the touch
+         overlay only. Never reuse this class as a state/marker class on <body>
+         (use `body.seedvale-touch-device`, set by createApp) — `pointer-events`
+         is an inherited property, so `pointer-events: none` landing on <body>
+         silently makes the entire document untappable except for the few nodes
+         that re-enable it explicitly. */
       .seedvale-touch {
         position: absolute;
         inset: 0;
@@ -699,6 +719,9 @@
         flex-direction: column;
         align-items: flex-end;
         gap: 8px;
+        /* Layout wrapper only — its padding/gap must not swallow look-drags;
+           the ☰ button and the minimap toggle re-enable pointer events. */
+        pointer-events: none;
       }
       .seedvale-top-right-cluster .seedvale-minimap {
         position: static;
@@ -711,7 +734,7 @@
       }
       /* Desktop toggle (2px/8px padding, ~11px font) is too small a touch target —
          enlarge it to a comfortable tap size on touch devices. */
-      body.seedvale-touch .seedvale-minimap__toggle {
+      body.seedvale-touch-device .seedvale-minimap__toggle {
         min-width: 44px;
         min-height: 32px;
         padding: 6px 10px;
@@ -719,7 +742,7 @@
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
       }
-      body.seedvale-touch .seedvale-interact-prompt {
+      body.seedvale-touch-device .seedvale-interact-prompt {
         bottom: 160px;
       }
 

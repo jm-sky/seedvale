@@ -19,7 +19,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 001 | [2026-08-07--001--water-shore-color-banding.md](./2026-08-07--001--water-shore-color-banding.md) | Brzeg jeziora w schodkach — twarde progi koloru terenu | `done` |
 | 002 | [2026-08-07--002--water-daynight-integration.md](./2026-08-07--002--water-daynight-integration.md) | Woda nie reaguje na dzień/noc | `done` |
 | 003 | [2026-08-07--003--ocean-shoreline-artifacts.md](./2026-08-07--003--ocean-shoreline-artifacts.md) | Ostre krawędzie/artefakty na styku oceanu z lądem | `todo` |
+| 004 | [2026-08-08--004--mobile-modals-untappable-pointer-events.md](./2026-08-08--004--mobile-modals-untappable-pointer-events.md) | Modale (pauza/zadania/mieszkańcy/dialog) nie reagują na dotyk ani nie scrollują — `pointer-events: none` odziedziczone z `<body>` | `verification needed` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `004`
+**Next ID:** `005`

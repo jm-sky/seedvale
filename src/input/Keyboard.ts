@@ -32,6 +32,20 @@ const KEY_MAP: Record<string, keyof KeyState> = {
  *  so a tap registers exactly once regardless of how long the key stays down. */
 const EDGE_TRIGGERED = new Set<keyof KeyState>(['drop', 'interact', 'questLog'])
 
+/** True while the event is headed for a text field — the pause menu's Character
+ *  name input is the live case. Without this, `KEY_MAP` letters (w/a/s/d/e/l/g)
+ *  would both steer the player and get `preventDefault()`d out of the field, so
+ *  the name simply couldn't contain them. */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target.isContentEditable
+  )
+}
+
 export function createKeyboard(): {
   state: KeyState
   /** Reads and clears the pending interact press. Returns true at most once per keydown. */
@@ -54,6 +68,7 @@ export function createKeyboard(): {
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
+    if (isEditableTarget(event.target)) return
     const action = KEY_MAP[event.code]
     if (!action) return
     if (EDGE_TRIGGERED.has(action)) {
@@ -65,6 +80,7 @@ export function createKeyboard(): {
   }
 
   const onKeyUp = (event: KeyboardEvent) => {
+    if (isEditableTarget(event.target)) return
     const action = KEY_MAP[event.code]
     if (!action) return
     if (!EDGE_TRIGGERED.has(action)) state[action] = false
