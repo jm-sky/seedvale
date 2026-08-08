@@ -24,6 +24,7 @@ import {
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { createChunkWater, type WorldWater } from '../world/createWater'
+import { biomeWeightsAt } from './biomeRegions'
 import { buildChunkGeometry } from './buildChunkGeometry'
 import {
   chebyshevDistance,
@@ -164,6 +165,11 @@ export type ChunkManager = {
   sampleContinentalness: (x: number, z: number) => number
   sampleMountainRidge: (x: number, z: number) => number
   sampleMoistureRegion: (x: number, z: number) => number
+  /** 0 (open ground) – 1 (dense forest) biome weight at (x, z) — same
+   *  classification `terrain/chunkItems.ts`/`chunkVegetation.ts` use at
+   *  generation time, composed here from the already-exposed samplers for
+   *  runtime callers (e.g. fauna player-detection, `createFauna.ts`). */
+  sampleForestFactor: (x: number, z: number) => number
   /** World-generated pickup items (`terrain/chunkItems.ts`) within `radius` of
    *  `pos` among currently loaded chunks — sufficient given `radius` is only
    *  ever the small interact range, and the player's own chunk is always loaded. */
@@ -535,6 +541,12 @@ export function createChunkManager(
     sampleContinentalness: (x, z) => readField('continentalness', x, z),
     sampleMountainRidge: (x, z) => readField('mountainRidge', x, z),
     sampleMoistureRegion: (x, z) => readField('moistureRegion', x, z),
+    sampleForestFactor: (x, z) => {
+      const h = readField('heights', x, z)
+      const altitude01 = Math.max(0, (h - config.waterLevel) / Math.max(config.heightScale, 0.001))
+      const moistureRegion = readField('moistureRegion', x, z)
+      return biomeWeightsAt(moistureRegion, altitude01, config.region).forest
+    },
     getNearbyItems(pos, radius) {
       const out: { id: string, kind: ItemKind, x: number, z: number }[] = []
       for (const rec of chunks.values()) {

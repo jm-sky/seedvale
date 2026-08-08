@@ -14,7 +14,12 @@ import { ANIMAL_DEFS, AnimalAgent, type AnimalKind } from './AnimalAgent'
 import { type PreySpawner, updateSpawners } from './AnimalSpawner'
 
 export type Fauna = {
-  update: (dt: number, observerPos: Vector3, timeOfDay: number) => void
+  update: (
+    dt: number,
+    observerPos: Vector3,
+    timeOfDay: number,
+    litFires: readonly { x: number, z: number }[],
+  ) => void
   dispose: () => void
   getAgents: () => AnimalAgent[]
   getSpawners: () => readonly PreySpawner[]
@@ -99,6 +104,7 @@ function disposeAgent(agent: AnimalAgent): void {
 export async function createFauna(
   scene: Scene,
   sampleHeight: HeightSampler,
+  sampleForestFactor: (x: number, z: number) => number,
   waterLevel: number,
   homeRadius: number,
   settlementCenter: Vector3,
@@ -170,9 +176,12 @@ export async function createFauna(
   }
 
   return {
-    update(dt, observerPos, timeOfDay) {
-      const isNight = skyParamsFromTime(timeOfDay).dayFactor <= 0
-      for (const a of agents) a.update(dt, agents, observerPos, isNight)
+    update(dt, observerPos, timeOfDay, litFires) {
+      const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
+      for (const a of agents) {
+        const forestFactor = sampleForestFactor(a.mesh.position.x, a.mesh.position.z)
+        a.update(dt, agents, observerPos, dayFactor, forestFactor, litFires)
+      }
 
       if (agents.some((a) => a.readyToRemove())) {
         const alive: AnimalAgent[] = []

@@ -694,7 +694,11 @@ export async function createApp(
       lights.follow(player.mesh.position.x, player.mesh.position.z)
       ocean.follow(player.mesh.position.x, player.mesh.position.z)
       settlementsManager.update(dt, player.mesh.position)
-      fauna.update(dt, player.mesh.position, dayNight.timeOfDay)
+      const litFires = [
+        ...settlementsManager.getLoaded().flatMap((s) => (s.fire?.isLit() ? [s.fire.position] : [])),
+        ...placedFires.list().filter((f) => f.fire.isLit()).map((f) => f.fire.position),
+      ]
+      fauna.update(dt, player.mesh.position, dayNight.timeOfDay, litFires)
       itemSpawners.update(dt, player.mesh.position)
       placedFires.update(dt)
       chunkManager.tickWater(dt)
@@ -984,6 +988,7 @@ function buildFauna(
   return createFauna(
     scene,
     chunkManager.sampleHeight,
+    chunkManager.sampleForestFactor,
     chunkManager.waterLevel,
     HOME_RADIUS,
     settlement.center,

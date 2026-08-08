@@ -3,6 +3,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createHealthState, damageFor, type HealthState, MAX_HP } from './HealthState'
+import { isPlayerNoticed } from './playerAwareness'
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
 const WATER_MARGIN = 0.3
@@ -24,6 +25,24 @@ const NIGHT_PREY_SPRINT_MULT = 0.9
  *  so it's only ever hit by a pathological long chase, where pulling back toward
  *  home is the desired behavior anyway. */
 const ROAM_RADIUS = 50
+/** Minimum dot(animalForward, toPlayer) to count as "in the animal's vision
+ *  cone" — same convention/threshold family as `INTERACT_MIN_DOT` in
+ *  `app/createApp.ts`, just wider (peripheral awareness, not a tight
+ *  interact-prompt cone). */
+const PLAYER_NOTICE_CONE_DOT = 0.3
+/** How long (seconds) an animal keeps fleeing the player after last noticing
+ *  them, even if the fresh geometric check (range/cone) would now fail —
+ *  hysteresis, avoids flicker right at the edge of the notice range/cone. */
+const ALERT_HOLD_SEC = 5
+/** Radius (world units) within which a *lit* campfire (village or
+ *  player-placed, see `app/createApp.ts`'s `litFires`) repels any animal,
+ *  predator or prey alike — pure distance, no facing cone (you don't need to
+ *  be looking at a fire to smell/hear it). */
+const FIRE_AVOID_RADIUS = 11
+/** Distance the flee-target point is placed beyond the animal, along the
+ *  away-from-threat direction — shared by fleeing a predator, the player, or
+ *  a campfire (`fleeFrom()`). */
+const FLEE_DISTANCE = 8
 
 export type AnimalRole = 'predator' | 'prey'
 /** Matches Quaternius Ultimate Animated Animal Pack kinds used in Seedvale. */
@@ -52,6 +71,15 @@ export type AnimalDef = {
   /** Prey-only: radius (m) within which it notices the nearest predator and flees.
    *  Meaningless for predator defs (set to 0 — predators don't flee). */
   fleeRange: number
+  /** Base radius (m) within which this animal can notice the player *if*
+   *  also facing them (see `PLAYER_NOTICE_CONE_DOT`) — modified further by
+   *  time of day/terrain, see `playerAwareness.ts::effectiveNoticeRange`.
+   *  Applies to both roles: predators are wary of humans too, just less
+   *  skittish than prey (smaller range). */
+  playerNoticeRange: number
+  /** Hard radius (m) within which the animal notices the player regardless
+   *  of facing direction — startled at close range. */
+  playerPanicRange: number
 }
 
 export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
@@ -65,6 +93,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     sprintSpeed: 6.5,
     detectRange: 18,
     fleeRange: 0,
+    playerNoticeRange: 10,
+    playerPanicRange: 3,
   },
   fox: {
     kind: 'fox',
@@ -76,6 +106,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     sprintSpeed: 6.2,
     detectRange: 15,
     fleeRange: 0,
+    playerNoticeRange: 9,
+    playerPanicRange: 3,
   },
   deer: {
     kind: 'deer',
@@ -87,6 +119,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     sprintSpeed: 7.5,
     detectRange: 16,
     fleeRange: 14,
+    playerNoticeRange: 18,
+    playerPanicRange: 4,
   },
   stag: {
     kind: 'stag',
@@ -98,6 +132,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     sprintSpeed: 7.2,
     detectRange: 17,
     fleeRange: 15,
+    playerNoticeRange: 16,
+    playerPanicRange: 4,
   },
 }
 
@@ -127,6 +163,9 @@ export class AnimalAgent {
   private timeSinceDeath = 0
   private isNight = false
   private highlighted = false
+  /** Counts down from `ALERT_HOLD_SEC` after last noticing the player —
+   *  hysteresis for `checkEnvironmentalDanger()`, see its comment. */
+  private alertTimer = 0
 
   constructor(
     def: AnimalDef,
@@ -243,17 +282,23 @@ export class AnimalAgent {
     dt: number,
     others: AnimalAgent[],
     observerPos: THREE.Vector3,
-    isNight = false,
+    dayFactor: number,
+    forestFactor: number,
+    litFires: readonly { x: number, z: number }[],
   ): void {
     if (this.health.dead) {
       this.timeSinceDeath += dt
       return
     }
     if (this.attackCooldown > 0) this.attackCooldown -= dt
-    this.isNight = isNight
+    if (this.alertTimer > 0) this.alertTimer -= dt
+    this.isNight = dayFactor <= 0
     this.moving = false
     this.sprinting = false
-    if (this.def.role === 'predator') {
+    const danger = this.checkEnvironmentalDanger(observerPos, dayFactor, forestFactor, litFires)
+    if (danger) {
+      this.fleeFrom(danger.x, danger.z, dt)
+    } else if (this.def.role === 'predator') {
       this.updatePredator(dt, others)
     } else {
       this.updatePrey(dt, others)
@@ -265,6 +310,75 @@ export class AnimalAgent {
       labelOpacityForDistance(this.mesh.position.distanceTo(observerPos)),
     )
     this.mixer?.update(dt)
+  }
+
+  /** Player-notice + campfire-avoidance — checked ahead of the existing
+   *  predator/prey dynamics every frame, for both roles (a wolf is wary of
+   *  fire and humans too, not just deer). Player detection uses distance +
+   *  the animal's own facing cone (`mesh.rotation.y`, same dot-product
+   *  convention as `interaction/findInteractionTarget.ts::pickInGaze`) plus
+   *  day/night and terrain modifiers (`playerAwareness.ts`); a lit campfire
+   *  is pure distance, no facing needed. Player detection takes priority
+   *  over fire (noticing a human is more urgent than smelling smoke), and
+   *  once noticed the animal keeps fleeing for `ALERT_HOLD_SEC` even if the
+   *  fresh check would now fail (hysteresis, avoids flee/calm flicker right
+   *  at the edge of range/cone). Returns the point to flee from, or null. */
+  private checkEnvironmentalDanger(
+    observerPos: THREE.Vector3,
+    dayFactor: number,
+    forestFactor: number,
+    litFires: readonly { x: number, z: number }[],
+  ): { x: number, z: number } | null {
+    const dx = observerPos.x - this.mesh.position.x
+    const dz = observerPos.z - this.mesh.position.z
+    const distance = Math.hypot(dx, dz)
+    let facingDot = -1
+    if (distance > 1e-4) {
+      const forwardX = -Math.sin(this.mesh.rotation.y)
+      const forwardZ = -Math.cos(this.mesh.rotation.y)
+      facingDot = (dx / distance) * forwardX + (dz / distance) * forwardZ
+    }
+    const noticed = isPlayerNoticed({
+      distance,
+      facingDot,
+      panicRange: this.def.playerPanicRange,
+      noticeRange: this.def.playerNoticeRange,
+      dayFactor,
+      forestFactor,
+      minFacingDot: PLAYER_NOTICE_CONE_DOT,
+    })
+    if (noticed) this.alertTimer = ALERT_HOLD_SEC
+    if (noticed || this.alertTimer > 0) {
+      return { x: observerPos.x, z: observerPos.z }
+    }
+
+    let nearestFire: { x: number, z: number } | null = null
+    let bestD = FIRE_AVOID_RADIUS
+    for (const fire of litFires) {
+      const d = Math.hypot(fire.x - this.mesh.position.x, fire.z - this.mesh.position.z)
+      if (d < bestD) {
+        bestD = d
+        nearestFire = fire
+      }
+    }
+    return nearestFire
+  }
+
+  /** Sprints away from (x, z) — shared by fleeing a predator (`updatePrey`),
+   *  the player, or a campfire (`checkEnvironmentalDanger`). */
+  private fleeFrom(x: number, z: number, dt: number): void {
+    this.tmp.set(this.mesh.position.x - x, 0, this.mesh.position.z - z)
+    if (this.tmp.lengthSq() < 1e-4) {
+      this.tmp.set(1, 0, 0)
+    }
+    this.tmp.normalize()
+    this.sprinting = true
+    this.fleeTarget.set(
+      this.mesh.position.x + this.tmp.x * FLEE_DISTANCE,
+      0,
+      this.mesh.position.z + this.tmp.z * FLEE_DISTANCE,
+    )
+    this.steerToward(this.fleeTarget, this.sprintSpeedNow(), dt)
   }
 
   /** Prey move slower at night; predators are unaffected. */
@@ -309,22 +423,7 @@ export class AnimalAgent {
   private updatePrey(dt: number, others: AnimalAgent[]): void {
     const threat = this.nearest(others, 'predator', this.def.fleeRange)
     if (threat) {
-      this.tmp.set(
-        this.mesh.position.x - threat.mesh.position.x,
-        0,
-        this.mesh.position.z - threat.mesh.position.z,
-      )
-      if (this.tmp.lengthSq() < 1e-4) {
-        this.tmp.set(1, 0, 0)
-      }
-      this.tmp.normalize()
-      this.sprinting = true
-      this.fleeTarget.set(
-        this.mesh.position.x + this.tmp.x * 8,
-        0,
-        this.mesh.position.z + this.tmp.z * 8,
-      )
-      this.steerToward(this.fleeTarget, this.sprintSpeedNow(), dt)
+      this.fleeFrom(threat.mesh.position.x, threat.mesh.position.z, dt)
       return
     }
     this.wander(dt)
