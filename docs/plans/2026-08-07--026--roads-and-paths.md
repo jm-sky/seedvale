@@ -5,6 +5,12 @@
 **Priority:** średni — rozszerzenie [multi-settlements](./2026-08-07--025--multi-settlements.md) (grafuje istniejącą siatkę wiosek) i [biome-regions](./2026-08-07--028--biome-regions.md) (kolejna warstwa na tym samym `sampleRawTexel`). Nie blokuje ani nie jest blokowany przez inne kolejkowane plany.
 **Zakres (zdecydowane z userem 2026-08-07):** drogi **też międzyosadowe** (nie tylko osada↔port), oraz wygładzenie terenu **+ blend koloru** (nie samo wygładzenie).
 
+**Follow-up (2026-08-08, jeszcze `verification needed`):** user zgłosił, że dróg nie widać. Trzy zmiany w `src/settlement/roadNetwork.ts`/`SettlementsManager.ts`:
+- Routing traktował `mountainRidge` powyżej progu jako **twardą ścianę** (`findRoute` zwracał `null`, brak drogi w ogóle) — zamieniony na ciągły koszt (`MOUNTAIN_COST_WEIGHT * ridge²` mnożnik dystansu kroku), więc trasa może przejść przez górę (przełęcz), tylko drożej — router wybiera obejście, gdy jest tańsze w obrębie siatki wyszukiwania (poszerzonej `margin: gridStep*5`), ale nie utyka, gdy przejście przez górę to jedyna opcja.
+- `neighborsFor` już nie ucina kandydatów do `maxNeighborRoads` przed próbą trasowania — `roadSegmentsForSettlement` próbuje kolejnych najbliższych sąsiadów, aż uzyska `maxNeighborRoads` **udanych** tras (zamiast poddawać się, gdy najbliższy kandydat jest odcięty wodą/górą, mimo że dalszy by się połączył).
+- `maxNeighborRoads` default 2 → 3 (gęstsza sieć regionalna, nadal w GUI 0–4).
+- `SettlementsManager.ts`: home settlement eagerly ładuje (`ensureLoaded`, ten sam async streaming co zwykłe podejście gracza) swoich `EAGER_NEIGHBOR_COUNT=2` najbliższych sąsiadów **od razu przy starcie świata**, nie czekając aż gracz wejdzie w `loadRadius` — gwarantuje, że sąsiednia wioska (i połączenie z nią) istnieje/buduje się od startu, niezależnie od `maxNeighborRoads`.
+
 ## Potrzeba
 
 Dziś świat ma miejsca (osady, docelowo ich mniejsze lokalizacje) rozrzucone po proceduralnym terenie bez żadnego połączenia — gracz i NPC-e chodzą po prostu w linii prostej. Chcemy szlaki: **drogi** między osadami (szeroko, mocno wyrównany teren — główne trakty) i **ścieżki** wewnątrz jednej osady do jej mniejszych lokalizacji (wąsko, teren prawie nieruszony). Trasa ma wybierać przebieg o małej zmianie wysokości (nie prostą linię przez wzgórze), a sama droga ma **delikatnie wygładzać** teren pod sobą — nie tworzyć płaskiego pasa, tylko zredukować lokalne nierówności.
