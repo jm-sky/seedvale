@@ -35,11 +35,15 @@ export const TREE_SPECS = [
   { url: '/models/nature/tree_a.glb', height: 4.2 },
   { url: '/models/nature/tree_b.glb', height: 3.8 },
   { url: '/models/nature/tree_c.glb', height: 4.6 },
+  { url: '/models/nature/birch_1.glb', height: 4.4 },
+  { url: '/models/nature/maple_1.glb', height: 4.8 },
+  { url: '/models/nature/deadtree_1.glb', height: 3.6 },
 ] as const
 
 export const BUSH_SPECS = [
   { url: '/models/nature/bush_a.glb', height: 1.4 },
   { url: '/models/nature/bush_b.glb', height: 1.8 },
+  { url: '/models/nature/flower_clump_1.glb', height: 0.4 },
 ] as const
 
 export const CACTUS_SPECS = [

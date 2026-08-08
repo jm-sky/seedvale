@@ -37,7 +37,7 @@ New files: `YYYY-MM-DD--{NNN}--slug.md` — own sequence for issues, plans, revi
 | Config + lil-gui + `localStorage` | done |
 | Flat shading toggle (default: smooth) | done |
 | Assety GLB osada/natura (2. agent) | w toku / częściowo w `public/models/` |
-| Zapas modeli (rezerwa, niepodpięte): dock, góry (`world/`), skały/pień, 7 budynków RTS, 4 nature (birch/maple/deadtree/flower) — z `_temp/` (Quaternius) | done — [docs/assets/CREDITS.md](docs/assets/CREDITS.md); `dock_a.glb` już aktywny (wypełnia `DOCK_SPECS`), reszta czeka na konkretną potrzebę |
+| Zapas modeli z `_temp/` (Quaternius, 28 plików): dock, góry (`world/`), skały/pień, 9 budynków RTS (w tym crate/barrel/wall/towerhouse/port/hut_d), surowce (gold/rock), 6 nature (birch/maple/deadtree/2×flower/bush_flowers) | done — [docs/assets/CREDITS.md](docs/assets/CREDITS.md); **aktywne:** `dock_a.glb` (wypełnia `DOCK_SPECS`) + birch/maple/deadtree/flower_clump_1 wpięte do `TREE_SPECS`/`BUSH_SPECS` (globalna wegetacja chunków); **rezerwa:** góry, skały/pień, budynki RTS, surowce, druga fala nature — czekają na konkretną potrzebę |
 | Scroll-wheel zoom kamery (distance-aware pitch) | done |
 | Bieganie [Shift] (Run animation z Quaternius GLB) | done |
 | **Worker pool dla generacji terenu** (offload heightmap z main thread) | done — [plans/2026-08-07--006--terrain-worker-pool.md](docs/plans/2026-08-07--006--terrain-worker-pool.md) |
