@@ -67,36 +67,46 @@ function defFor(cell: SettlementCell, ctx: RoadNetworkContext): SettlementDef {
   return def
 }
 
-/** A settlement's 1–2 nearest neighbor settlements (by actual site distance,
- *  not grid distance — `findSettlementSite` jitters each cell's center).
+/** All of a settlement's candidate neighbor settlements (by actual site
+ *  distance, not grid distance — `findSettlementSite` jitters each cell's
+ *  center), nearest first — the full ring-1 set (up to 8), *not* capped to
+ *  `maxNeighborRoads`. Callers cap: `roadSegmentsForSettlement` walks this
+ *  list trying each in turn until `maxNeighborRoads` routes actually succeed
+ *  (a nearby candidate across open water/impassable terrain shouldn't leave a
+ *  settlement with zero roads when a slightly farther one would connect fine).
  *  Deterministic and effectively symmetric: both sides resolve the same
  *  `SettlementDef`s from the same seed, so whichever settlement asks first,
  *  the edge (and its cached route, keyed by sorted id pair) comes out the
  *  same either way. */
 export function neighborsFor(cell: SettlementCell, ctx: RoadNetworkContext): SettlementDef[] {
   const self = defFor(cell, ctx)
-  const candidates = cellsWithinRadius(cell, 1)
+  return cellsWithinRadius(cell, 1)
     .filter((c) => !(c.gx === cell.gx && c.gz === cell.gz))
     .map((c) => defFor(c, ctx))
     .map((def) => ({ def, dist: Math.hypot(def.x - self.x, def.z - self.z) }))
     .sort((a, b) => a.dist - b.dist)
-  return candidates.slice(0, Math.max(0, ctx.region.roadNetwork.maxNeighborRoads)).map((c) => c.def)
+    .map((c) => c.def)
 }
 
-// --- Routing: coarse-grid A*, cost = distance + elevation change, rejecting
-// water/steep mountain ridges. Small, one-time, cached per pair — see
-// `findRoute`'s doc comment for the walkability criteria. ---
+// --- Routing: coarse-grid A*, cost = distance + elevation change + a steep
+// mountain-crossing penalty, rejecting only open water outright. Small,
+// one-time, cached per pair — see `findRoute`'s doc comment. ---
 
 const NEIGHBOR_OFFSETS = [
   [1, 0], [-1, 0], [0, 1], [0, -1],
   [1, 1], [1, -1], [-1, 1], [-1, -1],
 ] as const
 
-/** Above this `mountainRidge` value a route treats the cell as impassable —
- *  same bar `chunkVegetation.ts`/`grass.ts` use to reject a ridge crest. */
-const ROUTE_MOUNTAIN_RIDGE_REJECT = 0.35
-/** Clearance above `waterLevel` a route needs to consider a cell dry land. */
+/** Clearance above `waterLevel` a route needs to consider a cell dry land —
+ *  water is still a hard reject (no bridges yet, see roads-and-paths plan). */
 const ROUTE_WATER_CLEARANCE = 0.5
+/** Mountains are *not* a hard reject — real roads cross mountains (passes,
+ *  switchbacks), just at real cost. This multiplies a step's distance by
+ *  `1 + weight * ridge²` (ridge ≈ 0..1, averaged over the step's endpoints),
+ *  so the A* search strongly prefers routing around a ridge when a cheaper
+ *  detour exists within the search grid, but will still push straight through
+ *  when that's the only/shortest way to connect two settlements. */
+const MOUNTAIN_COST_WEIGHT = 25
 
 type RoutingOptions = {
   gridStep: number
@@ -126,7 +136,9 @@ export function findRoute(
   opts: RoutingOptions = DEFAULT_ROUTING_OPTIONS,
 ): RoutePoint[] | null {
   const { gridStep, elevationWeight, smoothingWindow } = opts
-  const margin = gridStep * 3
+  // Wide enough that the search grid has room to route *around* a mountain
+  // when that's cheaper, not just straight through it (see MOUNTAIN_COST_WEIGHT).
+  const margin = gridStep * 5
 
   const minX = Math.min(a.x, b.x) - margin
   const minZ = Math.min(a.z, b.z) - margin
@@ -151,11 +163,18 @@ export function findRoute(
     }
     return h
   }
-  const walkable = (ix: number, iz: number): boolean => {
-    if (heightAt(ix, iz) <= waterLevel + ROUTE_WATER_CLEARANCE) return false
-    const w = toWorld(ix, iz)
-    if (sampleMountainRidge(w.x, w.z) > ROUTE_MOUNTAIN_RIDGE_REJECT) return false
-    return true
+  const walkable = (ix: number, iz: number): boolean => heightAt(ix, iz) > waterLevel + ROUTE_WATER_CLEARANCE
+
+  const ridgeCache = new Map<number, number>()
+  const ridgeAt = (ix: number, iz: number): number => {
+    const k = key(ix, iz)
+    let r = ridgeCache.get(k)
+    if (r === undefined) {
+      const w = toWorld(ix, iz)
+      r = sampleMountainRidge(w.x, w.z)
+      ridgeCache.set(k, r)
+    }
+    return r
   }
 
   const start = toGrid(a.x, a.z)
@@ -192,7 +211,10 @@ export function findRoute(
       if (closed.has(nKey) || !walkable(nix, niz)) continue
 
       const stepDist = Math.hypot(dx * gridStep, dz * gridStep)
-      const cost = stepDist + elevationWeight * Math.abs(heightAt(nix, niz) - heightAt(cur.ix, cur.iz))
+      const ridge = (ridgeAt(cur.ix, cur.iz) + ridgeAt(nix, niz)) * 0.5
+      const cost =
+        stepDist * (1 + MOUNTAIN_COST_WEIGHT * ridge * ridge) +
+        elevationWeight * Math.abs(heightAt(nix, niz) - heightAt(cur.ix, cur.iz))
       const tentativeG = (gScore.get(curKey) ?? Infinity) + cost
 
       if (tentativeG < (gScore.get(nKey) ?? Infinity)) {
@@ -283,8 +305,14 @@ function routingOptionsFrom(ctx: RoadNetworkContext): RoutingOptions {
 function roadSegmentsForSettlement(def: SettlementDef, ctx: RoadNetworkContext): RoadSegment[] {
   const out: RoadSegment[] = []
   const opts = routingOptionsFrom(ctx)
+  const maxRoads = Math.max(0, ctx.region.roadNetwork.maxNeighborRoads)
 
+  // Walk candidates nearest-first, but count *successful* routes toward the
+  // cap — a nearby candidate blocked by open water shouldn't leave this
+  // settlement with fewer roads than a farther-but-reachable one would give.
+  let connected = 0
   for (const neighbor of neighborsFor({ gx: def.gx, gz: def.gz }, ctx)) {
+    if (connected >= maxRoads) break
     const key = pairKey(def.id, neighbor.id)
     let segments = routeCache.get(key)
     if (segments === undefined) {
@@ -299,7 +327,10 @@ function roadSegmentsForSettlement(def: SettlementDef, ctx: RoadNetworkContext):
       segments = points ? toSegments(points, 'road') : null
       routeCache.set(key, segments)
     }
-    if (segments) out.push(...segments)
+    if (segments) {
+      out.push(...segments)
+      connected++
+    }
   }
 
   const locations = minorLocationsFor(

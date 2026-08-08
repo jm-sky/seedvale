@@ -124,7 +124,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
           pathHeightStrength: 0.2,
           pathTintStrength: 0.4,
           smoothingWindow: 10,
-          maxNeighborRoads: 2,
+          maxNeighborRoads: 3,
           dockSearchRadius: 140,
         },
       },

@@ -1,9 +1,9 @@
 import { type Scene, type Vector3 } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
-import type { RoadNetworkContext } from './roadNetwork'
 import type { TerrainSamplers } from './settlementTerrain'
 import { createSettlement, type Settlement } from './createSettlement'
+import { neighborsFor, type RoadNetworkContext } from './roadNetwork'
 import {
   cellsWithinRadius,
   generateSettlementDef,
@@ -18,6 +18,15 @@ type Entry = {
   settlement: Settlement | null
   pendingPromise: Promise<void> | null
 }
+
+/** How many of the home settlement's nearest neighbor settlements get
+ *  streamed in immediately at world start, instead of waiting for the player
+ *  to wander within `loadRadius` — guarantees there's a village (and a road
+ *  to it, see `roadNetwork.ts`) findable right away. Deliberately independent
+ *  of `RegionParams.roadNetwork.maxNeighborRoads` (the wider regional road
+ *  network's fan-out), which can be tuned higher without also inflating
+ *  startup load cost. */
+const EAGER_NEIGHBOR_COUNT = 2
 
 export type SettlementsManager = {
   /** Settlement at grid cell (0,0) — always loaded, where the player spawns.
@@ -127,6 +136,13 @@ export async function createSettlementsManager(
         const cur = entries.get(def.id)
         if (cur) cur.pendingPromise = null
       })
+  }
+
+  // Same async streaming path `recheck` uses once the player wanders into
+  // range — just triggered immediately so the nearest village(s) are already
+  // built (or well underway) long before the player could reach them on foot.
+  for (const neighborDef of neighborsFor({ gx: 0, gz: 0 }, roadCtx).slice(0, EAGER_NEIGHBOR_COUNT)) {
+    ensureLoaded(neighborDef)
   }
 
   function unload(id: string, entry: Entry): void {
