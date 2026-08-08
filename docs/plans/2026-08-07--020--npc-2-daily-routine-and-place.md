@@ -1,5 +1,7 @@
 # Plan: NPC Daily Routine & Place System
 
+**Status:** `verification needed` — v1 (formalizacja `home` jako `Place`) zaimplementowane i zielone na `tsc`/`lint`/`build`/`test`, patrz „Stan implementacji” niżej; brak jeszcze wizualnej weryfikacji w przeglądarce. Pełny zakres (Schedule/workplace per rola/generyczny FSM) odłożony, patrz „Odłożone”.
+
 Part 2 of ChatGPT plans.
 
 > Draft from ChatGPT without repository files access. Review before implementation!
