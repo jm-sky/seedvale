@@ -13,6 +13,13 @@
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="manifest" href="/icons/site.webmanifest" />
     <meta name="theme-color" content="#87b5d4" />
+    <!-- iOS only honors "Add to Home Screen" fullscreen/standalone mode via
+         these meta tags (the web manifest's display:standalone is Android/
+         Chrome-only) — no effect on Android or in a regular browser tab. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Seedvale" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <style>
       * {
         margin: 0;
@@ -667,15 +674,27 @@
         pointer-events: auto;
         -webkit-tap-highlight-color: transparent;
       }
+      /* While a full-screen modal (pause menu, quest log, ...) is open, the
+         touch layer sits underneath it (z-index 7 < modal z-index) but taps can
+         still land on its buttons on some mobile browsers — this hard-disables
+         the whole layer so a tap meant for the modal can never also toggle
+         RUN/interact/etc. underneath it. Toggled from createApp's tick loop via
+         TouchControls.setInputEnabled(). */
+      .seedvale-touch--disabled * {
+        pointer-events: none !important;
+      }
 
-      /* Bottom-left minimap collides with the joystick — move it out of the way,
-         stacked below the ☰ pause button (44px + 16px gap) so the two don't
-         crowd the same corner. */
+      /* Bottom-left minimap collides with the joystick — move it out of the way.
+         Sits beside (not below) the ☰ pause button, same row: on a short
+         landscape phone, stacking two 44px-tall controls vertically at the top
+         edge pushed the pair down into the bottom-right L/G/RUN/E cluster's
+         territory. Side-by-side keeps the whole top-right footprint to one
+         44px row regardless of viewport height. */
       body.seedvale-touch .seedvale-minimap {
         left: auto;
-        right: max(20px, env(safe-area-inset-right));
+        right: max(72px, calc(env(safe-area-inset-right) + 72px));
         bottom: auto;
-        top: max(76px, calc(env(safe-area-inset-top) + 76px));
+        top: max(16px, env(safe-area-inset-top));
         flex-direction: column;
       }
       /* Desktop toggle (2px/8px padding, ~11px font) is too small a touch target —

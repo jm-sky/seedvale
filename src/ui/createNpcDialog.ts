@@ -1,3 +1,4 @@
+import { enableTouchScroll } from '../input/enableTouchScroll'
 import { isTouchDevice } from '../input/isTouchDevice'
 
 export type NpcDialogHandlers = {
@@ -53,6 +54,9 @@ export function createNpcDialog(
     </div>
   `
   parent.appendChild(root)
+
+  const panel = root.querySelector<HTMLElement>('.seedvale-npc-dialog__panel')!
+  const disposeTouchScroll = isTouchDevice() ? enableTouchScroll(panel) : null
 
   const nameEl = root.querySelector<HTMLElement>('[data-name]')!
   const lineEl = root.querySelector<HTMLElement>('[data-line]')!
@@ -120,6 +124,7 @@ export function createNpcDialog(
     dispose() {
       root.removeEventListener('click', onRootClick)
       window.removeEventListener('keydown', onKeyDown)
+      disposeTouchScroll?.()
       prompt.remove()
       root.remove()
     },

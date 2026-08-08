@@ -38,12 +38,22 @@ function findTouch(list: TouchList, id: number | null): Touch | undefined {
  *  touch devices. Writes directly into the same `KeyState`/`LookState` objects
  *  the keyboard and mouse-look inputs use, so `PlayerController` and the
  *  interaction loop in `createApp` need no touch-specific branches. */
+export type TouchControls = {
+  dispose: () => void
+  /** Disables (or re-enables) the whole joystick/look-zone/action-button layer —
+   *  used while a full-screen modal (pause menu, quest log, ...) is open, so a
+   *  tap meant for the modal can never also land on a button underneath it. Also
+   *  releases any in-progress joystick/look touch so movement doesn't get stuck
+   *  "on" if disabled mid-drag. */
+  setInputEnabled: (enabled: boolean) => void
+}
+
 export function createTouchControls(
   parent: HTMLElement,
   keys: KeyState,
   look: LookState,
   handlers: TouchControlsHandlers,
-): { dispose: () => void } {
+): TouchControls {
   const root = document.createElement('div')
   root.className = 'seedvale-touch'
   root.innerHTML = `
@@ -220,7 +230,16 @@ export function createTouchControls(
   sprintButton.addEventListener('click', onSprintToggle)
   pauseButton.addEventListener('click', onPause)
 
+  function setInputEnabled(enabled: boolean): void {
+    root.classList.toggle('seedvale-touch--disabled', !enabled)
+    if (enabled) return
+    joystickTouchId = null
+    resetJoystick()
+    lookTouches.clear()
+  }
+
   return {
+    setInputEnabled,
     dispose: () => {
       joystickBase.removeEventListener('touchstart', onJoystickTouchStart)
       joystickBase.removeEventListener('touchmove', onJoystickTouchMove)

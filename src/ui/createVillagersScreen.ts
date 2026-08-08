@@ -2,6 +2,7 @@ import type { Role, Trait } from '../ai/characters'
 import type { NpcAgent } from '../ai/NpcAgent'
 import { nearestArchetype, type Personality } from '../ai/dialogue'
 import { needLabel } from '../ai/Needs'
+import { enableTouchScroll } from '../input/enableTouchScroll'
 import { isTouchDevice } from '../input/isTouchDevice'
 
 export type VillagersScreenHandlers = {
@@ -69,6 +70,9 @@ export function createVillagersScreen(
     </div>
   `
   parent.appendChild(root)
+
+  const panel = root.querySelector<HTMLElement>('.seedvale-villagers__panel')!
+  const disposeTouchScroll = isTouchDevice() ? enableTouchScroll(panel) : null
 
   const listEl = root.querySelector<HTMLElement>('[data-list]')!
 
@@ -152,6 +156,7 @@ export function createVillagersScreen(
     dispose() {
       root.removeEventListener('click', onRootClick)
       window.removeEventListener('keydown', onKeyDown)
+      disposeTouchScroll?.()
       root.remove()
     },
   }

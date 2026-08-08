@@ -355,6 +355,22 @@ export async function createApp(
       })
     : null
 
+  // Best-effort address-bar hiding for Chrome/Firefox Android in a regular
+  // browser tab (not installed as a home-screen PWA) — the Fullscreen API
+  // needs a user gesture, so it's requested on the very first touch rather
+  // than at load. No-op where unsupported (notably iOS Safari, which only
+  // gets a chrome-less view via "Add to Home Screen" — see the
+  // apple-mobile-web-app-capable meta tag in index.html) or if the browser
+  // denies it; failure is silent since this is a nice-to-have, not required
+  // for the game to work.
+  if (isTouchDevice() && document.documentElement.requestFullscreen) {
+    const requestFullscreenOnce = () => {
+      document.removeEventListener('touchend', requestFullscreenOnce)
+      void document.documentElement.requestFullscreen().catch(() => {})
+    }
+    document.addEventListener('touchend', requestFullscreenOnce, { once: true })
+  }
+
   const onBeforeUnload = () => {
     void writeSave(buildSaveData())
   }
@@ -375,11 +391,27 @@ export async function createApp(
     postProcessing.setSize(width, height)
   }
   window.addEventListener('resize', onResize)
+  // Mobile browsers resize the *visual* viewport (address bar show/hide,
+  // on-screen keyboard) without always firing a plain window 'resize' — and
+  // orientation changes on some Android WebViews fire neither reliably.
+  // Covering both keeps the canvas from getting stuck at a stale size
+  // (reported: Chrome mobile rendering only into half the screen width after
+  // the initial address-bar layout settled).
+  window.addEventListener('orientationchange', onResize)
+  window.visualViewport?.addEventListener('resize', onResize)
+  // Defensive re-measure a couple frames after first paint, in case the very
+  // first `container.clientWidth/clientHeight` read (used above to size the
+  // renderer/camera) happened before the mobile browser's chrome/address-bar
+  // layout had fully settled.
+  requestAnimationFrame(() => requestAnimationFrame(onResize))
 
   const tick = () => {
     frameId = requestAnimationFrame(tick)
     const dt = Math.min(clock.getDelta(), 0.05)
     const menuPaused = pauseMenu.isPaused()
+    const anyModalOpen =
+      menuPaused || npcDialog.isOpen() || questLog.isOpen() || villagersScreen.isOpen()
+    touchControls?.setInputEnabled(!anyModalOpen)
 
     if (menuPaused) {
       // drop stale presses so they can't fire right after resume
@@ -511,6 +543,8 @@ export async function createApp(
   return () => {
     cancelAnimationFrame(frameId)
     window.removeEventListener('resize', onResize)
+    window.removeEventListener('orientationchange', onResize)
+    window.visualViewport?.removeEventListener('resize', onResize)
     window.removeEventListener('beforeunload', onBeforeUnload)
     gui.dispose()
     pauseMenu.dispose()

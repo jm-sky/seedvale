@@ -1,5 +1,6 @@
 import type { QuestListEntry } from '../quests/QuestManager'
 import type { QuestState } from '../quests/quests'
+import { enableTouchScroll } from '../input/enableTouchScroll'
 import { isTouchDevice } from '../input/isTouchDevice'
 
 export type QuestLogHandlers = {
@@ -58,6 +59,9 @@ export function createQuestLog(parent: HTMLElement, handlers: QuestLogHandlers =
     </div>
   `
   parent.appendChild(root)
+
+  const panel = root.querySelector<HTMLElement>('.seedvale-quest-log__panel')!
+  const disposeTouchScroll = isTouchDevice() ? enableTouchScroll(panel) : null
 
   const expEl = root.querySelector<HTMLElement>('[data-exp]')!
   const listEl = root.querySelector<HTMLElement>('[data-list]')!
@@ -149,6 +153,7 @@ export function createQuestLog(parent: HTMLElement, handlers: QuestLogHandlers =
     dispose() {
       root.removeEventListener('click', onRootClick)
       window.removeEventListener('keydown', onKeyDown)
+      disposeTouchScroll?.()
       root.remove()
     },
   }

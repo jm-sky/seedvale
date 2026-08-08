@@ -1,3 +1,4 @@
+import { enableTouchScroll } from '../input/enableTouchScroll'
 import { isTouchDevice } from '../input/isTouchDevice'
 
 export type PauseMenuHandlers = {
@@ -62,6 +63,9 @@ export function createPauseMenu(
     </div>
   `
   parent.appendChild(root)
+
+  const panel = root.querySelector<HTMLElement>('.seedvale-pause__panel')!
+  const disposeTouchScroll = isTouchDevice() ? enableTouchScroll(panel) : null
 
   const seedEl = root.querySelector<HTMLElement>('[data-seed]')!
   const resumeButton = root.querySelector<HTMLButtonElement>('[data-resume]')!
@@ -143,6 +147,7 @@ export function createPauseMenu(
       window.removeEventListener('keydown', onKeyDown)
       root.removeEventListener('click', onRootClick)
       window.clearTimeout(saveStatusTimeout)
+      disposeTouchScroll?.()
       root.remove()
     },
   }
