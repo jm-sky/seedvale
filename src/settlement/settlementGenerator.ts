@@ -201,11 +201,16 @@ export function generateSettlementDef(
     heightScale,
     region,
   }
+  // `seed` (the world seed), not `seedForCell` — the resource grid is one
+  // consistent layer across the whole world (plan 032 §1: "Zasoby są
+  // generowane niezależnie od wiosek"), not re-randomized per settlement. A
+  // world position must resolve to the same resource regardless of which
+  // settlement (or the world-wide `resourceDeposits` visualizer) asks.
   const candidateResources = resourcesNear(
     center.x,
     center.z,
     localSearchRadius + RESOURCE_ATTRACTION_MARGIN,
-    seedForCell,
+    seed,
     resourceEnv,
   )
   const resourceAttraction = (x: number, z: number): number => resourceAttractionAt(x, z, candidateResources)
@@ -221,7 +226,7 @@ export function generateSettlementDef(
     region,
     terrainSamplers,
   )
-  const dominantResource = dominantResourceNear(site.x, site.z, RESOURCE_INFLUENCE_RADIUS, seedForCell, resourceEnv)
+  const dominantResource = dominantResourceNear(site.x, site.z, RESOURCE_INFLUENCE_RADIUS, seed, resourceEnv)
   const nameCulture = pickNameCulture(seedForCell)
 
   // Resource Outposts (§7) — a genuinely exceptional deposit ("złoto → wysokie

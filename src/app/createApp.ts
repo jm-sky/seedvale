@@ -7,6 +7,7 @@ import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { SaveData } from '../persistence/saveData'
 import type { Settlement } from '../settlement/createSettlement'
 import type { ChunkCoord } from '../terrain/chunkGrid'
+import type { ResourceEnv } from '../terrain/naturalResources'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { saveWorldConfig } from '../config/persistConfig'
@@ -44,6 +45,7 @@ import {
   createChunkManager,
 } from '../terrain/chunkManager'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
+import { createResourceDeposits } from '../terrain/resourceDeposits'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
 import { createLoadingScreen } from '../ui/createLoadingScreen'
@@ -199,6 +201,21 @@ export async function createApp(
   }
   const ambientAudio = createAmbientAudio(worldAudio, ambientSamplers)
 
+  // Same indirection reasoning as `ambientSamplers` above — survives
+  // `rebuildWorld()` reassigning `chunkManager`. Unlike `ambientSamplers`,
+  // resource queries want `sampleHeight` (the rendered surface, for placing
+  // ore piles on it), not `sampleFloor`.
+  const resourceEnv: ResourceEnv = {
+    sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
+    sampleContinentalness: (x, z) => chunkManager.sampleContinentalness(x, z),
+    sampleMountainRidge: (x, z) => chunkManager.sampleMountainRidge(x, z),
+    sampleMoistureRegion: (x, z) => chunkManager.sampleMoistureRegion(x, z),
+    get waterLevel() { return chunkManager.waterLevel },
+    get heightScale() { return config.terrain.heightScale },
+    get region() { return config.terrain.region },
+  }
+  let resourceDeposits = createResourceDeposits(scene, resourceEnv, config.seed)
+
   let ocean = buildOcean(scene, config)
   let settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce, config)
   let fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
@@ -274,6 +291,7 @@ export async function createApp(
       droppedItems.dispose()
       const carriedFires = resetCollectedItems ? [] : [...placedFires.nodes()]
       placedFires.dispose()
+      resourceDeposits.dispose()
       settlementsManager.dispose()
       ocean.dispose()
       chunkManager.dispose()
@@ -308,6 +326,7 @@ export async function createApp(
       }
       fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
       itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
+      resourceDeposits = createResourceDeposits(scene, resourceEnv, config.seed)
       droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, carriedDrops)
       placedFires = createPlacedFires(scene, chunkManager.sampleHeight, carriedFires)
       player.setGround(chunkManager.sampleHeight, chunkManager.sampleFloor, chunkManager.waterLevel)
@@ -753,6 +772,7 @@ export async function createApp(
       lights.follow(player.mesh.position.x, player.mesh.position.z)
       ocean.follow(player.mesh.position.x, player.mesh.position.z)
       settlementsManager.update(dt, player.mesh.position)
+      resourceDeposits.update(player.mesh.position.x, player.mesh.position.z)
       const litFires = [
         ...settlementsManager.getLoaded().flatMap((s) => (s.fire?.isLit() ? [s.fire.position] : [])),
         ...placedFires.list().filter((f) => f.fire.isLit()).map((f) => f.fire.position),
@@ -806,6 +826,7 @@ export async function createApp(
     worldAudio.dispose()
     fauna.dispose()
     itemSpawners.dispose()
+    resourceDeposits.dispose()
     droppedItems.dispose()
     placedFires.dispose()
     settlementsManager.dispose()

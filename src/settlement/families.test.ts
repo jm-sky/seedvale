@@ -80,9 +80,9 @@ describe('generateFamilies', () => {
   })
 
   describe('dominantResource (plan 032)', () => {
-    const ironDeposit: NaturalResource = { type: 'iron', x: 0, z: 0, radius: 10, richness: 0.9 }
-    const faintDeposit: NaturalResource = { type: 'iron', x: 0, z: 0, radius: 10, richness: 0.1 }
-    const unmappedDeposit: NaturalResource = { type: 'herbs', x: 0, z: 0, radius: 10, richness: 0.9 }
+    const ironDeposit: NaturalResource = { id: 'r1', type: 'iron', x: 0, z: 0, radius: 10, richness: 0.9 }
+    const faintDeposit: NaturalResource = { id: 'r2', type: 'iron', x: 0, z: 0, radius: 10, richness: 0.1 }
+    const unmappedDeposit: NaturalResource = { id: 'r3', type: 'herbs', x: 0, z: 0, radius: 10, richness: 0.9 }
 
     it('adds one extra dedicated-role family on top of the normal roster when the resource is significant', () => {
       const without = generateFamilies(11, 'MD', false, 'polish')

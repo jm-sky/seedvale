@@ -171,7 +171,7 @@ describe('resourcesNear / dominantResourceNear', () => {
 })
 
 describe('resourceAttractionAt', () => {
-  const resource: NaturalResource = { type: 'iron', x: 100, z: 0, radius: 10, richness: 0.8 }
+  const resource: NaturalResource = { id: 'r1', type: 'iron', x: 100, z: 0, radius: 10, richness: 0.8 }
 
   it('is highest right at the resource and fades with distance', () => {
     const atCenter = resourceAttractionAt(100, 0, [resource])

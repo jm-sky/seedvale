@@ -22,6 +22,7 @@ import { biomeWeightsAt } from './biomeRegions'
  */
 export type ResourceType =
   | 'clay'
+  | 'coal'
   | 'fertile_soil'
   | 'fish'
   | 'gold'
@@ -31,10 +32,14 @@ export type ResourceType =
   | 'salt'
 
 export const RESOURCE_TYPES: readonly ResourceType[] = [
-  'iron', 'gold', 'fish', 'fertile_soil', 'clay', 'salt', 'resin', 'herbs',
+  'iron', 'coal', 'gold', 'fish', 'fertile_soil', 'clay', 'salt', 'resin', 'herbs',
 ]
 
 export type NaturalResource = {
+  /** Stable per-(seed, grid cell) identity — lets callers that stream deposits
+   *  in/out by distance (`terrain/resourceDeposits.ts`) diff "same node" across
+   *  ticks instead of re-keying on floating-point position. */
+  id: string
   type: ResourceType
   x: number
   z: number
@@ -57,6 +62,7 @@ export const SIGNIFICANT_RICHNESS = 0.55
  *  characters.ts`'s `Role` stays a closed, curated pool). */
 export const RESOURCE_ROLE: Partial<Record<ResourceType, Role>> = {
   iron: 'miner',
+  coal: 'miner',
   gold: 'miner',
   fish: 'fisher',
   fertile_soil: 'farmer',
@@ -152,6 +158,10 @@ function resourceWeights(
 
   return {
     iron: 0.15 + mountainRidge * 0.9 + altitude01 * 0.25,
+    // Coal favors foothills/mid-altitude over bare high ridges (real coal
+    // seams are sedimentary, not found on exposed rock crests) — same
+    // mountain-adjacent niche as iron, biased lower.
+    coal: 0.15 + mountainRidge * 0.7 + (1 - MathUtils.smoothstep(altitude01, 0.35, 0.8)) * 0.3,
     gold: 0.05 + mountainRidge * 0.65 + (nearWater ? 0.3 : 0),
     fish: nearWater ? 0.9 : 0.02,
     fertile_soil: (nearWater ? 0.75 : 0.08) * (0.3 + biome.forest * 0.7),
@@ -202,7 +212,7 @@ function resourceAtCell(cell: ResourceCell, seed: number, env: ResourceEnv): Nat
   const richness = MathUtils.clamp(0.2 + fit * 0.5 + random() * 0.3, 0, 1)
   const radius = MIN_RADIUS + random() * RADIUS_RANGE
 
-  return { type: picked, x, z, radius, richness }
+  return { id: `resource_${cell.rx}_${cell.rz}`, type: picked, x, z, radius, richness }
 }
 
 /** All resources within `radius` of `(x, z)` — scans the handful of resource

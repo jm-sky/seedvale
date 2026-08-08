@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { VillageSize } from './families'
 import type { SettlementSite } from './findSettlementSite'
+import type { FoodSourceType } from './settlementGenerator'
 import type { ClearingLayout } from './villageClearing'
 import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
 import { distanceToSegment } from '../math/segment'
@@ -387,10 +388,12 @@ export function createLargeRock(scale = 1, variant = 0.5): THREE.Group {
 
 /** Small cluster of pebbles (same geometry as the collectible `stone` item,
  *  `items.ts` — pure visual reuse) scattered deterministically from `variant`
- *  via trig offsets rather than `Math.random()`. */
-export function createRockCluster(scale = 1, variant = 0.5): THREE.Group {
+ *  via trig offsets rather than `Math.random()`. `color` defaults to plain
+ *  rock gray — overridden for ore piles (`terrain/resourceDeposits.ts`, e.g.
+ *  rust for iron, near-black for coal, gold for a gold vein). */
+export function createRockCluster(scale = 1, variant = 0.5, color = 0x8c8c8c): THREE.Group {
   const cluster = new THREE.Group()
-  const mat = new THREE.MeshStandardMaterial({ color: 0x8c8c8c, flatShading: true })
+  const mat = new THREE.MeshStandardMaterial({ color, flatShading: true })
   // Wider spread than a fixed 3-5: `variant` (already a random 0..1 roll from
   // the caller) pushes some clusters up to 9 pebbles for visible size variety
   // between clusters, not just within one.
@@ -514,6 +517,39 @@ export function createGarden(): THREE.Group {
     garden.add(crop)
   }
   return garden
+}
+
+/** Golden — distinctly different from `createGarden`'s green crop cones and
+ *  from any grass tint (`grass.ts`'s `ARID_GRASS`/`HUMID_GRASS`/`SWAMP_GRASS`
+ *  top out at an olive `0x9c9a54`), so a wheat field reads at a glance. */
+const WHEAT_COLOR = 0xd8b23c
+
+/** A small patch of thin, tall cone "stalks" — same silhouette idea as
+ *  `createReed` (a clump of narrow cones) but denser, taller, and narrower
+ *  per stalk, tinted gold instead of green, arranged as a filled disk instead
+ *  of one small clump. Placed near a settlement's `garden` landmark when its
+ *  `foodSourceType` is `'field'` (plan 032 §8) — deterministic from `variant`
+ *  (trig/golden-angle spread, same reasoning as `createRockCluster`) so a
+ *  reload doesn't reshuffle the field. */
+export function createWheatField(scale = 1, variant = 0.5, radius = 3.2): THREE.Group {
+  const field = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: WHEAT_COLOR, flatShading: true })
+  const count = 45 + Math.floor(variant * 25)
+  for (let i = 0; i < count; i++) {
+    // Golden-angle-ish step so stalks fill the disk evenly instead of
+    // spiraling into visible rings.
+    const a = variant * Math.PI * 2 + i * 2.399963
+    const r = radius * Math.sqrt((variant * (i + 11)) % 1)
+    const height = (0.7 + ((variant * (i + 5)) % 1) * 0.3) * scale
+    // Narrower than a normal grass/reed blade (0.022 vs createReed's 0.035) —
+    // "węższa i wyższą" (narrower and taller), per the ask.
+    const stalk = new THREE.Mesh(new THREE.ConeGeometry(0.022 * scale, height, 4), mat)
+    stalk.position.set(Math.cos(a) * r, height / 2, Math.sin(a) * r)
+    stalk.rotation.y = a
+    stalk.castShadow = true
+    field.add(stalk)
+  }
+  return field
 }
 
 async function loadPropOrFallback(
@@ -694,6 +730,13 @@ export async function buildSettlementProps(
    *  unlike home chunks, isn't suppressed around them. They still get their
    *  well/stockpile/garden/huts. */
   plantForest = true,
+  /** `'field'` (plan 032 §8 — a significant nearby `fertile_soil` resource)
+   *  gets a wheat patch next to the garden, on top of the garden prop itself
+   *  (which stays for every settlement regardless — no new food-source
+   *  geometry is swapped in yet, see the plan doc's "Poza zakresem"). Purely
+   *  decorative, no `Interactable`, matching `createRockCluster`'s ore piles
+   *  in `terrain/resourceDeposits.ts`. */
+  foodSourceType: FoodSourceType = 'garden',
 ): Promise<{ group: THREE.Group, landmarks: SettlementLandmarks, houseLights: HouseLight[] }> {
   const group = new THREE.Group()
   group.name = 'settlement'
@@ -733,6 +776,13 @@ export async function buildSettlementProps(
   placeOnGround(garden, gardenX, gardenZ, sampleHeight)
   group.add(garden)
   landmarks.garden.set(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
+
+  if (foodSourceType === 'field') {
+    const { x: wheatX, z: wheatZ } = findFlatSpot(site, -2.5, 8.2, sampleHeight, waterLevel, coreRandom)
+    const wheat = createWheatField(0.9 + coreRandom() * 0.3, coreRandom())
+    placeOnGround(wheat, wheatX, wheatZ, sampleHeight)
+    group.add(wheat)
+  }
 
   const houseLights: HouseLight[] = []
   for (let i = 0; i < clearings.houses.length; i++) {
