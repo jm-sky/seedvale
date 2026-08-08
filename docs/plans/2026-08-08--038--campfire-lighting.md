@@ -1,11 +1,13 @@
 # Plan: Zapalanie ognisk (gałęzie jako paliwo) + nocne szanse zapłonu w wiosce
 
-**Status:** `verification needed` (3/4) — punkty 1-3 (stan ognia, interakcja `[E]`, płomień) i renewable branch-spawn zaimplementowane, patrz „Stan implementacji" niżej. Punkt 4 (nocne 50% szans) **nie zaimplementowany** — zostaje `todo`.
+**Status:** `verification needed` (4/4) — punkty 1-4 (stan ognia, interakcja `[E]`, płomień, nocne 50% szans zapłonu) i renewable branch-spawn zaimplementowane, patrz „Stan implementacji" niżej.
 **Created:** 2026-08-08
 
 ## Stan implementacji (2026-08-09)
 
-Zaimplementowane: **punkty 1-3** (stan ognia, interakcja `[E]`, wizualny płomień) + dodatkowo renewable spawn gałęzi blisko drzew (żeby ognisko miało z czego się podtrzymywać — patrz niżej). **Punkt 4 (nocne 50% szans zapłonu) świadomie odłożony** — user poprosił konkretnie o te dwie rzeczy w tej turze implementacji, nie o cały plan.
+Zaimplementowane: **punkty 1-4** (stan ognia, interakcja `[E]`, wizualny płomień, nocne 50% szans zapłonu) + dodatkowo renewable spawn gałęzi blisko drzew (żeby ognisko miało z czego się podtrzymywać — patrz niżej).
+
+**Punkt 4 (2026-08-09):** `src/settlement/createSettlement.ts` — `setDayNight(t)` wykrywa przejście dzień→noc per osada (`nightFactor` przekracza `NIGHT_FIRE_THRESHOLD = 0.6`, ten sam próg co NPC sleep z [day-night-clock.md](./2026-08-07--003--day-night-clock.md)); przy przekroczeniu, jeśli ognisko istnieje i nie jest zapalone, seedowany rzut (`settlementSeed` z `settlementGenerator.ts::cellSeed(seed, {gx, gz})`, skombinowany z licznikiem `nightIndex` inkrementowanym co wykryte przejście) — `NIGHT_FIRE_IGNITE_CHANCE = 0.5` szans na `fire.light()` bez zużycia gałęzi gracza. Deterministyczne w obrębie tej samej nocy (ten sam `nightIndex` przy pierwszym przejściu po (re)streamingu osady daje ten sam wynik); kolejna noc dostaje inny `nightIndex`, więc inny rzut.
 
 - `src/settlement/VillageFire.ts` (nowy) — `createVillageFire(position, flame)`: `lit`/`fuelRemaining` w closure, `light()`/`addFuel()`/`update(dt)`, `FUEL_PER_BRANCH = 75s`.
 - `src/settlement/props.ts`: nowa `createCampfireFlame()` (stożek emissive + `PointLight`, `visible=false` domyślnie — oddzielna od `createCampfire()`, która zostaje czysto dekoracyjna dla ognisk rozrzuconych po świecie z [world-elements-interactions](./2026-08-07--030--world-elements-interactions.md)). `SettlementLandmarks` += `campfire?: { position, flame }`, ustawiane tylko dla MD/LG.
@@ -65,7 +67,7 @@ type FireState = {
 
 - `createCampfire()` (`props.ts`) dostaje wariant „lit" — prosty efekt ognia spójny ze stylem reszty propsów (flat-shaded, bez systemu cząstek): mały stożek/sprite z materiałem `emissive` + `PointLight` o niskim zasięgu, włączane/wyłączane wraz z `fire.lit`. Szczegóły wizualne do dopracowania przy implementacji.
 
-### 4. Nocne szanse zapłonu (tylko ognisko wioski) — nadal `todo`, nie zaimplementowane
+### 4. Nocne szanse zapłonu (tylko ognisko wioski) — `done` (2026-08-09), patrz „Stan implementacji" wyżej
 
 - Przy przejściu dzień→noc (hook w `dayNight.ts`/`createApp.ts`, tam gdzie dziś śledzone jest `timeOfDay` przekraczające próg nocy) — dla każdej załadowanej osady z własnym ogniskiem (MD/LG): 50% szans, że `fire.lit = true` z pełnym paliwem, **bez zużywania gałęzi gracza** (wioska sama je podtrzymuje — fabularnie NPC-e dokładają). Losowane **przy każdym zapadnięciu nocy**, nie raz na zawsze — jeśli zgaśnie przed świtem, zostaje zgaszone do następnej nocy (chyba że gracz dołoży gałąź).
 - Deterministyczność: seedowany rzut per (osada, „numer nocy") żeby przeładowanie/re-streaming osady nie zmieniało wyniku w trakcie tej samej nocy — dokładny mechanizm (np. `createSeededRandom(seed ^ settlementId ^ nightIndex)`) do ustalenia przy implementacji.
@@ -83,8 +85,8 @@ type FireState = {
   - Znajdź osadę MD/LG (ma własne ognisko). W okolicy jej drzew (`landmarks.trees`) powinna co jakiś czas (≈45s po zebraniu) pojawiać się gałąź do zebrania — sprawdź na desktop i mobile że `[E]`/przycisk dotykowy ją podnosi.
   - Podejdź do ogniska z gałęzią, zapal `[E]` (desktop) i przyciskiem dotykowym `E` (mobile) — sprawdź oba. Sprawdź że płomień/światło się pojawia, gaśnie po ~75s, i że dokładanie gałęzi (`[E]` ponownie przy zapalonym ognisku) przedłuża palenie.
   - Bez gałęzi w ekwipunku — `[E]` przy ognisku pokazuje komunikat „Potrzebujesz gałęzi", nic nie zużywa.
+  - Punkt 4: obserwuj osadę MD/LG od dnia do zapadnięcia nocy (ewentualnie z podbitym `timeMultiplier`) kilka nocy z rzędu — ognisko powinno czasem samo się zapalić o zmierzchu (~50% szans), czasem zostać zgaszone; nie powinno gasnąć/zapalać się mid-noc bez interwencji gracza.
 - `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — czyste (zrobione, patrz „Stan implementacji").
-- Punkt 4 (nocne 50% szans) — osobna weryfikacja po jego implementacji.
 
 ## Powiązane
 

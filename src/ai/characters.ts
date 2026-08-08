@@ -14,6 +14,11 @@ export type Trait = 'energetic' | 'fast_worker' | 'night_owl' | 'sociable'
 
 export type CharacterDef = {
   name: string
+  /** Family surname (shared by all members of the same family, gender-agreed
+   *  per member) — see `settlement/families.ts`/`ai/nameCultures.ts`.
+   *  Optional: kept out of `RESERVED_SEEDS`' matching-by-`name` use in quests
+   *  (`quests/quests.ts` matches `giverName` against `name` alone). */
+  lastName?: string
   gender: NpcGender
   role: Role
   personality: BigFivePersonality
@@ -31,10 +36,10 @@ type ReservedSeed = Omit<CharacterDef, 'personality'>
  *  `settlement/families.ts`). Randomizing these would silently break the
  *  only quests the game has. */
 const RESERVED_SEEDS: readonly ReservedSeed[] = [
-  { name: 'Anna', gender: 'female', role: 'farmer', traits: ['fast_worker'] },
-  { name: 'Piotr', gender: 'male', role: 'woodcutter', traits: ['energetic'] },
-  { name: 'Kasia', gender: 'female', role: 'trader', traits: ['night_owl'] },
-  { name: 'Marek', gender: 'male', role: 'guard', traits: ['sociable'] },
+  { name: 'Anna', lastName: 'Kowalska', gender: 'female', role: 'farmer', traits: ['fast_worker'] },
+  { name: 'Piotr', lastName: 'Kowalski', gender: 'male', role: 'woodcutter', traits: ['energetic'] },
+  { name: 'Kasia', lastName: 'Wiśniewska', gender: 'female', role: 'trader', traits: ['night_owl'] },
+  { name: 'Marek', lastName: 'Wiśniewski', gender: 'male', role: 'guard', traits: ['sociable'] },
 ]
 
 export const RESERVED_CHARACTERS: readonly CharacterDef[] = RESERVED_SEEDS.map((seed, i) => ({

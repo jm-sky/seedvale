@@ -1,6 +1,6 @@
 # NPC-e nie mają nazwiska (albo nie jest widoczne na etykiecie)
 
-**Status:** `todo`
+**Status:** `verification needed` — zaimplementowane 2026-08-09: `lastName` (rodzina dzieli jedno nazwisko, gender-agreed dla polskich form — `Kowalski`/`Kowalska`) w `ai/nameCultures.ts` (`SURNAME_POOLS`, `generateFamilySurname`, `surnameForGender`), `CharacterDef.lastName` (`ai/characters.ts`), `FamilyMember.lastName` wspólne per rodzina (`settlement/families.ts`). `NpcAgent.displayName` (`imię + nazwisko`) na etykiecie nad głową, w prompt „Rozmawiaj z…”, w dialogu i w ekranie Mieszkańcy — `npc.name` (samo imię) zostaje niezmienione jako klucz dopasowania questów (`quests/quests.ts`). Wymaga wizualnej weryfikacji w przeglądarce.
 **Created:** 2026-08-09
 **Źródło:** zgłoszenie użytkownika
 

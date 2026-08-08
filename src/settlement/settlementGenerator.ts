@@ -81,8 +81,10 @@ export function cellsWithinRadius(center: SettlementCell, radius: number): Settl
 /** Deterministic per-cell seed. Cell (0,0) maps to `seed` unchanged so that,
  *  combined with `center = {0,0}` in `generateSettlementDef`, the home
  *  settlement reproduces `findSettlementSite`'s original `seed ^ 0xc0ffee`
- *  stream exactly — no regression for existing saves/seeds. */
-function cellSeed(seed: number, cell: SettlementCell): number {
+ *  stream exactly — no regression for existing saves/seeds. Exported so other
+ *  per-settlement seeded rolls (e.g. `createSettlement.ts`'s night-fire
+ *  ignition) reuse the same settlement identity instead of a separate hash. */
+export function cellSeed(seed: number, cell: SettlementCell): number {
   if (cell.gx === 0 && cell.gz === 0) return seed
   let h = (cell.gx * 374761393 + cell.gz * 668265263) | 0
   h = (h ^ (h >>> 13)) | 0

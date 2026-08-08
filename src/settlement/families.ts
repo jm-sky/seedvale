@@ -1,7 +1,7 @@
 import type { NameCulture } from '../ai/nameCultures'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import { type CharacterDef, characterForSeed, type NpcGender, RESERVED_CHARACTERS } from '../ai/characters'
-import { generateNpcName } from '../ai/nameCultures'
+import { generateFamilySurname, generateNpcName, surnameForGender } from '../ai/nameCultures'
 import { createSeededRandom } from '../world/parseSeed'
 
 export type VillageSize = 'SM' | 'MD' | 'LG'
@@ -14,6 +14,9 @@ export type FamilyRelation = 'husband' | 'wife' | 'child' | 'single'
 
 export type FamilyMember = {
   name: string
+  /** Shared by every member of this family, gender-agreed (see
+   *  `ai/nameCultures.ts::surnameForGender`). */
+  lastName: string
   relation: FamilyRelation
   character: CharacterDef
   /** Model scale — 1 for adults. Children get a smaller stand-in scale (see
@@ -94,15 +97,15 @@ function reservedHomeFamilies(): FamilyDef[] {
     {
       id: 'family-reserved-0',
       members: [
-        { name: piotr!.name, relation: 'husband', character: piotr!, scale: 1 },
-        { name: anna!.name, relation: 'wife', character: anna!, scale: 1 },
+        { name: piotr!.name, lastName: piotr!.lastName!, relation: 'husband', character: piotr!, scale: 1 },
+        { name: anna!.name, lastName: anna!.lastName!, relation: 'wife', character: anna!, scale: 1 },
       ],
     },
     {
       id: 'family-reserved-1',
       members: [
-        { name: marek!.name, relation: 'husband', character: marek!, scale: 1 },
-        { name: kasia!.name, relation: 'wife', character: kasia!, scale: 1 },
+        { name: marek!.name, lastName: marek!.lastName!, relation: 'husband', character: marek!, scale: 1 },
+        { name: kasia!.name, lastName: kasia!.lastName!, relation: 'wife', character: kasia!, scale: 1 },
       ],
     },
   ]
@@ -125,13 +128,15 @@ function generateFamily(
 ): { family: FamilyDef, nextIndex: number } {
   const fseed = familySeed(seed, familyIndex)
   const random = createSeededRandom(fseed ^ 0x1f3c5a)
+  const baseSurname = generateFamilySurname(fseed, nameCulture)
   const members: FamilyMember[] = []
   let idx = npcIndex
 
   const addMember = (gender: NpcGender, relation: FamilyRelation, scale: number) => {
     const name = generateNpcName(seed, idx, gender, nameCulture)
+    const lastName = surnameForGender(baseSurname, nameCulture, gender)
     const character = characterForSeed(fseed ^ Math.imul(idx + 1, 0x2545f491), gender)
-    members.push({ name, relation, character: { ...character, name }, scale })
+    members.push({ name, lastName, relation, character: { ...character, name, lastName }, scale })
     idx++
   }
 

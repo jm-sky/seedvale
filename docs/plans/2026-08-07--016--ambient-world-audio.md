@@ -1,6 +1,6 @@
 # Plan: Ambient audio świata (dźwięki tła, zależne od obszaru)
 
-**Status:** `in progress` (2/5) — fundament audio (`src/audio/createWorldAudio.ts`) + warstwa dzień/noc (`src/audio/createAmbientAudio.ts`, świerszcze w nocy, crossfade po `dayFactor`) zaimplementowane; sampler obszaru (ocean/las/góry) i mixer runtime mają teraz konkretny projekt gotowy do implementacji (2026-08-08 review — patrz sekcje 2-4: reużywają istniejący `ChunkManager`/`biomeWeightsAt`, dwa z trzech brakujących assetów już leżą w `public/sounds/` nieużywane), ale kod jeszcze nie napisany
+**Status:** `verification needed` (4/5) — fundament audio + warstwa dzień/noc (świerszcze) + sampler obszaru (`src/audio/ambientWeights.ts`, nowy) + mixer runtime (warstwy `forest`/`coast`, rozszerzenie `createAmbientAudio.ts`) zaimplementowane 2026-08-09. Warstwa `mountain` (wiatr górski) świadomie pominięta — brakujący asset (patrz sekcja 2), `ambientWeightsAt` już liczy wagę `mountain`, tylko żadna pętla jej nie odtwarza. Wymaga wizualnej/dźwiękowej weryfikacji w przeglądarce.
 **Created:** 2026-08-07
 **Scope:** [world/](../../src/world/) (ocean/water/dayNight), [terrain/](../../src/terrain/) (biomy/regiony); niezależne od NPC, ale dzieli fundament audio z [npc-reaction-sounds.md](./2026-08-07--014--npc-reaction-sounds.md)
 
@@ -168,22 +168,22 @@ function update(dt: number, dayFactor: number, playerX: number, playerZ: number)
 
 ```
 src/audio/createWorldAudio.ts     # done: AudioListener na kamerze + helper do zapętlonych warstw z gain lerp (sekcja 1)
-src/audio/createAmbientAudio.ts   # done (noc) + rozszerzenie: forest/coast/mountain loopy, update(dt, dayFactor, playerX, playerZ)
-src/audio/ambientWeights.ts       # nowy: ambientWeightsAt(x, z, samplers) — kompozycja ChunkManager + biomeWeightsAt (sekcja 3)
-src/app/createApp.ts              # wiring: AmbientSamplers z chunkManager, rozszerzyć wywołanie ambientAudio.update() (~linia 484)
-public/sounds/ambient-forest-loop-01.wav          # done: już w repo, nieużywany w kodzie
-public/sounds/ambient-coast-seagulls-waves-01.wav # done: już w repo, nieużywany w kodzie
-public/sounds/ambient-mountain-wind-loop-01.wav   # brakuje: jedyny nowy asset do znalezienia (sekcja 2)
+src/audio/createAmbientAudio.ts   # done: noc + forest/coast loopy, update(dt, dayFactor, playerX, playerZ) — mountain pominięty (brak assetu)
+src/audio/ambientWeights.ts       # done: ambientWeightsAt(x, z, samplers) — kompozycja ChunkManager + biomeWeightsAt (sekcja 3)
+src/app/createApp.ts              # done: AmbientSamplers (indirection nad `chunkManager`/`config.terrain`, przetrwa rebuildWorld()), ambientAudio.update(dt, dayFactor, playerX, playerZ)
+public/sounds/ambient-forest-loop-01.wav          # done: wpięty jako warstwa forest
+public/sounds/ambient-coast-seagulls-waves-01.wav # done: wpięty jako warstwa coast/ocean
+public/sounds/ambient-mountain-wind-loop-01.wav   # brakuje: jedyny nowy asset do znalezienia (sekcja 2) — `mountain` waga liczona, ale bez pętli audio
 public/sounds/README.md           # dopisać wiersz dla mountain-wind po znalezieniu
 ```
 
 ## Done when
 
-- [ ] Bazowy ambient loop gra w tle (cichy, nie irytujący przy dłuższej sesji)
-- [ ] Warstwa dzień/noc: cykady w nocy, ptaki/owady w dzień, płynne przejście na granicy fazy
-- [ ] Warstwa terenowa: szum fal wyraźnie głośniejszy blisko oceanu/dużej wody, cichnie w głębi lądu
-- [ ] Przejście między warstwami przy chodzeniu jest płynne (brak słyszalnych "kliknięć"/nagłych skoków głośności)
-- [ ] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] Bazowy ambient loop gra w tle (cichy, nie irytujący przy dłuższej sesji)
+- [x] Warstwa dzień/noc: cykady w nocy, ptaki/owady w dzień, płynne przejście na granicy fazy
+- [x] Warstwa terenowa: szum fal wyraźnie głośniejszy blisko oceanu/dużej wody, cichnie w głębi lądu
+- [x] Przejście między warstwami przy chodzeniu jest płynne (brak słyszalnych "kliknięć"/nagłych skoków głośności) — throttlowany resample co 0.25s, gain nadal lerpuje co klatkę
+- [x] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`
 
 ## Do przetestowania (http://localhost:5577/)
 

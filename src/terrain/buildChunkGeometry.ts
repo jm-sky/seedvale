@@ -22,13 +22,14 @@ export type ChunkMeshResult = {
   dispose: () => void
 }
 
-/** How many times the detail normal map tiles across one chunk edge — high
- *  enough that the pattern reads as fine ground grain, not a repeated motif,
- *  which also hides the seam where one chunk's tiling restarts against its
- *  neighbor's (each chunk's plane UVs run 0..1 independently, so the pattern
- *  isn't phase-continuous across chunk borders — kept high-frequency and
- *  low-amplitude specifically so that doesn't read as a grid). */
-const NORMAL_MAP_TILES_PER_CHUNK = 10
+/** How many times the detail normal map tiles across one chunk edge. Lower
+ *  than the original 10 — that frequency read as a visible repeating
+ *  wave/stripe pattern (especially on flat graded ground like roads/village
+ *  clearings, where there's no geometric height variation to mask it under).
+ *  Still high enough to hide the chunk-border tiling seam (each chunk's UVs
+ *  run 0..1 independently, so the pattern isn't phase-continuous across
+ *  chunks) without reading as an obvious repeated motif. */
+const NORMAL_MAP_TILES_PER_CHUNK = 6
 
 /** Built once and shared by every chunk's material — same reasoning as
  *  `createOcean.ts`'s procedural water normal map: no external asset, no
@@ -150,8 +151,11 @@ export function buildChunkGeometry(
     normalMap,
     // Subtle — this is close-up surface grain, not a substitute for real
     // geometry; a strong value here reads as a repeating tiled pattern
-    // instead of "the ground isn't perfectly flat" (plan 044 §4.5).
-    normalScale: new THREE.Vector2(0.28, 0.28),
+    // (shiny stripes under directional light, most visible on flat graded
+    // ground like roads/village clearings) instead of "the ground isn't
+    // perfectly flat" (plan 044 §4.5). Turned down from an initial 0.28
+    // after that exact complaint.
+    normalScale: new THREE.Vector2(0.12, 0.12),
   })
 
   const mesh = new THREE.Mesh(geometry, material)

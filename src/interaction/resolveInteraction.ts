@@ -54,8 +54,8 @@ export function resolveInteraction(
     }
     case 'npc': {
       const override = questManager.onInteract(target.npc.name)
-      if (override) return { speakerName: target.npc.name, line: override.line, offer: override.offer }
-      return { speakerName: target.npc.name, line: target.npc.getDialogueLine() }
+      if (override) return { speakerName: target.npc.displayName, line: override.line, offer: override.offer }
+      return { speakerName: target.npc.displayName, line: target.npc.getDialogueLine() }
     }
     case 'spawner': {
       const override = questManager.onInteractObjective({
