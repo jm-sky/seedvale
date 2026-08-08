@@ -60,6 +60,7 @@ export function createPauseMenu(
           ? 'Joystick — ruch · przeciągnij ekran — rozglądanie · dotknij poza oknem — zamknij'
           : 'WASD — ruch · mysz (klik) — rozglądanie · Esc — pauza'
       }</div>
+      <div class="seedvale-pause__footer">v${__APP_VERSION__}<br>${__BUILD_DATE__}<br>${__GIT_COMMIT__}</div>
     </div>
   `
   parent.appendChild(root)
