@@ -22,7 +22,7 @@ import {
   REED_SPECS,
   TREE_SPECS,
 } from '../settlement/props'
-import { clearingSegmentsNear, type RoadNetworkContext, segmentsNear } from '../settlement/roadNetwork'
+import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { createChunkWater, type WorldWater } from '../world/createWater'
 import { buildChunkGeometry } from './buildChunkGeometry'
 import {
@@ -222,6 +222,7 @@ export function createChunkManager(
 
   function paramsFor(coord: ChunkCoord): ChunkTileParams {
     const { x, z } = chunkCenter(coord, config.chunkSize)
+    const village = villageSegmentsNear(x, z, config.chunkSize, roadCtx)
     return {
       cx: coord.cx,
       cz: coord.cz,
@@ -246,8 +247,9 @@ export function createChunkManager(
         cactus: CACTUS_SPECS.length,
         reed: REED_SPECS.length,
       },
-      roadSegments: segmentsNear(x, z, config.chunkSize, roadCtx),
-      clearings: clearingSegmentsNear(x, z, config.chunkSize, roadCtx),
+      roadSegments: [...segmentsNear(x, z, config.chunkSize, roadCtx), ...village.paths],
+      clearings: village.clearings,
+      regional: village.regional,
     }
   }
 
