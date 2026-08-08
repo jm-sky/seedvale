@@ -81,6 +81,9 @@ const INTERACT_MIN_DOT = 0.5
 /** Gaze-highlight range — deliberately larger than `INTERACT_RANGE` so the glow
  *  reads as an "approaching" cue before the `[E]` prompt appears. */
 const GAZE_RANGE = INTERACT_RANGE * 2
+/** Chance an `[E]`-inspected tree also yields a branch, on top of the
+ *  renewable branch spawn points (`createItemSpawners.ts`). */
+const TREE_BRANCH_CHANCE = 0.25
 
 type Highlightable = NpcAgent | AnimalAgent
 
@@ -517,6 +520,16 @@ export async function createApp(
           } else {
             npcDialog.open('Ognisko', 'Potrzebujesz gałęzi, żeby je zapalić.')
           }
+        } else if (target.kind === 'tree') {
+          const outcome = resolveInteraction(target, questManager)
+          let line = outcome.line
+          if (Math.random() < TREE_BRANCH_CHANCE) {
+            inventory.add('branch')
+            hud.setInventory(inventory.toJSON())
+            touchControls?.setDropAvailable(!inventory.isEmpty())
+            line += ' Pod drzewem leży sucha gałąź.'
+          }
+          npcDialog.open(outcome.speakerName, line, outcome.offer)
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)

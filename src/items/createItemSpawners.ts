@@ -19,20 +19,27 @@ export type ItemSpawners = {
 
 /** One renewable pickup per kind, close to the settlement — a reliable fallback
  *  source for quests regardless of whether world-generated coast/mountain items
- *  (`terrain/chunkItems.ts`) happened to land nearby this seed. `branch` is
- *  positioned near one of the settlement's own trees instead of the settlement
- *  center (`near: 'trees'`) — village campfires (`VillageFire.ts`) burn through
- *  branches, and world-generated branches near trees don't respawn
- *  (`terrain/chunkItems.ts`), so without this the supply would eventually run out. */
-const SPAWN_SPECS: { kind: ItemKind, respawnTime: number, near?: 'trees' }[] = [
+ *  (`terrain/chunkItems.ts`) happened to land nearby this seed. `branch` gets its
+ *  own multi-point pool below instead of a single point here — see
+ *  `BRANCH_SPAWN_POINTS_MIN/MAX`. */
+const SPAWN_SPECS: { kind: ItemKind, respawnTime: number }[] = [
   { kind: 'stone', respawnTime: 100 },
   { kind: 'shell', respawnTime: 90 },
-  { kind: 'branch', respawnTime: 45, near: 'trees' },
 ]
 
-/** How close to the chosen tree a `near: 'trees'` spawn point lands. */
+/** How close to a chosen tree a branch spawn point lands. */
 const TREE_SPAWN_MIN_DIST = 1.2
 const TREE_SPAWN_MAX_DIST = 3.5
+/** Village campfires (`VillageFire.ts`) burn through branches, and
+ *  world-generated branches near trees don't respawn (`terrain/chunkItems.ts`),
+ *  so branch needs a reliable renewable supply. A settlement's forest belt
+ *  (`plantTreeCluster`) can have dozens of trees, so a single spawn point (the
+ *  original design) was too sparse to find while walking around — one point
+ *  per handful of trees instead, scaled to the settlement's actual tree count. */
+const BRANCH_RESPAWN_TIME = 45
+const BRANCH_SPAWN_POINTS_MIN = 3
+const BRANCH_SPAWN_POINTS_MAX = 8
+const BRANCH_TREES_PER_POINT = 4
 
 export function createItemSpawners(
   scene: Scene,
@@ -74,22 +81,14 @@ export function createItemSpawners(
     meshes[index] = mesh
   }
 
-  for (const spec of SPAWN_SPECS) {
-    const pos =
-      spec.near === 'trees' && trees.length > 0
-        ? (() => {
-            const tree = trees[Math.floor(random() * trees.length)]!
-            return findWalkableNear(tree.x, tree.z, TREE_SPAWN_MIN_DIST, TREE_SPAWN_MAX_DIST)
-          })()
-        : findWalkableNear(settlementCenter.x, settlementCenter.z, 20, 42)
-    if (!pos) continue
+  const addSpawnPoint = (kind: ItemKind, respawnTime: number, pos: { x: number, z: number }): void => {
     const index = points.length
     points.push({
       id: `spawner:${index}`,
       x: pos.x,
       z: pos.z,
-      kind: spec.kind,
-      respawnTime: spec.respawnTime,
+      kind,
+      respawnTime,
       timeSinceCollected: 0,
       collected: false,
     })
@@ -98,11 +97,37 @@ export function createItemSpawners(
 
     const el = document.createElement('div')
     el.className = 'npc-label'
-    el.textContent = ITEM_DEFS[spec.kind].label
+    el.textContent = ITEM_DEFS[kind].label
     const label = new CSS2DObject(el)
     label.position.set(pos.x, sampleHeight(pos.x, pos.z) + 0.4, pos.z)
     scene.add(label)
     labels.push({ object: label, el })
+  }
+
+  for (const spec of SPAWN_SPECS) {
+    const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 20, 42)
+    if (!pos) continue
+    addSpawnPoint(spec.kind, spec.respawnTime, pos)
+  }
+
+  if (trees.length > 0) {
+    const treeOrder = trees.map((_, i) => i)
+    for (let i = treeOrder.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1))
+      const tmp = treeOrder[i]!
+      treeOrder[i] = treeOrder[j]!
+      treeOrder[j] = tmp
+    }
+    const branchPointCount = Math.min(
+      BRANCH_SPAWN_POINTS_MAX,
+      Math.max(BRANCH_SPAWN_POINTS_MIN, Math.ceil(trees.length / BRANCH_TREES_PER_POINT)),
+    )
+    for (let n = 0; n < branchPointCount; n++) {
+      const tree = trees[treeOrder[n % treeOrder.length]!]!
+      const pos = findWalkableNear(tree.x, tree.z, TREE_SPAWN_MIN_DIST, TREE_SPAWN_MAX_DIST)
+      if (!pos) continue
+      addSpawnPoint('branch', BRANCH_RESPAWN_TIME, pos)
+    }
   }
 
   return {
