@@ -1,5 +1,10 @@
 import type { HeightSampler } from '../player/PlayerController'
-import type { ClearingSegment, RegionParams, RoadCorridorSegment } from '../terrain/chunkHeightmap'
+import type {
+  ClearingSegment,
+  RegionalSmoothingSegment,
+  RegionParams,
+  RoadCorridorSegment,
+} from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
 import { minorLocationsFor } from './minorLocations'
 import {
@@ -445,39 +450,85 @@ export function segmentsNear(
   return out
 }
 
-/** Village clearing segments near a chunk's world-space footprint — same
+export type VillageSegments = {
+  clearings: ClearingSegment[]
+  regional: RegionalSmoothingSegment[]
+  /** House↔core paths — narrow, barely-reshaping corridors (same "path" tier
+   *  as a settlement↔minor-location path, see `pathHalfWidth` etc. below),
+   *  one straight line per family from its house to the settlement's core
+   *  clearing. Meant to merge into the caller's `roadSegments`, not a
+   *  separate `ChunkTileParams` field — it's the same `RoadCorridorSegment`
+   *  shape and blend as everything else there. */
+  paths: RoadCorridorSegment[]
+}
+
+/** Village terrain-shaping data near a chunk's world-space footprint — same
  *  "resolve nearby settlement defs, filter to what could reach this chunk"
  *  shape as `segmentsNear`, just reading `SettlementDef.clearings` (already
- *  laid out by `village/villageClearing.ts`'s `layoutClearings` when the def
- *  was resolved) instead of routing. Kept here rather than in
- *  `villageClearing.ts` itself to reuse this module's existing `defFor`
- *  cache/`RoadNetworkContext` and avoid a circular import: `villageClearing.ts`
- *  stays a pure leaf module `settlementGenerator.ts` can import without this
- *  module importing back into it. Called by `chunkManager.ts`'s `paramsFor()`,
- *  main-thread only, once per chunk request. */
-export function clearingSegmentsNear(
+ *  laid out by `villageClearing.ts`'s `layoutClearings` when the def was
+ *  resolved) instead of routing, plus deriving one house↔core path segment
+ *  per family. One pass over `cellsWithinRadius`/`defFor` for all three
+ *  (clearings/regional/paths) rather than three near-identical loops. Kept
+ *  here rather than in `villageClearing.ts` itself to reuse this module's
+ *  existing `defFor` cache/`RoadNetworkContext` and avoid a circular import:
+ *  `villageClearing.ts` stays a pure leaf module `settlementGenerator.ts` can
+ *  import without this module importing back into it. Called by
+ *  `chunkManager.ts`'s `paramsFor()`, main-thread only, once per chunk request. */
+export function villageSegmentsNear(
   worldX: number,
   worldZ: number,
   chunkSize: number,
   ctx: RoadNetworkContext,
-): ClearingSegment[] {
+): VillageSegments {
   const cell = worldToCell(worldX, worldZ)
   const half = chunkSize / 2
   const minX = worldX - half
   const maxX = worldX + half
   const minZ = worldZ - half
   const maxZ = worldZ + half
+  const inBounds = (x: number, z: number, margin: number) =>
+    !(x + margin < minX || x - margin > maxX || z + margin < minZ || z - margin > maxZ)
 
   const { heightStrength, tintStrength } = ctx.region.village
-  const out: ClearingSegment[] = []
+  const { pathHalfWidth, pathHeightStrength, pathTintStrength } = ctx.region.roadNetwork
+
+  const clearings: ClearingSegment[] = []
+  const regional: RegionalSmoothingSegment[] = []
+  const paths: RoadCorridorSegment[] = []
+
   for (const c of cellsWithinRadius(cell, 1)) {
     const def = defFor(c, ctx)
-    for (const area of [def.clearings.core, ...def.clearings.houses]) {
-      const margin = area.radius + 2
-      if (area.x + margin < minX || area.x - margin > maxX) continue
-      if (area.z + margin < minZ || area.z - margin > maxZ) continue
-      out.push({ x: area.x, z: area.z, radius: area.radius, targetH: area.targetH, heightStrength, tintStrength })
+    const { core, houses, regional: reg } = def.clearings
+
+    for (const area of [core, ...houses]) {
+      if (!inBounds(area.x, area.z, area.radius + 2)) continue
+      clearings.push({ x: area.x, z: area.z, radius: area.radius, targetH: area.targetH, heightStrength, tintStrength })
+    }
+
+    if (inBounds(reg.x, reg.z, reg.radius + 2)) {
+      regional.push({ x: reg.x, z: reg.z, radius: reg.radius, targetH: reg.targetH, heightStrength: reg.heightStrength })
+    }
+
+    for (const house of houses) {
+      const margin = pathHalfWidth + 2
+      const segMinX = Math.min(core.x, house.x) - margin
+      const segMaxX = Math.max(core.x, house.x) + margin
+      const segMinZ = Math.min(core.z, house.z) - margin
+      const segMaxZ = Math.max(core.z, house.z) + margin
+      if (segMaxX < minX || segMinX > maxX || segMaxZ < minZ || segMinZ > maxZ) continue
+      paths.push({
+        ax: core.x,
+        az: core.z,
+        ah: core.targetH,
+        bx: house.x,
+        bz: house.z,
+        bh: house.targetH,
+        halfWidth: pathHalfWidth,
+        heightStrength: pathHeightStrength,
+        tintStrength: pathTintStrength,
+      })
     }
   }
-  return out
+
+  return { clearings, regional, paths }
 }

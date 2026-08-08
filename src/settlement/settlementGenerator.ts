@@ -132,7 +132,7 @@ export function generateSettlementDef(
 
   const size = rollVillageSize(terrain, seedForCell)
   const families = generateFamilies(seedForCell, size, isHome, nameCulture)
-  const clearings = layoutClearings(site, families, seedForCell, sampleHeight, waterLevel, region.village)
+  const clearings = layoutClearings(site, families, terrain, seedForCell, sampleHeight, waterLevel, region.village)
 
   return {
     id: cellKey(cell),

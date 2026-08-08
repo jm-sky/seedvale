@@ -19,6 +19,16 @@ Zaimplementowane zgodnie ze szkicem poniżej, z kilkoma decyzjami podjętymi pod
 
 Sanity check: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — wszystkie czyste. **Nie zweryfikowano jeszcze w przeglądarce** — patrz „Do przetestowania" (wymaga manualnego testu przez użytkownika, zgodnie z zasadą projektu).
 
+## Follow-up (2026-08-08, po weryfikacji w przeglądarce)
+
+Użytkownik potwierdził, że pierwsza wersja działa, i zgłosił trzy uwagi do dopracowania w tym samym systemie:
+
+1. **Ścieżki dom↔plac** — nowy segment w `settlement/roadNetwork.ts::villageSegmentsNear` (dawniej `clearingSegmentsNear`, teraz zwraca `{clearings, regional, paths}` jednym przejściem po sąsiednich `SettlementDef`): dla każdego domu prosta linia core→dom, reużywa istniejący `RoadCorridorSegment`/tier „path" (`region.roadNetwork.pathHalfWidth/pathHeightStrength/pathTintStrength`) — bez nowego typu segmentu, bez zmian w `chunkHeightmap.ts` dla tej części.
+2. **Regionalne wyrównanie całej wioski** — nowy typ `RegionalSmoothingSegment` (`terrain/chunkHeightmap.ts`, bez `tintStrength` — tylko geometria, nie kolor), aplikowany w `computeChunkTile` **przed** istniejącym `applyTerrainCorridors` (dwuetapowo: najpierw miękkie wyrównanie całej wioski, potem ostry blend clearingów/dróg na tej już złagodzonej bazie) — konieczne, bo duży-słaby segment i mały-silny segment nie mogą uczciwie konkurować w logice „najsilniejszy falloff wygrywa". Siła zależna od terenu: `region.village.regionalHeightStrengthFlat` (domyślnie 0.3) / `regionalHeightStrengthMountain` (domyślnie 0.15) — `layoutClearings()` dostał nowy parametr `terrain: SettlementTerrain`.
+3. **Dom nie ląduje na oddzielonej wodą wysepce** — dotychczasowa ochrona sprawdzała tylko jeden punkt (środek domu); nowa `pathIsDry()` w `settlement/villageClearing.ts` próbkuje 5 punktów na całej linii plac→kandydat (ta sama linia, po której rysuje się ścieżka z pkt. 1 — jedna walidacja obsługuje oba przypadki), a gdy wszystkie próby zawiodą, dom ląduje tuż przy placu (`coreRadius + houseRadius*1.1`) zamiast przyjmować ostatni (potencjalnie zły) wynik jak wcześniej. Nie jest to 100% gwarancja (site zweryfikowany tylko ±2.5 jedn. od centrum) — świadomie zaakceptowane jako best-effort, jak reszta tego systemu (`findRoute`/`findSettlementSite`).
+
+Nowe testy: `src/settlement/villageClearing.test.ts` (determinizm, `regional.heightStrength` per teren, brak wody na linii plac→dom nawet na spreparowanym terenie z „paskiem wody", promień `regional` pokrywa cały pierścień domów). Sanity check ponownie czysty: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` (34 testy). **Wizualna weryfikacja tego follow-upu jeszcze nie zrobiona.**
+
 ## Kontekst
 
 Szkic tego planu powstał jako draft (ChatGPT) i został tu przejrzany oraz dopasowany do realiów kodu przed wpisaniem do kolejki. Punkt wyjścia: każda osada dziś ma płaską, niezróżnicowaną listę 3-5 NPC-ów (`SettlementDef.npcCount`, seeded roll) bez żadnej struktury rodzinnej, a domy stoją na trzech sztywnych offsetach niezależnie od tego, ilu NPC-ów faktycznie tam mieszka. Cel: **wioska generowana jako całość** — rozmiar (SM/MD/LG) → rodziny → NPC-e z relacjami (`husband`/`wife`/`child`) → **1 rodzina = 1 dom** → kilka małych, lokalnie wyrównanych obszarów terenu pod zabudowę → obiekty wspólne (studnia/skład, więcej dla większych wiosek). Bez ekonomii, rozwoju czy migracji — to fundament pod przyszłe „żywe" wioski (patrz „Kierunek na przyszłość" niżej), nie kompletny system.
@@ -124,14 +134,23 @@ Konstruktor/`create()` przyjmuje gotowy `CharacterDef` (z `FamilyMember.characte
 - [x] Home-osada dalej ma NPC-ów o imionach Anna/Piotr/Kasia/Marek z tymi samymi rolami/traits co dziś — questy v1 bez regresji (statycznie, patrz „Do przetestowania" dla weryfikacji w przeglądarce).
 - [x] Teren pod klastrami domów/obiektów wspólnych widocznie płynniejszy (spłaszczony), ale nie idealnie płaski dysk — reużywa `sampleRawTexel`/`applyRoadTint` (statycznie zaimplementowane, wizualna weryfikacja jeszcze do zrobienia).
 - [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` czyste.
+- [x] *(Follow-up)* Ścieżka dom↔plac widoczna w danych terenu (`RoadCorridorSegment` per dom, `roadSegments`), regionalne wyrównanie zależne od terenu (`RegionalSmoothingSegment`, `mountain` vs pozostałe), dom nigdy nie ląduje z drogą przez wodę do placu (`pathIsDry` + fallback) — statycznie zaimplementowane + testy jednostkowe (`villageClearing.test.ts`), wizualna weryfikacja jeszcze do zrobienia.
 
-## Do przetestowania (http://localhost:5577/) — jeszcze nie wykonane
+## Do przetestowania (http://localhost:5577/)
 
-1. Kilka seedów (`?seed=`) — rozmiar wiosek widocznie różny między osadami (SM/MD/LG), zgodnie z ich terenem (więcej domów w lesie/na równinie, mniej w górach/pustyni).
-2. Home-osada (spawn gracza) — Anna/Piotr/Kasia/Marek nadal obecni, dialog i questy v1 (`[E]`, quest log `[L]`) działają jak wcześniej.
-3. Domy nie zachodzą na siebie ani na studnię/skład; wioska nie wygląda jak jeden wielki płaski dysk, tylko kilka mniejszych spłaszczonych plam terenu.
-4. Ekran „Mieszkańcy" pokazuje relację (mąż/żona/dziecko) obok roli/osobowości; dziecko widocznie mniejsze od dorosłych.
-5. Sanity check regresji: chodzenie, sprint, drogi między osadami (`roads-and-paths.md`) nadal widoczne i nie kolidują wizualnie z nowymi obszarami wioski.
+Pierwsza runda — **potwierdzona przez użytkownika, działa** (patrz „Follow-up" wyżej dla trzech zgłoszonych dopracowań):
+
+1. ✅ Kilka seedów (`?seed=`) — rozmiar wiosek widocznie różny między osadami (SM/MD/LG), zgodnie z ich terenem.
+2. ✅ Home-osada (spawn gracza) — Anna/Piotr/Kasia/Marek nadal obecni, dialog i questy v1 (`[E]`, quest log `[L]`) działają jak wcześniej.
+3. ✅ Domy nie zachodzą na siebie ani na studnię/skład; wioska nie wygląda jak jeden wielki płaski dysk.
+
+Druga runda (follow-up) — **jeszcze nie wykonana**:
+
+4. Widoczna ścieżka (ubita ziemia + lekkie spłaszczenie) między placem a każdym domem, w kilku wioskach.
+5. Wioska górska (`?seed=` z osadą sklasyfikowaną jako `mountain`, patrz etykieta nazwy/debug) ma zauważalnie mniej wyrównany teren niż wioska na zwykłym terenie — nadal czuje się jak na zboczu, nie jak sztuczny płaski talerz — a jednocześnie różnice wysokości między jej clearingami są mniejsze niż przed tym follow-upem.
+6. Świadome przetestowanie wiosek przybrzeżnych/wyspiarskich (te same `?seed=`, które wcześniej pokazały dom na wysepce) — żaden dom nie ląduje odcięty wodą od reszty wioski.
+7. Ekran „Mieszkańcy" pokazuje relację (mąż/żona/dziecko) obok roli/osobowości; dziecko widocznie mniejsze od dorosłych.
+8. Sanity check regresji: chodzenie, sprint, drogi między osadami (`roads-and-paths.md`) nadal widoczne i nie kolidują wizualnie z nowymi ścieżkami/wyrównaniem.
 
 ## Następnie
 

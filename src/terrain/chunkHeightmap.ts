@@ -66,6 +66,12 @@ export type VillageClearingParams = {
   heightStrength: number
   /** How strongly the ground color blends toward `DIRT` inside a clearing. */
   tintStrength: number
+  /** How strongly the whole village footprint (core + house ring) gently
+   *  pulls toward a shared average height — see `RegionalSmoothingSegment`.
+   *  Split flat/mountain so a hillside village still reads as a hillside,
+   *  just less jarring between its clearings. */
+  regionalHeightStrengthFlat: number
+  regionalHeightStrengthMountain: number
 }
 
 export type RoadNetworkParams = {
@@ -113,7 +119,7 @@ export type RoadCorridorSegment = {
  *  counterpart to `RoadCorridorSegment`, same worker-safe/plain-numeric
  *  reasoning. Computed main-thread-only by `settlement/villageClearing.ts`
  *  (`layoutClearings`, embedded in `SettlementDef.clearings`) and flattened
- *  per-chunk by `settlement/roadNetwork.ts`'s `clearingSegmentsNear`. */
+ *  per-chunk by `settlement/roadNetwork.ts`'s `villageSegmentsNear`. */
 export type ClearingSegment = {
   x: number
   z: number
@@ -122,6 +128,23 @@ export type ClearingSegment = {
   targetH: number
   heightStrength: number
   tintStrength: number
+}
+
+/** A whole village's gentle, wide-radius height-only smoothing pass — pulls
+ *  the terrain under and around a village's clearings toward a shared
+ *  average height, applied *before* (not competing with) the sharp
+ *  `ClearingSegment`/`RoadCorridorSegment` blend — see `applyRegionalSmoothing`
+ *  and `computeChunkTile`'s two-stage blend. No `tintStrength`: this pass is
+ *  meant to be invisible as color, only as geometry — a village-sized "packed
+ *  dirt" disc would look wrong. Computed by `villageClearing.ts`'s
+ *  `layoutClearings`, flattened per-chunk by `roadNetwork.ts`'s
+ *  `villageSegmentsNear`. */
+export type RegionalSmoothingSegment = {
+  x: number
+  z: number
+  radius: number
+  targetH: number
+  heightStrength: number
 }
 
 export type ChunkTileParams = {
@@ -165,6 +188,11 @@ export type ChunkTileParams = {
    *  already include clearing blending — excluded from `RawSampleParams` for
    *  the same reason `roadSegments` is. */
   clearings: ClearingSegment[]
+  /** Village-wide regional smoothing near this chunk — see
+   *  `RegionalSmoothingSegment`. Same road-agnostic-analytic-sampler
+   *  reasoning as `roadSegments`/`clearings`, excluded from `RawSampleParams`
+   *  for the same reason. */
+  regional: RegionalSmoothingSegment[]
 }
 
 export type RawSampleParams = Omit<
@@ -177,6 +205,7 @@ export type RawSampleParams = Omit<
   | 'vegetationSpeciesCount'
   | 'roadSegments'
   | 'clearings'
+  | 'regional'
 >
 
 export type ChunkTileData = {
@@ -526,6 +555,42 @@ function applyTerrainCorridors(
   }
 }
 
+/** Gently blends a texel's `floorH` toward the nearest/strongest village's
+ *  regional target height — a soft, everywhere-present pull (no flat "inner"
+ *  plateau like `CORRIDOR_INNER_FRACTION`, since this isn't carving a disc,
+ *  just leveling the village's overall relief) applied *before*
+ *  `applyTerrainCorridors` in `computeChunkTile`, not in competition with it:
+ *  a big, weak regional segment would otherwise randomly win or lose against
+ *  a small, strong clearing depending on which happens to have the higher
+ *  falloff at a given point, defeating the point of a soft underlying base. */
+function applyRegionalSmoothing(
+  wx: number,
+  wz: number,
+  floorH: number,
+  segments: readonly RegionalSmoothingSegment[],
+): number {
+  let bestFalloff = 0
+  let bestTargetH = 0
+  let bestHeightStrength = 0
+
+  for (const seg of segments) {
+    const dx = wx - seg.x
+    const dz = wz - seg.z
+    const distSq = dx * dx + dz * dz
+    if (distSq >= seg.radius * seg.radius) continue
+    const dist = Math.sqrt(distSq)
+    const falloff = 1 - MathUtils.smoothstep(dist, 0, seg.radius)
+    if (falloff > bestFalloff) {
+      bestFalloff = falloff
+      bestTargetH = seg.targetH
+      bestHeightStrength = seg.heightStrength
+    }
+  }
+
+  if (bestFalloff <= 0) return floorH
+  return MathUtils.lerp(floorH, bestTargetH, bestFalloff * bestHeightStrength)
+}
+
 /**
  * Computes one chunk's apron-inclusive heightmap tile. Pure, environment-agnostic —
  * safe on the main thread or inside a worker. No map-edge concept (no guaranteed
@@ -560,6 +625,14 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
 
       let floorH = sample.floorH
       let tint = 0
+      // Stage 1: broad, weak village-wide leveling (see `applyRegionalSmoothing`'s
+      // doc comment for why this runs first instead of joining the corridor
+      // "strongest segment wins" competition below).
+      if (params.regional.length > 0) {
+        floorH = applyRegionalSmoothing(wx, wz, floorH, params.regional)
+      }
+      // Stage 2: sharp road/path/clearing blend on top of the (now gently
+      // leveled) base.
       if (params.roadSegments.length > 0 || params.clearings.length > 0) {
         const corridor = applyTerrainCorridors(wx, wz, floorH, params.roadSegments, params.clearings)
         floorH = corridor.floorH

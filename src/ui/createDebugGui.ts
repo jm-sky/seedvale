@@ -318,6 +318,18 @@ export function createDebugGui(
       .name('Clearing tint strength')
       .onFinishChange(handlers.onTerrainChange),
   )
+  terrainControllers.push(
+    village
+      .add(config.terrain.region.village, 'regionalHeightStrengthFlat', 0, 1, 0.01)
+      .name('Regional smoothing (flat)')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    village
+      .add(config.terrain.region.village, 'regionalHeightStrengthMountain', 0, 1, 0.01)
+      .name('Regional smoothing (mountain)')
+      .onFinishChange(handlers.onTerrainChange),
+  )
 
   const grass = gui.addFolder('Grass')
   terrainControllers.push(
