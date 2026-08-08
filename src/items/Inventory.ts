@@ -41,6 +41,10 @@ export class Inventory {
     return true
   }
 
+  clear(): void {
+    this.counts.clear()
+  }
+
   toJSON(): Partial<Record<ItemKind, number>> {
     return Object.fromEntries(this.counts) as Partial<Record<ItemKind, number>>
   }

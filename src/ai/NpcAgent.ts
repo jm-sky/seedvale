@@ -100,18 +100,18 @@ type Phase =
   | 'wander'
 
 /** Phases the player's approach may interrupt to trigger a lookAtPlayer pause. */
-const PAUSE_INTERRUPTIBLE_PHASES: readonly Phase[] = [
+const PAUSE_INTERRUPTIBLE_PHASES: ReadonlySet<Phase> = new Set([
   'choose',
-  'wander',
   'followPath',
   'goGarden',
   'goStock',
   'goTree',
   'goWell',
-]
+  'wander',
+])
 
 /** Phases that drain `health.currentHp` (fatigue) vs. ones that regenerate it. */
-const FATIGUE_PHASES: readonly Phase[] = [
+const FATIGUE_PHASES: ReadonlySet<Phase> = new Set([
   'chop',
   'deposit',
   'drink',
@@ -120,8 +120,8 @@ const FATIGUE_PHASES: readonly Phase[] = [
   'goStock',
   'goTree',
   'goWell',
-]
-const REST_PHASES: readonly Phase[] = ['wander', 'followPath', 'lookAtPlayer']
+])
+const REST_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'lookAtPlayer', 'wander'])
 
 /** Chance per `choose` cycle — when no active need routes the NPC anywhere
  *  specific and it would otherwise wander a few units from home — that it
@@ -209,6 +209,10 @@ export class NpcAgent {
   private questMarker: string | null = null
   private highlighted = false
   private readonly playSound: (url: string, volume?: number) => void
+  /** Last text/opacity actually written to `labelEl` — `textContent`/`style.opacity`
+   *  writes invalidate CSS2D label layout, so skip them when nothing changed. */
+  private lastLabelText = ''
+  private lastLabelOpacity = -1
 
   private constructor(
     root: THREE.Object3D,
@@ -274,6 +278,7 @@ export class NpcAgent {
     this.labelEl = document.createElement('div')
     this.labelEl.className = 'npc-label'
     this.labelEl.textContent = this.name
+    this.lastLabelText = this.name
     this.label = new CSS2DObject(this.labelEl)
     this.label.position.set(0, NPC_HEIGHT + 0.55, 0)
     this.mesh.add(this.label)
@@ -378,14 +383,14 @@ export class NpcAgent {
     tickNeeds(this.needs, dt)
     this.moving = false
 
-    if (FATIGUE_PHASES.includes(this.phase)) {
+    if (FATIGUE_PHASES.has(this.phase)) {
       applyFatigue(this.health, this.fatigueRate * dt, HP_FLOOR)
-    } else if (REST_PHASES.includes(this.phase)) {
+    } else if (REST_PHASES.has(this.phase)) {
       rest(this.health, this.restRate * dt)
     }
 
     if (this.pauseCooldown > 0) this.pauseCooldown -= dt
-    if (this.pauseCooldown <= 0 && PAUSE_INTERRUPTIBLE_PHASES.includes(this.phase)) {
+    if (this.pauseCooldown <= 0 && PAUSE_INTERRUPTIBLE_PHASES.has(this.phase)) {
       const dx = this.mesh.position.x - observerPos.x
       const dz = this.mesh.position.z - observerPos.z
       const params = this.pauseParams
@@ -491,10 +496,16 @@ export class NpcAgent {
       needColor(this.activeNeed),
     )
     const questSuffix = this.questMarker ? ` · ${this.questMarker}` : ''
-    this.labelEl.textContent = `${this.name}${questSuffix}`
-    this.labelEl.style.opacity = String(
-      labelOpacityForDistance(this.mesh.position.distanceTo(observerPos)),
-    )
+    const labelText = `${this.name}${questSuffix}`
+    if (labelText !== this.lastLabelText) {
+      this.lastLabelText = labelText
+      this.labelEl.textContent = labelText
+    }
+    const opacity = labelOpacityForDistance(this.mesh.position.distanceTo(observerPos))
+    if (opacity !== this.lastLabelOpacity) {
+      this.lastLabelOpacity = opacity
+      this.labelEl.style.opacity = String(opacity)
+    }
     this.mixer.update(dt)
   }
 
@@ -503,10 +514,6 @@ export class NpcAgent {
     this.labelEl.remove()
     this.mixer.stopAllAction()
     disposeObject3D(this.mesh)
-  }
-
-  disposeLabel(): void {
-    this.dispose()
   }
 
   private findAction(

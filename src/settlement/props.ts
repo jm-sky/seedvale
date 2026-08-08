@@ -3,6 +3,7 @@ import type { VillageSize } from './families'
 import type { SettlementSite } from './findSettlementSite'
 import type { ClearingLayout } from './villageClearing'
 import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
+import { distanceToSegment } from '../math/segment'
 import { createSeededRandom } from '../world/parseSeed'
 
 export type SettlementLandmarks = {
@@ -417,17 +418,6 @@ async function loadPropOrFallback(
 
 type ClusterSize = 'medium' | 'small'
 
-function mulberry(seed: number): () => number {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 export async function loadPropTemplates(
   specs: ReadonlyArray<{ url: string, height: number }>,
   fallback: () => THREE.Object3D,
@@ -447,18 +437,6 @@ export function cloneProp(
   prop.scale.multiplyScalar(scale)
   prop.rotation.y = Math.random() * Math.PI * 2
   return prop
-}
-
-/** Perpendicular distance from `(px,pz)` to segment `(ax,az)-(bx,bz)` — small
- *  local copy of `chunkHeightmap.ts`'s `projectOntoSegment` (not exported,
- *  and pulling in the terrain module here just for this would be overkill). */
-function distanceToSegment(px: number, pz: number, ax: number, az: number, bx: number, bz: number): number {
-  const dx = bx - ax
-  const dz = bz - az
-  const lenSq = dx * dx + dz * dz
-  if (lenSq < 1e-6) return Math.hypot(px - ax, pz - az)
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / lenSq))
-  return Math.hypot(px - (ax + dx * t), pz - (az + dz * t))
 }
 
 /** Clearance (world units) a tree/bush must keep from a house↔core path —
@@ -678,7 +656,7 @@ export async function buildSettlementProps(
   }
 
   if (plantForest) {
-    const random = mulberry(seed ^ 0x7e3d)
+    const random = createSeededRandom(seed ^ 0x7e3d)
     const treeTemplates = await loadPropTemplates(TREE_SPECS, () => createTree(1))
     const bushTemplates = await loadPropTemplates(BUSH_SPECS, () => createBush(1))
     const treeCounter = { n: 0 }

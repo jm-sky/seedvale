@@ -160,6 +160,7 @@ export async function createFauna(
     object: CSS2DObject
     el: HTMLDivElement
     marker: string | null
+    lastOpacity: number
   }[] = []
   for (const spec of SPAWNER_SPECS) {
     const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 45, 65)
@@ -172,7 +173,7 @@ export async function createFauna(
     const label = new CSS2DObject(el)
     label.position.set(pos.x, sampleHeight(pos.x, pos.z) + 0.6, pos.z)
     scene.add(label)
-    spawnerLabels.push({ type: spec.type, object: label, el, marker: null })
+    spawnerLabels.push({ type: spec.type, object: label, el, marker: null, lastOpacity: -1 })
   }
 
   return {
@@ -206,10 +207,11 @@ export async function createFauna(
         },
       )
 
-      for (const { object, el } of spawnerLabels) {
-        el.style.opacity = String(
-          labelOpacityForDistance(object.position.distanceTo(observerPos)),
-        )
+      for (const entry of spawnerLabels) {
+        const opacity = labelOpacityForDistance(entry.object.position.distanceTo(observerPos))
+        if (opacity === entry.lastOpacity) continue
+        entry.lastOpacity = opacity
+        entry.el.style.opacity = String(opacity)
       }
     },
     dispose() {

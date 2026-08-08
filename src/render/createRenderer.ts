@@ -2,7 +2,11 @@ import * as THREE from 'three'
 
 export function createRenderer(container: HTMLElement): THREE.WebGLRenderer {
   const renderer = new THREE.WebGLRenderer({
-    antialias: true,
+    // Everything renders through EffectComposer into offscreen targets, where
+    // this backbuffer MSAA has no effect (see createPostProcessing.ts — SMAAPass
+    // does the actual AA). Multisampling the default framebuffer here is a
+    // wasted allocation.
+    antialias: false,
     powerPreference: 'high-performance',
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))

@@ -36,22 +36,44 @@ export function createHud(parent: HTMLElement): Hud {
   const expEl = root.querySelector('[data-exp]')!
   const inventoryEl = root.querySelector('[data-inventory]')!
 
+  // `formatClock`/`phaseName` are called every frame (`timeOfDay` advances
+  // continuously), but the rendered string only actually changes a few times
+  // a minute — skip the `textContent` write (invalidates layout) otherwise.
+  let lastTime = ''
+  let lastPhase = ''
+  let lastExp = ''
+  let lastInventory = ''
+
   return {
     root,
     setSeed(seed) {
       seedEl.textContent = `seed ${seed}`
     },
     setTime(timeOfDay) {
-      timeEl.textContent = formatClock(timeOfDay)
-      phaseEl.textContent = phaseName(timeOfDay)
+      const time = formatClock(timeOfDay)
+      if (time !== lastTime) {
+        lastTime = time
+        timeEl.textContent = time
+      }
+      const phase = phaseName(timeOfDay)
+      if (phase !== lastPhase) {
+        lastPhase = phase
+        phaseEl.textContent = phase
+      }
     },
     setExp(exp) {
-      expEl.textContent = `exp ${exp}`
+      const text = `exp ${exp}`
+      if (text === lastExp) return
+      lastExp = text
+      expEl.textContent = text
     },
     setInventory(counts) {
-      inventoryEl.textContent = (Object.keys(ITEM_DEFS) as ItemKind[])
+      const text = (Object.keys(ITEM_DEFS) as ItemKind[])
         .map((kind) => `${ITEM_DEFS[kind].label} ${counts[kind] ?? 0}`)
         .join(' · ')
+      if (text === lastInventory) return
+      lastInventory = text
+      inventoryEl.textContent = text
     },
     dispose() {
       root.remove()

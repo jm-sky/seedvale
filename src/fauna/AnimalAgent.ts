@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import { labelOpacityForDistance } from '../ui/labelDistance'
-import { createHealthState, damageFor, type HealthState, MAX_HP } from './HealthState'
+import { createHealthState, damageFor, type HealthState, MAX_HP } from './faunaCombat'
 import { isPlayerNoticed } from './playerAwareness'
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
@@ -158,6 +158,7 @@ export class AnimalAgent {
   private currentAction: THREE.AnimationAction | null = null
   private readonly label: CSS2DObject
   private readonly labelEl: HTMLDivElement
+  private lastLabelOpacity = -1
   readonly health: HealthState
   private attackCooldown = 0
   private timeSinceDeath = 0
@@ -232,11 +233,6 @@ export class AnimalAgent {
     this.pickWanderTarget()
   }
 
-  /** World XZ position for proximity queries. */
-  get xz(): THREE.Vector2 {
-    return new THREE.Vector2(this.mesh.position.x, this.mesh.position.z)
-  }
-
   dispose(): void {
     this.label.removeFromParent()
     this.labelEl.remove()
@@ -306,9 +302,11 @@ export class AnimalAgent {
     this.clampBounds()
     this.snapY()
     this.updateAnim()
-    this.labelEl.style.opacity = String(
-      labelOpacityForDistance(this.mesh.position.distanceTo(observerPos)),
-    )
+    const opacity = labelOpacityForDistance(this.mesh.position.distanceTo(observerPos))
+    if (opacity !== this.lastLabelOpacity) {
+      this.lastLabelOpacity = opacity
+      this.labelEl.style.opacity = String(opacity)
+    }
     this.mixer?.update(dt)
   }
 

@@ -92,6 +92,15 @@ export class QuestManager {
     }
   }
 
+  /** Drops all progress/exp/relations back to a fresh-start state — used on
+   *  "New Game" so a new save doesn't inherit the previous playthrough's quest
+   *  state (the instance itself is kept, since callers hold a `const` ref). */
+  reset(): void {
+    for (const def of this.defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
+    this.relations.clear()
+    this.exp = 0
+  }
+
   private stateOf(id: string): { state: QuestState, stageIndex: number } {
     return this.states.get(id) ?? { state: 'not_offered', stageIndex: 0 }
   }

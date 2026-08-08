@@ -53,6 +53,16 @@ export type RoadNetworkContext = {
 // uses internally, so repeated chunk requests near the same cells don't redo
 // the ~80-sample flat-site search + naming every time. ---
 const defCache = new Map<string, SettlementDef>()
+
+/** Both module-level caches below are keyed by cell/id, not by seed — a new
+ *  world (new seed, or GUI-driven terrain param change) must call this before
+ *  any chunk generation, or stale roads/settlement defs from the previous
+ *  world leak into the new one. */
+export function clearRoadNetworkCaches(): void {
+  defCache.clear()
+  routeCache.clear()
+}
+
 function defFor(cell: SettlementCell, ctx: RoadNetworkContext): SettlementDef {
   const key = cellKey(cell)
   let def = defCache.get(key)

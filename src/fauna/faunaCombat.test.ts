@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createHealthState, damageFor, MAX_HP } from './HealthState'
+import { createHealthState, damageFor, MAX_HP } from './faunaCombat'
 
-describe('fauna HealthState (re-exported from shared, MAX_HP/damageFor stay fauna-local)', () => {
+describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageFor fauna-local)', () => {
   it('createHealthState still builds a full-health state after the shared/ extraction', () => {
     expect(createHealthState(MAX_HP.wolf)).toEqual({ maxHp: 50, currentHp: 50, dead: false })
   })

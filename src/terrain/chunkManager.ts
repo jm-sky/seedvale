@@ -56,26 +56,17 @@ import { createGrassSystem, type WorldGrassChunk } from './grass'
 
 // Loaded once and reused across every chunk (GLTF loader also caches by URL, but
 // this avoids rebuilding the template array + re-running `prepareProp` per chunk).
-let treeTemplatesPromise: Promise<THREE.Object3D[]> | null = null
-let bushTemplatesPromise: Promise<THREE.Object3D[]> | null = null
-let cactusTemplatesPromise: Promise<THREE.Object3D[]> | null = null
-let reedTemplatesPromise: Promise<THREE.Object3D[]> | null = null
-function getTreeTemplates(): Promise<THREE.Object3D[]> {
-  treeTemplatesPromise ??= loadPropTemplates(TREE_SPECS, () => createTree(1))
-  return treeTemplatesPromise
+function memoTemplates(
+  specs: Parameters<typeof loadPropTemplates>[0],
+  fallback: () => THREE.Object3D,
+): () => Promise<THREE.Object3D[]> {
+  let promise: Promise<THREE.Object3D[]> | null = null
+  return () => (promise ??= loadPropTemplates(specs, fallback))
 }
-function getBushTemplates(): Promise<THREE.Object3D[]> {
-  bushTemplatesPromise ??= loadPropTemplates(BUSH_SPECS, () => createBush(1))
-  return bushTemplatesPromise
-}
-function getCactusTemplates(): Promise<THREE.Object3D[]> {
-  cactusTemplatesPromise ??= loadPropTemplates(CACTUS_SPECS, () => createCactus(1))
-  return cactusTemplatesPromise
-}
-function getReedTemplates(): Promise<THREE.Object3D[]> {
-  reedTemplatesPromise ??= loadPropTemplates(REED_SPECS, () => createReed(1))
-  return reedTemplatesPromise
-}
+const getTreeTemplates = memoTemplates(TREE_SPECS, () => createTree(1))
+const getBushTemplates = memoTemplates(BUSH_SPECS, () => createBush(1))
+const getCactusTemplates = memoTemplates(CACTUS_SPECS, () => createCactus(1))
+const getReedTemplates = memoTemplates(REED_SPECS, () => createReed(1))
 
 /** Procedural (no-GLB) decorative prop for one `EnvironmentPlacement` — unlike
  *  vegetation, these never need template loading, so `ensureLoaded` can build
@@ -197,7 +188,11 @@ export function createChunkManager(
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
   const recheckDistance = config.chunkSize * 0.25
-  const grassUnloadRadius = config.grass.radius + 1
+  // Chunks only exist within loadRadius, so a grass radius beyond it is a dead
+  // knob — clamp so the GUI slider (1-12) can't silently do nothing, and so
+  // raising loadRadius later doesn't make grass range jump unexpectedly.
+  const effectiveGrassRadius = Math.min(config.grass.radius, config.loadRadius)
+  const grassUnloadRadius = effectiveGrassRadius + 1
 
   const fallbackParams: RawSampleParams = {
     seed: config.seed,
@@ -297,8 +292,15 @@ export function createChunkManager(
   function syncGrassForRecord(record: ChunkRecord, playerChunk: ChunkCoord): void {
     if (!config.grass.enabled || record.state !== 'ready') return
     const dist = chebyshevDistance(record.coord, playerChunk)
-    if (dist <= config.grass.radius) ensureGrass(record)
-    else if (dist > grassUnloadRadius && record.grass !== undefined) removeGrass(record)
+    if (dist <= effectiveGrassRadius) {
+      ensureGrass(record)
+      // Cheap distance LOD: render fewer blades in farther chunks (down to 50%
+      // at the visible edge) — imperceptible at that distance/fog, no
+      // reallocation, just narrows the instanced draw range.
+      record.grass?.setLodFraction(1 - (dist / Math.max(1, effectiveGrassRadius)) * 0.5)
+    } else if (dist > grassUnloadRadius && record.grass !== undefined) {
+      removeGrass(record)
+    }
   }
 
   function ensureLoaded(coord: ChunkCoord): Promise<void> {

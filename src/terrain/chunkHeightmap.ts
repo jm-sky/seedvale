@@ -1,6 +1,7 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
 import { MathUtils } from 'three'
 import { LinearSpline } from '../math/linearSpline'
+import { projectOntoSegment } from '../math/segment'
 import { createSeededRandom } from '../world/parseSeed'
 import { fbm01, type FbmParams } from './fbm'
 import { computeBodyScale, detectWaterBodies } from './waterBodies'
@@ -406,6 +407,56 @@ export function apronOriginWorld(
 
 /** Bilinear sample over an apron-inclusive grid — same math as the legacy whole-map
  *  `sampleGrid`, generalized to an arbitrary origin (world- or chunk-local-space). */
+/** Bilinear weights/indices for one `(x,z)` sample against an apron grid —
+ *  shared across every field sampled at the same point (`buildChunkGeometry`
+ *  samples 6 fields per vertex) so the fx/fz/floor/clamp work is done once. */
+export type ApronGridWeights = {
+  x0: number
+  x1: number
+  z0: number
+  z1: number
+  tx: number
+  tz: number
+}
+
+export function apronGridWeights(
+  apronRes: number,
+  originX: number,
+  originZ: number,
+  step: number,
+  x: number,
+  z: number,
+): ApronGridWeights {
+  const fx = (x - originX) / step
+  const fz = (z - originZ) / step
+  const x0 = Math.floor(fx)
+  const z0 = Math.floor(fz)
+  const clampi = (v: number) => Math.max(0, Math.min(apronRes - 1, v))
+  return {
+    x0: clampi(x0),
+    x1: clampi(x0 + 1),
+    z0: clampi(z0),
+    z1: clampi(z0 + 1),
+    tx: fx - x0,
+    tz: fz - z0,
+  }
+}
+
+export function sampleApronGridWeighted(
+  grid: Float32Array,
+  apronRes: number,
+  w: ApronGridWeights,
+): number {
+  const h00 = grid[w.z0 * apronRes + w.x0]!
+  const h10 = grid[w.z0 * apronRes + w.x1]!
+  const h01 = grid[w.z1 * apronRes + w.x0]!
+  const h11 = grid[w.z1 * apronRes + w.x1]!
+
+  const hx0 = h00 * (1 - w.tx) + h10 * w.tx
+  const hx1 = h01 * (1 - w.tx) + h11 * w.tx
+  return hx0 * (1 - w.tz) + hx1 * w.tz
+}
+
 export function sampleApronGrid(
   grid: Float32Array,
   apronRes: number,
@@ -415,25 +466,11 @@ export function sampleApronGrid(
   x: number,
   z: number,
 ): number {
-  const fx = (x - originX) / step
-  const fz = (z - originZ) / step
-  const x0 = Math.floor(fx)
-  const z0 = Math.floor(fz)
-  const x1 = x0 + 1
-  const z1 = z0 + 1
-  const tx = fx - x0
-  const tz = fz - z0
-
-  const clampi = (v: number) => Math.max(0, Math.min(apronRes - 1, v))
-
-  const h00 = grid[clampi(z0) * apronRes + clampi(x0)]!
-  const h10 = grid[clampi(z0) * apronRes + clampi(x1)]!
-  const h01 = grid[clampi(z1) * apronRes + clampi(x0)]!
-  const h11 = grid[clampi(z1) * apronRes + clampi(x1)]!
-
-  const hx0 = h00 * (1 - tx) + h10 * tx
-  const hx1 = h01 * (1 - tx) + h11 * tx
-  return hx0 * (1 - tz) + hx1 * tz
+  return sampleApronGridWeighted(
+    grid,
+    apronRes,
+    apronGridWeights(apronRes, originX, originZ, step, x, z),
+  )
 }
 
 /** Extracts the core (resolution × resolution) sub-grid from an apron-inclusive one. */
@@ -449,32 +486,6 @@ export function extractCoreGrid(
     }
   }
   return out
-}
-
-/** Perpendicular-distance-squared from `(px,pz)` to segment `(ax,az)-(bx,bz)`,
- *  plus the clamped [0,1] projection fraction `t` along it. */
-function projectOntoSegment(
-  px: number,
-  pz: number,
-  ax: number,
-  az: number,
-  bx: number,
-  bz: number,
-): { distSq: number; t: number } {
-  const dx = bx - ax
-  const dz = bz - az
-  const lenSq = dx * dx + dz * dz
-  if (lenSq < 1e-6) {
-    const ddx = px - ax
-    const ddz = pz - az
-    return { distSq: ddx * ddx + ddz * ddz, t: 0 }
-  }
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / lenSq))
-  const cx = ax + dx * t
-  const cz = az + dz * t
-  const ddx = px - cx
-  const ddz = pz - cz
-  return { distSq: ddx * ddx + ddz * ddz, t }
 }
 
 /** Fraction of a corridor's half-width/radius over which it's at full

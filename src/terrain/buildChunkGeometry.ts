@@ -8,7 +8,13 @@ import {
   colorForTerrain,
 } from './biomeColors'
 import { biomeWeightsAt } from './biomeRegions'
-import { type ChunkTileData, type RegionParams, sampleApronGrid } from './chunkHeightmap'
+import {
+  apronGridWeights,
+  type ChunkTileData,
+  type RegionParams,
+  sampleApronGrid,
+  sampleApronGridWeighted,
+} from './chunkHeightmap'
 
 export type ChunkMeshResult = {
   mesh: THREE.Mesh
@@ -59,15 +65,10 @@ export function buildChunkGeometry(
   apronGeometry.computeVertexNormals()
   const apronNormals = apronGeometry.attributes.normal as THREE.BufferAttribute
 
-  const normalAt = (x: number, z: number): THREE.Vector3 => {
+  const normalIndexAt = (x: number, z: number): number => {
     const ix = Math.max(0, Math.min(apronRes - 1, Math.round((x - apronOriginX) / step)))
     const iz = Math.max(0, Math.min(apronRes - 1, Math.round((z - apronOriginZ) / step)))
-    const idx = iz * apronRes + ix
-    return new THREE.Vector3(
-      apronNormals.getX(idx),
-      apronNormals.getY(idx),
-      apronNormals.getZ(idx),
-    )
+    return iz * apronRes + ix
   }
 
   const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize, resolution - 1, resolution - 1)
@@ -80,52 +81,26 @@ export function buildChunkGeometry(
   for (let i = 0; i < positions.count; i++) {
     const x = positions.getX(i)
     const z = positions.getZ(i)
-    const h = sampleApronGrid(tile.heights, apronRes, apronOriginX, apronOriginZ, step, x, z)
+    // One set of bilinear weights per vertex, reused for all 6 apron-grid
+    // samples below instead of each recomputing fx/fz/floor/clamp from scratch.
+    const w = apronGridWeights(apronRes, apronOriginX, apronOriginZ, step, x, z)
+    const h = sampleApronGridWeighted(tile.heights, apronRes, w)
     positions.setY(i, h)
 
-    const n = normalAt(x, z)
-    normalAttr[i * 3] = n.x
-    normalAttr[i * 3 + 1] = n.y
-    normalAttr[i * 3 + 2] = n.z
+    const nIdx = normalIndexAt(x, z)
+    const nx = apronNormals.getX(nIdx)
+    const ny = apronNormals.getY(nIdx)
+    const nz = apronNormals.getZ(nIdx)
+    normalAttr[i * 3] = nx
+    normalAttr[i * 3 + 1] = ny
+    normalAttr[i * 3 + 2] = nz
 
-    const m = sampleApronGrid(tile.biomes, apronRes, apronOriginX, apronOriginZ, step, x, z)
-    const continentalness = sampleApronGrid(
-      tile.continentalness,
-      apronRes,
-      apronOriginX,
-      apronOriginZ,
-      step,
-      x,
-      z,
-    )
-    const mountainRidge = sampleApronGrid(
-      tile.mountainRidge,
-      apronRes,
-      apronOriginX,
-      apronOriginZ,
-      step,
-      x,
-      z,
-    )
-    const moistureRegion = sampleApronGrid(
-      tile.moistureRegion,
-      apronRes,
-      apronOriginX,
-      apronOriginZ,
-      step,
-      x,
-      z,
-    )
-    const roadTint = sampleApronGrid(
-      tile.roadTint,
-      apronRes,
-      apronOriginX,
-      apronOriginZ,
-      step,
-      x,
-      z,
-    )
-    const steepness = 1 - n.y
+    const m = sampleApronGridWeighted(tile.biomes, apronRes, w)
+    const continentalness = sampleApronGridWeighted(tile.continentalness, apronRes, w)
+    const mountainRidge = sampleApronGridWeighted(tile.mountainRidge, apronRes, w)
+    const moistureRegion = sampleApronGridWeighted(tile.moistureRegion, apronRes, w)
+    const roadTint = sampleApronGridWeighted(tile.roadTint, apronRes, w)
+    const steepness = 1 - ny
     const altitude01 = (h - waterLevel) / Math.max(heightScale, 0.001)
     const biomeWeights = biomeWeightsAt(moistureRegion, altitude01, region)
 

@@ -35,6 +35,7 @@ import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
 import { createPlacedFires, type PlacedFires } from '../settlement/PlacedFires'
+import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
 import {
   type ChunkManager,
@@ -258,13 +259,31 @@ export async function createApp(
       settlementsManager.dispose()
       ocean.dispose()
       chunkManager.dispose()
-      if (resetCollectedItems) collectedItemIds = new Set()
+      if (resetCollectedItems) {
+        collectedItemIds = new Set()
+        inventory.clear()
+        questManager.reset()
+        hud.setInventory(inventory.toJSON())
+        hud.setExp(questManager.getExp())
+        touchControls?.setDropAvailable(!inventory.isEmpty())
+      }
+      // roadNetwork's def/route caches are module-level and keyed by cell/id,
+      // not by seed — must be dropped before generating the new world's chunks,
+      // otherwise roads/village clearings from the old seed leak in.
+      clearRoadNetworkCaches()
 
       chunkManager = buildChunkManager(scene, config, collectedItemIds)
       chunkManager.update(0, 0)
       await chunkManager.waitForChunks(homeChunks())
 
       ocean = buildOcean(scene, config)
+      // New chunkManager/ocean instances start with default (untinted) water —
+      // resync immediately rather than waiting for the tick loop's throttled
+      // apply to notice a large-enough timeOfDay delta.
+      if (dayNight.enabled) {
+        applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
+        lastAppliedTimeOfDay = dayNight.timeOfDay
+      }
       settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, worldAudio.playOnce, config)
       fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
       itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
@@ -324,6 +343,7 @@ export async function createApp(
   const onDayNightChange = () => {
     if (dayNight.enabled) {
       applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
+      lastAppliedTimeOfDay = dayNight.timeOfDay
     }
   }
 
@@ -489,6 +509,7 @@ export async function createApp(
   const autoSaveInterval = window.setInterval(saveNow, 60_000)
 
   applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
+  let lastAppliedTimeOfDay = dayNight.timeOfDay
 
   const clock = new Clock()
   let frameId = 0
@@ -687,8 +708,12 @@ export async function createApp(
         fauna.setSpawnerMarker(spawner.type, questManager.spawnerMarker(spawner.type))
       }
       tickDayNight(dayNight, dt)
-      if (dayNight.enabled) {
+      if (
+        dayNight.enabled &&
+        timeOfDayDelta(dayNight.timeOfDay, lastAppliedTimeOfDay) >= DAY_NIGHT_APPLY_THRESHOLD
+      ) {
         applyDayNight(dayNight.timeOfDay, sky, lights, scene, chunkManager, ocean)
+        lastAppliedTimeOfDay = dayNight.timeOfDay
       }
       ambientAudio.update(skyParamsFromTime(dayNight.timeOfDay).dayFactor)
       hud.setTime(dayNight.timeOfDay)
@@ -885,6 +910,17 @@ function collectItem(
     case 'world':
       return chunkManager.collectItem(ref.id)
   }
+}
+
+/** Smallest `timeOfDay` change (fraction of a day) worth reapplying sky/light/fog/water
+ *  uniforms for — below this the visual change is sub-pixel at any `dayLengthSec`
+ *  worth playing at, so re-running `applyDayNight` every frame is wasted work. */
+const DAY_NIGHT_APPLY_THRESHOLD = 1 / 2000
+
+/** Wraparound-aware distance between two `timeOfDay` values (both in [0,1)). */
+function timeOfDayDelta(a: number, b: number): number {
+  const diff = Math.abs(a - b) % 1
+  return Math.min(diff, 1 - diff)
 }
 
 function applyDayNight(

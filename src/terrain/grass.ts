@@ -7,6 +7,14 @@ import { apronOriginWorld, type ChunkTileData, type RegionParams, sampleApronGri
 
 export type WorldGrassChunk = {
   mesh: THREE.InstancedMesh
+  /** Instances actually generated for this chunk (survivors of eligibility/
+   *  density rejection) — `mesh.count` may be temporarily lower, see `setLodFraction`. */
+  readonly fullCount: number
+  /** Renders only the first `fraction` of instances (0 excluded, clamped to
+   *  (0, 1]) — cheap distance LOD: no reallocation, just narrows the instanced
+   *  draw range. Safe because instances are generated in seeded-random spatial
+   *  order, so any prefix is an unbiased spatial subsample. */
+  setLodFraction: (fraction: number) => void
   dispose: () => void
 }
 
@@ -126,6 +134,7 @@ const VERTEX_SHADER = /* glsl */ `
   uniform float uTime;
 
   varying vec3 vColor;
+  varying float vFogDepth;
 
   void main() {
     float bladeT = position.y;
@@ -149,17 +158,29 @@ const VERTEX_SHADER = /* glsl */ `
     worldPos.x += sway * 0.14 * bend;
     worldPos.z += swayZ * 0.1 * bend;
 
-    gl_Position = projectionMatrix * viewMatrix * worldPos;
+    vec4 mvPosition = viewMatrix * worldPos;
+    vFogDepth = -mvPosition.z;
+    gl_Position = projectionMatrix * mvPosition;
   }
 `
 
 const FRAGMENT_SHADER = /* glsl */ `
   uniform float uDayFactor;
+  uniform vec3 fogColor;
+  uniform float fogNear;
+  uniform float fogFar;
   varying vec3 vColor;
+  varying float vFogDepth;
 
   void main() {
     float brightness = mix(0.4, 1.0, uDayFactor);
-    gl_FragColor = vec4(vColor * brightness, 1.0);
+    vec3 color = vColor * brightness;
+    // Same linear falloff as three.js's built-in fog_fragment chunk — matches
+    // how the terrain (MeshStandardMaterial, scene.fog) fades, so the grass
+    // ring doesn't stay sharp against faded-out terrain past fogFar.
+    float fogFactor = smoothstep(fogNear, fogFar, vFogDepth);
+    color = mix(color, fogColor, fogFactor);
+    gl_FragColor = vec4(color, 1.0);
   }
 `
 
@@ -174,10 +195,20 @@ export function createGrassSystem(): GrassSystem {
   const template = createBladeTemplate()
   const material = new THREE.ShaderMaterial({
     side: THREE.DoubleSide,
-    uniforms: {
-      uTime: { value: 0 },
-      uDayFactor: { value: 1 },
-    },
+    // `fog: true` + the merged `UniformsLib.fog` uniforms below make three.js
+    // keep fogColor/fogNear/fogFar in sync with `scene.fog` every frame
+    // (WebGLMaterials.refreshFogUniforms) — the shader still has to declare
+    // and apply them itself (done in VERTEX_SHADER/FRAGMENT_SHADER above),
+    // since that auto-sync is the only part three.js does for a custom
+    // ShaderMaterial (non-Raw).
+    fog: true,
+    uniforms: THREE.UniformsUtils.merge([
+      THREE.UniformsLib.fog,
+      {
+        uTime: { value: 0 },
+        uDayFactor: { value: 1 },
+      },
+    ]),
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
   })
@@ -209,7 +240,14 @@ export function createGrassSystem(): GrassSystem {
     const random = createSeededRandom(seed ^ hashChunk(coord.cx, coord.cz) ^ 0x9f2c3b)
     const half = chunkSize / 2
 
-    const matrices: THREE.Matrix4[] = []
+    // Written to directly (`matrix.toArray`) instead of collecting `Matrix4.clone()`
+    // instances — at high `density` that's the difference between one allocation
+    // and hundreds of thousands. Sized to the (upper-bound) candidate count and
+    // trimmed with `.slice()` once the survivor count is known, so the temporary
+    // oversized backing buffer doesn't linger in memory (a `.subarray()` view
+    // would keep the whole candidatesPerChunk-sized allocation alive).
+    const matrixData = new Float32Array(candidatesPerChunk * 16)
+    let count = 0
     const phases: number[] = []
     const baseColors: number[] = []
     const tipColors: number[] = []
@@ -223,13 +261,6 @@ export function createGrassSystem(): GrassSystem {
       const h = sample(tile.heights, wx, wz)
       if (h <= waterLevel + SAND_BAND) continue // underwater/shoreline sand
 
-      const d = SLOPE_SAMPLE_STEP
-      const slope =
-        (Math.abs(sample(tile.heights, wx + d, wz) - sample(tile.heights, wx - d, wz)) +
-          Math.abs(sample(tile.heights, wx, wz + d) - sample(tile.heights, wx, wz - d))) /
-        (2 * d)
-      if (slope > ROCK_SLOPE_FULL) continue // cliff/rock face
-
       const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
       if (altitude > TREELINE_ALTITUDE) continue // above treeline
 
@@ -237,6 +268,18 @@ export function createGrassSystem(): GrassSystem {
       if (ridge > MOUNTAIN_RIDGE_REJECT) continue // bare ridge crest
 
       if (sample(tile.roadTint, wx, wz) > ROAD_TINT_REJECT) continue // road/path corridor
+
+      // Slope costs 4 samples vs. 1 each for the rejects above — checked last
+      // among the sample-based tests so it only runs on candidates that
+      // already survived the cheaper ones. None of these tests consume `random()`,
+      // so reordering them doesn't change which candidates survive or the RNG
+      // stream the density roll/blade params below draw from.
+      const d = SLOPE_SAMPLE_STEP
+      const slope =
+        (Math.abs(sample(tile.heights, wx + d, wz) - sample(tile.heights, wx - d, wz)) +
+          Math.abs(sample(tile.heights, wx, wz + d) - sample(tile.heights, wx, wz - d))) /
+        (2 * d)
+      if (slope > ROCK_SLOPE_FULL) continue // cliff/rock face
 
       const moisture = sample(tile.biomes, wx, wz)
       const moistureRegion = sample(tile.moistureRegion, wx, wz)
@@ -262,7 +305,8 @@ export function createGrassSystem(): GrassSystem {
       quat.setFromAxisAngle(axisY, rotationY)
       scale.set(bladeWidth, bladeHeight, bladeWidth)
       matrix.compose(pos, quat, scale)
-      matrices.push(matrix.clone())
+      matrix.toArray(matrixData, count * 16)
+      count++
 
       phases.push(random() * Math.PI * 2)
 
@@ -272,12 +316,16 @@ export function createGrassSystem(): GrassSystem {
       tipColors.push(tmpColor.r * 1.3 * jitter, tmpColor.g * 1.3 * jitter, tmpColor.b * 1.3 * jitter)
     }
 
-    const count = matrices.length
     if (count === 0) return null
 
     const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', template.position)
-    geometry.setIndex(template.index)
+    // Clone the shared template's attributes rather than referencing them
+    // directly — every chunk's `BufferGeometry.dispose()` (on unload) frees
+    // every attribute it holds, and referencing the template by identity would
+    // free the GPU buffer backing *every other* grass chunk's blade shape too.
+    // Cheap: ~20 vertices.
+    geometry.setAttribute('position', template.position.clone())
+    geometry.setIndex(template.index.clone())
     geometry.setAttribute('aPhase', new THREE.InstancedBufferAttribute(new Float32Array(phases), 1))
     geometry.setAttribute(
       'aBaseColor',
@@ -289,7 +337,7 @@ export function createGrassSystem(): GrassSystem {
     )
 
     const mesh = new THREE.InstancedMesh(geometry, material, count)
-    for (let i = 0; i < count; i++) mesh.setMatrixAt(i, matrices[i]!)
+    mesh.instanceMatrix = new THREE.InstancedBufferAttribute(matrixData.slice(0, count * 16), 16)
     mesh.instanceMatrix.needsUpdate = true
     mesh.computeBoundingSphere() // instance matrices spread well beyond the unit template's own bounds
     mesh.position.set(chunkOriginX, 0, chunkOriginZ)
@@ -297,6 +345,10 @@ export function createGrassSystem(): GrassSystem {
 
     return {
       mesh,
+      fullCount: count,
+      setLodFraction(fraction) {
+        mesh.count = Math.max(1, Math.min(count, Math.round(count * fraction)))
+      },
       dispose: () => {
         mesh.removeFromParent()
         geometry.dispose()

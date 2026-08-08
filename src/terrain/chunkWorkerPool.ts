@@ -50,6 +50,7 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
   const queue: ChunkJob[] = []
   const inflight = new Map<number, ChunkJob>()
   const keyToId = new Map<string, number>()
+  const workerJob = new Map<Worker, number>()
   let nextId = 0
 
   function pump(): void {
@@ -57,21 +58,30 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
       const worker = free.pop()!
       const job = queue.shift()!
       inflight.set(job.id, job)
+      workerJob.set(worker, job.id)
       const request: ChunkTileRequest = { id: job.id, params: job.params }
       worker.postMessage(request)
     }
   }
 
+  function settleJob(msgId: number): ChunkJob | undefined {
+    const job = inflight.get(msgId)
+    inflight.delete(msgId)
+    if (job && keyToId.get(job.key) === msgId) {
+      // Only clear keyToId if it still points at this job — a newer request for
+      // the same key may already have replaced it.
+      keyToId.delete(job.key)
+    }
+    return job
+  }
+
   function attach(worker: Worker): void {
     worker.onmessage = (event: MessageEvent<ChunkTileResponse>) => {
       const msg = event.data
-      const job = inflight.get(msg.id)
-      inflight.delete(msg.id)
+      const job = settleJob(msg.id)
+      workerJob.delete(worker)
       free.push(worker)
       if (job) {
-        // Only clear keyToId if it still points at this job — a newer request for
-        // the same key may already have replaced it.
-        if (keyToId.get(job.key) === msg.id) keyToId.delete(job.key)
         if (msg.ok) {
           job.resolve({
             heights: msg.heights,
@@ -94,8 +104,14 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
       pump()
     }
     worker.onerror = (event) => {
+      const jobId = workerJob.get(worker)
+      workerJob.delete(worker)
       free.push(worker)
       console.error('[chunkWorkerPool] worker error', event.message)
+      if (jobId !== undefined) {
+        const job = settleJob(jobId)
+        job?.reject(new Error(event.message || 'chunk worker error'))
+      }
       pump()
     }
   }
@@ -140,6 +156,7 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
     for (const job of inflight.values()) job.reject(new HeightmapGenerationCancelledError())
     inflight.clear()
     keyToId.clear()
+    workerJob.clear()
     for (const worker of workers) worker.terminate()
     workers.length = 0
     free.length = 0

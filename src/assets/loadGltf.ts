@@ -36,6 +36,15 @@ function loadCached(url: string): Promise<CachedGltf> {
         if (!mesh.isMesh) return
         mesh.castShadow = true
         mesh.receiveShadow = true
+        // Every clone (SkeletonUtils.clone / Object3D.clone(true)) shares this
+        // geometry/material BY REFERENCE with this cached root — flagging it
+        // here, on the geometry/material object itself, survives cloning no
+        // matter how faithfully each clone path copies `userData` on the mesh.
+        // `disposeObject3D` checks this and skips freeing it.
+        mesh.geometry.userData.sharedGpu = true
+        const mat = mesh.material
+        if (Array.isArray(mat)) mat.forEach((m: Material) => { m.userData.sharedGpu = true })
+        else (mat as Material).userData.sharedGpu = true
       })
       return { root, animations: gltf.animations ?? [] }
     })
@@ -96,13 +105,21 @@ export function prepareProp(
   return object
 }
 
+/** Frees geometry/material GPU resources for everything under `object` — but
+ *  never for resources shared with the GLTF loader cache (see `loadCached`'s
+ *  `sharedGpu` flag): those live for the app's lifetime, and freeing them here
+ *  would just force a shader recompile + buffer re-upload next time any other
+ *  clone of the same asset is used. */
 export function disposeObject3D(object: Object3D): void {
   object.traverse((obj) => {
     const mesh = obj as Mesh
     if (!mesh.isMesh) return
-    mesh.geometry.dispose()
+    if (!mesh.geometry.userData.sharedGpu) mesh.geometry.dispose()
     const mat = mesh.material
-    if (Array.isArray(mat)) mat.forEach((m: Material) => m.dispose())
-    else (mat as Material).dispose()
+    if (Array.isArray(mat)) {
+      mat.forEach((m: Material) => { if (!m.userData.sharedGpu) m.dispose() })
+    } else if (!(mat as Material).userData.sharedGpu) {
+      (mat as Material).dispose()
+    }
   })
 }

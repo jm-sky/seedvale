@@ -141,7 +141,9 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         // TEMP: high on purpose while tuning density/visuals — dial back down
         // (toward ~2) once look/perf is settled; see grass-rendering plan phase 4.
         radius: 10,
-        density: 12000,
+        // Matches the debug GUI slider's range (120000-400000) — the previous
+        // default of 12000 was 10x below the slider minimum.
+        density: 120000,
       },
     },
     sky: {
