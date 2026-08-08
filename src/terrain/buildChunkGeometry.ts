@@ -23,13 +23,14 @@ export type ChunkMeshResult = {
 }
 
 /** How many times the detail normal map tiles across one chunk edge. Lower
- *  than the original 10 — that frequency read as a visible repeating
- *  wave/stripe pattern (especially on flat graded ground like roads/village
- *  clearings, where there's no geometric height variation to mask it under).
- *  Still high enough to hide the chunk-border tiling seam (each chunk's UVs
- *  run 0..1 independently, so the pattern isn't phase-continuous across
- *  chunks) without reading as an obvious repeated motif. */
-const NORMAL_MAP_TILES_PER_CHUNK = 6
+ *  than the original 10 (then 6) — that frequency read as a visible
+ *  repeating wave/stripe pattern (especially on flat graded ground like
+ *  roads/village clearings, where there's no geometric height variation to
+ *  mask it under). Still high enough to hide the chunk-border tiling seam
+ *  (each chunk's UVs run 0..1 independently, so the pattern isn't
+ *  phase-continuous across chunks) without reading as an obvious repeated
+ *  motif — lower still and the seam itself would start showing instead. */
+const NORMAL_MAP_TILES_PER_CHUNK = 4
 
 /** Built once and shared by every chunk's material — same reasoning as
  *  `createOcean.ts`'s procedural water normal map: no external asset, no
@@ -150,12 +151,13 @@ export function buildChunkGeometry(
     metalness: 0.04,
     normalMap,
     // Subtle — this is close-up surface grain, not a substitute for real
-    // geometry; a strong value here reads as a repeating tiled pattern
-    // (shiny stripes under directional light, most visible on flat graded
-    // ground like roads/village clearings) instead of "the ground isn't
-    // perfectly flat" (plan 044 §4.5). Turned down from an initial 0.28
-    // after that exact complaint.
-    normalScale: new THREE.Vector2(0.12, 0.12),
+    // geometry; a strong value here reads as visual noise (compounded by the
+    // N8AO pass, which turns fine normal-map grain into speckly
+    // self-shadowing) instead of "the ground isn't perfectly flat" (plan 044
+    // §4.5). Turned down twice now (0.28 → 0.12 → this) after repeat
+    // complaints that it was still too strong/distracting — if it needs
+    // cutting again, the effect probably isn't worth keeping at all.
+    normalScale: new THREE.Vector2(0.05, 0.05),
   })
 
   const mesh = new THREE.Mesh(geometry, material)
