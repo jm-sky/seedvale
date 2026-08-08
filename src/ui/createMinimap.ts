@@ -47,10 +47,11 @@ export function createMinimap(parent: HTMLElement): Minimap {
   canvas.style.height = `${SIZE}px`
   ctx.scale(dpr, dpr)
 
-  // Starts collapsed on touch — expanded by default it can reach far enough
-  // down the right edge to overlap the action-button cluster (L/G/RUN/E) on
-  // a short landscape viewport; collapsed, it's just the toggle button.
-  let collapsed = isTouchDevice()
+  // Expanded by default, same as desktop — the minimap is useful enough on
+  // touch that hiding it by default did more harm than good (reported). The
+  // top-right cluster layout (see index.html's .seedvale-top-right-cluster)
+  // now keeps it clear of the L/G/RUN/E action-button cluster instead.
+  let collapsed = false
   canvas.hidden = collapsed
   toggleButton.textContent = collapsed ? '[+]' : '[-]'
   const onToggleClick = () => {

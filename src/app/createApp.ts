@@ -351,25 +351,42 @@ export async function createApp(
 
   const touchControls = isTouchDevice()
     ? createTouchControls(container, keyboard.state, mouseLook.state, {
-        onPauseToggle: () => pauseMenu.togglePause(),
+        // Guard against the ☰ button opening the pause overlay on top of
+        // another already-open full-screen modal (npc dialog/quest log/
+        // villagers) — those don't disable the button the way they disable
+        // the rest of the touch layer, since it now lives outside
+        // .seedvale-touch (see the top-right cluster below).
+        onPauseToggle: () => {
+          if (!npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen()) {
+            pauseMenu.togglePause()
+          }
+        },
       })
     : null
 
-  // Best-effort address-bar hiding for Chrome/Firefox Android in a regular
-  // browser tab (not installed as a home-screen PWA) — the Fullscreen API
-  // needs a user gesture, so it's requested on the very first touch rather
-  // than at load. No-op where unsupported (notably iOS Safari, which only
-  // gets a chrome-less view via "Add to Home Screen" — see the
-  // apple-mobile-web-app-capable meta tag in index.html) or if the browser
-  // denies it; failure is silent since this is a nice-to-have, not required
-  // for the game to work.
-  if (isTouchDevice() && document.documentElement.requestFullscreen) {
-    const requestFullscreenOnce = () => {
-      document.removeEventListener('touchend', requestFullscreenOnce)
-      void document.documentElement.requestFullscreen().catch(() => {})
-    }
-    document.addEventListener('touchend', requestFullscreenOnce, { once: true })
+  // Shared flex column, right-aligned, holding the ☰ pause button + minimap —
+  // replaces two independently absolutely-positioned corner widgets (which
+  // needed hand-tuned pixel offsets to avoid overlapping on a short landscape
+  // viewport) with one wrapper flexbox handles the spacing for. See
+  // .seedvale-top-right-cluster in index.html.
+  if (touchControls) {
+    const topRightCluster = document.createElement('div')
+    topRightCluster.className = 'seedvale-top-right-cluster'
+    container.appendChild(topRightCluster)
+    topRightCluster.appendChild(touchControls.pauseButton)
+    topRightCluster.appendChild(minimap.root)
   }
+
+  // NOTE: a Fullscreen-API-on-first-touch call used to live here (address-bar
+  // hiding for Chrome/Firefox Android). Removed — confirmed via automated
+  // touch-hit-test diagnostics that once document.documentElement enters
+  // fullscreen, document.elementFromPoint() (and therefore all subsequent tap
+  // hit-testing) degrades to returning <html> for every coordinate, which is
+  // exactly the "pause menu won't respond to any tap" symptom reported after
+  // this was added. True chrome-less fullscreen on mobile web reliably needs
+  // "Add to Home Screen" (see the apple-mobile-web-app-capable meta tag in
+  // index.html + the manifest's display:standalone) — that path doesn't hit
+  // this bug since it isn't the live Fullscreen API.
 
   const onBeforeUnload = () => {
     void writeSave(buildSaveData())

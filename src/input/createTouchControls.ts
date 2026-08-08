@@ -46,6 +46,12 @@ export type TouchControls = {
    *  releases any in-progress joystick/look touch so movement doesn't get stuck
    *  "on" if disabled mid-drag. */
   setInputEnabled: (enabled: boolean) => void
+  /** The ☰ pause button — a reference so `createApp` can relocate it into the
+   *  shared top-right cluster alongside the minimap (see
+   *  `.seedvale-top-right-cluster` in index.html) instead of leaving it
+   *  independently absolutely-positioned. Its click wiring/dispose stay owned
+   *  here; only its DOM parent moves. */
+  pauseButton: HTMLButtonElement
 }
 
 export function createTouchControls(
@@ -230,7 +236,14 @@ export function createTouchControls(
   sprintButton.addEventListener('click', onSprintToggle)
   pauseButton.addEventListener('click', onPause)
 
+  // Called every frame from createApp's tick loop — guard against redundant
+  // DOM writes so an unchanged state doesn't force a style recalc (the
+  // `.seedvale-touch--disabled *` selector is a universal descendant
+  // selector) 60x/sec while paused.
+  let inputEnabled = true
   function setInputEnabled(enabled: boolean): void {
+    if (enabled === inputEnabled) return
+    inputEnabled = enabled
     root.classList.toggle('seedvale-touch--disabled', !enabled)
     if (enabled) return
     joystickTouchId = null
@@ -240,6 +253,7 @@ export function createTouchControls(
 
   return {
     setInputEnabled,
+    pauseButton,
     dispose: () => {
       joystickBase.removeEventListener('touchstart', onJoystickTouchStart)
       joystickBase.removeEventListener('touchmove', onJoystickTouchMove)
@@ -254,6 +268,9 @@ export function createTouchControls(
       dropButton.removeEventListener('click', onDrop)
       sprintButton.removeEventListener('click', onSprintToggle)
       pauseButton.removeEventListener('click', onPause)
+      // Relocated out of `root` into the shared top-right cluster (see
+      // createApp) — root.remove() below won't reach it anymore.
+      pauseButton.remove()
       root.remove()
     },
   }
