@@ -7,7 +7,19 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
   })
 
   it('has a MAX_HP entry for every animal kind', () => {
-    expect(MAX_HP).toEqual({ wolf: 50, fox: 25, deer: 30, stag: 40 })
+    expect(MAX_HP).toEqual({
+      wolf: 50,
+      fox: 25,
+      deer: 30,
+      stag: 40,
+      rabbit: 10,
+      duck: 8,
+      boar: 35,
+      horse: 80,
+      cow: 70,
+      sheep: 22,
+      chicken: 6,
+    })
   })
 
   it('looks up predator/prey damage, falling back to the default', () => {

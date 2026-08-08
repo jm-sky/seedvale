@@ -19,6 +19,34 @@ const ANIMAL_FLAVOR_LINES: Record<AnimalKind, string[]> = {
     'Jeleń unosi głowę, poroże połyskuje w słońcu.',
     'Stoi spokojnie, dopóki się nie zbliżysz za bardzo.',
   ],
+  rabbit: [
+    'Królik zamiera z uszami postawionymi czujnie.',
+    'W każdej chwili gotów jest zniknąć w krzakach.',
+  ],
+  duck: [
+    'Kaczka pluska się przy brzegu, niewzruszona.',
+    'Odpływa spokojnie kawałek dalej po wodzie.',
+  ],
+  boar: [
+    'Dzik prycha cicho i grzebie ryjem w ściółce.',
+    'Mierzy Cię wzrokiem spod krzaczastych brwi.',
+  ],
+  horse: [
+    'Koń parska cicho i wraca do skubania trawy.',
+    'Merda ogonem, wyraźnie oswojony z ludźmi.',
+  ],
+  cow: [
+    'Krowa przeżuwa spokojnie, patrząc obojętnie.',
+    'Dzwoneczek na szyi cicho pobrzękuje przy każdym ruchu.',
+  ],
+  sheep: [
+    'Owca beczy cicho i wraca do skubania trawy.',
+    'Wełna jest już całkiem gęsta jak na tę porę roku.',
+  ],
+  chicken: [
+    'Kura gdacze i grzebie w ziemi w poszukiwaniu ziaren.',
+    'Odbiega parę kroków, po czym zaraz wraca do dziobania.',
+  ],
 }
 
 export function pickAnimalFlavorLine(kind: AnimalKind): string {

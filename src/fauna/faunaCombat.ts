@@ -8,12 +8,19 @@ export const MAX_HP: Record<AnimalKind, number> = {
   fox: 25,
   deer: 30,
   stag: 40,
+  rabbit: 10,
+  duck: 8,
+  boar: 35,
+  horse: 80,
+  cow: 70,
+  sheep: 22,
+  chicken: 6,
 }
 
 /** Predator kind -> prey kind -> damage per attack. */
 const DAMAGE_TABLE: Partial<Record<AnimalKind, Partial<Record<AnimalKind, number>>>> = {
-  wolf: { deer: 15, stag: 12 },
-  fox: { deer: 10, stag: 6 },
+  wolf: { deer: 15, stag: 12, boar: 10, sheep: 14, chicken: 20 },
+  fox: { deer: 10, stag: 6, rabbit: 20, duck: 18, chicken: 20 },
 }
 
 const DEFAULT_DAMAGE = 8

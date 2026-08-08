@@ -43,21 +43,62 @@ const FIRE_AVOID_RADIUS = 11
  *  away-from-threat direction — shared by fleeing a predator, the player, or
  *  a campfire (`fleeFrom()`). */
 const FLEE_DISTANCE = 8
+/** Radius (world units) around a village center that's off-limits to `wild`
+ *  animals for both wandering and predator hunting — plan 044 §2.3/§2.4:
+ *  wild animals avoid settled ground, predators don't treat the village as
+ *  hunting grounds. No hard wall — just excluded from candidate wander
+ *  targets and from `updatePredator`'s prey search. */
+const VILLAGE_AVOID_RADIUS = 20
+/** Radius (world units) over which the flee-direction village bias (`fleeFrom`)
+ *  ramps in — beyond this, fleeing wild/domestic animals behave the same
+ *  (the village is too far away to matter to which way they run). */
+const VILLAGE_FLEE_INFLUENCE_RADIUS = 45
+/** How strongly the flee direction leans away from (wild) or toward
+ *  (domestic) the nearest village, relative to the primary away-from-threat
+ *  vector (magnitude 1) — big enough to visibly redirect a flee, per plan
+ *  044's "sarna uciekająca... powinna preferować ucieczkę poza wioskę,
+ *  nawet jeśli oznacza to zmianę kierunku ucieczki" example. */
+const VILLAGE_FLEE_BIAS_WEIGHT = 0.9
 
-export type AnimalRole = 'predator' | 'prey'
-/** Matches Quaternius Ultimate Animated Animal Pack kinds used in Seedvale. */
-export type AnimalKind = 'wolf' | 'fox' | 'deer' | 'stag'
+export type AnimalRole = 'predator' | 'prey' | 'livestock'
+/** `wild` animals are wary of humans/the village and avoid it; `domestic`
+ *  animals aren't afraid of people and treat the village/farmstead as safe
+ *  ground to flee toward (plan 044 §2.3/§2.4). */
+export type AnimalSociability = 'wild' | 'domestic'
+/** wolf/fox/deer/stag match the Quaternius Ultimate Animated Animal Pack GLBs
+ *  (`public/models/fauna/`); the rest (plan 044) have no GLB and always use
+ *  the procedural visuals in `proceduralAnimals.ts` instead. */
+export type AnimalKind =
+  | 'wolf'
+  | 'fox'
+  | 'deer'
+  | 'stag'
+  | 'rabbit'
+  | 'duck'
+  | 'boar'
+  | 'horse'
+  | 'cow'
+  | 'sheep'
+  | 'chicken'
 
 export const ANIMAL_LABELS: Record<AnimalKind, string> = {
   wolf: 'wilk',
   fox: 'lis',
   deer: 'sarna',
   stag: 'jeleń',
+  rabbit: 'królik',
+  duck: 'kaczka',
+  boar: 'dzik',
+  horse: 'koń',
+  cow: 'krowa',
+  sheep: 'owca',
+  chicken: 'kura',
 }
 
 export type AnimalDef = {
   kind: AnimalKind
   role: AnimalRole
+  sociability: AnimalSociability
   color: number
   /** Capsule placeholder scale / height hint for GLB fit. */
   scale: number
@@ -86,6 +127,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
   wolf: {
     kind: 'wolf',
     role: 'predator',
+    sociability: 'wild',
     color: 0x5a5a62,
     scale: 0.85,
     modelHeight: 0.95,
@@ -99,6 +141,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
   fox: {
     kind: 'fox',
     role: 'predator',
+    sociability: 'wild',
     color: 0xb85a2a,
     scale: 0.55,
     modelHeight: 0.55,
@@ -112,6 +155,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
   deer: {
     kind: 'deer',
     role: 'prey',
+    sociability: 'wild',
     color: 0xa67c52,
     scale: 0.95,
     modelHeight: 1.15,
@@ -125,6 +169,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
   stag: {
     kind: 'stag',
     role: 'prey',
+    sociability: 'wild',
     color: 0x8a6238,
     scale: 1.05,
     modelHeight: 1.35,
@@ -134,6 +179,104 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 15,
     playerNoticeRange: 16,
     playerPanicRange: 4,
+  },
+  rabbit: {
+    kind: 'rabbit',
+    role: 'prey',
+    sociability: 'wild',
+    color: 0xb8a088,
+    scale: 0.4,
+    modelHeight: 0.42,
+    walkSpeed: 2.6,
+    sprintSpeed: 6.8,
+    detectRange: 12,
+    fleeRange: 11,
+    playerNoticeRange: 14,
+    playerPanicRange: 3,
+  },
+  duck: {
+    kind: 'duck',
+    role: 'prey',
+    sociability: 'wild',
+    color: 0x8a6a45,
+    scale: 0.4,
+    modelHeight: 0.38,
+    walkSpeed: 2.2,
+    sprintSpeed: 5.2,
+    detectRange: 10,
+    fleeRange: 9,
+    playerNoticeRange: 12,
+    playerPanicRange: 3,
+  },
+  boar: {
+    kind: 'boar',
+    role: 'prey',
+    sociability: 'wild',
+    color: 0x3d2e22,
+    scale: 0.9,
+    modelHeight: 0.9,
+    walkSpeed: 2.8,
+    sprintSpeed: 6.4,
+    detectRange: 14,
+    fleeRange: 12,
+    playerNoticeRange: 13,
+    playerPanicRange: 4,
+  },
+  horse: {
+    kind: 'horse',
+    role: 'livestock',
+    sociability: 'domestic',
+    color: 0x6b4423,
+    scale: 1.3,
+    modelHeight: 1.55,
+    walkSpeed: 2.6,
+    sprintSpeed: 6.0,
+    detectRange: 0,
+    fleeRange: 10,
+    playerNoticeRange: 0,
+    playerPanicRange: 0,
+  },
+  cow: {
+    kind: 'cow',
+    role: 'livestock',
+    sociability: 'domestic',
+    color: 0xede4d3,
+    scale: 1.1,
+    modelHeight: 1.3,
+    walkSpeed: 1.8,
+    sprintSpeed: 4.2,
+    detectRange: 0,
+    fleeRange: 8,
+    playerNoticeRange: 0,
+    playerPanicRange: 0,
+  },
+  sheep: {
+    kind: 'sheep',
+    role: 'prey',
+    sociability: 'domestic',
+    color: 0xe8e3d3,
+    scale: 0.7,
+    modelHeight: 0.68,
+    walkSpeed: 2.2,
+    sprintSpeed: 5.4,
+    detectRange: 0,
+    fleeRange: 12,
+    playerNoticeRange: 0,
+    playerPanicRange: 0,
+  },
+  chicken: {
+    kind: 'chicken',
+    role: 'prey',
+    sociability: 'domestic',
+    color: 0xa8783c,
+    scale: 0.35,
+    modelHeight: 0.4,
+    walkSpeed: 1.8,
+    sprintSpeed: 4.8,
+    detectRange: 0,
+    fleeRange: 10,
+    playerNoticeRange: 0,
+    playerPanicRange: 0,
   },
 }
 
@@ -167,6 +310,10 @@ export class AnimalAgent {
   /** Counts down from `ALERT_HOLD_SEC` after last noticing the player —
    *  hysteresis for `checkEnvironmentalDanger()`, see its comment. */
   private alertTimer = 0
+  /** This frame's loaded-settlement centers, refreshed at the top of every
+   *  `update()` call — read by `fleeFrom`/`wander`/`updatePredator` without
+   *  threading it through every method signature (plan 044 §2.3/§2.4). */
+  private currentVillages: readonly { x: number, z: number }[] = []
 
   constructor(
     def: AnimalDef,
@@ -281,6 +428,7 @@ export class AnimalAgent {
     dayFactor: number,
     forestFactor: number,
     litFires: readonly { x: number, z: number }[],
+    villages: readonly { x: number, z: number }[] = [],
   ): void {
     if (this.health.dead) {
       this.timeSinceDeath += dt
@@ -291,6 +439,7 @@ export class AnimalAgent {
     this.isNight = dayFactor <= 0
     this.moving = false
     this.sprinting = false
+    this.currentVillages = villages
     const danger = this.checkEnvironmentalDanger(observerPos, dayFactor, forestFactor, litFires)
     if (danger) {
       this.fleeFrom(danger.x, danger.z, dt)
@@ -362,14 +511,49 @@ export class AnimalAgent {
     return nearestFire
   }
 
+  /** Nearest loaded settlement center to this animal, or `null` if none are
+   *  loaded/close enough to matter — shared by `fleeFrom`'s village bias and
+   *  `wander`/`updatePredator`'s village-avoidance. */
+  private nearestVillage(): { x: number, z: number } | null {
+    let best: { x: number, z: number } | null = null
+    let bestD = Infinity
+    for (const v of this.currentVillages) {
+      const d = Math.hypot(v.x - this.mesh.position.x, v.z - this.mesh.position.z)
+      if (d < bestD) {
+        bestD = d
+        best = v
+      }
+    }
+    return best
+  }
+
   /** Sprints away from (x, z) — shared by fleeing a predator (`updatePrey`),
-   *  the player, or a campfire (`checkEnvironmentalDanger`). */
+   *  the player, or a campfire (`checkEnvironmentalDanger`). Wild animals
+   *  lean the flee direction away from the nearest village; domestic animals
+   *  lean it toward one instead (plan 044 §2.3/§2.4's "prefer fleeing away
+   *  from/into the village even if that changes the flee direction"). */
   private fleeFrom(x: number, z: number, dt: number): void {
     this.tmp.set(this.mesh.position.x - x, 0, this.mesh.position.z - z)
     if (this.tmp.lengthSq() < 1e-4) {
       this.tmp.set(1, 0, 0)
     }
     this.tmp.normalize()
+
+    const village = this.nearestVillage()
+    if (village) {
+      const vx = this.mesh.position.x - village.x
+      const vz = this.mesh.position.z - village.z
+      const vDist = Math.hypot(vx, vz)
+      const falloff = Math.max(0, 1 - vDist / VILLAGE_FLEE_INFLUENCE_RADIUS)
+      if (vDist > 1e-4 && falloff > 0) {
+        const sign = this.def.sociability === 'domestic' ? -1 : 1
+        const weight = falloff * VILLAGE_FLEE_BIAS_WEIGHT * sign
+        this.tmp.x += (vx / vDist) * weight
+        this.tmp.z += (vz / vDist) * weight
+        this.tmp.normalize()
+      }
+    }
+
     this.sprinting = true
     this.fleeTarget.set(
       this.mesh.position.x + this.tmp.x * FLEE_DISTANCE,
@@ -394,8 +578,23 @@ export class AnimalAgent {
     return this.def.sprintSpeed
   }
 
+  /** True if `pos` is within `VILLAGE_AVOID_RADIUS` of any loaded settlement —
+   *  used to make wild predators give up a chase that runs into the village
+   *  (plan 044 §2.4's "lis niechętnie wchodzi do bezpiecznego obszaru i może
+   *  przerwać pościg") and to keep wild wander targets off settled ground. */
+  private isNearVillage(pos: { x: number, z: number }): boolean {
+    for (const v of this.currentVillages) {
+      if (Math.hypot(pos.x - v.x, pos.z - v.z) < VILLAGE_AVOID_RADIUS) return true
+    }
+    return false
+  }
+
   private updatePredator(dt: number, others: AnimalAgent[]): void {
     const prey = this.nearest(others, 'prey', this.def.detectRange)
+    if (prey && this.isNearVillage(prey.mesh.position)) {
+      this.wander(dt)
+      return
+    }
     if (prey) {
       this.sprinting = true
       const dist = Math.hypot(
@@ -441,7 +640,7 @@ export class AnimalAgent {
       const a = Math.random() * Math.PI * 2
       const x = this.home.x + Math.cos(a) * r
       const z = this.home.z + Math.sin(a) * r
-      if (this.isWalkable(x, z)) {
+      if (this.isWalkable(x, z) && (this.def.sociability !== 'wild' || !this.isNearVillage({ x, z }))) {
         this.target.set(x, 0, z)
         this.wanderTimer = 3 + Math.random() * 4
         return

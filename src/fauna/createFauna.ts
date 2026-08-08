@@ -12,6 +12,15 @@ import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
 import { ANIMAL_DEFS, AnimalAgent, type AnimalKind } from './AnimalAgent'
 import { type PreySpawner, updateSpawners } from './AnimalSpawner'
+import {
+  createBoarModel,
+  createChickenModel,
+  createCowModel,
+  createDuckModel,
+  createHorseModel,
+  createRabbitModel,
+  createSheepModel,
+} from './proceduralAnimals'
 
 export type Fauna = {
   update: (
@@ -19,6 +28,10 @@ export type Fauna = {
     observerPos: Vector3,
     timeOfDay: number,
     litFires: readonly { x: number, z: number }[],
+    /** Loaded settlement centers (`SettlementsManager.getLoaded()`) — wild/
+     *  domestic animals react to proximity to any of these, see
+     *  `AnimalAgent.ts`'s village-avoidance/flee-bias (plan 044 §2.3/§2.4). */
+    villages: readonly { x: number, z: number }[],
   ) => void
   dispose: () => void
   getAgents: () => AnimalAgent[]
@@ -28,14 +41,41 @@ export type Fauna = {
   setSpawnerMarker: (type: PreySpawner['type'], marker: string | null) => void
 }
 
-type SpawnSpec = { kind: AnimalKind, count: number }
+/** Where a species prefers to spawn relative to the home settlement (plan
+ *  044 §2.1/§2.2's habitat preferences): `open` is the original ring used by
+ *  wolf/fox/deer/stag (no habitat check beyond dry land), `meadow`/`forest`/
+ *  `water` add a `sampleForestFactor`/shoreline check for the new wild
+ *  species, `farmstead` spawns domestic animals in a tight ring right around
+ *  the village instead of the wider wild-animal belt. */
+type SpawnProfile = 'open' | 'meadow' | 'forest' | 'water' | 'farmstead'
+type SpawnSpec = { kind: AnimalKind, count: number, profile: SpawnProfile }
 
 const SPAWNS: SpawnSpec[] = [
-  { kind: 'wolf', count: 2 },
-  { kind: 'fox', count: 2 },
-  { kind: 'deer', count: 4 },
-  { kind: 'stag', count: 2 },
+  { kind: 'wolf', count: 2, profile: 'open' },
+  { kind: 'fox', count: 2, profile: 'open' },
+  { kind: 'deer', count: 4, profile: 'open' },
+  { kind: 'stag', count: 2, profile: 'open' },
+  { kind: 'rabbit', count: 3, profile: 'meadow' },
+  { kind: 'duck', count: 2, profile: 'water' },
+  { kind: 'boar', count: 2, profile: 'forest' },
+  { kind: 'horse', count: 2, profile: 'farmstead' },
+  { kind: 'cow', count: 2, profile: 'farmstead' },
+  { kind: 'sheep', count: 3, profile: 'farmstead' },
+  { kind: 'chicken', count: 4, profile: 'farmstead' },
 ]
+
+/** [minDist, maxDist] from the settlement center for each `SpawnProfile` —
+ *  wild profiles (everything but `farmstead`) start a bit past
+ *  `AnimalAgent.ts`'s `VILLAGE_AVOID_RADIUS` (20) so a freshly-spawned wild
+ *  animal's own home point isn't already inside the zone its wander logic
+ *  then refuses to path back into. */
+const SPAWN_RING: Record<SpawnProfile, [number, number]> = {
+  open: [24, 42],
+  meadow: [24, 42],
+  forest: [24, 45],
+  water: [22, 42],
+  farmstead: [6, 16],
+}
 
 /** Hardcoded prey spawners (cave / thicket) — see docs/plans/2026-08-07--predator-prey-system.md. */
 const SPAWNER_SPECS: { type: PreySpawner['type'], kind: AnimalKind, respawnTime: number, maxPreyCount: number }[] = [
@@ -49,11 +89,27 @@ export const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
   grove: 'gaj',
 }
 
-const FAUNA_URLS: Record<AnimalKind, string> = {
+/** Only wolf/fox/deer/stag have a GLB (Quaternius pack); the rest (plan 044)
+ *  always use the procedural builders below — `Partial` since not every
+ *  `AnimalKind` has an entry. */
+const FAUNA_URLS: Partial<Record<AnimalKind, string>> = {
   wolf: '/models/fauna/wolf.glb',
   fox: '/models/fauna/fox.glb',
   deer: '/models/fauna/deer.glb',
   stag: '/models/fauna/stag.glb',
+}
+
+/** Primitive-built visuals (`proceduralAnimals.ts`) for species with no GLB —
+ *  same role as `AnimalAgent`'s capsule fallback, just species-shaped. Origin
+ *  at each animal's feet already, so no `wrapModel`/`prepareProp` needed. */
+const PROCEDURAL_FALLBACKS: Partial<Record<AnimalKind, () => Object3D>> = {
+  rabbit: createRabbitModel,
+  duck: createDuckModel,
+  boar: createBoarModel,
+  horse: createHorseModel,
+  cow: createCowModel,
+  sheep: createSheepModel,
+  chicken: createChickenModel,
 }
 
 type FaunaTemplate = GltfAsset
@@ -62,16 +118,13 @@ async function loadFaunaTemplates(): Promise<
   Partial<Record<AnimalKind, FaunaTemplate>>
 > {
   const entries = await Promise.all(
-    (Object.keys(FAUNA_URLS) as AnimalKind[]).map(async (kind) => {
+    (Object.entries(FAUNA_URLS) as [AnimalKind, string][]).map(async ([kind, url]) => {
       try {
-        const asset = await loadGltfAsset(FAUNA_URLS[kind])
+        const asset = await loadGltfAsset(url)
         prepareProp(asset.root, ANIMAL_DEFS[kind].modelHeight)
         return [kind, asset] as const
       } catch (err) {
-        console.warn(
-          `[fauna] failed to load ${FAUNA_URLS[kind]}, capsule fallback`,
-          err,
-        )
+        console.warn(`[fauna] failed to load ${url}, capsule fallback`, err)
         return [kind, null] as const
       }
     }),
@@ -114,12 +167,15 @@ export async function createFauna(
   let agents: AnimalAgent[] = []
   const templates = await loadFaunaTemplates()
 
-  /** Random point within [minDist, maxDist] of (cx, cz), clear of water and homeRadius bounds. */
+  /** Random point within [minDist, maxDist] of (cx, cz), clear of water and
+   *  homeRadius bounds — `filter` adds a habitat preference (meadow/forest/
+   *  shoreline) on top, see `SPAWN_RING`/`SPAWNS`. */
   const findWalkableNear = (
     cx: number,
     cz: number,
     minDist: number,
     maxDist: number,
+    filter?: (x: number, z: number) => boolean,
   ): { x: number, z: number } | null => {
     for (let attempt = 0; attempt < 24; attempt++) {
       const angle = random() * Math.PI * 2
@@ -128,9 +184,33 @@ export async function createFauna(
       const z = cz + Math.sin(angle) * dist
       if (Math.abs(x) > homeRadius - 4 || Math.abs(z) > homeRadius - 4) continue
       if (sampleHeight(x, z) <= waterLevel + 0.6) continue
+      if (filter && !filter(x, z)) continue
       return { x, z }
     }
     return null
+  }
+
+  /** True if any point a few meters out from (x, z) dips into water — used to
+   *  bias duck spawns toward the shoreline without requiring the duck's own
+   *  spot to be wet. */
+  const nearWater = (x: number, z: number): boolean => {
+    const offsets: Array<[number, number]> = [
+      [5, 0], [-5, 0], [0, 5], [0, -5], [3.5, 3.5], [-3.5, -3.5], [3.5, -3.5], [-3.5, 3.5],
+    ]
+    return offsets.some(([dx, dz]) => sampleHeight(x + dx, z + dz) <= waterLevel + 0.2)
+  }
+
+  const habitatFilterFor = (profile: SpawnProfile): ((x: number, z: number) => boolean) | undefined => {
+    switch (profile) {
+      case 'forest':
+        return (x, z) => sampleForestFactor(x, z) > 0.45
+      case 'meadow':
+        return (x, z) => sampleForestFactor(x, z) < 0.35
+      case 'water':
+        return nearWater
+      default:
+        return undefined
+    }
   }
 
   const spawnAgent = (kind: AnimalKind, x: number, z: number): AnimalAgent => {
@@ -140,13 +220,17 @@ export async function createFauna(
     if (tpl) {
       visual = wrapModel(tpl.clone())
       animations = tpl.animations
+    } else {
+      visual = PROCEDURAL_FALLBACKS[kind]?.()
     }
     return new AnimalAgent(ANIMAL_DEFS[kind], sampleHeight, waterLevel, x, z, visual, animations)
   }
 
   for (const spec of SPAWNS) {
+    const [minDist, maxDist] = SPAWN_RING[spec.profile]
+    const filter = habitatFilterFor(spec.profile)
     for (let i = 0; i < spec.count; i++) {
-      const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 18, 40)
+      const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, minDist, maxDist, filter)
       if (!pos) continue
       const agent = spawnAgent(spec.kind, pos.x, pos.z)
       scene.add(agent.mesh)
@@ -177,11 +261,11 @@ export async function createFauna(
   }
 
   return {
-    update(dt, observerPos, timeOfDay, litFires) {
+    update(dt, observerPos, timeOfDay, litFires, villages) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       for (const a of agents) {
         const forestFactor = sampleForestFactor(a.mesh.position.x, a.mesh.position.z)
-        a.update(dt, agents, observerPos, dayFactor, forestFactor, litFires)
+        a.update(dt, agents, observerPos, dayFactor, forestFactor, litFires, villages)
       }
 
       if (agents.some((a) => a.readyToRemove())) {
