@@ -23,7 +23,12 @@ import {
   placeOnGround,
   type SettlementLandmarks,
 } from './props'
-import { type RoadNetworkContext, routeToMinorLocation, signpostsForSettlement } from './roadNetwork'
+import {
+  type RoadNetworkContext,
+  routeToMinorLocation,
+  segmentsNear,
+  signpostsForSettlement,
+} from './roadNetwork'
 import { cellSeed } from './settlementGenerator'
 import { createVillageFire, type VillageFire } from './VillageFire'
 
@@ -95,6 +100,12 @@ export async function createSettlement(
   // for why it's `def.gx/def.gz` combined with the world seed rather than a
   // hash of `def.id`.
   const settlementSeed = cellSeed(seed, { gx: def.gx, gz: def.gz })
+  // Only needed when the forest belt actually runs (`def.isHome`, see
+  // `buildSettlementProps`'s `plantForest`) — keeps roads out of the
+  // settlement's own bespoke trees/bushes (`props.ts`'s `blocksPathOrClearing`).
+  const roadSegments = def.isHome && roadCtx
+    ? segmentsNear(site.x, site.z, localRadius * 2, roadCtx)
+    : []
   const { group, landmarks, houseLights } = await buildSettlementProps(
     site,
     sampleHeight,
@@ -105,6 +116,7 @@ export async function createSettlement(
     def.size,
     def.isHome,
     def.foodSourceType,
+    roadSegments,
   )
   scene.add(group)
 
