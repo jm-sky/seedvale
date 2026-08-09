@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { closeFlavorDialog, isFlavorDialogOpen, ui } from '../store'
 
 useOverlayScreen('flavor-dialog', isFlavorDialogOpen, closeFlavorDialog)
-const panel = useTouchScroll()
+const panel = ref<HTMLElement | null>(null)
+useTouchScroll(panel)
 </script>
 
 <template>
