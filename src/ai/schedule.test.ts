@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activityAt, hourToTimeOfDay, SCHEDULE_TEMPLATES } from './schedule'
+import { activityAt, hourToTimeOfDay, nextBoundary, SCHEDULE_TEMPLATES } from './schedule'
 
 describe('schedule', () => {
   it('hourToTimeOfDay matches the documented dayNight mapping', () => {
@@ -32,5 +32,21 @@ describe('schedule', () => {
 
   it('falls back to "home" for an empty template', () => {
     expect(activityAt([], 0.5)).toBe('home')
+  })
+
+  it('nextBoundary finds the soonest upcoming entry, in-order template', () => {
+    const template = SCHEDULE_TEMPLATES.woodcutter
+    expect(nextBoundary(template, hourToTimeOfDay(8))?.hour).toBe(12)
+    expect(nextBoundary(template, hourToTimeOfDay(20))?.hour).toBe(22)
+  })
+
+  it('nextBoundary wraps across midnight for a schedule that starts late (guard)', () => {
+    const template = SCHEDULE_TEMPLATES.guard
+    expect(nextBoundary(template, hourToTimeOfDay(23))?.hour).toBe(0)
+    expect(nextBoundary(template, hourToTimeOfDay(7.5))?.hour).toBe(8)
+  })
+
+  it('nextBoundary returns null for an empty template', () => {
+    expect(nextBoundary([], 0.5)).toBeNull()
   })
 })

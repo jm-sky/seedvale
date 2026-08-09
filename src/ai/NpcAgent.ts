@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
-import type { FamilyMember, FamilyRelation } from '../settlement/families'
+import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import {
@@ -33,7 +33,7 @@ import {
   pickNeed,
   tickNeeds,
 } from './Needs'
-import { activityAt, SCHEDULE_TEMPLATES, type ScheduleActivity, type ScheduleTemplate } from './schedule'
+import { activityAt, nextBoundary, SCHEDULE_TEMPLATES, type ScheduleActivity, type ScheduleTemplate } from './schedule'
 
 function randRange([min, max]: [number, number]): number {
   return min + Math.random() * (max - min)
@@ -131,6 +131,23 @@ type PlannedAction = {
   next?: PlannedAction
 }
 
+/** Public, dialogue-facing summary of what an NPC is doing right now — a
+ *  narrower, stable view over the private `phase`/`pendingAction` FSM state
+ *  (`getCurrentActivity()` below), so callers outside this class never see
+ *  `Phase`/`PlannedAction` themselves (`docs/plans/2026-08-09--048...`). */
+export type CurrentActivityKind = 'idle' | 'need' | 'sleep' | 'talking' | 'wander' | 'work'
+
+export type CurrentActivity = {
+  kind: CurrentActivityKind
+  /** Set only when `kind === 'need'` — which need currently has the NPC's
+   *  attention (`activeNeed`). */
+  need?: NeedId
+  /** Set when `schedule` has a known upcoming boundary (`nextBoundary`) worth
+   *  mentioning — e.g. `sleep`/`work` "...until HH:MM". Absent when there's
+   *  nothing schedule-relevant about the current activity (e.g. `wander`). */
+  endHour?: number
+}
+
 /** Phases the player's approach may interrupt to trigger a lookAtPlayer pause. */
 const PAUSE_INTERRUPTIBLE_PHASES: ReadonlySet<Phase> = new Set([
   'choose',
@@ -219,6 +236,10 @@ export class NpcAgent {
    *  later overlay). Drives `choose`'s sleep gate and `beginIdle`'s `work`
    *  routing via `getScheduledActivity`. */
   readonly schedule: ScheduleTemplate
+  /** The rest of this NPC's family (not including itself) — just enough for
+   *  dialogue to name them ("mam żonę Annę"), not live references to their
+   *  `NpcAgent` state. Empty for a `single` member. See `createSettlement.ts`. */
+  readonly familyMembers: readonly FamilyMemberRef[]
   private readonly dialogueArchetype: Personality
   private readonly pauseParams: PausePersonalityParams
   private readonly fatigueRate: number
@@ -275,6 +296,7 @@ export class NpcAgent {
     treeIndex: number,
     needOffset: number,
     member: FamilyMember,
+    familyMembers: readonly FamilyMemberRef[],
     playSound: (url: string, volume?: number) => void,
   ) {
     this.playSound = playSound
@@ -293,6 +315,7 @@ export class NpcAgent {
     this.health = createHealthState(MAX_HP)
     this.workplace = workplace
     this.schedule = SCHEDULE_TEMPLATES[character.role]
+    this.familyMembers = familyMembers
     this.dialogueArchetype = nearestArchetype(this.personality)
     this.pauseParams = applySociableBoost(pausePersonalityParams(this.personality), this.traits)
     const energetic = this.traits.includes('energetic')
@@ -347,6 +370,7 @@ export class NpcAgent {
     treeIndex: number,
     needOffset: number,
     member: FamilyMember,
+    familyMembers: readonly FamilyMemberRef[],
     playSound: (url: string, volume?: number) => void = () => {},
     modelUrl = modelUrlFor(member.character.gender, treeIndex),
   ): Promise<NpcAgent> {
@@ -363,6 +387,7 @@ export class NpcAgent {
         treeIndex,
         needOffset,
         member,
+        familyMembers,
         playSound,
       )
     } catch (err) {
@@ -376,6 +401,7 @@ export class NpcAgent {
         treeIndex,
         needOffset,
         member,
+        familyMembers,
         playSound,
       )
     }
@@ -390,6 +416,7 @@ export class NpcAgent {
     treeIndex: number,
     needOffset: number,
     member: FamilyMember,
+    familyMembers: readonly FamilyMemberRef[],
     playSound: (url: string, volume?: number) => void,
   ): NpcAgent {
     const capsule = new THREE.Group()
@@ -414,6 +441,7 @@ export class NpcAgent {
       treeIndex,
       needOffset,
       member,
+      familyMembers,
       playSound,
     )
   }
@@ -431,6 +459,31 @@ export class NpcAgent {
 
   getDialogueLine(): string {
     return pickDialogueLine(this.dialogueArchetype, this.activeNeed, this.isBusyPhase())
+  }
+
+  /** Dialogue-facing summary of what this NPC is doing right now — maps the
+   *  private `phase`/`pendingAction` FSM state onto `CurrentActivity`, adding
+   *  `nextBoundary(schedule, timeOfDay)` as `endHour` where it's meaningful
+   *  ("...do HH:MM" — `sleep`/`work`, not `need`/`wander`). */
+  getCurrentActivity(timeOfDay: number): CurrentActivity {
+    const endHour = nextBoundary(this.schedule, timeOfDay)?.hour
+    switch (this.phase) {
+      case 'choose':
+        return { kind: 'idle' }
+      case 'execute':
+      case 'goTo':
+        if (this.pendingAction?.action === 'work') return { kind: 'work', endHour }
+        if (this.pendingAction) return { kind: 'need', need: this.activeNeed }
+        return { kind: 'idle' }
+      case 'followPath':
+      case 'wander':
+        return { kind: 'wander' }
+      case 'goSleep':
+      case 'sleep':
+        return { kind: 'sleep', endHour }
+      case 'lookAtPlayer':
+        return { kind: 'talking' }
+    }
   }
 
   setQuestMarker(marker: string | null): void {

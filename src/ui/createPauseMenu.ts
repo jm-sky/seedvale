@@ -33,6 +33,13 @@ export function createPauseMenu(
   seed: number,
   playerName: string,
   handlers: PauseMenuHandlers,
+  /** True while a higher-priority modal not gated by the usual creation-order
+   *  `stopImmediatePropagation` trick is open (the Vue NPC dialogue menu,
+   *  `ui-vue/`) — that overlay mounts asynchronously (dynamic import), so it
+   *  can't rely on registering its own Escape listener before this one the
+   *  way every vanilla modal in `src/ui/` does (see e.g. `createQuestLog.ts`'s
+   *  `onKeyDown`). Checked instead of relying on listener order. */
+  isSuppressed: () => boolean = () => false,
 ): PauseMenu {
   let paused = false
 
@@ -136,7 +143,7 @@ export function createPauseMenu(
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.code !== 'Escape') return
+    if (event.code !== 'Escape' || isSuppressed()) return
     setPaused(!paused)
   }
 

@@ -37,10 +37,12 @@ function capitalize(text: string): string {
 
 /** Dispatches an `[E]`-pressed `Interactable` (everything except `item`/`campfire`,
  *  which `app/createApp.ts` handles directly — both need `Inventory` access this
- *  module doesn't have — without opening this generic dialog) to the right
- *  `QuestManager` call, falling back to flavor text when no active quest cares. */
+ *  module doesn't have — without opening this generic dialog; and `npc`, which
+ *  opens the dedicated Vue dialogue menu instead — see `ui-vue/store.ts`'s
+ *  `openNpcDialogueMenu`) to the right `QuestManager` call, falling back to
+ *  flavor text when no active quest cares. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'item' | 'campfire' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {
@@ -51,11 +53,6 @@ export function resolveInteraction(
         speakerName: capitalize(ANIMAL_LABELS[kind]),
         line: override?.line ?? pickAnimalFlavorLine(kind),
       }
-    }
-    case 'npc': {
-      const override = questManager.onInteract(target.npc.name)
-      if (override) return { speakerName: target.npc.displayName, line: override.line, offer: override.offer }
-      return { speakerName: target.npc.displayName, line: target.npc.getDialogueLine() }
     }
     case 'spawner': {
       const override = questManager.onInteractObjective({

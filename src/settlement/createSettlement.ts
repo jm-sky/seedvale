@@ -5,6 +5,9 @@ import {
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { HeightSampler } from '../player/PlayerController'
+import type { SettlementTerrain } from '../shared/SettlementName'
+import type { NaturalResource } from '../terrain/naturalResources'
+import type { VillageSize } from './families'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { labelOpacityForDistance } from '../ui/labelDistance'
@@ -53,6 +56,15 @@ export type Settlement = {
   /** Plan 032 §8 — surfaced today only in the Villagers screen's settlement
    *  badge (`ui/createVillagersScreen.ts`). */
   foodSourceType: FoodSourceType
+  /** `SM/MD/LG/OUTPOST`, straight from `SettlementDef` — see
+   *  `docs/plans/2026-08-09--048...`'s "aboutVillage" dialogue topic. */
+  size: VillageSize
+  /** Terrain feature the naming generator picked up around the site — see
+   *  `SettlementDef.terrain`'s doc comment. */
+  terrain: SettlementTerrain
+  /** The most significant natural resource near the site, or `null` — see
+   *  `SettlementDef.dominantResource`'s doc comment. */
+  dominantResource: NaturalResource | null
   spawn: Vector3
   center: Vector3
   npcs: readonly NpcAgent[]
@@ -182,11 +194,19 @@ export async function createSettlement(
   // single parallel batch, same concurrency as before family grouping existed.
   const flatMembers = def.families.flatMap((family, familyIndex) => {
     const home = homePlaces[familyIndex % homePlaces.length]!
-    return family.members.map((member) => ({ home, member }))
+    return family.members.map((member) => ({
+      home,
+      member,
+      // Rest of this member's own family, by name — see `NpcAgent.familyMembers`'s
+      // doc comment (dialogue-facing, not a live reference to their `NpcAgent`).
+      familyMembers: family.members
+        .filter((m) => m !== member)
+        .map((m) => ({ name: m.name, lastName: m.lastName, relation: m.relation })),
+    }))
   })
 
   const agents = await Promise.all(
-    flatMembers.map(async ({ home, member }, i) => {
+    flatMembers.map(async ({ home, member, familyMembers }, i) => {
       const workplace = workplaceFor(def.id, member.character.role, landmarks, i)
       const agent = await NpcAgent.create(
         sampleHeight,
@@ -197,6 +217,7 @@ export async function createSettlement(
         i,
         i / Math.max(1, flatMembers.length - 1),
         member,
+        familyMembers,
         playSound,
       )
       scene.add(agent.mesh)
@@ -228,6 +249,9 @@ export async function createSettlement(
     name: def.name,
     isHome: def.isHome,
     foodSourceType: def.foodSourceType,
+    size: def.size,
+    terrain: def.terrain,
+    dominantResource: def.dominantResource,
     spawn,
     center: new Vector3(site.x, site.y, site.z),
     npcs: agents,

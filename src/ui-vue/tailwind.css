@@ -1,7 +1,11 @@
 @import "tailwindcss";
 
-/* Design tokens land here as real screens migrate (plan 046) — shared
- * colors/radii/fonts already repeated across `.seedvale-*__panel` classes
- * in index.html's <style> block, so new Vue components don't re-guess them. */
+/* Design tokens land here as real screens migrate (plan 046) — matches the
+ * shared dark/translucent look already repeated across `.seedvale-*__panel`
+ * classes in index.html's <style> block (e.g. `.seedvale-npc-dialog__panel`),
+ * so new Vue components don't re-guess the colors. */
 @theme {
+  --color-panel: rgba(20, 24, 28, 0.92);
+  --color-panel-backdrop: rgba(10, 14, 18, 0.55);
+  --color-ink: #f2f6fa;
 }

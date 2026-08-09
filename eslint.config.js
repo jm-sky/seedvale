@@ -23,6 +23,13 @@ export default tseslint.config(
         parser: tseslint.parser,
       },
     },
+    rules: {
+      // `tseslint.configs.recommended` already turns this off for `.ts`
+      // (TS + DOM lib types make it redundant) but its `files` matcher
+      // doesn't reach `.vue` — same reasoning applies to their `<script>`
+      // blocks now that they're TS-parsed too.
+      'no-undef': 'off',
+    },
   },
   perfectionist.configs['recommended-natural'],
   {

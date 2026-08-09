@@ -543,7 +543,7 @@ export async function createApp(
       config.seed = randomSeed()
       void rebuildWorld(true)
     },
-  })
+  }, () => vueUi.isNpcDialogueMenuOpen())
 
   const touchControls = isTouchDevice()
     ? createTouchControls(container, keyboard.state, mouseLook.state, {
@@ -553,12 +553,24 @@ export async function createApp(
         // the rest of the touch layer, since it now lives outside
         // .seedvale-touch (see the top-right cluster below).
         onPauseToggle: () => {
-          if (!npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen() && !inventoryScreen.isOpen()) {
+          if (
+            !npcDialog.isOpen() &&
+            !questLog.isOpen() &&
+            !villagersScreen.isOpen() &&
+            !inventoryScreen.isOpen() &&
+            !vueUi.isNpcDialogueMenuOpen()
+          ) {
             pauseMenu.togglePause()
           }
         },
         onQuickActions: () => {
-          if (!npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen() && !inventoryScreen.isOpen()) {
+          if (
+            !npcDialog.isOpen() &&
+            !questLog.isOpen() &&
+            !villagersScreen.isOpen() &&
+            !inventoryScreen.isOpen() &&
+            !vueUi.isNpcDialogueMenuOpen()
+          ) {
             quickActions.toggle()
           }
         },
@@ -671,11 +683,20 @@ export async function createApp(
       questLog.isOpen() ||
       villagersScreen.isOpen() ||
       inventoryScreen.isOpen() ||
-      quickActions.isOpen()
+      quickActions.isOpen() ||
+      vueUi.isNpcDialogueMenuOpen()
     touchControls?.setInputEnabled(!anyModalOpen && !timeSkip.isActive())
 
     if (menuPaused) {
       // drop stale presses so they can't fire right after resume
+      keyboard.consumeInteract()
+      keyboard.consumeQuestLog()
+      keyboard.consumeDrop()
+      keyboard.consumeInventory()
+      setHighlight(null)
+    } else if (vueUi.isNpcDialogueMenuOpen()) {
+      // The Vue menu handles its own close (Escape/backdrop/buttons) —
+      // just block world interaction and other overlays while it's open.
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
@@ -789,6 +810,11 @@ export async function createApp(
             toast.show('+1 Gałąź', 'pickup')
           }
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
+        } else if (target.kind === 'npc') {
+          // Buttons need a visible cursor — same pointer-lock release the
+          // pause menu already does on open (createPauseMenu's onPause).
+          if (document.pointerLockElement === renderer.domElement) document.exitPointerLock()
+          vueUi.openNpcDialogueMenu(target.npc, target.settlement, questManager, dayNight.timeOfDay)
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
@@ -970,6 +996,7 @@ function buildInteractables(
         position: npc.mesh.position,
         promptLabel: `Rozmawiaj z ${npc.displayName}`,
         npc,
+        settlement,
       })
     }
 

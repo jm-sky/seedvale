@@ -1,6 +1,6 @@
 # NPC Dialogues v2
 
-**Status:** `todo` — draft zweryfikowany wobec kodu 2026-08-10, zakres v1 przycięty, projekt techniczny gotowy do implementacji; zero kodu tego planu jeszcze napisane. **Zależność odblokowana 2026-08-10:** [plan 046 (Vue.js + Tailwind stack)](./2026-08-09--046--vue-tailwind-ui-stack.md) Faza 0 (setup) jest już `done` — nowe menu dialogowe (budowane w Vue, nie jako kolejny moduł vanilla DOM, decyzja użytkownika 2026-08-10) może ruszyć bez dalszych prerequisite'ów, patrz „Zależność" niżej.
+**Status:** `verification needed` — v1 zaimplementowane 2026-08-10 (Vue menu rozmowy zastępuje `createNpcDialog.ts` dla NPC), zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test`; brak jeszcze wizualnej weryfikacji w przeglądarce. Patrz „Stan implementacji" niżej dla dokładnego zakresu i odstępstw od pierwotnego projektu technicznego.
 
 > Sekcje 1-14 poniżej to oryginalny draft — wizja produktowa, spisana bez dostępu do repo. Review i decyzje poniżej weryfikują ją wobec faktycznego kodu i przycinają zakres v1; sam draft zostaje jako dokumentacja docelowego kierunku.
 
@@ -111,6 +111,28 @@ export function buildTopicResponse(topic: DialogueTopic, ctx: DialogueContext): 
 - `src/ai/dialogueTemplates.test.ts` — jak `dialogue.test.ts`: każdy temat × archetyp zwraca niepusty string, fallback nie rzuca, `topNeeds` sortowanie/próg/limit, `aboutSelf` z pustą i niepustą `familyMembers`.
 - `schedule.test.ts` — rozszerzony o `nextBoundary`.
 - Zero testów dla `.vue` (zgodnie z planem 046 „Poza zakresem" — projekt świadomie nie testuje THREE/DOM/UI jednostkowo).
+
+## Stan implementacji (2026-08-10)
+
+Zaimplementowane zgodnie z „Projekt techniczny" wyżej, z kilkoma odstępstwami odkrytymi/zdecydowanymi przy pisaniu kodu:
+
+- **`help` bez osobnego `topNeeds`.** Zamiast nowej funkcji stackującej do 2 needs, opcja „Może w czymś ci pomóc" woła dokładnie to, co dziś robi `resolveInteraction`'s `npc` case (`questManager.onInteract(npc.name)`, fallback `npc.getDialogueLine()`) — inline w `store.ts`'s `openNpcDialogueMenu`, wołane **raz, w momencie otwarcia menu**, nie przy każdym kliknięciu tematu. To świadome uproszczenie: `QuestManager.onInteract` ma realne side effecty (przesuwa stan questu, zdejmuje itemy z gather_item) — wywołanie go ponownie przy każdym otwarciu tematu „help" cichcem mutowałoby postęp questu, którego gracz nigdy nie wybrał. `resolveInteraction.ts`'s `npc` case i cały branch w `createApp.ts` zostały usunięte (`Exclude<Interactable, {kind:'campfire'|'item'|'npc'}>` — `npc` doszedł do wykluczonych).
+- **Rozdzielenie `Interactable`'s `npc` na osobną gałąź w `createApp.ts`** — potrzebna `Settlement` do tematu „o wiosce" (dodane pole `settlement` do `Interactable`'s `npc` variant, wypełniane w `buildInteractables`). Nowa gałąź zwalnia pointer lock (`document.exitPointerLock()`, ten sam wzorzec co `createPauseMenu`'s `onPause`) przed otwarciem menu — przyciski potrzebują widocznego kursora, czego stary system (sterowany głównie `[E]`) nie wymagał.
+- **Nowy problem odkryty przy implementacji: Escape-priority.** Plan 046's `ui.openStack` (Faza 2) jeszcze nie istnieje, a stary wzorzec „zarejestruj listener przed pauseMenu, `stopImmediatePropagation`" **nie działa** dla komponentu montowanego asynchronicznie (dynamiczny `import()` w `mountVueUi` rozwiązuje się długo po tym, jak `createPauseMenu`'s listener już jest zarejestrowany — kolejność rejestracji jest nie do wygrania). Rozwiązanie: `createPauseMenu()` dostał nowy, opcjonalny parametr `isSuppressed: () => boolean`, sprawdzany w jego `onKeyDown` przed przełączeniem pauzy — `createApp.ts` przekazuje `() => vueUi.isNpcDialogueMenuOpen()`. Pozostałe vanilla modale (`npcDialog`/`questLog`/`villagersScreen`/`inventoryScreen`) nie potrzebują analogicznej zmiany — już dziś sprawdzają swój własny `openState` i są odcinane od klawiatury przez pętlę `tick()`'s `anyModalOpen`/branching, nie przez wyścig rejestracji.
+- **`Settlement` (runtime, `createSettlement.ts`) dostał nowe pola `size`/`terrain`/`dominantResource`** — wcześniej istniały tylko na `SettlementDef` (czas generacji), potrzebne w runtime dla tematu „o wiosce".
+- **Architektura Vue↔vanilla (ważne dla przyszłych ekranów):** `src/ui-vue/store.ts` (reactive state + `openNpcDialogueMenu`/`closeNpcDialogueMenu`/`acceptNpcDialogueOffer`/`isNpcDialogueMenuOpen`) jest importowany **wyłącznie wewnątrz już-dynamicznego importu** w `mount.ts` — `createApp.ts`/`createPauseMenu.ts` (synchronicznie ładowane) nigdy nie importują `store.ts` bezpośrednio, tylko przez `VueUi`'s zwrócone metody (`mount.ts` trzyma `impl: StoreImpl | null`, podmieniane po rozwiązaniu importu). Statyczny import `store.ts` z `createApp.ts` przeciągnąłby cały runtime Vue z powrotem do głównego, synchronicznego bundla — potwierdzone w buildzie: `vue.runtime`/`reactivity`/`runtime-dom`/`App`/`store`/`tailwind` to osobne chunki, `index-*.js` urósł tylko ~1.3kB względem Fazy 0 (same importy typów, zero runtime).
+- **Plik komponentu:** `src/ui-vue/NpcDialogueMenu.vue` (bez podkatalogu `screens/` z pierwotnego szkicu — nie było potrzeby na folder z jednym plikiem).
+- `src/ui/createNpcDialog.ts` **nie został usunięty** — dalej obsługuje `animal`/`well`/`tree`/`spawner` (proste dymki tekstowe, poza zakresem tego planu), tylko `npc` case został z niego wycięty.
+
+`npx tsc --noEmit`, `npx vue-tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` (98 testów) czyste. `curl` dev servera potwierdza że nowe pliki (`.vue`/`store.ts`/`mount.ts`/`tailwind.css`) serwują się bez błędu.
+
+### Do przetestowania (http://localhost:5577/)
+
+1. `[E]` na NPC otwiera nowe menu (lista 5 opcji) zamiast starego jednolinijkowego panelu; kursor jest widoczny (pointer lock zwolniony), przyciski klikalne.
+2. Przejdź przez każdy temat dla kilku różnych NPC (różne role/archetypy) — teksty się różnią, „Wróć" wraca do listy.
+3. NPC z aktywną ofertą questu — „Może w czymś ci pomóc" pokazuje ofertę z przyciskami Przyjmij/Odmów; Przyjmij faktycznie akceptuje quest (sprawdź w quest logu `[L]`), Odmów/Esc/klik w tło odrzuca.
+4. Sanity check regresji: zwierzęta/studnia/drzewo/spawner (`[E]`) nadal pokazują stary, prosty dymek (`createNpcDialog.ts`). Pauza (`Esc` gdy menu NPC jest zamknięte) działa jak dawniej. Otwórz menu NPC, spróbuj `Esc`, `[L]`, `☰`/pauzę (dotyk i desktop) — nic nie powinno otworzyć się „pod spodem".
+5. Dotyk/mobile: menu i jego przyciski są tapowalne, panel scrolluje się jeśli treść nie mieści się na ekranie.
 
 ## Cel
 
@@ -689,49 +711,49 @@ LLM, jeśli kiedyś się pojawi, powinien być rozszerzeniem istniejącego syste
 
 ### Menu
 
-- [ ] Może w czymś ci pomóc?
-- [ ] Powiedz coś o sobie.
-- [ ] Co teraz robisz?
-- [ ] Powiedz coś o wiosce.
-- [ ] Nic, miłego dnia!
+- [x] Może w czymś ci pomóc?
+- [x] Powiedz coś o sobie.
+- [x] Co teraz robisz?
+- [x] Powiedz coś o wiosce.
+- [x] Nic, miłego dnia!
 
 ### NPC
 
 - [x] imię
 - [x] nazwisko
-- [ ] pseudonim — jeśli nie jest jeszcze obsłużony
-- [x] rzeczywiste relacje rodzinne
+- [ ] pseudonim — nadal nie istnieje w kodzie, poza zakresem v1 (patrz Decyzje)
+- [x] rzeczywiste relacje rodzinne (po imieniu, `NpcAgent.familyMembers`)
 - [x] zawód / rola
 - [x] Big Five
 
 ### Świat
 
 - [x] pora dnia
-- [x] aktualna aktywność / FSM
-- [ ] pełny scheduler potrzebny do naturalnego raportowania planu — zależnie od aktualnego stanu implementacji
+- [x] aktualna aktywność / FSM (`NpcAgent.getCurrentActivity`)
+- [x] scheduler — `nextBoundary()` daje „do {endTime}" na bazie istniejącego `ScheduleTemplate`, bez pełnej personalizacji per-trait (poza zakresem v1)
 - [x] needs
 - [x] wioska
-- [x] zasoby
+- [x] zasoby (`dominantResource`, pojedynczy — nie lista wszystkich)
 - [x] lokalizacja / charakter terenu
 - [x] rozmiar wioski
-- [ ] history jako źródło dialogu, jeśli nie jest jeszcze dostępne w finalnym modelu wioski
+- [ ] history jako źródło dialogu — nadal nie istnieje w modelu wioski, poza zakresem v1 (patrz Decyzje)
 
 ### Questy
 
-- [x] istniejący system questów
-- [ ] wiele ofert w ramach odpowiedzi NPC
-- [ ] wybór konkretnego zadania z menu dialogowego
+- [x] istniejący system questów (reużyty jak dziś, jedno wywołanie `onInteract` na otwarcie menu)
+- [ ] wiele ofert w ramach odpowiedzi NPC — poza zakresem v1 (patrz Decyzje: dziś nie ma NPC z >1 questem)
+- [ ] wybór konkretnego zadania z menu dialogowego — j.w.
 
 ### Dialogue
 
-- [ ] system tematów
-- [ ] biblioteka szablonów
-- [ ] warunki wyboru szablonów
-- [ ] podstawianie danych
-- [ ] wpływ Big Five na wybór wariantu
-- [ ] komponenty odpowiedzi zależne od needs / time / activity
-- [ ] powrót do głównego menu
-- [ ] przygotowanie modelu pod przyszłe dialogue tree
+- [x] system tematów (`Topic` w `NpcDialogueMenu.vue`)
+- [x] biblioteka szablonów (`src/ai/dialogueTemplates.ts`)
+- [x] warunki wyboru szablonów (archetyp × temat)
+- [x] podstawianie danych
+- [x] wpływ Big Five na wybór wariantu (przez `nearestArchetype`)
+- [x] komponenty odpowiedzi zależne od needs / time / activity
+- [x] powrót do głównego menu
+- [ ] przygotowanie modelu pod przyszłe dialogue tree — v1 zostaje płaskie menu, jak zaplanowano (nie blokuje przyszłej rozbudowy, ale nie ma dziś dedykowanego modelu drzewa)
 
 ## 14. Zasady projektowe
 

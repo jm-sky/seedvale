@@ -1,6 +1,6 @@
 # Plan: Vue.js + Tailwind + ikony jako stack dla UI gry (dialogi/menu)
 
-**Status:** `in progress` — **Faza 0 (setup + proof-of-concept) done 2026-08-10**, zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test`, patrz stan pod „Faza 0" niżej; brak jeszcze wizualnej weryfikacji w przeglądarce. Fazy 1+ (migracja realnych ekranów) nieruszone.
+**Status:** `in progress` — **Faza 0 (setup + proof-of-concept) done 2026-08-10**, zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test`. Ten sam dzień: **pierwszy realny ekran wylądował poza kolejnością Faz** — [plan 048 (NPC dialogues v2)](./2026-08-09--048--npc-dialogues-v2.md)'s `NpcDialogueMenu.vue` (net-new, nie migracja istniejącego ekranu, więc nie wymagał Fazy 1/2) zastąpił `createNpcDialog.ts` dla NPC. Przy okazji odkryto, że Fazy 2 „Esc-priority" (`ui.openStack`) faktycznie **jest wymagana wcześniej niż zakładano** dla każdego asynchronicznie montowanego ekranu — `createPauseMenu.ts` dostał tymczasowy `isSuppressed` callback jako obejście (patrz plan 048 „Stan implementacji"), które Faza 2 powinna docelowo zastąpić generycznym mechanizmem zamiast per-ekran callbacków. Fazy 1 (Villagers) wciąż nieruszona. Brak jeszcze wizualnej weryfikacji w przeglądarce.
 **Created:** 2026-08-09
 **Priority:** ustalone z użytkownikiem 2026-08-10 — odblokowuje [plan 048 (NPC dialogues v2)](./2026-08-09--048--npc-dialogues-v2.md), którego nowe menu rozmowy ma być budowane w Vue
 
