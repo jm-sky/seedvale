@@ -50,6 +50,7 @@ Implementation plans for features and larger changes.
 | [2026-08-08--043--player-inventory-equipment.md](./2026-08-08--043--player-inventory-equipment.md) | Ekwipunek gracza v1: dedykowany ekran, waga, akcje, zbieranie + nóż/krzesiwo/koc; zarys equipment, durability i craftingu na przyszłość | `done` ✅ (potwierdzone w przeglądarce; Użyj/Połącz z §6 świadomie pominięte — brak jeszcze aktywnego narzędzia/craftingu do podpięcia) |
 | [2026-08-08--044--world-life-details.md](./2026-08-08--044--world-life-details.md) | Drobne życie i detale świata: światła w domach, nowe zwierzęta dzikie i gospodarskie, propsy, studnia, kwiaty/kamienie, naturalność drzew i fauna vs wioska | `verification needed` 🔍 (zaimplementowane, wymaga weryfikacji wizualnej w przeglądarce) |
 | [2026-08-08--045--health-stamina-threat.md](./2026-08-08--045--health-stamina-threat.md) | Wspólny Health/Stamina/Threat: stamina dla NPC/fauny/gracza, exhaustion, attack/flee i reakcje na obrażenia | `planned` 📋 (draft) |
+| [2026-08-09--046--vue-tailwind-ui-stack.md](./2026-08-09--046--vue-tailwind-ui-stack.md) | Vue.js + Tailwind v4 + lucide-vue-next jako stack dla UI gry (dialogi/menu) — odwraca decyzję z planu 005 „poza zakresem"; migracja screen-po-screen za dzisiejszym fasadowym kontraktem, rozwiązuje issue 005 (ikony) i issue 006 (paginacja Mieszkańcy) po drodze | `planned` 📋 |
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
 
