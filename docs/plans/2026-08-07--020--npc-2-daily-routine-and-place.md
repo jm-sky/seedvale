@@ -1,6 +1,6 @@
 # Plan: NPC Daily Routine & Place System
 
-**Status:** `in progress` (~15% pełnego pierwotnego zakresu) — v1 (formalizacja `home` jako `Place`) zaimplementowane i zielone na `tsc`/`lint`/`build`/`test`, patrz „Stan implementacji” niżej; brak jeszcze wizualnej weryfikacji w przeglądarce. Pełny zakres (Schedule/workplace per rola/generyczny FSM) był odłożony (patrz „Odłożone”), **2026-08-09 odmrożony** — zakres i podejście ustalone z użytkownikiem, patrz „Decyzje (2026-08-09)” niżej; implementacja jeszcze nie ruszona.
+**Status:** `in progress` — v1 (formalizacja `home` jako `Place`) done. **v2 stage 1** (dane: `PlaceType` `workplace`/`food`/`social`, `workplaceFor()` hybryda, `Schedule Template` per rola, `landmarks.market` dla tradera) zaimplementowane 2026-08-09, zielone na `tsc`/`lint`/`build`/`test` — patrz „Stan implementacji (v2 stage 1)” niżej. **v2 stage 2** (generyczna integracja Schedule/workplace z FSM — `goTo/execute/return` zastępujący `goWell/goGarden/goTree/goStock`) świadomie nieruszona — to osobny, ryzykowny refaktor działającego kodu, patrz „Decyzje (2026-08-09)”.
 
 **Zweryfikowane 2026-08-08 wobec kodu — pełna lista braków (dla przyszłego planu domykającego):**
 Z sześciu punktów „Zakres pierwszego etapu” (patrz sekcja niżej) zrobione są tylko 1.5/6:
@@ -56,6 +56,16 @@ Powód przycięcia: pełny zakres zależy od nierozstrzygniętego jeszcze zachow
 - **FSM: pełny refaktor na generyczny model**, nie nakładka nad obecnym `Phase`. `goTo(location) → execute(action) → return` zastępuje dzisiejsze zasobowo-specyficzne `goWell/goGarden/goTree/goStock` w `NpcAgent.ts`. To dotyka istniejącego, działającego kodu FSM na raz — planować jako osobny krok z uważną regresją (`pickNeed`, istniejące testy `src/ai/Needs.test.ts`, ręczna weryfikacja w przeglądarce: woda/jedzenie/drewno nadal działają tak jak dziś, HP/traits z `npc-character-depth.md` nadal się wpinają w `steerTo()`/phase timery).
 
 - **Schedule ↔ zegar dnia/nocy: bezpośrednie skalowanie 24h → `timeOfDay`.** `timeOfDay` w `src/world/dayNight.ts` to 0-1 (0=północ, 0.5=południe) — godzina zegarowa mapuje się liniowo: `timeOfDay = hour / 24` (np. `07:00 → 0.2917`, `12:00 → 0.5`, `18:00 → 0.75`, `22:00 → 0.9167`). Prosty, dokładny mapping — harmonogram żyje w tych samych jednostkach co reszta gry (oświetlenie/mgła już czytają `timeOfDay`/`dayFactor` z tego samego stanu).
+
+## Stan implementacji (v2 stage 1, 2026-08-09)
+
+Dane/fundament — celowo bez integracji z FSM (to stage 2, osobny krok wyżej):
+
+- `src/settlement/places.ts` — `PlaceType` rozszerzony o `'workplace' | 'food' | 'social'` (nadal tylko `workplace` ma realnego producenta); `workplaceFor(settlementId, role, landmarks, treeIndex): Place | null` — hybryda z decyzji wyżej: `woodcutter` → round-robin po `landmarks.trees`, `farmer` → `landmarks.garden`, `trader` → `landmarks.market` (nowe), `guard` → `landmarks.well`, `miner` → `landmarks.stockpile` (reuse, brak query API do złóż rudy), `fisher` → `landmarks.dock` gdy osada go ma, inaczej fallback na `landmarks.well` jak `guard`. Testy: `places.test.ts`.
+- `src/settlement/props.ts` — nowe pole `SettlementLandmarks.market`, budowane bezwarunkowo w `buildSettlementProps` (jak well/garden/stockpile) z `crate.glb` + `barrel.glb` (rezerwa, `createCrate()` fallback jeśli GLB nie załaduje się).
+- `src/ai/schedule.ts` (nowy) — `ScheduleTemplate`/`SCHEDULE_TEMPLATES` (jeden wzorzec na rolę: `woodcutter`/`farmer`/`miner`/`fisher`/`trader` — dzień; `guard` — nocna zmiana), `hourToTimeOfDay(hour)`, `activityAt(template, timeOfDay)` (cyklicznie rozwiązuje aktywność niezależnie od kolejności wpisów w tablicy — obsługuje `guard`'a przechodzącego przez północ). Testy: `schedule.test.ts`.
+- `src/ai/NpcAgent.ts` — nowe pola `readonly workplace: Place | null` (z `workplaceFor`, przekazywane przez `createSettlement.ts`) i `readonly schedule: ScheduleTemplate` (`SCHEDULE_TEMPLATES[role]` — bez personalizacji traits, zgodnie z decyzją) + `getScheduledActivity(timeOfDay)` jako query-only helper. **Zero zmian w `phase`/`switch` FSM** — `goWell/goGarden/goTree/goStock`/`pickNeed` działają identycznie jak przed tym krokiem.
+- `npx tsc --noEmit`/`npm run lint`/`npm run build`/`npm run test` czyste. Brak widocznej zmiany w istniejącym zachowaniu NPC (workplace/schedule to dziś martwe dane) — jedyna widoczna zmiana w grze to nowy prop (skrzynka+beczka) w każdej osadzie, do potwierdzenia w przeglądarce.
 
 **Cel:**  
 Dodanie warstwy codziennego życia NPC. Każdy mieszkaniec otrzymuje elastyczny plan dnia, własne miejsca związane z życiem oraz możliwość modyfikowania zachowania przez Identity Model.

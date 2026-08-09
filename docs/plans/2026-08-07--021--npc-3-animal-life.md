@@ -1,6 +1,6 @@
 # Plan: Animal Life Simulation
 
-**Status:** `todo` — zakres v1 przycięty (patrz „Decyzje” niżej) i od 2026-08-08 ma konkretny projekt techniczny gotowy do implementacji (sekcja „Projekt techniczny v1” poniżej, po „Decyzje”); zero kodu jeszcze napisane.
+**Status:** `verification needed` — v1 (needs → wander bias, sekcja „Projekt techniczny v1” niżej) zaimplementowane 2026-08-09, zielone na `tsc`/`lint`/`build`/`test`; brak jeszcze wizualnej weryfikacji w przeglądarce (patrz „Do przetestowania” na końcu pliku).
 **Scope:** [src/fauna/AnimalAgent.ts](../../src/fauna/AnimalAgent.ts) (rozszerzenie, nie nowy plik na FSM), współdzieli `HealthState`-owy wzorzec fatigue/rest z [npc-character-depth.md](./2026-08-07--022--npc-character-depth.md) (`src/shared/HealthState.ts`) tylko jako inspirację API-kształtu — `AnimalLifeState` to osobny, nowy typ (hunger/thirst/energy to nie HP).
 
 > Draft from ChatGPT without repository files access. Review before implementation!
@@ -264,13 +264,13 @@ src/fauna/AnimalAgent.ts    # + pole `life`, tick w update(), bias w wander()/pi
 
 ## Done when
 
-- [ ] `hunger`/`thirst`/`energy` tickują per-zwierzę (offsetowane, nie w unisono) — `src/fauna/AnimalLife.ts`
-- [ ] `energy` spada podczas sprintu (pościg/ucieczka), regeneruje się poza nim
-- [ ] Wysoki `hunger`/`thirst` widocznie zmienia wander (szerszy promień i/lub częstszy retarget) — obserwowalne w przeglądarce, nie tylko liczba w konsoli
-- [ ] Niska `energy` widocznie wydłuża okresy stania w miejscu (idle) między wanderami
-- [ ] `hunger`/`thirst` nie nasyca się trwale do 1 w dłuższej sesji (rozładowanie przy przybyciu do celu wander)
-- [ ] Zero regresji chase/flee/HP (`predator-prey-system.md`) — `life` nie wpływa na combat w v1
-- [ ] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test`
+- [x] `hunger`/`thirst`/`energy` tickują per-zwierzę (offsetowane, nie w unisono) — `src/fauna/AnimalLife.ts`
+- [x] `energy` spada podczas sprintu (pościg/ucieczka), regeneruje się poza nim
+- [x] Wysoki `hunger`/`thirst` widocznie zmienia wander (szerszy promień i/lub częstszy retarget) — `needWanderBias()` w `AnimalAgent.ts`, do potwierdzenia w przeglądarce
+- [x] Niska `energy` widocznie wydłuża okresy stania w miejscu (idle) między wanderami — `EXTENDED_IDLE_CHANCE` w `wander()`, do potwierdzenia w przeglądarce
+- [x] `hunger`/`thirst` nie nasyca się trwale do 1 w dłuższej sesji (rozładowanie przy przybyciu do celu wander) — `relieveElevatedNeeds()`
+- [x] Zero regresji chase/flee/HP (`predator-prey-system.md`) — `life` nie wpływa na combat w v1 (predator/prey ścieżki update() bez zmian, tick `life` na końcu `update()`)
+- [x] Console clean: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test`
 
 ## Do przetestowania (http://localhost:5577/)
 

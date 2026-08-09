@@ -11,6 +11,12 @@ export type SettlementLandmarks = {
   well: THREE.Vector3
   stockpile: THREE.Vector3
   garden: THREE.Vector3
+  /** Trader's `workplace` (`places.ts`'s `workplaceFor`) — crate + barrel
+   *  market stall, the one role in the workplace hybrid that gets a
+   *  dedicated new prop instead of reusing an existing landmark (2026-08-09
+   *  decision). Built unconditionally, like well/garden/stockpile, whether
+   *  or not this settlement's families happen to roll a trader. */
+  market: THREE.Vector3
   homes: THREE.Vector3[]
   trees: THREE.Vector3[]
   /** Settlement's dock/pier, if it has one (near-coast settlements only) —
@@ -282,6 +288,18 @@ export function createSignpost(): THREE.Group {
   signpost.add(board)
 
   return signpost
+}
+
+/** Fallback if `crate.glb` fails to load — plain flat-shaded box, same
+ *  material family as `createBarrel`'s fallback. */
+export function createCrate(scale = 1): THREE.Group {
+  const crate = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8a6a3e, flatShading: true })
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.6 * scale, 0.6 * scale, 0.6 * scale), mat)
+  box.position.y = 0.3 * scale
+  box.castShadow = true
+  crate.add(box)
+  return crate
 }
 
 export function createStockpile(): THREE.Group {
@@ -745,6 +763,7 @@ export async function buildSettlementProps(
     well: new THREE.Vector3(),
     stockpile: new THREE.Vector3(),
     garden: new THREE.Vector3(),
+    market: new THREE.Vector3(),
     homes: [],
     trees: [],
     dockRoute: [],
@@ -783,6 +802,18 @@ export async function buildSettlementProps(
     placeOnGround(wheat, wheatX, wheatZ, sampleHeight)
     group.add(wheat)
   }
+
+  // Trader's market stall (`landmarks.market`, see `places.ts`'s `workplaceFor`)
+  // — built unconditionally like well/garden/stockpile, whether or not this
+  // settlement's families happen to roll a trader.
+  const { x: marketX, z: marketZ } = findFlatSpot(site, 2, -5, sampleHeight, waterLevel, coreRandom)
+  const marketCrate = await loadPropOrFallback('/models/settlement/crate.glb', 0.6, () => createCrate(1))
+  placeOnGround(marketCrate, marketX, marketZ, sampleHeight)
+  group.add(marketCrate)
+  const marketBarrel = await loadPropOrFallback('/models/settlement/barrel.glb', 0.65, () => createBarrel(1))
+  placeOnGround(marketBarrel, marketX + 0.7, marketZ + 0.3, sampleHeight)
+  group.add(marketBarrel)
+  landmarks.market.set(marketX, sampleHeight(marketX, marketZ), marketZ)
 
   const houseLights: HouseLight[] = []
   for (let i = 0; i < clearings.houses.length; i++) {

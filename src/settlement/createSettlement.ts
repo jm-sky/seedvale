@@ -5,13 +5,13 @@ import {
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { HeightSampler } from '../player/PlayerController'
-import type { Place } from './places'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
+import { type Place, workplaceFor } from './places'
 import {
   buildSettlementProps,
   cloneProp,
@@ -175,11 +175,13 @@ export async function createSettlement(
 
   const agents = await Promise.all(
     flatMembers.map(async ({ home, member }, i) => {
+      const workplace = workplaceFor(def.id, member.character.role, landmarks, i)
       const agent = await NpcAgent.create(
         sampleHeight,
         waterLevel,
         landmarks,
         home,
+        workplace,
         i,
         i / Math.max(1, flatMembers.length - 1),
         member,
