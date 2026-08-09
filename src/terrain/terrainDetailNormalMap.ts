@@ -41,9 +41,16 @@ export function createTerrainNormalMap(): DataTexture {
       const b = v * Math.PI * 2 * freq
       h += noise4D(Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)) * weight
     }
-    octave(1, 1.0)
-    octave(2, 0.3)
-    octave(4, 0.1)
+    // Reported (screenshot): large, high-contrast blotches, not grain — the
+    // base octave (freq=1, i.e. one cycle across the *whole* tile) dominated
+    // at weight 1.0, so its patch size was the entire tile
+    // (NORMAL_MAP_TILES_PER_CHUNK-sized, several meters). Grain means small
+    // and low-contrast: frequencies raised ~6x so the dominant patch size
+    // shrinks proportionally, and total weight lowered (1.4 → 0.85) so no
+    // single octave reads as a stark blob.
+    octave(6, 0.5)
+    octave(14, 0.25)
+    octave(30, 0.1)
     return h
   }
 
