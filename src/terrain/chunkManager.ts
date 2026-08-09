@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { DetailNormalConfig } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type { EnvironmentKind } from './chunkEnvironment'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
@@ -122,6 +123,8 @@ export type ChunkManagerConfig = {
      *  rejection — the GUI "density" knob. */
     density: number
   }
+  /** Close-up surface grain on the chunk material (`buildChunkGeometry.ts`). */
+  detailNormal: DetailNormalConfig
 }
 
 type ChunkState = 'generating' | 'ready'
@@ -333,6 +336,7 @@ export function createChunkManager(
           config.heightScale,
           config.flatShading,
           config.region,
+          config.detailNormal,
         )
         scene.add(mesh)
         rec.mesh = mesh

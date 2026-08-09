@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { DetailNormalConfig } from '../config/worldConfig'
 import {
   applyMicroTint,
   applyMountainRock,
@@ -22,27 +23,17 @@ export type ChunkMeshResult = {
   dispose: () => void
 }
 
-/** How many times the detail normal map tiles across one chunk edge. Briefly
- *  raised to 11 alongside `terrainDetailNormalMap.ts`'s higher noise
- *  frequencies, but that combination aliased into "cloud"-like blotches with
- *  hard edges in the ocean's low-res mirror reflection (issue 009) — reverted
- *  back to 8. Direct land viewing benefits from mipmapping either way; the
- *  reflection pass doesn't get that benefit at this density, so patch count
- *  matters there more than it does on land. Still high enough to hide the
- *  chunk-border tiling seam (each chunk's UVs run 0..1 independently, so the
- *  pattern isn't phase-continuous across chunks) without reading as an
- *  obvious repeated motif. */
-const NORMAL_MAP_TILES_PER_CHUNK = 8
-
 /** Built once and shared by every chunk's material — same reasoning as
  *  `createOcean.ts`'s procedural water normal map: no external asset, no
- *  per-chunk cost beyond a cheap texture reference. */
+ *  per-chunk cost beyond a cheap texture reference. `repeat` lives on the
+ *  shared texture, so a `tilesPerChunk` change applies to every chunk at once
+ *  (the value can only change via a GUI edit, which rebuilds the world anyway).
+ *  Higher tiling aliases in the ocean's low-res mirror pass before it does on
+ *  land, where mipmapping hides it — see issue 009. */
 let terrainNormalMap: THREE.Texture | null = null
-function getTerrainNormalMap(): THREE.Texture {
-  if (!terrainNormalMap) {
-    terrainNormalMap = createTerrainNormalMap()
-    terrainNormalMap.repeat.set(NORMAL_MAP_TILES_PER_CHUNK, NORMAL_MAP_TILES_PER_CHUNK)
-  }
+function getTerrainNormalMap(tilesPerChunk: number): THREE.Texture {
+  if (!terrainNormalMap) terrainNormalMap = createTerrainNormalMap()
+  terrainNormalMap.repeat.set(tilesPerChunk, tilesPerChunk)
   return terrainNormalMap
 }
 
@@ -64,6 +55,7 @@ export function buildChunkGeometry(
   heightScale: number,
   flatShading: boolean,
   region: RegionParams,
+  detailNormal: DetailNormalConfig,
 ): ChunkMeshResult {
   const step = chunkSize / (resolution - 1)
   const apronRes = resolution + 2
@@ -145,20 +137,21 @@ export function buildChunkGeometry(
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
   apronGeometry.dispose()
 
-  const normalMap = getTerrainNormalMap()
   const material = new THREE.MeshStandardMaterial({
     vertexColors: true,
     flatShading,
     roughness: 0.92,
     metalness: 0.04,
-    normalMap,
-    // Subtle — this is close-up surface grain, not a substitute for real
-    // geometry (plan 044 §4.5, "teren wygląda płasko"). Still reported too
-    // visible after two prior cuts — halved again (0.015 → 0.0075) alongside
-    // `terrainDetailNormalMap.ts`'s own weight/frequency cut, so the two
-    // compound into roughly a third of the previous total strength rather
-    // than another small nudge.
-    normalScale: new THREE.Vector2(0.0075, 0.0075),
+    // Close-up surface grain, not a substitute for real geometry (plan 044
+    // §4.5, "teren wygląda płasko"). Strength is a GUI knob — do not hardcode
+    // a "cut" here again; see issue 014 for why the last four attempts to tune
+    // it in source went nowhere.
+    ...(detailNormal.enabled && detailNormal.strength > 0
+      ? {
+          normalMap: getTerrainNormalMap(detailNormal.tilesPerChunk),
+          normalScale: new THREE.Vector2(detailNormal.strength, detailNormal.strength),
+        }
+      : {}),
   })
 
   const mesh = new THREE.Mesh(geometry, material)

@@ -75,6 +75,7 @@ public/models/                # settlement / nature / fauna / characters
 
 - Resolution: 65 … **769** (Insane); default **193**
 - **Flat shading** — wyłączone = gładkie wzgórza (przy Insane + flat = „DOS”)
+- **Surface grain (detail normal)** — `strength` / `tilesPerChunk` / `enabled`; **stroj suwakami, nie stałymi w kodzie** — dlaczego: [reviews/2026-08-10--003](docs/reviews/2026-08-10--003--terrain-surface-detail.md), [issues/014](docs/issues/2026-08-10--014--terrain-detail-normal-map-green-channel.md)
 - Day/night: `timeMultiplier`, `dayLengthSec`, `enabled`
 - Priorytet config: URL (`?seed=` `?res=` `?gui=0`) → localStorage → defaults
 

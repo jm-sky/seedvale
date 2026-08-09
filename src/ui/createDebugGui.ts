@@ -351,6 +351,29 @@ export function createDebugGui(
       .onFinishChange(handlers.onTerrainChange),
   )
 
+  // Surface grain (detail normal map). Exposed as sliders on purpose: this
+  // effect was previously tuned by editing constants and reloading, which made
+  // every round unattributable — see issue 014.
+  const detail = gui.addFolder('Surface grain (detail normal)')
+  terrainControllers.push(
+    detail
+      .add(config.terrain.detailNormal, 'enabled')
+      .name('Enabled')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    detail
+      .add(config.terrain.detailNormal, 'strength', 0, 4, 0.05)
+      .name('Strength (normalScale)')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    detail
+      .add(config.terrain.detailNormal, 'tilesPerChunk', 1, 24, 1)
+      .name('Tiles per chunk (grain size)')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+
   const sky = gui.addFolder('Sky (manual)')
   sky
     .add(config.sky, 'inclination', 0, 1, 0.01)

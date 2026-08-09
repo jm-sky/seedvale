@@ -29,7 +29,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 011 | [2026-08-10--011--item-label-visibility-distance-darkness.md](./2026-08-10--011--item-label-visibility-distance-darkness.md) | Etykiety drobnych przedmiotów widoczne za daleko i w ciemności — te same progi co etykiety NPC | `verification needed` |
 | 012 | [2026-08-10--012--toast-notifications-for-quick-feedback.md](./2026-08-10--012--toast-notifications-for-quick-feedback.md) | Krótkie akcje (ognisko, znaleziona gałąź) niepotrzebnie blokują grę pełnym dialogiem zamiast toastu | `verification needed` |
 | 013 | [2026-08-10--013--npc-label-gaze-cone-dimming.md](./2026-08-10--013--npc-label-gaze-cone-dimming.md) | NPC labels przygasają do 50%, gdy gracz nie patrzy w ich stronę (~90° stożek) | `verification needed` |
+| 014 | [2026-08-10--014--terrain-detail-normal-map-green-channel.md](./2026-08-10--014--terrain-detail-normal-map-green-channel.md) | Normal-mapa terenu pieczona z „górą" w kanale G zamiast B — „camo" na ziemi, którego obniżanie `normalScale` tylko pogarszało; przy okazji: wyłączenie AO gasiło całą scenę | `verification needed` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `014`
+**Next ID:** `015`

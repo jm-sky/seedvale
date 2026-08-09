@@ -1123,6 +1123,7 @@ function buildChunkManager(
     flatShading: config.terrain.flatShading,
     collectedItemIds,
     grass: config.terrain.grass,
+    detailNormal: config.terrain.detailNormal,
   }
   return createChunkManager(scene, cfg)
 }

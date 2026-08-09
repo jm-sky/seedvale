@@ -22,6 +22,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 |--------|-------|--------|------|
 | Water quality | Stylized woda — brzegi, shader, vs Water.js | `done` | [2026-08-07--001--water-quality.md](./2026-08-07--001--water-quality.md) |
 | App performance & code health | Całość aplikacji — perf, refactoring, błędy (pierwsze ogólne review) | `done` | [2026-08-08--002--app-performance-and-code-health.md](./2026-08-08--002--app-performance-and-code-health.md) |
+| Terrain surface detail | Detal powierzchni terenu („teren wygląda płasko") — normal-mapa, micro-tint, trawa, AO; **+ instrukcja strojenia dla kolejnych agentów** | `verification needed` | [2026-08-10--003--terrain-surface-detail.md](./2026-08-10--003--terrain-surface-detail.md) |
 
 ## After each run
 

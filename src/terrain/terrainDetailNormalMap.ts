@@ -41,15 +41,11 @@ export function createTerrainNormalMap(): DataTexture {
       const b = v * Math.PI * 2 * freq
       h += noise4D(Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)) * weight
     }
-    // The previous pass raised both frequency (6/14/30 → 8/18/38, smaller/
-    // denser patches) and cut weight (contrast) at the same time. The
-    // frequency bump turned out to alias badly in the ocean's low-res mirror
-    // reflection (issue 009 — many more small patches read as "cloud"
-    // blotches with hard edges once aliased) even though it looked fine
-    // viewed directly on land (mipmapping hides it there). Reverted back to
-    // the original, larger-patch frequencies; kept the weight cut below
-    // (that's what actually controls contrast/subtlety, not patch count) plus
-    // `buildChunkGeometry.ts`'s `normalScale` cut from the same pass.
+    // Amplitude here is the *shape* of the grain, not its visible strength —
+    // strength is `config.terrain.detailNormal.strength` (→ `normalScale`),
+    // which is the knob to turn. Keep these fixed unless you want a different
+    // patch size/roughness mix; changing them and the strength in the same
+    // pass is what made the earlier tuning rounds unattributable (issue 014).
     octave(6, 0.16)
     octave(14, 0.08)
     octave(30, 0.03)
@@ -65,7 +61,17 @@ export function createTerrainNormalMap(): DataTexture {
       const hR = heightAt(u + step, v)
       const hD = heightAt(u, v - step)
       const hU = heightAt(u, v + step)
-      normal.set(-(hR - hL), 2, -(hU - hD)).normalize()
+      // OpenGL tangent-space convention: R/G carry the two in-plane slopes and
+      // **B carries the surface normal** (so a correct map is flat lavender-
+      // blue, mean ≈ (128, 128, ~250)). This used to write the up-vector into
+      // G — the map came out green, and three.js's `normal_fragment_maps`
+      // (`mapN.xy *= normalScale; normal = normalize(tbn * mapN)`) then read a
+      // sign-flipping *slope* as the up axis, tilting shading normals ~90° off
+      // the surface at noise frequency. That was the "camo"/high-contrast
+      // blotching, and it got *worse* as `normalScale` was lowered, since
+      // scaling xy only shrank the (misplaced) up-vector further. See
+      // `docs/issues/2026-08-10--014--terrain-detail-normal-map-green-channel.md`.
+      normal.set(-(hR - hL), -(hU - hD), 2).normalize()
 
       const idx = (y * SIZE + x) * 4
       data[idx] = Math.round((normal.x * 0.5 + 0.5) * 255)

@@ -1,6 +1,7 @@
 import { N8AOPass } from 'n8ao'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
 import type { WorldConfig } from '../config/worldConfig'
 import type { Camera, Scene, WebGLRenderer } from 'three'
@@ -29,6 +30,15 @@ export function createPostProcessing(
 ): PostProcessing {
   const composer = new EffectComposer(renderer)
 
+  // N8AOPass renders the scene itself, so it doubles as the chain's render
+  // pass — but `EffectComposer` skips disabled passes entirely, which meant
+  // turning AO off left nothing drawing the scene at all (empty sky-coloured
+  // frame). This RenderPass is the fallback for that case: enabled only while
+  // AO is off, so the scene is never rendered twice.
+  const renderPass = new RenderPass(scene, camera)
+  renderPass.enabled = !ao.aoEnabled
+  composer.addPass(renderPass)
+
   const aoPass = new N8AOPass(scene, camera, width, height)
   aoPass.configuration.gammaCorrection = false
   composer.addPass(aoPass)
@@ -41,6 +51,7 @@ export function createPostProcessing(
 
   function applyAoConfig(config: WorldConfig['postProcessing']): void {
     aoPass.enabled = config.aoEnabled
+    renderPass.enabled = !config.aoEnabled
     aoPass.setQualityMode(config.aoQuality)
     aoPass.configuration.aoRadius = config.aoRadius
     aoPass.configuration.intensity = config.aoIntensity

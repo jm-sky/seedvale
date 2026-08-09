@@ -7,6 +7,23 @@ import { loadStoredConfig } from './persistConfig'
 export type AoQuality = 'Performance' | 'Low' | 'Medium' | 'High' | 'Ultra'
 
 /**
+ * Terrain detail-normal ("surface grain") knobs. Separated out so strength and
+ * patch density are two independent, GUI-tunable sliders — the earlier tuning
+ * rounds moved both at once inside the source and could not tell which change
+ * caused which regression (see issue 014).
+ */
+export type DetailNormalConfig = {
+  enabled: boolean
+  /** `MeshStandardMaterial.normalScale` — 0 = off, 1 = the baked map at full
+   *  amplitude (mean ~2°, max ~8.6° of normal tilt). */
+  strength: number
+  /** How many times the 256² map tiles across one chunk edge — patch *size*,
+   *  independent of `strength`. Higher = finer grain, but aliases sooner in
+   *  the ocean's low-res mirror pass (issue 009). */
+  tilesPerChunk: number
+}
+
+/**
  * Tunables for Seedvale — edit here, via GUI, or localStorage.
  *
  * **resolution** = vertices along one edge of the terrain mesh.
@@ -45,6 +62,9 @@ export type WorldConfig = {
        *  rejection — higher reads as thicker grass. */
       density: number
     }
+    /** Close-up surface grain on the terrain — a tileable detail normal map
+     *  (`terrain/terrainDetailNormalMap.ts`), no displacement. */
+    detailNormal: DetailNormalConfig
   }
   sky: {
     inclination: number
@@ -145,6 +165,14 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         // default of 12000 was 10x below the slider minimum.
         density: 120000,
       },
+      detailNormal: {
+        enabled: true,
+        // Conservative starting point for a *correctly* oriented map — the
+        // old 0.0075 was a symptom of the green-channel bug (issue 014), not
+        // a meaningful strength. Tune live in the GUI, then move this default.
+        strength: 0.5,
+        tilesPerChunk: 8,
+      },
     },
     sky: {
       inclination: 0.36,
@@ -221,6 +249,14 @@ export function applyStoredTerrain(
     if (typeof t.grass.enabled === 'boolean') target.grass.enabled = t.grass.enabled
     if (typeof t.grass.radius === 'number') target.grass.radius = t.grass.radius
     if (typeof t.grass.density === 'number') target.grass.density = t.grass.density
+  }
+  if (t.detailNormal && typeof t.detailNormal === 'object') {
+    const d = t.detailNormal
+    if (typeof d.enabled === 'boolean') target.detailNormal.enabled = d.enabled
+    if (typeof d.strength === 'number') target.detailNormal.strength = d.strength
+    if (typeof d.tilesPerChunk === 'number') {
+      target.detailNormal.tilesPerChunk = d.tilesPerChunk
+    }
   }
 }
 
