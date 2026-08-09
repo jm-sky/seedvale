@@ -1,14 +1,10 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { ItemKind } from '../items/items'
-import type { QuestDialogOverride, QuestManager } from '../quests/QuestManager'
+import type { QuestDialogOverride, QuestManager, QuestListEntry } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
 
-/** `npc: Raw<NpcAgent>` — it holds THREE.js mesh/Object3D refs that shouldn't
- *  be deep-proxied (perf, and Vue's `UnwrapRef` otherwise mistypes it when
- *  nested inside an array); `refreshVillagers` applies the matching
- *  `markRaw()` at runtime. */
 export type VillagerEntry = {
   npc: Raw<NpcAgent>
   settlementName: string
@@ -23,25 +19,11 @@ type VillagerRefreshEntry = {
 
 export const VILLAGERS_PAGE_SIZE = 10
 
-/**
- * Small reactive store (plan 046 — "reactive()/ref() singletons... easy to
- * swap for Pinia later if complexity grows", not needed at this scale yet).
- * Only imported from inside the already-dynamically-imported Vue chunk
- * (`mount.ts`) — never import this module from a synchronously-loaded
- * vanilla module (`src/ui/`, `src/app/createApp.ts`), or Vue's runtime
- * stops being code-split and starts blocking first paint again.
- */
-
 type NpcDialogueMenuState = {
   open: boolean
   npc: NpcAgent | null
   settlement: Settlement | null
   timeOfDay: number
-  /** Computed once, when the menu opens (see `openNpcDialogueMenu`) — never
-   *  recomputed while open. `QuestManager.onInteract` has real side effects
-   *  (advances/consumes quest state), so re-querying it on every render or
-   *  topic click would silently mutate quest progress the player never
-   *  chose to engage with. */
   helpResult: QuestDialogOverride | null
 }
 
@@ -51,6 +33,40 @@ type InventoryState = {
   totalWeight: number
   maxWeight: number
   onDrop: ((kind: ItemKind) => void) | null
+}
+
+type PauseMenuState = {
+  open: boolean
+  seed: number
+  playerName: string
+  onPause: (() => void) | null
+  onResume: (() => void) | null
+  onToggleGui: (() => void) | null
+  onNameChange: ((name: string) => void) | null
+  onNameCommit: ((name: string) => void) | null
+  onSave: (() => void) | null
+  onRefresh: (() => void) | null
+  onBuildCampfire: (() => boolean) | null
+  onNewGame: (() => void) | null
+  onQuestLog: (() => void) | null
+  onVillagers: (() => void) | null
+  onInventory: (() => void) | null
+  saveStatus: string
+  buildCampfireStatus: string
+}
+
+type QuestLogState = {
+  open: boolean
+  entries: readonly QuestListEntry[]
+  exp: number
+  relation: (name: string) => number
+}
+
+type FlavorDialogState = {
+  open: boolean
+  prompt: string | null
+  name: string
+  line: string
 }
 
 export const ui = reactive({
@@ -73,33 +89,150 @@ export const ui = reactive({
     maxWeight: 0,
     onDrop: null,
   } as InventoryState,
-  /** Escape-priority stack (plan 046 "Faza 2" idea, built now since Faza 1
-   *  already needs it) — only the top id's registered `close()` fires on
-   *  Escape (`App.vue`'s single global listener, see `closeTopOverlay`).
-   *  `NpcDialogueMenu`/`InventoryScreen` aren't on this stack (still their
-   *  own listeners) — Vue mounts children before parents, so their
-   *  listeners register before `App.vue`'s and naturally still win the same
-   *  way the old vanilla registration-order trick did. */
+  pauseMenu: {
+    open: false,
+    seed: 0,
+    playerName: '',
+    onPause: null,
+    onResume: null,
+    onToggleGui: null,
+    onNameChange: null,
+    onNameCommit: null,
+    onSave: null,
+    onRefresh: null,
+    onBuildCampfire: null,
+    onNewGame: null,
+    onQuestLog: null,
+    onVillagers: null,
+    onInventory: null,
+    saveStatus: '',
+    buildCampfireStatus: '',
+  } as PauseMenuState,
+  questLog: {
+    open: false,
+    entries: [],
+    exp: 0,
+    relation: () => 0,
+  } as QuestLogState,
+  flavorDialog: {
+    open: false,
+    prompt: null,
+    name: '',
+    line: '',
+  } as FlavorDialogState,
+  /** IDs are ordered by opening time. Escape closes only the most recently
+   *  opened registered overlay. Components register once and sync membership
+   *  reactively through `useOverlayScreen`. */
   openStack: [] as string[],
 })
 
 const overlayCloseHandlers = new Map<string, () => void>()
 
-/** Called once per screen component (`useOverlayScreen` composable) — not
- *  per open/close. */
 export function registerOverlay(id: string, close: () => void): void {
   overlayCloseHandlers.set(id, close)
 }
 
+export function unregisterOverlay(id: string): void {
+  overlayCloseHandlers.delete(id)
+  syncOverlayStack(id, false)
+}
+
 export function syncOverlayStack(id: string, open: boolean): void {
   const idx = ui.openStack.indexOf(id)
-  if (open && idx === -1) ui.openStack.push(id)
-  else if (!open && idx !== -1) ui.openStack.splice(idx, 1)
+  if (open) {
+    if (idx === -1) ui.openStack.push(id)
+  } else if (idx !== -1) {
+    ui.openStack.splice(idx, 1)
+  }
 }
 
 export function closeTopOverlay(): void {
   const top = ui.openStack.at(-1)
   if (top) overlayCloseHandlers.get(top)?.()
+}
+
+export function togglePause(): void {
+  if (ui.pauseMenu.open) closePauseMenu()
+  else openPauseMenu()
+}
+
+export function openPauseMenu(): void {
+  if (ui.pauseMenu.open) return
+  ui.pauseMenu.open = true
+  ui.pauseMenu.onPause?.()
+}
+
+export function closePauseMenu(): void {
+  if (!ui.pauseMenu.open) return
+  ui.pauseMenu.open = false
+  ui.pauseMenu.onResume?.()
+}
+
+export function configurePauseMenu(
+  seed: number,
+  playerName: string,
+  handlers: Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'buildCampfireStatus'>,
+): void {
+  ui.pauseMenu.seed = seed
+  ui.pauseMenu.playerName = playerName
+  Object.assign(ui.pauseMenu, handlers)
+}
+
+export function setPauseSeed(seed: number): void {
+  ui.pauseMenu.seed = seed
+}
+
+export function setPausePlayerName(name: string): void {
+  ui.pauseMenu.playerName = name
+}
+
+export function setPauseSaveStatus(status: string): void {
+  ui.pauseMenu.saveStatus = status
+}
+
+export function setPauseBuildCampfireStatus(status: string): void {
+  ui.pauseMenu.buildCampfireStatus = status
+}
+
+export function openQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void {
+  ui.questLog.entries = entries
+  ui.questLog.exp = exp
+  ui.questLog.relation = relation
+  ui.questLog.open = true
+}
+
+export function refreshQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void {
+  ui.questLog.entries = entries
+  ui.questLog.exp = exp
+  ui.questLog.relation = relation
+}
+
+export function closeQuestLog(): void {
+  ui.questLog.open = false
+}
+
+export function isQuestLogOpen(): boolean {
+  return ui.questLog.open
+}
+
+export function openFlavorDialog(name: string, line: string): void {
+  ui.flavorDialog.prompt = null
+  ui.flavorDialog.name = name
+  ui.flavorDialog.line = line
+  ui.flavorDialog.open = true
+}
+
+export function setFlavorPrompt(text: string | null): void {
+  if (ui.flavorDialog.open) return
+  ui.flavorDialog.prompt = text
+}
+
+export function closeFlavorDialog(): void {
+  ui.flavorDialog.open = false
+}
+
+export function isFlavorDialogOpen(): boolean {
+  return ui.flavorDialog.open
 }
 
 export function openVillagers(): void {
@@ -116,9 +249,6 @@ export function toggleVillagers(): void {
   else openVillagers()
 }
 
-/** `markRaw` on `npc` — it holds THREE.js mesh/Object3D references that
- *  shouldn't be deep-proxied (perf, and Vue's `UnwrapRef` mistypes deeply
- *  nested class instances inside arrays otherwise). */
 export function refreshVillagers(entries: readonly VillagerRefreshEntry[]): void {
   ui.villagers.entries = entries.map((e) => ({ ...e, npc: markRaw(e.npc) }))
 }
@@ -154,10 +284,6 @@ function resetNpcDialogueMenu(): void {
   state.helpResult = null
 }
 
-/** Any way of leaving the menu without explicitly accepting a pending offer
- *  (Escape, backdrop click, an explicit "Odmów" button) counts as declining
- *  it — same semantics as the old single-panel `NpcDialog.close()`. No-op
- *  (including no `onDecline` call) if there's no offer to decline. */
 export function closeNpcDialogueMenu(): void {
   const state = ui.npcDialogueMenu
   if (!state.open) return
@@ -165,7 +291,6 @@ export function closeNpcDialogueMenu(): void {
   resetNpcDialogueMenu()
 }
 
-/** No-op outside of an actual pending offer. */
 export function acceptNpcDialogueOffer(): void {
   const state = ui.npcDialogueMenu
   if (!state.open || !state.helpResult?.offer) return
