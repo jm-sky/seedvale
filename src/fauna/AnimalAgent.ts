@@ -2,6 +2,15 @@ import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import { labelOpacityForDistance } from '../ui/labelDistance'
+import {
+  type AnimalLifeState,
+  BIAS_STRENGTH,
+  createAnimalLifeState,
+  ENERGY_REST_THRESHOLD,
+  NEED_ELEVATED_THRESHOLD,
+  relieveElevatedNeeds,
+  tickAnimalLife,
+} from './AnimalLife'
 import { createHealthState, damageFor, type HealthState, MAX_HP } from './faunaCombat'
 import { isPlayerNoticed } from './playerAwareness'
 
@@ -65,6 +74,10 @@ const VILLAGE_FLEE_BIAS_WEIGHT = 0.9
  *  constructor override, so `createFauna.ts`'s wild/wandering spawns are
  *  unaffected. */
 const DEFAULT_WANDER_RADIUS: readonly [number, number] = [6, 16]
+/** Chance per expired wander timer, while `energy` is below
+ *  `ENERGY_REST_THRESHOLD`, that the animal extends the timer and stays put
+ *  instead of picking a new wander target — a tired animal rests more. */
+const EXTENDED_IDLE_CHANCE = 0.5
 
 export type AnimalRole = 'predator' | 'prey' | 'livestock'
 /** `wild` animals are wary of humans/the village and avoid it; `domestic`
@@ -310,6 +323,7 @@ export class AnimalAgent {
   private readonly labelEl: HTMLDivElement
   private lastLabelOpacity = -1
   readonly health: HealthState
+  readonly life: AnimalLifeState
   private attackCooldown = 0
   private timeSinceDeath = 0
   private isNight = false
@@ -338,6 +352,7 @@ export class AnimalAgent {
     this.home.set(x, 0, z)
     this.wanderRadius = wanderRadius
     this.health = createHealthState(MAX_HP[def.kind])
+    this.life = createAnimalLifeState(Math.random())
 
     if (visual) {
       this.mesh = visual
@@ -460,6 +475,7 @@ export class AnimalAgent {
     this.clampBounds()
     this.snapY()
     this.updateAnim()
+    tickAnimalLife(this.life, dt, this.sprinting)
     const opacity = labelOpacityForDistance(this.mesh.position.distanceTo(observerPos))
     if (opacity !== this.lastLabelOpacity) {
       this.lastLabelOpacity = opacity
@@ -637,27 +653,47 @@ export class AnimalAgent {
 
   private wander(dt: number): void {
     this.wanderTimer -= dt
-    if (this.wanderTimer <= 0 || this.arrived(this.target, 1.2)) {
-      this.pickWanderTarget()
+    const timerExpired = this.wanderTimer <= 0
+    if (timerExpired || this.arrived(this.target, 1.2)) {
+      relieveElevatedNeeds(this.life)
+      const restInstead = timerExpired
+        && this.life.energy < ENERGY_REST_THRESHOLD
+        && Math.random() < EXTENDED_IDLE_CHANCE
+      if (restInstead) {
+        this.wanderTimer = 2 + Math.random() * 3
+      } else {
+        this.pickWanderTarget()
+      }
     }
     this.steerToward(this.target, this.walkSpeedNow(), dt)
   }
 
+  /** hunger/thirst above `NEED_ELEVATED_THRESHOLD` widen the wander radius
+   *  and shorten the retarget timer — "searching further, more restless". */
+  private needWanderBias(): number {
+    const needLevel = Math.max(
+      0,
+      (this.life.hunger + this.life.thirst) / 2 - NEED_ELEVATED_THRESHOLD / 2,
+    )
+    return 1 + needLevel * BIAS_STRENGTH
+  }
+
   private pickWanderTarget(): void {
     const [minR, maxR] = this.wanderRadius
+    const bias = this.needWanderBias()
     for (let attempt = 0; attempt < 8; attempt++) {
-      const r = minR + Math.random() * (maxR - minR)
+      const r = (minR + Math.random() * (maxR - minR)) * bias
       const a = Math.random() * Math.PI * 2
       const x = this.home.x + Math.cos(a) * r
       const z = this.home.z + Math.sin(a) * r
       if (this.isWalkable(x, z) && (this.def.sociability !== 'wild' || !this.isNearVillage({ x, z }))) {
         this.target.set(x, 0, z)
-        this.wanderTimer = 3 + Math.random() * 4
+        this.wanderTimer = (3 + Math.random() * 4) / bias
         return
       }
     }
     this.target.copy(this.home)
-    this.wanderTimer = 3 + Math.random() * 4
+    this.wanderTimer = (3 + Math.random() * 4) / bias
   }
 
   private isWalkable(x: number, z: number): boolean {
