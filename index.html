@@ -550,112 +550,6 @@
         font-size: 11px;
         opacity: 0.6;
       }
-      .seedvale-villagers {
-        position: absolute;
-        inset: 0;
-        z-index: 10;
-        pointer-events: auto;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(10, 14, 18, 0.55);
-        backdrop-filter: blur(2px);
-      }
-      .seedvale-villagers[hidden] {
-        display: none;
-      }
-      .seedvale-villagers__panel {
-        min-width: 360px;
-        max-width: 480px;
-        max-height: 70vh;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        touch-action: pan-y;
-        padding: 24px 28px;
-        border-radius: 10px;
-        background: rgba(20, 24, 28, 0.92);
-        color: #f2f6fa;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-      }
-      .seedvale-villagers__panel h1 {
-        font-size: 18px;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-        margin-bottom: 16px;
-      }
-      .seedvale-villagers__list {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .seedvale-villagers__row {
-        padding: 10px 12px;
-        border-radius: 6px;
-        background: rgba(255, 255, 255, 0.06);
-      }
-      .seedvale-villagers__row-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-      }
-      .seedvale-villagers__row-name {
-        font-size: 14px;
-        font-weight: 600;
-      }
-      .seedvale-villagers__row-role {
-        font-size: 12px;
-        opacity: 0.7;
-      }
-      .seedvale-villagers__row-meta {
-        font-size: 12px;
-        opacity: 0.8;
-        margin-top: 2px;
-      }
-      .seedvale-villagers__row-settlement {
-        margin-left: 6px;
-        padding: 1px 6px;
-        border-radius: 8px;
-        background: rgba(224, 179, 74, 0.25);
-        font-size: 11px;
-        opacity: 0.85;
-      }
-      .seedvale-villagers__hp {
-        margin-top: 6px;
-        height: 6px;
-        border-radius: 3px;
-        background: rgba(255, 255, 255, 0.12);
-        overflow: hidden;
-      }
-      .seedvale-villagers__hp-fill {
-        height: 100%;
-        background: #5faa3a;
-        transition: width 0.2s ease;
-      }
-      .seedvale-villagers__tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 8px;
-      }
-      .seedvale-villagers__tag {
-        padding: 2px 8px;
-        border-radius: 10px;
-        background: rgba(61, 123, 209, 0.35);
-        font-size: 11px;
-      }
-      .seedvale-villagers__tag--muted {
-        background: rgba(255, 255, 255, 0.08);
-        opacity: 0.6;
-      }
-      .seedvale-villagers__empty {
-        font-size: 13px;
-        opacity: 0.6;
-      }
-      .seedvale-villagers__hint {
-        margin-top: 16px;
-        font-size: 11px;
-        opacity: 0.6;
-      }
       .seedvale-inventory {
         position: absolute;
         inset: 0;
@@ -1049,7 +943,6 @@
         .seedvale-pause__panel,
         .seedvale-npc-dialog__panel,
         .seedvale-quest-log__panel,
-        .seedvale-villagers__panel,
         .seedvale-inventory__panel {
           min-width: 0;
           width: min(420px, calc(100vw - 32px));
