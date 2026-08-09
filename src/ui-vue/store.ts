@@ -2,27 +2,22 @@ import { reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { QuestDialogOverride, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
-
-/**
- * Small reactive store (plan 046 — "reactive()/ref() singletons... easy to
- * swap for Pinia later if complexity grows", not needed at this scale yet).
- * Only imported from inside the already-dynamically-imported Vue chunk
- * (`mount.ts`) — never import this module from a synchronously-loaded
- * vanilla module (`src/ui/`, `src/app/createApp.ts`), or Vue's runtime
- * stops being code-split and starts blocking first paint again.
- */
+import type { ItemKind } from '../items/items'
 
 type NpcDialogueMenuState = {
   open: boolean
   npc: NpcAgent | null
   settlement: Settlement | null
   timeOfDay: number
-  /** Computed once, when the menu opens (see `openNpcDialogueMenu`) — never
-   *  recomputed while open. `QuestManager.onInteract` has real side effects
-   *  (advances/consumes quest state), so re-querying it on every render or
-   *  topic click would silently mutate quest progress the player never
-   *  chose to engage with. */
   helpResult: QuestDialogOverride | null
+}
+
+type InventoryState = {
+  open: boolean
+  counts: Partial<Record<ItemKind, number>>
+  totalWeight: number
+  maxWeight: number
+  onDrop: ((kind: ItemKind) => void) | null
 }
 
 export const ui = reactive({
@@ -33,6 +28,13 @@ export const ui = reactive({
     timeOfDay: 0,
     helpResult: null,
   } as NpcDialogueMenuState,
+  inventory: {
+    open: false,
+    counts: {},
+    totalWeight: 0,
+    maxWeight: 0,
+    onDrop: null,
+  } as InventoryState,
 })
 
 export function openNpcDialogueMenu(
@@ -50,33 +52,58 @@ export function openNpcDialogueMenu(
   state.open = true
 }
 
-function resetNpcDialogueMenu(): void {
+export function closeNpcDialogueMenu(): void {
   const state = ui.npcDialogueMenu
+  if (!state.open) return
+  state.helpResult?.offer?.onDecline()
   state.open = false
   state.npc = null
   state.settlement = null
   state.helpResult = null
 }
 
-/** Any way of leaving the menu without explicitly accepting a pending offer
- *  (Escape, backdrop click, an explicit "Odmów" button) counts as declining
- *  it — same semantics as the old single-panel `NpcDialog.close()`. No-op
- *  (including no `onDecline` call) if there's no offer to decline. */
-export function closeNpcDialogueMenu(): void {
-  const state = ui.npcDialogueMenu
-  if (!state.open) return
-  state.helpResult?.offer?.onDecline()
-  resetNpcDialogueMenu()
-}
-
-/** No-op outside of an actual pending offer. */
 export function acceptNpcDialogueOffer(): void {
   const state = ui.npcDialogueMenu
   if (!state.open || !state.helpResult?.offer) return
   state.helpResult.offer.onAccept()
-  resetNpcDialogueMenu()
+  state.open = false
+  state.npc = null
+  state.settlement = null
+  state.helpResult = null
 }
 
 export function isNpcDialogueMenuOpen(): boolean {
   return ui.npcDialogueMenu.open
+}
+
+export function openInventory(
+  counts: Partial<Record<ItemKind, number>>,
+  totalWeight: number,
+  maxWeight: number,
+  onDrop: (kind: ItemKind) => void,
+): void {
+  ui.inventory.counts = { ...counts }
+  ui.inventory.totalWeight = totalWeight
+  ui.inventory.maxWeight = maxWeight
+  ui.inventory.onDrop = onDrop
+  ui.inventory.open = true
+}
+
+export function refreshInventory(
+  counts: Partial<Record<ItemKind, number>>,
+  totalWeight: number,
+  maxWeight: number,
+): void {
+  ui.inventory.counts = { ...counts }
+  ui.inventory.totalWeight = totalWeight
+  ui.inventory.maxWeight = maxWeight
+}
+
+export function closeInventory(): void {
+  ui.inventory.open = false
+  ui.inventory.onDrop = null
+}
+
+export function isInventoryOpen(): boolean {
+  return ui.inventory.open
 }
