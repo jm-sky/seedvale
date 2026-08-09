@@ -58,7 +58,6 @@ import { createQuestLog } from '../ui/createQuestLog'
 import { createQuickActions } from '../ui/createQuickActions'
 import { createTimeSkipOverlay } from '../ui/createTimeSkipOverlay'
 import { createToast } from '../ui/createToast'
-import { createVillagersScreen } from '../ui/createVillagersScreen'
 import { createLights } from '../world/createLights'
 import { createOcean, type WorldOcean } from '../world/createOcean'
 import { createSky } from '../world/createSky'
@@ -435,7 +434,6 @@ export async function createApp(
   // createNpcDialog's onKeyDown comment for why registration order matters here.
   const npcDialog = createNpcDialog(container)
   const questLog = createQuestLog(container)
-  const villagersScreen = createVillagersScreen(container)
 
   /** Drops the whole carried stack of `kind` back into the world at the
    *  player's feet, scattered slightly — the "Wyrzuć" action in
@@ -506,8 +504,8 @@ export async function createApp(
     )
   }
   const openVillagers = () => {
-    villagersScreen.open()
-    villagersScreen.refresh(
+    vueUi.openVillagers()
+    vueUi.refreshVillagers(
       settlementsManager
         .getLoaded()
         .flatMap((s) => s.npcs.map((npc) => ({ npc, settlementName: s.name, foodSourceType: s.foodSourceType }))),
@@ -556,7 +554,7 @@ export async function createApp(
           if (
             !npcDialog.isOpen() &&
             !questLog.isOpen() &&
-            !villagersScreen.isOpen() &&
+            !vueUi.isVillagersOpen() &&
             !inventoryScreen.isOpen() &&
             !vueUi.isNpcDialogueMenuOpen()
           ) {
@@ -567,7 +565,7 @@ export async function createApp(
           if (
             !npcDialog.isOpen() &&
             !questLog.isOpen() &&
-            !villagersScreen.isOpen() &&
+            !vueUi.isVillagersOpen() &&
             !inventoryScreen.isOpen() &&
             !vueUi.isNpcDialogueMenuOpen()
           ) {
@@ -681,7 +679,7 @@ export async function createApp(
       menuPaused ||
       npcDialog.isOpen() ||
       questLog.isOpen() ||
-      villagersScreen.isOpen() ||
+      vueUi.isVillagersOpen() ||
       inventoryScreen.isOpen() ||
       quickActions.isOpen() ||
       vueUi.isNpcDialogueMenuOpen()
@@ -718,7 +716,7 @@ export async function createApp(
       keyboard.consumeInventory()
       setHighlight(null)
       if (keyboard.consumeQuestLog()) questLog.close()
-    } else if (villagersScreen.isOpen()) {
+    } else if (vueUi.isVillagersOpen()) {
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
@@ -846,7 +844,7 @@ export async function createApp(
       !menuPaused &&
       !npcDialog.isOpen() &&
       !questLog.isOpen() &&
-      !villagersScreen.isOpen() &&
+      !vueUi.isVillagersOpen() &&
       !inventoryScreen.isOpen() &&
       !quickActions.isOpen()
     ) {
@@ -934,7 +932,6 @@ export async function createApp(
     pauseMenu.dispose()
     npcDialog.dispose()
     questLog.dispose()
-    villagersScreen.dispose()
     inventoryScreen.dispose()
     quickActions.dispose()
     hud.dispose()

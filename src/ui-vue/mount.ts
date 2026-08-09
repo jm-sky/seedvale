@@ -1,34 +1,50 @@
-import type { NpcAgent } from '../ai/NpcAgent'
-import type { QuestManager } from '../quests/QuestManager'
-import type { Settlement } from '../settlement/createSettlement'
-import type { ItemKind } from '../items/items'
 import type { App } from 'vue'
 
-export type VueUi = {
-  openNpcDialogueMenu: (npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number) => void
-  isNpcDialogueMenuOpen: () => boolean
-  openInventory: (counts: Partial<Record<ItemKind, number>>, totalWeight: number, maxWeight: number, onDrop: (kind: ItemKind) => void) => void
-  refreshInventory: (counts: Partial<Record<ItemKind, number>>, totalWeight: number, maxWeight: number) => void
-  isInventoryOpen: () => boolean
-  closeInventory: () => void
-  dispose: () => void
-}
+type StoreModule = typeof import('./store')
 
-type StoreImpl = {
-  openNpc: VueUi['openNpcDialogueMenu']
-  isNpcOpen: VueUi['isNpcDialogueMenuOpen']
-  openInventory: VueUi['openInventory']
-  refreshInventory: VueUi['refreshInventory']
-  isInventoryOpen: VueUi['isInventoryOpen']
-  closeInventory: VueUi['closeInventory']
-}
+/** Every store function `createApp.ts`/vanilla code needs to call — add new
+ *  screens' function names here as they migrate (plan 046). Kept as one
+ *  list instead of per-function forwarders so a new screen doesn't need
+ *  hand-written boilerplate in this file. */
+const FORWARDED_FNS = [
+  'openNpcDialogueMenu',
+  'closeNpcDialogueMenu',
+  'acceptNpcDialogueOffer',
+  'isNpcDialogueMenuOpen',
+  'openVillagers',
+  'closeVillagers',
+  'toggleVillagers',
+  'refreshVillagers',
+  'isVillagersOpen',
+  'openInventory',
+  'refreshInventory',
+  'isInventoryOpen',
+  'closeInventory',
+] as const
+
+export type VueUi = Pick<StoreModule, typeof FORWARDED_FNS[number]> & { dispose: () => void }
 
 let mountedVueUi: VueUi | null = null
 
+/** Used by `src/ui/createInventoryScreen.ts` — a thin compatibility adapter
+ *  kept instead of wiring `createApp.ts` directly to the store (unlike the
+ *  Villagers screen). Safe to call from anywhere: `open`/`refresh`/`close`
+ *  are all called lazily at runtime, by which point `mountVueUi` has always
+ *  already run and set this. */
 export function getMountedVueUi(): VueUi | null {
   return mountedVueUi
 }
 
+/** Mounts the Vue + Tailwind UI overlay (plan 046) into a new `#vue-ui` div
+ *  appended to `container`. Vue/`App.vue`/`store.ts`/Tailwind are all
+ *  dynamically imported here (not at this module's top level, and not by
+ *  `createApp.ts` or any other synchronously-loaded vanilla module — see
+ *  `store.ts`'s own doc comment) so the extra runtime doesn't delay first
+ *  paint. Calls made before the dynamic import resolves are queued and
+ *  replayed in order once it does (in practice unreachable — the import
+ *  starts before any of the game's own heavy async setup, which takes far
+ *  longer than fetching this small chunk — but correct either way, unlike
+ *  silently dropping early calls). */
 export function mountVueUi(container: HTMLElement): VueUi {
   const root = document.createElement('div')
   root.id = 'vue-ui'
@@ -36,7 +52,8 @@ export function mountVueUi(container: HTMLElement): VueUi {
 
   let app: App | null = null
   let disposed = false
-  let impl: StoreImpl | null = null
+  let impl: StoreModule | null = null
+  const queue: Array<() => void> = []
 
   void Promise.all([
     import('vue'),
@@ -45,37 +62,26 @@ export function mountVueUi(container: HTMLElement): VueUi {
     import('./tailwind.css'),
   ]).then(([{ createApp }, { default: RootUi }, store]) => {
     if (disposed) return
+    impl = store
     app = createApp(RootUi)
     app.mount(root)
-    impl = {
-      openNpc: store.openNpcDialogueMenu,
-      isNpcOpen: store.isNpcDialogueMenuOpen,
-      openInventory: store.openInventory,
-      refreshInventory: store.refreshInventory,
-      isInventoryOpen: store.isInventoryOpen,
-      closeInventory: store.closeInventory,
-    }
+    for (const fn of queue) fn()
+    queue.length = 0
   })
 
+  const forwarded = Object.fromEntries(
+    FORWARDED_FNS.map((name) => [
+      name,
+      (...args: unknown[]) => {
+        if (impl) return (impl[name] as (...a: unknown[]) => unknown)(...args)
+        queue.push(() => (impl![name] as (...a: unknown[]) => unknown)(...args))
+        return undefined
+      },
+    ]),
+  ) as Pick<StoreModule, typeof FORWARDED_FNS[number]>
+
   const api: VueUi = {
-    openNpcDialogueMenu(npc, settlement, questManager, timeOfDay) {
-      impl?.openNpc(npc, settlement, questManager, timeOfDay)
-    },
-    isNpcDialogueMenuOpen() {
-      return impl?.isNpcOpen() ?? false
-    },
-    openInventory(counts, totalWeight, maxWeight, onDrop) {
-      impl?.openInventory(counts, totalWeight, maxWeight, onDrop)
-    },
-    refreshInventory(counts, totalWeight, maxWeight) {
-      impl?.refreshInventory(counts, totalWeight, maxWeight)
-    },
-    isInventoryOpen() {
-      return impl?.isInventoryOpen() ?? false
-    },
-    closeInventory() {
-      impl?.closeInventory()
-    },
+    ...forwarded,
     dispose() {
       disposed = true
       app?.unmount()
