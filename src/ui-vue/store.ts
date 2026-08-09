@@ -1,7 +1,7 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { ItemKind } from '../items/items'
-import type { QuestDialogOverride, QuestManager, QuestListEntry } from '../quests/QuestManager'
+import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
 
