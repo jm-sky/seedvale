@@ -41,13 +41,18 @@ export function createTerrainNormalMap(): DataTexture {
       const b = v * Math.PI * 2 * freq
       h += noise4D(Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)) * weight
     }
-    // Patch size fixed (previous pass), but still reported too high-contrast
-    // ("camouflage" look) — halved total weight again (0.85 → 0.42) on top
-    // of `buildChunkGeometry.ts`'s `normalScale` cut, since both compound
-    // multiplicatively and contrast was still the complaint, not size.
-    octave(6, 0.25)
-    octave(14, 0.12)
-    octave(30, 0.05)
+    // Still reported too strong overall (both patch size and contrast) after
+    // the two prior cuts — this pass moves both knobs at once: frequencies up
+    // ~30% (6/14/30 → 8/18/38, smaller/denser patches) and weights down ~35%
+    // (0.42 → 0.27 total) so the height differences behind each normal are
+    // gentler, softening the perceived edges between bumps rather than just
+    // their size. Combined with `buildChunkGeometry.ts`'s `normalScale` cut
+    // (also ~50% this pass), total on-screen effect is roughly a third of
+    // what it was — intentionally past a flat 50%, matching "prefer too
+    // subtle over still-camo".
+    octave(8, 0.16)
+    octave(18, 0.08)
+    octave(38, 0.03)
     return h
   }
 

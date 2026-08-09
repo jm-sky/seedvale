@@ -2,7 +2,7 @@
 
 > Szkic od ChatGPT
 
-**Status:** `verification needed`  
+**Status:** `done`  
 **Created:** 2026-08-08  
 **Priority:** średni
 
