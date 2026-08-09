@@ -1,35 +1,34 @@
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
+import type { ItemKind } from '../items/items'
 import type { App } from 'vue'
 
 export type VueUi = {
-  openNpcDialogueMenu: (
-    npc: NpcAgent,
-    settlement: Settlement,
-    questManager: QuestManager,
-    timeOfDay: number,
-  ) => void
+  openNpcDialogueMenu: (npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number) => void
   isNpcDialogueMenuOpen: () => boolean
+  openInventory: (counts: Partial<Record<ItemKind, number>>, totalWeight: number, maxWeight: number, onDrop: (kind: ItemKind) => void) => void
+  refreshInventory: (counts: Partial<Record<ItemKind, number>>, totalWeight: number, maxWeight: number) => void
+  isInventoryOpen: () => boolean
+  closeInventory: () => void
   dispose: () => void
 }
 
 type StoreImpl = {
-  open: VueUi['openNpcDialogueMenu']
-  isOpen: VueUi['isNpcDialogueMenuOpen']
+  openNpc: VueUi['openNpcDialogueMenu']
+  isNpcOpen: VueUi['isNpcDialogueMenuOpen']
+  openInventory: VueUi['openInventory']
+  refreshInventory: VueUi['refreshInventory']
+  isInventoryOpen: VueUi['isInventoryOpen']
+  closeInventory: VueUi['closeInventory']
 }
 
-/** Mounts the Vue + Tailwind UI overlay (plan 046) into a new `#vue-ui` div
- *  appended to `container`. Vue/`App.vue`/`store.ts`/Tailwind are all
- *  dynamically imported here (not at this module's top level, and not by
- *  `createApp.ts` or any other synchronously-loaded vanilla module — see
- *  `store.ts`'s own doc comment) so the extra runtime doesn't delay first
- *  paint of the game itself — fetched as their own chunk in parallel
- *  instead. The returned `VueUi` exposes plain, type-only-Vue-free methods
- *  so callers (`createApp.ts`) never need their own static `vue` import;
- *  each just forwards to `impl` once the dynamic import resolves (a no-op
- *  before that — in practice unreachable, since a player can't interact
- *  with an NPC in the first fraction of a second after page load). */
+let mountedVueUi: VueUi | null = null
+
+export function getMountedVueUi(): VueUi | null {
+  return mountedVueUi
+}
+
 export function mountVueUi(container: HTMLElement): VueUi {
   const root = document.createElement('div')
   root.id = 'vue-ui'
@@ -48,20 +47,43 @@ export function mountVueUi(container: HTMLElement): VueUi {
     if (disposed) return
     app = createApp(RootUi)
     app.mount(root)
-    impl = { open: store.openNpcDialogueMenu, isOpen: store.isNpcDialogueMenuOpen }
+    impl = {
+      openNpc: store.openNpcDialogueMenu,
+      isNpcOpen: store.isNpcDialogueMenuOpen,
+      openInventory: store.openInventory,
+      refreshInventory: store.refreshInventory,
+      isInventoryOpen: store.isInventoryOpen,
+      closeInventory: store.closeInventory,
+    }
   })
 
-  return {
+  const api: VueUi = {
     openNpcDialogueMenu(npc, settlement, questManager, timeOfDay) {
-      impl?.open(npc, settlement, questManager, timeOfDay)
+      impl?.openNpc(npc, settlement, questManager, timeOfDay)
     },
     isNpcDialogueMenuOpen() {
-      return impl?.isOpen() ?? false
+      return impl?.isNpcOpen() ?? false
+    },
+    openInventory(counts, totalWeight, maxWeight, onDrop) {
+      impl?.openInventory(counts, totalWeight, maxWeight, onDrop)
+    },
+    refreshInventory(counts, totalWeight, maxWeight) {
+      impl?.refreshInventory(counts, totalWeight, maxWeight)
+    },
+    isInventoryOpen() {
+      return impl?.isInventoryOpen() ?? false
+    },
+    closeInventory() {
+      impl?.closeInventory()
     },
     dispose() {
       disposed = true
       app?.unmount()
+      if (mountedVueUi === api) mountedVueUi = null
       root.remove()
     },
   }
+
+  mountedVueUi = api
+  return api
 }
