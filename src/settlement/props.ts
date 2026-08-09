@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
 import type { VillageSize } from './families'
 import type { SettlementSite } from './findSettlementSite'
 import type { FoodSourceType } from './settlementGenerator'
@@ -613,19 +614,41 @@ export function cloneProp(
  *  ~1.5) so canopies don't visually hang over it either. */
 const PATH_TREE_CLEARANCE = 2.5
 
-/** Rejects candidates sitting on a clearing (well/stockpile/garden/hut pad)
- *  or on the walking path between a house and the core — the settlement's
- *  bespoke forest belt is independent of the per-chunk vegetation pipeline
- *  (`chunkVegetation.ts`, which already rejects on `roadTint`), so without
+/** Same idea as `PATH_TREE_CLEARANCE`, added on top of each road/path
+ *  segment's own `halfWidth` (roads and dock/minor-location paths use
+ *  different widths, `roadNetwork.ts`'s `roadHalfWidth`/`pathHalfWidth`) —
+ *  one constant works for both since it's relative to the segment's actual
+ *  width, not a fixed absolute clearance. */
+const ROAD_TREE_CLEARANCE = 1
+
+/** Rejects candidates sitting on a clearing (well/stockpile/garden/hut pad),
+ *  on the walking path between a house and the core, or within an
+ *  out-of-settlement road/path corridor (`roadSegments` — inter-settlement
+ *  roads and settlement↔minor-location paths, `roadNetwork.ts`'s
+ *  `segmentsNear`, resolved by `createSettlement.ts` before calling
+ *  `buildSettlementProps`). The settlement's bespoke forest belt is
+ *  otherwise independent of the per-chunk vegetation pipeline
+ *  (`chunkVegetation.ts`, which already rejects on `roadTint`) — without
  *  this a "near" woodlot cluster (close to the village on purpose, for NPC
- *  wood-chopping) can easily land trees right on top of the new house↔core
- *  paths (`villageClearing.ts`). */
-function blocksPathOrClearing(tx: number, tz: number, clearings: ClearingLayout): boolean {
+ *  wood-chopping) can land trees/bushes right on top of the road/paths
+ *  (`villageClearing.ts`'s house↔core paths, or the road leaving the
+ *  settlement toward a neighbor/dock). */
+function blocksPathOrClearing(
+  tx: number,
+  tz: number,
+  clearings: ClearingLayout,
+  roadSegments: readonly RoadCorridorSegment[],
+): boolean {
   for (const area of [clearings.core, ...clearings.houses]) {
     if (Math.hypot(tx - area.x, tz - area.z) < area.radius + 1) return true
   }
   for (const house of clearings.houses) {
     if (distanceToSegment(tx, tz, clearings.core.x, clearings.core.z, house.x, house.z) < PATH_TREE_CLEARANCE) {
+      return true
+    }
+  }
+  for (const seg of roadSegments) {
+    if (distanceToSegment(tx, tz, seg.ax, seg.az, seg.bx, seg.bz) < seg.halfWidth + ROAD_TREE_CLEARANCE) {
       return true
     }
   }
@@ -644,6 +667,7 @@ function plantTreeCluster(
   waterLevel: number,
   halfExtent: number,
   clearings: ClearingLayout,
+  roadSegments: readonly RoadCorridorSegment[],
   random: () => number,
   treeCounter: { n: number },
   bushCounter: { n: number },
@@ -659,7 +683,7 @@ function plantTreeCluster(
     const tx = cx + Math.cos(a) * d
     const tz = cz + Math.sin(a) * d
     if (Math.abs(tx) > limit || Math.abs(tz) > limit) continue
-    if (blocksPathOrClearing(tx, tz, clearings)) continue
+    if (blocksPathOrClearing(tx, tz, clearings, roadSegments)) continue
 
     const y = sampleHeight(tx, tz)
     if (y <= waterLevel + 0.55) continue
@@ -755,6 +779,11 @@ export async function buildSettlementProps(
    *  decorative, no `Interactable`, matching `createRockCluster`'s ore piles
    *  in `terrain/resourceDeposits.ts`. */
   foodSourceType: FoodSourceType = 'garden',
+  /** Inter-settlement road segments + settlement↔minor-location paths near
+   *  this settlement (`roadNetwork.ts`'s `segmentsNear`, resolved by
+   *  `createSettlement.ts` only when `plantForest` is set) — kept out of the
+   *  forest belt via `blocksPathOrClearing`, same as the house↔core paths. */
+  roadSegments: readonly RoadCorridorSegment[] = [],
 ): Promise<{ group: THREE.Group, landmarks: SettlementLandmarks, houseLights: HouseLight[] }> {
   const group = new THREE.Group()
   group.name = 'settlement'
@@ -904,6 +933,7 @@ export async function buildSettlementProps(
         waterLevel,
         halfExtent,
         clearings,
+        roadSegments,
         random,
         treeCounter,
         bushCounter,
@@ -927,6 +957,7 @@ export async function buildSettlementProps(
         waterLevel,
         halfExtent,
         clearings,
+        roadSegments,
         random,
         treeCounter,
         bushCounter,
@@ -950,6 +981,7 @@ export async function buildSettlementProps(
         waterLevel,
         halfExtent,
         clearings,
+        roadSegments,
         random,
         treeCounter,
         bushCounter,
@@ -975,6 +1007,7 @@ export async function buildSettlementProps(
         waterLevel,
         halfExtent,
         clearings,
+        roadSegments,
         random,
         treeCounter,
         bushCounter,
