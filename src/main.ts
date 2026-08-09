@@ -1,3 +1,4 @@
+import './app/dialogueTimeControl'
 import { createApp } from './app/createApp'
 import { clearSave, readSave } from './persistence/saveDb'
 import { createStartScreen } from './ui/createStartScreen'
