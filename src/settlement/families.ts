@@ -37,6 +37,16 @@ export type FamilyDef = {
   members: readonly FamilyMember[]
 }
 
+/** A family member as seen from another member's dialogue — just enough to
+ *  say "I have a wife Anna" (name/relation), no live reference to the other
+ *  member's own `NpcAgent`/state (`NpcAgent.familyMembers`, see
+ *  `docs/plans/2026-08-09--048--npc-dialogues-v2.md`). */
+export type FamilyMemberRef = {
+  name: string
+  lastName: string
+  relation: FamilyRelation
+}
+
 /** `OUTPOST`'s `[1, 1]` is never read by `familyCountForSize` in practice
  *  (the outpost path in `generateFamilies` below skips it entirely) — present
  *  only so this `Record<VillageSize, ...>` type-checks. */

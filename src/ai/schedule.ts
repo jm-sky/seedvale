@@ -96,3 +96,22 @@ export function activityAt(template: ScheduleTemplate, timeOfDay: number): Sched
   }
   return best?.activity ?? 'home'
 }
+
+/** The schedule entry that starts next after `timeOfDay` — the complement of
+ *  `activityAt` (which looks backward to "what most recently started"), used
+ *  for "...until HH:MM" dialogue lines (`docs/plans/2026-08-09--048...`).
+ *  Wraps cyclically at midnight regardless of the template array's own
+ *  order, same as `activityAt`. `null` only for an empty template. */
+export function nextBoundary(template: ScheduleTemplate, timeOfDay: number): ScheduleEntry | null {
+  let best: ScheduleEntry | null = null
+  let bestUntil = Infinity
+  for (const entry of template) {
+    const startTod = hourToTimeOfDay(entry.hour)
+    const until = ((startTod - timeOfDay) + 1) % 1
+    if (until < bestUntil) {
+      bestUntil = until
+      best = entry
+    }
+  }
+  return best
+}

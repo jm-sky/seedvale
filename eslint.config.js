@@ -3,12 +3,34 @@
 import js from '@eslint/js'
 import stylistic from '@stylistic/eslint-plugin'
 import perfectionist from 'eslint-plugin-perfectionist'
+import vue from 'eslint-plugin-vue'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   { ignores: ['dist/**', 'docs/refs/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  ...vue.configs['flat/recommended'],
+  {
+    // `eslint-plugin-vue`'s flat/recommended parses .vue files with
+    // vue-eslint-parser but leaves <script> content to espree by default —
+    // point it at the TS parser so `<script setup lang="ts">` blocks lint
+    // the same as the rest of the codebase (no type-aware rules needed here,
+    // same as the plain `tseslint.configs.recommended` above).
+    files: ['**/*.vue'],
+    languageOptions: {
+      parserOptions: {
+        parser: tseslint.parser,
+      },
+    },
+    rules: {
+      // `tseslint.configs.recommended` already turns this off for `.ts`
+      // (TS + DOM lib types make it redundant) but its `files` matcher
+      // doesn't reach `.vue` — same reasoning applies to their `<script>`
+      // blocks now that they're TS-parsed too.
+      'no-undef': 'off',
+    },
+  },
   perfectionist.configs['recommended-natural'],
   {
     plugins: {

@@ -1,3 +1,5 @@
+import tailwindcss from '@tailwindcss/vite'
+import vue from '@vitejs/plugin-vue'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vitest/config'
@@ -22,6 +24,7 @@ function gitCommitHash(): string {
 }
 
 export default defineConfig({
+  plugins: [vue(), tailwindcss()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __BUILD_DATE__: JSON.stringify(formatBuildDate(new Date())),
