@@ -5,24 +5,10 @@ import type { ItemKind } from '../items/items'
 import type { App } from 'vue'
 
 export type VueUi = {
-  openNpcDialogueMenu: (
-    npc: NpcAgent,
-    settlement: Settlement,
-    questManager: QuestManager,
-    timeOfDay: number,
-  ) => void
+  openNpcDialogueMenu: (npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number) => void
   isNpcDialogueMenuOpen: () => boolean
-  openInventory: (
-    counts: Partial<Record<ItemKind, number>>,
-    totalWeight: number,
-    maxWeight: number,
-    onDrop: (kind: ItemKind) => void,
-  ) => void
-  refreshInventory: (
-    counts: Partial<Record<ItemKind, number>>,
-    totalWeight: number,
-    maxWeight: number,
-  ) => void
+  openInventory: (counts: Partial<Record<ItemKind, number>>, totalWeight: number, maxWeight: number, onDrop: (kind: ItemKind) => void) => void
+  refreshInventory: (counts: Partial<Record<ItemKind, number>>, totalWeight: number, maxWeight: number) => void
   isInventoryOpen: () => boolean
   closeInventory: () => void
   dispose: () => void
@@ -35,6 +21,12 @@ type StoreImpl = {
   refreshInventory: VueUi['refreshInventory']
   isInventoryOpen: VueUi['isInventoryOpen']
   closeInventory: VueUi['closeInventory']
+}
+
+let mountedVueUi: VueUi | null = null
+
+export function getMountedVueUi(): VueUi | null {
+  return mountedVueUi
 }
 
 export function mountVueUi(container: HTMLElement): VueUi {
@@ -65,7 +57,7 @@ export function mountVueUi(container: HTMLElement): VueUi {
     }
   })
 
-  return {
+  const api: VueUi = {
     openNpcDialogueMenu(npc, settlement, questManager, timeOfDay) {
       impl?.openNpc(npc, settlement, questManager, timeOfDay)
     },
@@ -87,7 +79,11 @@ export function mountVueUi(container: HTMLElement): VueUi {
     dispose() {
       disposed = true
       app?.unmount()
+      if (mountedVueUi === api) mountedVueUi = null
       root.remove()
     },
   }
+
+  mountedVueUi = api
+  return api
 }
