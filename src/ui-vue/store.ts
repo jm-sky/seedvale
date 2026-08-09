@@ -22,6 +22,8 @@ type PauseMenuState = {
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
 type FlavorDialogState = { open: boolean; prompt: string | null; name: string; line: string }
 
+type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'buildCampfireStatus'>>
+
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
@@ -39,17 +41,14 @@ export const ui = reactive({
 const overlayCloseHandlers = new Map<string, () => void>()
 export function registerOverlay(id: string, close: () => void): void { overlayCloseHandlers.set(id, close) }
 export function unregisterOverlay(id: string): void { overlayCloseHandlers.delete(id); syncOverlayStack(id, false) }
-export function syncOverlayStack(id: string, open: boolean): void {
-  const idx = ui.openStack.indexOf(id)
-  if (open) { if (idx === -1) ui.openStack.push(id) } else if (idx !== -1) ui.openStack.splice(idx, 1)
-}
+export function syncOverlayStack(id: string, open: boolean): void { const idx = ui.openStack.indexOf(id); if (open) { if (idx === -1) ui.openStack.push(id) } else if (idx !== -1) ui.openStack.splice(idx, 1) }
 export function closeTopOverlay(): void { const top = ui.openStack.at(-1); if (top) overlayCloseHandlers.get(top)?.() }
 
 export function togglePause(): void { if (ui.pauseMenu.open) closePauseMenu(); else openPauseMenu() }
 export function openPauseMenu(): void { if (ui.pauseMenu.open) return; ui.pauseMenu.open = true; ui.pauseMenu.onPause?.() }
 export function closePauseMenu(): void { if (!ui.pauseMenu.open) return; ui.pauseMenu.open = false; ui.pauseMenu.onResume?.() }
 export function isPauseMenuOpen(): boolean { return ui.pauseMenu.open }
-export function configurePauseMenu(seed: number, playerName: string, handlers: Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'buildCampfireStatus'>): void { ui.pauseMenu.seed = seed; ui.pauseMenu.playerName = playerName; Object.assign(ui.pauseMenu, handlers) }
+export function configurePauseMenu(seed: number, playerName: string, handlers: PauseHandlers): void { ui.pauseMenu.seed = seed; ui.pauseMenu.playerName = playerName; Object.assign(ui.pauseMenu, handlers) }
 export function setPauseSeed(seed: number): void { ui.pauseMenu.seed = seed }
 export function setPausePlayerName(name: string): void { ui.pauseMenu.playerName = name }
 export function setPauseSaveStatus(status: string): void { ui.pauseMenu.saveStatus = status }
@@ -72,10 +71,7 @@ export function refreshVillagers(entries: readonly VillagerRefreshEntry[]): void
 export function isVillagersOpen(): boolean { return ui.villagers.open }
 export function setVillagersPage(page: number): void { ui.villagers.page = page }
 
-export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void {
-  const state = ui.npcDialogueMenu; const override = questManager.onInteract(npc.name)
-  state.npc = npc; state.settlement = settlement; state.timeOfDay = timeOfDay; state.helpResult = override ?? { line: npc.getDialogueLine() }; state.open = true
-}
+export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void { const state = ui.npcDialogueMenu; const override = questManager.onInteract(npc.name); state.npc = npc; state.settlement = settlement; state.timeOfDay = timeOfDay; state.helpResult = override ?? { line: npc.getDialogueLine() }; state.open = true }
 function resetNpcDialogueMenu(): void { const state = ui.npcDialogueMenu; state.open = false; state.npc = null; state.settlement = null; state.helpResult = null }
 export function closeNpcDialogueMenu(): void { const state = ui.npcDialogueMenu; if (!state.open) return; state.helpResult?.offer?.onDecline(); resetNpcDialogueMenu() }
 export function acceptNpcDialogueOffer(): void { const state = ui.npcDialogueMenu; if (!state.open || !state.helpResult?.offer) return; state.helpResult.offer.onAccept(); resetNpcDialogueMenu() }
