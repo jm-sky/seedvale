@@ -15,59 +15,50 @@ export type InventoryScreen = {
   dispose: () => void
 }
 
-/**
- * Compatibility facade for the old createApp API.
- *
- * The actual inventory UI is now rendered by Vue (`ui-vue/InventoryScreen.vue`).
- * Keeping this small facade lets the game/application layer migrate without
- * mixing DOM manipulation back into createApp.ts. It can be removed once all
- * callers use VueUi directly.
- */
+/** Compatibility facade. The actual inventory UI is rendered by Vue. */
 export function createInventoryScreen(
   _parent: HTMLElement,
   handlers: InventoryScreenHandlers = {},
 ): InventoryScreen {
   let disposed = false
-  let openState = false
+  let counts: Partial<Record<ItemKind, number>> = {}
+  let totalWeight = 0
+  let maxWeight = 0
 
   const getUi = () => getMountedVueUi()
+  const isOpen = () => !disposed && (getUi()?.isInventoryOpen() ?? false)
+
+  const open = () => {
+    if (disposed) return
+    getUi()?.openInventory(counts, totalWeight, maxWeight, (kind) => handlers.onDrop?.(kind))
+  }
 
   const close = () => {
-    if (!openState) return
-    openState = false
+    if (!isOpen()) return
     getUi()?.closeInventory()
     handlers.onClose?.()
   }
 
   return {
-    isOpen: () => openState && !disposed,
-    open() {
-      if (disposed) return
-      openState = true
-    },
+    isOpen,
+    open,
     close,
     toggle() {
-      if (disposed) return
-      if (openState) {
-        close()
-        return
-      }
-      openState = true
+      if (isOpen()) close()
+      else open()
     },
-    refresh(counts, totalWeight, maxWeight) {
+    refresh(nextCounts, nextTotalWeight, nextMaxWeight) {
       if (disposed) return
-      const ui = getUi()
-      if (!ui) return
-      if (openState) {
-        ui.openInventory(counts, totalWeight, maxWeight, (kind) => handlers.onDrop?.(kind))
-      } else {
-        ui.refreshInventory(counts, totalWeight, maxWeight)
+      counts = { ...nextCounts }
+      totalWeight = nextTotalWeight
+      maxWeight = nextMaxWeight
+      if (isOpen()) {
+        getUi()?.refreshInventory(counts, totalWeight, maxWeight)
       }
     },
     dispose() {
       if (disposed) return
       disposed = true
-      openState = false
       getUi()?.closeInventory()
     },
   }
