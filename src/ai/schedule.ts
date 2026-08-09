@@ -1,13 +1,13 @@
 import type { Role } from './characters'
 
 /**
- * Schedule Template v1 (`docs/plans/2026-08-07--020--npc-2-daily-routine-and-place.md`,
- * "v2 stage 1" 2026-08-09 decision) — a per-role daily plan, data only. No
- * `NpcAgent` behavior reads this yet; wiring it into the phase FSM
- * (`goWell`/`goGarden`/`goTree`/`goStock` → a generic `goTo`/`execute`) is a
- * deliberately separate follow-up step. Traits (`night_owl`/`hardworking`/
- * `sociable`) modifying the template per-NPC are also deferred — v1 is one
- * uniform template per role.
+ * Schedule Template (`docs/plans/2026-08-07--020--npc-2-daily-routine-and-place.md`)
+ * — a per-role daily plan. `NpcAgent`'s generic `goTo`/`execute` phases
+ * consume `sleep` (sleep gate in `choose`) and `work` (routes an idle NPC
+ * to its `workplace`, see `beginIdle`) — `eat`/`home`/`wake` stay
+ * informational for now, no dedicated FSM behavior yet. Traits
+ * (`night_owl`/`hardworking`/`sociable`) modifying the template per-NPC are
+ * deliberately deferred — one uniform template per role for now.
  */
 export type ScheduleActivity = 'eat' | 'home' | 'sleep' | 'wake' | 'work'
 

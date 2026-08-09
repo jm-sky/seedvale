@@ -7,13 +7,12 @@ import type { Vector3 } from 'three'
  * formalized `home` (`createSettlement.ts`) as a `Place` instead of a bare
  * `Vector3` — purely organizational, no behavior change.
  *
- * v2 stage 1 (2026-08-09 decisions) adds `workplace`/`food`/`social` as
+ * v2 stage 1 (2026-08-09 decisions) added `workplace`/`food`/`social` as
  * types and `workplaceFor()` below, computing a per-role `Place` from
- * existing `SettlementLandmarks` — still data only. Nothing reads
- * `NpcAgent.workplace`/`.schedule` yet: wiring them into the FSM
- * (`goWell`/`goGarden`/`goTree`/`goStock` → a generic `goTo`/`execute`) is a
- * deliberately separate, riskier follow-up step (full refactor of the
- * existing, working `NpcAgent.ts` phase machine).
+ * existing `SettlementLandmarks`. v2 stage 2 wires it up: `NpcAgent`'s
+ * generic `goTo`/`execute` phases (replacing the old resource-specific
+ * `goWell`/`goGarden`/`goTree`/`goStock`) send an idle NPC to `workplace`
+ * when `schedule` says `work` — see `NpcAgent.ts`'s `beginIdle`.
  */
 export type PlaceType = 'home' | 'workplace' | 'food' | 'social'
 

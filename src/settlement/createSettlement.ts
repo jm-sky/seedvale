@@ -27,15 +27,11 @@ import { type RoadNetworkContext, routeToMinorLocation, signpostsForSettlement }
 import { cellSeed } from './settlementGenerator'
 import { createVillageFire, type VillageFire } from './VillageFire'
 
-/** `setDayNight`'s `t` (0 day .. 1 full night) above this counts as "night"
- *  for NPC sleep (`NpcAgent`'s `goSleep`/`sleep` phases) — a bit past dusk
- *  rather than the instant it starts, so NPCs don't vanish home mid-dusk. */
-const NPC_SLEEP_NIGHT_THRESHOLD = 0.6
-
-/** Same threshold used for the village fire's dusk-triggered ignition roll
- *  (see `nightIndex`/`setDayNight` below) — one "night falling" instant per
- *  settlement, shared by both night-only NPC behaviors. */
-const NIGHT_FIRE_THRESHOLD = NPC_SLEEP_NIGHT_THRESHOLD
+/** `setDayNight`'s `t` (0 day .. 1 full night) above this triggers the
+ *  settlement fire's dusk-ignition roll (see `nightIndex`/`setDayNight`
+ *  below). NPC sleep timing moved to `NpcAgent`'s own `schedule` (v2 stage
+ *  2, `docs/plans/2026-08-07--020...`) — this threshold is now fire-only. */
+const NIGHT_FIRE_THRESHOLD = 0.6
 /** Chance the settlement's own fire is already lit when night falls —
  *  villagers keeping it going themselves, no player branch consumed. */
 const NIGHT_FIRE_IGNITE_CHANCE = 0.5
@@ -66,6 +62,10 @@ export type Settlement = {
     dt: number,
     observerPos: Vector3,
     observerYaw: number,
+    /** `dayNight.ts`'s clock (0-1, 0=midnight) — forwarded to each
+     *  `NpcAgent.update` for `schedule` lookups (sleep gate, `work`
+     *  routing). */
+    timeOfDay: number,
     dayFactor: number,
     litFires: readonly { x: number, z: number }[],
     villages: readonly { x: number, z: number }[],
@@ -222,8 +222,7 @@ export async function createSettlement(
     livestock,
     landmarks,
     fire,
-    update(dt, observerPos, observerYaw, dayFactor, litFires, villages) {
-      const isNight = nightFactor > NPC_SLEEP_NIGHT_THRESHOLD
+    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages) {
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i]!
         let nearbyNpcCount = 0
@@ -231,7 +230,7 @@ export async function createSettlement(
           if (i === j) continue
           if (agent.mesh.position.distanceTo(agents[j]!.mesh.position) <= GROUP_REACTION_RADIUS) nearbyNpcCount++
         }
-        agent.update(dt, observerPos, observerYaw, isNight, nearbyNpcCount)
+        agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCount)
       }
       // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef`
       // has `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-

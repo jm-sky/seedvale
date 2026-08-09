@@ -858,7 +858,15 @@ export async function createApp(
         ...placedFires.list().filter((f) => f.fire.isLit()).map((f) => f.fire.position),
       ]
       const villages = settlementsManager.getLoaded().map((s) => ({ x: s.center.x, z: s.center.z }))
-      settlementsManager.update(dt, player.mesh.position, mouseLook.state.yaw, dayFactor, litFires, villages)
+      settlementsManager.update(
+        dt,
+        player.mesh.position,
+        mouseLook.state.yaw,
+        dayNight.timeOfDay,
+        dayFactor,
+        litFires,
+        villages,
+      )
       resourceDeposits.update(player.mesh.position.x, player.mesh.position.z)
       fauna.update(dt, player.mesh.position, dayNight.timeOfDay, litFires, villages)
       itemSpawners.update(dt, player.mesh.position, dayFactor)
