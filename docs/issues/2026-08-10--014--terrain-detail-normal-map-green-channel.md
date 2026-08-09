@@ -42,9 +42,9 @@ Sanity check dla przyszłych sesji: **normal-mapa, która wygląda na zieloną, 
 ## Naprawa
 
 1. `src/terrain/terrainDetailNormalMap.ts` — `normal.set(-(hR - hL), -(hU - hD), 2)`: oba nachylenia do R/G, „góra" do B. Po zmianie średnie kanały to (127.5, 127.5, 255.0), zero zmian znaku.
-2. `src/config/worldConfig.ts` — nowy `terrain.detailNormal` (`DetailNormalConfig`: `enabled` / `strength` / `tilesPerChunk`), domyślnie `strength: 0.5`, `tilesPerChunk: 8`. Wartość `0.0075` była artefaktem błędu, nie sensowną siłą.
-3. `src/terrain/buildChunkGeometry.ts` — `normalScale`/`repeat` biorą się z configu; przy `enabled: false` materiał nie dostaje `normalMap` w ogóle.
-4. `src/ui/createDebugGui.ts` — folder **Surface grain (detail normal)**: `Enabled`, `Strength (normalScale)`, `Tiles per chunk`. Strojenie na żywo zamiast pętli „edytuj stałą → commit → poproś użytkownika o test".
+2. `src/config/worldConfig.ts` — nowy `terrain.detailNormal` (`DetailNormalConfig`: `enabled` / `strength` / `tilesGrass` / `tilesBare`), domyślnie `strength: 3`, `tilesGrass: 4`, `tilesBare: 12`. Wartość `0.0075` była artefaktem błędu, nie sensowną siłą.
+3. `src/terrain/buildChunkGeometry.ts` — `normalScale` z configu; przy `enabled: false` materiał nie dostaje `normalMap` w ogóle. Kafelkowanie liczone per fragment (dwa pobrania tekstury + `mix` po masce `aBareGround`), bo grunt porośnięty i droga/piasek dostają różną skalę ziarna — patrz review §B.4b.
+4. `src/ui/createDebugGui.ts` — folder **Surface grain (detail normal)**: `Enabled`, `Strength (normalScale)`, `Tiles/chunk — grass`, `Tiles/chunk — road/sand`. Strojenie na żywo zamiast pętli „edytuj stałą → commit → poproś użytkownika o test".
 
 ## Przy okazji: AO nie dało się wyłączyć (naprawione)
 

@@ -65,9 +65,27 @@ Zmiana obu naraz = nie wiadomo, co spowodowało regresję. Dokładnie tak powsta
 
 Upieczona mapa daje przy `strength = 1`: średnie odchylenie normalnej **~2.1°**, maksymalne **~8.6°** — czyli sama w sobie jest już subtelna. Obecny default to `0.5`. Wartości rzędu `0.0075` nie mają sensu (to relikt błędu z A.1) — jeśli ktoś znowu proponuje setne części, to znak, że coś innego jest zepsute.
 
-**Zmierzone po naprawie** (zrzuty z `?seed=100`, domyślna kamera 3rd-person): przy `strength` 0.5, 1.0 i **2.5** artefakt nie wraca, ale ziarno jest **ledwo widoczne** — kadr przy `strength: 2.5` różni się od `enabled: false` minimalnie. Powód jest geometryczny, nie amplitudowy: przy `tilesPerChunk: 8` na chunk 64 jednostek jeden kafel 256² przypada na 8 jednostek, czyli teksel ma ~3 cm. Z wysokości kamery 3rd-person to poniżej piksela, więc **mipmapping uśrednia ziarno do płaskiego** zanim cokolwiek zobaczysz.
+**Zmierzone po naprawie** (zrzuty z `?seed=100`, domyślna kamera 3rd-person): przy `strength` 0.5, 1.0 i **2.5** artefakt nie wraca, ale ziarno jest **ledwo widoczne** — kadr przy `strength: 2.5` różnił się od `enabled: false` minimalnie. Powód jest geometryczny, nie amplitudowy: przy 8 kaflach na chunk 64 jednostek jeden kafel 256² przypada na 8 jednostek, czyli teksel ma ~3 cm. Z wysokości kamery 3rd-person to poniżej piksela, więc **mipmapping uśrednia ziarno do płaskiego** zanim cokolwiek zobaczysz.
 
-Wniosek dla „chcę widzieć delikatną turbulencję": **podnoszenie `strength` to nie ta dźwignia**. Potrzebne są *większe* cechy — `tilesPerChunk` w okolicach **2–4** (widać to już przy `tilesPerChunk: 3`, gdzie pojawia się szersze, miękkie różnicowanie jasności) — albo przesunięcie wag oktaw w stronę niskich częstotliwości (patrz B.5.1). Uwaga: większe cechy to dokładnie ten kierunek, który **łagodzi** problem aliasingu w oceanie z issue 009, więc idą w tę samą stronę.
+Wniosek: **podnoszenie samego `strength` to nie ta dźwignia** — potrzebne są *większe* cechy. Większe cechy to zresztą dokładnie ten kierunek, który **łagodzi** aliasing w oceanie z issue 009, więc obie potrzeby idą w tę samą stronę.
+
+### B.4b Dwa kafelkowania: trawa vs. droga/piasek
+
+Stąd obecny kształt configu — jeden `strength`, ale **dwa** kafelkowania, mieszane per fragment:
+
+| Knob | Default | Gdzie działa |
+|---|---|---|
+| `strength` | `3` | wszędzie (`normalScale`) |
+| `tilesGrass` | `4` | grunt porośnięty — duże, miękkie placki/mini-pagórki |
+| `tilesBare` | `12` | droga, polana wioski, pas piasku przy brzegu, pustynia — drobne ziarno „piasku" |
+
+Implementacja (`buildChunkGeometry.ts`): `Texture.repeat` potrafi wyrazić tylko jedno kafelkowanie, więc tiling przeszedł do shadera — `applyDetailNormalTiling()` podmienia dyrektywę `#include <normal_fragment_maps>` na dwa pobrania tej samej tekstury przy `uDetailTilesGrass` / `uDetailTilesBare` i `mix()` po varyingu `vBareGround`.
+
+> **Pułapka, na którą się nadziałem — przeczytaj przed pisaniem `onBeforeCompile`:** shader podany do `onBeforeCompile` ma **nierozwinięte `#include`**; three woła `resolveIncludes()` dopiero później, w `WebGLProgram`. Podmienianie linii z *wnętrza* chunka (np. `vec3 mapN = texture2D( normalMap, vNormalMapUv )…`) jest więc no-opem: `String.replace` nie znajduje wzorca, shader kompiluje się bez Twojego kodu, a objaw to „efekt jest, ale suwaki nic nie robią i obie powierzchnie wyglądają tak samo". Podmieniaj **dyrektywę `#include <…>`**, nie treść chunka. I zawsze sprawdź, czy wzorzec w ogóle występuje (`includes()`), zamiast ufać, że `replace` coś zrobił.
+
+Jeśli dyrektywa zniknie po aktualizacji three, kod wypisuje ostrzeżenie i wraca do stockowego renderu, zamiast po cichu skompilować shader bez uniformów.
+
+Maska `aBareGround` (atrybut per wierzchołek) = `max(roadTint*2, pas piasku, biome.desert)` — `tile.roadTint` obejmuje zarówno drogi, jak i polany wiosek (`applyTerrainCorridors`), więc dirt w wiosce dostaje ziarno piasku automatycznie.
 
 ### B.5 Jeśli „delikatna turbulencja" nadal nie wystarcza
 

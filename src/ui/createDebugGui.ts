@@ -369,8 +369,14 @@ export function createDebugGui(
   )
   terrainControllers.push(
     detail
-      .add(config.terrain.detailNormal, 'tilesPerChunk', 1, 24, 1)
-      .name('Tiles per chunk (grain size)')
+      .add(config.terrain.detailNormal, 'tilesGrass', 1, 24, 1)
+      .name('Tiles/chunk — grass')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    detail
+      .add(config.terrain.detailNormal, 'tilesBare', 1, 24, 1)
+      .name('Tiles/chunk — road/sand')
       .onFinishChange(handlers.onTerrainChange),
   )
 

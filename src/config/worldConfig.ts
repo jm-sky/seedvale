@@ -17,10 +17,15 @@ export type DetailNormalConfig = {
   /** `MeshStandardMaterial.normalScale` — 0 = off, 1 = the baked map at full
    *  amplitude (mean ~2°, max ~8.6° of normal tilt). */
   strength: number
-  /** How many times the 256² map tiles across one chunk edge — patch *size*,
-   *  independent of `strength`. Higher = finer grain, but aliases sooner in
-   *  the ocean's low-res mirror pass (issue 009). */
-  tilesPerChunk: number
+  /** Tiles across one chunk edge on vegetated ground — patch *size*,
+   *  independent of `strength`. Lower = larger, softer lumps (mini-pagórki),
+   *  which is what reads at 3rd-person camera distance; high tiling gets
+   *  mipmapped to flat before you see it. */
+  tilesGrass: number
+  /** Same, for bare ground: road/clearing corridors, the shore sand band and
+   *  desert regions. Higher than `tilesGrass` = fine, sand-like grain. Pushing
+   *  this up aliases in the ocean's low-res mirror pass first (issue 009). */
+  tilesBare: number
 }
 
 /**
@@ -167,11 +172,12 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       },
       detailNormal: {
         enabled: true,
-        // Conservative starting point for a *correctly* oriented map — the
-        // old 0.0075 was a symptom of the green-channel bug (issue 014), not
-        // a meaningful strength. Tune live in the GUI, then move this default.
-        strength: 0.5,
-        tilesPerChunk: 8,
+        strength: 3,
+        // Two tilings, picked per vertex by `bareGroundWeight`
+        // (`buildChunkGeometry.ts`): big soft lumps under grass, fine sand
+        // grain on roads/clearings/beach/desert.
+        tilesGrass: 4,
+        tilesBare: 12,
       },
     },
     sky: {
@@ -250,13 +256,16 @@ export function applyStoredTerrain(
     if (typeof t.grass.radius === 'number') target.grass.radius = t.grass.radius
     if (typeof t.grass.density === 'number') target.grass.density = t.grass.density
   }
-  if (t.detailNormal && typeof t.detailNormal === 'object') {
+  // A stored block from before the grass/bare split carries a `strength` tuned
+  // against the old single tiling (and, for anyone who saved during the
+  // green-channel bug, a meaningless one) — ignore the whole block rather than
+  // let a stale value silently outrank the new defaults.
+  if (t.detailNormal && typeof t.detailNormal === 'object' && !('tilesPerChunk' in t.detailNormal)) {
     const d = t.detailNormal
     if (typeof d.enabled === 'boolean') target.detailNormal.enabled = d.enabled
     if (typeof d.strength === 'number') target.detailNormal.strength = d.strength
-    if (typeof d.tilesPerChunk === 'number') {
-      target.detailNormal.tilesPerChunk = d.tilesPerChunk
-    }
+    if (typeof d.tilesGrass === 'number') target.detailNormal.tilesGrass = d.tilesGrass
+    if (typeof d.tilesBare === 'number') target.detailNormal.tilesBare = d.tilesBare
   }
 }
 
