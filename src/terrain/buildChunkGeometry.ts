@@ -153,11 +153,12 @@ export function buildChunkGeometry(
     metalness: 0.04,
     normalMap,
     // Subtle — this is close-up surface grain, not a substitute for real
-    // geometry (plan 044 §4.5, "teren wygląda płasko"). Lowered once more
-    // (0.05 → 0.035) alongside shrinking the patch size itself
-    // (terrainDetailNormalMap.ts's noise frequencies, NORMAL_MAP_TILES_PER
-    // _CHUNK above) — "plamy" were both too large *and* too high-contrast.
-    normalScale: new THREE.Vector2(0.035, 0.035),
+    // geometry (plan 044 §4.5, "teren wygląda płasko"). Patch size fixed by
+    // the previous pass, but contrast (reported: still looks like a camo
+    // pattern) was still too strong — cut hard this time (0.035 → 0.015)
+    // alongside halving the noise map's own amplitude again
+    // (terrainDetailNormalMap.ts) rather than another small nudge.
+    normalScale: new THREE.Vector2(0.015, 0.015),
   })
 
   const mesh = new THREE.Mesh(geometry, material)
