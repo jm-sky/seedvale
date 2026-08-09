@@ -20,9 +20,15 @@ useTouchScroll(panel)
       class="max-h-[calc(100dvh-32px)] w-[min(420px,calc(100vw-32px))] overflow-y-auto rounded-[10px] bg-panel p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
       style="touch-action: pan-y"
     >
-      <h2 class="mb-3 text-base font-semibold tracking-wide">{{ ui.flavorDialog.name }}</h2>
-      <p class="text-sm leading-relaxed opacity-90">{{ ui.flavorDialog.line }}</p>
-      <div class="mt-3 text-[11px] opacity-60">Esc / E — zamknij</div>
+      <h2 class="mb-3 text-base font-semibold tracking-wide">
+        {{ ui.flavorDialog.name }}
+      </h2>
+      <p class="text-sm leading-relaxed opacity-90">
+        {{ ui.flavorDialog.line }}
+      </p>
+      <div class="mt-3 text-[11px] opacity-60">
+        Esc / E — zamknij
+      </div>
     </div>
   </div>
 
