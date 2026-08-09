@@ -13,9 +13,17 @@ export type ItemSpawners = {
   /** Removes the pickup mesh and marks the point collected; null if already
    *  collected or `id` doesn't match a known point. */
   collect: (id: string) => { kind: ItemKind; x: number; z: number } | null
-  update: (dt: number, observerPos: Vector3) => void
+  /** `dayFactor` (0 night .. 1 day) fades labels out in the dark, on top of
+   *  the distance fade — see `ITEM_LABEL_FADE_NEAR`/`_FAR` (issue 011). */
+  update: (dt: number, observerPos: Vector3, dayFactor: number) => void
   dispose: () => void
 }
+
+/** Item pickups only need to be readable from a couple steps away, unlike
+ *  NPC labels' 20/32 (`ui/labelDistance.ts`'s defaults) — tuned for reading a
+ *  name across a village square, way too far for a twig on the ground. */
+const ITEM_LABEL_FADE_NEAR = 8
+const ITEM_LABEL_FADE_FAR = 14
 
 /** One renewable pickup per kind, close to the settlement — a reliable fallback
  *  source for quests regardless of whether world-generated coast/mountain items
@@ -146,7 +154,7 @@ export function createItemSpawners(
       }
       return { kind: p.kind, x: p.x, z: p.z }
     },
-    update(dt, observerPos) {
+    update(dt, observerPos, dayFactor) {
       const wasCollected = points.map((p) => p.collected)
       updateItemSpawnPoints(points, dt)
       points.forEach((p, i) => {
@@ -154,9 +162,10 @@ export function createItemSpawners(
       })
       points.forEach((p, i) => {
         const { object, el } = labels[i]!
+        const distance = object.position.distanceTo(observerPos)
         el.style.opacity = p.collected
           ? '0'
-          : String(labelOpacityForDistance(object.position.distanceTo(observerPos)))
+          : String(labelOpacityForDistance(distance, ITEM_LABEL_FADE_NEAR, ITEM_LABEL_FADE_FAR) * dayFactor)
       })
     },
     dispose() {

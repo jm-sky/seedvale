@@ -40,6 +40,11 @@ const NIGHT_FIRE_THRESHOLD = NPC_SLEEP_NIGHT_THRESHOLD
  *  villagers keeping it going themselves, no player branch consumed. */
 const NIGHT_FIRE_IGNITE_CHANCE = 0.5
 
+/** How close (world units) another NPC must be to count toward
+ *  `nearbyNpcCount` for `NpcAgent`'s group reaction-chance dampening (issue
+ *  010). */
+const GROUP_REACTION_RADIUS = 6
+
 export type Settlement = {
   id: string
   name: string
@@ -60,6 +65,7 @@ export type Settlement = {
   update: (
     dt: number,
     observerPos: Vector3,
+    observerYaw: number,
     dayFactor: number,
     litFires: readonly { x: number, z: number }[],
     villages: readonly { x: number, z: number }[],
@@ -214,9 +220,17 @@ export async function createSettlement(
     livestock,
     landmarks,
     fire,
-    update(dt, observerPos, dayFactor, litFires, villages) {
+    update(dt, observerPos, observerYaw, dayFactor, litFires, villages) {
       const isNight = nightFactor > NPC_SLEEP_NIGHT_THRESHOLD
-      for (const agent of agents) agent.update(dt, observerPos, isNight)
+      for (let i = 0; i < agents.length; i++) {
+        const agent = agents[i]!
+        let nearbyNpcCount = 0
+        for (let j = 0; j < agents.length; j++) {
+          if (i === j) continue
+          if (agent.mesh.position.distanceTo(agents[j]!.mesh.position) <= GROUP_REACTION_RADIUS) nearbyNpcCount++
+        }
+        agent.update(dt, observerPos, observerYaw, isNight, nearbyNpcCount)
+      }
       // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef`
       // has `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-
       // modified branch of `isPlayerNoticed()` is structurally unreachable

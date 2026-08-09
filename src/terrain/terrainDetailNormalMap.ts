@@ -41,18 +41,18 @@ export function createTerrainNormalMap(): DataTexture {
       const b = v * Math.PI * 2 * freq
       h += noise4D(Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)) * weight
     }
-    // Still reported too strong overall (both patch size and contrast) after
-    // the two prior cuts — this pass moves both knobs at once: frequencies up
-    // ~30% (6/14/30 → 8/18/38, smaller/denser patches) and weights down ~35%
-    // (0.42 → 0.27 total) so the height differences behind each normal are
-    // gentler, softening the perceived edges between bumps rather than just
-    // their size. Combined with `buildChunkGeometry.ts`'s `normalScale` cut
-    // (also ~50% this pass), total on-screen effect is roughly a third of
-    // what it was — intentionally past a flat 50%, matching "prefer too
-    // subtle over still-camo".
-    octave(8, 0.16)
-    octave(18, 0.08)
-    octave(38, 0.03)
+    // The previous pass raised both frequency (6/14/30 → 8/18/38, smaller/
+    // denser patches) and cut weight (contrast) at the same time. The
+    // frequency bump turned out to alias badly in the ocean's low-res mirror
+    // reflection (issue 009 — many more small patches read as "cloud"
+    // blotches with hard edges once aliased) even though it looked fine
+    // viewed directly on land (mipmapping hides it there). Reverted back to
+    // the original, larger-patch frequencies; kept the weight cut below
+    // (that's what actually controls contrast/subtlety, not patch count) plus
+    // `buildChunkGeometry.ts`'s `normalScale` cut from the same pass.
+    octave(6, 0.16)
+    octave(14, 0.08)
+    octave(30, 0.03)
     return h
   }
 

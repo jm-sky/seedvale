@@ -22,16 +22,17 @@ export type ChunkMeshResult = {
   dispose: () => void
 }
 
-/** How many times the detail normal map tiles across one chunk edge. Raised
- *  again (8 → 11) alongside `terrainDetailNormalMap.ts`'s higher noise
- *  frequencies — still reported as too coarse/blotchy, so both patch-size
- *  knobs move together once more. Safe to raise now that the texture has
- *  mipmapping (`terrainDetailNormalMap.ts`) — that's what minification
- *  aliasing at high tile counts actually needed, not a low count. Still high
- *  enough to hide the chunk-border tiling seam (each chunk's UVs run 0..1
- *  independently, so the pattern isn't phase-continuous across chunks)
- *  without reading as an obvious repeated motif. */
-const NORMAL_MAP_TILES_PER_CHUNK = 11
+/** How many times the detail normal map tiles across one chunk edge. Briefly
+ *  raised to 11 alongside `terrainDetailNormalMap.ts`'s higher noise
+ *  frequencies, but that combination aliased into "cloud"-like blotches with
+ *  hard edges in the ocean's low-res mirror reflection (issue 009) — reverted
+ *  back to 8. Direct land viewing benefits from mipmapping either way; the
+ *  reflection pass doesn't get that benefit at this density, so patch count
+ *  matters there more than it does on land. Still high enough to hide the
+ *  chunk-border tiling seam (each chunk's UVs run 0..1 independently, so the
+ *  pattern isn't phase-continuous across chunks) without reading as an
+ *  obvious repeated motif. */
+const NORMAL_MAP_TILES_PER_CHUNK = 8
 
 /** Built once and shared by every chunk's material — same reasoning as
  *  `createOcean.ts`'s procedural water normal map: no external asset, no

@@ -50,6 +50,7 @@ export type SettlementsManager = {
   update: (
     dt: number,
     playerPos: Vector3,
+    playerYaw: number,
     dayFactor: number,
     litFires: readonly { x: number, z: number }[],
     villages: readonly { x: number, z: number }[],
@@ -267,11 +268,13 @@ export async function createSettlementsManager(
       lastDayNight = t
       for (const entry of entries.values()) entry.settlement?.setDayNight(t)
     },
-    update(dt, playerPos, dayFactor, litFires, villages) {
+    update(dt, playerPos, playerYaw, dayFactor, litFires, villages) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)
       }
-      for (const entry of entries.values()) entry.settlement?.update(dt, playerPos, dayFactor, litFires, villages)
+      for (const entry of entries.values()) {
+        entry.settlement?.update(dt, playerPos, playerYaw, dayFactor, litFires, villages)
+      }
       for (const instances of midpoints.values()) {
         for (const inst of instances) {
           inst.labelEl.style.opacity = String(labelOpacityForDistance(inst.position.distanceTo(playerPos)))
