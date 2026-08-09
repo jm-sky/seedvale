@@ -91,14 +91,33 @@ type FinSpec = {
   yaw: number
   originT: number
   heightT: number
-  baseHalfWidth: number
+  /** Half-width the fin ramps up to by `baseRise` (see `finHalfWidth`) — NOT
+   *  the width at the very base, which is why this used to be called
+   *  `baseHalfWidth`: a fin whose cross-section is already this wide at t=0
+   *  is what made multiple radial fins visibly cross through the shared
+   *  center instead of reading as separate leaves. */
+  peakHalfWidth: number
   tipHalfWidth: number
+  /** Fraction of the fin's own [0,1] where width ramps from ~0 up to
+   *  `peakHalfWidth` — keeps radiating fins converging to a shared point at
+   *  the base instead of overlapping through the center. */
+  baseRise: number
   curveStrength: number
   /** Rest-curve profile along the fin, `t` in [0,1] local to the fin (not the
    *  cluster) — default quadratic (`t*t`, base stays planted, curve grows
    *  toward the tip); `HERB_FINS` uses a rise-then-droop arch instead. */
   curveShape: (t: number) => number
   segments: number
+}
+
+/** Half-width at fin-local `t` — ramps linearly from 0 at t=0 to
+ *  `peakHalfWidth` at `t=baseRise` (so radiating fins meet at a near-point
+ *  base instead of crossing, see `FinSpec.baseRise`), then tapers linearly
+ *  from `peakHalfWidth` to `tipHalfWidth` over the rest of the fin. */
+function finHalfWidth(fin: FinSpec, t: number): number {
+  if (t < fin.baseRise) return fin.peakHalfWidth * (t / fin.baseRise)
+  const t2 = (t - fin.baseRise) / (1 - fin.baseRise)
+  return fin.peakHalfWidth + (fin.tipHalfWidth - fin.peakHalfWidth) * t2
 }
 
 const QUADRATIC_CURVE = (t: number): number => t * t
@@ -126,13 +145,18 @@ const BLADE_SEGMENTS = 4
  *  resulting world-space bend reads as a fraction of a typical blade's height. */
 const CURVE_STRENGTH = 1.2
 
+/** Fraction of a fin's own length where it ramps up to full width — shared
+ *  default for fins that run the cluster's full height (see `FinSpec.baseRise`). */
+const BASE_RISE = 0.2
+
 /** Species A, ~75% of it — 3 fins from the center, ~60°/120° apart (the direct
  *  "3 listki z centrum" upgrade of the old 2-fin cross). */
 const TRI_CLUSTER_FINS: FinSpec[] = radialFins(3, {
   originT: 0,
   heightT: 1,
-  baseHalfWidth: BASE_HALF_WIDTH,
+  peakHalfWidth: BASE_HALF_WIDTH,
   tipHalfWidth: TIP_HALF_WIDTH,
+  baseRise: BASE_RISE,
   curveStrength: CURVE_STRENGTH,
   curveShape: QUADRATIC_CURVE,
   segments: BLADE_SEGMENTS,
@@ -149,8 +173,9 @@ const GRAIN_FINS: FinSpec[] = [
     yaw: 0,
     originT: 0,
     heightT: 1,
-    baseHalfWidth: GRAIN_STEM_HALF_WIDTH,
+    peakHalfWidth: GRAIN_STEM_HALF_WIDTH,
     tipHalfWidth: GRAIN_STEM_HALF_WIDTH * 0.5,
+    baseRise: 0.15,
     curveStrength: CURVE_STRENGTH * 0.5,
     curveShape: QUADRATIC_CURVE,
     segments: BLADE_SEGMENTS,
@@ -159,8 +184,9 @@ const GRAIN_FINS: FinSpec[] = [
     yaw: Math.PI / 2,
     originT: 0,
     heightT: 1,
-    baseHalfWidth: GRAIN_STEM_HALF_WIDTH,
+    peakHalfWidth: GRAIN_STEM_HALF_WIDTH,
     tipHalfWidth: GRAIN_STEM_HALF_WIDTH * 0.5,
+    baseRise: 0.15,
     curveStrength: CURVE_STRENGTH * 0.5,
     curveShape: QUADRATIC_CURVE,
     segments: BLADE_SEGMENTS,
@@ -169,26 +195,39 @@ const GRAIN_FINS: FinSpec[] = [
     yaw: Math.PI / 4,
     originT: GRAIN_LEAF_ORIGIN_T,
     heightT: GRAIN_LEAF_HEIGHT_T,
-    baseHalfWidth: BASE_HALF_WIDTH * 0.7,
+    peakHalfWidth: BASE_HALF_WIDTH * 0.7,
     tipHalfWidth: TIP_HALF_WIDTH,
+    // Ramps up quickly from where it attaches to the stem, since that
+    // attachment point is itself already partway up the cluster.
+    baseRise: 0.25,
     curveStrength: CURVE_STRENGTH * 1.4,
     curveShape: QUADRATIC_CURVE,
     segments: 3,
   },
 ]
 
-const HERB_BASE_HALF_WIDTH = 0.62
-const HERB_TIP_HALF_WIDTH = 0.3
+const HERB_PEAK_HALF_WIDTH = 0.7
+const HERB_TIP_HALF_WIDTH = 0.32
 const HERB_SEGMENTS = 6
-const HERB_CURVE_STRENGTH = 0.9
+/** Stronger than the grass fins' curve — herb leaves are meant to droop/splay
+ *  outward close to the ground rather than stand up, see `HERB_HEIGHT_MIN/MAX`. */
+const HERB_CURVE_STRENGTH = 1.5
+/** Darkens the biome-lerped tint for herb instances — reads as a shaded
+ *  ground-cover plant next to the brighter grass around it. */
+const HERB_DARKEN = 0.72
+/** Herb barely reacts to wind (it's low and lies close to the ground) — not
+ *  exactly 0 so it doesn't look perfectly frozen next to swaying grass. */
+const HERB_WIND_FACTOR = 0.06
+const GRASS_WIND_FACTOR = 1
 /** Species B — 3 short, broad, rounded leaves (plantain/"babka lekarska"-like)
  *  instead of tall pointed blades; wider taper + arch curve + extra segments
  *  read as rounder than `TRI_CLUSTER_FINS`'s spikier linear taper. */
 const HERB_FINS: FinSpec[] = radialFins(3, {
   originT: 0,
   heightT: 1,
-  baseHalfWidth: HERB_BASE_HALF_WIDTH,
+  peakHalfWidth: HERB_PEAK_HALF_WIDTH,
   tipHalfWidth: HERB_TIP_HALF_WIDTH,
+  baseRise: BASE_RISE,
   curveStrength: HERB_CURVE_STRENGTH,
   curveShape: ARCH_CURVE,
   segments: HERB_SEGMENTS,
@@ -219,7 +258,7 @@ function buildFinCluster(fins: FinSpec[]): {
 
     for (let r = 0; r < rows; r++) {
       const t = r / fin.segments
-      const halfWidth = fin.baseHalfWidth + (fin.tipHalfWidth - fin.baseHalfWidth) * t
+      const halfWidth = finHalfWidth(fin, t)
       const curve = fin.curveStrength * fin.curveShape(t)
       const y = fin.originT + fin.heightT * t
       const cx = curveAxisX * curve
@@ -246,6 +285,9 @@ const VERTEX_SHADER = /* glsl */ `
   attribute float aPhase;
   attribute vec3 aBaseColor;
   attribute vec3 aTipColor;
+  // 1 for upright grass/grain, near-0 for the ground-hugging herb — see
+  // HERB_WIND_FACTOR/GRASS_WIND_FACTOR.
+  attribute float aWindFactor;
 
   uniform float uTime;
 
@@ -271,8 +313,8 @@ const VERTEX_SHADER = /* glsl */ `
     float bend = bladeT * bladeT;
     float sway = sin(uTime * 1.6 + aPhase + worldPos.x * 0.12 + worldPos.z * 0.09);
     float swayZ = cos(uTime * 1.3 + aPhase * 1.3 + worldPos.x * 0.09);
-    worldPos.x += sway * 0.14 * bend;
-    worldPos.z += swayZ * 0.1 * bend;
+    worldPos.x += sway * 0.14 * bend * aWindFactor;
+    worldPos.z += swayZ * 0.1 * bend * aWindFactor;
 
     vec4 mvPosition = viewMatrix * worldPos;
     vFogDepth = -mvPosition.z;
@@ -323,10 +365,12 @@ const SPECIES_BAND_HALF_WIDTH = 0.12
 /** Species A sub-mix: tri-cluster vs. grain stalk, "proporcje 3:1". */
 const GRAIN_RATIO = 0.25
 
-const HERB_HEIGHT_MIN = 0.12
-const HERB_HEIGHT_MAX = 0.22
-const HERB_WIDTH_MIN = 0.1
-const HERB_WIDTH_MAX = 0.16
+// Short — herb sits low, close to the ground, rather than standing up like
+// the grass blades (see also HERB_CURVE_STRENGTH's outward droop).
+const HERB_HEIGHT_MIN = 0.05
+const HERB_HEIGHT_MAX = 0.09
+const HERB_WIDTH_MIN = 0.14
+const HERB_WIDTH_MAX = 0.22
 const BLADE_HEIGHT_MIN = 0.22
 const BLADE_HEIGHT_MAX = 0.44
 const BLADE_WIDTH_MIN = 0.08
@@ -348,10 +392,18 @@ type InstanceBucket = {
   phases: number[]
   baseColors: number[]
   tipColors: number[]
+  windFactors: number[]
 }
 
 function createBucket(capacity: number): InstanceBucket {
-  return { matrixData: new Float32Array(capacity * 16), count: 0, phases: [], baseColors: [], tipColors: [] }
+  return {
+    matrixData: new Float32Array(capacity * 16),
+    count: 0,
+    phases: [],
+    baseColors: [],
+    tipColors: [],
+    windFactors: [],
+  }
 }
 
 /**
@@ -408,6 +460,7 @@ export function createGrassSystem(): GrassSystem {
     bladeWidth: number,
     tintColor: THREE.Color,
     jitter: number,
+    windFactor: number,
     random: () => number,
   ): void {
     tiltAxis.set(random() * 2 - 1, 0, random() * 2 - 1).normalize()
@@ -421,6 +474,7 @@ export function createGrassSystem(): GrassSystem {
     bucket.count++
 
     bucket.phases.push(random() * Math.PI * 2)
+    bucket.windFactors.push(windFactor)
 
     tmpColor.copy(tintColor)
     tmpColor.getHSL(tmpHsl)
@@ -526,7 +580,20 @@ export function createGrassSystem(): GrassSystem {
       if (isHerb) {
         const bladeHeight = HERB_HEIGHT_MIN + random() * (HERB_HEIGHT_MAX - HERB_HEIGHT_MIN)
         const bladeWidth = HERB_WIDTH_MIN + random() * (HERB_WIDTH_MAX - HERB_WIDTH_MIN)
-        pushInstance(buckets.herb, localX, localZ, h, rotationY, bladeHeight, bladeWidth, tmpColor, jitter, random)
+        tmpColor.multiplyScalar(HERB_DARKEN)
+        pushInstance(
+          buckets.herb,
+          localX,
+          localZ,
+          h,
+          rotationY,
+          bladeHeight,
+          bladeWidth,
+          tmpColor,
+          jitter,
+          HERB_WIND_FACTOR,
+          random,
+        )
       } else {
         const bladeHeight = BLADE_HEIGHT_MIN + random() * (BLADE_HEIGHT_MAX - BLADE_HEIGHT_MIN)
         const bladeWidth = BLADE_WIDTH_MIN + random() * (BLADE_WIDTH_MAX - BLADE_WIDTH_MIN)
@@ -541,6 +608,7 @@ export function createGrassSystem(): GrassSystem {
           bladeWidth,
           tmpColor,
           jitter,
+          GRASS_WIND_FACTOR,
           random,
         )
       }
@@ -577,6 +645,10 @@ export function createGrassSystem(): GrassSystem {
       geometry.setAttribute(
         'aTipColor',
         new THREE.InstancedBufferAttribute(new Float32Array(bucket.tipColors), 3),
+      )
+      geometry.setAttribute(
+        'aWindFactor',
+        new THREE.InstancedBufferAttribute(new Float32Array(bucket.windFactors), 1),
       )
 
       const mesh = new THREE.InstancedMesh(geometry, material, bucket.count)
