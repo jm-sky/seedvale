@@ -1,160 +1,27 @@
 import type { QuestListEntry } from '../quests/QuestManager'
-import type { QuestState } from '../quests/quests'
-import { enableTouchScroll } from '../input/enableTouchScroll'
-import { isTouchDevice } from '../input/isTouchDevice'
+import { getMountedVueUi } from '../ui-vue/mount'
 
-export type QuestLogHandlers = {
-  onClose?: () => void
-}
-
+export type QuestLogHandlers = { onClose?: () => void }
 export type QuestLog = {
   isOpen: () => boolean
   open: () => void
   close: () => void
   toggle: () => void
-  /** Re-renders from current quest/relation/exp state — call whenever it changes while open. */
   refresh: (entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number) => void
   dispose: () => void
 }
 
-type Filter = 'all' | 'active' | 'complete'
-
-const STATE_LABEL: Record<QuestState, string> = {
-  not_offered: 'niedostępny',
-  offered: 'zaoferowany',
-  active: 'aktywny',
-  ready_to_report: 'do zgłoszenia',
-  complete: 'zakończony',
-}
-
-function matchesFilter(state: QuestState, filter: Filter): boolean {
-  if (filter === 'all') return true
-  if (filter === 'complete') return state === 'complete'
-  return state !== 'not_offered' && state !== 'complete'
-}
-
-export function createQuestLog(parent: HTMLElement, handlers: QuestLogHandlers = {}): QuestLog {
-  let openState = false
-  let filter: Filter = 'all'
-  let lastEntries: readonly QuestListEntry[] = []
-  let lastExp = 0
-  let lastRelation: (name: string) => number = () => 0
-
-  const root = document.createElement('div')
-  root.className = 'seedvale-quest-log'
-  root.hidden = true
-  root.innerHTML = `
-    <div class="seedvale-quest-log__panel">
-      <h1>Zadania</h1>
-      <div class="seedvale-quest-log__exp">Exp: <span data-exp>0</span></div>
-      <div class="seedvale-quest-log__filters" data-filters>
-        <button type="button" data-filter="all" class="seedvale-quest-log__filter">Wszystkie</button>
-        <button type="button" data-filter="active" class="seedvale-quest-log__filter">W trakcie</button>
-        <button type="button" data-filter="complete" class="seedvale-quest-log__filter">Zakończone</button>
-      </div>
-      <div class="seedvale-quest-log__list" data-list></div>
-      <div class="seedvale-quest-log__hint">${
-        isTouchDevice() ? 'Dotknij poza oknem — zamknij' : 'L / Esc — zamknij'
-      }</div>
-    </div>
-  `
-  parent.appendChild(root)
-
-  const panel = root.querySelector<HTMLElement>('.seedvale-quest-log__panel')!
-  const disposeTouchScroll = isTouchDevice() ? enableTouchScroll(panel) : null
-
-  const expEl = root.querySelector<HTMLElement>('[data-exp]')!
-  const listEl = root.querySelector<HTMLElement>('[data-list]')!
-  const filterButtons = Array.from(
-    root.querySelectorAll<HTMLButtonElement>('[data-filter]'),
-  )
-
-  const render = () => {
-    expEl.textContent = String(lastExp)
-    for (const button of filterButtons) {
-      button.classList.toggle(
-        'seedvale-quest-log__filter--active',
-        button.dataset.filter === filter,
-      )
-    }
-    const visible = lastEntries.filter((entry) => matchesFilter(entry.state, filter))
-    listEl.innerHTML = visible.length
-      ? ''
-      : '<div class="seedvale-quest-log__empty">Brak zadań w tej kategorii.</div>'
-    for (const entry of visible) {
-      const stageSuffix =
-        entry.totalStages > 1 ? ` — Etap ${entry.stageIndex + 1}/${entry.totalStages}` : ''
-      const objectiveRow = entry.currentObjective
-        ? `<div class="seedvale-quest-log__row-objective">${entry.currentObjective}</div>`
-        : ''
-      const row = document.createElement('div')
-      row.className = 'seedvale-quest-log__row'
-      row.innerHTML = `
-        <div class="seedvale-quest-log__row-title">${entry.giverName}</div>
-        <div class="seedvale-quest-log__row-state">${STATE_LABEL[entry.state]}${stageSuffix}</div>
-        ${objectiveRow}
-        <div class="seedvale-quest-log__row-relation">♥ ${entry.giverName} ${lastRelation(entry.giverName)}</div>
-      `
-      listEl.appendChild(row)
-    }
-  }
-
-  for (const button of filterButtons) {
-    button.addEventListener('click', () => {
-      filter = button.dataset.filter as Filter
-      render()
-    })
-  }
-
-  const close = () => {
-    if (!openState) return
-    openState = false
-    root.hidden = true
-    handlers.onClose?.()
-  }
-
-  const onRootClick = (event: MouseEvent) => {
-    if (event.target === root) close()
-  }
-
-  // Same registration-order trick as createNpcDialog: created before pauseMenu
-  // so we can swallow Escape here instead of also toggling the pause overlay.
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (event.code !== 'Escape' || !openState) return
-    event.stopImmediatePropagation()
-    close()
-  }
-
-  root.addEventListener('click', onRootClick)
-  window.addEventListener('keydown', onKeyDown)
-
+/** Compatibility facade for the Vue quest log. */
+export function createQuestLog(_parent: HTMLElement, handlers: QuestLogHandlers = {}): QuestLog {
+  let disposed = false
+  const getUi = () => getMountedVueUi()
+  const close = () => { if (!disposed) { getUi()?.closeQuestLog(); handlers.onClose?.() } }
   return {
-    isOpen: () => openState,
-    open() {
-      openState = true
-      root.hidden = false
-      render()
-    },
+    isOpen: () => !disposed && (getUi()?.isQuestLogOpen() ?? false),
+    open: () => { if (!disposed) getUi()?.openQuestLog([], 0, () => 0) },
     close,
-    toggle() {
-      if (openState) close()
-      else {
-        openState = true
-        root.hidden = false
-        render()
-      }
-    },
-    refresh(entries, exp, relation) {
-      lastEntries = entries
-      lastExp = exp
-      lastRelation = relation
-      if (openState) render()
-    },
-    dispose() {
-      root.removeEventListener('click', onRootClick)
-      window.removeEventListener('keydown', onKeyDown)
-      disposeTouchScroll?.()
-      root.remove()
-    },
+    toggle: () => { if (!disposed) { if (getUi()?.isQuestLogOpen()) close(); else getUi()?.openQuestLog([], 0, () => 0) } },
+    refresh: (entries, exp, relation) => { if (!disposed) { const ui = getUi(); if (ui?.isQuestLogOpen()) ui.refreshQuestLog(entries, exp, relation); else ui?.openQuestLog(entries, exp, relation) } },
+    dispose: () => { if (!disposed) { disposed = true; getUi()?.closeQuestLog() } },
   }
 }
