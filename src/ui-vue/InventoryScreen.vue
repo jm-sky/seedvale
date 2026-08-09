@@ -49,7 +49,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="ui.inventory.open" class="seedvale-inventory" @click.self="closeInventory">
+  <div v-show="ui.inventory.open" class="seedvale-inventory" @click.self="closeInventory">
     <div ref="panel" class="seedvale-inventory__panel">
       <h1>Ekwipunek</h1>
       <div class="seedvale-inventory__weight">
