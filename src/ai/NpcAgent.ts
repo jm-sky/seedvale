@@ -97,47 +97,50 @@ function modelUrlFor(gender: NpcGender, treeIndex: number): string {
   return pool[treeIndex % pool.length]!
 }
 
+/** v2 stage 2 (`docs/plans/2026-08-07--020...`) collapses the old
+ *  resource-specific `goGarden/goHomeDrink/goStock/goTree/goWell` +
+ *  `chop/deposit/drink/eat` phases into one generic `goTo` → `execute` pair,
+ *  parameterized by `PlannedAction` (see below). `followPath`/`goSleep`/
+ *  `sleep`/`wander`/`lookAtPlayer` stay distinct — they aren't "go somewhere
+ *  and perform one resource action", so folding them in would blur rather
+ *  than simplify. */
 type Phase =
   | 'choose'
-  | 'chop'
-  | 'deposit'
-  | 'drink'
-  | 'eat'
+  | 'execute'
   | 'followPath'
-  | 'goGarden'
-  | 'goHomeDrink'
   | 'goSleep'
-  | 'goStock'
-  | 'goTree'
-  | 'goWell'
+  | 'goTo'
   | 'lookAtPlayer'
   | 'sleep'
   | 'wander'
+
+type ActionId = 'chop' | 'deposit' | 'drink' | 'eat' | 'work'
+
+/** A single "walk there, do this" step, optionally chained into a `next`
+ *  one (wood: chop at the tree, then walk to the stockpile to deposit) —
+ *  the generic replacement for the old dedicated go-somewhere / do-something
+ *  phases. `destination` is a live reference into `landmarks`/`home`/
+ *  `workplace` (never reassigned after settlement build), not a copy. */
+type PlannedAction = {
+  action: ActionId
+  destination: THREE.Vector3
+  /** Seconds spent in `execute` once `destination` is reached. */
+  duration: number
+  /** Applied once, when `execute`'s wait timer runs out. */
+  onComplete: () => void
+  next?: PlannedAction
+}
 
 /** Phases the player's approach may interrupt to trigger a lookAtPlayer pause. */
 const PAUSE_INTERRUPTIBLE_PHASES: ReadonlySet<Phase> = new Set([
   'choose',
   'followPath',
-  'goGarden',
-  'goHomeDrink',
-  'goStock',
-  'goTree',
-  'goWell',
+  'goTo',
   'wander',
 ])
 
 /** Phases that drain `health.currentHp` (fatigue) vs. ones that regenerate it. */
-const FATIGUE_PHASES: ReadonlySet<Phase> = new Set([
-  'chop',
-  'deposit',
-  'drink',
-  'eat',
-  'goGarden',
-  'goHomeDrink',
-  'goStock',
-  'goTree',
-  'goWell',
-])
+const FATIGUE_PHASES: ReadonlySet<Phase> = new Set(['execute', 'goTo'])
 const REST_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'lookAtPlayer', 'sleep', 'wander'])
 
 /** Chance per `choose` cycle — when no active need routes the NPC anywhere
@@ -153,6 +156,11 @@ const FOLLOW_DOCK_PATH_CHANCE = 0.08
  *  identical to drinking at the well (same `drink` phase, same instant
  *  thirst reduction), just a different destination. */
 const HOME_WATER_CHANCE = 0.45
+
+/** How long (seconds, before `waitMultiplier`) a scheduled `work` action
+ *  occupies an NPC at its `workplace` before it loops back to `choose` —
+ *  same order of magnitude as the resource-action waits above (0.8-1.6). */
+const WORK_DURATION_RANGE: [number, number] = [2, 4]
 
 const MAX_HP = 100
 /** currentHp never drops below this — no NPC death/despawn in v1. */
@@ -202,13 +210,14 @@ export class NpcAgent {
   readonly personality: CharacterDef['personality']
   readonly relation: FamilyRelation
   readonly health: HealthState
-  /** Data only (v2 stage 1, `docs/plans/2026-08-07--020...`) — `null` only
-   *  when the role's landmark doesn't exist for this settlement (e.g. a
-   *  `woodcutter` with no trees yet). Nothing reads this to steer the FSM
-   *  yet; see `places.ts`'s `workplaceFor`. */
+  /** `null` only when the role's landmark doesn't exist for this settlement
+   *  (e.g. a `woodcutter` with no trees yet) — see `places.ts`'s
+   *  `workplaceFor`. Consumed by `beginIdle()`'s `work` scheduled activity. */
   readonly workplace: Place | null
   /** One uniform template per role (`schedule.ts`) — not yet personalized by
-   *  traits, not yet consumed by the phase FSM. Query with `getScheduledActivity`. */
+   *  traits (v2 stage 2 decision: role-level schedule first, traits as a
+   *  later overlay). Drives `choose`'s sleep gate and `beginIdle`'s `work`
+   *  routing via `getScheduledActivity`. */
   readonly schedule: ScheduleTemplate
   private readonly dialogueArchetype: Personality
   private readonly pauseParams: PausePersonalityParams
@@ -227,6 +236,12 @@ export class NpcAgent {
   private readonly needMarker: THREE.Mesh
   private phase: Phase = 'choose'
   private activeNeed: NeedId = 'idle'
+  /** Set by `startAction()`, consumed by the `goTo`/`execute` phases — the
+   *  generic "walk there, do this" step currently in flight. `null` only
+   *  outside those two phases. */
+  private pendingAction: PlannedAction | null = null
+  /** Destination for the `wander` phase only — resource/work destinations
+   *  now live in `pendingAction.destination` instead. */
   private target = new THREE.Vector3()
   /** Waypoints for the `followPath` phase — a reference into
    *  `landmarks.dockRoute`, walked one at a time via `steerTo`. */
@@ -408,8 +423,8 @@ export class NpcAgent {
   }
 
   /** What this NPC's `schedule` says it should be doing at `timeOfDay`
-   *  (`dayNight.ts` convention, 0-1) — data query only, doesn't affect
-   *  `phase`/behavior yet. */
+   *  (`dayNight.ts` convention, 0-1) — also called internally by `update()`
+   *  each frame to drive the sleep gate and `beginIdle`'s `work` routing. */
   getScheduledActivity(timeOfDay: number): ScheduleActivity {
     return activityAt(this.schedule, timeOfDay)
   }
@@ -433,9 +448,11 @@ export class NpcAgent {
   /** `observerYaw` — player look direction (radians, same convention as
    *  `MouseLook`'s `state.yaw`), used only to dim this NPC's label when the
    *  player isn't facing toward it (see the gaze-cone opacity factor below).
-   *  `isNight` — from `dayNight.ts`'s clock, forwarded through
-   *  `Settlement`/`SettlementsManager.setDayNight` (see `createSettlement.ts`).
-   *  `night_owl` NPCs ignore it and keep their normal routine.
+   *  `timeOfDay` — `dayNight.ts`'s clock (0-1, 0=midnight), forwarded
+   *  through `SettlementsManager`/`Settlement.update` — drives `schedule`
+   *  via `getScheduledActivity` (sleep gate, `work` routing in
+   *  `beginIdle`). `night_owl` NPCs ignore the sleep gate and keep their
+   *  normal routine regardless of schedule.
    *  `nearbyNpcCount` — other NPCs from the same settlement within
    *  `GROUP_REACTION_RADIUS` (`createSettlement.ts`), used to dampen the
    *  reaction-sound trigger chance below (issue 010). */
@@ -443,11 +460,12 @@ export class NpcAgent {
     dt: number,
     observerPos: THREE.Vector3,
     observerYaw: number,
-    isNight: boolean,
+    timeOfDay: number,
     nearbyNpcCount: number,
   ): void {
     tickNeeds(this.needs, dt)
     this.moving = false
+    const scheduledActivity = this.getScheduledActivity(timeOfDay)
 
     if (FATIGUE_PHASES.has(this.phase)) {
       applyFatigue(this.health, this.fatigueRate * dt, HP_FLOOR)
@@ -479,35 +497,33 @@ export class NpcAgent {
     }
 
     switch (this.phase) {
-      case 'choose':
-        if (isNight && !this.traits.includes('night_owl')) this.phase = 'goSleep'
-        else this.beginNeed(pickNeed(this.needs))
+      case 'choose': {
+        const shouldSleep = scheduledActivity === 'sleep' && !this.traits.includes('night_owl')
+        if (shouldSleep) {
+          this.phase = 'goSleep'
+          break
+        }
+        const need = pickNeed(this.needs)
+        this.activeNeed = need
+        if (need === 'idle') this.beginIdle(scheduledActivity)
+        else this.beginNeed(need)
         break
-      case 'chop':
-        this.wait -= dt
-        if (this.wait <= 0) this.phase = 'goStock'
-        break
-      case 'deposit':
+      }
+      case 'execute': {
         this.wait -= dt
         if (this.wait <= 0) {
-          this.needs.woodDuty = Math.max(0, this.needs.woodDuty - 0.55)
-          this.phase = 'choose'
+          const action = this.pendingAction
+          this.pendingAction = null
+          action?.onComplete()
+          if (action?.next) {
+            this.pendingAction = action.next
+            this.phase = 'goTo'
+          } else {
+            this.phase = 'choose'
+          }
         }
         break
-      case 'drink':
-        this.wait -= dt
-        if (this.wait <= 0) {
-          this.needs.thirst = Math.max(0, this.needs.thirst - 0.65)
-          this.phase = 'choose'
-        }
-        break
-      case 'eat':
-        this.wait -= dt
-        if (this.wait <= 0) {
-          this.needs.hunger = Math.max(0, this.needs.hunger - 0.6)
-          this.phase = 'choose'
-        }
-        break
+      }
       case 'followPath': {
         const waypoint = this.pathWaypoints[this.pathIndex]
         if (!waypoint) {
@@ -520,40 +536,22 @@ export class NpcAgent {
         }
         break
       }
-      case 'goGarden':
-        if (this.steerTo(this.landmarks.garden, dt)) {
-          this.phase = 'eat'
-          this.wait = 1.4 * this.waitMultiplier
-        }
-        break
-      case 'goHomeDrink':
-        if (this.steerTo(this.home, dt)) {
-          this.phase = 'drink'
-          this.wait = 1.2 * this.waitMultiplier
-        }
-        break
       case 'goSleep':
-        if (!isNight) this.phase = 'choose'
+        if (scheduledActivity !== 'sleep') this.phase = 'choose'
         else if (this.steerTo(this.home, dt)) this.phase = 'sleep'
         break
-      case 'goStock':
-        if (this.steerTo(this.landmarks.stockpile, dt)) {
-          this.phase = 'deposit'
-          this.wait = 0.8 * this.waitMultiplier
+      case 'goTo': {
+        const action = this.pendingAction
+        if (!action) {
+          this.phase = 'choose'
+          break
+        }
+        if (this.steerTo(action.destination, dt)) {
+          this.phase = 'execute'
+          this.wait = action.duration
         }
         break
-      case 'goTree':
-        if (this.steerTo(this.target, dt)) {
-          this.phase = 'chop'
-          this.wait = 1.6 * this.waitMultiplier
-        }
-        break
-      case 'goWell':
-        if (this.steerTo(this.landmarks.well, dt)) {
-          this.phase = 'drink'
-          this.wait = 1.2 * this.waitMultiplier
-        }
-        break
+      }
       case 'lookAtPlayer': {
         const dx = observerPos.x - this.mesh.position.x
         const dz = observerPos.z - this.mesh.position.z
@@ -567,7 +565,7 @@ export class NpcAgent {
         break
       }
       case 'sleep':
-        if (!isNight) this.phase = 'choose'
+        if (scheduledActivity !== 'sleep') this.phase = 'choose'
         break
       case 'wander':
         if (this.steerTo(this.target, dt)) this.phase = 'choose'
@@ -633,13 +631,7 @@ export class NpcAgent {
   }
 
   private isBusyPhase(): boolean {
-    return (
-      this.phase === 'chop' ||
-      this.phase === 'deposit' ||
-      this.phase === 'drink' ||
-      this.phase === 'eat' ||
-      this.phase === 'lookAtPlayer'
-    )
+    return this.phase === 'execute' || this.phase === 'lookAtPlayer'
   }
 
   private crossfade(next: THREE.AnimationAction): void {
@@ -650,21 +642,71 @@ export class NpcAgent {
     }
   }
 
+  /** Kicks off a `goTo` → `execute` step — the generic replacement for the
+   *  old `this.phase = 'goWell'` etc. one-liners. */
+  private startAction(action: PlannedAction): void {
+    this.pendingAction = action
+    this.phase = 'goTo'
+  }
+
+  /** `need` is `'water' | 'food' | 'wood'` in practice — `'choose'` routes
+   *  `'idle'` to `beginIdle` instead and already set `this.activeNeed`. */
   private beginNeed(need: NeedId): void {
-    this.activeNeed = need
     if (need === 'water') {
-      this.phase = Math.random() < HOME_WATER_CHANCE ? 'goHomeDrink' : 'goWell'
+      const destination = Math.random() < HOME_WATER_CHANCE ? this.home : this.landmarks.well
+      this.startAction({
+        action: 'drink',
+        destination,
+        duration: 1.2 * this.waitMultiplier,
+        onComplete: () => { this.needs.thirst = Math.max(0, this.needs.thirst - 0.65) },
+      })
       return
     }
     if (need === 'food') {
-      this.phase = 'goGarden'
+      this.startAction({
+        action: 'eat',
+        destination: this.landmarks.garden,
+        duration: 1.4 * this.waitMultiplier,
+        onComplete: () => { this.needs.hunger = Math.max(0, this.needs.hunger - 0.6) },
+      })
       return
     }
     if (need === 'wood' && this.landmarks.trees.length > 0) {
       const tree = this.landmarks.trees[this.treeIndex]!
       this.treeIndex = (this.treeIndex + 1) % this.landmarks.trees.length
-      this.target.copy(tree)
-      this.phase = 'goTree'
+      this.startAction({
+        action: 'chop',
+        destination: tree,
+        duration: 1.6 * this.waitMultiplier,
+        onComplete: () => {},
+        next: {
+          action: 'deposit',
+          destination: this.landmarks.stockpile,
+          duration: 0.8 * this.waitMultiplier,
+          onComplete: () => { this.needs.woodDuty = Math.max(0, this.needs.woodDuty - 0.55) },
+        },
+      })
+      return
+    }
+    // 'wood' need but this settlement has no trees yet — same idle fallback
+    // as an unscheduled moment (not 'work': no point routing to a workplace
+    // just because the wood need happened to fire).
+    this.beginIdle('wake')
+  }
+
+  /** No active need (`pickNeed` returned `'idle'`) — either walk to the
+   *  workplace and perform a generic `work` action (when `schedule` says
+   *  `work` right now and a `workplace` exists), or fall back to the
+   *  pre-schedule idle behavior (occasional dock walk, otherwise wander
+   *  near home). */
+  private beginIdle(scheduledActivity: ScheduleActivity): void {
+    if (scheduledActivity === 'work' && this.workplace) {
+      this.startAction({
+        action: 'work',
+        destination: this.workplace.position,
+        duration: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
+        onComplete: () => {},
+      })
       return
     }
     if (this.landmarks.dockRoute.length > 1 && Math.random() < FOLLOW_DOCK_PATH_CHANCE) {
