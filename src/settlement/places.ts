@@ -1,14 +1,21 @@
+import type { Role } from '../ai/characters'
+import type { SettlementLandmarks } from './props'
 import type { Vector3 } from 'three'
 
 /**
- * v1 of the Place system (`docs/plans/2026-08-07--020--npc-2-daily-routine-and-place.md`),
- * trimmed to formalizing what already exists: each NPC's `home` assignment
- * (`createSettlement.ts`) is a `Place` instead of a bare `Vector3`. Purely
- * organizational — no behavior change. `workplace`/`food`/`social` places and
- * a `Schedule` that consumes them are deliberately out of scope until `role`
- * (`npc-character-depth.md`) has real behavior to hang a schedule off of.
+ * v1 of the Place system (`docs/plans/2026-08-07--020--npc-2-daily-routine-and-place.md`)
+ * formalized `home` (`createSettlement.ts`) as a `Place` instead of a bare
+ * `Vector3` — purely organizational, no behavior change.
+ *
+ * v2 stage 1 (2026-08-09 decisions) adds `workplace`/`food`/`social` as
+ * types and `workplaceFor()` below, computing a per-role `Place` from
+ * existing `SettlementLandmarks` — still data only. Nothing reads
+ * `NpcAgent.workplace`/`.schedule` yet: wiring them into the FSM
+ * (`goWell`/`goGarden`/`goTree`/`goStock` → a generic `goTo`/`execute`) is a
+ * deliberately separate, riskier follow-up step (full refactor of the
+ * existing, working `NpcAgent.ts` phase machine).
  */
-export type PlaceType = 'home'
+export type PlaceType = 'home' | 'workplace' | 'food' | 'social'
 
 export type Place = {
   /** Stable id, namespaced by settlement (e.g. `0_0:home:2`) — same spirit as
@@ -16,4 +23,50 @@ export type Place = {
   id: string
   type: PlaceType
   position: Vector3
+}
+
+/**
+ * Per-role workplace — hybrid per the 2026-08-09 decision: roles that
+ * already have a matching communal landmark reuse it as-is (no new world
+ * content); only `trader` gets a dedicated new prop (`landmarks.market`,
+ * see `props.ts`'s `buildSettlementProps`).
+ *
+ * - `woodcutter` → one of `landmarks.trees` (round-robin via `treeIndex`,
+ *   same index NPC already cycles through for its `wood` need).
+ * - `farmer` → `landmarks.garden`.
+ * - `trader` → `landmarks.market`.
+ * - `guard` → `landmarks.well` (central point, easiest to "patrol" from).
+ * - `miner` → `landmarks.stockpile` (existing shared storage point — no ore-
+ *   deposit query API exists yet, see `naturalResources.ts`/plan 032).
+ * - `fisher` → `landmarks.dock` when the settlement has one (near-coast
+ *   only), else falls back to `landmarks.well` like `guard`.
+ *
+ * Returns `null` only when the role's landmark genuinely doesn't exist for
+ * this settlement (e.g. a `woodcutter` in a settlement with no trees yet).
+ */
+export function workplaceFor(
+  settlementId: string,
+  role: Role,
+  landmarks: SettlementLandmarks,
+  treeIndex: number,
+): Place | null {
+  switch (role) {
+    case 'farmer':
+      return { id: `${settlementId}:workplace:garden`, type: 'workplace', position: landmarks.garden }
+    case 'fisher':
+      return landmarks.dock
+        ? { id: `${settlementId}:workplace:dock`, type: 'workplace', position: landmarks.dock }
+        : { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
+    case 'guard':
+      return { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
+    case 'miner':
+      return { id: `${settlementId}:workplace:stockpile`, type: 'workplace', position: landmarks.stockpile }
+    case 'trader':
+      return { id: `${settlementId}:workplace:market`, type: 'workplace', position: landmarks.market }
+    case 'woodcutter': {
+      if (landmarks.trees.length === 0) return null
+      const index = treeIndex % landmarks.trees.length
+      return { id: `${settlementId}:workplace:tree:${index}`, type: 'workplace', position: landmarks.trees[index]! }
+    }
+  }
 }

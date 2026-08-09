@@ -33,6 +33,7 @@ import {
   pickNeed,
   tickNeeds,
 } from './Needs'
+import { activityAt, SCHEDULE_TEMPLATES, type ScheduleActivity, type ScheduleTemplate } from './schedule'
 
 function randRange([min, max]: [number, number]): number {
   return min + Math.random() * (max - min)
@@ -201,6 +202,14 @@ export class NpcAgent {
   readonly personality: CharacterDef['personality']
   readonly relation: FamilyRelation
   readonly health: HealthState
+  /** Data only (v2 stage 1, `docs/plans/2026-08-07--020...`) — `null` only
+   *  when the role's landmark doesn't exist for this settlement (e.g. a
+   *  `woodcutter` with no trees yet). Nothing reads this to steer the FSM
+   *  yet; see `places.ts`'s `workplaceFor`. */
+  readonly workplace: Place | null
+  /** One uniform template per role (`schedule.ts`) — not yet personalized by
+   *  traits, not yet consumed by the phase FSM. Query with `getScheduledActivity`. */
+  readonly schedule: ScheduleTemplate
   private readonly dialogueArchetype: Personality
   private readonly pauseParams: PausePersonalityParams
   private readonly fatigueRate: number
@@ -247,6 +256,7 @@ export class NpcAgent {
     waterLevel: number,
     landmarks: SettlementLandmarks,
     home: Place,
+    workplace: Place | null,
     treeIndex: number,
     needOffset: number,
     member: FamilyMember,
@@ -266,6 +276,8 @@ export class NpcAgent {
     this.personality = character.personality
     this.relation = member.relation
     this.health = createHealthState(MAX_HP)
+    this.workplace = workplace
+    this.schedule = SCHEDULE_TEMPLATES[character.role]
     this.dialogueArchetype = nearestArchetype(this.personality)
     this.pauseParams = applySociableBoost(pausePersonalityParams(this.personality), this.traits)
     const energetic = this.traits.includes('energetic')
@@ -316,6 +328,7 @@ export class NpcAgent {
     waterLevel: number,
     landmarks: SettlementLandmarks,
     home: Place,
+    workplace: Place | null,
     treeIndex: number,
     needOffset: number,
     member: FamilyMember,
@@ -331,6 +344,7 @@ export class NpcAgent {
         waterLevel,
         landmarks,
         home,
+        workplace,
         treeIndex,
         needOffset,
         member,
@@ -343,6 +357,7 @@ export class NpcAgent {
         waterLevel,
         landmarks,
         home,
+        workplace,
         treeIndex,
         needOffset,
         member,
@@ -356,6 +371,7 @@ export class NpcAgent {
     waterLevel: number,
     landmarks: SettlementLandmarks,
     home: Place,
+    workplace: Place | null,
     treeIndex: number,
     needOffset: number,
     member: FamilyMember,
@@ -379,6 +395,7 @@ export class NpcAgent {
       waterLevel,
       landmarks,
       home,
+      workplace,
       treeIndex,
       needOffset,
       member,
@@ -388,6 +405,13 @@ export class NpcAgent {
 
   getActiveNeed(): NeedId {
     return this.activeNeed
+  }
+
+  /** What this NPC's `schedule` says it should be doing at `timeOfDay`
+   *  (`dayNight.ts` convention, 0-1) — data query only, doesn't affect
+   *  `phase`/behavior yet. */
+  getScheduledActivity(timeOfDay: number): ScheduleActivity {
+    return activityAt(this.schedule, timeOfDay)
   }
 
   getDialogueLine(): string {
