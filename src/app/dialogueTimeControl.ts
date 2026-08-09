@@ -13,6 +13,7 @@ Clock.prototype.getDelta = function (): number {
 
 const originalNpcUpdate = NpcAgent.prototype.update
 NpcAgent.prototype.update = function (
+  this: NpcAgent,
   dt,
   observerPos,
   observerYaw,
