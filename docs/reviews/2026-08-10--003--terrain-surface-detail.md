@@ -101,7 +101,12 @@ Osobno, poza normal-mapą: `applyMicroTint` (`biomeColors.ts`) dokłada **biały
 
 ### B.6 Jak testować
 
-`CLAUDE.md` mówi: nie odpalaj headless Chrome do rutynowego testowania zmian — zweryfikuj technicznie (`npx tsc --noEmit`, `npm run lint`, `npm run build`) i poproś użytkownika o test na `localhost:5577`. Dla **artefaktów wizualnych, których nie da się opisać słowami**, zrzut ekranu bywa jednak najkrótszą drogą — ta sesja to potwierdziła (porównanie „z trawą / bez trawy" rozstrzygnęło podejrzanego w jednym kroku). Jeśli sięgasz po przeglądarkę:
+`CLAUDE.md` mówi: nie odpalaj headless Chrome do rutynowego testowania zmian — zweryfikuj technicznie (`npx tsc --noEmit`, `npm run lint`, `npm run build`) i poproś użytkownika o test na `localhost:5577`. Doświadczenie z tej sesji uściśla to tak:
+
+- **Diagnoza** („co właściwie widać?") — zrzut potrafi być najkrótszą drogą i tylko do tego warto sięgać po przeglądarkę. Porównanie „z trawą / bez trawy" wykluczyło podejrzanego w jednym kroku.
+- **Weryfikacja poprawki** — robi ją użytkownik. Jeden cykl zrzutu to tutaj ~1,5–2 min (generacja trawy blokuje main thread), a strojenie wizualne i tak wymaga jego oka. Użytkownik powiedział wprost: „ja będę weryfikować w przeglądarce, ty nie sprawdzaj, szkoda czasu".
+
+Jeśli sięgasz po przeglądarkę do diagnozy:
 
 - Sceną odniesienia jest `http://localhost:5577/?seed=100` — start gry stawia gracza przy studni w Lipowie, ta sama rama co `screen-1.png`.
 - Warianty ustawiaj przez `localStorage['seedvale:worldConfig:v1']` **przed** przeładowaniem strony i kasuj zapis (`indexedDB.deleteDatabase('seedvale')`), żeby każdy wariant startował z tego samego New Game.
