@@ -1,19 +1,25 @@
+import { createNoise2D } from 'simplex-noise'
 import * as THREE from 'three'
 import type { ChunkCoord } from './chunkGrid'
 import { createSeededRandom } from '../world/parseSeed'
 import { ROCK_SLOPE_FULL, SAND_BAND } from './biomeColors'
 import { biomeWeightsAt } from './biomeRegions'
 import { apronOriginWorld, type ChunkTileData, type RegionParams, sampleApronGrid } from './chunkHeightmap'
+import { fbm01, type FbmParams } from './fbm'
 
 export type WorldGrassChunk = {
-  mesh: THREE.InstancedMesh
-  /** Instances actually generated for this chunk (survivors of eligibility/
-   *  density rejection) — `mesh.count` may be temporarily lower, see `setLodFraction`. */
+  /** Group of 1-3 InstancedMeshes (one per surviving species/subtype bucket —
+   *  see `SPECIES` below) positioned at the chunk origin. */
+  mesh: THREE.Group
+  /** Instances actually generated for this chunk, summed across all subtype
+   *  buckets (survivors of eligibility/density rejection) — `mesh`'s children's
+   *  `count` may be temporarily lower, see `setLodFraction`. */
   readonly fullCount: number
-  /** Renders only the first `fraction` of instances (0 excluded, clamped to
-   *  (0, 1]) — cheap distance LOD: no reallocation, just narrows the instanced
-   *  draw range. Safe because instances are generated in seeded-random spatial
-   *  order, so any prefix is an unbiased spatial subsample. */
+  /** Renders only the first `fraction` of instances in each subtype bucket
+   *  (0 excluded, clamped to (0, 1]) — cheap distance LOD: no reallocation,
+   *  just narrows each InstancedMesh's draw range. Safe because instances are
+   *  generated in seeded-random spatial order, so any prefix is an unbiased
+   *  spatial subsample. */
   setLodFraction: (fraction: number) => void
   dispose: () => void
 }
@@ -59,17 +65,6 @@ const ROAD_TINT_REJECT = 0.15
  *  surface (reads as "grass sunk into the ground"). */
 const GROUND_LIFT = 0.05
 
-const BASE_HALF_WIDTH = 0.5
-const TIP_HALF_WIDTH = 0.14
-/** Rows along the blade's height (segments + 1) — more than 2 so the baked-in
- *  rest curve below reads as an actual bend, not a straight-edged triangle. */
-const BLADE_SEGMENTS = 4
-/** Local-space lean at the tip (t=1), in the same units as `BASE_HALF_WIDTH` —
- *  deliberately larger than the width itself since it gets scaled by the
- *  instance's `bladeWidth` (not `bladeHeight`) at render time; tuned so the
- *  resulting world-space bend reads as a fraction of a typical blade's height. */
-const CURVE_STRENGTH = 1.2
-
 const ARID_GRASS = new THREE.Color(0x9c9a54)
 const HUMID_GRASS = new THREE.Color(0x5fb03f)
 /** Swamp tint — darker, more olive than even `HUMID_GRASS`. */
@@ -83,35 +78,156 @@ function hashChunk(cx: number, cz: number): number {
   return (h ^ (h >>> 16)) >>> 0
 }
 
-/** Unit "blade" — two crossed vertical strips (base at y=0, tapered tip at y=1),
- *  each `BLADE_SEGMENTS` segments tall with a fixed rest curve baked into the
- *  local coordinates, shared by every chunk's `InstancedMesh`; only the
- *  per-instance matrix/attributes differ per chunk. Quad A bends into +Z as it
- *  rises, quad B bends into +X, so the cross as a whole leans one consistent
- *  diagonal direction in its own local frame — after each instance's random
- *  Y rotation that reads as a random-but-natural lean per blade, not a razor-
- *  straight triangle. */
-function createBladeTemplate(): {
+/** One flat tapered strip ("fin") of a blade cluster, in the cluster's own
+ *  local unit space (`y` in [0,1] before the instance's `bladeHeight` scale).
+ *  `yaw` picks the horizontal direction the fin's flat face points in — the
+ *  fin itself is symmetric around the cluster's Y axis (spans `±halfWidth(t)`
+ *  along the direction perpendicular to `yaw`... see `buildFinCluster`), so
+ *  two fins 180° apart are the same plane (`radialFins` below accounts for
+ *  that). `originT`/`heightT` let a fin start partway up the cluster and
+ *  cover only part of its height — used by `GRAIN_FINS` for the leaf that
+ *  peels off the stem partway up. */
+type FinSpec = {
+  yaw: number
+  originT: number
+  heightT: number
+  baseHalfWidth: number
+  tipHalfWidth: number
+  curveStrength: number
+  /** Rest-curve profile along the fin, `t` in [0,1] local to the fin (not the
+   *  cluster) — default quadratic (`t*t`, base stays planted, curve grows
+   *  toward the tip); `HERB_FINS` uses a rise-then-droop arch instead. */
+  curveShape: (t: number) => number
+  segments: number
+}
+
+const QUADRATIC_CURVE = (t: number): number => t * t
+/** Rises to a peak around 70% up the fin then droops slightly toward the tip —
+ *  reads as an arched, broadleaf-like leaf instead of a blade leaning one way. */
+const ARCH_CURVE = (t: number): number => Math.sin(t * Math.PI * 0.7)
+
+/** `count` fins evenly spaced across the yaw range that actually gives distinct
+ *  planes — a fin's plane repeats every 180° (symmetric ±halfWidth), so `count`
+ *  fins spaced by `360/count` always lands on `count` distinct planes only
+ *  when `count` is odd (e.g. 3 fins at 0/120/240 ≡ the 3 distinct planes
+ *  0/60/120 mod 180). Used for the odd-numbered radial clusters below. */
+function radialFins(count: number, spec: Omit<FinSpec, 'yaw'>): FinSpec[] {
+  return Array.from({ length: count }, (_, i) => ({ ...spec, yaw: (i * Math.PI * 2) / count }))
+}
+
+const BASE_HALF_WIDTH = 0.5
+const TIP_HALF_WIDTH = 0.14
+/** Rows along a fin's height (segments + 1) — more than 2 so the baked-in
+ *  rest curve below reads as an actual bend, not a straight-edged triangle. */
+const BLADE_SEGMENTS = 4
+/** Local-space lean at the tip (t=1), in the same units as `BASE_HALF_WIDTH` —
+ *  deliberately larger than the width itself since it gets scaled by the
+ *  instance's `bladeWidth` (not `bladeHeight`) at render time; tuned so the
+ *  resulting world-space bend reads as a fraction of a typical blade's height. */
+const CURVE_STRENGTH = 1.2
+
+/** Species A, ~75% of it — 3 fins from the center, ~60°/120° apart (the direct
+ *  "3 listki z centrum" upgrade of the old 2-fin cross). */
+const TRI_CLUSTER_FINS: FinSpec[] = radialFins(3, {
+  originT: 0,
+  heightT: 1,
+  baseHalfWidth: BASE_HALF_WIDTH,
+  tipHalfWidth: TIP_HALF_WIDTH,
+  curveStrength: CURVE_STRENGTH,
+  curveShape: QUADRATIC_CURVE,
+  segments: BLADE_SEGMENTS,
+})
+
+const GRAIN_STEM_HALF_WIDTH = 0.16
+const GRAIN_LEAF_ORIGIN_T = 0.3
+const GRAIN_LEAF_HEIGHT_T = 0.7
+/** Species A, ~25% of it — a thin stem (2 perpendicular fins, like the old
+ *  cross but much narrower) plus one wider leaf peeling off partway up,
+ *  "trochę jak zboże". */
+const GRAIN_FINS: FinSpec[] = [
+  {
+    yaw: 0,
+    originT: 0,
+    heightT: 1,
+    baseHalfWidth: GRAIN_STEM_HALF_WIDTH,
+    tipHalfWidth: GRAIN_STEM_HALF_WIDTH * 0.5,
+    curveStrength: CURVE_STRENGTH * 0.5,
+    curveShape: QUADRATIC_CURVE,
+    segments: BLADE_SEGMENTS,
+  },
+  {
+    yaw: Math.PI / 2,
+    originT: 0,
+    heightT: 1,
+    baseHalfWidth: GRAIN_STEM_HALF_WIDTH,
+    tipHalfWidth: GRAIN_STEM_HALF_WIDTH * 0.5,
+    curveStrength: CURVE_STRENGTH * 0.5,
+    curveShape: QUADRATIC_CURVE,
+    segments: BLADE_SEGMENTS,
+  },
+  {
+    yaw: Math.PI / 4,
+    originT: GRAIN_LEAF_ORIGIN_T,
+    heightT: GRAIN_LEAF_HEIGHT_T,
+    baseHalfWidth: BASE_HALF_WIDTH * 0.7,
+    tipHalfWidth: TIP_HALF_WIDTH,
+    curveStrength: CURVE_STRENGTH * 1.4,
+    curveShape: QUADRATIC_CURVE,
+    segments: 3,
+  },
+]
+
+const HERB_BASE_HALF_WIDTH = 0.62
+const HERB_TIP_HALF_WIDTH = 0.3
+const HERB_SEGMENTS = 6
+const HERB_CURVE_STRENGTH = 0.9
+/** Species B — 3 short, broad, rounded leaves (plantain/"babka lekarska"-like)
+ *  instead of tall pointed blades; wider taper + arch curve + extra segments
+ *  read as rounder than `TRI_CLUSTER_FINS`'s spikier linear taper. */
+const HERB_FINS: FinSpec[] = radialFins(3, {
+  originT: 0,
+  heightT: 1,
+  baseHalfWidth: HERB_BASE_HALF_WIDTH,
+  tipHalfWidth: HERB_TIP_HALF_WIDTH,
+  curveStrength: HERB_CURVE_STRENGTH,
+  curveShape: ARCH_CURVE,
+  segments: HERB_SEGMENTS,
+})
+
+/** Builds one shared position/index buffer from a list of fins — each fin is a
+ *  flat tapered strip (a vertical "card") baked with its own rest curve; fins
+ *  are concatenated into one geometry (index offsets accumulate per fin), so a
+ *  whole cluster/stem+leaf/herb shape renders as a single draw call per
+ *  InstancedMesh. Generalizes the old hardcoded 2-perpendicular-fin cross. */
+function buildFinCluster(fins: FinSpec[]): {
   position: THREE.BufferAttribute
   index: THREE.BufferAttribute
 } {
-  const rows = BLADE_SEGMENTS + 1
   const positions: number[] = []
   const indices: number[] = []
 
-  for (let quad = 0; quad < 2; quad++) {
+  for (const fin of fins) {
     const base = positions.length / 3
+    const rows = fin.segments + 1
+    const widthAxisX = Math.cos(fin.yaw)
+    const widthAxisZ = Math.sin(fin.yaw)
+    // Perpendicular to the width axis in the XZ plane — the direction the fin
+    // leans into as it curves, same convention as the original 2-fin cross
+    // (quad0 widens along X, curves into +Z; quad1 widens along Z, curves into +X).
+    const curveAxisX = -widthAxisZ
+    const curveAxisZ = widthAxisX
+
     for (let r = 0; r < rows; r++) {
-      const t = r / BLADE_SEGMENTS
-      const halfWidth = BASE_HALF_WIDTH + (TIP_HALF_WIDTH - BASE_HALF_WIDTH) * t
-      const curve = CURVE_STRENGTH * t * t
-      if (quad === 0) {
-        positions.push(-halfWidth, t, curve, halfWidth, t, curve)
-      } else {
-        positions.push(curve, t, -halfWidth, curve, t, halfWidth)
-      }
+      const t = r / fin.segments
+      const halfWidth = fin.baseHalfWidth + (fin.tipHalfWidth - fin.baseHalfWidth) * t
+      const curve = fin.curveStrength * fin.curveShape(t)
+      const y = fin.originT + fin.heightT * t
+      const cx = curveAxisX * curve
+      const cz = curveAxisZ * curve
+      positions.push(-widthAxisX * halfWidth + cx, y, -widthAxisZ * halfWidth + cz)
+      positions.push(widthAxisX * halfWidth + cx, y, widthAxisZ * halfWidth + cz)
     }
-    for (let r = 0; r < BLADE_SEGMENTS; r++) {
+    for (let r = 0; r < fin.segments; r++) {
       const i0 = base + r * 2
       const i1 = i0 + 1
       const i2 = i0 + 2
@@ -192,6 +308,52 @@ const FRAGMENT_SHADER = /* glsl */ `
   }
 `
 
+/** Large-scale patch noise deciding species A (grass) vs. species B (herb) —
+ *  independent of the biome/moisture axes, tuned (via `SPECIES_PATCH_FBM`'s
+ *  frequency-equivalent scale below) so patches read as roughly 10 m² blobs.
+ *  Sampled directly in world space (not a per-chunk-tile grid) since grass
+ *  generation is already main-thread-only (see module doc). */
+const SPECIES_PATCH_SCALE = 0.16
+const SPECIES_PATCH_FBM: FbmParams = { octaves: 2, persistence: 0.5, lacunarity: 2, exponentiation: 1 }
+/** Half-width of the smoothstep transition band around the 0.5 threshold —
+ *  candidates inside the band roll herb-vs-grass independently, so patch
+ *  edges naturally interleave both species instead of a hard line ("mogą się
+ *  przenikać"). */
+const SPECIES_BAND_HALF_WIDTH = 0.12
+/** Species A sub-mix: tri-cluster vs. grain stalk, "proporcje 3:1". */
+const GRAIN_RATIO = 0.25
+
+const HERB_HEIGHT_MIN = 0.12
+const HERB_HEIGHT_MAX = 0.22
+const HERB_WIDTH_MIN = 0.1
+const HERB_WIDTH_MAX = 0.16
+const BLADE_HEIGHT_MIN = 0.22
+const BLADE_HEIGHT_MAX = 0.44
+const BLADE_WIDTH_MIN = 0.08
+const BLADE_WIDTH_MAX = 0.14
+
+/** Small extra per-instance variety beyond height/width/rotation: a slight hue/
+ *  saturation nudge on top of the biome-lerped tint, and a few degrees of
+ *  static tilt off vertical (independent of wind sway) so not every instance
+ *  stands bolt upright. */
+const HUE_JITTER = 0.03
+const SATURATION_JITTER = 0.08
+const TILT_JITTER_RAD = THREE.MathUtils.degToRad(7)
+
+type SpeciesId = 'tri' | 'grain' | 'herb'
+
+type InstanceBucket = {
+  matrixData: Float32Array
+  count: number
+  phases: number[]
+  baseColors: number[]
+  tipColors: number[]
+}
+
+function createBucket(capacity: number): InstanceBucket {
+  return { matrixData: new Float32Array(capacity * 16), count: 0, phases: [], baseColors: [], tipColors: [] }
+}
+
 /**
  * Owns the shared blade geometry/material (one draw call's worth of GPU state
  * reused by every chunk) and builds per-chunk `InstancedMesh`es from a tile's
@@ -200,7 +362,12 @@ const FRAGMENT_SHADER = /* glsl */ `
  * (see grass-rendering plan phase 5 for the deferred worker-offload follow-up).
  */
 export function createGrassSystem(): GrassSystem {
-  const template = createBladeTemplate()
+  const templates: Record<SpeciesId, { position: THREE.BufferAttribute, index: THREE.BufferAttribute }> = {
+    tri: buildFinCluster(TRI_CLUSTER_FINS),
+    grain: buildFinCluster(GRAIN_FINS),
+    herb: buildFinCluster(HERB_FINS),
+  }
+
   const material = new THREE.ShaderMaterial({
     side: THREE.DoubleSide,
     // `fog: true` + the merged `UniformsLib.fog` uniforms below make three.js
@@ -222,11 +389,47 @@ export function createGrassSystem(): GrassSystem {
   })
 
   const tmpColor = new THREE.Color()
+  const tmpHsl = { h: 0, s: 0, l: 0 }
   const pos = new THREE.Vector3()
   const quat = new THREE.Quaternion()
+  const tiltQuat = new THREE.Quaternion()
   const scale = new THREE.Vector3()
   const axisY = new THREE.Vector3(0, 1, 0)
+  const tiltAxis = new THREE.Vector3()
   const matrix = new THREE.Matrix4()
+
+  function pushInstance(
+    bucket: InstanceBucket,
+    localX: number,
+    localZ: number,
+    h: number,
+    rotationY: number,
+    bladeHeight: number,
+    bladeWidth: number,
+    tintColor: THREE.Color,
+    jitter: number,
+    random: () => number,
+  ): void {
+    tiltAxis.set(random() * 2 - 1, 0, random() * 2 - 1).normalize()
+    quat.setFromAxisAngle(axisY, rotationY)
+    tiltQuat.setFromAxisAngle(tiltAxis, random() * TILT_JITTER_RAD)
+    quat.multiply(tiltQuat)
+    pos.set(localX, h + GROUND_LIFT, localZ)
+    scale.set(bladeWidth, bladeHeight, bladeWidth)
+    matrix.compose(pos, quat, scale)
+    matrix.toArray(bucket.matrixData, bucket.count * 16)
+    bucket.count++
+
+    bucket.phases.push(random() * Math.PI * 2)
+
+    tmpColor.copy(tintColor)
+    tmpColor.getHSL(tmpHsl)
+    tmpHsl.h = (tmpHsl.h + (random() * 2 - 1) * HUE_JITTER + 1) % 1
+    tmpHsl.s = Math.min(1, Math.max(0, tmpHsl.s + (random() * 2 - 1) * SATURATION_JITTER))
+    tmpColor.setHSL(tmpHsl.h, tmpHsl.s, tmpHsl.l)
+    bucket.baseColors.push(tmpColor.r * 0.55 * jitter, tmpColor.g * 0.55 * jitter, tmpColor.b * 0.55 * jitter)
+    bucket.tipColors.push(tmpColor.r * 1.3 * jitter, tmpColor.g * 1.3 * jitter, tmpColor.b * 1.3 * jitter)
+  }
 
   function createChunkGrass(
     coord: ChunkCoord,
@@ -246,19 +449,18 @@ export function createGrassSystem(): GrassSystem {
       sampleApronGrid(grid, o.apronRes, o.x, o.z, o.step, x, z)
 
     const random = createSeededRandom(seed ^ hashChunk(coord.cx, coord.cz) ^ 0x9f2c3b)
+    const speciesNoise = speciesNoiseFor(seed)
     const half = chunkSize / 2
 
-    // Written to directly (`matrix.toArray`) instead of collecting `Matrix4.clone()`
-    // instances — at high `density` that's the difference between one allocation
-    // and hundreds of thousands. Sized to the (upper-bound) candidate count and
-    // trimmed with `.slice()` once the survivor count is known, so the temporary
-    // oversized backing buffer doesn't linger in memory (a `.subarray()` view
-    // would keep the whole candidatesPerChunk-sized allocation alive).
-    const matrixData = new Float32Array(candidatesPerChunk * 16)
-    let count = 0
-    const phases: number[] = []
-    const baseColors: number[] = []
-    const tipColors: number[] = []
+    // Sized to the (upper-bound) candidate count and trimmed with `.slice()`
+    // once each bucket's survivor count is known — same allocation-avoidance
+    // approach as before, just split across 3 subtype buckets since a chunk
+    // could (worst case) land entirely in one species/subtype's patch.
+    const buckets: Record<SpeciesId, InstanceBucket> = {
+      tri: createBucket(candidatesPerChunk),
+      grain: createBucket(candidatesPerChunk),
+      herb: createBucket(candidatesPerChunk),
+    }
 
     for (let i = 0; i < candidatesPerChunk; i++) {
       const localX = (random() * 2 - 1) * half
@@ -304,63 +506,107 @@ export function createGrassSystem(): GrassSystem {
         Math.max(0, Math.min(1, 0.55 + moisture * 0.45)) * altitudeFade * (1 - biome.desert * 0.9)
       if (random() > density) continue
 
-      const bladeHeight = 0.22 + random() * 0.22
-      const bladeWidth = 0.08 + random() * 0.06
       const rotationY = random() * Math.PI * 2
       const jitter = 1 + (random() * 2 - 1) * 0.15
 
-      pos.set(localX, h + GROUND_LIFT, localZ)
-      quat.setFromAxisAngle(axisY, rotationY)
-      scale.set(bladeWidth, bladeHeight, bladeWidth)
-      matrix.compose(pos, quat, scale)
-      matrix.toArray(matrixData, count * 16)
-      count++
-
-      phases.push(random() * Math.PI * 2)
-
       tmpColor.copy(ARID_GRASS).lerp(HUMID_GRASS, moisture)
       if (biome.swamp > 0) tmpColor.lerp(SWAMP_GRASS, biome.swamp)
-      baseColors.push(tmpColor.r * 0.55 * jitter, tmpColor.g * 0.55 * jitter, tmpColor.b * 0.55 * jitter)
-      tipColors.push(tmpColor.r * 1.3 * jitter, tmpColor.g * 1.3 * jitter, tmpColor.b * 1.3 * jitter)
+
+      // Large-scale patch roll: which species does this candidate belong to?
+      // Independent of the density roll above so patch shape doesn't correlate
+      // with moisture/altitude thinning.
+      const patchNoise = fbm01(speciesNoise, wx * SPECIES_PATCH_SCALE, wz * SPECIES_PATCH_SCALE, SPECIES_PATCH_FBM)
+      const herbWeight = THREE.MathUtils.smoothstep(
+        patchNoise,
+        0.5 - SPECIES_BAND_HALF_WIDTH,
+        0.5 + SPECIES_BAND_HALF_WIDTH,
+      )
+      const isHerb = random() < herbWeight
+
+      if (isHerb) {
+        const bladeHeight = HERB_HEIGHT_MIN + random() * (HERB_HEIGHT_MAX - HERB_HEIGHT_MIN)
+        const bladeWidth = HERB_WIDTH_MIN + random() * (HERB_WIDTH_MAX - HERB_WIDTH_MIN)
+        pushInstance(buckets.herb, localX, localZ, h, rotationY, bladeHeight, bladeWidth, tmpColor, jitter, random)
+      } else {
+        const bladeHeight = BLADE_HEIGHT_MIN + random() * (BLADE_HEIGHT_MAX - BLADE_HEIGHT_MIN)
+        const bladeWidth = BLADE_WIDTH_MIN + random() * (BLADE_WIDTH_MAX - BLADE_WIDTH_MIN)
+        const subtype: SpeciesId = random() < GRAIN_RATIO ? 'grain' : 'tri'
+        pushInstance(
+          buckets[subtype],
+          localX,
+          localZ,
+          h,
+          rotationY,
+          bladeHeight,
+          bladeWidth,
+          tmpColor,
+          jitter,
+          random,
+        )
+      }
     }
 
-    if (count === 0) return null
+    const group = new THREE.Group()
+    group.position.set(chunkOriginX, 0, chunkOriginZ)
+    group.name = 'chunk-grass'
 
-    const geometry = new THREE.BufferGeometry()
-    // Clone the shared template's attributes rather than referencing them
-    // directly — every chunk's `BufferGeometry.dispose()` (on unload) frees
-    // every attribute it holds, and referencing the template by identity would
-    // free the GPU buffer backing *every other* grass chunk's blade shape too.
-    // Cheap: ~20 vertices.
-    geometry.setAttribute('position', template.position.clone())
-    geometry.setIndex(template.index.clone())
-    geometry.setAttribute('aPhase', new THREE.InstancedBufferAttribute(new Float32Array(phases), 1))
-    geometry.setAttribute(
-      'aBaseColor',
-      new THREE.InstancedBufferAttribute(new Float32Array(baseColors), 3),
-    )
-    geometry.setAttribute(
-      'aTipColor',
-      new THREE.InstancedBufferAttribute(new Float32Array(tipColors), 3),
-    )
+    const subMeshes: { mesh: THREE.InstancedMesh, fullCount: number }[] = []
+    let totalCount = 0
 
-    const mesh = new THREE.InstancedMesh(geometry, material, count)
-    mesh.instanceMatrix = new THREE.InstancedBufferAttribute(matrixData.slice(0, count * 16), 16)
-    mesh.instanceMatrix.needsUpdate = true
-    mesh.computeBoundingSphere() // instance matrices spread well beyond the unit template's own bounds
-    mesh.position.set(chunkOriginX, 0, chunkOriginZ)
-    mesh.name = 'chunk-grass'
+    for (const id of Object.keys(buckets) as SpeciesId[]) {
+      const bucket = buckets[id]
+      if (bucket.count === 0) continue
+      totalCount += bucket.count
+
+      const geometry = new THREE.BufferGeometry()
+      // Clone the shared template's attributes rather than referencing them
+      // directly — every chunk's `BufferGeometry.dispose()` (on unload) frees
+      // every attribute it holds, and referencing the template by identity would
+      // free the GPU buffer backing *every other* grass chunk's blade shape too.
+      // Cheap: a few dozen vertices per template.
+      geometry.setAttribute('position', templates[id].position.clone())
+      geometry.setIndex(templates[id].index.clone())
+      geometry.setAttribute(
+        'aPhase',
+        new THREE.InstancedBufferAttribute(new Float32Array(bucket.phases), 1),
+      )
+      geometry.setAttribute(
+        'aBaseColor',
+        new THREE.InstancedBufferAttribute(new Float32Array(bucket.baseColors), 3),
+      )
+      geometry.setAttribute(
+        'aTipColor',
+        new THREE.InstancedBufferAttribute(new Float32Array(bucket.tipColors), 3),
+      )
+
+      const mesh = new THREE.InstancedMesh(geometry, material, bucket.count)
+      mesh.instanceMatrix = new THREE.InstancedBufferAttribute(
+        bucket.matrixData.slice(0, bucket.count * 16),
+        16,
+      )
+      mesh.instanceMatrix.needsUpdate = true
+      mesh.computeBoundingSphere() // instance matrices spread well beyond the unit template's own bounds
+      mesh.name = `chunk-grass-${id}`
+      group.add(mesh)
+      subMeshes.push({ mesh, fullCount: bucket.count })
+    }
+
+    if (totalCount === 0) return null
 
     return {
-      mesh,
-      fullCount: count,
+      mesh: group,
+      fullCount: totalCount,
       setLodFraction(fraction) {
-        mesh.count = Math.max(1, Math.min(count, Math.round(count * fraction)))
+        for (const sub of subMeshes) {
+          sub.mesh.count = Math.max(1, Math.min(sub.fullCount, Math.round(sub.fullCount * fraction)))
+        }
       },
       dispose: () => {
-        mesh.removeFromParent()
-        geometry.dispose()
-        mesh.dispose() // frees instanceMatrix's own GPU buffer — geometry.dispose() alone does not
+        group.removeFromParent()
+        for (const sub of subMeshes) {
+          sub.mesh.geometry.dispose()
+          sub.mesh.dispose() // frees instanceMatrix's own GPU buffer — geometry.dispose() alone does not
+        }
       },
     }
   }
@@ -377,4 +623,18 @@ export function createGrassSystem(): GrassSystem {
       material.dispose()
     },
   }
+}
+
+// One noise handle per world seed, same caching idea as chunkHeightmap.ts's
+// noiseHandlesFor — createGrassSystem() has no seed at construction time (it's
+// created once in chunkManager.ts before any chunk/seed-specific call), so the
+// handle is built lazily on first use per seed instead.
+const speciesNoiseCache = new Map<number, ReturnType<typeof createNoise2D>>()
+function speciesNoiseFor(seed: number): ReturnType<typeof createNoise2D> {
+  let noise = speciesNoiseCache.get(seed)
+  if (!noise) {
+    noise = createNoise2D(createSeededRandom(seed ^ 0x6a09e667))
+    speciesNoiseCache.set(seed, noise)
+  }
+  return noise
 }
