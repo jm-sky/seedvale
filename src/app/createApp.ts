@@ -48,6 +48,7 @@ import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { createResourceDeposits } from '../terrain/resourceDeposits'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
+import { createInventoryScreen } from '../ui/createInventoryScreen'
 import { createLoadingScreen } from '../ui/createLoadingScreen'
 import { createMinimap, type MinimapSettlement } from '../ui/createMinimap'
 import { createNpcDialog } from '../ui/createNpcDialog'
@@ -92,6 +93,19 @@ const GAZE_RANGE = INTERACT_RANGE * 2
 /** Chance an `[E]`-inspected tree also yields a branch, on top of the
  *  renewable branch spawn points (`createItemSpawners.ts`). */
 const TREE_BRANCH_CHANCE = 0.25
+/** Added to `TREE_BRANCH_CHANCE` while the player carries a knife (plan
+ *  `2026-08-08--043` §9) — a bonus, not a hard requirement. */
+const KNIFE_BRANCH_BONUS = 0.15
+/** Player-inventory tools/utility granted for free if missing — covers both a
+ *  brand-new game and saves from before this feature existed (plan §11's
+ *  "stare save'y muszą nadal działać"). Doesn't fire for a player who has
+ *  simply dropped one — `count` only hits 0 there if they also never picked
+ *  it back up, an acceptable v1 edge case for tools that never consume. */
+const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
+  knife: 1,
+  firestarter: 1,
+  blanket: 1,
+}
 /** Resource cost of building a freeform campfire from the pause menu
  *  (`settlement/PlacedFires.ts`) — a stone "fire pit" ring plus branches to
  *  get it started. */
@@ -113,6 +127,15 @@ function homeChunks(): ChunkCoord[] {
     for (let cx = -1; cx <= 1; cx++) coords.push({ cx, cz })
   }
   return coords
+}
+
+/** Adds any `STARTING_LOADOUT` kind the inventory doesn't already have —
+ *  called both for a fresh `Inventory` and after `inventory.clear()` (New
+ *  Game), so the player is never left without a firestarter/knife/blanket. */
+function grantStartingLoadout(inventory: Inventory): void {
+  for (const [kind, count] of Object.entries(STARTING_LOADOUT) as [ItemKind, number][]) {
+    if (inventory.count(kind) <= 0) inventory.add(kind, count)
+  }
 }
 
 export async function createApp(
@@ -223,6 +246,7 @@ export async function createApp(
   let droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialSave?.droppedItems ?? [])
   let placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialSave?.placedFires ?? [])
   const inventory = new Inventory(initialSave?.inventory)
+  grantStartingLoadout(inventory)
 
   const keyboard = createKeyboard()
   const mouseLook = createMouseLook(renderer.domElement)
@@ -267,7 +291,7 @@ export async function createApp(
     initialSave?.quests,
   )
   hud.setExp(questManager.getExp())
-  hud.setInventory(inventory.toJSON())
+  hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
 
   let rebuilding = false
   /** Pass `resetCollectedItems: true` only for a genuinely new world (new seed,
@@ -298,8 +322,9 @@ export async function createApp(
       if (resetCollectedItems) {
         collectedItemIds = new Set()
         inventory.clear()
+        grantStartingLoadout(inventory)
         questManager.reset()
-        hud.setInventory(inventory.toJSON())
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         hud.setExp(questManager.getExp())
         touchControls?.setDropAvailable(!inventory.isEmpty())
       }
@@ -405,6 +430,29 @@ export async function createApp(
   const questLog = createQuestLog(container)
   const villagersScreen = createVillagersScreen(container)
 
+  /** Drops the whole carried stack of `kind` back into the world at the
+   *  player's feet, scattered slightly — the "Wyrzuć" action in
+   *  `createInventoryScreen.ts`. Re-`refresh()`es the (already-open) screen
+   *  immediately since world simulation is frozen while it's open (see the
+   *  tick loop's modal-gating below) — nothing else will update it. */
+  const dropItemStack = (kind: ItemKind): void => {
+    const count = inventory.count(kind)
+    if (count <= 0) return
+    inventory.remove(kind, count)
+    for (let i = 0; i < count; i++) {
+      const angle = i * ((Math.PI * 2) / count)
+      droppedItems.drop(
+        kind,
+        player.mesh.position.x + Math.cos(angle) * 0.6,
+        player.mesh.position.z + Math.sin(angle) * 0.6,
+      )
+    }
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    touchControls?.setDropAvailable(!inventory.isEmpty())
+    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight)
+  }
+  const inventoryScreen = createInventoryScreen(container, { onDrop: dropItemStack })
+
   // Shared by the pause menu's "Zbuduj ognisko" button and the quick-actions
   // popup below — two UI entry points onto identical logic, not a duplicate.
   const buildCampfire = (): boolean => {
@@ -414,7 +462,7 @@ export async function createApp(
     inventory.remove('branch', CAMPFIRE_BRANCH_COST)
     inventory.remove('stone', CAMPFIRE_STONE_COST)
     placedFires.place(player.mesh.position.x, player.mesh.position.z)
-    hud.setInventory(inventory.toJSON())
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     touchControls?.setDropAvailable(!inventory.isEmpty())
     return true
   }
@@ -428,6 +476,7 @@ export async function createApp(
       timeSkip.start(hours, { fade: false, label: `Czekasz... (${hours}h)` })
     },
     onRest: (variant) => {
+      if (!inventory.has('blanket', 1)) return 'no-blanket'
       if (variant === 'town') {
         const nearSettlement = settlementsManager
           .getLoaded()
@@ -457,6 +506,10 @@ export async function createApp(
         .flatMap((s) => s.npcs.map((npc) => ({ npc, settlementName: s.name, foodSourceType: s.foodSourceType }))),
     )
   }
+  const openInventory = () => {
+    inventoryScreen.open()
+    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight)
+  }
 
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
     onPause: () => {
@@ -467,6 +520,7 @@ export async function createApp(
     onResume: () => {},
     onQuestLog: openQuestLog,
     onVillagers: openVillagers,
+    onInventory: openInventory,
     onToggleGui: () => gui.toggle(),
     onNameChange: (name) => player.setName(name),
     onNameCommit: (name) => {
@@ -492,19 +546,19 @@ export async function createApp(
         // the rest of the touch layer, since it now lives outside
         // .seedvale-touch (see the top-right cluster below).
         onPauseToggle: () => {
-          if (!npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen()) {
+          if (!npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen() && !inventoryScreen.isOpen()) {
             pauseMenu.togglePause()
           }
         },
         onQuickActions: () => {
-          if (!npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen()) {
+          if (!npcDialog.isOpen() && !questLog.isOpen() && !villagersScreen.isOpen() && !inventoryScreen.isOpen()) {
             quickActions.toggle()
           }
         },
       })
     : null
   // Reflects any inventory carried over from a loaded save — later changes are
-  // synced at each pickup/drop call site alongside hud.setInventory().
+  // synced at each pickup/drop call site alongside hud.setInventoryWeight().
   touchControls?.setDropAvailable(!inventory.isEmpty())
 
   // Shared flex column, right-aligned, holding the ☰ pause button + minimap —
@@ -609,6 +663,7 @@ export async function createApp(
       npcDialog.isOpen() ||
       questLog.isOpen() ||
       villagersScreen.isOpen() ||
+      inventoryScreen.isOpen() ||
       quickActions.isOpen()
     touchControls?.setInputEnabled(!anyModalOpen && !timeSkip.isActive())
 
@@ -617,11 +672,13 @@ export async function createApp(
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
+      keyboard.consumeInventory()
       setHighlight(null)
     } else if (npcDialog.isOpen()) {
       npcDialog.setPrompt(null)
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
+      keyboard.consumeInventory()
       setHighlight(null)
       if (keyboard.consumeInteract()) {
         if (npcDialog.isOffer()) npcDialog.accept()
@@ -630,22 +687,32 @@ export async function createApp(
     } else if (questLog.isOpen()) {
       keyboard.consumeInteract()
       keyboard.consumeDrop()
+      keyboard.consumeInventory()
       setHighlight(null)
       if (keyboard.consumeQuestLog()) questLog.close()
     } else if (villagersScreen.isOpen()) {
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
+      keyboard.consumeInventory()
       setHighlight(null)
+    } else if (inventoryScreen.isOpen()) {
+      keyboard.consumeInteract()
+      keyboard.consumeQuestLog()
+      keyboard.consumeDrop()
+      setHighlight(null)
+      if (keyboard.consumeInventory()) inventoryScreen.close()
     } else if (quickActions.isOpen()) {
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
+      keyboard.consumeInventory()
       setHighlight(null)
     } else if (timeSkip.isActive()) {
       keyboard.consumeInteract()
       keyboard.consumeQuestLog()
       keyboard.consumeDrop()
+      keyboard.consumeInventory()
       setHighlight(null)
     } else {
       const interactables = buildInteractables(
@@ -682,18 +749,24 @@ export async function createApp(
       const interactPressed = keyboard.consumeInteract()
       if (target && interactPressed) {
         if (target.kind === 'item') {
-          const collected = collectItem(target.item, chunkManager, itemSpawners, droppedItems)
-          if (collected) {
-            inventory.add(collected.kind)
-            hud.setInventory(inventory.toJSON())
-            touchControls?.setDropAvailable(!inventory.isEmpty())
+          if (!inventory.canAdd(target.item.kind)) {
+            npcDialog.open('Ekwipunek', 'Ekwipunek jest za ciężki.')
+          } else {
+            const collected = collectItem(target.item, chunkManager, itemSpawners, droppedItems)
+            if (collected) {
+              inventory.add(collected.kind)
+              hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+              touchControls?.setDropAvailable(!inventory.isEmpty())
+            }
           }
         } else if (target.kind === 'campfire') {
-          if (inventory.remove('branch', 1)) {
-            const wasLit = target.fire.isLit()
+          const wasLit = target.fire.isLit()
+          if (!wasLit && !inventory.has('firestarter', 1)) {
+            npcDialog.open('Ognisko', 'Potrzebujesz krzesiwa, żeby rozpalić ogień.')
+          } else if (inventory.remove('branch', 1)) {
             if (wasLit) target.fire.addFuel()
             else target.fire.light()
-            hud.setInventory(inventory.toJSON())
+            hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
             touchControls?.setDropAvailable(!inventory.isEmpty())
             npcDialog.open('Ognisko', wasLit ? 'Dołożono gałąź do ogniska.' : 'Ognisko zapłonęło.')
           } else {
@@ -702,9 +775,10 @@ export async function createApp(
         } else if (target.kind === 'tree') {
           const outcome = resolveInteraction(target, questManager)
           let line = outcome.line
-          if (Math.random() < TREE_BRANCH_CHANCE) {
+          const branchChance = TREE_BRANCH_CHANCE + (inventory.has('knife', 1) ? KNIFE_BRANCH_BONUS : 0)
+          if (Math.random() < branchChance && inventory.canAdd('branch')) {
             inventory.add('branch')
-            hud.setInventory(inventory.toJSON())
+            hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
             touchControls?.setDropAvailable(!inventory.isEmpty())
             line += ' Pod drzewem leży sucha gałąź.'
           }
@@ -715,6 +789,7 @@ export async function createApp(
         }
       }
       if (keyboard.consumeQuestLog()) openQuestLog()
+      if (keyboard.consumeInventory()) openInventory()
       if (keyboard.consumeDrop()) {
         let dropOffset = 0
         const itemKinds = Object.keys(ITEM_DEFS) as ItemKind[]
@@ -729,7 +804,7 @@ export async function createApp(
           dropOffset++
         }
         if (dropOffset > 0) {
-          hud.setInventory(inventory.toJSON())
+          hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
           touchControls?.setDropAvailable(!inventory.isEmpty())
         }
       }
@@ -740,6 +815,7 @@ export async function createApp(
       !npcDialog.isOpen() &&
       !questLog.isOpen() &&
       !villagersScreen.isOpen() &&
+      !inventoryScreen.isOpen() &&
       !quickActions.isOpen()
     ) {
       for (const s of settlementsManager.getLoaded()) {
@@ -819,6 +895,7 @@ export async function createApp(
     npcDialog.dispose()
     questLog.dispose()
     villagersScreen.dispose()
+    inventoryScreen.dispose()
     quickActions.dispose()
     hud.dispose()
     minimap.dispose()

@@ -2,9 +2,11 @@
 
 > Szkic od ChatGPT
 
-**Status:** `planned`  
+**Status:** `verification needed`  
 **Created:** 2026-08-08  
 **Priority:** średni
+
+Zaimplementowane: **punkty 1-11** — `ItemDef` z `category`/`weight`, `Inventory` z `maxWeight`/`canAdd()`, ekran „Ekwipunek" (`[I]`, `src/ui/createInventoryScreen.ts`) z akcją Wyrzuć, nóż/krzesiwo/koc jako startowy loadout (też jako migracja dla starych save'ów), krzesiwo wymagane do zapalenia (nie do dołożenia) ogniska, koc wymagany do odpoczynku, nóż jako bonus do szansy na gałąź, HUD pokazuje wagę zamiast liczników. **Nie zaimplementowano** `Użyj`/`Połącz` z §6 — v1 nie ma jeszcze koncepcji "aktywnego narzędzia" ani craftingu (§12), więc te przyciski nie miałyby żadnego działania; kontekstowe sprawdzanie narzędzi (`has('firestarter'|'knife'|'blanket', 1)`) już działa bez nich.
 
 ## Cel
 

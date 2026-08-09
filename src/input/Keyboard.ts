@@ -10,6 +10,8 @@ export type KeyState = {
   questLog: boolean
   /** Edge-triggered: set true on KeyG keydown, cleared by consumeDrop(). */
   drop: boolean
+  /** Edge-triggered: set true on KeyI keydown, cleared by consumeInventory(). */
+  inventory: boolean
 }
 
 const KEY_MAP: Record<string, keyof KeyState> = {
@@ -26,11 +28,12 @@ const KEY_MAP: Record<string, keyof KeyState> = {
   KeyE: 'interact',
   KeyL: 'questLog',
   KeyG: 'drop',
+  KeyI: 'inventory',
 }
 
 /** Actions that latch true on keydown and are cleared by the consumer, not by keyup —
  *  so a tap registers exactly once regardless of how long the key stays down. */
-const EDGE_TRIGGERED = new Set<keyof KeyState>(['drop', 'interact', 'questLog'])
+const EDGE_TRIGGERED = new Set<keyof KeyState>(['drop', 'interact', 'inventory', 'questLog'])
 
 /** True while the event is headed for a text field — the pause menu's Character
  *  name input is the live case. Without this, `KEY_MAP` letters (w/a/s/d/e/l/g)
@@ -54,6 +57,8 @@ export function createKeyboard(): {
   consumeQuestLog: () => boolean
   /** Reads and clears the pending drop press. Returns true at most once per keydown. */
   consumeDrop: () => boolean
+  /** Reads and clears the pending inventory press. Returns true at most once per keydown. */
+  consumeInventory: () => boolean
   dispose: () => void
 } {
   const state: KeyState = {
@@ -65,6 +70,7 @@ export function createKeyboard(): {
     interact: false,
     questLog: false,
     drop: false,
+    inventory: false,
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -105,6 +111,11 @@ export function createKeyboard(): {
     consumeDrop: () => {
       if (!state.drop) return false
       state.drop = false
+      return true
+    },
+    consumeInventory: () => {
+      if (!state.inventory) return false
+      state.inventory = false
       return true
     },
     dispose: () => {

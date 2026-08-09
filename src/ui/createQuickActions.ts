@@ -9,10 +9,11 @@ export type QuickActionsHandlers = {
   /** Starts a "wait" time skip (1/3/6h, visible fast-forward) — see
    *  `world/timeSkip.ts`. */
   onWait?: (hours: number) => void
-  /** Starts an 8h "rest" time skip (fades to black). `'town'` requires the
-   *  player to be near a settlement — returns `'too-far'` (consumes nothing)
-   *  if not; `'camp'` always succeeds. */
-  onRest?: (variant: 'camp' | 'town') => 'ok' | 'too-far'
+  /** Starts an 8h "rest" time skip (fades to black). Both variants require a
+   *  blanket in the inventory — returns `'no-blanket'` (consumes nothing) if
+   *  missing; `'town'` additionally requires the player to be near a
+   *  settlement — returns `'too-far'` (consumes nothing) if not. */
+  onRest?: (variant: 'camp' | 'town') => 'ok' | 'too-far' | 'no-blanket'
 }
 
 export type QuickActions = {
@@ -55,7 +56,10 @@ export function createQuickActions(
       <button type="button" data-wait="6" class="seedvale-quick-actions__button seedvale-quick-actions__button--small">6h</button>
     </div>
     <div class="seedvale-quick-actions__heading">Odpoczynek</div>
-    <button type="button" data-rest="camp" class="seedvale-quick-actions__button">Rozbij obóz (8h)</button>
+    <button type="button" data-rest="camp" class="seedvale-quick-actions__button">
+      Rozbij obóz (8h)
+      <span data-rest-camp-status class="seedvale-quick-actions__status"></span>
+    </button>
     <button type="button" data-rest="town" class="seedvale-quick-actions__button">
       Odpocznij w mieście (8h)
       <span data-rest-town-status class="seedvale-quick-actions__status"></span>
@@ -85,10 +89,25 @@ export function createQuickActions(
     })
   })
 
+  const restStatusText: Record<'too-far' | 'no-blanket', string> = {
+    'too-far': 'Musisz być bliżej wioski',
+    'no-blanket': 'Potrzebujesz koca',
+  }
+
   const campButton = root.querySelector<HTMLButtonElement>('[data-rest="camp"]')!
+  const campStatusEl = root.querySelector<HTMLElement>('[data-rest-camp-status]')!
+  let campStatusTimeout = 0
   campButton.addEventListener('click', () => {
+    const result = handlers.onRest?.('camp') ?? 'no-blanket'
+    if (result !== 'ok') {
+      campStatusEl.textContent = restStatusText[result]
+      window.clearTimeout(campStatusTimeout)
+      campStatusTimeout = window.setTimeout(() => {
+        campStatusEl.textContent = ''
+      }, 1500)
+      return
+    }
     close()
-    handlers.onRest?.('camp')
   })
 
   const townButton = root.querySelector<HTMLButtonElement>('[data-rest="town"]')!
@@ -96,8 +115,8 @@ export function createQuickActions(
   let townStatusTimeout = 0
   townButton.addEventListener('click', () => {
     const result = handlers.onRest?.('town') ?? 'too-far'
-    if (result === 'too-far') {
-      townStatusEl.textContent = 'Musisz być bliżej wioski'
+    if (result !== 'ok') {
+      townStatusEl.textContent = restStatusText[result]
       window.clearTimeout(townStatusTimeout)
       townStatusTimeout = window.setTimeout(() => {
         townStatusEl.textContent = ''
@@ -168,6 +187,7 @@ export function createQuickActions(
       window.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('click', onDocumentClick)
       window.clearTimeout(buildCampfireStatusTimeout)
+      window.clearTimeout(campStatusTimeout)
       window.clearTimeout(townStatusTimeout)
       disposeTouchScroll?.()
       triggerButton?.remove()

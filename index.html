@@ -623,6 +623,100 @@
         font-size: 11px;
         opacity: 0.6;
       }
+      .seedvale-inventory {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        pointer-events: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(10, 14, 18, 0.55);
+        backdrop-filter: blur(2px);
+      }
+      .seedvale-inventory[hidden] {
+        display: none;
+      }
+      .seedvale-inventory__panel {
+        min-width: 360px;
+        max-width: 480px;
+        max-height: 70vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        padding: 24px 28px;
+        border-radius: 10px;
+        background: rgba(20, 24, 28, 0.92);
+        color: #f2f6fa;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      }
+      .seedvale-inventory__panel h1 {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px;
+      }
+      .seedvale-inventory__weight {
+        font-size: 13px;
+        opacity: 0.75;
+        margin-bottom: 16px;
+      }
+      .seedvale-inventory__list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .seedvale-inventory__row {
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .seedvale-inventory__row-main {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .seedvale-inventory__row-name {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .seedvale-inventory__row-category {
+        font-size: 11px;
+        opacity: 0.6;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .seedvale-inventory__row-weight {
+        font-size: 12px;
+        opacity: 0.7;
+      }
+      .seedvale-inventory__drop {
+        align-self: flex-start;
+        margin-top: 2px;
+        padding: 4px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        background: transparent;
+        color: #f2f6fa;
+        font-size: 12px;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      .seedvale-inventory__drop:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .seedvale-inventory__empty {
+        font-size: 13px;
+        opacity: 0.6;
+      }
+      .seedvale-inventory__hint {
+        margin-top: 16px;
+        font-size: 11px;
+        opacity: 0.6;
+      }
       .npc-label {
         padding: 2px 6px;
         border-radius: 4px;
@@ -922,7 +1016,8 @@
         .seedvale-pause__panel,
         .seedvale-npc-dialog__panel,
         .seedvale-quest-log__panel,
-        .seedvale-villagers__panel {
+        .seedvale-villagers__panel,
+        .seedvale-inventory__panel {
           min-width: 0;
           width: min(420px, calc(100vw - 32px));
           max-width: calc(100vw - 32px);
