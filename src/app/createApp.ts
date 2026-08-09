@@ -56,6 +56,7 @@ import { createPauseMenu } from '../ui/createPauseMenu'
 import { createQuestLog } from '../ui/createQuestLog'
 import { createQuickActions } from '../ui/createQuickActions'
 import { createTimeSkipOverlay } from '../ui/createTimeSkipOverlay'
+import { createToast } from '../ui/createToast'
 import { createVillagersScreen } from '../ui/createVillagersScreen'
 import { createLights } from '../world/createLights'
 import { createOcean, type WorldOcean } from '../world/createOcean'
@@ -272,6 +273,7 @@ export async function createApp(
   const hud = createHud(container)
   hud.setSeed(config.seed)
   hud.setTime(dayNight.timeOfDay)
+  const toast = createToast(container)
 
   /** Currently gaze-highlighted NPC/animal, if any — tracked so we only toggle
    *  the CSS class on change instead of writing every frame. */
@@ -750,7 +752,7 @@ export async function createApp(
       if (target && interactPressed) {
         if (target.kind === 'item') {
           if (!inventory.canAdd(target.item.kind)) {
-            npcDialog.open('Ekwipunek', 'Ekwipunek jest za ciężki.')
+            toast.show('Ekwipunek jest za ciężki.', 'error')
           } else {
             const collected = collectItem(target.item, chunkManager, itemSpawners, droppedItems)
             if (collected) {
@@ -762,27 +764,26 @@ export async function createApp(
         } else if (target.kind === 'campfire') {
           const wasLit = target.fire.isLit()
           if (!wasLit && !inventory.has('firestarter', 1)) {
-            npcDialog.open('Ognisko', 'Potrzebujesz krzesiwa, żeby rozpalić ogień.')
+            toast.show('Potrzebujesz krzesiwa, żeby rozpalić ogień.', 'error')
           } else if (inventory.remove('branch', 1)) {
             if (wasLit) target.fire.addFuel()
             else target.fire.light()
             hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
             touchControls?.setDropAvailable(!inventory.isEmpty())
-            npcDialog.open('Ognisko', wasLit ? 'Dołożono gałąź do ogniska.' : 'Ognisko zapłonęło.')
+            toast.show(wasLit ? 'Dołożono gałąź do ogniska.' : 'Ognisko zapłonęło.')
           } else {
-            npcDialog.open('Ognisko', 'Potrzebujesz gałęzi, żeby je zapalić.')
+            toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
           }
         } else if (target.kind === 'tree') {
           const outcome = resolveInteraction(target, questManager)
-          let line = outcome.line
           const branchChance = TREE_BRANCH_CHANCE + (inventory.has('knife', 1) ? KNIFE_BRANCH_BONUS : 0)
           if (Math.random() < branchChance && inventory.canAdd('branch')) {
             inventory.add('branch')
             hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
             touchControls?.setDropAvailable(!inventory.isEmpty())
-            line += ' Pod drzewem leży sucha gałąź.'
+            toast.show('+1 Gałąź', 'pickup')
           }
-          npcDialog.open(outcome.speakerName, line, outcome.offer)
+          npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
@@ -857,10 +858,10 @@ export async function createApp(
         ...placedFires.list().filter((f) => f.fire.isLit()).map((f) => f.fire.position),
       ]
       const villages = settlementsManager.getLoaded().map((s) => ({ x: s.center.x, z: s.center.z }))
-      settlementsManager.update(dt, player.mesh.position, dayFactor, litFires, villages)
+      settlementsManager.update(dt, player.mesh.position, mouseLook.state.yaw, dayFactor, litFires, villages)
       resourceDeposits.update(player.mesh.position.x, player.mesh.position.z)
       fauna.update(dt, player.mesh.position, dayNight.timeOfDay, litFires, villages)
-      itemSpawners.update(dt, player.mesh.position)
+      itemSpawners.update(dt, player.mesh.position, dayFactor)
       placedFires.update(dt)
       chunkManager.tickWater(dt)
       chunkManager.tickGrass(dt)
@@ -898,6 +899,7 @@ export async function createApp(
     inventoryScreen.dispose()
     quickActions.dispose()
     hud.dispose()
+    toast.dispose()
     minimap.dispose()
     keyboard.dispose()
     mouseLook.dispose()

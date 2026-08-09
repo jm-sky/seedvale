@@ -24,7 +24,12 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 006 | [2026-08-08--006--villagers-list-virtualization.md](./2026-08-08--006--villagers-list-virtualization.md) | Ekran Mieszkańcy renderuje całą listę naraz — dodać paginację/infinite/virtual scroll przy większej liczbie NPC | `todo` |
 | 007 | [2026-08-08--007--npc-labels-over-modals.md](./2026-08-08--007--npc-labels-over-modals.md) | Etykiety NPC widoczne nad otwartym menu (pauza/quest log/Mieszkańcy/dialog) — brak `z-index` na `labelRenderer.domElement` | `verification needed` |
 | 008 | [2026-08-09--008--npc-missing-surname.md](./2026-08-09--008--npc-missing-surname.md) | NPC-e nie mają nazwiska — brak pola w danych, nie tylko w UI; etykieta uproszczona (bez potrzeby) przy okazji | `verification needed` |
+| 009 | [2026-08-10--009--ocean-normal-map-reflection-blotches.md](./2026-08-10--009--ocean-normal-map-reflection-blotches.md) | Ocean pokazuje gęste, "chmurowe" odbicia z twardymi krawędziami między kolorami — regresja po zagęszczeniu normal-mapy terenu | `verification needed` |
+| 010 | [2026-08-10--010--npc-group-reaction-dampening.md](./2026-08-10--010--npc-group-reaction-dampening.md) | NPC w grupie reagują ("Hmm?") tak samo często jak samotne — brak tłumienia zależnego od liczby pobliskich NPC/openness | `verification needed` |
+| 011 | [2026-08-10--011--item-label-visibility-distance-darkness.md](./2026-08-10--011--item-label-visibility-distance-darkness.md) | Etykiety drobnych przedmiotów widoczne za daleko i w ciemności — te same progi co etykiety NPC | `verification needed` |
+| 012 | [2026-08-10--012--toast-notifications-for-quick-feedback.md](./2026-08-10--012--toast-notifications-for-quick-feedback.md) | Krótkie akcje (ognisko, znaleziona gałąź) niepotrzebnie blokują grę pełnym dialogiem zamiast toastu | `verification needed` |
+| 013 | [2026-08-10--013--npc-label-gaze-cone-dimming.md](./2026-08-10--013--npc-label-gaze-cone-dimming.md) | NPC labels przygasają do 50%, gdy gracz nie patrzy w ich stronę (~90° stożek) | `verification needed` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `009`
+**Next ID:** `014`

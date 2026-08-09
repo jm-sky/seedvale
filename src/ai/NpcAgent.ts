@@ -10,7 +10,7 @@ import {
   prepareProp,
 } from '../assets/loadGltf'
 import { applyFatigue, createHealthState, type HealthState, rest } from '../shared/HealthState'
-import { labelOpacityForDistance } from '../ui/labelDistance'
+import { gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import {
   type CharacterDef,
   genderForName,
@@ -43,6 +43,17 @@ const ARRIVE = 0.55
 const NPC_HEIGHT = 1.75
 /** Minimum clearance above waterLevel an NPC will walk into or wander toward. */
 const WATER_MARGIN = 0.3
+
+/** How strongly nearby NPCs suppress this NPC's chance to react ("Hmm?") to
+ *  the player, scaled by `nearbyNpcCount * (1 - openness)` — see
+ *  `reactionChance` in `update()`. A lone NPC (`nearbyNpcCount === 0`) always
+ *  keeps its full chance regardless of this constant (issue 010). */
+const GROUP_SUPPRESSION_STRENGTH = 0.6
+/** Retry delay after a suppressed (rolled-and-failed) reaction check — much
+ *  shorter than the normal post-reaction `cooldownRange`, so a lingering
+ *  player can still eventually trigger it, just at a throttled cadence
+ *  instead of re-rolling every frame. */
+const SUPPRESSED_REACTION_RETRY_COOLDOWN = 1.5
 
 export type { NpcGender }
 export { genderForName }
@@ -395,10 +406,22 @@ export class NpcAgent {
     this.labelEl.classList.toggle('npc-label--highlighted', active)
   }
 
-  /** `isNight` — from `dayNight.ts`'s clock, forwarded through
+  /** `observerYaw` — player look direction (radians, same convention as
+   *  `MouseLook`'s `state.yaw`), used only to dim this NPC's label when the
+   *  player isn't facing toward it (see the gaze-cone opacity factor below).
+   *  `isNight` — from `dayNight.ts`'s clock, forwarded through
    *  `Settlement`/`SettlementsManager.setDayNight` (see `createSettlement.ts`).
-   *  `night_owl` NPCs ignore it and keep their normal routine. */
-  update(dt: number, observerPos: THREE.Vector3, isNight: boolean): void {
+   *  `night_owl` NPCs ignore it and keep their normal routine.
+   *  `nearbyNpcCount` — other NPCs from the same settlement within
+   *  `GROUP_REACTION_RADIUS` (`createSettlement.ts`), used to dampen the
+   *  reaction-sound trigger chance below (issue 010). */
+  update(
+    dt: number,
+    observerPos: THREE.Vector3,
+    observerYaw: number,
+    isNight: boolean,
+    nearbyNpcCount: number,
+  ): void {
     tickNeeds(this.needs, dt)
     this.moving = false
 
@@ -414,10 +437,20 @@ export class NpcAgent {
       const dz = this.mesh.position.z - observerPos.z
       const params = this.pauseParams
       if (Math.hypot(dx, dz) < params.triggerDistance) {
-        this.previousPhase = this.phase
-        this.phase = 'lookAtPlayer'
-        this.pauseTimer = randRange(params.lookDurationRange)
-        this.playReactionSound()
+        // A lone NPC (nearbyNpcCount 0) always reacts, same as before this
+        // was added. In a group, the chance drops with how many others are
+        // close by — scaled by (1 - openness) so an open/curious NPC barely
+        // cares about the crowd while a closed one goes quiet in company.
+        const reactionChance =
+          1 / (1 + GROUP_SUPPRESSION_STRENGTH * nearbyNpcCount * (1 - this.personality.openness))
+        if (Math.random() < reactionChance) {
+          this.previousPhase = this.phase
+          this.phase = 'lookAtPlayer'
+          this.pauseTimer = randRange(params.lookDurationRange)
+          this.playReactionSound()
+        } else {
+          this.pauseCooldown = SUPPRESSED_REACTION_RETRY_COOLDOWN
+        }
       }
     }
 
@@ -534,7 +567,12 @@ export class NpcAgent {
       this.lastLabelText = labelText
       this.labelEl.textContent = labelText
     }
-    const opacity = labelOpacityForDistance(this.mesh.position.distanceTo(observerPos))
+    const gaze = gazeOpacityFactor(
+      this.mesh.position.x - observerPos.x,
+      this.mesh.position.z - observerPos.z,
+      observerYaw,
+    )
+    const opacity = labelOpacityForDistance(this.mesh.position.distanceTo(observerPos)) * gaze
     if (opacity !== this.lastLabelOpacity) {
       this.lastLabelOpacity = opacity
       this.labelEl.style.opacity = String(opacity)
