@@ -18,6 +18,7 @@ export type PauseMenuHandlers = {
   onNewGame?: () => void
   onQuestLog?: () => void
   onVillagers?: () => void
+  onInventory?: () => void
 }
 
 export type PauseMenu = {
@@ -57,6 +58,7 @@ export function createPauseMenu(
       <button type="button" data-resume class="seedvale-pause__button">Resume</button>
       <button type="button" data-quest-log class="seedvale-pause__button seedvale-pause__button--ghost">Zadania [L]</button>
       <button type="button" data-villagers class="seedvale-pause__button seedvale-pause__button--ghost">Mieszkańcy</button>
+      <button type="button" data-inventory class="seedvale-pause__button seedvale-pause__button--ghost">Ekwipunek [I]</button>
       <button type="button" data-save class="seedvale-pause__button seedvale-pause__button--ghost">Save<span data-save-status class="seedvale-pause__save-status"></span></button>
       <button type="button" data-gui class="seedvale-pause__button seedvale-pause__button--ghost">Toggle debug panel</button>
       <button type="button" data-build-campfire class="seedvale-pause__button seedvale-pause__button--ghost">Zbuduj ognisko (2x gałąź, 2x kamień)<span data-build-campfire-status class="seedvale-pause__save-status"></span></button>
@@ -79,6 +81,7 @@ export function createPauseMenu(
   const resumeButton = root.querySelector<HTMLButtonElement>('[data-resume]')!
   const questLogButton = root.querySelector<HTMLButtonElement>('[data-quest-log]')!
   const villagersButton = root.querySelector<HTMLButtonElement>('[data-villagers]')!
+  const inventoryButton = root.querySelector<HTMLButtonElement>('[data-inventory]')!
   const guiButton = root.querySelector<HTMLButtonElement>('[data-gui]')!
   const refreshButton = root.querySelector<HTMLButtonElement>('[data-refresh]')!
   const buildCampfireButton = root.querySelector<HTMLButtonElement>('[data-build-campfire]')!
@@ -153,6 +156,10 @@ export function createPauseMenu(
   villagersButton.addEventListener('click', () => {
     setPaused(false)
     handlers.onVillagers?.()
+  })
+  inventoryButton.addEventListener('click', () => {
+    setPaused(false)
+    handlers.onInventory?.()
   })
   guiButton.addEventListener('click', () => handlers.onToggleGui?.())
   refreshButton.addEventListener('click', () => handlers.onRefresh?.())

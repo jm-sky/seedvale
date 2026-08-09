@@ -1,5 +1,4 @@
 import { isTouchDevice } from '../input/isTouchDevice'
-import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { formatClock, phaseName } from '../world/dayNight'
 
 export type Hud = {
@@ -7,7 +6,10 @@ export type Hud = {
   setSeed: (seed: number) => void
   setTime: (timeOfDay: number) => void
   setExp: (exp: number) => void
-  setInventory: (counts: Partial<Record<ItemKind, number>>) => void
+  /** Total carried weight vs. `Inventory.maxWeight` — replaces the old
+   *  per-item text counters (plan `2026-08-08--043` §10); the full breakdown
+   *  now lives in `createInventoryScreen.ts` (`[I]`). */
+  setInventoryWeight: (current: number, max: number) => void
   dispose: () => void
 }
 
@@ -20,12 +22,12 @@ export function createHud(parent: HTMLElement): Hud {
       <span data-phase></span>
       <span data-seed></span>
       <span data-exp></span>
-      <span data-inventory></span>
+      <span data-weight></span>
     </div>
     <div class="seedvale-hud__hint">${
       isTouchDevice()
         ? 'Joystick = ruch · przeciągnij = kamera · E = interakcja'
-        : 'WASD · klik = mysz · Esc = kursor · L = zadania · G = upuść'
+        : 'WASD · klik = mysz · Esc = kursor · L = zadania · I = ekwipunek · G = upuść'
     }</div>
   `
   parent.appendChild(root)
@@ -34,7 +36,7 @@ export function createHud(parent: HTMLElement): Hud {
   const phaseEl = root.querySelector('[data-phase]')!
   const seedEl = root.querySelector('[data-seed]')!
   const expEl = root.querySelector('[data-exp]')!
-  const inventoryEl = root.querySelector('[data-inventory]')!
+  const weightEl = root.querySelector('[data-weight]')!
 
   // `formatClock`/`phaseName` are called every frame (`timeOfDay` advances
   // continuously), but the rendered string only actually changes a few times
@@ -42,7 +44,7 @@ export function createHud(parent: HTMLElement): Hud {
   let lastTime = ''
   let lastPhase = ''
   let lastExp = ''
-  let lastInventory = ''
+  let lastWeight = ''
 
   return {
     root,
@@ -67,13 +69,11 @@ export function createHud(parent: HTMLElement): Hud {
       lastExp = text
       expEl.textContent = text
     },
-    setInventory(counts) {
-      const text = (Object.keys(ITEM_DEFS) as ItemKind[])
-        .map((kind) => `${ITEM_DEFS[kind].label} ${counts[kind] ?? 0}`)
-        .join(' · ')
-      if (text === lastInventory) return
-      lastInventory = text
-      inventoryEl.textContent = text
+    setInventoryWeight(current, max) {
+      const text = `${current.toFixed(1)}/${max.toFixed(1)} kg`
+      if (text === lastWeight) return
+      lastWeight = text
+      weightEl.textContent = text
     },
     dispose() {
       root.remove()
