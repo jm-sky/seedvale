@@ -1,6 +1,6 @@
 # NPC Dialogues v2
 
-**Status:** `todo` — draft zweryfikowany wobec kodu 2026-08-10, zakres v1 przycięty, projekt techniczny gotowy do implementacji; zero kodu jeszcze napisane. **Zależy od** [plan 046 (Vue.js + Tailwind stack)](./2026-08-09--046--vue-tailwind-ui-stack.md) Faza 0 (setup) — nowe menu dialogowe budujemy w Vue, nie jako kolejny moduł vanilla DOM (decyzja użytkownika 2026-08-10, patrz „Zależność" niżej).
+**Status:** `todo` — draft zweryfikowany wobec kodu 2026-08-10, zakres v1 przycięty, projekt techniczny gotowy do implementacji; zero kodu tego planu jeszcze napisane. **Zależność odblokowana 2026-08-10:** [plan 046 (Vue.js + Tailwind stack)](./2026-08-09--046--vue-tailwind-ui-stack.md) Faza 0 (setup) jest już `done` — nowe menu dialogowe (budowane w Vue, nie jako kolejny moduł vanilla DOM, decyzja użytkownika 2026-08-10) może ruszyć bez dalszych prerequisite'ów, patrz „Zależność" niżej.
 
 > Sekcje 1-14 poniżej to oryginalny draft — wizja produktowa, spisana bez dostępu do repo. Review i decyzje poniżej weryfikują ją wobec faktycznego kodu i przycinają zakres v1; sam draft zostaje jako dokumentacja docelowego kierunku.
 

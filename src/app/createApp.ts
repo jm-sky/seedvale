@@ -46,6 +46,7 @@ import {
 } from '../terrain/chunkManager'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { createResourceDeposits } from '../terrain/resourceDeposits'
+import { mountVueUi } from '../ui-vue/mount'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
 import { createInventoryScreen } from '../ui/createInventoryScreen'
@@ -186,6 +187,10 @@ export async function createApp(
   // NPC labels never draw over modals (pause menu, quest log, villagers, dialog).
   labelRenderer.domElement.style.zIndex = '1'
   container.appendChild(labelRenderer.domElement)
+
+  // Vue/Tailwind UI overlay (plan 046) — dynamically imported so it doesn't
+  // delay first paint (see `mountVueUi`'s doc comment).
+  const vueUi = mountVueUi(container)
 
   const scene = createScene()
   const camera = createCamera(container.clientWidth / container.clientHeight)
@@ -927,6 +932,7 @@ export async function createApp(
     disposeChunkWorkerPool()
     postProcessing.dispose()
     labelRenderer.domElement.remove()
+    vueUi.dispose()
     renderer.dispose()
     renderer.domElement.remove()
   }

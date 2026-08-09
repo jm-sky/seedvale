@@ -1,8 +1,8 @@
 # Plan: Vue.js + Tailwind + ikony jako stack dla UI gry (dialogi/menu)
 
-**Status:** `planned`
+**Status:** `in progress` — **Faza 0 (setup + proof-of-concept) done 2026-08-10**, zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test`, patrz stan pod „Faza 0" niżej; brak jeszcze wizualnej weryfikacji w przeglądarce. Fazy 1+ (migracja realnych ekranów) nieruszone.
 **Created:** 2026-08-09
-**Priority:** do ustalenia z użytkownikiem — traktowane jako fundament pod dalszy rozwój UI (issue 005, issue 006, World config/Notes z planu 005), nie blokuje gameplayu
+**Priority:** ustalone z użytkownikiem 2026-08-10 — odblokowuje [plan 048 (NPC dialogues v2)](./2026-08-09--048--npc-dialogues-v2.md), którego nowe menu rozmowy ma być budowane w Vue
 
 ## Kontekst
 
@@ -84,17 +84,16 @@ Dzisiejsze „PWA" to **wyłącznie metadata instalowalności**: `manifest.href`
 
 ## Fazy
 
-### Faza 0 — Setup i proof-of-concept
+### Faza 0 — Setup i proof-of-concept — `done` (2026-08-10)
 
-1. Dodać zależności (`vue`, `@vitejs/plugin-vue`, `@tailwindcss/vite`, `tailwindcss`, `lucide-vue-next`, `eslint-plugin-vue`, `vue-eslint-parser`, `vue-tsc`).
-2. `vite.config.ts`: dopiąć `vue()` plugin + `tailwindcss()` plugin obok istniejącego `defineConfig` (uwaga: dziś import z `vitest/config`, nie z `vite` — sprawdzić kompatybilność pluginów).
-3. `tsconfig.json`: `"types"` / include dla `.vue` (potrzebny `vue-tsc` do type-checku SFC, bo `tsc` sam nie rozumie `.vue`; zaktualizować `npm run build` na `vue-tsc && vite build` **lub** równoległy krok — zdecydować przy implementacji, żeby nie zepsuć istniejącego `tsc && vite build`).
-4. ESLint: dopiąć `eslint-plugin-vue` (flat config, zgodnie z istniejącym `eslint.config.*` — sprawdzić czy to `.js`/`.ts` flat config) tak, żeby `npm run lint` obejmował nowe `.vue` pliki.
-5. Minimalny proof-of-concept: pusty `#vue-ui` mount w `createApp.ts` z jednym trywialnym komponentem (np. tekst w rogu ekranu), zweryfikować:
-   - `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — wszystkie zielone.
-   - Canvas dalej łapie mouselook/klik (pointer-events nie zablokowane przez pusty Vue root).
-   - Dev server (`localhost:5577`) — **użytkownik testuje ręcznie w przeglądarce** (desktop + mobile viewport), zgodnie z zasadą projektu (nie uruchamiać headless Chrome/Playwright).
-6. Commit po zielonym PoC, zanim zacznie się właściwa migracja.
+1. [x] Zależności dodane przez `pnpm add` (projekt deklaruje `pnpm` w `package.json`'s `packageManager`, użyty zamiast `npm` żeby `pnpm-lock.yaml` został aktualny): `vue`, `lucide-vue-next` (dependencies); `@vitejs/plugin-vue`, `@tailwindcss/vite`, `tailwindcss`, `eslint-plugin-vue`, `vue-eslint-parser`, `vue-tsc` (devDependencies). `lucide-vue-next@1.0.0` zainstalował się z ostrzeżeniem `deprecated — please use @lucide/vue instead` — pakiet nadal działa, ale przy realnym użyciu ikon (Faza 1+) warto zweryfikować, czy `@lucide/vue` nie jest już lepszym wyborem (nie zmienione teraz, żeby nie odbiegać od decyzji ustalonej z użytkownikiem bez pytania).
+2. [x] `vite.config.ts`: `vue()` + `tailwindcss()` dodane do `plugins: [...]` — zero tarcia z `defineConfig` z `vitest/config` (worker `format:'es'` już tam był, plugin-model kompatybilny bez zmian).
+3. [x] `tsconfig.json`: `"include"` rozszerzony o `"src/**/*.vue"`. `src/vite-env.d.ts` dostał `declare module '*.vue'` (ambient shim z `DefineComponent`) — dzięki niemu **zwykły `tsc --noEmit` też przechodzi czysto** (deklaruje typ dla importu `.vue`, nie wchodzi w środek SFC), a `vue-tsc --noEmit` dodatkowo realnie type-checkuje zawartość `.vue`. `npm run build` zmienione na `vue-tsc --noEmit && vite build` (zdecydowano: zamiast równoległego kroku — `vue-tsc` jest nadzbiorem `tsc`, jeden call wystarcza).
+4. [x] `eslint.config.js`: `eslint-plugin-vue`'s `flat/recommended` dodany po `tseslint.configs.recommended`, plus override `files: ['**/*.vue']` ustawiający `languageOptions.parserOptions.parser: tseslint.parser` (żeby `<script setup lang="ts">` lintował się jak reszta repo, nie przez espree). `npm run lint` teraz obejmuje `.vue`.
+5. [x] Proof-of-concept: `src/ui-vue/mount.ts` (`mountVueUi(container): { dispose() }`) tworzy `#vue-ui` div i **dynamicznie** (`import()`) ładuje `vue`/`App.vue`/`tailwind.css` — osobny chunk w buildzie (`vue.runtime.esm-bundler-*.js`, `runtime-core.esm-bundler-*.js`, `App-*.js`, `tailwind-*.css`, potwierdzone w `dist/`), nie blokuje first-paint. Wpięty w `createApp.ts` zaraz po `labelRenderer` (dispose dopisany do istniejącej listy w zwracanym `dispose()`, symetrycznie z resztą overlayów, mimo że dziś nic zewnętrznego tego dispose nie wywołuje — `main.ts` robi `void createApp(...)`). `src/ui-vue/App.vue` — trywialny root: `pointer-events-none fixed inset-0`, mały tekstowy tag w rogu (Tailwind klasy, potwierdza że stylowanie faktycznie działa).
+   - `npx tsc --noEmit`, `npx vue-tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — wszystkie zielone.
+   - `curl` dev servera (Vite) potwierdza że `/src/ui-vue/App.vue`, `mount.ts`, `tailwind.css` serwują się bez błędu (200) i że strona/`main.ts` nadal się ładują — **wizualne potwierdzenie w przeglądarce (czy tag faktycznie widać w rogu, czy canvas dalej łapie mouselook) zostaje do zrobienia przez użytkownika**, zgodnie z zasadą projektu.
+6. [x] Gotowe do commita.
 
 ### Faza 1 — Ekran Mieszkańcy (`createVillagersScreen`) → Vue, rozwiązuje issue 006
 

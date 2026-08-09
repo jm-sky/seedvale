@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/* Design tokens land here as real screens migrate (plan 046) — shared
+ * colors/radii/fonts already repeated across `.seedvale-*__panel` classes
+ * in index.html's <style> block, so new Vue components don't re-guess them. */
+@theme {
+}
