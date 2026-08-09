@@ -22,11 +22,17 @@ export type ChunkMeshResult = {
   dispose: () => void
 }
 
-/** How many times the detail normal map tiles across one chunk edge. High
- *  enough to hide the chunk-border tiling seam (each chunk's UVs run 0..1
- *  independently, so the pattern isn't phase-continuous across chunks)
- *  without reading as an obvious repeated motif. */
-const NORMAL_MAP_TILES_PER_CHUNK = 4
+/** How many times the detail normal map tiles across one chunk edge. Doubled
+ *  (4 → 8) alongside `terrainDetailNormalMap.ts`'s higher noise frequencies —
+ *  reported blotches were tile-sized (several meters), not grain-sized; both
+ *  changes shrink the apparent patch size, this one on top of that by
+ *  halving how much world space one tile covers. Safe to raise now that the
+ *  texture has mipmapping (`terrainDetailNormalMap.ts`) — that's what
+ *  minification aliasing at high tile counts actually needed, not a low
+ *  count. Still high enough to hide the chunk-border tiling seam (each
+ *  chunk's UVs run 0..1 independently, so the pattern isn't phase-continuous
+ *  across chunks) without reading as an obvious repeated motif. */
+const NORMAL_MAP_TILES_PER_CHUNK = 8
 
 /** Built once and shared by every chunk's material — same reasoning as
  *  `createOcean.ts`'s procedural water normal map: no external asset, no
@@ -147,8 +153,11 @@ export function buildChunkGeometry(
     metalness: 0.04,
     normalMap,
     // Subtle — this is close-up surface grain, not a substitute for real
-    // geometry (plan 044 §4.5, "teren wygląda płasko").
-    normalScale: new THREE.Vector2(0.05, 0.05),
+    // geometry (plan 044 §4.5, "teren wygląda płasko"). Lowered once more
+    // (0.05 → 0.035) alongside shrinking the patch size itself
+    // (terrainDetailNormalMap.ts's noise frequencies, NORMAL_MAP_TILES_PER
+    // _CHUNK above) — "plamy" were both too large *and* too high-contrast.
+    normalScale: new THREE.Vector2(0.035, 0.035),
   })
 
   const mesh = new THREE.Mesh(geometry, material)
