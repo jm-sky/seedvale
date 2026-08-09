@@ -1,5 +1,117 @@
 # NPC Dialogues v2
 
+**Status:** `todo` — draft zweryfikowany wobec kodu 2026-08-10, zakres v1 przycięty, projekt techniczny gotowy do implementacji; zero kodu jeszcze napisane. **Zależy od** [plan 046 (Vue.js + Tailwind stack)](./2026-08-09--046--vue-tailwind-ui-stack.md) Faza 0 (setup) — nowe menu dialogowe budujemy w Vue, nie jako kolejny moduł vanilla DOM (decyzja użytkownika 2026-08-10, patrz „Zależność" niżej).
+
+> Sekcje 1-14 poniżej to oryginalny draft — wizja produktowa, spisana bez dostępu do repo. Review i decyzje poniżej weryfikują ją wobec faktycznego kodu i przycinają zakres v1; sam draft zostaje jako dokumentacja docelowego kierunku.
+
+## Review (2026-08-10, Claude) — vs. realia kodu
+
+Zweryfikowano wobec: `src/ai/dialogue.ts`, `src/ai/NpcAgent.ts`, `src/fauna/animalDialogue.ts`, `src/quests/`, `src/settlement/families.ts`, `src/ai/characters.ts`, `src/ai/schedule.ts`, `src/ai/Needs.ts`, `src/settlement/settlementGenerator.ts`, `src/terrain/naturalResources.ts`, `src/interaction/`, `src/ui/`.
+
+**Największa rozbieżność — nie ma dziś żadnego menu rozmowy.** Interakcja z NPC (`[E]`) to dziś jeden panel z pojedynczą linią tekstu (`src/ui/createNpcDialog.ts`) + opcjonalny accept/decline questu — `NpcDialog.open(name, line, offer?)` przyjmuje dokładnie jeden gotowy string. Draft zakłada realne menu (5 tematów → odpowiedź → powrót do menu) — to nowy, samodzielny komponent UI (lista klikalnych opcji + widok odpowiedzi + integracja z mechanizmem wykluczania paneli/Escape), nie tylko dane/treść.
+
+**Personality już istnieje, inaczej niż zakłada draft.** Nie trzeba budować „Big Five wpływa na wybór wariantu" od zera — to już działa: `personalityForIndex` generuje ciągły `BigFivePersonality` (OCEAN, `dialogue.ts:16-22`), `nearestArchetype()` mapuje go na jeden z 4 dyskretnych archetypów (`'calm'|'cheerful'|'curious'|'grumpy'`), a `pickDialogueLine(personality, need, busy)` już dziś wybiera z banku 32 komórek (4 need × 4 personality × 2 bucket, po 2 warianty PL) — dokładnie model „przygotowane warianty + wybór wg archetypu" z sekcji 6/7 draftu. Trzeba **rozszerzyć ten wzorzec na nowe tematy**, nie projektować nowego systemu wag (`personalityWeights` z sekcji 9 draftu nie jest potrzebny).
+
+**Potrzeby: dziś tylko jedna aktywna naraz.** `NpcAgent.activeNeed: NeedId` (singular), `pickNeed()` zwraca jednego zwycięzcę. Draft chce „NPC może mieć kilka potrzeb jednocześnie" (przykład: drewno + jedzenie) — wymaga nowej, czysto dialogowej funkcji zwracającej wszystkie needs powyżej progu, bez zmiany `pickNeed`/FSM.
+
+**Questy: „wiele ofert" to dziś praktycznie martwy temat.** W całej grze są dokładnie 4 hardkodowane questy (`quests/quests.ts`), każdy z jednym `giverName` — `QuestManager.onInteract(npcName)` zwraca pierwsze dopasowanie z listy. Żaden NPC nie ma dziś dwóch questów, więc „gracz wybiera jedną z kilku ofert" nie ma realnego przypadku użycia. `HELP` → „needs + available quest offers" z draftu powinno w v1 znaczyć: reużyj istniejącej logiki `QuestManager.onInteract`/`resolveInteraction` (dokładnie to, co dziś się dzieje na `[E]`) jako jedną odpowiedź, plus osobno needs-based flavor gdy nie ma aktywnego questu — nie budować nowego mechanizmu wielokrotnego wyboru zadań.
+
+**Rodzina: relacje to dziś etykiety, nie referencje.** `FamilyMember.relation: FamilyRelation` (`'husband'|'wife'|'child'|'single'`) nie wskazuje KOGO — nie ma `spouseId`/`childrenIds` ani referencji do innych `NpcAgent`. Draft chce „spouse → NPC B" jako wskazanie na rzeczywisty byt. Tanie do dodania (rodzina jest już razem w jednej tablicy przy tworzeniu osady, patrz Decyzje), ale to realna, choć mała, zmiana modelu danych.
+
+**`nickname` nie istnieje** (potwierdzone grep — zero wystąpień w repo) — sam draft to warunkowo zakłada („pseudonim — jeśli nie jest jeszcze obsłużony"), więc to zgodne z własnym zastrzeżeniem draftu.
+
+**„Co teraz robisz" — schedule ma tylko godziny START, nie END.** `ScheduleEntry = { hour, activity }` bez pola końca. „Koniec" aktywności to dziś niejawnie godzina następnego wpisu w szablonie (np. `work@7` kończy się gdy zaczyna się `eat@12`) — potrzebny nowy helper znajdujący najbliższy kolejny wpis, żeby wygenerować „...do {endTime}" z przykładów draftu. `NpcAgent.phase`/`pendingAction` (obecny FSM state) są dziś **prywatne, bez publicznego gettera** — nie ma dziś żadnego sposobu odczytania z zewnątrz, co NPC faktycznie robi (poza `getActiveNeed()`/`getScheduledActivity()`).
+
+**Wioska: nie ma `VillageIdentity` ani `history` — dane są rozproszone po `SettlementDef`.** `name`, `size: VillageSize` (**4 wartości: `SM|MD|LG|OUTPOST`, nie 3 jak w drafcie** — `OUTPOST` to realny 4. przypadek, osady jednoosobowe), `terrain: SettlementTerrain` (`ocean|mountain|swamp|desert|forest` — najbliższy odpowiednik „charakteru lokalizacji"), `foodSourceType`, `dominantResource: NaturalResource | null` (pojedynczy, nie lista wszystkich zasobów) — wszystko to już istnieje i wystarcza na „Powiedz coś o wiosce" bez `history`, którego draft chce warunkowo („jeśli dostępne" — nie jest).
+
+**Relation/sympathy: istnieje, ale nie tam gdzie trzeba.** `QuestManager` trzyma `Map<npcName, number>` (`relations`), bumpowany przy ukończeniu questu — dziś widoczny tylko w quest logu (`♥ {giverName} {relation}`), nigdy w dialogu z samym NPC. Do wykorzystania w tonie wypowiedzi trzeba przekazać `questManager.getRelation(name)` do warstwy budującej dialog (już dostępny tam, gdzie dziś rozwiązywana jest interakcja — `resolveInteraction.ts` ma `questManager`).
+
+## Zależność: Vue.js + Tailwind stack ([plan 046](./2026-08-09--046--vue-tailwind-ui-stack.md))
+
+Ustalone z użytkownikiem 2026-08-10: nowe menu dialogowe (jedyny realnie nowy komponent UI w tym planie) budujemy **w Vue**, nie jako kolejny moduł vanilla DOM w `src/ui/`. Plan 046 jest dziś `planned`, zero kodu.
+
+- **Wymagane przed startem:** plan 046 „Faza 0 — Setup i proof-of-concept" musi wylądować i być zielone (`vue`/`@vitejs/plugin-vue`/`@tailwindcss/vite`/`lucide-vue-next` w zależnościach, `#vue-ui` mount point w `createApp.ts`, `tsc`/`vue-tsc`/`lint`/`build` czyste, canvas dalej łapie mouselook z pustym Vue rootem — potwierdzone w przeglądarce).
+- **Nie wymagane:** Faza 1 (migracja Villagers screen) ani Faza 2 (pause/quest log/npc dialog) — nowe menu dialogowe to net-new komponent montowany obok istniejących vanilla ekranów (ten sam hybrydowy model co reszta planu 046), nie zależy od migracji żadnego istniejącego ekranu.
+- Nowe menu **zastępuje** dzisiejszy `src/ui/createNpcDialog.ts` (nie współistnieje z nim) — stary panel obsługiwał tylko pojedynczą linię + accept/decline, nowe menu w Vue przejmuje całą interakcję `[E]` z NPC. `resolveInteraction.ts`/`QuestManager` zostają jako logika, zmienia się tylko warstwa prezentacji.
+- Plan 046's „Esc-priority" (jawny `ui.openStack`) jest we „Fazie 2" — jeśli w momencie implementacji tego planu jeszcze go nie ma, nowe menu dialogowe może potrzebować minimalnej, tymczasowej wersji tego mechanizmu (albo reużyć dzisiejszego `stopImmediatePropagation`-owego wzorca) — do ustalenia przy implementacji, nie blocker na etapie planowania.
+
+Kolejność praktyczna: **plan 046 Faza 0 → ten plan** (menu dialogowe w Vue, treść/dane wg sekcji „Projekt techniczny" niżej). Można je zaimplementować w jednym ciągu prac (Faza 0 to krótka lista kroków) albo jako dwa kolejne kroki tej samej sesji.
+
+## Decyzje (2026-08-10)
+
+**UI:** nowe interaktywne menu rozmowy (lista tematów → odpowiedź → powrót), budowane w Vue — patrz „Zależność" wyżej. Zastępuje `createNpcDialog.ts`.
+
+**Rodzina — imiona, nie tylko etykiety.** `createSettlement.ts` już grupuje `def.families` przed tworzeniem `NpcAgent` (`flatMembers`) — przy tej samej okazji każdy `NpcAgent` dostaje listę pozostałych członków swojej rodziny (`{ name, lastName?, relation }[]`, bez siebie samego) jako nowe, proste pole konstruktora. Żadnych żywych referencji do innych `NpcAgent` (niepotrzebne — dialog o rodzinie to statyczny tekst, nie odczyt aktualnego stanu żony/dziecka). Rozwiązuje „spouse → NPC B" z draftu **bez** budowania grafu relacji.
+
+**Potrzeby — do 2 najsilniejszych w odpowiedzi „Może w czymś ci pomóc".** Nowa, czysto dialogowa funkcja (np. `topNeeds(needs, max=2)` w nowym module dialogowym, nie w `Needs.ts`) zwraca needs powyżej progu posortowane malejąco — bez zmiany `pickNeed`/FSM (ten zostaje jednoznaczny, jedna aktywność na raz). Odpowiedź może wspomnieć 1-2 needs, zgodnie z przykładem z draftu.
+
+**Questy — reużycie istniejącej logiki, bez nowego mechanizmu wielokrotnego wyboru.** Opcja „Może w czymś ci pomóc" najpierw sprawdza `QuestManager.onInteract`/istniejący quest-state-machine (dokładnie to, co dziś się dzieje na `[E]`) — jeśli jest oferta/przypomnienie/raport, to ona jest odpowiedzią. Jeśli nie ma aktywnego questu, odpowiedź to needs-based flavor (`topNeeds` wyżej). „Wiele ofert questowych" pozostaje poza zakresem — dziś nie ma NPC z więcej niż jednym questem.
+
+**Relation/sympathy — przekazane do warstwy dialogu, nie nowy system.** `questManager.getRelation(npcName)` (już istnieje) trafia do nowej warstwy budującej odpowiedzi jako dodatkowy kontekst (np. cieplejszy ton przy wysokiej relacji) — bez zmian w `QuestManager`.
+
+**Aktywność/koniec czasu — nowy helper na istniejącym `ScheduleTemplate`.** Nowa czysta funkcja w `schedule.ts` (np. `nextBoundary(template, timeOfDay): ScheduleEntry`) zwraca najbliższy kolejny wpis — jego `hour` to „do {endTime}" z przykładów draftu. `NpcAgent` dostaje nowy publiczny getter zwracający surowe dane (phase-kind/need/endHour) — **formatowanie tekstu żyje w module dialogowym, nie w `NpcAgent`**, zgodnie z zasadą draftu „szablony nie duplikują danych".
+
+**Poza zakresem v1 (świadomie odłożone):**
+- `nickname` — nie istnieje, nie dodajemy teraz (osobna decyzja, poza tym planem).
+- Village `history` — nie istnieje, nie wymyślamy teraz treści od zera; „Powiedz coś o wiosce" korzysta z `name`/`size`/`terrain`/`foodSourceType`/`dominantResource`, które już są.
+- Głębszy dialogue tree poza questami (sekcja 12 draftu) — model przygotowany pod to (sekcja 9 draftu, `DialogueTemplate`), ale nieimplementowany w v1.
+- LLM — jak w drafcie, niepotrzebne do v1.
+- Traits (`night_owl`/`fast_worker`/...) modyfikujące TREŚĆ dialogu (nie tylko istniejące efekty liczbowe) — poza zakresem, personality/archetyp już wystarcza na v1.
+
+## Projekt techniczny v1 (2026-08-10, gotowy do implementacji po Fazie 0 planu 046)
+
+### 1. Rozszerzenie danych `NpcAgent`
+
+- **Rodzina po imieniu** — `createSettlement.ts`: przy budowaniu `flatMembers` (dziś `def.families.flatMap(...)`) dociągnąć dla każdego membera listę pozostałych członków tej samej rodziny: `familyMembers: { name: string, lastName?: string, relation: FamilyRelation }[]`. Nowy parametr `NpcAgent.create()`/konstruktora, nowe pole `readonly familyMembers: readonly FamilyMember[]` (bez samego siebie).
+- **Aktualna aktywność** — nowy publiczny getter na `NpcAgent`, kształt przykładowy:
+  ```ts
+  type CurrentActivity = {
+    kind: 'sleep' | 'work' | 'wander' | 'need' | 'talking' | 'idle'
+    need?: NeedId
+    endHour?: number // z nextBoundary(schedule, timeOfDay), gdy dotyczy
+  }
+  getCurrentActivity(timeOfDay: number): CurrentActivity
+  ```
+  Mapowanie z prywatnego `phase`/`pendingAction`/`activeNeed` na `CurrentActivity['kind']` — nie wystawiać samego `Phase` na zewnątrz (zostaje implementacyjnym szczegółem FSM).
+- **`schedule.ts`**: nowa funkcja `nextBoundary(template: ScheduleTemplate, timeOfDay: number): ScheduleEntry` — analogiczna do `activityAt`, ale zwraca wpis o najmniejszym dodatnim „ile do startu" zamiast „ile od startu". Test: `schedule.test.ts` rozszerzony o przypadki wrap-around (jak `activityAt`).
+
+### 2. Nowy moduł treści dialogowej — `src/ai/dialogueTemplates.ts` (nowy plik, osobny od `dialogue.ts`)
+
+Nie rozbudowywać istniejącego `dialogue.ts` (personality/archetyp — zostaje jak jest, reużywany), tylko dobudować nową warstwę tematów obok:
+
+```ts
+export type DialogueTopic = 'help' | 'aboutSelf' | 'currentActivity' | 'aboutVillage' | 'goodbye'
+
+export type DialogueContext = {
+  npc: NpcAgent // lub węższy interfejs z potrzebnymi polami, do ustalenia przy implementacji
+  timeOfDay: number
+  relation: number // z questManager.getRelation
+  questLine: string | null // z QuestManager.onInteract, jeśli jest
+  village: Settlement // name/size/terrain/foodSourceType/dominantResource
+}
+
+export function buildTopicResponse(topic: DialogueTopic, ctx: DialogueContext): string
+```
+
+- Banki tekstów per temat × archetyp (jak istniejący `pickDialogueLine`'s 32-komórkowa tablica, ten sam styl: 2 warianty PL na komórkę, fallback na neutralny wariant gdy komórka pusta).
+- `aboutSelf`: imię/nazwisko + rola + `familyMembers` (jeśli niepuste: „mam żonę Annę i syna Tomka", budowane z listy, nie hardkodowane na 1 relację) + archetyp-zależny ton.
+- `currentActivity`: `npc.getCurrentActivity(timeOfDay)` → tekst z `endHour` gdy dostępny + needs-remark gdy `activeNeed` istotny.
+- `aboutVillage`: `village.name`/`size`/`terrain`/`foodSourceType`/`dominantResource`.
+- `help`: `questLine` jeśli nie-null, inaczej `topNeeds(...)` sformatowane w 1-2 zdania.
+- `goodbye`: prosta pożegnalna linia, zamyka menu.
+
+### 3. Vue: nowy komponent menu
+
+- `src/ui-vue/screens/NpcDialogueMenu.vue` (nazwa robocza) — zastępuje `createNpcDialog.ts`. Fasada zachowuje podobny kontrakt do reszty ekranów z planu 046 (`open(npc, settlement)/close/isOpen`), montowana w tym samym `#vue-ui` root.
+- Stan: lista 5 tematów (przycisk „Nic, miłego dnia!" zamyka), po kliknięciu → `buildTopicResponse()` → wyświetl odpowiedź + przycisk powrotu do listy tematów. Quest accept/decline (dziś `NpcDialogOffer`) zostaje jako specjalny sub-widok w obrębie tematu `help`, analogicznie do dzisiejszego zachowania.
+- Wpina się w mechanizm wykluczania paneli z planu 046 (`ui.openStack` jeśli już istnieje, inaczej tymczasowy mostek do dzisiejszego wzorca — patrz „Zależność" wyżej).
+
+### 4. Testy
+
+- `src/ai/dialogueTemplates.test.ts` — jak `dialogue.test.ts`: każdy temat × archetyp zwraca niepusty string, fallback nie rzuca, `topNeeds` sortowanie/próg/limit, `aboutSelf` z pustą i niepustą `familyMembers`.
+- `schedule.test.ts` — rozszerzony o `nextBoundary`.
+- Zero testów dla `.vue` (zgodnie z planem 046 „Poza zakresem" — projekt świadomie nie testuje THREE/DOM/UI jednostkowo).
+
 ## Cel
 
 Rozbudować obecną interakcję z NPC z pojedynczej odpowiedzi do prostego, kontekstowego dialogu.
@@ -634,3 +746,40 @@ LLM, jeśli kiedyś się pojawi, powinien być rozszerzeniem istniejącego syste
 9. **Model danych ma być gotowy na głębsze dialogi, ale v1 ich nie implementuje.**
 10. **LLM nie jest potrzebne do v1.**
 11. **Dialog ma rozszerzać istniejące sprzężenia Seedvale, nie tworzyć równoległego systemu świata.**
+
+## Szkic zmian (pliki)
+
+```
+src/ai/dialogueTemplates.ts        # nowy: DialogueTopic, DialogueContext, buildTopicResponse, topNeeds
+src/ai/dialogueTemplates.test.ts   # nowy
+src/ai/schedule.ts                 # + nextBoundary()
+src/ai/schedule.test.ts            # + testy nextBoundary
+src/ai/NpcAgent.ts                 # + pole familyMembers, + getCurrentActivity()
+src/settlement/createSettlement.ts # + budowanie familyMembers per NPC przed NpcAgent.create()
+src/ui-vue/screens/NpcDialogueMenu.vue # nowy (wymaga Fazy 0 planu 046)
+src/app/createApp.ts               # zamiana createNpcDialog → NpcDialogueMenu w pętli interakcji [E]
+src/ui/createNpcDialog.ts          # usunięty po migracji (albo zostawiony jako fallback — do ustalenia)
+```
+
+## Done when
+
+- [ ] Plan 046 Faza 0 zielone (`vue`/Tailwind/lucide w zależnościach, `#vue-ui` mount, canvas dalej łapie input) — prerequisite, nie część tego planu
+- [ ] `[E]` na NPC otwiera nowe menu z 5 tematami zamiast starego jednolinijkowego panelu
+- [ ] „Może w czymś ci pomóc" pokazuje istniejącą logikę questów gdy jest aktywna, inaczej do 2 needs
+- [ ] „Powiedz coś o sobie" wymienia rodzinę po imieniu, gdy `familyMembers` niepuste
+- [ ] „Co teraz robisz" pokazuje aktywność + „do {endTime}" z `nextBoundary`, plus needs-remark gdy istotne
+- [ ] „Powiedz coś o wiosce" korzysta z name/size/terrain/foodSourceType/dominantResource
+- [ ] „Nic, miłego dnia!" zamyka menu
+- [ ] Personality (archetyp) widocznie zmienia ton/długość odpowiedzi (reużycie `nearestArchetype`)
+- [ ] Esc/click-outside zamyka menu, nie koliduje z pause menu/quest log/innymi overlayami
+- [ ] Zero regresji: quest accept/decline nadal działa (`QuestManager`), zwierzęta (`animalDialogue.ts`) bez zmian
+- [ ] Console clean: `npx tsc --noEmit` (lub `vue-tsc`), `npm run lint`, `npm run build`, `npm run test`
+
+## Do przetestowania (http://localhost:5577/)
+
+1. Podejdź do NPC, `[E]` — powinno pojawić się menu z 5 opcjami zamiast starego jednolinijkowego dialogu.
+2. Przejdź przez każdy temat po kolei dla kilku różnych NPC (różne role/osobowości) — sprawdź że teksty się różnią wg archetypu i faktycznie odzwierciedlają stan (godzina pracy, needs, rodzina).
+3. NPC z aktywnym questem — „Może w czymś ci pomóc" pokazuje ofertę/przypomnienie/raport tak jak dziś (accept/decline nadal działa).
+4. NPC bez questu, z wysokim need — pokazuje 1-2 needs w odpowiedzi.
+5. Esc zamyka menu; otwórz pause menu / quest log w trakcie rozmowy — sprawdź że nic się nie gryzie (kolejność zamykania, brak podwójnego input).
+6. Zwierzęta (`[E]` na zwierzę) — nadal stary, prosty dymek tekstowy (`animalDialogue.ts` bez zmian).
