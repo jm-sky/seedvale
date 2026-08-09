@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
+import InventoryScreen from './InventoryScreen.vue'
 import NpcDialogueMenu from './NpcDialogueMenu.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
 import { closeTopOverlay, ui } from './store'
@@ -18,5 +19,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   <div class="pointer-events-none fixed inset-0 z-10">
     <NpcDialogueMenu />
     <VillagersScreen />
+    <InventoryScreen />
   </div>
 </template>

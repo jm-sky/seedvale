@@ -16,9 +16,24 @@ const FORWARDED_FNS = [
   'toggleVillagers',
   'refreshVillagers',
   'isVillagersOpen',
+  'openInventory',
+  'refreshInventory',
+  'isInventoryOpen',
+  'closeInventory',
 ] as const
 
 export type VueUi = Pick<StoreModule, typeof FORWARDED_FNS[number]> & { dispose: () => void }
+
+let mountedVueUi: VueUi | null = null
+
+/** Used by `src/ui/createInventoryScreen.ts` — a thin compatibility adapter
+ *  kept instead of wiring `createApp.ts` directly to the store (unlike the
+ *  Villagers screen). Safe to call from anywhere: `open`/`refresh`/`close`
+ *  are all called lazily at runtime, by which point `mountVueUi` has always
+ *  already run and set this. */
+export function getMountedVueUi(): VueUi | null {
+  return mountedVueUi
+}
 
 /** Mounts the Vue + Tailwind UI overlay (plan 046) into a new `#vue-ui` div
  *  appended to `container`. Vue/`App.vue`/`store.ts`/Tailwind are all
@@ -65,12 +80,16 @@ export function mountVueUi(container: HTMLElement): VueUi {
     ]),
   ) as Pick<StoreModule, typeof FORWARDED_FNS[number]>
 
-  return {
+  const api: VueUi = {
     ...forwarded,
     dispose() {
       disposed = true
       app?.unmount()
+      if (mountedVueUi === api) mountedVueUi = null
       root.remove()
     },
   }
+
+  mountedVueUi = api
+  return api
 }

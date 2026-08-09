@@ -1,5 +1,6 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { ItemKind } from '../items/items'
 import type { QuestDialogOverride, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
@@ -44,6 +45,14 @@ type NpcDialogueMenuState = {
   helpResult: QuestDialogOverride | null
 }
 
+type InventoryState = {
+  open: boolean
+  counts: Partial<Record<ItemKind, number>>
+  totalWeight: number
+  maxWeight: number
+  onDrop: ((kind: ItemKind) => void) | null
+}
+
 export const ui = reactive({
   npcDialogueMenu: {
     open: false,
@@ -57,13 +66,20 @@ export const ui = reactive({
     entries: [] as VillagerEntry[],
     page: 0,
   },
+  inventory: {
+    open: false,
+    counts: {},
+    totalWeight: 0,
+    maxWeight: 0,
+    onDrop: null,
+  } as InventoryState,
   /** Escape-priority stack (plan 046 "Faza 2" idea, built now since Faza 1
    *  already needs it) — only the top id's registered `close()` fires on
    *  Escape (`App.vue`'s single global listener, see `closeTopOverlay`).
-   *  `NpcDialogueMenu` isn't on this stack (still its own listener) — Vue
-   *  mounts children before parents, so its listener registers before
-   *  `App.vue`'s and naturally still wins the same way the old vanilla
-   *  registration-order trick did. */
+   *  `NpcDialogueMenu`/`InventoryScreen` aren't on this stack (still their
+   *  own listeners) — Vue mounts children before parents, so their
+   *  listeners register before `App.vue`'s and naturally still win the same
+   *  way the old vanilla registration-order trick did. */
   openStack: [] as string[],
 })
 
@@ -159,4 +175,36 @@ export function acceptNpcDialogueOffer(): void {
 
 export function isNpcDialogueMenuOpen(): boolean {
   return ui.npcDialogueMenu.open
+}
+
+export function openInventory(
+  counts: Partial<Record<ItemKind, number>>,
+  totalWeight: number,
+  maxWeight: number,
+  onDrop: (kind: ItemKind) => void,
+): void {
+  ui.inventory.counts = { ...counts }
+  ui.inventory.totalWeight = totalWeight
+  ui.inventory.maxWeight = maxWeight
+  ui.inventory.onDrop = onDrop
+  ui.inventory.open = true
+}
+
+export function refreshInventory(
+  counts: Partial<Record<ItemKind, number>>,
+  totalWeight: number,
+  maxWeight: number,
+): void {
+  ui.inventory.counts = { ...counts }
+  ui.inventory.totalWeight = totalWeight
+  ui.inventory.maxWeight = maxWeight
+}
+
+export function closeInventory(): void {
+  ui.inventory.open = false
+  ui.inventory.onDrop = null
+}
+
+export function isInventoryOpen(): boolean {
+  return ui.inventory.open
 }
