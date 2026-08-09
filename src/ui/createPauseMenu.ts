@@ -16,7 +16,14 @@ export type PauseMenuHandlers = {
 }
 export type PauseMenu = { isPaused: () => boolean; togglePause: () => void; setSeed: (seed: number) => void; dispose: () => void }
 
-export function createPauseMenu(_parent: HTMLElement, seed: number, playerName: string, handlers: PauseMenuHandlers): PauseMenu {
+export function createPauseMenu(
+  _parent: HTMLElement,
+  seed: number,
+  playerName: string,
+  handlers: PauseMenuHandlers,
+  /** @deprecated Escape priority is now handled by Vue's shared overlay stack. */
+  _isSuppressed?: () => boolean,
+): PauseMenu {
   let disposed = false
   const getUi = () => getMountedVueUi()
   getUi()?.configurePauseMenu(seed, playerName, handlers)
