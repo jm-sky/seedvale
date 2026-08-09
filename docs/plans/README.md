@@ -15,7 +15,7 @@ Implementation plans for features and larger changes.
 | [2026-08-07--004--v03-fauna-chase-flee.md](./2026-08-07--004--v03-fauna-chase-flee.md) | v0.3: fauna chase/flee (logika done; GLB open) | `done` ✅ |
 | [2026-08-07--003--day-night-clock.md](./2026-08-07--003--day-night-clock.md) | Zegar dnia/nocy + time multiplier | `done` ✅ (5/5 — NPC sen zależny od pory + persystencja `timeOfDay` w save zaimplementowane) |
 | [2026-08-07--005--game-ui-screens.md](./2026-08-07--005--game-ui-screens.md) | Ekrany/dialogi/modale jak w grach | `in progress` 🔄 (2/4 — Pause menu + NPC dialog/Quest log/Villagers done; World config screen i Notes/journal nie rozpoczęte) |
-| [2026-08-07--006--terrain-worker-pool.md](./2026-08-07--006--terrain-worker-pool.md) | Worker pool dla generacji terenu (offload heightmap) | `done` ✅ |
+| [2026-08-07--006--terrain-worker-pool.md](./2026-08-08--006--terrain-worker-pool.md) | Worker pool dla generacji terenu (offload heightmap) | `done` ✅ |
 | [2026-08-07--024--world-visual-overhaul.md](./2026-08-07--024--world-visual-overhaul.md) | Rośliny (krzewy), niebo/chmury, góry w tle (insp. SimonDev) | `in progress` 🔄 (~50% — część 1 rośliny + część 2 kolor nieba done; chmury + część 3 góry w tle nie rozpoczęte) |
 | [2026-08-07--007--world-streaming-persistence.md](./2026-08-07--007--world-streaming-persistence.md) | Chunk streaming (kierunek: duży/sferyczny świat) + zapis | `done` ✅ |
 | [2026-08-07--009--post-processing-pipeline.md](./2026-08-07--009--post-processing-pipeline.md) | Post-processing pipeline (EffectComposer) + N8AO ambient occlusion | `done` ✅ |
@@ -52,6 +52,7 @@ Implementation plans for features and larger changes.
 | [2026-08-08--045--health-stamina-threat.md](./2026-08-08--045--health-stamina-threat.md) | Wspólny Health/Stamina/Threat: stamina dla NPC/fauny/gracza, exhaustion, attack/flee i reakcje na obrażenia | `planned` 📋 (draft) |
 | [2026-08-09--046--vue-tailwind-ui-stack.md](./2026-08-09--046--vue-tailwind-ui-stack.md) | Vue.js + Tailwind v4 + lucide-vue-next jako stack dla UI gry (dialogi/menu) — odwraca decyzję z planu 005 „poza zakresem"; migracja screen-po-screen za dzisiejszym fasadowym kontraktem, rozwiązuje issue 005 (ikony) i issue 006 (paginacja Mieszkańcy) po drodze | `planned` 📋 |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md) | Przebudowa generowania wiosek: VillageIdentity (type/size/traits/history), VillagePlan, strefy, centrum, drogi, teren, relacje budynków, layout patterns, scoring i kontrolowana losowość | `planned` 📋 |
+| [2026-08-09--048--npc-dialogues-v2.md](./2026-08-09--048--npc-dialogues-v2.md) | Dialogi NPC v2: wielotematyczna rozmowa, kontekst świata, Big Five, szablony odpowiedzi, potrzeby/scheduler/aktywność, wioska i wieloofertowe questy | `planned` 📋 |
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
 
