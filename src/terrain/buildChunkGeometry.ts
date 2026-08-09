@@ -22,17 +22,16 @@ export type ChunkMeshResult = {
   dispose: () => void
 }
 
-/** How many times the detail normal map tiles across one chunk edge. Doubled
- *  (4 → 8) alongside `terrainDetailNormalMap.ts`'s higher noise frequencies —
- *  reported blotches were tile-sized (several meters), not grain-sized; both
- *  changes shrink the apparent patch size, this one on top of that by
- *  halving how much world space one tile covers. Safe to raise now that the
- *  texture has mipmapping (`terrainDetailNormalMap.ts`) — that's what
- *  minification aliasing at high tile counts actually needed, not a low
- *  count. Still high enough to hide the chunk-border tiling seam (each
- *  chunk's UVs run 0..1 independently, so the pattern isn't phase-continuous
- *  across chunks) without reading as an obvious repeated motif. */
-const NORMAL_MAP_TILES_PER_CHUNK = 8
+/** How many times the detail normal map tiles across one chunk edge. Raised
+ *  again (8 → 11) alongside `terrainDetailNormalMap.ts`'s higher noise
+ *  frequencies — still reported as too coarse/blotchy, so both patch-size
+ *  knobs move together once more. Safe to raise now that the texture has
+ *  mipmapping (`terrainDetailNormalMap.ts`) — that's what minification
+ *  aliasing at high tile counts actually needed, not a low count. Still high
+ *  enough to hide the chunk-border tiling seam (each chunk's UVs run 0..1
+ *  independently, so the pattern isn't phase-continuous across chunks)
+ *  without reading as an obvious repeated motif. */
+const NORMAL_MAP_TILES_PER_CHUNK = 11
 
 /** Built once and shared by every chunk's material — same reasoning as
  *  `createOcean.ts`'s procedural water normal map: no external asset, no
@@ -153,12 +152,12 @@ export function buildChunkGeometry(
     metalness: 0.04,
     normalMap,
     // Subtle — this is close-up surface grain, not a substitute for real
-    // geometry (plan 044 §4.5, "teren wygląda płasko"). Patch size fixed by
-    // the previous pass, but contrast (reported: still looks like a camo
-    // pattern) was still too strong — cut hard this time (0.035 → 0.015)
-    // alongside halving the noise map's own amplitude again
-    // (terrainDetailNormalMap.ts) rather than another small nudge.
-    normalScale: new THREE.Vector2(0.015, 0.015),
+    // geometry (plan 044 §4.5, "teren wygląda płasko"). Still reported too
+    // visible after two prior cuts — halved again (0.015 → 0.0075) alongside
+    // `terrainDetailNormalMap.ts`'s own weight/frequency cut, so the two
+    // compound into roughly a third of the previous total strength rather
+    // than another small nudge.
+    normalScale: new THREE.Vector2(0.0075, 0.0075),
   })
 
   const mesh = new THREE.Mesh(geometry, material)
