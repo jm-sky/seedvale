@@ -2,42 +2,45 @@
 
 **Plan:** [2026-08-08--045--health-stamina-threat.md](./2026-08-08--045--health-stamina-threat.md)
 
-**Purpose:** repository-specific implementation guidance. The goal is to save implementation-time repository archaeology and, more importantly, prevent parallel health/fatigue/combat systems from appearing.
+**Purpose:** repository-specific implementation guidance. The goal is to avoid parallel health/fatigue/combat systems and to extend the existing fauna/NPC architecture instead of replacing it with new managers or decision layers.
 
 ---
 
-## 1. Scope and architectural decision
+## 1. Architectural contract
 
-The central decision is:
+045 must preserve this separation:
 
 ```text
-HealthState   = physical health / damage / death
-StaminaState  = capacity for physical effort
-ThreatState   = perceived danger
-AI/FSM        = decision about what to do
+HealthState   = survival: HP / damage / death
+StaminaState  = physical effort capacity
+Threat        = currently relevant danger/context
+AI / FSM      = decision about what to do
 ```
 
-These are separate responsibilities.
+The state layers provide information; the existing actor AI decides the response.
 
-The implementation must extend existing systems rather than create category-specific versions such as:
+The implementation must not create category-specific versions such as:
 
 ```text
 AnimalEnergy
 NpcFatigue
 PlayerStamina
-AnimalThreat
-NpcThreat
+AnimalHealth
+NpcHealth
+PlayerHealth
 ```
 
-There should be one shared primitive for stamina and one shared model for health. Threat should be reusable, but its first implementation can remain deliberately small.
+`HealthState` is already shared infrastructure. Stamina must likewise have one source of truth for physical effort. Threat should remain deliberately small until a concrete second consumer requires a broader abstraction.
 
 ---
 
-## 2. Important existing code
+## 2. Verified current architecture
+
+The current repository has the following relevant boundaries:
 
 ### `src/shared/HealthState.ts`
 
-This is already the shared health primitive:
+`HealthState` is already the shared health primitive:
 
 ```ts
 export type HealthState = {
@@ -47,70 +50,53 @@ export type HealthState = {
 }
 ```
 
-It currently exposes `createHealthState()`, plus `applyFatigue()` and `rest()`. The latter two are a transitional NPC-fatigue mechanism: they mutate `currentHp` but deliberately do not represent combat damage/death in the NPC case. fileciteturn31file0L2-L6
+It also currently exports `createHealthState()`, `applyFatigue()` and `rest()`. The latter two mutate HP and are currently used as the NPC fatigue mechanism. fileciteturn6file0L2-L6
 
-**Important:** do not interpret this as evidence that NPC fatigue should remain encoded in HP. 045 exists partly to correct that conceptual overlap.
-
-Target direction:
-
-```text
-HealthState
- ├─ maxHp
- ├─ currentHp
- └─ dead
-
-StaminaState
- ├─ max
- └─ current
-```
-
-After migration, `applyFatigue()`/`rest()` should no longer be the general-purpose way of representing NPC effort if no compatibility consumer remains.
+045 should keep `HealthState` as the canonical health model and remove the fatigue semantics from it once the NPC migration has no remaining consumer. Do not create a replacement health type for NPCs or fauna.
 
 ### `src/fauna/faunaCombat.ts`
 
-Fauna already re-exports the shared `HealthState` and `createHealthState`; it also contains animal-specific HP and damage tables. fileciteturn32file0L2-L6
+Fauna re-exports the shared `HealthState` and `createHealthState()`. Animal-specific HP values and the predator/prey damage table live here. fileciteturn14file0L2-L6
 
-Keep animal-specific combat balance here where appropriate, but do not move `HealthState` back into fauna. `src/shared/HealthState.ts` is the canonical owner.
+Keep balance data here where appropriate. Do not move ownership of `HealthState` into fauna.
+
+### `src/fauna/AnimalLife.ts`
+
+`AnimalLifeState` currently contains:
+
+```ts
+{
+  hunger: number
+  thirst: number
+  energy: number
+}
+```
+
+`energy` starts at `1`, is drained while sprinting at `ENERGY_DRAIN_RATE`, regenerated otherwise at `ENERGY_REGEN_RATE`, and is already consumed by animal behavior through the low-energy rest threshold. fileciteturn4file0L2-L6
+
+Therefore **`AnimalLifeState.energy` is the existing animal stamina implementation**. It must not coexist with a new `StaminaState.current` representing the same physical effort resource.
 
 ### `src/fauna/AnimalAgent.ts`
 
-`AnimalAgent` already has:
+`AnimalAgent` owns the animal FSM/behavior, movement, predator/prey logic, perception and combat. It constructs the shared health state and the existing `AnimalLifeState`. fileciteturn5file0L2-L2
 
-- `HealthState`,
-- predator/prey roles,
-- chase/flee behavior,
-- sprinting,
-- attack cooldown/contact damage,
-- animal life/needs state,
-- player/environmental awareness.
-
-It currently constructs health through `createHealthState(MAX_HP[def.kind])`. fileciteturn33file0L2-L2
-
-This is the primary consumer for the first Stamina + Threat integration.
-
-**Do not create a new animal FSM.** Extend the existing predator/prey decision flow.
+The existing sprinting/chase/flee behavior and energy-based rest hook are the integration points for 045. Do not create another animal FSM or another update loop.
 
 ### `src/ai/NpcAgent.ts`
 
-NPC fatigue is currently implemented by draining `health.currentHp` during `execute`/`goTo` phases and restoring it during rest phases. `FATIGUE_PHASES`, `REST_PHASES`, `BASE_FATIGUE_RATE`, `BASE_REST_RATE`, `HP_FLOOR` and low-HP movement slowdown are currently part of the NPC implementation. fileciteturn35file0L2-L6
+NPCs currently construct the shared `HealthState` but use HP as fatigue: `execute` and `goTo` are fatigue phases, while movement/rest-related phases restore HP. The implementation also has an HP floor of `15`, fatigue/rest rates, energetic-trait modifiers and low-HP movement slowdown. fileciteturn9file0L2-L2
 
-This is the key migration seam:
+This is the migration seam from HP-based fatigue to real stamina. The existing Needs → FSM architecture remains the owner of rest/work decisions.
 
-```text
-current NPC fatigue
-        ↓
-StaminaState
-        ↓
-Needs/FSM decides when to rest
-```
+### Existing health consumers
 
-Do not simply rename `health` to `stamina`. Separate the two states.
+Search verification shows the shared health primitive is consumed by both fauna and NPC code, while animal combat uses the shared health through `faunaCombat`. The current animal damage implementation is therefore already compatible with a shared health foundation. fileciteturn3file0L2-L5 fileciteturn14file0L2-L6
 
 ---
 
-## 3. StaminaState
+## 3. Stamina: migrate the existing animal resource, do not duplicate it
 
-Introduce the shared type in an appropriate shared module, e.g.:
+Introduce one generic `StaminaState` in a shared, non-Three.js module:
 
 ```ts
 export type StaminaState = {
@@ -119,9 +105,7 @@ export type StaminaState = {
 }
 ```
 
-Keep the primitive intentionally small.
-
-Recommended operations:
+Recommended pure operations, following repository naming conventions:
 
 ```ts
 createStaminaState(max: number): StaminaState
@@ -131,25 +115,47 @@ isExhausted(stamina: StaminaState): boolean
 getStaminaRatio(stamina: StaminaState): number
 ```
 
-The exact function names can follow repository conventions.
+The primitive must:
 
-Rules:
-
-- clamp current to `[0, max]`,
+- clamp `current` to `[0, max]`,
 - never allow negative stamina,
-- do not modify health,
-- do not know anything about NPCs, animals or players,
-- do not contain AI decisions.
+- never modify health,
+- know nothing about NPCs, animals or players,
+- contain no AI decisions,
+- remain unit-testable without Three.js.
 
-`StaminaState` should be unit-testable without Three.js.
+### Required animal migration
+
+Do not implement this as:
+
+```text
+AnimalLifeState.energy
++
+StaminaState.current
+```
+
+The existing `energy` field is already the animal's physical-effort resource. Migrate that resource into the shared stamina representation while keeping the `AnimalLife` responsibility boundary.
+
+Preferred direction:
+
+```text
+AnimalLifeState
+├── hunger
+├── thirst
+└── stamina: StaminaState
+```
+
+`tickAnimalLife()` should continue to own deterministic biological/physical ticking. Its current hunger/thirst update remains in `AnimalLife`; the existing sprinting boolean continues to be the input that determines stamina drain vs. regeneration. Update `AnimalAgent` to consume the migrated stamina state instead of `.energy`.
+
+If the implementation finds that a different field layout preserves the same boundary more cleanly, the invariant is still strict: **one physical-effort resource, one owner, one source of truth**. A compatibility alias may be used temporarily during migration only if it does not create a second mutable value and is removed once all consumers are migrated.
+
+Preserve current energy behavior initially: same starting capacity, drain/regeneration rates, and low-energy rest threshold unless the 045 plan explicitly changes gameplay tuning.
 
 ---
 
-## 4. Migrate NPC fatigue first
+## 4. NPC fatigue migration
 
-NPCs are the most obvious place where the current conceptual overlap exists.
-
-Current behavior is approximately:
+Current NPC behavior is approximately:
 
 ```text
 work / execute / goTo
@@ -168,357 +174,363 @@ work / execute / goTo
         ↓
 stamina.current decreases
         ↓
-Needs/FSM sees low stamina
+existing Needs / FSM observes low stamina
         ↓
 rest / sleep
         ↓
 stamina.current increases
 ```
 
-Keep the existing `Needs → FSM` architecture. Stamina is a state/input; it should not become a second decision-maker.
+Add `StaminaState` to the NPC state and move the existing fatigue/rest rates and energetic-trait modifiers to stamina. Keep the existing phases and `Needs → FSM` decision flow.
 
-### Important compatibility detail
-
-The current NPC health floor is `15`, intentionally preventing NPC death/despawn in the existing v1 behavior. Do not accidentally turn this fatigue migration into NPC death.
+The current NPC health floor is `15` and exists specifically so fatigue cannot kill/despawn an NPC in v1. Preserve that gameplay behavior, but achieve it by no longer consuming HP for fatigue rather than by retaining an HP floor as a stamina mechanism.
 
 After migration:
 
-- NPC HP should remain available for future damage/combat,
-- NPC fatigue should no longer consume HP,
-- existing work/rest rhythm should remain recognizable,
-- low stamina should influence rest/work decisions rather than kill the NPC.
+- NPC HP remains available for future damage/combat,
+- fatigue does not reduce HP,
+- rest does not heal HP merely because it is rest,
+- zero stamina does not kill an NPC,
+- existing work/rest rhythm remains recognizable.
 
-The current HP-based movement slowdown should not automatically be ported to stamina. First establish clean semantics; only add stamina-based movement penalties if explicitly required by the plan.
+Do **not** automatically port the existing low-HP movement slowdown to stamina. Establish clean stamina semantics first; add movement penalties only if the 045 gameplay requirements actually call for them.
+
+Once no caller needs them, remove `applyFatigue()` and `rest()` from the shared health module rather than keeping misleading fatigue APIs indefinitely.
 
 ---
 
-## 5. Animal stamina
+## 5. Animal stamina integration
 
-Animals already have explicit `walkSpeed` and `sprintSpeed`, and the existing predator/prey system already knows when an animal is chasing/fleeing. This is the natural integration point. fileciteturn33file0L2-L2
+`AnimalAgent` already knows when an animal is sprinting during chase/flee and already uses the low-energy threshold to alter wandering/rest behavior. Extend those paths instead of adding a new controller. fileciteturn5file0L2-L2
 
-Target:
+Target shape:
 
 ```text
 AnimalAgent
 ├── health: HealthState
-├── stamina: StaminaState
-└── existing life / predator-prey state
+└── life: AnimalLifeState
+      ├── hunger
+      ├── thirst
+      └── stamina: StaminaState
 ```
 
-During sprint/chase/flee:
+During sprint:
 
 ```text
 sprint → drain stamina
 ```
 
-When not sprinting:
+Outside sprint:
 
 ```text
 not sprinting → restore stamina
 ```
 
-At exhaustion:
+At exhaustion, the existing FSM should be prevented from sustaining sprinting. The smallest acceptable v1 behavior is:
 
-```text
-predator → may abandon chase
-prey     → may stop sprinting / seek recovery
-```
+- predator may abandon/stop a chase when exhausted,
+- prey may stop sprinting and recover,
+- the existing low-energy rest/idle behavior remains the decision mechanism.
 
-Do not create `AnimalLifeState.energy` as a second stamina implementation. There is already an `AnimalLifeState` in the current agent; 045 should carefully distinguish biological/life needs from physical effort capacity rather than blindly duplicating fields.
-
-If the existing `AnimalLifeState.energy` already acts as a physical stamina value in the relevant code path, migrate its semantic responsibility into `StaminaState` instead of keeping two gauges.
+Do not create `StaminaManager`, `SurvivalController`, a second fauna FSM, or a second update loop.
 
 ---
 
-## 6. Threat: keep v1 small
+## 6. Health remains shared and combat-agnostic
 
-Threat should not become a generalized AI framework in 045.
+Keep `HealthState` ignorant of combat context and AI policy.
 
-A minimal shared representation is enough, for example:
-
-```ts
-export type ThreatState = {
-  target?: EntityRef
-  level: number
-}
-```
-
-But do not force a heavyweight persistent object onto every entity if the current behavior can be expressed with a smaller immutable/event-like input.
-
-The important abstraction is:
+Good boundary:
 
 ```text
-something dangerous is perceived
+attack/combat code
         ↓
-agent receives threat information
+apply damage
         ↓
-agent decides what to do
+target.health
+        ↓
+agent reacts
 ```
 
-Threat should not decide `fight` or `flee` by itself.
-
-Potential sources already relevant to Seedvale include:
-
-- predator/prey interactions,
-- player awareness,
-- direct damage,
-- environmental danger later.
-
----
-
-## 7. Existing fauna awareness should feed Threat
-
-Plan 042 already introduced fauna awareness of the player. The existing `AnimalAgent` has environmental/player awareness and alert/flee behavior. fileciteturn33file0L2-L2
-
-Do not build a second player-detection system inside Threat.
-
-Prefer:
-
-```text
-playerAwareness / predator detection
-              ↓
-         threat signal
-              ↓
-     existing animal decision
-              ↓
-          flee/chase
-```
-
-This preserves the distinction between **perception** and **decision**.
-
----
-
-## 8. Attack remains a consumer, not part of HealthState
-
-`HealthState` must stay ignorant of combat context.
-
-Good:
-
-```text
-attack(attacker, target)
-        ↓
-validate attack
-        ↓
-drain attacker stamina
-        ↓
-apply damage to target.health
-        ↓
-target reacts
-```
-
-Bad:
+Bad boundary:
 
 ```text
 HealthState.takeDamage(attacker, weapon, threat, personality, ...)
 ```
 
-The shared health primitive should only know how to mutate health.
+Animal-specific damage values can remain in `faunaCombat.ts`; the existing shared health export is already the correct foundation. fileciteturn14file0L2-L6
 
-Animal-specific damage values can remain in fauna combat data, as they do today. fileciteturn32file0L2-L6
-
----
-
-## 9. Damage reaction
-
-Damage should become a signal consumed by the agent.
-
-Conceptually:
-
-```text
-HealthState
-     ↑
-   damage
-     ↑
-   Attack
-     ↓
- reaction signal
-     ↓
- Agent decision
-```
-
-Do not put personality or flee/fight logic into `HealthState`.
-
-For v1, the reaction can be simple:
-
-- prey → flee,
-- predator → fight or flee based on current state,
-- NPC → defensive behavior can be prepared but does not need a complete combat tree yet.
+Damage/death handling must be audited across all current consumers before changing the health API. Do not change `HealthState` in isolation if fauna death/attack code relies on its current mutation semantics.
 
 ---
 
-## 10. Personality integration
+## 7. Threat: smallest useful abstraction
 
-NPC personality already exists in `src/ai/dialogue.ts` / character systems and is already used to affect behavior/dialogue. `NpcAgent` imports personality-derived pause parameters today. fileciteturn35file0L2-L6
+Threat is a context supplied to existing AI, not another AI system.
 
-Do not create a combat personality system.
+The repository currently has no established repository-wide `EntityRef` type; a search finds no real implementation of that abstraction outside the 045 documents. Therefore do **not** introduce `EntityRef` merely for architectural symmetry.
 
-When combat behavior reaches NPCs, reuse the existing personality representation as one decision input:
+For v1, use the smallest representation that fits the existing actor references and current fauna behavior. A threat context should carry only what the decision layer actually needs, such as:
 
 ```text
-personality
-health
-stamina
-threat
-needs
-    ↓
-existing NPC decision layer
+threat level / relevance
+threat source or target reference, if an existing actor reference is already available
 ```
 
-This should be a later step of 045, after shared primitives and fauna behavior are stable.
+Do not force a generic persistent entity-reference system into the codebase before there is a concrete second consumer that needs it. If a shared target identity becomes necessary for both fauna and NPCs, introduce the smallest generic representation at that point.
+
+The key contract is:
+
+```text
+perception / damage
+        ↓
+threat information
+        ↓
+existing actor AI / FSM
+        ↓
+flee / fight / ignore / continue current work
+```
+
+Threat itself must not choose fight/flee.
+
+---
+
+## 8. Reuse existing perception and awareness
+
+The fauna already has predator/prey perception and player/environmental awareness. `AnimalAgent` also has alert/flee behavior and a held alert timer. fileciteturn5file0L2-L2
+
+Do not build a second player-detection or predator-detection system inside Threat.
+
+Prefer:
+
+```text
+existing perception
+        ↓
+small threat signal/context
+        ↓
+existing predator/prey decision
+        ↓
+flee / chase / continue
+```
+
+This keeps perception, state and decision responsibilities separate.
+
+---
+
+## 9. Attack and stamina
+
+The current fauna combat model contains damage balance and the agent owns attack timing/contact behavior. Keep that ownership boundary. fileciteturn14file0L2-L6
+
+When 045 adds stamina cost to attack, the sequence should be conceptually:
+
+```text
+existing attack opportunity
+        ↓
+check attacker stamina
+        ↓
+drain attacker stamina
+        ↓
+apply target damage
+        ↓
+existing target death/reaction path
+```
+
+Do not move combat policy into `HealthState` or `StaminaState`.
+
+Do not introduce inventory, weapons, hitbox frameworks, combos or player combat as part of this foundation.
+
+---
+
+## 10. Damage reaction and personality
+
+Damage should remain a signal consumed by the agent. Health records the physical result; the agent decides what to do next.
+
+For fauna, extend the existing predator/prey decisions rather than introducing a generalized combat AI. For NPCs, personality may later influence defensive behavior, but this should reuse the existing personality representation and existing decision layer.
+
+Do not create a separate combat-personality subsystem.
+
+The intended coupling is:
+
+```text
+health + stamina + threat + needs + personality
+                    ↓
+              existing AI/FSM
+                    ↓
+             work / rest / flee / fight
+```
 
 ---
 
 ## 11. Flee uses existing movement
 
-Do not introduce navigation/pathfinding as part of 045.
-
-The project already has movement and predator/prey flee behavior. Threat should select/describe a target and the existing movement code should execute the flee.
+Threat and decision code should select or describe the threat/flee context. Existing movement executes the result.
 
 ```text
 Threat
   ↓
-flee target
+existing flee decision
   ↓
 existing movement
 ```
 
-This is particularly important for Seedvale's architecture: 045 should add physical/behavioral coupling, not create a parallel movement stack.
+Do not introduce navigation/pathfinding as part of 045. The current fauna already has flee targeting and movement behavior; extend it rather than creating another movement stack.
 
 ---
 
-## 12. Suggested implementation order
+## 12. Implementation order
 
 ### Phase 1 — shared stamina primitive
 
-Add `StaminaState` and pure tests.
+- Add `StaminaState` and pure operations/tests.
+- Keep the primitive independent of Three.js and actor-specific behavior.
+- No gameplay behavior changes beyond what is necessary to wire the existing animal resource later.
 
-No gameplay behavior changes yet.
+### Phase 2 — migrate `AnimalLifeState.energy`
 
-### Phase 2 — NPC migration
+- Replace the existing mutable `energy` resource with the shared stamina representation.
+- Keep `AnimalLife` as the owner of hunger/thirst/physical ticking.
+- Preserve current energy drain/regeneration and rest-threshold behavior initially.
+- Update every `.energy` consumer; do not leave two stamina gauges in parallel.
+- Keep the change deterministic and testable in `AnimalLife.test.ts`.
 
-Move current work/rest fatigue from `HealthState` to `StaminaState`.
+### Phase 3 — NPC stamina
 
-Preserve the existing schedule/FSM and recognizable work/rest behavior.
+- Add/use the same `StaminaState` for NPC fatigue.
+- Move the existing fatigue/rest rates and energetic-trait modifiers from HP to stamina.
+- Preserve the existing Needs/FSM phases and work/rest rhythm.
+- Remove HP-fatigue helpers only after all consumers are migrated.
 
-Remove the old HP-fatigue path once no consumer remains.
+### Phase 4 — animal exhaustion behavior
 
-### Phase 3 — animal stamina
+- Gate sustained sprinting/chase/flee on stamina.
+- Preserve the existing predator/prey FSM and movement.
+- Let exhaustion cause the smallest behavior change needed: stop/avoid sprinting and recover.
 
-Attach `StaminaState` to `AnimalAgent`.
+### Phase 5 — minimal threat context
 
-Drain on sprint/chase/flee; restore while not sprinting.
+- Introduce only the smallest threat state/signal required by the existing fauna decision paths.
+- Reuse current predator/player perception and references.
+- Do not introduce `EntityRef`, `ThreatManager`, `SurvivalController`, or a new decision engine without a concrete need.
 
-Exhaustion should limit sprint behavior without introducing a new FSM.
+### Phase 6 — attack/damage reaction
 
-### Phase 4 — minimal threat abstraction
+- Add stamina cost to existing attack behavior where required.
+- Keep `HealthState` as the target health primitive.
+- Preserve current animal damage values, attack cooldown and death behavior unless 045 explicitly changes them.
+- Feed damage/threat information back into existing agent decisions.
 
-Introduce the smallest useful shared threat representation or signal.
+### Phase 7 — NPC threat/personality
 
-Feed existing predator/player-awareness information into it where it reduces duplication.
+Only after the shared foundations work for fauna:
 
-### Phase 5 — damage/attack reaction
+- connect threat and health/stamina to the existing NPC decision layer,
+- reuse existing personality data,
+- do not create a combat-specific FSM.
 
-Keep existing animal contact attack behavior, but make its relationship to stamina and health explicit.
+### Phase 8 — player
 
-Then introduce generic `attack` semantics only where the current architecture benefits from it.
-
-### Phase 6 — NPC threat/personality
-
-Only after the shared foundations work for fauna, integrate threat decisions with NPC personality and future combat behavior.
-
-### Phase 7 — player
-
-Player stamina/combat should consume the same shared primitives. Do not let player-specific requirements distort the first shared implementation.
+Player stamina/combat can consume the same shared primitives later. Do not let player-specific requirements distort the first shared implementation.
 
 ---
 
 ## 13. Tests
 
-At minimum, add/extend pure tests for:
-
-### `StaminaState`
+At minimum, extend/add pure tests for the shared stamina primitive:
 
 - creates full,
 - drains correctly,
 - clamps at zero,
 - restores correctly,
 - clamps at max,
-- exhaustion threshold behaves deterministically.
+- exhaustion is deterministic.
+
+### Animal migration
+
+Update the existing `AnimalLife.test.ts` coverage to prove:
+
+- stamina starts full,
+- sprint drains stamina at the existing rate,
+- non-sprinting regenerates stamina at the existing rate,
+- stamina clamps to `[0, max]`,
+- the existing low-energy/rest behavior still works,
+- no second energy/stamina value is maintained.
 
 ### NPC migration
 
+Add coverage for:
+
 - fatigue does not reduce HP,
 - rest does not heal HP merely because it is rest,
-- stamina decreases during work,
-- stamina regenerates during rest,
-- NPC remains alive at zero stamina.
+- work/effort reduces stamina,
+- rest regenerates stamina,
+- zero stamina does not kill the NPC,
+- the existing HP floor is no longer needed as a fatigue mechanism.
 
-### Animal integration
+### Health/combat regression
 
-- sprint drains stamina,
-- no sprint does not drain it,
-- stamina regenerates,
-- exhaustion prevents/limits sprint,
-- existing predator/prey attack damage remains unchanged.
-
-Existing `HealthState.test.ts` and `faunaCombat.test.ts` should remain green. The repository already has those tests. fileciteturn30file19L96-L100 fileciteturn30file20L101-L105
+Keep existing `HealthState` and fauna combat tests green. The shared health contract and animal damage values must remain stable while stamina is migrated. `HealthState` is already a shared primitive and fauna combat already re-exports it. fileciteturn6file0L2-L6 fileciteturn14file0L2-L6
 
 ---
 
-## 14. Important guardrails
+## 14. Guardrails
 
 Do not:
 
+- keep `AnimalLifeState.energy` and `StaminaState.current` as parallel mutable stamina values,
 - create `AnimalEnergy`, `NpcFatigue` or `PlayerStamina` types,
+- create separate animal/NPC/player health models,
 - encode stamina in HP,
 - move AI decisions into `HealthState` or `StaminaState`,
 - create a second fauna FSM,
+- create a second update loop for biological/physical state,
+- create `StaminaManager`, `ThreatManager` or `SurvivalController` without a demonstrated need,
+- introduce `EntityRef` only for architectural symmetry,
 - create a second movement/navigation system,
-- create a combat personality subsystem,
-- make Threat responsible for deciding fight/flee,
+- create a combat-specific personality subsystem,
+- make Threat responsible for choosing fight/flee,
 - implement full player combat,
 - add inventory/weapons/armor as part of this foundation,
-- turn 045 into a generalized behavior-tree/utility-AI rewrite.
+- turn 045 into a generalized behavior-tree or utility-AI rewrite.
 
 Do:
 
-- reuse `HealthState`,
-- preserve existing predator/prey FSM,
-- preserve existing NPC Needs/FSM,
+- reuse the shared `HealthState`,
+- migrate the existing animal `energy` resource into the shared stamina primitive,
+- keep `AnimalLife` responsible for deterministic life/physical ticking,
+- keep `AnimalAgent` responsible for FSM, movement, perception and combat decisions,
+- preserve the existing NPC Needs/FSM,
 - reuse existing awareness/perception,
-- keep pure state primitives independent of Three.js,
-- make the shared types useful to NPC, fauna and eventually player.
+- keep shared state primitives independent of Three.js,
+- make health and stamina reusable by fauna, NPCs and eventually the player.
 
 ---
 
 ## 15. Desired end state
 
 ```text
-                    ┌──────────────┐
-                    │  Perception  │
-                    │ needs/threat │
-                    └──────┬───────┘
-                           ↓
-                     Agent / FSM
-                    ┌──────┼──────┐
-                    ↓      ↓      ↓
-                  Work   Fight   Flee
-                    │      │      │
-                    └──────┼──────┘
-                           ↓
-                     StaminaState
-                           │
-                     physical effort
+                 Perception / Needs
+                         │
+                  Threat / state
+                         ↓
+                    Existing AI/FSM
+                 ┌───────┼────────┐
+                 ↓       ↓        ↓
+               Work    Fight    Flee
+                 │       │        │
+                 └───────┼────────┘
+                         ↓
+                    StaminaState
+                  physical effort
 
 Damage ───────────────→ HealthState
-                           │
-                         death
+                            │
+                          death
 
-Personality ─────────→ Agent decision
+Personality ─────────→ existing decision layer
 ```
 
-The key architectural rule is:
+The architectural contract is:
 
-> **Health describes survival. Stamina describes effort. Threat describes danger. Existing AI decides the response.**
+> **Health describes survival. Stamina describes physical effort. Threat describes relevant danger. Existing AI/FSM decides the response.**
 
-045 is successful when these become reusable foundations shared by fauna, NPCs and eventually the player — without replacing the existing Seedvale behavior systems with a new parallel architecture.
+045 succeeds when these become reusable foundations without replacing Seedvale's existing life, needs, perception, predator/prey, movement and NPC behavior systems with parallel architecture.
