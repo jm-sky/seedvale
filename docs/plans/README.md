@@ -40,7 +40,7 @@ Implementation plans for features and larger changes.
 | [2026-08-07--045--health-stamina-threat.md](./2026-08-07--045--health-stamina-threat.md)                         | Wspólny Health/Stamina/Threat dla NPC/fauny/gracza             | 0%       | 🟡 medium | XL     |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md)             | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout  | 0%       | 🔴 high   | XL     |
 | [2026-08-09--049--procedural-world-landmarks.md](./2026-08-09--049--procedural-world-landmarks.md)               | Proceduralne obiekty, ruiny i landmarki                        | 0%       | 🟡 medium | XL     |
-| [2026-08-10--052--shovel-digging-and-finding stones.md](./2026-08-10--052--shovel-digging-and-finding stones.md) | Kopanie ziemi i znajdowanie kamieni                            | 0%       | 🔴 high   | M      |
+| [2026-08-10--052--shovel-digging-and-finding-stones.md](./2026-08-10--052--shovel-digging-and-finding-stones.md) | Kopanie ziemi i znajdowanie kamieni                            | 0%       | 🔴 high   | M      |
 
 ---
 
