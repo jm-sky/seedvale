@@ -1,5 +1,8 @@
 import { getMountedVueUi } from '../ui-vue/mount'
 
+export type RestVariant = 'camp' | 'town'
+export type RestOutcome = 'ok' | 'too-far' | 'no-blanket'
+
 export type QuickActionsHandlers = {
   /** Same handlers passed to `createPauseMenu`'s fire/torch buttons — these
    *  are a second UI entry point onto identical logic (`app/userActions.ts`),
@@ -15,7 +18,7 @@ export type QuickActionsHandlers = {
    *  blanket in the inventory — returns `'no-blanket'` (consumes nothing) if
    *  missing; `'town'` additionally requires the player to be near a
    *  settlement — returns `'too-far'` (consumes nothing) if not. */
-  onRest?: (variant: 'camp' | 'town') => 'ok' | 'too-far' | 'no-blanket'
+  onRest?: (variant: RestVariant) => RestOutcome
 }
 
 export type QuickActions = {

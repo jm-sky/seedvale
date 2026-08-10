@@ -7,12 +7,13 @@ import {
   type ChunkTileData,
   type ChunkTileParams,
   sampleApronGrid,
+  type VegetationKind,
 } from './chunkHeightmap'
 
 export type VegetationPlacement = {
   x: number
   z: number
-  kind: 'tree' | 'bush' | 'cactus' | 'reed'
+  kind: VegetationKind
   /** Index into `TREE_SPECS`/`BUSH_SPECS`/`CACTUS_SPECS`/`REED_SPECS`
    *  (`props.ts`), resolved on the main thread. */
   speciesIndex: number

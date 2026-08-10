@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onUnmounted, ref, type Ref, watch } from 'vue'
+import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -11,7 +12,7 @@ const touchDevice = isTouchDevice()
 useOverlayScreen('quick-actions', isQuickActionsOpen, closeQuickActions)
 useTouchScroll(panel)
 
-const restStatusText: Record<'too-far' | 'no-blanket', string> = {
+const restStatusText: Record<Exclude<RestOutcome, 'ok'>, string> = {
   'too-far': 'Musisz być bliżej wioski',
   'no-blanket': 'Potrzebujesz koca',
 }
@@ -53,7 +54,7 @@ function wait(hours: number): void {
   ui.quickActions.onWait?.(hours)
 }
 
-function rest(variant: 'camp' | 'town'): void {
+function rest(variant: RestVariant): void {
   const result = ui.quickActions.onRest?.(variant) ?? (variant === 'camp' ? 'no-blanket' : 'too-far')
   if (result !== 'ok') {
     const status = variant === 'camp' ? campStatus : townStatus

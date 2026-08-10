@@ -1,6 +1,6 @@
 # Review 004 — inline union types → dedykowane nazwane typy
 
-**Status:** `in progress` (1/4 — `PlacedFireKind` done)
+**Status:** `done` (4/4 — `PlacedFireKind`, `RestVariant`/`RestOutcome`, `VegetationKind`, `RoadSegmentKind`)
 **Data:** 2026-08-10
 **Zakres:** `src/` — pola/parametry z inline `'a' | 'b' | ...` zamiast nazwanego type alias, zgodnie z regułą z globalnego CLAUDE.md („Prefer creating dedicated union types instead of just defining them on interface prop").
 **Powód:** nowy audyt, nie część review #002.
@@ -16,7 +16,7 @@ sprawdzenie duplikacji tego samego zbioru wartości w innych plikach. Kontrola p
 
 ## Findings
 
-### `VegetationKind`
+### `VegetationKind` — ✅ zrobione (2026-08-10)
 
 `src/terrain/chunkVegetation.ts:15` — `VegetationPlacement.kind: 'tree' | 'bush' | 'cactus' | 'reed'` inline.
 Ten sam zbiór wartości jako kształt (nie unia, ale ten sam vocabulary) w
@@ -38,7 +38,7 @@ Fix: `SavePlacedFire.kind: PlacedFireKind` (import), usunąć powieloną definic
 „dodaj nazwę", to „przestań duplikować źródło prawdy" — dwa miejsca dziś mogłyby się rozjechać przy dodaniu
 trzeciego rodzaju ogniska.
 
-### `RestVariant` / `RestOutcome`
+### `RestVariant` / `RestOutcome` — ✅ zrobione (2026-08-10)
 
 Ten sam para zbiorów wartości wpisana inline w **trzech** plikach:
 
@@ -51,7 +51,7 @@ Cztery inline wystąpienia dwóch zbiorów wartości w trzech plikach — najsil
 Dodać `export type RestVariant = 'camp' | 'town'` i `export type RestOutcome = 'ok' | 'too-far' | 'no-blanket'`
 w `src/ui/createQuickActions.ts` (właściciel `QuickActionsHandlers`, jedyny plik nie-Vue z tych trzech), reeksportowane/importowane przez `ui-vue/store.ts` i `QuickActionsScreen.vue`.
 
-### `RoadSegmentKind` — słabszy przypadek, jeden plik
+### `RoadSegmentKind` — słabszy przypadek, jeden plik — ✅ zrobione (2026-08-10)
 
 `src/settlement/roadNetwork.ts:32` — `RoadSegment.kind: 'road' | 'path'`. `RoadSegment` nie jest eksportowany
 poza ten plik; wartości `'road'`/`'path'` używane tylko wewnątrz `roadNetwork.ts` (5 miejsc: `:342`, `:370`,
@@ -87,6 +87,6 @@ nie usuwa duplikacji, bo duplikacji nie ma (jeden call site). Zostawić jak jest
 ## Priorytet wykonania
 
 1. ✅ `PlacedFireKind` w `saveData.ts` — 1-linijkowa zmiana, usuwa realną duplikację źródła prawdy.
-2. `RestVariant`/`RestOutcome` — 3 pliki dziś muszą się zgadzać ręcznie; największe ryzyko rozjazdu.
-3. `VegetationKind` — dotyka worker-safe `chunkHeightmap.ts`, ostrożniej (współdzielony z workerem).
-4. `RoadSegmentKind` — kosmetyczne, jeden plik, zrobić przy okazji innej zmiany w `roadNetwork.ts`.
+2. ✅ `RestVariant`/`RestOutcome` — 3 pliki dziś muszą się zgadzać ręcznie; największe ryzyko rozjazdu.
+3. ✅ `VegetationKind` — dotyka worker-safe `chunkHeightmap.ts`, ostrożniej (współdzielony z workerem).
+4. ✅ `RoadSegmentKind` — kosmetyczne, jeden plik, zrobić przy okazji innej zmiany w `roadNetwork.ts`.

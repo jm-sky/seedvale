@@ -7,6 +7,8 @@ import { fbm01, type FbmParams } from './fbm'
 import { computeBodyScale, detectWaterBodies } from './waterBodies'
 import { worleyRidge } from './worleyNoise'
 
+export type VegetationKind = 'tree' | 'bush' | 'cactus' | 'reed'
+
 export type RegionParams = {
   /** Very-low-frequency noise scale (world units) classifying ocean → coast →
    *  lowland → highland. Independent of `mountainScale` — see chunkHeightmap.ts
@@ -172,7 +174,7 @@ export type ChunkTileParams = {
    *  passed as plain numbers rather than importing `TREE_SPECS`/`BUSH_SPECS`/
    *  `CACTUS_SPECS`/`REED_SPECS` from `props.ts` there, so worker-side code
    *  never pulls in THREE mesh-building/GLTF-loader code it will never run. */
-  vegetationSpeciesCount: { tree: number; bush: number; cactus: number; reed: number }
+  vegetationSpeciesCount: Record<VegetationKind, number>
   /** Road/path corridors near this chunk — see `RoadCorridorSegment`. Usually
    *  0–6 entries. Excluded from `RawSampleParams`: the analytic samplers below
    *  (`sampleHeightAt` etc.) are what `roadNetwork.ts` itself uses to find

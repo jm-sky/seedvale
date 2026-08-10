@@ -4,6 +4,7 @@ import type { ItemKind } from '../items/items'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
+import type { RestOutcome, RestVariant } from '../ui/createQuickActions'
 
 export type VillagerEntry = { npc: Raw<NpcAgent>; settlementName: string; foodSourceType: FoodSourceType }
 type VillagerRefreshEntry = { npc: NpcAgent; settlementName: string; foodSourceType: FoodSourceType }
@@ -28,7 +29,7 @@ type QuickActionsState = {
   onBuildFirePit: (() => boolean) | null
   onLightTorch: (() => boolean) | null
   onWait: ((hours: number) => void) | null
-  onRest: ((variant: 'camp' | 'town') => 'ok' | 'too-far' | 'no-blanket') | null
+  onRest: ((variant: RestVariant) => RestOutcome) | null
 }
 
 type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'simpleFireStatus' | 'firePitStatus' | 'torchStatus'>>

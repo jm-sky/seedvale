@@ -26,10 +26,12 @@ export type RoutePoint = {
   hs: number
 }
 
+export type RoadSegmentKind = 'road' | 'path'
+
 export type RoadSegment = {
   a: RoutePoint
   b: RoutePoint
-  kind: 'road' | 'path'
+  kind: RoadSegmentKind
 }
 
 /** Everything `roadNetwork.ts` needs to resolve settlement defs / find routes,
