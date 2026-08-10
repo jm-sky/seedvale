@@ -207,21 +207,28 @@ export function createBarrel(scale = 1): THREE.Group {
   return barrel
 }
 
-/** Small warm glow (emissive window pane + a short-range point light) meant
- *  to sit near a house — toggled continuously via `setNightIntensity(t)`
- *  (0 = daylight, off; 1 = full night glow), see `settlement/createSettlement.ts`'s
- *  day/night wiring. Kept as one cheap emissive quad + one short-falloff,
- *  unshadowed point light per house rather than anything more elaborate — a
- *  handful of these per loaded settlement is the same order of magnitude as
- *  the existing campfire flame light.
+const HOUSE_LAMP_OFF_COLOR = new THREE.Color(0x3a2c22)
+const HOUSE_LAMP_ON_COLOR = new THREE.Color(0xffb35c)
+
+/** Small lamp mounted on a house wall — a lantern-sized cube rather than a
+ *  window-sized pane, toggled continuously via `setNightIntensity(t)`
+ *  (0 = daylight, dark/unlit fixture; 1 = full night glow), see
+ *  `settlement/createSettlement.ts`'s day/night wiring. `MeshBasicMaterial`
+ *  (unlit) so it doesn't pick up ordinary scene shading and read as a plain
+ *  lit card during the day — previously a `MeshStandardMaterial` plane, which
+ *  stayed visibly bright under daylight even at `emissiveIntensity: 0` (see
+ *  plan `2026-08-08--044` §1.1's "hanging square" report; the wall-mount fix
+ *  there addressed positioning, not this). Kept as one cheap unlit cube + one
+ *  short-falloff, unshadowed point light per house rather than anything more
+ *  elaborate — a handful of these per loaded settlement is the same order of
+ *  magnitude as the existing campfire flame light.
  *
- *  `mountHeight`/`mountZ` place the glow flush against an actual wall —
- *  derived by the caller from the specific hut's own bounding box
- *  (`buildSettlementProps`), since the three GLB hut variants
- *  (`HUT_URLS`) don't share the fallback `createHut()` box's proportions;
- *  a fixed offset floated the glow plane off the wall on some of them
- *  (visible as a bright square hanging in the air, see plan
- *  `2026-08-08--044` §1.1). */
+ *  `mountHeight`/`mountZ` place the lamp against an actual wall — derived by
+ *  the caller from the specific hut's own bounding box (`buildSettlementProps`),
+ *  since the three GLB hut variants (`HUT_URLS`) don't share the fallback
+ *  `createHut()` box's proportions. `mountZ` is pulled in slightly from the
+ *  raw bounding-box edge since that edge is often the roof eave, not the
+ *  wall face, on the GLB hut models. */
 export type HouseLight = {
   readonly object: THREE.Object3D
   setNightIntensity: (t: number) => void
@@ -229,28 +236,22 @@ export type HouseLight = {
 
 export function createHouseLight(mountHeight: number, mountZ: number): HouseLight {
   const group = new THREE.Group()
+  const wallZ = mountZ * 0.85
 
-  const glowMat = new THREE.MeshStandardMaterial({
-    color: 0xffdb9e,
-    emissive: 0xffb35c,
-    emissiveIntensity: 0,
-    flatShading: true,
-    side: THREE.DoubleSide,
-  })
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), glowMat)
-  // Nudged just outside the wall face so it isn't hidden behind it.
-  glow.position.set(0, mountHeight, mountZ + 0.02)
-  group.add(glow)
+  const lampMat = new THREE.MeshBasicMaterial({ color: HOUSE_LAMP_OFF_COLOR })
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.06), lampMat)
+  lamp.position.set(0, mountHeight, wallZ + 0.04)
+  group.add(lamp)
 
   const light = new THREE.PointLight(0xffb35c, 0, 4.5, 2)
-  light.position.set(0, mountHeight, mountZ - 0.15)
+  light.position.set(0, mountHeight, wallZ - 0.1)
   group.add(light)
 
   return {
     object: group,
     setNightIntensity(t) {
       const clamped = Math.max(0, Math.min(1, t))
-      glowMat.emissiveIntensity = clamped * 2.2
+      lampMat.color.lerpColors(HOUSE_LAMP_OFF_COLOR, HOUSE_LAMP_ON_COLOR, clamped)
       light.intensity = clamped * 1.0
     },
   }

@@ -14,6 +14,8 @@ Problemem jest zbyt losowy układ, słabe relacje między budynkami i brak nadrz
 
 Istnieją już osobne mechanizmy dotyczące lokalizacji osady, rodzin i domów, wyrównywania terenu, ścieżek, livestock, props, miejsc NPC i ognisk. Potrzebna jest spójna warstwa planowania, która je połączy.
 
+> **Wziąć pod uwagę poprzedni niedokończony plan:** `2026-08-08--036--village-siting-difficult-terrain.md`
+
 ## 2. Tożsamość wioski
 
 ```ts
