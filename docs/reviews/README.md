@@ -23,6 +23,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | Water quality | Stylized woda — brzegi, shader, vs Water.js | `done` | [2026-08-07--001--water-quality.md](./2026-08-07--001--water-quality.md) |
 | App performance & code health | Całość aplikacji — perf, refactoring, błędy (pierwsze ogólne review) | `done` | [2026-08-08--002--app-performance-and-code-health.md](./2026-08-08--002--app-performance-and-code-health.md) |
 | Terrain surface detail | Detal powierzchni terenu („teren wygląda płasko") — normal-mapa, micro-tint, trawa, AO; **+ instrukcja strojenia dla kolejnych agentów** | `verification needed` | [2026-08-10--003--terrain-surface-detail.md](./2026-08-10--003--terrain-surface-detail.md) |
+| Dedicated union types | Audyt inline union types (`kind: 'a' \| 'b'` na polu/parametrze zamiast nazwanego type alias) w `src/` | `planned` | [2026-08-10--004--to-do--dedicated-union-types.md](./2026-08-10--004--to-do--dedicated-union-types.md) |
 
 ## After each run
 

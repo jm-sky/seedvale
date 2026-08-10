@@ -57,6 +57,7 @@ Implementation plans for features and larger changes.
 | [2026-08-09--050--fire-torch.md](./2026-08-09--050--fire-torch.md) | Ognisko i pochodnia: proste ognisko z drewna, palenisko z kamieni + ognisko oraz przenośna pochodnia | `done` ✅ |
 | [2026-08-09--051--visual-atmosphere-lighting.md](./2026-08-09--051--visual-atmosphere-lighting.md) | Visual polish: atmospheric fog, dynamiczne niebo/światło, subtelny bloom/glow i god rays | `verification needed` 🔍 (fog + dynamic sky już były zaimplementowane, doprecyzowane; bloom + god rays nowe — `src/render/createPostProcessing.ts`, `src/render/godRaysShader.ts`) |
 | [2026-08-10--052--shovel-digging-and-finding stones.md](./2026-08-10--052--shovel-digging-and-finding stones.md) | Kopanie w ziemi aby obniżyć teren i znaleźć kamienie | `planned` 📋 |
+| [2026-08-10--053--createapp-refactor.md](./2026-08-10--053--createapp-refactor.md) | Rozbicie `createApp.ts` (R5: `WorldBundle`/`gameLoop`/`modalState`/`interactables`) + `chunkManager.ensureLoaded` duplikacja (R6) — refresh review #002's R5-R9, konkretny plan świeżości stanu po `rebuildWorld()` | `planned` 📋 |
 
 ## Quick notes / bugs:
 - Domki mają dziwne wiszące w powietrzu kwadraty, to chyba "światło w domach". Wygląda zupełnie bez sensu. Światło w domu powinno palić się w nocy, może to być mała lampka
