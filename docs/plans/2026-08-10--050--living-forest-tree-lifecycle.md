@@ -2,7 +2,7 @@
 
 **Status:** `planned`
 **Created:** 2026-08-10
-**Next:** [055 — Siekiera i ścinanie drzew przez gracza](./2026-08-10--055--axe-player-tree-harvesting.md)
+**Next:** [057 — Siekiera i ścinanie drzew przez gracza](./2026-08-10--057--axe-player-tree-harvesting.md)
 
 ## Cel
 
@@ -240,7 +240,7 @@ Harvesting powinien być koncepcyjnie wspólną akcją świata, z której późn
 ```text
 HarvestAction
 ├── NPC
-└── Player (055)
+└── Player (057)
 ```
 
 Nie tworzyć osobnego `NpcTreeChopping` i później `PlayerTreeChopping`.
@@ -340,8 +340,8 @@ Nie stosować O(n²) porównywania wszystkich drzew.
 
 ## Poza zakresem v1
 
-- player tree harvesting — plan 055,
-- siekiera jako tool — plan 055,
+- player tree harvesting — plan 057,
+- siekiera jako tool — plan 057,
 - pełny system seasons — plan 040,
 - groundwater simulation,
 - pełny system gleby,
