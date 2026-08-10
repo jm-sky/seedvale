@@ -2,7 +2,7 @@
 
 **Status:** `planned`
 **Created:** 2026-08-10
-**Related:** [050 — Living Forest / Tree Lifecycle](./2026-08-10--050--living-forest-tree-lifecycle.md)
+**Related:** [058 — Living Forest / Tree Lifecycle](./2026-08-10--058--living-forest-tree-lifecycle.md)
 **Related pattern:** [052 — Shovel: digging & finding stones](./2026-08-10--052--shovel-digging-and-finding-stones.md)
 
 ## Cel
@@ -15,7 +15,7 @@ item → player action → world interaction → resource
 
 Gracz może znaleźć / zdobyć siekierę, wyposażyć ją i użyć do ścinania dojrzałych drzew.
 
-Plan powinien wykorzystywać lifecycle drzew z 050, a nie tworzyć osobnego systemu „player tree chopping”.
+Plan powinien wykorzystywać lifecycle drzew z 058, a nie tworzyć osobnego systemu „player tree chopping”.
 
 ## Gameplay
 
@@ -70,7 +70,7 @@ HarvestAction
 
 ## Tree lifecycle
 
-Ścięcie przez gracza musi korzystać z `TreeState` z planu 050:
+Ścięcie przez gracza musi korzystać z `TreeState` z planu 058:
 
 ```text
 mature
@@ -110,7 +110,7 @@ Nie jest wymagane realistyczne przewracanie drzewa w v1.
 
 Nie wykonywać ciągłego raycastu ani ciężkiej symulacji dla wszystkich drzew.
 
-Interakcja jest lokalna i dotyczy wybranego celu. Lifecycle/growth pozostaje systemem danych z 050.
+Interakcja jest lokalna i dotyczy wybranego celu. Lifecycle/growth pozostaje systemem danych z 058.
 
 Nie przenosić prostej pojedynczej interakcji do workera tylko dlatego, że Seedvale używa workerów. Worker może mieć sens później dla masowej symulacji drzew/growth, nie dla pojedynczego `chop`.
 
@@ -140,4 +140,4 @@ Nie przenosić prostej pojedynczej interakcji do workera tylko dlatego, że Seed
 
 > **Siekiera jest narzędziem do istniejącej interakcji ze światem, a nie początkiem osobnego systemu ścinania drzew.**
 
-Plan 050 odpowiada za życie drzewa. Ten plan odpowiada za możliwość wykonania harvestingu przez gracza.
+Plan 058 odpowiada za życie drzewa. Ten plan odpowiada za możliwość wykonania harvestingu przez gracza.
