@@ -41,7 +41,6 @@ Implementation plans for features and larger changes.
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md)             | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout  | 0%       | 🔴 high   | XL     |
 | [2026-08-09--049--procedural-world-landmarks.md](./2026-08-09--049--procedural-world-landmarks.md)               | Proceduralne obiekty, ruiny i landmarki                        | 0%       | 🟡 medium | XL     |
 | [2026-08-10--052--shovel-digging-and-finding stones.md](./2026-08-10--052--shovel-digging-and-finding stones.md) | Kopanie ziemi i znajdowanie kamieni                            | 0%       | 🔴 high   | M      |
-| [2026-08-10--053--createapp-refactor.md](./2026-08-10--053--createapp-refactor.md)                               | Refaktor `createApp.ts`, game loop, modal state, interactables | 0%       | 🟡 medium | L      |
 
 ---
 
@@ -60,6 +59,7 @@ Implementation plans for features and larger changes.
 | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | -------- | --------- | ------ |
 | [2026-08-08--032--natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md)               | Zasoby naturalne, atrakcyjność lokalizacji, food source | 100%     | 🔴 high   | M      |
 | [2026-08-08--036--village-siting-difficult-terrain.md](./2026-08-08--036--village-siting-difficult-terrain.md) | Osadzanie wiosek w trudnym terenie                      | 25%      | 🟡 medium | M      |
+| [2026-08-10--053--createapp-refactor.md](./2026-08-10--053--createapp-refactor.md)                             | Refaktor `createApp.ts`, game loop, modal state, interactables (R5+R6) | 100%     | 🟡 medium | L      |
 
 ---
 
@@ -105,7 +105,12 @@ Implementation plans for features and larger changes.
 
 ## Quick notes / bugs
 
-* Domki mają dziwne wiszące w powietrzu kwadraty, prawdopodobnie związane ze „światłem w domach”. Wygląda to nienaturalnie. Światło w domu powinno pojawiać się w nocy jako mała lampka (np. kostka).
+- Mgła (dodana w `2026-08-09--051--visual-atmosphere-lighting.md`) - w górach wszedłem w mgłę i nic nie widziałem. Ogółem mgły jest trochę za dużo.
+- Światło w domach (dodane w `2026-08-08--044--world-life-details.md` i poprawione ostatnio) - kostka wisi w powietrzu obok domu, czasem nawet jakby 2 metry obok.
+- Obiekty czasem "latają" nad ziemią. Np. krzaki. To wynika pewnie ze złego pozycjonowania, które nie bierze pod uwagę modyfikatorów...?
+- NPC w trakcie rozmowy z graczem, potrafi sobie odejść.
+- Aplikacja przeładowuje się przy zmianach w plikach .md z katalogu docs/ - nie powinna.
+- Morze/ocean wygląda słabo - lepszy byłby troszkę bardziej przezroczysty. [low priority]
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row to the appropriate status section above.
 

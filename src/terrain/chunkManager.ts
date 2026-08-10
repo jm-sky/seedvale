@@ -306,6 +306,27 @@ export function createChunkManager(
     }
   }
 
+  /** Builds one chunk-local placement group (vegetation/items/environment) —
+   *  `makeProp` returning `null` skips that placement (e.g. an already
+   *  `collectedItemIds` item) without leaving a gap in the group. Returns
+   *  `undefined` for an empty placement list, same as the field never having
+   *  been set, so callers can assign the result straight to `rec.X`. */
+  function buildPlacementGroup<T>(
+    name: string,
+    placements: readonly T[],
+    makeProp: (placement: T) => THREE.Object3D | null,
+  ): THREE.Group | undefined {
+    if (placements.length === 0) return undefined
+    const group = new THREE.Group()
+    group.name = name
+    for (const placement of placements) {
+      const prop = makeProp(placement)
+      if (prop) group.add(prop)
+    }
+    scene.add(group)
+    return group
+  }
+
   function ensureLoaded(coord: ChunkCoord): Promise<void> {
     const key = chunkKey(coord)
     const existing = chunks.get(key)
@@ -359,11 +380,14 @@ export function createChunkManager(
         rec.state = 'ready'
         syncGrassForRecord(rec, lastPlayerChunk)
 
-        if (tile.vegetation.length > 0) {
-          const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
-          const sampleTileHeight: HeightSampler = (sx, sz) =>
-            sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
+        // Identical for vegetation/items/environment — the apron/origin doesn't
+        // depend on what's being placed on it — so computed once up front
+        // rather than redundantly inside each of the three blocks below.
+        const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
+        const sampleTileHeight: HeightSampler = (sx, sz) =>
+          sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
 
+        if (tile.vegetation.length > 0) {
           const [treeTemplates, bushTemplates, cactusTemplates, reedTemplates] = await Promise.all([
             getTreeTemplates(),
             getBushTemplates(),
@@ -380,54 +404,30 @@ export function createChunkManager(
             reed: reedTemplates,
           }
 
-          const group = new THREE.Group()
-          group.name = 'chunk-vegetation'
-          for (const placement of tile.vegetation) {
+          rec.vegetation = buildPlacementGroup('chunk-vegetation', tile.vegetation, (placement) => {
             const templates = templatesByKind[placement.kind]
             const prop = cloneProp(templates, placement.speciesIndex, placement.scale)
             prop.rotation.y = placement.rotationY // deterministic — overrides cloneProp's own Math.random()
             placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
-            group.add(prop)
-          }
-          scene.add(group)
-          rec.vegetation = group
+            return prop
+          })
         }
 
-        if (tile.items.length > 0) {
-          const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
-          const sampleTileHeight: HeightSampler = (sx, sz) =>
-            sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
+        rec.items = buildPlacementGroup('chunk-items', tile.items, (placement) => {
+          if (config.collectedItemIds.has(placement.id)) return null
+          const itemMesh = createItemMesh(placement.kind)
+          itemMesh.userData.itemId = placement.id
+          itemMesh.userData.itemKind = placement.kind
+          placeOnGround(itemMesh, placement.x, placement.z, sampleTileHeight)
+          return itemMesh
+        })
 
-          const group = new THREE.Group()
-          group.name = 'chunk-items'
-          for (const placement of tile.items) {
-            if (config.collectedItemIds.has(placement.id)) continue
-            const itemMesh = createItemMesh(placement.kind)
-            itemMesh.userData.itemId = placement.id
-            itemMesh.userData.itemKind = placement.kind
-            placeOnGround(itemMesh, placement.x, placement.z, sampleTileHeight)
-            group.add(itemMesh)
-          }
-          scene.add(group)
-          rec.items = group
-        }
-
-        if (tile.environment.length > 0) {
-          const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
-          const sampleTileHeight: HeightSampler = (sx, sz) =>
-            sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
-
-          const group = new THREE.Group()
-          group.name = 'chunk-environment'
-          for (const placement of tile.environment) {
-            const prop = createEnvironmentProp(placement.kind, placement.scale, placement.variant)
-            prop.rotation.y = placement.rotationY
-            placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
-            group.add(prop)
-          }
-          scene.add(group)
-          rec.environment = group
-        }
+        rec.environment = buildPlacementGroup('chunk-environment', tile.environment, (placement) => {
+          const prop = createEnvironmentProp(placement.kind, placement.scale, placement.variant)
+          prop.rotation.y = placement.rotationY
+          placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
+          return prop
+        })
       })
       .catch((err: unknown) => {
         if (!(err instanceof HeightmapGenerationCancelledError)) {

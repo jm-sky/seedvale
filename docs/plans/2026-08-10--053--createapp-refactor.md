@@ -1,8 +1,20 @@
 # Plan: Rozbicie `createApp.ts` (R5) + drobne porządki (R6–R9)
 
-**Status:** `planned`
+**Status:** `verification needed`
 **Created:** 2026-08-10
 **Priority:** średni — czysto techniczny dług, żadna zmiana zachowania; robić przed kolejnym dużym dopisaniem do `createApp.ts` (dziś 1240 linii), nie w trybie pilnym
+
+## Wykonanie (2026-08-10)
+
+Zrobione w kolejności z planu, każdy krok zweryfikowany (`tsc --noEmit`, `vue-tsc --noEmit`, `eslint`, `npm run build`, `npm run test`) przed przejściem dalej:
+
+1. `src/app/worldBundle.ts` — `WorldBundle` (const-kontener, pola podmieniane przez `rebuildWorldBundle`), `createWorldBundle`/`rebuildWorldBundle`/`disposeWorldBundle`; `resourceEnv` (dla `resourceDeposits`) przestał być długożyjącą indirekcją — budowany od nowa przy każdym wywołaniu z lokalnego `chunkManager`, bo `resourceDeposits` i tak ma cykl życia 1:1 z `chunkManager` (oba disposowane/budowane razem w rebuildzie), więc indirekcja nie była tu potrzebna (inaczej niż `ambientSamplers`, który przeżywa wiele rebuildów).
+2. `src/app/interactables.ts` — `buildInteractables`/`collectItem` + stałe `INTERACT_RANGE`/`INTERACT_MIN_DOT`/`GAZE_RANGE`/`TREE_BRANCH_CHANCE`/`KNIFE_BRANCH_BONUS` (używane też w `tick()`, nie tylko w tych dwóch funkcjach — eksportowane, nie tylko lokalne).
+3. `src/app/modalState.ts` — `ActiveModal` union + `activeModal()`; `tick()` woła ją raz i robi `switch` z trzema realnymi gałęziami (`npcDialog`/`questLog`/`inventory` mają dodatkową logikę, reszta to no-op) zamiast ośmiokrotnie powtarzanej kaskady `keyboard.consume*()`.
+4. `src/app/gameLoop.ts` — `createGameLoop(deps)` zwraca `{ tick, resyncDayNight, forgetHighlight }`; `createApp.ts` trzyma tylko cienki `requestAnimationFrame` wrapper (`frameId` do `cancelAnimationFrame` w cleanup). `lastAppliedTimeOfDay`/`highlightedTarget`/`setHighlight`/`applyDayNight`/`timeOfDayDelta` przeniesione do środka jako stan modułu gameLoop — `resyncDayNight()`/`forgetHighlight()` to nowe metody zastępujące bezpośrednie odwołania z `createApp.ts` (initial setup, `rebuildWorld`, `onDayNightChange` GUI callback).
+5. R6: `chunkManager.ts::ensureLoaded` — `apronOriginWorld`/`sampleTileHeight` liczone raz przed trzema blokami; generyczny `buildPlacementGroup<T>(name, placements, makeProp)` (wewnątrz `createChunkManager`, zamyka się nad `scene`) zastępuje trzy bliźniacze bloki dla vegetation/items/environment. `makeProp` zwracające `null` pomija placement (np. już zebrany item) bez dziury w grupie.
+
+`createApp.ts`: 1240 → 573 linii. Zero zmiany zachowania (czysty przenośnik + ekstrakcja duplikatów) — wymaga ręcznej weryfikacji w przeglądarce (zmiana seeda z GUI, New Game, Continue z zapisu, dzień/noc, modale) zgodnie z `CLAUDE.md`.
 
 ## Źródło
 
