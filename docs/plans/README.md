@@ -29,7 +29,7 @@ Implementation plans for features and larger changes.
 | [2026-08-09--046--vue-tailwind-ui-stack.md](./2026-08-09--046--vue-tailwind-ui-stack.md)                 | Vue + Tailwind v4 + lucide-vue-next dla UI  | 25%      | 🔴 high   | XL     |
 | [2026-08-07--021--npc-3-animal-life.md](./2026-08-07--021--npc-3-animal-life.md)                         | Animal Life: hunger/thirst/energy + potrzeby zwierząt | 0%       | 🟡 medium | L      |
 | [2026-08-08--039--road-signposts.md](./2026-08-08--039--road-signposts.md)                               | Kierunkowskazy przy drogach: **Fix:** Poprawić kierunek tabliczki. Dodać odstęp między znakami, które są w połowie odległości między wioskami.                             | 67%      | ⚪ `low` | S      |
-| [2026-08-09--049--procedural-world-landmarks.md](./2026-08-09--049--procedural-world-landmarks.md)       | Proceduralne obiekty, ruiny i landmarki                        | 40%      | 🟡 medium | XL     |
+| [2026-08-09--049--procedural-world-landmarks.md](./2026-08-09--049--procedural-world-landmarks.md)       | Proceduralne obiekty, ruiny i landmarki                        | 40%       | 🟡 medium | XL     |
 | [2026-08-07--024--world-visual-overhaul.md](./2026-08-07--024--world-visual-overhaul.md)                 | Rośliny, niebo/chmury, góry w tle           | 50%      | ⚪ `low` | L      |
 
 ---
@@ -40,6 +40,7 @@ Implementation plans for features and larger changes.
 | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | -------- | --------- | ------ |
 | [2026-08-10--052--shovel-digging-and-finding-stones.md](./2026-08-10--052--shovel-digging-and-finding-stones.md) | Kopanie ziemi i znajdowanie kamieni [have implementation notes] | 0%       | 🔴 high   | M      |
 | [2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md](./2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md) | Bezpieczeństwo referencji `WorldBundle` + małe refaktory po 053 | 0% | 🟡 medium | S–M |
+| [2026-08-10--055--shared-simulation-architecture.md](./2026-08-10--055--shared-simulation-architecture.md) | Wspólna architektura symulacji: state → perception → decision → action → world effect | 0% | 🔴 high | XL |
 | [2026-08-10--056--hungry-predator-human-aggression.md](./2026-08-10--056--hungry-predator-human-aggression.md) | Głodny predator może przełamać strach przed człowiekiem | 0% | 🟡 medium | M |
 | [2026-08-07--045--health-stamina-threat.md](./2026-08-07--045--health-stamina-threat.md)                         | Wspólny Health/Stamina/Threat dla NPC/fauny/gracza             | 0%       | 🟡 medium | XL     |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md)             | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout  | 0%       | 🔴 high   | XL     |
