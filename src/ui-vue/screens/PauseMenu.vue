@@ -3,18 +3,22 @@ import { ref, watch } from 'vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { closePauseMenu, isPauseMenuOpen, setPauseBuildCampfireStatus, setPausePlayerName, setPauseSaveStatus, ui } from '../store'
+import { closePauseMenu, isPauseMenuOpen, setPauseFirePitStatus, setPausePlayerName, setPauseSaveStatus, setPauseSimpleFireStatus, setPauseTorchStatus, ui } from '../store'
 
 const panel = ref<HTMLElement | null>(null)
 const name = ref(ui.pauseMenu.playerName)
 const saveTimer = ref<number | null>(null)
-const campfireTimer = ref<number | null>(null)
+const simpleFireTimer = ref<number | null>(null)
+const firePitTimer = ref<number | null>(null)
+const torchTimer = ref<number | null>(null)
 useOverlayScreen('pause-menu', isPauseMenuOpen, closePauseMenu)
 useTouchScroll(panel)
 watch(() => ui.pauseMenu.playerName, (value) => { name.value = value })
 
 function save(): void { ui.pauseMenu.onSave?.(); setPauseSaveStatus('Saved'); if (saveTimer.value !== null) window.clearTimeout(saveTimer.value); saveTimer.value = window.setTimeout(() => setPauseSaveStatus(''), 1500) }
-function buildCampfire(): void { const built = ui.pauseMenu.onBuildCampfire?.() ?? false; setPauseBuildCampfireStatus(built ? 'Zbudowano!' : 'Brakuje surowców'); if (campfireTimer.value !== null) window.clearTimeout(campfireTimer.value); campfireTimer.value = window.setTimeout(() => setPauseBuildCampfireStatus(''), 1500) }
+function buildSimpleFire(): void { const built = ui.pauseMenu.onBuildSimpleFire?.() ?? false; setPauseSimpleFireStatus(built ? 'Zapłonęło!' : 'Brakuje gałęzi/krzesiwa'); if (simpleFireTimer.value !== null) window.clearTimeout(simpleFireTimer.value); simpleFireTimer.value = window.setTimeout(() => setPauseSimpleFireStatus(''), 1500) }
+function buildFirePit(): void { const built = ui.pauseMenu.onBuildFirePit?.() ?? false; setPauseFirePitStatus(built ? 'Zbudowano!' : 'Brakuje kamieni'); if (firePitTimer.value !== null) window.clearTimeout(firePitTimer.value); firePitTimer.value = window.setTimeout(() => setPauseFirePitStatus(''), 1500) }
+function lightTorch(): void { const lit = ui.pauseMenu.onLightTorch?.() ?? false; setPauseTorchStatus(lit ? 'Zapalono!' : 'Brakuje gałęzi/krzesiwa lub już płonie'); if (torchTimer.value !== null) window.clearTimeout(torchTimer.value); torchTimer.value = window.setTimeout(() => setPauseTorchStatus(''), 1500) }
 function commitName(): void { const value = name.value.trim(); if (value) ui.pauseMenu.onNameCommit?.(value) }
 function onNameInput(): void { setPausePlayerName(name.value); ui.pauseMenu.onNameChange?.(name.value) }
 function openQuestLog(): void { closePauseMenu(); ui.pauseMenu.onQuestLog?.() }
@@ -104,9 +108,23 @@ function openInventory(): void { closePauseMenu(); ui.pauseMenu.onInventory?.() 
       <button
         type="button"
         class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
-        @click="buildCampfire"
+        @click="buildSimpleFire"
       >
-        Zbuduj ognisko (2x gałąź, 2x kamień)<span class="ml-2 text-xs opacity-75">{{ ui.pauseMenu.buildCampfireStatus }}</span>
+        Rozpal ognisko (2x gałąź)<span class="ml-2 text-xs opacity-75">{{ ui.pauseMenu.simpleFireStatus }}</span>
+      </button>
+      <button
+        type="button"
+        class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
+        @click="buildFirePit"
+      >
+        Zbuduj palenisko (4x kamień)<span class="ml-2 text-xs opacity-75">{{ ui.pauseMenu.firePitStatus }}</span>
+      </button>
+      <button
+        type="button"
+        class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
+        @click="lightTorch"
+      >
+        Zapal pochodnię (1x gałąź)<span class="ml-2 text-xs opacity-75">{{ ui.pauseMenu.torchStatus }}</span>
       </button>
       <button
         type="button"

@@ -23,7 +23,15 @@ export type SaveQuests = {
 
 export type SaveDroppedItem = { id: string, kind: ItemKind, x: number, z: number }
 
-export type SavePlacedFire = { id: string, x: number, z: number }
+/** `kind` added in v6 (`docs/plans/2026-08-09--050`) — `'pit'` (stone-ring,
+ *  longer burn) vs `'simple'` (branches only, shorter burn). Older saves
+ *  (v5 and below) predate the distinction; migrated as `'pit'`, matching what
+ *  the single old "Zbuduj ognisko" (2x branch + 2x stone) action always
+ *  built. */
+export type SavePlacedFire = { id: string, x: number, z: number, kind: 'simple' | 'pit' }
+
+/** Shape stored by v4/v5 saves, before `kind` existed. */
+export type LegacySavePlacedFire = { id: string, x: number, z: number }
 
 export type SaveDataV1 = {
   version: 1
@@ -66,13 +74,27 @@ export type SaveDataV4 = {
   inventory: Partial<Record<ItemKind, number>>
   collectedItemIds: string[]
   droppedItems: SaveDroppedItem[]
-  placedFires: SavePlacedFire[]
+  placedFires: LegacySavePlacedFire[]
+}
+
+export type SaveDataV5 = {
+  version: 5
+  config: SaveConfig
+  player: SavePlayer
+  savedAt: number
+  quests: SaveQuests
+  inventory: Partial<Record<ItemKind, number>>
+  collectedItemIds: string[]
+  droppedItems: SaveDroppedItem[]
+  placedFires: LegacySavePlacedFire[]
+  timeOfDay: number
 }
 
 /** Canonical save shape used everywhere outside this module and `saveDb.ts` —
- *  always v5. `loadSaveData` migrates a stored v1/v2/v3/v4 save up to this on read. */
+ *  always v6. `loadSaveData` migrates a stored v1/v2/v3/v4/v5 save up to this
+ *  on read. */
 export type SaveData = {
-  version: 5
+  version: 6
   config: SaveConfig
   player: SavePlayer
   savedAt: number
@@ -161,10 +183,26 @@ export function isSaveDataV4(value: unknown): value is SaveDataV4 {
   return true
 }
 
-export function isSaveDataV5(value: unknown): value is SaveData {
+export function isSaveDataV5(value: unknown): value is SaveDataV5 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 5) return false
+  if (!isSaveConfig(v.config)) return false
+  if (!isSavePlayer(v.player)) return false
+  if (typeof v.savedAt !== 'number') return false
+  if (!v.quests || typeof v.quests !== 'object') return false
+  if (!v.inventory || typeof v.inventory !== 'object') return false
+  if (!Array.isArray(v.collectedItemIds)) return false
+  if (!Array.isArray(v.droppedItems)) return false
+  if (!Array.isArray(v.placedFires)) return false
+  if (typeof v.timeOfDay !== 'number') return false
+  return true
+}
+
+export function isSaveDataV6(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 6) return false
   if (!isSaveConfig(v.config)) return false
   if (!isSavePlayer(v.player)) return false
   if (typeof v.savedAt !== 'number') return false
@@ -181,15 +219,22 @@ export function isSaveDataV5(value: unknown): value is SaveData {
  *  mirrors `dayNight.ts::createDayNightState`'s own default. */
 const DEFAULT_TIME_OF_DAY = 0.32
 
-/** Accepts a stored v1/v2/v3/v4/v5 save and always returns the canonical v5
- *  shape, migrating older versions with empty state for whatever fields
+/** `kind` didn't exist before v6 (`docs/plans/2026-08-09--050`) — every
+ *  pre-v6 placed fire was built by the single old "Zbuduj ognisko" action
+ *  (2x branch + 2x stone), which matches today's `'pit'` variant. */
+function migratePlacedFires(placedFires: readonly LegacySavePlacedFire[]): SavePlacedFire[] {
+  return placedFires.map((pf) => ({ ...pf, kind: 'pit' as const }))
+}
+
+/** Accepts a stored v1/v2/v3/v4/v5/v6 save and always returns the canonical
+ *  v6 shape, migrating older versions with empty state for whatever fields
  *  didn't exist yet. Null if `value` matches none of them (missing/corrupted
  *  save). */
 export function loadSaveData(value: unknown): SaveData | null {
-  if (isSaveDataV5(value)) return value
-  if (isSaveDataV4(value)) {
+  if (isSaveDataV6(value)) return value
+  if (isSaveDataV5(value)) {
     return {
-      version: 5,
+      version: 6,
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -197,13 +242,27 @@ export function loadSaveData(value: unknown): SaveData | null {
       inventory: value.inventory,
       collectedItemIds: value.collectedItemIds,
       droppedItems: value.droppedItems,
-      placedFires: value.placedFires,
+      placedFires: migratePlacedFires(value.placedFires),
+      timeOfDay: value.timeOfDay,
+    }
+  }
+  if (isSaveDataV4(value)) {
+    return {
+      version: 6,
+      config: value.config,
+      player: value.player,
+      savedAt: value.savedAt,
+      quests: value.quests,
+      inventory: value.inventory,
+      collectedItemIds: value.collectedItemIds,
+      droppedItems: value.droppedItems,
+      placedFires: migratePlacedFires(value.placedFires),
       timeOfDay: DEFAULT_TIME_OF_DAY,
     }
   }
   if (isSaveDataV3(value)) {
     return {
-      version: 5,
+      version: 6,
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -217,7 +276,7 @@ export function loadSaveData(value: unknown): SaveData | null {
   }
   if (isSaveDataV2(value)) {
     return {
-      version: 5,
+      version: 6,
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -231,7 +290,7 @@ export function loadSaveData(value: unknown): SaveData | null {
   }
   if (isSaveDataV1(value)) {
     return {
-      version: 5,
+      version: 6,
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,

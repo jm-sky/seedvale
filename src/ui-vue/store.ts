@@ -15,14 +15,15 @@ type PauseMenuState = {
   open: boolean; seed: number; playerName: string
   onPause: (() => void) | null; onResume: (() => void) | null; onToggleGui: (() => void) | null
   onNameChange: ((name: string) => void) | null; onNameCommit: ((name: string) => void) | null
-  onSave: (() => void) | null; onRefresh: (() => void) | null; onBuildCampfire: (() => boolean) | null
+  onSave: (() => void) | null; onRefresh: (() => void) | null
+  onBuildSimpleFire: (() => boolean) | null; onBuildFirePit: (() => boolean) | null; onLightTorch: (() => boolean) | null
   onNewGame: (() => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null
-  saveStatus: string; buildCampfireStatus: string
+  saveStatus: string; simpleFireStatus: string; firePitStatus: string; torchStatus: string
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
 type FlavorDialogState = { open: boolean; prompt: string | null; name: string; line: string }
 
-type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'buildCampfireStatus'>>
+type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'simpleFireStatus' | 'firePitStatus' | 'torchStatus'>>
 
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null } as NpcDialogueMenuState,
@@ -30,8 +31,10 @@ export const ui = reactive({
   inventory: { open: false, counts: {}, totalWeight: 0, maxWeight: 0, onDrop: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', onPause: null, onResume: null, onToggleGui: null,
-    onNameChange: null, onNameCommit: null, onSave: null, onRefresh: null, onBuildCampfire: null,
-    onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, saveStatus: '', buildCampfireStatus: '',
+    onNameChange: null, onNameCommit: null, onSave: null, onRefresh: null,
+    onBuildSimpleFire: null, onBuildFirePit: null, onLightTorch: null,
+    onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null,
+    saveStatus: '', simpleFireStatus: '', firePitStatus: '', torchStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
@@ -52,7 +55,9 @@ export function configurePauseMenu(seed: number, playerName: string, handlers: P
 export function setPauseSeed(seed: number): void { ui.pauseMenu.seed = seed }
 export function setPausePlayerName(name: string): void { ui.pauseMenu.playerName = name }
 export function setPauseSaveStatus(status: string): void { ui.pauseMenu.saveStatus = status }
-export function setPauseBuildCampfireStatus(status: string): void { ui.pauseMenu.buildCampfireStatus = status }
+export function setPauseSimpleFireStatus(status: string): void { ui.pauseMenu.simpleFireStatus = status }
+export function setPauseFirePitStatus(status: string): void { ui.pauseMenu.firePitStatus = status }
+export function setPauseTorchStatus(status: string): void { ui.pauseMenu.torchStatus = status }
 
 export function openQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation; ui.questLog.open = true }
 export function refreshQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation }

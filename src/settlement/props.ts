@@ -488,6 +488,36 @@ export function createCampfire(scale = 1): THREE.Group {
   return fire
 }
 
+/** A minimal "prosta ognisko" base — ash patch + a couple of branches, no
+ *  stone ring (that's what distinguishes it from `createCampfire()`'s
+ *  palenisko look, see `docs/plans/2026-08-09--050`). Used by
+ *  `PlacedFires.ts` for the cheaper, shorter-burning `kind: 'simple'` fire. */
+export function createSimpleFireBase(scale = 1): THREE.Group {
+  const fire = new THREE.Group()
+  const ashMat = new THREE.MeshStandardMaterial({ color: 0x2b2724, flatShading: true, roughness: 1 })
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a3524, flatShading: true })
+
+  const ash = new THREE.Mesh(new THREE.CircleGeometry(0.4 * scale, 10), ashMat)
+  ash.rotation.x = -Math.PI / 2
+  ash.position.y = 0.02
+  ash.receiveShadow = true
+  fire.add(ash)
+
+  for (let i = 0; i < 2; i++) {
+    const a = i * 2.4
+    const branch = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.022 * scale, 0.028 * scale, 0.55 * scale, 5),
+      woodMat,
+    )
+    branch.rotation.set(Math.PI / 2 - 0.25, 0, a)
+    branch.position.y = 0.04 * scale
+    branch.castShadow = true
+    fire.add(branch)
+  }
+
+  return fire
+}
+
 /** The lightable/toggleable fire visual for a settlement's own campfire —
  *  separate from `createCampfire()`'s static stone-ring/ash/branches prop
  *  (which stays purely decorative for the world-scattered "old campfire"
