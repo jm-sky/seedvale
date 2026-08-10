@@ -14,6 +14,8 @@ For a new implementation session:
 4. Read `docs/plans/README.md` to understand active/planned work.
 5. For the selected plan, read its implementation notes and any linked review before changing code.
 
+`docs/STATE.md` is a snapshot, not the authoritative status tracker for plans. Use `docs/plans/README.md` for plan status.
+
 ## Runtime architecture
 
 Seedvale is a browser 3D sandbox built with **Three.js + WebGL2 + Vite + TypeScript**. The game/simulation layer remains vanilla Three.js; the overlay UI is a hybrid of existing vanilla DOM modules and a Vue 3 + Tailwind v4 layer.
@@ -29,7 +31,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - `DroppedItems`
 - `PlacedFires`
 
-`rebuildWorldBundle()` disposes and recreates these systems while mutating the existing bundle object in place. Callers must therefore keep the bundle reference rather than destructuring a member that may later be replaced.
+`rebuildWorldBundle()` disposes and recreates these systems while mutating the existing bundle object in place. Callers must therefore keep the bundle reference rather than destructuring a member that may later be replaced. This is the intended lifecycle pattern; plan 054 covers remaining callback/reference-safety cleanup, including code that currently captures `PlacedFires` directly.
 
 ## Major implemented systems
 
@@ -147,7 +149,7 @@ src/ui-vue/
 
 ### WorldBundle / createApp
 
-Plan 053 refactored `createApp.ts` and introduced the mutable `WorldBundle` boundary. Plan 054 is planned to tighten reference safety and perform small follow-up refactors. Treat this area as recently changed and read plans 053/054 before making structural changes here.
+Plan 053 refactored `createApp.ts` and introduced the mutable `WorldBundle` boundary. Plan 054 is planned to tighten reference safety and perform small follow-up refactors. In particular, the current `getUserActions(...)` path captures `bundle.placedFires` when the callbacks are created; after a world rebuild those callbacks can still point at the old `PlacedFires` instance. Treat this as a known follow-up, not as evidence that the `WorldBundle` design itself should be reverted. Read plans 053/054 before making structural changes here.
 
 ### UI migration
 
