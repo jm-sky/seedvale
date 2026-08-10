@@ -1,98 +1,136 @@
-# Seedvale
+# Seedvale — Agent Guide
 
-Sandbox / projekt Three.js: proceduralny teren + AI postaci.  
-Katalog repo: `three-js-dev` (working dir); nazwa produktu: **Seedvale**.
+Seedvale is a browser 3D sandbox built with **Three.js + WebGL2 + Vite + TypeScript**. The simulation/game layer is vanilla Three.js; UI is currently hybrid vanilla DOM + Vue 3/Tailwind v4.
 
-**Dev:** `npm run dev` → http://localhost:5577/ (`vite.config.ts`, `strictPort`)
+## Read order
 
-## Testowanie zmian w przeglądarce
+Before making a non-trivial change:
 
-**Nie uruchamiaj headless Chrome/Playwright samodzielnie do testowania zmian** (wolne, marudne selektory, słaba jakość sygnału). Zamiast tego:
+1. **[docs/STATE.md](docs/STATE.md)** — factual current implementation state.
+2. **[docs/VISION.md](docs/VISION.md)** — product intent and architectural philosophy.
+3. **[docs/plans/README.md](docs/plans/README.md)** — current plan/status index.
+4. The selected plan, its implementation notes, and any linked review.
 
-1. Zweryfikuj technicznie: `npx tsc --noEmit` (dla `.vue` plików użyj `npx vue-tsc --noEmit` — `npm run build` już go używa), `npm run lint` (ewentualnie `npx eslint <zmienione pliki>`), `npm run build`.
-2. Dev server zwykle już działa na `localhost:5577` — **poproś użytkownika o przetestowanie w jego przeglądarce** (konkretne kroki: co kliknąć, czego się spodziewać) zamiast robić to sam.
+`docs/STATE.md` is the compact handoff for the codebase. Do not reconstruct the whole project from old plans when the state document already answers the question.
 
-## Docs workflow
+## Core principles
 
-- **Vision:** [docs/VISION.md](docs/VISION.md) — czym jest Seedvale, filozofia projektowania, kierunki rozwoju (czytaj przed planowaniem nowych funkcji)
-- **Issues:** [docs/issues/README.md](docs/issues/README.md)
-- **Reviews:** [docs/reviews/README.md](docs/reviews/README.md) — głęboka analiza: `to-do--<slug>.md`
-- **Research:** [docs/research/README.md](docs/research/README.md)
-- **Plans:** [docs/plans/README.md](docs/plans/README.md)
-- **Roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md)
+- Seedvale is about a world that lives independently of the player. Prefer systems that create emergent behaviour over scripted player-centric flows.
+- Extend existing system couplings before creating parallel mechanisms.
+- Reuse shared domain types and lifecycle boundaries. In particular inspect `WorldBundle`, `HealthState`, `NpcAgent`, `AnimalAgent`, `Inventory`, `QuestManager` and `ChunkManager` before introducing new abstractions.
+- Keep the simulation/game layer vanilla Three.js. Do not introduce React/R3F or another rendering abstraction unless explicitly planned.
+- UI migration to Vue is incremental. Do not migrate or rewrite unrelated vanilla screens just because Vue exists.
+- Do not infer that a planned feature is implemented. Verify the code.
+- Do not mark visual Three.js work as fully verified solely because TypeScript/lint/build pass.
 
-Statuses: `todo` · `planned` · `in progress` · `done` · `verification needed`.  
-New files: `YYYY-MM-DD--{NNN}--slug.md` — own sequence for issues, plans, reviews, research (each 001+).
+## Development
 
-## Aktualny stan (2026-08-07, po worker pool + duże regiony)
-
-### Gotowe
-
-| Obszar | Stan |
-|--------|------|
-| **v0.1** teren + 3rd person + mysz | done |
-| **v0.2** osada + NPC (woda / drewno / jedzenie) + etykiety | done |
-| **v0.3** fauna chase/flee + GLB (wolf/fox/deer/stag) | done |
-| Dzień/noc + HUD + time multiplier | done |
-| Config + lil-gui + `localStorage` | done |
-| Flat shading toggle (default: smooth) | done |
-| Assety GLB osada/natura (2. agent) | w toku / częściowo w `public/models/` |
-| Zapas modeli z `_temp/` (Quaternius, 28 plików): dock, góry (`world/`), skały/pień, 9 budynków RTS (w tym crate/barrel/wall/towerhouse/port/hut_d), surowce (gold/rock), 6 nature (birch/maple/deadtree/2×flower/bush_flowers) | done — [docs/assets/CREDITS.md](docs/assets/CREDITS.md); **aktywne:** `dock_a.glb` (wypełnia `DOCK_SPECS`) + birch/maple/deadtree/flower_clump_1 wpięte do `TREE_SPECS`/`BUSH_SPECS` (globalna wegetacja chunków); **rezerwa:** góry, skały/pień, budynki RTS, surowce, druga fala nature — czekają na konkretną potrzebę |
-| Scroll-wheel zoom kamery (distance-aware pitch) | done |
-| Bieganie [Shift] (Run animation z Quaternius GLB) | done |
-| **Worker pool dla generacji terenu** (offload heightmap z main thread) | done — [plans/2026-08-07--006--terrain-worker-pool.md](docs/plans/2026-08-07--006--terrain-worker-pool.md) |
-| **Chunk streaming** (load/unload radius wokół gracza, brak reachable edge) + roślinność per-chunk w workerze | done — [plans/2026-08-07--007--world-streaming-persistence.md](docs/plans/2026-08-07--007--world-streaming-persistence.md) |
-| Duże regiony: oceany/wybrzeża/pasma górskie (macro noise: continentalness/mountainness + Worley ridge) | done |
-| NPC dialog (proximity-based, personality-flavored lines) | done — [plans/2026-08-07--011--npc-interactions.md](docs/plans/2026-08-07--011--npc-interactions.md) (`verification needed`) |
-| **Save/persystencja** (single-slot IndexedDB, Continue/New Game start screen, Save + New Game w pause menu) | done — [plans/2026-08-07--007--world-streaming-persistence.md](docs/plans/2026-08-07--007--world-streaming-persistence.md), `src/persistence/` |
-| **Post-processing pipeline** (EffectComposer + N8AO ambient occlusion + SMAA) | done — [plans/2026-08-07--009--post-processing-pipeline.md](docs/plans/2026-08-07--009--post-processing-pipeline.md), `src/render/createPostProcessing.ts` |
-| **Sterowanie dotykowe / mobile** (joystick + look-drag/pinch-zoom + przyciski E/Sprint/G/L/☰, responsywny CSS) | done — [plans/2026-08-07--023--mobile-touch-controls.md](docs/plans/2026-08-07--023--mobile-touch-controls.md), `src/input/createTouchControls.ts` |
-
-### Stack
-
-Vite + TS + Three (WebGL2) + `simplex-noise` + `lil-gui`. Silnik gry (scena/teren/AI/fauna) w 100% vanilla (bez R3F). UI-overlay warstwa (dialogi/menu, nad canvasem, `src/ui-vue/`): **Vue 3 + Tailwind v4 + `lucide-vue-next`** — hybryda, montowana jako jeden `#vue-ui` obok istniejących 13 vanilla modułów `src/ui/`, migrowanych screen-po-screen ([plan 046](docs/plans/2026-08-09--046--vue-tailwind-ui-stack.md), Faza 0 done). Testy jednostkowe: `vitest` (`npm run test`), pliki `*.test.ts` obok źródła — na razie tylko czysta logika (`src/ai/`, `src/shared/`, `src/fauna/HealthState.ts`), bez testów THREE/DOM/`.vue`.
-
-### Ważne ścieżki kodu
-
-```
-src/app/createApp.ts          # orchestration
-src/config/worldConfig.ts     # defaults + URL/storage merge
-src/config/persistConfig.ts   # localStorage key: seedvale:worldConfig:v1
-src/terrain/                  # chunked heightmap/mesh (worker pool), biom colors, FBM, macro regions, vegetation
-src/world/                    # sky, water, lights, dayNight
-src/settlement/               # site, props (GLB+fallback), NPC wiring
-src/ai/                       # Needs, NpcAgent
-src/fauna/                    # AnimalAgent, createFauna, AnimalSpawner, animalDialogue
-src/interaction/               # Interactable union, pickInGaze, resolveInteraction (NPC/animal/well/tree/spawner/item)
-src/items/                    # ItemKind/Inventory, ItemSpawner (renewable pool), createItemSpawners
-src/quests/                   # QuestDef/QuestObjective/QuestStage, QuestManager
-src/ui/                       # lil-gui, HUD, ekrany vanilla (do migracji na Vue — plan 046)
-src/ui-vue/                   # Vue 3 + Tailwind UI overlay (mount.ts, App.vue, tailwind.css) — plan 046
-src/assets/loadGltf.ts        # GLTF loader helpers
-public/models/                # settlement / nature / fauna / characters
+```text
+npm run dev
 ```
 
-### Konfiguracja (GUI / storage)
+The Vite dev server uses port `5577` with `strictPort` (`vite.config.ts`).
 
-- Resolution: 65 … **769** (Insane); default **193**
-- **Flat shading** — wyłączone = gładkie wzgórza (przy Insane + flat = „DOS”)
-- **Surface grain (detail normal)** — `strength` / `tilesPerChunk` / `enabled`; **stroj suwakami, nie stałymi w kodzie** — dlaczego: [reviews/2026-08-10--003](docs/reviews/2026-08-10--003--terrain-surface-detail.md), [issues/014](docs/issues/2026-08-10--014--terrain-detail-normal-map-green-channel.md)
-- Day/night: `timeMultiplier`, `dayLengthSec`, `enabled`
-- Priorytet config: URL (`?seed=` `?res=` `?gui=0`) → localStorage → defaults
+Technical verification normally includes:
 
-### Otwarte / kolejka
+```text
+npx tsc --noEmit
+npm run lint
+npm run build
+npm run test
+```
 
-0. ~~Worker pool dla generacji terenu~~ → `done` ([plans/2026-08-07--006--terrain-worker-pool.md](docs/plans/2026-08-07--006--terrain-worker-pool.md)); ~~chunk streaming + duże regiony (oceany/góry)~~ → `done` ([plans/2026-08-07--007--world-streaming-persistence.md](docs/plans/2026-08-07--007--world-streaming-persistence.md), streaming część); ~~NPC dialog~~ → `done` ([plans/2026-08-07--011--npc-interactions.md](docs/plans/2026-08-07--011--npc-interactions.md)); ~~Minimapa~~ → `verification needed` ([plans/2026-08-07--029--minimap.md](docs/plans/2026-08-07--029--minimap.md)); ~~Trawa (fazy 1-4 Must)~~ → `verification needed` ([plans/2026-08-07--008--grass-rendering.md](docs/plans/2026-08-07--008--grass-rendering.md)); ~~Save/persystencja (IndexedDB)~~ → `done` ([plans/2026-08-07--007--world-streaming-persistence.md](docs/plans/2026-08-07--007--world-streaming-persistence.md) — single-slot save, Continue/New Game start screen, Save + New Game w pause menu, `src/persistence/`)
-1. Wizualny overhaul (rośliny/krzewy, niebo/chmury, góry w tle — insp. SimonDev MMORPG devlog) → [plans/2026-08-07--024--world-visual-overhaul.md](docs/plans/2026-08-07--024--world-visual-overhaul.md) (`in progress`: rośliny + niebo done, góry w tle + chmury open; Mixamo→Blender pipeline rozważony i odłożony — Quaternius modele już mają pełny zestaw animacji). Kontynuacja: **obszary biomów** (pustynia/bagno/las, makro-oś wilgotności niezależna od `continentalness`/`mountainRidge`, charakterystyczna roślinność jak kaktus/trzcina) → [plans/2026-08-07--028--biome-regions.md](docs/plans/2026-08-07--028--biome-regions.md) (`verification needed` — zaimplementowane, wymaga wizualnej weryfikacji w przeglądarce). Kolejna warstwa na tym samym pipeline: **drogi i ścieżki** (międzyosadowe drogi + ścieżki osada↔port, trasowanie po małej zmianie wysokości, wygładzenie terenu + kolor, reużycie `wander`/`steerTo` dla NPC) → [plans/2026-08-07--026--roads-and-paths.md](docs/plans/2026-08-07--026--roads-and-paths.md) (`verification needed` — zaimplementowane, wymaga wizualnej weryfikacji w przeglądarce). Kolejny dodatek: **naturalne elementy świata** (głazy/kamienne klastry/powalone pnie/stare ogniska jako dekoracje + gałęzie/grzyby/kwiaty/szyszki jako rozszerzenie istniejącego zbierania muszli/kamieni, preferencje środowiskowe per chunk) → [plans/2026-08-07--030--world-elements-interactions.md](docs/plans/2026-08-07--030--world-elements-interactions.md) (`verification needed` — zaimplementowane, wymaga wizualnej weryfikacji w przeglądarce). Kolejna warstwa: **proceduralne landmarki** (monolit/kamienny krąg/proste ruiny jako nowe `EnvironmentKind` w tym samym `chunkEnvironment.ts` pipeline, bardzo niska szansa per chunk, własny seeded RNG per typ) → [plans/2026-08-09--049--procedural-world-landmarks.md](docs/plans/2026-08-09--049--procedural-world-landmarks.md) (`in progress`, 40% — pierwsze 3 typy z implementation notes zaimplementowane w `src/terrain/chunkEnvironment.ts`/`src/settlement/props.ts`/`src/terrain/chunkManager.ts`, `tsc`/`lint`/`build`/testy przechodzą; wymaga wizualnej weryfikacji w przeglądarce — kilka seedów, granice chunków, unload/load, okolice osady/dróg)
-2. Game UI screens (nie lil-gui) → [plans/2026-08-07--005--game-ui-screens.md](docs/plans/2026-08-07--005--game-ui-screens.md) (`in progress`: pause menu + Character (imię gracza) done — `src/ui/createPauseMenu.ts`; World config / Notes open, NPC dialog zastąpiony przez Vue menu — patrz niżej). UI stack: [plans/2026-08-09--046--vue-tailwind-ui-stack.md](docs/plans/2026-08-09--046--vue-tailwind-ui-stack.md) (`in progress` — **Faza 0 done**: Vue 3 + Tailwind v4 + `lucide-vue-next` w zależnościach, `#vue-ui` mount w `createApp.ts` przez dynamiczny `import()`, `vue-tsc` w `npm run build`; Fazy 1+ — migracja istniejących ekranów — nie ruszone). ~~[plans/2026-08-09--048--npc-dialogues-v2.md](docs/plans/2026-08-09--048--npc-dialogues-v2.md)~~ → `verification needed` — menu rozmowy NPC (5 tematów: pomoc/o sobie/aktywność/wioska/pożegnanie) w `src/ui-vue/NpcDialogueMenu.vue`, pierwszy realny ekran w Vue (poza kolejnością Faz planu 046, wymagał tylko Fazy 0), zastępuje `createNpcDialog.ts` dla NPC (zostaje dla zwierząt/studni/drzew/spawnerów); `src/ai/dialogueTemplates.ts` (nowe treści), `NpcAgent.familyMembers`/`getCurrentActivity()`, `schedule.ts::nextBoundary()`; wymaga weryfikacji w przeglądarce
-3. Cube-sphere / pełny sferyczny świat — nadal otwarte pytanie (nie rozstrzygnięte, obecny streaming to flat chunk grid z ringiem, nie sfera), patrz [plans/2026-08-07--007--world-streaming-persistence.md](docs/plans/2026-08-07--007--world-streaming-persistence.md) "Kierunek świata". Real textures/triplanar dopuszczone jako opcjonalny feature później (nie trzymamy się low-poly na sztywno) — patrz [research/2026-08-07-simodev-refs-review.md](docs/research/2026-08-07-simodev-refs-review.md) Update note
-4. Nowe pomysły: [plans/2026-08-07--016--ambient-world-audio.md](docs/plans/2026-08-07--016--ambient-world-audio.md) (`verification needed` — fundament + warstwa dzień/noc + sampler obszaru (`src/audio/ambientWeights.ts`) + warstwy forest/coast zaimplementowane; warstwa `mountain` czeka na asset wiatru); [plans/2026-08-07--021--npc-3-animal-life.md](docs/plans/2026-08-07--021--npc-3-animal-life.md) (`verification needed` — needs → wander bias: `hunger`/`thirst`/`energy` per-zwierzę, `src/fauna/AnimalLife.ts`, wpięte w `AnimalAgent.ts`); [plans/2026-08-07--020--npc-2-daily-routine-and-place.md](docs/plans/2026-08-07--020--npc-2-daily-routine-and-place.md) (`verification needed` — v1 `home` jako `Place` + **v2 stage 1** dane (`workplaceFor()` hybryda per rola + `landmarks.market`, `Schedule Template` w `src/ai/schedule.ts`) done; **v2 stage 2** generyczny FSM `goTo/execute/return` zastępujący `goWell/goGarden/goTree/goStock` w `NpcAgent.ts`, sleep gate i idle-`work`-routing napędzane realnym `schedule`/`timeOfDay` zamiast starego `isNight` — `guard` śpi w dzień/pracuje w nocy, reszta ról śpi wg własnego harmonogramu zamiast natychmiast o zmierzchu; traits-modyfikacja harmonogramu nadal odłożona). ~~Predator-prey system~~ → `done` ([plans/2026-08-07--010--predator-prey-system.md](docs/plans/2026-08-07--010--predator-prey-system.md)). ~~NPC gender-matched models~~ → `done` ([plans/2026-08-07--013--npc-gender-models.md](docs/plans/2026-08-07--013--npc-gender-models.md) — Quaternius Ultimate Modular Women pobrany i skonwertowany, `NPC_MODEL_URLS`/`CHARACTERS` w `src/ai/characters.ts`). ~~NPC reaction sounds~~ → `done` ([plans/2026-08-07--014--npc-reaction-sounds.md](docs/plans/2026-08-07--014--npc-reaction-sounds.md) — trigger/cooldown/gender pool w `NpcAgent.ts`, klipy w `public/sounds/`, potwierdzone w przeglądarce). ~~NPC character depth (role/traits/Big Five/HP + ekran Mieszkańcy)~~ → `done` ([plans/2026-08-07--022--npc-character-depth.md](docs/plans/2026-08-07--022--npc-character-depth.md) — `src/ai/characters.ts`, `src/shared/HealthState.ts`, `src/ui/createVillagersScreen.ts`; potwierdzone w przeglądarce)
-5. v0.4+ questy i wioski → [plans/2026-08-07--015--quests-v1.md](docs/plans/2026-08-07--015--quests-v1.md) (`verification needed` — relay quest + quest log panel `[L]` z filtrem, exp, relation/sympathy per NPC); [plans/2026-08-07--018--quests-v2-world-interactions.md](docs/plans/2026-08-07--018--quests-v2-world-interactions.md) (`verification needed` — multi-stage questy, interakcje ze studnią/drzewami/żywymi zwierzętami/spawnerami fauny, itemy: muszle/kamienie world-gen per-chunk + odnawialna pula blisko osady, `src/interaction/`, `src/items/`, `SaveData` v3), [plans/2026-08-07--025--multi-settlements.md](docs/plans/2026-08-07--025--multi-settlements.md) (`verification needed` — generator wiosek + streaming zaimplementowane, `src/settlement/settlementGenerator.ts`/`SettlementsManager.ts`; questy między wioskami nadal poza zakresem), [plans/2026-08-08--031--village-generation.md](docs/plans/2026-08-08--031--village-generation.md) (`verification needed` — rozmiar wioski SM/MD/LG + rodziny zastępują dawny `npcCount`, `src/settlement/families.ts`/`villageClearing.ts`), [plans/2026-08-08--032--natural-resources-economy.md](docs/plans/2026-08-08--032--natural-resources-economy.md) (`verification needed` — naturalne zasoby (`src/terrain/naturalResources.ts`, w tym `coal`) wpływają na atrakcyjność lokalizacji, dedykowaną rodzinę/rolę (miner/fisher), opcjonalne resource outposts, nazwę i food source wioski; **pierwsza widoczna geometria**: kupki rudy żelaza/węgla/złota w terenie (`src/terrain/resourceDeposits.ts`, strumieniowane po dystansie) + pole pszenicy przy osadach z `foodSourceType: 'field'` (`props.ts::createWheatField`), oba bez interakcji; brak craftingu/ekonomii/zbierania — dane pod przyszłość), [plans/2026-08-07--027--npc-names.md](docs/plans/2026-08-07--027--npc-names.md) (kulturowe pule imion + `lastName` per rodzina `verification needed`, `src/ai/nameCultures.ts`/`src/settlement/families.ts`; `nickname` nadal `planned`), ~~[plans/2026-08-08--043--player-inventory-equipment.md](docs/plans/2026-08-08--043--player-inventory-equipment.md)~~ → `done` — ekran „Ekwipunek" `[I]` z wagą/limitem zastępuje liczniki w HUD, nóż/krzesiwo/koc jako startowy loadout wpięty w rozpalanie ogniska/odpoczynek/zbieranie gałęzi, `src/items/Inventory.ts`/`src/ui/createInventoryScreen.ts`, potwierdzone w przeglądarce; `Użyj`/`Połącz` odłożone do przyszłego craftingu/equipment
+For `.vue` files, `npm run build` uses `vue-tsc`. Unit tests use Vitest (`*.test.ts`). Current unit coverage is primarily pure logic rather than Three.js/DOM/`.vue` integration.
 
-Woda (brzeg + dzień/noc): `done` → [issues 001](docs/issues/2026-08-07--001--water-shore-color-banding.md), [002](docs/issues/2026-08-07--002--water-daynight-integration.md) (review: [docs/reviews/2026-08-07--001--water-quality.md](docs/reviews/2026-08-07--001--water-quality.md))
+### Browser verification
 
-### Research
+Do **not** launch headless Chrome/Playwright yourself as the default way to test visual/gameplay changes. First run technical checks. If manual browser verification is needed, ask the user to test the already-running dev server and provide concrete steps and expected results.
 
-- Tech: [docs/research/2026-08-06-threejs-terrain-ai-tech-research.md](docs/research/2026-08-06-threejs-terrain-ai-tech-research.md)
-- Assets: [docs/research/2026-08-07-3d-asset-sources.md](docs/research/2026-08-07-3d-asset-sources.md) (Quaternius)
-- Portfolio audit: [docs/research/2026-08-07-3d-portfolio-library-audit.md](docs/research/2026-08-07-3d-portfolio-library-audit.md)
+## Documentation workflow
+
+| Area | Source |
+|---|---|
+| Product vision | [docs/VISION.md](docs/VISION.md) |
+| Current implementation state | [docs/STATE.md](docs/STATE.md) |
+| Strategic roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| Plan index/status | [docs/plans/README.md](docs/plans/README.md) |
+| Implementation plans | [docs/plans/](docs/plans/) |
+| Issues | [docs/issues/README.md](docs/issues/README.md) |
+| Reviews | [docs/reviews/README.md](docs/reviews/README.md) |
+| Research | [docs/research/README.md](docs/research/README.md) |
+
+Statuses are: `todo` · `planned` · `in progress` · `done` · `verification needed`.
+
+New issue/plan/review/research files use `YYYY-MM-DD--NNN--slug.md` with an independent sequence per document type.
+
+## Plan execution rules
+
+1. Do not implement a large change from the plan title alone.
+2. Read the complete plan.
+3. Read implementation notes if present.
+4. Read linked review material before implementation; review findings are actionable constraints, not background commentary.
+5. Inspect the actual code paths named by the plan. If the repository differs from the plan, trust the code and update the plan/notes as appropriate.
+6. Keep the change scoped to the plan. Do not opportunistically redesign unrelated systems.
+7. Run the relevant technical checks.
+8. Clearly separate **implemented**, **technically verified**, and **browser/manual verified**.
+
+## Important architecture
+
+The core world lifetime is grouped in `src/app/worldBundle.ts` as `WorldBundle`. `rebuildWorldBundle()` disposes and recreates its members while mutating the same bundle object. Code that must survive a world rebuild should capture the bundle object and read fields through it; do not destructure a replaceable member into a stale closure.
+
+Important entry points:
+
+```text
+src/app/createApp.ts
+src/app/gameLoop.ts
+src/app/worldBundle.ts
+src/config/worldConfig.ts
+src/terrain/chunkManager.ts
+src/terrain/chunkEnvironment.ts
+src/settlement/SettlementsManager.ts
+src/settlement/createSettlement.ts
+src/ai/NpcAgent.ts
+src/ai/Needs.ts
+src/fauna/AnimalAgent.ts
+src/fauna/HealthState.ts
+src/items/Inventory.ts
+src/quests/QuestManager.ts
+src/persistence/saveData.ts
+src/persistence/saveDb.ts
+src/ui/
+src/ui-vue/
+```
+
+## Current configuration / stack facts
+
+- Three.js + WebGL2, Vite, TypeScript.
+- `simplex-noise` and `lil-gui` are used by the world/config layer.
+- Vue 3 + Tailwind v4 + `lucide-vue-next` are used by the current Vue UI overlay.
+- Vue is mounted through `src/ui-vue/mount.ts` into `#vue-ui`.
+- IndexedDB persistence lives in `src/persistence/`.
+- World configuration is merged from URL/localStorage/defaults; inspect `src/config/worldConfig.ts` before changing precedence or save compatibility.
+
+## When changing architecture
+
+Before introducing a new cross-system service, ask:
+
+- Does an existing manager/agent already own this responsibility?
+- Can the existing shared type be extended instead?
+- Does the new lifecycle match `WorldBundle`?
+- Does the change need persistence?
+- Does it need to work when the player is far away from the relevant world location?
+- Does it create a second implementation of an existing mechanic?
+
+Prefer a small, explicit seam over a new generic framework.
+
+## Truth hierarchy
+
+For implementation questions:
+
+1. **Current code** — what actually exists.
+2. **Tests/build configuration** — what is mechanically verified.
+3. **Implementation notes/reviews** — known decisions and constraints.
+4. **Plan** — intended implementation.
+5. **Roadmap/Vision** — product direction, not implementation evidence.
+
+When documentation and code disagree, do not silently assume the documentation is correct. Call out the discrepancy and update the appropriate document when part of the task.
