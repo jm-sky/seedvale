@@ -31,6 +31,7 @@ type QuickActionsState = {
   onWait: ((hours: number) => void) | null
   onRest: ((variant: RestVariant) => RestOutcome) | null
 }
+type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean }
 
 type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'simpleFireStatus' | 'firePitStatus' | 'torchStatus'>>
 
@@ -48,6 +49,7 @@ export const ui = reactive({
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
   quickActions: { open: false, onBuildSimpleFire: null, onBuildFirePit: null, onLightTorch: null, onWait: null, onRest: null } as QuickActionsState,
+  timeSkip: { visible: false, label: '', fadeVisible: false } as TimeSkipState,
   openStack: [] as string[],
 })
 
@@ -102,3 +104,23 @@ export function openQuickActions(): void { ui.quickActions.open = true }
 export function closeQuickActions(): void { ui.quickActions.open = false }
 export function toggleQuickActions(): void { if (ui.quickActions.open) closeQuickActions(); else openQuickActions() }
 export function isQuickActionsOpen(): boolean { return ui.quickActions.open }
+
+/** `fade` mirrors the vanilla overlay's black full-screen fade (used for
+ *  "rest" — sleeping through the skip) vs. just the floating label alone
+ *  (used for "wait" — the player watches the sky/clock race ahead). */
+export function showTimeSkip(label: string, fade: boolean): void {
+  ui.timeSkip.visible = true
+  ui.timeSkip.label = label
+  if (fade) ui.timeSkip.fadeVisible = true
+}
+/** If a fade is currently showing, only *starts* the fade-out — the panel
+ *  stays mounted until `TimeSkipOverlay.vue`'s `transitionend` handler calls
+ *  `finishTimeSkipHide()`, so the opacity transition is visible instead of
+ *  the black screen vanishing instantly. Without an active fade there's
+ *  nothing to animate, so hide immediately. */
+export function hideTimeSkip(): void {
+  if (!ui.timeSkip.visible) return
+  if (!ui.timeSkip.fadeVisible) { ui.timeSkip.visible = false; return }
+  ui.timeSkip.fadeVisible = false
+}
+export function finishTimeSkipHide(): void { if (!ui.timeSkip.fadeVisible) ui.timeSkip.visible = false }

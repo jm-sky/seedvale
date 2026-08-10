@@ -26,7 +26,7 @@ Implementation plans for features and larger changes.
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------------- | -------- | --------- | ------ |
 | [2026-08-07--005--game-ui-screens.md](./2026-08-07--005--game-ui-screens.md)                             | Ekrany/dialogi/modale jak w grach           | 50%      | 🔴 high   | L      |
 | [2026-08-07--020--npc-2-daily-routine-and-place.md](./2026-08-07--020--npc-2-daily-routine-and-place.md) | NPC Place system: home + schedule/workplace | 50%      | 🔴 high   | L      |
-| [2026-08-09--046--vue-tailwind-ui-stack.md](./2026-08-09--046--vue-tailwind-ui-stack.md)                 | Vue + Tailwind v4 + lucide-vue-next dla UI  | 25%      | 🔴 high   | XL     |
+| [2026-08-09--046--vue-tailwind-ui-stack.md](./2026-08-09--046--vue-tailwind-ui-stack.md)                 | Vue + Tailwind v4 + lucide-vue-next dla UI (Faza 0-3 done, Faza 4 wstrzymana na decyzję użytkownika) | 70%      | 🔴 high   | XL     |
 | [2026-08-07--021--npc-3-animal-life.md](./2026-08-07--021--npc-3-animal-life.md)                         | Animal Life: hunger/thirst/energy + potrzeby zwierząt | 0%       | 🟡 medium | L      |
 | [2026-08-08--039--road-signposts.md](./2026-08-08--039--road-signposts.md)                               | Kierunkowskazy przy drogach: **Fix:** Poprawić kierunek tabliczki. Dodać odstęp między znakami, które są w połowie odległości między wioskami.                             | 67%      | ⚪ `low` | S      |
 | [2026-08-09--049--procedural-world-landmarks.md](./2026-08-09--049--procedural-world-landmarks.md)       | Proceduralne obiekty, ruiny i landmarki                        | 40%      | 🟡 medium | XL     |

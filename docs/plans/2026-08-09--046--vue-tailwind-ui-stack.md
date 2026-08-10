@@ -1,6 +1,8 @@
 # Plan: Vue.js + Tailwind + ikony jako stack dla UI gry (dialogi/menu)
 
-**Status:** `in progress` — **Faza 0 (setup + proof-of-concept) done 2026-08-10**, zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test`. Ten sam dzień: **pierwszy realny ekran wylądował poza kolejnością Faz** — [plan 048 (NPC dialogues v2)](./2026-08-09--048--npc-dialogues-v2.md)'s `NpcDialogueMenu.vue` (net-new, nie migracja istniejącego ekranu, więc nie wymagał Fazy 1/2) zastąpił `createNpcDialog.ts` dla NPC. **Faza 1 (Villagers) done 2026-08-09** — `src/ui-vue/screens/VillagersScreen.vue` zastępuje `src/ui/createVillagersScreen.ts` (usunięty), fasada w `src/ui-vue/store.ts` (`openVillagers/closeVillagers/refreshVillagers/isVillagersOpen`) + `mount.ts`'s generyczny `FORWARDED_FNS` forwarder; generyczny `ui.openStack`/`useOverlayScreen` z Fazy 2 zbudowany teraz (Escape-priority dla asynchronicznie montowanych ekranów, jeden globalny listener w `App.vue`) zamiast per-ekran `isSuppressed` — `createPauseMenu.ts`'s callback zostaje jako jest, do zastąpienia gdy pause menu też się migruje. Zielone na `tsc`/`vue-tsc`/`lint`/`test`/`build`; brak jeszcze wizualnej weryfikacji w przeglądarce. Faza 2/3 nieruszone.
+**Status:** `in progress` — **Faza 0 (setup + proof-of-concept) done 2026-08-10**, zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test`. Ten sam dzień: **pierwszy realny ekran wylądował poza kolejnością Faz** — [plan 048 (NPC dialogues v2)](./2026-08-09--048--npc-dialogues-v2.md)'s `NpcDialogueMenu.vue` (net-new, nie migracja istniejącego ekranu, więc nie wymagał Fazy 1/2) zastąpił `createNpcDialog.ts` dla NPC. **Faza 1 (Villagers) done 2026-08-09** — `src/ui-vue/screens/VillagersScreen.vue` zastępuje `src/ui/createVillagersScreen.ts` (usunięty), fasada w `src/ui-vue/store.ts` (`openVillagers/closeVillagers/refreshVillagers/isVillagersOpen`) + `mount.ts`'s generyczny `FORWARDED_FNS` forwarder; generyczny `ui.openStack`/`useOverlayScreen` z Fazy 2 zbudowany teraz (Escape-priority dla asynchronicznie montowanych ekranów, jeden globalny listener w `App.vue`) zamiast per-ekran `isSuppressed` — `createPauseMenu.ts`'s callback zostaje jako jest, do zastąpienia gdy pause menu też się migruje. Zielone na `tsc`/`vue-tsc`/`lint`/`test`/`build`; brak jeszcze wizualnej weryfikacji w przeglądarce.
+
+**Reconciliation 2026-08-10 (ten sam dzień jako plan 054):** ten status-nagłówek nie był aktualizowany od Fazy 1, mimo że **Faza 2 i większość Fazy 3 zostały w międzyczasie zaimplementowane** (widoczne w `git log` — gałąź `feat/vue-ui-phase-2-fix` zmergowana, plus dalsze commity `refactor(ui): ...`). Stan kodu (prawda per `CLAUDE.md`'s truth hierarchy), nie ten nagłówek, jest wiążący — patrz status per-Faza niżej. **Faza 2 (Pause menu, Quest log, NPC flavor dialog): done.** **Faza 3 (Inventory, Quick actions, Time Skip overlay): done** — Inventory/Quick actions były już zmigrowane; Time Skip overlay domknięty teraz w tej sesji (patrz notatka w sekcji Fazy 3). Wszystkie pięć `src/ui/create*.ts` modułów (`createPauseMenu`, `createQuestLog`, `createNpcDialog`, `createInventoryScreen`, `createQuickActions`, `createTimeSkipOverlay`) to dziś cienkie fasady nad `src/ui-vue/mount.ts`'s `getMountedVueUi()` — zachowują stary kontrakt (`isOpen/open/close/toggle/refresh/dispose`), `createApp.ts` się nie zmienił poza tym, co already było. **Faza 4 (HUD/Minimap/Toast/przyciski dotykowe): nieruszone**, zgodnie z planem wymaga świadomej decyzji przed startem (hot-path kod) — patrz sekcja Fazy 4. Zapytany o kierunek (tylko ikony dotykowe / pełna migracja hot-path / zatrzymać się), **użytkownik wybrał 2026-08-10: zatrzymać się na Fazie 3** — Faza 2/3 (w tym nowy Time Skip overlay) nigdy nie zostały ręcznie zweryfikowane w przeglądarce; to priorytet przed dalszymi fazami. Konkretne kroki do testu: patrz sekcja Weryfikacja niżej.
 **Created:** 2026-08-09
 **Priority:** ustalone z użytkownikiem 2026-08-10 — odblokowuje [plan 048 (NPC dialogues v2)](./2026-08-09--048--npc-dialogues-v2.md), którego nowe menu rozmowy ma być budowane w Vue
 
@@ -102,20 +104,28 @@ Dzisiejsze „PWA" to **wyłącznie metadata instalowalności**: `manifest.href`
 - Ikony `lucide-vue-next` zamiast unicode/emoji tam, gdzie dziś są (`♂`/`♀` gender, `🌾`/`🐟`/`🍄`/`🥕` food source) — nie wymagane przez issue 006, ale naturalny przyrost skoro i tak przepisujemy ten ekran i lucide jest już wpięte z Fazy 0.
 - Zamknąć issue 006 (i częściowo issue 005, dla tego ekranu) po weryfikacji w przeglądarce.
 
-### Faza 2 — Pause menu + Quest log + NPC dialog
+### Faza 2 — Pause menu + Quest log + NPC dialog — `done`
 
-- Te trzy dzielą najwięcej wspólnego zachowania (Esc-priority, click-outside, touch-scroll) — dobry moment na wydzielenie `useOverlayScreen` composable (`src/ui-vue/composables/useOverlayScreen.ts`): otwarty stan + rejestracja w `ui.openStack` (patrz „Esc-priority" wyżej) + click-outside-close, żeby nowe ekrany w Fazie 3+ dostawały to za darmo zamiast kopiować boilerplate.
-- Wyższe ryzyko niż Faza 1: `createPauseMenu` jest najbardziej wpięty w `createApp.ts` (toggluje debug GUI, zatrzymuje tick świata, pointer lock) — migrować ostrożnie, jeden ekran na commit, weryfikować `tsc`/`lint`/`build` + ręczny test w przeglądarce po każdym.
+- [x] `useOverlayScreen` composable (`src/ui-vue/composables/useOverlayScreen.ts`) zbudowany — otwarty stan + rejestracja w `ui.openStack` + click-outside-close, reużyty przez każdy kolejny ekran zamiast kopiowania boilerplate.
+- [x] `src/ui-vue/screens/PauseMenu.vue` (+ `PauseMenuEntriesMain/Actions/Settings.vue`) zastępuje starą implementację; `src/ui/createPauseMenu.ts` to dziś cienka fasada nad `getMountedVueUi()` (`configurePauseMenu/togglePause/isPauseMenuOpen/setPauseSeed`). `_isSuppressed` callback formalnie `@deprecated` w typie, zamiast usunięty — zachowuje kontrakt dla wywołań, które go jeszcze przekazują.
+- [x] `src/ui-vue/screens/QuestLogScreen.vue` zastępuje starą implementację; `src/ui/createQuestLog.ts` to fasada.
+- [x] `src/ui-vue/screens/FlavorDialog.vue` zastępuje starą implementację flavor-textu NPC (nie mylić z `NpcDialogueMenu.vue` z planu 048 — to dwa różne ekrany, oba dziś Vue); `src/ui/createNpcDialog.ts` to fasada.
+- Zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test` (weryfikowane commit-po-commicie w historii `feat/vue-ui-phase-2-fix`). Wizualna weryfikacja w przeglądarce: status nieznany z samego kodu — do potwierdzenia przez użytkownika razem z resztą tego planu.
 
-### Faza 3 — Inventory screen, Quick actions, Time skip overlay
+### Faza 3 — Inventory screen, Quick actions, Time skip overlay — `done`
 
-- Pozostałe modalne/overlay ekrany, ten sam wzorzec co Faza 2, niższe ryzyko (mniej wpięte w rdzeń pętli gry niż pause menu).
+- [x] `src/ui-vue/screens/InventoryScreen.vue` zastępuje starą implementację; `src/ui/createInventoryScreen.ts` to fasada.
+- [x] `src/ui-vue/screens/QuickActionsScreen.vue` zastępuje starą implementację (przyciski budowy ognia/odpoczynku + status-teksty jako lokalny `ref`, nie w store); `src/ui/createQuickActions.ts` to fasada.
+- [x] `src/ui-vue/screens/TimeSkipOverlay.vue` (2026-08-10, razem z plan 054) — ostatni brakujący ekran tej Fazy. Store (`src/ui-vue/store.ts`): `ui.timeSkip = { visible, label, fadeVisible }` + `showTimeSkip/hideTimeSkip/finishTimeSkipHide`. Zachowuje dokładnie stare zachowanie fade-out: `hideTimeSkip()` przy aktywnym fade **nie** chowa natychmiast — tylko startuje fade-out (`fadeVisible = false`), a `TimeSkipOverlay.vue`'s `@transitionend` na fade-div woła `finishTimeSkipHide()`, które dopiero wtedy chowa panel (`visible = false`) — więc opacity-transition (0.4s) jest widoczna zamiast czarnego ekranu znikającego natychmiast. Bez aktywnego fade (`onWait` — brak `fade`), `hideTimeSkip()` chowa panel od razu, tak jak stary `root.hidden = true` bez `transitionend`. `src/ui/createTimeSkipOverlay.ts` to teraz fasada (kontrakt `show/hide/dispose` bez zmian, `createApp.ts` się nie zmienił). Stara CSS (`.seedvale-time-skip*`, `index.html`) usunięta — nic już jej nie używa. Renderowany jako **ostatnie** dziecko w `App.vue`'s overlay-div, żeby malować się nad pause menu (odpowiednik starego `z-index: 12` > pause menu `11` — skip może być widoczny, gdy gracz otworzy pauzę Escape'em w trakcie).
+- Zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test`. Wizualna weryfikacja w przeglądarce: do zrobienia — patrz sekcja Weryfikacja niżej.
 
 ### Faza 4 — HUD / Minimap / Toast / przyciski dotykowe (do oceny, nie z góry przesądzone)
 
 Te są **hot-path**: HUD aktualizuje się co klatkę/co sekundę (czas, exp), minimap przerysowuje się często, toast ma własną kolejkę. Reaktywność Vue prawdopodobnie sobie poradzi (Vue jest szybki na tej skali), ale **nie migrować automatycznie** — ocenić przy implementacji, czy zysk (spójność, mniej ręcznego DOM-mutation) przebija ryzyko regresji w hot-path kodzie, który dziś działa dobrze.
 
 **Issue 005 (ikony na przyciskach dotykowych) nie wymaga czekania na tę fazę** — `lucide-vue-next` jest dostępne od Fazy 0, ale same przyciski (`src/input/createTouchControls.ts`) są dziś vanilla i renderowane bardzo prosto; można wstrzyknąć gotowe SVG stringi z lucide (lucide ma też pakiet czystych SVG, nie tylko komponenty Vue) bez czekania na pełną migrację tego modułu do Vue. Do decyzji przy implementacji: rozdzielić „dostań ikony" od „przepisz na Vue".
+
+**Znalezisko przy porządkowaniu tego planu (2026-08-10):** stara CSS w `index.html` dla już zmigrowanych ekranów (`.seedvale-pause__*`, `.seedvale-quest-log__*`, `.seedvale-villagers__*`, `.seedvale-inventory__*`, `.seedvale-quick-actions__*`, `.seedvale-npc-dialog__*`) **nie została usunięta** podczas Fazy 1–3, mimo że plan to przewidywał („migrowany ekran = jego stare klasy można usunąć") — żaden `.vue` komponent już ich nie referencuje (`grep` potwierdza zero trafień poza `index.html` samym i `createStartScreen.ts`/`createTouchControls.ts`, które używają **innych**, wciąż-vanilla klas). To martwy kod, nie ryzyko regresji — bezpieczny do usunięcia w osobnym, małym cleanup-commicie (nieco za duży zakres, żeby robić go przy okazji Fazy 3/Time-Skip; zostawiony jako jawnie odnotowany dług, nie cichy dodatek do tej sesji).
 
 ### Faza 5 — poza tym planem, ale naturalne miejsce na nowe ekrany
 
@@ -141,6 +151,22 @@ Te są **hot-path**: HUD aktualizuje się co klatkę/co sekundę (czas, exp), mi
 ## Weryfikacja (każda faza)
 
 Zgodnie z zasadami projektu (`CLAUDE.md`): `npx tsc --noEmit` (lub `vue-tsc --noEmit` po Fazie 0), `npm run lint`, `npm run build` po każdej fazie — **nie uruchamiać headless Chrome/Playwright**; po każdej fazie poprosić użytkownika o ręczny test na `localhost:5577` z konkretnymi krokami (co otworzyć, co kliknąć, na jakim viewport — desktop i touch/mobile osobno, bo to obszar z historią regresji).
+
+### Ręczny test zaległy dla Faz 2/3 (nigdy nie wykonany — priorytet przed Fazą 4)
+
+Wszystko techniczne zielone (`tsc`/`vue-tsc`/`lint`/`build`/`test`), ale żadna z poniższych migracji nie miała jeszcze wizualnego potwierdzenia w przeglądarce. Na `localhost:5577`, desktop i (jeśli możliwe) touch/mobile emulacja osobno:
+
+1. **Pause menu** — `Esc`, sprawdź panel (nazwa gracza edytowalna, seed widoczny), przyciski budowy ognia/pochodni/palenisko, „New Game", zamknięcie `Esc` i klikiem na tło.
+2. **Quest log** — otwórz z pause menu, filtr all/active/complete, zamknięcie.
+3. **NPC flavor dialog** — podejdź do NPC/zwierzęcia bez oferty questa, `[E]`, sprawdź że linia dialogowa i prompt się pokazują, zamknięcie.
+4. **NPC dialogue menu** (plan 048, już wcześniej istniejące) — podejdź do NPC z dostępną akcją (quest/handel), sprawdź że menu wielotematyczne nadal działa (regresja spoza tego planu, ale współdzieli `store.ts`).
+5. **Inventory** — `[I]` albo z pause menu, sprawdź listę itemów + wagę, „Wyrzuć" pojedynczego stacku.
+6. **Quick actions** — przycisk ⚡ (desktop) / dotykowy odpowiednik, zbuduj ognisko/palenisko, zapal pochodnię, „Czekaj" (1/3/6h), „Odpoczynek" (obóz i w mieście — sprawdź komunikat „za daleko" z dala od osady).
+7. **Time Skip overlay (nowe, 2026-08-10)** — najważniejsze do potwierdzenia, bo nigdy wcześniej nie istniało w Vue:
+   - „Czekaj" (dowolna liczba godzin) → etykieta „Czekasz... (Xh)" widoczna, **bez** czarnego tła, gra dalej widoczna pod spodem, znika natychmiast po zakończeniu.
+   - „Rozbij obóz" / „Odpocznij w mieście" (8h) → etykieta + **czarne tło narasta płynnie** (fade-in ok. 0.4s) do pełnej czerni, po zakończeniu **płynnie zanika** (fade-out) zamiast znikać skokowo — to jest dokładnie zachowanie, które zostało przepisane z DOM-owego `transitionend` na Vue reactive state, więc jeśli coś w tej migracji nie działa, najpewniej ujawni się jako "czarny ekran znika skokowo" albo "nie znika wcale".
+   - Naciśnij `Esc` w trakcie trwającego time-skip (dowolny wariant) → pause menu powinno pojawić się **nad** overlayem time-skip (nie pod spodem, nie ukryte).
+8. Brak błędów w konsoli przez cały powyższy przebieg.
 
 ## Referencje
 

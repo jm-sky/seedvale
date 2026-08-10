@@ -6,6 +6,7 @@ import InventoryScreen from './screens/InventoryScreen.vue'
 import PauseMenu from './screens/PauseMenu.vue'
 import QuestLogScreen from './screens/QuestLogScreen.vue'
 import QuickActionsScreen from './screens/QuickActionsScreen.vue'
+import TimeSkipOverlay from './screens/TimeSkipOverlay.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
 import { closeTopOverlay, togglePause, ui } from './store'
 
@@ -28,5 +29,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <VillagersScreen />
     <InventoryScreen />
     <QuickActionsScreen />
+    <!-- Last so it paints above every other overlay (matches the vanilla
+         overlay's z-index 12, above pause menu's 11) — a time skip can be
+         showing while the player also has the pause menu open. -->
+    <TimeSkipOverlay />
   </div>
 </template>

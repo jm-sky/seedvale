@@ -315,41 +315,6 @@
         font-family: monospace;
         opacity: 0.4;
       }
-      /* Visual layer for a "wait"/"rest" time skip (world/timeSkip.ts) —
-         above every other overlay (pause menu z-index 11) except the one-time
-         boot loading screen (20), which can never overlap this at runtime. */
-      .seedvale-time-skip {
-        position: absolute;
-        inset: 0;
-        z-index: 12;
-        pointer-events: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .seedvale-time-skip[hidden] {
-        display: none;
-      }
-      .seedvale-time-skip__fade {
-        position: absolute;
-        inset: 0;
-        background: #000;
-        opacity: 0;
-        transition: opacity 0.4s ease;
-      }
-      .seedvale-time-skip__fade--visible {
-        opacity: 1;
-      }
-      .seedvale-time-skip__label {
-        position: relative;
-        padding: 8px 18px;
-        border-radius: 8px;
-        background: rgba(20, 24, 28, 0.72);
-        color: #f4f7fa;
-        font-size: 15px;
-        font-family: 'Segoe UI', system-ui, sans-serif;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-      }
       .seedvale-loading {
         position: absolute;
         inset: 0;
