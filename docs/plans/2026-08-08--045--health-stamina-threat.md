@@ -1,52 +1,160 @@
 # Plan 045: Health, Stamina & Threat System
 
-**Status:** `draft`
-**Scope:** wspólny fundament dla `Health`, `Stamina`, zachowań `flee/attack` oraz przyszłego combat systemu.
-**Zasada:** rozszerzać istniejące systemy (`HealthState`, needs, FSM, fauna), zamiast tworzyć równoległe mechanizmy.
+**Status:** `planned` 📋  
+**Priority:** 🔴 `high`  
+**Effort:** L  
+**Depends on:** ~~010~~, ~~022~~
+
+## Cel
+
+Wzmocnić istniejący wspólny fundament fizycznego stanu żywych encji tak, aby:
+
+- zwierzęta zachowały istniejące HP/damage/death,
+- NPC miały prawdziwe HP niezależne od fatigue,
+- gracz otrzymał podstawowe HP,
+- NPC i fauna korzystały ze wspólnego `StaminaState` zamiast osobnych mechanizmów zmęczenia,
+- późniejsze zachowania `attack/flee` mogły korzystać ze wspólnego stanu bez tworzenia równoległych systemów.
+
+Plan **nie implementuje pełnego combat systemu**. Ma dostarczyć mały fundament, który będzie wykorzystany m.in. przez plan `056` i późniejszą `055 Shared Simulation Architecture`.
+
+## Ważna decyzja architektoniczna
+
+`Health`, `Stamina` i `Threat` są stanem/kontekstem domenowym. Nie są systemem AI.
+
+```text
+HealthState   → ile zdrowia pozostało
+StaminaState  → ile wysiłku można wykonać
+Threat        → jakie zagrożenie jest istotne
+
+AI / FSM / Decision → co encja robi w odpowiedzi
+```
+
+Plan `055` pozostaje właścicielem wspólnego modelu `perception → decision → action`. Plan `045` nie tworzy drugiego systemu decyzyjnego.
 
 ---
 
-## 1. Cel
+## 1. Istniejący codebase — stan wyjściowy
 
-Wprowadzić wspólny model stanu fizycznego istot żyjących w Seedvale:
+Repozytorium już posiada wspólny `HealthState` w `src/shared/HealthState.ts`:
 
-- `HealthState` — zdrowie, obrażenia, śmierć.
-- `StaminaState` — wysiłek, zmęczenie, regeneracja.
-- `Threat` — zagrożenie i reakcja na nie.
-- `Attack` — zadawanie obrażeń jako konsument `HealthState`.
-- `Flee` — ucieczka zależna m.in. od zdrowia i staminy.
+```ts
+type HealthState = {
+  maxHp: number
+  currentHp: number
+  dead: boolean
+}
+```
 
-System powinien działać dla zwierząt, NPC i docelowo gracza.
+Istnieją też `createHealthState()`, `applyFatigue()` i `rest()`. `applyFatigue()` / `rest()` są pozostałością po wykorzystaniu HP jako modelu zmęczenia NPC i powinny zostać usunięte po migracji NPC do staminy. fileciteturn67file0L2-L6
 
-Nie projektować osobnego systemu dla każdej kategorii encji.
+Fauna już korzysta ze wspólnego `HealthState` oraz istniejącego predator/prey damage/death. Plan `010` jest więc fundamentem, a `045` nie powinien tworzyć nowego `AnimalHealth`. fileciteturn66file3L17-L20
 
-## 2. Istniejące fundamenty
+NPC również już posiada `HealthState`, ale obecnie HP jest używane jako fatigue: fazy pracy zmniejszają `currentHp`, a odpoczynek je regeneruje. To należy rozdzielić. fileciteturn68file0L1-L2
 
-Seedvale posiada już `HealthState` z `maxHp`, `currentHp` i `dead`. Istnieją również operacje `applyFatigue()` i `rest()`, będące zalążkiem modelu zmęczenia NPC.
+Gracz nie powinien dostać osobnego modelu HP. Ma zostać podłączony do tego samego `HealthState`.
 
-Fauna posiada już HP, obrażenia, śmierć, predator/prey, pościg, ucieczkę i sprint.
+---
 
-NPC posiada needs, FSM, zmęczenie i odpoczynek.
+## 2. HealthState — wspólny fundament
 
-Nie tworzyć niezależnych mechanizmów typu `AnimalEnergy`, `NpcFatigue`, `PlayerStamina`. Docelowo wspólnym prymitywem powinien być `StaminaState`.
+Pozostawić `src/shared/HealthState.ts` jako jedyne źródło prawdy dla HP.
 
-## 3. HealthState
-
-Pozostawić `HealthState` jako wspólny system. Odpowiada wyłącznie za:
+Odpowiada wyłącznie za:
 
 - `maxHp`,
 - `currentHp`,
-- damage,
-- heal,
-- dead.
+- `dead`,
+- utworzenie stanu,
+- podstawowe damage/heal/death semantics.
 
-Nie powinien wiedzieć, kto zaatakował, dlaczego nastąpiły obrażenia ani czy encja powinna uciekać.
+Jeżeli obecny kod nie ma jeszcze wspólnych operacji `damage` / `heal`, dodać je w tym module w sposób czysty i domenowo neutralny.
 
-Decyzję co zrobić po otrzymaniu obrażeń podejmuje agent.
+Przykładowy kontrakt:
 
-## 4. StaminaState
+```ts
+createHealthState(maxHp)
+damageHealth(health, amount)
+healHealth(health, amount)
+isAlive(health)
+```
 
-Dodać wspólny typ:
+Zasady:
+
+- `currentHp` nigdy nie spada poniżej `0`,
+- `currentHp` nigdy nie przekracza `maxHp`,
+- osiągnięcie `0` ustawia `dead = true`,
+- damage/heal nie zna napastnika, osobowości ani AI,
+- Health nie steruje ruchem ani animacją.
+
+Istniejące zachowanie fauna należy zachować, chyba że implementacja wymaga minimalnej korekty API.
+
+---
+
+## 3. NPC — oddzielić HP od fatigue
+
+NPC już ma HP, więc nie dodajemy kolejnego health systemu.
+
+Obecnie istnieje jednak niepożądane sprzężenie:
+
+```text
+work / goTo
+    ↓
+HP ↓
+    ↓
+rest
+    ↓
+HP ↑
+```
+
+Po 045:
+
+```text
+work / physical effort
+    ↓
+Stamina ↓
+    ↓
+existing Needs / FSM
+    ↓
+rest / sleep
+    ↓
+Stamina ↑
+```
+
+HP NPC pozostaje dostępne dla rzeczywistych obrażeń.
+
+Istniejący HP floor `15` był mechanizmem ochrony przed śmiercią przez fatigue. Po migracji nie powinien być potrzebny do tego celu.
+
+Nie zmieniać istniejącego `Needs → FSM` ani harmonogramu NPC. Stamina dostarcza stan fizyczny; istniejący system decyduje o odpoczynku.
+
+---
+
+## 4. Gracz — podstawowe HP
+
+Dodać graczowi `HealthState` z prostą wartością bazową, np. `100 HP`.
+
+Na tym etapie:
+
+- gracz posiada stan HP,
+- można odczytać `currentHp / maxHp`,
+- można zastosować damage/heal przez wspólny API,
+- śmierć może być jedynie stanem domenowym.
+
+**Nie implementować jeszcze:**
+
+- ekranów death/game over,
+- respawnu,
+- leczenia przedmiotami,
+- pancerza,
+- broni gracza,
+- pełnego combat UI.
+
+Najważniejsze jest to, aby plan `056` miał istniejący wspólny target health dla gracza.
+
+---
+
+## 5. StaminaState
+
+Dodać jeden wspólny typ w module niezależnym od Three.js:
 
 ```ts
 type StaminaState = {
@@ -55,309 +163,237 @@ type StaminaState = {
 }
 ```
 
-oraz podstawowe operacje:
+Podstawowe operacje:
 
 ```ts
+createStaminaState(max)
 drainStamina(stamina, amount)
 restoreStamina(stamina, amount)
 isExhausted(stamina)
+getStaminaRatio(stamina)
 ```
 
-Opcjonalnie później `getStaminaRatio(stamina)`.
+Stamina:
 
-Stamina reprezentuje zdolność do wysiłku, a nie zdrowie.
+- jest ograniczona do `[0, max]`,
+- nie może zmieniać HP,
+- nie zna NPC/fauny/gracza,
+- nie podejmuje decyzji AI,
+- jest testowalna bez Three.js.
 
-Przykłady kosztów:
+---
 
-- sprint → stamina ↓
-- chase → stamina ↓
-- flee → stamina ↓
-- attack → stamina ↓
-- heavy work → stamina ↓
-- rest → stamina ↑
-- walking → niewielki lub zerowy koszt
+## 6. Fauna — migracja istniejącego `energy`
 
-Nie należy automatycznie zamieniać staminy na HP.
-
-## 5. Exhaustion
-
-Niska stamina nie oznacza śmierci.
-
-Proponowane poziomy:
-
-```text
-100% ───────── normal
- 50% ───────── zmęczenie
- 20% ───────── exhausted
-  0% ───────── chwilowa niezdolność do wysiłku
-```
-
-Exhaustion powinno wpływać na zachowanie: mniej sprintu, częstszy odpoczynek i regeneracja. Pierwsza wersja nie powinna wprowadzać skomplikowanych modyfikatorów statystyk.
-
-## 6. Integracja ze zwierzętami
-
-Obecny `AnimalAgent` posiada już informację o sprintingu podczas polowania, pościgu i ucieczki. To naturalny punkt integracji.
+`AnimalLifeState` już posiada `hunger`, `thirst` i `energy`, a `energy` jest faktycznie zasobem wysiłku: sprint ją zużywa, a brak sprintu regeneruje. Nie tworzyć równolegle `energy` i `StaminaState.current`.
 
 Docelowo:
 
 ```text
-AnimalAgent
-├── HealthState
-└── StaminaState
+AnimalLifeState
+├── hunger
+├── thirst
+└── stamina
 ```
 
-Podczas sprintu stamina spada, poza sprintem regeneruje się. Przy exhaustion predator może przerwać pościg, prey może przestać sprintować, a zwierzę może przejść w odpoczynek.
+z zachowaniem odpowiedzialności `AnimalLife` za ticking biologiczny.
 
-Nie tworzyć nowej FSM — rozszerzać istniejące predator/prey.
+W pierwszej wersji zachować obecne wartości drain/regeneration i istniejący mechanizm odpoczynku, zmieniając tylko reprezentację zasobu.
 
-## 7. Integracja z NPC
+Nie tworzyć nowej FSM ani nowego update loop.
 
-NPC już posiada model zmęczenia związany z pracą i odpoczynkiem. Docelowo należy ujednolicić go ze `StaminaState`.
+---
+
+## 7. NPC — migracja fatigue do StaminaState
+
+Dodać NPC wspólny `StaminaState` i przenieść do niego istniejące mechanizmy fatigue/rest:
+
+- praca → stamina ↓,
+- wysiłek/ruch → zgodnie z obecnym zachowaniem,
+- odpoczynek/sen → stamina ↑,
+- zero stamina ≠ śmierć.
+
+Zachować istniejący rytm pracy i odpoczynku.
+
+Nie przenosić automatycznie wszystkich efektów obecnego low-HP slowdown na stamina. Najpierw oczyścić semantykę. Dodatkowe gameplayowe konsekwencje mogą zostać dodane później, jeśli będą miały konsumenta.
+
+---
+
+## 8. Threat — minimalny kontekst, bez AI frameworka
+
+`Threat` jest potrzebny jako wspólny język dla późniejszego `flee/attack`, ale decyzje należą do agentów/FSM i planu `055`.
+
+Pierwsza wersja powinna być minimalna. Nie wprowadzać `ThreatManager`, globalnego rejestru zagrożeń ani trwałej pamięci zagrożeń.
+
+Jeżeli konkretny konsument potrzebuje stanu zagrożenia, użyć najmniejszego typu/contextu potrzebnego przez istniejące systemy, np. poziomu zagrożenia i opcjonalnego istniejącego targetu.
+
+Nie tworzyć teraz generycznego `EntityRef` tylko dla symetrii.
+
+---
+
+## 9. Attack / damage
+
+045 nie tworzy nowego combat systemu.
+
+Istniejący fauna attack/damage ma pozostać kompatybilny ze wspólnym `HealthState`.
+
+Jeżeli potrzebne jest wspólne minimum, używać:
 
 ```text
-chop wood → stamina ↓
-stamina low → rest
-rest → stamina ↑
+attack/action
+    ↓
+damageHealth(target.health, amount)
+    ↓
+HealthState
+    ↓
+agent reacts
 ```
 
-Istniejące `Needs → FSM` pozostaje odpowiedzialne za decyzję. `StaminaState` dostarcza stan fizyczny.
+`HealthState` nie decyduje, czy po obrażeniach należy walczyć, uciekać czy kontynuować pracę.
 
-## 8. Threat
+Koszt stamina ataku może zostać dodany tylko do istniejących ataków, jeśli jest potrzebny do spójnego działania systemu. Nie rozszerzać tego do broni/hitboxów/combos.
 
-Dodać wspólne pojęcie zagrożenia. Pierwsza wersja nie wymaga rozbudowanego systemu AI.
+---
 
-Minimalny model może zawierać:
+## 10. Reakcja na obrażenia
 
-```ts
-type ThreatState = {
-  target?: Entity
-  level: number
-}
-```
+Damage jest sygnałem dla agenta, nie zachowaniem Health.
 
-lub prostszy mechanizm lokalny, jeżeli pełny stan okaże się niepotrzebny.
-
-Zagrożenie może pochodzić z drapieżnika, atakującego zwierzęcia, NPC, gracza, a później także ze środowiska.
-
-## 9. Health + Stamina + Threat
-
-Kluczowe sprzężenie:
+Docelowo:
 
 ```text
-Threat
-   ↓
-Decision
-   ├── Fight
-   ├── Flee
-   └── Ignore
-
-Fight
-   ├── stamina ↓
-   └── target.health ↓
-
-Flee
-   └── stamina ↓
-
-Health low
-   ↓
-większa preferencja Flee
-
-Stamina low
-   ↓
-mniejsza zdolność Fight/Flee
-   ↓
-Rest / Retreat
+damage
+  ↓
+HealthState
+  ↓
+existing agent decision
+  ↓
+fight / flee / retreat / continue
 ```
 
-To powinno być jednym z ważniejszych mechanizmów emergentnego zachowania Seedvale.
+Nie implementować tutaj osobnego combat FSM.
 
-## 10. Attack
+---
 
-Pierwsza wersja ataku powinna być bardzo prosta:
+## 11. Relacja do planu 055
 
-```ts
-attack(attacker, target)
-```
-
-Atak:
-
-1. sprawdza możliwość wykonania ataku,
-2. zużywa staminę,
-3. nakłada damage na `HealthState`,
-4. generuje reakcję targetu.
-
-Na tym etapie bez inventory weapons, rozbudowanych hitboxów, combos i combat UI.
-
-## 11. Reakcja na obrażenia
-
-Obrażenia powinny być sygnałem dla AI:
+`055 Shared Simulation Architecture` definiuje wspólne kontrakty:
 
 ```text
-damage → HealthState → reaction
+state / needs
+    ↓
+perception
+    ↓
+decision
+    ↓
+action
+    ↓
+world effect
 ```
 
-Prey zwykle przechodzi w `Flee`; predator może wybrać `Fight` lub `Flee`; NPC może przejść w zachowanie defensywne.
-
-Sposób reakcji może zależeć od osobowości i powinien rozszerzać istniejące `personality → behavior`.
-
-## 12. Personality
-
-Nie tworzyć osobnego systemu combat personality. Wykorzystać istniejący system osobowości NPC.
-
-Przykładowo:
-
-- `Brave` → Fight bardziej prawdopodobne,
-- `Cowardly` → Flee wcześniej,
-- `Calm` → dłuższa ocena zagrożenia,
-- `Aggressive` → większa szansa na attack.
-
-## 13. Flee
-
-Ucieczka powinna wykorzystywać istniejący system ruchu. Nie tworzyć osobnego navigation system.
+`045` dostarcza przede wszystkim **state/context**, które 055 może później wykorzystać:
 
 ```text
-Threat → Flee target → istniejący movement
+HealthState
+StaminaState
+minimal Threat context
 ```
 
-Na decyzję wpływają m.in. HP, stamina, typ encji, personality, typ zagrożenia i dystans do zagrożenia.
+Nie uzależniać 045 od wykonania 055. Dzięki temu 045 może zostać zaimplementowany wcześniej, a 055 później uporządkuje sposób używania tych danych przez NPC/faunę.
 
-## 14. Kolejność implementacji
+---
 
-### Etap 1 — Stamina foundation
+## 12. Kolejność implementacji
 
-- `StaminaState`,
-- create/drain/restore,
-- exhaustion,
-- testy jednostkowe.
+### Phase 1 — Health API audit + cleanup
 
-Bez zmiany zachowania świata.
+- zweryfikować wszystkich konsumentów `HealthState`,
+- zachować fauna HP/damage/death,
+- dodać brakujące neutralne `damage/heal/isAlive`, jeśli potrzebne,
+- usunąć/oznaczyć stare fatigue helpers dopiero po migracji NPC.
 
-### Etap 2 — Animal stamina
+### Phase 2 — Player Health
 
-- sprint drains stamina,
-- regeneracja poza sprintem,
-- exhaustion ogranicza sprint,
-- predator/prey wykorzystuje istniejące zachowania.
+- dodać `HealthState` do gracza,
+- ustawić podstawowe HP,
+- zapewnić możliwość damage/heal przez wspólny API,
+- bez death UI/respawn/combat.
 
-Bez nowych lokacji i UI.
+### Phase 3 — Shared StaminaState
 
-### Etap 3 — NPC stamina
+- dodać typ i operacje,
+- testy jednostkowe,
+- brak zależności od Three.js.
 
-Połączyć istniejące zmęczenie NPC ze wspólnym `StaminaState`:
+### Phase 4 — Animal stamina migration
 
-- praca,
-- wysiłek,
-- odpoczynek,
-- regeneracja.
+- zastąpić `AnimalLifeState.energy` wspólną reprezentacją,
+- zachować obecne tempo drain/regeneration,
+- zaktualizować `AnimalAgent` i testy,
+- nie utrzymywać dwóch źródeł prawdy.
 
-### Etap 4 — Threat / reaction
+### Phase 5 — NPC stamina migration
 
-Wprowadzić minimalne:
+- zastąpić HP-fatigue stamina,
+- zachować Needs/FSM i rytm pracy/odpoczynku,
+- HP pozostawić wyłącznie jako health.
 
-```text
-Threat → Decision → Fight/Flee/Ignore
-```
+### Phase 6 — Minimal Threat context
 
-Najpierw dla fauny.
+- tylko jeśli istniejący consumer potrzebuje wspólnego typu,
+- bez ThreatManager i bez nowego AI.
 
-### Etap 5 — Attack + damage reaction
+### Phase 7 — Regression verification
 
-Rozszerzyć istniejący system obrażeń:
+- fauna combat,
+- fauna life,
+- NPC fatigue/rest,
+- player state,
+- shared health/stamina unit tests.
 
-```text
-Attack → HealthState → Reaction
-```
+---
 
-Bez pełnego combat systemu gracza.
+## 13. Poza zakresem
 
-### Etap 6 — Personality + combat behavior
+Nie obejmuje:
 
-Połączyć reakcję z istniejącą osobowością NPC.
-
-```text
-personality + health + stamina + threat
-                     ↓
-                  decision
-```
-
-### Etap 7 — Player
-
-Dopiero później:
-
-- player stamina,
-- sprint,
-- attack,
-- damage,
-- death,
-- ewentualne bronie.
-
-Gracz powinien korzystać z tych samych fundamentów co NPC i fauna.
-
-## 15. Poza zakresem
-
-Na tym etapie nie planować:
-
-- inventory,
-- weapons system,
-- armor,
-- XP combat,
-- skill trees,
+- pełnego combat systemu,
+- broni,
+- pancerza,
+- hitboxów,
 - combos,
-- bossów,
-- rozbudowanego combat UI,
-- multiplayer combat,
-- LLM combat AI.
+- combat UI,
+- death screen,
+- respawnu,
+- XP combat,
+- skill tree,
+- osobnego AI managera,
+- GOAP/utility-AI frameworka,
+- LLM AI,
+- worker-based simulation.
 
-System ma przede wszystkim sprawić, że żywe istoty mają fizyczne ograniczenia i reagują na zagrożenie.
+---
 
-## 16. Docelowe sprzężenie
+## 14. Kryteria akceptacji
 
-```text
-                Personality
-                     │
-                     ▼
-Needs ────────→ Decision ←────── Threat
-                     │
-             ┌───────┴───────┐
-             ▼               ▼
-           Work            Combat
-             │           ┌────┴────┐
-             ▼           ▼         ▼
-         Stamina       Attack     Flee
-             │           │         │
-             ▼           ▼         ▼
-           Rest       Health     Stamina
-                         │
-                         ▼
-                     Reaction
-```
+- `HealthState` jest jednym wspólnym źródłem prawdy dla NPC, fauny i gracza.
+- NPC nie tracą HP podczas zwykłego fatigue/work.
+- Odpoczynek NPC regeneruje stamina, nie HP.
+- Fauna nie posiada równolegle `energy` i `StaminaState` jako dwóch mutable źródeł tego samego zasobu.
+- Gracz posiada podstawowe HP korzystające z `HealthState`.
+- Istniejący fauna predator/prey damage/death nadal działa.
+- `HealthState` nie zawiera logiki AI.
+- `StaminaState` nie zawiera logiki AI.
+- Threat, jeśli jest potrzebny, pozostaje małym kontekstem używanym przez decyzje, a nie osobnym managerem.
+- Implementacja nie wymaga wykonania 055 wcześniej.
+- Plan 056 może wykorzystać player `HealthState` jako wspólny cel obrażeń bez tworzenia nowego health/combat systemu.
 
-To powinno pozostać jednym systemem sprzężeń, a nie kolekcją niezależnych funkcji.
+## Powiązane plany
 
-## 17. Przyszłość
-
-Po ukończeniu fundamentów można rozszerzyć system o:
-
-- stamina modifiers zależne od gatunku,
-- różne koszty ataków,
-- regenerację zależną od jedzenia,
-- obrażenia wpływające na zachowanie,
-- śmierć NPC,
-- leczenie,
-- choroby,
-- pogodę wpływającą na stamina,
-- temperaturę,
-- starvation,
-- animal hunting → food → village economy,
-- player combat.
-
-Elementy te powinny być dodawane dopiero wtedy, gdy istniejący system daje im realnego konsumenta.
-
-## Zasada projektowa
-
-**Health mówi, czy żyjesz.  
-Stamina mówi, ile wysiłku możesz wykonać.  
-Threat mówi, na co reagujesz.  
-AI/FSM decyduje, co z tym zrobić.**
-
-Żaden z tych systemów nie powinien przejmować odpowiedzialności drugiego.
+- `2026-08-07--010--predator-prey-system.md` — istniejące HP/damage/death fauny.
+- `2026-08-07--022--npc-character-depth.md` — istniejące NPC HP/character state.
+- `2026-08-07--021--npc-3-animal-life.md` — hunger/thirst/energy fauny.
+- `2026-08-10--055--shared-simulation-architecture.md` — wspólny model perception → decision → action.
+- `2026-08-10--056--hungry-predator-human-aggression.md` — konsument player/NPC health i późniejszego threat/decision.
+- `2026-08-10--041--wait-rest-time-skip.md` — istniejący wait/rest/time-skip kontekst.
+- `2026-08-10--042--fauna-player-awareness.md` — istniejąca percepcja gracza przez faunę.
