@@ -1,6 +1,6 @@
 # Review 004 — inline union types → dedykowane nazwane typy
 
-**Status:** `planned`
+**Status:** `in progress` (1/4 — `PlacedFireKind` done)
 **Data:** 2026-08-10
 **Zakres:** `src/` — pola/parametry z inline `'a' | 'b' | ...` zamiast nazwanego type alias, zgodnie z regułą z globalnego CLAUDE.md („Prefer creating dedicated union types instead of just defining them on interface prop").
 **Powód:** nowy audyt, nie część review #002.
@@ -28,7 +28,7 @@ Dodać `export type VegetationKind = 'tree' | 'bush' | 'cactus' | 'reed'` w `chu
 `VegetationPlacement.kind` i `vegetationSpeciesCount`/`templatesByKind` referencują ten jeden alias
 (`Record<VegetationKind, number>` zamiast wypisanych czterech pól).
 
-### `PlacedFireKind` — duplikat, nie brak nazwy
+### `PlacedFireKind` — duplikat, nie brak nazwy — ✅ zrobione (2026-08-10)
 
 `src/persistence/saveData.ts:31` — `SavePlacedFire.kind: 'simple' | 'pit'` inline, mimo że dokładnie ten sam
 zbiór już ma nazwany typ: `PlacedFireKind` w `src/settlement/PlacedFires.ts:11`. Import bezpieczny — `saveData.ts`
@@ -86,7 +86,7 @@ nie usuwa duplikacji, bo duplikacji nie ma (jeden call site). Zostawić jak jest
 
 ## Priorytet wykonania
 
-1. `PlacedFireKind` w `saveData.ts` — 1-linijkowa zmiana, usuwa realną duplikację źródła prawdy.
+1. ✅ `PlacedFireKind` w `saveData.ts` — 1-linijkowa zmiana, usuwa realną duplikację źródła prawdy.
 2. `RestVariant`/`RestOutcome` — 3 pliki dziś muszą się zgadzać ręcznie; największe ryzyko rozjazdu.
 3. `VegetationKind` — dotyka worker-safe `chunkHeightmap.ts`, ostrożniej (współdzielony z workerem).
 4. `RoadSegmentKind` — kosmetyczne, jeden plik, zrobić przy okazji innej zmiany w `roadNetwork.ts`.

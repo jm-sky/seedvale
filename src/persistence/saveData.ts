@@ -1,6 +1,7 @@
 import type { WorldConfig } from '../config/worldConfig'
 import type { ItemKind } from '../items/items'
 import type { QuestState } from '../quests/quests'
+import type { PlacedFireKind } from '../settlement/PlacedFires'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
  *  here so this module doesn't reach into config internals. */
@@ -28,7 +29,7 @@ export type SaveDroppedItem = { id: string, kind: ItemKind, x: number, z: number
  *  (v5 and below) predate the distinction; migrated as `'pit'`, matching what
  *  the single old "Zbuduj ognisko" (2x branch + 2x stone) action always
  *  built. */
-export type SavePlacedFire = { id: string, x: number, z: number, kind: 'simple' | 'pit' }
+export type SavePlacedFire = { id: string, x: number, z: number, kind: PlacedFireKind }
 
 /** Shape stored by v4/v5 saves, before `kind` existed. */
 export type LegacySavePlacedFire = { id: string, x: number, z: number }
