@@ -103,7 +103,7 @@ The road network is already a substantial global routing system. It currently:
 - also computes routes to settlement-adjacent minor locations such as docks,
 - provides settlement signpost/midpoint helpers.
 
-There is currently a module-level `SettlementDef` cache in `roadNetwork.ts`, separate from the `SettlementsManager` cache. This is an important migration target: do not preserve two independent authoritative settlement-definition caches once `VillagePlan` exists. `RoadNetwork` should consume/resove plans through the single planning path instead of becoming another settlement generator.
+There is currently a module-level `SettlementDef` cache in `roadNetwork.ts`, separate from the `SettlementsManager` cache. This is an important migration target: do not preserve two independent authoritative settlement-definition caches once `VillagePlan` exists. `RoadNetwork` should consume/resolve plans through the single planning path instead of becoming another settlement generator.
 
 Keep `roadNetwork.ts` focused on **global connections and route computation**. Its local-location routing helpers may remain during migration, but the resulting local path data should ultimately be represented by the village plan rather than recomputed independently by runtime consumers.
 
