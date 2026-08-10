@@ -1,5 +1,7 @@
 # Proceduralne obiekty i landmarki terenu — v1
 
+> **Implementation notes:** [2026-08-09--049--procedural-world-landmarks-implementation-notes.md](./2026-08-09--049--procedural-world-landmarks-implementation-notes.md) — techniczna mapa implementacji i wskazówki dla Claude Code.
+
 ## Cel
 
 Wzbogacić proceduralny teren o losowo rozmieszczane obiekty, ozdoby, ruiny i proste budowle.
@@ -38,7 +40,7 @@ Celem jest:
 
 **prosta geometria → prosta konstrukcja → czytelny obiekt → dobry efekt wizualny.**
 
-Jeżeli trzeba użyć większej liczby polygonów, żeby gracz od razu rozpoznał „to jest ruina domu”, „to jest studnia” albo „to jest ołtarz”, jest to lepsze rozwiązanie niż zrobienie taniego, ale niezrozumiałego zbioru cylindrów.
+Jeżeli trzeba użyć większej liczby polygonów, żeby gracz od razu rozpoznał „to jest ruina domu”, „to jest studnia” albo „to jest ołtarz”, jest to lepsze rozwiązanie niż zrobienie taniego, ale niezrozumiałego zbioru cylindrów i boxów.
 
 ## Kategorie rzadkości
 
