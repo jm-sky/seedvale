@@ -1,86 +1,201 @@
-# Seedvale — wizja i kontekst projektu
+# Seedvale — Vision
 
-**Cel dokumentu:** dać nieznającemu repozytorium (człowiekowi lub modelowi AI) kontekst *po co* Seedvale istnieje i *w jakim duchu* dopisywać kolejne funkcje — nie tylko jak jest zbudowane technicznie. Szczegóły: [ROADMAP.md](./ROADMAP.md), [plans/](./plans/), [CLAUDE.md](../CLAUDE.md).
+**Purpose:** define why Seedvale exists, what kind of world it is meant to become, and the principles that should guide major design decisions. This document describes the vision and long-term direction, not the current implementation status.
 
-## 1. Czym jest Seedvale
+Current implementation state belongs in [STATE.md](./STATE.md). Architecture belongs in [ARCHITECTURE.md](./ARCHITECTURE.md). Concrete priorities and plans belong in [ROADMAP.md](./ROADMAP.md) and [plans/README.md](./plans/README.md). Agent workflow belongs in [CLAUDE.md](../CLAUDE.md).
 
-Sandbox 3D (przeglądarkowy, **Three.js** + WebGL2) proceduralnego świata z osadą NPC-ów i ekosystemem zwierząt. Gracz chodzi po świecie w trzeciej osobie, obserwuje, rozmawia, wykonuje proste zadania — ale świat **nie jest zbudowany wokół gracza**. Wioska ma swój rytm potrzeb, zwierzęta polują i uciekają, dzień zmienia się w noc — niezależnie od tego, czy ktoś patrzy.
+## 1. What Seedvale is
 
-To nie MMO, nie multiplayer, nie pełny survival/crafting RPG. Sandbox/demo klasy „obserwuj i uczestnicz" — ile życia da się zbudować z prostych, sprzężonych systemów, zanim sięgnie się po kosztowne rozwiązania (inventory, combat, generator LLM).
+Seedvale is a browser-based 3D sandbox built around a **procedurally generated, living world**.
 
-## 2. Idea przewodnia
+The world contains settlements, people, animals, resources, weather/time cycles and other systems that interact with one another. The player enters that world as one of its inhabitants. The world should not exist merely to provide content for the player: it should have its own rhythms, constraints, needs and consequences.
+
+Seedvale is not intended to become an MMO, multiplayer game, theme-park quest RPG, or conventional survival/crafting game. Those systems may exist where they strengthen the central experience, but they are not the reason the world exists.
+
+## 2. The central idea
 
 > **Plant the seed. Watch the world grow.**
 
-Seedvale zaczyna się jako mała osada w pustym, proceduralnym świecie. Gracz nie jest centrum wszechświata — jest jednym z mieszkańców. Świat ma trwać i tworzyć własne historie niezależnie od tego, czy gracz robi coś „fabularnie ważnego", czy po prostu stoi i patrzy.
+The core fantasy is to enter a world that feels as though it was already alive before the player arrived — and to leave it knowing that it will continue changing after the player walks away.
 
-Docelowo (kierunek, nie stan obecny — sekcja 6): przybywają ludzie, zawiązują się relacje, zmieniają zasoby, zwierzęta migrują, pojawiają się konflikty. **Gracz nie pisze tej historii — jest jej świadkiem**, a czasem uczestnikiem: zadania, rozmowy, docelowo własne miejsce w świecie (dom, gospodarstwo). To rozszerza obecność gracza, ale nie zastępuje osi głównej: **życia, które toczy się dalej, gdy gracz odejdzie**.
+The player is not the chosen one and is not the centre of the simulation. The player can become important to particular people, places and events, but the world does not stop waiting for them.
 
-## 3. Jakie doświadczenie ma dostarczyć
+The long-term goal is therefore not simply to create more content. It is to create a world capable of **producing stories through its own behaviour**.
 
-Nie: podążanie za scenariuszem, odhaczanie questów, budowa idealnej bazy.
+## 3. The world is the AI system
 
-Tak: spacer po świecie, który *wygląda jakby żył zanim tu wszedłeś* i żyje dalej po wyjściu. Rozpoznanie NPC po imieniu i charakterze, nie ikonce. Wilk poluje na sarnę, a nowa pojawia się w spawnerze. Wioska ma rytm potrzeb, NPC-e nie stoją i czekają na dialog.
+A central part of Seedvale's identity is that its intelligence should emerge from the simulation itself.
 
-Docelowy efekt: *„nie wiedziałem, że w moim świecie może się to wydarzyć"*. Emergent storytelling: historie wynikają z interakcji systemów (potrzeby × AI × ekosystem × relacje), nie ze skryptów.
+The world is generated procedurally, but procedural generation alone does not make it alive. The generated environment provides the conditions in which agents and systems can act:
 
-## 4. Co wyróżnia Seedvale
+```text
+procedural world
+      ↓
+resources + places + settlements + environment
+      ↓
+agent simulation
+      ↓
+needs + personality + traits + abilities
+      ↓
+memory + relationships + goals
+      ↓
+decisions + actions
+      ↓
+consequences
+      ↓
+emergent events and stories
+```
 
-Wiele gier symuluje **obiekty** (drzewa, zasoby, listę questów). Seedvale celuje w symulację **życia**:
+An NPC should not need an LLM prompt for every action in order to appear intelligent. Needs, personality, abilities, relationships, memory and the environment should already produce meaningful behaviour through ordinary game systems.
 
-- NPC-e mają potrzeby napędzające zachowanie (FSM: `choose → chop/deposit/drink/eat/goX → wander`), nie stoją czekając na gracza.
-- NPC-e mają osobowość (dziś: 4 archetypy wpływające na reakcję i dobór dialogu; kierunek: więcej archetypów, zdolności, relacje).
-- Zwierzęta to ekosystem, nie dekoracja: role (predator/prey), kontakt i obrażenia, HP, śmierć i respawn w spawnerach, zachowanie zależne od pory dnia.
-- Świat trwa: dzień/noc, needs tickują, NPC-e i zwierzęta żyją swoim cyklem niezależnie od kamery.
-- Zapis/wznowienie (IndexedDB) — gracz wraca do świata, który miał czas żyć dalej (dziś: pozycja + config, bez stanu NPC/questów).
+LLMs and other generative AI may eventually extend this simulation — for example through richer dialogue, quest generation, characterisation or world events — but they should **augment the underlying simulation rather than replace it**.
 
-Różnica jest architektoniczna, nie kosmetyczna: kluczowe typy są **współdzielone między systemami, nie duplikowane**. `HealthState` (HP, śmierć) to jeden generyczny typ używany przez faunę (combat) i docelowo NPC (zmęczenie zamiast obrażeń) — świadomie zamiast dwóch równoległych systemów robiących to samo. Ma to obowiązywać dalej: rozszerzać istniejące sprzężenia (needs → FSM → dialog → quest), nie budować nowych wysp.
+This distinction is fundamental: Seedvale should remain a living world even when no generative model is running.
 
-## 5. Filozofia projektowania
+## 4. What the player becomes
 
-**Świat.** Proceduralny teren (macro noise → realne oceany, wybrzeża, góry zamiast szumu), chunk streaming wokół gracza (load/unload radius, generacja w workerach), roślinność per-chunk. Kierunek: duży, docelowo bezkrawędziowy świat — „jak bardzo" (cube-sphere vs. prostszy ring-based streaming) świadomie nierozstrzygnięte. Styl: stylized/low-poly (Quaternius, CC0) domyślnie, nie dogmat — realizm dopuszczony tam, gdzie poprawia czytelność.
+The player's long-term role is that of a **full member of the world, without becoming its centre**.
 
-**NPC.** Warstwy jedna na drugiej: `needs → FSM → osobowość (reakcja + dialog) → dialog jednostronny → oferty questów → (kierunek) character DB, HP-jako-zmęczenie, relacje`. Cel: NPC ma czuć się jak mieszkaniec, nie automat questowy. AI/LLM later-stage do generatora questów — rozszerzenie prostszych systemów, nie zamiennik.
+The player should eventually be able to build a life in Seedvale: have a home or piece of land, own and use objects, develop relationships, participate in work and local economies, help or harm communities, and leave lasting consequences behind.
 
-**Zwierzęta.** Ekosystem, nie modele z animacją chodzenia. Role determinują zachowanie, kontakt generuje obrażenia z cooldownem, śmierć zostawia zwłoki, spawnery utrzymują populację, pora dnia moduluje zachowanie. Ten sam `HealthState` co NPC.
+Those systems are not meant to turn Seedvale into a conventional player-centric survival game. The player's life is one life among many.
 
-**Systemy ogólnie.** Zasada: **unikać kolekcji niezależnych funkcji**. Przed nowym systemem sprawdzić, czy nie rozszerza istniejącego sprzężenia (needs/FSM/dialogue/HealthState/save) — duplikacja tego samego mechanizmu w dwóch miejscach to dług, nie neutralny wybór.
+A player may build a farm while another NPC moves away. The player may become friends with one villager while two other villagers develop a relationship independently. A settlement may prosper or decline while the player is exploring somewhere else.
 
-## 6. Obecne fundamenty
+The player's story should be **one emergent story inside the world's larger story**.
 
-Wszystkie zaimplementowane, poza zaznaczonymi wyjątkami:
+## 5. The experience we want
 
-- Teren, chunk streaming, worker pool, duże regiony (oceany/góry), dzień/noc, oświetlenie, mgła, woda.
-- Osada + NPC z potrzebami (woda/drewno/jedzenie), FSM, etykiety, osobowość (4 archetypy).
-- Dialog gracz↔NPC `[E]` (kwestia zależna od need + osobowości).
-- Quest v1 (relay między dwoma NPC), log questów, exp, relacja per NPC — *w pamięci, bez save*.
-- Fauna: predator/prey, HP, obrażenia, śmierć, spawnery/respawn.
-- Zapis/wznowienie (IndexedDB, Continue/New Game) — *tylko config + pozycja; bez stanu NPC/questów*.
-- Post-processing, minimapa, trawa/roślinność, dźwięki reakcji NPC.
-- Konfiguracja (rozdzielczość, shading, seed) przez URL/localStorage/GUI.
+Seedvale should encourage the player to:
 
-Gracz dziś: chodzi, obserwuje, rozmawia z NPC, może zrobić jeden hardcoded quest relay. **Brak jeszcze:** inventory, craftingu, budowania, combatu gracza — świadome luki, nie przeoczenia.
+- wander rather than follow a prescribed route;
+- recognise people by their character, behaviour and history rather than by quest markers;
+- observe events that were not authored specifically for them;
+- discover consequences rather than receive scripted exposition;
+- become attached to places and people because they change over time;
+- participate when they want to, and simply observe when they do not;
+- wonder what happened while they were away.
 
-## 7. Kierunki rozwoju
+The desired feeling is:
 
-- **Więcej questów**, docelowo generator (opcjonalnie LLM), gdy ręczny content przestanie się skalować.
-- **Wiele wiosek** — osady rozproszone po mapie, streaming osad, questy między wioskami.
-- **Głębsza charakteryzacja NPC** — character DB, więcej osobowości, zdolności modyfikujące zachowanie, HP-jako-zmęczenie (współdzielone z fauną).
-- **Przedmioty, budowanie, gospodarstwo gracza** — dziś brak inventory/craft/budowy. Rozszerzenie roli gracza w stronę „mieszkaniec z własnym miejscem w świecie" (dom/działka) — spójne z ideą przewodnią, odłożone do dojrzenia podstawowych systemów życia świata.
-- **Wizualny overhaul** — więcej roślinności (częściowo zrobione), chmury, góry w tle.
-- **Game UI poza lil-gui** — ekran „Mieszkańcy", pełniejszy world config UI.
-- **Duży/bezkrawędziowy świat** — cube-sphere vs. prostszy model, świadomie otwarte.
-- **Persystencja NPC/questów w save; ambient audio** — zanotowane, nieskolejkowane.
+> **"I didn't know my world could do that."**
 
-Pełne plany: [plans/README.md](./plans/README.md). Priorytet: [ROADMAP.md](./ROADMAP.md).
+That feeling should come from interactions between systems, not from an increasingly large collection of scripted scenarios.
 
-## 8. Jak korzystać z tego dokumentu
+## 6. The simulation layers
 
-Przy ocenie nowego pomysłu:
+Seedvale's long-term simulation should grow as connected layers rather than as independent feature collections.
 
-1. Czy wzmacnia poczucie **żywego świata niezależnego od gracza**, czy stawia gracza z powrotem w centrum (quest-hub, statyczny NPC-automat)?
-2. Czy **rozszerza istniejące sprzężenie** (needs → FSM → dialog → quest; `HealthState`; chunk streaming) czy tworzy wyspę robiącą to samo, co coś, co już jest?
-3. Czy systemy działają **także gdy gracz nie patrzy**, nie tylko w reakcji na jego akcję?
-4. Czy koszt jest proporcjonalny do efektu — duże systemy (cube-sphere, inventory, generator LLM) świadomie odłożone do dojrzenia prostszych fundamentów.
+### World
 
-Stan kodu zawsze weryfikować w [CLAUDE.md](../CLAUDE.md) i [ROADMAP.md](./ROADMAP.md) — aktualizują się częściej niż ten dokument.
+The procedural world should provide meaningful geography, resources, settlements and environmental conditions. Terrain, water, vegetation, climate and other environmental systems should influence what can happen in a region.
+
+The long-term direction is a substantially larger world, potentially without a conventional visible boundary. The exact technical solution is deliberately open until the simulation and streaming requirements make the choice clear.
+
+### NPCs
+
+NPCs should develop from the existing needs-driven model into increasingly complete agents.
+
+A long-term agent can have:
+
+- needs and priorities;
+- personality and traits;
+- abilities and limitations;
+- work and daily routines;
+- memory of relevant events;
+- relationships with other characters;
+- goals and changing circumstances;
+- the ability to make decisions based on the current world rather than a fixed script.
+
+The important progression is not "more dialogue lines". It is **more coherent behaviour over time**.
+
+### Settlements
+
+Settlements should become living communities rather than collections of NPCs and buildings.
+
+The long-term direction includes multiple settlements, population changes, migration, local resources, work, relationships, cooperation, conflicts and dependencies between communities.
+
+A settlement should be capable of changing because of what its inhabitants and environment do — not only because the player completed a quest there.
+
+### Fauna
+
+Animals should form an ecosystem with populations, predator/prey relationships, resources, movement and environmental pressures.
+
+Fauna should continue to matter to the world even when the player is not watching it. The goal is not to simulate every animal at maximum detail at all times, but to preserve the consequences and continuity that make the ecosystem feel real.
+
+### Player
+
+Player systems should eventually include the tools needed to establish a meaningful life in the world: possessions, a home or land, building, farming or other productive activities, and deeper social/economic participation.
+
+These systems should plug into the same world simulation rather than becoming a separate player-only game layered on top of it.
+
+### Stories and quests
+
+Quests should increasingly emerge from the world.
+
+A quest can originate from a need, relationship, resource problem, settlement event, conflict or other simulation state. Hand-authored quests remain useful, but the long-term direction is a system capable of producing varied situations without requiring every possibility to be scripted manually.
+
+Generative AI may eventually help create or express those situations, but the underlying causes should remain grounded in the simulated world.
+
+## 7. Design principles
+
+### Simulate life, not collections of objects
+
+The important question is not only whether a tree, NPC or animal exists. It is whether systems interact so that the world can change without direct player instruction.
+
+### Extend existing couplings
+
+When adding a feature, first ask whether it should extend an existing relationship:
+
+```text
+needs → behaviour → personality → dialogue → relationships → quests → world events
+```
+
+or another shared mechanism such as health/state, resources, persistence or world streaming.
+
+Avoid creating parallel systems that solve the same conceptual problem in isolation.
+
+### The player is part of the simulation
+
+Player-facing systems should participate in the same world rules where practical. The world should not quietly switch from "simulation" to "theme park" whenever the player arrives.
+
+### Consequences matter more than spectacle
+
+A small change that persists and affects other systems is often more valuable than a large scripted feature that disappears when its scene ends.
+
+### Simple systems first
+
+Seedvale should prefer understandable, composable simulation mechanisms before expensive general-purpose solutions. More sophisticated AI should be introduced when it solves a problem that simpler systems can no longer handle well.
+
+### The world must survive without the player
+
+A system is stronger when it can continue producing meaningful state changes without requiring the player to trigger every step.
+
+## 8. Long-term destination
+
+The long-term Seedvale vision is a generated world populated by agents that are sufficiently coherent to develop their own lives.
+
+A mature version of the game should make it possible for the player to:
+
+1. enter a procedurally generated world;
+2. meet people whose behaviour is shaped by who they are and what has happened to them;
+3. watch settlements and ecosystems change over time;
+4. establish a personal life and relationships within that world;
+5. influence events without controlling the entire simulation;
+6. leave an area and return later to discover consequences that happened in their absence;
+7. encounter stories that could not have been predicted from a fixed script.
+
+The ultimate measure of success is not the number of systems or quests. It is whether the player can tell stories about things that **the game did not explicitly tell them to experience**.
+
+## 9. How to evaluate a new idea
+
+Before adding a major feature, ask:
+
+1. Does it make the world more alive or merely give the player another task?
+2. Does it create or strengthen a meaningful interaction between existing systems?
+3. Can it produce consequences that persist beyond the immediate interaction?
+4. Does it help NPCs, settlements, fauna or the player behave like participants in the same world?
+5. Does it preserve the idea that the world continues without the player?
+6. Could a simpler systemic solution achieve the same result before introducing a heavier AI/LLM or content-generation layer?
+
+If a feature makes the game larger but not more alive, it deserves extra scrutiny.
