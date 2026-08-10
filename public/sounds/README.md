@@ -20,3 +20,9 @@
 | ambient-night-crickets-loop-01 | 521843__mrfossy__outdoors_night_cricketsloop.wav | https://freesound.org/people/mrfossy/sounds/521843/ | Loopable night crickets |
 | ambient-coast-seagulls-waves-01 | 56531__juskiddink__seagullswavesjuly-084of4freesound.wav | https://freesound.org/people/juskiddink/sounds/56531/ | Seagulls + waves, coastline |
 
+## Items / Inventory
+
+| filename         | oryginal filename | source url | notes |
+|------------------|-------------------|------------|-------|
+| inventory-pick-up-01.wav | 831642__ienba__generic-game-pick-up.wav | https://freesound.org/people/IENBA/sounds/831642/ | 4 sounds, split needed |
+| inventory-drop-01.wav | 791150__randbsoundbites__dropping-an-item-from-inventory.wav | https://freesound.org/people/randbsoundbites/sounds/791150/ | |
