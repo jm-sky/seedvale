@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { closePauseMenu, isPauseMenuOpen, setPausePlayerName, ui } from '../store'
+import { closePauseMenu, isPauseMenuOpen, openNotes, openWorldConfigScreen, setPausePlayerName, ui } from '../store'
 
 const panel = ref<HTMLElement | null>(null)
 const name = ref(ui.pauseMenu.playerName)
@@ -18,6 +18,11 @@ watch(() => ui.pauseMenu.playerName, (value) => { name.value = value })
 function commitName(): void { const value = name.value.trim(); if (value) ui.pauseMenu.onNameCommit?.(value) }
 function onNameInput(): void { setPausePlayerName(name.value); ui.pauseMenu.onNameChange?.(name.value) }
 function openVillagers(): void { closePauseMenu(); ui.pauseMenu.onVillagers?.() }
+// No `ui.pauseMenu.onX` indirection needed here, unlike `openVillagers` —
+// these two don't need any data fetched from `createApp.ts`'s game-world
+// state, just the store's own open flag.
+function openWorldConfig(): void { closePauseMenu(); openWorldConfigScreen() }
+function openNotesScreen(): void { closePauseMenu(); openNotes() }
 </script>
 
 <template>
@@ -59,6 +64,20 @@ function openVillagers(): void { closePauseMenu(); ui.pauseMenu.onVillagers?.() 
       @click="openVillagers"
     >
       Mieszkańcy
+    </button>
+    <button
+      type="button"
+      class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
+      @click="openWorldConfig"
+    >
+      Świat
+    </button>
+    <button
+      type="button"
+      class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
+      @click="openNotesScreen"
+    >
+      Notatki
     </button>
     <button
       type="button"

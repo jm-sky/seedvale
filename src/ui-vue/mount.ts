@@ -11,6 +11,8 @@ const FORWARDED_FNS = [
   'openFlavorDialog', 'setFlavorPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',
   'configureQuickActions', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
   'showTimeSkip', 'hideTimeSkip',
+  'configureWorldConfigScreen', 'openWorldConfigScreen', 'closeWorldConfigScreen', 'isWorldConfigScreenOpen',
+  'openNotes', 'closeNotes', 'isNotesOpen',
 ] as const
 
 export type VueUi = Pick<StoreModule, typeof FORWARDED_FNS[number]> & { dispose: () => void }

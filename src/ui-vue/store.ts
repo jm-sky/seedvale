@@ -1,10 +1,12 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { WorldConfig } from '../config/worldConfig'
 import type { ItemKind } from '../items/items'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
 import type { RestOutcome, RestVariant } from '../ui/createQuickActions'
+import type { DayNightState } from '../world/dayNight'
 
 export type VillagerEntry = { npc: Raw<NpcAgent>; settlementName: string; foodSourceType: FoodSourceType }
 type VillagerRefreshEntry = { npc: NpcAgent; settlementName: string; foodSourceType: FoodSourceType }
@@ -32,6 +34,25 @@ type QuickActionsState = {
   onRest: ((variant: RestVariant) => RestOutcome) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean }
+/** `config`/`dayNight` are the *same* mutable objects `createApp.ts` already
+ *  holds (see plan 005 — "Nie duplikować stanu"), assigned once via
+ *  `configureWorldConfigScreen`, not copied per-open. Vue's `reactive()`
+ *  deep-wraps them lazily on first read, so `v-model` writes go straight
+ *  through the proxy onto the same target every other system reads from. */
+type WorldConfigScreenState = {
+  open: boolean
+  config: WorldConfig | null
+  dayNight: DayNightState | null
+  /** Rebuilds the world — costly (regenerates every chunk). Fired by the
+   *  seed field's explicit "Zastosuj" button (not per-keystroke) and
+   *  immediately on the flat-shading toggle — same handler + timing as
+   *  debug GUI's `onTerrainChange`. */
+  onTerrainChange: (() => void) | null
+  /** Cheap, fired live on every day/night field change — mirrors debug
+   *  GUI's `onDayNightChange`. */
+  onDayNightChange: (() => void) | null
+}
+type NotesState = { open: boolean }
 
 type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'simpleFireStatus' | 'firePitStatus' | 'torchStatus'>>
 
@@ -50,6 +71,8 @@ export const ui = reactive({
   flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
   quickActions: { open: false, onBuildSimpleFire: null, onBuildFirePit: null, onLightTorch: null, onWait: null, onRest: null } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false } as TimeSkipState,
+  worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null } as WorldConfigScreenState,
+  notes: { open: false } as NotesState,
   openStack: [] as string[],
 })
 
@@ -124,3 +147,17 @@ export function hideTimeSkip(): void {
   ui.timeSkip.fadeVisible = false
 }
 export function finishTimeSkipHide(): void { if (!ui.timeSkip.fadeVisible) ui.timeSkip.visible = false }
+
+export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: { onTerrainChange: () => void; onDayNightChange: () => void }): void {
+  ui.worldConfigScreen.config = config
+  ui.worldConfigScreen.dayNight = dayNight
+  ui.worldConfigScreen.onTerrainChange = handlers.onTerrainChange
+  ui.worldConfigScreen.onDayNightChange = handlers.onDayNightChange
+}
+export function openWorldConfigScreen(): void { ui.worldConfigScreen.open = true }
+export function closeWorldConfigScreen(): void { ui.worldConfigScreen.open = false }
+export function isWorldConfigScreenOpen(): boolean { return ui.worldConfigScreen.open }
+
+export function openNotes(): void { ui.notes.open = true }
+export function closeNotes(): void { ui.notes.open = false }
+export function isNotesOpen(): boolean { return ui.notes.open }

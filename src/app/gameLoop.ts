@@ -214,10 +214,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           if (inventoryConsumed) inventoryScreen.close()
           break
         case 'menu':
+        case 'notes':
         case 'npcDialogueMenu':
         case 'quickActions':
         case 'timeSkip':
         case 'villagers':
+        case 'worldConfig':
           break
         case 'npcDialog':
           npcDialog.setPrompt(null)
@@ -337,7 +339,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       !questLog.isOpen() &&
       !vueUi.isVillagersOpen() &&
       !inventoryScreen.isOpen() &&
-      !quickActions.isOpen()
+      !quickActions.isOpen() &&
+      !vueUi.isWorldConfigScreenOpen() &&
+      !vueUi.isNotesOpen()
     ) {
       for (const s of bundle.settlementsManager.getLoaded()) {
         for (const npc of s.npcs) {

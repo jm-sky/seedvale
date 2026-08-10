@@ -19,6 +19,8 @@ export type ActiveModal =
   | 'inventory'
   | 'quickActions'
   | 'timeSkip'
+  | 'worldConfig'
+  | 'notes'
   | null
 
 export function activeModal(
@@ -38,5 +40,7 @@ export function activeModal(
   if (inventoryScreen.isOpen()) return 'inventory'
   if (quickActions.isOpen()) return 'quickActions'
   if (timeSkip.isActive()) return 'timeSkip'
+  if (vueUi.isWorldConfigScreenOpen()) return 'worldConfig'
+  if (vueUi.isNotesOpen()) return 'notes'
   return null
 }

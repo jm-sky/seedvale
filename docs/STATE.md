@@ -103,8 +103,9 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Vue 3 + Tailwind v4 + `lucide-vue-next` is mounted under `#vue-ui` through `src/ui-vue/`.
 - Vue migration is incremental; it is not a full replacement of the vanilla UI yet.
 - NPC dialogue v2 is already a Vue screen.
-- Pause menu, quest log, inventory and other game screens exist; some planned screens/features remain unfinished.
-- lil-gui remains the debug/world configuration UI.
+- Pause menu, quest log, inventory, quick actions, time-skip overlay, world config screen and notes/journal screen exist as Vue screens; `src/ui/create*.ts` for these are thin compatibility facades over the Vue store, not separate implementations.
+- HUD, minimap, toast and touch controls remain vanilla DOM (plan 046 Faza 4 — intentionally not migrated yet, hot-path code).
+- lil-gui remains the full debug/world configuration UI (region/fbm/road-network tuning, post-processing); the in-game world config screen (pause menu → Świat) exposes only the player-facing subset (seed, flat shading, day/night) — same underlying `WorldConfig`/`DayNightState` objects, not a duplicate.
 
 ## Important shared concepts
 
@@ -149,11 +150,11 @@ src/ui-vue/
 
 ### WorldBundle / createApp
 
-Plan 053 refactored `createApp.ts` and introduced the mutable `WorldBundle` boundary. Plan 054 is planned to tighten reference safety and perform small follow-up refactors. In particular, the current `getUserActions(...)` path captures `bundle.placedFires` when the callbacks are created; after a world rebuild those callbacks can still point at the old `PlacedFires` instance. Treat this as a known follow-up, not as evidence that the `WorldBundle` design itself should be reverted. Read plans 053/054 before making structural changes here.
+Plan 053 refactored `createApp.ts` and introduced the mutable `WorldBundle` boundary. Plan 054 (done) audited every long-lived closure created in `createApp.ts` for stale references into a `WorldBundle` field that `rebuildWorldBundle()` replaces — found and fixed one real bug (`getUserActions(...)` capturing `bundle.placedFires` by value instead of reading it live), confirmed `gameLoop.ts`/`interactables.ts` were already correct. Read plan 053 before making structural changes here; plan 054 documents what was checked and why.
 
 ### UI migration
 
-Plan 046 introduced the Vue/Tailwind UI stack and is being migrated screen-by-screen. Do not assume every UI screen belongs in Vue yet. Check the existing screen and the relevant plan before moving it.
+Plan 046 introduced the Vue/Tailwind UI stack and is being migrated screen-by-screen. Faza 0-3 are done (pause menu, quest log, NPC dialog, inventory, quick actions, time-skip overlay all live in `src/ui-vue/`). Faza 4 (HUD/minimap/toast/touch controls) is intentionally paused — hot-path code, needs a deliberate risk/reward call, not an automatic migration. Do not assume every UI screen belongs in Vue yet; check the existing screen and the relevant plan before moving it.
 
 ### NPC daily routine
 
@@ -199,9 +200,10 @@ The following should not be assumed to exist merely because related foundations 
 The exact status of plans belongs in `docs/plans/README.md`, not here. As of this snapshot, notable active/planned areas include:
 
 - Plan 049 — procedural world landmarks.
-- Plan 054 — WorldBundle reference safety and small refactors.
 - Plan 053 — createApp refactor is implemented and serves as recent architectural context.
-- Plan 046 — Vue/Tailwind UI migration.
+- Plan 054 — WorldBundle reference safety: done, kept as recent context for the `WorldBundle` mutation pattern.
+- Plan 046 — Vue/Tailwind UI migration: Faza 0-3 done, Faza 4 (hot-path HUD/minimap/toast/touch) paused pending a deliberate decision.
+- Plan 005 — game UI screens: done (world config + notes/journal screens close out the last open item).
 - Plan 020 — NPC Place/daily routine.
 - Plan 021 — Animal Life.
 - Plan 047 — village generation overhaul.

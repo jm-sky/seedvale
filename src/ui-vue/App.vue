@@ -3,11 +3,13 @@ import { onMounted, onUnmounted } from 'vue'
 import NpcDialogueMenu from './NpcDialogueMenu.vue'
 import FlavorDialog from './screens/FlavorDialog.vue'
 import InventoryScreen from './screens/InventoryScreen.vue'
+import NotesScreen from './screens/NotesScreen.vue'
 import PauseMenu from './screens/PauseMenu.vue'
 import QuestLogScreen from './screens/QuestLogScreen.vue'
 import QuickActionsScreen from './screens/QuickActionsScreen.vue'
 import TimeSkipOverlay from './screens/TimeSkipOverlay.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
+import WorldConfigScreen from './screens/WorldConfigScreen.vue'
 import { closeTopOverlay, togglePause, ui } from './store'
 
 function onKeydown(event: KeyboardEvent): void {
@@ -29,6 +31,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <VillagersScreen />
     <InventoryScreen />
     <QuickActionsScreen />
+    <WorldConfigScreen />
+    <NotesScreen />
     <!-- Last so it paints above every other overlay (matches the vanilla
          overlay's z-index 12, above pause menu's 11) — a time skip can be
          showing while the player also has the pause menu open. -->

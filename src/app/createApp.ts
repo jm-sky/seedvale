@@ -296,16 +296,21 @@ export async function createApp(
   const onDayNightChange = () => {
     if (dayNight.enabled) gameLoop.resyncDayNight()
   }
+  // Shared with the World config screen (`ui-vue/screens/WorldConfigScreen.vue`)
+  // via `configureWorldConfigScreen` below — same costly-rebuild handler as
+  // debug GUI's seed/flat-shading controls, not a second implementation.
+  const onTerrainChange = () => {
+    void rebuildWorld()
+  }
 
   const gui = createDebugGui(config, dayNight, {
-    onTerrainChange: () => {
-      void rebuildWorld()
-    },
+    onTerrainChange,
     onSkyChange: updateSkyFromGui,
     onDayNightChange,
     onPostProcessingChange: updatePostProcessingFromGui,
   })
   if (!config.showGui) gui.toggle()
+  vueUi.configureWorldConfigScreen(config, dayNight, { onTerrainChange, onDayNightChange })
 
   // Created before pauseMenu so their Escape listeners register first — see
   // createNpcDialog's onKeyDown comment for why registration order matters here.
@@ -426,7 +431,9 @@ export async function createApp(
             !questLog.isOpen() &&
             !vueUi.isVillagersOpen() &&
             !inventoryScreen.isOpen() &&
-            !vueUi.isNpcDialogueMenuOpen()
+            !vueUi.isNpcDialogueMenuOpen() &&
+            !vueUi.isWorldConfigScreenOpen() &&
+            !vueUi.isNotesOpen()
           ) {
             pauseMenu.togglePause()
           }
@@ -437,7 +444,9 @@ export async function createApp(
             !questLog.isOpen() &&
             !vueUi.isVillagersOpen() &&
             !inventoryScreen.isOpen() &&
-            !vueUi.isNpcDialogueMenuOpen()
+            !vueUi.isNpcDialogueMenuOpen() &&
+            !vueUi.isWorldConfigScreenOpen() &&
+            !vueUi.isNotesOpen()
           ) {
             quickActions.toggle()
           }

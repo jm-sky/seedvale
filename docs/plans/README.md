@@ -24,7 +24,6 @@ Implementation plans for features and larger changes.
 
 | File                                                                                                     | Summary                                     | Progress | Priority  | Effort |
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------------- | -------- | --------- | ------ |
-| [2026-08-07--005--game-ui-screens.md](./2026-08-07--005--game-ui-screens.md)                             | Ekrany/dialogi/modale jak w grach           | 50%      | 🔴 high   | L      |
 | [2026-08-07--020--npc-2-daily-routine-and-place.md](./2026-08-07--020--npc-2-daily-routine-and-place.md) | NPC Place system: home + schedule/workplace | 50%      | 🔴 high   | L      |
 | [2026-08-09--046--vue-tailwind-ui-stack.md](./2026-08-09--046--vue-tailwind-ui-stack.md)                 | Vue + Tailwind v4 + lucide-vue-next dla UI (Faza 0-3 done, Faza 4 wstrzymana na decyzję użytkownika) | 70%      | 🔴 high   | XL     |
 | [2026-08-07--021--npc-3-animal-life.md](./2026-08-07--021--npc-3-animal-life.md)                         | Animal Life: hunger/thirst/energy + potrzeby zwierząt | 0%       | 🟡 medium | L      |
@@ -62,6 +61,7 @@ Implementation plans for features and larger changes.
 | [2026-08-08--032--natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md)               | Zasoby naturalne, atrakcyjność lokalizacji, food source | 100%     | 🔴 high   | M      |
 | [2026-08-08--036--village-siting-difficult-terrain.md](./2026-08-08--036--village-siting-difficult-terrain.md) | Osadzanie wiosek w trudnym terenie                      | 25%      | 🟡 medium | M      |
 | [2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md](./2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md) | Bezpieczeństwo referencji `WorldBundle` + małe refaktory po 053 | 100% | 🟡 medium | S–M |
+| [2026-08-07--005--game-ui-screens.md](./2026-08-07--005--game-ui-screens.md) | Ekrany/dialogi/modale jak w grach (World config + Notes/journal domykają ostatnie 2/4) | 100% | 🔴 high | L |
 
 ---
 
