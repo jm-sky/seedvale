@@ -1,0 +1,164 @@
+# Seedvale Architecture
+
+**Purpose:** describe the architecture that exists in the code today. This is an architectural map, not a product roadmap.
+
+**Last verified:** 2026-08-10
+
+## Source of truth
+
+- `CLAUDE.md` — how agents should work.
+- `docs/STATE.md` — what is currently implemented.
+- `docs/ROADMAP.md` — product direction.
+- `docs/plans/README.md` — plan/status index.
+- Source code — authoritative when documentation conflicts with implementation.
+
+## Runtime composition
+
+`src/app/createApp.ts` is the application composition root. It creates the renderer/scene/camera, UI, audio, player, inventory, quests, day/night state and the world bundle, then wires the runtime loop and persistence together.
+
+The world systems that are rebuilt together are grouped in `src/app/worldBundle.ts` as `WorldBundle`:
+
+```text
+WorldBundle
+├── ChunkManager
+├── WorldOcean
+├── SettlementsManager
+├── Fauna
+├── ItemSpawners
+├── ResourceDeposits
+├── DroppedItems
+└── PlacedFires
+```
+
+`WorldBundle` is mutated in place during rebuild. Callers that need a live world reference should retain the bundle and read its fields when used; they must not capture a bundle field before a rebuild and expect it to remain current.
+
+## Major subsystems
+
+```text
+Application
+└── createApp
+    ├── World
+    │   └── WorldBundle
+    │       ├── Terrain / chunk streaming
+    │       ├── Ocean
+    │       ├── Settlements / NPCs
+    │       ├── Fauna
+    │       ├── Natural resources
+    │       └── World items / fires
+    ├── Player
+    │   ├── PlayerController
+    │   ├── Inventory
+    │   └── Player actions / torch
+    ├── Simulation services
+    │   ├── Game loop
+    │   ├── Day/night + time skip
+    │   └── QuestManager
+    ├── Presentation
+    │   ├── Three.js renderer / post-processing
+    │   ├── CSS2D labels
+    │   ├── audio
+    │   └── UI / Vue UI
+    └── Persistence
+        └── SaveData / IndexedDB
+```
+
+This diagram is intentionally conceptual. The actual imports in the source are authoritative.
+
+## World lifecycle
+
+```text
+createApp
+  │
+  ├── createWorldBundle(...)
+  │       └── build terrain → wait for home chunks → create dependent world systems
+  │
+  ├── run simulation
+  │
+  └── rebuildWorldBundle(...)
+          ├── dispose current world systems
+          ├── clear module-level road caches
+          ├── create a new ChunkManager
+          └── recreate dependent systems against the new manager
+```
+
+The rebuild path is used when terrain/world configuration changes and when starting a genuinely new seed. The caller decides whether collected items should be reset; `rebuildWorldBundle` carries that decision through rather than deciding it itself.
+
+## Dependency direction
+
+The intended high-level direction is:
+
+```text
+config / primitives
+        ↓
+terrain / world generation
+        ↓
+settlements / fauna / resources / items
+        ↓
+simulation orchestration
+        ↓
+presentation / interaction
+        ↓
+persistence wiring
+```
+
+This is a guide, not a claim that every current import follows a strict layered architecture. `createApp.ts` is deliberately a wiring layer and therefore depends on most subsystems.
+
+## Terrain as shared world environment
+
+`ChunkManager` exposes sampling/environment APIs used by other systems, including terrain height, floor, water level and regional signals. World systems should consume these APIs rather than duplicate terrain-generation logic.
+
+Terrain streaming is separate from simulation presence: settlement/fauna logic has a fixed home/spatial radius and settlement streaming is handled independently of terrain chunk loading. Do not assume that being outside the player's loaded terrain means an NPC/animal system should stop existing.
+
+## NPCs, settlements and fauna
+
+Settlements are managed by `SettlementsManager`; fauna is created and managed separately. Both are world systems coordinated by `WorldBundle` rather than being owned by the player controller.
+
+NPC behaviour is built around needs/FSM/personality/dialogue/quest interactions. Fauna has predator/prey behaviour and health/damage. Shared mechanisms should remain shared when the domain overlap is intentional.
+
+## Items and interaction
+
+`Inventory` is owned by the application/player-facing layer. World-side item state such as dropped items, item spawners and placed fires lives in `WorldBundle`. Interaction code connects player actions to those systems rather than moving all item state into the player controller.
+
+## Simulation vs presentation
+
+The game loop is the runtime coordination point for simulation updates and interaction state. Rendering/UI/audio are presentation layers around the simulation; avoid putting persistent gameplay rules solely in UI components.
+
+Modal UI can gate parts of simulation/input. Changes to modal behaviour should therefore be checked against the game loop and all relevant UI entry points, not only the component being changed.
+
+## Persistence
+
+Persistence is wired from `createApp.ts`. `SaveData` contains player/configuration plus current quest, inventory and selected world-item/time state. NPC simulation state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
+
+When changing `SaveData`, preserve compatibility with older saves and use the existing migration/defaulting patterns in the config and persistence code.
+
+## Rebuild / lifetime invariants
+
+1. `WorldBundle` itself is stable across rebuilds; its fields are replaced in place.
+2. Systems that depend on `ChunkManager` must be recreated when the manager is recreated.
+3. Long-lived closures must read the current bundle field instead of capturing a stale field value.
+4. World-owned resources must be disposed before replacement.
+5. Module-level caches whose keys are not seed-scoped must be cleared when switching worlds.
+6. New-world reset decisions belong to the caller; low-level rebuild helpers should not silently reset unrelated player/world state.
+
+## Adding a new system
+
+Before adding a subsystem, answer:
+
+1. Is there an existing system whose state/behaviour this extends?
+2. Which existing system owns its lifetime?
+3. Does it need to survive a `WorldBundle` rebuild?
+4. What existing environment/simulation API should it consume instead of duplicating logic?
+5. Does it need persistence? If yes, what is the compatibility story for old saves?
+6. Does it belong to simulation, world generation, interaction, or presentation?
+
+Prefer extending an existing coupling over introducing a parallel subsystem that solves the same problem.
+
+## Common architectural pitfalls
+
+- Capturing `bundle.chunkManager` in a long-lived closure and then rebuilding the bundle.
+- Treating terrain load radius as the simulation radius for NPCs/fauna.
+- Duplicating terrain sampling or procedural rules in another system.
+- Putting gameplay state only in UI components.
+- Forgetting disposal when replacing world-owned Three.js resources.
+- Assuming current `SaveData` represents complete NPC/world simulation persistence.
+- Reintroducing module-level seed-sensitive caches without clearing/scoping them.
