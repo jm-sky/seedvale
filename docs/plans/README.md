@@ -39,7 +39,6 @@ Implementation plans for features and larger changes.
 | File                                                                                                             | Summary                                                        | Progress | Priority  | Effort |
 | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | -------- | --------- | ------ |
 | [2026-08-10--052--shovel-digging-and-finding-stones.md](./2026-08-10--052--shovel-digging-and-finding-stones.md) | Kopanie ziemi i znajdowanie kamieni [have implementation notes] | 0%       | 🔴 high   | M      |
-| [2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md](./2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md) | Bezpieczeństwo referencji `WorldBundle` + małe refaktory po 053 | 0% | 🟡 medium | S–M |
 | [2026-08-10--056--hungry-predator-human-aggression.md](./2026-08-10--056--hungry-predator-human-aggression.md) | Głodny predator może przełamać strach przed człowiekiem | 0% | 🟡 medium | M |
 | [2026-08-07--045--health-stamina-threat.md](./2026-08-07--045--health-stamina-threat.md)                         | Wspólny Health/Stamina/Threat dla NPC/fauny/gracza             | 0%       | 🟡 medium | XL     |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md)             | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout  | 0%       | 🔴 high   | XL     |
@@ -61,6 +60,7 @@ Implementation plans for features and larger changes.
 | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | -------- | --------- | ------ |
 | [2026-08-08--032--natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md)               | Zasoby naturalne, atrakcyjność lokalizacji, food source | 100%     | 🔴 high   | M      |
 | [2026-08-08--036--village-siting-difficult-terrain.md](./2026-08-08--036--village-siting-difficult-terrain.md) | Osadzanie wiosek w trudnym terenie                      | 25%      | 🟡 medium | M      |
+| [2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md](./2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md) | Bezpieczeństwo referencji `WorldBundle` + małe refaktory po 053 | 100% | 🟡 medium | S–M |
 
 ---
 

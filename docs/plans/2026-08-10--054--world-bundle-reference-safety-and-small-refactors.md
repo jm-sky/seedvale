@@ -213,15 +213,67 @@ Następnie sprawdzić ręcznie:
 
 ## Definition of Done
 
-- [ ] przeprowadzony audit referencji po `rebuildWorld()`
-- [ ] `PlacedFires` nie jest używany przez stare callbacki po rebuildzie
-- [ ] game loop nie posiada niebezpiecznych snapshotów wymienianych systemów
-- [ ] interactables mają poprawny lifecycle
-- [ ] wykonane tylko małe, uzasadnione cleanupy
-- [ ] typecheck przechodzi
-- [ ] build przechodzi
-- [ ] brak regresji interakcji/ognisk/inventory
-- [ ] brak niepotrzebnego rozszerzenia zakresu planu 053
+- [x] przeprowadzony audit referencji po `rebuildWorld()`
+- [x] `PlacedFires` nie jest używany przez stare callbacki po rebuildzie
+- [x] game loop nie posiada niebezpiecznych snapshotów wymienianych systemów
+- [x] interactables mają poprawny lifecycle
+- [x] wykonane tylko małe, uzasadnione cleanupy
+- [x] typecheck przechodzi
+- [x] build przechodzi
+- [ ] brak regresji interakcji/ognisk/inventory *(technicznie zweryfikowane; wymaga ręcznego testu w przeglądarce — patrz Implementation notes)*
+- [x] brak niepotrzebnego rozszerzenia zakresu planu 053
+
+## Implementation notes (2026-08-10)
+
+**Audit (Phase 1/3/4) — wynik: jeden rzeczywisty bug, reszta poprawna.**
+
+- `src/app/createApp.ts:339` przekazywał `bundle.placedFires` (snapshot instancji) do
+  `getUserActions()`, której zwracane closures (`buildSimpleFire`, `buildFirePit`) są
+  długowieczne — trzymane przez `createQuickActions`/`createPauseMenu` przez cały czas
+  życia aplikacji, czyli przeżywają `rebuildWorldBundle()`. Po rebuildzie (zmiana
+  configu terenu, "New Game") wołałyby `.place()` na starej, zdisposowanej instancji
+  `PlacedFires` zamiast nowej `bundle.placedFires`. **To jest dokładnie Phase 2.**
+- `gameLoop.ts` (Phase 3): `createGameLoop()` bierze cały `bundle` (kontener, nie pole)
+  do `deps.bundle` i w `tick()` zawsze czyta `bundle.chunkManager`/`bundle.placedFires`/
+  itd. na żywo — brak snapshotów. Bez zmian.
+- `interactables.ts` (Phase 4): `buildInteractables()`/`collectItem()` są czystymi
+  funkcjami bez żadnego trzymanego stanu/registry — wywoływane raz na klatkę z bieżącym
+  `bundle`, wynik nigdzie nie jest cache'owany między rebuildami. Bez zmian.
+- `createApp.ts` — pozostałe odczyty `bundle.X` to albo funkcje wołane na żądanie
+  (`buildSaveData`, `dropItemStack`, `rebuildWorld` samo w sobie), albo gettery
+  (`ambientSamplers`), albo jednorazowa inicjalizacja przed pierwszym `rebuildWorld()`
+  (np. `player.setGround(...)` przy starcie — poprawnie re-wołane ponownie po każdym
+  rebuildzie na linii 244 z aktualnym `bundle.chunkManager`). Żadnych dodatkowych
+  snapshotów nie znaleziono.
+
+**Fix (Phase 2):**
+
+- `src/app/userActions.ts`: `getUserActions()` przyjmuje teraz `bundle: WorldBundle`
+  zamiast `placedFires: PlacedFires`; `buildSimpleFire`/`buildFirePit` czytają
+  `bundle.placedFires.place(...)` w momencie wykonania, nie z zamkniętego capture.
+- `src/app/createApp.ts:339`: call site zaktualizowany na `getUserActions(inventory,
+  bundle, playerTorch, player, hud, touchControls)`.
+
+**Phase 5 cleanupy:** nic dodatkowego do zrobienia — `npm run lint` (no-unused-vars
+włączony) już był czysty przed zmianą, nazewnictwo `bundle` jest już spójne w całym
+`src/app/`, brak zbędnych castów w plikach z planu 053. Drobna kosmetyka przy okazji:
+usunięty brakujący spacing w destrukturyzacji na `createApp.ts:339`
+(`lightTorch}` → `lightTorch }`).
+
+**Zweryfikowane technicznie:** `npx tsc --noEmit`, `npm run lint`, `npm run build`
+(vue-tsc + vite), `npm run test` (98/98) — wszystkie czyste.
+
+**Nie zweryfikowane ręcznie w przeglądarce** (per CLAUDE.md — wymaga usera na już
+działającym dev serverze). Konkretny scenariusz do sprawdzenia, który przed fixem
+faktycznie by się psuł:
+1. Start gry, otwórz Quick Actions, zbuduj proste ognisko (`buildSimpleFire`) — działa.
+2. Otwórz GUI debug → zmień parametr terenu (trigger `rebuildWorld()`) albo
+   Pause Menu → "New Game".
+3. Po rebuildzie spróbuj ponownie zbudować ognisko/palenisko przez Quick Actions
+   *oraz* przez Pause Menu. Sprawdź, że nowe ognisko faktycznie pojawia się w świecie
+   (nie ginie po odłożeniu surowców) i że jest widoczne/interaktywne (`[E]`).
+   Przed fixem surowce znikały z ekwipunku, ale `.place()` trafiał do
+   zdisposowanej, niewidocznej instancji.
 
 ## Szacowany effort
 

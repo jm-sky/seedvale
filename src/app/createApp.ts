@@ -336,7 +336,7 @@ export async function createApp(
 
   const inventoryScreen = createInventoryScreen(container, { onDrop: dropItemStack })
 
-  const { buildSimpleFire, buildFirePit, lightTorch} = getUserActions(inventory, bundle.placedFires, playerTorch, player, hud, touchControls)
+  const { buildSimpleFire, buildFirePit, lightTorch } = getUserActions(inventory, bundle, playerTorch, player, hud, touchControls)
 
   const timeSkip = createTimeSkip(dayNight)
   const timeSkipOverlay = createTimeSkipOverlay(container)

@@ -2,8 +2,8 @@ import type { TouchControls } from '../input/createTouchControls'
 import type { Inventory } from '../items/Inventory'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
-import type { PlacedFires } from '../settlement/PlacedFires'
 import type { Hud } from '../ui/createHud'
+import type { WorldBundle } from './worldBundle'
 
 /** Resource costs for the fire-building/lighting quick actions
  *  (`settlement/PlacedFires.ts`, `player/PlayerTorch.ts`) — see
@@ -18,7 +18,7 @@ const TORCH_BRANCH_COST = 1
 
 const getUserActions = (
   inventory: Inventory,
-  placedFires: PlacedFires,
+  bundle: WorldBundle,
   playerTorch: PlayerTorch,
   player: PlayerController,
   hud: Hud,
@@ -26,10 +26,13 @@ const getUserActions = (
 ) => {
   // Shared by the pause menu's fire/torch buttons and the quick-actions popup
   // below — two UI entry points onto identical logic, not a duplicate.
+  // Both read `bundle.placedFires` at call time (not a captured field) since
+  // these closures outlive `rebuildWorldBundle()`, which replaces it — see
+  // `WorldBundle`'s doc comment.
   const buildSimpleFire = (): boolean => {
     if (!inventory.has('firestarter', 1) || !inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)) return false
     inventory.remove('branch', SIMPLE_FIRE_BRANCH_COST)
-    placedFires.place(player.mesh.position.x, player.mesh.position.z, 'simple')
+    bundle.placedFires.place(player.mesh.position.x, player.mesh.position.z, 'simple')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     touchControls?.setDropAvailable(!inventory.isEmpty())
     return true
@@ -37,7 +40,7 @@ const getUserActions = (
   const buildFirePit = (): boolean => {
     if (!inventory.has('stone', FIRE_PIT_STONE_COST)) return false
     inventory.remove('stone', FIRE_PIT_STONE_COST)
-    placedFires.place(player.mesh.position.x, player.mesh.position.z, 'pit')
+    bundle.placedFires.place(player.mesh.position.x, player.mesh.position.z, 'pit')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     touchControls?.setDropAvailable(!inventory.isEmpty())
     return true
