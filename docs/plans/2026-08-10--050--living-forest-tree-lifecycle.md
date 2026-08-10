@@ -1,102 +1,72 @@
 # Żywy las i cykl życia drzew — v1
 
+**Status:** `planned`
+**Created:** 2026-08-10
+**Next:** [055 — Siekiera i ścinanie drzew przez gracza](./2026-08-10--055--axe-player-tree-harvesting.md)
+
 ## Cel
 
-Sprawić, aby las był żywym zasobem świata, a nie wyłącznie statyczną dekoracją.
+Sprawić, aby las był żywym zasobem świata, a nie statyczną dekoracją.
 
 Drzewa powinny:
-- rosnąć,
-- konkurować o światło i przestrzeń,
+
+- pojawiać się również jako `saplings`,
+- rosnąć przez kolejne etapy,
 - reagować na warunki środowiska,
+- konkurować o światło z dużymi drzewami,
 - być ścinane przez NPC,
-- pozostawiać widoczny ślad po harvestingu,
+- pozostawiać widoczny ślad po ścięciu,
 - z czasem regenerować się.
 
-Docelowy efekt:
+Najważniejszy efekt:
 
-> NPC ścina drzewo → las faktycznie się zmienia → młode drzewa mogą dostać więcej światła → po czasie las zaczyna się odbudowywać.
+> NPC ścina drzewo → świat faktycznie się zmienia → młode drzewa dostają więcej światła → las z czasem odbudowuje się.
 
-To ma być pierwszy wyraźny przykład świata, w którym **zasób ma własny cykl życia i działalność NPC pozostawia trwały, widoczny ślad**.
+## Stan obecny
 
----
+`src/terrain/chunkVegetation.ts` generuje deterministyczną roślinność per chunk. Drzewa mają już warianty/gatunki i część placementów jest wizualnie mała, ale 050 ma nadać temu **rzeczywisty lifecycle**, a nie tylko losową skalę.
 
-## Stan obecny repozytorium
+Istnieją już informacje środowiskowe, które można wykorzystać jako wejścia do wzrostu, m.in. wysokość, `continentalness`, `mountainRidge`, `moistureRegion` oraz biome weights.
 
-### Proceduralna roślinność już istnieje
+`src/world/dayNight.ts` dostarcza world time / time of day, ale nie ma jeszcze pełnego systemu sezonów.
 
-`src/terrain/chunkVegetation.ts` generuje deterministyczne placementy roślinności per chunk. Korzysta z world seed, chunk coordinates, terrain sampling, wysokości, nachylenia, `continentalness`, `mountainRidge`, `moistureRegion`, biome weights i road tint. Drzewa mają warianty gatunków oraz losową skalę; część drzew jest już celowo generowana jako małe saplingi. fileciteturn15file0L2-L2
+Nie ma obecnie osobnego systemu `groundwater`. Nie tworzyć go wyłącznie dla 050.
 
-### Biomy / środowisko już istnieją
+## Kluczowa decyzja: TreeState
 
-`biomeRegions.ts` dostarcza miękkie wagi `desert`, `swamp` i `forest` na podstawie `moistureRegion` oraz wysokości. fileciteturn17file0L2-L2
-
-`ChunkTileData` zawiera już m.in. wysokość, `continentalness`, `mountainRidge`, `moistureRegion` i `roadTint`, więc jest właściwą bazą do oceny środowiska drzewa. fileciteturn16file0L2-L2
-
-### Czas świata istnieje, ale pór roku jeszcze nie ma
-
-`src/world/dayNight.ts` posiada ciągły `timeOfDay`, długość dnia i `timeMultiplier`, ale obecny model czasu opisuje tylko cykl dobowy. Nie ma jeszcze osobnego modelu roku/sezonów. fileciteturn20file0L2-L2
-
-### Woda gruntowa
-
-W aktualnie sprawdzonych danych terenu nie ma osobnego, gotowego parametru `groundwater` przeznaczonego do symulacji wzrostu drzew.
-
-Nie należy tworzyć pełnego systemu wód gruntowych wyłącznie dla tego planu. Jeśli w przyszłości powstanie taki system, `GrowthModel` powinien móc wykorzystać jego wartość jako jeden z modifierów.
-
-### Natural resources
-
-`src/terrain/naturalResources.ts` już posiada deterministyczne środowiskowe zasoby świata i korzysta z tych samych osi terenu/biomów. Aktualny model jest warstwą danych zasobów, a nie pełnym systemem collectible world objects. fileciteturn24file0L2-L2
-
-Plan 032 jest kontekstem dla przyszłego ekonomicznego znaczenia drewna, ale 050 odpowiada za **życie drzewa jako obiektu świata**, nie za pełną ekonomię. fileciteturn23file19L96-L100
-
-### Inventory już istnieje
-
-Według aktualnego `docs/STATE.md` `Inventory` i `ItemKind` istnieją, inventory jest zapisywane, a system dropped items/collectibles jest już obecny. Pełna ekonomia wioski, crafting i barter nadal są odłożone. fileciteturn26file0L2-L2
-
-### NPC
-
-NPC ma już potrzeby i logikę zachowania, a istniejące fundamenty obejmują `NpcAgent`, `Needs` oraz system `Place`/schedule. Pełna role-driven daily routine jest jednak nadal częściowo zaimplementowana. fileciteturn26file0L2-L2
-
----
-
-## Kluczowa decyzja architektoniczna
-
-**Drzewo nie może pozostać wyłącznie statycznym `VegetationPlacement`.**
-
-Obecny placement opisuje proceduralną obecność drzewa. Lifecycle wymaga dodatkowo stanu świata, np.:
+Proceduralny placement i runtime state muszą być rozdzielone.
 
 ```text
-TreeWorldState
+world seed + chunk + placement identity
+                ↓
+        deterministic tree
+                ↓
+            TreeState
+                ↓
+ GrowthModel + WorldTime + Environment
+                ↓
+         visual representation
+```
+
+Przykładowy stan:
+
+```text
+TreeState
 ├── stable id
 ├── species
-├── position
 ├── growth stage
-├── growth progress / growth timestamp
-└── harvested / regrowth state
+├── growth progress / timestamp
+├── harvested state
+└── regrowth state
 ```
 
-Nie należy przechowywać w stanie rzeczy, które można deterministycznie odtworzyć z world seed + pozycji.
+Nie przechowywać w stanie danych, które można ponownie wyliczyć z seed + pozycji.
 
-Preferowany model:
-
-```text
-world seed + position
-        ↓
-initial tree identity / species / placement
-        ↓
-TreeState
-        ↓
-GrowthModel + WorldTime + Environment
-        ↓
-visual stage
-```
-
-Renderer ma pokazywać stan drzewa. Nie powinien być właścicielem jego logiki życia.
-
----
+Renderer nie powinien być właścicielem lifecycle drzewa.
 
 ## Cykl życia
 
-Minimalny cykl:
+Pierwsza wersja ma od początku zawierać naturalne `saplings`.
 
 ```text
 sapling
@@ -114,71 +84,111 @@ regrowth
 sapling
 ```
 
-Nie wszystkie etapy muszą mieć osobne modele GLB. Najważniejsza jest czytelność wizualna.
+### Saplings
+
+Saplings są normalną częścią proceduralnego lasu już w v1. Nie ograniczać ich wyłącznie do miejsc po ściętych drzewach.
+
+Mogą pojawiać się:
+
+- w pobliżu dużych drzew,
+- w lukach w lesie,
+- jako naturalne młode drzewa podczas proceduralnej generacji.
+
+### Growth stages
+
+Minimum:
 
 - `sapling` — małe drzewko,
 - `young` — wyraźnie rosnące drzewo,
-- `mature` — pełnowymiarowe drzewo,
-- `harvested` — pień / pozostałość,
-- `regrowth` — ponowne pojawienie się młodego drzewa.
+- `mature` — pełnowymiarowe drzewo.
 
-W pierwszej wersji można wykorzystać istniejące modele drzew i ich skalę, zamiast tworzyć nowy zestaw assetów.
+Nie trzeba tworzyć nowych assetów dla każdego etapu. Można wykorzystać istniejące modele i skalę, o ile sylwetka pozostaje czytelna.
 
----
+## Wzrost zależny od środowiska
 
-## Wzrost nie jest timerem
-
-Drzewo nie powinno mieć prostego:
+Wzrost nie powinien być prostym timerem:
 
 ```text
 age += dt
 if age > X → mature
 ```
 
-Zamiast tego tempo wzrostu powinno wynikać z warunków:
+Preferowany model:
 
 ```text
 species
 × sunlight
 × soil
 × biome
-× groundwater
-× season
+× moisture / water availability
+× optional groundwater
+× optional season
 × age
         ↓
- growth rate
+    growth rate
         ↓
- growth stage / progress
+ growth progress / stage
 ```
 
-> **Środowisko modyfikuje tempo wzrostu. Nie jest prostym przełącznikiem „rośnie / nie rośnie”.**
+Środowisko **modyfikuje tempo wzrostu**, a nie tylko przełącza `grow / don't grow`.
 
-Dzięki temu drzewo może żyć w trudnych warunkach, ale rosnąć znacznie wolniej.
+### Gleba
 
----
+Na początku wykorzystać istniejące informacje terenu/biomu/moisture. Nie tworzyć pełnego systemu gleby tylko dla drzew.
 
-## Światło i konkurencja drzew
+W przyszłości `soilType` / `soilQuality` może stać się wspólnym wejściem dla drzew, pól i gospodarstw.
 
-Młode drzewo może pojawić się obok dużych drzew, ale nie powinno automatycznie dorastać do ich rozmiaru.
+### Biome
+
+Istniejące biome weights powinny wpływać na wzrost.
+
+Przykładowo:
+
+```text
+forest / humid grassland → dobry wzrost
+swamp → zależnie od gatunku
+arid / desert → mocne spowolnienie
+high mountain → mocne spowolnienie / ograniczony maksymalny wzrost
+```
+
+Preferencje powinny należeć do gatunku, a nie być rozrzuconymi wyjątkami typu `if desert`.
+
+### Groundwater
+
+Jeżeli w przyszłości powstanie parametr `groundwater`, `GrowthModel` powinien móc go wykorzystać.
+
+Nie implementować groundwater w 050.
+
+### Seasons
+
+Seasons istnieją jako osobny przyszły kierunek (plan 040), ale nie są wymagane do implementacji 050.
+
+`GrowthModel` powinien mieć miejsce na sezonowy modifier bez tworzenia pełnego systemu seasons w ramach tego planu.
+
+Docelowo:
+
+```text
+spring → szybki wzrost
+summer → wzrost zależny od wilgotności
+autumn → spowolnienie
+winter → minimalny / zerowy wzrost
+```
+
+## Konkurencja o światło
+
+Małe drzewo może pojawić się obok dużych drzew, ale nie powinno automatycznie dorosnąć do ich rozmiaru.
 
 Duże drzewa ograniczają dostęp do światła.
 
-W v1 nie tworzyć pełnej fizycznej symulacji światła. Wystarczy lokalny model canopy/competition oparty na zagęszczeniu większych drzew.
-
-Przykładowa koncepcja:
+Nie tworzyć fizycznej symulacji promieni światła. W v1 wystarczy lokalny model `canopy / competition` oparty na zagęszczeniu większych drzew.
 
 ```text
-brak dużych drzew w promieniu
-    → wysoki sunlight modifier
-
-kilka dużych drzew
-    → średni modifier
-
-gęsty canopy
-    → niski modifier
+brak dużych drzew w pobliżu → dużo światła
+kilka dużych drzew           → mniej światła
+gęsty canopy                 → mocno ograniczony wzrost
 ```
 
-Kluczowy efekt emergentny:
+Ważny efekt emergentny:
 
 ```text
 🌳 🌳 🌱 🌳
@@ -189,134 +199,32 @@ NPC wycina 🌳
 🌳    🌱 🌳
 🌳 🌱 🌱
 
-        ↓
+      ↓
 
 więcej światła
-        ↓
+      ↓
 
-młode drzewa zaczynają szybciej rosnąć
+szybszy wzrost młodych drzew
 ```
 
-To jest ważniejsze niż dokładna fizyka światła.
+Usunięcie jednego dużego drzewa powinno więc potencjalnie zmienić przyszłość sąsiednich drzew.
 
-### Wydajność
+## Naturalne pojawianie się saplings
 
-Nie sprawdzać wszystkich drzew ze wszystkimi drzewami.
+W pierwszej wersji saplings powinny być częścią proceduralnej roślinności.
 
-Preferować lokalne zapytanie przestrzenne / grid / istniejący mechanizm chunkowy. Jeżeli obecna architektura nie posiada odpowiedniej struktury, najpierw zaprojektować prosty indeks per chunk zamiast globalnego O(n²) scan.
+Późniejszy system może dodawać naturalne rozsiewanie, ale nie jest wymagane, aby v1 potrafiło jeszcze dynamicznie tworzyć nowe saplings w każdym ticku.
 
----
-
-## Gleba
-
-Wzrost powinien mieć możliwość uwzględnienia jakości/typu gleby.
-
-Na obecnym etapie nie należy tworzyć pełnej symulacji gleby tylko dla drzew.
-
-Można zacząć od istniejących informacji środowiskowych:
-- biome,
-- moisture,
-- altitude,
-- terrain character.
-
-Później można wprowadzić jawny `soilQuality` / `soilType`, jeżeli będzie potrzebny również polom i gospodarstwom.
-
-`GrowthModel` nie powinien zakładać, że gleba musi być osobnym systemem już w v1.
-
----
-
-## Biomy
-
-Istniejące biome weights powinny wpływać na wzrost.
-
-Przykładowo:
-
-```text
-forest / humid grassland → dobry growth modifier
-swamp → dobry dla wybranych gatunków
-arid / desert → mocne spowolnienie
-high mountain → mocne spowolnienie / brak mature dla niektórych gatunków
-```
-
-Nie robić globalnego `desert → tree = false`, chyba że konkretny gatunek rzeczywiście nie może występować w danym środowisku.
-
-Preferencje powinny być wartościami gatunku:
-
-```text
-species → preferred environment
-```
-
-zamiast globalnych wyjątków rozsianych po kodzie.
-
----
-
-## Woda gruntowa
-
-Woda gruntowa jest **przyszłym wejściem**, nie wymaganiem dla pierwszej implementacji.
-
-Jeżeli w przyszłości pojawi się np.:
-
-```text
-groundwater 0..1
-```
-
-może wpływać na:
-
-```text
-growthRate *= groundwaterModifier
-```
-
-Nie budować groundwater systemu w ramach 050.
-
----
-
-## Pory roku
-
-Pory roku nie istnieją jeszcze w aktualnym systemie czasu.
-
-Nie należy tworzyć pełnego systemu seasons tylko po to, aby drzewa mogły rosnąć.
-
-Należy jednak przygotować `GrowthModel` tak, aby przyjmował opcjonalny environmental modifier sezonowy.
-
-Docelowo:
-
-```text
-spring → bardzo dobry wzrost
-summer → dobry wzrost / zależny od wilgotności
-autumn → spowolnienie
-winter → minimalny lub zerowy wzrost
-```
-
-Przyszły system sezonów powinien rozszerzyć istniejący model world time, a nie zostać zaszyty w `Tree`.
-
----
-
-## Naturalna śmierć
-
-W v1 głównym sposobem usunięcia dojrzałego drzewa jest harvesting przez NPC.
-
-Architektura nie powinna jednak zakładać, że:
-
-```text
-removed tree === harvested tree
-```
-
-W przyszłości możliwe są starzenie, choroby, susza, burze, naturalne przewrócenie i śmierć drzewa.
-
-Nie implementować tego jeszcze.
-
----
+Ważne jest, aby architektura nie zakładała, że każde drzewo istnieje wyłącznie dlatego, że zostało zasadzone po harvestingu.
 
 ## Harvesting przez NPC
 
-Istniejące zachowania NPC powinny zostać rozszerzone, a nie zastąpione nowym systemem AI.
-
-Docelowy przepływ:
+Istniejący behavior NPC należy rozszerzyć, a nie zastępować nowym systemem AI.
 
 ```text
-NPC wybiera pracę / potrzebę drewna
+NPC potrzebuje / zbiera drewno
         ↓
-znajduje dostępne mature tree
+wybiera dostępne mature tree
         ↓
 idzie do drzewa
         ↓
@@ -324,44 +232,38 @@ harvest
         ↓
 TreeState → harvested
         ↓
-wood + N
-        ↓
-NPC / storage
+wood → existing item/inventory flow
 ```
 
-Ważne:
+Harvesting powinien być koncepcyjnie wspólną akcją świata, z której później skorzysta gracz.
 
-- harvested tree nie może natychmiast ponownie stać się celem,
-- NPC powinien wybierać drzewa dostępne w aktualnym świecie,
-- harvesting musi zmieniać faktyczny stan drzewa,
-- zasób drewna powinien być przekazany do istniejącego modelu item/inventory, jeżeli aktualny flow na to pozwala.
+```text
+HarvestAction
+├── NPC
+└── Player (055)
+```
 
-Pełny system storage/economy pozostaje poza zakresem.
+Nie tworzyć osobnego `NpcTreeChopping` i później `PlayerTreeChopping`.
 
----
+## Widoczny ślad
 
-## Widoczny ślad po harvestingu
+Po ścięciu drzewo nie powinno po prostu zniknąć.
 
-To jeden z głównych celów planu.
+Minimum:
 
-Po ścięciu powinno pozostać coś, co gracz widzi:
-- pień,
-- ewentualnie małe kawałki drewna,
-- brak pełnej korony/drzewa.
-
-Nie trzeba jeszcze tworzyć fizycznych dropped items, jeśli prostszy stump wystarczy do przekazania informacji.
+- pień/stump,
+- brak korony,
+- opcjonalnie proste pozostałości drewna.
 
 Cel:
 
 > „Tutaj ktoś niedawno ściął drzewo.”
 
----
+## Regrowth
 
-## Regeneracja
+Regeneracja jest częścią cyklu, ale nie musi oznaczać pełnej symulacji botaniki.
 
-Regeneracja powinna być niezależna od obecności gracza.
-
-Preferowany model czasu:
+Stan powinien być możliwy do wyliczenia z czasu świata:
 
 ```text
 TreeState.lastTransitionAt
@@ -370,201 +272,137 @@ WorldTime
         ↓
 GrowthModel
         ↓
-aktualny stage
+current stage
 ```
 
-Nie wykonywać kosztownego `update()` dla każdego drzewa co frame.
+Nie wykonywać `update()` dla każdego drzewa co frame.
 
-Jeżeli świat zostanie wyłączony na dłużej, stan drzewa powinien być możliwy do wyliczenia z zapisanego czasu/stanu zamiast wymagania symulacji każdej klatki.
+Po dłuższym time skipie / ponownym uruchomieniu świata stan powinien wynikać z danych i czasu, a nie z konieczności zasymulowania każdej klatki.
 
----
+## Chunk streaming
 
-## Streaming chunków
+To jeden z najważniejszych problemów implementacyjnych.
 
-To jest kluczowy problem implementacyjny.
-
-Obecna roślinność jest generowana per chunk i może być ponownie odtworzona deterministycznie. Lifecycle drzewa wprowadza stan, którego nie można bezrefleksyjnie resetować podczas unload/load.
-
-Wymagania:
+Obecny placement jest proceduralny i per chunk. Runtime lifecycle nie może resetować drzewa podczas unload/load.
 
 ```text
 chunk load
-  → odtwórz deterministic placement
-  → zastosuj TreeState override
-  → renderuj aktualny stage
+  → deterministic placement
+  → stable tree id
+  → apply TreeState override
+  → render current stage
 
 chunk unload
-  → usuń renderowane obiekty
-  → zachowaj / możliwie odtwórz stan świata
+  → remove Three.js objects
+  → preserve sparse state
 
 chunk reload
-  → to samo drzewo
-  → ten sam lifecycle state
+  → same tree identity
+  → same lifecycle state
 ```
 
-Nie należy od razu przechowywać wszystkich drzew całego świata w pamięci.
+Nie przechowywać wszystkich drzew całego świata jako aktywnych obiektów.
 
-Preferowany kierunek to stabilne ID drzewa wynikające z seed + przestrzennej tożsamości placementu oraz sparse state tylko dla drzew, których stan odbiega od domyślnego proceduralnego stanu.
-
----
+Preferować **sparse overrides** tylko dla drzew, których stan odbiega od proceduralnego defaultu.
 
 ## Persistence
 
-Aktualny save zapisuje wiele elementów świata, ale pełny runtime state NPC nie jest jeszcze serializowany jako kompletna symulacja. `docs/STATE.md` opisuje aktualny stan persistence. fileciteturn26file0L2-L2
+Stan drzewa zmieniony przez świat musi w przyszłości przetrwać streaming i save/load.
 
-Dla drzew v1 należy rozdzielić:
-
-### Stan proceduralny
-
-Odtwarzalny z:
+Rozdzielić:
 
 ```text
-world seed + tree identity
-```
+procedural state
+= seed + tree identity
 
-### Stan zmieniony przez świat
-
-Np.:
-
-```text
-harvestedAt
-stage
+runtime override
+= harvested / stage / relevant timestamp
 ```
 
 Nie zapisywać każdego drzewa tylko dlatego, że istnieje.
 
-Docelowo save powinien przechowywać tylko sparse overrides / changed tree states.
+Jeżeli pełna persistence tree lifecycle wymaga rozszerzenia save schema, zrobić to jawnie i zgodnie z istniejącym persistence systemem.
 
-Jeżeli pełne zapisanie tree lifecycle wymaga rozszerzenia save schema, należy zaplanować to jawnie zamiast wprowadzać ukryty globalny cache.
+## Performance & workers
 
----
+Zgodnie z [Performance & Simulation Architecture](../architecture/performance-and-workers.md):
 
-## Nie budować jeszcze pełnego ekosystemu
+- brak per-frame symulacji wszystkich drzew,
+- growth powinien być event-driven, batchowany lub lazy,
+- lokalne zapytania zamiast globalnego skanowania,
+- ciężkie obliczenia danych mogą zostać wykonane w workerze,
+- Three.js objects pozostają na main thread,
+- worker nie jest wymagany dla pojedynczego harvestingu.
 
-### Poza zakresem
+Jeżeli canopy/growth zacznie być kosztowny dla tysięcy drzew, preferowany jest batch danych per chunk / region w istniejącym worker pipeline zamiast tysięcy małych komunikatów worker ↔ main thread.
 
-- pełny system sezonów,
+Nie stosować O(n²) porównywania wszystkich drzew.
+
+## Poza zakresem v1
+
+- player tree harvesting — plan 055,
+- siekiera jako tool — plan 055,
+- pełny system seasons — plan 040,
 - groundwater simulation,
-- choroby drzew,
-- pogoda wpływająca na drzewa,
-- realistyczna fotosynteza,
-- pełna symulacja gleby,
-- pełny model populacji lasu,
+- pełny system gleby,
+- choroby i naturalne katastrofy,
+- realistyczna fizyka upadku drzewa,
 - crafting,
-- ekonomia wioski,
+- pełna ekonomia drewna,
 - barter/trade,
-- inventory redesign,
-- player tree harvesting,
-- natural disasters.
-
----
-
-## Naturalne rozszerzenia przygotowane przez ten plan
-
-### Inne gatunki
-
-Każdy gatunek może mieć własne tempo wzrostu, maksymalny rozmiar, tolerancję cienia, preferencje biome/soil, zapotrzebowanie na wodę i długość życia.
-
-### Pola i uprawy
-
-Ten sam wzorzec może później obsłużyć:
-
-```text
-seed → growing → mature → harvested
-```
-
-### Owoce / drzewa owocowe
-
-Możliwy kolejny poziom:
-
-```text
-tree mature
- ↓
-fruiting
- ↓
-harvest
- ↓
-regrowth
-```
-
-### Las jako zasób gospodarczy
-
-```text
-forest
- ↓
-wood supply
- ↓
-NPC production
- ↓
-consumption
- ↓
-trade
-```
-
-To powinno zostać jednak w przyszłych planach economy/resources, nie w 050.
-
----
+- przebudowa inventory.
 
 ## Kryteria akceptacji
 
 ### Lifecycle
 
-- Drzewo ma stabilną tożsamość w świecie.
-- Drzewo może przejść przez minimum `sapling → young → mature`.
-- Harvest zmienia drzewo w widoczny stan pozostałości.
-- Pozostałość nie jest natychmiast ponownie harvestowalna.
-- Drzewo może rozpocząć regrowth.
+- proceduralny las zawiera saplings już w v1,
+- sapling może przejść `sapling → young → mature`,
+- mature tree może zostać harvested przez NPC,
+- harvesting tworzy widoczny stump/pozostałość,
+- drzewo może rozpocząć regrowth.
 
-### Growth model
+### Environment
 
-- Wzrost nie jest wyłącznie timerem.
-- Warunki środowiskowe wpływają na tempo wzrostu.
-- Duże drzewa ograniczają wzrost młodych drzew w swoim sąsiedztwie.
-- Usunięcie dużego drzewa może poprawić warunki wzrostu pobliskich młodych drzew.
-- Biome/altitude/moisture mogą wpływać na growth modifier.
-- Model ma miejsce na przyszły groundwater i season modifier bez ich implementowania w 050.
-
-### NPC
-
-- NPC może wykonać istniejącą akcję harvestingu na dojrzałym drzewie.
-- Harvest generuje drewno w istniejącym modelu item/inventory tam, gdzie jest to już możliwe.
-- NPC nie próbuje bez końca harvestować tego samego drzewa.
+- wzrost zależy od środowiska, a nie tylko od czasu,
+- biome/moisture/terrain mogą wpływać na growth rate,
+- duże drzewa ograniczają wzrost młodych drzew,
+- usunięcie dużego drzewa może poprawić warunki sąsiadów,
+- model jest gotowy na przyszłe `soil`, `groundwater` i `season` modifiers.
 
 ### Streaming
 
-- Unload/load chunku nie resetuje drzewa do pełnej postaci.
-- Proceduralny placement i runtime state są rozdzielone.
-- Nie powstaje globalna lista wszystkich renderowanych drzew.
+- unload/load chunku nie resetuje lifecycle drzewa,
+- procedural placement i runtime state są rozdzielone,
+- nie powstaje globalna lista wszystkich aktywnych drzew.
 
 ### Performance
 
-- Brak O(n²) globalnego porównywania wszystkich drzew.
-- Brak per-frame symulacji każdego drzewa.
-- Growth jest oceniany przy zmianie stanu / w kontrolowanych tickach / na żądanie.
+- brak per-frame update wszystkich drzew,
+- brak globalnego O(n²),
+- ciężka symulacja może być batchowana / workerowana,
+- Three.js pozostaje na main thread.
 
 ### Visual
 
-- Gracz może łatwo odróżnić mature tree, młode drzewo i miejsce po harvestingu.
-- Zmiana lasu po działalności NPC jest widoczna podczas eksploracji.
+- sapling, young i mature są czytelnie różne,
+- miejsce po harvestingu jest widoczne,
+- zmiana lasu po działalności NPC jest zauważalna podczas eksploracji.
 
----
+## Kolejność implementacji
 
-## Zalecana kolejność implementacji
-
-1. Zbadać aktualny lifecycle vegetation w `chunkVegetation.ts` / `chunkManager.ts` i ustalić właściciela runtime tree state.
-2. Nadać drzewom stabilną tożsamość wynikającą z proceduralnego placementu.
-3. Wprowadzić minimalny `TreeState` / sparse world override.
-4. Dodać `mature → harvested → stump`.
-5. Podłączyć harvesting NPC do zmiany `TreeState`.
-6. Podłączyć wood yield do istniejącego inventory/item flow.
-7. Dodać `sapling → young → mature`.
-8. Dodać `GrowthModel` z biome/terrain modifiers.
+1. Zbadać obecny placement drzew w `chunkVegetation.ts` i właściciela runtime vegetation.
+2. Zaprojektować stabilne tree identity.
+3. Wprowadzić minimalny `TreeState` / sparse override.
+4. Zapewnić proceduralne saplings jako prawdziwy lifecycle stage.
+5. Dodać `mature → harvested → stump` dla NPC.
+6. Podłączyć wood yield do istniejącego inventory/resource flow.
+7. Dodać `sapling → young → mature` i `GrowthModel`.
+8. Dodać biome/terrain/moisture modifiers.
 9. Dodać lokalny canopy/sunlight modifier.
 10. Dodać regrowth zależny od WorldTime.
-11. Zweryfikować chunk streaming i persistence.
-12. Dopiero później rozważyć seasons, groundwater i bardziej szczegółową ekologię.
-
----
+11. Zweryfikować streaming i persistence.
+12. Dopiero później integrować seasons/groundwater.
 
 ## Zasada projektowa
 
@@ -572,8 +410,4 @@ To powinno zostać jednak w przyszłych planach economy/resources, nie w 050.
 >
 > Rośnie → jest wykorzystywany → zmienia świat → regeneruje się.
 
-Najważniejszym rezultatem v1 nie jest realistyczna symulacja botaniki.
-
-Jest nim stworzenie pierwszego systemu, w którym gracz może zobaczyć:
-
-**„NPC zrobił coś w świecie, świat to zapamiętał, a później sam zaczął reagować na tę zmianę.”**
+Najważniejszym rezultatem v1 nie jest realistyczna botanika. Jest nim stworzenie systemu, w którym działalność NPC pozostawia ślad, a środowisko wpływa na to, jak świat rozwija się dalej.
