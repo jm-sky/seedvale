@@ -30,14 +30,14 @@ const ITEM_LABEL_FADE_FAR = 14
  *  (`terrain/chunkItems.ts`) happened to land nearby this seed. `branch` gets its
  *  own multi-point pool below instead of a single point here — see
  *  `BRANCH_SPAWN_POINTS_MIN/MAX`. */
-const SPAWN_SPECS: { kind: ItemKind, respawnTime: number }[] = [
-  { kind: 'stone', respawnTime: 100 },
-  { kind: 'shell', respawnTime: 90 },
+const SPAWN_SPECS: { kind: ItemKind, respawnTime: number, minDist: number, maxDist: number }[] = [
+  { kind: 'stone', respawnTime: 100, minDist: 20, maxDist: 42 },
+  { kind: 'shell', respawnTime: 90, minDist: 20, maxDist: 42 },
   // `Infinity` — a one-time village pickup (plan 052), not a renewable
   // resource: `updateItemSpawnPoints`'s `timeSinceCollected >= respawnTime`
   // check can never pass, so once collected it never respawns. Reuses the
   // existing spawn-point contract instead of a second "one-time item" system.
-  { kind: 'shovel', respawnTime: Infinity },
+  { kind: 'shovel', respawnTime: Infinity, minDist: 2, maxDist: 10 },
 ]
 
 /** How close to a chosen tree a branch spawn point lands. */
@@ -118,7 +118,7 @@ export function createItemSpawners(
   }
 
   for (const spec of SPAWN_SPECS) {
-    const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 20, 42)
+    const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, spec.minDist, spec.maxDist)
     if (!pos) continue
     addSpawnPoint(spec.kind, spec.respawnTime, pos)
   }
