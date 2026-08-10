@@ -2,10 +2,13 @@ import { enableTouchScroll } from '../input/enableTouchScroll'
 import { isTouchDevice } from '../input/isTouchDevice'
 
 export type QuickActionsHandlers = {
-  /** Same handler passed to `createPauseMenu`'s `onBuildCampfire` — this is a
-   *  second UI entry point onto identical logic, not a duplicate. Returns
-   *  false (consumes nothing) if the player lacks the resources. */
-  onBuildCampfire?: () => boolean
+  /** Same handlers passed to `createPauseMenu` — these are a second UI entry
+   *  point onto identical logic, not a duplicate. Each returns false
+   *  (consumes nothing) if the player lacks the resources.
+   *  `docs/plans/2026-08-09--050`. */
+  onBuildSimpleFire?: () => boolean
+  onBuildFirePit?: () => boolean
+  onLightTorch?: () => boolean
   /** Starts a "wait" time skip (1/3/6h, visible fast-forward) — see
    *  `world/timeSkip.ts`. */
   onWait?: (hours: number) => void
@@ -26,8 +29,9 @@ export type QuickActions = {
 /**
  * A small anchored popover (not a full-screen modal like `createNpcDialog`/
  * `createQuestLog`/`createVillagersScreen`/`createPauseMenu`) listing fast
- * in-gameplay actions — currently just "Zbuduj ognisko". Opened via a trigger
- * button: on touch, that button lives inside `input/createTouchControls.ts`'s
+ * in-gameplay actions — fire/torch building (plan 2026-08-09--050) plus
+ * wait/rest. Opened via a trigger button: on touch, that button lives inside
+ * `input/createTouchControls.ts`'s
  * own action-button column next to E (this module doesn't render it there);
  * on desktop, where no such column exists, this module renders its own small
  * fixed corner button. Still participates in the same modal-gating
@@ -45,9 +49,18 @@ export function createQuickActions(
   root.className = 'seedvale-quick-actions'
   root.hidden = true
   root.innerHTML = `
-    <button type="button" data-build-campfire class="seedvale-quick-actions__button">
-      Zbuduj ognisko (2x gałąź, 2x kamień)
-      <span data-build-campfire-status class="seedvale-quick-actions__status"></span>
+    <div class="seedvale-quick-actions__heading">Ogień</div>
+    <button type="button" data-build-simple-fire class="seedvale-quick-actions__button">
+      Rozpal ognisko (2x gałąź)
+      <span data-build-simple-fire-status class="seedvale-quick-actions__status"></span>
+    </button>
+    <button type="button" data-build-fire-pit class="seedvale-quick-actions__button">
+      Zbuduj palenisko (4x kamień)
+      <span data-build-fire-pit-status class="seedvale-quick-actions__status"></span>
+    </button>
+    <button type="button" data-light-torch class="seedvale-quick-actions__button">
+      Zapal pochodnię (1x gałąź)
+      <span data-light-torch-status class="seedvale-quick-actions__status"></span>
     </button>
     <div class="seedvale-quick-actions__heading">Czekaj</div>
     <div class="seedvale-quick-actions__row">
@@ -68,18 +81,28 @@ export function createQuickActions(
   parent.appendChild(root)
   const disposeTouchScroll = isTouchDevice() ? enableTouchScroll(root) : null
 
-  const buildCampfireButton = root.querySelector<HTMLButtonElement>('[data-build-campfire]')!
-  const buildCampfireStatusEl = root.querySelector<HTMLElement>('[data-build-campfire-status]')!
+  /** Wires a button+status pair to a handler that returns success/failure,
+   *  showing a transient status message either way — shared shape for the
+   *  three fire/torch actions below. Returns a cleanup that clears the
+   *  pending status timeout, for `dispose()`. */
+  const wireResultButton = (selector: string, statusSelector: string, handler: (() => boolean) | undefined, successText: string, failureText: string): (() => void) => {
+    const button = root.querySelector<HTMLButtonElement>(selector)!
+    const statusEl = root.querySelector<HTMLElement>(statusSelector)!
+    let statusTimeout = 0
+    button.addEventListener('click', () => {
+      const ok = handler?.() ?? false
+      statusEl.textContent = ok ? successText : failureText
+      window.clearTimeout(statusTimeout)
+      statusTimeout = window.setTimeout(() => {
+        statusEl.textContent = ''
+      }, 1500)
+    })
+    return () => window.clearTimeout(statusTimeout)
+  }
 
-  let buildCampfireStatusTimeout = 0
-  buildCampfireButton.addEventListener('click', () => {
-    const built = handlers.onBuildCampfire?.() ?? false
-    buildCampfireStatusEl.textContent = built ? 'Zbudowano!' : 'Brakuje surowców'
-    window.clearTimeout(buildCampfireStatusTimeout)
-    buildCampfireStatusTimeout = window.setTimeout(() => {
-      buildCampfireStatusEl.textContent = ''
-    }, 1500)
-  })
+  const clearSimpleFireStatus = wireResultButton('[data-build-simple-fire]', '[data-build-simple-fire-status]', handlers.onBuildSimpleFire, 'Zapłonęło!', 'Brakuje gałęzi/krzesiwa')
+  const clearFirePitStatus = wireResultButton('[data-build-fire-pit]', '[data-build-fire-pit-status]', handlers.onBuildFirePit, 'Zbudowano!', 'Brakuje kamieni')
+  const clearTorchStatus = wireResultButton('[data-light-torch]', '[data-light-torch-status]', handlers.onLightTorch, 'Zapalono!', 'Brakuje gałęzi/krzesiwa lub już płonie')
 
   root.querySelectorAll<HTMLButtonElement>('[data-wait]').forEach((button) => {
     const hours = Number(button.dataset.wait)
@@ -186,7 +209,9 @@ export function createQuickActions(
     dispose() {
       window.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('click', onDocumentClick)
-      window.clearTimeout(buildCampfireStatusTimeout)
+      clearSimpleFireStatus()
+      clearFirePitStatus()
+      clearTorchStatus()
       window.clearTimeout(campStatusTimeout)
       window.clearTimeout(townStatusTimeout)
       disposeTouchScroll?.()

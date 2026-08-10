@@ -31,6 +31,7 @@ import { Inventory } from '../items/Inventory'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
+import { createPlayerTorch } from '../player/PlayerTorch'
 import { QuestManager } from '../quests/QuestManager'
 import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
@@ -107,11 +108,16 @@ const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
   firestarter: 1,
   blanket: 1,
 }
-/** Resource cost of building a freeform campfire from the pause menu
- *  (`settlement/PlacedFires.ts`) — a stone "fire pit" ring plus branches to
- *  get it started. */
-const CAMPFIRE_BRANCH_COST = 2
-const CAMPFIRE_STONE_COST = 2
+/** Resource costs for the fire-building/lighting quick actions
+ *  (`settlement/PlacedFires.ts`, `player/PlayerTorch.ts`) — see
+ *  `docs/plans/2026-08-09--050`. A "prosta ognisko" is built directly from
+ *  branches alone (shorter burn); a "palenisko" is a stone fire pit built
+ *  cold, then lit later via the existing `[E]` campfire interaction (longer
+ *  burn). Both, like the `[E]` interaction, require a firestarter in
+ *  inventory to actually strike a flame (not consumed). */
+const SIMPLE_FIRE_BRANCH_COST = 2
+const FIRE_PIT_STONE_COST = 4
+const TORCH_BRANCH_COST = 1
 /** How close (world units) to a settlement's center counts as "in town" for
  *  the "Odpocznij w mieście" quick action — covers the default village
  *  extent (core + house ring, `ringMax + houseRadius*2 ≈ 39.6` at default
@@ -273,6 +279,7 @@ export async function createApp(
   }
   player.setName(config.player.name)
   scene.add(player.mesh)
+  const playerTorch = createPlayerTorch(player.mesh)
 
   const hud = createHud(container)
   hud.setSeed(config.seed)
@@ -330,6 +337,7 @@ export async function createApp(
         inventory.clear()
         grantStartingLoadout(inventory)
         questManager.reset()
+        playerTorch.extinguish()
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         hud.setExp(questManager.getExp())
         touchControls?.setDropAvailable(!inventory.isEmpty())
@@ -371,7 +379,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 5,
+    version: 6,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -458,15 +466,29 @@ export async function createApp(
   }
   const inventoryScreen = createInventoryScreen(container, { onDrop: dropItemStack })
 
-  // Shared by the pause menu's "Zbuduj ognisko" button and the quick-actions
-  // popup below — two UI entry points onto identical logic, not a duplicate.
-  const buildCampfire = (): boolean => {
-    if (!inventory.has('branch', CAMPFIRE_BRANCH_COST) || !inventory.has('stone', CAMPFIRE_STONE_COST)) {
-      return false
-    }
-    inventory.remove('branch', CAMPFIRE_BRANCH_COST)
-    inventory.remove('stone', CAMPFIRE_STONE_COST)
-    placedFires.place(player.mesh.position.x, player.mesh.position.z)
+  // Shared by the pause menu's fire/torch buttons and the quick-actions popup
+  // below — two UI entry points onto identical logic, not a duplicate.
+  const buildSimpleFire = (): boolean => {
+    if (!inventory.has('firestarter', 1) || !inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)) return false
+    inventory.remove('branch', SIMPLE_FIRE_BRANCH_COST)
+    placedFires.place(player.mesh.position.x, player.mesh.position.z, 'simple')
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    touchControls?.setDropAvailable(!inventory.isEmpty())
+    return true
+  }
+  const buildFirePit = (): boolean => {
+    if (!inventory.has('stone', FIRE_PIT_STONE_COST)) return false
+    inventory.remove('stone', FIRE_PIT_STONE_COST)
+    placedFires.place(player.mesh.position.x, player.mesh.position.z, 'pit')
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    touchControls?.setDropAvailable(!inventory.isEmpty())
+    return true
+  }
+  const lightTorch = (): boolean => {
+    if (playerTorch.isLit()) return false
+    if (!inventory.has('firestarter', 1) || !inventory.has('branch', TORCH_BRANCH_COST)) return false
+    inventory.remove('branch', TORCH_BRANCH_COST)
+    playerTorch.light()
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     touchControls?.setDropAvailable(!inventory.isEmpty())
     return true
@@ -476,7 +498,9 @@ export async function createApp(
   const timeSkipOverlay = createTimeSkipOverlay(container)
 
   const quickActions = createQuickActions(container, {
-    onBuildCampfire: buildCampfire,
+    onBuildSimpleFire: buildSimpleFire,
+    onBuildFirePit: buildFirePit,
+    onLightTorch: lightTorch,
     onWait: (hours) => {
       timeSkip.start(hours, { fade: false, label: `Czekasz... (${hours}h)` })
     },
@@ -534,7 +558,9 @@ export async function createApp(
     },
     onSave: saveNow,
     onRefresh: () => window.location.reload(),
-    onBuildCampfire: buildCampfire,
+    onBuildSimpleFire: buildSimpleFire,
+    onBuildFirePit: buildFirePit,
+    onLightTorch: lightTorch,
     onNewGame: () => {
       if (!window.confirm('Start a new game? Your saved progress will be cleared.')) return
       void clearSave()
@@ -900,6 +926,7 @@ export async function createApp(
       fauna.update(dt, player.mesh.position, dayNight.timeOfDay, litFires, villages)
       itemSpawners.update(dt, player.mesh.position, dayFactor)
       placedFires.update(dt)
+      playerTorch.update(dt)
       chunkManager.tickWater(dt)
       chunkManager.tickGrass(dt)
       ocean.update(dt)
@@ -951,6 +978,7 @@ export async function createApp(
     placedFires.dispose()
     settlementsManager.dispose()
     chunkManager.dispose()
+    playerTorch.dispose()
     player.dispose()
     disposeChunkWorkerPool()
     postProcessing.dispose()
@@ -981,7 +1009,9 @@ function buildInteractables(
     list.push({
       kind: 'campfire',
       position: { x: pf.x, z: pf.z },
-      promptLabel: pf.fire.isLit() ? 'Dołóż gałąź' : 'Zapal ognisko',
+      promptLabel: pf.fire.isLit()
+        ? 'Dołóż gałąź'
+        : pf.kind === 'pit' ? 'Zapal ognisko w palenisku' : 'Zapal ognisko',
       fire: pf.fire,
     })
   }

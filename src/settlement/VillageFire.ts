@@ -1,7 +1,10 @@
 import type * as THREE from 'three'
 
-/** Seconds of burn time one branch adds — light and refuel both apply this. */
-const FUEL_PER_BRANCH = 75
+/** Seconds of burn time one branch adds — light and refuel both apply this.
+ *  Default for settlement fires and player-built fire pits (`kind: 'pit'`,
+ *  `settlement/PlacedFires.ts`) — a simple campfire without a stone ring
+ *  passes a shorter value explicitly (plan `2026-08-09--050`). */
+export const FUEL_PER_BRANCH = 75
 
 export type VillageFire = {
   readonly position: THREE.Vector3
@@ -22,8 +25,16 @@ export type VillageFire = {
  * decorative campfires (`terrain/chunkEnvironment.ts`), this one is a fixed
  * piece of settlement infrastructure: going out doesn't despawn it, it just
  * goes back to unlit and can be relit (see `docs/plans/2026-08-08--038`).
+ *
+ * Also reused verbatim for player-built free-standing fires
+ * (`PlacedFires.ts`), with an explicit `fuelPerBranch` for the shorter-burning
+ * "prosta ognisko" variant (`docs/plans/2026-08-09--050`).
  */
-export function createVillageFire(position: THREE.Vector3, flame: THREE.Object3D): VillageFire {
+export function createVillageFire(
+  position: THREE.Vector3,
+  flame: THREE.Object3D,
+  fuelPerBranch: number = FUEL_PER_BRANCH,
+): VillageFire {
   let lit = false
   let fuelRemaining = 0
 
@@ -32,11 +43,11 @@ export function createVillageFire(position: THREE.Vector3, flame: THREE.Object3D
     isLit: () => lit,
     light() {
       lit = true
-      fuelRemaining = FUEL_PER_BRANCH
+      fuelRemaining = fuelPerBranch
       flame.visible = true
     },
     addFuel() {
-      fuelRemaining += FUEL_PER_BRANCH
+      fuelRemaining += fuelPerBranch
     },
     update(dt) {
       if (!lit) return
