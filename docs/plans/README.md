@@ -25,11 +25,12 @@ Implementation plans for features and larger changes.
 | File                                                                                                     | Summary                                     | Progress | Priority  | Effort |
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------------- | -------- | --------- | ------ |
 | [2026-08-07--005--game-ui-screens.md](./2026-08-07--005--game-ui-screens.md)                             | Ekrany/dialogi/modale jak w grach           | 50%      | 🔴 high   | L      |
-| [2026-08-07--024--world-visual-overhaul.md](./2026-08-07--024--world-visual-overhaul.md)                 | Rośliny, niebo/chmury, góry w tle           | 50%      | 🟡 medium | L      |
 | [2026-08-07--020--npc-2-daily-routine-and-place.md](./2026-08-07--020--npc-2-daily-routine-and-place.md) | NPC Place system: home + schedule/workplace | 50%      | 🔴 high   | L      |
 | [2026-08-09--046--vue-tailwind-ui-stack.md](./2026-08-09--046--vue-tailwind-ui-stack.md)                 | Vue + Tailwind v4 + lucide-vue-next dla UI  | 25%      | 🔴 high   | XL     |
-| [2026-08-08--039--road-signposts.md](./2026-08-08--039--road-signposts.md)                                     | Kierunkowskazy przy drogach: **Fix:** Poprawić kierunek tabliczki, dodać odstęp między znakami, które są w połowie odległości między wioskami.                             | 67%      | 🟡 medium | S      |
+| [2026-08-07--021--npc-3-animal-life.md](./2026-08-07--021--npc-3-animal-life.md)           | Animal Life: hunger/thirst/energy + potrzeby zwierząt | 0%       | 🟡 medium | L      |
+| [2026-08-08--039--road-signposts.md](./2026-08-08--039--road-signposts.md)                                     | Kierunkowskazy przy drogach: **Fix:** Poprawić kierunek tabliczki, dodać odstęp między znakami, które są w połowie odległości między wioskami.                             | 67%      | ⚪ `low` | S      |
 | [2026-08-09--049--procedural-world-landmarks.md](./2026-08-09--049--procedural-world-landmarks.md)             | Proceduralne obiekty, ruiny i landmarki                        | 40%      | 🟡 medium | XL     |
+| [2026-08-07--024--world-visual-overhaul.md](./2026-08-07--024--world-visual-overhaul.md)                 | Rośliny, niebo/chmury, góry w tle           | 50%      | ⚪ `low` | L      |
 
 ---
 
@@ -48,7 +49,6 @@ Implementation plans for features and larger changes.
 
 | File                                                                                       | Summary                                               | Progress | Priority  | Effort |
 | ------------------------------------------------------------------------------------------ | ----------------------------------------------------- | -------- | --------- | ------ |
-| [2026-08-07--021--npc-3-animal-life.md](./2026-08-07--021--npc-3-animal-life.md)           | Animal Life: hunger/thirst/energy + potrzeby zwierząt | 0%       | 🟡 medium | L      |
 | [2026-08-08--037--npc-genealogy-lineages.md](./2026-08-08--037--npc-genealogy-lineages.md) | Rody NPC + przypisanie wg kierunku osady              | 0%       | ⚪ low     | L      |
 
 ---
