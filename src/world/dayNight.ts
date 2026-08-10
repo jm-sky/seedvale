@@ -1,4 +1,23 @@
+import { Color } from 'three'
 import type { SkyParams } from './createSky'
+
+const NIGHT_FOG = new Color(0x1a2233)
+const DUSK_FOG = new Color(0xc4876a)
+const DAY_FOG = new Color(0x9ec5e0)
+const tmpFogColor = new Color()
+
+/** Smooth night→dusk/dawn→day fog color from sun elevation, replacing a
+ *  hard 3-bucket switch that popped visibly at each threshold crossing. */
+function fogColorFromElev(elev: number): number {
+  if (elev <= -0.3) return NIGHT_FOG.getHex()
+  if (elev >= 0.3) return DAY_FOG.getHex()
+  if (elev <= 0) {
+    tmpFogColor.copy(NIGHT_FOG).lerp(DUSK_FOG, (elev + 0.3) / 0.3)
+  } else {
+    tmpFogColor.copy(DUSK_FOG).lerp(DAY_FOG, elev / 0.3)
+  }
+  return tmpFogColor.getHex()
+}
 
 export type DayNightState = {
   /** 0 = midnight, 0.25 ≈ dawn, 0.5 = noon, 0.75 ≈ dusk */
@@ -39,6 +58,10 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
   fogColor: number
   /** 0 = full night, 1 = full day — shared by lights/fog/water. */
   dayFactor: number
+  /** Raw sun elevation: -1 night … 0 horizon … +1 noon. Unlike `dayFactor`
+   *  this keeps sign/magnitude below the horizon — needed by effects that
+   *  care specifically about "sun near the horizon" (god rays). */
+  elev: number
 } {
   // elev: -1 night … 0 horizon … +1 noon
   const elev = Math.sin((timeOfDay - 0.25) * Math.PI * 2)
@@ -66,7 +89,7 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
 
   const fogNear = 70 + dayFactor * 40
   const fogFar = 180 + dayFactor * 80
-  const fogColor = elev < 0 ? 0x1a2233 : elev < 0.25 ? 0xc4876a : 0x9ec5e0
+  const fogColor = fogColorFromElev(elev)
 
   return {
     inclination,
@@ -80,6 +103,7 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
     fogFar,
     fogColor,
     dayFactor,
+    elev,
   }
 }
 

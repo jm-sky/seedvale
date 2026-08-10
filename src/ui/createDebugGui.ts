@@ -411,6 +411,30 @@ export function createDebugGui(
     .add(config.postProcessing, 'aoIntensity', 0.5, 8, 0.1)
     .name('AO intensity')
     .onChange(handlers.onPostProcessingChange)
+  postFx
+    .add(config.postProcessing, 'bloomEnabled')
+    .name('Bloom')
+    .onChange(handlers.onPostProcessingChange)
+  postFx
+    .add(config.postProcessing, 'bloomStrength', 0, 1.5, 0.01)
+    .name('Bloom strength')
+    .onChange(handlers.onPostProcessingChange)
+  postFx
+    .add(config.postProcessing, 'bloomRadius', 0, 1, 0.01)
+    .name('Bloom radius')
+    .onChange(handlers.onPostProcessingChange)
+  postFx
+    .add(config.postProcessing, 'bloomThreshold', 0, 1, 0.01)
+    .name('Bloom threshold')
+    .onChange(handlers.onPostProcessingChange)
+  postFx
+    .add(config.postProcessing, 'godRaysEnabled')
+    .name('God rays')
+    .onChange(handlers.onPostProcessingChange)
+  postFx
+    .add(config.postProcessing, 'godRaysExposure', 0, 1, 0.01)
+    .name('God rays exposure')
+    .onChange(handlers.onPostProcessingChange)
 
   terrainControllers.push(
     gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild world'),

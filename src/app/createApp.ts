@@ -409,7 +409,7 @@ export async function createApp(
   }
 
   const updatePostProcessingFromGui = () => {
-    postProcessing.applyAoConfig(config.postProcessing)
+    postProcessing.applyConfig(config.postProcessing)
     saveWorldConfig(config)
   }
 
@@ -908,6 +908,7 @@ export async function createApp(
           .map((s): MinimapSettlement => ({ position: s.center, npcs: s.npcs, name: s.name })),
       )
     }
+    postProcessing.updateGodRays(camera, sky.sunPosition, skyParamsFromTime(dayNight.timeOfDay).elev)
     postProcessing.render()
     labelRenderer.render(scene, camera)
   }

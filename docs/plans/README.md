@@ -55,7 +55,12 @@ Implementation plans for features and larger changes.
 | [2026-08-09--048--npc-dialogues-v2.md](./2026-08-09--048--npc-dialogues-v2.md) | Dialogi NPC v2: menu rozmowy (5 tematów) nad istniejącym `dialogue.ts`/needs/schedule/questy/rodzina/wioska — zweryfikowane wobec kodu, zakres v1 przycięty | `done` ✅ |
 | [2026-08-09--049--procedural-world-landmarks.md](./2026-08-09--049--procedural-world-landmarks.md) | Proceduralne obiekty i landmarki terenu: częste dekoracje, rzadkie ruiny/lokacje, bardzo rzadkie landmarki; modułowe low-poly konstrukcje i zasada czytelności | `planned` 📋 |
 | [2026-08-09--050--fire-torch.md](./2026-08-09--050--fire-torch.md) | Ognisko i pochodnia: proste ognisko z drewna, palenisko z kamieni + ognisko oraz przenośna pochodnia | `done` ✅ |
-| [2026-08-09--051--visual-atmosphere-lighting.md](./2026-08-09--051--visual-atmosphere-lighting.md) | Visual polish: atmospheric fog, dynamiczne niebo/światło, subtelny bloom/glow i god rays | `planned` 📋 |
+| [2026-08-09--051--visual-atmosphere-lighting.md](./2026-08-09--051--visual-atmosphere-lighting.md) | Visual polish: atmospheric fog, dynamiczne niebo/światło, subtelny bloom/glow i god rays | `verification needed` 🔍 (fog + dynamic sky już były zaimplementowane, doprecyzowane; bloom + god rays nowe — `src/render/createPostProcessing.ts`, `src/render/godRaysShader.ts`) |
+| [2026-08-10--052--shovel-digging-and-finding stones.md](./2026-08-10--052--shovel-digging-and-finding stones.md) | Kopanie w ziemi aby obniżyć teren i znaleźć kamienie | `planned` 📋 |
+
+## Quick notes / bugs:
+- Domki mają dziwne wiszące w powietrzu kwadraty, to chyba "światło w domach". Wygląda zupełnie bez sensu. Światło w domu powinno palić się w nocy, może to być mała lampka
+  (kostka).
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row here.
 

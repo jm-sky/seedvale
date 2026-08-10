@@ -83,6 +83,15 @@ export type WorldConfig = {
     aoRadius: number
     aoIntensity: number
     aoQuality: AoQuality
+    /** Subtle glow on the brightest pixels (sun, fire/torch, window light). */
+    bloomEnabled: boolean
+    bloomStrength: number
+    bloomRadius: number
+    /** Luminance above which a pixel starts contributing to bloom (post tone-map, ~0-1). */
+    bloomThreshold: number
+    /** Screen-space crepuscular rays toward the sun, mainly at dawn/dusk. */
+    godRaysEnabled: boolean
+    godRaysExposure: number
   }
   /** Show lil-gui panel (`?gui=0` to hide). */
   showGui: boolean
@@ -191,6 +200,12 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       aoRadius: 2,
       aoIntensity: 3,
       aoQuality: 'Medium',
+      bloomEnabled: true,
+      bloomStrength: 0.4,
+      bloomRadius: 0.4,
+      bloomThreshold: 0.85,
+      godRaysEnabled: true,
+      godRaysExposure: 0.35,
     },
     showGui: true,
     player: {
