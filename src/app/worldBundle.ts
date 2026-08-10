@@ -154,6 +154,7 @@ function buildItemSpawners(
     settlement.center,
     settlement.landmarks.trees,
     seed,
+    { campfire: settlement.landmarks.campfire?.position, garden: settlement.landmarks.garden },
   )
 }
 

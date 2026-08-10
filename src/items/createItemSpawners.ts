@@ -29,16 +29,26 @@ const ITEM_LABEL_FADE_FAR = 14
  *  source for quests regardless of whether world-generated coast/mountain items
  *  (`terrain/chunkItems.ts`) happened to land nearby this seed. `branch` gets its
  *  own multi-point pool below instead of a single point here — see
- *  `BRANCH_SPAWN_POINTS_MIN/MAX`. */
+ *  `BRANCH_SPAWN_POINTS_MIN/MAX`. `shovel` isn't here either — it anchors to
+ *  the campfire/garden landmarks instead of the settlement center, see
+ *  `SHOVEL_FIRE_MAX_DIST`/`SHOVEL_FIELD_MIN_DIST`/`SHOVEL_FIELD_MAX_DIST`. */
 const SPAWN_SPECS: { kind: ItemKind, respawnTime: number, minDist: number, maxDist: number }[] = [
   { kind: 'stone', respawnTime: 100, minDist: 20, maxDist: 42 },
   { kind: 'shell', respawnTime: 90, minDist: 20, maxDist: 42 },
-  // `Infinity` — a one-time village pickup (plan 052), not a renewable
-  // resource: `updateItemSpawnPoints`'s `timeSinceCollected >= respawnTime`
-  // check can never pass, so once collected it never respawns. Reuses the
-  // existing spawn-point contract instead of a second "one-time item" system.
-  { kind: 'shovel', respawnTime: Infinity, minDist: 2, maxDist: 10 },
 ]
+
+// `Infinity` — a one-time village pickup (plan 052), not a renewable resource:
+// `updateItemSpawnPoints`'s `timeSinceCollected >= respawnTime` check can
+// never pass, so once collected it never respawns. Reuses the existing
+// spawn-point contract instead of a second "one-time item" system.
+const SHOVEL_RESPAWN_TIME = Infinity
+/** Fix for plan 052 — the shovel used to land anywhere 2-10m from the
+ *  settlement center, which could be behind a house or across the clearing.
+ *  Anchoring to two landmarks the player already looks at (campfire, food
+ *  source) makes it findable at a glance. */
+const SHOVEL_FIRE_MAX_DIST = 1
+const SHOVEL_FIELD_MIN_DIST = 1
+const SHOVEL_FIELD_MAX_DIST = 3
 
 /** How close to a chosen tree a branch spawn point lands. */
 const TREE_SPAWN_MIN_DIST = 1.2
@@ -62,6 +72,13 @@ export function createItemSpawners(
   settlementCenter: Vector3,
   trees: readonly Vector3[],
   seed: number,
+  /** Where the shovel's one-time pickup lands (plan 052 fix) — `campfire` is
+   *  absent for SM settlements (`buildSettlementProps`'s MD/LG check), in
+   *  which case the shovel always spawns near `garden` instead of the 50/50
+   *  split. `garden` is built unconditionally for every settlement and, per
+   *  `buildSettlementProps`, sits next to the wheat patch when the food
+   *  source is a field — close enough to read as "the field" either way. */
+  shovelLandmarks: { campfire?: Vector3, garden: Vector3 },
 ): ItemSpawners {
   const random = createSeededRandom(seed ^ 0x17ea)
   const points: ItemSpawnPoint[] = []
@@ -121,6 +138,16 @@ export function createItemSpawners(
     const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, spec.minDist, spec.maxDist)
     if (!pos) continue
     addSpawnPoint(spec.kind, spec.respawnTime, pos)
+  }
+
+  {
+    const nearFire = shovelLandmarks.campfire !== undefined && random() < 0.5
+    const anchor = nearFire ? shovelLandmarks.campfire! : shovelLandmarks.garden
+    const [minDist, maxDist] = nearFire
+      ? [0, SHOVEL_FIRE_MAX_DIST]
+      : [SHOVEL_FIELD_MIN_DIST, SHOVEL_FIELD_MAX_DIST]
+    const pos = findWalkableNear(anchor.x, anchor.z, minDist, maxDist)
+    if (pos) addSpawnPoint('shovel', SHOVEL_RESPAWN_TIME, pos)
   }
 
   if (trees.length > 0) {
