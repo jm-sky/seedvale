@@ -30,7 +30,7 @@ WorldBundle
 └── PlacedFires
 ```
 
-`WorldBundle` is mutated in place during rebuild. Callers that need a live world reference should retain the bundle and read its fields when used; they must not capture a bundle field before a rebuild and expect it to remain current.
+`WorldBundle` is mutated in place during rebuild. Callers that need a live world reference should retain the bundle and read its fields when used; they must not capture a bundle field before a rebuild and expect it to remain current. This is the intended lifecycle rule, but plan 054 exists because a few long-lived callbacks still need to be brought into full compliance.
 
 ## Major subsystems
 
@@ -78,10 +78,12 @@ createApp
           ├── dispose current world systems
           ├── clear module-level road caches
           ├── create a new ChunkManager
-          └── recreate dependent systems against the new manager
+          └── recreate dependent world systems against the new manager
 ```
 
 The rebuild path is used when terrain/world configuration changes and when starting a genuinely new seed. The caller decides whether collected items should be reset; `rebuildWorldBundle` carries that decision through rather than deciding it itself.
+
+Not every long-lived system is recreated. `PlayerController`, for example, survives a terrain rebuild and explicitly receives the new terrain samplers/water level through `setGround(...)`. The correct rule is therefore **recreate a world system or explicitly rebind its replaceable world dependencies**, not blindly recreate every consumer of `ChunkManager`.
 
 ## Dependency direction
 
@@ -107,7 +109,7 @@ This is a guide, not a claim that every current import follows a strict layered 
 
 `ChunkManager` exposes sampling/environment APIs used by other systems, including terrain height, floor, water level and regional signals. World systems should consume these APIs rather than duplicate terrain-generation logic.
 
-Terrain streaming is separate from simulation presence: settlement/fauna logic has a fixed home/spatial radius and settlement streaming is handled independently of terrain chunk loading. Do not assume that being outside the player's loaded terrain means an NPC/animal system should stop existing.
+Terrain streaming is separate from simulation presence. Terrain has its own chunk load/unload radii; settlement streaming uses a separate load/unload radius; and local settlement/fauna/item generation uses the fixed `HOME_RADIUS` spatial parameter. Do not assume that being outside the player's loaded terrain means an NPC/animal system should stop existing.
 
 ## NPCs, settlements and fauna
 
@@ -127,15 +129,21 @@ Modal UI can gate parts of simulation/input. Changes to modal behaviour should t
 
 ## Persistence
 
-Persistence is wired from `createApp.ts`. `SaveData` contains player/configuration plus current quest, inventory and selected world-item/time state. NPC simulation state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
+Persistence is orchestrated from `createApp.ts`, but ownership is split by responsibility:
+
+- `createApp.ts` decides when to save and assembles the current runtime state into `SaveData`.
+- `src/persistence/saveData.ts` owns the `SaveData` schema, validation/defaulting and migrations.
+- `src/persistence/saveDb.ts` owns the IndexedDB storage operations.
+
+The current save schema is version 6. It contains world configuration, player position/orientation, quest progress/EXP/relations, inventory, collected item IDs, dropped items, placed fires and time of day. NPC runtime state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
 
 When changing `SaveData`, preserve compatibility with older saves and use the existing migration/defaulting patterns in the config and persistence code.
 
 ## Rebuild / lifetime invariants
 
 1. `WorldBundle` itself is stable across rebuilds; its fields are replaced in place.
-2. Systems that depend on `ChunkManager` must be recreated when the manager is recreated.
-3. Long-lived closures must read the current bundle field instead of capturing a stale field value.
+2. A system whose world dependency is replaced must either be recreated or explicitly rebound to the new dependency.
+3. Long-lived closures should read the current bundle field instead of capturing a replaceable field value. This is the intended pattern, but the current code still has known follow-up work around `PlacedFires` callbacks (plan 054).
 4. World-owned resources must be disposed before replacement.
 5. Module-level caches whose keys are not seed-scoped must be cleared when switching worlds.
 6. New-world reset decisions belong to the caller; low-level rebuild helpers should not silently reset unrelated player/world state.
@@ -147,16 +155,18 @@ Before adding a subsystem, answer:
 1. Is there an existing system whose state/behaviour this extends?
 2. Which existing system owns its lifetime?
 3. Does it need to survive a `WorldBundle` rebuild?
-4. What existing environment/simulation API should it consume instead of duplicating logic?
-5. Does it need persistence? If yes, what is the compatibility story for old saves?
-6. Does it belong to simulation, world generation, interaction, or presentation?
+4. If a replaceable world dependency changes, will this system be recreated or explicitly rebound?
+5. What existing environment/simulation API should it consume instead of duplicating logic?
+6. Does it need persistence? If yes, what is the compatibility story for old saves?
+7. Does it belong to simulation, world generation, interaction, or presentation?
 
 Prefer extending an existing coupling over introducing a parallel subsystem that solves the same problem.
 
 ## Common architectural pitfalls
 
-- Capturing `bundle.chunkManager` in a long-lived closure and then rebuilding the bundle.
-- Treating terrain load radius as the simulation radius for NPCs/fauna.
+- Capturing `bundle.chunkManager` or another replaceable bundle field in a long-lived closure and then rebuilding the bundle.
+- Assuming every `ChunkManager` consumer must be recreated when an explicit rebinding API is the established lifecycle for that system.
+- Treating terrain load radius as the simulation radius for NPCs/fauna or as the settlement streaming radius.
 - Duplicating terrain sampling or procedural rules in another system.
 - Putting gameplay state only in UI components.
 - Forgetting disposal when replacing world-owned Three.js resources.
