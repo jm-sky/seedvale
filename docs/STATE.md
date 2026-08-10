@@ -78,7 +78,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Starting equipment currently includes knife, firestarter and blanket when missing.
 - Simple fire/fire pit/torch interactions exist.
 - Wait/rest time skip exists.
-- Inventory UI exists as a vanilla screen; broader UI migration is ongoing.
+- Inventory UI is a Vue screen (`src/ui-vue/screens/InventoryScreen.vue`); `src/ui/createInventoryScreen.ts` is a facade — see "UI migration" below.
+- Shovel exists as a one-time settlement pickup (`items/createItemSpawners.ts`'s `SPAWN_SPECS`, `respawnTime: Infinity`). Holding it unlocks a `[E]`-triggered "Wykop dołek" ground interaction (fallback target only when nothing else is being gazed at — see `app/interactables.ts`'s `buildDigTarget`) that locally deforms terrain and has a chance to yield `stone`. Terrain deformation is a small runtime overlay owned by `ChunkManager` (`modifyTerrain`/`applyModificationToTile` in `terrain/chunkManager.ts`), mutating a loaded chunk's cached height grid in place — not persisted across saves, and reapplied on chunk reload. Ground eligibility/tuning lives in `terrain/dig.ts`.
 
 ### Quests / progression
 
@@ -204,6 +205,7 @@ The exact status of plans belongs in `docs/plans/README.md`, not here. As of thi
 - Plan 054 — WorldBundle reference safety: done, kept as recent context for the `WorldBundle` mutation pattern.
 - Plan 046 — Vue/Tailwind UI migration: Faza 0-3 done, Faza 4 (hot-path HUD/minimap/toast/touch) paused pending a deliberate decision.
 - Plan 005 — game UI screens: done (world config + notes/journal screens close out the last open item).
+- Plan 052 — shovel digging/stone finding: done (shovel item, runtime terrain-deformation layer, dig ground interaction).
 - Plan 020 — NPC Place/daily routine.
 - Plan 021 — Animal Life.
 - Plan 047 — village generation overhaul.

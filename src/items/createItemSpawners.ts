@@ -33,6 +33,11 @@ const ITEM_LABEL_FADE_FAR = 14
 const SPAWN_SPECS: { kind: ItemKind, respawnTime: number }[] = [
   { kind: 'stone', respawnTime: 100 },
   { kind: 'shell', respawnTime: 90 },
+  // `Infinity` — a one-time village pickup (plan 052), not a renewable
+  // resource: `updateItemSpawnPoints`'s `timeSinceCollected >= respawnTime`
+  // check can never pass, so once collected it never respawns. Reuses the
+  // existing spawn-point contract instead of a second "one-time item" system.
+  { kind: 'shovel', respawnTime: Infinity },
 ]
 
 /** How close to a chosen tree a branch spawn point lands. */

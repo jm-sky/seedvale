@@ -1,6 +1,7 @@
 ## Plan: Shovel — digging & finding stones
 
 **Created:** 2026-08-10
+**Status:** `verification needed` (2026-08-10) — implemented and technically verified (`tsc`/`vue-tsc`/`lint`/`build`/`test`), not yet browser-verified. See `2026-08-10--052--shovel-digging-and-finding-stones-implementation-notes.md`'s "Actual implementation" section for what shipped, deliberate deviations, and manual test steps.
 
 ### Cel
 

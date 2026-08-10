@@ -184,6 +184,18 @@ export type ChunkManager = {
    *  its id as collected so it won't reappear on chunk reload. Null if `id`
    *  isn't currently instantiated. */
   collectItem: (id: string) => { kind: ItemKind, x: number, z: number } | null
+  /** Runtime terrain-deformation layer (plan 052 — shovel digging), additive
+   *  on top of the generated height field: a soft radial depression,
+   *  `-depth` at the center falling off to 0 at `radius`. Not the seed-derived
+   *  procedural terrain itself (`chunkHeightmap.ts`'s analytic samplers are
+   *  untouched) — a loaded chunk's cached tile is mutated in place, so
+   *  `sampleHeight`/the rendered mesh see it immediately and consistently;
+   *  reapplied to any chunk that (re)generates later, so walking away and
+   *  back doesn't lose a dig. Returns `false` if no loaded chunk was affected
+   *  (in practice this shouldn't happen — the dig site is wherever the player
+   *  is currently standing near, always loaded). Not persisted across saves
+   *  (plan 052 explicitly scopes persistence out). */
+  modifyTerrain: (x: number, z: number, radius: number, depth: number) => boolean
   waterLevel: number
   loadedChunkCount: () => number
   /** Resolves once every listed chunk has finished generating (or failed/cancelled). */
@@ -191,11 +203,54 @@ export type ChunkManager = {
   dispose: () => void
 }
 
+export type TerrainModification = { x: number, z: number, radius: number, depth: number }
+
+/** Writes one modification's radial falloff directly into `tile.heights`
+ *  (the apron-inclusive grid `buildChunkGeometry`/`sampleHeight` both read) —
+ *  in-place, texel by texel, only over the modification's bounding box, not
+ *  the whole grid. Independently correct for every chunk whose apron
+ *  overlaps the modification (including a neighbor across a chunk boundary):
+ *  each chunk computes the very same world-space delta at the same world
+ *  position, so shared edge texels end up with the same value on both sides
+ *  — the seam this apron trick already exists to avoid stays intact. Returns
+ *  whether it touched any texel (false = this chunk's grid doesn't overlap
+ *  the modification at all). Exported for `chunkManager.test.ts` — pure grid
+ *  math, no scene/worker dependency, unlike the rest of this module. */
+export function applyModificationToTile(
+  tile: ChunkTileResult,
+  coord: ChunkCoord,
+  chunkSize: number,
+  resolution: number,
+  mod: TerrainModification,
+): boolean {
+  const o = apronOriginWorld(coord.cx, coord.cz, chunkSize, resolution)
+  const minIx = Math.max(0, Math.floor((mod.x - mod.radius - o.x) / o.step))
+  const maxIx = Math.min(o.apronRes - 1, Math.ceil((mod.x + mod.radius - o.x) / o.step))
+  const minIz = Math.max(0, Math.floor((mod.z - mod.radius - o.z) / o.step))
+  const maxIz = Math.min(o.apronRes - 1, Math.ceil((mod.z + mod.radius - o.z) / o.step))
+  if (minIx > maxIx || minIz > maxIz) return false
+
+  let touched = false
+  for (let iz = minIz; iz <= maxIz; iz++) {
+    for (let ix = minIx; ix <= maxIx; ix++) {
+      const wx = o.x + ix * o.step
+      const wz = o.z + iz * o.step
+      const dist = Math.hypot(wx - mod.x, wz - mod.z)
+      if (dist >= mod.radius) continue
+      const falloff = 1 - THREE.MathUtils.smoothstep(dist, 0, mod.radius)
+      tile.heights[iz * o.apronRes + ix]! -= mod.depth * falloff
+      touched = true
+    }
+  }
+  return touched
+}
+
 export function createChunkManager(
   scene: THREE.Scene,
   config: ChunkManagerConfig,
 ): ChunkManager {
   const chunks = new Map<string, ChunkRecord>()
+  const modifications: TerrainModification[] = []
   const grassSystem = createGrassSystem()
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
@@ -336,6 +391,32 @@ export function createChunkManager(
     return group
   }
 
+  /** (Re)builds a chunk record's mesh from its current (possibly
+   *  dig-modified) tile — disposes the previous mesh first if there is one,
+   *  so it doubles as the initial build (`ensureLoaded`) and a post-dig
+   *  rebuild (`modifyTerrain`) without duplicating the `buildChunkGeometry`
+   *  call. */
+  function buildAndAttachMesh(rec: ChunkRecord, tile: ChunkTileResult): void {
+    rec.mesh?.removeFromParent()
+    rec.meshDispose?.()
+    const { x, z } = chunkCenter(rec.coord, config.chunkSize)
+    const { mesh, dispose } = buildChunkGeometry(
+      tile,
+      config.resolution,
+      config.chunkSize,
+      x,
+      z,
+      config.waterLevel,
+      config.heightScale,
+      config.flatShading,
+      config.region,
+      config.detailNormal,
+    )
+    scene.add(mesh)
+    rec.mesh = mesh
+    rec.meshDispose = dispose
+  }
+
   function ensureLoaded(coord: ChunkCoord): Promise<void> {
     const key = chunkKey(coord)
     const existing = chunks.get(key)
@@ -354,24 +435,14 @@ export function createChunkManager(
         const rec = chunks.get(key)
         if (!rec) return // unloaded while generating
         rec.tile = tile
+        // Re-apply any digs made before this chunk was (re)generated — see
+        // `ChunkManager.modifyTerrain`'s doc comment.
+        for (const mod of modifications) {
+          applyModificationToTile(tile, coord, config.chunkSize, config.resolution, mod)
+        }
+        buildAndAttachMesh(rec, tile)
 
         const { x, z } = chunkCenter(coord, config.chunkSize)
-        const { mesh, dispose } = buildChunkGeometry(
-          tile,
-          config.resolution,
-          config.chunkSize,
-          x,
-          z,
-          config.waterLevel,
-          config.heightScale,
-          config.flatShading,
-          config.region,
-          config.detailNormal,
-        )
-        scene.add(mesh)
-        rec.mesh = mesh
-        rec.meshDispose = dispose
-
         const apronRes = config.resolution + 2
         const coreHeights = extractCoreGrid(tile.heights, apronRes, config.resolution)
         const coreBodyScale = extractCoreGrid(tile.bodyScale, apronRes, config.resolution)
@@ -596,6 +667,19 @@ export function createChunkManager(
         return result
       }
       return null
+    },
+    modifyTerrain(x, z, radius, depth) {
+      const mod: TerrainModification = { x, z, radius, depth }
+      modifications.push(mod)
+      let touchedAny = false
+      for (const rec of chunks.values()) {
+        if (rec.state !== 'ready' || !rec.tile) continue
+        const touched = applyModificationToTile(rec.tile, rec.coord, config.chunkSize, config.resolution, mod)
+        if (!touched) continue
+        touchedAny = true
+        buildAndAttachMesh(rec, rec.tile)
+      }
+      return touchedAny
     },
     waterLevel: config.waterLevel,
     loadedChunkCount: () => chunks.size,

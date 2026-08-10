@@ -10,6 +10,7 @@ export type ItemKind =
   | 'knife'
   | 'firestarter'
   | 'blanket'
+  | 'shovel'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility'
 
@@ -31,6 +32,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   knife: { label: 'nóż', category: 'tool', weight: 0.4, color: 0xb7bfc7 },
   firestarter: { label: 'krzesiwo', category: 'tool', weight: 0.2, color: 0x54504a },
   blanket: { label: 'koc', category: 'utility', weight: 1.5, color: 0x8a4b3a },
+  shovel: { label: 'łopata', category: 'tool', weight: 2, color: 0x6b4a32 },
 }
 
 /** Small procedural pickup mesh — no GLB assets for these, they're meant to be
@@ -140,6 +142,27 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.position.y = 0.06
     mesh.castShadow = true
     return mesh
+  }
+  if (kind === 'shovel') {
+    const group = new THREE.Group()
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.02, 0.5, 6),
+      new THREE.MeshStandardMaterial({ color: 0x6b4a24, flatShading: true }),
+    )
+    handle.rotation.x = Math.PI / 2.4
+    handle.position.set(0, 0.16, -0.05)
+    handle.castShadow = true
+    group.add(handle)
+    const blade = new THREE.Mesh(
+      new THREE.ConeGeometry(0.09, 0.16, 4),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.shovel.color, flatShading: true, metalness: 0.3 }),
+    )
+    blade.rotation.x = Math.PI
+    blade.scale.set(1, 1, 0.5)
+    blade.position.set(0, 0.08, 0.13)
+    blade.castShadow = true
+    group.add(blade)
+    return group
   }
   // blanket
   const mesh = new THREE.Mesh(

@@ -37,12 +37,13 @@ function capitalize(text: string): string {
 
 /** Dispatches an `[E]`-pressed `Interactable` (everything except `item`/`campfire`,
  *  which `app/createApp.ts` handles directly — both need `Inventory` access this
- *  module doesn't have — without opening this generic dialog; and `npc`, which
+ *  module doesn't have — without opening this generic dialog; `npc`, which
  *  opens the dedicated Vue dialogue menu instead — see `ui-vue/store.ts`'s
- *  `openNpcDialogueMenu`) to the right `QuestManager` call, falling back to
- *  flavor text when no active quest cares. */
+ *  `openNpcDialogueMenu`; and `dig`, which `gameLoop.ts` handles directly for
+ *  the same `Inventory`-access reason as `item`/`campfire`) to the right
+ *  `QuestManager` call, falling back to flavor text when no active quest cares. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

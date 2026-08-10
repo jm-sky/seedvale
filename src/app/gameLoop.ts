@@ -30,8 +30,10 @@ import type { WorldBundle } from './worldBundle'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { DIG_RADIUS } from '../terrain/dig'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import {
+  buildDigTarget,
   buildInteractables,
   collectItem,
   GAZE_RANGE,
@@ -242,13 +244,17 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.placedFires,
         player.mesh.position,
       )
+      // The shovel's dig target is a fallback, not a competing candidate — only
+      // synthesized when nothing else is being gazed at, so it can never
+      // outcompete a real interactable the player is glancing near (see
+      // `buildDigTarget`'s doc comment).
       const target = pickInGaze(
         interactables,
         player.mesh.position,
         mouseLook.state.yaw,
         INTERACT_RANGE,
         INTERACT_MIN_DOT,
-      )
+      ) ?? buildDigTarget(player.mesh.position, mouseLook.state.yaw, inventory.has('shovel', 1), bundle.chunkManager)
       npcDialog.setPrompt(target ? target.promptLabel : null)
 
       const gazeCandidates: { position: { x: number, z: number }, agent: Highlightable }[] = []
@@ -305,6 +311,23 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           // pause menu already does on open (createPauseMenu's onPause).
           if (document.pointerLockElement === renderer.domElement) document.exitPointerLock()
           vueUi.openNpcDialogueMenu(target.npc, target.settlement, questManager, dayNight.timeOfDay)
+        } else if (target.kind === 'dig') {
+          // `target.profile` was already resolved when this target was
+          // synthesized this same frame (`buildDigTarget`) — no need to
+          // re-classify the surface here.
+          bundle.chunkManager.modifyTerrain(target.position.x, target.position.z, DIG_RADIUS, target.profile.depth)
+          if (Math.random() < target.profile.stoneChance) {
+            if (inventory.canAdd('stone')) {
+              inventory.add('stone')
+              hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+              touchControls?.setDropAvailable(!inventory.isEmpty())
+              toast.show('+1 Kamień', 'pickup')
+            } else {
+              toast.show('Ekwipunek jest za ciężki na kamień.', 'error')
+            }
+          } else {
+            toast.show('Wykopano dołek.')
+          }
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
