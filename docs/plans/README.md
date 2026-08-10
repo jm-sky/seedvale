@@ -38,10 +38,10 @@ Implementation plans for features and larger changes.
 
 | File                                                                                                             | Summary                                                        | Progress | Priority  | Effort |
 | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | -------- | --------- | ------ |
-| [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md)                                     | Pory roku i pogoda wpływające na świat                         | 0%       | 🟡 medium | XL     |
+| [2026-08-10--052--shovel-digging-and-finding-stones.md](./2026-08-10--052--shovel-digging-and-finding-stones.md) | Kopanie ziemi i znajdowanie kamieni [have implementation notes] | 0%      | 🔴 high   | M      |
 | [2026-08-07--045--health-stamina-threat.md](./2026-08-07--045--health-stamina-threat.md)                         | Wspólny Health/Stamina/Threat dla NPC/fauny/gracza             | 0%       | 🟡 medium | XL     |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md)             | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout  | 0%       | 🔴 high   | XL     |
-| [2026-08-10--052--shovel-digging-and-finding-stones.md](./2026-08-10--052--shovel-digging-and-finding-stones.md) | Kopanie ziemi i znajdowanie kamieni [have implementation notes] | 0%      | 🔴 high   | M      |
+| [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md)                                     | Pory roku i pogoda wpływające na świat                         | 0%       | 🟡 medium | XL     |
 
 ---
 
