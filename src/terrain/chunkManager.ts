@@ -15,8 +15,11 @@ import {
   createCampfire,
   createFallenLog,
   createLargeRock,
+  createMonolith,
   createReed,
   createRockCluster,
+  createSmallRuins,
+  createStoneCircle,
   createTree,
   loadPropTemplates,
   placeOnGround,
@@ -80,8 +83,14 @@ function createEnvironmentProp(kind: EnvironmentKind, scale: number, variant: nu
       return createFallenLog(scale, variant)
     case 'largeRock':
       return createLargeRock(scale, variant)
+    case 'monolith':
+      return createMonolith(scale, variant)
     case 'rockCluster':
       return createRockCluster(scale, variant)
+    case 'smallRuins':
+      return createSmallRuins(scale, variant)
+    case 'stoneCircle':
+      return createStoneCircle(scale, variant)
   }
 }
 

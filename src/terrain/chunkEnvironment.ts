@@ -9,7 +9,14 @@ import {
   sampleApronGrid,
 } from './chunkHeightmap'
 
-export type EnvironmentKind = 'largeRock' | 'rockCluster' | 'fallenLog' | 'campfire'
+export type EnvironmentKind =
+  | 'largeRock'
+  | 'rockCluster'
+  | 'fallenLog'
+  | 'campfire'
+  | 'monolith'
+  | 'stoneCircle'
+  | 'smallRuins'
 
 export type EnvironmentPlacement = {
   x: number
@@ -19,7 +26,9 @@ export type EnvironmentPlacement = {
   rotationY: number
   /** Meaning depends on `kind`: boulder irregularity 0..1 (`largeRock`/
    *  `rockCluster`), log length in world units (`fallenLog`), unused
-   *  (`campfire`) — see `createLargeRock`/`createRockCluster`/`createFallenLog`
+   *  (`campfire`), height/count/damage variation 0..1 (`monolith`/
+   *  `stoneCircle`/`smallRuins`) — see `createLargeRock`/`createRockCluster`/
+   *  `createFallenLog`/`createMonolith`/`createStoneCircle`/`createSmallRuins`
    *  in `settlement/props.ts`. */
   variant: number
 }
@@ -39,6 +48,23 @@ const TREE_PROXIMITY_RADIUS = 6
 const CAMPFIRE_CHANCE = 0.035
 /** Reject candidates sitting on a road/path corridor. */
 const ROAD_TINT_REJECT = 0.15
+
+/** Landmarks (plans/2026-08-09--049): much rarer than the decorations above —
+ *  "częste" tier (monolith) roughly half as common as a campfire, "rzadkie"
+ *  tier (stoneCircle/smallRuins) about half of that again. One roll per
+ *  chunk per kind, each on its own seeded RNG stream — with these chances,
+ *  a chunk rolling more than one landmark is negligible, so v1 doesn't need
+ *  a shared "pick one landmark type" selector. */
+const MONOLITH_CHANCE = 0.02
+const STONE_CIRCLE_CHANCE = 0.008
+const SMALL_RUINS_CHANCE = 0.008
+/** Multi-point landmarks want sturdier, flatter footing than a single rock. */
+const SLOPE_REJECT_LANDMARK = 0.6
+/** Keep the whole landmark footprint inside its own chunk (simpler than
+ *  cross-chunk ownership — see implementation notes' "Chunk boundaries"). */
+const MONOLITH_MARGIN = 1.2
+const STONE_CIRCLE_MARGIN = 4
+const SMALL_RUINS_MARGIN = 2.5
 
 function hashChunk(cx: number, cz: number, salt: number): number {
   let h = (cx * 668265263 + cz * 374761393 + salt * 2654435761) | 0
@@ -163,6 +189,75 @@ export function computeChunkEnvironment(
       rotationY: fireRandom() * Math.PI * 2,
       variant: 0,
     })
+  }
+
+  // --- Monolith: single standing stone, "częste" landmark tier ---
+  const monolithRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 4) ^ 0x1d4b7)
+  {
+    const wx = coord.cx * chunkSize + (monolithRandom() * 2 - 1) * (half - MONOLITH_MARGIN)
+    const wz = coord.cz * chunkSize + (monolithRandom() * 2 - 1) * (half - MONOLITH_MARGIN)
+    const h = sample(tile.heights, wx, wz)
+    if (
+      h > waterLevel + 0.3 &&
+      sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
+      slopeAt(wx, wz) <= SLOPE_REJECT_LANDMARK &&
+      monolithRandom() <= MONOLITH_CHANCE
+    ) {
+      placements.push({
+        x: wx,
+        z: wz,
+        kind: 'monolith',
+        scale: 0.85 + monolithRandom() * 0.5,
+        rotationY: monolithRandom() * Math.PI * 2,
+        variant: monolithRandom(),
+      })
+    }
+  }
+
+  // --- Stone circle: small "rzadkie" landmark tier ---
+  const stoneCircleRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 5) ^ 0x3ea92)
+  {
+    const wx = coord.cx * chunkSize + (stoneCircleRandom() * 2 - 1) * (half - STONE_CIRCLE_MARGIN)
+    const wz = coord.cz * chunkSize + (stoneCircleRandom() * 2 - 1) * (half - STONE_CIRCLE_MARGIN)
+    const h = sample(tile.heights, wx, wz)
+    if (
+      h > waterLevel + 0.3 &&
+      sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
+      slopeAt(wx, wz) <= SLOPE_REJECT_LANDMARK &&
+      stoneCircleRandom() <= STONE_CIRCLE_CHANCE
+    ) {
+      placements.push({
+        x: wx,
+        z: wz,
+        kind: 'stoneCircle',
+        scale: 0.9 + stoneCircleRandom() * 0.4,
+        rotationY: stoneCircleRandom() * Math.PI * 2,
+        variant: stoneCircleRandom(),
+      })
+    }
+  }
+
+  // --- Small ruins: low wall/foundation fragment, "rzadkie" landmark tier ---
+  const ruinsRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 6) ^ 0x57c31)
+  {
+    const wx = coord.cx * chunkSize + (ruinsRandom() * 2 - 1) * (half - SMALL_RUINS_MARGIN)
+    const wz = coord.cz * chunkSize + (ruinsRandom() * 2 - 1) * (half - SMALL_RUINS_MARGIN)
+    const h = sample(tile.heights, wx, wz)
+    if (
+      h > waterLevel + 0.3 &&
+      sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
+      slopeAt(wx, wz) <= SLOPE_REJECT_LANDMARK &&
+      ruinsRandom() <= SMALL_RUINS_CHANCE
+    ) {
+      placements.push({
+        x: wx,
+        z: wz,
+        kind: 'smallRuins',
+        scale: 0.85 + ruinsRandom() * 0.4,
+        rotationY: ruinsRandom() * Math.PI * 2,
+        variant: ruinsRandom(),
+      })
+    }
   }
 
   return placements

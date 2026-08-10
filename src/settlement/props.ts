@@ -575,6 +575,111 @@ export function createCampfire(scale = 1): THREE.Group {
   return fire
 }
 
+/** Single standing stone landmark (plans/2026-08-09--049, "częste" tier) —
+ *  a tapered low-poly pillar with a slight lean plus a couple of grounding
+ *  rubble pebbles at its base. `variant` (0..1) drives height, lean and
+ *  rubble placement so no two monoliths look identical. */
+export function createMonolith(scale = 1, variant = 0.5): THREE.Group {
+  const group = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x726d64, flatShading: true, roughness: 1 })
+
+  const height = (3 + variant * 2.4) * scale
+  const stone = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.32 * scale, 0.5 * scale, height, 5),
+    mat,
+  )
+  stone.rotation.y = variant * Math.PI * 2
+  stone.rotation.z = (variant - 0.5) * 0.18 // slight deliberate lean
+  stone.position.y = height / 2
+  stone.castShadow = true
+  stone.receiveShadow = true
+  group.add(stone)
+
+  const rubbleCount = 2 + Math.floor(variant * 3)
+  for (let i = 0; i < rubbleCount; i++) {
+    const a = variant * Math.PI * 2 + i * 2.3
+    const r = 0.5 * scale + ((variant * (i + 4)) % 1) * 0.3 * scale
+    const rubble = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18 * scale, 0), mat)
+    rubble.position.set(Math.cos(a) * r, 0.1 * scale, Math.sin(a) * r)
+    rubble.rotation.set(a, a * 1.4, 0)
+    rubble.castShadow = true
+    group.add(rubble)
+  }
+
+  return group
+}
+
+/** Small stone circle landmark (plans/2026-08-09--049, "rzadkie" tier) — a
+ *  ring of upright stones of uneven height, deterministically varied by
+ *  `variant` (stone count 6-9, per-stone height jitter). Reads as a miniature
+ *  Stonehenge from a distance without needing per-stone unique geometry. */
+export function createStoneCircle(scale = 1, variant = 0.5): THREE.Group {
+  const group = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x736e64, flatShading: true, roughness: 1 })
+
+  const count = 6 + Math.floor(variant * 4)
+  const radius = 2.6 * scale
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2
+    const h = (1.3 + ((variant * (i + 2)) % 1) * 0.9) * scale
+    const stone = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22 * scale, 0.3 * scale, h, 5),
+      mat,
+    )
+    stone.position.set(Math.cos(a) * radius, h / 2, Math.sin(a) * radius)
+    stone.rotation.y = a
+    stone.castShadow = true
+    stone.receiveShadow = true
+    group.add(stone)
+  }
+
+  return group
+}
+
+/** Small ruined wall/foundation fragment (plans/2026-08-09--049, "rzadkie"
+ *  tier) — a low foundation slab with two intersecting wall stubs of uneven,
+ *  broken height, reading as the corner of a long-gone building rather than
+ *  a random pile of boxes. `variant` (0..1) drives wall height/damage. */
+export function createSmallRuins(scale = 1, variant = 0.5): THREE.Group {
+  const group = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8a8478, flatShading: true, roughness: 1 })
+
+  const size = 3.2 * scale
+  const foundation = new THREE.Mesh(new THREE.BoxGeometry(size, 0.15 * scale, size), mat)
+  foundation.position.y = 0.075 * scale
+  foundation.receiveShadow = true
+  group.add(foundation)
+
+  const wallHeight = (1.1 + variant * 0.7) * scale
+  const wall1 = new THREE.Mesh(new THREE.BoxGeometry(size, wallHeight, 0.28 * scale), mat)
+  wall1.position.set(0, wallHeight / 2, -size / 2 + 0.14 * scale)
+  wall1.castShadow = true
+  wall1.receiveShadow = true
+  group.add(wall1)
+
+  // Adjoining wall is more broken down — shorter, so the corner still reads
+  // clearly as a ruin rather than an intact room.
+  const wall2Height = wallHeight * (0.45 + variant * 0.35)
+  const wall2 = new THREE.Mesh(new THREE.BoxGeometry(0.28 * scale, wall2Height, size), mat)
+  wall2.position.set(-size / 2 + 0.14 * scale, wall2Height / 2, 0)
+  wall2.castShadow = true
+  wall2.receiveShadow = true
+  group.add(wall2)
+
+  const rubbleCount = 2 + Math.floor(variant * 3)
+  for (let i = 0; i < rubbleCount; i++) {
+    const a = variant * Math.PI * 2 + i * 1.9
+    const r = size * 0.3 + ((variant * (i + 5)) % 1) * size * 0.25
+    const rubble = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22 * scale, 0), mat)
+    rubble.position.set(Math.cos(a) * r, 0.11 * scale, Math.sin(a) * r)
+    rubble.rotation.set(a, a * 1.2, 0)
+    rubble.castShadow = true
+    group.add(rubble)
+  }
+
+  return group
+}
+
 /** A minimal "prosta ognisko" base — ash patch + a couple of branches, no
  *  stone ring (that's what distinguishes it from `createCampfire()`'s
  *  palenisko look, see `docs/plans/2026-08-09--050`). Used by
