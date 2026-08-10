@@ -1,3 +1,4 @@
+import type { CampfireFlame } from './props'
 import type * as THREE from 'three'
 
 /** Seconds of burn time one branch adds — light and refuel both apply this.
@@ -5,6 +6,20 @@ import type * as THREE from 'three'
  *  `settlement/PlacedFires.ts`) — a simple campfire without a stone ring
  *  passes a shorter value explicitly (plan `2026-08-09--050`). */
 export const FUEL_PER_BRANCH = 75
+
+/** Fuel-to-visual-size curve for `CampfireFlame.setSize` — `ratio` is fuel
+ *  remaining in units of one branch. Below 1 it shrinks in lockstep as
+ *  embers die down. Between 1 and 2 (just the branch that lit it, or one
+ *  refuel on top of that) it holds at the normal size — a single extra
+ *  branch shouldn't already visibly bulk up the fire. Growth only kicks in
+ *  once a second extra branch goes on, so it reads as "stoking the fire"
+ *  rather than the first refuel already maxing it out. `setSize` clamps to
+ *  `FLAME_MAX_SIZE` on its own, so this only needs the slope past the dead
+ *  zone. */
+function fuelRatioToSizeFactor(ratio: number): number {
+  if (ratio <= 2) return Math.min(ratio, 1)
+  return 1 + (ratio - 2) * 0.5
+}
 
 export type VillageFire = {
   readonly position: THREE.Vector3
@@ -32,11 +47,13 @@ export type VillageFire = {
  */
 export function createVillageFire(
   position: THREE.Vector3,
-  flame: THREE.Object3D,
+  flame: CampfireFlame,
   fuelPerBranch: number = FUEL_PER_BRANCH,
 ): VillageFire {
   let lit = false
   let fuelRemaining = 0
+
+  const applySize = () => flame.setSize(fuelRatioToSizeFactor(fuelRemaining / fuelPerBranch))
 
   return {
     position,
@@ -44,18 +61,23 @@ export function createVillageFire(
     light() {
       lit = true
       fuelRemaining = fuelPerBranch
-      flame.visible = true
+      flame.object.visible = true
+      applySize()
     },
     addFuel() {
       fuelRemaining += fuelPerBranch
+      applySize()
     },
     update(dt) {
       if (!lit) return
+      flame.update(dt)
       fuelRemaining -= dt
       if (fuelRemaining <= 0) {
         lit = false
         fuelRemaining = 0
-        flame.visible = false
+        flame.object.visible = false
+      } else {
+        applySize()
       }
     },
   }

@@ -6,6 +6,7 @@ import type { FoodSourceType } from './settlementGenerator'
 import type { ClearingLayout } from './villageClearing'
 import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
 import { distanceToSegment } from '../math/segment'
+import { createSparks, type Sparks } from '../shared/getFireParticles'
 import { createSeededRandom } from '../world/parseSeed'
 
 export type SettlementLandmarks = {
@@ -32,7 +33,7 @@ export type SettlementLandmarks = {
    *  (`createCampfireFlame`), added as a child of the campfire prop but
    *  hidden until `settlement/VillageFire.ts` lights it. Distinct from the
    *  purely decorative world campfires in `terrain/chunkEnvironment.ts`. */
-  campfire?: { position: THREE.Vector3, flame: THREE.Object3D }
+  campfire?: { position: THREE.Vector3, flame: CampfireFlame }
 }
 
 const HUT_URLS = [
@@ -212,13 +213,21 @@ export function createBarrel(scale = 1): THREE.Group {
  *  day/night wiring. Kept as one cheap emissive quad + one short-falloff,
  *  unshadowed point light per house rather than anything more elaborate — a
  *  handful of these per loaded settlement is the same order of magnitude as
- *  the existing campfire flame light. */
+ *  the existing campfire flame light.
+ *
+ *  `mountHeight`/`mountZ` place the glow flush against an actual wall —
+ *  derived by the caller from the specific hut's own bounding box
+ *  (`buildSettlementProps`), since the three GLB hut variants
+ *  (`HUT_URLS`) don't share the fallback `createHut()` box's proportions;
+ *  a fixed offset floated the glow plane off the wall on some of them
+ *  (visible as a bright square hanging in the air, see plan
+ *  `2026-08-08--044` §1.1). */
 export type HouseLight = {
   readonly object: THREE.Object3D
   setNightIntensity: (t: number) => void
 }
 
-export function createHouseLight(): HouseLight {
+export function createHouseLight(mountHeight: number, mountZ: number): HouseLight {
   const group = new THREE.Group()
 
   const glowMat = new THREE.MeshStandardMaterial({
@@ -226,13 +235,15 @@ export function createHouseLight(): HouseLight {
     emissive: 0xffb35c,
     emissiveIntensity: 0,
     flatShading: true,
+    side: THREE.DoubleSide,
   })
   const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), glowMat)
-  glow.position.set(0, 1.0, 0.55)
+  // Nudged just outside the wall face so it isn't hidden behind it.
+  glow.position.set(0, mountHeight, mountZ + 0.02)
   group.add(glow)
 
   const light = new THREE.PointLight(0xffb35c, 0, 4.5, 2)
-  light.position.set(0, 1.0, 0.4)
+  light.position.set(0, mountHeight, mountZ - 0.15)
   group.add(light)
 
   return {
@@ -518,14 +529,34 @@ export function createSimpleFireBase(scale = 1): THREE.Group {
   return fire
 }
 
+/** How small a near-spent fire shrinks to and how large a freshly-stacked
+ *  one grows to, relative to `setSize(1)`'s normal single-branch look — see
+ *  `CampfireFlame.setSize`. */
+const FLAME_MIN_SIZE = 0.55
+const FLAME_MAX_SIZE = 1.8
+
 /** The lightable/toggleable fire visual for a settlement's own campfire —
  *  separate from `createCampfire()`'s static stone-ring/ash/branches prop
  *  (which stays purely decorative for the world-scattered "old campfire"
- *  elements, `terrain/chunkEnvironment.ts`). A small emissive cone + a low-
- *  range point light, both flat/simple like the rest of this file's props —
- *  no particle system. Caller (`settlement/VillageFire.ts`) toggles
- *  `.visible` on the returned group; starts hidden. */
-export function createCampfireFlame(scale = 1): THREE.Group {
+ *  elements, `terrain/chunkEnvironment.ts`). `object` bundles a small
+ *  emissive cone + a low-range point light + rising spark particles
+ *  (`shared/getFireParticles.ts`); `update` must be called each frame (only
+ *  while lit — see `settlement/VillageFire.ts`/`player/PlayerTorch.ts`) to
+ *  animate the sparks. `setSize(factor)` scales the cone/light/sparks
+ *  together (`factor` 1 = the normal single-branch look, clamped to
+ *  `[FLAME_MIN_SIZE, FLAME_MAX_SIZE]`) and also scales the light's
+ *  intensity/range, which a plain transform scale wouldn't touch — callers
+ *  drive this from their current fuel level relative to one branch's worth
+ *  (`VillageFire.ts`/`PlayerTorch.ts`), so the fire visibly grows when
+ *  refueled and shrinks as it burns down. Caller toggles `.visible` on
+ *  `object`; starts hidden. */
+export type CampfireFlame = {
+  object: THREE.Group
+  update: (dt: number) => void
+  setSize: (factor: number) => void
+}
+
+export function createCampfireFlame(scale = 1): CampfireFlame {
   const flame = new THREE.Group()
   const flameMat = new THREE.MeshStandardMaterial({
     color: 0xff9a3c,
@@ -537,12 +568,26 @@ export function createCampfireFlame(scale = 1): THREE.Group {
   cone.position.y = 0.3 * scale
   flame.add(cone)
 
-  const light = new THREE.PointLight(0xff8a3c, 3, 5 * scale, 2)
+  const baseIntensity = 3
+  const baseDistance = 5 * scale
+  const light = new THREE.PointLight(0xff8a3c, baseIntensity, baseDistance, 2)
   light.position.y = 0.35 * scale
   flame.add(light)
 
+  const sparks: Sparks = createSparks(scale)
+  flame.add(sparks.points)
+
   flame.visible = false
-  return flame
+
+  function setSize(factor: number) {
+    const clamped = THREE.MathUtils.clamp(factor, FLAME_MIN_SIZE, FLAME_MAX_SIZE)
+    flame.scale.setScalar(clamped)
+    light.intensity = baseIntensity * clamped
+    light.distance = baseDistance * clamped
+  }
+  setSize(1)
+
+  return { object: flame, update: sparks.update, setSize }
 }
 
 export function createGarden(): THREE.Group {
@@ -882,11 +927,16 @@ export async function buildSettlementProps(
       2.8,
       createHut,
     )
+    // Computed before `placeOnGround` moves `hut.position` to world
+    // coordinates, so this box is in the hut's own local frame — exactly
+    // what a child (`houseLight.object`) needs to be positioned relative to.
+    const hutBounds = new THREE.Box3().setFromObject(hut)
     placeOnGround(hut, area.x, area.z, sampleHeight)
     group.add(hut)
     landmarks.homes.push(new THREE.Vector3(area.x, sampleHeight(area.x, area.z), area.z))
 
-    const houseLight = createHouseLight()
+    const hutHeight = hutBounds.max.y - hutBounds.min.y
+    const houseLight = createHouseLight(hutHeight * 0.4, hutBounds.max.z)
     hut.add(houseLight.object)
     houseLights.push(houseLight)
   }
@@ -914,7 +964,7 @@ export async function buildSettlementProps(
     group.add(campfire)
 
     const flame = createCampfireFlame()
-    campfire.add(flame)
+    campfire.add(flame.object)
     landmarks.campfire = {
       position: new THREE.Vector3(fireX, sampleHeight(fireX, fireZ), fireZ),
       flame,

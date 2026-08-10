@@ -19,7 +19,7 @@ import {
 } from '../config/worldConfig'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { createFauna, type Fauna, SPAWNER_LABELS } from '../fauna/createFauna'
-import { createTouchControls } from '../input/createTouchControls'
+import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook } from '../input/MouseLook'
@@ -69,6 +69,7 @@ import {
 } from '../world/dayNight'
 import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
 import { createTimeSkip } from '../world/timeSkip'
+import { getUserActions } from './userActions'
 
 /** Fixed radius (world units) for settlement/fauna spatial logic — deliberately
  *  independent of the streamed terrain's loaded region, so the village and its
@@ -108,16 +109,6 @@ const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
   firestarter: 1,
   blanket: 1,
 }
-/** Resource costs for the fire-building/lighting quick actions
- *  (`settlement/PlacedFires.ts`, `player/PlayerTorch.ts`) — see
- *  `docs/plans/2026-08-09--050`. A "prosta ognisko" is built directly from
- *  branches alone (shorter burn); a "palenisko" is a stone fire pit built
- *  cold, then lit later via the existing `[E]` campfire interaction (longer
- *  burn). Both, like the `[E]` interaction, require a firestarter in
- *  inventory to actually strike a flame (not consumed). */
-const SIMPLE_FIRE_BRANCH_COST = 2
-const FIRE_PIT_STONE_COST = 4
-const TORCH_BRANCH_COST = 1
 /** How close (world units) to a settlement's center counts as "in town" for
  *  the "Odpocznij w mieście" quick action — covers the default village
  *  extent (core + house ring, `ringMax + houseRadius*2 ≈ 39.6` at default
@@ -125,6 +116,8 @@ const TORCH_BRANCH_COST = 1
 const REST_IN_TOWN_RADIUS = 40
 
 type Highlightable = NpcAgent | AnimalAgent
+
+let touchControls: TouchControls | null = null
 
 /** 3×3 block of chunks around the origin, pinned so the settlement never streams
  *  out from under itself. */
@@ -464,35 +457,10 @@ export async function createApp(
     touchControls?.setDropAvailable(!inventory.isEmpty())
     inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight)
   }
+
   const inventoryScreen = createInventoryScreen(container, { onDrop: dropItemStack })
 
-  // Shared by the pause menu's fire/torch buttons and the quick-actions popup
-  // below — two UI entry points onto identical logic, not a duplicate.
-  const buildSimpleFire = (): boolean => {
-    if (!inventory.has('firestarter', 1) || !inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)) return false
-    inventory.remove('branch', SIMPLE_FIRE_BRANCH_COST)
-    placedFires.place(player.mesh.position.x, player.mesh.position.z, 'simple')
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    touchControls?.setDropAvailable(!inventory.isEmpty())
-    return true
-  }
-  const buildFirePit = (): boolean => {
-    if (!inventory.has('stone', FIRE_PIT_STONE_COST)) return false
-    inventory.remove('stone', FIRE_PIT_STONE_COST)
-    placedFires.place(player.mesh.position.x, player.mesh.position.z, 'pit')
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    touchControls?.setDropAvailable(!inventory.isEmpty())
-    return true
-  }
-  const lightTorch = (): boolean => {
-    if (playerTorch.isLit()) return false
-    if (!inventory.has('firestarter', 1) || !inventory.has('branch', TORCH_BRANCH_COST)) return false
-    inventory.remove('branch', TORCH_BRANCH_COST)
-    playerTorch.light()
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    touchControls?.setDropAvailable(!inventory.isEmpty())
-    return true
-  }
+  const { buildSimpleFire, buildFirePit, lightTorch} = getUserActions(inventory, placedFires, playerTorch, player, hud, touchControls)
 
   const timeSkip = createTimeSkip(dayNight)
   const timeSkipOverlay = createTimeSkipOverlay(container)
@@ -569,7 +537,7 @@ export async function createApp(
     },
   }, () => vueUi.isNpcDialogueMenuOpen())
 
-  const touchControls = isTouchDevice()
+  touchControls = isTouchDevice()
     ? createTouchControls(container, keyboard.state, mouseLook.state, {
         // Guard against the ☰ button opening the pause overlay on top of
         // another already-open full-screen modal (npc dialog/quest log/
@@ -600,6 +568,7 @@ export async function createApp(
         },
       })
     : null
+
   // Reflects any inventory carried over from a loaded save — later changes are
   // synced at each pickup/drop call site alongside hud.setInventoryWeight().
   touchControls?.setDropAvailable(!inventory.isEmpty())
@@ -846,6 +815,7 @@ export async function createApp(
       }
       if (keyboard.consumeQuestLog()) openQuestLog()
       if (keyboard.consumeInventory()) openInventory()
+      if (keyboard.consumeQuickActions()) quickActions.toggle()
       if (keyboard.consumeDrop()) {
         let dropOffset = 0
         const itemKinds = Object.keys(ITEM_DEFS) as ItemKind[]

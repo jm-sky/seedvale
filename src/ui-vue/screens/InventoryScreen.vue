@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { isTouchDevice } from '../input/isTouchDevice'
-import { ITEM_DEFS, type ItemKind } from '../items/items'
-import { useOverlayScreen } from './composables/useOverlayScreen'
-import { useTouchScroll } from './composables/useTouchScroll'
-import { closeInventory, isInventoryOpen, ui } from './store'
+import { isTouchDevice } from '../../input/isTouchDevice'
+import { ITEM_DEFS, type ItemKind } from '../../items/items'
+import { useOverlayScreen } from '../composables/useOverlayScreen'
+import { useTouchScroll } from '../composables/useTouchScroll'
+import { closeInventory, isInventoryOpen, ui } from '../store'
 
 const panel = ref<HTMLElement | null>(null)
 const touchDevice = isTouchDevice()
@@ -24,7 +24,7 @@ function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
   >
     <div
       ref="panel"
-      class="max-h-[calc(100dvh-32px)] w-[min(480px,calc(100vw-32px))] overflow-y-auto rounded-[10px] bg-panel p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
+      class="max-h-[calc(100dvh-32px)] w-full max-w-3xl overflow-y-auto rounded-[10px] bg-panel p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
       style="touch-action: pan-y"
     >
       <h1 class="mb-2 text-lg font-semibold tracking-wide">
@@ -33,7 +33,7 @@ function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
       <div class="mb-4 text-[13px] opacity-75">
         Waga: {{ formatWeight(ui.inventory.totalWeight) }} / {{ formatWeight(ui.inventory.maxWeight) }}
       </div>
-      <div class="flex flex-col gap-2">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
         <div
           v-if="items.length === 0"
           class="text-[13px] opacity-60"

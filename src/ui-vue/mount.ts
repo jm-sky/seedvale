@@ -9,6 +9,7 @@ const FORWARDED_FNS = [
   'configurePauseMenu', 'setPauseSeed', 'openPauseMenu', 'closePauseMenu', 'togglePause', 'isPauseMenuOpen',
   'openQuestLog', 'refreshQuestLog', 'closeQuestLog', 'isQuestLogOpen',
   'openFlavorDialog', 'setFlavorPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',
+  'configureQuickActions', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
 ] as const
 
 export type VueUi = Pick<StoreModule, typeof FORWARDED_FNS[number]> & { dispose: () => void }

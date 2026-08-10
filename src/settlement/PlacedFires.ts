@@ -16,14 +16,36 @@ export type PlacedFireKind = 'simple' | 'pit'
  *  the heat. */
 const SIMPLE_FIRE_FUEL_PER_BRANCH = 40
 
+/** Real seconds a burnt-out `'simple'` fire's ash/branches linger before
+ *  despawning — a bare pile of branches doesn't stick around like a built
+ *  stone ring does. */
+const SIMPLE_FIRE_DESPAWN_DELAY = 60 * 60
+
+/** Real seconds a burnt-out `'pit'` fire's stone ring lingers before
+ *  despawning — much longer than `'simple'`, it's a built structure worth
+ *  keeping around to relight rather than instant clutter cleanup. */
+const PIT_FIRE_DESPAWN_DELAY = 7 * 24 * 60 * 60
+
+const despawnDelayFor = (kind: PlacedFireKind): number =>
+  kind === 'simple' ? SIMPLE_FIRE_DESPAWN_DELAY : PIT_FIRE_DESPAWN_DELAY
+
 /** Persisted shape — positions aren't derivable from the seed (player chose
  *  them), so the full record round-trips through the save, same as
  *  `items/createDroppedItems.ts`'s `DroppedItem`. Lit/fuel state is *not*
  *  persisted (consistent with settlement campfires, see plans/2026-08-08--038
- *  "Poza zakresu") — every placed fire loads unlit, ready to relight. */
+ *  "Poza zakresu") — every placed fire loads unlit, ready to relight, so the
+ *  despawn-after-burnout countdown below (`unlitSeconds`) restarts too. */
 export type PlacedFire = { id: string, x: number, z: number, kind: PlacedFireKind }
 
-export type PlacedFireEntry = PlacedFire & { fire: VillageFire }
+export type PlacedFireEntry = {
+  fire: VillageFire
+  /** Set once `fire` is observed lit — a `'pit'` placed cold and never yet
+   *  lit shouldn't start counting down to despawn. */
+  everLit: boolean
+  /** Seconds since `fire` was last seen lit; only advances once `everLit`.
+   *  Reset to 0 whenever the fire is lit or refueled. */
+  unlitSeconds: number
+} & PlacedFire
 
 export type PlacedFires = {
   list: () => readonly PlacedFireEntry[]
@@ -60,11 +82,27 @@ export function createPlacedFires(
     const group = pf.kind === 'simple' ? createSimpleFireBase() : createCampfire()
     placeOnGround(group, pf.x, pf.z, sampleHeight)
     const flame = createCampfireFlame()
-    group.add(flame)
+    group.add(flame.object)
     scene.add(group)
     meshes.set(pf.id, group)
     const fuelPerBranch = pf.kind === 'simple' ? SIMPLE_FIRE_FUEL_PER_BRANCH : undefined
-    fires.push({ ...pf, fire: createVillageFire(new Vector3(pf.x, sampleHeight(pf.x, pf.z), pf.z), flame, fuelPerBranch) })
+    fires.push({
+      ...pf,
+      fire: createVillageFire(new Vector3(pf.x, sampleHeight(pf.x, pf.z), pf.z), flame, fuelPerBranch),
+      everLit: false,
+      unlitSeconds: 0,
+    })
+  }
+
+  const despawn = (id: string): void => {
+    const mesh = meshes.get(id)
+    if (mesh) {
+      mesh.removeFromParent()
+      disposeObject3D(mesh)
+      meshes.delete(id)
+    }
+    const index = fires.findIndex((entry) => entry.id === id)
+    if (index !== -1) fires.splice(index, 1)
   }
 
   for (const pf of initial) spawn(pf)
@@ -83,7 +121,19 @@ export function createPlacedFires(
       }
     },
     update(dt) {
-      for (const entry of fires) entry.fire.update(dt)
+      // Snapshot first — `despawn` splices `fires`, which would skip the
+      // next entry if we walked the live array while removing from it.
+      for (const entry of [...fires]) {
+        entry.fire.update(dt)
+        if (entry.fire.isLit()) {
+          entry.everLit = true
+          entry.unlitSeconds = 0
+          continue
+        }
+        if (!entry.everLit) continue
+        entry.unlitSeconds += dt
+        if (entry.unlitSeconds >= despawnDelayFor(entry.kind)) despawn(entry.id)
+      }
     },
     dispose() {
       for (const mesh of meshes.values()) {

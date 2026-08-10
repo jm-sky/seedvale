@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
-import InventoryScreen from './InventoryScreen.vue'
 import NpcDialogueMenu from './NpcDialogueMenu.vue'
 import FlavorDialog from './screens/FlavorDialog.vue'
+import InventoryScreen from './screens/InventoryScreen.vue'
 import PauseMenu from './screens/PauseMenu.vue'
 import QuestLogScreen from './screens/QuestLogScreen.vue'
+import QuickActionsScreen from './screens/QuickActionsScreen.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
 import { closeTopOverlay, togglePause, ui } from './store'
 
@@ -26,5 +27,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <QuestLogScreen />
     <VillagersScreen />
     <InventoryScreen />
+    <QuickActionsScreen />
   </div>
 </template>

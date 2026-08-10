@@ -27,8 +27,8 @@ export type PlayerTorch = {
  */
 export function createPlayerTorch(playerMesh: THREE.Object3D): PlayerTorch {
   const flame = createCampfireFlame(0.45)
-  flame.position.set(0.32, 1.05, 0.22)
-  playerMesh.add(flame)
+  flame.object.position.set(0.32, 1.05, 0.22)
+  playerMesh.add(flame.object)
 
   let lit = false
   let fuelRemaining = 0
@@ -38,25 +38,29 @@ export function createPlayerTorch(playerMesh: THREE.Object3D): PlayerTorch {
     light() {
       lit = true
       fuelRemaining = TORCH_FUEL_PER_BRANCH
-      flame.visible = true
+      flame.object.visible = true
+      flame.setSize(1)
     },
     extinguish() {
       lit = false
       fuelRemaining = 0
-      flame.visible = false
+      flame.object.visible = false
     },
     update(dt) {
       if (!lit) return
+      flame.update(dt)
       fuelRemaining -= dt
       if (fuelRemaining <= 0) {
         lit = false
         fuelRemaining = 0
-        flame.visible = false
+        flame.object.visible = false
+      } else {
+        flame.setSize(fuelRemaining / TORCH_FUEL_PER_BRANCH)
       }
     },
     dispose() {
-      flame.removeFromParent()
-      disposeObject3D(flame)
+      flame.object.removeFromParent()
+      disposeObject3D(flame.object)
     },
   }
 }

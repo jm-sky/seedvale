@@ -88,7 +88,7 @@ function nextPage(): void {
   >
     <div
       ref="panel"
-      class="max-h-[calc(100dvh-32px)] w-[min(480px,calc(100vw-32px))] overflow-y-auto rounded-[10px] bg-panel p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
+      class="max-h-[calc(100dvh-32px)] w-full max-w-3xl overflow-y-auto rounded-[10px] bg-panel p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
       style="touch-action: pan-y"
     >
       <h1 class="mb-3 text-lg font-semibold tracking-wide">

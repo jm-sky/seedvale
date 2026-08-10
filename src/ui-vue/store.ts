@@ -22,6 +22,14 @@ type PauseMenuState = {
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
 type FlavorDialogState = { open: boolean; prompt: string | null; name: string; line: string }
+type QuickActionsState = {
+  open: boolean
+  onBuildSimpleFire: (() => boolean) | null
+  onBuildFirePit: (() => boolean) | null
+  onLightTorch: (() => boolean) | null
+  onWait: ((hours: number) => void) | null
+  onRest: ((variant: 'camp' | 'town') => 'ok' | 'too-far' | 'no-blanket') | null
+}
 
 type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'simpleFireStatus' | 'firePitStatus' | 'torchStatus'>>
 
@@ -38,6 +46,7 @@ export const ui = reactive({
   } as PauseMenuState,
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
+  quickActions: { open: false, onBuildSimpleFire: null, onBuildFirePit: null, onLightTorch: null, onWait: null, onRest: null } as QuickActionsState,
   openStack: [] as string[],
 })
 
@@ -86,3 +95,9 @@ export function openInventory(counts: Partial<Record<ItemKind, number>>, totalWe
 export function refreshInventory(counts: Partial<Record<ItemKind, number>>, totalWeight: number, maxWeight: number): void { ui.inventory.counts = { ...counts }; ui.inventory.totalWeight = totalWeight; ui.inventory.maxWeight = maxWeight }
 export function closeInventory(): void { ui.inventory.open = false; ui.inventory.onDrop = null }
 export function isInventoryOpen(): boolean { return ui.inventory.open }
+
+export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 'open'>>): void { Object.assign(ui.quickActions, handlers) }
+export function openQuickActions(): void { ui.quickActions.open = true }
+export function closeQuickActions(): void { ui.quickActions.open = false }
+export function toggleQuickActions(): void { if (ui.quickActions.open) closeQuickActions(); else openQuickActions() }
+export function isQuickActionsOpen(): boolean { return ui.quickActions.open }

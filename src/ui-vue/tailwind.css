@@ -9,3 +9,7 @@
   --color-panel-backdrop: rgba(10, 14, 18, 0.55);
   --color-ink: #f2f6fa;
 }
+
+:root {
+  --min-screen-width: 800;
+}
