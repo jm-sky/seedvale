@@ -50,7 +50,8 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-07--045--health-stamina-threat.md](./2026-08-07--045--health-stamina-threat.md) | Wspólny Health/Stamina/Threat dla NPC/fauny/gracza | 0% | 🟡 medium | XL | ~~010~~, ~~022~~ |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md) | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout | 0% | 🔴 high | XL | ~~031~~, 032, 036 |
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
-| [2026-08-10--057--axe-player-tree-harvesting.md](./2026-08-10--057--axe-player-tree-harvesting.md) | Siekiera + ścinanie drzew przez gracza | 0% | 🟡 medium | M | ~~050~~, ~~043~~, ~~030~~ |
+| [2026-08-10--058--living-forest-tree-lifecycle.md](./2026-08-10--058--living-forest-tree-lifecycle.md) | Żywy las i cykl życia drzew | 0% | 🟡 medium | XL | ~~007~~, ~~028~~, ~~030~~ |
+| [2026-08-10--057--axe-player-tree-harvesting.md](./2026-08-10--057--axe-player-tree-harvesting.md) | Siekiera + ścinanie drzew przez gracza | 0% | 🟡 medium | M | ~~058~~, ~~043~~, ~~030~~ |
 
 ---
 
