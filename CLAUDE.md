@@ -22,6 +22,7 @@ Before making a non-trivial change:
 - UI migration to Vue is incremental. Do not migrate or rewrite unrelated vanilla screens just because Vue exists.
 - Do not infer that a planned feature is implemented. Verify the code.
 - Do not mark visual Three.js work as fully verified solely because TypeScript/lint/build pass.
+- **Performance is an architectural constraint.** Keep the main thread responsive; prefer event-driven/batched simulation and use workers for CPU-heavy, data-oriented work when the cost of worker communication is justified. See [Performance & Simulation Architecture](docs/architecture/performance-and-workers.md).
 
 ## Development
 
@@ -55,6 +56,7 @@ Do **not** launch headless Chrome/Playwright yourself as the default way to test
 | Strategic roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Plan index/status | [docs/plans/README.md](docs/plans/README.md) |
 | Implementation plans | [docs/plans/](docs/plans/) |
+| Architecture | [docs/architecture/](docs/architecture/) |
 | Issues | [docs/issues/README.md](docs/issues/README.md) |
 | Reviews | [docs/reviews/README.md](docs/reviews/README.md) |
 | Research | [docs/research/README.md](docs/research/README.md) |
@@ -120,6 +122,8 @@ Before introducing a new cross-system service, ask:
 - Does the change need persistence?
 - Does it need to work when the player is far away from the relevant world location?
 - Does it create a second implementation of an existing mechanic?
+- **Does the work need frame-rate resolution, or can it be event-driven, lazy or batched?**
+- **Can CPU-heavy data-only work reuse an existing worker pipeline without unnecessary serialization/synchronization cost?**
 
 Prefer a small, explicit seam over a new generic framework.
 
