@@ -1,6 +1,6 @@
 # Plan: Rozbicie `createApp.ts` (R5) + drobne porządki (R6–R9)
 
-**Status:** `verification needed`
+**Status:** `done`
 **Created:** 2026-08-10
 **Priority:** średni — czysto techniczny dług, żadna zmiana zachowania; robić przed kolejnym dużym dopisaniem do `createApp.ts` (dziś 1240 linii), nie w trybie pilnym
 

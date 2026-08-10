@@ -59,7 +59,6 @@ Implementation plans for features and larger changes.
 | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | -------- | --------- | ------ |
 | [2026-08-08--032--natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md)               | Zasoby naturalne, atrakcyjność lokalizacji, food source | 100%     | 🔴 high   | M      |
 | [2026-08-08--036--village-siting-difficult-terrain.md](./2026-08-08--036--village-siting-difficult-terrain.md) | Osadzanie wiosek w trudnym terenie                      | 25%      | 🟡 medium | M      |
-| [2026-08-10--053--createapp-refactor.md](./2026-08-10--053--createapp-refactor.md)                             | Refaktor `createApp.ts`, game loop, modal state, interactables (R5+R6) | 100%     | 🟡 medium | L      |
 
 ---
 
@@ -100,6 +99,7 @@ Implementation plans for features and larger changes.
 | [2026-08-09--048--npc-dialogues-v2.md](./2026-08-09--048--npc-dialogues-v2.md)                         | Dialogi NPC v2 + menu rozmowy                               | 100%     |
 | [2026-08-09--050--fire-torch.md](./2026-08-09--050--fire-torch.md)                                     | Ognisko, palenisko i przenośna pochodnia                    | 100%     |
 | [2026-08-09--051--visual-atmosphere-lighting.md](./2026-08-09--051--visual-atmosphere-lighting.md)             | Fog, dynamiczne światło/niebo, bloom, god rays          | 100%     | 🟡 medium | M      |
+| [2026-08-10--053--createapp-refactor.md](./2026-08-10--053--createapp-refactor.md)                             | Refaktor `createApp.ts`, game loop, modal state, interactables (R5+R6) | 100%     | 🟡 medium | L      |
 
 ---
 
