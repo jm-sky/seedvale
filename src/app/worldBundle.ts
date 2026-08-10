@@ -118,6 +118,8 @@ function buildSettlementsManager(
     },
     config.terrain.heightScale,
     config.terrain.region,
+    chunkManager.waitForChunks,
+    config.terrain.chunkSize,
   )
 }
 

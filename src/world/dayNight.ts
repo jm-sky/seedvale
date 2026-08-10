@@ -87,7 +87,13 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
   const ambientIntensity = 0.12 + dayFactor * 0.28
   const hemiIntensity = 0.15 + dayFactor * 0.45
 
-  const fogNear = 70 + dayFactor * 40
+  // `fogNear` used to start as close as 70 — on terrain with short sightlines
+  // (mountain ridges/valleys) most of the visible surface already fell past
+  // it, reading as "walked into a wall of fog." Pushed further out so nearby
+  // terrain reads clearly; `fogFar` is left alone; it's tuned to how far
+  // chunks actually stream in (`ChunkManagerConfig.unloadRadius` ×
+  // `chunkSize`, ~256 by default) so the pop-in edge stays hidden.
+  const fogNear = 130 + dayFactor * 50
   const fogFar = 180 + dayFactor * 80
   const fogColor = fogColorFromElev(elev)
 

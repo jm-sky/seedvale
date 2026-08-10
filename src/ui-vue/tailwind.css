@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* `docs/` is pure Markdown (no Tailwind classes) but isn't gitignored, so
+ * Tailwind v4's automatic source detection watches it anyway — every saved
+ * doc edit re-triggered a CSS rebuild, which reads to the app as an
+ * unrelated full page reload. Excluded, not the content itself. */
+@source not "../../docs";
+
 /* Design tokens land here as real screens migrate (plan 046) — matches the
  * shared dark/translucent look already repeated across `.seedvale-*__panel`
  * classes in index.html's <style> block (e.g. `.seedvale-npc-dialog__panel`),

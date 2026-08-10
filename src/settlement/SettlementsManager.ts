@@ -4,6 +4,7 @@ import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
 import { disposeObject3D } from '../assets/loadGltf'
+import { type ChunkCoord, worldToChunk } from '../terrain/chunkGrid'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSettlement, type Settlement } from './createSettlement'
 import { createSignpost, placeOnGround } from './props'
@@ -26,6 +27,25 @@ type Entry = {
   def: SettlementDef
   settlement: Settlement | null
   pendingPromise: Promise<void> | null
+}
+
+/** 3×3 block of chunks around a settlement's site — mirrors `worldBundle.ts`'s
+ *  `homeChunks()`, generalized to any world position. A non-home settlement's
+ *  props (huts/lamps/forest belt) get positioned with `sampleHeight`, which
+ *  silently falls back to clearing-agnostic raw terrain height for chunks
+ *  that haven't generated yet (see `chunkManager.ts`'s `readField`) — that
+ *  fallback ignores the village-clearing flattening baked into the real
+ *  mesh, so anything placed before this settlement's own chunks are ready
+ *  ends up floating relative to the (differently-shaped) terrain that loads
+ *  in moments later. Awaiting this in `ensureLoaded` before building closes
+ *  that race. */
+function chunksNear(x: number, z: number, chunkSize: number): ChunkCoord[] {
+  const center = worldToChunk(x, z, chunkSize)
+  const coords: ChunkCoord[] = []
+  for (let dz = -1; dz <= 1; dz++) {
+    for (let dx = -1; dx <= 1; dx++) coords.push({ cx: center.cx + dx, cz: center.cz + dz })
+  }
+  return coords
 }
 
 /** How many of the home settlement's nearest neighbor settlements get
@@ -76,6 +96,10 @@ export async function createSettlementsManager(
   terrainSamplers: TerrainSamplers,
   heightScale: number,
   region: RegionParams,
+  /** Forces + awaits generation of the terrain chunks around a settlement
+   *  site before that settlement is built — see `chunksNear`'s comment. */
+  waitForChunks: (coords: ChunkCoord[]) => Promise<void>,
+  chunkSize: number,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -203,16 +227,17 @@ export async function createSettlementsManager(
     const entry: Entry = { def, settlement: null, pendingPromise: null }
     entries.set(def.id, entry)
     syncMidpoints()
-    entry.pendingPromise = createSettlement(
-      scene,
-      sampleHeight,
-      waterLevel,
-      localRadius,
-      seed,
-      def,
-      playSound,
-      roadCtx,
-    )
+    entry.pendingPromise = waitForChunks(chunksNear(def.x, def.z, chunkSize))
+      .then(() => createSettlement(
+        scene,
+        sampleHeight,
+        waterLevel,
+        localRadius,
+        seed,
+        def,
+        playSound,
+        roadCtx,
+      ))
       .then((settlement) => {
         const cur = entries.get(def.id)
         if (!cur) {

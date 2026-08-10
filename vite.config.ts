@@ -33,6 +33,16 @@ export default defineConfig({
   server: {
     port: 5577,
     strictPort: true,
+    watch: {
+      // No app code imports `.md` files (docs/, README.md, CLAUDE.md, ...) —
+      // confirmed by listening on the real dev server's HMR websocket while
+      // editing them: every save still pushed a `full-reload` (Tailwind's
+      // own automatic source detection treats any non-gitignored project
+      // file as a candidate to rescan, root-level ones apparently through a
+      // different path that doesn't even set `triggeredBy`). Ignored at the
+      // watcher level so no plugin downstream ever sees the change.
+      ignored: ['**/*.md'],
+    },
   },
   worker: {
     format: 'es',

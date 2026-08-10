@@ -234,27 +234,102 @@ export type HouseLight = {
   setNightIntensity: (t: number) => void
 }
 
-export function createHouseLight(mountHeight: number, mountZ: number): HouseLight {
+/** `createHouseLight`'s mount point is now a real point on the hut's exterior
+ *  surface (`findWallMount` below), not an assumed Z-facing wall — `mountX`/
+ *  `mountZ` place the lamp there, offset a little in/out along that surface's
+ *  outward normal (approximated as the direction from the vertical axis to
+ *  the point, accurate enough for the roughly-boxy `HUT_URLS` shapes), and
+ *  the lamp geometry is rotated to sit flush against it from any angle. */
+export function createHouseLight(mountHeight: number, mountX: number, mountZ: number): HouseLight {
   const group = new THREE.Group()
-  const wallZ = mountZ * 0.85
 
+  const outwardLen = Math.hypot(mountX, mountZ) || 1
+  const nx = mountX / outwardLen
+  const nz = mountZ / outwardLen
+
+  const baseMat = new THREE.MeshBasicMaterial({ color: 0x6b4226 })
   const lampMat = new THREE.MeshBasicMaterial({ color: HOUSE_LAMP_OFF_COLOR })
-  const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.06), lampMat)
-  lamp.position.set(0, mountHeight, wallZ + 0.04)
+
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.14), baseMat)
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.14), baseMat)
+
+  top.position.set(mountX, mountHeight + 0.08, mountZ)
+  top.rotation.y = Math.atan2(nx, nz)
+  group.add(top)
+
+  base.position.set(mountX, mountHeight - 0.08, mountZ)
+  base.rotation.y = Math.atan2(nx, nz)
+  group.add(base)
+
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.08), lampMat)
+
+  lamp.position.set(mountX + nx * 0.04, mountHeight, mountZ + nz * 0.04)
+  lamp.rotation.y = Math.atan2(nx, nz)
   group.add(lamp)
 
   const light = new THREE.PointLight(0xffb35c, 0, 4.5, 2)
-  light.position.set(0, mountHeight, wallZ - 0.1)
+  light.position.set(mountX - nx * 0.1, mountHeight, mountZ - nz * 0.1)
   group.add(light)
+
+  const lightIntensityBonus = 0.0
 
   return {
     object: group,
     setNightIntensity(t) {
       const clamped = Math.max(0, Math.min(1, t))
       lampMat.color.lerpColors(HOUSE_LAMP_OFF_COLOR, HOUSE_LAMP_ON_COLOR, clamped)
-      light.intensity = clamped * 1.0
+      light.intensity = clamped * (1.0 + lightIntensityBonus)
     },
   }
+}
+
+/** How far outside a hut's footprint to start each search ray — comfortably
+ *  past any `HUT_URLS`/fallback hut's extent. */
+const WALL_MOUNT_SEARCH_RADIUS = 20
+/** Tried lowest-first: real wall height varies a lot between the `HUT_URLS`
+ *  GLB variants — one only has wall left at 25% of total height before the
+ *  roof takes over, another still has wall at 45%. */
+const WALL_MOUNT_HEIGHT_FRACTIONS = [0.25, 0.35, 0.45, 0.55] as const
+const WALL_MOUNT_ANGLE_STEPS = 16
+
+/** Finds a real point on a loaded hut's exterior surface to mount a wall
+ *  lamp against. Replaces an earlier approach that placed the lamp at a
+ *  fraction of the model's raw bounding-box Z extent — which assumed a
+ *  symmetric, Z-facing box. The actual `HUT_URLS` GLB variants are neither
+ *  (confirmed by raycasting each one — see history around plan
+ *  `2026-08-08--044`'s "hanging square" and the report that followed even
+ *  the wall-mount fix there): the lamp ended up floating in open air next to
+ *  the house, sometimes a couple of meters off, because the wall it was
+ *  "mounted" on wasn't necessarily there at that height/side for that
+ *  particular hut model.
+ *
+ *  Searches outside-in from several heights and angles around the hut and
+ *  returns the first real surface hit, so it adapts to whatever shape each
+ *  model actually has instead of guessing one. `hut` must still be in its
+ *  own post-`prepareProp` local frame (before `placeOnGround` moves it into
+ *  world space) — same assumption the old bounding-box approach relied on.
+ *  Returns `null` in the extremely unlikely case no surface is found at any
+ *  tried height/angle (e.g. a hollow/open model) — callers fall back to the
+ *  hut's center, which at least never floats away from it. */
+function findWallMount(hut: THREE.Object3D, hutHeight: number): { height: number, x: number, z: number } | null {
+  const raycaster = new THREE.Raycaster()
+  raycaster.far = WALL_MOUNT_SEARCH_RADIUS * 2
+  const origin = new THREE.Vector3()
+  const dir = new THREE.Vector3()
+  for (const heightFraction of WALL_MOUNT_HEIGHT_FRACTIONS) {
+    const y = hutHeight * heightFraction
+    for (let i = 0; i < WALL_MOUNT_ANGLE_STEPS; i++) {
+      const angle = (i / WALL_MOUNT_ANGLE_STEPS) * Math.PI * 2
+      const dx = Math.sin(angle)
+      const dz = Math.cos(angle)
+      origin.set(dx * WALL_MOUNT_SEARCH_RADIUS, y, dz * WALL_MOUNT_SEARCH_RADIUS)
+      dir.set(-dx, 0, -dz)
+      raycaster.set(origin, dir)
+      const hit = raycaster.intersectObject(hut, true)[0]
+      if (hit) return { height: y, x: hit.point.x, z: hit.point.z }
+    }
+  }
+  return null
 }
 
 /** A short wooden pier — deck extends along local +X (rotate by the
@@ -929,15 +1004,22 @@ export async function buildSettlementProps(
       createHut,
     )
     // Computed before `placeOnGround` moves `hut.position` to world
-    // coordinates, so this box is in the hut's own local frame — exactly
-    // what a child (`houseLight.object`) needs to be positioned relative to.
+    // coordinates, so this is in the hut's own local frame — exactly what a
+    // child (`houseLight.object`) needs to be positioned relative to.
     const hutBounds = new THREE.Box3().setFromObject(hut)
+    const hutHeight = hutBounds.max.y - hutBounds.min.y
+    const wallMount = findWallMount(hut, hutHeight)
     placeOnGround(hut, area.x, area.z, sampleHeight)
     group.add(hut)
     landmarks.homes.push(new THREE.Vector3(area.x, sampleHeight(area.x, area.z), area.z))
 
-    const hutHeight = hutBounds.max.y - hutBounds.min.y
-    const houseLight = createHouseLight(hutHeight * 0.4, hutBounds.max.z)
+    // Users manual testing:
+    // - divide height by 2 places the lamp at 1/2 of house height
+    // - multiply x and z by 0.0 places the lamp *usually* at the exact center of the house
+    const displacementFactor = 0
+    const houseLight = wallMount
+      ? createHouseLight((wallMount.height / 2), wallMount.x * displacementFactor, wallMount.z * displacementFactor)
+      : createHouseLight((hutHeight / 2) * 0.4, 0, hutBounds.max.z * displacementFactor)
     hut.add(houseLight.object)
     houseLights.push(houseLight)
   }

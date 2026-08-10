@@ -86,7 +86,7 @@ export function refreshVillagers(entries: readonly VillagerRefreshEntry[]): void
 export function isVillagersOpen(): boolean { return ui.villagers.open }
 export function setVillagersPage(page: number): void { ui.villagers.page = page }
 
-export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void { const state = ui.npcDialogueMenu; const override = questManager.onInteract(npc.name); state.npc = npc; state.settlement = settlement; state.timeOfDay = timeOfDay; state.helpResult = override ?? { line: npc.getDialogueLine() }; state.open = true }
+export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void { const state = ui.npcDialogueMenu; const override = questManager.onInteract(npc.name); state.npc = markRaw(npc); state.settlement = settlement; state.timeOfDay = timeOfDay; state.helpResult = override ?? { line: npc.getDialogueLine() }; state.open = true }
 function resetNpcDialogueMenu(): void { const state = ui.npcDialogueMenu; state.open = false; state.npc = null; state.settlement = null; state.helpResult = null }
 export function closeNpcDialogueMenu(): void { const state = ui.npcDialogueMenu; if (!state.open) return; state.helpResult?.offer?.onDecline(); resetNpcDialogueMenu() }
 export function acceptNpcDialogueOffer(): void { const state = ui.npcDialogueMenu; if (!state.open || !state.helpResult?.offer) return; state.helpResult.offer.onAccept(); resetNpcDialogueMenu() }

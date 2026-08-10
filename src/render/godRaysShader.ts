@@ -65,6 +65,13 @@ export const GodRaysShader = {
         illuminationDecay *= decay;
       }
 
-      gl_FragColor = vec4(base.rgb + accumulated * exposure * intensity, base.a);
+      // Near lightPosition itself (looking straight at/near the sun),
+      // deltaTexCoord shrinks toward zero and every sample lands on
+      // (near-)the same bright, not-yet-tonemapped sky pixel — accumulating
+      // 32 of those unclamped blew the whole screen out to white/grey ("walk
+      // into the ray and see nothing"). Capped so the rays stay a glow, not
+      // a full-screen wash, at any viewing angle.
+      vec3 rays = min(accumulated * exposure * intensity, vec3(0.8));
+      gl_FragColor = vec4(base.rgb + rays, base.a);
     }`,
 }
