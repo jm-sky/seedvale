@@ -11,6 +11,7 @@ import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { VillageSize } from './families'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
+import { disposeObject3D } from '../assets/loadGltf'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
 import { applyTreeStageVisual } from '../world/treeVisuals'
@@ -309,6 +310,20 @@ export async function createSettlement(
       // modified branch of `isPlayerNoticed()` is structurally unreachable
       // for these kinds regardless of the value passed.
       for (const animal of livestock) animal.update(dt, livestock, observerPos, dayFactor, 0, litFires, villages)
+      if (livestock.some((a) => a.readyToRemove())) {
+        const kept: AnimalAgent[] = []
+        for (const animal of livestock) {
+          if (animal.readyToRemove()) {
+            animal.dispose()
+            animal.mesh.removeFromParent()
+            disposeObject3D(animal.mesh)
+          } else {
+            kept.push(animal)
+          }
+        }
+        livestock.length = 0
+        livestock.push(...kept)
+      }
       fire?.update(dt)
       for (const sp of signposts) {
         sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))

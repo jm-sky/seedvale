@@ -21,6 +21,8 @@ export type WorldItemRef = {
 export type Interactable =
   | { kind: 'npc', position: { x: number, z: number }, promptLabel: string, npc: NpcAgent, settlement: Settlement }
   | { kind: 'animal', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent }
+  /** Dead animal corpse — shovel bury prompt (only offered while shovel is held). */
+  | { kind: 'corpse', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent }
   | { kind: 'well', position: { x: number, z: number }, promptLabel: string }
   | {
     kind: 'tree'

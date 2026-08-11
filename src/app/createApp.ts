@@ -12,6 +12,7 @@ import {
   applyStoredTerrain,
   createWorldConfig,
 } from '../config/worldConfig'
+import { type AnimalAgent, BURY_DURATION_SEC } from '../fauna/AnimalAgent'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
@@ -453,6 +454,17 @@ export async function createApp(
     })
   }
 
+  const startBuryCorpse = (animal: AnimalAgent): void => {
+    if (heldTool.held() !== 'shovel' || busy.isActive() || timeSkip.isActive()) return
+    if (!animal.isDead() || animal.readyToRemove()) return
+    playActionDig(worldAudio.playOnce)
+    busy.start(BURY_DURATION_SEC, 'Zakopywanie…', () => {
+      if (!animal.isDead() || animal.readyToRemove()) return
+      animal.bury()
+      toast.show('Zwłoki zakopane.')
+    })
+  }
+
   const startTreeChop = (treeId: string, x: number, z: number): void => {
     if (heldTool.held() !== 'axe' || busy.isActive() || timeSkip.isActive()) return
     // Pre-check choppability without mutating — advanceHarvest is the authority.
@@ -696,6 +708,7 @@ export async function createApp(
       else startDigAt(x, z)
     },
     startTreeChop,
+    startBuryCorpse,
     onInventoryChanged: () => {
       heldTool.syncWithInventory()
       syncHeldHud()

@@ -57,6 +57,7 @@ export function buildInteractables(
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = heldTool === 'axe'
+  const shovelHeld = heldTool === 'shovel'
 
   for (const pf of placedFires.list()) {
     list.push({
@@ -81,7 +82,17 @@ export function buildInteractables(
     }
 
     for (const animal of settlement.livestock) {
-      if (animal.isDead()) continue
+      if (animal.isDead()) {
+        if (shovelHeld && !animal.readyToRemove()) {
+          list.push({
+            kind: 'corpse',
+            position: animal.mesh.position,
+            promptLabel: `Zakop zwłoki: ${ANIMAL_LABELS[animal.def.kind]}`,
+            animal,
+          })
+        }
+        continue
+      }
       list.push({
         kind: 'animal',
         position: animal.mesh.position,
@@ -131,7 +142,17 @@ export function buildInteractables(
   }
 
   for (const animal of fauna.getAgents()) {
-    if (animal.isDead()) continue
+    if (animal.isDead()) {
+      if (shovelHeld && !animal.readyToRemove()) {
+        list.push({
+          kind: 'corpse',
+          position: animal.mesh.position,
+          promptLabel: `Zakop zwłoki: ${ANIMAL_LABELS[animal.def.kind]}`,
+          animal,
+        })
+      }
+      continue
+    }
     list.push({
       kind: 'animal',
       position: animal.mesh.position,

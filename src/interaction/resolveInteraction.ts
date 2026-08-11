@@ -38,7 +38,7 @@ function capitalize(text: string): string {
  *  the same `Inventory`-access reason as `item`/`campfire`) to the right
  *  `QuestManager` call, falling back to flavor text when no active quest cares. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

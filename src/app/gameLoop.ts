@@ -138,6 +138,8 @@ export type GameLoopDeps = {
   startGroundWork: (mode: 'dig' | 'level', x: number, z: number) => void
   /** Start the axe chop channel for a gaze-selected tree (plan 057). */
   startTreeChop: (treeId: string, x: number, z: number) => void
+  /** Shovel-bury a dead animal corpse (busy channel). */
+  startBuryCorpse: (animal: AnimalAgent) => void
   onInventoryChanged: () => void
 }
 
@@ -173,7 +175,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, inventory, heldTool, toast, hud,
     questManager, ambientAudio, worldAudio, playerTorch, minimap, openQuestLog, openInventory,
-    startGroundWork, startTreeChop, onInventoryChanged,
+    startGroundWork, startTreeChop, startBuryCorpse, onInventoryChanged,
   } = deps
 
   const clock = new Clock()
@@ -312,7 +314,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const gazeCandidates: { position: { x: number, z: number }, agent: Highlightable }[] = []
       for (const item of interactables) {
         if (item.kind === 'npc') gazeCandidates.push({ position: item.position, agent: item.npc })
-        else if (item.kind === 'animal') gazeCandidates.push({ position: item.position, agent: item.animal })
+        else if (item.kind === 'animal' || item.kind === 'corpse') {
+          gazeCandidates.push({ position: item.position, agent: item.animal })
+        }
       }
       const gazed = pickInGaze(
         gazeCandidates,
@@ -381,6 +385,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             }
             npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
           }
+        } else if (target.kind === 'corpse') {
+          startBuryCorpse(target.animal)
         } else if (target.kind === 'npc') {
           // Buttons need a visible cursor — same pointer-lock release the
           // pause menu already does on open (createPauseMenu's onPause).

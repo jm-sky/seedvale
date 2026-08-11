@@ -37,7 +37,9 @@ const CONTACT_RANGE = 0.8
  *  melt prey HP in a single frame. */
 const ATTACK_COOLDOWN = 0.6
 /** Seconds a corpse stays in the scene (frozen pose) before it's disposed. */
-const CORPSE_LINGER_SECONDS = 8
+const CORPSE_LINGER_SECONDS = 60
+/** Busy-channel duration for shovel-burying a corpse. */
+export const BURY_DURATION_SEC = 1.5
 /** Prey wander speed at night vs. day (half speed — cautious/less active). */
 const NIGHT_PREY_WALK_MULT = 0.5
 /** Prey flee/sprint speed at night vs. day — smaller penalty than wander,
@@ -517,6 +519,12 @@ export class AnimalAgent {
     return this.health.dead && this.timeSinceDeath >= CORPSE_LINGER_SECONDS
   }
 
+  /** Player shovel-bury: mark corpse for disposal on the next fauna/settlement tick. */
+  bury(): void {
+    if (!this.health.dead) return
+    this.timeSinceDeath = CORPSE_LINGER_SECONDS
+  }
+
   takeDamage(damage: number, source?: 'player'): void {
     if (this.health.dead) return
     damageHealth(this.health, damage)
@@ -535,6 +543,9 @@ export class AnimalAgent {
     const side = Math.random() < 0.5 ? 1 : -1
     this.mesh.rotation.z = side * (Math.PI / 2)
     this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
+    this.lastHpRatio = 0
+    this.hpFillEl.style.width = '0%'
+    this.labelBarsEl.style.display = 'none'
   }
 
   update(
