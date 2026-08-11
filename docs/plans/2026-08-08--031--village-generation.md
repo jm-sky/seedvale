@@ -1,6 +1,6 @@
 # Plan: Generowanie wiosek (rozmiar → rodziny → domy → obszary terenu)
 
-**Status:** `verification needed` — zaimplementowane zgodnie z opisem poniżej (`src/settlement/families.ts`, `src/settlement/villageClearing.ts`, rozszerzenia `settlementGenerator.ts`/`createSettlement.ts`/`props.ts`/`characters.ts`/`NpcAgent.ts`/`chunkHeightmap.ts`/`roadNetwork.ts`/`chunkManager.ts`/`worldConfig.ts`), `npx tsc --noEmit`/`npm run lint`/`npm run build`/`npm run test` czyste (w tym nowe testy jednostkowe `src/settlement/families.test.ts`) — **brak jeszcze wizualnej weryfikacji w przeglądarce**, patrz „Do przetestowania" niżej
+**Status:** `done` — zaimplementowane zgodnie z opisem poniżej (`src/settlement/families.ts`, `src/settlement/villageClearing.ts`, rozszerzenia `settlementGenerator.ts`/`createSettlement.ts`/`props.ts`/`characters.ts`/`NpcAgent.ts`/`chunkHeightmap.ts`/`roadNetwork.ts`/`chunkManager.ts`/`worldConfig.ts`), `npx tsc --noEmit`/`npm run lint`/`npm run build`/`npm run test` czyste (w tym nowe testy jednostkowe `src/settlement/families.test.ts`) i zweryfikowane w przeglądarce.
 **Created:** 2026-08-08
 **Scope:** rozszerza [multi-settlements.md](./2026-08-07--025--multi-settlements.md) (siatka osad, streaming) i [npc-character-depth.md](./2026-08-07--022--npc-character-depth.md) (`CharacterDef`, Big Five, `HealthState`); reużywa wzorzec spłaszczania terenu z [roads-and-paths.md](./2026-08-07--026--roads-and-paths.md)
 

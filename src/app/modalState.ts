@@ -19,6 +19,7 @@ export type ActiveModal =
   | 'inventory'
   | 'quickActions'
   | 'timeSkip'
+  | 'busy'
   | 'worldConfig'
   | 'notes'
   | null
@@ -31,6 +32,7 @@ export function activeModal(
   inventoryScreen: InventoryScreen,
   quickActions: QuickActions,
   timeSkip: TimeSkip,
+  busy: { isActive: () => boolean },
 ): ActiveModal {
   if (pauseMenu.isPaused()) return 'menu'
   if (vueUi.isNpcDialogueMenuOpen()) return 'npcDialogueMenu'
@@ -40,6 +42,7 @@ export function activeModal(
   if (inventoryScreen.isOpen()) return 'inventory'
   if (quickActions.isOpen()) return 'quickActions'
   if (timeSkip.isActive()) return 'timeSkip'
+  if (busy.isActive()) return 'busy'
   if (vueUi.isWorldConfigScreenOpen()) return 'worldConfig'
   if (vueUi.isNotesOpen()) return 'notes'
   return null

@@ -2,6 +2,8 @@
 
 > Szkic od ChatGPT
 
+**Status:** `planned` 📋
+
 ## 1. Pory roku
 
 Świat ma 4 pory roku:

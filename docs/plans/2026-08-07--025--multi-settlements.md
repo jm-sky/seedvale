@@ -1,6 +1,6 @@
 # Plan: Wielorakie wioski (multi-settlement)
 
-**Status:** `verification needed`
+**Status:** `done`
 **Created:** 2026-08-07
 **Implemented:** 2026-08-07 (v1 — patrz "Stan implementacji" poniżej)
 **Scope:** v0.4+ (questy między wioskami), nadbudowa nad [quests-v1.md](./2026-08-07--015--quests-v1.md) (system questów), rozszerzenie [world-streaming-persistence.md](./2026-08-07--007--world-streaming-persistence.md) (chunk streaming)

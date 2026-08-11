@@ -6,13 +6,14 @@ import type { createWorldAudio } from '../audio/createWorldAudio'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { TouchControls } from '../input/createTouchControls'
 import type { createKeyboard } from '../input/Keyboard'
-import type { createMouseLook } from '../input/MouseLook'
+import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
 import type { PostProcessing } from '../render/createPostProcessing'
 import type { VueUi } from '../ui-vue/mount'
+import type { BusyOverlay } from '../ui/createBusyOverlay'
 import type { Hud } from '../ui/createHud'
 import type { InventoryScreen } from '../ui/createInventoryScreen'
 import type { Minimap, MinimapSettlement } from '../ui/createMinimap'
@@ -26,12 +27,13 @@ import type { WorldLights } from '../world/createLights'
 import type { WorldSky } from '../world/createSky'
 import type { DayNightState } from '../world/dayNight'
 import type { TimeSkip } from '../world/timeSkip'
+import type { BusyAction } from './busyAction'
 import type { WorldBundle } from './worldBundle'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
+import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
-import { DIG_RADIUS } from '../terrain/dig'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import {
   buildDigTarget,
@@ -113,7 +115,10 @@ export type GameLoopDeps = {
   quickActions: QuickActions
   timeSkip: TimeSkip
   timeSkipOverlay: TimeSkipOverlay
+  busy: BusyAction
+  busyOverlay: BusyOverlay
   inventory: Inventory
+  heldTool: HeldTool
   toast: Toast
   hud: Hud
   questManager: QuestManager
@@ -123,6 +128,8 @@ export type GameLoopDeps = {
   minimap: Minimap
   openQuestLog: () => void
   openInventory: () => void
+  startGroundWork: (mode: 'dig' | 'level', x: number, z: number) => void
+  onInventoryChanged: () => void
 }
 
 export type GameLoop = {
@@ -155,8 +162,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, inventory, toast, hud, questManager, ambientAudio,
-    worldAudio, playerTorch, minimap, openQuestLog, openInventory,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, inventory, heldTool, toast, hud,
+    questManager, ambientAudio, worldAudio, playerTorch, minimap, openQuestLog, openInventory,
+    startGroundWork, onInventoryChanged,
   } = deps
 
   const clock = new Clock()
@@ -199,8 +207,19 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       keyboard.state.sprint = false
     }
 
-    const modal = activeModal(pauseMenu, npcDialog, questLog, vueUi, inventoryScreen, quickActions, timeSkip)
-    touchControls?.setInputEnabled(modal === null && !timeSkip.isActive())
+    const busyTick = busy.tick(dt)
+    if (busyTick) {
+      busyOverlay.show(busyTick.label)
+      if (busyTick.justFinished) busyOverlay.hide()
+      keyboard.state.forward = false
+      keyboard.state.backward = false
+      keyboard.state.left = false
+      keyboard.state.right = false
+      keyboard.state.sprint = false
+    }
+
+    const modal = activeModal(pauseMenu, npcDialog, questLog, vueUi, inventoryScreen, quickActions, timeSkip, busy)
+    touchControls?.setInputEnabled(modal === null && !timeSkip.isActive() && !busy.isActive())
 
     if (modal !== null) {
       // Every modal drops stale presses so they can't fire right after it
@@ -210,19 +229,20 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const questLogConsumed = keyboard.consumeQuestLog()
       keyboard.consumeDrop()
       const inventoryConsumed = keyboard.consumeInventory()
+      const quickActionsConsumed = keyboard.consumeQuickActions()
       setHighlight(null)
 
       switch (modal) {
-        case 'inventory':
-          if (inventoryConsumed) inventoryScreen.close()
-          break
+        case 'busy':
         case 'menu':
         case 'notes':
         case 'npcDialogueMenu':
-        case 'quickActions':
         case 'timeSkip':
         case 'villagers':
         case 'worldConfig':
+          break
+        case 'inventory':
+          if (inventoryConsumed) inventoryScreen.close()
           break
         case 'npcDialog':
           npcDialog.setPrompt(null)
@@ -233,6 +253,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           break
         case 'questLog':
           if (questLogConsumed) questLog.close()
+          break
+        case 'quickActions':
+          if (quickActionsConsumed) quickActions.close()
           break
       }
     } else {
@@ -245,17 +268,21 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.placedFires,
         player.mesh.position,
       )
-      // The shovel's dig target is a fallback, not a competing candidate — only
-      // synthesized when nothing else is being gazed at, so it can never
-      // outcompete a real interactable the player is glancing near (see
-      // `buildDigTarget`'s doc comment).
+      // The shovel's dig/level target is a fallback, not a competing candidate —
+      // only synthesized when nothing else is being gazed at, and only while
+      // the shovel is held (quick actions cover ownership without holding).
       const target = pickInGaze(
         interactables,
         player.mesh.position,
         mouseLook.state.yaw,
         INTERACT_RANGE,
         INTERACT_MIN_DOT,
-      ) ?? buildDigTarget(player.mesh.position, mouseLook.state.yaw, inventory.has('shovel', 1), bundle.chunkManager)
+      ) ?? buildDigTarget(
+        player.mesh.position,
+        mouseLook.state.yaw,
+        heldTool.held() === 'shovel',
+        bundle.chunkManager,
+      )
       npcDialog.setPrompt(target ? target.promptLabel : null)
 
       const gazeCandidates: { position: { x: number, z: number }, agent: Highlightable }[] = []
@@ -283,6 +310,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               playInventoryPickUp(worldAudio.playOnce)
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
               touchControls?.setDropAvailable(!inventory.isEmpty())
+              onInventoryChanged()
             }
           }
         } else if (target.kind === 'campfire') {
@@ -294,6 +322,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             else target.fire.light()
             hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
             touchControls?.setDropAvailable(!inventory.isEmpty())
+            onInventoryChanged()
             toast.show(wasLit ? 'Dołożono gałąź do ogniska.' : 'Ognisko zapłonęło.')
           } else {
             toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
@@ -306,32 +335,17 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             playInventoryPickUp(worldAudio.playOnce)
             hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
             touchControls?.setDropAvailable(!inventory.isEmpty())
+            onInventoryChanged()
             toast.show('+1 Gałąź', 'pickup')
           }
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
         } else if (target.kind === 'npc') {
           // Buttons need a visible cursor — same pointer-lock release the
           // pause menu already does on open (createPauseMenu's onPause).
-          if (document.pointerLockElement === renderer.domElement) document.exitPointerLock()
+          exitGamePointerLock(renderer.domElement)
           vueUi.openNpcDialogueMenu(target.npc, target.settlement, questManager, dayNight.timeOfDay)
         } else if (target.kind === 'dig') {
-          // `target.profile` was already resolved when this target was
-          // synthesized this same frame (`buildDigTarget`) — no need to
-          // re-classify the surface here.
-          bundle.chunkManager.modifyTerrain(target.position.x, target.position.z, DIG_RADIUS, target.profile.depth)
-          if (Math.random() < target.profile.stoneChance) {
-            if (inventory.canAdd('stone')) {
-              inventory.add('stone')
-              playInventoryPickUp(worldAudio.playOnce)
-              hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-              touchControls?.setDropAvailable(!inventory.isEmpty())
-              toast.show('+1 Kamień', 'pickup')
-            } else {
-              toast.show('Ekwipunek jest za ciężki na kamień.', 'error')
-            }
-          } else {
-            toast.show('Wykopano dołek.')
-          }
+          startGroundWork(target.mode, target.position.x, target.position.z)
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
@@ -355,8 +369,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         }
         if (dropOffset > 0) {
           playInventoryDrop(worldAudio.playOnce)
+          heldTool.syncWithInventory()
           hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
           touchControls?.setDropAvailable(!inventory.isEmpty())
+          onInventoryChanged()
         }
       }
     }

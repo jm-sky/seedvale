@@ -1,6 +1,6 @@
 # Plan: Obszary biomów (pustynia, bagno, las) jako uzupełnienie gór/oceanów
 
-**Status:** `verification needed` — zaimplementowane w working tree zgodnie z opisem poniżej, brak jeszcze wizualnej weryfikacji w przeglądarce
+**Status:** `done` — zaimplementowane i zweryfikowane.
 **Created:** 2026-08-07
 **Priority:** średni — rozszerza istniejący system dużych regionów ([world-streaming-persistence](./2026-08-07--007--world-streaming-persistence.md)), naturalne uzupełnienie [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) (roślinność). Nie blokuje ani nie jest blokowany przez inne kolejkowane plany — czysto terenowo/wizualny dodatek.
 

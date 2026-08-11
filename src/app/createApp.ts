@@ -14,9 +14,10 @@ import {
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
-import { createMouseLook } from '../input/MouseLook'
+import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
+import { createHeldTool } from '../items/HeldTool'
 import { Inventory } from '../items/Inventory'
-import { type ItemKind } from '../items/items'
+import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
 import { createPlayerTorch } from '../player/PlayerTorch'
@@ -26,7 +27,10 @@ import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
+import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt } from '../terrain/dig'
+import { applyDigAt, applyLevelAt } from '../terrain/digAction'
 import { mountVueUi } from '../ui-vue/mount'
+import { createBusyOverlay } from '../ui/createBusyOverlay'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
 import { createInventoryScreen } from '../ui/createInventoryScreen'
@@ -43,7 +47,9 @@ import { createSky } from '../world/createSky'
 import { createDayNightState } from '../world/dayNight'
 import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
 import { createTimeSkip } from '../world/timeSkip'
+import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
+import { DIG_REACH } from './interactables'
 import { getUserActions } from './userActions'
 import { createWorldBundle, disposeWorldBundle, rebuildWorldBundle } from './worldBundle'
 
@@ -173,6 +179,10 @@ export async function createApp(
 
   const inventory = new Inventory(initialSave?.inventory)
   grantStartingLoadout(inventory)
+  const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
+  const syncShovelQuickActions = (): void => {
+    vueUi.setQuickActionsHasShovel(inventory.has('shovel', 1))
+  }
 
   const keyboard = createKeyboard()
   const mouseLook = createMouseLook(renderer.domElement)
@@ -200,6 +210,12 @@ export async function createApp(
   hud.setSeed(config.seed)
   hud.setTime(dayNight.timeOfDay)
   const toast = createToast(container)
+
+  const syncHeldHud = (): void => {
+    const held = heldTool.held()
+    hud.setHeldTool(held ? ITEM_DEFS[held].label : '')
+  }
+  syncHeldHud()
 
   const minimap = createMinimap(container)
   const questManager = new QuestManager(
@@ -232,11 +248,14 @@ export async function createApp(
       if (resetCollectedItems) {
         inventory.clear()
         grantStartingLoadout(inventory)
+        heldTool.unequip()
         questManager.reset()
         playerTorch.extinguish()
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        syncHeldHud()
         hud.setExp(questManager.getExp())
         touchControls?.setDropAvailable(!inventory.isEmpty())
+        syncShovelQuickActions()
       }
       // New chunkManager/ocean instances start with default (untinted) water —
       // resync immediately rather than waiting for the tick loop's throttled
@@ -253,7 +272,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 6,
+    version: 7,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -277,6 +296,7 @@ export async function createApp(
     droppedItems: bundle.droppedItems.nodes().map((item) => ({ ...item })),
     placedFires: bundle.placedFires.nodes().map((fire) => ({ ...fire })),
     timeOfDay: dayNight.timeOfDay,
+    heldTool: heldTool.held(),
   })
 
   const saveNow = (): void => {
@@ -327,6 +347,7 @@ export async function createApp(
     const count = inventory.count(kind)
     if (count <= 0) return
     inventory.remove(kind, count)
+    heldTool.syncWithInventory()
     for (let i = 0; i < count; i++) {
       const angle = i * ((Math.PI * 2) / count)
       bundle.droppedItems.drop(
@@ -337,18 +358,87 @@ export async function createApp(
     }
     playInventoryDrop(worldAudio.playOnce)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    syncHeldHud()
     touchControls?.setDropAvailable(!inventory.isEmpty())
-    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight)
+    syncShovelQuickActions()
+    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
   }
 
-  const inventoryScreen = createInventoryScreen(container, { onDrop: dropItemStack })
+  const equipTool = (kind: ItemKind): void => {
+    if (!heldTool.equip(kind)) return
+    syncHeldHud()
+    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
+  }
+  const unequipTool = (): void => {
+    heldTool.unequip()
+    syncHeldHud()
+    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
+  }
+
+  const inventoryScreen = createInventoryScreen(container, {
+    onDrop: dropItemStack,
+    onEquip: equipTool,
+    onUnequip: unequipTool,
+  })
 
   const { buildSimpleFire, buildFirePit, lightTorch } = getUserActions(inventory, bundle, playerTorch, player, hud, touchControls)
 
   const timeSkip = createTimeSkip(dayNight)
   const timeSkipOverlay = createTimeSkipOverlay(container)
+  const busy = createBusyAction()
+  const busyOverlay = createBusyOverlay(container)
 
+  const digFeedback = () => ({
+    inventory,
+    droppedItems: bundle.droppedItems,
+    toast,
+    hud,
+    touchControls,
+    playOnce: worldAudio.playOnce,
+  })
+
+  const aimGroundPoint = (): { x: number, z: number } => ({
+    x: player.mesh.position.x - Math.sin(mouseLook.state.yaw) * DIG_REACH,
+    z: player.mesh.position.z - Math.cos(mouseLook.state.yaw) * DIG_REACH,
+  })
+
+  const startDigAt = (x: number, z: number): void => {
+    if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive()) return
+    const profile = getDigProfileAt(x, z, bundle.chunkManager)
+    if (!profile) {
+      toast.show('Tu nie da się kopać.', 'error')
+      return
+    }
+    busy.start(DIG_DURATION_SEC, 'Kopanie…', () => {
+      applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
+      syncShovelQuickActions()
+    })
+  }
+
+  const startLevelAt = (x: number, z: number): void => {
+    if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive()) return
+    if (!canLevelAt(x, z, bundle.chunkManager)) {
+      toast.show('Nie ma tu czego wyrównać.', 'error')
+      return
+    }
+    busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
+      applyLevelAt(bundle.chunkManager, x, z, toast)
+    })
+  }
+
+  /** When quick actions opened under pointer lock, restore lock on close so
+   *  camera look resumes without requiring an extra canvas click. */
+  let restorePointerLockAfterQuickActions = false
   const quickActions = createQuickActions(container, {
+    hasShovel: inventory.has('shovel', 1),
+    onOpen: () => {
+      restorePointerLockAfterQuickActions = exitGamePointerLock(renderer.domElement)
+    },
+    onClose: () => {
+      if (!restorePointerLockAfterQuickActions) return
+      restorePointerLockAfterQuickActions = false
+      requestGamePointerLock(renderer.domElement)
+    },
     onBuildSimpleFire: buildSimpleFire,
     onBuildFirePit: buildFirePit,
     onLightTorch: lightTorch,
@@ -370,7 +460,27 @@ export async function createApp(
       })
       return 'ok'
     },
+    onDig: () => {
+      const p = aimGroundPoint()
+      startDigAt(p.x, p.z)
+    },
+    onLevel: () => {
+      const p = aimGroundPoint()
+      startLevelAt(p.x, p.z)
+    },
   })
+  syncShovelQuickActions()
+
+  // Close on Q inside the keydown gesture so onClose can re-request pointer
+  // lock. gameLoop only consumes the edge on the next frame, which is too late
+  // for requestPointerLock's transient user activation.
+  const onQuickActionsKeyDown = (event: KeyboardEvent) => {
+    if (event.code !== 'KeyQ' || event.repeat) return
+    if (!quickActions.isOpen()) return
+    quickActions.close()
+    keyboard.consumeQuickActions()
+  }
+  window.addEventListener('keydown', onQuickActionsKeyDown)
 
   const openQuestLog = () => {
     questLog.open()
@@ -387,15 +497,14 @@ export async function createApp(
     )
   }
   const openInventory = () => {
+    exitGamePointerLock(renderer.domElement)
     inventoryScreen.open()
-    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight)
+    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
   }
 
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
     onPause: () => {
-      if (document.pointerLockElement === renderer.domElement) {
-        document.exitPointerLock()
-      }
+      exitGamePointerLock(renderer.domElement)
     },
     onResume: () => {},
     onQuestLog: openQuestLog,
@@ -506,8 +615,17 @@ export async function createApp(
   const gameLoop = createGameLoop({
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, inventory, toast, hud, questManager, ambientAudio,
-    worldAudio, playerTorch, minimap, openQuestLog, openInventory,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, inventory, heldTool, toast, hud,
+    questManager, ambientAudio, worldAudio, playerTorch, minimap, openQuestLog, openInventory,
+    startGroundWork: (mode, x, z) => {
+      if (mode === 'level') startLevelAt(x, z)
+      else startDigAt(x, z)
+    },
+    onInventoryChanged: () => {
+      heldTool.syncWithInventory()
+      syncHeldHud()
+      syncShovelQuickActions()
+    },
   })
   gameLoop.resyncDayNight()
 
@@ -555,11 +673,15 @@ export async function createApp(
     window.clearInterval(autoSaveInterval)
     timeSkip.cancel()
     timeSkipOverlay.dispose()
+    busy.cancel()
+    busyOverlay.dispose()
     gui.dispose()
     pauseMenu.dispose()
     npcDialog.dispose()
     questLog.dispose()
     inventoryScreen.dispose()
+    restorePointerLockAfterQuickActions = false
+    window.removeEventListener('keydown', onQuickActionsKeyDown)
     quickActions.dispose()
     hud.dispose()
     toast.dispose()

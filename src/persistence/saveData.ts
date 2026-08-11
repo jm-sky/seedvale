@@ -1,7 +1,7 @@
 import type { WorldConfig } from '../config/worldConfig'
-import type { ItemKind } from '../items/items'
 import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
+import { ITEM_DEFS, type ItemKind } from '../items/items'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
  *  here so this module doesn't reach into config internals. */
@@ -91,11 +91,22 @@ export type SaveDataV5 = {
   timeOfDay: number
 }
 
-/** Canonical save shape used everywhere outside this module and `saveDb.ts` —
- *  always v6. `loadSaveData` migrates a stored v1/v2/v3/v4/v5 save up to this
- *  on read. */
-export type SaveData = {
+export type SaveDataV6 = {
   version: 6
+  config: SaveConfig
+  player: SavePlayer
+  savedAt: number
+  quests: SaveQuests
+  inventory: Partial<Record<ItemKind, number>>
+  collectedItemIds: string[]
+  droppedItems: SaveDroppedItem[]
+  placedFires: SavePlacedFire[]
+  timeOfDay: number
+}
+
+/** Canonical save shape — always v7. `loadSaveData` migrates older saves up. */
+export type SaveData = {
+  version: 7
   config: SaveConfig
   player: SavePlayer
   savedAt: number
@@ -110,6 +121,8 @@ export type SaveData = {
   /** `world/dayNight.ts`'s `DayNightState.timeOfDay` — otherwise the clock
    *  resets to the default dawn-ish start on every Continue. */
   timeOfDay: number
+  /** Single held-tool slot (`items/HeldTool.ts`). Null when nothing is in hand. */
+  heldTool: ItemKind | null
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -131,6 +144,12 @@ function isSavePlayer(value: unknown): value is SavePlayer {
     typeof player.yaw === 'number' &&
     typeof player.pitch === 'number'
   )
+}
+
+function isHeldToolField(value: unknown): value is ItemKind | null {
+  if (value === null) return true
+  if (typeof value !== 'string') return false
+  return value in ITEM_DEFS && ITEM_DEFS[value as ItemKind].category === 'tool'
 }
 
 export function isSaveDataV1(value: unknown): value is SaveDataV1 {
@@ -200,7 +219,7 @@ export function isSaveDataV5(value: unknown): value is SaveDataV5 {
   return true
 }
 
-export function isSaveDataV6(value: unknown): value is SaveData {
+export function isSaveDataV6(value: unknown): value is SaveDataV6 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 6) return false
@@ -216,6 +235,23 @@ export function isSaveDataV6(value: unknown): value is SaveData {
   return true
 }
 
+export function isSaveDataV7(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 7) return false
+  if (!isSaveConfig(v.config)) return false
+  if (!isSavePlayer(v.player)) return false
+  if (typeof v.savedAt !== 'number') return false
+  if (!v.quests || typeof v.quests !== 'object') return false
+  if (!v.inventory || typeof v.inventory !== 'object') return false
+  if (!Array.isArray(v.collectedItemIds)) return false
+  if (!Array.isArray(v.droppedItems)) return false
+  if (!Array.isArray(v.placedFires)) return false
+  if (typeof v.timeOfDay !== 'number') return false
+  if (!isHeldToolField(v.heldTool)) return false
+  return true
+}
+
 /** Default `timeOfDay` for saves that predate persisting the clock (v1-v4) —
  *  mirrors `dayNight.ts::createDayNightState`'s own default. */
 const DEFAULT_TIME_OF_DAY = 0.32
@@ -227,15 +263,33 @@ function migratePlacedFires(placedFires: readonly LegacySavePlacedFire[]): SaveP
   return placedFires.map((pf) => ({ ...pf, kind: 'pit' as const }))
 }
 
-/** Accepts a stored v1/v2/v3/v4/v5/v6 save and always returns the canonical
- *  v6 shape, migrating older versions with empty state for whatever fields
- *  didn't exist yet. Null if `value` matches none of them (missing/corrupted
- *  save). */
+function toV7(fields: Omit<SaveData, 'version' | 'heldTool'> & { heldTool?: ItemKind | null }): SaveData {
+  return {
+    version: 7,
+    ...fields,
+    heldTool: fields.heldTool ?? null,
+  }
+}
+
+/** Accepts a stored v1–v7 save and always returns the canonical v7 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
-  if (isSaveDataV6(value)) return value
+  if (isSaveDataV7(value)) return value
+  if (isSaveDataV6(value)) {
+    return toV7({
+      config: value.config,
+      player: value.player,
+      savedAt: value.savedAt,
+      quests: value.quests,
+      inventory: value.inventory,
+      collectedItemIds: value.collectedItemIds,
+      droppedItems: value.droppedItems,
+      placedFires: value.placedFires,
+      timeOfDay: value.timeOfDay,
+      heldTool: null,
+    })
+  }
   if (isSaveDataV5(value)) {
-    return {
-      version: 6,
+    return toV7({
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -245,11 +299,11 @@ export function loadSaveData(value: unknown): SaveData | null {
       droppedItems: value.droppedItems,
       placedFires: migratePlacedFires(value.placedFires),
       timeOfDay: value.timeOfDay,
-    }
+      heldTool: null,
+    })
   }
   if (isSaveDataV4(value)) {
-    return {
-      version: 6,
+    return toV7({
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -259,11 +313,11 @@ export function loadSaveData(value: unknown): SaveData | null {
       droppedItems: value.droppedItems,
       placedFires: migratePlacedFires(value.placedFires),
       timeOfDay: DEFAULT_TIME_OF_DAY,
-    }
+      heldTool: null,
+    })
   }
   if (isSaveDataV3(value)) {
-    return {
-      version: 6,
+    return toV7({
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -273,11 +327,11 @@ export function loadSaveData(value: unknown): SaveData | null {
       droppedItems: value.droppedItems,
       placedFires: [],
       timeOfDay: DEFAULT_TIME_OF_DAY,
-    }
+      heldTool: null,
+    })
   }
   if (isSaveDataV2(value)) {
-    return {
-      version: 6,
+    return toV7({
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -287,11 +341,11 @@ export function loadSaveData(value: unknown): SaveData | null {
       droppedItems: [],
       placedFires: [],
       timeOfDay: DEFAULT_TIME_OF_DAY,
-    }
+      heldTool: null,
+    })
   }
   if (isSaveDataV1(value)) {
-    return {
-      version: 6,
+    return toV7({
       config: value.config,
       player: value.player,
       savedAt: value.savedAt,
@@ -301,7 +355,8 @@ export function loadSaveData(value: unknown): SaveData | null {
       droppedItems: [],
       placedFires: [],
       timeOfDay: DEFAULT_TIME_OF_DAY,
-    }
+      heldTool: null,
+    })
   }
   return null
 }

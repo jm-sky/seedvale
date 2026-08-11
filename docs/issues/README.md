@@ -34,3 +34,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
 **Next ID:** `015`
+
+
+## Bugs
+- "God Ray" potrafi zasłonić cały ekran i nic nie widać, szczególnie gdy patrzę zza pleców postaci z poziou ziemi. (2026-08-11)
+- Ocean ma artefakty wizualne. (2026-08-11)

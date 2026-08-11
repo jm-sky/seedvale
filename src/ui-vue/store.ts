@@ -13,7 +13,16 @@ type VillagerRefreshEntry = { npc: NpcAgent; settlementName: string; foodSourceT
 export const VILLAGERS_PAGE_SIZE = 10
 
 type NpcDialogueMenuState = { open: boolean; npc: NpcAgent | null; settlement: Settlement | null; timeOfDay: number; helpResult: QuestDialogOverride | null }
-type InventoryState = { open: boolean; counts: Partial<Record<ItemKind, number>>; totalWeight: number; maxWeight: number; onDrop: ((kind: ItemKind) => void) | null }
+type InventoryState = {
+  open: boolean
+  counts: Partial<Record<ItemKind, number>>
+  totalWeight: number
+  maxWeight: number
+  heldTool: ItemKind | null
+  onDrop: ((kind: ItemKind) => void) | null
+  onEquip: ((kind: ItemKind) => void) | null
+  onUnequip: (() => void) | null
+}
 type PauseMenuState = {
   open: boolean; seed: number; playerName: string
   onPause: (() => void) | null; onResume: (() => void) | null; onToggleGui: (() => void) | null
@@ -27,13 +36,19 @@ type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: n
 type FlavorDialogState = { open: boolean; prompt: string | null; name: string; line: string }
 type QuickActionsState = {
   open: boolean
+  hasShovel: boolean
   onBuildSimpleFire: (() => boolean) | null
   onBuildFirePit: (() => boolean) | null
   onLightTorch: (() => boolean) | null
   onWait: ((hours: number) => void) | null
   onRest: ((variant: RestVariant) => RestOutcome) | null
+  onDig: (() => void) | null
+  onLevel: (() => void) | null
+  onOpen: (() => void) | null
+  onClose: (() => void) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean }
+type BusyState = { visible: boolean; label: string }
 /** `config`/`dayNight` are the *same* mutable objects `createApp.ts` already
  *  holds (see plan 005 — "Nie duplikować stanu"), assigned once via
  *  `configureWorldConfigScreen`, not copied per-open. Vue's `reactive()`
@@ -59,7 +74,7 @@ type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName'
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
-  inventory: { open: false, counts: {}, totalWeight: 0, maxWeight: 0, onDrop: null } as InventoryState,
+  inventory: { open: false, counts: {}, totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onRefresh: null,
@@ -69,8 +84,13 @@ export const ui = reactive({
   } as PauseMenuState,
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
-  quickActions: { open: false, onBuildSimpleFire: null, onBuildFirePit: null, onLightTorch: null, onWait: null, onRest: null } as QuickActionsState,
+  quickActions: {
+    open: false, hasShovel: false,
+    onBuildSimpleFire: null, onBuildFirePit: null, onLightTorch: null,
+    onWait: null, onRest: null, onDig: null, onLevel: null, onOpen: null, onClose: null,
+  } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false } as TimeSkipState,
+  busy: { visible: false, label: '' } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
   openStack: [] as string[],
@@ -117,14 +137,55 @@ export function closeNpcDialogueMenu(): void { const state = ui.npcDialogueMenu;
 export function acceptNpcDialogueOffer(): void { const state = ui.npcDialogueMenu; if (!state.open || !state.helpResult?.offer) return; state.helpResult.offer.onAccept(); resetNpcDialogueMenu() }
 export function isNpcDialogueMenuOpen(): boolean { return ui.npcDialogueMenu.open }
 
-export function openInventory(counts: Partial<Record<ItemKind, number>>, totalWeight: number, maxWeight: number, onDrop: (kind: ItemKind) => void): void { ui.inventory.counts = { ...counts }; ui.inventory.totalWeight = totalWeight; ui.inventory.maxWeight = maxWeight; ui.inventory.onDrop = onDrop; ui.inventory.open = true }
-export function refreshInventory(counts: Partial<Record<ItemKind, number>>, totalWeight: number, maxWeight: number): void { ui.inventory.counts = { ...counts }; ui.inventory.totalWeight = totalWeight; ui.inventory.maxWeight = maxWeight }
-export function closeInventory(): void { ui.inventory.open = false; ui.inventory.onDrop = null }
+export function openInventory(
+  counts: Partial<Record<ItemKind, number>>,
+  totalWeight: number,
+  maxWeight: number,
+  heldTool: ItemKind | null,
+  onDrop: (kind: ItemKind) => void,
+  onEquip: (kind: ItemKind) => void,
+  onUnequip: () => void,
+): void {
+  ui.inventory.counts = { ...counts }
+  ui.inventory.totalWeight = totalWeight
+  ui.inventory.maxWeight = maxWeight
+  ui.inventory.heldTool = heldTool
+  ui.inventory.onDrop = onDrop
+  ui.inventory.onEquip = onEquip
+  ui.inventory.onUnequip = onUnequip
+  ui.inventory.open = true
+}
+export function refreshInventory(
+  counts: Partial<Record<ItemKind, number>>,
+  totalWeight: number,
+  maxWeight: number,
+  heldTool: ItemKind | null,
+): void {
+  ui.inventory.counts = { ...counts }
+  ui.inventory.totalWeight = totalWeight
+  ui.inventory.maxWeight = maxWeight
+  ui.inventory.heldTool = heldTool
+}
+export function closeInventory(): void {
+  ui.inventory.open = false
+  ui.inventory.onDrop = null
+  ui.inventory.onEquip = null
+  ui.inventory.onUnequip = null
+}
 export function isInventoryOpen(): boolean { return ui.inventory.open }
 
 export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 'open'>>): void { Object.assign(ui.quickActions, handlers) }
-export function openQuickActions(): void { ui.quickActions.open = true }
-export function closeQuickActions(): void { ui.quickActions.open = false }
+export function setQuickActionsHasShovel(hasShovel: boolean): void { ui.quickActions.hasShovel = hasShovel }
+export function openQuickActions(): void {
+  if (ui.quickActions.open) return
+  ui.quickActions.open = true
+  ui.quickActions.onOpen?.()
+}
+export function closeQuickActions(): void {
+  if (!ui.quickActions.open) return
+  ui.quickActions.open = false
+  ui.quickActions.onClose?.()
+}
 export function toggleQuickActions(): void { if (ui.quickActions.open) closeQuickActions(); else openQuickActions() }
 export function isQuickActionsOpen(): boolean { return ui.quickActions.open }
 
@@ -147,6 +208,15 @@ export function hideTimeSkip(): void {
   ui.timeSkip.fadeVisible = false
 }
 export function finishTimeSkipHide(): void { if (!ui.timeSkip.fadeVisible) ui.timeSkip.visible = false }
+
+export function showBusy(label: string): void {
+  ui.busy.visible = true
+  ui.busy.label = label
+}
+export function hideBusy(): void {
+  ui.busy.visible = false
+  ui.busy.label = ''
+}
 
 export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: { onTerrainChange: () => void; onDayNightChange: () => void }): void {
   ui.worldConfigScreen.config = config

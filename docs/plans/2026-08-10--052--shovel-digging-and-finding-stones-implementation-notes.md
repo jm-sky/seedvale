@@ -341,6 +341,8 @@ Followed section 13's suggested order closely. Deviations from these notes, and 
 
 **Verified technically:** `npx tsc --noEmit`, `npx vue-tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` (111/111) — all clean.
 
+**Post-ship UX feedback (2026-08-11):** addressed in plan `2026-08-11--061--dig-ux-held-tool-and-level.md` (larger hole, 2s channel + overlay, stone notice/ground drop, held-tool slot, Wyrównaj). See that plan for what shipped.
+
 **Not verified in browser** (per `CLAUDE.md` — requires the user on the running dev server). Concrete steps:
 
 1. Start a new game, walk to the settlement, find the shovel (procedural cylinder+cone mesh, near the stone/shell spawn points) and pick it up with `[E]`. Confirm `inventory.has('shovel', 1)` via the inventory screen (`[I]`).

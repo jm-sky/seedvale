@@ -1,6 +1,6 @@
 # Plan: NPC Daily Routine & Place System
 
-**Status:** `verification needed` — implementation is complete; browser verification remains. Traits-based schedule personalization is intentionally deferred.
+**Status:** `done` — implementation is complete and verified. Traits-based schedule personalization is intentionally deferred to [plan 060](./2026-08-11--060--npc-schedule-actions-and-trait-overlays.md).
 
 > **Implementation notes:** [2026-08-07--020--npc-2-daily-routine-and-place-implementation-notes.md](./2026-08-07--npc-2-daily-routine-and-place-implementation-notes.md)
 

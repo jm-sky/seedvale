@@ -8,7 +8,7 @@ import type { ChunkManager } from '../terrain/chunkManager'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
-import { getDigProfileAt } from '../terrain/dig'
+import { canLevelAt, getDigProfileAt } from '../terrain/dig'
 import type { Vector3 } from 'three'
 
 /** How close (world units) the player must be to an interactable before it's
@@ -149,25 +149,29 @@ export function buildInteractables(
   return list
 }
 
-/** The shovel's dig target, unlike everything in `buildInteractables()`'s
+/** The shovel's ground-work target, unlike everything in `buildInteractables()`'s
  *  list, isn't a fixed world object competing for gaze priority — it's
  *  synthesized directly ahead of the player at a fixed reach. `gameLoop.ts`
  *  only asks for one when `pickInGaze` over the real candidates found
  *  nothing, so it's a fallback and can never outcompete a real target the
- *  player is glancing near. `null` when the player has no shovel or the
- *  aimed ground isn't diggable (`getDigProfileAt`). */
+ *  player is glancing near. Requires the shovel to be **held** (not merely
+ *  owned). Prefers "Wyrównaj" when the aim point is depressed vs procedural
+ *  base; otherwise offers dig when the surface is diggable. */
 export function buildDigTarget(
   playerPos: { x: number, z: number },
   playerYaw: number,
-  hasShovel: boolean,
+  shovelHeld: boolean,
   chunkManager: ChunkManager,
 ): Interactable | null {
-  if (!hasShovel) return null
+  if (!shovelHeld) return null
   const x = playerPos.x - Math.sin(playerYaw) * DIG_REACH
   const z = playerPos.z - Math.cos(playerYaw) * DIG_REACH
+  if (canLevelAt(x, z, chunkManager)) {
+    return { kind: 'dig', position: { x, z }, promptLabel: 'Wyrównaj', mode: 'level', profile: null }
+  }
   const profile = getDigProfileAt(x, z, chunkManager)
   if (!profile) return null
-  return { kind: 'dig', position: { x, z }, promptLabel: 'Wykop dołek', profile }
+  return { kind: 'dig', position: { x, z }, promptLabel: 'Wykop dołek', mode: 'dig', profile }
 }
 
 /** Routes a picked-up `WorldItemRef` to whichever registry it came from —

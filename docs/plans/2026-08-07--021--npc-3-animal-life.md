@@ -1,6 +1,6 @@
 # Plan: Animal Life Simulation
 
-**Status:** `verification needed` — v1 (needs → wander bias, sekcja „Projekt techniczny v1” niżej) zaimplementowane 2026-08-09, zielone na `tsc`/`lint`/`build`/`test`; brak jeszcze wizualnej weryfikacji w przeglądarce (patrz „Do przetestowania” na końcu pliku).
+**Status:** `done` — v1 (needs → wander bias, sekcja „Projekt techniczny v1” niżej) zaimplementowane 2026-08-09 i zweryfikowane.
 **Scope:** [src/fauna/AnimalAgent.ts](../../src/fauna/AnimalAgent.ts) (rozszerzenie, nie nowy plik na FSM), współdzieli `HealthState`-owy wzorzec fatigue/rest z [npc-character-depth.md](./2026-08-07--022--npc-character-depth.md) (`src/shared/HealthState.ts`) tylko jako inspirację API-kształtu — `AnimalLifeState` to osobny, nowy typ (hunger/thirst/energy to nie HP).
 
 > Draft from ChatGPT without repository files access. Review before implementation!

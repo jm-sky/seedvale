@@ -2,7 +2,7 @@
 
 **Purpose:** factual snapshot of the implemented codebase. This document describes what exists now, not the desired future state.
 
-**Last verified:** 2026-08-10
+**Last verified:** 2026-08-11
 
 ## Read this first
 
@@ -80,7 +80,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Wait/rest time skip exists.
 - Inventory UI is a Vue screen (`src/ui-vue/screens/InventoryScreen.vue`); `src/ui/createInventoryScreen.ts` is a facade — see "UI migration" below.
 - Inventory pick-up / drop SFX exist (`audio/inventorySounds.ts` via `worldAudio.playOnce`): ground collect, tree branch, dig stone, UI/quick drop.
-- Shovel exists as a one-time settlement pickup (`items/createItemSpawners.ts`'s `SPAWN_SPECS`, `respawnTime: Infinity`). Holding it unlocks a `[E]`-triggered "Wykop dołek" ground interaction (fallback target only when nothing else is being gazed at — see `app/interactables.ts`'s `buildDigTarget`) that locally deforms terrain and has a chance to yield `stone`. Terrain deformation is a small runtime overlay owned by `ChunkManager` (`modifyTerrain`/`applyModificationToTile` in `terrain/chunkManager.ts`), mutating a loaded chunk's cached height grid in place — not persisted across saves, and reapplied on chunk reload. Ground eligibility/tuning lives in `terrain/dig.ts`.
+- Shovel is a one-time settlement landmark pickup (`items/createItemSpawners.ts`, campfire/garden anchors — not in generic `SPAWN_SPECS`). Dig/level require a shovel in inventory; the HUD `[E]` prompt appears only while the shovel is **held** (`items/HeldTool.ts`, persisted as `SaveData.heldTool` in schema v7). Owning a shovel (held or not) also exposes dig/level in Quick Actions. Dig/level run as a ~2 s busy channel (`app/busyAction.ts` + Vue `BusyOverlay`) then apply via `terrain/digAction.ts`. Dig size/tuning and stone notice chance live in `terrain/dig.ts`. Found stones go to inventory on a successful notice roll, otherwise (or when inventory is full) drop beside the hole via `droppedItems` — never silently lost. `ChunkManager.modifyTerrain` / `levelTerrain` own the runtime height overlay (dig down / raise toward procedural base); not save-persisted, reapplied on chunk reload.
 
 ### Quests / progression
 
@@ -92,8 +92,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 ### Persistence
 
 - IndexedDB persistence exists in `src/persistence/`.
-- Current save data includes world configuration, player position/orientation, time of day, quests/EXP/relations, inventory, collected item IDs, dropped items and placed fires.
-- Save schema is currently version `6` in `createApp.ts`.
+- Current save data includes world configuration, player position/orientation, time of day, quests/EXP/relations, inventory, held tool, collected item IDs, dropped items and placed fires.
+- Save schema is currently version `7` in `createApp.ts`.
 - New Game resets world-dependent state as implemented by `createApp.ts`/`rebuildWorldBundle()`.
 - NPC runtime state is not generally persisted as a full simulation snapshot; do not assume Continue restores every NPC need/AI state.
 
@@ -105,7 +105,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Vue 3 + Tailwind v4 + `lucide-vue-next` is mounted under `#vue-ui` through `src/ui-vue/`.
 - Vue migration is incremental; it is not a full replacement of the vanilla UI yet.
 - NPC dialogue v2 is already a Vue screen.
-- Pause menu, quest log, inventory, quick actions, time-skip overlay, world config screen and notes/journal screen exist as Vue screens; `src/ui/create*.ts` for these are thin compatibility facades over the Vue store, not separate implementations.
+- Pause menu, quest log, inventory, quick actions, time-skip overlay, busy/channel overlay, world config screen and notes/journal screen exist as Vue screens; `src/ui/create*.ts` for these are thin compatibility facades over the Vue store, not separate implementations.
 - HUD, minimap, toast and touch controls remain vanilla DOM (plan 046 Faza 4 — intentionally not migrated yet, hot-path code).
 - lil-gui remains the full debug/world configuration UI (region/fbm/road-network tuning, post-processing); the in-game world config screen (pause menu → Świat) exposes only the player-facing subset (seed, flat shading, day/night) — same underlying `WorldConfig`/`DayNightState` objects, not a duplicate.
 
@@ -117,7 +117,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `HealthState` — shared health/damage/death concept used by fauna and intended for broader agent use.
 - `NpcAgent` — central NPC behaviour/needs/personality integration point.
 - `AnimalAgent` — central fauna behaviour integration point.
-- `Inventory` / `ItemKind` — existing item ownership model.
+- `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot.
 - `QuestManager` — quest progress, EXP and relations.
 - `ChunkManager` — terrain sampling, streaming and environment-facing world queries.
 - `Place` / schedule-related NPC work — existing foundation for daily routines.
@@ -140,7 +140,11 @@ src/ai/Needs.ts
 src/fauna/AnimalAgent.ts
 src/fauna/HealthState.ts
 src/items/Inventory.ts
+src/items/HeldTool.ts
 src/items/createItemSpawners.ts
+src/terrain/dig.ts
+src/terrain/digAction.ts
+src/app/busyAction.ts
 src/quests/QuestManager.ts
 src/persistence/saveData.ts
 src/persistence/saveDb.ts

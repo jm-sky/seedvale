@@ -2,6 +2,7 @@
 import { onUnmounted, ref, type Ref, watch } from 'vue'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import { isTouchDevice } from '../../input/isTouchDevice'
+import QuickActionsButton from '../components/QuickActionsButton.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { closeQuickActions, isQuickActionsOpen, toggleQuickActions, ui } from '../store'
@@ -66,6 +67,16 @@ function rest(variant: RestVariant): void {
   closeQuickActions()
 }
 
+function dig(): void {
+  closeQuickActions()
+  ui.quickActions.onDig?.()
+}
+
+function level(): void {
+  closeQuickActions()
+  ui.quickActions.onLevel?.()
+}
+
 // Attached only while open, and only on the *next* tick — so the click that
 // opened the popup (trigger button or touch controls' own button) doesn't
 // immediately bubble into this listener and close it again. Mirrors the
@@ -116,6 +127,21 @@ const actions: Action[] = [
   },
 ]
 
+const shovelActions: Action[] = [
+  {
+    label: 'Wykop dołek',
+    cost: 'łopata',
+    onClick: dig,
+    status: null,
+  },
+  {
+    label: 'Wyrównaj',
+    cost: 'łopata',
+    onClick: level,
+    status: null,
+  },
+]
+
 </script>
 
 <template>
@@ -138,50 +164,52 @@ const actions: Action[] = [
       v-for="action in actions"
       :key="action.label"
     >
-      <button
-        type="button"
-        class="block w-55 max-w-[calc(100vw-40px)] cursor-pointer rounded-lg border border-white/20 bg-panel px-3.5 py-2.5 text-left text-sm text-ink shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:bg-panel/30 hover:backdrop-blur-md"
+      <QuickActionsButton
+        :label="action.label"
+        :cost="action.cost"
+        :status="action.status?.value"
         @click="action.onClick"
+      />
+    </template>
+    <template v-if="ui.quickActions.hasShovel">
+      <div class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-65">
+        Łopata
+      </div>
+      <template
+        v-for="action in shovelActions"
+        :key="action.label"
       >
-        {{ action.label }}
-        <div class="inline-block text-xs px-2 py-0.5 bg-black/50 rounded-lg font-mono">
-          {{ action.cost }}
-        </div>
-        <span class="mt-1 block text-[11px] opacity-75">{{ action.status?.value }}</span>
-      </button>
+        <QuickActionsButton
+          :label="action.label"
+          :cost="action.cost"
+          @click="action.onClick"
+        />
+      </template>
     </template>
     <div class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-65">
       Czekaj
     </div>
     <div class="flex gap-2">
-      <button
+      <QuickActionsButton
         v-for="hours in [1, 3, 6]"
         :key="hours"
-        type="button"
-        class="flex-1 cursor-pointer rounded-lg border border-white/20 bg-panel px-3.5 py-2.5 text-center text-sm text-ink shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:bg-panel/30 hover:backdrop-blur-md"
+        :label="`${hours}h`"
+        class="flex-1"
         @click="wait(hours)"
-      >
-        {{ hours }}h
-      </button>
+      />
     </div>
     <div class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-65">
       Odpoczynek
     </div>
-    <button
-      type="button"
-      class="block w-55 max-w-[calc(100vw-40px)] cursor-pointer rounded-lg border border-white/20 bg-panel px-3.5 py-2.5 text-left text-sm text-ink shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:bg-panel/30 hover:backdrop-blur-md"
+    <QuickActionsButton
+      label="Rozbij obóz (8h)"
+      :status="campStatus"
       @click="rest('camp')"
-    >
-      Rozbij obóz (8h)
-      <span class="mt-1 block text-[11px] opacity-75">{{ campStatus }}</span>
-    </button>
-    <button
-      type="button"
-      class="block w-55 max-w-[calc(100vw-40px)] cursor-pointer rounded-lg border border-white/20 bg-panel px-3.5 py-2.5 text-left text-sm text-ink shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:bg-panel/30 hover:backdrop-blur-md"
+    />
+    <QuickActionsButton
+      label="Odpocznij w mieście (8h)"
+      :status="townStatus"
       @click="rest('town')"
-    >
-      Odpocznij w mieście (8h)
-      <span class="mt-1 block text-[11px] opacity-75">{{ townStatus }}</span>
-    </button>
+    />
   </div>
 </template>

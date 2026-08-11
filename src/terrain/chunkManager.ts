@@ -196,6 +196,11 @@ export type ChunkManager = {
    *  is currently standing near, always loaded). Not persisted across saves
    *  (plan 052 explicitly scopes persistence out). */
   modifyTerrain: (x: number, z: number, radius: number, depth: number) => boolean
+  /** Raises terrain toward the procedural base (never above it) — "Wyrównaj".
+   *  Same runtime overlay as `modifyTerrain`; returns false if nothing changed. */
+  levelTerrain: (x: number, z: number, radius: number, maxRaise: number) => boolean
+  /** Seed-derived analytic height at `(x, z)` — ignores runtime dig/level mods. */
+  sampleBaseHeight: HeightSampler
   waterLevel: number
   loadedChunkCount: () => number
   /** Resolves once every listed chunk has finished generating (or failed/cancelled). */
@@ -203,7 +208,14 @@ export type ChunkManager = {
   dispose: () => void
 }
 
-export type TerrainModification = { x: number, z: number, radius: number, depth: number }
+export type TerrainModification = {
+  x: number
+  z: number
+  radius: number
+  depth: number
+  /** `'dig'` lowers; `'level'` raises toward `sampleBase` and never above it. */
+  mode: 'dig' | 'level'
+}
 
 /** Writes one modification's radial falloff directly into `tile.heights`
  *  (the apron-inclusive grid `buildChunkGeometry`/`sampleHeight` both read) —
@@ -215,13 +227,15 @@ export type TerrainModification = { x: number, z: number, radius: number, depth:
  *  — the seam this apron trick already exists to avoid stays intact. Returns
  *  whether it touched any texel (false = this chunk's grid doesn't overlap
  *  the modification at all). Exported for `chunkManager.test.ts` — pure grid
- *  math, no scene/worker dependency, unlike the rest of this module. */
+ *  math, no scene/worker dependency, unlike the rest of this module.
+ *  `sampleBase` is required for `mode: 'level'` (procedural height clamp). */
 export function applyModificationToTile(
   tile: ChunkTileResult,
   coord: ChunkCoord,
   chunkSize: number,
   resolution: number,
   mod: TerrainModification,
+  sampleBase?: HeightSampler,
 ): boolean {
   const o = apronOriginWorld(coord.cx, coord.cz, chunkSize, resolution)
   const minIx = Math.max(0, Math.floor((mod.x - mod.radius - o.x) / o.step))
@@ -238,7 +252,17 @@ export function applyModificationToTile(
       const dist = Math.hypot(wx - mod.x, wz - mod.z)
       if (dist >= mod.radius) continue
       const falloff = 1 - THREE.MathUtils.smoothstep(dist, 0, mod.radius)
-      tile.heights[iz * o.apronRes + ix]! -= mod.depth * falloff
+      const idx = iz * o.apronRes + ix
+      const prev = tile.heights[idx]!
+      if (mod.mode === 'level') {
+        if (!sampleBase) continue
+        const base = sampleBase(wx, wz)
+        const next = Math.min(prev + mod.depth * falloff, base)
+        if (next <= prev + 1e-6) continue
+        tile.heights[idx] = next
+      } else {
+        tile.heights[idx] = prev - mod.depth * falloff
+      }
       touched = true
     }
   }
@@ -438,7 +462,14 @@ export function createChunkManager(
         // Re-apply any digs made before this chunk was (re)generated — see
         // `ChunkManager.modifyTerrain`'s doc comment.
         for (const mod of modifications) {
-          applyModificationToTile(tile, coord, config.chunkSize, config.resolution, mod)
+          applyModificationToTile(
+            tile,
+            coord,
+            config.chunkSize,
+            config.resolution,
+            mod,
+            (wx, wz) => sampleHeightAt(wx, wz, fallbackParams),
+          )
         }
         buildAndAttachMesh(rec, tile)
 
@@ -669,7 +700,7 @@ export function createChunkManager(
       return null
     },
     modifyTerrain(x, z, radius, depth) {
-      const mod: TerrainModification = { x, z, radius, depth }
+      const mod: TerrainModification = { x, z, radius, depth, mode: 'dig' }
       modifications.push(mod)
       let touchedAny = false
       for (const rec of chunks.values()) {
@@ -681,6 +712,28 @@ export function createChunkManager(
       }
       return touchedAny
     },
+    levelTerrain(x, z, radius, maxRaise) {
+      const mod: TerrainModification = { x, z, radius, depth: maxRaise, mode: 'level' }
+      modifications.push(mod)
+      const sampleBase: HeightSampler = (wx, wz) => sampleHeightAt(wx, wz, fallbackParams)
+      let touchedAny = false
+      for (const rec of chunks.values()) {
+        if (rec.state !== 'ready' || !rec.tile) continue
+        const touched = applyModificationToTile(
+          rec.tile,
+          rec.coord,
+          config.chunkSize,
+          config.resolution,
+          mod,
+          sampleBase,
+        )
+        if (!touched) continue
+        touchedAny = true
+        buildAndAttachMesh(rec, rec.tile)
+      }
+      return touchedAny
+    },
+    sampleBaseHeight: (x, z) => sampleHeightAt(x, z, fallbackParams),
     waterLevel: config.waterLevel,
     loadedChunkCount: () => chunks.size,
     waitForChunks: (coords) => Promise.all(coords.map((c) => ensureLoaded(c))).then(() => undefined),

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import NpcDialogueMenu from './NpcDialogueMenu.vue'
+import BusyOverlay from './screens/BusyOverlay.vue'
 import FlavorDialog from './screens/FlavorDialog.vue'
 import InventoryScreen from './screens/InventoryScreen.vue'
 import NotesScreen from './screens/NotesScreen.vue'
@@ -37,5 +38,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
          overlay's z-index 12, above pause menu's 11) — a time skip can be
          showing while the player also has the pause menu open. -->
     <TimeSkipOverlay />
+    <BusyOverlay />
   </div>
 </template>

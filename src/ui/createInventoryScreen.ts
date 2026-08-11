@@ -3,6 +3,8 @@ import { getMountedVueUi } from '../ui-vue/mount'
 
 export type InventoryScreenHandlers = {
   onDrop?: (kind: ItemKind) => void
+  onEquip?: (kind: ItemKind) => void
+  onUnequip?: () => void
   onClose?: () => void
 }
 
@@ -11,7 +13,12 @@ export type InventoryScreen = {
   open: () => void
   close: () => void
   toggle: () => void
-  refresh: (counts: Partial<Record<ItemKind, number>>, totalWeight: number, maxWeight: number) => void
+  refresh: (
+    counts: Partial<Record<ItemKind, number>>,
+    totalWeight: number,
+    maxWeight: number,
+    heldTool: ItemKind | null,
+  ) => void
   dispose: () => void
 }
 
@@ -24,13 +31,22 @@ export function createInventoryScreen(
   let counts: Partial<Record<ItemKind, number>> = {}
   let totalWeight = 0
   let maxWeight = 0
+  let heldTool: ItemKind | null = null
 
   const getUi = () => getMountedVueUi()
   const isOpen = () => !disposed && (getUi()?.isInventoryOpen() ?? false)
 
   const open = () => {
     if (disposed) return
-    getUi()?.openInventory(counts, totalWeight, maxWeight, (kind) => handlers.onDrop?.(kind))
+    getUi()?.openInventory(
+      counts,
+      totalWeight,
+      maxWeight,
+      heldTool,
+      (kind) => handlers.onDrop?.(kind),
+      (kind) => handlers.onEquip?.(kind),
+      () => handlers.onUnequip?.(),
+    )
   }
 
   const close = () => {
@@ -47,13 +63,14 @@ export function createInventoryScreen(
       if (isOpen()) close()
       else open()
     },
-    refresh(nextCounts, nextTotalWeight, nextMaxWeight) {
+    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextHeldTool) {
       if (disposed) return
       counts = { ...nextCounts }
       totalWeight = nextTotalWeight
       maxWeight = nextMaxWeight
+      heldTool = nextHeldTool
       if (isOpen()) {
-        getUi()?.refreshInventory(counts, totalWeight, maxWeight)
+        getUi()?.refreshInventory(counts, totalWeight, maxWeight, heldTool)
       }
     },
     dispose() {

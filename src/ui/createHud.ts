@@ -10,6 +10,8 @@ export type Hud = {
    *  per-item text counters (plan `2026-08-08--043` §10); the full breakdown
    *  now lives in `createInventoryScreen.ts` (`[I]`). */
   setInventoryWeight: (current: number, max: number) => void
+  /** Label for the held tool slot — empty string hides it. */
+  setHeldTool: (label: string) => void
   dispose: () => void
 }
 
@@ -23,6 +25,7 @@ export function createHud(parent: HTMLElement): Hud {
       <span data-seed></span>
       <span data-exp></span>
       <span data-weight></span>
+      <span data-held></span>
     </div>
     <div class="seedvale-hud__hint">${
       isTouchDevice()
@@ -37,6 +40,7 @@ export function createHud(parent: HTMLElement): Hud {
   const seedEl = root.querySelector('[data-seed]')!
   const expEl = root.querySelector('[data-exp]')!
   const weightEl = root.querySelector('[data-weight]')!
+  const heldEl = root.querySelector('[data-held]')! as HTMLElement
 
   // `formatClock`/`phaseName` are called every frame (`timeOfDay` advances
   // continuously), but the rendered string only actually changes a few times
@@ -45,6 +49,7 @@ export function createHud(parent: HTMLElement): Hud {
   let lastPhase = ''
   let lastExp = ''
   let lastWeight = ''
+  let lastHeld = ''
 
   return {
     root,
@@ -74,6 +79,12 @@ export function createHud(parent: HTMLElement): Hud {
       if (text === lastWeight) return
       lastWeight = text
       weightEl.textContent = text
+    },
+    setHeldTool(label) {
+      const text = label ? `w ręce: ${label}` : ''
+      if (text === lastHeld) return
+      lastHeld = text
+      heldEl.textContent = text
     },
     dispose() {
       root.remove()

@@ -2,13 +2,20 @@ import type { HeightSampler } from '../player/PlayerController'
 import { SAND_BAND } from './biomeColors'
 
 /** Radius (world units) of one dig's terrain depression — see
- *  `ChunkManager.modifyTerrain()`. Small enough that a handful of nearby digs
- *  read as a shared shallow pit rather than a crater. */
-export const DIG_RADIUS = 0.75
-const DIG_DEPTH_SOIL = 0.12
-const DIG_DEPTH_SAND = 0.06
-const STONE_CHANCE_SOIL = 0.45
-const STONE_CHANCE_SAND = 0.15
+ *  `ChunkManager.modifyTerrain()`. Large enough to read as a real hole while
+ *  still merging nearby digs into one shared pit. */
+export const DIG_RADIUS = 1.4
+export const DIG_DEPTH_SOIL = 0.28
+export const DIG_DEPTH_SAND = 0.14
+export const STONE_CHANCE_SOIL = 0.45
+export const STONE_CHANCE_SAND = 0.15
+/** Chance that a found stone is noticed and goes to inventory (when there is
+ *  capacity); otherwise it drops beside the hole. */
+export const STONE_NOTICE_CHANCE = 0.65
+/** Real-time seconds for dig / level channel before terrain + loot apply. */
+export const DIG_DURATION_SEC = 2
+/** Minimum depression vs procedural base before "Wyrównaj" is offered. */
+export const LEVEL_EPS = 0.04
 
 /** `sampleMountainRidge` above this reads as bare mountain rock (see
  *  `biomeColors.ts`'s `applyMountainRock` — starts blending toward `ROCK`/
@@ -32,6 +39,13 @@ export type DigEnv = {
   waterLevel: number
 }
 
+/** Env that can compare runtime height against procedural base — used for
+ *  "Wyrównaj" eligibility. */
+export type LevelEnv = {
+  sampleHeight: HeightSampler
+  sampleBaseHeight: HeightSampler
+}
+
 /** Classifies the ground at `(x, z)` for digging — `null` means not diggable
  *  (rock/mountain or water/seabed), matching the plan's soil table without a
  *  full terrain-type taxonomy: reuses the exact same signals (`mountainRidge`,
@@ -46,4 +60,27 @@ export function getDigProfileAt(x: number, z: number, env: DigEnv): DigProfile |
   return isSand
     ? { depth: DIG_DEPTH_SAND, stoneChance: STONE_CHANCE_SAND }
     : { depth: DIG_DEPTH_SOIL, stoneChance: STONE_CHANCE_SOIL }
+}
+
+/** True when the runtime surface sits meaningfully below the procedural base
+ *  (i.e. there is a dig depression worth leveling). */
+export function canLevelAt(x: number, z: number, env: LevelEnv): boolean {
+  return env.sampleHeight(x, z) < env.sampleBaseHeight(x, z) - LEVEL_EPS
+}
+
+export type DigStoneOutcome =
+  | { kind: 'none' }
+  | { kind: 'inventory' }
+  | { kind: 'ground'; reason: 'unnoticed' | 'full' }
+
+/** Pure stone-resolution after a successful dig roll — injectable RNG for tests. */
+export function resolveDigStone(
+  stoneChance: number,
+  canAddStone: boolean,
+  random: () => number = Math.random,
+): DigStoneOutcome {
+  if (random() >= stoneChance) return { kind: 'none' }
+  if (!canAddStone) return { kind: 'ground', reason: 'full' }
+  if (random() >= STONE_NOTICE_CHANCE) return { kind: 'ground', reason: 'unnoticed' }
+  return { kind: 'inventory' }
 }

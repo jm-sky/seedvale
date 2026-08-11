@@ -1,6 +1,6 @@
 # Plan: akcje "Czekaj" (1/3/6h) i "Odpoczynek" (obóz/miasto, 8h) w Quick Actions
 
-**Status:** `verification needed` — zaimplementowane, `npx tsc --noEmit`/`npm run lint`/`npm run build`/`npm run test` czyste, wizualna weryfikacja w przeglądarce jeszcze nie zrobiona.
+**Status:** `done` — zaimplementowane, `npx tsc --noEmit`/`npm run lint`/`npm run build`/`npm run test` czyste i zweryfikowane w przeglądarce.
 **Created:** 2026-08-10
 
 ## Skąd to się wzięło

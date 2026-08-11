@@ -42,6 +42,20 @@ export function clampPitch(pitch: number, distance: number): number {
   return clamp(pitch, PITCH_MIN, pitchMaxFor(distance))
 }
 
+/** Release pointer lock when opening clickable UI (pause, inventory, quick actions, NPC menu).
+ *  Returns whether the target held the lock (so callers can restore it later). */
+export function exitGamePointerLock(target: HTMLElement): boolean {
+  if (document.pointerLockElement !== target) return false
+  document.exitPointerLock()
+  return true
+}
+
+/** Re-acquire pointer lock after closing UI that temporarily released it. */
+export function requestGamePointerLock(target: HTMLElement): void {
+  if (document.pointerLockElement === target) return
+  void target.requestPointerLock()
+}
+
 export function createMouseLook(target: HTMLElement): {
   state: LookState
   dispose: () => void
@@ -92,9 +106,7 @@ export function createMouseLook(target: HTMLElement): {
         document.removeEventListener('mousemove', onMouseMove)
       }
       target.removeEventListener('wheel', onWheel)
-      if (document.pointerLockElement === target) {
-        document.exitPointerLock()
-      }
+      exitGamePointerLock(target)
     },
   }
 }

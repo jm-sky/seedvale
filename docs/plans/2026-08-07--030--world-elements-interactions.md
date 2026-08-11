@@ -1,6 +1,6 @@
 # Plan: Naturalne elementy świata i proste interakcje (głazy, pnie, zbieralna flora, ogniska)
 
-**Status:** `verification needed` — zaimplementowane w working tree zgodnie z opisem poniżej, brak jeszcze wizualnej weryfikacji w przeglądarce
+**Status:** `done` — zaimplementowane i zweryfikowane.
 **Created:** 2026-08-07
 **Priority:** niski/średni — kosmetyczne wypełnienie świata, nie blokuje ani nie jest blokowany przez inne kolejkowane plany. Naturalna kontynuacja [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) i [biome-regions](./2026-08-07--028--biome-regions.md) (reużywa te same makro-osie do doboru preferencji środowiskowych) oraz [quests-v2-world-interactions](./2026-08-07--018--quests-v2-world-interactions.md) (reużywa mechanizm zbieralnych przedmiotów).
 

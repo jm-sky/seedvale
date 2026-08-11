@@ -19,6 +19,15 @@ export type QuickActionsHandlers = {
    *  missing; `'town'` additionally requires the player to be near a
    *  settlement — returns `'too-far'` (consumes nothing) if not. */
   onRest?: (variant: RestVariant) => RestOutcome
+  /** Shovel dig / level when the player owns a shovel (HUD only when held). */
+  onDig?: () => void
+  onLevel?: () => void
+  /** Initial shovel ownership for showing dig/level buttons. */
+  hasShovel?: boolean
+  /** Fired when the panel transitions from closed → open (e.g. release pointer lock). */
+  onOpen?: () => void
+  /** Fired when the panel transitions from open → closed (e.g. restore pointer lock). */
+  onClose?: () => void
 }
 
 export type QuickActions = {
@@ -37,6 +46,9 @@ export function createQuickActions(
   let disposed = false
   const getUi = () => getMountedVueUi()
   getUi()?.configureQuickActions(handlers)
+  if (typeof handlers.hasShovel === 'boolean') {
+    getUi()?.setQuickActionsHasShovel(handlers.hasShovel)
+  }
 
   return {
     isOpen: () => !disposed && (getUi()?.isQuickActionsOpen() ?? false),

@@ -9,8 +9,9 @@ const FORWARDED_FNS = [
   'configurePauseMenu', 'setPauseSeed', 'openPauseMenu', 'closePauseMenu', 'togglePause', 'isPauseMenuOpen',
   'openQuestLog', 'refreshQuestLog', 'closeQuestLog', 'isQuestLogOpen',
   'openFlavorDialog', 'setFlavorPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',
-  'configureQuickActions', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
+  'configureQuickActions', 'setQuickActionsHasShovel', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
   'showTimeSkip', 'hideTimeSkip',
+  'showBusy', 'hideBusy',
   'configureWorldConfigScreen', 'openWorldConfigScreen', 'closeWorldConfigScreen', 'isWorldConfigScreenOpen',
   'openNotes', 'closeNotes', 'isNotesOpen',
 ] as const
