@@ -2,7 +2,9 @@
 
 ## Status
 
-`planned` 📋
+`in progress` 🔄
+
+**Progress:** ~90% (Phase 1–6 implemented; Threat framework still deferred; human damage left to 056/combat)
 
 ## Priority
 
@@ -42,8 +44,8 @@ Seedvale ma już kilka działających mechanizmów, ale rozwijają się one rów
 - Fauna posiada potrzeby hunger/thirst/energy oraz osobne zachowania wander/chase/flee.
 - Predator/prey posiada własną logikę zagrożenia, pościgu i obrażeń.
 - Player awareness fauny jest osobnym kontekstem reakcji.
-- `Health/Stamina/Threat` jest już zaplanowane jako wspólna domena.
-- `WorldBundle` / game loop porządkują zależności, ale nie definiują jeszcze wspólnego modelu symulacji.
+- `Health/Stamina` jest już wspólną domeną (`src/shared/`); Threat pozostaje odłożony.
+- `WorldBundle` / game loop porządkują zależności; wspólne kontrakty akcji/decyzji żyją w `src/simulation/` (Phase 1–2).
 
 Kolejne funkcje, takie jak głodny predator atakujący człowieka, praca NPC, żerowanie zwierząt, polowanie, odpoczynek czy późniejsza ekonomia będą łatwiejsze do rozwijania, jeśli nie będą tworzyć kolejnych równoległych mechanizmów.
 
@@ -302,43 +304,94 @@ Workerów nie wprowadzać na tym etapie tylko dlatego, że architektura jest wsp
 
 ## Kolejność implementacji
 
-### Phase 1 — contracts
+### Phase 1 — contracts ✅
 
 - zmapować obecne `NpcAgent`, fauna needs, chase/flee i action flow,
-- zdefiniować minimalne typy `SimulationContext`, `DecisionContext` i `PlannedAction` / action lifecycle,
+- zdefiniować minimalne typy `DecisionContext` i `PlannedAction` / action lifecycle w `src/simulation/`,
 - ustalić ownership state,
 - nie zmieniać zachowania gry.
 
-### Phase 2 — NPC adapter
+### Phase 2 — NPC adapter ✅
 
 - podłączyć istniejące `NpcAgent` do wspólnego kontraktu,
 - zachować istniejący schedule, needs i `goTo → execute`,
 - usunąć tylko rzeczywistą duplikację.
 
-### Phase 3 — fauna adapter
+### Phase 3 — fauna adapter ✅
 
 - podłączyć potrzeby i player/prey awareness fauny,
 - wykorzystać istniejące chase/flee jako akcje/zachowania,
 - nie przepisywać całego systemu.
 
-### Phase 4 — shared domain systems
+### Phase 4 — shared domain systems ✅ (Threat deferred)
 
-- zintegrować `Health/Stamina/Threat`,
-- ujednolicić world effects,
-- dopracować cancel/fail/complete akcji,
-- przygotować event/state transitions tam, gdzie są rzeczywiście potrzebne.
+- Health/Stamina already shared; **Threat** remains deferred (plan 045 — no consumer framework).
+- ujednolicić ownership efektów (callbacks NPC / `HealthState` damage fauny),
+- dopracować cancel/fail/complete akcji (`src/simulation/actionControl.ts`),
+- event bus nie wprowadzony — nie był potrzebny.
 
-### Phase 5 — decision scoring
+### Phase 5 — decision scoring ✅
 
-- dodać minimalny scoring konkurujących zachowań,
-- zastosować go najpierw do jednego konkretnego przypadku: predator hunger vs fear,
-- dopiero później rozszerzać na NPC i kolejne zachowania.
+- dodać minimalny scoring konkurujących zachowań (`src/simulation/scoreActions.ts`),
+- zastosować go najpierw do jednego konkretnego przypadku: predator hunger vs fear (`src/fauna/predatorHumanDecision.ts` + wiring w `AnimalAgent`),
+- chase human bez obrażeń gracza (granica damage → plan 056 Phase 6).
 
-### Phase 6 — performance
+### Phase 6 — performance ✅
 
-- zmierzyć koszt symulacji,
-- wprowadzić staggerowanie/LOD częstotliwości decyzji,
-- dopiero jeśli potrzeba rozważyć worker-based simulation dla niezależnych obliczeń.
+- decyzja human flee/attack staggered @ 5 Hz (`HUMAN_DECISION_INTERVAL_SEC`); ruch nadal per-frame,
+- NPC `choose` już event-driven (tylko po zakończeniu akcji) — bez dodatkowego LOD,
+- workerów nie wprowadzano.
+
+---
+
+## Implementation notes (2026-08-11)
+
+### Done — Phase 1–6
+
+| Area | Location |
+|------|----------|
+| Shared contracts | `src/simulation/types.ts` — `Vec3`, `PlannedAction`, `DecisionContext`, `SimulationEntityRef`, `ActionLifecycle` |
+| Lifecycle helpers | `src/simulation/actionLifecycle.ts`, `actionControl.ts` (`replace` / `adopt` / finish) |
+| Scoring | `src/simulation/scoreActions.ts` — `pickHighestScore` |
+| Barrel | `src/simulation/index.ts` |
+| Unit tests | `src/simulation/*.test.ts`, `src/fauna/predatorHumanDecision.test.ts` |
+| NPC adapter | `src/ai/NpcAgent.ts` — shared `PlannedAction` + `DecisionContext` + lifecycle |
+| Fauna adapter | `src/fauna/AnimalAgent.ts` — `senseEnvironment` → intent/`setIntent` → existing flee/chase/wander |
+| Predator hunger vs fear | `src/fauna/predatorHumanDecision.ts` — pure flee/attack scores; hungry predator may `chaseHuman` |
+
+### Ownership
+
+| Concern | Owner |
+|---------|-------|
+| Needs | `src/ai/Needs.ts` / `src/fauna/AnimalLife.ts` |
+| Health / Stamina | `src/shared/HealthState.ts`, `StaminaState.ts` |
+| Threat | Deferred — no shared Threat module (plan 045) |
+| Perception | Domain modules (`playerAwareness`, fire distance, landmarks) |
+| Decision policy | Local to each agent; shared only via `DecisionContext` + `pickHighestScore` |
+| Action plan | Shared `PlannedAction` + lifecycle |
+| World effects | Existing domain APIs (`onComplete`, `damageHealth` / `harvestWorldTree`) |
+| Rendering | Three.js mesh/anim — outside the contract |
+
+### Deliberately deferred / remaining
+
+- Shared **Threat** type/manager (045) — not required for hunger-vs-fear scoring
+- Player/NPC **damage** when predator chooses attack (056 Phase 6)
+- Scoring for NPC activities / broader fauna intents beyond human flee|attack
+- Workers for simulation
+- No `UniversalAIManager`, GOAP, or ECS
+
+### Verification
+
+- **Implemented:** Phase 1–6 (Threat excluded by design)
+- **Technically verified:** `npx tsc --noEmit`, `npm run lint`, `npm run test` — 2026-08-11
+- **Browser / manual:** hungry-wolf chase vs flee — ask user to verify in running dev server (see steps below)
+
+### Manual browser check (optional)
+
+1. Spawn near a wolf with low hunger → expect flee when noticed.
+2. (Debug) raise wolf hunger near 1.0, stand at notice edge without panic/fire → may chase instead of flee.
+3. Approach a campfire with a hungry wolf nearby → fire fear should favor flee.
+4. Prey/livestock player-flee and predator–prey chase unchanged.
 
 ---
 

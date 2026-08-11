@@ -120,8 +120,9 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `WorldBundle` — lifetime/rebuild boundary for core world systems.
 - `HealthState` — shared health/damage/death (`src/shared/HealthState.ts`) used by fauna, NPCs and the player.
 - `StaminaState` — shared physical-effort capacity (`src/shared/StaminaState.ts`) used by fauna (`AnimalLifeState.stamina`) and NPCs; replaces NPC HP-as-fatigue and animal `energy`.
+- Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/` (plan 055). NPC + fauna adapters; predator hunger-vs-fear scoring in `src/fauna/predatorHumanDecision.ts`.
 - `NpcAgent` — central NPC behaviour/needs/personality integration point.
-- `AnimalAgent` — central fauna behaviour integration point.
+- `AnimalAgent` — central fauna behaviour integration point (intents via shared lifecycle; chase/flee/wander bodies unchanged).
 - `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot.
 - `QuestManager` — quest progress, EXP and relations.
 - `ChunkManager` — terrain sampling, streaming and environment-facing world queries.
@@ -144,6 +145,8 @@ src/ai/NpcAgent.ts
 src/ai/Needs.ts
 src/fauna/AnimalAgent.ts
 src/fauna/AnimalLife.ts
+src/fauna/predatorHumanDecision.ts
+src/simulation/
 src/shared/HealthState.ts
 src/shared/StaminaState.ts
 src/items/Inventory.ts

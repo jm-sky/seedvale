@@ -3,6 +3,14 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
+import {
+  type ActionLifecycle,
+  adoptPlannedAction,
+  copyVec3,
+  createActionLifecycle,
+  type DecisionContext,
+  type PlannedAction,
+} from '../simulation'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import {
   type AnimalLifeState,
@@ -15,6 +23,10 @@ import {
 } from './AnimalLife'
 import { createHealthState, damageFor, MAX_HP } from './faunaCombat'
 import { isPlayerNoticed } from './playerAwareness'
+import {
+  decidePredatorHumanIntent,
+  type PredatorHumanIntent,
+} from './predatorHumanDecision'
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
 const WATER_MARGIN = 0.3
@@ -84,6 +96,18 @@ const EXTENDED_IDLE_CHANCE = 0.5
  *  aligned with the shared effort resource without a separate combat stamina
  *  subsystem. Small relative to `ANIMAL_STAMINA_MAX` (1). */
 const ATTACK_STAMINA_COST = 0.05
+/** How often predators re-score flee vs attack toward a noticed human
+ *  (plan 055 Phase 6 — movement stays per-frame). */
+const HUMAN_DECISION_INTERVAL_SEC = 0.2
+
+type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander'
+
+type EnvironmentSense = {
+  playerActive: boolean
+  playerDistance: number
+  fireNearby: boolean
+  nearestFire: { x: number, z: number } | null
+}
 
 export type AnimalRole = 'predator' | 'prey' | 'livestock'
 /** `wild` animals are wary of humans/the village and avoid it; `domestic`
@@ -347,6 +371,12 @@ export class AnimalAgent {
    *  `update()` call — read by `fleeFrom`/`wander`/`updatePredator` without
    *  threading it through every method signature (plan 044 §2.3/§2.4). */
   private currentVillages: readonly { x: number, z: number }[] = []
+  /** Shared planned-action seam (plan 055) — movement bodies stay local. */
+  private actionLifecycle: ActionLifecycle = createActionLifecycle()
+  private pendingAction: PlannedAction<FaunaActionKind> | null = null
+  /** Staggered human flee/attack reevaluation while the player alert is held. */
+  private humanDecisionTimer = 0
+  private cachedHumanIntent: PredatorHumanIntent = 'flee'
 
   constructor(
     def: AnimalDef,
@@ -486,6 +516,7 @@ export class AnimalAgent {
     forestFactor: number,
     litFires: readonly { x: number, z: number }[],
     villages: readonly { x: number, z: number }[] = [],
+    nearbyHumanCount = 1,
   ): void {
     if (this.health.dead) {
       this.timeSinceDeath += dt
@@ -497,12 +528,39 @@ export class AnimalAgent {
     this.moving = false
     this.sprinting = false
     this.currentVillages = villages
-    const danger = this.checkEnvironmentalDanger(observerPos, dayFactor, forestFactor, litFires)
-    if (danger) {
-      this.fleeFrom(danger.x, danger.z, dt)
+    const sense = this.senseEnvironment(observerPos, dayFactor, forestFactor, litFires)
+
+    if (sense.playerActive) {
+      if (this.def.role === 'predator') {
+        this.humanDecisionTimer -= dt
+        if (this.humanDecisionTimer <= 0) {
+          this.humanDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
+          this.cachedHumanIntent = this.decideHumanResponse(
+            sense,
+            observerPos,
+            nearbyHumanCount,
+          )
+        }
+        if (this.cachedHumanIntent === 'attack') {
+          this.setIntent('attack', copyVec3(observerPos))
+          this.chaseHuman(observerPos, dt)
+        } else {
+          this.setIntent('flee', copyVec3(observerPos))
+          this.fleeFrom(observerPos.x, observerPos.z, dt)
+        }
+      } else {
+        this.setIntent('flee', copyVec3(observerPos))
+        this.fleeFrom(observerPos.x, observerPos.z, dt)
+      }
+    } else if (sense.nearestFire) {
+      this.humanDecisionTimer = 0
+      this.setIntent('flee', { x: sense.nearestFire.x, z: sense.nearestFire.z })
+      this.fleeFrom(sense.nearestFire.x, sense.nearestFire.z, dt)
     } else if (this.def.role === 'predator') {
+      this.humanDecisionTimer = 0
       this.updatePredator(dt, others)
     } else {
+      this.humanDecisionTimer = 0
       this.updatePrey(dt, others)
     }
     this.clampBounds()
@@ -532,23 +590,80 @@ export class AnimalAgent {
     this.mixer?.update(dt)
   }
 
-  /** Player-notice + campfire-avoidance — checked ahead of the existing
-   *  predator/prey dynamics every frame, for both roles (a wolf is wary of
-   *  fire and humans too, not just deer). Player detection uses distance +
-   *  the animal's own facing cone (`mesh.rotation.y`, same dot-product
-   *  convention as `interaction/findInteractionTarget.ts::pickInGaze`) plus
-   *  day/night and terrain modifiers (`playerAwareness.ts`); a lit campfire
-   *  is pure distance, no facing needed. Player detection takes priority
-   *  over fire (noticing a human is more urgent than smelling smoke), and
-   *  once noticed the animal keeps fleeing for `ALERT_HOLD_SEC` even if the
-   *  fresh check would now fail (hysteresis, avoids flee/calm flicker right
-   *  at the edge of range/cone). Returns the point to flee from, or null. */
-  private checkEnvironmentalDanger(
+  /** Adopt a fauna intent via the shared action lifecycle (plan 055). */
+  private setIntent(kind: FaunaActionKind, destination?: { x: number, y?: number, z: number }): void {
+    const next: PlannedAction<FaunaActionKind> = destination
+      ? { kind, destination: { x: destination.x, y: destination.y ?? 0, z: destination.z } }
+      : { kind }
+    const { action } = adoptPlannedAction(this.actionLifecycle, this.pendingAction, next)
+    this.pendingAction = action
+  }
+
+  private buildDecisionContext(
+    sense: EnvironmentSense,
+    nearbyHumanCount: number,
+  ): DecisionContext {
+    return {
+      needs: {
+        hunger: this.life.hunger,
+        thirst: this.life.thirst,
+        stamina: getStaminaRatio(this.life.stamina),
+      },
+      nearbyHumanCount,
+      nearbyFireCount: sense.fireNearby ? 1 : 0,
+      extras: {
+        role: this.def.role,
+        kind: this.def.kind,
+        playerDistance: sense.playerDistance,
+        playerActive: sense.playerActive,
+      },
+    }
+  }
+
+  private decideHumanResponse(
+    sense: EnvironmentSense,
+    observerPos: THREE.Vector3,
+    nearbyHumanCount: number,
+  ): PredatorHumanIntent {
+    const ctx = this.buildDecisionContext(sense, nearbyHumanCount)
+    return decidePredatorHumanIntent({
+      hunger: ctx.needs?.hunger ?? this.life.hunger,
+      humanDistance: sense.playerDistance > 0
+        ? sense.playerDistance
+        : Math.hypot(
+          observerPos.x - this.mesh.position.x,
+          observerPos.z - this.mesh.position.z,
+        ),
+      playerNoticeRange: this.def.playerNoticeRange,
+      playerPanicRange: this.def.playerPanicRange,
+      fireNearby: (ctx.nearbyFireCount ?? 0) > 0,
+      nearbyHumanCount: Math.max(1, ctx.nearbyHumanCount ?? nearbyHumanCount),
+      kind: this.def.kind,
+    })
+  }
+
+  /** Sprint toward a human without dealing damage yet (056 damage boundary). */
+  private chaseHuman(observerPos: THREE.Vector3, dt: number): void {
+    if (isExhausted(this.life.stamina)) {
+      this.setIntent('wander')
+      this.wander(dt)
+      return
+    }
+    this.sprinting = true
+    this.steerToward(observerPos, this.sprintSpeedNow(), dt)
+  }
+
+  /**
+   * Player-notice + campfire sensing — checked ahead of predator/prey
+   * dynamics. Returns structured perception for decision scoring; movement
+   * is chosen by `update()` (plan 055: perception ≠ action).
+   */
+  private senseEnvironment(
     observerPos: THREE.Vector3,
     dayFactor: number,
     forestFactor: number,
     litFires: readonly { x: number, z: number }[],
-  ): { x: number, z: number } | null {
+  ): EnvironmentSense {
     const dx = observerPos.x - this.mesh.position.x
     const dz = observerPos.z - this.mesh.position.z
     const distance = Math.hypot(dx, dz)
@@ -568,9 +683,7 @@ export class AnimalAgent {
       minFacingDot: PLAYER_NOTICE_CONE_DOT,
     })
     if (noticed) this.alertTimer = ALERT_HOLD_SEC
-    if (noticed || this.alertTimer > 0) {
-      return { x: observerPos.x, z: observerPos.z }
-    }
+    const playerActive = noticed || this.alertTimer > 0
 
     let nearestFire: { x: number, z: number } | null = null
     let bestD = FIRE_AVOID_RADIUS
@@ -581,7 +694,13 @@ export class AnimalAgent {
         nearestFire = fire
       }
     }
-    return nearestFire
+
+    return {
+      playerActive,
+      playerDistance: distance,
+      fireNearby: nearestFire !== null,
+      nearestFire,
+    }
   }
 
   /** Nearest loaded settlement center to this animal, or `null` if none are
@@ -666,14 +785,17 @@ export class AnimalAgent {
   private updatePredator(dt: number, others: AnimalAgent[]): void {
     const prey = this.nearest(others, 'prey', this.def.detectRange)
     if (prey && this.isNearVillage(prey.mesh.position)) {
+      this.setIntent('wander')
       this.wander(dt)
       return
     }
     if (prey) {
       if (isExhausted(this.life.stamina)) {
+        this.setIntent('wander')
         this.wander(dt)
         return
       }
+      this.setIntent('chase', copyVec3(prey.mesh.position))
       this.sprinting = true
       const dist = Math.hypot(
         prey.mesh.position.x - this.mesh.position.x,
@@ -686,6 +808,7 @@ export class AnimalAgent {
       }
       return
     }
+    this.setIntent('wander')
     this.wander(dt)
   }
 
@@ -700,9 +823,11 @@ export class AnimalAgent {
   private updatePrey(dt: number, others: AnimalAgent[]): void {
     const threat = this.nearest(others, 'predator', this.def.fleeRange)
     if (threat) {
+      this.setIntent('flee', copyVec3(threat.mesh.position))
       this.fleeFrom(threat.mesh.position.x, threat.mesh.position.z, dt)
       return
     }
+    this.setIntent('wander')
     this.wander(dt)
   }
 

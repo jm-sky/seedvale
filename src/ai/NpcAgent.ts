@@ -17,6 +17,16 @@ import {
   restoreStamina,
   type StaminaState,
 } from '../shared/StaminaState'
+import {
+  type ActionLifecycle,
+  completeActionLifecycle,
+  copyVec3,
+  createActionLifecycle,
+  type DecisionContext,
+  failActionLifecycle,
+  type PlannedAction,
+  replaceActionLifecycle,
+} from '../simulation'
 import { gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import { harvestWorldTree } from '../world/treeHarvest'
 import {
@@ -108,10 +118,10 @@ function modelUrlFor(gender: NpcGender, treeIndex: number): string {
 /** v2 stage 2 (`docs/plans/2026-08-07--020...`) collapses the old
  *  resource-specific `goGarden/goHomeDrink/goStock/goTree/goWell` +
  *  `chop/deposit/drink/eat` phases into one generic `goTo` → `execute` pair,
- *  parameterized by `PlannedAction` (see below). `followPath`/`goSleep`/
- *  `sleep`/`wander`/`lookAtPlayer` stay distinct — they aren't "go somewhere
- *  and perform one resource action", so folding them in would blur rather
- *  than simplify. */
+ *  parameterized by shared `PlannedAction` (`src/simulation`, plan 055).
+ *  `followPath`/`goSleep`/`sleep`/`wander`/`lookAtPlayer` stay distinct —
+ *  they aren't "go somewhere and perform one resource action", so folding
+ *  them in would blur rather than simplify. */
 type Phase =
   | 'choose'
   | 'execute'
@@ -124,19 +134,18 @@ type Phase =
 
 type ActionId = 'chop' | 'deposit' | 'drink' | 'eat' | 'work'
 
-/** A single "walk there, do this" step, optionally chained into a `next`
- *  one (wood: chop at the tree, then walk to the stockpile to deposit) —
- *  the generic replacement for the old dedicated go-somewhere / do-something
- *  phases. `destination` is a live reference into `landmarks`/`home`/
- *  `workplace` (never reassigned after settlement build), not a copy. */
-type PlannedAction = {
-  action: ActionId
-  destination: THREE.Vector3
-  /** Seconds spent in `execute` once `destination` is reached. */
-  duration: number
-  /** Applied once, when `execute`'s wait timer runs out. */
+/**
+ * NPC adapter over the shared `PlannedAction` contract: destination and
+ * duration are required for `goTo` → `execute`, and `onComplete` applies
+ * domain world effects (needs / harvest) without an event bus.
+ * Destination is a plain `Vec3` snapshot of a landmark/home/workplace
+ * position (landmarks are not reassigned after settlement build).
+ */
+type NpcPlannedAction = PlannedAction<ActionId> & {
+  destination: NonNullable<PlannedAction<ActionId>['destination']>
+  durationSec: number
   onComplete: () => void
-  next?: PlannedAction
+  next?: NpcPlannedAction
 }
 
 /** Public, dialogue-facing summary of what an NPC is doing right now — a
@@ -269,7 +278,10 @@ export class NpcAgent {
   /** Set by `startAction()`, consumed by the `goTo`/`execute` phases — the
    *  generic "walk there, do this" step currently in flight. `null` only
    *  outside those two phases. */
-  private pendingAction: PlannedAction | null = null
+  private pendingAction: NpcPlannedAction | null = null
+  /** Shared action lifecycle for the in-flight `PlannedAction` only —
+   *  orthogonal to agent `Phase` (`wander`/`sleep`/…). */
+  private actionLifecycle: ActionLifecycle = createActionLifecycle()
   /** Destination for the `wander` phase only — resource/work destinations
    *  now live in `pendingAction.destination` instead. */
   private target = new THREE.Vector3()
@@ -520,7 +532,7 @@ export class NpcAgent {
         return { kind: 'idle' }
       case 'execute':
       case 'goTo':
-        if (this.pendingAction?.action === 'work') return { kind: 'work', endHour }
+        if (this.pendingAction?.kind === 'work') return { kind: 'work', endHour }
         if (this.pendingAction) return { kind: 'need', need: this.activeNeed }
         return { kind: 'idle' }
       case 'followPath':
@@ -599,7 +611,11 @@ export class NpcAgent {
 
     switch (this.phase) {
       case 'choose': {
-        const shouldSleep = scheduledActivity === 'sleep' && !this.traits.includes('night_owl')
+        // Shared DecisionContext snapshot (plan 055) — policy remains inline
+        // (`pickNeed` + schedule); scoring arrives in Phase 5.
+        const decisionContext = this.buildDecisionContext(scheduledActivity, nearbyNpcCount)
+        const shouldSleep =
+          decisionContext.scheduleActivity === 'sleep' && !this.traits.includes('night_owl')
         if (shouldSleep) {
           this.phase = 'goSleep'
           break
@@ -618,8 +634,10 @@ export class NpcAgent {
           action?.onComplete()
           if (action?.next) {
             this.pendingAction = action.next
+            // Chained step stays `active` — do not complete between links.
             this.phase = 'goTo'
           } else {
+            completeActionLifecycle(this.actionLifecycle)
             this.phase = 'choose'
           }
         }
@@ -644,12 +662,14 @@ export class NpcAgent {
       case 'goTo': {
         const action = this.pendingAction
         if (!action) {
+          failActionLifecycle(this.actionLifecycle)
           this.phase = 'choose'
           break
         }
-        if (this.steerTo(action.destination, dt)) {
+        this.tmp.set(action.destination.x, action.destination.y, action.destination.z)
+        if (this.steerTo(this.tmp, dt)) {
           this.phase = 'execute'
-          this.wait = action.duration
+          this.wait = action.durationSec
         }
         break
       }
@@ -758,9 +778,30 @@ export class NpcAgent {
 
   /** Kicks off a `goTo` → `execute` step — the generic replacement for the
    *  old `this.phase = 'goWell'` etc. one-liners. */
-  private startAction(action: PlannedAction): void {
+  private startAction(action: NpcPlannedAction): void {
     this.pendingAction = action
+    replaceActionLifecycle(this.actionLifecycle)
     this.phase = 'goTo'
+  }
+
+  /** Snapshot for the shared decision seam — not a policy framework. */
+  private buildDecisionContext(
+    scheduleActivity: ScheduleActivity,
+    nearbyNpcCount: number,
+  ): DecisionContext {
+    return {
+      needs: {
+        thirst: this.needs.thirst,
+        woodDuty: this.needs.woodDuty,
+        hunger: this.needs.hunger,
+      },
+      scheduleActivity,
+      nearbyHumanCount: nearbyNpcCount,
+      extras: {
+        activeNeed: this.activeNeed,
+        staminaRatio: this.stamina.max > 0 ? this.stamina.current / this.stamina.max : 0,
+      },
+    }
   }
 
   /** `need` is `'water' | 'food' | 'wood'` in practice — `'choose'` routes
@@ -769,18 +810,18 @@ export class NpcAgent {
     if (need === 'water') {
       const destination = Math.random() < HOME_WATER_CHANCE ? this.home : this.landmarks.well
       this.startAction({
-        action: 'drink',
-        destination,
-        duration: 1.2 * this.waitMultiplier,
+        kind: 'drink',
+        destination: copyVec3(destination),
+        durationSec: 1.2 * this.waitMultiplier,
         onComplete: () => { this.needs.thirst = Math.max(0, this.needs.thirst - 0.65) },
       })
       return
     }
     if (need === 'food') {
       this.startAction({
-        action: 'eat',
-        destination: this.landmarks.garden,
-        duration: 1.4 * this.waitMultiplier,
+        kind: 'eat',
+        destination: copyVec3(this.landmarks.garden),
+        durationSec: 1.4 * this.waitMultiplier,
         onComplete: () => { this.needs.hunger = Math.max(0, this.needs.hunger - 0.6) },
       })
       return
@@ -805,9 +846,9 @@ export class NpcAgent {
       }
 
       this.startAction({
-        action: 'chop',
-        destination: landmark.position,
-        duration: 1.6 * this.waitMultiplier,
+        kind: 'chop',
+        destination: copyVec3(landmark.position),
+        durationSec: 1.6 * this.waitMultiplier,
         onComplete: () => {
           if (!forest) return
           harvestWorldTree(
@@ -819,9 +860,9 @@ export class NpcAgent {
           )
         },
         next: {
-          action: 'deposit',
-          destination: this.landmarks.stockpile,
-          duration: 0.8 * this.waitMultiplier,
+          kind: 'deposit',
+          destination: copyVec3(this.landmarks.stockpile),
+          durationSec: 0.8 * this.waitMultiplier,
           onComplete: () => { this.needs.woodDuty = Math.max(0, this.needs.woodDuty - 0.55) },
         },
       })
@@ -841,9 +882,9 @@ export class NpcAgent {
   private beginIdle(scheduledActivity: ScheduleActivity): void {
     if (scheduledActivity === 'work' && this.workplace) {
       this.startAction({
-        action: 'work',
-        destination: this.workplace.position,
-        duration: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
+        kind: 'work',
+        destination: copyVec3(this.workplace.position),
+        durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
         onComplete: () => {},
       })
       return

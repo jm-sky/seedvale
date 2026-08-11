@@ -4,6 +4,12 @@
 **Priority:** 🟡 `medium`  
 **Effort:** `M`
 
+> **Note (2026-08-11):** Decision seam from plan 055 Phase 5 is in place —
+> `src/fauna/predatorHumanDecision.ts` + `AnimalAgent` chase-vs-flee wiring.
+> Remaining for this plan: optional nearby-human count from settlements,
+> torch-as-fire if not already covered by `litFires`, and human damage boundary
+> (do not invent a combat framework).
+
 ## Goal
 
 Allow a hungry wild predator to decide that hunger outweighs fear of humans and attack a human target.
