@@ -6,6 +6,8 @@ export type KeyState = {
   sprint: boolean
   /** Edge-triggered: set true on KeyE keydown, cleared by consumeInteract(). */
   interact: boolean
+  /** Edge-triggered: set true on KeyR keydown, cleared by consumeAltInteract(). */
+  altInteract: boolean
   /** Edge-triggered: set true on KeyL keydown, cleared by consumeQuestLog(). */
   questLog: boolean
   /** Edge-triggered: set true on KeyG keydown, cleared by consumeDrop(). */
@@ -28,6 +30,7 @@ const KEY_MAP: Record<string, keyof KeyState> = {
   ShiftLeft: 'sprint',
   ShiftRight: 'sprint',
   KeyE: 'interact',
+  KeyR: 'altInteract',
   KeyL: 'questLog',
   KeyG: 'drop',
   KeyI: 'inventory',
@@ -36,7 +39,7 @@ const KEY_MAP: Record<string, keyof KeyState> = {
 
 /** Actions that latch true on keydown and are cleared by the consumer, not by keyup —
  *  so a tap registers exactly once regardless of how long the key stays down. */
-const EDGE_TRIGGERED = new Set<keyof KeyState>(['drop', 'interact', 'inventory', 'questLog', 'quickActions'])
+const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'drop', 'interact', 'inventory', 'questLog', 'quickActions'])
 
 /** True while the event is headed for a text field — the pause menu's Character
  *  name input is the live case. Without this, `KEY_MAP` letters (w/a/s/d/e/l/g)
@@ -56,6 +59,8 @@ export function createKeyboard(): {
   state: KeyState
   /** Reads and clears the pending interact press. Returns true at most once per keydown. */
   consumeInteract: () => boolean
+  /** Reads and clears the pending alt-interact press (`R`). */
+  consumeAltInteract: () => boolean
   /** Reads and clears the pending quest-log press. Returns true at most once per keydown. */
   consumeQuestLog: () => boolean
   /** Reads and clears the pending drop press. Returns true at most once per keydown. */
@@ -73,6 +78,7 @@ export function createKeyboard(): {
     right: false,
     sprint: false,
     interact: false,
+    altInteract: false,
     questLog: false,
     drop: false,
     inventory: false,
@@ -102,33 +108,20 @@ export function createKeyboard(): {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
 
+  const consume = (key: 'interact' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions'): boolean => {
+    if (!state[key]) return false
+    state[key] = false
+    return true
+  }
+
   return {
     state,
-    consumeInteract: () => {
-      if (!state.interact) return false
-      state.interact = false
-      return true
-    },
-    consumeQuestLog: () => {
-      if (!state.questLog) return false
-      state.questLog = false
-      return true
-    },
-    consumeDrop: () => {
-      if (!state.drop) return false
-      state.drop = false
-      return true
-    },
-    consumeInventory: () => {
-      if (!state.inventory) return false
-      state.inventory = false
-      return true
-    },
-    consumeQuickActions: () => {
-      if (!state.quickActions) return false
-      state.quickActions = false
-      return true
-    },
+    consumeInteract: () => consume('interact'),
+    consumeAltInteract: () => consume('altInteract'),
+    consumeQuestLog: () => consume('questLog'),
+    consumeDrop: () => consume('drop'),
+    consumeInventory: () => consume('inventory'),
+    consumeQuickActions: () => consume('quickActions'),
     dispose: () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)

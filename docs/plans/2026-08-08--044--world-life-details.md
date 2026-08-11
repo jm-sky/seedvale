@@ -2,6 +2,8 @@
 
 # Plan 044 — Drobne życie i detale świata
 
+**Status:** `done` ✅
+
 ## Cel
 
 Dodać niewielkim kosztem elementy, które sprawią, że świat Seedvale będzie wyglądał na bardziej zamieszkany, naturalny i dopracowany.

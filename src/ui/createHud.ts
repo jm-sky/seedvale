@@ -29,8 +29,8 @@ export function createHud(parent: HTMLElement): Hud {
     </div>
     <div class="seedvale-hud__hint">${
       isTouchDevice()
-        ? 'Joystick = ruch · przeciągnij = kamera · E = interakcja'
-        : 'WASD · klik = mysz · Esc = kursor · L = zadania · I = ekwipunek · G = upuść'
+        ? 'Joystick = ruch · przeciągnij = kamera · E = interakcja · R = alt'
+        : 'WASD · klik = mysz · Esc = kursor · E = interakcja · R = alt · L = zadania · I = ekwipunek · G = upuść'
     }</div>
   `
   parent.appendChild(root)

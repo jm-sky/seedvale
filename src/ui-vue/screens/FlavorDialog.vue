@@ -36,6 +36,6 @@ useTouchScroll(panel)
     v-if="!ui.flavorDialog.open && ui.flavorDialog.prompt"
     class="pointer-events-none fixed bottom-[90px] left-1/2 z-[6] -translate-x-1/2 rounded-md bg-black/70 px-3.5 py-1.5 text-[13px] text-white shadow"
   >
-    [E] {{ ui.flavorDialog.prompt }}
+    {{ ui.flavorDialog.prompt.startsWith('[') ? ui.flavorDialog.prompt : `[E] ${ui.flavorDialog.prompt}` }}
   </div>
 </template>

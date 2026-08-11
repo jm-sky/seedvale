@@ -1,6 +1,6 @@
 # NPC Dialogues v2
 
-**Status:** `verification needed` — v1 zaimplementowane 2026-08-10 (Vue menu rozmowy zastępuje `createNpcDialog.ts` dla NPC), zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test`; brak jeszcze wizualnej weryfikacji w przeglądarce. Patrz „Stan implementacji" niżej dla dokładnego zakresu i odstępstw od pierwotnego projektu technicznego.
+**Status:** `done` — v1 zaimplementowane 2026-08-10 (Vue menu rozmowy zastępuje `createNpcDialog.ts` dla NPC), zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test` i zweryfikowane w przeglądarce. Patrz „Stan implementacji" niżej dla dokładnego zakresu i odstępstw od pierwotnego projektu technicznego.
 
 > Sekcje 1-14 poniżej to oryginalny draft — wizja produktowa, spisana bez dostępu do repo. Review i decyzje poniżej weryfikują ją wobec faktycznego kodu i przycinają zakres v1; sam draft zostaje jako dokumentacja docelowego kierunku.
 

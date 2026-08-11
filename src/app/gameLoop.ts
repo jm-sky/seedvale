@@ -226,6 +226,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // closes, and blocks the gaze highlight — only the per-modal reaction
       // to *which* key was pressed differs, in the switch below.
       const interactConsumed = keyboard.consumeInteract()
+      keyboard.consumeAltInteract()
       const questLogConsumed = keyboard.consumeQuestLog()
       keyboard.consumeDrop()
       const inventoryConsumed = keyboard.consumeInventory()
@@ -299,7 +300,19 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       )
       setHighlight(gazed?.agent ?? null)
       const interactPressed = keyboard.consumeInteract()
-      if (target && interactPressed) {
+      const altInteractPressed = keyboard.consumeAltInteract()
+      if (target?.kind === 'dig') {
+        if (interactPressed && target.profile) {
+          startGroundWork('dig', target.position.x, target.position.z)
+        } else if (interactPressed && !target.profile) {
+          toast.show('Tu nie da się kopać.', 'error')
+        }
+        if (altInteractPressed && target.canLevel) {
+          startGroundWork('level', target.position.x, target.position.z)
+        } else if (altInteractPressed && !target.canLevel) {
+          toast.show('Nie ma tu czego wyrównać.', 'error')
+        }
+      } else if (target && interactPressed) {
         if (target.kind === 'item') {
           if (!inventory.canAdd(target.item.kind)) {
             toast.show('Ekwipunek jest za ciężki.', 'error')
@@ -344,8 +357,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           // pause menu already does on open (createPauseMenu's onPause).
           exitGamePointerLock(renderer.domElement)
           vueUi.openNpcDialogueMenu(target.npc, target.settlement, questManager, dayNight.timeOfDay)
-        } else if (target.kind === 'dig') {
-          startGroundWork(target.mode, target.position.x, target.position.z)
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)

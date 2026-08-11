@@ -25,8 +25,8 @@ export type Interactable =
   | { kind: 'campfire', position: { x: number, z: number }, promptLabel: string, fire: VillageFire }
   | { kind: 'spawner', position: { x: number, z: number }, promptLabel: string, spawner: PreySpawner }
   | { kind: 'item', position: { x: number, z: number }, promptLabel: string, item: WorldItemRef }
-  /** Synthetic target for shovel ground work — dig or level. Built from the
-   *  player's aimed ground point (`app/interactables.ts`'s `buildDigTarget`);
-   *  `mode`/`profile` are resolved once there so the `[E]` handler doesn't
-   *  re-classify the surface. */
-  | { kind: 'dig', position: { x: number, z: number }, promptLabel: string, mode: 'dig' | 'level', profile: DigProfile | null }
+  /** Synthetic target for shovel ground work. Built from the aimed ground
+   *  point (`app/interactables.ts`'s `buildDigTarget`). `profile` non-null →
+   *  `[E]` dig; `canLevel` → `[R]` level. Both may be true at once (deeper
+   *  dig over an existing hole). */
+  | { kind: 'dig', position: { x: number, z: number }, promptLabel: string, profile: DigProfile | null, canLevel: boolean }

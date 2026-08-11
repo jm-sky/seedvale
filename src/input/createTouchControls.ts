@@ -89,6 +89,7 @@ export function createTouchControls(
     <button type="button" class="seedvale-touch__button" data-quick-actions>⚡</button>
     <button type="button" class="seedvale-touch__button" data-drop hidden>G</button>
     <button type="button" class="seedvale-touch__button seedvale-touch__button--sprint" data-sprint>RUN</button>
+    <button type="button" class="seedvale-touch__button" data-alt-interact>R</button>
     <button type="button" class="seedvale-touch__button seedvale-touch__button--primary" data-interact>E</button>
   `
   parent.appendChild(buttons)
@@ -99,6 +100,7 @@ export function createTouchControls(
   const quickActionsButton = buttons.querySelector<HTMLButtonElement>('[data-quick-actions]')!
   const dropButton = buttons.querySelector<HTMLButtonElement>('[data-drop]')!
   const sprintButton = buttons.querySelector<HTMLButtonElement>('[data-sprint]')!
+  const altInteractButton = buttons.querySelector<HTMLButtonElement>('[data-alt-interact]')!
   const interactButton = buttons.querySelector<HTMLButtonElement>('[data-interact]')!
   const pauseButton = root.querySelector<HTMLButtonElement>('[data-pause]')!
 
@@ -233,6 +235,9 @@ export function createTouchControls(
   const onInteract = () => {
     keys.interact = true
   }
+  const onAltInteract = () => {
+    keys.altInteract = true
+  }
   const onDrop = () => {
     keys.drop = true
   }
@@ -245,6 +250,7 @@ export function createTouchControls(
   const onQuickActions = () => handlers.onQuickActions?.()
 
   interactButton.addEventListener('click', onInteract)
+  altInteractButton.addEventListener('click', onAltInteract)
   dropButton.addEventListener('click', onDrop)
   sprintButton.addEventListener('click', onSprintToggle)
   pauseButton.addEventListener('click', onPause)
@@ -290,6 +296,7 @@ export function createTouchControls(
       lookZone.removeEventListener('touchend', onLookTouchEnd)
       lookZone.removeEventListener('touchcancel', onLookTouchEnd)
       interactButton.removeEventListener('click', onInteract)
+      altInteractButton.removeEventListener('click', onAltInteract)
       dropButton.removeEventListener('click', onDrop)
       sprintButton.removeEventListener('click', onSprintToggle)
       pauseButton.removeEventListener('click', onPause)

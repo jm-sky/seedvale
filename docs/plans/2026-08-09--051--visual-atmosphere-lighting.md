@@ -1,6 +1,6 @@
 # Plan: Visual Atmosphere & Lighting Polish
 
-**Status:** `verification needed` (zaimplementowane 2026-08-10, wymaga weryfikacji wizualnej w przeglądarce)
+**Status:** `done` (zaimplementowane 2026-08-10 i zweryfikowane w przeglądarce)
 **Created:** 2026-08-09
 **Scope:** Three.js / WebGL2
 

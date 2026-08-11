@@ -2,6 +2,8 @@
 
 > **Implementation notes:** [2026-08-09--047--village-generation-overhaul-implementation-notes.md](./2026-08-09--047--village-generation-overhaul-implementation-notes.md)
 
+**Status:** `planned` 📋
+
 ## Goal
 
 Przebudować generowanie wiosek tak, aby nie były zbiorem losowo rozmieszczonych obiektów, ale spójnymi, proceduralnie zaplanowanymi osadami.

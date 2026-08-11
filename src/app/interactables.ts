@@ -155,8 +155,8 @@ export function buildInteractables(
  *  only asks for one when `pickInGaze` over the real candidates found
  *  nothing, so it's a fallback and can never outcompete a real target the
  *  player is glancing near. Requires the shovel to be **held** (not merely
- *  owned). Prefers "Wyrównaj" when the aim point is depressed vs procedural
- *  base; otherwise offers dig when the surface is diggable. */
+ *  owned). `[E]` digs when diggable; `[R]` levels when depressed vs base —
+ *  both can be offered together. */
 export function buildDigTarget(
   playerPos: { x: number, z: number },
   playerYaw: number,
@@ -166,12 +166,22 @@ export function buildDigTarget(
   if (!shovelHeld) return null
   const x = playerPos.x - Math.sin(playerYaw) * DIG_REACH
   const z = playerPos.z - Math.cos(playerYaw) * DIG_REACH
-  if (canLevelAt(x, z, chunkManager)) {
-    return { kind: 'dig', position: { x, z }, promptLabel: 'Wyrównaj', mode: 'level', profile: null }
-  }
   const profile = getDigProfileAt(x, z, chunkManager)
-  if (!profile) return null
-  return { kind: 'dig', position: { x, z }, promptLabel: 'Wykop dołek', mode: 'dig', profile }
+  const canLevel = canLevelAt(x, z, chunkManager)
+  if (!profile && !canLevel) return null
+  // Dig-only / both: FlavorDialog prefixes `[E]`. Level-only starts with `[R]`
+  // so the dialog skips that prefix (see FlavorDialog.vue).
+  let promptLabel: string
+  if (profile && canLevel) promptLabel = 'Wykop dołek · [R] Wyrównaj'
+  else if (profile) promptLabel = 'Wykop dołek'
+  else promptLabel = '[R] Wyrównaj'
+  return {
+    kind: 'dig',
+    position: { x, z },
+    promptLabel,
+    profile,
+    canLevel,
+  }
 }
 
 /** Routes a picked-up `WorldItemRef` to whichever registry it came from —

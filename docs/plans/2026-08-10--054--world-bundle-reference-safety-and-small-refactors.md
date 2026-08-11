@@ -1,5 +1,7 @@
 # Plan 054 — World Bundle Reference Safety & Small Refactors
 
+**Status:** `done` ✅
+
 ## Cel
 
 Domknąć refaktor z planu 053 poprzez usunięcie miejsc, w których długowieczne callbacki, akcje lub systemy mogą zachować referencję do obiektu należącego do starego `WorldBundle`.

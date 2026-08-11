@@ -46,8 +46,9 @@ Dopracować UX kopania po ręcznym teście 052:
 
 ### UX wiring
 
-- HUD `[E]` tylko gdy `heldTool === 'shovel'`.
+- HUD only when `heldTool === 'shovel'`: **`E` = Wykop dołek**, **`R` = Wyrównaj** (prompt np. `[E] Wykop dołek · [R] Wyrównaj`).
 - Menu akcji gdy gracz **posiada** łopatę (nawet bez trzymania).
+- Touch: przycisk `R` obok `E`.
 
 ## Poza zakresem (bez zmian)
 

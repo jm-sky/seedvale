@@ -68,7 +68,6 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 |------|---------|----------|----------|--------|------------|
 | [2026-08-08--032--natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md) | Zasoby naturalne, atrakcyjność lokalizacji, food source | 100% | 🔴 high | M | ~~028~~, ~~030~~, ~~031~~ |
 | [2026-08-08--036--village-siting-difficult-terrain.md](./2026-08-08--036--village-siting-difficult-terrain.md) | Osadzanie wiosek w trudnym terenie | 25% | 🟡 medium | M | ~~028~~, ~~031~~ |
-| [2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md](./2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md) | Bezpieczeństwo referencji `WorldBundle` + małe refaktory po 053 | 100% | 🟡 medium | S–M | ~~053~~ |
 | [2026-08-10--052--shovel-digging-and-finding-stones.md](./2026-08-10--052--shovel-digging-and-finding-stones.md) | Kopanie ziemi i znajdowanie kamieni [have implementation notes] | 100% | 🔴 high | M | ~~043~~, ~~030~~ |
 | [2026-08-11--059--inventory-pick-drop-sfx.md](./2026-08-11--059--inventory-pick-drop-sfx.md) | SFX podniesienia / wyrzucenia itemów | 100% | ⚪ low | S | ~~014~~, ~~043~~ |
 | [2026-08-11--061--dig-ux-held-tool-and-level.md](./2026-08-11--061--dig-ux-held-tool-and-level.md) | Dig UX: held tool, kanał 2s, notice kamienia, Wyrównaj | 100% | 🔴 high | M | ~~052~~ |
@@ -116,6 +115,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-09--050--fire-torch.md](./2026-08-09--050--fire-torch.md) | Ognisko, palenisko i przenośna pochodnia | ~~038~~ |
 | [2026-08-09--051--visual-atmosphere-lighting.md](./2026-08-09--051--visual-atmosphere-lighting.md) | Fog, dynamiczne światło/niebo, bloom, god rays | ~~003~~ |
 | [2026-08-10--053--createapp-refactor.md](./2026-08-10--053--createapp-refactor.md) | Refaktor `createApp.ts`, game loop, modal state, interactables (R5+R6) | ~~005~~, ~~011~~ |
+| [2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md](./2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md) | Bezpieczeństwo referencji `WorldBundle` + małe refaktory po 053 | ~~053~~ |
 
 ---
 

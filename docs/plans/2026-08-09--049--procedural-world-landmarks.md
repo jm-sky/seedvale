@@ -2,6 +2,8 @@
 
 > **Implementation notes:** [2026-08-09--049--procedural-world-landmarks-implementation-notes.md](./2026-08-09--049--procedural-world-landmarks-implementation-notes.md) — techniczna mapa implementacji i wskazówki dla Claude Code.
 
+**Status:** `in progress` 🔄
+
 ## Cel
 
 Wzbogacić proceduralny teren o losowo rozmieszczane obiekty, ozdoby, ruiny i proste budowle.
