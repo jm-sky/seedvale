@@ -45,9 +45,9 @@ function setupCanvas(canvas: HTMLCanvasElement): void {
   ctx?.scale(dpr, dpr)
 }
 
-function draw(playerPos: Vector3, settlements: readonly MinimapSettlement[]): void {
+function draw(playerPos: Vector3, settlements: readonly MinimapSettlement[], yaw: number): void {
   if (ui.minimap.collapsed || !ctx) return
-  drawMinimapFrame({ ctx, size }, playerPos, settlements)
+  drawMinimapFrame({ ctx, size }, playerPos, settlements, yaw)
 }
 
 onMounted(() => {

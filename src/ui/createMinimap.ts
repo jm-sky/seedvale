@@ -8,7 +8,7 @@ import type { Vector3 } from 'three'
 export type { MinimapSettlement }
 
 export type Minimap = {
-  update: (playerPos: Vector3, settlements: readonly MinimapSettlement[]) => void
+  update: (playerPos: Vector3, settlements: readonly MinimapSettlement[], yaw: number) => void
   toggle: () => void
   dispose: () => void
 }
@@ -20,9 +20,9 @@ export function createMinimap(_parent: HTMLElement): Minimap {
   let disposed = false
   const getUi = () => getMountedVueUi()
   return {
-    update(playerPos, settlements) {
+    update(playerPos, settlements, yaw) {
       if (disposed) return
-      updateRegisteredMinimap(playerPos, settlements)
+      updateRegisteredMinimap(playerPos, settlements, yaw)
     },
     toggle: () => { if (!disposed) getUi()?.toggleMinimap() },
     dispose: () => {

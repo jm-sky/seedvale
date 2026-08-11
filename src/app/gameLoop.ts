@@ -471,6 +471,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.settlementsManager
           .getLoaded()
           .map((s): MinimapSettlement => ({ position: s.center, npcs: s.npcs, name: s.name })),
+        mouseLook.state.yaw,
       )
     }
     postProcessing.updateGodRays(camera, sky.sunPosition, skyParamsFromTime(dayNight.timeOfDay).elev)

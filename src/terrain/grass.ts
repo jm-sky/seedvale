@@ -68,10 +68,18 @@ const ROAD_TINT_REJECT = 0.15
  *  surface (reads as "grass sunk into the ground"). */
 const GROUND_LIFT = 0.05
 
-const ARID_GRASS = new THREE.Color(0x9c9a54)
-const HUMID_GRASS = new THREE.Color(0x5fb03f)
+const ARID_GRASS = new THREE.Color(0x8a8848)
+/** Match humid terrain meadow (`biomeColors` ~0x4f9a3e) — was 0x5fb03f + tip×1.3 → neon lime. */
+const HUMID_GRASS = new THREE.Color(0x4a8a38)
 /** Swamp tint — darker, more olive than even `HUMID_GRASS`. */
-const SWAMP_GRASS = new THREE.Color(0x4a5c34)
+const SWAMP_GRASS = new THREE.Color(0x3f5230)
+
+/** Per-vertex gradient along a blade: base stays shaded, tip only slightly
+ *  brighter than the tint (not a glowing highlight). */
+const BASE_COLOR_SCALE = 0.48
+const TIP_COLOR_SCALE = 1.02
+/** Tips lose a bit of saturation so they don't read as plastic lime. */
+const TIP_SATURATION = 0.82
 
 /** Per-chunk hash so nearby chunks don't get correlated blade layouts (own salt,
  *  decorrelated from `chunkVegetation.ts`'s hash/salt for the same chunk). */
@@ -365,12 +373,12 @@ const FRAGMENT_SHADER = /* glsl */ `
     float tip = vBladeT * vBladeT;
     // Warm yellowish-green scatter — sells "vegetation" vs plastic cards.
     // Kept modest: earlier 0.65 read as glowing blades.
-    vec3 scatter = vec3(0.65, 0.95, 0.28);
-    color += scatter * pow(sunFacing, 1.8) * tip * 0.32 * uDayFactor;
+    vec3 scatter = vec3(0.45, 0.7, 0.22);
+    color += scatter * pow(sunFacing, 1.8) * tip * 0.22 * uDayFactor;
     // Soft fill on the lit side so blades aren't flat silhouettes when the
     // sun is behind the camera.
     float frontLit = max(dot(viewDir, -sunDir), 0.0);
-    color *= 1.0 + frontLit * 0.08 * uDayFactor;
+    color *= 1.0 + frontLit * 0.06 * uDayFactor;
 
     // Same linear falloff as three.js's built-in fog_fragment chunk — matches
     // how the terrain (MeshStandardMaterial, scene.fog) fades, so the grass
@@ -398,22 +406,24 @@ const GRAIN_RATIO = 0.25
 
 // Short — herb sits low, close to the ground, rather than standing up like
 // the grass blades (see also HERB_CURVE_STRENGTH's outward droop).
-const HERB_HEIGHT_MIN = 0.05
-const HERB_HEIGHT_MAX = 0.09
-const HERB_WIDTH_MIN = 0.14
-const HERB_WIDTH_MAX = 0.22
-const BLADE_HEIGHT_MIN = 0.22
-const BLADE_HEIGHT_MAX = 0.44
-const BLADE_WIDTH_MIN = 0.08
-const BLADE_WIDTH_MAX = 0.14
+const HERB_HEIGHT_MIN = 0.04
+const HERB_HEIGHT_MAX = 0.11
+const HERB_WIDTH_MIN = 0.12
+const HERB_WIDTH_MAX = 0.24
+const BLADE_HEIGHT_MIN = 0.16
+const BLADE_HEIGHT_MAX = 0.52
+const BLADE_WIDTH_MIN = 0.06
+const BLADE_WIDTH_MAX = 0.16
 
 /** Small extra per-instance variety beyond height/width/rotation: a slight hue/
- *  saturation nudge on top of the biome-lerped tint, and a few degrees of
- *  static tilt off vertical (independent of wind sway) so not every instance
- *  stands bolt upright. */
-const HUE_JITTER = 0.03
-const SATURATION_JITTER = 0.08
-const TILT_JITTER_RAD = THREE.MathUtils.degToRad(7)
+ *  saturation/lightness nudge on top of the biome-lerped tint, and static tilt
+ *  off vertical (independent of wind sway) so clumps don't read as clones. */
+const HUE_JITTER = 0.07
+const SATURATION_JITTER = 0.14
+const LIGHTNESS_JITTER = 0.06
+const TILT_JITTER_RAD = THREE.MathUtils.degToRad(14)
+/** Extra overall size scatter on top of the height/width roll. */
+const SIZE_JITTER = 0.22
 
 type SpeciesId = 'tri' | 'grain' | 'herb'
 
@@ -501,7 +511,8 @@ export function createGrassSystem(): GrassSystem {
     tiltQuat.setFromAxisAngle(tiltAxis, random() * TILT_JITTER_RAD)
     quat.multiply(tiltQuat)
     pos.set(localX, h + GROUND_LIFT, localZ)
-    scale.set(bladeWidth, bladeHeight, bladeWidth)
+    const sizeJitter = 1 + (random() * 2 - 1) * SIZE_JITTER
+    scale.set(bladeWidth * sizeJitter, bladeHeight * sizeJitter, bladeWidth * sizeJitter)
     matrix.compose(pos, quat, scale)
     matrix.toArray(bucket.matrixData, bucket.count * 16)
     bucket.count++
@@ -513,9 +524,20 @@ export function createGrassSystem(): GrassSystem {
     tmpColor.getHSL(tmpHsl)
     tmpHsl.h = (tmpHsl.h + (random() * 2 - 1) * HUE_JITTER + 1) % 1
     tmpHsl.s = Math.min(1, Math.max(0, tmpHsl.s + (random() * 2 - 1) * SATURATION_JITTER))
+    tmpHsl.l = Math.min(1, Math.max(0, tmpHsl.l + (random() * 2 - 1) * LIGHTNESS_JITTER))
     tmpColor.setHSL(tmpHsl.h, tmpHsl.s, tmpHsl.l)
-    bucket.baseColors.push(tmpColor.r * 0.55 * jitter, tmpColor.g * 0.55 * jitter, tmpColor.b * 0.55 * jitter)
-    bucket.tipColors.push(tmpColor.r * 1.3 * jitter, tmpColor.g * 1.3 * jitter, tmpColor.b * 1.3 * jitter)
+    bucket.baseColors.push(
+      tmpColor.r * BASE_COLOR_SCALE * jitter,
+      tmpColor.g * BASE_COLOR_SCALE * jitter,
+      tmpColor.b * BASE_COLOR_SCALE * jitter,
+    )
+    // Tip: same hue family, slightly less saturated, capped brightness.
+    tmpColor.setHSL(tmpHsl.h, tmpHsl.s * TIP_SATURATION, tmpHsl.l)
+    bucket.tipColors.push(
+      tmpColor.r * TIP_COLOR_SCALE * jitter,
+      tmpColor.g * TIP_COLOR_SCALE * jitter,
+      tmpColor.b * TIP_COLOR_SCALE * jitter,
+    )
   }
 
   function createChunkGrass(
@@ -602,7 +624,7 @@ export function createGrassSystem(): GrassSystem {
       if (density <= 0 || random() > density) continue
 
       const rotationY = random() * Math.PI * 2
-      const jitter = 1 + (random() * 2 - 1) * 0.15
+      const jitter = 1 + (random() * 2 - 1) * 0.22
 
       tmpColor.copy(ARID_GRASS).lerp(HUMID_GRASS, moisture)
       if (biome.swamp > 0) tmpColor.lerp(SWAMP_GRASS, biome.swamp)
@@ -699,6 +721,10 @@ export function createGrassSystem(): GrassSystem {
       )
       mesh.instanceMatrix.needsUpdate = true
       mesh.computeBoundingSphere() // instance matrices spread well beyond the unit template's own bounds
+      // No sun shadows — dense fin clusters painted black contact blobs under
+      // every tuft (reads as plastic stickers). Terrain AO still softens a bit.
+      mesh.castShadow = false
+      mesh.receiveShadow = false
       mesh.name = `chunk-grass-${id}`
       group.add(mesh)
       subMeshes.push({ mesh, fullCount: bucket.count })

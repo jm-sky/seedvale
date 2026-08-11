@@ -54,7 +54,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
-| [2026-08-08--037--npc-genealogy-lineages.md](./2026-08-08--037--npc-genealogy-lineages.md) | Rody NPC + przypisanie wg kierunku osady | 0% | ⚪ low | L | ~~022~~, ~~031~~ |
+| [2026-08-08--037--npc-genealogy-lineages.md](./2026-08-08--037--npc-genealogy-lineages.md) | Rody NPC + przypisanie wg kierunku osady (kompas N → ~~067~~) | 0% | ⚪ low | L | ~~022~~, ~~031~~ |
 
 ---
 
@@ -121,6 +121,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-10--055--shared-simulation-architecture.md](./2026-08-10--055--shared-simulation-architecture.md) | Wspólna architektura symulacji: state → perception → decision → action → world effect | — |
 | [2026-08-11--062--terrain-generation-overhaul.md](./2026-08-11--062--terrain-generation-overhaul.md) | Naturalniejsze generowanie terenu (macro + hills + soft detail; variable beach; grass foothill fade) | ~~001~~, ~~006~~, ~~007~~, ~~028~~ |
 | [2026-08-11--066--better-visual-effects.md](./2026-08-11--066--better-visual-effects.md) | Lepsze efekty graficzne (grass, terrain, wind, film grade, atmosphere) | — |
+| [2026-08-11--067--minimap-heading-and-north.md](./2026-08-11--067--minimap-heading-and-north.md) | Minimapa heading-up + kompas N na ramce | ~~029~~, ~~046~~ |
 
 ---
 

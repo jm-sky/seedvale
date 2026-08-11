@@ -118,6 +118,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Vue migration is incremental; it is not a full replacement of the vanilla UI yet.
 - NPC dialogue v2 is already a Vue screen.
 - Pause menu, quest log, inventory, quick actions, time-skip overlay, busy/channel overlay, world config screen, notes/journal, HUD, minimap, toast and touch action chrome exist as Vue screens/overlays; `src/ui/create*.ts` for these are thin compatibility facades over the Vue store.
+- Minimap is heading-up (canvas up = `mouseLook` yaw) with a rim `N` marker for world north (−Z); draw logic in `src/ui-vue/lib/drawMinimap.ts` (plan 067).
 - Touch joystick + look-drag remain vanilla DOM in `src/input/createTouchControls.ts` (input hot-path); Lucide icons on pause/actions/minimap toggle (plan 046 Faza 4 / issue 005).
 - lil-gui remains the full debug/world configuration UI (region/fbm/road-network tuning, post-processing); the in-game world config screen (pause menu → Świat) exposes only the player-facing subset (seed, flat shading, day/night) — same underlying `WorldConfig`/`DayNightState` objects, not a duplicate.
 
