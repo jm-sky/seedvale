@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
+import { createHealthState, damageFor, damageVsHuman, isMeleeTool, MAX_HP, playerToolDamage } from './faunaCombat'
 
 describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageFor fauna-local)', () => {
   it('createHealthState still builds a full-health state after the shared/ extraction', () => {
@@ -32,5 +32,13 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
     expect(damageVsHuman('wolf')).toBe(12)
     expect(damageVsHuman('fox')).toBe(6)
     expect(damageVsHuman('boar')).toBe(8) // no table entry -> DEFAULT_DAMAGE
+  })
+
+  it('ranks player melee tools axe > knife > shovel', () => {
+    expect(playerToolDamage('axe')).toBeGreaterThan(playerToolDamage('knife'))
+    expect(playerToolDamage('knife')).toBeGreaterThan(playerToolDamage('shovel'))
+    expect(isMeleeTool('axe')).toBe(true)
+    expect(isMeleeTool('firestarter')).toBe(false)
+    expect(isMeleeTool(null)).toBe(false)
   })
 })

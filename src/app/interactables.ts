@@ -2,11 +2,13 @@ import type { Fauna } from '../fauna/createFauna'
 import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemSpawners } from '../items/createItemSpawners'
+import type { ToolKind } from '../items/HeldTool'
 import type { Settlement } from '../settlement/createSettlement'
 import type { PlacedFires } from '../settlement/PlacedFires'
 import type { ChunkManager } from '../terrain/chunkManager'
-import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
+import { ANIMAL_LABELS, type AnimalKind } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
+import { isMeleeTool } from '../fauna/faunaCombat'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { canLevelAt, getDigProfileAt } from '../terrain/dig'
 import { isChoppableStage } from '../world/treeLifecycle'
@@ -32,6 +34,11 @@ export const KNIFE_BRANCH_BONUS = 0.15
  *  offered; see `buildDigTarget`. */
 export const DIG_REACH = 1.5
 
+function animalPromptLabel(kind: AnimalKind, heldTool: ToolKind | null): string {
+  const label = ANIMAL_LABELS[kind]
+  return isMeleeTool(heldTool) ? `Atakuj: ${label}` : `Obserwuj: ${label}`
+}
+
 /** Assembles this frame's `Interactable` candidates from every world system —
  *  NPCs, the well, nearby trees (settlement + streamed via lifecycle), live fauna,
  *  fauna spawn points, player-built campfires, and nearby pickup items
@@ -45,10 +52,11 @@ export function buildInteractables(
   droppedItems: DroppedItems,
   placedFires: PlacedFires,
   playerPos: Vector3,
-  /** When the axe is held, mature trees show a chop prompt (plan 057). */
-  axeHeld = false,
+  /** Currently held tool — drives axe harvest prompts and animal attack prompts. */
+  heldTool: ToolKind | null = null,
 ): Interactable[] {
   const list: Interactable[] = []
+  const axeHeld = heldTool === 'axe'
 
   for (const pf of placedFires.list()) {
     list.push({
@@ -77,7 +85,7 @@ export function buildInteractables(
       list.push({
         kind: 'animal',
         position: animal.mesh.position,
-        promptLabel: `Obserwuj: ${ANIMAL_LABELS[animal.def.kind]}`,
+        promptLabel: animalPromptLabel(animal.def.kind, heldTool),
         animal,
       })
     }
@@ -127,7 +135,7 @@ export function buildInteractables(
     list.push({
       kind: 'animal',
       position: animal.mesh.position,
-      promptLabel: `Obserwuj: ${ANIMAL_LABELS[animal.def.kind]}`,
+      promptLabel: animalPromptLabel(animal.def.kind, heldTool),
       animal,
     })
   }

@@ -26,6 +26,7 @@ import { isPlayerNoticed } from './playerAwareness'
 import {
   decidePredatorHumanIntent,
   type PredatorHumanIntent,
+  PROVOCATION_SECONDS,
 } from './predatorHumanDecision'
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
@@ -381,6 +382,10 @@ export class AnimalAgent {
   /** Staggered human flee/attack reevaluation while the player alert is held. */
   private humanDecisionTimer = 0
   private cachedHumanIntent: PredatorHumanIntent = 'flee'
+  /** Roll paired with `cachedHumanIntent` so the 0.2s window does not flicker. */
+  private cachedAggressionRoll = 0
+  /** Counts down after a player hit — feeds wolf retaliation (plan 056 ext). */
+  private provokedTimer = 0
 
   constructor(
     def: AnimalDef,
@@ -512,9 +517,14 @@ export class AnimalAgent {
     return this.health.dead && this.timeSinceDeath >= CORPSE_LINGER_SECONDS
   }
 
-  takeDamage(damage: number): void {
+  takeDamage(damage: number, source?: 'player'): void {
     if (this.health.dead) return
     damageHealth(this.health, damage)
+    if (source === 'player') {
+      this.provokedTimer = PROVOCATION_SECONDS
+      // Force an immediate re-score so healthy wolves can retaliate this frame.
+      this.humanDecisionTimer = 0
+    }
     if (this.health.dead) this.collapse()
   }
 
@@ -545,6 +555,7 @@ export class AnimalAgent {
     }
     if (this.attackCooldown > 0) this.attackCooldown -= dt
     if (this.alertTimer > 0) this.alertTimer -= dt
+    if (this.provokedTimer > 0) this.provokedTimer -= dt
     this.isNight = dayFactor <= 0
     this.moving = false
     this.sprinting = false
@@ -556,10 +567,12 @@ export class AnimalAgent {
         this.humanDecisionTimer -= dt
         if (this.humanDecisionTimer <= 0) {
           this.humanDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
+          this.cachedAggressionRoll = Math.random()
           this.cachedHumanIntent = this.decideHumanResponse(
             sense,
             observerPos,
             nearbyHumanCount,
+            this.cachedAggressionRoll,
           )
         }
         if (this.cachedHumanIntent === 'attack') {
@@ -575,13 +588,16 @@ export class AnimalAgent {
       }
     } else if (sense.nearestFire) {
       this.humanDecisionTimer = 0
+      this.provokedTimer = 0
       this.setIntent('flee', { x: sense.nearestFire.x, z: sense.nearestFire.z })
       this.fleeFrom(sense.nearestFire.x, sense.nearestFire.z, dt)
     } else if (this.def.role === 'predator') {
       this.humanDecisionTimer = 0
+      this.provokedTimer = 0
       this.updatePredator(dt, others)
     } else {
       this.humanDecisionTimer = 0
+      this.provokedTimer = 0
       this.updatePrey(dt, others)
     }
     this.clampBounds()
@@ -655,8 +671,10 @@ export class AnimalAgent {
     sense: EnvironmentSense,
     observerPos: THREE.Vector3,
     nearbyHumanCount: number,
+    aggressionRoll: number,
   ): PredatorHumanIntent {
     const ctx = this.buildDecisionContext(sense, nearbyHumanCount)
+    const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
     return decidePredatorHumanIntent({
       hunger: ctx.needs?.hunger ?? this.life.hunger,
       humanDistance: sense.playerDistance > 0
@@ -670,6 +688,9 @@ export class AnimalAgent {
       fireNearby: (ctx.nearbyFireCount ?? 0) > 0,
       nearbyHumanCount: Math.max(1, ctx.nearbyHumanCount ?? nearbyHumanCount),
       kind: this.def.kind,
+      selfHpRatio: hpRatio,
+      provoked: this.provokedTimer > 0,
+      aggressionRoll,
     })
   }
 

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CLOSE_ATTACK_CHANCE,
   countNearbyHumans,
   decidePredatorHumanIntent,
   humanProximityFear,
   hungerAttackPressure,
   NEARBY_HUMAN_RADIUS,
+  PROVOKED_FLEE_HP_RATIO,
+  RETALIATION_ATTACK_CHANCE,
   scorePredatorHumanIntents,
 } from './predatorHumanDecision'
 
@@ -15,6 +18,9 @@ const base = {
   fireNearby: false,
   nearbyHumanCount: 1,
   kind: 'wolf',
+  selfHpRatio: 1,
+  provoked: false,
+  aggressionRoll: 0,
 } as const
 
 describe('humanProximityFear', () => {
@@ -58,11 +64,13 @@ describe('decidePredatorHumanIntent', () => {
       humanDistance: 9,
     })
     expect(hungryFar).toBe('attack')
+    // Roll above close-attack chance so territorial branch does not override.
     expect(
       decidePredatorHumanIntent({
         ...base,
         hunger: 0.95,
         humanDistance: 2,
+        aggressionRoll: CLOSE_ATTACK_CHANCE,
       }),
     ).toBe('flee')
   })
@@ -115,8 +123,98 @@ describe('decidePredatorHumanIntent', () => {
   })
 
   it('is deterministic for identical inputs', () => {
-    const input = { ...base, hunger: 0.9 }
+    const input = { ...base, hunger: 0.9, aggressionRoll: 0.42 }
     expect(decidePredatorHumanIntent(input)).toBe(decidePredatorHumanIntent(input))
+  })
+
+  it('wolf close territorial roll can attack when non-hungry', () => {
+    const close = {
+      ...base,
+      hunger: 0.3,
+      humanDistance: 2,
+    }
+    expect(
+      decidePredatorHumanIntent({
+        ...close,
+        aggressionRoll: CLOSE_ATTACK_CHANCE - 0.01,
+      }),
+    ).toBe('attack')
+    expect(
+      decidePredatorHumanIntent({
+        ...close,
+        aggressionRoll: CLOSE_ATTACK_CHANCE,
+      }),
+    ).toBe('flee')
+  })
+
+  it('fox does not use the close territorial roll', () => {
+    expect(
+      decidePredatorHumanIntent({
+        ...base,
+        kind: 'fox',
+        hunger: 0.3,
+        humanDistance: 2,
+        aggressionRoll: 0,
+      }),
+    ).toBe('flee')
+  })
+
+  it('provoked healthy wolf retaliates by roll', () => {
+    const provoked = {
+      ...base,
+      hunger: 0.3,
+      humanDistance: 8,
+      provoked: true,
+      selfHpRatio: 0.8,
+    }
+    expect(
+      decidePredatorHumanIntent({
+        ...provoked,
+        aggressionRoll: RETALIATION_ATTACK_CHANCE - 0.01,
+      }),
+    ).toBe('attack')
+    expect(
+      decidePredatorHumanIntent({
+        ...provoked,
+        aggressionRoll: RETALIATION_ATTACK_CHANCE,
+      }),
+    ).toBe('flee')
+  })
+
+  it('provoked low-HP wolf always flees', () => {
+    expect(
+      decidePredatorHumanIntent({
+        ...base,
+        hunger: 0.3,
+        humanDistance: 8,
+        provoked: true,
+        selfHpRatio: PROVOKED_FLEE_HP_RATIO - 0.1,
+        aggressionRoll: 0,
+      }),
+    ).toBe('flee')
+  })
+
+  it('fire suppresses close and retaliation attack rolls', () => {
+    expect(
+      decidePredatorHumanIntent({
+        ...base,
+        hunger: 0.3,
+        humanDistance: 2,
+        fireNearby: true,
+        aggressionRoll: 0,
+      }),
+    ).toBe('flee')
+    expect(
+      decidePredatorHumanIntent({
+        ...base,
+        hunger: 0.3,
+        humanDistance: 8,
+        provoked: true,
+        selfHpRatio: 0.9,
+        fireNearby: true,
+        aggressionRoll: 0,
+      }),
+    ).toBe('flee')
   })
 })
 

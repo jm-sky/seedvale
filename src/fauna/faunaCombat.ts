@@ -1,3 +1,4 @@
+import type { ToolKind } from '../items/HeldTool'
 import type { AnimalKind } from './AnimalAgent'
 
 export type { HealthState } from '../shared/HealthState'
@@ -32,10 +33,27 @@ const HUMAN_DAMAGE: Partial<Record<AnimalKind, number>> = {
   fox: 6,
 }
 
+/** Held tools that can hit an animal on `[E]` (axe > knife > shovel). */
+export type MeleeToolKind = Extract<ToolKind, 'axe' | 'knife' | 'shovel'>
+
+const PLAYER_TOOL_DAMAGE: Record<MeleeToolKind, number> = {
+  axe: 20,
+  knife: 12,
+  shovel: 8,
+}
+
+export function isMeleeTool(kind: ToolKind | null | undefined): kind is MeleeToolKind {
+  return kind === 'axe' || kind === 'knife' || kind === 'shovel'
+}
+
 export function damageFor(predator: AnimalKind, prey: AnimalKind): number {
   return DAMAGE_TABLE[predator]?.[prey] ?? DEFAULT_DAMAGE
 }
 
 export function damageVsHuman(predator: AnimalKind): number {
   return HUMAN_DAMAGE[predator] ?? DEFAULT_DAMAGE
+}
+
+export function playerToolDamage(tool: MeleeToolKind): number {
+  return PLAYER_TOOL_DAMAGE[tool]
 }

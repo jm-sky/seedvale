@@ -453,3 +453,13 @@ Keep the decision small and pure, reuse existing hunger/perception/fire/movement
 - NPC as attack target (player only).
 - Death UI / respawn / combat UX (plan 045).
 - Generalized combat framework / `EntityRef` / `ThreatManager`.
+
+---
+
+## 21. Wolf close aggression + retaliation (2026-08-11)
+
+Extends the decision module without a new AI system:
+
+- Inputs: `selfHpRatio`, `provoked`, `aggressionRoll` (caller-injected; cached with intent for 0.2s).
+- Wolf only: close territorial roll (~30%) when inside panic range and hunger scoring would flee; retaliation after `takeDamage(..., 'player')` — 75% attack if HP ≥ 40%, else always flee. Fire / crowd ≥ 3 suppress roll branches.
+- Provocation lasts 8s, cleared when player alert drops. Player melee in `gameLoop` passes `'player'` as damage source.

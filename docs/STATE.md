@@ -77,7 +77,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Animal Life hunger/thirst/stamina (`AnimalLifeState`; stamina migrated from former `energy` under plan 045).
 - Prey spawners (cave / thicket) with respawn; placement rejects road/path corridors (`ChunkManager.roadCorridorsNear` + `halfWidth` clearance). Cave has a procedural mouth mesh (`createCaveMouth`) plus CSS2D label; thicket remains label-only.
 - Player-awareness/flee behaviour.
-- Hungry wild predators can choose chase/attack vs flee via pure `predatorHumanDecision` (plan 056): hunger vs proximity/fire/crowd; torch position joins `litFires`; nearby-human count is precomputed once per frame from loaded NPCs; contact bites call `damageHealth` on `player.health` (`damageVsHuman`). No death UI yet.
+- Hungry wild predators can choose chase/attack vs flee via pure `predatorHumanDecision` (plan 056): hunger vs proximity/fire/crowd; torch position joins `litFires`; nearby-human count is precomputed once per frame from loaded NPCs; contact bites call `damageHealth` on `player.health` (`damageVsHuman`). Wolves also get close territorial (~30% inside panic range when not already attacking from hunger) and retaliation after a player hit (75% when HP ≥ 40%, else flee). No death UI yet.
 - Exhaustion gates sustained chase/flee sprinting.
 - GLB fauna models are used for wolf/fox/deer/stag.
 
@@ -85,6 +85,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 
 - `ItemKind` and `Inventory` exist in `src/items/`.
 - Player has shared `HealthState` on `PlayerController` (100 HP; CSS2D HP bar like NPC/fauna; no death UI/respawn yet — plan 045).
+- Simple player→animal melee: with knife/axe/shovel **held**, gazing at a live animal and pressing `[E]` deals instant damage (`playerToolDamage`: axe 20 > knife 12 > shovel 8) via `AnimalAgent.takeDamage`; without a melee tool the existing observe/flavor dialog remains.
 - Inventory is persisted in save data and has weight calculation/max weight support.
 - Item spawners and dropped items exist.
 - Natural collectible items are integrated into the world.

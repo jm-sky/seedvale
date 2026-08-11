@@ -10,7 +10,8 @@ const name = ref(ui.pauseMenu.playerName)
 const saveTimer = ref<number | null>(null)
 
 const emit = defineEmits<{
-  (e: 'open-actions'): void
+  'open-actions': []
+  'open-settings': []
 }>()
 
 useOverlayScreen('pause-menu', isPauseMenuOpen, closePauseMenu)
@@ -60,6 +61,13 @@ function openInventory(): void { closePauseMenu(); ui.pauseMenu.onInventory?.() 
       Akcje
     </button>
     <div class="my-3 mx-auto h-px w-1/2 self-center border-t border-white/15" />
+    <button
+      type="button"
+      class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
+      @click="emit('open-settings')"
+    >
+      Ustawienia
+    </button>
     <button
       type="button"
       class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"

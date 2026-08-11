@@ -31,6 +31,8 @@ import type { BusyAction } from './busyAction'
 import type { WorldBundle } from './worldBundle'
 import { playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
+import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
+import { isMeleeTool, playerToolDamage } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
@@ -279,6 +281,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           break
       }
     } else {
+      const held = heldTool.held()
       const interactables = buildInteractables(
         bundle.settlementsManager.getLoaded(),
         bundle.fauna,
@@ -287,7 +290,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.droppedItems,
         bundle.placedFires,
         player.mesh.position,
-        heldTool.held() === 'axe',
+        held,
       )
       // The shovel's dig/level target is a fallback, not a competing candidate —
       // only synthesized when nothing else is being gazed at, and only while
@@ -301,7 +304,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       ) ?? buildDigTarget(
         player.mesh.position,
         mouseLook.state.yaw,
-        heldTool.held() === 'shovel',
+        held === 'shovel',
         bundle.chunkManager,
       )
       npcDialog.setPrompt(target ? target.promptLabel : null)
@@ -384,9 +387,21 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           exitGamePointerLock(renderer.domElement)
           vueUi.openNpcDialogueMenu(target.npc, target.settlement, questManager, dayNight.timeOfDay)
         } else if (target.kind === 'animal') {
-          const outcome = resolveInteraction(target, questManager)
-          playAnimalSound(target.animal.def.kind, worldAudio.playOnce)
-          npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
+          if (isMeleeTool(held)) {
+            const beforeDead = target.animal.isDead()
+            target.animal.takeDamage(playerToolDamage(held), 'player')
+            playAnimalSound(target.animal.def.kind, worldAudio.playOnce)
+            const label = ANIMAL_LABELS[target.animal.def.kind]
+            if (!beforeDead && target.animal.isDead()) {
+              toast.show(`${label} pada.`)
+            } else {
+              toast.show(`Trafiono: ${label}`)
+            }
+          } else {
+            const outcome = resolveInteraction(target, questManager)
+            playAnimalSound(target.animal.def.kind, worldAudio.playOnce)
+            npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
+          }
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
