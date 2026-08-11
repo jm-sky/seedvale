@@ -196,7 +196,7 @@ const shovelActions: Action[] = [
         v-for="hours in [1, 3, 6]"
         :key="hours"
         :label="`${hours}h`"
-        class="flex-1"
+        class="flex-1 w-auto"
         @click="wait(hours)"
       />
     </div>
