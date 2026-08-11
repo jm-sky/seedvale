@@ -1,14 +1,14 @@
 # Hungry Predator: Human Aggression
 
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** 🟡 `medium`  
 **Effort:** `M`
 
-> **Note (2026-08-11):** Decision seam from plan 055 Phase 5 is in place —
-> `src/fauna/predatorHumanDecision.ts` + `AnimalAgent` chase-vs-flee wiring.
-> Remaining for this plan: optional nearby-human count from settlements,
-> torch-as-fire if not already covered by `litFires`, and human damage boundary
-> (do not invent a combat framework).
+> **Note (2026-08-11):** Implemented. Decision seam (`predatorHumanDecision.ts`),
+> chase-vs-flee wiring, torch→`litFires`, precomputed `nearbyHumanCount` from
+> loaded NPCs, and fauna→player damage via `damageHealth(player.health, …)` /
+> `damageVsHuman`. No death UI/respawn (still plan 045). NPC targeting deferred.
+> Browser verification still required.
 
 ## Goal
 

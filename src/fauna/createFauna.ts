@@ -37,6 +37,10 @@ export type Fauna = {
      *  (horse/cow/sheep/chicken) isn't spawned here at all — see
      *  `settlement/livestock.ts`, spawned per-settlement instead. */
     villages: readonly { x: number, z: number }[],
+    /** Player + nearby NPCs for predator crowd fear (plan 056). Default 1. */
+    nearbyHumanCount?: number,
+    /** Fauna→player damage callback when a predator bites in contact range. */
+    onHumanHit?: (damage: number) => void,
   ) => void
   dispose: () => void
   getAgents: () => AnimalAgent[]
@@ -283,11 +287,21 @@ export async function createFauna(
   }
 
   return {
-    update(dt, observerPos, timeOfDay, litFires, villages) {
+    update(dt, observerPos, timeOfDay, litFires, villages, nearbyHumanCount = 1, onHumanHit) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       for (const a of agents) {
         const forestFactor = sampleForestFactor(a.mesh.position.x, a.mesh.position.z)
-        a.update(dt, agents, observerPos, dayFactor, forestFactor, litFires, villages)
+        a.update(
+          dt,
+          agents,
+          observerPos,
+          dayFactor,
+          forestFactor,
+          litFires,
+          villages,
+          nearbyHumanCount,
+          onHumanHit,
+        )
       }
 
       if (agents.some((a) => a.readyToRemove())) {

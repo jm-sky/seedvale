@@ -83,3 +83,27 @@ export function decidePredatorHumanIntent(
 ): PredatorHumanIntent {
   return pickHighestScore(scorePredatorHumanIntents(input))?.kind ?? 'flee'
 }
+
+/** XZ radius around the player for counting nearby NPCs into crowd fear.
+ *  Tuned near notice range so only humans at the encounter matter. */
+export const NEARBY_HUMAN_RADIUS = 12
+
+/**
+ * Player (always 1) + alive NPCs within `radius` of the player.
+ * Precomputed once per frame by the caller — avoids O(animals × NPCs).
+ */
+export function countNearbyHumans(
+  playerX: number,
+  playerZ: number,
+  npcPositions: readonly { x: number, z: number }[],
+  radius: number = NEARBY_HUMAN_RADIUS,
+): number {
+  let count = 1
+  const r2 = radius * radius
+  for (const p of npcPositions) {
+    const dx = p.x - playerX
+    const dz = p.z - playerZ
+    if (dx * dx + dz * dz <= r2) count++
+  }
+  return count
+}

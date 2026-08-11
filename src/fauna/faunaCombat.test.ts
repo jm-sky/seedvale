@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createHealthState, damageFor, MAX_HP } from './faunaCombat'
+import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 
 describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageFor fauna-local)', () => {
   it('createHealthState still builds a full-health state after the shared/ extraction', () => {
@@ -26,5 +26,11 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
     expect(damageFor('wolf', 'deer')).toBe(15)
     expect(damageFor('fox', 'stag')).toBe(6)
     expect(damageFor('wolf', 'fox')).toBe(8) // no table entry -> DEFAULT_DAMAGE
+  })
+
+  it('looks up predator→human damage (plan 056)', () => {
+    expect(damageVsHuman('wolf')).toBe(12)
+    expect(damageVsHuman('fox')).toBe(6)
+    expect(damageVsHuman('boar')).toBe(8) // no table entry -> DEFAULT_DAMAGE
   })
 })

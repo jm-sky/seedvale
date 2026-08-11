@@ -432,3 +432,24 @@ If actual human damage is not supported by an existing safe health boundary, rep
 The important implementation trap is assuming that plan 056 is only a change from `flee` to `attack`. It is not: the current code has **player perception**, but the actual attack API is **animal-to-animal only**.
 
 Keep the decision small and pure, reuse existing hunger/perception/fire/movement, and add only the smallest human-target boundary that the current player health API can support. Do not solve the larger combat architecture in this plan.
+
+---
+
+## 20. Implementation record (2026-08-11)
+
+**Status:** implemented · technically verified · browser verification needed
+
+### Done
+
+- Pure decision: `src/fauna/predatorHumanDecision.ts` (+ `countNearbyHumans`).
+- `AnimalAgent`: predator noticed-human → `decidePredatorHumanIntent` → `chaseHuman` / `fleeFrom`.
+- Torch: lit `playerTorch` XZ appended to `litFires` in `gameLoop` before fauna update.
+- Crowd: once-per-frame `countNearbyHumans` from loaded settlement NPCs (radius 12), passed into `Fauna.update`.
+- Fauna→player damage: `chaseHuman` contact + cooldown → `damageVsHuman(kind)` → `onHumanHit` → `damageHealth(player.health, …)`. No death UI/respawn.
+- Tests: decision + `countNearbyHumans` + `damageVsHuman`; `tsc` / lint / fauna tests / build green.
+
+### Explicitly out of scope / deferred
+
+- NPC as attack target (player only).
+- Death UI / respawn / combat UX (plan 045).
+- Generalized combat framework / `EntityRef` / `ThreatManager`.

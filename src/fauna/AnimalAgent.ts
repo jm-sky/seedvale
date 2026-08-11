@@ -21,7 +21,7 @@ import {
   STAMINA_REST_THRESHOLD,
   tickAnimalLife,
 } from './AnimalLife'
-import { createHealthState, damageFor, MAX_HP } from './faunaCombat'
+import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 import { isPlayerNoticed } from './playerAwareness'
 import {
   decidePredatorHumanIntent,
@@ -536,6 +536,8 @@ export class AnimalAgent {
     litFires: readonly { x: number, z: number }[],
     villages: readonly { x: number, z: number }[] = [],
     nearbyHumanCount = 1,
+    /** Optional fauna→human damage seam (plan 056). Absent → chase only. */
+    onHumanHit?: (damage: number) => void,
   ): void {
     if (this.health.dead) {
       this.timeSinceDeath += dt
@@ -562,7 +564,7 @@ export class AnimalAgent {
         }
         if (this.cachedHumanIntent === 'attack') {
           this.setIntent('attack', copyVec3(observerPos))
-          this.chaseHuman(observerPos, dt)
+          this.chaseHuman(observerPos, dt, onHumanHit)
         } else {
           this.setIntent('flee', copyVec3(observerPos))
           this.fleeFrom(observerPos.x, observerPos.z, dt)
@@ -671,15 +673,35 @@ export class AnimalAgent {
     })
   }
 
-  /** Sprint toward a human without dealing damage yet (056 damage boundary). */
-  private chaseHuman(observerPos: THREE.Vector3, dt: number): void {
+  /** Sprint toward a human; bite via `onHumanHit` when in contact (plan 056). */
+  private chaseHuman(
+    observerPos: THREE.Vector3,
+    dt: number,
+    onHumanHit?: (damage: number) => void,
+  ): void {
     if (isExhausted(this.life.stamina)) {
       this.setIntent('wander')
       this.wander(dt)
       return
     }
     this.sprinting = true
+    const dist = Math.hypot(
+      observerPos.x - this.mesh.position.x,
+      observerPos.z - this.mesh.position.z,
+    )
+    if (dist < CONTACT_RANGE && onHumanHit) {
+      this.attackHuman(onHumanHit)
+      return
+    }
     this.steerToward(observerPos, this.sprintSpeedNow(), dt)
+  }
+
+  private attackHuman(onHumanHit: (damage: number) => void): void {
+    if (this.attackCooldown > 0) return
+    if (isExhausted(this.life.stamina)) return
+    this.attackCooldown = ATTACK_COOLDOWN
+    drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
+    onHumanHit(damageVsHuman(this.def.kind))
   }
 
   /**

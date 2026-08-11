@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  countNearbyHumans,
   decidePredatorHumanIntent,
   humanProximityFear,
   hungerAttackPressure,
+  NEARBY_HUMAN_RADIUS,
   scorePredatorHumanIntents,
 } from './predatorHumanDecision'
 
@@ -115,5 +117,21 @@ describe('decidePredatorHumanIntent', () => {
   it('is deterministic for identical inputs', () => {
     const input = { ...base, hunger: 0.9 }
     expect(decidePredatorHumanIntent(input)).toBe(decidePredatorHumanIntent(input))
+  })
+})
+
+describe('countNearbyHumans', () => {
+  it('always counts the player as 1 with no NPCs', () => {
+    expect(countNearbyHumans(0, 0, [])).toBe(1)
+  })
+
+  it('adds NPCs inside the radius and ignores those outside', () => {
+    expect(
+      countNearbyHumans(0, 0, [
+        { x: 5, z: 0 },
+        { x: NEARBY_HUMAN_RADIUS + 1, z: 0 },
+        { x: 0, z: NEARBY_HUMAN_RADIUS },
+      ]),
+    ).toBe(3)
   })
 })

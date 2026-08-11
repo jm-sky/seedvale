@@ -30,11 +30,13 @@ import type { TimeSkip } from '../world/timeSkip'
 import type { BusyAction } from './busyAction'
 import type { WorldBundle } from './worldBundle'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
+import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { damageHealth } from '../shared/HealthState'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
 import {
@@ -454,11 +456,24 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // can also use them — neither depends on `update()`'s effect this same
       // frame (fire-lit state only changes via `setDayNight`, not `update`).
       const dayFactor = skyParamsFromTime(dayNight.timeOfDay).dayFactor
-      const litFires = [
+      const litFires: { x: number, z: number }[] = [
         ...bundle.settlementsManager.getLoaded().flatMap((s) => (s.fire?.isLit() ? [s.fire.position] : [])),
         ...bundle.placedFires.list().filter((f) => f.fire.isLit()).map((f) => f.fire.position),
       ]
+      // Portable torch counts as a fire source for fauna fear (plan 056 / 050).
+      if (playerTorch.isLit()) {
+        litFires.push({ x: player.mesh.position.x, z: player.mesh.position.z })
+      }
       const villages = bundle.settlementsManager.getLoaded().map((s) => ({ x: s.center.x, z: s.center.z }))
+      const nearbyHumanCount = countNearbyHumans(
+        player.mesh.position.x,
+        player.mesh.position.z,
+        bundle.settlementsManager.getLoaded().flatMap((s) =>
+          s.npcs
+            .filter((npc) => !npc.health.dead)
+            .map((npc) => ({ x: npc.mesh.position.x, z: npc.mesh.position.z })),
+        ),
+      )
       bundle.settlementsManager.update(
         dt,
         player.mesh.position,
@@ -469,7 +484,15 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         villages,
       )
       bundle.resourceDeposits.update(player.mesh.position.x, player.mesh.position.z)
-      bundle.fauna.update(dt, player.mesh.position, dayNight.timeOfDay, litFires, villages)
+      bundle.fauna.update(
+        dt,
+        player.mesh.position,
+        dayNight.timeOfDay,
+        litFires,
+        villages,
+        nearbyHumanCount,
+        (amount) => damageHealth(player.health, amount),
+      )
       bundle.itemSpawners.update(dt, player.mesh.position, dayFactor)
       bundle.placedFires.update(dt)
       playerTorch.update(dt)
