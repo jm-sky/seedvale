@@ -1,17 +1,19 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
+import { damageHealth, type HealthState } from '../shared/HealthState'
+import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import {
   type AnimalLifeState,
   BIAS_STRENGTH,
   createAnimalLifeState,
-  ENERGY_REST_THRESHOLD,
   NEED_ELEVATED_THRESHOLD,
   relieveElevatedNeeds,
+  STAMINA_REST_THRESHOLD,
   tickAnimalLife,
 } from './AnimalLife'
-import { createHealthState, damageFor, type HealthState, MAX_HP } from './faunaCombat'
+import { createHealthState, damageFor, MAX_HP } from './faunaCombat'
 import { isPlayerNoticed } from './playerAwareness'
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
@@ -74,10 +76,14 @@ const VILLAGE_FLEE_BIAS_WEIGHT = 0.9
  *  constructor override, so `createFauna.ts`'s wild/wandering spawns are
  *  unaffected. */
 const DEFAULT_WANDER_RADIUS: readonly [number, number] = [6, 16]
-/** Chance per expired wander timer, while `energy` is below
- *  `ENERGY_REST_THRESHOLD`, that the animal extends the timer and stays put
+/** Chance per expired wander timer, while stamina ratio is below
+ *  `STAMINA_REST_THRESHOLD`, that the animal extends the timer and stays put
  *  instead of picking a new wander target — a tired animal rests more. */
 const EXTENDED_IDLE_CHANCE = 0.5
+/** Flat stamina cost applied when a predator lands a bite — keeps attack
+ *  aligned with the shared effort resource without a separate combat stamina
+ *  subsystem. Small relative to `ANIMAL_STAMINA_MAX` (1). */
+const ATTACK_STAMINA_COST = 0.05
 
 export type AnimalRole = 'predator' | 'prey' | 'livestock'
 /** `wild` animals are wary of humans/the village and avoid it; `domestic`
@@ -429,11 +435,8 @@ export class AnimalAgent {
 
   takeDamage(damage: number): void {
     if (this.health.dead) return
-    this.health.currentHp = Math.max(0, this.health.currentHp - damage)
-    if (this.health.currentHp <= 0) {
-      this.health.dead = true
-      this.collapse()
-    }
+    damageHealth(this.health, damage)
+    if (this.health.dead) this.collapse()
   }
 
   /** Tip the corpse onto its side (relative to its facing direction) instead
@@ -579,13 +582,14 @@ export class AnimalAgent {
       }
     }
 
-    this.sprinting = true
+    this.sprinting = !isExhausted(this.life.stamina)
     this.fleeTarget.set(
       this.mesh.position.x + this.tmp.x * FLEE_DISTANCE,
       0,
       this.mesh.position.z + this.tmp.z * FLEE_DISTANCE,
     )
-    this.steerToward(this.fleeTarget, this.sprintSpeedNow(), dt)
+    const speed = this.sprinting ? this.sprintSpeedNow() : this.walkSpeedNow()
+    this.steerToward(this.fleeTarget, speed, dt)
   }
 
   /** Prey move slower at night; predators are unaffected. */
@@ -621,6 +625,10 @@ export class AnimalAgent {
       return
     }
     if (prey) {
+      if (isExhausted(this.life.stamina)) {
+        this.wander(dt)
+        return
+      }
       this.sprinting = true
       const dist = Math.hypot(
         prey.mesh.position.x - this.mesh.position.x,
@@ -638,7 +646,9 @@ export class AnimalAgent {
 
   private attack(prey: AnimalAgent): void {
     if (this.attackCooldown > 0) return
+    if (isExhausted(this.life.stamina)) return
     this.attackCooldown = ATTACK_COOLDOWN
+    drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
     prey.takeDamage(damageFor(this.def.kind, prey.def.kind))
   }
 
@@ -657,7 +667,7 @@ export class AnimalAgent {
     if (timerExpired || this.arrived(this.target, 1.2)) {
       relieveElevatedNeeds(this.life)
       const restInstead = timerExpired
-        && this.life.energy < ENERGY_REST_THRESHOLD
+        && getStaminaRatio(this.life.stamina) < STAMINA_REST_THRESHOLD
         && Math.random() < EXTENDED_IDLE_CHANCE
       if (restInstead) {
         this.wanderTimer = 2 + Math.random() * 3

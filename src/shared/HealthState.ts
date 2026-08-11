@@ -8,13 +8,22 @@ export function createHealthState(maxHp: number): HealthState {
   return { maxHp, currentHp: maxHp, dead: false }
 }
 
-/** Drains currentHp by `amount`, never below `floor`. Used by callers (e.g.
- *  NpcAgent) that never want `dead` to trigger — unlike fauna's takeDamage(),
- *  this never reaches 0 unless floor is 0. */
-export function applyFatigue(health: HealthState, amount: number, floor = 0): void {
-  health.currentHp = Math.max(floor, health.currentHp - amount)
+/** Subtracts `amount` from HP. Clamps at 0 and sets `dead` when HP reaches 0.
+ *  Combat-agnostic — does not know the attacker, weapon, or AI policy. */
+export function damageHealth(health: HealthState, amount: number): void {
+  if (health.dead || amount <= 0) return
+  health.currentHp = Math.max(0, health.currentHp - amount)
+  if (health.currentHp <= 0) {
+    health.dead = true
+  }
 }
 
-export function rest(health: HealthState, amount: number): void {
+/** Adds `amount` to HP, capped at `maxHp`. Does not revive the dead. */
+export function healHealth(health: HealthState, amount: number): void {
+  if (health.dead || amount <= 0) return
   health.currentHp = Math.min(health.maxHp, health.currentHp + amount)
+}
+
+export function isAlive(health: HealthState): boolean {
+  return !health.dead
 }

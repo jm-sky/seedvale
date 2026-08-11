@@ -1,12 +1,19 @@
+import {
+  createStaminaState,
+  drainStamina,
+  restoreStamina,
+  type StaminaState,
+} from '../shared/StaminaState'
+
 /** Units/sec — same order of magnitude as NPC `Needs.ts` (0.028–0.04/sec). */
 const HUNGER_RATE = 0.03
 const THIRST_RATE = 0.032
-/** Faster than regen so a sustained chase/flee visibly costs energy. */
-const ENERGY_DRAIN_RATE = 0.18
-const ENERGY_REGEN_RATE = 0.06
-/** Below this, `AnimalAgent.wander()` has a chance to extend idle instead of
+/** Faster than regen so a sustained chase/flee visibly costs stamina. */
+const STAMINA_DRAIN_RATE = 0.18
+const STAMINA_REGEN_RATE = 0.06
+/** Below this ratio, `AnimalAgent.wander()` has a chance to extend idle instead of
  *  picking a new wander target. */
-export const ENERGY_REST_THRESHOLD = 0.35
+export const STAMINA_REST_THRESHOLD = 0.35
 /** Multiplier applied to wander radius/retarget timer when hunger/thirst is
  *  elevated — one shared strength for both (decision: no separate tuning). */
 export const BIAS_STRENGTH = 0.6
@@ -16,11 +23,13 @@ export const NEED_ELEVATED_THRESHOLD = 0.5
 /** Flat amount subtracted from an elevated hunger/thirst on arrival at a
  *  wander target — abstraction for "grazed/drank something along the way". */
 export const NEED_RELIEF_ON_ARRIVAL = 0.25
+/** Full stamina capacity for animals — preserves the previous 0–1 energy scale. */
+export const ANIMAL_STAMINA_MAX = 1
 
 export type AnimalLifeState = {
   hunger: number
   thirst: number
-  energy: number
+  stamina: StaminaState
 }
 
 /** `offset` (0–1, per-instance) staggers hunger/thirst phase like
@@ -30,16 +39,18 @@ export function createAnimalLifeState(offset = 0): AnimalLifeState {
   return {
     hunger: 0.2 + offset * 0.3,
     thirst: 0.2 + ((offset + 0.4) % 1) * 0.3,
-    energy: 1,
+    stamina: createStaminaState(ANIMAL_STAMINA_MAX),
   }
 }
 
 export function tickAnimalLife(life: AnimalLifeState, dt: number, sprinting: boolean): void {
   life.hunger = Math.min(1, life.hunger + dt * HUNGER_RATE)
   life.thirst = Math.min(1, life.thirst + dt * THIRST_RATE)
-  life.energy = sprinting
-    ? Math.max(0, life.energy - dt * ENERGY_DRAIN_RATE)
-    : Math.min(1, life.energy + dt * ENERGY_REGEN_RATE)
+  if (sprinting) {
+    drainStamina(life.stamina, dt * STAMINA_DRAIN_RATE)
+  } else {
+    restoreStamina(life.stamina, dt * STAMINA_REGEN_RATE)
+  }
 }
 
 /** Subtracts a flat relief amount from any elevated hunger/thirst — call

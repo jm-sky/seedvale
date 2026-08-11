@@ -9,7 +9,13 @@ import {
   loadGltfAnimated,
   prepareProp,
 } from '../assets/loadGltf'
-import { applyFatigue, createHealthState, type HealthState, rest } from '../shared/HealthState'
+import { createHealthState, type HealthState } from '../shared/HealthState'
+import {
+  createStaminaState,
+  drainStamina,
+  restoreStamina,
+  type StaminaState,
+} from '../shared/StaminaState'
 import { gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import {
   type CharacterDef,
@@ -156,7 +162,7 @@ const PAUSE_INTERRUPTIBLE_PHASES: ReadonlySet<Phase> = new Set([
   'wander',
 ])
 
-/** Phases that drain `health.currentHp` (fatigue) vs. ones that regenerate it. */
+/** Phases that drain stamina (effort) vs. ones that regenerate it. */
 const FATIGUE_PHASES: ReadonlySet<Phase> = new Set(['execute', 'goTo'])
 const REST_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'lookAtPlayer', 'sleep', 'wander'])
 
@@ -180,14 +186,14 @@ const HOME_WATER_CHANCE = 0.45
 const WORK_DURATION_RANGE: [number, number] = [2, 4]
 
 const MAX_HP = 100
-/** currentHp never drops below this — no NPC death/despawn in v1. */
-const HP_FLOOR = 15
-const BASE_FATIGUE_RATE = 3 // hp/sec while in a FATIGUE_PHASES phase
-const BASE_REST_RATE = 6 // hp/sec while in a REST_PHASES phase
+const MAX_STAMINA = 100
+const BASE_FATIGUE_RATE = 3 // stamina/sec while in a FATIGUE_PHASES phase
+const BASE_REST_RATE = 6 // stamina/sec while in a REST_PHASES phase
 const ENERGETIC_FATIGUE_MULT = 0.6
 const ENERGETIC_REST_MULT = 1.5
 
-/** Below this currentHp/maxHp fraction, walk speed starts dropping toward the floor. */
+/** Below this currentHp/maxHp fraction, walk speed starts dropping toward the floor.
+ *  Kept for real damage later — fatigue no longer touches HP (plan 045). */
 const HP_SLOW_THRESHOLD = 0.3
 const HP_SLOW_FLOOR = 0.55
 /** `night_owl` blunts the low-HP slowdown instead of removing it. */
@@ -227,6 +233,7 @@ export class NpcAgent {
   readonly personality: CharacterDef['personality']
   readonly relation: FamilyRelation
   readonly health: HealthState
+  readonly stamina: StaminaState
   /** `null` only when the role's landmark doesn't exist for this settlement
    *  (e.g. a `woodcutter` with no trees yet) — see `places.ts`'s
    *  `workplaceFor`. Consumed by `beginIdle()`'s `work` scheduled activity. */
@@ -313,6 +320,7 @@ export class NpcAgent {
     this.personality = character.personality
     this.relation = member.relation
     this.health = createHealthState(MAX_HP)
+    this.stamina = createStaminaState(MAX_STAMINA)
     this.workplace = workplace
     this.schedule = SCHEDULE_TEMPLATES[character.role]
     this.familyMembers = familyMembers
@@ -521,9 +529,9 @@ export class NpcAgent {
     const scheduledActivity = this.getScheduledActivity(timeOfDay)
 
     if (FATIGUE_PHASES.has(this.phase)) {
-      applyFatigue(this.health, this.fatigueRate * dt, HP_FLOOR)
+      drainStamina(this.stamina, this.fatigueRate * dt)
     } else if (REST_PHASES.has(this.phase)) {
-      rest(this.health, this.restRate * dt)
+      restoreStamina(this.stamina, this.restRate * dt)
     }
 
     if (this.pauseCooldown > 0) this.pauseCooldown -= dt

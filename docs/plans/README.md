@@ -43,8 +43,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
 | [2026-08-10--055--shared-simulation-architecture.md](./2026-08-10--055--shared-simulation-architecture.md) | Wspólna architektura symulacji: state → perception → decision → action → world effect | 0% | 🔴 high | XL | — |
-| [2026-08-10--056--hungry-predator-human-aggression.md](./2026-08-10--056--hungry-predator-human-aggression.md) | Głodny predator może przełamać strach przed człowiekiem | 0% | 🟡 medium | M | ~~010~~, ~~021~~, 045, 055 |
-| [2026-08-07--045--health-stamina-threat.md](./2026-08-07--045--health-stamina-threat.md) | Wspólny Health/Stamina/Threat dla NPC/fauny/gracza | 0% | 🟡 medium | XL | ~~010~~, ~~022~~ |
+| [2026-08-10--056--hungry-predator-human-aggression.md](./2026-08-10--056--hungry-predator-human-aggression.md) | Głodny predator może przełamać strach przed człowiekiem | 0% | 🟡 medium | M | ~~010~~, ~~021~~, ~~045~~, 055 |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md) | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout | 0% | 🔴 high | XL | ~~031~~, 032, 036 |
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
 | [2026-08-10--058--living-forest-tree-lifecycle.md](./2026-08-10--058--living-forest-tree-lifecycle.md) | Żywy las i cykl życia drzew | 0% | 🟡 medium | XL | ~~007~~, ~~028~~, ~~030~~ |
@@ -67,6 +66,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
+| [2026-08-08--045--health-stamina-threat.md](./2026-08-08--045--health-stamina-threat.md) | Wspólny Health/Stamina dla NPC/fauny/gracza (Threat odłożony — brak nowego konsumenta) | 100% | 🔴 high | L | ~~010~~, ~~022~~ |
 | [2026-08-09--046--vue-tailwind-ui-stack.md](./2026-08-09--046--vue-tailwind-ui-stack.md) | Vue + Tailwind v4 + lucide-vue-next (Fazy 0–4 zaimplementowane; weryfikacja ręczna desktop/touch) | 100% | 🔴 high | XL | ~~005~~ |
 | [2026-08-08--032--natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md) | Zasoby naturalne, atrakcyjność lokalizacji, food source | 100% | 🔴 high | M | ~~028~~, ~~030~~, ~~031~~ |
 | [2026-08-08--036--village-siting-difficult-terrain.md](./2026-08-08--036--village-siting-difficult-terrain.md) | Osadzanie wiosek w trudnym terenie | 25% | 🟡 medium | M | ~~028~~, ~~031~~ |

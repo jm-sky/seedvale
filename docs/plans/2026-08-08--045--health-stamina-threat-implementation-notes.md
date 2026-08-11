@@ -534,3 +534,23 @@ The architectural contract is:
 > **Health describes survival. Stamina describes physical effort. Threat describes relevant danger. Existing AI/FSM decides the response.**
 
 045 succeeds when these become reusable foundations without replacing Seedvale's existing life, needs, perception, predator/prey, movement and NPC behavior systems with parallel architecture.
+
+---
+
+## 16. Implementation status (2026-08-11)
+
+**Technically verified** (`tsc`, lint, build, unit tests). Browser/manual verification pending.
+
+Implemented:
+
+- `HealthState`: `damageHealth` / `healHealth` / `isAlive`; removed `applyFatigue` / `rest`.
+- `StaminaState` shared primitive + tests.
+- Player `HealthState` on `PlayerController` (100 HP; no death UI).
+- `AnimalLifeState.energy` → `stamina: StaminaState`; exhaustion gates chase/flee sprint; attack drains a small stamina cost.
+- NPC work/rest drains/restores stamina instead of HP; HP floor for fatigue removed.
+
+Deferred (per plan: only if a concrete consumer needs it):
+
+- Shared Threat context type / ThreatManager — existing fauna perception already supplies threat for current decisions.
+- Player stamina and combat UI.
+- Porting former low-HP walk slowdown onto stamina.

@@ -7,6 +7,7 @@ import {
   CAMERA_DISTANCE_MIN,
   type LookState,
 } from '../input/MouseLook'
+import { createHealthState, type HealthState } from '../shared/HealthState'
 
 const MOVE_SPEED = 8
 const SPRINT_MULTIPLIER = 1.8
@@ -15,6 +16,7 @@ const LOOK_AT_OFFSET_FAR = 0.9
 const LOOK_AT_OFFSET_NEAR = 1.6
 const PLAYER_HEIGHT = 1.8
 const PLAYER_LABEL = 'Ja'
+const PLAYER_MAX_HP = 100
 /** How far below the surface the player can sink while swimming — caps out in deep
  *  water so the head still breaks the surface instead of vanishing into the seabed. */
 const MAX_SWIM_DEPTH = 1.2
@@ -35,6 +37,8 @@ export type HeightSampler = (x: number, z: number) => number
 export class PlayerController {
   /** Wrapper group; feet sit at local y=0, world y is set in snapToGround. */
   readonly mesh: THREE.Object3D
+  /** Shared survival HP — domain state only in v1 (no death UI / respawn). */
+  readonly health: HealthState
   private readonly camera: THREE.PerspectiveCamera
   private readonly keys: KeyState
   private readonly look: LookState
@@ -80,6 +84,7 @@ export class PlayerController {
     this.sampleFloor = sampleFloor
     this.waterLevel = waterLevel
     this.isCapsule = isCapsule
+    this.health = createHealthState(PLAYER_MAX_HP)
 
     this.mesh = new THREE.Group()
     this.mesh.add(root)

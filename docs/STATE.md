@@ -53,7 +53,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Multiple streamed settlements.
 - Settlement generation with families, houses, roads/paths and environment-aware siting.
 - NPC needs and behaviour/state-machine logic.
-- NPC personality/character depth including role, traits/Big Five-related data and health state.
+- NPC personality/character depth including role, traits/Big Five-related data, health and stamina.
+- NPCs use shared `StaminaState` for work/rest effort; HP is no longer drained by fatigue.
 - NPC names and family naming data.
 - NPC dialogue v2 exists as a Vue screen with multiple conversation topics.
 - NPC daily routine/place work is partially implemented; plan 020 remains in progress.
@@ -63,15 +64,17 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 
 - Predator/prey roles.
 - Chase/flee behaviour.
-- Health and damage/death flow.
+- Health and damage/death flow via shared `HealthState`.
+- Animal Life hunger/thirst/stamina (`AnimalLifeState`; stamina migrated from former `energy` under plan 045).
 - Spawners and respawn.
 - Player-awareness/flee behaviour.
+- Exhaustion gates sustained chase/flee sprinting.
 - GLB fauna models are used for wolf/fox/deer/stag.
-- The planned Animal Life hunger/thirst/energy layer is not yet implemented; plan 021 is still in progress.
 
 ### Items / player
 
 - `ItemKind` and `Inventory` exist in `src/items/`.
+- Player has shared `HealthState` on `PlayerController` (100 HP; no death UI/respawn yet — plan 045).
 - Inventory is persisted in save data and has weight calculation/max weight support.
 - Item spawners and dropped items exist.
 - Natural collectible items are integrated into the world.
@@ -114,7 +117,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 Prefer extending existing shared mechanisms instead of creating parallel systems.
 
 - `WorldBundle` — lifetime/rebuild boundary for core world systems.
-- `HealthState` — shared health/damage/death concept used by fauna and intended for broader agent use.
+- `HealthState` — shared health/damage/death (`src/shared/HealthState.ts`) used by fauna, NPCs and the player.
+- `StaminaState` — shared physical-effort capacity (`src/shared/StaminaState.ts`) used by fauna (`AnimalLifeState.stamina`) and NPCs; replaces NPC HP-as-fatigue and animal `energy`.
 - `NpcAgent` — central NPC behaviour/needs/personality integration point.
 - `AnimalAgent` — central fauna behaviour integration point.
 - `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot.
@@ -138,7 +142,9 @@ src/settlement/createSettlement.ts
 src/ai/NpcAgent.ts
 src/ai/Needs.ts
 src/fauna/AnimalAgent.ts
-src/fauna/HealthState.ts
+src/fauna/AnimalLife.ts
+src/shared/HealthState.ts
+src/shared/StaminaState.ts
 src/items/Inventory.ts
 src/items/HeldTool.ts
 src/items/createItemSpawners.ts
@@ -190,8 +196,8 @@ Do not treat a passing build as proof that a visual Three.js feature is correct.
 The following should not be assumed to exist merely because related foundations exist:
 
 - Full NPC simulation persistence across saves.
-- Animal hunger/thirst/energy life simulation (plan 021).
 - Full role-driven NPC daily routine/workplace system (plan 020).
+- Shared Threat context type (plan 045 deferred — existing fauna perception covers current consumers).
 - LLM/AI-generated quests.
 - Full village production/consumption economy.
 - Crafting and barter/trade systems.
@@ -212,9 +218,8 @@ The exact status of plans belongs in `docs/plans/README.md`, not here. As of thi
 - Plan 005 — game UI screens: done (world config + notes/journal screens close out the last open item).
 - Plan 052 — shovel digging/stone finding: done (shovel item, runtime terrain-deformation layer, dig ground interaction).
 - Plan 020 — NPC Place/daily routine.
-- Plan 021 — Animal Life.
+- Plan 045 — Health/Stamina foundation: implemented; browser/manual verification pending (Threat deferred).
 - Plan 047 — village generation overhaul.
-- Plan 045 — Health/Stamina/Threat foundation.
 
 ## Source of truth rule
 

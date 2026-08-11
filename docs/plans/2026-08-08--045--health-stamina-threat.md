@@ -1,6 +1,6 @@
 # Plan 045: Health, Stamina & Threat System
 
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** 🔴 `high`  
 **Effort:** L  
 **Depends on:** ~~010~~, ~~022~~
