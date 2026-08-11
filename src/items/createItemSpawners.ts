@@ -29,9 +29,9 @@ const ITEM_LABEL_FADE_FAR = 14
  *  source for quests regardless of whether world-generated coast/mountain items
  *  (`terrain/chunkItems.ts`) happened to land nearby this seed. `branch` gets its
  *  own multi-point pool below instead of a single point here — see
- *  `BRANCH_SPAWN_POINTS_MIN/MAX`. `shovel` isn't here either — it anchors to
- *  the campfire/garden landmarks instead of the settlement center, see
- *  `SHOVEL_FIRE_MAX_DIST`/`SHOVEL_FIELD_MIN_DIST`/`SHOVEL_FIELD_MAX_DIST`. */
+ *  `BRANCH_SPAWN_POINTS_MIN/MAX`. `shovel` / `axe` aren't here either — they
+ *  anchor to campfire/garden/trees instead of the settlement center, see
+ *  `SHOVEL_*` / `AXE_*` distances. */
 const SPAWN_SPECS: { kind: ItemKind, respawnTime: number, minDist: number, maxDist: number }[] = [
   { kind: 'stone', respawnTime: 100, minDist: 20, maxDist: 42 },
   { kind: 'shell', respawnTime: 90, minDist: 20, maxDist: 42 },
@@ -49,6 +49,13 @@ const SHOVEL_RESPAWN_TIME = Infinity
 const SHOVEL_FIRE_MAX_DIST = 1
 const SHOVEL_FIELD_MIN_DIST = 1
 const SHOVEL_FIELD_MAX_DIST = 3
+
+/** One-time village axe (plan 057) — same Infinity-respawn contract as the shovel. */
+const AXE_RESPAWN_TIME = Infinity
+const AXE_TREE_MIN_DIST = 1
+const AXE_TREE_MAX_DIST = 2.5
+const AXE_FIELD_MIN_DIST = 1
+const AXE_FIELD_MAX_DIST = 3
 
 /** How close to a chosen tree a branch spawn point lands. */
 const TREE_SPAWN_MIN_DIST = 1.2
@@ -148,6 +155,18 @@ export function createItemSpawners(
       : [SHOVEL_FIELD_MIN_DIST, SHOVEL_FIELD_MAX_DIST]
     const pos = findWalkableNear(anchor.x, anchor.z, minDist, maxDist)
     if (pos) addSpawnPoint('shovel', SHOVEL_RESPAWN_TIME, pos)
+  }
+
+  {
+    // Prefer a settlement tree (thematic); fall back to the garden when the
+    // settlement has no forest belt yet.
+    const tree = trees.length > 0 ? trees[Math.floor(random() * trees.length)]! : null
+    const anchor = tree ?? shovelLandmarks.garden
+    const [minDist, maxDist] = tree
+      ? [AXE_TREE_MIN_DIST, AXE_TREE_MAX_DIST]
+      : [AXE_FIELD_MIN_DIST, AXE_FIELD_MAX_DIST]
+    const pos = findWalkableNear(anchor.x, anchor.z, minDist, maxDist)
+    if (pos) addSpawnPoint('axe', AXE_RESPAWN_TIME, pos)
   }
 
   if (trees.length > 0) {

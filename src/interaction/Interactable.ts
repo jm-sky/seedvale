@@ -5,6 +5,7 @@ import type { ItemKind } from '../items/items'
 import type { Settlement } from '../settlement/createSettlement'
 import type { VillageFire } from '../settlement/VillageFire'
 import type { DigProfile } from '../terrain/dig'
+import type { TreeGrowthStage } from '../world/treeLifecycle'
 
 export type WorldItemRef = {
   id: string
@@ -21,7 +22,14 @@ export type Interactable =
   | { kind: 'npc', position: { x: number, z: number }, promptLabel: string, npc: NpcAgent, settlement: Settlement }
   | { kind: 'animal', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent }
   | { kind: 'well', position: { x: number, z: number }, promptLabel: string }
-  | { kind: 'tree', position: { x: number, z: number }, promptLabel: string, id: string }
+  | {
+    kind: 'tree'
+    position: { x: number, z: number }
+    promptLabel: string
+    id: string
+    stage: TreeGrowthStage
+    canHarvest?: boolean
+  }
   | { kind: 'campfire', position: { x: number, z: number }, promptLabel: string, fire: VillageFire }
   | { kind: 'spawner', position: { x: number, z: number }, promptLabel: string, spawner: PreySpawner }
   | { kind: 'item', position: { x: number, z: number }, promptLabel: string, item: WorldItemRef }

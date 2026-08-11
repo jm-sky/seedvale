@@ -97,13 +97,17 @@ export type PausePersonalityParams = {
 /** How close the player must get to make an NPC stop and look, how long it
  *  holds the look, and how long before it can trigger again — computed
  *  directly from raw OCEAN dimensions (continuous), not from the archetype
- *  bucket. Coefficients tuned to land close to the old per-archetype table. */
+ *  bucket. Post-reaction cooldown is deliberately long so a lingering
+ *  player is acknowledged once, then ignored for a while rather than
+ *  re-triggering every few seconds. */
 export function pausePersonalityParams(p: BigFivePersonality): PausePersonalityParams {
   const triggerDistance = lerp(2, 5, 0.5 * p.extraversion + 0.5 * p.openness)
   const lookMin = lerp(1.5, 3, p.openness)
   const lookMax = lookMin + lerp(1, 3, 1 - p.neuroticism)
-  const cooldownMin = lerp(2, 8, p.neuroticism)
-  const cooldownMax = cooldownMin + lerp(1.5, 4.5, 1 - p.extraversion)
+  // ~10–40s depending on personality (was ~2–12s — too spammy when the
+  // player stays nearby after the first "Hmm?").
+  const cooldownMin = lerp(10, 25, p.neuroticism)
+  const cooldownMax = cooldownMin + lerp(5, 15, 1 - p.extraversion)
   return {
     triggerDistance,
     lookDurationRange: [lookMin, lookMax],

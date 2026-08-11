@@ -10,6 +10,13 @@ describe('createHeldTool', () => {
     expect(held.held()).toBe('shovel')
   })
 
+  it('equips an axe from inventory', () => {
+    const inventory = new Inventory({ axe: 1 })
+    const held = createHeldTool(inventory)
+    expect(held.equip('axe')).toBe(true)
+    expect(held.held()).toBe('axe')
+  })
+
   it('rejects non-tools and missing items', () => {
     const inventory = new Inventory({ stone: 1 })
     const held = createHeldTool(inventory)

@@ -13,7 +13,7 @@ import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
-import { applyHarvestedTreeVisual } from '../world/treeVisuals'
+import { applyTreeStageVisual } from '../world/treeVisuals'
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
 import { type Place, workplaceFor } from './places'
@@ -160,8 +160,8 @@ export async function createSettlement(
         forest.sampleEnv(tree.position.x, tree.position.z),
         worldDays,
       )
-      if (!resolved.showCrown) {
-        tree.mesh = applyHarvestedTreeVisual(tree.mesh)
+      if (resolved.visual !== 'living') {
+        tree.mesh = applyTreeStageVisual(tree.mesh, resolved.stage)
       }
     }
   }

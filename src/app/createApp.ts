@@ -1,10 +1,10 @@
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { AmbientSamplers } from '../audio/ambientWeights'
 import type { SaveData } from '../persistence/saveData'
-import { playActionDig } from '../audio/actionSounds'
+import { playActionChop, playActionDig } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
-import { playInventoryDrop } from '../audio/inventorySounds'
+import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { saveWorldConfig } from '../config/persistConfig'
 import {
   applyStoredPlayer,
@@ -48,7 +48,8 @@ import { createSky } from '../world/createSky'
 import { createDayNightState } from '../world/dayNight'
 import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
 import { createTimeSkip } from '../world/timeSkip'
-import { createTreeLifecycle, parseTreeOverrides } from '../world/treeLifecycle'
+import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
+import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChopStage } from '../world/treeLifecycle'
 import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
 import { DIG_REACH } from './interactables'
@@ -454,6 +455,65 @@ export async function createApp(
     })
   }
 
+  const startTreeChop = (treeId: string, x: number, z: number): void => {
+    if (heldTool.held() !== 'axe' || busy.isActive() || timeSkip.isActive()) return
+    // Pre-check choppability without mutating — advanceHarvest is the authority.
+    const nearby = bundle.chunkManager.getNearbyTrees({ x, z }, 0.5)
+    const target = nearby.find((t) => t.id === treeId)
+    if (!target || !isChoppableStage(target.stage)) {
+      toast.show('To drzewo nie nadaje się do ścięcia.', 'error')
+      return
+    }
+    const stepYield = yieldForChopStage(target.stage)
+    if (!stepYield || !inventory.canAdd(stepYield.kind, stepYield.count)) {
+      toast.show('Ekwipunek jest za ciężki.', 'error')
+      return
+    }
+    const busyLabel =
+      target.stage === 'mature'
+        ? 'Oczyszczanie…'
+        : target.stage === 'limbed'
+          ? 'Ścinanie…'
+          : 'Rąbanie…'
+    playActionChop(worldAudio.playOnce)
+    busy.start(CHOP_DURATION_SEC, busyLabel, () => {
+      if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
+        toast.show('Ekwipunek jest za ciężki.', 'error')
+        return
+      }
+      const landmark = bundle.settlementsManager
+        .getLoaded()
+        .flatMap((s) => s.landmarks.trees)
+        .find((t) => t.id === treeId)
+      const result = advanceWorldTreeHarvest(
+        treeLifecycle,
+        treeId,
+        dayNight.elapsedDays,
+        bundle.chunkManager.sampleTreeEnv(x, z),
+        landmark
+          ? { landmark }
+          : { refreshChunkVisual: (id) => bundle.chunkManager.refreshTreeVisual(id) },
+      )
+      if (!result.ok) {
+        toast.show(
+          result.reason === 'not-choppable' || result.reason === 'already-harvested'
+            ? 'To drzewo nie nadaje się do ścięcia.'
+            : 'Nie udało się ściąć drzewa.',
+          'error',
+        )
+        return
+      }
+      inventory.add(result.yield.kind, result.yield.count)
+      playInventoryPickUp(worldAudio.playOnce)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      touchControls?.setDropAvailable(!inventory.isEmpty())
+      heldTool.syncWithInventory()
+      syncHeldHud()
+      syncShovelQuickActions()
+      toast.show(`+${result.yield.count} Gałąź`, 'pickup')
+    })
+  }
+
   /** When quick actions opened under pointer lock, restore lock on close so
    *  camera look resumes without requiring an extra canvas click. */
   let restorePointerLockAfterQuickActions = false
@@ -637,6 +697,7 @@ export async function createApp(
       if (mode === 'level') startLevelAt(x, z)
       else startDigAt(x, z)
     },
+    startTreeChop,
     onInventoryChanged: () => {
       heldTool.syncWithInventory()
       syncHeldHud()

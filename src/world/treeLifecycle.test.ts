@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   advanceStage,
   canopyGrowthFactor,
+  CHOP_YIELDS,
   createTreeLifecycle,
   envGrowthFactor,
+  isChoppableStage,
   makeTreeId,
   parseTreeOverrides,
   STAGE_DURATION_DAYS,
@@ -73,6 +75,11 @@ describe('advanceStage', () => {
   it('regrows harvested → sapling after stump duration', () => {
     expect(advanceStage('harvested', 0, STAGE_DURATION_DAYS.harvested, 1).stage).toBe('sapling')
   })
+
+  it('does not time-advance limbed or felled chop stages', () => {
+    expect(advanceStage('limbed', 0, 100, 1).stage).toBe('limbed')
+    expect(advanceStage('felled', 0, 100, 1).stage).toBe('felled')
+  })
 })
 
 describe('canopyGrowthFactor', () => {
@@ -97,7 +104,7 @@ describe('createTreeLifecycle', () => {
     expect(life.getOverride(p.id)).toBeUndefined()
   })
 
-  it('harvests mature trees and leaves a stump override', () => {
+  it('advances harvest in three steps with branch yields', () => {
     const life = createTreeLifecycle(7)
     const p = presence({
       id: life.makeId(0, 0, 0),
@@ -106,14 +113,60 @@ describe('createTreeLifecycle', () => {
     })
     life.registerPresence(p)
 
-    const result = life.harvest(p.id, 2, goodEnv)
-    expect(result.ok).toBe(true)
-    if (result.ok) expect(result.yield.kind).toBe('branch')
+    const step1 = life.advanceHarvest(p.id, 2, goodEnv)
+    expect(step1).toEqual({
+      ok: true,
+      yield: CHOP_YIELDS.mature,
+      stage: 'limbed',
+    })
+    expect(life.resolve(p, goodEnv, 2).visual).toBe('limbed')
 
+    const step2 = life.advanceHarvest(p.id, 2, goodEnv)
+    expect(step2).toEqual({
+      ok: true,
+      yield: CHOP_YIELDS.limbed,
+      stage: 'felled',
+    })
+    expect(life.resolve(p, goodEnv, 2).visual).toBe('felled')
+
+    const step3 = life.advanceHarvest(p.id, 2, goodEnv)
+    expect(step3).toEqual({
+      ok: true,
+      yield: CHOP_YIELDS.felled,
+      stage: 'harvested',
+    })
     const stump = life.resolve(p, goodEnv, 2)
     expect(stump.stage).toBe('harvested')
     expect(stump.showCrown).toBe(false)
+    expect(stump.visual).toBe('stump')
     expect(life.getOverride(p.id)?.stage).toBe('harvested')
+
+    expect(life.advanceHarvest(p.id, 2, goodEnv).ok).toBe(false)
+  })
+
+  it('harvestFully collapses remaining steps into one total yield', () => {
+    const life = createTreeLifecycle(7)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature' })
+    life.registerPresence(p)
+
+    const result = life.harvestFully(p.id, 1, goodEnv)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.stage).toBe('harvested')
+      expect(result.yield.count).toBe(
+        CHOP_YIELDS.mature.count + CHOP_YIELDS.limbed.count + CHOP_YIELDS.felled.count,
+      )
+    }
+  })
+
+  it('rejects advanceHarvest on sapling/young', () => {
+    const life = createTreeLifecycle(7)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'sapling' })
+    life.registerPresence(p)
+    expect(life.advanceHarvest(p.id, 0, goodEnv)).toEqual({
+      ok: false,
+      reason: 'not-choppable',
+    })
   })
 
   it('finds harvestable mature trees locally across cell buckets', () => {
@@ -125,6 +178,17 @@ describe('createTreeLifecycle', () => {
 
     const near = life.findHarvestableNear(1, 0, 10, 0, () => goodEnv)
     expect(near?.id).toBe(a.id)
+  })
+
+  it('lists nearby registered presence via spatial buckets', () => {
+    const life = createTreeLifecycle(3)
+    const a = presence({ id: life.makeId(0, 0, 0), x: 0, z: 0, initialStage: 'young' })
+    const b = presence({ id: life.makeId(100, 0, 0), x: 100, z: 0, initialStage: 'mature' })
+    life.registerPresence(a)
+    life.registerPresence(b)
+
+    const near = life.getNearbyPresence(1, 0, 10)
+    expect(near.map((t) => t.id)).toEqual([a.id])
   })
 
   it('does not count harvested stumps toward canopy', () => {
@@ -146,7 +210,7 @@ describe('createTreeLifecycle', () => {
     life.registerPresence(sapling)
     expect(life.countMatureNear(2, 0, sapling.id, 0, () => goodEnv)).toBe(1)
 
-    life.harvest(mature.id, 0, goodEnv)
+    life.harvestFully(mature.id, 0, goodEnv)
     expect(life.countMatureNear(2, 0, sapling.id, 0, () => goodEnv)).toBe(0)
   })
 
@@ -154,10 +218,20 @@ describe('createTreeLifecycle', () => {
     const life = createTreeLifecycle(1)
     const p = presence({ id: life.makeId(1, 1, 0), x: 1, z: 1, initialStage: 'mature' })
     life.registerPresence(p)
-    life.harvest(p.id, 1.5, goodEnv)
+    life.advanceHarvest(p.id, 1.5, goodEnv)
     const serialized = life.serializeOverrides()
     expect(Object.keys(serialized)).toEqual([p.id])
-    expect(serialized[p.id]?.stage).toBe('harvested')
+    expect(serialized[p.id]?.stage).toBe('limbed')
+  })
+})
+
+describe('isChoppableStage', () => {
+  it('allows mature/limbed/felled only', () => {
+    expect(isChoppableStage('mature')).toBe(true)
+    expect(isChoppableStage('limbed')).toBe(true)
+    expect(isChoppableStage('felled')).toBe(true)
+    expect(isChoppableStage('sapling')).toBe(false)
+    expect(isChoppableStage('harvested')).toBe(false)
   })
 })
 
@@ -167,10 +241,14 @@ describe('parseTreeOverrides', () => {
     expect(
       parseTreeOverrides({
         good: { stage: 'harvested', stageStartedAt: 1 },
+        limbed: { stage: 'limbed', stageStartedAt: 2 },
         bad: { stage: 'nope', stageStartedAt: 1 },
         worse: 3,
       }),
-    ).toEqual({ good: { stage: 'harvested', stageStartedAt: 1 } })
+    ).toEqual({
+      good: { stage: 'harvested', stageStartedAt: 1 },
+      limbed: { stage: 'limbed', stageStartedAt: 2 },
+    })
   })
 })
 

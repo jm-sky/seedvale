@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { DetailNormalConfig } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
-import type { TreeEnvSample, TreeLifecycle } from '../world/treeLifecycle'
+import type { TreeEnvSample, TreeGrowthStage, TreeLifecycle, TreePresence } from '../world/treeLifecycle'
 import type { EnvironmentKind } from './chunkEnvironment'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
@@ -22,7 +22,6 @@ import {
   createSmallRuins,
   createStoneCircle,
   createTree,
-  createTreeStump,
   loadPropTemplates,
   placeOnGround,
   REED_SPECS,
@@ -30,7 +29,7 @@ import {
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { createChunkWater, type WorldWater } from '../world/createWater'
-import { tagTreeMesh } from '../world/treeVisuals'
+import { createTreeStageMesh, tagTreeMesh } from '../world/treeVisuals'
 import { biomeWeightsAt } from './biomeRegions'
 import { buildChunkGeometry } from './buildChunkGeometry'
 import {
@@ -215,6 +214,11 @@ export type ChunkManager = {
   sampleTreeEnv: (x: number, z: number) => TreeEnvSample
   /** Rebuild a single streamed tree mesh after harvest / stage change. */
   refreshTreeVisual: (treeId: string) => boolean
+  /** Loaded/registered trees near a point (settlement + streamed; plan 057). */
+  getNearbyTrees: (
+    pos: { x: number, z: number },
+    radius: number,
+  ) => readonly (TreePresence & { stage: TreeGrowthStage })[]
   waterLevel: number
   loadedChunkCount: () => number
   /** Resolves once every listed chunk has finished generating (or failed/cancelled). */
@@ -550,9 +554,9 @@ export function createChunkManager(
               treeIds.push(id)
               const env = sampleTreeEnvAt(placement.x, placement.z, tile, coord)
               const resolved = config.treeLifecycle.resolve(presence, env, config.getWorldDays())
-              const prop = resolved.showCrown
+              const prop = resolved.visual === 'living'
                 ? cloneProp(templatesByKind.tree, placement.speciesIndex, resolved.scale)
-                : createTreeStump(resolved.scale)
+                : createTreeStageMesh(resolved.visual, resolved.scale, id)
               prop.rotation.y = placement.rotationY
               placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
               tagTreeMesh(prop, resolved, placement.scale, placement.speciesIndex, initialStage)
@@ -686,11 +690,11 @@ export function createChunkManager(
       const pos = mesh.position.clone()
       mesh.removeFromParent()
       disposeObject3D(mesh)
-      // Procedural fallback is fine for mid-session refresh; chunk reload uses
-      // the proper GLB templates again.
-      const replacement = resolved.showCrown
+      // Living trees reload with GLB templates; chop mid/final stages use
+      // procedural meshes (same as mid-session refresh).
+      const replacement = resolved.visual === 'living'
         ? createTree(resolved.scale)
-        : createTreeStump(resolved.scale)
+        : createTreeStageMesh(resolved.visual, resolved.scale, treeId)
       replacement.position.copy(pos)
       replacement.rotation.y = rotY
       tagTreeMesh(replacement, resolved, baseScale, speciesIndex, initialStage)
@@ -790,6 +794,17 @@ export function createChunkManager(
     },
     sampleTreeEnv,
     refreshTreeVisual,
+    getNearbyTrees(pos, radius) {
+      const worldDays = config.getWorldDays()
+      return config.treeLifecycle.getNearbyPresence(pos.x, pos.z, radius).map((presence) => {
+        const resolved = config.treeLifecycle.resolve(
+          presence,
+          sampleTreeEnv(presence.x, presence.z),
+          worldDays,
+        )
+        return { ...presence, stage: resolved.stage }
+      })
+    },
     getNearbyItems(pos, radius) {
       const out: { id: string, kind: ItemKind, x: number, z: number }[] = []
       for (const rec of chunks.values()) {

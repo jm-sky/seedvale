@@ -4,6 +4,8 @@
 **Reviewed:** 2026-08-11
 **Review basis:** current `main` repository state, `CLAUDE.md`, `docs/STATE.md`, `docs/ROADMAP.md`, `docs/plans/README.md`, plan 057, plan 058 + its implementation notes, and the relevant item/interaction/tree/resource plans and code.
 
+> **Current truth (2026-08-11):** 057 is implemented, including **multi-stage chop** (`mature → limbed → felled → harvested`, yields `branch` 2/2/3). Prefer [`docs/STATE.md`](../STATE.md) and the **Implementation decisions / Multi-stage chop** sections at the bottom of this file over the pre-implementation review narrative above them when they disagree. APIs: `TreeLifecycle.advanceHarvest` / `harvestFully`; `advanceWorldTreeHarvest` / `harvestWorldTreeFully`.
+
 ## 1. Scope and architectural intent
 
 057 is now a relatively small integration task because 058 has already introduced the important world-side tree lifecycle seam.
@@ -916,6 +918,30 @@ One product/UX decision is genuinely required:
 4. **What happens when three branches do not fit?** Recommended: reject before starting the harvest. Do not silently destroy a tree and lose resources.
 
 No architectural decision is needed about lifecycle/regrowth: 058 already owns it.
+
+### Implementation decisions (2026-08-11)
+
+Accepted as recommended above:
+
+1. One-time settlement axe near a random settlement tree (garden fallback) via `createItemSpawners` (`AXE_RESPAWN_TIME = Infinity`).
+2. Direct `[E]` chop requires the axe **held** (`heldTool.held() === 'axe'` + `canHarvest` on the interactable).
+3. ~1.5 s `BusyAction` channel (`CHOP_DURATION_SEC`) with `action-wood-chop-01.wav` at start.
+4. `inventory.canAdd` checked for the **current step yield** before starting the channel and again before calling `advanceWorldTreeHarvest`.
+5. Nearby trees: `TreeLifecycle.getNearbyPresence` → `ChunkManager.getNearbyTrees` → `buildInteractables` (replaces the settlement-only tree loop; no `TreeId` duplicates).
+6. Non-mature / no-axe: existing inspection + chance branch remains.
+
+### Multi-stage chop (2026-08-11)
+
+Extended beyond the original single-shot harvest:
+
+```text
+mature → limbed (+2 branch) → felled (+2 branch) → harvested (+3 branch)
+```
+
+- Player: one BusyAction = one `advanceHarvest` step; prompts „Oczyść gałęzie” / „Ścinaj drzewo” / „Porąb pień”.
+- NPC: `harvestWorldTreeFully` collapses remaining steps in one chop action.
+- Visuals: limbed trunk / stump+fallen log / stump via `applyTreeStageVisual`.
+- `limbed`/`felled` do not time-advance; only `harvested` regrows to sapling.
 
 ## 22. Key conclusion
 

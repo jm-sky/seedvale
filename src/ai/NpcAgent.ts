@@ -28,7 +28,7 @@ import {
   replaceActionLifecycle,
 } from '../simulation'
 import { gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
-import { harvestWorldTree } from '../world/treeHarvest'
+import { harvestWorldTreeFully } from '../world/treeHarvest'
 import {
   type CharacterDef,
   genderForName,
@@ -851,7 +851,7 @@ export class NpcAgent {
         durationSec: 1.6 * this.waitMultiplier,
         onComplete: () => {
           if (!forest) return
-          harvestWorldTree(
+          harvestWorldTreeFully(
             forest.lifecycle,
             landmark.id,
             forest.getWorldDays(),

@@ -32,5 +32,5 @@
 | filename         | oryginal filename | source url | notes |
 |------------------|-------------------|------------|-------|
 | action-dig-01…04.wav | 486228__ruben_uitenweerde__digging-sand-with-a-shovel.wav | https://freesound.org/people/Ruben_Uitenweerde/sounds/486228/ | 4× ~2 s strokes split from 27 s pack; random on shovel dig |
-| action-wood-chop-01.wav | 847818__elschorscho__chopping-wood_medium-459.wav | https://freesound.org/people/ElSchorscho/sounds/847818/ | Not wired yet (axe / tree harvest) |
+| action-wood-chop-01.wav | 847818__elschorscho__chopping-wood_medium-459.wav | https://freesound.org/people/ElSchorscho/sounds/847818/ | Axe / tree harvest (plan 057); play on chop channel start |
 

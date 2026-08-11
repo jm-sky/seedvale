@@ -2,7 +2,7 @@ import type { Inventory } from './Inventory'
 import { ITEM_DEFS, type ItemKind } from './items'
 
 /** Tool kinds that can occupy the single "in hand" slot. */
-export type ToolKind = 'knife' | 'firestarter' | 'shovel'
+export type ToolKind = 'knife' | 'firestarter' | 'shovel' | 'axe'
 
 export function isToolKind(kind: ItemKind): kind is ToolKind {
   return ITEM_DEFS[kind].category === 'tool'

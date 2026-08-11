@@ -105,6 +105,18 @@ describe('pausePersonalityParams', () => {
     })
     expect(anxious.cooldownRange[0]).toBeGreaterThan(steady.cooldownRange[0])
   })
+
+  it('post-reaction cooldown stays long enough that a lingering player is not re-acked every few seconds', () => {
+    const calm = pausePersonalityParams({
+      openness: 0.5,
+      conscientiousness: 0.5,
+      extraversion: 1,
+      agreeableness: 0.5,
+      neuroticism: 0,
+    })
+    // Shortest personality still ignores for ≥10s after looking once.
+    expect(calm.cooldownRange[0]).toBeGreaterThanOrEqual(10)
+  })
 })
 
 describe('pickDialogueLine', () => {

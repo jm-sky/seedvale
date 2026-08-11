@@ -84,6 +84,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Inventory UI is a Vue screen (`src/ui-vue/screens/InventoryScreen.vue`); `src/ui/createInventoryScreen.ts` is a facade — see "UI migration" below.
 - Inventory pick-up / drop SFX exist (`audio/inventorySounds.ts` via `worldAudio.playOnce`): ground collect, tree branch, dig stone, UI/quick drop.
 - Shovel is a one-time settlement landmark pickup (`items/createItemSpawners.ts`, campfire/garden anchors — not in generic `SPAWN_SPECS`). Dig/level require a shovel in inventory; HUD prompts appear only while the shovel is **held** (`items/HeldTool.ts`, persisted as `SaveData.heldTool` in schema v7): **`E` digs**, **`R` levels** (both can show together over a depression). Owning a shovel (held or not) also exposes dig/level in Quick Actions. Dig/level run as a ~2 s busy channel (`app/busyAction.ts` + Vue `BusyOverlay`) then apply via `terrain/digAction.ts`. Dig start plays a random ~2 s shovel SFX (`audio/actionSounds.ts`). Dig size/tuning and stone notice chance live in `terrain/dig.ts`. Found stones go to inventory on a successful notice roll, otherwise (or when inventory is full) drop beside the hole via `droppedItems` — never silently lost. `ChunkManager.modifyTerrain` / `levelTerrain` own the runtime height overlay (dig down / raise toward procedural base); not save-persisted, reapplied on chunk reload.
+- Axe is a one-time settlement pickup (`createItemSpawners.ts`, near a settlement tree or garden — plan 057). Equip via Inventory/`HeldTool`. While the axe is **held**, gazing at a choppable tree (settlement or streamed; stages `mature` / `limbed` / `felled`) shows stage prompts (**Oczyść gałęzie** / **Ścinaj drzewo** / **Porąb pień**); `[E]` runs a ~1.5 s busy channel then `advanceWorldTreeHarvest()` (one step). Yield is `branch` (2 / 2 / 3). Inventory capacity is checked for the current step before the irreversible transition. NPC woodcutting uses `harvestWorldTreeFully()` to finish remaining steps in one action. Without axe (or on non-choppable stages) the existing tree inspection / chance branch remains. Chop SFX: `action-wood-chop-01.wav`. Nearby trees come from `TreeLifecycle.getNearbyPresence` via `ChunkManager.getNearbyTrees`.
 
 ### Quests / progression
 
@@ -99,7 +100,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Save schema is currently version `8` in `createApp.ts`.
 - New Game resets world-dependent state as implemented by `createApp.ts`/`rebuildWorldBundle()`.
 - NPC runtime state is not generally persisted as a full simulation snapshot; do not assume Continue restores every NPC need/AI state.
-- Tree lifecycle (`src/world/treeLifecycle.ts`) uses sparse overrides + lazy growth from `DayNightState.elapsedDays`; chunk/settlement trees share `TreeId` and `harvestWorldTree`.
+- Tree lifecycle (`src/world/treeLifecycle.ts`) uses sparse overrides + lazy growth from `DayNightState.elapsedDays`. Stages: `sapling` → `young` → `mature`, then player/NPC chop mid-stages `limbed` → `felled` → `harvested` (regrowth only from `harvested`). Chunk/settlement trees share `TreeId`. Shared harvest APIs: `advanceWorldTreeHarvest` (one step) / `harvestWorldTreeFully` (NPC) in `src/world/treeHarvest.ts`; visuals via `applyTreeStageVisual`.
 
 ### UI / input
 
@@ -123,7 +124,8 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/` (plan 055). NPC + fauna adapters; predator hunger-vs-fear scoring in `src/fauna/predatorHumanDecision.ts`.
 - `NpcAgent` — central NPC behaviour/needs/personality integration point.
 - `AnimalAgent` — central fauna behaviour integration point (intents via shared lifecycle; chase/flee/wander bodies unchanged).
-- `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot.
+- `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot (axe + shovel included).
+- `TreeLifecycle` / `harvestWorldTree*` — authoritative tree growth + multi-stage chop (`limbed` / `felled` / `harvested`); see plans 058 and 057.
 - `QuestManager` — quest progress, EXP and relations.
 - `ChunkManager` — terrain sampling, streaming and environment-facing world queries.
 - `Place` / schedule-related NPC work — existing foundation for daily routines.
@@ -159,6 +161,7 @@ src/quests/QuestManager.ts
 src/world/dayNight.ts
 src/world/treeLifecycle.ts
 src/world/treeHarvest.ts
+src/world/treeVisuals.ts
 src/persistence/saveData.ts
 src/persistence/saveDb.ts
 src/ui/

@@ -459,6 +459,49 @@ export function createTreeStump(scale = 1): THREE.Group {
   return stump
 }
 
+/** Chop step 1 visual — tall trunk without crown (limbed / "dead" tree). */
+export function createLimbedTree(scale = 1): THREE.Group {
+  const tree = new THREE.Group()
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16 * scale, 0.22 * scale, 2.8 * scale, 6),
+    new THREE.MeshStandardMaterial({ color: 0x4a3728, flatShading: true }),
+  )
+  trunk.position.y = 1.4 * scale
+  trunk.castShadow = true
+  tree.add(trunk)
+
+  // A couple of short stub branches so it reads as "stripped", not a pole.
+  const stubMat = new THREE.MeshStandardMaterial({ color: 0x3d2e22, flatShading: true })
+  const stubA = new THREE.Mesh(new THREE.CylinderGeometry(0.04 * scale, 0.05 * scale, 0.45 * scale, 5), stubMat)
+  stubA.position.set(0.28 * scale, 2.1 * scale, 0)
+  stubA.rotation.z = -0.9
+  stubA.castShadow = true
+  tree.add(stubA)
+  const stubB = new THREE.Mesh(new THREE.CylinderGeometry(0.035 * scale, 0.045 * scale, 0.35 * scale, 5), stubMat)
+  stubB.position.set(-0.22 * scale, 1.7 * scale, 0.1 * scale)
+  stubB.rotation.z = 1.0
+  stubB.castShadow = true
+  tree.add(stubB)
+  return tree
+}
+
+/**
+ * Chop step 2 visual — low stump + fallen log beside it (same TreeId group).
+ * `yaw` rotates the log offset so neighboring trees don't stack logs the same way.
+ */
+export function createFelledTree(scale = 1, yaw = 0): THREE.Group {
+  const group = new THREE.Group()
+  const stump = createTreeStump(scale)
+  group.add(stump)
+
+  const log = createFallenLog(scale, 2.6)
+  const offset = 1.25 * scale
+  log.position.set(Math.sin(yaw) * offset, 0, Math.cos(yaw) * offset)
+  log.rotation.y = yaw + Math.PI / 2
+  group.add(log)
+  return group
+}
+
 export function createBush(scale = 1): THREE.Group {
   const bush = new THREE.Group()
   const body = new THREE.Mesh(
@@ -1051,7 +1094,7 @@ function plantTreeCluster(
       group.add(bush)
     } else {
       const roll = random()
-      const initialStage: Exclude<TreeGrowthStage, 'harvested'> =
+      const initialStage: Exclude<TreeGrowthStage, 'limbed' | 'felled' | 'harvested'> =
         roll < 0.12 ? 'sapling' : roll < 0.25 ? 'young' : 'mature'
       const baseScale = 0.7 + random() * 0.6
       const speciesIndex = treeCounter.n % Math.max(1, treeTemplates.length)

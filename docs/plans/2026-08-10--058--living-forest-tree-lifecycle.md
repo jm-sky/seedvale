@@ -96,13 +96,21 @@ Mogą pojawiać się:
 
 ### Growth stages
 
-Minimum:
+Minimum (growth):
 
 - `sapling` — małe drzewko,
 - `young` — wyraźnie rosnące drzewo,
 - `mature` — pełnowymiarowe drzewo.
 
-Nie trzeba tworzyć nowych assetów dla każdego etapu. Można wykorzystać istniejące modele i skalę, o ile sylwetka pozostaje czytelna.
+Etapy chopu (rozszerzenie z planu 057 — ten sam `TreeGrowthStage` / sparse overrides):
+
+- `limbed` — ogołocony pień (bez korony),
+- `felled` — niski pień + leżąca kłoda,
+- `harvested` — sam pień; stąd lazy regrowth → `sapling`.
+
+`limbed` / `felled` nie awansują z czasem. NPC może domknąć pozostałe etapy w jednym `harvestFully`.
+
+Nie trzeba tworzyć nowych assetów GLB dla każdego etapu. Można wykorzystać istniejące modele / proceduralne meshe, o ile sylwetka pozostaje czytelna.
 
 ## Wzrost zależny od środowiska
 

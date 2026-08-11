@@ -2,12 +2,21 @@ import type { ItemKind } from '../items/items'
 import type { BiomeWeights } from '../terrain/biomeRegions'
 
 /** Explicit lifecycle stages — not inferred from model scale. */
-export type TreeGrowthStage = 'sapling' | 'young' | 'mature' | 'harvested'
+export type TreeGrowthStage =
+  | 'sapling'
+  | 'young'
+  | 'mature'
+  | 'limbed'
+  | 'felled'
+  | 'harvested'
+
+/** Renderer discriminator — living crown vs multi-stage chop visuals. */
+export type TreeVisualKind = 'living' | 'limbed' | 'felled' | 'stump'
 
 export type TreeId = string
 
 /** Sparse runtime override — only trees that diverge from procedural default
- *  + lazy world-time growth (typically harvested / mid-regrowth). */
+ *  + lazy world-time growth (typically harvested / mid-chop / mid-regrowth). */
 export type TreeStateOverride = {
   stage: TreeGrowthStage
   /** `DayNightState.elapsedDays` when this stage began. */
@@ -37,8 +46,11 @@ export type TreeSpeciesPrefs = {
   mountain: number
 }
 
+/** Stages that advance via world-time growth (not chop progress). */
+type TimedGrowthStage = 'sapling' | 'young' | 'harvested'
+
 /** Ideal game-days per stage at growthRate = 1. */
-export const STAGE_DURATION_DAYS: Record<Exclude<TreeGrowthStage, 'mature'>, number> = {
+export const STAGE_DURATION_DAYS: Record<TimedGrowthStage, number> = {
   sapling: 0.5,
   young: 1.0,
   /** Stump / dead wood before sapling regrowth. */
@@ -50,13 +62,51 @@ export const STAGE_SCALE_MULT: Record<TreeGrowthStage, number> = {
   sapling: 0.35,
   young: 0.62,
   mature: 1,
+  /** Tall limbed trunk — slightly below mature canopy height. */
+  limbed: 0.85,
+  /** Low stump scale (log is separate). */
+  felled: 0.28,
   harvested: 0.28,
 }
 
 const CANOPY_RADIUS = 8
 const CANOPY_WEIGHT = 0.35
-/** Harvest yield uses the existing resource flow (`branch`) — no parallel `wood`. */
-export const HARVEST_YIELD: { kind: ItemKind, count: number } = { kind: 'branch', count: 3 }
+
+export type HarvestYield = { kind: ItemKind, count: number }
+
+/** Per-step chop yields (`branch` — no parallel `wood`). */
+export const CHOP_YIELDS: Record<'mature' | 'limbed' | 'felled', HarvestYield> = {
+  mature: { kind: 'branch', count: 2 },
+  limbed: { kind: 'branch', count: 2 },
+  felled: { kind: 'branch', count: 3 },
+}
+
+/** Final-step yield (bucking) — kept for callers that check capacity for one chop. */
+export const HARVEST_YIELD: HarvestYield = CHOP_YIELDS.felled
+
+const CHOP_NEXT: Record<'mature' | 'limbed' | 'felled', TreeGrowthStage> = {
+  mature: 'limbed',
+  limbed: 'felled',
+  felled: 'harvested',
+}
+
+export function isChoppableStage(stage: TreeGrowthStage): boolean {
+  return stage === 'mature' || stage === 'limbed' || stage === 'felled'
+}
+
+export function yieldForChopStage(stage: TreeGrowthStage): HarvestYield | null {
+  if (stage === 'mature' || stage === 'limbed' || stage === 'felled') {
+    return { ...CHOP_YIELDS[stage] }
+  }
+  return null
+}
+
+export function treeVisualKind(stage: TreeGrowthStage): TreeVisualKind {
+  if (stage === 'limbed') return 'limbed'
+  if (stage === 'felled') return 'felled'
+  if (stage === 'harvested') return 'stump'
+  return 'living'
+}
 
 /** Default prefs per `TREE_SPECS` index (6 entries). */
 export const TREE_SPECIES_PREFS: readonly TreeSpeciesPrefs[] = [
@@ -83,8 +133,9 @@ export type ResolvedTreeState = {
   id: TreeId
   stage: TreeGrowthStage
   scale: number
-  /** When false, renderer should show stump instead of full tree mesh. */
+  /** When false, renderer should not show a living crown mesh. */
   showCrown: boolean
+  visual: TreeVisualKind
 }
 
 /** Quantize world position so tiny float noise doesn't split ids. */
@@ -147,7 +198,14 @@ export function envGrowthFactor(env: TreeEnvSample, prefs: TreeSpeciesPrefs): nu
 
 /** Local canopy competition — nearby mature trees reduce sapling/young growth. */
 export function canopyGrowthFactor(matureNeighbors: number, stage: TreeGrowthStage): number {
-  if (stage === 'mature' || stage === 'harvested') return 1
+  if (
+    stage === 'mature' ||
+    stage === 'limbed' ||
+    stage === 'felled' ||
+    stage === 'harvested'
+  ) {
+    return 1
+  }
   return 1 / (1 + Math.max(0, matureNeighbors) * CANOPY_WEIGHT)
 }
 
@@ -158,6 +216,7 @@ export function visualScale(baseScale: number, stage: TreeGrowthStage): number {
 /**
  * Advance stages from an anchor using elapsed world days and a constant
  * growth rate for the interval. Lazy — no per-frame ticks.
+ * Chop mid-stages (`limbed` / `felled`) do not advance with time.
  */
 export function advanceStage(
   stage: TreeGrowthStage,
@@ -171,8 +230,8 @@ export function advanceStage(
 
   // Cap iterations so pathological rates can't loop forever.
   for (let i = 0; i < 8; i++) {
-    if (current === 'mature') break
-    const duration = STAGE_DURATION_DAYS[current as Exclude<TreeGrowthStage, 'mature'>]
+    if (current === 'mature' || current === 'limbed' || current === 'felled') break
+    const duration = STAGE_DURATION_DAYS[current as TimedGrowthStage]
     const needed = duration / rate
     if (worldDays < started + needed) break
     started = started + needed
@@ -187,6 +246,10 @@ function cellKey(x: number, z: number): string {
   return `${Math.floor(x / CANOPY_RADIUS)}:${Math.floor(z / CANOPY_RADIUS)}`
 }
 
+export type TreeHarvestStepResult =
+  | { ok: true, yield: HarvestYield, stage: TreeGrowthStage }
+  | { ok: false, reason: string }
+
 export type TreeLifecycle = {
   makeId: (x: number, z: number, speciesIndex: number) => TreeId
   /** Register a known tree for local canopy / harvest queries (chunk or settlement). */
@@ -198,12 +261,27 @@ export type TreeLifecycle = {
     env: TreeEnvSample,
     worldDays: number,
   ) => ResolvedTreeState
-  /** Authoritative world harvest — shared by NPC and future player (057). */
+  /** One chop step: mature→limbed→felled→harvested. */
+  advanceHarvest: (
+    id: TreeId,
+    worldDays: number,
+    env: TreeEnvSample,
+  ) => TreeHarvestStepResult
+  /** Advance all remaining chop steps to `harvested` (NPC one-shot). */
+  harvestFully: (
+    id: TreeId,
+    worldDays: number,
+    env: TreeEnvSample,
+  ) => TreeHarvestStepResult
+  /**
+   * @deprecated Prefer `advanceHarvest` / `harvestFully`. Kept as alias of
+   * `harvestFully` for older call sites.
+   */
   harvest: (
     id: TreeId,
     worldDays: number,
     env: TreeEnvSample,
-  ) => { ok: true, yield: typeof HARVEST_YIELD } | { ok: false, reason: string }
+  ) => TreeHarvestStepResult
   findHarvestableNear: (
     x: number,
     z: number,
@@ -211,6 +289,8 @@ export type TreeLifecycle = {
     worldDays: number,
     envAt: (x: number, z: number) => TreeEnvSample,
   ) => TreePresence | null
+  /** Loaded/registered trees within radius — uses spatial buckets (plan 057). */
+  getNearbyPresence: (x: number, z: number, radius: number) => readonly TreePresence[]
   countMatureNear: (
     x: number,
     z: number,
@@ -338,12 +418,53 @@ export function createTreeLifecycle(
       stage = advanceStage(presence.initialStage, 0, worldDays, growthRate).stage
     }
 
+    const visual = treeVisualKind(stage)
     return {
       id: presence.id,
       stage,
       scale: visualScale(presence.baseScale, stage),
-      showCrown: stage !== 'harvested',
+      showCrown: visual === 'living',
+      visual,
     }
+  }
+
+  function advanceHarvest(
+    id: TreeId,
+    worldDays: number,
+    env: TreeEnvSample,
+  ): TreeHarvestStepResult {
+    const presence = byId.get(id)
+    if (!presence) return { ok: false, reason: 'unknown-tree' }
+    const current = resolvePresence(presence, env, worldDays)
+    if (!isChoppableStage(current.stage)) {
+      return { ok: false, reason: current.stage === 'harvested' ? 'already-harvested' : 'not-choppable' }
+    }
+    const from = current.stage as 'mature' | 'limbed' | 'felled'
+    const next = CHOP_NEXT[from]
+    const yieldAmt = CHOP_YIELDS[from]
+    overrides.set(id, { stage: next, stageStartedAt: worldDays })
+    return { ok: true, yield: { ...yieldAmt }, stage: next }
+  }
+
+  function harvestFully(
+    id: TreeId,
+    worldDays: number,
+    env: TreeEnvSample,
+  ): TreeHarvestStepResult {
+    let total = 0
+    let lastStage: TreeGrowthStage | null = null
+    for (let i = 0; i < 3; i++) {
+      const step = advanceHarvest(id, worldDays, env)
+      if (!step.ok) {
+        if (i === 0) return step
+        break
+      }
+      total += step.yield.count
+      lastStage = step.stage
+      if (step.stage === 'harvested') break
+    }
+    if (lastStage === null) return { ok: false, reason: 'not-choppable' }
+    return { ok: true, yield: { kind: 'branch', count: total }, stage: lastStage }
   }
 
   function registerPresence(presence: TreePresence): void {
@@ -369,14 +490,9 @@ export function createTreeLifecycle(
       byCell.clear()
     },
     resolve: resolvePresence,
-    harvest(id, worldDays, env) {
-      const presence = byId.get(id)
-      if (!presence) return { ok: false, reason: 'unknown-tree' }
-      const current = resolvePresence(presence, env, worldDays)
-      if (current.stage !== 'mature') return { ok: false, reason: 'not-mature' }
-      overrides.set(id, { stage: 'harvested', stageStartedAt: worldDays })
-      return { ok: true, yield: { ...HARVEST_YIELD } }
-    },
+    advanceHarvest,
+    harvestFully,
+    harvest: harvestFully,
     findHarvestableNear(x, z, radius, worldDays, envAt) {
       let best: TreePresence | null = null
       let bestDist = Infinity
@@ -386,11 +502,21 @@ export function createTreeLifecycle(
         const dist = Math.hypot(presence.x - x, presence.z - z)
         if (dist > radius || dist >= bestDist) continue
         const resolved = resolvePresence(presence, envAt(presence.x, presence.z), worldDays)
-        if (resolved.stage !== 'mature') continue
+        if (!isChoppableStage(resolved.stage)) continue
         best = presence
         bestDist = dist
       }
       return best
+    },
+    getNearbyPresence(x, z, radius) {
+      const out: TreePresence[] = []
+      for (const id of nearbyIds(x, z, radius)) {
+        const presence = byId.get(id)
+        if (!presence) continue
+        if (Math.hypot(presence.x - x, presence.z - z) > radius) continue
+        out.push(presence)
+      }
+      return out
     },
     countMatureNear(x, z, excludeId, worldDays, envAt) {
       return countMatureNearInternal(x, z, excludeId, worldDays, envAt)
@@ -415,6 +541,15 @@ export function createTreeLifecycle(
   }
 }
 
+const VALID_STAGES: ReadonlySet<string> = new Set([
+  'felled',
+  'harvested',
+  'limbed',
+  'mature',
+  'sapling',
+  'young',
+])
+
 /** Defensive parse of saved overrides — invalid entries are skipped. */
 export function parseTreeOverrides(value: unknown): Record<TreeId, TreeStateOverride> {
   if (!value || typeof value !== 'object') return {}
@@ -424,16 +559,9 @@ export function parseTreeOverrides(value: unknown): Record<TreeId, TreeStateOver
     if (!raw || typeof raw !== 'object') continue
     const rec = raw as Record<string, unknown>
     const stage = rec.stage
-    if (
-      stage !== 'sapling' &&
-      stage !== 'young' &&
-      stage !== 'mature' &&
-      stage !== 'harvested'
-    ) {
-      continue
-    }
+    if (typeof stage !== 'string' || !VALID_STAGES.has(stage)) continue
     if (typeof rec.stageStartedAt !== 'number' || !Number.isFinite(rec.stageStartedAt)) continue
-    out[id] = { stage, stageStartedAt: rec.stageStartedAt }
+    out[id] = { stage: stage as TreeGrowthStage, stageStartedAt: rec.stageStartedAt }
   }
   return out
 }

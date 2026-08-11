@@ -33,6 +33,7 @@ import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
+import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import {
@@ -129,6 +130,8 @@ export type GameLoopDeps = {
   openQuestLog: () => void
   openInventory: () => void
   startGroundWork: (mode: 'dig' | 'level', x: number, z: number) => void
+  /** Start the axe chop channel for a gaze-selected tree (plan 057). */
+  startTreeChop: (treeId: string, x: number, z: number) => void
   onInventoryChanged: () => void
 }
 
@@ -164,7 +167,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, inventory, heldTool, toast, hud,
     questManager, ambientAudio, worldAudio, playerTorch, minimap, openQuestLog, openInventory,
-    startGroundWork, onInventoryChanged,
+    startGroundWork, startTreeChop, onInventoryChanged,
   } = deps
 
   const clock = new Clock()
@@ -268,6 +271,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.droppedItems,
         bundle.placedFires,
         player.mesh.position,
+        heldTool.held() === 'axe',
       )
       // The shovel's dig/level target is a fallback, not a competing candidate —
       // only synthesized when nothing else is being gazed at, and only while
@@ -341,17 +345,23 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
           }
         } else if (target.kind === 'tree') {
-          const outcome = resolveInteraction(target, questManager)
-          const branchChance = TREE_BRANCH_CHANCE + (inventory.has('knife', 1) ? KNIFE_BRANCH_BONUS : 0)
-          if (Math.random() < branchChance && inventory.canAdd('branch')) {
-            inventory.add('branch')
-            playInventoryPickUp(worldAudio.playOnce)
-            hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-            touchControls?.setDropAvailable(!inventory.isEmpty())
-            onInventoryChanged()
-            toast.show('+1 Gałąź', 'pickup')
+          if (target.canHarvest) {
+            startTreeChop(target.id, target.position.x, target.position.z)
+          } else {
+            const outcome = resolveInteraction(target, questManager)
+            if (treeInspectionCanYieldBranch(target.stage)) {
+              const branchChance = TREE_BRANCH_CHANCE + (inventory.has('knife', 1) ? KNIFE_BRANCH_BONUS : 0)
+              if (Math.random() < branchChance && inventory.canAdd('branch')) {
+                inventory.add('branch')
+                playInventoryPickUp(worldAudio.playOnce)
+                hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+                touchControls?.setDropAvailable(!inventory.isEmpty())
+                onInventoryChanged()
+                toast.show('+1 Gałąź', 'pickup')
+              }
+            }
+            npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
           }
-          npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
         } else if (target.kind === 'npc') {
           // Buttons need a visible cursor — same pointer-lock release the
           // pause menu already does on open (createPauseMenu's onPause).

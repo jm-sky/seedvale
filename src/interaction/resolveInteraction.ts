@@ -3,6 +3,7 @@ import type { Interactable } from './Interactable'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { pickAnimalFlavorLine } from '../fauna/animalDialogue'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
+import { treeInspectionFlavor } from './treeInspection'
 
 export type InteractionOutcome = {
   speakerName: string
@@ -14,12 +15,6 @@ const WELL_FLAVOR_LINES = [
   'Woda w studni jest czysta i chłodna.',
   'Cembrowina wygląda na solidną robotę.',
   'Ktoś zostawił tu wiadro.',
-]
-
-const TREE_FLAVOR_LINES = [
-  'Stare, sękate drzewo.',
-  'Liście szumią na wietrze.',
-  'Kora pachnie żywicą.',
 ]
 
 const SPAWNER_FLAVOR_LINES = [
@@ -67,7 +62,8 @@ export function resolveInteraction(
     }
     case 'tree': {
       const override = questManager.onInteractObjective({ type: 'interact_tree' })
-      return { speakerName: 'Drzewo', line: override?.line ?? pickFrom(TREE_FLAVOR_LINES) }
+      const flavor = treeInspectionFlavor(target.stage)
+      return { speakerName: flavor.speakerName, line: override?.line ?? flavor.line }
     }
     case 'well': {
       const override = questManager.onInteractObjective({ type: 'interact_well' })

@@ -9,6 +9,7 @@ import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { canLevelAt, getDigProfileAt } from '../terrain/dig'
+import { isChoppableStage } from '../world/treeLifecycle'
 import type { Vector3 } from 'three'
 
 /** How close (world units) the player must be to an interactable before it's
@@ -32,10 +33,10 @@ export const KNIFE_BRANCH_BONUS = 0.15
 export const DIG_REACH = 1.5
 
 /** Assembles this frame's `Interactable` candidates from every world system —
- *  NPCs, the well/trees (settlement landmarks), live fauna, fauna spawn points,
- *  player-built campfires, and nearby pickup items (world-generated + the
- *  renewable pool + player-dropped).
- *  Cheap: a few dozen objects total, dominated by settlement trees. */
+ *  NPCs, the well, nearby trees (settlement + streamed via lifecycle), live fauna,
+ *  fauna spawn points, player-built campfires, and nearby pickup items
+ *  (world-generated + the renewable pool + player-dropped).
+ *  Cheap: a few dozen objects total near the player. */
 export function buildInteractables(
   settlements: readonly Settlement[],
   fauna: Fauna,
@@ -44,6 +45,8 @@ export function buildInteractables(
   droppedItems: DroppedItems,
   placedFires: PlacedFires,
   playerPos: Vector3,
+  /** When the axe is held, mature trees show a chop prompt (plan 057). */
+  axeHeld = false,
 ): Interactable[] {
   const list: Interactable[] = []
 
@@ -93,14 +96,29 @@ export function buildInteractables(
         fire: settlement.fire,
       })
     }
+  }
 
-    settlement.landmarks.trees.forEach((tree) => {
-      list.push({
-        kind: 'tree',
-        position: tree.position,
-        promptLabel: 'Obejrzyj drzewo',
-        id: tree.id,
-      })
+  // Settlement + streamed trees share TreeLifecycle registration — one nearby
+  // query avoids duplicates and covers chunk vegetation (plan 057).
+  for (const tree of chunkManager.getNearbyTrees(playerPos, GAZE_RANGE)) {
+    const canHarvest = axeHeld && isChoppableStage(tree.stage)
+    let promptLabel = 'Obejrzyj drzewo'
+    if (canHarvest) {
+      if (tree.stage === 'mature') promptLabel = 'Oczyść gałęzie'
+      else if (tree.stage === 'limbed') promptLabel = 'Ścinaj drzewo'
+      else promptLabel = 'Porąb pień'
+    } else if (tree.stage === 'limbed' || tree.stage === 'felled' || tree.stage === 'harvested') {
+      promptLabel = 'Obejrzyj pień'
+    } else if (tree.stage === 'sapling') {
+      promptLabel = 'Obejrzyj drzewko'
+    }
+    list.push({
+      kind: 'tree',
+      position: { x: tree.x, z: tree.z },
+      promptLabel,
+      id: tree.id,
+      stage: tree.stage,
+      canHarvest,
     })
   }
 

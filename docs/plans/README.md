@@ -45,7 +45,6 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-10--056--hungry-predator-human-aggression.md](./2026-08-10--056--hungry-predator-human-aggression.md) | Głodny predator może przełamać strach przed człowiekiem | 0% | 🟡 medium | M | ~~010~~, ~~021~~, ~~045~~, ~~055~~ |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md) | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout | 0% | 🔴 high | XL | ~~031~~, 032, 036 |
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
-| [2026-08-10--057--axe-player-tree-harvesting.md](./2026-08-10--057--axe-player-tree-harvesting.md) | Siekiera + ścinanie drzew przez gracza | 0% | 🟡 medium | M | ~~058~~, ~~043~~, ~~030~~ |
 | [2026-08-11--060--npc-schedule-actions-and-trait-overlays.md](./2026-08-11--060--npc-schedule-actions-and-trait-overlays.md) | Wykonywalne aktywności grafiku NPC + nakładki traits | 0% | 🟡 medium | L | ~~020~~, ~~022~~ |
 | [2026-08-11--062--terrain-generation-overhaul.md](./2026-08-11--062--terrain-generation-overhaul.md) | Poprawić proceduralne generowanie terenu | 0% | 🔴 high| L | ~~001~~, ~~006~~, ~~007~~, ~~028~~ |
 | [2026-08-11--063--forest-regions-and-habitat-distribution.md](./2026-08-11--063--forest-regions-and-habitat-distribution.md) | Rozbudować generowanie lasów tak, aby świat posiadał duże, wyraźne obszary leśne | 0% | 🔴 high| L | ~~028~~ |
@@ -64,6 +63,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
+| [2026-08-10--057--axe-player-tree-harvesting.md](./2026-08-10--057--axe-player-tree-harvesting.md) | Siekiera + ścinanie drzew (3 etapy: limbed → felled → harvested) | 100% | 🟡 medium | M | ~~058~~, ~~043~~, ~~030~~ |
 | [2026-08-10--058--living-forest-tree-lifecycle.md](./2026-08-10--058--living-forest-tree-lifecycle.md) | Żywy las i cykl życia drzew | 100% | 🟡 medium | XL | ~~007~~, ~~028~~, ~~030~~ |
 | [2026-08-09--046--vue-tailwind-ui-stack.md](./2026-08-09--046--vue-tailwind-ui-stack.md) | Vue + Tailwind v4 + lucide-vue-next (Fazy 0–4 zaimplementowane; weryfikacja ręczna desktop/touch) | 100% | 🔴 high | XL | ~~005~~ |
 | [2026-08-08--032--natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md) | Zasoby naturalne, atrakcyjność lokalizacji, food source | 100% | 🔴 high | M | ~~028~~, ~~030~~, ~~031~~ |
