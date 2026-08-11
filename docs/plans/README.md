@@ -32,7 +32,6 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
-| [2026-08-10--055--shared-simulation-architecture.md](./2026-08-10--055--shared-simulation-architecture.md) | Wspólna architektura symulacji: state → perception → decision → action → world effect (Phase 1–6; Threat deferred; human damage → 056) | 90% | 🔴 high | XL | — |
 | [2026-08-08--039--road-signposts.md](./2026-08-08--039--road-signposts.md) | Kierunkowskazy przy drogach: **Fix:** Poprawić kierunek tabliczki. Dodać odstęp między znakami, które są w połowie odległości między wioskami. | 67% | ⚪ low | S | ~~026~~ |
 | [2026-08-09--049--procedural-world-landmarks.md](./2026-08-09--049--procedural-world-landmarks.md) | Proceduralne obiekty, ruiny i landmarki | 40% | 🟡 medium | XL | ~~001~~, ~~006~~, ~~007~~, ~~028~~, ~~030~~ |
 | [2026-08-07--024--world-visual-overhaul.md](./2026-08-07--024--world-visual-overhaul.md) | Rośliny, niebo/chmury, góry w tle | 50% | ⚪ low | L | ~~028~~ |
@@ -43,7 +42,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
-| [2026-08-10--056--hungry-predator-human-aggression.md](./2026-08-10--056--hungry-predator-human-aggression.md) | Głodny predator może przełamać strach przed człowiekiem | 0% | 🟡 medium | M | ~~010~~, ~~021~~, ~~045~~, 055 |
+| [2026-08-10--056--hungry-predator-human-aggression.md](./2026-08-10--056--hungry-predator-human-aggression.md) | Głodny predator może przełamać strach przed człowiekiem | 0% | 🟡 medium | M | ~~010~~, ~~021~~, ~~045~~, ~~055~~ |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md) | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout | 0% | 🔴 high | XL | ~~031~~, 032, 036 |
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
 | [2026-08-10--057--axe-player-tree-harvesting.md](./2026-08-10--057--axe-player-tree-harvesting.md) | Siekiera + ścinanie drzew przez gracza | 0% | 🟡 medium | M | ~~058~~, ~~043~~, ~~030~~ |
@@ -72,6 +71,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-10--052--shovel-digging-and-finding-stones.md](./2026-08-10--052--shovel-digging-and-finding-stones.md) | Kopanie ziemi i znajdowanie kamieni [have implementation notes] | 100% | 🔴 high | M | ~~043~~, ~~030~~ |
 | [2026-08-11--059--inventory-pick-drop-sfx.md](./2026-08-11--059--inventory-pick-drop-sfx.md) | SFX podniesienia / wyrzucenia itemów | 100% | ⚪ low | S | ~~014~~, ~~043~~ |
 | [2026-08-11--061--dig-ux-held-tool-and-level.md](./2026-08-11--061--dig-ux-held-tool-and-level.md) | Dig UX: held tool, kanał 2s, notice kamienia, Wyrównaj | 100% | 🔴 high | M | ~~052~~ |
+| [2026-08-11--064--cave-spawner-road-avoidance-and-visual.md](./2026-08-11--064--cave-spawner-road-avoidance-and-visual.md) | Jaskinia: unikaj drogi + proceduralne wejście | 100% | 🟡 medium | S | ~~010~~, ~~026~~ |
 
 ---
 
@@ -118,6 +118,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-10--053--createapp-refactor.md](./2026-08-10--053--createapp-refactor.md) | Refaktor `createApp.ts`, game loop, modal state, interactables (R5+R6) | ~~005~~, ~~011~~ |
 | [2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md](./2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md) | Bezpieczeństwo referencji `WorldBundle` + małe refaktory po 053 | ~~053~~ |
 | [2026-08-08--045--health-stamina-threat.md](./2026-08-08--045--health-stamina-threat.md) | Wspólny Health/Stamina dla NPC/fauny/gracza (Threat odłożony — brak nowego konsumenta) | 100% | 🔴 high | L | ~~010~~, ~~022~~ |
+| [2026-08-10--055--shared-simulation-architecture.md](./2026-08-10--055--shared-simulation-architecture.md) | Wspólna architektura symulacji: state → perception → decision → action → world effect | — |
 
 ---
 

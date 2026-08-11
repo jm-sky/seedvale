@@ -137,6 +137,13 @@ function buildFauna(
   settlement: Settlement,
   seed: number,
 ): Promise<Fauna> {
+  // Spawner ring is 45–65 m from home; querySize 150 → half 75 covers the ring
+  // plus road halfWidth margin for corridor rejection in createFauna.
+  const roadSegments = chunkManager.roadCorridorsNear(
+    settlement.center.x,
+    settlement.center.z,
+    150,
+  )
   return createFauna(
     scene,
     chunkManager.sampleHeight,
@@ -145,6 +152,7 @@ function buildFauna(
     HOME_RADIUS,
     settlement.center,
     seed,
+    roadSegments,
   )
 }
 

@@ -1,18 +1,29 @@
 import { Group, type Object3D, type Scene, type Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
+import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
 import {
   disposeObject3D,
   type GltfAsset,
   loadGltfAsset,
   prepareProp,
 } from '../assets/loadGltf'
+import { distanceToSegment } from '../math/segment'
+import { createCaveMouth } from '../settlement/props'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
 import { ANIMAL_DEFS, AnimalAgent, type AnimalKind } from './AnimalAgent'
 import { type PreySpawner, updateSpawners } from './AnimalSpawner'
 import { createBoarModel, createDuckModel, createRabbitModel } from './proceduralAnimals'
+
+/** Extra clearance past each corridor's `halfWidth` — matches forest-belt
+ *  road avoidance in `props.ts` (`ROAD_TREE_CLEARANCE`). */
+const SPAWNER_ROAD_CLEARANCE = 1
+
+/** Label height above ground for a cave mouth (prop ~1.1 m tall at scale 1). */
+const CAVE_LABEL_HEIGHT = 1.8
+const DEFAULT_SPAWNER_LABEL_HEIGHT = 0.6
 
 export type Fauna = {
   update: (
@@ -139,6 +150,7 @@ function disposeAgent(agent: AnimalAgent): void {
 /**
  * Place animals in a ring around the settlement (forest belt).
  * Prefers GLB from `public/models/fauna/` keyed by `userData.animalKind`.
+ * `roadSegments` — corridors near home used to keep prey spawners off roads.
  */
 export async function createFauna(
   scene: Scene,
@@ -148,10 +160,21 @@ export async function createFauna(
   homeRadius: number,
   settlementCenter: Vector3,
   seed: number,
+  roadSegments: readonly RoadCorridorSegment[] = [],
 ): Promise<Fauna> {
   const random = createSeededRandom(seed ^ 0xfa11)
   let agents: AnimalAgent[] = []
   const templates = await loadFaunaTemplates()
+  const spawnerMeshes: Object3D[] = []
+
+  const onRoad = (x: number, z: number): boolean => {
+    for (const seg of roadSegments) {
+      if (distanceToSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz) < seg.halfWidth + SPAWNER_ROAD_CLEARANCE) {
+        return true
+      }
+    }
+    return false
+  }
 
   /** Random point within [minDist, maxDist] of (cx, cz), clear of water and
    *  homeRadius bounds — `filter` adds a habitat preference (meadow/forest/
@@ -162,8 +185,9 @@ export async function createFauna(
     minDist: number,
     maxDist: number,
     filter?: (x: number, z: number) => boolean,
+    maxAttempts = 24,
   ): { x: number, z: number } | null => {
-    for (let attempt = 0; attempt < 24; attempt++) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const angle = random() * Math.PI * 2
       const dist = minDist + random() * (maxDist - minDist)
       const x = cx + Math.cos(angle) * dist
@@ -232,16 +256,28 @@ export async function createFauna(
     marker: string | null
     lastOpacity: number
   }[] = []
+  const offRoad = (x: number, z: number) => !onRoad(x, z)
   for (const spec of SPAWNER_SPECS) {
-    const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 45, 65)
+    const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 45, 65, offRoad, 48)
     if (!pos) continue
     spawners.push({ ...pos, ...spec, timeSinceLastRespawn: 0 })
+
+    const groundY = sampleHeight(pos.x, pos.z)
+    if (spec.type === 'cave') {
+      const mouth = createCaveMouth(1, random())
+      mouth.position.set(pos.x, groundY, pos.z)
+      // Open side (+Z) faces away from the settlement into the wild.
+      mouth.rotation.y = Math.atan2(pos.x - settlementCenter.x, pos.z - settlementCenter.z)
+      scene.add(mouth)
+      spawnerMeshes.push(mouth)
+    }
 
     const el = document.createElement('div')
     el.className = 'npc-label'
     el.textContent = SPAWNER_LABELS[spec.type]
     const label = new CSS2DObject(el)
-    label.position.set(pos.x, sampleHeight(pos.x, pos.z) + 0.6, pos.z)
+    const labelH = spec.type === 'cave' ? CAVE_LABEL_HEIGHT : DEFAULT_SPAWNER_LABEL_HEIGHT
+    label.position.set(pos.x, groundY + labelH, pos.z)
     scene.add(label)
     spawnerLabels.push({ type: spec.type, object: label, el, marker: null, lastOpacity: -1 })
   }
@@ -287,6 +323,11 @@ export async function createFauna(
     dispose() {
       for (const a of agents) disposeAgent(a)
       agents = []
+      for (const mesh of spawnerMeshes) {
+        mesh.removeFromParent()
+        disposeObject3D(mesh)
+      }
+      spawnerMeshes.length = 0
       for (const { object, el } of spawnerLabels) {
         object.removeFromParent()
         el.remove()

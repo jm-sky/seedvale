@@ -26,3 +26,11 @@
 |------------------|-------------------|------------|-------|
 | inventory-pick-up-01…04.wav | 831642__ienba__generic-game-pick-up.wav | https://freesound.org/people/IENBA/sounds/831642/ | 4 variants split from one pack; random pick on collect |
 | inventory-drop-01.wav | 791150__randbsoundbites__dropping-an-item-from-inventory.wav | https://freesound.org/people/randbsoundbites/sounds/791150/ | |
+
+## Actions
+
+| filename         | oryginal filename | source url | notes |
+|------------------|-------------------|------------|-------|
+| action-dig-01…04.wav | 486228__ruben_uitenweerde__digging-sand-with-a-shovel.wav | https://freesound.org/people/Ruben_Uitenweerde/sounds/486228/ | 4× ~2 s strokes split from 27 s pack; random on shovel dig |
+| action-wood-chop-01.wav | 847818__elschorscho__chopping-wood_medium-459.wav | https://freesound.org/people/ElSchorscho/sounds/847818/ | Not wired yet (axe / tree harvest) |
+

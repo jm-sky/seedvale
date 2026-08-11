@@ -1,6 +1,7 @@
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { AmbientSamplers } from '../audio/ambientWeights'
 import type { SaveData } from '../persistence/saveData'
+import { playActionDig } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { playInventoryDrop } from '../audio/inventorySounds'
@@ -435,6 +436,7 @@ export async function createApp(
       toast.show('Tu nie da się kopać.', 'error')
       return
     }
+    playActionDig(worldAudio.playOnce)
     busy.start(DIG_DURATION_SEC, 'Kopanie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
       syncShovelQuickActions()

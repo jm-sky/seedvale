@@ -2,9 +2,9 @@
 
 ## Status
 
-`in progress` 🔄
+`done` ✅
 
-**Progress:** ~90% (Phase 1–6 implemented; Threat framework still deferred; human damage left to 056/combat)
+**Progress:** 100% (Phase 1–6; Threat deferred by design to 045; human damage → 056)
 
 ## Priority
 
@@ -384,13 +384,13 @@ Workerów nie wprowadzać na tym etapie tylko dlatego, że architektura jest wsp
 
 - **Implemented:** Phase 1–6 (Threat excluded by design)
 - **Technically verified:** `npx tsc --noEmit`, `npm run lint`, `npm run test` — 2026-08-11
-- **Browser / manual:** hungry-wolf chase vs flee — ask user to verify in running dev server (see steps below)
+- **Browser / manual:** verified by user 2026-08-11 — hungry-wolf chase vs flee works
 
-### Manual browser check (optional)
+### Manual browser check (verified)
 
-1. Spawn near a wolf with low hunger → expect flee when noticed.
+1. Spawn near a wolf with low hunger → flee when noticed.
 2. (Debug) raise wolf hunger near 1.0, stand at notice edge without panic/fire → may chase instead of flee.
-3. Approach a campfire with a hungry wolf nearby → fire fear should favor flee.
+3. Approach a campfire with a hungry wolf nearby → fire fear favors flee.
 4. Prey/livestock player-flee and predator–prey chase unchanged.
 
 ---

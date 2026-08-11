@@ -713,6 +713,68 @@ export function createSmallRuins(scale = 1, variant = 0.5): THREE.Group {
   return group
 }
 
+/** Horseshoe of rocks with a dark recessed mouth — visual for the prey
+ *  `cave` spawner (`createFauna.ts`). Origin at feet; footprint ~2–3 m at
+ *  scale 1. `variant` (0..1) jitters rock sizes/angles so two caves don't
+ *  look identical. Open side faces +Z (caller may rotate). */
+export function createCaveMouth(scale = 1, variant = 0.5): THREE.Group {
+  const group = new THREE.Group()
+  const rockMat = new THREE.MeshStandardMaterial({
+    color: 0x7d7a72,
+    flatShading: true,
+    roughness: 1,
+  })
+  const mouthMat = new THREE.MeshStandardMaterial({
+    color: 0x1a1814,
+    flatShading: true,
+    roughness: 1,
+    metalness: 0,
+  })
+
+  // U-shaped rock ring: angles spanning the back and sides, leaving +Z open.
+  const rockAngles = [-2.2, -1.4, -0.7, 0.7, 1.4, 2.2]
+  for (let i = 0; i < rockAngles.length; i++) {
+    const a = rockAngles[i]!
+    const sizeJitter = 0.75 + ((variant * (i + 3)) % 1) * 0.55
+    const rock = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(0.55 * scale * sizeJitter, 0),
+      rockMat,
+    )
+    const r = (1.05 + ((variant * (i + 5)) % 1) * 0.25) * scale
+    rock.position.set(Math.sin(a) * r, 0.4 * scale * sizeJitter, Math.cos(a) * r * 0.55)
+    rock.scale.set(
+      0.85 + ((variant * (i + 2)) % 1) * 0.4,
+      0.9 + ((variant * (i + 7)) % 1) * 0.5,
+      0.85 + ((variant * (i + 11)) % 1) * 0.4,
+    )
+    rock.rotation.set(a * 0.3, a, variant * 1.7)
+    rock.castShadow = true
+    rock.receiveShadow = true
+    group.add(rock)
+  }
+
+  // Dark mouth recess toward the open side — reads as an entrance, not a pile.
+  const mouth = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.55 * scale, 0.7 * scale, 1.1 * scale, 8, 1, true),
+    mouthMat,
+  )
+  mouth.rotation.x = Math.PI / 2
+  mouth.position.set(0, 0.55 * scale, 0.15 * scale)
+  mouth.receiveShadow = true
+  group.add(mouth)
+
+  // Small floor lip so the opening sits on ground rather than floating.
+  const sill = new THREE.Mesh(
+    new THREE.BoxGeometry(1.4 * scale, 0.12 * scale, 0.5 * scale),
+    rockMat,
+  )
+  sill.position.set(0, 0.06 * scale, 0.55 * scale)
+  sill.receiveShadow = true
+  group.add(sill)
+
+  return group
+}
+
 /** A minimal "prosta ognisko" base — ash patch + a couple of branches, no
  *  stone ring (that's what distinguishes it from `createCampfire()`'s
  *  palenisko look, see `docs/plans/2026-08-09--050`). Used by

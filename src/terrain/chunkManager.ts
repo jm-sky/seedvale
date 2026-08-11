@@ -46,6 +46,7 @@ import {
   extractCoreGrid,
   type RawSampleParams,
   type RegionParams,
+  type RoadCorridorSegment,
   sampleApronGrid,
   sampleBiomeAt,
   sampleContinentalnessAt,
@@ -218,6 +219,10 @@ export type ChunkManager = {
   loadedChunkCount: () => number
   /** Resolves once every listed chunk has finished generating (or failed/cancelled). */
   waitForChunks: (coords: ChunkCoord[]) => Promise<void>
+  /** Road/path corridors near a world point — same merge as `paramsFor`
+   *  (`segmentsNear` + village house↔core paths). Used by fauna spawners to
+   *  avoid placing on roads without needing a loaded chunk's `roadTint`. */
+  roadCorridorsNear: (worldX: number, worldZ: number, querySize: number) => RoadCorridorSegment[]
   dispose: () => void
 }
 
@@ -858,6 +863,10 @@ export function createChunkManager(
     waterLevel: config.waterLevel,
     loadedChunkCount: () => chunks.size,
     waitForChunks: (coords) => Promise.all(coords.map((c) => ensureLoaded(c))).then(() => undefined),
+    roadCorridorsNear(worldX, worldZ, querySize) {
+      const village = villageSegmentsNear(worldX, worldZ, querySize, roadCtx)
+      return [...segmentsNear(worldX, worldZ, querySize, roadCtx), ...village.paths]
+    },
     dispose() {
       for (const record of [...chunks.values()]) unload(record)
       grassSystem.dispose()

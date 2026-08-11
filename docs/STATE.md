@@ -66,7 +66,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Chase/flee behaviour.
 - Health and damage/death flow via shared `HealthState`.
 - Animal Life hunger/thirst/stamina (`AnimalLifeState`; stamina migrated from former `energy` under plan 045).
-- Spawners and respawn.
+- Prey spawners (cave / thicket) with respawn; placement rejects road/path corridors (`ChunkManager.roadCorridorsNear` + `halfWidth` clearance). Cave has a procedural mouth mesh (`createCaveMouth`) plus CSS2D label; thicket remains label-only.
 - Player-awareness/flee behaviour.
 - Exhaustion gates sustained chase/flee sprinting.
 - GLB fauna models are used for wolf/fox/deer/stag.
@@ -83,7 +83,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Wait/rest time skip exists.
 - Inventory UI is a Vue screen (`src/ui-vue/screens/InventoryScreen.vue`); `src/ui/createInventoryScreen.ts` is a facade — see "UI migration" below.
 - Inventory pick-up / drop SFX exist (`audio/inventorySounds.ts` via `worldAudio.playOnce`): ground collect, tree branch, dig stone, UI/quick drop.
-- Shovel is a one-time settlement landmark pickup (`items/createItemSpawners.ts`, campfire/garden anchors — not in generic `SPAWN_SPECS`). Dig/level require a shovel in inventory; HUD prompts appear only while the shovel is **held** (`items/HeldTool.ts`, persisted as `SaveData.heldTool` in schema v7): **`E` digs**, **`R` levels** (both can show together over a depression). Owning a shovel (held or not) also exposes dig/level in Quick Actions. Dig/level run as a ~2 s busy channel (`app/busyAction.ts` + Vue `BusyOverlay`) then apply via `terrain/digAction.ts`. Dig size/tuning and stone notice chance live in `terrain/dig.ts`. Found stones go to inventory on a successful notice roll, otherwise (or when inventory is full) drop beside the hole via `droppedItems` — never silently lost. `ChunkManager.modifyTerrain` / `levelTerrain` own the runtime height overlay (dig down / raise toward procedural base); not save-persisted, reapplied on chunk reload.
+- Shovel is a one-time settlement landmark pickup (`items/createItemSpawners.ts`, campfire/garden anchors — not in generic `SPAWN_SPECS`). Dig/level require a shovel in inventory; HUD prompts appear only while the shovel is **held** (`items/HeldTool.ts`, persisted as `SaveData.heldTool` in schema v7): **`E` digs**, **`R` levels** (both can show together over a depression). Owning a shovel (held or not) also exposes dig/level in Quick Actions. Dig/level run as a ~2 s busy channel (`app/busyAction.ts` + Vue `BusyOverlay`) then apply via `terrain/digAction.ts`. Dig start plays a random ~2 s shovel SFX (`audio/actionSounds.ts`). Dig size/tuning and stone notice chance live in `terrain/dig.ts`. Found stones go to inventory on a successful notice roll, otherwise (or when inventory is full) drop beside the hole via `droppedItems` — never silently lost. `ChunkManager.modifyTerrain` / `levelTerrain` own the runtime height overlay (dig down / raise toward procedural base); not save-persisted, reapplied on chunk reload.
 
 ### Quests / progression
 
