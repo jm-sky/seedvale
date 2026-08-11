@@ -136,6 +136,8 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 - **Morze/ocean** (2026-08-11)
   - na telefonie wygląda słabo - są jakieś artefakty; widać krawędzie między obszarami; po morzu pływają dziwne plamy
   - można spróbować z bardziej przezroczystą wodą
+- **Fauna sytość / nawodnienie** (2026-08-11)
+  - paski nad zwierzęciem działają, ale bez realnego jedzenia/picia głównie maleją — zob. [issue 015](../issues/2026-08-11--015--fauna-food-water-for-satiety-hydration.md)
 
 When adding a new plan: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in plans), add a row to the appropriate status section above.
 
