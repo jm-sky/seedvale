@@ -84,7 +84,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 ### Items / player
 
 - `ItemKind` and `Inventory` exist in `src/items/`.
-- Player has shared `HealthState` on `PlayerController` (100 HP; no death UI/respawn yet — plan 045).
+- Player has shared `HealthState` on `PlayerController` (100 HP; CSS2D HP bar like NPC/fauna; no death UI/respawn yet — plan 045).
 - Inventory is persisted in save data and has weight calculation/max weight support.
 - Item spawners and dropped items exist.
 - Natural collectible items are integrated into the world.

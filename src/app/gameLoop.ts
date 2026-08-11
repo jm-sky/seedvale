@@ -29,6 +29,7 @@ import type { DayNightState } from '../world/dayNight'
 import type { TimeSkip } from '../world/timeSkip'
 import type { BusyAction } from './busyAction'
 import type { WorldBundle } from './worldBundle'
+import { playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
@@ -382,6 +383,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           // pause menu already does on open (createPauseMenu's onPause).
           exitGamePointerLock(renderer.domElement)
           vueUi.openNpcDialogueMenu(target.npc, target.settlement, questManager, dayNight.timeOfDay)
+        } else if (target.kind === 'animal') {
+          const outcome = resolveInteraction(target, questManager)
+          playAnimalSound(target.animal.def.kind, worldAudio.playOnce)
+          npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)

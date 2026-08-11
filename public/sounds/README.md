@@ -12,6 +12,14 @@
 | male-thank-you-02 | 429036__theuncertainman__thank-you-npc-british-male.wav | https://freesound.org/  | generic |
 | female-thank-you-01       | 624079__djhamsammich__thank-you-anne.mp3 | https://freesound.org/ | Simple, short |
 
+## Animals
+
+| filename         | oryginal filename | source url | notes |
+|------------------|-------------------|------------|-------|
+| animal-chicken-01.wav | 724216__nickmaysoundmusic__chickens_waiting_to_be_fed_farm_light_wind_bird_song.wav | https://freesound.org/people/nickmaysoundmusic/sounds/724216/ | Farm chickens + light wind/birds; longer bed (~17 s) |
+| animal-cow-01.wav | 513565__spurioustransients__cow-moo-8.wav | https://freesound.org/people/spurioustransients/sounds/513565/ | Cow moo |
+| animal-wolf-01.wav | 338674__newagesoup__wolf-growl.wav | https://freesound.org/people/newagesoup/sounds/338674/ | Wolf growl |
+
 ## Ambient / background
 
 | filename         | oryginal filename | source url | notes |

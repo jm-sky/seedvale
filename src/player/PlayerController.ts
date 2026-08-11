@@ -65,6 +65,9 @@ export class PlayerController {
   private readonly camOffset = new THREE.Vector3()
   private readonly label: CSS2DObject
   private readonly labelEl: HTMLDivElement
+  private readonly labelNameEl: HTMLDivElement
+  private readonly hpFillEl: HTMLDivElement
+  private lastHpRatio = -1
 
   private constructor(
     root: THREE.Object3D,
@@ -106,7 +109,22 @@ export class PlayerController {
 
     this.labelEl = document.createElement('div')
     this.labelEl.className = 'npc-label'
-    this.labelEl.textContent = PLAYER_LABEL
+
+    this.labelNameEl = document.createElement('div')
+    this.labelNameEl.className = 'npc-label__name'
+    this.labelNameEl.textContent = PLAYER_LABEL
+
+    const labelBarsEl = document.createElement('div')
+    labelBarsEl.className = 'npc-label__bars'
+    const hpBar = document.createElement('div')
+    hpBar.className = 'npc-label__bar npc-label__bar--hp'
+    this.hpFillEl = document.createElement('div')
+    this.hpFillEl.className = 'npc-label__bar-fill'
+    this.hpFillEl.style.width = '100%'
+    hpBar.appendChild(this.hpFillEl)
+    labelBarsEl.appendChild(hpBar)
+
+    this.labelEl.append(this.labelNameEl, labelBarsEl)
     this.label = new CSS2DObject(this.labelEl)
     this.label.position.set(0, PLAYER_HEIGHT + 0.55, 0)
     this.mesh.add(this.label)
@@ -194,7 +212,7 @@ export class PlayerController {
   }
 
   setName(name: string): void {
-    this.labelEl.textContent = name.trim() || PLAYER_LABEL
+    this.labelNameEl.textContent = name.trim() || PLAYER_LABEL
   }
 
   setPosition(x: number, z: number): void {
@@ -230,6 +248,7 @@ export class PlayerController {
   update(dt: number): void {
     if (this.resting) {
       this.syncCamera()
+      this.syncHpBar()
       this.mixer?.update(dt)
       return
     }
@@ -256,7 +275,15 @@ export class PlayerController {
     this.snapToGround()
     this.syncCamera()
     this.syncAnimation()
+    this.syncHpBar()
     this.mixer?.update(dt)
+  }
+
+  private syncHpBar(): void {
+    const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
+    if (hpRatio === this.lastHpRatio) return
+    this.lastHpRatio = hpRatio
+    this.hpFillEl.style.width = `${Math.round(hpRatio * 100)}%`
   }
 
   dispose(): void {
