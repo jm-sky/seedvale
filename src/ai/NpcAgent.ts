@@ -283,14 +283,20 @@ export class NpcAgent {
   private pauseCooldown = 0
   private readonly tmp = new THREE.Vector3()
   private readonly labelEl: HTMLDivElement
+  private readonly labelNameEl: HTMLDivElement
+  private readonly labelBarsEl: HTMLDivElement
+  private readonly hpFillEl: HTMLDivElement
+  private readonly staminaFillEl: HTMLDivElement
   /** Set externally (e.g. by a QuestManager) — NpcAgent stays quest-agnostic. */
   private questMarker: string | null = null
   private highlighted = false
   private readonly playSound: (url: string, volume?: number) => void
-  /** Last text/opacity actually written to `labelEl` — `textContent`/`style.opacity`
-   *  writes invalidate CSS2D label layout, so skip them when nothing changed. */
+  /** Last text/opacity/bar widths written to the label DOM — writes invalidate
+   *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
   private lastLabelOpacity = -1
+  private lastHpRatio = -1
+  private lastStaminaRatio = -1
 
   private constructor(
     root: THREE.Object3D,
@@ -362,8 +368,32 @@ export class NpcAgent {
 
     this.labelEl = document.createElement('div')
     this.labelEl.className = 'npc-label'
-    this.labelEl.textContent = this.displayName
+
+    this.labelNameEl = document.createElement('div')
+    this.labelNameEl.className = 'npc-label__name'
+    this.labelNameEl.textContent = this.displayName
     this.lastLabelText = this.displayName
+
+    this.labelBarsEl = document.createElement('div')
+    this.labelBarsEl.className = 'npc-label__bars'
+
+    const hpBar = document.createElement('div')
+    hpBar.className = 'npc-label__bar npc-label__bar--hp'
+    this.hpFillEl = document.createElement('div')
+    this.hpFillEl.className = 'npc-label__bar-fill'
+    this.hpFillEl.style.width = '100%'
+    hpBar.appendChild(this.hpFillEl)
+
+    const staminaBar = document.createElement('div')
+    staminaBar.className = 'npc-label__bar npc-label__bar--stamina'
+    this.staminaFillEl = document.createElement('div')
+    this.staminaFillEl.className = 'npc-label__bar-fill'
+    this.staminaFillEl.style.width = '100%'
+    staminaBar.appendChild(this.staminaFillEl)
+
+    this.labelBarsEl.append(hpBar, staminaBar)
+    this.labelEl.append(this.labelNameEl, this.labelBarsEl)
+
     this.label = new CSS2DObject(this.labelEl)
     this.label.position.set(0, NPC_HEIGHT + 0.55, 0)
     this.mesh.add(this.label)
@@ -648,7 +678,17 @@ export class NpcAgent {
     const labelText = `${this.displayName}${questSuffix}`
     if (labelText !== this.lastLabelText) {
       this.lastLabelText = labelText
-      this.labelEl.textContent = labelText
+      this.labelNameEl.textContent = labelText
+    }
+    const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
+    if (hpRatio !== this.lastHpRatio) {
+      this.lastHpRatio = hpRatio
+      this.hpFillEl.style.width = `${Math.round(hpRatio * 100)}%`
+    }
+    const staminaRatio = this.stamina.max > 0 ? this.stamina.current / this.stamina.max : 0
+    if (staminaRatio !== this.lastStaminaRatio) {
+      this.lastStaminaRatio = staminaRatio
+      this.staminaFillEl.style.width = `${Math.round(staminaRatio * 100)}%`
     }
     const gaze = gazeOpacityFactor(
       this.mesh.position.x - observerPos.x,
@@ -659,6 +699,9 @@ export class NpcAgent {
     if (opacity !== this.lastLabelOpacity) {
       this.lastLabelOpacity = opacity
       this.labelEl.style.opacity = String(opacity)
+      // At full visibility bars sit at 80%; once the shared label fades, inherit
+      // the parent opacity without an extra dimming factor.
+      this.labelBarsEl.style.opacity = opacity === 1 ? '0.8' : '1'
     }
     this.mixer.update(dt)
   }

@@ -507,6 +507,10 @@
         opacity: 0.6;
       }
       .npc-label {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
         padding: 2px 6px;
         border-radius: 4px;
         background: rgba(20, 24, 28, 0.72);
@@ -516,6 +520,30 @@
         white-space: nowrap;
         pointer-events: none;
         user-select: none;
+      }
+      .npc-label__name {
+        text-align: center;
+      }
+      .npc-label__bars {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .npc-label__bar {
+        height: 3px;
+        overflow: hidden;
+        border-radius: 2px;
+        background: rgba(0, 0, 0, 0.45);
+      }
+      .npc-label__bar-fill {
+        height: 100%;
+        width: 100%;
+      }
+      .npc-label__bar--hp .npc-label__bar-fill {
+        background: #e05555;
+      }
+      .npc-label__bar--stamina .npc-label__bar-fill {
+        background: #e0c040;
       }
       .npc-label--highlighted {
         /* box-shadow (not border) so the glow never shifts label layout/position. */
