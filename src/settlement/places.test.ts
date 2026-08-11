@@ -1,7 +1,18 @@
-import { Vector3 } from 'three'
+import { Object3D, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
-import type { SettlementLandmarks } from './props'
+import type { SettlementLandmarks, SettlementTreeLandmark } from './props'
 import { workplaceFor } from './places'
+
+function makeTree(id: string, x: number, z: number): SettlementTreeLandmark {
+  return {
+    id,
+    position: new Vector3(x, 0, z),
+    mesh: new Object3D(),
+    speciesIndex: 0,
+    baseScale: 1,
+    initialStage: 'mature',
+  }
+}
 
 function makeLandmarks(overrides: Partial<SettlementLandmarks> = {}): SettlementLandmarks {
   return {
@@ -46,11 +57,11 @@ describe('workplaceFor', () => {
   })
 
   it('woodcutter -> round-robin tree, null if no trees', () => {
-    const trees = [new Vector3(0, 0, 0), new Vector3(5, 0, 5)]
+    const trees = [makeTree('t0', 0, 0), makeTree('t1', 5, 5)]
     const landmarks = makeLandmarks({ trees })
-    expect(workplaceFor('s1', 'woodcutter', landmarks, 0)?.position).toBe(trees[0])
-    expect(workplaceFor('s1', 'woodcutter', landmarks, 1)?.position).toBe(trees[1])
-    expect(workplaceFor('s1', 'woodcutter', landmarks, 2)?.position).toBe(trees[0])
+    expect(workplaceFor('s1', 'woodcutter', landmarks, 0)?.position).toBe(trees[0]!.position)
+    expect(workplaceFor('s1', 'woodcutter', landmarks, 1)?.position).toBe(trees[1]!.position)
+    expect(workplaceFor('s1', 'woodcutter', landmarks, 2)?.position).toBe(trees[0]!.position)
 
     expect(workplaceFor('s1', 'woodcutter', makeLandmarks(), 0)).toBeNull()
   })

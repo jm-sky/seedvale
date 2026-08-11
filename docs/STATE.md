@@ -95,10 +95,11 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 ### Persistence
 
 - IndexedDB persistence exists in `src/persistence/`.
-- Current save data includes world configuration, player position/orientation, time of day, quests/EXP/relations, inventory, held tool, collected item IDs, dropped items and placed fires.
-- Save schema is currently version `7` in `createApp.ts`.
+- Current save data includes world configuration, player position/orientation, time of day, elapsed game days, quests/EXP/relations, inventory, held tool, collected item IDs, dropped items, placed fires and sparse tree lifecycle overrides.
+- Save schema is currently version `8` in `createApp.ts`.
 - New Game resets world-dependent state as implemented by `createApp.ts`/`rebuildWorldBundle()`.
 - NPC runtime state is not generally persisted as a full simulation snapshot; do not assume Continue restores every NPC need/AI state.
+- Tree lifecycle (`src/world/treeLifecycle.ts`) uses sparse overrides + lazy growth from `DayNightState.elapsedDays`; chunk/settlement trees share `TreeId` and `harvestWorldTree`.
 
 ### UI / input
 
@@ -152,6 +153,9 @@ src/terrain/dig.ts
 src/terrain/digAction.ts
 src/app/busyAction.ts
 src/quests/QuestManager.ts
+src/world/dayNight.ts
+src/world/treeLifecycle.ts
+src/world/treeHarvest.ts
 src/persistence/saveData.ts
 src/persistence/saveDb.ts
 src/ui/

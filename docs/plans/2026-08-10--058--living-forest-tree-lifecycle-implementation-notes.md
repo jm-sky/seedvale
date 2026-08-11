@@ -2,10 +2,21 @@
 
 **Plan:** [058 — Living Forest / Tree Lifecycle](./2026-08-10--058--living-forest-tree-lifecycle.md)
 **Reviewed:** 2026-08-10
+**Implemented:** 2026-08-11 (technically verified; browser verification pending)
 
 ## Review result
 
 The plan is directionally compatible with the current architecture, but implementation needs explicit decisions around runtime tree state, persistence, NPC tree targets, and harvest resources.
+
+## Implementation summary (2026-08-11)
+
+- Domain module: `src/world/treeLifecycle.ts` (+ unit tests), shared `harvestWorldTree` in `src/world/treeHarvest.ts`.
+- Absolute clock: `DayNightState.elapsedDays` advanced by `tickDayNight` (incl. time skip).
+- Procedural trees emit explicit `growthStage` (`chunkVegetation.ts`); scale is mature base + stage multipliers.
+- `ChunkManager` registers presence on load, applies resolve/stump visuals, unregisters on unload; canopy uses local cell buckets.
+- Settlement trees carry `TreeId` + mesh refs; NPC wood chop calls shared harvest → stump.
+- Yield uses existing `branch` (no parallel `wood` ItemKind).
+- Save schema v8: `elapsedDays` + sparse `treeOverrides`; corrupt/old saves migrate or fall back via existing `loadSaveData`/`readSave` try/catch.
 
 ## Decisions
 

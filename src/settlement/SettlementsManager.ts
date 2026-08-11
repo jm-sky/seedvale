@@ -2,6 +2,7 @@ import { type Object3D, type Scene, Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
+import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TerrainSamplers } from './settlementTerrain'
 import { disposeObject3D } from '../assets/loadGltf'
 import { type ChunkCoord, worldToChunk } from '../terrain/chunkGrid'
@@ -100,6 +101,7 @@ export async function createSettlementsManager(
    *  site before that settlement is built — see `chunksNear`'s comment. */
   waitForChunks: (coords: ChunkCoord[]) => Promise<void>,
   chunkSize: number,
+  forest?: SettlementForestHooks,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -144,6 +146,7 @@ export async function createSettlementsManager(
     homeDef,
     playSound,
     roadCtx,
+    forest,
   )
 
   const entries = new Map<string, Entry>()
@@ -237,6 +240,7 @@ export async function createSettlementsManager(
         def,
         playSound,
         roadCtx,
+        forest,
       ))
       .then((settlement) => {
         const cur = entries.get(def.id)

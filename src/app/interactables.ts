@@ -94,8 +94,13 @@ export function buildInteractables(
       })
     }
 
-    settlement.landmarks.trees.forEach((position, i) => {
-      list.push({ kind: 'tree', position, promptLabel: 'Obejrzyj drzewo', id: `tree-${settlement.id}-${i}` })
+    settlement.landmarks.trees.forEach((tree) => {
+      list.push({
+        kind: 'tree',
+        position: tree.position,
+        promptLabel: 'Obejrzyj drzewo',
+        id: tree.id,
+      })
     })
   }
 

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { DetailNormalConfig } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
+import type { TreeEnvSample, TreeLifecycle } from '../world/treeLifecycle'
 import type { EnvironmentKind } from './chunkEnvironment'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
@@ -21,6 +22,7 @@ import {
   createSmallRuins,
   createStoneCircle,
   createTree,
+  createTreeStump,
   loadPropTemplates,
   placeOnGround,
   REED_SPECS,
@@ -28,6 +30,7 @@ import {
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { createChunkWater, type WorldWater } from '../world/createWater'
+import { tagTreeMesh } from '../world/treeVisuals'
 import { biomeWeightsAt } from './biomeRegions'
 import { buildChunkGeometry } from './buildChunkGeometry'
 import {
@@ -134,6 +137,10 @@ export type ChunkManagerConfig = {
   }
   /** Close-up surface grain on the chunk material (`buildChunkGeometry.ts`). */
   detailNormal: DetailNormalConfig
+  /** Living-forest lifecycle (plan 058) — sparse overrides + canopy queries. */
+  treeLifecycle: TreeLifecycle
+  /** Absolute game-days (`DayNightState.elapsedDays`) for lazy growth resolve. */
+  getWorldDays: () => number
 }
 
 type ChunkState = 'generating' | 'ready'
@@ -149,6 +156,8 @@ type ChunkRecord = {
   vegetation?: THREE.Group
   items?: THREE.Group
   environment?: THREE.Group
+  /** TreeIds registered into `treeLifecycle` for this chunk — cleared on unload. */
+  treeIds?: string[]
   /** `undefined` = not yet decided (chunk not ready or outside grass radius);
    *  `null` = decided ineligible (no blades survived rejection, e.g. all rock/sand). */
   grass?: WorldGrassChunk | null
@@ -201,6 +210,10 @@ export type ChunkManager = {
   levelTerrain: (x: number, z: number, radius: number, maxRaise: number) => boolean
   /** Seed-derived analytic height at `(x, z)` — ignores runtime dig/level mods. */
   sampleBaseHeight: HeightSampler
+  /** Environment inputs for tree growth at a world point. */
+  sampleTreeEnv: (x: number, z: number) => TreeEnvSample
+  /** Rebuild a single streamed tree mesh after harvest / stage change. */
+  refreshTreeVisual: (treeId: string) => boolean
   waterLevel: number
   loadedChunkCount: () => number
   /** Resolves once every listed chunk has finished generating (or failed/cancelled). */
@@ -515,13 +528,38 @@ export function createChunkManager(
             reed: reedTemplates,
           }
 
+          const treeIds: string[] = []
           rec.vegetation = buildPlacementGroup('chunk-vegetation', tile.vegetation, (placement) => {
+            if (placement.kind === 'tree') {
+              const initialStage = placement.growthStage ?? 'mature'
+              const id = config.treeLifecycle.makeId(placement.x, placement.z, placement.speciesIndex)
+              const presence = {
+                id,
+                x: placement.x,
+                z: placement.z,
+                speciesIndex: placement.speciesIndex,
+                initialStage,
+                baseScale: placement.scale,
+              }
+              config.treeLifecycle.registerPresence(presence)
+              treeIds.push(id)
+              const env = sampleTreeEnvAt(placement.x, placement.z, tile, coord)
+              const resolved = config.treeLifecycle.resolve(presence, env, config.getWorldDays())
+              const prop = resolved.showCrown
+                ? cloneProp(templatesByKind.tree, placement.speciesIndex, resolved.scale)
+                : createTreeStump(resolved.scale)
+              prop.rotation.y = placement.rotationY
+              placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
+              tagTreeMesh(prop, resolved, placement.scale, placement.speciesIndex, initialStage)
+              return prop
+            }
             const templates = templatesByKind[placement.kind]
             const prop = cloneProp(templates, placement.speciesIndex, placement.scale)
             prop.rotation.y = placement.rotationY // deterministic — overrides cloneProp's own Math.random()
             placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
             return prop
           })
+          rec.treeIds = treeIds
         }
 
         rec.items = buildPlacementGroup('chunk-items', tile.items, (placement) => {
@@ -557,6 +595,10 @@ export function createChunkManager(
 
   function unload(record: ChunkRecord): void {
     if (record.state === 'generating') cancelChunkTile(record.key)
+    if (record.treeIds) {
+      for (const id of record.treeIds) config.treeLifecycle.unregisterPresence(id)
+      record.treeIds = undefined
+    }
     record.mesh?.removeFromParent()
     record.meshDispose?.()
     record.water?.dispose()
@@ -574,6 +616,83 @@ export function createChunkManager(
       record.environment.removeFromParent()
     }
     chunks.delete(record.key)
+  }
+
+  function sampleTreeEnvAt(
+    x: number,
+    z: number,
+    tile: ChunkTileResult,
+    coord: ChunkCoord,
+  ): TreeEnvSample {
+    const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
+    const sample = (grid: Float32Array) =>
+      sampleApronGrid(grid, o.apronRes, o.x, o.z, o.step, x, z)
+    const h = sample(tile.heights)
+    const altitude01 = Math.max(0, (h - config.waterLevel) / Math.max(config.heightScale, 0.001))
+    const moistureRegion = sample(tile.moistureRegion)
+    return {
+      biome: biomeWeightsAt(moistureRegion, altitude01, config.region),
+      moisture: sample(tile.biomes),
+      altitude01,
+      mountainRidge: sample(tile.mountainRidge),
+    }
+  }
+
+  function sampleTreeEnv(x: number, z: number): TreeEnvSample {
+    const h = readField('heights', x, z)
+    const altitude01 = Math.max(0, (h - config.waterLevel) / Math.max(config.heightScale, 0.001))
+    const moistureRegion = readField('moistureRegion', x, z)
+    return {
+      biome: biomeWeightsAt(moistureRegion, altitude01, config.region),
+      moisture: readField('biomes', x, z),
+      altitude01,
+      mountainRidge: readField('mountainRidge', x, z),
+    }
+  }
+
+  function refreshTreeVisual(treeId: string): boolean {
+    for (const rec of chunks.values()) {
+      if (!rec.vegetation || !rec.treeIds?.includes(treeId)) continue
+      const mesh = rec.vegetation.children.find((c) => c.userData.treeId === treeId)
+      if (!mesh || !rec.tile) continue
+      const baseScale =
+        typeof mesh.userData.treeBaseScale === 'number' ? mesh.userData.treeBaseScale : 1
+      const speciesIndex =
+        typeof mesh.userData.treeSpeciesIndex === 'number' ? mesh.userData.treeSpeciesIndex : 0
+      const initialStage =
+        mesh.userData.treeInitialStage === 'sapling' || mesh.userData.treeInitialStage === 'young'
+          ? mesh.userData.treeInitialStage
+          : 'mature'
+      const presence = {
+        id: treeId,
+        x: mesh.position.x,
+        z: mesh.position.z,
+        speciesIndex,
+        initialStage,
+        baseScale,
+      }
+      const resolved = config.treeLifecycle.resolve(
+        presence,
+        sampleTreeEnvAt(mesh.position.x, mesh.position.z, rec.tile, rec.coord),
+        config.getWorldDays(),
+      )
+      const parent = mesh.parent
+      const rotY = mesh.rotation.y
+      const pos = mesh.position.clone()
+      mesh.removeFromParent()
+      disposeObject3D(mesh)
+      // Procedural fallback is fine for mid-session refresh; chunk reload uses
+      // the proper GLB templates again.
+      const replacement = resolved.showCrown
+        ? createTree(resolved.scale)
+        : createTreeStump(resolved.scale)
+      replacement.position.copy(pos)
+      replacement.rotation.y = rotY
+      tagTreeMesh(replacement, resolved, baseScale, speciesIndex, initialStage)
+      parent?.add(replacement)
+      return true
+    }
+    return false
   }
 
   function recheck(playerX: number, playerZ: number): void {
@@ -664,6 +783,8 @@ export function createChunkManager(
       const moistureRegion = readField('moistureRegion', x, z)
       return biomeWeightsAt(moistureRegion, altitude01, config.region).forest
     },
+    sampleTreeEnv,
+    refreshTreeVisual,
     getNearbyItems(pos, radius) {
       const out: { id: string, kind: ItemKind, x: number, z: number }[] = []
       for (const rec of chunks.values()) {

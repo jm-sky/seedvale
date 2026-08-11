@@ -2,6 +2,8 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { Settlement } from '../settlement/createSettlement'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { ResourceEnv } from '../terrain/naturalResources'
+import type { SettlementForestHooks } from '../world/settlementForestHooks'
+import type { TreeLifecycle } from '../world/treeLifecycle'
 import { createFauna, type Fauna } from '../fauna/createFauna'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
@@ -63,6 +65,8 @@ function buildChunkManager(
   scene: Scene,
   config: WorldConfig,
   collectedItemIds: Set<string>,
+  treeLifecycle: TreeLifecycle,
+  getWorldDays: () => number,
 ): ChunkManager {
   const cfg: ChunkManagerConfig = {
     chunkSize: config.terrain.chunkSize,
@@ -82,6 +86,8 @@ function buildChunkManager(
     collectedItemIds,
     grass: config.terrain.grass,
     detailNormal: config.terrain.detailNormal,
+    treeLifecycle,
+    getWorldDays,
   }
   return createChunkManager(scene, cfg)
 }
@@ -101,6 +107,7 @@ function buildSettlementsManager(
   seed: number,
   playSound: (url: string, volume?: number) => void,
   config: WorldConfig,
+  forest: SettlementForestHooks,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -120,6 +127,7 @@ function buildSettlementsManager(
     config.terrain.region,
     chunkManager.waitForChunks,
     config.terrain.chunkSize,
+    forest,
   )
 }
 
@@ -152,7 +160,7 @@ function buildItemSpawners(
     chunkManager.waterLevel,
     HOME_RADIUS,
     settlement.center,
-    settlement.landmarks.trees,
+    settlement.landmarks.trees.map((t) => t.position),
     seed,
     { campfire: settlement.landmarks.campfire?.position, garden: settlement.landmarks.garden },
   )
@@ -189,13 +197,20 @@ export async function createWorldBundle(
   playSound: (url: string, volume?: number) => void,
   initialDroppedItems: readonly DroppedItem[],
   initialPlacedFires: readonly PlacedFire[],
+  treeLifecycle: TreeLifecycle,
+  getWorldDays: () => number,
 ): Promise<WorldBundle> {
-  const chunkManager = buildChunkManager(scene, config, collectedItemIds)
+  const chunkManager = buildChunkManager(scene, config, collectedItemIds, treeLifecycle, getWorldDays)
   chunkManager.update(0, 0)
   await chunkManager.waitForChunks(homeChunks())
 
+  const forest: SettlementForestHooks = {
+    lifecycle: treeLifecycle,
+    getWorldDays,
+    sampleEnv: (x, z) => chunkManager.sampleTreeEnv(x, z),
+  }
   const ocean = buildOcean(scene, config)
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playSound, config)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playSound, config, forest)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   const resourceDeposits = buildResourceDeposits(scene, chunkManager, config, config.seed)
@@ -224,6 +239,8 @@ export async function rebuildWorldBundle(
   resetCollectedItems: boolean,
   collectedItemIds: Set<string>,
   playSound: (url: string, volume?: number) => void,
+  treeLifecycle: TreeLifecycle,
+  getWorldDays: () => number,
 ): Promise<void> {
   bundle.fauna.dispose()
   bundle.itemSpawners.dispose()
@@ -243,12 +260,22 @@ export async function rebuildWorldBundle(
   // otherwise roads/village clearings from the old seed leak in.
   clearRoadNetworkCaches()
 
-  bundle.chunkManager = buildChunkManager(scene, config, collectedItemIds)
+  // Presence index is chunk/settlement owned — clear before rebuild so stale
+  // ids from the previous world don't pollute canopy queries.
+  treeLifecycle.clearPresence()
+  if (resetCollectedItems) treeLifecycle.clearOverrides()
+
+  bundle.chunkManager = buildChunkManager(scene, config, collectedItemIds, treeLifecycle, getWorldDays)
   bundle.chunkManager.update(0, 0)
   await bundle.chunkManager.waitForChunks(homeChunks())
 
+  const forest: SettlementForestHooks = {
+    lifecycle: treeLifecycle,
+    getWorldDays,
+    sampleEnv: (x, z) => bundle.chunkManager.sampleTreeEnv(x, z),
+  }
   bundle.ocean = buildOcean(scene, config)
-  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playSound, config)
+  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playSound, config, forest)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
   bundle.resourceDeposits = buildResourceDeposits(scene, bundle.chunkManager, config, config.seed)

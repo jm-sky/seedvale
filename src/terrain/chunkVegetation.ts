@@ -17,8 +17,12 @@ export type VegetationPlacement = {
   /** Index into `TREE_SPECS`/`BUSH_SPECS`/`CACTUS_SPECS`/`REED_SPECS`
    *  (`props.ts`), resolved on the main thread. */
   speciesIndex: number
+  /** Mature visual base scale — stage multipliers applied at render time
+   *  (`world/treeLifecycle.ts`). For non-trees this is the final scale. */
   scale: number
   rotationY: number
+  /** Explicit lifecycle stage for trees (plan 058). Absent for bushes/etc. */
+  growthStage?: 'sapling' | 'young' | 'mature'
 }
 
 const CANDIDATES_PER_CHUNK = 18
@@ -165,18 +169,30 @@ export function computeChunkVegetation(
       kind === 'tree'
         ? clusteredTreeSpecies(clumpValue, Math.max(1, speciesCount), random)
         : Math.floor(random() * Math.max(1, speciesCount))
-    // Most trees are grown adults; a minority are small saplings — visible
-    // size variety within the same stand (plan 044 4.5).
-    const isSapling = kind === 'tree' && random() < 0.18
-    const scale =
-      kind === 'bush' || kind === 'cactus'
-        ? 0.6 + random() * 0.5
-        : isSapling
-          ? 0.28 + random() * 0.25
-          : 0.7 + random() * 0.6
+    // Trees carry an explicit lifecycle stage (plan 058). Scale is the mature
+    // base; sapling/young multipliers are applied when instantiating meshes.
+    let growthStage: VegetationPlacement['growthStage']
+    let scale: number
+    if (kind === 'bush' || kind === 'cactus') {
+      scale = 0.6 + random() * 0.5
+    } else if (kind === 'tree') {
+      const roll = random()
+      growthStage = roll < 0.18 ? 'sapling' : roll < 0.35 ? 'young' : 'mature'
+      scale = 0.7 + random() * 0.6
+    } else {
+      scale = 0.7 + random() * 0.6
+    }
     const rotationY = random() * Math.PI * 2
 
-    placements.push({ x: wx, z: wz, kind, speciesIndex, scale, rotationY })
+    placements.push({
+      x: wx,
+      z: wz,
+      kind,
+      speciesIndex,
+      scale,
+      rotationY,
+      ...(growthStage ? { growthStage } : {}),
+    })
   }
 
   placements.push(...flowerMeadowPatches(coord, tile, params, sample, meadowNoise))

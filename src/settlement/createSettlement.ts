@@ -7,11 +7,13 @@ import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
+import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { VillageSize } from './families'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
+import { applyHarvestedTreeVisual } from '../world/treeVisuals'
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
 import { type Place, workplaceFor } from './places'
@@ -34,6 +36,8 @@ import {
 } from './roadNetwork'
 import { cellSeed } from './settlementGenerator'
 import { createVillageFire, type VillageFire } from './VillageFire'
+
+export type { SettlementForestHooks }
 
 /** `setDayNight`'s `t` (0 day .. 1 full night) above this triggers the
  *  settlement fire's dusk-ignition roll (see `nightIndex`/`setDayNight`
@@ -104,6 +108,7 @@ export async function createSettlement(
   def: SettlementDef,
   playSound: (url: string, volume?: number) => void = () => {},
   roadCtx?: RoadNetworkContext,
+  forest?: SettlementForestHooks,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
@@ -131,6 +136,35 @@ export async function createSettlement(
     roadSegments,
   )
   scene.add(group)
+
+  if (forest) {
+    const worldDays = forest.getWorldDays()
+    for (const tree of landmarks.trees) {
+      forest.lifecycle.registerPresence({
+        id: tree.id,
+        x: tree.position.x,
+        z: tree.position.z,
+        speciesIndex: tree.speciesIndex,
+        initialStage: tree.initialStage,
+        baseScale: tree.baseScale,
+      })
+      const resolved = forest.lifecycle.resolve(
+        {
+          id: tree.id,
+          x: tree.position.x,
+          z: tree.position.z,
+          speciesIndex: tree.speciesIndex,
+          initialStage: tree.initialStage,
+          baseScale: tree.baseScale,
+        },
+        forest.sampleEnv(tree.position.x, tree.position.z),
+        worldDays,
+      )
+      if (!resolved.showCrown) {
+        tree.mesh = applyHarvestedTreeVisual(tree.mesh)
+      }
+    }
+  }
 
   const livestock = spawnLivestock(scene, sampleHeight, waterLevel, landmarks.homes, def.size, settlementSeed)
 
@@ -219,6 +253,8 @@ export async function createSettlement(
         member,
         familyMembers,
         playSound,
+        undefined,
+        forest,
       )
       scene.add(agent.mesh)
       return agent
@@ -290,6 +326,9 @@ export async function createSettlement(
       for (const light of houseLights) light.setNightIntensity(t)
     },
     dispose() {
+      if (forest) {
+        for (const tree of landmarks.trees) forest.lifecycle.unregisterPresence(tree.id)
+      }
       for (const agent of agents) {
         agent.dispose()
         agent.mesh.removeFromParent()

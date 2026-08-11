@@ -22,6 +22,10 @@ function fogColorFromElev(elev: number): number {
 export type DayNightState = {
   /** 0 = midnight, 0.25 ≈ dawn, 0.5 = noon, 0.75 ≈ dusk */
   timeOfDay: number
+  /** Absolute game-days elapsed since world start — advances with the clock
+   *  (including time skip) and never wraps. Used by lazy systems such as tree
+   *  growth (`world/treeLifecycle.ts`) that must survive chunk unload and save. */
+  elapsedDays: number
   /** Real seconds for a full day cycle at multiplier = 1. */
   dayLengthSec: number
   /** Speed scale: 1 = normal, 2 = 2× faster, 0.5 = half speed. */
@@ -34,6 +38,7 @@ export function createDayNightState(
 ): DayNightState {
   return {
     timeOfDay: 0.32,
+    elapsedDays: 0,
     dayLengthSec: 480,
     timeMultiplier: 1,
     enabled: true,
@@ -45,7 +50,9 @@ export function tickDayNight(state: DayNightState, dt: number): void {
   if (!state.enabled) return
   const len = Math.max(30, state.dayLengthSec)
   const mult = Math.max(0, state.timeMultiplier)
-  state.timeOfDay = (state.timeOfDay + (dt * mult) / len) % 1
+  const advance = (dt * mult) / len
+  state.elapsedDays += advance
+  state.timeOfDay = (state.timeOfDay + advance) % 1
 }
 
 /** Preetham-ish params + light hints from clock. */

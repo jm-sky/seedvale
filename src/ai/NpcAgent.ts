@@ -4,6 +4,7 @@ import type { HeightSampler } from '../player/PlayerController'
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
+import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import {
   disposeObject3D,
   loadGltfAnimated,
@@ -17,6 +18,7 @@ import {
   type StaminaState,
 } from '../shared/StaminaState'
 import { gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
+import { harvestWorldTree } from '../world/treeHarvest'
 import {
   type CharacterDef,
   genderForName,
@@ -291,6 +293,7 @@ export class NpcAgent {
   private questMarker: string | null = null
   private highlighted = false
   private readonly playSound: (url: string, volume?: number) => void
+  private readonly forest: SettlementForestHooks | undefined
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
@@ -311,8 +314,10 @@ export class NpcAgent {
     member: FamilyMember,
     familyMembers: readonly FamilyMemberRef[],
     playSound: (url: string, volume?: number) => void,
+    forest: SettlementForestHooks | undefined,
   ) {
     this.playSound = playSound
+    this.forest = forest
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.landmarks = landmarks
@@ -411,6 +416,7 @@ export class NpcAgent {
     familyMembers: readonly FamilyMemberRef[],
     playSound: (url: string, volume?: number) => void = () => {},
     modelUrl = modelUrlFor(member.character.gender, treeIndex),
+    forest?: SettlementForestHooks,
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -427,6 +433,7 @@ export class NpcAgent {
         member,
         familyMembers,
         playSound,
+        forest,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -441,6 +448,7 @@ export class NpcAgent {
         member,
         familyMembers,
         playSound,
+        forest,
       )
     }
   }
@@ -456,6 +464,7 @@ export class NpcAgent {
     member: FamilyMember,
     familyMembers: readonly FamilyMemberRef[],
     playSound: (url: string, volume?: number) => void,
+    forest?: SettlementForestHooks,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -481,6 +490,7 @@ export class NpcAgent {
       member,
       familyMembers,
       playSound,
+      forest,
     )
   }
 
@@ -776,13 +786,38 @@ export class NpcAgent {
       return
     }
     if (need === 'wood' && this.landmarks.trees.length > 0) {
-      const tree = this.landmarks.trees[this.treeIndex]!
+      const forest = this.forest
+      let landmark = this.landmarks.trees[this.treeIndex]!
       this.treeIndex = (this.treeIndex + 1) % this.landmarks.trees.length
+
+      if (forest) {
+        const found = forest.lifecycle.findHarvestableNear(
+          this.mesh.position.x,
+          this.mesh.position.z,
+          80,
+          forest.getWorldDays(),
+          forest.sampleEnv,
+        )
+        if (found) {
+          const match = this.landmarks.trees.find((t) => t.id === found.id)
+          if (match) landmark = match
+        }
+      }
+
       this.startAction({
         action: 'chop',
-        destination: tree,
+        destination: landmark.position,
         duration: 1.6 * this.waitMultiplier,
-        onComplete: () => {},
+        onComplete: () => {
+          if (!forest) return
+          harvestWorldTree(
+            forest.lifecycle,
+            landmark.id,
+            forest.getWorldDays(),
+            forest.sampleEnv(landmark.position.x, landmark.position.z),
+            { landmark },
+          )
+        },
         next: {
           action: 'deposit',
           destination: this.landmarks.stockpile,

@@ -1,6 +1,6 @@
 # Żywy las i cykl życia drzew — v1
 
-**Status:** `planned`
+**Status:** `verification needed`
 **Created:** 2026-08-10
 **Next:** [057 — Siekiera i ścinanie drzew przez gracza](./2026-08-10--057--axe-player-tree-harvesting.md)
 

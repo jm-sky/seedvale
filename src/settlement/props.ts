@@ -8,6 +8,7 @@ import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
 import { distanceToSegment } from '../math/segment'
 import { createSparks, type Sparks } from '../shared/getFireParticles'
 import { createSeededRandom } from '../world/parseSeed'
+import { makeTreeId, type TreeGrowthStage, visualScale } from '../world/treeLifecycle'
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
@@ -20,7 +21,9 @@ export type SettlementLandmarks = {
    *  or not this settlement's families happen to roll a trader. */
   market: THREE.Vector3
   homes: THREE.Vector3[]
-  trees: THREE.Vector3[]
+  /** Settlement forest trees — each carries a stable `TreeId` for lifecycle
+   *  / NPC harvest (plan 058). `mesh` is the live prop for stump swaps. */
+  trees: SettlementTreeLandmark[]
   /** Settlement's dock/pier, if it has one (near-coast settlements only) —
    *  see `settlement/minorLocations.ts`. */
   dock?: THREE.Vector3
@@ -34,6 +37,15 @@ export type SettlementLandmarks = {
    *  hidden until `settlement/VillageFire.ts` lights it. Distinct from the
    *  purely decorative world campfires in `terrain/chunkEnvironment.ts`. */
   campfire?: { position: THREE.Vector3, flame: CampfireFlame }
+}
+
+export type SettlementTreeLandmark = {
+  id: string
+  position: THREE.Vector3
+  mesh: THREE.Object3D
+  speciesIndex: number
+  baseScale: number
+  initialStage: 'sapling' | 'young' | 'mature'
 }
 
 const HUT_URLS = [
@@ -424,6 +436,27 @@ export function createTree(scale = 1): THREE.Group {
   crown.castShadow = true
   tree.add(crown)
   return tree
+}
+
+/** Visible harvest remainder (plan 058) — same TreeId as the living tree. */
+export function createTreeStump(scale = 1): THREE.Group {
+  const stump = new THREE.Group()
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2 * scale, 0.26 * scale, 0.45 * scale, 6),
+    new THREE.MeshStandardMaterial({ color: 0x5c4033, flatShading: true }),
+  )
+  trunk.position.y = 0.22 * scale
+  trunk.castShadow = true
+  stump.add(trunk)
+
+  const top = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22 * scale, 0.22 * scale, 0.06 * scale, 6),
+    new THREE.MeshStandardMaterial({ color: 0x6b5340, flatShading: true }),
+  )
+  top.position.y = 0.48 * scale
+  top.castShadow = true
+  stump.add(top)
+  return stump
 }
 
 export function createBush(scale = 1): THREE.Group {
@@ -927,6 +960,7 @@ function plantTreeCluster(
   random: () => number,
   treeCounter: { n: number },
   bushCounter: { n: number },
+  worldSeed: number,
 ): void {
   const count =
     size === 'small' ? 4 + Math.floor(random() * 4) : 7 + Math.floor(random() * 6)
@@ -954,11 +988,27 @@ function plantTreeCluster(
       placeOnGround(bush, tx, tz, sampleHeight)
       group.add(bush)
     } else {
-      const scale = 0.7 + random() * 0.6
-      const tree = cloneProp(treeTemplates, treeCounter.n++, scale)
+      const roll = random()
+      const initialStage: Exclude<TreeGrowthStage, 'harvested'> =
+        roll < 0.12 ? 'sapling' : roll < 0.25 ? 'young' : 'mature'
+      const baseScale = 0.7 + random() * 0.6
+      const speciesIndex = treeCounter.n % Math.max(1, treeTemplates.length)
+      const tree = cloneProp(treeTemplates, treeCounter.n++, visualScale(baseScale, initialStage))
       placeOnGround(tree, tx, tz, sampleHeight)
+      const id = makeTreeId(worldSeed, tx, tz, speciesIndex)
+      tree.userData.treeId = id
+      tree.userData.treeBaseScale = baseScale
+      tree.userData.treeSpeciesIndex = speciesIndex
+      tree.userData.treeInitialStage = initialStage
       group.add(tree)
-      landmarks.trees.push(new THREE.Vector3(tx, y, tz))
+      landmarks.trees.push({
+        id,
+        position: new THREE.Vector3(tx, y, tz),
+        mesh: tree,
+        speciesIndex,
+        baseScale,
+        initialStage,
+      })
     }
   }
 }
@@ -1205,6 +1255,7 @@ export async function buildSettlementProps(
         random,
         treeCounter,
         bushCounter,
+        seed,
       )
     }
 
@@ -1229,6 +1280,7 @@ export async function buildSettlementProps(
         random,
         treeCounter,
         bushCounter,
+        seed,
       )
     }
 
@@ -1253,6 +1305,7 @@ export async function buildSettlementProps(
         random,
         treeCounter,
         bushCounter,
+        seed,
       )
     }
 
@@ -1279,6 +1332,7 @@ export async function buildSettlementProps(
         random,
         treeCounter,
         bushCounter,
+        seed,
       )
     }
   }

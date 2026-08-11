@@ -47,6 +47,7 @@ import { createSky } from '../world/createSky'
 import { createDayNightState } from '../world/dayNight'
 import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
 import { createTimeSkip } from '../world/timeSkip'
+import { createTreeLifecycle, parseTreeOverrides } from '../world/treeLifecycle'
 import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
 import { DIG_REACH } from './interactables'
@@ -114,8 +115,16 @@ export async function createApp(
   saveWorldConfig(config)
 
   const dayNight = createDayNightState(
-    initialSave ? { timeOfDay: initialSave.timeOfDay } : undefined,
+    initialSave
+      ? { timeOfDay: initialSave.timeOfDay, elapsedDays: initialSave.elapsedDays }
+      : undefined,
   )
+
+  let treeLifecycle = createTreeLifecycle(
+    config.seed,
+    parseTreeOverrides(initialSave?.treeOverrides),
+  )
+  const getWorldDays = () => dayNight.elapsedDays
 
   const renderer = createRenderer(container)
   const labelRenderer = new CSS2DRenderer()
@@ -160,6 +169,8 @@ export async function createApp(
     worldAudio.playOnce,
     initialSave?.droppedItems ?? [],
     initialSave?.placedFires ?? [],
+    treeLifecycle,
+    getWorldDays,
   )
 
   // Indirection (not a direct destructure) so this keeps sampling whichever
@@ -241,9 +252,22 @@ export async function createApp(
       // Old agents are about to be disposed — drop the reference rather than
       // toggling a class on a DOM node that's going away anyway.
       gameLoop.forgetHighlight()
-      if (resetCollectedItems) collectedItemIds = new Set()
+      if (resetCollectedItems) {
+        collectedItemIds = new Set()
+        dayNight.elapsedDays = 0
+        treeLifecycle = createTreeLifecycle(config.seed, {})
+      }
 
-      await rebuildWorldBundle(bundle, scene, config, resetCollectedItems, collectedItemIds, worldAudio.playOnce)
+      await rebuildWorldBundle(
+        bundle,
+        scene,
+        config,
+        resetCollectedItems,
+        collectedItemIds,
+        worldAudio.playOnce,
+        treeLifecycle,
+        getWorldDays,
+      )
 
       if (resetCollectedItems) {
         inventory.clear()
@@ -272,7 +296,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 7,
+    version: 8,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -296,7 +320,9 @@ export async function createApp(
     droppedItems: bundle.droppedItems.nodes().map((item) => ({ ...item })),
     placedFires: bundle.placedFires.nodes().map((fire) => ({ ...fire })),
     timeOfDay: dayNight.timeOfDay,
+    elapsedDays: dayNight.elapsedDays,
     heldTool: heldTool.held(),
+    treeOverrides: treeLifecycle.serializeOverrides(),
   })
 
   const saveNow = (): void => {

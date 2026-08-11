@@ -327,7 +327,13 @@ export class AnimalAgent {
   private currentAction: THREE.AnimationAction | null = null
   private readonly label: CSS2DObject
   private readonly labelEl: HTMLDivElement
+  private readonly labelNameEl: HTMLDivElement
+  private readonly labelBarsEl: HTMLDivElement
+  private readonly hpFillEl: HTMLDivElement
+  private readonly staminaFillEl: HTMLDivElement
   private lastLabelOpacity = -1
+  private lastHpRatio = -1
+  private lastStaminaRatio = -1
   readonly health: HealthState
   readonly life: AnimalLifeState
   private attackCooldown = 0
@@ -398,7 +404,31 @@ export class AnimalAgent {
 
     this.labelEl = document.createElement('div')
     this.labelEl.className = 'npc-label'
-    this.labelEl.textContent = ANIMAL_LABELS[def.kind]
+
+    this.labelNameEl = document.createElement('div')
+    this.labelNameEl.className = 'npc-label__name'
+    this.labelNameEl.textContent = ANIMAL_LABELS[def.kind]
+
+    this.labelBarsEl = document.createElement('div')
+    this.labelBarsEl.className = 'npc-label__bars'
+
+    const hpBar = document.createElement('div')
+    hpBar.className = 'npc-label__bar npc-label__bar--hp'
+    this.hpFillEl = document.createElement('div')
+    this.hpFillEl.className = 'npc-label__bar-fill'
+    this.hpFillEl.style.width = '100%'
+    hpBar.appendChild(this.hpFillEl)
+
+    const staminaBar = document.createElement('div')
+    staminaBar.className = 'npc-label__bar npc-label__bar--stamina'
+    this.staminaFillEl = document.createElement('div')
+    this.staminaFillEl.className = 'npc-label__bar-fill'
+    this.staminaFillEl.style.width = '100%'
+    staminaBar.appendChild(this.staminaFillEl)
+
+    this.labelBarsEl.append(hpBar, staminaBar)
+    this.labelEl.append(this.labelNameEl, this.labelBarsEl)
+
     this.label = new CSS2DObject(this.labelEl)
     const labelHeight = this.isCapsule
       ? 0.45 * def.scale + 0.3
@@ -479,10 +509,25 @@ export class AnimalAgent {
     this.snapY()
     this.updateAnim()
     tickAnimalLife(this.life, dt, this.sprinting)
+    const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
+    if (hpRatio !== this.lastHpRatio) {
+      this.lastHpRatio = hpRatio
+      this.hpFillEl.style.width = `${Math.round(hpRatio * 100)}%`
+    }
+    const staminaRatio = this.life.stamina.max > 0
+      ? this.life.stamina.current / this.life.stamina.max
+      : 0
+    if (staminaRatio !== this.lastStaminaRatio) {
+      this.lastStaminaRatio = staminaRatio
+      this.staminaFillEl.style.width = `${Math.round(staminaRatio * 100)}%`
+    }
     const opacity = labelOpacityForDistance(this.mesh.position.distanceTo(observerPos))
     if (opacity !== this.lastLabelOpacity) {
       this.lastLabelOpacity = opacity
       this.labelEl.style.opacity = String(opacity)
+      // At full visibility bars sit at 80%; once the shared label fades, inherit
+      // the parent opacity without an extra dimming factor.
+      this.labelBarsEl.style.opacity = opacity === 1 ? '0.8' : '1'
     }
     this.mixer?.update(dt)
   }

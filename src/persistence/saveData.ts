@@ -104,9 +104,28 @@ export type SaveDataV6 = {
   timeOfDay: number
 }
 
-/** Canonical save shape — always v7. `loadSaveData` migrates older saves up. */
-export type SaveData = {
+/** Canonical save shape — always v8. `loadSaveData` migrates older saves up. */
+export type SaveDataV7 = {
   version: 7
+  config: SaveConfig
+  player: SavePlayer
+  savedAt: number
+  quests: SaveQuests
+  inventory: Partial<Record<ItemKind, number>>
+  collectedItemIds: string[]
+  droppedItems: SaveDroppedItem[]
+  placedFires: SavePlacedFire[]
+  timeOfDay: number
+  heldTool: ItemKind | null
+}
+
+export type SaveTreeOverride = {
+  stage: 'sapling' | 'young' | 'mature' | 'harvested'
+  stageStartedAt: number
+}
+
+export type SaveData = {
+  version: 8
   config: SaveConfig
   player: SavePlayer
   savedAt: number
@@ -121,8 +140,13 @@ export type SaveData = {
   /** `world/dayNight.ts`'s `DayNightState.timeOfDay` — otherwise the clock
    *  resets to the default dawn-ish start on every Continue. */
   timeOfDay: number
+  /** Absolute game-days for lazy systems (tree lifecycle, plan 058). */
+  elapsedDays: number
   /** Single held-tool slot (`items/HeldTool.ts`). Null when nothing is in hand. */
   heldTool: ItemKind | null
+  /** Sparse tree lifecycle overrides (`world/treeLifecycle.ts`) — only trees
+   *  whose state diverges from procedural default + world-time growth. */
+  treeOverrides: Record<string, SaveTreeOverride>
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -235,7 +259,7 @@ export function isSaveDataV6(value: unknown): value is SaveDataV6 {
   return true
 }
 
-export function isSaveDataV7(value: unknown): value is SaveData {
+export function isSaveDataV7(value: unknown): value is SaveDataV7 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 7) return false
@@ -252,6 +276,43 @@ export function isSaveDataV7(value: unknown): value is SaveData {
   return true
 }
 
+function isTreeOverridesField(value: unknown): value is Record<string, SaveTreeOverride> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  for (const raw of Object.values(value as Record<string, unknown>)) {
+    if (!raw || typeof raw !== 'object') return false
+    const rec = raw as Record<string, unknown>
+    if (
+      rec.stage !== 'sapling' &&
+      rec.stage !== 'young' &&
+      rec.stage !== 'mature' &&
+      rec.stage !== 'harvested'
+    ) {
+      return false
+    }
+    if (typeof rec.stageStartedAt !== 'number') return false
+  }
+  return true
+}
+
+export function isSaveDataV8(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 8) return false
+  if (!isSaveConfig(v.config)) return false
+  if (!isSavePlayer(v.player)) return false
+  if (typeof v.savedAt !== 'number') return false
+  if (!v.quests || typeof v.quests !== 'object') return false
+  if (!v.inventory || typeof v.inventory !== 'object') return false
+  if (!Array.isArray(v.collectedItemIds)) return false
+  if (!Array.isArray(v.droppedItems)) return false
+  if (!Array.isArray(v.placedFires)) return false
+  if (typeof v.timeOfDay !== 'number') return false
+  if (typeof v.elapsedDays !== 'number') return false
+  if (!isHeldToolField(v.heldTool)) return false
+  if (!isTreeOverridesField(v.treeOverrides)) return false
+  return true
+}
+
 /** Default `timeOfDay` for saves that predate persisting the clock (v1-v4) —
  *  mirrors `dayNight.ts::createDayNightState`'s own default. */
 const DEFAULT_TIME_OF_DAY = 0.32
@@ -263,100 +324,124 @@ function migratePlacedFires(placedFires: readonly LegacySavePlacedFire[]): SaveP
   return placedFires.map((pf) => ({ ...pf, kind: 'pit' as const }))
 }
 
-function toV7(fields: Omit<SaveData, 'version' | 'heldTool'> & { heldTool?: ItemKind | null }): SaveData {
+function toV8(fields: Omit<SaveData, 'version' | 'heldTool' | 'elapsedDays' | 'treeOverrides'> & {
+  heldTool?: ItemKind | null
+  elapsedDays?: number
+  treeOverrides?: Record<string, SaveTreeOverride>
+}): SaveData {
   return {
-    version: 7,
+    version: 8,
     ...fields,
     heldTool: fields.heldTool ?? null,
+    elapsedDays: fields.elapsedDays ?? 0,
+    treeOverrides: fields.treeOverrides ?? {},
   }
 }
 
-/** Accepts a stored v1–v7 save and always returns the canonical v7 shape. */
+/** Accepts a stored v1–v8 save and always returns the canonical v8 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
-  if (isSaveDataV7(value)) return value
-  if (isSaveDataV6(value)) {
-    return toV7({
-      config: value.config,
-      player: value.player,
-      savedAt: value.savedAt,
-      quests: value.quests,
-      inventory: value.inventory,
-      collectedItemIds: value.collectedItemIds,
-      droppedItems: value.droppedItems,
-      placedFires: value.placedFires,
-      timeOfDay: value.timeOfDay,
-      heldTool: null,
-    })
+  try {
+    if (isSaveDataV8(value)) return value
+    if (isSaveDataV7(value)) {
+      return toV8({
+        config: value.config,
+        player: value.player,
+        savedAt: value.savedAt,
+        quests: value.quests,
+        inventory: value.inventory,
+        collectedItemIds: value.collectedItemIds,
+        droppedItems: value.droppedItems,
+        placedFires: value.placedFires,
+        timeOfDay: value.timeOfDay,
+        heldTool: value.heldTool,
+      })
+    }
+    if (isSaveDataV6(value)) {
+      return toV8({
+        config: value.config,
+        player: value.player,
+        savedAt: value.savedAt,
+        quests: value.quests,
+        inventory: value.inventory,
+        collectedItemIds: value.collectedItemIds,
+        droppedItems: value.droppedItems,
+        placedFires: value.placedFires,
+        timeOfDay: value.timeOfDay,
+        heldTool: null,
+      })
+    }
+    if (isSaveDataV5(value)) {
+      return toV8({
+        config: value.config,
+        player: value.player,
+        savedAt: value.savedAt,
+        quests: value.quests,
+        inventory: value.inventory,
+        collectedItemIds: value.collectedItemIds,
+        droppedItems: value.droppedItems,
+        placedFires: migratePlacedFires(value.placedFires),
+        timeOfDay: value.timeOfDay,
+        heldTool: null,
+      })
+    }
+    if (isSaveDataV4(value)) {
+      return toV8({
+        config: value.config,
+        player: value.player,
+        savedAt: value.savedAt,
+        quests: value.quests,
+        inventory: value.inventory,
+        collectedItemIds: value.collectedItemIds,
+        droppedItems: value.droppedItems,
+        placedFires: migratePlacedFires(value.placedFires),
+        timeOfDay: DEFAULT_TIME_OF_DAY,
+        heldTool: null,
+      })
+    }
+    if (isSaveDataV3(value)) {
+      return toV8({
+        config: value.config,
+        player: value.player,
+        savedAt: value.savedAt,
+        quests: value.quests,
+        inventory: value.inventory,
+        collectedItemIds: value.collectedItemIds,
+        droppedItems: value.droppedItems,
+        placedFires: [],
+        timeOfDay: DEFAULT_TIME_OF_DAY,
+        heldTool: null,
+      })
+    }
+    if (isSaveDataV2(value)) {
+      return toV8({
+        config: value.config,
+        player: value.player,
+        savedAt: value.savedAt,
+        quests: value.quests,
+        inventory: value.inventory,
+        collectedItemIds: value.collectedItemIds,
+        droppedItems: [],
+        placedFires: [],
+        timeOfDay: DEFAULT_TIME_OF_DAY,
+        heldTool: null,
+      })
+    }
+    if (isSaveDataV1(value)) {
+      return toV8({
+        config: value.config,
+        player: value.player,
+        savedAt: value.savedAt,
+        quests: { progress: [], exp: 0, relations: {} },
+        inventory: {},
+        collectedItemIds: [],
+        droppedItems: [],
+        placedFires: [],
+        timeOfDay: DEFAULT_TIME_OF_DAY,
+        heldTool: null,
+      })
+    }
+    return null
+  } catch {
+    return null
   }
-  if (isSaveDataV5(value)) {
-    return toV7({
-      config: value.config,
-      player: value.player,
-      savedAt: value.savedAt,
-      quests: value.quests,
-      inventory: value.inventory,
-      collectedItemIds: value.collectedItemIds,
-      droppedItems: value.droppedItems,
-      placedFires: migratePlacedFires(value.placedFires),
-      timeOfDay: value.timeOfDay,
-      heldTool: null,
-    })
-  }
-  if (isSaveDataV4(value)) {
-    return toV7({
-      config: value.config,
-      player: value.player,
-      savedAt: value.savedAt,
-      quests: value.quests,
-      inventory: value.inventory,
-      collectedItemIds: value.collectedItemIds,
-      droppedItems: value.droppedItems,
-      placedFires: migratePlacedFires(value.placedFires),
-      timeOfDay: DEFAULT_TIME_OF_DAY,
-      heldTool: null,
-    })
-  }
-  if (isSaveDataV3(value)) {
-    return toV7({
-      config: value.config,
-      player: value.player,
-      savedAt: value.savedAt,
-      quests: value.quests,
-      inventory: value.inventory,
-      collectedItemIds: value.collectedItemIds,
-      droppedItems: value.droppedItems,
-      placedFires: [],
-      timeOfDay: DEFAULT_TIME_OF_DAY,
-      heldTool: null,
-    })
-  }
-  if (isSaveDataV2(value)) {
-    return toV7({
-      config: value.config,
-      player: value.player,
-      savedAt: value.savedAt,
-      quests: value.quests,
-      inventory: value.inventory,
-      collectedItemIds: value.collectedItemIds,
-      droppedItems: [],
-      placedFires: [],
-      timeOfDay: DEFAULT_TIME_OF_DAY,
-      heldTool: null,
-    })
-  }
-  if (isSaveDataV1(value)) {
-    return toV7({
-      config: value.config,
-      player: value.player,
-      savedAt: value.savedAt,
-      quests: { progress: [], exp: 0, relations: {} },
-      inventory: {},
-      collectedItemIds: [],
-      droppedItems: [],
-      placedFires: [],
-      timeOfDay: DEFAULT_TIME_OF_DAY,
-      heldTool: null,
-    })
-  }
-  return null
 }

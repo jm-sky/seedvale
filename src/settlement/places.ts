@@ -65,7 +65,12 @@ export function workplaceFor(
     case 'woodcutter': {
       if (landmarks.trees.length === 0) return null
       const index = treeIndex % landmarks.trees.length
-      return { id: `${settlementId}:workplace:tree:${index}`, type: 'workplace', position: landmarks.trees[index]! }
+      const tree = landmarks.trees[index]!
+      return {
+        id: `${settlementId}:workplace:tree:${tree.id}`,
+        type: 'workplace',
+        position: tree.position,
+      }
     }
   }
 }
