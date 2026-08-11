@@ -355,9 +355,13 @@ export class AnimalAgent {
   private readonly labelBarsEl: HTMLDivElement
   private readonly hpFillEl: HTMLDivElement
   private readonly staminaFillEl: HTMLDivElement
+  private readonly satietyFillEl: HTMLDivElement
+  private readonly hydrationFillEl: HTMLDivElement
   private lastLabelOpacity = -1
   private lastHpRatio = -1
   private lastStaminaRatio = -1
+  private lastSatietyRatio = -1
+  private lastHydrationRatio = -1
   readonly health: HealthState
   readonly life: AnimalLifeState
   private attackCooldown = 0
@@ -456,7 +460,22 @@ export class AnimalAgent {
     this.staminaFillEl.style.width = '100%'
     staminaBar.appendChild(this.staminaFillEl)
 
-    this.labelBarsEl.append(hpBar, staminaBar)
+    // Satiety / hydration are inverted needs: full bar = well fed / hydrated.
+    const satietyBar = document.createElement('div')
+    satietyBar.className = 'npc-label__bar npc-label__bar--satiety'
+    this.satietyFillEl = document.createElement('div')
+    this.satietyFillEl.className = 'npc-label__bar-fill'
+    this.satietyFillEl.style.width = `${Math.round((1 - this.life.hunger) * 100)}%`
+    satietyBar.appendChild(this.satietyFillEl)
+
+    const hydrationBar = document.createElement('div')
+    hydrationBar.className = 'npc-label__bar npc-label__bar--hydration'
+    this.hydrationFillEl = document.createElement('div')
+    this.hydrationFillEl.className = 'npc-label__bar-fill'
+    this.hydrationFillEl.style.width = `${Math.round((1 - this.life.thirst) * 100)}%`
+    hydrationBar.appendChild(this.hydrationFillEl)
+
+    this.labelBarsEl.append(hpBar, staminaBar, satietyBar, hydrationBar)
     this.labelEl.append(this.labelNameEl, this.labelBarsEl)
 
     this.label = new CSS2DObject(this.labelEl)
@@ -578,6 +597,16 @@ export class AnimalAgent {
     if (staminaRatio !== this.lastStaminaRatio) {
       this.lastStaminaRatio = staminaRatio
       this.staminaFillEl.style.width = `${Math.round(staminaRatio * 100)}%`
+    }
+    const satietyRatio = 1 - this.life.hunger
+    if (satietyRatio !== this.lastSatietyRatio) {
+      this.lastSatietyRatio = satietyRatio
+      this.satietyFillEl.style.width = `${Math.round(satietyRatio * 100)}%`
+    }
+    const hydrationRatio = 1 - this.life.thirst
+    if (hydrationRatio !== this.lastHydrationRatio) {
+      this.lastHydrationRatio = hydrationRatio
+      this.hydrationFillEl.style.width = `${Math.round(hydrationRatio * 100)}%`
     }
     const opacity = labelOpacityForDistance(this.mesh.position.distanceTo(observerPos))
     if (opacity !== this.lastLabelOpacity) {
