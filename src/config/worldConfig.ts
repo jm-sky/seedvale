@@ -176,6 +176,12 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
           smoothingWindow: 10,
           maxNeighborRoads: 3,
           dockSearchRadius: 140,
+          edgeWobbleAmplitude: 0.15,
+          edgeWobbleScale: 0.06,
+          potholeDepth: 0.12,
+          potholeThreshold: 0.72,
+          meanderAmplitude: 2,
+          meanderScale: 0.04,
         },
         village: {
           coreRadius: 9,
@@ -271,25 +277,36 @@ export function applyStoredTerrain(
   }
   if (t.region && typeof t.region === 'object') {
     const r = t.region
+    // Capture nested defaults *before* the shallow region spread — otherwise
+    // `...r` replaces `roadNetwork`/`village`/FBM objects wholesale with a
+    // possibly-stale stored copy, and the merges below would be old∪old
+    // (missing new knobs like `edgeWobbleAmplitude` → lil-gui `gui.add failed`).
+    const defaultContinentFbm = target.region.continentFbm
+    const defaultMountainFbm = target.region.mountainFbm
+    const defaultMoistureRegionFbm = target.region.moistureRegionFbm
+    const defaultRoadNetwork = target.region.roadNetwork
+    const defaultVillage = target.region.village
     target.region = { ...target.region, ...r }
-    if (r.continentFbm && typeof r.continentFbm === 'object') {
-      target.region.continentFbm = { ...target.region.continentFbm, ...r.continentFbm }
-    }
-    if (r.mountainFbm && typeof r.mountainFbm === 'object') {
-      target.region.mountainFbm = { ...target.region.mountainFbm, ...r.mountainFbm }
-    }
-    if (r.moistureRegionFbm && typeof r.moistureRegionFbm === 'object') {
-      target.region.moistureRegionFbm = {
-        ...target.region.moistureRegionFbm,
-        ...r.moistureRegionFbm,
-      }
-    }
-    if (r.roadNetwork && typeof r.roadNetwork === 'object') {
-      target.region.roadNetwork = { ...target.region.roadNetwork, ...r.roadNetwork }
-    }
-    if (r.village && typeof r.village === 'object') {
-      target.region.village = { ...target.region.village, ...r.village }
-    }
+    target.region.continentFbm =
+      r.continentFbm && typeof r.continentFbm === 'object'
+        ? { ...defaultContinentFbm, ...r.continentFbm }
+        : defaultContinentFbm
+    target.region.mountainFbm =
+      r.mountainFbm && typeof r.mountainFbm === 'object'
+        ? { ...defaultMountainFbm, ...r.mountainFbm }
+        : defaultMountainFbm
+    target.region.moistureRegionFbm =
+      r.moistureRegionFbm && typeof r.moistureRegionFbm === 'object'
+        ? { ...defaultMoistureRegionFbm, ...r.moistureRegionFbm }
+        : defaultMoistureRegionFbm
+    target.region.roadNetwork =
+      r.roadNetwork && typeof r.roadNetwork === 'object'
+        ? { ...defaultRoadNetwork, ...r.roadNetwork }
+        : defaultRoadNetwork
+    target.region.village =
+      r.village && typeof r.village === 'object'
+        ? { ...defaultVillage, ...r.village }
+        : defaultVillage
   }
   if (t.grass && typeof t.grass === 'object') {
     if (typeof t.grass.enabled === 'boolean') target.grass.enabled = t.grass.enabled

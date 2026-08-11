@@ -33,6 +33,12 @@ const REGION: RegionParams = {
     smoothingWindow: 10,
     maxNeighborRoads: 3,
     dockSearchRadius: 140,
+    edgeWobbleAmplitude: 0.15,
+    edgeWobbleScale: 0.06,
+    potholeDepth: 0.12,
+    potholeThreshold: 0.72,
+    meanderAmplitude: 2,
+    meanderScale: 0.04,
   },
   village: {
     coreRadius: 9,

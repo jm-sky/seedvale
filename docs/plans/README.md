@@ -121,6 +121,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-11--062--terrain-generation-overhaul.md](./2026-08-11--062--terrain-generation-overhaul.md) | Naturalniejsze generowanie terenu (macro + hills + soft detail; variable beach; grass foothill fade) | ~~001~~, ~~006~~, ~~007~~, ~~028~~ |
 | [2026-08-11--066--better-visual-effects.md](./2026-08-11--066--better-visual-effects.md) | Lepsze efekty graficzne (grass, terrain, wind, film grade, atmosphere) | — |
 | [2026-08-11--067--minimap-heading-and-north.md](./2026-08-11--067--minimap-heading-and-north.md) | Minimapa heading-up + kompas N na ramce | ~~029~~, ~~046~~ |
+| [2026-08-11--068--uneven-road-surfaces.md](./2026-08-11--068--uneven-road-surfaces.md) | Nierówne drogi: dziury + falujące krawędzie + meander osi | ~~026~~ |
 | [2026-08-11--063--forest-regions-and-habitat-distribution.md](./2026-08-11--063--forest-regions-and-habitat-distribution.md) | Duże regiony leśne + ciągły `forestDensity` / habitat | ~~028~~, ~~062~~ |
 
 ---

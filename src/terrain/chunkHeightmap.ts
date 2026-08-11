@@ -98,6 +98,22 @@ export type RoadNetworkParams = {
   /** Max radius (world units) searched outward from a settlement for a
    *  coastline to place its dock/pier minor location. */
   dockSearchRadius: number
+  /** Fraction of `halfWidth` by which corridor edges wobble (±) via simplex —
+   *  0 = perfect capsule, ~0.15 = visibly uneven dirt strip. */
+  edgeWobbleAmplitude: number
+  /** World-space frequency of edge wobble noise (higher = tighter scallops). */
+  edgeWobbleScale: number
+  /** Max depth (world units) of sparse procedural potholes carved into
+   *  corridor `targetH`. Final dip is scaled by corridor blend strength. */
+  potholeDepth: number
+  /** Sparse gate in [0,1): only noise samples above this become potholes
+   *  (higher = rarer). */
+  potholeThreshold: number
+  /** Lateral meander amplitude (world units) applied to interior A* waypoints
+   *  before profile smoothing — 0 = ruler-straight polyline. */
+  meanderAmplitude: number
+  /** World-space frequency of route meander noise. */
+  meanderScale: number
 }
 
 /** A single road/path segment's terrain-shaping data, already resolved to
@@ -252,6 +268,8 @@ type NoiseHandles = {
   continent: NoiseFunction2D
   mountain: NoiseFunction2D
   moistureRegion: NoiseFunction2D
+  /** Road edge wobble + sparse potholes — decorrelated from terrain channels. */
+  roadDetail: NoiseFunction2D
 }
 
 /** Soft domain warp for local detail — lower freq/amp than the previous
@@ -285,6 +303,7 @@ function noiseHandlesFor(seed: number): NoiseHandles {
       continent: createNoise2D(createSeededRandom(seed ^ 0xc2b2ae35)),
       mountain: createNoise2D(createSeededRandom(seed ^ 0x27d4eb2f)),
       moistureRegion: createNoise2D(createSeededRandom(seed ^ 0x1b873593)),
+      roadDetail: createNoise2D(createSeededRandom(seed ^ 0x94d049bb)),
     }
     noiseCache.set(seed, handles)
   }
@@ -537,18 +556,43 @@ export function extractCoreGrid(
  *  corridors) — both blend a texel toward a pre-resolved target height the
  *  same way, just with a different distance metric. */
 const CORRIDOR_INNER_FRACTION = 0.6
+/** World-space frequency for sparse pothole noise (separate from edge wobble). */
+const POTHOLE_NOISE_SCALE = 0.14
 
 type CorridorCandidate = { falloff: number; targetH: number; heightStrength: number; tint: number }
 
-function roadCandidate(wx: number, wz: number, seg: RoadCorridorSegment): CorridorCandidate | null {
+function roadCandidate(
+  wx: number,
+  wz: number,
+  seg: RoadCorridorSegment,
+  roadNoise: NoiseFunction2D,
+  rn: RoadNetworkParams,
+): CorridorCandidate | null {
   const { distSq, t } = projectOntoSegment(wx, wz, seg.ax, seg.az, seg.bx, seg.bz)
-  if (distSq >= seg.halfWidth * seg.halfWidth) return null
+  const edgeN = roadNoise(wx * rn.edgeWobbleScale, wz * rn.edgeWobbleScale)
+  const effectiveHalfWidth = Math.max(0.05, seg.halfWidth * (1 + rn.edgeWobbleAmplitude * edgeN))
+  if (distSq >= effectiveHalfWidth * effectiveHalfWidth) return null
   const dist = Math.sqrt(distSq)
-  const inner = seg.halfWidth * CORRIDOR_INNER_FRACTION
-  const falloff = 1 - MathUtils.smoothstep(dist, inner, seg.halfWidth)
+  const inner = effectiveHalfWidth * CORRIDOR_INNER_FRACTION
+  const falloff = 1 - MathUtils.smoothstep(dist, inner, effectiveHalfWidth)
+
+  let targetH = MathUtils.lerp(seg.ah, seg.bh, t)
+  if (rn.potholeDepth > 0 && falloff > 0) {
+    // Offset domain so pothole peaks don't align with edge scallops.
+    const pN = roadNoise(wx * POTHOLE_NOISE_SCALE + 17.3, wz * POTHOLE_NOISE_SCALE - 9.1)
+    const u = (pN + 1) * 0.5
+    const thr = Math.min(0.999, Math.max(0, rn.potholeThreshold))
+    if (u > thr) {
+      const sparse = (u - thr) / (1 - thr)
+      // Lower target only; final dip is further scaled by falloff×heightStrength
+      // in the corridor blend — paths (low heightStrength) stay nearly flat.
+      targetH -= rn.potholeDepth * sparse * falloff
+    }
+  }
+
   return {
     falloff,
-    targetH: MathUtils.lerp(seg.ah, seg.bh, t),
+    targetH,
     heightStrength: seg.heightStrength,
     tint: falloff * seg.tintStrength,
   }
@@ -582,6 +626,8 @@ function applyTerrainCorridors(
   floorH: number,
   roadSegments: readonly RoadCorridorSegment[],
   clearingSegments: readonly ClearingSegment[],
+  roadNoise: NoiseFunction2D,
+  roadNetwork: RoadNetworkParams,
 ): { floorH: number; tint: number } {
   let bestFalloff = 0
   let bestTargetH = 0
@@ -598,7 +644,7 @@ function applyTerrainCorridors(
     if (candidate.tint > bestTint) bestTint = candidate.tint
   }
 
-  for (const seg of roadSegments) consider(roadCandidate(wx, wz, seg))
+  for (const seg of roadSegments) consider(roadCandidate(wx, wz, seg, roadNoise, roadNetwork))
   for (const seg of clearingSegments) consider(clearingCandidate(wx, wz, seg))
 
   if (bestFalloff <= 0) return { floorH, tint: 0 }
@@ -687,7 +733,15 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
       // Stage 2: sharp road/path/clearing blend on top of the (now gently
       // leveled) base.
       if (params.roadSegments.length > 0 || params.clearings.length > 0) {
-        const corridor = applyTerrainCorridors(wx, wz, floorH, params.roadSegments, params.clearings)
+        const corridor = applyTerrainCorridors(
+          wx,
+          wz,
+          floorH,
+          params.roadSegments,
+          params.clearings,
+          noise.roadDetail,
+          params.region.roadNetwork,
+        )
         floorH = corridor.floorH
         tint = corridor.tint
       }

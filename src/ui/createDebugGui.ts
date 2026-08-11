@@ -336,6 +336,42 @@ export function createDebugGui(
       .name('Dock search radius')
       .onFinishChange(handlers.onTerrainChange),
   )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'edgeWobbleAmplitude', 0, 0.4, 0.01)
+      .name('Edge wobble amp')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'edgeWobbleScale', 0.01, 0.2, 0.005)
+      .name('Edge wobble scale')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'potholeDepth', 0, 0.4, 0.01)
+      .name('Pothole depth')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'potholeThreshold', 0.4, 0.95, 0.01)
+      .name('Pothole threshold')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'meanderAmplitude', 0, 6, 0.25)
+      .name('Meander amplitude')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'meanderScale', 0.01, 0.15, 0.005)
+      .name('Meander scale')
+      .onFinishChange(handlers.onTerrainChange),
+  )
 
   const village = terrain.addFolder('Village')
   terrainControllers.push(

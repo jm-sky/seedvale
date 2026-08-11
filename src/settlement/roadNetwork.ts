@@ -1,3 +1,4 @@
+import { createNoise2D } from 'simplex-noise'
 import type { HeightSampler } from '../player/PlayerController'
 import type {
   ClearingSegment,
@@ -6,6 +7,7 @@ import type {
   RoadCorridorSegment,
 } from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
+import { createSeededRandom } from '../world/parseSeed'
 import { minorLocationsFor } from './minorLocations'
 import {
   cellKey,
@@ -129,12 +131,18 @@ type RoutingOptions = {
   gridStep: number
   elevationWeight: number
   smoothingWindow: number
+  meanderAmplitude: number
+  meanderScale: number
+  seed: number
 }
 
 const DEFAULT_ROUTING_OPTIONS: RoutingOptions = {
   gridStep: 9,
   elevationWeight: 6,
   smoothingWindow: 10,
+  meanderAmplitude: 2,
+  meanderScale: 0.04,
+  seed: 0,
 }
 
 /**
@@ -152,7 +160,7 @@ export function findRoute(
   waterLevel: number,
   opts: RoutingOptions = DEFAULT_ROUTING_OPTIONS,
 ): RoutePoint[] | null {
-  const { gridStep, elevationWeight, smoothingWindow } = opts
+  const { gridStep, elevationWeight, smoothingWindow, meanderAmplitude, meanderScale, seed } = opts
   // Wide enough that the search grid has room to route *around* a mountain
   // when that's cheaper, not just straight through it (see MOUNTAIN_COST_WEIGHT).
   const margin = gridStep * 5
@@ -261,7 +269,38 @@ export function findRoute(
     return { x: w.x, z: w.z, h: heightAt(ix, iz) }
   })
 
-  return smoothProfile(raw, smoothingWindow)
+  const meandered = meanderRoute(raw, sampleHeight, meanderAmplitude, meanderScale, seed)
+  return smoothProfile(meandered, smoothingWindow)
+}
+
+/**
+ * Offsets interior waypoints perpendicular to the local path tangent so the
+ * corridor centerline isn't a ruler between A* grid cells. Endpoints stay
+ * fixed (settlement / dock anchors). Pure + deterministic for a given seed.
+ */
+export function meanderRoute(
+  points: { x: number; z: number; h: number }[],
+  sampleHeight: HeightSampler,
+  amplitude: number,
+  scale: number,
+  seed: number,
+): { x: number; z: number; h: number }[] {
+  if (points.length < 3 || amplitude <= 0) return points
+  const noise = createNoise2D(createSeededRandom(seed ^ 0xa5f3c1e9))
+  return points.map((p, i) => {
+    if (i === 0 || i === points.length - 1) return p
+    const prev = points[i - 1]!
+    const next = points[i + 1]!
+    const tx = next.x - prev.x
+    const tz = next.z - prev.z
+    const len = Math.hypot(tx, tz) || 1
+    const nx = -tz / len
+    const nz = tx / len
+    const n = noise(p.x * scale, p.z * scale)
+    const x = p.x + nx * n * amplitude
+    const z = p.z + nz * n * amplitude
+    return { x, z, h: sampleHeight(x, z) }
+  })
 }
 
 /** Moving-average smoothing pass over a route's raw elevation profile, by
@@ -308,11 +347,21 @@ function pairKey(idA: string, idB: string): string {
 }
 
 function routingOptionsFrom(ctx: RoadNetworkContext): RoutingOptions {
+  const rn = ctx.region.roadNetwork
   return {
     gridStep: DEFAULT_ROUTING_OPTIONS.gridStep,
     elevationWeight: DEFAULT_ROUTING_OPTIONS.elevationWeight,
-    smoothingWindow: ctx.region.roadNetwork.smoothingWindow,
+    smoothingWindow: rn.smoothingWindow,
+    meanderAmplitude: rn.meanderAmplitude,
+    meanderScale: rn.meanderScale,
+    seed: ctx.seed,
   }
+}
+
+/** Extra AABB margin so noise-widened corridor edges aren't clipped when a
+ *  segment barely touches a chunk. */
+function corridorHalfWidthMargin(halfWidth: number, edgeWobbleAmplitude: number): number {
+  return halfWidth * (1 + Math.max(0, edgeWobbleAmplitude)) + 2
 }
 
 /** All road (inter-settlement) + path (settlement↔own minor location)
@@ -564,7 +613,7 @@ export function segmentsNear(
     for (const seg of roadSegmentsForSettlement(def, ctx)) {
       const isRoad = seg.kind === 'road'
       const halfWidth = isRoad ? ctx.region.roadNetwork.roadHalfWidth : ctx.region.roadNetwork.pathHalfWidth
-      const margin = halfWidth + 2
+      const margin = corridorHalfWidthMargin(halfWidth, ctx.region.roadNetwork.edgeWobbleAmplitude)
       const segMinX = Math.min(seg.a.x, seg.b.x) - margin
       const segMaxX = Math.max(seg.a.x, seg.b.x) + margin
       const segMinZ = Math.min(seg.a.z, seg.b.z) - margin
@@ -627,7 +676,8 @@ export function villageSegmentsNear(
     !(x + margin < minX || x - margin > maxX || z + margin < minZ || z - margin > maxZ)
 
   const { heightStrength, tintStrength } = ctx.region.village
-  const { pathHalfWidth, pathHeightStrength, pathTintStrength } = ctx.region.roadNetwork
+  const { pathHalfWidth, pathHeightStrength, pathTintStrength, edgeWobbleAmplitude } =
+    ctx.region.roadNetwork
 
   const clearings: ClearingSegment[] = []
   const regional: RegionalSmoothingSegment[] = []
@@ -647,7 +697,7 @@ export function villageSegmentsNear(
     }
 
     for (const house of houses) {
-      const margin = pathHalfWidth + 2
+      const margin = corridorHalfWidthMargin(pathHalfWidth, edgeWobbleAmplitude)
       const segMinX = Math.min(core.x, house.x) - margin
       const segMaxX = Math.max(core.x, house.x) + margin
       const segMinZ = Math.min(core.z, house.z) - margin

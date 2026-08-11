@@ -60,6 +60,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 
 - Multiple streamed settlements.
 - Settlement generation with families, houses, roads/paths and environment-aware siting.
+- Road/path corridors get edge wobble, sparse light potholes, and A* route meander (`region.roadNetwork` knobs; plan 068).
 - NPC needs and behaviour/state-machine logic.
 - NPC personality/character depth including role, traits/Big Five-related data, health and stamina.
 - NPCs use shared `StaminaState` for work/rest effort; HP is no longer drained by fatigue.

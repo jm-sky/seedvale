@@ -3,6 +3,8 @@ import {
   apronOriginWorld,
   computeChunkTile,
   type RawSampleParams,
+  type RegionalSmoothingSegment,
+  type RoadCorridorSegment,
   sampleContinentalnessAt,
   sampleFloorAt,
   sampleHeightAt,
@@ -55,6 +57,12 @@ function rawParams(overrides: Partial<RawSampleParams> = {}): RawSampleParams {
         smoothingWindow: 10,
         maxNeighborRoads: 3,
         dockSearchRadius: 140,
+        edgeWobbleAmplitude: 0.15,
+        edgeWobbleScale: 0.06,
+        potholeDepth: 0.12,
+        potholeThreshold: 0.72,
+        meanderAmplitude: 2,
+        meanderScale: 0.04,
       },
       village: {
         coreRadius: 9,
@@ -214,5 +222,109 @@ describe('chunkHeightmap seams', () => {
     expect(aThenB[0]!.continentalness).toEqual(bThenA[1]!.continentalness)
     expect(aThenB[0]!.mountainRidge).toEqual(bThenA[1]!.mountainRidge)
     expect(aThenB[0]!.moistureRegion).toEqual(bThenA[1]!.moistureRegion)
+  })
+})
+
+describe('chunkHeightmap road irregularity', () => {
+  const roadSeg = {
+    ax: -20,
+    az: 0,
+    ah: 2,
+    bx: 20,
+    bz: 0,
+    bh: 2,
+    halfWidth: 5,
+    heightStrength: 0.85,
+    tintStrength: 0.8,
+  }
+
+  function tileWithRoads(seed = 42) {
+    const params = rawParams({ seed })
+    return computeChunkTile({
+      ...params,
+      cx: 0,
+      cz: 0,
+      chunkSize: 64,
+      resolution: 17,
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1 },
+      roadSegments: [roadSeg],
+      clearings: [],
+      regional: [],
+    })
+  }
+
+  it('is deterministic for the same seed with road corridors', () => {
+    const a = tileWithRoads(99)
+    const b = tileWithRoads(99)
+    expect(a.floorHeights).toEqual(b.floorHeights)
+    expect(a.roadTint).toEqual(b.roadTint)
+  })
+
+  it('does not change clearings-only tiles when road irregularity knobs vary', () => {
+    const clearing = {
+      x: 0,
+      z: 0,
+      radius: 8,
+      targetH: 3,
+      heightStrength: 0.8,
+      tintStrength: 0.75,
+    }
+    const base = {
+      ...rawParams(),
+      cx: 0,
+      cz: 0,
+      chunkSize: 64,
+      resolution: 17,
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1 },
+      roadSegments: [] as RoadCorridorSegment[],
+      clearings: [clearing],
+      regional: [] as RegionalSmoothingSegment[],
+    }
+    const a = computeChunkTile(base)
+    const b = computeChunkTile({
+      ...base,
+      region: {
+        ...base.region,
+        roadNetwork: {
+          ...base.region.roadNetwork,
+          edgeWobbleAmplitude: 0.4,
+          potholeDepth: 0.4,
+          potholeThreshold: 0.5,
+        },
+      },
+    })
+    expect(a.floorHeights).toEqual(b.floorHeights)
+    expect(a.roadTint).toEqual(b.roadTint)
+  })
+
+  it('produces non-uniform road tint along a straight corridor (edge wobble)', () => {
+    const flat = tileWithRoads(7)
+    const params = rawParams({
+      seed: 7,
+      region: {
+        ...rawParams().region,
+        roadNetwork: {
+          ...rawParams().region.roadNetwork,
+          edgeWobbleAmplitude: 0,
+          potholeDepth: 0,
+        },
+      },
+    })
+    const noWobble = computeChunkTile({
+      ...params,
+      cx: 0,
+      cz: 0,
+      chunkSize: 64,
+      resolution: 17,
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1 },
+      roadSegments: [roadSeg],
+      clearings: [],
+      regional: [],
+    })
+    // With wobble, the tint footprint differs from a perfect capsule.
+    expect(flat.roadTint).not.toEqual(noWobble.roadTint)
   })
 })
