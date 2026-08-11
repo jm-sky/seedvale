@@ -1,9 +1,24 @@
 # Village Generation Overhaul
 
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Reviewed:** 2026-08-11 against current `main` repository state  
 **Priority:** 🔴 high  
 **Effort:** XL
+
+## Implementation progress (2026-08-11)
+
+Completed plan steps 1–16 (technically verified: `tsc` / lint / build / unit tests).
+
+- Steps 1–9: plan types → site/footprint → identity → families → zones/plots → buildings/landmarks → local paths/entrances
+- **Step 10:** `layoutClearingsFromPlan` — terrain clearings from plan plots/center
+- **Steps 11–12:** `buildSettlementProps(..., plan)` landmarks; `createSettlement` passes `def.plan`
+- **Step 13:** planned dock landmark + `minorLocationsFor` prefers plan dock; `attachPlannedDock` in generator
+- **Steps 14–15:** shared `settlementPlanCache`; `RoadNetwork` entrances via `entranceToward`; local corridors from `pathPlansToCorridorData`
+- **Step 16:** `summarizeVillagePlan` + lil-gui “Log home VillagePlan”
+
+**Technically verified.** Browser/manual layout verification still needed (village look, roads from entrances, dock, props alignment).
+
+Next: manual browser pass against §16 acceptance criteria.
 
 ## Goal
 

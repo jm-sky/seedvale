@@ -8,15 +8,19 @@ import type {
 } from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
 import { createSeededRandom } from '../world/parseSeed'
-import { minorLocationsFor } from './minorLocations'
+import { clearMinorLocationCaches, minorLocationsFor } from './minorLocations'
 import {
-  cellKey,
   cellsWithinRadius,
-  generateSettlementDef,
   type SettlementCell,
   type SettlementDef,
   worldToCell,
 } from './settlementGenerator'
+import {
+  clearSettlementDefCache,
+  settlementDefFor,
+  type SettlementResolveContext,
+} from './settlementPlanCache'
+import { pathPlansToCorridorData } from './villagePlanner'
 
 export type RoutePoint = {
   x: number
@@ -53,37 +57,56 @@ export type RoadNetworkContext = {
   localSearchRadius: number
 }
 
-// --- Settlement def cache — own copy of the same pattern `SettlementsManager`
-// uses internally, so repeated chunk requests near the same cells don't redo
-// the ~80-sample flat-site search + naming every time. ---
-const defCache = new Map<string, SettlementDef>()
+// Settlement defs resolve through the shared `settlementPlanCache` (plan 047
+// §9.14–15) — do not keep a second authoritative layout/def cache here.
+const routeCache = new Map<string, RoadSegment[] | null>()
 
 /** Both module-level caches below are keyed by cell/id, not by seed — a new
  *  world (new seed, or GUI-driven terrain param change) must call this before
  *  any chunk generation, or stale roads/settlement defs from the previous
  *  world leak into the new one. */
 export function clearRoadNetworkCaches(): void {
-  defCache.clear()
+  clearSettlementDefCache()
+  clearMinorLocationCaches()
   routeCache.clear()
 }
 
-function defFor(cell: SettlementCell, ctx: RoadNetworkContext): SettlementDef {
-  const key = cellKey(cell)
-  let def = defCache.get(key)
-  if (!def) {
-    def = generateSettlementDef(
-      cell,
-      ctx.seed,
-      ctx.sampleHeight,
-      ctx.waterLevel,
-      ctx.localSearchRadius,
-      ctx.terrainSamplers,
-      ctx.heightScale,
-      ctx.region,
-    )
-    defCache.set(key, def)
+function resolveCtx(ctx: RoadNetworkContext): SettlementResolveContext {
+  return {
+    seed: ctx.seed,
+    sampleHeight: ctx.sampleHeight,
+    waterLevel: ctx.waterLevel,
+    localSearchRadius: ctx.localSearchRadius,
+    terrainSamplers: ctx.terrainSamplers,
+    heightScale: ctx.heightScale,
+    region: ctx.region,
   }
-  return def
+}
+
+function defFor(cell: SettlementCell, ctx: RoadNetworkContext): SettlementDef {
+  return settlementDefFor(cell, resolveCtx(ctx))
+}
+
+/** Pick the entrance whose outward angle best faces `toward` (plan 047 §9.14).
+ *  Falls back to the settlement site when no entrances exist. */
+export function entranceToward(
+  def: SettlementDef,
+  toward: { x: number, z: number },
+): { x: number, z: number } {
+  const entrances = def.plan.entrances
+  if (entrances.length === 0) return { x: def.x, z: def.z }
+  const toTarget = Math.atan2(toward.z - def.z, toward.x - def.x)
+  let best = entrances[0]!
+  let bestScore = -Infinity
+  for (const e of entrances) {
+    const angDiff = Math.abs(Math.atan2(Math.sin(e.angle - toTarget), Math.cos(e.angle - toTarget)))
+    const score = -angDiff
+    if (score > bestScore) {
+      bestScore = score
+      best = e
+    }
+  }
+  return { x: best.x, z: best.z }
 }
 
 /** All of a settlement's candidate neighbor settlements (by actual site
@@ -340,8 +363,8 @@ function toSegments(points: RoutePoint[], kind: RoadSegment['kind']): RoadSegmen
 }
 
 /** Route cache keyed by a sorted, order-independent pair id — whichever
- *  settlement resolves an edge first, the other reuses the same result. */
-const routeCache = new Map<string, RoadSegment[] | null>()
+ *  settlement resolves an edge first, the other reuses the same result.
+ *  Declared near the top of this module with `clearRoadNetworkCaches`. */
 function pairKey(idA: string, idB: string): string {
   return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`
 }
@@ -383,8 +406,8 @@ function roadSegmentsForSettlement(def: SettlementDef, ctx: RoadNetworkContext):
     let segments = routeCache.get(key)
     if (segments === undefined) {
       const points = findRoute(
-        def,
-        neighbor,
+        entranceToward(def, neighbor),
+        entranceToward(neighbor, def),
         ctx.sampleHeight,
         ctx.terrainSamplers.sampleMountainRidge,
         ctx.waterLevel,
@@ -411,7 +434,7 @@ function roadSegmentsForSettlement(def: SettlementDef, ctx: RoadNetworkContext):
     let segments = routeCache.get(key)
     if (segments === undefined) {
       const points = findRoute(
-        def,
+        entranceToward(def, loc),
         loc,
         ctx.sampleHeight,
         ctx.terrainSamplers.sampleMountainRidge,
@@ -452,8 +475,8 @@ export function signpostsForSettlement(def: SettlementDef, ctx: RoadNetworkConte
     let segments = routeCache.get(key)
     if (segments === undefined) {
       const points = findRoute(
-        def,
-        neighbor,
+        entranceToward(def, neighbor),
+        entranceToward(neighbor, def),
         ctx.sampleHeight,
         ctx.terrainSamplers.sampleMountainRidge,
         ctx.waterLevel,
@@ -509,8 +532,8 @@ export function midpointSignpostsFor(
   let segments = routeCache.get(key)
   if (segments === undefined) {
     const points = findRoute(
-      def,
-      neighbor,
+      entranceToward(def, neighbor),
+      entranceToward(neighbor, def),
       ctx.sampleHeight,
       ctx.terrainSamplers.sampleMountainRidge,
       ctx.waterLevel,
@@ -575,7 +598,7 @@ export function routeToMinorLocation(
   let segments = routeCache.get(key)
   if (segments === undefined) {
     const points = findRoute(
-      def,
+      entranceToward(def, loc),
       loc,
       ctx.sampleHeight,
       ctx.terrainSamplers.sampleMountainRidge,
@@ -696,21 +719,22 @@ export function villageSegmentsNear(
       regional.push({ x: reg.x, z: reg.z, radius: reg.radius, targetH: reg.targetH, heightStrength: reg.heightStrength })
     }
 
-    for (const house of houses) {
-      const margin = corridorHalfWidthMargin(pathHalfWidth, edgeWobbleAmplitude)
-      const segMinX = Math.min(core.x, house.x) - margin
-      const segMaxX = Math.max(core.x, house.x) + margin
-      const segMinZ = Math.min(core.z, house.z) - margin
-      const segMaxZ = Math.max(core.z, house.z) + margin
+    // Local paths come from VillagePlan (plan 047) — not a second house↔core layout.
+    for (const seg of pathPlansToCorridorData(def.plan.paths, ctx.sampleHeight)) {
+      const margin = corridorHalfWidthMargin(seg.halfWidth || pathHalfWidth, edgeWobbleAmplitude)
+      const segMinX = Math.min(seg.ax, seg.bx) - margin
+      const segMaxX = Math.max(seg.ax, seg.bx) + margin
+      const segMinZ = Math.min(seg.az, seg.bz) - margin
+      const segMaxZ = Math.max(seg.az, seg.bz) + margin
       if (segMaxX < minX || segMinX > maxX || segMaxZ < minZ || segMinZ > maxZ) continue
       paths.push({
-        ax: core.x,
-        az: core.z,
-        ah: core.targetH,
-        bx: house.x,
-        bz: house.z,
-        bh: house.targetH,
-        halfWidth: pathHalfWidth,
+        ax: seg.ax,
+        az: seg.az,
+        ah: seg.ah,
+        bx: seg.bx,
+        bz: seg.bz,
+        bh: seg.bh,
+        halfWidth: seg.halfWidth || pathHalfWidth,
         heightStrength: pathHeightStrength,
         tintStrength: pathTintStrength,
       })

@@ -122,6 +122,7 @@ const SIZE_LABEL: Record<VillageSize, string> = {
   SM: 'mała',
   MD: 'średnia',
   LG: 'spora',
+  XL: 'wielka',
   OUTPOST: 'samotna',
 }
 

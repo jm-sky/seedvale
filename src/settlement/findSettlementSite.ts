@@ -1,5 +1,6 @@
 import type { HeightSampler } from '../player/PlayerController'
 import { createSeededRandom } from '../world/parseSeed'
+import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
 
 export type SettlementSite = {
   x: number
@@ -7,13 +8,127 @@ export type SettlementSite = {
   y: number
 }
 
-/** How strongly a nearby natural resource (`resourceAttraction`, 0..1) can
- *  tip the ranking between two similarly flat/dry candidates — comparable in
- *  magnitude to the flatness term's typical spread, deliberately *not* large
- *  enough to make an uneven/wet spot win outright (those are already
- *  rejected above via `continue`, before this ever runs) — plan 032 §5:
- *  "atrakcyjność lokalizacji", not "override the flatness gate". */
-const RESOURCE_SCORE_WEIGHT = 3
+/** Optional footprint for village-scale suitability (plan 047 §6). When
+ *  omitted, scoring falls back to the legacy local ±2.5 probe only. */
+export type SettlementFootprintHint = {
+  /** Village boundary radius (`VILLAGE_SIZE_CONFIG.footprintRadius`). */
+  footprintRadius: number
+  /** Outer house-ring distance (`VILLAGE_SIZE_CONFIG.houseRingMax`). */
+  houseRingMax: number
+}
+
+/**
+ * Central site-scoring weights (plan 047 §6) — one table, not magic numbers
+ * scattered across helpers. Resource weight matches plan 032's previous
+ * `RESOURCE_SCORE_WEIGHT = 3` so attraction still cannot beat hard water /
+ * local-flatness gates.
+ */
+export const SITE_SCORE_WEIGHTS = {
+  /** Baseline so typical good candidates land in a comfortable positive band. */
+  base: 8,
+  localFlatness: 3,
+  distanceFromCenter: 0.05,
+  elevationAboveWater: 0.15,
+  resourceAttraction: 3,
+  footprintDryRatio: 5,
+  footprintHeightSpread: 1.8,
+  footprintAvgSlope: 1.4,
+  pathDryRatio: 4,
+} as const
+
+/** Local cross-probe step (world units) — hard flatness gate at the plaza. */
+const LOCAL_FLAT_STEP = 2.5
+/** Reject candidates whose local cross-probe exceeds this height delta. */
+const LOCAL_FLAT_MAX_DELTA = 2.2
+/** Hard-reject footprints with less dry land than this fraction of samples. */
+const MIN_FOOTPRINT_DRY_RATIO = 0.4
+/** Directions sampled on each footprint ring. */
+const FOOTPRINT_RING_DIRS = 8
+/** Candidate attempts per cell (same budget as pre-047). */
+const SITE_CANDIDATE_ATTEMPTS = 80
+
+type FootprintMetrics = {
+  dryRatio: number
+  heightSpread: number
+  avgAbsDelta: number
+  pathDryRatio: number
+}
+
+/**
+ * Sample rings at ~half / full house ring (and boundary if larger) to score
+ * village-scale dryness, elevation spread, slope, and dry paths to the plaza.
+ */
+function sampleFootprintMetrics(
+  x: number,
+  z: number,
+  y: number,
+  footprint: SettlementFootprintHint,
+  waterLevel: number,
+  sampleHeight: HeightSampler,
+): FootprintMetrics {
+  const radii: number[] = [footprint.houseRingMax * 0.55, footprint.houseRingMax]
+  if (footprint.footprintRadius > footprint.houseRingMax * 1.05) {
+    radii.push(footprint.footprintRadius)
+  }
+
+  let dry = 0
+  let pathDry = 0
+  let total = 0
+  let minH = y
+  let maxH = y
+  let absDeltaSum = 0
+
+  for (const radius of radii) {
+    for (let i = 0; i < FOOTPRINT_RING_DIRS; i++) {
+      const angle = (i / FOOTPRINT_RING_DIRS) * Math.PI * 2
+      const sx = x + Math.cos(angle) * radius
+      const sz = z + Math.sin(angle) * radius
+      const h = sampleHeight(sx, sz)
+      total++
+      if (h > waterLevel + SETTLEMENT_WATER_MARGIN) dry++
+      if (pathIsDry(x, z, sx, sz, waterLevel, sampleHeight)) pathDry++
+      if (h < minH) minH = h
+      if (h > maxH) maxH = h
+      absDeltaSum += Math.abs(h - y)
+    }
+  }
+
+  return {
+    dryRatio: total > 0 ? dry / total : 0,
+    heightSpread: maxH - minH,
+    avgAbsDelta: total > 0 ? absDeltaSum / total : 0,
+    pathDryRatio: total > 0 ? pathDry / total : 0,
+  }
+}
+
+function scoreCandidate(
+  x: number,
+  z: number,
+  y: number,
+  maxDelta: number,
+  center: { x: number, z: number },
+  waterLevel: number,
+  resourceAttraction: ((x: number, z: number) => number) | undefined,
+  footprint: FootprintMetrics | null,
+): number {
+  const w = SITE_SCORE_WEIGHTS
+  const dist = Math.hypot(x - center.x, z - center.z)
+  let score =
+    w.base -
+    maxDelta * w.localFlatness -
+    dist * w.distanceFromCenter +
+    (y - waterLevel) * w.elevationAboveWater +
+    (resourceAttraction?.(x, z) ?? 0) * w.resourceAttraction
+
+  if (footprint) {
+    score +=
+      footprint.dryRatio * w.footprintDryRatio -
+      footprint.heightSpread * w.footprintHeightSpread -
+      footprint.avgAbsDelta * w.footprintAvgSlope +
+      footprint.pathDryRatio * w.pathDryRatio
+  }
+  return score
+}
 
 /**
  * Pick a walkable, relatively flat patch above water for the village, searching
@@ -23,7 +138,12 @@ const RESOURCE_SCORE_WEIGHT = 3
  *
  * `resourceAttraction`, if given, adds plan 032 §5's "resource → site
  * attractiveness" bonus to each already-accepted candidate's score — see
- * `terrain/naturalResources.ts::resourceAttractionAt`.
+ * `terrain/naturalResources.ts::resourceAttractionAt`. Resource bonus never
+ * bypasses hard water / local-flatness / footprint-dry gates.
+ *
+ * `footprint`, if given, adds plan 047 village-scale suitability (dry area,
+ * height spread, slope, dry paths to the house ring) on top of the local
+ * ±2.5 plaza probe.
  */
 export function findSettlementSite(
   sampleHeight: HeightSampler,
@@ -32,34 +152,65 @@ export function findSettlementSite(
   seed: number,
   center: { x: number, z: number } = { x: 0, z: 0 },
   resourceAttraction?: (x: number, z: number) => number,
+  footprint?: SettlementFootprintHint,
 ): SettlementSite {
   const random = createSeededRandom(seed ^ 0xc0ffee)
   const margin = Math.min(24, halfExtent * 0.55)
   let best: SettlementSite | null = null
   let bestScore = -Infinity
+  /** Best candidate that only failed the soft-ish footprint dry ratio — used
+   *  when every attempt is rejected so we still avoid pure `Math.random`
+   *  fallbacks (plan 047 §15). */
+  let nearestSafe: SettlementSite | null = null
+  let nearestSafeScore = -Infinity
 
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < SITE_CANDIDATE_ATTEMPTS; i++) {
     const x = center.x + (random() * 2 - 1) * margin
     const z = center.z + (random() * 2 - 1) * margin
     const y = sampleHeight(x, z)
-    if (y <= waterLevel + 0.8) continue
+    if (y <= waterLevel + SETTLEMENT_WATER_MARGIN) continue
 
-    const step = 2.5
     const samples = [
-      sampleHeight(x + step, z),
-      sampleHeight(x - step, z),
-      sampleHeight(x, z + step),
-      sampleHeight(x, z - step),
+      sampleHeight(x + LOCAL_FLAT_STEP, z),
+      sampleHeight(x - LOCAL_FLAT_STEP, z),
+      sampleHeight(x, z + LOCAL_FLAT_STEP),
+      sampleHeight(x, z - LOCAL_FLAT_STEP),
     ]
     const maxDelta = Math.max(...samples.map((h) => Math.abs(h - y)))
-    if (maxDelta > 2.2) continue
+    if (maxDelta > LOCAL_FLAT_MAX_DELTA) continue
 
-    // Prefer slightly inland flats closer to center, and (if given) ones near
-    // a significant natural resource.
-    const dist = Math.hypot(x - center.x, z - center.z)
-    const score =
-      8 - maxDelta * 3 - dist * 0.05 + (y - waterLevel) * 0.15 +
-      (resourceAttraction?.(x, z) ?? 0) * RESOURCE_SCORE_WEIGHT
+    let footprintMetrics: FootprintMetrics | null = null
+    if (footprint) {
+      footprintMetrics = sampleFootprintMetrics(x, z, y, footprint, waterLevel, sampleHeight)
+      const softScore = scoreCandidate(
+        x,
+        z,
+        y,
+        maxDelta,
+        center,
+        waterLevel,
+        resourceAttraction,
+        footprintMetrics,
+      )
+      if (footprintMetrics.dryRatio < MIN_FOOTPRINT_DRY_RATIO) {
+        if (softScore > nearestSafeScore) {
+          nearestSafeScore = softScore
+          nearestSafe = { x, z, y }
+        }
+        continue
+      }
+    }
+
+    const score = scoreCandidate(
+      x,
+      z,
+      y,
+      maxDelta,
+      center,
+      waterLevel,
+      resourceAttraction,
+      footprintMetrics,
+    )
     if (score > bestScore) {
       bestScore = score
       best = { x, z, y }
@@ -67,7 +218,8 @@ export function findSettlementSite(
   }
 
   if (best) return best
+  if (nearestSafe) return nearestSafe
 
-  // Fallback: center (may be wet — still better than nothing).
+  // Fallback: cell center (may be wet — still better than nothing).
   return { x: center.x, z: center.z, y: sampleHeight(center.x, center.z) }
 }

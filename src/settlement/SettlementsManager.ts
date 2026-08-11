@@ -17,12 +17,12 @@ import {
 } from './roadNetwork'
 import {
   cellsWithinRadius,
-  generateSettlementDef,
   SETTLEMENT_GRID_STEP,
   type SettlementCell,
   type SettlementDef,
   worldToCell,
 } from './settlementGenerator'
+import { settlementDefFor } from './settlementPlanCache'
 
 type Entry = {
   def: SettlementDef
@@ -82,6 +82,8 @@ export type SettlementsManager = {
    *  current time of day instead of flashing on/off at its own default. */
   setDayNight: (t: number) => void
   getLoaded: () => Settlement[]
+  /** Home settlement definition (includes authoritative `VillagePlan`). */
+  getHomeDef: () => SettlementDef
   dispose: () => void
 }
 
@@ -113,27 +115,17 @@ export async function createSettlementsManager(
     localSearchRadius: localRadius,
   }
 
-  // Defs are pure functions of (seed, cell) — cached so repeated streaming
-  // rechecks don't redo the ~80-sample flat-site search for cells we've
-  // already visited.
-  const defCache = new Map<string, SettlementDef>()
+  // Defs resolve through the shared settlement plan cache (plan 047 §9.15).
   function defFor(cell: SettlementCell): SettlementDef {
-    const key = `${cell.gx}_${cell.gz}`
-    let def = defCache.get(key)
-    if (!def) {
-      def = generateSettlementDef(
-        cell,
-        seed,
-        sampleHeight,
-        waterLevel,
-        localRadius,
-        terrainSamplers,
-        heightScale,
-        region,
-      )
-      defCache.set(key, def)
-    }
-    return def
+    return settlementDefFor(cell, {
+      seed,
+      sampleHeight,
+      waterLevel,
+      localSearchRadius: localRadius,
+      terrainSamplers,
+      heightScale,
+      region,
+    })
   }
 
   const homeDef = defFor({ gx: 0, gz: 0 })
@@ -318,6 +310,7 @@ export async function createSettlementsManager(
       }
       return out
     },
+    getHomeDef: () => homeDef,
     dispose() {
       for (const entry of entries.values()) entry.settlement?.dispose()
       for (const instances of midpoints.values()) {

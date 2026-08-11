@@ -59,8 +59,10 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 ### Settlements / NPCs
 
 - Multiple streamed settlements.
+- Settlement generation is plan-first: one `VillagePlan` per settlement (identity → zones/plots/buildings/landmarks/local paths/entrances), projected to `SettlementDef` for runtime; shared `settlementPlanCache` feeds `SettlementsManager` and `RoadNetwork` (plan 047 — verification needed).
 - Settlement generation with families, houses, roads/paths and environment-aware siting.
 - Road/path corridors get edge wobble, sparse light potholes, and A* route meander (`region.roadNetwork` knobs; plan 068).
+- Inter-settlement roads attach via plan entrances (`entranceToward`); local path corridors come from `VillagePlan.paths`.
 - NPC needs and behaviour/state-machine logic.
 - NPC personality/character depth including role, traits/Big Five-related data, health and stamina.
 - NPCs use shared `StaminaState` for work/rest effort; HP is no longer drained by fatigue.

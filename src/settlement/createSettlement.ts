@@ -61,7 +61,7 @@ export type Settlement = {
   /** Plan 032 §8 — surfaced today only in the Villagers screen's settlement
    *  badge (`ui/createVillagersScreen.ts`). */
   foodSourceType: FoodSourceType
-  /** `SM/MD/LG/OUTPOST`, straight from `SettlementDef` — see
+  /** `SM/MD/LG/XL/OUTPOST`, straight from `SettlementDef` — see
    *  `docs/plans/2026-08-09--048...`'s "aboutVillage" dialogue topic. */
   size: VillageSize
   /** Terrain feature the naming generator picked up around the site — see
@@ -135,6 +135,7 @@ export async function createSettlement(
     def.isHome,
     def.foodSourceType,
     roadSegments,
+    def.plan,
   )
   scene.add(group)
 

@@ -9,6 +9,8 @@ export type DebugGuiHandlers = {
   onSkyChange: () => void
   onDayNightChange?: () => void
   onPostProcessingChange: () => void
+  /** Log the home settlement's VillagePlan summary to the console (plan 047). */
+  onDumpVillagePlan?: () => void
 }
 
 /** On-screen panel; mutates `config` / `dayNight` in place, then calls handlers. */
@@ -374,6 +376,11 @@ export function createDebugGui(
   )
 
   const village = terrain.addFolder('Village')
+  if (handlers.onDumpVillagePlan) {
+    village
+      .add({ dump: () => handlers.onDumpVillagePlan?.() }, 'dump')
+      .name('Log home VillagePlan')
+  }
   terrainControllers.push(
     village
       .add(config.terrain.region.village, 'coreRadius', 4, 20, 0.5)

@@ -24,7 +24,7 @@ const SEARCH_STEP = 4
  * no dock — not an error case.
  */
 export function findDockLocation(
-  def: SettlementDef,
+  origin: { x: number, z: number },
   sampleHeight: HeightSampler,
   sampleContinentalness: (x: number, z: number) => number,
   region: RegionParams,
@@ -38,8 +38,8 @@ export function findDockLocation(
     const dz = Math.sin(angle)
 
     for (let dist = SEARCH_STEP; dist <= maxRadius; dist += SEARCH_STEP) {
-      const x = def.x + dx * dist
-      const z = def.z + dz * dist
+      const x = origin.x + dx * dist
+      const z = origin.z + dz * dist
       const c = sampleContinentalness(x, z)
       if (c < region.coastThreshold) {
         if (!best || dist < best.dist) {
@@ -66,6 +66,14 @@ export function findDockLocation(
 /** Cached per settlement id — resolved once, same seed/site ⇒ same result. */
 const cache = new Map<string, MinorLocation[]>()
 
+export function clearMinorLocationCaches(): void {
+  cache.clear()
+}
+
+/**
+ * Plan 047 adapter: prefer a dock landmark already on `VillagePlan`; fall back
+ * to the analytic ocean ray-march for settlements without a planned dock.
+ */
 export function minorLocationsFor(
   def: SettlementDef,
   sampleHeight: HeightSampler,
@@ -75,14 +83,32 @@ export function minorLocationsFor(
 ): MinorLocation[] {
   let locations = cache.get(def.id)
   if (!locations) {
-    // Cheap pre-check: `def.terrain` already averages continentalness around
-    // the site for naming (`settlementTerrain.ts`) — only settlements that
-    // classified as coastal-ish ('ocean') are worth the full ray-march.
-    const dock =
-      def.terrain === 'ocean'
-        ? findDockLocation(def, sampleHeight, sampleContinentalness, region, maxDockSearchRadius)
-        : null
-    locations = dock ? [dock] : []
+    const planned = def.plan.landmarks.find((l) => l.kind === 'dock')
+    if (planned) {
+      locations = [
+        {
+          kind: 'dock',
+          x: planned.x,
+          z: planned.z,
+          y: planned.y,
+          angle: planned.rotation,
+        },
+      ]
+    } else {
+      // Cheap pre-check: `def.terrain` already averages continentalness around
+      // the site for naming — only coastal-ish settlements get the ray-march.
+      const dock =
+        def.terrain === 'ocean' || def.foodSourceType === 'fishing'
+          ? findDockLocation(
+              { x: def.x, z: def.z },
+              sampleHeight,
+              sampleContinentalness,
+              region,
+              maxDockSearchRadius,
+            )
+          : null
+      locations = dock ? [dock] : []
+    }
     cache.set(def.id, locations)
   }
   return locations

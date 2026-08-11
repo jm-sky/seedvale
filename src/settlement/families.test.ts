@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { NaturalResource } from '../terrain/naturalResources'
-import { generateFamilies, rollVillageSize } from './families'
+import {
+  generateFamilies,
+  rollVillageSize,
+  VILLAGE_SIZE_CONFIG,
+  type VillageSize,
+  villageSizeConfig,
+} from './families'
 
 describe('rollVillageSize', () => {
   it('is deterministic for the same terrain/seed', () => {
@@ -10,14 +16,53 @@ describe('rollVillageSize', () => {
 
   it('biases mountain/desert toward SM more than forest', () => {
     const sizesFor = (terrain: 'forest' | 'mountain') => {
-      const counts = { SM: 0, MD: 0, LG: 0 }
+      const counts = { SM: 0, MD: 0, LG: 0, XL: 0 }
       for (let seed = 0; seed < 500; seed++) counts[rollVillageSize(terrain, seed)]++
       return counts
     }
     const forest = sizesFor('forest')
     const mountain = sizesFor('mountain')
     expect(mountain.SM).toBeGreaterThan(forest.SM)
-    expect(forest.LG).toBeGreaterThan(mountain.LG)
+    expect(forest.LG + forest.XL).toBeGreaterThan(mountain.LG + mountain.XL)
+  })
+
+  it('can roll XL and never returns OUTPOST', () => {
+    const seen = new Set<string>()
+    for (let seed = 0; seed < 2000; seed++) {
+      const size = rollVillageSize('forest', seed)
+      seen.add(size)
+      expect(size).not.toBe('OUTPOST')
+    }
+    expect(seen.has('XL')).toBe(true)
+  })
+})
+
+describe('VILLAGE_SIZE_CONFIG (plan 047)', () => {
+  it('defines every VillageSize including XL and OUTPOST', () => {
+    const sizes: VillageSize[] = ['OUTPOST', 'SM', 'MD', 'LG', 'XL']
+    for (const size of sizes) {
+      expect(VILLAGE_SIZE_CONFIG[size]).toBeDefined()
+      expect(villageSizeConfig(size)).toBe(VILLAGE_SIZE_CONFIG[size])
+    }
+  })
+
+  it('makes XL materially larger than LG', () => {
+    const lg = villageSizeConfig('LG')
+    const xl = villageSizeConfig('XL')
+    expect(xl.footprintRadius).toBeGreaterThan(lg.footprintRadius)
+    expect(xl.houseRingMax).toBeGreaterThan(lg.houseRingMax)
+    expect(xl.familyCount[0]).toBeGreaterThanOrEqual(lg.familyCount[0])
+    expect(xl.familyCount[1]).toBeGreaterThan(lg.familyCount[1])
+    expect(xl.pathDensity).toBeGreaterThan(lg.pathDensity)
+  })
+
+  it('keeps OUTPOST minimal (no campfire/market, tiny footprint)', () => {
+    const outpost = villageSizeConfig('OUTPOST')
+    expect(outpost.familyCount).toEqual([1, 1])
+    expect(outpost.infrastructure.campfires).toBe(0)
+    expect(outpost.infrastructure.markets).toBe(0)
+    expect(outpost.infrastructure.stockpiles).toBe(1)
+    expect(outpost.footprintRadius).toBeLessThan(villageSizeConfig('SM').footprintRadius)
   })
 })
 
@@ -29,7 +74,7 @@ describe('generateFamilies', () => {
   })
 
   it('guarantees the 2 reserved families (Anna/Piotr, Kasia/Marek) for the home settlement', () => {
-    for (const size of ['SM', 'MD', 'LG'] as const) {
+    for (const size of ['SM', 'MD', 'LG', 'XL'] as const) {
       const families = generateFamilies(7, size, true, 'polish')
       const names = families.flatMap((f) => f.members.map((m) => m.name))
       expect(names).toContain('Anna')
@@ -77,6 +122,16 @@ describe('generateFamilies', () => {
         }
       }
     }
+  })
+
+  it('XL yields more families on average than LG for the same seeds', () => {
+    let lgTotal = 0
+    let xlTotal = 0
+    for (let seed = 0; seed < 80; seed++) {
+      lgTotal += generateFamilies(seed, 'LG', false, 'polish').length
+      xlTotal += generateFamilies(seed, 'XL', false, 'polish').length
+    }
+    expect(xlTotal).toBeGreaterThan(lgTotal)
   })
 
   describe('dominantResource (plan 032)', () => {

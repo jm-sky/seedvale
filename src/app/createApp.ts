@@ -28,6 +28,7 @@ import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
+import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt } from '../terrain/dig'
 import { applyDigAt, applyLevelAt } from '../terrain/digAction'
@@ -356,6 +357,9 @@ export async function createApp(
     onSkyChange: updateSkyFromGui,
     onDayNightChange,
     onPostProcessingChange: updatePostProcessingFromGui,
+    onDumpVillagePlan: () => {
+      console.log(summarizeVillagePlan(bundle.settlementsManager.getHomeDef().plan))
+    },
   })
   if (!config.showGui) gui.toggle()
   vueUi.configureWorldConfigScreen(config, dayNight, { onTerrainChange, onDayNightChange })

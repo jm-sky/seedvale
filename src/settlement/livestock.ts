@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import type { HeightSampler } from '../player/PlayerController'
-import type { VillageSize } from './families'
 import { disposeObject3D } from '../assets/loadGltf'
 import { ANIMAL_DEFS, AnimalAgent } from '../fauna/AnimalAgent'
 import {
@@ -10,6 +9,7 @@ import {
   createSheepModel,
 } from '../fauna/proceduralAnimals'
 import { createSeededRandom } from '../world/parseSeed'
+import { type VillageSize, villageSizeConfig } from './families'
 
 /** Owned farm animal kinds — the only `AnimalKind`s this module ever spawns. */
 type LivestockKind = 'horse' | 'cow' | 'sheep' | 'chicken'
@@ -21,8 +21,6 @@ const MODEL_BUILDERS: Record<LivestockKind, () => THREE.Object3D> = {
   chicken: createChickenModel,
 }
 
-/** Chance a given house owns any livestock at all. */
-const LIVESTOCK_OWNERSHIP_CHANCE = 0.5
 /** Given ownership, chance of 2 animals instead of 1. */
 const LIVESTOCK_TWO_CHANCE = 0.4
 /** Species weights when a house rolls an animal — common (chicken) to rare
@@ -33,10 +31,9 @@ const SPECIES_WEIGHTS: readonly [LivestockKind, number][] = [
   ['cow', 0.17],
   ['horse', 0.13],
 ]
-/** Outposts (`size === 'OUTPOST'`, always exactly 1 house, 1 lone resident)
- *  get a much poorer roll than a normal house — at most a single chicken,
+/** Outposts get a much poorer roll than a normal house — at most a single
+ *  chicken (chance from `VILLAGE_SIZE_CONFIG.OUTPOST.livestockOwnershipChance`),
  *  never a cow/horse/sheep (no room/need for a herd at a 1-person cabin). */
-const OUTPOST_CHICKEN_CHANCE = 0.3
 /** `[min, max]` wander radius (world units) from the owning house — tight
  *  enough that even on the closest realistic house spacing (LG villages,
  *  `villageClearing.ts`'s ring math), two neighboring farmyards' wander
@@ -88,10 +85,11 @@ function findSpotNearHouse(
 }
 
 function kindsForHouse(size: VillageSize, random: () => number): LivestockKind[] {
+  const ownershipChance = villageSizeConfig(size).livestockOwnershipChance
   if (size === 'OUTPOST') {
-    return random() < OUTPOST_CHICKEN_CHANCE ? ['chicken'] : []
+    return random() < ownershipChance ? ['chicken'] : []
   }
-  if (random() >= LIVESTOCK_OWNERSHIP_CHANCE) return []
+  if (random() >= ownershipChance) return []
   const count = random() < LIVESTOCK_TWO_CHANCE ? 2 : 1
   const kinds: LivestockKind[] = []
   for (let i = 0; i < count; i++) kinds.push(pickSpecies(random))

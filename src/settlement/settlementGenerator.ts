@@ -12,17 +12,22 @@ import {
   SIGNIFICANT_RICHNESS,
 } from '../terrain/naturalResources'
 import { createSeededRandom } from '../world/parseSeed'
-import { type FamilyDef, generateFamilies, rollVillageSize, type VillageSize } from './families'
+import {
+  type FamilyDef,
+  generateFamilies,
+  type RolledVillageSize,
+  rollVillageSize,
+  type VillageSize,
+  villageSizeConfig,
+} from './families'
 import { findSettlementSite } from './findSettlementSite'
+import { findDockLocation } from './minorLocations'
 import { classifySettlementTerrain, type TerrainSamplers } from './settlementTerrain'
-import { type ClearingLayout, layoutClearings } from './villageClearing'
+import { type ClearingLayout, layoutClearingsFromPlan } from './villageClearing'
+import { type FoodSourceType, type VillageIdentity, type VillagePlan } from './villagePlan'
+import { planVillageLayout } from './villagePlanner'
 
-/** How a settlement's population mainly feeds itself (plan 032 §8) — v1 is
- *  data/flavor only (no dedicated visual per type yet, see review note in
- *  the plan doc): every settlement still gets the same `garden` prop
- *  (`props.ts`) regardless of this field. Consumed today only by the
- *  Villagers screen's settlement badge. */
-export type FoodSourceType = 'field' | 'fishing' | 'foraging' | 'garden'
+export type { FoodSourceType } from './villagePlan'
 
 /** Search radius (world units) beyond `localSearchRadius` the pre-site
  *  resource scan looks out to — a deposit just outside the site-search box
@@ -70,7 +75,7 @@ export type SettlementDef = {
   x: number
   z: number
   y: number
-  /** SM/MD/LG, rolled from `terrain` — see `families.ts`'s `rollVillageSize`.
+  /** SM/MD/LG/XL, rolled from `terrain` — see `families.ts`'s `rollVillageSize`.
    *  Drives `families.length` (a floor of 2 reserved families for home, see
    *  `families.ts`'s `generateFamilies`), which in turn drives NPC/house count. */
   size: VillageSize
@@ -81,7 +86,9 @@ export type SettlementDef = {
    *  silently break the only quests the game has (see `families.ts`). */
   families: readonly FamilyDef[]
   /** Terrain clearing layout (well/stockpile/garden core + one patch per
-   *  family for its house) — see `villageClearing.ts`. */
+   *  family for its house) — see `villageClearing.ts`. Compatibility
+   *  projection until plan 047 migrates clearings into plan-derived terrain
+   *  modifiers; must not diverge from `plan` site/identity. */
   clearings: ClearingLayout
   /** True only for cell (0,0) — the settlement the player spawns in, always
    *  loaded, and the only one built with the full forest belt in v1. */
@@ -103,6 +110,9 @@ export type SettlementDef = {
   dominantResource: NaturalResource | null
   /** Plan 032 §8 — data/flavor only in v1, see `FoodSourceType`'s doc comment. */
   foodSourceType: FoodSourceType
+  /** Authoritative local layout (plan 047). `SettlementDef` remains a thin
+   *  compatibility projection for existing runtime consumers. */
+  plan: VillagePlan
 }
 
 export function cellKey(cell: SettlementCell): string {
@@ -168,17 +178,30 @@ function foodSourceTypeFor(terrain: SettlementTerrain, dominantResource: Natural
   return 'garden'
 }
 
-/** Generates a settlement's site + metadata for a grid cell, seeded
- *  deterministically from the world seed — same seed ⇒ same layout.
- *
- *  Order follows plan 032 §1's "teren → środowisko → zasoby → wioski":
- *  natural resources are sampled from the terrain/environment `sampleHeight`/
- *  `terrainSamplers` already expose, *before* the site search runs, and feed
- *  into it as an attractiveness bonus (§5) — resources aren't generated *for*
- *  the settlement, the settlement's placement responds to resources that
- *  would exist there regardless.
- */
-export function generateSettlementDef(
+type SettlementGenContext = {
+  cell: SettlementCell
+  seed: number
+  seedForCell: number
+  isHome: boolean
+  center: { x: number, z: number }
+  resourceEnv: ResourceEnv
+  resourceAttraction: (x: number, z: number) => number
+  sampleHeight: HeightSampler
+  waterLevel: number
+  localSearchRadius: number
+  terrainSamplers: TerrainSamplers
+  heightScale: number
+  region: RegionParams
+  /**
+   * Size rolled once from terrain at the cell center *before* site search
+   * (plan 047 §6). Used for footprint scoring and locked into identity
+   * unless the final site becomes an OUTPOST. Never re-rolled after site.
+   */
+  provisionalSize: RolledVillageSize
+}
+
+/** Step 1 of the plan 047 seam: cell + world seed → resource scan context. */
+function resolveSettlementContext(
   cell: SettlementCell,
   seed: number,
   sampleHeight: HeightSampler,
@@ -187,7 +210,7 @@ export function generateSettlementDef(
   terrainSamplers: TerrainSamplers,
   heightScale: number,
   region: RegionParams,
-): SettlementDef {
+): SettlementGenContext {
   const isHome = cell.gx === 0 && cell.gz === 0
   const seedForCell = cellSeed(seed, cell)
   const center = isHome ? { x: 0, z: 0 } : offsetCellCenter(cell, seedForCell)
@@ -203,9 +226,7 @@ export function generateSettlementDef(
   }
   // `seed` (the world seed), not `seedForCell` — the resource grid is one
   // consistent layer across the whole world (plan 032 §1: "Zasoby są
-  // generowane niezależnie od wiosek"), not re-randomized per settlement. A
-  // world position must resolve to the same resource regardless of which
-  // settlement (or the world-wide `resourceDeposits` visualizer) asks.
+  // generowane niezależnie od wiosek"), not re-randomized per settlement.
   const candidateResources = resourcesNear(
     center.x,
     center.z,
@@ -215,53 +236,330 @@ export function generateSettlementDef(
   )
   const resourceAttraction = (x: number, z: number): number => resourceAttractionAt(x, z, candidateResources)
 
-  const site = findSettlementSite(sampleHeight, waterLevel, localSearchRadius, seedForCell, center, resourceAttraction)
-
-  const terrain = classifySettlementTerrain(
-    site.x,
-    site.z,
-    site.y,
+  // Provisional size for footprint-aware site search (plan 047 §6): classify
+  // terrain at the cell center, roll size once, then lock that roll after the
+  // site is chosen (OUTPOST may still override). Final naming/terrain flavor
+  // still uses classification at the *selected* site.
+  const centerY = sampleHeight(center.x, center.z)
+  const provisionalTerrain = classifySettlementTerrain(
+    center.x,
+    center.z,
+    centerY,
     waterLevel,
     heightScale,
     region,
     terrainSamplers,
   )
-  const dominantResource = dominantResourceNear(site.x, site.z, RESOURCE_INFLUENCE_RADIUS, seed, resourceEnv)
-  const nameCulture = pickNameCulture(seedForCell)
+  const provisionalSize = rollVillageSize(provisionalTerrain, seedForCell)
 
-  // Resource Outposts (§7) — a genuinely exceptional deposit ("złoto → wysokie
-  // góry → zbyt trudne miejsce na wioskę") in harsh (mountain) terrain
-  // sometimes replaces the whole village with a single lone resident tied to
-  // it, instead of the normal SM/MD/LG roll. Never for the home settlement —
-  // it always needs its full reserved-family roster (see `families.ts`).
+  return {
+    cell,
+    seed,
+    seedForCell,
+    isHome,
+    center,
+    resourceEnv,
+    resourceAttraction,
+    sampleHeight,
+    waterLevel,
+    localSearchRadius,
+    terrainSamplers,
+    heightScale,
+    region,
+    provisionalSize,
+  }
+}
+
+/** Step 2: footprint-aware site search using `provisionalSize` knobs. */
+function chooseSettlementSite(ctx: SettlementGenContext): { x: number, z: number, y: number } {
+  const sizeCfg = villageSizeConfig(ctx.provisionalSize)
+  return findSettlementSite(
+    ctx.sampleHeight,
+    ctx.waterLevel,
+    ctx.localSearchRadius,
+    ctx.seedForCell,
+    ctx.center,
+    ctx.resourceAttraction,
+    { footprintRadius: sizeCfg.footprintRadius, houseRingMax: sizeCfg.houseRingMax },
+  )
+}
+
+/** Step 3: terrain + resources + locked size + naming → `VillageIdentity`. */
+function resolveVillageIdentity(
+  ctx: SettlementGenContext,
+  site: { x: number, z: number, y: number },
+): VillageIdentity {
+  const terrain = classifySettlementTerrain(
+    site.x,
+    site.z,
+    site.y,
+    ctx.waterLevel,
+    ctx.heightScale,
+    ctx.region,
+    ctx.terrainSamplers,
+  )
+  const dominantResource = dominantResourceNear(
+    site.x,
+    site.z,
+    RESOURCE_INFLUENCE_RADIUS,
+    ctx.seed,
+    ctx.resourceEnv,
+  )
+  const nameCulture = pickNameCulture(ctx.seedForCell)
+
+  // Resource Outposts (§7) — never for the home settlement.
   const isOutpost =
-    !isHome &&
+    !ctx.isHome &&
     terrain === 'mountain' &&
     dominantResource !== null &&
     dominantResource.richness >= OUTPOST_RICHNESS_THRESHOLD &&
     RESOURCE_ROLE[dominantResource.type] !== undefined &&
-    rollIsOutpost(seedForCell)
+    rollIsOutpost(ctx.seedForCell)
 
-  const size = isOutpost ? 'OUTPOST' : rollVillageSize(terrain, seedForCell)
-  const name = generateSettlementName(seedForCell, terrain, dominantResource)
-  const families = generateFamilies(seedForCell, size, isHome, nameCulture, dominantResource)
-  const clearings = layoutClearings(site, families, terrain, seedForCell, sampleHeight, waterLevel, region.village)
+  // Lock provisional size — do not call `rollVillageSize` again (plan 047 §6).
+  const size = isOutpost ? 'OUTPOST' : ctx.provisionalSize
+  const name = generateSettlementName(ctx.seedForCell, terrain, dominantResource)
+  const foodSourceType = foodSourceTypeFor(terrain, dominantResource)
 
   return {
-    id: cellKey(cell),
-    gx: cell.gx,
-    gz: cell.gz,
+    id: cellKey(ctx.cell),
+    cell: { gx: ctx.cell.gx, gz: ctx.cell.gz },
+    isHome: ctx.isHome,
+    size,
+    terrain,
+    dominantResource,
+    foodSourceType,
+    name,
+    nameCulture,
+  }
+}
+
+/** Steps 4–9: identity + site + families → authoritative `VillagePlan` with
+ *  boundary/center/pattern/zones/plots/buildings/landmarks/paths/entrances.
+ *  Clearings still compatibility-projected separately until terrain adapter. */
+function createVillagePlan(
+  identity: VillageIdentity,
+  site: { x: number, z: number, y: number },
+  families: readonly FamilyDef[],
+  seedForCell: number,
+  sampleHeight: HeightSampler,
+  waterLevel: number,
+): VillagePlan {
+  const sizeCfg = villageSizeConfig(identity.size)
+  const layout = planVillageLayout(identity, site, families, seedForCell, sampleHeight, waterLevel)
+  return {
+    identity,
+    site: { x: site.x, z: site.z, y: site.y, radius: sizeCfg.footprintRadius },
+    boundary: layout.boundary,
+    center: layout.center,
+    pattern: layout.pattern,
+    zones: layout.zones,
+    plots: layout.plots,
+    buildings: layout.buildings,
+    landmarks: layout.landmarks,
+    paths: layout.paths,
+    entrances: layout.entrances,
+  }
+}
+
+type SettlementCore = {
+  plan: VillagePlan
+  families: FamilyDef[]
+  seedForCell: number
+  sampleHeight: HeightSampler
+  waterLevel: number
+  region: RegionParams
+}
+
+/** Single generation pass shared by `generateVillagePlan` / `generateSettlementDef`. */
+function generateSettlementCore(
+  cell: SettlementCell,
+  seed: number,
+  sampleHeight: HeightSampler,
+  waterLevel: number,
+  localSearchRadius: number,
+  terrainSamplers: TerrainSamplers,
+  heightScale: number,
+  region: RegionParams,
+): SettlementCore {
+  const ctx = resolveSettlementContext(
+    cell,
+    seed,
+    sampleHeight,
+    waterLevel,
+    localSearchRadius,
+    terrainSamplers,
+    heightScale,
+    region,
+  )
+  const site = chooseSettlementSite(ctx)
+  const identity = resolveVillageIdentity(ctx, site)
+  const families = generateFamilies(
+    ctx.seedForCell,
+    identity.size,
+    identity.isHome,
+    identity.nameCulture,
+    identity.dominantResource,
+  )
+  const plan = attachPlannedDock(
+    createVillagePlan(
+      identity,
+      site,
+      families,
+      ctx.seedForCell,
+      ctx.sampleHeight,
+      ctx.waterLevel,
+    ),
+    {
+      sampleHeight: ctx.sampleHeight,
+      sampleContinentalness: ctx.terrainSamplers.sampleContinentalness,
+      region: ctx.region,
+      dockSearchRadius: ctx.region.roadNetwork.dockSearchRadius,
+    },
+  )
+  return {
+    plan,
+    families,
+    seedForCell: ctx.seedForCell,
+    sampleHeight: ctx.sampleHeight,
+    waterLevel: ctx.waterLevel,
+    region: ctx.region,
+  }
+}
+
+/** Attach a dock landmark (+ path) when ocean/fishing and a shore exists —
+ *  plan 047 step 13. Analytic search matches `minorLocations`; result is
+ *  stored on the plan so runtime adapters do not invent a second dock. */
+function attachPlannedDock(
+  plan: VillagePlan,
+  opts: {
+    sampleHeight: HeightSampler
+    sampleContinentalness: (x: number, z: number) => number
+    region: RegionParams
+    dockSearchRadius: number
+  },
+): VillagePlan {
+  if (plan.landmarks.some((l) => l.kind === 'dock')) return plan
+  if (plan.identity.terrain !== 'ocean' && plan.identity.foodSourceType !== 'fishing') return plan
+
+  const dock = findDockLocation(
+    plan.site,
+    opts.sampleHeight,
+    opts.sampleContinentalness,
+    opts.region,
+    opts.dockSearchRadius,
+  )
+  if (!dock) return plan
+
+  const dockLandmark = {
+    id: 'landmark-dock-0',
+    kind: 'dock' as const,
+    x: dock.x,
+    z: dock.z,
+    y: dock.y,
+    rotation: dock.angle,
+    plotId: null,
+    index: 0,
+  }
+  const dockPath = {
+    id: 'path-dock-0',
+    points: [
+      { x: plan.center.x, z: plan.center.z },
+      { x: dock.x, z: dock.z },
+    ],
+    halfWidth: 1.5,
+    kind: 'path' as const,
+  }
+  return {
+    ...plan,
+    landmarks: [...plan.landmarks, dockLandmark],
+    paths: [...plan.paths, dockPath],
+  }
+}
+
+/**
+ * Authoritative plan generation seam (plan 047 §9.3):
+ * context → site → identity → families → VillagePlan (zones/plots).
+ */
+export function generateVillagePlan(
+  cell: SettlementCell,
+  seed: number,
+  sampleHeight: HeightSampler,
+  waterLevel: number,
+  localSearchRadius: number,
+  terrainSamplers: TerrainSamplers,
+  heightScale: number,
+  region: RegionParams,
+): VillagePlan {
+  return generateSettlementCore(
+    cell,
+    seed,
+    sampleHeight,
+    waterLevel,
+    localSearchRadius,
+    terrainSamplers,
+    heightScale,
+    region,
+  ).plan
+}
+
+/** Compatibility projection: one plan + families + clearings → `SettlementDef`.
+ *  Must not invent a second site/size/name — all identity fields come from
+ *  `plan.identity` / `plan.site`. */
+function settlementDefFromPlan(
+  plan: VillagePlan,
+  families: readonly FamilyDef[],
+  clearings: ClearingLayout,
+): SettlementDef {
+  const { identity, site } = plan
+  return {
+    id: identity.id,
+    gx: identity.cell.gx,
+    gz: identity.cell.gz,
     x: site.x,
     z: site.z,
     y: site.y,
-    size,
+    size: identity.size,
     families,
     clearings,
-    isHome,
-    terrain,
-    name,
-    nameCulture,
-    dominantResource,
-    foodSourceType: foodSourceTypeFor(terrain, dominantResource),
+    isHome: identity.isHome,
+    terrain: identity.terrain,
+    name: identity.name,
+    nameCulture: identity.nameCulture,
+    dominantResource: identity.dominantResource,
+    foodSourceType: identity.foodSourceType,
+    plan,
   }
+}
+
+/** Generates a settlement's site + metadata for a grid cell, seeded
+ *  deterministically from the world seed — same seed ⇒ same layout.
+ *
+ *  Thin compatibility wrapper over `generateSettlementCore` (plan 047): one
+ *  generation pass, then clearings + `SettlementDef` projection.
+ *  Order still follows plan 032 §1's "teren → środowisko → zasoby → wioski".
+ */
+export function generateSettlementDef(
+  cell: SettlementCell,
+  seed: number,
+  sampleHeight: HeightSampler,
+  waterLevel: number,
+  localSearchRadius: number,
+  terrainSamplers: TerrainSamplers,
+  heightScale: number,
+  region: RegionParams,
+): SettlementDef {
+  const { plan, families, sampleHeight: height, region: reg } =
+    generateSettlementCore(
+      cell,
+      seed,
+      sampleHeight,
+      waterLevel,
+      localSearchRadius,
+      terrainSamplers,
+      heightScale,
+      region,
+    )
+  const clearings = layoutClearingsFromPlan(plan, height, reg.village)
+  return settlementDefFromPlan(plan, families, clearings)
 }

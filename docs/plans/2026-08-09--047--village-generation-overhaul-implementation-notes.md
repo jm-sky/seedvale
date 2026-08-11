@@ -6,6 +6,31 @@
 
 ---
 
+## Progress log
+
+### 2026-08-11 — steps 10–16 (implementation complete → verification needed)
+
+- **Step 10:** `layoutClearingsFromPlan` in `villageClearing.ts`; generator uses plan plots/center. Legacy `layoutClearings` kept for unit tests.
+- **Shared cache:** `settlementPlanCache.ts` — single `settlementDefFor` used by `SettlementsManager` + `RoadNetwork`; `clearRoadNetworkCaches` clears settlement + minor-location caches.
+- **Steps 11–12:** props consume plan landmarks (well/stockpile/garden/field/market/campfire); `createSettlement` passes `def.plan`.
+- **Step 13:** `attachPlannedDock` writes dock landmark+path onto plan; `minorLocationsFor` prefers planned dock; `findDockLocation(origin, …)`.
+- **Steps 14–15:** inter-settlement + dock routes start/end at `entranceToward`; local terrain corridors from `pathPlansToCorridorData(def.plan.paths, …)`.
+- **Step 16:** `villagePlanDebug.summarizeVillagePlan`; debug GUI “Log home VillagePlan” wired via `SettlementsManager.getHomeDef()`.
+- Technical gates green (`tsc`, lint, build, 254 unit tests). Browser layout verification still open.
+
+### 2026-08-11 — steps 1–9
+
+- Added `src/settlement/villagePlan.ts` (plain-data plan types; `FoodSourceType` lives here and is re-exported from `settlementGenerator`).
+- Extended `families.ts` with `XL` and `VILLAGE_SIZE_CONFIG` / `villageSizeConfig()`.
+- Refactored `settlementGenerator.ts` into `generateSettlementCore()` → plan + families in one pass.
+- Footprint-aware `findSettlementSite` + provisional size lock; shared `pathDryness.ts`.
+- `villagePlanner.ts` fills boundary/center/pattern/zones/plots/buildings/landmarks.
+- **Step 9:** `planLocalPathsAndEntrances` — semantic entrances + local paths (dry gated); `pathPlansToCorridorData` for worker-safe corridor projection. Global roads remain `RoadNetwork`.
+- `layoutClearings` remains runtime compatibility until step 10.
+- Next: step 10 — terrain adapter from plan.
+
+---
+
 ## 1. Scope and decisions
 
 ### v1

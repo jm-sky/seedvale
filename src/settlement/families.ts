@@ -11,8 +11,109 @@ import { createSeededRandom } from '../world/parseSeed'
  *  significant resource in harsh terrain, not a weighted roll — see
  *  `SIZE_WEIGHTS`'s `OUTPOST: 0` rows below) — never returned by
  *  `rollVillageSize` itself, but part of the type since `generateFamilies`
- *  needs to handle it. */
-export type VillageSize = 'SM' | 'MD' | 'LG' | 'OUTPOST'
+ *  needs to handle it. `XL` (plan 047) is a normal weighted size above `LG`. */
+export type VillageSize = 'SM' | 'MD' | 'LG' | 'XL' | 'OUTPOST'
+
+/** Normal (non-outpost) sizes `rollVillageSize` may return. */
+export type RolledVillageSize = Exclude<VillageSize, 'OUTPOST'>
+
+/** Shared size table for planner / props / livestock / footprint scoring
+ *  (plan 047 §5) — one source of truth; do not duplicate these numbers. */
+export type VillageSizeConfig = {
+  /** Inclusive `[min, max]` family count for `generateFamilies` (OUTPOST path
+   *  bypasses this and always yields exactly one family). */
+  familyCount: readonly [number, number]
+  /** World-unit village footprint radius (boundary / site scoring). */
+  footprintRadius: number
+  /** Preferred minimum spacing between house plot centers. */
+  houseSpacing: number
+  /** Outer house-ring distance used by footprint-aware site scoring — mirrors
+   *  today's `layoutClearings` ringMax ≈ coreRadius + houseRadius×4.8 with
+   *  default clearing params (9 + 4.5×4.8 ≈ 30.6) scaled per size. */
+  houseRingMax: number
+  /** Soft budgets for zone generation (0 = zone may be omitted). */
+  zoneBudget: {
+    residential: number
+    public: number
+    production: number
+    food: number
+    livestock: number
+    utility: number
+  }
+  /** Counts of core infrastructure landmarks (`props.ts` / planner). */
+  infrastructure: {
+    wells: number
+    stockpiles: number
+    gardens: number
+    markets: number
+    campfires: number
+  }
+  /** Relative local-path density in `[0, 1]` — denser for larger villages. */
+  pathDensity: number
+  /** Per-house livestock ownership chance (OUTPOST uses its own chicken roll). */
+  livestockOwnershipChance: number
+}
+
+/**
+ * Centralized per-size knobs (plan 047). Footprint/ring values are calibrated
+ * so XL is materially larger than LG while OUTPOST stays a tight cabin site.
+ */
+export const VILLAGE_SIZE_CONFIG: Record<VillageSize, VillageSizeConfig> = {
+  OUTPOST: {
+    familyCount: [1, 1],
+    footprintRadius: 22,
+    houseSpacing: 10,
+    houseRingMax: 18,
+    zoneBudget: { residential: 1, public: 1, production: 0, food: 0, livestock: 0, utility: 1 },
+    infrastructure: { wells: 1, stockpiles: 1, gardens: 1, markets: 0, campfires: 0 },
+    pathDensity: 0.25,
+    livestockOwnershipChance: 0.3,
+  },
+  SM: {
+    familyCount: [1, 3],
+    footprintRadius: 40,
+    houseSpacing: 12,
+    houseRingMax: 28,
+    zoneBudget: { residential: 1, public: 1, production: 0, food: 1, livestock: 0, utility: 1 },
+    infrastructure: { wells: 1, stockpiles: 1, gardens: 1, markets: 0, campfires: 0 },
+    pathDensity: 0.45,
+    livestockOwnershipChance: 0.45,
+  },
+  MD: {
+    familyCount: [2, 4],
+    footprintRadius: 48,
+    houseSpacing: 14,
+    houseRingMax: 32,
+    zoneBudget: { residential: 1, public: 1, production: 1, food: 1, livestock: 1, utility: 1 },
+    infrastructure: { wells: 1, stockpiles: 1, gardens: 1, markets: 0, campfires: 1 },
+    pathDensity: 0.6,
+    livestockOwnershipChance: 0.5,
+  },
+  LG: {
+    familyCount: [3, 5],
+    footprintRadius: 56,
+    houseSpacing: 16,
+    houseRingMax: 36,
+    zoneBudget: { residential: 1, public: 1, production: 1, food: 1, livestock: 1, utility: 1 },
+    infrastructure: { wells: 1, stockpiles: 2, gardens: 1, markets: 1, campfires: 1 },
+    pathDensity: 0.75,
+    livestockOwnershipChance: 0.55,
+  },
+  XL: {
+    familyCount: [4, 7],
+    footprintRadius: 72,
+    houseSpacing: 18,
+    houseRingMax: 48,
+    zoneBudget: { residential: 1, public: 1, production: 1, food: 1, livestock: 1, utility: 1 },
+    infrastructure: { wells: 1, stockpiles: 2, gardens: 1, markets: 1, campfires: 1 },
+    pathDensity: 0.9,
+    livestockOwnershipChance: 0.6,
+  },
+}
+
+export function villageSizeConfig(size: VillageSize): VillageSizeConfig {
+  return VILLAGE_SIZE_CONFIG[size]
+}
 
 /** `single` isn't in the original draft's husband/wife/child trio, but a
  *  family of 1 (explicitly allowed — "1–3 osób") needs *some* relation, and
@@ -47,29 +148,22 @@ export type FamilyMemberRef = {
   relation: FamilyRelation
 }
 
-/** `OUTPOST`'s `[1, 1]` is never read by `familyCountForSize` in practice
- *  (the outpost path in `generateFamilies` below skips it entirely) — present
- *  only so this `Record<VillageSize, ...>` type-checks. */
-const FAMILY_COUNT_RANGE: Record<VillageSize, readonly [number, number]> = {
-  SM: [1, 3],
-  MD: [2, 4],
-  LG: [3, 5],
-  OUTPOST: [1, 1],
-}
-
 /** Wstępne wagi rozmiaru per teren — do kalibracji w edytorze, jak reszta
  *  configu w projekcie. `forest` to dzisiejszy fallback/domyślna kategoria w
  *  `classifySettlementTerrain` — najbliżej odpowiada „przyjaznym równinom" z
  *  draftu, którym nie ma osobnej kategorii terenu w kodzie. `OUTPOST: 0`
- *  everywhere — `rollVillageSize` only ever iterates `SM`/`MD`/`LG` (see
- *  below), outposts are decided separately by `settlementGenerator.ts`. */
+ *  everywhere — `rollVillageSize` only ever iterates normal sizes (see
+ *  below), outposts are decided separately by `settlementGenerator.ts`.
+ *  Weights for SM+MD+LG+XL sum to 1.0 per terrain. */
 const SIZE_WEIGHTS: Record<SettlementTerrain, Record<VillageSize, number>> = {
-  forest: { SM: 0.2, MD: 0.4, LG: 0.4, OUTPOST: 0 },
-  ocean: { SM: 0.3, MD: 0.45, LG: 0.25, OUTPOST: 0 },
-  mountain: { SM: 0.65, MD: 0.3, LG: 0.05, OUTPOST: 0 },
-  desert: { SM: 0.65, MD: 0.3, LG: 0.05, OUTPOST: 0 },
-  swamp: { SM: 0.6, MD: 0.3, LG: 0.1, OUTPOST: 0 },
+  forest: { SM: 0.18, MD: 0.35, LG: 0.32, XL: 0.15, OUTPOST: 0 },
+  ocean: { SM: 0.28, MD: 0.4, LG: 0.25, XL: 0.07, OUTPOST: 0 },
+  mountain: { SM: 0.6, MD: 0.28, LG: 0.1, XL: 0.02, OUTPOST: 0 },
+  desert: { SM: 0.6, MD: 0.28, LG: 0.1, XL: 0.02, OUTPOST: 0 },
+  swamp: { SM: 0.55, MD: 0.28, LG: 0.12, XL: 0.05, OUTPOST: 0 },
 }
+
+const ROLLED_SIZES: readonly RolledVillageSize[] = ['SM', 'MD', 'LG', 'XL']
 
 /** Chance a family is a lone adult vs. a couple (`SOLO_CHANCE`), and — given
  *  a couple — the additional chance they also have a child
@@ -87,12 +181,12 @@ const CHILD_SCALE_RANGE: readonly [number, number] = [0.5, 0.8]
  *  settlement's family count is drawn from (see `SIZE_WEIGHTS`). Never
  *  `OUTPOST` — that's decided separately by `settlementGenerator.ts` (a
  *  resource+terrain condition, not part of this weighted roll). */
-export function rollVillageSize(terrain: SettlementTerrain, seed: number): Exclude<VillageSize, 'OUTPOST'> {
+export function rollVillageSize(terrain: SettlementTerrain, seed: number): RolledVillageSize {
   const random = createSeededRandom(seed ^ 0x5127e1)
   const weights = SIZE_WEIGHTS[terrain]
   const roll = random()
   let cumulative = 0
-  for (const size of ['SM', 'MD', 'LG'] as const) {
+  for (const size of ROLLED_SIZES) {
     cumulative += weights[size]
     if (roll < cumulative) return size
   }
@@ -100,7 +194,7 @@ export function rollVillageSize(terrain: SettlementTerrain, seed: number): Exclu
 }
 
 function familyCountForSize(size: VillageSize, seed: number): number {
-  const [min, max] = FAMILY_COUNT_RANGE[size]
+  const [min, max] = villageSizeConfig(size).familyCount
   const random = createSeededRandom(seed ^ 0x7a11ee)
   return min + Math.floor(random() * (max - min + 1))
 }

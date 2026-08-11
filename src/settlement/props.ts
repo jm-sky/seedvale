@@ -1,15 +1,16 @@
 import * as THREE from 'three'
 import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
-import type { VillageSize } from './families'
 import type { SettlementSite } from './findSettlementSite'
 import type { FoodSourceType } from './settlementGenerator'
 import type { ClearingLayout } from './villageClearing'
+import type { VillageLandmarkPlan, VillagePlan } from './villagePlan'
 import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
 import { distanceToSegment } from '../math/segment'
 import { createSparks, type Sparks } from '../shared/getFireParticles'
 import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, type TreeGrowthStage, visualScale } from '../world/treeLifecycle'
+import { type VillageSize, villageSizeConfig } from './families'
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
@@ -1253,6 +1254,35 @@ function findFlatSpot(
   return best
 }
 
+
+/** Prefer a planned landmark position; `findFlatSpot` only micro-corrects
+ *  around that candidate (plan 047 §9.11) — it must not invent a new layout. */
+function placeFromLandmark(
+  site: { x: number, z: number },
+  landmark: VillageLandmarkPlan | undefined,
+  fallbackDx: number,
+  fallbackDz: number,
+  sampleHeight: (x: number, z: number) => number,
+  waterLevel: number,
+  random: () => number,
+): { x: number, z: number } {
+  if (landmark) {
+    return findFlatSpot(
+      site,
+      landmark.x - site.x,
+      landmark.z - site.z,
+      sampleHeight,
+      waterLevel,
+      random,
+    )
+  }
+  return findFlatSpot(site, fallbackDx, fallbackDz, sampleHeight, waterLevel, random)
+}
+
+function landmarkOf(plan: VillagePlan | undefined, kind: VillageLandmarkPlan['kind'], index = 0) {
+  return plan?.landmarks.find((l) => l.kind === kind && l.index === index)
+}
+
 export async function buildSettlementProps(
   site: SettlementSite,
   sampleHeight: (x: number, z: number) => number,
@@ -1285,6 +1315,9 @@ export async function buildSettlementProps(
    *  `createSettlement.ts` only when `plantForest` is set) — kept out of the
    *  forest belt via `blocksPathOrClearing`, same as the house↔core paths. */
   roadSegments: readonly RoadCorridorSegment[] = [],
+  /** Authoritative layout (plan 047). When present, prop positions come from
+   *  planned landmarks; `findFlatSpot` only corrects locally. */
+  plan?: VillagePlan,
 ): Promise<{ group: THREE.Group, landmarks: SettlementLandmarks, houseLights: HouseLight[] }> {
   const group = new THREE.Group()
   group.name = 'settlement'
@@ -1301,12 +1334,17 @@ export async function buildSettlementProps(
 
   const coreRandom = createSeededRandom(seed ^ 0x5a17e)
 
+  const wellLm = landmarkOf(plan, 'well')
+  const wellX = wellLm?.x ?? site.x
+  const wellZ = wellLm?.z ?? site.z
   const well = createWell()
-  placeOnGround(well, site.x, site.z, sampleHeight)
+  placeOnGround(well, wellX, wellZ, sampleHeight)
   group.add(well)
-  landmarks.well.set(site.x, sampleHeight(site.x, site.z), site.z)
+  landmarks.well.set(wellX, sampleHeight(wellX, wellZ), wellZ)
 
-  const { x: stockX, z: stockZ } = findFlatSpot(site, 4, 1.5, sampleHeight, waterLevel, coreRandom)
+  const { x: stockX, z: stockZ } = placeFromLandmark(
+    site, landmarkOf(plan, 'stockpile', 0), 4, 1.5, sampleHeight, waterLevel, coreRandom,
+  )
   const stockpile = await loadPropOrFallback(
     '/models/settlement/logs.glb',
     0.9,
@@ -1316,7 +1354,9 @@ export async function buildSettlementProps(
   group.add(stockpile)
   landmarks.stockpile.set(stockX, sampleHeight(stockX, stockZ), stockZ)
 
-  const { x: gardenX, z: gardenZ } = findFlatSpot(site, -2.5, 5, sampleHeight, waterLevel, coreRandom)
+  const { x: gardenX, z: gardenZ } = placeFromLandmark(
+    site, landmarkOf(plan, 'garden', 0), -2.5, 5, sampleHeight, waterLevel, coreRandom,
+  )
   const garden = await loadPropOrFallback(
     '/models/settlement/garden.glb',
     1.2,
@@ -1327,7 +1367,9 @@ export async function buildSettlementProps(
   landmarks.garden.set(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
 
   if (foodSourceType === 'field') {
-    const { x: wheatX, z: wheatZ } = findFlatSpot(site, -2.5, 8.2, sampleHeight, waterLevel, coreRandom)
+    const { x: wheatX, z: wheatZ } = placeFromLandmark(
+      site, landmarkOf(plan, 'field', 0), -2.5, 8.2, sampleHeight, waterLevel, coreRandom,
+    )
     const wheat = createWheatField(0.9 + coreRandom() * 0.3, coreRandom())
     placeOnGround(wheat, wheatX, wheatZ, sampleHeight)
     group.add(wheat)
@@ -1336,7 +1378,9 @@ export async function buildSettlementProps(
   // Trader's market stall (`landmarks.market`, see `places.ts`'s `workplaceFor`)
   // — built unconditionally like well/garden/stockpile, whether or not this
   // settlement's families happen to roll a trader.
-  const { x: marketX, z: marketZ } = findFlatSpot(site, 2, -5, sampleHeight, waterLevel, coreRandom)
+  const { x: marketX, z: marketZ } = placeFromLandmark(
+    site, landmarkOf(plan, 'market', 0), 2, -5, sampleHeight, waterLevel, coreRandom,
+  )
   const marketCrate = await loadPropOrFallback('/models/settlement/crate.glb', 0.6, () => createCrate(1))
   placeOnGround(marketCrate, marketX, marketZ, sampleHeight)
   group.add(marketCrate)
@@ -1387,11 +1431,14 @@ export async function buildSettlementProps(
     group.add(barrel)
   }
 
-  // `size !== 'SM'` would also be true for 'OUTPOST' (plan 032 §7) — a lone
-  // resident's cabin doesn't get a village campfire, so this is explicit
-  // about which two sizes actually qualify instead of just excluding SM.
-  if (size === 'MD' || size === 'LG') {
-    const { x: fireX, z: fireZ } = findFlatSpot(site, -4.5, -2, sampleHeight, waterLevel, coreRandom)
+  // Infrastructure counts come from centralized `VILLAGE_SIZE_CONFIG` (plan
+  // 047) — OUTPOST/SM stay without a village campfire; MD+ get one; LG/XL
+  // get a second stockpile. Do not re-encode size thresholds here.
+  const infra = villageSizeConfig(size).infrastructure
+  if (infra.campfires > 0) {
+    const { x: fireX, z: fireZ } = placeFromLandmark(
+      site, landmarkOf(plan, 'campfire', 0), -4.5, -2, sampleHeight, waterLevel, coreRandom,
+    )
     const campfire = createCampfire()
     placeOnGround(campfire, fireX, fireZ, sampleHeight)
     group.add(campfire)
@@ -1403,8 +1450,10 @@ export async function buildSettlementProps(
       flame,
     }
   }
-  if (size === 'LG') {
-    const { x: stock2X, z: stock2Z } = findFlatSpot(site, 5.5, -2.5, sampleHeight, waterLevel, coreRandom)
+  if (infra.stockpiles > 1) {
+    const { x: stock2X, z: stock2Z } = placeFromLandmark(
+      site, landmarkOf(plan, 'stockpile', 1), 5.5, -2.5, sampleHeight, waterLevel, coreRandom,
+    )
     const stockpile2 = await loadPropOrFallback(
       '/models/settlement/logs.glb',
       0.9,
