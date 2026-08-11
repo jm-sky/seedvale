@@ -564,6 +564,32 @@ export function createBush(scale = 1): THREE.Group {
   return bush
 }
 
+/** Tight cluster of three small trees — visual for the prey `thicket`
+ *  spawner (`createFauna.ts`). Origin at feet; footprint ~2.5 m at scale 1.
+ *  `variant` (0..1) jitters tree scales/offsets so two thickets don't look
+ *  identical. Reuses `createTree` so foliage wind matches other procedural
+ *  crowns. */
+export function createThicket(scale = 1, variant = 0.5): THREE.Group {
+  const group = new THREE.Group()
+  // Equilateral-ish triangle around the origin — reads as a small grove,
+  // not a single landmark tree.
+  const placements: Array<{ angle: number, radius: number, size: number }> = [
+    { angle: 0.15 + variant * 0.4, radius: 0.85, size: 0.72 },
+    { angle: 2.25 + variant * 0.35, radius: 0.95, size: 0.58 },
+    { angle: 4.05 + variant * 0.3, radius: 0.8, size: 0.65 },
+  ]
+  for (let i = 0; i < placements.length; i++) {
+    const p = placements[i]!
+    const sizeJitter = 0.9 + ((variant * (i + 3)) % 1) * 0.25
+    const tree = createTree(scale * p.size * sizeJitter)
+    const r = p.radius * scale * (0.9 + ((variant * (i + 5)) % 1) * 0.2)
+    tree.position.set(Math.sin(p.angle) * r, 0, Math.cos(p.angle) * r)
+    tree.rotation.y = variant * 4.2 + i * 1.7
+    group.add(tree)
+  }
+  return group
+}
+
 export function createCactus(scale = 1): THREE.Group {
   const cactus = new THREE.Group()
   const mat = new THREE.MeshStandardMaterial({ color: 0x4d7a4a, flatShading: true })

@@ -26,7 +26,7 @@
 ## Out of scope
 
 - Real underground geometry / biome-based cave generation
-- Thicket / grove meshes
+- Grove meshes (spawner type reserved, not spawned yet)
 - Dig-on-road rejection
 - Interaction / quest prompt changes
 
@@ -34,5 +34,6 @@
 
 - [x] Spawners reject road/path corridors
 - [x] Cave has procedural mouth mesh + label
+- [x] Thicket has three-tree cluster mesh + label (`createThicket`)
 - [x] Technical: `tsc` / lint / build / test
-- [ ] Browser: jaskinia off road, visible rocks, „Zbadaj: jaskinia” still works
+- [ ] Browser: jaskinia off road, visible rocks; zagajnik shows 3 trees; „Zbadaj: …” still works

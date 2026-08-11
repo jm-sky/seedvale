@@ -9,7 +9,7 @@ import {
   prepareProp,
 } from '../assets/loadGltf'
 import { distanceToSegment } from '../math/segment'
-import { createCaveMouth } from '../settlement/props'
+import { createCaveMouth, createThicket } from '../settlement/props'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
@@ -23,6 +23,8 @@ const SPAWNER_ROAD_CLEARANCE = 1
 
 /** Label height above ground for a cave mouth (prop ~1.1 m tall at scale 1). */
 const CAVE_LABEL_HEIGHT = 1.8
+/** Label above a thicket crown (~createTree at ~0.7 scale → crown ~2.5 m). */
+const THICKET_LABEL_HEIGHT = 3.2
 const DEFAULT_SPAWNER_LABEL_HEIGHT = 0.6
 
 export type Fauna = {
@@ -274,13 +276,23 @@ export async function createFauna(
       mouth.rotation.y = Math.atan2(pos.x - settlementCenter.x, pos.z - settlementCenter.z)
       scene.add(mouth)
       spawnerMeshes.push(mouth)
+    } else if (spec.type === 'thicket') {
+      const thicket = createThicket(1, random())
+      thicket.position.set(pos.x, groundY, pos.z)
+      thicket.rotation.y = random() * Math.PI * 2
+      scene.add(thicket)
+      spawnerMeshes.push(thicket)
     }
 
     const el = document.createElement('div')
     el.className = 'npc-label'
     el.textContent = SPAWNER_LABELS[spec.type]
     const label = new CSS2DObject(el)
-    const labelH = spec.type === 'cave' ? CAVE_LABEL_HEIGHT : DEFAULT_SPAWNER_LABEL_HEIGHT
+    const labelH = spec.type === 'cave'
+      ? CAVE_LABEL_HEIGHT
+      : spec.type === 'thicket'
+        ? THICKET_LABEL_HEIGHT
+        : DEFAULT_SPAWNER_LABEL_HEIGHT
     label.position.set(pos.x, groundY + labelH, pos.z)
     scene.add(label)
     spawnerLabels.push({ type: spec.type, object: label, el, marker: null, lastOpacity: -1 })

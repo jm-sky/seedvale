@@ -75,7 +75,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Chase/flee behaviour.
 - Health and damage/death flow via shared `HealthState`.
 - Animal Life hunger/thirst/stamina (`AnimalLifeState`; stamina migrated from former `energy` under plan 045).
-- Prey spawners (cave / thicket) with respawn; placement rejects road/path corridors (`ChunkManager.roadCorridorsNear` + `halfWidth` clearance). Cave has a procedural mouth mesh (`createCaveMouth`) plus CSS2D label; thicket remains label-only.
+- Prey spawners (cave / thicket) with respawn; placement rejects road/path corridors (`ChunkManager.roadCorridorsNear` + `halfWidth` clearance). Cave has a procedural mouth mesh (`createCaveMouth`) plus CSS2D label; thicket has a three-tree cluster (`createThicket`) plus label.
 - Player-awareness/flee behaviour.
 - Hungry wild predators can choose chase/attack vs flee via pure `predatorHumanDecision` (plan 056): hunger vs proximity/fire/crowd; torch position joins `litFires`; nearby-human count is precomputed once per frame from loaded NPCs; contact bites call `damageHealth` on `player.health` (`damageVsHuman`). Wolves also get close territorial (~30% inside panic range when not already attacking from hunger) and retaliation after a player hit (75% when HP ≥ 40%, else flee). No death UI yet.
 - Exhaustion gates sustained chase/flee sprinting.
