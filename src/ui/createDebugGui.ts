@@ -123,6 +123,50 @@ export function createDebugGui(
       .name('Noise scale')
       .onFinishChange(handlers.onTerrainChange),
   )
+  terrainControllers.push(
+    terrain
+      .add(config.terrain, 'detailAmplitude', 0, 1.5, 0.01)
+      .name('Detail amplitude')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+
+  const hills = terrain.addFolder('Hills / valleys')
+  terrainControllers.push(
+    hills
+      .add(config.terrain, 'hillsScale', 80, 1200, 10)
+      .name('Hills scale')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    hills
+      .add(config.terrain, 'hillsAmplitude', 0, 1, 0.01)
+      .name('Hills amplitude')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    hills
+      .add(config.terrain.hillsFbm, 'octaves', 1, 6, 1)
+      .name('Hills octaves')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    hills
+      .add(config.terrain.hillsFbm, 'persistence', 0.2, 0.9, 0.01)
+      .name('Hills persistence')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    hills
+      .add(config.terrain.hillsFbm, 'lacunarity', 1.2, 3, 0.05)
+      .name('Hills lacunarity')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    hills
+      .add(config.terrain.hillsFbm, 'exponentiation', 0.5, 3, 0.05)
+      .name('Hills exponentiation')
+      .onFinishChange(handlers.onTerrainChange),
+  )
 
   const fbm = terrain.addFolder('FBM')
   terrainControllers.push(

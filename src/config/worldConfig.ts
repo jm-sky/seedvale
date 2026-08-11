@@ -50,8 +50,15 @@ export type WorldConfig = {
     flatShading: boolean
     heightScale: number
     waterLevel: number
-    /** Larger = smoother hills. */
+    /** Larger = smoother local surface detail. */
     noiseScale: number
+    /** Scales local detail FBM relative to macro/hills structure (1 = full). */
+    detailAmplitude: number
+    /** Medium-scale hills/valleys wavelength (world units). */
+    hillsScale: number
+    /** Centered hills/valleys amplitude (0 = off). */
+    hillsAmplitude: number
+    hillsFbm: FbmParams
     fbm: FbmParams
     biome: {
       noiseScale: number
@@ -115,12 +122,21 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       flatShading: false,
       heightScale: 18,
       waterLevel: 0.45,
-      noiseScale: 72,
-      fbm: {
-        octaves: 5,
+      noiseScale: 105,
+      detailAmplitude: 0.65,
+      hillsScale: 420,
+      hillsAmplitude: 0.34,
+      hillsFbm: {
+        octaves: 3,
         persistence: 0.55,
         lacunarity: 2.0,
-        exponentiation: 2.4,
+        exponentiation: 1.15,
+      },
+      fbm: {
+        octaves: 4,
+        persistence: 0.65,
+        lacunarity: 2.0,
+        exponentiation: 1.35,
       },
       biome: {
         noiseScale: 96,
@@ -137,10 +153,10 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         mountainScale: 1800,
         mountainFbm: { octaves: 2, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.2 },
         mountainThreshold: 0.62,
-        mountainThresholdWidth: 0.12,
+        mountainThresholdWidth: 0.14,
         worleyCellSize: 260,
-        ridgeSharpness: 2.2,
-        mountainGain: 0.75,
+        ridgeSharpness: 2.0,
+        mountainGain: 0.88,
         oceanThreshold: 0.32,
         coastThreshold: 0.45,
         oceanDetailWeight: 0.25,
@@ -233,6 +249,12 @@ export function applyStoredTerrain(
   if (typeof t.heightScale === 'number') target.heightScale = t.heightScale
   if (typeof t.waterLevel === 'number') target.waterLevel = t.waterLevel
   if (typeof t.noiseScale === 'number') target.noiseScale = t.noiseScale
+  if (typeof t.detailAmplitude === 'number') target.detailAmplitude = t.detailAmplitude
+  if (typeof t.hillsScale === 'number') target.hillsScale = t.hillsScale
+  if (typeof t.hillsAmplitude === 'number') target.hillsAmplitude = t.hillsAmplitude
+  if (t.hillsFbm && typeof t.hillsFbm === 'object') {
+    target.hillsFbm = { ...target.hillsFbm, ...t.hillsFbm }
+  }
   if (t.fbm && typeof t.fbm === 'object') {
     target.fbm = { ...target.fbm, ...t.fbm }
   }

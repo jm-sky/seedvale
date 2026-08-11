@@ -1,6 +1,8 @@
+import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
 import { Color, MathUtils } from 'three'
 import type { BiomeWeights } from './biomeRegions'
 import { LinearSpline } from '../math/linearSpline'
+import { createSeededRandom } from '../world/parseSeed'
 
 const SEABED = new Color(0x2f5244)
 const SAND = new Color(0xd4c090)
@@ -12,13 +14,46 @@ const MUD = new Color(0x4a3f2a)
 /** Road/path corridor — packed dirt/gravel. */
 const DIRT = new Color(0x9c8563)
 
-/** Shore sand band above water (world units). */
-export const SAND_BAND = 0.6
+/** Minimum shore sand band above water (world units) — also the legacy fixed width. */
+export const SAND_BAND_MIN = 0.6
+/** Maximum locally varying shore sand band (world units). */
+export const SAND_BAND_MAX = 3.0
+/** @deprecated Prefer `SAND_BAND_MIN` / `sandBandAt` — kept as the minimum alias. */
+export const SAND_BAND = SAND_BAND_MIN
+
+/** Coast-scale wavelength for beach-width variation (world units). */
+const SAND_BAND_NOISE_SCALE = 560
 
 /** Half-width of the smoothed seabed → sand transition (world units). */
 const SEABED_BLEND = 0.25
-/** Half-width of the smoothed sand → land transition (world units). */
-const LAND_BLEND = 0.35
+/** Base half-width of the smoothed sand → land transition (world units). */
+const LAND_BLEND_BASE = 0.35
+
+const sandBandNoiseCache = new Map<number, NoiseFunction2D>()
+function sandBandNoiseFor(seed: number): NoiseFunction2D {
+  let noise = sandBandNoiseCache.get(seed)
+  if (!noise) {
+    noise = createNoise2D(createSeededRandom(seed ^ 0xb5297a4d))
+    sandBandNoiseCache.set(seed, noise)
+  }
+  return noise
+}
+
+/**
+ * Local beach width above `waterLevel` in `[SAND_BAND_MIN, SAND_BAND_MAX]`.
+ * Deterministic from world seed + world coordinates (same point → same band
+ * across chunks / grass / dig / mesh coloring).
+ */
+export function sandBandAt(wx: number, wz: number, seed: number): number {
+  const n = sandBandNoiseFor(seed)(wx / SAND_BAND_NOISE_SCALE, wz / SAND_BAND_NOISE_SCALE)
+  const t = n * 0.5 + 0.5
+  return SAND_BAND_MIN + (SAND_BAND_MAX - SAND_BAND_MIN) * t
+}
+
+/** Sand→land blend half-width grows slightly with wider beaches. */
+export function landBlendForSandBand(sandBand: number): number {
+  return LAND_BLEND_BASE + 0.15 * Math.max(0, sandBand - SAND_BAND_MIN)
+}
 
 const landTmp = new Color()
 
@@ -97,6 +132,7 @@ export function colorForTerrain(
   heightScale: number,
   biomeWeights: BiomeWeights,
   out: Color,
+  sandBand: number = SAND_BAND_MIN,
 ): void {
   const hNorm = Math.min(
     1,
@@ -116,10 +152,11 @@ export function colorForTerrain(
   out.copy(SEABED).lerpHSL(SAND, seabedToSand)
   if (biomeWeights.swamp > 0) out.lerpHSL(MUD, biomeWeights.swamp * 0.6)
 
+  const landBlend = landBlendForSandBand(sandBand)
   const sandToLand = MathUtils.smoothstep(
     height,
-    waterLevel + SAND_BAND - LAND_BLEND,
-    waterLevel + SAND_BAND + LAND_BLEND,
+    waterLevel + sandBand - landBlend,
+    waterLevel + sandBand + landBlend,
   )
   out.lerpHSL(landTmp, sandToLand)
 }
@@ -133,6 +170,7 @@ export function applySlopeRock(
   height: number,
   waterLevel: number,
   steepness: number,
+  sandBand: number = SAND_BAND_MIN,
 ): void {
   if (height <= waterLevel + 0.05) return
 
@@ -147,8 +185,8 @@ export function applySlopeRock(
 
   // Shore sand: weaker rock so beaches stay sandy
   const shoreFade =
-    height < waterLevel + SAND_BAND
-      ? Math.max(0, (height - waterLevel - 0.05) / (SAND_BAND - 0.05))
+    height < waterLevel + sandBand
+      ? Math.max(0, (height - waterLevel - 0.05) / Math.max(sandBand - 0.05, 0.01))
       : 1
 
   color.lerp(ROCK, t * shoreFade)

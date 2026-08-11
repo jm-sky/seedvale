@@ -1120,3 +1120,26 @@ The smallest coherent implementation is therefore **not** "build the proposed fo
 ```
 
 This keeps 062 small, deterministic and compatible with 063, 058, village generation and the current worker/chunk architecture.
+
+---
+
+## Implementation record (2026-08-11)
+
+Implemented on current code:
+
+- Softened local detail: `noiseScale` 105, FBM octaves 4 / persistence 0.65 / exponentiation 1.35, gentler hardcoded detail warp (`0.012 × 6`).
+- Added `detailAmplitude` (default `0.65`) so local FBM cannot dominate macro structure.
+- Added generation-internal medium-scale hills/valleys (`hillsScale` / `hillsAmplitude` 0.34 / `hillsFbm` + dedicated noise handle). Not exposed as a `ChunkTileData` field.
+- Light mountain gate/ridge retune: threshold width `0.14`, ridge sharpness `2.0`, gain `0.88`.
+- Debug GUI: Detail amplitude + Hills/valleys folder.
+- Tests: `src/terrain/chunkHeightmap.test.ts` (determinism, hills amplitude bound, adjacent-chunk seams, generation-order independence).
+
+### Follow-up polish (browser feedback)
+
+- Variable beach width via `sandBandAt(wx, wz, seed)` in `[0.6, 3.0]` — shared by mesh coloring, bare-ground weight, grass shoreline reject, and dig sand classification.
+- Grass foothills: hard `mountainRidge` reject replaced with smooth density fade (`smoothstep` 0.05→0.5).
+- Gentle anti-monotony defaults: higher detail/hills amplitude, slightly tighter `noiseScale`, slightly higher `mountainGain`.
+
+**Technically verified:** `tsc`, lint, full Vitest, production build (after follow-up).
+
+**Browser / manual verification:** confirmed by user 2026-08-11 — plan marked `done`.

@@ -2,7 +2,7 @@ import { createNoise2D } from 'simplex-noise'
 import * as THREE from 'three'
 import type { ChunkCoord } from './chunkGrid'
 import { createSeededRandom } from '../world/parseSeed'
-import { ROCK_SLOPE_FULL, SAND_BAND } from './biomeColors'
+import { ROCK_SLOPE_FULL, sandBandAt } from './biomeColors'
 import { biomeWeightsAt } from './biomeRegions'
 import { apronOriginWorld, type ChunkTileData, type RegionParams, sampleApronGrid } from './chunkHeightmap'
 import { fbm01, type FbmParams } from './fbm'
@@ -53,8 +53,10 @@ const SLOPE_SAMPLE_STEP = 1.2
 const TREELINE_ALTITUDE = 0.5
 /** Fade grass out over the last 40% below the treeline instead of a hard cutoff. */
 const TREELINE_FADE_START = TREELINE_ALTITUDE * 0.6
-/** Reject candidates sitting on a strong mountain ridge crest, regardless of altitude. */
-const MOUNTAIN_RIDGE_REJECT = 0.3
+/** Mountain ridge where foothill grass starts thinning (smoothstep low). */
+const MOUNTAIN_RIDGE_FADE_START = 0.05
+/** Mountain ridge where grass density reaches ~0 (smoothstep high). */
+const MOUNTAIN_RIDGE_FADE_END = 0.5
 /** Reject candidates sitting on a road/path corridor (`tile.roadTint`, `chunkHeightmap.ts`). */
 const ROAD_TINT_REJECT = 0.15
 
@@ -523,13 +525,13 @@ export function createGrassSystem(): GrassSystem {
       const wz = coord.cz * chunkSize + localZ
 
       const h = sample(tile.heights, wx, wz)
-      if (h <= waterLevel + SAND_BAND) continue // underwater/shoreline sand
+      const sandBand = sandBandAt(wx, wz, seed)
+      if (h <= waterLevel + sandBand) continue // underwater/shoreline sand
 
       const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
       if (altitude > TREELINE_ALTITUDE) continue // above treeline
 
       const ridge = sample(tile.mountainRidge, wx, wz)
-      if (ridge > MOUNTAIN_RIDGE_REJECT) continue // bare ridge crest
 
       if (sample(tile.roadTint, wx, wz) > ROAD_TINT_REJECT) continue // road/path corridor
 
@@ -554,11 +556,19 @@ export function createGrassSystem(): GrassSystem {
           0,
           Math.min(1, (altitude - TREELINE_FADE_START) / (TREELINE_ALTITUDE - TREELINE_FADE_START)),
         )
+      // Soft foothill thinning: grass density fades with mountainRidge instead
+      // of a hard reject line at the plains→mountain boundary.
+      const ridgeFade =
+        1 -
+        THREE.MathUtils.smoothstep(ridge, MOUNTAIN_RIDGE_FADE_START, MOUNTAIN_RIDGE_FADE_END)
       // Sparse-but-present even on dry ground; thick on humid lowlands. Desert
       // thins it out to near-nothing (bare sand, not a lawn).
       const density =
-        Math.max(0, Math.min(1, 0.55 + moisture * 0.45)) * altitudeFade * (1 - biome.desert * 0.9)
-      if (random() > density) continue
+        Math.max(0, Math.min(1, 0.55 + moisture * 0.45)) *
+        altitudeFade *
+        ridgeFade *
+        (1 - biome.desert * 0.9)
+      if (density <= 0 || random() > density) continue
 
       const rotationY = random() * Math.PI * 2
       const jitter = 1 + (random() * 2 - 1) * 0.15

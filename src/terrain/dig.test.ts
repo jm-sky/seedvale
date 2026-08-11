@@ -14,6 +14,7 @@ function env(overrides: Partial<DigEnv> = {}): DigEnv {
     sampleHeight: () => WATER_LEVEL + 2,
     sampleMountainRidge: () => 0,
     waterLevel: WATER_LEVEL,
+    seed: 42,
     ...overrides,
   }
 }

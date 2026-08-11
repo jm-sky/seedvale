@@ -159,7 +159,18 @@ export type ChunkTileParams = {
   seed: number
   heightScale: number
   waterLevel: number
+  /** World-space wavelength of local surface detail FBM. Larger = broader bumps. */
   noiseScale: number
+  /** Multiplier on local detail FBM contribution (1 = legacy full weight). Keeps
+   *  high-frequency surface noise from overpowering macro / hills structure. */
+  detailAmplitude: number
+  /** Medium-scale hills/valleys wavelength (world units) — between local
+   *  `noiseScale` and macro `continentScale` / `mountainScale`. */
+  hillsScale: number
+  /** Amplitude of the centered hills/valleys term (0 = off). Applied on land
+   *  only via `landWeight`; generation-internal — not a ChunkTileData field. */
+  hillsAmplitude: number
+  hillsFbm: FbmParams
   fbm: FbmParams
   biome: {
     noiseScale: number
@@ -235,11 +246,18 @@ export type ChunkTileData = {
 type NoiseHandles = {
   height: NoiseFunction2D
   warp: NoiseFunction2D
+  /** Medium-scale hills/valleys — independent of local detail and macro axes. */
+  hills: NoiseFunction2D
   biome: NoiseFunction2D
   continent: NoiseFunction2D
   mountain: NoiseFunction2D
   moistureRegion: NoiseFunction2D
 }
+
+/** Soft domain warp for local detail — lower freq/amp than the previous
+ *  (0.02 × 12) pair so warp does not invent sharp local pits/peaks. */
+const DETAIL_WARP_FREQ = 0.012
+const DETAIL_WARP_AMP = 6
 
 /** Piecewise-linear continentalness → height bias, in the same normalized units as
  *  the detail FBM's `n` (roughly [0,1] before this bias). Built once at module scope. */
@@ -262,6 +280,7 @@ function noiseHandlesFor(seed: number): NoiseHandles {
     handles = {
       height: createNoise2D(createSeededRandom(seed)),
       warp: createNoise2D(createSeededRandom(seed ^ 0x9e3779b9)),
+      hills: createNoise2D(createSeededRandom(seed ^ 0x165667b1)),
       biome: createNoise2D(createSeededRandom(seed ^ 0x85ebca6b)),
       continent: createNoise2D(createSeededRandom(seed ^ 0xc2b2ae35)),
       mountain: createNoise2D(createSeededRandom(seed ^ 0x27d4eb2f)),
@@ -285,7 +304,18 @@ function sampleRawTexel(
   mountainRidge: number
   moistureRegion: number
 } {
-  const { heightScale, waterLevel, noiseScale, fbm, biome, region } = params
+  const {
+    heightScale,
+    waterLevel,
+    noiseScale,
+    detailAmplitude,
+    hillsScale,
+    hillsAmplitude,
+    hillsFbm,
+    fbm,
+    biome,
+    region,
+  } = params
 
   // Macro region axes — decorrelated so mountain ranges can cut across continents
   // at any elevation above sea level, instead of always coinciding with the
@@ -329,11 +359,21 @@ function sampleRawTexel(
     ) * landWeight // no ridges below sea/coast
   const mountainRidge = ridge01 * mountainGate
 
-  const wxw = wx + noise.warp(wx * 0.02, wz * 0.02) * 12
-  const wzw = wz + noise.warp(wx * 0.02 + 40, wz * 0.02 + 40) * 12
+  // Hierarchy: macro bias + mountain ridge, then medium hills/valleys, then
+  // soft local surface detail. Hills stay generation-internal (no tile field).
+  const hills01 = fbm01(noise.hills, wx / hillsScale, wz / hillsScale, hillsFbm)
+  const hillsTerm = (hills01 - 0.5) * hillsAmplitude * landWeight
+
+  const wxw = wx + noise.warp(wx * DETAIL_WARP_FREQ, wz * DETAIL_WARP_FREQ) * DETAIL_WARP_AMP
+  const wzw =
+    wz + noise.warp(wx * DETAIL_WARP_FREQ + 40, wz * DETAIL_WARP_FREQ + 40) * DETAIL_WARP_AMP
   const n = fbm01(noise.height, wxw / noiseScale, wzw / noiseScale, fbm)
 
-  const nCombined = n * detailWeight + regionBias + mountainRidge * region.mountainGain
+  const nCombined =
+    n * detailWeight * detailAmplitude +
+    regionBias +
+    hillsTerm +
+    mountainRidge * region.mountainGain
   const floorH = nCombined * heightScale
   const h = floorH < waterLevel ? waterLevel : floorH
 

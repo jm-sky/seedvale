@@ -4,7 +4,7 @@
 **Created:** 2026-08-11
 **Priority:** 🔴 high
 **Effort:** L–XL
-**Depends on:** ~~028~~, terrain generation, existing vegetation/tree placement
+**Depends on:** ~~028~~, ~~062~~, existing vegetation/tree placement
 
 ## Cel
 

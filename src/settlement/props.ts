@@ -87,6 +87,53 @@ export const DOCK_SPECS = [
   { url: '/models/settlement/dock_a.glb', height: 1.0 },
 ] as const
 
+/** Chunk-environment rocks / fallen logs (plan 065) — previously procedural-only. */
+export const ROCK_SPECS = [
+  { url: '/models/nature/rock_a.glb', height: 1.2 },
+] as const
+
+export const ROCK_CLUSTER_SPECS = [
+  { url: '/models/nature/rock_cluster_a.glb', height: 0.9 },
+] as const
+
+export const FALLEN_LOG_SPECS = [
+  { url: '/models/nature/fallen_log_a.glb', height: 0.55 },
+] as const
+
+/** Visible ore piles (`terrain/resourceDeposits.ts`, plan 065). */
+export const RESOURCE_GOLD_SPECS = [
+  { url: '/models/nature/resource_gold_1.glb', height: 1.1 },
+] as const
+
+export const RESOURCE_ROCK_SPECS = [
+  { url: '/models/nature/resource_rock_1.glb', height: 1.1 },
+] as const
+
+/**
+ * Recolor a cloned prop without mutating shared GLTF materials
+ * (`loadGltf` marks cache materials `sharedGpu`). Clones each material,
+ * clears the shared flag so `disposeObject3D` can free the tint instance,
+ * then applies `hex`.
+ */
+export function tintPropMaterials(root: THREE.Object3D, hex: number): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const apply = (mat: THREE.Material): THREE.Material => {
+      const next = mat.clone()
+      next.userData = { ...next.userData, sharedGpu: false }
+      const colored = next as THREE.Material & { color?: THREE.Color }
+      if (colored.color) colored.color.setHex(hex)
+      return next
+    }
+    if (Array.isArray(mesh.material)) {
+      mesh.material = mesh.material.map(apply)
+    } else {
+      mesh.material = apply(mesh.material)
+    }
+  })
+}
+
 export function placeOnGround(
   mesh: THREE.Object3D,
   x: number,
@@ -1000,6 +1047,21 @@ export function cloneProp(
   const prop = src.clone(true)
   prop.scale.multiplyScalar(scale)
   prop.rotation.y = Math.random() * Math.PI * 2
+  return prop
+}
+
+/** Like `cloneProp`, but yaw comes from the caller (seeded / placement) —
+ *  avoids `Math.random()` so chunk reload and ore piles stay deterministic. */
+export function clonePropWithYaw(
+  templates: THREE.Object3D[],
+  index: number,
+  scale: number,
+  rotationY: number,
+): THREE.Object3D {
+  const src = templates[index % templates.length]!
+  const prop = src.clone(true)
+  prop.scale.multiplyScalar(scale)
+  prop.rotation.y = rotationY
   return prop
 }
 

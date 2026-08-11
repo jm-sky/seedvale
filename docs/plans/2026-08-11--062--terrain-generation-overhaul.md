@@ -1,6 +1,6 @@
 # Plan: Terrain generation overhaul — naturalniejsze ukształtowanie terenu
 
-**Status:** `planned`
+**Status:** `done`
 **Created:** 2026-08-11
 **Priority:** 🔴 high
 **Effort:** L–XL
@@ -491,34 +491,34 @@ Nie akceptować znaczącego wzrostu kosztu generacji bez wyraźnej poprawy wizua
 
 ### Terrain shape
 
-* [ ] teren wygląda naturalniej niż obecnie na kilku seedach,
-* [ ] przypadkowe ostre pagórki są rzadsze,
-* [ ] przypadkowe głębokie dołki są rzadsze,
-* [ ] wzgórza mają większą ciągłość przestrzenną,
-* [ ] doliny mają naturalniejsze kształty,
-* [ ] góry pozostają wyraźnie bardziej strome od zwykłych wzgórz,
-* [ ] przejścia pomiędzy formami terenu są płynne.
+* [x] teren wygląda naturalniej niż obecnie na kilku seedach,
+* [x] przypadkowe ostre pagórki są rzadsze,
+* [x] przypadkowe głębokie dołki są rzadsze,
+* [x] wzgórza mają większą ciągłość przestrzenną,
+* [x] doliny mają naturalniejsze kształty,
+* [x] góry pozostają wyraźnie bardziej strome od zwykłych wzgórz,
+* [x] przejścia pomiędzy formami terenu są płynne.
 
 ### World structure
 
-* [ ] oceany i wybrzeża nadal wyglądają poprawnie,
-* [ ] makro-regiony nadal są czytelne,
-* [ ] istniejące biomy nie tracą swojej charakterystyki,
-* [ ] teren nadal współpracuje z istniejącymi road/clearing modifications.
+* [x] oceany i wybrzeża nadal wyglądają poprawnie,
+* [x] makro-regiony nadal są czytelne,
+* [x] istniejące biomy nie tracą swojej charakterystyki,
+* [x] teren nadal współpracuje z istniejącymi road/clearing modifications.
 
 ### Technical
 
-* [ ] deterministyczność względem seed jest zachowana,
-* [ ] chunk seams pozostają poprawne,
-* [ ] worker pipeline pozostaje bez zmian architektonicznych,
-* [ ] nie powstaje drugi system generowania wysokości,
-* [ ] testy istniejącego terrain/chunk pipeline przechodzą.
+* [x] deterministyczność względem seed jest zachowana,
+* [x] chunk seams pozostają poprawne,
+* [x] worker pipeline pozostaje bez zmian architektonicznych,
+* [x] nie powstaje drugi system generowania wysokości,
+* [x] testy istniejącego terrain/chunk pipeline przechodzą.
 
 ### Performance
 
-* [ ] brak istotnego pogorszenia czasu generacji chunków,
-* [ ] brak niepotrzebnego wzrostu transferu worker ↔ main thread,
-* [ ] dodatkowe warstwy noise są uzasadnione wizualnym efektem.
+* [x] brak istotnego pogorszenia czasu generacji chunków,
+* [x] brak niepotrzebnego wzrostu transferu worker ↔ main thread,
+* [x] dodatkowe warstwy noise są uzasadnione wizualnym efektem.
 
 ---
 

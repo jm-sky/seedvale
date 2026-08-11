@@ -38,11 +38,15 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 ### World / terrain
 
 - Procedural terrain with chunked generation.
+- Height composition uses macro continental bias + mountain ridges, a medium-scale hills/valleys term, and softened local detail FBM (`detailAmplitude`; plan 062 done).
+- Shore sand band width varies locally in world space (`sandBandAt`, ~0.6–3 units); grass thins smoothly into mountain foothills instead of a hard ridge cutoff.
 - Worker pool for terrain generation.
 - Chunk streaming with load/unload radii and pinned home chunks.
 - Large-scale terrain regions including ocean/coast/mountain behaviour.
 - Biome/moisture-region support and environment generation.
 - Per-chunk vegetation and natural environment elements.
+- Chunk environment rocks and fallen logs use GLB templates (`rock_a` / `rock_cluster_a` / `fallen_log_a`) with procedural fallbacks (plan 065); campfire/monolith/ruins stay procedural.
+- Visible iron/coal/gold deposits stream GLB resource nodes (`resource_gold_1` / `resource_rock_1` with iron/coal tint) via `ResourceDeposits` (plan 065).
 - Procedural landmark pipeline exists and is currently being extended/verified under plan 049.
 - Ocean, sky, lighting, day/night cycle and fog are implemented.
 - Post-processing includes EffectComposer, N8AO and SMAA.

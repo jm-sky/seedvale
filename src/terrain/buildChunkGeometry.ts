@@ -7,7 +7,7 @@ import {
   applyRoadTint,
   applySlopeRock,
   colorForTerrain,
-  SAND_BAND,
+  sandBandAt,
 } from './biomeColors'
 import { biomeWeightsAt } from './biomeRegions'
 import {
@@ -114,13 +114,14 @@ function bareGroundWeight(
   height: number,
   waterLevel: number,
   desert: number,
+  sandBand: number,
 ): number {
   // `applyRoadTint` saturates at roadTint = 1; reach full "bare" earlier than
   // that so a path that already reads as dirt also reads as dirt-grained.
   const road = Math.min(1, roadTint * 2)
   const sand =
     1 -
-    THREE.MathUtils.smoothstep(height, waterLevel + SAND_BAND * 0.5, waterLevel + SAND_BAND * 1.5)
+    THREE.MathUtils.smoothstep(height, waterLevel + sandBand * 0.5, waterLevel + sandBand * 1.5)
   return Math.min(1, Math.max(road, sand, desert))
 }
 
@@ -143,6 +144,7 @@ export function buildChunkGeometry(
   flatShading: boolean,
   region: RegionParams,
   detailNormal: DetailNormalConfig,
+  seed: number,
 ): ChunkMeshResult {
   const step = chunkSize / (resolution - 1)
   const apronRes = resolution + 2
@@ -208,18 +210,21 @@ export function buildChunkGeometry(
     const steepness = 1 - ny
     const altitude01 = (h - waterLevel) / Math.max(heightScale, 0.001)
     const biomeWeights = biomeWeightsAt(moistureRegion, altitude01, region)
+    const wx = chunkOriginX + x
+    const wz = chunkOriginZ + z
+    const sandBand = sandBandAt(wx, wz, seed)
 
-    colorForTerrain(h, m, waterLevel, heightScale, biomeWeights, tmp)
-    applySlopeRock(tmp, h, waterLevel, steepness)
+    colorForTerrain(h, m, waterLevel, heightScale, biomeWeights, tmp, sandBand)
+    applySlopeRock(tmp, h, waterLevel, steepness, sandBand)
     applyMountainRock(tmp, mountainRidge, h, waterLevel, heightScale)
     applyOceanDepthTint(tmp, continentalness, h, waterLevel)
-    applyMicroTint(tmp, h, waterLevel, chunkOriginX + x, chunkOriginZ + z)
+    applyMicroTint(tmp, h, waterLevel, wx, wz)
     applyRoadTint(tmp, roadTint)
 
     colors[i * 3] = tmp.r
     colors[i * 3 + 1] = tmp.g
     colors[i * 3 + 2] = tmp.b
-    bareGround[i] = bareGroundWeight(roadTint, h, waterLevel, biomeWeights.desert)
+    bareGround[i] = bareGroundWeight(roadTint, h, waterLevel, biomeWeights.desert, sandBand)
   }
 
   geometry.setAttribute('normal', new THREE.BufferAttribute(normalAttr, 3))

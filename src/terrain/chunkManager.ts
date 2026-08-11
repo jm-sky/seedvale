@@ -11,6 +11,7 @@ import {
   BUSH_SPECS,
   CACTUS_SPECS,
   cloneProp,
+  clonePropWithYaw,
   createBush,
   createCactus,
   createCampfire,
@@ -22,9 +23,12 @@ import {
   createSmallRuins,
   createStoneCircle,
   createTree,
+  FALLEN_LOG_SPECS,
   loadPropTemplates,
   placeOnGround,
   REED_SPECS,
+  ROCK_CLUSTER_SPECS,
+  ROCK_SPECS,
   TREE_SPECS,
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
@@ -74,11 +78,20 @@ const getTreeTemplates = memoTemplates(TREE_SPECS, () => createTree(1))
 const getBushTemplates = memoTemplates(BUSH_SPECS, () => createBush(1))
 const getCactusTemplates = memoTemplates(CACTUS_SPECS, () => createCactus(1))
 const getReedTemplates = memoTemplates(REED_SPECS, () => createReed(1))
+const getRockTemplates = memoTemplates(ROCK_SPECS, () => createLargeRock(1))
+const getRockClusterTemplates = memoTemplates(ROCK_CLUSTER_SPECS, () => createRockCluster(1))
+const getFallenLogTemplates = memoTemplates(FALLEN_LOG_SPECS, () => createFallenLog(1))
 
-/** Procedural (no-GLB) decorative prop for one `EnvironmentPlacement` — unlike
- *  vegetation, these never need template loading, so `ensureLoaded` can build
- *  them synchronously. */
-function createEnvironmentProp(kind: EnvironmentKind, scale: number, variant: number): THREE.Object3D {
+const GLB_ENV_KINDS = new Set<EnvironmentKind>(['fallenLog', 'largeRock', 'rockCluster'])
+
+/** Procedural decorative prop for landmark kinds that stay non-GLB
+ *  (campfire / monolith / ruins / stone circle). Rocks and fallen logs use
+ *  memoized GLB templates with these as `loadPropTemplates` fallbacks. */
+function createProceduralEnvironmentProp(
+  kind: EnvironmentKind,
+  scale: number,
+  variant: number,
+): THREE.Object3D {
   switch (kind) {
     case 'campfire':
       return createCampfire(scale)
@@ -111,6 +124,10 @@ export type ChunkManagerConfig = {
   heightScale: number
   waterLevel: number
   noiseScale: number
+  detailAmplitude: number
+  hillsScale: number
+  hillsAmplitude: number
+  hillsFbm: FbmParams
   fbm: FbmParams
   biome: { noiseScale: number; fbm: FbmParams }
   region: RegionParams
@@ -219,6 +236,8 @@ export type ChunkManager = {
     pos: { x: number, z: number },
     radius: number,
   ) => readonly (TreePresence & { stage: TreeGrowthStage })[]
+  /** World seed — shared with shore/dig helpers (`sandBandAt`). */
+  seed: number
   waterLevel: number
   loadedChunkCount: () => number
   /** Resolves once every listed chunk has finished generating (or failed/cancelled). */
@@ -312,6 +331,10 @@ export function createChunkManager(
     heightScale: config.heightScale,
     waterLevel: config.waterLevel,
     noiseScale: config.noiseScale,
+    detailAmplitude: config.detailAmplitude,
+    hillsScale: config.hillsScale,
+    hillsAmplitude: config.hillsAmplitude,
+    hillsFbm: config.hillsFbm,
     fbm: config.fbm,
     biome: config.biome,
     region: config.region,
@@ -346,6 +369,10 @@ export function createChunkManager(
       heightScale: config.heightScale,
       waterLevel: config.waterLevel,
       noiseScale: config.noiseScale,
+      detailAmplitude: config.detailAmplitude,
+      hillsScale: config.hillsScale,
+      hillsAmplitude: config.hillsAmplitude,
+      hillsFbm: { ...config.hillsFbm },
       fbm: { ...config.fbm },
       biome: { noiseScale: config.biome.noiseScale, fbm: { ...config.biome.fbm } },
       region: {
@@ -457,6 +484,7 @@ export function createChunkManager(
       config.flatShading,
       config.region,
       config.detailNormal,
+      config.seed,
     )
     scene.add(mesh)
     rec.mesh = mesh
@@ -580,9 +608,31 @@ export function createChunkManager(
           return itemMesh
         })
 
+        const needsEnvGlb = tile.environment.some((p) => GLB_ENV_KINDS.has(p.kind))
+        let rockTemplates: THREE.Object3D[] | null = null
+        let rockClusterTemplates: THREE.Object3D[] | null = null
+        let fallenLogTemplates: THREE.Object3D[] | null = null
+        if (needsEnvGlb) {
+          ;[rockTemplates, rockClusterTemplates, fallenLogTemplates] = await Promise.all([
+            getRockTemplates(),
+            getRockClusterTemplates(),
+            getFallenLogTemplates(),
+          ])
+          if (!chunks.has(key)) return
+        }
+
         rec.environment = buildPlacementGroup('chunk-environment', tile.environment, (placement) => {
-          const prop = createEnvironmentProp(placement.kind, placement.scale, placement.variant)
-          prop.rotation.y = placement.rotationY
+          let prop: THREE.Object3D
+          if (placement.kind === 'largeRock' && rockTemplates) {
+            prop = clonePropWithYaw(rockTemplates, 0, placement.scale, placement.rotationY)
+          } else if (placement.kind === 'rockCluster' && rockClusterTemplates) {
+            prop = clonePropWithYaw(rockClusterTemplates, 0, placement.scale, placement.rotationY)
+          } else if (placement.kind === 'fallenLog' && fallenLogTemplates) {
+            prop = clonePropWithYaw(fallenLogTemplates, 0, placement.scale, placement.rotationY)
+          } else {
+            prop = createProceduralEnvironmentProp(placement.kind, placement.scale, placement.variant)
+            prop.rotation.y = placement.rotationY
+          }
           placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
           return prop
         })
@@ -875,6 +925,7 @@ export function createChunkManager(
       return touchedAny
     },
     sampleBaseHeight: (x, z) => sampleHeightAt(x, z, fallbackParams),
+    seed: config.seed,
     waterLevel: config.waterLevel,
     loadedChunkCount: () => chunks.size,
     waitForChunks: (coords) => Promise.all(coords.map((c) => ensureLoaded(c))).then(() => undefined),

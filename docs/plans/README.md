@@ -46,8 +46,8 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md) | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout | 0% | 🔴 high | XL | ~~031~~, 032, 036 |
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
 | [2026-08-11--060--npc-schedule-actions-and-trait-overlays.md](./2026-08-11--060--npc-schedule-actions-and-trait-overlays.md) | Wykonywalne aktywności grafiku NPC + nakładki traits | 0% | 🟡 medium | L | ~~020~~, ~~022~~ |
-| [2026-08-11--062--terrain-generation-overhaul.md](./2026-08-11--062--terrain-generation-overhaul.md) | Poprawić proceduralne generowanie terenu | 0% | 🔴 high| L | ~~001~~, ~~006~~, ~~007~~, ~~028~~ |
-| [2026-08-11--063--forest-regions-and-habitat-distribution.md](./2026-08-11--063--forest-regions-and-habitat-distribution.md) | Rozbudować generowanie lasów tak, aby świat posiadał duże, wyraźne obszary leśne | 0% | 🔴 high| L | ~~028~~ |
+| [2026-08-11--063--forest-regions-and-habitat-distribution.md](./2026-08-11--063--forest-regions-and-habitat-distribution.md) | Rozbudować generowanie lasów tak, aby świat posiadał duże, wyraźne obszary leśne | 0% | 🔴 high | L | ~~028~~, ~~062~~ |
+| [2026-08-11--066--better-visual-effects.md](./2026-08-11--066--better-visual-effects.md) | Lepsze efekty graficzne | 0% | 🟡 medium | S |  |
 
 ---
 
@@ -72,6 +72,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-11--059--inventory-pick-drop-sfx.md](./2026-08-11--059--inventory-pick-drop-sfx.md) | SFX podniesienia / wyrzucenia itemów | 100% | ⚪ low | S | ~~014~~, ~~043~~ |
 | [2026-08-11--061--dig-ux-held-tool-and-level.md](./2026-08-11--061--dig-ux-held-tool-and-level.md) | Dig UX: held tool, kanał 2s, notice kamienia, Wyrównaj | 100% | 🔴 high | M | ~~052~~ |
 | [2026-08-11--064--cave-spawner-road-avoidance-and-visual.md](./2026-08-11--064--cave-spawner-road-avoidance-and-visual.md) | Jaskinia: unikaj drogi + proceduralne wejście | 100% | 🟡 medium | S | ~~010~~, ~~026~~ |
+| [2026-08-11--065--wire-nature-and-ore-models.md](./2026-08-11--065--wire-nature-and-ore-models.md) | GLB skały/pnie + modele złóż (gold/rock + tint) | 100% | 🟡 medium | M | ~~030~~, ~~032~~ |
 
 ---
 
@@ -119,6 +120,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md](./2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md) | Bezpieczeństwo referencji `WorldBundle` + małe refaktory po 053 | ~~053~~ |
 | [2026-08-08--045--health-stamina-threat.md](./2026-08-08--045--health-stamina-threat.md) | Wspólny Health/Stamina dla NPC/fauny/gracza (Threat odłożony — brak nowego konsumenta) | 100% | 🔴 high | L | ~~010~~, ~~022~~ |
 | [2026-08-10--055--shared-simulation-architecture.md](./2026-08-10--055--shared-simulation-architecture.md) | Wspólna architektura symulacji: state → perception → decision → action → world effect | — |
+| [2026-08-11--062--terrain-generation-overhaul.md](./2026-08-11--062--terrain-generation-overhaul.md) | Naturalniejsze generowanie terenu (macro + hills + soft detail; variable beach; grass foothill fade) | ~~001~~, ~~006~~, ~~007~~, ~~028~~ |
 
 ---
 

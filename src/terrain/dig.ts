@@ -1,5 +1,5 @@
 import type { HeightSampler } from '../player/PlayerController'
-import { SAND_BAND } from './biomeColors'
+import { sandBandAt } from './biomeColors'
 
 /** Radius (world units) of one dig's terrain depression — see
  *  `ChunkManager.modifyTerrain()`. Large enough to read as a real hole while
@@ -37,6 +37,8 @@ export type DigEnv = {
   sampleHeight: HeightSampler
   sampleMountainRidge: (x: number, z: number) => number
   waterLevel: number
+  /** World seed — same value coloring/grass use for `sandBandAt`. */
+  seed: number
 }
 
 /** Env that can compare runtime height against procedural base — used for
@@ -49,14 +51,14 @@ export type LevelEnv = {
 /** Classifies the ground at `(x, z)` for digging — `null` means not diggable
  *  (rock/mountain or water/seabed), matching the plan's soil table without a
  *  full terrain-type taxonomy: reuses the exact same signals (`mountainRidge`,
- *  height vs. `waterLevel` + `SAND_BAND`) `buildChunkGeometry.ts`'s coloring
- *  already keys off, so "looks like rock/sand" and "digs like rock/sand" stay
- *  in sync without a second terrain-type system. */
+ *  height vs. `waterLevel` + local `sandBandAt`) `buildChunkGeometry.ts`'s
+ *  coloring already keys off, so "looks like rock/sand" and "digs like
+ *  rock/sand" stay in sync without a second terrain-type system. */
 export function getDigProfileAt(x: number, z: number, env: DigEnv): DigProfile | null {
   const height = env.sampleHeight(x, z)
   if (height < env.waterLevel + WATER_MARGIN) return null
   if (env.sampleMountainRidge(x, z) > ROCK_MOUNTAIN_RIDGE_THRESHOLD) return null
-  const isSand = height < env.waterLevel + SAND_BAND
+  const isSand = height < env.waterLevel + sandBandAt(x, z, env.seed)
   return isSand
     ? { depth: DIG_DEPTH_SAND, stoneChance: STONE_CHANCE_SAND }
     : { depth: DIG_DEPTH_SOIL, stoneChance: STONE_CHANCE_SOIL }

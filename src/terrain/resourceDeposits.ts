@@ -1,7 +1,15 @@
 import { Group, type Object3D, type Scene } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { disposeObject3D } from '../assets/loadGltf'
-import { createRockCluster, placeOnGround } from '../settlement/props'
+import {
+  clonePropWithYaw,
+  createRockCluster,
+  loadPropTemplates,
+  placeOnGround,
+  RESOURCE_GOLD_SPECS,
+  RESOURCE_ROCK_SPECS,
+  tintPropMaterials,
+} from '../settlement/props'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
 import { type NaturalResource, type ResourceEnv, resourcesNear } from './naturalResources'
@@ -40,13 +48,10 @@ const LOAD_RADIUS = 160
 const UNLOAD_RADIUS = 220
 const RECHECK_DISTANCE = LOAD_RADIUS * 0.25
 
-const PILES_MIN = 2
-const PILES_MAX = 3
-/** Passed as `createRockCluster`'s `variant` — that function's own pebble
- *  count is `3 + floor(variant * 7)`, so capping variant this low keeps every
- *  pile a small 3-4 rock heap ("2-3 kupki po 3-4 kamienie"), not the fuller
- *  3-9 range `variant`'s full 0..1 range would allow. */
-const PILE_VARIANT_MAX = 0.14
+/** GLB resource nodes are already full RTS piles — 1–2 per deposit, not the
+ *  former 2–3 tiny procedural pebble heaps (plan 065). */
+const PILES_MIN = 1
+const PILES_MAX = 2
 /** Piles scatter within this fraction of the deposit's own `radius` — keeps
  *  them visibly clustered around one spot rather than spread across the
  *  whole (up to 20-unit) deposit radius, which exists for the
@@ -67,6 +72,11 @@ function hashId(id: string): number {
   return h >>> 0
 }
 
+type OreTemplates = {
+  gold: Object3D[]
+  rock: Object3D[]
+}
+
 type DepositInstance = {
   resource: NaturalResource
   group: Object3D
@@ -80,24 +90,51 @@ export type ResourceDeposits = {
 }
 
 /**
- * Streams small, non-interactive ore piles (colored rock clusters + a name
+ * Streams small, non-interactive ore piles (GLB resource nodes + a name
  * label) into the world near the player, one per significant iron/coal/gold
- * `NaturalResource` (plan 032) — the first visible surface of a resource
- * layer that was, until now, pure settlement-generation data (no world
- * geometry at all). Main-thread, radius-based streaming — mirrors
- * `SettlementsManager`'s load/unload-by-distance shape, not the chunk-worker
- * pipeline: `naturalResources.ts`'s query functions are cheap pure functions
- * of already-available `ChunkManager` samplers (see `ambientWeights.ts` for
- * the same "reuse ChunkManager's exposed samplers on the main thread"
- * approach), so there's no need to thread this through the terrain worker.
+ * `NaturalResource` (plan 032 / 065). Main-thread, radius-based streaming —
+ * mirrors `SettlementsManager`'s load/unload-by-distance shape, not the
+ * chunk-worker pipeline.
  */
 export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: number): ResourceDeposits {
   const instances = new Map<string, DepositInstance>()
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
+  let templatesPromise: Promise<OreTemplates> | null = null
+  let templates: OreTemplates | null = null
+  let disposed = false
+  /** Spawns deferred until GLB templates finish loading (first nearby ore). */
+  const pendingIds = new Set<string>()
 
-  function spawn(resource: NaturalResource): void {
-    if (!isVisibleOre(resource.type)) return
+  function getTemplates(): Promise<OreTemplates> {
+    return (templatesPromise ??= Promise.all([
+      loadPropTemplates(RESOURCE_GOLD_SPECS, () => createRockCluster(1, 0.14, ORE_COLOR.gold)),
+      loadPropTemplates(RESOURCE_ROCK_SPECS, () => createRockCluster(1, 0.14, ORE_COLOR.iron)),
+    ]).then(([gold, rock]) => {
+      templates = { gold, rock }
+      return templates
+    }))
+  }
+
+  function createPile(
+    type: VisibleOreType,
+    scale: number,
+    rotationY: number,
+    oreTemplates: OreTemplates,
+  ): Object3D {
+    if (type === 'gold') {
+      return clonePropWithYaw(oreTemplates.gold, 0, scale, rotationY)
+    }
+    const pile = clonePropWithYaw(oreTemplates.rock, 0, scale, rotationY)
+    // Iron / coal share `resource_rock_1`; tint distinguishes them without
+    // mutating the shared GLTF material cache (`tintPropMaterials`).
+    tintPropMaterials(pile, ORE_COLOR[type])
+    return pile
+  }
+
+  function spawnSync(resource: NaturalResource, oreTemplates: OreTemplates): void {
+    if (disposed || !isVisibleOre(resource.type)) return
+    if (instances.has(resource.id)) return
     const random = createSeededRandom(hashId(resource.id))
     const group = new Group()
     group.name = `resourceDeposit:${resource.id}`
@@ -112,11 +149,9 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
       const pz = resource.z + Math.sin(angle) * dist
       const h = env.sampleHeight(px, pz)
       if (h <= env.waterLevel + 0.4) continue
-      const pile = createRockCluster(
-        0.55 + random() * 0.25,
-        random() * PILE_VARIANT_MAX,
-        ORE_COLOR[resource.type],
-      )
+      const scale = 0.85 + random() * 0.35
+      const yaw = random() * Math.PI * 2
+      const pile = createPile(resource.type, scale, yaw, oreTemplates)
       placeOnGround(pile, px, pz, env.sampleHeight)
       group.add(pile)
     }
@@ -133,7 +168,26 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
     instances.set(resource.id, { resource, group, label, labelEl })
   }
 
+  function spawn(resource: NaturalResource): void {
+    if (disposed || !isVisibleOre(resource.type)) return
+    if (instances.has(resource.id) || pendingIds.has(resource.id)) return
+    if (templates) {
+      spawnSync(resource, templates)
+      return
+    }
+    pendingIds.add(resource.id)
+    void getTemplates().then((oreTemplates) => {
+      pendingIds.delete(resource.id)
+      if (disposed) return
+      // Player may have walked away while templates loaded.
+      const dist = Math.hypot(resource.x - lastCheckX, resource.z - lastCheckZ)
+      if (dist > UNLOAD_RADIUS) return
+      spawnSync(resource, oreTemplates)
+    })
+  }
+
   function despawn(id: string): void {
+    pendingIds.delete(id)
     const instance = instances.get(id)
     if (!instance) return
     instance.group.removeFromParent()
@@ -171,6 +225,8 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
       }
     },
     dispose() {
+      disposed = true
+      pendingIds.clear()
       for (const id of [...instances.keys()]) despawn(id)
     },
   }
