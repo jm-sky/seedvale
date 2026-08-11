@@ -188,11 +188,12 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       },
       grass: {
         enabled: true,
-        // TEMP: high on purpose while tuning density/visuals — dial back down
-        // (toward ~2) once look/perf is settled; see grass-rendering plan phase 4.
-        radius: 10,
-        // Matches the debug GUI slider's range (120000-400000) — the previous
-        // default of 12000 was 10x below the slider minimum.
+        // Smaller than terrain `loadRadius` so the outer terrain ring stays
+        // grass-free (plan 008 phase 4). Values above `loadRadius` are capped
+        // at runtime and only waste the hysteresis ring.
+        radius: 2,
+        // High visual density is intentional (sparse grass looks wrong); the
+        // cost is controlled by `radius` + distance LOD, not by starving this.
         density: 120000,
       },
       detailNormal: {
@@ -215,7 +216,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       aoEnabled: true,
       aoRadius: 2,
       aoIntensity: 3,
-      aoQuality: 'Medium',
+      aoQuality: 'Low',
       bloomEnabled: true,
       bloomStrength: 0.28,
       bloomRadius: 0.35,
@@ -294,6 +295,12 @@ export function applyStoredTerrain(
     if (typeof t.grass.enabled === 'boolean') target.grass.enabled = t.grass.enabled
     if (typeof t.grass.radius === 'number') target.grass.radius = t.grass.radius
     if (typeof t.grass.density === 'number') target.grass.density = t.grass.density
+  }
+  // Values ≥ loadRadius are a dead knob (chunks don't exist beyond it) and
+  // accidentally put grass on every loaded chunk with no hysteresis. Leave one
+  // terrain ring grass-free — matches plan 008 phase 4.
+  if (target.grass.radius >= target.loadRadius) {
+    target.grass.radius = Math.max(1, target.loadRadius - 1)
   }
   // A stored block from before the grass/bare split carries a `strength` tuned
   // against the old single tiling (and, for anyone who saved during the

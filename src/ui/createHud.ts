@@ -1,7 +1,7 @@
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type Hud = {
-  setSeed: (seed: number) => void
+  setFps: (fps: number) => void
   setTime: (timeOfDay: number) => void
   setExp: (exp: number) => void
   /** Total carried weight vs. `Inventory.maxWeight` — replaces the old
@@ -18,7 +18,7 @@ export function createHud(_parent: HTMLElement): Hud {
   let disposed = false
   const getUi = () => getMountedVueUi()
   return {
-    setSeed: (seed) => { if (!disposed) getUi()?.setHudSeed(seed) },
+    setFps: (fps) => { if (!disposed) getUi()?.setHudFps(fps) },
     setTime: (timeOfDay) => { if (!disposed) getUi()?.setHudTime(timeOfDay) },
     setExp: (exp) => { if (!disposed) getUi()?.setHudExp(exp) },
     setInventoryWeight: (current, max) => { if (!disposed) getUi()?.setHudInventoryWeight(current, max) },

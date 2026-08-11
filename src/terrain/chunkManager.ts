@@ -34,7 +34,7 @@ import {
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { createChunkWater, type WorldWater } from '../world/createWater'
 import { createTreeStageMesh, tagTreeMesh } from '../world/treeVisuals'
-import { biomeWeightsAt } from './biomeRegions'
+import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import { buildChunkGeometry } from './buildChunkGeometry'
 import {
   chebyshevDistance,
@@ -194,10 +194,10 @@ export type ChunkManager = {
   sampleContinentalness: (x: number, z: number) => number
   sampleMountainRidge: (x: number, z: number) => number
   sampleMoistureRegion: (x: number, z: number) => number
-  /** 0 (open ground) – 1 (dense forest) biome weight at (x, z) — same
-   *  classification `terrain/chunkItems.ts`/`chunkVegetation.ts` use at
-   *  generation time, composed here from the already-exposed samplers for
-   *  runtime callers (e.g. fauna player-detection, `createFauna.ts`). */
+  /** 0 (open / poor forest habitat) – 1 (dense forest) continuous suitability
+   *  at (x, z) via `forestDensityAt` (`biomeRegions.ts`) — same signal
+   *  `chunkVegetation.ts` uses for tree-density modulation. Runtime bridge
+   *  for fauna (`createFauna.ts`) and other habitat consumers (plan 063). */
   sampleForestFactor: (x: number, z: number) => number
   /** World-generated pickup items (`terrain/chunkItems.ts`) within `radius` of
    *  `pos` among currently loaded chunks — sufficient given `radius` is only
@@ -434,10 +434,12 @@ export function createChunkManager(
     const dist = chebyshevDistance(record.coord, playerChunk)
     if (dist <= effectiveGrassRadius) {
       ensureGrass(record)
-      // Cheap distance LOD: render fewer blades in farther chunks (down to 50%
+      // Cheap distance LOD: render fewer blades in farther chunks (down to ~25%
       // at the visible edge) — imperceptible at that distance/fog, no
-      // reallocation, just narrows the instanced draw range.
-      record.grass?.setLodFraction(1 - (dist / Math.max(1, effectiveGrassRadius)) * 0.5)
+      // reallocation, just narrows the instanced draw range. Keeps near-field
+      // density (the intentional visual choice) while cutting fill-rate cost.
+      const t = dist / Math.max(1, effectiveGrassRadius)
+      record.grass?.setLodFraction(Math.max(0.25, 1 - t * 0.75))
     } else if (dist > grassUnloadRadius && record.grass !== undefined) {
       removeGrass(record)
     }
@@ -839,8 +841,13 @@ export function createChunkManager(
     sampleForestFactor: (x, z) => {
       const h = readField('heights', x, z)
       const altitude01 = Math.max(0, (h - config.waterLevel) / Math.max(config.heightScale, 0.001))
-      const moistureRegion = readField('moistureRegion', x, z)
-      return biomeWeightsAt(moistureRegion, altitude01, config.region).forest
+      return forestDensityAt(
+        readField('moistureRegion', x, z),
+        altitude01,
+        readField('continentalness', x, z),
+        readField('mountainRidge', x, z),
+        config.region,
+      )
     },
     sampleTreeEnv,
     refreshTreeVisual,

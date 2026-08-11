@@ -2,7 +2,16 @@
 
 **Plan:** [063 — Forest Regions & Habitat Distribution](./2026-08-11--063--forest-regions-and-habitat-distribution.md)
 **Reviewed:** 2026-08-11
-**Review basis:** current `main` code, `docs/STATE.md`, `CLAUDE.md`, `docs/ROADMAP.md`, plan index, plans 028/032/044/049/058/062 and 058 implementation notes.
+**Implemented:** 2026-08-11
+**Verified:** 2026-08-11 (browser — density tuned; moisture canopy band kept at original width)
+
+## Implementation summary (2026-08-11)
+
+- Added pure `forestDensityAt(...)` in `src/terrain/biomeRegions.ts` — peaked moisture canopy on top of `biomeWeightsAt`, gated by land/altitude/ridge. No new noise axis, no transferred forest grid.
+- `ChunkManager.sampleForestFactor()` now delegates to `forestDensityAt` (fauna forest/meadow profiles unchanged).
+- `computeChunkVegetation()` uses the same signal for acceptance probability, candidate budget (`16 + 90·fd`), tree-vs-bush mix, and initial mature/scale bias. Existing water/slope/treeline/ridge/road rejection preserved. Deep forest ~6–7 m mean spacing.
+- Unit tests: `src/terrain/biomeRegions.test.ts`.
+- Technical + browser verification passed (2026-08-11).
 
 ## 1. Scope and architectural intent
 

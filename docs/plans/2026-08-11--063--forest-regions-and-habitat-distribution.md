@@ -1,6 +1,6 @@
 # Plan: Forest regions & habitat distribution
 
-**Status:** `planned`
+**Status:** `done`
 **Created:** 2026-08-11
 **Priority:** 🔴 high
 **Effort:** L–XL
@@ -628,40 +628,40 @@ Zweryfikować:
 
 ### Forests
 
-* [ ] świat posiada wyraźne duże regiony leśne,
-* [ ] część lasów obejmuje wiele sąsiednich chunków,
-* [ ] istnieją zarówno mniejsze zagajniki, jak i duże lasy,
-* [ ] las jest rozpoznawalny jako osobna struktura przestrzenna,
-* [ ] głębia lasu ma wyraźnie większą gęstość drzew,
-* [ ] las nie jest tylko skupiskiem kilku przypadkowych drzew.
+* [x] świat posiada wyraźne duże regiony leśne,
+* [x] część lasów obejmuje wiele sąsiednich chunków,
+* [x] istnieją zarówno mniejsze zagajniki, jak i duże lasy,
+* [x] las jest rozpoznawalny jako osobna struktura przestrzenna,
+* [x] głębia lasu ma wyraźnie większą gęstość drzew,
+* [x] las nie jest tylko skupiskiem kilku przypadkowych drzew.
 
 ### Forest edges
 
-* [ ] granica lasu jest płynna,
-* [ ] występują obszary przejściowe,
-* [ ] poza lasem nadal mogą występować pojedyncze drzewa.
+* [x] granica lasu jest płynna,
+* [x] występują obszary przejściowe,
+* [x] poza lasem nadal mogą występować pojedyncze drzewa.
 
 ### Trees
 
-* [ ] duże lasy mają odpowiednio wysokie/gęste drzewa,
-* [ ] nie powstaje nienaturalnie jednolity „mur drzew”,
-* [ ] istniejący vegetation placement nadal działa.
+* [x] duże lasy mają odpowiednio wysokie/gęste drzewa,
+* [x] nie powstaje nienaturalnie jednolity „mur drzew”,
+* [x] istniejący vegetation placement nadal działa.
 
 ### Habitat
 
-* [ ] dostępna jest ciągła wartość `forestDensity` / `forestHabitat`,
-* [ ] może być wykorzystana przez przyszły system fauny,
-* [ ] nie ma bezpośredniego hard-coded `spawn N animals in forest`,
-* [ ] środowisko poza lasem może nadal wspierać pojedyncze zwierzęta.
+* [x] dostępna jest ciągła wartość `forestDensity` / `forestHabitat`,
+* [x] może być wykorzystana przez przyszły system fauny,
+* [x] nie ma bezpośredniego hard-coded `spawn N animals in forest`,
+* [x] środowisko poza lasem może nadal wspierać pojedyncze zwierzęta.
 
 ### Technical
 
-* [ ] deterministyczność jest zachowana,
-* [ ] chunk boundaries są poprawne,
-* [ ] nie powstaje drugi system biome,
-* [ ] istniejący worker pipeline jest wykorzystywany,
-* [ ] brak globalnego skanowania świata,
-* [ ] koszt generowania pozostaje akceptowalny.
+* [x] deterministyczność jest zachowana,
+* [x] chunk boundaries są poprawne,
+* [x] nie powstaje drugi system biome,
+* [x] istniejący worker pipeline jest wykorzystywany,
+* [x] brak globalnego skanowania świata,
+* [x] koszt generowania pozostaje akceptowalny.
 
 ---
 

@@ -46,7 +46,6 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md) | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout | 0% | 🔴 high | XL | ~~031~~, 032, 036 |
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
 | [2026-08-11--060--npc-schedule-actions-and-trait-overlays.md](./2026-08-11--060--npc-schedule-actions-and-trait-overlays.md) | Wykonywalne aktywności grafiku NPC + nakładki traits | 0% | 🟡 medium | L | ~~020~~, ~~022~~ |
-| [2026-08-11--063--forest-regions-and-habitat-distribution.md](./2026-08-11--063--forest-regions-and-habitat-distribution.md) | Rozbudować generowanie lasów tak, aby świat posiadał duże, wyraźne obszary leśne | 0% | 🔴 high | L | ~~028~~, ~~062~~ |
 
 ---
 
@@ -122,6 +121,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-11--062--terrain-generation-overhaul.md](./2026-08-11--062--terrain-generation-overhaul.md) | Naturalniejsze generowanie terenu (macro + hills + soft detail; variable beach; grass foothill fade) | ~~001~~, ~~006~~, ~~007~~, ~~028~~ |
 | [2026-08-11--066--better-visual-effects.md](./2026-08-11--066--better-visual-effects.md) | Lepsze efekty graficzne (grass, terrain, wind, film grade, atmosphere) | — |
 | [2026-08-11--067--minimap-heading-and-north.md](./2026-08-11--067--minimap-heading-and-north.md) | Minimapa heading-up + kompas N na ramce | ~~029~~, ~~046~~ |
+| [2026-08-11--063--forest-regions-and-habitat-distribution.md](./2026-08-11--063--forest-regions-and-habitat-distribution.md) | Duże regiony leśne + ciągły `forestDensity` / habitat | ~~028~~, ~~062~~ |
 
 ---
 

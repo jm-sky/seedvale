@@ -1,7 +1,7 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
 import type { ChunkCoord } from './chunkGrid'
 import { createSeededRandom } from '../world/parseSeed'
-import { biomeWeightsAt } from './biomeRegions'
+import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import {
   apronOriginWorld,
   type ChunkTileData,
@@ -25,7 +25,13 @@ export type VegetationPlacement = {
   growthStage?: 'sapling' | 'young' | 'mature'
 }
 
-const CANDIDATES_PER_CHUNK = 18
+/** Baseline candidates on open / weak-forest land. Dense forest adds
+ *  `FOREST_EXTRA_CANDIDATES` on top (plan 063 — probability alone cannot
+ *  densify past a fixed budget).
+ *  Deep forest (fd≈1) → ~100 candidates → ~6–7 m mean tree spacing on a
+ *  64² chunk when acceptance is high; open land stays sparse. */
+const BASE_CANDIDATES_PER_CHUNK = 16
+const FOREST_EXTRA_CANDIDATES = 90
 const SLOPE_SAMPLE_STEP = 1.5
 /** Reject candidates on slopes steeper than this (roughly matches where
  *  `applySlopeRock` starts taking over visually). */
@@ -36,6 +42,8 @@ const TREELINE_ALTITUDE = 0.6
 const MOUNTAIN_RIDGE_REJECT = 0.35
 /** Reject candidates sitting on a road/path corridor (`tile.roadTint`, `chunkHeightmap.ts`). */
 const ROAD_TINT_REJECT = 0.15
+/** Outside strong forest, retain a small chance of isolated trees. */
+const OPEN_TREE_BASELINE = 0.10
 
 /** Per-chunk hash so nearby chunks don't get correlated candidate layouts. */
 function hashChunk(cx: number, cz: number): number {
@@ -86,11 +94,11 @@ function clusteredTreeSpecies(clumpValue: number, speciesCount: number, random: 
 /**
  * Deterministic, worker-safe per-chunk vegetation placement — pure data only
  * (no `THREE.Object3D`/GLTF; workers can't touch either), instantiated into
- * actual meshes on the main thread (`chunkManager.ts`). Density/species mix is
- * driven by the same macro region values (`continentalness`, `mountainRidge`)
- * added for terrain shaping, so forests naturally thin out toward highlands/
- * mountains and stop at the shoreline/treeline. Callers skip this for pinned
- * `homeChunks` — the settlement keeps its own bespoke layout (`props.ts`).
+ * actual meshes on the main thread (`chunkManager.ts`). Macro forest density
+ * (`forestDensityAt`, plan 063) drives large-scale tree concentration; local
+ * `clumpNoise` + fine moisture keep stands from reading as uniform carpets.
+ * Callers skip this for pinned `homeChunks` — the settlement keeps its own
+ * bespoke layout (`props.ts`).
  */
 export function computeChunkVegetation(
   coord: ChunkCoord,
@@ -110,7 +118,24 @@ export function computeChunkVegetation(
   const half = chunkSize / 2
   const { clump: clumpNoise, meadow: meadowNoise } = noiseFieldsFor(params.seed)
 
-  for (let i = 0; i < CANDIDATES_PER_CHUNK; i++) {
+  // Chunk-centre forest estimate sets the candidate budget. Linear in forest
+  // density so mid/edge forest also densifies (squaring left mid-forest too open).
+  const centerX = coord.cx * chunkSize
+  const centerZ = coord.cz * chunkSize
+  const centerH = sample(tile.heights, centerX, centerZ)
+  const centerAltitude = (centerH - waterLevel) / Math.max(heightScale, 0.001)
+  const centerForest = forestDensityAt(
+    sample(tile.moistureRegion, centerX, centerZ),
+    centerAltitude,
+    sample(tile.continentalness, centerX, centerZ),
+    sample(tile.mountainRidge, centerX, centerZ),
+    region,
+  )
+  const candidateCount = Math.round(
+    BASE_CANDIDATES_PER_CHUNK + FOREST_EXTRA_CANDIDATES * centerForest,
+  )
+
+  for (let i = 0; i < candidateCount; i++) {
     const localX = (random() * 2 - 1) * half
     const localZ = (random() * 2 - 1) * half
     const wx = coord.cx * chunkSize + localX
@@ -119,7 +144,16 @@ export function computeChunkVegetation(
     const h = sample(tile.heights, wx, wz)
     const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
     const moistureRegion = sample(tile.moistureRegion, wx, wz)
+    const continentalness = sample(tile.continentalness, wx, wz)
+    const ridge = sample(tile.mountainRidge, wx, wz)
     const biome = biomeWeightsAt(moistureRegion, altitude, region)
+    const forestDensity = forestDensityAt(
+      moistureRegion,
+      altitude,
+      continentalness,
+      ridge,
+      region,
+    )
 
     // Reeds tolerate growing right at the waterline; everything else needs
     // to clear the shore like today.
@@ -135,25 +169,24 @@ export function computeChunkVegetation(
 
     if (altitude > TREELINE_ALTITUDE) continue // above treeline
 
-    const ridge = sample(tile.mountainRidge, wx, wz)
     if (ridge > MOUNTAIN_RIDGE_REJECT) continue // bare ridge crest
 
     if (sample(tile.roadTint, wx, wz) > ROAD_TINT_REJECT) continue // road/path corridor
 
     const moisture = sample(tile.biomes, wx, wz)
-    const continentalness = sample(tile.continentalness, wx, wz)
-    // Low-frequency field shared across chunk borders — pushes local density
-    // up in some patches and down in others, so forest thins/thickens in
-    // irregular drifts instead of a uniform per-tile probability (plan
-    // 044 4.5: avoid mechanically even spacing).
+    // Low-frequency field shared across chunk borders — local density drift
+    // inside a forest region (plan 044 4.5: avoid mechanically even spacing).
     const clumpValue = fieldAt(clumpNoise, wx, wz, 0.015)
-    // Denser on humid lowlands/coasts (continentalness near the coastal band),
-    // sparser further inland/toward highlands; deserts thin out further still.
+    // Macro forest density dominates acceptance. Clump varies locally but
+    // stays high enough in deep forest that most candidates land as trees
+    // (~6–7 m mean spacing), not a thinned park.
+    const local = 0.72 + clumpValue * 0.45
     const density =
-      Math.max(0, Math.min(1, moisture * 0.7 + (1 - Math.abs(continentalness - 0.55)) * 0.3)) *
-      (1 - biome.desert * 0.6) *
-      (0.55 + clumpValue * 0.9)
-    if (random() > density) continue
+      (OPEN_TREE_BASELINE + forestDensity * (1.05 - OPEN_TREE_BASELINE)) *
+      (1 - biome.desert * 0.65) *
+      local *
+      (0.85 + moisture * 0.15)
+    if (random() > Math.min(1, density)) continue
 
     let kind: VegetationPlacement['kind']
     if (biome.desert > 0.5 && random() < biome.desert) {
@@ -161,7 +194,9 @@ export function computeChunkVegetation(
     } else if (biome.swamp > 0.5 && random() < biome.swamp) {
       kind = random() < 0.8 ? 'reed' : 'tree'
     } else {
-      kind = random() < 0.15 + (1 - moisture) * 0.35 ? 'bush' : 'tree'
+      // Deep forest prefers trees; open temperate keeps more bushes.
+      const bushChance = (0.15 + (1 - moisture) * 0.35) * (1 - forestDensity * 0.85)
+      kind = random() < bushChance ? 'bush' : 'tree'
     }
 
     const speciesCount = params.vegetationSpeciesCount[kind]
@@ -171,14 +206,19 @@ export function computeChunkVegetation(
         : Math.floor(random() * Math.max(1, speciesCount))
     // Trees carry an explicit lifecycle stage (plan 058). Scale is the mature
     // base; sapling/young multipliers are applied when instantiating meshes.
+    // Deep forest only biases the *initial procedural distribution* toward
+    // larger/mature visuals — no TreeState / lifecycle ownership here (063).
     let growthStage: VegetationPlacement['growthStage']
     let scale: number
     if (kind === 'bush' || kind === 'cactus') {
       scale = 0.6 + random() * 0.5
     } else if (kind === 'tree') {
+      const saplingChance = 0.22 - forestDensity * 0.14
+      const youngChance = 0.18 - forestDensity * 0.06
       const roll = random()
-      growthStage = roll < 0.18 ? 'sapling' : roll < 0.35 ? 'young' : 'mature'
-      scale = 0.7 + random() * 0.6
+      growthStage =
+        roll < saplingChance ? 'sapling' : roll < saplingChance + youngChance ? 'young' : 'mature'
+      scale = 0.7 + random() * 0.6 + forestDensity * 0.28
     } else {
       scale = 0.7 + random() * 0.6
     }

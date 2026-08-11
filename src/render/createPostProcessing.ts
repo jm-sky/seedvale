@@ -62,6 +62,11 @@ export function createPostProcessing(
 
   const aoPass = new N8AOPass(scene, camera, width, height)
   aoPass.configuration.gammaCorrection = false
+  // Half-res AO is a large GPU win with little visible loss at Seedvale's
+  // scale (dense grass + soft lighting). Full-res remains available by
+  // flipping this if quality tuning needs it.
+  aoPass.configuration.halfRes = true
+  aoPass.configuration.depthAwareUpsampling = true
   composer.addPass(aoPass)
 
   const smaaPass = new SMAAPass()

@@ -73,7 +73,7 @@ type NotesState = { open: boolean }
 type HudState = {
   time: string
   phase: string
-  seed: string
+  fps: string
   exp: string
   weight: string
   held: string
@@ -127,7 +127,7 @@ export const ui = reactive({
   hud: {
     time: '--',
     phase: '',
-    seed: '',
+    fps: '',
     exp: '',
     weight: '',
     held: '',
@@ -286,10 +286,10 @@ export function openNotes(): void { ui.notes.open = true }
 export function closeNotes(): void { ui.notes.open = false }
 export function isNotesOpen(): boolean { return ui.notes.open }
 
-export function setHudSeed(seed: number): void {
-  const text = `seed ${seed}`
-  if (ui.hud.seed === text) return
-  ui.hud.seed = text
+export function setHudFps(fps: number): void {
+  const text = `${Math.round(fps)} FPS`
+  if (ui.hud.fps === text) return
+  ui.hud.fps = text
 }
 export function setHudTime(timeOfDay: number): void {
   const time = formatClock(timeOfDay)

@@ -220,7 +220,6 @@ export async function createApp(
   const playerTorch = createPlayerTorch(player.mesh)
 
   const hud = createHud(container)
-  hud.setSeed(config.seed)
   hud.setTime(dayNight.timeOfDay)
   const toast = createToast(container)
 
@@ -289,7 +288,6 @@ export async function createApp(
       if (dayNight.enabled) gameLoop.resyncDayNight()
       player.setGround(bundle.chunkManager.sampleHeight, bundle.chunkManager.sampleFloor, bundle.chunkManager.waterLevel)
       player.setPosition(bundle.settlementsManager.home.spawn.x, bundle.settlementsManager.home.spawn.z)
-      hud.setSeed(config.seed)
       pauseMenu.setSeed(config.seed)
     } finally {
       gui.setBusy(false)

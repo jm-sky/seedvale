@@ -12,7 +12,7 @@ import { ui } from '../store'
     </div>
     <div class="mt-0.5 flex gap-3 text-[13px] opacity-90">
       <span v-if="ui.hud.phase">{{ ui.hud.phase }}</span>
-      <span v-if="ui.hud.seed">{{ ui.hud.seed }}</span>
+      <span v-if="ui.hud.fps">{{ ui.hud.fps }}</span>
       <span v-if="ui.hud.exp">{{ ui.hud.exp }}</span>
       <span v-if="ui.hud.weight">{{ ui.hud.weight }}</span>
       <span v-if="ui.hud.held">{{ ui.hud.held }}</span>

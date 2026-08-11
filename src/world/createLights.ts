@@ -18,7 +18,9 @@ export function createLights(): WorldLights {
   const sun = new THREE.DirectionalLight(0xfff0d4, 1.4)
   sun.position.set(40, 70, 30)
   sun.castShadow = true
-  sun.shadow.mapSize.set(2048, 2048)
+  // 1024 is enough for the ~160-unit shadow frustum around the player;
+  // 2048 mostly burned fill-rate without a matching clarity gain.
+  sun.shadow.mapSize.set(1024, 1024)
   sun.shadow.camera.near = 1
   sun.shadow.camera.far = 200
   sun.shadow.camera.left = -80

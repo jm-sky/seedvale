@@ -47,6 +47,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Chunk streaming with load/unload radii and pinned home chunks.
 - Large-scale terrain regions including ocean/coast/mountain behaviour.
 - Biome/moisture-region support and environment generation.
+- Continuous `forestDensityAt` suitability (`biomeRegions.ts`) drives large-scale tree density and `ChunkManager.sampleForestFactor` for fauna habitat (plan 063); no separate forest grid/manager.
 - Per-chunk vegetation and natural environment elements.
 - Chunk environment rocks and fallen logs use GLB templates (`rock_a` / `rock_cluster_a` / `fallen_log_a`) with procedural fallbacks (plan 065); campfire/monolith/ruins stay procedural.
 - Visible iron/coal/gold deposits stream GLB resource nodes (`resource_gold_1` / `resource_rock_1` with iron/coal tint) via `ResourceDeposits` (plan 065).

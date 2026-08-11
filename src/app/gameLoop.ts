@@ -173,6 +173,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
 
   const clock = new Clock()
   let lastAppliedTimeOfDay = dayNight.timeOfDay
+  /** EMA of instantaneous FPS; HUD text refreshes at most ~4×/s. */
+  let fpsEma = 60
+  let fpsHudAge = 0
 
   /** Currently gaze-highlighted NPC/animal, if any — tracked so we only toggle
    *  the CSS class on change instead of writing every frame. */
@@ -191,7 +194,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   }
 
   const tick = (): void => {
-    const dt = Math.min(clock.getDelta(), 0.05)
+    const rawDt = clock.getDelta()
+    const dt = Math.min(rawDt, 0.05)
+    if (rawDt > 0) {
+      fpsEma = fpsEma * 0.9 + (1 / rawDt) * 0.1
+      fpsHudAge += rawDt
+      if (fpsHudAge >= 0.25) {
+        fpsHudAge = 0
+        hud.setFps(fpsEma)
+      }
+    }
 
     // Runs regardless of any modal/pause state — the clock has to keep
     // advancing (boosted) for the skip to actually pass game-time. Only

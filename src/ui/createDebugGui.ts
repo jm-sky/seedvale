@@ -384,13 +384,13 @@ export function createDebugGui(
   )
   terrainControllers.push(
     grass
-      .add(config.terrain.grass, 'radius', 1, 12, 1)
+      .add(config.terrain.grass, 'radius', 1, 4, 1)
       .name('Render radius (chunks)')
       .onFinishChange(handlers.onTerrainChange),
   )
   terrainControllers.push(
     grass
-      .add(config.terrain.grass, 'density', 120000, 400000, 1000)
+      .add(config.terrain.grass, 'density', 40000, 250000, 1000)
       .name('Density (candidates/chunk)')
       .onFinishChange(handlers.onTerrainChange),
   )
