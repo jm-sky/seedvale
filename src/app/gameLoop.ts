@@ -27,6 +27,7 @@ import type { WorldSky } from '../world/createSky'
 import type { DayNightState } from '../world/dayNight'
 import type { TimeSkip } from '../world/timeSkip'
 import type { WorldBundle } from './worldBundle'
+import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
@@ -279,6 +280,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             const collected = collectItem(target.item, bundle.chunkManager, bundle.itemSpawners, bundle.droppedItems)
             if (collected) {
               inventory.add(collected.kind)
+              playInventoryPickUp(worldAudio.playOnce)
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
               touchControls?.setDropAvailable(!inventory.isEmpty())
             }
@@ -301,6 +303,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           const branchChance = TREE_BRANCH_CHANCE + (inventory.has('knife', 1) ? KNIFE_BRANCH_BONUS : 0)
           if (Math.random() < branchChance && inventory.canAdd('branch')) {
             inventory.add('branch')
+            playInventoryPickUp(worldAudio.playOnce)
             hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
             touchControls?.setDropAvailable(!inventory.isEmpty())
             toast.show('+1 Gałąź', 'pickup')
@@ -319,6 +322,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           if (Math.random() < target.profile.stoneChance) {
             if (inventory.canAdd('stone')) {
               inventory.add('stone')
+              playInventoryPickUp(worldAudio.playOnce)
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
               touchControls?.setDropAvailable(!inventory.isEmpty())
               toast.show('+1 Kamień', 'pickup')
@@ -350,6 +354,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           dropOffset++
         }
         if (dropOffset > 0) {
+          playInventoryDrop(worldAudio.playOnce)
           hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
           touchControls?.setDropAvailable(!inventory.isEmpty())
         }

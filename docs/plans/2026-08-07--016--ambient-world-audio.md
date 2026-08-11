@@ -1,6 +1,6 @@
 # Plan: Ambient audio świata (dźwięki tła, zależne od obszaru)
 
-**Status:** `verification needed` (4/5) — fundament audio + warstwa dzień/noc (świerszcze) + sampler obszaru (`src/audio/ambientWeights.ts`, nowy) + mixer runtime (warstwy `forest`/`coast`, rozszerzenie `createAmbientAudio.ts`) zaimplementowane 2026-08-09. Warstwa `mountain` (wiatr górski) świadomie pominięta — brakujący asset (patrz sekcja 2), `ambientWeightsAt` już liczy wagę `mountain`, tylko żadna pętla jej nie odtwarza. Wymaga wizualnej/dźwiękowej weryfikacji w przeglądarce.
+**Status:** `done` (4/5) — fundament audio + warstwa dzień/noc (świerszcze) + sampler obszaru (`src/audio/ambientWeights.ts`, nowy) + mixer runtime (warstwy `forest`/`coast`, rozszerzenie `createAmbientAudio.ts`) zaimplementowane 2026-08-09. Warstwa `mountain` (wiatr górski) świadomie pominięta — brakujący asset (patrz sekcja 2), `ambientWeightsAt` już liczy wagę `mountain`, tylko żadna pętla jej nie odtwarza.
 **Created:** 2026-08-07
 **Scope:** [world/](../../src/world/) (ocean/water/dayNight), [terrain/](../../src/terrain/) (biomy/regiony); niezależne od NPC, ale dzieli fundament audio z [npc-reaction-sounds.md](./2026-08-07--014--npc-reaction-sounds.md)
 

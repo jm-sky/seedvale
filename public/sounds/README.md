@@ -24,5 +24,5 @@
 
 | filename         | oryginal filename | source url | notes |
 |------------------|-------------------|------------|-------|
-| inventory-pick-up-01.wav | 831642__ienba__generic-game-pick-up.wav | https://freesound.org/people/IENBA/sounds/831642/ | 4 sounds, split needed |
+| inventory-pick-up-01…04.wav | 831642__ienba__generic-game-pick-up.wav | https://freesound.org/people/IENBA/sounds/831642/ | 4 variants split from one pack; random pick on collect |
 | inventory-drop-01.wav | 791150__randbsoundbites__dropping-an-item-from-inventory.wav | https://freesound.org/people/randbsoundbites/sounds/791150/ | |

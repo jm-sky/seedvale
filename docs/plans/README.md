@@ -70,8 +70,8 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-08--032--natural-resources-economy.md](./2026-08-08--032--natural-resources-economy.md) | Zasoby naturalne, atrakcyjność lokalizacji, food source | 100% | 🔴 high | M | ~~028~~, ~~030~~, ~~031~~ |
 | [2026-08-08--036--village-siting-difficult-terrain.md](./2026-08-08--036--village-siting-difficult-terrain.md) | Osadzanie wiosek w trudnym terenie | 25% | 🟡 medium | M | ~~028~~, ~~031~~ |
 | [2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md](./2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md) | Bezpieczeństwo referencji `WorldBundle` + małe refaktory po 053 | 100% | 🟡 medium | S–M | ~~053~~ |
-| [2026-08-07--005--game-ui-screens.md](./2026-08-07--005--game-ui-screens.md) | Ekrany/dialogi/modale jak w grach (World config + Notes/journal domykają ostatnie 2/4) | 100% | 🔴 high | L | ~~002~~ |
 | [2026-08-10--052--shovel-digging-and-finding-stones.md](./2026-08-10--052--shovel-digging-and-finding-stones.md) | Kopanie ziemi i znajdowanie kamieni [have implementation notes] | 100% | 🔴 high | M | ~~043~~, ~~030~~ |
+| [2026-08-11--059--inventory-pick-drop-sfx.md](./2026-08-11--059--inventory-pick-drop-sfx.md) | SFX podniesienia / wyrzucenia itemów | 100% | ⚪ low | S | ~~014~~, ~~043~~ |
 
 ---
 
@@ -83,6 +83,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-07--002--v02-settlement-npc.md](./2026-08-07--002--v02-settlement-npc.md) | v0.2: osada + NPC (woda / drewno / jedzenie) | ~~001~~ |
 | [2026-08-07--003--day-night-clock.md](./2026-08-07--003--day-night-clock.md) | Zegar dnia/nocy + time multiplier | ~~001~~ |
 | [2026-08-07--004--v03-fauna-chase-flee.md](./2026-08-07--004--v03-fauna-chase-flee.md) | v0.3: fauna chase/flee | ~~001~~ |
+| [2026-08-07--005--game-ui-screens.md](./2026-08-07--005--game-ui-screens.md) | Ekrany/dialogi/modale jak w grach (World config + Notes/journal domykają ostatnie 2/4) | ~~002~~ |
 | [2026-08-07--006--terrain-worker-pool.md](./2026-08-07--006--terrain-worker-pool.md) | Worker pool dla generacji terenu | ~~001~~ |
 | [2026-08-07--007--world-streaming-persistence.md](./2026-08-07--007--world-streaming-persistence.md) | Chunk streaming + zapis | ~~001~~, ~~006~~ |
 | [2026-08-07--008--grass-rendering.md](./2026-08-07--008--grass-rendering.md) | Instanced ground cover per chunk | ~~001~~, ~~006~~ |

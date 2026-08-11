@@ -1,6 +1,6 @@
 # Plan: zegar świata — dzień / noc
 
-**Status:** `verification needed` (5/5) — zegar/sky/HUD + NPC sen zależny od pory + persystencja `timeOfDay` w save zaimplementowane 2026-08-09. Wymaga wizualnej weryfikacji w przeglądarce.
+**Status:** `done` (5/5) — zegar/sky/HUD + NPC sen zależny od pory + persystencja `timeOfDay` w save zaimplementowane 2026-08-09 i zweryfikowane.
 **Created:** 2026-08-07  
 **Priority:** polish po v0.2  
 

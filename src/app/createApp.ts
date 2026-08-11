@@ -3,6 +3,7 @@ import type { AmbientSamplers } from '../audio/ambientWeights'
 import type { SaveData } from '../persistence/saveData'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
+import { playInventoryDrop } from '../audio/inventorySounds'
 import { saveWorldConfig } from '../config/persistConfig'
 import {
   applyStoredPlayer,
@@ -334,6 +335,7 @@ export async function createApp(
         player.mesh.position.z + Math.sin(angle) * 0.6,
       )
     }
+    playInventoryDrop(worldAudio.playOnce)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     touchControls?.setDropAvailable(!inventory.isEmpty())
     inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight)

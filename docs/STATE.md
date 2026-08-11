@@ -79,6 +79,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Simple fire/fire pit/torch interactions exist.
 - Wait/rest time skip exists.
 - Inventory UI is a Vue screen (`src/ui-vue/screens/InventoryScreen.vue`); `src/ui/createInventoryScreen.ts` is a facade — see "UI migration" below.
+- Inventory pick-up / drop SFX exist (`audio/inventorySounds.ts` via `worldAudio.playOnce`): ground collect, tree branch, dig stone, UI/quick drop.
 - Shovel exists as a one-time settlement pickup (`items/createItemSpawners.ts`'s `SPAWN_SPECS`, `respawnTime: Infinity`). Holding it unlocks a `[E]`-triggered "Wykop dołek" ground interaction (fallback target only when nothing else is being gazed at — see `app/interactables.ts`'s `buildDigTarget`) that locally deforms terrain and has a chance to yield `stone`. Terrain deformation is a small runtime overlay owned by `ChunkManager` (`modifyTerrain`/`applyModificationToTile` in `terrain/chunkManager.ts`), mutating a loaded chunk's cached height grid in place — not persisted across saves, and reapplied on chunk reload. Ground eligibility/tuning lives in `terrain/dig.ts`.
 
 ### Quests / progression

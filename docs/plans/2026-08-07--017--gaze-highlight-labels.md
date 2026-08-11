@@ -1,6 +1,6 @@
 # Plan: Hover/gaze highlight na etykietach (NPC + zwierzęta)
 
-**Status:** `verification needed`
+**Status:** `done`
 **Created:** 2026-08-07
 **Scope:** [npc-labels.md](./2026-08-07--012--npc-labels.md), [npc-interactions.md](./2026-08-07--011--npc-interactions.md)
 
