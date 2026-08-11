@@ -3,12 +3,16 @@ import { onMounted, onUnmounted } from 'vue'
 import NpcDialogueMenu from './NpcDialogueMenu.vue'
 import BusyOverlay from './screens/BusyOverlay.vue'
 import FlavorDialog from './screens/FlavorDialog.vue'
+import HudScreen from './screens/HudScreen.vue'
 import InventoryScreen from './screens/InventoryScreen.vue'
+import MinimapScreen from './screens/MinimapScreen.vue'
 import NotesScreen from './screens/NotesScreen.vue'
 import PauseMenu from './screens/PauseMenu.vue'
 import QuestLogScreen from './screens/QuestLogScreen.vue'
 import QuickActionsScreen from './screens/QuickActionsScreen.vue'
 import TimeSkipOverlay from './screens/TimeSkipOverlay.vue'
+import ToastStack from './screens/ToastStack.vue'
+import TouchChrome from './screens/TouchChrome.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
 import WorldConfigScreen from './screens/WorldConfigScreen.vue'
 import { closeTopOverlay, togglePause, ui } from './store'
@@ -25,15 +29,22 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 <template>
   <div class="pointer-events-none fixed inset-0 z-10">
+    <!-- Always-visible chrome (under modal screens). -->
+    <HudScreen />
+    <ToastStack />
+    <MinimapScreen />
     <PauseMenu />
-    <NpcDialogueMenu />
-    <FlavorDialog />
     <QuestLogScreen />
     <VillagersScreen />
     <InventoryScreen />
     <QuickActionsScreen />
     <WorldConfigScreen />
     <NotesScreen />
+    <!-- Flavor / NPC dialogue first, then TouchChrome so E sits above those
+         dialogs (former z-9 > z-8) while PauseMenu (z-11) stays on top. -->
+    <NpcDialogueMenu />
+    <FlavorDialog />
+    <TouchChrome />
     <!-- Last so it paints above every other overlay (matches the vanilla
          overlay's z-index 12, above pause menu's 11) — a time skip can be
          showing while the player also has the pause menu open. -->

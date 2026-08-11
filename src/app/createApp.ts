@@ -567,20 +567,8 @@ export async function createApp(
 
   // Reflects any inventory carried over from a loaded save — later changes are
   // synced at each pickup/drop call site alongside hud.setInventoryWeight().
+  // Pause + minimap chrome for touch live in Vue (TouchChrome / MinimapScreen).
   touchControls?.setDropAvailable(!inventory.isEmpty())
-
-  // Shared flex column, right-aligned, holding the ☰ pause button + minimap —
-  // replaces two independently absolutely-positioned corner widgets (which
-  // needed hand-tuned pixel offsets to avoid overlapping on a short landscape
-  // viewport) with one wrapper flexbox handles the spacing for. See
-  // .seedvale-top-right-cluster in index.html.
-  if (touchControls) {
-    const topRightCluster = document.createElement('div')
-    topRightCluster.className = 'seedvale-top-right-cluster'
-    container.appendChild(topRightCluster)
-    topRightCluster.appendChild(touchControls.pauseButton)
-    topRightCluster.appendChild(minimap.root)
-  }
 
   // NOTE: a Fullscreen-API-on-first-touch call used to live here (address-bar
   // hiding for Chrome/Firefox Android). Removed — confirmed via automated

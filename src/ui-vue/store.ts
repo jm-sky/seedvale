@@ -6,7 +6,9 @@ import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quest
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
 import type { RestOutcome, RestVariant } from '../ui/createQuickActions'
-import type { DayNightState } from '../world/dayNight'
+import type { ToastVariant } from '../ui/createToast'
+import { isTouchDevice } from '../input/isTouchDevice'
+import { type DayNightState, formatClock, phaseName } from '../world/dayNight'
 
 export type VillagerEntry = { npc: Raw<NpcAgent>; settlementName: string; foodSourceType: FoodSourceType }
 type VillagerRefreshEntry = { npc: NpcAgent; settlementName: string; foodSourceType: FoodSourceType }
@@ -68,8 +70,37 @@ type WorldConfigScreenState = {
   onDayNightChange: (() => void) | null
 }
 type NotesState = { open: boolean }
+type HudState = {
+  time: string
+  phase: string
+  seed: string
+  exp: string
+  weight: string
+  held: string
+  hint: string
+}
+type MinimapState = { collapsed: boolean }
+export type ToastItem = { id: number; text: string; variant: ToastVariant; fading: boolean }
+type ToastState = { items: ToastItem[] }
+type TouchChromeState = {
+  visible: boolean
+  inputEnabled: boolean
+  dropAvailable: boolean
+  sprintActive: boolean
+  onPause: (() => void) | null
+  onQuickActions: (() => void) | null
+  onInteract: (() => void) | null
+  onAltInteract: (() => void) | null
+  onDrop: (() => void) | null
+  onSprintToggle: (() => void) | null
+}
 
 type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'simpleFireStatus' | 'firePitStatus' | 'torchStatus'>>
+
+const HUD_HINT_TOUCH = 'Joystick = ruch · przeciągnij = kamera · E = interakcja · R = alt'
+const HUD_HINT_DESKTOP = 'WASD · klik = mysz · Esc = kursor · E = interakcja · R = alt · L = działania · I = ekwipunek · G = upuść · M = mapa'
+const TOAST_VISIBLE_MS = 2200
+const TOAST_FADE_MS = 300
 
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null } as NpcDialogueMenuState,
@@ -93,6 +124,29 @@ export const ui = reactive({
   busy: { visible: false, label: '' } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
+  hud: {
+    time: '--',
+    phase: '',
+    seed: '',
+    exp: '',
+    weight: '',
+    held: '',
+    hint: isTouchDevice() ? HUD_HINT_TOUCH : HUD_HINT_DESKTOP,
+  } as HudState,
+  minimap: { collapsed: false } as MinimapState,
+  toast: { items: [] as ToastItem[] } as ToastState,
+  touch: {
+    visible: false,
+    inputEnabled: true,
+    dropAvailable: false,
+    sprintActive: false,
+    onPause: null,
+    onQuickActions: null,
+    onInteract: null,
+    onAltInteract: null,
+    onDrop: null,
+    onSprintToggle: null,
+  } as TouchChromeState,
   openStack: [] as string[],
 })
 
@@ -231,3 +285,87 @@ export function isWorldConfigScreenOpen(): boolean { return ui.worldConfigScreen
 export function openNotes(): void { ui.notes.open = true }
 export function closeNotes(): void { ui.notes.open = false }
 export function isNotesOpen(): boolean { return ui.notes.open }
+
+export function setHudSeed(seed: number): void {
+  const text = `seed ${seed}`
+  if (ui.hud.seed === text) return
+  ui.hud.seed = text
+}
+export function setHudTime(timeOfDay: number): void {
+  const time = formatClock(timeOfDay)
+  if (ui.hud.time !== time) ui.hud.time = time
+  const phase = phaseName(timeOfDay)
+  if (ui.hud.phase !== phase) ui.hud.phase = phase
+}
+export function setHudExp(exp: number): void {
+  const text = `exp ${exp}`
+  if (ui.hud.exp === text) return
+  ui.hud.exp = text
+}
+export function setHudInventoryWeight(current: number, max: number): void {
+  const text = `${current.toFixed(1)}/${max.toFixed(1)} kg`
+  if (ui.hud.weight === text) return
+  ui.hud.weight = text
+}
+export function setHudHeldTool(label: string): void {
+  const text = label ? `w ręce: ${label}` : ''
+  if (ui.hud.held === text) return
+  ui.hud.held = text
+}
+
+export function toggleMinimap(): void { ui.minimap.collapsed = !ui.minimap.collapsed }
+export function setMinimapCollapsed(collapsed: boolean): void { ui.minimap.collapsed = collapsed }
+export function isMinimapCollapsed(): boolean { return ui.minimap.collapsed }
+
+let nextToastId = 1
+const toastTimeouts = new Set<number>()
+export function showToast(text: string, variant: ToastVariant = 'info'): void {
+  const id = nextToastId++
+  ui.toast.items.push({ id, text, variant, fading: false })
+  const fadeTimeout = window.setTimeout(() => {
+    const item = ui.toast.items.find((t) => t.id === id)
+    if (item) item.fading = true
+    const removeTimeout = window.setTimeout(() => {
+      const idx = ui.toast.items.findIndex((t) => t.id === id)
+      if (idx !== -1) ui.toast.items.splice(idx, 1)
+      toastTimeouts.delete(removeTimeout)
+    }, TOAST_FADE_MS)
+    toastTimeouts.add(removeTimeout)
+    toastTimeouts.delete(fadeTimeout)
+  }, TOAST_VISIBLE_MS)
+  toastTimeouts.add(fadeTimeout)
+}
+export function clearToasts(): void {
+  for (const t of toastTimeouts) window.clearTimeout(t)
+  toastTimeouts.clear()
+  ui.toast.items = []
+}
+
+type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract' | 'onAltInteract' | 'onDrop' | 'onSprintToggle'>>
+export function configureTouchChrome(handlers: TouchChromeHandlers): void {
+  ui.touch.visible = true
+  Object.assign(ui.touch, handlers)
+}
+export function setTouchInputEnabled(enabled: boolean): void {
+  if (ui.touch.inputEnabled === enabled) return
+  ui.touch.inputEnabled = enabled
+}
+export function setTouchDropAvailable(available: boolean): void {
+  if (ui.touch.dropAvailable === available) return
+  ui.touch.dropAvailable = available
+}
+export function setTouchSprintActive(active: boolean): void {
+  ui.touch.sprintActive = active
+}
+export function clearTouchChrome(): void {
+  ui.touch.visible = false
+  ui.touch.inputEnabled = true
+  ui.touch.dropAvailable = false
+  ui.touch.sprintActive = false
+  ui.touch.onPause = null
+  ui.touch.onQuickActions = null
+  ui.touch.onInteract = null
+  ui.touch.onAltInteract = null
+  ui.touch.onDrop = null
+  ui.touch.onSprintToggle = null
+}

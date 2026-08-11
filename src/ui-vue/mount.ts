@@ -14,6 +14,10 @@ const FORWARDED_FNS = [
   'showBusy', 'hideBusy',
   'configureWorldConfigScreen', 'openWorldConfigScreen', 'closeWorldConfigScreen', 'isWorldConfigScreenOpen',
   'openNotes', 'closeNotes', 'isNotesOpen',
+  'setHudSeed', 'setHudTime', 'setHudExp', 'setHudInventoryWeight', 'setHudHeldTool',
+  'toggleMinimap', 'setMinimapCollapsed', 'isMinimapCollapsed',
+  'showToast', 'clearToasts',
+  'configureTouchChrome', 'setTouchInputEnabled', 'setTouchDropAvailable', 'setTouchSprintActive', 'clearTouchChrome',
 ] as const
 
 export type VueUi = Pick<StoreModule, typeof FORWARDED_FNS[number]> & { dispose: () => void }

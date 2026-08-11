@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Zap } from 'lucide-vue-next'
 import { onUnmounted, ref, type Ref, watch } from 'vue'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import { isTouchDevice } from '../../input/isTouchDevice'
@@ -148,11 +149,12 @@ const shovelActions: Action[] = [
   <button
     v-if="!touchDevice"
     type="button"
-    class="pointer-events-auto fixed h-11 w-11 cursor-pointer rounded-lg border border-white/25 bg-black/40 text-lg text-ink hover:bg-black/60"
+    class="pointer-events-auto fixed flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-white/25 bg-black/40 text-ink hover:bg-black/60"
     style="right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom))"
+    aria-label="Szybkie działania"
     @click="toggleQuickActions"
   >
-    ⚡
+    <Zap :size="22" />
   </button>
   <div
     v-if="ui.quickActions.open"

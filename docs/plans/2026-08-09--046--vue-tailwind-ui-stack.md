@@ -1,8 +1,6 @@
 # Plan: Vue.js + Tailwind + ikony jako stack dla UI gry (dialogi/menu)
 
-**Status:** `in progress` — **Faza 0 (setup + proof-of-concept) done 2026-08-10**, zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test`. Ten sam dzień: **pierwszy realny ekran wylądował poza kolejnością Faz** — [plan 048 (NPC dialogues v2)](./2026-08-09--048--npc-dialogues-v2.md)'s `NpcDialogueMenu.vue` (net-new, nie migracja istniejącego ekranu, więc nie wymagał Fazy 1/2) zastąpił `createNpcDialog.ts` dla NPC. **Faza 1 (Villagers) done 2026-08-09** — `src/ui-vue/screens/VillagersScreen.vue` zastępuje `src/ui/createVillagersScreen.ts` (usunięty), fasada w `src/ui-vue/store.ts` (`openVillagers/closeVillagers/refreshVillagers/isVillagersOpen`) + `mount.ts`'s generyczny `FORWARDED_FNS` forwarder; generyczny `ui.openStack`/`useOverlayScreen` z Fazy 2 zbudowany teraz (Escape-priority dla asynchronicznie montowanych ekranów, jeden globalny listener w `App.vue`) zamiast per-ekran `isSuppressed` — `createPauseMenu.ts`'s callback zostaje jako jest, do zastąpienia gdy pause menu też się migruje. Zielone na `tsc`/`vue-tsc`/`lint`/`test`/`build`; brak jeszcze wizualnej weryfikacji w przeglądarce.
-
-**Reconciliation 2026-08-10 (ten sam dzień jako plan 054):** ten status-nagłówek nie był aktualizowany od Fazy 1, mimo że **Faza 2 i większość Fazy 3 zostały w międzyczasie zaimplementowane** (widoczne w `git log` — gałąź `feat/vue-ui-phase-2-fix` zmergowana, plus dalsze commity `refactor(ui): ...`). Stan kodu (prawda per `CLAUDE.md`'s truth hierarchy), nie ten nagłówek, jest wiążący — patrz status per-Faza niżej. **Faza 2 (Pause menu, Quest log, NPC flavor dialog): done.** **Faza 3 (Inventory, Quick actions, Time Skip overlay): done** — Inventory/Quick actions były już zmigrowane; Time Skip overlay domknięty teraz w tej sesji (patrz notatka w sekcji Fazy 3). Wszystkie pięć `src/ui/create*.ts` modułów (`createPauseMenu`, `createQuestLog`, `createNpcDialog`, `createInventoryScreen`, `createQuickActions`, `createTimeSkipOverlay`) to dziś cienkie fasady nad `src/ui-vue/mount.ts`'s `getMountedVueUi()` — zachowują stary kontrakt (`isOpen/open/close/toggle/refresh/dispose`), `createApp.ts` się nie zmienił poza tym, co already było. **Faza 4 (HUD/Minimap/Toast/przyciski dotykowe): nieruszone**, zgodnie z planem wymaga świadomej decyzji przed startem (hot-path kod) — patrz sekcja Fazy 4. Zapytany o kierunek (tylko ikony dotykowe / pełna migracja hot-path / zatrzymać się), **użytkownik wybrał 2026-08-10: zatrzymać się na Fazie 3** — Faza 2/3 (w tym nowy Time Skip overlay) nigdy nie zostały ręcznie zweryfikowane w przeglądarce; to priorytet przed dalszymi fazami. Konkretne kroki do testu: patrz sekcja Weryfikacja niżej.
+**Status:** `verification needed` — **Fazy 0–4 zaimplementowane 2026-08-11.** Faza 4 (HUD / Minimap / Toast / touch chrome + Lucide) dociąga hot-path overlaye do Vue: fasady `createHud`/`createMinimap`/`createToast`, `HudScreen`/`MinimapScreen`/`ToastStack`/`TouchChrome`; joystick + look zostają vanilla w `createTouchControls`. Minimap maluje canvas imperatywnie (bez reactive pozycji co klatkę). Ikony: `lucide-vue-next` (Menu/Zap/PackageMinus/Footprints/Plus/Minus; E/R litery). Wymaga ręcznej weryfikacji w przeglądarce (desktop + touch) — patrz sekcja Weryfikacja / Faza 4.
 **Created:** 2026-08-09
 **Priority:** ustalone z użytkownikiem 2026-08-10 — odblokowuje [plan 048 (NPC dialogues v2)](./2026-08-09--048--npc-dialogues-v2.md), którego nowe menu rozmowy ma być budowane w Vue
 
@@ -119,13 +117,18 @@ Dzisiejsze „PWA" to **wyłącznie metadata instalowalności**: `manifest.href`
 - [x] `src/ui-vue/screens/TimeSkipOverlay.vue` (2026-08-10, razem z plan 054) — ostatni brakujący ekran tej Fazy. Store (`src/ui-vue/store.ts`): `ui.timeSkip = { visible, label, fadeVisible }` + `showTimeSkip/hideTimeSkip/finishTimeSkipHide`. Zachowuje dokładnie stare zachowanie fade-out: `hideTimeSkip()` przy aktywnym fade **nie** chowa natychmiast — tylko startuje fade-out (`fadeVisible = false`), a `TimeSkipOverlay.vue`'s `@transitionend` na fade-div woła `finishTimeSkipHide()`, które dopiero wtedy chowa panel (`visible = false`) — więc opacity-transition (0.4s) jest widoczna zamiast czarnego ekranu znikającego natychmiast. Bez aktywnego fade (`onWait` — brak `fade`), `hideTimeSkip()` chowa panel od razu, tak jak stary `root.hidden = true` bez `transitionend`. `src/ui/createTimeSkipOverlay.ts` to teraz fasada (kontrakt `show/hide/dispose` bez zmian, `createApp.ts` się nie zmienił). Stara CSS (`.seedvale-time-skip*`, `index.html`) usunięta — nic już jej nie używa. Renderowany jako **ostatnie** dziecko w `App.vue`'s overlay-div, żeby malować się nad pause menu (odpowiednik starego `z-index: 12` > pause menu `11` — skip może być widoczny, gdy gracz otworzy pauzę Escape'em w trakcie).
 - Zielone na `tsc`/`vue-tsc`/`lint`/`build`/`test`. Wizualna weryfikacja w przeglądarce: do zrobienia — patrz sekcja Weryfikacja niżej.
 
-### Faza 4 — HUD / Minimap / Toast / przyciski dotykowe (do oceny, nie z góry przesądzone)
+### Faza 4 — HUD / Minimap / Toast / przyciski dotykowe — `verification needed` (2026-08-11)
 
-Te są **hot-path**: HUD aktualizuje się co klatkę/co sekundę (czas, exp), minimap przerysowuje się często, toast ma własną kolejkę. Reaktywność Vue prawdopodobnie sobie poradzi (Vue jest szybki na tej skali), ale **nie migrować automatycznie** — ocenić przy implementacji, czy zysk (spójność, mniej ręcznego DOM-mutation) przebija ryzyko regresji w hot-path kodzie, który dziś działa dobrze.
+Użytkownik 2026-08-11: cała Faza 4 + Lucide (nie Vuetify).
 
-**Issue 005 (ikony na przyciskach dotykowych) nie wymaga czekania na tę fazę** — `lucide-vue-next` jest dostępne od Fazy 0, ale same przyciski (`src/input/createTouchControls.ts`) są dziś vanilla i renderowane bardzo prosto; można wstrzyknąć gotowe SVG stringi z lucide (lucide ma też pakiet czystych SVG, nie tylko komponenty Vue) bez czekania na pełną migrację tego modułu do Vue. Do decyzji przy implementacji: rozdzielić „dostań ikony" od „przepisz na Vue".
-
-**Znalezisko przy porządkowaniu tego planu (2026-08-10):** stara CSS w `index.html` dla już zmigrowanych ekranów (`.seedvale-pause__*`, `.seedvale-quest-log__*`, `.seedvale-villagers__*`, `.seedvale-inventory__*`, `.seedvale-quick-actions__*`, `.seedvale-npc-dialog__*`) **nie została usunięta** podczas Fazy 1–3, mimo że plan to przewidywał („migrowany ekran = jego stare klasy można usunąć") — żaden `.vue` komponent już ich nie referencuje (`grep` potwierdza zero trafień poza `index.html` samym i `createStartScreen.ts`/`createTouchControls.ts`, które używają **innych**, wciąż-vanilla klas). To martwy kod, nie ryzyko regresji — bezpieczny do usunięcia w osobnym, małym cleanup-commicie (nieco za duży zakres, żeby robić go przy okazji Fazy 3/Time-Skip; zostawiony jako jawnie odnotowany dług, nie cichy dodatek do tej sesji).
+- [x] `HudScreen.vue` + fasada `createHud.ts` — dirty-check w store (`setHudTime`/…) jak dawniej `lastTime`/`lastExp`
+- [x] `MinimapScreen.vue` + `lib/drawMinimap.ts` — Vue shell + Lucide Plus/Minus; `update()` imperatywne przez `registerMinimapDrawer` (bez reactive pozycji NPC/osad co klatkę)
+- [x] `ToastStack.vue` + fasada `createToast.ts` — kolejka + fade 2200/300 ms
+- [x] `TouchChrome.vue` (Menu/Zap/PackageMinus/Footprints + litery R/E) — pause + action cluster; joystick + look zostają vanilla w `createTouchControls.ts`
+- [x] Usunięte `.seedvale-top-right-cluster` z `createApp.ts` — layout touch w Tailwind (pause + minimap offset)
+- [x] Quick Actions FAB desktop: `Zap` zamiast ⚡
+- [x] Stara CSS HUD/toast/minimap/touch-buttons/cluster usunięta z `index.html`; joystick/look/`--disabled` zostają
+- Zamyka [issue 005](../issues/2026-08-08--005--mobile-touch-ui-icon-library.md) (po weryfikacji w przeglądarce)
 
 ### Faza 5 — poza tym planem, ale naturalne miejsce na nowe ekrany
 
@@ -151,6 +154,17 @@ Te są **hot-path**: HUD aktualizuje się co klatkę/co sekundę (czas, exp), mi
 ## Weryfikacja (każda faza)
 
 Zgodnie z zasadami projektu (`CLAUDE.md`): `npx tsc --noEmit` (lub `vue-tsc --noEmit` po Fazie 0), `npm run lint`, `npm run build` po każdej fazie — **nie uruchamiać headless Chrome/Playwright**; po każdej fazie poprosić użytkownika o ręczny test na `localhost:5577` z konkretnymi krokami (co otworzyć, co kliknąć, na jakim viewport — desktop i touch/mobile osobno, bo to obszar z historią regresji).
+
+### Ręczny test Faza 4 (HUD / Minimap / Toast / touch + Lucide)
+
+Na `localhost:5577`, desktop i emulacja touch / urządzenie:
+
+1. **HUD** — zegar, faza, seed, exp, waga, held tool aktualizują się; hint desktop vs touch; na wąskim viewport hint znika.
+2. **Minimap** — NPC (niebieskie), osady (żółte + nazwa / strzałka), gracz (biały romb); collapse Plus/Minus; desktop bottom-left; touch top-right pod pause.
+3. **Toast** — np. zbierz gałąź / błąd kopania: stack top-center, fade.
+4. **Touch chrome** — Menu / Zap / PackageMinus / Footprints / R / E; drop tylko przy niepustym ekwipunku; RUN toggle (żółty active); E przy prompcie questa; joystick/look bez regresji; modal → chrome wyłączony (E wyjątek).
+5. **Quick actions FAB** (desktop) — ikona Zap.
+6. Brak błędów w konsoli.
 
 ### Ręczny test zaległy dla Faz 2/3 (nigdy nie wykonany — priorytet przed Fazą 4)
 

@@ -105,8 +105,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Vue 3 + Tailwind v4 + `lucide-vue-next` is mounted under `#vue-ui` through `src/ui-vue/`.
 - Vue migration is incremental; it is not a full replacement of the vanilla UI yet.
 - NPC dialogue v2 is already a Vue screen.
-- Pause menu, quest log, inventory, quick actions, time-skip overlay, busy/channel overlay, world config screen and notes/journal screen exist as Vue screens; `src/ui/create*.ts` for these are thin compatibility facades over the Vue store, not separate implementations.
-- HUD, minimap, toast and touch controls remain vanilla DOM (plan 046 Faza 4 — intentionally not migrated yet, hot-path code).
+- Pause menu, quest log, inventory, quick actions, time-skip overlay, busy/channel overlay, world config screen, notes/journal, HUD, minimap, toast and touch action chrome exist as Vue screens/overlays; `src/ui/create*.ts` for these are thin compatibility facades over the Vue store.
+- Touch joystick + look-drag remain vanilla DOM in `src/input/createTouchControls.ts` (input hot-path); Lucide icons on pause/actions/minimap toggle (plan 046 Faza 4 / issue 005).
 - lil-gui remains the full debug/world configuration UI (region/fbm/road-network tuning, post-processing); the in-game world config screen (pause menu → Świat) exposes only the player-facing subset (seed, flat shading, day/night) — same underlying `WorldConfig`/`DayNightState` objects, not a duplicate.
 
 ## Important shared concepts
@@ -160,7 +160,7 @@ Plan 053 refactored `createApp.ts` and introduced the mutable `WorldBundle` boun
 
 ### UI migration
 
-Plan 046 introduced the Vue/Tailwind UI stack and is being migrated screen-by-screen. Faza 0-3 are done (pause menu, quest log, NPC dialog, inventory, quick actions, time-skip overlay all live in `src/ui-vue/`). Faza 4 (HUD/minimap/toast/touch controls) is intentionally paused — hot-path code, needs a deliberate risk/reward call, not an automatic migration. Do not assume every UI screen belongs in Vue yet; check the existing screen and the relevant plan before moving it.
+Plan 046 introduced the Vue/Tailwind UI stack and migrated screens phase-by-phase. Fazy 0–4 are implemented (HUD, minimap, toast, touch chrome with Lucide; joystick/look stay vanilla). Plan status is `verification needed` until manual desktop/touch checks pass. Do not assume every future UI belongs in Vue by default; extend the existing facade + store pattern when migrating.
 
 ### NPC daily routine
 
@@ -208,7 +208,7 @@ The exact status of plans belongs in `docs/plans/README.md`, not here. As of thi
 - Plan 049 — procedural world landmarks.
 - Plan 053 — createApp refactor is implemented and serves as recent architectural context.
 - Plan 054 — WorldBundle reference safety: done, kept as recent context for the `WorldBundle` mutation pattern.
-- Plan 046 — Vue/Tailwind UI migration: Faza 0-3 done, Faza 4 (hot-path HUD/minimap/toast/touch) paused pending a deliberate decision.
+- Plan 046 — Vue/Tailwind UI migration: Fazy 0–4 implemented; browser verification pending (desktop + touch).
 - Plan 005 — game UI screens: done (world config + notes/journal screens close out the last open item).
 - Plan 052 — shovel digging/stone finding: done (shovel item, runtime terrain-deformation layer, dig ground interaction).
 - Plan 020 — NPC Place/daily routine.
