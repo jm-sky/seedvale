@@ -1,0 +1,87 @@
+import { MeshStandardMaterial as MeshStandardMaterialCtor } from 'three'
+import type { Material, Mesh, MeshStandardMaterial, Object3D } from 'three'
+
+/** Shared clock for every patched foliage material — one uniform object, many
+ *  shaders. Advanced from the game loop (`updateFoliageWind`). */
+const uFoliageTime = { value: 0 }
+
+/** Leaf/canopy materials on nature GLBs (`tree_*`, `birch_*`, `maple_*`, bushes).
+ *  Trunk/bark names (`Wood`, `*Bark`) intentionally do not match. */
+const FOLIAGE_NAME_RE = /leaves|green|flowers/i
+
+const WIND_CACHE_KEY = 'foliage-wind-v1'
+
+const BEGIN_VERTEX_WIND = /* glsl */ `
+  #include <begin_vertex>
+  {
+    // World-meter amplitude independent of prepareProp()'s object.scale —
+    // modelMatrix column length is that uniform scale.
+    float objScale = length( modelMatrix[ 0 ].xyz );
+    float amp = 0.11 / max( objScale, 1e-4 );
+    // Canopy meshes are foliage-only (trunk uses a different material), so the
+    // whole mesh may sway a little; higher local Y still moves more.
+    float bend = 0.45 + 0.55 * smoothstep( 0.0, 1.4, max( transformed.y, 0.0 ) );
+    vec3 world = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;
+    float phase = world.x * 0.13 + world.z * 0.10;
+    float t = uFoliageTime;
+    transformed.x += sin( t * 1.15 + phase ) * amp * bend;
+    transformed.z += cos( t * 0.95 + phase * 1.25 ) * amp * 0.75 * bend;
+  }
+`
+
+function isFoliageMaterial(mat: Material): boolean {
+  return FOLIAGE_NAME_RE.test(mat.name ?? '')
+}
+
+/**
+ * Injects a cheap tip-weighted XZ sway into a `MeshStandardMaterial` used for
+ * foliage (plan 066). Idempotent — safe to call on every GLTF traverse.
+ * Shadow depth is left alone (subtle motion; matching depth material later if
+ * needed).
+ */
+export function patchFoliageWindMaterial(mat: Material): void {
+  if (!(mat instanceof MeshStandardMaterialCtor)) return
+  if (!isFoliageMaterial(mat)) return
+  if (mat.userData.foliageWindPatched) return
+  mat.userData.foliageWindPatched = true
+
+  const prevCompile = mat.onBeforeCompile
+  mat.onBeforeCompile = (shader, renderer) => {
+    prevCompile?.(shader, renderer)
+    shader.uniforms.uFoliageTime = uFoliageTime
+    if (!shader.vertexShader.includes('uFoliageTime')) {
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          '#include <common>',
+          '#include <common>\nuniform float uFoliageTime;',
+        )
+        .replace('#include <begin_vertex>', BEGIN_VERTEX_WIND)
+    }
+  }
+  const prevKey = mat.customProgramCacheKey
+  mat.customProgramCacheKey = () =>
+    `${prevKey ? prevKey.call(mat) : ''}|${WIND_CACHE_KEY}`
+}
+
+/** Traverse an object and patch every foliage material (shared GPU mats ⇒ one
+ *  patch covers all clones of the same GLB). */
+export function patchFoliageWindOnObject(root: Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as Mesh
+    if (!mesh.isMesh) return
+    const mat = mesh.material
+    if (Array.isArray(mat)) mat.forEach(patchFoliageWindMaterial)
+    else patchFoliageWindMaterial(mat)
+  })
+}
+
+/** Patch a procedural crown material that has no GLB name (e.g. `createTree`). */
+export function patchProceduralFoliageMaterial(mat: MeshStandardMaterial): void {
+  if (!mat.name) mat.name = 'Green'
+  patchFoliageWindMaterial(mat)
+}
+
+/** Advance the shared foliage wind clock — call once per frame. */
+export function updateFoliageWind(dt: number): void {
+  uFoliageTime.value += dt
+}

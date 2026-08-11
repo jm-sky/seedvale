@@ -40,6 +40,9 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Procedural terrain with chunked generation.
 - Height composition uses macro continental bias + mountain ridges, a medium-scale hills/valleys term, and softened local detail FBM (`detailAmplitude`; plan 062 done).
 - Shore sand band width varies locally in world space (`sandBandAt`, ~0.6–3 units); grass thins smoothly into mountain foothills instead of a hard ridge cutoff.
+- Instanced grass uses a custom wind shader with view/sun tip scatter (plan 066).
+- Chunk terrain fragment shader adds procedural macro color/roughness variation; detail normals fade out with distance (20–50 m).
+- Tree/bush leaf materials share a cheap vertex wind (`world/foliageWind.ts`); post-processing ends with a subtle film grade + Bayer dither (`render/filmGradeShader.ts`).
 - Worker pool for terrain generation.
 - Chunk streaming with load/unload radii and pinned home chunks.
 - Large-scale terrain regions including ocean/coast/mountain behaviour.

@@ -13,11 +13,14 @@ export const GodRaysShader = {
   uniforms: {
     tDiffuse: { value: null },
     lightPosition: { value: new Vector2(0.5, 0.5) },
-    exposure: { value: 0.35 },
+    exposure: { value: 0.22 },
     decay: { value: 0.95 },
     density: { value: 0.9 },
-    weight: { value: 0.6 },
-    threshold: { value: 0.6 },
+    // Kept modest so shafts read as streaks, not a full-frame lift when many
+    // samples hit HDR sky (see issue 016 — mountain whiteout).
+    weight: { value: 0.4 },
+    // Above typical day-fog luminance so fogged horizons don't feed the rays.
+    threshold: { value: 0.75 },
     /** Overall fade — 0 while the sun is below/far from the horizon or off
      *  screen, so the sample loop below is wasted work only near dawn/dusk. */
     intensity: { value: 0 },
@@ -65,13 +68,12 @@ export const GodRaysShader = {
         illuminationDecay *= decay;
       }
 
-      // Near lightPosition itself (looking straight at/near the sun),
-      // deltaTexCoord shrinks toward zero and every sample lands on
-      // (near-)the same bright, not-yet-tonemapped sky pixel — accumulating
-      // 32 of those unclamped blew the whole screen out to white/grey ("walk
-      // into the ray and see nothing"). Capped so the rays stay a glow, not
-      // a full-screen wash, at any viewing angle.
-      vec3 rays = min(accumulated * exposure * intensity, vec3(0.8));
+      // Near lightPosition (or with a sky-heavy frame from a ridge), many
+      // samples hit the same bright, not-yet-tonemapped sky — the geometric
+      // series can exceed ~3× before exposure. A high per-pixel cap (0.8)
+      // still washed the whole frame white on mountains (issue 016); keep
+      // shafts as a local glow, not a screen-wide lift.
+      vec3 rays = min(accumulated * exposure * intensity, vec3(0.2));
       gl_FragColor = vec4(base.rgb + rays, base.a);
     }`,
 }

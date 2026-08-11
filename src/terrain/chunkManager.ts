@@ -187,7 +187,7 @@ export type ChunkManager = {
   tickWater: (dt: number) => void
   setWaterDayNight: (dayFactor: number) => void
   tickGrass: (dt: number) => void
-  setGrassDayNight: (dayFactor: number) => void
+  setGrassDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void
   sampleHeight: HeightSampler
   sampleFloor: HeightSampler
   sampleBiome: (x: number, z: number) => number
@@ -827,8 +827,8 @@ export function createChunkManager(
     tickGrass(dt) {
       grassSystem.update(dt)
     },
-    setGrassDayNight(dayFactor) {
-      grassSystem.setDayNight(dayFactor)
+    setGrassDayNight(dayFactor, sunDirection) {
+      grassSystem.setDayNight(dayFactor, sunDirection)
     },
     sampleHeight: (x, z) => readField('heights', x, z),
     sampleFloor: (x, z) => readField('floorHeights', x, z),

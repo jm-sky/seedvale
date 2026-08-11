@@ -1,10 +1,26 @@
 # Better visual effects
 
-**Status:** `planned`
+**Status:** `done`
 **Created:** 2026-08-11
-**Priority:** 🟡 medium · **Effort:** ? · **Depends on:** -
+**Priority:** 🟡 medium · **Effort:** S · **Depends on:** -
 
 > Authored by ChatGPT - review needed.
+
+## Progress
+
+| Item | Status |
+|------|--------|
+| Grass backlighting / fake subsurface | ✅ tuned (scatter 0.32) |
+| Terrain macro-color shader | ✅ strengthened (~±18% value + hue nudge) |
+| Distance-based terrain detail | ✅ detail normals fade 20→50 m |
+| Atmospheric fog | ✅ midday whiteout tuned (fog color, rayleigh, bloom, exposure) |
+| Water Fresnel | deferred — ocean quality is a separate README bug, not this plan |
+| Tree/foliage wind shader | ✅ `src/world/foliageWind.ts` |
+| Screen-space dithering / subtle color grading | ✅ `FilmGradeShader` after OutputPass |
+
+**Closed:** 2026-08-11 — atmosphere + wind verified; water left out of scope.
+
+---
 
 Tak. Patrząc na aktualny kod Seedvale i ten screenshot, **nie szedłbym teraz w ciężkie shadery**. Macie już sporo dobrych rzeczy: ACES, SMAA, N8AO, bloom, god rays, normal mapę terenu, custom shader trawy i miękkie cienie.
 
@@ -12,16 +28,16 @@ Największy problem na screenie to moim zdaniem **nie brak geometrii, tylko zbyt
 
 ### Co dałoby największy efekt za mały koszt
 
-| Mechanizm                                         | Efekt                                                 | Koszt |
-| ------------------------------------------------- | ----------------------------------------------------- | ----: |
-| **Terrain fragment shader – macro variation**     | ziemia przestaje wyglądać jak jednolity zielony dywan |    🟢 |
-| **Fake sunlight / backlighting dla trawy**        | trawa wygląda dużo bardziej naturalnie                |    🟢 |
-| **Distance-based terrain detail**                 | blisko szczegół, daleko czysta powierzchnia           |    🟢 |
-| **Lepszy atmospheric fog**                        | mniej „białej ściany” na horyzoncie                   |    🟢 |
-| **Screen-space dithering / subtle color grading** | bardziej filmowy obraz                                |    🟢 |
-| **Tree/foliage wind shader**                      | drzewa przestają być statycznymi modelami             |    🟡 |
-| **Cheap water Fresnel shader**                    | dużo lepsza woda                                      |    🟡 |
-| CSM / volumetric clouds / SSR                     | duży efekt, ale większy scope                         |    🔴 |
+| Mechanizm                                         | Efekt                                                 | Koszt | Done |
+| ------------------------------------------------- | ----------------------------------------------------- | ----: | :--: |
+| **Terrain fragment shader – macro variation**     | ziemia przestaje wyglądać jak jednolity zielony dywan |    🟢 |  ✅  |
+| **Fake sunlight / backlighting dla trawy**        | trawa wygląda dużo bardziej naturalnie                |    🟢 |  ✅  |
+| **Distance-based terrain detail**                 | blisko szczegół, daleko czysta powierzchnia           |    🟢 |  ✅  |
+| **Lepszy atmospheric fog**                        | mniej „białej ściany” na horyzoncie                   |    🟢 |  ✅  |
+| **Screen-space dithering / subtle color grading** | bardziej filmowy obraz                                |    🟢 |  ✅  |
+| **Tree/foliage wind shader**                      | drzewa przestają być statycznymi modelami             |    🟡 |  ✅  |
+| **Cheap water Fresnel shader**                    | dużo lepsza woda                                      |    🟡 |  —  |
+| CSM / volumetric clouds / SSR                     | duży efekt, ale większy scope                         |    🔴 |      |
 
 ### 1. Najbardziej polecam: shader powierzchni terenu
 

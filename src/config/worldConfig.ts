@@ -217,11 +217,13 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       aoIntensity: 3,
       aoQuality: 'Medium',
       bloomEnabled: true,
-      bloomStrength: 0.4,
-      bloomRadius: 0.4,
-      bloomThreshold: 0.85,
+      bloomStrength: 0.28,
+      bloomRadius: 0.35,
+      bloomThreshold: 0.92,
       godRaysEnabled: true,
-      godRaysExposure: 0.35,
+      // Kept low so dawn/dusk shafts stay visible without mountain whiteout
+      // (issue 016); GUI still allows raising it while tuning.
+      godRaysExposure: 0.22,
     },
     showGui: true,
     player: {

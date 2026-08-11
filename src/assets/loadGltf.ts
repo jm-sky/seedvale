@@ -10,6 +10,7 @@ import {
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { patchFoliageWindOnObject } from '../world/foliageWind'
 
 const loader = new GLTFLoader()
 loader.setMeshoptDecoder(MeshoptDecoder)
@@ -48,6 +49,10 @@ function loadCached(url: string): Promise<CachedGltf> {
         if (Array.isArray(mat)) mat.forEach((m: Material) => { m.userData.sharedGpu = true })
         else (mat as Material).userData.sharedGpu = true
       })
+      // Leaf/canopy materials get a shared vertex wind (plan 066). Materials are
+      // shared across every clone of this URL, so patching the cache root once
+      // covers chunk + settlement trees/bushes.
+      patchFoliageWindOnObject(root)
       return { root, animations: gltf.animations ?? [] }
     })
     cache.set(url, pending)

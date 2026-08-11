@@ -3,7 +3,10 @@ import type { SkyParams } from './createSky'
 
 const NIGHT_FOG = new Color(0x1a2233)
 const DUSK_FOG = new Color(0xc4876a)
-const DAY_FOG = new Color(0x9ec5e0)
+/** Midday fog used to be `0x9ec5e0` — light enough that ACES+bloom read it as a
+ *  white wall once distant terrain mixed toward it. Deeper blue-grey keeps
+ *  atmospheric perspective without bleaching the horizon. */
+const DAY_FOG = new Color(0x6a93b0)
 const tmpFogColor = new Color()
 
 /** Smooth night→dusk/dawn→day fog color from sun elevation, replacing a
@@ -83,25 +86,23 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
   // per-wavelength falloff that reads as "blue" instead of washed-out white.
   // Keep rayleigh close to that native scale; use turbidity for the
   // warm/hazy horizon look at low sun angles instead.
-  let turbidity = 1.6 + (1 - Math.abs(elev)) * 2.8
-  let rayleigh = 0.85 + dayFactor * 0.95
+  // Cap midday ~1.15 — even 1.8 still bleached the dome white under bloom
+  // (plan 066 whiteout screenshot @ ~12:00).
+  let turbidity = 1.4 + (1 - Math.abs(elev)) * 2.4
+  let rayleigh = 0.7 + dayFactor * 0.45
   if (elev < -0.15) {
-    turbidity = 1.2
-    rayleigh = 0.6
+    turbidity = 1.1
+    rayleigh = 0.55
   }
 
-  const sunIntensity = 0.15 + dayFactor * 1.35
-  const ambientIntensity = 0.12 + dayFactor * 0.28
-  const hemiIntensity = 0.15 + dayFactor * 0.45
+  const sunIntensity = 0.15 + dayFactor * 1.15
+  const ambientIntensity = 0.12 + dayFactor * 0.25
+  const hemiIntensity = 0.15 + dayFactor * 0.38
 
-  // `fogNear` used to start as close as 70 — on terrain with short sightlines
-  // (mountain ridges/valleys) most of the visible surface already fell past
-  // it, reading as "walked into a wall of fog." Pushed further out so nearby
-  // terrain reads clearly; `fogFar` is left alone; it's tuned to how far
-  // chunks actually stream in (`ChunkManagerConfig.unloadRadius` ×
-  // `chunkSize`, ~256 by default) so the pop-in edge stays hidden.
-  const fogNear = 130 + dayFactor * 50
-  const fogFar = 180 + dayFactor * 80
+  // Start fog further out so mid-ground hills stay readable; `fogFar` still
+  // covers the chunk stream-in edge (~unloadRadius × chunkSize).
+  const fogNear = 160 + dayFactor * 50
+  const fogFar = 230 + dayFactor * 70
   const fogColor = fogColorFromElev(elev)
 
   return {

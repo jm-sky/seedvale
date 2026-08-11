@@ -7,6 +7,7 @@ import type { ClearingLayout } from './villageClearing'
 import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
 import { distanceToSegment } from '../math/segment'
 import { createSparks, type Sparks } from '../shared/getFireParticles'
+import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, type TreeGrowthStage, visualScale } from '../world/treeLifecycle'
 
@@ -481,6 +482,7 @@ export function createTree(scale = 1): THREE.Group {
   )
   crown.position.y = 2.3 * scale
   crown.castShadow = true
+  patchProceduralFoliageMaterial(crown.material as THREE.MeshStandardMaterial)
   tree.add(crown)
   return tree
 }

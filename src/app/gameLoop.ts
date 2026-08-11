@@ -36,6 +36,7 @@ import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
+import { updateFoliageWind } from '../world/foliageWind'
 import {
   buildDigTarget,
   buildInteractables,
@@ -90,7 +91,7 @@ function applyDayNight(
     fog.far = p.fogFar
   }
   chunkManager.setWaterDayNight(p.dayFactor)
-  chunkManager.setGrassDayNight(p.dayFactor)
+  chunkManager.setGrassDayNight(p.dayFactor, sky.sunPosition)
   ocean.setDayNight(p.dayFactor, sky.sunPosition)
 }
 
@@ -462,6 +463,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       playerTorch.update(dt)
       bundle.chunkManager.tickWater(dt)
       bundle.chunkManager.tickGrass(dt)
+      updateFoliageWind(dt)
       bundle.ocean.update(dt)
       worldAudio.update(dt)
       minimap.update(

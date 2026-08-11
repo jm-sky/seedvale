@@ -14,7 +14,8 @@ export function createRenderer(container: HTMLElement): THREE.WebGLRenderer {
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 0.95
+  // Slightly under 1 — midday sky + hemi easily clip to a white dome otherwise.
+  renderer.toneMappingExposure = 0.88
   container.appendChild(renderer.domElement)
   return renderer
 }

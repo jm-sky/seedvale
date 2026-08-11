@@ -47,7 +47,6 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
 | [2026-08-11--060--npc-schedule-actions-and-trait-overlays.md](./2026-08-11--060--npc-schedule-actions-and-trait-overlays.md) | Wykonywalne aktywności grafiku NPC + nakładki traits | 0% | 🟡 medium | L | ~~020~~, ~~022~~ |
 | [2026-08-11--063--forest-regions-and-habitat-distribution.md](./2026-08-11--063--forest-regions-and-habitat-distribution.md) | Rozbudować generowanie lasów tak, aby świat posiadał duże, wyraźne obszary leśne | 0% | 🔴 high | L | ~~028~~, ~~062~~ |
-| [2026-08-11--066--better-visual-effects.md](./2026-08-11--066--better-visual-effects.md) | Lepsze efekty graficzne | 0% | 🟡 medium | S |  |
 
 ---
 
@@ -121,14 +120,12 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-08--045--health-stamina-threat.md](./2026-08-08--045--health-stamina-threat.md) | Wspólny Health/Stamina dla NPC/fauny/gracza (Threat odłożony — brak nowego konsumenta) | 100% | 🔴 high | L | ~~010~~, ~~022~~ |
 | [2026-08-10--055--shared-simulation-architecture.md](./2026-08-10--055--shared-simulation-architecture.md) | Wspólna architektura symulacji: state → perception → decision → action → world effect | — |
 | [2026-08-11--062--terrain-generation-overhaul.md](./2026-08-11--062--terrain-generation-overhaul.md) | Naturalniejsze generowanie terenu (macro + hills + soft detail; variable beach; grass foothill fade) | ~~001~~, ~~006~~, ~~007~~, ~~028~~ |
+| [2026-08-11--066--better-visual-effects.md](./2026-08-11--066--better-visual-effects.md) | Lepsze efekty graficzne (grass, terrain, wind, film grade, atmosphere) | — |
 
 ---
 
 ## Quick notes / bugs
 
-- **Mgła i god rays**
-  - ~~Mgła (dodana w `2026-08-09--051--visual-atmosphere-lighting.md`) - w górach wszedłem w mgłę i nic nie widziałem. Ogółem mgły jest trochę za dużo.~~ → poprawione (weryfikacja potrzebna), dwie osobne rzeczy: (1) `fogNear` (`src/world/dayNight.ts`) zaczynał się już przy 70 jednostkach, przesunięte do 130-180 (`fogFar` bez zmian — dostrojone do zasięgu strumieniowania chunków). (2) Prawdziwy winowajca "nic nie widziałem" to god rays, nie mgła — `src/render/godRaysShader.ts` akumulował 32 nieklampowane próbki; patrząc blisko słońca wszystkie trafiały w niemal ten sam jasny, jeszcze nie tonemapowany piksel nieba, dając wielokrotność 1.0 i biały/szary "whiteout" po ACES. Dodany clamp na wkład promieni.
-  - **UPDATE 2026-08-11:** "God Ray" potrafi zasłonić cały ekran i nic nie widać, szczególnie gdy patrzę zza pleców postaci z poziou ziemi.
 - **Światło w domach**
   - ~~Światło w domach (dodane w `2026-08-08--044--world-life-details.md` i poprawione ostatnio) - kostka wisi w powietrzu obok domu, czasem nawet jakby 2 metry obok.~~ → poprawione (weryfikacja potrzebna): pierwsza poprawka (czekanie na `waitForChunks` dla niedomowych osad, patrz niżej) usuwała tylko jedną przyczynę. Druga, właściwa: `createHouseLight` zakładał lampę na 85% z `hutBounds.max.z`, czyli że ściana jest płaska i zwrócona w +Z na wysokości 40% modelu — nieprawdziwe dla żadnego z 3 wariantów `HUT_URLS` (potwierdzone raycastingiem: jeden ma ścianę tylko do ~25% wysokości, inny ma realną ścianę pod kątem 45°/225°, nie na osi Z). `props.ts::findWallMount` szuka teraz prawdziwego punktu na powierzchni bryły (raycast z zewnątrz, kilka wysokości/kątów) zamiast zgadywać z bounding boxa.
   - **UPDATE 2026-08-11:** jeszcze nie jest idealnie. Trzeba chyba zrobić porządne mapowanie per konkretny model budynku.

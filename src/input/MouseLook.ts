@@ -9,9 +9,12 @@ export type LookState = {
 const SENSITIVITY = 0.0022
 const PITCH_MIN = -0.9
 
-/** Pitch ceiling grows with zoom distance: close-in feels head-level, zoomed-out allows a top-down view. */
-const PITCH_MAX_NEAR = 0.5
-const PITCH_MAX_FAR = 1.15
+/** Max look-down pitch. Used to scale with zoom (near ≪ far) so close third-person
+ *  stayed nearly head-level — that blocked top-down aiming until you zoomed out.
+ *  Near is now almost as steep as far; a tiny gap still keeps ultra-close slightly
+ *  less extreme so the camera doesn't sit inside the head as easily. */
+const PITCH_MAX_NEAR = 1.05
+const PITCH_MAX_FAR = 1.2
 
 export const CAMERA_DISTANCE_MIN = 1.6
 export const CAMERA_DISTANCE_MAX = 22

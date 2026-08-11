@@ -7,6 +7,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import type { WorldConfig } from '../config/worldConfig'
+import { FilmGradeShader } from './filmGradeShader'
 import { GodRaysShader } from './godRaysShader'
 import type { Camera, Scene, WebGLRenderer } from 'three'
 
@@ -21,7 +22,14 @@ export type PostProcessing = {
   dispose: () => void
 }
 
-const GOD_RAYS_FACING_MARGIN = 0.15
+/** Facing-dot range for god-ray intensity. Full strength only when looking
+ *  fairly toward the sun — the old (−0.15…0.15) cone went full-blast across
+ *  most of the forward hemisphere and washed third-person views (issue 016). */
+const GOD_RAYS_FACING_START = 0.25
+const GOD_RAYS_FACING_FULL = 0.65
+/** Soft UV margin: fade rays as the projected sun leaves the frame. */
+const GOD_RAYS_SCREEN_IN = 0.05
+const GOD_RAYS_SCREEN_OUT = 0.12
 
 /** EffectComposer + N8AO (GTAO-based ambient occlusion) + SMAA, replacing the
  *  direct `renderer.render(scene, camera)` call. SMAA is needed because the
@@ -59,7 +67,7 @@ export function createPostProcessing(
   const smaaPass = new SMAAPass()
   composer.addPass(smaaPass)
 
-  const bloomPass = new UnrealBloomPass(new Vector2(width, height), 0.4, 0.4, 0.85)
+  const bloomPass = new UnrealBloomPass(new Vector2(width, height), 0.28, 0.35, 0.92)
   composer.addPass(bloomPass)
 
   const godRaysPass = new ShaderPass(GodRaysShader)
@@ -67,6 +75,11 @@ export function createPostProcessing(
 
   const outputPass = new OutputPass()
   composer.addPass(outputPass)
+
+  // After tone mapping / output encoding — grades display color and dithers
+  // 8-bit banding (sky, fog). See plan 066.
+  const filmGradePass = new ShaderPass(FilmGradeShader)
+  composer.addPass(filmGradePass)
 
   function applyConfig(next: WorldConfig['postProcessing']): void {
     aoPass.enabled = next.aoEnabled
@@ -102,18 +115,33 @@ export function createPostProcessing(
     if (intensity > 0) {
       cam.getWorldDirection(forward)
       const facing = forward.dot(sunDirection)
-      // Fade out (rather than hard-cut) as the sun approaches the edge of
-      // view/behind the camera — a hard cutoff would pop when turning.
-      intensity *= MathUtils.smoothstep(facing, -GOD_RAYS_FACING_MARGIN, GOD_RAYS_FACING_MARGIN)
+      // Require looking fairly toward the sun — soft fade, no hard pop.
+      intensity *= MathUtils.smoothstep(facing, GOD_RAYS_FACING_START, GOD_RAYS_FACING_FULL)
     }
 
-    godRaysPass.uniforms.intensity!.value = intensity
-    if (intensity <= 0) return
+    if (intensity <= 0) {
+      godRaysPass.uniforms.intensity!.value = 0
+      return
+    }
 
     sunWorld.copy(cam.position).addScaledVector(sunDirection, 500)
     ndc.copy(sunWorld).project(cam)
     const lightPos = godRaysPass.uniforms.lightPosition!.value as Vector2
     lightPos.set((ndc.x + 1) / 2, (ndc.y + 1) / 2)
+
+    // Softly kill rays when the sun is off-screen (old code kept full
+    // intensity with lightPosition outside [0,1], smearing sky across the
+    // frame from an off-frame target — issue 016).
+    const lx = lightPos.x
+    const ly = lightPos.y
+    const screenFade =
+      MathUtils.smoothstep(lx, -GOD_RAYS_SCREEN_OUT, GOD_RAYS_SCREEN_IN) *
+      (1 - MathUtils.smoothstep(lx, 1 - GOD_RAYS_SCREEN_IN, 1 + GOD_RAYS_SCREEN_OUT)) *
+      MathUtils.smoothstep(ly, -GOD_RAYS_SCREEN_OUT, GOD_RAYS_SCREEN_IN) *
+      (1 - MathUtils.smoothstep(ly, 1 - GOD_RAYS_SCREEN_IN, 1 + GOD_RAYS_SCREEN_OUT))
+    intensity *= screenFade
+
+    godRaysPass.uniforms.intensity!.value = intensity
   }
 
   return {
@@ -127,6 +155,7 @@ export function createPostProcessing(
       bloomPass.dispose()
       godRaysPass.dispose()
       outputPass.dispose()
+      filmGradePass.dispose()
       composer.dispose()
     },
   }

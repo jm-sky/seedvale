@@ -42,8 +42,9 @@ export type GrassSystem = {
   ) => WorldGrassChunk | null
   /** Advances the shared wind clock — call once per frame, not per chunk. */
   update: (dt: number) => void
-  /** 0 = full night, 1 = full day — darkens grass in step with sky/fog/lights. */
-  setDayNight: (dayFactor: number) => void
+  /** 0 = full night, 1 = full day — darkens grass in step with sky/fog/lights.
+   *  `sunDirection` drives cheap fake subsurface/backlighting (plan 066). */
+  setDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void
   dispose: () => void
 }
 
@@ -295,9 +296,15 @@ const VERTEX_SHADER = /* glsl */ `
 
   varying vec3 vColor;
   varying float vFogDepth;
+  varying vec3 vWorldPos;
+  // Blade height fraction [0 tip-less base .. 1 tip] — used for tip glow /
+  // fake subsurface (plan 066). Captured before wind bend so it stays the
+  // geometric "along-blade" parameter, not world Y.
+  varying float vBladeT;
 
   void main() {
     float bladeT = position.y;
+    vBladeT = bladeT;
     vColor = mix(aBaseColor, aTipColor, bladeT);
 
     // attribute mat4 instanceMatrix is injected automatically by three.js
@@ -318,6 +325,7 @@ const VERTEX_SHADER = /* glsl */ `
     worldPos.x += sway * 0.14 * bend * aWindFactor;
     worldPos.z += swayZ * 0.1 * bend * aWindFactor;
 
+    vWorldPos = worldPos.xyz;
     vec4 mvPosition = viewMatrix * worldPos;
     vFogDepth = -mvPosition.z;
     gl_Position = projectionMatrix * mvPosition;
@@ -326,23 +334,44 @@ const VERTEX_SHADER = /* glsl */ `
 
 const FRAGMENT_SHADER = /* glsl */ `
   uniform float uDayFactor;
+  uniform vec3 uSunDirection;
   uniform vec3 fogColor;
   uniform float fogNear;
   uniform float fogFar;
   varying vec3 vColor;
   varying float vFogDepth;
+  varying vec3 vWorldPos;
+  varying float vBladeT;
 
   void main() {
-    // Grass is unlit (no scene lights/shadows in this shader, purely
-    // vColor * brightness) — the terrain around it IS lit
-    // (MeshStandardMaterial), and at night its ambient/hemi/sun intensities
-    // (world/dayNight.ts's skyParamsFromTime) drop to roughly 10-15% of their
-    // daytime peak. A 0.4 floor here (reported: grass glowing at night, way
-    // brighter than everything drowning in darkness around it) stayed far
-    // above that, so grass visually detached from the terrain instead of
-    // going dark with it. Matched down to the same rough floor.
+    // Grass is mostly unlit (no scene lights/shadows) — the terrain around it
+    // IS lit (MeshStandardMaterial), and at night its ambient/hemi/sun
+    // intensities (world/dayNight.ts's skyParamsFromTime) drop to roughly
+    // 10-15% of their daytime peak. A 0.4 floor here (reported: grass glowing
+    // at night, way brighter than everything drowning in darkness around it)
+    // stayed far above that, so grass visually detached from the terrain
+    // instead of going dark with it. Matched down to the same rough floor.
     float brightness = mix(0.08, 1.0, uDayFactor);
     vec3 color = vColor * brightness;
+
+    // Fake translucency (plan 066): when looking toward the sun, thin tips
+    // pick up a warm scatter as if light passes through the blade. View/sun
+    // only — no screen-space normals (dFdx on thin fins was too subtle /
+    // unstable to read as vegetation). Scales with uDayFactor so night stays
+    // dark.
+    vec3 viewDir = normalize(cameraPosition - vWorldPos);
+    vec3 sunDir = normalize(uSunDirection);
+    float sunFacing = max(dot(viewDir, sunDir), 0.0);
+    float tip = vBladeT * vBladeT;
+    // Warm yellowish-green scatter — sells "vegetation" vs plastic cards.
+    // Kept modest: earlier 0.65 read as glowing blades.
+    vec3 scatter = vec3(0.65, 0.95, 0.28);
+    color += scatter * pow(sunFacing, 1.8) * tip * 0.32 * uDayFactor;
+    // Soft fill on the lit side so blades aren't flat silhouettes when the
+    // sun is behind the camera.
+    float frontLit = max(dot(viewDir, -sunDir), 0.0);
+    color *= 1.0 + frontLit * 0.08 * uDayFactor;
+
     // Same linear falloff as three.js's built-in fog_fragment chunk — matches
     // how the terrain (MeshStandardMaterial, scene.fog) fades, so the grass
     // ring doesn't stay sharp against faded-out terrain past fogFar.
@@ -436,6 +465,8 @@ export function createGrassSystem(): GrassSystem {
       {
         uTime: { value: 0 },
         uDayFactor: { value: 1 },
+        // Normalized sun direction from Sky — updated via setDayNight.
+        uSunDirection: { value: new THREE.Vector3(0, 1, 0) },
       },
     ]),
     vertexShader: VERTEX_SHADER,
@@ -698,8 +729,9 @@ export function createGrassSystem(): GrassSystem {
     update(dt) {
       material.uniforms.uTime!.value += dt
     },
-    setDayNight(dayFactor) {
+    setDayNight(dayFactor, sunDirection) {
       material.uniforms.uDayFactor!.value = dayFactor
+      ;(material.uniforms.uSunDirection!.value as THREE.Vector3).copy(sunDirection).normalize()
     },
     dispose() {
       material.dispose()

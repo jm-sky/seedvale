@@ -40,70 +40,148 @@ function getTerrainNormalMap(): THREE.Texture {
  *  unexpanded — three's `resolveIncludes()` runs later, inside `WebGLProgram`.
  *  So the thing to replace is the directive, not any line of the chunk's body. */
 const NORMAL_MAP_INCLUDE = '#include <normal_fragment_maps>'
+const COLOR_FRAGMENT_INCLUDE = '#include <color_fragment>'
+const ROUGHNESSMAP_FRAGMENT_INCLUDE = '#include <roughnessmap_fragment>'
 
 /** Stands in for three's `normal_fragment_maps` (r180) — only the
  *  `USE_NORMALMAP_TANGENTSPACE` branch, which is the only one a chunk material
  *  can take (it always gets a tangent-space `normalMap`, never an object-space
  *  one or a bump map). `tbn` comes from `normal_fragment_begin`, which still
- *  runs ahead of this. */
+ *  runs ahead of this. Distance fade (plan 066): full detail near the camera,
+ *  none past ~50 m, so close ground can stay grainy without paying for it on
+ *  the whole streamed horizon. */
 const NORMAL_MAP_TWO_TAP = /* glsl */ `
   vec3 mapNGrass = texture2D( normalMap, vNormalMapUv * uDetailTilesGrass ).xyz * 2.0 - 1.0;
   vec3 mapNBare = texture2D( normalMap, vNormalMapUv * uDetailTilesBare ).xyz * 2.0 - 1.0;
   vec3 mapN = mix( mapNGrass, mapNBare, vBareGround );
-  mapN.xy *= normalScale;
+  float detailFade = 1.0 - smoothstep( 20.0, 50.0, length( vViewPosition ) );
+  mapN.xy *= normalScale * detailFade;
   normal = normalize( tbn * mapN );
+`
+
+/** Cheap tileable value noise in world XZ — drives macro color/roughness
+ *  variation so the ground stops reading as a flat vertex-color carpet
+ *  (plan 066). No texture sample. */
+const MACRO_NOISE_FUNCS = /* glsl */ `
+float terrainHash21( vec2 p ) {
+  p = fract( p * vec2( 123.34, 456.21 ) );
+  p += dot( p, p + 45.32 );
+  return fract( p.x * p.y );
+}
+float terrainValueNoise( vec2 p ) {
+  vec2 i = floor( p );
+  vec2 f = fract( p );
+  f = f * f * ( 3.0 - 2.0 * f );
+  float a = terrainHash21( i );
+  float b = terrainHash21( i + vec2( 1.0, 0.0 ) );
+  float c = terrainHash21( i + vec2( 0.0, 1.0 ) );
+  float d = terrainHash21( i + vec2( 1.0, 1.0 ) );
+  return mix( mix( a, b, f.x ), mix( c, d, f.x ), f.y );
+}
+`
+
+const MACRO_COLOR_CHUNK = /* glsl */ `
+  {
+    float macro = terrainValueNoise( vWorldPos.xz * 0.045 );
+    float mid = terrainValueNoise( vWorldPos.xz * 0.12 );
+    float micro = terrainValueNoise( vWorldPos.xz * 0.32 );
+    float n = ( macro * 0.55 + mid * 0.30 + micro * 0.15 ) * 2.0 - 1.0;
+    float grassAmt = 1.0 - vBareGround;
+    // Stronger than vertex micro-tint alone — large irregular patches of
+    // greener / browner / darker ground so the carpet breaks up at a glance.
+    diffuseColor.rgb *= 1.0 + n * 0.18;
+    diffuseColor.g = clamp( diffuseColor.g + n * 0.09 * grassAmt, 0.0, 1.0 );
+    diffuseColor.r = clamp( diffuseColor.r + n * 0.07 * vBareGround - n * 0.03 * grassAmt, 0.0, 1.0 );
+    diffuseColor.b = clamp( diffuseColor.b - abs( n ) * 0.04 * grassAmt, 0.0, 1.0 );
+  }
+`
+
+const MACRO_ROUGHNESS_CHUNK = /* glsl */ `
+  {
+    float n = terrainValueNoise( vWorldPos.xz * 0.09 ) * 2.0 - 1.0;
+    roughnessFactor = clamp( roughnessFactor + n * 0.12, 0.3, 1.0 );
+  }
 `
 
 let warnedMissingInclude = false
 
 /**
+ * Injects per-fragment terrain surface polish (plan 066):
+ * - always: world-space macro color + roughness variation (breaks flat vertex colors)
+ * - when detail normals are on: dual-tile normal map + distance fade
+ *
  * Samples the shared detail normal map at two tilings and blends them per
  * fragment by `aBareGround` — large, soft lumps under grass, fine sand-like
  * grain on roads/clearings/beach/desert. One texture, two `repeat`s, which is
  * why this needs a shader injection instead of `Texture.repeat`.
  */
-function applyDetailNormalTiling(
+function applyTerrainSurfaceShader(
   material: THREE.MeshStandardMaterial,
-  detailNormal: DetailNormalConfig,
+  detailNormal: DetailNormalConfig | null,
 ): void {
+  const detailOn = detailNormal !== null
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.uDetailTilesGrass = { value: detailNormal.tilesGrass }
-    shader.uniforms.uDetailTilesBare = { value: detailNormal.tilesBare }
+    if (detailOn) {
+      shader.uniforms.uDetailTilesGrass = { value: detailNormal.tilesGrass }
+      shader.uniforms.uDetailTilesBare = { value: detailNormal.tilesBare }
+    }
 
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
-        '#include <common>\nattribute float aBareGround;\nvarying float vBareGround;',
+        '#include <common>\nattribute float aBareGround;\nvarying float vBareGround;\nvarying vec3 vWorldPos;',
       )
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBareGround = aBareGround;')
+      .replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\nvBareGround = aBareGround;',
+      )
+      .replace(
+        '#include <worldpos_vertex>',
+        '#include <worldpos_vertex>\nvWorldPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;',
+      )
 
-    if (!shader.fragmentShader.includes(NORMAL_MAP_INCLUDE)) {
-      // A three upgrade restructured the normal pipeline — fall back to the
-      // stock single tiling (which looks wrong, but only flat-ish, not broken)
-      // and say so once, instead of silently compiling a shader whose uniforms
-      // nothing reads. That silent-failure mode is exactly what shipped when
-      // this replaced a line of the chunk body instead of the include.
-      if (!warnedMissingInclude) {
-        warnedMissingInclude = true
-        console.warn(
-          `[terrain] fragment shader has no ${NORMAL_MAP_INCLUDE} — ` +
-            'detail-normal tiling disabled; update buildChunkGeometry.ts',
-        )
-      }
-      return
-    }
-
-    shader.fragmentShader = shader.fragmentShader
+    let frag = shader.fragmentShader
       .replace(
         '#include <common>',
-        '#include <common>\nuniform float uDetailTilesGrass;\nuniform float uDetailTilesBare;\nvarying float vBareGround;',
+        `#include <common>
+varying float vBareGround;
+varying vec3 vWorldPos;
+${MACRO_NOISE_FUNCS}${
+          detailOn
+            ? '\nuniform float uDetailTilesGrass;\nuniform float uDetailTilesBare;'
+            : ''
+        }`,
       )
-      .replace(NORMAL_MAP_INCLUDE, NORMAL_MAP_TWO_TAP)
+      .replace(
+        COLOR_FRAGMENT_INCLUDE,
+        `${COLOR_FRAGMENT_INCLUDE}\n${MACRO_COLOR_CHUNK}`,
+      )
+      .replace(
+        ROUGHNESSMAP_FRAGMENT_INCLUDE,
+        `${ROUGHNESSMAP_FRAGMENT_INCLUDE}\n${MACRO_ROUGHNESS_CHUNK}`,
+      )
+
+    if (detailOn) {
+      if (!frag.includes(NORMAL_MAP_INCLUDE)) {
+        if (!warnedMissingInclude) {
+          warnedMissingInclude = true
+          console.warn(
+            `[terrain] fragment shader has no ${NORMAL_MAP_INCLUDE} — ` +
+              'detail-normal tiling disabled; update buildChunkGeometry.ts',
+          )
+        }
+      } else {
+        frag = frag.replace(NORMAL_MAP_INCLUDE, NORMAL_MAP_TWO_TAP)
+      }
+    }
+
+    shader.fragmentShader = frag
   }
-  // Every chunk injects identical code, so they can share one compiled program —
-  // but three's default cache key ignores `onBeforeCompile`, so say so explicitly
-  // rather than relying on that happening to work out.
-  material.customProgramCacheKey = () => 'chunk-detail-normal'
+  // Every chunk injects identical code for a given detail mode, so they can
+  // share one compiled program — but three's default cache key ignores
+  // `onBeforeCompile`, so say so explicitly.
+  material.customProgramCacheKey = () =>
+    detailOn ? 'chunk-terrain-surface-detail' : 'chunk-terrain-surface'
 }
 
 /** Where the surface reads as packed dirt/sand rather than vegetated ground:
@@ -249,7 +327,8 @@ export function buildChunkGeometry(
         }
       : {}),
   })
-  if (detailOn) applyDetailNormalTiling(material, detailNormal)
+  // Macro color/roughness always; dual-tile normals + distance fade when enabled.
+  applyTerrainSurfaceShader(material, detailOn ? detailNormal : null)
 
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(chunkOriginX, 0, chunkOriginZ)
