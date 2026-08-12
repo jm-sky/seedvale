@@ -37,7 +37,9 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 019 | [2026-08-12--019--configuration-localstorage-domains.md](./2026-08-12--019--configuration-localstorage-domains.md) | Rozdzielenie localStorage na niezależne domeny konfiguracji | `done` |
 | 020 | [2026-08-12--020--world-configuration-options.md](./2026-08-12--020--world-configuration-options.md) | Dodatkowe opcje świata, m.in. wielkość osady startowej/domowej | `done` |
 | 021 | [2026-08-12--021--development-asset-lists.md](./2026-08-12--021--development-asset-lists.md) | Lista modeli i dźwięków jako stały element development flow | `done` |
+| 022 | [2026-08-12--022--ocean-through-tree-foliage.md](./2026-08-12--022--ocean-through-tree-foliage.md) | Ocean/jeziora malują się przez korony drzew (BLEND liście + depthWrite wody) | `done` |
+| 023 | [2026-08-12--023--road-grass-ground-cover.md](./2026-08-12--023--road-grass-ground-cover.md) | Droga/trawa: ziarno dirtu, soft edge, filler blisko kamery | `done` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `022`
+**Next ID:** `024`

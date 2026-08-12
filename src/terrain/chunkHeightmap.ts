@@ -549,13 +549,10 @@ export function extractCoreGrid(
   return out
 }
 
-/** Fraction of a corridor's half-width/radius over which it's at full
- *  strength before tapering off — keeps the edge soft instead of a hard
- *  cutoff, same idea as `SEABED_BLEND`/`LAND_BLEND` in `biomeColors.ts`.
- *  Shared by roads/paths (line corridors) and village clearings (point
- *  corridors) — both blend a texel toward a pre-resolved target height the
- *  same way, just with a different distance metric. */
-const CORRIDOR_INNER_FRACTION = 0.6
+/** Fraction of a corridor's half-width/radius that stays at full strength
+ *  before tapering (roads/paths + village clearings). Lower = longer soft
+ *  edge into surrounding ground — less "painted strip" (GRAPHICS / issue 023). */
+const CORRIDOR_INNER_FRACTION = 0.32
 /** World-space frequency for sparse pothole noise (separate from edge wobble). */
 const POTHOLE_NOISE_SCALE = 0.14
 

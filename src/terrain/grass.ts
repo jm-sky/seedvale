@@ -8,19 +8,21 @@ import { apronOriginWorld, type ChunkTileData, type RegionParams, sampleApronGri
 import { fbm01, type FbmParams } from './fbm'
 
 export type WorldGrassChunk = {
-  /** Group of 1-3 InstancedMeshes (one per surviving species/subtype bucket —
-   *  see `SPECIES` below) positioned at the chunk origin. */
+  /** Group of InstancedMeshes (species buckets + optional near-field filler)
+   *  positioned at the chunk origin. */
   mesh: THREE.Group
   /** Instances actually generated for this chunk, summed across all subtype
    *  buckets (survivors of eligibility/density rejection) — `mesh`'s children's
    *  `count` may be temporarily lower, see `setLodFraction`. */
   readonly fullCount: number
-  /** Renders only the first `fraction` of instances in each subtype bucket
-   *  (0 excluded, clamped to (0, 1]) — cheap distance LOD: no reallocation,
-   *  just narrows each InstancedMesh's draw range. Safe because instances are
-   *  generated in seeded-random spatial order, so any prefix is an unbiased
-   *  spatial subsample. */
-  setLodFraction: (fraction: number) => void
+  /** Renders only the first `fraction` of instances in each *main* subtype
+   *  bucket (0 excluded, clamped to (0, 1]) — cheap distance LOD: no
+   *  reallocation, just narrows each InstancedMesh's draw range. Safe because
+   *  instances are generated in seeded-random spatial order, so any prefix is
+   *  an unbiased spatial subsample.
+   *  `fillerFraction` (default 0) controls the short ground-cover bucket that
+   *  exists only to densify the near field without paying fill-rate far away. */
+  setLodFraction: (fraction: number, fillerFraction?: number) => void
   dispose: () => void
 }
 
@@ -58,8 +60,21 @@ const TREELINE_FADE_START = TREELINE_ALTITUDE * 0.6
 const MOUNTAIN_RIDGE_FADE_START = 0.05
 /** Mountain ridge where grass density reaches ~0 (smoothstep high). */
 const MOUNTAIN_RIDGE_FADE_END = 0.5
-/** Reject candidates sitting on a road/path corridor (`tile.roadTint`, `chunkHeightmap.ts`). */
-const ROAD_TINT_REJECT = 0.15
+/** Reject / thin grass inside road/path corridors (`tile.roadTint`). Soft
+ *  fade lets sparse blades into the dirt edge so the strip isn't a bald cut. */
+const ROAD_TINT_FADE_START = 0.04
+const ROAD_TINT_FADE_END = 0.38
+
+/** Extra short ground-cover blades (near-camera only via LOD). Fraction of the
+ *  main `candidatesPerChunk` budget — processed once at chunk build, drawn
+ *  only when the player is close (issue 023). */
+const FILLER_CANDIDATE_RATIO = 0.28
+const FILLER_HEIGHT_MIN = 0.045
+const FILLER_HEIGHT_MAX = 0.13
+const FILLER_WIDTH_MIN = 0.04
+const FILLER_WIDTH_MAX = 0.09
+const FILLER_WIND_FACTOR = 0.35
+const FILLER_DARKEN = 0.88
 
 /** Small upward bias on the blade base — the sampled height is bilinearly
  *  interpolated across a heightmap cell while the *rendered* terrain surface is
@@ -216,6 +231,19 @@ const GRAIN_FINS: FinSpec[] = [
     segments: 3,
   },
 ]
+
+/** Near-field filler — 2 thin fins, few segments (cheap tris). Only drawn
+ *  close to the camera via `setLodFraction(..., fillerFraction)`. */
+const FILLER_FINS: FinSpec[] = radialFins(2, {
+  originT: 0,
+  heightT: 1,
+  peakHalfWidth: 0.35,
+  tipHalfWidth: 0.1,
+  baseRise: 0.25,
+  curveStrength: 0.7,
+  curveShape: QUADRATIC_CURVE,
+  segments: 3,
+})
 
 const HERB_PEAK_HALF_WIDTH = 0.7
 const HERB_TIP_HALF_WIDTH = 0.32
@@ -425,7 +453,7 @@ const TILT_JITTER_RAD = THREE.MathUtils.degToRad(14)
 /** Extra overall size scatter on top of the height/width roll. */
 const SIZE_JITTER = 0.22
 
-type SpeciesId = 'tri' | 'grain' | 'herb'
+type SpeciesId = 'tri' | 'grain' | 'herb' | 'filler'
 
 type InstanceBucket = {
   matrixData: Float32Array
@@ -459,6 +487,7 @@ export function createGrassSystem(): GrassSystem {
     tri: buildFinCluster(TRI_CLUSTER_FINS),
     grain: buildFinCluster(GRAIN_FINS),
     herb: buildFinCluster(HERB_FINS),
+    filler: buildFinCluster(FILLER_FINS),
   }
 
   const material = new THREE.ShaderMaterial({
@@ -569,6 +598,7 @@ export function createGrassSystem(): GrassSystem {
       tri: createBucket(candidatesPerChunk),
       grain: createBucket(candidatesPerChunk),
       herb: createBucket(candidatesPerChunk),
+      filler: createBucket(Math.max(1, Math.floor(candidatesPerChunk * FILLER_CANDIDATE_RATIO))),
     }
 
     for (let i = 0; i < candidatesPerChunk; i++) {
@@ -586,7 +616,10 @@ export function createGrassSystem(): GrassSystem {
 
       const ridge = sample(tile.mountainRidge, wx, wz)
 
-      if (sample(tile.roadTint, wx, wz) > ROAD_TINT_REJECT) continue // road/path corridor
+      const roadTint = sample(tile.roadTint, wx, wz)
+      const roadFade =
+        1 - THREE.MathUtils.smoothstep(roadTint, ROAD_TINT_FADE_START, ROAD_TINT_FADE_END)
+      if (roadFade <= 0) continue
 
       // Slope costs 4 samples vs. 1 each for the rejects above — checked last
       // among the sample-based tests so it only runs on candidates that
@@ -615,11 +648,13 @@ export function createGrassSystem(): GrassSystem {
         1 -
         THREE.MathUtils.smoothstep(ridge, MOUNTAIN_RIDGE_FADE_START, MOUNTAIN_RIDGE_FADE_END)
       // Sparse-but-present even on dry ground; thick on humid lowlands. Desert
-      // thins it out to near-nothing (bare sand, not a lawn).
+      // thins it out to near-nothing (bare sand, not a lawn). Soft roadFade
+      // lets a few blades into the dirt shoulder instead of a bald cut.
       const density =
         Math.max(0, Math.min(1, 0.55 + moisture * 0.45)) *
         altitudeFade *
         ridgeFade *
+        roadFade *
         (1 - biome.desert * 0.9)
       if (density <= 0 || random() > density) continue
 
@@ -677,11 +712,81 @@ export function createGrassSystem(): GrassSystem {
       }
     }
 
+    // Near-field filler pass — short cheap blades to close golf-course gaps
+    // between main clumps. Same eligibility; separate RNG stream via continue
+    // of `random`. Drawn only when chunkManager passes fillerFraction > 0.
+    const fillerCandidates = Math.floor(candidatesPerChunk * FILLER_CANDIDATE_RATIO)
+    for (let i = 0; i < fillerCandidates; i++) {
+      const localX = (random() * 2 - 1) * half
+      const localZ = (random() * 2 - 1) * half
+      const wx = coord.cx * chunkSize + localX
+      const wz = coord.cz * chunkSize + localZ
+
+      const h = sample(tile.heights, wx, wz)
+      const sandBand = sandBandAt(wx, wz, seed)
+      if (h <= waterLevel + sandBand) continue
+
+      const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
+      if (altitude > TREELINE_ALTITUDE) continue
+
+      const ridge = sample(tile.mountainRidge, wx, wz)
+      const roadTint = sample(tile.roadTint, wx, wz)
+      const roadFade =
+        1 - THREE.MathUtils.smoothstep(roadTint, ROAD_TINT_FADE_START, ROAD_TINT_FADE_END)
+      if (roadFade <= 0) continue
+
+      const d = SLOPE_SAMPLE_STEP
+      const slope =
+        (Math.abs(sample(tile.heights, wx + d, wz) - sample(tile.heights, wx - d, wz)) +
+          Math.abs(sample(tile.heights, wx, wz + d) - sample(tile.heights, wx, wz - d))) /
+        (2 * d)
+      if (slope > ROCK_SLOPE_FULL) continue
+
+      const moisture = sample(tile.biomes, wx, wz)
+      const moistureRegion = sample(tile.moistureRegion, wx, wz)
+      const biome = biomeWeightsAt(moistureRegion, altitude, region)
+      const altitudeFade =
+        1 -
+        Math.max(
+          0,
+          Math.min(1, (altitude - TREELINE_FADE_START) / (TREELINE_ALTITUDE - TREELINE_FADE_START)),
+        )
+      const ridgeFade =
+        1 -
+        THREE.MathUtils.smoothstep(ridge, MOUNTAIN_RIDGE_FADE_START, MOUNTAIN_RIDGE_FADE_END)
+      // Slightly denser accept than main grass — fillers are short and LOD-gated.
+      const density =
+        Math.max(0, Math.min(1, 0.65 + moisture * 0.35)) *
+        altitudeFade *
+        ridgeFade *
+        roadFade *
+        (1 - biome.desert * 0.95)
+      if (density <= 0 || random() > density) continue
+
+      tmpColor.copy(ARID_GRASS).lerp(HUMID_GRASS, moisture)
+      if (biome.swamp > 0) tmpColor.lerp(SWAMP_GRASS, biome.swamp)
+      tmpColor.multiplyScalar(FILLER_DARKEN)
+
+      pushInstance(
+        buckets.filler,
+        localX,
+        localZ,
+        h,
+        random() * Math.PI * 2,
+        FILLER_HEIGHT_MIN + random() * (FILLER_HEIGHT_MAX - FILLER_HEIGHT_MIN),
+        FILLER_WIDTH_MIN + random() * (FILLER_WIDTH_MAX - FILLER_WIDTH_MIN),
+        tmpColor,
+        1 + (random() * 2 - 1) * 0.18,
+        FILLER_WIND_FACTOR,
+        random,
+      )
+    }
+
     const group = new THREE.Group()
     group.position.set(chunkOriginX, 0, chunkOriginZ)
     group.name = 'chunk-grass'
 
-    const subMeshes: { mesh: THREE.InstancedMesh, fullCount: number }[] = []
+    const subMeshes: { mesh: THREE.InstancedMesh, fullCount: number, filler: boolean }[] = []
     let totalCount = 0
 
     for (const id of Object.keys(buckets) as SpeciesId[]) {
@@ -726,8 +831,10 @@ export function createGrassSystem(): GrassSystem {
       mesh.castShadow = false
       mesh.receiveShadow = false
       mesh.name = `chunk-grass-${id}`
+      // Filler starts hidden; chunkManager enables it only in the near field.
+      if (id === 'filler') mesh.count = 0
       group.add(mesh)
-      subMeshes.push({ mesh, fullCount: bucket.count })
+      subMeshes.push({ mesh, fullCount: bucket.count, filler: id === 'filler' })
     }
 
     if (totalCount === 0) return null
@@ -735,9 +842,15 @@ export function createGrassSystem(): GrassSystem {
     return {
       mesh: group,
       fullCount: totalCount,
-      setLodFraction(fraction) {
+      setLodFraction(fraction, fillerFraction = 0) {
+        const mainFrac = Math.max(0, Math.min(1, fraction))
+        const fillFrac = Math.max(0, Math.min(1, fillerFraction))
         for (const sub of subMeshes) {
-          sub.mesh.count = Math.max(1, Math.min(sub.fullCount, Math.round(sub.fullCount * fraction)))
+          if (sub.filler) {
+            sub.mesh.count = Math.min(sub.fullCount, Math.round(sub.fullCount * fillFrac))
+          } else {
+            sub.mesh.count = Math.max(1, Math.min(sub.fullCount, Math.round(sub.fullCount * mainFrac)))
+          }
         }
       },
       dispose: () => {

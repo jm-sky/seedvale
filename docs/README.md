@@ -5,8 +5,10 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 ## Główne dokumenty
 
 - **[VISION.md](./VISION.md)** — wizja i kontekst produktu (czym jest Seedvale, dla kogo, filozofia projektowania — czytaj przed planowaniem nowych funkcji)
+- **[STATE.md](./STATE.md)** — factual current implementation state
+- **[GRAPHICS.md](./GRAPHICS.md)** — log decyzji / kontraktów graficznych (materiały, woda, post-process, performance wizualny)
 - **[ROADMAP.md](./ROADMAP.md)** — punkt wejścia + handoff  
-- **[../CLAUDE.md](../CLAUDE.md)** — aktualny stan kodu (czytaj na start sesji)  
+- **[../CLAUDE.md](../CLAUDE.md)** — reguły dla agentów  
 - **[features/](./features/)** — FEATURE-y (jeszcze puste)  
 - **[reviews/](./reviews/README.md)** — kolejka `to-do--*` (woda)  
 
@@ -19,6 +21,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 | [research/](./research/README.md) | Analizy, spike'i, porównania przed decyzją |
 | [plans/](./plans/README.md) | Plany implementacji większych zmian |
 | [assets/](./assets/README.md) | Żywe listy wymaganych modeli/dźwięków + CREDITS |
+| [GRAPHICS.md](./GRAPHICS.md) | Decyzje i uwagi graficzne (SoT, nie katalog) |
 
 Statusy: `todo` · `planned` · `in progress` · `done` · `verification needed`
 
@@ -53,4 +56,4 @@ Meta-prompty do powtarzalnych zadań (struktura docs, review, itd.).
 
 ---
 
-**Ostatnia aktualizacja:** 2026-08-07 (handoff sesji)
+**Ostatnia aktualizacja:** 2026-08-12

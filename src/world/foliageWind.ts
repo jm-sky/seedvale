@@ -33,6 +33,32 @@ function isFoliageMaterial(mat: Material): boolean {
   return FOLIAGE_NAME_RE.test(mat.name ?? '')
 }
 
+/** Cutout threshold for GLTF `alphaMode: BLEND` leaf textures converted to
+ *  opaque alpha-tested materials (writes depth → correctly occludes water). */
+export const FOLIAGE_ALPHA_CUTOFF = 0.45
+
+/**
+ * Quaternius stylized nature packs ship leaf/flower materials as
+ * `alphaMode: BLEND` (`transparent` + `depthWrite: false`). That puts canopies
+ * in the transparent queue and lets lakes/ocean overpaint them. Convert those
+ * materials to alpha-tested cutouts once on the shared GLTF cache root — no
+ * per-frame cost, and shadow maps already honor `alphaTest`.
+ */
+export function hardenFoliageAlpha(mat: Material): void {
+  if (!(mat instanceof MeshStandardMaterialCtor)) return
+  if (!isFoliageMaterial(mat)) return
+  if (mat.userData.foliageAlphaHardened) return
+  mat.userData.foliageAlphaHardened = true
+
+  // Solid opaque crowns (e.g. Fantasy RTS `Green`) need no change.
+  if (!mat.transparent && mat.opacity >= 1 && mat.alphaTest <= 0) return
+
+  mat.transparent = false
+  mat.depthWrite = true
+  if (mat.alphaTest <= 0) mat.alphaTest = FOLIAGE_ALPHA_CUTOFF
+  mat.needsUpdate = true
+}
+
 /**
  * Injects a cheap tip-weighted XZ sway into a `MeshStandardMaterial` used for
  * foliage (plan 066). Idempotent — safe to call on every GLTF traverse.
@@ -70,8 +96,15 @@ export function patchFoliageWindOnObject(root: Object3D): void {
     const mesh = obj as Mesh
     if (!mesh.isMesh) return
     const mat = mesh.material
-    if (Array.isArray(mat)) mat.forEach(patchFoliageWindMaterial)
-    else patchFoliageWindMaterial(mat)
+    if (Array.isArray(mat)) {
+      mat.forEach((m) => {
+        hardenFoliageAlpha(m)
+        patchFoliageWindMaterial(m)
+      })
+    } else {
+      hardenFoliageAlpha(mat)
+      patchFoliageWindMaterial(mat)
+    }
   })
 }
 

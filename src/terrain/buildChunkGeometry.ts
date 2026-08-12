@@ -93,6 +93,23 @@ const MACRO_COLOR_CHUNK = /* glsl */ `
     diffuseColor.g = clamp( diffuseColor.g + n * 0.09 * grassAmt, 0.0, 1.0 );
     diffuseColor.r = clamp( diffuseColor.r + n * 0.07 * vBareGround - n * 0.03 * grassAmt, 0.0, 1.0 );
     diffuseColor.b = clamp( diffuseColor.b - abs( n ) * 0.04 * grassAmt, 0.0, 1.0 );
+
+    // Meadow carpet between blade clumps — extra mid/fine green variation so
+    // the ground doesn't read as golf-course fill (issue 023).
+    float meadow = terrainValueNoise( vWorldPos.xz * 0.07 );
+    float fineG = terrainValueNoise( vWorldPos.xz * 0.26 );
+    float m = ( meadow * 0.65 + fineG * 0.35 ) * 2.0 - 1.0;
+    diffuseColor.g = clamp( diffuseColor.g + m * 0.12 * grassAmt, 0.0, 1.0 );
+    diffuseColor.r = clamp( diffuseColor.r - m * 0.05 * grassAmt, 0.0, 1.0 );
+    diffuseColor.rgb *= 1.0 + m * 0.07 * grassAmt;
+
+    // Packed dirt / road grain — higher frequency than meadow, only on bare.
+    float dirt = terrainValueNoise( vWorldPos.xz * 0.9 ) * 2.0 - 1.0;
+    float grit = terrainValueNoise( vWorldPos.xz * 2.1 ) * 2.0 - 1.0;
+    float d = dirt * 0.7 + grit * 0.3;
+    diffuseColor.rgb *= 1.0 + d * 0.16 * vBareGround;
+    diffuseColor.r = clamp( diffuseColor.r + d * 0.05 * vBareGround, 0.0, 1.0 );
+    diffuseColor.g = clamp( diffuseColor.g - abs( d ) * 0.03 * vBareGround, 0.0, 1.0 );
   }
 `
 
@@ -181,7 +198,7 @@ ${MACRO_NOISE_FUNCS}${
   // share one compiled program — but three's default cache key ignores
   // `onBeforeCompile`, so say so explicitly.
   material.customProgramCacheKey = () =>
-    detailOn ? 'chunk-terrain-surface-detail' : 'chunk-terrain-surface'
+    detailOn ? 'chunk-terrain-surface-detail-v2' : 'chunk-terrain-surface-v2'
 }
 
 /** Where the surface reads as packed dirt/sand rather than vegetated ground:
@@ -194,9 +211,9 @@ function bareGroundWeight(
   desert: number,
   sandBand: number,
 ): number {
-  // `applyRoadTint` saturates at roadTint = 1; reach full "bare" earlier than
-  // that so a path that already reads as dirt also reads as dirt-grained.
-  const road = Math.min(1, roadTint * 2)
+  // `applyRoadTint` saturates toward dirt; keep a longer mixed band so the
+  // soft corridor edge still shows meadow normals/color before full bare grain.
+  const road = Math.min(1, Math.pow(Math.max(0, roadTint), 0.85) * 1.35)
   const sand =
     1 -
     THREE.MathUtils.smoothstep(height, waterLevel + sandBand * 0.5, waterLevel + sandBand * 1.5)
@@ -296,8 +313,8 @@ export function buildChunkGeometry(
     applySlopeRock(tmp, h, waterLevel, steepness, sandBand)
     applyMountainRock(tmp, mountainRidge, h, waterLevel, heightScale)
     applyOceanDepthTint(tmp, continentalness, h, waterLevel)
-    applyMicroTint(tmp, h, waterLevel, wx, wz)
-    applyRoadTint(tmp, roadTint)
+    applyMicroTint(tmp, h, waterLevel, wx, wz, 0.045 + Math.min(1, roadTint) * 0.05)
+    applyRoadTint(tmp, roadTint, wx, wz)
 
     colors[i * 3] = tmp.r
     colors[i * 3 + 1] = tmp.g

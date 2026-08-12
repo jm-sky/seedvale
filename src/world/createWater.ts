@@ -74,14 +74,17 @@ export function createChunkWater(
 
   const material = new ShaderMaterial({
     transparent: true,
-    depthWrite: true,
+    // Must not write depth: otherwise lakes overpaint alpha-tested foliage and
+    // other transparent props when renderOrder pulls water later. Opaque terrain
+    // + hardened leaf cutouts already provide correct occlusion.
+    depthWrite: false,
     side: DoubleSide,
     uniforms: {
       uTime: { value: 0 },
       uDeep: { value: DAY_DEEP.clone() },
       uShallow: { value: DAY_SHALLOW.clone() },
       uFoam: { value: DAY_FOAM.clone() },
-      uOpacity: { value: 0.82 },
+      uOpacity: { value: 0.78 },
       uHeightmap: { value: heightTex },
       uBodyScale: { value: bodyScaleTex },
       uMapSize: { value: chunkSize },

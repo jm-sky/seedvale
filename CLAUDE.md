@@ -62,6 +62,7 @@ Do **not** launch headless Chrome/Playwright yourself as the default way to test
 |---|---|
 | Product vision | [docs/VISION.md](docs/VISION.md) |
 | Current implementation state | [docs/STATE.md](docs/STATE.md) |
+| Graphics decisions / visual contracts | [docs/GRAPHICS.md](docs/GRAPHICS.md) |
 | Strategic roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Plan index/status | [docs/plans/README.md](docs/plans/README.md) |
 | Implementation plans | [docs/plans/](docs/plans/) |

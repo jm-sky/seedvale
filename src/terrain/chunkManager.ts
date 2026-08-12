@@ -438,8 +438,12 @@ export function createChunkManager(
       // at the visible edge) — imperceptible at that distance/fog, no
       // reallocation, just narrows the instanced draw range. Keeps near-field
       // density (the intentional visual choice) while cutting fill-rate cost.
+      // Short filler blades only in the player's chunk + immediate ring
+      // (issue 023) — zero draw cost beyond that.
       const t = dist / Math.max(1, effectiveGrassRadius)
-      record.grass?.setLodFraction(Math.max(0.25, 1 - t * 0.75))
+      const mainFrac = Math.max(0.25, 1 - t * 0.75)
+      const fillerFrac = dist <= 1 ? Math.max(0, 1 - dist * 0.55) : 0
+      record.grass?.setLodFraction(mainFrac, fillerFrac)
     } else if (dist > grassUnloadRadius && record.grass !== undefined) {
       removeGrass(record)
     }

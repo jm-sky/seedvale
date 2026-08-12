@@ -239,10 +239,27 @@ export function applyOceanDepthTint(
  * is `tile.roadTint` (`chunkHeightmap.ts`) — already the corridor falloff ×
  * per-segment tint strength, so a wide/strong road reads as clearly worn
  * ground while a narrow/weak path barely tints the grass under it.
+ *
+ * Soft onset (`pow` < 1) + optional world-XZ micro contrast so the strip
+ * doesn't read as flat paint (issue 023 / GRAPHICS.md).
  */
-export function applyRoadTint(color: Color, roadTint: number): void {
+export function applyRoadTint(
+  color: Color,
+  roadTint: number,
+  worldX = 0,
+  worldZ = 0,
+): void {
   if (roadTint <= 0) return
-  color.lerpHSL(DIRT, Math.min(1, roadTint))
+  const t = Math.min(1, Math.pow(roadTint, 0.72))
+  color.lerpHSL(DIRT, t)
+  if (t < 0.08) return
+  // Fine lightness/warmth speckles on packed dirt (vertex stage; fragment
+  // shader adds higher-frequency bare-ground grain on top).
+  const n = terrainTintNoise(worldX * 1.15, worldZ * 1.15)
+  const f = 1 + n * 0.1 * t
+  color.r = Math.min(1, Math.max(0, color.r * f))
+  color.g = Math.min(1, Math.max(0, color.g * (1 + n * 0.07 * t)))
+  color.b = Math.min(1, Math.max(0, color.b * (1 + n * 0.04 * t)))
 }
 
 /**

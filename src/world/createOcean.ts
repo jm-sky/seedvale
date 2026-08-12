@@ -78,6 +78,10 @@ function createProceduralWaterNormals(): DataTexture {
   return tex
 }
 
+/** Mirror RT resolution — Water.js re-renders the scene into this every frame.
+ *  256 is enough for stylized reflections and ~4× cheaper than 512. */
+const OCEAN_MIRROR_SIZE = 256
+
 /**
  * Reflective ocean (three/addons Water.js) — a single app-level plane sized to
  * generously cover the loaded chunk region and re-centered under the player via
@@ -87,23 +91,34 @@ function createProceduralWaterNormals(): DataTexture {
  * opaque terrain hides it under dry land, and each chunk's stylized water
  * (createChunkWater) sits above it and discards itself over large-body cells, so
  * this is only seen where the flood-fill classified a body as large.
+ *
+ * Transparency: Water.js writes `alpha` into `gl_FragColor` but does not set
+ * `material.transparent`, so blending never ran. We enable real blending with
+ * `depthWrite: false` (foliage is alpha-tested / opaque — see foliageWind) and
+ * fresnel-modulate opacity in the patched fragment shader. No extra passes or
+ * heightmap sampling — keeps the mirror pass as the only ocean cost.
  */
 export function createOcean(size: number, waterLevel: number): WorldOcean {
   const geometry = new PlaneGeometry(size, size)
   const waterNormals = createProceduralWaterNormals()
 
   const water = new Water(geometry, {
-    textureWidth: 512,
-    textureHeight: 512,
+    textureWidth: OCEAN_MIRROR_SIZE,
+    textureHeight: OCEAN_MIRROR_SIZE,
     waterNormals,
     sunDirection: new Vector3(0, 1, 0),
     sunColor: DAY_SUN_COLOR.clone(),
     waterColor: DAY_WATER_COLOR.clone(),
     distortionScale: 2.2,
-    alpha: 0.95,
+    // Base opacity when looking straight down; grazing angles go denser via the
+    // shader patch below.
+    alpha: 0.78,
     fog: true,
   })
   water.material.uniforms.size!.value = 3.5
+  // Water.js never sets these — without them `alpha` is ignored by the blender.
+  water.material.transparent = true
+  water.material.depthWrite = false
   water.rotation.x = -Math.PI / 2
   water.position.y = waterLevel + 0.02
   water.name = 'ocean'
@@ -113,7 +128,8 @@ export function createOcean(size: number, waterLevel: number): WorldOcean {
   // pure mirrored sky" — reads as a flat bright/silver sheet rather than
   // ocean-colored water. Three.js doesn't expose a hook to tune this, so patch
   // the compiled fragment shader: cap max reflectance and tint the reflection
-  // sample toward waterColor so the sky bleed-through stays colored.
+  // sample toward waterColor so the sky bleed-through stays colored. Also
+  // fresnel-modulate alpha (denser edge-on, more see-through from above).
   water.material.fragmentShader = water.material.fragmentShader
     .replace(
       'float reflectance = rf0 + ( 1.0 - rf0 ) * pow( ( 1.0 - theta ), 5.0 );',
@@ -126,6 +142,12 @@ export function createOcean(size: number, waterLevel: number): WorldOcean {
     .replace(
       'vec3 albedo = mix( ( sunColor * diffuseLight * 0.3 + scatter ) * getShadowMask(), ( vec3( 0.1 ) + reflectionSample * 0.9 + reflectionSample * specularLight ), reflectance);',
       'vec3 albedo = mix( ( sunColor * diffuseLight * 0.3 + scatter ) * getShadowMask(), ( waterColor * 0.15 + reflectionSample * 0.55 + reflectionSample * specularLight * 0.5 ), reflectance);',
+    )
+    .replace(
+      'gl_FragColor = vec4( outgoingLight, alpha );',
+      // theta≈1 looking down → more transparent; theta≈0 grazing → denser.
+      'float waterAlpha = mix( min( 0.94, alpha + 0.14 ), alpha * 0.72, theta );\n'
+      + '\t\t\t\t\tgl_FragColor = vec4( outgoingLight, waterAlpha );',
     )
   water.material.needsUpdate = true
 
