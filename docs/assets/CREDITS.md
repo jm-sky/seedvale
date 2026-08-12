@@ -4,7 +4,9 @@ Modele 3D użyte w projekcie. Preferujemy CC0; przy CC-BY wpisz wymagany kredyt.
 
 | Asset (ścieżka) | Pack / autor | Źródło | Licencja | Plik źródłowy |
 |-----------------|--------------|--------|----------|---------------|
-| `public/models/settlement/hut_*.glb` | Ultimate Fantasy RTS / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatefantasyrts.html) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | `Houses_FirstAge_*_Level1` |
+| `public/models/settlement/hut_*.glb` | Ultimate Fantasy RTS / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatefantasyrts.html) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | `Houses_FirstAge_*_Level1` (+ `hut_d` = `Houses_SecondAge_1_Level1`, podpięte) |
+| `public/models/settlement/towerhouse.glb` | j.w. | j.w. | CC0 1.0 | `TowerHouse_FirstAge` — podpięte jako wariant domu (plan 072) |
+| `public/models/settlement/wall.glb` | j.w. | j.w. | CC0 1.0 | `Wall_FirstAge` — podpięte jako zaczątki palisady przy wejściu (plan 072) |
 | `public/models/settlement/logs.glb` | j.w. | j.w. | CC0 1.0 | `Logs` |
 | `public/models/settlement/garden.glb` | j.w. | j.w. | CC0 1.0 | `Farm_FirstAge_Level1_Wheat` |
 | `public/models/settlement/storage.glb` | j.w. | j.w. | CC0 1.0 | `Storage_FirstAge_Level1` |
@@ -25,9 +27,8 @@ Modele 3D użyte w projekcie. Preferujemy CC0; przy CC-BY wpisz wymagany kredyt.
 | `public/models/world/mountain_a.glb`, `mountain_b.glb`, `mountain_c.glb` | j.w. | j.w. | CC0 1.0 | `Mountain_Single` / `Mountain_Group_1` / `MountainLarge_Single` — **rezerwa, niepodpięte**; kandydat pod "góry w tle" z [plans/024](../plans/2026-08-07--024--world-visual-overhaul.md) (otwarty punkt) |
 | `public/models/nature/birch_1.glb`, `maple_1.glb`, `deadtree_1.glb`, `flower_clump_1.glb` | Ultimate Stylized Nature / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatestylizednature.html) | CC0 1.0 | `BirchTree_1` / `MapleTree_1` / `DeadTree_1` / `Flower_1_Clump` (textury 512px + WebP via `gltf-transform`, jak `tree_c`/`bush_*`) — podpięte do `TREE_SPECS`/`BUSH_SPECS` w `src/settlement/props.ts` (globalna wegetacja chunków, nie tylko okolice osady) |
 | `public/models/nature/resource_gold_1.glb`, `resource_rock_1.glb` | Ultimate Fantasy RTS / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatefantasyrts.html) | CC0 1.0 | `Resource_Gold_1` / `Resource_Rock_1` — podpięte do widocznych złóż (`RESOURCE_GOLD_SPECS` / `RESOURCE_ROCK_SPECS` → `terrain/resourceDeposits.ts`, plan 065); żelazo/węgiel dzielą `resource_rock_1` z tintem |
-| `public/models/settlement/crate.glb`, `barrel.glb`, `wall.glb` | j.w. | j.w. | CC0 1.0 | `Crate` / `Barrel` / `Wall_FirstAge` — **rezerwa, niepodpięte**; ogólne dekoracje osady/ekonomii |
-| `public/models/settlement/towerhouse.glb`, `port.glb` | j.w. | j.w. | CC0 1.0 | `TowerHouse_FirstAge` / `Port_FirstAge_Level1` — **rezerwa, niepodpięte**; obrona / większy port (obok istniejącego małego `dock_a.glb`) |
-| `public/models/settlement/hut_d.glb` | j.w. | j.w. | CC0 1.0 | `Houses_SecondAge_1_Level1` — **rezerwa, niepodpięte**; alternatywny styl domu (Second Age) pod wariację wioski |
+| `public/models/settlement/crate.glb`, `barrel.glb` | j.w. | j.w. | CC0 1.0 | `Crate` / `Barrel` — podpięte przy market stall |
+| `public/models/settlement/port.glb` | j.w. | j.w. | CC0 1.0 | `Port_FirstAge_Level1` — **rezerwa, niepodpięte**; większy port (obok istniejącego małego `dock_a.glb`) |
 | `public/models/nature/bush_flowers_1.glb`, `flower_clump_2.glb` | Ultimate Stylized Nature / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatestylizednature.html) | CC0 1.0 | `Bush_Flowers` / `Flower_2_Clump` (textury 512px + WebP) — **rezerwa, niepodpięte**; kolejna wariacja kolorowego poszycia |
 
 Kopia tekstu licencji z paczki: [quaternius-ultimate-fantasy-rts-license.txt](./quaternius-ultimate-fantasy-rts-license.txt) (w zipie oznaczona mylnie jako „Platformer Pack”; treść = CC0).  
@@ -40,3 +41,5 @@ Fauna: [quaternius-ultimate-animated-animals-license.txt](./quaternius-ultimate-
 **Uwaga (tree_c/bush_*):** Ultimate Stylized Nature nie ma osobnego pliku licencji w pobranym zestawie (Blends/FBX/gITF/OBJ/PNG) — jak wszystkie paczki Quaternius, licencja to CC0 1.0.
 
 Research: [../research/2026-08-07-3d-asset-sources.md](../research/2026-08-07-3d-asset-sources.md).
+
+| `public/models/settlement/megakit/*.glb` (19 szt.) | Medieval Village MegaKit Standard / Quaternius | [quaternius.itch.io/medieval-village-megakit](https://quaternius.itch.io/medieval-village-megakit) | CC0 1.0 | Fences, wagon, crate, chimneys, vines, walls, stairs — parked (not wired); see `public/models/settlement/megakit/README.md`. License: [quaternius-medieval-village-megakit-license.txt](./quaternius-medieval-village-megakit-license.txt) |
