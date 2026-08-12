@@ -1,5 +1,7 @@
 # Asset Alignment Browser
 
+> **Review:** [2026-08-12--088--asset-alignment-browser-review.md](./2026-08-12--088--asset-alignment-browser-review.md)
+
 ## Status
 
 - Status: `planned`
