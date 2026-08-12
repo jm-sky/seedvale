@@ -1,3 +1,4 @@
+import type { LightActionResult } from '../app/userActions'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type RestVariant = 'camp' | 'town'
@@ -10,7 +11,8 @@ export type QuickActionsHandlers = {
    *  lacks the resources. */
   onBuildSimpleFire?: () => boolean
   onBuildFirePit?: () => boolean
-  onLightTorch?: () => boolean
+  onLightBranch?: () => LightActionResult
+  onLightWoodenTorch?: () => LightActionResult
   /** Starts a "wait" time skip (1/3/6h, visible fast-forward) — see
    *  `world/timeSkip.ts`. */
   onWait?: (hours: number) => void

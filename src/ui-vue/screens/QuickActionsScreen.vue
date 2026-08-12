@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Zap } from 'lucide-vue-next'
 import { onUnmounted, ref, type Ref, watch } from 'vue'
+import type { LightActionResult } from '../../app/userActions'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import QuickActionsButton from '../components/QuickActionsButton.vue'
@@ -19,13 +20,21 @@ const restStatusText: Record<Exclude<RestOutcome, 'ok'>, string> = {
   'no-blanket': 'Potrzebujesz koca',
 }
 
+const lightStatusText: Record<Exclude<LightActionResult, 'ok'>, string> = {
+  'already-lit': 'Już płonie',
+  missing: 'Brakuje surowców',
+  'need-hold': 'Weź pochodnię w rękę',
+}
+
 const campfireStatus = ref('')
 const firePitStatus = ref('')
+const branchStatus = ref('')
 const torchStatus = ref('')
 const campStatus = ref('')
 const townStatus = ref('')
 let simpleFireTimeout = 0
 let firePitTimeout = 0
+let branchTimeout = 0
 let torchTimeout = 0
 let campTimeout = 0
 let townTimeout = 0
@@ -44,9 +53,16 @@ function buildSimpleFire(): void {
   simpleFireTimeout = window.setTimeout(() => { campfireStatus.value = '' }, 1500)
 }
 
-function lightTorch(): void {
-  const built = ui.quickActions.onLightTorch?.() ?? false
-  torchStatus.value = built ? 'Zapalono!' : 'Brakuje surowców'
+function lightBranch(): void {
+  const result = ui.quickActions.onLightBranch?.() ?? 'missing'
+  branchStatus.value = result === 'ok' ? 'Zapalono!' : lightStatusText[result]
+  window.clearTimeout(branchTimeout)
+  branchTimeout = window.setTimeout(() => { branchStatus.value = '' }, 1500)
+}
+
+function lightWoodenTorch(): void {
+  const result = ui.quickActions.onLightWoodenTorch?.() ?? 'missing'
+  torchStatus.value = result === 'ok' ? 'Zapalono!' : lightStatusText[result]
   window.clearTimeout(torchTimeout)
   torchTimeout = window.setTimeout(() => { torchStatus.value = '' }, 1500)
 }
@@ -95,6 +111,8 @@ watch(() => ui.quickActions.open, (open) => {
 onUnmounted(() => {
   window.clearTimeout(attachTimeout)
   window.clearTimeout(simpleFireTimeout)
+  window.clearTimeout(branchTimeout)
+  window.clearTimeout(torchTimeout)
   window.clearTimeout(campTimeout)
   window.clearTimeout(townTimeout)
   document.removeEventListener('click', onDocumentClick)
@@ -109,9 +127,15 @@ type Action = {
 
 const actions: Action[] = [
   {
-    label: 'Zapal pochodnię',
+    label: 'Zapal gałąź',
     cost: '1x gałąź',
-    onClick: lightTorch,
+    onClick: lightBranch,
+    status: branchStatus,
+  },
+  {
+    label: 'Zapal pochodnię',
+    cost: 'pochodnia w ręce',
+    onClick: lightWoodenTorch,
     status: torchStatus,
   },
   {

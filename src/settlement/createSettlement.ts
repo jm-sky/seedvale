@@ -139,7 +139,7 @@ export async function createSettlement(
   const roadSegments = def.isHome && roadCtx
     ? segmentsNear(site.x, site.z, localRadius * 2, roadCtx)
     : []
-  const { group, landmarks, houseLights } = await buildSettlementProps(
+  const { group, landmarks, houseLights, villageTorches } = await buildSettlementProps(
     site,
     sampleHeight,
     waterLevel,
@@ -388,6 +388,7 @@ export async function createSettlement(
         livestock.push(...kept)
       }
       fire?.update(dt)
+      for (const torch of villageTorches) torch.update(dt)
       for (const sp of signposts) {
         sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))
       }
@@ -399,6 +400,12 @@ export async function createSettlement(
           settlementSeed ^ Math.imul(nightIndex, 0x9e3779b1) ^ 0x4e494748,
         )
         if (random() < (NIGHT_FIRE_IGNITE_CHANCE[def.size] ?? 0.75)) fire.light()
+      }
+      // Village torches: always light at dusk, extinguish at dawn (plan 085).
+      if (nightFactor <= NIGHT_FIRE_THRESHOLD && t > NIGHT_FIRE_THRESHOLD) {
+        for (const torch of villageTorches) torch.setLit(true)
+      } else if (nightFactor > NIGHT_FIRE_THRESHOLD && t <= NIGHT_FIRE_THRESHOLD) {
+        for (const torch of villageTorches) torch.setLit(false)
       }
       nightFactor = t
       for (const light of houseLights) light.setNightIntensity(t)

@@ -64,6 +64,12 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     // the palm sits nearer the handle end instead of mid-shaft.
     gripLocalOffset: [0, -0.24, 0],
   },
+  wooden_torch: {
+    position: [0.02, 0.12, -0.02],
+    rotation: [0, 0, -Math.PI / 2.5],
+    scale: 1.1,
+    gripLocalOffset: [0, -0.18, 0],
+  },
 }
 
 /** Longest-axis size while held (meters). Separate from ground-drop sizing. */
@@ -71,6 +77,7 @@ const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }>> = {
   axe: { url: '/models/items/axe.glb', maxSize: 0.55 },
   knife: { url: '/models/items/knife.glb', maxSize: 0.28 },
   shovel: { url: '/models/items/shovel.glb', maxSize: 0.77 },
+  wooden_torch: { url: '/models/items/wooden_torch.glb', maxSize: 0.55 },
 }
 
 const heldTemplates = new Map<ToolKind, Group>()

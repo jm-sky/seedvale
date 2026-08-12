@@ -12,11 +12,12 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Concern | Where |
 |---------|--------|
 | Inventory weight / label | `ITEM_DEFS` |
-| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — only knife, firestarter, shovel, axe |
+| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch |
 | Held 3D attach | `heldToolVisual.ts` → `WristR` + `HELD_ATTACH` |
 | Ground GLB scale | `itemModels.ts` → `preparePropFitMax` (not height-only) |
 | Melee vs animals | `faunaCombat.ts` — axe 20, knife 12, shovel 8 |
 | Village one-time tools | `createItemSpawners.ts` |
+| Portable light | `PlayerTorch` — lit branch (90s) or held wooden_torch (240s); exclusive right hand |
 
 ## Items
 
@@ -24,7 +25,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 |------|-------|------|-------|-------|-------|-------|
 | shell | muszla | — | — | renewable village | procedural | |
 | stone | kamień | — | — | renewable + dig | procedural | |
-| branch | gałąź | — | — | renewable trees | procedural | axe harvest; **melee later** |
+| branch | gałąź | lit only | — | renewable trees | `items/branch.glb` | Zapal gałąź → hand mesh + fire; **melee later** |
 | mushroom | grzyb | — | — | world chunk | procedural | |
 | flower | kwiat | — | — | world chunk | procedural | |
 | cone | szyszka | — | — | world chunk | procedural | |
@@ -35,6 +36,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | axe | siekiera | yes | 20 | village 1× | `items/axe.glb` | chop |
 | pitchfork | widły | **no** | — | village 1–3 | `items/pitchfork.glb` | plan 082; **melee later** |
 | sickle | sierp | **no** | — | village 1–3 | `items/sickle.glb` | plan 082 |
+| wooden_torch | pochodnia | yes | — | village 1× | `items/wooden_torch.glb` | plan 085; longer/brighter than lit branch |
 
 ## Roadmap (not done)
 
@@ -48,6 +50,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 4. **NPC protest** when picking village pitchfork/sickle — [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md).
 5. **pickaxe** as `ItemKind` + mining — currently decorative only at stockpile.
 6. **long_sword** — parked CC-BY combat prop.
+7. **Left-hand dual wield** — currently right hand exclusive (tool vs lit light).
 
 ## Related non-item props
 
@@ -55,5 +58,8 @@ implemented, and what is planned. Code source of truth for weights/labels:
 |----|------|--------|
 | pickaxe | `/models/items/pickaxe.glb` | decorative |
 | hay | `/models/settlement/hay.glb` | decorative |
+| lantern | `/models/settlement/lantern.glb` | house night lamp body (plan 085) |
+| torch | `/models/settlement/torch.glb` | village plaza/gate posts (plan 085) |
+| fire | `/models/fx/fire.glb` | handheld / village torch tip (CC-BY) |
 | blood_splat | `/models/fx/blood_splat.glb` | parked — death VFX later |
 | long_sword | `/models/items/long_sword.glb` | parked |

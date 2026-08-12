@@ -60,8 +60,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     holdable: false,
     meleeDamage: null,
     spawn: 'village_renewable',
-    modelUrl: null,
-    notes: 'Renewable near settlement trees; axe harvest yield.',
+    modelUrl: '/models/items/branch.glb',
+    notes: 'Renewable near settlement trees; axe harvest yield; lit hand visual (plan 085).',
     roadmap:
       'Holdable improvised melee (low damage, ~4–8). Natural candidate for item durability/HP wear.',
   },
@@ -168,6 +168,17 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     notes: '1–3 with pitchfork near gardens (plan 082). Pickup only — not holdable yet.',
     roadmap:
       'Holdable + melee like knife (damage TBD, ~10–12). NPC protest on village theft (issue 025).',
+  },
+  wooden_torch: {
+    kind: 'wooden_torch',
+    label: 'pochodnia',
+    category: 'tool',
+    holdable: true,
+    meleeDamage: null,
+    spawn: 'village_onetime',
+    modelUrl: '/models/items/wooden_torch.glb',
+    notes:
+      'One-time near plaza/campfire; Weź then Zapal pochodnię (firestarter). Longer/brighter than lit branch (plan 085).',
   },
 }
 

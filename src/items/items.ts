@@ -15,6 +15,7 @@ export type ItemKind =
   | 'axe'
   | 'pitchfork'
   | 'sickle'
+  | 'wooden_torch'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility'
 
@@ -40,6 +41,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   axe: { label: 'siekiera', category: 'tool', weight: 2.5, color: 0x7a7e86 },
   pitchfork: { label: 'widły', category: 'tool', weight: 1.8, color: 0x6b5a3a },
   sickle: { label: 'sierp', category: 'tool', weight: 0.7, color: 0x8a9098 },
+  wooden_torch: { label: 'pochodnia', category: 'tool', weight: 1.2, color: 0x7a5230 },
 }
 
 /** Pickup mesh — prefers a preloaded GLB clone when available (`itemModels.ts`),
@@ -233,6 +235,25 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     blade.position.set(0.06, 0.08, 0.02)
     blade.castShadow = true
     group.add(blade)
+    return group
+  }
+  if (kind === 'wooden_torch') {
+    const group = new THREE.Group()
+    const stick = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.022, 0.028, 0.55, 6),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.wooden_torch.color, flatShading: true }),
+    )
+    stick.position.y = 0.28
+    stick.castShadow = true
+    group.add(stick)
+    const wrap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.06, 6, 4),
+      new THREE.MeshStandardMaterial({ color: 0xc45a1a, flatShading: true, emissive: 0x331100 }),
+    )
+    wrap.position.y = 0.58
+    wrap.scale.set(1, 1.2, 1)
+    wrap.castShadow = true
+    group.add(wrap)
     return group
   }
   // blanket

@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { computed, type ComputedRef, ref } from 'vue'
-import { setPauseFirePitStatus, setPauseSimpleFireStatus, setPauseTorchStatus, ui } from '../store'
+import type { LightActionResult } from '../../app/userActions'
+import {
+  setPauseBranchStatus,
+  setPauseFirePitStatus,
+  setPauseSimpleFireStatus,
+  setPauseTorchStatus,
+  ui,
+} from '../store'
 
+const branchTimer = ref<number | null>(null)
 const torchTimer = ref<number | null>(null)
 const firePitTimer = ref<number | null>(null)
 const simpleFireTimer = ref<number | null>(null)
@@ -10,11 +18,23 @@ const emit = defineEmits<{
   (e: 'close-actions'): void
 }>()
 
-function lightTorch(): void {
-  const lit = ui.pauseMenu.onLightTorch?.() ?? false; setPauseTorchStatus(lit ? 'Zapalono!' : 'Brakuje gałęzi/krzesiwa lub już płonie')
-  if (torchTimer.value !== null) {
-    window.clearTimeout(torchTimer.value)
-  }
+const lightStatusText: Record<Exclude<LightActionResult, 'ok'>, string> = {
+  'already-lit': 'Już płonie',
+  missing: 'Brakuje surowców / krzesiwa',
+  'need-hold': 'Weź pochodnię w rękę (albo odłóż inne narzędzie)',
+}
+
+function lightBranch(): void {
+  const result = ui.pauseMenu.onLightBranch?.() ?? 'missing'
+  setPauseBranchStatus(result === 'ok' ? 'Zapalono!' : lightStatusText[result])
+  if (branchTimer.value !== null) window.clearTimeout(branchTimer.value)
+  branchTimer.value = window.setTimeout(() => setPauseBranchStatus(''), 1500)
+}
+
+function lightWoodenTorch(): void {
+  const result = ui.pauseMenu.onLightWoodenTorch?.() ?? 'missing'
+  setPauseTorchStatus(result === 'ok' ? 'Zapalono!' : lightStatusText[result])
+  if (torchTimer.value !== null) window.clearTimeout(torchTimer.value)
   torchTimer.value = window.setTimeout(() => setPauseTorchStatus(''), 1500)
 }
 
@@ -43,9 +63,15 @@ type Action = {
 
 const actions: ComputedRef<readonly Action[]> = computed(() => [
   {
-    label: 'Zapal pochodnię',
+    label: 'Zapal gałąź',
     cost: '1x gałąź',
-    onClick: lightTorch,
+    onClick: lightBranch,
+    status: ui.pauseMenu.branchStatus,
+  },
+  {
+    label: 'Zapal pochodnię',
+    cost: 'pochodnia w ręce',
+    onClick: lightWoodenTorch,
     status: ui.pauseMenu.torchStatus,
   },
   {

@@ -65,6 +65,12 @@ const VILLAGE_TOOL_COUNT_MIN = 1
 const VILLAGE_TOOL_COUNT_MAX = 3
 const VILLAGE_TOOL_KINDS: readonly ItemKind[] = ['pitchfork', 'sickle']
 
+/** One-time wooden torch near plaza/campfire (plan 085). */
+const WOODEN_TORCH_RESPAWN_TIME = Infinity
+const WOODEN_TORCH_FIRE_MAX_DIST = 2.2
+const WOODEN_TORCH_PLAZA_MIN_DIST = 2
+const WOODEN_TORCH_PLAZA_MAX_DIST = 4.5
+
 /** How close to a chosen tree a branch spawn point lands. */
 const TREE_SPAWN_MIN_DIST = 1.2
 const TREE_SPAWN_MAX_DIST = 3.5
@@ -197,6 +203,23 @@ export function createItemSpawners(
       )
       if (pos) addSpawnPoint(kind, VILLAGE_TOOL_RESPAWN_TIME, pos)
     }
+  }
+
+  {
+    // One wooden torch near campfire when present, else plaza/garden (plan 085).
+    const nearFire = shovelLandmarks.campfire !== undefined
+    const anchor = nearFire ? shovelLandmarks.campfire! : settlementCenter
+    const [minDist, maxDist] = nearFire
+      ? [0.8, WOODEN_TORCH_FIRE_MAX_DIST]
+      : [WOODEN_TORCH_PLAZA_MIN_DIST, WOODEN_TORCH_PLAZA_MAX_DIST]
+    const pos = findWalkableNear(anchor.x, anchor.z, minDist, maxDist)
+      ?? findWalkableNear(
+        shovelLandmarks.garden.x,
+        shovelLandmarks.garden.z,
+        WOODEN_TORCH_PLAZA_MIN_DIST,
+        WOODEN_TORCH_PLAZA_MAX_DIST,
+      )
+    if (pos) addSpawnPoint('wooden_torch', WOODEN_TORCH_RESPAWN_TIME, pos)
   }
 
   if (trees.length > 0) {

@@ -1,5 +1,6 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { LightActionResult } from '../app/userActions'
 import type { WorldConfig } from '../config/worldConfig'
 import type { ItemKind } from '../items/items'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
@@ -30,9 +31,10 @@ type PauseMenuState = {
   onPause: (() => void) | null; onResume: (() => void) | null; onToggleGui: (() => void) | null
   onNameChange: ((name: string) => void) | null; onNameCommit: ((name: string) => void) | null
   onSave: (() => void) | null; onRefresh: (() => void) | null
-  onBuildSimpleFire: (() => boolean) | null; onBuildFirePit: (() => boolean) | null; onLightTorch: (() => boolean) | null
+  onBuildSimpleFire: (() => boolean) | null; onBuildFirePit: (() => boolean) | null
+  onLightBranch: (() => LightActionResult) | null; onLightWoodenTorch: (() => LightActionResult) | null
   onNewGame: (() => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null
-  saveStatus: string; simpleFireStatus: string; firePitStatus: string; torchStatus: string
+  saveStatus: string; simpleFireStatus: string; firePitStatus: string; torchStatus: string; branchStatus: string
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
 type FlavorDialogState = { open: boolean; prompt: string | null; name: string; line: string }
@@ -42,7 +44,8 @@ type QuickActionsState = {
   nearTown: boolean
   onBuildSimpleFire: (() => boolean) | null
   onBuildFirePit: (() => boolean) | null
-  onLightTorch: (() => boolean) | null
+  onLightBranch: (() => LightActionResult) | null
+  onLightWoodenTorch: (() => LightActionResult) | null
   onWait: ((hours: number) => void) | null
   onRest: ((variant: RestVariant) => RestOutcome) | null
   onDig: (() => void) | null
@@ -96,7 +99,7 @@ type TouchChromeState = {
   onSprintToggle: (() => void) | null
 }
 
-type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'simpleFireStatus' | 'firePitStatus' | 'torchStatus'>>
+type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'simpleFireStatus' | 'firePitStatus' | 'torchStatus' | 'branchStatus'>>
 
 const HUD_HINT_TOUCH = 'Joystick = ruch · przeciągnij = kamera · E = interakcja · R = alt'
 const HUD_HINT_DESKTOP = 'WASD · klik = mysz · Esc = kursor · E = interakcja · R = alt · L = działania · I = ekwipunek · G = upuść · M = mapa'
@@ -110,15 +113,15 @@ export const ui = reactive({
   pauseMenu: {
     open: false, seed: 0, playerName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onRefresh: null,
-    onBuildSimpleFire: null, onBuildFirePit: null, onLightTorch: null,
+    onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
     onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null,
-    saveStatus: '', simpleFireStatus: '', firePitStatus: '', torchStatus: '',
+    saveStatus: '', simpleFireStatus: '', firePitStatus: '', torchStatus: '', branchStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
   quickActions: {
     open: false, hasShovel: false, nearTown: false,
-    onBuildSimpleFire: null, onBuildFirePit: null, onLightTorch: null,
+    onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null, onDig: null, onLevel: null, onOpen: null, onClose: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
@@ -168,6 +171,7 @@ export function setPauseSaveStatus(status: string): void { ui.pauseMenu.saveStat
 export function setPauseSimpleFireStatus(status: string): void { ui.pauseMenu.simpleFireStatus = status }
 export function setPauseFirePitStatus(status: string): void { ui.pauseMenu.firePitStatus = status }
 export function setPauseTorchStatus(status: string): void { ui.pauseMenu.torchStatus = status }
+export function setPauseBranchStatus(status: string): void { ui.pauseMenu.branchStatus = status }
 
 export function openQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation; ui.questLog.open = true }
 export function refreshQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation }

@@ -243,6 +243,11 @@ export class PlayerController {
    * the item; this is visual only). Capsule / missing-bone fallback parents
    * to the body root (looks wrong — prefer fixing the socket).
    */
+  /** Right-hand bone (or model root fallback) for held tools / lit lights. */
+  handSocket(): THREE.Object3D {
+    return this.rightWrist ?? this.modelRoot
+  }
+
   setHeldTool(kind: ToolKind | null): void {
     if (kind === this.heldToolKind) return
     this.heldToolKind = kind
@@ -254,7 +259,7 @@ export class PlayerController {
     }
     if (!kind) return
 
-    const parent = this.rightWrist ?? this.modelRoot
+    const parent = this.handSocket()
     void createHeldToolObject(kind).then((tool) => {
       if (loadToken !== this.heldToolLoadToken || this.heldToolKind !== kind) {
         disposeObject3D(tool)

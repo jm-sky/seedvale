@@ -99,10 +99,16 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 
 - `ItemKind` and `Inventory` exist in `src/items/`.
 - Player has shared `HealthState` on `PlayerController` (100 HP; CSS2D HP bar like NPC/fauna; no death UI/respawn yet — plan 045).
-- Held tools (`HeldTool`) attach a dedicated held mesh (GLB for shovel/axe/knife)
-  to Quaternius `WristR` via `heldToolVisual.ts` (not the ground-drop pose).
+- Held tools (`HeldTool`) attach a dedicated held mesh (GLB for shovel/axe/knife/wooden_torch)
+  to Quaternius `WristR` via `heldToolVisual.ts` (not the ground-drop pose). Right hand is
+  exclusive: a lit branch or lit wooden torch occupies the slot (no second tool until left hand).
+- Portable light (`PlayerTorch`): **Zapal gałąź** (1× branch + firestarter, ~90s, branch+fire GLB
+  in hand) or **Zapal pochodnię** (held `wooden_torch` + firestarter, ~240s, brighter). Village
+  one-time wooden torch pickup near plaza/campfire.
 - Item overview for agents: [docs/items/CATALOG.md](./items/CATALOG.md) +
   `src/items/itemCatalog.ts` (pitchfork/sickle melee = roadmap).
+- House night lamps use `lantern.glb` body + `PointLight` (`createHouseLight`); village torch posts
+  (`torch.glb`) at plaza + gate auto-light at dusk like the campfire threshold.
 - Simple player→animal melee: with knife/axe/shovel **held**, gazing at a live animal and pressing `[E]` deals instant damage (`playerToolDamage`: axe 20 > knife 12 > shovel 8) via `AnimalAgent.takeDamage`; hit/kill SFX via `playAt` at the animal; without a melee tool the existing observe/flavor dialog remains.
 - Inventory is persisted in save data and has weight calculation/max weight support.
 - Item spawners and dropped items exist.

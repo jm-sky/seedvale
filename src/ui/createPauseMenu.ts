@@ -1,3 +1,4 @@
+import type { LightActionResult } from '../app/userActions'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type PauseMenuHandlers = {
@@ -10,7 +11,8 @@ export type PauseMenuHandlers = {
   onRefresh?: () => void
   onBuildSimpleFire?: () => boolean
   onBuildFirePit?: () => boolean
-  onLightTorch?: () => boolean
+  onLightBranch?: () => LightActionResult
+  onLightWoodenTorch?: () => LightActionResult
   onNewGame?: () => void
   onQuestLog?: () => void
   onVillagers?: () => void

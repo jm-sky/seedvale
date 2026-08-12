@@ -15,6 +15,11 @@ type GroundGlbSpec = {
 export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
   axe: { url: '/models/items/axe.glb', maxSize: 0.85 },
   knife: { url: '/models/items/knife.glb', maxSize: 0.35 },
+  branch: {
+    url: '/models/items/branch.glb',
+    maxSize: 0.55,
+    groundRotation: [0, 0, Math.PI / 2.4],
+  },
   pitchfork: {
     url: '/models/items/pitchfork.glb',
     maxSize: 1.15,
@@ -25,6 +30,11 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
     url: '/models/items/sickle.glb',
     maxSize: 0.45,
     groundRotation: [Math.PI / 2.5, 0, 0],
+  },
+  wooden_torch: {
+    url: '/models/items/wooden_torch.glb',
+    maxSize: 0.75,
+    groundRotation: [0, 0, Math.PI / 2.3],
   },
 }
 

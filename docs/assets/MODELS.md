@@ -47,6 +47,11 @@ If the feature needs no new model, do nothing to this file.
 | M17 | Poly Farm building | Alternate farm shell vs Fantasy RTS `farm.glb` (CC-BY) | `in repo` | plan 082 (`settlement/farm_poly.glb`) |
 | M18 | Rock variant B | Extra rock prop beside wired `rock_a` | `in repo` | plan 082 (`nature/rock_b.glb`) |
 | M19 | Held shovel / axe / knife GLB | Drop + hand attach (`heldToolVisual`) | `wired` | `items/shovel.glb`, `axe.glb`, `knife.glb` |
+| M20 | Wooden torch (held) | Holdable item; longer/brighter than lit branch | `wired` | [plan 085](../plans/2026-08-12--085--handheld-lights-and-village-torches.md) |
+| M21 | Branch GLB | Ground + lit-hand mesh | `wired` | plan 085 |
+| M22 | Fire tip FX | Handheld + village torch flame | `wired` | plan 085 (`fx/fire.glb`, CC-BY) |
+| M23 | House lantern GLB | Replaces procedural lamp body | `wired` | plan 085 |
+| M24 | Village torch post | Plaza + gate, auto-lit at dusk | `wired` | plan 085 |
 
 ## Wired (reference — do not treat as open work)
 
@@ -58,7 +63,8 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Fauna | wolf, fox, deer, stag |
 | Nature (active) | trees/bushes, rock/log, ore piles |
 | Settlement (active) | huts, towerhouse, wall stubs, dock, crate/barrel, garden/storage/logs, hay |
-| Items (active) | pitchfork, sickle (village pickups); pickaxe decorative |
+| Items (active) | pitchfork, sickle (village pickups); wooden torch; branch GLB; pickaxe decorative |
+| Settlement lights | house lantern GLB; plaza/gate torch posts |
 
 ## Related research
 

@@ -372,6 +372,20 @@ export type HouseLight = {
   setNightIntensity: (t: number) => void
 }
 
+/** Night-auto village torch post (plaza / gate) — not player-fueled. */
+export type VillageTorch = {
+  readonly object: THREE.Object3D
+  setLit: (lit: boolean) => void
+  update: (dt: number) => void
+}
+
+const LANTERN_URL = '/models/settlement/lantern.glb'
+const VILLAGE_TORCH_URL = '/models/settlement/torch.glb'
+const FIRE_FX_URL = '/models/fx/fire.glb'
+const LANTERN_FLOOR_MAX = 0.28
+const LANTERN_WALL_MAX = 0.16
+const VILLAGE_TORCH_HEIGHT = 1.55
+
 /** `createHouseLight`'s mount point is now a real point on the hut's exterior
  *  surface (`findWallMount` below), not an assumed Z-facing wall — `mountX`/
  *  `mountZ` place the lamp there, offset a little in/out along that surface's
@@ -380,13 +394,14 @@ export type HouseLight = {
  *  the lamp geometry is rotated to sit flush against it from any angle.
  *
  *  Wall fixtures are half the reference lantern size; floor-center keeps full
- *  size. Cap (daszek) and base (podstawka) share the body's XZ center and sit
- *  flush above/below it. */
+ *  size. Prefer `lanternBody` GLB (plan 085); procedural box body is fallback.
+ */
 export function createHouseLight(
   mountHeight: number,
   mountX: number,
   mountZ: number,
   style: HouseLampStyle = 'wall',
+  lanternBody: THREE.Object3D | null = null,
 ): HouseLight {
   const group = new THREE.Group()
   const scale = style === 'wall' ? 0.5 : 1
@@ -396,40 +411,47 @@ export function createHouseLight(
   const nz = mountZ / outwardLen
   const yaw = Math.atan2(nx, nz)
 
-  // Reference lantern (scale=1); wall uses 50%.
-  const bodyW = 0.12 * scale
-  const bodyH = 0.16 * scale
-  const bodyD = 0.08 * scale
-  const plateW = 0.14 * scale
-  const plateH = 0.04 * scale
-  const plateD = 0.14 * scale
   const stickOut = style === 'wall' ? 0.04 * scale : 0
-
-  // One shared center for body + cap + base (fixes old offset where the glow
-  // cube sat forward of the wood plates).
   const cx = mountX + nx * stickOut
   const cy = mountHeight
   const cz = mountZ + nz * stickOut
-  const halfBody = bodyH * 0.5
-  const halfPlate = plateH * 0.5
 
-  const baseMat = new THREE.MeshBasicMaterial({ color: 0x6b4226 })
-  const lampMat = new THREE.MeshBasicMaterial({ color: HOUSE_LAMP_OFF_COLOR })
+  let lampMat: THREE.MeshBasicMaterial | null = null
 
-  const top = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMat)
-  top.position.set(cx, cy + halfBody + halfPlate, cz)
-  top.rotation.y = yaw
-  group.add(top)
+  if (lanternBody) {
+    const body = lanternBody.clone(true)
+    body.position.set(cx, cy, cz)
+    body.rotation.y = yaw
+    group.add(body)
+  } else {
+    // Reference lantern (scale=1); wall uses 50%.
+    const bodyW = 0.12 * scale
+    const bodyH = 0.16 * scale
+    const bodyD = 0.08 * scale
+    const plateW = 0.14 * scale
+    const plateH = 0.04 * scale
+    const plateD = 0.14 * scale
+    const halfBody = bodyH * 0.5
+    const halfPlate = plateH * 0.5
 
-  const base = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMat)
-  base.position.set(cx, cy - halfBody - halfPlate, cz)
-  base.rotation.y = yaw
-  group.add(base)
+    const baseMat = new THREE.MeshBasicMaterial({ color: 0x6b4226 })
+    lampMat = new THREE.MeshBasicMaterial({ color: HOUSE_LAMP_OFF_COLOR })
 
-  const lamp = new THREE.Mesh(new THREE.BoxGeometry(bodyW, bodyH, bodyD), lampMat)
-  lamp.position.set(cx, cy, cz)
-  lamp.rotation.y = yaw
-  group.add(lamp)
+    const top = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMat)
+    top.position.set(cx, cy + halfBody + halfPlate, cz)
+    top.rotation.y = yaw
+    group.add(top)
+
+    const base = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMat)
+    base.position.set(cx, cy - halfBody - halfPlate, cz)
+    base.rotation.y = yaw
+    group.add(base)
+
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(bodyW, bodyH, bodyD), lampMat)
+    lamp.position.set(cx, cy, cz)
+    lamp.rotation.y = yaw
+    group.add(lamp)
+  }
 
   const light = new THREE.PointLight(0xffb35c, 0, 4.5 * scale, 2)
   light.position.set(cx - nx * 0.08 * scale, cy, cz - nz * 0.08 * scale)
@@ -439,8 +461,68 @@ export function createHouseLight(
     object: group,
     setNightIntensity(t) {
       const clamped = Math.max(0, Math.min(1, t))
-      lampMat.color.lerpColors(HOUSE_LAMP_OFF_COLOR, HOUSE_LAMP_ON_COLOR, clamped)
+      if (lampMat) lampMat.color.lerpColors(HOUSE_LAMP_OFF_COLOR, HOUSE_LAMP_ON_COLOR, clamped)
       light.intensity = clamped * (style === 'wall' ? 0.85 : 1)
+    },
+  }
+}
+
+function createProceduralTorchPost(): THREE.Object3D {
+  const group = new THREE.Group()
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04, 0.05, 1.4, 6),
+    new THREE.MeshStandardMaterial({ color: 0x5a3a22, flatShading: true }),
+  )
+  pole.position.y = 0.7
+  pole.castShadow = true
+  group.add(pole)
+  const head = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07, 0.05, 0.18, 6),
+    new THREE.MeshStandardMaterial({ color: 0x3a2a1a, flatShading: true }),
+  )
+  head.position.y = 1.45
+  head.castShadow = true
+  group.add(head)
+  return group
+}
+
+/** Freestanding village torch — GLB post + tip flame, toggled at dusk/dawn. */
+export function createVillageTorchLight(
+  post: THREE.Object3D,
+  flameTip: THREE.Object3D | null,
+): VillageTorch {
+  const group = new THREE.Group()
+  group.add(post)
+
+  let flameUpdate: ((dt: number) => void) | null = null
+  let flameObj: THREE.Object3D
+  if (flameTip) {
+    flameObj = flameTip
+    flameObj.position.set(0, 1.45, 0)
+    flameObj.visible = false
+    group.add(flameObj)
+  } else {
+    const flame = createCampfireFlame(0.35)
+    flameObj = flame.object
+    flameObj.position.set(0, 1.4, 0)
+    flameUpdate = flame.update
+    group.add(flameObj)
+  }
+
+  const light = new THREE.PointLight(0xff8a3c, 0, 7, 2)
+  light.position.set(0, 1.5, 0)
+  group.add(light)
+
+  let lit = false
+  return {
+    object: group,
+    setLit(on) {
+      lit = on
+      flameObj.visible = on
+      light.intensity = on ? 1.6 : 0
+    },
+    update(dt) {
+      if (lit) flameUpdate?.(dt)
     },
   }
 }
@@ -1728,7 +1810,12 @@ export async function buildSettlementProps(
   plan?: VillagePlan,
   /** Optional coast samplers — skips palisade on beach / seaward entrances. */
   coast?: CoastalSamplers,
-): Promise<{ group: THREE.Group, landmarks: SettlementLandmarks, houseLights: HouseLight[] }> {
+): Promise<{
+  group: THREE.Group
+  landmarks: SettlementLandmarks
+  houseLights: HouseLight[]
+  villageTorches: VillageTorch[]
+}> {
   const group = new THREE.Group()
   group.name = 'settlement'
 
@@ -1838,6 +1925,35 @@ export async function buildSettlementProps(
   landmarks.market.set(marketX, sampleHeight(marketX, marketZ), marketZ)
 
   const houseLights: HouseLight[] = []
+  const villageTorches: VillageTorch[] = []
+
+  let lanternFloor: THREE.Object3D | null = null
+  let lanternWall: THREE.Object3D | null = null
+  try {
+    const lantern = await loadGltf(LANTERN_URL)
+    lanternFloor = preparePropFitMax(lantern.clone(true), LANTERN_FLOOR_MAX)
+    lanternWall = preparePropFitMax(lantern.clone(true), LANTERN_WALL_MAX)
+  } catch (err) {
+    console.warn('[settlement] lantern.glb unavailable — procedural house lamps', err)
+  }
+
+  let torchPostTemplate: THREE.Object3D = createProceduralTorchPost()
+  let fireTipTemplate: THREE.Object3D | null = null
+  try {
+    torchPostTemplate = await loadPropOrFallback(
+      VILLAGE_TORCH_URL,
+      VILLAGE_TORCH_HEIGHT,
+      createProceduralTorchPost,
+    )
+  } catch {
+    /* keep procedural */
+  }
+  try {
+    const fire = await loadGltf(FIRE_FX_URL)
+    fireTipTemplate = preparePropFitMax(fire, 0.28)
+  } catch {
+    fireTipTemplate = null
+  }
   const housePlots = (plan?.plots.filter((p) => p.role === 'house') ?? [])
     .slice()
     .sort((a, b) => (a.familyIndex ?? 0) - (b.familyIndex ?? 0))
@@ -1898,7 +2014,14 @@ export async function buildSettlementProps(
       lampMountSource: lampMount.source,
     })
 
-    const houseLight = createHouseLight(lampMount.y, lampMount.x, lampMount.z, entry.lampStyle)
+    const lanternTpl = entry.lampStyle === 'wall' ? lanternWall : lanternFloor
+    const houseLight = createHouseLight(
+      lampMount.y,
+      lampMount.x,
+      lampMount.z,
+      entry.lampStyle,
+      lanternTpl,
+    )
     hut.add(houseLight.object)
     houseLights.push(houseLight)
 
@@ -2013,6 +2136,73 @@ export async function buildSettlementProps(
   }
 
   await plantEntrancePalisade(group, site, size, sampleHeight, waterLevel, plan, coast, pathCorridors)
+
+  // Village torch posts — plaza ring (MD+) + gate flanks (plan 085).
+  {
+    const postTpl = torchPostTemplate
+    const placeTorchAt = (x: number, z: number, yaw = 0) => {
+      const post = postTpl.clone(true)
+      post.rotation.y = yaw
+      const tip = fireTipTemplate ? fireTipTemplate.clone(true) : null
+      const torch = createVillageTorchLight(post, tip)
+      placeOnGround(torch.object, x, z, sampleHeight)
+      group.add(torch.object)
+      villageTorches.push(torch)
+    }
+
+    const infra = villageSizeConfig(size).infrastructure
+    if (infra.campfires > 0) {
+      const plazaR = Math.max(3, clearings.core.radius * 0.85)
+      const count = size === 'XL' ? 4 : size === 'LG' ? 3 : 2
+      for (let i = 0; i < count; i++) {
+        const ang = (i / count) * Math.PI * 2 + 0.35
+        const tx = clearings.core.x + Math.cos(ang) * plazaR
+        const tz = clearings.core.z + Math.sin(ang) * plazaR
+        if (sampleHeight(tx, tz) <= waterLevel + 0.55) continue
+        // Keep clear of well / campfire
+        if (Math.hypot(tx - wellX, tz - wellZ) < 3.2) continue
+        if (landmarks.campfire) {
+          const c = landmarks.campfire.position
+          if (Math.hypot(tx - c.x, tz - c.z) < 2.8) continue
+        }
+        placeTorchAt(tx, tz, ang + Math.PI)
+      }
+    }
+
+    // Gate flanks (same entrance math as palisade).
+    {
+      const coastEnv: CoastalSamplers = coast ?? { sampleHeight, waterLevel }
+      const radius = plan?.boundary.radius ?? villageSizeConfig(size).footprintRadius * 0.72
+      const entrances = plan?.entrances ?? []
+      const inlandEntrances = entrances.filter((e) => !isCoastalPlacement(e.x, e.z, coastEnv))
+      const entrance = inlandEntrances.find((e) => e.kind === 'road') ?? inlandEntrances[0]
+      if (entrance || entrances.length === 0) {
+        const outward = entrance
+          ? Math.atan2(entrance.z - site.z, entrance.x - site.x)
+          : 0
+        const gateX = site.x + Math.cos(outward) * radius
+        const gateZ = site.z + Math.sin(outward) * radius
+        if (!isCoastalPlacement(gateX, gateZ, coastEnv)) {
+          let maxCorridorHalf = 5
+          for (const seg of pathCorridors) {
+            if (seg.halfWidth > maxCorridorHalf) maxCorridorHalf = seg.halfWidth
+          }
+          const gateHalf = Math.max(
+            PALISADE_GATE_HALF_ANGLE,
+            Math.atan2(maxCorridorHalf + WALL_HALF_LENGTH, Math.max(radius, 1)),
+          )
+          const flank = gateHalf + 0.22
+          for (const side of [-1, 1] as const) {
+            const ang = outward + side * flank
+            const tx = site.x + Math.cos(ang) * radius
+            const tz = site.z + Math.sin(ang) * radius
+            if (isCoastalPlacement(tx, tz, coastEnv)) continue
+            placeTorchAt(tx, tz, ang + Math.PI)
+          }
+        }
+      }
+    }
+  }
 
   if (plantForest) {
     const random = createSeededRandom(seed ^ 0x7e3d)
@@ -2195,7 +2385,7 @@ export async function buildSettlementProps(
     }
   }
 
-  return { group, landmarks, houseLights }
+  return { group, landmarks, houseLights, villageTorches }
 }
 
 export function disposeSettlementGroup(group: THREE.Group): void {

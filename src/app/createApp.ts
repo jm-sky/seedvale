@@ -222,14 +222,33 @@ export async function createApp(
   }
   player.setName(config.player.name)
   scene.add(player.mesh)
-  const playerTorch = createPlayerTorch(player.mesh)
-
   const hud = createHud(container)
   hud.setTime(dayNight.timeOfDay)
   const toast = createToast(container)
 
-  const syncHeldHud = (): void => {
+  // Assigned below; PlayerTorch onChange closes over the live binding.
+  let syncHeldHud = (): void => {}
+  const playerTorch = createPlayerTorch({
+    handSocket: () => player.handSocket(),
+    onChange: () => syncHeldHud(),
+  })
+
+  syncHeldHud = (): void => {
+    if (playerTorch.isLit() && playerTorch.source() === 'branch') {
+      hud.setHeldTool('płonąca gałąź')
+      // Lit branch owns the wrist — clear tool mesh so they don't stack.
+      if (heldTool.held() !== null) {
+        heldTool.unequip()
+      }
+      player.setHeldTool(null)
+      return
+    }
     const held = heldTool.held()
+    if (playerTorch.isLit() && playerTorch.source() === 'wooden_torch' && held === 'wooden_torch') {
+      hud.setHeldTool('pochodnia (płonie)')
+      player.setHeldTool(held)
+      return
+    }
     hud.setHeldTool(held ? ITEM_DEFS[held].label : '')
     player.setHeldTool(held)
   }
@@ -384,6 +403,9 @@ export async function createApp(
     if (count <= 0) return
     inventory.remove(kind, count)
     heldTool.syncWithInventory()
+    if (playerTorch.isLit() && playerTorch.source() === 'wooden_torch' && heldTool.held() !== 'wooden_torch') {
+      playerTorch.extinguish()
+    }
     for (let i = 0; i < count; i++) {
       const angle = i * ((Math.PI * 2) / count)
       bundle.droppedItems.drop(
@@ -401,11 +423,13 @@ export async function createApp(
   }
 
   const equipTool = (kind: ItemKind): void => {
+    if (playerTorch.isLit()) playerTorch.extinguish()
     if (!heldTool.equip(kind)) return
     syncHeldHud()
     inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
   }
   const unequipTool = (): void => {
+    if (playerTorch.isLit()) playerTorch.extinguish()
     heldTool.unequip()
     syncHeldHud()
     inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
@@ -417,7 +441,16 @@ export async function createApp(
     onUnequip: unequipTool,
   })
 
-  const { buildSimpleFire, buildFirePit, lightTorch } = getUserActions(inventory, bundle, playerTorch, player, hud, touchControls)
+  const { buildSimpleFire, buildFirePit, lightBranch, lightWoodenTorch } = getUserActions(
+    inventory,
+    bundle,
+    playerTorch,
+    player,
+    hud,
+    heldTool,
+    syncHeldHud,
+    touchControls,
+  )
 
   const timeSkip = createTimeSkip(dayNight)
   const timeSkipOverlay = createTimeSkipOverlay(container)
@@ -558,7 +591,8 @@ export async function createApp(
     },
     onBuildSimpleFire: buildSimpleFire,
     onBuildFirePit: buildFirePit,
-    onLightTorch: lightTorch,
+    onLightBranch: lightBranch,
+    onLightWoodenTorch: lightWoodenTorch,
     onWait: (hours) => {
       if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
       timeSkip.start(hours, { fadeStrength: 0.5, label: `Czekasz... (${hours}h)` })
@@ -647,7 +681,8 @@ export async function createApp(
     onRefresh: () => window.location.reload(),
     onBuildSimpleFire: buildSimpleFire,
     onBuildFirePit: buildFirePit,
-    onLightTorch: lightTorch,
+    onLightBranch: lightBranch,
+    onLightWoodenTorch: lightWoodenTorch,
     onNewGame: () => {
       if (!window.confirm('Start a new game? Your saved progress will be cleared.')) return
       void clearSave()

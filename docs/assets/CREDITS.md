@@ -54,6 +54,11 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/fauna/chicken.glb` | jeremy | [poly.pizza/m/1YE8U35HXsI](https://poly.pizza/m/1YE8U35HXsI) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Chicken` — **parked** (fauna gospodarska); wymagana atrybucja |
 | `public/models/settlement/farm_poly.glb` | Poly by Google | [poly.pizza/m/dSjXKezYeBo](https://poly.pizza/m/dSjXKezYeBo) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Farm` — **parked** (nie mylić z Fantasy RTS `farm.glb`); wymagana atrybucja |
 | `public/models/nature/rock_b.glb` | Quaternius | [poly.pizza/m/RtLRqYjfMs](https://poly.pizza/m/RtLRqYjfMs) | CC0 1.0 | `Rock` — **parked** wariant obok wired `rock_a` |
+| `public/models/items/wooden_torch.glb` | Quaternius | [poly.pizza/m/pNsfJzhXiD](https://poly.pizza/m/pNsfJzhXiD) | CC0 1.0 | `Wooden Torch` — holdable + lit hand light (plan 085) |
+| `public/models/items/branch.glb` | AssetQuest | [poly.pizza/m/kvLsgIS5nh](https://poly.pizza/m/kvLsgIS5nh) | CC0 1.0 | `Branch B` — ground drop + lit hand (plan 085) |
+| `public/models/fx/fire.glb` | J-Toastie | [poly.pizza/m/8kb5fydmHf](https://poly.pizza/m/8kb5fydmHf) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Fire` — handheld / village torch flame tip (plan 085); wymagana atrybucja |
+| `public/models/settlement/lantern.glb` | Tomáš Bayer | [poly.pizza/m/d80ay-dCqqj](https://poly.pizza/m/d80ay-dCqqj) | CC0 1.0 | `Lantern` — house night lamp body (plan 085) |
+| `public/models/settlement/torch.glb` | Quaternius | [poly.pizza/m/Gq38E7hFZw](https://poly.pizza/m/Gq38E7hFZw) | CC0 1.0 | `Torch` — village plaza/gate night posts (plan 085) |
 
 Kopia tekstu licencji z paczki: [quaternius-ultimate-fantasy-rts-license.txt](./quaternius-ultimate-fantasy-rts-license.txt) (w zipie oznaczona mylnie jako „Platformer Pack”; treść = CC0).  
 Modular Men: [quaternius-ultimate-modular-men-license.txt](./quaternius-ultimate-modular-men-license.txt).  
