@@ -10,6 +10,7 @@ import {
   Vector3,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { createCameraPersistScheduler, restoreCamerasFromPersist, saveCameraPersist } from './cameraPersist'
 import type { WebGLRenderer } from 'three'
 
 export type ViewId = 'front' | 'side' | 'top' | 'perspective'
@@ -36,6 +37,9 @@ export function createMultiView(
   views: ViewportDef[]
   resize: (w: number, h: number) => void
   frameTargets: (bounds: { center: Vector3, radius: number } | null) => void
+  /** Restore cameras from localStorage. Returns false when nothing saved. */
+  restorePersistedCameras: () => boolean
+  persistCameras: () => void
   dispose: () => void
 } {
   const views: ViewportDef[] = [
@@ -45,12 +49,15 @@ export function createMultiView(
     makePerspectiveView('perspective', 'Perspective', container, aspect),
   ]
 
+  const persist = createCameraPersistScheduler(() => views)
+
   for (const view of views) {
     if (view.camera instanceof OrthographicCamera) {
       view.controls.enableRotate = false
     }
     view.controls.addEventListener('change', () => {
       container.dispatchEvent(new CustomEvent('viewer-dirty'))
+      persist.schedule()
     })
   }
 
@@ -118,13 +125,19 @@ export function createMultiView(
       view.controls.update()
       view.controls.enableDamping = damping
     }
+    saveCameraPersist(views)
   }
 
   return {
     views,
     resize,
     frameTargets,
+    restorePersistedCameras: () => restoreCamerasFromPersist(views),
+    persistCameras: () => {
+      persist.flush()
+    },
     dispose() {
+      persist.dispose()
       for (const view of views) {
         view.controls.dispose()
         view.overlay.remove()

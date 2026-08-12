@@ -131,12 +131,7 @@ watch(() => browserState.freeUrl, () => { if (browserState.freeUrl.trim()) void 
 watch(browserState, () => viewer.value?.refresh(), { deep: true })
 
 watch(
-  () => [
-    browserState.focus,
-    browserState.focusRadius,
-    browserState.pose,
-    browserState.layout,
-  ] as const,
+  () => [browserState.focus, browserState.focusRadius] as const,
   () => viewer.value?.frame(),
 )
 
@@ -536,6 +531,9 @@ function lampMountSnippet() {
         >
           Reframe camera
         </button>
+        <p class="mt-1 text-[10px] leading-snug text-slate-500">
+          Orbit/zoom is kept across grip edits and reloads (localStorage). Reframe overwrites the saved view.
+        </p>
         <label
           v-if="browserState.lightingPreset === 'torch'"
           class="mt-2 block text-xs"

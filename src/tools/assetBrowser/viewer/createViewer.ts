@@ -224,6 +224,14 @@ export function createViewer(container: HTMLElement): AssetViewer {
     markDirty()
   }
 
+  const tryRestoreOrFrame = () => {
+    if (multi.restorePersistedCameras()) {
+      markDirty()
+      return
+    }
+    frameScene()
+  }
+
   return {
     reference,
     target,
@@ -231,14 +239,14 @@ export function createViewer(container: HTMLElement): AssetViewer {
       clearHeldPreviewMount(target)
       await reference.load(entry, url)
       refreshHeldPreview()
-      frameScene()
+      tryRestoreOrFrame()
       markDirty()
     },
     async loadTarget(entry, url) {
       clearHeldPreviewMount(target)
       await target.load(entry, url)
       refreshHeldPreview()
-      frameScene()
+      tryRestoreOrFrame()
       markDirty()
     },
     async reloadReference() {
@@ -305,8 +313,8 @@ export function createViewer(container: HTMLElement): AssetViewer {
     },
     frame: frameScene,
     remountHeld() {
+      // Keep the user's camera — grip tweaks must not reframe.
       refreshHeldPreview()
-      frameScene()
       markDirty()
     },
     refresh: markDirty,
