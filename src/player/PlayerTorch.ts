@@ -37,10 +37,10 @@ const BRANCH_ATTACH: HeldAttach = {
   gripLocalOffset: [0, 0, -0.22],
 }
 
-/** PointLight / future flame tip when wooden_torch mesh is already on WristR. */
+/** PointLight / future flame tip — same wrist TRS as `HELD_ATTACH.wooden_torch`. */
 const WOODEN_FIRE_ATTACH: HeldAttach = {
-  position: [0.02, 0.14, -0.02],
-  rotation: [Math.PI / 2, Math.PI / 2, 0],
+  position: [-0.25, 0.085, -0.02],
+  rotation: [Math.PI / 2, -Math.PI / 2, 0],
   scale: 1,
 }
 
