@@ -226,6 +226,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       if (skip.justFinished) {
         timeSkipOverlay.hide()
         player.standUp()
+        bundle.settlementsManager.resolveTimeSkip(skip.startTimeOfDay, skip.hours, dayNight.dayLengthSec)
       }
       keyboard.state.forward = false
       keyboard.state.backward = false
@@ -483,6 +484,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       for (const spawner of bundle.fauna.getSpawners()) {
         bundle.fauna.setSpawnerMarker(spawner.type, questManager.spawnerMarker(spawner.type))
       }
+      // While a `timeSkip` is in flight, NPCs/fauna freeze instead of
+      // continuing to walk/steer in real time underneath the label/filter —
+      // `NpcAgent.resolveTimeSkip` (called above on `skip.justFinished`)
+      // catches them up to the new schedule/needs/position in one shot, so
+      // nothing is lost by not ticking them meanwhile. `dt` below (for the
+      // clock itself) stays real — the sky/clock still has to race ahead.
+      const worldDt = timeSkip.isActive() ? 0 : dt
       tickDayNight(dayNight, dt)
       if (
         dayNight.enabled &&
@@ -526,7 +534,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         ),
       )
       bundle.settlementsManager.update(
-        dt,
+        worldDt,
         player.mesh.position,
         mouseLook.state.yaw,
         dayNight.timeOfDay,
@@ -536,7 +544,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       )
       bundle.resourceDeposits.update(player.mesh.position.x, player.mesh.position.z)
       bundle.fauna.update(
-        dt,
+        worldDt,
         player.mesh.position,
         dayNight.timeOfDay,
         litFires,

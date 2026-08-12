@@ -9,6 +9,13 @@ export type TimeSkipTickResult = {
   /** True on the exact frame the skip completes — the caller's cue to hide
    *  the overlay (see `createTimeSkipOverlay.ts`). */
   justFinished: boolean
+  /** Total hours this skip advances the clock by. Combined with
+   *  `startTimeOfDay`, lets a `justFinished` caller (`SettlementsManager.
+   *  resolveTimeSkip`) replay the skipped period for NPC needs/stamina/
+   *  position catch-up (`docs/plans/2026-08-12--075...`). */
+  hours: number
+  /** `dayNight.timeOfDay` (0-1) at the moment this skip started. */
+  startTimeOfDay: number
 }
 
 export type TimeSkip = {
@@ -33,12 +40,25 @@ export type TimeSkip = {
  * real seconds, then restoring it. Deliberately does *not* scale `dt` for
  * anything else (NPC/fauna movement would fly off into the void at a large
  * multiplier) — the world keeps simulating at its normal real-time pace
- * underneath; only the sky/clock visibly races ahead. `app/createApp.ts` is
+ * underneath; only the sky/clock visibly races ahead while the skip is in
+ * flight. `hours`/`startTimeOfDay` on the `justFinished` result let the
+ * caller replay the skipped period afterward instead — see
+ * `NpcAgent.resolveTimeSkip` / `SettlementsManager.resolveTimeSkip`
+ * (`docs/plans/2026-08-12--075--time-skip-npc-catchup.md`), which catch NPC
+ * needs/stamina/position up to where they'd be after that many hours of
+ * normal play, then teleport instead of walking. `app/createApp.ts` is
  * responsible for blocking player input while active and for not gating this
  * out of the per-frame world-update block (the clock needs to keep ticking).
  */
 export function createTimeSkip(dayNight: DayNightState): TimeSkip {
-  let active: { remainingSec: number, previousMultiplier: number, fade: boolean, label: string } | null = null
+  let active: {
+    remainingSec: number
+    previousMultiplier: number
+    fade: boolean
+    label: string
+    hours: number
+    startTimeOfDay: number
+  } | null = null
 
   return {
     isActive: () => active !== null,
@@ -49,17 +69,19 @@ export function createTimeSkip(dayNight: DayNightState): TimeSkip {
         previousMultiplier: dayNight.timeMultiplier,
         fade: opts.fade,
         label: opts.label,
+        hours,
+        startTimeOfDay: dayNight.timeOfDay,
       }
       dayNight.timeMultiplier = dayNight.dayLengthSec / (24 * SECONDS_PER_SKIPPED_HOUR)
     },
     tick(dt) {
       if (!active) return null
       active.remainingSec -= dt
-      const { label, fade } = active
-      if (active.remainingSec > 0) return { label, fade, justFinished: false }
+      const { label, fade, hours, startTimeOfDay } = active
+      if (active.remainingSec > 0) return { label, fade, justFinished: false, hours, startTimeOfDay }
       dayNight.timeMultiplier = active.previousMultiplier
       active = null
-      return { label, fade, justFinished: true }
+      return { label, fade, justFinished: true, hours, startTimeOfDay }
     },
     cancel() {
       if (!active) return

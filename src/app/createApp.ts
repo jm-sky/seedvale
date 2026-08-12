@@ -561,7 +561,7 @@ export async function createApp(
       }
       player.lieDown()
       timeSkip.start(8, {
-        fade: false,
+        fade: true,
         label: variant === 'town' ? 'Odpoczywasz w mieście...' : 'Rozbijasz obóz...',
       })
       return 'ok'

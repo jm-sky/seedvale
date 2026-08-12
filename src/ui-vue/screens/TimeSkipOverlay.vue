@@ -8,7 +8,7 @@ import { finishTimeSkipHide, ui } from '../store'
     class="pointer-events-none fixed inset-0 flex items-center justify-center"
   >
     <div
-      class="pointer-events-none absolute inset-0 bg-black opacity-0 transition-opacity duration-400 ease-in-out"
+      class="pointer-events-none absolute inset-0 bg-black/10 opacity-0 backdrop-blur-[2px] backdrop-grayscale backdrop-brightness-90 transition-opacity duration-400 ease-in-out"
       :class="{ 'opacity-100': ui.timeSkip.fadeVisible }"
       @transitionend="finishTimeSkipHide"
     />

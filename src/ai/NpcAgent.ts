@@ -10,6 +10,8 @@ import {
   loadGltfAnimated,
   prepareProp,
 } from '../assets/loadGltf'
+import { playActionWell } from '../audio/actionSounds'
+import type { PlayAt } from '../audio/createWorldAudio'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 import {
   createStaminaState,
@@ -27,8 +29,6 @@ import {
   type PlannedAction,
   replaceActionLifecycle,
 } from '../simulation'
-import { playActionWell } from '../audio/actionSounds'
-import type { PlayAt } from '../audio/createWorldAudio'
 import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import {
@@ -178,6 +178,21 @@ const PAUSE_INTERRUPTIBLE_PHASES: ReadonlySet<Phase> = new Set([
 /** Phases that drain stamina (effort) vs. ones that regenerate it. */
 const FATIGUE_PHASES: ReadonlySet<Phase> = new Set(['execute', 'goTo'])
 const REST_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'lookAtPlayer', 'sleep', 'wander'])
+
+/** Need reduction applied on satisfying water/food/wood — shared by
+ *  `beginNeed`'s `onComplete` effects and `resolveTimeSkip`'s catch-up steps
+ *  so both apply the same "how satisfied does one visit make you" amount. */
+const WATER_SATISFY_AMOUNT = 0.65
+const FOOD_SATISFY_AMOUNT = 0.6
+const WOOD_SATISFY_AMOUNT = 0.55
+
+/** Game-time step used by `resolveTimeSkip` to replay a `timeSkip.ts`
+ *  period in coarse increments instead of one big end-of-skip jump — close
+ *  to the natural re-trigger cadence of the fastest-decaying need (`thirst`)
+ *  at default `Needs.ts`/`dayNight.ts` rates, so a multi-hour skip still
+ *  resolves roughly as many satisfy-cycles as unskipped play would have.
+ *  See `docs/plans/2026-08-12--075--time-skip-npc-catchup.md`. */
+const TIME_SKIP_SAMPLE_HOURS = 0.5
 
 /** Chance per `choose` cycle — when no active need routes the NPC anywhere
  *  specific and it would otherwise wander a few units from home — that it
@@ -755,6 +770,58 @@ export class NpcAgent {
     this.mixer.update(dt)
   }
 
+  /** Replays a `timeSkip.ts` "rest"/"wait" period in `TIME_SKIP_SAMPLE_HOURS`
+   *  steps instead of one big end-of-skip jump, so needs/stamina land where
+   *  they'd naturally be after that many hours of normal (non-skipped) play
+   *  — a sleeping NPC actually rests, one working/awake still gets thirsty/
+   *  hungry/behind on `woodDuty` and (outside `sleep`) satisfies whichever
+   *  need would have come up, the same way `beginNeed`'s `onComplete` does.
+   *  Finishes by teleporting straight to wherever the last step's schedule
+   *  activity says this NPC belongs — no `steerTo` walk, matching how a
+   *  time-lapse only shows someone where they linger. Called once per skip
+   *  by `SettlementsManager.resolveTimeSkip`, never per-frame.
+   *  See `docs/plans/2026-08-12--075--time-skip-npc-catchup.md`. */
+  resolveTimeSkip(startTimeOfDay: number, hours: number, dayLengthSec: number): void {
+    let finalActivity: ScheduleActivity | null = null
+    let elapsed = 0
+    while (elapsed < hours) {
+      const step = Math.min(TIME_SKIP_SAMPLE_HOURS, hours - elapsed)
+      elapsed += step
+      const virtualTimeOfDay = (startTimeOfDay + elapsed / 24) % 1
+      const activity = this.getScheduledActivity(virtualTimeOfDay)
+      // Equivalent real-seconds `dt` this step would take in normal
+      // (non-skipped) play — the same conversion `dayNight.ts`'s
+      // `tickDayNight` uses in reverse (`dayLengthSec` real seconds / 24 per
+      // game hour) — so needs/stamina accrue at their usual rate.
+      const stepDt = (step * dayLengthSec) / 24
+      tickNeeds(this.needs, stepDt)
+      if (activity === 'sleep') {
+        restoreStamina(this.stamina, this.restRate * stepDt)
+      } else {
+        if (activity === 'work') drainStamina(this.stamina, this.fatigueRate * stepDt)
+        else restoreStamina(this.stamina, this.restRate * stepDt)
+        // Not asleep this step — resolve whichever need would have sent the
+        // NPC off to drink/eat/gather, same amounts `beginNeed` applies.
+        const need = pickNeed(this.needs)
+        if (need === 'water') this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
+        else if (need === 'food') this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+        else if (need === 'wood' && this.landmarks.trees.length > 0) {
+          this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
+        }
+      }
+      finalActivity = activity
+    }
+    if (finalActivity === null) return
+
+    const target = finalActivity === 'work' && this.workplace ? this.workplace.position : this.home
+    this.mesh.position.set(target.x, this.sampleHeight(target.x, target.z), target.z)
+    this.pendingAction = null
+    this.wait = 0
+    this.pathWaypoints = []
+    this.pathIndex = 0
+    this.phase = 'choose'
+  }
+
   dispose(): void {
     this.label.removeFromParent()
     this.labelEl.remove()
@@ -832,7 +899,7 @@ export class NpcAgent {
         kind: 'drink',
         destination: copyVec3(destination),
         durationSec: 1.2 * this.waitMultiplier,
-        onComplete: () => { this.needs.thirst = Math.max(0, this.needs.thirst - 0.65) },
+        onComplete: () => { this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT) },
       })
       return
     }
@@ -841,7 +908,7 @@ export class NpcAgent {
         kind: 'eat',
         destination: copyVec3(this.landmarks.garden),
         durationSec: 1.4 * this.waitMultiplier,
-        onComplete: () => { this.needs.hunger = Math.max(0, this.needs.hunger - 0.6) },
+        onComplete: () => { this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT) },
       })
       return
     }
@@ -882,7 +949,7 @@ export class NpcAgent {
           kind: 'deposit',
           destination: copyVec3(this.landmarks.stockpile),
           durationSec: 0.8 * this.waitMultiplier,
-          onComplete: () => { this.needs.woodDuty = Math.max(0, this.needs.woodDuty - 0.55) },
+          onComplete: () => { this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT) },
         },
       })
       return

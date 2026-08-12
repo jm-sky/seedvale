@@ -83,6 +83,13 @@ export type SettlementsManager = {
    *  glow) — also remembered so a settlement streamed in later starts at the
    *  current time of day instead of flashing on/off at its own default. */
   setDayNight: (t: number) => void
+  /** Called once when a `world/timeSkip.ts` skip finishes — replays the
+   *  skipped period for every loaded settlement's NPCs (needs/stamina/
+   *  position catch-up) instead of leaving them to walk it off in real time.
+   *  Only loaded settlements' NPCs exist to update; unloaded ones re-seed
+   *  from scratch on load regardless. See `NpcAgent.resolveTimeSkip`
+   *  (`docs/plans/2026-08-12--075--time-skip-npc-catchup.md`). */
+  resolveTimeSkip: (startTimeOfDay: number, hours: number, dayLengthSec: number) => void
   getLoaded: () => Settlement[]
   /** Home settlement definition (includes authoritative `VillagePlan`). */
   getHomeDef: () => SettlementDef
@@ -294,6 +301,12 @@ export async function createSettlementsManager(
     setDayNight(t) {
       lastDayNight = t
       for (const entry of entries.values()) entry.settlement?.setDayNight(t)
+    },
+    resolveTimeSkip(startTimeOfDay, hours, dayLengthSec) {
+      for (const entry of entries.values()) {
+        if (!entry.settlement) continue
+        for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
+      }
     },
     update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {

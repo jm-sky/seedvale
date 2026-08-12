@@ -51,7 +51,6 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
-| [2026-08-12--075--time-skip-npc-catchup.md](./2026-08-12--075--time-skip-npc-catchup.md) | Odpoczynek przyspiesza zegar, ale NPC nie nadążają (nadal chodzą w realnym tempie) | 0% | 🟡 medium | M | — |
 | [2026-08-08--037--npc-genealogy-lineages.md](./2026-08-08--037--npc-genealogy-lineages.md) | Rody NPC + przypisanie wg kierunku osady (kompas N → ~~067~~) | 0% | ⚪ low | L | ~~022~~, ~~031~~ |
 | [2026-08-11--069--npc-household-resources.md](./2026-08-11--069--npc-household-resources.md) | Gospodarstwa NPC + przepływ zasobów (etap 1 ekonomii) | 0% | 🟡 medium | L | ~~060~~, ~~071~~ |
 | [2026-08-11--070--world-observatory.md](./2026-08-11--070--world-observatory.md) | World Observatory — panel obserwacji życia świata | 0% | ⚪ low | XL | ~~071~~, ~~069~~ |
@@ -64,6 +63,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
 | [2026-08-12--078--distance-oneshot-falloff.md](./2026-08-12--078--distance-oneshot-falloff.md) | `playAt`: dalej = ciszej dla one-shotów światowych | 100% | 🟡 medium | S | ~~014~~, ~~016~~ |
+| [2026-08-12--075--time-skip-npc-catchup.md](./2026-08-12--075--time-skip-npc-catchup.md) | Odpoczynek: teleport NPC do nowej pozycji wg zegara + realny catch-up potrzeb/staminy | 100% | 🟡 medium | M | — |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md) | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout [have implementation notes] | 100% | 🔴 high | XL | ~~031~~, 032 |
 | [2026-08-10--056--hungry-predator-human-aggression.md](./2026-08-10--056--hungry-predator-human-aggression.md) | Głodny predator może przełamać strach przed człowiekiem [have implementation notes] | 100% | 🟡 medium | M | ~~010~~, ~~021~~, ~~045~~, ~~055~~ |
 | [2026-08-10--057--axe-player-tree-harvesting.md](./2026-08-10--057--axe-player-tree-harvesting.md) | Siekiera + ścinanie drzew (3 etapy: limbed → felled → harvested) | 100% | 🟡 medium | M | ~~058~~, ~~043~~, ~~030~~ |
