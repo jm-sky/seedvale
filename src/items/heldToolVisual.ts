@@ -66,7 +66,7 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
   },
   wooden_torch: {
     // Match lit-branch / axe wrist TRS (mesh long axis treated as +Z in attach).
-    position: [0.02, 0.5, -0.02],
+    position: [-0.25, 0.085, -0.02],
     rotation: [Math.PI / 2, -Math.PI / 2, 0],
     scale: 1.1,
     gripLocalOffset: [0, 0, -0.2],

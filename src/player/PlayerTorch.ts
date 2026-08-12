@@ -10,6 +10,13 @@ export const TORCH_FUEL_BRANCH = 90
 /** Wooden torch burns longer than a bare branch (plan 085). */
 export const TORCH_FUEL_WOODEN = 240
 
+/**
+ * TEMP — grip-tuning: hide sparks / fire.glb tip so only the stick mesh is
+ * visible. Flip back to `true` once `BRANCH_ATTACH` / `wooden_torch` HELD_ATTACH
+ * look right.
+ */
+const SHOW_HAND_FLAME_VISUAL = false
+
 const BRANCH_URL = '/models/items/branch.glb'
 const FIRE_URL = '/models/fx/fire.glb'
 const BRANCH_HELD_MAX = 0.55
@@ -30,7 +37,7 @@ const BRANCH_ATTACH: HeldAttach = {
   gripLocalOffset: [0, 0, -0.22],
 }
 
-/** Fire tip when wooden_torch mesh is already on the wrist via HeldTool. */
+/** PointLight / future flame tip when wooden_torch mesh is already on WristR. */
 const WOODEN_FIRE_ATTACH: HeldAttach = {
   position: [0.02, 0.14, -0.02],
   rotation: [Math.PI / 2, Math.PI / 2, 0],
@@ -74,7 +81,7 @@ let templatesPromise: Promise<void> | null = null
 const _socketWorldScale = new Vector3()
 
 async function ensureTemplates(): Promise<void> {
-  if (branchTemplate && fireTemplate) return
+  if (branchTemplate && (!SHOW_HAND_FLAME_VISUAL || fireTemplate)) return
   if (!templatesPromise) {
     templatesPromise = (async () => {
       try {
@@ -84,14 +91,16 @@ async function ensureTemplates(): Promise<void> {
       } catch (err) {
         console.warn('[torch] failed to load branch.glb', err)
       }
-      try {
-        const model = await loadGltf(FIRE_URL)
-        preparePropFitMax(model, FIRE_TIP_MAX)
-        // Stand the authored flat fire so local +Y is "up the tip".
-        model.rotation.x = Math.PI / 2
-        fireTemplate = model
-      } catch (err) {
-        console.warn('[torch] failed to load fire.glb', err)
+      if (SHOW_HAND_FLAME_VISUAL) {
+        try {
+          const model = await loadGltf(FIRE_URL)
+          preparePropFitMax(model, FIRE_TIP_MAX)
+          // Stand the authored flat fire so local +Y is "up the tip".
+          model.rotation.x = Math.PI / 2
+          fireTemplate = model
+        } catch (err) {
+          console.warn('[torch] failed to load fire.glb', err)
+        }
       }
     })()
   }
@@ -224,19 +233,29 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
 
       const socket = hand.handSocket()
       const group = new Group()
-      const flame = makeFlameVisual(source === 'wooden_torch' ? 1.05 : 0.9)
-      flame.object.visible = true
-      flameUpdate = flame.update
-      flameSetSize = flame.setSize
-      flame.setSize(fuelRemaining / fuelMax)
+      const ratio = fuelRemaining / fuelMax
 
       const params = source === 'wooden_torch' ? LIGHT_WOODEN : LIGHT_BRANCH
       pointLight = new PointLight(
         params.color,
-        params.intensity * (fuelRemaining / fuelMax),
+        params.intensity * ratio,
         params.distance,
         2,
       )
+      pointLight.position.set(0, 0, 0.36)
+
+      let flameObject: Object3D | null = null
+      if (SHOW_HAND_FLAME_VISUAL) {
+        const flame = makeFlameVisual(source === 'wooden_torch' ? 1.05 : 0.9)
+        flame.object.visible = true
+        flameUpdate = flame.update
+        flameSetSize = flame.setSize
+        flame.setSize(ratio)
+        // Align flame local +Y (sparks/cone up) with tip +Z.
+        flame.object.rotation.x = Math.PI / 2
+        flame.object.position.set(0, 0, 0.34)
+        flameObject = flame.object
+      }
 
       if (source === 'branch') {
         const branch = cloneBranchMesh()
@@ -244,21 +263,14 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
         const grip = BRANCH_ATTACH.gripLocalOffset
         // Long axis is +Z after cloneBranchMesh reorient; grip toward butt.
         if (grip) branch.position.set(grip[0], grip[1], grip[2])
-        // Align flame local +Y (sparks/cone up) with tip +Z; flip if it ever
-        // reads downward in-game.
-        flame.object.rotation.x = Math.PI / 2
-        flame.object.position.set(0, 0, 0.34)
-        pointLight.position.set(0, 0, 0.36)
         wrap.add(branch)
-        wrap.add(flame.object)
+        if (flameObject) wrap.add(flameObject)
         wrap.add(pointLight)
         group.add(wrap)
         mountOnSocket(group, socket, BRANCH_ATTACH)
       } else {
-        flame.object.rotation.x = Math.PI / 2
-        flame.object.position.set(0, 0, 0.34)
-        pointLight.position.set(0, 0, 0.36)
-        group.add(flame.object)
+        // Stick mesh comes from HeldTool; this mount is light (+ optional flame).
+        if (flameObject) group.add(flameObject)
         group.add(pointLight)
         mountOnSocket(group, socket, WOODEN_FIRE_ATTACH)
       }
