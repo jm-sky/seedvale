@@ -6,9 +6,16 @@ export type TreeGrowthStage =
   | 'sapling'
   | 'young'
   | 'mature'
+  | 'old'
   | 'limbed'
   | 'felled'
   | 'harvested'
+
+/** Living crown ages (growth). Chop mid-stages are separate. */
+export type TreeLivingAge = 'sapling' | 'young' | 'mature' | 'old'
+
+/** Independent of age — drives position within height ranges (plan 073). */
+export type TreeSizeClass = 'small' | 'medium' | 'large'
 
 /** Renderer discriminator — living crown vs multi-stage chop visuals. */
 export type TreeVisualKind = 'living' | 'limbed' | 'felled' | 'stump'
@@ -47,24 +54,55 @@ export type TreeSpeciesPrefs = {
 }
 
 /** Stages that advance via world-time growth (not chop progress). */
-type TimedGrowthStage = 'sapling' | 'young' | 'harvested'
+type TimedGrowthStage = 'sapling' | 'young' | 'mature' | 'harvested'
 
 /** Ideal game-days per stage at growthRate = 1. */
 export const STAGE_DURATION_DAYS: Record<TimedGrowthStage, number> = {
   sapling: 0.5,
   young: 1.0,
+  /** Mature → old (only when sizeClass allows). */
+  mature: 2.0,
   /** Stump / dead wood before sapling regrowth. */
   harvested: 0.75,
 }
 
-/** Visual scale multipliers relative to the placement's mature base scale. */
-export const STAGE_SCALE_MULT: Record<TreeGrowthStage, number> = {
-  sapling: 0.35,
-  young: 0.62,
-  mature: 1,
-  /** Tall limbed trunk — slightly below mature canopy height. */
+/** World-meter height ranges per living age (plan 073). Ranges may overlap. */
+export const HEIGHT_RANGE_M: Record<TreeLivingAge, { min: number, max: number }> = {
+  sapling: { min: 0.5, max: 2 },
+  young: { min: 1.5, max: 6 },
+  mature: { min: 4, max: 15 },
+  old: { min: 12, max: 25 },
+}
+
+/** Nominal position within a height range before jitter. */
+export const SIZE_CLASS_T: Record<TreeSizeClass, number> = {
+  small: 0.15,
+  medium: 0.5,
+  large: 0.85,
+}
+
+/** Procedural sizeClass roll weights (must sum ≈ 1). */
+export const SIZE_CLASS_WEIGHTS: Record<TreeSizeClass, number> = {
+  small: 0.35,
+  medium: 0.5,
+  large: 0.15,
+}
+
+/** Half-width of jitter around SIZE_CLASS_T (clamped to 0..1). */
+export const SIZE_JITTER_HALF = 0.12
+
+/** When sizeClass may be `old`, chance to spawn as old instead of mature. */
+export const OLD_SPAWN_CHANCE = 0.5
+
+/**
+ * Template heights after `prepareProp` — must stay aligned with `TREE_SPECS`
+ * index order in `settlement/props.ts`.
+ */
+export const TREE_TEMPLATE_HEIGHT_M: readonly number[] = [4.2, 3.8, 4.6, 4.4, 4.8, 3.6]
+
+/** Chop remnant scale relative to the tree's mature living height. */
+export const CHOP_SCALE_MULT: Record<'limbed' | 'felled' | 'harvested', number> = {
   limbed: 0.85,
-  /** Low stump scale (log is separate). */
   felled: 0.28,
   harvested: 0.28,
 }
@@ -74,9 +112,12 @@ const CANOPY_WEIGHT = 0.35
 
 export type HarvestYield = { kind: ItemKind, count: number }
 
+type ChoppableLiving = 'mature' | 'old'
+
 /** Per-step chop yields (`branch` — no parallel `wood`). */
-export const CHOP_YIELDS: Record<'mature' | 'limbed' | 'felled', HarvestYield> = {
+export const CHOP_YIELDS: Record<ChoppableLiving | 'limbed' | 'felled', HarvestYield> = {
   mature: { kind: 'branch', count: 2 },
+  old: { kind: 'branch', count: 2 },
   limbed: { kind: 'branch', count: 2 },
   felled: { kind: 'branch', count: 3 },
 }
@@ -84,18 +125,27 @@ export const CHOP_YIELDS: Record<'mature' | 'limbed' | 'felled', HarvestYield> =
 /** Final-step yield (bucking) — kept for callers that check capacity for one chop. */
 export const HARVEST_YIELD: HarvestYield = CHOP_YIELDS.felled
 
-const CHOP_NEXT: Record<'mature' | 'limbed' | 'felled', TreeGrowthStage> = {
+const CHOP_NEXT: Record<ChoppableLiving | 'limbed' | 'felled', TreeGrowthStage> = {
   mature: 'limbed',
+  old: 'limbed',
   limbed: 'felled',
   felled: 'harvested',
 }
 
 export function isChoppableStage(stage: TreeGrowthStage): boolean {
-  return stage === 'mature' || stage === 'limbed' || stage === 'felled'
+  return stage === 'mature' || stage === 'old' || stage === 'limbed' || stage === 'felled'
+}
+
+export function isCanopyStage(stage: TreeGrowthStage): boolean {
+  return stage === 'mature' || stage === 'old'
+}
+
+export function canReachOld(sizeClass: TreeSizeClass): boolean {
+  return sizeClass === 'medium' || sizeClass === 'large'
 }
 
 export function yieldForChopStage(stage: TreeGrowthStage): HarvestYield | null {
-  if (stage === 'mature' || stage === 'limbed' || stage === 'felled') {
+  if (stage === 'mature' || stage === 'old' || stage === 'limbed' || stage === 'felled') {
     return { ...CHOP_YIELDS[stage] }
   }
   return null
@@ -125,8 +175,9 @@ export type TreePresence = {
   speciesIndex: number
   /** Procedural default stage at world day 0 (before growth / overrides). */
   initialStage: TreeGrowthStage
-  /** Mature visual base scale from placement. */
-  baseScale: number
+  sizeClass: TreeSizeClass
+  /** 0..1 roll used inside height ranges (procedural, not saved). */
+  sizeJitter: number
 }
 
 export type ResolvedTreeState = {
@@ -138,24 +189,80 @@ export type ResolvedTreeState = {
   visual: TreeVisualKind
 }
 
-/** Quantize world position so tiny float noise doesn't split ids. */
-export function quantizeTreeCoord(v: number): number {
-  return Math.round(v * 10) / 10
+export function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v))
+}
+
+export function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t
+}
+
+/** Map sizeClass + jitter → 0..1 position within a height range. */
+export function sizeT(sizeClass: TreeSizeClass, sizeJitter: number): number {
+  const jitter = (clamp01(sizeJitter) - 0.5) * 2 * SIZE_JITTER_HALF
+  return clamp01(SIZE_CLASS_T[sizeClass] + jitter)
+}
+
+export function livingHeightM(
+  age: TreeLivingAge,
+  sizeClass: TreeSizeClass,
+  sizeJitter: number,
+): number {
+  const range = HEIGHT_RANGE_M[age]
+  return lerp(range.min, range.max, sizeT(sizeClass, sizeJitter))
+}
+
+export function templateHeightM(speciesIndex: number): number {
+  return TREE_TEMPLATE_HEIGHT_M[speciesIndex] ?? TREE_TEMPLATE_HEIGHT_M[0]!
 }
 
 /**
- * Stable id from seed + quantized position + species — not Object3D ids or
- * array indexes. Chunk coords are implicit in world position.
+ * Mesh scale so the prepared GLB (~templateHeightM) reaches the target
+ * world height for this age / sizeClass.
  */
-export function makeTreeId(
-  seed: number,
-  x: number,
-  z: number,
+export function visualScaleForTree(
   speciesIndex: number,
-): TreeId {
-  const qx = quantizeTreeCoord(x)
-  const qz = quantizeTreeCoord(z)
-  return `${seed}:${qx}:${qz}:${speciesIndex}`
+  stage: TreeGrowthStage,
+  sizeClass: TreeSizeClass,
+  sizeJitter: number,
+): number {
+  const template = Math.max(0.01, templateHeightM(speciesIndex))
+  if (stage === 'limbed' || stage === 'felled' || stage === 'harvested') {
+    const matureH = livingHeightM('mature', sizeClass, sizeJitter)
+    return (matureH * CHOP_SCALE_MULT[stage]) / template
+  }
+  const age: TreeLivingAge =
+    stage === 'sapling' || stage === 'young' || stage === 'mature' || stage === 'old'
+      ? stage
+      : 'mature'
+  return livingHeightM(age, sizeClass, sizeJitter) / template
+}
+
+/** Weighted roll for sizeClass from a 0..1 random. */
+export function rollSizeClass(random01: number): TreeSizeClass {
+  const r = clamp01(random01)
+  if (r < SIZE_CLASS_WEIGHTS.small) return 'small'
+  if (r < SIZE_CLASS_WEIGHTS.small + SIZE_CLASS_WEIGHTS.medium) return 'medium'
+  return 'large'
+}
+
+/**
+ * Procedural living age given sizeClass. `ageRoll` / `oldRoll` are independent
+ * 0..1 uniforms. Sapling/young chances are caller-supplied.
+ */
+export function rollLivingAge(params: {
+  sizeClass: TreeSizeClass
+  ageRoll: number
+  oldRoll: number
+  saplingChance: number
+  youngChance: number
+}): TreeLivingAge {
+  const { sizeClass, ageRoll, oldRoll, saplingChance, youngChance } = params
+  const roll = clamp01(ageRoll)
+  if (roll < saplingChance) return 'sapling'
+  if (roll < saplingChance + youngChance) return 'young'
+  if (canReachOld(sizeClass) && clamp01(oldRoll) < OLD_SPAWN_CHANCE) return 'old'
+  return 'mature'
 }
 
 export function speciesPrefs(speciesIndex: number): TreeSpeciesPrefs {
@@ -196,10 +303,11 @@ export function envGrowthFactor(env: TreeEnvSample, prefs: TreeSpeciesPrefs): nu
   )
 }
 
-/** Local canopy competition — nearby mature trees reduce sapling/young growth. */
+/** Local canopy competition — nearby mature/old trees reduce sapling/young growth. */
 export function canopyGrowthFactor(matureNeighbors: number, stage: TreeGrowthStage): number {
   if (
     stage === 'mature' ||
+    stage === 'old' ||
     stage === 'limbed' ||
     stage === 'felled' ||
     stage === 'harvested'
@@ -209,20 +317,18 @@ export function canopyGrowthFactor(matureNeighbors: number, stage: TreeGrowthSta
   return 1 / (1 + Math.max(0, matureNeighbors) * CANOPY_WEIGHT)
 }
 
-export function visualScale(baseScale: number, stage: TreeGrowthStage): number {
-  return baseScale * STAGE_SCALE_MULT[stage]
-}
-
 /**
  * Advance stages from an anchor using elapsed world days and a constant
  * growth rate for the interval. Lazy — no per-frame ticks.
  * Chop mid-stages (`limbed` / `felled`) do not advance with time.
+ * `allowOld` gates mature → old (small trees never become old).
  */
 export function advanceStage(
   stage: TreeGrowthStage,
   stageStartedAt: number,
   worldDays: number,
   growthRate: number,
+  allowOld = true,
 ): { stage: TreeGrowthStage, stageStartedAt: number } {
   let current = stage
   let started = stageStartedAt
@@ -230,13 +336,16 @@ export function advanceStage(
 
   // Cap iterations so pathological rates can't loop forever.
   for (let i = 0; i < 8; i++) {
-    if (current === 'mature' || current === 'limbed' || current === 'felled') break
+    if (current === 'old' || current === 'limbed' || current === 'felled') break
+    if (current === 'mature' && !allowOld) break
     const duration = STAGE_DURATION_DAYS[current as TimedGrowthStage]
+    if (duration === undefined) break
     const needed = duration / rate
     if (worldDays < started + needed) break
     started = started + needed
     if (current === 'sapling') current = 'young'
     else if (current === 'young') current = 'mature'
+    else if (current === 'mature') current = 'old'
     else if (current === 'harvested') current = 'sapling'
   }
   return { stage: current, stageStartedAt: started }
@@ -261,7 +370,7 @@ export type TreeLifecycle = {
     env: TreeEnvSample,
     worldDays: number,
   ) => ResolvedTreeState
-  /** One chop step: mature→limbed→felled→harvested. */
+  /** One chop step: mature|old→limbed→felled→harvested. */
   advanceHarvest: (
     id: TreeId,
     worldDays: number,
@@ -302,6 +411,26 @@ export type TreeLifecycle = {
   serializeOverrides: () => Record<TreeId, TreeStateOverride>
   replaceOverrides: (overrides: Record<TreeId, TreeStateOverride>) => void
   clearOverrides: () => void
+}
+
+/** Quantize world position so tiny float noise doesn't split ids. */
+export function quantizeTreeCoord(v: number): number {
+  return Math.round(v * 10) / 10
+}
+
+/**
+ * Stable id from seed + quantized position + species — not Object3D ids or
+ * array indexes. Chunk coords are implicit in world position.
+ */
+export function makeTreeId(
+  seed: number,
+  x: number,
+  z: number,
+  speciesIndex: number,
+): TreeId {
+  const qx = quantizeTreeCoord(x)
+  const qz = quantizeTreeCoord(z)
+  return `${seed}:${qx}:${qz}:${speciesIndex}`
 }
 
 export function createTreeLifecycle(
@@ -349,6 +478,10 @@ export function createTreeLifecycle(
     return out
   }
 
+  function allowOldFor(presence: TreePresence): boolean {
+    return canReachOld(presence.sizeClass)
+  }
+
   /** Canopy density uses env-only growth (no nested canopy) to avoid recursion. */
   function isEffectivelyMature(
     presence: TreePresence,
@@ -357,11 +490,12 @@ export function createTreeLifecycle(
   ): boolean {
     const prefs = speciesPrefs(presence.speciesIndex)
     const rate = envGrowthFactor(env, prefs)
+    const allowOld = allowOldFor(presence)
     const override = overrides.get(presence.id)
-    if (override) {
-      return advanceStage(override.stage, override.stageStartedAt, worldDays, rate).stage === 'mature'
-    }
-    return advanceStage(presence.initialStage, 0, worldDays, rate).stage === 'mature'
+    const stage = override
+      ? advanceStage(override.stage, override.stageStartedAt, worldDays, rate, allowOld).stage
+      : advanceStage(presence.initialStage, 0, worldDays, rate, allowOld).stage
+    return isCanopyStage(stage)
   }
 
   function countMatureNearInternal(
@@ -391,6 +525,7 @@ export function createTreeLifecycle(
     const envRate = envGrowthFactor(env, prefs)
     const override = overrides.get(presence.id)
     const lookingStage = override?.stage ?? presence.initialStage
+    const allowOld = allowOldFor(presence)
 
     const matureNeighbors = countMatureNearInternal(
       presence.x,
@@ -404,25 +539,36 @@ export function createTreeLifecycle(
 
     let stage: TreeGrowthStage
     if (override) {
-      const advanced = advanceStage(override.stage, override.stageStartedAt, worldDays, growthRate)
+      const advanced = advanceStage(
+        override.stage,
+        override.stageStartedAt,
+        worldDays,
+        growthRate,
+        allowOld,
+      )
       stage = advanced.stage
-      const procedural = advanceStage(presence.initialStage, 0, worldDays, growthRate)
-      // Prune sparse override once the tree is mature again and procedural
-      // growth would also be mature (harvest scar no longer needed).
-      if (stage === 'mature' && procedural.stage === 'mature') {
+      const procedural = advanceStage(presence.initialStage, 0, worldDays, growthRate, allowOld)
+      // Prune sparse override once fully grown again and procedural growth
+      // matches (harvest scar no longer needed).
+      if (isCanopyStage(stage) && stage === procedural.stage) {
         overrides.delete(presence.id)
       } else if (stage !== override.stage || advanced.stageStartedAt !== override.stageStartedAt) {
         overrides.set(presence.id, { stage, stageStartedAt: advanced.stageStartedAt })
       }
     } else {
-      stage = advanceStage(presence.initialStage, 0, worldDays, growthRate).stage
+      stage = advanceStage(presence.initialStage, 0, worldDays, growthRate, allowOld).stage
     }
 
     const visual = treeVisualKind(stage)
     return {
       id: presence.id,
       stage,
-      scale: visualScale(presence.baseScale, stage),
+      scale: visualScaleForTree(
+        presence.speciesIndex,
+        stage,
+        presence.sizeClass,
+        presence.sizeJitter,
+      ),
       showCrown: visual === 'living',
       visual,
     }
@@ -439,7 +585,7 @@ export function createTreeLifecycle(
     if (!isChoppableStage(current.stage)) {
       return { ok: false, reason: current.stage === 'harvested' ? 'already-harvested' : 'not-choppable' }
     }
-    const from = current.stage as 'mature' | 'limbed' | 'felled'
+    const from = current.stage as ChoppableLiving | 'limbed' | 'felled'
     const next = CHOP_NEXT[from]
     const yieldAmt = CHOP_YIELDS[from]
     overrides.set(id, { stage: next, stageStartedAt: worldDays })
@@ -546,6 +692,7 @@ const VALID_STAGES: ReadonlySet<string> = new Set([
   'harvested',
   'limbed',
   'mature',
+  'old',
   'sapling',
   'young',
 ])

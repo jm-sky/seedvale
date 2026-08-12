@@ -135,7 +135,7 @@ export function buildInteractables(
     const canHarvest = axeHeld && isChoppableStage(tree.stage)
     let promptLabel = 'Obejrzyj drzewo'
     if (canHarvest) {
-      if (tree.stage === 'mature') promptLabel = 'Oczyść gałęzie'
+      if (tree.stage === 'mature' || tree.stage === 'old') promptLabel = 'Oczyść gałęzie'
       else if (tree.stage === 'limbed') promptLabel = 'Ścinaj drzewo'
       else promptLabel = 'Porąb pień'
     } else if (tree.stage === 'limbed' || tree.stage === 'felled' || tree.stage === 'harvested') {
@@ -149,6 +149,7 @@ export function buildInteractables(
       promptLabel,
       id: tree.id,
       stage: tree.stage,
+      sizeClass: tree.sizeClass,
       canHarvest,
     })
   }

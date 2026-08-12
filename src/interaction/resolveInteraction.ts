@@ -73,7 +73,7 @@ export function resolveInteraction(
     }
     case 'tree': {
       const override = questManager.onInteractObjective({ type: 'interact_tree' })
-      const flavor = treeInspectionFlavor(target.stage)
+      const flavor = treeInspectionFlavor(target.stage, target.sizeClass)
       return { speakerName: flavor.speakerName, line: override?.line ?? flavor.line }
     }
     case 'well': {

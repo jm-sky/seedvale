@@ -1,5 +1,10 @@
 import * as THREE from 'three'
-import type { ResolvedTreeState, TreeGrowthStage, TreeVisualKind } from './treeLifecycle'
+import type {
+  ResolvedTreeState,
+  TreeGrowthStage,
+  TreeSizeClass,
+  TreeVisualKind,
+} from './treeLifecycle'
 import { disposeObject3D } from '../assets/loadGltf'
 import {
   createFelledTree,
@@ -7,7 +12,7 @@ import {
   createTree,
   createTreeStump,
 } from '../settlement/props'
-import { treeVisualKind } from './treeLifecycle'
+import { treeVisualKind, visualScaleForTree } from './treeLifecycle'
 
 /** Stable yaw from TreeId so felled logs don't all point the same way. */
 export function felledYawFromTreeId(treeId: string): number {
@@ -36,6 +41,24 @@ export function createTreeStageMesh(
   }
 }
 
+export function readTreeSizeClass(userData: Record<string, unknown>): TreeSizeClass {
+  const v = userData.treeSizeClass
+  if (v === 'small' || v === 'medium' || v === 'large') return v
+  return 'medium'
+}
+
+export function readTreeSizeJitter(userData: Record<string, unknown>): number {
+  return typeof userData.treeSizeJitter === 'number' ? userData.treeSizeJitter : 0.5
+}
+
+export function readTreeLivingStage(
+  userData: Record<string, unknown>,
+): 'sapling' | 'young' | 'mature' | 'old' {
+  const v = userData.treeInitialStage
+  if (v === 'sapling' || v === 'young' || v === 'mature' || v === 'old') return v
+  return 'mature'
+}
+
 /**
  * Swap a tree mesh for the mesh matching `stage` (same parent/pose/userData).
  * Returns the new object so callers can update landmark mesh refs.
@@ -45,16 +68,13 @@ export function applyTreeStageVisual(
   stage: TreeGrowthStage,
 ): THREE.Object3D {
   const parent = tree.parent
-  const baseScale =
-    typeof tree.userData.treeBaseScale === 'number' ? tree.userData.treeBaseScale : 1
+  const speciesIndex =
+    typeof tree.userData.treeSpeciesIndex === 'number' ? tree.userData.treeSpeciesIndex : 0
+  const sizeClass = readTreeSizeClass(tree.userData)
+  const sizeJitter = readTreeSizeJitter(tree.userData)
   const treeId = typeof tree.userData.treeId === 'string' ? tree.userData.treeId : ''
   const visual = treeVisualKind(stage)
-  const scale =
-    visual === 'limbed'
-      ? baseScale * 0.85
-      : visual === 'living'
-        ? baseScale
-        : baseScale * 0.28
+  const scale = visualScaleForTree(speciesIndex, stage, sizeClass, sizeJitter)
   const next = createTreeStageMesh(visual, scale, treeId)
   next.position.copy(tree.position)
   next.rotation.copy(tree.rotation)
@@ -77,12 +97,14 @@ export function applyHarvestedTreeVisual(tree: THREE.Object3D): THREE.Object3D {
 export function tagTreeMesh(
   mesh: THREE.Object3D,
   resolved: ResolvedTreeState,
-  baseScale: number,
+  sizeClass: TreeSizeClass,
+  sizeJitter: number,
   speciesIndex: number,
   initialStage: string,
 ): void {
   mesh.userData.treeId = resolved.id
-  mesh.userData.treeBaseScale = baseScale
+  mesh.userData.treeSizeClass = sizeClass
+  mesh.userData.treeSizeJitter = sizeJitter
   mesh.userData.treeSpeciesIndex = speciesIndex
   mesh.userData.treeInitialStage = initialStage
   mesh.userData.treeStage = resolved.stage

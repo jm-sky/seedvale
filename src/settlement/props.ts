@@ -10,7 +10,7 @@ import { createSparks, type Sparks } from '../shared/getFireParticles'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
 import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
-import { makeTreeId, type TreeGrowthStage, visualScale } from '../world/treeLifecycle'
+import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { type VillageSize, villageSizeConfig } from './families'
 import { homeHouseEntryAt, resolveHouseHeight } from './houseCatalog'
 import { yawToward } from './roadNetwork'
@@ -60,8 +60,9 @@ export type SettlementTreeLandmark = {
   position: THREE.Vector3
   mesh: THREE.Object3D
   speciesIndex: number
-  baseScale: number
-  initialStage: 'sapling' | 'young' | 'mature'
+  sizeClass: TreeSizeClass
+  sizeJitter: number
+  initialStage: TreeLivingAge
 }
 
 const WALL_URL = '/models/settlement/wall.glb'
@@ -1285,16 +1286,26 @@ function plantTreeCluster(
       placeOnGround(bush, tx, tz, sampleHeight)
       group.add(bush)
     } else {
-      const roll = random()
-      const initialStage: Exclude<TreeGrowthStage, 'limbed' | 'felled' | 'harvested'> =
-        roll < 0.12 ? 'sapling' : roll < 0.25 ? 'young' : 'mature'
-      const baseScale = 0.7 + random() * 0.6
+      const sizeClass = rollSizeClass(random())
+      const sizeJitter = random()
+      const initialStage = rollLivingAge({
+        sizeClass,
+        ageRoll: random(),
+        oldRoll: random(),
+        saplingChance: 0.12,
+        youngChance: 0.13,
+      })
       const speciesIndex = treeCounter.n % Math.max(1, treeTemplates.length)
-      const tree = cloneProp(treeTemplates, treeCounter.n++, visualScale(baseScale, initialStage))
+      const tree = cloneProp(
+        treeTemplates,
+        treeCounter.n++,
+        visualScaleForTree(speciesIndex, initialStage, sizeClass, sizeJitter),
+      )
       placeOnGround(tree, tx, tz, sampleHeight)
       const id = makeTreeId(worldSeed, tx, tz, speciesIndex)
       tree.userData.treeId = id
-      tree.userData.treeBaseScale = baseScale
+      tree.userData.treeSizeClass = sizeClass
+      tree.userData.treeSizeJitter = sizeJitter
       tree.userData.treeSpeciesIndex = speciesIndex
       tree.userData.treeInitialStage = initialStage
       group.add(tree)
@@ -1303,7 +1314,8 @@ function plantTreeCluster(
         position: new THREE.Vector3(tx, y, tz),
         mesh: tree,
         speciesIndex,
-        baseScale,
+        sizeClass,
+        sizeJitter,
         initialStage,
       })
     }

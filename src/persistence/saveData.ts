@@ -122,7 +122,7 @@ export type SaveDataV7 = {
 }
 
 export type SaveTreeOverride = {
-  stage: 'sapling' | 'young' | 'mature' | 'limbed' | 'felled' | 'harvested'
+  stage: 'sapling' | 'young' | 'mature' | 'old' | 'limbed' | 'felled' | 'harvested'
   stageStartedAt: number
 }
 
@@ -287,6 +287,7 @@ function isTreeOverridesField(value: unknown): value is Record<string, SaveTreeO
       rec.stage !== 'sapling' &&
       rec.stage !== 'young' &&
       rec.stage !== 'mature' &&
+      rec.stage !== 'old' &&
       rec.stage !== 'limbed' &&
       rec.stage !== 'felled' &&
       rec.stage !== 'harvested'

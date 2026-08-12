@@ -5,7 +5,7 @@ import type { ItemKind } from '../items/items'
 import type { Settlement } from '../settlement/createSettlement'
 import type { VillageFire } from '../settlement/VillageFire'
 import type { DigProfile } from '../terrain/dig'
-import type { TreeGrowthStage } from '../world/treeLifecycle'
+import type { TreeGrowthStage, TreeSizeClass } from '../world/treeLifecycle'
 
 export type WorldItemRef = {
   id: string
@@ -39,6 +39,7 @@ export type Interactable =
     promptLabel: string
     id: string
     stage: TreeGrowthStage
+    sizeClass: TreeSizeClass
     canHarvest?: boolean
   }
   | { kind: 'campfire', position: { x: number, z: number }, promptLabel: string, fire: VillageFire }

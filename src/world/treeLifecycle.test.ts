@@ -2,16 +2,22 @@ import { describe, expect, it } from 'vitest'
 import {
   advanceStage,
   canopyGrowthFactor,
+  canReachOld,
   CHOP_YIELDS,
   createTreeLifecycle,
   envGrowthFactor,
+  HEIGHT_RANGE_M,
+  isCanopyStage,
   isChoppableStage,
+  livingHeightM,
   makeTreeId,
   parseTreeOverrides,
+  rollLivingAge,
+  rollSizeClass,
   STAGE_DURATION_DAYS,
   type TreeEnvSample,
   type TreePresence,
-  visualScale,
+  visualScaleForTree,
 } from './treeLifecycle'
 
 const goodEnv: TreeEnvSample = {
@@ -34,7 +40,8 @@ function presence(partial: Partial<TreePresence> & Pick<TreePresence, 'id'>): Tr
     z: 0,
     speciesIndex: 0,
     initialStage: 'sapling',
-    baseScale: 1,
+    sizeClass: 'medium',
+    sizeJitter: 0.5,
     ...partial,
   }
 }
@@ -72,6 +79,13 @@ describe('advanceStage', () => {
     expect(advanceStage('sapling', 0, toMatureDays, rate).stage).toBe('mature')
   })
 
+  it('advances mature → old when allowed', () => {
+    const days =
+      STAGE_DURATION_DAYS.sapling + STAGE_DURATION_DAYS.young + STAGE_DURATION_DAYS.mature
+    expect(advanceStage('sapling', 0, days, 1, true).stage).toBe('old')
+    expect(advanceStage('sapling', 0, days, 1, false).stage).toBe('mature')
+  })
+
   it('regrows harvested → sapling after stump duration', () => {
     expect(advanceStage('harvested', 0, STAGE_DURATION_DAYS.harvested, 1).stage).toBe('sapling')
   })
@@ -83,16 +97,71 @@ describe('advanceStage', () => {
 })
 
 describe('canopyGrowthFactor', () => {
-  it('slows saplings near mature trees but not matures themselves', () => {
+  it('slows saplings near mature trees but not matures/old themselves', () => {
     expect(canopyGrowthFactor(3, 'sapling')).toBeLessThan(1)
     expect(canopyGrowthFactor(3, 'mature')).toBe(1)
+    expect(canopyGrowthFactor(3, 'old')).toBe(1)
+  })
+})
+
+describe('sizeClass / height', () => {
+  it('keeps living ages within configured meter ranges', () => {
+    for (const age of ['sapling', 'young', 'mature', 'old'] as const) {
+      for (const size of ['small', 'medium', 'large'] as const) {
+        const h = livingHeightM(age, size, 0.5)
+        expect(h).toBeGreaterThanOrEqual(HEIGHT_RANGE_M[age].min)
+        expect(h).toBeLessThanOrEqual(HEIGHT_RANGE_M[age].max)
+      }
+    }
+  })
+
+  it('orders sapling < young < mature < old for the same size', () => {
+    const s = visualScaleForTree(0, 'sapling', 'medium', 0.5)
+    const y = visualScaleForTree(0, 'young', 'medium', 0.5)
+    const m = visualScaleForTree(0, 'mature', 'medium', 0.5)
+    const o = visualScaleForTree(0, 'old', 'medium', 0.5)
+    expect(s).toBeLessThan(y)
+    expect(y).toBeLessThan(m)
+    expect(m).toBeLessThan(o)
+  })
+
+  it('rolls sizeClass by weights and gates old for small', () => {
+    expect(rollSizeClass(0)).toBe('small')
+    expect(rollSizeClass(0.4)).toBe('medium')
+    expect(rollSizeClass(0.99)).toBe('large')
+    expect(canReachOld('small')).toBe(false)
+    expect(canReachOld('large')).toBe(true)
+    expect(
+      rollLivingAge({
+        sizeClass: 'small',
+        ageRoll: 0.9,
+        oldRoll: 0,
+        saplingChance: 0.1,
+        youngChance: 0.1,
+      }),
+    ).toBe('mature')
+    expect(
+      rollLivingAge({
+        sizeClass: 'large',
+        ageRoll: 0.9,
+        oldRoll: 0,
+        saplingChance: 0.1,
+        youngChance: 0.1,
+      }),
+    ).toBe('old')
   })
 })
 
 describe('createTreeLifecycle', () => {
   it('resolves procedural sapling growth without storing an override', () => {
     const life = createTreeLifecycle(7)
-    const p = presence({ id: life.makeId(10, 20, 0), x: 10, z: 20, initialStage: 'sapling' })
+    const p = presence({
+      id: life.makeId(10, 20, 0),
+      x: 10,
+      z: 20,
+      initialStage: 'sapling',
+      sizeClass: 'small',
+    })
     life.registerPresence(p)
 
     const day0 = life.resolve(p, goodEnv, 0)
@@ -101,7 +170,22 @@ describe('createTreeLifecycle', () => {
 
     const later = life.resolve(p, goodEnv, 5)
     expect(later.stage).toBe('mature')
+    expect(isCanopyStage(later.stage)).toBe(true)
     expect(life.getOverride(p.id)).toBeUndefined()
+  })
+
+  it('grows medium sapling to old over enough days', () => {
+    const life = createTreeLifecycle(7)
+    const p = presence({
+      id: life.makeId(10, 21, 0),
+      x: 10,
+      z: 21,
+      initialStage: 'sapling',
+      sizeClass: 'medium',
+    })
+    life.registerPresence(p)
+    const later = life.resolve(p, goodEnv, 20)
+    expect(later.stage).toBe('old')
   })
 
   it('advances harvest in three steps with branch yields', () => {
@@ -109,7 +193,6 @@ describe('createTreeLifecycle', () => {
     const p = presence({
       id: life.makeId(0, 0, 0),
       initialStage: 'mature',
-      baseScale: 1.1,
     })
     life.registerPresence(p)
 
@@ -142,6 +225,14 @@ describe('createTreeLifecycle', () => {
     expect(life.getOverride(p.id)?.stage).toBe('harvested')
 
     expect(life.advanceHarvest(p.id, 2, goodEnv).ok).toBe(false)
+  })
+
+  it('chops old trees like mature', () => {
+    const life = createTreeLifecycle(7)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'old', sizeClass: 'large' })
+    life.registerPresence(p)
+    const step = life.advanceHarvest(p.id, 1, goodEnv)
+    expect(step).toEqual({ ok: true, yield: CHOP_YIELDS.old, stage: 'limbed' })
   })
 
   it('harvestFully collapses remaining steps into one total yield', () => {
@@ -214,6 +305,27 @@ describe('createTreeLifecycle', () => {
     expect(life.countMatureNear(2, 0, sapling.id, 0, () => goodEnv)).toBe(0)
   })
 
+  it('counts old trees toward canopy', () => {
+    const life = createTreeLifecycle(9)
+    const old = presence({
+      id: life.makeId(0, 0, 0),
+      x: 0,
+      z: 0,
+      initialStage: 'old',
+      sizeClass: 'large',
+    })
+    const sapling = presence({
+      id: life.makeId(2, 0, 1),
+      x: 2,
+      z: 0,
+      speciesIndex: 1,
+      initialStage: 'sapling',
+    })
+    life.registerPresence(old)
+    life.registerPresence(sapling)
+    expect(life.countMatureNear(2, 0, sapling.id, 0, () => goodEnv)).toBe(1)
+  })
+
   it('serializes only sparse overrides', () => {
     const life = createTreeLifecycle(1)
     const p = presence({ id: life.makeId(1, 1, 0), x: 1, z: 1, initialStage: 'mature' })
@@ -226,8 +338,9 @@ describe('createTreeLifecycle', () => {
 })
 
 describe('isChoppableStage', () => {
-  it('allows mature/limbed/felled only', () => {
+  it('allows mature/old/limbed/felled only', () => {
     expect(isChoppableStage('mature')).toBe(true)
+    expect(isChoppableStage('old')).toBe(true)
     expect(isChoppableStage('limbed')).toBe(true)
     expect(isChoppableStage('felled')).toBe(true)
     expect(isChoppableStage('sapling')).toBe(false)
@@ -242,19 +355,14 @@ describe('parseTreeOverrides', () => {
       parseTreeOverrides({
         good: { stage: 'harvested', stageStartedAt: 1 },
         limbed: { stage: 'limbed', stageStartedAt: 2 },
+        old: { stage: 'old', stageStartedAt: 3 },
         bad: { stage: 'nope', stageStartedAt: 1 },
         worse: 3,
       }),
     ).toEqual({
       good: { stage: 'harvested', stageStartedAt: 1 },
       limbed: { stage: 'limbed', stageStartedAt: 2 },
+      old: { stage: 'old', stageStartedAt: 3 },
     })
-  })
-})
-
-describe('visualScale', () => {
-  it('keeps sapling/young/mature visually distinct', () => {
-    expect(visualScale(1, 'sapling')).toBeLessThan(visualScale(1, 'young'))
-    expect(visualScale(1, 'young')).toBeLessThan(visualScale(1, 'mature'))
   })
 })

@@ -1,10 +1,13 @@
 # Tree Types, Height & Age Overhaul
 
-**Status:** `planned`
+**Status:** `done`
 **Created:** 2026-08-12
 **Priority:** 🟡 medium
-**Effort:** ?
-**Depends on:** ?
+**Effort:** L
+**Depends on:** [058 — Living Forest / Tree Lifecycle](./2026-08-10--058--living-forest-tree-lifecycle.md)
+**Related:** [057 — Axe / player tree harvesting](./2026-08-10--057--axe-player-tree-harvesting.md) (`old` choppable jak `mature`)
+
+**Implemented (2026-08-12):** `sizeClass` (small/medium/large) + living age `old`; wysokości z `HEIGHT_RANGE_M` × sizeClass; chop `old→limbed→…`; save stage union + `'old'`.
 
 ## Cel
 

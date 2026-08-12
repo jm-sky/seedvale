@@ -151,23 +151,18 @@ export async function createSettlement(
   if (forest) {
     const worldDays = forest.getWorldDays()
     for (const tree of landmarks.trees) {
-      forest.lifecycle.registerPresence({
+      const presence = {
         id: tree.id,
         x: tree.position.x,
         z: tree.position.z,
         speciesIndex: tree.speciesIndex,
         initialStage: tree.initialStage,
-        baseScale: tree.baseScale,
-      })
+        sizeClass: tree.sizeClass,
+        sizeJitter: tree.sizeJitter,
+      }
+      forest.lifecycle.registerPresence(presence)
       const resolved = forest.lifecycle.resolve(
-        {
-          id: tree.id,
-          x: tree.position.x,
-          z: tree.position.z,
-          speciesIndex: tree.speciesIndex,
-          initialStage: tree.initialStage,
-          baseScale: tree.baseScale,
-        },
+        presence,
         forest.sampleEnv(tree.position.x, tree.position.z),
         worldDays,
       )

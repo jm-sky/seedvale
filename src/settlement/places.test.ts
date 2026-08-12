@@ -9,7 +9,8 @@ function makeTree(id: string, x: number, z: number): SettlementTreeLandmark {
     position: new Vector3(x, 0, z),
     mesh: new Object3D(),
     speciesIndex: 0,
-    baseScale: 1,
+    sizeClass: 'medium',
+    sizeJitter: 0.5,
     initialStage: 'mature',
   }
 }

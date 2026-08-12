@@ -33,7 +33,13 @@ import {
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { createChunkWater, type WorldWater } from '../world/createWater'
-import { createTreeStageMesh, tagTreeMesh } from '../world/treeVisuals'
+import {
+  createTreeStageMesh,
+  readTreeLivingStage,
+  readTreeSizeClass,
+  readTreeSizeJitter,
+  tagTreeMesh,
+} from '../world/treeVisuals'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import { buildChunkGeometry } from './buildChunkGeometry'
 import {
@@ -575,6 +581,8 @@ export function createChunkManager(
           rec.vegetation = buildPlacementGroup('chunk-vegetation', tile.vegetation, (placement) => {
             if (placement.kind === 'tree') {
               const initialStage = placement.growthStage ?? 'mature'
+              const sizeClass = placement.sizeClass ?? 'medium'
+              const sizeJitter = placement.sizeJitter ?? placement.scale
               const id = config.treeLifecycle.makeId(placement.x, placement.z, placement.speciesIndex)
               const presence = {
                 id,
@@ -582,7 +590,8 @@ export function createChunkManager(
                 z: placement.z,
                 speciesIndex: placement.speciesIndex,
                 initialStage,
-                baseScale: placement.scale,
+                sizeClass,
+                sizeJitter,
               }
               config.treeLifecycle.registerPresence(presence)
               treeIds.push(id)
@@ -593,7 +602,14 @@ export function createChunkManager(
                 : createTreeStageMesh(resolved.visual, resolved.scale, id)
               prop.rotation.y = placement.rotationY
               placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
-              tagTreeMesh(prop, resolved, placement.scale, placement.speciesIndex, initialStage)
+              tagTreeMesh(
+                prop,
+                resolved,
+                sizeClass,
+                sizeJitter,
+                placement.speciesIndex,
+                initialStage,
+              )
               return prop
             }
             const templates = templatesByKind[placement.kind]
@@ -720,21 +736,19 @@ export function createChunkManager(
       if (!rec.vegetation || !rec.treeIds?.includes(treeId)) continue
       const mesh = rec.vegetation.children.find((c) => c.userData.treeId === treeId)
       if (!mesh || !rec.tile) continue
-      const baseScale =
-        typeof mesh.userData.treeBaseScale === 'number' ? mesh.userData.treeBaseScale : 1
+      const sizeClass = readTreeSizeClass(mesh.userData)
+      const sizeJitter = readTreeSizeJitter(mesh.userData)
       const speciesIndex =
         typeof mesh.userData.treeSpeciesIndex === 'number' ? mesh.userData.treeSpeciesIndex : 0
-      const initialStage =
-        mesh.userData.treeInitialStage === 'sapling' || mesh.userData.treeInitialStage === 'young'
-          ? mesh.userData.treeInitialStage
-          : 'mature'
+      const initialStage = readTreeLivingStage(mesh.userData)
       const presence = {
         id: treeId,
         x: mesh.position.x,
         z: mesh.position.z,
         speciesIndex,
         initialStage,
-        baseScale,
+        sizeClass,
+        sizeJitter,
       }
       const resolved = config.treeLifecycle.resolve(
         presence,
@@ -753,7 +767,7 @@ export function createChunkManager(
         : createTreeStageMesh(resolved.visual, resolved.scale, treeId)
       replacement.position.copy(pos)
       replacement.rotation.y = rotY
-      tagTreeMesh(replacement, resolved, baseScale, speciesIndex, initialStage)
+      tagTreeMesh(replacement, resolved, sizeClass, sizeJitter, speciesIndex, initialStage)
       parent?.add(replacement)
       return true
     }

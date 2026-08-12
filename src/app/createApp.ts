@@ -488,7 +488,7 @@ export async function createApp(
       return
     }
     const busyLabel =
-      target.stage === 'mature'
+      target.stage === 'mature' || target.stage === 'old'
         ? 'Oczyszczanie…'
         : target.stage === 'limbed'
           ? 'Ścinanie…'

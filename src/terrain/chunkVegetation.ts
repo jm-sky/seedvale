@@ -1,6 +1,12 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
 import type { ChunkCoord } from './chunkGrid'
 import { createSeededRandom } from '../world/parseSeed'
+import {
+  rollLivingAge,
+  rollSizeClass,
+  type TreeLivingAge,
+  type TreeSizeClass,
+} from '../world/treeLifecycle'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import {
   apronOriginWorld,
@@ -17,12 +23,15 @@ export type VegetationPlacement = {
   /** Index into `TREE_SPECS`/`BUSH_SPECS`/`CACTUS_SPECS`/`REED_SPECS`
    *  (`props.ts`), resolved on the main thread. */
   speciesIndex: number
-  /** Mature visual base scale — stage multipliers applied at render time
-   *  (`world/treeLifecycle.ts`). For non-trees this is the final scale. */
+  /** For non-trees: final mesh scale. For trees: unused (sizeJitter used instead). */
   scale: number
   rotationY: number
-  /** Explicit lifecycle stage for trees (plan 058). Absent for bushes/etc. */
-  growthStage?: 'sapling' | 'young' | 'mature'
+  /** Explicit lifecycle stage for trees (plans 058 / 073). Absent for bushes/etc. */
+  growthStage?: TreeLivingAge
+  /** Independent size class (plan 073). Trees only. */
+  sizeClass?: TreeSizeClass
+  /** 0..1 jitter inside height ranges (plan 073). Trees only. */
+  sizeJitter?: number
 }
 
 /** Baseline candidates on open / weak-forest land. Dense forest adds
@@ -204,21 +213,27 @@ export function computeChunkVegetation(
       kind === 'tree'
         ? clusteredTreeSpecies(clumpValue, Math.max(1, speciesCount), random)
         : Math.floor(random() * Math.max(1, speciesCount))
-    // Trees carry an explicit lifecycle stage (plan 058). Scale is the mature
-    // base; sapling/young multipliers are applied when instantiating meshes.
-    // Deep forest only biases the *initial procedural distribution* toward
-    // larger/mature visuals — no TreeState / lifecycle ownership here (063).
+    // Trees: sizeClass + living age (plan 073). Height comes from meter ranges
+    // at render time — no TreeState ownership here (058 / 063).
     let growthStage: VegetationPlacement['growthStage']
+    let sizeClass: TreeSizeClass | undefined
+    let sizeJitter: number | undefined
     let scale: number
     if (kind === 'bush' || kind === 'cactus') {
       scale = 0.6 + random() * 0.5
     } else if (kind === 'tree') {
       const saplingChance = 0.22 - forestDensity * 0.14
       const youngChance = 0.18 - forestDensity * 0.06
-      const roll = random()
-      growthStage =
-        roll < saplingChance ? 'sapling' : roll < saplingChance + youngChance ? 'young' : 'mature'
-      scale = 0.7 + random() * 0.6 + forestDensity * 0.28
+      sizeClass = rollSizeClass(random())
+      sizeJitter = random()
+      growthStage = rollLivingAge({
+        sizeClass,
+        ageRoll: random(),
+        oldRoll: random(),
+        saplingChance,
+        youngChance,
+      })
+      scale = sizeJitter
     } else {
       scale = 0.7 + random() * 0.6
     }
@@ -232,6 +247,8 @@ export function computeChunkVegetation(
       scale,
       rotationY,
       ...(growthStage ? { growthStage } : {}),
+      ...(sizeClass ? { sizeClass } : {}),
+      ...(sizeJitter !== undefined ? { sizeJitter } : {}),
     })
   }
 

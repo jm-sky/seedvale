@@ -41,7 +41,6 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 ## Planned
 
 | File | Summary | Progress | Priority | Effort | Depends on |
-| [2026-08-12--073--tree-types-height-age-overhaul.md](./2026-08-12--073--tree-types-height-age-overhaul.md) | Klasy wielkości drzew + wiek `old` | 0% | 🟡 medium | L | ~~058~~ |
 |------|---------|----------|----------|--------|------------|
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
 | [2026-08-11--060--npc-schedule-actions-and-trait-overlays.md](./2026-08-11--060--npc-schedule-actions-and-trait-overlays.md) | Wykonywalne aktywności grafiku NPC + nakładki traits | 0% | 🟡 medium | L | ~~020~~, ~~022~~ |
@@ -84,6 +83,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Depends on |
 |------|---------|------------|
+| [2026-08-12--073--tree-types-height-age-overhaul.md](./2026-08-12--073--tree-types-height-age-overhaul.md) | sizeClass + wiek `old` + zakresy wysokości (m) | ~~058~~ |
 | [2026-08-07--001--v01-terrain-walking.md](./2026-08-07--001--v01-terrain-walking.md) | v0.1: teren + chodzenie 3rd person | — |
 | [2026-08-07--002--v02-settlement-npc.md](./2026-08-07--002--v02-settlement-npc.md) | v0.2: osada + NPC (woda / drewno / jedzenie) | ~~001~~ |
 | [2026-08-07--003--day-night-clock.md](./2026-08-07--003--day-night-clock.md) | Zegar dnia/nocy + time multiplier | ~~001~~ |
