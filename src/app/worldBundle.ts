@@ -1,13 +1,14 @@
+import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
 import type { Settlement } from '../settlement/createSettlement'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { ResourceEnv } from '../terrain/naturalResources'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TreeLifecycle } from '../world/treeLifecycle'
-import type { PlayAt } from '../audio/createWorldAudio'
 import { createFauna, type Fauna } from '../fauna/createFauna'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
+import { preloadItemGlbModels } from '../items/itemModels'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
@@ -173,6 +174,10 @@ function buildItemSpawners(
   settlement: Settlement,
   seed: number,
 ): ItemSpawners {
+  const gardens =
+    settlement.landmarks.gardens.length > 0
+      ? settlement.landmarks.gardens
+      : [settlement.landmarks.garden]
   return createItemSpawners(
     scene,
     chunkManager.sampleHeight,
@@ -182,6 +187,7 @@ function buildItemSpawners(
     settlement.landmarks.trees.map((t) => t.position),
     seed,
     { campfire: settlement.landmarks.campfire?.position, garden: settlement.landmarks.garden },
+    gardens,
   )
 }
 
@@ -231,6 +237,7 @@ export async function createWorldBundle(
   const ocean = buildOcean(scene, config)
   const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
+  await preloadItemGlbModels()
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   const resourceDeposits = buildResourceDeposits(scene, chunkManager, config, config.seed)
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
@@ -296,6 +303,7 @@ export async function rebuildWorldBundle(
   bundle.ocean = buildOcean(scene, config)
   bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
+  await preloadItemGlbModels()
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
   bundle.resourceDeposits = buildResourceDeposits(scene, bundle.chunkManager, config, config.seed)
   bundle.droppedItems = createDroppedItems(scene, bundle.chunkManager.sampleHeight, carriedDrops)

@@ -30,6 +30,20 @@ Modele 3D użyte w projekcie. Preferujemy CC0; przy CC-BY wpisz wymagany kredyt.
 | `public/models/settlement/crate.glb`, `barrel.glb` | j.w. | j.w. | CC0 1.0 | `Crate` / `Barrel` — podpięte przy market stall |
 | `public/models/settlement/port.glb` | j.w. | j.w. | CC0 1.0 | `Port_FirstAge_Level1` — **rezerwa, niepodpięte**; większy port (obok istniejącego małego `dock_a.glb`) |
 | `public/models/nature/bush_flowers_1.glb`, `flower_clump_2.glb` | Ultimate Stylized Nature / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatestylizednature.html) | CC0 1.0 | `Bush_Flowers` / `Flower_2_Clump` (textury 512px + WebP) — **rezerwa, niepodpięte**; kolejna wariacja kolorowego poszycia |
+| `public/models/items/pitchfork.glb` | Poly by Google | [poly.pizza/m/edEe1ygZiHf](https://poly.pizza/m/edEe1ygZiHf) | **[CC-BY](https://creativecommons.org/licenses/by/3.0/)** | `Pitchfork` — pickup wioski (plan 082); wymagana atrybucja |
+| `public/models/items/sickle.glb` | J-Toastie | [poly.pizza/m/InQGR6t3yY](https://poly.pizza/m/InQGR6t3yY) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Sickle` — pickup wioski (plan 082); wymagana atrybucja |
+| `public/models/settlement/hay.glb` | Quaternius | [poly.pizza/m/Yu8TOERkpw](https://poly.pizza/m/Yu8TOERkpw) | CC0 1.0 | `Hay` — clutter przy ogrodach (plan 082) |
+| `public/models/items/pickaxe.glb` | CreativeTrio | [poly.pizza/m/cJp88qPPLc](https://poly.pizza/m/cJp88qPPLc) | CC0 1.0 | `Pickaxe` — dekor przy stockpile; gameplay mining later (plan 082) |
+| `public/models/fauna/sheep.glb` | Quaternius | [poly.pizza/m/C39AUXUUes](https://poly.pizza/m/C39AUXUUes) | CC0 1.0 | `Sheep` — **parked**, niepodpięte (fauna gospodarska) |
+| `public/models/fauna/horse.glb` | Quaternius | [poly.pizza/m/qvTrSG9pZF](https://poly.pizza/m/qvTrSG9pZF) | CC0 1.0 | `Horse` — **parked**, niepodpięte |
+| `public/models/nature/pine_trees.glb` | Quaternius | [poly.pizza/m/oYtDty0fR6](https://poly.pizza/m/oYtDty0fR6) | CC0 1.0 | `Pine Trees` — **parked**, niepodpięte |
+| `public/models/nature/grass_clump.glb` | Quaternius | [poly.pizza/m/UGTOzcO3P2](https://poly.pizza/m/UGTOzcO3P2) | CC0 1.0 | `Grass` — **parked** (instanced grass już w runtime) |
+| `public/models/items/long_sword.glb` | ImForth | [poly.pizza/m/fRNfk6uA5hq](https://poly.pizza/m/fRNfk6uA5hq) | **[CC-BY](https://creativecommons.org/licenses/by/3.0/)** | `Long Sword` — **parked**; wymagana atrybucja przy wire |
+| `public/models/parked/FishingRod_Lvl2.fbx` | ❓ | `_temp` | **❓** ustalić przed wire | Wymaga FBX→GLB + źródło/licencja |
+| `public/models/fx/blood_splat.glb` | Quaternius | [poly.pizza/m/pFSQljR206](https://poly.pizza/m/pFSQljR206) | CC0 1.0 | `Blood Splat` — **parked**; docelowo VFX przy śmierci NPC / fauna / mob (plan 082) |
+| `public/models/fauna/chicken.glb` | jeremy | [poly.pizza/m/1YE8U35HXsI](https://poly.pizza/m/1YE8U35HXsI) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Chicken` — **parked** (fauna gospodarska); wymagana atrybucja |
+| `public/models/settlement/farm_poly.glb` | Poly by Google | [poly.pizza/m/dSjXKezYeBo](https://poly.pizza/m/dSjXKezYeBo) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Farm` — **parked** (nie mylić z Fantasy RTS `farm.glb`); wymagana atrybucja |
+| `public/models/nature/rock_b.glb` | Quaternius | [poly.pizza/m/RtLRqYjfMs](https://poly.pizza/m/RtLRqYjfMs) | CC0 1.0 | `Rock` — **parked** wariant obok wired `rock_a` |
 
 Kopia tekstu licencji z paczki: [quaternius-ultimate-fantasy-rts-license.txt](./quaternius-ultimate-fantasy-rts-license.txt) (w zipie oznaczona mylnie jako „Platformer Pack”; treść = CC0).  
 Modular Men: [quaternius-ultimate-modular-men-license.txt](./quaternius-ultimate-modular-men-license.txt).  

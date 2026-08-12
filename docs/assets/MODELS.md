@@ -34,7 +34,18 @@ If the feature needs no new model, do nothing to this file.
 | M04 | Economy / outpost buildings | Market, farm, windmill, towncenter, watchtower, barracks, temple, port | `in repo` | [CREDITS](./CREDITS.md), plans 032 / 071 |
 | M05 | Background mountains | Distant silhouette meshes | `in repo` | [plan 024](../plans/2026-08-07--024--world-visual-overhaul.md) (`mountain_a/b/c`) |
 | M06 | Extra flora variants | `bush_flowers_1`, `flower_clump_2` (and further variety as needed) | `in repo` | nature reserve in CREDITS |
-| M07 | Farm animals (chicken / cow) | SFX already exist; no matching fauna GLBs (current fauna = wolf/fox/deer/stag) | `needed` | [SOUNDS](./SOUNDS.md), animal SFX in `public/sounds/` |
+| M07 | Farm animals (chicken / cow / sheep / horse) | Chicken GLB in `fauna/chicken.glb` (CC-BY); sheep+horse parked; cow still needed | `in repo` | [SOUNDS](./SOUNDS.md), [plan 082](../plans/2026-08-12--082--village-tool-props-and-temp-assets.md) |
+| M08 | Village pitchfork | One-time garden pickup + future NPC theft reaction | `wired` | [plan 082](../plans/2026-08-12--082--village-tool-props-and-temp-assets.md), [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md) |
+| M09 | Village sickle | One-time garden pickup + future NPC theft reaction | `wired` | plan 082, issue 025 |
+| M10 | Hay bale clutter | Decorative hay near gardens | `wired` | plan 082 |
+| M11 | Pickaxe (mining gameplay) | Decorative at stockpile now; future dig/ore tool | `in repo` | plan 082 (`public/models/items/pickaxe.glb`) |
+| M12 | Pine tree variant | `pine_trees.glb` parked under nature | `in repo` | plan 082 / 073 |
+| M13 | Grass clump GLB | Optional complement to instanced grass | `in repo` | plan 082 |
+| M14 | Long sword | Future combat / decor (CC-BY) | `in repo` | plan 082 |
+| M15 | Fishing rod | `_temp` FBX parked; license ❓ + convert to GLB | `needed` | `public/models/parked/FishingRod_Lvl2.fbx` |
+| M16 | Blood splat death VFX | Spawn at death of NPC / fauna / mob (corpse linger) | `in repo` | plan 082 (`public/models/fx/blood_splat.glb`) |
+| M17 | Poly Farm building | Alternate farm shell vs Fantasy RTS `farm.glb` (CC-BY) | `in repo` | plan 082 (`settlement/farm_poly.glb`) |
+| M18 | Rock variant B | Extra rock prop beside wired `rock_a` | `in repo` | plan 082 (`nature/rock_b.glb`) |
 
 ## Wired (reference — do not treat as open work)
 
@@ -45,7 +56,8 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Characters | Modular men/women NPCs, Adventurer player |
 | Fauna | wolf, fox, deer, stag |
 | Nature (active) | trees/bushes, rock/log, ore piles |
-| Settlement (active) | huts, towerhouse, wall stubs, dock, crate/barrel, garden/storage/logs |
+| Settlement (active) | huts, towerhouse, wall stubs, dock, crate/barrel, garden/storage/logs, hay |
+| Items (active) | pitchfork, sickle (village pickups); pickaxe decorative |
 
 ## Related research
 

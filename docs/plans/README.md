@@ -63,6 +63,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
+| [2026-08-12--082--village-tool-props-and-temp-assets.md](./2026-08-12--082--village-tool-props-and-temp-assets.md) | Widły/sierp pickup w wiosce; siano/kilof clutter; park pozostałych `_temp` | 100% | 🟡 medium | M | ~~061~~ |
 | [2026-08-12--079--interaction-queue-well-drink.md](./2026-08-12--079--interaction-queue-well-drink.md) | Generyczna InteractionQueue; pierwszy klient = drink przy studni | 100% | 🟡 medium | M | ~~020~~ |
 | [2026-08-12--078--distance-oneshot-falloff.md](./2026-08-12--078--distance-oneshot-falloff.md) | `playAt`: dalej = ciszej dla one-shotów światowych | 100% | 🟡 medium | S | ~~014~~, ~~016~~ |
 | [2026-08-12--077--village-gardens-scale.md](./2026-08-12--077--village-gardens-scale.md) | Ogrody S/M/L z liczby domów (~1/3), clearings vs drzewa | 100% | 🟡 medium | M | ~~047~~, ~~076~~ |

@@ -57,6 +57,14 @@ const AXE_TREE_MAX_DIST = 2.5
 const AXE_FIELD_MIN_DIST = 1
 const AXE_FIELD_MAX_DIST = 3
 
+/** One-time village farm tools (plan 082) — pitchfork / sickle near gardens. */
+const VILLAGE_TOOL_RESPAWN_TIME = Infinity
+const VILLAGE_TOOL_MIN_DIST = 1.2
+const VILLAGE_TOOL_MAX_DIST = 3.5
+const VILLAGE_TOOL_COUNT_MIN = 1
+const VILLAGE_TOOL_COUNT_MAX = 3
+const VILLAGE_TOOL_KINDS: readonly ItemKind[] = ['pitchfork', 'sickle']
+
 /** How close to a chosen tree a branch spawn point lands. */
 const TREE_SPAWN_MIN_DIST = 1.2
 const TREE_SPAWN_MAX_DIST = 3.5
@@ -86,6 +94,8 @@ export function createItemSpawners(
    *  `buildSettlementProps`, sits next to the wheat patch when the food
    *  source is a field — close enough to read as "the field" either way. */
   shovelLandmarks: { campfire?: Vector3, garden: Vector3 },
+  /** Extra garden pads (plan 077 / 082) — farm tools scatter near these. */
+  gardens: readonly Vector3[] = [],
 ): ItemSpawners {
   const random = createSeededRandom(seed ^ 0x17ea)
   const points: ItemSpawnPoint[] = []
@@ -167,6 +177,26 @@ export function createItemSpawners(
       : [AXE_FIELD_MIN_DIST, AXE_FIELD_MAX_DIST]
     const pos = findWalkableNear(anchor.x, anchor.z, minDist, maxDist)
     if (pos) addSpawnPoint('axe', AXE_RESPAWN_TIME, pos)
+  }
+
+  {
+    // 1–3 one-time farm tools (pitchfork / sickle) near garden pads — visual
+    // clutter + pickup. Future: NPC protest when stolen (issue 025).
+    const anchors = gardens.length > 0 ? gardens : [shovelLandmarks.garden]
+    const count =
+      VILLAGE_TOOL_COUNT_MIN +
+      Math.floor(random() * (VILLAGE_TOOL_COUNT_MAX - VILLAGE_TOOL_COUNT_MIN + 1))
+    for (let n = 0; n < count; n++) {
+      const anchor = anchors[Math.floor(random() * anchors.length)]!
+      const kind = VILLAGE_TOOL_KINDS[Math.floor(random() * VILLAGE_TOOL_KINDS.length)]!
+      const pos = findWalkableNear(
+        anchor.x,
+        anchor.z,
+        VILLAGE_TOOL_MIN_DIST,
+        VILLAGE_TOOL_MAX_DIST,
+      )
+      if (pos) addSpawnPoint(kind, VILLAGE_TOOL_RESPAWN_TIME, pos)
+    }
   }
 
   if (trees.length > 0) {

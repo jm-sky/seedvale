@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
+import { isToolKind } from '../../items/HeldTool'
 import { ITEM_DEFS, type ItemKind } from '../../items/items'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -62,7 +63,7 @@ function onUnequip(): void { ui.inventory.onUnequip?.() }
           </div>
           <div class="mt-0.5 flex flex-wrap gap-2">
             <button
-              v-if="item.def.category === 'tool' && ui.inventory.heldTool !== item.kind"
+              v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"
               type="button"
               class="cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-1 text-xs hover:bg-white/10"
               @click="onEquip(item.kind)"

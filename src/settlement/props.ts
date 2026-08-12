@@ -4,7 +4,7 @@ import type { SettlementSite } from './findSettlementSite'
 import type { FoodSourceType } from './settlementGenerator'
 import type { ClearingLayout } from './villageClearing'
 import type { VillageLandmarkPlan, VillagePlan } from './villagePlan'
-import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
+import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../assets/loadGltf'
 import { isDebugMode } from '../debug/debugMode'
 import { distanceToSegment, projectOntoSegment } from '../math/segment'
 import { createSparks, type Sparks } from '../shared/getFireParticles'
@@ -1928,11 +1928,15 @@ export async function buildSettlementProps(
     placeOnGround(hay, g.x + Math.cos(ang) * dist, g.z + Math.sin(ang) * dist, sampleHeight)
     group.add(hay)
   }
-  const pickaxe = await loadPropOrFallback(
-    '/models/items/pickaxe.glb',
-    0.7,
-    createPickaxeProp,
-  )
+  const pickaxe = await (async () => {
+    try {
+      const model = await loadGltf('/models/items/pickaxe.glb')
+      // Authored long/flat — height-fit would make it several meters long.
+      return preparePropFitMax(model, 0.9)
+    } catch {
+      return createPickaxeProp()
+    }
+  })()
   pickaxe.rotation.y = coreRandom() * Math.PI * 2
   placeOnGround(pickaxe, stockX - 1.2, stockZ + 0.9, sampleHeight)
   group.add(pickaxe)

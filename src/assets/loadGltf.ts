@@ -90,6 +90,10 @@ const _center = new Vector3()
 /**
  * Fit model so its feet sit on y=0 and height ≈ `targetHeight` (world meters).
  * Returns the same object for chaining.
+ *
+ * Prefer {@link preparePropFitMax} for long/flat tools (pitchfork, pickaxe):
+ * those assets are authored with a small Y and a long X/Z, so height-fitting
+ * inflates them to tens of meters.
  */
 export function prepareProp(
   object: Object3D,
@@ -102,6 +106,31 @@ export function prepareProp(
 
   const scale = targetHeight / _size.y
   object.scale.multiplyScalar(scale)
+  object.updateMatrixWorld(true)
+
+  _box.setFromObject(object)
+  _box.getCenter(_center)
+  object.position.x -= _center.x
+  object.position.z -= _center.z
+  object.position.y -= _box.min.y
+  return object
+}
+
+/**
+ * Fit model so the largest bbox axis ≈ `targetMax` (world meters) and feet
+ * sit on y=0. Use for elongated props where height is not the authored long axis.
+ */
+export function preparePropFitMax(
+  object: Object3D,
+  targetMax: number,
+): Object3D {
+  object.updateMatrixWorld(true)
+  _box.setFromObject(object)
+  _box.getSize(_size)
+  const longest = Math.max(_size.x, _size.y, _size.z)
+  if (longest < 1e-4) return object
+
+  object.scale.multiplyScalar(targetMax / longest)
   object.updateMatrixWorld(true)
 
   _box.setFromObject(object)

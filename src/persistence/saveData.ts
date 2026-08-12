@@ -1,7 +1,8 @@
 import type { WorldConfig } from '../config/worldConfig'
 import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
-import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { isToolKind } from '../items/HeldTool'
+import { type ItemKind } from '../items/items'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
  *  here so this module doesn't reach into config internals. */
@@ -175,7 +176,7 @@ function isSavePlayer(value: unknown): value is SavePlayer {
 function isHeldToolField(value: unknown): value is ItemKind | null {
   if (value === null) return true
   if (typeof value !== 'string') return false
-  return value in ITEM_DEFS && ITEM_DEFS[value as ItemKind].category === 'tool'
+  return isToolKind(value as ItemKind)
 }
 
 export function isSaveDataV1(value: unknown): value is SaveDataV1 {

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { cloneItemGlb } from './itemModels'
 
 export type ItemKind =
   | 'shell'
@@ -12,6 +13,8 @@ export type ItemKind =
   | 'blanket'
   | 'shovel'
   | 'axe'
+  | 'pitchfork'
+  | 'sickle'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility'
 
@@ -35,11 +38,16 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   blanket: { label: 'koc', category: 'utility', weight: 1.5, color: 0x8a4b3a },
   shovel: { label: 'łopata', category: 'tool', weight: 2, color: 0x6b4a32 },
   axe: { label: 'siekiera', category: 'tool', weight: 2.5, color: 0x7a7e86 },
+  pitchfork: { label: 'widły', category: 'tool', weight: 1.8, color: 0x6b5a3a },
+  sickle: { label: 'sierp', category: 'tool', weight: 0.7, color: 0x8a9098 },
 }
 
-/** Small procedural pickup mesh — no GLB assets for these, they're meant to be
- *  cheap and plentiful. */
+/** Pickup mesh — prefers a preloaded GLB clone when available (`itemModels.ts`),
+ *  otherwise a cheap procedural stand-in (resources + tool fallbacks). */
 export function createItemMesh(kind: ItemKind): THREE.Object3D {
+  const glb = cloneItemGlb(kind)
+  if (glb) return glb
+
   if (kind === 'stone') {
     const mesh = new THREE.Mesh(
       new THREE.DodecahedronGeometry(0.14, 0),
@@ -183,6 +191,48 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     head.position.set(0.02, 0.18, 0.14)
     head.castShadow = true
     group.add(head)
+    return group
+  }
+  if (kind === 'pitchfork') {
+    const group = new THREE.Group()
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.018, 0.022, 0.7, 6),
+      new THREE.MeshStandardMaterial({ color: 0x6b4a24, flatShading: true }),
+    )
+    handle.rotation.x = Math.PI / 2.3
+    handle.position.set(0, 0.12, -0.08)
+    handle.castShadow = true
+    group.add(handle)
+    for (let i = -1; i <= 1; i++) {
+      const tine = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.008, 0.01, 0.22, 4),
+        new THREE.MeshStandardMaterial({ color: ITEM_DEFS.pitchfork.color, flatShading: true, metalness: 0.35 }),
+      )
+      tine.rotation.x = Math.PI / 2.1
+      tine.position.set(i * 0.04, 0.14, 0.22)
+      tine.castShadow = true
+      group.add(tine)
+    }
+    return group
+  }
+  if (kind === 'sickle') {
+    const group = new THREE.Group()
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.018, 0.02, 0.14, 6),
+      new THREE.MeshStandardMaterial({ color: 0x4a3324, flatShading: true }),
+    )
+    handle.rotation.z = Math.PI / 2.4
+    handle.position.set(-0.06, 0.06, 0)
+    handle.castShadow = true
+    group.add(handle)
+    const blade = new THREE.Mesh(
+      new THREE.TorusGeometry(0.1, 0.018, 4, 10, Math.PI * 1.1),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.sickle.color, flatShading: true, metalness: 0.45 }),
+    )
+    blade.rotation.set(Math.PI / 2, 0, -0.4)
+    blade.position.set(0.06, 0.08, 0.02)
+    blade.castShadow = true
+    group.add(blade)
     return group
   }
   // blanket

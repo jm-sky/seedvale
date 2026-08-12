@@ -104,6 +104,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Item spawners and dropped items exist.
 - Natural collectible items are integrated into the world.
 - Starting equipment currently includes knife, firestarter and blanket when missing.
+- Village garden pickups include one-time **pitchfork** / **sickle** (1–3 total near gardens; GLB + procedural fallback; not holdable yet). Future NPC protest on theft: issue 025.
+- Settlement clutter: hay bales near gardens; decorative pickaxe at stockpile (plan 082).
 - Simple fire/fire pit/torch interactions exist.
 - Wait/rest time skip exists.
 - Inventory UI is a Vue screen (`src/ui-vue/screens/InventoryScreen.vue`); `src/ui/createInventoryScreen.ts` is a facade — see "UI migration" below.

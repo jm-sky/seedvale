@@ -25,6 +25,14 @@ describe('createHeldTool', () => {
     expect(held.held()).toBeNull()
   })
 
+  it('rejects village farm tools that are not yet holdable (plan 082)', () => {
+    const inventory = new Inventory({ pitchfork: 1, sickle: 1 })
+    const held = createHeldTool(inventory)
+    expect(held.equip('pitchfork')).toBe(false)
+    expect(held.equip('sickle')).toBe(false)
+    expect(held.held()).toBeNull()
+  })
+
   it('clears the slot when the tool leaves inventory', () => {
     const inventory = new Inventory({ shovel: 1 })
     const held = createHeldTool(inventory, 'shovel')

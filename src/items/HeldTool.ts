@@ -1,11 +1,18 @@
 import type { Inventory } from './Inventory'
-import { ITEM_DEFS, type ItemKind } from './items'
+import type { ItemKind } from './items'
 
 /** Tool kinds that can occupy the single "in hand" slot. */
 export type ToolKind = 'knife' | 'firestarter' | 'shovel' | 'axe'
 
+const HELD_TOOL_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
+  'axe',
+  'firestarter',
+  'knife',
+  'shovel',
+])
+
 export function isToolKind(kind: ItemKind): kind is ToolKind {
-  return ITEM_DEFS[kind].category === 'tool'
+  return HELD_TOOL_KINDS.has(kind)
 }
 
 export type HeldTool = {
