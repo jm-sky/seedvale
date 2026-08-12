@@ -313,6 +313,38 @@ export function createBarrel(scale = 1): THREE.Group {
   return barrel
 }
 
+/** Fallback if `hay.glb` fails — small rectangular bale. */
+export function createHayBale(scale = 1): THREE.Group {
+  const hay = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0xc9a84a, flatShading: true })
+  const bale = new THREE.Mesh(new THREE.BoxGeometry(0.7 * scale, 0.4 * scale, 0.45 * scale), mat)
+  bale.position.y = 0.2 * scale
+  bale.castShadow = true
+  hay.add(bale)
+  return hay
+}
+
+/** Fallback if `pickaxe.glb` fails — decorative only (not an ItemKind yet). */
+export function createPickaxeProp(): THREE.Group {
+  const group = new THREE.Group()
+  const handle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.02, 0.02, 0.55, 6),
+    new THREE.MeshStandardMaterial({ color: 0x5a3a22, flatShading: true }),
+  )
+  handle.rotation.x = Math.PI / 2.2
+  handle.position.set(0, 0.16, -0.04)
+  handle.castShadow = true
+  group.add(handle)
+  const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 0.06, 0.06),
+    new THREE.MeshStandardMaterial({ color: 0x7a7e86, flatShading: true, metalness: 0.4 }),
+  )
+  head.position.set(0, 0.2, 0.18)
+  head.castShadow = true
+  group.add(head)
+  return group
+}
+
 const HOUSE_LAMP_OFF_COLOR = new THREE.Color(0x3a2c22)
 const HOUSE_LAMP_ON_COLOR = new THREE.Color(0xffb35c)
 
@@ -603,6 +635,9 @@ function createPalisadeStake(): THREE.Group {
  * Short palisade wings beside the main entrance — a gate gap, not a full ring.
  * Uses `wall.glb` (Quaternius Fantasy RTS) with procedural stake fallback.
  * Skips seaward / beach entrances so coastal villages don't wall off the ocean.
+ * Also skips (or never opens onto) road/path corridors so stakes don't sit in
+ * the dirt strip — the gate angle alone is not enough when the road bearing
+ * differs from the entrance ray or a second corridor crosses the ring.
  */
 async function plantEntrancePalisade(
   group: THREE.Group,
@@ -612,6 +647,7 @@ async function plantEntrancePalisade(
   waterLevel: number,
   plan: VillagePlan | undefined,
   coast?: CoastalSamplers,
+  corridors: readonly RoadCorridorSegment[] = [],
 ): Promise<void> {
   const segmentsPerSide = PALISADE_SEGMENTS_PER_SIDE[size]
   if (segmentsPerSide <= 0) return
@@ -637,15 +673,27 @@ async function plantEntrancePalisade(
   const gateZ = site.z + Math.sin(outward) * radius
   if (isCoastalPlacement(gateX, gateZ, coastEnv)) return
 
+  // Widen the angular gate so a typical inter-settlement road (~roadHalfWidth 5)
+  // plus a wall segment fits through even when the ray is slightly off.
+  let maxCorridorHalf = 5
+  for (const seg of corridors) {
+    if (seg.halfWidth > maxCorridorHalf) maxCorridorHalf = seg.halfWidth
+  }
+  const gateHalf = Math.max(
+    PALISADE_GATE_HALF_ANGLE,
+    Math.atan2(maxCorridorHalf + WALL_HALF_LENGTH, Math.max(radius, 1)),
+  )
+
   const wall = await loadPropOrFallback(WALL_URL, WALL_TARGET_HEIGHT, createPalisadeStake)
   const step = (WALL_HALF_LENGTH * 2) / radius
 
   for (const side of [-1, 1] as const) {
     for (let i = 0; i < segmentsPerSide; i++) {
-      const ang = outward + side * (PALISADE_GATE_HALF_ANGLE + step * (i + 0.5))
+      const ang = outward + side * (gateHalf + step * (i + 0.5))
       const x = site.x + Math.cos(ang) * radius
       const z = site.z + Math.sin(ang) * radius
       if (isCoastalPlacement(x, z, coastEnv)) continue
+      if (pointHitsCorridor(x, z, corridors, WALL_HALF_LENGTH + 0.4)) continue
       const segment = wall.clone(true)
       // Wall's long axis is local +X in the Quaternius asset — tangent to the ring.
       const tangent = ang + Math.PI / 2
@@ -654,6 +702,21 @@ async function plantEntrancePalisade(
       group.add(segment)
     }
   }
+}
+
+/** True when `(x,z)` lies inside any corridor capsule (+ extra clearance). */
+function pointHitsCorridor(
+  x: number,
+  z: number,
+  corridors: readonly RoadCorridorSegment[],
+  extraClearance: number,
+): boolean {
+  for (const seg of corridors) {
+    const need = seg.halfWidth + extraClearance
+    const { distSq } = projectOntoSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz)
+    if (distSq < need * need) return true
+  }
+  return false
 }
 
 /** Fallback if `crate.glb` fails to load — plain flat-shaded box, same
@@ -1849,6 +1912,31 @@ export async function buildSettlementProps(
     group.add(barrel)
   }
 
+  // Hay bales near garden pads + a decorative pickaxe by the stockpile (plan 082 B).
+  const hayTemplates = await loadPropTemplates(
+    [{ url: '/models/settlement/hay.glb', height: 0.55 }],
+    () => createHayBale(),
+  )
+  const hayGardens = landmarks.gardens.length > 0 ? landmarks.gardens : [landmarks.garden]
+  const hayCount = Math.min(2, Math.max(1, hayGardens.length))
+  for (let i = 0; i < hayCount; i++) {
+    const g = hayGardens[i % hayGardens.length]!
+    const ang = coreRandom() * Math.PI * 2
+    const dist = 1.6 + coreRandom() * 1.2
+    const hay = cloneProp(hayTemplates, 0, 0.9 + coreRandom() * 0.25)
+    hay.rotation.y = coreRandom() * Math.PI * 2
+    placeOnGround(hay, g.x + Math.cos(ang) * dist, g.z + Math.sin(ang) * dist, sampleHeight)
+    group.add(hay)
+  }
+  const pickaxe = await loadPropOrFallback(
+    '/models/items/pickaxe.glb',
+    0.7,
+    createPickaxeProp,
+  )
+  pickaxe.rotation.y = coreRandom() * Math.PI * 2
+  placeOnGround(pickaxe, stockX - 1.2, stockZ + 0.9, sampleHeight)
+  group.add(pickaxe)
+
   // Infrastructure counts come from centralized `VILLAGE_SIZE_CONFIG` (plan
   // 047) — OUTPOST/SM stay without a village campfire; MD+ get one; LG/XL
   // get a second stockpile. Do not re-encode size thresholds here.
@@ -1906,7 +1994,7 @@ export async function buildSettlementProps(
     group.add(stockpile2)
   }
 
-  await plantEntrancePalisade(group, site, size, sampleHeight, waterLevel, plan, coast)
+  await plantEntrancePalisade(group, site, size, sampleHeight, waterLevel, plan, coast, pathCorridors)
 
   if (plantForest) {
     const random = createSeededRandom(seed ^ 0x7e3d)
