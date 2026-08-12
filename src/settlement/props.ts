@@ -4,6 +4,9 @@ import type { SettlementSite } from './findSettlementSite'
 import type { FoodSourceType } from './settlementGenerator'
 import type { ClearingLayout } from './villageClearing'
 import type { VillageLandmarkPlan, VillagePlan } from './villagePlan'
+import { discoverGlbAnchors, resolveAssetAnchors } from '../assets/anchorResolve'
+import { anchorsForAsset } from '../assets/assetAnchorData'
+import { mergeAnchorDefs } from '../assets/assetAnchors'
 import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../assets/loadGltf'
 import { isDebugMode } from '../debug/debugMode'
 import { distanceToSegment, projectOntoSegment } from '../math/segment'
@@ -27,6 +30,17 @@ import {
   pickHomeHouse,
   resolveHouseHeight,
 } from './houseCatalog'
+import {
+  BUSH_SPECS,
+  FIRE_FX_URL,
+  LANTERN_FLOOR_MAX,
+  LANTERN_URL,
+  LANTERN_WALL_MAX,
+  TREE_SPECS,
+  VILLAGE_TORCH_HEIGHT,
+  VILLAGE_TORCH_URL,
+  WALL_URL,
+} from './propSpecs'
 import { yawToward } from './roadNetwork'
 import { pathPlansToCorridorData } from './villagePlanner'
 
@@ -85,7 +99,6 @@ export type SettlementTreeLandmark = {
   initialStage: TreeLivingAge
 }
 
-const WALL_URL = '/models/settlement/wall.glb'
 const WALL_TARGET_HEIGHT = 1.85
 /** Approximate world half-width of a wall segment after `prepareProp` height fit. */
 const WALL_HALF_LENGTH = 2.2
@@ -100,60 +113,25 @@ const PALISADE_SEGMENTS_PER_SIDE: Record<VillageSize, number> = {
   XL: 4,
 }
 
-export const TREE_SPECS = [
-  { url: '/models/nature/tree_a.glb', height: 4.2 },
-  { url: '/models/nature/tree_b.glb', height: 3.8 },
-  { url: '/models/nature/tree_c.glb', height: 4.6 },
-  { url: '/models/nature/birch_1.glb', height: 4.4 },
-  { url: '/models/nature/maple_1.glb', height: 4.8 },
-  { url: '/models/nature/deadtree_1.glb', height: 3.6 },
-] as const
-
-/** Indices 2-4 (the flower entries) are also referenced by exact position from
- *  `terrain/chunkVegetation.ts`'s `FLOWER_BUSH_SPECIES_INDICES` for meadow
- *  patches — keep flowers grouped at the end if this list changes. */
-export const BUSH_SPECS = [
-  { url: '/models/nature/bush_a.glb', height: 1.4 },
-  { url: '/models/nature/bush_b.glb', height: 1.8 },
-  { url: '/models/nature/flower_clump_1.glb', height: 0.4 },
-  { url: '/models/nature/flower_clump_2.glb', height: 0.4 },
-  { url: '/models/nature/bush_flowers_1.glb', height: 0.6 },
-] as const
-
-export const CACTUS_SPECS = [
-  { url: '/models/nature/cactus_a.glb', height: 1.4 },
-  { url: '/models/nature/cactus_b.glb', height: 2.0 },
-] as const
-
-export const REED_SPECS = [
-  { url: '/models/nature/reed_a.glb', height: 1.1 },
-] as const
-
-export const DOCK_SPECS = [
-  { url: '/models/settlement/dock_a.glb', height: 1.0 },
-] as const
-
-/** Chunk-environment rocks / fallen logs (plan 065) — previously procedural-only. */
-export const ROCK_SPECS = [
-  { url: '/models/nature/rock_a.glb', height: 1.2 },
-] as const
-
-export const ROCK_CLUSTER_SPECS = [
-  { url: '/models/nature/rock_cluster_a.glb', height: 0.9 },
-] as const
-
-export const FALLEN_LOG_SPECS = [
-  { url: '/models/nature/fallen_log_a.glb', height: 0.55 },
-] as const
-
-/** Visible ore piles (`terrain/resourceDeposits.ts`, plan 065). */
-export const RESOURCE_GOLD_SPECS = [
-  { url: '/models/nature/resource_gold_1.glb', height: 1.1 },
-] as const
-
-export const RESOURCE_ROCK_SPECS = [
-  { url: '/models/nature/resource_rock_1.glb', height: 1.1 },
-] as const
+export {
+  BUSH_SPECS,
+  CACTUS_SPECS,
+  DOCK_SPECS,
+  FALLEN_LOG_SPECS,
+  FIRE_FX_URL,
+  LANTERN_FLOOR_MAX,
+  LANTERN_URL,
+  LANTERN_WALL_MAX,
+  REED_SPECS,
+  RESOURCE_GOLD_SPECS,
+  RESOURCE_ROCK_SPECS,
+  ROCK_CLUSTER_SPECS,
+  ROCK_SPECS,
+  TREE_SPECS,
+  VILLAGE_TORCH_HEIGHT,
+  VILLAGE_TORCH_URL,
+  WALL_URL,
+} from './propSpecs'
 
 /**
  * Recolor a cloned prop without mutating shared GLTF materials
@@ -379,13 +357,6 @@ export type VillageTorch = {
   update: (dt: number) => void
 }
 
-const LANTERN_URL = '/models/settlement/lantern.glb'
-const VILLAGE_TORCH_URL = '/models/settlement/torch.glb'
-const FIRE_FX_URL = '/models/fx/fire.glb'
-const LANTERN_FLOOR_MAX = 0.28
-const LANTERN_WALL_MAX = 0.16
-const VILLAGE_TORCH_HEIGHT = 1.55
-
 /** `createHouseLight`'s mount point is now a real point on the hut's exterior
  *  surface (`findWallMount` below), not an assumed Z-facing wall — `mountX`/
  *  `mountZ` place the lamp there, offset a little in/out along that surface's
@@ -402,6 +373,7 @@ export function createHouseLight(
   mountZ: number,
   style: HouseLampStyle = 'wall',
   lanternBody: THREE.Object3D | null = null,
+  explicitYaw?: number,
 ): HouseLight {
   const group = new THREE.Group()
   const scale = style === 'wall' ? 0.5 : 1
@@ -409,7 +381,7 @@ export function createHouseLight(
   const outwardLen = Math.hypot(mountX, mountZ) || 1
   const nx = mountX / outwardLen
   const nz = mountZ / outwardLen
-  const yaw = Math.atan2(nx, nz)
+  const yaw = explicitYaw ?? Math.atan2(nx, nz)
 
   const stickOut = style === 'wall' ? 0.04 * scale : 0
   const cx = mountX + nx * stickOut
@@ -609,14 +581,57 @@ function provisionalWallMount(hut: THREE.Object3D): HouseLampMount {
   }
 }
 
-export type ResolvedHouseLampMount = HouseLampMount & { source: string }
+export type ResolvedHouseLampMount = HouseLampMount & { source: string, yaw?: number }
 
-/** Catalog override → floor center → wall raycast → bbox provisional. */
+function resolveLampMountFromAnchor(
+  hut: THREE.Object3D,
+  assetId: string,
+): ResolvedHouseLampMount | null {
+  const glb = discoverGlbAnchors(hut)
+  const metadata = anchorsForAsset(assetId)
+  const merged = mergeAnchorDefs(glb.defs, metadata)
+  const lampDef = merged.defs.find((d) => d.name === 'lamp_mount')
+  if (!lampDef) return null
+
+  const { anchors } = resolveAssetAnchors(hut, [lampDef], {
+    glbNames: new Set(glb.defs.map((d) => d.name)),
+    metadataNames: new Set(metadata.map((d) => d.name)),
+  })
+  const resolved = anchors.find((a) => a.def.name === 'lamp_mount')
+  if (!resolved) return null
+
+  const pos = new THREE.Vector3()
+  resolved.localMatrix.decompose(pos, new THREE.Quaternion(), new THREE.Vector3())
+
+  let yaw: number | undefined
+  if (resolved.hasOrientation) {
+    const forward = new THREE.Vector3(0, 0, 1).applyMatrix4(resolved.localMatrix)
+    forward.sub(pos)
+    if (forward.lengthSq() > 1e-8) {
+      forward.normalize()
+      yaw = Math.atan2(forward.x, forward.z)
+    }
+  }
+
+  return {
+    x: pos.x,
+    y: pos.y,
+    z: pos.z,
+    source: 'anchor',
+    ...(yaw !== undefined ? { yaw } : {}),
+  }
+}
+
+/** Anchor → catalog override → floor center → wall raycast → bbox provisional. */
 export function resolveHouseLampMount(
   entry: HouseCatalogEntry,
   hut: THREE.Object3D,
   hutHeight: number,
 ): ResolvedHouseLampMount {
+  const assetId = `house:${entry.id}`
+  const fromAnchor = resolveLampMountFromAnchor(hut, assetId)
+  if (fromAnchor) return fromAnchor
+
   if (entry.lampMount) {
     return { ...entry.lampMount, source: 'catalog' }
   }
@@ -2021,6 +2036,7 @@ export async function buildSettlementProps(
       lampMount.z,
       entry.lampStyle,
       lanternTpl,
+      lampMount.yaw,
     )
     hut.add(houseLight.object)
     houseLights.push(houseLight)
@@ -2030,6 +2046,7 @@ export async function buildSettlementProps(
         id: entry.id,
         style: entry.lampStyle,
         source: lampMount.source,
+        anchor: lampMount.source === 'anchor',
         mount: { x: +lampMount.x.toFixed(3), y: +lampMount.y.toFixed(3), z: +lampMount.z.toFixed(3) },
         paste: `lampMount: { x: ${lampMount.x.toFixed(3)}, y: ${lampMount.y.toFixed(3)}, z: ${lampMount.z.toFixed(3)} }`,
       })

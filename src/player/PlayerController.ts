@@ -20,7 +20,7 @@ const SPRINT_MULTIPLIER = 1.8
 /** Look-at height eases from chest-level (far/default zoom) up toward eye-level as the camera zooms in. */
 const LOOK_AT_OFFSET_FAR = 0.9
 const LOOK_AT_OFFSET_NEAR = 1.6
-const PLAYER_HEIGHT = 1.8
+export const PLAYER_HEIGHT = 1.8
 const PLAYER_LABEL = 'Ja'
 const PLAYER_MAX_HP = 100
 /** How far below the surface the player can sink while swimming — caps out in deep

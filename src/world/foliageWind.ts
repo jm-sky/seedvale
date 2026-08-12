@@ -49,6 +49,7 @@ export function hardenFoliageAlpha(mat: Material): void {
   if (!isFoliageMaterial(mat)) return
   if (mat.userData.foliageAlphaHardened) return
   mat.userData.foliageAlphaHardened = true
+  mat.userData.foliageHardened = true
 
   // Solid opaque crowns (e.g. Fantasy RTS `Green`) need no change.
   if (!mat.transparent && mat.opacity >= 1 && mat.alphaTest <= 0) return

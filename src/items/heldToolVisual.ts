@@ -1,6 +1,7 @@
-import { Bone, Group, type Object3D, Vector3 } from 'three'
+import { Group, type Object3D, Vector3 } from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { ToolKind } from './HeldTool'
+import { findAnchorNode } from '../assets/anchorResolve'
 import { loadGltf, preparePropFitMax } from '../assets/loadGltf'
 import { createItemMesh } from './items'
 
@@ -75,7 +76,7 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
 }
 
 /** Longest-axis size while held (meters). Separate from ground-drop sizing. */
-const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }>> = {
+export const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }>> = {
   axe: { url: '/models/items/axe.glb', maxSize: 0.55 },
   knife: { url: '/models/items/knife.glb', maxSize: 0.28 },
   shovel: { url: '/models/items/shovel.glb', maxSize: 0.77 },
@@ -86,14 +87,7 @@ const heldTemplates = new Map<ToolKind, Group>()
 const _socketWorldScale = new Vector3()
 
 export function findRightHandSocket(root: Object3D): Object3D | null {
-  let bone: Object3D | null = null
-  let any: Object3D | null = null
-  root.traverse((obj) => {
-    if (!(RIGHT_HAND_BONE_NAMES as readonly string[]).includes(obj.name)) return
-    if (!any) any = obj
-    if (obj instanceof Bone && !bone) bone = obj
-  })
-  return bone ?? any
+  return findAnchorNode(root, RIGHT_HAND_BONE_NAMES).node
 }
 
 export async function preloadHeldToolModels(): Promise<void> {

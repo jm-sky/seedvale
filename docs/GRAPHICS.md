@@ -31,6 +31,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G7 | Post-process: EffectComposer + N8AO + SMAA (+ bloom / god rays / film grade). Hardware MSAA wyłączone (i tak bez efektu na targetach composera). | `createPostProcessing.ts`, `createRenderer.ts` |
 | G8 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | `CLAUDE.md` |
 | G9 | Droga = tint korytarza na meshu terenu (nie osobny mesh). Miękki brzeg + ziarno dirtu; trawa **soft-fade** w korytarzu, nie hard bald cut. Extra gęstość łąki = **near-field filler LOD**, nie globalny bump `grass.density`. | `chunkHeightmap` / `biomeColors` / `grass` / `chunkManager`, issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
+| G10 | Asset alignment browser **Game-like** mode reuses `createRenderer` / `createLights` / `createSky` / `skyParamsFromTime` — no parallel preview rig. Post-processing composer runs in **single-view only** (not 4-up). | `src/tools/assetBrowser/`, plan [088](./plans/2026-08-12--088--asset-alignment-browser.md) |
 
 ---
 
@@ -39,7 +40,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | Obszar | Gdzie |
 |--------|--------|
 | Renderer | `src/render/createRenderer.ts` |
-| Post-process | `src/render/createPostProcessing.ts`, `filmGradeShader.ts`, `godRaysShader.ts` |
+| Post-process | `src/render/createPostProcessing.ts`, `gradedOutputPass.ts`, `godRaysShader.ts` |
 | Ocean | `src/world/createOcean.ts` (`three/addons/objects/Water.js`) |
 | Jeziora | `src/world/createWater.ts` |
 | Foliage wind + alpha harden | `src/world/foliageWind.ts` |

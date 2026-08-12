@@ -13,7 +13,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 |---------|--------|
 | Inventory weight / label | `ITEM_DEFS` |
 | Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch |
-| Held 3D attach | `heldToolVisual.ts` → `WristR` + `HELD_ATTACH` |
+| Held 3D attach | `heldToolVisual.ts` → `WristR` + `HELD_ATTACH` (Phase 6: migrate per-tool numbers to `grip` anchors via alignment browser) |
 | Ground GLB scale | `itemModels.ts` → `preparePropFitMax` (not height-only) |
 | Melee vs animals | `faunaCombat.ts` — axe 20, knife 12, shovel 8 |
 | Village one-time tools | `createItemSpawners.ts` |

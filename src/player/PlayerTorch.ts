@@ -4,6 +4,14 @@ import type { HeldAttach } from '../items/heldToolVisual'
 import { disposeObject3D, loadGltf, preparePropFitMax } from '../assets/loadGltf'
 import { createItemMesh } from '../items/items'
 import { createCampfireFlame } from '../settlement/props'
+import {
+  BRANCH_HELD_MAX,
+  BRANCH_URL,
+  TORCH_LIGHT_BRANCH,
+  TORCH_LIGHT_DECAY,
+  TORCH_LIGHT_LOCAL_OFFSET,
+  TORCH_LIGHT_WOODEN,
+} from './torchLightPresets'
 
 /** Seconds a lit branch burns — portable stopgap (plan 050 / 085). */
 export const TORCH_FUEL_BRANCH = 90
@@ -17,9 +25,7 @@ export const TORCH_FUEL_WOODEN = 240
  */
 const SHOW_HAND_FLAME_VISUAL = false
 
-const BRANCH_URL = '/models/items/branch.glb'
 const FIRE_URL = '/models/fx/fire.glb'
-const BRANCH_HELD_MAX = 0.55
 /** Accent tip only — sparks/cone come from `createCampfireFlame`. */
 const FIRE_TIP_MAX = 0.11
 const FLAME_OPACITY = 0.75
@@ -43,8 +49,7 @@ const WOODEN_FIRE_ATTACH: HeldAttach = {
   scale: 1,
 }
 
-const LIGHT_BRANCH = { color: 0xff8a3c, intensity: 2.35, distance: 8 }
-const LIGHT_WOODEN = { color: 0xff9a4a, intensity: 2.8, distance: 11 }
+// BRANCH_ATTACH / WOODEN_FIRE_ATTACH duplicate HELD_ATTACH.wooden_torch — Phase 6 migration candidate.
 
 export type TorchSource = 'branch' | 'wooden_torch'
 
@@ -232,14 +237,18 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
       const group = new Group()
       const ratio = fuelRemaining / fuelMax
 
-      const params = source === 'wooden_torch' ? LIGHT_WOODEN : LIGHT_BRANCH
+      const params = source === 'wooden_torch' ? TORCH_LIGHT_WOODEN : TORCH_LIGHT_BRANCH
       pointLight = new PointLight(
         params.color,
         params.intensity * ratio,
         params.distance,
-        2,
+        TORCH_LIGHT_DECAY,
       )
-      pointLight.position.set(0, 0, 0.36)
+      pointLight.position.set(
+        TORCH_LIGHT_LOCAL_OFFSET[0],
+        TORCH_LIGHT_LOCAL_OFFSET[1],
+        TORCH_LIGHT_LOCAL_OFFSET[2],
+      )
 
       let flameObject: Object3D | null = null
       if (SHOW_HAND_FLAME_VISUAL) {
@@ -297,7 +306,7 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
         const ratio = fuelRemaining / fuelMax
         flameSetSize?.(ratio)
         if (pointLight) {
-          const base = current === 'wooden_torch' ? LIGHT_WOODEN.intensity : LIGHT_BRANCH.intensity
+          const base = current === 'wooden_torch' ? TORCH_LIGHT_WOODEN.intensity : TORCH_LIGHT_BRANCH.intensity
           pointLight.intensity = base * ratio
         }
       }
