@@ -3,7 +3,7 @@
 **Plan:** [2026-08-12--088--asset-alignment-browser.md](./2026-08-12--088--asset-alignment-browser.md)
 **Review:** [2026-08-12--088--asset-alignment-browser-review.md](./2026-08-12--088--asset-alignment-browser-review.md)
 
-**Status:** `verification needed` 📋
+**Status:** `verification needed` 📋 (Phase 6 infrastructure landed; per-tool grip migration still pending browser verify)
 **Priority:** 🟡 `medium`
 **Effort:** `XL` (PRD says `L`; the anchor seam + runtime consumers + 5 MVP phases are larger than one session)
 **Dependencies:** — (touches `074` / `085` code paths but does not depend on unfinished work)

@@ -179,7 +179,7 @@ Before adding a new abstraction, check whether one of these already owns the res
 
 ## Developer tooling
 
-- **Asset alignment browser** — dev-only page at `/asset-browser.html` (`src/tools/assetBrowser/`). Aggregates existing asset registries via `src/assets/assetIndex.ts`; not included in production `vite build` input. Shared anchor modules are importable by game code. Browser verification: plan 088 §10 (not marked verified on technical checks alone).
+- **Asset alignment browser** — dev-only page at `/asset-browser.html` (`src/tools/assetBrowser/`). Aggregates existing asset registries via `src/assets/assetIndex.ts`; not included in production `vite build` input. Dev server lists `public/models/**/*.glb` at `/__asset-browser/models` and auto-reloads slots when a model file changes (HMR). Shared anchor modules are importable by game code. Browser verification: plan 088 §10 (not marked verified on technical checks alone).
 
 ## Important code entry points
 

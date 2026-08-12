@@ -34,8 +34,9 @@ Resolution produces `localMatrix` (relative to asset root) and `worldMatrix` (af
 | Asset id | Anchors authored | Notes |
 |---|---|---|
 | `character:player`, `npc:*` | `hand.right` (metadata) | rotation correction TBD in browser |
-| Houses, held tools, fauna | none yet | Phase 6 migration from `HELD_ATTACH` / `lampMount` |
-| GLB `SV_*` nodes | none shipped | preferred when models are re-exported |
+| `house:hut_d` | `lamp_mount` (metadata) | ported from catalog `lampMount`; anchor-first in `resolveHouseLampMount` |
+| Held tools (`held:*`) | none enabled | add `grip` to `HELD_TOOL_GRIP_ANCHORS` after browser verify; `mountByAnchorPair` opt-in |
+| Other houses, fauna props | none yet | Phase 6 continues per-asset |
 
 ## Blender workflow
 
