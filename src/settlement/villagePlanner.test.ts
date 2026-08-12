@@ -109,6 +109,48 @@ describe('planVillageLayout (plan 047 steps 5–7)', () => {
     }
   })
 
+  it('keeps house plots clear of the plaza well', () => {
+    const id = identity({ id: '5_1', size: 'SM' })
+    const families = generateFamilies(7, 'SM', false, 'polish')
+    const layout = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, 7, flatHeight, WATER)
+    const well = layout.plots.find((p) => p.id === 'plot-infra-well')!
+    const minDist = 4.5 + 2.4 + 2.5 // HOUSE_PLOT_RADIUS + INFRA_PLOT_RADIUS + gap
+    for (const house of layout.plots.filter((p) => p.role === 'house')) {
+      expect(Math.hypot(house.x - well.x, house.z - well.z)).toBeGreaterThanOrEqual(minDist - 0.01)
+    }
+  })
+
+  it('keeps house pads off neighbouring plaza→house path spokes', () => {
+    const id = identity({ id: '5_2', size: 'MD' })
+    const families = generateFamilies(21, 'MD', false, 'polish')
+    const layout = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, 21, flatHeight, WATER)
+    const houses = layout.plots.filter((p) => p.role === 'house')
+    const center = layout.center
+    // Same clearance as villagePlanner HOUSE_SPOKE_CLEARANCE (1.5 + 4.5*0.55).
+    const clearance = 1.5 + 4.5 * 0.55
+    for (let i = 0; i < houses.length; i++) {
+      for (let j = 0; j < houses.length; j++) {
+        if (i === j) continue
+        const a = houses[i]!
+        const b = houses[j]!
+        const { distSq, t } = (() => {
+          const dx = b.x - center.x
+          const dz = b.z - center.z
+          const lenSq = dx * dx + dz * dz
+          if (lenSq < 1e-6) return { distSq: 0, t: 0 }
+          const tt = Math.max(0, Math.min(1, ((a.x - center.x) * dx + (a.z - center.z) * dz) / lenSq))
+          const cx = center.x + dx * tt
+          const cz = center.z + dz * tt
+          const ddx = a.x - cx
+          const ddz = a.z - cz
+          return { distSq: ddx * ddx + ddz * ddz, t: tt }
+        })()
+        if (t <= 0.1 || t >= 0.9) continue
+        expect(Math.sqrt(distSq)).toBeGreaterThanOrEqual(clearance - 0.05)
+      }
+    }
+  })
+
   it('derives buildings and landmarks from plots with matching positions (step 8)', () => {
     const id = identity({ id: '6_0', size: 'LG', foodSourceType: 'field', isHome: false })
     const families = generateFamilies(15, 'LG', false, 'polish')

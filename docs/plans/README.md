@@ -44,6 +44,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 |------|---------|----------|----------|--------|------------|
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
 | [2026-08-11--060--npc-schedule-actions-and-trait-overlays.md](./2026-08-11--060--npc-schedule-actions-and-trait-overlays.md) | Wykonywalne aktywności grafiku NPC + nakładki traits | 0% | 🟡 medium | L | ~~020~~, ~~022~~ |
+| [2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md](./2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md) | Dzika fauna unika realnego footprintu osady (skalowanego z `VillageSize`) + minimalny rozstaw spawn-pointów | 0% | 🟡 medium | M | ~~047~~, ~~076~~, ~~077~~ |
 
 ---
 
@@ -62,6 +63,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
+| [2026-08-12--079--interaction-queue-well-drink.md](./2026-08-12--079--interaction-queue-well-drink.md) | Generyczna InteractionQueue; pierwszy klient = drink przy studni | 100% | 🟡 medium | M | ~~020~~ |
 | [2026-08-12--078--distance-oneshot-falloff.md](./2026-08-12--078--distance-oneshot-falloff.md) | `playAt`: dalej = ciszej dla one-shotów światowych | 100% | 🟡 medium | S | ~~014~~, ~~016~~ |
 | [2026-08-12--077--village-gardens-scale.md](./2026-08-12--077--village-gardens-scale.md) | Ogrody S/M/L z liczby domów (~1/3), clearings vs drzewa | 100% | 🟡 medium | M | ~~047~~, ~~076~~ |
 | [2026-08-12--075--time-skip-npc-catchup.md](./2026-08-12--075--time-skip-npc-catchup.md) | Odpoczynek: teleport NPC do nowej pozycji wg zegara + realny catch-up potrzeb/staminy | 100% | 🟡 medium | M | — |

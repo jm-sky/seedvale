@@ -72,6 +72,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Inter-settlement road signposts use `yawToward` for board orientation; midpoint pairs are spaced apart (plan 039).
 - Inter-settlement roads attach via plan entrances (`entranceToward`); local path corridors come from `VillagePlan.paths`.
 - NPC needs and behaviour/state-machine logic.
+- Well drinks use a shared per-settlement `InteractionQueue` (plan 079): FIFO standing slots south of the well, one serving agent at a time; home drinks skip the queue. Same queue type is reusable for future garden/stall points.
 - NPC personality/character depth including role, traits/Big Five-related data, health and stamina.
 - NPCs use shared `StaminaState` for work/rest effort; HP is no longer drained by fatigue.
 - NPC names and family naming data.

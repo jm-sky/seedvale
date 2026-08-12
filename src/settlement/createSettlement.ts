@@ -3,6 +3,7 @@ import {
   Vector3,
 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { PlayAt } from '../audio/createWorldAudio'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
@@ -11,8 +12,13 @@ import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { VillageSize } from './families'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
-import type { PlayAt } from '../audio/createWorldAudio'
 import { disposeObject3D } from '../assets/loadGltf'
+import {
+  copyVec3,
+  createInteractionQueue,
+  type InteractionQueue,
+  wellQueueId,
+} from '../simulation'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
 import { applyTreeStageVisual } from '../world/treeVisuals'
@@ -258,6 +264,25 @@ export async function createSettlement(
       ? landmarks.homes.map((position, i) => ({ id: `${def.id}:home:${i}`, type: 'home', position }))
       : [{ id: `${def.id}:home:fallback`, type: 'home', position: landmarks.well.clone() }]
 
+  // Interaction queues (plan 079): well drink first; garden/stall later reuse
+  // the same map. Line runs +Z from the well so waiters stand south of the rim.
+  // servingOffset = well base radius (0.85) + 0.3 m clearance so NPCs do not
+  // stand inside the stone cylinder (`createWell` in props.ts).
+  const wellQid = wellQueueId(def.id)
+  const queues = new Map<string, InteractionQueue>([
+    [
+      wellQid,
+      createInteractionQueue(wellQid, {
+        anchor: copyVec3(landmarks.well),
+        lineDir: { x: 0, z: 1 },
+        servingOffset: 0.85 + 0.3,
+        spacing: 1.2,
+        maxVisibleSlots: 8,
+        servingCapacity: 1,
+      }),
+    ],
+  ])
+
   // 1 family = 1 house: every member of a family shares that family's home
   // place (`homePlaces[familyIndex]`), not a bare `i % homePlaces.length`
   // cycle — flattened here so the NPC-creation `Promise.all` below stays a
@@ -291,6 +316,9 @@ export async function createSettlement(
         playAt,
         undefined,
         forest,
+        `${def.id}:npc:${i}`,
+        queues,
+        wellQid,
       )
       scene.add(agent.mesh)
       return agent

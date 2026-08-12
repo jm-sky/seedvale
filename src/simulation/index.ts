@@ -15,6 +15,12 @@ export {
   startActionLifecycle,
 } from './actionLifecycle'
 export {
+  createInteractionQueue,
+  type InteractionQueue,
+  type InteractionQueueConfig,
+  wellQueueId,
+} from './interactionQueue'
+export {
   pickActionKind,
   pickHighestScore,
   plannedFromKind,

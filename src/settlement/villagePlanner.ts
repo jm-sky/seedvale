@@ -16,6 +16,7 @@ import type {
   VillageZone,
   VillageZoneKind,
 } from './villagePlan'
+import { projectOntoSegment } from '../math/segment'
 import { RESOURCE_ROLE, SIGNIFICANT_RICHNESS } from '../terrain/naturalResources'
 import { createSeededRandom } from '../world/parseSeed'
 import { villageSizeConfig } from './families'
@@ -73,6 +74,13 @@ const LOCAL_PATH_HALF_WIDTH = 1.5
 const LOCAL_ROAD_HALF_WIDTH = 2.4
 const ENTRANCE_CANDIDATE_JITTERS = 7
 const PATH_POLYLINE_SAMPLES = 3
+/**
+ * Lateral clearance from a future center→house dirt path. Paths are planned
+ * after plots (`planLocalPathsAndEntrances`), so house scoring anticipates
+ * those spokes — otherwise a cottage on the plaza rim can sit on the path
+ * to a neighbour further out.
+ */
+const HOUSE_SPOKE_CLEARANCE = LOCAL_PATH_HALF_WIDTH + HOUSE_PLOT_RADIUS * 0.55
 
 /**
  * Deterministic base layout pattern from identity + seed (plan 047 §7).
@@ -297,6 +305,34 @@ function minDistToPlots(x: number, z: number, plots: readonly VillagePlot[]): nu
   return min
 }
 
+/**
+ * True when `(x,z)` would sit on (or block) a plaza→house spoke for any
+ * already-placed house — mid-segment only; near the house pad itself is
+ * handled by ordinary plot spacing.
+ */
+function blocksHouseSpoke(
+  x: number,
+  z: number,
+  center: VillageCenter,
+  existingHouses: readonly VillagePlot[],
+  clearance: number,
+): boolean {
+  const clearanceSq = clearance * clearance
+  for (const house of existingHouses) {
+    // Candidate on the path to an existing house?
+    const toExisting = projectOntoSegment(x, z, center.x, center.z, house.x, house.z)
+    if (toExisting.t > 0.1 && toExisting.t < 0.9 && toExisting.distSq < clearanceSq) {
+      return true
+    }
+    // Existing house on the path to this candidate (closer cottage on the same ray)?
+    const toCandidate = projectOntoSegment(house.x, house.z, center.x, center.z, x, z)
+    if (toCandidate.t > 0.1 && toCandidate.t < 0.9 && toCandidate.distSq < clearanceSq) {
+      return true
+    }
+  }
+  return false
+}
+
 type PlotPlacementRequest = {
   id: string
   role: VillagePlotRole
@@ -341,6 +377,13 @@ function scorePlotCandidate(
 
   const clearance = minDistToPlots(x, z, existing)
   if (Number.isFinite(clearance) && clearance < minSpacing) return null
+
+  if (req.role === 'house') {
+    const houses = existing.filter((p) => p.role === 'house')
+    if (houses.length > 0 && blocksHouseSpoke(x, z, center, houses, HOUSE_SPOKE_CLEARANCE)) {
+      return null
+    }
+  }
 
   const w = PLOT_SCORE_WEIGHTS
   const distCenter = Math.hypot(x - center.x, z - center.z)
@@ -425,7 +468,8 @@ function pickPlot(
   let best: VillagePlot | null = null
   let bestScore = -Infinity
 
-  for (let attempt = 0; attempt < PLOT_CANDIDATE_ATTEMPTS; attempt++) {
+  const attempts = req.role === 'house' ? PLOT_CANDIDATE_ATTEMPTS * 2 : PLOT_CANDIDATE_ATTEMPTS
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const angle = baseAngle + (random() - 0.5) * 1.4 + attempt * 0.37
     let dist =
       req.role === 'house' || req.role === 'livestock' || req.maxCenterDist != null
@@ -471,13 +515,53 @@ function pickPlot(
 
   // Deterministic fallback: prefer the requested ring (keeps campfire / market
   // off the well when public-zone center ≈ plaza — plan 076). Houses still hug
-  // residential zone when no preferredRing was set.
+  // residential zone when no preferredRing was set — but skip plaza spokes
+  // already claimed by earlier cottages.
   let fallbackRing = Math.max(
     preferredRing ??
       (req.role === 'house' ? HOUSE_PLOT_RADIUS * 1.2 : boundary.radius * 0.22),
     req.minCenterDist ?? 0,
   )
   if (req.maxCenterDist != null) fallbackRing = Math.min(fallbackRing, req.maxCenterDist)
+
+  if (req.role === 'house') {
+    const base =
+      zone != null
+        ? Math.atan2(zone.z - center.z, zone.x - center.x)
+        : baseAngle
+    for (let i = 0; i < 12; i++) {
+      const angle = base + (i / 12) * Math.PI * 2
+      const fx = center.x + Math.cos(angle) * fallbackRing
+      const fz = center.z + Math.sin(angle) * fallbackRing
+      const score = scorePlotCandidate(
+        fx,
+        fz,
+        sampleHeight(fx, fz),
+        { ...req, preferredRing: fallbackRing },
+        center,
+        boundary,
+        existing,
+        seedForCell,
+        sampleHeight,
+        waterLevel,
+        minSpacing,
+      )
+      if (score === null) continue
+      return {
+        id: req.id,
+        role: req.role,
+        x: fx,
+        z: fz,
+        y: sampleHeight(fx, fz),
+        radius: req.radius,
+        rotation: angle,
+        zoneId: zone?.id ?? null,
+        familyIndex: req.familyIndex,
+        familyId: req.familyId,
+      }
+    }
+  }
+
   const fx =
     req.role === 'house' && zone
       ? zone.x
@@ -566,6 +650,9 @@ export function planVillageLayout(
   )
 
   const houseRing = sizeCfg.houseRingMax * 0.85
+  // Keep cottage pads off the plaza well — house radius + well infra radius +
+  // gap so walls do not sit on the square rim (playtest 2026-08-12).
+  const houseMinCenterDist = HOUSE_PLOT_RADIUS + INFRA_PLOT_RADIUS + 2.5
   families.forEach((family, familyIndex) => {
     plots.push(
       pickPlot(
@@ -577,6 +664,7 @@ export function planVillageLayout(
           familyIndex,
           familyId: family.id,
           preferredRing: houseRing,
+          minCenterDist: houseMinCenterDist,
         },
         center,
         boundary,

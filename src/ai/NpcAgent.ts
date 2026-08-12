@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { PlayAt } from '../audio/createWorldAudio'
 import type { HeightSampler } from '../player/PlayerController'
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
 import type { Place } from '../settlement/places'
@@ -11,7 +12,6 @@ import {
   prepareProp,
 } from '../assets/loadGltf'
 import { playActionWell } from '../audio/actionSounds'
-import type { PlayAt } from '../audio/createWorldAudio'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 import {
   createStaminaState,
@@ -26,6 +26,7 @@ import {
   createActionLifecycle,
   type DecisionContext,
   failActionLifecycle,
+  type InteractionQueue,
   type PlannedAction,
   replaceActionLifecycle,
 } from '../simulation'
@@ -64,6 +65,16 @@ const ARRIVE = 0.55
 const NPC_HEIGHT = 1.75
 /** Minimum clearance above waterLevel an NPC will walk into or wander toward. */
 const WATER_MARGIN = 0.3
+/**
+ * Keep NPC feet outside the village well mesh (base radius ~0.85 in
+ * `createWell`) plus a small buffer. Serving stand is farther out
+ * (`servingOffset` in createSettlement) so queued drinks never need the
+ * blocked disk; transit paths that would cut through the well are deflected.
+ */
+const WELL_COLLISION_RADIUS = 1.0
+/** Destinations this close to the well may enter the collision disk (serving /
+ *  workplace). Farther goals skirt around instead of walking through. */
+const WELL_APPROACH_ALLOW = WELL_COLLISION_RADIUS + 0.4
 
 /** How strongly nearby NPCs suppress this NPC's chance to react ("Hmm?") to
  *  the player, scaled by `nearbyNpcCount * (1 - openness)` — see
@@ -148,6 +159,8 @@ type NpcPlannedAction = PlannedAction<ActionId> & {
   durationSec: number
   onComplete: () => void
   next?: NpcPlannedAction
+  /** When set, this step uses a settlement `InteractionQueue` (FIFO slots). */
+  queueId?: string
 }
 
 /** Public, dialogue-facing summary of what an NPC is doing right now — a
@@ -255,6 +268,11 @@ export class NpcAgent {
   /** Display-only — `name` alone stays the matching key for quests/dialogue
    *  (`quests/quests.ts` hardcodes `giverName` as first name only). */
   readonly displayName: string
+  /**
+   * Settlement-scoped id (`${settlementId}:npc:${i}`) for interaction queues
+   * and other shared simulation membership. Distinct from `name` (dialogue key).
+   */
+  readonly id: string
   readonly gender: NpcGender
   readonly role: Role
   readonly traits: readonly Trait[]
@@ -313,6 +331,7 @@ export class NpcAgent {
   private pauseTimer = 0
   private pauseCooldown = 0
   private readonly tmp = new THREE.Vector3()
+  private readonly tmpAvoid = new THREE.Vector3()
   private readonly labelEl: HTMLDivElement
   private readonly labelNameEl: HTMLDivElement
   private readonly labelBarsEl: HTMLDivElement
@@ -323,6 +342,12 @@ export class NpcAgent {
   private highlighted = false
   private readonly playAt: PlayAt
   private readonly forest: SettlementForestHooks | undefined
+  /** Settlement interaction queues (well today; garden/stall later). */
+  private readonly queues: ReadonlyMap<string, InteractionQueue>
+  /** Queue id for village-well drinks; `null` skips queueing. */
+  private readonly wellQueueId: string | null
+  /** Queue this agent is currently a member of (waiting or serving). */
+  private activeQueueId: string | null = null
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
@@ -345,9 +370,15 @@ export class NpcAgent {
     familyMembers: readonly FamilyMemberRef[],
     playAt: PlayAt,
     forest: SettlementForestHooks | undefined,
+    npcId: string,
+    queues: ReadonlyMap<string, InteractionQueue>,
+    wellQueueId: string | null,
   ) {
     this.playAt = playAt
     this.forest = forest
+    this.id = npcId
+    this.queues = queues
+    this.wellQueueId = wellQueueId
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.landmarks = landmarks
@@ -447,6 +478,9 @@ export class NpcAgent {
     playAt: PlayAt = () => {},
     modelUrl = modelUrlFor(member.character.gender, treeIndex),
     forest?: SettlementForestHooks,
+    npcId = '',
+    queues: ReadonlyMap<string, InteractionQueue> = new Map(),
+    wellQueueId: string | null = null,
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -464,6 +498,9 @@ export class NpcAgent {
         familyMembers,
         playAt,
         forest,
+        npcId,
+        queues,
+        wellQueueId,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -479,6 +516,9 @@ export class NpcAgent {
         familyMembers,
         playAt,
         forest,
+        npcId,
+        queues,
+        wellQueueId,
       )
     }
   }
@@ -494,7 +534,10 @@ export class NpcAgent {
     member: FamilyMember,
     familyMembers: readonly FamilyMemberRef[],
     playAt: PlayAt,
-    forest?: SettlementForestHooks,
+    forest: SettlementForestHooks | undefined,
+    npcId: string,
+    queues: ReadonlyMap<string, InteractionQueue>,
+    wellQueueId: string | null,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -521,6 +564,9 @@ export class NpcAgent {
       familyMembers,
       playAt,
       forest,
+      npcId,
+      queues,
+      wellQueueId,
     )
   }
 
@@ -646,6 +692,14 @@ export class NpcAgent {
       }
       case 'execute': {
         this.wait -= dt
+        // Face the well while drawing water so Interact reads as a drink.
+        if (this.pendingAction?.kind === 'drink' && this.pendingAction.queueId) {
+          const dx = this.landmarks.well.x - this.mesh.position.x
+          const dz = this.landmarks.well.z - this.mesh.position.z
+          if (Math.hypot(dx, dz) > 0.05) {
+            this.mesh.rotation.y = Math.atan2(dx, dz)
+          }
+        }
         if (this.wait <= 0) {
           const action = this.pendingAction
           this.pendingAction = null
@@ -656,6 +710,7 @@ export class NpcAgent {
             this.phase = 'goTo'
           } else {
             completeActionLifecycle(this.actionLifecycle)
+            this.leaveActiveQueue()
             this.phase = 'choose'
           }
         }
@@ -681,20 +736,47 @@ export class NpcAgent {
         const action = this.pendingAction
         if (!action) {
           failActionLifecycle(this.actionLifecycle)
+          this.leaveActiveQueue()
           this.phase = 'choose'
           break
         }
+        if (action.queueId) {
+          const queue = this.queues.get(action.queueId)
+          if (queue?.isMember(this.id)) {
+            action.destination = queue.worldDestination(this.id)
+          }
+        }
         this.tmp.set(action.destination.x, action.destination.y, action.destination.z)
-        if (this.steerTo(this.tmp, dt)) {
+        const steerTarget = this.resolveSteerTarget(this.tmp)
+        if (this.steerTo(steerTarget, dt)) {
+          // Skirt waypoint reached — keep going toward the real destination.
+          if (steerTarget !== this.tmp && this.tmp.distanceTo(steerTarget) > ARRIVE) {
+            break
+          }
+          if (action.queueId) {
+            const queue = this.queues.get(action.queueId)
+            if (queue?.isMember(this.id)) {
+              if (queue.canEnterServing(this.id)) {
+                queue.claimServing(this.id)
+              } else if (!queue.isServing(this.id)) {
+                // Waiting slot reached — hold until promoted to serving.
+                break
+              }
+            }
+          }
           this.phase = 'execute'
           this.wait = action.durationSec
-          // Well draw SFX only when drinking at the village well (not home).
+          // Well draw SFX for queued well drinks (destination is offset from
+          // the mesh center) and for any legacy drink aimed at the well.
           if (
             action.kind === 'drink'
-            && Math.hypot(
-              action.destination.x - this.landmarks.well.x,
-              action.destination.z - this.landmarks.well.z,
-            ) < 0.5
+            && (
+              action.queueId === this.wellQueueId
+              || Math.hypot(
+                action.destination.x - this.landmarks.well.x,
+                action.destination.z - this.landmarks.well.z,
+              ) < 0.5
+            )
           ) {
             playActionWell(this.playAt, this.landmarks.well)
           }
@@ -815,6 +897,7 @@ export class NpcAgent {
 
     const target = finalActivity === 'work' && this.workplace ? this.workplace.position : this.home
     this.mesh.position.set(target.x, this.sampleHeight(target.x, target.z), target.z)
+    this.leaveActiveQueue()
     this.pendingAction = null
     this.wait = 0
     this.pathWaypoints = []
@@ -823,6 +906,7 @@ export class NpcAgent {
   }
 
   dispose(): void {
+    this.leaveActiveQueue()
     this.label.removeFromParent()
     this.labelEl.remove()
     this.mixer.stopAllAction()
@@ -841,10 +925,12 @@ export class NpcAgent {
   }
 
   private syncAnimation(): void {
-    if (this.moving && this.walkAction) {
-      this.crossfade(this.walkAction)
-    } else if (this.isBusyPhase() && this.interactAction) {
+    // Busy actions (drink / eat / talk) must not keep Walk — prioritize
+    // Interact over locomotion even if `moving` somehow stayed true.
+    if (this.isBusyPhase() && this.interactAction) {
       this.crossfade(this.interactAction)
+    } else if (this.moving && this.walkAction) {
+      this.crossfade(this.walkAction)
     } else if (this.idleAction) {
       this.crossfade(this.idleAction)
     }
@@ -863,11 +949,28 @@ export class NpcAgent {
   }
 
   /** Kicks off a `goTo` → `execute` step — the generic replacement for the
-   *  old `this.phase = 'goWell'` etc. one-liners. */
+   *  old `this.phase = 'goWell'` etc. one-liners.
+   *  Caller must `join` a queue (if any) *before* this when `action.queueId`
+   *  is set; we only clear a *different* prior queue here so we do not
+   *  immediately `leave` the membership just established. */
   private startAction(action: NpcPlannedAction): void {
+    if (!action.queueId) {
+      this.leaveActiveQueue()
+    } else if (action.queueId !== this.activeQueueId) {
+      // Drop a different prior queue only — membership for `action.queueId`
+      // was already joined by the caller.
+      if (this.activeQueueId) this.leaveActiveQueue()
+      this.activeQueueId = action.queueId
+    }
     this.pendingAction = action
     replaceActionLifecycle(this.actionLifecycle)
     this.phase = 'goTo'
+  }
+
+  private leaveActiveQueue(): void {
+    if (!this.activeQueueId) return
+    this.queues.get(this.activeQueueId)?.leave(this.id)
+    this.activeQueueId = null
   }
 
   /** Snapshot for the shared decision seam — not a policy framework. */
@@ -894,12 +997,41 @@ export class NpcAgent {
    *  `'idle'` to `beginIdle` instead and already set `this.activeNeed`. */
   private beginNeed(need: NeedId): void {
     if (need === 'water') {
-      const destination = Math.random() < HOME_WATER_CHANCE ? this.home : this.landmarks.well
+      const drinkAtHome = Math.random() < HOME_WATER_CHANCE
+      if (drinkAtHome) {
+        this.startAction({
+          kind: 'drink',
+          destination: copyVec3(this.home),
+          durationSec: 1.2 * this.waitMultiplier,
+          onComplete: () => {
+            this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
+          },
+        })
+        return
+      }
+      const queue = this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
+      if (queue && this.wellQueueId) {
+        // Leave any prior queue before joining so an agent is never in two.
+        this.leaveActiveQueue()
+        queue.join(this.id)
+        this.startAction({
+          kind: 'drink',
+          destination: queue.worldDestination(this.id),
+          durationSec: 1.2 * this.waitMultiplier,
+          queueId: this.wellQueueId,
+          onComplete: () => {
+            this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
+          },
+        })
+        return
+      }
       this.startAction({
         kind: 'drink',
-        destination: copyVec3(destination),
+        destination: copyVec3(this.landmarks.well),
         durationSec: 1.2 * this.waitMultiplier,
-        onComplete: () => { this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT) },
+        onComplete: () => {
+          this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
+        },
       })
       return
     }
@@ -1001,7 +1133,60 @@ export class NpcAgent {
   }
 
   private isWalkable(x: number, z: number): boolean {
-    return this.sampleHeight(x, z) > this.waterLevel + WATER_MARGIN
+    if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
+    const well = this.landmarks.well
+    const distWell = Math.hypot(x - well.x, z - well.z)
+    if (distWell < WELL_COLLISION_RADIUS) {
+      const dest = this.pendingAction?.destination
+      const destNearWell =
+        !!dest
+        && Math.hypot(dest.x - well.x, dest.z - well.z) <= WELL_APPROACH_ALLOW
+      // Final approach to serving / workplace may clip the outer ring; never
+      // the very center (keeps feet out of the water cylinder).
+      if (!destNearWell) return false
+      if (distWell < WELL_COLLISION_RADIUS * 0.55) return false
+    }
+    return true
+  }
+
+  /**
+   * If the straight segment from the NPC to `dest` cuts through the well
+   * collision disk, return a bypass point on the disk rim; otherwise `dest`.
+   * Final approaches to near-well destinations (queued drink / guard work)
+   * are left alone.
+   */
+  private resolveSteerTarget(dest: THREE.Vector3): THREE.Vector3 {
+    const wx = this.landmarks.well.x
+    const wz = this.landmarks.well.z
+    const destDist = Math.hypot(dest.x - wx, dest.z - wz)
+    if (destDist <= WELL_APPROACH_ALLOW) return dest
+
+    const px = this.mesh.position.x
+    const pz = this.mesh.position.z
+    const abx = dest.x - px
+    const abz = dest.z - pz
+    const abLen2 = abx * abx + abz * abz
+    if (abLen2 < 1e-8) return dest
+
+    const apx = wx - px
+    const apz = wz - pz
+    let t = (apx * abx + apz * abz) / abLen2
+    t = Math.max(0, Math.min(1, t))
+    const cx = px + abx * t
+    const cz = pz + abz * t
+    const dx = cx - wx
+    const dz = cz - wz
+    const d = Math.hypot(dx, dz)
+    if (d >= WELL_COLLISION_RADIUS) return dest
+
+    const rim = WELL_COLLISION_RADIUS * 1.2
+    if (d > 1e-4) {
+      this.tmpAvoid.set(wx + (dx / d) * rim, dest.y, wz + (dz / d) * rim)
+    } else {
+      const len = Math.sqrt(abLen2)
+      this.tmpAvoid.set(wx + (-abz / len) * rim, dest.y, wz + (abx / len) * rim)
+    }
+    return this.tmpAvoid
   }
 
   /** 1 above HP_SLOW_THRESHOLD, tapering toward a floor as currentHp drops
