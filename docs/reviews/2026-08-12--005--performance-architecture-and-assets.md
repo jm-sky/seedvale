@@ -477,6 +477,40 @@ Zaimplementowane w jednej sesji, bez osobnego planu. `npx tsc --noEmit`, `npm ru
 poprawności) — pozycje 4 i 5 zmieniają renderowany wygląd (post-processing chain, cienie drobnych
 propsów) i wymagają ręcznej kontroli na żywym dev serverze.
 
+### Implementacja — pozycje 10–13 (2026-08-12, tor 2)
+
+Zaimplementowane w jednej sesji. `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test`
+(322/322) czyste po każdym z dwóch commitów poniżej.
+
+- **10 (A5)** — `buildChunkGeometry.ts` eksportuje `createTerrainMaterial()`; `ChunkManager` buduje
+  materiał raz przy tworzeniu (`flatShading`/`detailNormal` idą przez `onTerrainChange` → pełny
+  rebuild świata, więc materiał nigdy nie musi być podmieniany in-place) i dysponuje go w `dispose()`.
+  Normalne liczone teraz różnicami centralnymi wprost na `tile.heights` (apron istnieje właśnie po to,
+  żeby każdy wierzchołek core miał sąsiada po obu stronach szwu) zamiast przez tymczasową
+  `PlaneGeometry` + `computeVertexNormals()` + `dispose()` na każdy chunk. Równoważność matematyczna
+  zweryfikowana numerycznie (skrypt w `three`, PlaneGeometry realnej wersji z repo) — błąd ~5e-8,
+  zaokrąglenie float32.
+- **11 (A3.2/3.3)** — `pixelRatioCap` w `config.postProcessing` (domyślnie `2`, bez zmiany zachowania),
+  suwak "Render scale cap" w debug GUI (`onFinishChange`, osobny handler od reszty post-fx — nie
+  realokuje render targetów na każdym ticku suwaka bloom/AO). `UnrealBloomPass` renderuje wewnętrzny
+  łańcuch blur na połowie rozdzielczości compositora — `EffectComposer` zawsze wywołuje `setSize`
+  passu z pełną rozdzielczością przy resize, więc połowienie jest zaimplementowane jako owinięcie
+  `bloomPass.setSize`, nie jako argument konstruktora (ten działa tylko do pierwszego resize).
+- **12 (A4b)** — `ChunkManager.recheck()` już nie odpala `ensureLoaded` dla całego brakującego
+  zestawu na raz; wypełnia `loadQueue` (posortowaną, najbliższe pierwsze), a `update()` drenuje z niej
+  do `CHUNKS_STARTED_PER_FRAME = 2` na klatkę, niezależnie od throttle'u `recheck()` (żeby kolejka nie
+  utknęła, gdy gracz stoi w miejscu po dużym skoku pozycji). `waitForChunks(homeChunks())` przy starcie
+  świata woła `ensureLoaded` bezpośrednio, więc start gry i tak czeka tylko na home chunki.
+- **13 (A2, tylko teren)** — `mesh.castShadow = false` w `buildChunkGeometry.ts` dla terenu. Osobny
+  commit (`a1b88b3`) od 10–12 (`ac63ddf`) celowo — to jedyna pozycja z realnym ryzykiem wizualnym
+  (strome zbocza przy niskim słońcu), więc musi dać się cofnąć bez ruszania reszty.
+
+**Nie zweryfikowane wizualnie w przeglądarce** — pozycja 13 zmienia renderowany wygląd (cień terenu na
+stromych zboczach o zachodzie/wschodzie słońca) i wymaga ręcznej kontroli na żywym dev serverze zgodnie
+z CLAUDE.md. Pozycje 10–12 nie zmieniają wyglądu (współdzielony materiał/normalne dają identyczny
+wynik przy tych samych configach; render-scale domyślnie niezmieniony; kolejkowanie chunków zmienia
+tylko kiedy, nie co się ładuje).
+
 ## Co jest zrobione dobrze (żeby nie zepsuć)
 
 - **Poprzednie review zostało realnie wdrożone**, nie odhaczone. Naprawy mają komentarze wyjaśniające
