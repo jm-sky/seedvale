@@ -1,13 +1,13 @@
 /** Inventory pick-up / drop one-shots. Sources/licenses: public/sounds/README.md. */
 
 export const INVENTORY_PICK_UP_SOUND_URLS = [
-  '/sounds/inventory-pick-up-01.wav',
-  '/sounds/inventory-pick-up-02.wav',
-  '/sounds/inventory-pick-up-03.wav',
-  '/sounds/inventory-pick-up-04.wav',
+  '/sounds/inventory-pick-up-01.ogg',
+  '/sounds/inventory-pick-up-02.ogg',
+  '/sounds/inventory-pick-up-03.ogg',
+  '/sounds/inventory-pick-up-04.ogg',
 ] as const
 
-export const INVENTORY_DROP_SOUND_URL = '/sounds/inventory-drop-01.wav'
+export const INVENTORY_DROP_SOUND_URL = '/sounds/inventory-drop-01.ogg'
 
 const INVENTORY_SFX_VOLUME = 0.4
 

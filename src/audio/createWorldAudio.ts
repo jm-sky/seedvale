@@ -1,4 +1,4 @@
-import { Audio, AudioListener, AudioLoader, Vector3, type Camera } from 'three'
+import { Audio, AudioListener, AudioLoader, type Camera, Vector3 } from 'three'
 
 export type AudioLoopHandle = {
   /** Ramps toward this gain (0-1) on each update() call instead of snapping —

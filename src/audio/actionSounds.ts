@@ -3,16 +3,16 @@
 import type { PlayAt, WorldSoundPosition } from './createWorldAudio'
 
 export const ACTION_DIG_SOUND_URLS = [
-  '/sounds/action-dig-01.wav',
-  '/sounds/action-dig-02.wav',
-  '/sounds/action-dig-03.wav',
-  '/sounds/action-dig-04.wav',
+  '/sounds/action-dig-01.ogg',
+  '/sounds/action-dig-02.ogg',
+  '/sounds/action-dig-03.ogg',
+  '/sounds/action-dig-04.ogg',
 ] as const
 
-export const ACTION_CHOP_SOUND_URL = '/sounds/action-wood-chop-01.wav'
-export const ACTION_MELEE_HIT_SOUND_URL = '/sounds/action-melee-hit-01.wav'
-export const ACTION_MELEE_KILL_SOUND_URL = '/sounds/action-melee-kill-01.wav'
-export const ACTION_WELL_SOUND_URL = '/sounds/action-well-01.wav'
+export const ACTION_CHOP_SOUND_URL = '/sounds/action-wood-chop-01.ogg'
+export const ACTION_MELEE_HIT_SOUND_URL = '/sounds/action-melee-hit-01.ogg'
+export const ACTION_MELEE_KILL_SOUND_URL = '/sounds/action-melee-kill-01.ogg'
+export const ACTION_WELL_SOUND_URL = '/sounds/action-well-01.ogg'
 
 const ACTION_DIG_SFX_VOLUME = 0.45
 const ACTION_CHOP_SFX_VOLUME = 0.5

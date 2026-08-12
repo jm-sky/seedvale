@@ -4,9 +4,9 @@ import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { PlayAt, WorldSoundPosition } from './createWorldAudio'
 
 export const ANIMAL_SOUND_URLS: Partial<Record<AnimalKind, string>> = {
-  chicken: '/sounds/animal-chicken-01.wav',
-  cow: '/sounds/animal-cow-01.wav',
-  wolf: '/sounds/animal-wolf-01.wav',
+  chicken: '/sounds/animal-chicken-01.ogg',
+  cow: '/sounds/animal-cow-01.ogg',
+  wolf: '/sounds/animal-wolf-01.ogg',
 }
 
 /** Quiet enough under dialogue/ambient; chicken bed is long so keep it softer. */
