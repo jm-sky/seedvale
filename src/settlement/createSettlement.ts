@@ -46,6 +46,10 @@ import {
 } from './roadNetwork'
 import { cellSeed } from './settlementGenerator'
 import { createVillageFire, type VillageFire } from './VillageFire'
+import {
+  buildWellInteractionQueueConfig,
+  WELL_QUEUE_SERVING_OFFSET_FALLBACK,
+} from './wellInteractionQueue'
 
 export type { SettlementForestHooks }
 
@@ -269,17 +273,29 @@ export async function createSettlement(
   // servingOffset = well base radius (0.85) + 0.3 m clearance so NPCs do not
   // stand inside the stone cylinder (`createWell` in props.ts).
   const wellQid = wellQueueId(def.id)
+  const wellQueueRest = {
+    spacing: 1.2,
+    maxVisibleSlots: 8,
+    servingCapacity: 1,
+  }
   const queues = new Map<string, InteractionQueue>([
     [
       wellQid,
-      createInteractionQueue(wellQid, {
-        anchor: copyVec3(landmarks.well),
-        lineDir: { x: 0, z: 1 },
-        servingOffset: 0.85 + 0.3,
-        spacing: 1.2,
-        maxVisibleSlots: 8,
-        servingCapacity: 1,
-      }),
+      createInteractionQueue(
+        wellQid,
+        landmarks.wellProp
+          ? buildWellInteractionQueueConfig(
+              landmarks.wellProp,
+              copyVec3(landmarks.well),
+              wellQueueRest,
+            )
+          : {
+              anchor: copyVec3(landmarks.well),
+              lineDir: { x: 0, z: 1 },
+              servingOffset: WELL_QUEUE_SERVING_OFFSET_FALLBACK,
+              ...wellQueueRest,
+            },
+      ),
     ],
   ])
 

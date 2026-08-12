@@ -57,6 +57,8 @@ export type SettlementHouseLandmark = {
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
+  /** Procedural well group — anchor resolution for the drink queue (Phase 6). */
+  wellProp?: THREE.Object3D
   stockpile: THREE.Vector3
   garden: THREE.Vector3
   /** All garden pads (plan 077); `garden` mirrors the primary (index 0). */
@@ -1859,6 +1861,7 @@ export async function buildSettlementProps(
   placeOnGround(well, wellX, wellZ, sampleHeight)
   group.add(well)
   landmarks.well.set(wellX, sampleHeight(wellX, wellZ), wellZ)
+  landmarks.wellProp = well
 
   const { x: stockX, z: stockZ } = placeFromLandmark(
     site, landmarkOf(plan, 'stockpile', 0), 4, 1.5, sampleHeight, waterLevel, coreRandom,

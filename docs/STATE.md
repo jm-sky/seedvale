@@ -173,7 +173,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `QuestManager` — quest progress, EXP and relations.
 - `ChunkManager` — terrain sampling, streaming and environment-facing world queries.
 - `Place` / schedule-related NPC work — existing foundation for daily routines.
-- **Asset anchors** — `src/assets/assetAnchors.ts`, `anchorResolve.ts`, `assetAnchorData.ts`; convention in [docs/assets/ANCHORS.md](./assets/ANCHORS.md). Runtime consumers: `findRightHandSocket` (via `findAnchorNode`), `resolveHouseLampMount` anchor-first branch.
+- **Asset anchors** — `src/assets/assetAnchors.ts`, `anchorResolve.ts`, `assetAnchorData.ts`; convention in [docs/assets/ANCHORS.md](./assets/ANCHORS.md). Runtime consumers: `findRightHandSocket` (via `findAnchorNode`), `resolveHouseLampMount` anchor-first branch, `buildWellInteractionQueueConfig` (`settlement:well` interaction anchor → well drink `InteractionQueue`).
 
 Before adding a new abstraction, check whether one of these already owns the responsibility.
 

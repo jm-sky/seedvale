@@ -1,5 +1,6 @@
 import type { AssetAnchorDef } from './assetAnchors'
 import { RIGHT_HAND_BONE_NAMES } from '../items/heldToolVisual'
+import { HOUSE_FLOOR_LAMP_Y } from '../settlement/houseCatalog'
 
 export const CHARACTER_ANCHORS: readonly AssetAnchorDef[] = [
   {
@@ -12,7 +13,25 @@ export const CHARACTER_ANCHORS: readonly AssetAnchorDef[] = [
   },
 ]
 
-/** Ported from `HOUSE_CATALOG.hut_d.lampMount` — anchor-first path in `resolveHouseLampMount`. */
+/** South rim of `createWell()` — queue line runs along anchor +Z (plan 088 Phase 6). */
+const WELL_INTERACTION: AssetAnchorDef = {
+  name: 'interaction',
+  type: 'interaction',
+  space: 'assetLocal',
+  position: [0, 0.72, 0.85],
+}
+
+function floorCenterLampMount(height: number): AssetAnchorDef {
+  return {
+    name: 'lamp_mount',
+    type: 'mount',
+    space: 'assetLocal',
+    position: [0, HOUSE_FLOOR_LAMP_Y, 0],
+    rotation: [0, 0, 0],
+    authoredFor: { mode: 'height', value: height },
+  }
+}
+
 const HUT_D_LAMP_MOUNT: AssetAnchorDef = {
   name: 'lamp_mount',
   type: 'mount',
@@ -32,6 +51,7 @@ export const HELD_TOOL_GRIP_ANCHORS: Partial<Record<string, readonly AssetAnchor
 }
 
 export const ASSET_ANCHORS: Record<string, readonly AssetAnchorDef[]> = {
+  'settlement:well': [WELL_INTERACTION],
   'character:player': CHARACTER_ANCHORS,
   'npc:Farmer': CHARACTER_ANCHORS,
   'npc:Worker': CHARACTER_ANCHORS,
@@ -41,6 +61,9 @@ export const ASSET_ANCHORS: Record<string, readonly AssetAnchorDef[]> = {
   'npc:Female_Casual': CHARACTER_ANCHORS,
   'npc:Female_Medieval': CHARACTER_ANCHORS,
   'npc:Female_Formal': CHARACTER_ANCHORS,
+  'house:hut_a': [floorCenterLampMount(8.5)],
+  'house:hut_b': [floorCenterLampMount(8.0)],
+  'house:hut_c': [floorCenterLampMount(6.5)],
   'house:hut_d': [HUT_D_LAMP_MOUNT],
 }
 

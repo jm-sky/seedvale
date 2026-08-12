@@ -54,7 +54,7 @@ export function resolveInteractionPoint(
   }
 
   resolved.worldMatrix.decompose(_pos, new Quaternion(), new Vector3())
-  _forward.set(0, 0, 1).applyMatrix4(resolved.worldMatrix)
+  _forward.set(0, 0, 1).transformDirection(resolved.worldMatrix)
   _forward.y = 0
   const len = Math.hypot(_forward.x, _forward.z)
   const lineDir = len > 1e-6
