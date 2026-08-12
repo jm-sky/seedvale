@@ -27,6 +27,55 @@ export type ViewportDef = {
 }
 
 const _target = new Vector3()
+const _scratchPos = new Vector3()
+const _defaultTarget = new Vector3(0, 0.8, 0)
+const _upY = new Vector3(0, 1, 0)
+const _upTop = new Vector3(0, 0, -1)
+const _frontPos = new Vector3(0, 2, -5)
+const _sidePos = new Vector3(5, 2, 0)
+const _topPos = new Vector3(0, 5, 0)
+
+function setOrthoViewCamera(
+  camera: OrthographicCamera,
+  position: Vector3,
+  up: Vector3,
+  target = _defaultTarget,
+): void {
+  camera.position.copy(position)
+  camera.up.copy(up)
+  camera.lookAt(target)
+}
+
+function frameOrthoCamera(
+  view: ViewportDef,
+  target: Vector3,
+  dist: number,
+): void {
+  view.controls.target.copy(target)
+  if (view.id === 'front') {
+    setOrthoViewCamera(
+      view.camera as OrthographicCamera,
+      _scratchPos.set(target.x, target.y, target.z - dist),
+      _upY,
+      target,
+    )
+  } else if (view.id === 'side') {
+    setOrthoViewCamera(
+      view.camera as OrthographicCamera,
+      _scratchPos.set(target.x + dist, target.y, target.z),
+      _upY,
+      target,
+    )
+  } else if (view.id === 'top') {
+    setOrthoViewCamera(
+      view.camera as OrthographicCamera,
+      _scratchPos.set(target.x, target.y + dist, target.z),
+      _upTop,
+      target,
+    )
+  }
+  view.controls.update()
+}
 
 export function createMultiView(
   container: HTMLElement,
@@ -39,9 +88,9 @@ export function createMultiView(
   dispose: () => void
 } {
   const views: ViewportDef[] = [
-    makeOrthoView('front', 'Front', container, 0, 0, 0, -1),
-    makeOrthoView('side', 'Side', container, 1, 0, 0, 0),
-    makeOrthoView('top', 'Top', container, 0, 1, 0, 0),
+    makeOrthoView('front', 'Front', container, _frontPos, _upY),
+    makeOrthoView('side', 'Side', container, _sidePos, _upY),
+    makeOrthoView('top', 'Top', container, _topPos, _upTop),
     makePerspectiveView('perspective', 'Perspective', container, aspect),
   ]
 
@@ -88,13 +137,18 @@ export function createMultiView(
     _target.copy(bounds.center)
     const dist = Math.max(bounds.radius * 2.5, 1.5)
     for (const view of views) {
-      view.controls.target.copy(_target)
-      if (view.id === 'front') view.camera.position.set(_target.x, _target.y, _target.z + dist)
-      else if (view.id === 'side') view.camera.position.set(_target.x + dist, _target.y, _target.z)
-      else if (view.id === 'top') view.camera.position.set(_target.x, _target.y + dist, _target.z)
-      else view.camera.position.set(_target.x + dist * 0.7, _target.y + dist * 0.5, _target.z + dist * 0.7)
-      view.camera.lookAt(_target)
-      view.controls.update()
+      if (view.id === 'perspective') {
+        view.controls.target.copy(_target)
+        view.camera.position.set(
+          _target.x + dist * 0.7,
+          _target.y + dist * 0.5,
+          _target.z + dist * 0.7,
+        )
+        view.camera.lookAt(_target)
+        view.controls.update()
+      } else {
+        frameOrthoCamera(view, _target, dist)
+      }
     }
   }
 
@@ -125,17 +179,14 @@ function makeOrthoView(
   id: ViewId,
   label: string,
   container: HTMLElement,
-  dirX: number,
-  dirY: number,
-  dirZ: number,
-  upY: number,
+  position: Vector3,
+  up: Vector3,
 ): ViewportDef {
   const camera = new OrthographicCamera(-2, 2, 2, -2, 0.1, 200)
-  camera.position.set(dirX * 5, dirY * 5 + (upY ? 0 : 2), dirZ * 5)
-  camera.up.set(0, upY || 1, 0)
-  camera.lookAt(0, 0.8, 0)
+  setOrthoViewCamera(camera, position, up)
   const overlay = makeOverlay(container, label)
   const controls = new OrbitControls(camera, overlay)
+  controls.target.copy(_defaultTarget)
   controls.enableDamping = true
   return { id, label, camera, controls, overlay, x: 0, y: 0, w: 1, h: 1 }
 }

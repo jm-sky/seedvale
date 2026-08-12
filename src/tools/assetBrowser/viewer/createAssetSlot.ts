@@ -16,7 +16,7 @@ import {
   disposeObject3D,
   invalidateGltf,
   loadGltf,
-  loadGltfAsset,
+  loadGltfAnimated,
   prepareProp,
   preparePropFitMax,
 } from '../../../assets/loadGltf'
@@ -131,10 +131,10 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
 
       const fetchUrl = reloadCounter > 0 ? `${url}?r=${reloadCounter}` : url
       const loaded = nextEntry.skinned
-        ? await loadGltfAsset(fetchUrl)
-        : { root: await loadGltf(fetchUrl), animations: [] as import('three').AnimationClip[] }
+        ? await loadGltfAnimated(fetchUrl)
+        : { scene: await loadGltf(fetchUrl), animations: [] as import('three').AnimationClip[] }
 
-      model = loaded.root
+      model = loaded.scene
       clips = loaded.animations
       applyPrepare(model, nextEntry.prepare)
       if (nextEntry.id === 'held:wooden_torch') model.rotation.x = Math.PI / 2
