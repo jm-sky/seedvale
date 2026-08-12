@@ -1,11 +1,13 @@
 /**
- * Per-model house catalog — Quaternius Fantasy RTS meshes differ a lot
- * (roof-heavy cottages vs tower-with-flags). One shared height broke doors
- * and lamps; tune each entry instead of global hacks (issue 018 / plan 074).
+ * Per-model house catalog — Quaternius Fantasy RTS meshes differ a lot.
+ * Tune each entry (issue 018 / plan 074). Prefer `doorHeightFraction` +
+ * `targetDoorHeight` when the mesh has a measurable door; otherwise `height`.
  *
- * Prefer `doorHeightFraction` (lintel as fraction of bbox height, measured by
- * raycast) + `targetDoorHeight` so `resolveHouseHeight` stays systematic.
- * Use explicit `height` only when the mesh has no geometric door opening.
+ * Field notes (2026-08-12 playtest):
+ * - hut_a / hut_b / hut_c: First Age shells — no real walls (holes / plank roof).
+ *   Still in home rotation; lamps skipped (`hasWalls: false`).
+ * - hut_d: Second Age — real walls; lamps allowed.
+ * - towerhouse: tower + flags — not a cottage (`useAsHome: false` until landmark use).
  */
 
 export type HouseRole = 'cottage' | 'tower'
@@ -22,9 +24,15 @@ export type HouseCatalogEntry = {
   /** Include in family-home rotation (`buildSettlementProps`). */
   useAsHome: boolean
   /**
-   * Door lintel as a fraction of fitted bbox height (0–1), from raycast
-   * probes. When set, world height = targetDoorHeight / doorHeightFraction
-   * (capped). When null, `height` is used as-is.
+   * False for First Age “roof shells” — skip wall lamps (raycasts hit the
+   * roof and float in mid-air).
+   */
+  hasWalls: boolean
+  /** Extra world Y after `placeOnGround` (e.g. sink gray foundation). */
+  groundYOffset: number
+  /**
+   * Door lintel as a fraction of fitted bbox height (0–1). When set,
+   * world height = targetDoorHeight / doorHeightFraction (capped).
    */
   doorHeightFraction: number | null
   /** Desired door opening in world meters (~NPC 1.75 + clearance). */
@@ -42,10 +50,9 @@ export type HouseCatalogEntry = {
 /** Default door clearance target (world meters). */
 export const DEFAULT_TARGET_DOOR_HEIGHT = 2.05
 
-/**
- * Tunable table. `doorHeightFraction` from local raycast probes (2026-08-12).
- * `towerhouse` stays out of home rotation (flags / tower silhouette).
- */
+/** Hard cap for wall-lamp local Y (meters above hut foot) — NPC-door band. */
+export const HOUSE_LAMP_MAX_LOCAL_Y = 2.35
+
 export const HOUSE_CATALOG: readonly HouseCatalogEntry[] = [
   {
     id: 'hut_d',
@@ -54,69 +61,83 @@ export const HOUSE_CATALOG: readonly HouseCatalogEntry[] = [
     label: 'Chata',
     examine: 'Drewniana chata z wyraźnymi ścianami — wygląda na solidny dach nad głową.',
     useAsHome: true,
-    // No clear geometric door hole in mesh — textured opening; fixed height.
+    hasWalls: true,
+    groundYOffset: 0,
+    // Textured door. Playtest: doors ~20cm too tall at 9.0 → 8.2.
     doorHeightFraction: null,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
-    height: 9.0,
-    maxHeight: 11,
-    lightHeightFractions: [0.2, 0.26, 0.32, 0.38],
-    lightMaxHeightFraction: 0.42,
+    height: 8.2,
+    maxHeight: 9.5,
+    lightHeightFractions: [0.14, 0.18, 0.22, 0.26],
+    lightMaxHeightFraction: 0.3,
   },
   {
     id: 'hut_a',
     url: '/models/settlement/hut_a.glb',
     role: 'cottage',
     label: 'Chałupa',
-    examine: 'Niska chałupa z wysokim dachem. Drzwi są wąskie, ale da się wejść wyprostowanym.',
+    examine:
+      'Pierwszy Wiek Quaternius: praktycznie sam dach na szarym fundamencie — brak ścian, same otwory.',
     useAsHome: true,
-    doorHeightFraction: 0.2,
+    hasWalls: false,
+    groundYOffset: -0.2,
+    doorHeightFraction: 0.22,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
-    height: 9.5,
-    maxHeight: 11,
-    lightHeightFractions: [0.18, 0.24, 0.3, 0.36],
-    lightMaxHeightFraction: 0.38,
+    height: 8.5,
+    maxHeight: 9.5,
+    lightHeightFractions: [0.18, 0.24],
+    lightMaxHeightFraction: 0.28,
   },
   {
     id: 'hut_b',
     url: '/models/settlement/hut_b.glb',
     role: 'cottage',
     label: 'Chałupa',
-    examine: 'Podobna chałupa co sąsiednie — ten sam styl, inny układ belek.',
+    examine:
+      'Pierwszy Wiek Quaternius: dach bez ścian (ażurowe otwory). Trochę za duży w skali chaty.',
     useAsHome: true,
-    doorHeightFraction: 0.2,
+    hasWalls: false,
+    groundYOffset: 0,
+    doorHeightFraction: 0.24,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
-    height: 9.5,
-    maxHeight: 11,
-    lightHeightFractions: [0.18, 0.24, 0.3, 0.36],
-    lightMaxHeightFraction: 0.38,
+    height: 8.0,
+    maxHeight: 9,
+    lightHeightFractions: [0.18, 0.24],
+    lightMaxHeightFraction: 0.28,
   },
   {
     id: 'hut_c',
     url: '/models/settlement/hut_c.glb',
     role: 'cottage',
     label: 'Szałas',
-    examine: 'Niższy, bardziej zbity budynek. Dach schodzi prawie do okapu.',
+    examine:
+      'Pierwszy Wiek Quaternius: brak ścian, dach to kilka desek.',
     useAsHome: true,
+    hasWalls: false,
+    groundYOffset: 0,
     doorHeightFraction: 0.28,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
-    height: 7.5,
-    maxHeight: 10,
-    lightHeightFractions: [0.22, 0.28, 0.34],
-    lightMaxHeightFraction: 0.4,
+    height: 6.5,
+    maxHeight: 8,
+    lightHeightFractions: [0.2, 0.26],
+    lightMaxHeightFraction: 0.3,
   },
   {
     id: 'towerhouse',
     url: '/models/settlement/towerhouse.glb',
     role: 'tower',
     label: 'Wieża mieszkalna',
-    examine: 'Wysoka budowla z blankami i flagami — raczej strażnica niż zwykły dom.',
+    examine:
+      'Wieża z blankami i flagami — strażnica / landmark, nie zwykły dom rodzinny.',
     useAsHome: false,
+    hasWalls: true,
+    groundYOffset: 0,
     doorHeightFraction: null,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
     height: 10,
     maxHeight: 12,
-    lightHeightFractions: [0.15, 0.2, 0.25, 0.3],
-    lightMaxHeightFraction: 0.35,
+    lightHeightFractions: [0.12, 0.16, 0.2, 0.24],
+    lightMaxHeightFraction: 0.28,
   },
   {
     id: 'fallback',
@@ -125,6 +146,8 @@ export const HOUSE_CATALOG: readonly HouseCatalogEntry[] = [
     label: 'Chata',
     examine: 'Prosta chatka z bali — tymczasowa budowla, zanim postawią coś trwalszego.',
     useAsHome: false,
+    hasWalls: true,
+    groundYOffset: 0,
     doorHeightFraction: 0.55,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
     height: 5.5,

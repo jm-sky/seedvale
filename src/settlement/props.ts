@@ -12,7 +12,7 @@ import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { type VillageSize, villageSizeConfig } from './families'
-import { homeHouseEntryAt, resolveHouseHeight } from './houseCatalog'
+import { homeHouseEntryAt, HOUSE_LAMP_MAX_LOCAL_Y, resolveHouseHeight } from './houseCatalog'
 import { yawToward } from './roadNetwork'
 
 export type SettlementHouseLandmark = {
@@ -386,28 +386,48 @@ const WALL_MOUNT_ANGLE_STEPS = 16
  *  returns the first real surface hit. `hut` must still be in its
  *  own post-`prepareProp` local frame (before `placeOnGround` moves it into
  *  world space). Returns `null` if no surface is found. */
+/** Finds a wall-lamp mount in the hut's **local** frame (child of `hut`).
+ *  Rays are cast in world space via `hut.matrixWorld`, then hits are converted
+ *  with `worldToLocal` — required after `prepareProp` offsets the root.
+ *  Rejects roof/underside normals and anything above the door-band cap. */
 function findWallMount(
   hut: THREE.Object3D,
   hutHeight: number,
   heightFractions: readonly number[] = DEFAULT_LIGHT_HEIGHT_FRACTIONS,
   maxHeightFraction = 0.45,
 ): { height: number, x: number, z: number } | null {
+  hut.updateMatrixWorld(true)
   const raycaster = new THREE.Raycaster()
   raycaster.far = WALL_MOUNT_SEARCH_RADIUS * 2
+  const originLocal = new THREE.Vector3()
   const origin = new THREE.Vector3()
+  const dirLocal = new THREE.Vector3()
   const dir = new THREE.Vector3()
+  const worldNormal = new THREE.Vector3()
+  const localHit = new THREE.Vector3()
+  const maxY = Math.min(hutHeight * maxHeightFraction, HOUSE_LAMP_MAX_LOCAL_Y)
+
   for (const heightFraction of heightFractions) {
-    if (heightFraction > maxHeightFraction) continue
     const y = hutHeight * heightFraction
+    if (y > maxY) continue
     for (let i = 0; i < WALL_MOUNT_ANGLE_STEPS; i++) {
       const angle = (i / WALL_MOUNT_ANGLE_STEPS) * Math.PI * 2
       const dx = Math.sin(angle)
       const dz = Math.cos(angle)
-      origin.set(dx * WALL_MOUNT_SEARCH_RADIUS, y, dz * WALL_MOUNT_SEARCH_RADIUS)
-      dir.set(-dx, 0, -dz)
+      originLocal.set(dx * WALL_MOUNT_SEARCH_RADIUS, y, dz * WALL_MOUNT_SEARCH_RADIUS)
+      dirLocal.set(-dx, 0, -dz)
+      origin.copy(originLocal).applyMatrix4(hut.matrixWorld)
+      dir.copy(dirLocal).transformDirection(hut.matrixWorld).normalize()
       raycaster.set(origin, dir)
       const hit = raycaster.intersectObject(hut, true)[0]
-      if (hit) return { height: y, x: hit.point.x, z: hit.point.z }
+      if (!hit?.face) continue
+      worldNormal.copy(hit.face.normal).transformDirection(hit.object.matrixWorld).normalize()
+      if (Math.abs(worldNormal.y) > 0.45) continue
+      if (worldNormal.dot(dir) > -0.15) continue
+      localHit.copy(hit.point)
+      hut.worldToLocal(localHit)
+      if (localHit.y < 0.45 || localHit.y > maxY) continue
+      return { height: localHit.y, x: localHit.x, z: localHit.z }
     }
   }
   return null
@@ -1522,19 +1542,26 @@ export async function buildSettlementProps(
     // child (`houseLight.object`) needs to be positioned relative to.
     const hutBounds = new THREE.Box3().setFromObject(hut)
     const hutHeight = hutBounds.max.y - hutBounds.min.y
-    const wallMount = findWallMount(
-      hut,
-      hutHeight,
-      entry.lightHeightFractions,
-      entry.lightMaxHeightFraction,
-    )
-    placeOnGround(hut, area.x, area.z, sampleHeight)
+    const wallMount = entry.hasWalls
+      ? findWallMount(
+          hut,
+          hutHeight,
+          entry.lightHeightFractions,
+          entry.lightMaxHeightFraction,
+        )
+      : null
+    placeOnGround(hut, area.x, area.z, sampleHeight, entry.groundYOffset)
     hut.name = `house:${entry.id}`
     hut.userData.houseId = entry.id
     hut.userData.houseModelUrl = entry.url
+    hut.userData.hasWalls = entry.hasWalls
     group.add(hut)
 
-    const foot = new THREE.Vector3(area.x, sampleHeight(area.x, area.z), area.z)
+    const foot = new THREE.Vector3(
+      area.x,
+      sampleHeight(area.x, area.z) + entry.groundYOffset,
+      area.z,
+    )
     landmarks.homes.push(foot)
     landmarks.houses.push({
       position: foot.clone(),
@@ -1544,17 +1571,12 @@ export async function buildSettlementProps(
       examine: entry.examine,
     })
 
-    // Mount on the raycast hit — do not zero XZ (that put lamps in mid-air
-    // after cottage scale-up; see issue 018 / plan 044 lamp notes).
-    const houseLight = wallMount
-      ? createHouseLight(wallMount.height, wallMount.x, wallMount.z)
-      : createHouseLight(
-          hutHeight * Math.min(0.35, entry.lightMaxHeightFraction),
-          0,
-          hutBounds.max.z * 0.85,
-        )
-    hut.add(houseLight.object)
-    houseLights.push(houseLight)
+    // Shell roofs (no walls) skip lamps — raycasts hit the roof and float.
+    if (entry.hasWalls && wallMount) {
+      const houseLight = createHouseLight(wallMount.height, wallMount.x, wallMount.z)
+      hut.add(houseLight.object)
+      houseLights.push(houseLight)
+    }
   }
 
   // A couple of barrels by the stockpile — everyday clutter, purely

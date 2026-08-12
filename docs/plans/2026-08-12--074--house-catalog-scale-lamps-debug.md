@@ -30,9 +30,10 @@ http://localhost:5577/?debug=1
 
 **Nie ruszać** `worldConfig` / localStorage przy tej kalibracji — wysokości są w katalogu.
 
-## Done when
+## Update (2026-08-12 playtest)
 
-- [x] Katalog per model
-- [x] Lampy na ścianie, nie w powietrzu
-- [x] Identyfikacja modelu w debug
-- [ ] Ręczna kalibracja wysokości po `?debug=1` (user)
+- `hut_d` height 9.0 → **8.2** (drzwi ~20 cm za wysokie).
+- `hut_a/b/c` First Age: **brak ścian** — wyłączone z rotacji domów; notatki w `examine`.
+- `hut_a` `groundYOffset: -0.2` (szary fundament).
+- Lampy: tylko `hasWalls`; `findWallMount` odrzuca trafienia w dach (normal.y).
+- `towerhouse` nadal poza rotacją (wieża/flagi) — dlatego nie pojawiał się w wiosce.

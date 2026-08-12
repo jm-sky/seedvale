@@ -51,6 +51,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
+| [2026-08-12--075--time-skip-npc-catchup.md](./2026-08-12--075--time-skip-npc-catchup.md) | Odpoczynek przyspiesza zegar, ale NPC nie nadążają (nadal chodzą w realnym tempie) | 0% | 🟡 medium | M | — |
 | [2026-08-08--037--npc-genealogy-lineages.md](./2026-08-08--037--npc-genealogy-lineages.md) | Rody NPC + przypisanie wg kierunku osady (kompas N → ~~067~~) | 0% | ⚪ low | L | ~~022~~, ~~031~~ |
 | [2026-08-11--069--npc-household-resources.md](./2026-08-11--069--npc-household-resources.md) | Gospodarstwa NPC + przepływ zasobów (etap 1 ekonomii) | 0% | 🟡 medium | L | ~~060~~, ~~071~~ |
 | [2026-08-11--070--world-observatory.md](./2026-08-11--070--world-observatory.md) | World Observatory — panel obserwacji życia świata | 0% | ⚪ low | XL | ~~071~~, ~~069~~ |
