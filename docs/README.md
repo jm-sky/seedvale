@@ -10,7 +10,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 - **[features/](./features/)** — FEATURE-y (jeszcze puste)  
 - **[reviews/](./reviews/README.md)** — kolejka `to-do--*` (woda)  
 
-## Workflow (issues, reviews, research, plans)
+## Workflow (issues, reviews, research, plans, assets)
 
 | Katalog | Przeznaczenie |
 |---------|---------------|
@@ -18,6 +18,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 | [reviews/](./reviews/README.md) | Sesje przeglądu (security, code quality, UX, performance) |
 | [research/](./research/README.md) | Analizy, spike'i, porównania przed decyzją |
 | [plans/](./plans/README.md) | Plany implementacji większych zmian |
+| [assets/](./assets/README.md) | Żywe listy wymaganych modeli/dźwięków + CREDITS |
 
 Statusy: `todo` · `planned` · `in progress` · `done` · `verification needed`
 

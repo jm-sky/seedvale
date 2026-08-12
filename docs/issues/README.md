@@ -33,10 +33,10 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 015 | [2026-08-11--015--fauna-food-water-for-satiety-hydration.md](./2026-08-11--015--fauna-food-water-for-satiety-hydration.md) | Zwierzęta potrzebują źródeł jedzenia/wody, żeby paski sytości i nawodnienia mogły rosnąć | `todo` |
 | 016 | [2026-08-11--016--god-rays-mountain-whiteout.md](./2026-08-11--016--god-rays-mountain-whiteout.md) | God rays: biały whiteout na wyżynach / przy kamerze zza postaci (clamp 0.8 niewystarczający) | `done` |
 | 017 | [2026-08-12--017--nearby-status-bars.md](./2026-08-12--017--nearby-status-bars.md) | Paski HP/stamina NPC i mobów widoczne tylko w pobliżu gracza, aby ograniczyć clutter | `todo` |
-| 018 | [2026-08-12--018--house-scale-vs-npc.md](./2026-08-12--018--house-scale-vs-npc.md) | Domki są zazwyczaj zbyt małe względem rozmiaru NPC | `todo` |
+| 018 | [2026-08-12--018--house-scale-vs-npc.md](./2026-08-12--018--house-scale-vs-npc.md) | Domki są zazwyczaj zbyt małe względem rozmiaru NPC | `verification needed` |
 | 019 | [2026-08-12--019--configuration-localstorage-domains.md](./2026-08-12--019--configuration-localstorage-domains.md) | Rozdzielenie localStorage na niezależne domeny konfiguracji | `todo` |
 | 020 | [2026-08-12--020--world-configuration-options.md](./2026-08-12--020--world-configuration-options.md) | Dodatkowe opcje świata, m.in. wielkość osady startowej/domowej | `todo` |
-| 021 | [2026-08-12--021--development-asset-lists.md](./2026-08-12--021--development-asset-lists.md) | Lista modeli i dźwięków jako stały element development flow | `todo` |
+| 021 | [2026-08-12--021--development-asset-lists.md](./2026-08-12--021--development-asset-lists.md) | Lista modeli i dźwięków jako stały element development flow | `done` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 

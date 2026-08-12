@@ -32,6 +32,15 @@ npm run dev
 
 The Vite dev server uses port `5577` with `strictPort` (`vite.config.ts`).
 
+### Asset lists (models & sounds)
+
+When planning or implementing a feature, review and update the living asset backlogs if the work needs new media:
+
+- [docs/assets/MODELS.md](docs/assets/MODELS.md) — required / not-yet-wired models
+- [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) — required / not-yet-wired sounds
+
+If the feature needs a new model or sound, add (or update) a row during planning/implementation. If nothing new is needed, leave the lists unchanged. Credits for models already in the repo live in [docs/assets/CREDITS.md](docs/assets/CREDITS.md); sound file sources in [`public/sounds/README.md`](public/sounds/README.md). Folder index: [docs/assets/README.md](docs/assets/README.md).
+
 Technical verification normally includes:
 
 ```text
@@ -60,6 +69,7 @@ Do **not** launch headless Chrome/Playwright yourself as the default way to test
 | Issues | [docs/issues/README.md](docs/issues/README.md) |
 | Reviews | [docs/reviews/README.md](docs/reviews/README.md) |
 | Research | [docs/research/README.md](docs/research/README.md) |
+| Required models / sounds | [docs/assets/MODELS.md](docs/assets/MODELS.md), [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) |
 
 Statuses are: `todo` · `planned` · `in progress` · `done` · `verification needed`.
 
@@ -73,8 +83,9 @@ New issue/plan/review/research files use `YYYY-MM-DD--NNN--slug.md` with an inde
 4. Read linked review material before implementation; review findings are actionable constraints, not background commentary.
 5. Inspect the actual code paths named by the plan. If the repository differs from the plan, trust the code and update the plan/notes as appropriate.
 6. Keep the change scoped to the plan. Do not opportunistically redesign unrelated systems.
-7. Run the relevant technical checks.
-8. Clearly separate **implemented**, **technically verified**, and **browser/manual verified**.
+7. If the plan needs new models or sounds, update [docs/assets/MODELS.md](docs/assets/MODELS.md) / [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) as part of the work (skip when no new assets are required).
+8. Run the relevant technical checks.
+9. Clearly separate **implemented**, **technically verified**, and **browser/manual verified**.
 
 ## Important architecture
 
