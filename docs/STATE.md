@@ -173,8 +173,13 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `QuestManager` — quest progress, EXP and relations.
 - `ChunkManager` — terrain sampling, streaming and environment-facing world queries.
 - `Place` / schedule-related NPC work — existing foundation for daily routines.
+- **Asset anchors** — `src/assets/assetAnchors.ts`, `anchorResolve.ts`, `assetAnchorData.ts`; convention in [docs/assets/ANCHORS.md](./assets/ANCHORS.md). Runtime consumers: `findRightHandSocket` (via `findAnchorNode`), `resolveHouseLampMount` anchor-first branch.
 
 Before adding a new abstraction, check whether one of these already owns the responsibility.
+
+## Developer tooling
+
+- **Asset alignment browser** — dev-only page at `/asset-browser.html` (`src/tools/assetBrowser/`). Aggregates existing asset registries via `src/assets/assetIndex.ts`; not included in production `vite build` input. Dev server lists `public/models/**/*.glb` at `/__asset-browser/models` and auto-reloads slots when a model file changes (HMR). Shared anchor modules are importable by game code. Browser verification: plan 088 §10 (not marked verified on technical checks alone).
 
 ## Important code entry points
 

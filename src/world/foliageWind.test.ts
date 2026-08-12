@@ -19,6 +19,7 @@ describe('hardenFoliageAlpha', () => {
     expect(mat.transparent).toBe(false)
     expect(mat.depthWrite).toBe(true)
     expect(mat.alphaTest).toBe(FOLIAGE_ALPHA_CUTOFF)
+    expect(mat.userData.foliageHardened).toBe(true)
   })
 
   it('leaves solid opaque crowns alone', () => {

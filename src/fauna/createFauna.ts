@@ -170,7 +170,7 @@ export const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
 /** Only wolf/fox/deer/stag have a GLB (Quaternius pack); the rest (plan 044)
  *  always use the procedural builders below — `Partial` since not every
  *  `AnimalKind` has an entry. */
-const FAUNA_URLS: Partial<Record<AnimalKind, string>> = {
+export const FAUNA_URLS: Partial<Record<AnimalKind, string>> = {
   wolf: '/models/fauna/wolf.glb',
   fox: '/models/fauna/fox.glb',
   deer: '/models/fauna/deer.glb',

@@ -154,6 +154,24 @@ export function preparePropFitMax(
   return object
 }
 
+/** Dev-tool only: drop a cached URL and free its GPU resources. Game code never
+ *  calls this — shared cache roots stay alive for the app lifetime. */
+export function invalidateGltf(url: string): void {
+  const pending = cache.get(url)
+  cache.delete(url)
+  if (!pending) return
+  void pending.then((asset) => {
+    asset.root.traverse((obj) => {
+      const mesh = obj as Mesh
+      if (!mesh.isMesh) return
+      mesh.geometry.dispose()
+      const mat = mesh.material
+      if (Array.isArray(mat)) mat.forEach((m: Material) => m.dispose())
+      else (mat as Material).dispose()
+    })
+  }).catch(() => { /* load may have failed */ })
+}
+
 /** Frees geometry/material GPU resources for everything under `object` — but
  *  never for resources shared with the GLTF loader cache (see `loadCached`'s
  *  `sharedGpu` flag): those live for the app's lifetime, and freeing them here

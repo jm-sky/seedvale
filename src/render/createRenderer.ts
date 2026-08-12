@@ -6,6 +6,7 @@ import * as THREE from 'three'
 export function createRenderer(
   container: HTMLElement,
   pixelRatioCap = 2,
+  options: { preserveDrawingBuffer?: boolean } = {},
 ): THREE.WebGLRenderer {
   const renderer = new THREE.WebGLRenderer({
     // Everything renders through EffectComposer into offscreen targets, where
@@ -14,6 +15,7 @@ export function createRenderer(
     // wasted allocation.
     antialias: false,
     powerPreference: 'high-performance',
+    preserveDrawingBuffer: options.preserveDrawingBuffer ?? false,
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioCap))
   renderer.setSize(container.clientWidth, container.clientHeight)

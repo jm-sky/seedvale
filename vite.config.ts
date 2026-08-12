@@ -4,6 +4,7 @@ import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
+import { assetBrowserDevPlugin } from './vite-plugin-asset-browser-dev'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }
 
@@ -25,7 +26,7 @@ function gitCommitHash(): string {
 }
 
 export default defineConfig({
-  plugins: [vue(), tailwindcss()],
+  plugins: [vue(), tailwindcss(), assetBrowserDevPlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __BUILD_DATE__: JSON.stringify(formatBuildDate(new Date())),

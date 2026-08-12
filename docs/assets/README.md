@@ -7,6 +7,7 @@ Living project asset lists and credits for Seedvale.
 | [MODELS.md](./MODELS.md) | **Required models** — backlog of models still needed or not yet wired |
 | [SOUNDS.md](./SOUNDS.md) | **Required sounds** — backlog of SFX still needed or not yet wired |
 | [CREDITS.md](./CREDITS.md) | Attribution for models already in the repo |
+| [ANCHORS.md](./ANCHORS.md) | Anchor naming, spaces, axis convention, per-asset status |
 | `quaternius-*-license.txt` | Pack license copies |
 
 Runtime files and per-file source notes:
