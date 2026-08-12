@@ -4,7 +4,7 @@
 
 ## Problem
 
-Generated houses are often too small relative to the NPCs living in the settlement. Doors, walls and the overall building footprint do not consistently feel proportionate to the character scale.
+Generated houses are often too small relative to the NPCs living in the settlement. Doors, walls and the overall building footprint do not consistently feel proportionate to the character scale. Global height bumps helped some variants and broke others (lamps in mid-air; towerhouse used as a cottage).
 
 ## Expected behaviour
 
@@ -17,12 +17,13 @@ Generated houses are often too small relative to the NPCs living in the settleme
 
 Make settlement buildings feel physically believable relative to the inhabitants.
 
-## Fix (2026-08-12)
+## Fix (2026-08-12) — systematic
 
-Quaternius Fantasy RTS cottages are roof-heavy; previous target heights (~2.8–3.6 m) left door bands ≈1 m vs NPC ≈1.75 m.
+See plan [074](../plans/2026-08-12--074--house-catalog-scale-lamps-debug.md).
 
-- Shared cottage height `HOUSE_COTTAGE_HEIGHT = 5.0`, tower `HOUSE_TOWER_HEIGHT = 6.4` in `src/settlement/props.ts` (`HUT_URLS`).
-- Procedural `createHut()` wall band raised (~2 m before scale) so fallback matches.
-- Default clearing `houseRadius` 4.5 → 5.5 in `worldConfig.ts` for larger footprints.
+- Per-model `HOUSE_CATALOG` (`src/settlement/houseCatalog.ts`) with individual `height` / lamp fractions.
+- `towerhouse` removed from family-home rotation.
+- Wall lamps use real `findWallMount` again (no centered `displacementFactor = 0`).
+- Identify models in-game: `?debug=1` + `[E] Obejrzyj` → id/URL in dialog + console.
 
-**Manual check:** walk a few settlements; doors/walls should feel NPC-scale across `hut_d` / `towerhouse` / `hut_a–c`.
+**Manual:** open with `?debug=1`, examine each house, tune that row in the catalog if doors still look wrong.

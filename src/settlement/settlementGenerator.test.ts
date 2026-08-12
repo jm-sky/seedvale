@@ -125,4 +125,23 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
     expect(a.entrances.length).toBeGreaterThanOrEqual(1)
     expect(a.paths.some((p) => p.id.startsWith('path-entrance-'))).toBe(true)
   })
+
+  it('homeSize override locks home size without changing non-home rolls (issue 020)', () => {
+    const homeSm = generateSettlementDef(
+      { gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region, 'SM',
+    )
+    const homeXl = generateSettlementDef(
+      { gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region, 'XL',
+    )
+    expect(homeSm.size).toBe('SM')
+    expect(homeXl.size).toBe('XL')
+    expect(homeSm.families.length).toBeGreaterThanOrEqual(2)
+    const names = homeSm.families.flatMap((f) => f.members.map((m) => m.name))
+    expect(names).toContain('Anna')
+    expect(names).toContain('Piotr')
+
+    const cell = { gx: 1, gz: 1 }
+    const other = generateVillagePlan(cell, 88, flatHeight, 0, 56, samplers, 1, region, 'XL')
+    expect(other.identity.size).toBe(rollVillageSize('forest', cellSeed(88, cell)))
+  })
 })

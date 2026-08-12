@@ -1,5 +1,6 @@
 import type { QuestDialogOverride, QuestManager } from '../quests/QuestManager'
 import type { Interactable } from './Interactable'
+import { isDebugMode } from '../debug/debugMode'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { pickAnimalFlavorLine } from '../fauna/animalDialogue'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
@@ -49,6 +50,16 @@ export function resolveInteraction(
         speakerName: capitalize(ANIMAL_LABELS[kind]),
         line: override?.line ?? pickAnimalFlavorLine(kind),
       }
+    }
+    case 'house': {
+      let line = target.examine
+      if (isDebugMode()) {
+        const model = target.modelUrl ?? '(procedural fallback)'
+        const entry = { id: target.houseId, model, label: target.label }
+        console.info('[house]', entry)
+        line = `${line}\n\n[debug] ${target.houseId} · ${model}`
+      }
+      return { speakerName: target.label, line }
     }
     case 'spawner': {
       const override = questManager.onInteractObjective({

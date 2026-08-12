@@ -22,6 +22,19 @@ function applySeed(): void {
   if (!window.confirm('Odtworzyć teren od nowa z tym seedem? Pozycja i ekwipunek zostaną zachowane.')) return
   state.onTerrainChange?.()
 }
+
+function onHomeSizeSelect(event: Event): void {
+  const select = event.target as HTMLSelectElement
+  const previous = state.config!.settlements.homeSize
+  const next = select.value as typeof previous
+  if (next === previous) return
+  if (!window.confirm('Odtworzyć świat z nową wielkością osady domowej? Pozycja i ekwipunek zostaną zachowane.')) {
+    select.value = previous
+    return
+  }
+  state.config!.settlements.homeSize = next
+  state.onTerrainChange?.()
+}
 </script>
 
 <template>
@@ -73,6 +86,47 @@ function applySeed(): void {
           >
           Low-poly (flat shading)
         </label>
+        <label
+          class="mt-3 mb-1 block text-xs opacity-75"
+          for="seedvale-home-size"
+        >Wielkość osady domowej</label>
+        <select
+          id="seedvale-home-size"
+          :value="state.config!.settlements.homeSize"
+          class="w-full rounded-md border border-white/15 bg-[rgb(28,34,40)] px-2.5 py-2 text-sm text-ink outline-none focus:border-blue-400/60 [color-scheme:dark]"
+          @change="onHomeSizeSelect"
+        >
+          <option
+            value="auto"
+            class="bg-[rgb(28,34,40)] text-ink"
+          >
+            Auto
+          </option>
+          <option
+            value="SM"
+            class="bg-[rgb(28,34,40)] text-ink"
+          >
+            Mała
+          </option>
+          <option
+            value="MD"
+            class="bg-[rgb(28,34,40)] text-ink"
+          >
+            Średnia
+          </option>
+          <option
+            value="LG"
+            class="bg-[rgb(28,34,40)] text-ink"
+          >
+            Duża
+          </option>
+          <option
+            value="XL"
+            class="bg-[rgb(28,34,40)] text-ink"
+          >
+            Bardzo duża
+          </option>
+        </select>
       </div>
 
       <div class="mb-5">

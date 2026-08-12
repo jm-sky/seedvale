@@ -137,6 +137,14 @@ export async function createSettlement(
     def.foodSourceType,
     roadSegments,
     def.plan,
+    roadCtx
+      ? {
+          sampleHeight,
+          waterLevel,
+          sampleContinentalness: roadCtx.terrainSamplers.sampleContinentalness,
+          coastThreshold: roadCtx.region.coastThreshold,
+        }
+      : { sampleHeight, waterLevel },
   )
   scene.add(group)
 

@@ -10,6 +10,7 @@ import {
 } from '../assets/loadGltf'
 import { distanceToSegment } from '../math/segment'
 import { createCaveMouth, createThicket } from '../settlement/props'
+import { isCoastalPlacement } from '../terrain/coastPlacement'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
@@ -167,6 +168,10 @@ export async function createFauna(
   settlementCenter: Vector3,
   seed: number,
   roadSegments: readonly RoadCorridorSegment[] = [],
+  coast?: {
+    sampleContinentalness: (x: number, z: number) => number
+    coastThreshold: number
+  },
 ): Promise<Fauna> {
   const random = createSeededRandom(seed ^ 0xfa11)
   let agents: AnimalAgent[] = []
@@ -263,8 +268,22 @@ export async function createFauna(
     lastOpacity: number
   }[] = []
   const offRoad = (x: number, z: number) => !onRoad(x, z)
+  /** Prey spawners (esp. thicket) stay inland — not on beach / coastal band. */
+  const spawnerSiteOk = (x: number, z: number): boolean => {
+    if (!offRoad(x, z)) return false
+    return !isCoastalPlacement(x, z, {
+      sampleHeight,
+      waterLevel,
+      sampleContinentalness: coast?.sampleContinentalness,
+      coastThreshold: coast?.coastThreshold,
+    })
+  }
   for (const spec of SPAWNER_SPECS) {
-    const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 45, 65, offRoad, 48)
+    // Thicket also prefers some forest cover so it doesn't land on open sand/meadow shore.
+    const filter = spec.type === 'thicket'
+      ? (x: number, z: number) => spawnerSiteOk(x, z) && sampleForestFactor(x, z) > 0.28
+      : spawnerSiteOk
+    const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 45, 65, filter, 72)
     if (!pos) continue
     spawners.push({ ...pos, ...spec, timeSinceLastRespawn: 0 })
 

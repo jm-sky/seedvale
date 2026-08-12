@@ -2,7 +2,7 @@
 
 **Purpose:** factual snapshot of the implemented codebase. This document describes what exists now, not the desired future state.
 
-**Last verified:** 2026-08-11
+**Last verified:** 2026-08-12
 
 ## Read this first
 
@@ -61,7 +61,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Multiple streamed settlements.
 - Settlement generation is plan-first: one `VillagePlan` per settlement (identity → zones/plots/buildings/landmarks/local paths/entrances), projected to `SettlementDef` for runtime; shared `settlementPlanCache` feeds `SettlementsManager` and `RoadNetwork` (plan 047 — verification needed).
 - Settlement generation with families, houses, roads/paths and environment-aware siting.
-- House visuals prefer Second Age / towerhouse GLBs mixed with First Age huts (cottage ~5 m / tower ~6.4 m roof-top so doors read NPC-scale — issue 018); a name plaque sits by the well; short `wall.glb` palisade wings flank the main entrance (plan 072 — verification needed).
+- House visuals use per-model `HOUSE_CATALOG` (issue 018 / plan 074): individual heights + lamp fractions; `towerhouse` excluded from family homes; `[E] Obejrzyj` + `?debug=1` shows model id/URL. Wall lamps use `findWallMount` again. Name plaque by the well; inland-only palisade wings (plan 072).
+- Prey thicket/cave spawners reject coastal/beach sites (`isCoastalPlacement`); thickets also prefer light forest cover.
 - Road/path corridors get edge wobble, sparse light potholes, and A* route meander (`region.roadNetwork` knobs; plan 068).
 - Inter-settlement road signposts use `yawToward` for board orientation; midpoint pairs are spaced apart (plan 039).
 - Inter-settlement roads attach via plan entrances (`entranceToward`); local path corridors come from `VillagePlan.paths`.
@@ -113,7 +114,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 ### Persistence
 
 - IndexedDB persistence exists in `src/persistence/`.
-- Current save data includes world configuration, player position/orientation, time of day, elapsed game days, quests/EXP/relations, inventory, held tool, collected item IDs, dropped items, placed fires and sparse tree lifecycle overrides.
+- Current save data includes world configuration (including optional `settlements.homeSize`), player position/orientation, time of day, elapsed game days, quests/EXP/relations, inventory, held tool, collected item IDs, dropped items, placed fires and sparse tree lifecycle overrides.
+- localStorage config is split by domain (`src/config/persistConfig.ts`): `seedvale:graphics:v1` (post-processing), `seedvale:player:v1`, `seedvale:world:v1` (seed/terrain/sky/settlements); legacy `seedvale:worldConfig:v1` migrates on first load (issue 019).
 - Save schema is currently version `8` in `createApp.ts`.
 - New Game resets world-dependent state as implemented by `createApp.ts`/`rebuildWorldBundle()`.
 - NPC runtime state is not generally persisted as a full simulation snapshot; do not assume Continue restores every NPC need/AI state.
@@ -130,7 +132,9 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Pause menu, quest log, inventory, quick actions, time-skip overlay, busy/channel overlay, world config screen, notes/journal, HUD, minimap, toast and touch action chrome exist as Vue screens/overlays; `src/ui/create*.ts` for these are thin compatibility facades over the Vue store.
 - Minimap is heading-up (canvas up = `mouseLook` yaw) with a rim `N` marker for world north (−Z); draw logic in `src/ui-vue/lib/drawMinimap.ts` (plan 067).
 - Touch joystick + look-drag remain vanilla DOM in `src/input/createTouchControls.ts` (input hot-path); Lucide icons on pause/actions/minimap toggle (plan 046 Faza 4 / issue 005).
-- lil-gui remains the full debug/world configuration UI (region/fbm/road-network tuning, post-processing); the in-game world config screen (pause menu → Świat) exposes only the player-facing subset (seed, flat shading, day/night) — same underlying `WorldConfig`/`DayNightState` objects, not a duplicate.
+- lil-gui remains the full debug/world configuration UI (region/fbm/road-network tuning, post-processing, home village size); the in-game world config screen (pause menu → Świat) exposes the player-facing subset (seed, flat shading, home village size, day/night) — same underlying `WorldConfig`/`DayNightState` objects, not a duplicate.
+- `WorldConfig.settlements.homeSize` (`auto` | SM/MD/LG/XL) overrides the home cell size roll in settlement generation (issue 020); non-home settlements still use `rollVillageSize`.
+- NPC/fauna CSS2D status bars (HP/stamina/…) show only within `barsVisibleForDistance` (~20 units, same as full label readability); name labels still fade 20→32 (issue 017).
 
 ## Important shared concepts
 

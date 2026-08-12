@@ -41,6 +41,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 ## Planned
 
 | File | Summary | Progress | Priority | Effort | Depends on |
+| [2026-08-12--073--tree-types-height-age-overhaul.md](./2026-08-12--073--tree-types-height-age-overhaul.md) | Klasy wielkości drzew + wiek `old` | 0% | 🟡 medium | L | ~~058~~ |
 |------|---------|----------|----------|--------|------------|
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
 | [2026-08-11--060--npc-schedule-actions-and-trait-overlays.md](./2026-08-11--060--npc-schedule-actions-and-trait-overlays.md) | Wykonywalne aktywności grafiku NPC + nakładki traits | 0% | 🟡 medium | L | ~~020~~, ~~022~~ |
@@ -75,6 +76,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-11--064--cave-spawner-road-avoidance-and-visual.md](./2026-08-11--064--cave-spawner-road-avoidance-and-visual.md) | Jaskinia: unikaj drogi + proceduralne wejście | 100% | 🟡 medium | S | ~~010~~, ~~026~~ |
 | [2026-08-11--065--wire-nature-and-ore-models.md](./2026-08-11--065--wire-nature-and-ore-models.md) | GLB skały/pnie + modele złóż (gold/rock + tint) | 100% | 🟡 medium | M | ~~030~~, ~~032~~ |
 | [2026-08-11--072--settlement-visuals-nameplate-palisade.md](./2026-08-11--072--settlement-visuals-nameplate-palisade.md) | Lepsze domy, tabliczka nazwy przy studni, zaczątki palisady/bramy | 100% | 🟡 medium | M | ~~031~~, ~~047~~ |
+| [2026-08-12--074--house-catalog-scale-lamps-debug.md](./2026-08-12--074--house-catalog-scale-lamps-debug.md) | Katalog domów per model, lampy, [E] Obejrzyj + ?debug=1 | 100% | 🔴 high | M | ~~072~~ |
 
 ---
 

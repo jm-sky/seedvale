@@ -80,7 +80,7 @@ export const VILLAGE_SIZE_CONFIG: Record<VillageSize, VillageSizeConfig> = {
     livestockOwnershipChance: 0.45,
   },
   MD: {
-    familyCount: [2, 4],
+    familyCount: [3, 5],
     footprintRadius: 48,
     houseSpacing: 14,
     houseRingMax: 32,
@@ -90,7 +90,7 @@ export const VILLAGE_SIZE_CONFIG: Record<VillageSize, VillageSizeConfig> = {
     livestockOwnershipChance: 0.5,
   },
   LG: {
-    familyCount: [3, 5],
+    familyCount: [5, 7],
     footprintRadius: 56,
     houseSpacing: 16,
     houseRingMax: 36,
@@ -100,7 +100,7 @@ export const VILLAGE_SIZE_CONFIG: Record<VillageSize, VillageSizeConfig> = {
     livestockOwnershipChance: 0.55,
   },
   XL: {
-    familyCount: [4, 7],
+    familyCount: [7, 9],
     footprintRadius: 72,
     houseSpacing: 18,
     houseRingMax: 48,

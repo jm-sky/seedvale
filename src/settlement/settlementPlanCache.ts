@@ -1,3 +1,4 @@
+import type { HomeVillageSize } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
@@ -19,6 +20,8 @@ export type SettlementResolveContext = {
   terrainSamplers: TerrainSamplers
   heightScale: number
   region: RegionParams
+  /** Home village size override (`WorldConfig.settlements.homeSize`). */
+  homeSize?: HomeVillageSize
 }
 
 const defCache = new Map<string, SettlementDef>()
@@ -43,6 +46,7 @@ export function settlementDefFor(
       ctx.terrainSamplers,
       ctx.heightScale,
       ctx.region,
+      ctx.homeSize ?? 'auto',
     )
     defCache.set(key, def)
   }

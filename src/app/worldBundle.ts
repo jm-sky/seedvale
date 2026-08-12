@@ -132,6 +132,7 @@ function buildSettlementsManager(
     chunkManager.waitForChunks,
     config.terrain.chunkSize,
     forest,
+    config.settlements.homeSize,
   )
 }
 
@@ -140,6 +141,7 @@ function buildFauna(
   chunkManager: ChunkManager,
   settlement: Settlement,
   seed: number,
+  coastThreshold: number,
 ): Promise<Fauna> {
   // Spawner ring is 45–65 m from home; querySize 150 → half 75 covers the ring
   // plus road halfWidth margin for corridor rejection in createFauna.
@@ -157,6 +159,10 @@ function buildFauna(
     settlement.center,
     seed,
     roadSegments,
+    {
+      sampleContinentalness: chunkManager.sampleContinentalness,
+      coastThreshold,
+    },
   )
 }
 
@@ -223,7 +229,7 @@ export async function createWorldBundle(
   }
   const ocean = buildOcean(scene, config)
   const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playSound, config, forest)
-  const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed)
+  const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   const resourceDeposits = buildResourceDeposits(scene, chunkManager, config, config.seed)
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
@@ -288,7 +294,7 @@ export async function rebuildWorldBundle(
   }
   bundle.ocean = buildOcean(scene, config)
   bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playSound, config, forest)
-  bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
+  bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
   bundle.resourceDeposits = buildResourceDeposits(scene, bundle.chunkManager, config, config.seed)
   bundle.droppedItems = createDroppedItems(scene, bundle.chunkManager.sampleHeight, carriedDrops)

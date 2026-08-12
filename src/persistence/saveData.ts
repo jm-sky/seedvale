@@ -10,6 +10,8 @@ export type SaveConfig = {
   terrain: WorldConfig['terrain']
   sky: WorldConfig['sky']
   player: WorldConfig['player']
+  /** Optional — older saves predate issue 020; missing → defaults on load. */
+  settlements?: WorldConfig['settlements']
 }
 
 export type SavePlayer = { x: number, z: number, yaw: number, pitch: number }

@@ -31,6 +31,7 @@ import type { BusyAction } from './busyAction'
 import type { WorldBundle } from './worldBundle'
 import { playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
+import { isDebugMode } from '../debug/debugMode'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { isMeleeTool, playerToolDamage } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
@@ -187,6 +188,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   /** Currently gaze-highlighted NPC/animal, if any — tracked so we only toggle
    *  the CSS class on change instead of writing every frame. */
   let highlightedTarget: Highlightable | null = null
+  /** Dedupes `?debug=1` house console spam while gazing at the same building. */
+  let lastDebugHouseId: string | null = null
   const setHighlight = (next: Highlightable | null): void => {
     if (highlightedTarget === next) return
     highlightedTarget?.setHighlighted(false)
@@ -310,6 +313,21 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.chunkManager,
       )
       npcDialog.setPrompt(target ? target.promptLabel : null)
+
+      if (isDebugMode()) {
+        if (target?.kind === 'house') {
+          if (target.houseId !== lastDebugHouseId) {
+            lastDebugHouseId = target.houseId
+            console.info('[house:gaze]', {
+              id: target.houseId,
+              model: target.modelUrl,
+              label: target.label,
+            })
+          }
+        } else {
+          lastDebugHouseId = null
+        }
+      }
 
       const gazeCandidates: { position: { x: number, z: number }, agent: Highlightable }[] = []
       for (const item of interactables) {

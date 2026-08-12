@@ -25,6 +25,15 @@ export type Interactable =
   | { kind: 'corpse', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent }
   | { kind: 'well', position: { x: number, z: number }, promptLabel: string }
   | {
+    kind: 'house'
+    position: { x: number, z: number }
+    promptLabel: string
+    houseId: string
+    modelUrl: string | null
+    label: string
+    examine: string
+  }
+  | {
     kind: 'tree'
     position: { x: number, z: number }
     promptLabel: string

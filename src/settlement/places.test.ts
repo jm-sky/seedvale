@@ -21,6 +21,7 @@ function makeLandmarks(overrides: Partial<SettlementLandmarks> = {}): Settlement
     garden: new Vector3(3, 0, 3),
     market: new Vector3(4, 0, 4),
     homes: [],
+    houses: [],
     trees: [],
     dockRoute: [],
     ...overrides,

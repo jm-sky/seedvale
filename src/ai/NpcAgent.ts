@@ -27,7 +27,7 @@ import {
   type PlannedAction,
   replaceActionLifecycle,
 } from '../simulation'
-import { gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
+import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import {
   type CharacterDef,
@@ -312,6 +312,7 @@ export class NpcAgent {
   private lastLabelOpacity = -1
   private lastHpRatio = -1
   private lastStaminaRatio = -1
+  private lastBarsVisible: boolean | null = null
 
   private constructor(
     root: THREE.Object3D,
@@ -725,7 +726,13 @@ export class NpcAgent {
       this.mesh.position.z - observerPos.z,
       observerYaw,
     )
-    const opacity = labelOpacityForDistance(this.mesh.position.distanceTo(observerPos)) * gaze
+    const dist = this.mesh.position.distanceTo(observerPos)
+    const showBars = barsVisibleForDistance(dist)
+    if (showBars !== this.lastBarsVisible) {
+      this.lastBarsVisible = showBars
+      this.labelBarsEl.style.display = showBars ? '' : 'none'
+    }
+    const opacity = labelOpacityForDistance(dist) * gaze
     if (opacity !== this.lastLabelOpacity) {
       this.lastLabelOpacity = opacity
       this.labelEl.style.opacity = String(opacity)

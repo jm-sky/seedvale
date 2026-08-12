@@ -1,5 +1,6 @@
 import { type Object3D, type Scene, Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { HomeVillageSize } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
@@ -104,6 +105,7 @@ export async function createSettlementsManager(
   waitForChunks: (coords: ChunkCoord[]) => Promise<void>,
   chunkSize: number,
   forest?: SettlementForestHooks,
+  homeSize: HomeVillageSize = 'auto',
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -113,6 +115,7 @@ export async function createSettlementsManager(
     heightScale,
     region,
     localSearchRadius: localRadius,
+    homeSize,
   }
 
   // Defs resolve through the shared settlement plan cache (plan 047 §9.15).
@@ -125,6 +128,7 @@ export async function createSettlementsManager(
       terrainSamplers,
       heightScale,
       region,
+      homeSize,
     })
   }
 

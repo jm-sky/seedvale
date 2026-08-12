@@ -1,6 +1,6 @@
 # 020 — Expand world configuration options
 
-**Status:** `todo`
+**Status:** `done`
 
 ## Problem
 

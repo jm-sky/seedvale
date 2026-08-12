@@ -7,11 +7,21 @@ import type { VillageLandmarkPlan, VillagePlan } from './villagePlan'
 import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
 import { distanceToSegment } from '../math/segment'
 import { createSparks, type Sparks } from '../shared/getFireParticles'
+import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
 import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, type TreeGrowthStage, visualScale } from '../world/treeLifecycle'
 import { type VillageSize, villageSizeConfig } from './families'
+import { homeHouseEntryAt, resolveHouseHeight } from './houseCatalog'
 import { yawToward } from './roadNetwork'
+
+export type SettlementHouseLandmark = {
+  position: THREE.Vector3
+  houseId: string
+  modelUrl: string | null
+  label: string
+  examine: string
+}
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
@@ -23,7 +33,10 @@ export type SettlementLandmarks = {
    *  decision). Built unconditionally, like well/garden/stockpile, whether
    *  or not this settlement's families happen to roll a trader. */
   market: THREE.Vector3
+  /** Foot positions for homes — same order as `houses` (compat for places/livestock). */
   homes: THREE.Vector3[]
+  /** Per-house catalog identity for examine / debug (issue 018). */
+  houses: SettlementHouseLandmark[]
   /** Settlement forest trees — each carries a stable `TreeId` for lifecycle
    *  / NPC harvest (plan 058). `mesh` is the live prop for stump swaps. */
   trees: SettlementTreeLandmark[]
@@ -50,22 +63,6 @@ export type SettlementTreeLandmark = {
   baseScale: number
   initialStage: 'sapling' | 'young' | 'mature'
 }
-
-/** Target roof-top height (world meters) for Quaternius Fantasy RTS cottages.
- *  Those meshes are roof-heavy — total height must sit well above NPC (~1.75m)
- *  so door/wall bands read as walkable (~2m+), not dollhouse. */
-const HOUSE_COTTAGE_HEIGHT = 5.0
-/** Multi-storey / tower variant — taller silhouette, same scale family. */
-const HOUSE_TOWER_HEIGHT = 6.4
-
-const HUT_URLS = [
-  // Prefer Second Age / tower over First Age "roof-only" RTS huts.
-  { url: '/models/settlement/hut_d.glb', height: HOUSE_COTTAGE_HEIGHT },
-  { url: '/models/settlement/towerhouse.glb', height: HOUSE_TOWER_HEIGHT },
-  { url: '/models/settlement/hut_a.glb', height: HOUSE_COTTAGE_HEIGHT },
-  { url: '/models/settlement/hut_b.glb', height: HOUSE_COTTAGE_HEIGHT },
-  { url: '/models/settlement/hut_c.glb', height: HOUSE_COTTAGE_HEIGHT },
-] as const
 
 const WALL_URL = '/models/settlement/wall.glb'
 const WALL_TARGET_HEIGHT = 1.85
@@ -183,8 +180,7 @@ export function placeOnGround(
 export function createHut(): THREE.Group {
   const hut = new THREE.Group()
 
-  // Wall band ~2m before `prepareProp` scales to `HOUSE_COTTAGE_HEIGHT`, so a
-  // fallback hut keeps NPC-believable door height (not a 1.4m dollhouse).
+  // Wall band ~2m before `prepareProp` scales via house catalog height.
   const walls = new THREE.Mesh(
     new THREE.BoxGeometry(2.6, 2.0, 2.6),
     new THREE.MeshStandardMaterial({ color: 0x8b6914, flatShading: true }),
@@ -314,7 +310,7 @@ const HOUSE_LAMP_ON_COLOR = new THREE.Color(0xffb35c)
  *
  *  `mountHeight`/`mountZ` place the lamp against an actual wall — derived by
  *  the caller from the specific hut's own bounding box (`buildSettlementProps`),
- *  since the three GLB hut variants (`HUT_URLS`) don't share the fallback
+ *  since catalog hut variants (`houseCatalog.ts`) don't share the fallback
  *  `createHut()` box's proportions. `mountZ` is pulled in slightly from the
  *  raw bounding-box edge since that edge is often the roof eave, not the
  *  wall face, on the GLB hut models. */
@@ -327,7 +323,7 @@ export type HouseLight = {
  *  surface (`findWallMount` below), not an assumed Z-facing wall — `mountX`/
  *  `mountZ` place the lamp there, offset a little in/out along that surface's
  *  outward normal (approximated as the direction from the vertical axis to
- *  the point, accurate enough for the roughly-boxy `HUT_URLS` shapes), and
+ *  the point, accurate enough for the roughly-boxy catalog hut shapes), and
  *  the lamp geometry is rotated to sit flush against it from any angle. */
 export function createHouseLight(mountHeight: number, mountX: number, mountZ: number): HouseLight {
   const group = new THREE.Group()
@@ -373,39 +369,34 @@ export function createHouseLight(mountHeight: number, mountX: number, mountZ: nu
 }
 
 /** How far outside a hut's footprint to start each search ray — comfortably
- *  past any `HUT_URLS`/fallback hut's extent. */
+ *  past any catalog/fallback hut's extent. */
 const WALL_MOUNT_SEARCH_RADIUS = 20
-/** Tried lowest-first: real wall height varies a lot between the `HUT_URLS`
- *  GLB variants — one only has wall left at 25% of total height before the
- *  roof takes over, another still has wall at 45%. */
-const WALL_MOUNT_HEIGHT_FRACTIONS = [0.25, 0.35, 0.45, 0.55] as const
+/** Tried lowest-first within each catalog entry's `lightHeightFractions`. */
+const DEFAULT_LIGHT_HEIGHT_FRACTIONS = [0.22, 0.3, 0.38] as const
 const WALL_MOUNT_ANGLE_STEPS = 16
 
 /** Finds a real point on a loaded hut's exterior surface to mount a wall
  *  lamp against. Replaces an earlier approach that placed the lamp at a
  *  fraction of the model's raw bounding-box Z extent — which assumed a
- *  symmetric, Z-facing box. The actual `HUT_URLS` GLB variants are neither
- *  (confirmed by raycasting each one — see history around plan
- *  `2026-08-08--044`'s "hanging square" and the report that followed even
- *  the wall-mount fix there): the lamp ended up floating in open air next to
- *  the house, sometimes a couple of meters off, because the wall it was
- *  "mounted" on wasn't necessarily there at that height/side for that
- *  particular hut model.
+ *  symmetric, Z-facing box. Catalog entries supply height fractions so
+ *  roof-heavy First Age huts don't mount lamps in the roof volume.
  *
  *  Searches outside-in from several heights and angles around the hut and
- *  returns the first real surface hit, so it adapts to whatever shape each
- *  model actually has instead of guessing one. `hut` must still be in its
+ *  returns the first real surface hit. `hut` must still be in its
  *  own post-`prepareProp` local frame (before `placeOnGround` moves it into
- *  world space) — same assumption the old bounding-box approach relied on.
- *  Returns `null` in the extremely unlikely case no surface is found at any
- *  tried height/angle (e.g. a hollow/open model) — callers fall back to the
- *  hut's center, which at least never floats away from it. */
-function findWallMount(hut: THREE.Object3D, hutHeight: number): { height: number, x: number, z: number } | null {
+ *  world space). Returns `null` if no surface is found. */
+function findWallMount(
+  hut: THREE.Object3D,
+  hutHeight: number,
+  heightFractions: readonly number[] = DEFAULT_LIGHT_HEIGHT_FRACTIONS,
+  maxHeightFraction = 0.45,
+): { height: number, x: number, z: number } | null {
   const raycaster = new THREE.Raycaster()
   raycaster.far = WALL_MOUNT_SEARCH_RADIUS * 2
   const origin = new THREE.Vector3()
   const dir = new THREE.Vector3()
-  for (const heightFraction of WALL_MOUNT_HEIGHT_FRACTIONS) {
+  for (const heightFraction of heightFractions) {
+    if (heightFraction > maxHeightFraction) continue
     const y = hutHeight * heightFraction
     for (let i = 0; i < WALL_MOUNT_ANGLE_STEPS; i++) {
       const angle = (i / WALL_MOUNT_ANGLE_STEPS) * Math.PI * 2
@@ -495,23 +486,40 @@ function createPalisadeStake(): THREE.Group {
 /**
  * Short palisade wings beside the main entrance — a gate gap, not a full ring.
  * Uses `wall.glb` (Quaternius Fantasy RTS) with procedural stake fallback.
+ * Skips seaward / beach entrances so coastal villages don't wall off the ocean.
  */
 async function plantEntrancePalisade(
   group: THREE.Group,
   site: SettlementSite,
   size: VillageSize,
   sampleHeight: (x: number, z: number) => number,
+  waterLevel: number,
   plan: VillagePlan | undefined,
+  coast?: CoastalSamplers,
 ): Promise<void> {
   const segmentsPerSide = PALISADE_SEGMENTS_PER_SIDE[size]
   if (segmentsPerSide <= 0) return
 
+  const coastEnv: CoastalSamplers = coast ?? { sampleHeight, waterLevel }
   const radius = plan?.boundary.radius ?? villageSizeConfig(size).footprintRadius * 0.72
-  const entrance = plan?.entrances.find((e) => e.kind === 'road') ?? plan?.entrances[0]
-  // Prefer outward angle from center→entrance when we have coordinates.
+
+  const entrances = plan?.entrances ?? []
+  const inlandEntrances = entrances.filter((e) => !isCoastalPlacement(e.x, e.z, coastEnv))
+  const entrance = inlandEntrances.find((e) => e.kind === 'road')
+    ?? inlandEntrances[0]
+  if (!entrance && entrances.length > 0) {
+    // Every planned entrance is coastal — skip palisade rather than wall the sea.
+    return
+  }
+
   const outward = entrance
     ? Math.atan2(entrance.z - site.z, entrance.x - site.x)
     : 0
+
+  // Also reject if the gate mid-point itself sits on beach (no plan entrances).
+  const gateX = site.x + Math.cos(outward) * radius
+  const gateZ = site.z + Math.sin(outward) * radius
+  if (isCoastalPlacement(gateX, gateZ, coastEnv)) return
 
   const wall = await loadPropOrFallback(WALL_URL, WALL_TARGET_HEIGHT, createPalisadeStake)
   const step = (WALL_HALF_LENGTH * 2) / radius
@@ -521,6 +529,7 @@ async function plantEntrancePalisade(
       const ang = outward + side * (PALISADE_GATE_HALF_ANGLE + step * (i + 0.5))
       const x = site.x + Math.cos(ang) * radius
       const z = site.z + Math.sin(ang) * radius
+      if (isCoastalPlacement(x, z, coastEnv)) continue
       const segment = wall.clone(true)
       // Wall's long axis is local +X in the Quaternius asset — tangent to the ring.
       const tangent = ang + Math.PI / 2
@@ -1410,6 +1419,8 @@ export async function buildSettlementProps(
   /** Authoritative layout (plan 047). When present, prop positions come from
    *  planned landmarks; `findFlatSpot` only corrects locally. */
   plan?: VillagePlan,
+  /** Optional coast samplers — skips palisade on beach / seaward entrances. */
+  coast?: CoastalSamplers,
 ): Promise<{ group: THREE.Group, landmarks: SettlementLandmarks, houseLights: HouseLight[] }> {
   const group = new THREE.Group()
   group.name = 'settlement'
@@ -1420,6 +1431,7 @@ export async function buildSettlementProps(
     garden: new THREE.Vector3(),
     market: new THREE.Vector3(),
     homes: [],
+    houses: [],
     trees: [],
     dockRoute: [],
   }
@@ -1484,29 +1496,51 @@ export async function buildSettlementProps(
   const houseLights: HouseLight[] = []
   for (let i = 0; i < clearings.houses.length; i++) {
     const area = clearings.houses[i]!
-    const hutSpec = HUT_URLS[i % HUT_URLS.length]!
-    const hut = await loadPropOrFallback(
-      hutSpec.url,
-      hutSpec.height,
-      createHut,
-    )
+    const entry = homeHouseEntryAt(i)
+    const targetHeight = resolveHouseHeight(entry)
+    const hut = entry.url
+      ? await loadPropOrFallback(entry.url, targetHeight, createHut)
+      : (() => {
+          const fallback = createHut()
+          prepareProp(fallback, targetHeight)
+          return fallback
+        })()
     // Computed before `placeOnGround` moves `hut.position` to world
     // coordinates, so this is in the hut's own local frame — exactly what a
     // child (`houseLight.object`) needs to be positioned relative to.
     const hutBounds = new THREE.Box3().setFromObject(hut)
     const hutHeight = hutBounds.max.y - hutBounds.min.y
-    const wallMount = findWallMount(hut, hutHeight)
+    const wallMount = findWallMount(
+      hut,
+      hutHeight,
+      entry.lightHeightFractions,
+      entry.lightMaxHeightFraction,
+    )
     placeOnGround(hut, area.x, area.z, sampleHeight)
+    hut.name = `house:${entry.id}`
+    hut.userData.houseId = entry.id
+    hut.userData.houseModelUrl = entry.url
     group.add(hut)
-    landmarks.homes.push(new THREE.Vector3(area.x, sampleHeight(area.x, area.z), area.z))
 
-    // Users manual testing:
-    // - divide height by 2 places the lamp at 1/2 of house height
-    // - multiply x and z by 0.0 places the lamp *usually* at the exact center of the house
-    const displacementFactor = 0
+    const foot = new THREE.Vector3(area.x, sampleHeight(area.x, area.z), area.z)
+    landmarks.homes.push(foot)
+    landmarks.houses.push({
+      position: foot.clone(),
+      houseId: entry.id,
+      modelUrl: entry.url,
+      label: entry.label,
+      examine: entry.examine,
+    })
+
+    // Mount on the raycast hit — do not zero XZ (that put lamps in mid-air
+    // after cottage scale-up; see issue 018 / plan 044 lamp notes).
     const houseLight = wallMount
-      ? createHouseLight((wallMount.height / 2), wallMount.x * displacementFactor, wallMount.z * displacementFactor)
-      : createHouseLight((hutHeight / 2) * 0.4, 0, hutBounds.max.z * displacementFactor)
+      ? createHouseLight(wallMount.height, wallMount.x, wallMount.z)
+      : createHouseLight(
+          hutHeight * Math.min(0.35, entry.lightMaxHeightFraction),
+          0,
+          hutBounds.max.z * 0.85,
+        )
     hut.add(houseLight.object)
     houseLights.push(houseLight)
   }
@@ -1556,7 +1590,7 @@ export async function buildSettlementProps(
     group.add(stockpile2)
   }
 
-  await plantEntrancePalisade(group, site, size, sampleHeight, plan)
+  await plantEntrancePalisade(group, site, size, sampleHeight, waterLevel, plan, coast)
 
   if (plantForest) {
     const random = createSeededRandom(seed ^ 0x7e3d)

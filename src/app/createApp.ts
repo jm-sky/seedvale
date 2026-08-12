@@ -5,9 +5,10 @@ import { playActionChop, playActionDig } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
-import { saveWorldConfig } from '../config/persistConfig'
+import { saveAllDomains, saveGraphics, savePlayer, saveWorld } from '../config/persistConfig'
 import {
   applyStoredPlayer,
+  applyStoredSettlements,
   applyStoredSky,
   applyStoredTerrain,
   createWorldConfig,
@@ -115,8 +116,9 @@ export async function createApp(
     }
     applyStoredSky(config.sky, initialSave.config.sky)
     applyStoredPlayer(config.player, initialSave.config.player)
+    applyStoredSettlements(config.settlements, initialSave.config.settlements)
   }
-  saveWorldConfig(config)
+  saveAllDomains(config)
 
   const dayNight = createDayNightState(
     initialSave
@@ -252,7 +254,7 @@ export async function createApp(
     gui.setBusy(true)
     try {
       syncSeedInUrl(config.seed)
-      saveWorldConfig(config)
+      saveWorld(config)
       // Old agents are about to be disposed — drop the reference rather than
       // toggling a class on a DOM node that's going away anyway.
       gameLoop.forgetHighlight()
@@ -305,6 +307,7 @@ export async function createApp(
       terrain: structuredClone(config.terrain),
       sky: { ...config.sky },
       player: { ...config.player },
+      settlements: { ...config.settlements },
     },
     player: {
       x: player.mesh.position.x,
@@ -335,12 +338,12 @@ export async function createApp(
   const updateSkyFromGui = () => {
     dayNight.enabled = false
     sky.setParams(config.sky, lights.sun)
-    saveWorldConfig(config)
+    saveWorld(config)
   }
 
   const updatePostProcessingFromGui = () => {
     postProcessing.applyConfig(config.postProcessing)
-    saveWorldConfig(config)
+    saveGraphics(config)
   }
 
   const onDayNightChange = () => {
@@ -617,7 +620,7 @@ export async function createApp(
     onNameChange: (name) => player.setName(name),
     onNameCommit: (name) => {
       config.player.name = name
-      saveWorldConfig(config)
+      savePlayer(config)
     },
     onSave: saveNow,
     onRefresh: () => window.location.reload(),

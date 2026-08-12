@@ -17,6 +17,15 @@ export function labelOpacityForDistance(
   return 1 - (distance - near) / (far - near)
 }
 
+/** Show NPC/fauna status bars only while the name is fully readable (issue 017).
+ *  Default threshold matches `LABEL_FADE_NEAR`. */
+export function barsVisibleForDistance(
+  distance: number,
+  near = LABEL_FADE_NEAR,
+): boolean {
+  return distance <= near
+}
+
 /** Half-angle (degrees) of the "player is looking toward this" cone — full
  *  width ~90°, per issue 010. */
 const GAZE_CONE_HALF_ANGLE_DEG = 45

@@ -1,6 +1,6 @@
 # 019 — Separate configuration domains in localStorage
 
-**Status:** `todo`
+**Status:** `done`
 
 ## Problem
 

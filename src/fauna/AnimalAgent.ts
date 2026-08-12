@@ -11,7 +11,7 @@ import {
   type DecisionContext,
   type PlannedAction,
 } from '../simulation'
-import { labelOpacityForDistance } from '../ui/labelDistance'
+import { barsVisibleForDistance, labelOpacityForDistance } from '../ui/labelDistance'
 import {
   type AnimalLifeState,
   BIAS_STRENGTH,
@@ -365,6 +365,7 @@ export class AnimalAgent {
   private lastStaminaRatio = -1
   private lastSatietyRatio = -1
   private lastHydrationRatio = -1
+  private lastBarsVisible: boolean | null = null
   readonly health: HealthState
   readonly life: AnimalLifeState
   private attackCooldown = 0
@@ -637,7 +638,13 @@ export class AnimalAgent {
       this.lastHydrationRatio = hydrationRatio
       this.hydrationFillEl.style.width = `${Math.round(hydrationRatio * 100)}%`
     }
-    const opacity = labelOpacityForDistance(this.mesh.position.distanceTo(observerPos))
+    const dist = this.mesh.position.distanceTo(observerPos)
+    const showBars = barsVisibleForDistance(dist)
+    if (showBars !== this.lastBarsVisible) {
+      this.lastBarsVisible = showBars
+      this.labelBarsEl.style.display = showBars ? '' : 'none'
+    }
+    const opacity = labelOpacityForDistance(dist)
     if (opacity !== this.lastLabelOpacity) {
       this.lastLabelOpacity = opacity
       this.labelEl.style.opacity = String(opacity)

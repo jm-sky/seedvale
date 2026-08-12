@@ -1,6 +1,6 @@
 # 017 — NPC/mob status bars only when nearby
 
-**Status:** `todo`
+**Status:** `done`
 
 ## Problem
 

@@ -1,3 +1,4 @@
+import type { HomeVillageSize } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { NaturalResource } from '../terrain/naturalResources'
@@ -210,6 +211,7 @@ function resolveSettlementContext(
   terrainSamplers: TerrainSamplers,
   heightScale: number,
   region: RegionParams,
+  homeSize: HomeVillageSize = 'auto',
 ): SettlementGenContext {
   const isHome = cell.gx === 0 && cell.gz === 0
   const seedForCell = cellSeed(seed, cell)
@@ -240,6 +242,7 @@ function resolveSettlementContext(
   // terrain at the cell center, roll size once, then lock that roll after the
   // site is chosen (OUTPOST may still override). Final naming/terrain flavor
   // still uses classification at the *selected* site.
+  // Home may override the roll via `WorldConfig.settlements.homeSize` (issue 020).
   const centerY = sampleHeight(center.x, center.z)
   const provisionalTerrain = classifySettlementTerrain(
     center.x,
@@ -250,7 +253,10 @@ function resolveSettlementContext(
     region,
     terrainSamplers,
   )
-  const provisionalSize = rollVillageSize(provisionalTerrain, seedForCell)
+  const provisionalSize =
+    isHome && homeSize !== 'auto'
+      ? homeSize
+      : rollVillageSize(provisionalTerrain, seedForCell)
 
   return {
     cell,
@@ -381,6 +387,7 @@ function generateSettlementCore(
   terrainSamplers: TerrainSamplers,
   heightScale: number,
   region: RegionParams,
+  homeSize: HomeVillageSize = 'auto',
 ): SettlementCore {
   const ctx = resolveSettlementContext(
     cell,
@@ -391,6 +398,7 @@ function generateSettlementCore(
     terrainSamplers,
     heightScale,
     region,
+    homeSize,
   )
   const site = chooseSettlementSite(ctx)
   const identity = resolveVillageIdentity(ctx, site)
@@ -490,6 +498,7 @@ export function generateVillagePlan(
   terrainSamplers: TerrainSamplers,
   heightScale: number,
   region: RegionParams,
+  homeSize: HomeVillageSize = 'auto',
 ): VillagePlan {
   return generateSettlementCore(
     cell,
@@ -500,6 +509,7 @@ export function generateVillagePlan(
     terrainSamplers,
     heightScale,
     region,
+    homeSize,
   ).plan
 }
 
@@ -548,6 +558,7 @@ export function generateSettlementDef(
   terrainSamplers: TerrainSamplers,
   heightScale: number,
   region: RegionParams,
+  homeSize: HomeVillageSize = 'auto',
 ): SettlementDef {
   const { plan, families, sampleHeight: height, region: reg } =
     generateSettlementCore(
@@ -559,6 +570,7 @@ export function generateSettlementDef(
       terrainSamplers,
       heightScale,
       region,
+      homeSize,
     )
   const clearings = layoutClearingsFromPlan(plan, height, reg.village)
   return settlementDefFromPlan(plan, families, clearings)

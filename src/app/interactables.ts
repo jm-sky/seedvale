@@ -107,6 +107,18 @@ export function buildInteractables(
       promptLabel: 'Zaczerpnij wody',
     })
 
+    for (const house of settlement.landmarks.houses) {
+      list.push({
+        kind: 'house',
+        position: house.position,
+        promptLabel: `Obejrzyj: ${house.label}`,
+        houseId: house.houseId,
+        modelUrl: house.modelUrl,
+        label: house.label,
+        examine: house.examine,
+      })
+    }
+
     if (settlement.fire) {
       list.push({
         kind: 'campfire',

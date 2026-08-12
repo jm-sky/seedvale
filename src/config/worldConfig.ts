@@ -1,7 +1,11 @@
+import type { RolledVillageSize } from '../settlement/families'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { FbmParams } from '../terrain/fbm'
 import { parseSeedFromUrl } from '../world/parseSeed'
-import { loadStoredConfig } from './persistConfig'
+import { loadDomainConfigs } from './persistConfig'
+
+/** Player override for the home settlement size — `auto` keeps terrain-weighted roll. */
+export type HomeVillageSize = 'auto' | RolledVillageSize
 
 /** N8AO quality presets — trades AO/denoise sample counts for GPU cost. */
 export type AoQuality = 'Performance' | 'Low' | 'Medium' | 'High' | 'Ultra'
@@ -105,6 +109,11 @@ export type WorldConfig = {
   player: {
     name: string
   }
+  /** World-generation options that are not terrain noise / graphics. */
+  settlements: {
+    /** Home (cell 0,0) village size; `auto` = `rollVillageSize` as before. */
+    homeSize: HomeVillageSize
+  }
 }
 
 const DEFAULT_PLAYER_NAME = 'Ja'
@@ -185,7 +194,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         },
         village: {
           coreRadius: 9,
-          houseRadius: 5.5,
+          houseRadius: 7,
           heightStrength: 0.8,
           tintStrength: 0.75,
           regionalHeightStrengthFlat: 0.3,
@@ -236,7 +245,25 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
     player: {
       name: DEFAULT_PLAYER_NAME,
     },
+    settlements: {
+      homeSize: 'auto',
+    },
   }
+}
+
+const HOME_SIZE_VALUES: readonly HomeVillageSize[] = ['auto', 'SM', 'MD', 'LG', 'XL']
+
+function isHomeVillageSize(value: unknown): value is HomeVillageSize {
+  return typeof value === 'string' && (HOME_SIZE_VALUES as readonly string[]).includes(value)
+}
+
+/** Same missing-field-keeps-default guarantee as `applyStoredTerrain`, for settlements. */
+export function applyStoredSettlements(
+  target: WorldConfig['settlements'],
+  s: Partial<WorldConfig['settlements']> | undefined,
+): void {
+  if (!s || typeof s !== 'object') return
+  if (isHomeVillageSize(s.homeSize)) target.homeSize = s.homeSize
 }
 
 /**
@@ -349,11 +376,11 @@ export function applyStoredPlayer(
 }
 
 /**
- * Priority: URL query (`seed`, `res`, `gui`) > localStorage > defaults.
+ * Priority: URL query (`seed`, `res`, `gui`) > localStorage domains > defaults.
  */
 export function createWorldConfig(): WorldConfig {
   const params = new URLSearchParams(window.location.search)
-  const stored = loadStoredConfig()
+  const stored = loadDomainConfigs()
 
   const seedFromUrl = params.has('seed') ? parseSeedFromUrl() : null
   const resRaw = Number(params.get('res'))
@@ -378,6 +405,7 @@ export function createWorldConfig(): WorldConfig {
   }
 
   applyStoredSky(config.sky, stored?.sky)
+  applyStoredSettlements(config.settlements, stored?.settlements)
 
   if (stored?.postProcessing && typeof stored.postProcessing === 'object') {
     config.postProcessing = { ...config.postProcessing, ...stored.postProcessing }

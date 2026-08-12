@@ -1,4 +1,5 @@
 import { createNoise2D } from 'simplex-noise'
+import type { HomeVillageSize } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type {
   ClearingSegment,
@@ -55,6 +56,8 @@ export type RoadNetworkContext = {
    *  everywhere else a `SettlementDef` gets generated (`HOME_RADIUS` in
    *  `createApp.ts`). */
   localSearchRadius: number
+  /** Home village size override — must match `SettlementsManager` / world config. */
+  homeSize?: HomeVillageSize
 }
 
 // Settlement defs resolve through the shared `settlementPlanCache` (plan 047
@@ -80,6 +83,7 @@ function resolveCtx(ctx: RoadNetworkContext): SettlementResolveContext {
     terrainSamplers: ctx.terrainSamplers,
     heightScale: ctx.heightScale,
     region: ctx.region,
+    homeSize: ctx.homeSize,
   }
 }
 

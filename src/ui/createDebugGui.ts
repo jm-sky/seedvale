@@ -383,6 +383,12 @@ export function createDebugGui(
   }
   terrainControllers.push(
     village
+      .add(config.settlements, 'homeSize', ['auto', 'SM', 'MD', 'LG', 'XL'])
+      .name('Home village size')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    village
       .add(config.terrain.region.village, 'coreRadius', 4, 20, 0.5)
       .name('Core clearing radius')
       .onFinishChange(handlers.onTerrainChange),
