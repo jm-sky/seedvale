@@ -94,6 +94,7 @@ function buildChunkManager(
     collectedItemIds,
     grass: config.terrain.grass,
     detailNormal: config.terrain.detailNormal,
+    terrainCastsShadow: config.postProcessing.terrainCastsShadow,
     treeLifecycle,
     getWorldDays,
   }

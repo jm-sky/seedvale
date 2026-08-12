@@ -131,6 +131,7 @@ function minimalConfig(): WorldConfig {
       godRaysEnabled: true,
       godRaysExposure: 0.22,
       pixelRatioCap: 2,
+      terrainCastsShadow: true,
     },
     showGui: true,
     player: { name: 'Ja' },

@@ -14,6 +14,10 @@ export type DebugGuiHandlers = {
    *  drawing buffer + composer render targets, unlike the cheap uniform
    *  updates `onPostProcessingChange` handles (perf review A3.2). */
   onRenderQualityChange: () => void
+  /** Fires only for the terrain-self-shadow toggle — flips `castShadow` on
+   *  already-loaded chunk meshes via `ChunkManager`, unlike the composer-only
+   *  updates `onPostProcessingChange` handles (perf review A2/#13). */
+  onTerrainShadowChange: () => void
   /** Log the home settlement's VillagePlan summary to the console (plan 047). */
   onDumpVillagePlan?: () => void
 }
@@ -558,6 +562,14 @@ export function createDebugGui(
     })
     .name('Render scale cap')
     .onFinishChange(handlers.onRenderQualityChange)
+  // Live toggle on already-loaded chunks (`ChunkManager.setTerrainCastsShadow`)
+  // — no rebuild, so its own handler rather than `onTerrainChange`. Default
+  // on; perf review #13 found this a real, if small, visual tradeoff on
+  // steep slopes at low sun angle, so it's opt-in rather than forced off.
+  postFx
+    .add(config.postProcessing, 'terrainCastsShadow')
+    .name('Terrain self-shadow')
+    .onChange(handlers.onTerrainShadowChange)
 
   terrainControllers.push(
     gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild world'),

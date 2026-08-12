@@ -108,6 +108,11 @@ export type WorldConfig = {
      *  `logicalSize × min(devicePixelRatio, pixelRatioCap)` fragments, so this
      *  is the single biggest lever on GPU fill-rate cost (perf review A3.2). */
     pixelRatioCap: number
+    /** Terrain self-shadows (perf review A2/#13) — off saves a second
+     *  shadow-pass draw of every chunk, but is visible as flatter-looking
+     *  steep slopes at low sun angle. Defaults on (the pre-review look);
+     *  applies live to already-loaded chunks, no world rebuild. */
+    terrainCastsShadow: boolean
   }
   /** Show lil-gui panel (`?gui=0` to hide). */
   showGui: boolean
@@ -248,6 +253,9 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       // Matches the previous hardcoded `Math.min(devicePixelRatio, 2)` — no
       // behavior change by default, only when lowered via the GUI.
       pixelRatioCap: 2,
+      // On by default — a perf-vs-look tradeoff belongs to the player
+      // (issue: default-off read as a visual regression), opt-in via GUI.
+      terrainCastsShadow: true,
     },
     showGui: true,
     player: {

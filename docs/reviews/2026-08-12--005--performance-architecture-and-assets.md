@@ -501,15 +501,20 @@ Zaimplementowane w jednej sesji. `npx tsc --noEmit`, `npm run lint`, `npm run bu
   do `CHUNKS_STARTED_PER_FRAME = 2` na klatkę, niezależnie od throttle'u `recheck()` (żeby kolejka nie
   utknęła, gdy gracz stoi w miejscu po dużym skoku pozycji). `waitForChunks(homeChunks())` przy starcie
   świata woła `ensureLoaded` bezpośrednio, więc start gry i tak czeka tylko na home chunki.
-- **13 (A2, tylko teren)** — `mesh.castShadow = false` w `buildChunkGeometry.ts` dla terenu. Osobny
+- **13 (A2, tylko teren)** — `mesh.castShadow = false` w `buildChunkGeometry.ts` dla terenu, osobny
   commit (`a1b88b3`) od 10–12 (`ac63ddf`) celowo — to jedyna pozycja z realnym ryzykiem wizualnym
-  (strome zbocza przy niskim słońcu), więc musi dać się cofnąć bez ruszania reszty.
+  (strome zbocza przy niskim słońcu). **Zrewidowane po sesji**: zamiast wymuszać `false`, teren dostał
+  suwak "Terrain self-shadow" w debug GUI (`config.postProcessing.terrainCastsShadow`, domyślnie
+  `true` — przywraca wygląd sprzed #13), z live-togglem bez rebuildu świata
+  (`ChunkManager.setTerrainCastsShadow` flippuje `castShadow` na już załadowanych meshach chunków).
+  Perf win z #13 jest więc opt-in, nie wymuszony — trade-off wizja/wydajność należy do gracza.
 
-**Nie zweryfikowane wizualnie w przeglądarce** — pozycja 13 zmienia renderowany wygląd (cień terenu na
-stromych zboczach o zachodzie/wschodzie słońca) i wymaga ręcznej kontroli na żywym dev serverze zgodnie
-z CLAUDE.md. Pozycje 10–12 nie zmieniają wyglądu (współdzielony materiał/normalne dają identyczny
-wynik przy tych samych configach; render-scale domyślnie niezmieniony; kolejkowanie chunków zmienia
-tylko kiedy, nie co się ładuje).
+**Nie zweryfikowane wizualnie w przeglądarce** — pozycja 13, gdy wyłączona przez gracza w GUI, zmienia
+renderowany wygląd (cień terenu na stromych zboczach o zachodzie/wschodzie słońca) i wymaga ręcznej
+kontroli na żywym dev serverze zgodnie z CLAUDE.md; domyślny stan (`true`) jest identyczny wizualnie ze
+stanem sprzed review'u. Pozycje 10–12 nie zmieniają wyglądu (współdzielony materiał/normalne dają
+identyczny wynik przy tych samych configach; render-scale domyślnie niezmieniony; kolejkowanie chunków
+zmienia tylko kiedy, nie co się ładuje).
 
 ## Co jest zrobione dobrze (żeby nie zepsuć)
 

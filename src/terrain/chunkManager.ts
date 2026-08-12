@@ -160,6 +160,10 @@ export type ChunkManagerConfig = {
   }
   /** Close-up surface grain on the chunk material (`buildChunkGeometry.ts`). */
   detailNormal: DetailNormalConfig
+  /** Terrain self-shadows — cheap live toggle (`setTerrainCastsShadow`), not
+   *  a rebuild-driven field like the rest of this config despite living here
+   *  (perf review A2/#13). */
+  terrainCastsShadow: boolean
   /** Living-forest lifecycle (plan 058) — sparse overrides + canopy queries. */
   treeLifecycle: TreeLifecycle
   /** Absolute game-days (`DayNightState.elapsedDays`) for lazy growth resolve. */
@@ -252,6 +256,9 @@ export type ChunkManager = {
    *  (`segmentsNear` + village house↔core paths). Used by fauna spawners to
    *  avoid placing on roads without needing a loaded chunk's `roadTint`. */
   roadCorridorsNear: (worldX: number, worldZ: number, querySize: number) => RoadCorridorSegment[]
+  /** Live toggle, no rebuild — flips `castShadow` on every currently-loaded
+   *  chunk mesh and on every chunk built afterward (perf review A2/#13). */
+  setTerrainCastsShadow: (value: boolean) => void
   dispose: () => void
 }
 
@@ -512,6 +519,7 @@ export function createChunkManager(
       terrainMaterial,
       config.region,
       config.seed,
+      config.terrainCastsShadow,
     )
     scene.add(mesh)
     rec.mesh = mesh
@@ -987,6 +995,12 @@ export function createChunkManager(
     roadCorridorsNear(worldX, worldZ, querySize) {
       const village = villageSegmentsNear(worldX, worldZ, querySize, roadCtx)
       return [...segmentsNear(worldX, worldZ, querySize, roadCtx), ...village.paths]
+    },
+    setTerrainCastsShadow(value) {
+      config.terrainCastsShadow = value
+      for (const record of chunks.values()) {
+        if (record.mesh) record.mesh.castShadow = value
+      }
     },
     dispose() {
       for (const record of [...chunks.values()]) unload(record)

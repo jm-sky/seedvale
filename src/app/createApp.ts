@@ -377,6 +377,16 @@ export async function createApp(
     saveGraphics(config)
   }
 
+  // Separate from `updatePostProcessingFromGui`: applies to `ChunkManager`'s
+  // already-loaded chunk meshes, not the post-processing composer (perf
+  // review A2/#13). Reads `bundle.chunkManager` fresh each call rather than
+  // capturing it, since `rebuildWorld` replaces that field on the same
+  // `bundle` object (see `WorldBundle` lifecycle note in CLAUDE.md).
+  const updateTerrainShadowFromGui = () => {
+    bundle.chunkManager.setTerrainCastsShadow(config.postProcessing.terrainCastsShadow)
+    saveGraphics(config)
+  }
+
   const onDayNightChange = () => {
     if (dayNight.enabled) gameLoop.resyncDayNight()
   }
@@ -393,6 +403,7 @@ export async function createApp(
     onDayNightChange,
     onPostProcessingChange: updatePostProcessingFromGui,
     onRenderQualityChange: updateRenderQualityFromGui,
+    onTerrainShadowChange: updateTerrainShadowFromGui,
     onDumpVillagePlan: () => {
       console.log(summarizeVillagePlan(bundle.settlementsManager.getHomeDef().plan))
     },
