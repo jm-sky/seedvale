@@ -1,9 +1,10 @@
 import type { HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { RegionalSmoothingSegment, VillageClearingParams } from '../terrain/chunkHeightmap'
-import type { FamilyDef } from './families'
+import type { FamilyDef, VillageSize } from './families'
 import type { VillagePlan } from './villagePlan'
 import { createSeededRandom } from '../world/parseSeed'
+import { gardenClearingRadius, type GardenScale } from './gardenScale'
 import { pathIsDry } from './pathDryness'
 
 export type ClearingArea = {
@@ -17,11 +18,13 @@ export type ClearingArea = {
 }
 
 export type ClearingLayout = {
-  /** Shared area at the settlement's site center — well/stockpile/garden
+  /** Shared area at the settlement's site center — well/stockpile
    *  (+extras for bigger villages, see `settlement/props.ts`). */
   core: ClearingArea
   /** One per family — its house sits here. Same order as `SettlementDef.families`. */
   houses: readonly ClearingArea[]
+  /** Garden pads (plan 077) — tree reject + light terrain flatten. */
+  gardens: readonly ClearingArea[]
   /** Broad, weak smoothing pass covering the whole village footprint (core +
    *  house ring), pulling outlier clearings toward a shared average height —
    *  see `RegionalSmoothingSegment`'s doc comment for why it's a separate,
@@ -45,6 +48,20 @@ function averageHeight(cx: number, cz: number, r: number, sampleHeight: HeightSa
   return sum / offsets.length
 }
 
+/** Size-scaled plaza disk (plan 076) — larger villages get a clearer packed-dirt center. */
+export function plazaCoreRadius(size: VillageSize, baseCoreRadius: number): number {
+  switch (size) {
+    case 'LG':
+      return Math.max(baseCoreRadius, 12)
+    case 'MD':
+      return Math.max(baseCoreRadius, 10)
+    case 'XL':
+      return Math.max(baseCoreRadius, 14)
+    default:
+      return baseCoreRadius
+  }
+}
+
 /**
  * Plan → terrain modifiers (plan 047 §9.10). House/core positions come from
  * `VillagePlan` plots/landmarks — this no longer chooses layout independently.
@@ -54,7 +71,7 @@ export function layoutClearingsFromPlan(
   sampleHeight: HeightSampler,
   params: VillageClearingParams,
 ): ClearingLayout {
-  const coreRadius = params.coreRadius
+  const coreRadius = plazaCoreRadius(plan.identity.size, params.coreRadius)
   const houseRadius = params.houseRadius
   const core: ClearingArea = {
     x: plan.center.x,
@@ -75,7 +92,27 @@ export function layoutClearingsFromPlan(
     targetH: averageHeight(plot.x, plot.z, houseRadius, sampleHeight),
   }))
 
-  const allTargets = [core.targetH, ...houses.map((h) => h.targetH)]
+  const gardenLandmarks = plan.landmarks
+    .filter((l) => l.kind === 'garden')
+    .slice()
+    .sort((a, b) => a.index - b.index)
+
+  const gardens: ClearingArea[] = gardenLandmarks.map((lm) => {
+    const scale = (lm.gardenScale ?? 'S') as GardenScale
+    const radius = gardenClearingRadius(scale)
+    return {
+      x: lm.x,
+      z: lm.z,
+      radius,
+      targetH: averageHeight(lm.x, lm.z, radius, sampleHeight),
+    }
+  })
+
+  const allTargets = [
+    core.targetH,
+    ...houses.map((h) => h.targetH),
+    ...gardens.map((g) => g.targetH),
+  ]
   const regional: RegionalSmoothingSegment = {
     x: plan.boundary.x,
     z: plan.boundary.z,
@@ -87,7 +124,7 @@ export function layoutClearingsFromPlan(
         : params.regionalHeightStrengthFlat,
   }
 
-  return { core, houses, regional }
+  return { core, houses, gardens, regional }
 }
 
 /**
@@ -143,5 +180,5 @@ export function layoutClearings(
       terrain === 'mountain' ? params.regionalHeightStrengthMountain : params.regionalHeightStrengthFlat,
   }
 
-  return { core, houses, regional }
+  return { core, houses, gardens: [], regional }
 }

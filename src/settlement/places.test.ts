@@ -16,10 +16,12 @@ function makeTree(id: string, x: number, z: number): SettlementTreeLandmark {
 }
 
 function makeLandmarks(overrides: Partial<SettlementLandmarks> = {}): SettlementLandmarks {
+  const garden = new Vector3(3, 0, 3)
   return {
     well: new Vector3(1, 0, 1),
     stockpile: new Vector3(2, 0, 2),
-    garden: new Vector3(3, 0, 3),
+    garden,
+    gardens: [garden],
     market: new Vector3(4, 0, 4),
     homes: [],
     houses: [],

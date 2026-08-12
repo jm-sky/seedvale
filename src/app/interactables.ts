@@ -116,6 +116,8 @@ export function buildInteractables(
         modelUrl: house.modelUrl,
         label: house.label,
         examine: house.examine,
+        lampMount: house.lampMount,
+        lampMountSource: house.lampMountSource,
       })
     }
 

@@ -63,7 +63,9 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
 | [2026-08-12--078--distance-oneshot-falloff.md](./2026-08-12--078--distance-oneshot-falloff.md) | `playAt`: dalej = ciszej dla one-shotów światowych | 100% | 🟡 medium | S | ~~014~~, ~~016~~ |
+| [2026-08-12--077--village-gardens-scale.md](./2026-08-12--077--village-gardens-scale.md) | Ogrody S/M/L z liczby domów (~1/3), clearings vs drzewa | 100% | 🟡 medium | M | ~~047~~, ~~076~~ |
 | [2026-08-12--075--time-skip-npc-catchup.md](./2026-08-12--075--time-skip-npc-catchup.md) | Odpoczynek: teleport NPC do nowej pozycji wg zegara + realny catch-up potrzeb/staminy | 100% | 🟡 medium | M | — |
+| [2026-08-12--076--village-generator-polish.md](./2026-08-12--076--village-generator-polish.md) | Ścieżki/plac, ognisko, yaw/pad, shells, drzewa dziedzińca, tabliczka 2 słupy | 100% | 🟡 medium | L | ~~047~~, ~~072~~, ~~074~~ |
 | [2026-08-09--047--village-generation-overhaul.md](./2026-08-09--047--village-generation-overhaul.md) | VillageIdentity, VillagePlan, strefy, drogi, scoring i layout [have implementation notes] | 100% | 🔴 high | XL | ~~031~~, 032 |
 | [2026-08-10--056--hungry-predator-human-aggression.md](./2026-08-10--056--hungry-predator-human-aggression.md) | Głodny predator może przełamać strach przed człowiekiem [have implementation notes] | 100% | 🟡 medium | M | ~~010~~, ~~021~~, ~~045~~, ~~055~~ |
 | [2026-08-10--057--axe-player-tree-harvesting.md](./2026-08-10--057--axe-player-tree-harvesting.md) | Siekiera + ścinanie drzew (3 etapy: limbed → felled → harvested) | 100% | 🟡 medium | M | ~~058~~, ~~043~~, ~~030~~ |

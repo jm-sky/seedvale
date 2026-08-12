@@ -194,8 +194,8 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         },
         village: {
           coreRadius: 9,
-          houseRadius: 7,
-          heightStrength: 0.8,
+          houseRadius: 8,
+          heightStrength: 1,
           tintStrength: 0.75,
           regionalHeightStrengthFlat: 0.3,
           regionalHeightStrengthMountain: 0.15,

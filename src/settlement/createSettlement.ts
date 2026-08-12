@@ -30,6 +30,7 @@ import {
   loadPropTemplates,
   placeOnGround,
   type SettlementLandmarks,
+  VILLAGE_NAMEPOST_BOARD_CENTER_Y,
 } from './props'
 import {
   type RoadNetworkContext,
@@ -47,9 +48,15 @@ export type { SettlementForestHooks }
  *  below). NPC sleep timing moved to `NpcAgent`'s own `schedule` (v2 stage
  *  2, `docs/plans/2026-08-07--020...`) — this threshold is now fire-only. */
 const NIGHT_FIRE_THRESHOLD = 0.6
-/** Chance the settlement's own fire is already lit when night falls —
- *  villagers keeping it going themselves, no player branch consumed. */
-const NIGHT_FIRE_IGNITE_CHANCE = 0.5
+/** Per-size chance the settlement fire is already lit at dusk (villagers keep
+ *  it going — no player branch). OUTPOST/SM have no campfire prop. */
+const NIGHT_FIRE_IGNITE_CHANCE: Record<VillageSize, number> = {
+  OUTPOST: 0,
+  SM: 0,
+  MD: 0.75,
+  LG: 0.85,
+  XL: 1,
+}
 
 /** How close (world units) another NPC must be to count toward
  *  `nearbyNpcCount` for `NpcAgent`'s group reaction-chance dampening (issue
@@ -190,7 +197,7 @@ export async function createSettlement(
     labelEl.className = 'npc-label'
     labelEl.textContent = def.name
     const label = new CSS2DObject(labelEl)
-    label.position.set(0, 2.15, 0)
+    label.position.set(0, VILLAGE_NAMEPOST_BOARD_CENTER_Y, 0)
     prop.add(label)
 
     signposts.push({
@@ -363,7 +370,7 @@ export async function createSettlement(
         const random = createSeededRandom(
           settlementSeed ^ Math.imul(nightIndex, 0x9e3779b1) ^ 0x4e494748,
         )
-        if (random() < NIGHT_FIRE_IGNITE_CHANCE) fire.light()
+        if (random() < (NIGHT_FIRE_IGNITE_CHANCE[def.size] ?? 0.75)) fire.light()
       }
       nightFactor = t
       for (const light of houseLights) light.setNightIntensity(t)

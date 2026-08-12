@@ -9,6 +9,7 @@ import type {
 } from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
 import { createSeededRandom } from '../world/parseSeed'
+import { villageSizeConfig } from './families'
 import { clearMinorLocationCaches, minorLocationsFor } from './minorLocations'
 import {
   cellsWithinRadius,
@@ -726,8 +727,16 @@ export function villageSegmentsNear(
     !(x + margin < minX || x - margin > maxX || z + margin < minZ || z - margin > maxZ)
 
   const { heightStrength, tintStrength } = ctx.region.village
-  const { pathHalfWidth, pathHeightStrength, pathTintStrength, edgeWobbleAmplitude } =
-    ctx.region.roadNetwork
+  const houseHeightStrength = Math.min(1, Math.max(heightStrength, 0.95))
+  const {
+    pathHalfWidth,
+    pathHeightStrength,
+    pathTintStrength,
+    roadHalfWidth,
+    roadHeightStrength,
+    roadTintStrength,
+    edgeWobbleAmplitude,
+  } = ctx.region.roadNetwork
 
   const clearings: ClearingSegment[] = []
   const regional: RegionalSmoothingSegment[] = []
@@ -735,11 +744,43 @@ export function villageSegmentsNear(
 
   for (const c of cellsWithinRadius(cell, 1)) {
     const def = defFor(c, ctx)
-    const { core, houses, regional: reg } = def.clearings
+    const { core, houses, gardens, regional: reg } = def.clearings
+    const center = def.plan.center
+    const sizeCfg = villageSizeConfig(def.size)
+    const fullWearR = Math.max(core.radius * 1.15, sizeCfg.houseRingMax * 0.35)
+    const softWearR = Math.max(fullWearR + 4, sizeCfg.houseRingMax * 0.95)
 
-    for (const area of [core, ...houses]) {
+    if (inBounds(core.x, core.z, core.radius + 2)) {
+      clearings.push({
+        x: core.x,
+        z: core.z,
+        radius: core.radius,
+        targetH: core.targetH,
+        heightStrength,
+        tintStrength,
+      })
+    }
+    for (const area of houses) {
       if (!inBounds(area.x, area.z, area.radius + 2)) continue
-      clearings.push({ x: area.x, z: area.z, radius: area.radius, targetH: area.targetH, heightStrength, tintStrength })
+      clearings.push({
+        x: area.x,
+        z: area.z,
+        radius: area.radius,
+        targetH: area.targetH,
+        heightStrength: houseHeightStrength,
+        tintStrength,
+      })
+    }
+    for (const area of gardens ?? []) {
+      if (!inBounds(area.x, area.z, area.radius + 2)) continue
+      clearings.push({
+        x: area.x,
+        z: area.z,
+        radius: area.radius,
+        targetH: area.targetH,
+        heightStrength: Math.min(1, heightStrength * 0.85),
+        tintStrength: tintStrength * 0.85,
+      })
     }
 
     if (inBounds(reg.x, reg.z, reg.radius + 2)) {
@@ -748,12 +789,28 @@ export function villageSegmentsNear(
 
     // Local paths come from VillagePlan (plan 047) — not a second house↔core layout.
     for (const seg of pathPlansToCorridorData(def.plan.paths, ctx.sampleHeight)) {
-      const margin = corridorHalfWidthMargin(seg.halfWidth || pathHalfWidth, edgeWobbleAmplitude)
+      const isRoad = seg.kind === 'road'
+      const halfWidth = seg.halfWidth || (isRoad ? Math.min(roadHalfWidth, LOCAL_ROAD_HALF_WIDTH_CAP) : pathHalfWidth)
+      const margin = corridorHalfWidthMargin(halfWidth, edgeWobbleAmplitude)
       const segMinX = Math.min(seg.ax, seg.bx) - margin
       const segMaxX = Math.max(seg.ax, seg.bx) + margin
       const segMinZ = Math.min(seg.az, seg.bz) - margin
       const segMaxZ = Math.max(seg.az, seg.bz) + margin
       if (segMaxX < minX || segMinX > maxX || segMaxZ < minZ || segMinZ > maxZ) continue
+
+      const baseHeight = isRoad ? roadHeightStrength : Math.max(pathHeightStrength, 0.45)
+      // Local footpaths used pathTint 0.4 × radial wear → center tint ~0.2 and
+      // grass grew on the strip (fade ends at roadTint 0.38). Keep village
+      // corridors clearly packed dirt; outer wear still softens via `wear`.
+      const baseTint = isRoad ? roadTintStrength : Math.max(pathTintStrength, 0.78)
+      const wear = localPathRadialWear(
+        (seg.ax + seg.bx) * 0.5,
+        (seg.az + seg.bz) * 0.5,
+        center.x,
+        center.z,
+        fullWearR,
+        softWearR,
+      )
       paths.push({
         ax: seg.ax,
         az: seg.az,
@@ -761,12 +818,33 @@ export function villageSegmentsNear(
         bx: seg.bx,
         bz: seg.bz,
         bh: seg.bh,
-        halfWidth: seg.halfWidth || pathHalfWidth,
-        heightStrength: pathHeightStrength,
-        tintStrength: pathTintStrength,
+        halfWidth,
+        heightStrength: baseHeight * (0.65 + 0.35 * wear),
+        tintStrength: baseTint * wear,
       })
     }
   }
 
   return { clearings, regional, paths }
+}
+
+/** Cap local village "road" half-width — wider than a footpath, narrower than
+ *  inter-settlement highways (`roadHalfWidth` ~5). */
+const LOCAL_ROAD_HALF_WIDTH_CAP = 2.8
+
+/** Full wear near plaza; outer ring can look a bit softer but still dirt
+ *  (floor ~0.72 — pathTint×0.5 previously left grass in the corridor). */
+function localPathRadialWear(
+  x: number,
+  z: number,
+  centerX: number,
+  centerZ: number,
+  fullWearR: number,
+  softWearR: number,
+): number {
+  const d = Math.hypot(x - centerX, z - centerZ)
+  if (d <= fullWearR) return 1
+  if (d >= softWearR) return 0.72
+  const t = (d - fullWearR) / Math.max(1e-6, softWearR - fullWearR)
+  return 1 - 0.28 * t
 }

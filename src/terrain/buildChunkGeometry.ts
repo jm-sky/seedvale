@@ -55,7 +55,10 @@ const NORMAL_MAP_TWO_TAP = /* glsl */ `
   vec3 mapNBare = texture2D( normalMap, vNormalMapUv * uDetailTilesBare ).xyz * 2.0 - 1.0;
   vec3 mapN = mix( mapNGrass, mapNBare, vBareGround );
   float detailFade = 1.0 - smoothstep( 20.0, 50.0, length( vViewPosition ) );
-  mapN.xy *= normalScale * detailFade;
+  // Packed dirt (plaza / roads): keep light grit, not crumpled-foil bumps.
+  // Roads still read as dirt; village squares stop looking like crumpled mesh.
+  float bareQuiet = mix( 1.0, 0.28, vBareGround );
+  mapN.xy *= normalScale * detailFade * bareQuiet;
   normal = normalize( tbn * mapN );
 `
 
@@ -103,13 +106,14 @@ const MACRO_COLOR_CHUNK = /* glsl */ `
     diffuseColor.r = clamp( diffuseColor.r - m * 0.05 * grassAmt, 0.0, 1.0 );
     diffuseColor.rgb *= 1.0 + m * 0.07 * grassAmt;
 
-    // Packed dirt / road grain — higher frequency than meadow, only on bare.
+    // Packed dirt / road grain — lighter than before so plaza/roads don't
+    // read as crumpled geometry under daylight (plan 076 plaza playtest).
     float dirt = terrainValueNoise( vWorldPos.xz * 0.9 ) * 2.0 - 1.0;
     float grit = terrainValueNoise( vWorldPos.xz * 2.1 ) * 2.0 - 1.0;
     float d = dirt * 0.7 + grit * 0.3;
-    diffuseColor.rgb *= 1.0 + d * 0.16 * vBareGround;
-    diffuseColor.r = clamp( diffuseColor.r + d * 0.05 * vBareGround, 0.0, 1.0 );
-    diffuseColor.g = clamp( diffuseColor.g - abs( d ) * 0.03 * vBareGround, 0.0, 1.0 );
+    diffuseColor.rgb *= 1.0 + d * 0.07 * vBareGround;
+    diffuseColor.r = clamp( diffuseColor.r + d * 0.025 * vBareGround, 0.0, 1.0 );
+    diffuseColor.g = clamp( diffuseColor.g - abs( d ) * 0.015 * vBareGround, 0.0, 1.0 );
   }
 `
 
@@ -198,7 +202,7 @@ ${MACRO_NOISE_FUNCS}${
   // share one compiled program — but three's default cache key ignores
   // `onBeforeCompile`, so say so explicitly.
   material.customProgramCacheKey = () =>
-    detailOn ? 'chunk-terrain-surface-detail-v2' : 'chunk-terrain-surface-v2'
+    detailOn ? 'chunk-terrain-surface-detail-v3' : 'chunk-terrain-surface-v3'
 }
 
 /** Where the surface reads as packed dirt/sand rather than vegetated ground:

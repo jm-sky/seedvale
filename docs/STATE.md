@@ -65,6 +65,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Settlement generation is plan-first: one `VillagePlan` per settlement (identity → zones/plots/buildings/landmarks/local paths/entrances), projected to `SettlementDef` for runtime; shared `settlementPlanCache` feeds `SettlementsManager` and `RoadNetwork` (plan 047 — verification needed).
 - Settlement generation with families, houses, roads/paths and environment-aware siting.
 - House visuals use per-model `HOUSE_CATALOG` (issue 018 / plan 074): individual heights + lamp fractions; `towerhouse` excluded from family homes; `[E] Obejrzyj` + `?debug=1` shows model id/URL. Wall lamps use `findWallMount` again. Name plaque by the well; inland-only palisade wings (plan 072).
+- Village generator polish (plan 076): worn local roads + radial path wear, size-scaled plaza clearing, campfire kept off the well, house yaw + stronger house pads, First Age shells rare/small villages only, courtyard tree cap, two-post nameboard.
+- Village gardens scale (plan 077): ~1 garden unit per 3 houses packed into S/M/L beds; garden clearings keep trees out; `landmarks.gardens[]` with primary `garden` for farmers.
 - Prey thicket/cave spawners reject coastal/beach sites (`isCoastalPlacement`); thickets also prefer light forest cover.
 - Road/path corridors get edge wobble, sparse light potholes, and A* route meander (`region.roadNetwork` knobs; plan 068).
 - Inter-settlement road signposts use `yawToward` for board orientation; midpoint pairs are spaced apart (plan 039).

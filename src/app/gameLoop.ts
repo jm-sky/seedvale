@@ -324,6 +324,17 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               id: target.houseId,
               model: target.modelUrl,
               label: target.label,
+              lampSource: target.lampMountSource,
+              lampMount: target.lampMount
+                ? {
+                    x: +target.lampMount.x.toFixed(3),
+                    y: +target.lampMount.y.toFixed(3),
+                    z: +target.lampMount.z.toFixed(3),
+                  }
+                : null,
+              paste: target.lampMount
+                ? `lampMount: { x: ${target.lampMount.x.toFixed(3)}, y: ${target.lampMount.y.toFixed(3)}, z: ${target.lampMount.z.toFixed(3)} }`
+                : null,
             })
           }
         } else {

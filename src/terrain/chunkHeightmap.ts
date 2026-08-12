@@ -549,10 +549,12 @@ export function extractCoreGrid(
   return out
 }
 
-/** Fraction of a corridor's half-width/radius that stays at full strength
- *  before tapering (roads/paths + village clearings). Lower = longer soft
- *  edge into surrounding ground — less "painted strip" (GRAPHICS / issue 023). */
+/** Fraction of a corridor's half-width that stays at full strength before
+ *  tapering (roads/paths). Lower = longer soft edge into surrounding ground. */
 const CORRIDOR_INNER_FRACTION = 0.32
+/** Village clearings (plaza / house pads) stay nearly flat across most of the
+ *  disk — only a short soft skirt at the rim (plan 076 playtest). */
+const CLEARING_INNER_FRACTION = 0.82
 /** World-space frequency for sparse pothole noise (separate from edge wobble). */
 const POTHOLE_NOISE_SCALE = 0.14
 
@@ -601,7 +603,7 @@ function clearingCandidate(wx: number, wz: number, seg: ClearingSegment): Corrid
   const distSq = dx * dx + dz * dz
   if (distSq >= seg.radius * seg.radius) return null
   const dist = Math.sqrt(distSq)
-  const inner = seg.radius * CORRIDOR_INNER_FRACTION
+  const inner = seg.radius * CLEARING_INNER_FRACTION
   const falloff = 1 - MathUtils.smoothstep(dist, inner, seg.radius)
   return {
     falloff,
@@ -616,7 +618,11 @@ function clearingCandidate(wx: number, wz: number, seg: ClearingSegment): Corrid
  *  `applyRoadTint` (reused as-is for clearings — both read as "packed
  *  ground", see `villageClearing.ts`). Segments are plain per-chunk input
  *  data (`ChunkTileParams.roadSegments`/`clearings`) — see their doc comments
- *  for why this lives here and not in `sampleRawTexel`. */
+ *  for why this lives here and not in `sampleRawTexel`.
+ *
+ *  Height priority: clearings beat roads/paths once the texel is meaningfully
+ *  inside a pad/plaza. Entrance roads still tint the dirt, but their potholes
+ *  and endpoint height lerp must not roughen the square. */
 function applyTerrainCorridors(
   wx: number,
   wz: number,
@@ -626,27 +632,52 @@ function applyTerrainCorridors(
   roadNoise: NoiseFunction2D,
   roadNetwork: RoadNetworkParams,
 ): { floorH: number; tint: number } {
-  let bestFalloff = 0
-  let bestTargetH = 0
-  let bestHeightStrength = 0
+  let bestRoadFalloff = 0
+  let bestRoadTargetH = 0
+  let bestRoadHeightStrength = 0
+  let bestClearingFalloff = 0
+  let bestClearingTargetH = 0
+  let bestClearingHeightStrength = 0
   let bestTint = 0
 
-  const consider = (candidate: CorridorCandidate | null) => {
-    if (!candidate) return
-    if (candidate.falloff > bestFalloff) {
-      bestFalloff = candidate.falloff
-      bestTargetH = candidate.targetH
-      bestHeightStrength = candidate.heightStrength
+  for (const seg of roadSegments) {
+    const candidate = roadCandidate(wx, wz, seg, roadNoise, roadNetwork)
+    if (!candidate) continue
+    if (candidate.falloff > bestRoadFalloff) {
+      bestRoadFalloff = candidate.falloff
+      bestRoadTargetH = candidate.targetH
+      bestRoadHeightStrength = candidate.heightStrength
+    }
+    if (candidate.tint > bestTint) bestTint = candidate.tint
+  }
+  for (const seg of clearingSegments) {
+    const candidate = clearingCandidate(wx, wz, seg)
+    if (!candidate) continue
+    if (candidate.falloff > bestClearingFalloff) {
+      bestClearingFalloff = candidate.falloff
+      bestClearingTargetH = candidate.targetH
+      bestClearingHeightStrength = candidate.heightStrength
     }
     if (candidate.tint > bestTint) bestTint = candidate.tint
   }
 
-  for (const seg of roadSegments) consider(roadCandidate(wx, wz, seg, roadNoise, roadNetwork))
-  for (const seg of clearingSegments) consider(clearingCandidate(wx, wz, seg))
-
-  if (bestFalloff <= 0) return { floorH, tint: 0 }
+  /** Inside plaza/house pad — ignore road height (potholes / profile lerp).
+   *  Low threshold so the whole dirt square stays on the flat target, not just
+   *  the innermost metres. */
+  const CLEARING_HEIGHT_PRIORITY = 0.08
+  if (bestClearingFalloff >= CLEARING_HEIGHT_PRIORITY) {
+    // Snap hard once we're clearly on the pad — residual lerp left visible
+    // "tin foil" ridges under the well (playtest screen).
+    const blend = Math.min(1, bestClearingFalloff * bestClearingHeightStrength)
+    const hard = blend >= 0.55 ? 1 : blend
+    return {
+      floorH: MathUtils.lerp(floorH, bestClearingTargetH, hard),
+      tint: bestTint,
+    }
+  }
+  if (bestRoadFalloff <= 0) return { floorH, tint: bestTint }
   return {
-    floorH: MathUtils.lerp(floorH, bestTargetH, bestFalloff * bestHeightStrength),
+    floorH: MathUtils.lerp(floorH, bestRoadTargetH, bestRoadFalloff * bestRoadHeightStrength),
     tint: bestTint,
   }
 }

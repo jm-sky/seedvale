@@ -55,9 +55,20 @@ export function resolveInteraction(
       let line = target.examine
       if (isDebugMode()) {
         const model = target.modelUrl ?? '(procedural fallback)'
-        const entry = { id: target.houseId, model, label: target.label }
-        console.info('[house]', entry)
-        line = `${line}\n\n[debug] ${target.houseId} · ${model}`
+        const paste = target.lampMount
+          ? `lampMount: { x: ${target.lampMount.x.toFixed(3)}, y: ${target.lampMount.y.toFixed(3)}, z: ${target.lampMount.z.toFixed(3)} }`
+          : null
+        console.info('[house]', {
+          id: target.houseId,
+          model,
+          label: target.label,
+          lampSource: target.lampMountSource,
+          lampMount: target.lampMount,
+          paste,
+        })
+        line = paste
+          ? `${line}\n\n[debug] ${target.houseId} · ${model}\n${paste} · ${target.lampMountSource ?? '?'}`
+          : `${line}\n\n[debug] ${target.houseId} · ${model}`
       }
       return { speakerName: target.label, line }
     }

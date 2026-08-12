@@ -114,6 +114,8 @@ export type VillageLandmarkPlan = {
   plotId: string | null
   /** Index into homes / stockpiles of the same kind when multiple exist. */
   index: number
+  /** Garden cluster size (plan 077) — only set for `kind === 'garden'`. */
+  gardenScale?: 'S' | 'M' | 'L'
 }
 
 export type VillagePathPlan = {

@@ -40,10 +40,13 @@ export type VillageSizeConfig = {
     livestock: number
     utility: number
   }
-  /** Counts of core infrastructure landmarks (`props.ts` / planner). */
+  /** Counts of core infrastructure landmarks (`props.ts` / planner).
+   *  `gardens` is legacy/cap only — plan 077 derives garden clusters from
+   *  `ceil(nHouses / 3)` via `gardenScale.ts` (not this field). */
   infrastructure: {
     wells: number
     stockpiles: number
+    /** @deprecated Prefer `packGardenScales(gardenUnitsFromHouses(n))`. */
     gardens: number
     markets: number
     campfires: number

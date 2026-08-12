@@ -23,17 +23,20 @@ Traktować każdy wariant domu osobno (wysokość, lampa, rola), zamiast jednej 
 http://localhost:5577/?debug=1
 ```
 
-1. Podejdź do domu — w konsoli: `[house:gaze] { id, model, label }`.
-2. `[E] Obejrzyj` — flavor + `[debug] hut_a · /models/...`.
-3. Jeśli drzwi za niskie: w `houseCatalog.ts` **obniż** `doorHeightFraction` (np. 0.20 → 0.18) albo podnieś `targetDoorHeight` / `maxHeight`.
-4. Jeśli dom za duży względem placu: obniż `maxHeight` albo podnieś `doorHeightFraction`.
+1. Przy starcie wioski: `[house:lamp]` — `source`, `mount`, gotowy `paste:` do `houseCatalog.ts`.
+2. Podejdź do domu — `[house:gaze]` z tym samym `paste:`.
+3. `[E] Obejrzyj` — flavor + debug + `lampMount` w dialogu.
+4. Jeśli drzwi za niskie: w `houseCatalog.ts` **obniż** `doorHeightFraction` (np. 0.20 → 0.18) albo podnieś `targetDoorHeight` / `maxHeight`.
+5. Jeśli dom za duży względem placu: obniż `maxHeight` albo podnieś `doorHeightFraction`.
+6. Wall lamp źle: wklej `lampMount: { x, y, z }` z konsoli do wpisu modelu (`source: catalog`).
 
 **Nie ruszać** `worldConfig` / localStorage przy tej kalibracji — wysokości są w katalogu.
 
 ## Update (2026-08-12 playtest)
 
 - `hut_d` height 9.0 → **8.2** (drzwi ~20 cm za wysokie).
-- `hut_a/b/c` First Age: **brak ścian** — wyłączone z rotacji domów; notatki w `examine`.
+- `hut_a/b/c` First Age: **brak ścian** — nadal w katalogu (OUTPOST/SM rare); lampy **floor-center** przy ziemi (NPC mieszkają).
 - `hut_a` `groundYOffset: -0.2` (szary fundament).
-- Lampy: tylko `hasWalls`; `findWallMount` odrzuca trafienia w dach (normal.y).
+- Lampy: `lampStyle` + opcjonalne `lampMount` (paste z konsoli). Wall: raycast → bbox provisional. Debug: `[house:lamp]` / gaze `[house:gaze]` z `paste:`.
 - `towerhouse` nadal poza rotacją (wieża/flagi) — dlatego nie pojawiał się w wiosce.
+- Blender / socket w GLB — awaryjnie później.

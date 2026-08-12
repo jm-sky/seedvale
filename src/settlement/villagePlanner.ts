@@ -19,7 +19,18 @@ import type {
 import { RESOURCE_ROLE, SIGNIFICANT_RICHNESS } from '../terrain/naturalResources'
 import { createSeededRandom } from '../world/parseSeed'
 import { villageSizeConfig } from './families'
+import {
+  gardenPlotRadius,
+  type GardenScale,
+  gardenUnitsFromHouses,
+  packGardenScales,
+} from './gardenScale'
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
+import { plazaCoreRadius } from './villageClearing'
+
+/** Matches `worldConfig.settlement.clearing.coreRadius` — used only to size
+ *  plaza-relative infrastructure (campfire stays on packed dirt). */
+const DEFAULT_PLAZA_CORE_RADIUS = 9
 
 /** Shared plot-placement weights (plan 047 §8) — one table for every role. */
 export const PLOT_SCORE_WEIGHTS = {
@@ -295,6 +306,10 @@ type PlotPlacementRequest = {
   familyId: string | null
   /** Preferred distance from village center (houses). */
   preferredRing?: number
+  /** Hard reject when closer than this to plaza center (gardens stay off the square). */
+  minCenterDist?: number
+  /** Hard reject when farther than this (campfire stays on plaza dirt). */
+  maxCenterDist?: number
   /** Prefer proximity to this point (resource / related plot). */
   attractor?: { x: number, z: number } | null
   /** Force exact position (well at plaza) — still records a plot. */
@@ -329,6 +344,9 @@ function scorePlotCandidate(
 
   const w = PLOT_SCORE_WEIGHTS
   const distCenter = Math.hypot(x - center.x, z - center.z)
+  if (req.minCenterDist != null && distCenter < req.minCenterDist) return null
+  if (req.maxCenterDist != null && distCenter > req.maxCenterDist) return null
+
   const outside = distCenter + req.radius - boundary.radius
 
   let score =
@@ -347,6 +365,10 @@ function scorePlotCandidate(
   if (req.role === 'house' || req.role === 'livestock') {
     score -= Math.abs(distCenter - (req.preferredRing ?? distCenter)) * w.preferredRingPenalty
     score -= distCenter * w.distToCenterHouse * 0.25
+  } else if (req.preferredRing != null) {
+    // Campfire / market: stay near the requested plaza ring rather than
+    // collapsing onto the well or drifting onto grass outside the square.
+    score -= Math.abs(distCenter - req.preferredRing) * w.preferredRingPenalty
   } else {
     score -= distCenter * w.distToCenterInfra
   }
@@ -405,10 +427,12 @@ function pickPlot(
 
   for (let attempt = 0; attempt < PLOT_CANDIDATE_ATTEMPTS; attempt++) {
     const angle = baseAngle + (random() - 0.5) * 1.4 + attempt * 0.37
-    const dist =
-      req.role === 'house' || req.role === 'livestock'
+    let dist =
+      req.role === 'house' || req.role === 'livestock' || req.maxCenterDist != null
         ? preferredRing * (0.75 + random() * 0.5)
         : preferredRing * (0.35 + random() * 0.7)
+    if (req.minCenterDist != null) dist = Math.max(dist, req.minCenterDist)
+    if (req.maxCenterDist != null) dist = Math.min(dist, req.maxCenterDist)
     const x = center.x + Math.cos(angle) * dist
     const z = center.z + Math.sin(angle) * dist
     const y = sampleHeight(x, z)
@@ -445,9 +469,23 @@ function pickPlot(
 
   if (best) return best
 
-  // Deterministic fallback: hug zone center or village center (plan 047 §15).
-  const fx = zone?.x ?? center.x + Math.cos(baseAngle) * (HOUSE_PLOT_RADIUS * 1.2)
-  const fz = zone?.z ?? center.z + Math.sin(baseAngle) * (HOUSE_PLOT_RADIUS * 1.2)
+  // Deterministic fallback: prefer the requested ring (keeps campfire / market
+  // off the well when public-zone center ≈ plaza — plan 076). Houses still hug
+  // residential zone when no preferredRing was set.
+  let fallbackRing = Math.max(
+    preferredRing ??
+      (req.role === 'house' ? HOUSE_PLOT_RADIUS * 1.2 : boundary.radius * 0.22),
+    req.minCenterDist ?? 0,
+  )
+  if (req.maxCenterDist != null) fallbackRing = Math.min(fallbackRing, req.maxCenterDist)
+  const fx =
+    req.role === 'house' && zone
+      ? zone.x
+      : center.x + Math.cos(baseAngle) * fallbackRing
+  const fz =
+    req.role === 'house' && zone
+      ? zone.z
+      : center.z + Math.sin(baseAngle) * fallbackRing
   return {
     id: req.id,
     role: req.role,
@@ -581,17 +619,22 @@ export function planVillageLayout(
     )
   }
 
-  for (let i = 0; i < infra.gardens; i++) {
+  // Plan 077: garden clusters from house count (~1 unit / 3 houses → S/M/L).
+  const houseCount = families.length
+  const gardenScales = packGardenScales(gardenUnitsFromHouses(houseCount))
+  for (let i = 0; i < gardenScales.length; i++) {
+    const scale = gardenScales[i]!
     plots.push(
       pickPlot(
         {
-          id: `plot-infra-garden-${i}`,
+          id: `plot-infra-garden-${i}-${scale}`,
           role: 'infrastructure',
           zone: foodZone ?? publicZone,
-          radius: INFRA_PLOT_RADIUS,
+          radius: gardenPlotRadius(scale),
           familyIndex: null,
           familyId: null,
-          preferredRing: sizeCfg.footprintRadius * 0.14,
+          preferredRing: sizeCfg.footprintRadius * (0.34 + i * 0.04),
+          minCenterDist: sizeCfg.footprintRadius * 0.24,
         },
         center,
         boundary,
@@ -604,6 +647,7 @@ export function planVillageLayout(
     )
   }
 
+  const plazaR = plazaCoreRadius(identity.size, DEFAULT_PLAZA_CORE_RADIUS)
   for (let i = 0; i < infra.campfires; i++) {
     plots.push(
       pickPlot(
@@ -614,7 +658,10 @@ export function planVillageLayout(
           radius: INFRA_PLOT_RADIUS * 0.85,
           familyIndex: null,
           familyId: null,
-          preferredRing: sizeCfg.footprintRadius * 0.08,
+          // On packed-dirt plaza: mid-ring, hard-capped inside core clearing
+          // (0.22×footprint sat on the grass rim after props jitter / well push).
+          preferredRing: plazaR * 0.55,
+          maxCenterDist: Math.max(plazaR * 0.55, plazaR - 1.5),
         },
         center,
         boundary,
@@ -760,6 +807,7 @@ export function buildingsAndLandmarksFromPlots(
     kind: VillageLandmarkKind,
     plot: VillagePlot,
     idSuffix?: string,
+    gardenScale?: GardenScale,
   ) => {
     const index = nextIndex(kind)
     landmarks.push({
@@ -771,6 +819,7 @@ export function buildingsAndLandmarksFromPlots(
       rotation: plot.rotation,
       plotId: plot.id,
       index,
+      ...(gardenScale ? { gardenScale } : {}),
     })
   }
 
@@ -825,10 +874,11 @@ export function buildingsAndLandmarksFromPlots(
       pushLandmark('stockpile', plot, stockpileMatch[1])
       continue
     }
-    const gardenMatch = /^plot-infra-garden-(\d+)$/.exec(plot.id)
+    const gardenMatch = /^plot-infra-garden-(\d+)-(S|M|L)$/.exec(plot.id)
     if (gardenMatch) {
-      pushBuilding('utility', plot, `building-garden-${gardenMatch[1]}`)
-      pushLandmark('garden', plot, gardenMatch[1])
+      const scale = gardenMatch[2] as GardenScale
+      pushBuilding('utility', plot, `building-garden-${gardenMatch[1]}-${scale}`)
+      pushLandmark('garden', plot, `${gardenMatch[1]}-${scale}`, scale)
       continue
     }
     const campfireMatch = /^plot-infra-campfire-(\d+)$/.exec(plot.id)
@@ -1097,7 +1147,7 @@ export function planLocalPathsAndEntrances(args: {
 
 /**
  * Flatten local path polylines into worker-safe corridor numerics (plain
- * ax/az/ah/bx/bz/bh/halfWidth). Does not invent a second pathfinder.
+ * ax/az/ah/bx/bz/bh/halfWidth + kind). Does not invent a second pathfinder.
  */
 export function pathPlansToCorridorData(
   paths: readonly VillagePathPlan[],
@@ -1110,6 +1160,7 @@ export function pathPlansToCorridorData(
   bz: number
   bh: number
   halfWidth: number
+  kind: 'path' | 'road'
 }> {
   const out: Array<{
     ax: number
@@ -1119,6 +1170,7 @@ export function pathPlansToCorridorData(
     bz: number
     bh: number
     halfWidth: number
+    kind: 'path' | 'road'
   }> = []
   for (const path of paths) {
     for (let i = 0; i < path.points.length - 1; i++) {
@@ -1132,6 +1184,7 @@ export function pathPlansToCorridorData(
         bz: b.z,
         bh: sampleHeight(b.x, b.z),
         halfWidth: path.halfWidth,
+        kind: path.kind,
       })
     }
   }

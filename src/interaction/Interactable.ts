@@ -32,6 +32,8 @@ export type Interactable =
     modelUrl: string | null
     label: string
     examine: string
+    lampMount: { x: number, y: number, z: number } | null
+    lampMountSource: string | null
   }
   | {
     kind: 'tree'

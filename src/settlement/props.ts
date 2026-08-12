@@ -5,15 +5,30 @@ import type { FoodSourceType } from './settlementGenerator'
 import type { ClearingLayout } from './villageClearing'
 import type { VillageLandmarkPlan, VillagePlan } from './villagePlan'
 import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
-import { distanceToSegment } from '../math/segment'
+import { isDebugMode } from '../debug/debugMode'
+import { distanceToSegment, projectOntoSegment } from '../math/segment'
 import { createSparks, type Sparks } from '../shared/getFireParticles'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
 import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { type VillageSize, villageSizeConfig } from './families'
-import { homeHouseEntryAt, HOUSE_LAMP_MAX_LOCAL_Y, resolveHouseHeight } from './houseCatalog'
+import {
+  gardenBedCount,
+  gardenClearingRadius,
+  type GardenScale,
+} from './gardenScale'
+import {
+  HOUSE_FLOOR_LAMP_Y,
+  HOUSE_LAMP_MAX_LOCAL_Y,
+  type HouseCatalogEntry,
+  type HouseLampMount,
+  type HouseLampStyle,
+  pickHomeHouse,
+  resolveHouseHeight,
+} from './houseCatalog'
 import { yawToward } from './roadNetwork'
+import { pathPlansToCorridorData } from './villagePlanner'
 
 export type SettlementHouseLandmark = {
   position: THREE.Vector3
@@ -21,12 +36,17 @@ export type SettlementHouseLandmark = {
   modelUrl: string | null
   label: string
   examine: string
+  /** Local lamp mount used at build time (for debug gaze / catalog paste). */
+  lampMount: HouseLampMount | null
+  lampMountSource: string | null
 }
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
   stockpile: THREE.Vector3
   garden: THREE.Vector3
+  /** All garden pads (plan 077); `garden` mirrors the primary (index 0). */
+  gardens: THREE.Vector3[]
   /** Trader's `workplace` (`places.ts`'s `workplaceFor`) — crate + barrel
    *  market stall, the one role in the workplace hybrid that gets a
    *  dedicated new prop instead of reusing an existing landmark (2026-08-09
@@ -325,46 +345,70 @@ export type HouseLight = {
  *  `mountZ` place the lamp there, offset a little in/out along that surface's
  *  outward normal (approximated as the direction from the vertical axis to
  *  the point, accurate enough for the roughly-boxy catalog hut shapes), and
- *  the lamp geometry is rotated to sit flush against it from any angle. */
-export function createHouseLight(mountHeight: number, mountX: number, mountZ: number): HouseLight {
+ *  the lamp geometry is rotated to sit flush against it from any angle.
+ *
+ *  Wall fixtures are half the reference lantern size; floor-center keeps full
+ *  size. Cap (daszek) and base (podstawka) share the body's XZ center and sit
+ *  flush above/below it. */
+export function createHouseLight(
+  mountHeight: number,
+  mountX: number,
+  mountZ: number,
+  style: HouseLampStyle = 'wall',
+): HouseLight {
   const group = new THREE.Group()
+  const scale = style === 'wall' ? 0.5 : 1
 
   const outwardLen = Math.hypot(mountX, mountZ) || 1
   const nx = mountX / outwardLen
   const nz = mountZ / outwardLen
+  const yaw = Math.atan2(nx, nz)
+
+  // Reference lantern (scale=1); wall uses 50%.
+  const bodyW = 0.12 * scale
+  const bodyH = 0.16 * scale
+  const bodyD = 0.08 * scale
+  const plateW = 0.14 * scale
+  const plateH = 0.04 * scale
+  const plateD = 0.14 * scale
+  const stickOut = style === 'wall' ? 0.04 * scale : 0
+
+  // One shared center for body + cap + base (fixes old offset where the glow
+  // cube sat forward of the wood plates).
+  const cx = mountX + nx * stickOut
+  const cy = mountHeight
+  const cz = mountZ + nz * stickOut
+  const halfBody = bodyH * 0.5
+  const halfPlate = plateH * 0.5
 
   const baseMat = new THREE.MeshBasicMaterial({ color: 0x6b4226 })
   const lampMat = new THREE.MeshBasicMaterial({ color: HOUSE_LAMP_OFF_COLOR })
 
-  const top = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.14), baseMat)
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.14), baseMat)
-
-  top.position.set(mountX, mountHeight + 0.08, mountZ)
-  top.rotation.y = Math.atan2(nx, nz)
+  const top = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMat)
+  top.position.set(cx, cy + halfBody + halfPlate, cz)
+  top.rotation.y = yaw
   group.add(top)
 
-  base.position.set(mountX, mountHeight - 0.08, mountZ)
-  base.rotation.y = Math.atan2(nx, nz)
+  const base = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMat)
+  base.position.set(cx, cy - halfBody - halfPlate, cz)
+  base.rotation.y = yaw
   group.add(base)
 
-  const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.08), lampMat)
-
-  lamp.position.set(mountX + nx * 0.04, mountHeight, mountZ + nz * 0.04)
-  lamp.rotation.y = Math.atan2(nx, nz)
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(bodyW, bodyH, bodyD), lampMat)
+  lamp.position.set(cx, cy, cz)
+  lamp.rotation.y = yaw
   group.add(lamp)
 
-  const light = new THREE.PointLight(0xffb35c, 0, 4.5, 2)
-  light.position.set(mountX - nx * 0.1, mountHeight, mountZ - nz * 0.1)
+  const light = new THREE.PointLight(0xffb35c, 0, 4.5 * scale, 2)
+  light.position.set(cx - nx * 0.08 * scale, cy, cz - nz * 0.08 * scale)
   group.add(light)
-
-  const lightIntensityBonus = 0.0
 
   return {
     object: group,
     setNightIntensity(t) {
       const clamped = Math.max(0, Math.min(1, t))
       lampMat.color.lerpColors(HOUSE_LAMP_OFF_COLOR, HOUSE_LAMP_ON_COLOR, clamped)
-      light.intensity = clamped * (1.0 + lightIntensityBonus)
+      light.intensity = clamped * (style === 'wall' ? 0.85 : 1)
     },
   }
 }
@@ -395,7 +439,7 @@ function findWallMount(
   hutHeight: number,
   heightFractions: readonly number[] = DEFAULT_LIGHT_HEIGHT_FRACTIONS,
   maxHeightFraction = 0.45,
-): { height: number, x: number, z: number } | null {
+): HouseLampMount | null {
   hut.updateMatrixWorld(true)
   const raycaster = new THREE.Raycaster()
   raycaster.far = WALL_MOUNT_SEARCH_RADIUS * 2
@@ -427,10 +471,52 @@ function findWallMount(
       localHit.copy(hit.point)
       hut.worldToLocal(localHit)
       if (localHit.y < 0.45 || localHit.y > maxY) continue
-      return { height: localHit.y, x: localHit.x, z: localHit.z }
+      return { x: localHit.x, y: localHit.y, z: localHit.z }
     }
   }
   return null
+}
+
+/** Provisional +Z wall face from bbox — always places a lamp so we can tune
+ *  via console (`lampMount` paste into `houseCatalog`). */
+function provisionalWallMount(hut: THREE.Object3D): HouseLampMount {
+  hut.updateMatrixWorld(true)
+  const box = new THREE.Box3().setFromObject(hut)
+  const world = new THREE.Vector3(
+    (box.min.x + box.max.x) * 0.5,
+    Math.min(1.75, HOUSE_LAMP_MAX_LOCAL_Y),
+    box.max.z - 0.08,
+  )
+  hut.worldToLocal(world)
+  return {
+    x: world.x,
+    y: Math.max(0.5, Math.min(HOUSE_LAMP_MAX_LOCAL_Y, world.y)),
+    z: world.z,
+  }
+}
+
+export type ResolvedHouseLampMount = HouseLampMount & { source: string }
+
+/** Catalog override → floor center → wall raycast → bbox provisional. */
+export function resolveHouseLampMount(
+  entry: HouseCatalogEntry,
+  hut: THREE.Object3D,
+  hutHeight: number,
+): ResolvedHouseLampMount {
+  if (entry.lampMount) {
+    return { ...entry.lampMount, source: 'catalog' }
+  }
+  if (entry.lampStyle === 'floorCenter') {
+    return { x: 0, y: HOUSE_FLOOR_LAMP_Y, z: 0, source: 'floorCenter' }
+  }
+  const wall = findWallMount(
+    hut,
+    hutHeight,
+    entry.lightHeightFractions,
+    entry.lightMaxHeightFraction,
+  )
+  if (wall) return { ...wall, source: 'raycast' }
+  return { ...provisionalWallMount(hut), source: 'bboxProvisional' }
 }
 
 /** A short wooden pier — deck extends along local +X (rotate by the
@@ -478,16 +564,25 @@ export function createSignpost(): THREE.Group {
   return signpost
 }
 
-/** Village name plaque by the well — short post + board; CSS2D text is added by the caller. */
+/** Village name plaque by the well — two posts + board; CSS2D text is added by the caller.
+ *  Overall height ~4 m; board ~0.6 m (plan 076 + raise). */
+export const VILLAGE_NAMEPOST_BOARD_CENTER_Y = 3.4
+
 export function createVillageNamepost(): THREE.Group {
   const post = new THREE.Group()
   const woodMat = new THREE.MeshStandardMaterial({ color: 0x6e4e32, flatShading: true })
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 1.7, 6), woodMat)
-  pole.position.y = 0.85
-  pole.castShadow = true
-  post.add(pole)
-  const board = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.4, 0.07), woodMat)
-  board.position.set(0, 1.55, 0)
+  const poleHeight = 4.0
+  const poleGap = 1.55
+  const boardH = 0.6
+  const boardW = 1.7
+  for (const side of [-1, 1] as const) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, poleHeight, 6), woodMat)
+    pole.position.set(side * (poleGap * 0.5), poleHeight * 0.5, 0)
+    pole.castShadow = true
+    post.add(pole)
+  }
+  const board = new THREE.Mesh(new THREE.BoxGeometry(boardW, boardH, 0.07), woodMat)
+  board.position.set(0, VILLAGE_NAMEPOST_BOARD_CENTER_Y, 0)
   board.castShadow = true
   post.add(board)
   return post
@@ -1107,25 +1202,35 @@ export function createCampfireFlame(scale = 1): CampfireFlame {
   return { object: flame, update: sparks.update, setSize }
 }
 
-export function createGarden(): THREE.Group {
+/** Procedural garden beds — S = one bed (legacy), M/L = side-by-side beds (plan 077). */
+export function createGarden(scale: GardenScale = 'S'): THREE.Group {
   const garden = new THREE.Group()
-  const bed = new THREE.Mesh(
-    new THREE.BoxGeometry(2.4, 0.2, 1.6),
-    new THREE.MeshStandardMaterial({ color: 0x5a3d24, flatShading: true }),
-  )
-  bed.position.y = 0.1
-  bed.receiveShadow = true
-  garden.add(bed)
+  const beds = gardenBedCount(scale)
+  const bedW = 2.4
+  const bedD = 1.6
+  const gap = 0.35
+  const totalW = beds * bedW + (beds - 1) * gap
+  const startX = -totalW * 0.5 + bedW * 0.5
 
+  const bedMat = new THREE.MeshStandardMaterial({ color: 0x5a3d24, flatShading: true })
   const cropMat = new THREE.MeshStandardMaterial({
     color: 0x6db33f,
     flatShading: true,
   })
-  for (let i = 0; i < 6; i++) {
-    const crop = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 4), cropMat)
-    crop.position.set(-0.8 + (i % 3) * 0.8, 0.4, i < 3 ? -0.35 : 0.35)
-    crop.castShadow = true
-    garden.add(crop)
+
+  for (let b = 0; b < beds; b++) {
+    const bx = startX + b * (bedW + gap)
+    const bed = new THREE.Mesh(new THREE.BoxGeometry(bedW, 0.2, bedD), bedMat)
+    bed.position.set(bx, 0.1, 0)
+    bed.receiveShadow = true
+    garden.add(bed)
+
+    for (let i = 0; i < 6; i++) {
+      const crop = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 4), cropMat)
+      crop.position.set(bx - 0.8 + (i % 3) * 0.8, 0.4, i < 3 ? -0.35 : 0.35)
+      crop.castShadow = true
+      garden.add(crop)
+    }
   }
   return garden
 }
@@ -1226,27 +1331,82 @@ const PATH_TREE_CLEARANCE = 2.5
  *  different widths, `roadNetwork.ts`'s `roadHalfWidth`/`pathHalfWidth`) —
  *  one constant works for both since it's relative to the segment's actual
  *  width, not a fixed absolute clearance. */
-const ROAD_TREE_CLEARANCE = 1
+const ROAD_TREE_CLEARANCE = 1.25
+
+/** Local VillagePlan path polylines as corridor segments for prop rejection. */
+function localPathCorridors(
+  plan: VillagePlan | undefined,
+  sampleHeight: (x: number, z: number) => number,
+): RoadCorridorSegment[] {
+  if (!plan) return []
+  return pathPlansToCorridorData(plan.paths, sampleHeight).map((seg) => ({
+    ax: seg.ax,
+    az: seg.az,
+    ah: seg.ah,
+    bx: seg.bx,
+    bz: seg.bz,
+    bh: seg.bh,
+    halfWidth: seg.halfWidth,
+    heightStrength: 0,
+    tintStrength: 0,
+  }))
+}
+
+/** Push a point outside corridor capsules (plaza paths / roads). */
+function pushOffCorridors(
+  x: number,
+  z: number,
+  corridors: readonly RoadCorridorSegment[],
+  extraClearance: number,
+): { x: number, z: number } {
+  let px = x
+  let pz = z
+  for (let iter = 0; iter < 5; iter++) {
+    let moved = false
+    for (const seg of corridors) {
+      const need = seg.halfWidth + extraClearance
+      const { distSq, t } = projectOntoSegment(px, pz, seg.ax, seg.az, seg.bx, seg.bz)
+      const dist = Math.sqrt(distSq)
+      if (dist >= need) continue
+      const cx = seg.ax + (seg.bx - seg.ax) * t
+      const cz = seg.az + (seg.bz - seg.az) * t
+      let dx = px - cx
+      let dz = pz - cz
+      const len = Math.hypot(dx, dz)
+      if (len < 1e-4) {
+        const sx = seg.bx - seg.ax
+        const sz = seg.bz - seg.az
+        const sl = Math.hypot(sx, sz) || 1
+        dx = -sz / sl
+        dz = sx / sl
+      } else {
+        dx /= len
+        dz /= len
+      }
+      px = cx + dx * need
+      pz = cz + dz * need
+      moved = true
+    }
+    if (!moved) break
+  }
+  return { x: px, z: pz }
+}
 
 /** Rejects candidates sitting on a clearing (well/stockpile/garden/hut pad),
- *  on the walking path between a house and the core, or within an
- *  out-of-settlement road/path corridor (`roadSegments` — inter-settlement
- *  roads and settlement↔minor-location paths, `roadNetwork.ts`'s
- *  `segmentsNear`, resolved by `createSettlement.ts` before calling
- *  `buildSettlementProps`). The settlement's bespoke forest belt is
- *  otherwise independent of the per-chunk vegetation pipeline
- *  (`chunkVegetation.ts`, which already rejects on `roadTint`) — without
- *  this a "near" woodlot cluster (close to the village on purpose, for NPC
- *  wood-chopping) can land trees/bushes right on top of the road/paths
- *  (`villageClearing.ts`'s house↔core paths, or the road leaving the
- *  settlement toward a neighbor/dock). */
+ *  on house↔core links, within road/path corridors (inter-settlement + local
+ *  VillagePlan paths), or inside the residential courtyard (plan 076). */
 function blocksPathOrClearing(
   tx: number,
   tz: number,
   clearings: ClearingLayout,
   roadSegments: readonly RoadCorridorSegment[],
+  courtyardRadius = 0,
 ): boolean {
-  for (const area of [clearings.core, ...clearings.houses]) {
+  if (courtyardRadius > 0) {
+    const dCore = Math.hypot(tx - clearings.core.x, tz - clearings.core.z)
+    if (dCore < courtyardRadius) return true
+  }
+  for (const area of [clearings.core, ...clearings.houses, ...(clearings.gardens ?? [])]) {
     if (Math.hypot(tx - area.x, tz - area.z) < area.radius + 1) return true
   }
   for (const house of clearings.houses) {
@@ -1279,6 +1439,7 @@ function plantTreeCluster(
   treeCounter: { n: number },
   bushCounter: { n: number },
   worldSeed: number,
+  courtyardRadius = 0,
 ): void {
   const count =
     size === 'small' ? 4 + Math.floor(random() * 4) : 7 + Math.floor(random() * 6)
@@ -1291,7 +1452,7 @@ function plantTreeCluster(
     const tx = cx + Math.cos(a) * d
     const tz = cz + Math.sin(a) * d
     if (Math.abs(tx) > limit || Math.abs(tz) > limit) continue
-    if (blocksPathOrClearing(tx, tz, clearings, roadSegments)) continue
+    if (blocksPathOrClearing(tx, tz, clearings, roadSegments, courtyardRadius)) continue
 
     const y = sampleHeight(tx, tz)
     if (y <= waterLevel + 0.55) continue
@@ -1389,7 +1550,8 @@ function findFlatSpot(
 
 
 /** Prefer a planned landmark position; `findFlatSpot` only micro-corrects
- *  around that candidate (plan 047 §9.11) — it must not invent a new layout. */
+ *  around that candidate (plan 047 §9.11) — it must not invent a new layout.
+ *  Optional `avoid` keeps props (campfire) out of another landmark's disk. */
 function placeFromLandmark(
   site: { x: number, z: number },
   landmark: VillageLandmarkPlan | undefined,
@@ -1398,18 +1560,54 @@ function placeFromLandmark(
   sampleHeight: (x: number, z: number) => number,
   waterLevel: number,
   random: () => number,
+  avoid?: { x: number, z: number, minDist: number },
 ): { x: number, z: number } {
-  if (landmark) {
-    return findFlatSpot(
-      site,
-      landmark.x - site.x,
-      landmark.z - site.z,
-      sampleHeight,
-      waterLevel,
-      random,
-    )
+  const raw = landmark
+    ? findFlatSpot(
+        site,
+        landmark.x - site.x,
+        landmark.z - site.z,
+        sampleHeight,
+        waterLevel,
+        random,
+      )
+    : findFlatSpot(site, fallbackDx, fallbackDz, sampleHeight, waterLevel, random)
+  if (!avoid) return raw
+  return pushAwayFrom(raw.x, raw.z, avoid.x, avoid.z, avoid.minDist)
+}
+
+function pushAwayFrom(
+  x: number,
+  z: number,
+  ox: number,
+  oz: number,
+  minDist: number,
+): { x: number, z: number } {
+  const dx = x - ox
+  const dz = z - oz
+  const d = Math.hypot(dx, dz)
+  if (d >= minDist) return { x, z }
+  if (d < 1e-4) {
+    return { x: ox + minDist, z: oz }
   }
-  return findFlatSpot(site, fallbackDx, fallbackDz, sampleHeight, waterLevel, random)
+  const s = minDist / d
+  return { x: ox + dx * s, z: oz + dz * s }
+}
+
+/** Pull a point onto/inside a disk (campfire stays on plaza dirt after jitter). */
+function pullIntoDisk(
+  x: number,
+  z: number,
+  cx: number,
+  cz: number,
+  maxRadius: number,
+): { x: number, z: number } {
+  const dx = x - cx
+  const dz = z - cz
+  const d = Math.hypot(dx, dz)
+  if (d <= maxRadius || d < 1e-4) return { x, z }
+  const s = maxRadius / d
+  return { x: cx + dx * s, z: cz + dz * s }
 }
 
 function landmarkOf(plan: VillagePlan | undefined, kind: VillageLandmarkPlan['kind'], index = 0) {
@@ -1461,6 +1659,7 @@ export async function buildSettlementProps(
     well: new THREE.Vector3(),
     stockpile: new THREE.Vector3(),
     garden: new THREE.Vector3(),
+    gardens: [],
     market: new THREE.Vector3(),
     homes: [],
     houses: [],
@@ -1469,6 +1668,10 @@ export async function buildSettlementProps(
   }
 
   const coreRandom = createSeededRandom(seed ^ 0x5a17e)
+  const pathCorridors: RoadCorridorSegment[] = [
+    ...roadSegments,
+    ...localPathCorridors(plan, sampleHeight),
+  ]
 
   const wellLm = landmarkOf(plan, 'well')
   const wellX = wellLm?.x ?? site.x
@@ -1490,17 +1693,49 @@ export async function buildSettlementProps(
   group.add(stockpile)
   landmarks.stockpile.set(stockX, sampleHeight(stockX, stockZ), stockZ)
 
-  const { x: gardenX, z: gardenZ } = placeFromLandmark(
-    site, landmarkOf(plan, 'garden', 0), -2.5, 5, sampleHeight, waterLevel, coreRandom,
-  )
-  const garden = await loadPropOrFallback(
-    '/models/settlement/garden.glb',
-    1.2,
-    createGarden,
-  )
-  placeOnGround(garden, gardenX, gardenZ, sampleHeight)
-  group.add(garden)
-  landmarks.garden.set(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
+  const gardenLms = (plan?.landmarks.filter((l) => l.kind === 'garden') ?? [])
+    .slice()
+    .sort((a, b) => a.index - b.index)
+  const gardenPlazaClear = clearings.core.radius + 3
+  const gardenCount = Math.max(1, gardenLms.length)
+  for (let gi = 0; gi < gardenCount; gi++) {
+    const lm = gardenLms[gi]
+    const scale: GardenScale = lm?.gardenScale ?? 'S'
+    const pathClear = 2.4 + gardenClearingRadius(scale) * 0.4
+    let { x: gardenX, z: gardenZ } = placeFromLandmark(
+      site,
+      lm,
+      -2.5 - gi * 2.2,
+      5 + gi * 2.5,
+      sampleHeight,
+      waterLevel,
+      coreRandom,
+      { x: clearings.core.x, z: clearings.core.z, minDist: gardenPlazaClear },
+    )
+    for (let i = 0; i < 8; i++) {
+      ;({ x: gardenX, z: gardenZ } = pushAwayFrom(
+        gardenX,
+        gardenZ,
+        clearings.core.x,
+        clearings.core.z,
+        gardenPlazaClear,
+      ))
+      ;({ x: gardenX, z: gardenZ } = pushOffCorridors(gardenX, gardenZ, pathCorridors, pathClear))
+    }
+    // Prefer procedural multi-bed for M/L; S may use GLB with procedural fallback.
+    const garden =
+      scale === 'S'
+        ? await loadPropOrFallback('/models/settlement/garden.glb', 1.2, () => createGarden('S'))
+        : createGarden(scale)
+    placeOnGround(garden, gardenX, gardenZ, sampleHeight)
+    garden.name = `garden:${scale}`
+    group.add(garden)
+    const foot = new THREE.Vector3(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
+    landmarks.gardens.push(foot)
+  }
+  if (landmarks.gardens[0]) {
+    landmarks.garden.copy(landmarks.gardens[0])
+  }
 
   if (foodSourceType === 'field') {
     const { x: wheatX, z: wheatZ } = placeFromLandmark(
@@ -1526,9 +1761,14 @@ export async function buildSettlementProps(
   landmarks.market.set(marketX, sampleHeight(marketX, marketZ), marketZ)
 
   const houseLights: HouseLight[] = []
+  const housePlots = (plan?.plots.filter((p) => p.role === 'house') ?? [])
+    .slice()
+    .sort((a, b) => (a.familyIndex ?? 0) - (b.familyIndex ?? 0))
+  const houseRing = villageSizeConfig(size).houseRingMax * 0.85
+  const houseYawRandom = createSeededRandom(seed ^ 0xa11ce)
   for (let i = 0; i < clearings.houses.length; i++) {
     const area = clearings.houses[i]!
-    const entry = homeHouseEntryAt(i)
+    const entry = pickHomeHouse(size, i, seed)
     const targetHeight = resolveHouseHeight(entry)
     const hut = entry.url
       ? await loadPropOrFallback(entry.url, targetHeight, createHut)
@@ -1542,19 +1782,27 @@ export async function buildSettlementProps(
     // child (`houseLight.object`) needs to be positioned relative to.
     const hutBounds = new THREE.Box3().setFromObject(hut)
     const hutHeight = hutBounds.max.y - hutBounds.min.y
-    const wallMount = entry.hasWalls
-      ? findWallMount(
-          hut,
-          hutHeight,
-          entry.lightHeightFractions,
-          entry.lightMaxHeightFraction,
-        )
-      : null
+    const lampMount = resolveHouseLampMount(entry, hut, hutHeight)
+
+    const plot = housePlots[i]
+    const outward =
+      plot?.rotation ??
+      Math.atan2(area.z - clearings.core.z, area.x - clearings.core.x)
+    // Face the plaza (inward); outskirts get a seeded yaw jitter (plan 076).
+    let yaw = outward + Math.PI
+    const dist = Math.hypot(area.x - clearings.core.x, area.z - clearings.core.z)
+    if (dist > houseRing * 0.75) {
+      yaw += (houseYawRandom() - 0.5) * Math.PI * 0.9
+    }
+    hut.rotation.y = yaw
+
     placeOnGround(hut, area.x, area.z, sampleHeight, entry.groundYOffset)
     hut.name = `house:${entry.id}`
     hut.userData.houseId = entry.id
     hut.userData.houseModelUrl = entry.url
     hut.userData.hasWalls = entry.hasWalls
+    hut.userData.lampMount = { x: lampMount.x, y: lampMount.y, z: lampMount.z }
+    hut.userData.lampMountSource = lampMount.source
     group.add(hut)
 
     const foot = new THREE.Vector3(
@@ -1569,13 +1817,22 @@ export async function buildSettlementProps(
       modelUrl: entry.url,
       label: entry.label,
       examine: entry.examine,
+      lampMount: { x: lampMount.x, y: lampMount.y, z: lampMount.z },
+      lampMountSource: lampMount.source,
     })
 
-    // Shell roofs (no walls) skip lamps — raycasts hit the roof and float.
-    if (entry.hasWalls && wallMount) {
-      const houseLight = createHouseLight(wallMount.height, wallMount.x, wallMount.z)
-      hut.add(houseLight.object)
-      houseLights.push(houseLight)
+    const houseLight = createHouseLight(lampMount.y, lampMount.x, lampMount.z, entry.lampStyle)
+    hut.add(houseLight.object)
+    houseLights.push(houseLight)
+
+    if (isDebugMode()) {
+      console.info('[house:lamp]', {
+        id: entry.id,
+        style: entry.lampStyle,
+        source: lampMount.source,
+        mount: { x: +lampMount.x.toFixed(3), y: +lampMount.y.toFixed(3), z: +lampMount.z.toFixed(3) },
+        paste: `lampMount: { x: ${lampMount.x.toFixed(3)}, y: ${lampMount.y.toFixed(3)}, z: ${lampMount.z.toFixed(3)} }`,
+      })
     }
   }
 
@@ -1597,9 +1854,34 @@ export async function buildSettlementProps(
   // get a second stockpile. Do not re-encode size thresholds here.
   const infra = villageSizeConfig(size).infrastructure
   if (infra.campfires > 0) {
-    const { x: fireX, z: fireZ } = placeFromLandmark(
-      site, landmarkOf(plan, 'campfire', 0), -4.5, -2, sampleHeight, waterLevel, coreRandom,
+    const plazaPad = Math.max(2.5, clearings.core.radius - 1.2)
+    let { x: fireX, z: fireZ } = placeFromLandmark(
+      site,
+      landmarkOf(plan, 'campfire', 0),
+      -4.5,
+      -2,
+      sampleHeight,
+      waterLevel,
+      coreRandom,
+      { x: wellX, z: wellZ, minDist: 5.5 },
     )
+    // findFlatSpot jitter (±3.5) and well push can eject the fire onto grass
+    // beside the square — snap back onto packed-dirt plaza.
+    ;({ x: fireX, z: fireZ } = pullIntoDisk(
+      fireX,
+      fireZ,
+      clearings.core.x,
+      clearings.core.z,
+      plazaPad,
+    ))
+    ;({ x: fireX, z: fireZ } = pushAwayFrom(fireX, fireZ, wellX, wellZ, 5.5))
+    ;({ x: fireX, z: fireZ } = pullIntoDisk(
+      fireX,
+      fireZ,
+      clearings.core.x,
+      clearings.core.z,
+      plazaPad,
+    ))
     const campfire = createCampfire()
     placeOnGround(campfire, fireX, fireZ, sampleHeight)
     group.add(campfire)
@@ -1632,18 +1914,77 @@ export async function buildSettlementProps(
     const bushTemplates = await loadPropTemplates(BUSH_SPECS, () => createBush(1))
     const treeCounter = { n: 0 }
     const bushCounter = { n: 0 }
+    // Inter-settlement roads + local VillagePlan paths — trees on the dirt strip
+    // came from only checking house↔core chords + segmentsNear (no local paths).
+    const treeCorridors = pathCorridors
+
+    const sizeCfg = villageSizeConfig(size)
+    const minHouseDist = clearings.houses.reduce(
+      (min, h) => Math.min(min, Math.hypot(h.x - clearings.core.x, h.z - clearings.core.z)),
+      Infinity,
+    )
+    const courtyardRadius = Math.max(
+      clearings.core.radius * 1.6,
+      Number.isFinite(minHouseDist) ? minHouseDist * 0.55 : clearings.core.radius * 1.6,
+    )
 
     // Scale forests to map size (halfExtent), not fixed village yards.
-    const nearR = Math.min(18, halfExtent * 0.22)
     const midMin = halfExtent * 0.32
     const midMax = halfExtent * 0.55
     const farMin = halfExtent * 0.55
     const farMax = halfExtent * 0.88
 
-    // Only a couple of small woodlots by the village (NPC wood).
+    // Sparse plaza trees (0–3) between core and house ring — not a woodlot (plan 076).
+    const plazaTreeCount = Math.floor(random() * 4)
+    const plazaBandMin = clearings.core.radius + 2.5
+    const plazaBandMax = Math.max(plazaBandMin + 2, courtyardRadius * 0.92)
+    for (let i = 0; i < plazaTreeCount; i++) {
+      const angle = random() * Math.PI * 2
+      const dist = plazaBandMin + random() * Math.max(0.5, plazaBandMax - plazaBandMin)
+      const tx = clearings.core.x + Math.cos(angle) * dist
+      const tz = clearings.core.z + Math.sin(angle) * dist
+      if (blocksPathOrClearing(tx, tz, clearings, treeCorridors, 0)) continue
+      const y = sampleHeight(tx, tz)
+      if (y <= waterLevel + 0.55) continue
+      const sizeClass = rollSizeClass(random())
+      const sizeJitter = random()
+      const initialStage = rollLivingAge({
+        sizeClass,
+        ageRoll: random(),
+        oldRoll: random(),
+        saplingChance: 0.05,
+        youngChance: 0.2,
+      })
+      const speciesIndex = treeCounter.n % Math.max(1, treeTemplates.length)
+      const tree = cloneProp(
+        treeTemplates,
+        treeCounter.n++,
+        visualScaleForTree(speciesIndex, initialStage, sizeClass, sizeJitter),
+      )
+      placeOnGround(tree, tx, tz, sampleHeight)
+      const id = makeTreeId(seed, tx, tz, speciesIndex)
+      tree.userData.treeId = id
+      tree.userData.treeSizeClass = sizeClass
+      tree.userData.treeSizeJitter = sizeJitter
+      tree.userData.treeSpeciesIndex = speciesIndex
+      tree.userData.treeInitialStage = initialStage
+      group.add(tree)
+      landmarks.trees.push({
+        id,
+        position: new THREE.Vector3(tx, y, tz),
+        mesh: tree,
+        speciesIndex,
+        sizeClass,
+        sizeJitter,
+        initialStage,
+      })
+    }
+
+    // NPC woodlots just outside the house ring — never inside the courtyard.
+    const woodlotR = Math.max(sizeCfg.houseRingMax * 0.95, courtyardRadius + 6)
     const nearCenters: Array<[number, number]> = [
-      [nearR * 0.7, nearR * 0.35],
-      [-nearR * 0.75, nearR * 0.4],
+      [woodlotR * 0.85, woodlotR * 0.25],
+      [-woodlotR * 0.8, woodlotR * 0.35],
     ]
     for (const [dx, dz] of nearCenters) {
       plantTreeCluster(
@@ -1658,11 +1999,12 @@ export async function buildSettlementProps(
         waterLevel,
         halfExtent,
         clearings,
-        roadSegments,
+        treeCorridors,
         random,
         treeCounter,
         bushCounter,
         seed,
+        courtyardRadius,
       )
     }
 
@@ -1683,11 +2025,12 @@ export async function buildSettlementProps(
         waterLevel,
         halfExtent,
         clearings,
-        roadSegments,
+        treeCorridors,
         random,
         treeCounter,
         bushCounter,
         seed,
+        courtyardRadius,
       )
     }
 
@@ -1708,11 +2051,12 @@ export async function buildSettlementProps(
         waterLevel,
         halfExtent,
         clearings,
-        roadSegments,
+        treeCorridors,
         random,
         treeCounter,
         bushCounter,
         seed,
+        courtyardRadius,
       )
     }
 
@@ -1735,11 +2079,12 @@ export async function buildSettlementProps(
         waterLevel,
         halfExtent,
         clearings,
-        roadSegments,
+        treeCorridors,
         random,
         treeCounter,
         bushCounter,
         seed,
+        courtyardRadius,
       )
     }
   }
