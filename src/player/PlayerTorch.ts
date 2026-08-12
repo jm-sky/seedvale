@@ -25,16 +25,16 @@ const FIRE_TIP_MAX = 0.11
 const FLAME_OPACITY = 0.75
 
 /**
- * Lit branch grip — Quaternius `WristR`: **+Y ≈ fingertips**, **−Z ≈ body**.
- * Branch mesh is reoriented so its long axis is local +Z (like the axe), then
- * axe-style wrist TRS aims the tip up/out of the palm instead of through the
- * torso (identity left the tip stabbing out the player's left side).
+ * Lit branch grip — same wrist TRS as verified `wooden_torch`.
+ * Branch B (AssetQuest) is already long on authored +Z (unlike Quaternius
+ * Y-up sticks); do **not** apply mesh `rotation.x = π/2` or the stick lies
+ * across the waist with the tip out the player's right side.
  */
 const BRANCH_ATTACH: HeldAttach = {
-  position: [0.02, 0.12, -0.02],
-  rotation: [Math.PI / 2, Math.PI / 2, 0],
+  position: [-0.25, 0.085, -0.02],
+  rotation: [Math.PI / 2, -Math.PI / 2, 0],
   scale: 1,
-  gripLocalOffset: [0, 0, -0.22],
+  gripLocalOffset: [0, 0, -0.2],
 }
 
 /** PointLight / future flame tip — same wrist TRS as `HELD_ATTACH.wooden_torch`. */
@@ -108,10 +108,8 @@ async function ensureTemplates(): Promise<void> {
 }
 
 function cloneBranchMesh(): Object3D {
-  const branch = branchTemplate ? cloneSkinned(branchTemplate) : createItemMesh('branch')
-  // Authored long axis = +Y; map to +Z so axe-style wrist attach applies.
-  branch.rotation.x = Math.PI / 2
-  return branch
+  // Branch B is already Z-long in the GLB — keep authored orientation.
+  return branchTemplate ? cloneSkinned(branchTemplate) : createItemMesh('branch')
 }
 
 function softenMaterials(root: Object3D, opacity: number): void {

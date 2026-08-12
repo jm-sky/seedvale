@@ -32,6 +32,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
+| [2026-08-12--085--handheld-lights-and-village-torches.md](./2026-08-12--085--handheld-lights-and-village-torches.md) | Pochodnia OK; lit-branch grip + flame tip jeszcze do dokończenia | 85% | 🟡 medium | L | ~~082~~ |
 | [2026-08-08--039--road-signposts.md](./2026-08-08--039--road-signposts.md) | Kierunkowskazy: fix yaw tabliczki + odstęp midpoint; skrzyżowania nadal later | 80% | ⚪ low | S | ~~026~~ |
 | [2026-08-09--049--procedural-world-landmarks.md](./2026-08-09--049--procedural-world-landmarks.md) | Proceduralne obiekty, ruiny i landmarki | 40% | 🟡 medium | XL | ~~001~~, ~~006~~, ~~007~~, ~~028~~, ~~030~~ |
 | [2026-08-07--024--world-visual-overhaul.md](./2026-08-07--024--world-visual-overhaul.md) | Rośliny, niebo/chmury, góry w tle | 50% | ⚪ low | L | ~~028~~ |
@@ -64,7 +65,6 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
-| [2026-08-12--085--handheld-lights-and-village-torches.md](./2026-08-12--085--handheld-lights-and-village-torches.md) | Pochodnia item + lit branch w ręce; latarnie domów; pochodnie plac/brama | 100% | 🟡 medium | L | ~~082~~ |
 | [2026-08-12--084--camp-rest-sequence-and-town-rest-visibility.md](./2026-08-12--084--camp-rest-sequence-and-town-rest-visibility.md) | Town rest visibility + sekwencja obozu + Pause Esc→main + Czekaj half-fade | 100% | 🟡 medium | M | ~~041~~, ~~075~~ |
 | [2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md](./2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md) | Dzika fauna unika realnego footprintu osady (skalowanego z `VillageSize`) + minimalny rozstaw spawn-pointów | 100% | 🟡 medium | M | ~~047~~, ~~076~~, ~~077~~ |
 | [2026-08-12--083--cave-mouth-terrain-depression.md](./2026-08-12--083--cave-mouth-terrain-depression.md) | Jaskinia: realna dziura w terenie (reuse `modifyTerrain`) zamiast płaskiego czarnego walca, sianie pod kątem na zboczu | 100% | ⚪ low | S | ~~052~~, ~~064~~ |
