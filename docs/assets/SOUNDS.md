@@ -32,7 +32,7 @@ If the feature needs no new sound, do nothing to this file.
 | Animals | chicken, cow, wolf | `[E]` on animal (chicken/cow SFX without matching models — see MODELS M07) |
 | Ambient | forest, night crickets, coast | Area / time loops |
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
-| Actions | dig ×4, wood-chop ×1 | Shovel / axe |
+| Actions | dig ×4, wood-chop ×1, melee hit/kill, well ×1 | Shovel / axe / melee / well |
 
 ## Backlog
 
@@ -43,7 +43,7 @@ If the feature needs no new sound, do nothing to this file.
 | S01 | Footsteps (grass / dirt / wood) | Player move; 2–3 variants + light sprint | `needed` | — |
 | S02 | Splash / wade | Enter water / swim | `needed` | — |
 | S03 | Fire (loop + ignite) | Campfire / torch / fire pit | `needed` | — |
-| S04 | Melee hit (knife/axe) | Player → animal melee | `needed` | — |
+| S04 | Melee hit (knife/axe) | Player → animal melee | `wired` | `action-melee-hit-01` / `action-melee-kill-01` |
 | S05 | UI click / open-close | Inventory, pause, dialog (coherent set) | `needed` | — |
 
 ### P1 — world feels alive
@@ -52,7 +52,7 @@ If the feature needs no new sound, do nothing to this file.
 |----|-------|---------|--------|---------|
 | S06 | Wind (light loop) | Open / mountain; fade with ridge | `needed` | — |
 | S07 | Rain | When weather exists | `needed` | [plan 040](../plans/2026-08-08--040--seasons-weather.md) |
-| S08 | Well / draw water | NPC or player at well | `needed` | — |
+| S08 | Well / draw water | NPC or player at well | `wired` | `action-well-01` |
 | S09 | Door / enter house | Optional on house proximity | `needed` | — |
 | S10 | Fauna: deer / fox / stag one-shot | Today only chicken/cow/wolf SFX | `needed` | — |
 | S11 | Wolf distant (bark/howl) vs contact growl | Distinguish threat distance | `needed` | Existing `animal-wolf-01` is growl |

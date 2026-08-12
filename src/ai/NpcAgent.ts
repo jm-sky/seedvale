@@ -27,6 +27,7 @@ import {
   type PlannedAction,
   replaceActionLifecycle,
 } from '../simulation'
+import { playActionWell } from '../audio/actionSounds'
 import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import {
@@ -671,6 +672,16 @@ export class NpcAgent {
         if (this.steerTo(this.tmp, dt)) {
           this.phase = 'execute'
           this.wait = action.durationSec
+          // Well draw SFX only when drinking at the village well (not home).
+          if (
+            action.kind === 'drink'
+            && Math.hypot(
+              action.destination.x - this.landmarks.well.x,
+              action.destination.z - this.landmarks.well.z,
+            ) < 0.5
+          ) {
+            playActionWell(this.playSound)
+          }
         }
         break
       }

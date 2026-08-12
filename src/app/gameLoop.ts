@@ -29,6 +29,7 @@ import type { DayNightState } from '../world/dayNight'
 import type { TimeSkip } from '../world/timeSkip'
 import type { BusyAction } from './busyAction'
 import type { WorldBundle } from './worldBundle'
+import { playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audio/actionSounds'
 import { playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { isDebugMode } from '../debug/debugMode'
@@ -414,9 +415,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           if (isMeleeTool(held)) {
             const beforeDead = target.animal.isDead()
             target.animal.takeDamage(playerToolDamage(held), 'player')
-            playAnimalSound(target.animal.def.kind, worldAudio.playOnce)
+            const killed = !beforeDead && target.animal.isDead()
+            if (killed) playActionMeleeKill(worldAudio.playOnce)
+            else playActionMeleeHit(worldAudio.playOnce)
             const label = ANIMAL_LABELS[target.animal.def.kind]
-            if (!beforeDead && target.animal.isDead()) {
+            if (killed) {
               toast.show(`${label} pada.`)
             } else {
               toast.show(`Trafiono: ${label}`)
@@ -426,6 +429,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             playAnimalSound(target.animal.def.kind, worldAudio.playOnce)
             npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
           }
+        } else if (target.kind === 'well') {
+          const outcome = resolveInteraction(target, questManager)
+          playActionWell(worldAudio.playOnce)
+          npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)

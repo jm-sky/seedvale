@@ -41,4 +41,7 @@
 |------------------|-------------------|------------|-------|
 | action-dig-01…04.wav | 486228__ruben_uitenweerde__digging-sand-with-a-shovel.wav | https://freesound.org/people/Ruben_Uitenweerde/sounds/486228/ | 4× ~2 s strokes split from 27 s pack; random on shovel dig |
 | action-wood-chop-01.wav | 847818__elschorscho__chopping-wood_medium-459.wav | https://freesound.org/people/ElSchorscho/sounds/847818/ | Axe / tree harvest (plan 057); play on chop channel start |
+| action-melee-hit-01.wav | 420673__sypherzent__basic-melee-hit.wav | https://freesound.org/people/SypherZent/sounds/420673/ | Short punch/impact; player melee hit (animal stays up); converted mono 16-bit 44.1 kHz |
+| action-melee-kill-01.wav | 264062__paul368__melee-weapon-hit-with-male-moan-body-fall.wav | https://freesound.org/people/Paul368/sounds/264062/ | Hit + moan + body fall; player melee kill; converted mono 16-bit 44.1 kHz |
+| action-well-01.wav | 146947__macferret_20__uoa_120217_kcqwell.wav | https://freesound.org/people/MacFerret_20/sounds/146947/ | Stone/water in well; player `[E]` at well + NPC drink at well; converted mono 16-bit 44.1 kHz |
 

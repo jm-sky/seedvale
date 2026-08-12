@@ -1,4 +1,4 @@
-/** Action one-shots (shovel dig, axe chop, etc.). Sources/licenses: public/sounds/README.md. */
+/** Action one-shots (shovel dig, axe chop, melee, well, etc.). Sources/licenses: public/sounds/README.md. */
 
 export const ACTION_DIG_SOUND_URLS = [
   '/sounds/action-dig-01.wav',
@@ -8,9 +8,15 @@ export const ACTION_DIG_SOUND_URLS = [
 ] as const
 
 export const ACTION_CHOP_SOUND_URL = '/sounds/action-wood-chop-01.wav'
+export const ACTION_MELEE_HIT_SOUND_URL = '/sounds/action-melee-hit-01.wav'
+export const ACTION_MELEE_KILL_SOUND_URL = '/sounds/action-melee-kill-01.wav'
+export const ACTION_WELL_SOUND_URL = '/sounds/action-well-01.wav'
 
 const ACTION_DIG_SFX_VOLUME = 0.45
 const ACTION_CHOP_SFX_VOLUME = 0.5
+const ACTION_MELEE_HIT_SFX_VOLUME = 0.5
+const ACTION_MELEE_KILL_SFX_VOLUME = 0.55
+const ACTION_WELL_SFX_VOLUME = 0.4
 
 type PlayOnce = (url: string, volume?: number) => void
 
@@ -23,4 +29,19 @@ export function playActionDig(playOnce: PlayOnce): void {
 /** Axe wood-chop one-shot — play when the chop channel starts (plan 057). */
 export function playActionChop(playOnce: PlayOnce): void {
   playOnce(ACTION_CHOP_SOUND_URL, ACTION_CHOP_SFX_VOLUME)
+}
+
+/** Short melee impact — player tool hit on an animal that stays up. */
+export function playActionMeleeHit(playOnce: PlayOnce): void {
+  playOnce(ACTION_MELEE_HIT_SOUND_URL, ACTION_MELEE_HIT_SFX_VOLUME)
+}
+
+/** Melee finishing blow (impact + body fall) — when the hit kills the animal. */
+export function playActionMeleeKill(playOnce: PlayOnce): void {
+  playOnce(ACTION_MELEE_KILL_SOUND_URL, ACTION_MELEE_KILL_SFX_VOLUME)
+}
+
+/** Well / draw-water one-shot — player interact or NPC drink at the well. */
+export function playActionWell(playOnce: PlayOnce): void {
+  playOnce(ACTION_WELL_SOUND_URL, ACTION_WELL_SFX_VOLUME)
 }
