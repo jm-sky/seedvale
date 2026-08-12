@@ -75,7 +75,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - NPC names and family naming data.
 - NPC dialogue v2 exists as a Vue screen with multiple conversation topics.
 - NPC daily routine/place work is partially implemented; plan 020 remains in progress.
-- NPC reaction sounds are implemented.
+- NPC reaction sounds are implemented (`playAt` from the NPC mesh — quieter farther away).
+- World one-shots that have a source position use `worldAudio.playAt` (linear falloff `ref=4` / `max=45`): well, melee, animal observe, axe chop. Inventory / quest thank-you stay on `playOnce`.
 
 ### Fauna
 
@@ -95,7 +96,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - `ItemKind` and `Inventory` exist in `src/items/`.
 - Player has shared `HealthState` on `PlayerController` (100 HP; CSS2D HP bar like NPC/fauna; no death UI/respawn yet — plan 045).
 - Held tools (`HeldTool`) attach a procedural mesh to Quaternius `Wrist.R` while equipped (visual only; grip pose is approximate).
-- Simple player→animal melee: with knife/axe/shovel **held**, gazing at a live animal and pressing `[E]` deals instant damage (`playerToolDamage`: axe 20 > knife 12 > shovel 8) via `AnimalAgent.takeDamage`; without a melee tool the existing observe/flavor dialog remains.
+- Simple player→animal melee: with knife/axe/shovel **held**, gazing at a live animal and pressing `[E]` deals instant damage (`playerToolDamage`: axe 20 > knife 12 > shovel 8) via `AnimalAgent.takeDamage`; hit/kill SFX via `playAt` at the animal; without a melee tool the existing observe/flavor dialog remains.
 - Inventory is persisted in save data and has weight calculation/max weight support.
 - Item spawners and dropped items exist.
 - Natural collectible items are integrated into the world.
@@ -105,7 +106,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Inventory UI is a Vue screen (`src/ui-vue/screens/InventoryScreen.vue`); `src/ui/createInventoryScreen.ts` is a facade — see "UI migration" below.
 - Inventory pick-up / drop SFX exist (`audio/inventorySounds.ts` via `worldAudio.playOnce`): ground collect, tree branch, dig stone, UI/quick drop.
 - Shovel is a one-time settlement landmark pickup (`items/createItemSpawners.ts`, campfire/garden anchors — not in generic `SPAWN_SPECS`). Dig/level require a shovel in inventory; HUD prompts appear only while the shovel is **held** (`items/HeldTool.ts`, persisted as `SaveData.heldTool` in schema v7): **`E` digs**, **`R` levels** (both can show together over a depression). Owning a shovel (held or not) also exposes dig/level in Quick Actions. Dig/level run as a ~2 s busy channel (`app/busyAction.ts` + Vue `BusyOverlay`) then apply via `terrain/digAction.ts`. Dig start plays a random ~2 s shovel SFX (`audio/actionSounds.ts`). Dig size/tuning and stone notice chance live in `terrain/dig.ts`. Found stones go to inventory on a successful notice roll, otherwise (or when inventory is full) drop beside the hole via `droppedItems` — never silently lost. `ChunkManager.modifyTerrain` / `levelTerrain` own the runtime height overlay (dig down / raise toward procedural base); not save-persisted, reapplied on chunk reload.
-- Axe is a one-time settlement pickup (`createItemSpawners.ts`, near a settlement tree or garden — plan 057). Equip via Inventory/`HeldTool`. While the axe is **held**, gazing at a choppable tree (settlement or streamed; stages `mature` / `old` / `limbed` / `felled`) shows stage prompts (**Oczyść gałęzie** / **Ścinaj drzewo** / **Porąb pień**); `[E]` runs a ~1.5 s busy channel then `advanceWorldTreeHarvest()` (one step). Yield is `branch` (2 / 2 / 3). Inventory capacity is checked for the current step before the irreversible transition. NPC woodcutting uses `harvestWorldTreeFully()` to finish remaining steps in one action. Without axe (or on non-choppable stages) the existing tree inspection / chance branch remains. Chop SFX: `action-wood-chop-01.wav`. Nearby trees come from `TreeLifecycle.getNearbyPresence` via `ChunkManager.getNearbyTrees`.
+- Axe is a one-time settlement pickup (`createItemSpawners.ts`, near a settlement tree or garden — plan 057). Equip via Inventory/`HeldTool`. While the axe is **held**, gazing at a choppable tree (settlement or streamed; stages `mature` / `old` / `limbed` / `felled`) shows stage prompts (**Oczyść gałęzie** / **Ścinaj drzewo** / **Porąb pień**); `[E]` runs a ~1.5 s busy channel then `advanceWorldTreeHarvest()` (one step). Yield is `branch` (2 / 2 / 3). Inventory capacity is checked for the current step before the irreversible transition. NPC woodcutting uses `harvestWorldTreeFully()` to finish remaining steps in one action. Without axe (or on non-choppable stages) the existing tree inspection / chance branch remains. Chop SFX: `action-wood-chop-01.wav` via `playAt` at the tree. Nearby trees come from `TreeLifecycle.getNearbyPresence` via `ChunkManager.getNearbyTrees`.
 
 ### Quests / progression
 

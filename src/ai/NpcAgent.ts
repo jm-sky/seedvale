@@ -28,6 +28,7 @@ import {
   replaceActionLifecycle,
 } from '../simulation'
 import { playActionWell } from '../audio/actionSounds'
+import type { PlayAt } from '../audio/createWorldAudio'
 import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import {
@@ -305,7 +306,7 @@ export class NpcAgent {
   /** Set externally (e.g. by a QuestManager) — NpcAgent stays quest-agnostic. */
   private questMarker: string | null = null
   private highlighted = false
-  private readonly playSound: (url: string, volume?: number) => void
+  private readonly playAt: PlayAt
   private readonly forest: SettlementForestHooks | undefined
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
@@ -327,10 +328,10 @@ export class NpcAgent {
     needOffset: number,
     member: FamilyMember,
     familyMembers: readonly FamilyMemberRef[],
-    playSound: (url: string, volume?: number) => void,
+    playAt: PlayAt,
     forest: SettlementForestHooks | undefined,
   ) {
-    this.playSound = playSound
+    this.playAt = playAt
     this.forest = forest
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
@@ -428,7 +429,7 @@ export class NpcAgent {
     needOffset: number,
     member: FamilyMember,
     familyMembers: readonly FamilyMemberRef[],
-    playSound: (url: string, volume?: number) => void = () => {},
+    playAt: PlayAt = () => {},
     modelUrl = modelUrlFor(member.character.gender, treeIndex),
     forest?: SettlementForestHooks,
   ): Promise<NpcAgent> {
@@ -446,7 +447,7 @@ export class NpcAgent {
         needOffset,
         member,
         familyMembers,
-        playSound,
+        playAt,
         forest,
       )
     } catch (err) {
@@ -461,7 +462,7 @@ export class NpcAgent {
         needOffset,
         member,
         familyMembers,
-        playSound,
+        playAt,
         forest,
       )
     }
@@ -477,7 +478,7 @@ export class NpcAgent {
     needOffset: number,
     member: FamilyMember,
     familyMembers: readonly FamilyMemberRef[],
-    playSound: (url: string, volume?: number) => void,
+    playAt: PlayAt,
     forest?: SettlementForestHooks,
   ): NpcAgent {
     const capsule = new THREE.Group()
@@ -503,7 +504,7 @@ export class NpcAgent {
       needOffset,
       member,
       familyMembers,
-      playSound,
+      playAt,
       forest,
     )
   }
@@ -680,7 +681,7 @@ export class NpcAgent {
               action.destination.z - this.landmarks.well.z,
             ) < 0.5
           ) {
-            playActionWell(this.playSound)
+            playActionWell(this.playAt, this.landmarks.well)
           }
         }
         break
@@ -929,7 +930,7 @@ export class NpcAgent {
   private playReactionSound(): void {
     const pool = NPC_REACTION_SOUND_URLS[this.gender]
     const url = pool[Math.floor(Math.random() * pool.length)]
-    if (url) this.playSound(url, REACTION_SOUND_VOLUME)
+    if (url) this.playAt(url, this.mesh.position, REACTION_SOUND_VOLUME)
   }
 
   private isWalkable(x: number, z: number): boolean {

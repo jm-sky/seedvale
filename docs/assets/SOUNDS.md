@@ -70,10 +70,11 @@ If the feature needs no new sound, do nothing to this file.
 
 - Prefer **CC0 / freesound with a clear license**; add a row to `public/sounds/README.md`.
 - Short one-shots (~0.2–2 s); ambient as loopable WAV.
-- Reuse `worldAudio.playOnce` / `createLoop` — no second audio bus.
+- Reuse `worldAudio.playOnce` / `playAt` / `createLoop` — no second audio bus.
+- **World-sourced one-shots** (well, NPC reaction, melee, animal, chop) → `worldAudio.playAt` (distance gain at play start). **UI / inventory / quest thank-you** → `playOnce`.
 - Per-category gain as in `actionSounds` / `inventorySounds`.
 
 ## Out of scope for this list
 
 - Music / soundtrack.
-- Full HRTF / 3D spatial audio (Three `PositionalAudio` may come later for fires).
+- Full HRTF / 3D stereo pan (`THREE.PositionalAudio` may come later for fire loops). Distance gain via `playAt` is in.

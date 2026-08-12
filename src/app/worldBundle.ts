@@ -4,6 +4,7 @@ import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { ResourceEnv } from '../terrain/naturalResources'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TreeLifecycle } from '../world/treeLifecycle'
+import type { PlayAt } from '../audio/createWorldAudio'
 import { createFauna, type Fauna } from '../fauna/createFauna'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
@@ -109,7 +110,7 @@ function buildSettlementsManager(
   scene: Scene,
   chunkManager: ChunkManager,
   seed: number,
-  playSound: (url: string, volume?: number) => void,
+  playAt: PlayAt,
   config: WorldConfig,
   forest: SettlementForestHooks,
 ): Promise<SettlementsManager> {
@@ -119,7 +120,7 @@ function buildSettlementsManager(
     chunkManager.waterLevel,
     HOME_RADIUS,
     seed,
-    playSound,
+    playAt,
     SETTLEMENT_LOAD_RADIUS,
     SETTLEMENT_UNLOAD_RADIUS,
     {
@@ -212,7 +213,7 @@ export async function createWorldBundle(
   scene: Scene,
   config: WorldConfig,
   collectedItemIds: Set<string>,
-  playSound: (url: string, volume?: number) => void,
+  playAt: PlayAt,
   initialDroppedItems: readonly DroppedItem[],
   initialPlacedFires: readonly PlacedFire[],
   treeLifecycle: TreeLifecycle,
@@ -228,7 +229,7 @@ export async function createWorldBundle(
     sampleEnv: (x, z) => chunkManager.sampleTreeEnv(x, z),
   }
   const ocean = buildOcean(scene, config)
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playSound, config, forest)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   const resourceDeposits = buildResourceDeposits(scene, chunkManager, config, config.seed)
@@ -256,7 +257,7 @@ export async function rebuildWorldBundle(
   config: WorldConfig,
   resetCollectedItems: boolean,
   collectedItemIds: Set<string>,
-  playSound: (url: string, volume?: number) => void,
+  playAt: PlayAt,
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
 ): Promise<void> {
@@ -293,7 +294,7 @@ export async function rebuildWorldBundle(
     sampleEnv: (x, z) => bundle.chunkManager.sampleTreeEnv(x, z),
   }
   bundle.ocean = buildOcean(scene, config)
-  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playSound, config, forest)
+  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
   bundle.resourceDeposits = buildResourceDeposits(scene, bundle.chunkManager, config, config.seed)

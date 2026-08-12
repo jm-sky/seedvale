@@ -5,6 +5,7 @@ import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TerrainSamplers } from './settlementTerrain'
+import type { PlayAt } from '../audio/createWorldAudio'
 import { disposeObject3D } from '../assets/loadGltf'
 import { type ChunkCoord, worldToChunk } from '../terrain/chunkGrid'
 import { labelOpacityForDistance } from '../ui/labelDistance'
@@ -94,7 +95,7 @@ export async function createSettlementsManager(
   waterLevel: number,
   localRadius: number,
   seed: number,
-  playSound: (url: string, volume?: number) => void,
+  playAt: PlayAt,
   loadRadius: number,
   unloadRadius: number,
   terrainSamplers: TerrainSamplers,
@@ -140,7 +141,7 @@ export async function createSettlementsManager(
     localRadius,
     seed,
     homeDef,
-    playSound,
+    playAt,
     roadCtx,
     forest,
   )
@@ -234,7 +235,7 @@ export async function createSettlementsManager(
         localRadius,
         seed,
         def,
-        playSound,
+        playAt,
         roadCtx,
         forest,
       ))

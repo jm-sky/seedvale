@@ -1,6 +1,7 @@
 /** Animal one-shots on `[E]` interact. Sources/licenses: public/sounds/README.md. */
 
 import type { AnimalKind } from '../fauna/AnimalAgent'
+import type { PlayAt, WorldSoundPosition } from './createWorldAudio'
 
 export const ANIMAL_SOUND_URLS: Partial<Record<AnimalKind, string>> = {
   chicken: '/sounds/animal-chicken-01.wav',
@@ -17,11 +18,13 @@ const ANIMAL_SFX_VOLUME: Partial<Record<AnimalKind, number>> = {
 
 const DEFAULT_ANIMAL_SFX_VOLUME = 0.35
 
-type PlayOnce = (url: string, volume?: number) => void
-
 /** Plays the species clip when one exists — no-op for kinds without a sound yet. */
-export function playAnimalSound(kind: AnimalKind, playOnce: PlayOnce): void {
+export function playAnimalSound(
+  kind: AnimalKind,
+  playAt: PlayAt,
+  position: WorldSoundPosition,
+): void {
   const url = ANIMAL_SOUND_URLS[kind]
   if (!url) return
-  playOnce(url, ANIMAL_SFX_VOLUME[kind] ?? DEFAULT_ANIMAL_SFX_VOLUME)
+  playAt(url, position, ANIMAL_SFX_VOLUME[kind] ?? DEFAULT_ANIMAL_SFX_VOLUME)
 }

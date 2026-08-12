@@ -172,7 +172,7 @@ export async function createApp(
     scene,
     config,
     collectedItemIds,
-    worldAudio.playOnce,
+    worldAudio.playAt,
     initialSave?.droppedItems ?? [],
     initialSave?.placedFires ?? [],
     treeLifecycle,
@@ -270,7 +270,7 @@ export async function createApp(
         config,
         resetCollectedItems,
         collectedItemIds,
-        worldAudio.playOnce,
+        worldAudio.playAt,
         treeLifecycle,
         getWorldDays,
       )
@@ -493,7 +493,7 @@ export async function createApp(
         : target.stage === 'limbed'
           ? 'Ścinanie…'
           : 'Rąbanie…'
-    playActionChop(worldAudio.playOnce)
+    playActionChop(worldAudio.playAt, { x, z })
     busy.start(CHOP_DURATION_SEC, busyLabel, () => {
       if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
         toast.show('Ekwipunek jest za ciężki.', 'error')

@@ -416,8 +416,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             const beforeDead = target.animal.isDead()
             target.animal.takeDamage(playerToolDamage(held), 'player')
             const killed = !beforeDead && target.animal.isDead()
-            if (killed) playActionMeleeKill(worldAudio.playOnce)
-            else playActionMeleeHit(worldAudio.playOnce)
+            if (killed) playActionMeleeKill(worldAudio.playAt, target.position)
+            else playActionMeleeHit(worldAudio.playAt, target.position)
             const label = ANIMAL_LABELS[target.animal.def.kind]
             if (killed) {
               toast.show(`${label} pada.`)
@@ -426,12 +426,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             }
           } else {
             const outcome = resolveInteraction(target, questManager)
-            playAnimalSound(target.animal.def.kind, worldAudio.playOnce)
+            playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
             npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
           }
         } else if (target.kind === 'well') {
           const outcome = resolveInteraction(target, questManager)
-          playActionWell(worldAudio.playOnce)
+          playActionWell(worldAudio.playAt, target.position)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
         } else {
           const outcome = resolveInteraction(target, questManager)

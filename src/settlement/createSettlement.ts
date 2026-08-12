@@ -11,6 +11,7 @@ import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { VillageSize } from './families'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
+import type { PlayAt } from '../audio/createWorldAudio'
 import { disposeObject3D } from '../assets/loadGltf'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
@@ -108,7 +109,7 @@ export async function createSettlement(
   localRadius: number,
   seed: number,
   def: SettlementDef,
-  playSound: (url: string, volume?: number) => void = () => {},
+  playAt: PlayAt = () => {},
   roadCtx?: RoadNetworkContext,
   forest?: SettlementForestHooks,
 ): Promise<Settlement> {
@@ -280,7 +281,7 @@ export async function createSettlement(
         i / Math.max(1, flatMembers.length - 1),
         member,
         familyMembers,
-        playSound,
+        playAt,
         undefined,
         forest,
       )

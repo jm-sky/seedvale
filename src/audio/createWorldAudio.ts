@@ -1,4 +1,4 @@
-import { Audio, AudioListener, AudioLoader, type Camera } from 'three'
+import { Audio, AudioListener, AudioLoader, Vector3, type Camera } from 'three'
 
 export type AudioLoopHandle = {
   /** Ramps toward this gain (0-1) on each update() call instead of snapping —
@@ -7,17 +7,32 @@ export type AudioLoopHandle = {
   dispose: () => void
 }
 
+/** World XZ (optional Y) for distance-attenuated one-shots. */
+export type WorldSoundPosition = { x: number; y?: number; z: number }
+
+/** Fire-and-forget clip at a world position — volume falls off with distance. */
+export type PlayAt = (url: string, position: WorldSoundPosition, volume?: number) => void
+
 export type WorldAudio = {
   listener: AudioListener
   /** Loads a clip, loops it starting at zero gain, and returns a handle to fade
    *  it in/out via setTargetGain() + update(). */
   createLoop: (url: string) => AudioLoopHandle
-  /** Fire-and-forget clip at a fixed volume, e.g. an NPC reaction line. */
+  /** Fire-and-forget clip at a fixed volume (UI / inventory / quest thank-you). */
   playOnce: (url: string, volume?: number) => void
+  /** Fire-and-forget clip with distance gain from listener → `position`. */
+  playAt: PlayAt
   /** Advances all active loop gains toward their targets — call once per frame. */
   update: (dt: number) => void
   dispose: () => void
 }
+
+/** Full category gain within this distance (world units). */
+export const DISTANCE_REF = 4
+/** Silent at and beyond this distance. */
+export const DISTANCE_MAX = 45
+/** Skip playback when effective gain is below this. */
+export const DISTANCE_GAIN_EPS = 0.02
 
 /** Gain change per second when a loop's target moves — fast enough to feel
  *  responsive, slow enough to avoid audible clicks/pops on crossfade. */
@@ -39,12 +54,24 @@ function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value))
 }
 
+/** Linear distance → gain multiplier (1 inside ref, 0 at/after max). Pure — unit-tested. */
+export function distanceGain(
+  distance: number,
+  refDistance = DISTANCE_REF,
+  maxDistance = DISTANCE_MAX,
+): number {
+  if (distance <= refDistance) return 1
+  if (distance >= maxDistance) return 0
+  return 1 - (distance - refDistance) / (maxDistance - refDistance)
+}
+
 /** Camera-attached AudioListener plus a small mixer for looped, gain-lerped
  *  layers (ambient beds) and one-shot clips (reaction sounds) — shared
  *  foundation for both, so neither has to build its own AudioContext plumbing. */
 export function createWorldAudio(camera: Camera): WorldAudio {
   const listener = new AudioListener()
   camera.add(listener)
+  const listenerPos = new Vector3()
 
   // Browsers start the AudioContext suspended until a user gesture; the game's
   // own pointer-lock click is the first guaranteed one, so piggyback on it
@@ -101,6 +128,19 @@ export function createWorldAudio(camera: Camera): WorldAudio {
       })
   }
 
+  function playAt(url: string, position: WorldSoundPosition, volume = 1): void {
+    listener.getWorldPosition(listenerPos)
+    const y = position.y ?? listenerPos.y
+    const distance = Math.hypot(
+      position.x - listenerPos.x,
+      y - listenerPos.y,
+      position.z - listenerPos.z,
+    )
+    const gain = clamp01(volume) * distanceGain(distance)
+    if (gain < DISTANCE_GAIN_EPS) return
+    playOnce(url, gain)
+  }
+
   function update(dt: number): void {
     const step = GAIN_LERP_SPEED * dt
     for (const entry of activeLoops) {
@@ -122,5 +162,5 @@ export function createWorldAudio(camera: Camera): WorldAudio {
     camera.remove(listener)
   }
 
-  return { listener, createLoop, playOnce, update, dispose }
+  return { listener, createLoop, playOnce, playAt, update, dispose }
 }
