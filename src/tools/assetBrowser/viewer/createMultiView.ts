@@ -86,15 +86,37 @@ export function createMultiView(
   const frameTargets = (bounds: { center: Vector3, radius: number } | null) => {
     if (!bounds) return
     _target.copy(bounds.center)
-    const dist = Math.max(bounds.radius * 2.5, 1.5)
+    const radius = Math.max(bounds.radius, 0.05)
+    // Ortho half-extent at zoom=1 (must match resize()).
+    const orthoHalf = 3
+    const dist = Math.max(radius * 2.8, 0.55)
     for (const view of views) {
       view.controls.target.copy(_target)
       if (view.id === 'front') view.camera.position.set(_target.x, _target.y, _target.z + dist)
       else if (view.id === 'side') view.camera.position.set(_target.x + dist, _target.y, _target.z)
       else if (view.id === 'top') view.camera.position.set(_target.x, _target.y + dist, _target.z)
-      else view.camera.position.set(_target.x + dist * 0.7, _target.y + dist * 0.5, _target.z + dist * 0.7)
-      view.camera.lookAt(_target)
+      else view.camera.position.set(
+        _target.x + dist * 0.75,
+        _target.y + dist * 0.45,
+        _target.z + dist * 0.75,
+      )
+
+      if (view.camera instanceof OrthographicCamera) {
+        view.camera.zoom = Math.min(40, Math.max(0.35, orthoHalf / (radius * 1.35)))
+        view.camera.updateProjectionMatrix()
+      } else {
+        view.camera.near = Math.max(0.01, dist / 100)
+        view.camera.far = Math.max(50, dist * 40)
+        view.camera.updateProjectionMatrix()
+      }
+
+      view.controls.minDistance = Math.max(0.05, dist * 0.2)
+      view.controls.maxDistance = Math.max(2, dist * 6)
+      // Apply pose without damping interpolation fighting the new framing.
+      const damping = view.controls.enableDamping
+      view.controls.enableDamping = false
       view.controls.update()
+      view.controls.enableDamping = damping
     }
   }
 

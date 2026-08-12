@@ -33,7 +33,7 @@ const FLAME_OPACITY = 0.75
 
 /** PointLight / future flame tip — same wrist TRS as `HELD_ATTACH.wooden_torch`. */
 const WOODEN_FIRE_ATTACH: HeldAttach = {
-  position: [-0.25, 0.085, -0.02],
+  position: [0.02, 0.12, -0.02],
   rotation: [Math.PI / 2, -Math.PI / 2, 0],
   scale: 1,
 }

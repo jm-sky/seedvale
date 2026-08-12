@@ -9,6 +9,7 @@ import { createWorldConfig } from '../../../config/worldConfig'
 import { createPostProcessing } from '../../../render/createPostProcessing'
 import { createRenderer } from '../../../render/createRenderer'
 import { browserState } from '../state'
+import { gripOverrideForTarget } from '../gripEdit'
 import { type AssetSlot, boundsData, createAssetSlot, setWireframe } from './createAssetSlot'
 import { createConnectionLine, createMultiView } from './createMultiView'
 import { applySceneBackground, createViewerScene } from './createViewerScene'
@@ -34,12 +35,19 @@ export type AssetViewer = {
     rotationDeg?: [number, number, number]
     scale?: [number, number, number]
   }) => void
+  /** Re-frame cameras from current focus mode / bounds. */
+  frame: () => void
+  /** Remount in-hand preview (after grip editor changes). */
+  remountHeld: () => void
   refresh: () => void
   resize: () => void
   dispose: () => void
   getCanvas: () => HTMLCanvasElement
   updateReport: () => void
 }
+
+const _handCenter = new Vector3()
+
 
 export function createViewer(container: HTMLElement): AssetViewer {
   const renderer = createRenderer(container, 2, { preserveDrawingBuffer: true })
@@ -54,9 +62,12 @@ export function createViewer(container: HTMLElement): AssetViewer {
 
   const refreshHeldPreview = () => {
     reference.setPose(browserState.pose === 'idle' ? 'idle' : 'rest')
-    const state = applyHeldPreview(reference, target)
+    const override = gripOverrideForTarget(target.entry?.id ?? null)
+    const state = applyHeldPreview(reference, target, override)
     if (state.mode === 'in-hand') {
-      browserState.statusMessage = 'In-hand preview (game mount)'
+      browserState.statusMessage = override
+        ? 'In-hand preview (grip editor override)'
+        : (state.reason ?? 'In-hand preview (game mount)')
     } else if (state.reason) {
       browserState.statusMessage = state.reason
     }
@@ -182,7 +193,24 @@ export function createViewer(container: HTMLElement): AssetViewer {
   requestAnimationFrame(loop)
 
   const frameScene = () => {
+    reference.refreshAnchors()
+    target.refreshAnchors()
     const held = computeHeldPreviewState(reference, target)
+
+    if (browserState.focus === 'hand') {
+      const hand = findAnchorByName(reference, 'hand.right')
+        ?? findAnchorByName(reference, browserState.referenceAnchor)
+      if (hand) {
+        // Lock framing on the hand socket — do not expand/re-center to the
+        // (possibly badly offset) tool bbox, or grip screenshots zoom out.
+        _handCenter.setFromMatrixPosition(hand.worldMatrix)
+        const radius = browserState.focusRadius ?? 0.28
+        multi.frameTargets({ center: _handCenter.clone(), radius })
+        markDirty()
+        return
+      }
+    }
+
     const box = held.mode === 'in-hand'
       ? reference.getBounds()
       : (target.getBounds() ?? reference.getBounds())
@@ -191,7 +219,8 @@ export function createViewer(container: HTMLElement): AssetViewer {
     box.getCenter(center)
     const size = new Vector3()
     box.getSize(size)
-    multi.frameTargets({ center, radius: size.length() * 0.5 })
+    const radius = browserState.focusRadius ?? size.length() * 0.5
+    multi.frameTargets({ center, radius })
     markDirty()
   }
 
@@ -272,6 +301,12 @@ export function createViewer(container: HTMLElement): AssetViewer {
         )
       }
       if (t.scale) target.group.scale.set(...t.scale)
+      markDirty()
+    },
+    frame: frameScene,
+    remountHeld() {
+      refreshHeldPreview()
+      frameScene()
       markDirty()
     },
     refresh: markDirty,

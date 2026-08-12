@@ -41,6 +41,7 @@ export type HeldAttach = {
  */
 export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
   axe: {
+    // Verified in-hand after user manual adjustment (2026-08-12)
     // Was along forearm (handle → bone −Y); +90° yaw puts shaft across the grip.
     position: [0.02, 0.13, -0.02],
     rotation: [Math.PI / 2, Math.PI / 2, 0],
@@ -54,12 +55,14 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     rotation: [0.4, 0.2, 0.3],
     scale: 1,
   },
+    // Verified in-hand after user manual adjustment (2026-08-12)
   knife: {
-    position: [0, 0.12, 0.0],
+    position: [0, 0.12, -0.01],
     rotation: [Math.PI, 0, Math.PI / 2],
     scale: 1.25,
   },
   shovel: {
+    // Verified in-hand after user manual adjustment (2026-08-12)
     position: [0.02, 0.11, -0.025],
     rotation: [0, 0, -Math.PI / 2.6],
     scale: 1,
@@ -68,9 +71,10 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     gripLocalOffset: [0, -0.24, 0],
   },
   wooden_torch: {
-    // Verified in-hand (2026-08-12): tip up/out of palm, grip on shaft.
+    // Verified in-hand after user manual adjustment (2026-08-12)
+    // ~~Verified in-hand (2026-08-12): tip up/out of palm, grip on shaft.~~
     // Mesh long axis treated as +Z (preload applies rotation.x = π/2).
-    position: [-0.25, 0.085, -0.02],
+    position: [-0.25, 0.1, -0.02],
     rotation: [Math.PI / 2, -Math.PI / 2, 0],
     scale: 1.1,
     gripLocalOffset: [0, 0, -0.2],
@@ -83,10 +87,11 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
  * `PlayerTorch` and the asset browser in-hand preview.
  */
 export const BRANCH_HELD_ATTACH: HeldAttach = {
-  position: [-0.25, 0.085, -0.02],
+  // Verified in-hand after user manual adjustment (2026-08-12)
+  position: [-0.05, 0.14, -0.05],
   rotation: [Math.PI / 2, Math.PI / 2, 0],
   scale: 1,
-  gripLocalOffset: [0, 0, 0.1],
+  gripLocalOffset: [0, 0, -0.08],
 }
 
 /** Longest-axis size while held (meters). Separate from ground-drop sizing. */

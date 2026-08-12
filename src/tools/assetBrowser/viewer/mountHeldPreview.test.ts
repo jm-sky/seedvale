@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AssetIndexEntry } from '../../../assets/assetIndex'
-import { heldPreviewKind } from './mountHeldPreview'
+import { heldPreviewKind, provisionalHeldAttach } from './mountHeldPreview'
 
 function heldEntry(id: string): AssetIndexEntry {
   return {
@@ -37,5 +37,14 @@ describe('heldPreviewKind', () => {
       group: 'item',
     })).toBeNull()
     expect(heldPreviewKind(null)).toBeNull()
+  })
+})
+
+describe('provisionalHeldAttach', () => {
+  it('provides a browser-only long_sword grip', () => {
+    expect(provisionalHeldAttach(heldEntry('held:long_sword'))).toMatchObject({
+      scale: 1,
+    })
+    expect(provisionalHeldAttach(heldEntry('held:pitchfork'))).toBeNull()
   })
 })
