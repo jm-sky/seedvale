@@ -14,7 +14,7 @@ Dalej = ciszej dla one-shotów z pozycją źródła. Inventory / quest thank-you
 
 ## Zakres
 
-1. **API** — `done`. [`src/audio/createWorldAudio.ts`](../../src/audio/createWorldAudio.ts): `playAt`, `distanceGain` (ref=4, max=45, liniowo), skip gdy gain &lt; 0.02. Unit test: [`distanceGain.test.ts`](../../src/audio/distanceGain.test.ts).
+1. **API** — `done`. [`src/audio/createWorldAudio.ts`](../../src/audio/createWorldAudio.ts): `playAt`, `distanceGain` (ref=1.5, max=28, liniowo), skip gdy gain &lt; 0.02. Unit test: [`distanceGain.test.ts`](../../src/audio/distanceGain.test.ts). Well base volume kept low (`0.18`) — clip is a deep well echo.
 2. **Helpery** — `done`. `playActionWell` / melee / chop / `playAnimalSound` biorą `PlayAt` + pozycję. Dig zostaje na `playOnce`.
 3. **P0** — `done`. NPC well drink + NPC reaction → `playAt` (well landmark / mesh).
 4. **P1** — `done`. Player well, melee, animal observe, axe chop → `playAt`.

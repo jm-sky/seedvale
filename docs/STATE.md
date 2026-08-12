@@ -76,7 +76,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - NPC dialogue v2 exists as a Vue screen with multiple conversation topics.
 - NPC daily routine/place work is partially implemented; plan 020 remains in progress.
 - NPC reaction sounds are implemented (`playAt` from the NPC mesh — quieter farther away).
-- World one-shots that have a source position use `worldAudio.playAt` (linear falloff `ref=4` / `max=45`): well, melee, animal observe, axe chop. Inventory / quest thank-you stay on `playOnce`.
+- World one-shots that have a source position use `worldAudio.playAt` (linear falloff `ref=1.5` / `max=28`): well, melee, animal observe, axe chop. Inventory / quest thank-you stay on `playOnce`.
 
 ### Fauna
 

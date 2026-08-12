@@ -18,7 +18,8 @@ const ACTION_DIG_SFX_VOLUME = 0.45
 const ACTION_CHOP_SFX_VOLUME = 0.5
 const ACTION_MELEE_HIT_SFX_VOLUME = 0.5
 const ACTION_MELEE_KILL_SFX_VOLUME = 0.55
-const ACTION_WELL_SFX_VOLUME = 0.4
+/** Quiet — the clip is a deep well echo and reads as “inside” if loud. */
+const ACTION_WELL_SFX_VOLUME = 0.18
 
 type PlayOnce = (url: string, volume?: number) => void
 

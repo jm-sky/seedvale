@@ -27,10 +27,11 @@ export type WorldAudio = {
   dispose: () => void
 }
 
-/** Full category gain within this distance (world units). */
-export const DISTANCE_REF = 4
+/** Full category gain within this distance (world units).
+ *  Kept near interact range so ~3 m already softens instead of “inside the source”. */
+export const DISTANCE_REF = 1.5
 /** Silent at and beyond this distance. */
-export const DISTANCE_MAX = 45
+export const DISTANCE_MAX = 28
 /** Skip playback when effective gain is below this. */
 export const DISTANCE_GAIN_EPS = 0.02
 
