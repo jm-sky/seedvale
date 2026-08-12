@@ -1,9 +1,9 @@
-# Plan 090: Miecz, Kupiec, Namiot, Duże Jaskinie i Kilof
+# Plan 091: Miecz, Kupiec, Namiot, Duże Jaskinie i Kilof
 
-**Status:** `planned` 📋  
-**Created:** 2026-08-12  
-**Priority:** 🟡 medium  
-**Effort:** XL  
+**Status:** `planned` 📋
+**Created:** 2026-08-12
+**Priority:** 🟡 medium
+**Effort:** XL
 **Scope:** kilka powiązanych dodatków gameplay/world, które rozszerzają istniejące systemy itemów, NPC, handlu, campingu, zasobów i landmarków.
 
 ## Cel
