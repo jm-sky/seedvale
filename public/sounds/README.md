@@ -11,6 +11,9 @@ today. The pre-conversion WAVs are recoverable from git history/the
 `male-thank-you-01.mp3` and `female-thank-you-01.mp3` were already lossy-compressed
 and were left as-is.
 
+Backlog status: [`docs/assets/SOUNDS.md`](../../docs/assets/SOUNDS.md). Staging
+candidates still under review: [`_temp/Sounds/README.md`](../../_temp/Sounds/README.md).
+
 ## NPC
 
 | filename         | oryginal filename | source url | notes |
@@ -30,6 +33,7 @@ and were left as-is.
 | animal-chicken-01.ogg | 724216__nickmaysoundmusic__chickens_waiting_to_be_fed_farm_light_wind_bird_song.wav | https://freesound.org/people/nickmaysoundmusic/sounds/724216/ | Farm chickens + light wind/birds; longer bed (~17 s) |
 | animal-cow-01.ogg | 513565__spurioustransients__cow-moo-8.wav | https://freesound.org/people/spurioustransients/sounds/513565/ | Cow moo |
 | animal-wolf-01.ogg | 338674__newagesoup__wolf-growl.wav | https://freesound.org/people/newagesoup/sounds/338674/ | Wolf growl |
+| animal-dog-01.ogg | ANMLDog_Dog Barks, Multiple, Indoors…_344 Audio_Dog Vocalisations_02.wav | Sonniss GDC 2026 — 344 Audio Dog Vocalisations | **not wired**; village dog; not deer/fox (S10 still open) |
 
 ## Ambient / background
 
@@ -38,6 +42,12 @@ and were left as-is.
 | ambient-forest-loop-01.ogg | 170515__rolandasb__forest_ambient_01_loop.wav | https://freesound.org/people/rolandasb/sounds/170515/ | Loopable forest ambience (birds/wind) |
 | ambient-night-crickets-loop-01.ogg | 521843__mrfossy__outdoors_night_cricketsloop.wav | https://freesound.org/people/mrfossy/sounds/521843/ | Loopable night crickets |
 | ambient-coast-seagulls-waves-01.ogg | 56531__juskiddink__seagullswavesjuly-084of4freesound.wav | https://freesound.org/people/juskiddink/sounds/56531/ | Seagulls + waves, coastline |
+| ambient-fire-loop-01.ogg | FIREBurn_Loop Elements Fire Crackling…_ESM_SNLS.wav | Sonniss GDC 2026 — Epic Stock Media Synthesized Nature | **not wired**; S03 fire loop (~12 s) |
+| ambient-wind-loop-01.ogg | WINDInt_Loop Weather Wind Whipping…_ESM_SNLS.wav | Sonniss GDC 2026 — Epic Stock Media Synthesized Nature | **not wired**; S06 (~7.5 s) |
+| ambient-rain-loop-01.ogg | RAINInt_Heavy Rain on Window, Constant _JF_INT Storm.wav | Sonniss GDC 2026 — Jake Fielding Interior Wind Rain | **not wired**; S07; rain-on-window bed (~31 s) |
+| ambient-meadow-loop-01.ogg | AMBSwmp_Meadow Pipits…Wind blowing through Grass_JSE_HoN_Stereo.wav | Sonniss GDC 2026 — Just Sound Effects Highlands of Norway | **not wired**; open / meadow bed (trimmed ~25 s) |
+| ambient-waves-soft-01.ogg | WATRWave_Soft Waves Cliffs_JSE_RCoN_Stereo.wav | Sonniss GDC 2026 — Just Sound Effects Rocky Coast of Norway | **not wired**; soft coast waves (trimmed ~20 s); supplement to seagulls coast |
+| ambient-crowd-kids-01.ogg | CRWDChld_Walla Children Kids…Playground 01_ESM_CPS.wav | Sonniss GDC 2026 — Epic Stock Media Crowds Walla | **not wired**; weak S12 stand-in (kids playground walla, trimmed ~25 s) |
 
 ## Items / Inventory
 
@@ -45,6 +55,27 @@ and were left as-is.
 |------------------|-------------------|------------|-------|
 | inventory-pick-up-01…04.ogg | 831642__ienba__generic-game-pick-up.wav | https://freesound.org/people/IENBA/sounds/831642/ | 4 variants split from one pack; random pick on collect |
 | inventory-drop-01.ogg | 791150__randbsoundbites__dropping-an-item-from-inventory.wav | https://freesound.org/people/randbsoundbites/sounds/791150/ | |
+
+## UI (not wired)
+
+| filename | oryginal filename | source url | notes |
+|----------|-------------------|------------|-------|
+| ui-click-01.ogg | metalClick.ogg | Kenney RPG sounds (CC0) — https://kenney.nl | S05 hard click |
+| ui-click-02.ogg | UIMisc_Kalimba 3 Up_CB Sounddesign_APPlicable Sounds.wav | Sonniss GDC 2026 — CB Sounddesign Organic UI | S05 soft confirm |
+| ui-click-03.ogg | interface1.wav | RPG Sound Pack (artisticdude / OpenGameArt; verify CC0) | S05 short UI blip |
+| ui-open-01.ogg | TOONMisc_Bird Flutes 3_CB Sounddesign_APPlicable Sounds.wav | Sonniss GDC 2026 — CB Sounddesign Organic UI | S05 open / positive |
+
+## Player / world interaction (not wired)
+
+| filename | oryginal filename | source url | notes |
+|----------|-------------------|------------|-------|
+| footstep-01…04.ogg | footstep00…03.ogg | Kenney RPG sounds (CC0) — https://kenney.nl | S01; generic hard surface — not grass/dirt variants yet |
+| door-open-01.ogg | doorOpen_1.ogg | Kenney RPG sounds (CC0) | S09 |
+| door-close-01.ogg | doorClose_1.ogg | Kenney RPG sounds (CC0) | S09 |
+| door-creak-01.ogg | creak1.ogg | Kenney RPG sounds (CC0) | S09 / S14 gate |
+| door-creak-02.ogg | creak2.ogg | Kenney RPG sounds (CC0) | S14 variant |
+| door-latch-01.ogg | metalLatch.ogg | Kenney RPG sounds (CC0) | S14 latch |
+| water-lap-01.ogg | WATRLap_Summer Tennessee Lake Dock Water Ripples…_ESM_CPS.wav | Sonniss GDC 2026 — Epic Stock Media Storms Lakes Parks | **S02 candidate** only (gentle lap trimmed ~2 s — not a true splash/wade yet) |
 
 ## Actions
 
@@ -55,4 +86,13 @@ and were left as-is.
 | action-melee-hit-01.ogg | 420673__sypherzent__basic-melee-hit.wav | https://freesound.org/people/SypherZent/sounds/420673/ | Short punch/impact; player melee hit (animal stays up); converted mono 16-bit 44.1 kHz |
 | action-melee-kill-01.ogg | 264062__paul368__melee-weapon-hit-with-male-moan-body-fall.wav | https://freesound.org/people/Paul368/sounds/264062/ | Hit + moan + body fall; player melee kill; converted mono 16-bit 44.1 kHz |
 | action-well-01.ogg | 146947__macferret_20__uoa_120217_kcqwell.wav | https://freesound.org/people/MacFerret_20/sounds/146947/ | Stone/water in well; player `[E]` at well + NPC drink at well; converted mono 16-bit 44.1 kHz |
+| action-fire-ignite-01.ogg | 24 Campfire, Dropping Fresh Pine Branches in Fire…Close 02.wav | Sonniss GDC 2026 — Ivo Vicic Campfire Bonfire FX | **not wired**; S03 ignite (trimmed ~2.5 s from long take) |
+| action-fire-extinguish-01.ogg | 42 Campfire, Putting Out Fire, Water from Bottle…Close.wav | Sonniss GDC 2026 — Ivo Vicic Campfire Bonfire FX | **not wired**; S03 extinguish (trimmed ~2.8 s) |
 
+## License notes (2026-08-12 batch)
+
+| Source | License posture |
+|--------|-----------------|
+| Kenney RPG sounds | **CC0** (see `_temp/Sounds/RPGsounds_Kenney/license.txt`) |
+| RPG Sound Pack (`ui-click-03`) | Typically CC0 on OpenGameArt (artisticdude) — **verify before commercial ship** |
+| Sonniss.com GDC 2026 Game Audio Bundle samples | Promo/eval samples — **confirm Sonniss GDC license terms before shipping** the fire/wind/rain/meadow/waves/dog/crowd/UI clips |
