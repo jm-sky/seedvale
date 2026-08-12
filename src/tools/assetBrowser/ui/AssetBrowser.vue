@@ -2,8 +2,6 @@
 import { computed, onMounted, onUnmounted, ref, type Ref, watch } from 'vue'
 import type { AssetViewer } from '../viewer/createViewer'
 import { buildAssetIndex, findAssetEntry } from '../../../assets/assetIndex'
-import { ASSET_BROWSER_MODEL_MANIFEST } from '../modelManifest'
-import { browserState, slotDiagnostics } from '../state'
 import {
   bumpGripEdit,
   formatHeldAttachSnippet,
@@ -11,6 +9,8 @@ import {
   installGripApi,
   loadGripEditor,
 } from '../gripEdit'
+import { ASSET_BROWSER_MODEL_MANIFEST } from '../modelManifest'
+import { browserState, slotDiagnostics } from '../state'
 import { syncAssetBrowserUrlParams } from '../urlParams'
 import { boundsData } from '../viewer/createAssetSlot'
 import { captureSnapshot, copyText } from '../viewer/createSnapshot'

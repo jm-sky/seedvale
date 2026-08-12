@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import type { BrowserState } from './state'
 import {
   applyAssetBrowserUrlParams,
   hasAssetBrowserUrlParams,
   parseAssetBrowserUrlParams,
 } from './urlParams'
-import type { BrowserState } from './state'
 
 function baseState(overrides: Partial<BrowserState> = {}): BrowserState {
   return {

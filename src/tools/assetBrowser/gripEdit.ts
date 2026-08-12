@@ -1,11 +1,11 @@
 import { reactive } from 'vue'
 import type { HeldAttach } from '../../items/heldToolVisual'
+import type { ItemKind } from '../../items/items'
+import { isToolKind } from '../../items/HeldTool'
 import {
   BRANCH_HELD_ATTACH,
   HELD_ATTACH,
 } from '../../items/heldToolVisual'
-import { isToolKind } from '../../items/HeldTool'
-import type { ItemKind } from '../../items/items'
 
 /** Browser-only grips for held catalog entries that are not yet `ToolKind`. */
 export const BROWSER_PROVISIONAL_ATTACH: Readonly<Record<string, HeldAttach>> = {
@@ -25,14 +25,14 @@ export type GripEditValues = {
   gripLocalOffset: [number, number, number]
 }
 
-export type GripEditState = GripEditValues & {
+export type GripEditState = {
   /** True when target is a held tool with an editable attach. */
   active: boolean
   /** Asset id currently driving the editor (`held:knife`, …). */
   sourceId: string | null
   /** Bumps when values change so the viewer can remount. */
   revision: number
-}
+} & GripEditValues
 
 export const gripEdit = reactive<GripEditState>({
   active: false,
@@ -140,12 +140,12 @@ export function formatHeldAttachSnippet(sourceId: string | null = gripEdit.sourc
   const constName = key === 'branch' ? 'BRANCH_HELD_ATTACH' : key
   if (key === 'branch') {
     return [
-      `export const BRANCH_HELD_ATTACH: HeldAttach = {`,
+      'export const BRANCH_HELD_ATTACH: HeldAttach = {',
       `  position: [${pos.join(', ')}],`,
       `  rotation: [${rot.join(', ')}],`,
       `  scale: ${fmt(a.scale, 2)},`,
       `  gripLocalOffset: [${grip.join(', ')}],`,
-      `}`,
+      '}',
     ].join('\n')
   }
   return [
@@ -154,7 +154,7 @@ export function formatHeldAttachSnippet(sourceId: string | null = gripEdit.sourc
     `  rotation: [${rot.join(', ')}],`,
     `  scale: ${fmt(a.scale, 2)},`,
     `  gripLocalOffset: [${grip.join(', ')}],`,
-    `},`,
+    '},',
   ].join('\n')
 }
 
