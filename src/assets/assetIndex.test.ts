@@ -24,4 +24,26 @@ describe('assetIndex', () => {
     expect(held!.prepare).not.toEqual(ground!.prepare)
     expect(held!.url).toBe(ground!.url)
   })
+
+  it('includes all player holdable GLB tools in held group', () => {
+    const index = buildAssetIndex()
+    const ids = new Set(index.map((e) => e.id))
+    for (const id of [
+      'held:knife',
+      'held:axe',
+      'held:shovel',
+      'held:wooden_torch',
+      'held:branch',
+    ]) {
+      expect(ids.has(id), id).toBe(true)
+    }
+  })
+
+  it('includes roadmap held tools for grip alignment work', () => {
+    const index = buildAssetIndex()
+    const ids = new Set(index.map((e) => e.id))
+    for (const id of ['held:pitchfork', 'held:sickle', 'held:pickaxe', 'held:long_sword']) {
+      expect(ids.has(id), id).toBe(true)
+    }
+  })
 })

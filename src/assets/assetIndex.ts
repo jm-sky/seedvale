@@ -61,6 +61,65 @@ function basenameFromUrl(url: string): string {
   return file.replace(/\.glb$/i, '')
 }
 
+function pushHeldSpecs(out: AssetIndexEntry[]): void {
+  const seen = new Set(out.map((e) => e.id))
+
+  for (const [kind, spec] of Object.entries(HELD_GLB)) {
+    if (!spec) continue
+    const id = `held:${kind}`
+    if (seen.has(id)) continue
+    seen.add(id)
+    out.push({
+      id,
+      url: spec.url,
+      label: `${kind} (held)`,
+      group: 'held',
+      prepare: { mode: 'fitMax', value: spec.maxSize },
+      skinned: false,
+      anchors: anchorsForAsset(id),
+    })
+  }
+
+  /** Browser-only held pose — roadmap / decorative tools not yet in `HELD_GLB`. */
+  const browserHeld: Array<{ id: string, url: string, label: string, maxSize: number }> = [
+    { id: 'held:branch', url: BRANCH_URL, label: 'branch (lit, held)', maxSize: BRANCH_HELD_MAX },
+    { id: 'held:pitchfork', url: '/models/items/pitchfork.glb', label: 'pitchfork (held)', maxSize: 0.81 },
+    { id: 'held:sickle', url: '/models/items/sickle.glb', label: 'sickle (held)', maxSize: 0.36 },
+    { id: 'held:pickaxe', url: '/models/items/pickaxe.glb', label: 'pickaxe (held)', maxSize: 0.55 },
+    { id: 'held:long_sword', url: '/models/items/long_sword.glb', label: 'long_sword (held)', maxSize: 0.95 },
+  ]
+
+  for (const spec of browserHeld) {
+    if (seen.has(spec.id)) continue
+    seen.add(spec.id)
+    out.push({
+      ...spec,
+      group: 'held',
+      prepare: { mode: 'fitMax', value: spec.maxSize },
+      skinned: false,
+      anchors: anchorsForAsset(spec.id),
+    })
+  }
+}
+
+function pushBrowserItemExtras(out: AssetIndexEntry[]): void {
+  const extras: Array<{ id: string, url: string, label: string, maxSize: number }> = [
+    { id: 'item:pickaxe', url: '/models/items/pickaxe.glb', label: 'pickaxe (ground)', maxSize: 0.9 },
+    { id: 'item:long_sword', url: '/models/items/long_sword.glb', label: 'long_sword (ground)', maxSize: 1.15 },
+  ]
+  const seen = new Set(out.map((e) => e.id))
+  for (const spec of extras) {
+    if (seen.has(spec.id)) continue
+    out.push({
+      ...spec,
+      group: 'item',
+      prepare: { mode: 'fitMax', value: spec.maxSize },
+      skinned: false,
+      anchors: anchorsForAsset(spec.id),
+    })
+  }
+}
+
 function pushHeightSpecs(
   out: AssetIndexEntry[],
   specs: readonly { url: string, height: number }[],
@@ -140,19 +199,8 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     })
   }
 
-  for (const [kind, spec] of Object.entries(HELD_GLB)) {
-    if (!spec) continue
-    const id = `held:${kind}`
-    out.push({
-      id,
-      url: spec.url,
-      label: `${kind} (held)`,
-      group: 'held',
-      prepare: { mode: 'fitMax', value: spec.maxSize },
-      skinned: false,
-      anchors: anchorsForAsset(id),
-    })
-  }
+  pushBrowserItemExtras(out)
+  pushHeldSpecs(out)
 
   for (const entry of HOUSE_CATALOG) {
     if (!entry.url) continue
@@ -184,14 +232,13 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     { id: 'settlement:lantern_wall', url: LANTERN_URL, label: 'Lantern (wall)', prepare: { mode: 'fitMax', value: LANTERN_WALL_MAX } },
     { id: 'settlement:torch', url: VILLAGE_TORCH_URL, label: 'Village torch', prepare: { mode: 'height', value: VILLAGE_TORCH_HEIGHT } },
     { id: 'settlement:wall', url: WALL_URL, label: 'Wall segment', prepare: { mode: 'height', value: 1.85 } },
-    { id: 'held:branch', url: BRANCH_URL, label: 'Branch (held)', prepare: { mode: 'fitMax', value: BRANCH_HELD_MAX } },
     { id: 'fx:fire', url: FIRE_FX_URL, label: 'Fire FX', prepare: { mode: 'fitMax', value: 0.11 } },
   ]
 
   for (const spec of settlementProps) {
     out.push({
       ...spec,
-      group: spec.id.startsWith('fx:') ? 'fx' : spec.id.startsWith('held:') ? 'held' : 'settlement',
+      group: spec.id.startsWith('fx:') ? 'fx' : 'settlement',
       skinned: false,
       anchors: anchorsForAsset(spec.id),
     })
