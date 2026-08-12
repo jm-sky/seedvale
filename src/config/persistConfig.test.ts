@@ -130,6 +130,7 @@ function minimalConfig(): WorldConfig {
       bloomThreshold: 0.92,
       godRaysEnabled: true,
       godRaysExposure: 0.22,
+      pixelRatioCap: 2,
     },
     showGui: true,
     player: { name: 'Ja' },

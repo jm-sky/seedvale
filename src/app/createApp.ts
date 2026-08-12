@@ -133,7 +133,7 @@ export async function createApp(
   )
   const getWorldDays = () => dayNight.elapsedDays
 
-  const renderer = createRenderer(container)
+  const renderer = createRenderer(container, config.postProcessing.pixelRatioCap)
   const labelRenderer = new CSS2DRenderer()
   labelRenderer.setSize(container.clientWidth, container.clientHeight)
   labelRenderer.domElement.style.position = 'absolute'
@@ -366,6 +366,17 @@ export async function createApp(
     saveGraphics(config)
   }
 
+  // Separate from `updatePostProcessingFromGui`: this one reallocates the
+  // renderer's drawing buffer + every composer render target, so it must not
+  // run on every bloom/AO slider tick — only when the render-scale control
+  // itself changes (perf review A3.2).
+  const updateRenderQualityFromGui = () => {
+    const pixelRatio = Math.min(window.devicePixelRatio, config.postProcessing.pixelRatioCap)
+    renderer.setPixelRatio(pixelRatio)
+    postProcessing.setPixelRatio(pixelRatio)
+    saveGraphics(config)
+  }
+
   const onDayNightChange = () => {
     if (dayNight.enabled) gameLoop.resyncDayNight()
   }
@@ -381,6 +392,7 @@ export async function createApp(
     onSkyChange: updateSkyFromGui,
     onDayNightChange,
     onPostProcessingChange: updatePostProcessingFromGui,
+    onRenderQualityChange: updateRenderQualityFromGui,
     onDumpVillagePlan: () => {
       console.log(summarizeVillagePlan(bundle.settlementsManager.getHomeDef().plan))
     },

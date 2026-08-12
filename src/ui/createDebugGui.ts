@@ -10,6 +10,10 @@ export type DebugGuiHandlers = {
   onSkyChange: () => void
   onDayNightChange?: () => void
   onPostProcessingChange: () => void
+  /** Fires only for the render-scale control — reallocates the renderer's
+   *  drawing buffer + composer render targets, unlike the cheap uniform
+   *  updates `onPostProcessingChange` handles (perf review A3.2). */
+  onRenderQualityChange: () => void
   /** Log the home settlement's VillagePlan summary to the console (plan 047). */
   onDumpVillagePlan?: () => void
 }
@@ -541,6 +545,19 @@ export function createDebugGui(
     .add(config.postProcessing, 'godRaysExposure', 0, 1, 0.01)
     .name('God rays exposure')
     .onChange(handlers.onPostProcessingChange)
+  // Reallocates GPU render targets, so this gets its own handler and
+  // `onFinishChange` (not the live `onChange` the sliders above use) — see
+  // perf review A3.2.
+  postFx
+    .add(config.postProcessing, 'pixelRatioCap', {
+      '1x': 1,
+      '1.25x': 1.25,
+      '1.5x': 1.5,
+      '1.75x': 1.75,
+      '2x (default)': 2,
+    })
+    .name('Render scale cap')
+    .onFinishChange(handlers.onRenderQualityChange)
 
   terrainControllers.push(
     gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild world'),

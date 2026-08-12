@@ -41,7 +41,7 @@ import {
   tagTreeMesh,
 } from '../world/treeVisuals'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
-import { buildChunkGeometry } from './buildChunkGeometry'
+import { buildChunkGeometry, createTerrainMaterial } from './buildChunkGeometry'
 import {
   chebyshevDistance,
   chunkCenter,
@@ -323,9 +323,25 @@ export function createChunkManager(
   const chunks = new Map<string, ChunkRecord>()
   const modifications: TerrainModification[] = []
   const grassSystem = createGrassSystem()
+  // One material for every chunk this manager ever builds (perf review 005,
+  // A5) — `flatShading`/`detailNormal` changes go through `onTerrainChange` →
+  // full world rebuild, which recreates the whole `ChunkManager`, so this
+  // never needs to be swapped in place. Disposed in `dispose()` below.
+  const terrainMaterial = createTerrainMaterial(config.flatShading, config.detailNormal)
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
   const recheckDistance = config.chunkSize * 0.25
+  // Chunks `recheck()` wants but hasn't started loading yet, nearest first —
+  // drained a few at a time in `update()` (every frame, unlike the throttled
+  // `recheck()` itself) instead of firing `ensureLoaded` for the whole
+  // missing set in one synchronous burst. `ensureLoaded`'s per-chunk cost
+  // (worker round-trip result triggers a main-thread grass build, ~150k
+  // candidates) is what actually hitches; spreading *starts* across frames
+  // spreads when those results land too (perf review A4b). Replaced wholesale
+  // on every `recheck()` — always reflects the latest player position, so a
+  // stale entry from before a big jump never blocks fresher ones behind it.
+  let loadQueue: ChunkCoord[] = []
+  const CHUNKS_STARTED_PER_FRAME = 2
   // Chunks only exist within loadRadius, so a grass radius beyond it is a dead
   // knob — clamp so the GUI slider (1-12) can't silently do nothing, and so
   // raising loadRadius later doesn't make grass range jump unexpectedly.
@@ -493,9 +509,8 @@ export function createChunkManager(
       z,
       config.waterLevel,
       config.heightScale,
-      config.flatShading,
+      terrainMaterial,
       config.region,
-      config.detailNormal,
       config.seed,
     )
     scene.add(mesh)
@@ -794,9 +809,7 @@ export function createChunkManager(
     )
     const desiredKeys = new Set(desired.map(chunkKey))
 
-    for (const coord of desired) {
-      if (!chunks.has(chunkKey(coord))) void ensureLoaded(coord)
-    }
+    loadQueue = desired.filter((coord) => !chunks.has(chunkKey(coord)))
     for (const record of [...chunks.values()]) {
       syncGrassForRecord(record, playerChunk)
       if (record.pinned || desiredKeys.has(record.key)) continue
@@ -804,9 +817,26 @@ export function createChunkManager(
     }
   }
 
+  /** Starts up to `CHUNKS_STARTED_PER_FRAME` still-missing chunks from
+   *  `loadQueue`, nearest first. Called every frame regardless of the
+   *  `recheck()` movement throttle, so the queue keeps draining even while
+   *  the player stands still after a big jump (e.g. fast travel, loading a
+   *  save far from spawn). */
+  function drainLoadQueue(): void {
+    let started = 0
+    while (started < CHUNKS_STARTED_PER_FRAME && loadQueue.length > 0) {
+      const coord = loadQueue.shift()!
+      if (chunks.has(chunkKey(coord))) continue
+      void ensureLoaded(coord)
+      started++
+    }
+  }
+
   function update(playerX: number, playerZ: number): void {
-    if (Math.hypot(playerX - lastCheckX, playerZ - lastCheckZ) < recheckDistance) return
-    recheck(playerX, playerZ)
+    if (Math.hypot(playerX - lastCheckX, playerZ - lastCheckZ) >= recheckDistance) {
+      recheck(playerX, playerZ)
+    }
+    drainLoadQueue()
   }
 
   function readField(
@@ -961,6 +991,7 @@ export function createChunkManager(
     dispose() {
       for (const record of [...chunks.values()]) unload(record)
       grassSystem.dispose()
+      terrainMaterial.dispose()
     },
   }
 }

@@ -103,6 +103,11 @@ export type WorldConfig = {
     /** Screen-space crepuscular rays toward the sun, mainly at dawn/dusk. */
     godRaysEnabled: boolean
     godRaysExposure: number
+    /** Upper bound on device pixel ratio (`window.devicePixelRatio` is still
+     *  respected below this) — the whole post-processing chain runs at
+     *  `logicalSize × min(devicePixelRatio, pixelRatioCap)` fragments, so this
+     *  is the single biggest lever on GPU fill-rate cost (perf review A3.2). */
+    pixelRatioCap: number
   }
   /** Show lil-gui panel (`?gui=0` to hide). */
   showGui: boolean
@@ -240,6 +245,9 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       // Kept low so dawn/dusk shafts stay visible without mountain whiteout
       // (issue 016); GUI still allows raising it while tuning.
       godRaysExposure: 0.22,
+      // Matches the previous hardcoded `Math.min(devicePixelRatio, 2)` — no
+      // behavior change by default, only when lowered via the GUI.
+      pixelRatioCap: 2,
     },
     showGui: true,
     player: {

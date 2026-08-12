@@ -14,7 +14,6 @@ import {
   apronGridWeights,
   type ChunkTileData,
   type RegionParams,
-  sampleApronGrid,
   sampleApronGridWeighted,
 } from './chunkHeightmap'
 import { createTerrainNormalMap } from './terrainDetailNormalMap'
@@ -22,6 +21,39 @@ import { createTerrainNormalMap } from './terrainDetailNormalMap'
 export type ChunkMeshResult = {
   mesh: THREE.Mesh
   dispose: () => void
+}
+
+/** Every chunk's material is stateless per-chunk (all differences live in
+ *  vertex attributes), so `ChunkManager` builds exactly one and passes it to
+ *  every `buildChunkGeometry` call instead of paying for 49 materials/
+ *  compiled-shader-uniform-sets. Config changes to `flatShading`/
+ *  `detailNormal` go through `onTerrainChange` → full world rebuild (see
+ *  `createApp.ts`), which recreates the `ChunkManager` and this material with
+ *  it — so it never needs to be mutated in place. */
+export function createTerrainMaterial(
+  flatShading: boolean,
+  detailNormal: DetailNormalConfig,
+): THREE.MeshStandardMaterial {
+  // Surface grain, not a substitute for real geometry (plan 044 §4.5, "teren
+  // wygląda płasko"). Strength/tiling are GUI knobs — do not hardcode a "cut"
+  // here again; see issue 014 for why the last four attempts to tune it in
+  // source went nowhere.
+  const detailOn = detailNormal.enabled && detailNormal.strength > 0
+  const material = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    flatShading,
+    roughness: 0.92,
+    metalness: 0.04,
+    ...(detailOn
+      ? {
+          normalMap: getTerrainNormalMap(),
+          normalScale: new THREE.Vector2(detailNormal.strength, detailNormal.strength),
+        }
+      : {}),
+  })
+  // Macro color/roughness always; dual-tile normals + distance fade when enabled.
+  applyTerrainSurfaceShader(material, detailOn ? detailNormal : null)
+  return material
 }
 
 /** Built once and shared by every chunk's material — same reasoning as
@@ -224,13 +256,33 @@ function bareGroundWeight(
   return Math.min(1, Math.max(road, sand, desert))
 }
 
+/** Grid indices of the apron texel nearest `(x, z)` — every core vertex lands
+ *  exactly on an apron grid point (the apron is the same step spacing, one
+ *  ring wider), so this is exact, not a nearest-neighbor approximation. */
+function apronGridIJ(
+  apronRes: number,
+  apronOriginX: number,
+  apronOriginZ: number,
+  step: number,
+  x: number,
+  z: number,
+): { ix: number; iz: number } {
+  return {
+    ix: Math.max(0, Math.min(apronRes - 1, Math.round((x - apronOriginX) / step))),
+    iz: Math.max(0, Math.min(apronRes - 1, Math.round((z - apronOriginZ) / step))),
+  }
+}
+
 /**
  * Builds one chunk's render mesh from its apron-inclusive tile. Normals are computed
- * on a temporary apron-sized geometry (so every core-edge vertex sees triangles on
- * both sides of the seam), then copied onto the trimmed core geometry. The core
- * geometry's normal attribute is set directly — `computeVertexNormals()` must NOT be
- * called on it, since that would recompute from core-only faces and reintroduce the
- * seam mismatch this whole apron trick exists to avoid.
+ * by central differences directly on `tile.heights` (the apron ring exists precisely
+ * so every core-edge vertex has a same-grid neighbor on both sides of the seam) —
+ * mathematically identical to `computeVertexNormals()` on this grid's regular
+ * triangulation, verified numerically against three's own implementation, but without
+ * allocating and immediately discarding a helper `PlaneGeometry` per chunk.
+ * `computeVertexNormals()` must NOT be called on the core geometry itself, since that
+ * would recompute from core-only faces and reintroduce the seam mismatch the apron
+ * exists to avoid.
  */
 export function buildChunkGeometry(
   tile: ChunkTileData,
@@ -240,41 +292,14 @@ export function buildChunkGeometry(
   chunkOriginZ: number,
   waterLevel: number,
   heightScale: number,
-  flatShading: boolean,
+  material: THREE.MeshStandardMaterial,
   region: RegionParams,
-  detailNormal: DetailNormalConfig,
   seed: number,
 ): ChunkMeshResult {
   const step = chunkSize / (resolution - 1)
   const apronRes = resolution + 2
   const apronOriginX = -chunkSize / 2 - step
   const apronOriginZ = -chunkSize / 2 - step
-
-  const apronSize = chunkSize + 2 * step
-  const apronGeometry = new THREE.PlaneGeometry(
-    apronSize,
-    apronSize,
-    apronRes - 1,
-    apronRes - 1,
-  )
-  apronGeometry.rotateX(-Math.PI / 2)
-  const apronPositions = apronGeometry.attributes.position as THREE.BufferAttribute
-  for (let i = 0; i < apronPositions.count; i++) {
-    const x = apronPositions.getX(i)
-    const z = apronPositions.getZ(i)
-    apronPositions.setY(
-      i,
-      sampleApronGrid(tile.heights, apronRes, apronOriginX, apronOriginZ, step, x, z),
-    )
-  }
-  apronGeometry.computeVertexNormals()
-  const apronNormals = apronGeometry.attributes.normal as THREE.BufferAttribute
-
-  const normalIndexAt = (x: number, z: number): number => {
-    const ix = Math.max(0, Math.min(apronRes - 1, Math.round((x - apronOriginX) / step)))
-    const iz = Math.max(0, Math.min(apronRes - 1, Math.round((z - apronOriginZ) / step)))
-    return iz * apronRes + ix
-  }
 
   const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize, resolution - 1, resolution - 1)
   geometry.rotateX(-Math.PI / 2)
@@ -293,13 +318,18 @@ export function buildChunkGeometry(
     const h = sampleApronGridWeighted(tile.heights, apronRes, w)
     positions.setY(i, h)
 
-    const nIdx = normalIndexAt(x, z)
-    const nx = apronNormals.getX(nIdx)
-    const ny = apronNormals.getY(nIdx)
-    const nz = apronNormals.getZ(nIdx)
-    normalAttr[i * 3] = nx
+    const { ix, iz } = apronGridIJ(apronRes, apronOriginX, apronOriginZ, step, x, z)
+    const hE = tile.heights[iz * apronRes + Math.min(apronRes - 1, ix + 1)]!
+    const hW = tile.heights[iz * apronRes + Math.max(0, ix - 1)]!
+    const hN = tile.heights[Math.min(apronRes - 1, iz + 1) * apronRes + ix]!
+    const hS = tile.heights[Math.max(0, iz - 1) * apronRes + ix]!
+    const dHdx = (hE - hW) / (2 * step)
+    const dHdz = (hN - hS) / (2 * step)
+    const nLen = Math.hypot(dHdx, 1, dHdz)
+    const ny = 1 / nLen
+    normalAttr[i * 3] = -dHdx / nLen
     normalAttr[i * 3 + 1] = ny
-    normalAttr[i * 3 + 2] = nz
+    normalAttr[i * 3 + 2] = -dHdz / nLen
 
     const m = sampleApronGridWeighted(tile.biomes, apronRes, w)
     const continentalness = sampleApronGridWeighted(tile.continentalness, apronRes, w)
@@ -329,27 +359,6 @@ export function buildChunkGeometry(
   geometry.setAttribute('normal', new THREE.BufferAttribute(normalAttr, 3))
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
   geometry.setAttribute('aBareGround', new THREE.BufferAttribute(bareGround, 1))
-  apronGeometry.dispose()
-
-  // Surface grain, not a substitute for real geometry (plan 044 §4.5, "teren
-  // wygląda płasko"). Strength/tiling are GUI knobs — do not hardcode a "cut"
-  // here again; see issue 014 for why the last four attempts to tune it in
-  // source went nowhere.
-  const detailOn = detailNormal.enabled && detailNormal.strength > 0
-  const material = new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    flatShading,
-    roughness: 0.92,
-    metalness: 0.04,
-    ...(detailOn
-      ? {
-          normalMap: getTerrainNormalMap(),
-          normalScale: new THREE.Vector2(detailNormal.strength, detailNormal.strength),
-        }
-      : {}),
-  })
-  // Macro color/roughness always; dual-tile normals + distance fade when enabled.
-  applyTerrainSurfaceShader(material, detailOn ? detailNormal : null)
 
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(chunkOriginX, 0, chunkOriginZ)
@@ -359,9 +368,11 @@ export function buildChunkGeometry(
 
   return {
     mesh,
+    // `material` is shared across every chunk (`createTerrainMaterial`,
+    // owned/disposed by `ChunkManager`) — only this chunk's own geometry is
+    // per-instance and needs disposing here.
     dispose: () => {
       geometry.dispose()
-      material.dispose()
     },
   }
 }

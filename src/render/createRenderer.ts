@@ -1,6 +1,12 @@
 import * as THREE from 'three'
 
-export function createRenderer(container: HTMLElement): THREE.WebGLRenderer {
+/** `pixelRatioCap` is `WorldConfig['postProcessing']['pixelRatioCap']` — the
+ *  GUI's render-scale quality knob (perf review A3.2). Defaults to 2, the
+ *  previous hardcoded value, if the caller doesn't pass one. */
+export function createRenderer(
+  container: HTMLElement,
+  pixelRatioCap = 2,
+): THREE.WebGLRenderer {
   const renderer = new THREE.WebGLRenderer({
     // Everything renders through EffectComposer into offscreen targets, where
     // this backbuffer MSAA has no effect (see createPostProcessing.ts — SMAAPass
@@ -9,7 +15,7 @@ export function createRenderer(container: HTMLElement): THREE.WebGLRenderer {
     antialias: false,
     powerPreference: 'high-performance',
   })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioCap))
   renderer.setSize(container.clientWidth, container.clientHeight)
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap

@@ -13,6 +13,10 @@ import type { Camera, Scene, WebGLRenderer } from 'three'
 export type PostProcessing = {
   render: () => void
   setSize: (width: number, height: number) => void
+  /** Mirrors `renderer.setPixelRatio` — must be called with the same value so
+   *  the composer's offscreen targets stay the same size as the renderer's
+   *  drawing buffer (perf review A3.2). */
+  setPixelRatio: (pixelRatio: number) => void
   applyConfig: (config: WorldConfig['postProcessing']) => void
   /** Sun screen-projection + camera-facing fade change every frame (camera
    *  moves even while `timeOfDay` doesn't), so this runs outside the
@@ -71,7 +75,16 @@ export function createPostProcessing(
   const smaaPass = new SMAAPass()
   composer.addPass(smaaPass)
 
-  const bloomPass = new UnrealBloomPass(new Vector2(width, height), 0.28, 0.35, 0.92)
+  const bloomPass = new UnrealBloomPass(new Vector2(width / 2, height / 2), 0.28, 0.35, 0.92)
+  // Bloom is a low-frequency effect by construction (5-level mip blur chain) —
+  // running its whole chain at half the composer's resolution is not
+  // perceptible but halves the pixel count through every blur pass (perf
+  // review A3.3). `EffectComposer.setSize`/`addPass` always call a pass's own
+  // `setSize` with the *full* composer resolution, so the halving has to be
+  // applied here rather than by just picking a smaller constructor argument
+  // (which only sets the initial size, not what survives a resize).
+  const bloomPassSetSize = bloomPass.setSize.bind(bloomPass)
+  bloomPass.setSize = (w, h) => bloomPassSetSize(w / 2, h / 2)
   composer.addPass(bloomPass)
 
   const godRaysPass = new ShaderPass(GodRaysShader)
@@ -150,6 +163,7 @@ export function createPostProcessing(
   return {
     render: () => composer.render(),
     setSize: (w, h) => composer.setSize(w, h),
+    setPixelRatio: (pixelRatio) => composer.setPixelRatio(pixelRatio),
     applyConfig,
     updateGodRays,
     dispose: () => {
