@@ -61,30 +61,34 @@ function onUnequip(): void { ui.inventory.onUnequip?.() }
           <div class="text-xs opacity-70">
             {{ formatWeight(item.def.weight) }} szt. · {{ formatWeight(item.def.weight * item.count) }} razem
           </div>
-          <div class="mt-0.5 flex flex-wrap gap-2">
-            <button
-              v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"
-              type="button"
-              class="cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-1 text-xs hover:bg-white/10"
-              @click="onEquip(item.kind)"
-            >
-              Weź
-            </button>
-            <button
-              v-if="ui.inventory.heldTool === item.kind"
-              type="button"
-              class="cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-1 text-xs hover:bg-white/10"
-              @click="onUnequip"
-            >
-              Odłóż
-            </button>
-            <button
-              type="button"
-              class="cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-1 text-xs hover:bg-white/10"
-              @click="onDrop(item.kind)"
-            >
-              Wyrzuć
-            </button>
+          <div class="mt-1 -mb-1 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center justify-start gap-2">
+              <button
+                v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"
+                type="button"
+                class="cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-1 text-xs hover:bg-white/10"
+                @click="onEquip(item.kind)"
+              >
+                Weź
+              </button>
+              <button
+                v-if="ui.inventory.heldTool === item.kind"
+                type="button"
+                class="cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-1 text-xs hover:bg-white/10"
+                @click="onUnequip"
+              >
+                Odłóż
+              </button>
+            </div>
+            <div class="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                class="cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-1 text-xs hover:bg-white/10"
+                @click="onDrop(item.kind)"
+              >
+                Wyrzuć
+              </button>
+            </div>
           </div>
         </div>
       </div>

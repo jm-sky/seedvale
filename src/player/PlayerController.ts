@@ -9,9 +9,9 @@ import {
   type LookState,
 } from '../input/MouseLook'
 import {
-  applyHeldAttach,
   createHeldToolObject,
   findRightHandSocket,
+  mountHeldToolOnSocket,
 } from '../items/heldToolVisual'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 
@@ -74,7 +74,7 @@ export class PlayerController {
   private readonly labelNameEl: HTMLDivElement
   private readonly hpFillEl: HTMLDivElement
   private lastHpRatio = -1
-  /** Quaternius `Wrist.R` (or null on capsule fallback / missing bone). */
+  /** Quaternius `WristR` (or null on capsule fallback / missing bone). */
   private readonly rightWrist: THREE.Object3D | null
   private heldToolObject: THREE.Object3D | null = null
   private heldToolKind: ToolKind | null = null
@@ -253,9 +253,7 @@ export class PlayerController {
         disposeObject3D(tool)
         return
       }
-      applyHeldAttach(tool, kind)
-      parent.add(tool)
-      this.heldToolObject = tool
+      this.heldToolObject = mountHeldToolOnSocket(tool, parent, kind)
     })
   }
 

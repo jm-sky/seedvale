@@ -62,6 +62,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'village_renewable',
     modelUrl: null,
     notes: 'Renewable near settlement trees; axe harvest yield.',
+    roadmap:
+      'Holdable improvised melee (low damage, ~4–8). Natural candidate for item durability/HP wear.',
   },
   mushroom: {
     kind: 'mushroom',
@@ -168,6 +170,12 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
       'Holdable + melee like knife (damage TBD, ~10–12). NPC protest on village theft (issue 025).',
   },
 }
+
+/** Cross-cutting item systems not tied to a single kind (roadmap only). */
+export const ITEM_SYSTEM_ROADMAP = [
+  'Item durability / HP: tools and improvised weapons wear down with use (esp. combat); break or need repair when depleted.',
+  'Expand melee set: pitchfork, sickle, branch (see per-kind roadmap).',
+] as const
 
 /** Decorative / not ItemKind — listed for agents scanning item-ish props. */
 export const NON_ITEM_PROPS = [

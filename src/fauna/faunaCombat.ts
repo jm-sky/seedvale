@@ -34,8 +34,8 @@ const HUMAN_DAMAGE: Partial<Record<AnimalKind, number>> = {
 }
 
 /** Held tools that can hit an animal on `[E]` (axe > knife > shovel).
- *  Roadmap: add pitchfork / sickle when they become holdable — see
- *  `docs/items/CATALOG.md` / `items/itemCatalog.ts`. */
+ *  Roadmap: pitchfork / sickle / branch melee + item durability — see
+ *  `docs/items/CATALOG.md` / `items/itemCatalog.ts` (`ITEM_SYSTEM_ROADMAP`). */
 export type MeleeToolKind = Extract<ToolKind, 'axe' | 'knife' | 'shovel'>
 
 const PLAYER_TOOL_DAMAGE: Record<MeleeToolKind, number> = {

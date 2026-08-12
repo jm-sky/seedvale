@@ -13,7 +13,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 |---------|--------|
 | Inventory weight / label | `ITEM_DEFS` |
 | Holdable (Weź) | `isToolKind` in `HeldTool.ts` — only knife, firestarter, shovel, axe |
-| Held 3D attach | `heldToolVisual.ts` → `Wrist.R` + `HELD_ATTACH` |
+| Held 3D attach | `heldToolVisual.ts` → `WristR` + `HELD_ATTACH` |
 | Ground GLB scale | `itemModels.ts` → `preparePropFitMax` (not height-only) |
 | Melee vs animals | `faunaCombat.ts` — axe 20, knife 12, shovel 8 |
 | Village one-time tools | `createItemSpawners.ts` |
@@ -24,7 +24,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 |------|-------|------|-------|-------|-------|-------|
 | shell | muszla | — | — | renewable village | procedural | |
 | stone | kamień | — | — | renewable + dig | procedural | |
-| branch | gałąź | — | — | renewable trees | procedural | axe harvest |
+| branch | gałąź | — | — | renewable trees | procedural | axe harvest; **melee later** |
 | mushroom | grzyb | — | — | world chunk | procedural | |
 | flower | kwiat | — | — | world chunk | procedural | |
 | cone | szyszka | — | — | world chunk | procedural | |
@@ -33,16 +33,21 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | blanket | koc | — | — | starting | procedural | |
 | shovel | łopata | yes | 8 | village 1× | `items/shovel.glb` | dig / level |
 | axe | siekiera | yes | 20 | village 1× | `items/axe.glb` | chop |
-| pitchfork | widły | **no** | — | village 1–3 | `items/pitchfork.glb` | plan 082 |
+| pitchfork | widły | **no** | — | village 1–3 | `items/pitchfork.glb` | plan 082; **melee later** |
 | sickle | sierp | **no** | — | village 1–3 | `items/sickle.glb` | plan 082 |
 
 ## Roadmap (not done)
 
 1. **pitchfork / sickle holdable + melee** — same pattern as knife (`HeldTool` +
    `faunaCombat` + `HELD_ATTACH`). Suggested damage band ~10–14.
-2. **NPC protest** when picking village pitchfork/sickle — [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md).
-3. **pickaxe** as `ItemKind` + mining — currently decorative only at stockpile.
-4. **long_sword** — parked CC-BY combat prop.
+2. **branch as improvised melee** — holdable stick, low damage (~4–8); good
+   durability-wear guinea pig.
+3. **Item durability / HP** — tools (and combat props) have condition that
+   decreases with use (fight, chop, dig); at 0 → break or force repair. Not in
+   save schema yet.
+4. **NPC protest** when picking village pitchfork/sickle — [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md).
+5. **pickaxe** as `ItemKind` + mining — currently decorative only at stockpile.
+6. **long_sword** — parked CC-BY combat prop.
 
 ## Related non-item props
 

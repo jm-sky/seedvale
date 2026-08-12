@@ -100,7 +100,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - `ItemKind` and `Inventory` exist in `src/items/`.
 - Player has shared `HealthState` on `PlayerController` (100 HP; CSS2D HP bar like NPC/fauna; no death UI/respawn yet — plan 045).
 - Held tools (`HeldTool`) attach a dedicated held mesh (GLB for shovel/axe/knife)
-  to Quaternius `Wrist.R` via `heldToolVisual.ts` (not the ground-drop pose).
+  to Quaternius `WristR` via `heldToolVisual.ts` (not the ground-drop pose).
 - Item overview for agents: [docs/items/CATALOG.md](./items/CATALOG.md) +
   `src/items/itemCatalog.ts` (pitchfork/sickle melee = roadmap).
 - Simple player→animal melee: with knife/axe/shovel **held**, gazing at a live animal and pressing `[E]` deals instant damage (`playerToolDamage`: axe 20 > knife 12 > shovel 8) via `AnimalAgent.takeDamage`; hit/kill SFX via `playAt` at the animal; without a melee tool the existing observe/flavor dialog remains.
