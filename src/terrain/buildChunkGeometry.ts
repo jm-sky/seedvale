@@ -363,7 +363,14 @@ export function buildChunkGeometry(
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(chunkOriginX, 0, chunkOriginZ)
   mesh.receiveShadow = true
-  mesh.castShadow = true
+  // Terrain casting a shadow onto itself is mostly shadow acne at this map's
+  // resolution (1024², 160×160 frustum) plus the cost of rendering every
+  // chunk into the shadow pass a second time — the directional light + N8AO
+  // already carry the terrain's own silhouette shading (perf review A2).
+  // Visual risk: real, on steep slopes at low sun angle — needs browser
+  // verification, which is why this is its own commit, separate from the
+  // rest of review 005 track 2.
+  mesh.castShadow = false
   mesh.name = 'chunk'
 
   return {
