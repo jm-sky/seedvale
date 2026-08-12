@@ -1,5 +1,9 @@
 # Etap 1 — Gospodarstwa NPC i przepływ zasobów
 
+**Status:** `todo`
+**Created:** 2026-08-12
+**Priority:** 🟡 medium · **Effort:** L · **Depends on:** ~~060~~, ~~071~~
+
 ## Cel
 
 Zmienić obecny model potrzeb NPC z:
