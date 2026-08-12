@@ -1,6 +1,6 @@
 # 018 — House scale vs NPC size
 
-**Status:** `todo`
+**Status:** `verification needed`
 
 ## Problem
 
@@ -16,3 +16,13 @@ Generated houses are often too small relative to the NPCs living in the settleme
 ## Goal
 
 Make settlement buildings feel physically believable relative to the inhabitants.
+
+## Fix (2026-08-12)
+
+Quaternius Fantasy RTS cottages are roof-heavy; previous target heights (~2.8–3.6 m) left door bands ≈1 m vs NPC ≈1.75 m.
+
+- Shared cottage height `HOUSE_COTTAGE_HEIGHT = 5.0`, tower `HOUSE_TOWER_HEIGHT = 6.4` in `src/settlement/props.ts` (`HUT_URLS`).
+- Procedural `createHut()` wall band raised (~2 m before scale) so fallback matches.
+- Default clearing `houseRadius` 4.5 → 5.5 in `worldConfig.ts` for larger footprints.
+
+**Manual check:** walk a few settlements; doors/walls should feel NPC-scale across `hut_d` / `towerhouse` / `hut_a–c`.

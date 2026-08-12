@@ -185,7 +185,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         },
         village: {
           coreRadius: 9,
-          houseRadius: 4.5,
+          houseRadius: 5.5,
           heightStrength: 0.8,
           tintStrength: 0.75,
           regionalHeightStrengthFlat: 0.3,

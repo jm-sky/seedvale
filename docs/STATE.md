@@ -61,7 +61,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Multiple streamed settlements.
 - Settlement generation is plan-first: one `VillagePlan` per settlement (identity → zones/plots/buildings/landmarks/local paths/entrances), projected to `SettlementDef` for runtime; shared `settlementPlanCache` feeds `SettlementsManager` and `RoadNetwork` (plan 047 — verification needed).
 - Settlement generation with families, houses, roads/paths and environment-aware siting.
-- House visuals prefer Second Age / towerhouse GLBs mixed with First Age huts; a name plaque sits by the well; short `wall.glb` palisade wings flank the main entrance (plan 072 — verification needed).
+- House visuals prefer Second Age / towerhouse GLBs mixed with First Age huts (cottage ~5 m / tower ~6.4 m roof-top so doors read NPC-scale — issue 018); a name plaque sits by the well; short `wall.glb` palisade wings flank the main entrance (plan 072 — verification needed).
 - Road/path corridors get edge wobble, sparse light potholes, and A* route meander (`region.roadNetwork` knobs; plan 068).
 - Inter-settlement road signposts use `yawToward` for board orientation; midpoint pairs are spaced apart (plan 039).
 - Inter-settlement roads attach via plan entrances (`entranceToward`); local path corridors come from `VillagePlan.paths`.

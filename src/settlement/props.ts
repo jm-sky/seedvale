@@ -51,13 +51,20 @@ export type SettlementTreeLandmark = {
   initialStage: 'sapling' | 'young' | 'mature'
 }
 
+/** Target roof-top height (world meters) for Quaternius Fantasy RTS cottages.
+ *  Those meshes are roof-heavy — total height must sit well above NPC (~1.75m)
+ *  so door/wall bands read as walkable (~2m+), not dollhouse. */
+const HOUSE_COTTAGE_HEIGHT = 5.0
+/** Multi-storey / tower variant — taller silhouette, same scale family. */
+const HOUSE_TOWER_HEIGHT = 6.4
+
 const HUT_URLS = [
   // Prefer Second Age / tower over First Age "roof-only" RTS huts.
-  { url: '/models/settlement/hut_d.glb', height: 3.0 },
-  { url: '/models/settlement/towerhouse.glb', height: 3.6 },
-  { url: '/models/settlement/hut_a.glb', height: 2.8 },
-  { url: '/models/settlement/hut_b.glb', height: 2.8 },
-  { url: '/models/settlement/hut_c.glb', height: 2.8 },
+  { url: '/models/settlement/hut_d.glb', height: HOUSE_COTTAGE_HEIGHT },
+  { url: '/models/settlement/towerhouse.glb', height: HOUSE_TOWER_HEIGHT },
+  { url: '/models/settlement/hut_a.glb', height: HOUSE_COTTAGE_HEIGHT },
+  { url: '/models/settlement/hut_b.glb', height: HOUSE_COTTAGE_HEIGHT },
+  { url: '/models/settlement/hut_c.glb', height: HOUSE_COTTAGE_HEIGHT },
 ] as const
 
 const WALL_URL = '/models/settlement/wall.glb'
@@ -176,20 +183,22 @@ export function placeOnGround(
 export function createHut(): THREE.Group {
   const hut = new THREE.Group()
 
+  // Wall band ~2m before `prepareProp` scales to `HOUSE_COTTAGE_HEIGHT`, so a
+  // fallback hut keeps NPC-believable door height (not a 1.4m dollhouse).
   const walls = new THREE.Mesh(
-    new THREE.BoxGeometry(2.2, 1.4, 2.2),
+    new THREE.BoxGeometry(2.6, 2.0, 2.6),
     new THREE.MeshStandardMaterial({ color: 0x8b6914, flatShading: true }),
   )
-  walls.position.y = 0.7
+  walls.position.y = 1.0
   walls.castShadow = true
   walls.receiveShadow = true
   hut.add(walls)
 
   const roof = new THREE.Mesh(
-    new THREE.ConeGeometry(1.8, 1.1, 4),
+    new THREE.ConeGeometry(2.0, 1.3, 4),
     new THREE.MeshStandardMaterial({ color: 0x6b3a2a, flatShading: true }),
   )
-  roof.position.y = 1.85
+  roof.position.y = 2.65
   roof.rotation.y = Math.PI / 4
   roof.castShadow = true
   hut.add(roof)
