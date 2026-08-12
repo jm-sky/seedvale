@@ -2,7 +2,7 @@
 
 **Status:** IN PROGRESS
 
-This document records the decisions accepted during Session 2 so far. It is not yet a complete systems architecture or dependency map.
+This document records the decisions accepted during Session 2 so far. It is not yet a complete systems architecture or dependency map. A separate review will consolidate and challenge these decisions before the session is closed.
 
 ## Accepted principles
 
@@ -14,23 +14,7 @@ Seedvale should use a hybrid architecture:
 - simulation state owned by the systems responsible for it,
 - no large central `WorldState` acting as a God Object.
 
-### Resources and environment
-
-Natural resources should use a shared resource system connected to the environment.
-
-The environment provides conditions; the resource system owns resource availability, regeneration and related state.
-
-### NPC and Household
-
-The model is hybrid:
-
-- **NPC** owns individual behaviour, needs, health, personality, traits, relationships and similar personal state.
-- **Household/Family** owns shared life and economic concerns such as shared resources and household-level decisions.
-- Not every NPC must necessarily belong to a household.
-
-NPCs should not become independent miniature economies when a household-level concept is more appropriate.
-
-## Flexible simulation entities / groups
+### Simulation entities and groups
 
 There should not be a single mandatory unit of simulation. Depending on the situation and system, the simulation may operate on:
 
@@ -48,9 +32,17 @@ General principle:
 
 > A group is a useful simulation entity when it has a shared goal, resources, location, structure or behaviour.
 
-This flexibility also supports CPU-friendly hybrid simulation and aggregation.
+### NPC and Household
 
-## Needs, pressure and decision making
+The model is hybrid:
+
+- **NPC** owns individual behaviour, needs, health, personality, traits, relationships and similar personal state.
+- **Household/Family** owns shared life and economic concerns such as shared resources and household-level decisions.
+- Not every NPC must necessarily belong to a household.
+
+NPCs should not become independent miniature economies when a household-level concept is more appropriate.
+
+### Needs, pressure and decision making
 
 NPC decision making should resemble a hierarchy of needs rather than a single flat need list.
 
@@ -89,7 +81,39 @@ Food shortage
 
 The decision can consider fatigue, time of day, distance, risk, skills, availability and other contextual factors.
 
-## Work and production
+Decision priorities should be influenced by the hierarchy of **self / family / group or settlement**, personality and traits such as altruism, egoism or patriotism. Exact weighting remains to be defined.
+
+### Goals and strategies
+
+The model should support both emergent behaviour and explicit goals/strategies:
+
+```text
+State + Needs / Pressures + Traits + Relationships + Goals
+  → Decision
+  → Strategy
+  → Actions
+  → World changes
+```
+
+`Goal` is intended as a shared foundation that can be specialized for NPCs, households, settlements and groups. Complex goals may contain subgoals. Goals can retain progress, be temporarily deprioritized by crises, and resume later.
+
+Strategies can be explicit options while the choice and execution remain dependent on the actual world state. This is intentionally a **strategies + emergence** model.
+
+### Settlement and group decision layers
+
+A settlement is expected to be more than a passive aggregate. The current direction is **B + C**:
+
+- the settlement connects its units and shared state,
+- it also has its own community-level state and decisions,
+- a deterministic **Virtual Mayor** / settlement decision layer can handle development and crises without requiring a simulated mayor NPC.
+
+The same general decision-layer foundation may be used by other groups, such as bandits.
+
+A higher-level goal does not directly command NPCs. For example, a settlement may decide that it needs wood, but individual NPCs choose whether and how to contribute based on their own needs, priorities, personality, traits and context.
+
+Goals may include development and crisis response, and can remain persistent with progress.
+
+### Work and production
 
 Work is an ordinary type of NPC activity rather than a separate conceptual mechanism.
 
@@ -106,23 +130,37 @@ NPC / Group
   → further use
 ```
 
-## Group and settlement decisions
+Production processes are likely to use recipes/process definitions, but with room for hybrid/specialized behaviour. Requirements may include buildings, tools, skills and time.
 
-Not every important decision needs to emerge directly from an urgent need.
+### Resources, storage and ownership
 
-The model should also support:
+A shared foundation for resources/items/goods is acceptable, while natural resources and manufactured goods do not have to be identical in every semantic detail.
+
+Resources may exist at multiple levels of representation, for example:
 
 ```text
-state + trends + goals
-  → decision
-  → actions
+specific wood pile
+  → warehouse stock
+  → regional availability
+  → estimated remote availability
 ```
 
-This is particularly relevant for future settlement development. Some strategic decisions may need dedicated mechanisms rather than being left entirely to emergent behaviour.
+Storage is an active economic element, but should start simple and gain functionality only where needed. Some goods may have ownership or group affiliation; ownership is not required for every resource.
 
-The exact strategic decision mechanism remains open.
+A resource shortage may create pressure and eventually a goal, but not every shortage should automatically create a goal. This is a hybrid mechanism.
 
-## Relationships
+### Buildings and infrastructure
+
+Buildings are expected to participate in simulation, but selectively. Most may eventually have mechanics, while some can remain decorative or gain mechanics later.
+
+The current architectural direction is hybrid:
+
+- buildings can expose capabilities such as housing, storage, production or water access,
+- selected buildings may also contain specialized logic where appropriate.
+
+Infrastructure follows the same hybrid principle. Selected elements can affect movement, transport, access and other systems, while decorative or low-impact infrastructure need not be deeply simulated.
+
+### Relationships
 
 A shared relationship system is a likely direction, capable of representing relationships between different entity types, for example:
 
@@ -140,7 +178,7 @@ The influence should be introduced incrementally; not every relationship type ne
 
 Relationships should evolve over time. Their history can be selective rather than a complete event log. Important semantic events may be remembered, e.g. a rescue, betrayal or significant help.
 
-## Time and simulation frequency
+### Time and simulation frequency
 
 Time is a shared foundation of the simulation, but systems do not need to update on every tick.
 
@@ -157,9 +195,9 @@ regional simulation   → very infrequent
 
 This is a core performance principle.
 
-## Events and system communication
+### Events and system communication
 
-System communication should likely use a **hybrid** approach:
+System communication should use a **hybrid** approach:
 
 - events for loosely coupled communication,
 - direct communication where a strong, explicit dependency is appropriate,
@@ -173,7 +211,7 @@ Instead, the current direction is:
 
 The world may contain important semantic events such as births, deaths, marriages, fires, discoveries, migrations, trade and other significant events. These can later feed relationships, history, quests, dialogue and similar systems.
 
-## World history and memory
+### World history and memory
 
 Important world events should be persistent parts of the world history, but not everything needs to be remembered forever.
 
@@ -181,13 +219,13 @@ Memory can be selective and may decay / be forgotten over time.
 
 This principle applies both to world history and to relationship history.
 
-## Persistence
+### Persistence
 
 Persistence should cover the continuing state of the world, not only the player.
 
 The saved state should be sufficient for the world to continue after restarting the game, including relevant state of NPCs, families, animals, settlements, resources, relationships, events and other simulation entities.
 
-## Hybrid simulation and aggregation
+### Hybrid simulation and aggregation
 
 Simulation may change representation depending on context and distance.
 
@@ -202,24 +240,9 @@ Aggregation must be conservative around sensitive situations. Important examples
 - player observation,
 - other states where losing individual detail would change the outcome.
 
-The exact mechanism is not fixed yet. The current direction is that individual systems should have substantial control over their appropriate simulation detail, potentially combined with shared contracts/conditions.
+Individual systems should have substantial control over their appropriate simulation detail, potentially combined with shared contracts/conditions. Simplifications are explicitly allowed when they produce a sufficiently believable continuation of the world.
 
-Simplifications are explicitly allowed when they produce a sufficiently believable continuation of the world.
-
-## Resource aggregation
-
-Resources may exist at multiple levels of representation, for example:
-
-```text
-specific wood pile
-  → warehouse stock
-  → regional availability
-  → estimated remote availability
-```
-
-This is intended to support both realistic physical flows and CPU-efficient remote simulation.
-
-## Transport
+### Transport
 
 Transport should be a real activity where it matters:
 
@@ -230,24 +253,63 @@ collect
   → unload
 ```
 
-Important transports may be fully simulated. Bulk or low-value flows may be aggregated, especially outside the active simulation area.
+Important transports may be fully simulated. Bulk or low-value flows may be aggregated, especially outside the active simulation area. Practical simplifications are allowed, including higher-than-realistic carrying capacity where necessary to keep the economy flowing without excessive simulation cost.
 
-Practical simplifications are allowed, including higher-than-realistic carrying capacity where necessary to keep the economy flowing without excessive simulation cost.
+### Environment and dynamic resources
 
----
+The environment should influence **selected systems**, rather than creating global coupling between every system.
+
+Natural resources should be dynamic where it produces useful simulation effects, but only selected resources need regeneration/depletion behaviour. We do not need to simulate every ecological detail.
+
+Selected feedback loops are desirable when they create meaningful emergent outcomes, but they should be deliberate rather than universal.
+
+### Wildlife and ecosystem
+
+Wildlife should use selected ecosystem mechanisms rather than attempting to simulate a complete ecological model from the start.
+
+- ecosystem-level pressures may be introduced selectively and incrementally,
+- predator/prey food-chain modelling should initially cover selected species,
+- wildlife should affect settlements and economy through selected meaningful dependencies.
+
+### Player integration
+
+The player should generally use the same underlying world systems as NPCs, while not necessarily using the same interface or level of control.
+
+The player can influence NPCs, groups and settlement goals through actions in the world rather than becoming a direct controller of the simulation.
+
+Player actions can create pressures, goals and consequences that flow through the same world systems.
+
+### Quests and authored scenarios
+
+Quests should use a hybrid model:
+
+1. **Emergent quests** can arise from existing world problems/goals.
+2. **Authored scenarios** can introduce designed content and special mechanics, such as caves, ruins, treasures or unique mobs (e.g. a large wolf).
+
+Quests should generally build on existing world systems rather than becoming a parallel simulation architecture.
+
+### Dialogue
+
+Dialogue should partially reflect the actual state of the world and NPCs. It should be able to use relevant needs, family, relationships, work, events, settlement problems and history, while not requiring every line to be fully dynamic.
+
+### World independence from the player
+
+The world should be able to produce meaningful situations that the player does not see or directly influence. Examples include NPC conflicts/resolutions, settlement development, wildlife movement and trade between remote settlements.
+
+The extent and fidelity of such simulation may be reduced when remote, provided the resulting world state remains believable.
 
 ## Decisions still open
 
-The following questions have been raised but **not decided**:
+The following remain intentionally open and should be reviewed before Session 2 is closed:
 
-1. Whether `Settlement` should be primarily an aggregate of multiple systems or contain more logic in one `SettlementSystem`.
-2. Whether buildings should be active simulation elements with capabilities such as storage, production, housing and water access.
-3. Whether infrastructure should participate directly in system dependencies, e.g. roads affecting transport and bridges affecting access to resources.
-4. The precise abstraction shared by NPC, Household, Settlement and other group-level pressures.
-5. The exact strategic decision mechanism for settlements and other groups.
-6. The exact architecture for simulation LOD / aggregation.
-
-These should be discussed before Session 2 is considered complete.
+1. The exact semantic model shared by NPC, Household, Settlement and Group pressures.
+2. The exact implementation and weighting of priority between self, family, group/settlement, personality and traits.
+3. The exact structure and ownership boundaries of `Settlement` and its decision layer.
+4. The precise abstraction shared by `Goal` and specialized goal types.
+5. The exact architecture for simulation LOD / aggregation and transitions between representations.
+6. Which buildings and infrastructure elements receive mechanics first.
+7. The exact scope and implementation of relationship history and memory decay.
+8. Which environment/resource/ecosystem feedback loops are worth simulating.
 
 ## Session status
 
