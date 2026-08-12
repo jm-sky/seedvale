@@ -12,6 +12,12 @@ import { browserState } from '../state'
 import { type AssetSlot, boundsData, createAssetSlot, setWireframe } from './createAssetSlot'
 import { createConnectionLine, createMultiView } from './createMultiView'
 import { applySceneBackground, createViewerScene } from './createViewerScene'
+import {
+  applyHeldPreview,
+  clearHeldPreviewMount,
+  computeHeldPreviewState,
+  HELD_SIDE_OFFSET,
+} from './mountHeldPreview'
 import { buildReportFromScene, findAnchorByName } from './reportFromScene'
 
 export type AssetViewer = {
@@ -44,7 +50,17 @@ export function createViewer(container: HTMLElement): AssetViewer {
   const { scene, world, ground, grid, axes, lighting } = createViewerScene()
   const reference = createAssetSlot('reference', world)
   const target = createAssetSlot('target', world)
-  target.group.position.x = 1.2
+  target.group.position.x = HELD_SIDE_OFFSET
+
+  const refreshHeldPreview = () => {
+    reference.setPose(browserState.pose === 'idle' ? 'idle' : 'rest')
+    const state = applyHeldPreview(reference, target)
+    if (state.mode === 'in-hand') {
+      browserState.statusMessage = 'In-hand preview (game mount)'
+    } else if (state.reason) {
+      browserState.statusMessage = state.reason
+    }
+  }
 
   const multi = createMultiView(container, renderer, 1)
   let layout: 'quad' | 'single' = 'quad'
@@ -166,7 +182,10 @@ export function createViewer(container: HTMLElement): AssetViewer {
   requestAnimationFrame(loop)
 
   const frameScene = () => {
-    const box = target.getBounds() ?? reference.getBounds()
+    const held = computeHeldPreviewState(reference, target)
+    const box = held.mode === 'in-hand'
+      ? reference.getBounds()
+      : (target.getBounds() ?? reference.getBounds())
     if (!box) return
     const center = new Vector3()
     box.getCenter(center)
@@ -180,29 +199,41 @@ export function createViewer(container: HTMLElement): AssetViewer {
     reference,
     target,
     async loadReference(entry, url) {
+      clearHeldPreviewMount(target)
       await reference.load(entry, url)
+      refreshHeldPreview()
       frameScene()
       markDirty()
     },
     async loadTarget(entry, url) {
+      clearHeldPreviewMount(target)
       await target.load(entry, url)
+      refreshHeldPreview()
       frameScene()
       markDirty()
     },
     async reloadReference() {
       const prevRef = browserState.referenceAnchor
       const prevTgt = browserState.targetAnchor
+      clearHeldPreviewMount(target)
       await reference.reload()
       validateSelections(prevRef, prevTgt)
-      if (browserState.resetTransformOnReload) target.group.position.set(1.2, 0, 0)
+      refreshHeldPreview()
+      if (browserState.resetTransformOnReload && computeHeldPreviewState(reference, target).mode !== 'in-hand') {
+        target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
+      }
       markDirty()
     },
     async reloadTarget() {
       const prevRef = browserState.referenceAnchor
       const prevTgt = browserState.targetAnchor
+      clearHeldPreviewMount(target)
       await target.reload()
       validateSelections(prevRef, prevTgt)
-      if (browserState.resetTransformOnReload) target.group.position.set(1.2, 0, 0)
+      refreshHeldPreview()
+      if (browserState.resetTransformOnReload && computeHeldPreviewState(reference, target).mode !== 'in-hand') {
+        target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
+      }
       markDirty()
     },
     align(mode) {
@@ -224,9 +255,11 @@ export function createViewer(container: HTMLElement): AssetViewer {
       markDirty()
     },
     resetTargetTransform() {
-      target.group.position.set(1.2, 0, 0)
+      clearHeldPreviewMount(target)
+      target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
       target.group.rotation.set(0, 0, 0)
       target.group.scale.set(1, 1, 1)
+      refreshHeldPreview()
       markDirty()
     },
     setTargetTransform(t) {
@@ -244,6 +277,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
     refresh: markDirty,
     resize: () => { markDirty() },
     dispose() {
+      clearHeldPreviewMount(target)
       reference.dispose()
       target.dispose()
       multi.dispose()

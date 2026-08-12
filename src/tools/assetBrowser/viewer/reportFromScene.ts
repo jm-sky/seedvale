@@ -17,6 +17,7 @@ import {
   type ReportAnchor,
 } from '../../../assets/alignmentReport'
 import { boundsData } from './createAssetSlot'
+import { computeHeldPreviewState } from './mountHeldPreview'
 
 function rootTransform(group: import('three').Group): {
   position: [number, number, number]
@@ -94,6 +95,14 @@ export function buildReportFromScene(input: {
     !reference.anchors.some((r) => r.def.name === a.def.name),
   )]
 
+  const heldPreview = computeHeldPreviewState(reference, target)
+  const previewWarnings: string[] = []
+  if (heldPreview.mode === 'in-hand') {
+    previewWarnings.push('in-hand-preview: mounted via game HELD_ATTACH / mountHeldToolOnSocket')
+  } else if (heldPreview.reason) {
+    previewWarnings.push(heldPreview.reason)
+  }
+
   const report = buildAlignmentReport({
     mode: hasPair ? 'pair' : 'single',
     status,
@@ -121,7 +130,7 @@ export function buildReportFromScene(input: {
       ...target.anchorIssues,
       ...(invalidSelection ? [`selection-invalid: ${invalidSelection}`] : []),
     ],
-    warnings: [],
+    warnings: previewWarnings,
   })
 
   return formatAlignmentReport(report)

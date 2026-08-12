@@ -1,11 +1,11 @@
 import { type Object3D, Quaternion, Vector3 } from 'three'
 import type { InteractionQueueConfig } from '../simulation/interactionQueue'
+import { discoverGlbAnchors, resolveAssetAnchors } from './anchorResolve'
 import {
   type AssetAnchorDef,
   type AssetPrepare,
   mergeAnchorDefs,
 } from './assetAnchors'
-import { discoverGlbAnchors, resolveAssetAnchors } from './anchorResolve'
 
 export type ResolvedInteractionPoint = {
   anchor: Vector3
