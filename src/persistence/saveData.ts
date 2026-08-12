@@ -107,7 +107,7 @@ export type SaveDataV6 = {
   timeOfDay: number
 }
 
-/** Canonical save shape — always v8. `loadSaveData` migrates older saves up. */
+/** Canonical save shape — always v9. `loadSaveData` migrates older saves up. */
 export type SaveDataV7 = {
   version: 7
   config: SaveConfig
@@ -127,8 +127,31 @@ export type SaveTreeOverride = {
   stageStartedAt: number
 }
 
-export type SaveData = {
+/** Portable hand light mid-burn (`player/PlayerTorch.ts`) — plan 085. */
+export type SavePlayerTorch = {
+  source: 'branch' | 'wooden_torch'
+  /** Seconds of fuel left (clamped on restore). */
+  fuelRemaining: number
+}
+
+export type SaveDataV8 = {
   version: 8
+  config: SaveConfig
+  player: SavePlayer
+  savedAt: number
+  quests: SaveQuests
+  inventory: Partial<Record<ItemKind, number>>
+  collectedItemIds: string[]
+  droppedItems: SaveDroppedItem[]
+  placedFires: SavePlacedFire[]
+  timeOfDay: number
+  elapsedDays: number
+  heldTool: ItemKind | null
+  treeOverrides: Record<string, SaveTreeOverride>
+}
+
+export type SaveData = {
+  version: 9
   config: SaveConfig
   player: SavePlayer
   savedAt: number
@@ -150,6 +173,8 @@ export type SaveData = {
   /** Sparse tree lifecycle overrides (`world/treeLifecycle.ts`) — only trees
    *  whose state diverges from procedural default + world-time growth. */
   treeOverrides: Record<string, SaveTreeOverride>
+  /** Lit hand torch/branch + remaining fuel. Null when unlit. */
+  playerTorch: SavePlayerTorch | null
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -300,7 +325,15 @@ function isTreeOverridesField(value: unknown): value is Record<string, SaveTreeO
   return true
 }
 
-export function isSaveDataV8(value: unknown): value is SaveData {
+function isPlayerTorchField(value: unknown): value is SavePlayerTorch | null {
+  if (value === null) return true
+  if (!value || typeof value !== 'object') return false
+  const t = value as Record<string, unknown>
+  if (t.source !== 'branch' && t.source !== 'wooden_torch') return false
+  return typeof t.fuelRemaining === 'number' && Number.isFinite(t.fuelRemaining)
+}
+
+export function isSaveDataV8(value: unknown): value is SaveDataV8 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 8) return false
@@ -319,6 +352,26 @@ export function isSaveDataV8(value: unknown): value is SaveData {
   return true
 }
 
+export function isSaveDataV9(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 9) return false
+  if (!isSaveConfig(v.config)) return false
+  if (!isSavePlayer(v.player)) return false
+  if (typeof v.savedAt !== 'number') return false
+  if (!v.quests || typeof v.quests !== 'object') return false
+  if (!v.inventory || typeof v.inventory !== 'object') return false
+  if (!Array.isArray(v.collectedItemIds)) return false
+  if (!Array.isArray(v.droppedItems)) return false
+  if (!Array.isArray(v.placedFires)) return false
+  if (typeof v.timeOfDay !== 'number') return false
+  if (typeof v.elapsedDays !== 'number') return false
+  if (!isHeldToolField(v.heldTool)) return false
+  if (!isTreeOverridesField(v.treeOverrides)) return false
+  if (!isPlayerTorchField(v.playerTorch)) return false
+  return true
+}
+
 /** Default `timeOfDay` for saves that predate persisting the clock (v1-v4) —
  *  mirrors `dayNight.ts::createDayNightState`'s own default. */
 const DEFAULT_TIME_OF_DAY = 0.32
@@ -330,26 +383,45 @@ function migratePlacedFires(placedFires: readonly LegacySavePlacedFire[]): SaveP
   return placedFires.map((pf) => ({ ...pf, kind: 'pit' as const }))
 }
 
-function toV8(fields: Omit<SaveData, 'version' | 'heldTool' | 'elapsedDays' | 'treeOverrides'> & {
+function toV9(fields: Omit<SaveData, 'version' | 'heldTool' | 'elapsedDays' | 'treeOverrides' | 'playerTorch'> & {
   heldTool?: ItemKind | null
   elapsedDays?: number
   treeOverrides?: Record<string, SaveTreeOverride>
+  playerTorch?: SavePlayerTorch | null
 }): SaveData {
   return {
-    version: 8,
+    version: 9,
     ...fields,
     heldTool: fields.heldTool ?? null,
     elapsedDays: fields.elapsedDays ?? 0,
     treeOverrides: fields.treeOverrides ?? {},
+    playerTorch: fields.playerTorch ?? null,
   }
 }
 
-/** Accepts a stored v1–v8 save and always returns the canonical v8 shape. */
+/** Accepts a stored v1–v9 save and always returns the canonical v9 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV8(value)) return value
+    if (isSaveDataV9(value)) return value
+    if (isSaveDataV8(value)) {
+      return toV9({
+        config: value.config,
+        player: value.player,
+        savedAt: value.savedAt,
+        quests: value.quests,
+        inventory: value.inventory,
+        collectedItemIds: value.collectedItemIds,
+        droppedItems: value.droppedItems,
+        placedFires: value.placedFires,
+        timeOfDay: value.timeOfDay,
+        elapsedDays: value.elapsedDays,
+        heldTool: value.heldTool,
+        treeOverrides: value.treeOverrides,
+        playerTorch: null,
+      })
+    }
     if (isSaveDataV7(value)) {
-      return toV8({
+      return toV9({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -363,7 +435,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV6(value)) {
-      return toV8({
+      return toV9({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -377,7 +449,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV5(value)) {
-      return toV8({
+      return toV9({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -391,7 +463,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV4(value)) {
-      return toV8({
+      return toV9({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -405,7 +477,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV3(value)) {
-      return toV8({
+      return toV9({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -419,7 +491,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV2(value)) {
-      return toV8({
+      return toV9({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -433,7 +505,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV1(value)) {
-      return toV8({
+      return toV9({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,

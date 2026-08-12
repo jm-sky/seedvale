@@ -65,10 +65,11 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     gripLocalOffset: [0, -0.24, 0],
   },
   wooden_torch: {
-    position: [0.02, 0.12, -0.02],
-    rotation: [0, 0, -Math.PI / 2.5],
+    // Match lit-branch / axe wrist TRS (mesh long axis treated as +Z in attach).
+    position: [0.02, 0.5, -0.02],
+    rotation: [Math.PI / 2, -Math.PI / 2, 0],
     scale: 1.1,
-    gripLocalOffset: [0, -0.18, 0],
+    gripLocalOffset: [0, 0, -0.2],
   },
 }
 
@@ -103,6 +104,8 @@ export async function preloadHeldToolModels(): Promise<void> {
       const model = await loadGltf(spec.url)
       // No ground-lay rotation — grip orientation comes from HELD_ATTACH.
       preparePropFitMax(model, spec.maxSize)
+      // Wooden torch stick is Y-up like the branch; map to +Z for axe-style attach.
+      if (kind === 'wooden_torch') model.rotation.x = Math.PI / 2
       heldTemplates.set(kind, model)
     } catch (err) {
       console.warn(`[held] failed to load ${spec.url}`, err)
@@ -120,6 +123,7 @@ export async function createHeldToolObject(kind: ToolKind): Promise<Object3D> {
       const spec = HELD_GLB[kind]!
       const model = await loadGltf(spec.url)
       preparePropFitMax(model, spec.maxSize)
+      if (kind === 'wooden_torch') model.rotation.x = Math.PI / 2
       heldTemplates.set(kind, model)
       return cloneSkinned(model)
     } catch {

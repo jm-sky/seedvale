@@ -104,7 +104,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
   exclusive: a lit branch or lit wooden torch occupies the slot (no second tool until left hand).
 - Portable light (`PlayerTorch`): **Zapal gałąź** (1× branch + firestarter, ~90s, branch+fire GLB
   in hand) or **Zapal pochodnię** (held `wooden_torch` + firestarter, ~240s, brighter). Village
-  one-time wooden torch pickup near plaza/campfire.
+  one-time wooden torch pickup near plaza/campfire. Lit source + `fuelRemaining` persist in
+  `SaveData.playerTorch` (schema v9).
 - Item overview for agents: [docs/items/CATALOG.md](./items/CATALOG.md) +
   `src/items/itemCatalog.ts` (pitchfork/sickle melee = roadmap).
 - House night lamps use `lantern.glb` body + `PointLight` (`createHouseLight`); village torch posts

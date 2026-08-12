@@ -69,6 +69,7 @@ const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
   knife: 1,
   firestarter: 1,
   blanket: 1,
+  wooden_torch: 1,
 }
 /** How close (world units) to a settlement's center counts as "in town" for
  *  the "Odpocznij w mieście" quick action — covers the default village
@@ -80,7 +81,7 @@ let touchControls: TouchControls | null = null
 
 /** Adds any `STARTING_LOADOUT` kind the inventory doesn't already have —
  *  called both for a fresh `Inventory` and after `inventory.clear()` (New
- *  Game), so the player is never left without a firestarter/knife/blanket. */
+ *  Game), so the player is never left without knife/firestarter/blanket/torch. */
 function grantStartingLoadout(inventory: Inventory): void {
   for (const [kind, count] of Object.entries(STARTING_LOADOUT) as [ItemKind, number][]) {
     if (inventory.count(kind) <= 0) inventory.add(kind, count)
@@ -254,6 +255,25 @@ export async function createApp(
   }
   syncHeldHud()
 
+  // Restore mid-burn hand light after held-tool HUD sync.
+  if (initialSave?.playerTorch) {
+    const saved = initialSave.playerTorch
+    let canRestore = true
+    if (saved.source === 'wooden_torch') {
+      if (heldTool.held() !== 'wooden_torch') {
+        canRestore = inventory.has('wooden_torch', 1) && heldTool.equip('wooden_torch')
+      }
+    } else {
+      // Lit branch occupies the hand — clear any restored tool slot.
+      heldTool.unequip()
+    }
+    if (canRestore) {
+      void playerTorch.light(saved.source, { fuelRemaining: saved.fuelRemaining }).then(() => {
+        syncHeldHud()
+      })
+    }
+  }
+
   const minimap = createMinimap(container)
   const questManager = new QuestManager(
     undefined,
@@ -321,7 +341,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 8,
+    version: 9,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -349,6 +369,9 @@ export async function createApp(
     elapsedDays: dayNight.elapsedDays,
     heldTool: heldTool.held(),
     treeOverrides: treeLifecycle.serializeOverrides(),
+    playerTorch: playerTorch.isLit() && playerTorch.source()
+      ? { source: playerTorch.source()!, fuelRemaining: playerTorch.fuelRemaining() }
+      : null,
   })
 
   const saveNow = (): void => {

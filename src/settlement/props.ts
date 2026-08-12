@@ -2138,9 +2138,13 @@ export async function buildSettlementProps(
   await plantEntrancePalisade(group, site, size, sampleHeight, waterLevel, plan, coast, pathCorridors)
 
   // Village torch posts — plaza ring (MD+) + gate flanks (plan 085).
+  // Never sit in the road: gate posts belong on the palisade wing, not in the
+  // open gate gap; plaza posts reject path/road corridors.
   {
     const postTpl = torchPostTemplate
-    const placeTorchAt = (x: number, z: number, yaw = 0) => {
+    const placeTorchAt = (x: number, z: number, yaw = 0): boolean => {
+      if (pointHitsCorridor(x, z, pathCorridors, 0.85)) return false
+      if (sampleHeight(x, z) <= waterLevel + 0.55) return false
       const post = postTpl.clone(true)
       post.rotation.y = yaw
       const tip = fireTipTemplate ? fireTipTemplate.clone(true) : null
@@ -2148,28 +2152,35 @@ export async function buildSettlementProps(
       placeOnGround(torch.object, x, z, sampleHeight)
       group.add(torch.object)
       villageTorches.push(torch)
+      return true
     }
 
     const infra = villageSizeConfig(size).infrastructure
     if (infra.campfires > 0) {
-      const plazaR = Math.max(3, clearings.core.radius * 0.85)
+      // Outside packed plaza dirt a bit, toward house ring — less likely on
+      // radial paths that cross the square.
+      const plazaR = Math.max(3.5, clearings.core.radius * 1.05)
       const count = size === 'XL' ? 4 : size === 'LG' ? 3 : 2
       for (let i = 0; i < count; i++) {
-        const ang = (i / count) * Math.PI * 2 + 0.35
-        const tx = clearings.core.x + Math.cos(ang) * plazaR
-        const tz = clearings.core.z + Math.sin(ang) * plazaR
-        if (sampleHeight(tx, tz) <= waterLevel + 0.55) continue
-        // Keep clear of well / campfire
+        const ang = (i / count) * Math.PI * 2 + 0.55
+        let tx = clearings.core.x + Math.cos(ang) * plazaR
+        let tz = clearings.core.z + Math.sin(ang) * plazaR
         if (Math.hypot(tx - wellX, tz - wellZ) < 3.2) continue
         if (landmarks.campfire) {
           const c = landmarks.campfire.position
           if (Math.hypot(tx - c.x, tz - c.z) < 2.8) continue
         }
+        // Nudge outward once if the first try lands on a corridor.
+        if (pointHitsCorridor(tx, tz, pathCorridors, 0.85)) {
+          tx = clearings.core.x + Math.cos(ang) * (plazaR + 1.4)
+          tz = clearings.core.z + Math.sin(ang) * (plazaR + 1.4)
+        }
         placeTorchAt(tx, tz, ang + Math.PI)
       }
     }
 
-    // Gate flanks (same entrance math as palisade).
+    // Gate flanks — same entrance math as palisade, but place on the *first
+    // wall segment* angle (outside the road gap), not inside it.
     {
       const coastEnv: CoastalSamplers = coast ?? { sampleHeight, waterLevel }
       const radius = plan?.boundary.radius ?? villageSizeConfig(size).footprintRadius * 0.72
@@ -2191,7 +2202,10 @@ export async function buildSettlementProps(
             PALISADE_GATE_HALF_ANGLE,
             Math.atan2(maxCorridorHalf + WALL_HALF_LENGTH, Math.max(radius, 1)),
           )
-          const flank = gateHalf + 0.22
+          const wallStep = (WALL_HALF_LENGTH * 2) / Math.max(radius, 1)
+          // First palisade stake sits at gateHalf + 0.5*step — put torch there
+          // (slightly further out along the ring so it clears the dirt strip).
+          const flank = gateHalf + wallStep * 0.55
           for (const side of [-1, 1] as const) {
             const ang = outward + side * flank
             const tx = site.x + Math.cos(ang) * radius

@@ -1,4 +1,4 @@
-import { Group, type Object3D, PointLight, Vector3 } from 'three'
+import { Group, type Material, type Mesh, type Object3D, PointLight, Vector3 } from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { HeldAttach } from '../items/heldToolVisual'
 import { disposeObject3D, loadGltf, preparePropFitMax } from '../assets/loadGltf'
@@ -13,33 +13,42 @@ export const TORCH_FUEL_WOODEN = 240
 const BRANCH_URL = '/models/items/branch.glb'
 const FIRE_URL = '/models/fx/fire.glb'
 const BRANCH_HELD_MAX = 0.55
-const FIRE_HELD_MAX = 0.22
+/** Accent tip only — sparks/cone come from `createCampfireFlame`. */
+const FIRE_TIP_MAX = 0.11
+const FLAME_OPACITY = 0.75
 
-/** Grip for ephemeral lit branch (not a ToolKind). Quaternius WristR: +Y fingertips. */
+/**
+ * Lit branch grip — Quaternius `WristR`: **+Y ≈ fingertips**, **−Z ≈ body**.
+ * Branch mesh is reoriented so its long axis is local +Z (like the axe), then
+ * axe-style wrist TRS aims the tip up/out of the palm instead of through the
+ * torso (identity left the tip stabbing out the player's left side).
+ */
 const BRANCH_ATTACH: HeldAttach = {
   position: [0.02, 0.12, -0.02],
-  rotation: [0, 0, -Math.PI / 2.4],
+  rotation: [Math.PI / 2, Math.PI / 2, 0],
   scale: 1,
-  gripLocalOffset: [0, -0.12, 0],
+  gripLocalOffset: [0, 0, -0.22],
 }
 
-/** Fire tip offset when wooden_torch is already on the wrist via HeldTool. */
+/** Fire tip when wooden_torch mesh is already on the wrist via HeldTool. */
 const WOODEN_FIRE_ATTACH: HeldAttach = {
   position: [0.02, 0.14, -0.02],
   rotation: [Math.PI / 2, Math.PI / 2, 0],
   scale: 1,
 }
 
-const LIGHT_BRANCH = { color: 0xff8a3c, intensity: 1.35, distance: 6.5 }
-const LIGHT_WOODEN = { color: 0xff9a4a, intensity: 2.4, distance: 11 }
+const LIGHT_BRANCH = { color: 0xff8a3c, intensity: 2.35, distance: 8 }
+const LIGHT_WOODEN = { color: 0xff9a4a, intensity: 2.8, distance: 11 }
 
 export type TorchSource = 'branch' | 'wooden_torch'
 
 export type PlayerTorch = {
   isLit: () => boolean
   source: () => TorchSource | null
-  /** Ignites — caller checks inventory / held tool first. */
-  light: (source: TorchSource) => Promise<void>
+  fuelRemaining: () => number
+  /** Ignites — caller checks inventory / held tool first.
+   *  Optional `fuelRemaining` restores a mid-burn torch from save. */
+  light: (source: TorchSource, opts?: { fuelRemaining?: number }) => Promise<void>
   extinguish: () => void
   update: (dt: number) => void
   dispose: () => void
@@ -77,7 +86,9 @@ async function ensureTemplates(): Promise<void> {
       }
       try {
         const model = await loadGltf(FIRE_URL)
-        preparePropFitMax(model, FIRE_HELD_MAX)
+        preparePropFitMax(model, FIRE_TIP_MAX)
+        // Stand the authored flat fire so local +Y is "up the tip".
+        model.rotation.x = Math.PI / 2
         fireTemplate = model
       } catch (err) {
         console.warn('[torch] failed to load fire.glb', err)
@@ -88,25 +99,65 @@ async function ensureTemplates(): Promise<void> {
 }
 
 function cloneBranchMesh(): Object3D {
-  if (branchTemplate) return cloneSkinned(branchTemplate)
-  return createItemMesh('branch')
+  const branch = branchTemplate ? cloneSkinned(branchTemplate) : createItemMesh('branch')
+  // Authored long axis = +Y; map to +Z so axe-style wrist attach applies.
+  branch.rotation.x = Math.PI / 2
+  return branch
 }
 
-function makeFlameVisual(scale: number): FlameVisual {
-  if (fireTemplate) {
-    const fire = cloneSkinned(fireTemplate)
-    const base = scale
-    fire.scale.setScalar(base)
-    fire.visible = true
-    return {
-      object: fire,
-      update: () => { /* static GLB tip */ },
-      setSize(f: number) {
-        fire.scale.setScalar(Math.max(0.15, f) * base)
-      },
+function softenMaterials(root: Object3D, opacity: number): void {
+  root.traverse((obj) => {
+    const mesh = obj as Mesh
+    if (!mesh.isMesh) return
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const mat of mats) {
+      const m = mat as Material & { opacity?: number, transparent?: boolean, depthWrite?: boolean }
+      m.transparent = true
+      m.opacity = opacity
+      m.depthWrite = false
     }
+  })
+}
+
+function muteInternalLights(root: Object3D): void {
+  root.traverse((obj) => {
+    if ('isLight' in obj && (obj as { isLight?: boolean }).isLight) {
+      ;(obj as PointLight).intensity = 0
+    }
+  })
+}
+
+/**
+ * Handheld flame: procedural sparks/cone + optional small fire.glb tip (~75%
+ * opacity). Own PointLight is added by the caller. Local +Y = flame up.
+ */
+function makeFlameVisual(scale: number): FlameVisual {
+  const group = new Group()
+  const procedural = createCampfireFlame(0.28 * scale)
+  procedural.object.visible = true
+  muteInternalLights(procedural.object)
+  softenMaterials(procedural.object, FLAME_OPACITY)
+  group.add(procedural.object)
+
+  let tip: Object3D | null = null
+  let tipBase = 1
+  if (fireTemplate) {
+    tip = cloneSkinned(fireTemplate)
+    tipBase = 0.85 * scale
+    tip.scale.setScalar(tipBase)
+    tip.position.y = 0.08 * scale
+    softenMaterials(tip, FLAME_OPACITY)
+    group.add(tip)
   }
-  return createCampfireFlame(0.45 * scale)
+
+  return {
+    object: group,
+    update: procedural.update,
+    setSize(f: number) {
+      procedural.setSize(f)
+      if (tip) tip.scale.setScalar(Math.max(0.2, f) * tipBase)
+    },
+  }
 }
 
 function mountOnSocket(mount: Object3D, socket: Object3D, attach: HeldAttach): void {
@@ -155,7 +206,8 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
   return {
     isLit: () => lit,
     source: () => current,
-    async light(source) {
+    fuelRemaining: () => (lit ? fuelRemaining : 0),
+    async light(source, opts) {
       const token = ++loadToken
       await ensureTemplates()
       if (token !== loadToken) return
@@ -164,35 +216,48 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
       lit = true
       current = source
       fuelMax = source === 'wooden_torch' ? TORCH_FUEL_WOODEN : TORCH_FUEL_BRANCH
-      fuelRemaining = fuelMax
+      const restored = opts?.fuelRemaining
+      fuelRemaining =
+        typeof restored === 'number' && Number.isFinite(restored)
+          ? Math.max(0.05, Math.min(fuelMax, restored))
+          : fuelMax
 
       const socket = hand.handSocket()
       const group = new Group()
-      const flame = makeFlameVisual(source === 'wooden_torch' ? 1.15 : 1)
+      const flame = makeFlameVisual(source === 'wooden_torch' ? 1.05 : 0.9)
       flame.object.visible = true
       flameUpdate = flame.update
       flameSetSize = flame.setSize
-      flame.setSize(1)
+      flame.setSize(fuelRemaining / fuelMax)
 
       const params = source === 'wooden_torch' ? LIGHT_WOODEN : LIGHT_BRANCH
-      pointLight = new PointLight(params.color, params.intensity, params.distance, 2)
+      pointLight = new PointLight(
+        params.color,
+        params.intensity * (fuelRemaining / fuelMax),
+        params.distance,
+        2,
+      )
 
       if (source === 'branch') {
         const branch = cloneBranchMesh()
         const wrap = new Group()
         const grip = BRANCH_ATTACH.gripLocalOffset
+        // Long axis is +Z after cloneBranchMesh reorient; grip toward butt.
         if (grip) branch.position.set(grip[0], grip[1], grip[2])
-        flame.object.position.set(0, 0.3, 0)
-        pointLight.position.set(0, 0.32, 0)
+        // Align flame local +Y (sparks/cone up) with tip +Z; flip if it ever
+        // reads downward in-game.
+        flame.object.rotation.x = Math.PI / 2
+        flame.object.position.set(0, 0, 0.34)
+        pointLight.position.set(0, 0, 0.36)
         wrap.add(branch)
         wrap.add(flame.object)
         wrap.add(pointLight)
         group.add(wrap)
         mountOnSocket(group, socket, BRANCH_ATTACH)
       } else {
-        // Fire tip only — wooden_torch mesh comes from HeldTool / setHeldTool.
-        flame.object.position.set(0, 0.32, 0)
-        pointLight.position.set(0, 0.34, 0)
+        flame.object.rotation.x = Math.PI / 2
+        flame.object.position.set(0, 0, 0.34)
+        pointLight.position.set(0, 0, 0.36)
         group.add(flame.object)
         group.add(pointLight)
         mountOnSocket(group, socket, WOODEN_FIRE_ATTACH)

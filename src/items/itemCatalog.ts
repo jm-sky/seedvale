@@ -175,10 +175,10 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     category: 'tool',
     holdable: true,
     meleeDamage: null,
-    spawn: 'village_onetime',
+    spawn: 'starting',
     modelUrl: '/models/items/wooden_torch.glb',
     notes:
-      'One-time near plaza/campfire; Weź then Zapal pochodnię (firestarter). Longer/brighter than lit branch (plan 085).',
+      'Starting loadout (+ village 1× near plaza/campfire). Weź then Zapal pochodnię (firestarter). Longer/brighter than lit branch (plan 085).',
   },
 }
 

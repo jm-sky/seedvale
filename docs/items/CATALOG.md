@@ -36,7 +36,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | axe | siekiera | yes | 20 | village 1× | `items/axe.glb` | chop |
 | pitchfork | widły | **no** | — | village 1–3 | `items/pitchfork.glb` | plan 082; **melee later** |
 | sickle | sierp | **no** | — | village 1–3 | `items/sickle.glb` | plan 082 |
-| wooden_torch | pochodnia | yes | — | village 1× | `items/wooden_torch.glb` | plan 085; longer/brighter than lit branch |
+| wooden_torch | pochodnia | yes | — | starting (+ village 1×) | `items/wooden_torch.glb` | plan 085; longer/brighter than lit branch |
 
 ## Roadmap (not done)
 
