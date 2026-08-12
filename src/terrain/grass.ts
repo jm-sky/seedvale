@@ -614,12 +614,16 @@ export function createGrassSystem(): GrassSystem {
       const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
       if (altitude > TREELINE_ALTITUDE) continue // above treeline
 
-      const ridge = sample(tile.mountainRidge, wx, wz)
-
       const roadTint = sample(tile.roadTint, wx, wz)
       const roadFade =
         1 - THREE.MathUtils.smoothstep(roadTint, ROAD_TINT_FADE_START, ROAD_TINT_FADE_END)
       if (roadFade <= 0) continue
+
+      // Sampled after the road-corridor reject above (not before) — `ridge`
+      // is only used by `ridgeFade` further down, so a candidate rejected by
+      // `roadFade` never pays for a sample it wouldn't use. Safe to reorder:
+      // none of these tests consume `random()` (see note below).
+      const ridge = sample(tile.mountainRidge, wx, wz)
 
       // Slope costs 4 samples vs. 1 each for the rejects above — checked last
       // among the sample-based tests so it only runs on candidates that
@@ -729,11 +733,14 @@ export function createGrassSystem(): GrassSystem {
       const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
       if (altitude > TREELINE_ALTITUDE) continue
 
-      const ridge = sample(tile.mountainRidge, wx, wz)
       const roadTint = sample(tile.roadTint, wx, wz)
       const roadFade =
         1 - THREE.MathUtils.smoothstep(roadTint, ROAD_TINT_FADE_START, ROAD_TINT_FADE_END)
       if (roadFade <= 0) continue
+
+      // See the main-pass loop above: `ridge` only feeds `ridgeFade` below, so
+      // it's sampled after the road-corridor reject, not before.
+      const ridge = sample(tile.mountainRidge, wx, wz)
 
       const d = SLOPE_SAMPLE_STEP
       const slope =

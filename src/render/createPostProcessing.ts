@@ -1,14 +1,13 @@
 import { N8AOPass } from 'n8ao'
 import { MathUtils, Vector2, Vector3 } from 'three'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import type { WorldConfig } from '../config/worldConfig'
-import { FilmGradeShader } from './filmGradeShader'
 import { GodRaysShader } from './godRaysShader'
+import { createGradedOutputPass } from './gradedOutputPass'
 import type { Camera, Scene, WebGLRenderer } from 'three'
 
 export type PostProcessing = {
@@ -78,13 +77,12 @@ export function createPostProcessing(
   const godRaysPass = new ShaderPass(GodRaysShader)
   composer.addPass(godRaysPass)
 
-  const outputPass = new OutputPass()
+  // Tone mapping / output encoding, then (folded into the same pass — see
+  // gradedOutputPass.ts / perf review A3.1) the film grade + dither that used
+  // to be its own `ShaderPass` after this one. Plan 066 originally added the
+  // grade as a separate pass; A3.1 merges it in without changing the result.
+  const outputPass = createGradedOutputPass()
   composer.addPass(outputPass)
-
-  // After tone mapping / output encoding — grades display color and dithers
-  // 8-bit banding (sky, fog). See plan 066.
-  const filmGradePass = new ShaderPass(FilmGradeShader)
-  composer.addPass(filmGradePass)
 
   function applyConfig(next: WorldConfig['postProcessing']): void {
     aoPass.enabled = next.aoEnabled
@@ -160,7 +158,6 @@ export function createPostProcessing(
       bloomPass.dispose()
       godRaysPass.dispose()
       outputPass.dispose()
-      filmGradePass.dispose()
       composer.dispose()
     },
   }

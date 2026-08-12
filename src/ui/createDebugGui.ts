@@ -3,6 +3,7 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { DayNightState } from '../world/dayNight'
 import { triangleCount } from '../config/worldConfig'
 import { isTouchDevice } from '../input/isTouchDevice'
+import type { WebGLRenderer } from 'three'
 
 export type DebugGuiHandlers = {
   onTerrainChange: () => void
@@ -13,12 +14,24 @@ export type DebugGuiHandlers = {
   onDumpVillagePlan?: () => void
 }
 
+export type DebugGuiHandle = {
+  dispose: () => void
+  toggle: () => void
+  setBusy: (busy: boolean) => void
+  /** Pushes this frame's simulate/render split (ms) into the Performance
+   *  folder — `renderer.info` is read live via `.listen()` getters below, but
+   *  frame timing has to be measured by the caller (`gameLoop.tick`) around
+   *  the actual simulate/render boundary. See perf review M1. */
+  setFrameTiming: (simulateMs: number, renderMs: number) => void
+}
+
 /** On-screen panel; mutates `config` / `dayNight` in place, then calls handlers. */
 export function createDebugGui(
   config: WorldConfig,
   dayNight: DayNightState,
+  renderer: WebGLRenderer,
   handlers: DebugGuiHandlers,
-): { dispose: () => void; toggle: () => void; setBusy: (busy: boolean) => void } {
+): DebugGuiHandle {
   const gui = new GUI({ title: 'Seedvale' })
   gui.close()
   // lil-gui is a dev/debug panel, not part of the mobile UI — hidden by default
@@ -533,6 +546,41 @@ export function createDebugGui(
     gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild world'),
   )
 
+  // `renderer.info` is free (three.js already tracks these counters) but
+  // nothing in the app read it before — read live via `.listen()`, same
+  // pattern as `info.triangles` above. Frame timing isn't on `renderer.info`
+  // (three.js doesn't measure CPU time), so it's pushed in by the caller —
+  // see `setFrameTiming`. Perf review M1: "can't measure what this review
+  // describes" was the actual finding; this is the fix.
+  const perf = {
+    simulateMs: 0,
+    renderMs: 0,
+    get drawCalls() {
+      return renderer.info.render.calls
+    },
+    get triangles() {
+      return renderer.info.render.triangles.toLocaleString()
+    },
+    get geometries() {
+      return renderer.info.memory.geometries
+    },
+    get textures() {
+      return renderer.info.memory.textures
+    },
+  }
+  const perfFolder = gui.addFolder('Performance')
+  perfFolder.add(perf, 'drawCalls').name('Draw calls').listen().disable()
+  perfFolder.add(perf, 'triangles').name('Triangles (rendered)').listen().disable()
+  perfFolder.add(perf, 'geometries').name('Geometries (GPU)').listen().disable()
+  perfFolder.add(perf, 'textures').name('Textures (GPU)').listen().disable()
+  perfFolder.add(perf, 'simulateMs').name('Simulate (ms)').listen().disable()
+  perfFolder.add(perf, 'renderMs').name('Render (ms)').listen().disable()
+
+  function setFrameTiming(simulateMs: number, renderMs: number): void {
+    perf.simulateMs = Math.round(simulateMs * 100) / 100
+    perf.renderMs = Math.round(renderMs * 100) / 100
+  }
+
   function setBusy(busy: boolean): void {
     status.busy = busy
     for (const c of terrainControllers) c.disable(busy)
@@ -542,5 +590,6 @@ export function createDebugGui(
     dispose: () => gui.destroy(),
     toggle: () => gui.show(gui._hidden),
     setBusy,
+    setFrameTiming,
   }
 }

@@ -33,6 +33,7 @@ export function activeModal(
   quickActions: QuickActions,
   timeSkip: TimeSkip,
   busy: { isActive: () => boolean },
+  restCamp?: { isActive: () => boolean },
 ): ActiveModal {
   if (pauseMenu.isPaused()) return 'menu'
   if (vueUi.isNpcDialogueMenuOpen()) return 'npcDialogueMenu'
@@ -43,6 +44,7 @@ export function activeModal(
   if (quickActions.isOpen()) return 'quickActions'
   if (timeSkip.isActive()) return 'timeSkip'
   if (busy.isActive()) return 'busy'
+  if (restCamp?.isActive()) return 'busy'
   if (vueUi.isWorldConfigScreenOpen()) return 'worldConfig'
   if (vueUi.isNotesOpen()) return 'notes'
   return null

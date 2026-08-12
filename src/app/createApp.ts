@@ -56,6 +56,7 @@ import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChop
 import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
 import { DIG_REACH } from './interactables'
+import { createRestCampSequence } from './restCampSequence'
 import { getUserActions } from './userActions'
 import { createWorldBundle, disposeWorldBundle, rebuildWorldBundle } from './worldBundle'
 
@@ -356,7 +357,7 @@ export async function createApp(
     void rebuildWorld()
   }
 
-  const gui = createDebugGui(config, dayNight, {
+  const gui = createDebugGui(config, dayNight, renderer, {
     onTerrainChange,
     onSkyChange: updateSkyFromGui,
     onDayNightChange,
@@ -422,6 +423,14 @@ export async function createApp(
   const timeSkipOverlay = createTimeSkipOverlay(container)
   const busy = createBusyAction()
   const busyOverlay = createBusyOverlay(container)
+  const restCamp = createRestCampSequence(scene, player, (x, z) => bundle.chunkManager.sampleHeight(x, z))
+
+  const isNearTown = (): boolean => bundle.settlementsManager
+    .getLoaded()
+    .some((s) => s.center.distanceTo(player.mesh.position) <= REST_IN_TOWN_RADIUS)
+  const syncNearTownQuickActions = (): void => {
+    vueUi.setQuickActionsNearTown(isNearTown())
+  }
 
   const digFeedback = () => ({
     inventory,
@@ -438,7 +447,7 @@ export async function createApp(
   })
 
   const startDigAt = (x: number, z: number): void => {
-    if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive()) return
+    if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
     const profile = getDigProfileAt(x, z, bundle.chunkManager)
     if (!profile) {
       toast.show('Tu nie da się kopać.', 'error')
@@ -452,7 +461,7 @@ export async function createApp(
   }
 
   const startLevelAt = (x: number, z: number): void => {
-    if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive()) return
+    if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
     if (!canLevelAt(x, z, bundle.chunkManager)) {
       toast.show('Nie ma tu czego wyrównać.', 'error')
       return
@@ -537,8 +546,10 @@ export async function createApp(
   let restorePointerLockAfterQuickActions = false
   const quickActions = createQuickActions(container, {
     hasShovel: inventory.has('shovel', 1),
+    nearTown: isNearTown(),
     onOpen: () => {
       restorePointerLockAfterQuickActions = exitGamePointerLock(renderer.domElement)
+      syncNearTownQuickActions()
     },
     onClose: () => {
       if (!restorePointerLockAfterQuickActions) return
@@ -549,20 +560,29 @@ export async function createApp(
     onBuildFirePit: buildFirePit,
     onLightTorch: lightTorch,
     onWait: (hours) => {
-      timeSkip.start(hours, { fade: false, label: `Czekasz... (${hours}h)` })
+      if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+      timeSkip.start(hours, { fadeStrength: 0.5, label: `Czekasz... (${hours}h)` })
     },
     onRest: (variant) => {
+      if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return 'ok'
       if (!inventory.has('blanket', 1)) return 'no-blanket'
       if (variant === 'town') {
-        const nearSettlement = bundle.settlementsManager
-          .getLoaded()
-          .some((s) => s.center.distanceTo(player.mesh.position) <= REST_IN_TOWN_RADIUS)
-        if (!nearSettlement) return 'too-far'
+        if (!isNearTown()) return 'too-far'
+        player.lieDown()
+        timeSkip.start(8, {
+          fadeStrength: 1,
+          label: 'Odpoczywasz w mieście...',
+        })
+        return 'ok'
       }
-      player.lieDown()
-      timeSkip.start(8, {
-        fade: true,
-        label: variant === 'town' ? 'Odpoczywasz w mieście...' : 'Rozbijasz obóz...',
+      restCamp.start({
+        onSleepStart: () => {
+          timeSkip.start(8, {
+            fadeStrength: 1,
+            label: 'Rozbijasz obóz...',
+          })
+        },
+        onComplete: () => {},
       })
       return 'ok'
     },
@@ -576,6 +596,7 @@ export async function createApp(
     },
   })
   syncShovelQuickActions()
+  syncNearTownQuickActions()
 
   // Close on Q inside the keydown gesture so onClose can re-request pointer
   // lock. gameLoop only consumes the edge on the next frame, which is too late
@@ -709,7 +730,7 @@ export async function createApp(
   const gameLoop = createGameLoop({
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, inventory, heldTool, toast, hud,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
     questManager, ambientAudio, worldAudio, playerTorch, minimap, openQuestLog, openInventory,
     startGroundWork: (mode, x, z) => {
       if (mode === 'level') startLevelAt(x, z)
@@ -722,6 +743,7 @@ export async function createApp(
       syncHeldHud()
       syncShovelQuickActions()
     },
+    setFrameTiming: gui.setFrameTiming,
   })
   gameLoop.resyncDayNight()
 
@@ -771,6 +793,7 @@ export async function createApp(
     timeSkipOverlay.dispose()
     busy.cancel()
     busyOverlay.dispose()
+    restCamp.dispose()
     gui.dispose()
     pauseMenu.dispose()
     npcDialog.dispose()

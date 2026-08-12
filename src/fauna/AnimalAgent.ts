@@ -399,10 +399,10 @@ export class AnimalAgent {
   private readonly satietyFillEl: HTMLDivElement
   private readonly hydrationFillEl: HTMLDivElement
   private lastLabelOpacity = -1
-  private lastHpRatio = -1
-  private lastStaminaRatio = -1
-  private lastSatietyRatio = -1
-  private lastHydrationRatio = -1
+  private lastHpPercent = -1
+  private lastStaminaPercent = -1
+  private lastSatietyPercent = -1
+  private lastHydrationPercent = -1
   private lastBarsVisible: boolean | null = null
   readonly health: HealthState
   readonly life: AnimalLifeState
@@ -582,7 +582,7 @@ export class AnimalAgent {
     const side = Math.random() < 0.5 ? 1 : -1
     this.mesh.rotation.z = side * (Math.PI / 2)
     this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
-    this.lastHpRatio = 0
+    this.lastHpPercent = 0
     this.hpFillEl.style.width = '0%'
     this.labelBarsEl.style.display = 'none'
   }
@@ -654,27 +654,30 @@ export class AnimalAgent {
     this.snapY()
     this.updateAnim()
     tickAnimalLife(this.life, dt, this.sprinting)
-    const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
-    if (hpRatio !== this.lastHpRatio) {
-      this.lastHpRatio = hpRatio
-      this.hpFillEl.style.width = `${Math.round(hpRatio * 100)}%`
+    // Compared/stored as the same rounded percent that's actually written to
+    // the DOM — the raw ratio drifts by a hair every frame during
+    // regen/drain, which would defeat a guard keyed on the raw value.
+    const hpPercent = this.health.maxHp > 0 ? Math.round((this.health.currentHp / this.health.maxHp) * 100) : 0
+    if (hpPercent !== this.lastHpPercent) {
+      this.lastHpPercent = hpPercent
+      this.hpFillEl.style.width = `${hpPercent}%`
     }
-    const staminaRatio = this.life.stamina.max > 0
-      ? this.life.stamina.current / this.life.stamina.max
+    const staminaPercent = this.life.stamina.max > 0
+      ? Math.round((this.life.stamina.current / this.life.stamina.max) * 100)
       : 0
-    if (staminaRatio !== this.lastStaminaRatio) {
-      this.lastStaminaRatio = staminaRatio
-      this.staminaFillEl.style.width = `${Math.round(staminaRatio * 100)}%`
+    if (staminaPercent !== this.lastStaminaPercent) {
+      this.lastStaminaPercent = staminaPercent
+      this.staminaFillEl.style.width = `${staminaPercent}%`
     }
-    const satietyRatio = 1 - this.life.hunger
-    if (satietyRatio !== this.lastSatietyRatio) {
-      this.lastSatietyRatio = satietyRatio
-      this.satietyFillEl.style.width = `${Math.round(satietyRatio * 100)}%`
+    const satietyPercent = Math.round((1 - this.life.hunger) * 100)
+    if (satietyPercent !== this.lastSatietyPercent) {
+      this.lastSatietyPercent = satietyPercent
+      this.satietyFillEl.style.width = `${satietyPercent}%`
     }
-    const hydrationRatio = 1 - this.life.thirst
-    if (hydrationRatio !== this.lastHydrationRatio) {
-      this.lastHydrationRatio = hydrationRatio
-      this.hydrationFillEl.style.width = `${Math.round(hydrationRatio * 100)}%`
+    const hydrationPercent = Math.round((1 - this.life.thirst) * 100)
+    if (hydrationPercent !== this.lastHydrationPercent) {
+      this.lastHydrationPercent = hydrationPercent
+      this.hydrationFillEl.style.width = `${hydrationPercent}%`
     }
     const dist = this.mesh.position.distanceTo(observerPos)
     const showBars = barsVisibleForDistance(dist)
@@ -682,7 +685,9 @@ export class AnimalAgent {
       this.lastBarsVisible = showBars
       this.labelBarsEl.style.display = showBars ? '' : 'none'
     }
-    const opacity = labelOpacityForDistance(dist)
+    // Quantized before comparing — `dist` changes by a hair every frame while
+    // the player moves, so an unrounded guard never catches a repeat.
+    const opacity = Math.round(labelOpacityForDistance(dist) * 32) / 32
     if (opacity !== this.lastLabelOpacity) {
       this.lastLabelOpacity = opacity
       this.labelEl.style.opacity = String(opacity)

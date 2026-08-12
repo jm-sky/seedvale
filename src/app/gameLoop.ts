@@ -28,6 +28,7 @@ import type { WorldSky } from '../world/createSky'
 import type { DayNightState } from '../world/dayNight'
 import type { TimeSkip } from '../world/timeSkip'
 import type { BusyAction } from './busyAction'
+import type { RestCampSequence } from './restCampSequence'
 import type { WorldBundle } from './worldBundle'
 import { playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audio/actionSounds'
 import { playAnimalSound } from '../audio/animalSounds'
@@ -78,7 +79,7 @@ function applyDayNight(
   scene: Scene,
   chunkManager: WorldBundle['chunkManager'],
   ocean: WorldBundle['ocean'],
-): void {
+): ReturnType<typeof skyParamsFromTime> {
   const p = skyParamsFromTime(timeOfDay)
   sky.setParams(
     {
@@ -101,6 +102,7 @@ function applyDayNight(
   chunkManager.setWaterDayNight(p.dayFactor)
   chunkManager.setGrassDayNight(p.dayFactor, sky.sunPosition)
   ocean.setDayNight(p.dayFactor, sky.sunPosition)
+  return p
 }
 
 export type GameLoopDeps = {
@@ -127,6 +129,7 @@ export type GameLoopDeps = {
   timeSkipOverlay: TimeSkipOverlay
   busy: BusyAction
   busyOverlay: BusyOverlay
+  restCamp: RestCampSequence
   inventory: Inventory
   heldTool: HeldTool
   toast: Toast
@@ -144,6 +147,9 @@ export type GameLoopDeps = {
   /** Shovel-bury a dead animal corpse (busy channel). */
   startBuryCorpse: (animal: AnimalAgent) => void
   onInventoryChanged: () => void
+  /** Reports this frame's simulate/render split (ms) to the debug GUI's
+   *  Performance folder (perf review M1). */
+  setFrameTiming: (simulateMs: number, renderMs: number) => void
 }
 
 export type GameLoop = {
@@ -176,13 +182,17 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, inventory, heldTool, toast, hud,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
     questManager, ambientAudio, worldAudio, playerTorch, minimap, openQuestLog, openInventory,
-    startGroundWork, startTreeChop, startBuryCorpse, onInventoryChanged,
+    startGroundWork, startTreeChop, startBuryCorpse, onInventoryChanged, setFrameTiming,
   } = deps
 
   const clock = new Clock()
   let lastAppliedTimeOfDay = dayNight.timeOfDay
+  /** Cached `skyParamsFromTime(dayNight.timeOfDay)` — recomputed at most once
+   *  per frame (only while unpaused, since `timeOfDay` is frozen otherwise),
+   *  instead of once per call site (`ambientAudio`, `dayFactor`, `godRays`). */
+  let cachedSky = skyParamsFromTime(dayNight.timeOfDay)
   /** EMA of instantaneous FPS; HUD text refreshes at most ~4×/s. */
   let fpsEma = 60
   let fpsHudAge = 0
@@ -200,12 +210,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   }
 
   const resyncDayNight = (): void => {
-    applyDayNight(dayNight.timeOfDay, sky, lights, scene, bundle.chunkManager, bundle.ocean)
-    bundle.settlementsManager.setDayNight(1 - skyParamsFromTime(dayNight.timeOfDay).dayFactor)
+    cachedSky = applyDayNight(dayNight.timeOfDay, sky, lights, scene, bundle.chunkManager, bundle.ocean)
+    bundle.settlementsManager.setDayNight(1 - cachedSky.dayFactor)
     lastAppliedTimeOfDay = dayNight.timeOfDay
   }
 
   const tick = (): void => {
+    const frameStart = performance.now()
     const rawDt = clock.getDelta()
     const dt = Math.min(rawDt, 0.05)
     if (rawDt > 0) {
@@ -223,12 +234,35 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     // per-frame path (see world/timeSkip.ts for why dt itself isn't scaled).
     const skip = timeSkip.tick(dt)
     if (skip) {
-      timeSkipOverlay.show(skip.label, skip.fade)
+      timeSkipOverlay.show(skip.label, skip.fadeStrength)
       if (skip.justFinished) {
         timeSkipOverlay.hide()
-        player.standUp()
+        if (restCamp.isActive()) {
+          restCamp.notifySleepFinished()
+        } else {
+          player.standUp()
+        }
         bundle.settlementsManager.resolveTimeSkip(skip.startTimeOfDay, skip.hours, dayNight.dayLengthSec)
       }
+      keyboard.state.forward = false
+      keyboard.state.backward = false
+      keyboard.state.left = false
+      keyboard.state.right = false
+      keyboard.state.sprint = false
+    }
+
+    const campTick = restCamp.tick(dt)
+    if (campTick) {
+      if (restCamp.isBusy()) busyOverlay.show(campTick.label)
+      if (campTick.justFinishedBusy) busyOverlay.hide()
+      keyboard.state.forward = false
+      keyboard.state.backward = false
+      keyboard.state.left = false
+      keyboard.state.right = false
+      keyboard.state.sprint = false
+    } else if (restCamp.isBusy()) {
+      // Keep clearing movement while setup/teardown timers run between ticks
+      // that return a result every frame.
       keyboard.state.forward = false
       keyboard.state.backward = false
       keyboard.state.left = false
@@ -247,8 +281,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       keyboard.state.sprint = false
     }
 
-    const modal = activeModal(pauseMenu, npcDialog, questLog, vueUi, inventoryScreen, quickActions, timeSkip, busy)
-    touchControls?.setInputEnabled(modal === null && !timeSkip.isActive() && !busy.isActive())
+    const modal = activeModal(
+      pauseMenu, npcDialog, questLog, vueUi, inventoryScreen, quickActions, timeSkip, busy, restCamp,
+    )
+    touchControls?.setInputEnabled(
+      modal === null && !timeSkip.isActive() && !busy.isActive() && !restCamp.isActive(),
+    )
 
     if (modal !== null) {
       // Every modal drops stale presses so they can't fire right after it
@@ -488,13 +526,17 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       !vueUi.isWorldConfigScreenOpen() &&
       !vueUi.isNotesOpen()
     ) {
-      for (const s of bundle.settlementsManager.getLoaded()) {
-        for (const npc of s.npcs) {
-          npc.setQuestMarker(questManager.labelMarker(npc.name))
+      const loaded = bundle.settlementsManager.getLoaded()
+      if (questManager.isDirty()) {
+        for (const s of loaded) {
+          for (const npc of s.npcs) {
+            npc.setQuestMarker(questManager.labelMarker(npc.name))
+          }
         }
-      }
-      for (const spawner of bundle.fauna.getSpawners()) {
-        bundle.fauna.setSpawnerMarker(spawner.type, questManager.spawnerMarker(spawner.type))
+        for (const spawner of bundle.fauna.getSpawners()) {
+          bundle.fauna.setSpawnerMarker(spawner.type, questManager.spawnerMarker(spawner.type))
+        }
+        questManager.clearDirty()
       }
       // While a `timeSkip` is in flight, NPCs/fauna freeze instead of
       // continuing to walk/steer in real time underneath the label/filter —
@@ -510,9 +552,14 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       ) {
         resyncDayNight()
       }
+      // Single `skyParamsFromTime` call for the frame — `tickDayNight` just
+      // advanced `timeOfDay`, so this reflects the current frame and is
+      // reused below (`dayFactor`) and after this block (`postProcessing`)
+      // instead of each call site recomputing the same params object.
+      cachedSky = skyParamsFromTime(dayNight.timeOfDay)
       ambientAudio.update(
         dt,
-        skyParamsFromTime(dayNight.timeOfDay).dayFactor,
+        cachedSky.dayFactor,
         player.mesh.position.x,
         player.mesh.position.z,
       )
@@ -526,16 +573,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // livestock existed) so its per-settlement livestock `update()` calls
       // can also use them — neither depends on `update()`'s effect this same
       // frame (fire-lit state only changes via `setDayNight`, not `update`).
-      const dayFactor = skyParamsFromTime(dayNight.timeOfDay).dayFactor
+      const dayFactor = cachedSky.dayFactor
       const litFires: { x: number, z: number }[] = [
-        ...bundle.settlementsManager.getLoaded().flatMap((s) => (s.fire?.isLit() ? [s.fire.position] : [])),
+        ...loaded.flatMap((s) => (s.fire?.isLit() ? [s.fire.position] : [])),
         ...bundle.placedFires.list().filter((f) => f.fire.isLit()).map((f) => f.fire.position),
       ]
       // Portable torch counts as a fire source for fauna fear (plan 056 / 050).
       if (playerTorch.isLit()) {
         litFires.push({ x: player.mesh.position.x, z: player.mesh.position.z })
       }
-      const villages = bundle.settlementsManager.getLoaded().map((s) => ({
+      const villages = loaded.map((s) => ({
         x: s.center.x,
         z: s.center.z,
         radius: villageSizeConfig(s.size).footprintRadius,
@@ -543,7 +590,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const nearbyHumanCount = countNearbyHumans(
         player.mesh.position.x,
         player.mesh.position.z,
-        bundle.settlementsManager.getLoaded().flatMap((s) =>
+        loaded.flatMap((s) =>
           s.npcs
             .filter((npc) => !npc.health.dead)
             .map((npc) => ({ x: npc.mesh.position.x, z: npc.mesh.position.z })),
@@ -578,15 +625,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       worldAudio.update(dt)
       minimap.update(
         player.mesh.position,
-        bundle.settlementsManager
-          .getLoaded()
-          .map((s): MinimapSettlement => ({ position: s.center, npcs: s.npcs, name: s.name })),
+        loaded.map((s): MinimapSettlement => ({ position: s.center, npcs: s.npcs, name: s.name })),
         mouseLook.state.yaw,
       )
     }
-    postProcessing.updateGodRays(camera, sky.sunPosition, skyParamsFromTime(dayNight.timeOfDay).elev)
+    const renderStart = performance.now()
+    postProcessing.updateGodRays(camera, sky.sunPosition, cachedSky.elev)
     postProcessing.render()
     labelRenderer.render(scene, camera)
+    const renderEnd = performance.now()
+    setFrameTiming(renderStart - frameStart, renderEnd - renderStart)
   }
 
   return {

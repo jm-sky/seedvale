@@ -39,11 +39,22 @@ function animalPromptLabel(kind: AnimalKind, heldTool: ToolKind | null): string 
   return isMeleeTool(heldTool) ? `Atakuj: ${label}` : `Obserwuj: ${label}`
 }
 
+/** True if `(x, z)` is within `range` of `playerPos` (XZ plane, squared distance). */
+function withinRange(x: number, z: number, playerPos: Vector3, range: number): boolean {
+  const dx = x - playerPos.x
+  const dz = z - playerPos.z
+  return dx * dx + dz * dz <= range * range
+}
+
 /** Assembles this frame's `Interactable` candidates from every world system —
  *  NPCs, the well, nearby trees (settlement + streamed via lifecycle), live fauna,
  *  fauna spawn points, player-built campfires, and nearby pickup items
- *  (world-generated + the renewable pool + player-dropped).
- *  Cheap: a few dozen objects total near the player. */
+ *  (world-generated + the renewable pool + player-dropped). Settlement/fauna
+ *  candidates aren't pre-filtered by their source systems (unlike trees/items,
+ *  which already query `chunkManager` by range), so each is checked against
+ *  `GAZE_RANGE` here before allocating its description object — `GAZE_RANGE`
+ *  is the largest range any consumer of this list picks against, so nothing
+ *  a caller could select is dropped. */
 export function buildInteractables(
   settlements: readonly Settlement[],
   fauna: Fauna,
@@ -60,6 +71,7 @@ export function buildInteractables(
   const shovelHeld = heldTool === 'shovel'
 
   for (const pf of placedFires.list()) {
+    if (!withinRange(pf.x, pf.z, playerPos, GAZE_RANGE)) continue
     list.push({
       kind: 'campfire',
       position: { x: pf.x, z: pf.z },
@@ -72,6 +84,7 @@ export function buildInteractables(
 
   for (const settlement of settlements) {
     for (const npc of settlement.npcs) {
+      if (!withinRange(npc.mesh.position.x, npc.mesh.position.z, playerPos, GAZE_RANGE)) continue
       list.push({
         kind: 'npc',
         position: npc.mesh.position,
@@ -82,6 +95,7 @@ export function buildInteractables(
     }
 
     for (const animal of settlement.livestock) {
+      if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, GAZE_RANGE)) continue
       if (animal.isDead()) {
         if (shovelHeld && !animal.readyToRemove()) {
           list.push({
@@ -101,13 +115,16 @@ export function buildInteractables(
       })
     }
 
-    list.push({
-      kind: 'well',
-      position: settlement.landmarks.well,
-      promptLabel: 'Zaczerpnij wody',
-    })
+    if (withinRange(settlement.landmarks.well.x, settlement.landmarks.well.z, playerPos, GAZE_RANGE)) {
+      list.push({
+        kind: 'well',
+        position: settlement.landmarks.well,
+        promptLabel: 'Zaczerpnij wody',
+      })
+    }
 
     for (const house of settlement.landmarks.houses) {
+      if (!withinRange(house.position.x, house.position.z, playerPos, GAZE_RANGE)) continue
       list.push({
         kind: 'house',
         position: house.position,
@@ -121,7 +138,10 @@ export function buildInteractables(
       })
     }
 
-    if (settlement.fire) {
+    if (
+      settlement.fire &&
+      withinRange(settlement.fire.position.x, settlement.fire.position.z, playerPos, GAZE_RANGE)
+    ) {
       list.push({
         kind: 'campfire',
         position: settlement.fire.position,
@@ -157,6 +177,7 @@ export function buildInteractables(
   }
 
   for (const animal of fauna.getAgents()) {
+    if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, GAZE_RANGE)) continue
     if (animal.isDead()) {
       if (shovelHeld && !animal.readyToRemove()) {
         list.push({
@@ -177,6 +198,7 @@ export function buildInteractables(
   }
 
   for (const spawner of fauna.getSpawners()) {
+    if (!withinRange(spawner.x, spawner.z, playerPos, GAZE_RANGE)) continue
     list.push({
       kind: 'spawner',
       position: { x: spawner.x, z: spawner.z },

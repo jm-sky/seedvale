@@ -15,6 +15,16 @@ import { patchFoliageWindOnObject } from '../world/foliageWind'
 const loader = new GLTFLoader()
 loader.setMeshoptDecoder(MeshoptDecoder)
 
+/** Meshes whose local-space bounding-box diagonal is below this (meters,
+ *  measured before any later `prepareProp`/`preparePropFitMax` scale) skip
+ *  the shadow pass. Drobne propsy (pebbles, reed clumps, small filler) are a
+ *  fraction of a shadow-map texel at the world's 1024² map / 160-unit
+ *  frustum — casting still costs a full extra draw call per shadow-casting
+ *  light. Trees/houses/characters are authored well above this threshold, so
+ *  they keep `castShadow`. See docs/reviews/2026-08-12--005--performance-architecture-and-assets.md (A2). */
+const SMALL_MESH_SHADOW_THRESHOLD = 0.5
+const _meshBoxSize = new Vector3()
+
 type CachedGltf = {
   root: Group
   animations: AnimationClip[]
@@ -37,7 +47,10 @@ function loadCached(url: string): Promise<CachedGltf> {
       root.traverse((obj) => {
         const mesh = obj as Mesh
         if (!mesh.isMesh) return
-        mesh.castShadow = true
+        mesh.geometry.computeBoundingBox()
+        const box = mesh.geometry.boundingBox
+        const diagonal = box ? box.getSize(_meshBoxSize).length() : Infinity
+        mesh.castShadow = diagonal >= SMALL_MESH_SHADOW_THRESHOLD
         mesh.receiveShadow = true
         // Every clone (SkeletonUtils.clone / Object3D.clone(true)) shares this
         // geometry/material BY REFERENCE with this cached root — flagging it

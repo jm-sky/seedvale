@@ -70,6 +70,11 @@ export class QuestManager {
   private readonly relations = new Map<string, number>()
   private readonly playSound: (url: string, volume?: number) => void
   private exp = 0
+  /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
+   *  clear it after recomputing labels, so per-frame work is skipped on
+   *  frames where nothing quest-related happened. Starts `true` so the first
+   *  frame always computes markers. */
+  private dirty = true
 
   constructor(
     defs: readonly QuestDef[] = QUESTS,
@@ -96,13 +101,28 @@ export class QuestManager {
    *  "New Game" so a new save doesn't inherit the previous playthrough's quest
    *  state (the instance itself is kept, since callers hold a `const` ref). */
   reset(): void {
-    for (const def of this.defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
+    for (const def of this.defs) this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 })
     this.relations.clear()
     this.exp = 0
   }
 
   private stateOf(id: string): { state: QuestState, stageIndex: number } {
     return this.states.get(id) ?? { state: 'not_offered', stageIndex: 0 }
+  }
+
+  private setQuestState(id: string, value: { state: QuestState, stageIndex: number }): void {
+    this.states.set(id, value)
+    this.dirty = true
+  }
+
+  /** True when quest state changed since the last `clearDirty()` — callers
+   *  should recompute anything derived from `labelMarker`/`spawnerMarker`. */
+  isDirty(): boolean {
+    return this.dirty
+  }
+
+  clearDirty(): void {
+    this.dirty = false
   }
 
   private currentStage(def: QuestDef, stageIndex: number): QuestStage | undefined {
@@ -160,7 +180,7 @@ export class QuestManager {
   }
 
   private completeQuest(def: QuestDef): string {
-    this.states.set(def.id, { state: 'complete', stageIndex: def.stages.length })
+    this.setQuestState(def.id, { state: 'complete', stageIndex: def.stages.length })
     this.exp += QUEST_EXP_REWARD
     this.bumpRelation(def.giverName, QUEST_RELATION_REWARD)
     for (const stage of def.stages) {
@@ -176,7 +196,7 @@ export class QuestManager {
    *  `ready_to_report` once the last one clears. */
   private advanceStage(def: QuestDef, s: { state: QuestState, stageIndex: number }): void {
     const nextIndex = s.stageIndex + 1
-    this.states.set(def.id, {
+    this.setQuestState(def.id, {
       state: nextIndex >= def.stages.length ? 'ready_to_report' : 'active',
       stageIndex: nextIndex,
     })
@@ -187,12 +207,12 @@ export class QuestManager {
     s: { state: QuestState, stageIndex: number },
   ): QuestDialogOverride | null {
     if (s.state === 'not_offered' || s.state === 'offered') {
-      this.states.set(def.id, { state: 'offered', stageIndex: 0 })
+      this.setQuestState(def.id, { state: 'offered', stageIndex: 0 })
       return {
         line: def.offerLine,
         offer: {
-          onAccept: () => this.states.set(def.id, { state: 'active', stageIndex: 0 }),
-          onDecline: () => this.states.set(def.id, { state: 'not_offered', stageIndex: 0 }),
+          onAccept: () => this.setQuestState(def.id, { state: 'active', stageIndex: 0 }),
+          onDecline: () => this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 }),
         },
       }
     }

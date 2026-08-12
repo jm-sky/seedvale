@@ -109,14 +109,14 @@ export const NPC_MODEL_URLS: Record<NpcGender, readonly string[]> = {
 /** Short reaction clips played once when an NPC enters `lookAtPlayer` — one pool
  *  per gender. Sources/licenses: public/sounds/README.md. */
 export const NPC_REACTION_SOUND_URLS: Record<NpcGender, readonly string[]> = {
-  male: ['/sounds/male-hmm-01.m4a', '/sounds/male-hmm-02.wav'],
-  female: ['/sounds/female-hmm-01.wav', '/sounds/female-hmm-02.wav'],
+  male: ['/sounds/male-hmm-01.m4a', '/sounds/male-hmm-02.ogg'],
+  female: ['/sounds/female-hmm-01.ogg', '/sounds/female-hmm-02.ogg'],
 }
 
 /** Short "thank you" clips played once a quest is turned in — one pool per
  *  gender, keyed by the giver's gender. Sources/licenses: public/sounds/README.md. */
 export const NPC_QUEST_COMPLETE_SOUND_URLS: Record<NpcGender, readonly string[]> = {
-  male: ['/sounds/male-thank-you-01.mp3', '/sounds/male-thank-you-02.wav'],
+  male: ['/sounds/male-thank-you-01.mp3', '/sounds/male-thank-you-02.ogg'],
   female: ['/sounds/female-thank-you-01.mp3'],
 }
 
@@ -352,8 +352,8 @@ export class NpcAgent {
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
   private lastLabelOpacity = -1
-  private lastHpRatio = -1
-  private lastStaminaRatio = -1
+  private lastHpPercent = -1
+  private lastStaminaPercent = -1
   private lastBarsVisible: boolean | null = null
 
   private constructor(
@@ -820,15 +820,18 @@ export class NpcAgent {
       this.lastLabelText = labelText
       this.labelNameEl.textContent = labelText
     }
-    const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
-    if (hpRatio !== this.lastHpRatio) {
-      this.lastHpRatio = hpRatio
-      this.hpFillEl.style.width = `${Math.round(hpRatio * 100)}%`
+    // Compared/stored as the same rounded percent that's actually written to
+    // the DOM — the raw ratio drifts by a hair every frame during
+    // regen/drain, which would defeat a guard keyed on the raw value.
+    const hpPercent = this.health.maxHp > 0 ? Math.round((this.health.currentHp / this.health.maxHp) * 100) : 0
+    if (hpPercent !== this.lastHpPercent) {
+      this.lastHpPercent = hpPercent
+      this.hpFillEl.style.width = `${hpPercent}%`
     }
-    const staminaRatio = this.stamina.max > 0 ? this.stamina.current / this.stamina.max : 0
-    if (staminaRatio !== this.lastStaminaRatio) {
-      this.lastStaminaRatio = staminaRatio
-      this.staminaFillEl.style.width = `${Math.round(staminaRatio * 100)}%`
+    const staminaPercent = this.stamina.max > 0 ? Math.round((this.stamina.current / this.stamina.max) * 100) : 0
+    if (staminaPercent !== this.lastStaminaPercent) {
+      this.lastStaminaPercent = staminaPercent
+      this.staminaFillEl.style.width = `${staminaPercent}%`
     }
     const gaze = gazeOpacityFactor(
       this.mesh.position.x - observerPos.x,
@@ -841,7 +844,9 @@ export class NpcAgent {
       this.lastBarsVisible = showBars
       this.labelBarsEl.style.display = showBars ? '' : 'none'
     }
-    const opacity = labelOpacityForDistance(dist) * gaze
+    // Quantized before comparing — `dist`/`gaze` change by a hair every frame
+    // while the player moves, so an unrounded guard never catches a repeat.
+    const opacity = Math.round(labelOpacityForDistance(dist) * gaze * 32) / 32
     if (opacity !== this.lastLabelOpacity) {
       this.lastLabelOpacity = opacity
       this.labelEl.style.opacity = String(opacity)

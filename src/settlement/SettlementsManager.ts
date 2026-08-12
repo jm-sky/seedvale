@@ -1,12 +1,12 @@
 import { type Object3D, type Scene, Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
 import type { VillageInfo } from '../fauna/AnimalAgent'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TerrainSamplers } from './settlementTerrain'
-import type { PlayAt } from '../audio/createWorldAudio'
 import { disposeObject3D } from '../assets/loadGltf'
 import { type ChunkCoord, worldToChunk } from '../terrain/chunkGrid'
 import { labelOpacityForDistance } from '../ui/labelDistance'
@@ -169,7 +169,16 @@ export async function createSettlementsManager(
   // rather than inside `createSettlement`. `midpointSignpostsFor` only reads
   // each side's `SettlementDef` (cheap/deterministic), so this doesn't have
   // to wait for either settlement's async build to finish.
-  type MidpointInstance = { prop: Object3D, labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
+  type MidpointInstance = {
+    prop: Object3D
+    labelEl: HTMLDivElement
+    label: CSS2DObject
+    position: Vector3
+    /** Last opacity written to `labelEl` — guards the DOM write like
+     *  `NpcAgent`/`AnimalAgent` do, quantized so it actually catches repeats
+     *  while the player is in continuous motion. */
+    lastOpacity: number
+  }
   const midpoints = new Map<string, MidpointInstance[]>()
 
   function midpointPairKey(a: string, b: string): string {
@@ -194,6 +203,7 @@ export async function createSettlementsManager(
       labelEl,
       label,
       position: new Vector3(sp.position.x, sampleHeight(sp.position.x, sp.position.z), sp.position.z),
+      lastOpacity: -1,
     }
   }
 
@@ -318,7 +328,11 @@ export async function createSettlementsManager(
       }
       for (const instances of midpoints.values()) {
         for (const inst of instances) {
-          inst.labelEl.style.opacity = String(labelOpacityForDistance(inst.position.distanceTo(playerPos)))
+          const opacity = Math.round(labelOpacityForDistance(inst.position.distanceTo(playerPos)) * 32) / 32
+          if (opacity !== inst.lastOpacity) {
+            inst.lastOpacity = opacity
+            inst.labelEl.style.opacity = String(opacity)
+          }
         }
       }
     },

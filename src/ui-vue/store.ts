@@ -39,6 +39,7 @@ type FlavorDialogState = { open: boolean; prompt: string | null; name: string; l
 type QuickActionsState = {
   open: boolean
   hasShovel: boolean
+  nearTown: boolean
   onBuildSimpleFire: (() => boolean) | null
   onBuildFirePit: (() => boolean) | null
   onLightTorch: (() => boolean) | null
@@ -49,7 +50,7 @@ type QuickActionsState = {
   onOpen: (() => void) | null
   onClose: (() => void) | null
 }
-type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean }
+type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number }
 type BusyState = { visible: boolean; label: string }
 /** `config`/`dayNight` are the *same* mutable objects `createApp.ts` already
  *  holds (see plan 005 — "Nie duplikować stanu"), assigned once via
@@ -116,11 +117,11 @@ export const ui = reactive({
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
   quickActions: {
-    open: false, hasShovel: false,
+    open: false, hasShovel: false, nearTown: false,
     onBuildSimpleFire: null, onBuildFirePit: null, onLightTorch: null,
     onWait: null, onRest: null, onDig: null, onLevel: null, onOpen: null, onClose: null,
   } as QuickActionsState,
-  timeSkip: { visible: false, label: '', fadeVisible: false } as TimeSkipState,
+  timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
   busy: { visible: false, label: '' } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
@@ -230,6 +231,7 @@ export function isInventoryOpen(): boolean { return ui.inventory.open }
 
 export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 'open'>>): void { Object.assign(ui.quickActions, handlers) }
 export function setQuickActionsHasShovel(hasShovel: boolean): void { ui.quickActions.hasShovel = hasShovel }
+export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }
 export function openQuickActions(): void {
   if (ui.quickActions.open) return
   ui.quickActions.open = true
@@ -243,25 +245,34 @@ export function closeQuickActions(): void {
 export function toggleQuickActions(): void { if (ui.quickActions.open) closeQuickActions(); else openQuickActions() }
 export function isQuickActionsOpen(): boolean { return ui.quickActions.open }
 
-/** `fade` mirrors the vanilla overlay's black full-screen fade (used for
- *  "rest" — sleeping through the skip) vs. just the floating label alone
- *  (used for "wait" — the player watches the sky/clock race ahead). */
-export function showTimeSkip(label: string, fade: boolean): void {
+/** `fadeStrength` drives the grayscale/blur filter opacity (`0` = label only,
+ *  `0.5` = wait, `1` = rest). See `TimeSkipOverlay.vue`. */
+export function showTimeSkip(label: string, fadeStrength: number): void {
   ui.timeSkip.visible = true
   ui.timeSkip.label = label
-  if (fade) ui.timeSkip.fadeVisible = true
+  ui.timeSkip.fadeStrength = fadeStrength
+  if (fadeStrength > 0) ui.timeSkip.fadeVisible = true
 }
 /** If a fade is currently showing, only *starts* the fade-out — the panel
  *  stays mounted until `TimeSkipOverlay.vue`'s `transitionend` handler calls
  *  `finishTimeSkipHide()`, so the opacity transition is visible instead of
- *  the black screen vanishing instantly. Without an active fade there's
- *  nothing to animate, so hide immediately. */
+ *  the filter vanishing instantly. Without an active fade there's nothing to
+ *  animate, so hide immediately. */
 export function hideTimeSkip(): void {
   if (!ui.timeSkip.visible) return
-  if (!ui.timeSkip.fadeVisible) { ui.timeSkip.visible = false; return }
+  if (!ui.timeSkip.fadeVisible || ui.timeSkip.fadeStrength <= 0) {
+    ui.timeSkip.visible = false
+    ui.timeSkip.fadeStrength = 0
+    return
+  }
   ui.timeSkip.fadeVisible = false
 }
-export function finishTimeSkipHide(): void { if (!ui.timeSkip.fadeVisible) ui.timeSkip.visible = false }
+export function finishTimeSkipHide(): void {
+  if (!ui.timeSkip.fadeVisible) {
+    ui.timeSkip.visible = false
+    ui.timeSkip.fadeStrength = 0
+  }
+}
 
 export function showBusy(label: string): void {
   ui.busy.visible = true

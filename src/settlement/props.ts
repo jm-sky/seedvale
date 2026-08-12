@@ -898,7 +898,10 @@ export function createReed(scale = 1): THREE.Group {
     const height = (0.8 + Math.random() * 0.5) * scale
     const blade = new THREE.Mesh(new THREE.ConeGeometry(0.035 * scale, height, 4), mat)
     blade.position.set((Math.random() - 0.5) * 0.3 * scale, height / 2, (Math.random() - 0.5) * 0.3 * scale)
-    blade.castShadow = true
+    // No shadow: a 3.5cm-radius blade contributes an imperceptible shadow at
+    // the world's shadow-map resolution but still costs a draw call (perf
+    // review A2 — "drobne propsy").
+    blade.castShadow = false
     reed.add(blade)
   }
   return reed
@@ -948,7 +951,8 @@ export function createRockCluster(scale = 1, variant = 0.5, color = 0x8c8c8c): T
     )
     pebble.position.set(Math.cos(a) * r, 0.08 * scale, Math.sin(a) * r)
     pebble.rotation.set(a, a * 1.3, 0)
-    pebble.castShadow = true
+    // No shadow: same reasoning as `createReed` (perf review A2).
+    pebble.castShadow = false
     cluster.add(pebble)
   }
   return cluster
