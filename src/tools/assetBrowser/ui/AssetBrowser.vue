@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, type Ref, watch } from 'vue'
 import type { AssetViewer } from '../viewer/createViewer'
 import { buildAssetIndex, findAssetEntry } from '../../../assets/assetIndex'
+import { ASSET_BROWSER_MODEL_MANIFEST } from '../modelManifest'
 import { browserState, slotDiagnostics } from '../state'
 import { boundsData } from '../viewer/createAssetSlot'
 import { captureSnapshot, copyText } from '../viewer/createSnapshot'
@@ -13,7 +14,7 @@ const modelFiles = ref<string[]>([])
 
 async function fetchModelFiles(): Promise<void> {
   try {
-    const res = await fetch('/__asset-browser/models')
+    const res = await fetch(ASSET_BROWSER_MODEL_MANIFEST)
     if (!res.ok) return
     const data = await res.json() as { files?: string[] }
     modelFiles.value = data.files ?? []

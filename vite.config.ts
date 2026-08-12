@@ -2,11 +2,13 @@ import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
-import { assetBrowserDevPlugin } from './vite-plugin-asset-browser-dev'
+import { assetBrowserPlugin } from './vite-plugin-asset-browser'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }
+const rootDir = fileURLToPath(new URL('.', import.meta.url))
 
 function formatBuildDate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, '0')
@@ -26,7 +28,7 @@ function gitCommitHash(): string {
 }
 
 export default defineConfig({
-  plugins: [vue(), tailwindcss(), assetBrowserDevPlugin()],
+  plugins: [vue(), tailwindcss(), assetBrowserPlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __BUILD_DATE__: JSON.stringify(formatBuildDate(new Date())),
@@ -35,6 +37,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src/ui-vue', import.meta.url)),
+    },
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(rootDir, 'index.html'),
+        assetBrowser: resolve(rootDir, 'asset-browser.html'),
+      },
     },
   },
   server: {
