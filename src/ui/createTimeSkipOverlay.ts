@@ -1,13 +1,9 @@
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type TimeSkipOverlay = {
-  /** `fade` toggles a grayscale/blur/darken "sleep" filter over the whole
-   *  screen (used for "rest" — sleeping through the skip, so the player
-   *  isn't watching the world simulate in real time underneath while
-   *  waiting for it — see `TimeSkipOverlay.vue`) vs. just the floating
-   *  label alone (used for "wait" — the player watches the sky/clock race
-   *  ahead with the world still visible). */
-  show: (label: string, fade: boolean) => void
+  /** `fadeStrength` sets the grayscale/blur/darken filter opacity (`0` =
+   *  label only, `0.5` = wait, `1` = rest — see `TimeSkipOverlay.vue`). */
+  show: (label: string, fadeStrength: number) => void
   hide: () => void
   dispose: () => void
 }
@@ -18,7 +14,9 @@ export function createTimeSkipOverlay(_parent: HTMLElement): TimeSkipOverlay {
   let disposed = false
   const getUi = () => getMountedVueUi()
   return {
-    show: (label, fade) => { if (!disposed) getUi()?.showTimeSkip(label, fade) },
+    show: (label, fadeStrength) => {
+      if (!disposed) getUi()?.showTimeSkip(label, fadeStrength)
+    },
     hide: () => { if (!disposed) getUi()?.hideTimeSkip() },
     dispose: () => { if (!disposed) { disposed = true; getUi()?.hideTimeSkip() } },
   }

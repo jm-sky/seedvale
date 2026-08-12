@@ -14,6 +14,9 @@ const currentScreen = ref<'main' | 'actions' | 'settings'>('main')
 useOverlayScreen('pause-menu', isPauseMenuOpen, closePauseMenu)
 useTouchScroll(panel)
 watch(() => ui.pauseMenu.playerName, (value) => { name.value = value })
+watch(() => ui.pauseMenu.open, (open) => {
+  if (!open) currentScreen.value = 'main'
+})
 </script>
 
 <template>

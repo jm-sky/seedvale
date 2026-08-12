@@ -14,16 +14,19 @@ export type QuickActionsHandlers = {
   /** Starts a "wait" time skip (1/3/6h, visible fast-forward) — see
    *  `world/timeSkip.ts`. */
   onWait?: (hours: number) => void
-  /** Starts an 8h "rest" time skip (fades to black). Both variants require a
-   *  blanket in the inventory — returns `'no-blanket'` (consumes nothing) if
-   *  missing; `'town'` additionally requires the player to be near a
-   *  settlement — returns `'too-far'` (consumes nothing) if not. */
+  /** Starts an 8h "rest" time skip. Both variants require a blanket in the
+   *  inventory — returns `'no-blanket'` (consumes nothing) if missing;
+   *  `'town'` additionally requires the player to be near a settlement —
+   *  returns `'too-far'` (consumes nothing) if not. The town button is also
+   *  hidden via `nearTown` when far. */
   onRest?: (variant: RestVariant) => RestOutcome
   /** Shovel dig / level when the player owns a shovel (HUD only when held). */
   onDig?: () => void
   onLevel?: () => void
   /** Initial shovel ownership for showing dig/level buttons. */
   hasShovel?: boolean
+  /** Initial near-settlement flag for showing "Odpocznij w mieście". */
+  nearTown?: boolean
   /** Fired when the panel transitions from closed → open (e.g. release pointer lock). */
   onOpen?: () => void
   /** Fired when the panel transitions from open → closed (e.g. restore pointer lock). */
@@ -48,6 +51,9 @@ export function createQuickActions(
   getUi()?.configureQuickActions(handlers)
   if (typeof handlers.hasShovel === 'boolean') {
     getUi()?.setQuickActionsHasShovel(handlers.hasShovel)
+  }
+  if (typeof handlers.nearTown === 'boolean') {
+    getUi()?.setQuickActionsNearTown(handlers.nearTown)
   }
 
   return {

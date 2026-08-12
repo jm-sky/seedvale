@@ -3,9 +3,12 @@ import type { DayNightState } from './dayNight'
 /** Real seconds held per skipped game-hour — 1h skip ≈ 1s, 8h skip ≈ 8s. */
 const SECONDS_PER_SKIPPED_HOUR = 1
 
+/** Overlay filter intensity: `0` = label only, `0.5` = wait, `1` = rest. */
+export type TimeSkipFadeStrength = 0 | 0.5 | 1
+
 export type TimeSkipTickResult = {
   label: string
-  fade: boolean
+  fadeStrength: TimeSkipFadeStrength
   /** True on the exact frame the skip completes — the caller's cue to hide
    *  the overlay (see `createTimeSkipOverlay.ts`). */
   justFinished: boolean
@@ -20,10 +23,10 @@ export type TimeSkipTickResult = {
 
 export type TimeSkip = {
   isActive: () => boolean
-  /** No-op if a skip is already in progress. `fade` picks the visual
-   *  treatment (`app/createApp.ts` wires this to `createTimeSkipOverlay`) —
-   *  the underlying mechanism is identical either way. */
-  start: (hours: number, opts: { fade: boolean, label: string }) => void
+  /** No-op if a skip is already in progress. `fadeStrength` picks the visual
+   *  filter intensity (`app/createApp.ts` wires this to
+   *  `createTimeSkipOverlay`) — the underlying mechanism is identical. */
+  start: (hours: number, opts: { fadeStrength: TimeSkipFadeStrength, label: string }) => void
   /** Call once per frame regardless of any modal/pause state — this is what
    *  keeps `dayNight.timeMultiplier` boosted while the skip runs. Returns
    *  null when no skip is active. */
@@ -54,7 +57,7 @@ export function createTimeSkip(dayNight: DayNightState): TimeSkip {
   let active: {
     remainingSec: number
     previousMultiplier: number
-    fade: boolean
+    fadeStrength: TimeSkipFadeStrength
     label: string
     hours: number
     startTimeOfDay: number
@@ -67,7 +70,7 @@ export function createTimeSkip(dayNight: DayNightState): TimeSkip {
       active = {
         remainingSec: hours * SECONDS_PER_SKIPPED_HOUR,
         previousMultiplier: dayNight.timeMultiplier,
-        fade: opts.fade,
+        fadeStrength: opts.fadeStrength,
         label: opts.label,
         hours,
         startTimeOfDay: dayNight.timeOfDay,
@@ -77,11 +80,13 @@ export function createTimeSkip(dayNight: DayNightState): TimeSkip {
     tick(dt) {
       if (!active) return null
       active.remainingSec -= dt
-      const { label, fade, hours, startTimeOfDay } = active
-      if (active.remainingSec > 0) return { label, fade, justFinished: false, hours, startTimeOfDay }
+      const { label, fadeStrength, hours, startTimeOfDay } = active
+      if (active.remainingSec > 0) {
+        return { label, fadeStrength, justFinished: false, hours, startTimeOfDay }
+      }
       dayNight.timeMultiplier = active.previousMultiplier
       active = null
-      return { label, fade, justFinished: true, hours, startTimeOfDay }
+      return { label, fadeStrength, justFinished: true, hours, startTimeOfDay }
     },
     cancel() {
       if (!active) return

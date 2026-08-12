@@ -34,6 +34,13 @@ const LIE_DOWN_ROTATION_X = -Math.PI / 2
 /** Small upward nudge so the now-horizontal body doesn't clip into the
  *  ground (the model's local origin/feet stay at the wrapper's y=0). */
 const LIE_DOWN_Y_OFFSET = 0.25
+/** Procedural squat for camp-rest setup/teardown — no crouch clip on the
+ *  Quaternius Adventurer rig, so we tip + sink the model root only (wrapper
+ *  / label stay upright). */
+const CROUCH_ROTATION_X = 0.45
+const CROUCH_Y_OFFSET = -0.35
+
+type PlayerPose = 'stand' | 'crouch' | 'lie'
 
 /** Quaternius Ultimate Modular Men — distinct from the NPC roster. */
 export const PLAYER_MODEL_URL = '/models/characters/Adventurer.glb'
@@ -54,10 +61,10 @@ export class PlayerController {
   private readonly isCapsule: boolean
   /** The GLB scene root (or capsule mesh) — rotated independently of `mesh`
    *  (the wrapper, which also carries the label at a fixed height) for
-   *  `lieDown()`, so the nameplate stays floating above the character
-   *  instead of tipping over with the body. */
+   *  `lieDown()` / `crouch()`, so the nameplate stays floating above the
+   *  character instead of tipping over with the body. */
   private readonly modelRoot: THREE.Object3D
-  private resting = false
+  private pose: PlayerPose = 'stand'
   private readonly mixer: THREE.AnimationMixer | null
   private readonly idleAction: THREE.AnimationAction | null
   private readonly walkAction: THREE.AnimationAction | null
@@ -264,31 +271,42 @@ export class PlayerController {
     this.syncCamera()
   }
 
+  /** Procedural squat — camp-rest setup/teardown between stand and lie. */
+  crouch(): void {
+    if (this.pose === 'crouch') return
+    this.clearPoseVisual()
+    this.pose = 'crouch'
+    this.currentAction?.fadeOut(0.15)
+    this.currentAction = null
+    this.modelRoot.rotation.x = CROUCH_ROTATION_X
+    this.modelRoot.position.y = CROUCH_Y_OFFSET
+  }
+
   /** Tips the model onto its back and freezes animation — used while resting
    *  (`app/createApp.ts`'s "Rozbij obóz"/"Odpocznij w mieście" quick
-   *  actions). `update()` skips movement/animation entirely while resting;
-   *  the camera keeps following (ground snap still runs) so the world stays
-   *  visible around the sleeping character during the sped-up clock. */
+   *  actions). `update()` skips movement/animation entirely while not
+   *  standing; the camera keeps following so the world stays visible around
+   *  the sleeping character during the sped-up clock. */
   lieDown(): void {
-    if (this.resting) return
-    this.resting = true
+    if (this.pose === 'lie') return
+    this.clearPoseVisual()
+    this.pose = 'lie'
     this.currentAction?.fadeOut(0.15)
     this.currentAction = null
     this.modelRoot.rotation.x = LIE_DOWN_ROTATION_X
     this.mesh.position.y += LIE_DOWN_Y_OFFSET
   }
 
-  /** No-op if not currently lying down. */
+  /** No-op if already standing. Clears crouch or lie visuals. */
   standUp(): void {
-    if (!this.resting) return
-    this.resting = false
-    this.modelRoot.rotation.x = 0
-    this.mesh.position.y -= LIE_DOWN_Y_OFFSET
+    if (this.pose === 'stand') return
+    this.clearPoseVisual()
+    this.pose = 'stand'
     this.playAction(this.idleAction)
   }
 
   update(dt: number): void {
-    if (this.resting) {
+    if (this.pose !== 'stand') {
       this.syncCamera()
       this.syncHpBar()
       this.mixer?.update(dt)
@@ -319,6 +337,15 @@ export class PlayerController {
     this.syncAnimation()
     this.syncHpBar()
     this.mixer?.update(dt)
+  }
+
+  /** Undo the visual offsets of the current pose before switching. */
+  private clearPoseVisual(): void {
+    if (this.pose === 'lie') {
+      this.mesh.position.y -= LIE_DOWN_Y_OFFSET
+    }
+    this.modelRoot.rotation.x = 0
+    this.modelRoot.position.y = 0
   }
 
   private syncHpBar(): void {

@@ -209,6 +209,7 @@ const shovelActions: Action[] = [
       @click="rest('camp')"
     />
     <QuickActionsButton
+      v-if="ui.quickActions.nearTown"
       label="Odpocznij w mieście (8h)"
       :status="townStatus"
       @click="rest('town')"
