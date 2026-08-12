@@ -38,6 +38,7 @@ When planning or implementing a feature, review and update the living asset back
 
 - [docs/assets/MODELS.md](docs/assets/MODELS.md) — required / not-yet-wired models
 - [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) — required / not-yet-wired sounds
+- [docs/items/CATALOG.md](docs/items/CATALOG.md) — item gameplay flags / hold / melee / roadmap (`src/items/itemCatalog.ts`)
 
 If the feature needs a new model or sound, add (or update) a row during planning/implementation. If nothing new is needed, leave the lists unchanged. Credits for models already in the repo live in [docs/assets/CREDITS.md](docs/assets/CREDITS.md); sound file sources in [`public/sounds/README.md`](public/sounds/README.md). Folder index: [docs/assets/README.md](docs/assets/README.md).
 
@@ -71,6 +72,7 @@ Do **not** launch headless Chrome/Playwright yourself as the default way to test
 | Reviews | [docs/reviews/README.md](docs/reviews/README.md) |
 | Research | [docs/research/README.md](docs/research/README.md) |
 | Required models / sounds | [docs/assets/MODELS.md](docs/assets/MODELS.md), [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) |
+| Item catalog (hold/melee/spawn) | [docs/items/CATALOG.md](docs/items/CATALOG.md) |
 
 Statuses are: `todo` · `planned` · `in progress` · `done` · `verification needed`.
 

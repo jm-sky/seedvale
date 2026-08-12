@@ -8,6 +8,7 @@ import type { TreeLifecycle } from '../world/treeLifecycle'
 import { createFauna, type Fauna } from '../fauna/createFauna'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
+import { preloadHeldToolModels } from '../items/heldToolVisual'
 import { preloadItemGlbModels } from '../items/itemModels'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
@@ -238,6 +239,7 @@ export async function createWorldBundle(
   const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
   await preloadItemGlbModels()
+  await preloadHeldToolModels()
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   const resourceDeposits = buildResourceDeposits(scene, chunkManager, config, config.seed)
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
@@ -304,6 +306,7 @@ export async function rebuildWorldBundle(
   bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
   await preloadItemGlbModels()
+  await preloadHeldToolModels()
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
   bundle.resourceDeposits = buildResourceDeposits(scene, bundle.chunkManager, config, config.seed)
   bundle.droppedItems = createDroppedItems(scene, bundle.chunkManager.sampleHeight, carriedDrops)

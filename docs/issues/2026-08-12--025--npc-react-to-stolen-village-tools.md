@@ -15,7 +15,8 @@ settlement item pool), nearby NPCs should protest, e.g. bark/dialog
 ## Out of scope for now
 
 - Implementing the reaction (this issue only tracks the future work).
-- Held-hand visuals for pitchfork/sickle (separate from plan 081 held tools).
+- Held-hand visuals + melee for pitchfork/sickle (see
+  [items CATALOG](../items/CATALOG.md) roadmap — same pattern as knife).
 
 ## Notes
 

@@ -32,6 +32,9 @@ Modele 3D użyte w projekcie. Preferujemy CC0; przy CC-BY wpisz wymagany kredyt.
 | `public/models/nature/bush_flowers_1.glb`, `flower_clump_2.glb` | Ultimate Stylized Nature / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatestylizednature.html) | CC0 1.0 | `Bush_Flowers` / `Flower_2_Clump` (textury 512px + WebP) — **rezerwa, niepodpięte**; kolejna wariacja kolorowego poszycia |
 | `public/models/items/pitchfork.glb` | Poly by Google | [poly.pizza/m/edEe1ygZiHf](https://poly.pizza/m/edEe1ygZiHf) | **[CC-BY](https://creativecommons.org/licenses/by/3.0/)** | `Pitchfork` — pickup wioski (plan 082); wymagana atrybucja |
 | `public/models/items/sickle.glb` | J-Toastie | [poly.pizza/m/InQGR6t3yY](https://poly.pizza/m/InQGR6t3yY) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Sickle` — pickup wioski (plan 082); wymagana atrybucja |
+| `public/models/items/shovel.glb` | Quaternius | [poly.pizza/m/oNBQSf87ZJ](https://poly.pizza/m/oNBQSf87ZJ) | CC0 1.0 | `Shovel` — drop + held (plan 082 / held visual) |
+| `public/models/items/knife.glb` | Quaternius | [poly.pizza/m/N9bfPFP1hr](https://poly.pizza/m/N9bfPFP1hr) | CC0 1.0 | `Knife` — drop + held |
+| `public/models/items/axe.glb` | CreativeTrio | [poly.pizza/m/OhZDdlrx29](https://poly.pizza/m/OhZDdlrx29) | CC0 1.0 | `Axe` — drop + held |
 | `public/models/settlement/hay.glb` | Quaternius | [poly.pizza/m/Yu8TOERkpw](https://poly.pizza/m/Yu8TOERkpw) | CC0 1.0 | `Hay` — clutter przy ogrodach (plan 082) |
 | `public/models/items/pickaxe.glb` | CreativeTrio | [poly.pizza/m/cJp88qPPLc](https://poly.pizza/m/cJp88qPPLc) | CC0 1.0 | `Pickaxe` — dekor przy stockpile; gameplay mining later (plan 082) |
 | `public/models/fauna/sheep.glb` | Quaternius | [poly.pizza/m/C39AUXUUes](https://poly.pizza/m/C39AUXUUes) | CC0 1.0 | `Sheep` — **parked**, niepodpięte (fauna gospodarska) |

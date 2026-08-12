@@ -41,7 +41,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 023 | [2026-08-12--023--road-grass-ground-cover.md](./2026-08-12--023--road-grass-ground-cover.md) | Droga/trawa: ziarno dirtu, soft edge, filler blisko kamery | `done` |
 | 024 | [2026-08-12--024--wild-fauna-enters-village-and-spawns-too-close.md](./2026-08-12--024--wild-fauna-enters-village-and-spawns-too-close.md) | Dzikie zwierzęta wchodzą do wioski; spawn-pointy za blisko osady i siebie nawzajem | `todo` |
 | 025 | [2026-08-12--025--npc-react-to-stolen-village-tools.md](./2026-08-12--025--npc-react-to-stolen-village-tools.md) | NPC protestują, gdy gracz bierze widły/sierp z wioski | `todo` |
+| 026 | [2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md](./2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md) | Jaskinia: płaski czarny „daszek" zamiast realnej dziury w terenie | `todo` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `026`
+**Next ID:** `027`

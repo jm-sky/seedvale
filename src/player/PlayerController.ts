@@ -8,7 +8,11 @@ import {
   CAMERA_DISTANCE_MIN,
   type LookState,
 } from '../input/MouseLook'
-import { createItemMesh } from '../items/items'
+import {
+  applyHeldAttach,
+  createHeldToolObject,
+  findRightHandSocket,
+} from '../items/heldToolVisual'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 
 const MOVE_SPEED = 8
@@ -70,10 +74,12 @@ export class PlayerController {
   private readonly labelNameEl: HTMLDivElement
   private readonly hpFillEl: HTMLDivElement
   private lastHpRatio = -1
-  /** Quaternius `Wrist.R` (or null on capsule fallback). */
+  /** Quaternius `Wrist.R` (or null on capsule fallback / missing bone). */
   private readonly rightWrist: THREE.Object3D | null
   private heldToolObject: THREE.Object3D | null = null
   private heldToolKind: ToolKind | null = null
+  /** Bumps on each `setHeldTool` so stale async GLB loads are ignored. */
+  private heldToolLoadToken = 0
 
   private constructor(
     root: THREE.Object3D,
@@ -99,7 +105,10 @@ export class PlayerController {
     this.mesh.add(root)
     this.mesh.position.set(0, 0, 0)
     this.modelRoot = root
-    this.rightWrist = isCapsule ? null : findNamedBone(root, ['Wrist.R', 'Hand.R', 'mixamorigRightHand'])
+    this.rightWrist = isCapsule ? null : findRightHandSocket(root)
+    if (!isCapsule && !this.rightWrist) {
+      console.warn('[player] right-hand bone not found; held tools parent to model root (feet)')
+    }
 
     if (animations.length > 0) {
       this.mixer = new THREE.AnimationMixer(root)
@@ -224,11 +233,13 @@ export class PlayerController {
 
   /**
    * Attach / clear a held tool mesh on the right wrist (inventory still owns
-   * the item; this is visual only). Capsule fallback parents to the body.
+   * the item; this is visual only). Capsule / missing-bone fallback parents
+   * to the body root (looks wrong — prefer fixing the socket).
    */
   setHeldTool(kind: ToolKind | null): void {
     if (kind === this.heldToolKind) return
     this.heldToolKind = kind
+    const loadToken = ++this.heldToolLoadToken
     if (this.heldToolObject) {
       this.heldToolObject.removeFromParent()
       disposeObject3D(this.heldToolObject)
@@ -236,24 +247,16 @@ export class PlayerController {
     }
     if (!kind) return
 
-    const tool = createItemMesh(kind)
-    // Drop meshes are world-oriented; rotate into a rough right-hand grip.
-    tool.scale.setScalar(kind === 'knife' ? 0.95 : 0.8)
-    if (kind === 'knife') {
-      tool.position.set(0.02, -0.02, 0.06)
-      tool.rotation.set(Math.PI / 2, 0, Math.PI / 2)
-    } else if (kind === 'shovel' || kind === 'axe') {
-      tool.position.set(0.04, -0.04, 0.02)
-      tool.rotation.set(0, 0, -Math.PI / 2.4)
-    } else {
-      // firestarter — fist-sized
-      tool.position.set(0.03, -0.02, 0.05)
-      tool.rotation.set(0.4, 0.2, 0.3)
-    }
-
     const parent = this.rightWrist ?? this.modelRoot
-    parent.add(tool)
-    this.heldToolObject = tool
+    void createHeldToolObject(kind).then((tool) => {
+      if (loadToken !== this.heldToolLoadToken || this.heldToolKind !== kind) {
+        disposeObject3D(tool)
+        return
+      }
+      applyHeldAttach(tool, kind)
+      parent.add(tool)
+      this.heldToolObject = tool
+    })
   }
 
   setPosition(x: number, z: number): void {
@@ -413,13 +416,4 @@ export class PlayerController {
       this.mesh.position.z,
     )
   }
-}
-
-function findNamedBone(root: THREE.Object3D, names: string[]): THREE.Object3D | null {
-  let found: THREE.Object3D | null = null
-  root.traverse((obj) => {
-    if (found) return
-    if (names.includes(obj.name)) found = obj
-  })
-  return found
 }

@@ -1,0 +1,189 @@
+/**
+ * Machine-readable item catalog for Seedvale.
+ * Prefer this (or docs/items/CATALOG.md) over grepping scattered ITEM_DEFS / spawners.
+ *
+ * Source of truth for *labels/weights* remains `ITEM_DEFS` in `items.ts`.
+ * This file adds gameplay/AI-facing flags (hold, melee, spawn, assets, roadmap).
+ */
+import type { ItemKind } from './items'
+
+export type ItemSpawnKind =
+  | 'none'
+  | 'starting'
+  | 'village_onetime'
+  | 'village_renewable'
+  | 'world_chunk'
+  | 'decorative_only'
+
+export type ItemCatalogEntry = {
+  kind: ItemKind
+  /** Polish label — mirrors ITEM_DEFS. */
+  label: string
+  category: 'resource' | 'tool' | 'utility'
+  /** Can occupy HeldTool slot + Weź in inventory. */
+  holdable: boolean
+  /** Player melee vs animals while held (`faunaCombat.ts`). */
+  meleeDamage: number | null
+  spawn: ItemSpawnKind
+  /** Runtime GLB under public/ when present. */
+  modelUrl: string | null
+  notes: string
+  /** Planned work — not implemented. */
+  roadmap?: string
+}
+
+export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
+  shell: {
+    kind: 'shell',
+    label: 'muszla',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'village_renewable',
+    modelUrl: null,
+    notes: 'Procedural mesh; renewable near settlement.',
+  },
+  stone: {
+    kind: 'stone',
+    label: 'kamień',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'village_renewable',
+    modelUrl: null,
+    notes: 'Procedural; also dig loot / drops.',
+  },
+  branch: {
+    kind: 'branch',
+    label: 'gałąź',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'village_renewable',
+    modelUrl: null,
+    notes: 'Renewable near settlement trees; axe harvest yield.',
+  },
+  mushroom: {
+    kind: 'mushroom',
+    label: 'grzyb',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'world_chunk',
+    modelUrl: null,
+    notes: 'World chunk collectible.',
+  },
+  flower: {
+    kind: 'flower',
+    label: 'kwiat',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'world_chunk',
+    modelUrl: null,
+    notes: 'World chunk collectible.',
+  },
+  cone: {
+    kind: 'cone',
+    label: 'szyszka',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'world_chunk',
+    modelUrl: null,
+    notes: 'World chunk collectible.',
+  },
+  knife: {
+    kind: 'knife',
+    label: 'nóż',
+    category: 'tool',
+    holdable: true,
+    meleeDamage: 12,
+    spawn: 'starting',
+    modelUrl: '/models/items/knife.glb',
+    notes: 'Starting loadout; held visual on Wrist.R; melee on animals.',
+  },
+  firestarter: {
+    kind: 'firestarter',
+    label: 'krzesiwo',
+    category: 'tool',
+    holdable: true,
+    meleeDamage: null,
+    spawn: 'starting',
+    modelUrl: null,
+    notes: 'Starting loadout; procedural held/drop mesh; lights fires.',
+  },
+  blanket: {
+    kind: 'blanket',
+    label: 'koc',
+    category: 'utility',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'starting',
+    modelUrl: null,
+    notes: 'Starting loadout; rest / camp UX.',
+  },
+  shovel: {
+    kind: 'shovel',
+    label: 'łopata',
+    category: 'tool',
+    holdable: true,
+    meleeDamage: 8,
+    spawn: 'village_onetime',
+    modelUrl: '/models/items/shovel.glb',
+    notes: 'One-time near campfire/garden; dig + level; melee; held GLB.',
+  },
+  axe: {
+    kind: 'axe',
+    label: 'siekiera',
+    category: 'tool',
+    holdable: true,
+    meleeDamage: 20,
+    spawn: 'village_onetime',
+    modelUrl: '/models/items/axe.glb',
+    notes: 'One-time near settlement tree; chop trees; melee; held GLB.',
+  },
+  pitchfork: {
+    kind: 'pitchfork',
+    label: 'widły',
+    category: 'tool',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'village_onetime',
+    modelUrl: '/models/items/pitchfork.glb',
+    notes: '1–3 with sickle near gardens (plan 082). Pickup only — not holdable yet.',
+    roadmap:
+      'Holdable + melee like knife (damage TBD, ~10–14). NPC protest on village theft (issue 025).',
+  },
+  sickle: {
+    kind: 'sickle',
+    label: 'sierp',
+    category: 'tool',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'village_onetime',
+    modelUrl: '/models/items/sickle.glb',
+    notes: '1–3 with pitchfork near gardens (plan 082). Pickup only — not holdable yet.',
+    roadmap:
+      'Holdable + melee like knife (damage TBD, ~10–12). NPC protest on village theft (issue 025).',
+  },
+}
+
+/** Decorative / not ItemKind — listed for agents scanning item-ish props. */
+export const NON_ITEM_PROPS = [
+  {
+    id: 'pickaxe',
+    modelUrl: '/models/items/pickaxe.glb',
+    notes: 'Decorative at stockpile (plan 082). Future mining tool — not ItemKind yet.',
+  },
+  {
+    id: 'hay',
+    modelUrl: '/models/settlement/hay.glb',
+    notes: 'Decorative bales near gardens.',
+  },
+  {
+    id: 'long_sword',
+    modelUrl: '/models/items/long_sword.glb',
+    notes: 'Parked CC-BY; future combat.',
+  },
+] as const
