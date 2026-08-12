@@ -77,6 +77,18 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
   },
 }
 
+/**
+ * Lit branch grip — Branch B is already Z-long (no Y→Z remap). Yaw +π vs
+ * wooden_torch so the tip points forward/out of the palm. Shared with
+ * `PlayerTorch` and the asset browser in-hand preview.
+ */
+export const BRANCH_HELD_ATTACH: HeldAttach = {
+  position: [-0.25, 0.085, -0.02],
+  rotation: [Math.PI / 2, Math.PI / 2, 0],
+  scale: 1,
+  gripLocalOffset: [0, 0, 0.1],
+}
+
 /** Longest-axis size while held (meters). Separate from ground-drop sizing. */
 export const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }>> = {
   axe: { url: '/models/items/axe.glb', maxSize: 0.55 },
@@ -181,12 +193,6 @@ export function mountHeldToolOnSocket(
   }
 
   const a = HELD_ATTACH[kind]
-  socket.updateWorldMatrix(true, false)
-  socket.getWorldScale(_socketWorldScale)
-  const sx = Math.max(_socketWorldScale.x, 1e-6)
-  const sy = Math.max(_socketWorldScale.y, 1e-6)
-  const sz = Math.max(_socketWorldScale.z, 1e-6)
-
   const grip = a.gripLocalOffset
   let mount: Object3D = tool
   if (grip) {
@@ -196,12 +202,31 @@ export function mountHeldToolOnSocket(
     mount = wrap
   }
 
-  mount.position.set(a.position[0] / sx, a.position[1] / sy, a.position[2] / sz)
-  mount.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2])
-  mount.scale.multiplyScalar(a.scale)
+  mountAttachOnSocket(mount, socket, a)
+  return mount
+}
+
+/** Parent `mount` under `socket` with meter-sized attach and armature scale compensation. */
+export function mountAttachOnSocket(
+  mount: Object3D,
+  socket: Object3D,
+  attach: HeldAttach,
+): void {
+  socket.updateWorldMatrix(true, false)
+  socket.getWorldScale(_socketWorldScale)
+  const sx = Math.max(_socketWorldScale.x, 1e-6)
+  const sy = Math.max(_socketWorldScale.y, 1e-6)
+  const sz = Math.max(_socketWorldScale.z, 1e-6)
+
+  mount.position.set(
+    attach.position[0] / sx,
+    attach.position[1] / sy,
+    attach.position[2] / sz,
+  )
+  mount.rotation.set(attach.rotation[0], attach.rotation[1], attach.rotation[2])
+  mount.scale.multiplyScalar(attach.scale)
   mount.scale.x /= sx
   mount.scale.y /= sy
   mount.scale.z /= sz
   socket.add(mount)
-  return mount
 }
