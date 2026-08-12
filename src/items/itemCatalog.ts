@@ -105,6 +105,17 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: '/models/items/knife.glb',
     notes: 'Starting loadout; held visual on Wrist.R; melee on animals.',
   },
+  // TODO: Add long_sword to the game, review all configs.
+  long_sword: {
+    kind: 'long_sword',
+    label: 'miecz',
+    category: 'tool',
+    holdable: true,
+    meleeDamage: 30,
+    spawn: 'village_onetime',
+    modelUrl: '/models/items/long_sword.glb',
+    notes: 'One-time near settlement tree; chop trees; melee; held GLB.',
+  },
   firestarter: {
     kind: 'firestarter',
     label: 'krzesiwo',

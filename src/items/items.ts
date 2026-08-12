@@ -9,6 +9,7 @@ export type ItemKind =
   | 'flower'
   | 'cone'
   | 'knife'
+  | 'long_sword'
   | 'firestarter'
   | 'blanket'
   | 'shovel'
@@ -39,6 +40,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   blanket: { label: 'koc', category: 'utility', weight: 1.5, color: 0x8a4b3a },
   shovel: { label: 'łopata', category: 'tool', weight: 2, color: 0x6b4a32 },
   axe: { label: 'siekiera', category: 'tool', weight: 2.5, color: 0x7a7e86 },
+  long_sword: { label: 'miecz', category: 'tool', weight: 2.5, color: 0x7a7e86 },
   pitchfork: { label: 'widły', category: 'tool', weight: 1.8, color: 0x6b5a3a },
   sickle: { label: 'sierp', category: 'tool', weight: 0.7, color: 0x8a9098 },
   wooden_torch: { label: 'pochodnia', category: 'tool', weight: 1.2, color: 0x7a5230 },
@@ -143,6 +145,18 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     handle.position.set(0, 0.05, -0.06)
     handle.castShadow = true
     group.add(handle)
+    return group
+  }
+  if (kind === 'long_sword') {
+    const group = new THREE.Group()
+    const blade = new THREE.Mesh(
+      new THREE.ConeGeometry(0.035, 0.22, 4),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.long_sword.color, flatShading: true, metalness: 0.4 }),
+    )
+    blade.rotation.x = Math.PI / 2
+    blade.position.set(0, 0.05, 0.11)
+    blade.castShadow = true
+    group.add(blade)
     return group
   }
   if (kind === 'firestarter') {

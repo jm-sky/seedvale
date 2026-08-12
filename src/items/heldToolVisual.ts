@@ -79,6 +79,13 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     scale: 1.1,
     gripLocalOffset: [0, 0, -0.2],
   },
+  // Verified in-hand after user manual adjustment (2026-08-12)
+  long_sword: {
+    position: [-0.3, 0.12, -0.02],
+    rotation: [0, 0, Math.PI / 2],
+    scale: 1,
+    gripLocalOffset: [0, -0.25, 0],
+  },
 }
 
 /**

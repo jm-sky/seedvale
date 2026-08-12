@@ -2,7 +2,12 @@ import type { Inventory } from './Inventory'
 import type { ItemKind } from './items'
 
 /** Tool kinds that can occupy the single "in hand" slot. */
-export type ToolKind = 'knife' | 'firestarter' | 'shovel' | 'axe' | 'wooden_torch'
+export type ToolKind = 'knife'
+| 'firestarter'
+| 'shovel'
+| 'axe'
+| 'wooden_torch'
+| 'long_sword'
 
 const HELD_TOOL_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
   'axe',
