@@ -428,8 +428,8 @@ plus licznik czasu klatki z rozbiciem na `simulate` / `render` (dwa `performance
 | 11 | `pixelRatio` jako suwak jakości + bloom half-res (**A3.2/3.3**) | perf | średni | niskie |
 | 12 | Budżetowanie chunków na klatkę (**A4b**) | perf | średni | brak |
 | 13 | `castShadow = false` dla terenu (**A2**) — osobno, z weryfikacją w przeglądarce | perf | mały | **średnie** |
-| 14 | **Trawa do workera** (**A4a**) — własny plan | perf | duży | brak |
-| 15 | **Instancing roślinności i propsów** (**A1**) — własny plan | architektura | duży | brak |
+| 14 | **Trawa do workera** (**A4a**) — [plan 086](../plans/2026-08-12--086--grass-generation-in-worker.md) | perf | duży | brak |
+| 15 | **Instancing roślinności i propsów** (**A1**) — [plan 087](../plans/2026-08-12--087--vegetation-and-prop-instancing.md) | architektura | duży | brak |
 | 16 | R2/R3: wspólny `AnimationSet`, wspólny `steerWithShoreSlide` | refactor | mały | brak |
 
 Pozycje 0–9 to jedna sesja i kandydaci na wpisy w [issues/README.md](../issues/README.md).

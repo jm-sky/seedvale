@@ -42,6 +42,8 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
+| [2026-08-12--087--vegetation-and-prop-instancing.md](./2026-08-12--087--vegetation-and-prop-instancing.md) | Instancing roślinności i propsów (review 005 / A1, poz. 15) | 0% | 🔴 high | XL | ~~007~~, ~~065~~, ~~073~~ |
+| [2026-08-12--086--grass-generation-in-worker.md](./2026-08-12--086--grass-generation-in-worker.md) | Generacja trawy w workerze (review 005 / A4a, poz. 14) — domyka fazę 5 planu ~~008~~ | 0% | 🟡 medium | L | ~~006~~, ~~008~~ |
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
 | [2026-08-11--060--npc-schedule-actions-and-trait-overlays.md](./2026-08-11--060--npc-schedule-actions-and-trait-overlays.md) | Wykonywalne aktywności grafiku NPC + nakładki traits | 0% | 🟡 medium | L | ~~020~~, ~~022~~ |
 
