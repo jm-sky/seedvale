@@ -2,7 +2,9 @@ import { Group, type Object3D, Vector3 } from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { ToolKind } from './HeldTool'
 import { findAnchorNode } from '../assets/anchorResolve'
+import { anchorsForAsset, heldToolHasGripAnchor } from '../assets/assetAnchorData'
 import { loadGltf, preparePropFitMax } from '../assets/loadGltf'
+import { mountByAnchorPair } from '../assets/mountByAnchorPair'
 import { createItemMesh } from './items'
 
 /** Quaternius Modular / Adventurer use `WristR` (no dot). Keep dotted/Mixamo
@@ -83,6 +85,20 @@ export const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }
   wooden_torch: { url: '/models/items/wooden_torch.glb', maxSize: 0.55 },
 }
 
+const HELD_ASSET_ID: Partial<Record<ToolKind, string>> = {
+  axe: 'held:axe',
+  knife: 'held:knife',
+  shovel: 'held:shovel',
+  wooden_torch: 'held:wooden_torch',
+}
+
+export type HeldMountContext = {
+  characterRoot: Object3D
+  /** Asset index id for character anchors (default `character:player`). */
+  characterAssetId?: string
+  characterHeight?: number
+}
+
 const heldTemplates = new Map<ToolKind, Group>()
 const _socketWorldScale = new Vector3()
 
@@ -141,7 +157,29 @@ export function mountHeldToolOnSocket(
   tool: Object3D,
   socket: Object3D,
   kind: ToolKind,
+  ctx?: HeldMountContext,
 ): Object3D {
+  const assetId = HELD_ASSET_ID[kind]
+  if (ctx?.characterRoot && assetId && heldToolHasGripAnchor(assetId)) {
+    const spec = HELD_GLB[kind]
+    const charId = ctx.characterAssetId ?? 'character:player'
+    const mounted = mountByAnchorPair({
+      characterRoot: ctx.characterRoot,
+      tool,
+      socket,
+      referenceAnchorName: 'hand.right',
+      targetAnchorName: 'grip',
+      characterAnchorDefs: anchorsForAsset(charId),
+      toolAnchorDefs: anchorsForAsset(assetId),
+      characterPrepare: ctx.characterHeight
+        ? { mode: 'height', value: ctx.characterHeight }
+        : undefined,
+      toolPrepare: spec ? { mode: 'fitMax', value: spec.maxSize } : undefined,
+      extraScale: HELD_ATTACH[kind].scale,
+    })
+    if (mounted) return mounted
+  }
+
   const a = HELD_ATTACH[kind]
   socket.updateWorldMatrix(true, false)
   socket.getWorldScale(_socketWorldScale)

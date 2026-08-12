@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, type Ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, type Ref, watch } from 'vue'
 import type { AssetViewer } from '../viewer/createViewer'
 import { buildAssetIndex, findAssetEntry } from '../../../assets/assetIndex'
 import { browserState, slotDiagnostics } from '../state'
@@ -8,6 +8,29 @@ import { captureSnapshot, copyText } from '../viewer/createSnapshot'
 
 const props = defineProps<{ viewerRef: Ref<AssetViewer | null> }>()
 const viewer = computed(() => props.viewerRef.value)
+
+const modelFiles = ref<string[]>([])
+
+async function fetchModelFiles(): Promise<void> {
+  try {
+    const res = await fetch('/__asset-browser/models')
+    if (!res.ok) return
+    const data = await res.json() as { files?: string[] }
+    modelFiles.value = data.files ?? []
+  } catch {
+    modelFiles.value = []
+  }
+}
+
+function onModelHmr(event: string, data?: { url?: string }) {
+  if (event !== 'asset-browser:model-changed' || !data?.url) return
+  browserState.statusMessage = `Model changed: ${data.url} — reload to pick up edits`
+  const refUrl = viewer.value?.reference.url
+  const tgtUrl = viewer.value?.target.url
+  const clean = (u: string | null) => u?.replace(/\?r=\d+$/, '') ?? null
+  if (clean(refUrl ?? null) === data.url) void viewer.value?.reloadReference()
+  if (clean(tgtUrl ?? null) === data.url) void viewer.value?.reloadTarget()
+}
 
 const assetIndex = buildAssetIndex()
 const grouped = computed(() => {
@@ -83,6 +106,12 @@ watch(() => browserState.freeUrl, () => { if (browserState.freeUrl.trim()) void 
 watch(browserState, () => viewer.value?.refresh(), { deep: true })
 
 onMounted(() => {
+  void fetchModelFiles()
+  if (import.meta.hot) {
+    import.meta.hot.on('asset-browser:model-changed', (data: { url?: string }) => {
+      onModelHmr('asset-browser:model-changed', data)
+    })
+  }
   const ro = new ResizeObserver(() => viewer.value?.resize())
   const el = document.getElementById('asset-browser-viewport')
   if (el) ro.observe(el)
@@ -204,7 +233,15 @@ function lampMountSnippet() {
           v-model="browserState.freeUrl"
           class="w-full rounded bg-slate-800 px-2 py-1"
           placeholder="/models/..."
+          list="asset-browser-model-list"
         >
+        <datalist id="asset-browser-model-list">
+          <option
+            v-for="url in modelFiles"
+            :key="url"
+            :value="url"
+          />
+        </datalist>
         <label class="mt-2 block text-xs text-slate-400">Anchor</label>
         <select
           v-model="browserState.targetAnchor"

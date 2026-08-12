@@ -265,7 +265,10 @@ export class PlayerController {
         disposeObject3D(tool)
         return
       }
-      this.heldToolObject = mountHeldToolOnSocket(tool, parent, kind)
+      this.heldToolObject = mountHeldToolOnSocket(tool, parent, kind, {
+        characterRoot: this.modelRoot,
+        characterHeight: PLAYER_HEIGHT,
+      })
     })
   }
 

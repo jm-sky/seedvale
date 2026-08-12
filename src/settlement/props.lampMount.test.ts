@@ -4,8 +4,8 @@ import { HOUSE_CATALOG } from './houseCatalog'
 import { resolveHouseLampMount } from './props'
 
 describe('resolveHouseLampMount', () => {
-  it('falls back to catalog when no anchor exists', () => {
-    const entry = HOUSE_CATALOG.find((e) => e.id === 'hut_d')!
+  it('falls back when no anchor metadata exists', () => {
+    const entry = HOUSE_CATALOG.find((e) => e.id === 'hut_c')!
     const hut = new Group()
     const mount = resolveHouseLampMount(entry, hut, entry.height)
     expect(mount.source).not.toBe('anchor')
@@ -16,5 +16,15 @@ describe('resolveHouseLampMount', () => {
     const hut = new Group()
     const mount = resolveHouseLampMount(entry, hut, entry.height)
     expect(mount.source).toBe('floorCenter')
+  })
+
+  it('prefers lamp_mount metadata for hut_d', () => {
+    const entry = HOUSE_CATALOG.find((e) => e.id === 'hut_d')!
+    const hut = new Group()
+    const mount = resolveHouseLampMount(entry, hut, entry.height)
+    expect(mount.source).toBe('anchor')
+    expect(mount.x).toBeCloseTo(0.07, 3)
+    expect(mount.y).toBeCloseTo(0.25, 3)
+    expect(mount.z).toBeCloseTo(0.17, 3)
   })
 })
