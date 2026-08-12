@@ -2,6 +2,13 @@
 
 Modele 3D użyte w projekcie. Preferujemy CC0; przy CC-BY wpisz wymagany kredyt.
 
+Wszystkie `.glb` w `public/models/` przepuszczone przez `gltfpack -cc` (meshopt
+compression; dekoder już podpięty w `assets/loadGltf.ts`) — 31 MB → ~9 MB, bez
+zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
+`docs/reviews/2026-08-12--005--performance-architecture-and-assets.md`, AS2).
+Ścieżki i nazwy plików bez zmian. Nieskompresowane oryginały: git tag
+`audio-glb-originals-2026-08-12`.
+
 | Asset (ścieżka) | Pack / autor | Źródło | Licencja | Plik źródłowy |
 |-----------------|--------------|--------|----------|---------------|
 | `public/models/settlement/hut_*.glb` | Ultimate Fantasy RTS / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatefantasyrts.html) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | `Houses_FirstAge_*_Level1` (+ `hut_d` = `Houses_SecondAge_1_Level1`, podpięte) |

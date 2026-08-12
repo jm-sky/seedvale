@@ -436,6 +436,47 @@ Pozycje 0–9 to jedna sesja i kandydaci na wpisy w [issues/README.md](../issues
 Pozycje **14** i **15** zasługują na własne plany w [plans/](../plans/README.md) — 15 jest zależne od 0
 (bez pomiaru nie ma jak potwierdzić hipotezy ani efektu).
 
+### Implementacja — pozycje 0–9 (2026-08-12)
+
+Zaimplementowane w jednej sesji, bez osobnego planu. `npx tsc --noEmit`, `npm run lint`,
+`npm run build`, `npm run test` (322/322) — czyste po każdej zmianie.
+
+- **0 (M1)** — `renderer.info` (draw calls/triangles/geometries/textures, `.listen()`)
+  + symulate/render split przez `performance.now()` w `gameLoop.tick()`, folder „Performance”
+  w `createDebugGui.ts`.
+- **1 (AS1)** — wszystkie 23 WAV → OGG Vorbis (mono one-shoty, stereo pętle ambientu, 48 kHz)
+  przez `ffmpeg`/`libvorbis`: 22 MB → ~1,1 MB (lepiej niż szacunek). Referencje URL w kodzie
+  i `public/sounds/README.md` zaktualizowane; `.m4a`/`.mp3` (już stratne) bez zmian.
+- **2 (AS2)** — wszystkie 87 GLB → `gltfpack -cc` w miejscu (te same ścieżki/nazwy): 31 MB → ~9,1 MB.
+  Zweryfikowane parserem `GLTFLoader`+`MeshoptDecoder` w Node dla modeli bez tekstur (54/87 — reszta
+  trafia na `self is not defined` w Node przy dekodowaniu obrazu WebP, potwierdzone jako ograniczenie
+  środowiska Node, nie regresja: ten sam błąd na oryginalnym `tree_c.glb` sprzed kompresji).
+- **Proces (poza review, ustalenia autora zlecenia):** oryginały WAV/GLB nie trzymane w drzewie —
+  odzyskiwalne z gita (tag `audio-glb-originals-2026-08-12` na commicie sprzed konwersji).
+  `docs/assets/CREDITS.md` / `public/sounds/README.md` zaktualizowane pod nowe rozszerzenia/proces.
+- **3 (AS1 lazy loop)** — pętla nocna tworzona dopiero gdy `dayFactor < 0.95`, przybrzeżna gdy
+  `ambientWeightsAt().ocean > 0`; leśna zostaje eager (`createAmbientAudio.ts`).
+- **4 (A3.1)** — `filmGradeShader.ts` usunięty; grade+dither scalony w `OutputPass`'a własny fragment
+  shader (`render/gradedOutputPass.ts`, `#include`-i skopiowane z `OutputShader` bez zmian) — jeden
+  pass mniej, ten sam wynik.
+- **5 (A2, bez terenu)** — próg `SMALL_MESH_SHADOW_THRESHOLD` (0.5 m bbox diagonal) w `loadGltf.ts`
+  dla GLB; `createReed`/`createRockCluster` (`props.ts`) bez `castShadow` jawnie. Teren nietknięty
+  (pozycja 13, osobno).
+- **6 (P4')** — `buildInteractables` filtruje NPC/zwierzęta/ognie/domy/studnie/spawnery po `GAZE_RANGE`
+  przed alokacją opisu (`interactables.ts`); drzewa/itemy już były filtrowane przez `chunkManager`.
+- **7 (P5')** — `getLoaded()` i `skyParamsFromTime()` liczone raz na klatkę (`gameLoop.ts`); drugie też
+  scalone z `resyncDayNight` (`applyDayNight` teraz zwraca `p` zamiast go gubić).
+- **8 (P3')** — opacity kwantyzowane (`Math.round(x*32)/32`) przed guardem w `NpcAgent`/`AnimalAgent`;
+  HP/stamina/satiety/hydration porównywane na już-zaokrąglonym procencie. Signposty
+  (`SettlementsManager.ts`) dostały ten sam guard (wcześniej pisały bezwarunkowo co klatkę).
+- **9 (A4c/P6')** — `ridge` w `grass.ts` (obie pętle) sampled po teście `roadFade`, nie przed.
+  `QuestManager` dostał flagę `dirty`/`clearDirty()`; `gameLoop.ts` przelicza markery questowe tylko
+  gdy `isDirty()`.
+
+**Nie zweryfikowane wizualnie w przeglądarce** (CLAUDE.md: TS/lint/build nie potwierdzają wizualnej
+poprawności) — pozycje 4 i 5 zmieniają renderowany wygląd (post-processing chain, cienie drobnych
+propsów) i wymagają ręcznej kontroli na żywym dev serverze.
+
 ## Co jest zrobione dobrze (żeby nie zepsuć)
 
 - **Poprzednie review zostało realnie wdrożone**, nie odhaczone. Naprawy mają komentarze wyjaśniające
