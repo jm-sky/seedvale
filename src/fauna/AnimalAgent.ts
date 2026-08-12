@@ -69,16 +69,21 @@ const FIRE_AVOID_RADIUS = 11
  *  away-from-threat direction — shared by fleeing a predator, the player, or
  *  a campfire (`fleeFrom()`). */
 const FLEE_DISTANCE = 8
-/** Radius (world units) around a village center that's off-limits to `wild`
- *  animals for both wandering and predator hunting — plan 044 §2.3/§2.4:
- *  wild animals avoid settled ground, predators don't treat the village as
- *  hunting grounds. No hard wall — just excluded from candidate wander
- *  targets and from `updatePredator`'s prey search. */
-const VILLAGE_AVOID_RADIUS = 20
-/** Radius (world units) over which the flee-direction village bias (`fleeFrom`)
- *  ramps in — beyond this, fleeing wild/domestic animals behave the same
- *  (the village is too far away to matter to which way they run). */
-const VILLAGE_FLEE_INFLUENCE_RADIUS = 45
+/** Clearance (world units) *past* a village's real footprint (`VillageInfo.radius`,
+ *  see `settlement/families.ts`'s `VILLAGE_SIZE_CONFIG.footprintRadius`) that's
+ *  off-limits to `wild` animals for both wandering and predator hunting — plan
+ *  044 §2.3/§2.4: wild animals avoid settled ground, predators don't treat the
+ *  village as hunting grounds. No hard wall — just excluded from candidate
+ *  wander targets and from `updatePredator`'s prey search. Scaled per-village
+ *  (plan 080) instead of a flat radius, since `VillageSize` footprints range
+ *  from 22 (`OUTPOST`) to 72 (`XL`) world units. */
+const VILLAGE_AVOID_MARGIN = 6
+/** Clearance (world units) *past* a village's real footprint over which the
+ *  flee-direction village bias (`fleeFrom`) ramps in — beyond
+ *  `radius + this`, fleeing wild/domestic animals behave the same (the
+ *  village is too far away to matter to which way they run). Scaled
+ *  per-village (plan 080), same reasoning as `VILLAGE_AVOID_MARGIN`. */
+const VILLAGE_FLEE_INFLUENCE_MARGIN = 25
 /** How strongly the flee direction leans away from (wild) or toward
  *  (domestic) the nearest village, relative to the primary away-from-threat
  *  vector (magnitude 1) — big enough to visibly redirect a flee, per plan
@@ -110,6 +115,39 @@ type EnvironmentSense = {
   playerDistance: number
   fireNearby: boolean
   nearestFire: { x: number, z: number } | null
+}
+
+/** A loaded settlement's center + real footprint radius (plan 080) —
+ *  `VILLAGE_SIZE_CONFIG.footprintRadius` for that settlement's `VillageSize`,
+ *  see `settlement/families.ts`. Replaces the old flat-distance village
+ *  avoidance so `MD`/`LG`/`XL` villages (footprint 48–72) get avoided
+ *  correctly instead of only the smallest sizes. */
+export type VillageInfo = { x: number, z: number, radius: number }
+
+/** True if `pos` is within `village.radius + margin` of `village`'s center —
+ *  pure so it's unit-testable without instantiating `AnimalAgent`/Three.js.
+ *  Shared by `isNearVillage` (`VILLAGE_AVOID_MARGIN`) and could be reused by
+ *  any other "is this near settled ground" check. */
+export function isWithinVillageRadius(
+  pos: { x: number, z: number },
+  village: VillageInfo,
+  margin: number,
+): boolean {
+  return Math.hypot(pos.x - village.x, pos.z - village.z) < village.radius + margin
+}
+
+/** Linear falloff from `1` at the village center to `0` at
+ *  `village.radius + margin` — the flee-direction village bias's ramp
+ *  (`fleeFrom`). Pure so it's unit-testable without instantiating
+ *  `AnimalAgent`/Three.js. */
+export function villageFleeBiasFalloff(
+  distanceFromCenter: number,
+  village: VillageInfo,
+  margin: number,
+): number {
+  const influenceRadius = village.radius + margin
+  if (influenceRadius <= 0) return 0
+  return Math.max(0, 1 - distanceFromCenter / influenceRadius)
 }
 
 export type AnimalRole = 'predator' | 'prey' | 'livestock'
@@ -378,7 +416,7 @@ export class AnimalAgent {
   /** This frame's loaded-settlement centers, refreshed at the top of every
    *  `update()` call — read by `fleeFrom`/`wander`/`updatePredator` without
    *  threading it through every method signature (plan 044 §2.3/§2.4). */
-  private currentVillages: readonly { x: number, z: number }[] = []
+  private currentVillages: readonly VillageInfo[] = []
   /** Shared planned-action seam (plan 055) — movement bodies stay local. */
   private actionLifecycle: ActionLifecycle = createActionLifecycle()
   private pendingAction: PlannedAction<FaunaActionKind> | null = null
@@ -556,7 +594,7 @@ export class AnimalAgent {
     dayFactor: number,
     forestFactor: number,
     litFires: readonly { x: number, z: number }[],
-    villages: readonly { x: number, z: number }[] = [],
+    villages: readonly VillageInfo[] = [],
     nearbyHumanCount = 1,
     /** Optional fauna→human damage seam (plan 056). Absent → chase only. */
     onHumanHit?: (damage: number) => void,
@@ -796,8 +834,8 @@ export class AnimalAgent {
   /** Nearest loaded settlement center to this animal, or `null` if none are
    *  loaded/close enough to matter — shared by `fleeFrom`'s village bias and
    *  `wander`/`updatePredator`'s village-avoidance. */
-  private nearestVillage(): { x: number, z: number } | null {
-    let best: { x: number, z: number } | null = null
+  private nearestVillage(): VillageInfo | null {
+    let best: VillageInfo | null = null
     let bestD = Infinity
     for (const v of this.currentVillages) {
       const d = Math.hypot(v.x - this.mesh.position.x, v.z - this.mesh.position.z)
@@ -826,7 +864,7 @@ export class AnimalAgent {
       const vx = this.mesh.position.x - village.x
       const vz = this.mesh.position.z - village.z
       const vDist = Math.hypot(vx, vz)
-      const falloff = Math.max(0, 1 - vDist / VILLAGE_FLEE_INFLUENCE_RADIUS)
+      const falloff = villageFleeBiasFalloff(vDist, village, VILLAGE_FLEE_INFLUENCE_MARGIN)
       if (vDist > 1e-4 && falloff > 0) {
         const sign = this.def.sociability === 'domestic' ? -1 : 1
         const weight = falloff * VILLAGE_FLEE_BIAS_WEIGHT * sign
@@ -861,13 +899,14 @@ export class AnimalAgent {
     return this.def.sprintSpeed
   }
 
-  /** True if `pos` is within `VILLAGE_AVOID_RADIUS` of any loaded settlement —
-   *  used to make wild predators give up a chase that runs into the village
-   *  (plan 044 §2.4's "lis niechętnie wchodzi do bezpiecznego obszaru i może
-   *  przerwać pościg") and to keep wild wander targets off settled ground. */
+  /** True if `pos` is within that settlement's real footprint + `VILLAGE_AVOID_MARGIN`
+   *  of any loaded settlement — used to make wild predators give up a chase
+   *  that runs into the village (plan 044 §2.4's "lis niechętnie wchodzi do
+   *  bezpiecznego obszaru i może przerwać pościg") and to keep wild wander
+   *  targets off settled ground. */
   private isNearVillage(pos: { x: number, z: number }): boolean {
     for (const v of this.currentVillages) {
-      if (Math.hypot(pos.x - v.x, pos.z - v.z) < VILLAGE_AVOID_RADIUS) return true
+      if (isWithinVillageRadius(pos, v, VILLAGE_AVOID_MARGIN)) return true
     }
     return false
   }

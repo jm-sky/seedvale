@@ -1,6 +1,11 @@
 # 024 — Wild fauna enters the village; spawn points too close together
 
-**Status:** `todo`
+**Status:** `verification needed`
+
+## Fix (2026-08-12)
+
+See plan [080](../plans/2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md)
+— implemented, technical checks pass, browser verification pending.
 
 ## Problem
 

@@ -41,6 +41,7 @@ import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { villageSizeConfig } from '../settlement/families'
 import { damageHealth } from '../shared/HealthState'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
@@ -534,7 +535,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       if (playerTorch.isLit()) {
         litFires.push({ x: player.mesh.position.x, z: player.mesh.position.z })
       }
-      const villages = bundle.settlementsManager.getLoaded().map((s) => ({ x: s.center.x, z: s.center.z }))
+      const villages = bundle.settlementsManager.getLoaded().map((s) => ({
+        x: s.center.x,
+        z: s.center.z,
+        radius: villageSizeConfig(s.size).footprintRadius,
+      }))
       const nearbyHumanCount = countNearbyHumans(
         player.mesh.position.x,
         player.mesh.position.z,

@@ -44,8 +44,6 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 |------|---------|----------|----------|--------|------------|
 | [2026-08-08--040--seasons-weather.md](./2026-08-08--040--seasons-weather.md) | Pory roku i pogoda wpływające na świat | 0% | 🟡 medium | XL | ~~003~~, ~~028~~ |
 | [2026-08-11--060--npc-schedule-actions-and-trait-overlays.md](./2026-08-11--060--npc-schedule-actions-and-trait-overlays.md) | Wykonywalne aktywności grafiku NPC + nakładki traits | 0% | 🟡 medium | L | ~~020~~, ~~022~~ |
-| [2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md](./2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md) | Dzika fauna unika realnego footprintu osady (skalowanego z `VillageSize`) + minimalny rozstaw spawn-pointów | 0% | 🟡 medium | M | ~~047~~, ~~076~~, ~~077~~ |
-| [2026-08-12--083--cave-mouth-terrain-depression.md](./2026-08-12--083--cave-mouth-terrain-depression.md) | Jaskinia: realna dziura w terenie (reuse `modifyTerrain`) zamiast płaskiego czarnego walca, sianie pod kątem na zboczu | 0% | ⚪ low | S | ~~052~~, ~~064~~ |
 
 ---
 
@@ -64,6 +62,8 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
+| [2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md](./2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md) | Dzika fauna unika realnego footprintu osady (skalowanego z `VillageSize`) + minimalny rozstaw spawn-pointów | 100% | 🟡 medium | M | ~~047~~, ~~076~~, ~~077~~ |
+| [2026-08-12--083--cave-mouth-terrain-depression.md](./2026-08-12--083--cave-mouth-terrain-depression.md) | Jaskinia: realna dziura w terenie (reuse `modifyTerrain`) zamiast płaskiego czarnego walca, sianie pod kątem na zboczu | 100% | ⚪ low | S | ~~052~~, ~~064~~ |
 | [2026-08-12--082--village-tool-props-and-temp-assets.md](./2026-08-12--082--village-tool-props-and-temp-assets.md) | Widły/sierp pickup w wiosce; siano/kilof clutter; park pozostałych `_temp` | 100% | 🟡 medium | M | ~~061~~ |
 | [2026-08-12--079--interaction-queue-well-drink.md](./2026-08-12--079--interaction-queue-well-drink.md) | Generyczna InteractionQueue; pierwszy klient = drink przy studni | 100% | 🟡 medium | M | ~~020~~ |
 | [2026-08-12--078--distance-oneshot-falloff.md](./2026-08-12--078--distance-oneshot-falloff.md) | `playAt`: dalej = ciszej dla one-shotów światowych | 100% | 🟡 medium | S | ~~014~~, ~~016~~ |

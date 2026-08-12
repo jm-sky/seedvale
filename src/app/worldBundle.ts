@@ -5,11 +5,12 @@ import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { ResourceEnv } from '../terrain/naturalResources'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TreeLifecycle } from '../world/treeLifecycle'
-import { createFauna, type Fauna } from '../fauna/createFauna'
+import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
 import { preloadHeldToolModels } from '../items/heldToolVisual'
 import { preloadItemGlbModels } from '../items/itemModels'
+import { villageSizeConfig } from '../settlement/families'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
@@ -146,12 +147,16 @@ function buildFauna(
   seed: number,
   coastThreshold: number,
 ): Promise<Fauna> {
-  // Spawner ring is 45–65 m from home; querySize 150 → half 75 covers the ring
-  // plus road halfWidth margin for corridor rejection in createFauna.
+  const footprintRadius = villageSizeConfig(settlement.size).footprintRadius
+  // Spawner ring now reaches `footprintRadius + SPAWNER_RING_OFFSET[1]` (plan
+  // 080 — was a flat 45–65 m from home); size the query so its half-extent
+  // covers that reach plus a road halfWidth clearance margin, same 10 m
+  // margin the original fixed 150 (→ half 75, ring max 65) already implied.
+  const spawnerMaxReach = footprintRadius + SPAWNER_RING_OFFSET[1]
   const roadSegments = chunkManager.roadCorridorsNear(
     settlement.center.x,
     settlement.center.z,
-    150,
+    (spawnerMaxReach + 10) * 2,
   )
   return createFauna(
     scene,
@@ -161,10 +166,15 @@ function buildFauna(
     HOME_RADIUS,
     settlement.center,
     seed,
+    footprintRadius,
     roadSegments,
     {
       sampleContinentalness: chunkManager.sampleContinentalness,
       coastThreshold,
+    },
+    {
+      modifyTerrain: chunkManager.modifyTerrain,
+      sampleMountainRidge: chunkManager.sampleMountainRidge,
     },
   )
 }

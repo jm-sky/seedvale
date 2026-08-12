@@ -1,6 +1,11 @@
 # 026 — Cave mouth prop reads as a flat black disc, not a hole
 
-**Status:** `todo`
+**Status:** `verification needed`
+
+## Fix (2026-08-12)
+
+See plan [083](../plans/2026-08-12--083--cave-mouth-terrain-depression.md) —
+implemented, technical checks pass, browser verification pending.
 
 ## Problem
 

@@ -845,19 +845,21 @@ export function createBush(scale = 1): THREE.Group {
   return bush
 }
 
-/** Tight cluster of three small trees — visual for the prey `thicket`
+/** Tight cluster of five small trees — visual for the prey `thicket`
  *  spawner (`createFauna.ts`). Origin at feet; footprint ~2.5 m at scale 1.
  *  `variant` (0..1) jitters tree scales/offsets so two thickets don't look
  *  identical. Reuses `createTree` so foliage wind matches other procedural
  *  crowns. */
 export function createThicket(scale = 1, variant = 0.5): THREE.Group {
   const group = new THREE.Group()
-  // Equilateral-ish triangle around the origin — reads as a small grove,
-  // not a single landmark tree.
+  // Five trees packed close around the origin (~72° apart) — reads as a
+  // dense little grove, not a few scattered trees.
   const placements: Array<{ angle: number, radius: number, size: number }> = [
-    { angle: 0.15 + variant * 0.4, radius: 0.85, size: 0.72 },
-    { angle: 2.25 + variant * 0.35, radius: 0.95, size: 0.58 },
-    { angle: 4.05 + variant * 0.3, radius: 0.8, size: 0.65 },
+    { angle: 0.15 + variant * 0.4, radius: 0.7, size: 0.68 },
+    { angle: 1.4 + variant * 0.3, radius: 0.55, size: 0.5 },
+    { angle: 2.65 + variant * 0.35, radius: 0.75, size: 0.6 },
+    { angle: 3.9 + variant * 0.25, radius: 0.5, size: 0.48 },
+    { angle: 5.15 + variant * 0.3, radius: 0.65, size: 0.58 },
   ]
   for (let i = 0; i < placements.length; i++) {
     const p = placements[i]!
@@ -1112,10 +1114,13 @@ export function createSmallRuins(scale = 1, variant = 0.5): THREE.Group {
   return group
 }
 
-/** Horseshoe of rocks with a dark recessed mouth — visual for the prey
- *  `cave` spawner (`createFauna.ts`). Origin at feet; footprint ~2–3 m at
- *  scale 1. `variant` (0..1) jitters rock sizes/angles so two caves don't
- *  look identical. Open side faces +Z (caller may rotate). */
+/** Horseshoe of rocks framing a real terrain depression — visual for the prey
+ *  `cave` spawner (`createFauna.ts`, plan 083). Origin at feet; footprint
+ *  ~2–3 m at scale 1. `variant` (0..1) jitters rock sizes/angles so two caves
+ *  don't look identical. Open side faces +Z (caller may rotate) — the caller
+ *  carves the actual pit into the terrain (`ChunkManager.modifyTerrain`)
+ *  centered on this same origin; this prop only supplies the rock framing
+ *  and a small dark accent, not the hole itself. */
 export function createCaveMouth(scale = 1, variant = 0.5): THREE.Group {
   const group = new THREE.Group()
   const rockMat = new THREE.MeshStandardMaterial({
@@ -1152,22 +1157,27 @@ export function createCaveMouth(scale = 1, variant = 0.5): THREE.Group {
     group.add(rock)
   }
 
-  // Dark mouth recess toward the open side — reads as an entrance, not a pile.
-  const mouth = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.55 * scale, 0.7 * scale, 1.1 * scale, 8, 1, true),
+  // The opening itself is a real depression carved into the terrain by the
+  // caller (`ChunkManager.modifyTerrain`, see `fauna/createFauna.ts`, plan
+  // 083) — this prop no longer fakes it with a flat standing disc. A small
+  // dark pool low at the back (away from the +Z open side, where the rock
+  // ring is densest) hints the ground goes dark/deeper without reading as a
+  // floating cap over the opening.
+  const shadowPool = new THREE.Mesh(
+    new THREE.CircleGeometry(0.5 * scale, 8),
     mouthMat,
   )
-  mouth.rotation.x = Math.PI / 2
-  mouth.position.set(0, 0.55 * scale, 0.15 * scale)
-  mouth.receiveShadow = true
-  group.add(mouth)
+  shadowPool.rotation.x = -Math.PI / 2
+  shadowPool.position.set(0, -0.35 * scale, -0.35 * scale)
+  group.add(shadowPool)
 
-  // Small floor lip so the opening sits on ground rather than floating.
+  // Low threshold stone at the pit's open (+Z) lip, marking where natural
+  // ground gives way to the carved depression.
   const sill = new THREE.Mesh(
     new THREE.BoxGeometry(1.4 * scale, 0.12 * scale, 0.5 * scale),
     rockMat,
   )
-  sill.position.set(0, 0.06 * scale, 0.55 * scale)
+  sill.position.set(0, 0.02 * scale, 0.65 * scale)
   sill.receiveShadow = true
   group.add(sill)
 

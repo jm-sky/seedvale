@@ -1,8 +1,27 @@
 # Wild Fauna: Village Avoidance & Spawn Spacing
 
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** 🟡 `medium`
 **Effort:** `M`
+
+> **Note (2026-08-12):** Implemented — shared `VillageInfo` type
+> (`AnimalAgent.ts`) threaded through `gameLoop.ts` → `SettlementsManager` →
+> `Settlement.update` → livestock, and `Fauna.update` → `AnimalAgent.update`;
+> `radius` populated from `villageSizeConfig(size).footprintRadius`.
+> `VILLAGE_AVOID_MARGIN`/`VILLAGE_FLEE_INFLUENCE_MARGIN` replace the old flat
+> radii; both extracted as pure `isWithinVillageRadius`/`villageFleeBiasFalloff`
+> helpers with unit tests (`villageAvoidance.test.ts`). `createFauna.ts`'s
+> `SPAWN_RING_OFFSET`/`SPAWNER_RING_OFFSET` anchor spawn rings to
+> `footprintRadius` instead of a flat guess; `MIN_SPAWN_SEPARATION` +
+> `placedSpawnPoints` keep ring spawns and cave/thicket spawners apart.
+> Also fixed a real bug found while implementing: `findWalkableNear`'s safety
+> clamp compared `Math.abs(x)`/`Math.abs(z)` (world-origin-absolute) instead
+> of `Math.abs(x - cx)`/`Math.abs(z - cz)` (settlement-relative, matching its
+> own doc comment), and was widened to `Math.max(homeRadius - 4, maxDist)` so
+> it can never be tighter than the ring it's asked to fill — otherwise `LG`/
+> `XL` footprint-anchored rings would routinely fail to find a valid spawn
+> point. `npx tsc --noEmit` / `npm run lint` / `npm run build` / `npm run test`
+> all pass. Browser verification still required (see Acceptance criteria).
 
 ## Goal
 

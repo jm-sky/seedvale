@@ -1,6 +1,7 @@
 import { type Object3D, type Scene, Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HomeVillageSize } from '../config/worldConfig'
+import type { VillageInfo } from '../fauna/AnimalAgent'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
@@ -77,7 +78,7 @@ export type SettlementsManager = {
     timeOfDay: number,
     dayFactor: number,
     litFires: readonly { x: number, z: number }[],
-    villages: readonly { x: number, z: number }[],
+    villages: readonly VillageInfo[],
   ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the

@@ -1,8 +1,32 @@
 # Cave Mouth: Real Terrain Depression
 
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** ⚪ `low`
 **Effort:** `S`
+
+> **Note (2026-08-12):** Implemented. `createFauna.ts` gained an optional
+> `terrainCarving` param (`modifyTerrain` + `sampleMountainRidge`, threaded
+> from `worldBundle.ts`'s `buildFauna`); the cave spawner site search now
+> tries a slope-preferring pass first (`measureSlope`, 8-direction sample,
+> pure/unit-tested in `measureSlope.test.ts`), falling back to any valid flat
+> site. `modifyTerrain` carves a `CAVE_DEPRESSION_RADIUS`/`CAVE_DEPRESSION_DEPTH`
+> pit (skipped on bare mountain rock via `CAVE_ROCK_MOUNTAIN_RIDGE_THRESHOLD`),
+> and `createCaveMouth` (`props.ts`) no longer has the flat `mouthMat`
+> cylinder — replaced with a small dark accent pool at the pit's back plus a
+> low threshold stone at the open lip. The rock ring is oriented toward the
+> measured downhill direction when one was found, otherwise the old
+> "away from the settlement" fallback.
+>
+> Also fixed while implementing: `worldBundle.ts`'s `buildFauna` sized its
+> `roadCorridorsNear` query for the old flat 45–65 m spawner ring; since plan
+> 080 made that ring `footprintRadius`-anchored (up to 117 m for `XL`), the
+> query half-extent is now computed from the real reach
+> (`footprintRadius + SPAWNER_RING_OFFSET[1] + margin`) instead of a fixed
+> 150, so road-avoidance doesn't silently under-reach for larger villages.
+>
+> `npx tsc --noEmit` / `npm run lint` / `npm run build` / `npm run test` all
+> pass. Browser verification still required — this is a visual Three.js
+> change and technical checks don't confirm how it actually looks.
 
 ## Goal
 

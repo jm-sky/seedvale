@@ -14,7 +14,7 @@ import { isCoastalPlacement } from '../terrain/coastPlacement'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
-import { ANIMAL_DEFS, AnimalAgent, type AnimalKind } from './AnimalAgent'
+import { ANIMAL_DEFS, AnimalAgent, type AnimalKind, type VillageInfo } from './AnimalAgent'
 import { type PreySpawner, updateSpawners } from './AnimalSpawner'
 import { createBoarModel, createDuckModel, createRabbitModel } from './proceduralAnimals'
 
@@ -34,12 +34,13 @@ export type Fauna = {
     observerPos: Vector3,
     timeOfDay: number,
     litFires: readonly { x: number, z: number }[],
-    /** Loaded settlement centers (`SettlementsManager.getLoaded()`) — wild
-     *  animals react to proximity to any of these, see `AnimalAgent.ts`'s
-     *  village-avoidance/flee-bias (plan 044 §2.3/§2.4). Owned livestock
-     *  (horse/cow/sheep/chicken) isn't spawned here at all — see
-     *  `settlement/livestock.ts`, spawned per-settlement instead. */
-    villages: readonly { x: number, z: number }[],
+    /** Loaded settlements' centers + real footprint radii
+     *  (`SettlementsManager.getLoaded()`, plan 080) — wild animals react to
+     *  proximity to any of these, see `AnimalAgent.ts`'s village-avoidance/
+     *  flee-bias (plan 044 §2.3/§2.4). Owned livestock (horse/cow/sheep/
+     *  chicken) isn't spawned here at all — see `settlement/livestock.ts`,
+     *  spawned per-settlement instead. */
+    villages: readonly VillageInfo[],
     /** Player + nearby NPCs for predator crowd fear (plan 056). Default 1. */
     nearbyHumanCount?: number,
     /** Fauna→player damage callback when a predator bites in contact range. */
@@ -74,15 +75,84 @@ const SPAWNS: SpawnSpec[] = [
   { kind: 'boar', count: 2, profile: 'forest' },
 ]
 
-/** [minDist, maxDist] from the settlement center for each `SpawnProfile` —
- *  starts a bit past `AnimalAgent.ts`'s `VILLAGE_AVOID_RADIUS` (20) so a
- *  freshly-spawned wild animal's own home point isn't already inside the
- *  zone its wander logic then refuses to path back into. */
-const SPAWN_RING: Record<SpawnProfile, [number, number]> = {
-  open: [24, 42],
-  meadow: [24, 42],
-  forest: [24, 45],
-  water: [22, 42],
+/** [minOffset, maxOffset] *past* the settlement's real footprint radius
+ *  (`footprintRadius` — `VILLAGE_SIZE_CONFIG.footprintRadius`, see
+ *  `settlement/families.ts`) for each `SpawnProfile` (plan 080) — starts a
+ *  bit past `AnimalAgent.ts`'s `VILLAGE_AVOID_MARGIN` so a freshly-spawned
+ *  wild animal's own home point isn't already inside the zone its wander
+ *  logic then refuses to path back into. Offset widths match the original
+ *  flat-radius bands (18/18/21/20); only the anchor changed from a fixed
+ *  guess (~20) to the settlement's real boundary, which ranges 22 (`OUTPOST`)
+ *  to 72 (`XL`). */
+const SPAWN_RING_OFFSET: Record<SpawnProfile, [number, number]> = {
+  open: [6, 24],
+  meadow: [6, 24],
+  forest: [6, 27],
+  water: [4, 24],
+}
+
+/** [minOffset, maxOffset] past the settlement's real footprint radius for
+ *  cave/thicket prey spawners (plan 080) — same reasoning as
+ *  `SPAWN_RING_OFFSET`, widths matching the original flat 45–65 band.
+ *  Exported so `worldBundle.ts`'s `buildFauna` can size its
+ *  `roadCorridorsNear` query to actually cover the (now size-dependent)
+ *  spawner ring instead of a fixed guess. */
+export const SPAWNER_RING_OFFSET: [number, number] = [25, 45]
+
+/** Minimum distance (world units) between any two wild-fauna spawn points
+ *  placed while building one settlement's fauna — ring spawns and cave/
+ *  thicket spawners share one running list so e.g. a cave spawner can't land
+ *  next to a thicket spawner, or one species' initial spawn next to
+ *  another's (plan 080). Not applied to `updateSpawners`'s runtime
+ *  respawn-near-spawner call — that's intentionally close to its own
+ *  spawner, not a new independent spawn point. */
+const MIN_SPAWN_SEPARATION = 10
+
+/** Cave depression carve (plan 083) — a real terrain pit under the rock
+ *  ring, replacing the old flat dark prop disc. Sized for a walk-in opening,
+ *  not shovel-dig scale (`terrain/dig.ts`'s `DIG_RADIUS`/`DIG_DEPTH_SOIL` are
+ *  far too small to read as a cave mouth). */
+const CAVE_DEPRESSION_RADIUS = 2.6
+const CAVE_DEPRESSION_DEPTH = 1.8
+/** Skip carving into terrain that already reads as bare mountain rock — same
+ *  threshold `terrain/dig.ts`'s `getDigProfileAt` rejects digging into,
+ *  duplicated locally since it's fauna-placement-specific and `dig.ts`
+ *  doesn't export it. */
+const CAVE_ROCK_MOUNTAIN_RIDGE_THRESHOLD = 0.3
+/** Radius (world units) `measureSlope` samples around a cave candidate. */
+const CAVE_SLOPE_SAMPLE_RADIUS = 3
+/** Minimum height drop across `CAVE_SLOPE_SAMPLE_RADIUS` for a site to count
+ *  as "sloped" — below this, the cave falls back to flat-ground placement/
+ *  orientation (facing away from the settlement, the pre-083 behavior). */
+const CAVE_MIN_SLOPE_DROP = 0.6
+
+/** Steepest-descent direction + height drop across `radius` around (cx, cz)
+ *  — 8-direction sample, same shape as `settlement/villagePlanner.ts`'s
+ *  `downhillAngle`. `yaw` is Three.js Y-rotation convention (`atan2(dx, dz)`,
+ *  matching how `createCaveMouth`'s `mouth.rotation.y` is already set
+ *  elsewhere in this file) so an object can be oriented to open toward the
+ *  downhill side; `drop` is ~0 on flat ground. Pure — no Three.js dependency
+ *  — exported for unit testing. */
+export function measureSlope(
+  cx: number,
+  cz: number,
+  radius: number,
+  sampleHeight: HeightSampler,
+): { yaw: number, drop: number } {
+  const centerH = sampleHeight(cx, cz)
+  let bestDrop = 0
+  let bestYaw = 0
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2
+    const dx = Math.cos(angle) * radius
+    const dz = Math.sin(angle) * radius
+    const drop = centerH - sampleHeight(cx + dx, cz + dz)
+    if (drop > bestDrop) {
+      bestDrop = drop
+      bestYaw = Math.atan2(dx, dz)
+    }
+  }
+  return { yaw: bestYaw, drop: bestDrop }
 }
 
 /** Hardcoded prey spawners (cave / thicket) — see docs/plans/2026-08-07--predator-prey-system.md. */
@@ -158,6 +228,13 @@ function disposeAgent(agent: AnimalAgent): void {
  * Place animals in a ring around the settlement (forest belt).
  * Prefers GLB from `public/models/fauna/` keyed by `userData.animalKind`.
  * `roadSegments` — corridors near home used to keep prey spawners off roads.
+ * `footprintRadius` — this settlement's real boundary radius
+ * (`VILLAGE_SIZE_CONFIG.footprintRadius`, plan 080) — spawn rings anchor past
+ * it instead of a fixed guess, see `SPAWN_RING_OFFSET`/`SPAWNER_RING_OFFSET`.
+ * `terrainCarving` — lets the cave spawner cut a real depression into the
+ * terrain (plan 083) instead of relying on a flat prop; optional so callers
+ * without terrain-modification access (e.g. future tests) still work, just
+ * without the carved pit.
  */
 export async function createFauna(
   scene: Scene,
@@ -167,10 +244,15 @@ export async function createFauna(
   homeRadius: number,
   settlementCenter: Vector3,
   seed: number,
+  footprintRadius: number,
   roadSegments: readonly RoadCorridorSegment[] = [],
   coast?: {
     sampleContinentalness: (x: number, z: number) => number
     coastThreshold: number
+  },
+  terrainCarving?: {
+    modifyTerrain: (x: number, z: number, radius: number, depth: number) => boolean
+    sampleMountainRidge: (x: number, z: number) => number
   },
 ): Promise<Fauna> {
   const random = createSeededRandom(seed ^ 0xfa11)
@@ -188,8 +270,13 @@ export async function createFauna(
   }
 
   /** Random point within [minDist, maxDist] of (cx, cz), clear of water and
-   *  homeRadius bounds — `filter` adds a habitat preference (meadow/forest/
-   *  shoreline) on top, see `SPAWN_RING`/`SPAWNS`. */
+   *  a safety bound around (cx, cz) — `filter` adds a habitat preference
+   *  (meadow/forest/shoreline) on top, see `SPAWN_RING_OFFSET`/`SPAWNS`. The
+   *  safety bound is `homeRadius` by default but never tighter than the
+   *  caller's own `maxDist` (plan 080 — `footprintRadius`-anchored rings for
+   *  `LG`/`XL` villages can legitimately exceed the historical `homeRadius`
+   *  guess, and a bound narrower than the requested ring would make
+   *  placement impossible by construction). */
   const findWalkableNear = (
     cx: number,
     cz: number,
@@ -198,18 +285,26 @@ export async function createFauna(
     filter?: (x: number, z: number) => boolean,
     maxAttempts = 24,
   ): { x: number, z: number } | null => {
+    const clampRadius = Math.max(homeRadius - 4, maxDist)
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const angle = random() * Math.PI * 2
       const dist = minDist + random() * (maxDist - minDist)
       const x = cx + Math.cos(angle) * dist
       const z = cz + Math.sin(angle) * dist
-      if (Math.abs(x) > homeRadius - 4 || Math.abs(z) > homeRadius - 4) continue
+      if (Math.abs(x - cx) > clampRadius || Math.abs(z - cz) > clampRadius) continue
       if (sampleHeight(x, z) <= waterLevel + 0.6) continue
       if (filter && !filter(x, z)) continue
       return { x, z }
     }
     return null
   }
+
+  /** Wild-fauna spawn points placed so far this build (ring spawns + cave/
+   *  thicket spawners) — `MIN_SPAWN_SEPARATION` rejection reads this, both
+   *  loops below push into it (plan 080). */
+  const placedSpawnPoints: { x: number, z: number }[] = []
+  const farFromOtherSpawns = (x: number, z: number): boolean =>
+    placedSpawnPoints.every((p) => Math.hypot(p.x - x, p.z - z) >= MIN_SPAWN_SEPARATION)
 
   /** True if any point a few meters out from (x, z) dips into water — used to
    *  bias duck spawns toward the shoreline without requiring the duck's own
@@ -248,11 +343,20 @@ export async function createFauna(
   }
 
   for (const spec of SPAWNS) {
-    const [minDist, maxDist] = SPAWN_RING[spec.profile]
-    const filter = habitatFilterFor(spec.profile)
+    const [minOffset, maxOffset] = SPAWN_RING_OFFSET[spec.profile]
+    const habitatFilter = habitatFilterFor(spec.profile)
+    const filter = (x: number, z: number) =>
+      (!habitatFilter || habitatFilter(x, z)) && farFromOtherSpawns(x, z)
     for (let i = 0; i < spec.count; i++) {
-      const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, minDist, maxDist, filter)
+      const pos = findWalkableNear(
+        settlementCenter.x,
+        settlementCenter.z,
+        footprintRadius + minOffset,
+        footprintRadius + maxOffset,
+        filter,
+      )
       if (!pos) continue
+      placedSpawnPoints.push(pos)
       const agent = spawnAgent(spec.kind, pos.x, pos.z)
       scene.add(agent.mesh)
       agents.push(agent)
@@ -278,21 +382,60 @@ export async function createFauna(
       coastThreshold: coast?.coastThreshold,
     })
   }
+  const [spawnerMinOffset, spawnerMaxOffset] = SPAWNER_RING_OFFSET
   for (const spec of SPAWNER_SPECS) {
     // Thicket also prefers some forest cover so it doesn't land on open sand/meadow shore.
-    const filter = spec.type === 'thicket'
+    const baseFilter = spec.type === 'thicket'
       ? (x: number, z: number) => spawnerSiteOk(x, z) && sampleForestFactor(x, z) > 0.28
       : spawnerSiteOk
-    const pos = findWalkableNear(settlementCenter.x, settlementCenter.z, 45, 65, filter, 72)
+    const filter = (x: number, z: number) => baseFilter(x, z) && farFromOtherSpawns(x, z)
+    // Cave prefers a sloped site (plan 083 — carved depression reads as cut
+    // into a hillside); falls back to any valid flat site if none found.
+    const slopedFilter = (x: number, z: number) =>
+      filter(x, z) && measureSlope(x, z, CAVE_SLOPE_SAMPLE_RADIUS, sampleHeight).drop >= CAVE_MIN_SLOPE_DROP
+    const pos = spec.type === 'cave'
+      ? findWalkableNear(
+          settlementCenter.x,
+          settlementCenter.z,
+          footprintRadius + spawnerMinOffset,
+          footprintRadius + spawnerMaxOffset,
+          slopedFilter,
+          72,
+        ) ?? findWalkableNear(
+          settlementCenter.x,
+          settlementCenter.z,
+          footprintRadius + spawnerMinOffset,
+          footprintRadius + spawnerMaxOffset,
+          filter,
+          72,
+        )
+      : findWalkableNear(
+          settlementCenter.x,
+          settlementCenter.z,
+          footprintRadius + spawnerMinOffset,
+          footprintRadius + spawnerMaxOffset,
+          filter,
+          72,
+        )
     if (!pos) continue
+    placedSpawnPoints.push(pos)
     spawners.push({ ...pos, ...spec, timeSinceLastRespawn: 0 })
 
     const groundY = sampleHeight(pos.x, pos.z)
     if (spec.type === 'cave') {
+      const slope = measureSlope(pos.x, pos.z, CAVE_SLOPE_SAMPLE_RADIUS, sampleHeight)
+      const facingVillage = Math.atan2(pos.x - settlementCenter.x, pos.z - settlementCenter.z)
+      if (
+        terrainCarving
+        && terrainCarving.sampleMountainRidge(pos.x, pos.z) <= CAVE_ROCK_MOUNTAIN_RIDGE_THRESHOLD
+      ) {
+        terrainCarving.modifyTerrain(pos.x, pos.z, CAVE_DEPRESSION_RADIUS, CAVE_DEPRESSION_DEPTH)
+      }
       const mouth = createCaveMouth(1, random())
       mouth.position.set(pos.x, groundY, pos.z)
-      // Open side (+Z) faces away from the settlement into the wild.
-      mouth.rotation.y = Math.atan2(pos.x - settlementCenter.x, pos.z - settlementCenter.z)
+      // Open side (+Z) faces downhill when a slope was found, otherwise away
+      // from the settlement into the wild (pre-083 fallback behavior).
+      mouth.rotation.y = slope.drop >= CAVE_MIN_SLOPE_DROP ? slope.yaw : facingVillage
       scene.add(mouth)
       spawnerMeshes.push(mouth)
     } else if (spec.type === 'thicket') {

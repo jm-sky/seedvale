@@ -4,7 +4,7 @@ import {
 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
-import type { AnimalAgent } from '../fauna/AnimalAgent'
+import type { AnimalAgent, VillageInfo } from '../fauna/AnimalAgent'
 import type { HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
@@ -105,7 +105,7 @@ export type Settlement = {
     timeOfDay: number,
     dayFactor: number,
     litFires: readonly { x: number, z: number }[],
-    villages: readonly { x: number, z: number }[],
+    villages: readonly VillageInfo[],
   ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
