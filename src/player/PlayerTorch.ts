@@ -25,14 +25,13 @@ const FIRE_TIP_MAX = 0.11
 const FLAME_OPACITY = 0.75
 
 /**
- * Lit branch grip — same wrist TRS as verified `wooden_torch`.
- * Branch B (AssetQuest) is already long on authored +Z (unlike Quaternius
- * Y-up sticks); do **not** apply mesh `rotation.x = π/2` or the stick lies
- * across the waist with the tip out the player's right side.
+ * Lit branch grip — Branch B is already Z-long (no Y→Z remap). Same wrist
+ * position/scale as wooden_torch; yaw +π vs torch so the authored tip points
+ * forward/out of the palm instead of back through the forearm.
  */
 const BRANCH_ATTACH: HeldAttach = {
   position: [-0.25, 0.085, -0.02],
-  rotation: [Math.PI / 2, -Math.PI / 2, 0],
+  rotation: [Math.PI / 2, Math.PI / 2, 0],
   scale: 1,
   gripLocalOffset: [0, 0, -0.2],
 }
