@@ -25,15 +25,15 @@ const FIRE_TIP_MAX = 0.11
 const FLAME_OPACITY = 0.75
 
 /**
- * Lit branch grip — Branch B is already Z-long (no Y→Z remap). Same wrist
- * position/scale as wooden_torch; yaw +π vs torch so the authored tip points
- * forward/out of the palm instead of back through the forearm.
+ * Lit branch grip — Branch B is already Z-long (no Y→Z remap). Yaw +π vs
+ * wooden_torch so the tip points forward/out of the palm. Grip Z tuned
+ * in-browser; lateral nudge still TBD (outer side of hand).
  */
 const BRANCH_ATTACH: HeldAttach = {
   position: [-0.25, 0.085, -0.02],
   rotation: [Math.PI / 2, Math.PI / 2, 0],
   scale: 1,
-  gripLocalOffset: [0, 0, -0.2],
+  gripLocalOffset: [0, 0, 0.1],
 }
 
 /** PointLight / future flame tip — same wrist TRS as `HELD_ATTACH.wooden_torch`. */
