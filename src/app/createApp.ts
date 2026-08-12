@@ -228,6 +228,7 @@ export async function createApp(
   const syncHeldHud = (): void => {
     const held = heldTool.held()
     hud.setHeldTool(held ? ITEM_DEFS[held].label : '')
+    player.setHeldTool(held)
   }
   syncHeldHud()
 

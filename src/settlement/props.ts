@@ -11,6 +11,7 @@ import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, type TreeGrowthStage, visualScale } from '../world/treeLifecycle'
 import { type VillageSize, villageSizeConfig } from './families'
+import { yawToward } from './roadNetwork'
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
@@ -51,10 +52,28 @@ export type SettlementTreeLandmark = {
 }
 
 const HUT_URLS = [
-  '/models/settlement/hut_a.glb',
-  '/models/settlement/hut_b.glb',
-  '/models/settlement/hut_c.glb',
+  // Prefer Second Age / tower over First Age "roof-only" RTS huts.
+  { url: '/models/settlement/hut_d.glb', height: 3.0 },
+  { url: '/models/settlement/towerhouse.glb', height: 3.6 },
+  { url: '/models/settlement/hut_a.glb', height: 2.8 },
+  { url: '/models/settlement/hut_b.glb', height: 2.8 },
+  { url: '/models/settlement/hut_c.glb', height: 2.8 },
 ] as const
+
+const WALL_URL = '/models/settlement/wall.glb'
+const WALL_TARGET_HEIGHT = 1.85
+/** Approximate world half-width of a wall segment after `prepareProp` height fit. */
+const WALL_HALF_LENGTH = 2.2
+/** Gate gap half-angle (radians) left open for the road/path. */
+const PALISADE_GATE_HALF_ANGLE = 0.38
+/** How many wall segments on each side of the gate (small villages stay modest). */
+const PALISADE_SEGMENTS_PER_SIDE: Record<VillageSize, number> = {
+  OUTPOST: 1,
+  SM: 2,
+  MD: 3,
+  LG: 3,
+  XL: 4,
+}
 
 export const TREE_SPECS = [
   { url: '/models/nature/tree_a.glb', height: 4.2 },
@@ -420,8 +439,7 @@ export function createDock(): THREE.Group {
 }
 
 /** A roadside signpost — post rises along Y, board's long axis (arrow-like)
- *  extends along local +X (rotate by the target road's direction angle, same
- *  convention as `createDock`). */
+ *  extends along local +X. Use `yawToward(dx, dz)` for `rotation.y`. */
 export function createSignpost(): THREE.Group {
   const signpost = new THREE.Group()
   const woodMat = new THREE.MeshStandardMaterial({ color: 0x7a5c3e, flatShading: true })
@@ -437,6 +455,71 @@ export function createSignpost(): THREE.Group {
   signpost.add(board)
 
   return signpost
+}
+
+/** Village name plaque by the well — short post + board; CSS2D text is added by the caller. */
+export function createVillageNamepost(): THREE.Group {
+  const post = new THREE.Group()
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6e4e32, flatShading: true })
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 1.7, 6), woodMat)
+  pole.position.y = 0.85
+  pole.castShadow = true
+  post.add(pole)
+  const board = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.4, 0.07), woodMat)
+  board.position.set(0, 1.55, 0)
+  board.castShadow = true
+  post.add(board)
+  return post
+}
+
+/** Fallback palisade stake if `wall.glb` fails to load. */
+function createPalisadeStake(): THREE.Group {
+  const g = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x5c4030, flatShading: true })
+  const stake = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 1.8, 5), mat)
+  stake.position.y = 0.9
+  stake.castShadow = true
+  g.add(stake)
+  return g
+}
+
+/**
+ * Short palisade wings beside the main entrance — a gate gap, not a full ring.
+ * Uses `wall.glb` (Quaternius Fantasy RTS) with procedural stake fallback.
+ */
+async function plantEntrancePalisade(
+  group: THREE.Group,
+  site: SettlementSite,
+  size: VillageSize,
+  sampleHeight: (x: number, z: number) => number,
+  plan: VillagePlan | undefined,
+): Promise<void> {
+  const segmentsPerSide = PALISADE_SEGMENTS_PER_SIDE[size]
+  if (segmentsPerSide <= 0) return
+
+  const radius = plan?.boundary.radius ?? villageSizeConfig(size).footprintRadius * 0.72
+  const entrance = plan?.entrances.find((e) => e.kind === 'road') ?? plan?.entrances[0]
+  // Prefer outward angle from center→entrance when we have coordinates.
+  const outward = entrance
+    ? Math.atan2(entrance.z - site.z, entrance.x - site.x)
+    : 0
+
+  const wall = await loadPropOrFallback(WALL_URL, WALL_TARGET_HEIGHT, createPalisadeStake)
+  const step = (WALL_HALF_LENGTH * 2) / radius
+
+  for (const side of [-1, 1] as const) {
+    for (let i = 0; i < segmentsPerSide; i++) {
+      const ang = outward + side * (PALISADE_GATE_HALF_ANGLE + step * (i + 0.5))
+      const x = site.x + Math.cos(ang) * radius
+      const z = site.z + Math.sin(ang) * radius
+      const segment = wall.clone(true)
+      // Wall's long axis is local +X in the Quaternius asset — tangent to the ring.
+      const tangent = ang + Math.PI / 2
+      segment.rotation.y = yawToward(Math.cos(tangent), Math.sin(tangent))
+      placeOnGround(segment, x, z, sampleHeight)
+      group.add(segment)
+    }
+  }
 }
 
 /** Fallback if `crate.glb` fails to load — plain flat-shaded box, same
@@ -1392,9 +1475,10 @@ export async function buildSettlementProps(
   const houseLights: HouseLight[] = []
   for (let i = 0; i < clearings.houses.length; i++) {
     const area = clearings.houses[i]!
+    const hutSpec = HUT_URLS[i % HUT_URLS.length]!
     const hut = await loadPropOrFallback(
-      HUT_URLS[i % HUT_URLS.length]!,
-      2.8,
+      hutSpec.url,
+      hutSpec.height,
       createHut,
     )
     // Computed before `placeOnGround` moves `hut.position` to world
@@ -1462,6 +1546,8 @@ export async function buildSettlementProps(
     placeOnGround(stockpile2, stock2X, stock2Z, sampleHeight)
     group.add(stockpile2)
   }
+
+  await plantEntrancePalisade(group, site, size, sampleHeight, plan)
 
   if (plantForest) {
     const random = createSeededRandom(seed ^ 0x7e3d)

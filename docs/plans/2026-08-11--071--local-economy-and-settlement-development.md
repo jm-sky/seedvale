@@ -1,4 +1,4 @@
-# Plan 066: Local Economy & Settlement Development
+# Plan 071: Local Economy & Settlement Development
 
 **Status:** `todo` ⬜ — wstępny kierunek do dalszego dopracowania.
 **Created:** 2026-08-11

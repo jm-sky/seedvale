@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { meanderRoute } from './roadNetwork'
+import { meanderRoute, yawToward } from './roadNetwork'
+
+describe('yawToward', () => {
+  it('maps local +X toward +X world (no Z flip)', () => {
+    expect(yawToward(1, 0)).toBeCloseTo(0)
+  })
+
+  it('maps local +X toward +Z world', () => {
+    // Three.js Y-rot: +X → (cos θ, −sin θ); want (0, 1) ⇒ θ = −π/2
+    expect(yawToward(0, 1)).toBeCloseTo(-Math.PI / 2)
+  })
+})
 
 describe('meanderRoute', () => {
   const sampleHeight = (x: number, z: number) => x * 0.01 + z * 0.02

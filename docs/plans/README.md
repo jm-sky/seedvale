@@ -32,7 +32,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
-| [2026-08-08--039--road-signposts.md](./2026-08-08--039--road-signposts.md) | Kierunkowskazy przy drogach: **Fix:** Poprawić kierunek tabliczki. Dodać odstęp między znakami, które są w połowie odległości między wioskami. | 67% | ⚪ low | S | ~~026~~ |
+| [2026-08-08--039--road-signposts.md](./2026-08-08--039--road-signposts.md) | Kierunkowskazy: fix yaw tabliczki + odstęp midpoint; skrzyżowania nadal later | 80% | ⚪ low | S | ~~026~~ |
 | [2026-08-09--049--procedural-world-landmarks.md](./2026-08-09--049--procedural-world-landmarks.md) | Proceduralne obiekty, ruiny i landmarki | 40% | 🟡 medium | XL | ~~001~~, ~~006~~, ~~007~~, ~~028~~, ~~030~~ |
 | [2026-08-07--024--world-visual-overhaul.md](./2026-08-07--024--world-visual-overhaul.md) | Rośliny, niebo/chmury, góry w tle | 50% | ⚪ low | L | ~~028~~ |
 
@@ -52,6 +52,9 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | File | Summary | Progress | Priority | Effort | Depends on |
 |------|---------|----------|----------|--------|------------|
 | [2026-08-08--037--npc-genealogy-lineages.md](./2026-08-08--037--npc-genealogy-lineages.md) | Rody NPC + przypisanie wg kierunku osady (kompas N → ~~067~~) | 0% | ⚪ low | L | ~~022~~, ~~031~~ |
+| [2026-08-11--069--npc-household-resources.md](./2026-08-11--069--npc-household-resources.md) | Gospodarstwa NPC + przepływ zasobów (etap 1 ekonomii) | 0% | 🟡 medium | L | ~~060~~, ~~071~~ |
+| [2026-08-11--070--world-observatory.md](./2026-08-11--070--world-observatory.md) | World Observatory — panel obserwacji życia świata | 0% | ⚪ low | XL | ~~071~~, ~~069~~ |
+| [2026-08-11--071--local-economy-and-settlement-development.md](./2026-08-11--071--local-economy-and-settlement-development.md) | Lokalna gospodarka osady + rozwój z życia NPC/zasobów (draft) | 0% | 🟡 medium | XL | ~~060~~, ~~032~~, ~~047~~ |
 
 ---
 
@@ -71,6 +74,7 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-11--061--dig-ux-held-tool-and-level.md](./2026-08-11--061--dig-ux-held-tool-and-level.md) | Dig UX: held tool, kanał 2s, notice kamienia, Wyrównaj | 100% | 🔴 high | M | ~~052~~ |
 | [2026-08-11--064--cave-spawner-road-avoidance-and-visual.md](./2026-08-11--064--cave-spawner-road-avoidance-and-visual.md) | Jaskinia: unikaj drogi + proceduralne wejście | 100% | 🟡 medium | S | ~~010~~, ~~026~~ |
 | [2026-08-11--065--wire-nature-and-ore-models.md](./2026-08-11--065--wire-nature-and-ore-models.md) | GLB skały/pnie + modele złóż (gold/rock + tint) | 100% | 🟡 medium | M | ~~030~~, ~~032~~ |
+| [2026-08-11--072--settlement-visuals-nameplate-palisade.md](./2026-08-11--072--settlement-visuals-nameplate-palisade.md) | Lepsze domy, tabliczka nazwy przy studni, zaczątki palisady/bramy | 100% | 🟡 medium | M | ~~031~~, ~~047~~ |
 
 ---
 
@@ -123,6 +127,14 @@ Use dependencies to determine implementation order. A plan may be conceptually r
 | [2026-08-11--067--minimap-heading-and-north.md](./2026-08-11--067--minimap-heading-and-north.md) | Minimapa heading-up + kompas N na ramce | ~~029~~, ~~046~~ |
 | [2026-08-11--068--uneven-road-surfaces.md](./2026-08-11--068--uneven-road-surfaces.md) | Nierówne drogi: dziury + falujące krawędzie + meander osi | ~~026~~ |
 | [2026-08-11--063--forest-regions-and-habitat-distribution.md](./2026-08-11--063--forest-regions-and-habitat-distribution.md) | Duże regiony leśne + ciągły `forestDensity` / habitat | ~~028~~, ~~062~~ |
+| [2026-08-07--012--npc-labels.md](./2026-08-07--012--npc-labels.md) | (archiwum) Etykiety NPC/fauny — zakres w ~~017~~ / ~~022~~ | — |
+| [2026-08-07--019--npc-1-identity.md](./2026-08-07--019--npc-1-identity.md) | (archiwum) Draft identity — scalony do ~~022~~ | — |
+
+---
+
+## Index completeness
+
+Każdy główny plik `docs/plans/YYYY-MM-DD--NNN--*.md` (bez `*-implementation-notes.md` i `README.md`) powinien mieć wiersz w tabelach powyżej. Pliki `012` / `019` są historyczne, ale indeksowane w Done jako archiwum.
 
 ---
 

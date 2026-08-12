@@ -450,9 +450,18 @@ function roadSegmentsForSettlement(def: SettlementDef, ctx: RoadNetworkContext):
   return out
 }
 
+/**
+ * Three.js `rotation.y` so a prop whose long axis is local +X points toward
+ * world direction `(dx, dz)`. (`atan2(dz, dx)` alone is wrong: Y-rotation maps
+ * +X to `(cos θ, −sin θ)` in XZ.)
+ */
+export function yawToward(dx: number, dz: number): number {
+  return Math.atan2(-dz, dx)
+}
+
 export type SettlementSignpost = {
   position: { x: number, z: number }
-  /** Radians — direction from `position` toward the neighbor, world XZ. */
+  /** Radians — Three.js `rotation.y` so the board's +X faces the target. */
   angle: number
   targetName: string
 }
@@ -503,7 +512,7 @@ export function signpostsForSettlement(def: SettlementDef, ctx: RoadNetworkConte
     if (idx <= 0) idx = points.length - 1
     const at = points[idx]!
     const prev = points[idx - 1] ?? points[0]!
-    const angle = Math.atan2(at.z - prev.z, at.x - prev.x)
+    const angle = yawToward(at.x - prev.x, at.z - prev.z)
     out.push({ position: { x: at.x, z: at.z }, angle, targetName: neighbor.name })
   }
   return out
@@ -565,13 +574,27 @@ export function midpointSignpostsFor(
   }
   const at = points[idx]!
   const prev = points[idx - 1]!
-  const toNeighborAngle = Math.atan2(at.z - prev.z, at.x - prev.x)
-  const perpX = -Math.sin(toNeighborAngle) * 0.7
-  const perpZ = Math.cos(toNeighborAngle) * 0.7
+  const dirX = at.x - prev.x
+  const dirZ = at.z - prev.z
+  const dirLen = Math.hypot(dirX, dirZ) || 1
+  const nx = dirX / dirLen
+  const nz = dirZ / dirLen
+  // Perp + slight along-road split so the pair doesn't read as one cluttered post.
+  const side = 2.4
+  const along = 0.55
+  const toNeighborAngle = yawToward(nx, nz)
 
   return [
-    { position: { x: at.x + perpX, z: at.z + perpZ }, angle: toNeighborAngle, targetName: neighbor.name },
-    { position: { x: at.x - perpX, z: at.z - perpZ }, angle: toNeighborAngle + Math.PI, targetName: def.name },
+    {
+      position: { x: at.x - nz * side + nx * along, z: at.z + nx * side + nz * along },
+      angle: toNeighborAngle,
+      targetName: neighbor.name,
+    },
+    {
+      position: { x: at.x + nz * side - nx * along, z: at.z - nx * side - nz * along },
+      angle: yawToward(-nx, -nz),
+      targetName: def.name,
+    },
   ]
 }
 

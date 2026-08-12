@@ -23,6 +23,7 @@ import {
   cloneProp,
   createDock,
   createSignpost,
+  createVillageNamepost,
   disposeSettlementGroup,
   DOCK_SPECS,
   loadPropTemplates,
@@ -172,6 +173,28 @@ export async function createSettlement(
 
   type SignpostInstance = { labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
   const signposts: SignpostInstance[] = []
+
+  // Name plaque by the well — reuses signpost label fade/dispose path.
+  {
+    const nameX = landmarks.well.x + 1.35
+    const nameZ = landmarks.well.z + 1.05
+    const prop = createVillageNamepost()
+    placeOnGround(prop, nameX, nameZ, sampleHeight)
+    group.add(prop)
+
+    const labelEl = document.createElement('div')
+    labelEl.className = 'npc-label'
+    labelEl.textContent = def.name
+    const label = new CSS2DObject(labelEl)
+    label.position.set(0, 2.15, 0)
+    prop.add(label)
+
+    signposts.push({
+      labelEl,
+      label,
+      position: new Vector3(nameX, sampleHeight(nameX, nameZ), nameZ),
+    })
+  }
 
   if (roadCtx) {
     const [dock] = minorLocationsFor(

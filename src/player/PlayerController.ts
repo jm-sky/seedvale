@@ -1,12 +1,14 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { KeyState } from '../input/Keyboard'
+import type { ToolKind } from '../items/HeldTool'
 import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
 import {
   CAMERA_DISTANCE_DEFAULT,
   CAMERA_DISTANCE_MIN,
   type LookState,
 } from '../input/MouseLook'
+import { createItemMesh } from '../items/items'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 
 const MOVE_SPEED = 8
@@ -68,6 +70,10 @@ export class PlayerController {
   private readonly labelNameEl: HTMLDivElement
   private readonly hpFillEl: HTMLDivElement
   private lastHpRatio = -1
+  /** Quaternius `Wrist.R` (or null on capsule fallback). */
+  private readonly rightWrist: THREE.Object3D | null
+  private heldToolObject: THREE.Object3D | null = null
+  private heldToolKind: ToolKind | null = null
 
   private constructor(
     root: THREE.Object3D,
@@ -93,6 +99,7 @@ export class PlayerController {
     this.mesh.add(root)
     this.mesh.position.set(0, 0, 0)
     this.modelRoot = root
+    this.rightWrist = isCapsule ? null : findNamedBone(root, ['Wrist.R', 'Hand.R', 'mixamorigRightHand'])
 
     if (animations.length > 0) {
       this.mixer = new THREE.AnimationMixer(root)
@@ -215,6 +222,40 @@ export class PlayerController {
     this.labelNameEl.textContent = name.trim() || PLAYER_LABEL
   }
 
+  /**
+   * Attach / clear a held tool mesh on the right wrist (inventory still owns
+   * the item; this is visual only). Capsule fallback parents to the body.
+   */
+  setHeldTool(kind: ToolKind | null): void {
+    if (kind === this.heldToolKind) return
+    this.heldToolKind = kind
+    if (this.heldToolObject) {
+      this.heldToolObject.removeFromParent()
+      disposeObject3D(this.heldToolObject)
+      this.heldToolObject = null
+    }
+    if (!kind) return
+
+    const tool = createItemMesh(kind)
+    // Drop meshes are world-oriented; rotate into a rough right-hand grip.
+    tool.scale.setScalar(kind === 'knife' ? 0.95 : 0.8)
+    if (kind === 'knife') {
+      tool.position.set(0.02, -0.02, 0.06)
+      tool.rotation.set(Math.PI / 2, 0, Math.PI / 2)
+    } else if (kind === 'shovel' || kind === 'axe') {
+      tool.position.set(0.04, -0.04, 0.02)
+      tool.rotation.set(0, 0, -Math.PI / 2.4)
+    } else {
+      // firestarter — fist-sized
+      tool.position.set(0.03, -0.02, 0.05)
+      tool.rotation.set(0.4, 0.2, 0.3)
+    }
+
+    const parent = this.rightWrist ?? this.modelRoot
+    parent.add(tool)
+    this.heldToolObject = tool
+  }
+
   setPosition(x: number, z: number): void {
     this.mesh.position.x = x
     this.mesh.position.z = z
@@ -287,6 +328,7 @@ export class PlayerController {
   }
 
   dispose(): void {
+    this.setHeldTool(null)
     this.label.removeFromParent()
     this.labelEl.remove()
     this.mixer?.stopAllAction()
@@ -371,4 +413,13 @@ export class PlayerController {
       this.mesh.position.z,
     )
   }
+}
+
+function findNamedBone(root: THREE.Object3D, names: string[]): THREE.Object3D | null {
+  let found: THREE.Object3D | null = null
+  root.traverse((obj) => {
+    if (found) return
+    if (names.includes(obj.name)) found = obj
+  })
+  return found
 }

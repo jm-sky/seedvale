@@ -61,7 +61,9 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Multiple streamed settlements.
 - Settlement generation is plan-first: one `VillagePlan` per settlement (identity → zones/plots/buildings/landmarks/local paths/entrances), projected to `SettlementDef` for runtime; shared `settlementPlanCache` feeds `SettlementsManager` and `RoadNetwork` (plan 047 — verification needed).
 - Settlement generation with families, houses, roads/paths and environment-aware siting.
+- House visuals prefer Second Age / towerhouse GLBs mixed with First Age huts; a name plaque sits by the well; short `wall.glb` palisade wings flank the main entrance (plan 072 — verification needed).
 - Road/path corridors get edge wobble, sparse light potholes, and A* route meander (`region.roadNetwork` knobs; plan 068).
+- Inter-settlement road signposts use `yawToward` for board orientation; midpoint pairs are spaced apart (plan 039).
 - Inter-settlement roads attach via plan entrances (`entranceToward`); local path corridors come from `VillagePlan.paths`.
 - NPC needs and behaviour/state-machine logic.
 - NPC personality/character depth including role, traits/Big Five-related data, health and stamina.
@@ -88,6 +90,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 
 - `ItemKind` and `Inventory` exist in `src/items/`.
 - Player has shared `HealthState` on `PlayerController` (100 HP; CSS2D HP bar like NPC/fauna; no death UI/respawn yet — plan 045).
+- Held tools (`HeldTool`) attach a procedural mesh to Quaternius `Wrist.R` while equipped (visual only; grip pose is approximate).
 - Simple player→animal melee: with knife/axe/shovel **held**, gazing at a live animal and pressing `[E]` deals instant damage (`playerToolDamage`: axe 20 > knife 12 > shovel 8) via `AnimalAgent.takeDamage`; without a melee tool the existing observe/flavor dialog remains.
 - Inventory is persisted in save data and has weight calculation/max weight support.
 - Item spawners and dropped items exist.
