@@ -22,6 +22,7 @@ Before making a non-trivial change:
 - UI migration to Vue is incremental. Do not migrate or rewrite unrelated vanilla screens just because Vue exists.
 - Do not infer that a planned feature is implemented. Verify the code.
 - Do not mark visual Three.js work as fully verified solely because TypeScript/lint/build pass.
+- Shader GLSL lives inside JS/TS template literals. Never put backticks or markdown in comments inside those strings: a backtick closes the template literal and is a syntax error.
 - **Performance is an architectural constraint.** Keep the main thread responsive; prefer event-driven/batched simulation and use workers for CPU-heavy, data-oriented work when the cost of worker communication is justified. See [Performance & Simulation Architecture](docs/architecture/performance-and-workers.md).
 
 ## Development
