@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Footprints, Menu, PackageMinus, Zap } from 'lucide-vue-next'
+import { Menu, Zap } from 'lucide-vue-next'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { ui } from '../store'
 
@@ -36,37 +36,6 @@ const touch = isTouchDevice()
         @click="ui.touch.onQuickActions?.()"
       >
         <Zap :size="22" />
-      </button>
-      <button
-        v-show="ui.touch.dropAvailable"
-        type="button"
-        class="pointer-events-auto flex h-[52px] w-[52px] cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(20,24,28,0.6)] text-ink [-webkit-tap-highlight-color:transparent]"
-        :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
-        aria-label="Upuść przedmiot"
-        @click="ui.touch.onDrop?.()"
-      >
-        <PackageMinus :size="22" />
-      </button>
-      <button
-        type="button"
-        class="pointer-events-auto flex h-[52px] w-[52px] cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(20,24,28,0.6)] text-ink [-webkit-tap-highlight-color:transparent]"
-        :class="{
-          'pointer-events-none opacity-40': !ui.touch.inputEnabled,
-          'border-[rgba(224,179,74,0.9)] bg-[rgba(224,179,74,0.75)]': ui.touch.sprintActive,
-        }"
-        aria-label="Bieg"
-        @click="ui.touch.onSprintToggle?.()"
-      >
-        <Footprints :size="22" />
-      </button>
-      <button
-        type="button"
-        class="pointer-events-auto flex h-[52px] w-[52px] cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(20,24,28,0.6)] text-[15px] font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
-        :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
-        aria-label="Akcja alternatywna"
-        @click="ui.touch.onAltInteract?.()"
-      >
-        R
       </button>
       <button
         type="button"

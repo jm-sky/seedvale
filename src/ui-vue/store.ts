@@ -110,19 +110,14 @@ type ToastState = { items: ToastItem[] }
 type TouchChromeState = {
   visible: boolean
   inputEnabled: boolean
-  dropAvailable: boolean
-  sprintActive: boolean
   onPause: (() => void) | null
   onQuickActions: (() => void) | null
   onInteract: (() => void) | null
-  onAltInteract: (() => void) | null
-  onDrop: (() => void) | null
-  onSprintToggle: (() => void) | null
 }
 
 type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'simpleFireStatus' | 'firePitStatus' | 'torchStatus' | 'branchStatus'>>
 
-const HUD_HINT_TOUCH = 'Joystick = ruch · przeciągnij = kamera · E = interakcja · R = alt'
+const HUD_HINT_TOUCH = 'Joystick = ruch · przeciągnij = kamera · E = interakcja'
 const HUD_HINT_DESKTOP = 'WASD · klik = mysz · Esc = kursor · E = interakcja · R = alt · L = działania · I = ekwipunek · G = upuść · M = mapa'
 const TOAST_VISIBLE_MS = 2200
 const TOAST_FADE_MS = 300
@@ -164,14 +159,9 @@ export const ui = reactive({
   touch: {
     visible: false,
     inputEnabled: true,
-    dropAvailable: false,
-    sprintActive: false,
     onPause: null,
     onQuickActions: null,
     onInteract: null,
-    onAltInteract: null,
-    onDrop: null,
-    onSprintToggle: null,
   } as TouchChromeState,
   openStack: [] as string[],
 })
@@ -421,7 +411,7 @@ export function clearToasts(): void {
   ui.toast.items = []
 }
 
-type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract' | 'onAltInteract' | 'onDrop' | 'onSprintToggle'>>
+type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract'>>
 export function configureTouchChrome(handlers: TouchChromeHandlers): void {
   ui.touch.visible = true
   Object.assign(ui.touch, handlers)
@@ -430,22 +420,10 @@ export function setTouchInputEnabled(enabled: boolean): void {
   if (ui.touch.inputEnabled === enabled) return
   ui.touch.inputEnabled = enabled
 }
-export function setTouchDropAvailable(available: boolean): void {
-  if (ui.touch.dropAvailable === available) return
-  ui.touch.dropAvailable = available
-}
-export function setTouchSprintActive(active: boolean): void {
-  ui.touch.sprintActive = active
-}
 export function clearTouchChrome(): void {
   ui.touch.visible = false
   ui.touch.inputEnabled = true
-  ui.touch.dropAvailable = false
-  ui.touch.sprintActive = false
   ui.touch.onPause = null
   ui.touch.onQuickActions = null
   ui.touch.onInteract = null
-  ui.touch.onAltInteract = null
-  ui.touch.onDrop = null
-  ui.touch.onSprintToggle = null
 }

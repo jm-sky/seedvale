@@ -161,7 +161,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - NPC dialogue v2 is already a Vue screen.
 - Pause menu, quest log, inventory, quick actions, time-skip overlay, busy/channel overlay, world config screen, notes/journal, HUD, minimap, toast and touch action chrome exist as Vue screens/overlays; `src/ui/create*.ts` for these are thin compatibility facades over the Vue store.
 - Minimap is heading-up (canvas up = `mouseLook` yaw) with a rim `N` marker for world north (−Z); draw logic in `src/ui-vue/lib/drawMinimap.ts` (plan 067).
-- Touch joystick + look-drag remain vanilla DOM in `src/input/createTouchControls.ts` (input hot-path); Lucide icons on pause/actions/minimap toggle (plan 046 Faza 4 / issue 005).
+- Touch joystick + look-drag remain vanilla DOM in `src/input/createTouchControls.ts` (input hot-path). Vue chrome on mobile is pause, quick actions, and interact (E); sprint is push-to-run on the joystick. Drop lives in the inventory screen. Lucide icons on pause/actions/minimap toggle (plan 046 Faza 4 / issue 005).
 - lil-gui remains the full debug/world configuration UI (region/fbm/road-network tuning, post-processing, home village size); the in-game world config screen (pause menu → Świat) exposes the player-facing subset (seed, flat shading, home village size, day/night) — same underlying `WorldConfig`/`DayNightState` objects, not a duplicate.
 - `WorldConfig.settlements.homeSize` (`auto` | SM/MD/LG/XL) overrides the home cell size roll in settlement generation (issue 020); non-home settlements still use `rollVillageSize`.
 - NPC/fauna CSS2D status bars (HP/stamina/…) show only within `barsVisibleForDistance` (~20 units, same as full label readability); name labels still fade 20→32 (issue 017).

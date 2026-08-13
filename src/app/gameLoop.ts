@@ -428,7 +428,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               inventory.add(collected.kind)
               playInventoryPickUp(worldAudio.playOnce)
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-              touchControls?.setDropAvailable(!inventory.isEmpty())
               onInventoryChanged()
             }
           }
@@ -440,7 +439,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             if (wasLit) target.fire.addFuel()
             else target.fire.light()
             hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-            touchControls?.setDropAvailable(!inventory.isEmpty())
             onInventoryChanged()
             toast.show(wasLit ? 'Dołożono gałąź do ogniska.' : 'Ognisko zapłonęło.')
           } else {
@@ -457,7 +455,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 inventory.add('branch')
                 playInventoryPickUp(worldAudio.playOnce)
                 hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-                touchControls?.setDropAvailable(!inventory.isEmpty())
                 onInventoryChanged()
                 toast.show('+1 Gałąź', 'pickup')
               }
@@ -521,7 +518,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           playInventoryDrop(worldAudio.playOnce)
           heldTool.syncWithInventory()
           hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-          touchControls?.setDropAvailable(!inventory.isEmpty())
           onInventoryChanged()
         }
       }

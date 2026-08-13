@@ -44,9 +44,6 @@ export type TouchControls = {
    *  used while a full-screen modal is open. Also releases any in-progress
    *  joystick/look touch so movement doesn't get stuck "on". */
   setInputEnabled: (enabled: boolean) => void
-  /** Shows/hides the drop control in Vue chrome — only meaningful while the
-   *  player is carrying at least one item. */
-  setDropAvailable: (available: boolean) => void
 }
 
 export function createTouchControls(
@@ -72,9 +69,6 @@ export function createTouchControls(
   // --- Joystick (single touch, tracked by identifier) ---
   let joystickTouchId: number | null = null
   let joystickCenter: Point = { x: 0, y: 0 }
-  /** Manual override from the RUN button — kept separate from the joystick-driven
-   *  push-to-run so releasing/re-centering the knobs doesn't clobber a toggle-on. */
-  let sprintButtonActive = false
 
   const updateJoystick = (clientX: number, clientY: number) => {
     const dx = clientX - joystickCenter.x
@@ -87,7 +81,7 @@ export function createTouchControls(
     joystickKnob.style.transform = `translate(${kx}px, ${ky}px)`
 
     const mag = clamped / JOYSTICK_RADIUS
-    keys.sprint = sprintButtonActive || mag > JOYSTICK_SPRINT_THRESHOLD
+    keys.sprint = mag > JOYSTICK_SPRINT_THRESHOLD
     if (mag < JOYSTICK_DEADZONE) {
       keys.forward = false
       keys.backward = false
@@ -109,7 +103,7 @@ export function createTouchControls(
     keys.backward = false
     keys.left = false
     keys.right = false
-    keys.sprint = sprintButtonActive
+    keys.sprint = false
   }
 
   const onJoystickTouchStart = (event: TouchEvent) => {
@@ -197,13 +191,6 @@ export function createTouchControls(
     onPause: () => handlers.onPauseToggle(),
     onQuickActions: () => handlers.onQuickActions?.(),
     onInteract: () => { keys.interact = true },
-    onAltInteract: () => { keys.altInteract = true },
-    onDrop: () => { keys.drop = true },
-    onSprintToggle: () => {
-      sprintButtonActive = !sprintButtonActive
-      keys.sprint = sprintButtonActive
-      getUi()?.setTouchSprintActive(sprintButtonActive)
-    },
   })
 
   let inputEnabled = true
@@ -218,13 +205,8 @@ export function createTouchControls(
     lookTouches.clear()
   }
 
-  function setDropAvailable(available: boolean): void {
-    getUi()?.setTouchDropAvailable(available)
-  }
-
   return {
     setInputEnabled,
-    setDropAvailable,
     dispose: () => {
       joystickBase.removeEventListener('touchstart', onJoystickTouchStart)
       joystickBase.removeEventListener('touchmove', onJoystickTouchMove)

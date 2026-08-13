@@ -1,4 +1,3 @@
-import type { TouchControls } from '../input/createTouchControls'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { Inventory } from '../items/Inventory'
 import type { Hud } from '../ui/createHud'
@@ -17,7 +16,6 @@ export type DigFeedback = {
   droppedItems: DroppedItems
   toast: Toast
   hud: Hud
-  touchControls?: TouchControls | null
   playOnce: (url: string, volume?: number) => void
 }
 
@@ -40,7 +38,6 @@ export function applyDigAt(
     feedback.inventory.add('stone')
     playInventoryPickUp(feedback.playOnce)
     feedback.hud.setInventoryWeight(feedback.inventory.totalWeight(), feedback.inventory.maxWeight)
-    feedback.touchControls?.setDropAvailable(!feedback.inventory.isEmpty())
     feedback.toast.show('+1 Kamień', 'pickup')
     return
   }

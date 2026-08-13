@@ -294,7 +294,6 @@ export async function createApp(
       }
     }
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    touchControls?.setDropAvailable(!inventory.isEmpty())
     heldTool.syncWithInventory()
     syncHeldHud()
     syncShovelQuickActions()
@@ -327,7 +326,6 @@ export async function createApp(
       const result = buyWithShells(inventory, kind)
       if (result === 'ok') {
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-        touchControls?.setDropAvailable(!inventory.isEmpty())
         heldTool.syncWithInventory()
         syncHeldHud()
         syncShovelQuickActions()
@@ -340,7 +338,6 @@ export async function createApp(
       const result = buyWithBarter(inventory, kind, offer)
       if (result === 'ok') {
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-        touchControls?.setDropAvailable(!inventory.isEmpty())
         heldTool.syncWithInventory()
         syncHeldHud()
         syncShovelQuickActions()
@@ -411,7 +408,6 @@ export async function createApp(
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         syncHeldHud()
         hud.setExp(questManager.getExp())
-        touchControls?.setDropAvailable(!inventory.isEmpty())
         syncShovelQuickActions()
       }
       // New chunkManager/ocean instances start with default (untinted) water —
@@ -558,7 +554,6 @@ export async function createApp(
     playInventoryDrop(worldAudio.playOnce)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     syncHeldHud()
-    touchControls?.setDropAvailable(!inventory.isEmpty())
     syncShovelQuickActions()
     inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
   }
@@ -590,7 +585,6 @@ export async function createApp(
     hud,
     heldTool,
     syncHeldHud,
-    touchControls,
   )
 
   const timeSkip = createTimeSkip(dayNight)
@@ -645,7 +639,6 @@ export async function createApp(
     if (!inventory.remove('tent', 1)) return
     bundle.placedTents.place(aim.x, aim.z, aim.yaw)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    touchControls?.setDropAvailable(!inventory.isEmpty())
     syncShovelQuickActions()
     toast.show('Rozstawiono namiot.')
   }
@@ -677,7 +670,6 @@ export async function createApp(
     if (!packed) return
     inventory.add('tent', 1)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    touchControls?.setDropAvailable(!inventory.isEmpty())
     syncShovelQuickActions()
     toast.show('+1 Namiot', 'pickup')
   }
@@ -706,7 +698,6 @@ export async function createApp(
     droppedItems: bundle.droppedItems,
     toast,
     hud,
-    touchControls,
     playOnce: worldAudio.playOnce,
   })
 
@@ -831,7 +822,6 @@ export async function createApp(
       inventory.add(result.yield.kind, result.yield.count)
       playInventoryPickUp(worldAudio.playOnce)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      touchControls?.setDropAvailable(!inventory.isEmpty())
       heldTool.syncWithInventory()
       syncHeldHud()
       syncShovelQuickActions()
@@ -865,7 +855,6 @@ export async function createApp(
       inventory.add(result.yield.kind, result.yield.count)
       playInventoryPickUp(worldAudio.playOnce)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      touchControls?.setDropAvailable(!inventory.isEmpty())
       heldTool.syncWithInventory()
       syncHeldHud()
       toast.show(`+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`, 'pickup')
@@ -1027,10 +1016,7 @@ export async function createApp(
       })
     : null
 
-  // Reflects any inventory carried over from a loaded save — later changes are
-  // synced at each pickup/drop call site alongside hud.setInventoryWeight().
   // Pause + minimap chrome for touch live in Vue (TouchChrome / MinimapScreen).
-  touchControls?.setDropAvailable(!inventory.isEmpty())
 
   // NOTE: a Fullscreen-API-on-first-touch call used to live here (address-bar
   // hiding for Chrome/Firefox Android). Removed — confirmed via automated

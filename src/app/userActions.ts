@@ -1,4 +1,3 @@
-import type { TouchControls } from '../input/createTouchControls'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
 import type { PlayerController } from '../player/PlayerController'
@@ -27,7 +26,6 @@ const getUserActions = (
   hud: Hud,
   heldTool: HeldTool,
   syncHeldHud: () => void,
-  touchControls?: TouchControls | null | undefined,
 ) => {
   // Shared by the pause menu's fire/torch buttons and the quick-actions popup
   // below — two UI entry points onto identical logic, not a duplicate.
@@ -39,7 +37,6 @@ const getUserActions = (
     inventory.remove('branch', SIMPLE_FIRE_BRANCH_COST)
     bundle.placedFires.place(player.mesh.position.x, player.mesh.position.z, 'simple')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    touchControls?.setDropAvailable(!inventory.isEmpty())
     return true
   }
   const buildFirePit = (): boolean => {
@@ -47,7 +44,6 @@ const getUserActions = (
     inventory.remove('stone', FIRE_PIT_STONE_COST)
     bundle.placedFires.place(player.mesh.position.x, player.mesh.position.z, 'pit')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    touchControls?.setDropAvailable(!inventory.isEmpty())
     return true
   }
 
@@ -60,7 +56,6 @@ const getUserActions = (
     syncHeldHud()
     void playerTorch.light('branch').then(() => syncHeldHud())
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    touchControls?.setDropAvailable(!inventory.isEmpty())
     return 'ok'
   }
 
