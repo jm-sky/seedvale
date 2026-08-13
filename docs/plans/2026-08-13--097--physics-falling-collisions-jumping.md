@@ -1,6 +1,6 @@
 # Plan: Fizyka — opadanie przedmiotów, kolizje, skok
 
-**Status:** `planned` 📋
+**Status:** `in progress` 🔄 — faza 2.1 zaimplementowana (2026-08-13), technicznie zweryfikowana; 2.2/2.3 nie rozpoczęte.
 **Created:** 2026-08-13
 **Priority:** 🟡 medium · **Effort:** XL (trzy fazy: 2.1 `S`, 2.2 `L`, 2.3 `M`) · **Depends on:** —
 **Źródło:** rozmowa 2026-08-13 przy researchu [009 — jaskinie podziemne](../research/2026-08-13--009--underground-caves.md); potrzeba `clampToVolume` w jaskini to ten sam brakujący fundament co kolizje w świecie.
@@ -109,6 +109,9 @@ Odbicia, toczenie, stosy przedmiotów, ragdolle, niszczenie obiektów, fizyka wo
 Kolejność fazy = kolejność implementacji (potwierdzone pytanie 1: 2.1 osobno i pierwsze). 2.2 zależy tylko od 2.1 tematycznie, nie technicznie — może iść niezależnie, ale idzie po 2.1 bo 2.1 jest tani i daje szybki zysk. 2.3 zależy funkcjonalnie od 2.2 (skok bez kolizji jest grywalny, ale nie ma na co wskakiwać — patrz §2.3).
 
 ### Faza 2.1 — Opadanie przedmiotów (Effort: S)
+
+**Status:** `verification needed` 🔍 — zaimplementowane 2026-08-13, techniczne checki
+zielone; manualna weryfikacja w przeglądarce (patrz sekcja „Weryfikacja”, punkt 1) czeka na usera.
 
 **Zakres doprecyzowany:** dziś `drop()` (`createDroppedItems.ts:53-57`) zawsze stawia item bezpośrednio na `sampleHeight(x,z)` — nie ma osobnej mechaniki „rzutu” (potwierdzone pytanie 7: tylko upuszczanie). Oba wywołania (`gameLoop.ts:513`, `createApp.ts:291,544`, `digAction.ts:49`) liczą x/z wokół gracza i nie przekazują wysokości. „Opadanie” w tym planie = item startuje na wysokości dłoni/pasa gracza i **spada pionowo** (grawitacja, `vy` startowe = 0, bez `vx/vz` — brak celowania/rzutu), zamiast dzisiejszego teleportu na grunt. To spójne z odpowiedzią 7 i nie wymaga nowego inputu ani UI.
 

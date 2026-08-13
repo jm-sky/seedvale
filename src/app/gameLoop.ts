@@ -623,6 +623,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         (amount) => damageHealth(player.health, amount),
       )
       bundle.itemSpawners.update(dt, player.mesh.position, dayFactor)
+      bundle.droppedItems.tick(dt)
       bundle.placedFires.update(dt)
       playerTorch.update(dt)
       bundle.chunkManager.tickWater(dt)

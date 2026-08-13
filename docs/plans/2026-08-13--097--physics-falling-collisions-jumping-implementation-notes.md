@@ -85,13 +85,42 @@ Mesh jest ustawiany przez:
 
 To oznacza, że nie należy przebudowywać całego systemu itemów.
 
-## Zalecana implementacja
+## Zalecana implementacja — zaimplementowane 2026-08-13
 
-Publiczny `DroppedItem` może pozostać rekordem pozycji spoczynkowej.
+Publiczny `DroppedItem` pozostał rekordem pozycji spoczynkowej (`{ id, kind, x, z }`) —
+schema save'a (v10) się nie zmieniła.
 
-Runtime powinien mieć osobny stan:
+Runtime ma osobny stan lotu, lokalny do `createDroppedItems.ts`:
 
 ```ts
-type FallingDrop = {
-  vy: number
-}
+const falling = new Map<string, { vy: number }>()
+```
+
+- Stałe modułowe: `DROP_SPAWN_HEIGHT = 0.9` (dłoń/pas), `GRAVITY = 20` (celowo mocniejsza
+  niż 9.81 — krótki, czytelny spadek zamiast realistycznego wolnego opadania).
+- `drop()`: tworzy `DroppedItem` jak dotąd, wywołuje `spawnMesh(item, DROP_SPAWN_HEIGHT)`
+  (nowy opcjonalny `yOffset` na `spawnMesh`, przekazywany dalej do `placeOnGround`'s istniejącego
+  `yOffset`), potem `falling.set(item.id, { vy: 0 })`.
+- `tick(dt)`: dla każdego wpisu w `falling` — `vy -= GRAVITY*dt`, kandydat
+  `mesh.position.y + vy*dt`; jeśli `<= sampleHeight(x,z)` → przypina do gruntu i usuwa z `falling`
+  (wraca do dzisiejszego stanu „stoi”, koszt 0); inaczej ustawia `mesh.position.y` na kandydata.
+  Early-return gdy `falling.size === 0`.
+- `collect()` i `dispose()` też czyszczą wpis z `falling` (usunięty/zebrany w locie item nie może
+  zostać osieroconym wpisem w mapie).
+- Wywoływane z `gameLoop.ts` obok `bundle.itemSpawners.update(...)`:
+  `bundle.droppedItems.tick(dt)`.
+
+**Save/load (rozstrzygnięcie otwartego pytania z planu §6/2.1):** **bez zmiany schematu.**
+`x`/`z` nie zmieniają się w locie (brak `vx`/`vz` w v1 — patrz plan pytanie 7), więc zapisany
+rekord jest identyczny w locie i po lądowaniu. Item złapany w zapisie w połowie spadku po
+wczytaniu po prostu ląduje od razu na `sampleHeight(x,z)` — pominięty fragment lotu trwa
+< 0.3 s i < 1 m, niezauważalne (dokładnie ta opcja, którą plan zostawił otwartą jako
+akceptowalną). Nie dodano `SaveDataV11`.
+
+**Status:** faza 2.1 zaimplementowana i zweryfikowana technicznie (`tsc`, `lint`, `build`,
+`test` — wszystkie przechodzą). Manualna weryfikacja w przeglądarce (widoczny spadek po `G`,
+poprawny pickup, save/reload w locie) czeka na usera — patrz plan, sekcja „Weryfikacja”, punkt 1.
+
+Fazy 2.2 (kolizje) i 2.3 (skok) — nie rozpoczęte. Ich specyfikacja jest zamknięta w planie
+głównym (sekcja 6); nie duplikować jej tutaj, dopisać do tego dokumentu dopiero przy
+implementacji, jeśli w trakcie pracy wyjdą decyzje nieoczywiste z samego planu.

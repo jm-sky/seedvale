@@ -18,6 +18,7 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 |------|---------|---|-----|--------|---------|
 | `2026-08-09--049--procedural-world-landmarks.md` | Proceduralne obiekty, ruiny, landmarki | 40 | 🟡 | XL | ~~001~~ ~~006~~ ~~007~~ ~~028~~ ~~030~~ |
 | `2026-08-07--024--world-visual-overhaul.md` | Rośliny, niebo/chmury, góry w tle | 50 | ⚪ | L | ~~028~~ |
+| `2026-08-13--097--physics-falling-collisions-jumping.md` | Fizyka: opadanie przedmiotów (2.1 zrobione, verification needed), kolizje + skok (2.2/2.3 nie zaczęte) | 15 | 🟡 | XL | — |
 
 ---
 
@@ -26,7 +27,6 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059) | 🔴 | XL | ~~015~~ ~~018~~ |
-| `2026-08-13--097--physics-falling-collisions-jumping.md` | Fizyka: opadanie przedmiotów, kolizje (gracz+NPC+zwierzęta), skok | 🟡 | XL | — |
 | `2026-08-12--089--better-minimap-and-world-map.md` | Minimapa + mapa świata, FoW, warstwy **[DO REVIEW]** | 🟡 | XL | ~~025~~ ~~028~~ ~~029~~ ~~046~~ ~~067~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
 
