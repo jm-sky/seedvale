@@ -55,7 +55,7 @@ Implementation complete; needs play/browser check. Grouped; full write-up is in 
 
 **Fauna / jaskinie** — `056` głodny predator · `064` cave vs droga · `080` fauna vs footprint osady · `083` dziura w terenie przy jaskini
 
-**UI / audio / rest** — `059` SFX pick/drop (`2026-08-11--059--inventory-pick-drop-sfx.md`) · `075` time-skip catch-up NPC · `078` `playAt` falloff · `084` obóz + town rest · `088` asset alignment browser · `090` miecz/kupiec/namiot/jaskinie/kilof · `098` woda lustro 256² + toggle Vue (fazy 1–2 browser ✅; faza 3 kod, checklist w planie)
+**UI / audio / rest** — `059` SFX pick/drop (`2026-08-11--059--inventory-pick-drop-sfx.md`) · `075` time-skip catch-up NPC · `078` `playAt` falloff · `084` obóz + town rest · `088` asset alignment browser · `090` miecz/kupiec/namiot/jaskinie/kilof
 
 **NPC** — `060` wykonywalny grafik (`eat`/`home`/`wake`) + overlay traits (`night_owl` / `fast_worker` / `sociable`)
 
@@ -70,6 +70,7 @@ Compact ID list. Open the file only when you need the original scope.
 - **Fauna / walka:** `004` chase/flee · `010` predator-prey · `021` animal life · `042` świadomość gracza · `045` Health/Stamina
 - **Itemy / świat:** `016` ambient audio · `017` gaze labels · `018` questy v2 · `029` minimapa · `030` zbieralne · `041` czekaj/odpoczynek · `043` ekwipunek · `050` pochodnia · `051` atmosfera · `067` minimapa N · `052` łopata/kamienie · `057` siekiera · `082` widły/sierp/clutter
 - **App / UI:** `005` ekrany · `023` touch · `053` createApp refactor · `054` WorldBundle refs · `055` shared simulation · `046` Vue+Tailwind
+- **Woda / grafika:** `098` jedna rodzina shadera + brzeg + lustro 256² / Vue
 - **Archiwum:** `012` etykiety → `017`/`022` · `019` identity → `022` · `032` zasoby naturalne· `039` znaki drogowe
 
 ---
@@ -87,7 +88,7 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the 
 - **Światło w domach** — `findWallMount` raycastuje bryłę; 2026-08-11: nadal nierówne, potrzeba mapowania per model.
 - **Latające obiekty** — `waitForChunks` przed propsami osady; 2026-08-11: nadal nieidealne.
 - **Morze (telefon)** — artefakty krawędzi, plamy; spróbować bardziej przezroczystej wody.
-- **Woda** — plan [098](./2026-08-13--098--water-unified-shader-shore-reflections.md): fazy 1–2 `done`; faza 3 (lustro + Vue) kod, browser 🔍.
+- **Woda** — plan [098](./2026-08-13--098--water-unified-shader-shore-reflections.md) `done` (2026-08-13). Telefon: off odbić jako ucieczka od artefaktów krawędzi (notatka wyżej).
 
 ## Related
 

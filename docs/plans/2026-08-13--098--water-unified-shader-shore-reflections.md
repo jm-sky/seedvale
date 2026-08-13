@@ -1,6 +1,6 @@
 # Plan: Woda — jedna rodzina shadera, brzeg, lustro z wyłącznikiem
 
-**Status:** `verification needed` 🔍 — fazy 1–2 `done` (browser 2026-08-13); faza 3 kod (lustro + Vue), browser checklist poniżej  
+**Status:** `done` ✅ — fazy 1–3 (browser 2026-08-13)  
 **Created:** 2026-08-13  
 **Priority:** 🟡 medium  
 **Effort:** XL (faza 1 = S; fazy 2–3 = L–XL)  
@@ -29,7 +29,7 @@ Pół-realistyczna, lekko przezroczysta woda bez ciężkiego GPU:
 - [x] Faza 2 kod: `waterMaterial.ts`, ocean bez Water.js, `floorHeights`, piana, mokry piasek. Browser: checklist faza 2.
 - [x] Inland staw ze screenu 2026-08-13: jeden materiał, bez Water.js na środku.
 - [x] Wybrzeże: miękki brzeg (issue 003 w załadowanych chunkach), ocean ciemniejszy / większa fala.
-- [x] Faza 3 kod: jeden pass 256², `waterReflections`, Vue/lil-gui, persist. Browser: checklist faza 3.
+- [x] Faza 3: jeden pass 256², `waterReflections`, Vue/lil-gui, persist. Browser: checklist faza 3 (2026-08-13).
 - [x] `tsc` / lint / test / build czyste (faza 3 kod). Browser check osobno (W7).
 
 ---
@@ -233,7 +233,7 @@ Dev server już na `5577`.
 6. Dzień/noc: woda ciemnieje razem ze sceną.
 7. Drzewa nad wodą: woda nie maluje się na koronach (regresja 022).
 
-**Faza 3**
+**Faza 3** — zaakceptowane 2026-08-13 (użytkownik).
 
 1. Odbicia włączone: widać niebo/brzeg w tafli; jeden pass (nie zanik FPS vs dzisiejszy ocean).
 2. Pauza → Świat → off: odbicia znikają, sky+błysk zostaje; FPS nie gorszy (lepiej na słabszym GPU).

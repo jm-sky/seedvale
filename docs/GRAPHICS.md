@@ -55,11 +55,11 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 ## Log
 
-### 2026-08-13 — Faza 3: wspólne lustro wody 256² + toggle Vue 🔧
+### 2026-08-13 — Faza 3: wspólne lustro wody 256² + toggle Vue ✅
 
 - Jeden `WebGLRenderTarget` 256² (`waterMirror.ts`), kamera względem `y = waterLevel`; meshe wody na warstwie 1 (mirror camera tylko 0).
 - `postProcessing.waterReflections` default on; off kasuje pass. Vue Pauza → Świat → Grafika; lil-gui Post-processing.
-- G5 = stan kodu. Browser: checklist planu 098 faza 3.
+- G5 = stan kodu. Browser: użytkownik 2026-08-13. Plan 098 `done`.
 
 ### 2026-08-13 — Faza 2: jedna rodzina shadera wody + brzeg ✅
 
