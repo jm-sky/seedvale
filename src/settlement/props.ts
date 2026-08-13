@@ -17,6 +17,7 @@ import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { type VillageSize, villageSizeConfig } from './families'
+import { createPropYieldGate } from './frameYield'
 import {
   GARDEN_BED_D,
   GARDEN_BED_GAP,
@@ -804,6 +805,10 @@ async function plantEntrancePalisade(
 
   const wall = await loadPropOrFallback(WALL_URL, WALL_TARGET_HEIGHT, createPalisadeStake)
   const step = (WALL_HALF_LENGTH * 2) / radius
+  // Own gate (own counter) — palisade stakes are all-cached clones (`wall`
+  // loaded once above), same freeze risk as the loops in
+  // `buildSettlementProps` (issue 027).
+  const yieldStake = createPropYieldGate()
 
   for (const side of [-1, 1] as const) {
     for (let i = 0; i < segmentsPerSide; i++) {
@@ -818,6 +823,7 @@ async function plantEntrancePalisade(
       segment.rotation.y = yawToward(Math.cos(tangent), Math.sin(tangent))
       placeOnGround(segment, x, z, sampleHeight)
       group.add(segment)
+      await yieldStake()
     }
   }
 }
@@ -1819,6 +1825,12 @@ export async function buildSettlementProps(
   const group = new THREE.Group()
   group.name = 'settlement'
 
+  // Breaks up the (potentially 20-60+ prop) build below into chunks the
+  // browser can actually paint between — see `frameYield.ts`'s doc comment
+  // and issue 027 (a GLTF-cache-hit `await` chain otherwise blocks rendering
+  // for the whole synchronous build).
+  const yieldProp = createPropYieldGate()
+
   const landmarks: SettlementLandmarks = {
     well: new THREE.Vector3(),
     stockpile: new THREE.Vector3(),
@@ -2048,6 +2060,7 @@ export async function buildSettlementProps(
         paste: `lampMount: { x: ${lampMount.x.toFixed(3)}, y: ${lampMount.y.toFixed(3)}, z: ${lampMount.z.toFixed(3)} }`,
       })
     }
+    await yieldProp()
   }
 
   // A couple of barrels by the stockpile — everyday clutter, purely
@@ -2061,6 +2074,7 @@ export async function buildSettlementProps(
     const barrel = cloneProp(barrelTemplates, 0, 0.85 + coreRandom() * 0.3)
     placeOnGround(barrel, stockX + dx, stockZ + dz, sampleHeight)
     group.add(barrel)
+    await yieldProp()
   }
 
   // Hay stacks near garden pads (plan 082 B / 095). Pickaxe is a one-time
@@ -2083,6 +2097,7 @@ export async function buildSettlementProps(
     hay.rotation.y = coreRandom() * Math.PI * 2
     placeOnGround(hay, g.x + Math.cos(ang) * dist, g.z + Math.sin(ang) * dist, sampleHeight)
     group.add(hay)
+    await yieldProp()
   }
 
   // Infrastructure counts come from centralized `VILLAGE_SIZE_CONFIG` (plan
@@ -2233,6 +2248,7 @@ export async function buildSettlementProps(
           tz = clearings.core.z + Math.sin(ang) * (plazaR + 1.4)
         }
         placeTorchAt(tx, tz, ang + Math.PI)
+        await yieldProp()
       }
     }
 
@@ -2269,6 +2285,7 @@ export async function buildSettlementProps(
             const tz = site.z + Math.sin(ang) * radius
             if (isCoastalPlacement(tx, tz, coastEnv)) continue
             placeTorchAt(tx, tz, ang + Math.PI)
+            await yieldProp()
           }
         }
       }
@@ -2345,6 +2362,7 @@ export async function buildSettlementProps(
         sizeJitter,
         initialStage,
       })
+      await yieldProp()
     }
 
     // NPC woodlots just outside the house ring — never inside the courtyard.
@@ -2373,6 +2391,7 @@ export async function buildSettlementProps(
         seed,
         courtyardRadius,
       )
+      await yieldProp()
     }
 
     // Mid forest belt — away from houses, still walkable from village.
@@ -2399,6 +2418,7 @@ export async function buildSettlementProps(
         seed,
         courtyardRadius,
       )
+      await yieldProp()
     }
 
     // Far belt toward map edges.
@@ -2425,6 +2445,7 @@ export async function buildSettlementProps(
         seed,
         courtyardRadius,
       )
+      await yieldProp()
     }
 
     // Fill the rest of the map with scattered clumps (not centered on village).
@@ -2453,6 +2474,7 @@ export async function buildSettlementProps(
         seed,
         courtyardRadius,
       )
+      await yieldProp()
     }
   }
 

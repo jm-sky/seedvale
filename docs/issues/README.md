@@ -42,7 +42,7 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 024 | [2026-08-12--024--wild-fauna-enters-village-and-spawns-too-close.md](./2026-08-12--024--wild-fauna-enters-village-and-spawns-too-close.md) | Dzikie zwierzęta wchodzą do wioski; spawn-pointy za blisko osady i siebie nawzajem | `verification needed` |
 | 025 | [2026-08-12--025--npc-react-to-stolen-village-tools.md](./2026-08-12--025--npc-react-to-stolen-village-tools.md) | NPC protestują, gdy gracz bierze widły/sierp z wioski | `todo` |
 | 026 | [2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md](./2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md) | Jaskinia: płaski czarny „daszek" zamiast realnej dziury w terenie | `verification needed` |
-| 027 | [2026-08-13--027--settlement-streaming-main-thread-freeze.md](./2026-08-13--027--settlement-streaming-main-thread-freeze.md) | Osada streamuje się synchronicznie — ~89 ms freeze przy pojawieniu się wioski w polu widzenia | `todo` |
+| 027 | [2026-08-13--027--settlement-streaming-main-thread-freeze.md](./2026-08-13--027--settlement-streaming-main-thread-freeze.md) | Osada streamuje się synchronicznie — ~89 ms freeze przy pojawieniu się wioski w polu widzenia | `verification needed` |
 | 028 | [2026-08-13--028--inland-water-dual-material.md](./2026-08-13--028--inland-water-dual-material.md) | Śródlądowy staw/ciek: shader jeziora + ocean Water.js na jednym zbiorniku | `done` |
 | 029 | [2026-08-13--029--village-in-open-ocean.md](./2026-08-13--029--village-in-open-ocean.md) | Wioska na otwartym oceanie / zalewanej ławicy | `verification needed` |
 

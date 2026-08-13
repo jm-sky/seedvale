@@ -1,3 +1,4 @@
+import * as store from './store'
 import type { App } from 'vue'
 
 type StoreModule = typeof import('./store')
@@ -36,7 +37,11 @@ export function mountVueUi(container: HTMLElement): VueUi {
   let impl: StoreModule | null = null
   const queue: Array<() => void> = []
 
-  void Promise.all([import('vue'), import('./App.vue'), import('./store'), import('./tailwind.css')]).then(([{ createApp }, { default: RootUi }, store]) => {
+  // `store` is imported statically above (~20 other modules already import
+  // it eagerly, so a dynamic import here bought zero code-splitting — was
+  // just a dead-intention warning, review 005 AS3). `vue`/`App.vue`/the
+  // Tailwind stylesheet stay dynamic — those are the actually-deferrable part.
+  void Promise.all([import('vue'), import('./App.vue'), import('./tailwind.css')]).then(([{ createApp }, { default: RootUi }]) => {
     if (disposed) return
     impl = store
     app = createApp(RootUi)

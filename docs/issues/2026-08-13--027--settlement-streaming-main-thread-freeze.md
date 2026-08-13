@@ -1,6 +1,6 @@
 # Osada streamuje się synchronicznie — wyczuwalny freeze przy pojawieniu się wioski
 
-**Status:** `todo`
+**Status:** `verification needed` — fix implemented, see [plan 102](../plans/2026-08-13--102--settlement-build-frame-yielding.md)
 **Created:** 2026-08-13
 **Źródło:** zgłoszenie użytkownika podczas weryfikacji [planu 086](../plans/2026-08-12--086--grass-generation-in-worker.md) (trawa w workerze) — `Simulate (ms)` skoczył do **~89 ms** (baseline 3-5 ms) w momencie, gdy wioska pojawiła się w polu widzenia. Baseline 3-5 ms potwierdza, że plan 086 sam w sobie działa poprawnie — ten freeze ma inne źródło.
 

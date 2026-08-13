@@ -436,6 +436,41 @@ Pozycje 0–9 to jedna sesja i kandydaci na wpisy w [issues/README.md](../issues
 Pozycje **14** i **15** zasługują na własne plany w [plans/](../plans/README.md) — 15 jest zależne od 0
 (bez pomiaru nie ma jak potwierdzić hipotezy ani efektu).
 
+## Checklist wdrożenia (stan zweryfikowany w kodzie: 2026-08-13)
+
+- [x] 0 — M1: `renderer.info` (draw calls/triangles/geometries/textures) + split `simulate`/`render` w debug GUI
+- [x] 1 — AS1: 23 WAV → OGG Vorbis (22 MB → ~1,1 MB)
+- [x] 2 — AS2: `gltfpack -cc` na wszystkich 87 GLB (31 MB → ~9,1 MB)
+- [x] 3 — AS1: leniwe ładowanie pętli ambientu (nocna/przybrzeżna)
+- [x] 4 — A3.1: `FilmGradeShader` scalony w `gradedOutputPass.ts`
+- [x] 5 — A2: `castShadow = false` dla drobnych propsów (próg `SMALL_MESH_SHADOW_THRESHOLD`)
+- [x] 6 — P4': filtr odległości w `buildInteractables` przed alokacją opisu
+- [x] 7 — P5': `getLoaded()` / `skyParamsFromTime()` liczone raz na klatkę
+- [x] 8 — P3': kwantyzacja opacity przed guardem DOM (NPC/zwierzęta/signposty)
+- [x] 9 — A4c/P6': kolejność sampli w `grass.ts` + `QuestManager.dirty`
+- [x] 10 — A5: współdzielony materiał terenu + normalne bez pomocniczej `PlaneGeometry`
+- [x] 11 — A3.2/3.3: `pixelRatio` jako suwak jakości + bloom half-res
+- [x] 12 — A4b: budżetowanie chunków na klatkę (`loadQueue` + `CHUNKS_STARTED_PER_FRAME`)
+- [x] 13 — A2 (teren): opt-in suwak „Terrain self-shadow" (domyślnie `true` = bez zmian)
+- [x] 14 — A4a: trawa w workerze — [plan 086](../plans/2026-08-12--086--grass-generation-in-worker.md) (`verification needed`: baseline `Simulate (ms)` potwierdzony w przeglądarce, pixel-identyczny layout nie porównany explicite)
+- [x] 15 — A1: instancing roślinności/propsów — [plan 087](../plans/2026-08-12--087--vegetation-and-prop-instancing.md) (`verification needed`: brak pomiaru draw calls przed/po)
+- [ ] 16 — R2/R3: wspólny `AnimationSet` / `steerWithShoreSlide` — **nie zrobione**, duplikacja nadal w `PlayerController.ts`/`AnimalAgent.ts`/`NpcAgent.ts` (`findAction`/`playAction` trojaczki, `steerTo`/`steerToward` z osobnym `WATER_MARGIN` w dwóch plikach)
+
+### Follow-up (sekcja niżej w tym dokumencie) — stan
+
+- [x] `tsc`/`lint` w drzewie roboczym — czyste (zweryfikowane 2026-08-13, artefakty z sesji reviewu dawno posprzątane)
+- [x] Docstring `buildInteractables` zaktualizowany — nie mówi już „Cheap: a few dozen objects total"
+- [x] AS3: martwy dynamiczny `import('./store')` w `ui-vue/mount.ts` — rozstrzygnięty 2026-08-13 (statyczny import; `store` już był bundlowany eagerly przez ~20 innych modułów, więc dynamiczny import nie robił nic poza ostrzeżeniem builda)
+
+### Powiązane, znalezione po tym review
+
+Weryfikacja w przeglądarce planu 086 (pozycja 14) ujawniła osobny freeze przy **streamingu osady**
+(~89 ms, `SettlementsManager`/`buildSettlementProps` — mikrotaski z cache'owanego GLTF loadera nie
+oddają sterowania do renderu). Nie było to findingiem tego review (dotyczy osad, nie trawy/chunków),
+udokumentowane jako [issue 027](../issues/2026-08-13--027--settlement-streaming-main-thread-freeze.md)
+i naprawione w [plan 102](../plans/2026-08-13--102--settlement-build-frame-yielding.md) (2026-08-13,
+`verification needed`).
+
 ### Implementacja — pozycje 0–9 (2026-08-12)
 
 Zaimplementowane w jednej sesji, bez osobnego planu. `npx tsc --noEmit`, `npm run lint`,
