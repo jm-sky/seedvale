@@ -4,6 +4,8 @@
 **Created:** 2026-08-12
 **Priority:** 🟡 medium · **Effort:** L · **Depends on:** ~~060~~, ~~071~~
 
+**Implementation notes:** `docs/plans/2026-08-11--069--npc-household-resources-implementation-notes.md`
+
 ## Cel
 
 Zmienić obecny model potrzeb NPC z:
