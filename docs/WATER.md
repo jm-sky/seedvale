@@ -4,7 +4,7 @@
 
 **Nie jest:** planem implementacji ([plans/](./plans/README.md)), logiem całej grafiki ([GRAPHICS.md](./GRAPHICS.md) — tam zostają kontrakty G4–G6), ani katalogiem assetów.
 
-**Last verified:** 2026-08-13 (kod fazy 2 planu 098; browser check osobno)
+**Last verified:** 2026-08-13 (fazy 1–2 planu 098, browser ✅; faza 3 lustro nie ruszona)
 
 Gdy ten plik rozjeżdża się z kodem — **wygrywa kod**, potem aktualizujemy ten dokument.
 
@@ -27,18 +27,18 @@ Trwałe reguły. Zmiana = nowy wpis w historii + aktualizacja tej tabeli.
 
 | ID | Decyzja | Skutek |
 |----|---------|--------|
-| W1 | **Jedna rodzina shadera, dwa strojenia** (jezioro / ocean). Bez `Water.js`, bez SSR / refrakcji / trzeciego mesha. | faza 2 planu 098 🔧; lustro = faza 3 |
+| W1 | **Jedna rodzina shadera, dwa strojenia** (jezioro / ocean). Bez `Water.js`, bez SSR / refrakcji / trzeciego mesha. | faza 2 planu 098 ✅; lustro = faza 3 |
 | W2 | Ocean = **jeden** plane, follow gracza, **nie** per-chunk. | G5 (geometria). Shader = `waterMaterial.ts` |
 | W3 | Woda: `transparent: true`, **`depthWrite: false`**. Nie łączyć transparent + depthWrite + wysokiego `renderOrder`. | G4, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
 | W4 | Liście GLTF `BLEND` → opaque `alphaTest` cutout. Korony piszą depth, woda nie. | G3 |
-| W5 | Chunk water maskuje się heightmapą (`vCover`). `bodyScale` 1 = strojenie oceanu (nie discard). | W8 + faza 2 |
+| W5 | Chunk water maskuje się heightmapą (`vCover`). `bodyScale` 1 = strojenie oceanu (nie discard). | W8 + faza 2 ✅ |
 | W6 | **Performance jest constraint.** Lustro sceny = **jeden** wspólny pass (nie per-chunk). Wyłącznik w Vue. Mirror RT mały (256²). | G2; faza 3 |
 | W7 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | G8 |
-| W8 | **Ocean tylko morze / wybrzeże.** Śródlądowe jeziora, stawy i cieki nigdy nie używają materiału oceanu, niezależnie od powierzchni w chunku. | zaakceptowane 2026-08-13; issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) |
+| W8 | **Ocean tylko morze / wybrzeże.** Śródlądowe jeziora, stawy i cieki nigdy nie używają materiału oceanu, niezależnie od powierzchni w chunku. | issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) ✅ |
 | W9 | **Lustro sceny** (planar, jedna RT) na jeziorach **i** oceanie, z opcją wyłączenia w Vue (Pauza → Świat / Grafika) + `seedvale:graphics:v1`. Off → niebo + specular, **zero** extra passu. Default: włączone. | nie per-jezioro Water.js; faza 3 |
-| W10 | Przezroczystość **z głębokości** (`floorHeights`): przy brzegu widać piasek, w głębi gęstsza/ciemniejsza. Nie akwarium, nie prawie-opaque. | faza 2 🔧 |
-| W11 | Brzeg: miękki fade + linia piany z maski + mokry piasek na terenie. | faza 2 🔧 |
-| W12 | Ruch: jezioro = drobne zmarszczki world-space; ocean = wolniejsza, większa fala. **Bez** nurtu rzek na start. | faza 2 🔧 |
+| W10 | Przezroczystość **z głębokości** (`floorHeights`): przy brzegu widać piasek, w głębi gęstsza/ciemniejsza. Nie akwarium, nie prawie-opaque. | faza 2 ✅ |
+| W11 | Brzeg: miękki fade + linia piany z maski + mokry piasek na terenie. | faza 2 ✅ |
+| W12 | Ruch: jezioro = drobne zmarszczki world-space; ocean = wolniejsza, większa fala. **Bez** nurtu rzek na start. | faza 2 ✅ |
 
 ---
 
@@ -133,7 +133,7 @@ src/player/PlayerController.ts     pływanie po floorHeights
 
 Screen (przed fazą 1): [refs/water-2026-08-13-inland-dual-material.png](./refs/water-2026-08-13-inland-dual-material.png)
 
-To było śródlądowe jezioro rysowane dwoma systemami. **Faza 1** odcina inland od `bodyScale = 1`. **Faza 2** usuwa Water.js — jeden shader, depth fade, piana, mokry piasek. Browser check: issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) / [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md).
+To było śródlądowe jezioro rysowane dwoma systemami. **Faza 1–2 (browser ✅ 2026-08-13):** inland nigdy nie jest oceanem; jeden shader; depth fade / piana / mokry piasek. Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) / [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md) `done`.
 
 Przyczyna screenu (stan sprzed fazy 1):
 
@@ -155,18 +155,18 @@ Pas piasku terenu (issue 001, `sandBandAt` 0.6–3) jest w kodzie wygładzony; n
 
 ## Kolejność implementacji (po decyzjach)
 
-Plan: [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md). **Stan obecny powyżej jest nadal kodem** — target to W1–W12.
+Plan: [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md). P0–P1 bez W9 = kod + browser ✅ 2026-08-13. Zostaje lustro (W9 / faza 3).
 
 ### P0 — jeden materiał na jednym zbiorniku (issue 028)
 
-1. W8: śródlądzie nigdy nie discarduje do oceanu. Ocean tylko tam, gdzie to naprawdę morze. **🔧 faza 1 planu 098** — browser check.
-2. Geometria: jeziora per-chunk + ocean singleton (W2). Materiał oceanu = rodzina jezior (W1). **🔧 faza 2** — bez Water.js; lustro w fazie 3.
+1. W8: śródlądzie nigdy nie discarduje do oceanu. Ocean tylko tam, gdzie to naprawdę morze. **✅ faza 1**
+2. Geometria: jeziora per-chunk + ocean singleton (W2). Materiał oceanu = rodzina jezior (W1). **✅ faza 2** — bez Water.js; lustro w fazie 3.
 
 ### P1 — wygląd z decyzji
 
-3. Depth fade z `floorHeights` (W10). **🔧 faza 2**
-4. Brzeg: fade + piana z maski + mokry piasek (W11). Issue 003 na oceanie w załadowanych chunkach. **🔧 faza 2**
-5. Fale world-space; jezioro drobne, ocean swell (W12). **🔧 faza 2**
+3. Depth fade z `floorHeights` (W10). **✅ faza 2**
+4. Brzeg: fade + piana z maski + mokry piasek (W11). Issue 003. **✅ faza 2**
+5. Fale world-space; jezioro drobne, ocean swell (W12). **✅ faza 2**
 6. Wspólne lustro 256² + fallback sky/spec + toggle Vue/lil-gui (W9). Default on. **faza 3**
 
 ### P2 — później
@@ -181,20 +181,21 @@ Plan: [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md).
 
 Najnowsze na górze.
 
-### 2026-08-13 — Faza 2 planu 098: jedna rodzina shadera + brzeg 🔧
+### 2026-08-13 — Faza 2 planu 098: jedna rodzina shadera + brzeg ✅
 
 - `waterMaterial.ts`: jezioro/ocean, fale `world.xz`, głębokość z `floorHeights`, piana z `vCover`.
 - `createOcean` bez Water.js; singleton radial-fade poza `loadRadius` (chunk water rysuje plażę).
 - Terrain: mokry piasek (`uWaterLevel`, pas ~0.4).
+- Fog uniforms (`UniformsLib.fog`) — bez nich `refreshFogUniforms` crashował.
 - Lustro sceny **nie** wraca — faza 3.
-- Issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md) → `verification needed`.
+- Browser: użytkownik 2026-08-13. Issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md) / [028](./issues/2026-08-13--028--inland-water-dual-material.md) → `done`.
 
-### 2026-08-13 — Faza 1 planu 098: W8 inland ≠ ocean 🔧
+### 2026-08-13 — Faza 1 planu 098: W8 inland ≠ ocean ✅
 
 - `computeBodyScale` bierze `continentalness`; `isLarge` / 35% chunka usunięte.
 - Jeziora cap 0.85; discard 0.9 zostaje, ale znaczy komórkę oceanu.
 - Testy: `src/terrain/waterBodies.test.ts`.
-- Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) → `verification needed`.
+- Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) → `done` (browser z fazą 2).
 
 ### 2026-08-13 — Plan 098 (P0–P1) 📝
 
@@ -248,10 +249,10 @@ Nierozwiązane z [review 001](./reviews/2026-08-07--001--water-quality.md):
 | Finding | Status 2026-08-13 |
 |---------|-------------------|
 | 1 schodki koloru terenu | `done` (issue 001) |
-| 2 płaskie dno mesha (brak batymetrii wizualnej) | `done` faza 2 — shader sampluje `floorHeights` (browser) |
+| 2 płaskie dno mesha (brak batymetrii wizualnej) | `done` faza 2 — shader sampluje `floorHeights` |
 | 3 rozdzielczość siatki wody vs teren | częściowo: `min(resolution-1, 256)` zamiast stałych 96 |
 | 4 dzień/noc | `done` (issue 002) |
-| 5 foam nie z brzegu | `done` faza 2 — piana z maski (browser) |
+| 5 foam nie z brzegu | `done` faza 2 — piana z maski |
 | 6 z-fight | nie potwierdzony; marginesy 0.02 / 0.07 |
 
 ---
@@ -260,11 +261,8 @@ Nierozwiązane z [review 001](./reviews/2026-08-07--001--water-quality.md):
 
 | Temat | Status | Link |
 |-------|--------|------|
-| Śródlądzie renderowane jako ocean (dwa materiały) | `verification needed` | issue [028](./issues/2026-08-13--028--inland-water-dual-material.md); faza 2 usuwa Water.js |
-| Soft shore fade ocean ↔ ląd | `verification needed` | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md), plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 |
 | Blotches w lustrze oceanu | `deferred` do fazy 3 | issue [009](./issues/2026-08-10--009--ocean-normal-map-reflection-blotches.md) — brak mirror pass do fazy 3 |
-| Depth fade / brzeg / world-space waves | `verification needed` | W10–W12, faza 2 |
-| Wspólne lustro + toggle Vue | `todo` | W9, faza 3 |
+| Wspólne lustro + toggle Vue | `todo` | W9, faza 3 planu [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) |
 | Artefakty oceanu na telefonie | notatka | [plans/README.md](./plans/README.md) Quick notes |
 | Fauna pije wodę (symulacja) | `todo` | plan [094](./plans/2026-08-13--094--fauna-food-water-for-satiety-hydration.md) |
 

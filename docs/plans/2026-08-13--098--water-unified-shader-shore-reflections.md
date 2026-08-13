@@ -1,6 +1,6 @@
 # Plan: Woda — jedna rodzina shadera, brzeg, lustro z wyłącznikiem
 
-**Status:** `in progress` 🔄 (~55%) — fazy 1–2 zaimplementowane; faza 2 browser check; faza 3 nie ruszona  
+**Status:** `in progress` 🔄 (~60%) — fazy 1–2 `done` (browser 2026-08-13); faza 3 (lustro + Vue) nie ruszona  
 **Created:** 2026-08-13  
 **Priority:** 🟡 medium  
 **Effort:** XL (faza 1 = S; fazy 2–3 = L–XL)  
@@ -27,10 +27,10 @@ Pół-realistyczna, lekko przezroczysta woda bez ciężkiego GPU:
 
 - [x] Faza 1 kod: inland nie discarduje do oceanu (`waterBodies.ts`, testy). Browser: issue 028.
 - [x] Faza 2 kod: `waterMaterial.ts`, ocean bez Water.js, `floorHeights`, piana, mokry piasek. Browser: checklist faza 2.
-- [ ] Inland staw ze screenu 2026-08-13: jeden materiał, bez Water.js na środku. *(kod gotowy — browser)*
-- [ ] Wybrzeże: miękki brzeg (issue 003 w załadowanych chunkach), ocean ciemniejszy / większa fala. *(kod gotowy — browser)*
+- [x] Inland staw ze screenu 2026-08-13: jeden materiał, bez Water.js na środku.
+- [x] Wybrzeże: miękki brzeg (issue 003 w załadowanych chunkach), ocean ciemniejszy / większa fala.
 - [ ] Pauza → Świat: checkbox odbić wody; off kasuje pass lustra; persist `seedvale:graphics:v1`.
-- [ ] `tsc` / lint / test / build czyste. Browser check osobno (W7).
+- [x] `tsc` / lint / test / build czyste (faza 2). Browser check osobno (W7) — fazy 1–2 ✅ 2026-08-13.
 
 ---
 
@@ -221,7 +221,7 @@ Dev server już na `5577`.
 1. To samo miejsce co [screen](../refs/water-2026-08-13-inland-dual-material.png) — jeden materiał jeziora, bez ciemnej falującej plamy Water.js.
 2. Wybrzeże / otwarte morze — nadal reflective Water.js, bez jeziora na środku oceanu.
 
-**Faza 2**
+**Faza 2** — zaakceptowane 2026-08-13 (użytkownik).
 
 1. Staw: widać piasek przy brzegu, środek ciemniejszy; piana na linii brzegu, nie na środku fal.
 2. Sąsiednie chunki jeziora: brak szwu fazy fal.

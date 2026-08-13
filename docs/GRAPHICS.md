@@ -55,16 +55,16 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 ## Log
 
-### 2026-08-13 — Faza 2: jedna rodzina shadera wody + brzeg 🔧
+### 2026-08-13 — Faza 2: jedna rodzina shadera wody + brzeg ✅
 
 - `waterMaterial.ts` zastępuje Water.js i stary shader jeziora. Fale `world.xz`, depth z `floorHeights`, piana z maski, mokry piasek na terenie.
 - Ocean singleton: radial fade poza loadRadius (chunk water rysuje plażę — issue 003).
-- Lustro 256² wraca w fazie 3. G5/G6 = stan kodu.
+- Lustro 256² wraca w fazie 3. G5/G6 = stan kodu. Browser: użytkownik 2026-08-13.
 
-### 2026-08-13 — W8 faza 1: inland nie jest oceanem 🔧
+### 2026-08-13 — W8 faza 1: inland nie jest oceanem ✅
 
 - `computeBodyScale`: ocean = niska kontynentalność; jeziora cap `LAKE_SCALE_MAX` 0.85 (poniżej discard 0.9). Usunięte `isLarge` / 35% chunka.
-- Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) — `verification needed`. Plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1.
+- Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) — `done`. Plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1.
 
 ### 2026-08-13 — Kierunek wody: jedna rodzina, W8, lustro z Vue 📝
 

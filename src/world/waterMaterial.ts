@@ -3,6 +3,8 @@ import {
   DoubleSide,
   ShaderMaterial,
   type Texture,
+  UniformsLib,
+  UniformsUtils,
   Vector3,
 } from 'three'
 
@@ -209,20 +211,23 @@ const FRAGMENT_SHADER = /* glsl */ `
  */
 export function createWaterMaterial(opts: WaterMaterialOptions): ShaderMaterial {
   const chunkMask = opts.heightmap != null
-  const uniforms: ShaderMaterial['uniforms'] = {
-    uTime: { value: 0 },
-    uOcean: { value: opts.ocean },
-    uWaterLevel: { value: opts.waterLevel },
-    uLakeDeep: { value: DAY_LAKE_DEEP.clone() },
-    uLakeShallow: { value: DAY_LAKE_SHALLOW.clone() },
-    uLakeFoam: { value: DAY_LAKE_FOAM.clone() },
-    uOceanDeep: { value: DAY_OCEAN_DEEP.clone() },
-    uOceanShallow: { value: DAY_OCEAN_SHALLOW.clone() },
-    uOceanFoam: { value: DAY_OCEAN_FOAM.clone() },
-    uSunDirection: { value: new Vector3(0, 1, 0) },
-    uFadeInner: { value: opts.fadeInner ?? 0 },
-    uFadeOuter: { value: opts.fadeOuter ?? 0 },
-  }
+  const uniforms: ShaderMaterial['uniforms'] = UniformsUtils.merge([
+    UniformsLib.fog,
+    {
+      uTime: { value: 0 },
+      uOcean: { value: opts.ocean },
+      uWaterLevel: { value: opts.waterLevel },
+      uLakeDeep: { value: DAY_LAKE_DEEP.clone() },
+      uLakeShallow: { value: DAY_LAKE_SHALLOW.clone() },
+      uLakeFoam: { value: DAY_LAKE_FOAM.clone() },
+      uOceanDeep: { value: DAY_OCEAN_DEEP.clone() },
+      uOceanShallow: { value: DAY_OCEAN_SHALLOW.clone() },
+      uOceanFoam: { value: DAY_OCEAN_FOAM.clone() },
+      uSunDirection: { value: new Vector3(0, 1, 0) },
+      uFadeInner: { value: opts.fadeInner ?? 0 },
+      uFadeOuter: { value: opts.fadeOuter ?? 0 },
+    },
+  ])
 
   if (chunkMask) {
     uniforms.uHeightmap = { value: opts.heightmap }

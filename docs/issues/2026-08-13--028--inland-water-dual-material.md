@@ -1,9 +1,9 @@
 # Śródlądowa woda renderuje się dwoma materiałami (jezioro + ocean)
 
-**Status:** `verification needed`
+**Status:** `done`
 **Created:** 2026-08-13
 **Updated:** 2026-08-13
-**Plan:** [098](../plans/2026-08-13--098--water-unified-shader-shore-reflections.md) (faza 1)
+**Plan:** [098](../plans/2026-08-13--098--water-unified-shader-shore-reflections.md) (fazy 1–2)
 **Źródło:** screen użytkownika — staw/ciek przy piaszczystym brzegu; SoT [WATER.md](../WATER.md)
 
 ## Problem
@@ -44,5 +44,4 @@ P1 (brzeg, world-space waves, palety, lustro) — fazy 2–3 planu 098; nie w ty
 
 ### Browser
 
-1. To samo miejsce co [screen](../refs/water-2026-08-13-inland-dual-material.png) — jeden materiał jeziora, bez ciemnej falującej plamy.
-2. Wybrzeże / otwarte morze — ten sam shader, ciemniejszy teal / większa fala; plaża z `vCover` (issue 003).
+Zaakceptowane 2026-08-13 (użytkownik, z fazą 2): jeden materiał na stawie, bez plamy Water.js; ocean/jezioro ta sama rodzina shadera.

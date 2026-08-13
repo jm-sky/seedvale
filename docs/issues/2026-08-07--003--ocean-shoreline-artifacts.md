@@ -1,6 +1,6 @@
 # Ostre krawędzie / artefakty na styku oceanu z lądem
 
-**Status:** `verification needed`
+**Status:** `done`
 **Created:** 2026-08-07
 **Updated:** 2026-08-13
 **Plan:** [098](../plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 (chunk water rysuje komórki oceanu z `vCover`; singleton radial-fade poza loadRadius)
@@ -21,9 +21,7 @@ Water.js usunięty. Chunk water rysuje komórki oceanu z `vCover` (fade na plaż
 
 ### Browser
 
-1. Wybrzeże w załadowanym chunku — brak twardego wielokąta clippigu, widać piasek przez wodę.
-2. Otwarte morze za zasięgiem chunków — tafla nadal jest (singleton).
-3. Jezioro śródlądowe — ten sam język shadera, jaśniejszy / drobniejsza fala.
+Zaakceptowane 2026-08-13 (użytkownik): brak twardego clippigu na plaży w załadowanym chunku; inland i ocean ten sam język shadera.
 
 ## Effort
 

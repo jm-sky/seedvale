@@ -16,7 +16,7 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 | File | Summary | % | Pri | Effort | Depends |
 |------|---------|---|-----|--------|---------|
-| `2026-08-13--098--water-unified-shader-shore-reflections.md` | Woda: fazy 1–2 OK (browser); lustro/Vue = faza 3 | 55 | 🟡 | XL | ~~022~~ ~~001~~ |
+| `2026-08-13--098--water-unified-shader-shore-reflections.md` | Woda: fazy 1–2 `done`; lustro/Vue = faza 3 | 60 | 🟡 | XL | ~~022~~ ~~001~~ |
 | `2026-08-09--049--procedural-world-landmarks.md` | Proceduralne obiekty, ruiny, landmarki | 40 | 🟡 | XL | ~~001~~ ~~006~~ ~~007~~ ~~028~~ ~~030~~ |
 | `2026-08-07--024--world-visual-overhaul.md` | Rośliny, niebo/chmury, góry w tle | 50 | ⚪ | L | ~~028~~ |
 
@@ -88,7 +88,7 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the 
 - **Światło w domach** — `findWallMount` raycastuje bryłę; 2026-08-11: nadal nierówne, potrzeba mapowania per model.
 - **Latające obiekty** — `waitForChunks` przed propsami osady; 2026-08-11: nadal nieidealne.
 - **Morze (telefon)** — artefakty krawędzi, plamy; spróbować bardziej przezroczystej wody.
-- **Woda śródlądowa** — SoT [WATER.md](../WATER.md), issue 028, plan [098](./2026-08-13--098--water-unified-shader-shore-reflections.md) (faza 2: jeden shader; browser check brzegu).
+- **Woda** — fazy 1–2 planu [098](./2026-08-13--098--water-unified-shader-shore-reflections.md) `done`; zostaje lustro + toggle Vue (faza 3).
 
 ## Related
 
