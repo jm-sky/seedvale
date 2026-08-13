@@ -17,5 +17,7 @@ Analyses, spikes, comparisons, and notes collected before implementation decisio
 | [2026-08-07--004--grass-generation.md](2026-08-07--004--grass-generation.md) | Prompt/research: architektura instanced trawy (AAA-style) — pytania odpowiedziane w [plans/2026-08-07--008--grass-rendering.md](../plans/2026-08-07--008--grass-rendering.md) | `done` |
 | [2026-08-11--006--medieval-model-library-complement.md](2026-08-11--006--medieval-model-library-complement.md) | Uzupełniająca paczka modeli: Quaternius Medieval Village MegaKit (CC0) | `done` |
 | [2026-08-11--007--sound-needs.md](2026-08-11--007--sound-needs.md) | Inwentarz SFX + lista braków (kroki, ogień, melee, UI…) | `done` |
+| [2026-08-13--008--real-caves-in-three-js--brief.md](2026-08-13--008--real-caves-in-three-js--brief.md) | Brief: prawdziwe jaskinie podziemne — pytania i zakres researchu (odpowiedź: [009](2026-08-13--009--underground-caves.md)) | `done` |
+| [2026-08-13--009--underground-caves.md](2026-08-13--009--underground-caves.md) | Jaskinie podziemne: werdykt L2 + osobny mesh wnętrza z kolizją z grafu layoutu; tabela technik A–F, couplingi, pytania otwarte | `done` |
 
 When adding a new entry: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in research), add a row here.
