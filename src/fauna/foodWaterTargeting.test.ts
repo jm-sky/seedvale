@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { forageEdgeScore, shoreProbeHits } from './AnimalAgent'
+import { forageEdgeScore, isCarcassEdible, shoreProbeHits } from './AnimalAgent'
 
 describe('shoreProbeHits (plan 094)', () => {
   const flatAt = (h: number) => () => h
@@ -37,5 +37,67 @@ describe('forageEdgeScore (plan 094)', () => {
   it('never goes negative', () => {
     expect(forageEdgeScore(0)).toBeGreaterThanOrEqual(0)
     expect(forageEdgeScore(1)).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('isCarcassEdible (plan 094)', () => {
+  const eater = { id: 'wolf-a' }
+  const other = { id: 'wolf-b' }
+
+  it('allows an unclaimed dead prey that has not expired or been eaten', () => {
+    expect(isCarcassEdible({
+      dead: true,
+      expired: false,
+      consumed: false,
+      claimedBy: null,
+      eater,
+    })).toBe(true)
+  })
+
+  it('allows the predator that already claimed the corpse', () => {
+    expect(isCarcassEdible({
+      dead: true,
+      expired: false,
+      consumed: false,
+      claimedBy: eater,
+      eater,
+    })).toBe(true)
+  })
+
+  it('rejects a corpse claimed by another predator', () => {
+    expect(isCarcassEdible({
+      dead: true,
+      expired: false,
+      consumed: false,
+      claimedBy: other,
+      eater,
+    })).toBe(false)
+  })
+
+  it('rejects a corpse after a completed eat, even for the original eater', () => {
+    expect(isCarcassEdible({
+      dead: true,
+      expired: false,
+      consumed: true,
+      claimedBy: null,
+      eater,
+    })).toBe(false)
+  })
+
+  it('rejects live or expired bodies', () => {
+    expect(isCarcassEdible({
+      dead: false,
+      expired: false,
+      consumed: false,
+      claimedBy: null,
+      eater,
+    })).toBe(false)
+    expect(isCarcassEdible({
+      dead: true,
+      expired: true,
+      consumed: false,
+      claimedBy: null,
+      eater,
+    })).toBe(false)
   })
 })

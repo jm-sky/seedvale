@@ -88,12 +88,12 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Predator/prey roles.
 - Chase/flee behaviour.
 - Health and damage/death flow via shared `HealthState`.
-- Animal Life hunger/thirst/stamina (`AnimalLifeState`; stamina migrated from former `energy` under plan 045).
+- Animal Life hunger/thirst/stamina (`AnimalLifeState`; stamina migrated from former `energy` under plan 045). Elevated hunger/thirst retarget to a real source (plan 094): prey/livestock forage (habitat-biased when `sampleForestFactor` is available), thirsty animals walk to a walkable shoreline and drink, predators scavenge a claimed corpse. Relief (`consumeFood` / `drinkWater`) applies once after a short stationary action — wander arrival no longer relieves needs.
 - Prey spawners (cave / thicket) with respawn; placement rejects road/path corridors (`ChunkManager.roadCorridorsNear` + `halfWidth` clearance, query sized from the real spawner reach — plan 083). Cave has a rock-ring prop (`createCaveMouth`) around a real terrain depression carved via `ChunkManager.modifyTerrain` (skipped on bare mountain rock), sited/oriented toward a nearby slope when one exists (`measureSlope`, falls back to flat placement) — plan 083, replacing the earlier flat dark disc prop. Thicket has a five-tree cluster (`createThicket`, 2026-08-12) plus label; both spawners keep a minimum distance from other wild-fauna spawn points (plan 080).
 - Wild-fauna village avoidance and spawn-ring placement scale with each settlement's real `VillageSize` footprint radius (`villageSizeConfig(size).footprintRadius`, 22–72 world units) instead of a flat guess (plan 080); `AnimalAgent`'s `currentVillages`/`Fauna.update` carry a `VillageInfo` (`{x, z, radius}`) per loaded settlement. Ring spawns and cave/thicket spawners also keep a minimum distance from each other (`MIN_SPAWN_SEPARATION`, `createFauna.ts`) so different spawn points don't cluster.
 - Player-awareness/flee behaviour.
 - Hungry wild predators can choose chase/attack vs flee via pure `predatorHumanDecision` (plan 056): hunger vs proximity/fire/crowd; torch position joins `litFires`; nearby-human count is precomputed once per frame from loaded NPCs; contact bites call `damageHealth` on `player.health` (`damageVsHuman`). Wolves also get close territorial (~30% inside panic range when not already attacking from hunger) and retaliation after a player hit (75% when HP ≥ 40%, else flee). No death UI yet.
-- Animal corpses linger 60s (label bars hidden at death). Death spawns `blood_splat.glb` on the ground (not parented to the tipped mesh). With shovel held, `[E]` on a corpse runs a short bury busy channel (`Zakop zwłoki`) and removes the body. Predator scavenging of carcasses is not implemented yet.
+- Animal corpses linger 60s (label bars hidden at death). Death spawns `blood_splat.glb` on the ground (not parented to the tipped mesh). With shovel held, `[E]` on a corpse runs a short bury busy channel (`Zakop zwłoki`) and removes the body. Hungry predators move to an unclaimed dead prey, eat once (`foodConsumed` then blocks repeat feeding), and release the claim if threat interrupts.
 - Exhaustion gates sustained chase/flee sprinting.
 - GLB fauna models: wild wolf/fox/deer/stag; village livestock chicken/sheep/cow/horse/donkey (`spawnLivestock`, procedural fallback).
 
@@ -175,7 +175,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `StaminaState` — shared physical-effort capacity (`src/shared/StaminaState.ts`) used by fauna (`AnimalLifeState.stamina`) and NPCs; replaces NPC HP-as-fatigue and animal `energy`.
 - Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/` (plan 055). NPC + fauna adapters; predator hunger-vs-fear scoring in `src/fauna/predatorHumanDecision.ts`.
 - `NpcAgent` — central NPC behaviour/needs/personality integration point.
-- `AnimalAgent` — central fauna behaviour integration point (intents via shared lifecycle; chase/flee/wander bodies unchanged).
+- `AnimalAgent` — central fauna behaviour integration point (intents via shared lifecycle; chase/flee/wander plus forage/drink/eat for plan 094).
 - `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot (axe + shovel included).
 - `TreeLifecycle` / `harvestWorldTree*` — authoritative tree growth + multi-stage chop (`limbed` / `felled` / `harvested`); sizeClass + `old` age (plans 058, 057, 073).
 - `QuestManager` — quest progress, EXP and relations.

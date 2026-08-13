@@ -187,6 +187,22 @@ export function forageEdgeScore(forestFactor: number): number {
   return Math.max(0, 1 - Math.abs(forestFactor - 0.45) * 2)
 }
 
+/** Whether a corpse can feed this eater (plan 094). `consumed` is set once
+ *  an eat action completes, so the same carcass cannot refill hunger
+ *  repeatedly. A claim held by someone else blocks selection; a claim held
+ *  by `eater` (or no claim) is allowed. */
+export function isCarcassEdible(opts: {
+  dead: boolean
+  expired: boolean
+  consumed: boolean
+  claimedBy: unknown
+  eater: unknown
+}): boolean {
+  if (!opts.dead || opts.expired || opts.consumed) return false
+  if (opts.claimedBy != null && opts.claimedBy !== opts.eater) return false
+  return true
+}
+
 type EnvironmentSense = {
   playerActive: boolean
   playerDistance: number
@@ -540,6 +556,9 @@ export class AnimalAgent {
    *  — guards against two predators completing an eat action on the same
    *  corpse (plan 094). */
   private foodClaimedBy: AnimalAgent | null = null
+  /** Set once a predator finishes eating this corpse — the carcass stays
+   *  visible for the rest of its linger time, but is no longer food. */
+  private foodConsumed = false
 
   constructor(
     def: AnimalDef,
@@ -1057,12 +1076,17 @@ export class AnimalAgent {
   private updatePredator(dt: number, others: AnimalAgent[]): void {
     const prey = this.nearest(others, 'prey', this.def.detectRange)
     if (prey && this.isNearVillage(prey.mesh.position)) {
+      // Live prey inside the village is not huntable; still allow drink/eat.
+      if (this.pursueNeeds(dt, others)) return
       this.setIntent('wander')
       this.wander(dt)
       return
     }
     if (prey) {
       if (isExhausted(this.life.stamina)) {
+        // Chase is gated on stamina; eating/drinking are low-effort and
+        // should still run so a wolf can feed on the corpse it just made.
+        if (this.pursueNeeds(dt, others)) return
         this.setIntent('wander')
         this.wander(dt)
         return
@@ -1139,8 +1163,14 @@ export class AnimalAgent {
   private isSourceTargetValid(target: SourceTarget): boolean {
     if (target.kind === 'carcass') {
       const corpse = target.corpse
-      if (!corpse || !corpse.health.dead || corpse.readyToRemove()) return false
-      return corpse.foodClaimedBy === this
+      if (!corpse) return false
+      return isCarcassEdible({
+        dead: corpse.health.dead,
+        expired: corpse.readyToRemove(),
+        consumed: corpse.foodConsumed,
+        claimedBy: corpse.foodClaimedBy,
+        eater: this,
+      }) && corpse.foodClaimedBy === this
     }
     if (!this.isWalkable(target.x, target.z)) return false
     return Math.hypot(target.x - this.home.x, target.z - this.home.z) <= ROAM_RADIUS
@@ -1190,6 +1220,7 @@ export class AnimalAgent {
       drinkWater(this.life)
     } else {
       consumeFood(this.life)
+      if (target.kind === 'carcass') target.corpse?.markFoodConsumed()
     }
     this.cancelSourceTarget()
   }
@@ -1249,8 +1280,14 @@ export class AnimalAgent {
     let best: AnimalAgent | null = null
     let bestD = FOOD_SEARCH_RADIUS
     for (const o of others) {
-      if (o === this || o.def.role !== 'prey' || !o.health.dead || o.readyToRemove()) continue
-      if (o.foodClaimedBy && o.foodClaimedBy !== this) continue
+      if (o === this || o.def.role !== 'prey') continue
+      if (!isCarcassEdible({
+        dead: o.health.dead,
+        expired: o.readyToRemove(),
+        consumed: o.foodConsumed,
+        claimedBy: o.foodClaimedBy,
+        eater: this,
+      })) continue
       const d = Math.hypot(o.mesh.position.x - this.mesh.position.x, o.mesh.position.z - this.mesh.position.z)
       if (d < bestD) {
         bestD = d
@@ -1264,6 +1301,7 @@ export class AnimalAgent {
   /** True if this corpse is unclaimed or already claimed by `by` — guards
    *  against two predators both completing an eat action on one carcass. */
   private claimAsFood(by: AnimalAgent): boolean {
+    if (this.foodConsumed) return false
     if (this.foodClaimedBy && this.foodClaimedBy !== by) return false
     this.foodClaimedBy = by
     return true
@@ -1271,6 +1309,11 @@ export class AnimalAgent {
 
   private releaseFoodClaim(by: AnimalAgent): void {
     if (this.foodClaimedBy === by) this.foodClaimedBy = null
+  }
+
+  private markFoodConsumed(): void {
+    this.foodConsumed = true
+    this.foodClaimedBy = null
   }
 
   private withinRange(x: number, z: number, radius: number): boolean {
