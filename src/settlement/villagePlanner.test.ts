@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { VillageIdentity } from './villagePlan'
 import { generateFamilies } from './families'
+import { gardenPlazaMinCenterDist, type GardenScale } from './gardenScale'
+import { plazaCoreRadius } from './villageClearing'
 import { chooseLayoutPattern, planVillageLayout, PLOT_SCORE_WEIGHTS } from './villagePlanner'
 
 const flatHeight = (): number => 12
@@ -117,6 +119,34 @@ describe('planVillageLayout (plan 047 steps 5–7)', () => {
     const minDist = 4.5 + 2.4 + 2.5 // HOUSE_PLOT_RADIUS + INFRA_PLOT_RADIUS + gap
     for (const house of layout.plots.filter((p) => p.role === 'house')) {
       expect(Math.hypot(house.x - well.x, house.z - well.z)).toBeGreaterThanOrEqual(minDist - 0.01)
+    }
+  })
+
+  it('keeps garden plots outside the plaza disk (plan 095)', () => {
+    const cases: Array<{ id: string, size: VillageIdentity['size'], seed: number }> = [
+      { id: 'g_out', size: 'OUTPOST', seed: 5 },
+      { id: 'g_sm', size: 'SM', seed: 7 },
+      { id: 'g_md', size: 'MD', seed: 21 },
+      { id: 'g_lg', size: 'LG', seed: 15 },
+      { id: 'g_xl', size: 'XL', seed: 11 },
+    ]
+    for (const c of cases) {
+      const id = identity({ id: c.id, size: c.size, isHome: false })
+      const families = generateFamilies(c.seed, c.size, false, 'polish')
+      const layout = planVillageLayout(
+        id, { x: 0, z: 0, y: 12 }, families, c.seed, flatHeight, WATER,
+      )
+      const plazaR = plazaCoreRadius(c.size, 9)
+      const gardens = layout.plots.filter((p) => p.id.startsWith('plot-infra-garden-'))
+      expect(gardens.length, c.size).toBeGreaterThan(0)
+      for (const plot of gardens) {
+        const scale = (plot.id.match(/-(S|M|L)$/)?.[1] ?? 'S') as GardenScale
+        const min = gardenPlazaMinCenterDist(plazaR, scale)
+        expect(
+          Math.hypot(plot.x - layout.center.x, plot.z - layout.center.z),
+          `${c.size} ${plot.id}`,
+        ).toBeGreaterThanOrEqual(min - 0.01)
+      }
     }
   })
 

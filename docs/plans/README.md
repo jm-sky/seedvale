@@ -51,7 +51,7 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 Implementation complete; needs play/browser check. Grouped; full write-up is in the plan file.
 
-**Osady / wioski** — `047` village overhaul (zależy jeszcze od 032) · `036` siting trudny teren (częściowo) · `072` nameplate/palisada · `074` katalog domów · `076` polish generatora · `077` ogrody S/M/L
+**Osady / wioski** — `047` village overhaul (zależy jeszcze od 032) · `036` siting trudny teren (częściowo) · `072` nameplate/palisada · `074` katalog domów · `076` polish generatora · `077` ogrody S/M/L · `095` stóg siana + ogród poza placem
 
 **Las / narzędzia / zbieractwo** — `032` zasoby naturalne · `052` łopata/kamienie · `057` siekiera · `058` cykl drzew · `061` dig UX · `065` GLB skały/złoża · `082` widły/sierp/clutter · `086` trawa w workerze (zdrowy baseline `Simulate (ms)` potwierdzony w przeglądarce; pixel-identyczny layout nie porównany explicite) · `091` odnawialne gałęzie
 

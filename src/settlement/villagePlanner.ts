@@ -21,6 +21,7 @@ import { RESOURCE_ROLE, SIGNIFICANT_RICHNESS } from '../terrain/naturalResources
 import { createSeededRandom } from '../world/parseSeed'
 import { villageSizeConfig } from './families'
 import {
+  gardenPlazaMinCenterDist,
   gardenPlotRadius,
   type GardenScale,
   gardenUnitsFromHouses,
@@ -29,8 +30,8 @@ import {
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
 import { plazaCoreRadius } from './villageClearing'
 
-/** Matches `worldConfig.settlement.clearing.coreRadius` — used only to size
- *  plaza-relative infrastructure (campfire stays on packed dirt). */
+/** Matches `worldConfig.settlement.clearing.coreRadius` — used to size
+ *  plaza-relative infrastructure (campfire on packed dirt; gardens off it). */
 const DEFAULT_PLAZA_CORE_RADIUS = 9
 
 /** Shared plot-placement weights (plan 047 §8) — one table for every role. */
@@ -707,11 +708,14 @@ export function planVillageLayout(
     )
   }
 
+  const plazaR = plazaCoreRadius(identity.size, DEFAULT_PLAZA_CORE_RADIUS)
   // Plan 077: garden clusters from house count (~1 unit / 3 houses → S/M/L).
+  // Plan 095: keep centers outside the plaza disk (not a footprint fraction).
   const houseCount = families.length
   const gardenScales = packGardenScales(gardenUnitsFromHouses(houseCount))
   for (let i = 0; i < gardenScales.length; i++) {
     const scale = gardenScales[i]!
+    const minCenterDist = gardenPlazaMinCenterDist(plazaR, scale)
     plots.push(
       pickPlot(
         {
@@ -721,8 +725,11 @@ export function planVillageLayout(
           radius: gardenPlotRadius(scale),
           familyIndex: null,
           familyId: null,
-          preferredRing: sizeCfg.footprintRadius * (0.34 + i * 0.04),
-          minCenterDist: sizeCfg.footprintRadius * 0.24,
+          preferredRing: Math.max(
+            sizeCfg.footprintRadius * (0.34 + i * 0.04),
+            minCenterDist + 2,
+          ),
+          minCenterDist,
         },
         center,
         boundary,
@@ -734,8 +741,6 @@ export function planVillageLayout(
       ),
     )
   }
-
-  const plazaR = plazaCoreRadius(identity.size, DEFAULT_PLAZA_CORE_RADIUS)
   for (let i = 0; i < infra.campfires; i++) {
     plots.push(
       pickPlot(

@@ -68,7 +68,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Settlement generation with families, houses, roads/paths and environment-aware siting.
 - House visuals use per-model `HOUSE_CATALOG` (issue 018 / plan 074): individual heights + lamp fractions; `towerhouse` excluded from family homes; `[E] Obejrzyj` + `?debug=1` shows model id/URL. Wall lamps use `findWallMount` again. Name plaque by the well; inland-only palisade wings (plan 072).
 - Village generator polish (plan 076): worn local roads + radial path wear, size-scaled plaza clearing, campfire kept off the well, house yaw + stronger house pads, First Age shells rare/small villages only, courtyard tree cap, two-post nameboard.
-- Village gardens scale (plan 077): ~1 garden unit per 3 houses packed into S/M/L beds; garden clearings keep trees out; `landmarks.gardens[]` with primary `garden` for farmers.
+- Village gardens scale (plan 077): ~1 garden unit per 3 houses packed into S/M/L beds; garden clearings keep trees out; `landmarks.gardens[]` with primary `garden` for farmers. Garden centers stay outside the plaza disk (`plazaCoreRadius + gardenPlotRadius`, plan 095) in home and non-home villages.
 - Prey thicket/cave spawners reject coastal/beach sites (`isCoastalPlacement`); thickets also prefer light forest cover.
 - Road/path corridors get edge wobble, sparse light potholes, and A* route meander (`region.roadNetwork` knobs; plan 068).
 - Inter-settlement road signposts use `yawToward` for board orientation; midpoint pairs are spaced apart (plan 039).
@@ -118,7 +118,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Natural collectible items are integrated into the world.
 - Starting equipment currently includes knife, firestarter and blanket when missing.
 - Village garden pickups include one-time **pitchfork** / **sickle** (1–3 total near gardens; GLB + procedural fallback; not holdable yet). Future NPC protest on theft: issue 025.
-- Settlement clutter: hay bales near gardens. Pickaxe is a one-time stockpile pickup (plan 090), not a decorative prop.
+- Settlement clutter: hay stacks near gardens (~1.4 m, plan 095). Pickaxe is a one-time stockpile pickup (plan 090), not a decorative prop.
 - Pickaxe (held): gazing at a streamed iron/coal/gold deposit shows **Wydobądź**; `[E]` runs a ~1.6 s busy channel then `ResourceDeposits.mine()` (3–7 hits from richness; session-only depletion). Yield is `iron` / `coal` / `gold`. On bare mountain rock (`mountainRidge` above the shovel-reject threshold) the same held-gaze fallback as the shovel offers **Wykop skałę** / **Wyrównaj**; yield is stone (higher chance than soil). Shovel cannot dig or level rock. Mine SFX currently reuses dig clips.
 - Long sword is holdable melee (28 dmg). Acquire: Marek's well-quest reward, dialogue „Poproś o miecz” after that quest/relation, or buy from the home Kupiec (plan 090).
 - Home settlement has exactly one trader (Kasia). Talking to her opens a Vue trade screen: shells or barter (`tradeCatalog.ts` / `trade.ts`). Wagon + decorative horse stand at the home market stall. Daytime she works the stall (eat at midday, short evening at home, sleep); she does not chop wood. Kasia's `night_owl` overlay still shifts the template +2 h.

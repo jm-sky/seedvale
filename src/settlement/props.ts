@@ -20,6 +20,8 @@ import { type VillageSize, villageSizeConfig } from './families'
 import {
   gardenBedCount,
   gardenClearingRadius,
+  gardenPlazaMinCenterDist,
+  gardenPlotRadius,
   type GardenScale,
 } from './gardenScale'
 import {
@@ -294,7 +296,7 @@ export function createBarrel(scale = 1): THREE.Group {
   return barrel
 }
 
-/** Fallback if `hay.glb` fails — small rectangular bale. */
+/** Fallback if `hay.glb` fails — rectangular bale (scale 2.5 ≈ GLB ~1.4 m). */
 export function createHayBale(scale = 1): THREE.Group {
   const hay = new THREE.Group()
   const mat = new THREE.MeshStandardMaterial({ color: 0xc9a84a, flatShading: true })
@@ -1879,11 +1881,11 @@ export async function buildSettlementProps(
   const gardenLms = (plan?.landmarks.filter((l) => l.kind === 'garden') ?? [])
     .slice()
     .sort((a, b) => a.index - b.index)
-  const gardenPlazaClear = clearings.core.radius + 3
   const gardenCount = Math.max(1, gardenLms.length)
   for (let gi = 0; gi < gardenCount; gi++) {
     const lm = gardenLms[gi]
     const scale: GardenScale = lm?.gardenScale ?? 'S'
+    const gardenPlazaClear = gardenPlazaMinCenterDist(clearings.core.radius, scale)
     const pathClear = 2.4 + gardenClearingRadius(scale) * 0.4
     let { x: gardenX, z: gardenZ } = placeFromLandmark(
       site,
@@ -2095,18 +2097,22 @@ export async function buildSettlementProps(
     group.add(barrel)
   }
 
-  // Hay bales near garden pads (plan 082 B). Pickaxe is a one-time stockpile
-  // pickup via item spawners (plan 090), not a decorative prop.
+  // Hay stacks near garden pads (plan 082 B / 095). Pickaxe is a one-time
+  // stockpile pickup via item spawners (plan 090), not a decorative prop.
   const hayTemplates = await loadPropTemplates(
-    [{ url: '/models/settlement/hay.glb', height: 0.55 }],
-    () => createHayBale(),
+    [{ url: '/models/settlement/hay.glb', height: 1.4 }],
+    () => createHayBale(2.5),
   )
   const hayGardens = landmarks.gardens.length > 0 ? landmarks.gardens : [landmarks.garden]
   const hayCount = Math.min(2, Math.max(1, hayGardens.length))
   for (let i = 0; i < hayCount; i++) {
     const g = hayGardens[i % hayGardens.length]!
+    const hayScale: GardenScale =
+      (gardenLms.length > 0
+        ? gardenLms[i % gardenLms.length]?.gardenScale
+        : undefined) ?? 'S'
     const ang = coreRandom() * Math.PI * 2
-    const dist = 1.6 + coreRandom() * 1.2
+    const dist = gardenPlotRadius(hayScale) + 1.4 + coreRandom() * 1.2
     const hay = cloneProp(hayTemplates, 0, 0.9 + coreRandom() * 0.25)
     hay.rotation.y = coreRandom() * Math.PI * 2
     placeOnGround(hay, g.x + Math.cos(ang) * dist, g.z + Math.sin(ang) * dist, sampleHeight)

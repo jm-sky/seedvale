@@ -42,6 +42,21 @@ export function gardenPlotRadius(scale: GardenScale): number {
   }
 }
 
+/** Gap between plaza rim and garden plot edge (plan 095). */
+export const GARDEN_PLAZA_GAP = 1.5
+
+/**
+ * Minimum distance from plaza center to a garden plot center so the beds
+ * sit outside packed dirt (`plazaCoreRadius + plot radius + gap`).
+ */
+export function gardenPlazaMinCenterDist(
+  plazaR: number,
+  scale: GardenScale,
+  gap = GARDEN_PLAZA_GAP,
+): number {
+  return plazaR + gardenPlotRadius(scale) + gap
+}
+
 /** Terrain / tree-reject clearing radius (world units). */
 export function gardenClearingRadius(scale: GardenScale): number {
   switch (scale) {
