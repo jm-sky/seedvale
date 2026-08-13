@@ -82,7 +82,8 @@ const ROUGHNESSMAP_FRAGMENT_INCLUDE = '#include <roughnessmap_fragment>'
  *  one or a bump map). `tbn` comes from `normal_fragment_begin`, which still
  *  runs ahead of this. Distance fade (plan 066): full detail near the camera,
  *  none past ~50 m, so close ground can stay grainy without paying for it on
- *  the whole streamed horizon. */
+ *  the whole streamed horizon.
+ *  User: Used to be 0.28, now 0.50 - because road was flat */
 const NORMAL_MAP_TWO_TAP = /* glsl */ `
   vec3 mapNGrass = texture2D( normalMap, vNormalMapUv * uDetailTilesGrass ).xyz * 2.0 - 1.0;
   vec3 mapNBare = texture2D( normalMap, vNormalMapUv * uDetailTilesBare ).xyz * 2.0 - 1.0;
@@ -90,7 +91,7 @@ const NORMAL_MAP_TWO_TAP = /* glsl */ `
   float detailFade = 1.0 - smoothstep( 20.0, 50.0, length( vViewPosition ) );
   // Packed dirt (plaza / roads): keep light grit, not crumpled-foil bumps.
   // Roads still read as dirt; village squares stop looking like crumpled mesh.
-  float bareQuiet = mix( 1.0, 0.28, vBareGround );
+  float bareQuiet = mix( 1.0, 0.50, vBareGround );
   mapN.xy *= normalScale * detailFade * bareQuiet;
   normal = normalize( tbn * mapN );
 `
