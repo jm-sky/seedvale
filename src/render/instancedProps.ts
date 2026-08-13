@@ -27,8 +27,19 @@ export type PropPlacement = {
 export type InstancedPropGroup = {
   group: THREE.Group
   /** Swap-remove: the last instance in every bucket moves into the freed
-   *  slot. Returns `false` for an unknown (or keyless) placement. */
+   *  slot. Returns `false` for an unknown (or keyless) placement. Re-applies
+   *  the current LOD fraction afterward so `count` stays a prefix of the
+   *  remaining instances. */
   removeByKey: (key: string) => boolean
+  /** Renders only the first `fraction` of instances in every bucket
+   *  (clamped to [0, 1]). Cheap distance LOD: no reallocation, just narrows
+   *  each `InstancedMesh`'s draw range. Safe because callers feed placements
+   *  in seeded-random spatial order (`chunkVegetation.ts` /
+   *  `chunkEnvironment.ts`), so any prefix is an unbiased spatial subsample
+   *  — same justification as grass `setLodFraction`. At least one instance
+   *  stays drawn while the bucket is non-empty, so a lone distant tree
+   *  doesn't vanish. */
+  setLodFraction: (fraction: number) => void
   dispose: () => void
 }
 
@@ -178,6 +189,24 @@ export function buildInstancedProps(
 
   if (buckets.size === 0) return undefined
 
+  // Default: draw every instance. `setLodFraction` only narrows `mesh.count`;
+  // the keys/matrix buffers stay full so a later raise (walking closer) or
+  // `removeByKey` still addresses every placement.
+  let lodFraction = 1
+
+  function applyCount(): void {
+    const frac = Math.max(0, Math.min(1, lodFraction))
+    for (const bucket of buckets.values()) {
+      const full = bucket.keys.length
+      bucket.mesh.count = full === 0 ? 0 : Math.max(1, Math.min(full, Math.round(full * frac)))
+    }
+  }
+
+  function setLodFraction(fraction: number): void {
+    lodFraction = fraction
+    applyCount()
+  }
+
   function removeByKey(targetKey: string): boolean {
     let removed = false
     for (const bucket of buckets.values()) {
@@ -191,16 +220,17 @@ export function buildInstancedProps(
         bucket.keys[index] = bucket.keys[lastIndex]
       }
       bucket.keys.pop()
-      bucket.mesh.count = bucket.keys.length
       bucket.mesh.instanceMatrix.needsUpdate = true
       removed = true
     }
+    if (removed) applyCount()
     return removed
   }
 
   return {
     group,
     removeByKey,
+    setLodFraction,
     dispose: () => {
       group.removeFromParent()
       for (const bucket of buckets.values()) {

@@ -464,6 +464,26 @@ export function createChunkManager(
     }
   }
 
+  /** Same prefix-`count` curve as grass, scaled to `loadRadius` because
+   *  instanced vegetation/rocks live on every loaded chunk (unlike grass,
+   *  which has its own smaller radius). Recovers the triangle-count
+   *  regression from losing per-object frustum culling (plan 087 faza 7 / R3). */
+  function vegetationLodForDistance(dist: number): number {
+    const t = dist / Math.max(1, config.loadRadius)
+    return Math.max(0.25, 1 - t * 0.75)
+  }
+
+  function syncInstancedLodForRecord(record: ChunkRecord, playerChunk: ChunkCoord): void {
+    const frac = vegetationLodForDistance(chebyshevDistance(record.coord, playerChunk))
+    record.treeInstances?.setLodFraction(frac)
+    if (record.vegetationInstances) {
+      for (const group of record.vegetationInstances) group.setLodFraction(frac)
+    }
+    if (record.environmentInstances) {
+      for (const group of record.environmentInstances) group.setLodFraction(frac)
+    }
+  }
+
   /** Requests grass placement on the worker pool (plan 086) — `record.grass`
    *  stays `undefined` (and `grassPending` true) until the result comes back,
    *  at which point it's re-validated against the *current* player position
@@ -762,6 +782,7 @@ export function createChunkManager(
             }
           }
           if (vegetationInstances.length > 0) rec.vegetationInstances = vegetationInstances
+          syncInstancedLodForRecord(rec, lastPlayerChunk)
         }
 
         rec.items = buildPlacementGroup('chunk-items', tile.items, (placement) => {
@@ -826,6 +847,7 @@ export function createChunkManager(
           }
         }
         if (environmentInstances.length > 0) rec.environmentInstances = environmentInstances
+        syncInstancedLodForRecord(rec, lastPlayerChunk)
       })
       .catch((err: unknown) => {
         if (!(err instanceof HeightmapGenerationCancelledError)) {
@@ -999,6 +1021,7 @@ export function createChunkManager(
     loadQueue = desired.filter((coord) => !chunks.has(chunkKey(coord)))
     for (const record of [...chunks.values()]) {
       syncGrassForRecord(record, playerChunk)
+      syncInstancedLodForRecord(record, playerChunk)
       if (record.pinned || desiredKeys.has(record.key)) continue
       if (chebyshevDistance(record.coord, playerChunk) > config.unloadRadius) unload(record)
     }

@@ -141,3 +141,87 @@ describe('InstancedPropGroup.removeByKey', () => {
     expect(mesh.count).toBe(1)
   })
 })
+
+describe('InstancedPropGroup.setLodFraction', () => {
+  function simpleTemplate(): Mesh {
+    return new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial())
+  }
+
+  function fourPlacements(): PropPlacement[] {
+    return [
+      { speciesIndex: 0, x: 0, z: 0, groundY: 0, rotationY: 0, scale: 1, key: 'a' },
+      { speciesIndex: 0, x: 1, z: 1, groundY: 0, rotationY: 0, scale: 1, key: 'b' },
+      { speciesIndex: 0, x: 2, z: 2, groundY: 0, rotationY: 0, scale: 1, key: 'c' },
+      { speciesIndex: 0, x: 3, z: 3, groundY: 0, rotationY: 0, scale: 1, key: 'd' },
+    ]
+  }
+
+  type CountMesh = {
+    count: number
+    getMatrixAt: (i: number, m: Matrix4) => void
+  }
+
+  it('narrows count to a prefix without rewriting instance matrices', () => {
+    const result = buildInstancedProps([simpleTemplate()], fourPlacements(), 'lod')!
+    const mesh = result.group.children[0] as unknown as CountMesh
+    expect(mesh.count).toBe(4)
+
+    const prefix = [new Matrix4(), new Matrix4()]
+    mesh.getMatrixAt(0, prefix[0]!)
+    mesh.getMatrixAt(1, prefix[1]!)
+
+    result.setLodFraction(0.5)
+    expect(mesh.count).toBe(2)
+
+    const after = [new Matrix4(), new Matrix4()]
+    mesh.getMatrixAt(0, after[0]!)
+    mesh.getMatrixAt(1, after[1]!)
+    expectMatricesClose(after[0]!, prefix[0]!)
+    expectMatricesClose(after[1]!, prefix[1]!)
+  })
+
+  it('restores the full count at fraction 1', () => {
+    const result = buildInstancedProps([simpleTemplate()], fourPlacements(), 'lod-restore')!
+    const mesh = result.group.children[0] as unknown as CountMesh
+    result.setLodFraction(0.25)
+    expect(mesh.count).toBe(1)
+    result.setLodFraction(1)
+    expect(mesh.count).toBe(4)
+  })
+
+  it('keeps at least one instance drawn while the bucket is non-empty', () => {
+    const result = buildInstancedProps([simpleTemplate()], fourPlacements(), 'lod-min')!
+    const mesh = result.group.children[0] as unknown as CountMesh
+    result.setLodFraction(0)
+    expect(mesh.count).toBe(1)
+  })
+
+  it('re-applies the current fraction after removeByKey', () => {
+    const result = buildInstancedProps([simpleTemplate()], fourPlacements(), 'lod-remove')!
+    const mesh = result.group.children[0] as unknown as CountMesh
+    result.setLodFraction(0.5)
+    expect(mesh.count).toBe(2)
+
+    expect(result.removeByKey('a')).toBe(true)
+    // 3 remaining, fraction 0.5 → round(1.5) = 2, still a prefix of what's left.
+    expect(mesh.count).toBe(2)
+    expect(result.removeByKey('b')).toBe(true)
+    // 2 remaining → round(1) = 1, floored by max(1, …).
+    expect(mesh.count).toBe(1)
+    expect(result.removeByKey('c')).toBe(true)
+    expect(mesh.count).toBe(1)
+    expect(result.removeByKey('d')).toBe(true)
+    expect(mesh.count).toBe(0)
+  })
+
+  it('applies the same count to every primitive bucket of a species', () => {
+    const template = makeTemplate()
+    const result = buildInstancedProps([template], fourPlacements(), 'lod-multi')!
+    result.setLodFraction(0.5)
+    for (let primitiveIndex = 0; primitiveIndex < 2; primitiveIndex++) {
+      const child = result.group.children.find((c) => c.name === `lod-multi-0:${primitiveIndex}`)
+      expect(child).toBeDefined()
+      expect((child as unknown as CountMesh).count).toBe(2)
+    }
+  })
+})

@@ -53,7 +53,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Large-scale terrain regions including ocean/coast/mountain behaviour.
 - Biome/moisture-region support and environment generation.
 - Continuous `forestDensityAt` suitability (`biomeRegions.ts`) drives large-scale tree density and `ChunkManager.sampleForestFactor` for fauna habitat (plan 063); no separate forest grid/manager.
-- Per-chunk vegetation and natural environment elements.
+- Per-chunk vegetation and natural environment elements. Living trees, bushes/cacti/reeds, and GLB rocks/clusters/logs are `InstancedMesh` buckets per (species, primitive, chunk) (`src/render/instancedProps.ts`, plan 087); distant chunks thin the draw range via `InstancedMesh.count` (same prefix-LOD as grass). Stage meshes (limbed/felled/stump) and procedural landmarks stay individual `Object3D`s. Settlement trees/bushes are not instanced.
 - Chunk environment rocks and fallen logs use GLB templates (`rock_a` / `rock_cluster_a` / `fallen_log_a`) with procedural fallbacks (plan 065); campfire/monolith/ruins stay procedural.
 - Visible iron/coal/gold deposits stream GLB resource nodes (`resource_gold_1` / `resource_rock_1` with iron/coal tint) via `ResourceDeposits` (plan 065).
 - Procedural landmark pipeline exists and is currently being extended/verified under plan 049.

@@ -19,7 +19,6 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 | `2026-08-08--039--road-signposts.md` | Yaw tabliczki + odstęp midpoint; skrzyżowania later | 80 | ⚪ | S | ~~026~~ |
 | `2026-08-09--049--procedural-world-landmarks.md` | Proceduralne obiekty, ruiny, landmarki | 40 | 🟡 | XL | ~~001~~ ~~006~~ ~~007~~ ~~028~~ ~~030~~ |
 | `2026-08-07--024--world-visual-overhaul.md` | Rośliny, niebo/chmury, góry w tle | 50 | ⚪ | L | ~~028~~ |
-| `2026-08-12--087--vegetation-and-prop-instancing.md` | Instancing roślinności/propsów (review 005 / A1) — fazy 1–5 (Must) gotowe; dalej faza 7 (LOD) | 60 | 🔴 | XL | ~~007~~ ~~065~~ ~~073~~ |
 
 ---
 
@@ -52,7 +51,7 @@ Implementation complete; needs play/browser check. Grouped; full write-up is in 
 
 **Osady / wioski** — `047` village overhaul (zależy jeszcze od 032) · `036` siting trudny teren (częściowo) · `072` nameplate/palisada · `074` katalog domów · `076` polish generatora · `077` ogrody S/M/L · `095` stóg siana + ogród poza placem
 
-**Las / narzędzia / zbieractwo** — `032` zasoby naturalne · `052` łopata/kamienie · `057` siekiera · `058` cykl drzew · `061` dig UX · `065` GLB skały/złoża · `082` widły/sierp/clutter · `085` handheld lights + village torches · `086` trawa w workerze (zdrowy baseline `Simulate (ms)` potwierdzony w przeglądarce; pixel-identyczny layout nie porównany explicite) · `091` odnawialne gałęzie · `096` fauna GLB / hold / światła / blood splat
+**Las / narzędzia / zbieractwo** — `032` zasoby naturalne · `052` łopata/kamienie · `057` siekiera · `058` cykl drzew · `061` dig UX · `065` GLB skały/złoża · `082` widły/sierp/clutter · `085` handheld lights + village torches · `086` trawa w workerze (zdrowy baseline `Simulate (ms)` potwierdzony w przeglądarce; pixel-identyczny layout nie porównany explicite) · `087` instancing roślinności/propsów (fazy 1–5+7; brak pomiaru Draw calls przed/po) · `091` odnawialne gałęzie · `096` fauna GLB / hold / światła / blood splat
 
 **Fauna / jaskinie** — `056` głodny predator · `064` cave vs droga · `080` fauna vs footprint osady · `083` dziura w terenie przy jaskini
 
