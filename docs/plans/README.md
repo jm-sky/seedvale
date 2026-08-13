@@ -32,7 +32,6 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 | `2026-08-12--089--better-minimap-and-world-map.md` | Minimapa + mapa świata, FoW, warstwy **[DO REVIEW]** | 🟡 | XL | ~~025~~ ~~028~~ ~~029~~ ~~046~~ ~~067~~ |
 | `2026-08-12--086--grass-generation-in-worker.md` | Trawa w workerze (domyka fazę 5 ~~008~~) | 🟡 | L | ~~006~~ ~~008~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
-| `2026-08-11--060--npc-schedule-actions-and-trait-overlays.md` | Wykonywalne aktywności grafiku NPC + traits | 🟡 | L | ~~020~~ ~~022~~ |
 
 ---
 
@@ -59,6 +58,8 @@ Implementation complete; needs play/browser check. Grouped; full write-up is in 
 **Fauna / jaskinie** — `056` głodny predator · `064` cave vs droga · `080` fauna vs footprint osady · `083` dziura w terenie przy jaskini
 
 **UI / audio / rest** — `046` Vue+Tailwind · `059` SFX pick/drop (`2026-08-11--059--inventory-pick-drop-sfx.md`) · `075` time-skip catch-up NPC · `078` `playAt` falloff · `079` InteractionQueue / studnia · `084` obóz + town rest · `088` asset alignment browser · `090` miecz/kupiec/namiot/jaskinie/kilof
+
+**NPC** — `060` wykonywalny grafik (`eat`/`home`/`wake`) + overlay traits (`night_owl` / `fast_worker` / `sociable`)
 
 ---
 

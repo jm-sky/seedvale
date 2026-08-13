@@ -9,10 +9,11 @@ import type { Vector3 } from 'three'
  *
  * v2 stage 1 (2026-08-09 decisions) added `workplace`/`food`/`social` as
  * types and `workplaceFor()` below, computing a per-role `Place` from
- * existing `SettlementLandmarks`. v2 stage 2 wires it up: `NpcAgent`'s
- * generic `goTo`/`execute` phases (replacing the old resource-specific
- * `goWell`/`goGarden`/`goTree`/`goStock`) send an idle NPC to `workplace`
- * when `schedule` says `work` — see `NpcAgent.ts`'s `beginIdle`.
+ * existing `SettlementLandmarks`. `NpcAgent`'s generic `goTo`/`execute`
+ * phases send an idle NPC to `workplace` when the effective schedule says
+ * `work` — see `NpcAgent.ts`'s `beginIdle`. Scheduled `eat` reuses the
+ * garden; `home`/`wake` stay near the home Place. `social` has no producer
+ * yet (plan 060 falls back to home).
  */
 export type PlaceType = 'home' | 'workplace' | 'food' | 'social'
 

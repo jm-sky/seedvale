@@ -76,10 +76,10 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - NPC needs and behaviour/state-machine logic.
 - Well drinks use a shared per-settlement `InteractionQueue` (plan 079): FIFO standing slots south of the well, one serving agent at a time; home drinks skip the queue. Same queue type is reusable for future garden/stall points.
 - NPC personality/character depth including role, traits/Big Five-related data, health and stamina.
+- NPC daily rhythm uses an effective per-NPC schedule (`effectiveScheduleFor`: role template + trait overlays). Scheduled `eat` / `home` / `wake` / `work` / `sleep` are executed through the existing FSM; `night_owl` shifts the day rather than skipping sleep; `fast_worker` lengthens work blocks; `sociable` would split `home`→`social` if a social Place existed (none is generated yet). Urgent needs still win at `choose()`. Plan 060 — verification needed (browser rhythm check).
 - NPCs use shared `StaminaState` for work/rest effort; HP is no longer drained by fatigue.
 - NPC names and family naming data.
 - NPC dialogue v2 exists as a Vue screen with multiple conversation topics. Home trader opens a trade screen; home guard can be asked for a sword.
-- NPC daily routine/place work is partially implemented; plan 020 remains in progress.
 - NPC reaction sounds are implemented (`playAt` from the NPC mesh — quieter farther away).
 - World one-shots that have a source position use `worldAudio.playAt` (linear falloff `ref=1.5` / `max=28`): well, melee, animal observe, axe chop. Inventory / quest thank-you stay on `playOnce`.
 
@@ -236,7 +236,7 @@ Plan 046 introduced the Vue/Tailwind UI stack and migrated screens phase-by-phas
 
 ### NPC daily routine
 
-Plan 020 is partially implemented. `Place`, schedule and movement/action concepts exist, but the full role-driven routine/workplace system is not complete.
+Plan 020 (Place, role templates, `activityAt`, workplace, generic `goTo`→`execute`) plus plan 060 (executable `eat`/`home`/`wake`, trait overlays on an effective schedule) are implemented. Remaining gaps are intentional: no social landmark yet, no household economy, ordinary schedule changes do not interrupt an action in flight.
 
 ### Procedural landmarks
 
@@ -262,7 +262,7 @@ Do not treat a passing build as proof that a visual Three.js feature is correct.
 The following should not be assumed to exist merely because related foundations exist:
 
 - Full NPC simulation persistence across saves.
-- Full role-driven NPC daily routine/workplace system (plan 020).
+- Social Place assignment for `sociable` schedule overlays (type exists; no producer yet).
 - Shared Threat context type (plan 045 deferred — existing fauna perception covers current consumers).
 - LLM/AI-generated quests.
 - Full village production/consumption economy.
@@ -283,8 +283,6 @@ The exact status of plans belongs in `docs/plans/README.md`, not here. As of thi
 - Plan 046 — Vue/Tailwind UI migration: Fazy 0–4 implemented; browser verification pending (desktop + touch).
 - Plan 005 — game UI screens: done (world config + notes/journal screens close out the last open item).
 - Plan 052 — shovel digging/stone finding: done (shovel item, runtime terrain-deformation layer, dig ground interaction).
-- Plan 020 — NPC Place/daily routine.
-- Plan 045 — Health/Stamina foundation: implemented; browser/manual verification pending (Threat deferred).
 - Plan 047 — village generation overhaul.
 
 ## Source of truth rule

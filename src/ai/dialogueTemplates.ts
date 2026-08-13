@@ -89,6 +89,7 @@ export function aboutSelfLine(
 const ACTIVITY_LABEL: Record<Exclude<CurrentActivityKind, 'need'>, string> = {
   sleep: 'śpię',
   work: 'pracuję',
+  eat: 'jem',
   wander: 'przechadzam się po okolicy',
   talking: 'akurat z Tobą rozmawiam',
   idle: 'nic szczególnego nie robię',

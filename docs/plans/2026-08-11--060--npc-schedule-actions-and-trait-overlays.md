@@ -1,6 +1,6 @@
 # Plan: NPC schedule actions and trait overlays
 
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Created:** 2026-08-11
 **Priority:** 🟡 medium
 **Effort:** L
@@ -78,9 +78,30 @@ Nie dodawać przerywania trwającej akcji przez zwykłą zmianę godziny. Przerw
 
 ## Done when
 
-- [ ] `eat`, `home` i `wake` mają jawne, obserwowalne zachowanie lub udokumentowany brak działania, gdy to właściwe.
-- [ ] Pilne water/food/wood needs nadal wygrywają z harmonogramem.
-- [ ] Trait overlays tworzą deterministyczny effective schedule bez mutacji szablonów ról.
-- [ ] `night_owl`, `hardworking` i `sociable` mają testy jednostkowe dla harmonogramu, w tym przypadki przez północ i brak `social` place.
-- [ ] Brak regresji snu, pracy i dialogowego `getCurrentActivity()`.
+- [x] `eat`, `home` i `wake` mają jawne, obserwowalne zachowanie lub udokumentowany brak działania, gdy to właściwe.
+- [x] Pilne water/food/wood needs nadal wygrywają z harmonogramem.
+- [x] Trait overlays tworzą deterministyczny effective schedule bez mutacji szablonów ról.
+- [x] `night_owl`, `fast_worker` (zamiast nieistniejącego `hardworking`) i `sociable` mają testy jednostkowe dla harmonogramu, w tym przypadki przez północ i brak `social` place.
+- [x] Brak regresji snu, pracy i dialogowego `getCurrentActivity()`.
 - [ ] Ręczna weryfikacja: NPC je, wraca do domu, pracuje i śpi zgodnie z efektywnym grafikiem.
+
+## Zaimplementowane (2026-08-13)
+
+Czysta transformacja `effectiveScheduleFor(template, traits, options)` w `src/ai/schedule.ts`, liczona raz przy tworzeniu `NpcAgent`. Szablony ról nie są mutowane. `NpcAgent.schedule` to jedyne źródło runtime (decyzje + `getCurrentActivity` / `nextBoundary`).
+
+**Aktywności**
+
+- `eat` — ta sama akcja `eat` co need jedzenia (ogród, `FOOD_SATISFY_AMOUNT`); po posiłku NPC zostaje przy ogrodzie do końca bloku.
+- `home` / `wake` — `wake` to granica decyzji (bez nowej akcji); oba zostają przy domu przez istniejący `wander`, bez przypadkowego `dockRoute`.
+- `work` / `sleep` — bez zmian wykonania; sen nie omija już `night_owl` wyjątkiem — grafik jest przesunięty.
+- `social` — nowa etykieta grafiku; w runtime nie ma social Place, więc overlay i FSM padają na `home`.
+
+**Arbitraż w `choose()`:** `pickNeed()` → jeśli nie `idle`, need; dopiero potem `sleep` / pozostały grafik. Zwyczajna zmiana godziny nie przerywa trwającej akcji.
+
+**Overlays (kolejność stała)**
+
+1. `fast_worker` — opóźnia `home` następujące po `work` o 1 h (dłuższy blok pracy). Osobne od `FAST_WORKER_WAIT_MULT` (szybkość akcji). Plan nazywał to `hardworking`; w modelu postaci takiej cechy nie ma — nie dodano jej.
+2. `night_owl` — przesuwa **wszystkie** wpisy o +2 h (mod 24), w tym grafik strażnika przez północ.
+3. `sociable` — `home`→`social` tylko gdy `hasSocialPlace`; runtime podaje `false`.
+
+**Technicznie zweryfikowane:** `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test`. Rytm dnia wymaga sprawdzenia w przeglądarce.

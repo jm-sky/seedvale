@@ -12,8 +12,9 @@ export type NpcGender = 'male' | 'female'
  *  come up on any regular family via the normal random roll below. */
 export type Role = 'woodcutter' | 'farmer' | 'guard' | 'trader' | 'miner' | 'fisher'
 
-/** Closed pool of lightweight, deterministic modifiers — see NpcAgent for
- *  where each one actually changes a number (wait times, HP, PAUSE_PARAMS). */
+/** Closed pool of lightweight, deterministic modifiers — execution effects
+ *  live in `NpcAgent` (wait times, stamina, PAUSE_PARAMS); schedule overlays
+ *  (`night_owl` / `fast_worker` / `sociable`) live in `effectiveScheduleFor`. */
 export type Trait = 'energetic' | 'fast_worker' | 'night_owl' | 'sociable'
 
 export type CharacterDef = {
