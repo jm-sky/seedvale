@@ -1,9 +1,9 @@
 # Plan: Lepsza minimapa i nowa duża mapa
 
-**Status:** `planned` — **DO REVIEW**  
-**Created:** 2026-08-12  
-**Priority:** 🟡 medium  
-**Effort:** XL  
+**Status:** `planned` — **DO REVIEW**
+**Created:** 2026-08-12
+**Priority:** 🟡 medium
+**Effort:** XL
 **Depends on:** ~~025~~, ~~028~~, ~~029~~, ~~046~~, ~~067~~
 
 ## Cel
@@ -34,8 +34,8 @@ Minimapa pozostaje **lekkim narzędziem orientacyjnym**, a nie miniaturą dużej
 - podstawowe kolory terenu/biomów
 - Fog of War
 - nieznany teren domyślnie ukryty
-- podstawowe markery: gracz, osady i istotne lokalizacje
-- zachowanie heading-up + kompas N z planu 067
+- podstawowe markery: gracz, osady i istotne lokalizacje (na razie nie mamy istotnych lokalizacji)
+- zachowanie heading-up + kompas N z planu 067 (minimapa powinna obracać się; nie powinno być "góra to zawsze północ")
 - możliwość show/hide warstw typu terenu/biomu, jeśli nie pogorszy to czytelności
 - zachowanie obecnego collapse/toggle
 - czytelność na desktopie i touch
@@ -50,15 +50,15 @@ Podstawowe możliwości:
 
 - duży zakres zoom in/out
 - przesuwanie mapy
-- Fog of War
-- nieznany teren ukryty
+- Fog of War (może być później, v3)
+- nieznany teren ukryty (może być później, v2)
 - kolorowanie biomów/typów terenu
 - warstwy włączane/wyłączane przez użytkownika
 - osady, miasta i inne ważne lokalizacje
 - drogi i ścieżki, jeśli są znane
-- własne markery gracza
-- oznaczenie lokalizacji jako potwierdzonej albo szacunkowej
-- możliwość wyświetlania informacji pochodzących z różnych źródeł
+- własne markery gracza (może być później, v4)
+- oznaczenie lokalizacji jako potwierdzonej albo szacunkowej (może być później, v3/4/5)
+- możliwość wyświetlania informacji pochodzących z różnych źródeł (może być później, v4/5)
 
 ### 3. Wiedza o świecie
 
