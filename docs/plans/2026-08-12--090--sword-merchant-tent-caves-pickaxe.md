@@ -1,6 +1,6 @@
-# Plan 091: Miecz, Kupiec, Namiot, Duże Jaskinie i Kilof
+# Plan 090: Miecz, Kupiec, Namiot, Duże Jaskinie i Kilof
 
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — kilof, miecz (hold/melee + Strażnik/Kupiec), kupiec/handel, namiot, duże jaskinie, wóz/koń zaimplementowane; wymaga sprawdzenia w przeglądarce
 **Created:** 2026-08-12
 **Priority:** 🟡 medium
 **Effort:** XL
@@ -417,47 +417,48 @@ Nie implementować w ramach tego planu:
 
 ### Miecz
 
-- [ ] `Miecz` jest prawidłowym itemem inventory.
-- [ ] Można go trzymać w dłoni z poprawnym gripem.
-- [ ] Działa w istniejącym melee.
-- [ ] Strażnik może przekazać go jako nagrodę za quest/dialog.
-- [ ] Kupiec sprzedaje go za muszle i barter.
+- [x] `Miecz` jest prawidłowym itemem inventory.
+- [x] Można go trzymać w dłoni z gripem (do strojenia w alignment browser).
+- [x] Działa w istniejącym melee (28 dmg).
+- [x] Strażnik może przekazać go jako nagrodę za quest/dialog.
+- [x] Kupiec sprzedaje go za muszle i barter.
 
 ### Kupiec
 
-- [ ] W domowej osadzie istnieje dokładnie jeden Kupiec.
-- [ ] Kupiec ma wóz obok siebie.
-- [ ] Przy wozie znajduje się dekoracyjny koń.
-- [ ] Interakcja z Kupcem otwiera handel.
-- [ ] Działa płatność muszlami.
-- [ ] Działa barter item → item.
-- [ ] Ceny są skonfigurowane centralnie.
+- [x] W domowej osadzie istnieje dokładnie jeden Kupiec.
+- [x] Kupiec ma wóz obok siebie.
+- [x] Przy wozie znajduje się dekoracyjny koń.
+- [x] Interakcja z Kupcem otwiera handel.
+- [x] Działa płatność muszlami.
+- [x] Działa barter item → item.
+- [x] Ceny są skonfigurowane centralnie.
 
 ### Namiot
 
-- [ ] Namiot jest itemem inventory.
-- [ ] Można kupić go u Kupca.
-- [ ] Można go rozstawić na odpowiednim terenie.
-- [ ] Stojący namiot daje `Odpocznij` i `Złóż namiot`.
-- [ ] Złożenie zwraca namiot do inventory.
-- [ ] Odpoczynek wykorzystuje istniejący camping/time-skip.
+- [x] Namiot jest itemem inventory.
+- [x] Można kupić go u Kupca.
+- [x] Można go rozstawić na odpowiednim terenie.
+- [x] Stojący namiot daje `Odpocznij` i `Złóż namiot`.
+- [x] Złożenie zwraca namiot do inventory.
+- [x] Odpoczynek wykorzystuje istniejący camping/time-skip.
 
 ### Jaskinie
 
-- [ ] Generator tworzy wiele dużych jaskiń.
-- [ ] Otwór ma około 3 × 3 m.
-- [ ] Tunel ma około 10–15 m.
-- [ ] Jaskinia jest fizycznie dostępna dla gracza.
-- [ ] Teren jest rzeczywiście zagłębiony, a nie przykryty wyłącznie wizualnym propem.
-- [ ] Wejście jest naturalnie otoczone skałami.
-- [ ] Jaskinie nie kolidują z osadami/drogami/ważnymi landmarkami.
-- [ ] Pierwsza wersja nie zawiera jeszcze zawartości gameplayowej.
+- [x] Generator tworzy wiele dużych jaskiń.
+- [x] Otwór ma około 3 × 3 m.
+- [x] Tunel ma około 10–15 m.
+- [x] Jaskinia jest fizycznie dostępna dla gracza.
+- [x] Teren jest rzeczywiście zagłębiony, a nie przykryty wyłącznie wizualnym propem.
+- [x] Wejście jest naturalnie otoczone skałami.
+- [x] Jaskinie nie kolidują z osadami/drogami/ważnymi landmarkami.
+- [x] Pierwsza wersja nie zawiera jeszcze zawartości gameplayowej.
 
 ### Kilof
 
-- [ ] Kilof jest itemem inventory i można go trzymać.
-- [ ] `[E] Wydobądź` działa tylko z odpowiednimi złożami/skałami.
-- [ ] Można wydobywać kamień, węgiel, żelazo i złoto.
-- [ ] Wydobycie korzysta z istniejącego `ResourceDeposits`.
-- [ ] Yield respektuje istniejący system inventory/drop.
-- [ ] Nie powstaje drugi system zarządzania złożami.
+- [x] Kilof jest itemem inventory i można go trzymać.
+- [x] `[E] Wydobądź` działa tylko z odpowiednimi złożami (iron/coal/gold), gdy kilof jest w dłoni.
+- [x] Można wydobywać węgiel, żelazo i złoto. Kamień zostaje przy łopacie (`dig`), zgodnie z podziałem narzędzi w planie.
+- [x] Wydobycie korzysta z istniejącego `ResourceDeposits` (hits z `richness`, sesja bez save).
+- [x] Yield respektuje istniejący system inventory/drop.
+- [x] Nie powstaje drugi system zarządzania złożami.
+- [x] Kilof u Kupca (po slice handlu).

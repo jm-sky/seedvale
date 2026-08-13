@@ -25,8 +25,11 @@ export type QuickActionsHandlers = {
   /** Shovel dig / level when the player owns a shovel (HUD only when held). */
   onDig?: () => void
   onLevel?: () => void
+  onPlaceTent?: () => void
   /** Initial shovel ownership for showing dig/level buttons. */
   hasShovel?: boolean
+  /** Initial tent ownership for showing "Rozstaw namiot". */
+  hasTent?: boolean
   /** Initial near-settlement flag for showing "Odpocznij w mieście". */
   nearTown?: boolean
   /** Fired when the panel transitions from closed → open (e.g. release pointer lock). */
@@ -53,6 +56,9 @@ export function createQuickActions(
   getUi()?.configureQuickActions(handlers)
   if (typeof handlers.hasShovel === 'boolean') {
     getUi()?.setQuickActionsHasShovel(handlers.hasShovel)
+  }
+  if (typeof handlers.hasTent === 'boolean') {
+    getUi()?.setQuickActionsHasTent(handlers.hasTent)
   }
   if (typeof handlers.nearTown === 'boolean') {
     getUi()?.setQuickActionsNearTown(handlers.nearTown)

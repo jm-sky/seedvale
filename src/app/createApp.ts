@@ -1,7 +1,7 @@
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { AmbientSamplers } from '../audio/ambientWeights'
 import type { SaveData } from '../persistence/saveData'
-import { playActionChop, playActionDig } from '../audio/actionSounds'
+import { playActionChop, playActionDig, playActionMine } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
@@ -18,9 +18,12 @@ import { createTouchControls, type TouchControls } from '../input/createTouchCon
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
+import { askGuardForSword, shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { Inventory } from '../items/Inventory'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { evaluateTentPlacement, TENT_PLACEMENT_MESSAGE } from '../items/tentPlacement'
+import { buyWithBarter, buyWithShells } from '../items/trade'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
 import { createPlayerTorch } from '../player/PlayerTorch'
@@ -31,6 +34,7 @@ import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
+import { MINE_DURATION_SEC, yieldForOre } from '../terrain/depositMining'
 import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt } from '../terrain/dig'
 import { applyDigAt, applyLevelAt } from '../terrain/digAction'
 import { mountVueUi } from '../ui-vue/mount'
@@ -177,6 +181,7 @@ export async function createApp(
     worldAudio.playAt,
     initialSave?.droppedItems ?? [],
     initialSave?.placedFires ?? [],
+    initialSave?.placedTents ?? [],
     treeLifecycle,
     getWorldDays,
   )
@@ -201,6 +206,7 @@ export async function createApp(
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
   const syncShovelQuickActions = (): void => {
     vueUi.setQuickActionsHasShovel(inventory.has('shovel', 1))
+    vueUi.setQuickActionsHasTent(inventory.has('tent', 1))
   }
 
   const keyboard = createKeyboard()
@@ -274,15 +280,93 @@ export async function createApp(
     }
   }
 
+  const worldFlags = {
+    guardSwordGifted: initialSave?.worldFlags?.guardSwordGifted ?? false,
+  }
+
+  const grantItem = (kind: ItemKind, count: number): void => {
+    for (let i = 0; i < count; i++) {
+      if (!inventory.add(kind)) {
+        bundle.droppedItems.drop(kind, player.mesh.position.x, player.mesh.position.z)
+      }
+    }
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    touchControls?.setDropAvailable(!inventory.isEmpty())
+    heldTool.syncWithInventory()
+    syncHeldHud()
+    syncShovelQuickActions()
+  }
+
   const minimap = createMinimap(container)
   const questManager = new QuestManager(
     undefined,
     worldAudio.playOnce,
     inventory,
     initialSave?.quests,
+    (kind, count) => {
+      if (kind === 'long_sword') {
+        if (!shouldGrantQuestSword(kind, worldFlags.guardSwordGifted, inventory.has('long_sword', 1))) return
+        worldFlags.guardSwordGifted = true
+      }
+      grantItem(kind, count)
+      toast.show(`+${count} ${ITEM_DEFS[kind].label}`, 'pickup')
+    },
   )
   hud.setExp(questManager.getExp())
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+
+  const syncMerchantIfOpen = (): void => {
+    if (vueUi.isMerchantOpen()) vueUi.refreshMerchant(inventory.toJSON())
+  }
+
+  vueUi.configureMerchant({
+    onBuyShells: (kind) => {
+      const result = buyWithShells(inventory, kind)
+      if (result === 'ok') {
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        touchControls?.setDropAvailable(!inventory.isEmpty())
+        heldTool.syncWithInventory()
+        syncHeldHud()
+        syncShovelQuickActions()
+        vueUi.refreshMerchant(inventory.toJSON())
+        toast.show(`+1 ${ITEM_DEFS[kind].label}`, 'pickup')
+      }
+      return result
+    },
+    onBuyBarter: (kind, offer) => {
+      const result = buyWithBarter(inventory, kind, offer)
+      if (result === 'ok') {
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        touchControls?.setDropAvailable(!inventory.isEmpty())
+        heldTool.syncWithInventory()
+        syncHeldHud()
+        syncShovelQuickActions()
+        vueUi.refreshMerchant(inventory.toJSON())
+        toast.show(`+1 ${ITEM_DEFS[kind].label}`, 'pickup')
+      }
+      return result
+    },
+  })
+  vueUi.configureNpcDialogueMenu({
+    onAskSword: () => {
+      const result = askGuardForSword({
+        alreadyGifted: worldFlags.guardSwordGifted,
+        guardQuestComplete: questManager.getState('woda-dla-marka') === 'complete',
+        relation: questManager.getRelation('Marek'),
+        alreadyHasSword: inventory.has('long_sword', 1),
+      })
+      if (result.grant) {
+        worldFlags.guardSwordGifted = true
+        grantItem('long_sword', 1)
+        toast.show('+1 Miecz', 'pickup')
+      }
+      return result.line
+    },
+    onOpenTrade: () => {
+      vueUi.closeNpcDialogueMenu({ decline: false })
+      vueUi.openMerchant(inventory.toJSON())
+    },
+  })
 
   let rebuilding = false
   /** Pass `resetCollectedItems: true` only for a genuinely new world (new seed,
@@ -321,6 +405,7 @@ export async function createApp(
         heldTool.unequip()
         questManager.reset()
         playerTorch.extinguish()
+        worldFlags.guardSwordGifted = false
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         syncHeldHud()
         hud.setExp(questManager.getExp())
@@ -341,7 +426,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 9,
+    version: 10,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -372,6 +457,8 @@ export async function createApp(
     playerTorch: playerTorch.isLit() && playerTorch.source()
       ? { source: playerTorch.source()!, fuelRemaining: playerTorch.fuelRemaining() }
       : null,
+    placedTents: bundle.placedTents.nodes().map((tent) => ({ ...tent })),
+    worldFlags: { ...worldFlags },
   })
 
   const saveNow = (): void => {
@@ -504,6 +591,83 @@ export async function createApp(
   const busyOverlay = createBusyOverlay(container)
   const restCamp = createRestCampSequence(scene, player, (x, z) => bundle.chunkManager.sampleHeight(x, z))
 
+  const tentAimPoint = (): { x: number, z: number, yaw: number } => {
+    const yaw = mouseLook.state.yaw
+    return {
+      x: player.mesh.position.x - Math.sin(yaw) * 2.2,
+      z: player.mesh.position.z - Math.cos(yaw) * 2.2,
+      yaw,
+    }
+  }
+
+  const tentBlockers = (x: number, z: number): { x: number, z: number, radius: number }[] => {
+    const blockers: { x: number, z: number, radius: number }[] = []
+    for (const tree of bundle.chunkManager.getNearbyTrees({ x, z }, 8)) {
+      blockers.push({ x: tree.x, z: tree.z, radius: 1.2 })
+    }
+    for (const settlement of bundle.settlementsManager.getLoaded()) {
+      blockers.push({
+        x: settlement.landmarks.well.x,
+        z: settlement.landmarks.well.z,
+        radius: 1.6,
+      })
+      for (const house of settlement.landmarks.houses) {
+        blockers.push({ x: house.position.x, z: house.position.z, radius: 2.2 })
+      }
+    }
+    return blockers
+  }
+
+  const placeTentAtAim = (): void => {
+    if (!inventory.has('tent', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const aim = tentAimPoint()
+    const reason = evaluateTentPlacement({
+      x: aim.x,
+      z: aim.z,
+      sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
+      waterLevel: bundle.chunkManager.waterLevel,
+      roads: bundle.chunkManager.roadCorridorsNear(aim.x, aim.z, 10),
+      blockers: tentBlockers(aim.x, aim.z),
+      otherTents: bundle.placedTents.nodes(),
+    })
+    if (reason !== 'ok') {
+      toast.show(TENT_PLACEMENT_MESSAGE[reason], 'error')
+      return
+    }
+    if (!inventory.remove('tent', 1)) return
+    bundle.placedTents.place(aim.x, aim.z, aim.yaw)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    touchControls?.setDropAvailable(!inventory.isEmpty())
+    syncShovelQuickActions()
+    toast.show('Rozstawiono namiot.')
+  }
+
+  const startTentRest = (): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    restCamp.start({
+      variant: 'tent',
+      onSleepStart: () => {
+        timeSkip.start(8, { fadeStrength: 1, label: 'Odpoczywasz w namiocie...' })
+      },
+      onComplete: () => {},
+    })
+  }
+
+  const packTent = (id: string): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (!inventory.canAdd('tent')) {
+      toast.show('Ekwipunek jest za ciężki.', 'error')
+      return
+    }
+    const packed = bundle.placedTents.pack(id)
+    if (!packed) return
+    inventory.add('tent', 1)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    touchControls?.setDropAvailable(!inventory.isEmpty())
+    syncShovelQuickActions()
+    toast.show('+1 Namiot', 'pickup')
+  }
+
   const isNearTown = (): boolean => bundle.settlementsManager
     .getLoaded()
     .some((s) => s.center.distanceTo(player.mesh.position) <= REST_IN_TOWN_RADIUS)
@@ -620,11 +784,45 @@ export async function createApp(
     })
   }
 
+  const startDepositMine = (depositId: string, x: number, z: number): void => {
+    if (heldTool.held() !== 'pickaxe' || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const target = bundle.resourceDeposits.queryNearest(x, z, 0.75)
+    if (!target || target.id !== depositId || target.remaining <= 0) {
+      toast.show('Tu nie ma już czego wydobywać.', 'error')
+      return
+    }
+    const stepYield = yieldForOre(target.type)
+    if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
+      toast.show('Ekwipunek jest za ciężki.', 'error')
+      return
+    }
+    playActionMine(worldAudio.playAt, { x, z })
+    busy.start(MINE_DURATION_SEC, 'Wydobywanie…', () => {
+      if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
+        toast.show('Ekwipunek jest za ciężki.', 'error')
+        return
+      }
+      const result = bundle.resourceDeposits.mine(depositId)
+      if (!result.ok) {
+        toast.show('Tu nie ma już czego wydobywać.', 'error')
+        return
+      }
+      inventory.add(result.yield.kind, result.yield.count)
+      playInventoryPickUp(worldAudio.playOnce)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      touchControls?.setDropAvailable(!inventory.isEmpty())
+      heldTool.syncWithInventory()
+      syncHeldHud()
+      toast.show(`+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`, 'pickup')
+    })
+  }
+
   /** When quick actions opened under pointer lock, restore lock on close so
    *  camera look resumes without requiring an extra canvas click. */
   let restorePointerLockAfterQuickActions = false
   const quickActions = createQuickActions(container, {
     hasShovel: inventory.has('shovel', 1),
+    hasTent: inventory.has('tent', 1),
     nearTown: isNearTown(),
     onOpen: () => {
       restorePointerLockAfterQuickActions = exitGamePointerLock(renderer.domElement)
@@ -674,6 +872,7 @@ export async function createApp(
       const p = aimGroundPoint()
       startLevelAt(p.x, p.z)
     },
+    onPlaceTent: placeTentAtAim,
   })
   syncShovelQuickActions()
   syncNearTownQuickActions()
@@ -818,11 +1017,15 @@ export async function createApp(
       else startDigAt(x, z)
     },
     startTreeChop,
+    startDepositMine,
     startBuryCorpse,
+    startTentRest,
+    packTent,
     onInventoryChanged: () => {
       heldTool.syncWithInventory()
       syncHeldHud()
       syncShovelQuickActions()
+      syncMerchantIfOpen()
     },
     setFrameTiming: gui.setFrameTiming,
   })

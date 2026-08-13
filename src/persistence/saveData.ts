@@ -150,7 +150,7 @@ export type SaveDataV8 = {
   treeOverrides: Record<string, SaveTreeOverride>
 }
 
-export type SaveData = {
+export type SaveDataV9 = {
   version: 9
   config: SaveConfig
   player: SavePlayer
@@ -175,6 +175,33 @@ export type SaveData = {
   treeOverrides: Record<string, SaveTreeOverride>
   /** Lit hand torch/branch + remaining fuel. Null when unlit. */
   playerTorch: SavePlayerTorch | null
+}
+
+export type SavePlacedTent = { id: string, x: number, z: number, yaw: number }
+
+export type SaveWorldFlags = {
+  /** Strażnik already gifted a long_sword (quest or dialogue, plan 090). */
+  guardSwordGifted?: boolean
+}
+
+/** Canonical save shape — always v10. `loadSaveData` migrates older saves up. */
+export type SaveData = {
+  version: 10
+  config: SaveConfig
+  player: SavePlayer
+  savedAt: number
+  quests: SaveQuests
+  inventory: Partial<Record<ItemKind, number>>
+  collectedItemIds: string[]
+  droppedItems: SaveDroppedItem[]
+  placedFires: SavePlacedFire[]
+  timeOfDay: number
+  elapsedDays: number
+  heldTool: ItemKind | null
+  treeOverrides: Record<string, SaveTreeOverride>
+  playerTorch: SavePlayerTorch | null
+  placedTents: SavePlacedTent[]
+  worldFlags: SaveWorldFlags
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -352,7 +379,47 @@ export function isSaveDataV8(value: unknown): value is SaveDataV8 {
   return true
 }
 
-export function isSaveDataV9(value: unknown): value is SaveData {
+function isPlacedTentsField(value: unknown): value is SavePlacedTent[] {
+  if (!Array.isArray(value)) return false
+  for (const raw of value) {
+    if (!raw || typeof raw !== 'object') return false
+    const t = raw as Record<string, unknown>
+    if (typeof t.id !== 'string') return false
+    if (typeof t.x !== 'number' || typeof t.z !== 'number' || typeof t.yaw !== 'number') return false
+  }
+  return true
+}
+
+function isWorldFlagsField(value: unknown): value is SaveWorldFlags {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const flags = value as Record<string, unknown>
+  if (flags.guardSwordGifted !== undefined && typeof flags.guardSwordGifted !== 'boolean') return false
+  return true
+}
+
+export function isSaveDataV10(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 10) return false
+  if (!isSaveConfig(v.config)) return false
+  if (!isSavePlayer(v.player)) return false
+  if (typeof v.savedAt !== 'number') return false
+  if (!v.quests || typeof v.quests !== 'object') return false
+  if (!v.inventory || typeof v.inventory !== 'object') return false
+  if (!Array.isArray(v.collectedItemIds)) return false
+  if (!Array.isArray(v.droppedItems)) return false
+  if (!Array.isArray(v.placedFires)) return false
+  if (typeof v.timeOfDay !== 'number') return false
+  if (typeof v.elapsedDays !== 'number') return false
+  if (!isHeldToolField(v.heldTool)) return false
+  if (!isTreeOverridesField(v.treeOverrides)) return false
+  if (!isPlayerTorchField(v.playerTorch)) return false
+  if (!isPlacedTentsField(v.placedTents)) return false
+  if (!isWorldFlagsField(v.worldFlags)) return false
+  return true
+}
+
+export function isSaveDataV9(value: unknown): value is SaveDataV9 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 9) return false
@@ -383,28 +450,49 @@ function migratePlacedFires(placedFires: readonly LegacySavePlacedFire[]): SaveP
   return placedFires.map((pf) => ({ ...pf, kind: 'pit' as const }))
 }
 
-function toV9(fields: Omit<SaveData, 'version' | 'heldTool' | 'elapsedDays' | 'treeOverrides' | 'playerTorch'> & {
+function toV10(fields: Omit<SaveData, 'version' | 'heldTool' | 'elapsedDays' | 'treeOverrides' | 'playerTorch' | 'placedTents' | 'worldFlags'> & {
   heldTool?: ItemKind | null
   elapsedDays?: number
   treeOverrides?: Record<string, SaveTreeOverride>
   playerTorch?: SavePlayerTorch | null
+  placedTents?: SavePlacedTent[]
+  worldFlags?: SaveWorldFlags
 }): SaveData {
   return {
-    version: 9,
+    version: 10,
     ...fields,
     heldTool: fields.heldTool ?? null,
     elapsedDays: fields.elapsedDays ?? 0,
     treeOverrides: fields.treeOverrides ?? {},
     playerTorch: fields.playerTorch ?? null,
+    placedTents: fields.placedTents ?? [],
+    worldFlags: fields.worldFlags ?? {},
   }
 }
 
-/** Accepts a stored v1–v9 save and always returns the canonical v9 shape. */
+/** Accepts a stored v1–v10 save and always returns the canonical v10 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV9(value)) return value
+    if (isSaveDataV10(value)) return value
+    if (isSaveDataV9(value)) {
+      return toV10({
+        config: value.config,
+        player: value.player,
+        savedAt: value.savedAt,
+        quests: value.quests,
+        inventory: value.inventory,
+        collectedItemIds: value.collectedItemIds,
+        droppedItems: value.droppedItems,
+        placedFires: value.placedFires,
+        timeOfDay: value.timeOfDay,
+        elapsedDays: value.elapsedDays,
+        heldTool: value.heldTool,
+        treeOverrides: value.treeOverrides,
+        playerTorch: value.playerTorch,
+      })
+    }
     if (isSaveDataV8(value)) {
-      return toV9({
+      return toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -421,7 +509,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV7(value)) {
-      return toV9({
+      return toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -435,7 +523,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV6(value)) {
-      return toV9({
+      return toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -449,7 +537,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV5(value)) {
-      return toV9({
+      return toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -463,7 +551,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV4(value)) {
-      return toV9({
+      return toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -477,7 +565,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV3(value)) {
-      return toV9({
+      return toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -491,7 +579,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV2(value)) {
-      return toV9({
+      return toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -505,7 +593,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       })
     }
     if (isSaveDataV1(value)) {
-      return toV9({
+      return toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,

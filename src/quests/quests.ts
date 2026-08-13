@@ -38,6 +38,8 @@ export type QuestDef = {
   stages: readonly QuestStage[]
   /** Giver's line once every stage is cleared and the player reports back. */
   reportLine: string
+  /** Optional inventory grant on turn-in (plan 090 sword from Strażnik). */
+  reward?: { kind: ItemKind, count: number }
 }
 
 export const QUESTS: readonly QuestDef[] = [
@@ -81,7 +83,8 @@ export const QUESTS: readonly QuestDef[] = [
         progressLine: 'Zaczerpnąłeś wody. Wróć do Marka.',
       },
     ],
-    reportLine: 'Dzięki, akurat mi się przydała.',
+    reportLine: 'Dzięki, akurat mi się przydała. Weź ten miecz — przyda Ci się w drodze.',
+    reward: { kind: 'long_sword', count: 1 },
   },
   {
     id: 'zwiadowca',

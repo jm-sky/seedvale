@@ -8,15 +8,7 @@ import {
 } from '../../items/heldToolVisual'
 
 /** Browser-only grips for held catalog entries that are not yet `ToolKind`. */
-export const BROWSER_PROVISIONAL_ATTACH: Readonly<Record<string, HeldAttach>> = {
-  // Y-up blade — same pitch/roll family as recalibrated shovel. Browser-only for now.
-  'held:long_sword': {
-    position: [0.02, 0.12, -0.02],
-    rotation: [Math.PI / 2, 0, -Math.PI / 2.6],
-    scale: 1,
-    gripLocalOffset: [0, -0.25, 0],
-  },
-}
+export const BROWSER_PROVISIONAL_ATTACH: Readonly<Record<string, HeldAttach>> = {}
 
 export type GripEditValues = {
   position: [number, number, number]

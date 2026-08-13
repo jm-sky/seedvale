@@ -17,6 +17,15 @@ describe('createHeldTool', () => {
     expect(held.held()).toBe('axe')
   })
 
+  it('equips pickaxe and long_sword from inventory (plan 090)', () => {
+    const inventory = new Inventory({ pickaxe: 1, long_sword: 1 })
+    const held = createHeldTool(inventory)
+    expect(held.equip('pickaxe')).toBe(true)
+    expect(held.held()).toBe('pickaxe')
+    expect(held.equip('long_sword')).toBe(true)
+    expect(held.held()).toBe('long_sword')
+  })
+
   it('rejects non-tools and missing items', () => {
     const inventory = new Inventory({ stone: 1 })
     const held = createHeldTool(inventory)

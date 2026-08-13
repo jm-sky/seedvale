@@ -2,7 +2,7 @@
 
 **Purpose:** factual snapshot of the implemented codebase. This document describes what exists now, not the desired future state.
 
-**Last verified:** 2026-08-12
+**Last verified:** 2026-08-13
 
 ## Read this first
 
@@ -30,6 +30,8 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - `ResourceDeposits`
 - `DroppedItems`
 - `PlacedFires`
+- `PlacedTents`
+- `LargeCaves`
 
 `rebuildWorldBundle()` disposes and recreates these systems while mutating the existing bundle object in place. Callers must therefore keep the bundle reference rather than destructuring a member that may later be replaced. This is the intended lifecycle pattern; plan 054 covers remaining callback/reference-safety cleanup, including code that currently captures `PlacedFires` directly.
 
@@ -76,7 +78,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - NPC personality/character depth including role, traits/Big Five-related data, health and stamina.
 - NPCs use shared `StaminaState` for work/rest effort; HP is no longer drained by fatigue.
 - NPC names and family naming data.
-- NPC dialogue v2 exists as a Vue screen with multiple conversation topics.
+- NPC dialogue v2 exists as a Vue screen with multiple conversation topics. Home trader opens a trade screen; home guard can be asked for a sword.
 - NPC daily routine/place work is partially implemented; plan 020 remains in progress.
 - NPC reaction sounds are implemented (`playAt` from the NPC mesh — quieter farther away).
 - World one-shots that have a source position use `worldAudio.playAt` (linear falloff `ref=1.5` / `max=28`): well, melee, animal observe, axe chop. Inventory / quest thank-you stay on `playOnce`.
@@ -99,7 +101,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 
 - `ItemKind` and `Inventory` exist in `src/items/`.
 - Player has shared `HealthState` on `PlayerController` (100 HP; CSS2D HP bar like NPC/fauna; no death UI/respawn yet — plan 045).
-- Held tools (`HeldTool`) attach a dedicated held mesh (GLB for shovel/axe/knife/wooden_torch)
+- Held tools (`HeldTool`) attach a dedicated held mesh (GLB for shovel/axe/knife/wooden_torch/pickaxe/long_sword)
   to Quaternius `WristR` via `heldToolVisual.ts` (not the ground-drop pose). Right hand is
   exclusive: a lit branch or lit wooden torch occupies the slot (no second tool until left hand).
 - Portable light (`PlayerTorch`): **Zapal gałąź** (1× branch + firestarter, ~90s, branch+fire GLB
@@ -110,16 +112,21 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
   `src/items/itemCatalog.ts` (pitchfork/sickle melee = roadmap).
 - House night lamps use `lantern.glb` body + `PointLight` (`createHouseLight`); village torch posts
   (`torch.glb`) at plaza + gate auto-light at dusk like the campfire threshold.
-- Simple player→animal melee: with knife/axe/shovel **held**, gazing at a live animal and pressing `[E]` deals instant damage (`playerToolDamage`: axe 20 > knife 12 > shovel 8) via `AnimalAgent.takeDamage`; hit/kill SFX via `playAt` at the animal; without a melee tool the existing observe/flavor dialog remains.
+- Simple player→animal melee: with knife/axe/shovel/long_sword **held**, gazing at a live animal and pressing `[E]` deals instant damage (`playerToolDamage`: sword 28 > axe 20 > knife 12 > shovel 8) via `AnimalAgent.takeDamage`; hit/kill SFX via `playAt` at the animal; without a melee tool the existing observe/flavor dialog remains.
 - Inventory is persisted in save data and has weight calculation/max weight support.
 - Item spawners and dropped items exist.
 - Natural collectible items are integrated into the world.
 - Starting equipment currently includes knife, firestarter and blanket when missing.
 - Village garden pickups include one-time **pitchfork** / **sickle** (1–3 total near gardens; GLB + procedural fallback; not holdable yet). Future NPC protest on theft: issue 025.
-- Settlement clutter: hay bales near gardens; decorative pickaxe at stockpile (plan 082).
+- Settlement clutter: hay bales near gardens. Pickaxe is a one-time stockpile pickup (plan 090), not a decorative prop.
+- Pickaxe (held): gazing at a streamed iron/coal/gold deposit shows **Wydobądź**; `[E]` runs a ~1.6 s busy channel then `ResourceDeposits.mine()` (3–7 hits from richness; session-only depletion). Yield is `iron` / `coal` / `gold`. Stone remains shovel-dig. Mine SFX currently reuses dig clips.
+- Long sword is holdable melee (28 dmg). Acquire: Marek's well-quest reward, dialogue „Poproś o miecz” after that quest/relation, or buy from the home Kupiec (plan 090).
+- Home settlement has exactly one trader (Kasia). Talking to her opens a Vue trade screen: shells or barter (`tradeCatalog.ts` / `trade.ts`). Wagon + decorative horse stand at the home market stall.
+- Tent is a utility item (Kupiec only, not a world spawn). Quick Action „Rozstaw namiot” checks flat/dry/clear ground; a placed tent offers `[E] Odpocznij` (camp rest sequence without blanket) and `[R] Złóż namiot`. Positions persist in save schema v10.
+- Large walk-in caves (`world/largeCaves.ts`): several world-scale sites (10–15 m trench, ~3 m mouth) carved via `modifyTerrain` with rock framing; empty of loot/mobs; avoid settlements/roads/coast.
 - Simple fire/fire pit/torch interactions exist.
 - Wait/rest time skip exists.
-- Quick Actions: „Odpocznij w mieście” only while near a loaded settlement (`nearTown`, `REST_IN_TOWN_RADIUS`); „Rozbij obóz” runs a crouch → blanket prop → lie → 8h skip → crouch → pack-up → stand sequence (`restCampSequence.ts`); „Czekaj” uses the same time-skip filter at half opacity (`fadeStrength: 0.5` vs rest `1`).
+- Quick Actions: „Odpocznij w mieście” only while near a loaded settlement (`nearTown`, `REST_IN_TOWN_RADIUS`); „Rozbij obóz” runs a crouch → blanket prop → lie → 8h skip → crouch → pack-up → stand sequence (`restCampSequence.ts`); „Rozstaw namiot” when a tent is owned; „Czekaj” uses the same time-skip filter at half opacity (`fadeStrength: 0.5` vs rest `1`).
 - Pause menu Esc/close resets submenu to `main` so the next open is not stuck on Akcje/Ustawienia.
 - Inventory UI is a Vue screen (`src/ui-vue/screens/InventoryScreen.vue`); `src/ui/createInventoryScreen.ts` is a facade — see "UI migration" below.
 - Inventory pick-up / drop SFX exist (`audio/inventorySounds.ts` via `worldAudio.playOnce`): ground collect, tree branch, dig stone, UI/quick drop.
@@ -136,9 +143,9 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 ### Persistence
 
 - IndexedDB persistence exists in `src/persistence/`.
-- Current save data includes world configuration (including optional `settlements.homeSize`), player position/orientation, time of day, elapsed game days, quests/EXP/relations, inventory, held tool, collected item IDs, dropped items, placed fires and sparse tree lifecycle overrides.
+- Current save data includes world configuration (including optional `settlements.homeSize`), player position/orientation, time of day, elapsed game days, quests/EXP/relations, inventory, held tool, collected item IDs, dropped items, placed fires, placed tents, world flags (e.g. guard sword gift) and sparse tree lifecycle overrides.
 - localStorage config is split by domain (`src/config/persistConfig.ts`): `seedvale:graphics:v1` (post-processing), `seedvale:player:v1`, `seedvale:world:v1` (seed/terrain/sky/settlements); legacy `seedvale:worldConfig:v1` migrates on first load (issue 019).
-- Save schema is currently version `8` in `createApp.ts`.
+- Save schema is currently version `10` in `createApp.ts`.
 - New Game resets world-dependent state as implemented by `createApp.ts`/`rebuildWorldBundle()`.
 - NPC runtime state is not generally persisted as a full simulation snapshot; do not assume Continue restores every NPC need/AI state.
 - Tree lifecycle (`src/world/treeLifecycle.ts`) uses sparse overrides + lazy growth from `DayNightState.elapsedDays`. Living stages: `sapling` → `young` → `mature` → `old` (plan 073; `small` sizeClass never reaches `old`). Height is meter-ranged by age × `sizeClass` (`HEIGHT_RANGE_M`), not a flat stage multiplier. Chop mid-stages: `limbed` → `felled` → `harvested` (from `mature` or `old`; regrowth only from `harvested`). Chunk/settlement trees share `TreeId`. Shared harvest APIs: `advanceWorldTreeHarvest` (one step) / `harvestWorldTreeFully` (NPC) in `src/world/treeHarvest.ts`; visuals via `applyTreeStageVisual`.
@@ -162,7 +169,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 
 Prefer extending existing shared mechanisms instead of creating parallel systems.
 
-- `WorldBundle` — lifetime/rebuild boundary for core world systems.
+- `WorldBundle` — lifetime/rebuild boundary for core world systems (`ChunkManager`, ocean, settlements, fauna, item spawners, resource deposits, dropped items, placed fires, placed tents, large caves).
 - `HealthState` — shared health/damage/death (`src/shared/HealthState.ts`) used by fauna, NPCs and the player.
 - `StaminaState` — shared physical-effort capacity (`src/shared/StaminaState.ts`) used by fauna (`AnimalLifeState.stamina`) and NPCs; replaces NPC HP-as-fatigue and animal `energy`.
 - Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/` (plan 055). NPC + fauna adapters; predator hunger-vs-fear scoring in `src/fauna/predatorHumanDecision.ts`.

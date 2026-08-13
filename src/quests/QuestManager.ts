@@ -1,6 +1,7 @@
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { Inventory } from '../items/Inventory'
+import type { ItemKind } from '../items/items'
 import { genderForName, NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/NpcAgent'
 import { type QuestDef, type QuestObjective, QUESTS, type QuestStage, type QuestState } from './quests'
 
@@ -31,6 +32,8 @@ export type QuestManagerInitial = {
   exp: number
   relations: Record<string, number>
 }
+
+export type QuestItemGrant = (kind: ItemKind, count: number) => void
 
 /** What a non-NPC world interaction (well/tree/spawner/live animal) reports to
  *  `onInteractObjective`. `gather_item` has no interaction point of its own —
@@ -69,6 +72,7 @@ export class QuestManager {
   private readonly states = new Map<string, { state: QuestState, stageIndex: number }>()
   private readonly relations = new Map<string, number>()
   private readonly playSound: (url: string, volume?: number) => void
+  private readonly grantItem: QuestItemGrant
   private exp = 0
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
@@ -81,10 +85,12 @@ export class QuestManager {
     playSound: (url: string, volume?: number) => void = () => {},
     inventory: Inventory,
     initial?: QuestManagerInitial,
+    grantItem: QuestItemGrant = () => {},
   ) {
     this.defs = defs
     this.playSound = playSound
     this.inventory = inventory
+    this.grantItem = grantItem
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
@@ -189,6 +195,7 @@ export class QuestManager {
       }
     }
     this.playQuestCompleteSound(def.giverName)
+    if (def.reward) this.grantItem(def.reward.kind, def.reward.count)
     return def.reportLine
   }
 

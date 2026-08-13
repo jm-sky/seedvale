@@ -34,6 +34,8 @@ describe('assetIndex', () => {
       'held:shovel',
       'held:wooden_torch',
       'held:branch',
+      'held:pickaxe',
+      'held:long_sword',
     ]) {
       expect(ids.has(id), id).toBe(true)
     }

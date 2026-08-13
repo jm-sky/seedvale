@@ -27,7 +27,12 @@ describe('heldPreviewKind', () => {
 
   it('returns null for roadmap held tools without attach', () => {
     expect(heldPreviewKind(heldEntry('held:pitchfork'))).toBeNull()
-    expect(heldPreviewKind(heldEntry('held:long_sword'))).toBeNull()
+    expect(heldPreviewKind(heldEntry('held:sickle'))).toBeNull()
+  })
+
+  it('maps newly wired combat/mining tools', () => {
+    expect(heldPreviewKind(heldEntry('held:long_sword'))).toBe('long_sword')
+    expect(heldPreviewKind(heldEntry('held:pickaxe'))).toBe('pickaxe')
   })
 
   it('returns null for non-held entries', () => {
@@ -41,10 +46,8 @@ describe('heldPreviewKind', () => {
 })
 
 describe('provisionalHeldAttach', () => {
-  it('provides a browser-only long_sword grip', () => {
-    expect(provisionalHeldAttach(heldEntry('held:long_sword'))).toMatchObject({
-      scale: 1,
-    })
+  it('has no remaining browser-only grips now that sword is a ToolKind', () => {
+    expect(provisionalHeldAttach(heldEntry('held:long_sword'))).toBeNull()
     expect(provisionalHeldAttach(heldEntry('held:pitchfork'))).toBeNull()
   })
 })

@@ -2,14 +2,17 @@ import type { Fauna } from '../fauna/createFauna'
 import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemSpawners } from '../items/createItemSpawners'
+import type { PlacedTents } from '../items/createPlacedTents'
 import type { ToolKind } from '../items/HeldTool'
 import type { Settlement } from '../settlement/createSettlement'
 import type { PlacedFires } from '../settlement/PlacedFires'
 import type { ChunkManager } from '../terrain/chunkManager'
+import type { ResourceDeposits } from '../terrain/resourceDeposits'
 import { ANIMAL_LABELS, type AnimalKind } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { ORE_YIELD_LABEL } from '../terrain/depositMining'
 import { canLevelAt, getDigProfileAt } from '../terrain/dig'
 import { isChoppableStage } from '../world/treeLifecycle'
 import type { Vector3 } from 'three'
@@ -62,6 +65,8 @@ export function buildInteractables(
   itemSpawners: ItemSpawners,
   droppedItems: DroppedItems,
   placedFires: PlacedFires,
+  placedTents: PlacedTents,
+  resourceDeposits: ResourceDeposits,
   playerPos: Vector3,
   /** Currently held tool — drives axe harvest prompts and animal attack prompts. */
   heldTool: ToolKind | null = null,
@@ -69,6 +74,7 @@ export function buildInteractables(
   const list: Interactable[] = []
   const axeHeld = heldTool === 'axe'
   const shovelHeld = heldTool === 'shovel'
+  const pickaxeHeld = heldTool === 'pickaxe'
 
   for (const pf of placedFires.list()) {
     if (!withinRange(pf.x, pf.z, playerPos, GAZE_RANGE)) continue
@@ -79,6 +85,16 @@ export function buildInteractables(
         ? 'Dołóż gałąź'
         : pf.kind === 'pit' ? 'Zapal ognisko w palenisku' : 'Zapal ognisko',
       fire: pf.fire,
+    })
+  }
+
+  for (const tent of placedTents.list()) {
+    if (!withinRange(tent.x, tent.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'tent',
+      position: { x: tent.x, z: tent.z },
+      promptLabel: '[E] Odpocznij · [R] Złóż namiot',
+      id: tent.id,
     })
   }
 
@@ -233,6 +249,19 @@ export function buildInteractables(
       promptLabel: `Podnieś: ${ITEM_DEFS[item.kind].label}`,
       item: { id: item.id, kind: item.kind, source: 'dropped' },
     })
+  }
+
+  if (pickaxeHeld) {
+    const deposit = resourceDeposits.queryNearest(playerPos.x, playerPos.z, GAZE_RANGE)
+    if (deposit) {
+      list.push({
+        kind: 'deposit',
+        position: { x: deposit.x, z: deposit.z },
+        promptLabel: `Wydobądź: ${ORE_YIELD_LABEL[deposit.type]}`,
+        id: deposit.id,
+        oreType: deposit.type,
+      })
+    }
   }
 
   return list

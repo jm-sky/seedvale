@@ -12,6 +12,12 @@ import {
 } from '../settlement/props'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
+import {
+  hitsForRichness,
+  type MineableOre,
+  ORE_YIELD_LABEL,
+  yieldForOre,
+} from './depositMining'
 import { type NaturalResource, type ResourceEnv, resourcesNear } from './naturalResources'
 
 /** Ore-bearing types that get a visible pile in the world — the rest of
@@ -26,12 +32,6 @@ const ORE_COLOR: Record<VisibleOreType, number> = {
   iron: 0x8a4a30,
   coal: 0x1c1c1c,
   gold: 0xd4af37,
-}
-
-const ORE_LABEL: Record<VisibleOreType, string> = {
-  iron: 'Żelazo',
-  coal: 'Węgiel',
-  gold: 'Złoto',
 }
 
 function isVisibleOre(type: NaturalResource['type']): type is VisibleOreType {
@@ -82,22 +82,41 @@ type DepositInstance = {
   group: Object3D
   label: CSS2DObject
   labelEl: HTMLDivElement
+  remaining: number
 }
+
+export type DepositTarget = {
+  id: string
+  type: MineableOre
+  x: number
+  z: number
+  remaining: number
+}
+
+export type MineResult =
+  | { ok: true, yield: { kind: ReturnType<typeof yieldForOre>['kind'], count: number }, remaining: number }
+  | { ok: false, reason: 'missing' | 'depleted' }
 
 export type ResourceDeposits = {
   update: (playerX: number, playerZ: number) => void
+  /** Nearest loaded ore pile the player can mine (plan 090). */
+  queryNearest: (x: number, z: number, range: number) => DepositTarget | null
+  mine: (id: string) => MineResult
   dispose: () => void
 }
 
 /**
- * Streams small, non-interactive ore piles (GLB resource nodes + a name
- * label) into the world near the player, one per significant iron/coal/gold
- * `NaturalResource` (plan 032 / 065). Main-thread, radius-based streaming —
- * mirrors `SettlementsManager`'s load/unload-by-distance shape, not the
- * chunk-worker pipeline.
+ * Streams ore piles (GLB resource nodes + a name label) into the world near
+ * the player, one per significant iron/coal/gold `NaturalResource`
+ * (plan 032 / 065). Pickaxe mining (plan 090) consumes remaining hits on the
+ * loaded instance. Main-thread, radius-based streaming — mirrors
+ * `SettlementsManager`'s load/unload-by-distance shape, not the chunk-worker
+ * pipeline.
  */
 export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: number): ResourceDeposits {
   const instances = new Map<string, DepositInstance>()
+  /** Session-only — depleted piles do not respawn until world rebuild (like dig holes). */
+  const depletedIds = new Set<string>()
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
   let templatesPromise: Promise<OreTemplates> | null = null
@@ -105,6 +124,12 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
   let disposed = false
   /** Spawns deferred until GLB templates finish loading (first nearby ore). */
   const pendingIds = new Set<string>()
+
+  function setLabel(instance: DepositInstance): void {
+    const type = instance.resource.type
+    if (!isVisibleOre(type)) return
+    instance.labelEl.textContent = `${ORE_YIELD_LABEL[type]} (${instance.remaining})`
+  }
 
   function getTemplates(): Promise<OreTemplates> {
     return (templatesPromise ??= Promise.all([
@@ -134,7 +159,7 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
 
   function spawnSync(resource: NaturalResource, oreTemplates: OreTemplates): void {
     if (disposed || !isVisibleOre(resource.type)) return
-    if (instances.has(resource.id)) return
+    if (depletedIds.has(resource.id) || instances.has(resource.id)) return
     const random = createSeededRandom(hashId(resource.id))
     const group = new Group()
     group.name = `resourceDeposit:${resource.id}`
@@ -157,19 +182,21 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
     }
     scene.add(group)
 
+    const remaining = hitsForRichness(resource.richness)
     const labelEl = document.createElement('div')
     labelEl.className = 'npc-label'
-    labelEl.textContent = ORE_LABEL[resource.type]
     const label = new CSS2DObject(labelEl)
     const labelY = env.sampleHeight(resource.x, resource.z) + 0.6
     label.position.set(resource.x, labelY, resource.z)
     scene.add(label)
 
-    instances.set(resource.id, { resource, group, label, labelEl })
+    const instance: DepositInstance = { resource, group, label, labelEl, remaining }
+    setLabel(instance)
+    instances.set(resource.id, instance)
   }
 
   function spawn(resource: NaturalResource): void {
-    if (disposed || !isVisibleOre(resource.type)) return
+    if (disposed || !isVisibleOre(resource.type) || depletedIds.has(resource.id)) return
     if (instances.has(resource.id) || pendingIds.has(resource.id)) return
     if (templates) {
       spawnSync(resource, templates)
@@ -203,7 +230,7 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
     const nearby = resourcesNear(playerX, playerZ, LOAD_RADIUS, seed, env)
     const wanted = new Set<string>()
     for (const resource of nearby) {
-      if (!isVisibleOre(resource.type)) continue
+      if (!isVisibleOre(resource.type) || depletedIds.has(resource.id)) continue
       wanted.add(resource.id)
       if (!instances.has(resource.id)) spawn(resource)
     }
@@ -224,9 +251,46 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
         instance.labelEl.style.opacity = String(labelOpacityForDistance(dist))
       }
     },
+    queryNearest(x, z, range) {
+      let best: DepositTarget | null = null
+      let bestDist = range
+      for (const instance of instances.values()) {
+        const type = instance.resource.type
+        if (!isVisibleOre(type) || instance.remaining <= 0) continue
+        const dist = Math.hypot(instance.resource.x - x, instance.resource.z - z)
+        if (dist > bestDist) continue
+        bestDist = dist
+        best = {
+          id: instance.resource.id,
+          type,
+          x: instance.resource.x,
+          z: instance.resource.z,
+          remaining: instance.remaining,
+        }
+      }
+      return best
+    },
+    mine(id) {
+      const instance = instances.get(id)
+      if (!instance) return { ok: false, reason: 'missing' }
+      const type = instance.resource.type
+      if (!isVisibleOre(type) || instance.remaining <= 0) {
+        return { ok: false, reason: 'depleted' }
+      }
+      instance.remaining -= 1
+      const mined = yieldForOre(type)
+      if (instance.remaining <= 0) {
+        depletedIds.add(id)
+        despawn(id)
+      } else {
+        setLabel(instance)
+      }
+      return { ok: true, yield: mined, remaining: instance.remaining }
+    },
     dispose() {
       disposed = true
       pendingIds.clear()
+      depletedIds.clear()
       for (const id of [...instances.keys()]) despawn(id)
     },
   }

@@ -8,6 +8,7 @@ import type { TreeLifecycle } from '../world/treeLifecycle'
 import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
+import { createPlacedTents, type PlacedTent, type PlacedTents } from '../items/createPlacedTents'
 import { preloadHeldToolModels } from '../items/heldToolVisual'
 import { preloadItemGlbModels } from '../items/itemModels'
 import { villageSizeConfig } from '../settlement/families'
@@ -20,6 +21,7 @@ import {
   createChunkManager,
 } from '../terrain/chunkManager'
 import { createResourceDeposits, type ResourceDeposits } from '../terrain/resourceDeposits'
+import { createLargeCaves, type LargeCaves } from '../world/createLargeCaves'
 import { createOcean, type WorldOcean } from '../world/createOcean'
 import type { Scene } from 'three'
 
@@ -63,6 +65,8 @@ export type WorldBundle = {
   resourceDeposits: ResourceDeposits
   droppedItems: DroppedItems
   placedFires: PlacedFires
+  placedTents: PlacedTents
+  largeCaves: LargeCaves
 }
 
 function buildChunkManager(
@@ -198,7 +202,7 @@ function buildItemSpawners(
     settlement.center,
     settlement.landmarks.trees.map((t) => t.position),
     seed,
-    { campfire: settlement.landmarks.campfire?.position, garden: settlement.landmarks.garden },
+    { campfire: settlement.landmarks.campfire?.position, garden: settlement.landmarks.garden, stockpile: settlement.landmarks.stockpile },
     gardens,
   )
 }
@@ -234,6 +238,7 @@ export async function createWorldBundle(
   playAt: PlayAt,
   initialDroppedItems: readonly DroppedItem[],
   initialPlacedFires: readonly PlacedFire[],
+  initialPlacedTents: readonly PlacedTent[],
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
 ): Promise<WorldBundle> {
@@ -255,8 +260,16 @@ export async function createWorldBundle(
   const resourceDeposits = buildResourceDeposits(scene, chunkManager, config, config.seed)
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
   const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires)
+  const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
+  const largeCaves = createLargeCaves(
+    scene,
+    chunkManager,
+    config.seed,
+    villageSizeConfig(settlementsManager.home.size).footprintRadius,
+    config.terrain.region.coastThreshold,
+  )
 
-  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires }
+  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, largeCaves }
 }
 
 /** Disposes every member's current instance and mutates `bundle`'s fields in
@@ -289,6 +302,9 @@ export async function rebuildWorldBundle(
   bundle.droppedItems.dispose()
   const carriedFires = resetCollectedItems ? [] : [...bundle.placedFires.nodes()]
   bundle.placedFires.dispose()
+  const carriedTents = resetCollectedItems ? [] : [...bundle.placedTents.nodes()]
+  bundle.placedTents.dispose()
+  bundle.largeCaves.dispose()
   bundle.resourceDeposits.dispose()
   bundle.settlementsManager.dispose()
   bundle.ocean.dispose()
@@ -322,6 +338,14 @@ export async function rebuildWorldBundle(
   bundle.resourceDeposits = buildResourceDeposits(scene, bundle.chunkManager, config, config.seed)
   bundle.droppedItems = createDroppedItems(scene, bundle.chunkManager.sampleHeight, carriedDrops)
   bundle.placedFires = createPlacedFires(scene, bundle.chunkManager.sampleHeight, carriedFires)
+  bundle.placedTents = createPlacedTents(scene, bundle.chunkManager.sampleHeight, carriedTents)
+  bundle.largeCaves = createLargeCaves(
+    scene,
+    bundle.chunkManager,
+    config.seed,
+    villageSizeConfig(bundle.settlementsManager.home.size).footprintRadius,
+    config.terrain.region.coastThreshold,
+  )
 }
 
 export function disposeWorldBundle(bundle: WorldBundle): void {
@@ -329,6 +353,8 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.itemSpawners.dispose()
   bundle.droppedItems.dispose()
   bundle.placedFires.dispose()
+  bundle.placedTents.dispose()
+  bundle.largeCaves.dispose()
   bundle.resourceDeposits.dispose()
   bundle.settlementsManager.dispose()
   bundle.ocean.dispose()

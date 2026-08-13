@@ -36,6 +36,16 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
     maxSize: 0.75,
     groundRotation: [0, 0, Math.PI / 2.3],
   },
+  pickaxe: {
+    url: '/models/items/pickaxe.glb',
+    maxSize: 0.9,
+    groundRotation: [0, 0, Math.PI / 2.2],
+  },
+  long_sword: {
+    url: '/models/items/long_sword.glb',
+    maxSize: 1.15,
+    groundRotation: [0, 0, Math.PI / 2.4],
+  },
 }
 
 const prepared = new Map<ItemKind, Group>()

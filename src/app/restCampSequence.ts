@@ -30,6 +30,7 @@ export type RestCampSequence = {
   start: (opts: {
     onSleepStart: () => void
     onComplete: () => void
+    variant?: 'camp' | 'tent'
   }) => void
   /** Call when the 8h time skip finishes — begins teardown. */
   notifySleepFinished: () => void
@@ -54,6 +55,7 @@ export function createRestCampSequence(
   let onComplete: (() => void) | null = null
   let blanket: Object3D | null = null
   let busyLabel = ''
+  let variant: 'camp' | 'tent' = 'camp'
 
   const clearBlanket = (): void => {
     if (!blanket) return
@@ -93,17 +95,18 @@ export function createRestCampSequence(
       if (phase !== 'idle') return
       onSleepStart = opts.onSleepStart
       onComplete = opts.onComplete
+      variant = opts.variant ?? 'camp'
       player.crouch()
       phase = 'setupCrouch'
       remainingSec = SETUP_CROUCH_SEC
-      busyLabel = 'Rozbijasz obóz…'
+      busyLabel = variant === 'tent' ? 'Kładziesz się w namiocie…' : 'Rozbijasz obóz…'
     },
     notifySleepFinished() {
       if (phase !== 'sleeping') return
       player.crouch()
       phase = 'teardownCrouch'
       remainingSec = TEARDOWN_CROUCH_SEC
-      busyLabel = 'Zwijasz obóz…'
+      busyLabel = variant === 'tent' ? 'Wstajesz…' : 'Zwijasz obóz…'
     },
     tick(dt) {
       if (phase === 'idle' || phase === 'sleeping') return null
@@ -121,7 +124,7 @@ export function createRestCampSequence(
       }
 
       if (phase === 'placeBlanket') {
-        placeBlanket()
+        if (variant === 'camp') placeBlanket()
         phase = 'lie'
       }
 

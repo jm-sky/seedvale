@@ -144,8 +144,12 @@ export type GameLoopDeps = {
   startGroundWork: (mode: 'dig' | 'level', x: number, z: number) => void
   /** Start the axe chop channel for a gaze-selected tree (plan 057). */
   startTreeChop: (treeId: string, x: number, z: number) => void
+  /** Start the pickaxe mine channel for a gaze-selected ore deposit (plan 090). */
+  startDepositMine: (depositId: string, x: number, z: number) => void
   /** Shovel-bury a dead animal corpse (busy channel). */
   startBuryCorpse: (animal: AnimalAgent) => void
+  startTentRest: () => void
+  packTent: (id: string) => void
   onInventoryChanged: () => void
   /** Reports this frame's simulate/render split (ms) to the debug GUI's
    *  Performance folder (perf review M1). */
@@ -184,7 +188,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
     questManager, ambientAudio, worldAudio, playerTorch, minimap, openQuestLog, openInventory,
-    startGroundWork, startTreeChop, startBuryCorpse, onInventoryChanged, setFrameTiming,
+    startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startTentRest, packTent, onInventoryChanged, setFrameTiming,
   } = deps
 
   const clock = new Clock()
@@ -303,6 +307,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       switch (modal) {
         case 'busy':
         case 'menu':
+        case 'merchant':
         case 'notes':
         case 'npcDialogueMenu':
         case 'timeSkip':
@@ -335,6 +340,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.itemSpawners,
         bundle.droppedItems,
         bundle.placedFires,
+        bundle.placedTents,
+        bundle.resourceDeposits,
         player.mesh.position,
         held,
       )
@@ -409,6 +416,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         } else if (altInteractPressed && !target.canLevel) {
           toast.show('Nie ma tu czego wyrównać.', 'error')
         }
+      } else if (target?.kind === 'tent') {
+        if (interactPressed) startTentRest()
+        if (altInteractPressed) packTent(target.id)
       } else if (target && interactPressed) {
         if (target.kind === 'item') {
           if (!inventory.canAdd(target.item.kind)) {
@@ -455,6 +465,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             }
             npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
           }
+        } else if (target.kind === 'deposit') {
+          startDepositMine(target.id, target.position.x, target.position.z)
         } else if (target.kind === 'corpse') {
           startBuryCorpse(target.animal)
         } else if (target.kind === 'npc') {
