@@ -16,10 +16,11 @@ import ToastStack from './screens/ToastStack.vue'
 import TouchChrome from './screens/TouchChrome.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
 import WorldConfigScreen from './screens/WorldConfigScreen.vue'
-import { closeTopOverlay, togglePause, ui } from './store'
+import { abortRest, closeTopOverlay, togglePause, ui } from './store'
 
 function onKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
+  if (abortRest()) return
   if (ui.openStack.length > 0) closeTopOverlay()
   else togglePause()
 }

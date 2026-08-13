@@ -1,14 +1,32 @@
 import * as THREE from 'three'
 import { disposeObject3D } from '../assets/loadGltf'
+import { PLAYER_HEIGHT } from '../player/PlayerController'
 import { ITEM_DEFS } from './items'
 
 /** World-space A-frame tent for a placed `tent` item (plan 090).
  *  Long axis is Z so it matches the player spine after `lieDown()`. */
-export const TENT_LENGTH = 2.2
-export const TENT_WIDTH = 1.6
-export const TENT_HEIGHT = 1.25
+export const TENT_LENGTH = 2.42
+export const TENT_WIDTH = 1.76
+export const TENT_HEIGHT = 1.375
 /** Clearance radius used by placement / packing probes. */
-export const TENT_FOOTPRINT_RADIUS = 1.4
+export const TENT_FOOTPRINT_RADIUS = 1.54
+
+export type TentRestPose = { x: number, z: number, yaw: number }
+
+/**
+ * Feet pose for tent rest: spine along the tent long axis, head toward the
+ * back wall (local −Z). `lieDown()` tips onto the back so feet stay at the
+ * wrapper origin and the head runs along wrapper-local −Z — which matches
+ * this yaw, not the walk-facing yaw (that is offset by π).
+ */
+export function tentRestPose(tent: { x: number, z: number, yaw: number }): TentRestPose {
+  const along = PLAYER_HEIGHT * 0.45
+  return {
+    x: tent.x + Math.sin(tent.yaw) * along,
+    z: tent.z + Math.cos(tent.yaw) * along,
+    yaw: tent.yaw,
+  }
+}
 
 export function createPlacedTentProp(): THREE.Group {
   const group = new THREE.Group()

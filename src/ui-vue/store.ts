@@ -290,6 +290,15 @@ export function closeQuickActions(): void {
 export function toggleQuickActions(): void { if (ui.quickActions.open) closeQuickActions(); else openQuickActions() }
 export function isQuickActionsOpen(): boolean { return ui.quickActions.open }
 
+/** Esc during rest (tent/camp/town) — not wait. Returns true if consumed. */
+let abortRestHandler: (() => boolean) | null = null
+export function configureAbortRest(handler: (() => boolean) | null): void {
+  abortRestHandler = handler
+}
+export function abortRest(): boolean {
+  return abortRestHandler?.() ?? false
+}
+
 /** `fadeStrength` drives the grayscale/blur filter opacity (`0` = label only,
  *  `0.5` = wait, `1` = rest). See `TimeSkipOverlay.vue`. */
 export function showTimeSkip(label: string, fadeStrength: number): void {

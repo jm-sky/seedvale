@@ -11,6 +11,7 @@ const FORWARDED_FNS = [
   'openQuestLog', 'refreshQuestLog', 'closeQuestLog', 'isQuestLogOpen',
   'openFlavorDialog', 'setFlavorPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',
   'configureQuickActions', 'setQuickActionsHasShovel', 'setQuickActionsHasTent', 'setQuickActionsNearTown', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
+  'configureAbortRest', 'abortRest',
   'showTimeSkip', 'hideTimeSkip',
   'showBusy', 'hideBusy',
   'configureWorldConfigScreen', 'openWorldConfigScreen', 'closeWorldConfigScreen', 'isWorldConfigScreenOpen',

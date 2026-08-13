@@ -23,6 +23,7 @@ import { createHeldTool } from '../items/HeldTool'
 import { Inventory } from '../items/Inventory'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { evaluateTentPlacement, TENT_PLACEMENT_MESSAGE } from '../items/tentPlacement'
+import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
 import { buyWithBarter, buyWithShells } from '../items/trade'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
@@ -594,8 +595,8 @@ export async function createApp(
   const tentAimPoint = (): { x: number, z: number, yaw: number } => {
     const yaw = mouseLook.state.yaw
     return {
-      x: player.mesh.position.x - Math.sin(yaw) * 2.2,
-      z: player.mesh.position.z - Math.cos(yaw) * 2.2,
+      x: player.mesh.position.x - Math.sin(yaw) * TENT_LENGTH,
+      z: player.mesh.position.z - Math.cos(yaw) * TENT_LENGTH,
       yaw,
     }
   }
@@ -642,8 +643,14 @@ export async function createApp(
     toast.show('Rozstawiono namiot.')
   }
 
-  const startTentRest = (): void => {
+  const startTentRest = (id: string): void => {
     if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const tent = bundle.placedTents.list().find((entry) => entry.id === id)
+    if (tent) {
+      const pose = tentRestPose(tent)
+      player.setPosition(pose.x, pose.z)
+      player.mesh.rotation.y = pose.yaw
+    }
     restCamp.start({
       variant: 'tent',
       onSleepStart: () => {
@@ -667,6 +674,18 @@ export async function createApp(
     syncShovelQuickActions()
     toast.show('+1 Namiot', 'pickup')
   }
+
+  const abortRest = (): boolean => {
+    const resting = restCamp.isActive() || timeSkip.fadeStrength() === 1
+    if (!resting) return false
+    timeSkip.cancel()
+    timeSkipOverlay.hide()
+    busyOverlay.hide()
+    restCamp.cancel()
+    player.standUp()
+    return true
+  }
+  vueUi.configureAbortRest(abortRest)
 
   const isNearTown = (): boolean => bundle.settlementsManager
     .getLoaded()
@@ -1105,6 +1124,7 @@ export async function createApp(
     document.removeEventListener('visibilitychange', onVisibilityChange)
     window.removeEventListener('pagehide', saveNow)
     window.clearInterval(autoSaveInterval)
+    vueUi.configureAbortRest(null)
     timeSkip.cancel()
     timeSkipOverlay.dispose()
     busy.cancel()

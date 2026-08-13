@@ -1,6 +1,6 @@
 # Plan: Instancing roślinności i propsów (review 005, pozycja 15 / A1)
 
-**Status:** `planned`
+**Status:** `in progress` (fazy 1–5, czyli wszystkie **Must** poza pomiarem bazowym, zaimplementowane i technicznie zweryfikowane [`tsc`/`lint`/`test`/`build`]; faza 0 — pomiar bazowy w przeglądarce — nie została wykonana, jest tylko nieformalne potwierdzenie „chodzę po mapie i działa". **Następna: faza 7** [LOD przez `count`] — wybrana zamiast fazy 6 [Should] jako lepsze ROI, patrz [implementation notes](./2026-08-12--087--vegetation-and-prop-instancing-implementation-notes.md))
 **Created:** 2026-08-12
 **Priority:** 🔴 high
 **Effort:** XL

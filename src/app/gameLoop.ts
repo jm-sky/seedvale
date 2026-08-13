@@ -148,7 +148,7 @@ export type GameLoopDeps = {
   startDepositMine: (depositId: string, x: number, z: number) => void
   /** Shovel-bury a dead animal corpse (busy channel). */
   startBuryCorpse: (animal: AnimalAgent) => void
-  startTentRest: () => void
+  startTentRest: (id: string) => void
   packTent: (id: string) => void
   onInventoryChanged: () => void
   /** Reports this frame's simulate/render split (ms) to the debug GUI's
@@ -416,7 +416,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           toast.show('Nie ma tu czego wyrównać.', 'error')
         }
       } else if (target?.kind === 'tent') {
-        if (interactPressed) startTentRest()
+        if (interactPressed) startTentRest(target.id)
         if (altInteractPressed) packTent(target.id)
       } else if (target && interactPressed) {
         if (target.kind === 'item') {
