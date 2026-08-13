@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import InventoryScreenSection from '@/components/InventoryScreenSection.vue'
 import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
+import { firstUpperCase } from '@/lib/firstUpperCase'
 import { isToolKind } from '../../items/HeldTool'
+import { ITEM_CATALOG } from '../../items/itemCatalog'
 import { ITEM_DEFS, type ItemDef, type ItemKind } from '../../items/items'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -21,6 +24,7 @@ const { categoryLabel } = useItemCategoryLabels()
 
 const item = computed<ItemDef | null>(() => props.selectedItem ? ITEM_DEFS[props.selectedItem] : null)
 const itemCount = computed<number>(() => ui.inventory.counts[props.selectedItem as ItemKind ?? ''] ?? 0)
+const itemDamage = computed<number | null>(() => ITEM_CATALOG[props.selectedItem as ItemKind]?.meleeDamage ?? null)
 
 useOverlayScreen('inventory', isInventoryOpen, closeInventory)
 useTouchScroll(panel)
@@ -40,7 +44,7 @@ function onUnequip(): void { ui.inventory.onUnequip?.() }
   >
     <div class="flex flex-row items-center justify-between gap-2">
       <h1 class="mb-2 text-xl font-semibold tracking-wide">
-        {{ item.label }}
+        {{ firstUpperCase(item.label) }}
       </h1>
       <button
         type="button"
@@ -51,34 +55,37 @@ function onUnequip(): void { ui.inventory.onUnequip?.() }
       </button>
     </div>
 
-    <div class="my-3 h-px border-white/20 border-b" />
+    <div class="my-4 h-px border-white/20 border-b" />
 
     <div class="my-2">
       {{ item.description ?? `To jest... ${item.label}.` }}
     </div>
 
-    <div class="my-3 h-px border-white/20 border-b" />
+    <div class="my-4 h-px border-white/20 border-b" />
 
     <div class="grid grid-cols-2 gap-2 my-2">
-      <div class="flex gap-2">
-        <span class="font-bold opacity-80">Kategoria:</span>
-        <span>
-          {{ categoryLabel[item.category] }}
-        </span>
-      </div>
+      <InventoryScreenSection
+        label="Kategoria"
+        :value="categoryLabel[item.category]"
+      />
 
-      <div class="flex gap-2">
-        <span class="font-bold opacity-80">Ilość:</span>
-        <span>{{ itemCount }} × {{ item.label }}</span>
-      </div>
+      <InventoryScreenSection
+        label="Ilość"
+        :value="`${itemCount} × ${item.label}`"
+      />
 
-      <div class="flex gap-2">
-        <span class="font-bold opacity-80">Waga:</span>
-        <span>{{ formatWeight(item.weight) }}</span>
-      </div>
+      <InventoryScreenSection
+        label="Waga"
+        :value="formatWeight(item.weight)"
+      />
+
+      <InventoryScreenSection
+        label="Obrażenia"
+        :value="itemDamage?.toString() ?? 'Nie dotyczy'"
+      />
     </div>
 
-    <div class="my-3 h-px border-white/20 border-b" />
+    <div class="my-4 h-px border-white/20 border-b" />
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mx-auto max-w-md">
       <ItemsScreenItemButton
