@@ -46,7 +46,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Chunk terrain fragment shader adds procedural macro color/roughness variation (richer meadow + bare-dirt grit); detail normals fade out with distance (20–50 m).
 - Road/path corridors use soft tint edges and dirt micro-contrast on the terrain mesh (issue 023); grass soft-fades into corridors instead of a hard bald cut.
 - Tree/bush leaf materials share a cheap vertex wind (`world/foliageWind.ts`); GLTF `BLEND` foliage is hardened to opaque `alphaTest` cutouts so canopies write depth (issue 022). Post-processing ends with a subtle film grade + Bayer dither (`render/filmGradeShader.ts`).
-- Ocean (`createOcean` / Water.js) uses real transparency (`transparent` + fresnel-modulated alpha, `depthWrite: false`) with a 256² mirror RT; chunk lakes match the no-depthWrite transparent contract.
+- Ocean (`createOcean` / Water.js) uses real transparency (`transparent` + fresnel-modulated alpha, `depthWrite: false`) with a 256² mirror RT; chunk lakes match the no-depthWrite transparent contract. Inland lakes classified `isLarge` (per-chunk, ≥35% of the chunk grid) discard to the ocean plane — visible dual-material on a single pond (issue 028). Water domain SoT: [WATER.md](./WATER.md).
 - Graphics decisions / visual contracts: [GRAPHICS.md](./GRAPHICS.md).
 - Worker pool for terrain generation.
 - Chunk streaming with load/unload radii and pinned home chunks.

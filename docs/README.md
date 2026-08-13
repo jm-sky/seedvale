@@ -7,6 +7,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 - **[VISION.md](./VISION.md)** — wizja i kontekst produktu (czym jest Seedvale, dla kogo, filozofia projektowania — czytaj przed planowaniem nowych funkcji)
 - **[STATE.md](./STATE.md)** — factual current implementation state
 - **[GRAPHICS.md](./GRAPHICS.md)** — log decyzji / kontraktów graficznych (materiały, woda, post-process, performance wizualny)
+- **[WATER.md](./WATER.md)** — źródło prawdy dla wody (ocean + jeziora: stan, decyzje, historia)
 - **[ROADMAP.md](./ROADMAP.md)** — punkt wejścia + handoff  
 - **[../CLAUDE.md](../CLAUDE.md)** — reguły dla agentów  
 - **[features/](./features/)** — FEATURE-y (jeszcze puste)  
@@ -22,6 +23,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 | [plans/](./plans/README.md) | Plany implementacji większych zmian |
 | [assets/](./assets/README.md) | Żywe listy wymaganych modeli/dźwięków + CREDITS |
 | [GRAPHICS.md](./GRAPHICS.md) | Decyzje i uwagi graficzne (SoT, nie katalog) |
+| [WATER.md](./WATER.md) | Woda — stan techniczny/wizualny, decyzje, historia poprawek |
 
 Statusy: `todo` · `planned` · `in progress` · `done` · `verification needed`
 
@@ -56,4 +58,4 @@ Meta-prompty do powtarzalnych zadań (struktura docs, review, itd.).
 
 ---
 
-**Ostatnia aktualizacja:** 2026-08-12
+**Ostatnia aktualizacja:** 2026-08-13
