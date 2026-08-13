@@ -1,6 +1,6 @@
 # Draft: NPC stamina vs dzienny wigor
 
-**Status:** `todo` ⬜ — draft, nazwa drugiego zasobu do ustalenia  
+**Status:** `verification needed` 🔍 — implemented, technically verified (`tsc`/`lint`/`build`/`test` pass); browser verification still required (see [implementation notes](./2026-08-13--092--npc-stamina-and-daily-vigor-implementation-notes.md#implementation-status-2026-08-13)).  
 **Created:** 2026-08-13  
 **Priority:** 🟡 medium · **Effort:** L · **Depends on:** ~~045~~, ~~020~~
 

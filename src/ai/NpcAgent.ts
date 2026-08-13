@@ -12,13 +12,14 @@ import {
   prepareProp,
 } from '../assets/loadGltf'
 import { playActionWell } from '../audio/actionSounds'
-import { createHealthState, type HealthState } from '../shared/HealthState'
+import { createHealthState, damageHealth, type HealthState } from '../shared/HealthState'
 import {
   createStaminaState,
   drainStamina,
   restoreStamina,
   type StaminaState,
 } from '../shared/StaminaState'
+import { createVigorState, type VigorState } from '../shared/VigorState'
 import {
   type ActionLifecycle,
   completeActionLifecycle,
@@ -54,6 +55,18 @@ import {
   pickNeed,
   tickNeeds,
 } from './Needs'
+import {
+  applyDamageVigor,
+  applySleepVigor,
+  applyWorkVigor,
+  isHeavyWorkKind,
+  MAX_VIGOR,
+  preferHomeSleep,
+  shouldCollapseSleep,
+  shouldStayAsleep,
+  type SleepReason,
+  tickVigorForSimulatedStep,
+} from './npcVigor'
 import {
   activityAt,
   effectiveScheduleFor,
@@ -290,6 +303,7 @@ export class NpcAgent {
   readonly relation: FamilyRelation
   readonly health: HealthState
   readonly stamina: StaminaState
+  readonly vigor: VigorState
   /** `null` only when the role's landmark doesn't exist for this settlement
    *  (e.g. a `woodcutter` with no trees yet) — see `places.ts`'s
    *  `workplaceFor`. Consumed by `beginIdle()`'s `work` scheduled activity. */
@@ -350,6 +364,9 @@ export class NpcAgent {
   private readonly labelBarsEl: HTMLDivElement
   private readonly hpFillEl: HTMLDivElement
   private readonly staminaFillEl: HTMLDivElement
+  private readonly vigorFillEl: HTMLDivElement
+  /** Why the NPC is currently in `goSleep`/`sleep`. `null` when awake. */
+  private sleepReason: SleepReason | null = null
   /** Set externally (e.g. by a QuestManager) — NpcAgent stays quest-agnostic. */
   private questMarker: string | null = null
   private highlighted = false
@@ -367,6 +384,7 @@ export class NpcAgent {
   private lastLabelOpacity = -1
   private lastHpPercent = -1
   private lastStaminaPercent = -1
+  private lastVigorPercent = -1
   private lastBarsVisible: boolean | null = null
 
   private constructor(
@@ -406,6 +424,7 @@ export class NpcAgent {
     this.relation = member.relation
     this.health = createHealthState(MAX_HP)
     this.stamina = createStaminaState(MAX_STAMINA)
+    this.vigor = createVigorState(MAX_VIGOR)
     this.workplace = workplace
     this.schedule = effectiveScheduleFor(
       SCHEDULE_TEMPLATES[character.role],
@@ -474,7 +493,14 @@ export class NpcAgent {
     this.staminaFillEl.style.width = '100%'
     staminaBar.appendChild(this.staminaFillEl)
 
-    this.labelBarsEl.append(hpBar, staminaBar)
+    const vigorBar = document.createElement('div')
+    vigorBar.className = 'npc-label__bar npc-label__bar--vigor'
+    this.vigorFillEl = document.createElement('div')
+    this.vigorFillEl.className = 'npc-label__bar-fill'
+    this.vigorFillEl.style.width = '100%'
+    vigorBar.appendChild(this.vigorFillEl)
+
+    this.labelBarsEl.append(hpBar, staminaBar, vigorBar)
     this.labelEl.append(this.labelNameEl, this.labelBarsEl)
 
     this.label = new CSS2DObject(this.labelEl)
@@ -642,6 +668,16 @@ export class NpcAgent {
     this.labelEl.classList.toggle('npc-label--highlighted', active)
   }
 
+  /**
+   * NPC-specific damage: HP via shared `damageHealth`, then a lump vigor
+   * cost. `HealthState` stays combat-agnostic (plan 092).
+   */
+  takeDamage(amount: number): void {
+    if (this.health.dead) return
+    damageHealth(this.health, amount)
+    applyDamageVigor(this.vigor)
+  }
+
   /** `observerYaw` — player look direction (radians, same convention as
    *  `MouseLook`'s `state.yaw`), used only to dim this NPC's label when the
    *  player isn't facing toward it (see the gaze-cone opacity factor below).
@@ -667,6 +703,11 @@ export class NpcAgent {
       drainStamina(this.stamina, this.fatigueRate * dt)
     } else if (REST_PHASES.has(this.phase)) {
       restoreStamina(this.stamina, this.restRate * dt)
+    }
+    if (this.phase === 'execute' && this.pendingAction && isHeavyWorkKind(this.pendingAction.kind)) {
+      applyWorkVigor(this.vigor, dt)
+    } else if (this.phase === 'sleep') {
+      applySleepVigor(this.vigor, dt)
     }
 
     if (this.pauseCooldown > 0) this.pauseCooldown -= dt
@@ -697,6 +738,10 @@ export class NpcAgent {
         // Shared DecisionContext snapshot (plan 055) — policy remains inline
         // (`pickNeed` then effective schedule); scoring arrives in Phase 5.
         const decisionContext = this.buildDecisionContext(scheduledActivity, nearbyNpcCount)
+        if (shouldCollapseSleep(this.vigor)) {
+          this.beginCollapseSleep()
+          break
+        }
         const need = pickNeed(this.needs, { skipWood: this.role === 'trader' })
         this.activeNeed = need
         if (need !== 'idle') {
@@ -704,6 +749,7 @@ export class NpcAgent {
           break
         }
         if (decisionContext.scheduleActivity === 'sleep') {
+          this.sleepReason = 'schedule'
           this.phase = 'goSleep'
           break
         }
@@ -749,8 +795,10 @@ export class NpcAgent {
         break
       }
       case 'goSleep':
-        if (scheduledActivity !== 'sleep') this.phase = 'choose'
-        else if (this.steerTo(this.home, dt)) this.phase = 'sleep'
+        if (!shouldStayAsleep(this.vigor, scheduledActivity, this.sleepReason)) {
+          this.sleepReason = null
+          this.phase = 'choose'
+        } else if (this.steerTo(this.home, dt)) this.phase = 'sleep'
         break
       case 'goTo': {
         const action = this.pendingAction
@@ -816,7 +864,10 @@ export class NpcAgent {
         break
       }
       case 'sleep':
-        if (scheduledActivity !== 'sleep') this.phase = 'choose'
+        if (!shouldStayAsleep(this.vigor, scheduledActivity, this.sleepReason)) {
+          this.sleepReason = null
+          this.phase = 'choose'
+        }
         break
       case 'wander':
         if (this.steerTo(this.target, dt)) this.phase = 'choose'
@@ -853,6 +904,11 @@ export class NpcAgent {
       this.lastStaminaPercent = staminaPercent
       this.staminaFillEl.style.width = `${staminaPercent}%`
     }
+    const vigorPercent = this.vigor.max > 0 ? Math.round((this.vigor.current / this.vigor.max) * 100) : 0
+    if (vigorPercent !== this.lastVigorPercent) {
+      this.lastVigorPercent = vigorPercent
+      this.vigorFillEl.style.width = `${vigorPercent}%`
+    }
     const gaze = gazeOpacityFactor(
       this.mesh.position.x - observerPos.x,
       this.mesh.position.z - observerPos.z,
@@ -878,11 +934,13 @@ export class NpcAgent {
   }
 
   /** Replays a `timeSkip.ts` "rest"/"wait" period in `TIME_SKIP_SAMPLE_HOURS`
-   *  steps instead of one big end-of-skip jump, so needs/stamina land where
+   *  steps instead of one big end-of-skip jump, so needs/stamina/vigor land where
    *  they'd naturally be after that many hours of normal (non-skipped) play
-   *  — a sleeping NPC actually rests, one working/awake still gets thirsty/
-   *  hungry/behind on `woodDuty` and (outside `sleep`) satisfies whichever
-   *  need would have come up, the same way `beginNeed`'s `onComplete` does.
+   *  — a sleeping NPC actually rests (stamina + vigor), one working/awake
+   *  still gets thirsty/hungry/behind on `woodDuty` and (outside sleep)
+   *  satisfies whichever need would have come up, the same way `beginNeed`'s
+   *  `onComplete` does. Collapsed vigor turns remaining work steps into a
+   *  nap using the same restore rates as live `sleep`.
    *  Finishes by teleporting straight to wherever the last step's schedule
    *  activity says this NPC belongs — no `steerTo` walk, matching how a
    *  time-lapse only shows someone where they linger. Called once per skip
@@ -891,6 +949,7 @@ export class NpcAgent {
   resolveTimeSkip(startTimeOfDay: number, hours: number, dayLengthSec: number): void {
     let finalActivity: ScheduleActivity | null = null
     let elapsed = 0
+    let napping = this.sleepReason === 'collapse' || shouldCollapseSleep(this.vigor)
     while (elapsed < hours) {
       const step = Math.min(TIME_SKIP_SAMPLE_HOURS, hours - elapsed)
       elapsed += step
@@ -899,10 +958,12 @@ export class NpcAgent {
       // Equivalent real-seconds `dt` this step would take in normal
       // (non-skipped) play — the same conversion `dayNight.ts`'s
       // `tickDayNight` uses in reverse (`dayLengthSec` real seconds / 24 per
-      // game hour) — so needs/stamina accrue at their usual rate.
+      // game hour) — so needs/stamina/vigor accrue at their usual rate.
       const stepDt = (step * dayLengthSec) / 24
       tickNeeds(this.needs, stepDt)
-      if (activity === 'sleep') {
+      const vigorStep = tickVigorForSimulatedStep(this.vigor, activity, stepDt, napping)
+      napping = vigorStep.napping
+      if (activity === 'sleep' || vigorStep.slept) {
         restoreStamina(this.stamina, this.restRate * stepDt)
       } else {
         if (activity === 'work') drainStamina(this.stamina, this.fatigueRate * stepDt)
@@ -918,6 +979,7 @@ export class NpcAgent {
       }
       finalActivity = activity
     }
+    this.sleepReason = napping ? 'collapse' : finalActivity === 'sleep' ? 'schedule' : null
     if (finalActivity === null) return
 
     const target =
@@ -933,7 +995,7 @@ export class NpcAgent {
     this.wait = 0
     this.pathWaypoints = []
     this.pathIndex = 0
-    this.phase = 'choose'
+    this.phase = napping ? 'sleep' : 'choose'
   }
 
   dispose(): void {
@@ -1020,8 +1082,26 @@ export class NpcAgent {
       extras: {
         activeNeed: this.activeNeed,
         staminaRatio: this.stamina.max > 0 ? this.stamina.current / this.stamina.max : 0,
+        vigorRatio: this.vigor.max > 0 ? this.vigor.current / this.vigor.max : 0,
       },
     }
+  }
+
+  /**
+   * Physiological collapse — reuse the existing `goSleep`/`sleep` path
+   * rather than a second FSM. Walk home when nearby; otherwise sleep here.
+   */
+  private beginCollapseSleep(): void {
+    this.sleepReason = 'collapse'
+    this.leaveActiveQueue()
+    this.pendingAction = null
+    this.wait = 0
+    this.pathWaypoints = []
+    const dist = Math.hypot(
+      this.mesh.position.x - this.home.x,
+      this.mesh.position.z - this.home.z,
+    )
+    this.phase = preferHomeSleep(dist) ? 'goSleep' : 'sleep'
   }
 
   /** `need` is `'water' | 'food' | 'wood'` in practice — `'choose'` routes
@@ -1162,6 +1242,7 @@ export class NpcAgent {
       return
     }
     if (intent === 'sleep') {
+      this.sleepReason = 'schedule'
       this.phase = 'goSleep'
       return
     }

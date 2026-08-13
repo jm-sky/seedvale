@@ -395,3 +395,22 @@ Schedule ──────────────→ existing FSM
 ```
 
 **Key rule:** `VigorState` is a physiological resource used by the existing NPC decision/FSM. It is not a new AI system. Sleep remains the existing action; vigor only adds the additional reason for entering it.
+
+## Implementation status (2026-08-13)
+
+**Implemented, technically verified** (`npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` all pass — 493/493 tests). **Browser/manual verification not yet done** — see the checklist in §23; still needs to be run against the live dev server before this plan can move to `done`.
+
+Files:
+
+- `src/shared/VigorState.ts` + `src/shared/VigorState.test.ts` — positive-pool type mirroring `StaminaState`; `isCollapsed` uses `VIGOR_COLLAPSE_THRESHOLD` (5), not exact zero.
+- `src/ai/npcVigor.ts` + `src/ai/npcVigor.test.ts` — NPC-only policy (rates, heavy-work kinds, collapse/wake gate, time-skip step). Not a second scheduler.
+- `src/ai/NpcAgent.ts` — `vigor` beside `health`/`stamina`. Heavy `execute` (`work`/`chop`) drains vigor; `sleep` restores it over elapsed time. Collapse at `choose()` wins over `pickNeed`/schedule and reuses `goSleep`/`sleep` (`sleepReason: 'collapse' | 'schedule'`). Home if within `HOME_SLEEP_RANGE`, otherwise sleep in place. `takeDamage` is `damageHealth` then a lump `DAMAGE_VIGOR_COST`. `resolveTimeSkip` uses `tickVigorForSimulatedStep` (same rates as live).
+- `index.html` — teal vigor bar on NPC labels (`npc-label__bar--vigor`).
+
+Deliberate v1 call-outs:
+
+- **No stress/panic drain.** NPCs have no clean major-threat transition; §10 follow-up rather than a new event architecture.
+- **No vigor persistence.** NPC runtime state is still regenerated on load; vigor starts full.
+- **`energetic` does not modify vigor** (§18).
+- **Fauna unchanged.** Vigor is NPC-only.
+- Eating/drinking/deposit/idle/wander do not drain vigor. Ordinary rest restores stamina only.

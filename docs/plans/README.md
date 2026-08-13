@@ -36,7 +36,6 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-13--092--npc-stamina-and-daily-vigor.md` | Stamina (burst) + dzienny wigor; sen / zasypianie w pracy (draft, nazwa do ustalenia) | 🟡 | L | ~~045~~ ~~020~~ |
 | `2026-08-11--071--local-economy-and-settlement-development.md` | Lokalna gospodarka osady (draft) | 🟡 | XL | ~~060~~ ~~032~~ ~~047~~ |
 | `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów — **blokada: 060, 071** | 🟡 | L | 060, 071 |
 | `2026-08-11--070--world-observatory.md` | Panel obserwacji życia świata | ⚪ | XL | 071, 069 |
@@ -56,7 +55,7 @@ Implementation complete; needs play/browser check. Grouped; full write-up is in 
 
 **UI / audio / rest** — `059` SFX pick/drop (`2026-08-11--059--inventory-pick-drop-sfx.md`) · `075` time-skip catch-up NPC · `078` `playAt` falloff · `084` obóz + town rest · `088` asset alignment browser · `090` miecz/kupiec/namiot/jaskinie/kilof
 
-**NPC** — `060` wykonywalny grafik (`eat`/`home`/`wake`) + overlay traits (`night_owl` / `fast_worker` / `sociable`)
+**NPC** — `060` wykonywalny grafik (`eat`/`home`/`wake`) + overlay traits (`night_owl` / `fast_worker` / `sociable`) · `092` stamina (burst) + dzienny wigor / zasypianie w pracy
 
 ---
 

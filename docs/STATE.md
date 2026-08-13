@@ -78,6 +78,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - NPC personality/character depth including role, traits/Big Five-related data, health and stamina.
 - NPC daily rhythm uses an effective per-NPC schedule (`effectiveScheduleFor`: role template + trait overlays). Scheduled `eat` / `home` / `wake` / `work` / `sleep` are executed through the existing FSM; `night_owl` shifts the day rather than skipping sleep; `fast_worker` lengthens work blocks; `sociable` would split `home`→`social` if a social Place existed (none is generated yet). Urgent needs still win at `choose()`. Traders skip `woodDuty` (stay at the stall) and have a longer work block (home only 21–23). Plan 060 — verification needed (browser rhythm check).
 - NPCs use shared `StaminaState` for work/rest effort; HP is no longer drained by fatigue.
+- NPCs use `VigorState` as a daily effort budget (plan 092): heavy `work`/`chop` drains it, scheduled or forced sleep restores it, ordinary rest restores stamina only. Collapse (`≤ VIGOR_COLLAPSE_THRESHOLD`) reuses the existing `goSleep`/`sleep` path so the NPC stops working and sleeps (home if nearby, otherwise in place). Runtime NPC state is still not persisted — vigor starts full on spawn.
 - NPC names and family naming data.
 - NPC dialogue v2 exists as a Vue screen with multiple conversation topics. Home trader opens a trade screen; home guard can be asked for a sword.
 - NPC reaction sounds are implemented (`playAt` from the NPC mesh — quieter farther away).
@@ -173,6 +174,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `WorldBundle` — lifetime/rebuild boundary for core world systems (`ChunkManager`, ocean, settlements, fauna, item spawners, resource deposits, dropped items, placed fires, placed tents, large caves).
 - `HealthState` — shared health/damage/death (`src/shared/HealthState.ts`) used by fauna, NPCs and the player.
 - `StaminaState` — shared physical-effort capacity (`src/shared/StaminaState.ts`) used by fauna (`AnimalLifeState.stamina`) and NPCs; replaces NPC HP-as-fatigue and animal `energy`.
+- `VigorState` — NPC daily physiological budget (`src/shared/VigorState.ts`); collapse gates sleep through the existing NPC FSM (plan 092). Not used by fauna.
 - Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/` (plan 055). NPC + fauna adapters; predator hunger-vs-fear scoring in `src/fauna/predatorHumanDecision.ts`.
 - `NpcAgent` — central NPC behaviour/needs/personality integration point.
 - `AnimalAgent` — central fauna behaviour integration point (intents via shared lifecycle; chase/flee/wander plus forage/drink/eat for plan 094).
@@ -208,6 +210,7 @@ src/fauna/predatorHumanDecision.ts
 src/simulation/
 src/shared/HealthState.ts
 src/shared/StaminaState.ts
+src/shared/VigorState.ts
 src/items/Inventory.ts
 src/items/HeldTool.ts
 src/items/createItemSpawners.ts
