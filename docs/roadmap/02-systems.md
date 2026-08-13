@@ -1,8 +1,9 @@
 # Session 2 — Systems & Dependencies
 
-**Status:** IN PROGRESS
+**Status:** `DONE`  
+**Date:** 2026-08-14
 
-This document records the decisions accepted during Session 2 so far. It is not yet a complete systems architecture or dependency map. A separate review will consolidate and challenge these decisions before the session is closed.
+This document records the decisions accepted during Session 2. It is not a complete systems architecture or a final dependency map. Remaining open questions are deferred to later design/implementation work rather than blockers for closing this session.
 
 ## Accepted principles
 
@@ -300,7 +301,7 @@ The extent and fidelity of such simulation may be reduced when remote, provided 
 
 ## Decisions still open
 
-The following remain intentionally open and should be reviewed before Session 2 is closed:
+The following remain intentionally open and should be resolved later during design/implementation, not as a prerequisite for closing Session 2:
 
 1. The exact semantic model shared by NPC, Household, Settlement and Group pressures.
 2. The exact implementation and weighting of priority between self, family, group/settlement, personality and traits.
@@ -315,8 +316,8 @@ The following remain intentionally open and should be reviewed before Session 2 
 
 - [x] Session 0 — Context & Current State
 - [x] Session 1 — Vision & Desired World
-- [🟡] Session 2 — Systems & Dependencies — **CURRENT**
-- [ ] Session 3 — Development Stages
+- [x] Session 2 — Systems & Dependencies
+- [ ] Session 3 — Development Stages — **CURRENT**
 - [ ] Session 4 — Existing Plans Mapping
 - [ ] Session 5 — Roadmap v1
 

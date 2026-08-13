@@ -1,10 +1,11 @@
 # Seedvale — Session 2: Systems & Dependencies
 
-**Status:** `IN PROGRESS — REVIEW`  
+**Status:** `DONE`  
+**Date:** 2026-08-14  
 **Purpose:** define the major systems and their relationships without defining implementation order.  
 **Source:** `docs/roadmap/02-systems.md`  
 
-This document captures the current Session 2 decisions. It intentionally avoids detailed implementation design. Session 2 remains open until the remaining architectural questions are accepted.
+This document captures the accepted Session 2 decisions. It intentionally avoids detailed implementation design. Remaining architectural questions are deferred to later design/implementation work.
 
 ---
 
@@ -338,9 +339,9 @@ These principles are useful for future design but are intentionally not treated 
 
 - [x] Session 0 — Context & Current State
 - [x] Session 1 — Vision & Desired World
-- [🟡] Session 2 — Systems & Dependencies — **CURRENT**
-- [ ] Session 3 — Development Stages
+- [x] Session 2 — Systems & Dependencies
+- [ ] Session 3 — Development Stages — **CURRENT**
 - [ ] Session 4 — Existing Plans Mapping
 - [ ] Session 5 — Roadmap v1
 
-> Session 2 is consolidated but remains open until the user explicitly accepts it as complete.
+> Session 2 is accepted as complete. Open architectural questions remain for later design, not as blockers for this session.
