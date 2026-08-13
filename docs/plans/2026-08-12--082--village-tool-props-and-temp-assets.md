@@ -1,8 +1,8 @@
 # Plan: Village tool props and `_temp` assets
 
-**Created:** 2026-08-12  
-**Status:** `verification needed`  
-**Priority:** medium · **Effort:** M  
+**Created:** 2026-08-12
+**Status:** `done`
+**Priority:** medium · **Effort:** M
 **Depends on:** ~~061~~
 
 ## Cel

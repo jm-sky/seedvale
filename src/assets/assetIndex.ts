@@ -11,8 +11,12 @@ import { LIVESTOCK_URLS } from '../settlement/livestock'
 import {
   BUSH_SPECS,
   CACTUS_SPECS,
+  CROPS_FIT_MAX,
+  CROPS_URL,
   DOCK_SPECS,
   FALLEN_LOG_SPECS,
+  FARM_HEIGHT,
+  FARM_URL,
   FIRE_FX_URL,
   LANTERN_FLOOR_MAX,
   LANTERN_URL,
@@ -245,6 +249,8 @@ export function buildAssetIndex(): AssetIndexEntry[] {
   pushHeightSpecs(out, DOCK_SPECS, 'settlement', 'settlement')
 
   const settlementProps: Array<{ id: string, url: string, label: string, prepare: AssetPrepare }> = [
+    { id: 'settlement:crops', url: CROPS_URL, label: 'Garden crops', prepare: { mode: 'fitMax', value: CROPS_FIT_MAX } },
+    { id: 'settlement:farm', url: FARM_URL, label: 'Wheat field', prepare: { mode: 'height', value: FARM_HEIGHT } },
     { id: 'settlement:lantern', url: LANTERN_URL, label: 'Lantern', prepare: { mode: 'fitMax', value: LANTERN_FLOOR_MAX } },
     { id: 'settlement:lantern_wall', url: LANTERN_URL, label: 'Lantern (wall)', prepare: { mode: 'fitMax', value: LANTERN_WALL_MAX } },
     { id: 'settlement:torch', url: VILLAGE_TORCH_URL, label: 'Village torch', prepare: { mode: 'height', value: VILLAGE_TORCH_HEIGHT } },

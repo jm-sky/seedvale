@@ -36,6 +36,10 @@ import {
 import { pickMerchantWagonPose } from './merchantWagon'
 import {
   BUSH_SPECS,
+  CROPS_FIT_MAX,
+  CROPS_URL,
+  FARM_HEIGHT,
+  FARM_URL,
   FIRE_FX_URL,
   LANTERN_FLOOR_MAX,
   LANTERN_URL,
@@ -122,8 +126,12 @@ const PALISADE_SEGMENTS_PER_SIDE: Record<VillageSize, number> = {
 export {
   BUSH_SPECS,
   CACTUS_SPECS,
+  CROPS_FIT_MAX,
+  CROPS_URL,
   DOCK_SPECS,
   FALLEN_LOG_SPECS,
+  FARM_HEIGHT,
+  FARM_URL,
   FIRE_FX_URL,
   LANTERN_FLOOR_MAX,
   LANTERN_URL,
@@ -1382,15 +1390,16 @@ export function createCampfireFlame(scale = 1): CampfireFlame {
   return { object: flame, update: sparks.update, setSize }
 }
 
+const GARDEN_BED_W = 2.4
+const GARDEN_BED_D = 1.6
+const GARDEN_BED_GAP = 0.35
+
 /** Procedural garden beds — S = one bed (legacy), M/L = side-by-side beds (plan 077). */
 export function createGarden(scale: GardenScale = 'S'): THREE.Group {
   const garden = new THREE.Group()
   const beds = gardenBedCount(scale)
-  const bedW = 2.4
-  const bedD = 1.6
-  const gap = 0.35
-  const totalW = beds * bedW + (beds - 1) * gap
-  const startX = -totalW * 0.5 + bedW * 0.5
+  const totalW = beds * GARDEN_BED_W + (beds - 1) * GARDEN_BED_GAP
+  const startX = -totalW * 0.5 + GARDEN_BED_W * 0.5
 
   const bedMat = new THREE.MeshStandardMaterial({ color: 0x5a3d24, flatShading: true })
   const cropMat = new THREE.MeshStandardMaterial({
@@ -1399,8 +1408,8 @@ export function createGarden(scale: GardenScale = 'S'): THREE.Group {
   })
 
   for (let b = 0; b < beds; b++) {
-    const bx = startX + b * (bedW + gap)
-    const bed = new THREE.Mesh(new THREE.BoxGeometry(bedW, 0.2, bedD), bedMat)
+    const bx = startX + b * (GARDEN_BED_W + GARDEN_BED_GAP)
+    const bed = new THREE.Mesh(new THREE.BoxGeometry(GARDEN_BED_W, 0.2, GARDEN_BED_D), bedMat)
     bed.position.set(bx, 0.1, 0)
     bed.receiveShadow = true
     garden.add(bed)
@@ -1415,18 +1424,28 @@ export function createGarden(scale: GardenScale = 'S'): THREE.Group {
   return garden
 }
 
+/** Side-by-side clones of `crops.glb` using the same bed spacing as `createGarden`. */
+function layoutCropsGarden(template: THREE.Object3D, beds: number): THREE.Group {
+  const garden = new THREE.Group()
+  const count = Math.max(1, beds)
+  const totalW = count * GARDEN_BED_W + (count - 1) * GARDEN_BED_GAP
+  const startX = -totalW * 0.5 + GARDEN_BED_W * 0.5
+  for (let b = 0; b < count; b++) {
+    const bed = template.clone(true)
+    bed.position.x += startX + b * (GARDEN_BED_W + GARDEN_BED_GAP)
+    garden.add(bed)
+  }
+  return garden
+}
+
 /** Golden — distinctly different from `createGarden`'s green crop cones and
  *  from any grass tint (`grass.ts`'s `ARID_GRASS`/`HUMID_GRASS`/`SWAMP_GRASS`
  *  top out at an olive `0x9c9a54`), so a wheat field reads at a glance. */
 const WHEAT_COLOR = 0xd8b23c
 
-/** A small patch of thin, tall cone "stalks" — same silhouette idea as
- *  `createReed` (a clump of narrow cones) but denser, taller, and narrower
- *  per stalk, tinted gold instead of green, arranged as a filled disk instead
- *  of one small clump. Placed near a settlement's `garden` landmark when its
- *  `foodSourceType` is `'field'` (plan 032 §8) — deterministic from `variant`
- *  (trig/golden-angle spread, same reasoning as `createRockCluster`) so a
- *  reload doesn't reshuffle the field. */
+/** Fallback wheat patch if `farm.glb` fails — thin gold cones (plan 032 / 099).
+ *  Deterministic from `variant` (trig/golden-angle spread, same reasoning as
+ *  `createRockCluster`) so a reload doesn't reshuffle the field. */
 export function createWheatField(scale = 1, variant = 0.5, radius = 3.2): THREE.Group {
   const field = new THREE.Group()
   const mat = new THREE.MeshStandardMaterial({ color: WHEAT_COLOR, flatShading: true })
@@ -1814,12 +1833,9 @@ export async function buildSettlementProps(
    *  unlike home chunks, isn't suppressed around them. They still get their
    *  well/stockpile/garden/huts. */
   plantForest = true,
-  /** `'field'` (plan 032 §8 — a significant nearby `fertile_soil` resource)
-   *  gets a wheat patch next to the garden, on top of the garden prop itself
-   *  (which stays for every settlement regardless — no new food-source
-   *  geometry is swapped in yet, see the plan doc's "Poza zakresem"). Purely
-   *  decorative, no `Interactable`, matching `createRockCluster`'s ore piles
-   *  in `terrain/resourceDeposits.ts`. */
+  /** `'field'` (plan 032 §8 / 099 — significant nearby `fertile_soil`)
+   *  gets `farm.glb` next to the garden (procedural `createWheatField`
+   *  fallback). Decorative only — no `Interactable`. */
   foodSourceType: FoodSourceType = 'garden',
   /** Inter-settlement road segments + settlement↔minor-location paths near
    *  this settlement (`roadNetwork.ts`'s `segmentsNear`, resolved by
@@ -1883,6 +1899,14 @@ export async function buildSettlementProps(
     .slice()
     .sort((a, b) => a.index - b.index)
   const gardenCount = Math.max(1, gardenLms.length)
+  let cropsTemplate: THREE.Object3D | null = null
+  try {
+    const crops = await loadGltf(CROPS_URL)
+    preparePropFitMax(crops, CROPS_FIT_MAX)
+    cropsTemplate = crops
+  } catch (err) {
+    console.warn('[settlement] crops.glb unavailable — garden GLB / procedural fallback', err)
+  }
   for (let gi = 0; gi < gardenCount; gi++) {
     const lm = gardenLms[gi]
     const scale: GardenScale = lm?.gardenScale ?? 'S'
@@ -1908,11 +1932,12 @@ export async function buildSettlementProps(
       ))
       ;({ x: gardenX, z: gardenZ } = pushOffCorridors(gardenX, gardenZ, pathCorridors, pathClear))
     }
-    // Prefer procedural multi-bed for M/L; S may use GLB with procedural fallback.
-    const garden =
-      scale === 'S'
-        ? await loadPropOrFallback('/models/settlement/garden.glb', 1.2, () => createGarden('S'))
-        : createGarden(scale)
+    // Gardens are vegetable beds (`crops.glb`), never wheat `garden.glb`
+    // (same mesh as the field). M/L tile extra beds; fallback is procedural.
+    const beds = gardenBedCount(scale)
+    const garden = cropsTemplate
+      ? layoutCropsGarden(cropsTemplate, beds)
+      : createGarden(scale)
     placeOnGround(garden, gardenX, gardenZ, sampleHeight)
     garden.name = `garden:${scale}`
     group.add(garden)
@@ -1927,7 +1952,12 @@ export async function buildSettlementProps(
     const { x: wheatX, z: wheatZ } = placeFromLandmark(
       site, landmarkOf(plan, 'field', 0), -2.5, 8.2, sampleHeight, waterLevel, coreRandom,
     )
-    const wheat = createWheatField(0.9 + coreRandom() * 0.3, coreRandom())
+    const wheat = await loadPropOrFallback(
+      FARM_URL,
+      FARM_HEIGHT,
+      () => createWheatField(0.9 + coreRandom() * 0.3, coreRandom()),
+    )
+    wheat.rotation.y = coreRandom() * Math.PI * 2
     placeOnGround(wheat, wheatX, wheatZ, sampleHeight)
     group.add(wheat)
   }

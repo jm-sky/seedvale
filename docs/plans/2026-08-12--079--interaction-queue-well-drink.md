@@ -1,6 +1,6 @@
 # Plan: Interaction queue — well drink (first client)
 
-**Status:** `verification needed` 🔍
+**Status:** `done`
 **Created:** 2026-08-12
 **Priority:** 🟡 medium
 **Effort:** M

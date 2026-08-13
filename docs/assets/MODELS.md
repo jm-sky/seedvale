@@ -31,7 +31,7 @@ If the feature needs no new model, do nothing to this file.
 | M01 | Richer house shells / wall segments (MegaKit) | Fantasy RTS cottages are roof-heavy; MegaKit walls/fences for denser settlement look | `in repo` | [research 006](../research/2026-08-11--006--medieval-model-library-complement.md), [plan 072](../plans/2026-08-11--072--settlement-visuals-nameplate-palisade.md), [issue 018](../issues/2026-08-12--018--house-scale-vs-npc.md) |
 | M02 | Yard fence / gate runs | Better palisade/yard than single `wall.glb` stubs | `in repo` | MegaKit `fence_*`, `wall_arch` |
 | M03 | Settlement clutter (wagon, chimney, vines…) | Optional village density props. Home Kupiec wagon uses MegaKit `wagon.glb` | `wired` (merchant wagon) | MegaKit parked set, [plan 090](../plans/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
-| M04 | Economy / outpost buildings | Market, farm, windmill, towncenter, watchtower, barracks, temple, port | `in repo` | [CREDITS](./CREDITS.md), plans 032 / 071 |
+| M04 | Economy / outpost buildings | Market, windmill, towncenter, watchtower, barracks, temple, port. `farm.glb` wired as village wheat field | `wired` (farm) / `in repo` (rest) | [CREDITS](./CREDITS.md), [plan 099](../plans/2026-08-13--099--wheat-field-glb.md), plan 071 |
 | M05 | Background mountains | Distant silhouette meshes | `in repo` | [plan 024](../plans/2026-08-07--024--world-visual-overhaul.md) (`mountain_a/b/c`) |
 | M06 | Extra flora variants | `bush_flowers_1`, `flower_clump_2` (and further variety as needed) | `in repo` | nature reserve in CREDITS |
 | M07 | Farm animals (chicken / cow / sheep / horse / donkey) | Village livestock GLB; home Kupiec decorative horse | `wired` | [SOUNDS](./SOUNDS.md), [plan 096](../plans/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md) |
@@ -51,7 +51,7 @@ If the feature needs no new model, do nothing to this file.
 | M21 | Branch GLB | Ground + lit-hand mesh | `wired` | plan 085 |
 | M22 | Fire tip FX | Handheld + village torch flame | `wired` | plan 085 (`fx/fire.glb`, CC-BY) |
 | M23 | House lantern GLB | Replaces procedural lamp body | `wired` | plan 085 |
-| M24 | Village torch post | Plaza + gate, auto-lit at dusk | `wired` | plan 085 |
+| M25 | Garden crop beds | Vegetable plots (tomato/pumpkin/lettuce) for all village gardens | `wired` | [plan 099](../plans/2026-08-13--099--wheat-field-glb.md) (`settlement/crops.glb`) |
 
 ## Wired (reference — do not treat as open work)
 
@@ -62,7 +62,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Characters | Modular men/women NPCs, Adventurer player |
 | Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
 | Nature (active) | trees/bushes, rock/log, ore piles |
-| Settlement (active) | huts, towerhouse, wall stubs, dock, crate/barrel, garden/storage/logs, hay |
+| Settlement (active) | huts, towerhouse, wall stubs, dock, crate/barrel, garden/crops/storage/logs, hay, wheat field (`farm.glb`) |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
 | FX | fire tip; blood splat (animal death) |

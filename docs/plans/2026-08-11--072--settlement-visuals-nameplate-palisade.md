@@ -1,6 +1,6 @@
 # Plan: Settlement visuals — houses, nameplate, palisade seeds
 
-**Status:** `verification needed` 🔍
+**Status:** `done`
 **Created:** 2026-08-11
 **Priority:** 🟡 medium
 **Effort:** M

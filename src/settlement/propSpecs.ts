@@ -50,6 +50,15 @@ export const RESOURCE_ROCK_SPECS = [
   { url: '/models/nature/resource_rock_1.glb', height: 1.1 },
 ] as const
 
+export const FARM_URL = '/models/settlement/farm.glb'
+/** Taller than a garden bed. Same GLB bytes as unused `garden.glb` — keep this
+ *  modest so the wheat plot stays near `FOOD_PLOT_RADIUS` (6). */
+export const FARM_HEIGHT = 1.6
+
+export const CROPS_URL = '/models/settlement/crops.glb'
+/** Longest-axis fit for one vegetable bed (~`createGarden` bed width 2.4). */
+export const CROPS_FIT_MAX = 2.4
+
 export const WALL_URL = '/models/settlement/wall.glb'
 export const LANTERN_URL = '/models/settlement/lantern.glb'
 export const VILLAGE_TORCH_URL = '/models/settlement/torch.glb'

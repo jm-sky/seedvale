@@ -4,7 +4,7 @@ import type { NaturalResource } from '../terrain/naturalResources'
 import type { VillageSize } from './families'
 
 /** How a settlement's population mainly feeds itself (plan 032 §8) — v1 is
- *  data/flavor; props still share a garden unless `field` adds a wheat patch.
+ *  data/flavor; props still share a garden unless `field` adds `farm.glb`.
  *  Owned here so `VillageIdentity` stays free of a circular import with
  *  `settlementGenerator.ts` (which re-exports the type for existing callers). */
 export type FoodSourceType = 'field' | 'fishing' | 'foraging' | 'garden'
