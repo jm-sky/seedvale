@@ -1,5 +1,9 @@
 # Plan — World Observatory
 
+**Status:** `todo`
+**Created:** 2026-08-11
+**Priority:** ⚪ low · **Effort:** XL · **Depends on:** 071, 069
+
 ## Cel
 
 Gracz powinien mieć możliwość obserwowania życia świata nie tylko z perspektywy swojej postaci.
