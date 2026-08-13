@@ -11,7 +11,6 @@ import { buildInstancedProps, type InstancedPropGroup, type PropPlacement } from
 import {
   BUSH_SPECS,
   CACTUS_SPECS,
-  clonePropWithYaw,
   createBush,
   createCactus,
   createCampfire,
@@ -195,7 +194,13 @@ type ChunkRecord = {
    *  `refreshTreeVisual` to re-place a tree it no longer has a mesh for. */
   treeYaw?: Map<string, number>
   items?: THREE.Group
+  /** Procedural-only landmark kinds (campfire/monolith/stoneCircle/smallRuins)
+   *  — geometry is built per placement, not from a shared template, so these
+   *  stay unbatched (plan 087 §2.5). */
   environment?: THREE.Group
+  /** GLB environment kinds (largeRock/rockCluster/fallenLog, faza 5/087) —
+   *  no runtime state, same "simplest case" instancing as `vegetationInstances`. */
+  environmentInstances?: InstancedPropGroup[]
   /** TreeIds registered into `treeLifecycle` for this chunk — cleared on unload. */
   treeIds?: string[]
   /** `undefined` = not yet decided (chunk not ready or outside grass radius);
@@ -781,21 +786,46 @@ export function createChunkManager(
           if (!chunks.has(key)) return
         }
 
-        rec.environment = buildPlacementGroup('chunk-environment', tile.environment, (placement) => {
-          let prop: THREE.Object3D
-          if (placement.kind === 'largeRock' && rockTemplates) {
-            prop = clonePropWithYaw(rockTemplates, 0, placement.scale, placement.rotationY)
-          } else if (placement.kind === 'rockCluster' && rockClusterTemplates) {
-            prop = clonePropWithYaw(rockClusterTemplates, 0, placement.scale, placement.rotationY)
-          } else if (placement.kind === 'fallenLog' && fallenLogTemplates) {
-            prop = clonePropWithYaw(fallenLogTemplates, 0, placement.scale, placement.rotationY)
-          } else {
-            prop = createProceduralEnvironmentProp(placement.kind, placement.scale, placement.variant)
-            prop.rotation.y = placement.rotationY
-          }
+        // Procedural-only landmark kinds (§2.5 — geometry built per placement,
+        // nothing to batch): unchanged individual-`Object3D` path.
+        const proceduralEnvPlacements = tile.environment.filter((p) => !GLB_ENV_KINDS.has(p.kind))
+        rec.environment = buildPlacementGroup('chunk-environment', proceduralEnvPlacements, (placement) => {
+          const prop = createProceduralEnvironmentProp(placement.kind, placement.scale, placement.variant)
+          prop.rotation.y = placement.rotationY
           placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
           return prop
         })
+
+        // GLB env kinds (faza 5) — instanced, same shape as bush/cactus/reed
+        // (§2.5's other "no runtime state" row). `EnvironmentPlacement` has
+        // no `speciesIndex` (today's code always clones template index 0 for
+        // these kinds — `clonePropWithYaw(rockTemplates, 0, ...)` — so
+        // `speciesIndex: 0` here preserves that, not a new simplification).
+        const envInstancedSources: { kind: EnvironmentKind, templates: THREE.Object3D[] | null }[] = [
+          { kind: 'largeRock', templates: rockTemplates },
+          { kind: 'rockCluster', templates: rockClusterTemplates },
+          { kind: 'fallenLog', templates: fallenLogTemplates },
+        ]
+        const environmentInstances: InstancedPropGroup[] = []
+        for (const { kind, templates } of envInstancedSources) {
+          if (!templates) continue
+          const placements = tile.environment.filter((p) => p.kind === kind)
+          if (placements.length === 0) continue
+          const propPlacements: PropPlacement[] = placements.map((p) => ({
+            speciesIndex: 0,
+            x: p.x,
+            z: p.z,
+            groundY: sampleTileHeight(p.x, p.z),
+            rotationY: p.rotationY,
+            scale: p.scale,
+          }))
+          const instanced = buildInstancedProps(templates, propPlacements, `chunk-environment-${kind}`)
+          if (instanced) {
+            scene.add(instanced.group)
+            environmentInstances.push(instanced)
+          }
+        }
+        if (environmentInstances.length > 0) rec.environmentInstances = environmentInstances
       })
       .catch((err: unknown) => {
         if (!(err instanceof HeightmapGenerationCancelledError)) {
@@ -843,6 +873,10 @@ export function createChunkManager(
     if (record.environment) {
       disposeObject3D(record.environment)
       record.environment.removeFromParent()
+    }
+    if (record.environmentInstances) {
+      for (const instanced of record.environmentInstances) instanced.dispose()
+      record.environmentInstances = undefined
     }
     chunks.delete(record.key)
   }
