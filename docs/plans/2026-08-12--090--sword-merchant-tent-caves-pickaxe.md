@@ -426,7 +426,7 @@ Nie implementować w ramach tego planu:
 ### Kupiec
 
 - [x] W domowej osadzie istnieje dokładnie jeden Kupiec.
-- [x] Kupiec ma wóz obok siebie.
+- [x] Kupiec ma wóz obok siebie (heading omija stertę kłód / studnię / domy).
 - [x] Przy wozie znajduje się dekoracyjny koń.
 - [x] Interakcja z Kupcem otwiera handel.
 - [x] Działa płatność muszlami.

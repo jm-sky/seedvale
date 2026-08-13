@@ -17,6 +17,7 @@ import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { type VillageSize, villageSizeConfig } from './families'
+import { pickMerchantWagonPose } from './merchantWagon'
 import {
   gardenBedCount,
   gardenClearingRadius,
@@ -1945,31 +1946,6 @@ export async function buildSettlementProps(
   group.add(marketBarrel)
   landmarks.market.set(marketX, sampleHeight(marketX, marketZ), marketZ)
 
-  if (plantForest) {
-    try {
-      const wagon = await loadGltf('/models/settlement/megakit/wagon.glb')
-      preparePropFitMax(wagon, 3.8)
-      placeOnGround(wagon, marketX + 2.8, marketZ - 0.5, sampleHeight)
-      wagon.rotation.y = 0.4
-      group.add(wagon)
-    } catch (err) {
-      console.warn('[settlement] wagon.glb unavailable', err)
-    }
-    try {
-      const horse = await loadGltf('/models/fauna/horse.glb')
-      prepareProp(horse, 1.55)
-      placeOnGround(horse, marketX + 4.4, marketZ + 1.15, sampleHeight)
-      horse.rotation.y = 1.1
-      group.add(horse)
-    } catch (err) {
-      console.warn('[settlement] horse.glb unavailable — procedural stand-in', err)
-      const horse = createHorseModel()
-      placeOnGround(horse, marketX + 4.4, marketZ + 1.15, sampleHeight)
-      horse.rotation.y = 1.1
-      group.add(horse)
-    }
-  }
-
   const houseLights: HouseLight[] = []
   const villageTorches: VillageTorch[] = []
 
@@ -2163,10 +2139,12 @@ export async function buildSettlementProps(
       flame,
     }
   }
+  let stock2X: number | null = null
+  let stock2Z: number | null = null
   if (infra.stockpiles > 1) {
-    const { x: stock2X, z: stock2Z } = placeFromLandmark(
+    ;({ x: stock2X, z: stock2Z } = placeFromLandmark(
       site, landmarkOf(plan, 'stockpile', 1), 5.5, -2.5, sampleHeight, waterLevel, coreRandom,
-    )
+    ))
     const stockpile2 = await loadPropOrFallback(
       '/models/settlement/logs.glb',
       0.9,
@@ -2174,6 +2152,54 @@ export async function buildSettlementProps(
     )
     placeOnGround(stockpile2, stock2X, stock2Z, sampleHeight)
     group.add(stockpile2)
+  }
+
+  if (plantForest) {
+    const wagonObstacles: Array<{ x: number, z: number, r: number }> = [
+      { x: stockX, z: stockZ, r: 2.5 },
+      { x: wellX, z: wellZ, r: 2 },
+    ]
+    if (stock2X != null && stock2Z != null) {
+      wagonObstacles.push({ x: stock2X, z: stock2Z, r: 2.5 })
+    }
+    for (let gi = 0; gi < landmarks.gardens.length; gi++) {
+      const g = landmarks.gardens[gi]!
+      const scale: GardenScale = gardenLms[gi]?.gardenScale ?? 'S'
+      wagonObstacles.push({ x: g.x, z: g.z, r: gardenPlotRadius(scale) })
+    }
+    for (const home of landmarks.homes) {
+      wagonObstacles.push({ x: home.x, z: home.z, r: 2.8 })
+    }
+    if (landmarks.campfire) {
+      wagonObstacles.push({
+        x: landmarks.campfire.position.x,
+        z: landmarks.campfire.position.z,
+        r: 1.5,
+      })
+    }
+    const pose = pickMerchantWagonPose(marketX, marketZ, wagonObstacles)
+    try {
+      const wagon = await loadGltf('/models/settlement/megakit/wagon.glb')
+      preparePropFitMax(wagon, 3.8)
+      placeOnGround(wagon, pose.wagonX, pose.wagonZ, sampleHeight)
+      wagon.rotation.y = pose.yaw
+      group.add(wagon)
+    } catch (err) {
+      console.warn('[settlement] wagon.glb unavailable', err)
+    }
+    try {
+      const horse = await loadGltf('/models/fauna/horse.glb')
+      prepareProp(horse, 1.55)
+      placeOnGround(horse, pose.horseX, pose.horseZ, sampleHeight)
+      horse.rotation.y = pose.yaw
+      group.add(horse)
+    } catch (err) {
+      console.warn('[settlement] horse.glb unavailable — procedural stand-in', err)
+      const horse = createHorseModel()
+      placeOnGround(horse, pose.horseX, pose.horseZ, sampleHeight)
+      horse.rotation.y = pose.yaw
+      group.add(horse)
+    }
   }
 
   await plantEntrancePalisade(group, site, size, sampleHeight, waterLevel, plan, coast, pathCorridors)
