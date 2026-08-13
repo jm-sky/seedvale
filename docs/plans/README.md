@@ -66,7 +66,7 @@ Implementation complete; needs play/browser check. Grouped; full write-up is in 
 Compact ID list. Open the file only when you need the original scope.
 
 - **Fundament:** `001` teren · `003` zegar · `006` terrain workers · `007` streaming/save · `008` trawa · `009` postprocess · `028` biomy · `062` terrain overhaul · `063` las/habitat · `066` VFX · `068` nierówne drogi
-- **Osady / NPC:** `002` osada+NPC · `011` dialog · `013` płeć · `014` SFX reakcji · `020` grafik/place · `022` character depth · `025` multi-osady · `026` drogi · `027` imiona · `031` gen. wiosek · `038` ogniska · `044` detale świata · `048` dialogi v2 · `073` typy drzew · `047` village overhaul · `072` nameplate/palisada· `079` InteractionQueue / studnia · `099` pole pszenicy GLB + ogród crops
+- **Osady / NPC:** `002` osada+NPC · `011` dialog · `013` płeć · `014` SFX reakcji · `020` grafik/place · `022` character depth · `025` multi-osady · `026` drogi · `027` imiona · `031` gen. wiosek · `038` ogniska · `044` detale świata · `048` dialogi v2 · `073` typy drzew · `047` village overhaul · `072` nameplate/palisada· `079` InteractionQueue / studnia · `099` pole pszenicy GLB + ogród crops · `100` ogród 2× + pad pod crops
 - **Fauna / walka:** `004` chase/flee · `010` predator-prey · `021` animal life · `042` świadomość gracza · `045` Health/Stamina
 - **Itemy / świat:** `016` ambient audio · `017` gaze labels · `018` questy v2 · `029` minimapa · `030` zbieralne · `041` czekaj/odpoczynek · `043` ekwipunek · `050` pochodnia · `051` atmosfera · `067` minimapa N · `052` łopata/kamienie · `057` siekiera · `082` widły/sierp/clutter
 - **App / UI:** `005` ekrany · `023` touch · `053` createApp refactor · `054` WorldBundle refs · `055` shared simulation · `046` Vue+Tailwind

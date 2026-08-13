@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  gardenClearingRadius,
+  gardenPlotRadius,
   gardenUnitsFromHouses,
   packGardenScales,
 } from './gardenScale'
@@ -23,5 +25,14 @@ describe('gardenScale', () => {
     expect(packGardenScales(5)).toEqual(['L', 'M'])
     expect(packGardenScales(6)).toEqual(['L', 'L'])
     expect(packGardenScales(0)).toEqual(['S'])
+  })
+
+  it('gardenClearingRadius hugs the tiled beds (plan 100)', () => {
+    expect(gardenClearingRadius('S')).toBeCloseTo(3.68, 1)
+    expect(gardenClearingRadius('M')).toBeCloseTo(6.03, 1)
+    expect(gardenClearingRadius('L')).toBeCloseTo(8.52, 1)
+    expect(gardenClearingRadius('S')).toBeLessThan(gardenPlotRadius('S'))
+    expect(gardenClearingRadius('M')).toBeLessThan(gardenPlotRadius('M'))
+    expect(gardenClearingRadius('L')).toBeLessThanOrEqual(gardenPlotRadius('L') + 0.2)
   })
 })

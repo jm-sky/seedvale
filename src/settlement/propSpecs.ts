@@ -56,8 +56,8 @@ export const FARM_URL = '/models/settlement/farm.glb'
 export const FARM_HEIGHT = 1.6
 
 export const CROPS_URL = '/models/settlement/crops.glb'
-/** Longest-axis fit for one vegetable bed (~`createGarden` bed width 2.4). */
-export const CROPS_FIT_MAX = 2.4
+/** Longest-axis fit for one vegetable bed (~`createGarden` bed width 4.8). */
+export const CROPS_FIT_MAX = 4.8
 
 export const WALL_URL = '/models/settlement/wall.glb'
 export const LANTERN_URL = '/models/settlement/lantern.glb'

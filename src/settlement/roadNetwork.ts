@@ -778,8 +778,8 @@ export function villageSegmentsNear(
         z: area.z,
         radius: area.radius,
         targetH: area.targetH,
-        heightStrength: Math.min(1, heightStrength * 0.85),
-        tintStrength: tintStrength * 0.85,
+        heightStrength: houseHeightStrength,
+        tintStrength,
       })
     }
 

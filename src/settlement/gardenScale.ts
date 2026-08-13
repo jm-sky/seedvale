@@ -34,11 +34,11 @@ export function packGardenScales(units: number): GardenScale[] {
 export function gardenPlotRadius(scale: GardenScale): number {
   switch (scale) {
     case 'L':
-      return 4.2
+      return 8.4
     case 'M':
-      return 3.2
+      return 6.4
     default:
-      return 2.4
+      return 4.8
   }
 }
 
@@ -57,17 +57,13 @@ export function gardenPlazaMinCenterDist(
   return plazaR + gardenPlotRadius(scale) + gap
 }
 
-/** Terrain / tree-reject clearing radius (world units). */
-export function gardenClearingRadius(scale: GardenScale): number {
-  switch (scale) {
-    case 'L':
-      return 7
-    case 'M':
-      return 5.5
-    default:
-      return 4
-  }
-}
+/** Unit bed size — `crops.glb` fit and procedural `createGarden` fallback. */
+export const GARDEN_BED_W = 4.8
+export const GARDEN_BED_D = 3.2
+export const GARDEN_BED_GAP = 0.35
+
+/** Dirt skirt past the bed corners so grass starts just outside the mesh. */
+const GARDEN_PAD_SKIRT = 0.8
 
 /** How many unit beds the procedural mesh lays out. */
 export function gardenBedCount(scale: GardenScale): number {
@@ -79,4 +75,12 @@ export function gardenBedCount(scale: GardenScale): number {
     default:
       return 1
   }
+}
+
+/** Terrain / grass-reject pad — hugs the tiled beds (not a large plaza disk). */
+export function gardenClearingRadius(scale: GardenScale): number {
+  const beds = gardenBedCount(scale)
+  const halfW = (beds * GARDEN_BED_W + Math.max(0, beds - 1) * GARDEN_BED_GAP) * 0.5
+  const halfD = GARDEN_BED_D * 0.5
+  return Math.hypot(halfW, halfD) + GARDEN_PAD_SKIRT
 }

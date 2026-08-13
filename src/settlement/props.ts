@@ -18,9 +18,10 @@ import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { type VillageSize, villageSizeConfig } from './families'
 import {
+  GARDEN_BED_D,
+  GARDEN_BED_GAP,
+  GARDEN_BED_W,
   gardenBedCount,
-  gardenClearingRadius,
-  gardenPlazaMinCenterDist,
   gardenPlotRadius,
   type GardenScale,
 } from './gardenScale'
@@ -1390,10 +1391,6 @@ export function createCampfireFlame(scale = 1): CampfireFlame {
   return { object: flame, update: sparks.update, setSize }
 }
 
-const GARDEN_BED_W = 2.4
-const GARDEN_BED_D = 1.6
-const GARDEN_BED_GAP = 0.35
-
 /** Procedural garden beds — S = one bed (legacy), M/L = side-by-side beds (plan 077). */
 export function createGarden(scale: GardenScale = 'S'): THREE.Group {
   const garden = new THREE.Group()
@@ -1416,7 +1413,7 @@ export function createGarden(scale: GardenScale = 'S'): THREE.Group {
 
     for (let i = 0; i < 6; i++) {
       const crop = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 4), cropMat)
-      crop.position.set(bx - 0.8 + (i % 3) * 0.8, 0.4, i < 3 ? -0.35 : 0.35)
+      crop.position.set(bx - 1.6 + (i % 3) * 1.6, 0.4, i < 3 ? -0.7 : 0.7)
       crop.castShadow = true
       garden.add(crop)
     }
@@ -1549,46 +1546,6 @@ function localPathCorridors(
     heightStrength: 0,
     tintStrength: 0,
   }))
-}
-
-/** Push a point outside corridor capsules (plaza paths / roads). */
-function pushOffCorridors(
-  x: number,
-  z: number,
-  corridors: readonly RoadCorridorSegment[],
-  extraClearance: number,
-): { x: number, z: number } {
-  let px = x
-  let pz = z
-  for (let iter = 0; iter < 5; iter++) {
-    let moved = false
-    for (const seg of corridors) {
-      const need = seg.halfWidth + extraClearance
-      const { distSq, t } = projectOntoSegment(px, pz, seg.ax, seg.az, seg.bx, seg.bz)
-      const dist = Math.sqrt(distSq)
-      if (dist >= need) continue
-      const cx = seg.ax + (seg.bx - seg.ax) * t
-      const cz = seg.az + (seg.bz - seg.az) * t
-      let dx = px - cx
-      let dz = pz - cz
-      const len = Math.hypot(dx, dz)
-      if (len < 1e-4) {
-        const sx = seg.bx - seg.ax
-        const sz = seg.bz - seg.az
-        const sl = Math.hypot(sx, sz) || 1
-        dx = -sz / sl
-        dz = sx / sl
-      } else {
-        dx /= len
-        dz /= len
-      }
-      px = cx + dx * need
-      pz = cz + dz * need
-      moved = true
-    }
-    if (!moved) break
-  }
-  return { x: px, z: pz }
 }
 
 /** Rejects candidates sitting on a clearing (well/stockpile/garden/hut pad),
@@ -1910,27 +1867,24 @@ export async function buildSettlementProps(
   for (let gi = 0; gi < gardenCount; gi++) {
     const lm = gardenLms[gi]
     const scale: GardenScale = lm?.gardenScale ?? 'S'
-    const gardenPlazaClear = gardenPlazaMinCenterDist(clearings.core.radius, scale)
-    const pathClear = 2.4 + gardenClearingRadius(scale) * 0.4
-    let { x: gardenX, z: gardenZ } = placeFromLandmark(
-      site,
-      lm,
-      -2.5 - gi * 2.2,
-      5 + gi * 2.5,
-      sampleHeight,
-      waterLevel,
-      coreRandom,
-      { x: clearings.core.x, z: clearings.core.z, minDist: gardenPlazaClear },
-    )
-    for (let i = 0; i < 8; i++) {
-      ;({ x: gardenX, z: gardenZ } = pushAwayFrom(
-        gardenX,
-        gardenZ,
-        clearings.core.x,
-        clearings.core.z,
-        gardenPlazaClear,
+    // Sit on the terrain pad (same x/z as flatten + dirt tint). Jitter would
+    // leave the mesh on grass beside the clearing (plan 100).
+    const pad = clearings.gardens[gi]
+    let gardenX: number
+    let gardenZ: number
+    if (pad) {
+      gardenX = pad.x
+      gardenZ = pad.z
+    } else {
+      ;({ x: gardenX, z: gardenZ } = placeFromLandmark(
+        site,
+        lm,
+        -2.5 - gi * 2.2,
+        5 + gi * 2.5,
+        sampleHeight,
+        waterLevel,
+        coreRandom,
       ))
-      ;({ x: gardenX, z: gardenZ } = pushOffCorridors(gardenX, gardenZ, pathCorridors, pathClear))
     }
     // Gardens are vegetable beds (`crops.glb`), never wheat `garden.glb`
     // (same mesh as the field). M/L tile extra beds; fallback is procedural.

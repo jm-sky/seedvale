@@ -23,7 +23,7 @@ export type ClearingLayout = {
   core: ClearingArea
   /** One per family — its house sits here. Same order as `SettlementDef.families`. */
   houses: readonly ClearingArea[]
-  /** Garden pads (plan 077) — tree reject + light terrain flatten. */
+  /** Garden pads (plan 077 / 100) — tree/grass reject + house-level flatten. */
   gardens: readonly ClearingArea[]
   /** Broad, weak smoothing pass covering the whole village footprint (core +
    *  house ring), pulling outlier clearings toward a shared average height —
