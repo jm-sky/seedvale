@@ -30,6 +30,10 @@ import {
   VILLAGE_TORCH_HEIGHT,
   VILLAGE_TORCH_URL,
   WALL_URL,
+  WELL_HEIGHT,
+  WELL_URL,
+  WOOD_PILE_HEIGHT,
+  WOOD_PILE_URL,
 } from '../settlement/propSpecs'
 import { anchorsForAsset } from './assetAnchorData'
 
@@ -255,6 +259,8 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     { id: 'settlement:lantern_wall', url: LANTERN_URL, label: 'Lantern (wall)', prepare: { mode: 'fitMax', value: LANTERN_WALL_MAX } },
     { id: 'settlement:torch', url: VILLAGE_TORCH_URL, label: 'Village torch', prepare: { mode: 'height', value: VILLAGE_TORCH_HEIGHT } },
     { id: 'settlement:wall', url: WALL_URL, label: 'Wall segment', prepare: { mode: 'height', value: 1.85 } },
+    { id: 'settlement:well', url: WELL_URL, label: 'Well', prepare: { mode: 'height', value: WELL_HEIGHT } },
+    { id: 'settlement:wood_pile', url: WOOD_PILE_URL, label: 'Wood pile', prepare: { mode: 'height', value: WOOD_PILE_HEIGHT } },
     { id: 'fx:fire', url: FIRE_FX_URL, label: 'Fire FX', prepare: { mode: 'fitMax', value: 0.11 } },
     { id: 'fx:blood_splat', url: '/models/fx/blood_splat.glb', label: 'Blood splat', prepare: { mode: 'fitMax', value: 1 } },
   ]

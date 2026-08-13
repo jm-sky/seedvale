@@ -13,7 +13,8 @@ export const CHARACTER_ANCHORS: readonly AssetAnchorDef[] = [
   },
 ]
 
-/** South rim of `createWell()` — queue line runs along anchor +Z (plan 088 Phase 6). */
+/** South rim of the well after `prepareProp` (GLB `well.glb` / procedural
+ *  `createWell`) — queue line runs along anchor +Z (plan 088 Phase 6 / 101). */
 const WELL_INTERACTION: AssetAnchorDef = {
   name: 'interaction',
   type: 'interaction',

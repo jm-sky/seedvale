@@ -270,8 +270,8 @@ export async function createSettlement(
 
   // Interaction queues (plan 079): well drink first; garden/stall later reuse
   // the same map. Line runs +Z from the well so waiters stand south of the rim.
-  // servingOffset = well base radius (0.85) + 0.3 m clearance so NPCs do not
-  // stand inside the stone cylinder (`createWell` in props.ts).
+  // servingOffset: rim + 0.3 m (`settlement:well` anchor). GLB well uses
+  // the same asset-local rim as procedural `createWell` (~0.85 m south).
   const wellQid = wellQueueId(def.id)
   const wellQueueRest = {
     spacing: 1.2,

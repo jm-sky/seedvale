@@ -49,6 +49,10 @@ import {
   VILLAGE_TORCH_HEIGHT,
   VILLAGE_TORCH_URL,
   WALL_URL,
+  WELL_HEIGHT,
+  WELL_URL,
+  WOOD_PILE_HEIGHT,
+  WOOD_PILE_URL,
 } from './propSpecs'
 import { yawToward } from './roadNetwork'
 import { pathPlansToCorridorData } from './villagePlanner'
@@ -66,7 +70,7 @@ export type SettlementHouseLandmark = {
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
-  /** Procedural well group — anchor resolution for the drink queue (Phase 6). */
+  /** Well mesh (GLB or procedural fallback) — drink-queue anchors (Phase 6). */
   wellProp?: THREE.Object3D
   stockpile: THREE.Vector3
   garden: THREE.Vector3
@@ -146,6 +150,10 @@ export {
   VILLAGE_TORCH_HEIGHT,
   VILLAGE_TORCH_URL,
   WALL_URL,
+  WELL_HEIGHT,
+  WELL_URL,
+  WOOD_PILE_HEIGHT,
+  WOOD_PILE_URL,
 } from './propSpecs'
 
 /**
@@ -216,10 +224,8 @@ export function createHut(): THREE.Group {
   return hut
 }
 
-/** Stone ring + roofed crossbeam + hanging bucket — more of a village
- *  landmark than the bare cylinder this replaces (plan 044 §1.3), still
- *  primitives-only (no GLB) since a well has no gameplay mechanic to justify
- *  sourcing/loading a dedicated model. */
+/** Procedural fallback for `well.glb` (plan 101) — stone ring, roofed
+ *  crossbeam, hanging bucket. Drink queue still uses `settlement:well`. */
 export function createWell(): THREE.Group {
   const well = new THREE.Group()
   const stoneMat = new THREE.MeshStandardMaterial({ color: 0x7a7a72, flatShading: true, roughness: 0.95 })
@@ -1834,7 +1840,7 @@ export async function buildSettlementProps(
   const wellLm = landmarkOf(plan, 'well')
   const wellX = wellLm?.x ?? site.x
   const wellZ = wellLm?.z ?? site.z
-  const well = createWell()
+  const well = await loadPropOrFallback(WELL_URL, WELL_HEIGHT, createWell)
   placeOnGround(well, wellX, wellZ, sampleHeight)
   group.add(well)
   landmarks.well.set(wellX, sampleHeight(wellX, wellZ), wellZ)
@@ -1844,8 +1850,8 @@ export async function buildSettlementProps(
     site, landmarkOf(plan, 'stockpile', 0), 4, 1.5, sampleHeight, waterLevel, coreRandom,
   )
   const stockpile = await loadPropOrFallback(
-    '/models/settlement/logs.glb',
-    0.9,
+    WOOD_PILE_URL,
+    WOOD_PILE_HEIGHT,
     createStockpile,
   )
   placeOnGround(stockpile, stockX, stockZ, sampleHeight)
@@ -2130,8 +2136,8 @@ export async function buildSettlementProps(
       site, landmarkOf(plan, 'stockpile', 1), 5.5, -2.5, sampleHeight, waterLevel, coreRandom,
     ))
     const stockpile2 = await loadPropOrFallback(
-      '/models/settlement/logs.glb',
-      0.9,
+      WOOD_PILE_URL,
+      WOOD_PILE_HEIGHT,
       createStockpile,
     )
     placeOnGround(stockpile2, stock2X, stock2Z, sampleHeight)

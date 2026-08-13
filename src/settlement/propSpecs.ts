@@ -59,6 +59,13 @@ export const CROPS_URL = '/models/settlement/crops.glb'
 /** Longest-axis fit for one vegetable bed (~`createGarden` bed width 4.8). */
 export const CROPS_FIT_MAX = 4.8
 
+export const WELL_URL = '/models/settlement/well.glb'
+/** Roofed well — matches procedural `createWell` overall height (~roof y=2). */
+export const WELL_HEIGHT = 2.0
+
+export const WOOD_PILE_URL = '/models/settlement/wood_pile.glb'
+export const WOOD_PILE_HEIGHT = 0.9
+
 export const WALL_URL = '/models/settlement/wall.glb'
 export const LANTERN_URL = '/models/settlement/lantern.glb'
 export const VILLAGE_TORCH_URL = '/models/settlement/torch.glb'

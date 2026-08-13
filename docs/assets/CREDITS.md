@@ -14,7 +14,7 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/settlement/hut_*.glb` | Ultimate Fantasy RTS / Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatefantasyrts.html) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | `Houses_FirstAge_*_Level1` (+ `hut_d` = `Houses_SecondAge_1_Level1`, podpięte) |
 | `public/models/settlement/towerhouse.glb` | j.w. | j.w. | CC0 1.0 | `TowerHouse_FirstAge` — podpięte jako wariant domu (plan 072) |
 | `public/models/settlement/wall.glb` | j.w. | j.w. | CC0 1.0 | `Wall_FirstAge` — podpięte jako zaczątki palisady przy wejściu (plan 072) |
-| `public/models/settlement/logs.glb` | j.w. | j.w. | CC0 1.0 | `Logs` |
+| `public/models/settlement/logs.glb` | j.w. | j.w. | CC0 1.0 | `Logs` — **parked**; skład wioski używa `wood_pile.glb` (plan 101) |
 | `public/models/settlement/garden.glb` | j.w. | j.w. | CC0 1.0 | `Farm_FirstAge_Level1_Wheat` — **nieużywane** (duplikat `farm.glb`); ogrody idą na `crops.glb` |
 | `public/models/settlement/farm.glb` | j.w. | j.w. | CC0 1.0 | `Farm_FirstAge_Level1_Wheat` — pole przy `foodSourceType === 'field'` (`FARM_HEIGHT` 1.6, plan 099); fallback `createWheatField` |
 | `public/models/settlement/crops.glb` | Quaternius | [poly.pizza/m/Ro6K0Yg7mx](https://poly.pizza/m/Ro6K0Yg7mx) | CC0 1.0 | `Crops` (`Farm_Dirt_Level3`) — grządki ogrodu (plan 099); `gltfpack -cc` |
@@ -63,6 +63,17 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/fx/fire.glb` | J-Toastie | [poly.pizza/m/8kb5fydmHf](https://poly.pizza/m/8kb5fydmHf) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Fire` — handheld / village torch flame tip (plan 085); wymagana atrybucja |
 | `public/models/settlement/lantern.glb` | Tomáš Bayer | [poly.pizza/m/d80ay-dCqqj](https://poly.pizza/m/d80ay-dCqqj) | CC0 1.0 | `Lantern` — house night lamp body (plan 085) |
 | `public/models/settlement/torch.glb` | Quaternius | [poly.pizza/m/Gq38E7hFZw](https://poly.pizza/m/Gq38E7hFZw) | CC0 1.0 | `Torch` — village plaza/gate night posts (plan 085) |
+| `public/models/nature/cactus_a.glb` | Quaternius | [poly.pizza/m/HsEJgRLQWX](https://poly.pizza/m/HsEJgRLQWX) | CC0 1.0 | `Cactus` — chunk vegetation (pustynia) |
+| `public/models/nature/cactus_b.glb` | Quaternius | [poly.pizza/m/Da39rzd54k](https://poly.pizza/m/Da39rzd54k) | CC0 1.0 | `Cactus Flowers` — chunk vegetation (pustynia) |
+| `public/models/nature/reed_a.glb` | Poly by Google | [poly.pizza/m/9uT74BMpRrl](https://poly.pizza/m/9uT74BMpRrl) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Cattail` — chunk vegetation (bagno); wymagana atrybucja |
+| `public/models/settlement/well.glb` | Quaternius | [poly.pizza/m/QlqncKYxXb](https://poly.pizza/m/QlqncKYxXb) | CC0 1.0 | `Well` — studnia wioski; fallback `createWell` (plan 101) |
+| `public/models/settlement/wood_pile.glb` | K H (Kash) | [poly.pizza/m/8ueXsvnRjC1](https://poly.pizza/m/8ueXsvnRjC1) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Wood Pile` — skład wioski; wymagana atrybucja (plan 101) |
+| `public/models/nature/mushroom_a.glb` | Quaternius | [poly.pizza/m/aOW08oSrd4](https://poly.pizza/m/aOW08oSrd4) | CC0 1.0 | `Mushroom` — **parked**; textury 1024→512 WebP |
+| `public/models/nature/fern_a.glb` | Quaternius | [poly.pizza/m/jqcanvH7D6](https://poly.pizza/m/jqcanvH7D6) | CC0 1.0 | `Fern` — **parked**; textury 1024→512 WebP |
+| `public/models/nature/rock_path_round_wide.glb` | Quaternius | [poly.pizza/m/mWb3XxOctl](https://poly.pizza/m/mWb3XxOctl) | CC0 1.0 | `Rock Path Round Wide` — **parked**; kandydat na bruk ścieżki |
+| `public/models/settlement/campfire_unlit.glb` | Quaternius | [poly.pizza/m/Azj9hJwwwG](https://poly.pizza/m/Azj9hJwwwG) | CC0 1.0 | `Bonfire` (kamienie+drewno, bez płomienia) — **parked**; przyszłe ciało ogniska |
+| `public/models/settlement/campfire_burning_q.glb` | Quaternius | [poly.pizza/m/k1e0cOzi8A](https://poly.pizza/m/k1e0cOzi8A) | CC0 1.0 | `Bonfire` (palące drewno) — **parked**; płomień w meshu |
+| `public/models/settlement/campfire_burning_poly.glb` | Poly by Google | [poly.pizza/m/0vzzmM-t8CP](https://poly.pizza/m/0vzzmM-t8CP) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Campfire` — **parked**; wymagana atrybucja; płomień w meshu |
 
 Kopia tekstu licencji z paczki: [quaternius-ultimate-fantasy-rts-license.txt](./quaternius-ultimate-fantasy-rts-license.txt) (w zipie oznaczona mylnie jako „Platformer Pack”; treść = CC0).  
 Modular Men: [quaternius-ultimate-modular-men-license.txt](./quaternius-ultimate-modular-men-license.txt).  

@@ -52,6 +52,15 @@ If the feature needs no new model, do nothing to this file.
 | M22 | Fire tip FX | Handheld + village torch flame | `wired` | plan 085 (`fx/fire.glb`, CC-BY) |
 | M23 | House lantern GLB | Replaces procedural lamp body | `wired` | plan 085 |
 | M25 | Garden crop beds | Vegetable plots (tomato/pumpkin/lettuce) for all village gardens | `wired` | [plan 099](../plans/2026-08-13--099--wheat-field-glb.md) (`settlement/crops.glb`) |
+| M26 | Mushroom | Forest-floor clutter | `in repo` | [plan 101](../plans/2026-08-13--101--cactus-reed-well-woodpile.md) (`nature/mushroom_a.glb`) |
+| M27 | Fern | Forest undergrowth | `in repo` | plan 101 (`nature/fern_a.glb`) |
+| M28 | Rock path (round wide) | Candidate cobble for village/path tiles (roads are terrain tint today) | `in repo` | plan 101 (`nature/rock_path_round_wide.glb`) |
+| M29 | Campfire unlit body | Stones + stacked wood, no flame — future `VillageFire` body | `in repo` | plan 101 (`settlement/campfire_unlit.glb`) |
+| M30 | Campfire burning (Quaternius) | Baked flame in mesh — not usable with fuel toggle | `in repo` | plan 101 (`campfire_burning_q.glb`) |
+| M31 | Campfire burning (Poly) | Higher-quality baked flame; CC-BY | `in repo` | plan 101 (`campfire_burning_poly.glb`) |
+| M32 | Village well GLB | Replaces procedural `createWell` (fallback kept) | `wired` | plan 101 (`settlement/well.glb`) |
+| M33 | Wood pile stockpile | Stacked beams; replaces wired `logs.glb` | `wired` | plan 101 (`settlement/wood_pile.glb`, CC-BY) |
+| M34 | Fantasy RTS logs | Former stockpile mesh | `in repo` | `settlement/logs.glb` |
 
 ## Wired (reference — do not treat as open work)
 
@@ -61,8 +70,8 @@ Keep this section short. Prefer CREDITS for the full credited set.
 |------|----------|
 | Characters | Modular men/women NPCs, Adventurer player |
 | Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
-| Nature (active) | trees/bushes, rock/log, ore piles |
-| Settlement (active) | huts, towerhouse, wall stubs, dock, crate/barrel, garden/crops/storage/logs, hay, wheat field (`farm.glb`) |
+| Nature (active) | trees/bushes, cactus/reed, rock/log, ore piles |
+| Settlement (active) | huts, towerhouse, wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
 | FX | fire tip; blood splat (animal death) |

@@ -36,7 +36,7 @@ Resolution produces `localMatrix` (relative to asset root) and `worldMatrix` (af
 | `character:player`, `npc:*` | `hand.right` (metadata) | rotation correction TBD in browser |
 | `house:hut_d` | `lamp_mount` (metadata) | ported from catalog `lampMount`; anchor-first in `resolveHouseLampMount` |
 | `house:hut_a` / `hut_b` / `hut_c` | `lamp_mount` (metadata) | floor-center lantern (`HOUSE_FLOOR_LAMP_Y`); anchor-first |
-| `settlement:well` | `interaction` (metadata) | south rim of procedural well; consumed by `buildWellInteractionQueueConfig` |
+| `settlement:well` | `interaction` (metadata) | south rim of well GLB / procedural fallback; consumed by `buildWellInteractionQueueConfig` |
 | Held tools (`held:*`) | none enabled | add `grip` to `HELD_TOOL_GRIP_ANCHORS` after browser verify; `mountByAnchorPair` opt-in |
 | Other houses, fauna props | none yet | Phase 6 continues per-asset |
 
