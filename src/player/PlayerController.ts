@@ -21,6 +21,15 @@ const MOVE_SPEED = 8
  *  the GLB model has no measured collision shape, so this stands in for both. */
 const PLAYER_COLLISION_RADIUS = 0.35
 const SPRINT_MULTIPLIER = 1.8
+/** Plan 097 §2.3 — stronger than real gravity (9.81) for a short, readable
+ *  arc, matching `items/createDroppedItems.ts`'s falling-item gravity. */
+const GRAVITY = 20
+/** `sqrt(2 * GRAVITY * targetHeight)` for a ~0.6m jump apex (plan 097 §2.3). */
+const JUMP_SPEED = Math.sqrt(2 * GRAVITY * 0.6)
+/** Airborne lean (radians) — no jump clip on the rig (plan 097 §4 pyt. 5), so
+ *  this reuses the `crouch()`/`lieDown()` trick of rotating `modelRoot` only. */
+const JUMP_TILT_MAX = 0.25
+const JUMP_TILT_FACTOR = 0.05
 /** Look-at height eases from chest-level (far/default zoom) up toward eye-level as the camera zooms in. */
 const LOOK_AT_OFFSET_FAR = 0.9
 const LOOK_AT_OFFSET_NEAR = 1.6
@@ -73,6 +82,12 @@ export class PlayerController {
    *  character instead of tipping over with the body. */
   private readonly modelRoot: THREE.Object3D
   private pose: PlayerPose = 'stand'
+  /** Vertical speed (m/s), +up. Zeroed/`grounded=true` on teleport (`snapToGround`)
+   *  and while underwater — jumping/falling only apply on dry land (plan 097 §2.3). */
+  private verticalVelocity = 0
+  private grounded = true
+  /** Set by `jump()`, consumed (and cleared) on the next `updateVerticalMotion`. */
+  private jumpRequested = false
   private readonly mixer: THREE.AnimationMixer | null
   private readonly idleAction: THREE.AnimationAction | null
   private readonly walkAction: THREE.AnimationAction | null
@@ -330,6 +345,13 @@ export class PlayerController {
     this.playAction(this.idleAction)
   }
 
+  /** Edge-triggered request, consumed on the next `updateVerticalMotion` —
+   *  no-op while airborne (no double jump), underwater, or crouched/lying. */
+  jump(): void {
+    if (this.pose !== 'stand') return
+    this.jumpRequested = true
+  }
+
   update(dt: number): void {
     if (this.pose !== 'stand') {
       this.syncCamera()
@@ -365,7 +387,7 @@ export class PlayerController {
       this.mesh.rotation.y = Math.atan2(this.wish.x, this.wish.z)
     }
 
-    this.snapToGround()
+    this.updateVerticalMotion(dt)
     this.syncCamera()
     this.syncAnimation()
     this.syncHpBar()
@@ -427,6 +449,9 @@ export class PlayerController {
     this.playAction(moveAction ?? this.idleAction)
   }
 
+  /** Teleport case (construction, `setPosition`, `setGround`) — snaps straight
+   *  to ground/water and clears any in-flight jump/fall state. Per-frame
+   *  movement uses `updateVerticalMotion` instead. */
   private snapToGround(): void {
     const { x, z } = this.mesh.position
     const groundY = this.sampleHeight(x, z)
@@ -439,6 +464,52 @@ export class PlayerController {
     } else {
       this.mesh.position.y = groundY
     }
+    this.verticalVelocity = 0
+    this.grounded = true
+    this.jumpRequested = false
+    this.modelRoot.rotation.x = 0
+  }
+
+  /** Per-frame gravity/jump integration (plan 097 §2.3). Underwater keeps the
+   *  existing swim behaviour and blocks jumping/falling. */
+  private updateVerticalMotion(dt: number): void {
+    const { x, z } = this.mesh.position
+    const groundY = this.sampleHeight(x, z)
+    if (groundY <= this.waterLevel) {
+      const floorY = this.sampleFloor(x, z)
+      const depth = Math.min(this.waterLevel - floorY, MAX_SWIM_DEPTH)
+      this.mesh.position.y = this.waterLevel - depth
+      this.verticalVelocity = 0
+      this.grounded = true
+      this.jumpRequested = false
+      this.modelRoot.rotation.x = 0
+      return
+    }
+
+    if (this.grounded && this.jumpRequested) {
+      this.verticalVelocity = JUMP_SPEED
+      this.grounded = false
+    }
+    this.jumpRequested = false
+
+    this.verticalVelocity -= GRAVITY * dt
+    const candidateY = this.mesh.position.y + this.verticalVelocity * dt
+    if (candidateY <= groundY) {
+      this.mesh.position.y = groundY
+      this.verticalVelocity = 0
+      this.grounded = true
+    } else {
+      this.mesh.position.y = candidateY
+      this.grounded = false
+    }
+
+    this.modelRoot.rotation.x = this.grounded
+      ? 0
+      : THREE.MathUtils.clamp(
+          -this.verticalVelocity * JUMP_TILT_FACTOR,
+          -JUMP_TILT_MAX,
+          JUMP_TILT_MAX,
+        )
   }
 
   private syncCamera(): void {

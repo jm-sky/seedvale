@@ -18,6 +18,8 @@ export type KeyState = {
   quickActions: boolean
   /** Edge-triggered: set true on KeyM keydown, cleared by consumeMinimap(). */
   minimap: boolean
+  /** Edge-triggered: set true on Space keydown, cleared by consumeJump(). */
+  jump: boolean
 }
 
 const KEY_MAP: Record<string, keyof KeyState> = {
@@ -38,11 +40,12 @@ const KEY_MAP: Record<string, keyof KeyState> = {
   KeyI: 'inventory',
   KeyQ: 'quickActions',
   KeyM: 'minimap',
+  Space: 'jump',
 }
 
 /** Actions that latch true on keydown and are cleared by the consumer, not by keyup —
  *  so a tap registers exactly once regardless of how long the key stays down. */
-const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'drop', 'interact', 'inventory', 'minimap', 'questLog', 'quickActions'])
+const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'drop', 'interact', 'inventory', 'jump', 'minimap', 'questLog', 'quickActions'])
 
 /** True while the event is headed for a text field — the pause menu's Character
  *  name input is the live case. Without this, `KEY_MAP` letters (w/a/s/d/e/l/g)
@@ -74,6 +77,8 @@ export function createKeyboard(): {
   consumeQuickActions: () => boolean
   /** Reads and clears the pending minimap toggle press (`M`). */
   consumeMinimap: () => boolean
+  /** Reads and clears the pending jump press (`Space`). */
+  consumeJump: () => boolean
   dispose: () => void
 } {
   const state: KeyState = {
@@ -89,6 +94,7 @@ export function createKeyboard(): {
     inventory: false,
     quickActions: false,
     minimap: false,
+    jump: false,
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -114,7 +120,7 @@ export function createKeyboard(): {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
 
-  const consume = (key: 'interact' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap'): boolean => {
+  const consume = (key: 'interact' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap' | 'jump'): boolean => {
     if (!state[key]) return false
     state[key] = false
     return true
@@ -129,6 +135,7 @@ export function createKeyboard(): {
     consumeInventory: () => consume('inventory'),
     consumeQuickActions: () => consume('quickActions'),
     consumeMinimap: () => consume('minimap'),
+    consumeJump: () => consume('jump'),
     dispose: () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)

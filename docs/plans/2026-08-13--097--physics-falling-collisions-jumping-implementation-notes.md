@@ -121,8 +121,6 @@ akceptowalną). Nie dodano `SaveDataV11`.
 `test` — wszystkie przechodzą). Manualna weryfikacja w przeglądarce (widoczny spadek po `G`,
 poprawny pickup, save/reload w locie) czeka na usera — patrz plan, sekcja „Weryfikacja”, punkt 1.
 
-Faza 2.3 (skok) — nie rozpoczęta.
-
 ---
 
 # 4. Faza 2.2 — Kolizje (zaimplementowane 2026-08-13)
@@ -271,3 +269,68 @@ o generycznych counter-collision (`NPC_COLLIDER_APPROACH_BUFFER`/
 - `PLAYER_COLLISION_RADIUS`/promienie domów/studni/propów to ręczne estymaty,
   nie pomiary z geometrii GLB — do dostrojenia na podstawie manualnego
   playtestu (patrz plan, kryteria akceptacji fazy 2.2).
+
+---
+
+# 5. Faza 2.3 — Skok (zaimplementowane 2026-08-13)
+
+## 5.1 Stan pionowy w `PlayerController`
+
+Nowe pola: `verticalVelocity` (m/s, +up), `grounded`, `jumpRequested` (edge-triggered
+intencja skoku, ustawiana przez `jump()`, konsumowana i czyszczona na początku
+`updateVerticalMotion`). Stałe: `GRAVITY = 20` (ta sama wartość co spadające itemy w
+`createDroppedItems.ts` — krótki, czytelny łuk zamiast realistycznego 9.81),
+`JUMP_SPEED = sqrt(2 * GRAVITY * 0.6)` (apex ~0.6 m).
+
+`snapToGround()` (dawna, jedyna implementacja) zostaje jako wariant **teleportu** —
+używana tylko w konstruktorze, `setPosition()` i `setGround()` (rebuild terenu). Oprócz
+ustawienia `mesh.position.y` zeruje teraz też `verticalVelocity`/`jumpRequested` i
+wymusza `grounded = true`, żeby teleport nigdy nie zostawiał gracza z resztkową
+prędkością pionową sprzed skoku.
+
+Nowa `updateVerticalMotion(dt)` zastępuje wywołanie `snapToGround()` w `update()`
+(wołana co klatkę, niezależnie od tego czy gracz się porusza poziomo — grawitacja
+działa też w bezruchu, np. przy zejściu z krawędzi). Gałąź underwater jest bez zmian
+(dawny `snapToGround`'s swim-case) i **blokuje skok/grawitację** — `MAX_SWIM_DEPTH`
+zostaje jedynym mechanizmem pionowym w wodzie (potwierdzone pytanie planu: brak skoku
+w wodzie w v1). Na lądzie: jeśli `grounded && jumpRequested` → `vy = JUMP_SPEED`,
+`grounded = false`; zawsze `vy -= GRAVITY*dt`; kandydat `y = position.y + vy*dt`; jeśli
+`<= groundY` → przypina do gruntu, `vy = 0`, `grounded = true`, inaczej `grounded =
+false` i `y` zostaje kandydatem.
+
+`jump()` (publiczna metoda) jest no-opem poza `pose === 'stand'` — crouch/lie
+(camp-rest) i skok się więc wzajemnie wykluczają bez dodatkowej logiki w
+`gameLoop.ts`.
+
+## 5.2 Input — `Space`, edge-triggered, wzorzec `consumeDrop`
+
+`input/Keyboard.ts`: nowy klawisz `Space → jump` w `KEY_MAP`, dodany do
+`EDGE_TRIGGERED`, z `consumeJump()` symetrycznym do `consumeInteract`/`consumeDrop`.
+
+`gameLoop.ts`: `keyboard.consumeJump()` jest konsumowany w dwóch miejscach — w gałęzi
+`modal !== null` (zrzucany bez akcji, tak jak `consumeDrop()` tuż obok — `activeModal`
+obejmuje też `busy`/`restCamp`, więc to samo miejsce chroni przed „skokiem" tuż po
+wybudzeniu z obozu/zajętości) i w głównej gałęzi świata (`if (keyboard.consumeJump())
+player.jump()`, obok `consumeMinimap`/przed `consumeDrop`). Nie trzeba osobno czyścić
+`keyboard.state.jump` w blokach `timeSkip`/`restCamp`/`busy`, które dziś zerują ruch —
+te stany już wchodzą do `modal !== null` przez `activeModal`.
+
+## 5.3 Animacja — bez klipu, reużyty trik `modelRoot.rotation.x`
+
+Zgodnie z §4 pyt. 5 (żaden model postaci nie ma klipu skoku): `updateVerticalMotion`
+ustawia `modelRoot.rotation.x` na lekkie przechylenie proporcjonalne do
+`verticalVelocity` (`JUMP_TILT_FACTOR = 0.05`, `JUMP_TILT_MAX = 0.25` rad), zerowane
+przy lądowaniu. Nie koliduje z `crouch()`/`lieDown()`, bo te uruchamiają się tylko
+poza `pose === 'stand'`, a pionowa fizyka działa tylko w `pose === 'stand'`.
+
+## 5.4 Kamera, pływanie, strome zbocza
+
+Bez zmian poza samą integracją Y — `syncCamera()` już czytał `mesh.position.y` co
+klatkę, więc łuk skoku przechodzi przez kamerę bez dodatkowej pracy (do potwierdzenia
+manualnie — brak szarpania, patrz kryteria akceptacji). Pływanie i strome zbocza —
+jak przewidziano w planie, brak zmian w tej fazie.
+
+## 5.5 Dźwięk
+
+`S17` (`docs/assets/SOUNDS.md`) zostaje `needed` — brak SFX skoku/lądowania w v1,
+zgodnie z planem (niekrytyczne, może wejść później).

@@ -300,6 +300,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       keyboard.consumeAltInteract()
       const questLogConsumed = keyboard.consumeQuestLog()
       keyboard.consumeDrop()
+      keyboard.consumeJump()
       const inventoryConsumed = keyboard.consumeInventory()
       const quickActionsConsumed = keyboard.consumeQuickActions()
       setHighlight(null)
@@ -501,6 +502,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       if (keyboard.consumeInventory()) openInventory()
       if (keyboard.consumeQuickActions()) quickActions.toggle()
       if (keyboard.consumeMinimap()) minimap.toggle()
+      if (keyboard.consumeJump()) player.jump()
       if (keyboard.consumeDrop()) {
         let dropOffset = 0
         const itemKinds = Object.keys(ITEM_DEFS) as ItemKind[]

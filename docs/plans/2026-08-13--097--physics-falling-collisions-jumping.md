@@ -1,6 +1,6 @@
 # Plan: Fizyka — opadanie przedmiotów, kolizje, skok
 
-**Status:** `in progress` 🔄 — fazy 2.1 i 2.2 zaimplementowane (2026-08-13), technicznie zweryfikowane; 2.3 nie rozpoczęta.
+**Status:** `verification needed` 🔍 — fazy 2.1, 2.2 i 2.3 zaimplementowane (2026-08-13), technicznie zweryfikowane; manualna weryfikacja w przeglądarce czeka na usera.
 **Created:** 2026-08-13
 **Priority:** 🟡 medium · **Effort:** XL (trzy fazy: 2.1 `S`, 2.2 `L`, 2.3 `M`) · **Depends on:** —
 **Źródło:** rozmowa 2026-08-13 przy researchu [009 — jaskinie podziemne](../research/2026-08-13--009--underground-caves.md); potrzeba `clampToVolume` w jaskini to ten sam brakujący fundament co kolizje w świecie.
@@ -173,6 +173,11 @@ To jest praca wymagająca rozdzielczości klatkowej (ruch co klatkę) — zgodni
 ---
 
 ### Faza 2.3 — Skok (Effort: M)
+
+**Status:** `verification needed` 🔍 — zaimplementowane 2026-08-13, techniczne checki
+zielone (`tsc`, `lint`, `build`, `test`); manualna weryfikacja w przeglądarce (patrz
+sekcja „Weryfikacja”, punkt 3) czeka na usera. Szczegóły implementacji — implementation
+notes §5.
 
 Wymaga stanu pionowego gracza i zmiany `snapToGround` z bezwarunkowego przypisania na integrację, gdy gracz jest w powietrzu.
 
