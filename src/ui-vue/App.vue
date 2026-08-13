@@ -16,6 +16,7 @@ import ToastStack from './screens/ToastStack.vue'
 import TouchChrome from './screens/TouchChrome.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
 import WorldConfigScreen from './screens/WorldConfigScreen.vue'
+import WorldMapScreen from './screens/WorldMapScreen.vue'
 import { abortRest, closeTopOverlay, togglePause, ui } from './store'
 
 function onKeydown(event: KeyboardEvent): void {
@@ -43,6 +44,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <QuickActionsScreen />
     <WorldConfigScreen />
     <NotesScreen />
+    <WorldMapScreen />
     <!-- Flavor / NPC dialogue first, then TouchChrome so E sits above those
          dialogs (former z-9 > z-8) while PauseMenu (z-11) stays on top. -->
     <NpcDialogueMenu />

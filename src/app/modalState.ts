@@ -23,6 +23,7 @@ export type ActiveModal =
   | 'busy'
   | 'worldConfig'
   | 'notes'
+  | 'worldMap'
   | null
 
 export function activeModal(
@@ -49,5 +50,6 @@ export function activeModal(
   if (restCamp?.isActive()) return 'busy'
   if (vueUi.isWorldConfigScreenOpen()) return 'worldConfig'
   if (vueUi.isNotesOpen()) return 'notes'
+  if (vueUi.isWorldMapOpen()) return 'worldMap'
   return null
 }

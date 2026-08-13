@@ -3,12 +3,16 @@ import { Minus, Plus } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import {
+  adjustMinimapZoom,
   drawMinimapFrame,
+  getMinimapZoom,
+  lastMinimapPlayer,
   type MinimapSettlement,
   minimapSize,
   registerMinimapDrawer,
+  setMinimapZoom,
 } from '../lib/drawMinimap'
-import { toggleMinimap, ui } from '../store'
+import { openWorldMap, toggleMinimap, ui } from '../store'
 import type { Vector3 } from 'three'
 
 const touch = isTouchDevice()
@@ -48,6 +52,50 @@ function setupCanvas(canvas: HTMLCanvasElement): void {
 function draw(playerPos: Vector3, settlements: readonly MinimapSettlement[], yaw: number): void {
   if (ui.minimap.collapsed || !ctx) return
   drawMinimapFrame({ ctx, size }, playerPos, settlements, yaw)
+}
+
+function onCanvasWheel(event: WheelEvent): void {
+  event.preventDefault()
+  adjustMinimapZoom(event.deltaY < 0 ? 0.25 : -0.25)
+}
+
+const pointers = new Map<number, { x: number, y: number }>()
+let pinchStart = 0
+let pinchZoom0 = 1
+let pinched = false
+
+function onCanvasPointerDown(event: PointerEvent): void {
+  canvasRef.value?.setPointerCapture(event.pointerId)
+  pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+  if (pointers.size === 2) {
+    pinched = true
+    const [a, b] = [...pointers.values()]
+    pinchStart = Math.hypot(a!.x - b!.x, a!.y - b!.y)
+    pinchZoom0 = getMinimapZoom()
+  }
+}
+
+function onCanvasPointerMove(event: PointerEvent): void {
+  if (!pointers.has(event.pointerId)) return
+  pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+  if (pointers.size !== 2 || pinchStart < 1) return
+  const [a, b] = [...pointers.values()]
+  const dist = Math.hypot(a!.x - b!.x, a!.y - b!.y)
+  setMinimapZoom(pinchZoom0 * (dist / pinchStart))
+}
+
+function onCanvasPointerUp(event: PointerEvent): void {
+  pointers.delete(event.pointerId)
+  if (pointers.size < 2) pinchStart = 0
+}
+
+function onCanvasClick(): void {
+  if (pinched) {
+    pinched = false
+    return
+  }
+  const { x, z } = lastMinimapPlayer()
+  openWorldMap(x, z)
 }
 
 onMounted(() => {
@@ -92,8 +140,14 @@ watch(canvasRef, (canvas) => {
     <canvas
       v-show="!ui.minimap.collapsed"
       ref="canvasRef"
-      class="pointer-events-none block rounded-md border border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.35)]"
+      class="pointer-events-auto block cursor-pointer rounded-md border border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.35)]"
       :class="touch ? 'absolute top-full right-0 mt-1' : ''"
+      @click="onCanvasClick"
+      @wheel.prevent="onCanvasWheel"
+      @pointerdown="onCanvasPointerDown"
+      @pointermove="onCanvasPointerMove"
+      @pointerup="onCanvasPointerUp"
+      @pointercancel="onCanvasPointerUp"
     />
   </div>
 </template>

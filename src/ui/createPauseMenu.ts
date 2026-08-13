@@ -17,6 +17,7 @@ export type PauseMenuHandlers = {
   onQuestLog?: () => void
   onVillagers?: () => void
   onInventory?: () => void
+  onWorldMap?: () => void
 }
 export type PauseMenu = { isPaused: () => boolean; togglePause: () => void; setSeed: (seed: number) => void; dispose: () => void }
 

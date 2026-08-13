@@ -26,6 +26,7 @@ import type { Toast } from '../ui/createToast'
 import type { WorldLights } from '../world/createLights'
 import type { WorldSky } from '../world/createSky'
 import type { DayNightState } from '../world/dayNight'
+import type { MapDiscovery } from '../world/map/mapDiscovery'
 import type { TimeSkip } from '../world/timeSkip'
 import type { BusyAction } from './busyAction'
 import type { RestCampSequence } from './restCampSequence'
@@ -139,6 +140,7 @@ export type GameLoopDeps = {
   worldAudio: ReturnType<typeof createWorldAudio>
   playerTorch: PlayerTorch
   minimap: Minimap
+  mapDiscovery: MapDiscovery
   openQuestLog: () => void
   openInventory: () => void
   startGroundWork: (mode: 'dig' | 'level', x: number, z: number) => void
@@ -187,7 +189,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
-    questManager, ambientAudio, worldAudio, playerTorch, minimap, openQuestLog, openInventory,
+    questManager, ambientAudio, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startTentRest, packTent, onInventoryChanged, setFrameTiming,
   } = deps
 
@@ -303,6 +305,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       keyboard.consumeJump()
       const inventoryConsumed = keyboard.consumeInventory()
       const quickActionsConsumed = keyboard.consumeQuickActions()
+      const minimapConsumed = keyboard.consumeMinimap()
       setHighlight(null)
 
       switch (modal) {
@@ -330,6 +333,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           break
         case 'quickActions':
           if (quickActionsConsumed) quickActions.close()
+          break
+        case 'worldMap':
+          if (minimapConsumed) vueUi.closeWorldMap()
           break
       }
     } else {
@@ -501,7 +507,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       if (keyboard.consumeQuestLog()) openQuestLog()
       if (keyboard.consumeInventory()) openInventory()
       if (keyboard.consumeQuickActions()) quickActions.toggle()
-      if (keyboard.consumeMinimap()) minimap.toggle()
+      if (keyboard.consumeMinimap()) {
+        vueUi.toggleWorldMap(player.mesh.position.x, player.mesh.position.z)
+      }
       if (keyboard.consumeJump()) player.jump()
       if (keyboard.consumeDrop()) {
         let dropOffset = 0
@@ -533,7 +541,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       !inventoryScreen.isOpen() &&
       !quickActions.isOpen() &&
       !vueUi.isWorldConfigScreenOpen() &&
-      !vueUi.isNotesOpen()
+      !vueUi.isNotesOpen() &&
+      !vueUi.isWorldMapOpen()
     ) {
       const loaded = bundle.settlementsManager.getLoaded()
       if (questManager.isDirty()) {
@@ -575,6 +584,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       hud.setTime(dayNight.timeOfDay)
       hud.setExp(questManager.getExp())
       player.update(dt)
+      mapDiscovery.update(player.mesh.position.x, player.mesh.position.z)
       bundle.chunkManager.update(player.mesh.position.x, player.mesh.position.z)
       lights.follow(player.mesh.position.x, player.mesh.position.z)
       bundle.ocean.follow(player.mesh.position.x, player.mesh.position.z)

@@ -21,6 +21,7 @@ watch(() => ui.pauseMenu.playerName, (value) => { name.value = value })
 function save(): void { ui.pauseMenu.onSave?.(); setPauseSaveStatus('Saved'); if (saveTimer.value !== null) window.clearTimeout(saveTimer.value); saveTimer.value = window.setTimeout(() => setPauseSaveStatus(''), 1500) }
 function openQuestLog(): void { closePauseMenu(); ui.pauseMenu.onQuestLog?.() }
 function openInventory(): void { closePauseMenu(); ui.pauseMenu.onInventory?.() }
+function openMap(): void { closePauseMenu(); ui.pauseMenu.onWorldMap?.() }
 </script>
 
 <template>
@@ -52,6 +53,13 @@ function openInventory(): void { closePauseMenu(); ui.pauseMenu.onInventory?.() 
       @click="openInventory"
     >
       Ekwipunek [I]
+    </button>
+    <button
+      type="button"
+      class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
+      @click="openMap"
+    >
+      Mapa [M]
     </button>
     <button
       type="button"

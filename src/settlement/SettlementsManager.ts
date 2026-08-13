@@ -96,6 +96,8 @@ export type SettlementsManager = {
   getLoaded: () => Settlement[]
   /** Home settlement definition (includes authoritative `VillagePlan`). */
   getHomeDef: () => SettlementDef
+  /** Resolve a settlement def from the shared plan cache without loading meshes. */
+  peekDef: (cell: SettlementCell) => SettlementDef | null
   dispose: () => void
 }
 
@@ -372,6 +374,7 @@ export async function createSettlementsManager(
       return out
     },
     getHomeDef: () => homeDef,
+    peekDef: (cell) => defFor(cell),
     dispose() {
       for (const entry of entries.values()) entry.settlement?.dispose()
       for (const instances of midpoints.values()) {

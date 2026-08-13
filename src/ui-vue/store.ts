@@ -42,7 +42,7 @@ type PauseMenuState = {
   onSave: (() => void) | null; onRefresh: (() => void) | null
   onBuildSimpleFire: (() => boolean) | null; onBuildFirePit: (() => boolean) | null
   onLightBranch: (() => LightActionResult) | null; onLightWoodenTorch: (() => LightActionResult) | null
-  onNewGame: (() => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null
+  onNewGame: (() => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
   saveStatus: string; simpleFireStatus: string; firePitStatus: string; torchStatus: string; branchStatus: string
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
@@ -95,6 +95,7 @@ type WorldConfigScreenState = {
   onPostProcessingChange: (() => void) | null
 }
 type NotesState = { open: boolean }
+type WorldMapState = { open: boolean; playerX: number; playerZ: number }
 type HudState = {
   time: string
   phase: string
@@ -130,7 +131,7 @@ export const ui = reactive({
     open: false, seed: 0, playerName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onRefresh: null,
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
-    onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null,
+    onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null,
     saveStatus: '', simpleFireStatus: '', firePitStatus: '', torchStatus: '', branchStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
@@ -145,6 +146,7 @@ export const ui = reactive({
   busy: { visible: false, label: '' } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
+  worldMap: { open: false, playerX: 0, playerZ: 0 } as WorldMapState,
   hud: {
     time: '--',
     phase: '',
@@ -355,6 +357,19 @@ export function isWorldConfigScreenOpen(): boolean { return ui.worldConfigScreen
 export function openNotes(): void { ui.notes.open = true }
 export function closeNotes(): void { ui.notes.open = false }
 export function isNotesOpen(): boolean { return ui.notes.open }
+
+export function openWorldMap(playerX: number, playerZ: number): void {
+  if (document.pointerLockElement) document.exitPointerLock()
+  ui.worldMap.playerX = playerX
+  ui.worldMap.playerZ = playerZ
+  ui.worldMap.open = true
+}
+export function closeWorldMap(): void { ui.worldMap.open = false }
+export function isWorldMapOpen(): boolean { return ui.worldMap.open }
+export function toggleWorldMap(playerX: number, playerZ: number): void {
+  if (ui.worldMap.open) closeWorldMap()
+  else openWorldMap(playerX, playerZ)
+}
 
 export function setHudFps(fps: number): void {
   const text = `${Math.round(fps)} FPS`

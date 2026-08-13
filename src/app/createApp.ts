@@ -54,6 +54,9 @@ import { createToast } from '../ui/createToast'
 import { createLights } from '../world/createLights'
 import { createSky } from '../world/createSky'
 import { createDayNightState } from '../world/dayNight'
+import { createMapData, setActiveMapData } from '../world/map/mapData'
+import { createMapDiscovery } from '../world/map/mapDiscovery'
+import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
 import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
 import { createTimeSkip } from '../world/timeSkip'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
@@ -203,6 +206,19 @@ export async function createApp(
     get region() { return config.terrain.region },
   }
   const ambientAudio = createAmbientAudio(worldAudio, ambientSamplers)
+
+  const mapDiscovery = createMapDiscovery(initialSave?.map.discoveredCells)
+  const mapProjection = createMapProjection(rawSampleParamsFromWorld(config))
+  const mapData = createMapData({
+    projection: mapProjection,
+    discovery: mapDiscovery,
+    lookupSettlement: (gx, gz) => {
+      const def = bundle.settlementsManager.peekDef({ gx, gz })
+      if (!def) return null
+      return { id: def.id, x: def.x, z: def.z, name: def.name }
+    },
+  })
+  setActiveMapData(mapData)
 
   const inventory = new Inventory(initialSave?.inventory)
   grantStartingLoadout(inventory)
@@ -398,12 +414,14 @@ export async function createApp(
         treeLifecycle,
         getWorldDays,
       )
+      mapProjection.setParams(rawSampleParamsFromWorld(config))
 
       if (resetCollectedItems) {
         inventory.clear()
         grantStartingLoadout(inventory)
         heldTool.unequip()
         questManager.reset()
+        mapDiscovery.clear()
         playerTorch.extinguish()
         worldFlags.guardSwordGifted = false
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
@@ -430,7 +448,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 10,
+    version: 11,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -463,6 +481,7 @@ export async function createApp(
       : null,
     placedTents: bundle.placedTents.nodes().map((tent) => ({ ...tent })),
     worldFlags: { ...worldFlags },
+    map: { discoveredCells: mapDiscovery.serialize() },
   })
 
   const saveNow = (): void => {
@@ -966,6 +985,9 @@ export async function createApp(
     onQuestLog: openQuestLog,
     onVillagers: openVillagers,
     onInventory: openInventory,
+    onWorldMap: () => {
+      vueUi.openWorldMap(player.mesh.position.x, player.mesh.position.z)
+    },
     onToggleGui: () => gui.toggle(),
     onNameChange: (name) => player.setName(name),
     onNameCommit: (name) => {
@@ -1058,7 +1080,7 @@ export async function createApp(
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
-    questManager, ambientAudio, worldAudio, playerTorch, minimap, openQuestLog, openInventory,
+    questManager, ambientAudio, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
     startGroundWork: (mode, x, z) => {
       if (heldTool.held() === 'pickaxe') {
         if (mode === 'level') startPickaxeLevelAt(x, z)
@@ -1140,6 +1162,7 @@ export async function createApp(
     hud.dispose()
     toast.dispose()
     minimap.dispose()
+    setActiveMapData(null)
     keyboard.dispose()
     mouseLook.dispose()
     touchControls?.dispose()

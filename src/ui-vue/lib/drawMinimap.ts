@@ -1,4 +1,8 @@
 import type { NpcAgent } from '../../ai/NpcAgent'
+import { MAP_MINIMAP_ZOOM_MAX, MAP_MINIMAP_ZOOM_MIN } from '../../world/map/mapConfig'
+import { getActiveMapData } from '../../world/map/mapData'
+import { mapCellBounds } from '../../world/map/mapProjection'
+import { MAP_FOG_FILL, mapCellFillStyle } from './mapColors'
 import type { Vector3 } from 'three'
 
 export type MinimapSettlement = {
@@ -14,8 +18,22 @@ export function minimapSize(touch: boolean): number {
   return touch ? 130 : 200
 }
 
-/** World units → minimap px. */
+/** World units → minimap px at zoom 1×. */
 export const MINIMAP_SCALE = 2
+
+let minimapZoom = 1
+
+export function getMinimapZoom(): number {
+  return minimapZoom
+}
+
+export function setMinimapZoom(zoom: number): void {
+  minimapZoom = Math.min(MAP_MINIMAP_ZOOM_MAX, Math.max(MAP_MINIMAP_ZOOM_MIN, zoom))
+}
+
+export function adjustMinimapZoom(delta: number): void {
+  setMinimapZoom(minimapZoom + delta)
+}
 
 export type MinimapDrawContext = {
   ctx: CanvasRenderingContext2D
@@ -52,14 +70,14 @@ export function drawMinimapFrame(
   settlements: readonly MinimapSettlement[],
   yaw: number,
 ): void {
-  const scale = MINIMAP_SCALE
+  const scale = MINIMAP_SCALE * minimapZoom
   const halfRange = size / 2 / scale
   const arrowRadius = size / 2 - 14
   const northRadius = size / 2 - 10
   const cos = Math.cos(yaw)
   const sin = Math.sin(yaw)
 
-  ctx.fillStyle = 'rgba(20, 24, 28, 0.72)'
+  ctx.fillStyle = MAP_FOG_FILL
   ctx.fillRect(0, 0, size, size)
 
   const centerX = size / 2
@@ -78,6 +96,34 @@ export function drawMinimapFrame(
     y: dx * sin + dz * cos,
   })
 
+  const mapData = getActiveMapData()
+  const queryRange = halfRange * Math.SQRT2
+  const viewport = {
+    minX: playerPos.x - queryRange,
+    maxX: playerPos.x + queryRange,
+    minZ: playerPos.z - queryRange,
+    maxZ: playerPos.z + queryRange,
+  }
+  if (mapData) {
+    for (const cell of mapData.queryCells(viewport)) {
+      const bounds = mapCellBounds(cell.cx, cell.cz)
+      const corners = [
+        toMap(bounds.minX, bounds.minZ),
+        toMap(bounds.maxX, bounds.minZ),
+        toMap(bounds.maxX, bounds.maxZ),
+        toMap(bounds.minX, bounds.maxZ),
+      ]
+      ctx.fillStyle = mapCellFillStyle(cell)
+      ctx.beginPath()
+      ctx.moveTo(corners[0]!.x, corners[0]!.y)
+      ctx.lineTo(corners[1]!.x, corners[1]!.y)
+      ctx.lineTo(corners[2]!.x, corners[2]!.y)
+      ctx.lineTo(corners[3]!.x, corners[3]!.y)
+      ctx.closePath()
+      ctx.fill()
+    }
+  }
+
   ctx.fillStyle = '#4a89e0'
   for (const settlement of settlements) {
     for (const npc of settlement.npcs) {
@@ -89,20 +135,23 @@ export function drawMinimapFrame(
     }
   }
 
-  for (const settlement of settlements) {
-    const dx = settlement.position.x - playerPos.x
-    const dz = settlement.position.z - playerPos.z
+  const known = mapData?.knownLocations(viewport) ?? []
+  for (const location of known) {
+    const dx = location.x - playerPos.x
+    const dz = location.z - playerPos.z
     const dist = Math.hypot(dx, dz)
     if (dist <= halfRange) {
-      const { x, y } = toMap(settlement.position.x, settlement.position.z)
+      const { x, y } = toMap(location.x, location.z)
       ctx.fillStyle = '#e0b34a'
       ctx.fillRect(x - 4, y - 4, 8, 8)
-      ctx.font = '10px sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillStyle = 'rgba(20, 24, 28, 0.85)'
-      ctx.fillText(settlement.name, x + 1, y + 17)
-      ctx.fillStyle = '#f2f6fa'
-      ctx.fillText(settlement.name, x, y + 16)
+      if (location.label) {
+        ctx.font = '10px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillStyle = 'rgba(20, 24, 28, 0.85)'
+        ctx.fillText(location.label, x + 1, y + 17)
+        ctx.fillStyle = '#f2f6fa'
+        ctx.fillText(location.label, x, y + 16)
+      }
     } else if (dist > 1e-4) {
       const rotated = rotateDelta(dx, dz)
       const len = Math.hypot(rotated.x, rotated.y)
@@ -132,6 +181,12 @@ export function drawMinimapFrame(
 type MinimapDrawer = (playerPos: Vector3, settlements: readonly MinimapSettlement[], yaw: number) => void
 
 let registeredDrawer: MinimapDrawer | null = null
+let lastPlayerX = 0
+let lastPlayerZ = 0
+
+export function lastMinimapPlayer(): { x: number, z: number } {
+  return { x: lastPlayerX, z: lastPlayerZ }
+}
 
 /** MinimapScreen registers an imperative drawer so gameLoop can paint without
  *  putting per-frame positions into Vue reactive state. */
@@ -144,5 +199,7 @@ export function updateRegisteredMinimap(
   settlements: readonly MinimapSettlement[],
   yaw: number,
 ): void {
+  lastPlayerX = playerPos.x
+  lastPlayerZ = playerPos.z
   registeredDrawer?.(playerPos, settlements, yaw)
 }

@@ -1,6 +1,6 @@
 # Plan: Lepsza minimapa i nowa duża mapa
 
-**Status:** `planned` — **DO REVIEW**
+**Status:** `verification needed`
 **Created:** 2026-08-12
 **Priority:** 🟡 medium
 **Effort:** XL

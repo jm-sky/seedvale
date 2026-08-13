@@ -146,9 +146,9 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 ### Persistence
 
 - IndexedDB persistence exists in `src/persistence/`.
-- Current save data includes world configuration (including optional `settlements.homeSize`), player position/orientation, time of day, elapsed game days, quests/EXP/relations, inventory, held tool, collected item IDs, dropped items, placed fires, placed tents, world flags (e.g. guard sword gift) and sparse tree lifecycle overrides.
+- Current save data includes world configuration (including optional `settlements.homeSize`), player position/orientation, time of day, elapsed game days, quests/EXP/relations, inventory, held tool, collected item IDs, dropped items, placed fires, placed tents, world flags (e.g. guard sword gift), sparse tree lifecycle overrides and map discovery cells.
 - localStorage config is split by domain (`src/config/persistConfig.ts`): `seedvale:graphics:v1` (post-processing), `seedvale:player:v1`, `seedvale:world:v1` (seed/terrain/sky/settlements); legacy `seedvale:worldConfig:v1` migrates on first load (issue 019).
-- Save schema is currently version `10` in `createApp.ts`.
+- Save schema is currently version `11` in `createApp.ts`.
 - New Game resets world-dependent state as implemented by `createApp.ts`/`rebuildWorldBundle()`.
 - NPC runtime state is not generally persisted as a full simulation snapshot; do not assume Continue restores every NPC need/AI state.
 - Tree lifecycle (`src/world/treeLifecycle.ts`) uses sparse overrides + lazy growth from `DayNightState.elapsedDays`. Living stages: `sapling` → `young` → `mature` → `old` (plan 073; `small` sizeClass never reaches `old`). Height is meter-ranged by age × `sizeClass` (`HEIGHT_RANGE_M`), not a flat stage multiplier. Chop mid-stages: `limbed` → `felled` → `harvested` (from `mature` or `old`; regrowth only from `harvested`). Chunk/settlement trees share `TreeId`. Shared harvest APIs: `advanceWorldTreeHarvest` (one step) / `harvestWorldTreeFully` (NPC) in `src/world/treeHarvest.ts`; visuals via `applyTreeStageVisual`.
@@ -161,8 +161,9 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Vue 3 + Tailwind v4 + `lucide-vue-next` is mounted under `#vue-ui` through `src/ui-vue/`.
 - Vue migration is incremental; it is not a full replacement of the vanilla UI yet.
 - NPC dialogue v2 is already a Vue screen.
-- Pause menu, quest log, inventory, quick actions, time-skip overlay, busy/channel overlay, world config screen, notes/journal, HUD, minimap, toast and touch action chrome exist as Vue screens/overlays; `src/ui/create*.ts` for these are thin compatibility facades over the Vue store.
-- Minimap is heading-up (canvas up = `mouseLook` yaw) with a rim `N` marker for world north (−Z); draw logic in `src/ui-vue/lib/drawMinimap.ts` (plan 067).
+- Pause menu, quest log, inventory, quick actions, time-skip overlay, busy/channel overlay, world config screen, notes/journal, HUD, minimap, world map overlay, toast and touch action chrome exist as Vue screens/overlays; `src/ui/create*.ts` for these are thin compatibility facades over the Vue store.
+- Minimap is heading-up (canvas up = `mouseLook` yaw) with a rim `N` marker for world north (−Z), terrain/biome cells, Fog of War and bounded zoom (`src/ui-vue/lib/drawMinimap.ts`, plans 067 / 089). Unknown terrain is hidden. Collapse stays on `+/-`; `M` / tap opens the north-up world map overlay (`WorldMapScreen.vue`).
+- Map projection/discovery lives in `src/world/map/` (not WorldBundle). Discovery is permanent, radius 48, persisted as `SaveData.map.discoveredCells` (schema v11). Opening the map does not load world chunks.
 - Touch joystick + look-drag remain vanilla DOM in `src/input/createTouchControls.ts` (input hot-path). Vue chrome on mobile is pause, quick actions, and interact (E); sprint is push-to-run on the joystick. Drop lives in the inventory screen. Lucide icons on pause/actions/minimap toggle (plan 046 Faza 4 / issue 005).
 - lil-gui remains the full debug/world configuration UI (region/fbm/road-network tuning, post-processing, home village size); the in-game world config screen (pause menu → Świat) exposes the player-facing subset (seed, flat shading, home village size, day/night) — same underlying `WorldConfig`/`DayNightState` objects, not a duplicate.
 - `WorldConfig.settlements.homeSize` (`auto` | SM/MD/LG/XL) overrides the home cell size roll in settlement generation (issue 020); non-home settlements still use `rollVillageSize`.
@@ -184,6 +185,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `TreeLifecycle` / `harvestWorldTree*` — authoritative tree growth + multi-stage chop (`limbed` / `felled` / `harvested`); sizeClass + `old` age (plans 058, 057, 073).
 - `QuestManager` — quest progress, EXP and relations.
 - `ChunkManager` — terrain sampling, streaming and environment-facing world queries.
+- `MapData` / `MapDiscovery` — map projection + permanent Fog of War (`src/world/map/`); consumed by minimap and world map, persisted in SaveData v11.
 - `Place` / schedule-related NPC work — existing foundation for daily routines.
 - **Asset anchors** — `src/assets/assetAnchors.ts`, `anchorResolve.ts`, `assetAnchorData.ts`; convention in [docs/assets/ANCHORS.md](./assets/ANCHORS.md). Runtime consumers: `findRightHandSocket` (via `findAnchorNode`), `resolveHouseLampMount` anchor-first branch, `buildWellInteractionQueueConfig` (`settlement:well` interaction anchor → well drink `InteractionQueue`).
 

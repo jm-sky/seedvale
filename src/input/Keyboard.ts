@@ -75,7 +75,7 @@ export function createKeyboard(): {
   consumeInventory: () => boolean
   /** Reads and clears the pending quick actions press. Returns true at most once per keydown. */
   consumeQuickActions: () => boolean
-  /** Reads and clears the pending minimap toggle press (`M`). */
+  /** Reads and clears the pending world-map toggle press (`M`). */
   consumeMinimap: () => boolean
   /** Reads and clears the pending jump press (`Space`). */
   consumeJump: () => boolean

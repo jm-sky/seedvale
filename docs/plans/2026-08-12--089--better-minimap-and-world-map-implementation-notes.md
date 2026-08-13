@@ -1,7 +1,7 @@
 # Implementation Notes — Better Minimap and World Map
 
 **Plan:** [2026-08-12--089--better-minimap-and-world-map.md](./2026-08-12--089--better-minimap-and-world-map.md)
-**Status:** `planned` — implementation notes ready for review
+**Status:** `verification needed` — v1 implemented 2026-08-13 (projection, discovery, minimap FoW, world map overlay). Knowledge/NPC/roads deferred.
 **Priority:** 🟡 `medium`
 **Effort:** `XL`
 **Dependencies:** existing minimap (`029`, `067`), Vue UI (`046`), settlement/world streaming/persistence systems
