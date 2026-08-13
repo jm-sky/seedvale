@@ -46,6 +46,8 @@ const MIN_FOOTPRINT_DRY_RATIO = 0.4
 const FOOTPRINT_RING_DIRS = 8
 /** Candidate attempts per cell (same budget as pre-047). */
 const SITE_CANDIDATE_ATTEMPTS = 80
+/** Default half-width of the site search box (world units). */
+export const DEFAULT_SITE_SEARCH_MARGIN = 24
 
 type FootprintMetrics = {
   dryRatio: number
@@ -132,9 +134,13 @@ function scoreCandidate(
 
 /**
  * Pick a walkable, relatively flat patch above water for the village, searching
- * within `halfExtent` of `center`. Seeded search — same seed ⇒ same site.
+ * within `searchMargin` of `center`. Seeded search — same seed ⇒ same site.
  * `center` defaults to the origin, matching the original single-settlement
  * behavior exactly (used as-is by the home settlement in multi-settlement mode).
+ *
+ * Returns `null` when no candidate passes the hard water / local-flatness /
+ * footprint-dry gates — callers must skip the cell (or widen the search for
+ * home). Wet cell-center fallbacks are not used.
  *
  * `resourceAttraction`, if given, adds plan 032 §5's "resource → site
  * attractiveness" bonus to each already-accepted candidate's score — see
@@ -153,16 +159,15 @@ export function findSettlementSite(
   center: { x: number, z: number } = { x: 0, z: 0 },
   resourceAttraction?: (x: number, z: number) => number,
   footprint?: SettlementFootprintHint,
-): SettlementSite {
+  searchMargin: number = DEFAULT_SITE_SEARCH_MARGIN,
+): SettlementSite | null {
   const random = createSeededRandom(seed ^ 0xc0ffee)
-  const margin = Math.min(24, halfExtent * 0.55)
+  const margin =
+    searchMargin === DEFAULT_SITE_SEARCH_MARGIN
+      ? Math.min(DEFAULT_SITE_SEARCH_MARGIN, halfExtent * 0.55)
+      : searchMargin
   let best: SettlementSite | null = null
   let bestScore = -Infinity
-  /** Best candidate that only failed the soft-ish footprint dry ratio — used
-   *  when every attempt is rejected so we still avoid pure `Math.random`
-   *  fallbacks (plan 047 §15). */
-  let nearestSafe: SettlementSite | null = null
-  let nearestSafeScore = -Infinity
 
   for (let i = 0; i < SITE_CANDIDATE_ATTEMPTS; i++) {
     const x = center.x + (random() * 2 - 1) * margin
@@ -182,23 +187,7 @@ export function findSettlementSite(
     let footprintMetrics: FootprintMetrics | null = null
     if (footprint) {
       footprintMetrics = sampleFootprintMetrics(x, z, y, footprint, waterLevel, sampleHeight)
-      const softScore = scoreCandidate(
-        x,
-        z,
-        y,
-        maxDelta,
-        center,
-        waterLevel,
-        resourceAttraction,
-        footprintMetrics,
-      )
-      if (footprintMetrics.dryRatio < MIN_FOOTPRINT_DRY_RATIO) {
-        if (softScore > nearestSafeScore) {
-          nearestSafeScore = softScore
-          nearestSafe = { x, z, y }
-        }
-        continue
-      }
+      if (footprintMetrics.dryRatio < MIN_FOOTPRINT_DRY_RATIO) continue
     }
 
     const score = scoreCandidate(
@@ -217,9 +206,5 @@ export function findSettlementSite(
     }
   }
 
-  if (best) return best
-  if (nearestSafe) return nearestSafe
-
-  // Fallback: cell center (may be wet — still better than nothing).
-  return { x: center.x, z: center.z, y: sampleHeight(center.x, center.z) }
+  return best
 }

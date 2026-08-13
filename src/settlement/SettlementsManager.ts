@@ -128,7 +128,7 @@ export async function createSettlementsManager(
   }
 
   // Defs resolve through the shared settlement plan cache (plan 047 §9.15).
-  function defFor(cell: SettlementCell): SettlementDef {
+  function defFor(cell: SettlementCell): SettlementDef | null {
     return settlementDefFor(cell, {
       seed,
       sampleHeight,
@@ -142,6 +142,9 @@ export async function createSettlementsManager(
   }
 
   const homeDef = defFor({ gx: 0, gz: 0 })
+  if (!homeDef) {
+    throw new Error('[SettlementsManager] home settlement (0,0) failed to generate')
+  }
   const homeSettlement = await createSettlement(
     scene,
     sampleHeight,
@@ -297,6 +300,7 @@ export async function createSettlementsManager(
 
     for (const cell of cellsWithinRadius(playerCell, cellRadius)) {
       const def = defFor(cell)
+      if (!def) continue
       const dist = Math.hypot(def.x - playerX, def.z - playerZ)
       if (dist <= loadRadius) ensureLoaded(def)
     }

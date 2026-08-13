@@ -21,7 +21,7 @@ import {
   type VillageSize,
   villageSizeConfig,
 } from './families'
-import { findSettlementSite } from './findSettlementSite'
+import { DEFAULT_SITE_SEARCH_MARGIN, findSettlementSite } from './findSettlementSite'
 import { findDockLocation } from './minorLocations'
 import { classifySettlementTerrain, type TerrainSamplers } from './settlementTerrain'
 import { type ClearingLayout, layoutClearingsFromPlan } from './villageClearing'
@@ -276,18 +276,42 @@ function resolveSettlementContext(
   }
 }
 
-/** Step 2: footprint-aware site search using `provisionalSize` knobs. */
-function chooseSettlementSite(ctx: SettlementGenContext): { x: number, z: number, y: number } {
+/** Wider home-only searches when the default ±24 box is open water. Stays
+ *  inside roughly half a grid cell so we do not sit on a neighbor's site. */
+const HOME_SITE_EXPAND_MARGINS = [72, 120] as const
+
+/** Step 2: footprint-aware site search using `provisionalSize` knobs.
+ *  Non-home cells return `null` when there is no dry plaza — skip the village
+ *  rather than spawning in the sea. Home widens the search, then as a last
+ *  resort still occupies the cell center (the player has to spawn somewhere). */
+function chooseSettlementSite(ctx: SettlementGenContext): { x: number, z: number, y: number } | null {
   const sizeCfg = villageSizeConfig(ctx.provisionalSize)
-  return findSettlementSite(
-    ctx.sampleHeight,
-    ctx.waterLevel,
-    ctx.localSearchRadius,
-    ctx.seedForCell,
-    ctx.center,
-    ctx.resourceAttraction,
-    { footprintRadius: sizeCfg.footprintRadius, houseRingMax: sizeCfg.houseRingMax },
-  )
+  const footprint = { footprintRadius: sizeCfg.footprintRadius, houseRingMax: sizeCfg.houseRingMax }
+  const tryMargin = (searchMargin: number) =>
+    findSettlementSite(
+      ctx.sampleHeight,
+      ctx.waterLevel,
+      Math.max(ctx.localSearchRadius, searchMargin / 0.55),
+      ctx.seedForCell,
+      ctx.center,
+      ctx.resourceAttraction,
+      footprint,
+      searchMargin,
+    )
+
+  const site = tryMargin(DEFAULT_SITE_SEARCH_MARGIN)
+  if (site) return site
+  if (!ctx.isHome) return null
+
+  for (const margin of HOME_SITE_EXPAND_MARGINS) {
+    const expanded = tryMargin(margin)
+    if (expanded) return expanded
+  }
+  return {
+    x: ctx.center.x,
+    z: ctx.center.z,
+    y: ctx.sampleHeight(ctx.center.x, ctx.center.z),
+  }
 }
 
 /** Step 3: terrain + resources + locked size + naming → `VillageIdentity`. */
@@ -377,7 +401,8 @@ type SettlementCore = {
   region: RegionParams
 }
 
-/** Single generation pass shared by `generateVillagePlan` / `generateSettlementDef`. */
+/** Single generation pass shared by `generateVillagePlan` / `generateSettlementDef`.
+ *  Returns `null` when the cell has no habitable dry site (non-home ocean). */
 function generateSettlementCore(
   cell: SettlementCell,
   seed: number,
@@ -388,7 +413,7 @@ function generateSettlementCore(
   heightScale: number,
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
-): SettlementCore {
+): SettlementCore | null {
   const ctx = resolveSettlementContext(
     cell,
     seed,
@@ -401,6 +426,7 @@ function generateSettlementCore(
     homeSize,
   )
   const site = chooseSettlementSite(ctx)
+  if (!site) return null
   const identity = resolveVillageIdentity(ctx, site)
   const families = generateFamilies(
     ctx.seedForCell,
@@ -488,6 +514,7 @@ function attachPlannedDock(
 /**
  * Authoritative plan generation seam (plan 047 §9.3):
  * context → site → identity → families → VillagePlan (zones/plots).
+ * Returns `null` when the cell has no habitable dry site (open ocean).
  */
 export function generateVillagePlan(
   cell: SettlementCell,
@@ -499,7 +526,7 @@ export function generateVillagePlan(
   heightScale: number,
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
-): VillagePlan {
+): VillagePlan | null {
   return generateSettlementCore(
     cell,
     seed,
@@ -510,7 +537,7 @@ export function generateVillagePlan(
     heightScale,
     region,
     homeSize,
-  ).plan
+  )?.plan ?? null
 }
 
 /** Compatibility projection: one plan + families + clearings → `SettlementDef`.
@@ -559,19 +586,20 @@ export function generateSettlementDef(
   heightScale: number,
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
-): SettlementDef {
-  const { plan, families, sampleHeight: height, region: reg } =
-    generateSettlementCore(
-      cell,
-      seed,
-      sampleHeight,
-      waterLevel,
-      localSearchRadius,
-      terrainSamplers,
-      heightScale,
-      region,
-      homeSize,
-    )
-  const clearings = layoutClearingsFromPlan(plan, height, reg.village)
+): SettlementDef | null {
+  const core = generateSettlementCore(
+    cell,
+    seed,
+    sampleHeight,
+    waterLevel,
+    localSearchRadius,
+    terrainSamplers,
+    heightScale,
+    region,
+    homeSize,
+  )
+  if (!core) return null
+  const { plan, families, sampleHeight: height, waterLevel: water, region: reg } = core
+  const clearings = layoutClearingsFromPlan(plan, height, reg.village, water)
   return settlementDefFromPlan(plan, families, clearings)
 }

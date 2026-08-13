@@ -24,7 +24,7 @@ export type SettlementResolveContext = {
   homeSize?: HomeVillageSize
 }
 
-const defCache = new Map<string, SettlementDef>()
+const defCache = new Map<string, SettlementDef | null>()
 
 export function clearSettlementDefCache(): void {
   defCache.clear()
@@ -33,23 +33,21 @@ export function clearSettlementDefCache(): void {
 export function settlementDefFor(
   cell: SettlementCell,
   ctx: SettlementResolveContext,
-): SettlementDef {
+): SettlementDef | null {
   const key = cellKey(cell)
-  let def = defCache.get(key)
-  if (!def) {
-    def = generateSettlementDef(
-      cell,
-      ctx.seed,
-      ctx.sampleHeight,
-      ctx.waterLevel,
-      ctx.localSearchRadius,
-      ctx.terrainSamplers,
-      ctx.heightScale,
-      ctx.region,
-      ctx.homeSize ?? 'auto',
-    )
-    defCache.set(key, def)
-  }
+  if (defCache.has(key)) return defCache.get(key)!
+  const def = generateSettlementDef(
+    cell,
+    ctx.seed,
+    ctx.sampleHeight,
+    ctx.waterLevel,
+    ctx.localSearchRadius,
+    ctx.terrainSamplers,
+    ctx.heightScale,
+    ctx.region,
+    ctx.homeSize ?? 'auto',
+  )
+  defCache.set(key, def)
   return def
 }
 

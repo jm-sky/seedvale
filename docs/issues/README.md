@@ -44,7 +44,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 026 | [2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md](./2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md) | Jaskinia: płaski czarny „daszek" zamiast realnej dziury w terenie | `verification needed` |
 | 027 | [2026-08-13--027--settlement-streaming-main-thread-freeze.md](./2026-08-13--027--settlement-streaming-main-thread-freeze.md) | Osada streamuje się synchronicznie — ~89 ms freeze przy pojawieniu się wioski w polu widzenia | `todo` |
 | 028 | [2026-08-13--028--inland-water-dual-material.md](./2026-08-13--028--inland-water-dual-material.md) | Śródlądowy staw/ciek: shader jeziora + ocean Water.js na jednym zbiorniku | `done` |
+| 029 | [2026-08-13--029--village-in-open-ocean.md](./2026-08-13--029--village-in-open-ocean.md) | Wioska na otwartym oceanie / zalewanej ławicy | `verification needed` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `029`
+**Next ID:** `030`

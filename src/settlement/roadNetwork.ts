@@ -88,7 +88,7 @@ function resolveCtx(ctx: RoadNetworkContext): SettlementResolveContext {
   }
 }
 
-function defFor(cell: SettlementCell, ctx: RoadNetworkContext): SettlementDef {
+function defFor(cell: SettlementCell, ctx: RoadNetworkContext): SettlementDef | null {
   return settlementDefFor(cell, resolveCtx(ctx))
 }
 
@@ -127,9 +127,11 @@ export function entranceToward(
  *  same either way. */
 export function neighborsFor(cell: SettlementCell, ctx: RoadNetworkContext): SettlementDef[] {
   const self = defFor(cell, ctx)
+  if (!self) return []
   return cellsWithinRadius(cell, 1)
     .filter((c) => !(c.gx === cell.gx && c.gz === cell.gz))
     .map((c) => defFor(c, ctx))
+    .filter((def): def is SettlementDef => def !== null)
     .map((def) => ({ def, dist: Math.hypot(def.x - self.x, def.z - self.z) }))
     .sort((a, b) => a.dist - b.dist)
     .map((c) => c.def)
@@ -661,6 +663,7 @@ export function segmentsNear(
   const out: RoadCorridorSegment[] = []
   for (const c of cellsWithinRadius(cell, 1)) {
     const def = defFor(c, ctx)
+    if (!def) continue
     for (const seg of roadSegmentsForSettlement(def, ctx)) {
       const isRoad = seg.kind === 'road'
       const halfWidth = isRoad ? ctx.region.roadNetwork.roadHalfWidth : ctx.region.roadNetwork.pathHalfWidth
@@ -744,6 +747,7 @@ export function villageSegmentsNear(
 
   for (const c of cellsWithinRadius(cell, 1)) {
     const def = defFor(c, ctx)
+    if (!def) continue
     const { core, houses, gardens, regional: reg } = def.clearings
     const center = def.plan.center
     const sizeCfg = villageSizeConfig(def.size)

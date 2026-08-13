@@ -5,7 +5,7 @@ import type { FamilyDef, VillageSize } from './families'
 import type { VillagePlan } from './villagePlan'
 import { createSeededRandom } from '../world/parseSeed'
 import { gardenClearingRadius, type GardenScale } from './gardenScale'
-import { pathIsDry } from './pathDryness'
+import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
 
 export type ClearingArea = {
   x: number
@@ -48,6 +48,10 @@ function averageHeight(cx: number, cz: number, r: number, sampleHeight: HeightSa
   return sum / offsets.length
 }
 
+function dryClearingHeight(h: number, waterLevel: number): number {
+  return Math.max(h, waterLevel + SETTLEMENT_WATER_MARGIN)
+}
+
 /** Size-scaled plaza disk (plan 076) — larger villages get a clearer packed-dirt center. */
 export function plazaCoreRadius(size: VillageSize, baseCoreRadius: number): number {
   switch (size) {
@@ -70,6 +74,7 @@ export function layoutClearingsFromPlan(
   plan: VillagePlan,
   sampleHeight: HeightSampler,
   params: VillageClearingParams,
+  waterLevel: number,
 ): ClearingLayout {
   const coreRadius = plazaCoreRadius(plan.identity.size, params.coreRadius)
   const houseRadius = params.houseRadius
@@ -77,7 +82,10 @@ export function layoutClearingsFromPlan(
     x: plan.center.x,
     z: plan.center.z,
     radius: coreRadius,
-    targetH: averageHeight(plan.center.x, plan.center.z, coreRadius, sampleHeight),
+    targetH: dryClearingHeight(
+      averageHeight(plan.center.x, plan.center.z, coreRadius, sampleHeight),
+      waterLevel,
+    ),
   }
 
   const housePlots = plan.plots
@@ -89,7 +97,10 @@ export function layoutClearingsFromPlan(
     x: plot.x,
     z: plot.z,
     radius: Math.max(houseRadius, plot.radius * 0.85),
-    targetH: averageHeight(plot.x, plot.z, houseRadius, sampleHeight),
+    targetH: dryClearingHeight(
+      averageHeight(plot.x, plot.z, houseRadius, sampleHeight),
+      waterLevel,
+    ),
   }))
 
   const gardenLandmarks = plan.landmarks
@@ -104,7 +115,7 @@ export function layoutClearingsFromPlan(
       x: lm.x,
       z: lm.z,
       radius,
-      targetH: averageHeight(lm.x, lm.z, radius, sampleHeight),
+      targetH: dryClearingHeight(averageHeight(lm.x, lm.z, radius, sampleHeight), waterLevel),
     }
   })
 

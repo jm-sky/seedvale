@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
+import type { VillagePlan } from './villagePlan'
 import { rollVillageSize } from './families'
-import { cellSeed, generateSettlementDef, generateVillagePlan } from './settlementGenerator'
+import { cellSeed, generateSettlementDef, generateVillagePlan, type SettlementDef } from './settlementGenerator'
 
 /** Flat dry plateau — site search always succeeds without resource bias. */
 const flatHeight = (): number => 12
@@ -33,16 +34,28 @@ const region = {
   },
 } as RegionParams
 
+function planOf(...args: Parameters<typeof generateVillagePlan>): VillagePlan {
+  const plan = generateVillagePlan(...args)
+  if (!plan) throw new Error('expected a village plan on dry land')
+  return plan
+}
+
+function defOf(...args: Parameters<typeof generateSettlementDef>): SettlementDef {
+  const def = generateSettlementDef(...args)
+  if (!def) throw new Error('expected a settlement def on dry land')
+  return def
+}
+
 describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
   it('is deterministic for the same seed/cell', () => {
-    const a = generateVillagePlan({ gx: 1, gz: -2 }, 4242, flatHeight, 0, 56, samplers, 1, region)
-    const b = generateVillagePlan({ gx: 1, gz: -2 }, 4242, flatHeight, 0, 56, samplers, 1, region)
+    const a = planOf({ gx: 1, gz: -2 }, 4242, flatHeight, 0, 56, samplers, 1, region)
+    const b = planOf({ gx: 1, gz: -2 }, 4242, flatHeight, 0, 56, samplers, 1, region)
     expect(a).toEqual(b)
   })
 
   it('SettlementDef projects identity/site from the same plan without a second roll', () => {
-    const plan = generateVillagePlan({ gx: 0, gz: 0 }, 99, flatHeight, 0, 56, samplers, 1, region)
-    const def = generateSettlementDef({ gx: 0, gz: 0 }, 99, flatHeight, 0, 56, samplers, 1, region)
+    const plan = planOf({ gx: 0, gz: 0 }, 99, flatHeight, 0, 56, samplers, 1, region)
+    const def = defOf({ gx: 0, gz: 0 }, 99, flatHeight, 0, 56, samplers, 1, region)
     expect(def.plan).toEqual(plan)
     expect(def.id).toBe(plan.identity.id)
     expect(def.size).toBe(plan.identity.size)
@@ -55,7 +68,7 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
   })
 
   it('home settlement keeps reserved families and a filled boundary/center', () => {
-    const def = generateSettlementDef({ gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region)
+    const def = defOf({ gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region)
     const names = def.families.flatMap((f) => f.members.map((m) => m.name))
     expect(names).toContain('Anna')
     expect(names).toContain('Piotr')
@@ -69,7 +82,7 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
   it('XL footprint radius is larger than LG when those sizes appear', () => {
     const seeds = Array.from({ length: 400 }, (_, i) => i + 1)
     const plans = seeds.map((seed) =>
-      generateVillagePlan({ gx: 2, gz: 3 }, seed, flatHeight, 0, 56, samplers, 1, region),
+      planOf({ gx: 2, gz: 3 }, seed, flatHeight, 0, 56, samplers, 1, region),
     )
     const lg = plans.find((p) => p.identity.size === 'LG')
     const xl = plans.find((p) => p.identity.size === 'XL')
@@ -83,14 +96,14 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
     // for non-outpost cells. Site may jitter, but size must not be re-rolled.
     for (const seed of [3, 17, 88, 201, 404]) {
       const cell = { gx: 1, gz: 1 }
-      const plan = generateVillagePlan(cell, seed, flatHeight, 0, 56, samplers, 1, region)
+      const plan = planOf(cell, seed, flatHeight, 0, 56, samplers, 1, region)
       expect(plan.identity.size).not.toBe('OUTPOST')
       expect(plan.identity.size).toBe(rollVillageSize('forest', cellSeed(seed, cell)))
     }
   })
 
   it('fills zones and 1:1 house plots on the authoritative plan', () => {
-    const def = generateSettlementDef({ gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region)
+    const def = defOf({ gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region)
     expect(def.plan.zones.length).toBeGreaterThanOrEqual(2)
     expect(def.plan.zones.some((z) => z.kind === 'public')).toBe(true)
     expect(def.plan.zones.some((z) => z.kind === 'residential')).toBe(true)
@@ -105,7 +118,7 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
   })
 
   it('exposes plan landmarks/buildings aligned with plots (step 8)', () => {
-    const def = generateSettlementDef({ gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region)
+    const def = defOf({ gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region)
     expect(def.plan.landmarks.some((l) => l.kind === 'well')).toBe(true)
     expect(def.plan.landmarks.filter((l) => l.kind === 'home')).toHaveLength(def.families.length)
     expect(def.plan.buildings.filter((b) => b.role === 'residential')).toHaveLength(def.families.length)
@@ -118,8 +131,8 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
   })
 
   it('includes deterministic entrances and local paths on the plan (step 9)', () => {
-    const a = generateVillagePlan({ gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region)
-    const b = generateVillagePlan({ gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region)
+    const a = planOf({ gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region)
+    const b = planOf({ gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region)
     expect(a.entrances).toEqual(b.entrances)
     expect(a.paths).toEqual(b.paths)
     expect(a.entrances.length).toBeGreaterThanOrEqual(1)
@@ -127,10 +140,10 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
   })
 
   it('homeSize override locks home size without changing non-home rolls (issue 020)', () => {
-    const homeSm = generateSettlementDef(
+    const homeSm = defOf(
       { gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region, 'SM',
     )
-    const homeXl = generateSettlementDef(
+    const homeXl = defOf(
       { gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region, 'XL',
     )
     expect(homeSm.size).toBe('SM')
@@ -141,7 +154,21 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
     expect(names).toContain('Piotr')
 
     const cell = { gx: 1, gz: 1 }
-    const other = generateVillagePlan(cell, 88, flatHeight, 0, 56, samplers, 1, region, 'XL')
+    const other = planOf(cell, 88, flatHeight, 0, 56, samplers, 1, region, 'XL')
     expect(other.identity.size).toBe(rollVillageSize('forest', cellSeed(88, cell)))
+  })
+
+  it('skips a non-home ocean cell instead of placing a village in the water', () => {
+    const wet = (): number => -2
+    expect(generateSettlementDef({ gx: 2, gz: 3 }, 11, wet, 0, 56, samplers, 1, region)).toBeNull()
+    expect(generateVillagePlan({ gx: 2, gz: 3 }, 11, wet, 0, 56, samplers, 1, region)).toBeNull()
+  })
+
+  it('still generates the home settlement when the origin is wet', () => {
+    const wet = (): number => -2
+    const def = defOf({ gx: 0, gz: 0 }, 11, wet, 0, 56, samplers, 1, region)
+    expect(def.isHome).toBe(true)
+    expect(def.x).toBe(0)
+    expect(def.z).toBe(0)
   })
 })

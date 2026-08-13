@@ -1,8 +1,10 @@
 import type { HeightSampler } from '../player/PlayerController'
 
 /** Clearance above `waterLevel` for dry-land / path checks — shared by
- *  `findSettlementSite`, `villageClearing`, and related settlement probes. */
-export const SETTLEMENT_WATER_MARGIN = 0.8
+ *  `findSettlementSite`, `villageClearing`, and related settlement probes.
+ *  Kept above ocean swell (~0.4) + shore cover fade (~0.35) so a "dry" plaza
+ *  is not visually flooded by waves. */
+export const SETTLEMENT_WATER_MARGIN = 1.15
 
 /** Inclusive endpoint samples along a core→target line when testing for water. */
 export const PATH_DRY_SAMPLES = 5
