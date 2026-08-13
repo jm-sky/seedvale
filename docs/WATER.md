@@ -27,19 +27,39 @@ Trwałe reguły. Zmiana = nowy wpis w historii + aktualizacja tej tabeli.
 
 | ID | Decyzja | Skutek |
 |----|---------|--------|
-| W1 | **Dwa systemy renderu, nie trzy.** Ocean = singleton `Water.js`. Śródlądzie = per-chunk stylized shader. Nie dokładać SSR / refrakcji / trzeciego mesha wody. | `createOcean.ts`, `createWater.ts`; review [001](./reviews/2026-08-07--001--water-quality.md) odrzucił screen-space |
-| W2 | Ocean = **jeden** plane, follow gracza, **nie** per-chunk. Mirror RT trzymać **mały** (256²). | [GRAPHICS.md](./GRAPHICS.md) G5 |
-| W3 | Oba systemy: `transparent: true`, **`depthWrite: false`**. Nie łączyć transparent + depthWrite + wysokiego `renderOrder` — woda maluje się przez korony. | G4, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
+| W1 | **Jedna rodzina shadera, dwa strojenia** (jezioro / ocean). Bez `Water.js`, bez SSR / refrakcji / trzeciego mesha. | target 2026-08-13; dziś kod nadal ma dwa silniki |
+| W2 | Ocean = **jeden** plane, follow gracza, **nie** per-chunk. | G5 (geometria). Shader oceanu ma dołączyć do rodziny W1 |
+| W3 | Woda: `transparent: true`, **`depthWrite: false`**. Nie łączyć transparent + depthWrite + wysokiego `renderOrder`. | G4, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
 | W4 | Liście GLTF `BLEND` → opaque `alphaTest` cutout. Korony piszą depth, woda nie. | G3 |
-| W5 | Jeziora maskują się heightmapą (`vCover`); nad komórkami `vBodyScale > 0.9` **discard** → widać ocean. | G6, `waterBodies.ts` |
-| W6 | **Performance jest constraint.** Nowy pass / większy mirror / per-frame CPU „dla ładniejszej wody” wymaga świadomej ceny. | G2 |
+| W5 | Jeziora maskują się heightmapą (`vCover`). **Nie** oddawać śródlądzia oceanowi przez `vBodyScale > 0.9`. | W8; dziś kod nadal discarduje — issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) |
+| W6 | **Performance jest constraint.** Lustro sceny = **jeden** wspólny pass (nie per-chunk). Wyłącznik w Vue. Mirror RT mały (256²). | G2 |
 | W7 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | G8 |
+| W8 | **Ocean tylko morze / wybrzeże.** Śródlądowe jeziora, stawy i cieki nigdy nie używają materiału oceanu, niezależnie od powierzchni w chunku. | zaakceptowane 2026-08-13; issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) |
+| W9 | **Lustro sceny** (planar, jedna RT) na jeziorach **i** oceanie, z opcją wyłączenia w Vue (Pauza → Świat / Grafika) + `seedvale:graphics:v1`. Off → niebo + specular, **zero** extra passu. Default: włączone. | nie per-jezioro Water.js |
+| W10 | Przezroczystość **z głębokości** (`floorHeights`): przy brzegu widać piasek, w głębi gęstsza/ciemniejsza. Nie akwarium, nie prawie-opaque. | P1 |
+| W11 | Brzeg: miękki fade + linia piany z maski + mokry piasek na terenie. | P1 |
+| W12 | Ruch: jezioro = drobne zmarszczki world-space; ocean = wolniejsza, większa fala. **Bez** nurtu rzek na start. | P1 / P2 |
 
-### Proponowane (jeszcze nie decyzja)
+---
 
-| ID | Propozycja | Po co |
-|----|------------|-------|
-| W8 📝 | **Ocean tylko dla prawdziwego morza / wybrzeża.** Śródlądowe jeziora i cieki zostają na shaderze jezior niezależnie od powierzchni w chunku. | Screen 2026-08-13: jeden staw = dwa materiały. Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) |
+## Kierunek wizualny (zaakceptowany 2026-08-13)
+
+Rozmowa: pół-realistyczna, trochę przezroczysta, bez ciężkiego CPU/GPU. Potem doprecyzowanie: lustro sceny **tak**, ale z wyłącznikiem.
+
+| | Śródlądzie (jezioro / staw / ciek) | Ocean (tylko wybrzeże / morze) |
+|--|-------------------------------------|--------------------------------|
+| Shader | ta sama rodzina | ta sama rodzina, inne uniformy |
+| Kolor | jaśniejszy, płytszy cyan/zieleń | ciemniejszy teal, większa „masa” |
+| Fale | drobne zmarszczki, `world.xz` | wolniejszy, większy swell |
+| Maskowanie | heightmap `vCover` (jak dziś) | shore fade na singleton plane (issue 003) |
+| Głębokość | `floorHeights` → alpha + kolor | to samo na styku z lądem; otwarte morze gęstsze |
+| Brzeg | fade + piana + mokry piasek | fade + piana + mokry piasek |
+| Odbicia | wspólne lustro 256², albo sky+spec gdy off | to samo lustro / ten sam fallback |
+| Nurt | nie teraz | n/d |
+
+**Koszt lustra:** jeden extra render sceny na klatkę, jak dzisiejszy ocean — nie N jezior × Water.js. Wyłączenie w menu ma być realnym spadkiem GPU (pass w ogóle nie startuje). Miejsce UI: Pauza → **Świat**, sekcja grafiki (obok flat shading); persist jak AO/bloom (`seedvale:graphics:v1`). lil-gui zostaje debugowym odpowiednikiem.
+
+**Świadomie nie:** SSR, refrakcja, caustics, flow rzek, mesh per basen, powiększanie mirror > 256².
 
 ---
 
@@ -126,44 +146,39 @@ Pas piasku terenu (issue 001, `sandBandAt` 0.6–3) jest w kodzie wygładzony; n
 
 ---
 
-## Rekomendowana kolejność poprawek
+## Kolejność implementacji (po decyzjach)
 
-Nie implementować z tej listy bez planu / zgody. Kolejność = to, co naprawia screen, przy W1–W6.
+Nie startować z tej listy bez planu. **Stan obecny powyżej jest nadal kodem** — target to W1–W12.
 
-### P0 — jeden materiał na jednym zbiorniku
+### P0 — jeden materiał na jednym zbiorniku (issue 028)
 
-To jest 90% tego, co widać na obrazku.
+1. W8: śródlądzie nigdy nie discarduje do oceanu (`vBodyScale > 0.9` znika jako przełącznik silnika). Ocean tylko tam, gdzie to naprawdę morze.
+2. Zostawić geometrię: jeziora per-chunk + ocean singleton (W2). Zmienić **materiał** oceanu na rodzinę jezior (W1), nie dokładać Water.js na stawach.
 
-1. **Ocean nie dla śródlądzia (W8).** `isLarge` tylko gdy zbiornik łączy się z prawdziwym oceanem / wybrzeżem (sygnał: niska kontynentalność, ciało dotyka krawędzi świata wodnego, nie „≥35% tego chunka”). Duże jezioro w lesie zostaje na `createChunkWater`.
-2. **Klasyfikacja spójna między chunkami.** Dziś BFS per chunk sprawia, że ten sam ciek jest oceanem w jednym chunku i jeziorem w sąsiednim. Apron już jest w heightmapie — albo klasyfikacja z sąsiadów, albo reguła W8 sprawia, że pomyłka 35% przestaje być widoczna.
-3. **Nie dokładać trzeciego shadera.** Najpierw przestać pokazywać Water.js na stawie.
+### P1 — wygląd z decyzji
 
-### P1 — brzeg i spójność tafli
+3. Depth fade z `floorHeights` (W10).
+4. Brzeg: fade + piana z maski + mokry piasek (W11). Issue 003 na oceanie w tym samym przebiegu.
+5. Fale world-space; jezioro drobne, ocean swell (W12). Mesh jeziora bez rozjechanej fazy między chunkami.
+6. Wspólne lustro 256² + fallback sky/spec + toggle Vue/lil-gui (W9). Default on.
 
-4. **Fade brzegu jeziora z głębokości.** `floorHeights` już jest — sample w shaderze: płycej → jaśniej / bardziej przezroczysto, pianka z `fwidth(vCover)` albo `1 - vCover`, nie z amplitudy fali (review 001 Finding 5).
-5. **Issue 003 — shore fade oceanu** tylko tam, gdzie ocean ma prawo być (po P0). Patch Water.js analogiczny do `vCover`, albo maska z tej samej heightmapy. Bez tego morze dalej tnie ląd wielokątem.
-6. **Fale w world-space** (`world.xz`, nie `position.xz`) i mesh wody = `chunkSize` (bez `* 1.02`), ewentualnie lekki overlap z identyczną fazą. Usuwa szwy płatów.
-7. **Zbliżyć palety**, jeśli oba systemy zostają na jednym ekranie (wybrzeże): ocean `waterColor` bliżej `DAY_DEEP` / `DAY_SHALLOW`, niższy kontrast lustra.
+### P2 — później
 
-### P2 — później, nie na ten screen
-
-8. Mokry piasek w shaderze terenu (przyciemnienie w paśmie `sandBandAt`).
-9. Inland: bez mirror RT — sky/fresnel + tani specular. Water.js zostaje na morzu (G5).
-10. Flow / rzeki jako osobny system — dopiero gdy P0–P1 dadzą jedną taflę.
-11. Mesh per basen (review 001 opcja C) / prawdziwa wanna w meshu terenu — duży plan, nie quick win.
-12. SSR, refrakcja, caustics — **nie** (W1, W6).
-
-### Świadomie nie robić
-
-- Drugiego oceanu per chunk (zabije FPS — G5).
-- Zwiększania mirror powyżej 256² „żeby odbicia były ostrzejsze”.
-- Traktowania issue 003 jako fixu na **ten** screen — tamten issue to ocean↔ląd; tu problemem jest ocean **wewnątrz** jeziora.
+7. Nurt rzek.
+8. Mesh per basen / wanna w terenie (review 001 C).
+9. SSR, refrakcja, caustics, mirror > 256² — **nie**.
 
 ---
 
 ## Historia poprawek
 
 Najnowsze na górze.
+
+### 2026-08-13 — Kierunek: jedna rodzina, W8, lustro z wyłącznikiem 📝
+
+- Użytkownik: pół-realistyczna, lekko przezroczysta, bez ciężkiego GPU; potem lustro sceny **tak**, z opcją off w Vue.
+- W8 zaakceptowane. W1 zmienione (docelowo bez Water.js). W9–W12 nowe.
+- Kod **bez zmian** — to decyzja, nie implementacja.
 
 ### 2026-08-13 — SoT wody + diagnoza dual-material 📝
 
@@ -221,7 +236,8 @@ Nierozwiązane z [review 001](./reviews/2026-08-07--001--water-quality.md):
 | Śródlądzie renderowane jako ocean (dwa materiały) | `todo` | issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) |
 | Soft shore fade ocean ↔ ląd | `todo` | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md) |
 | Blotches w lustrze oceanu | `verification needed` | issue [009](./issues/2026-08-10--009--ocean-normal-map-reflection-blotches.md) |
-| Foam / depth fade / world-space waves | `todo` | ten plik, P1 |
+| Depth fade / brzeg (piana, mokry piasek) / world-space waves | `todo` | W10–W12, P1 |
+| Wspólne lustro + toggle Vue | `todo` | W9 |
 | Artefakty oceanu na telefonie | notatka | [plans/README.md](./plans/README.md) Quick notes |
 | Fauna pije wodę (symulacja) | `todo` | plan [094](./plans/2026-08-13--094--fauna-food-water-for-satiety-hydration.md) |
 

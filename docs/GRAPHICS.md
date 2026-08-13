@@ -28,8 +28,8 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G2 | **Performance jest constraint architektury** — nie dokładamy passów, mirror RT ani per-frame CPU „dla ładniejszej wody/liści” bez świadomej ceny. | [architecture/performance-and-workers.md](./architecture/performance-and-workers.md) |
 | G3 | Liście / kwiaty z GLTF `alphaMode: BLEND` → przy loadzie **opaque `alphaTest` cutout** (`hardenFoliageAlpha`). Korony piszą depth. | `src/world/foliageWind.ts`, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
 | G4 | Woda transparentna: ocean i jeziora mają **`depthWrite: false`**. Nie łączyć `transparent` + `depthWrite: true` + wysokiego `renderOrder` — to maluje wodę przez korony. | `createOcean.ts`, `createWater.ts` |
-| G5 | Ocean = **jeden** `Water.js` plane (follow gracza), nie per-chunk. Mirror RT trzymać **mały** (obecnie 256²). | `createOcean.ts` |
-| G6 | Jeziora = per-chunk stylized shader z maską heightmap; nad dużymi zbiornikami `discard` → ocean. **Wyciek oceanu na śródlądzie** — [WATER.md](./WATER.md) W8 (propozycja) / issue [028](./issues/2026-08-13--028--inland-water-dual-material.md). | `createWater.ts` |
+| G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Mirror RT **mały** (256²), **jeden** pass na całą wodę — nie per jezioro. Dziś implementacja to Water.js; target [WATER.md](./WATER.md) W1/W9: ta sama rodzina shadera + opcjonalne lustro. | `createOcean.ts` |
+| G6 | Jeziora = per-chunk shader z maską heightmap. **W8:** śródlądzie nie discarduje do oceanu. Dziś kod nadal `vBodyScale > 0.9` → ocean (issue [028](./issues/2026-08-13--028--inland-water-dual-material.md)). | `createWater.ts` |
 | G7 | Post-process: EffectComposer + N8AO + SMAA (+ bloom / god rays / film grade). Hardware MSAA wyłączone (i tak bez efektu na targetach composera). | `createPostProcessing.ts`, `createRenderer.ts` |
 | G8 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | `CLAUDE.md` |
 | G9 | Droga = tint korytarza na meshu terenu (nie osobny mesh). Miękki brzeg + ziarno dirtu; trawa **soft-fade** w korytarzu, nie hard bald cut. Extra gęstość łąki = **near-field filler LOD**, nie globalny bump `grass.density`. | `chunkHeightmap` / `biomeColors` / `grass` / `chunkManager`, issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
@@ -55,11 +55,17 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 ## Log
 
+### 2026-08-13 — Kierunek wody: jedna rodzina, W8, lustro z Vue 📝
+
+- W8 zaakceptowane. Target: jeden shader (jezioro jaśniejsze / ocean ciemniejszy+swell), depth fade, brzeg fade+piana+mokry piasek.
+- Lustro sceny na obu, **jeden** RT 256², wyłącznik Pauza → Świat; off = sky+spec bez passu.
+- G5/G6: geometria zostaje; Water.js i discard `vBodyScale` to stan kodu, nie cel. Szczegóły: [WATER.md](./WATER.md).
+
 ### 2026-08-13 — SoT wody; dual-material na śródlądziu 📝
 
 - Nowy [WATER.md](./WATER.md) — stan techniczny/wizualny, decyzje W1–W7, historia.
 - Screen: śródlądowy staw jednocześnie jako jezioro i ocean (`vBodyScale > 0.9` → discard → Water.js bez maski).
-- Propozycja W8: ocean tylko dla morza/wybrzeża. Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md). Kod bez zmian.
+- W8 wtedy jako propozycja; wieczorem zaakceptowane (wpis powyżej). Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md).
 
 ### 2026-08-12 — Droga + łąka: ziarno, soft edge, near-field filler ✅
 
@@ -96,7 +102,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | Temat | Status | Link |
 |-------|--------|------|
 | Soft shore fade ocean ↔ ląd | `todo` | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md) |
-| Śródlądzie = dwa materiały wody | `todo` | [WATER.md](./WATER.md), issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) |
+| Śródlądzie = dwa materiały wody | `todo` | [WATER.md](./WATER.md) W8, issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) |
 | Droga/trawa ground cover (#1–#3) | `done` | issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
 | God rays whiteout (fix) | `done` | issue [016](./issues/2026-08-11--016--god-rays-mountain-whiteout.md) |
 | Terrain detail normal „camo” (G vs B) | `verification needed` | issue [014](./issues/2026-08-10--014--terrain-detail-normal-map-green-channel.md) |

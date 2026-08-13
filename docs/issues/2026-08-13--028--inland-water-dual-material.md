@@ -24,14 +24,11 @@ To nie jest issue [003](./2026-08-07--003--ocean-shoreline-artifacts.md) (brzeg 
 
 BFS nie widzi, że ciek ciągnie się przez sąsiadów — ten sam basen może być oceanem w jednym chunku i jeziorem w następnym.
 
-## Kierunek (do rozstrzygnięcia przy realizacji)
+## Kierunek (zaakceptowany 2026-08-13)
 
-Rekomendacja w [WATER.md](../WATER.md) P0, pending decyzja **W8**:
+[WATER.md](../WATER.md) **W8**: ocean tylko morze/wybrzeże; śródlądzie zawsze na rodzinie shadera jezior, niezależnie od pola w chunku.
 
-- Ocean tylko dla prawdziwego morza / wybrzeża; śródlądzie zawsze na `createChunkWater`, niezależnie od pola w chunku.
-- Ewentualnie spójna klasyfikacja z apronem / sąsiadami, jeśli `isLarge` ma zostać.
-
-Nie robić trzeciego shadera. Nie traktować powiększenia mirror RT jako fixu.
+Docelowo ta sama rodzina materiału co ocean (W1) — nie dwa silniki, nie trzeci shader. Lustro sceny to osobny wspólny pass (W9), nie powód żeby staw dostał Water.js.
 
 P1 (brzeg, world-space waves, palety) — po P0; opisane w WATER.md, nie w tym issue.
 
