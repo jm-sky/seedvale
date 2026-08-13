@@ -30,6 +30,8 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 | `2026-08-12--089--better-minimap-and-world-map.md` | Minimapa + mapa świata, FoW, warstwy **[DO REVIEW]** | 🟡 | XL | ~~025~~ ~~028~~ ~~029~~ ~~046~~ ~~067~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
 
++ `2026-08-13--103--performance-diagnostics-benchmark.md` (update table above with this plan) 
+
 ---
 
 ## Todo
