@@ -23,6 +23,7 @@ import {
 import { createResourceDeposits, type ResourceDeposits } from '../terrain/resourceDeposits'
 import { createLargeCaves, type LargeCaves } from '../world/createLargeCaves'
 import { createOcean, type WorldOcean } from '../world/createOcean'
+import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import type { Scene } from 'three'
 
 /** Fixed radius (world units) for settlement/fauna spatial logic — deliberately
@@ -75,6 +76,7 @@ function buildChunkManager(
   collectedItemIds: Set<string>,
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
+  waterMirror: WaterMirror,
 ): ChunkManager {
   const cfg: ChunkManagerConfig = {
     chunkSize: config.terrain.chunkSize,
@@ -101,11 +103,12 @@ function buildChunkManager(
     terrainCastsShadow: config.postProcessing.terrainCastsShadow,
     treeLifecycle,
     getWorldDays,
+    waterMirror,
   }
   return createChunkManager(scene, cfg)
 }
 
-function buildOcean(scene: Scene, config: WorldConfig): WorldOcean {
+function buildOcean(scene: Scene, config: WorldConfig, waterMirror: WaterMirror): WorldOcean {
   // Generously covers the loaded region so it never runs out under the player;
   // repositioned (not resized) as the player moves — see createOcean.follow().
   const { chunkSize, loadRadius, unloadRadius, waterLevel } = config.terrain
@@ -114,7 +117,7 @@ function buildOcean(scene: Scene, config: WorldConfig): WorldOcean {
   // Radial, not a height clipmap — follow() is every frame.
   const fadeInner = loadRadius * chunkSize
   const fadeOuter = (loadRadius + 1) * chunkSize
-  const ocean = createOcean(size, waterLevel, fadeInner, fadeOuter)
+  const ocean = createOcean(size, waterLevel, fadeInner, fadeOuter, waterMirror)
   ocean.addTo(scene)
   return ocean
 }
@@ -247,7 +250,11 @@ export async function createWorldBundle(
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
 ): Promise<WorldBundle> {
-  const chunkManager = buildChunkManager(scene, config, collectedItemIds, treeLifecycle, getWorldDays)
+  const waterMirror = createWaterMirror({
+    waterLevel: config.terrain.waterLevel,
+    enabled: config.postProcessing.waterReflections,
+  })
+  const chunkManager = buildChunkManager(scene, config, collectedItemIds, treeLifecycle, getWorldDays, waterMirror)
   chunkManager.update(0, 0)
   await chunkManager.waitForChunks(homeChunks())
 
@@ -256,7 +263,7 @@ export async function createWorldBundle(
     getWorldDays,
     sampleEnv: (x, z) => chunkManager.sampleTreeEnv(x, z),
   }
-  const ocean = buildOcean(scene, config)
+  const ocean = buildOcean(scene, config, waterMirror)
   const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
   await preloadItemGlbModels()
@@ -325,7 +332,11 @@ export async function rebuildWorldBundle(
   treeLifecycle.clearPresence()
   if (resetCollectedItems) treeLifecycle.clearOverrides()
 
-  bundle.chunkManager = buildChunkManager(scene, config, collectedItemIds, treeLifecycle, getWorldDays)
+  const waterMirror = createWaterMirror({
+    waterLevel: config.terrain.waterLevel,
+    enabled: config.postProcessing.waterReflections,
+  })
+  bundle.chunkManager = buildChunkManager(scene, config, collectedItemIds, treeLifecycle, getWorldDays, waterMirror)
   bundle.chunkManager.update(0, 0)
   await bundle.chunkManager.waitForChunks(homeChunks())
 
@@ -334,7 +345,7 @@ export async function rebuildWorldBundle(
     getWorldDays,
     sampleEnv: (x, z) => bundle.chunkManager.sampleTreeEnv(x, z),
   }
-  bundle.ocean = buildOcean(scene, config)
+  bundle.ocean = buildOcean(scene, config, waterMirror)
   bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
   await preloadItemGlbModels()

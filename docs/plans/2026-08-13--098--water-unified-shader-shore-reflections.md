@@ -1,6 +1,6 @@
 # Plan: Woda — jedna rodzina shadera, brzeg, lustro z wyłącznikiem
 
-**Status:** `in progress` 🔄 (~60%) — fazy 1–2 `done` (browser 2026-08-13); faza 3 (lustro + Vue) nie ruszona  
+**Status:** `verification needed` 🔍 — fazy 1–2 `done` (browser 2026-08-13); faza 3 kod (lustro + Vue), browser checklist poniżej  
 **Created:** 2026-08-13  
 **Priority:** 🟡 medium  
 **Effort:** XL (faza 1 = S; fazy 2–3 = L–XL)  
@@ -29,8 +29,8 @@ Pół-realistyczna, lekko przezroczysta woda bez ciężkiego GPU:
 - [x] Faza 2 kod: `waterMaterial.ts`, ocean bez Water.js, `floorHeights`, piana, mokry piasek. Browser: checklist faza 2.
 - [x] Inland staw ze screenu 2026-08-13: jeden materiał, bez Water.js na środku.
 - [x] Wybrzeże: miękki brzeg (issue 003 w załadowanych chunkach), ocean ciemniejszy / większa fala.
-- [ ] Pauza → Świat: checkbox odbić wody; off kasuje pass lustra; persist `seedvale:graphics:v1`.
-- [x] `tsc` / lint / test / build czyste (faza 2). Browser check osobno (W7) — fazy 1–2 ✅ 2026-08-13.
+- [x] Faza 3 kod: jeden pass 256², `waterReflections`, Vue/lil-gui, persist. Browser: checklist faza 3.
+- [x] `tsc` / lint / test / build czyste (faza 3 kod). Browser check osobno (W7).
 
 ---
 
@@ -42,13 +42,13 @@ Pełna tabela: [WATER.md — Stan obecny](../WATER.md#stan-obecny).
 |------|------|
 | Jezioro / ocean: `waterMaterial.ts`; chunk `vCover` + `floorHeights`; ocean singleton radial fade | `src/world/waterMaterial.ts` |
 | `bodyScale` 0 ląd / jezioro < 0.9 / 1 ocean (kontynentalność, nie pole stawu) | `src/terrain/waterBodies.ts` |
-| Ocean: ten sam shader, `uOcean = 1`, bez Water.js, bez lustra (faza 3) | `src/world/createOcean.ts` |
+| Ocean: ten sam shader, `uOcean = 1`, bez Water.js, lustro 256² (`waterMirror.ts`) | `src/world/createOcean.ts` |
 | `floorHeights` → depth fade w shaderze chunk water | `chunkHeightmap.ts` / `createWater.ts` |
 | Fale w `world.xz` (jezioro ripple / ocean swell) | `waterMaterial.ts` vertex |
 | Foam z `1 - vCover` + `fwidth(vCover)` | `waterMaterial.ts` fragment |
 | Mokry piasek: terrain `uWaterLevel` pas ~0.4 | `buildChunkGeometry.ts` |
 | Kontynentalność już na tile (`oceanThreshold` 0.32, `coastThreshold` 0.45) | `RegionParams`, `chunkHeightmap.ts` |
-| Grafika Vue: Pauza → Świat ma seed / flat / home size / dzień-noc; **brak** toggle odbić wody (faza 3) | `WorldConfigScreen.vue` |
+| Grafika Vue: Pauza → Świat → Grafika → „Odbicia wody”; persist `seedvale:graphics:v1` | `WorldConfigScreen.vue` |
 
 `bodyScale` zostaje jako skala fal jeziora (0–1). **Nie** może już oznaczać „oddaj piksel Water.js”.
 
@@ -150,6 +150,8 @@ src/app/gameLoop.ts            setDayNight / update bez Water.js uniforms
 Usunąć patch fragmentu Water.js i `createProceduralWaterNormals` jeśli ripple idzie z sine w shaderze (dziś jezioro tak robi). Normal-mapa oceanu jest opcjonalnym plusem — nie blokuje fazy.
 
 **Notes (faza 2, 2026-08-13):** mesh jeziora = `chunkSize` (bez overlap 1.02). Singleton nie używa opcji (a) samego `renderOrder` — przezroczysty brzeg odsłoniłby twardy clip. Zamiast clipmapy height: radial fade `loadRadius` → `loadRadius+1` chunków (`worldBundle.buildOcean`). Sky + sun specular; lustro = faza 3.
+
+**Notes (faza 3, 2026-08-13):** lustro to `waterMirror.ts` (nie Water.js / nie Reflector per jezioro). Meshe wody na warstwie 1; kamera lustra tylko warstwa 0. Hook: `gameLoop` przed `postProcessing.render()`. Off ustawia `uReflections = 0` i nie woła `renderer.render` na RT. Vue handler = ten sam `updatePostProcessingFromGui` co lil-gui.
 
 ---
 

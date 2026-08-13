@@ -10,6 +10,7 @@ import {
   type Vector3,
 } from 'three'
 import { createWaterMaterial, setWaterDayNight, tickWaterTime } from './waterMaterial'
+import { bindWaterMirror, WATER_RENDER_LAYER, type WaterMirror } from './waterMirror'
 
 export type WorldWater = {
   mesh: Mesh
@@ -51,6 +52,7 @@ export function createChunkWater(
   chunkOriginZ: number,
   chunkSize: number,
   waterLevel: number,
+  waterMirror?: WaterMirror,
 ): WorldWater | null {
   let hasWater = false
   for (let i = 0; i < heights.length; i++) {
@@ -77,11 +79,13 @@ export function createChunkWater(
     floorHeights: floorTex,
     bodyScale: bodyScaleTex,
   })
+  if (waterMirror) bindWaterMirror(material, waterMirror)
 
   const mesh = new Mesh(geometry, material)
   mesh.position.set(chunkOriginX, waterLevel + 0.07, chunkOriginZ)
   mesh.renderOrder = 1
   mesh.name = 'chunk-water'
+  mesh.layers.set(WATER_RENDER_LAYER)
 
   return {
     mesh,

@@ -1,10 +1,14 @@
 import {
   Color,
+  DataTexture,
   DoubleSide,
+  Matrix4,
+  RGBAFormat,
   ShaderMaterial,
   type Texture,
   UniformsLib,
   UniformsUtils,
+  UnsignedByteType,
   Vector3,
 } from 'three'
 
@@ -23,6 +27,10 @@ export const NIGHT_OCEAN_SHALLOW = new Color(0x0c1c28)
 export const NIGHT_OCEAN_FOAM = new Color(0x3a5864)
 
 const _sun = new Vector3()
+
+/** Bound when no WaterMirror is attached — sampler2D must not be null. */
+const FALLBACK_MIRROR = new DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1, RGBAFormat, UnsignedByteType)
+FALLBACK_MIRROR.needsUpdate = true
 
 export type WaterMaterialOptions = {
   /** 0 = lake (chunk water may still promote ocean cells via bodyScale). */
@@ -46,6 +54,7 @@ const VERTEX_SHADER = /* glsl */ `
   uniform float uOcean;
   uniform float uFadeInner;
   uniform float uFadeOuter;
+  uniform mat4 uTextureMatrix;
   #ifdef USE_CHUNK_MASK
     uniform sampler2D uHeightmap;
     uniform sampler2D uBodyScale;
@@ -59,6 +68,7 @@ const VERTEX_SHADER = /* glsl */ `
   varying vec2 vMapUv;
   varying vec3 vViewDir;
   varying vec3 vNormalW;
+  varying vec4 vMirrorCoord;
 
   vec3 lakeRipple(vec2 w, float t) {
     float a1 = 0.038;
@@ -129,6 +139,7 @@ const VERTEX_SHADER = /* glsl */ `
     vec4 world = modelMatrix * vec4(pos, 1.0);
     vViewDir = normalize(cameraPosition - world.xyz);
     vNormalW = normalize(vec3(-wave.y, 1.0, -wave.z));
+    vMirrorCoord = uTextureMatrix * world;
 
     vec4 mvPosition = viewMatrix * world;
     gl_Position = projectionMatrix * mvPosition;
@@ -147,6 +158,8 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform vec3 uOceanShallow;
   uniform vec3 uOceanFoam;
   uniform vec3 uSunDirection;
+  uniform sampler2D uMirror;
+  uniform float uReflections;
   #ifdef USE_CHUNK_MASK
     uniform sampler2D uFloorHeights;
     uniform float uWaterLevel;
@@ -158,6 +171,7 @@ const FRAGMENT_SHADER = /* glsl */ `
   varying vec2 vMapUv;
   varying vec3 vViewDir;
   varying vec3 vNormalW;
+  varying vec4 vMirrorCoord;
 
   void main() {
     if (vCover < 0.02) discard;
@@ -188,6 +202,14 @@ const FRAGMENT_SHADER = /* glsl */ `
     float spec = pow(max(dot(N, H), 0.0), mix(48.0, 80.0, vOcean)) * step(0.0, L.y);
     col += vec3(0.55, 0.72, 0.82) * spec * mix(0.16, 0.30, vOcean);
 
+    float rf0 = 0.02;
+    float reflectance = min(0.4, rf0 + (1.0 - rf0) * pow(1.0 - facing, 5.0)) * uReflections;
+    vec2 muv = vMirrorCoord.xy / max(vMirrorCoord.w, 0.0001);
+    vec2 distortion = vNormalW.xz * mix(0.006, 0.014, vOcean);
+    vec3 mirrorSample = texture2D(uMirror, muv + distortion).rgb;
+    vec3 tinted = mix(mirrorSample, body, 0.55);
+    col = mix(col, tinted, reflectance);
+
     float shore = 1.0 - vCover;
     float foamBand = smoothstep(0.08, 0.42, shore) * (1.0 - smoothstep(0.55, 0.95, shore));
     float foamEdge = min(1.0, fwidth(vCover) * 8.0);
@@ -207,7 +229,8 @@ const FRAGMENT_SHADER = /* glsl */ `
 /**
  * Shared lake/ocean ShaderMaterial. Chunk water passes height/floor/bodyScale
  * textures (USE_CHUNK_MASK). The ocean singleton omits them and sets ocean=1.
- * Planar scene reflections are phase 3 — this is sky + depth + sun specular.
+ * Planar scene reflections come from a shared 256 RT (bindWaterMirror); off
+ * keeps sky + sun specular with uReflections = 0.
  */
 export function createWaterMaterial(opts: WaterMaterialOptions): ShaderMaterial {
   const chunkMask = opts.heightmap != null
@@ -226,6 +249,9 @@ export function createWaterMaterial(opts: WaterMaterialOptions): ShaderMaterial 
       uSunDirection: { value: new Vector3(0, 1, 0) },
       uFadeInner: { value: opts.fadeInner ?? 0 },
       uFadeOuter: { value: opts.fadeOuter ?? 0 },
+      uMirror: { value: FALLBACK_MIRROR },
+      uTextureMatrix: { value: new Matrix4() },
+      uReflections: { value: 0 },
     },
   ])
 

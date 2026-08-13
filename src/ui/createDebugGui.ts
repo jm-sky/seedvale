@@ -570,6 +570,10 @@ export function createDebugGui(
     .add(config.postProcessing, 'terrainCastsShadow')
     .name('Terrain self-shadow')
     .onChange(handlers.onTerrainShadowChange)
+  postFx
+    .add(config.postProcessing, 'waterReflections')
+    .name('Water reflections')
+    .onChange(handlers.onPostProcessingChange)
 
   terrainControllers.push(
     gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild world'),

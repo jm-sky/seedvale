@@ -66,6 +66,7 @@ If the feature needs no new sound, do nothing to this file.
 | S14 | Gate / creak | Palisade / future fortifications | `in repo` | `door-creak-01…02` / `door-latch-01` |
 | S15 | Stone find (distinct from dig) | Dig notice — today reuses dig SFX | `needed` | — |
 | S16 | Pickaxe / ore strike | Mine channel — today reuses dig clips via `playActionMine` | `needed` | [plan 090](../plans/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
+| S17 | Jump / land (player) | New jump mechanic — takeoff + landing thud | `needed` | [plan 097](../plans/2026-08-13--097--physics-falling-collisions-jumping.md) |
 
 ## Acquisition rules
 

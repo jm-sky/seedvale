@@ -18,6 +18,10 @@ function onFlatShadingChange(): void {
   state.onTerrainChange?.()
 }
 
+function onGraphicsChange(): void {
+  state.onPostProcessingChange?.()
+}
+
 function applySeed(): void {
   if (!window.confirm('Odtworzyć teren od nowa z tym seedem? Pozycja i ekwipunek zostaną zachowane.')) return
   state.onTerrainChange?.()
@@ -169,6 +173,20 @@ function onHomeSizeSelect(event: Event): void {
           class="w-full"
           @input="onDayNightInput"
         >
+      </div>
+
+      <div class="mb-5">
+        <h2 class="mb-2 text-xs font-semibold uppercase tracking-widest opacity-60">
+          Grafika
+        </h2>
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            v-model="state.config!.postProcessing.waterReflections"
+            type="checkbox"
+            @change="onGraphicsChange"
+          >
+          Odbicia wody
+        </label>
       </div>
 
       <button

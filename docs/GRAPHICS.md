@@ -28,7 +28,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G2 | **Performance jest constraint architektury** — nie dokładamy passów, mirror RT ani per-frame CPU „dla ładniejszej wody/liści” bez świadomej ceny. | [architecture/performance-and-workers.md](./architecture/performance-and-workers.md) |
 | G3 | Liście / kwiaty z GLTF `alphaMode: BLEND` → przy loadzie **opaque `alphaTest` cutout** (`hardenFoliageAlpha`). Korony piszą depth. | `src/world/foliageWind.ts`, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
 | G4 | Woda transparentna: ocean i jeziora mają **`depthWrite: false`**. Nie łączyć `transparent` + `depthWrite: true` + wysokiego `renderOrder` — to maluje wodę przez korony. | `createOcean.ts`, `createWater.ts` |
-| G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Shader = rodzina jezior (`waterMaterial.ts`). Lustro sceny = faza 3 planu 098 (dziś sky + specular). | `createOcean.ts` |
+| G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Shader = rodzina jezior (`waterMaterial.ts`). Lustro sceny = jeden RT 256² (`waterMirror.ts`), wyłącznik Vue. | `createOcean.ts` |
 | G6 | Jeziora = per-chunk ten sam shader, maska heightmap + głębokość z `floorHeights`. `bodyScale` 1 stroi ocean, nie discarduje piksela. | `createWater.ts`, `waterMaterial.ts`, `waterBodies.ts` |
 | G7 | Post-process: EffectComposer + N8AO + SMAA (+ bloom / god rays / film grade). Hardware MSAA wyłączone (i tak bez efektu na targetach composera). | `createPostProcessing.ts`, `createRenderer.ts` |
 | G8 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | `CLAUDE.md` |
@@ -43,7 +43,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 |--------|--------|
 | Renderer | `src/render/createRenderer.ts` |
 | Post-process | `src/render/createPostProcessing.ts`, `gradedOutputPass.ts`, `godRaysShader.ts` |
-| Ocean | `src/world/createOcean.ts` + `waterMaterial.ts` |
+| Ocean | `src/world/createOcean.ts` + `waterMaterial.ts` + `waterMirror.ts` |
 | Jeziora | `src/world/createWater.ts` + `waterMaterial.ts` |
 | Foliage wind + alpha harden | `src/world/foliageWind.ts` |
 | GLB load / shared mats | `src/assets/loadGltf.ts` |
@@ -54,6 +54,12 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-08-13 — Faza 3: wspólne lustro wody 256² + toggle Vue 🔧
+
+- Jeden `WebGLRenderTarget` 256² (`waterMirror.ts`), kamera względem `y = waterLevel`; meshe wody na warstwie 1 (mirror camera tylko 0).
+- `postProcessing.waterReflections` default on; off kasuje pass. Vue Pauza → Świat → Grafika; lil-gui Post-processing.
+- G5 = stan kodu. Browser: checklist planu 098 faza 3.
 
 ### 2026-08-13 — Faza 2: jedna rodzina shadera wody + brzeg ✅
 
@@ -112,8 +118,9 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 | Temat | Status | Link |
 |-------|--------|------|
-| Soft shore fade ocean ↔ ląd | `planned` | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md), plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 |
-| Śródlądzie = dwa materiały wody | `verification needed` | [WATER.md](./WATER.md) W8, issue [028](./issues/2026-08-13--028--inland-water-dual-material.md), plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1 |
+| Soft shore fade ocean ↔ ląd | `done` (browser 2026-08-13) | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md), plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 |
+| Śródlądzie = dwa materiały wody | `done` | [WATER.md](./WATER.md) W8, issue [028](./issues/2026-08-13--028--inland-water-dual-material.md), plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1 |
+| Lustro wody + toggle Vue | `verification needed` | W9, plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 3 |
 | Droga/trawa ground cover (#1–#3) | `done` | issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
 | God rays whiteout (fix) | `done` | issue [016](./issues/2026-08-11--016--god-rays-mountain-whiteout.md) |
 | Terrain detail normal „camo” (G vs B) | `verification needed` | issue [014](./issues/2026-08-10--014--terrain-detail-normal-map-green-channel.md) |

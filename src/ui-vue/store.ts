@@ -90,6 +90,9 @@ type WorldConfigScreenState = {
   /** Cheap, fired live on every day/night field change — mirrors debug
    *  GUI's `onDayNightChange`. */
   onDayNightChange: (() => void) | null
+  /** Cheap — toggles water reflections / other graphics without a rebuild.
+   *  Same handler as debug GUI's `onPostProcessingChange`. */
+  onPostProcessingChange: (() => void) | null
 }
 type NotesState = { open: boolean }
 type HudState = {
@@ -145,7 +148,7 @@ export const ui = reactive({
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
   merchant: { open: false, npc: null, counts: {}, onBuyShells: null, onBuyBarter: null } as MerchantState,
   busy: { visible: false, label: '' } as BusyState,
-  worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null } as WorldConfigScreenState,
+  worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
   hud: {
     time: '--',
@@ -348,11 +351,12 @@ export function hideBusy(): void {
   ui.busy.label = ''
 }
 
-export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: { onTerrainChange: () => void; onDayNightChange: () => void }): void {
+export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: { onTerrainChange: () => void; onDayNightChange: () => void; onPostProcessingChange: () => void }): void {
   ui.worldConfigScreen.config = config
   ui.worldConfigScreen.dayNight = dayNight
   ui.worldConfigScreen.onTerrainChange = handlers.onTerrainChange
   ui.worldConfigScreen.onDayNightChange = handlers.onDayNightChange
+  ui.worldConfigScreen.onPostProcessingChange = handlers.onPostProcessingChange
 }
 export function openWorldConfigScreen(): void { ui.worldConfigScreen.open = true }
 export function closeWorldConfigScreen(): void { ui.worldConfigScreen.open = false }

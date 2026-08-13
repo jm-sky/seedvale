@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { DetailNormalConfig } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type { TreeEnvSample, TreeGrowthStage, TreeLifecycle, TreePresence } from '../world/treeLifecycle'
+import type { WaterMirror } from '../world/waterMirror'
 import type { EnvironmentKind } from './chunkEnvironment'
 import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
@@ -163,6 +164,8 @@ export type ChunkManagerConfig = {
   treeLifecycle: TreeLifecycle
   /** Absolute game-days (`DayNightState.elapsedDays`) for lazy growth resolve. */
   getWorldDays: () => number
+  /** Shared planar water mirror — bound onto every chunk-water material. */
+  waterMirror: WaterMirror
 }
 
 type ChunkState = 'generating' | 'ready'
@@ -217,6 +220,7 @@ export type ChunkManager = {
   update: (playerX: number, playerZ: number) => void
   tickWater: (dt: number) => void
   setWaterDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void
+  setWaterReflections: (enabled: boolean) => void
   tickGrass: (dt: number) => void
   setGrassDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void
   sampleHeight: HeightSampler
@@ -664,6 +668,7 @@ export function createChunkManager(
           z,
           config.chunkSize,
           config.waterLevel,
+          config.waterMirror,
         )
         if (rec.water) scene.add(rec.water.mesh)
 
@@ -1089,6 +1094,9 @@ export function createChunkManager(
     },
     setWaterDayNight(dayFactor, sunDirection) {
       for (const rec of chunks.values()) rec.water?.setDayNight(dayFactor, sunDirection)
+    },
+    setWaterReflections(enabled) {
+      config.waterMirror.setEnabled(enabled)
     },
     tickGrass(dt) {
       grassSystem.update(dt)

@@ -641,6 +641,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       )
     }
     const renderStart = performance.now()
+    bundle.ocean.renderMirror(renderer, scene, camera)
     postProcessing.updateGodRays(camera, sky.sunPosition, cachedSky.elev)
     postProcessing.render()
     labelRenderer.render(scene, camera)

@@ -58,6 +58,7 @@ import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
 import { createTimeSkip } from '../world/timeSkip'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
 import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChopStage } from '../world/treeLifecycle'
+import { WATER_RENDER_LAYER } from '../world/waterMirror'
 import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
 import { DIG_REACH } from './interactables'
@@ -156,6 +157,7 @@ export async function createApp(
 
   const scene = createScene()
   const camera = createCamera(container.clientWidth / container.clientHeight)
+  camera.layers.enable(WATER_RENDER_LAYER)
   const worldAudio = createWorldAudio(camera)
 
   const postProcessing = createPostProcessing(
@@ -473,6 +475,8 @@ export async function createApp(
 
   const updatePostProcessingFromGui = () => {
     postProcessing.applyConfig(config.postProcessing)
+    bundle.ocean.setReflections(config.postProcessing.waterReflections)
+    bundle.chunkManager.setWaterReflections(config.postProcessing.waterReflections)
     saveGraphics(config)
   }
 
@@ -519,7 +523,11 @@ export async function createApp(
     },
   })
   if (!config.showGui) gui.toggle()
-  vueUi.configureWorldConfigScreen(config, dayNight, { onTerrainChange, onDayNightChange })
+  vueUi.configureWorldConfigScreen(config, dayNight, {
+    onTerrainChange,
+    onDayNightChange,
+    onPostProcessingChange: updatePostProcessingFromGui,
+  })
 
   // Created before pauseMenu so their Escape listeners register first — see
   // createNpcDialog's onKeyDown comment for why registration order matters here.

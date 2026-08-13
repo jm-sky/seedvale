@@ -16,7 +16,6 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 | File | Summary | % | Pri | Effort | Depends |
 |------|---------|---|-----|--------|---------|
-| `2026-08-13--098--water-unified-shader-shore-reflections.md` | Woda: fazy 1–2 `done`; lustro/Vue = faza 3 | 60 | 🟡 | XL | ~~022~~ ~~001~~ |
 | `2026-08-09--049--procedural-world-landmarks.md` | Proceduralne obiekty, ruiny, landmarki | 40 | 🟡 | XL | ~~001~~ ~~006~~ ~~007~~ ~~028~~ ~~030~~ |
 | `2026-08-07--024--world-visual-overhaul.md` | Rośliny, niebo/chmury, góry w tle | 50 | ⚪ | L | ~~028~~ |
 
@@ -27,6 +26,7 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059) | 🔴 | XL | ~~015~~ ~~018~~ |
+| `2026-08-13--097--physics-falling-collisions-jumping.md` | Fizyka: opadanie przedmiotów, kolizje (gracz+NPC+zwierzęta), skok | 🟡 | XL | — |
 | `2026-08-12--089--better-minimap-and-world-map.md` | Minimapa + mapa świata, FoW, warstwy **[DO REVIEW]** | 🟡 | XL | ~~025~~ ~~028~~ ~~029~~ ~~046~~ ~~067~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
 
@@ -36,7 +36,6 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-13--097--physics-falling-collisions-jumping.md` | Fizyka: opadanie przedmiotów, kolizje, skok (szkic — do uzupełnienia) | 🟡 | L | — |
 | `2026-08-13--094--fauna-food-water-for-satiety-hydration.md` | Fauna: realne jedzenie/woda dla sytości i nawodnienia (ex issue 015) | 🟡 | L | ~~021~~ ~~010~~ |
 | `2026-08-13--092--npc-stamina-and-daily-vigor.md` | Stamina (burst) + dzienny wigor; sen / zasypianie w pracy (draft, nazwa do ustalenia) | 🟡 | L | ~~045~~ ~~020~~ |
 | `2026-08-11--071--local-economy-and-settlement-development.md` | Lokalna gospodarka osady (draft) | 🟡 | XL | ~~060~~ ~~032~~ ~~047~~ |
@@ -56,7 +55,7 @@ Implementation complete; needs play/browser check. Grouped; full write-up is in 
 
 **Fauna / jaskinie** — `056` głodny predator · `064` cave vs droga · `080` fauna vs footprint osady · `083` dziura w terenie przy jaskini
 
-**UI / audio / rest** — `059` SFX pick/drop (`2026-08-11--059--inventory-pick-drop-sfx.md`) · `075` time-skip catch-up NPC · `078` `playAt` falloff · `084` obóz + town rest · `088` asset alignment browser · `090` miecz/kupiec/namiot/jaskinie/kilof
+**UI / audio / rest** — `059` SFX pick/drop (`2026-08-11--059--inventory-pick-drop-sfx.md`) · `075` time-skip catch-up NPC · `078` `playAt` falloff · `084` obóz + town rest · `088` asset alignment browser · `090` miecz/kupiec/namiot/jaskinie/kilof · `098` woda lustro 256² + toggle Vue (fazy 1–2 browser ✅; faza 3 kod, checklist w planie)
 
 **NPC** — `060` wykonywalny grafik (`eat`/`home`/`wake`) + overlay traits (`night_owl` / `fast_worker` / `sociable`)
 
@@ -88,7 +87,7 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the 
 - **Światło w domach** — `findWallMount` raycastuje bryłę; 2026-08-11: nadal nierówne, potrzeba mapowania per model.
 - **Latające obiekty** — `waitForChunks` przed propsami osady; 2026-08-11: nadal nieidealne.
 - **Morze (telefon)** — artefakty krawędzi, plamy; spróbować bardziej przezroczystej wody.
-- **Woda** — fazy 1–2 planu [098](./2026-08-13--098--water-unified-shader-shore-reflections.md) `done`; zostaje lustro + toggle Vue (faza 3).
+- **Woda** — plan [098](./2026-08-13--098--water-unified-shader-shore-reflections.md): fazy 1–2 `done`; faza 3 (lustro + Vue) kod, browser 🔍.
 
 ## Related
 

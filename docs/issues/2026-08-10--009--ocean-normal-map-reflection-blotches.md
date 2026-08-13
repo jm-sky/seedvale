@@ -1,6 +1,6 @@
 # Ocean pokazuje gęste, "chmurowe" odbicia z twardymi krawędziami między kolorami
 
-**Status:** `verification needed` — naprawione 2026-08-10 (częstotliwość detail normals). **2026-08-13:** Water.js + mirror RT usunięte w fazie 2 planu 098; blotches nie są obserwowalne do powrotu lustra w fazie 3.
+**Status:** `verification needed` — naprawione 2026-08-10 (częstotliwość detail normals). **2026-08-13:** lustro 256² wróciło w fazie 3 planu 098 (`waterMirror.ts`, nie Water.js). Detail normals terenu nie zagęszczane; wyłączenie `normalMap` na czas mirror camera nadal poza minimum.
 **Created:** 2026-08-10
 **Źródło:** zgłoszenie użytkownika po ostatniej turze strojenia normal-mapy terenu
 

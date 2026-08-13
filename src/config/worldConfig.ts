@@ -113,6 +113,9 @@ export type WorldConfig = {
      *  steep slopes at low sun angle. Defaults on (the pre-review look);
      *  applies live to already-loaded chunks, no world rebuild. */
     terrainCastsShadow: boolean
+    /** Shared planar water mirror (256²). Off skips the extra scene pass;
+     *  water falls back to sky color + sun specular. */
+    waterReflections: boolean
   }
   /** Show lil-gui panel (`?gui=0` to hide). */
   showGui: boolean
@@ -256,6 +259,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       // On by default — a perf-vs-look tradeoff belongs to the player
       // (issue: default-off read as a visual regression), opt-in via GUI.
       terrainCastsShadow: true,
+      waterReflections: true,
     },
     showGui: true,
     player: {

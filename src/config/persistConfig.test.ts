@@ -132,6 +132,7 @@ function minimalConfig(): WorldConfig {
       godRaysExposure: 0.22,
       pixelRatioCap: 2,
       terrainCastsShadow: true,
+      waterReflections: true,
     },
     showGui: true,
     player: { name: 'Ja' },
@@ -189,5 +190,33 @@ describe('persistConfig domains (issue 019)', () => {
     expect(graphics.postProcessing.aoEnabled).toBe(true)
     expect(world.seed).toBe(42)
     expect(world.settlements.homeSize).toBe('auto')
+  })
+
+  it('round-trips waterReflections through saveGraphics', () => {
+    const config = minimalConfig()
+    config.postProcessing.waterReflections = false
+    saveGraphics(config)
+
+    const loaded = loadDomainConfigs()
+    expect(loaded?.postProcessing?.waterReflections).toBe(false)
+  })
+
+  it('defaults waterReflections to true when stored graphics omit the flag', () => {
+    localStorage.setItem(
+      GRAPHICS_KEY,
+      JSON.stringify({
+        postProcessing: { aoEnabled: false },
+      }),
+    )
+
+    const loaded = loadDomainConfigs()
+    // Same merge as createWorldConfig: defaults first, stored second.
+    const merged = {
+      waterReflections: true,
+      aoEnabled: true,
+      ...loaded?.postProcessing,
+    }
+    expect(merged.waterReflections).toBe(true)
+    expect(merged.aoEnabled).toBe(false)
   })
 })
