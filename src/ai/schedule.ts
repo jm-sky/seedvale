@@ -98,12 +98,14 @@ export const SCHEDULE_TEMPLATES: Record<Role, ScheduleTemplate> = {
     { hour: 18, activity: 'home' },
     { hour: 21.5, activity: 'sleep' },
   ],
+  /** Stall hours are longer than other roles: short evening at home, same
+   *  1 h midday meal and 8 h sleep. `night_owl` (Kasia) still shifts +2 h. */
   trader: [
     { hour: 7, activity: 'wake' },
     { hour: 8, activity: 'work' },
     { hour: 13, activity: 'eat' },
     { hour: 14, activity: 'work' },
-    { hour: 19, activity: 'home' },
+    { hour: 21, activity: 'home' },
     { hour: 23, activity: 'sleep' },
   ],
   /** Night watch — `wake`/`work` land in the evening, `eat`/`work` past

@@ -32,11 +32,12 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | knife | nóż | yes | 12 | starting | `items/knife.glb` | |
 | firestarter | krzesiwo | yes | — | starting | procedural | |
 | blanket | koc | — | — | starting | procedural | |
-| shovel | łopata | yes | 8 | village 1× | `items/shovel.glb` | dig / level |
+| shovel | łopata | yes | 8 | village 1× | `items/shovel.glb` | soil/sand dig / level (not rock) |
 | axe | siekiera | yes | 20 | village 1× | `items/axe.glb` | chop |
 | pitchfork | widły | **no** | — | village 1–3 | `items/pitchfork.glb` | plan 082; **melee later** |
 | sickle | sierp | **no** | — | village 1–3 | `items/sickle.glb` | plan 082 |
 | wooden_torch | pochodnia | yes | — | starting (+ village 1×) | `items/wooden_torch.glb` | plan 085; longer/brighter than lit branch |
+| pickaxe | kilof | yes | — | village 1× + Kupiec | `items/pickaxe.glb` | ore deposits + mountain-rock dig/level (plan 090) |
 | tent | namiot | — | — | none (Kupiec) | procedural | place / rest / pack (plan 090) |
 | long_sword | miecz | yes | 28 | none (Strażnik/Kupiec) | `items/long_sword.glb` | hold+melee; Strażnik quest/dialog + Kupiec |
 | coal | węgiel | — | — | pickaxe yield | procedural | plan 090 |

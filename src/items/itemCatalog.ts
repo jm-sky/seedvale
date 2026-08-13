@@ -199,7 +199,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     meleeDamage: null,
     spawn: 'village_onetime',
     modelUrl: '/models/items/pickaxe.glb',
-    notes: 'One-time near stockpile (plan 090). Held; mines iron/coal/gold deposits.',
+    notes: 'One-time near stockpile (plan 090). Held; mines iron/coal/gold deposits and mountain-rock ground (stone).',
   },
   tent: {
     kind: 'tent',

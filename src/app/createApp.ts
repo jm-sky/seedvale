@@ -35,7 +35,7 @@ import { createScene } from '../scene/createScene'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { MINE_DURATION_SEC, yieldForOre } from '../terrain/depositMining'
-import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt } from '../terrain/dig'
+import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
 import { applyDigAt, applyLevelAt } from '../terrain/digAction'
 import { mountVueUi } from '../ui-vue/mount'
 import { createBusyOverlay } from '../ui/createBusyOverlay'
@@ -703,9 +703,38 @@ export async function createApp(
     })
   }
 
+  const startPickaxeDigAt = (x: number, z: number): void => {
+    if (heldTool.held() !== 'pickaxe' || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const profile = getRockDigProfileAt(x, z, bundle.chunkManager)
+    if (!profile) {
+      toast.show('Tu nie da się kopać kilofem.', 'error')
+      return
+    }
+    playActionMine(worldAudio.playAt, { x, z })
+    busy.start(DIG_DURATION_SEC, 'Kucie…', () => {
+      applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
+      syncShovelQuickActions()
+    })
+  }
+
   const startLevelAt = (x: number, z: number): void => {
     if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (isRockGround(x, z, bundle.chunkManager)) {
+      toast.show('Łopata nie bierze skały.', 'error')
+      return
+    }
     if (!canLevelAt(x, z, bundle.chunkManager)) {
+      toast.show('Nie ma tu czego wyrównać.', 'error')
+      return
+    }
+    busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
+      applyLevelAt(bundle.chunkManager, x, z, toast)
+    })
+  }
+
+  const startPickaxeLevelAt = (x: number, z: number): void => {
+    if (heldTool.held() !== 'pickaxe' || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (!isRockGround(x, z, bundle.chunkManager) || !canLevelAt(x, z, bundle.chunkManager)) {
       toast.show('Nie ma tu czego wyrównać.', 'error')
       return
     }
@@ -1013,7 +1042,10 @@ export async function createApp(
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
     questManager, ambientAudio, worldAudio, playerTorch, minimap, openQuestLog, openInventory,
     startGroundWork: (mode, x, z) => {
-      if (mode === 'level') startLevelAt(x, z)
+      if (heldTool.held() === 'pickaxe') {
+        if (mode === 'level') startPickaxeLevelAt(x, z)
+        else startPickaxeDigAt(x, z)
+      } else if (mode === 'level') startLevelAt(x, z)
       else startDigAt(x, z)
     },
     startTreeChop,

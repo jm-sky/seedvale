@@ -57,6 +57,17 @@ describe('schedule', () => {
     }
   })
 
+  it('gives the trader a realistic day with a long stall block and a short evening at home', () => {
+    const template = SCHEDULE_TEMPLATES.trader
+    expect(activityAt(template, hourToTimeOfDay(8))).toBe('work')
+    expect(activityAt(template, hourToTimeOfDay(13.5))).toBe('eat')
+    expect(activityAt(template, hourToTimeOfDay(14))).toBe('work')
+    expect(activityAt(template, hourToTimeOfDay(20))).toBe('work')
+    expect(activityAt(template, hourToTimeOfDay(21.5))).toBe('home')
+    expect(activityAt(template, hourToTimeOfDay(23.5))).toBe('sleep')
+    expect(hoursOf('home', template)[0]).toBe(21)
+  })
+
   it('activityAt resolves the most recently started entry, in-order template', () => {
     const template = SCHEDULE_TEMPLATES.woodcutter
     expect(activityAt(template, hourToTimeOfDay(8))).toBe('work')

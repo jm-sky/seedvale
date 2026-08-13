@@ -697,7 +697,7 @@ export class NpcAgent {
         // Shared DecisionContext snapshot (plan 055) — policy remains inline
         // (`pickNeed` then effective schedule); scoring arrives in Phase 5.
         const decisionContext = this.buildDecisionContext(scheduledActivity, nearbyNpcCount)
-        const need = pickNeed(this.needs)
+        const need = pickNeed(this.needs, { skipWood: this.role === 'trader' })
         this.activeNeed = need
         if (need !== 'idle') {
           this.beginNeed(need)
@@ -909,7 +909,7 @@ export class NpcAgent {
         else restoreStamina(this.stamina, this.restRate * stepDt)
         // Not asleep this step — resolve whichever need would have sent the
         // NPC off to drink/eat/gather, same amounts `beginNeed` applies.
-        const need = pickNeed(this.needs)
+        const need = pickNeed(this.needs, { skipWood: this.role === 'trader' })
         if (need === 'water') this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
         else if (need === 'food') this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
         else if (need === 'wood' && this.landmarks.trees.length > 0) {
@@ -1075,7 +1075,7 @@ export class NpcAgent {
       })
       return
     }
-    if (need === 'wood' && this.landmarks.trees.length > 0) {
+    if (need === 'wood' && this.role !== 'trader' && this.landmarks.trees.length > 0) {
       const forest = this.forest
       let landmark = this.landmarks.trees[this.treeIndex]!
       this.treeIndex = (this.treeIndex + 1) % this.landmarks.trees.length

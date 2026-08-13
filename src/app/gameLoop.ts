@@ -345,9 +345,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.mesh.position,
         held,
       )
-      // The shovel's dig/level target is a fallback, not a competing candidate —
-      // only synthesized when nothing else is being gazed at, and only while
-      // the shovel is held (quick actions cover ownership without holding).
+      // Ground-work (shovel soil / pickaxe rock) is a fallback, not a competing
+      // candidate — only synthesized when nothing else is being gazed at.
       const target = pickInGaze(
         interactables,
         player.mesh.position,
@@ -357,7 +356,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       ) ?? buildDigTarget(
         player.mesh.position,
         mouseLook.state.yaw,
-        held === 'shovel',
+        held,
         bundle.chunkManager,
       )
       npcDialog.setPrompt(target ? target.promptLabel : null)

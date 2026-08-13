@@ -456,8 +456,9 @@ Nie implementować w ramach tego planu:
 ### Kilof
 
 - [x] Kilof jest itemem inventory i można go trzymać.
-- [x] `[E] Wydobądź` działa tylko z odpowiednimi złożami (iron/coal/gold), gdy kilof jest w dłoni.
-- [x] Można wydobywać węgiel, żelazo i złoto. Kamień zostaje przy łopacie (`dig`), zgodnie z podziałem narzędzi w planie.
+- [x] `[E] Wydobądź` działa na złożach (iron/coal/gold), gdy kilof jest w dłoni.
+- [x] Na gołej skale górskiej (`mountainRidge`) kilof kopie analogicznie do łopaty (`Wykop skałę` / `Wyrównaj`); łopata tam nie działa. Gleba/piasek zostają przy łopacie.
+- [x] Można wydobywać węgiel, żelazo i złoto ze złóż; kamień ze skały górskiej (kilof) oraz z gleby (łopata).
 - [x] Wydobycie korzysta z istniejącego `ResourceDeposits` (hits z `richness`, sesja bez save).
 - [x] Yield respektuje istniejący system inventory/drop.
 - [x] Nie powstaje drugi system zarządzania złożami.

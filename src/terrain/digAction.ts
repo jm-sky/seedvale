@@ -33,7 +33,7 @@ export function applyDigAt(
   chunkManager.modifyTerrain(x, z, DIG_RADIUS, profile.depth)
   const outcome = resolveDigStone(profile.stoneChance, feedback.inventory.canAdd('stone'), random)
   if (outcome.kind === 'none') {
-    feedback.toast.show('Wykopano dołek.')
+    feedback.toast.show(profile.surface === 'rock' ? 'Wykuto skałę.' : 'Wykopano dołek.')
     return
   }
   if (outcome.kind === 'inventory') {

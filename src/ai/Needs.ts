@@ -21,9 +21,15 @@ export function tickNeeds(needs: NeedState, dt: number): void {
   needs.hunger = Math.min(1, needs.hunger + dt * 0.035)
 }
 
-export function pickNeed(needs: NeedState): NeedId {
+export type PickNeedOptions = {
+  /** Traders keep the woodDuty meter but never act on it — they stay at the
+   *  stall instead of walking off to chop. */
+  skipWood?: boolean
+}
+
+export function pickNeed(needs: NeedState, options: PickNeedOptions = {}): NeedId {
   const waterScore = needs.thirst > 0.35 ? needs.thirst * 1.35 : 0
-  const woodScore = needs.woodDuty > 0.3 ? needs.woodDuty * 1.1 : 0
+  const woodScore = options.skipWood ? 0 : (needs.woodDuty > 0.3 ? needs.woodDuty * 1.1 : 0)
   const foodScore = needs.hunger > 0.32 ? needs.hunger * 1.2 : 0
   const idleScore = 0.12
 
