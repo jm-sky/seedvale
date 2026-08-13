@@ -1,6 +1,6 @@
 # Plan: Kierunkowskazy przy drogach do wiosek
 
-**Status:** `in progress` 🔄 (części 1–2 + fix 2026-08-11: `yawToward` dla kierunku tabliczki; większy odstęp midpoint. Część 3 — skrzyżowania — nadal `todo`.)
+**Status:** `done` (części 1–2 + fix 2026-08-11: `yawToward` dla kierunku tabliczki; większy odstęp midpoint. Część 3 — skrzyżowania — nadal `todo`.)
 **Created:** 2026-08-08
 **Scope:** rozszerza [roads-and-paths](./2026-08-07--026--roads-and-paths.md) (`roadNetwork.ts` — grafowanie osad, nazwane trasy) i [village-generation](./2026-08-08--031--village-generation.md) (`SettlementDef.name`)
 

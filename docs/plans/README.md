@@ -16,7 +16,7 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 | File | Summary | % | Pri | Effort | Depends |
 |------|---------|---|-----|--------|---------|
-| `2026-08-08--039--road-signposts.md` | Yaw tabliczki + odstęp midpoint; skrzyżowania later | 80 | ⚪ | S | ~~026~~ |
+| `2026-08-13--098--water-unified-shader-shore-reflections.md` | Woda: faza 1 W8 OK (browser); shader/brzeg/lustro later | 15 | 🟡 | XL | ~~022~~ ~~001~~ |
 | `2026-08-09--049--procedural-world-landmarks.md` | Proceduralne obiekty, ruiny, landmarki | 40 | 🟡 | XL | ~~001~~ ~~006~~ ~~007~~ ~~028~~ ~~030~~ |
 | `2026-08-07--024--world-visual-overhaul.md` | Rośliny, niebo/chmury, góry w tle | 50 | ⚪ | L | ~~028~~ |
 
@@ -36,6 +36,7 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-13--097--physics-falling-collisions-jumping.md` | Fizyka: opadanie przedmiotów, kolizje, skok (szkic — do uzupełnienia) | 🟡 | L | — |
 | `2026-08-13--094--fauna-food-water-for-satiety-hydration.md` | Fauna: realne jedzenie/woda dla sytości i nawodnienia (ex issue 015) | 🟡 | L | ~~021~~ ~~010~~ |
 | `2026-08-13--092--npc-stamina-and-daily-vigor.md` | Stamina (burst) + dzienny wigor; sen / zasypianie w pracy (draft, nazwa do ustalenia) | 🟡 | L | ~~045~~ ~~020~~ |
 | `2026-08-11--071--local-economy-and-settlement-development.md` | Lokalna gospodarka osady (draft) | 🟡 | XL | ~~060~~ ~~032~~ ~~047~~ |
@@ -49,13 +50,13 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 Implementation complete; needs play/browser check. Grouped; full write-up is in the plan file.
 
-**Osady / wioski** — `047` village overhaul (zależy jeszcze od 032) · `036` siting trudny teren (częściowo) · `072` nameplate/palisada · `074` katalog domów · `076` polish generatora · `077` ogrody S/M/L · `095` stóg siana + ogród poza placem
+**Osady / wioski** — `036` siting trudny teren (częściowo) · `072` nameplate/palisada · `074` katalog domów · `076` polish generatora · `077` ogrody S/M/L · `095` stóg siana + ogród poza placem
 
-**Las / narzędzia / zbieractwo** — `032` zasoby naturalne · `052` łopata/kamienie · `057` siekiera · `058` cykl drzew · `061` dig UX · `065` GLB skały/złoża · `082` widły/sierp/clutter · `085` handheld lights + village torches · `086` trawa w workerze (zdrowy baseline `Simulate (ms)` potwierdzony w przeglądarce; pixel-identyczny layout nie porównany explicite) · `087` instancing roślinności/propsów (fazy 1–5+7; brak pomiaru Draw calls przed/po) · `091` odnawialne gałęzie · `096` fauna GLB / hold / światła / blood splat
+**Las / narzędzia / zbieractwo** — `058` cykl drzew · `061` dig UX · `065` GLB skały/złoża · `082` widły/sierp/clutter · `085` handheld lights + village torches · `086` trawa w workerze (zdrowy baseline `Simulate (ms)` potwierdzony w przeglądarce; pixel-identyczny layout nie porównany explicite) · `087` instancing roślinności/propsów (fazy 1–5+7; brak pomiaru Draw calls przed/po) · `091` odnawialne gałęzie · `096` fauna GLB / hold / światła / blood splat
 
 **Fauna / jaskinie** — `056` głodny predator · `064` cave vs droga · `080` fauna vs footprint osady · `083` dziura w terenie przy jaskini
 
-**UI / audio / rest** — `046` Vue+Tailwind · `059` SFX pick/drop (`2026-08-11--059--inventory-pick-drop-sfx.md`) · `075` time-skip catch-up NPC · `078` `playAt` falloff · `079` InteractionQueue / studnia · `084` obóz + town rest · `088` asset alignment browser · `090` miecz/kupiec/namiot/jaskinie/kilof
+**UI / audio / rest** — `059` SFX pick/drop (`2026-08-11--059--inventory-pick-drop-sfx.md`) · `075` time-skip catch-up NPC · `078` `playAt` falloff · `079` InteractionQueue / studnia · `084` obóz + town rest · `088` asset alignment browser · `090` miecz/kupiec/namiot/jaskinie/kilof
 
 **NPC** — `060` wykonywalny grafik (`eat`/`home`/`wake`) + overlay traits (`night_owl` / `fast_worker` / `sociable`)
 
@@ -66,11 +67,11 @@ Implementation complete; needs play/browser check. Grouped; full write-up is in 
 Compact ID list. Open the file only when you need the original scope.
 
 - **Fundament:** `001` teren · `003` zegar · `006` terrain workers · `007` streaming/save · `008` trawa · `009` postprocess · `028` biomy · `062` terrain overhaul · `063` las/habitat · `066` VFX · `068` nierówne drogi
-- **Osady / NPC:** `002` osada+NPC · `011` dialog · `013` płeć · `014` SFX reakcji · `020` grafik/place · `022` character depth · `025` multi-osady · `026` drogi · `027` imiona · `031` gen. wiosek · `038` ogniska · `044` detale świata · `048` dialogi v2 · `073` typy drzew
+- **Osady / NPC:** `002` osada+NPC · `011` dialog · `013` płeć · `014` SFX reakcji · `020` grafik/place · `022` character depth · `025` multi-osady · `026` drogi · `027` imiona · `031` gen. wiosek · `038` ogniska · `044` detale świata · `048` dialogi v2 · `073` typy drzew · `047` village overhaul
 - **Fauna / walka:** `004` chase/flee · `010` predator-prey · `021` animal life · `042` świadomość gracza · `045` Health/Stamina
-- **Itemy / świat:** `016` ambient audio · `017` gaze labels · `018` questy v2 · `029` minimapa · `030` zbieralne · `041` czekaj/odpoczynek · `043` ekwipunek · `050` pochodnia · `051` atmosfera · `067` minimapa N
-- **App / UI:** `005` ekrany · `023` touch · `053` createApp refactor · `054` WorldBundle refs · `055` shared simulation
-- **Archiwum:** `012` etykiety → `017`/`022` · `019` identity → `022`
+- **Itemy / świat:** `016` ambient audio · `017` gaze labels · `018` questy v2 · `029` minimapa · `030` zbieralne · `041` czekaj/odpoczynek · `043` ekwipunek · `050` pochodnia · `051` atmosfera · `067` minimapa N · `052` łopata/kamienie · `057` siekiera
+- **App / UI:** `005` ekrany · `023` touch · `053` createApp refactor · `054` WorldBundle refs · `055` shared simulation · `046` Vue+Tailwind
+- **Archiwum:** `012` etykiety → `017`/`022` · `019` identity → `022` · `032` zasoby naturalne· `039` znaki drogowe
 
 ---
 
@@ -87,7 +88,7 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the 
 - **Światło w domach** — `findWallMount` raycastuje bryłę; 2026-08-11: nadal nierówne, potrzeba mapowania per model.
 - **Latające obiekty** — `waitForChunks` przed propsami osady; 2026-08-11: nadal nieidealne.
 - **Morze (telefon)** — artefakty krawędzi, plamy; spróbować bardziej przezroczystej wody.
-- **Woda śródlądowa** — dwa materiały na jednym stawie; SoT [WATER.md](../WATER.md), issue 028.
+- **Woda śródlądowa** — dwa materiały na jednym stawie; SoT [WATER.md](../WATER.md), issue 028, plan [098](./2026-08-13--098--water-unified-shader-shore-reflections.md).
 
 ## Related
 

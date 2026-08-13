@@ -12,6 +12,8 @@ Legenda statusu wiedzy: ✅ potwierdzone w kodzie (z `file:line`) · 🟡 zało�
 
 ## 1. Werdykt
 
+> ⚠️ **Uzupełniony po odpowiedziach użytkownika — patrz [§11](#11-werdykt-po-odpowiedziach-użytkownika-2026-08-13).** Poziom **L2 i technika B zostają bez zmian**. Zmieniają się trzy rzeczy: generator przechodzi na **siatkę jaskiń z jitterem** (wzorzec siatki osad, ~500 m), kolizja przechodzi do planowanego systemu fizyki (plan `097`), a v1 przestaje być puste (zwierzę + skarb).
+
 **Rekomendacja: celuj w L2, ale zbuduj to jako jedną abstrakcję od pierwszego dnia. v1 = L1 zrealizowany jako graf z jedną krawędzią.**
 
 | Pytanie | Odpowiedź |
@@ -211,12 +213,32 @@ Dlaczego to nie wymusza rewrite:
 Odpowiedzi na 1, 4 i 5 zmieniają technikę; reszta zmienia zakres.
 
 1. **Skala.** Ile jaskiń „prawdziwych” w promieniu grywalnym? Dziś jest 10 rowów w pierścieniu 130–620 m. Czy L2 to *rzadkość* (2–4 na świat, reszta zostaje fasadą/rowem), czy każda z dzisiejszych 10 ma stać się prawdziwą jaskinią? (Odpowiedź „wszystkie i więcej” przesuwa nas w stronę F i wtedy rekomendacja się zmienia.)
+
+**Odpowiedź**: chcę 0-2 duże jaskinie (2+ korytarze) na chunk gdzie są góry (75% szans na jaskinię), oraz 0-1 małą jaskinię (1 korytarz) na innych terenach (30% szans).
+
 2. **Zejście.** Czy korytarz opadający ~10–15% w dół jest OK produktowo? To jest techniczny warunek nadkładu i tego, żeby sala mogła być pod łąką, a nie tylko pod klifem.
+
+**Odpowiedź:** Tak
+
 3. **Fauna/NPC w środku.** Czy kiedykolwiek mają wchodzić (niedźwiedź w jaskini, wilki w legowisku), czy jaskinia jest przestrzenią wyłącznie gracza? Wpływa na to, czy graf od razu projektujemy jako navgraf.
+
+**Odpowiedź:** Tak - wilk lub niedźwiedź. (btw. chcę dodać fizykę dla kolizji)
+
 4. **Kopanie wewnątrz.** Czy kilof/łopata mają działać na ściany jaskini (poszerzanie, własne tunele)? **Jeśli tak — B jest niewłaściwe** i trzeba świadomie odłożyć temat do czasu decyzji o wokselach.
+
+**Odpowiedź:** Byłoby miło, ale możemy to odłożyć.
+
 5. **Czy jaskinia to prototyp wnętrz w ogóle?** Czy ta sama abstrakcja ma później obsłużyć wnętrza chat (VISION: rozszerzać couplingi, nie tworzyć równoległych mechanizmów), czy jaskinia ma zostać jaskinią? Wpływa tylko na nazwę i granicę API — ale lepiej zdecydować przed, niż po.
+
+**Odpowiedź:** Byłoby miło mieć wnętrza chat i zamków. Nie wiem czy tym samym mechanizmem.
+
 6. **Fasada vs lokacja.** Czy fauna-cave (`createCaveMouth`, spawner zwierzyny przy osadzie) ma **na zawsze** zostać płaską fasadą? Rekomendacja: tak, i rozdzielić to nazewniczo w docs/kodzie (`FaunaDen` vs `CaveVolume`), żeby nikt nie próbował włożyć lisów do sali 30 m.
+
+**Odpowiedź:** Tak, ewentualnie to będzie mała jaskinia (1 tunel).
+
 7. **Zawartość v1.** Plan 090 mówi „pusto”. Czy v1 prawdziwej jaskini też ma być pusta (czyli nagrodą jest sama eksploracja + użycie pochodni), czy od razu chcemy jeden przedmiot na końcu? To zmienia, czy potrzebna jest persystencja stanu.
+
+**Odpowiedź:** Chcę w jaskini dać zwierzę i/lub skarb.
 
 ---
 
@@ -250,3 +272,124 @@ Nie jest to plan implementacyjny — to kolejność, w jakiej powinny powstać p
 5. **Plan: L2** — generator grafu 3–4 krawędzi + komnata, drugie wejście, ewentualnie fauna/loot.
 
 **Nie implementować niczego z tej listy w ramach tego researchu.**
+
+---
+
+## 11. Werdykt po odpowiedziach użytkownika (2026-08-13)
+
+Odpowiedzi są w §8. Trzy z nich realnie zmieniają wnioski: **1 (gęstość)**, **3 (fizyka kolizji + zwierzę w środku)** i **7 (zawartość v1)**. Odpowiedzi 2, 4, 5, 6 potwierdzają rekomendacje z §1–§10.
+
+### 11.1 Gęstość — kalibracja (poprawka po rozmowie, 2026-08-13)
+
+Pierwotna odpowiedź mówiła „na chunk”, przy założeniu, że chunk to obszar mieszczący wioskę i dużo przestrzeni wokół (~500–1000 m). **Chunk ma 64 × 64 m** (✅ `worldConfig.ts:137`), czyli ~20× mniejszą powierzchnię niż komórka wioski. Intencja brzmiała: **„jaskinia nie jest częsta”**, i ta intencja jest wiążąca — nie liczby per chunk.
+
+Punkty odniesienia w tym świecie:
+
+| Wielkość | Wartość | Źródło |
+|---|---|---|
+| Chunk | 64 × 64 m = 4 096 m² | ✅ `worldConfig.ts:137` |
+| Siatka osad („1 wioska + przestrzeń wokół”) | **280 m**, min. separacja ~150 m | ✅ `settlementGenerator.ts:62` (`SETTLEMENT_GRID_STEP`) |
+| Załadowany świat wokół gracza | ±192 m (`loadRadius 3`) | ✅ `chunkManager.ts:979-1004` |
+| Dzisiejsze large caves | 10 sztuk, pierścień 130–620 m | ✅ `largeCaves.ts:37-40` |
+
+Te same procenty przeliczone na komórkę o rozmiarze, który miałeś na myśli:
+
+| Komórka | Małe jaskinie (30%) — średni odstęp | Duże (75% × 0–2) w górach — średni odstęp | Ile w promieniu 1 km |
+|---|---|---|---|
+| 64 m (chunk — **błędna interpretacja**) | ~117 m | ~64 m | ~200+ ❌ |
+| 280 m (siatka osad) | ~510 m | ~270 m | ~12 małych + duże tylko w górach |
+| **500 m (najbliższe intencji)** | **~910 m** | **~480 m** | **~4 małe + ~3–8 dużych** 🟡 |
+| 1000 m | ~1 800 m | ~950 m | ~1 mała + ~3 duże |
+
+**Wniosek: przy komórce 500 m wracamy dokładnie do L2 i werdykt z §1 obowiązuje bez zmian.** Alarm „L3-lite”, który postawiłem w poprzedniej wersji tej sekcji, wynikał z odczytania „chunk” dosłownie i **jest wycofany**. Rzędy wielkości (~4 małe + ~3–8 dużych w promieniu grywalnym) są bardzo blisko dzisiejszych 10 sitów — czyli technika B, koszt z §4 i kolejność z §10 zostają aktualne.
+
+**Rekomendacja: przestać wyrażać gęstość „na chunk” i wyrażać ją w metrach między wejściami.** To jednostka odporna na zmianę `chunkSize` i zgodna z tym, jak myślisz o świecie.
+
+### 11.2 Model generatora: siatka jaskiń, analogicznie do siatki osad
+
+Dzisiejsze `largeCaves.ts` losuje 10 sitów globalnie w pierścieniu wokół (0,0) (✅ `largeCaves.ts:37-40, 100`) — to nie skaluje się na nieskończony świat, niezależnie od gęstości.
+
+Silnik ma już gotowy, sprawdzony wzorzec na dokładnie ten problem: **deterministyczna siatka z jitterem**, używana przez osady (`SETTLEMENT_GRID_STEP = 280` + losowe przesunięcie w komórce, ✅ `settlementGenerator.ts:62, 125-126, 158`). Rekomendacja:
+
+```text
+CAVE_GRID_STEP ≈ 500 m
+per komórka: hash(seed, gx, gz) → kandydat + jitter w obrębie komórki
+             teren górski  → duża jaskinia (2+ korytarze), p ≈ 0.6–0.75
+             pozostały     → mała jaskinia (1 korytarz),   p ≈ 0.3
+             następnie: test nadkładu (§4.1) — odrzuca lub akceptuje
+```
+
+Dlaczego to, a nie „per chunk w workerze”:
+
+- Odstęp 500 m jest ~8× większy niż chunk, więc jaskinia i tak przecina wiele chunków — decyzja per chunk wymagałaby odpytywania sąsiadów i tak. Siatka to załatwia z definicji.
+- **To jest ten sam mechanizm, którym powstają wioski** — czyli rozszerzenie istniejącego couplingu, nie równoległy system (CLAUDE.md).
+- Wejścia trafiają do world-genu tą samą drogą co polany wiosek: jako segmenty zasilające `roadTint` w `chunkHeightmap.ts` (✅ `:600-798`), co automatycznie wycina trawę/drzewa/skały wokół otworu i naprawia problem z §2.
+- Determinizm z seeda za darmo, zero persystencji geometrii.
+
+**Deklarowane procenty to *częstość prób*, nie gwarancja.** Test nadkładu odrzuci część kandydatów — i to jest pożądane, bo odsiewa miejsca, gdzie korytarz przebiłby wzgórze. Realna gęstość wyjdzie niższa od nominalnej i **trzeba ją zmierzyć przed ustaleniem progów** (spike, §11.8).
+
+### 11.3 Ryzyko przy tej (skalibrowanej) gęstości
+
+Po kalibracji trzy z czterech wcześniejszych ryzyk znikają: draw calls (1–2 volumes naraz zamiast ~50), monotonia (kilkanaście jaskiń da się dopieścić generatorem), „ser szwajcarski” w górach (przy odstępie ~480 m to rzadkość, nie sito). Zostaje jedno:
+
+**Wejście na płaskim terenie.** Brief §1 wymaga: „wejście **w zbocze, nie dziura w łące**”. Małe jaskinie mają powstawać na „pozostałych terenach”, czyli głównie na nizinach — a tam test nadkładu odrzuci większość kandydatów i deklarowane 30% nigdy się nie zrealizuje. Dwa wyjścia:
+
+1. Przyjąć, że małe jaskinie **też wymagają zbocza** (pagórek, skarpa, brzeg wąwozu) i pogodzić się, że na płaskiej łące ich nie ma. Realna gęstość spada, ale każde wejście wygląda dobrze.
+2. Dopuścić **drugi archetyp wejścia** — zapadlisko / skalna wychodnia (technika **D** z §3) — jako równorzędny wariant dla płaskiego terenu.
+
+Rekomendacja: **(1) na v1**, (2) dopiero jeśli pomiar pokaże, że nizin bez zbocza jest tyle, że jaskinie praktycznie z nich znikają. Odwrotnie niż rekomendowałem przed kalibracją — przy rzadkich jaskiniach nie ma presji, żeby wciskać je na płaskie tereny.
+
+### 11.4 Fizyka i kolizje (odpowiedź 3) — unieważnia część rekomendacji z §1
+
+Użytkownik chce **realnego systemu kolizji** (plan [`097`](../plans/2026-08-13--097--physics-falling-collisions-jumping.md)). To zmienia rekomendację „kolizja z grafu, nie z mesha”:
+
+- **Nie budować dla jaskini własnej kolizji**, jeśli system kolizji i tak powstaje (CLAUDE.md: rozszerzać istniejące couplingi, nie tworzyć równoległych mechanizmów). Ściany jaskini stają się po prostu ciałami statycznymi w tym systemie.
+- **Ale graf layoutu zostaje** — z trzech innych powodów, niezależnych od kolizji: (a) jest źródłem mesha, (b) jest źródłem sitingu/testu nadkładu, (c) **jest navmeshem dla zwierzęcia w środku** (odpowiedź 3: wilk/niedźwiedź).
+- Kolejność ma znaczenie: jeśli plan `097` (kolizje) idzie **przed** jaskiniami, jaskinia dostaje ściany za darmo. Jeśli **po** — jaskinia potrzebuje tymczasowego `clampToVolume` z grafu, który potem trzeba będzie usunąć. **Rekomendacja: fizyka/kolizje przed jaskiniami.**
+
+### 11.5 Zwierzę i skarb w środku (odpowiedzi 3 i 7) — nowe couplingi
+
+v1 przestaje być „pusta rura”, więc dochodzą rzeczy, których §6 nie obejmował:
+
+| Coupling | Problem | Uwaga |
+|---|---|---|
+| `AnimalAgent` w objętości | ✅ dziś Y **wyłącznie** z `sampleHeight` (`AnimalAgent.ts:393-394`) — wilk w jaskini stanąłby na powierzchni terenu, nad dachem | Zwierzę musi umieć brać Y z `CaveVolume.sampleFloor`. To ten sam seam co `setGround()` u gracza, ale `AnimalAgent` go nie ma — trzeba dodać. **To jest realna nowa praca, nie drobiazg.** |
+| Ruch zwierzęcia po grafie | brak navmeshu, ruch to wander/chase po płaszczyźnie | Krawędzie grafu jako navgraf; zwierzę porusza się wzdłuż korytarza, nie w linii prostej do gracza |
+| Zwierzę wychodzi / gracz ucieka | granica volume | Trzeba zdefiniować, co się dzieje przy przekroczeniu wejścia w obie strony |
+| Skarb | brak persystencji jakiegokolwiek stanu jaskiń | Zapisywać flagi `{ caveId, looted, cleared }` — **nie** geometrię. `caveId` musi być stabilny: `(chunkCoord, index)`, nie indeks w globalnej liście |
+| Walka we wnętrzu | melee istnieje, ale nigdy nie działało w ciasnej przestrzeni z kamerą przy ścianie | 🟡 ryzyko UX, do sprawdzenia w przeglądarce |
+
+### 11.6 Pozostałe odpowiedzi — potwierdzenia
+
+- **2 (zejście ~10–15%): tak** → §4.1 zostaje bez zmian. To warunek nadkładu i tego, żeby sala mogła być pod łąką.
+- **4 (kopanie: odłożone)** → B pozostaje właściwe. **Uwaga:** kopanie + gęstość z 11.1 razem = F. Jeśli kopanie kiedyś wróci jako wymaganie, to jest moment na przemyślenie silnika terenu, a nie na doklejanie go do B.
+- **5 (wnętrza chat/zamków: „byłoby miło, nie wiem czy tym samym mechanizmem”)** → rekomendacja: **nie abstrahować na zapas**. Nazwać `CaveVolume`, ale trzymać API z §5 czyste (graf + `sampleFloor` + `contains` + mesh), żeby przemianowanie na `InteriorVolume` było refaktorem nazwy, a nie przebudową. Wnętrze chaty i tak będzie miało inny mesh (GLB) i inne wejście (drzwi), więc wspólny jest tylko kontrakt, nie implementacja.
+- **6 (fauna-cave)**: mała jaskinia (1 korytarz) **zastępuje** dzisiejszą fasadę `createCaveMouth` tam, gdzie siting przejdzie. Dobra konsolidacja — znika osobny system. Tam, gdzie siting nie przejdzie, zostaje fasada. Rozdział nazewniczy (`FaunaDen` vs `CaveVolume`) nadal potrzebny.
+
+### 11.7 Zrewidowany werdykt
+
+| | Przed odpowiedziami | Po odpowiedziach + kalibracji gęstości |
+|---|---|---|
+| Poziom | L2 (rzadkie lokacje) | **L2 — bez zmian.** Gęstość „na chunk” była nieporozumieniem; intencja to ~500 m między wejściami |
+| Technika | B | **B** — pod warunkiem że kopanie zostaje odłożone |
+| Generator | globalna lista sitów (jak dziś) | **siatka jaskiń z jitterem (`CAVE_GRID_STEP ≈ 500 m`), wzorowana na siatce osad** ← główna zmiana |
+| Kolizja | analitycznie z grafu | **z systemu fizyki (plan 097)**; graf zostaje jako mesh-source, siting i navmesh |
+| Wejścia | jeden archetyp (w zbocze) | **jeden archetyp na v1** (zbocze); zapadlisko/wychodnia (D) tylko jeśli pomiar pokaże, że nizin bez zbocza jest za dużo |
+| v1 | pusty korytarz | korytarz + **zwierzę i/lub skarb** → persystencja flag + `AnimalAgent` w objętości |
+| Kolejność | jaskinie samodzielnie | **fizyka/kolizje (097) przed jaskiniami** |
+
+### 11.8 Zrewidowana kolejność prac (zastępuje §10)
+
+1. **Plan `097` — kolizje** (przynajmniej warstwa 2.2). Jaskinie są jego pierwszym poważnym konsumentem.
+2. **Spike gęstości i nadkładu.** Dla obecnego seeda zmierzyć, jaki odsetek komórek siatki 500 m (górskich i nizinnych) faktycznie przechodzi test nadkładu przy korytarzu 20–30 m opadającym 12%, i jaki wychodzi realny odstęp między wejściami w metrach. **Dopiero ta liczba pozwala ustawić `CAVE_GRID_STEP` i progi 75%/30%.** Bez pomiaru progi są zgadywaniem.
+3. **Plan: siting jaskiń jako część world-genu** — siatka `CAVE_GRID_STEP` z jitterem (wzorzec `SETTLEMENT_GRID_STEP`), wejście podawane do `chunkHeightmap.ts` jako segment `roadTint`, jak polany wiosek. Sam w sobie naprawia też dzisiejszą trawę w rowie (§2).
+4. **Plan: `CaveVolume` v1** — graf, mesh, wejście, oświetlenie + `PlayerTorch`, kamera, mała jaskinia (1 korytarz).
+5. **Weryfikacja w przeglądarce** — szew, ciemność, kamera w ciasnym korytarzu, gęstość „na oko” podczas spaceru.
+6. **Plan: duża jaskinia** — 2+ korytarze, komnata, zwierzę (navgraf) + skarb (persystencja flag).
+
+### 11.9 Nowe pytania otwarte ❓
+
+1. Czy `CAVE_GRID_STEP ≈ 500 m` odpowiada Twojemu „jaskinia nie jest częsta”? Konkretnie: **duża jaskinia co ~500 m w górach, mała co ~900 m poza nimi** — czyli podczas typowego spaceru mijasz jedną co kilka minut, nie co kilkanaście sekund.
+2. Czy małe jaskinie mogą **nie występować na płaskiej łące** (wymóg zbocza), czy wolisz drugi archetyp wejścia (zapadlisko), żeby były też na nizinach?
+3. Czy plan `097` (kolizje) ma faktycznie iść przed jaskiniami — to jest kolejność, która minimalizuje pracę do wyrzucenia.
+4. Czy zwierzę w jaskini ma być **stałym mieszkańcem** (respawn, terytorium, wychodzi na powierzchnię) czy **strażnikiem skarbu** (jednorazowy, po zabiciu jaskinia zostaje pusta)? Pierwsze jest bliższe VISION („świat żyje niezależnie”), drugie jest znacznie tańsze.

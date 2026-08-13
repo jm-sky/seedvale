@@ -1,6 +1,6 @@
 # Plan: Natural Resources, Food & Village Economy
 
-**Status:** `verification needed` 🔍 — checklist §14 punkty 1-6, 8-9 zaimplementowane 2026-08-10, punkt 7 (outposts) zaimplementowany jako opcjonalny/warunkowy mechanizm; wymaga wizualnej weryfikacji w przeglądarce na kilku ziarnach (patrz „Stan implementacji" niżej).
+**Status:** `done` — checklist §14 punkty 1-6, 8-9 zaimplementowane 2026-08-10, punkt 7 (outposts) zaimplementowany jako opcjonalny/warunkowy mechanizm; wymaga wizualnej weryfikacji w przeglądarce na kilku ziarnach (patrz „Stan implementacji" niżej).
 **Created:** 2026-08-08
 **Scope:** kolejny etap po generowaniu wiosek ([village-generation.md](./2026-08-08--031--village-generation.md)), rozszerza [multi-settlements.md](./2026-08-07--025--multi-settlements.md) (tam „dystrybucja zasobów per wioska" jest jawnie poza zakresem v1 — to jest ten plan)
 

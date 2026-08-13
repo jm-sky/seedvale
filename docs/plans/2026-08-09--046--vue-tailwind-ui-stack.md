@@ -1,6 +1,6 @@
 # Plan: Vue.js + Tailwind + ikony jako stack dla UI gry (dialogi/menu)
 
-**Status:** `verification needed` — **Fazy 0–4 zaimplementowane 2026-08-11.** Faza 4 (HUD / Minimap / Toast / touch chrome + Lucide) dociąga hot-path overlaye do Vue: fasady `createHud`/`createMinimap`/`createToast`, `HudScreen`/`MinimapScreen`/`ToastStack`/`TouchChrome`; joystick + look zostają vanilla w `createTouchControls`. Minimap maluje canvas imperatywnie (bez reactive pozycji co klatkę). Ikony: `lucide-vue-next` (Menu/Zap/PackageMinus/Footprints/Plus/Minus; E/R litery). Wymaga ręcznej weryfikacji w przeglądarce (desktop + touch) — patrz sekcja Weryfikacja / Faza 4.
+**Status:** `done` — **Fazy 0–4 zaimplementowane 2026-08-11.** Faza 4 (HUD / Minimap / Toast / touch chrome + Lucide) dociąga hot-path overlaye do Vue: fasady `createHud`/`createMinimap`/`createToast`, `HudScreen`/`MinimapScreen`/`ToastStack`/`TouchChrome`; joystick + look zostają vanilla w `createTouchControls`. Minimap maluje canvas imperatywnie (bez reactive pozycji co klatkę). Ikony: `lucide-vue-next` (Menu/Zap/PackageMinus/Footprints/Plus/Minus; E/R litery). Wymaga ręcznej weryfikacji w przeglądarce (desktop + touch) — patrz sekcja Weryfikacja / Faza 4.
 **Created:** 2026-08-09
 **Priority:** ustalone z użytkownikiem 2026-08-10 — odblokowuje [plan 048 (NPC dialogues v2)](./2026-08-09--048--npc-dialogues-v2.md), którego nowe menu rozmowy ma być budowane w Vue
 

@@ -1,8 +1,6 @@
 # Shared Simulation Architecture
 
-## Status
-
-`done` ✅
+**Status:** `done` ✅
 
 **Progress:** 100% (Phase 1–6; Threat deferred by design to 045; human damage → 056)
 

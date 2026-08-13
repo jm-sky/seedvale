@@ -1,6 +1,6 @@
 # Siekiera i ścinanie drzew przez gracza — v1
 
-**Status:** `verification needed`
+**Status:** `done`
 **Created:** 2026-08-10
 **Related:** [058 — Living Forest / Tree Lifecycle](./2026-08-10--058--living-forest-tree-lifecycle.md)
 **Related pattern:** [052 — Shovel: digging & finding stones](./2026-08-10--052--shovel-digging-and-finding-stones.md)

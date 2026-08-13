@@ -1,8 +1,8 @@
 # Village Generation Overhaul
 
-**Status:** `verification needed` 🔍  
-**Reviewed:** 2026-08-11 against current `main` repository state  
-**Priority:** 🔴 high  
+**Status:** `done`
+**Reviewed:** 2026-08-11 against current `main` repository state
+**Priority:** 🔴 high
 **Effort:** XL
 
 ## Implementation progress (2026-08-11)

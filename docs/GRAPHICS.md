@@ -29,7 +29,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G3 | Liście / kwiaty z GLTF `alphaMode: BLEND` → przy loadzie **opaque `alphaTest` cutout** (`hardenFoliageAlpha`). Korony piszą depth. | `src/world/foliageWind.ts`, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
 | G4 | Woda transparentna: ocean i jeziora mają **`depthWrite: false`**. Nie łączyć `transparent` + `depthWrite: true` + wysokiego `renderOrder` — to maluje wodę przez korony. | `createOcean.ts`, `createWater.ts` |
 | G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Mirror RT **mały** (256²), **jeden** pass na całą wodę — nie per jezioro. Dziś implementacja to Water.js; target [WATER.md](./WATER.md) W1/W9: ta sama rodzina shadera + opcjonalne lustro. | `createOcean.ts` |
-| G6 | Jeziora = per-chunk shader z maską heightmap. **W8:** śródlądzie nie discarduje do oceanu. Dziś kod nadal `vBodyScale > 0.9` → ocean (issue [028](./issues/2026-08-13--028--inland-water-dual-material.md)). | `createWater.ts` |
+| G6 | Jeziora = per-chunk shader z maską heightmap. Discard `vBodyScale > 0.9` tylko na komórkach oceanu (kontynentalność), nie na dużych stawach. Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) faza 1 — browser check. | `createWater.ts`, `waterBodies.ts` |
 | G7 | Post-process: EffectComposer + N8AO + SMAA (+ bloom / god rays / film grade). Hardware MSAA wyłączone (i tak bez efektu na targetach composera). | `createPostProcessing.ts`, `createRenderer.ts` |
 | G8 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | `CLAUDE.md` |
 | G9 | Droga = tint korytarza na meshu terenu (nie osobny mesh). Miękki brzeg + ziarno dirtu; trawa **soft-fade** w korytarzu, nie hard bald cut. Extra gęstość łąki = **near-field filler LOD**, nie globalny bump `grass.density`. | `chunkHeightmap` / `biomeColors` / `grass` / `chunkManager`, issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
@@ -54,6 +54,11 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-08-13 — W8 faza 1: inland nie jest oceanem 🔧
+
+- `computeBodyScale`: ocean = niska kontynentalność; jeziora cap `LAKE_SCALE_MAX` 0.85 (poniżej discard 0.9). Usunięte `isLarge` / 35% chunka.
+- Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) — `verification needed`. Plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1.
 
 ### 2026-08-13 — Kierunek wody: jedna rodzina, W8, lustro z Vue 📝
 
@@ -101,8 +106,8 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 | Temat | Status | Link |
 |-------|--------|------|
-| Soft shore fade ocean ↔ ląd | `todo` | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md) |
-| Śródlądzie = dwa materiały wody | `todo` | [WATER.md](./WATER.md) W8, issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) |
+| Soft shore fade ocean ↔ ląd | `planned` | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md), plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 |
+| Śródlądzie = dwa materiały wody | `verification needed` | [WATER.md](./WATER.md) W8, issue [028](./issues/2026-08-13--028--inland-water-dual-material.md), plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1 |
 | Droga/trawa ground cover (#1–#3) | `done` | issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
 | God rays whiteout (fix) | `done` | issue [016](./issues/2026-08-11--016--god-rays-mountain-whiteout.md) |
 | Terrain detail normal „camo” (G vs B) | `verification needed` | issue [014](./issues/2026-08-10--014--terrain-detail-normal-map-green-channel.md) |
