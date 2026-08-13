@@ -1,8 +1,15 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { PlayAt } from '../audio/createWorldAudio'
 import type { KeyState } from '../input/Keyboard'
 import type { ToolKind } from '../items/HeldTool'
 import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
+import {
+  playFootstep,
+  playJumpLand,
+  playJumpTakeoff,
+  playWaterLap,
+} from '../audio/playerMoveSounds'
 import {
   CAMERA_DISTANCE_DEFAULT,
   CAMERA_DISTANCE_MIN,
@@ -52,6 +59,8 @@ const LIE_DOWN_Y_OFFSET = 0.25
  *  / label stay upright). */
 const CROUCH_ROTATION_X = 0.45
 const CROUCH_Y_OFFSET = -0.35
+const FOOTSTEP_WALK_INTERVAL = 0.45
+const FOOTSTEP_SPRINT_INTERVAL = 0.28
 
 type PlayerPose = 'stand' | 'crouch' | 'lie'
 
@@ -95,6 +104,9 @@ export class PlayerController {
   private currentAction: THREE.AnimationAction | null = null
   private moving = false
   private sprinting = false
+  private wasInWater = false
+  private footstepAccum = 0
+  private playAt: PlayAt | null = null
   private readonly forward = new THREE.Vector3()
   private readonly right = new THREE.Vector3()
   private readonly wish = new THREE.Vector3()
@@ -179,6 +191,11 @@ export class PlayerController {
 
     this.snapToGround()
     this.syncCamera()
+  }
+
+  /** World one-shots for footsteps / jump / splash — same `playAt` as the rest of the mixer. */
+  setMoveAudio(playAt: PlayAt | null): void {
+    this.playAt = playAt
   }
 
   static async create(
@@ -388,6 +405,7 @@ export class PlayerController {
     }
 
     this.updateVerticalMotion(dt)
+    this.tickFootsteps(dt)
     this.syncCamera()
     this.syncAnimation()
     this.syncHpBar()
@@ -467,6 +485,8 @@ export class PlayerController {
     this.verticalVelocity = 0
     this.grounded = true
     this.jumpRequested = false
+    this.wasInWater = groundY <= this.waterLevel
+    this.footstepAccum = 0
     this.modelRoot.rotation.x = 0
   }
 
@@ -476,6 +496,10 @@ export class PlayerController {
     const { x, z } = this.mesh.position
     const groundY = this.sampleHeight(x, z)
     if (groundY <= this.waterLevel) {
+      if (!this.wasInWater && this.playAt) {
+        playWaterLap(this.playAt, { x, y: this.waterLevel, z })
+      }
+      this.wasInWater = true
       const floorY = this.sampleFloor(x, z)
       const depth = Math.min(this.waterLevel - floorY, MAX_SWIM_DEPTH)
       this.mesh.position.y = this.waterLevel - depth
@@ -485,19 +509,26 @@ export class PlayerController {
       this.modelRoot.rotation.x = 0
       return
     }
+    this.wasInWater = false
 
     if (this.grounded && this.jumpRequested) {
       this.verticalVelocity = JUMP_SPEED
       this.grounded = false
+      if (this.playAt) playJumpTakeoff(this.playAt, { x, y: this.mesh.position.y, z })
     }
     this.jumpRequested = false
 
     this.verticalVelocity -= GRAVITY * dt
     const candidateY = this.mesh.position.y + this.verticalVelocity * dt
     if (candidateY <= groundY) {
+      const wasAirborne = !this.grounded
       this.mesh.position.y = groundY
       this.verticalVelocity = 0
       this.grounded = true
+      if (wasAirborne) {
+        if (this.playAt) playJumpLand(this.playAt, { x, y: groundY, z })
+        this.footstepAccum = 0
+      }
     } else {
       this.mesh.position.y = candidateY
       this.grounded = false
@@ -510,6 +541,22 @@ export class PlayerController {
           -JUMP_TILT_MAX,
           JUMP_TILT_MAX,
         )
+  }
+
+  private tickFootsteps(dt: number): void {
+    if (!this.playAt || !this.moving || !this.grounded || this.wasInWater) {
+      if (!this.moving) this.footstepAccum = 0
+      return
+    }
+    const interval = this.sprinting ? FOOTSTEP_SPRINT_INTERVAL : FOOTSTEP_WALK_INTERVAL
+    this.footstepAccum += dt
+    if (this.footstepAccum < interval) return
+    this.footstepAccum = 0
+    playFootstep(
+      this.playAt,
+      { x: this.mesh.position.x, y: this.mesh.position.y, z: this.mesh.position.z },
+      this.sprinting,
+    )
   }
 
   private syncCamera(): void {

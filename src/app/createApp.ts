@@ -4,6 +4,8 @@ import type { SaveData } from '../persistence/saveData'
 import { playActionChop, playActionDig, playActionMine } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
+import { createHouseDoorTracker } from '../audio/doorSounds'
+import { createFireAudio, playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { saveAllDomains, saveGraphics, savePlayer, saveWorld } from '../config/persistConfig'
 import {
@@ -39,6 +41,7 @@ import { MINE_DURATION_SEC, yieldForOre } from '../terrain/depositMining'
 import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
 import { applyDigAt, applyLevelAt } from '../terrain/digAction'
 import { mountVueUi } from '../ui-vue/mount'
+import { configureUiSounds } from '../ui-vue/store'
 import { createBusyOverlay } from '../ui/createBusyOverlay'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
@@ -206,6 +209,9 @@ export async function createApp(
     get region() { return config.terrain.region },
   }
   const ambientAudio = createAmbientAudio(worldAudio, ambientSamplers)
+  const fireAudio = createFireAudio(worldAudio)
+  const houseDoors = createHouseDoorTracker()
+  configureUiSounds(worldAudio.playOnce)
 
   const mapDiscovery = createMapDiscovery(initialSave?.map.discoveredCells)
   const mapProjection = createMapProjection(rawSampleParamsFromWorld(config))
@@ -248,6 +254,7 @@ export async function createApp(
     player.setPosition(bundle.settlementsManager.home.spawn.x, bundle.settlementsManager.home.spawn.z)
   }
   player.setName(config.player.name)
+  player.setMoveAudio(worldAudio.playAt)
   scene.add(player.mesh)
   const hud = createHud(container)
   hud.setTime(dayNight.timeOfDay)
@@ -258,6 +265,8 @@ export async function createApp(
   const playerTorch = createPlayerTorch({
     handSocket: () => player.handSocket(),
     onChange: () => syncHeldHud(),
+    onIgnite: () => playActionFireIgnite(worldAudio.playAt, player.mesh.position),
+    onExtinguish: () => playActionFireExtinguish(worldAudio.playAt, player.mesh.position),
   })
 
   syncHeldHud = (): void => {
@@ -294,7 +303,7 @@ export async function createApp(
       heldTool.unequip()
     }
     if (canRestore) {
-      void playerTorch.light(saved.source, { fuelRemaining: saved.fuelRemaining }).then(() => {
+      void playerTorch.light(saved.source, { fuelRemaining: saved.fuelRemaining, silent: true }).then(() => {
         syncHeldHud()
       })
     }
@@ -1080,7 +1089,7 @@ export async function createApp(
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
-    questManager, ambientAudio, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
+    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
     startGroundWork: (mode, x, z) => {
       if (heldTool.held() === 'pickaxe') {
         if (mode === 'level') startPickaxeLevelAt(x, z)
@@ -1168,6 +1177,8 @@ export async function createApp(
     touchControls?.dispose()
     sky.dispose()
     ambientAudio.dispose()
+    fireAudio.dispose()
+    configureUiSounds(null)
     worldAudio.dispose()
     disposeWorldBundle(bundle)
     playerTorch.dispose()

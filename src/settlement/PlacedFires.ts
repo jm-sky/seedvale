@@ -1,6 +1,8 @@
 import { type Object3D, type Scene, Vector3 } from 'three'
+import type { PlayAt } from '../audio/createWorldAudio'
 import type { HeightSampler } from '../player/PlayerController'
 import { disposeObject3D } from '../assets/loadGltf'
+import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { createCampfire, createCampfireFlame, createSimpleFireBase, placeOnGround } from './props'
 import { createVillageFire, type VillageFire } from './VillageFire'
 
@@ -74,6 +76,7 @@ export function createPlacedFires(
   scene: Scene,
   sampleHeight: HeightSampler,
   initial: readonly PlacedFire[] = [],
+  playAt?: PlayAt,
 ): PlacedFires {
   const fires: PlacedFireEntry[] = []
   const meshes = new Map<string, Object3D>()
@@ -88,7 +91,17 @@ export function createPlacedFires(
     const fuelPerBranch = pf.kind === 'simple' ? SIMPLE_FIRE_FUEL_PER_BRANCH : undefined
     fires.push({
       ...pf,
-      fire: createVillageFire(new Vector3(pf.x, sampleHeight(pf.x, pf.z), pf.z), flame, fuelPerBranch),
+      fire: createVillageFire(
+        new Vector3(pf.x, sampleHeight(pf.x, pf.z), pf.z),
+        flame,
+        fuelPerBranch,
+        playAt
+          ? {
+            onLight: (pos) => playActionFireIgnite(playAt, pos),
+            onExtinguish: (pos) => playActionFireExtinguish(playAt, pos),
+          }
+          : undefined,
+      ),
       everLit: false,
       unlitSeconds: 0,
     })

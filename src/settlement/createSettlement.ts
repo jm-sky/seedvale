@@ -14,6 +14,7 @@ import type { VillageSize } from './families'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { disposeObject3D } from '../assets/loadGltf'
+import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { type SettlementEconomy, WOODSHED_DEVELOPMENT } from '../economy'
 import {
   copyVec3,
@@ -49,7 +50,7 @@ import {
   signpostsForSettlement,
 } from './roadNetwork'
 import { cellSeed } from './settlementGenerator'
-import { createVillageFire, type VillageFire } from './VillageFire'
+import { createVillageFire, FUEL_PER_BRANCH, type VillageFire } from './VillageFire'
 import {
   buildWellInteractionQueueConfig,
   WELL_QUEUE_SERVING_OFFSET_FALLBACK,
@@ -388,7 +389,10 @@ export async function createSettlement(
   )
 
   const fire = landmarks.campfire
-    ? createVillageFire(landmarks.campfire.position, landmarks.campfire.flame)
+    ? createVillageFire(landmarks.campfire.position, landmarks.campfire.flame, FUEL_PER_BRANCH, {
+      onLight: (pos) => playActionFireIgnite(playAt, pos),
+      onExtinguish: (pos) => playActionFireExtinguish(playAt, pos),
+    })
     : undefined
 
   let nightFactor = 0

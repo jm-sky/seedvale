@@ -9,6 +9,7 @@ import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
 import type { RestOutcome, RestVariant } from '../ui/createQuickActions'
 import type { ToastVariant } from '../ui/createToast'
+import { playUiClick, playUiOpen } from '../audio/uiSounds'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { type DayNightState, formatClock, phaseName } from '../world/dayNight'
 
@@ -123,6 +124,21 @@ const HUD_HINT_DESKTOP = 'WASD · klik = mysz · Esc = kursor · E = interakcja 
 const TOAST_VISIBLE_MS = 2200
 const TOAST_FADE_MS = 300
 
+type PlayOnce = (url: string, volume?: number) => void
+let uiPlayOnce: PlayOnce | null = null
+
+export function configureUiSounds(playOnce: PlayOnce | null): void {
+  uiPlayOnce = playOnce
+}
+
+function emitUiOpen(): void {
+  if (uiPlayOnce) playUiOpen(uiPlayOnce)
+}
+
+export function emitUiClick(): void {
+  if (uiPlayOnce) playUiClick(uiPlayOnce)
+}
+
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, onAskSword: null, onOpenTrade: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
@@ -175,7 +191,7 @@ export function syncOverlayStack(id: string, open: boolean): void { const idx = 
 export function closeTopOverlay(): void { const top = ui.openStack.at(-1); if (top) overlayCloseHandlers.get(top)?.() }
 
 export function togglePause(): void { if (ui.pauseMenu.open) closePauseMenu(); else openPauseMenu() }
-export function openPauseMenu(): void { if (ui.pauseMenu.open) return; ui.pauseMenu.open = true; ui.pauseMenu.onPause?.() }
+export function openPauseMenu(): void { if (ui.pauseMenu.open) return; ui.pauseMenu.open = true; emitUiOpen(); ui.pauseMenu.onPause?.() }
 export function closePauseMenu(): void { if (!ui.pauseMenu.open) return; ui.pauseMenu.open = false; ui.pauseMenu.onResume?.() }
 export function isPauseMenuOpen(): boolean { return ui.pauseMenu.open }
 export function configurePauseMenu(seed: number, playerName: string, handlers: PauseHandlers): void { ui.pauseMenu.seed = seed; ui.pauseMenu.playerName = playerName; Object.assign(ui.pauseMenu, handlers) }
@@ -187,12 +203,12 @@ export function setPauseFirePitStatus(status: string): void { ui.pauseMenu.fireP
 export function setPauseTorchStatus(status: string): void { ui.pauseMenu.torchStatus = status }
 export function setPauseBranchStatus(status: string): void { ui.pauseMenu.branchStatus = status }
 
-export function openQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation; ui.questLog.open = true }
+export function openQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation; ui.questLog.open = true; emitUiOpen() }
 export function refreshQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation }
 export function closeQuestLog(): void { ui.questLog.open = false }
 export function isQuestLogOpen(): boolean { return ui.questLog.open }
 
-export function openFlavorDialog(name: string, line: string): void { ui.flavorDialog.prompt = null; ui.flavorDialog.name = name; ui.flavorDialog.line = line; ui.flavorDialog.open = true }
+export function openFlavorDialog(name: string, line: string): void { ui.flavorDialog.prompt = null; ui.flavorDialog.name = name; ui.flavorDialog.line = line; ui.flavorDialog.open = true; emitUiOpen() }
 export function setFlavorPrompt(text: string | null): void { if (!ui.flavorDialog.open) ui.flavorDialog.prompt = text }
 export function closeFlavorDialog(): void { ui.flavorDialog.open = false }
 export function isFlavorDialogOpen(): boolean { return ui.flavorDialog.open }
@@ -204,7 +220,7 @@ export function refreshVillagers(entries: readonly VillagerRefreshEntry[]): void
 export function isVillagersOpen(): boolean { return ui.villagers.open }
 export function setVillagersPage(page: number): void { ui.villagers.page = page }
 
-export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void { const state = ui.npcDialogueMenu; const override = questManager.onInteract(npc.name); state.npc = markRaw(npc); state.settlement = settlement; state.timeOfDay = timeOfDay; state.helpResult = override ?? { line: npc.getDialogueLine() }; state.open = true }
+export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void { const state = ui.npcDialogueMenu; const override = questManager.onInteract(npc.name); state.npc = markRaw(npc); state.settlement = settlement; state.timeOfDay = timeOfDay; state.helpResult = override ?? { line: npc.getDialogueLine() }; state.open = true; emitUiOpen() }
 function resetNpcDialogueMenu(): void { const state = ui.npcDialogueMenu; state.open = false; state.npc = null; state.settlement = null; state.helpResult = null }
 export function closeNpcDialogueMenu(opts?: { decline?: boolean }): void {
   const state = ui.npcDialogueMenu
@@ -236,6 +252,7 @@ export function openInventory(
   ui.inventory.onEquip = onEquip
   ui.inventory.onUnequip = onUnequip
   ui.inventory.open = true
+  emitUiOpen()
 }
 export function refreshInventory(
   counts: Partial<Record<ItemKind, number>>,

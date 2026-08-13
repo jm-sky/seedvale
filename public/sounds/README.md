@@ -42,11 +42,11 @@ candidates still under review: [`_temp/Sounds/README.md`](../../_temp/Sounds/REA
 | ambient-forest-loop-01.ogg | 170515__rolandasb__forest_ambient_01_loop.wav | https://freesound.org/people/rolandasb/sounds/170515/ | Loopable forest ambience (birds/wind) |
 | ambient-night-crickets-loop-01.ogg | 521843__mrfossy__outdoors_night_cricketsloop.wav | https://freesound.org/people/mrfossy/sounds/521843/ | Loopable night crickets |
 | ambient-coast-seagulls-waves-01.ogg | 56531__juskiddink__seagullswavesjuly-084of4freesound.wav | https://freesound.org/people/juskiddink/sounds/56531/ | Seagulls + waves, coastline |
-| ambient-fire-loop-01.ogg | FIREBurn_Loop Elements Fire Crackling…_ESM_SNLS.wav | Sonniss GDC 2026 — Epic Stock Media Synthesized Nature | **not wired**; S03 fire loop (~12 s) |
-| ambient-wind-loop-01.ogg | WINDInt_Loop Weather Wind Whipping…_ESM_SNLS.wav | Sonniss GDC 2026 — Epic Stock Media Synthesized Nature | **not wired**; S06 (~7.5 s) |
+| ambient-fire-loop-01.ogg | FIREBurn_Loop Elements Fire Crackling…_ESM_SNLS.wav | Sonniss GDC 2026 — Epic Stock Media Synthesized Nature | S03 fire loop (~12 s); gain from nearest lit campfire |
+| ambient-wind-loop-01.ogg | WINDInt_Loop Weather Wind Whipping…_ESM_SNLS.wav | Sonniss GDC 2026 — Epic Stock Media Synthesized Nature | S06 mountain / highland |
 | ambient-rain-loop-01.ogg | RAINInt_Heavy Rain on Window, Constant _JF_INT Storm.wav | Sonniss GDC 2026 — Jake Fielding Interior Wind Rain | **not wired**; S07; rain-on-window bed (~31 s) |
-| ambient-meadow-loop-01.ogg | AMBSwmp_Meadow Pipits…Wind blowing through Grass_JSE_HoN_Stereo.wav | Sonniss GDC 2026 — Just Sound Effects Highlands of Norway | **not wired**; open / meadow bed (trimmed ~25 s) |
-| ambient-waves-soft-01.ogg | WATRWave_Soft Waves Cliffs_JSE_RCoN_Stereo.wav | Sonniss GDC 2026 — Just Sound Effects Rocky Coast of Norway | **not wired**; soft coast waves (trimmed ~20 s); supplement to seagulls coast |
+| ambient-meadow-loop-01.ogg | AMBSwmp_Meadow Pipits…Wind blowing through Grass_JSE_HoN_Stereo.wav | Sonniss GDC 2026 — Just Sound Effects Highlands of Norway | Open / meadow bed (trimmed ~25 s) |
+| ambient-waves-soft-01.ogg | WATRWave_Soft Waves Cliffs_JSE_RCoN_Stereo.wav | Sonniss GDC 2026 — Just Sound Effects Rocky Coast of Norway | Soft coast waves (trimmed ~20 s); supplement to seagulls coast |
 | ambient-crowd-kids-01.ogg | CRWDChld_Walla Children Kids…Playground 01_ESM_CPS.wav | Sonniss GDC 2026 — Epic Stock Media Crowds Walla | **not wired**; weak S12 stand-in (kids playground walla, trimmed ~25 s) |
 
 ## Items / Inventory
@@ -56,7 +56,7 @@ candidates still under review: [`_temp/Sounds/README.md`](../../_temp/Sounds/REA
 | inventory-pick-up-01…04.ogg | 831642__ienba__generic-game-pick-up.wav | https://freesound.org/people/IENBA/sounds/831642/ | 4 variants split from one pack; random pick on collect |
 | inventory-drop-01.ogg | 791150__randbsoundbites__dropping-an-item-from-inventory.wav | https://freesound.org/people/randbsoundbites/sounds/791150/ | |
 
-## UI (not wired)
+## UI
 
 | filename | oryginal filename | source url | notes |
 |----------|-------------------|------------|-------|
@@ -65,7 +65,7 @@ candidates still under review: [`_temp/Sounds/README.md`](../../_temp/Sounds/REA
 | ui-click-03.ogg | interface1.wav | RPG Sound Pack (artisticdude / OpenGameArt; verify CC0) | S05 short UI blip |
 | ui-open-01.ogg | TOONMisc_Bird Flutes 3_CB Sounddesign_APPlicable Sounds.wav | Sonniss GDC 2026 — CB Sounddesign Organic UI | S05 open / positive |
 
-## Player / world interaction (not wired)
+## Player / world interaction
 
 | filename | oryginal filename | source url | notes |
 |----------|-------------------|------------|-------|
@@ -76,6 +76,7 @@ candidates still under review: [`_temp/Sounds/README.md`](../../_temp/Sounds/REA
 | door-creak-02.ogg | creak2.ogg | Kenney RPG sounds (CC0) | S14 variant |
 | door-latch-01.ogg | metalLatch.ogg | Kenney RPG sounds (CC0) | S14 latch |
 | water-lap-01.ogg | WATRLap_Summer Tennessee Lake Dock Water Ripples…_ESM_CPS.wav | Sonniss GDC 2026 — Epic Stock Media Storms Lakes Parks | **S02 candidate** only (gentle lap trimmed ~2 s — not a true splash/wade yet) |
+| action-jump-cloth-01.ogg | cloth1.ogg | Kenney RPG sounds (CC0) | S17 jump takeoff stand-in (cloth whoosh) |
 
 ## Actions
 
@@ -86,8 +87,8 @@ candidates still under review: [`_temp/Sounds/README.md`](../../_temp/Sounds/REA
 | action-melee-hit-01.ogg | 420673__sypherzent__basic-melee-hit.wav | https://freesound.org/people/SypherZent/sounds/420673/ | Short punch/impact; player melee hit (animal stays up); converted mono 16-bit 44.1 kHz |
 | action-melee-kill-01.ogg | 264062__paul368__melee-weapon-hit-with-male-moan-body-fall.wav | https://freesound.org/people/Paul368/sounds/264062/ | Hit + moan + body fall; player melee kill; converted mono 16-bit 44.1 kHz |
 | action-well-01.ogg | 146947__macferret_20__uoa_120217_kcqwell.wav | https://freesound.org/people/MacFerret_20/sounds/146947/ | Stone/water in well; player `[E]` at well + NPC drink at well; converted mono 16-bit 44.1 kHz |
-| action-fire-ignite-01.ogg | 24 Campfire, Dropping Fresh Pine Branches in Fire…Close 02.wav | Sonniss GDC 2026 — Ivo Vicic Campfire Bonfire FX | **not wired**; S03 ignite (trimmed ~2.5 s from long take) |
-| action-fire-extinguish-01.ogg | 42 Campfire, Putting Out Fire, Water from Bottle…Close.wav | Sonniss GDC 2026 — Ivo Vicic Campfire Bonfire FX | **not wired**; S03 extinguish (trimmed ~2.8 s) |
+| action-fire-ignite-01.ogg | 24 Campfire, Dropping Fresh Pine Branches in Fire…Close 02.wav | Sonniss GDC 2026 — Ivo Vicic Campfire Bonfire FX | S03 ignite (trimmed ~2.5 s from long take) |
+| action-fire-extinguish-01.ogg | 42 Campfire, Putting Out Fire, Water from Bottle…Close.wav | Sonniss GDC 2026 — Ivo Vicic Campfire Bonfire FX | S03 extinguish (trimmed ~2.8 s) |
 
 ## License notes (2026-08-12 batch)
 

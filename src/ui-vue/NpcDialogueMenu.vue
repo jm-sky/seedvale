@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { nearestArchetype } from '../ai/dialogue'
 import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } from '../ai/dialogueTemplates'
 import { useOverlayScreen } from './composables/useOverlayScreen'
-import { acceptNpcDialogueOffer, closeNpcDialogueMenu, isNpcDialogueMenuOpen, ui } from './store'
+import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, ui } from './store'
 
 type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword'
 const state = ui.npcDialogueMenu
@@ -26,18 +26,21 @@ const responseText = computed(() => {
     default: return ''
   }
 })
-function openMenu(): void { topic.value = null; swordLine.value = '' }
-function selectTopic(next: Topic): void { topic.value = next }
+function resetMenu(): void { topic.value = null; swordLine.value = '' }
+function backToTopics(): void { emitUiClick(); resetMenu() }
+function selectTopic(next: Topic): void { emitUiClick(); topic.value = next }
 function askSword(): void {
+  emitUiClick()
   swordLine.value = state.onAskSword?.() ?? ''
   topic.value = 'askSword'
 }
 function openTrade(): void {
+  emitUiClick()
   state.onOpenTrade?.()
 }
-function accept(): void { acceptNpcDialogueOffer(); topic.value = null }
-function close(): void { closeNpcDialogueMenu(); topic.value = null }
-watch(() => state.open, (open) => { if (open) openMenu() })
+function accept(): void { emitUiClick(); acceptNpcDialogueOffer(); topic.value = null }
+function close(): void { emitUiClick(); closeNpcDialogueMenu(); topic.value = null }
+watch(() => state.open, (open) => { if (open) resetMenu() })
 </script>
 
 <template>
@@ -121,7 +124,7 @@ watch(() => state.open, (open) => { if (open) openMenu() })
           v-else
           type="button"
           class="cursor-pointer self-start rounded-md bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-          @click="openMenu"
+          @click="backToTopics"
         >
           Wróć
         </button>

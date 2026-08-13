@@ -9,13 +9,18 @@ const NIGHT_LOOP_URL = '/sounds/ambient-night-crickets-loop-01.ogg'
 const NIGHT_MAX_VOLUME = 0.35
 
 /** Day ambience (birds/wind) + coastal surf — area-dependent layers, crossfaded
- *  by `ambientWeightsAt`'s forest/ocean weights. Already in `public/sounds/`
- *  (see README.md), previously unused. No mountain-wind asset yet — that
- *  layer is intentionally omitted rather than silently 404ing every load. */
+ *  by `ambientWeightsAt`'s forest/ocean/mountain weights. Wind/meadow/soft-waves
+ *  load lazily the first time their gain is non-zero. */
 const FOREST_LOOP_URL = '/sounds/ambient-forest-loop-01.ogg'
 const COAST_LOOP_URL = '/sounds/ambient-coast-seagulls-waves-01.ogg'
+const COAST_SOFT_LOOP_URL = '/sounds/ambient-waves-soft-01.ogg'
+const WIND_LOOP_URL = '/sounds/ambient-wind-loop-01.ogg'
+const MEADOW_LOOP_URL = '/sounds/ambient-meadow-loop-01.ogg'
 const FOREST_MAX_VOLUME = 0.3
 const COAST_MAX_VOLUME = 0.4
+const COAST_SOFT_MAX_VOLUME = 0.28
+const WIND_MAX_VOLUME = 0.32
+const MEADOW_MAX_VOLUME = 0.28
 
 /** Terrain samplers are cheap but not free (a few `smoothstep`s) — resample
  *  the player's area weights on a throttle instead of every frame; gain
@@ -43,6 +48,9 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
   const forestLoop = worldAudio.createLoop(FOREST_LOOP_URL)
   let nightLoop: AudioLoopHandle | null = null
   let coastLoop: AudioLoopHandle | null = null
+  let coastSoftLoop: AudioLoopHandle | null = null
+  let windLoop: AudioLoopHandle | null = null
+  let meadowLoop: AudioLoopHandle | null = null
   let sampleAccum = 0
 
   function update(dt: number, dayFactor: number, playerX: number, playerZ: number): void {
@@ -55,18 +63,34 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
     if (sampleAccum < SAMPLE_INTERVAL) return
     sampleAccum = 0
     const w = ambientWeightsAt(playerX, playerZ, samplers)
+    const meadow = (1 - w.ocean) * (1 - w.mountain) * (1 - w.forest)
     // Quieter/silent at night — birds are asleep.
     forestLoop.setTargetGain(w.forest * dayFactor * FOREST_MAX_VOLUME)
     if (!coastLoop && w.ocean > 0) {
       coastLoop = worldAudio.createLoop(COAST_LOOP_URL)
     }
     coastLoop?.setTargetGain(w.ocean * COAST_MAX_VOLUME)
+    if (!coastSoftLoop && w.ocean > 0) {
+      coastSoftLoop = worldAudio.createLoop(COAST_SOFT_LOOP_URL)
+    }
+    coastSoftLoop?.setTargetGain(w.ocean * COAST_SOFT_MAX_VOLUME)
+    if (!windLoop && w.mountain > 0) {
+      windLoop = worldAudio.createLoop(WIND_LOOP_URL)
+    }
+    windLoop?.setTargetGain(w.mountain * WIND_MAX_VOLUME)
+    if (!meadowLoop && meadow > 0) {
+      meadowLoop = worldAudio.createLoop(MEADOW_LOOP_URL)
+    }
+    meadowLoop?.setTargetGain(meadow * dayFactor * MEADOW_MAX_VOLUME)
   }
 
   function dispose(): void {
     nightLoop?.dispose()
     forestLoop.dispose()
     coastLoop?.dispose()
+    coastSoftLoop?.dispose()
+    windLoop?.dispose()
+    meadowLoop?.dispose()
   }
 
   return { update, dispose }

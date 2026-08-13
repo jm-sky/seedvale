@@ -4,7 +4,7 @@ import { isTouchDevice } from '../../input/isTouchDevice'
 import { type ItemKind } from '../../items/items'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { closeInventory, isInventoryOpen, ui } from '../store'
+import { closeInventory, emitUiClick, isInventoryOpen, ui } from '../store'
 import InventoryScreenItemDetails from './InventoryScreenItemDetails.vue'
 import InventoryScreenItemList from './InventoryScreenItemList.vue'
 
@@ -18,6 +18,7 @@ useOverlayScreen('inventory', isInventoryOpen, closeInventory)
 useTouchScroll(panel)
 
 const onSelectItem = (item: ItemKind) => {
+  emitUiClick()
   selectedItem.value = item
   currentView.value = 'details'
 }

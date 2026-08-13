@@ -2,7 +2,7 @@
 
 **Purpose:** factual snapshot of the implemented codebase. This document describes what exists now, not the desired future state.
 
-**Last verified:** 2026-08-13
+**Last verified:** 2026-08-14
 
 ## Read this first
 
@@ -83,7 +83,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - Each loaded settlement owns a `SettlementEconomy` (plan 071): bulk `wood`/`food`/`water` stock, demand targets, shortage/surplus. Woodcutter chop→deposit adds wood at the stockpile; a woodshed (second, smaller pile) is paid once from surplus wood. Farmer/fisher/miner scheduled work calls a shared production hook (empty outputs until 069). No second AI/inventory.
 - NPC dialogue v2 exists as a Vue screen with multiple conversation topics. Home trader opens a trade screen; home guard can be asked for a sword.
 - NPC reaction sounds are implemented (`playAt` from the NPC mesh — quieter farther away).
-- World one-shots that have a source position use `worldAudio.playAt` (linear falloff `ref=1.5` / `max=28`): well, melee, animal observe, axe chop. Inventory / quest thank-you stay on `playOnce`.
+- World one-shots that have a source position use `worldAudio.playAt` (linear falloff `ref=1.5` / `max=28`): well, melee, animal observe, axe chop, footsteps, jump/land, splash candidate, doors, fire ignite/extinguish. Inventory / quest thank-you / UI stay on `playOnce`. Ambient beds include forest, night crickets, coast (+ soft waves), mountain wind, meadow, and a distance-faded campfire loop.
 
 ### Fauna
 

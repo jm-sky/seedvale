@@ -35,8 +35,9 @@ export type PlayerTorch = {
   source: () => TorchSource | null
   fuelRemaining: () => number
   /** Ignites — caller checks inventory / held tool first.
-   *  Optional `fuelRemaining` restores a mid-burn torch from save. */
-  light: (source: TorchSource, opts?: { fuelRemaining?: number }) => Promise<void>
+   *  Optional `fuelRemaining` restores a mid-burn torch from save.
+   *  `silent` skips ignite SFX (save restore). */
+  light: (source: TorchSource, opts?: { fuelRemaining?: number, silent?: boolean }) => Promise<void>
   extinguish: () => void
   update: (dt: number) => void
   dispose: () => void
@@ -47,6 +48,8 @@ type HandAccess = {
   handSocket: () => Object3D
   /** Fired when lit state / source changes (HUD sync). */
   onChange?: () => void
+  onIgnite?: () => void
+  onExtinguish?: () => void
 }
 
 type FlameVisual = {
@@ -268,14 +271,17 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
 
       mount = group
       notify()
+      if (!opts?.silent) hand.onIgnite?.()
     },
     extinguish() {
+      const wasLit = lit
       loadToken++
       lit = false
       current = null
       fuelRemaining = 0
       clearMount()
       notify()
+      if (wasLit) hand.onExtinguish?.()
     },
     update(dt) {
       if (!lit) return
@@ -288,6 +294,7 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
         fuelRemaining = 0
         clearMount()
         notify()
+        hand.onExtinguish?.()
       } else {
         const ratio = fuelRemaining / fuelMax
         flameSetSize?.(ratio)

@@ -21,6 +21,11 @@ function fuelRatioToSizeFactor(ratio: number): number {
   return 1 + (ratio - 2) * 0.5
 }
 
+export type VillageFireHooks = {
+  onLight?: (position: THREE.Vector3) => void
+  onExtinguish?: (position: THREE.Vector3) => void
+}
+
 export type VillageFire = {
   readonly position: THREE.Vector3
   isLit: () => boolean
@@ -49,6 +54,7 @@ export function createVillageFire(
   position: THREE.Vector3,
   flame: CampfireFlame,
   fuelPerBranch: number = FUEL_PER_BRANCH,
+  hooks: VillageFireHooks = {},
 ): VillageFire {
   let lit = false
   let fuelRemaining = 0
@@ -59,10 +65,12 @@ export function createVillageFire(
     position,
     isLit: () => lit,
     light() {
+      const wasLit = lit
       lit = true
       fuelRemaining = fuelPerBranch
       flame.object.visible = true
       applySize()
+      if (!wasLit) hooks.onLight?.(position)
     },
     addFuel() {
       fuelRemaining += fuelPerBranch
@@ -76,6 +84,7 @@ export function createVillageFire(
         lit = false
         fuelRemaining = 0
         flame.object.visible = false
+        hooks.onExtinguish?.(position)
       } else {
         applySize()
       }

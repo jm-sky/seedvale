@@ -3,6 +3,8 @@ import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { createAmbientAudio } from '../audio/createAmbientAudio'
 import type { createWorldAudio } from '../audio/createWorldAudio'
+import type { createHouseDoorTracker } from '../audio/doorSounds'
+import type { createFireAudio } from '../audio/fireSounds'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { TouchControls } from '../input/createTouchControls'
 import type { createKeyboard } from '../input/Keyboard'
@@ -44,6 +46,7 @@ import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { villageSizeConfig } from '../settlement/families'
+import { houseCatalogById } from '../settlement/houseCatalog'
 import { damageHealth } from '../shared/HealthState'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
@@ -137,6 +140,8 @@ export type GameLoopDeps = {
   hud: Hud
   questManager: QuestManager
   ambientAudio: ReturnType<typeof createAmbientAudio>
+  fireAudio: ReturnType<typeof createFireAudio>
+  houseDoors: ReturnType<typeof createHouseDoorTracker>
   worldAudio: ReturnType<typeof createWorldAudio>
   playerTorch: PlayerTorch
   minimap: Minimap
@@ -189,7 +194,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
-    questManager, ambientAudio, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
+    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startTentRest, packTent, onInventoryChanged, setFrameTiming,
   } = deps
 
@@ -584,6 +589,19 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       hud.setTime(dayNight.timeOfDay)
       hud.setExp(questManager.getExp())
       player.update(dt)
+      houseDoors.update(
+        player.mesh.position.x,
+        player.mesh.position.z,
+        loaded.flatMap((s) =>
+          s.landmarks.houses.map((house) => ({
+            id: `${s.id}:${house.position.x.toFixed(2)}:${house.position.z.toFixed(2)}`,
+            x: house.position.x,
+            z: house.position.z,
+            radius: houseCatalogById(house.houseId).footprintRadius,
+          })),
+        ),
+        worldAudio.playAt,
+      )
       mapDiscovery.update(player.mesh.position.x, player.mesh.position.z)
       bundle.chunkManager.update(player.mesh.position.x, player.mesh.position.z)
       lights.follow(player.mesh.position.x, player.mesh.position.z)
@@ -597,6 +615,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         ...loaded.flatMap((s) => (s.fire?.isLit() ? [s.fire.position] : [])),
         ...bundle.placedFires.list().filter((f) => f.fire.isLit()).map((f) => f.fire.position),
       ]
+      fireAudio.update(player.mesh.position.x, player.mesh.position.z, litFires)
       // Portable torch counts as a fire source for fauna fear (plan 056 / 050).
       if (playerTorch.isLit()) {
         litFires.push({ x: player.mesh.position.x, z: player.mesh.position.z })

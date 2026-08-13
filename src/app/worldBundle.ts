@@ -275,7 +275,7 @@ export async function createWorldBundle(
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   const resourceDeposits = buildResourceDeposits(scene, chunkManager, config, config.seed)
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
-  const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires)
+  const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt)
   const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
   const largeCaves = createLargeCaves(
     scene,
@@ -357,7 +357,7 @@ export async function rebuildWorldBundle(
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
   bundle.resourceDeposits = buildResourceDeposits(scene, bundle.chunkManager, config, config.seed)
   bundle.droppedItems = createDroppedItems(scene, bundle.chunkManager.sampleHeight, carriedDrops)
-  bundle.placedFires = createPlacedFires(scene, bundle.chunkManager.sampleHeight, carriedFires)
+  bundle.placedFires = createPlacedFires(scene, bundle.chunkManager.sampleHeight, carriedFires, playAt)
   bundle.placedTents = createPlacedTents(scene, bundle.chunkManager.sampleHeight, carriedTents)
   bundle.largeCaves = createLargeCaves(
     scene,
