@@ -780,6 +780,9 @@ export function villageSegmentsNear(
         targetH: area.targetH,
         heightStrength: houseHeightStrength,
         tintStrength,
+        // Crop pads are small — keep a wide flat/dirt core so beds sit on packed
+        // ground after plaza/house `CLEARING_INNER_FRACTION` was lowered to 0.45.
+        innerFraction: 0.75,
       })
     }
 

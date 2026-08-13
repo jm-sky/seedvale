@@ -26,7 +26,7 @@ Dopracować wygląd i layout generatora osad: wydeptane ścieżki/plac w centrum
 - Ogród: `minCenterDist` + pierścień poza placem; props push off plaza/ścieżki (iteracja, clearance 3.4).
 - Zapalenie ogniska o zmierzchu: MD 75% / LG 85% / XL 100%.
 - Lokalne ścieżki: silniejszy tint (≥0.78) + wyższy floor wear — bez trawy na środku pasa.
-- Plac: clearing wygrywa wysokość nad drogami (bez potholi na placu); szerszy flat core (`CLEARING_INNER_FRACTION`).
+- Plac: clearing wygrywa wysokość nad drogami (bez potholi na placu). `CLEARING_INNER_FRACTION` 0.45 (płaski środek + długa spódnica; 0.82 dawało mesę).
 
 ## Done when
 

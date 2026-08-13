@@ -63,7 +63,7 @@ export const GARDEN_BED_D = 3.2
 export const GARDEN_BED_GAP = 0.35
 
 /** Dirt skirt past the bed corners so grass starts just outside the mesh. */
-const GARDEN_PAD_SKIRT = 0.8
+const GARDEN_PAD_SKIRT = 1.2
 
 /** How many unit beds the procedural mesh lays out. */
 export function gardenBedCount(scale: GardenScale): number {

@@ -147,6 +147,10 @@ export type ClearingSegment = {
   targetH: number
   heightStrength: number
   tintStrength: number
+  /** Full-strength disk as a fraction of `radius`. Omit to use the plaza/house
+   *  default (`CLEARING_INNER_FRACTION`). Gardens keep a higher value so the
+   *  small crop pad stays dirt under the beds. */
+  innerFraction?: number
 }
 
 /** A whole village's gentle, wide-radius height-only smoothing pass — pulls
@@ -556,9 +560,9 @@ export function extractCoreGrid(
 /** Fraction of a corridor's half-width that stays at full strength before
  *  tapering (roads/paths). Lower = longer soft edge into surrounding ground. */
 const CORRIDOR_INNER_FRACTION = 0.32
-/** Village clearings (plaza / house pads) stay nearly flat across most of the
- *  disk — only a short soft skirt at the rim (plan 076 playtest). */
-const CLEARING_INNER_FRACTION = 0.82
+/** Village clearings (plaza / house pads) stay fully flat in the inner disk,
+ *  then a long soft skirt to the rim — 0.82 read as a raised mesa. */
+const CLEARING_INNER_FRACTION = 0.45
 /** World-space frequency for sparse pothole noise (separate from edge wobble). */
 const POTHOLE_NOISE_SCALE = 0.14
 
@@ -607,7 +611,7 @@ function clearingCandidate(wx: number, wz: number, seg: ClearingSegment): Corrid
   const distSq = dx * dx + dz * dz
   if (distSq >= seg.radius * seg.radius) return null
   const dist = Math.sqrt(distSq)
-  const inner = seg.radius * CLEARING_INNER_FRACTION
+  const inner = seg.radius * (seg.innerFraction ?? CLEARING_INNER_FRACTION)
   const falloff = 1 - MathUtils.smoothstep(dist, inner, seg.radius)
   return {
     falloff,

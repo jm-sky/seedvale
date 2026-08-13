@@ -13,8 +13,8 @@ Powiększyć grządki `crops.glb` 2× i dopasować pad terenu (wyrównanie + bra
 
 1. [`propSpecs.ts`](../../src/settlement/propSpecs.ts) — `CROPS_FIT_MAX` 2.4 → 4.8.
 2. [`props.ts`](../../src/settlement/props.ts) — `GARDEN_BED_W/D` 4.8 / 3.2; mesh na `clearings.gardens[gi]` (bez jittera).
-3. [`gardenScale.ts`](../../src/settlement/gardenScale.ts) — `gardenPlotRadius` 4.8 / 6.4 / 8.4; `gardenClearingRadius` = obrys grządek + 0.8 (S/M/L ~3.7 / 6.0 / 8.5), żeby trawa dochodziła bliżej.
-4. [`roadNetwork.ts`](../../src/settlement/roadNetwork.ts) — pad ogrodu jak pad domu (`houseHeightStrength` + pełny `tintStrength`).
+3. [`gardenScale.ts`](../../src/settlement/gardenScale.ts) — `gardenPlotRadius` 4.8 / 6.4 / 8.4; `gardenClearingRadius` = obrys grządek + 1.2 (S/M/L ~4.1 / 6.4 / 8.9).
+4. [`roadNetwork.ts`](../../src/settlement/roadNetwork.ts) — pad ogrodu jak pad domu (`houseHeightStrength` + pełny `tintStrength`); `innerFraction` 0.75 (place/domy 0.45), żeby ziemia została pod meshem.
 
 Pszenica (`farm.glb`) bez zmian.
 

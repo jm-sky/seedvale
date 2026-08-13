@@ -28,11 +28,11 @@ describe('gardenScale', () => {
   })
 
   it('gardenClearingRadius hugs the tiled beds (plan 100)', () => {
-    expect(gardenClearingRadius('S')).toBeCloseTo(3.68, 1)
-    expect(gardenClearingRadius('M')).toBeCloseTo(6.03, 1)
-    expect(gardenClearingRadius('L')).toBeCloseTo(8.52, 1)
+    expect(gardenClearingRadius('S')).toBeCloseTo(4.08, 1)
+    expect(gardenClearingRadius('M')).toBeCloseTo(6.43, 1)
+    expect(gardenClearingRadius('L')).toBeCloseTo(8.92, 1)
     expect(gardenClearingRadius('S')).toBeLessThan(gardenPlotRadius('S'))
-    expect(gardenClearingRadius('M')).toBeLessThan(gardenPlotRadius('M'))
-    expect(gardenClearingRadius('L')).toBeLessThanOrEqual(gardenPlotRadius('L') + 0.2)
+    expect(gardenClearingRadius('M')).toBeLessThanOrEqual(gardenPlotRadius('M') + 0.1)
+    expect(gardenClearingRadius('L')).toBeLessThanOrEqual(gardenPlotRadius('L') + 0.6)
   })
 })
