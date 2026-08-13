@@ -89,8 +89,8 @@ const OCEAN_MIRROR_SIZE = 256
  * render pass per frame; per-chunk instances would mean dozens of extra scene
  * renders per frame). Only ever becomes visible where nothing else occludes it:
  * opaque terrain hides it under dry land, and each chunk's stylized water
- * (createChunkWater) sits above it and discards itself over large-body cells, so
- * this is only seen where the flood-fill classified a body as large.
+ * (createChunkWater) sits above it and discards itself over ocean cells
+ * (low continentalness), so this is only seen on sea/coast — not inland lakes.
  *
  * Transparency: Water.js writes `alpha` into `gl_FragColor` but does not set
  * `material.transparent`, so blending never ran. We enable real blending with

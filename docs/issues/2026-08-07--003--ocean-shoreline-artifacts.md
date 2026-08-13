@@ -1,8 +1,9 @@
 # Ostre krawędzie / artefakty na styku oceanu z lądem
 
-**Status:** `todo`
+**Status:** `planned`
 **Created:** 2026-08-07
-**Updated:** 2026-08-07
+**Updated:** 2026-08-13
+**Plan:** [098](../plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 (chunk water rysuje komórki oceanu z `vCover` zamiast samego depth-testu singletonu)
 **Źródło:** rozmowa z użytkownikiem, po dodaniu reflective ocean (`src/world/createOcean.ts`)
 
 ## Problem

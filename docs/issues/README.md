@@ -18,7 +18,7 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 |----|------|---------|--------|
 | 001 | [2026-08-07--001--water-shore-color-banding.md](./2026-08-07--001--water-shore-color-banding.md) | Brzeg jeziora w schodkach — twarde progi koloru terenu | `done` |
 | 002 | [2026-08-07--002--water-daynight-integration.md](./2026-08-07--002--water-daynight-integration.md) | Woda nie reaguje na dzień/noc | `done` |
-| 003 | [2026-08-07--003--ocean-shoreline-artifacts.md](./2026-08-07--003--ocean-shoreline-artifacts.md) | Ostre krawędzie/artefakty na styku oceanu z lądem | `todo` |
+| 003 | [2026-08-07--003--ocean-shoreline-artifacts.md](./2026-08-07--003--ocean-shoreline-artifacts.md) | Ostre krawędzie/artefakty na styku oceanu z lądem | `planned` |
 | 004 | [2026-08-08--004--mobile-modals-untappable-pointer-events.md](./2026-08-08--004--mobile-modals-untappable-pointer-events.md) | Modale (pauza/zadania/mieszkańcy/dialog) nie reagują na dotyk ani nie scrollują — `pointer-events: none` odziedziczone z `<body>` | `done` |
 | 005 | [2026-08-08--005--mobile-touch-ui-icon-library.md](./2026-08-08--005--mobile-touch-ui-icon-library.md) | Guziki dotykowe — Lucide w Faza 4 planu 046 | `verification needed` |
 | 006 | [2026-08-08--006--villagers-list-virtualization.md](./2026-08-08--006--villagers-list-virtualization.md) | Ekran Mieszkańcy renderuje całą listę naraz — dodać paginację/infinite/virtual scroll przy większej liczbie NPC | `todo` |
@@ -43,7 +43,7 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 025 | [2026-08-12--025--npc-react-to-stolen-village-tools.md](./2026-08-12--025--npc-react-to-stolen-village-tools.md) | NPC protestują, gdy gracz bierze widły/sierp z wioski | `todo` |
 | 026 | [2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md](./2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md) | Jaskinia: płaski czarny „daszek" zamiast realnej dziury w terenie | `verification needed` |
 | 027 | [2026-08-13--027--settlement-streaming-main-thread-freeze.md](./2026-08-13--027--settlement-streaming-main-thread-freeze.md) | Osada streamuje się synchronicznie — ~89 ms freeze przy pojawieniu się wioski w polu widzenia | `todo` |
-| 028 | [2026-08-13--028--inland-water-dual-material.md](./2026-08-13--028--inland-water-dual-material.md) | Śródlądowy staw/ciek: shader jeziora + ocean Water.js na jednym zbiorniku | `todo` |
+| 028 | [2026-08-13--028--inland-water-dual-material.md](./2026-08-13--028--inland-water-dual-material.md) | Śródlądowy staw/ciek: shader jeziora + ocean Water.js na jednym zbiorniku | `verification needed` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 

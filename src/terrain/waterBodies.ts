@@ -4,8 +4,6 @@ export type WaterBody = {
   id: number
   cellCount: number
   worldArea: number
-  /** Large enough to render as reflective open water rather than a small stylized lake. */
-  isLarge: boolean
 }
 
 export type WaterBodyDetection = {
@@ -13,20 +11,27 @@ export type WaterBodyDetection = {
   bodies: WaterBody[]
 }
 
+export type BodyScaleParams = {
+  continentalness: Float32Array
+  oceanThreshold: number
+  coastThreshold: number
+}
+
 const WATER_EPS = 1e-4
 const LAKE_AREA_SATURATE = 300
-/** Fraction of one chunk's (apron) grid area above which a body renders as "large"
- *  water. Relative rather than a fixed world-area constant so the classification
- *  doesn't depend on the user's chosen `chunkSize` (a fixed threshold could sit
- *  *above* the total area of a fully-flooded chunk at small chunk sizes, making
- *  "isLarge" unreachable regardless of how much water actually surrounds it). Also
- *  area-based rather than grid-boundary-touch, since per-chunk BFS has no shared
- *  grid edge to test a body against. */
-const LARGE_BODY_AREA_FRACTION = 0.35
+/**
+ * Chunk-water fragment discards above this (`createWater.ts`). Ocean cells are
+ * written as 1; inland lakes must stay strictly below so they never punch
+ * through to the Water.js singleton (plan 098 faza 1 / W8).
+ */
+export const OCEAN_BODY_SCALE_DISCARD = 0.9
+/** Max `lakeScaleFor` after remap — leaves headroom under the discard gate. */
+export const LAKE_SCALE_MAX = 0.85
 
 /**
  * BFS flood-fill over `h <= waterLevel` cells (4-connectivity) to find discrete
- * water bodies within one chunk's (apron-inclusive) grid.
+ * water bodies within one chunk's (apron-inclusive) grid. Area is used only to
+ * scale inland-lake waves — not to decide ocean vs lake.
  */
 export function detectWaterBodies(
   heights: Float32Array,
@@ -37,8 +42,6 @@ export function detectWaterBodies(
   const bodyId = new Int32Array(resolution * resolution).fill(-1)
   const bodies: WaterBody[] = []
   const queue = new Int32Array(resolution * resolution)
-  const gridSide = (resolution - 1) * step
-  const largeAreaThreshold = LARGE_BODY_AREA_FRACTION * gridSide * gridSide
 
   for (let start = 0; start < resolution * resolution; start++) {
     if (bodyId[start] !== -1 || heights[start]! > waterLevel + WATER_EPS) continue
@@ -73,7 +76,7 @@ export function detectWaterBodies(
     }
 
     const worldArea = cellCount * step * step
-    bodies.push({ id, cellCount, worldArea, isLarge: worldArea >= largeAreaThreshold })
+    bodies.push({ id, cellCount, worldArea })
   }
 
   return { bodyId, bodies }
@@ -84,9 +87,30 @@ export function lakeScaleFor(area: number): number {
   return MathUtils.smoothstep(area, 4, LAKE_AREA_SATURATE)
 }
 
-/** Per-texel wave-amplitude scale: 0 for land, lake-size-based for lakes, 1 for ocean. */
-export function computeBodyScale(detection: WaterBodyDetection): Float32Array {
+/**
+ * 1 = unambiguously ocean (`continentalness <= oceanThreshold`),
+ * 0 = unambiguously inland (`>= coastThreshold`).
+ */
+export function oceanMixAt(
+  continentalness: number,
+  oceanThreshold: number,
+  coastThreshold: number,
+): number {
+  const lo = Math.min(oceanThreshold, coastThreshold)
+  const hi = Math.max(oceanThreshold, coastThreshold)
+  return 1 - MathUtils.smoothstep(continentalness, lo, hi)
+}
+
+/**
+ * Per-texel scale: 0 land, inland lake wave scale (capped below the ocean
+ * discard), 1 ocean (continentalness, not chunk area).
+ */
+export function computeBodyScale(
+  detection: WaterBodyDetection,
+  params: BodyScaleParams,
+): Float32Array {
   const { bodyId, bodies } = detection
+  const { continentalness, oceanThreshold, coastThreshold } = params
   const scale = new Float32Array(bodyId.length)
   for (let i = 0; i < bodyId.length; i++) {
     const id = bodyId[i]!
@@ -94,8 +118,13 @@ export function computeBodyScale(detection: WaterBodyDetection): Float32Array {
       scale[i] = 0
       continue
     }
+    const oceanMix = oceanMixAt(continentalness[i]!, oceanThreshold, coastThreshold)
+    if (oceanMix > OCEAN_BODY_SCALE_DISCARD) {
+      scale[i] = 1
+      continue
+    }
     const body = bodies[id]!
-    scale[i] = body.isLarge ? 1.0 : lakeScaleFor(body.worldArea)
+    scale[i] = Math.min(LAKE_SCALE_MAX, lakeScaleFor(body.worldArea))
   }
   return scale
 }

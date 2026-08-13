@@ -1,7 +1,9 @@
 # Śródlądowa woda renderuje się dwoma materiałami (jezioro + ocean)
 
-**Status:** `todo`
+**Status:** `verification needed`
 **Created:** 2026-08-13
+**Updated:** 2026-08-13
+**Plan:** [098](../plans/2026-08-13--098--water-unified-shader-shore-reflections.md) (faza 1)
 **Źródło:** screen użytkownika — staw/ciek przy piaszczystym brzegu; SoT [WATER.md](../WATER.md)
 
 ## Problem
@@ -30,8 +32,16 @@ BFS nie widzi, że ciek ciągnie się przez sąsiadów — ten sam basen może b
 
 Docelowo ta sama rodzina materiału co ocean (W1) — nie dwa silniki, nie trzeci shader. Lustro sceny to osobny wspólny pass (W9), nie powód żeby staw dostał Water.js.
 
-P1 (brzeg, world-space waves, palety) — po P0; opisane w WATER.md, nie w tym issue.
+P1 (brzeg, world-space waves, palety, lustro) — fazy 2–3 planu 098; nie w tym issue.
 
-## Effort
+## Implementacja (2026-08-13, faza 1)
 
-S — zmiana reguły `isLarge` / discard. M — jeśli klasyfikacja ma być spójna między chunkami.
+- `computeBodyScale` bierze `continentalness` + progi regionu. Komórka oceanu (`oceanMixAt` > 0.9) → `bodyScale = 1` → jezioro `discard`.
+- Śródlądzie: `min(lakeScaleFor(area), 0.85)` — nigdy nie przebija discardu, niezależnie od pola w chunku.
+- Usunięte `isLarge` / `LARGE_BODY_AREA_FRACTION`.
+- Testy: `src/terrain/waterBodies.test.ts`.
+
+### Browser
+
+1. To samo miejsce co [screen](../refs/water-2026-08-13-inland-dual-material.png) — jeden materiał jeziora, bez ciemnej falującej plamy Water.js.
+2. Wybrzeże / otwarte morze — nadal Water.js, bez jeziora na środku oceanu.

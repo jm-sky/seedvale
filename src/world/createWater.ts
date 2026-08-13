@@ -108,7 +108,7 @@ export function createChunkWater(
         float terrainH = texture2D(uHeightmap, uv).r;
         vCover = 1.0 - smoothstep(uWaterLevel - 0.05, uWaterLevel + 0.35, terrainH);
 
-        // 0 = small lake .. 1 = large body; blends wave amplitude between the two.
+        // 0 land / small lake .. <0.9 inland lake (wave amp); 1 = ocean cell.
         float bodyScale = texture2D(uBodyScale, uv).r;
         vBodyScale = bodyScale;
         float ampScale = mix(0.06, 0.24, bodyScale);
@@ -138,8 +138,7 @@ export function createChunkWater(
 
       void main() {
         if (vCover < 0.02) discard;
-        // Large bodies are rendered by the reflective Water.js ocean singleton
-        // instead — step aside so the two don't double-render/z-fight.
+        // Ocean cells (continentalness, not lake area) — Water.js singleton.
         if (vBodyScale > 0.9) discard;
 
         float fresnel = pow(1.0 - max(dot(normalize(vViewDir), vec3(0.0, 1.0, 0.0)), 0.0), 2.2);

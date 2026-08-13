@@ -785,7 +785,11 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
   }
 
   const waterBodies = detectWaterBodies(heights, apronRes, waterLevel, step)
-  const bodyScale = computeBodyScale(waterBodies)
+  const bodyScale = computeBodyScale(waterBodies, {
+    continentalness,
+    oceanThreshold: params.region.oceanThreshold,
+    coastThreshold: params.region.coastThreshold,
+  })
 
   return {
     heights,
