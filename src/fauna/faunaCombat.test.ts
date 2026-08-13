@@ -16,6 +16,7 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
       duck: 8,
       boar: 35,
       horse: 80,
+      donkey: 55,
       cow: 70,
       sheep: 22,
       chicken: 6,
@@ -34,12 +35,16 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
     expect(damageVsHuman('boar')).toBe(8) // no table entry -> DEFAULT_DAMAGE
   })
 
-  it('ranks player melee tools sword > axe > knife > shovel', () => {
+  it('ranks player melee tools sword > axe > pitchfork > knife = sickle > shovel', () => {
     expect(playerToolDamage('long_sword')).toBeGreaterThan(playerToolDamage('axe'))
-    expect(playerToolDamage('axe')).toBeGreaterThan(playerToolDamage('knife'))
-    expect(playerToolDamage('knife')).toBeGreaterThan(playerToolDamage('shovel'))
+    expect(playerToolDamage('axe')).toBeGreaterThan(playerToolDamage('pitchfork'))
+    expect(playerToolDamage('pitchfork')).toBeGreaterThan(playerToolDamage('knife'))
+    expect(playerToolDamage('knife')).toBe(playerToolDamage('sickle'))
+    expect(playerToolDamage('sickle')).toBeGreaterThan(playerToolDamage('shovel'))
     expect(isMeleeTool('long_sword')).toBe(true)
     expect(isMeleeTool('axe')).toBe(true)
+    expect(isMeleeTool('pitchfork')).toBe(true)
+    expect(isMeleeTool('sickle')).toBe(true)
     expect(isMeleeTool('pickaxe')).toBe(false)
     expect(isMeleeTool('firestarter')).toBe(false)
     expect(isMeleeTool(null)).toBe(false)

@@ -1,7 +1,7 @@
 # Plan: Handheld lights + village lanterns/torches
 
 **Created:** 2026-08-12  
-**Status:** `in progress`  
+**Status:** `verification needed`  
 **Priority:** medium · **Effort:** L  
 **Depends on:** held tools / ~~082~~
 
@@ -9,12 +9,11 @@
 
 Wpiąć modele z `_temp`: wooden torch (holdable item), lit branch w ręce, lantern przy domach, pochodnie wioski (plac/brama), plus `branch.glb` / `fire.glb`.
 
-## Progress (2026-08-12)
+## Progress (2026-08-13)
 
 - Done: assets, `wooden_torch` item + starting loadout, save v9 lit state, house lanterns, village torches (off-road), UI Zapal gałąź / Zapal pochodnię.
-- Done: `wooden_torch` hand grip verified in-browser.
-- In progress: lit-branch — upright (no sideways); tip flipped forward via BRANCH_ATTACH yaw +π (await confirm); flame/sparks TEMP off (`SHOW_HAND_FLAME_VISUAL`).
-- Pending: re-enable flame tip + sparks once branch grip is right.
+- Done: `wooden_torch` and lit-branch hand grip (user-tuned).
+- Done: flame tip + sparks re-enabled (`SHOW_HAND_FLAME_VISUAL`); PointLight/flame at stick tip (`TORCH_TIP_OFFSET_*`); wooden torch light uses `HELD_ATTACH.wooden_torch` (plan 096).
 
 ## Decisions
 

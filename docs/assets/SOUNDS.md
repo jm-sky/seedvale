@@ -29,7 +29,7 @@ If the feature needs no new sound, do nothing to this file.
 | Category | Files | Notes |
 |----------|-------|-------|
 | NPC | hmm / thank-you (M/F) | Dialogue reactions |
-| Animals | chicken, cow, wolf | `[E]` on animal (chicken/cow SFX without matching models — see MODELS M07) |
+| Animals | chicken, cow, wolf | `[E]` on animal (donkey/horse/sheep reuse silence until clips exist) |
 | Ambient | forest, night crickets, coast | Area / time loops |
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
 | Actions | dig ×4, wood-chop ×1, melee hit/kill, well ×1 | Shovel / axe / melee / well |

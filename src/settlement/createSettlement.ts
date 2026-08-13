@@ -190,7 +190,7 @@ export async function createSettlement(
     }
   }
 
-  const livestock = spawnLivestock(scene, sampleHeight, waterLevel, landmarks.homes, def.size, settlementSeed)
+  const livestock = await spawnLivestock(scene, sampleHeight, waterLevel, landmarks.homes, def.size, settlementSeed)
 
   type SignpostInstance = { labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
   const signposts: SignpostInstance[] = []

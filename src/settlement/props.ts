@@ -17,7 +17,6 @@ import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { type VillageSize, villageSizeConfig } from './families'
-import { pickMerchantWagonPose } from './merchantWagon'
 import {
   gardenBedCount,
   gardenClearingRadius,
@@ -34,6 +33,7 @@ import {
   pickHomeHouse,
   resolveHouseHeight,
 } from './houseCatalog'
+import { pickMerchantWagonPose } from './merchantWagon'
 import {
   BUSH_SPECS,
   FIRE_FX_URL,
@@ -487,7 +487,7 @@ export function createVillageTorchLight(
     group.add(flameObj)
   }
 
-  const light = new THREE.PointLight(0xff8a3c, 0, 7, 2)
+  const light = new THREE.PointLight(0xff8a3c, 0, 14, 2)
   light.position.set(0, 1.5, 0)
   group.add(light)
 
@@ -497,7 +497,7 @@ export function createVillageTorchLight(
     setLit(on) {
       lit = on
       flameObj.visible = on
-      light.intensity = on ? 1.6 : 0
+      light.intensity = on ? 3.2 : 0
     },
     update(dt) {
       if (lit) flameUpdate?.(dt)
@@ -1360,8 +1360,8 @@ export function createCampfireFlame(scale = 1): CampfireFlame {
   cone.position.y = 0.3 * scale
   flame.add(cone)
 
-  const baseIntensity = 3
-  const baseDistance = 5 * scale
+  const baseIntensity = 6
+  const baseDistance = 16 * scale
   const light = new THREE.PointLight(0xff8a3c, baseIntensity, baseDistance, 2)
   light.position.y = 0.35 * scale
   flame.add(light)

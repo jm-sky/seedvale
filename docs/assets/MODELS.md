@@ -34,16 +34,16 @@ If the feature needs no new model, do nothing to this file.
 | M04 | Economy / outpost buildings | Market, farm, windmill, towncenter, watchtower, barracks, temple, port | `in repo` | [CREDITS](./CREDITS.md), plans 032 / 071 |
 | M05 | Background mountains | Distant silhouette meshes | `in repo` | [plan 024](../plans/2026-08-07--024--world-visual-overhaul.md) (`mountain_a/b/c`) |
 | M06 | Extra flora variants | `bush_flowers_1`, `flower_clump_2` (and further variety as needed) | `in repo` | nature reserve in CREDITS |
-| M07 | Farm animals (chicken / cow / sheep / horse) | Chicken GLB in `fauna/chicken.glb` (CC-BY); sheep+horse parked; cow still needed. Home Kupiec uses `horse.glb` as a decorative stand-in | `wired` (merchant horse) | [SOUNDS](./SOUNDS.md), [plan 082](../plans/2026-08-12--082--village-tool-props-and-temp-assets.md), [plan 090](../plans/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
-| M08 | Village pitchfork | One-time garden pickup + future NPC theft reaction; **melee/hold later** | `wired` | [plan 082](../plans/2026-08-12--082--village-tool-props-and-temp-assets.md), [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md), [items CATALOG](../items/CATALOG.md) |
-| M09 | Village sickle | One-time garden pickup + future NPC theft reaction; **melee/hold later** | `wired` | plan 082, issue 025, [items CATALOG](../items/CATALOG.md) |
+| M07 | Farm animals (chicken / cow / sheep / horse / donkey) | Village livestock GLB; home Kupiec decorative horse | `wired` | [SOUNDS](./SOUNDS.md), [plan 096](../plans/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md) |
+| M08 | Village pitchfork | Garden pickup + holdable melee | `wired` | [plan 082](../plans/2026-08-12--082--village-tool-props-and-temp-assets.md), [plan 096](../plans/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md), [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md) |
+| M09 | Village sickle | Garden pickup + holdable melee | `wired` | plan 082, plan 096, issue 025 |
 | M10 | Hay bale clutter | Decorative hay near gardens | `wired` | plan 082 |
 | M11 | Pickaxe (mining gameplay) | Held tool; one-time stockpile pickup; mines ore deposits | `wired` | [plan 090](../plans/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 | M12 | Pine tree variant | `pine_trees.glb` parked under nature | `in repo` | plan 082 / 073 |
 | M13 | Grass clump GLB | Optional complement to instanced grass | `in repo` | plan 082 |
 | M14 | Long sword | Held melee; Strażnik quest/dialog + Kupiec | `wired` | [plan 090](../plans/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 | M15 | Fishing rod | `_temp` FBX parked; license ❓ + convert to GLB | `needed` | `public/models/parked/FishingRod_Lvl2.fbx` |
-| M16 | Blood splat death VFX | Spawn at death of NPC / fauna / mob (corpse linger) | `in repo` | plan 082 (`public/models/fx/blood_splat.glb`) |
+| M16 | Blood splat death VFX | Spawn at animal death (corpse linger); NPC later | `wired` | [plan 096](../plans/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md) |
 | M17 | Poly Farm building | Alternate farm shell vs Fantasy RTS `farm.glb` (CC-BY) | `in repo` | plan 082 (`settlement/farm_poly.glb`) |
 | M18 | Rock variant B | Extra rock prop beside wired `rock_a` | `in repo` | plan 082 (`nature/rock_b.glb`) |
 | M19 | Held shovel / axe / knife GLB | Drop + hand attach (`heldToolVisual`) | `wired` | `items/shovel.glb`, `axe.glb`, `knife.glb` |
@@ -60,11 +60,12 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Area | Examples |
 |------|----------|
 | Characters | Modular men/women NPCs, Adventurer player |
-| Fauna | wolf, fox, deer, stag |
+| Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
 | Nature (active) | trees/bushes, rock/log, ore piles |
 | Settlement (active) | huts, towerhouse, wall stubs, dock, crate/barrel, garden/storage/logs, hay |
-| Items (active) | pitchfork, sickle (village pickups); wooden torch; branch GLB; pickaxe; long sword |
+| Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
+| FX | fire tip; blood splat (animal death) |
 
 ## Related research
 

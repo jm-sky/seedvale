@@ -13,6 +13,7 @@ export const MAX_HP: Record<AnimalKind, number> = {
   duck: 8,
   boar: 35,
   horse: 80,
+  donkey: 55,
   cow: 70,
   sheep: 22,
   chicken: 6,
@@ -20,7 +21,7 @@ export const MAX_HP: Record<AnimalKind, number> = {
 
 /** Predator kind -> prey kind -> damage per attack. */
 const DAMAGE_TABLE: Partial<Record<AnimalKind, Partial<Record<AnimalKind, number>>>> = {
-  wolf: { deer: 15, stag: 12, boar: 10, sheep: 14, chicken: 20 },
+  wolf: { deer: 15, stag: 12, boar: 10, sheep: 14, donkey: 14, chicken: 20 },
   fox: { deer: 10, stag: 6, rabbit: 20, duck: 18, chicken: 20 },
 }
 
@@ -33,20 +34,32 @@ const HUMAN_DAMAGE: Partial<Record<AnimalKind, number>> = {
   fox: 6,
 }
 
-/** Held tools that can hit an animal on `[E]` (sword > axe > knife > shovel).
- *  Roadmap: pitchfork / sickle / branch melee + item durability — see
+/** Held tools that can hit an animal on `[E]` (sword > axe > pitchfork > knife = sickle > shovel).
+ *  Roadmap: branch melee + item durability — see
  *  `docs/items/CATALOG.md` / `items/itemCatalog.ts` (`ITEM_SYSTEM_ROADMAP`). */
-export type MeleeToolKind = Extract<ToolKind, 'long_sword' | 'axe' | 'knife' | 'shovel'>
+export type MeleeToolKind = Extract<
+  ToolKind,
+  'long_sword' | 'axe' | 'pitchfork' | 'knife' | 'sickle' | 'shovel'
+>
 
 const PLAYER_TOOL_DAMAGE: Record<MeleeToolKind, number> = {
   long_sword: 28,
   axe: 20,
+  pitchfork: 14,
   knife: 12,
+  sickle: 12,
   shovel: 8,
 }
 
 export function isMeleeTool(kind: ToolKind | null | undefined): kind is MeleeToolKind {
-  return kind === 'long_sword' || kind === 'axe' || kind === 'knife' || kind === 'shovel'
+  return (
+    kind === 'long_sword'
+    || kind === 'axe'
+    || kind === 'pitchfork'
+    || kind === 'knife'
+    || kind === 'sickle'
+    || kind === 'shovel'
+  )
 }
 
 export function damageFor(predator: AnimalKind, prey: AnimalKind): number {

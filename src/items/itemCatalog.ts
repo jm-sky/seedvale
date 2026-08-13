@@ -160,25 +160,23 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'pitchfork',
     label: 'widły',
     category: 'tool',
-    holdable: false,
-    meleeDamage: null,
+    holdable: true,
+    meleeDamage: 14,
     spawn: 'village_onetime',
     modelUrl: '/models/items/pitchfork.glb',
-    notes: '1–3 with sickle near gardens (plan 082). Pickup only — not holdable yet.',
-    roadmap:
-      'Holdable + melee like knife (damage TBD, ~10–14). NPC protest on village theft (issue 025).',
+    notes: '1–3 with sickle near gardens (plan 082). Holdable melee (plan 096).',
+    roadmap: 'NPC protest on village theft (issue 025).',
   },
   sickle: {
     kind: 'sickle',
     label: 'sierp',
     category: 'tool',
-    holdable: false,
-    meleeDamage: null,
+    holdable: true,
+    meleeDamage: 12,
     spawn: 'village_onetime',
     modelUrl: '/models/items/sickle.glb',
-    notes: '1–3 with pitchfork near gardens (plan 082). Pickup only — not holdable yet.',
-    roadmap:
-      'Holdable + melee like knife (damage TBD, ~10–12). NPC protest on village theft (issue 025).',
+    notes: '1–3 with pitchfork near gardens (plan 082). Holdable melee (plan 096).',
+    roadmap: 'NPC protest on village theft (issue 025).',
   },
   wooden_torch: {
     kind: 'wooden_torch',
@@ -246,7 +244,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
 /** Cross-cutting item systems not tied to a single kind (roadmap only). */
 export const ITEM_SYSTEM_ROADMAP = [
   'Item durability / HP: tools and improvised weapons wear down with use (esp. combat); break or need repair when depleted.',
-  'Expand melee set: pitchfork, sickle, branch (see per-kind roadmap).',
+  'Expand melee set: branch (see per-kind roadmap).',
 ] as const
 
 /** Decorative / not ItemKind — listed for agents scanning item-ish props. */

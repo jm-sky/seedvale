@@ -25,14 +25,11 @@ describe('heldPreviewKind', () => {
     expect(heldPreviewKind(heldEntry('held:branch'))).toBe('branch')
   })
 
-  it('returns null for roadmap held tools without attach', () => {
-    expect(heldPreviewKind(heldEntry('held:pitchfork'))).toBeNull()
-    expect(heldPreviewKind(heldEntry('held:sickle'))).toBeNull()
-  })
-
-  it('maps newly wired combat/mining tools', () => {
+  it('maps newly wired combat/mining/farm tools', () => {
     expect(heldPreviewKind(heldEntry('held:long_sword'))).toBe('long_sword')
     expect(heldPreviewKind(heldEntry('held:pickaxe'))).toBe('pickaxe')
+    expect(heldPreviewKind(heldEntry('held:pitchfork'))).toBe('pitchfork')
+    expect(heldPreviewKind(heldEntry('held:sickle'))).toBe('sickle')
   })
 
   it('returns null for non-held entries', () => {

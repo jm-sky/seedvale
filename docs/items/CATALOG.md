@@ -12,10 +12,10 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Concern | Where |
 |---------|--------|
 | Inventory weight / label | `ITEM_DEFS` |
-| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword |
+| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, pitchfork, sickle |
 | Held 3D attach | `heldToolVisual.ts` → `WristR` + `HELD_ATTACH` (Phase 6: migrate per-tool numbers to `grip` anchors via alignment browser) |
 | Ground GLB scale | `itemModels.ts` → `preparePropFitMax` (not height-only) |
-| Melee vs animals | `faunaCombat.ts` — sword 28, axe 20, knife 12, shovel 8 |
+| Melee vs animals | `faunaCombat.ts` — sword 28, axe 20, pitchfork 14, knife/sickle 12, shovel 8 |
 | Village one-time tools | `createItemSpawners.ts` |
 | Portable light | `PlayerTorch` — lit branch (90s) or held wooden_torch (240s); exclusive right hand |
 
@@ -34,8 +34,8 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | blanket | koc | — | — | starting | procedural | |
 | shovel | łopata | yes | 8 | village 1× | `items/shovel.glb` | soil/sand dig / level (not rock) |
 | axe | siekiera | yes | 20 | village 1× | `items/axe.glb` | chop |
-| pitchfork | widły | **no** | — | village 1–3 | `items/pitchfork.glb` | plan 082; **melee later** |
-| sickle | sierp | **no** | — | village 1–3 | `items/sickle.glb` | plan 082 |
+| pitchfork | widły | yes | 14 | village 1–3 | `items/pitchfork.glb` | plan 082 pickup; hold+melee (plan 096); grip TBD |
+| sickle | sierp | yes | 12 | village 1–3 | `items/sickle.glb` | plan 082 pickup; hold+melee (plan 096); grip TBD |
 | wooden_torch | pochodnia | yes | — | starting (+ village 1×) | `items/wooden_torch.glb` | plan 085; longer/brighter than lit branch |
 | pickaxe | kilof | yes | — | village 1× + Kupiec | `items/pickaxe.glb` | ore deposits + mountain-rock dig/level (plan 090) |
 | tent | namiot | — | — | none (Kupiec) | procedural | place / rest / pack (plan 090) |
@@ -46,15 +46,13 @@ implemented, and what is planned. Code source of truth for weights/labels:
 
 ## Roadmap (not done)
 
-1. **pitchfork / sickle holdable + melee** — same pattern as knife (`HeldTool` +
-   `faunaCombat` + `HELD_ATTACH`). Suggested damage band ~10–14.
-2. **branch as improvised melee** — holdable stick, low damage (~4–8); good
+1. **branch as improvised melee** — holdable stick, low damage (~4–8); good
    durability-wear guinea pig.
-3. **Item durability / HP** — tools (and combat props) have condition that
+2. **Item durability / HP** — tools (and combat props) have condition that
    decreases with use (fight, chop, dig); at 0 → break or force repair. Not in
    save schema yet.
-4. **NPC protest** when picking village pitchfork/sickle — [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md).
-5. **Left-hand dual wield** — currently right hand exclusive (tool vs lit light).
+3. **NPC protest** when picking village pitchfork/sickle — [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md).
+4. **Left-hand dual wield** — currently right hand exclusive (tool vs lit light).
 
 ## Related non-item props
 
@@ -64,4 +62,4 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | lantern | `/models/settlement/lantern.glb` | house night lamp body (plan 085) |
 | torch | `/models/settlement/torch.glb` | village plaza/gate posts (plan 085) |
 | fire | `/models/fx/fire.glb` | handheld / village torch tip (CC-BY) |
-| blood_splat | `/models/fx/blood_splat.glb` | parked — death VFX later |
+| blood_splat | `/models/fx/blood_splat.glb` | animal death VFX (plan 096) |

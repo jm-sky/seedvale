@@ -17,7 +17,7 @@ import type { BackgroundPreset, LightingPreset, RenderMode } from '../state'
 import {
   TORCH_LIGHT_BRANCH,
   TORCH_LIGHT_DECAY,
-  TORCH_LIGHT_LOCAL_OFFSET,
+  TORCH_TIP_OFFSET_BRANCH,
 } from '../../../player/torchLightPresets'
 import { createLights } from '../../../world/createLights'
 import { createSky } from '../../../world/createSky'
@@ -127,9 +127,9 @@ function createPreviewLighting(scene: Scene, world: Group): PreviewLighting {
         torchLight.intensity = TORCH_LIGHT_BRANCH.intensity * opts.torchFuelRatio
         if (opts.torchAnchorWorld) {
           _offset.set(
-            TORCH_LIGHT_LOCAL_OFFSET[0],
-            TORCH_LIGHT_LOCAL_OFFSET[1],
-            TORCH_LIGHT_LOCAL_OFFSET[2],
+            TORCH_TIP_OFFSET_BRANCH[0],
+            TORCH_TIP_OFFSET_BRANCH[1],
+            TORCH_TIP_OFFSET_BRANCH[2],
           )
           _offset.applyMatrix4(opts.torchAnchorWorld)
           torchLight.position.copy(_offset)

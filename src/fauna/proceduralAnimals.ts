@@ -1,13 +1,9 @@
 import * as THREE from 'three'
 
 /**
- * Simple primitive-built animal visuals for the species added by plan 044
- * that have no GLB asset (`public/models/fauna/` only has wolf/fox/deer/
- * stag) — same "flat-shaded primitives, no rig" approach `settlement/
- * props.ts` already uses for huts/wells/trees. Each builder's local origin
- * sits at the animal's feet/ground contact point (matching the convention
- * `AnimalAgent` expects from a GLB `visual`), so these can be passed straight
- * into `AnimalAgent`'s constructor without the capsule-fallback path.
+ * Simple primitive-built animal visuals for species without a GLB, or as a
+ * load-failure fallback. Livestock (chicken/sheep/cow/horse/donkey) prefer
+ * `public/models/fauna/*.glb`. Origin at feet (same as GLB `prepareProp`).
  */
 
 function legs(mat: THREE.Material, count: 2 | 4, spanX: number, spanZ: number, radius: number, height: number): THREE.Group {
@@ -145,6 +141,20 @@ export function createHorseModel(): THREE.Group {
   root.add(tail)
 
   root.add(legs(bodyMat, 4, 0.16, 0.3, 0.06, legHeight))
+  return root
+}
+
+/** Procedural stand-in when donkey.glb fails — scaled/tinted horse. */
+export function createDonkeyModel(): THREE.Group {
+  const root = createHorseModel()
+  root.scale.setScalar(0.75)
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const mat = mesh.material
+    const std = (Array.isArray(mat) ? mat[0] : mat) as THREE.MeshStandardMaterial
+    if (std?.color) std.color.setHex(0x7a6a58)
+  })
   return root
 }
 

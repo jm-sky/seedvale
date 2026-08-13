@@ -21,6 +21,7 @@ import {
   STAMINA_REST_THRESHOLD,
   tickAnimalLife,
 } from './AnimalLife'
+import { createBloodSplat, disposeBloodSplat } from './bloodSplat'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 import { isPlayerNoticed } from './playerAwareness'
 import {
@@ -155,9 +156,8 @@ export type AnimalRole = 'predator' | 'prey' | 'livestock'
  *  animals aren't afraid of people and treat the village/farmstead as safe
  *  ground to flee toward (plan 044 §2.3/§2.4). */
 export type AnimalSociability = 'wild' | 'domestic'
-/** wolf/fox/deer/stag match the Quaternius Ultimate Animated Animal Pack GLBs
- *  (`public/models/fauna/`); the rest (plan 044) have no GLB and always use
- *  the procedural visuals in `proceduralAnimals.ts` instead. */
+/** wolf/fox/deer/stag + livestock (chicken/sheep/cow/horse/donkey) have GLBs
+ *  under `public/models/fauna/`; rabbit/duck/boar stay procedural. */
 export type AnimalKind =
   | 'wolf'
   | 'fox'
@@ -167,6 +167,7 @@ export type AnimalKind =
   | 'duck'
   | 'boar'
   | 'horse'
+  | 'donkey'
   | 'cow'
   | 'sheep'
   | 'chicken'
@@ -180,6 +181,7 @@ export const ANIMAL_LABELS: Record<AnimalKind, string> = {
   duck: 'kaczka',
   boar: 'dzik',
   horse: 'koń',
+  donkey: 'osioł',
   cow: 'krowa',
   sheep: 'owca',
   chicken: 'kura',
@@ -326,6 +328,20 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 0,
     playerPanicRange: 0,
   },
+  donkey: {
+    kind: 'donkey',
+    role: 'livestock',
+    sociability: 'domestic',
+    color: 0x7a6a58,
+    scale: 1.05,
+    modelHeight: 1.15,
+    walkSpeed: 2.4,
+    sprintSpeed: 5.4,
+    detectRange: 0,
+    fleeRange: 9,
+    playerNoticeRange: 0,
+    playerPanicRange: 0,
+  },
   cow: {
     kind: 'cow',
     role: 'livestock',
@@ -427,6 +443,8 @@ export class AnimalAgent {
   private cachedAggressionRoll = 0
   /** Counts down after a player hit — feeds wolf retaliation (plan 056 ext). */
   private provokedTimer = 0
+  private bloodSplat: THREE.Object3D | null = null
+  private bloodSplatToken = 0
 
   constructor(
     def: AnimalDef,
@@ -536,6 +554,9 @@ export class AnimalAgent {
   }
 
   dispose(): void {
+    this.bloodSplatToken++
+    disposeBloodSplat(this.bloodSplat)
+    this.bloodSplat = null
     this.label.removeFromParent()
     this.labelEl.remove()
     this.mixer?.stopAllAction()
@@ -585,6 +606,23 @@ export class AnimalAgent {
     this.lastHpPercent = 0
     this.hpFillEl.style.width = '0%'
     this.labelBarsEl.style.display = 'none'
+    void this.spawnDeathSplat()
+  }
+
+  /** Ground splat as a scene sibling — must not parent to the tipped mesh. */
+  private async spawnDeathSplat(): Promise<void> {
+    const token = ++this.bloodSplatToken
+    const splat = await createBloodSplat(this.def.modelHeight)
+    if (!splat) return
+    if (token !== this.bloodSplatToken || !this.mesh.parent) {
+      disposeBloodSplat(splat)
+      return
+    }
+    const y = this.sampleHeight(this.mesh.position.x, this.mesh.position.z)
+    splat.position.set(this.mesh.position.x, y + 0.02, this.mesh.position.z)
+    splat.rotation.y = Math.random() * Math.PI * 2
+    this.mesh.parent.add(splat)
+    this.bloodSplat = splat
   }
 
   update(

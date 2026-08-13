@@ -93,6 +93,17 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     scale: 1.2,
     gripLocalOffset: [0, 0, -0.28],
   },
+  pitchfork: {
+    position: [-0.8, 0.13, -0.02],
+    rotation: [Math.PI / 2, -Math.PI / 2, 0],
+    scale: 1,
+    gripLocalOffset: [0, 0, -0.35],
+  },
+  sickle: {
+    position: [0, 0.12, -0.01],
+    rotation: [Math.PI, 0, Math.PI / 2],
+    scale: 1.15,
+  },
 }
 
 /**
@@ -116,6 +127,8 @@ export const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }
   wooden_torch: { url: '/models/items/wooden_torch.glb', maxSize: 0.55 },
   pickaxe: { url: '/models/items/pickaxe.glb', maxSize: 0.55 },
   long_sword: { url: '/models/items/long_sword.glb', maxSize: 0.95 },
+  pitchfork: { url: '/models/items/pitchfork.glb', maxSize: 0.81 },
+  sickle: { url: '/models/items/sickle.glb', maxSize: 0.36 },
 }
 
 const HELD_ASSET_ID: Partial<Record<ToolKind, string>> = {
@@ -125,6 +138,8 @@ const HELD_ASSET_ID: Partial<Record<ToolKind, string>> = {
   wooden_torch: 'held:wooden_torch',
   pickaxe: 'held:pickaxe',
   long_sword: 'held:long_sword',
+  pitchfork: 'held:pitchfork',
+  sickle: 'held:sickle',
 }
 
 export type HeldMountContext = {

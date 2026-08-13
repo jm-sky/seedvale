@@ -35,6 +35,10 @@ const ANIMAL_FLAVOR_LINES: Record<AnimalKind, string[]> = {
     'Koń parska cicho i wraca do skubania trawy.',
     'Merda ogonem, wyraźnie oswojony z ludźmi.',
   ],
+  donkey: [
+    'Osioł kręci uszami i stoi niewzruszenie.',
+    'Pochyla pysk ku trawie, przyzwyczajony do ludzi.',
+  ],
   cow: [
     'Krowa przeżuwa spokojnie, patrząc obojętnie.',
     'Dzwoneczek na szyi cicho pobrzękuje przy każdym ruchu.',

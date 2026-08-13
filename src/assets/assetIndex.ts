@@ -7,6 +7,7 @@ import { ITEM_GLB_SPECS } from '../items/itemModels'
 import { PLAYER_HEIGHT, PLAYER_MODEL_URL } from '../player/PlayerController'
 import { BRANCH_HELD_MAX, BRANCH_URL } from '../player/torchLightPresets'
 import { HOUSE_CATALOG } from '../settlement/houseCatalog'
+import { LIVESTOCK_URLS } from '../settlement/livestock'
 import {
   BUSH_SPECS,
   CACTUS_SPECS,
@@ -185,6 +186,22 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     })
   }
 
+  const faunaSeen = new Set(out.filter((e) => e.group === 'fauna').map((e) => e.id))
+  for (const [kind, url] of Object.entries(LIVESTOCK_URLS)) {
+    const id = `fauna:${kind}`
+    if (faunaSeen.has(id)) continue
+    const def = ANIMAL_DEFS[kind as keyof typeof ANIMAL_DEFS]
+    out.push({
+      id,
+      url,
+      label: kind,
+      group: 'fauna',
+      prepare: { mode: 'height', value: def.modelHeight },
+      skinned: true,
+      anchors: anchorsForAsset(id),
+    })
+  }
+
   for (const [kind, spec] of Object.entries(ITEM_GLB_SPECS)) {
     if (!spec) continue
     const id = `item:${kind}`
@@ -233,6 +250,7 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     { id: 'settlement:torch', url: VILLAGE_TORCH_URL, label: 'Village torch', prepare: { mode: 'height', value: VILLAGE_TORCH_HEIGHT } },
     { id: 'settlement:wall', url: WALL_URL, label: 'Wall segment', prepare: { mode: 'height', value: 1.85 } },
     { id: 'fx:fire', url: FIRE_FX_URL, label: 'Fire FX', prepare: { mode: 'fitMax', value: 0.11 } },
+    { id: 'fx:blood_splat', url: '/models/fx/blood_splat.glb', label: 'Blood splat', prepare: { mode: 'fitMax', value: 1 } },
   ]
 
   for (const spec of settlementProps) {

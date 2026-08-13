@@ -1,17 +1,19 @@
-import { Group, type Material, type Mesh, type Object3D, PointLight } from 'three'
+import { Group, type Material, Matrix4, type Mesh, type Object3D, PointLight, Vector3 } from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
-import type { HeldAttach } from '../items/heldToolVisual'
 import { disposeObject3D, loadGltf, preparePropFitMax } from '../assets/loadGltf'
-import { BRANCH_HELD_ATTACH, mountAttachOnSocket } from '../items/heldToolVisual'
+import { BRANCH_HELD_ATTACH, HELD_ATTACH, mountAttachOnSocket } from '../items/heldToolVisual'
 import { createItemMesh } from '../items/items'
 import { createCampfireFlame } from '../settlement/props'
+import { createSparks } from '../shared/getFireParticles'
 import {
   BRANCH_HELD_MAX,
   BRANCH_URL,
   TORCH_LIGHT_BRANCH,
   TORCH_LIGHT_DECAY,
-  TORCH_LIGHT_LOCAL_OFFSET,
   TORCH_LIGHT_WOODEN,
+  TORCH_SPARK_OFFSET_WOODEN,
+  TORCH_TIP_OFFSET_BRANCH,
+  TORCH_TIP_OFFSET_WOODEN,
 } from './torchLightPresets'
 
 /** Seconds a lit branch burns — portable stopgap (plan 050 / 085). */
@@ -19,26 +21,12 @@ export const TORCH_FUEL_BRANCH = 90
 /** Wooden torch burns longer than a bare branch (plan 085). */
 export const TORCH_FUEL_WOODEN = 240
 
-/**
- * TEMP — grip-tuning: hide sparks / fire.glb tip so only the stick mesh is
- * visible. Flip back to `true` once `BRANCH_ATTACH` / `wooden_torch` HELD_ATTACH
- * look right.
- */
-const SHOW_HAND_FLAME_VISUAL = false
+const SHOW_HAND_FLAME_VISUAL = true
 
 const FIRE_URL = '/models/fx/fire.glb'
 /** Accent tip only — sparks/cone come from `createCampfireFlame`. */
 const FIRE_TIP_MAX = 0.11
 const FLAME_OPACITY = 0.75
-
-/** PointLight / future flame tip — same wrist TRS as `HELD_ATTACH.wooden_torch`. */
-const WOODEN_FIRE_ATTACH: HeldAttach = {
-  position: [0.02, 0.12, -0.02],
-  rotation: [Math.PI / 2, -Math.PI / 2, 0],
-  scale: 1,
-}
-
-// BRANCH_HELD_ATTACH / WOODEN_FIRE_ATTACH duplicate HELD_ATTACH.wooden_torch — Phase 6 migration candidate.
 
 export type TorchSource = 'branch' | 'wooden_torch'
 
@@ -70,6 +58,21 @@ type FlameVisual = {
 let branchTemplate: Group | null = null
 let fireTemplate: Group | null = null
 let templatesPromise: Promise<void> | null = null
+
+const _invParent = new Matrix4()
+const _localUp = new Vector3()
+const _fromY = new Vector3(0, 1, 0)
+
+/** Spark sim uses local +Y as rise — counter the wrist/tool rotation so +Y is world up. */
+function alignLocalYToWorldUp(obj: Object3D): void {
+  const parent = obj.parent
+  if (!parent) return
+  parent.updateWorldMatrix(true, false)
+  _invParent.copy(parent.matrixWorld).invert()
+  _localUp.set(0, 1, 0).transformDirection(_invParent)
+  if (_localUp.lengthSq() < 1e-8) return
+  obj.quaternion.setFromUnitVectors(_fromY, _localUp.normalize())
+}
 
 async function ensureTemplates(): Promise<void> {
   if (branchTemplate && (!SHOW_HAND_FLAME_VISUAL || fireTemplate)) return
@@ -171,6 +174,7 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
   let flameUpdate: ((dt: number) => void) | null = null
   let flameSetSize: ((f: number) => void) | null = null
   let pointLight: PointLight | null = null
+  let worldUpSparks: Object3D | null = null
   let loadToken = 0
 
   const clearMount = () => {
@@ -182,6 +186,7 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
     flameUpdate = null
     flameSetSize = null
     pointLight = null
+    worldUpSparks = null
   }
 
   const notify = () => hand.onChange?.()
@@ -216,22 +221,19 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
         params.distance,
         TORCH_LIGHT_DECAY,
       )
-      pointLight.position.set(
-        TORCH_LIGHT_LOCAL_OFFSET[0],
-        TORCH_LIGHT_LOCAL_OFFSET[1],
-        TORCH_LIGHT_LOCAL_OFFSET[2],
-      )
+      const tipOffset = source === 'wooden_torch' ? TORCH_TIP_OFFSET_WOODEN : TORCH_TIP_OFFSET_BRANCH
+      pointLight.position.set(tipOffset[0], tipOffset[1], tipOffset[2])
 
       let flameObject: Object3D | null = null
-      if (SHOW_HAND_FLAME_VISUAL) {
-        const flame = makeFlameVisual(source === 'wooden_torch' ? 1.05 : 0.9)
+      if (SHOW_HAND_FLAME_VISUAL && source === 'branch') {
+        const flame = makeFlameVisual(0.9)
         flame.object.visible = true
         flameUpdate = flame.update
         flameSetSize = flame.setSize
         flame.setSize(ratio)
         // Align flame local +Y (sparks/cone up) with tip +Z.
         flame.object.rotation.x = Math.PI / 2
-        flame.object.position.set(0, 0, 0.34)
+        flame.object.position.set(tipOffset[0], tipOffset[1], tipOffset[2])
         flameObject = flame.object
       }
 
@@ -247,10 +249,21 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
         group.add(wrap)
         mountAttachOnSocket(group, socket, BRANCH_HELD_ATTACH)
       } else {
-        // Stick mesh comes from HeldTool; this mount is light (+ optional flame).
-        if (flameObject) group.add(flameObject)
+        // Stick mesh comes from HeldTool. Light + sparks at the tip — no
+        // cone/fire.glb (those sat at the tip while sparks flew further
+        // along +Z after the extra π/2).
+        const sparks = createSparks(0.4)
+        sparks.points.position.set(
+          TORCH_SPARK_OFFSET_WOODEN[0],
+          TORCH_SPARK_OFFSET_WOODEN[1],
+          TORCH_SPARK_OFFSET_WOODEN[2],
+        )
+        flameUpdate = sparks.update
+        worldUpSparks = sparks.points
+        group.add(sparks.points)
         group.add(pointLight)
-        mountAttachOnSocket(group, socket, WOODEN_FIRE_ATTACH)
+        mountAttachOnSocket(group, socket, HELD_ATTACH.wooden_torch)
+        alignLocalYToWorldUp(sparks.points)
       }
 
       mount = group
@@ -266,6 +279,7 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
     },
     update(dt) {
       if (!lit) return
+      if (worldUpSparks) alignLocalYToWorldUp(worldUpSparks)
       flameUpdate?.(dt)
       fuelRemaining -= dt
       if (fuelRemaining <= 0) {

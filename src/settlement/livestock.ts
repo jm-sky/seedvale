@@ -1,10 +1,17 @@
 import * as THREE from 'three'
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { HeightSampler } from '../player/PlayerController'
-import { disposeObject3D } from '../assets/loadGltf'
+import {
+  disposeObject3D,
+  type GltfAsset,
+  loadGltfAsset,
+  prepareProp,
+} from '../assets/loadGltf'
 import { ANIMAL_DEFS, AnimalAgent } from '../fauna/AnimalAgent'
 import {
   createChickenModel,
   createCowModel,
+  createDonkeyModel,
   createHorseModel,
   createSheepModel,
 } from '../fauna/proceduralAnimals'
@@ -12,10 +19,19 @@ import { createSeededRandom } from '../world/parseSeed'
 import { type VillageSize, villageSizeConfig } from './families'
 
 /** Owned farm animal kinds — the only `AnimalKind`s this module ever spawns. */
-type LivestockKind = 'horse' | 'cow' | 'sheep' | 'chicken'
+type LivestockKind = 'horse' | 'donkey' | 'cow' | 'sheep' | 'chicken'
+
+export const LIVESTOCK_URLS: Record<LivestockKind, string> = {
+  horse: '/models/fauna/horse.glb',
+  donkey: '/models/fauna/donkey.glb',
+  cow: '/models/fauna/cow.glb',
+  sheep: '/models/fauna/sheep.glb',
+  chicken: '/models/fauna/chicken.glb',
+}
 
 const MODEL_BUILDERS: Record<LivestockKind, () => THREE.Object3D> = {
   horse: createHorseModel,
+  donkey: createDonkeyModel,
   cow: createCowModel,
   sheep: createSheepModel,
   chicken: createChickenModel,
@@ -23,17 +39,18 @@ const MODEL_BUILDERS: Record<LivestockKind, () => THREE.Object3D> = {
 
 /** Given ownership, chance of 2 animals instead of 1. */
 const LIVESTOCK_TWO_CHANCE = 0.4
-/** Species weights when a house rolls an animal — common (chicken) to rare
- *  (horse). Order matters: cumulative-sum picking below walks this list. */
+/** Species weights when a house rolls an animal — chicken common, horse rare.
+ *  Order matters: cumulative-sum picking below walks this list. */
 const SPECIES_WEIGHTS: readonly [LivestockKind, number][] = [
-  ['chicken', 0.42],
-  ['sheep', 0.28],
-  ['cow', 0.17],
-  ['horse', 0.13],
+  ['chicken', 0.40],
+  ['sheep', 0.26],
+  ['cow', 0.16],
+  ['donkey', 0.12],
+  ['horse', 0.06],
 ]
 /** Outposts get a much poorer roll than a normal house — at most a single
  *  chicken (chance from `VILLAGE_SIZE_CONFIG.OUTPOST.livestockOwnershipChance`),
- *  never a cow/horse/sheep (no room/need for a herd at a 1-person cabin). */
+ *  never a cow/horse/sheep/donkey (no room/need for a herd at a 1-person cabin). */
 /** `[min, max]` wander radius (world units) from the owning house — tight
  *  enough that even on the closest realistic house spacing (LG villages,
  *  `villageClearing.ts`'s ring math), two neighboring farmyards' wander
@@ -44,6 +61,48 @@ const LIVESTOCK_WANDER_RADIUS: readonly [number, number] = [3, 6]
  *  point is offset by — close enough to read as "belongs to this house",
  *  not literally standing in the doorway. */
 const SPAWN_OFFSET_RANGE: readonly [number, number] = [1.5, 4]
+
+const livestockTemplates: Partial<Record<LivestockKind, GltfAsset>> = {}
+let livestockTemplatesPromise: Promise<void> | null = null
+
+function wrapModel(model: THREE.Object3D): THREE.Group {
+  const wrap = new THREE.Group()
+  wrap.add(model)
+  return wrap
+}
+
+async function ensureLivestockTemplates(): Promise<void> {
+  if (livestockTemplatesPromise) {
+    await livestockTemplatesPromise
+    return
+  }
+  livestockTemplatesPromise = (async () => {
+    const entries = await Promise.all(
+      (Object.entries(LIVESTOCK_URLS) as [LivestockKind, string][]).map(async ([kind, url]) => {
+        try {
+          const asset = await loadGltfAsset(url)
+          // Clone before prepareProp so the shared GLTF cache stays unscaled
+          // (merchant horse.glb also clones from that cache).
+          const prepared = asset.clone()
+          prepareProp(prepared, ANIMAL_DEFS[kind].modelHeight)
+          const wrapped: GltfAsset = {
+            root: prepared,
+            animations: asset.animations,
+            clone: () => cloneSkinned(prepared) as THREE.Group,
+          }
+          return [kind, wrapped] as const
+        } catch (err) {
+          console.warn(`[livestock] failed to load ${url}, procedural fallback`, err)
+          return [kind, null] as const
+        }
+      }),
+    )
+    for (const [kind, asset] of entries) {
+      if (asset) livestockTemplates[kind] = asset
+    }
+  })()
+  await livestockTemplatesPromise
+}
 
 /** Deterministic per-house seed, same xor/imul idiom as `families.ts`'s
  *  `familySeed` — every house's ownership/count/species/placement rolls
@@ -96,27 +155,35 @@ function kindsForHouse(size: VillageSize, random: () => number): LivestockKind[]
   return kinds
 }
 
+function visualFor(kind: LivestockKind): { visual: THREE.Object3D, animations: THREE.AnimationClip[] } {
+  const tpl = livestockTemplates[kind]
+  if (tpl) {
+    return { visual: wrapModel(tpl.clone()), animations: tpl.animations }
+  }
+  return { visual: MODEL_BUILDERS[kind](), animations: [] }
+}
+
 /**
  * Spawns one house-anchored `AnimalAgent` per rolled farm animal, one
  * deterministic roll per house in `homes` (1:1 with the settlement's
- * `families`, see `createSettlement.ts`). Purely synchronous — the
- * `LivestockKind` visuals are all procedural builders (`proceduralAnimals.ts`),
- * no GLB/async loading involved.
+ * `families`, see `createSettlement.ts`). Loads livestock GLBs once, then
+ * clones; procedural builders remain the fallback.
  */
-export function spawnLivestock(
+export async function spawnLivestock(
   scene: THREE.Scene,
   sampleHeight: HeightSampler,
   waterLevel: number,
   homes: readonly THREE.Vector3[],
   size: VillageSize,
   settlementSeed: number,
-): AnimalAgent[] {
+): Promise<AnimalAgent[]> {
+  await ensureLivestockTemplates()
   const agents: AnimalAgent[] = []
   homes.forEach((home, i) => {
     const random = createSeededRandom(houseSeed(settlementSeed, i))
     for (const kind of kindsForHouse(size, random)) {
       const { x, z } = findSpotNearHouse(home, sampleHeight, waterLevel, random)
-      const visual = MODEL_BUILDERS[kind]()
+      const { visual, animations } = visualFor(kind)
       const agent = new AnimalAgent(
         ANIMAL_DEFS[kind],
         sampleHeight,
@@ -124,7 +191,7 @@ export function spawnLivestock(
         x,
         z,
         visual,
-        [],
+        animations,
         LIVESTOCK_WANDER_RADIUS,
       )
       scene.add(agent.mesh)
@@ -134,11 +201,8 @@ export function spawnLivestock(
   return agents
 }
 
-/** Unlike `createFauna.ts`'s `disposeAgent` (which only frees capsule
- *  geometry, since GLB clones share the loader's cached GPU resources),
- *  every livestock visual here is a fresh procedural build
- *  (`proceduralAnimals.ts`) with its own geometry/material — always safe,
- *  and necessary, to dispose. */
+/** GLB clones share the loader's cached GPU resources (`sharedGpu`);
+ *  procedural fallbacks own their geometry — `disposeObject3D` skips shared. */
 export function disposeLivestock(agents: readonly AnimalAgent[]): void {
   for (const agent of agents) {
     agent.dispose()

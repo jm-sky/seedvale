@@ -44,14 +44,16 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/items/axe.glb` | CreativeTrio | [poly.pizza/m/OhZDdlrx29](https://poly.pizza/m/OhZDdlrx29) | CC0 1.0 | `Axe` — drop + held |
 | `public/models/settlement/hay.glb` | Quaternius | [poly.pizza/m/Yu8TOERkpw](https://poly.pizza/m/Yu8TOERkpw) | CC0 1.0 | `Hay` — clutter przy ogrodach (plan 082) |
 | `public/models/items/pickaxe.glb` | CreativeTrio | [poly.pizza/m/cJp88qPPLc](https://poly.pizza/m/cJp88qPPLc) | CC0 1.0 | `Pickaxe` — dekor przy stockpile; gameplay mining later (plan 082) |
-| `public/models/fauna/sheep.glb` | Quaternius | [poly.pizza/m/C39AUXUUes](https://poly.pizza/m/C39AUXUUes) | CC0 1.0 | `Sheep` — **parked**, niepodpięte (fauna gospodarska) |
-| `public/models/fauna/horse.glb` | Quaternius | [poly.pizza/m/qvTrSG9pZF](https://poly.pizza/m/qvTrSG9pZF) | CC0 1.0 | `Horse` — **parked**, niepodpięte |
+| `public/models/fauna/sheep.glb` | Quaternius | [poly.pizza/m/C39AUXUUes](https://poly.pizza/m/C39AUXUUes) | CC0 1.0 | `Sheep` — livestock wioski (plan 096) |
+| `public/models/fauna/horse.glb` | Quaternius | [poly.pizza/m/qvTrSG9pZF](https://poly.pizza/m/qvTrSG9pZF) | CC0 1.0 | `Horse` — livestock + dekor przy wozie kupca |
+| `public/models/fauna/cow.glb` | Quaternius | [poly.pizza/m/5XSc2Fka3F](https://poly.pizza/m/5XSc2Fka3F) | CC0 1.0 | `Cow` — livestock wioski (plan 096) |
+| `public/models/fauna/donkey.glb` | Quaternius | [poly.pizza/m/qmX6nhnvp7](https://poly.pizza/m/qmX6nhnvp7) | CC0 1.0 | `Donkey` — livestock wioski (plan 096) |
 | `public/models/nature/pine_trees.glb` | Quaternius | [poly.pizza/m/oYtDty0fR6](https://poly.pizza/m/oYtDty0fR6) | CC0 1.0 | `Pine Trees` — **parked**, niepodpięte |
 | `public/models/nature/grass_clump.glb` | Quaternius | [poly.pizza/m/UGTOzcO3P2](https://poly.pizza/m/UGTOzcO3P2) | CC0 1.0 | `Grass` — **parked** (instanced grass już w runtime) |
 | `public/models/items/long_sword.glb` | ImForth | [poly.pizza/m/fRNfk6uA5hq](https://poly.pizza/m/fRNfk6uA5hq) | **[CC-BY](https://creativecommons.org/licenses/by/3.0/)** | `Long Sword` — **parked**; wymagana atrybucja przy wire |
 | `public/models/parked/FishingRod_Lvl2.fbx` | ❓ | `_temp` | **❓** ustalić przed wire | Wymaga FBX→GLB + źródło/licencja |
-| `public/models/fx/blood_splat.glb` | Quaternius | [poly.pizza/m/pFSQljR206](https://poly.pizza/m/pFSQljR206) | CC0 1.0 | `Blood Splat` — **parked**; docelowo VFX przy śmierci NPC / fauna / mob (plan 082) |
-| `public/models/fauna/chicken.glb` | jeremy | [poly.pizza/m/1YE8U35HXsI](https://poly.pizza/m/1YE8U35HXsI) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Chicken` — **parked** (fauna gospodarska); wymagana atrybucja |
+| `public/models/fx/blood_splat.glb` | Quaternius | [poly.pizza/m/pFSQljR206](https://poly.pizza/m/pFSQljR206) | CC0 1.0 | `Blood Splat` — VFX przy śmierci fauna/livestock (plan 096) |
+| `public/models/fauna/chicken.glb` | jeremy | [poly.pizza/m/1YE8U35HXsI](https://poly.pizza/m/1YE8U35HXsI) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Chicken` — livestock wioski (plan 096); wymagana atrybucja |
 | `public/models/settlement/farm_poly.glb` | Poly by Google | [poly.pizza/m/dSjXKezYeBo](https://poly.pizza/m/dSjXKezYeBo) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Farm` — **parked** (nie mylić z Fantasy RTS `farm.glb`); wymagana atrybucja |
 | `public/models/nature/rock_b.glb` | Quaternius | [poly.pizza/m/RtLRqYjfMs](https://poly.pizza/m/RtLRqYjfMs) | CC0 1.0 | `Rock` — **parked** wariant obok wired `rock_a` |
 | `public/models/items/wooden_torch.glb` | Quaternius | [poly.pizza/m/pNsfJzhXiD](https://poly.pizza/m/pNsfJzhXiD) | CC0 1.0 | `Wooden Torch` — holdable + lit hand light (plan 085) |

@@ -1,8 +1,11 @@
 export const TORCH_LIGHT_BRANCH = { color: 0xff8a3c, intensity: 2.35, distance: 8 }
 export const TORCH_LIGHT_WOODEN = { color: 0xff9a4a, intensity: 2.8, distance: 11 }
 export const TORCH_LIGHT_DECAY = 2
-/** Local offset from the torch mount toward the flame tip. */
-export const TORCH_LIGHT_LOCAL_OFFSET = [0, 0, 0.36] as const
+/** Local +Z from the held wrap toward the flame tip (after grip offset). */
+export const TORCH_TIP_OFFSET_BRANCH = [0, 0, 0.48] as const
+export const TORCH_TIP_OFFSET_WOODEN = [0, 0, 0.42] as const
+/** Sparks sit a little behind the light so they read on the head, not in front of it. */
+export const TORCH_SPARK_OFFSET_WOODEN = [0, 0, 0.32] as const
 
 export const BRANCH_URL = '/models/items/branch.glb'
 export const BRANCH_HELD_MAX = 0.55

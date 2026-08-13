@@ -17,7 +17,7 @@ siano/kilof jako clutter; pozostałe modele zaparkować w `public/models` + MODE
 - `ItemKind` `pitchfork` / `sickle` (+ procedural fallback mesh).
 - GLB: `public/models/items/pitchfork.glb`, `sickle.glb` (preload w `itemModels.ts`).
 - Spawner: **1–3** one-time pickupy przy ogrodach (`createItemSpawners.ts`).
-- Nie są holdable (`isToolKind` tylko knife/firestarter/shovel/axe) — Weź w UI nie pokazuje się.
+- Nie były holdable w momencie 082 — hold+melee: plan 096.
 - Issue [025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md): przyszła reakcja NPC *„Hej! Co robisz!?”*.
 
 ### Faza B — clutter
