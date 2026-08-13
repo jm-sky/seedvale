@@ -73,31 +73,31 @@ Zgodnie z [performance-and-workers.md](../architecture/performance-and-workers.m
 
 1. Czy 2.1 wchodzi osobno i od razu (mały, niezależny zysk), czy całość idzie jednym planem?
 
--> Najpierw 2.1
+> -> Najpierw 2.1
 
 2. Skąd biorą się ciała kolizyjne propsów — z katalogu (ręczny promień per model), czy liczone z bounding boxa GLB przy ładowaniu?
 
--> Nie wiem, jak lepiej? Liczone i potem zapisane w kodzie per model?
+> -> Nie wiem, jak lepiej? Liczone i potem zapisane w kodzie per model?
 
 3. Czy kolizje dotyczą NPC/zwierząt, czy tylko gracza?
 
--> Gracz, NPC i zwierzęta
+> -> Gracz, NPC i zwierzęta
 
 4. Czy wchodzimy w bibliotekę fizyki, czy zostajemy przy własnych prymitywach? (Rekomendacja wstępna: własne — patrz 2.2.)
 
--> Mżemy zrobić sami, jeżeli nie skończy się ciągłymi błędami i poprawkami.
+> -> Mżemy zrobić sami, jeżeli nie skończy się ciągłymi błędami i poprawkami.
 
 5. Czy skok ma mieć animację i czy istnieje klip w rigu gracza.
 
--> Byłoby miło. Jeżeli nie ma animacji, to zmienimy model gracza.
+> -> Byłoby miło. Jeżeli nie ma animacji, to zmienimy model gracza.
 
--> ✅ zweryfikowane w kodzie (2026-08-13): **żaden klip skoku nie istnieje** — ani w `Adventurer.glb` (gracz), ani w żadnym z pozostałych 8 modeli w `public/models/characters/` (wszystkie to ta sama paczka Quaternius Ultimate Modular Men, identyczny zestaw 24 klipów: `Idle, Idle_Neutral, Walk, Run, Run_Back, Run_Left, Run_Right, Roll, Interact, Wave, Death, HitRecieve, HitRecieve_2, Punch_Left, Punch_Right, Kick_Left, Kick_Right, Sword_Slash, Idle_Sword, Gun_Shoot, Idle_Gun, Idle_Gun_Pointing, Idle_Gun_Shoot, Run_Shoot`). Zmiana modelu gracza **nie rozwiąże tego w obrębie obecnej biblioteki postaci** — trzeba by sprowadzić inny pakiet/rig, co jest osobnym, większym zadaniem (nowy szkielet ≠ nowy plik GLB w tym samym rigu). **Rekomendacja: v1 skoku bez dedykowanego klipu** — reużyć istniejący trik proceduralny (patrz `CROUCH_ROTATION_X`/`CROUCH_Y_OFFSET` w `PlayerController.ts` — przysiad przez `rotation.x`/`position.y` na `modelRoot`, bez klipu) do krótkiego przysiadu przed odbiciem i/lub przechylenia w locie, zamiast blokować fazę 2.3 na nowym assecie. Wymiana rigu zostaje osobnym, przyszłym tematem, jeśli okaże się warta kosztu.
+> -> ✅ zweryfikowane w kodzie (2026-08-13): **żaden klip skoku nie istnieje** — ani w `Adventurer.glb` (gracz), ani w żadnym z pozostałych 8 modeli w `public/models/characters/` (wszystkie to ta sama paczka Quaternius Ultimate Modular Men, identyczny zestaw 24 klipów: `Idle, Idle_Neutral, Walk, Run, Run_Back, Run_Left, Run_Right, Roll, Interact, Wave, Death, HitRecieve, HitRecieve_2, Punch_Left, Punch_Right, Kick_Left, Kick_Right, Sword_Slash, Idle_Sword, Gun_Shoot, Idle_Gun, Idle_Gun_Pointing, Idle_Gun_Shoot, Run_Shoot`). Zmiana modelu gracza **nie rozwiąże tego w obrębie obecnej biblioteki postaci** — trzeba by sprowadzić inny pakiet/rig, co jest osobnym, większym zadaniem (nowy szkielet ≠ nowy plik GLB w tym samym rigu). **Rekomendacja: v1 skoku bez dedykowanego klipu** — reużyć istniejący trik proceduralny (patrz `CROUCH_ROTATION_X`/`CROUCH_Y_OFFSET` w `PlayerController.ts` — przysiad przez `rotation.x`/`position.y` na `modelRoot`, bez klipu) do krótkiego przysiadu przed odbiciem i/lub przechylenia w locie, zamiast blokować fazę 2.3 na nowym assecie. Wymiana rigu zostaje osobnym, przyszłym tematem, jeśli okaże się warta kosztu.
 
 6. ~~Jak to spina się z `CaveVolume` / `clampToVolume` z researchu 009~~ → **rozstrzygnięte 2026-08-13**: wspólna abstrakcja, ten plan idzie pierwszy. Ściany jaskini to statyczne ciała w tym systemie; graf jaskini zostaje wyłącznie jako źródło mesha, sitingu i navmeshu dla zwierzęcia (research 009 §11.4). Konsekwencja dla 2.2: kolizja musi obsłużyć **wnętrze** (wypchnięcie do środka objętości), nie tylko **omijanie** propsów z zewnątrz.
 
 7. Czy fizyka ma dotyczyć rzucania przedmiotami (nowa mechanika) czy tylko upuszczania (istniejąca).
 
--> Na razie tylko upuszczanie.
+> -> Na razie tylko upuszczanie.
 
 
 ## 5. Poza zakresem (na teraz)
