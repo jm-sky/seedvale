@@ -30,7 +30,7 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 012 | [2026-08-10--012--toast-notifications-for-quick-feedback.md](./2026-08-10--012--toast-notifications-for-quick-feedback.md) | Krótkie akcje (ognisko, znaleziona gałąź) niepotrzebnie blokują grę pełnym dialogiem zamiast toastu | `verification needed` |
 | 013 | [2026-08-10--013--npc-label-gaze-cone-dimming.md](./2026-08-10--013--npc-label-gaze-cone-dimming.md) | NPC labels przygasają do 50%, gdy gracz nie patrzy w ich stronę (~90° stożek) | `verification needed` |
 | 014 | [2026-08-10--014--terrain-detail-normal-map-green-channel.md](./2026-08-10--014--terrain-detail-normal-map-green-channel.md) | Normal-mapa terenu pieczona z „górą" w kanale G zamiast B — „camo" na ziemi, którego obniżanie `normalScale` tylko pogarszało; przy okazji: wyłączenie AO gasiło całą scenę | `verification needed` |
-| 015 | [2026-08-11--015--fauna-food-water-for-satiety-hydration.md](./2026-08-11--015--fauna-food-water-for-satiety-hydration.md) | Zwierzęta potrzebują źródeł jedzenia/wody, żeby paski sytości i nawodnienia mogły rosnąć | `todo` |
+| 015 | — | Fauna jedzenie/woda dla sytości/nawodnienia — **przeniesione** do [planu 094](../plans/2026-08-13--094--fauna-food-water-for-satiety-hydration.md) | `planned` |
 | 016 | [2026-08-11--016--god-rays-mountain-whiteout.md](./2026-08-11--016--god-rays-mountain-whiteout.md) | God rays: biały whiteout na wyżynach / przy kamerze zza postaci (clamp 0.8 niewystarczający) | `done` |
 | 017 | [2026-08-12--017--nearby-status-bars.md](./2026-08-12--017--nearby-status-bars.md) | Paski HP/stamina NPC i mobów widoczne tylko w pobliżu gracza, aby ograniczyć clutter | `done` |
 | 018 | [2026-08-12--018--house-scale-vs-npc.md](./2026-08-12--018--house-scale-vs-npc.md) | Domki są zazwyczaj zbyt małe względem rozmiaru NPC | `verification needed` |
@@ -42,7 +42,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 024 | [2026-08-12--024--wild-fauna-enters-village-and-spawns-too-close.md](./2026-08-12--024--wild-fauna-enters-village-and-spawns-too-close.md) | Dzikie zwierzęta wchodzą do wioski; spawn-pointy za blisko osady i siebie nawzajem | `verification needed` |
 | 025 | [2026-08-12--025--npc-react-to-stolen-village-tools.md](./2026-08-12--025--npc-react-to-stolen-village-tools.md) | NPC protestują, gdy gracz bierze widły/sierp z wioski | `todo` |
 | 026 | [2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md](./2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md) | Jaskinia: płaski czarny „daszek" zamiast realnej dziury w terenie | `verification needed` |
+| 027 | [2026-08-13--027--settlement-streaming-main-thread-freeze.md](./2026-08-13--027--settlement-streaming-main-thread-freeze.md) | Osada streamuje się synchronicznie — ~89 ms freeze przy pojawieniu się wioski w polu widzenia | `todo` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `027`
+**Next ID:** `028`

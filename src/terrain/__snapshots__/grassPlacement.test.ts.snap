@@ -1,0 +1,76 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`computeChunkGrass > produces a deterministic, non-trivial golden result per chunk (locks in today's output — plan 086 phase 1) > chunk (-18,6) 1`] = `
+{
+  "filler": {
+    "baseColorsChecksum": 0.098151,
+    "count": 1,
+    "matricesChecksum": 42.016519,
+  },
+  "grain": {
+    "baseColorsChecksum": 0.239407,
+    "count": 1,
+    "matricesChecksum": 35.526259,
+  },
+  "herb": {
+    "baseColorsChecksum": 0.910496,
+    "count": 5,
+    "matricesChecksum": 213.335224,
+  },
+  "tri": {
+    "baseColorsChecksum": 0.702354,
+    "count": 3,
+    "matricesChecksum": 144.648246,
+  },
+}
+`;
+
+exports[`computeChunkGrass > produces a deterministic, non-trivial golden result per chunk (locks in today's output — plan 086 phase 1) > chunk (0,0) 1`] = `
+{
+  "filler": {
+    "baseColorsChecksum": 144.065086,
+    "count": 738,
+    "matricesChecksum": 3183.865426,
+  },
+  "grain": {
+    "baseColorsChecksum": 66.747355,
+    "count": 298,
+    "matricesChecksum": 2028.908711,
+  },
+  "herb": {
+    "baseColorsChecksum": 195.477439,
+    "count": 1242,
+    "matricesChecksum": 4216.434116,
+  },
+  "tri": {
+    "baseColorsChecksum": 196.551344,
+    "count": 874,
+    "matricesChecksum": 4008.378949,
+  },
+}
+`;
+
+exports[`computeChunkGrass > produces a deterministic, non-trivial golden result per chunk (locks in today's output — plan 086 phase 1) > chunk (24,24) 1`] = `
+{
+  "filler": {
+    "baseColorsChecksum": 166.339466,
+    "count": 868,
+    "matricesChecksum": 5347.763249,
+  },
+  "grain": {
+    "baseColorsChecksum": 79.372911,
+    "count": 367,
+    "matricesChecksum": 1896.682492,
+  },
+  "herb": {
+    "baseColorsChecksum": 231.808188,
+    "count": 1490,
+    "matricesChecksum": 8662.017889,
+  },
+  "tri": {
+    "baseColorsChecksum": 239.131013,
+    "count": 1091,
+    "matricesChecksum": 5994.407163,
+  },
+}
+`;

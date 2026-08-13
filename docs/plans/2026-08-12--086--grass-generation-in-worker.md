@@ -1,6 +1,6 @@
 # Plan: Generacja trawy w workerze (review 005, pozycja 14 / A4a)
 
-**Status:** `planned`
+**Status:** `verification needed` (fazy 0-5, czyli wszystkie **Must**, zaimplementowane/zmierzone — zdrowy baseline `Simulate (ms)` bez skoku przy granicy trawy; fazy 6/7 to Should/Nice, poza zakresem teraz. Zobacz [implementation notes](./2026-08-12--086--grass-generation-in-worker-implementation-notes.md))
 **Created:** 2026-08-12
 **Priority:** 🟡 medium
 **Effort:** L
