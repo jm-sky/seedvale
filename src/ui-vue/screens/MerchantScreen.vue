@@ -78,7 +78,7 @@ function selectBarter(kind: ItemKind): void {
         <div
           v-for="item in stock"
           :key="item.kind"
-          class="flex items-center gap-2 rounded-md bg-white/5 px-3 py-2"
+          class="flex items-center gap-2 rounded-md bg-white/5 px-3 py-2 border border-transparent hover:border-white/30"
           :class="barterKind === item.kind ? 'ring-1 ring-white/30' : ''"
         >
           <button
