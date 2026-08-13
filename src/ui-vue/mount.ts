@@ -6,7 +6,7 @@ const FORWARDED_FNS = [
   'openNpcDialogueMenu', 'closeNpcDialogueMenu', 'acceptNpcDialogueOffer', 'isNpcDialogueMenuOpen', 'configureNpcDialogueMenu',
   'openVillagers', 'closeVillagers', 'toggleVillagers', 'refreshVillagers', 'isVillagersOpen',
   'openInventory', 'refreshInventory', 'isInventoryOpen', 'closeInventory',
-  'configureMerchant', 'openMerchant', 'refreshMerchant', 'closeMerchant', 'isMerchantOpen',
+  'configureMerchant', 'openMerchant', 'openMerchantFromDialogue', 'refreshMerchant', 'closeMerchant', 'isMerchantOpen',
   'configurePauseMenu', 'setPauseSeed', 'openPauseMenu', 'closePauseMenu', 'togglePause', 'isPauseMenuOpen',
   'openQuestLog', 'refreshQuestLog', 'closeQuestLog', 'isQuestLogOpen',
   'openFlavorDialog', 'setFlavorPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',

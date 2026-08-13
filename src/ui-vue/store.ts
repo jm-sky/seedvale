@@ -66,6 +66,7 @@ type QuickActionsState = {
 }
 type MerchantState = {
   open: boolean
+  npc: NpcAgent | null
   counts: Partial<Record<ItemKind, number>>
   onBuyShells: ((kind: ItemKind) => TradeResult) | null
   onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>) => TradeResult) | null
@@ -142,7 +143,7 @@ export const ui = reactive({
     onWait: null, onRest: null, onDig: null, onLevel: null, onOpen: null, onClose: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
-  merchant: { open: false, counts: {}, onBuyShells: null, onBuyBarter: null } as MerchantState,
+  merchant: { open: false, npc: null, counts: {}, onBuyShells: null, onBuyBarter: null } as MerchantState,
   busy: { visible: false, label: '' } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
@@ -263,14 +264,24 @@ export function isInventoryOpen(): boolean { return ui.inventory.open }
 export function configureMerchant(handlers: Pick<MerchantState, 'onBuyShells' | 'onBuyBarter'>): void {
   Object.assign(ui.merchant, handlers)
 }
-export function openMerchant(counts: Partial<Record<ItemKind, number>>): void {
+export function openMerchant(counts: Partial<Record<ItemKind, number>>, npc: NpcAgent | null = null): void {
   ui.merchant.counts = { ...counts }
+  ui.merchant.npc = npc ? markRaw(npc) : null
   ui.merchant.open = true
+}
+/** Close dialogue first, then open trade — capture the NPC before reset. */
+export function openMerchantFromDialogue(counts: Partial<Record<ItemKind, number>>): void {
+  const npc = ui.npcDialogueMenu.npc as NpcAgent | null
+  closeNpcDialogueMenu({ decline: false })
+  openMerchant(counts, npc)
 }
 export function refreshMerchant(counts: Partial<Record<ItemKind, number>>): void {
   ui.merchant.counts = { ...counts }
 }
-export function closeMerchant(): void { ui.merchant.open = false }
+export function closeMerchant(): void {
+  ui.merchant.open = false
+  ui.merchant.npc = null
+}
 export function isMerchantOpen(): boolean { return ui.merchant.open }
 
 export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 'open'>>): void { Object.assign(ui.quickActions, handlers) }

@@ -364,8 +364,7 @@ export async function createApp(
       return result.line
     },
     onOpenTrade: () => {
-      vueUi.closeNpcDialogueMenu({ decline: false })
-      vueUi.openMerchant(inventory.toJSON())
+      vueUi.openMerchantFromDialogue(inventory.toJSON())
     },
   })
 
