@@ -17,8 +17,8 @@ const NOISE_SEED = 0x7a11e5
 
 /**
  * Bakes a small tileable detail normal map from a couple of layered noise
- * octaves (no external asset — same reasoning as `createOcean.ts`'s
- * procedural water normals) so flat/gently-sloped terrain reads as having a
+ * octaves (no external asset — same reasoning as the water shader's sine
+ * ripples) so flat/gently-sloped terrain reads as having a
  * bit of surface grain up close, instead of perfectly smooth geometry
  * (plan 044 §4.5, "teren wygląda płasko"). Tiles seamlessly by sampling the
  * noise on a torus (wrap the sample coordinates through a full turn) rather

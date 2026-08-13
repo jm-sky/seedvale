@@ -33,6 +33,7 @@ export type ChunkMeshResult = {
 export function createTerrainMaterial(
   flatShading: boolean,
   detailNormal: DetailNormalConfig,
+  waterLevel: number,
 ): THREE.MeshStandardMaterial {
   // Surface grain, not a substitute for real geometry (plan 044 §4.5, "teren
   // wygląda płasko"). Strength/tiling are GUI knobs — do not hardcode a "cut"
@@ -52,13 +53,13 @@ export function createTerrainMaterial(
       : {}),
   })
   // Macro color/roughness always; dual-tile normals + distance fade when enabled.
-  applyTerrainSurfaceShader(material, detailOn ? detailNormal : null)
+  applyTerrainSurfaceShader(material, detailOn ? detailNormal : null, waterLevel)
   return material
 }
 
-/** Built once and shared by every chunk's material — same reasoning as
- *  `createOcean.ts`'s procedural water normal map: no external asset, no
- *  per-chunk cost beyond a cheap texture reference. `repeat` is deliberately
+/** Built once and shared by every chunk's material — same reasoning as the
+ *  water shader's sine ripples: no external asset, no per-chunk cost beyond a
+ *  cheap texture reference. `repeat` is deliberately
  *  left at 1: tiling is applied per-fragment in the injected shader below,
  *  because the two surface types need two different tilings out of the same
  *  texture and `Texture.repeat` can only express one. */
@@ -156,6 +157,15 @@ const MACRO_ROUGHNESS_CHUNK = /* glsl */ `
   }
 `
 
+/** Darken albedo in a band just above the waterline (W11) — wet sand/soil,
+ *  not a second mesh and not a hard cutoff in `colorForTerrain`. */
+const WET_SAND_CHUNK = /* glsl */ `
+  {
+    float wet = 1.0 - smoothstep( uWaterLevel, uWaterLevel + 0.4, vWorldPos.y );
+    diffuseColor.rgb *= 1.0 - wet * 0.38;
+  }
+`
+
 let warnedMissingInclude = false
 
 /**
@@ -171,9 +181,11 @@ let warnedMissingInclude = false
 function applyTerrainSurfaceShader(
   material: THREE.MeshStandardMaterial,
   detailNormal: DetailNormalConfig | null,
+  waterLevel: number,
 ): void {
   const detailOn = detailNormal !== null
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uWaterLevel = { value: waterLevel }
     if (detailOn) {
       shader.uniforms.uDetailTilesGrass = { value: detailNormal.tilesGrass }
       shader.uniforms.uDetailTilesBare = { value: detailNormal.tilesBare }
@@ -199,6 +211,7 @@ function applyTerrainSurfaceShader(
         `#include <common>
 varying float vBareGround;
 varying vec3 vWorldPos;
+uniform float uWaterLevel;
 ${MACRO_NOISE_FUNCS}${
           detailOn
             ? '\nuniform float uDetailTilesGrass;\nuniform float uDetailTilesBare;'
@@ -207,7 +220,7 @@ ${MACRO_NOISE_FUNCS}${
       )
       .replace(
         COLOR_FRAGMENT_INCLUDE,
-        `${COLOR_FRAGMENT_INCLUDE}\n${MACRO_COLOR_CHUNK}`,
+        `${COLOR_FRAGMENT_INCLUDE}\n${MACRO_COLOR_CHUNK}\n${WET_SAND_CHUNK}`,
       )
       .replace(
         ROUGHNESSMAP_FRAGMENT_INCLUDE,
@@ -234,7 +247,7 @@ ${MACRO_NOISE_FUNCS}${
   // share one compiled program — but three's default cache key ignores
   // `onBeforeCompile`, so say so explicitly.
   material.customProgramCacheKey = () =>
-    detailOn ? 'chunk-terrain-surface-detail-v3' : 'chunk-terrain-surface-v3'
+    detailOn ? 'chunk-terrain-surface-detail-v4' : 'chunk-terrain-surface-v4'
 }
 
 /** Where the surface reads as packed dirt/sand rather than vegetated ground:

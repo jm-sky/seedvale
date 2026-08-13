@@ -36,12 +36,13 @@ P1 (brzeg, world-space waves, palety, lustro) — fazy 2–3 planu 098; nie w ty
 
 ## Implementacja (2026-08-13, faza 1)
 
-- `computeBodyScale` bierze `continentalness` + progi regionu. Komórka oceanu (`oceanMixAt` > 0.9) → `bodyScale = 1` → jezioro `discard`.
-- Śródlądzie: `min(lakeScaleFor(area), 0.85)` — nigdy nie przebija discardu, niezależnie od pola w chunku.
+- `computeBodyScale` bierze `continentalness` + progi regionu. Komórka oceanu (`oceanMixAt` > 0.9) → `bodyScale = 1` (faza 2: strojenie oceanu w tym samym shaderze, nie discard).
+- Śródlądzie: `min(lakeScaleFor(area), 0.85)` — nigdy nie przebija progu oceanu, niezależnie od pola w chunku.
 - Usunięte `isLarge` / `LARGE_BODY_AREA_FRACTION`.
 - Testy: `src/terrain/waterBodies.test.ts`.
+- Faza 2: Water.js usunięty; inland i ocean to jedna rodzina (`waterMaterial.ts`).
 
 ### Browser
 
-1. To samo miejsce co [screen](../refs/water-2026-08-13-inland-dual-material.png) — jeden materiał jeziora, bez ciemnej falującej plamy Water.js.
-2. Wybrzeże / otwarte morze — nadal Water.js, bez jeziora na środku oceanu.
+1. To samo miejsce co [screen](../refs/water-2026-08-13-inland-dual-material.png) — jeden materiał jeziora, bez ciemnej falującej plamy.
+2. Wybrzeże / otwarte morze — ten sam shader, ciemniejszy teal / większa fala; plaża z `vCover` (issue 003).

@@ -1,9 +1,9 @@
 # Ostre krawędzie / artefakty na styku oceanu z lądem
 
-**Status:** `planned`
+**Status:** `verification needed`
 **Created:** 2026-08-07
 **Updated:** 2026-08-13
-**Plan:** [098](../plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 (chunk water rysuje komórki oceanu z `vCover` zamiast samego depth-testu singletonu)
+**Plan:** [098](../plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 (chunk water rysuje komórki oceanu z `vCover`; singleton radial-fade poza loadRadius)
 **Źródło:** rozmowa z użytkownikiem, po dodaniu reflective ocean (`src/world/createOcean.ts`)
 
 ## Problem
@@ -15,12 +15,16 @@ Reflective ocean (`three/addons/objects/Water.js`, `createOcean.ts`) to płaski 
 
 Na granicy ocean/ląd (i prawdopodobnie ocean/jezioro) brak miękkiego przejścia daje widoczne ostre krawędzie/artefakty — zgłoszone przez użytkownika po wizualnej weryfikacji w przeglądarce (`docs/issues/README.md` — wcześniej odnotowany podobny problem z brzegiem koloru terenu, patrz [001](./2026-08-07--001--water-shore-color-banding.md), ale to inny mechanizm: tam chodziło o kolor terenu, tu o krawędź samej siatki/reflection oceanu).
 
-## Możliwe kierunki (nieprzeanalizowane, do rozstrzygnięcia przy realizacji)
+## Implementacja (2026-08-13, plan 098 faza 2)
 
-- Dodać do `createOcean.ts` per-fragment "shore fade" analogiczny do `vCover` w `createWater.ts` (sampling tej samej `uHeightmap`-style tekstury, smoothstep blend do przezroczystości/koloru lądu przy brzegu) — wymaga kolejnego patcha skompilowanego fragment shadera `Water.js` (już patchujemy go dla reflectance/tint, patrz `createOcean.ts`).
-- Sprawdzić, czy problem to raczej z-fighting (ocean `waterLevel+0.02` bardzo blisko płaskiego, przyciętego dna `waterLevel`) niż brak maski — jeśli tak, prostszy fix to zwiększenie marginesu wysokości.
-- Zweryfikować, czy artefakt występuje też na granicy ocean/jezioro (gdzie oba systemy wody nakładają się przestrzennie), czy tylko ocean/ląd.
+Water.js usunięty. Chunk water rysuje komórki oceanu z `vCover` (fade na plaży). Singleton oceanu jest radial-fade poza `loadRadius`, więc twardy clip vs teren zostaje tylko daleko od gracza (otwarte morze / pierścień unloada), nie na plaży w załadowanych chunkach.
+
+### Browser
+
+1. Wybrzeże w załadowanym chunku — brak twardego wielokąta clippigu, widać piasek przez wodę.
+2. Otwarte morze za zasięgiem chunków — tafla nadal jest (singleton).
+3. Jezioro śródlądowe — ten sam język shadera, jaśniejszy / drobniejsza fala.
 
 ## Effort
 
-Nieoszacowany — do analizy przy podjęciu.
+Zrealizowane w fazie 2 planu 098.

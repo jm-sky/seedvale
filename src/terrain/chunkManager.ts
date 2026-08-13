@@ -216,7 +216,7 @@ export type ChunkManager = {
   /** Cheap to call every frame — internally throttled to a recheck distance. */
   update: (playerX: number, playerZ: number) => void
   tickWater: (dt: number) => void
-  setWaterDayNight: (dayFactor: number) => void
+  setWaterDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void
   tickGrass: (dt: number) => void
   setGrassDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void
   sampleHeight: HeightSampler
@@ -355,7 +355,11 @@ export function createChunkManager(
   // A5) — `flatShading`/`detailNormal` changes go through `onTerrainChange` →
   // full world rebuild, which recreates the whole `ChunkManager`, so this
   // never needs to be swapped in place. Disposed in `dispose()` below.
-  const terrainMaterial = createTerrainMaterial(config.flatShading, config.detailNormal)
+  const terrainMaterial = createTerrainMaterial(
+    config.flatShading,
+    config.detailNormal,
+    config.waterLevel,
+  )
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
   const recheckDistance = config.chunkSize * 0.25
@@ -649,9 +653,11 @@ export function createChunkManager(
         const { x, z } = chunkCenter(coord, config.chunkSize)
         const apronRes = config.resolution + 2
         const coreHeights = extractCoreGrid(tile.heights, apronRes, config.resolution)
+        const coreFloorHeights = extractCoreGrid(tile.floorHeights, apronRes, config.resolution)
         const coreBodyScale = extractCoreGrid(tile.bodyScale, apronRes, config.resolution)
         rec.water = createChunkWater(
           coreHeights,
+          coreFloorHeights,
           coreBodyScale,
           config.resolution,
           x,
@@ -1081,8 +1087,8 @@ export function createChunkManager(
     tickWater(dt) {
       for (const rec of chunks.values()) rec.water?.update(dt)
     },
-    setWaterDayNight(dayFactor) {
-      for (const rec of chunks.values()) rec.water?.setDayNight(dayFactor)
+    setWaterDayNight(dayFactor, sunDirection) {
+      for (const rec of chunks.values()) rec.water?.setDayNight(dayFactor, sunDirection)
     },
     tickGrass(dt) {
       grassSystem.update(dt)

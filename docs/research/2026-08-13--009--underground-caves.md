@@ -298,12 +298,30 @@ Te same procenty przeliczone na komórkę o rozmiarze, który miałeś na myśli
 |---|---|---|---|
 | 64 m (chunk — **błędna interpretacja**) | ~117 m | ~64 m | ~200+ ❌ |
 | 280 m (siatka osad) | ~510 m | ~270 m | ~12 małych + duże tylko w górach |
-| **500 m (najbliższe intencji)** | **~910 m** | **~480 m** | **~4 małe + ~3–8 dużych** 🟡 |
-| 1000 m | ~1 800 m | ~950 m | ~1 mała + ~3 duże |
+| 500 m | ~910 m | ~480 m | ~4 małe + ~3–8 dużych — **duże za gęsto** |
+| 1000 m | ~1 800 m | ~950 m | ~1 mała + ~3 duże — za rzadko |
 
-**Wniosek: przy komórce 500 m wracamy dokładnie do L2 i werdykt z §1 obowiązuje bez zmian.** Alarm „L3-lite”, który postawiłem w poprzedniej wersji tej sekcji, wynikał z odczytania „chunk” dosłownie i **jest wycofany**. Rzędy wielkości (~4 małe + ~3–8 dużych w promieniu grywalnym) są bardzo blisko dzisiejszych 10 sitów — czyli technika B, koszt z §4 i kolejność z §10 zostają aktualne.
+**Wniosek: wracamy dokładnie do L2 i werdykt z §1 obowiązuje bez zmian.** Alarm „L3-lite”, który postawiłem w poprzedniej wersji tej sekcji, wynikał z odczytania „chunk” dosłownie i **jest wycofany**. Rzędy wielkości są bliskie dzisiejszym 10 sitom — technika B, koszt z §4 i kolejność z §10 zostają aktualne.
 
 **Rekomendacja: przestać wyrażać gęstość „na chunk” i wyrażać ją w metrach między wejściami.** To jednostka odporna na zmianę `chunkSize` i zgodna z tym, jak myślisz o świecie.
+
+### 11.1a Docelowe wartości (ustalone 2026-08-13)
+
+Cel użytkownika: **duża jaskinia w górach co ~650 m** · **~4 małe + ~2–5 dużych w promieniu 1 km**.
+
+Odstęp wynika z oczekiwanej liczby jaskiń na komórkę (`E`) i rozmiaru komórki: `odstęp = √(krok² / E)`. Przy jednej wspólnej siatce **500 m** wychodzi:
+
+| Typ | Warunek komórki | Prawdopodobieństwo | `E` | Średni odstęp | W promieniu 1 km |
+|---|---|---|---|---|---|
+| **Duża** (2+ korytarze, komnata) | teren górski | 50% na 1 · 5% na 2 | **0.60** | **~645 m** ✅ | ~2–3 🟡 (zależy od udziału gór) |
+| **Mała** (1 korytarz) | pozostały teren | 30% na 1 | **0.30** | **~910 m** | **~3.8** ✅ |
+
+Liczba dużych jaskiń w promieniu 1 km zależy od **udziału terenu górskiego**, który jest różny per seed i per okolica (🟡 niezmierzony). Przy ~30% gór wychodzi ~2.3 dużej jaskini na 1 km — środek zamówionego przedziału 2–5. To jest pierwsza rzecz do zmierzenia w spike'u (§11.8).
+
+Dwie właściwości tego ustawienia warte zapamiętania:
+
+- **`E` jest jedyną wielkością, która steruje odstępem.** Rozkład 50%/5% można dowolnie przesuwać (np. 60% na 1 i 0% na 2), byle `E` zostało 0.60 — odstęp się nie zmieni. Wariant 50/5 daje sporadyczne pary jaskiń w jednej komórce, co jest ciekawsze niż idealnie regularne rozstawienie.
+- **Deklarowane procenty to częstość prób.** Test nadkładu (§4.1) część kandydatów odrzuci, więc realny odstęp będzie **większy** niż 645 m. Progi trzeba skalibrować po pomiarze, celując w 650 m *po* odrzuceniach.
 
 ### 11.2 Model generatora: siatka jaskiń, analogicznie do siatki osad
 
@@ -312,10 +330,10 @@ Dzisiejsze `largeCaves.ts` losuje 10 sitów globalnie w pierścieniu wokół (0,
 Silnik ma już gotowy, sprawdzony wzorzec na dokładnie ten problem: **deterministyczna siatka z jitterem**, używana przez osady (`SETTLEMENT_GRID_STEP = 280` + losowe przesunięcie w komórce, ✅ `settlementGenerator.ts:62, 125-126, 158`). Rekomendacja:
 
 ```text
-CAVE_GRID_STEP ≈ 500 m
+CAVE_GRID_STEP = 500 m
 per komórka: hash(seed, gx, gz) → kandydat + jitter w obrębie komórki
-             teren górski  → duża jaskinia (2+ korytarze), p ≈ 0.6–0.75
-             pozostały     → mała jaskinia (1 korytarz),   p ≈ 0.3
+             teren górski  → duża jaskinia (2+ korytarze):  p(1) = 0.50, p(2) = 0.05   → E = 0.60 → ~645 m
+             pozostały     → mała jaskinia (1 korytarz):    p(1) = 0.30                → E = 0.30 → ~910 m
              następnie: test nadkładu (§4.1) — odrzuca lub akceptuje
 ```
 
@@ -372,7 +390,8 @@ v1 przestaje być „pusta rura”, więc dochodzą rzeczy, których §6 nie obe
 |---|---|---|
 | Poziom | L2 (rzadkie lokacje) | **L2 — bez zmian.** Gęstość „na chunk” była nieporozumieniem; intencja to ~500 m między wejściami |
 | Technika | B | **B** — pod warunkiem że kopanie zostaje odłożone |
-| Generator | globalna lista sitów (jak dziś) | **siatka jaskiń z jitterem (`CAVE_GRID_STEP ≈ 500 m`), wzorowana na siatce osad** ← główna zmiana |
+| Generator | globalna lista sitów (jak dziś) | **siatka jaskiń z jitterem (`CAVE_GRID_STEP = 500 m`), wzorowana na siatce osad** ← główna zmiana |
+| Gęstość | 10 sitów w pierścieniu 130–620 m | **duże w górach co ~645 m** (`E = 0.60`), **małe co ~910 m** (`E = 0.30`) → ~4 małe + ~2–3 duże na 1 km |
 | Kolizja | analitycznie z grafu | **z systemu fizyki (plan 097)**; graf zostaje jako mesh-source, siting i navmesh |
 | Wejścia | jeden archetyp (w zbocze) | **jeden archetyp na v1** (zbocze); zapadlisko/wychodnia (D) tylko jeśli pomiar pokaże, że nizin bez zbocza jest za dużo |
 | v1 | pusty korytarz | korytarz + **zwierzę i/lub skarb** → persystencja flag + `AnimalAgent` w objętości |
@@ -381,7 +400,7 @@ v1 przestaje być „pusta rura”, więc dochodzą rzeczy, których §6 nie obe
 ### 11.8 Zrewidowana kolejność prac (zastępuje §10)
 
 1. **Plan `097` — kolizje** (przynajmniej warstwa 2.2). Jaskinie są jego pierwszym poważnym konsumentem.
-2. **Spike gęstości i nadkładu.** Dla obecnego seeda zmierzyć, jaki odsetek komórek siatki 500 m (górskich i nizinnych) faktycznie przechodzi test nadkładu przy korytarzu 20–30 m opadającym 12%, i jaki wychodzi realny odstęp między wejściami w metrach. **Dopiero ta liczba pozwala ustawić `CAVE_GRID_STEP` i progi 75%/30%.** Bez pomiaru progi są zgadywaniem.
+2. **Spike gęstości i nadkładu.** Dla obecnego seeda zmierzyć trzy rzeczy: (a) **udział terenu górskiego** — od niego zależy, czy `E = 0.60` daje 2, czy 5 dużych jaskiń na 1 km; (b) jaki odsetek komórek siatki 500 m przechodzi test nadkładu przy korytarzu 20–30 m opadającym 12%; (c) realny odstęp między wejściami w metrach **po odrzuceniach**. **Dopiero te liczby pozwalają skalibrować progi tak, żeby wyszło zamówione ~650 m.** Bez pomiaru wartości z §11.1a są nominalne, nie realne.
 3. **Plan: siting jaskiń jako część world-genu** — siatka `CAVE_GRID_STEP` z jitterem (wzorzec `SETTLEMENT_GRID_STEP`), wejście podawane do `chunkHeightmap.ts` jako segment `roadTint`, jak polany wiosek. Sam w sobie naprawia też dzisiejszą trawę w rowie (§2).
 4. **Plan: `CaveVolume` v1** — graf, mesh, wejście, oświetlenie + `PlayerTorch`, kamera, mała jaskinia (1 korytarz).
 5. **Weryfikacja w przeglądarce** — szew, ciemność, kamera w ciasnym korytarzu, gęstość „na oko” podczas spaceru.
@@ -389,7 +408,7 @@ v1 przestaje być „pusta rura”, więc dochodzą rzeczy, których §6 nie obe
 
 ### 11.9 Nowe pytania otwarte ❓
 
-1. Czy `CAVE_GRID_STEP ≈ 500 m` odpowiada Twojemu „jaskinia nie jest częsta”? Konkretnie: **duża jaskinia co ~500 m w górach, mała co ~900 m poza nimi** — czyli podczas typowego spaceru mijasz jedną co kilka minut, nie co kilkanaście sekund.
+1. ~~Czy `CAVE_GRID_STEP ≈ 500 m` odpowiada „jaskinia nie jest częsta”?~~ → **ustalone**: duże w górach co ~650 m, małe co ~910 m, ~4 małe + ~2–5 dużych na 1 km. Wartości w §11.1a. Pozostaje do potwierdzenia **po pomiarze** (§11.8 krok 2), czy realny odstęp po odrzuceniach nadal trafia w ~650 m.
 2. Czy małe jaskinie mogą **nie występować na płaskiej łące** (wymóg zbocza), czy wolisz drugi archetyp wejścia (zapadlisko), żeby były też na nizinach?
 3. Czy plan `097` (kolizje) ma faktycznie iść przed jaskiniami — to jest kolejność, która minimalizuje pracę do wyrzucenia.
 4. Czy zwierzę w jaskini ma być **stałym mieszkańcem** (respawn, terytorium, wychodzi na powierzchnię) czy **strażnikiem skarbu** (jednorazowy, po zabiciu jaskinia zostaje pusta)? Pierwsze jest bliższe VISION („świat żyje niezależnie”), drugie jest znacznie tańsze.

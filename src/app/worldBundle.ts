@@ -108,8 +108,13 @@ function buildChunkManager(
 function buildOcean(scene: Scene, config: WorldConfig): WorldOcean {
   // Generously covers the loaded region so it never runs out under the player;
   // repositioned (not resized) as the player moves — see createOcean.follow().
-  const size = (config.terrain.unloadRadius * 2 + 4) * config.terrain.chunkSize
-  const ocean = createOcean(size, config.terrain.waterLevel)
+  const { chunkSize, loadRadius, unloadRadius, waterLevel } = config.terrain
+  const size = (unloadRadius * 2 + 4) * chunkSize
+  // Hide the singleton where chunk water already draws (incl. coastal fade).
+  // Radial, not a height clipmap — follow() is every frame.
+  const fadeInner = loadRadius * chunkSize
+  const fadeOuter = (loadRadius + 1) * chunkSize
+  const ocean = createOcean(size, waterLevel, fadeInner, fadeOuter)
   ocean.addTo(scene)
   return ocean
 }

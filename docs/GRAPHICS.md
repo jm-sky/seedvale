@@ -28,8 +28,8 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G2 | **Performance jest constraint architektury** — nie dokładamy passów, mirror RT ani per-frame CPU „dla ładniejszej wody/liści” bez świadomej ceny. | [architecture/performance-and-workers.md](./architecture/performance-and-workers.md) |
 | G3 | Liście / kwiaty z GLTF `alphaMode: BLEND` → przy loadzie **opaque `alphaTest` cutout** (`hardenFoliageAlpha`). Korony piszą depth. | `src/world/foliageWind.ts`, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
 | G4 | Woda transparentna: ocean i jeziora mają **`depthWrite: false`**. Nie łączyć `transparent` + `depthWrite: true` + wysokiego `renderOrder` — to maluje wodę przez korony. | `createOcean.ts`, `createWater.ts` |
-| G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Mirror RT **mały** (256²), **jeden** pass na całą wodę — nie per jezioro. Dziś implementacja to Water.js; target [WATER.md](./WATER.md) W1/W9: ta sama rodzina shadera + opcjonalne lustro. | `createOcean.ts` |
-| G6 | Jeziora = per-chunk shader z maską heightmap. Discard `vBodyScale > 0.9` tylko na komórkach oceanu (kontynentalność), nie na dużych stawach. Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) faza 1 — browser check. | `createWater.ts`, `waterBodies.ts` |
+| G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Shader = rodzina jezior (`waterMaterial.ts`). Lustro sceny = faza 3 planu 098 (dziś sky + specular). | `createOcean.ts` |
+| G6 | Jeziora = per-chunk ten sam shader, maska heightmap + głębokość z `floorHeights`. `bodyScale` 1 stroi ocean, nie discarduje piksela. | `createWater.ts`, `waterMaterial.ts`, `waterBodies.ts` |
 | G7 | Post-process: EffectComposer + N8AO + SMAA (+ bloom / god rays / film grade). Hardware MSAA wyłączone (i tak bez efektu na targetach composera). | `createPostProcessing.ts`, `createRenderer.ts` |
 | G8 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | `CLAUDE.md` |
 | G9 | Droga = tint korytarza na meshu terenu (nie osobny mesh). Miękki brzeg + ziarno dirtu; trawa **soft-fade** w korytarzu, nie hard bald cut. Extra gęstość łąki = **near-field filler LOD**, nie globalny bump `grass.density`. | `chunkHeightmap` / `biomeColors` / `grass` / `chunkManager`, issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
@@ -43,8 +43,8 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 |--------|--------|
 | Renderer | `src/render/createRenderer.ts` |
 | Post-process | `src/render/createPostProcessing.ts`, `gradedOutputPass.ts`, `godRaysShader.ts` |
-| Ocean | `src/world/createOcean.ts` (`three/addons/objects/Water.js`) |
-| Jeziora | `src/world/createWater.ts` |
+| Ocean | `src/world/createOcean.ts` + `waterMaterial.ts` |
+| Jeziora | `src/world/createWater.ts` + `waterMaterial.ts` |
 | Foliage wind + alpha harden | `src/world/foliageWind.ts` |
 | GLB load / shared mats | `src/assets/loadGltf.ts` |
 | Niebo / światło / dzień-noc | `src/world/createSky.ts`, `createLights.ts`, `dayNight.ts` |
@@ -54,6 +54,12 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-08-13 — Faza 2: jedna rodzina shadera wody + brzeg 🔧
+
+- `waterMaterial.ts` zastępuje Water.js i stary shader jeziora. Fale `world.xz`, depth z `floorHeights`, piana z maski, mokry piasek na terenie.
+- Ocean singleton: radial fade poza loadRadius (chunk water rysuje plażę — issue 003).
+- Lustro 256² wraca w fazie 3. G5/G6 = stan kodu.
 
 ### 2026-08-13 — W8 faza 1: inland nie jest oceanem 🔧
 

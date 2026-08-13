@@ -1,6 +1,6 @@
 # Ocean pokazuje gęste, "chmurowe" odbicia z twardymi krawędziami między kolorami
 
-**Status:** `verification needed` — naprawione 2026-08-10: cofnięto zagęszczenie/podniesienie częstotliwości `terrainDetailNormalMap.ts`/`buildChunkGeometry.ts` z poprzedniej sesji (`NORMAL_MAP_TILES_PER_CHUNK` 11→8, oktawy 8/18/38→6/14/30), zachowując obniżoną amplitudę/`normalScale` z tamtej sesji. Wymaga wizualnej weryfikacji w przeglądarce (spojrzeć na ocean pod kątem, sprawdzić czy blotches/krawędzie zniknęły).
+**Status:** `verification needed` — naprawione 2026-08-10 (częstotliwość detail normals). **2026-08-13:** Water.js + mirror RT usunięte w fazie 2 planu 098; blotches nie są obserwowalne do powrotu lustra w fazie 3.
 **Created:** 2026-08-10
 **Źródło:** zgłoszenie użytkownika po ostatniej turze strojenia normal-mapy terenu
 

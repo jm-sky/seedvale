@@ -1,6 +1,6 @@
 # Plan: Woda — jedna rodzina shadera, brzeg, lustro z wyłącznikiem
 
-**Status:** `in progress` 🔄 (~15%) — faza 1 zaimplementowana, browser check issue 028; fazy 2–3 nie ruszone  
+**Status:** `in progress` 🔄 (~55%) — fazy 1–2 zaimplementowane; faza 2 browser check; faza 3 nie ruszona  
 **Created:** 2026-08-13  
 **Priority:** 🟡 medium  
 **Effort:** XL (faza 1 = S; fazy 2–3 = L–XL)  
@@ -26,8 +26,9 @@ Pół-realistyczna, lekko przezroczysta woda bez ciężkiego GPU:
 ## Done when
 
 - [x] Faza 1 kod: inland nie discarduje do oceanu (`waterBodies.ts`, testy). Browser: issue 028.
-- [ ] Inland staw ze screenu 2026-08-13: jeden materiał, bez Water.js na środku.
-- [ ] Wybrzeże: miękki brzeg (issue 003 w załadowanych chunkach), ocean ciemniejszy / większa fala.
+- [x] Faza 2 kod: `waterMaterial.ts`, ocean bez Water.js, `floorHeights`, piana, mokry piasek. Browser: checklist faza 2.
+- [ ] Inland staw ze screenu 2026-08-13: jeden materiał, bez Water.js na środku. *(kod gotowy — browser)*
+- [ ] Wybrzeże: miękki brzeg (issue 003 w załadowanych chunkach), ocean ciemniejszy / większa fala. *(kod gotowy — browser)*
 - [ ] Pauza → Świat: checkbox odbić wody; off kasuje pass lustra; persist `seedvale:graphics:v1`.
 - [ ] `tsc` / lint / test / build czyste. Browser check osobno (W7).
 
@@ -39,14 +40,15 @@ Pełna tabela: [WATER.md — Stan obecny](../WATER.md#stan-obecny).
 
 | Fakt | Plik |
 |------|------|
-| Jezioro: `ShaderMaterial` + `vCover` z heightmapy; `discard` gdy `vBodyScale > 0.9` | `src/world/createWater.ts` |
-| `isLarge` = pole ≥ 35% siatki **tego** chunka → `bodyScale = 1` | `src/terrain/waterBodies.ts` |
-| Ocean: `three/addons/objects/Water.js`, mirror 256², brak maski brzegu | `src/world/createOcean.ts` |
-| `floorHeights` jest; shader jeziora go nie sampluje | `chunkHeightmap.ts` / `createWater.ts` |
-| Fale jeziora w lokalnym `position.xz` (szwy) | `createWater.ts` vertex |
-| Foam z amplitudy fali, nie z brzegu | `createWater.ts` fragment |
+| Jezioro / ocean: `waterMaterial.ts`; chunk `vCover` + `floorHeights`; ocean singleton radial fade | `src/world/waterMaterial.ts` |
+| `bodyScale` 0 ląd / jezioro < 0.9 / 1 ocean (kontynentalność, nie pole stawu) | `src/terrain/waterBodies.ts` |
+| Ocean: ten sam shader, `uOcean = 1`, bez Water.js, bez lustra (faza 3) | `src/world/createOcean.ts` |
+| `floorHeights` → depth fade w shaderze chunk water | `chunkHeightmap.ts` / `createWater.ts` |
+| Fale w `world.xz` (jezioro ripple / ocean swell) | `waterMaterial.ts` vertex |
+| Foam z `1 - vCover` + `fwidth(vCover)` | `waterMaterial.ts` fragment |
+| Mokry piasek: terrain `uWaterLevel` pas ~0.4 | `buildChunkGeometry.ts` |
 | Kontynentalność już na tile (`oceanThreshold` 0.32, `coastThreshold` 0.45) | `RegionParams`, `chunkHeightmap.ts` |
-| Grafika Vue: Pauza → Świat ma seed / flat / home size / dzień-noc; **brak** toggle post-process (to lil-gui) | `WorldConfigScreen.vue` |
+| Grafika Vue: Pauza → Świat ma seed / flat / home size / dzień-noc; **brak** toggle odbić wody (faza 3) | `WorldConfigScreen.vue` |
 
 `bodyScale` zostaje jako skala fal jeziora (0–1). **Nie** może już oznaczać „oddaj piksel Water.js”.
 
@@ -146,6 +148,8 @@ src/app/gameLoop.ts            setDayNight / update bez Water.js uniforms
 ```
 
 Usunąć patch fragmentu Water.js i `createProceduralWaterNormals` jeśli ripple idzie z sine w shaderze (dziś jezioro tak robi). Normal-mapa oceanu jest opcjonalnym plusem — nie blokuje fazy.
+
+**Notes (faza 2, 2026-08-13):** mesh jeziora = `chunkSize` (bez overlap 1.02). Singleton nie używa opcji (a) samego `renderOrder` — przezroczysty brzeg odsłoniłby twardy clip. Zamiast clipmapy height: radial fade `loadRadius` → `loadRadius+1` chunków (`worldBundle.buildOcean`). Sky + sun specular; lustro = faza 3.
 
 ---
 

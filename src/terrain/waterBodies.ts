@@ -20,12 +20,12 @@ export type BodyScaleParams = {
 const WATER_EPS = 1e-4
 const LAKE_AREA_SATURATE = 300
 /**
- * Chunk-water fragment discards above this (`createWater.ts`). Ocean cells are
- * written as 1; inland lakes must stay strictly below so they never punch
- * through to the Water.js singleton (plan 098 faza 1 / W8).
+ * Ocean cells are written as 1 (continentalness, not lake area). Inland lakes
+ * stay strictly below so the unified shader can mix lake vs ocean per texel
+ * (plan 098 / W8). No longer a fragment discard gate.
  */
 export const OCEAN_BODY_SCALE_DISCARD = 0.9
-/** Max `lakeScaleFor` after remap — leaves headroom under the discard gate. */
+/** Max `lakeScaleFor` after remap — leaves headroom under the ocean mix gate. */
 export const LAKE_SCALE_MAX = 0.85
 
 /**
@@ -103,7 +103,7 @@ export function oceanMixAt(
 
 /**
  * Per-texel scale: 0 land, inland lake wave scale (capped below the ocean
- * discard), 1 ocean (continentalness, not chunk area).
+ * mix gate), 1 ocean (continentalness, not chunk area).
  */
 export function computeBodyScale(
   detection: WaterBodyDetection,

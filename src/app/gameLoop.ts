@@ -99,7 +99,7 @@ function applyDayNight(
     fog.near = p.fogNear
     fog.far = p.fogFar
   }
-  chunkManager.setWaterDayNight(p.dayFactor)
+  chunkManager.setWaterDayNight(p.dayFactor, sky.sunPosition)
   chunkManager.setGrassDayNight(p.dayFactor, sky.sunPosition)
   ocean.setDayNight(p.dayFactor, sky.sunPosition)
   return p
