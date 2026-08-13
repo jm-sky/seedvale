@@ -291,6 +291,17 @@ The exact status of plans belongs in `docs/plans/README.md`, not here. As of thi
 - Plan 052 — shovel digging/stone finding: done (shovel item, runtime terrain-deformation layer, dig ground interaction).
 - Plan 047 — village generation overhaul.
 
+## Open questions / review notes
+
+### Plan 094 — Fauna food/water
+- Czy zjedzone przez drapieżnika zwłoki są faktycznie usuwane po konsumpcji?
+- Czy żerowanie roślinożerców wykorzystuje wirtualne/habitatowe żerowiska, czy realne obiekty świata (np. konkretne kępy trawy)?
+
+### Plan 092 — NPC stamina / daily vigor
+- Czy stamina lub vigor zależą od płci NPC?
+- Czy stamina/vigor zależą od wieku NPC?
+- Docelowo rozważyć modyfikatory wynikające z wieku, płci, zdrowia i cech NPC zamiast jednakowych wartości bazowych.
+
 ## Source of truth rule
 
 When this document conflicts with the code, **the code wins**. When it conflicts with a plan, the plan describes intended work but does not override implemented behaviour. Update this file when a structural change makes the snapshot materially stale.
