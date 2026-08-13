@@ -3,13 +3,14 @@ import type { App } from 'vue'
 type StoreModule = typeof import('./store')
 
 const FORWARDED_FNS = [
-  'openNpcDialogueMenu', 'closeNpcDialogueMenu', 'acceptNpcDialogueOffer', 'isNpcDialogueMenuOpen',
+  'openNpcDialogueMenu', 'closeNpcDialogueMenu', 'acceptNpcDialogueOffer', 'isNpcDialogueMenuOpen', 'configureNpcDialogueMenu',
   'openVillagers', 'closeVillagers', 'toggleVillagers', 'refreshVillagers', 'isVillagersOpen',
   'openInventory', 'refreshInventory', 'isInventoryOpen', 'closeInventory',
+  'configureMerchant', 'openMerchant', 'refreshMerchant', 'closeMerchant', 'isMerchantOpen',
   'configurePauseMenu', 'setPauseSeed', 'openPauseMenu', 'closePauseMenu', 'togglePause', 'isPauseMenuOpen',
   'openQuestLog', 'refreshQuestLog', 'closeQuestLog', 'isQuestLogOpen',
   'openFlavorDialog', 'setFlavorPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',
-  'configureQuickActions', 'setQuickActionsHasShovel', 'setQuickActionsNearTown', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
+  'configureQuickActions', 'setQuickActionsHasShovel', 'setQuickActionsHasTent', 'setQuickActionsNearTown', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
   'showTimeSkip', 'hideTimeSkip',
   'showBusy', 'hideBusy',
   'configureWorldConfigScreen', 'openWorldConfigScreen', 'closeWorldConfigScreen', 'isWorldConfigScreenOpen',

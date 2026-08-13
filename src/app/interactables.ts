@@ -2,15 +2,18 @@ import type { Fauna } from '../fauna/createFauna'
 import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemSpawners } from '../items/createItemSpawners'
+import type { PlacedTents } from '../items/createPlacedTents'
 import type { ToolKind } from '../items/HeldTool'
 import type { Settlement } from '../settlement/createSettlement'
 import type { PlacedFires } from '../settlement/PlacedFires'
 import type { ChunkManager } from '../terrain/chunkManager'
+import type { ResourceDeposits } from '../terrain/resourceDeposits'
 import { ANIMAL_LABELS, type AnimalKind } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
-import { canLevelAt, getDigProfileAt } from '../terrain/dig'
+import { ORE_YIELD_LABEL } from '../terrain/depositMining'
+import { canLevelAt, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
 import { isChoppableStage } from '../world/treeLifecycle'
 import type { Vector3 } from 'three'
 
@@ -62,6 +65,8 @@ export function buildInteractables(
   itemSpawners: ItemSpawners,
   droppedItems: DroppedItems,
   placedFires: PlacedFires,
+  placedTents: PlacedTents,
+  resourceDeposits: ResourceDeposits,
   playerPos: Vector3,
   /** Currently held tool — drives axe harvest prompts and animal attack prompts. */
   heldTool: ToolKind | null = null,
@@ -69,6 +74,7 @@ export function buildInteractables(
   const list: Interactable[] = []
   const axeHeld = heldTool === 'axe'
   const shovelHeld = heldTool === 'shovel'
+  const pickaxeHeld = heldTool === 'pickaxe'
 
   for (const pf of placedFires.list()) {
     if (!withinRange(pf.x, pf.z, playerPos, GAZE_RANGE)) continue
@@ -79,6 +85,16 @@ export function buildInteractables(
         ? 'Dołóż gałąź'
         : pf.kind === 'pit' ? 'Zapal ognisko w palenisku' : 'Zapal ognisko',
       fire: pf.fire,
+    })
+  }
+
+  for (const tent of placedTents.list()) {
+    if (!withinRange(tent.x, tent.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'tent',
+      position: { x: tent.x, z: tent.z },
+      promptLabel: '[E] Odpocznij · [R] Złóż namiot',
+      id: tent.id,
     })
   }
 
@@ -235,42 +251,75 @@ export function buildInteractables(
     })
   }
 
+  if (pickaxeHeld) {
+    const deposit = resourceDeposits.queryNearest(playerPos.x, playerPos.z, GAZE_RANGE)
+    if (deposit) {
+      list.push({
+        kind: 'deposit',
+        position: { x: deposit.x, z: deposit.z },
+        promptLabel: `Wydobądź: ${ORE_YIELD_LABEL[deposit.type]}`,
+        id: deposit.id,
+        oreType: deposit.type,
+      })
+    }
+  }
+
   return list
 }
 
-/** The shovel's ground-work target, unlike everything in `buildInteractables()`'s
- *  list, isn't a fixed world object competing for gaze priority — it's
- *  synthesized directly ahead of the player at a fixed reach. `gameLoop.ts`
- *  only asks for one when `pickInGaze` over the real candidates found
- *  nothing, so it's a fallback and can never outcompete a real target the
- *  player is glancing near. Requires the shovel to be **held** (not merely
- *  owned). `[E]` digs when diggable; `[R]` levels when depressed vs base —
- *  both can be offered together. */
+function groundWorkPrompt(
+  digLabel: string,
+  profile: ReturnType<typeof getDigProfileAt>,
+  canLevel: boolean,
+): string {
+  if (profile && canLevel) return `${digLabel} · [R] Wyrównaj`
+  if (profile) return digLabel
+  return '[R] Wyrównaj'
+}
+
+/** Ground-work target ahead of the player. Unlike everything in
+ *  `buildInteractables()`, this isn't a fixed world object competing for gaze
+ *  — `gameLoop.ts` only asks for one when `pickInGaze` found nothing, so it
+ *  never outcompetes a real target (including ore deposits). Shovel: soil/sand
+ *  only. Pickaxe: mountain rock only. `[E]` digs when a profile exists;
+ *  `[R]` levels a depression on the same surface. */
 export function buildDigTarget(
   playerPos: { x: number, z: number },
   playerYaw: number,
-  shovelHeld: boolean,
+  heldTool: ToolKind | null,
   chunkManager: ChunkManager,
 ): Interactable | null {
-  if (!shovelHeld) return null
   const x = playerPos.x - Math.sin(playerYaw) * DIG_REACH
   const z = playerPos.z - Math.cos(playerYaw) * DIG_REACH
-  const profile = getDigProfileAt(x, z, chunkManager)
-  const canLevel = canLevelAt(x, z, chunkManager)
-  if (!profile && !canLevel) return null
-  // Dig-only / both: FlavorDialog prefixes `[E]`. Level-only starts with `[R]`
-  // so the dialog skips that prefix (see FlavorDialog.vue).
-  let promptLabel: string
-  if (profile && canLevel) promptLabel = 'Wykop dołek · [R] Wyrównaj'
-  else if (profile) promptLabel = 'Wykop dołek'
-  else promptLabel = '[R] Wyrównaj'
-  return {
-    kind: 'dig',
-    position: { x, z },
-    promptLabel,
-    profile,
-    canLevel,
+  const rock = isRockGround(x, z, chunkManager)
+
+  if (heldTool === 'shovel') {
+    const profile = getDigProfileAt(x, z, chunkManager)
+    const canLevel = !rock && canLevelAt(x, z, chunkManager)
+    if (!profile && !canLevel) return null
+    return {
+      kind: 'dig',
+      position: { x, z },
+      promptLabel: groundWorkPrompt('Wykop dołek', profile, canLevel),
+      profile,
+      canLevel,
+    }
   }
+
+  if (heldTool === 'pickaxe') {
+    const profile = getRockDigProfileAt(x, z, chunkManager)
+    const canLevel = rock && canLevelAt(x, z, chunkManager)
+    if (!profile && !canLevel) return null
+    return {
+      kind: 'dig',
+      position: { x, z },
+      promptLabel: groundWorkPrompt('Wykop skałę', profile, canLevel),
+      profile,
+      canLevel,
+    }
+  }
+
+  return null
 }
 
 /** Routes a picked-up `WorldItemRef` to whichever registry it came from —

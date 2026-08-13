@@ -2,8 +2,16 @@
 import { computed, onMounted, onUnmounted, ref, type Ref, watch } from 'vue'
 import type { AssetViewer } from '../viewer/createViewer'
 import { buildAssetIndex, findAssetEntry } from '../../../assets/assetIndex'
+import {
+  bumpGripEdit,
+  formatHeldAttachSnippet,
+  gripEdit,
+  installGripApi,
+  loadGripEditor,
+} from '../gripEdit'
 import { ASSET_BROWSER_MODEL_MANIFEST } from '../modelManifest'
 import { browserState, slotDiagnostics } from '../state'
+import { syncAssetBrowserUrlParams } from '../urlParams'
 import { boundsData } from '../viewer/createAssetSlot'
 import { captureSnapshot, copyText } from '../viewer/createSnapshot'
 
@@ -93,11 +101,27 @@ async function loadTarget() {
     const entry = browserState.targetId ? findAssetEntry(browserState.targetId) : null
     await viewer.value.loadTarget(entry ?? null, entry?.url)
   }
+  loadGripEditor(browserState.freeUrl.trim() ? null : browserState.targetId)
   syncSlot('target')
+}
+
+function applyGripEdit() {
+  bumpGripEdit()
+  viewer.value?.remountHeld()
+  syncSlot('target')
+}
+
+async function copyGripSnippet() {
+  await copyText(formatHeldAttachSnippet())
+  browserState.statusMessage = 'HELD_ATTACH snippet copied'
 }
 
 watch(() => viewer.value, (v) => {
   if (!v) return
+  installGripApi(() => {
+    v.remountHeld()
+    syncSlot('target')
+  })
   void loadReference()
   if (browserState.targetId || browserState.freeUrl) void loadTarget()
 })
@@ -105,6 +129,33 @@ watch(() => browserState.referenceId, loadReference)
 watch(() => browserState.targetId, loadTarget)
 watch(() => browserState.freeUrl, () => { if (browserState.freeUrl.trim()) void loadTarget() })
 watch(browserState, () => viewer.value?.refresh(), { deep: true })
+
+watch(
+  () => [browserState.focus, browserState.focusRadius] as const,
+  () => viewer.value?.frame(),
+)
+
+watch(
+  () => [
+    browserState.referenceId,
+    browserState.targetId,
+    browserState.freeUrl,
+    browserState.referenceAnchor,
+    browserState.targetAnchor,
+    browserState.focus,
+    browserState.focusRadius,
+    browserState.layout,
+    browserState.activeView,
+    browserState.pose,
+    browserState.lightingPreset,
+    browserState.showBbox,
+    browserState.showGrid,
+    browserState.showAxes,
+    browserState.showGround,
+    browserState.showOverlay,
+  ] as const,
+  () => syncAssetBrowserUrlParams(browserState),
+)
 
 onMounted(() => {
   void fetchModelFiles()
@@ -274,9 +325,75 @@ function lampMountSnippet() {
         Missing after reload: {{ browserState.invalidSelection }}
       </section>
 
+      <section
+        v-if="gripEdit.active"
+        class="rounded border border-emerald-800/60 bg-emerald-950/20 p-2"
+      >
+        <h2 class="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-300/90">
+          Grip editor (HELD_ATTACH)
+        </h2>
+        <p class="mb-2 text-[10px] text-slate-400">
+          Bone-local meters. WristR idle: +Y fingertips, −Z body. Live remount.
+        </p>
+        <div class="grid grid-cols-4 gap-1 text-[10px]">
+          <span class="text-slate-500">pos</span>
+          <input
+            v-for="(_, i) in gripEdit.position"
+            :key="`p${i}`"
+            v-model.number="gripEdit.position[i]"
+            type="number"
+            step="0.01"
+            class="rounded bg-slate-800 px-1"
+            @change="applyGripEdit"
+          >
+          <span class="text-slate-500">rot°</span>
+          <input
+            v-for="(_, i) in gripEdit.rotationDeg"
+            :key="`r${i}`"
+            v-model.number="gripEdit.rotationDeg[i]"
+            type="number"
+            step="5"
+            class="rounded bg-slate-800 px-1"
+            @change="applyGripEdit"
+          >
+          <span class="text-slate-500">grip</span>
+          <input
+            v-for="(_, i) in gripEdit.gripLocalOffset"
+            :key="`g${i}`"
+            v-model.number="gripEdit.gripLocalOffset[i]"
+            type="number"
+            step="0.02"
+            class="rounded bg-slate-800 px-1"
+            @change="applyGripEdit"
+          >
+          <span class="text-slate-500">scale</span>
+          <input
+            v-model.number="gripEdit.scale"
+            type="number"
+            step="0.05"
+            class="col-span-3 rounded bg-slate-800 px-1"
+            @change="applyGripEdit"
+          >
+        </div>
+        <div class="mt-2 flex gap-1">
+          <button
+            class="flex-1 rounded bg-emerald-700 px-2 py-1 hover:bg-emerald-600"
+            @click="copyGripSnippet"
+          >
+            Copy HELD_ATTACH
+          </button>
+          <button
+            class="rounded bg-slate-700 px-2 py-1"
+            @click="() => { loadGripEditor(gripEdit.sourceId); applyGripEdit() }"
+          >
+            Reset
+          </button>
+        </div>
+      </section>
+
       <section>
         <h2 class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-          Transform (target)
+          Transform (target root)
         </h2>
         <div class="grid grid-cols-3 gap-1 text-xs">
           <template
@@ -384,6 +501,39 @@ function lampMountSnippet() {
             Idle@t=0
           </option>
         </select>
+        <label class="mt-1 block text-xs text-slate-400">Focus</label>
+        <select
+          v-model="browserState.focus"
+          class="w-full rounded bg-slate-800 px-2 py-1"
+        >
+          <option value="scene">
+            Full scene
+          </option>
+          <option value="hand">
+            Hand / grip
+          </option>
+        </select>
+        <label class="mt-1 block text-xs text-slate-400">Layout</label>
+        <select
+          v-model="browserState.layout"
+          class="w-full rounded bg-slate-800 px-2 py-1"
+        >
+          <option value="quad">
+            Quad
+          </option>
+          <option value="single">
+            Single
+          </option>
+        </select>
+        <button
+          class="mt-1 w-full rounded bg-slate-700 px-2 py-1 hover:bg-slate-600"
+          @click="viewer?.frame()"
+        >
+          Reframe camera
+        </button>
+        <p class="mt-1 text-[10px] leading-snug text-slate-500">
+          Orbit/zoom is kept across grip edits and reloads (localStorage). Reframe overwrites the saved view.
+        </p>
         <label
           v-if="browserState.lightingPreset === 'torch'"
           class="mt-2 block text-xs"
@@ -397,6 +547,10 @@ function lampMountSnippet() {
           step="0.05"
           class="w-full"
         >
+        <label class="mt-1 flex items-center gap-2 text-xs"><input
+          v-model="browserState.showOverlay"
+          type="checkbox"
+        > Report overlay</label>
       </section>
 
       <section>
@@ -432,7 +586,10 @@ function lampMountSnippet() {
         id="asset-browser-viewport"
         class="absolute inset-0"
       />
-      <pre class="pointer-events-none absolute bottom-0 left-0 right-0 max-h-40 overflow-auto bg-black/60 p-2 text-[10px] leading-tight text-slate-200">{{ browserState.reportText }}</pre>
+      <pre
+        v-if="browserState.showOverlay"
+        class="pointer-events-none absolute bottom-0 left-0 right-0 max-h-40 overflow-auto bg-black/60 p-2 text-[10px] leading-tight text-slate-200"
+      >{{ browserState.reportText }}</pre>
     </div>
   </div>
 </template>

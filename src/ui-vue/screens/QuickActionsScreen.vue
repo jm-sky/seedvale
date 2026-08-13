@@ -84,6 +84,11 @@ function rest(variant: RestVariant): void {
   closeQuickActions()
 }
 
+function placeTent(): void {
+  closeQuickActions()
+  ui.quickActions.onPlaceTent?.()
+}
+
 function dig(): void {
   closeQuickActions()
   ui.quickActions.onDig?.()
@@ -227,6 +232,12 @@ const shovelActions: Action[] = [
     <div class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-65">
       Odpoczynek
     </div>
+    <QuickActionsButton
+      v-if="ui.quickActions.hasTent"
+      label="Rozstaw namiot"
+      cost="1× namiot"
+      @click="placeTent"
+    />
     <QuickActionsButton
       label="Rozbij obóz (8h)"
       :status="campStatus"

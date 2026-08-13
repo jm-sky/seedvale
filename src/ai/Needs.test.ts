@@ -16,6 +16,12 @@ describe('pickNeed', () => {
     expect(pickNeed({ thirst: 0.5, woodDuty: 0.5, hunger: 0.5 })).toBe('water')
     expect(pickNeed({ thirst: 0, woodDuty: 0.9, hunger: 0.35 })).toBe('wood')
   })
+
+  it('ignores woodDuty when skipWood is set (trader stays at the stall)', () => {
+    expect(pickNeed({ thirst: 0, woodDuty: 0.9, hunger: 0 }, { skipWood: true })).toBe('idle')
+    expect(pickNeed({ thirst: 0, woodDuty: 0.9, hunger: 0.9 }, { skipWood: true })).toBe('food')
+    expect(pickNeed({ thirst: 0.9, woodDuty: 0.9, hunger: 0 }, { skipWood: true })).toBe('water')
+  })
 })
 
 describe('tickNeeds', () => {

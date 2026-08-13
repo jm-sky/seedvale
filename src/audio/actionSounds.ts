@@ -34,6 +34,12 @@ export function playActionChop(playAt: PlayAt, position: WorldSoundPosition): vo
   playAt(ACTION_CHOP_SOUND_URL, position, ACTION_CHOP_SFX_VOLUME)
 }
 
+/** Pickaxe strike — reuses dig clips until a dedicated mine SFX exists (plan 090 / S16). */
+export function playActionMine(playAt: PlayAt, position: WorldSoundPosition): void {
+  const url = ACTION_DIG_SOUND_URLS[Math.floor(Math.random() * ACTION_DIG_SOUND_URLS.length)]
+  if (url) playAt(url, position, ACTION_DIG_SFX_VOLUME)
+}
+
 /** Short melee impact — player tool hit on an animal that stays up. */
 export function playActionMeleeHit(playAt: PlayAt, position: WorldSoundPosition): void {
   playAt(ACTION_MELEE_HIT_SOUND_URL, position, ACTION_MELEE_HIT_SFX_VOLUME)

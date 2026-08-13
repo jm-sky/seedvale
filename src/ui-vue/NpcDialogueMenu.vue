@@ -5,25 +5,36 @@ import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } fro
 import { useOverlayScreen } from './composables/useOverlayScreen'
 import { acceptNpcDialogueOffer, closeNpcDialogueMenu, isNpcDialogueMenuOpen, ui } from './store'
 
-type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help'
+type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword'
 const state = ui.npcDialogueMenu
 const topic = ref<Topic | null>(null)
 useOverlayScreen('npc-dialogue', isNpcDialogueMenuOpen, closeNpcDialogueMenu)
 const archetype = computed(() => (state.npc ? nearestArchetype(state.npc.personality) : 'calm'))
 const hasOffer = computed(() => state.helpResult?.offer != null)
+const isHomeTrader = computed(() => state.npc?.role === 'trader' && state.settlement?.isHome === true)
+const isHomeGuard = computed(() => state.npc?.role === 'guard' && state.settlement?.isHome === true)
+const swordLine = ref('')
 const responseText = computed(() => {
   if (!state.npc || topic.value === null) return ''
   switch (topic.value) {
     case 'aboutSelf': return aboutSelfLine(state.npc.displayName, state.npc.role, state.npc.familyMembers, archetype.value)
     case 'aboutVillage': return state.settlement ? aboutVillageLine(state.settlement.name, state.settlement.size, state.settlement.terrain, state.settlement.foodSourceType, state.settlement.dominantResource, archetype.value) : ''
+    case 'askSword': return swordLine.value
     case 'currentActivity': return currentActivityLine(state.npc.getCurrentActivity(state.timeOfDay), archetype.value)
     case 'goodbye': return goodbyeLine(archetype.value)
     case 'help': return state.helpResult?.line ?? ''
     default: return ''
   }
 })
-function openMenu(): void { topic.value = null }
+function openMenu(): void { topic.value = null; swordLine.value = '' }
 function selectTopic(next: Topic): void { topic.value = next }
+function askSword(): void {
+  swordLine.value = state.onAskSword?.() ?? ''
+  topic.value = 'askSword'
+}
+function openTrade(): void {
+  state.onOpenTrade?.()
+}
 function accept(): void { acceptNpcDialogueOffer(); topic.value = null }
 function close(): void { closeNpcDialogueMenu(); topic.value = null }
 watch(() => state.open, (open) => { if (open) openMenu() })
@@ -46,6 +57,22 @@ watch(() => state.open, (open) => { if (open) openMenu() })
         v-if="topic === null"
         class="flex flex-col gap-2"
       >
+        <button
+          v-if="isHomeTrader"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/10 px-3 py-2 text-left text-sm font-medium hover:bg-white/20"
+          @click="openTrade"
+        >
+          Handel
+        </button>
+        <button
+          v-if="isHomeGuard"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="askSword"
+        >
+          Poproś o miecz
+        </button>
         <button
           v-for="item in ([['help', 'Może w czymś ci pomóc?'], ['aboutSelf', 'Powiedz coś o sobie.'], ['currentActivity', 'Co teraz robisz?'], ['aboutVillage', 'Powiedz coś o wiosce.'], ['goodbye', 'Nic, miłego dnia!']] as const)"
           :key="item[0]"

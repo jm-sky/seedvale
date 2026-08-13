@@ -54,7 +54,15 @@ import {
   pickNeed,
   tickNeeds,
 } from './Needs'
-import { activityAt, nextBoundary, SCHEDULE_TEMPLATES, type ScheduleActivity, type ScheduleTemplate } from './schedule'
+import {
+  activityAt,
+  effectiveScheduleFor,
+  idleIntentFor,
+  nextBoundary,
+  SCHEDULE_TEMPLATES,
+  type ScheduleActivity,
+  type ScheduleTemplate,
+} from './schedule'
 
 function randRange([min, max]: [number, number]): number {
   return min + Math.random() * (max - min)
@@ -167,7 +175,7 @@ type NpcPlannedAction = PlannedAction<ActionId> & {
  *  narrower, stable view over the private `phase`/`pendingAction` FSM state
  *  (`getCurrentActivity()` below), so callers outside this class never see
  *  `Phase`/`PlannedAction` themselves (`docs/plans/2026-08-09--048...`). */
-export type CurrentActivityKind = 'idle' | 'need' | 'sleep' | 'talking' | 'wander' | 'work'
+export type CurrentActivityKind = 'eat' | 'idle' | 'need' | 'sleep' | 'talking' | 'wander' | 'work'
 
 export type CurrentActivity = {
   kind: CurrentActivityKind
@@ -213,6 +221,8 @@ const TIME_SKIP_SAMPLE_HOURS = 0.5
  *  `createSettlement.ts` only for settlements near enough to water to have
  *  resolved one — see `settlement/roadNetwork.ts`). */
 const FOLLOW_DOCK_PATH_CHANCE = 0.08
+/** Random wander radius around home / garden while lingering on a schedule block. */
+const IDLE_WANDER_SPREAD = 4
 
 /** Chance a `water` need routes the NPC to drink at home instead of the
  *  village well — same destination-swap idea as `FOLLOW_DOCK_PATH_CHANCE`,
@@ -284,10 +294,9 @@ export class NpcAgent {
    *  (e.g. a `woodcutter` with no trees yet) — see `places.ts`'s
    *  `workplaceFor`. Consumed by `beginIdle()`'s `work` scheduled activity. */
   readonly workplace: Place | null
-  /** One uniform template per role (`schedule.ts`) — not yet personalized by
-   *  traits (v2 stage 2 decision: role-level schedule first, traits as a
-   *  later overlay). Drives `choose`'s sleep gate and `beginIdle`'s `work`
-   *  routing via `getScheduledActivity`. */
+  /** Effective per-NPC schedule (`effectiveScheduleFor` of the role template
+   *  + traits). Computed once at construction. Drives `choose` and
+   *  `getScheduledActivity` / dialogue boundaries. */
   readonly schedule: ScheduleTemplate
   /** The rest of this NPC's family (not including itself) — just enough for
    *  dialogue to name them ("mam żonę Annę"), not live references to their
@@ -314,6 +323,10 @@ export class NpcAgent {
    *  generic "walk there, do this" step currently in flight. `null` only
    *  outside those two phases. */
   private pendingAction: NpcPlannedAction | null = null
+  /** After a one-shot scheduled action (eat) finishes, linger on that
+   *  activity until the effective schedule moves on — avoids restarting the
+   *  same meal every `choose` cycle. */
+  private settledIdleActivity: ScheduleActivity | null = null
   /** Shared action lifecycle for the in-flight `PlannedAction` only —
    *  orthogonal to agent `Phase` (`wander`/`sleep`/…). */
   private actionLifecycle: ActionLifecycle = createActionLifecycle()
@@ -394,7 +407,11 @@ export class NpcAgent {
     this.health = createHealthState(MAX_HP)
     this.stamina = createStaminaState(MAX_STAMINA)
     this.workplace = workplace
-    this.schedule = SCHEDULE_TEMPLATES[character.role]
+    this.schedule = effectiveScheduleFor(
+      SCHEDULE_TEMPLATES[character.role],
+      character.traits,
+      { hasSocialPlace: false },
+    )
     this.familyMembers = familyMembers
     this.dialogueArchetype = nearestArchetype(this.personality)
     this.pauseParams = applySociableBoost(pausePersonalityParams(this.personality), this.traits)
@@ -574,9 +591,9 @@ export class NpcAgent {
     return this.activeNeed
   }
 
-  /** What this NPC's `schedule` says it should be doing at `timeOfDay`
-   *  (`dayNight.ts` convention, 0-1) — also called internally by `update()`
-   *  each frame to drive the sleep gate and `beginIdle`'s `work` routing. */
+  /** What this NPC's effective `schedule` says it should be doing at
+   *  `timeOfDay` (`dayNight.ts` convention, 0-1) — also called internally by
+   *  `update()` each frame to drive sleep / idle routing. */
   getScheduledActivity(timeOfDay: number): ScheduleActivity {
     return activityAt(this.schedule, timeOfDay)
   }
@@ -588,7 +605,7 @@ export class NpcAgent {
   /** Dialogue-facing summary of what this NPC is doing right now — maps the
    *  private `phase`/`pendingAction` FSM state onto `CurrentActivity`, adding
    *  `nextBoundary(schedule, timeOfDay)` as `endHour` where it's meaningful
-   *  ("...do HH:MM" — `sleep`/`work`, not `need`/`wander`). */
+   *  ("...do HH:MM" — `sleep`/`work`/`eat`, not `need`/`wander`). */
   getCurrentActivity(timeOfDay: number): CurrentActivity {
     const endHour = nextBoundary(this.schedule, timeOfDay)?.hour
     switch (this.phase) {
@@ -597,6 +614,9 @@ export class NpcAgent {
       case 'execute':
       case 'goTo':
         if (this.pendingAction?.kind === 'work') return { kind: 'work', endHour }
+        if (this.pendingAction?.kind === 'eat' && this.activeNeed === 'idle') {
+          return { kind: 'eat', endHour }
+        }
         if (this.pendingAction) return { kind: 'need', need: this.activeNeed }
         return { kind: 'idle' }
       case 'followPath':
@@ -626,10 +646,9 @@ export class NpcAgent {
    *  `MouseLook`'s `state.yaw`), used only to dim this NPC's label when the
    *  player isn't facing toward it (see the gaze-cone opacity factor below).
    *  `timeOfDay` — `dayNight.ts`'s clock (0-1, 0=midnight), forwarded
-   *  through `SettlementsManager`/`Settlement.update` — drives `schedule`
-   *  via `getScheduledActivity` (sleep gate, `work` routing in
-   *  `beginIdle`). `night_owl` NPCs ignore the sleep gate and keep their
-   *  normal routine regardless of schedule.
+   *  through `SettlementsManager`/`Settlement.update` — drives the effective
+   *  `schedule` via `getScheduledActivity`. Sleep uses that schedule; the
+   *  `night_owl` overlay shifts the sleep block rather than skipping it.
    *  `nearbyNpcCount` — other NPCs from the same settlement within
    *  `GROUP_REACTION_RADIUS` (`createSettlement.ts`), used to dampen the
    *  reaction-sound trigger chance below (issue 010). */
@@ -676,18 +695,19 @@ export class NpcAgent {
     switch (this.phase) {
       case 'choose': {
         // Shared DecisionContext snapshot (plan 055) — policy remains inline
-        // (`pickNeed` + schedule); scoring arrives in Phase 5.
+        // (`pickNeed` then effective schedule); scoring arrives in Phase 5.
         const decisionContext = this.buildDecisionContext(scheduledActivity, nearbyNpcCount)
-        const shouldSleep =
-          decisionContext.scheduleActivity === 'sleep' && !this.traits.includes('night_owl')
-        if (shouldSleep) {
+        const need = pickNeed(this.needs, { skipWood: this.role === 'trader' })
+        this.activeNeed = need
+        if (need !== 'idle') {
+          this.beginNeed(need)
+          break
+        }
+        if (decisionContext.scheduleActivity === 'sleep') {
           this.phase = 'goSleep'
           break
         }
-        const need = pickNeed(this.needs)
-        this.activeNeed = need
-        if (need === 'idle') this.beginIdle(scheduledActivity)
-        else this.beginNeed(need)
+        this.beginIdle(scheduledActivity)
         break
       }
       case 'execute': {
@@ -889,7 +909,7 @@ export class NpcAgent {
         else restoreStamina(this.stamina, this.restRate * stepDt)
         // Not asleep this step — resolve whichever need would have sent the
         // NPC off to drink/eat/gather, same amounts `beginNeed` applies.
-        const need = pickNeed(this.needs)
+        const need = pickNeed(this.needs, { skipWood: this.role === 'trader' })
         if (need === 'water') this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
         else if (need === 'food') this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
         else if (need === 'wood' && this.landmarks.trees.length > 0) {
@@ -900,10 +920,16 @@ export class NpcAgent {
     }
     if (finalActivity === null) return
 
-    const target = finalActivity === 'work' && this.workplace ? this.workplace.position : this.home
+    const target =
+      finalActivity === 'work' && this.workplace
+        ? this.workplace.position
+        : finalActivity === 'eat'
+          ? this.landmarks.garden
+          : this.home
     this.mesh.position.set(target.x, this.sampleHeight(target.x, target.z), target.z)
     this.leaveActiveQueue()
     this.pendingAction = null
+    this.settledIdleActivity = null
     this.wait = 0
     this.pathWaypoints = []
     this.pathIndex = 0
@@ -1049,7 +1075,7 @@ export class NpcAgent {
       })
       return
     }
-    if (need === 'wood' && this.landmarks.trees.length > 0) {
+    if (need === 'wood' && this.role !== 'trader' && this.landmarks.trees.length > 0) {
       const forest = this.forest
       let landmark = this.landmarks.trees[this.treeIndex]!
       this.treeIndex = (this.treeIndex + 1) % this.landmarks.trees.length
@@ -1091,19 +1117,22 @@ export class NpcAgent {
       })
       return
     }
-    // 'wood' need but this settlement has no trees yet — same idle fallback
-    // as an unscheduled moment (not 'work': no point routing to a workplace
-    // just because the wood need happened to fire).
-    this.beginIdle('wake')
+    // 'wood' need but this settlement has no trees yet — same unscheduled
+    // idle fallback as a moment with no workplace (not 'work').
+    this.beginUnscheduledIdle()
   }
 
-  /** No active need (`pickNeed` returned `'idle'`) — either walk to the
-   *  workplace and perform a generic `work` action (when `schedule` says
-   *  `work` right now and a `workplace` exists), or fall back to the
-   *  pre-schedule idle behavior (occasional dock walk, otherwise wander
-   *  near home). */
+  /** No active need (`pickNeed` returned `'idle'`) — follow the effective
+   *  schedule through the existing generic `goTo`/`execute`/`wander` path.
+   *  `wake` maps to staying home; `social` currently has no Place so it
+   *  also stays home. Ordinary schedule changes do not interrupt an action
+   *  already in flight — this runs only from `choose`. */
   private beginIdle(scheduledActivity: ScheduleActivity): void {
-    if (scheduledActivity === 'work' && this.workplace) {
+    if (this.settledIdleActivity !== null && this.settledIdleActivity !== scheduledActivity) {
+      this.settledIdleActivity = null
+    }
+    const intent = idleIntentFor(scheduledActivity)
+    if (intent === 'work' && this.workplace) {
       this.startAction({
         kind: 'work',
         destination: copyVec3(this.workplace.position),
@@ -1112,22 +1141,56 @@ export class NpcAgent {
       })
       return
     }
+    if (intent === 'eat') {
+      if (this.settledIdleActivity !== 'eat') {
+        this.startAction({
+          kind: 'eat',
+          destination: copyVec3(this.landmarks.garden),
+          durationSec: 1.4 * this.waitMultiplier,
+          onComplete: () => {
+            this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+            this.settledIdleActivity = 'eat'
+          },
+        })
+        return
+      }
+      this.wanderNear(this.landmarks.garden)
+      return
+    }
+    if (intent === 'home' || intent === 'social') {
+      this.wanderNear(this.home)
+      return
+    }
+    if (intent === 'sleep') {
+      this.phase = 'goSleep'
+      return
+    }
+    this.beginUnscheduledIdle()
+  }
+
+  /** Dock-path / wander-near-home fallback used when the schedule has no
+   *  workplace to go to (or a wood need fired in a treeless settlement). */
+  private beginUnscheduledIdle(): void {
     if (this.landmarks.dockRoute.length > 1 && Math.random() < FOLLOW_DOCK_PATH_CHANCE) {
       this.pathWaypoints = this.landmarks.dockRoute
       this.pathIndex = 0
       this.phase = 'followPath'
       return
     }
+    this.wanderNear(this.home)
+  }
+
+  private wanderNear(anchor: THREE.Vector3): void {
     for (let attempt = 0; attempt < 6; attempt++) {
-      const x = this.home.x + (Math.random() - 0.5) * 4
-      const z = this.home.z + (Math.random() - 0.5) * 4
+      const x = anchor.x + (Math.random() - 0.5) * IDLE_WANDER_SPREAD
+      const z = anchor.z + (Math.random() - 0.5) * IDLE_WANDER_SPREAD
       if (this.isWalkable(x, z)) {
         this.target.set(x, 0, z)
         this.phase = 'wander'
         return
       }
     }
-    this.target.copy(this.home)
+    this.target.copy(anchor)
     this.phase = 'wander'
   }
 

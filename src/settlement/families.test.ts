@@ -92,6 +92,17 @@ describe('generateFamilies', () => {
     expect(families.every((f) => !f.id.startsWith('family-reserved'))).toBe(true)
   })
 
+  it('home has exactly one trader (Kasia); other settlements never roll trader (plan 090)', () => {
+    const home = generateFamilies(7, 'XL', true, 'polish')
+    const homeTraders = home.flatMap((f) => f.members).filter((m) => m.character.role === 'trader')
+    expect(homeTraders).toHaveLength(1)
+    expect(homeTraders[0]!.name).toBe('Kasia')
+    for (let seed = 0; seed < 40; seed++) {
+      const families = generateFamilies(seed, 'XL', false, 'polish')
+      expect(families.flatMap((f) => f.members).every((m) => m.character.role !== 'trader')).toBe(true)
+    }
+  })
+
   it('every family has 1-3 members with a sensible relation shape', () => {
     for (let seed = 0; seed < 50; seed++) {
       const families = generateFamilies(seed, 'LG', false, 'polish')

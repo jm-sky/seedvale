@@ -33,19 +33,20 @@ const HUMAN_DAMAGE: Partial<Record<AnimalKind, number>> = {
   fox: 6,
 }
 
-/** Held tools that can hit an animal on `[E]` (axe > knife > shovel).
+/** Held tools that can hit an animal on `[E]` (sword > axe > knife > shovel).
  *  Roadmap: pitchfork / sickle / branch melee + item durability — see
  *  `docs/items/CATALOG.md` / `items/itemCatalog.ts` (`ITEM_SYSTEM_ROADMAP`). */
-export type MeleeToolKind = Extract<ToolKind, 'axe' | 'knife' | 'shovel'>
+export type MeleeToolKind = Extract<ToolKind, 'long_sword' | 'axe' | 'knife' | 'shovel'>
 
 const PLAYER_TOOL_DAMAGE: Record<MeleeToolKind, number> = {
+  long_sword: 28,
   axe: 20,
   knife: 12,
   shovel: 8,
 }
 
 export function isMeleeTool(kind: ToolKind | null | undefined): kind is MeleeToolKind {
-  return kind === 'axe' || kind === 'knife' || kind === 'shovel'
+  return kind === 'long_sword' || kind === 'axe' || kind === 'knife' || kind === 'shovel'
 }
 
 export function damageFor(predator: AnimalKind, prey: AnimalKind): number {

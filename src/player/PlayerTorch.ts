@@ -1,7 +1,8 @@
-import { Group, type Material, type Mesh, type Object3D, PointLight, Vector3 } from 'three'
+import { Group, type Material, type Mesh, type Object3D, PointLight } from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { HeldAttach } from '../items/heldToolVisual'
 import { disposeObject3D, loadGltf, preparePropFitMax } from '../assets/loadGltf'
+import { BRANCH_HELD_ATTACH, mountAttachOnSocket } from '../items/heldToolVisual'
 import { createItemMesh } from '../items/items'
 import { createCampfireFlame } from '../settlement/props'
 import {
@@ -30,26 +31,14 @@ const FIRE_URL = '/models/fx/fire.glb'
 const FIRE_TIP_MAX = 0.11
 const FLAME_OPACITY = 0.75
 
-/**
- * Lit branch grip — Branch B is already Z-long (no Y→Z remap). Yaw +π vs
- * wooden_torch so the tip points forward/out of the palm. Grip Z tuned
- * in-browser; lateral nudge still TBD (outer side of hand).
- */
-const BRANCH_ATTACH: HeldAttach = {
-  position: [-0.25, 0.085, -0.02],
-  rotation: [Math.PI / 2, Math.PI / 2, 0],
-  scale: 1,
-  gripLocalOffset: [0, 0, 0.1],
-}
-
 /** PointLight / future flame tip — same wrist TRS as `HELD_ATTACH.wooden_torch`. */
 const WOODEN_FIRE_ATTACH: HeldAttach = {
-  position: [-0.25, 0.085, -0.02],
+  position: [0.02, 0.12, -0.02],
   rotation: [Math.PI / 2, -Math.PI / 2, 0],
   scale: 1,
 }
 
-// BRANCH_ATTACH / WOODEN_FIRE_ATTACH duplicate HELD_ATTACH.wooden_torch — Phase 6 migration candidate.
+// BRANCH_HELD_ATTACH / WOODEN_FIRE_ATTACH duplicate HELD_ATTACH.wooden_torch — Phase 6 migration candidate.
 
 export type TorchSource = 'branch' | 'wooden_torch'
 
@@ -81,8 +70,6 @@ type FlameVisual = {
 let branchTemplate: Group | null = null
 let fireTemplate: Group | null = null
 let templatesPromise: Promise<void> | null = null
-
-const _socketWorldScale = new Vector3()
 
 async function ensureTemplates(): Promise<void> {
   if (branchTemplate && (!SHOW_HAND_FLAME_VISUAL || fireTemplate)) return
@@ -171,21 +158,6 @@ function makeFlameVisual(scale: number): FlameVisual {
   }
 }
 
-function mountOnSocket(mount: Object3D, socket: Object3D, attach: HeldAttach): void {
-  socket.updateWorldMatrix(true, false)
-  socket.getWorldScale(_socketWorldScale)
-  const sx = Math.max(_socketWorldScale.x, 1e-6)
-  const sy = Math.max(_socketWorldScale.y, 1e-6)
-  const sz = Math.max(_socketWorldScale.z, 1e-6)
-  mount.position.set(attach.position[0] / sx, attach.position[1] / sy, attach.position[2] / sz)
-  mount.rotation.set(attach.rotation[0], attach.rotation[1], attach.rotation[2])
-  mount.scale.setScalar(attach.scale)
-  mount.scale.x /= sx
-  mount.scale.y /= sy
-  mount.scale.z /= sz
-  socket.add(mount)
-}
-
 /**
  * Portable hand light — lit branch (consumes branch) or wooden torch item.
  * Mounts on the right wrist; replaces the old body-offset procedural flame.
@@ -266,19 +238,19 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
       if (source === 'branch') {
         const branch = cloneBranchMesh()
         const wrap = new Group()
-        const grip = BRANCH_ATTACH.gripLocalOffset
+        const grip = BRANCH_HELD_ATTACH.gripLocalOffset
         // Long axis is +Z after cloneBranchMesh reorient; grip toward butt.
         if (grip) branch.position.set(grip[0], grip[1], grip[2])
         wrap.add(branch)
         if (flameObject) wrap.add(flameObject)
         wrap.add(pointLight)
         group.add(wrap)
-        mountOnSocket(group, socket, BRANCH_ATTACH)
+        mountAttachOnSocket(group, socket, BRANCH_HELD_ATTACH)
       } else {
         // Stick mesh comes from HeldTool; this mount is light (+ optional flame).
         if (flameObject) group.add(flameObject)
         group.add(pointLight)
-        mountOnSocket(group, socket, WOODEN_FIRE_ATTACH)
+        mountAttachOnSocket(group, socket, WOODEN_FIRE_ATTACH)
       }
 
       mount = group

@@ -46,6 +46,7 @@ describe('dialogueTemplates', () => {
       it(`returns non-empty text for every activity kind (${archetype})`, () => {
         expect(currentActivityLine({ kind: 'sleep', endHour: 6 }, archetype).length).toBeGreaterThan(0)
         expect(currentActivityLine({ kind: 'work', endHour: 18 }, archetype).length).toBeGreaterThan(0)
+        expect(currentActivityLine({ kind: 'eat', endHour: 13 }, archetype).length).toBeGreaterThan(0)
         expect(currentActivityLine({ kind: 'wander' }, archetype).length).toBeGreaterThan(0)
         expect(currentActivityLine({ kind: 'idle' }, archetype).length).toBeGreaterThan(0)
         expect(currentActivityLine({ kind: 'talking' }, archetype).length).toBeGreaterThan(0)

@@ -8,10 +8,17 @@ import { solveAnchorAlignment } from '../../../assets/alignAnchors'
 import { createWorldConfig } from '../../../config/worldConfig'
 import { createPostProcessing } from '../../../render/createPostProcessing'
 import { createRenderer } from '../../../render/createRenderer'
+import { gripOverrideForTarget } from '../gripEdit'
 import { browserState } from '../state'
 import { type AssetSlot, boundsData, createAssetSlot, setWireframe } from './createAssetSlot'
 import { createConnectionLine, createMultiView } from './createMultiView'
 import { applySceneBackground, createViewerScene } from './createViewerScene'
+import {
+  applyHeldPreview,
+  clearHeldPreviewMount,
+  computeHeldPreviewState,
+  HELD_SIDE_OFFSET,
+} from './mountHeldPreview'
 import { buildReportFromScene, findAnchorByName } from './reportFromScene'
 
 export type AssetViewer = {
@@ -28,12 +35,19 @@ export type AssetViewer = {
     rotationDeg?: [number, number, number]
     scale?: [number, number, number]
   }) => void
+  /** Re-frame cameras from current focus mode / bounds. */
+  frame: () => void
+  /** Remount in-hand preview (after grip editor changes). */
+  remountHeld: () => void
   refresh: () => void
   resize: () => void
   dispose: () => void
   getCanvas: () => HTMLCanvasElement
   updateReport: () => void
 }
+
+const _handCenter = new Vector3()
+
 
 export function createViewer(container: HTMLElement): AssetViewer {
   const renderer = createRenderer(container, 2, { preserveDrawingBuffer: true })
@@ -44,7 +58,20 @@ export function createViewer(container: HTMLElement): AssetViewer {
   const { scene, world, ground, grid, axes, lighting } = createViewerScene()
   const reference = createAssetSlot('reference', world)
   const target = createAssetSlot('target', world)
-  target.group.position.x = 1.2
+  target.group.position.x = HELD_SIDE_OFFSET
+
+  const refreshHeldPreview = () => {
+    reference.setPose(browserState.pose === 'idle' ? 'idle' : 'rest')
+    const override = gripOverrideForTarget(target.entry?.id ?? null)
+    const state = applyHeldPreview(reference, target, override)
+    if (state.mode === 'in-hand') {
+      browserState.statusMessage = override
+        ? 'In-hand preview (grip editor override)'
+        : (state.reason ?? 'In-hand preview (game mount)')
+    } else if (state.reason) {
+      browserState.statusMessage = state.reason
+    }
+  }
 
   const multi = createMultiView(container, renderer, 1)
   let layout: 'quad' | 'single' = 'quad'
@@ -166,43 +193,84 @@ export function createViewer(container: HTMLElement): AssetViewer {
   requestAnimationFrame(loop)
 
   const frameScene = () => {
-    const box = target.getBounds() ?? reference.getBounds()
+    reference.refreshAnchors()
+    target.refreshAnchors()
+    const held = computeHeldPreviewState(reference, target)
+
+    if (browserState.focus === 'hand') {
+      const hand = findAnchorByName(reference, 'hand.right')
+        ?? findAnchorByName(reference, browserState.referenceAnchor)
+      if (hand) {
+        // Lock framing on the hand socket — do not expand/re-center to the
+        // (possibly badly offset) tool bbox, or grip screenshots zoom out.
+        _handCenter.setFromMatrixPosition(hand.worldMatrix)
+        const radius = browserState.focusRadius ?? 0.28
+        multi.frameTargets({ center: _handCenter.clone(), radius })
+        markDirty()
+        return
+      }
+    }
+
+    const box = held.mode === 'in-hand'
+      ? reference.getBounds()
+      : (target.getBounds() ?? reference.getBounds())
     if (!box) return
     const center = new Vector3()
     box.getCenter(center)
     const size = new Vector3()
     box.getSize(size)
-    multi.frameTargets({ center, radius: size.length() * 0.5 })
+    const radius = browserState.focusRadius ?? size.length() * 0.5
+    multi.frameTargets({ center, radius })
     markDirty()
+  }
+
+  const tryRestoreOrFrame = () => {
+    if (multi.restorePersistedCameras()) {
+      markDirty()
+      return
+    }
+    frameScene()
   }
 
   return {
     reference,
     target,
     async loadReference(entry, url) {
+      clearHeldPreviewMount(target)
       await reference.load(entry, url)
-      frameScene()
+      refreshHeldPreview()
+      tryRestoreOrFrame()
       markDirty()
     },
     async loadTarget(entry, url) {
+      clearHeldPreviewMount(target)
       await target.load(entry, url)
-      frameScene()
+      refreshHeldPreview()
+      tryRestoreOrFrame()
       markDirty()
     },
     async reloadReference() {
       const prevRef = browserState.referenceAnchor
       const prevTgt = browserState.targetAnchor
+      clearHeldPreviewMount(target)
       await reference.reload()
       validateSelections(prevRef, prevTgt)
-      if (browserState.resetTransformOnReload) target.group.position.set(1.2, 0, 0)
+      refreshHeldPreview()
+      if (browserState.resetTransformOnReload && computeHeldPreviewState(reference, target).mode !== 'in-hand') {
+        target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
+      }
       markDirty()
     },
     async reloadTarget() {
       const prevRef = browserState.referenceAnchor
       const prevTgt = browserState.targetAnchor
+      clearHeldPreviewMount(target)
       await target.reload()
       validateSelections(prevRef, prevTgt)
-      if (browserState.resetTransformOnReload) target.group.position.set(1.2, 0, 0)
+      refreshHeldPreview()
+      if (browserState.resetTransformOnReload && computeHeldPreviewState(reference, target).mode !== 'in-hand') {
+        target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
+      }
       markDirty()
     },
     align(mode) {
@@ -224,9 +292,11 @@ export function createViewer(container: HTMLElement): AssetViewer {
       markDirty()
     },
     resetTargetTransform() {
-      target.group.position.set(1.2, 0, 0)
+      clearHeldPreviewMount(target)
+      target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
       target.group.rotation.set(0, 0, 0)
       target.group.scale.set(1, 1, 1)
+      refreshHeldPreview()
       markDirty()
     },
     setTargetTransform(t) {
@@ -241,9 +311,16 @@ export function createViewer(container: HTMLElement): AssetViewer {
       if (t.scale) target.group.scale.set(...t.scale)
       markDirty()
     },
+    frame: frameScene,
+    remountHeld() {
+      // Keep the user's camera — grip tweaks must not reframe.
+      refreshHeldPreview()
+      markDirty()
+    },
     refresh: markDirty,
     resize: () => { markDirty() },
     dispose() {
+      clearHeldPreviewMount(target)
       reference.dispose()
       target.dispose()
       multi.dispose()

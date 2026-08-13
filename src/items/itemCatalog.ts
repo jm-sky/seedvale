@@ -105,6 +105,17 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: '/models/items/knife.glb',
     notes: 'Starting loadout; held visual on Wrist.R; melee on animals.',
   },
+  // TODO: Add long_sword to the game, review all configs.
+  long_sword: {
+    kind: 'long_sword',
+    label: 'miecz',
+    category: 'tool',
+    holdable: true,
+    meleeDamage: 28,
+    spawn: 'none',
+    modelUrl: '/models/items/long_sword.glb',
+    notes: 'Held melee (plan 090). Acquire via Strażnik/Kupiec — not a world spawn.',
+  },
   firestarter: {
     kind: 'firestarter',
     label: 'krzesiwo',
@@ -180,6 +191,56 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     notes:
       'Starting loadout (+ village 1× near plaza/campfire). Weź then Zapal pochodnię (firestarter). Longer/brighter than lit branch (plan 085).',
   },
+  pickaxe: {
+    kind: 'pickaxe',
+    label: 'kilof',
+    category: 'tool',
+    holdable: true,
+    meleeDamage: null,
+    spawn: 'village_onetime',
+    modelUrl: '/models/items/pickaxe.glb',
+    notes: 'One-time near stockpile (plan 090). Held; mines iron/coal/gold deposits and mountain-rock ground (stone).',
+  },
+  tent: {
+    kind: 'tent',
+    label: 'namiot',
+    category: 'utility',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Buy from Kupiec; place / rest / pack (plan 090). Not a world spawn.',
+  },
+  coal: {
+    kind: 'coal',
+    label: 'węgiel',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Pickaxe yield from coal deposits (plan 090).',
+  },
+  iron: {
+    kind: 'iron',
+    label: 'żelazo',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Pickaxe yield from iron deposits (plan 090).',
+  },
+  gold: {
+    kind: 'gold',
+    label: 'złoto',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Pickaxe yield from gold deposits (plan 090).',
+  },
 }
 
 /** Cross-cutting item systems not tied to a single kind (roadmap only). */
@@ -191,18 +252,8 @@ export const ITEM_SYSTEM_ROADMAP = [
 /** Decorative / not ItemKind — listed for agents scanning item-ish props. */
 export const NON_ITEM_PROPS = [
   {
-    id: 'pickaxe',
-    modelUrl: '/models/items/pickaxe.glb',
-    notes: 'Decorative at stockpile (plan 082). Future mining tool — not ItemKind yet.',
-  },
-  {
     id: 'hay',
     modelUrl: '/models/settlement/hay.glb',
     notes: 'Decorative bales near gardens.',
-  },
-  {
-    id: 'long_sword',
-    modelUrl: '/models/items/long_sword.glb',
-    notes: 'Parked CC-BY; future combat.',
   },
 ] as const

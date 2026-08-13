@@ -10,6 +10,7 @@ import {
   Vector3,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { createCameraPersistScheduler, restoreCamerasFromPersist, saveCameraPersist } from './cameraPersist'
 import type { WebGLRenderer } from 'three'
 
 export type ViewId = 'front' | 'side' | 'top' | 'perspective'
@@ -85,6 +86,9 @@ export function createMultiView(
   views: ViewportDef[]
   resize: (w: number, h: number) => void
   frameTargets: (bounds: { center: Vector3, radius: number } | null) => void
+  /** Restore cameras from localStorage. Returns false when nothing saved. */
+  restorePersistedCameras: () => boolean
+  persistCameras: () => void
   dispose: () => void
 } {
   const views: ViewportDef[] = [
@@ -94,12 +98,15 @@ export function createMultiView(
     makePerspectiveView('perspective', 'Perspective', container, aspect),
   ]
 
+  const persist = createCameraPersistScheduler(() => views)
+
   for (const view of views) {
     if (view.camera instanceof OrthographicCamera) {
       view.controls.enableRotate = false
     }
     view.controls.addEventListener('change', () => {
       container.dispatchEvent(new CustomEvent('viewer-dirty'))
+      persist.schedule()
     })
   }
 
@@ -135,28 +142,51 @@ export function createMultiView(
   const frameTargets = (bounds: { center: Vector3, radius: number } | null) => {
     if (!bounds) return
     _target.copy(bounds.center)
-    const dist = Math.max(bounds.radius * 2.5, 1.5)
+    const radius = Math.max(bounds.radius, 0.05)
+    // Ortho half-extent at zoom=1 (must match resize()).
+    const orthoHalf = 3
+    const dist = Math.max(radius * 2.8, 0.55)
     for (const view of views) {
+      // Apply pose without damping interpolation fighting the new framing.
+      const damping = view.controls.enableDamping
+      view.controls.enableDamping = false
+
       if (view.id === 'perspective') {
         view.controls.target.copy(_target)
         view.camera.position.set(
-          _target.x + dist * 0.7,
-          _target.y + dist * 0.5,
-          _target.z + dist * 0.7,
+          _target.x + dist * 0.75,
+          _target.y + dist * 0.45,
+          _target.z + dist * 0.75,
         )
         view.camera.lookAt(_target)
-        view.controls.update()
+        view.camera.near = Math.max(0.01, dist / 100)
+        view.camera.far = Math.max(50, dist * 40)
+        view.camera.updateProjectionMatrix()
       } else {
         frameOrthoCamera(view, _target, dist)
+        const cam = view.camera as OrthographicCamera
+        cam.zoom = Math.min(40, Math.max(0.35, orthoHalf / (radius * 1.35)))
+        cam.updateProjectionMatrix()
       }
+
+      view.controls.minDistance = Math.max(0.05, dist * 0.2)
+      view.controls.maxDistance = Math.max(2, dist * 6)
+      view.controls.update()
+      view.controls.enableDamping = damping
     }
+    saveCameraPersist(views)
   }
 
   return {
     views,
     resize,
     frameTargets,
+    restorePersistedCameras: () => restoreCamerasFromPersist(views),
+    persistCameras: () => {
+      persist.flush()
+    },
     dispose() {
+      persist.dispose()
       for (const view of views) {
         view.controls.dispose()
         view.overlay.remove()

@@ -3,6 +3,7 @@ import type { NpcAgent } from '../ai/NpcAgent'
 import type { LightActionResult } from '../app/userActions'
 import type { WorldConfig } from '../config/worldConfig'
 import type { ItemKind } from '../items/items'
+import type { TradeResult } from '../items/trade'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
@@ -15,7 +16,15 @@ export type VillagerEntry = { npc: Raw<NpcAgent>; settlementName: string; foodSo
 type VillagerRefreshEntry = { npc: NpcAgent; settlementName: string; foodSourceType: FoodSourceType }
 export const VILLAGERS_PAGE_SIZE = 10
 
-type NpcDialogueMenuState = { open: boolean; npc: NpcAgent | null; settlement: Settlement | null; timeOfDay: number; helpResult: QuestDialogOverride | null }
+type NpcDialogueMenuState = {
+  open: boolean
+  npc: NpcAgent | null
+  settlement: Settlement | null
+  timeOfDay: number
+  helpResult: QuestDialogOverride | null
+  onAskSword: (() => string) | null
+  onOpenTrade: (() => void) | null
+}
 type InventoryState = {
   open: boolean
   counts: Partial<Record<ItemKind, number>>
@@ -50,8 +59,16 @@ type QuickActionsState = {
   onRest: ((variant: RestVariant) => RestOutcome) | null
   onDig: (() => void) | null
   onLevel: (() => void) | null
+  onPlaceTent: (() => void) | null
+  hasTent: boolean
   onOpen: (() => void) | null
   onClose: (() => void) | null
+}
+type MerchantState = {
+  open: boolean
+  counts: Partial<Record<ItemKind, number>>
+  onBuyShells: ((kind: ItemKind) => TradeResult) | null
+  onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>) => TradeResult) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number }
 type BusyState = { visible: boolean; label: string }
@@ -107,7 +124,7 @@ const TOAST_VISIBLE_MS = 2200
 const TOAST_FADE_MS = 300
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, onAskSword: null, onOpenTrade: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
   inventory: { open: false, counts: {}, totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null } as InventoryState,
   pauseMenu: {
@@ -120,11 +137,12 @@ export const ui = reactive({
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
   quickActions: {
-    open: false, hasShovel: false, nearTown: false,
+    open: false, hasShovel: false, nearTown: false, hasTent: false,
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null, onDig: null, onLevel: null, onOpen: null, onClose: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
+  merchant: { open: false, counts: {}, onBuyShells: null, onBuyBarter: null } as MerchantState,
   busy: { visible: false, label: '' } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
@@ -192,9 +210,18 @@ export function setVillagersPage(page: number): void { ui.villagers.page = page 
 
 export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void { const state = ui.npcDialogueMenu; const override = questManager.onInteract(npc.name); state.npc = markRaw(npc); state.settlement = settlement; state.timeOfDay = timeOfDay; state.helpResult = override ?? { line: npc.getDialogueLine() }; state.open = true }
 function resetNpcDialogueMenu(): void { const state = ui.npcDialogueMenu; state.open = false; state.npc = null; state.settlement = null; state.helpResult = null }
-export function closeNpcDialogueMenu(): void { const state = ui.npcDialogueMenu; if (!state.open) return; state.helpResult?.offer?.onDecline(); resetNpcDialogueMenu() }
+export function closeNpcDialogueMenu(opts?: { decline?: boolean }): void {
+  const state = ui.npcDialogueMenu
+  if (!state.open) return
+  if (opts?.decline !== false) state.helpResult?.offer?.onDecline()
+  resetNpcDialogueMenu()
+}
 export function acceptNpcDialogueOffer(): void { const state = ui.npcDialogueMenu; if (!state.open || !state.helpResult?.offer) return; state.helpResult.offer.onAccept(); resetNpcDialogueMenu() }
 export function isNpcDialogueMenuOpen(): boolean { return ui.npcDialogueMenu.open }
+export function configureNpcDialogueMenu(handlers: { onAskSword: () => string, onOpenTrade: () => void }): void {
+  ui.npcDialogueMenu.onAskSword = handlers.onAskSword
+  ui.npcDialogueMenu.onOpenTrade = handlers.onOpenTrade
+}
 
 export function openInventory(
   counts: Partial<Record<ItemKind, number>>,
@@ -233,8 +260,22 @@ export function closeInventory(): void {
 }
 export function isInventoryOpen(): boolean { return ui.inventory.open }
 
+export function configureMerchant(handlers: Pick<MerchantState, 'onBuyShells' | 'onBuyBarter'>): void {
+  Object.assign(ui.merchant, handlers)
+}
+export function openMerchant(counts: Partial<Record<ItemKind, number>>): void {
+  ui.merchant.counts = { ...counts }
+  ui.merchant.open = true
+}
+export function refreshMerchant(counts: Partial<Record<ItemKind, number>>): void {
+  ui.merchant.counts = { ...counts }
+}
+export function closeMerchant(): void { ui.merchant.open = false }
+export function isMerchantOpen(): boolean { return ui.merchant.open }
+
 export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 'open'>>): void { Object.assign(ui.quickActions, handlers) }
 export function setQuickActionsHasShovel(hasShovel: boolean): void { ui.quickActions.hasShovel = hasShovel }
+export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions.hasTent = hasTent }
 export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }
 export function openQuickActions(): void {
   if (ui.quickActions.open) return

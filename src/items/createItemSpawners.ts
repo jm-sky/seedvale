@@ -65,7 +65,10 @@ const VILLAGE_TOOL_COUNT_MIN = 1
 const VILLAGE_TOOL_COUNT_MAX = 3
 const VILLAGE_TOOL_KINDS: readonly ItemKind[] = ['pitchfork', 'sickle']
 
-/** One-time wooden torch near plaza/campfire (plan 085). */
+/** One-time village pickaxe (plan 090) — stockpile, same Infinity-respawn as shovel. */
+const PICKAXE_RESPAWN_TIME = Infinity
+const PICKAXE_STOCK_MIN_DIST = 0.8
+const PICKAXE_STOCK_MAX_DIST = 2.2
 const WOODEN_TORCH_RESPAWN_TIME = Infinity
 const WOODEN_TORCH_FIRE_MAX_DIST = 2.2
 const WOODEN_TORCH_PLAZA_MIN_DIST = 2
@@ -99,7 +102,7 @@ export function createItemSpawners(
    *  split. `garden` is built unconditionally for every settlement and, per
    *  `buildSettlementProps`, sits next to the wheat patch when the food
    *  source is a field — close enough to read as "the field" either way. */
-  shovelLandmarks: { campfire?: Vector3, garden: Vector3 },
+  shovelLandmarks: { campfire?: Vector3, garden: Vector3, stockpile?: Vector3 },
   /** Extra garden pads (plan 077 / 082) — farm tools scatter near these. */
   gardens: readonly Vector3[] = [],
 ): ItemSpawners {
@@ -220,6 +223,14 @@ export function createItemSpawners(
         WOODEN_TORCH_PLAZA_MAX_DIST,
       )
     if (pos) addSpawnPoint('wooden_torch', WOODEN_TORCH_RESPAWN_TIME, pos)
+  }
+
+  {
+    const stock = shovelLandmarks.stockpile
+    if (stock) {
+      const pos = findWalkableNear(stock.x, stock.z, PICKAXE_STOCK_MIN_DIST, PICKAXE_STOCK_MAX_DIST)
+      if (pos) addSpawnPoint('pickaxe', PICKAXE_RESPAWN_TIME, pos)
+    }
   }
 
   if (trees.length > 0) {

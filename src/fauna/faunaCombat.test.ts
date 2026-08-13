@@ -34,10 +34,13 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
     expect(damageVsHuman('boar')).toBe(8) // no table entry -> DEFAULT_DAMAGE
   })
 
-  it('ranks player melee tools axe > knife > shovel', () => {
+  it('ranks player melee tools sword > axe > knife > shovel', () => {
+    expect(playerToolDamage('long_sword')).toBeGreaterThan(playerToolDamage('axe'))
     expect(playerToolDamage('axe')).toBeGreaterThan(playerToolDamage('knife'))
     expect(playerToolDamage('knife')).toBeGreaterThan(playerToolDamage('shovel'))
+    expect(isMeleeTool('long_sword')).toBe(true)
     expect(isMeleeTool('axe')).toBe(true)
+    expect(isMeleeTool('pickaxe')).toBe(false)
     expect(isMeleeTool('firestarter')).toBe(false)
     expect(isMeleeTool(null)).toBe(false)
   })

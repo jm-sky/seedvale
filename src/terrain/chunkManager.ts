@@ -3,7 +3,7 @@ import type { DetailNormalConfig } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type { TreeEnvSample, TreeGrowthStage, TreeLifecycle, TreePresence } from '../world/treeLifecycle'
 import type { EnvironmentKind } from './chunkEnvironment'
-import type { ChunkTileResult } from './chunkHeightmapProtocol'
+import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
 import { disposeObject3D } from '../assets/loadGltf'
 import { createItemMesh, type ItemKind } from '../items/items'
@@ -65,8 +65,10 @@ import {
   sampleMountainRidgeAt,
 } from './chunkHeightmap'
 import {
+  cancelChunkGrass,
   cancelChunkTile,
   HeightmapGenerationCancelledError,
+  requestChunkGrass,
   requestChunkTile,
 } from './chunkWorkerPool'
 import { createGrassSystem, type WorldGrassChunk } from './grass'
@@ -188,6 +190,9 @@ type ChunkRecord = {
   /** `undefined` = not yet decided (chunk not ready or outside grass radius);
    *  `null` = decided ineligible (no blades survived rejection, e.g. all rock/sand). */
   grass?: WorldGrassChunk | null
+  /** A `requestChunkGrass` request is in flight for this chunk (plan 086) —
+   *  `grass` stays `undefined` until it resolves. */
+  grassPending?: boolean
   pendingPromise?: Promise<void>
 }
 
@@ -429,29 +434,84 @@ export function createChunkManager(
 
   let lastPlayerChunk: ChunkCoord = { cx: 0, cz: 0 }
 
+  /** Cheap distance LOD: render fewer blades in farther chunks (down to ~25%
+   *  at the visible edge) — imperceptible at that distance/fog, no
+   *  reallocation, just narrows the instanced draw range. Keeps near-field
+   *  density (the intentional visual choice) while cutting fill-rate cost.
+   *  Short filler blades only in the player's chunk + immediate ring
+   *  (issue 023) — zero draw cost beyond that. */
+  function grassLodForDistance(dist: number): { mainFrac: number, fillerFrac: number } {
+    const t = dist / Math.max(1, effectiveGrassRadius)
+    return {
+      mainFrac: Math.max(0.25, 1 - t * 0.75),
+      fillerFrac: dist <= 1 ? Math.max(0, 1 - dist * 0.55) : 0,
+    }
+  }
+
+  /** Requests grass placement on the worker pool (plan 086) — `record.grass`
+   *  stays `undefined` (and `grassPending` true) until the result comes back,
+   *  at which point it's re-validated against the *current* player position
+   *  (not the one at request time) before building meshes. Chunk tiles come
+   *  back synchronously already resolved (`ensureLoaded`); grass is the only
+   *  per-chunk placement still generated on demand after that. */
   function ensureGrass(record: ChunkRecord): void {
-    if (record.grass !== undefined || !record.tile) return
-    const { x, z } = chunkCenter(record.coord, config.chunkSize)
-    const grass = grassSystem.createChunkGrass(
-      record.coord,
-      record.tile,
-      config.resolution,
-      config.chunkSize,
-      x,
-      z,
-      config.waterLevel,
-      config.heightScale,
-      config.seed,
-      config.grass.density,
-      config.region,
-    )
-    record.grass = grass
-    if (grass) scene.add(grass.mesh)
+    if (record.grass !== undefined || record.grassPending || !record.tile) return
+    const tile = record.tile
+    const key = record.key
+    const coord = record.coord
+    const { x, z } = chunkCenter(coord, config.chunkSize)
+    record.grassPending = true
+
+    const params: GrassRequestParams = {
+      cx: coord.cx,
+      cz: coord.cz,
+      chunkSize: config.chunkSize,
+      resolution: config.resolution,
+      waterLevel: config.waterLevel,
+      heightScale: config.heightScale,
+      seed: config.seed,
+      candidatesPerChunk: config.grass.density,
+      region: config.region,
+      grids: {
+        heights: tile.heights,
+        biomes: tile.biomes,
+        roadTint: tile.roadTint,
+        mountainRidge: tile.mountainRidge,
+        moistureRegion: tile.moistureRegion,
+      },
+    }
+
+    requestChunkGrass(key, params)
+      .then((data) => {
+        const rec = chunks.get(key)
+        if (!rec) return // chunk unloaded while generating
+        rec.grassPending = false
+        const dist = chebyshevDistance(coord, lastPlayerChunk)
+        if (dist > grassUnloadRadius) return // out of range by the time the result came back
+        const grass = grassSystem.buildGrassChunkMeshes(data, x, z)
+        rec.grass = grass
+        if (grass) {
+          scene.add(grass.mesh)
+          const { mainFrac, fillerFrac } = grassLodForDistance(dist)
+          grass.setLodFraction(mainFrac, fillerFrac)
+        }
+      })
+      .catch((err: unknown) => {
+        const rec = chunks.get(key)
+        if (rec) rec.grassPending = false
+        if (!(err instanceof HeightmapGenerationCancelledError)) {
+          console.error('[chunkManager] grass generation failed', err)
+        }
+      })
   }
 
   function removeGrass(record: ChunkRecord): void {
     record.grass?.dispose()
     record.grass = undefined
+    if (record.grassPending) {
+      cancelChunkGrass(record.key)
+      record.grassPending = false
+    }
   }
 
   /** Grass gets its own (smaller) show/hide radius than the terrain `loadRadius` —
@@ -463,17 +523,9 @@ export function createChunkManager(
     const dist = chebyshevDistance(record.coord, playerChunk)
     if (dist <= effectiveGrassRadius) {
       ensureGrass(record)
-      // Cheap distance LOD: render fewer blades in farther chunks (down to ~25%
-      // at the visible edge) — imperceptible at that distance/fog, no
-      // reallocation, just narrows the instanced draw range. Keeps near-field
-      // density (the intentional visual choice) while cutting fill-rate cost.
-      // Short filler blades only in the player's chunk + immediate ring
-      // (issue 023) — zero draw cost beyond that.
-      const t = dist / Math.max(1, effectiveGrassRadius)
-      const mainFrac = Math.max(0.25, 1 - t * 0.75)
-      const fillerFrac = dist <= 1 ? Math.max(0, 1 - dist * 0.55) : 0
+      const { mainFrac, fillerFrac } = grassLodForDistance(dist)
       record.grass?.setLodFraction(mainFrac, fillerFrac)
-    } else if (dist > grassUnloadRadius && record.grass !== undefined) {
+    } else if (dist > grassUnloadRadius && (record.grass !== undefined || record.grassPending)) {
       removeGrass(record)
     }
   }

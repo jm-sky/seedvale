@@ -9,6 +9,7 @@ export type ItemKind =
   | 'flower'
   | 'cone'
   | 'knife'
+  | 'long_sword'
   | 'firestarter'
   | 'blanket'
   | 'shovel'
@@ -16,32 +17,45 @@ export type ItemKind =
   | 'pitchfork'
   | 'sickle'
   | 'wooden_torch'
+  | 'pickaxe'
+  | 'tent'
+  | 'coal'
+  | 'iron'
+  | 'gold'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility'
 
 export type ItemDef = {
   label: string
+  kind: ItemKind
   category: ItemCategory
+  description?: string | null | undefined
   /** Kilograms — see `Inventory.ts`'s `totalWeight()`/`canAdd()`. */
   weight: number
   color: number
 }
 
 export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
-  shell: { label: 'muszla', category: 'resource', weight: 0.05, color: 0xf2e4c9 },
-  stone: { label: 'kamień', category: 'resource', weight: 1, color: 0x8c8c8c },
-  branch: { label: 'gałąź', category: 'resource', weight: 0.5, color: 0x6b4a2f },
-  mushroom: { label: 'grzyb', category: 'resource', weight: 0.1, color: 0xc0453c },
-  flower: { label: 'kwiat', category: 'resource', weight: 0.05, color: 0xdb6fa3 },
-  cone: { label: 'szyszka', category: 'resource', weight: 0.1, color: 0x7a5230 },
-  knife: { label: 'nóż', category: 'tool', weight: 0.4, color: 0xb7bfc7 },
-  firestarter: { label: 'krzesiwo', category: 'tool', weight: 0.2, color: 0x54504a },
-  blanket: { label: 'koc', category: 'utility', weight: 1.5, color: 0x8a4b3a },
-  shovel: { label: 'łopata', category: 'tool', weight: 2, color: 0x6b4a32 },
-  axe: { label: 'siekiera', category: 'tool', weight: 2.5, color: 0x7a7e86 },
-  pitchfork: { label: 'widły', category: 'tool', weight: 1.8, color: 0x6b5a3a },
-  sickle: { label: 'sierp', category: 'tool', weight: 0.7, color: 0x8a9098 },
-  wooden_torch: { label: 'pochodnia', category: 'tool', weight: 1.2, color: 0x7a5230 },
+  shell: { kind: 'shell', label: 'muszla', category: 'resource', weight: 0.05, color: 0xf2e4c9 },
+  stone: { kind: 'stone', label: 'kamień', category: 'resource', weight: 1, color: 0x8c8c8c },
+  branch: { kind: 'branch', label: 'gałąź', category: 'resource', weight: 0.5, color: 0x6b4a2f },
+  mushroom: { kind: 'mushroom', label: 'grzyb', category: 'resource', weight: 0.1, color: 0xc0453c },
+  flower: { kind: 'flower', label: 'kwiat', category: 'resource', weight: 0.05, color: 0xdb6fa3 },
+  cone: { kind: 'cone', label: 'szyszka', category: 'resource', weight: 0.1, color: 0x7a5230 },
+  knife: { kind: 'knife', label: 'nóż', category: 'tool', weight: 0.4, color: 0xb7bfc7 },
+  firestarter: { kind: 'firestarter', label: 'krzesiwo', category: 'tool', weight: 0.2, color: 0x54504a },
+  blanket: { kind: 'blanket', label: 'koc', category: 'utility', weight: 1.5, color: 0x8a4b3a },
+  shovel: { kind: 'shovel', label: 'łopata', category: 'tool', weight: 2, color: 0x6b4a32 },
+  axe: { kind: 'axe', label: 'siekiera', category: 'tool', weight: 2.5, color: 0x7a7e86 },
+  long_sword: { kind: 'long_sword', label: 'miecz', category: 'tool', weight: 2.5, color: 0x7a7e86 },
+  pitchfork: { kind: 'pitchfork', label: 'widły', category: 'tool', weight: 1.8, color: 0x6b5a3a },
+  sickle: { kind: 'sickle', label: 'sierp', category: 'tool', weight: 0.7, color: 0x8a9098 },
+  wooden_torch: { kind: 'wooden_torch', label: 'pochodnia', category: 'tool', weight: 1.2, color: 0x7a5230 },
+  pickaxe: { kind: 'pickaxe', label: 'kilof', category: 'tool', weight: 2.5, color: 0x7a7e86 },
+  tent: { kind: 'tent', label: 'namiot', category: 'utility', weight: 3, color: 0x8a6a3a },
+  coal: { kind: 'coal', label: 'węgiel', category: 'resource', weight: 1, color: 0x1c1c1c },
+  iron: { kind: 'iron', label: 'żelazo', category: 'resource', weight: 1.5, color: 0x8a4a30 },
+  gold: { kind: 'gold', label: 'złoto', category: 'resource', weight: 0.4, color: 0xd4af37 },
 }
 
 /** Pickup mesh — prefers a preloaded GLB clone when available (`itemModels.ts`),
@@ -145,6 +159,18 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     group.add(handle)
     return group
   }
+  if (kind === 'long_sword') {
+    const group = new THREE.Group()
+    const blade = new THREE.Mesh(
+      new THREE.ConeGeometry(0.035, 0.22, 4),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.long_sword.color, flatShading: true, metalness: 0.4 }),
+    )
+    blade.rotation.x = Math.PI / 2
+    blade.position.set(0, 0.05, 0.11)
+    blade.castShadow = true
+    group.add(blade)
+    return group
+  }
   if (kind === 'firestarter') {
     const mesh = new THREE.Mesh(
       new THREE.DodecahedronGeometry(0.1, 0),
@@ -236,6 +262,47 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     blade.castShadow = true
     group.add(blade)
     return group
+  }
+  if (kind === 'coal' || kind === 'iron' || kind === 'gold') {
+    const mesh = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(0.12, 0),
+      new THREE.MeshStandardMaterial({
+        color: ITEM_DEFS[kind].color,
+        flatShading: true,
+        metalness: kind === 'gold' ? 0.55 : 0.15,
+      }),
+    )
+    mesh.position.y = 0.09
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'pickaxe') {
+    const group = new THREE.Group()
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.02, 0.5, 6),
+      new THREE.MeshStandardMaterial({ color: 0x5a3a22, flatShading: true }),
+    )
+    handle.rotation.x = Math.PI / 2.2
+    handle.position.set(0, 0.14, -0.02)
+    handle.castShadow = true
+    group.add(handle)
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.06, 0.06),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.pickaxe.color, flatShading: true, metalness: 0.4 }),
+    )
+    head.position.set(0, 0.18, 0.16)
+    head.castShadow = true
+    group.add(head)
+    return group
+  }
+  if (kind === 'tent') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.36, 0.14, 0.28),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.tent.color, flatShading: true }),
+    )
+    mesh.position.y = 0.07
+    mesh.castShadow = true
+    return mesh
   }
   if (kind === 'wooden_torch') {
     const group = new THREE.Group()

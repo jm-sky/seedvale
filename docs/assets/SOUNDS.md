@@ -4,7 +4,7 @@ Living backlog of sound effects Seedvale still needs (or has but must wire).
 
 Inventory of files already in the repo: [`public/sounds/README.md`](../../public/sounds/README.md). One-shot research snapshot that seeded this list: [research 007](../research/2026-08-11--007--sound-needs.md).
 
-**Last updated:** 2026-08-12
+**Last updated:** 2026-08-13
 
 ## How to use
 
@@ -65,6 +65,7 @@ If the feature needs no new sound, do nothing to this file.
 | S13 | Smithing / woodwork (workplace) | When NPCs really work | `needed` | [plan 060](../plans/2026-08-11--060--npc-schedule-actions-and-trait-overlays.md)+ |
 | S14 | Gate / creak | Palisade / future fortifications | `in repo` | `door-creak-01…02` / `door-latch-01` |
 | S15 | Stone find (distinct from dig) | Dig notice — today reuses dig SFX | `needed` | — |
+| S16 | Pickaxe / ore strike | Mine channel — today reuses dig clips via `playActionMine` | `needed` | [plan 090](../plans/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 
 ## Acquisition rules
 

@@ -1,11 +1,14 @@
 import { reactive } from 'vue'
 import type { AssetIndexEntry } from '../../assets/assetIndex'
+import { applyAssetBrowserUrlParams } from './urlParams'
 
 export type ViewLayout = 'quad' | 'single'
 export type RenderMode = 'diagnostic' | 'game-like'
 export type LightingPreset = 'alignment' | 'daylight' | 'night' | 'torch'
 export type BackgroundPreset = 'dark' | 'mid' | 'light' | 'checker'
 export type PoseMode = 'rest' | 'idle'
+/** `scene` = full asset bounds; `hand` = zoom on hand.right / selected reference anchor. */
+export type FocusMode = 'scene' | 'hand'
 
 export type BrowserState = {
   referenceId: string | null
@@ -23,6 +26,11 @@ export type BrowserState = {
   showGround: boolean
   showBbox: boolean
   wireframe: boolean
+  /** When false, hide the on-canvas report overlay (cleaner grip screenshots). */
+  showOverlay: boolean
+  focus: FocusMode
+  /** Optional framing radius override in meters (mainly with focus=hand). */
+  focusRadius: number | null
   timeOfDay: number
   torchFuelRatio: number
   pose: PoseMode
@@ -48,6 +56,9 @@ export const browserState = reactive<BrowserState>({
   showGround: true,
   showBbox: true,
   wireframe: false,
+  showOverlay: true,
+  focus: 'scene',
+  focusRadius: null,
   timeOfDay: 0.5,
   torchFuelRatio: 1,
   pose: 'rest',
@@ -56,6 +67,17 @@ export const browserState = reactive<BrowserState>({
   statusMessage: 'Ready',
   invalidSelection: null,
 })
+
+if (applyAssetBrowserUrlParams(browserState)) {
+  const parts = [
+    browserState.referenceId ? `ref=${browserState.referenceId}` : null,
+    browserState.targetId ? `target=${browserState.targetId}` : null,
+    browserState.freeUrl.trim() ? `url=${browserState.freeUrl.trim()}` : null,
+  ].filter(Boolean)
+  browserState.statusMessage = parts.length
+    ? `Loaded from URL (${parts.join(', ')})`
+    : 'Loaded from URL'
+}
 
 export type SlotDiagnostics = {
   entry: AssetIndexEntry | null

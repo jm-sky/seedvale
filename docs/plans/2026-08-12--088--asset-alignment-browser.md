@@ -5,7 +5,7 @@
 
 ## Status
 
-- Status: `planned`
+- Status: `verification needed`
 - Priority: 🟡 `medium`
 - Effort: `XL` (raised from `L` by the implementation plan: shared anchor seam + runtime consumers + 5 MVP phases)
 - Dependencies: `—`

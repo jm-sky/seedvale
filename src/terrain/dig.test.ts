@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   canLevelAt,
+  DIG_DEPTH_ROCK,
   type DigEnv,
   getDigProfileAt,
+  getRockDigProfileAt,
+  isRockGround,
   resolveDigStone,
+  STONE_CHANCE_ROCK,
   STONE_NOTICE_CHANCE,
 } from './dig'
 
@@ -47,6 +51,37 @@ describe('getDigProfileAt', () => {
 
   it('allows gentle foothills below the rock threshold', () => {
     expect(getDigProfileAt(0, 0, env({ sampleMountainRidge: () => 0.1 }))).not.toBeNull()
+  })
+
+  it('tags ordinary dry land as soil', () => {
+    expect(getDigProfileAt(0, 0, env())?.surface).toBe('soil')
+  })
+})
+
+describe('getRockDigProfileAt', () => {
+  it('returns a rock profile on mountain ridges', () => {
+    const profile = getRockDigProfileAt(0, 0, env({ sampleMountainRidge: () => 0.5 }))
+    expect(profile).toEqual({
+      depth: DIG_DEPTH_ROCK,
+      stoneChance: STONE_CHANCE_ROCK,
+      surface: 'rock',
+    })
+  })
+
+  it('rejects soil, sand, water and foothills', () => {
+    expect(getRockDigProfileAt(0, 0, env())).toBeNull()
+    expect(getRockDigProfileAt(0, 0, env({ sampleMountainRidge: () => 0.1 }))).toBeNull()
+    expect(getRockDigProfileAt(0, 0, env({
+      sampleHeight: () => WATER_LEVEL - 1,
+      sampleMountainRidge: () => 0.9,
+    }))).toBeNull()
+  })
+})
+
+describe('isRockGround', () => {
+  it('matches the shovel-reject ridge threshold', () => {
+    expect(isRockGround(0, 0, env({ sampleMountainRidge: () => 0.3 }))).toBe(false)
+    expect(isRockGround(0, 0, env({ sampleMountainRidge: () => 0.31 }))).toBe(true)
   })
 })
 

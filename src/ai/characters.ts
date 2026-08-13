@@ -12,8 +12,9 @@ export type NpcGender = 'male' | 'female'
  *  come up on any regular family via the normal random roll below. */
 export type Role = 'woodcutter' | 'farmer' | 'guard' | 'trader' | 'miner' | 'fisher'
 
-/** Closed pool of lightweight, deterministic modifiers — see NpcAgent for
- *  where each one actually changes a number (wait times, HP, PAUSE_PARAMS). */
+/** Closed pool of lightweight, deterministic modifiers — execution effects
+ *  live in `NpcAgent` (wait times, stamina, PAUSE_PARAMS); schedule overlays
+ *  (`night_owl` / `fast_worker` / `sociable`) live in `effectiveScheduleFor`. */
 export type Trait = 'energetic' | 'fast_worker' | 'night_owl' | 'sociable'
 
 export type CharacterDef = {
@@ -29,7 +30,9 @@ export type CharacterDef = {
   traits: readonly Trait[]
 }
 
-const ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'trader', 'miner', 'fisher']
+/** Random family members never roll `trader` — plan 090 wants exactly one
+ *  Kupiec (reserved Kasia in the home settlement), none elsewhere. */
+const RANDOM_ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'miner', 'fisher']
 const TRAITS: readonly Trait[] = ['energetic', 'fast_worker', 'night_owl', 'sociable']
 
 type ReservedSeed = Omit<CharacterDef, 'personality'>
@@ -66,7 +69,7 @@ export function genderForName(name: string): NpcGender | null {
  *  they get here — see `settlement/families.ts`. */
 export function characterForSeed(seed: number, gender: NpcGender): Omit<CharacterDef, 'name'> {
   const random = createSeededRandom(seed ^ 0x63a4e1)
-  const role = ROLES[Math.floor(random() * ROLES.length)]!
+  const role = RANDOM_ROLES[Math.floor(random() * RANDOM_ROLES.length)]!
   const traitCount = random() < 0.5 ? 1 : 2
   const pool = [...TRAITS]
   const traits: Trait[] = []

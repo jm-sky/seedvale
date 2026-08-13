@@ -1,5 +1,20 @@
 # Implementation Notes — 060
 
+## Implemented rules (2026-08-13)
+
+Resolved during implementation (plan left exact hours open):
+
+| Overlay | Rule |
+|---|---|
+| `night_owl` | Shift **every** entry by `NIGHT_OWL_SHIFT_HOURS = 2` (mod 24). Replaces the old `choose()` skip-sleep exception. |
+| Work-oriented | **`fast_worker`**, not a new `hardworking` trait. Delay a `home` that follows `work` by `FAST_WORKER_WORK_EXTEND_HOURS = 1`. Distinct from `FAST_WORKER_WAIT_MULT`. |
+| `sociable` | If `hasSocialPlace`, first `SOCIABLE_SOCIAL_HOURS = 2` of each `home` block become `social`; shorter blocks convert entirely. Runtime passes `hasSocialPlace: false`. |
+| Order | `fast_worker` → `night_owl` → `sociable`. |
+| `wake` | No action; `idleIntentFor('wake') === 'home'`. |
+| Arbitration | `pickNeed()` first, then schedule (including sleep). No interrupt of in-flight actions. |
+
+`effectiveScheduleFor` lives in `src/ai/schedule.ts`; tests in `src/ai/schedule.test.ts`. `NpcAgent.schedule` is the effective schedule, computed once in the constructor.
+
 ## Purpose
 
 These notes are a repository-specific implementation guide for plan 060. They are intentionally not a copy of the plan. The goal is to let an implementation agent extend the existing NPC schedule/FSM/traits code without re-discovering the architecture.

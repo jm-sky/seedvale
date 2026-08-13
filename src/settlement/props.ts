@@ -9,6 +9,7 @@ import { anchorsForAsset } from '../assets/assetAnchorData'
 import { mergeAnchorDefs } from '../assets/assetAnchors'
 import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../assets/loadGltf'
 import { isDebugMode } from '../debug/debugMode'
+import { createHorseModel } from '../fauna/proceduralAnimals'
 import { distanceToSegment, projectOntoSegment } from '../math/segment'
 import { createSparks, type Sparks } from '../shared/getFireParticles'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
@@ -57,6 +58,8 @@ export type SettlementHouseLandmark = {
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
+  /** Procedural well group — anchor resolution for the drink queue (Phase 6). */
+  wellProp?: THREE.Object3D
   stockpile: THREE.Vector3
   garden: THREE.Vector3
   /** All garden pads (plan 077); `garden` mirrors the primary (index 0). */
@@ -302,7 +305,7 @@ export function createHayBale(scale = 1): THREE.Group {
   return hay
 }
 
-/** Fallback if `pickaxe.glb` fails — decorative only (not an ItemKind yet). */
+/** Fallback mesh if `pickaxe.glb` fails — also used as item procedural stand-in. */
 export function createPickaxeProp(): THREE.Group {
   const group = new THREE.Group()
   const handle = new THREE.Mesh(
@@ -1859,6 +1862,7 @@ export async function buildSettlementProps(
   placeOnGround(well, wellX, wellZ, sampleHeight)
   group.add(well)
   landmarks.well.set(wellX, sampleHeight(wellX, wellZ), wellZ)
+  landmarks.wellProp = well
 
   const { x: stockX, z: stockZ } = placeFromLandmark(
     site, landmarkOf(plan, 'stockpile', 0), 4, 1.5, sampleHeight, waterLevel, coreRandom,
@@ -1938,6 +1942,31 @@ export async function buildSettlementProps(
   placeOnGround(marketBarrel, marketX + 0.7, marketZ + 0.3, sampleHeight)
   group.add(marketBarrel)
   landmarks.market.set(marketX, sampleHeight(marketX, marketZ), marketZ)
+
+  if (plantForest) {
+    try {
+      const wagon = await loadGltf('/models/settlement/megakit/wagon.glb')
+      preparePropFitMax(wagon, 3.8)
+      placeOnGround(wagon, marketX + 2.8, marketZ - 0.5, sampleHeight)
+      wagon.rotation.y = 0.4
+      group.add(wagon)
+    } catch (err) {
+      console.warn('[settlement] wagon.glb unavailable', err)
+    }
+    try {
+      const horse = await loadGltf('/models/fauna/horse.glb')
+      prepareProp(horse, 1.55)
+      placeOnGround(horse, marketX + 4.4, marketZ + 1.15, sampleHeight)
+      horse.rotation.y = 1.1
+      group.add(horse)
+    } catch (err) {
+      console.warn('[settlement] horse.glb unavailable — procedural stand-in', err)
+      const horse = createHorseModel()
+      placeOnGround(horse, marketX + 4.4, marketZ + 1.15, sampleHeight)
+      horse.rotation.y = 1.1
+      group.add(horse)
+    }
+  }
 
   const houseLights: HouseLight[] = []
   const villageTorches: VillageTorch[] = []
@@ -2066,7 +2095,8 @@ export async function buildSettlementProps(
     group.add(barrel)
   }
 
-  // Hay bales near garden pads + a decorative pickaxe by the stockpile (plan 082 B).
+  // Hay bales near garden pads (plan 082 B). Pickaxe is a one-time stockpile
+  // pickup via item spawners (plan 090), not a decorative prop.
   const hayTemplates = await loadPropTemplates(
     [{ url: '/models/settlement/hay.glb', height: 0.55 }],
     () => createHayBale(),
@@ -2082,18 +2112,6 @@ export async function buildSettlementProps(
     placeOnGround(hay, g.x + Math.cos(ang) * dist, g.z + Math.sin(ang) * dist, sampleHeight)
     group.add(hay)
   }
-  const pickaxe = await (async () => {
-    try {
-      const model = await loadGltf('/models/items/pickaxe.glb')
-      // Authored long/flat — height-fit would make it several meters long.
-      return preparePropFitMax(model, 0.9)
-    } catch {
-      return createPickaxeProp()
-    }
-  })()
-  pickaxe.rotation.y = coreRandom() * Math.PI * 2
-  placeOnGround(pickaxe, stockX - 1.2, stockZ + 0.9, sampleHeight)
-  group.add(pickaxe)
 
   // Infrastructure counts come from centralized `VILLAGE_SIZE_CONFIG` (plan
   // 047) — OUTPOST/SM stay without a village campfire; MD+ get one; LG/XL

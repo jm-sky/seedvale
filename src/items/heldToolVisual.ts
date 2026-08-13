@@ -41,6 +41,7 @@ export type HeldAttach = {
  */
 export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
   axe: {
+    // Verified in-hand after user manual adjustment (2026-08-12)
     // Was along forearm (handle → bone −Y); +90° yaw puts shaft across the grip.
     position: [0.02, 0.13, -0.02],
     rotation: [Math.PI / 2, Math.PI / 2, 0],
@@ -54,12 +55,14 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     rotation: [0.4, 0.2, 0.3],
     scale: 1,
   },
+    // Verified in-hand after user manual adjustment (2026-08-12)
   knife: {
-    position: [0, 0.12, 0.0],
+    position: [0, 0.12, -0.01],
     rotation: [Math.PI, 0, Math.PI / 2],
     scale: 1.25,
   },
   shovel: {
+    // Verified in-hand after user manual adjustment (2026-08-12)
     position: [0.02, 0.11, -0.025],
     rotation: [0, 0, -Math.PI / 2.6],
     scale: 1,
@@ -68,13 +71,41 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     gripLocalOffset: [0, -0.24, 0],
   },
   wooden_torch: {
-    // Verified in-hand (2026-08-12): tip up/out of palm, grip on shaft.
+    // Verified in-hand after user manual adjustment (2026-08-12)
+    // ~~Verified in-hand (2026-08-12): tip up/out of palm, grip on shaft.~~
     // Mesh long axis treated as +Z (preload applies rotation.x = π/2).
-    position: [-0.25, 0.085, -0.02],
+    position: [-0.25, 0.1, -0.02],
     rotation: [Math.PI / 2, -Math.PI / 2, 0],
     scale: 1.1,
     gripLocalOffset: [0, 0, -0.2],
   },
+  // Verified in-hand after user manual adjustment (2026-08-12)
+  long_sword: {
+    position: [-0.3, 0.12, -0.02],
+    rotation: [0, 0, Math.PI / 2],
+    scale: 1,
+    gripLocalOffset: [0, -0.25, 0],
+  },
+  pickaxe: {
+    // Same family as axe until grip is verified in the alignment browser.
+    position: [0.02, 0.13, -0.02],
+    rotation: [Math.PI / 2, Math.PI / 2, 0],
+    scale: 1.2,
+    gripLocalOffset: [0, 0, -0.28],
+  },
+}
+
+/**
+ * Lit branch grip — Branch B is already Z-long (no Y→Z remap). Yaw +π vs
+ * wooden_torch so the tip points forward/out of the palm. Shared with
+ * `PlayerTorch` and the asset browser in-hand preview.
+ */
+export const BRANCH_HELD_ATTACH: HeldAttach = {
+  // Verified in-hand after user manual adjustment (2026-08-12)
+  position: [-0.05, 0.14, -0.05],
+  rotation: [Math.PI / 2, Math.PI / 2, 0],
+  scale: 1,
+  gripLocalOffset: [0, 0, -0.08],
 }
 
 /** Longest-axis size while held (meters). Separate from ground-drop sizing. */
@@ -83,6 +114,8 @@ export const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }
   knife: { url: '/models/items/knife.glb', maxSize: 0.28 },
   shovel: { url: '/models/items/shovel.glb', maxSize: 0.77 },
   wooden_torch: { url: '/models/items/wooden_torch.glb', maxSize: 0.55 },
+  pickaxe: { url: '/models/items/pickaxe.glb', maxSize: 0.55 },
+  long_sword: { url: '/models/items/long_sword.glb', maxSize: 0.95 },
 }
 
 const HELD_ASSET_ID: Partial<Record<ToolKind, string>> = {
@@ -90,6 +123,8 @@ const HELD_ASSET_ID: Partial<Record<ToolKind, string>> = {
   knife: 'held:knife',
   shovel: 'held:shovel',
   wooden_torch: 'held:wooden_torch',
+  pickaxe: 'held:pickaxe',
+  long_sword: 'held:long_sword',
 }
 
 export type HeldMountContext = {
@@ -181,12 +216,6 @@ export function mountHeldToolOnSocket(
   }
 
   const a = HELD_ATTACH[kind]
-  socket.updateWorldMatrix(true, false)
-  socket.getWorldScale(_socketWorldScale)
-  const sx = Math.max(_socketWorldScale.x, 1e-6)
-  const sy = Math.max(_socketWorldScale.y, 1e-6)
-  const sz = Math.max(_socketWorldScale.z, 1e-6)
-
   const grip = a.gripLocalOffset
   let mount: Object3D = tool
   if (grip) {
@@ -196,12 +225,31 @@ export function mountHeldToolOnSocket(
     mount = wrap
   }
 
-  mount.position.set(a.position[0] / sx, a.position[1] / sy, a.position[2] / sz)
-  mount.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2])
-  mount.scale.multiplyScalar(a.scale)
+  mountAttachOnSocket(mount, socket, a)
+  return mount
+}
+
+/** Parent `mount` under `socket` with meter-sized attach and armature scale compensation. */
+export function mountAttachOnSocket(
+  mount: Object3D,
+  socket: Object3D,
+  attach: HeldAttach,
+): void {
+  socket.updateWorldMatrix(true, false)
+  socket.getWorldScale(_socketWorldScale)
+  const sx = Math.max(_socketWorldScale.x, 1e-6)
+  const sy = Math.max(_socketWorldScale.y, 1e-6)
+  const sz = Math.max(_socketWorldScale.z, 1e-6)
+
+  mount.position.set(
+    attach.position[0] / sx,
+    attach.position[1] / sy,
+    attach.position[2] / sz,
+  )
+  mount.rotation.set(attach.rotation[0], attach.rotation[1], attach.rotation[2])
+  mount.scale.multiplyScalar(attach.scale)
   mount.scale.x /= sx
   mount.scale.y /= sy
   mount.scale.z /= sz
   socket.add(mount)
-  return mount
 }
