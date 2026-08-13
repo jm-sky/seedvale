@@ -1,7 +1,7 @@
 # Plan: Flora GLB, studnia, stos drewna i parked ogniska
 
 **Created:** 2026-08-13  
-**Status:** `verification needed`  
+**Status:** `done` ✅  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~024~~ ~~079~~ ~~082~~
 
@@ -18,7 +18,7 @@ Wpiąć kaktusy, cattail (jako `reed_a`), studnię i stos drewna. Zaparkować mu
 
 - GLB → `public/models/` + `gltfpack -cc`. Parked flora z teksturami 1024 PNG: resize 512 + WebP (jak `tree_c`).
 - Drop-in: `cactus_a` / `cactus_b` / `reed_a` w istniejących `CACTUS_SPECS` / `REED_SPECS`.
-- [`propSpecs.ts`](../../src/settlement/propSpecs.ts): `WELL_URL`/`WELL_HEIGHT` (2.0), `WOOD_PILE_URL`/`WOOD_PILE_HEIGHT` (0.9).
+- [`propSpecs.ts`](../../src/settlement/propSpecs.ts): `WELL_URL`/`WELL_HEIGHT` (2.0), `WOOD_PILE_URL`/`WOOD_PILE_HEIGHT` (1.35 = 1.5× first drop-in).
 - [`props.ts`](../../src/settlement/props.ts): `loadPropOrFallback` studni i składu (×2 w większych wsiach). `logs.glb` parked.
 - Asset browser: `settlement:well`, `settlement:wood_pile`. Kotwica kolejki bez zmiany (`[0, 0.72, 0.85]` — południowy róg GLB po `prepareProp` ≈ 0.80 m).
 

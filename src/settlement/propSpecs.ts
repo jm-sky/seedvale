@@ -64,7 +64,8 @@ export const WELL_URL = '/models/settlement/well.glb'
 export const WELL_HEIGHT = 2.0
 
 export const WOOD_PILE_URL = '/models/settlement/wood_pile.glb'
-export const WOOD_PILE_HEIGHT = 0.9
+/** 1.5× the first drop-in height (0.9) so stacked beams read at village scale. */
+export const WOOD_PILE_HEIGHT = 1.35
 
 export const WALL_URL = '/models/settlement/wall.glb'
 export const LANTERN_URL = '/models/settlement/lantern.glb'
