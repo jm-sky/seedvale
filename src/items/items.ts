@@ -37,64 +37,164 @@ export type ItemDef = {
 
 export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   shell: {
-    kind: 'shell', label: 'muszla', category: 'resource', weight: 0.05, color: 0xf2e4c9
+    kind: 'shell',
+    label: 'muszla',
+    category: 'resource',
+    weight: 0.05,
+    color: 0xf2e4c9,
+    description: 'Lekka muszla znaleziona na brzegu. Podstawowa waluta tego świata.'
   },
   stone: {
-    kind: 'stone', label: 'kamień', category: 'resource', weight: 1, color: 0x8c8c8c
+    kind: 'stone',
+    label: 'kamień',
+    category: 'resource',
+    weight: 1,
+    color: 0x8c8c8c,
+    description: 'Zwykły, solidny kamień. Przydatny w budowie i rzemiośle.'
   },
   branch: {
-    kind: 'branch', label: 'gałąź', category: 'resource', weight: 0.5, color: 0x6b4a2f
+    kind: 'branch',
+    label: 'gałąź',
+    category: 'resource',
+    weight: 0.5,
+    color: 0x6b4a2f,
+    description: 'Sucha gałąź zebrana w lesie. Łatwo ją wykorzystać jako opał lub materiał do prostych przedmiotów lub pochodnię.'
   },
   mushroom: {
-    kind: 'mushroom', label: 'grzyb', category: 'resource', weight: 0.1, color: 0xc0453c
+    kind: 'mushroom',
+    label: 'grzyb',
+    category: 'resource',
+    weight: 0.1,
+    color: 0xc0453c,
+    description: 'Leśny grzyb rosnący w cieniu drzew. Niektóre gatunki nadają się do jedzenia.'
   },
   flower: {
-    kind: 'flower', label: 'kwiat', category: 'resource', weight: 0.05, color: 0xdb6fa3
+    kind: 'flower',
+    label: 'kwiat',
+    category: 'resource',
+    weight: 0.05,
+    color: 0xdb6fa3,
+    description: 'Delikatny kwiat zerwany z łąki. Może ozdobić dom lub posłużyć do prostych wyrobów.'
   },
   cone: {
-    kind: 'cone', label: 'szyszka', category: 'resource', weight: 0.1, color: 0x7a5230
+    kind: 'cone',
+    label: 'szyszka',
+    category: 'resource',
+    weight: 0.1,
+    color: 0x7a5230,
+    description: 'Drobna szyszka sosnowa. Sucha i łatwopalna, doskonała do rozpalania ognia.'
   },
   knife: {
-    kind: 'knife', label: 'nóż', category: 'tool', weight: 0.4, color: 0xb7bfc7
+    kind: 'knife',
+    label: 'nóż',
+    category: 'tool',
+    weight: 0.4,
+    color: 0xb7bfc7,
+    description: 'Niewielkie, poręczne ostrze przydatne podczas pracy, polowania i przygotowywania żywności.'
   },
   firestarter: {
-    kind: 'firestarter', label: 'krzesiwo', category: 'tool', weight: 0.2, color: 0x54504a, description: 'Umożliwia zapalanie ognia przy pomocy drewna - ognisko, pochodnia itp.'
+    kind: 'firestarter',
+    label: 'krzesiwo',
+    category: 'tool',
+    weight: 0.2,
+    color: 0x54504a,
+    description: 'Proste krzesiwo pozwalające wzniecić ogień przy pomocy suchego drewna - ognisko, pochodnia itp.'
   },
   blanket: {
-    kind: 'blanket', label: 'koc', category: 'utility', weight: 1.5, color: 0x8a4b3a, description: 'Lepiej śpi się z kocem w chłodne noce.'
+    kind: 'blanket',
+    label: 'koc',
+    category: 'utility',
+    weight: 1.5,
+    color: 0x8a4b3a,
+    description: 'Ciepły, wełniany koc. Chroni przed chłodem podczas odpoczynku i snu.'
   },
   shovel: {
-    kind: 'shovel', label: 'łopata', category: 'tool', weight: 2, color: 0x6b4a32, description: 'Umożliwia kopanie w ziemi i równanie terenu.'
+    kind: 'shovel',
+    label: 'łopata',
+    category: 'tool',
+    weight: 2,
+    color: 0x6b4a32,
+    description: 'Solidna łopata do kopania ziemi, przygotowywania grządek i wyrównywania terenu.'
   },
   axe: {
-    kind: 'axe', label: 'siekiera', category: 'tool', weight: 2.5, color: 0x7a7e86, description: 'Umożliwia cięcie drzew i gałęzi.'
+    kind: 'axe',
+    label: 'siekiera',
+    category: 'tool',
+    weight: 2.5,
+    color: 0x7a7e86,
+    description: 'Ciężka siekiera z ostrym stalowym ostrzem. Niezastąpiona przy ścinaniu drzew i rąbaniu drewna.'
   },
   long_sword: {
-    kind: 'long_sword', label: 'miecz', category: 'tool', weight: 2.5, color: 0x7a7e86, description: 'Długi miecz stalowy, ostry i wytrzymały.'
+    kind: 'long_sword',
+    label: 'miecz',
+    category: 'tool',
+    weight: 2.5,
+    color: 0x7a7e86,
+    description: 'Długi, stalowy miecz. Ostry, wytrzymały i przeznaczony do walki.'
   },
   pitchfork: {
-    kind: 'pitchfork', label: 'widły', category: 'tool', weight: 1.8, color: 0x6b5a3a
+    kind: 'pitchfork',
+    label: 'widły',
+    category: 'tool',
+    weight: 1.8,
+    color: 0x6b5a3a,
+    description: 'Proste, mocne widły używane przy pracy w gospodarstwie i przenoszeniu siana.'
   },
   sickle: {
-    kind: 'sickle', label: 'sierp', category: 'tool', weight: 0.7, color: 0x8a9098
+    kind: 'sickle',
+    label: 'sierp',
+    category: 'tool',
+    weight: 0.7,
+    color: 0x8a9098,
+    description: 'Małe zakrzywione ostrze przeznaczone do ścinania trawy, zbóż i innych roślin.'
   },
   wooden_torch: {
-    kind: 'wooden_torch', label: 'pochodnia', category: 'tool', weight: 1.2, color: 0x7a5230
+    kind: 'wooden_torch',
+    label: 'pochodnia',
+    category: 'tool',
+    weight: 1.2,
+    color: 0x7a5230,
+    description: 'Drewniana pochodnia dająca światło po zmroku i pomagająca rozświetlić ciemne miejsca.'
   },
   pickaxe: {
-    kind: 'pickaxe', label: 'kilof', category: 'tool', weight: 2.5, color: 0x7a7e86, description: 'Umożliwia wydobycie kamieni i rud w obszarach skalistych.'
+    kind: 'pickaxe',
+    label: 'kilof',
+    category: 'tool',
+    weight: 2.5,
+    color: 0x7a7e86,
+    description: 'Ciężki kilof do rozbijania skał i wydobywania rud ukrytych w ziemi.'
   },
   tent: {
-    kind: 'tent', label: 'namiot', category: 'utility', weight: 3, color: 0x8a6a3a, description: 'Umożliwia nocleg w lesie lub na terenie.'
+    kind: 'tent',
+    label: 'namiot',
+    category: 'utility',
+    weight: 3,
+    color: 0x8a6a3a,
+    description: 'Lekki namiot zapewniający schronienie i miejsce do spania poza osadą.'
   },
   coal: {
-    kind: 'coal', label: 'węgiel', category: 'resource', weight: 1, color: 0x1c1c1c
+    kind: 'coal',
+    label: 'węgiel',
+    category: 'resource',
+    weight: 1,
+    color: 0x1c1c1c,
+    description: 'Czarny, łatwopalny surowiec wydobywany spod ziemi. Doskonałe źródło opału i paliwo do wytopu.'
   },
   iron: {
-    kind: 'iron', label: 'żelazo', category: 'resource', weight: 1.5, color: 0x8a4a30
+    kind: 'iron',
+    label: 'żelazo',
+    category: 'resource',
+    weight: 1.5,
+    color: 0x8a4a30,
+    description: 'Ciężka ruda o rdzawym kolorze. Jeden z najważniejszych surowców do wytwarzania narzędzi i broni.'
   },
   gold: {
-    kind: 'gold', label: 'złoto', category: 'resource', weight: 0.4, color: 0xd4af37
+    kind: 'gold',
+    label: 'złoto',
+    category: 'resource',
+    weight: 0.4,
+    color: 0xd4af37,
+    description: 'Rzadka i cenna ruda o charakterystycznym złotym połysku. Ceniona za swoją wartość i piękno.'
   },
 }
 
