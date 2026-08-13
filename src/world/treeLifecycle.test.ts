@@ -282,6 +282,18 @@ describe('createTreeLifecycle', () => {
     expect(near.map((t) => t.id)).toEqual([a.id])
   })
 
+  it('looks up registered presence by id, and returns null once unregistered', () => {
+    const life = createTreeLifecycle(3)
+    const a = presence({ id: life.makeId(0, 0, 0), x: 0, z: 0, initialStage: 'mature' })
+    life.registerPresence(a)
+
+    expect(life.getPresence(a.id)).toEqual(a)
+    expect(life.getPresence('no-such-id')).toBeNull()
+
+    life.unregisterPresence(a.id)
+    expect(life.getPresence(a.id)).toBeNull()
+  })
+
   it('does not count harvested stumps toward canopy', () => {
     const life = createTreeLifecycle(9)
     const mature = presence({

@@ -400,6 +400,12 @@ export type TreeLifecycle = {
   ) => TreePresence | null
   /** Loaded/registered trees within radius — uses spatial buckets (plan 057). */
   getNearbyPresence: (x: number, z: number, radius: number) => readonly TreePresence[]
+  /** Registered presence for `id`, or `null` if not currently registered
+   *  (chunk unloaded, settlement despawn, etc.) — lets a caller recover a
+   *  tree's identity data (x/z/speciesIndex/sizeClass/sizeJitter/initialStage)
+   *  by id alone, without holding a scene mesh (plan 087 faza 4: instanced
+   *  living trees carry no per-instance `userData`). */
+  getPresence: (id: TreeId) => TreePresence | null
   countMatureNear: (
     x: number,
     z: number,
@@ -663,6 +669,9 @@ export function createTreeLifecycle(
         out.push(presence)
       }
       return out
+    },
+    getPresence(id) {
+      return byId.get(id) ?? null
     },
     countMatureNear(x, z, excludeId, worldDays, envAt) {
       return countMatureNearInternal(x, z, excludeId, worldDays, envAt)

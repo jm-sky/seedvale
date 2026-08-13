@@ -7,10 +7,10 @@ import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtoc
 import type { FbmParams } from './fbm'
 import { disposeObject3D } from '../assets/loadGltf'
 import { createItemMesh, type ItemKind } from '../items/items'
+import { buildInstancedProps, type InstancedPropGroup, type PropPlacement } from '../render/instancedProps'
 import {
   BUSH_SPECS,
   CACTUS_SPECS,
-  cloneProp,
   clonePropWithYaw,
   createBush,
   createCactus,
@@ -33,13 +33,7 @@ import {
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { createChunkWater, type WorldWater } from '../world/createWater'
-import {
-  createTreeStageMesh,
-  readTreeLivingStage,
-  readTreeSizeClass,
-  readTreeSizeJitter,
-  tagTreeMesh,
-} from '../world/treeVisuals'
+import { createTreeStageMesh, tagTreeMesh } from '../world/treeVisuals'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import { buildChunkGeometry, createTerrainMaterial } from './buildChunkGeometry'
 import {
@@ -182,7 +176,24 @@ type ChunkRecord = {
   mesh?: THREE.Mesh
   meshDispose?: () => void
   water?: WorldWater | null
-  vegetation?: THREE.Group
+  /** Bush/cactus/reed (faza 3/087) — no per-instance runtime state, so these
+   *  are instanced (one `InstancedPropGroup` per kind present in this
+   *  chunk). */
+  vegetationInstances?: InstancedPropGroup[]
+  /** Living trees (faza 4/087) — instanced, keyed by `treeId` so a single
+   *  tree can be swap-removed on chop/refresh without rebuilding the whole
+   *  bucket (`InstancedPropGroup.removeByKey`). */
+  treeInstances?: InstancedPropGroup
+  /** Non-living tree stage meshes (limbed/felled/stump) — few and mutated
+   *  individually, so never instanced (plan 087 §2.3/§2.5). Also receives
+   *  whatever `refreshTreeVisual` swaps a tree into afterward, including a
+   *  regrown sapling: once a tree needs a runtime refresh it stays a plain
+   *  `Object3D` here rather than re-joining `treeInstances`. */
+  vegetationExtras?: THREE.Group
+  /** `treeId` -> placement yaw — the one piece of tree identity `TreePresence`
+   *  doesn't carry (see `TreeLifecycle.getPresence`), needed by
+   *  `refreshTreeVisual` to re-place a tree it no longer has a mesh for. */
+  treeYaw?: Map<string, number>
   items?: THREE.Group
   environment?: THREE.Group
   /** TreeIds registered into `treeLifecycle` for this chunk — cleared on unload. */
@@ -645,55 +656,107 @@ export function createChunkManager(
           // Re-check after the await — chunk may have unloaded while templates loaded.
           if (!chunks.has(key)) return
 
-          const templatesByKind = {
-            tree: treeTemplates,
+          const treeIds: string[] = []
+          const treeYaw = new Map<string, number>()
+          const treePlacements = tile.vegetation.filter((p) => p.kind === 'tree')
+          const livingTreePlacements: PropPlacement[] = []
+          const extras = new THREE.Group()
+          extras.name = 'chunk-vegetation-extras'
+          let hasExtras = false
+
+          for (const placement of treePlacements) {
+            const initialStage = placement.growthStage ?? 'mature'
+            const sizeClass = placement.sizeClass ?? 'medium'
+            const sizeJitter = placement.sizeJitter ?? placement.scale
+            const id = config.treeLifecycle.makeId(placement.x, placement.z, placement.speciesIndex)
+            const presence = {
+              id,
+              x: placement.x,
+              z: placement.z,
+              speciesIndex: placement.speciesIndex,
+              initialStage,
+              sizeClass,
+              sizeJitter,
+            }
+            config.treeLifecycle.registerPresence(presence)
+            treeIds.push(id)
+            treeYaw.set(id, placement.rotationY)
+            const env = sampleTreeEnvAt(placement.x, placement.z, tile, coord)
+            const resolved = config.treeLifecycle.resolve(presence, env, config.getWorldDays())
+
+            if (resolved.visual === 'living') {
+              // Instanced (plan 087 faza 4) — `cloneProp`'s exact transform
+              // math is reproduced by `buildInstancedProps` (§2.1), so no
+              // per-instance Object3D/userData is needed here.
+              livingTreePlacements.push({
+                speciesIndex: placement.speciesIndex,
+                x: placement.x,
+                z: placement.z,
+                groundY: sampleTileHeight(placement.x, placement.z),
+                rotationY: placement.rotationY,
+                scale: resolved.scale,
+                key: id,
+              })
+              continue
+            }
+
+            const prop = createTreeStageMesh(resolved.visual, resolved.scale, id)
+            prop.rotation.y = placement.rotationY
+            placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
+            tagTreeMesh(prop, resolved, sizeClass, sizeJitter, placement.speciesIndex, initialStage)
+            extras.add(prop)
+            hasExtras = true
+          }
+          rec.treeIds = treeIds
+          rec.treeYaw = treeYaw
+
+          if (hasExtras) {
+            scene.add(extras)
+            rec.vegetationExtras = extras
+          }
+          const treeInstances = buildInstancedProps(
+            treeTemplates,
+            livingTreePlacements,
+            'chunk-vegetation-tree-living',
+          )
+          if (treeInstances) {
+            scene.add(treeInstances.group)
+            rec.treeInstances = treeInstances
+          }
+
+          // Bush/cactus/reed carry no runtime state (unlike trees — no
+          // lifecycle, no `refreshTreeVisual`-style single-instance swap), so
+          // they're the "simplest case" instancing target from plan 087 §2.5:
+          // one `InstancedMesh` bucket per (species, primitive) instead of
+          // one cloned `Object3D` tree per placement.
+          const instancedTemplatesByKind = {
             bush: bushTemplates,
             cactus: cactusTemplates,
             reed: reedTemplates,
           }
-
-          const treeIds: string[] = []
-          rec.vegetation = buildPlacementGroup('chunk-vegetation', tile.vegetation, (placement) => {
-            if (placement.kind === 'tree') {
-              const initialStage = placement.growthStage ?? 'mature'
-              const sizeClass = placement.sizeClass ?? 'medium'
-              const sizeJitter = placement.sizeJitter ?? placement.scale
-              const id = config.treeLifecycle.makeId(placement.x, placement.z, placement.speciesIndex)
-              const presence = {
-                id,
-                x: placement.x,
-                z: placement.z,
-                speciesIndex: placement.speciesIndex,
-                initialStage,
-                sizeClass,
-                sizeJitter,
-              }
-              config.treeLifecycle.registerPresence(presence)
-              treeIds.push(id)
-              const env = sampleTreeEnvAt(placement.x, placement.z, tile, coord)
-              const resolved = config.treeLifecycle.resolve(presence, env, config.getWorldDays())
-              const prop = resolved.visual === 'living'
-                ? cloneProp(templatesByKind.tree, placement.speciesIndex, resolved.scale)
-                : createTreeStageMesh(resolved.visual, resolved.scale, id)
-              prop.rotation.y = placement.rotationY
-              placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
-              tagTreeMesh(
-                prop,
-                resolved,
-                sizeClass,
-                sizeJitter,
-                placement.speciesIndex,
-                initialStage,
-              )
-              return prop
+          const vegetationInstances: InstancedPropGroup[] = []
+          for (const kind of ['bush', 'cactus', 'reed'] as const) {
+            const placements = tile.vegetation.filter((p) => p.kind === kind)
+            if (placements.length === 0) continue
+            const propPlacements: PropPlacement[] = placements.map((p) => ({
+              speciesIndex: p.speciesIndex,
+              x: p.x,
+              z: p.z,
+              groundY: sampleTileHeight(p.x, p.z),
+              rotationY: p.rotationY,
+              scale: p.scale,
+            }))
+            const instanced = buildInstancedProps(
+              instancedTemplatesByKind[kind],
+              propPlacements,
+              `chunk-vegetation-${kind}`,
+            )
+            if (instanced) {
+              scene.add(instanced.group)
+              vegetationInstances.push(instanced)
             }
-            const templates = templatesByKind[placement.kind]
-            const prop = cloneProp(templates, placement.speciesIndex, placement.scale)
-            prop.rotation.y = placement.rotationY // deterministic — overrides cloneProp's own Math.random()
-            placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
-            return prop
-          })
-          rec.treeIds = treeIds
+          }
+          if (vegetationInstances.length > 0) rec.vegetationInstances = vegetationInstances
         }
 
         rec.items = buildPlacementGroup('chunk-items', tile.items, (placement) => {
@@ -755,13 +818,23 @@ export function createChunkManager(
       for (const id of record.treeIds) config.treeLifecycle.unregisterPresence(id)
       record.treeIds = undefined
     }
+    record.treeYaw = undefined
     record.mesh?.removeFromParent()
     record.meshDispose?.()
     record.water?.dispose()
     removeGrass(record)
-    if (record.vegetation) {
-      disposeObject3D(record.vegetation)
-      record.vegetation.removeFromParent()
+    if (record.vegetationExtras) {
+      disposeObject3D(record.vegetationExtras)
+      record.vegetationExtras.removeFromParent()
+      record.vegetationExtras = undefined
+    }
+    if (record.treeInstances) {
+      record.treeInstances.dispose()
+      record.treeInstances = undefined
+    }
+    if (record.vegetationInstances) {
+      for (const instanced of record.vegetationInstances) instanced.dispose()
+      record.vegetationInstances = undefined
     }
     if (record.items) {
       disposeObject3D(record.items)
@@ -794,6 +867,14 @@ export function createChunkManager(
     }
   }
 
+  /** Same apron-grid sample `placeOnGround` needs, for callers (like
+   *  `refreshTreeVisual`) that only have a `ChunkTileResult` on hand, not the
+   *  `sampleTileHeight` closure built once per chunk inside `ensureLoaded`. */
+  function sampleGroundHeightAt(x: number, z: number, tile: ChunkTileResult, coord: ChunkCoord): number {
+    const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
+    return sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, x, z)
+  }
+
   function sampleTreeEnv(x: number, z: number): TreeEnvSample {
     const h = readField('heights', x, z)
     const altitude01 = Math.max(0, (h - config.waterLevel) / Math.max(config.heightScale, 0.001))
@@ -806,44 +887,56 @@ export function createChunkManager(
     }
   }
 
+  /** Rebuild one tree's visual after a lifecycle change (chop step, stump
+   *  regrowth). Living trees load in as instances (`rec.treeInstances`, no
+   *  per-instance `Object3D`/`userData` — see faza 4), so this can no longer
+   *  find "the mesh" and read state off it the way it used to: identity data
+   *  comes from `treeLifecycle.getPresence` + `rec.treeYaw` instead, and the
+   *  replacement always lands in `rec.vegetationExtras` as a plain `Object3D`
+   *  — once a tree needs a runtime refresh it stays there even if regrowth
+   *  eventually makes it 'living' again (plan 087 §2.3 point 2: simpler than
+   *  re-inserting into an already-built instance buffer, and this path is
+   *  the rare case next to the bulk of a chunk's initially-instanced trees). */
   function refreshTreeVisual(treeId: string): boolean {
     for (const rec of chunks.values()) {
-      if (!rec.vegetation || !rec.treeIds?.includes(treeId)) continue
-      const mesh = rec.vegetation.children.find((c) => c.userData.treeId === treeId)
-      if (!mesh || !rec.tile) continue
-      const sizeClass = readTreeSizeClass(mesh.userData)
-      const sizeJitter = readTreeSizeJitter(mesh.userData)
-      const speciesIndex =
-        typeof mesh.userData.treeSpeciesIndex === 'number' ? mesh.userData.treeSpeciesIndex : 0
-      const initialStage = readTreeLivingStage(mesh.userData)
-      const presence = {
-        id: treeId,
-        x: mesh.position.x,
-        z: mesh.position.z,
-        speciesIndex,
-        initialStage,
-        sizeClass,
-        sizeJitter,
+      if (!rec.treeIds?.includes(treeId) || !rec.tile) continue
+
+      const wasInstance = rec.treeInstances?.removeByKey(treeId) ?? false
+      if (!wasInstance) {
+        const mesh = rec.vegetationExtras?.children.find((c) => c.userData.treeId === treeId)
+        if (!mesh) continue
+        mesh.removeFromParent()
+        disposeObject3D(mesh)
       }
+
+      const presence = config.treeLifecycle.getPresence(treeId)
+      if (!presence) continue
       const resolved = config.treeLifecycle.resolve(
         presence,
-        sampleTreeEnvAt(mesh.position.x, mesh.position.z, rec.tile, rec.coord),
+        sampleTreeEnvAt(presence.x, presence.z, rec.tile, rec.coord),
         config.getWorldDays(),
       )
-      const parent = mesh.parent
-      const rotY = mesh.rotation.y
-      const pos = mesh.position.clone()
-      mesh.removeFromParent()
-      disposeObject3D(mesh)
-      // Living trees reload with GLB templates; chop mid/final stages use
-      // procedural meshes (same as mid-session refresh).
-      const replacement = resolved.visual === 'living'
-        ? createTree(resolved.scale)
-        : createTreeStageMesh(resolved.visual, resolved.scale, treeId)
-      replacement.position.copy(pos)
-      replacement.rotation.y = rotY
-      tagTreeMesh(replacement, resolved, sizeClass, sizeJitter, speciesIndex, initialStage)
-      parent?.add(replacement)
+
+      const replacement = createTreeStageMesh(resolved.visual, resolved.scale, treeId)
+      replacement.rotation.y = rec.treeYaw?.get(treeId) ?? 0
+      placeOnGround(replacement, presence.x, presence.z, (sx, sz) =>
+        sampleGroundHeightAt(sx, sz, rec.tile!, rec.coord))
+      tagTreeMesh(
+        replacement,
+        resolved,
+        presence.sizeClass,
+        presence.sizeJitter,
+        presence.speciesIndex,
+        presence.initialStage,
+      )
+
+      if (!rec.vegetationExtras) {
+        const extras = new THREE.Group()
+        extras.name = 'chunk-vegetation-extras'
+        scene.add(extras)
+        rec.vegetationExtras = extras
+      }
+      rec.vegetationExtras.add(replacement)
       return true
     }
     return false
