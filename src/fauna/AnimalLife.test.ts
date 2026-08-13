@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { getStaminaRatio, isExhausted } from '../shared/StaminaState'
 import {
   ANIMAL_STAMINA_MAX,
+  consumeFood,
   createAnimalLifeState,
+  drinkWater,
+  FOOD_RELIEF,
   NEED_ELEVATED_THRESHOLD,
-  relieveElevatedNeeds,
   tickAnimalLife,
+  WATER_RELIEF,
 } from './AnimalLife'
 
 describe('AnimalLife', () => {
@@ -44,20 +47,41 @@ describe('AnimalLife', () => {
     expect(getStaminaRatio(life.stamina)).toBe(1)
   })
 
-  it('relieveElevatedNeeds only reduces needs above the elevated threshold', () => {
+  it('consumeFood reduces hunger by FOOD_RELIEF and does not touch thirst', () => {
     const life = createAnimalLifeState(0)
-    life.hunger = NEED_ELEVATED_THRESHOLD + 0.1
-    life.thirst = NEED_ELEVATED_THRESHOLD - 0.1
-    relieveElevatedNeeds(life)
-    expect(life.hunger).toBeLessThan(NEED_ELEVATED_THRESHOLD + 0.1)
-    expect(life.thirst).toBe(NEED_ELEVATED_THRESHOLD - 0.1)
+    life.hunger = 0.8
+    life.thirst = 0.8
+    consumeFood(life)
+    expect(life.hunger).toBeCloseTo(0.8 - FOOD_RELIEF)
+    expect(life.thirst).toBe(0.8)
   })
 
-  it('relieveElevatedNeeds never drops below 0', () => {
+  it('drinkWater reduces thirst by WATER_RELIEF and does not touch hunger', () => {
     const life = createAnimalLifeState(0)
-    life.hunger = NEED_ELEVATED_THRESHOLD + 0.01
-    life.thirst = 0
-    relieveElevatedNeeds(life)
-    expect(life.hunger).toBeGreaterThanOrEqual(0)
+    life.hunger = 0.8
+    life.thirst = 0.8
+    drinkWater(life)
+    expect(life.thirst).toBeCloseTo(0.8 - WATER_RELIEF)
+    expect(life.hunger).toBe(0.8)
+  })
+
+  it('consumeFood/drinkWater clamp at 0', () => {
+    const life = createAnimalLifeState(0)
+    life.hunger = 0.1
+    life.thirst = 0.1
+    consumeFood(life)
+    drinkWater(life)
+    expect(life.hunger).toBe(0)
+    expect(life.thirst).toBe(0)
+  })
+
+  it('consumeFood/drinkWater apply below the elevated threshold too — relief is only valid after a real completed action, not gated on need level', () => {
+    const life = createAnimalLifeState(0)
+    life.hunger = NEED_ELEVATED_THRESHOLD - 0.1
+    life.thirst = NEED_ELEVATED_THRESHOLD - 0.1
+    consumeFood(life)
+    drinkWater(life)
+    expect(life.hunger).toBeLessThan(NEED_ELEVATED_THRESHOLD - 0.1)
+    expect(life.thirst).toBeLessThan(NEED_ELEVATED_THRESHOLD - 0.1)
   })
 })

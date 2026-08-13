@@ -15,9 +15,10 @@ import { barsVisibleForDistance, labelOpacityForDistance } from '../ui/labelDist
 import {
   type AnimalLifeState,
   BIAS_STRENGTH,
+  consumeFood,
   createAnimalLifeState,
+  drinkWater,
   NEED_ELEVATED_THRESHOLD,
-  relieveElevatedNeeds,
   STAMINA_REST_THRESHOLD,
   tickAnimalLife,
 } from './AnimalLife'
@@ -108,8 +109,83 @@ const ATTACK_STAMINA_COST = 0.05
 /** How often predators re-score flee vs attack toward a noticed human
  *  (plan 055 Phase 6 — movement stays per-frame). */
 const HUMAN_DECISION_INTERVAL_SEC = 0.2
+/** Radius (world units) searched around the animal for a valid forage spot
+ *  or a scavengeable carcass once hunger crosses `NEED_ELEVATED_THRESHOLD`
+ *  (plan 094). */
+const FOOD_SEARCH_RADIUS = 14
+/** Radius (world units) searched around the animal for a walkable shoreline
+ *  point once thirst crosses `NEED_ELEVATED_THRESHOLD` (plan 094). */
+const WATER_SEARCH_RADIUS = 20
+/** Candidate points sampled per forage/carcass search call. */
+const FOOD_SEARCH_ATTEMPTS = 10
+/** Candidate points sampled per water search call — wider radius than
+ *  forage, so more attempts to actually land near a shore. */
+const WATER_SEARCH_ATTEMPTS = 14
+/** Distance at which an animal counts as having arrived at a forage spot or
+ *  carcass, and can start eating. */
+const FOOD_INTERACTION_RANGE = 1.4
+/** Distance at which an animal counts as having arrived at a shoreline
+ *  point, and can start drinking. */
+const WATER_INTERACTION_RANGE = 1.2
+/** Seconds spent stationary eating before hunger relief (`consumeFood`) is
+ *  applied — a short, real action, not a per-frame drain. */
+const EAT_DURATION_SEC = 3
+/** Seconds spent stationary drinking before thirst relief (`drinkWater`) is
+ *  applied. */
+const DRINK_DURATION_SEC = 2
+/** Seconds to wait before retrying a failed food/water search — without
+ *  this, a hungry/thirsty animal with no source in range would re-scan
+ *  candidate points every frame. */
+const SOURCE_SEARCH_COOLDOWN_SEC = 3
+/** Seconds an animal will pursue a cached food/water target before giving
+ *  up and re-searching — guards against a target that passed validation but
+ *  is effectively unreachable (e.g. boxed in by terrain `steerToward` can't
+ *  route around). */
+const SOURCE_TARGET_TIMEOUT_SEC = 20
+/** Offsets (world units) probed around a water-search candidate to confirm
+ *  it's actually at the edge of a water body, not just dry land somewhere
+ *  within `WATER_SEARCH_RADIUS`. */
+const SHORE_PROBE_OFFSETS: readonly [number, number][] = [
+  [1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5],
+]
 
-type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander'
+type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander' | 'forage' | 'drink' | 'eat'
+
+/** A real-world food/water destination an animal is pursuing (plan 094) —
+ *  `corpse` is set only for `kind: 'carcass'`, so the eater can release its
+ *  claim on cancel/completion. */
+type SourceTargetKind = 'water' | 'forage' | 'carcass'
+type SourceTarget = {
+  kind: SourceTargetKind
+  x: number
+  z: number
+  corpse?: AnimalAgent
+}
+
+/** Count of `SHORE_PROBE_OFFSETS` around (x, z) that dip at/below the water
+ *  threshold — a lightweight "is this the edge of a water body" signal for
+ *  the thirsty-animal shoreline search. Pure so it's unit-testable without
+ *  instantiating `AnimalAgent`/Three.js. */
+export function shoreProbeHits(
+  x: number,
+  z: number,
+  sampleHeight: HeightSampler,
+  waterLevel: number,
+): number {
+  let hits = 0
+  for (const [dx, dz] of SHORE_PROBE_OFFSETS) {
+    if (sampleHeight(x + dx, z + dz) <= waterLevel + WATER_MARGIN) hits++
+  }
+  return hits
+}
+
+/** Forage habitat suitability from a `sampleForestFactor` reading — peaks at
+ *  forest-edge density (~0.45) rather than open meadow or deep forest,
+ *  matching deer/stag habitat preference (plan 094). Pure so it's
+ *  unit-testable without instantiating `AnimalAgent`/Three.js. */
+export function forageEdgeScore(forestFactor: number): number {
+  return Math.max(0, 1 - Math.abs(forestFactor - 0.45) * 2)
+}
 
 type EnvironmentSense = {
   playerActive: boolean
@@ -392,6 +468,10 @@ export class AnimalAgent {
   readonly def: AnimalDef
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
+  /** Optional habitat sampler (plan 094) — only wild fauna's `createFauna.ts`
+   *  passes one; livestock's spawn path omits it, and forage search falls
+   *  back to distance-only scoring (see `findForageTarget`). */
+  private readonly sampleForestFactor?: (x: number, z: number) => number
   private readonly isCapsule: boolean
   private target = new THREE.Vector3()
   private readonly fleeTarget = new THREE.Vector3()
@@ -445,6 +525,21 @@ export class AnimalAgent {
   private provokedTimer = 0
   private bloodSplat: THREE.Object3D | null = null
   private bloodSplatToken = 0
+  /** Cached real food/water destination while hunger/thirst is elevated
+   *  (plan 094) — `null` when not currently pursuing one. */
+  private sourceTarget: SourceTarget | null = null
+  /** Seconds remaining before the next failed-search retry is allowed. */
+  private sourceSearchCooldown = 0
+  /** Seconds spent pursuing (not yet arrived at) the current `sourceTarget`. */
+  private sourceTargetElapsed = 0
+  /** Seconds spent stationary performing the current eat/drink action. */
+  private actionTimer = 0
+  /** Scratch vector for `steerToward` calls toward `sourceTarget`. */
+  private readonly sourceDest = new THREE.Vector3()
+  /** Set on a dead prey's `AnimalAgent` by the predator currently eating it
+   *  — guards against two predators completing an eat action on the same
+   *  corpse (plan 094). */
+  private foodClaimedBy: AnimalAgent | null = null
 
   constructor(
     def: AnimalDef,
@@ -455,10 +550,12 @@ export class AnimalAgent {
     visual?: THREE.Object3D,
     animations: THREE.AnimationClip[] = [],
     wanderRadius: readonly [number, number] = DEFAULT_WANDER_RADIUS,
+    sampleForestFactor?: (x: number, z: number) => number,
   ) {
     this.def = def
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
+    this.sampleForestFactor = sampleForestFactor
     this.home.set(x, 0, z)
     this.wanderRadius = wanderRadius
     this.health = createHealthState(MAX_HP[def.kind])
@@ -644,6 +741,7 @@ export class AnimalAgent {
     if (this.attackCooldown > 0) this.attackCooldown -= dt
     if (this.alertTimer > 0) this.alertTimer -= dt
     if (this.provokedTimer > 0) this.provokedTimer -= dt
+    if (this.sourceSearchCooldown > 0) this.sourceSearchCooldown -= dt
     this.isNight = dayFactor <= 0
     this.moving = false
     this.sprinting = false
@@ -651,6 +749,7 @@ export class AnimalAgent {
     const sense = this.senseEnvironment(observerPos, dayFactor, forestFactor, litFires)
 
     if (sense.playerActive) {
+      this.cancelSourceTarget()
       if (this.def.role === 'predator') {
         this.humanDecisionTimer -= dt
         if (this.humanDecisionTimer <= 0) {
@@ -677,6 +776,7 @@ export class AnimalAgent {
     } else if (sense.nearestFire) {
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
+      this.cancelSourceTarget()
       this.setIntent('flee', { x: sense.nearestFire.x, z: sense.nearestFire.z })
       this.fleeFrom(sense.nearestFire.x, sense.nearestFire.z, dt)
     } else if (this.def.role === 'predator') {
@@ -967,6 +1067,7 @@ export class AnimalAgent {
         this.wander(dt)
         return
       }
+      this.cancelSourceTarget()
       this.setIntent('chase', copyVec3(prey.mesh.position))
       this.sprinting = true
       const dist = Math.hypot(
@@ -980,6 +1081,7 @@ export class AnimalAgent {
       }
       return
     }
+    if (this.pursueNeeds(dt, others)) return
     this.setIntent('wander')
     this.wander(dt)
   }
@@ -995,19 +1097,190 @@ export class AnimalAgent {
   private updatePrey(dt: number, others: AnimalAgent[]): void {
     const threat = this.nearest(others, 'predator', this.def.fleeRange)
     if (threat) {
+      this.cancelSourceTarget()
       this.setIntent('flee', copyVec3(threat.mesh.position))
       this.fleeFrom(threat.mesh.position.x, threat.mesh.position.z, dt)
       return
     }
+    if (this.pursueNeeds(dt, others)) return
     this.setIntent('wander')
     this.wander(dt)
+  }
+
+  /** Real food/water pursuit (plan 094) — searches for and moves to a
+   *  source only while hunger/thirst is elevated, caching the target so the
+   *  search doesn't re-run every frame. Returns `true` if it handled this
+   *  frame's movement (searching, walking to, or eating/drinking at a
+   *  source), `false` if the caller should fall back to biased wander. */
+  private pursueNeeds(dt: number, others: readonly AnimalAgent[]): boolean {
+    const thirstElevated = this.life.thirst > NEED_ELEVATED_THRESHOLD
+    const hungerElevated = this.life.hunger > NEED_ELEVATED_THRESHOLD
+    if (!thirstElevated && !hungerElevated) {
+      this.cancelSourceTarget()
+      return false
+    }
+    if (this.sourceTarget && !this.isSourceTargetValid(this.sourceTarget)) {
+      this.cancelSourceTarget()
+    }
+    if (!this.sourceTarget && this.sourceSearchCooldown <= 0) {
+      this.sourceTarget = thirstElevated
+        ? this.findWaterTarget() ?? (hungerElevated ? this.findFoodTarget(others) : null)
+        : this.findFoodTarget(others)
+      if (!this.sourceTarget) this.sourceSearchCooldown = SOURCE_SEARCH_COOLDOWN_SEC
+    }
+    if (!this.sourceTarget) return false
+    return this.pursueSourceTarget(dt)
+  }
+
+  private findFoodTarget(others: readonly AnimalAgent[]): SourceTarget | null {
+    return this.def.role === 'predator' ? this.findCarcassTarget(others) : this.findForageTarget()
+  }
+
+  private isSourceTargetValid(target: SourceTarget): boolean {
+    if (target.kind === 'carcass') {
+      const corpse = target.corpse
+      if (!corpse || !corpse.health.dead || corpse.readyToRemove()) return false
+      return corpse.foodClaimedBy === this
+    }
+    if (!this.isWalkable(target.x, target.z)) return false
+    return Math.hypot(target.x - this.home.x, target.z - this.home.z) <= ROAM_RADIUS
+  }
+
+  /** Releases any corpse claim and clears the cached target — called both on
+   *  successful completion and on threat/invalidation interrupts (plan 094:
+   *  "cancel the pending food/water action ... release the corpse claim"). */
+  private cancelSourceTarget(): void {
+    if (this.sourceTarget?.kind === 'carcass' && this.sourceTarget.corpse) {
+      this.sourceTarget.corpse.releaseFoodClaim(this)
+    }
+    this.sourceTarget = null
+    this.actionTimer = 0
+    this.sourceTargetElapsed = 0
+  }
+
+  private pursueSourceTarget(dt: number): boolean {
+    const target = this.sourceTarget
+    if (!target) return false
+    const actionKind: FaunaActionKind = target.kind === 'water' ? 'drink' : target.kind === 'carcass' ? 'eat' : 'forage'
+    this.setIntent(actionKind, { x: target.x, z: target.z })
+    const range = target.kind === 'water' ? WATER_INTERACTION_RANGE : FOOD_INTERACTION_RANGE
+    if (this.withinRange(target.x, target.z, range)) {
+      this.performSourceAction(dt, target)
+      return true
+    }
+    this.sourceTargetElapsed += dt
+    if (this.sourceTargetElapsed > SOURCE_TARGET_TIMEOUT_SEC) {
+      this.cancelSourceTarget()
+      this.sourceSearchCooldown = SOURCE_SEARCH_COOLDOWN_SEC
+      return false
+    }
+    this.sourceDest.set(target.x, 0, target.z)
+    this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+    return true
+  }
+
+  /** Stand still and eat/drink for a fixed duration; relief is applied once
+   *  on completion, not drained per-frame (plan 094 — keeps the effect
+   *  independent of frame/update rate). */
+  private performSourceAction(dt: number, target: SourceTarget): void {
+    this.actionTimer += dt
+    const duration = target.kind === 'water' ? DRINK_DURATION_SEC : EAT_DURATION_SEC
+    if (this.actionTimer < duration) return
+    if (target.kind === 'water') {
+      drinkWater(this.life)
+    } else {
+      consumeFood(this.life)
+    }
+    this.cancelSourceTarget()
+  }
+
+  private findWaterTarget(): SourceTarget | null {
+    let best: SourceTarget | null = null
+    let bestScore = -Infinity
+    for (let attempt = 0; attempt < WATER_SEARCH_ATTEMPTS; attempt++) {
+      const angle = Math.random() * Math.PI * 2
+      const dist = Math.random() * WATER_SEARCH_RADIUS
+      const x = this.mesh.position.x + Math.cos(angle) * dist
+      const z = this.mesh.position.z + Math.sin(angle) * dist
+      if (!this.isWalkable(x, z)) continue
+      const hits = shoreProbeHits(x, z, this.sampleHeight, this.waterLevel)
+      if (hits === 0) continue
+      if (this.def.sociability === 'wild' && this.isNearVillage({ x, z })) continue
+      if (Math.hypot(x - this.home.x, z - this.home.z) > ROAM_RADIUS) continue
+      const d = Math.hypot(x - this.mesh.position.x, z - this.mesh.position.z)
+      const score = hits * 10 - d
+      if (score > bestScore) {
+        bestScore = score
+        best = { kind: 'water', x, z }
+      }
+    }
+    return best
+  }
+
+  /** Habitat-biased forage spot for wild prey/livestock — uses
+   *  `sampleForestFactor` when available (wild fauna, see `createFauna.ts`);
+   *  falls back to distance-only scoring when it isn't (livestock, plan
+   *  094 §2). */
+  private findForageTarget(): SourceTarget | null {
+    let best: SourceTarget | null = null
+    let bestScore = -Infinity
+    for (let attempt = 0; attempt < FOOD_SEARCH_ATTEMPTS; attempt++) {
+      const angle = Math.random() * Math.PI * 2
+      const dist = Math.random() * FOOD_SEARCH_RADIUS
+      const x = this.mesh.position.x + Math.cos(angle) * dist
+      const z = this.mesh.position.z + Math.sin(angle) * dist
+      if (!this.isWalkable(x, z)) continue
+      if (this.def.sociability === 'wild' && this.isNearVillage({ x, z })) continue
+      if (Math.hypot(x - this.home.x, z - this.home.z) > ROAM_RADIUS) continue
+      const suitability = this.sampleForestFactor ? forageEdgeScore(this.sampleForestFactor(x, z)) : 0.5
+      const d = Math.hypot(x - this.mesh.position.x, z - this.mesh.position.z)
+      const score = suitability * 10 - d
+      if (score > bestScore) {
+        bestScore = score
+        best = { kind: 'forage', x, z }
+      }
+    }
+    return best
+  }
+
+  /** Nearest unclaimed dead prey within `FOOD_SEARCH_RADIUS`, claimed on
+   *  selection so a second predator can't also target it (plan 094 §8). */
+  private findCarcassTarget(others: readonly AnimalAgent[]): SourceTarget | null {
+    let best: AnimalAgent | null = null
+    let bestD = FOOD_SEARCH_RADIUS
+    for (const o of others) {
+      if (o === this || o.def.role !== 'prey' || !o.health.dead || o.readyToRemove()) continue
+      if (o.foodClaimedBy && o.foodClaimedBy !== this) continue
+      const d = Math.hypot(o.mesh.position.x - this.mesh.position.x, o.mesh.position.z - this.mesh.position.z)
+      if (d < bestD) {
+        bestD = d
+        best = o
+      }
+    }
+    if (!best || !best.claimAsFood(this)) return null
+    return { kind: 'carcass', x: best.mesh.position.x, z: best.mesh.position.z, corpse: best }
+  }
+
+  /** True if this corpse is unclaimed or already claimed by `by` — guards
+   *  against two predators both completing an eat action on one carcass. */
+  private claimAsFood(by: AnimalAgent): boolean {
+    if (this.foodClaimedBy && this.foodClaimedBy !== by) return false
+    this.foodClaimedBy = by
+    return true
+  }
+
+  private releaseFoodClaim(by: AnimalAgent): void {
+    if (this.foodClaimedBy === by) this.foodClaimedBy = null
+  }
+
+  private withinRange(x: number, z: number, radius: number): boolean {
+    return Math.hypot(x - this.mesh.position.x, z - this.mesh.position.z) < radius
   }
 
   private wander(dt: number): void {
     this.wanderTimer -= dt
     const timerExpired = this.wanderTimer <= 0
     if (timerExpired || this.arrived(this.target, 1.2)) {
-      relieveElevatedNeeds(this.life)
       const restInstead = timerExpired
         && getStaminaRatio(this.life.stamina) < STAMINA_REST_THRESHOLD
         && Math.random() < EXTENDED_IDLE_CHANCE

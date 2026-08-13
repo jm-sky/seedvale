@@ -1,6 +1,6 @@
 # Plan: Fauna — źródła jedzenia i wody dla sytości / nawodnienia
 
-**Status:** `todo` ⬜  
+**Status:** `verification needed` 🔍 — implemented, technically verified (`tsc`/`lint`/`build`/`test` pass); browser verification still required (see [implementation notes](./2026-08-13--094--fauna-food-water-for-satiety-hydration-implementation-notes.md#implementation-status-2026-08-13)).  
 **Created:** 2026-08-13  
 **Priority:** 🟡 medium · **Effort:** L · **Depends on:** ~~021~~, ~~010~~  
 **Źródło:** issue `015` (2026-08-11) — obserwacja po paskach statusu nad zwierzętami (HP / stamina / sytość / nawodnienie)

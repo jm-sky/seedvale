@@ -36,7 +36,6 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-13--094--fauna-food-water-for-satiety-hydration.md` | Fauna: realne jedzenie/woda dla sytości i nawodnienia (ex issue 015) | 🟡 | L | ~~021~~ ~~010~~ |
 | `2026-08-13--092--npc-stamina-and-daily-vigor.md` | Stamina (burst) + dzienny wigor; sen / zasypianie w pracy (draft, nazwa do ustalenia) | 🟡 | L | ~~045~~ ~~020~~ |
 | `2026-08-11--071--local-economy-and-settlement-development.md` | Lokalna gospodarka osady (draft) | 🟡 | XL | ~~060~~ ~~032~~ ~~047~~ |
 | `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów — **blokada: 060, 071** | 🟡 | L | 060, 071 |
@@ -53,7 +52,7 @@ Implementation complete; needs play/browser check. Grouped; full write-up is in 
 
 **Las / narzędzia / zbieractwo** — `058` cykl drzew · `061` dig UX · `065` GLB skały/złoża · `085` handheld lights + village torches · `086` trawa w workerze (zdrowy baseline `Simulate (ms)` potwierdzony w przeglądarce; pixel-identyczny layout nie porównany explicite) · `087` instancing roślinności/propsów (fazy 1–5+7; brak pomiaru Draw calls przed/po) · `091` odnawialne gałęzie · `096` fauna GLB / hold / światła / blood splat
 
-**Fauna / jaskinie** — `056` głodny predator · `064` cave vs droga · `080` fauna vs footprint osady · `083` dziura w terenie przy jaskini
+**Fauna / jaskinie** — `056` głodny predator · `064` cave vs droga · `080` fauna vs footprint osady · `083` dziura w terenie przy jaskini · `094` realne jedzenie/woda dla sytości i nawodnienia
 
 **UI / audio / rest** — `059` SFX pick/drop (`2026-08-11--059--inventory-pick-drop-sfx.md`) · `075` time-skip catch-up NPC · `078` `playAt` falloff · `084` obóz + town rest · `088` asset alignment browser · `090` miecz/kupiec/namiot/jaskinie/kilof
 

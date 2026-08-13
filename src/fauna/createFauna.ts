@@ -337,7 +337,17 @@ export async function createFauna(
     } else {
       visual = PROCEDURAL_FALLBACKS[kind]?.()
     }
-    return new AnimalAgent(ANIMAL_DEFS[kind], sampleHeight, waterLevel, x, z, visual, animations)
+    return new AnimalAgent(
+      ANIMAL_DEFS[kind],
+      sampleHeight,
+      waterLevel,
+      x,
+      z,
+      visual,
+      animations,
+      undefined,
+      sampleForestFactor,
+    )
   }
 
   for (const spec of SPAWNS) {
