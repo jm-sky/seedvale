@@ -32,7 +32,8 @@ export type Place = {
  * see `props.ts`'s `buildSettlementProps`).
  *
  * - `woodcutter` → one of `landmarks.trees` (round-robin via `treeIndex`,
- *   same index NPC already cycles through for its `wood` need).
+ *   same index NPC already cycles through for its `wood` need). Successful
+ *   chop → deposit commits wood into settlement economy stock (plan 071).
  * - `farmer` → `landmarks.garden`.
  * - `trader` → `landmarks.market`.
  * - `guard` → `landmarks.well` (central point, easiest to "patrol" from).

@@ -22,6 +22,17 @@ describe('pickNeed', () => {
     expect(pickNeed({ thirst: 0, woodDuty: 0.9, hunger: 0.9 }, { skipWood: true })).toBe('food')
     expect(pickNeed({ thirst: 0.9, woodDuty: 0.9, hunger: 0 }, { skipWood: true })).toBe('water')
   })
+
+  it('shortage bias can promote wood/food without becoming a planner', () => {
+    expect(pickNeed({ thirst: 0, woodDuty: 0.25, hunger: 0 })).toBe('idle')
+    expect(pickNeed({ thirst: 0, woodDuty: 0.25, hunger: 0 }, { woodShortage: true })).toBe('wood')
+    expect(pickNeed({ thirst: 0, woodDuty: 0, hunger: 0.28 })).toBe('idle')
+    expect(pickNeed({ thirst: 0, woodDuty: 0, hunger: 0.28 }, { foodShortage: true })).toBe('food')
+    expect(pickNeed(
+      { thirst: 0, woodDuty: 0.9, hunger: 0 },
+      { skipWood: true, woodShortage: true },
+    )).toBe('idle')
+  })
 })
 
 describe('tickNeeds', () => {

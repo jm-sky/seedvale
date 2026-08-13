@@ -12,6 +12,11 @@ import {
   prepareProp,
 } from '../assets/loadGltf'
 import { playActionWell } from '../audio/actionSounds'
+import {
+  commitRoleWork,
+  commitWoodcutterDeposit,
+  type SettlementEconomy,
+} from '../economy'
 import { createHealthState, damageHealth, type HealthState } from '../shared/HealthState'
 import {
   createStaminaState,
@@ -53,6 +58,7 @@ import {
   type NeedId,
   type NeedState,
   pickNeed,
+  type PickNeedOptions,
   tickNeeds,
 } from './Needs'
 import {
@@ -378,6 +384,8 @@ export class NpcAgent {
   private readonly wellQueueId: string | null
   /** Queue this agent is currently a member of (waiting or serving). */
   private activeQueueId: string | null = null
+  /** Settlement-owned bulk stock (plan 071). Null only in isolated fallbacks. */
+  private readonly economy: SettlementEconomy | null
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
@@ -404,12 +412,14 @@ export class NpcAgent {
     npcId: string,
     queues: ReadonlyMap<string, InteractionQueue>,
     wellQueueId: string | null,
+    economy: SettlementEconomy | null,
   ) {
     this.playAt = playAt
     this.forest = forest
     this.id = npcId
     this.queues = queues
     this.wellQueueId = wellQueueId
+    this.economy = economy
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.landmarks = landmarks
@@ -524,6 +534,7 @@ export class NpcAgent {
     npcId = '',
     queues: ReadonlyMap<string, InteractionQueue> = new Map(),
     wellQueueId: string | null = null,
+    economy: SettlementEconomy | null = null,
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -544,6 +555,7 @@ export class NpcAgent {
         npcId,
         queues,
         wellQueueId,
+        economy,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -562,6 +574,7 @@ export class NpcAgent {
         npcId,
         queues,
         wellQueueId,
+        economy,
       )
     }
   }
@@ -581,6 +594,7 @@ export class NpcAgent {
     npcId: string,
     queues: ReadonlyMap<string, InteractionQueue>,
     wellQueueId: string | null,
+    economy: SettlementEconomy | null,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -610,6 +624,7 @@ export class NpcAgent {
       npcId,
       queues,
       wellQueueId,
+      economy,
     )
   }
 
@@ -742,7 +757,7 @@ export class NpcAgent {
           this.beginCollapseSleep()
           break
         }
-        const need = pickNeed(this.needs, { skipWood: this.role === 'trader' })
+        const need = pickNeed(this.needs, this.needPickOptions())
         this.activeNeed = need
         if (need !== 'idle') {
           this.beginNeed(need)
@@ -970,7 +985,7 @@ export class NpcAgent {
         else restoreStamina(this.stamina, this.restRate * stepDt)
         // Not asleep this step — resolve whichever need would have sent the
         // NPC off to drink/eat/gather, same amounts `beginNeed` applies.
-        const need = pickNeed(this.needs, { skipWood: this.role === 'trader' })
+        const need = pickNeed(this.needs, this.needPickOptions())
         if (need === 'water') this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
         else if (need === 'food') this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
         else if (need === 'wood' && this.landmarks.trees.length > 0) {
@@ -1067,6 +1082,14 @@ export class NpcAgent {
   }
 
   /** Snapshot for the shared decision seam — not a policy framework. */
+  private needPickOptions(): PickNeedOptions {
+    return {
+      skipWood: this.role === 'trader',
+      woodShortage: this.economy?.hasShortage('wood') ?? false,
+      foodShortage: this.economy?.hasShortage('food') ?? false,
+    }
+  }
+
   private buildDecisionContext(
     scheduleActivity: ScheduleActivity,
     nearbyNpcCount: number,
@@ -1192,7 +1215,10 @@ export class NpcAgent {
           kind: 'deposit',
           destination: copyVec3(this.landmarks.stockpile),
           durationSec: 0.8 * this.waitMultiplier,
-          onComplete: () => { this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT) },
+          onComplete: () => {
+            this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
+            if (this.economy) commitWoodcutterDeposit(this.economy)
+          },
         },
       })
       return
@@ -1217,7 +1243,9 @@ export class NpcAgent {
         kind: 'work',
         destination: copyVec3(this.workplace.position),
         durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
-        onComplete: () => {},
+        onComplete: () => {
+          if (this.economy) commitRoleWork(this.economy, this.role)
+        },
       })
       return
     }

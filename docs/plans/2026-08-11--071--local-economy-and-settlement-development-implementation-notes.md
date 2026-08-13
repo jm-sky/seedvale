@@ -1,6 +1,6 @@
 # Plan 071 — Implementation Notes: Local Economy & Settlement Development
 
-**Status:** `reviewed` 🟡 — ready after 092 and 094.
+**Status:** `verification needed` 🔍 — implemented 2026-08-13 (domain + settlement registry + woodcutter deposit + woodshed).
 **Created:** 2026-08-13
 **Order:** `092 → 071 → 069`
 
@@ -269,6 +269,9 @@ Narrow the implementation by:
 - `docs/plans/2026-08-08--032--natural-resources-economy.md`
 - `src/ai/NpcAgent.ts`
 - `src/settlement/places.ts`
+- `src/settlement/createSettlement.ts`
+- `src/settlement/SettlementsManager.ts`
+- `src/economy/`
 - `src/items/itemCatalog.ts`
 
 ## Agreed implementation order
@@ -282,3 +285,17 @@ Narrow the implementation by:
 ```
 
 The success test for 071 is simple: **after 071, implementing 069 should feel like adding a new producer to an existing economy, not creating a second economy for farms.**
+
+## Implementation status (2026-08-13)
+
+Implemented:
+
+- `src/economy/` — `EconomicStock`, `SettlementEconomy` (add/remove/query/reserve/produce/demand/development), `ProductionDef` (woodcutting + empty farmer/fisher/miner hooks), woodshed development, stream-safe `EconomyRegistry` on `SettlementsManager`.
+- Woodcutter chop → deposit commits `WOODCUTTING_PRODUCTION` on successful completion. Scheduled woodcutter `work` does not mint wood.
+- Shortage/surplus vs demand targets; light `pickNeed` bias (`woodShortage` / `foodShortage`).
+- Visible woodshed: extra smaller `createStockpile` beside the existing pile once 6 wood is reserved and paid.
+- Stamina/vigor unchanged (092). No second AI/FSM/save schema.
+
+Deferred (as planned): trade, player crafting, household stock (069), save persistence of economy (session + streaming only).
+
+Technical verification: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — pass (2026-08-13). Browser: watch Piotr (home woodcutter) chop and deposit; after several trips a second, smaller wood pile should appear next to the stockpile.

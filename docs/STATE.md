@@ -80,6 +80,7 @@ The main application orchestration lives in `src/app/createApp.ts`. World system
 - NPCs use shared `StaminaState` for work/rest effort; HP is no longer drained by fatigue.
 - NPCs use `VigorState` as a daily effort budget (plan 092): heavy `work`/`chop` drains it, scheduled or forced sleep restores it, ordinary rest restores stamina only. Collapse (`≤ VIGOR_COLLAPSE_THRESHOLD`) reuses the existing `goSleep`/`sleep` path so the NPC stops working and sleeps (home if nearby, otherwise in place). Runtime NPC state is still not persisted — vigor starts full on spawn.
 - NPC names and family naming data.
+- Each loaded settlement owns a `SettlementEconomy` (plan 071): bulk `wood`/`food`/`water` stock, demand targets, shortage/surplus. Woodcutter chop→deposit adds wood at the stockpile; a woodshed (second, smaller pile) is paid once from surplus wood. Farmer/fisher/miner scheduled work calls a shared production hook (empty outputs until 069). No second AI/inventory.
 - NPC dialogue v2 exists as a Vue screen with multiple conversation topics. Home trader opens a trade screen; home guard can be asked for a sword.
 - NPC reaction sounds are implemented (`playAt` from the NPC mesh — quieter farther away).
 - World one-shots that have a source position use `worldAudio.playAt` (linear falloff `ref=1.5` / `max=28`): well, melee, animal observe, axe chop. Inventory / quest thank-you stay on `playOnce`.
@@ -176,6 +177,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `StaminaState` — shared physical-effort capacity (`src/shared/StaminaState.ts`) used by fauna (`AnimalLifeState.stamina`) and NPCs; replaces NPC HP-as-fatigue and animal `energy`.
 - `VigorState` — NPC daily physiological budget (`src/shared/VigorState.ts`); collapse gates sleep through the existing NPC FSM (plan 092). Not used by fauna.
 - Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/` (plan 055). NPC + fauna adapters; predator hunger-vs-fear scoring in `src/fauna/predatorHumanDecision.ts`.
+- `SettlementEconomy` — settlement-owned bulk stock, demand (shortage/surplus), production recipes and one development payment (`src/economy/`, plan 071). Not player `Inventory`. Survives stream-out/in via `SettlementsManager`'s registry; not in save data yet (same class as NPC runtime state).
 - `NpcAgent` — central NPC behaviour/needs/personality integration point.
 - `AnimalAgent` — central fauna behaviour integration point (intents via shared lifecycle; chase/flee/wander plus forage/drink/eat for plan 094).
 - `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot (axe + shovel included).
@@ -202,6 +204,7 @@ src/terrain/chunkManager.ts
 src/terrain/chunkEnvironment.ts
 src/settlement/SettlementsManager.ts
 src/settlement/createSettlement.ts
+src/economy/
 src/ai/NpcAgent.ts
 src/ai/Needs.ts
 src/fauna/AnimalAgent.ts
@@ -269,8 +272,7 @@ The following should not be assumed to exist merely because related foundations 
 - Social Place assignment for `sociable` schedule overlays (type exists; no producer yet).
 - Shared Threat context type (plan 045 deferred — existing fauna perception covers current consumers).
 - LLM/AI-generated quests.
-- Full village production/consumption economy.
-- Crafting and barter/trade systems.
+- Inter-settlement trade, player crafting, and household (069) consumption of settlement stock. Settlement bulk economy + woodshed development exist (plan 071).
 - Full combat system for the player.
 - Full NPC-vs-fauna combat wiring.
 - Cube-sphere / fully spherical world architecture.

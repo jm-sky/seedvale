@@ -1,6 +1,6 @@
 # Plan 071: Local Economy & Settlement Development
 
-**Status:** `todo` ⬜ — wstępny kierunek do dalszego dopracowania.
+**Status:** `verification needed` 🔍 — implemented 2026-08-13; technically verified (`tsc`/`lint`/`build`/`test`). Browser: watch a woodcutter chop → deposit, then a second smaller pile appear after enough wood.
 **Created:** 2026-08-11
 **Scope:** przyszły etap po rozwoju NPC schedule/actions, oparty na istniejących systemach zasobów, potrzeb, pracy, osad i planowania wiosek.
 

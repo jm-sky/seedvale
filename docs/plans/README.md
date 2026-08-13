@@ -36,8 +36,7 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-11--071--local-economy-and-settlement-development.md` | Lokalna gospodarka osady (draft) | 🟡 | XL | ~~060~~ ~~032~~ ~~047~~ |
-| `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów — **blokada: 060, 071** | 🟡 | L | 060, 071 |
+| `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów | 🟡 | L | ~~060~~ ~~071~~ |
 | `2026-08-11--070--world-observatory.md` | Panel obserwacji życia świata | ⚪ | XL | 071, 069 |
 | `2026-08-08--037--npc-genealogy-lineages.md` | Rody NPC (kompas N → ~~067~~) | ⚪ | L | ~~022~~ ~~031~~ |
 
@@ -47,7 +46,7 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 Implementation complete; needs play/browser check. Grouped; full write-up is in the plan file.
 
-**Osady / wioski** — `036` siting trudny teren (częściowo) · `074` katalog domów · `076` polish generatora · `077` ogrody S/M/L · `095` stóg siana + ogród poza placem · issue `029` wioska na oceanie
+**Osady / wioski** — `036` siting trudny teren (częściowo) · `074` katalog domów · `076` polish generatora · `077` ogrody S/M/L · `095` stóg siana + ogród poza placem · issue `029` wioska na oceanie · `071` lokalna gospodarka osady (stock/produkcja/woodshed)
 
 **Las / narzędzia / zbieractwo** — `058` cykl drzew · `061` dig UX · `065` GLB skały/złoża · `085` handheld lights + village torches · `086` trawa w workerze (zdrowy baseline `Simulate (ms)` potwierdzony w przeglądarce; pixel-identyczny layout nie porównany explicite) · `087` instancing roślinności/propsów (fazy 1–5+7; brak pomiaru Draw calls przed/po) · `091` odnawialne gałęzie · `096` fauna GLB / hold / światła / blood splat
 

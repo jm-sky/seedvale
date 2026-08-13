@@ -25,12 +25,20 @@ export type PickNeedOptions = {
   /** Traders keep the woodDuty meter but never act on it — they stay at the
    *  stall instead of walking off to chop. */
   skipWood?: boolean
+  /** Settlement wood shortage — a light score bump, not an economic planner. */
+  woodShortage?: boolean
+  /** Settlement food shortage — same light bias as `woodShortage`. */
+  foodShortage?: boolean
 }
 
 export function pickNeed(needs: NeedState, options: PickNeedOptions = {}): NeedId {
   const waterScore = needs.thirst > 0.35 ? needs.thirst * 1.35 : 0
-  const woodScore = options.skipWood ? 0 : (needs.woodDuty > 0.3 ? needs.woodDuty * 1.1 : 0)
-  const foodScore = needs.hunger > 0.32 ? needs.hunger * 1.2 : 0
+  const woodThreshold = options.woodShortage ? 0.22 : 0.3
+  const woodMult = options.woodShortage ? 1.35 : 1.1
+  const woodScore = options.skipWood ? 0 : (needs.woodDuty > woodThreshold ? needs.woodDuty * woodMult : 0)
+  const foodThreshold = options.foodShortage ? 0.24 : 0.32
+  const foodMult = options.foodShortage ? 1.4 : 1.2
+  const foodScore = needs.hunger > foodThreshold ? needs.hunger * foodMult : 0
   const idleScore = 0.12
 
   const best = Math.max(waterScore, woodScore, foodScore, idleScore)

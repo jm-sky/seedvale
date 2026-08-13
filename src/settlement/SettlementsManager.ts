@@ -8,6 +8,7 @@ import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TerrainSamplers } from './settlementTerrain'
 import { disposeObject3D } from '../assets/loadGltf'
+import { createEconomyRegistry } from '../economy'
 import { type ChunkCoord, worldToChunk } from '../terrain/chunkGrid'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSettlement, type Settlement } from './createSettlement'
@@ -141,6 +142,17 @@ export async function createSettlementsManager(
     })
   }
 
+  const economies = createEconomyRegistry()
+  function economyFor(def: SettlementDef) {
+    return economies.getOrCreate({
+      id: def.id,
+      size: def.size,
+      foodSourceType: def.foodSourceType,
+      familyCount: def.families.length,
+      dominantResource: def.dominantResource,
+    })
+  }
+
   const homeDef = defFor({ gx: 0, gz: 0 })
   if (!homeDef) {
     throw new Error('[SettlementsManager] home settlement (0,0) failed to generate')
@@ -152,6 +164,7 @@ export async function createSettlementsManager(
     localRadius,
     seed,
     homeDef,
+    economyFor(homeDef),
     playAt,
     roadCtx,
     forest,
@@ -256,6 +269,7 @@ export async function createSettlementsManager(
         localRadius,
         seed,
         def,
+        economyFor(def),
         playAt,
         roadCtx,
         forest,
@@ -355,6 +369,7 @@ export async function createSettlementsManager(
       }
       midpoints.clear()
       entries.clear()
+      economies.clear()
     },
   }
 }

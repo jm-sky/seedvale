@@ -13,6 +13,7 @@ import type { VillageSize } from './families'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { disposeObject3D } from '../assets/loadGltf'
+import { type SettlementEconomy, WOODSHED_DEVELOPMENT } from '../economy'
 import {
   copyVec3,
   createInteractionQueue,
@@ -30,6 +31,7 @@ import {
   cloneProp,
   createDock,
   createSignpost,
+  createStockpile,
   createVillageNamepost,
   disposeSettlementGroup,
   DOCK_SPECS,
@@ -97,6 +99,8 @@ export type Settlement = {
    *  the separate, home-settlement-only `Fauna` system (`fauna/createFauna.ts`). */
   livestock: readonly AnimalAgent[]
   landmarks: SettlementLandmarks
+  /** Settlement-owned bulk stock / demand / development (plan 071). */
+  economy: SettlementEconomy
   /** Only present for MD/LG villages, see `props.ts`'s `buildSettlementProps`. */
   fire?: VillageFire
   update: (
@@ -126,6 +130,7 @@ export async function createSettlement(
   localRadius: number,
   seed: number,
   def: SettlementDef,
+  economy: SettlementEconomy,
   playAt: PlayAt = () => {},
   roadCtx?: RoadNetworkContext,
   forest?: SettlementForestHooks,
@@ -335,6 +340,7 @@ export async function createSettlement(
         `${def.id}:npc:${i}`,
         queues,
         wellQid,
+        economy,
       )
       scene.add(agent.mesh)
       return agent
@@ -359,6 +365,20 @@ export async function createSettlement(
    *  .ts`'s `cellSeed` for why this settlement's own seed is `def.gx/def.gz`
    *  combined with the world seed rather than a hash of `def.id`. */
   let nightIndex = 0
+  let woodshedPlaced = false
+
+  function placeWoodshedIfComplete(): void {
+    if (woodshedPlaced) return
+    if (economy.developmentStatus(WOODSHED_DEVELOPMENT.id) !== 'complete') return
+    woodshedPlaced = true
+    const pile = createStockpile()
+    pile.scale.multiplyScalar(0.75)
+    const x = landmarks.stockpile.x - 1.8
+    const z = landmarks.stockpile.z - 1.1
+    placeOnGround(pile, x, z, sampleHeight)
+    group.add(pile)
+  }
+  placeWoodshedIfComplete()
 
   return {
     id: def.id,
@@ -373,6 +393,7 @@ export async function createSettlement(
     npcs: agents,
     livestock,
     landmarks,
+    economy,
     fire,
     update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages) {
       for (let i = 0; i < agents.length; i++) {
@@ -404,6 +425,7 @@ export async function createSettlement(
         livestock.push(...kept)
       }
       fire?.update(dt)
+      placeWoodshedIfComplete()
       for (const torch of villageTorches) torch.update(dt)
       for (const sp of signposts) {
         sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))
