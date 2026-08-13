@@ -221,6 +221,7 @@ export async function createApp(
     bundle.chunkManager.sampleHeight,
     bundle.chunkManager.sampleFloor,
     bundle.chunkManager.waterLevel,
+    bundle.chunkManager.collidersNear,
   )
   if (initialSave) {
     // Set look before position — setPosition() calls syncCamera(), which reads yaw/pitch.
@@ -414,7 +415,12 @@ export async function createApp(
       // resync immediately rather than waiting for the tick loop's throttled
       // apply to notice a large-enough timeOfDay delta.
       if (dayNight.enabled) gameLoop.resyncDayNight()
-      player.setGround(bundle.chunkManager.sampleHeight, bundle.chunkManager.sampleFloor, bundle.chunkManager.waterLevel)
+      player.setGround(
+        bundle.chunkManager.sampleHeight,
+        bundle.chunkManager.sampleFloor,
+        bundle.chunkManager.waterLevel,
+        bundle.chunkManager.collidersNear,
+      )
       player.setPosition(bundle.settlementsManager.home.spawn.x, bundle.settlementsManager.home.spawn.z)
       pauseMenu.setSeed(config.seed)
     } finally {

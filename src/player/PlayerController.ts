@@ -14,8 +14,12 @@ import {
   mountHeldToolOnSocket,
 } from '../items/heldToolVisual'
 import { createHealthState, type HealthState } from '../shared/HealthState'
+import { type Collider, resolvePosition } from '../world/collision'
 
 const MOVE_SPEED = 8
+/** Matches the capsule fallback's `CapsuleGeometry` radius (plan 097 §2.2) —
+ *  the GLB model has no measured collision shape, so this stands in for both. */
+const PLAYER_COLLISION_RADIUS = 0.35
 const SPRINT_MULTIPLIER = 1.8
 /** Look-at height eases from chest-level (far/default zoom) up toward eye-level as the camera zooms in. */
 const LOOK_AT_OFFSET_FAR = 0.9
@@ -46,6 +50,9 @@ type PlayerPose = 'stand' | 'crouch' | 'lie'
 export const PLAYER_MODEL_URL = '/models/characters/Adventurer.glb'
 
 export type HeightSampler = (x: number, z: number) => number
+/** `ChunkManager.collidersNear` (plan 097 §2.2) — kept as its own alias
+ *  instead of importing `ChunkManager` here, same reasoning as `HeightSampler`. */
+export type ColliderSource = (x: number, z: number) => readonly Collider[]
 
 export class PlayerController {
   /** Wrapper group; feet sit at local y=0, world y is set in snapToGround. */
@@ -58,6 +65,7 @@ export class PlayerController {
   private sampleHeight: HeightSampler
   private sampleFloor: HeightSampler
   private waterLevel: number
+  private collidersNear: ColliderSource
   private readonly isCapsule: boolean
   /** The GLB scene root (or capsule mesh) — rotated independently of `mesh`
    *  (the wrapper, which also carries the label at a fixed height) for
@@ -98,6 +106,7 @@ export class PlayerController {
     sampleHeight: HeightSampler,
     sampleFloor: HeightSampler,
     waterLevel: number,
+    collidersNear: ColliderSource,
   ) {
     this.camera = camera
     this.keys = keys
@@ -105,6 +114,7 @@ export class PlayerController {
     this.sampleHeight = sampleHeight
     this.sampleFloor = sampleFloor
     this.waterLevel = waterLevel
+    this.collidersNear = collidersNear
     this.isCapsule = isCapsule
     this.health = createHealthState(PLAYER_MAX_HP)
 
@@ -163,6 +173,7 @@ export class PlayerController {
     sampleHeight: HeightSampler,
     sampleFloor: HeightSampler,
     waterLevel: number,
+    collidersNear: ColliderSource,
     modelUrl = PLAYER_MODEL_URL,
   ): Promise<PlayerController> {
     try {
@@ -178,6 +189,7 @@ export class PlayerController {
         sampleHeight,
         sampleFloor,
         waterLevel,
+        collidersNear,
       )
     } catch (err) {
       console.warn(`[player] failed to load ${modelUrl}, using capsule`, err)
@@ -188,6 +200,7 @@ export class PlayerController {
         sampleHeight,
         sampleFloor,
         waterLevel,
+        collidersNear,
       )
     }
   }
@@ -199,6 +212,7 @@ export class PlayerController {
     sampleHeight: HeightSampler,
     sampleFloor: HeightSampler,
     waterLevel: number,
+    collidersNear: ColliderSource,
   ): PlayerController {
     const body = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.35, 0.9, 4, 8),
@@ -219,6 +233,7 @@ export class PlayerController {
       sampleHeight,
       sampleFloor,
       waterLevel,
+      collidersNear,
     )
   }
 
@@ -227,10 +242,12 @@ export class PlayerController {
     sampleHeight: HeightSampler,
     sampleFloor: HeightSampler,
     waterLevel: number,
+    collidersNear: ColliderSource,
   ): void {
     this.sampleHeight = sampleHeight
     this.sampleFloor = sampleFloor
     this.waterLevel = waterLevel
+    this.collidersNear = collidersNear
     this.snapToGround()
   }
 
@@ -335,8 +352,16 @@ export class PlayerController {
     if (this.moving) {
       const speed = this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED
       this.wish.normalize().multiplyScalar(speed * dt)
-      this.mesh.position.x += this.wish.x
-      this.mesh.position.z += this.wish.z
+      const candidateX = this.mesh.position.x + this.wish.x
+      const candidateZ = this.mesh.position.z + this.wish.z
+      const resolved = resolvePosition(
+        candidateX,
+        candidateZ,
+        PLAYER_COLLISION_RADIUS,
+        this.collidersNear(candidateX, candidateZ),
+      )
+      this.mesh.position.x = resolved.x
+      this.mesh.position.z = resolved.z
       this.mesh.rotation.y = Math.atan2(this.wish.x, this.wish.z)
     }
 

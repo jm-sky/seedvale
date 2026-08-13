@@ -3,8 +3,9 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
 import type { VillageInfo } from '../fauna/AnimalAgent'
-import type { HeightSampler } from '../player/PlayerController'
+import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
+import type { Collider } from '../world/collision'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TerrainSamplers } from './settlementTerrain'
 import { disposeObject3D } from '../assets/loadGltf'
@@ -114,6 +115,9 @@ export async function createSettlementsManager(
    *  site before that settlement is built — see `chunksNear`'s comment. */
   waitForChunks: (coords: ChunkCoord[]) => Promise<void>,
   chunkSize: number,
+  collidersNear: ColliderSource,
+  registerColliders: (ownerKey: string, colliders: readonly Collider[]) => void,
+  clearColliders: (ownerKey: string) => void,
   forest?: SettlementForestHooks,
   homeSize: HomeVillageSize = 'auto',
 ): Promise<SettlementsManager> {
@@ -165,6 +169,9 @@ export async function createSettlementsManager(
     seed,
     homeDef,
     economyFor(homeDef),
+    collidersNear,
+    registerColliders,
+    clearColliders,
     playAt,
     roadCtx,
     forest,
@@ -270,6 +277,9 @@ export async function createSettlementsManager(
         seed,
         def,
         economyFor(def),
+        collidersNear,
+        registerColliders,
+        clearColliders,
         playAt,
         roadCtx,
         forest,

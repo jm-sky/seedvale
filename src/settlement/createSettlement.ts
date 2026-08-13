@@ -5,9 +5,10 @@ import {
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { AnimalAgent, VillageInfo } from '../fauna/AnimalAgent'
-import type { HeightSampler } from '../player/PlayerController'
+import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
+import type { Collider } from '../world/collision'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { VillageSize } from './families'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
@@ -23,6 +24,7 @@ import {
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
 import { applyTreeStageVisual } from '../world/treeVisuals'
+import { houseCatalogById } from './houseCatalog'
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
 import { type Place, workplaceFor } from './places'
@@ -54,6 +56,15 @@ import {
 } from './wellInteractionQueue'
 
 export type { SettlementForestHooks }
+
+/**
+ * Well collision radius (plan 097 §2.2 — was `NpcAgent.ts`'s
+ * `WELL_COLLISION_RADIUS` before the well became a registry collider like
+ * any other). Base well mesh radius ~0.85 (`createWell`) plus a small
+ * buffer; the serving stand sits farther out (`servingOffset` below) so
+ * queued drinks never need the blocked disk.
+ */
+const WELL_COLLISION_RADIUS = 1.0
 
 /** `setDayNight`'s `t` (0 day .. 1 full night) above this triggers the
  *  settlement fire's dusk-ignition roll (see `nightIndex`/`setDayNight`
@@ -131,6 +142,11 @@ export async function createSettlement(
   seed: number,
   def: SettlementDef,
   economy: SettlementEconomy,
+  collidersNear: ColliderSource,
+  /** Registers this settlement's static colliders (well + houses) under
+   *  `def.id` — plan 097 §2.2. Cleared again in `dispose()` below. */
+  registerColliders: (ownerKey: string, colliders: readonly Collider[]) => void,
+  clearColliders: (ownerKey: string) => void,
   playAt: PlayAt = () => {},
   roadCtx?: RoadNetworkContext,
   forest?: SettlementForestHooks,
@@ -171,6 +187,15 @@ export async function createSettlement(
   )
   scene.add(group)
 
+  registerColliders(def.id, [
+    { x: landmarks.well.x, z: landmarks.well.z, radius: WELL_COLLISION_RADIUS },
+    ...landmarks.houses.map((house) => ({
+      x: house.position.x,
+      z: house.position.z,
+      radius: houseCatalogById(house.houseId).footprintRadius,
+    })),
+  ])
+
   if (forest) {
     const worldDays = forest.getWorldDays()
     for (const tree of landmarks.trees) {
@@ -195,7 +220,15 @@ export async function createSettlement(
     }
   }
 
-  const livestock = await spawnLivestock(scene, sampleHeight, waterLevel, landmarks.homes, def.size, settlementSeed)
+  const livestock = await spawnLivestock(
+    scene,
+    sampleHeight,
+    waterLevel,
+    collidersNear,
+    landmarks.homes,
+    def.size,
+    settlementSeed,
+  )
 
   type SignpostInstance = { labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
   const signposts: SignpostInstance[] = []
@@ -327,6 +360,7 @@ export async function createSettlement(
       const agent = await NpcAgent.create(
         sampleHeight,
         waterLevel,
+        collidersNear,
         landmarks,
         home,
         workplace,
@@ -449,6 +483,7 @@ export async function createSettlement(
       for (const light of houseLights) light.setNightIntensity(t)
     },
     dispose() {
+      clearColliders(def.id)
       if (forest) {
         for (const tree of landmarks.trees) forest.lifecycle.unregisterPresence(tree.id)
       }

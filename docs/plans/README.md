@@ -18,7 +18,7 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 |------|---------|---|-----|--------|---------|
 | `2026-08-09--049--procedural-world-landmarks.md` | Proceduralne obiekty, ruiny, landmarki | 40 | 🟡 | XL | ~~001~~ ~~006~~ ~~007~~ ~~028~~ ~~030~~ |
 | `2026-08-07--024--world-visual-overhaul.md` | Rośliny, niebo/chmury, góry w tle | 50 | ⚪ | L | ~~028~~ |
-| `2026-08-13--097--physics-falling-collisions-jumping.md` | Fizyka: opadanie przedmiotów (2.1 zrobione, verification needed), kolizje + skok (2.2/2.3 nie zaczęte) | 15 | 🟡 | XL | — |
+| `2026-08-13--097--physics-falling-collisions-jumping.md` | Fizyka: opadanie przedmiotów + kolizje gracz/NPC/fauna zrobione (2.1/2.2, verification needed), skok (2.3) nie zaczęty | 65 | 🟡 | XL | — |
 
 ---
 

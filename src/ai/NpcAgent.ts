@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
-import type { HeightSampler } from '../player/PlayerController'
+import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
@@ -93,15 +93,17 @@ export const NPC_HEIGHT = 1.75
 /** Minimum clearance above waterLevel an NPC will walk into or wander toward. */
 const WATER_MARGIN = 0.3
 /**
- * Keep NPC feet outside the village well mesh (base radius ~0.85 in
- * `createWell`) plus a small buffer. Serving stand is farther out
- * (`servingOffset` in createSettlement) so queued drinks never need the
- * blocked disk; transit paths that would cut through the well are deflected.
+ * Buffer added to a collider's own radius (plan 097 §2.2 — colliders come
+ * from the shared registry now, well included; see `createSettlement.ts`)
+ * when deciding whether a *destination* near that collider is allowed to
+ * enter its disk — e.g. the well's serving stand / a workplace right next to
+ * an obstacle. Farther goals skirt around instead of walking through.
  */
-const WELL_COLLISION_RADIUS = 1.0
-/** Destinations this close to the well may enter the collision disk (serving /
- *  workplace). Farther goals skirt around instead of walking through. */
-const WELL_APPROACH_ALLOW = WELL_COLLISION_RADIUS + 0.4
+const NPC_COLLIDER_APPROACH_BUFFER = 0.4
+/** Even an approach-allowed destination may not bring an NPC's feet past
+ *  this fraction of a collider's radius (keeps feet out of e.g. the well's
+ *  water cylinder while still reaching the rim). */
+const NPC_COLLIDER_CORE_FRACTION = 0.55
 
 /** How strongly nearby NPCs suppress this NPC's chance to react ("Hmm?") to
  *  the player, scaled by `nearbyNpcCount * (1 - openness)` — see
@@ -329,6 +331,7 @@ export class NpcAgent {
   private readonly waitMultiplier: number
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
+  private readonly collidersNear: ColliderSource
   private readonly landmarks: SettlementLandmarks
   private readonly needs: NeedState
   private readonly home: THREE.Vector3
@@ -400,6 +403,7 @@ export class NpcAgent {
     animations: THREE.AnimationClip[],
     sampleHeight: HeightSampler,
     waterLevel: number,
+    collidersNear: ColliderSource,
     landmarks: SettlementLandmarks,
     home: Place,
     workplace: Place | null,
@@ -422,6 +426,7 @@ export class NpcAgent {
     this.economy = economy
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
+    this.collidersNear = collidersNear
     this.landmarks = landmarks
     this.home = home.position.clone()
     const character = member.character
@@ -521,6 +526,7 @@ export class NpcAgent {
   static async create(
     sampleHeight: HeightSampler,
     waterLevel: number,
+    collidersNear: ColliderSource,
     landmarks: SettlementLandmarks,
     home: Place,
     workplace: Place | null,
@@ -543,6 +549,7 @@ export class NpcAgent {
         animations,
         sampleHeight,
         waterLevel,
+        collidersNear,
         landmarks,
         home,
         workplace,
@@ -562,6 +569,7 @@ export class NpcAgent {
       return NpcAgent.createCapsuleFallback(
         sampleHeight,
         waterLevel,
+        collidersNear,
         landmarks,
         home,
         workplace,
@@ -582,6 +590,7 @@ export class NpcAgent {
   private static createCapsuleFallback(
     sampleHeight: HeightSampler,
     waterLevel: number,
+    collidersNear: ColliderSource,
     landmarks: SettlementLandmarks,
     home: Place,
     workplace: Place | null,
@@ -612,6 +621,7 @@ export class NpcAgent {
       [],
       sampleHeight,
       waterLevel,
+      collidersNear,
       landmarks,
       home,
       workplace,
@@ -1311,59 +1321,63 @@ export class NpcAgent {
 
   private isWalkable(x: number, z: number): boolean {
     if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
-    const well = this.landmarks.well
-    const distWell = Math.hypot(x - well.x, z - well.z)
-    if (distWell < WELL_COLLISION_RADIUS) {
-      const dest = this.pendingAction?.destination
-      const destNearWell =
+    const dest = this.pendingAction?.destination
+    for (const collider of this.collidersNear(x, z)) {
+      const dist = Math.hypot(x - collider.x, z - collider.z)
+      if (dist >= collider.radius) continue
+      const approachAllow = collider.radius + NPC_COLLIDER_APPROACH_BUFFER
+      const destNearCollider =
         !!dest
-        && Math.hypot(dest.x - well.x, dest.z - well.z) <= WELL_APPROACH_ALLOW
-      // Final approach to serving / workplace may clip the outer ring; never
-      // the very center (keeps feet out of the water cylinder).
-      if (!destNearWell) return false
-      if (distWell < WELL_COLLISION_RADIUS * 0.55) return false
+        && Math.hypot(dest.x - collider.x, dest.z - collider.z) <= approachAllow
+      // Final approach to a destination right next to this collider (well
+      // serving stand, a workplace) may clip its outer ring; never its core.
+      if (!destNearCollider) return false
+      if (dist < collider.radius * NPC_COLLIDER_CORE_FRACTION) return false
     }
     return true
   }
 
   /**
-   * If the straight segment from the NPC to `dest` cuts through the well
-   * collision disk, return a bypass point on the disk rim; otherwise `dest`.
-   * Final approaches to near-well destinations (queued drink / guard work)
-   * are left alone.
+   * If the straight segment from the NPC to `dest` cuts through a nearby
+   * collider's disk, return a bypass point on that disk's rim; otherwise
+   * `dest`. Destinations already allowed to approach a collider (queued
+   * drink / guard work right next to it) are left alone. Only resolves the
+   * first blocking collider found — matches `isWalkable`'s "closest
+   * obstacle" simplicity (plan 097 §2.2), not full multi-obstacle routing.
    */
   private resolveSteerTarget(dest: THREE.Vector3): THREE.Vector3 {
-    const wx = this.landmarks.well.x
-    const wz = this.landmarks.well.z
-    const destDist = Math.hypot(dest.x - wx, dest.z - wz)
-    if (destDist <= WELL_APPROACH_ALLOW) return dest
-
     const px = this.mesh.position.x
     const pz = this.mesh.position.z
-    const abx = dest.x - px
-    const abz = dest.z - pz
-    const abLen2 = abx * abx + abz * abz
-    if (abLen2 < 1e-8) return dest
+    for (const collider of this.collidersNear(px, pz)) {
+      const destDist = Math.hypot(dest.x - collider.x, dest.z - collider.z)
+      if (destDist <= collider.radius + NPC_COLLIDER_APPROACH_BUFFER) continue
 
-    const apx = wx - px
-    const apz = wz - pz
-    let t = (apx * abx + apz * abz) / abLen2
-    t = Math.max(0, Math.min(1, t))
-    const cx = px + abx * t
-    const cz = pz + abz * t
-    const dx = cx - wx
-    const dz = cz - wz
-    const d = Math.hypot(dx, dz)
-    if (d >= WELL_COLLISION_RADIUS) return dest
+      const abx = dest.x - px
+      const abz = dest.z - pz
+      const abLen2 = abx * abx + abz * abz
+      if (abLen2 < 1e-8) continue
 
-    const rim = WELL_COLLISION_RADIUS * 1.2
-    if (d > 1e-4) {
-      this.tmpAvoid.set(wx + (dx / d) * rim, dest.y, wz + (dz / d) * rim)
-    } else {
-      const len = Math.sqrt(abLen2)
-      this.tmpAvoid.set(wx + (-abz / len) * rim, dest.y, wz + (abx / len) * rim)
+      const apx = collider.x - px
+      const apz = collider.z - pz
+      let t = (apx * abx + apz * abz) / abLen2
+      t = Math.max(0, Math.min(1, t))
+      const cx = px + abx * t
+      const cz = pz + abz * t
+      const dx = cx - collider.x
+      const dz = cz - collider.z
+      const d = Math.hypot(dx, dz)
+      if (d >= collider.radius) continue
+
+      const rim = collider.radius * 1.2
+      if (d > 1e-4) {
+        this.tmpAvoid.set(collider.x + (dx / d) * rim, dest.y, collider.z + (dz / d) * rim)
+      } else {
+        const len = Math.sqrt(abLen2)
+        this.tmpAvoid.set(collider.x + (-abz / len) * rim, dest.y, collider.z + (abx / len) * rim)
+      }
+      return this.tmpAvoid
     }
-    return this.tmpAvoid
+    return dest
   }
 
   /** 1 above HP_SLOW_THRESHOLD, tapering toward a floor as currentHp drops

@@ -1,6 +1,6 @@
 import { Group, type Object3D, type Scene, type Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
-import type { HeightSampler } from '../player/PlayerController'
+import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
 import {
   disposeObject3D,
@@ -239,6 +239,7 @@ export async function createFauna(
   sampleHeight: HeightSampler,
   sampleForestFactor: (x: number, z: number) => number,
   waterLevel: number,
+  collidersNear: ColliderSource,
   homeRadius: number,
   settlementCenter: Vector3,
   seed: number,
@@ -341,6 +342,7 @@ export async function createFauna(
       ANIMAL_DEFS[kind],
       sampleHeight,
       waterLevel,
+      collidersNear,
       x,
       z,
       visual,

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
-import type { HeightSampler } from '../player/PlayerController'
+import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
 import {
@@ -484,6 +484,7 @@ export class AnimalAgent {
   readonly def: AnimalDef
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
+  private readonly collidersNear: ColliderSource
   /** Optional habitat sampler (plan 094) — only wild fauna's `createFauna.ts`
    *  passes one; livestock's spawn path omits it, and forage search falls
    *  back to distance-only scoring (see `findForageTarget`). */
@@ -564,6 +565,7 @@ export class AnimalAgent {
     def: AnimalDef,
     sampleHeight: HeightSampler,
     waterLevel: number,
+    collidersNear: ColliderSource,
     x: number,
     z: number,
     visual?: THREE.Object3D,
@@ -574,6 +576,7 @@ export class AnimalAgent {
     this.def = def
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
+    this.collidersNear = collidersNear
     this.sampleForestFactor = sampleForestFactor
     this.home.set(x, 0, z)
     this.wanderRadius = wanderRadius
@@ -1365,7 +1368,11 @@ export class AnimalAgent {
   }
 
   private isWalkable(x: number, z: number): boolean {
-    return this.sampleHeight(x, z) > this.waterLevel + WATER_MARGIN
+    if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
+    for (const collider of this.collidersNear(x, z)) {
+      if (Math.hypot(x - collider.x, z - collider.z) < collider.radius) return false
+    }
+    return true
   }
 
   private nearest(

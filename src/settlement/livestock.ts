@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
-import type { HeightSampler } from '../player/PlayerController'
+import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import {
   disposeObject3D,
   type GltfAsset,
@@ -173,6 +173,7 @@ export async function spawnLivestock(
   scene: THREE.Scene,
   sampleHeight: HeightSampler,
   waterLevel: number,
+  collidersNear: ColliderSource,
   homes: readonly THREE.Vector3[],
   size: VillageSize,
   settlementSeed: number,
@@ -188,6 +189,7 @@ export async function spawnLivestock(
         ANIMAL_DEFS[kind],
         sampleHeight,
         waterLevel,
+        collidersNear,
         x,
         z,
         visual,

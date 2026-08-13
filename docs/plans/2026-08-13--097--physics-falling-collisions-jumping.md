@@ -1,6 +1,6 @@
 # Plan: Fizyka — opadanie przedmiotów, kolizje, skok
 
-**Status:** `in progress` 🔄 — faza 2.1 zaimplementowana (2026-08-13), technicznie zweryfikowana; 2.2/2.3 nie rozpoczęte.
+**Status:** `in progress` 🔄 — fazy 2.1 i 2.2 zaimplementowane (2026-08-13), technicznie zweryfikowane; 2.3 nie rozpoczęta.
 **Created:** 2026-08-13
 **Priority:** 🟡 medium · **Effort:** XL (trzy fazy: 2.1 `S`, 2.2 `L`, 2.3 `M`) · **Depends on:** —
 **Źródło:** rozmowa 2026-08-13 przy researchu [009 — jaskinie podziemne](../research/2026-08-13--009--underground-caves.md); potrzeba `clampToVolume` w jaskini to ten sam brakujący fundament co kolizje w świecie.
@@ -132,6 +132,11 @@ zielone; manualna weryfikacja w przeglądarce (patrz sekcja „Weryfikacja”, p
 ---
 
 ### Faza 2.2 — Kolizje (Effort: L, największa część planu)
+
+**Status:** `verification needed` 🔍 — zaimplementowane 2026-08-13, techniczne checki
+zielone (`tsc`, `lint`, `build`, `test`); manualna weryfikacja w przeglądarce (patrz
+sekcja „Weryfikacja”, punkt 2) czeka na usera. Szczegóły implementacji (dokładne
+promienie, dlaczego NPC nie dostał `resolvePosition`, itd.) — implementation notes §4.
 
 **Decyzje zamknięte:** kolizje obejmują gracza, NPC i zwierzęta (pytanie 3); ciała kolizyjne liczone raz i zapisywane per model, nie liczone w locie z bounding boxa GLB (pytanie 2, doprecyzowanie poniżej); własne prymitywy, nie biblioteka fizyki (pytanie 4).
 

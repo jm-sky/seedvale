@@ -121,6 +121,153 @@ akceptowalną). Nie dodano `SaveDataV11`.
 `test` — wszystkie przechodzą). Manualna weryfikacja w przeglądarce (widoczny spadek po `G`,
 poprawny pickup, save/reload w locie) czeka na usera — patrz plan, sekcja „Weryfikacja”, punkt 1.
 
-Fazy 2.2 (kolizje) i 2.3 (skok) — nie rozpoczęte. Ich specyfikacja jest zamknięta w planie
-głównym (sekcja 6); nie duplikować jej tutaj, dopisać do tego dokumentu dopiero przy
-implementacji, jeśli w trakcie pracy wyjdą decyzje nieoczywiste z samego planu.
+Faza 2.3 (skok) — nie rozpoczęta.
+
+---
+
+# 4. Faza 2.2 — Kolizje (zaimplementowane 2026-08-13)
+
+## 4.1 Jeden wspólny moduł: `src/world/collision.ts`
+
+Nowy, samodzielny moduł (bez zależności od `ChunkManager`/domenowych typów) —
+dokładnie ten "mały collision/query layer" z sekcji 2 tego dokumentu:
+
+- `Collider = { x, z, radius }` — jedyny prymityw (okrąg).
+- `resolvePosition(x, z, entityRadius, colliders)` — czysta funkcja: znajduje
+  collider z **największą penetracją** i wypycha punkt na zewnątrz wzdłuż wektora
+  środek→punkt. Nie rozwiązuje jednoczesnego nakładania się dwóch corliderów
+  (np. róg między dwiema skałami) — celowe uproszczenie v1 zgodne z planem.
+- `createColliderRegistry(cellSize)` — grid bucketów `cellSize` × `cellSize`
+  (przekazywany `config.chunkSize`), z API `setColliders(ownerKey, colliders)` /
+  `clearColliders(ownerKey)` / `query(x, z)` (sąsiedztwo 3×3 bucketów). `ownerKey`
+  to albo klucz terenowego chunka, albo id osady/studni — jeden rejestr obsługuje
+  oba źródła bez dwóch równoległych struktur.
+- Pokryte testami jednostkowymi (`collision.test.ts`), zgodnie z konwencją repo
+  (logika czysta → Vitest).
+
+## 4.2 `ChunkManager` jako właściciel rejestru
+
+`chunkManager.ts` tworzy jeden `colliderRegistry` i:
+
+- w `ensureLoaded()` — zaraz po ustaleniu `tile`, przed `buildAndAttachMesh` —
+  buduje listę providerów z `tile.environment` (tabela `ENVIRONMENT_COLLISION_RADIUS`
+  per `EnvironmentKind`, pomnożona przez `placement.scale`) i `tile.vegetation`
+  (tylko `kind === 'tree'`, promień płaski `TREE_COLLISION_RADIUS` — `VegetationPlacement
+  .scale` jest udokumentowane jako "unused" dla drzew), i woła
+  `colliderRegistry.setColliders(chunkKey, colliders)`.
+- w `unload()` — `colliderRegistry.clearColliders(record.key)`.
+- eksponuje na `ChunkManager`: `collidersNear(x, z)` (odczyt), `registerColliders`
+  /`clearColliders` (zapis dla źródeł spoza chunków terenu — osady).
+
+**Promienie środowiska** (`ENVIRONMENT_COLLISION_RADIUS`, ręczne estymaty z
+geometrii `create*` w `props.ts`, nie zmierzone): `largeRock` 0.9, `rockCluster`
+0.5, `fallenLog` 0.4, `campfire` 0.5, `monolith` 0.4. **`stoneCircle` i
+`smallRuins` celowo 0** (bez kolizji w v1) — obie to landmarki, których prawdziwy
+kształt (pierścień z wnętrzem do przejścia / narożnik L-kształtnych murów) jeden
+okrąg by źle przybliżył (zablokowałby właśnie to miejsce, po którym gracz ma
+móc chodzić). Drzewa: `TREE_COLLISION_RADIUS = 0.4` (promień pnia), **tylko
+gdy `resolved.visual === 'living'`** — sadzonka/pień po ścięciu nie kolidują.
+
+**Świeżość colliderów drzew:** drzewa mają runtime lifecycle (ścięcie →
+`refreshTreeVisual` zamienia mesh na pieniek; odrost → z powrotem na żywe), więc
+collider zbudowany raz przy generacji chunka by się zdezaktualizował (ścięte
+drzewo dalej blokowałoby przejście przez pieniek). Naprawione przez
+`rebuildColliders(record)` — funkcję przeliczającą **cały** zestaw colliderów
+chunka (środowisko + aktualny stan lifecycle każdego drzewa z `record.treeIds`)
+i zastępującą go w rejestrze — wołaną raz na końcu `ensureLoaded` (po
+zbudowaniu wszystkich sekcji tile'a) **i** za każdym razem z `refreshTreeVisual`.
+Tani (dane, nie GLB) — chunk ma najwyżej kilkadziesiąt drzew.
+
+## 4.3 Studnia i domy — `createSettlement.ts` rejestruje własne colidery
+
+Osady **nie są częścią `ChunkManager`** (budowane bezpośrednio do `scene` przez
+`buildSettlementProps`, ładowane/wyładowywane niezależnie przez
+`SettlementsManager`) — rejestrują więc swoje statyczne collidery pod
+`ownerKey = def.id` przez `chunkManager.registerColliders`/`clearColliders`,
+przekazane w dół łańcuchem `worldBundle.ts` → `createSettlementsManager` →
+`createSettlement`:
+
+- **Studnia:** `WELL_COLLISION_RADIUS = 1.0` — dokładnie ta sama stała co
+  wcześniej w `ai/NpcAgent.ts` (baza ~0.85 promienia mesha + bufor), tylko
+  przeniesiona do `createSettlement.ts` (jedyne miejsce, które zna pozycję
+  studni) i teraz rejestrowana jako zwykły `Collider`, nie osobny mechanizm.
+- **Domy:** nowe pole `HouseCatalogEntry.footprintRadius` (jak `groundYOffset`
+  — ręcznie dobrana wartość per katalogowy model, nie liczona z GLB bbox w
+  runtime) — `hut_d` 2.0, `hut_a` 2.2, `hut_b` 2.2, `hut_c` 1.6, `towerhouse`
+  1.8, `fallback` 1.5. `landmarks.houses[i].houseId` już niósł identyfikator
+  katalogowy (issue 018), więc kolidery domów to `houseCatalogById(houseId)
+  .footprintRadius` przy pozycji z `landmarks.houses`.
+- Rejestracja w `Settlement.dispose()` przez `clearColliders(def.id)` — symetrycznie
+  do `registerColliders` przy budowie, więc streaming osad in/out
+  (`SettlementsManager`'s `unload`/`ensureLoaded`) nie zostawia sierocych
+  colliderów ani nie duplikuje ich przy ponownym załadowaniu.
+
+## 4.4 Trzej ruchomi konsumenci — dwa różne wzorce integracji, jeden wspólny rejestr
+
+Plan (sekcja 2.2) zakładał, że każdy z trzech konsumentów dziś liczy deltę i
+przypisuje `position.x/z` wprost, więc `resolvePosition` wejdzie jako krok
+pośredni po delcie. Weryfikacja kodu (2026-08-13) pokazała, że to prawda tylko
+dla gracza — NPC i fauna miały już własny, bardziej rozbudowany mechanizm
+(`isWalkable(x, z)` bramkujący ruch + oś-po-osi sliding w `steerTo`/
+`steerToward`, żeby NPC/zwierzę nie utykało w przeszkodzie). Dodanie
+`resolvePosition` jako **drugiego, równoległego** mechanizmu obok istniejącego
+`isWalkable` byłoby dokładnie tym, czego plan każe unikać ("brak dwóch
+równoległych mechanizmów kolizji") — więc:
+
+- **Gracz** (`PlayerController.update()`): wzorzec z planu, dosłownie.
+  `mesh.position.x/z += wish` zastąpione: policz kandydata, przepuść przez
+  `resolvePosition(candidateX, candidateZ, PLAYER_COLLISION_RADIUS,
+  this.collidersNear(candidateX, candidateZ))`, przypisz wynik.
+  `PLAYER_COLLISION_RADIUS = 0.35` (promień capsule fallbacku — GLB gracza nie
+  ma osobno zmierzonego kształtu kolizyjnego, więc jeden przybliżony promień
+  służy obu). `collidersNear` dochodzi do `PlayerController` przez nowy
+  parametr `create()`/`setGround()` (`ColliderSource`, nowy eksportowany alias
+  typu obok `HeightSampler`), źródłem jest zawsze `chunkManager.collidersNear`.
+- **NPC** (`ai/NpcAgent.ts`) i **fauna** (`fauna/AnimalAgent.ts`): istniejący
+  `isWalkable`/(`resolveSteerTarget` tylko NPC) **uogólnione**, nie zastąpione —
+  źródłem danych jest teraz `this.collidersNear(x, z)` (zapytanie do
+  rejestru) zamiast twardo wpisanej pozycji studni:
+  - `NpcAgent.isWalkable`: pętla po `collidersNear(x, z)`; dla każdego collidera
+    w zasięgu sprawdza (jak dawniej tylko dla studni) czy `pendingAction
+    .destination` jest w promieniu `collider.radius + NPC_COLLIDER_APPROACH_BUFFER`
+    (0.4, dawne `WELL_APPROACH_ALLOW - WELL_COLLISION_RADIUS`) — jeśli tak,
+    końcowe podejście może wejść w zewnętrzny pierścień, ale nigdy głębiej niż
+    `NPC_COLLIDER_CORE_FRACTION` (0.55, dawne magic number) promienia.
+  - `NpcAgent.resolveSteerTarget`: ta sama pętla, ta sama matematyka odchylenia
+    segmentu do stycznej na obrzeżu collidera (`rim = radius * 1.2`) co dawniej
+    tylko dla studni — teraz działa dla pierwszego napotkanego collidera z
+    `collidersNear(mesh.position)`. Rozwiązuje tylko jeden blokujący collider na
+    wywołanie (spójne z uproszczeniem `isWalkable`/`resolvePosition` — "najbliższa
+    przeszkoda", nie pełny multi-obstacle routing).
+  - `AnimalAgent.isWalkable`: prostszy przypadek — bez `pendingAction`/wyjątków
+    podejścia (zwierzęta nie mają kolejek typu "serving stand"), więc czysty
+    test punkt-w-okręgu po `collidersNear(x, z)`.
+  - Efekt uboczny zgodny z kryterium akceptacji: NPC i zwierzęta omijają teraz
+    też drzewa/skały/domy, nie tylko studnię — wcześniej `WELL_COLLISION_RADIUS`
+    było jedyną kolizją w całym ruchu NPC/fauny.
+- `collidersNear` dochodzi do obu przez łańcuch konstruktorów/fabryk (jak
+  `sampleHeight`/`waterLevel` już wcześniej): `NpcAgent.create`/
+  `createCapsuleFallback` → `createSettlement.ts`; `AnimalAgent`'s konstruktor
+  → `spawnLivestock` (settlement-owned) i `createFauna.ts`'s `spawnAgent`
+  (dzika fauna) → `worldBundle.ts`'s `buildFauna`/`buildSettlementsManager`,
+  oba źródłowo z `chunkManager.collidersNear`.
+
+**`WELL_COLLISION_RADIUS` usunięty z `ai/NpcAgent.ts`** (kryterium akceptacji
+planu) — konstanta i jej użycia przeniesione do `createSettlement.ts` jako
+zwykły wpis w rejestrze; `NpcAgent.ts` już nie wie nic o studni per se, tylko
+o generycznych counter-collision (`NPC_COLLIDER_APPROACH_BUFFER`/
+`NPC_COLLIDER_CORE_FRACTION`).
+
+## 4.5 Co zostało poza zakresem (celowo)
+
+- Wnętrze `CaveVolume` — jak w planie, osobne zadanie (research 009 §11.4).
+  Rejestr colliderów jest gotowy na statyczne ściany jaskini jako kolejny
+  `ownerKey`, ale nic w tej fazie ich nie tworzy.
+- `stoneCircle`/`smallRuins` bez kolizji (patrz §4.2) — świadomy wybór, nie
+  przeoczenie; do rozważenia gdy/jeśli te landmarki dostaną kształt lepszy niż
+  pojedynczy okrąg.
+- Multi-obstacle resolution (róg między dwoma colliderami, `resolvePosition`
+  rozwiązuje tylko najgłębszą penetrację) — zgodnie z planem, nie blocker v1.
+- `PLAYER_COLLISION_RADIUS`/promienie domów/studni/propów to ręczne estymaty,
+  nie pomiary z geometrii GLB — do dostrojenia na podstawie manualnego
+  playtestu (patrz plan, kryteria akceptacji fazy 2.2).

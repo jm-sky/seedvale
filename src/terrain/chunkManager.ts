@@ -32,6 +32,7 @@ import {
   TREE_SPECS,
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
+import { type Collider, createColliderRegistry } from '../world/collision'
 import { createChunkWater, type WorldWater } from '../world/createWater'
 import { createTreeStageMesh, tagTreeMesh } from '../world/treeVisuals'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
@@ -85,6 +86,29 @@ const getRockClusterTemplates = memoTemplates(ROCK_CLUSTER_SPECS, () => createRo
 const getFallenLogTemplates = memoTemplates(FALLEN_LOG_SPECS, () => createFallenLog(1))
 
 const GLB_ENV_KINDS = new Set<EnvironmentKind>(['fallenLog', 'largeRock', 'rockCluster'])
+
+/** Base collision radius (world meters, before `* placement.scale`) per
+ *  environment kind — plan 097 §2.2. `stoneCircle`/`smallRuins` are left at
+ *  0 (no collider): both are landmarks with a walkable interior/L-shaped
+ *  footprint that a single circle would misrepresent (blocking the very
+ *  space you're meant to walk into) — deferred rather than approximated
+ *  badly. Values are manual estimates from each `create*` prop's geometry
+ *  in `settlement/props.ts`, tunable on playtest like `WELL_COLLISION_RADIUS`
+ *  was before this table replaced it (`ai/NpcAgent.ts`). */
+const ENVIRONMENT_COLLISION_RADIUS: Record<EnvironmentKind, number> = {
+  largeRock: 0.9,
+  rockCluster: 0.5,
+  fallenLog: 0.4,
+  campfire: 0.5,
+  monolith: 0.4,
+  stoneCircle: 0,
+  smallRuins: 0,
+}
+
+/** Flat trunk collision radius for every tree — `VegetationPlacement.scale`
+ *  is documented "unused" for trees (size varies via `sizeJitter`/lifecycle
+ *  stage instead), so v1 doesn't attempt to scale this per placement. */
+const TREE_COLLISION_RADIUS = 0.4
 
 /** Procedural decorative prop for landmark kinds that stay non-GLB
  *  (campfire / monolith / ruins / stone circle). Rocks and fallen logs use
@@ -284,6 +308,16 @@ export type ChunkManager = {
   /** Live toggle, no rebuild — flips `castShadow` on every currently-loaded
    *  chunk mesh and on every chunk built afterward (perf review A2/#13). */
   setTerrainCastsShadow: (value: boolean) => void
+  /** Collision colliders (plan 097 §2.2) near (x, z) — terrain-chunk
+   *  environment/vegetation plus anything registered via `registerColliders`
+   *  (settlements, the well). Feed straight into `world/collision.ts`'s
+   *  `resolvePosition`. */
+  collidersNear: (x: number, z: number) => readonly Collider[]
+  /** Registers colliders that aren't tied to a terrain chunk's own
+   *  load/unload (settlement buildings, the well) under `ownerKey` — call
+   *  again with the same key to replace, `clearColliders` to remove. */
+  registerColliders: (ownerKey: string, colliders: readonly Collider[]) => void
+  clearColliders: (ownerKey: string) => void
   dispose: () => void
 }
 
@@ -355,6 +389,11 @@ export function createChunkManager(
   const chunks = new Map<string, ChunkRecord>()
   const modifications: TerrainModification[] = []
   const grassSystem = createGrassSystem()
+  // Single collision index for the whole world (plan 097 §2.2) — terrain
+  // chunks register/clear their own colliders keyed by `chunkKey` below;
+  // settlements (outside this manager entirely) register theirs keyed by
+  // their own id through `registerColliders`/`clearColliders`.
+  const colliderRegistry = createColliderRegistry(config.chunkSize)
   // One material for every chunk this manager ever builds (perf review 005,
   // A5) — `flatShading`/`detailNormal` changes go through `onTerrainChange` →
   // full world rebuild, which recreates the whole `ChunkManager`, so this
@@ -859,6 +898,7 @@ export function createChunkManager(
         }
         if (environmentInstances.length > 0) rec.environmentInstances = environmentInstances
         syncInstancedLodForRecord(rec, lastPlayerChunk)
+        rebuildColliders(rec)
       })
       .catch((err: unknown) => {
         if (!(err instanceof HeightmapGenerationCancelledError)) {
@@ -875,8 +915,38 @@ export function createChunkManager(
     return promise
   }
 
+  /** Recomputes `record`'s full collider set from its current tile/tree
+   *  state and re-registers it (plan 097 §2.2) — called once after a
+   *  chunk finishes building, and again from `refreshTreeVisual` so a
+   *  chopped/regrown tree's collider (present only while `resolved.visual
+   *  === 'living'`) doesn't go stale (e.g. a felled trunk staying solid
+   *  after the mesh becomes a walkable stump). Cheap: tree lifecycle
+   *  resolution is data-only, and a chunk has at most a few dozen trees. */
+  function rebuildColliders(record: ChunkRecord): void {
+    if (!record.tile) return
+    const colliders: Collider[] = []
+    for (const p of record.tile.environment) {
+      const radius = ENVIRONMENT_COLLISION_RADIUS[p.kind]
+      if (radius > 0) colliders.push({ x: p.x, z: p.z, radius: radius * p.scale })
+    }
+    for (const id of record.treeIds ?? []) {
+      const presence = config.treeLifecycle.getPresence(id)
+      if (!presence) continue
+      const resolved = config.treeLifecycle.resolve(
+        presence,
+        sampleTreeEnvAt(presence.x, presence.z, record.tile, record.coord),
+        config.getWorldDays(),
+      )
+      if (resolved.visual === 'living') {
+        colliders.push({ x: presence.x, z: presence.z, radius: TREE_COLLISION_RADIUS })
+      }
+    }
+    colliderRegistry.setColliders(record.key, colliders)
+  }
+
   function unload(record: ChunkRecord): void {
     if (record.state === 'generating') cancelChunkTile(record.key)
+    colliderRegistry.clearColliders(record.key)
     if (record.treeIds) {
       for (const id of record.treeIds) config.treeLifecycle.unregisterPresence(id)
       record.treeIds = undefined
@@ -1004,6 +1074,7 @@ export function createChunkManager(
         rec.vegetationExtras = extras
       }
       rec.vegetationExtras.add(replacement)
+      rebuildColliders(rec)
       return true
     }
     return false
@@ -1218,6 +1289,9 @@ export function createChunkManager(
         if (record.mesh) record.mesh.castShadow = value
       }
     },
+    collidersNear: (x, z) => colliderRegistry.query(x, z),
+    registerColliders: (ownerKey, colliders) => colliderRegistry.setColliders(ownerKey, colliders),
+    clearColliders: (ownerKey) => colliderRegistry.clearColliders(ownerKey),
     dispose() {
       for (const record of [...chunks.values()]) unload(record)
       grassSystem.dispose()

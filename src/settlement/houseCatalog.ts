@@ -40,6 +40,10 @@ export type HouseCatalogEntry = {
   hasWalls: boolean
   /** Extra world Y after `placeOnGround` (e.g. sink gray foundation). */
   groundYOffset: number
+  /** Collision radius (world meters, circle centered on the placement) —
+   *  plan 097 §2.2. Manually estimated from `height`/proportions like
+   *  `groundYOffset`, not measured from the GLB bbox; tune on playtest. */
+  footprintRadius: number
   /**
    * Door lintel as a fraction of fitted bbox height (0–1). When set,
    * world height = targetDoorHeight / doorHeightFraction (capped).
@@ -83,6 +87,7 @@ export const HOUSE_CATALOG: readonly HouseCatalogEntry[] = [
     useAsHome: true,
     hasWalls: true,
     groundYOffset: 0,
+    footprintRadius: 2.0,
     // Textured door. Playtest: doors ~20cm too tall at 9.0 → 8.2.
     doorHeightFraction: null,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
@@ -105,6 +110,7 @@ export const HOUSE_CATALOG: readonly HouseCatalogEntry[] = [
     useAsHome: true,
     hasWalls: false,
     groundYOffset: -0.2,
+    footprintRadius: 2.2,
     doorHeightFraction: 0.22,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
     height: 8.5,
@@ -124,6 +130,7 @@ export const HOUSE_CATALOG: readonly HouseCatalogEntry[] = [
     useAsHome: true,
     hasWalls: false,
     groundYOffset: 0,
+    footprintRadius: 2.2,
     doorHeightFraction: 0.24,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
     height: 8.0,
@@ -143,6 +150,7 @@ export const HOUSE_CATALOG: readonly HouseCatalogEntry[] = [
     useAsHome: true,
     hasWalls: false,
     groundYOffset: 0,
+    footprintRadius: 1.6,
     doorHeightFraction: 0.28,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
     height: 6.5,
@@ -162,6 +170,7 @@ export const HOUSE_CATALOG: readonly HouseCatalogEntry[] = [
     useAsHome: false,
     hasWalls: true,
     groundYOffset: 0,
+    footprintRadius: 1.8,
     doorHeightFraction: null,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
     height: 10,
@@ -180,6 +189,7 @@ export const HOUSE_CATALOG: readonly HouseCatalogEntry[] = [
     useAsHome: false,
     hasWalls: true,
     groundYOffset: 0,
+    footprintRadius: 1.5,
     doorHeightFraction: 0.55,
     targetDoorHeight: DEFAULT_TARGET_DOOR_HEIGHT,
     height: 5.5,

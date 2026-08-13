@@ -148,6 +148,9 @@ function buildSettlementsManager(
     config.terrain.region,
     chunkManager.waitForChunks,
     config.terrain.chunkSize,
+    chunkManager.collidersNear,
+    chunkManager.registerColliders,
+    chunkManager.clearColliders,
     forest,
     config.settlements.homeSize,
   )
@@ -176,6 +179,7 @@ function buildFauna(
     chunkManager.sampleHeight,
     chunkManager.sampleForestFactor,
     chunkManager.waterLevel,
+    chunkManager.collidersNear,
     HOME_RADIUS,
     settlement.center,
     seed,
