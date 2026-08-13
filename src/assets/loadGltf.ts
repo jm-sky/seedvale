@@ -2,6 +2,7 @@ import {
   type AnimationClip,
   Box3,
   type Group,
+  type InstancedMesh,
   type Material,
   type Mesh,
   type Object3D,
@@ -188,5 +189,11 @@ export function disposeObject3D(object: Object3D): void {
     } else if (!(mat as Material).userData.sharedGpu) {
       (mat as Material).dispose()
     }
+    // InstancedMesh owns an instanceMatrix GPU buffer that neither
+    // geometry.dispose() nor material.dispose() frees — only
+    // InstancedMesh.dispose() does (plan 087 §2.4). Safe for every other
+    // mesh: `isInstancedMesh` is `undefined` on a plain Mesh.
+    const inst = obj as InstancedMesh
+    if (inst.isInstancedMesh) inst.dispose()
   })
 }

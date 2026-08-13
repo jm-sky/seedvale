@@ -9,19 +9,30 @@ const uFoliageTime = { value: 0 }
  *  Trunk/bark names (`Wood`, `*Bark`) intentionally do not match. */
 const FOLIAGE_NAME_RE = /leaves|green|flowers/i
 
-const WIND_CACHE_KEY = 'foliage-wind-v1'
+// v2: instancing branch (plan 087 §2.2) — bumped because the shader text
+// changed, so three.js's material program cache doesn't reuse a v1 program
+// (compiled without the instanceMatrix branch) for instanced foliage.
+const WIND_CACHE_KEY = 'foliage-wind-v2'
 
 const BEGIN_VERTEX_WIND = /* glsl */ `
   #include <begin_vertex>
   {
+    // Under instancing, modelMatrix is the InstancedMesh's (chunk-group)
+    // matrix, not any individual instance's — fold in instanceMatrix so
+    // amplitude/phase are computed per-instance instead of every instance in
+    // the mesh sharing one phase (plan 087 §2.2 / finding #2).
+    mat4 propMatrix = modelMatrix;
+    #ifdef USE_INSTANCING
+      propMatrix = modelMatrix * instanceMatrix;
+    #endif
     // World-meter amplitude independent of prepareProp()'s object.scale —
-    // modelMatrix column length is that uniform scale.
-    float objScale = length( modelMatrix[ 0 ].xyz );
+    // propMatrix column length is that uniform scale.
+    float objScale = length( propMatrix[ 0 ].xyz );
     float amp = 0.11 / max( objScale, 1e-4 );
     // Canopy meshes are foliage-only (trunk uses a different material), so the
     // whole mesh may sway a little; higher local Y still moves more.
     float bend = 0.45 + 0.55 * smoothstep( 0.0, 1.4, max( transformed.y, 0.0 ) );
-    vec3 world = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;
+    vec3 world = ( propMatrix * vec4( transformed, 1.0 ) ).xyz;
     float phase = world.x * 0.13 + world.z * 0.10;
     float t = uFoliageTime;
     transformed.x += sin( t * 1.15 + phase ) * amp * bend;
