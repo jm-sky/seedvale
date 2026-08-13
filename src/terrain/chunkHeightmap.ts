@@ -239,8 +239,12 @@ export type RawSampleParams = Omit<
 >
 
 export type ChunkTileData = {
-  /** Apron-inclusive: (resolution + 2) texels per edge. */
+  /** Apron-inclusive: (resolution + 2) texels per edge. Clamped to `waterLevel`
+   *  underwater — water mask (`vCover`), grass reject, `sampleHeight` / NPC walk.
+   *  Not the render-mesh Y; that is `floorHeights`. */
   heights: Float32Array
+  /** True bathymetry (may be below `waterLevel`). Terrain mesh Y / normals /
+   *  seabed colour, water depth shader, player swim floor. */
   floorHeights: Float32Array
   biomes: Float32Array
   bodyScale: Float32Array
@@ -774,6 +778,7 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
         tint = corridor.tint
       }
 
+      // Visual mesh uses `floorHeights` (bathtub). This clamp is the walk/mask lid.
       heights[idx] = floorH < waterLevel ? waterLevel : floorH
       floorHeights[idx] = floorH
       biomes[idx] = sample.m

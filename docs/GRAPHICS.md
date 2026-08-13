@@ -55,6 +55,12 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 ## Log
 
+### 2026-08-13 — Wanna terenu pod wodą (`floorHeights`) ✅
+
+- Mesh chunka: Y / normalne / kolor z `floorHeights`, nie z clampowanego `heights`. Koniec zielonej tafli `SEABED` na powierzchni wody.
+- `heights` nadal clamp dla maski wody, trawy, `sampleHeight`. Szczegóły: [WATER.md](./WATER.md).
+- Browser: użytkownik 2026-08-13.
+
 ### 2026-08-13 — Faza 3: wspólne lustro wody 256² + toggle Vue ✅
 
 - Jeden `WebGLRenderTarget` 256² (`waterMirror.ts`), kamera względem `y = waterLevel`; meshe wody na warstwie 1 (mirror camera tylko 0).

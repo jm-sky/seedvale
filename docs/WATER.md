@@ -4,7 +4,7 @@
 
 **Nie jest:** planem implementacji ([plans/](./plans/README.md)), logiem całej grafiki ([GRAPHICS.md](./GRAPHICS.md) — tam zostają kontrakty G4–G6), ani katalogiem assetów.
 
-**Last verified:** 2026-08-13 (plan 098 fazy 1–3, browser ✅)
+**Last verified:** 2026-08-13 (plan 098 fazy 1–3 + wanna mesha, browser ✅)
 
 Gdy ten plik rozjeżdża się z kodem — **wygrywa kod**, potem aktualizujemy ten dokument.
 
@@ -67,8 +67,8 @@ Rozmowa: pół-realistyczna, trochę przezroczysta, bez ciężkiego CPU/GPU. Pot
 
 ```text
 heightmap (worker)
-  heights[]      — teren przycięty do waterLevel (płaskie „dno” mesha)
-  floorHeights[] — prawdziwa wysokość pod wodą (shader głębokości + pływanie)
+  heights[]      — ląd + pokrywa walk/mask (clamp do waterLevel)
+  floorHeights[] — prawdziwa wysokość (mesh terenu + shader głębokości + pływanie)
         ↓
 detectWaterBodies()  — BFS 4-sąsiedztwo w obrębie JEDNEGO chunka (+ apron)
         ↓
@@ -103,8 +103,8 @@ Ocean powstaje w `rebuildWorldBundle()`; rozmiar plane = `(unloadRadius * 2 + 4)
 |---------|----------|
 | `waterLevel` | `WorldConfig.terrain.waterLevel`, default **0.45**; GUI live (rebuild) |
 | `bodyScale` | 0 ląd; inland `min(lakeScaleFor(area), 0.85)`; 1 = ocean (`oceanMixAt` > 0.9) |
-| Mesh terenu pod wodą | `heights = max(floorH, waterLevel)` — tafla, nie wanna |
-| Batymetria | `floorHeights` → shader (`depth = waterLevel - floorH`) + pływak / ambient |
+| Mesh terenu pod wodą | `floorHeights` — wanna pod taflą; `heights` zostaje clampem dla maski / trawy / `sampleHeight` |
+| Batymetria | `floorHeights` → mesh + shader (`depth = waterLevel - floorH`) + pływak / ambient |
 | Maska chunk water | `vCover` z heightmapy; `discard` gdy `< 0.02`. Komórki oceanu **rysowane** (nie discard) |
 | Fale | 3–4 sine w **world.xz**; jezioro drobne zmarszczki, ocean wolniejszy swell (`mix` z `vOcean`) |
 | Foam | z `1 - vCover` + `fwidth(vCover)` przy brzegu, nie z amplitudy fali |
@@ -127,7 +127,7 @@ src/world/createWater.ts
 src/terrain/waterBodies.ts
 src/terrain/chunkHeightmap.ts      detect + bodyScale + clamp heights
 src/terrain/chunkManager.ts        createChunkWater / update / setDayNight
-src/terrain/buildChunkGeometry.ts  mokry piasek (uWaterLevel)
+src/terrain/buildChunkGeometry.ts  mesh z floorHeights (wanna); mokry piasek (uWaterLevel)
 src/app/worldBundle.ts             createOcean
 src/app/gameLoop.ts                follow + setDayNight
 src/terrain/biomeColors.ts         pas piasku / dna (smoothstep, issue 001)
@@ -177,7 +177,7 @@ Plan: [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) 
 ### P2 — później
 
 7. Nurt rzek.
-8. Mesh per basen / wanna w terenie (review 001 C).
+8. Mesh per basen (review 001 C) — osobna geometria jeziora. **Wanna w meshu terenu** (finding 2) jest zrobiona: `buildChunkGeometry` czyta `floorHeights`.
 9. SSR, refrakcja, caustics, mirror > 256² — **nie**.
 
 ---
@@ -185,6 +185,13 @@ Plan: [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) 
 ## Historia poprawek
 
 Najnowsze na górze.
+
+### 2026-08-13 — Wanna: mesh terenu z `floorHeights` ✅
+
+- Zielone kanciaste plamy na wodzie = płaski mesh przycięty do `waterLevel` (`SEABED` 0x2f5244), przez który gracz pływał (`sampleFloor`).
+- `buildChunkGeometry` bierze Y / normalne / kolor z `floorHeights`. Clamp `heights` zostaje dla `vCover`, trawy i `sampleHeight`.
+- Finding 2 review 001: shader głębokości był w 098; **wizualne dno mesha** dopiero tu.
+- Browser: użytkownik 2026-08-13.
 
 ### 2026-08-13 — Faza 3 planu 098: wspólne lustro + Vue ✅
 
@@ -261,7 +268,7 @@ Nierozwiązane z [review 001](./reviews/2026-08-07--001--water-quality.md):
 | Finding | Status 2026-08-13 |
 |---------|-------------------|
 | 1 schodki koloru terenu | `done` (issue 001) |
-| 2 płaskie dno mesha (brak batymetrii wizualnej) | `done` faza 2 — shader sampluje `floorHeights` |
+| 2 płaskie dno mesha (brak batymetrii wizualnej) | `done` (browser 2026-08-13) — mesh z `floorHeights` (shader depth był w 098) |
 | 3 rozdzielczość siatki wody vs teren | częściowo: `min(resolution-1, 256)` zamiast stałych 96 |
 | 4 dzień/noc | `done` (issue 002) |
 | 5 foam nie z brzegu | `done` faza 2 — piana z maski |

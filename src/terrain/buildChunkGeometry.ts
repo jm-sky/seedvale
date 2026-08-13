@@ -287,8 +287,12 @@ function apronGridIJ(
 }
 
 /**
- * Builds one chunk's render mesh from its apron-inclusive tile. Normals are computed
- * by central differences directly on `tile.heights` (the apron ring exists precisely
+ * Builds one chunk's render mesh from its apron-inclusive tile. Vertex Y, normals
+ * and shore/seabed colour use `tile.floorHeights` (true bathymetry) so underwater
+ * terrain is a bathtub under the water plane, not a flat lid at `waterLevel`.
+ * `tile.heights` stays clamped for the water mask, grass reject and `sampleHeight`.
+ *
+ * Normals are central differences on that same floor grid (the apron ring exists
  * so every core-edge vertex has a same-grid neighbor on both sides of the seam) —
  * mathematically identical to `computeVertexNormals()` on this grid's regular
  * triangulation, verified numerically against three's own implementation, but without
@@ -329,14 +333,14 @@ export function buildChunkGeometry(
     // One set of bilinear weights per vertex, reused for all 6 apron-grid
     // samples below instead of each recomputing fx/fz/floor/clamp from scratch.
     const w = apronGridWeights(apronRes, apronOriginX, apronOriginZ, step, x, z)
-    const h = sampleApronGridWeighted(tile.heights, apronRes, w)
+    const h = sampleApronGridWeighted(tile.floorHeights, apronRes, w)
     positions.setY(i, h)
 
     const { ix, iz } = apronGridIJ(apronRes, apronOriginX, apronOriginZ, step, x, z)
-    const hE = tile.heights[iz * apronRes + Math.min(apronRes - 1, ix + 1)]!
-    const hW = tile.heights[iz * apronRes + Math.max(0, ix - 1)]!
-    const hN = tile.heights[Math.min(apronRes - 1, iz + 1) * apronRes + ix]!
-    const hS = tile.heights[Math.max(0, iz - 1) * apronRes + ix]!
+    const hE = tile.floorHeights[iz * apronRes + Math.min(apronRes - 1, ix + 1)]!
+    const hW = tile.floorHeights[iz * apronRes + Math.max(0, ix - 1)]!
+    const hN = tile.floorHeights[Math.min(apronRes - 1, iz + 1) * apronRes + ix]!
+    const hS = tile.floorHeights[Math.max(0, iz - 1) * apronRes + ix]!
     const dHdx = (hE - hW) / (2 * step)
     const dHdz = (hN - hS) / (2 * step)
     const nLen = Math.hypot(dHdx, 1, dHdz)
