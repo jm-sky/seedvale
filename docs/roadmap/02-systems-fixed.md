@@ -1,10 +1,10 @@
-# Seedvale — Session 2: Systems & Dependencies (Review Draft)
+# Seedvale — Session 2: Systems & Dependencies
 
 **Status:** `IN PROGRESS — REVIEW`  
-**Purpose:** consolidate the accepted Session 2 decisions into a concise systems model and dependency map.  
+**Purpose:** define the major systems and their relationships without defining implementation order.  
 **Source:** `docs/roadmap/02-systems.md`  
 
-This document is a review draft. It intentionally avoids implementation order and detailed implementation specifications. Session 2 remains open until the remaining architectural questions are discussed and accepted.
+This document captures the current Session 2 decisions. It intentionally avoids detailed implementation design. Session 2 remains open until the remaining architectural questions are accepted.
 
 ---
 
@@ -40,6 +40,13 @@ Simulation detail may change with relevance, distance and situation. Important o
 
 Simplification is allowed when it preserves a believable continuation of the world. Sensitive situations such as combat, fleeing, important actions, significant events and player-observed situations require higher fidelity.
 
+When simulation is aggregated or simplified:
+
+- important world-state quantities remain consistent,
+- important events and consequences are not silently lost,
+- entities do not gain resources, population or other state without a plausible simulated cause,
+- returning to detailed simulation produces a believable state consistent with what happened while the entity was aggregated.
+
 ---
 
 ## 2. Core system model
@@ -48,21 +55,39 @@ Simplification is allowed when it preserves a believable continuation of the wor
 
 The model is hybrid:
 
-- **NPC** owns individual state: needs, behaviour, health, personality, traits, relationships and personal goals.
-- **Household / Family** owns shared life and economic concerns such as shared resources and household-level decisions.
-- Not every NPC must belong to a household.
+- **NPC** owns individual state: needs, behaviour, health, personality, traits, relationships and personal goals,
+- **Household / Family** owns shared life and economic concerns such as shared resources and household-level decisions,
+- not every NPC must belong to a household.
 
 NPCs should not become independent miniature economies when a household-level concept is more appropriate.
 
-### Pressure and decision making
+### Needs, problems and goals
 
-Decision making should use a common concept of **pressure / priority**, while keeping the semantics of biological needs distinct from household, settlement or group problems where necessary.
+These are conceptually distinct:
+
+- **needs** describe states that require satisfaction or maintenance,
+- **problems** describe undesirable situations requiring a response,
+- **goals** describe desired future states or outcomes.
+
+They may share implementation mechanisms for evaluation, prioritization and decision making, but they are not required to be the same domain concept.
+
+This distinction applies across the simulation. For example, an NPC may have biological needs, while a household or settlement may have problems such as insufficient food or damaged infrastructure and goals such as expanding housing.
+
+### Decision making
+
+Decision making should use a common concept of **pressure / priority**, while keeping the semantics of needs distinct from problems and goals.
 
 A pressure can consider factors such as urgency, importance, current state, desired state, context and available actions.
 
 A pressure does not dictate one fixed solution. For example, a food shortage could lead to hunting, farming, fishing, purchase, import or migration depending on context.
 
-Decision making should be influenced by the relevant level of responsibility (self, family, group / settlement), personality, traits, relationships and world context.
+Decision making should consider the relevant level of responsibility:
+
+```text
+self ↔ household/family ↔ settlement/group
+```
+
+Personality, traits, relationships and world context influence how an entity responds to competing pressures. An NPC may prioritize a family or settlement problem over a personal need, depending on its state and characteristics.
 
 ### Goals and strategies
 
@@ -76,17 +101,17 @@ State + Pressures + Traits + Relationships + Goals
   → World changes
 ```
 
-Goals should be usable by NPCs, households, settlements and other groups. Complex goals may contain subgoals, retain progress and be temporarily deprioritized by more urgent situations.
+Goals may exist at different simulation levels, but no universal goal abstraction is required at this stage.
 
 Strategies represent possible approaches; their selection and execution remain dependent on the actual world state.
 
 ### Settlement / group decision layer
 
-A settlement is more than an aggregate of NPCs. It has shared state and community-level decisions.
+A settlement is more than an aggregate of NPCs. It is a full simulation system with shared state, problems, goals and community-level decisions.
 
-The current direction is a deterministic settlement decision layer ("Virtual Mayor") that can handle development and crises without requiring a dedicated mayor NPC.
+Development should be incremental. Early versions may behave closer to an aggregation/state layer; later versions can introduce increasingly capable deterministic settlement decisions, including scenarios handled from a "Virtual Mayor" perspective without requiring a dedicated mayor NPC.
 
-The same general foundation may be reused by other groups where appropriate.
+For example, the system may initially support one concrete management scenario, then gain additional scenarios over time.
 
 Higher-level goals should create pressure/opportunity rather than directly commanding individual NPCs. NPCs decide how and whether to contribute based on their own state and context.
 
@@ -141,7 +166,7 @@ Important flows may be individually simulated; bulk or remote flows may be aggre
 
 Buildings participate in simulation when they provide meaningful capabilities such as housing, storage, production, water access or other relevant functions.
 
-The architecture is hybrid: capabilities should be shared where useful, while specialized buildings may own specialized behaviour when necessary.
+Capabilities should be reusable where useful, while specialized buildings may own specialized behaviour when necessary.
 
 ### Infrastructure
 
@@ -157,17 +182,13 @@ Settlement development should emerge from population, resources, economy, infras
 
 ### Relationships
 
-A shared relationship foundation should support relationships between relevant entity types, for example:
+The initial relationship system is deliberately narrow:
 
 ```text
 NPC ↔ NPC
-NPC ↔ Household
-NPC ↔ Settlement
-Settlement ↔ Settlement
-Group ↔ Group
 ```
 
-Relationships can influence decisions and behaviour and should evolve over time. Important semantic events may be remembered without maintaining a complete event log.
+Relationships can influence decisions and behaviour and should evolve over time. Additional relationship types may be introduced later when required by the simulation.
 
 ### Events
 
@@ -296,16 +317,20 @@ The map is intentionally high-level. It must not be interpreted as a fixed depen
 
 ---
 
-## 11. Decisions still requiring discussion before closing Session 2
+## 11. Deferred architectural notes
 
-1. **Pressure model:** how much of the pressure/priority concept should actually be shared between NPC, household, settlement and group layers?
-2. **Responsibility hierarchy:** how should self vs family vs group/settlement priorities interact with personality and traits?
-3. **Settlement decision layer:** what state belongs to `Settlement`, and what belongs to its constituent households/NPCs?
-4. **Goal abstraction:** what minimum common foundation should goals share without creating a generic over-engineered goal system?
-5. **Simulation aggregation:** what guarantees must hold when switching between individual and aggregated simulation?
-6. **Relationship/history scope:** which relationship types and memories are foundational enough to define now?
+These principles are useful for future design but are intentionally not treated as Session 2 decisions:
 
-Other details should remain open until later sessions unless they affect one of these decisions.
+- Resource representation may evolve from concrete local stocks to aggregated regional availability depending on simulation context.
+- Important world flows may be simulated individually while bulk/remote flows may be aggregated.
+- Buildings may expose reusable capabilities while specialized buildings retain specialized behaviour.
+- Infrastructure should only receive deep simulation when it has meaningful effects on movement, access, transport or other systems.
+- Different simulation systems may run at different frequencies; there is no requirement for one universal simulation tick.
+- Shared event contracts are preferred over a mandatory central event manager.
+- World and relationship memory should be selective rather than a complete permanent event log.
+- Environmental/resource feedback loops should be introduced selectively; full ecological simulation is not required.
+- Player systems should reuse world simulation primitives instead of creating parallel player-only mechanisms.
+- Quest and dialogue systems should consume existing simulation state rather than become independent sources of world truth.
 
 ---
 
@@ -318,4 +343,4 @@ Other details should remain open until later sessions unless they affect one of 
 - [ ] Session 4 — Existing Plans Mapping
 - [ ] Session 5 — Roadmap v1
 
-> This is a review/consolidation draft. It does not close Session 2 and does not define implementation order.
+> Session 2 is consolidated but remains open until the user explicitly accepts it as complete.
