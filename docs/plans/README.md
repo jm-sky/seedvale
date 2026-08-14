@@ -64,7 +64,7 @@ Completed plans **in this folder**. After the 2026-08-14 archive freeze new `don
 
 | File | Summary |
 |------|---------|
-| `2026-08-14--109--megakit-construction-catalog.md` | Audyt 176 MegaKit GLB + `ConstructionCatalog` (review [009](../reviews/2026-08-14--009--megakit-construction-audit.md)); weryfikacja w przeglądarce [011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md) |
+| `2026-08-14--109--megakit-construction-catalog.md` | Audyt 176 MegaKit GLB + `ConstructionCatalog` (review [009](../reviews/2026-08-14--009--megakit-construction-audit.md)); weryfikacja w przeglądarce [011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md); guardrails wydajnościowe dla przyszłego `HouseBuilder` (review [012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md)) |
 | `2026-08-09--049--procedural-world-landmarks.md` | Landmarki v1: monolith / stoneCircle / smallRuins / cemetery + bias terenu |
 
 Older completed work: [archive/README.md](./archive/README.md).
