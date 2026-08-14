@@ -47,9 +47,9 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
     <button
       type="button"
       class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
-      @click="openQuestLog"
+      @click="openCharacter"
     >
-      Zadania [L]
+      Postać
     </button>
     <button
       type="button"
@@ -61,9 +61,9 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
     <button
       type="button"
       class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
-      @click="openCharacter"
+      @click="openQuestLog"
     >
-      Postać
+      Zadania [L]
     </button>
     <button
       type="button"

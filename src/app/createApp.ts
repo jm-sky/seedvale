@@ -56,6 +56,7 @@ import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { MINE_DURATION_SEC, yieldForOre } from '../terrain/depositMining'
 import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
 import { applyDigAt, applyLevelAt } from '../terrain/digAction'
+import { sampleFootstepSurface } from '../terrain/footstepSurface'
 import { mountVueUi } from '../ui-vue/mount'
 import { configureUiSounds } from '../ui-vue/store'
 import { createBusyOverlay } from '../ui/createBusyOverlay'
@@ -106,9 +107,12 @@ const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
  *  extent (core + house ring, `ringMax + houseRadius*2 ≈ 39.6` at default
  *  `coreRadius`/`houseRadius`), not the much larger `HOME_RADIUS`. */
 const REST_IN_TOWN_RADIUS = 40
-/** Busy-channel duration for knife-harvesting raw_meat from a corpse (plan
- *  106) — same order of magnitude as `BURY_DURATION_SEC`. */
-const HARVEST_MEAT_DURATION_SEC = 1.5
+/** Busy-channel duration for knife-harvesting raw_meat from a corpse — real
+ *  minutes, with the vision blur+desaturate overlay (tune during playtest). */
+const HARVEST_MEAT_DURATION_SEC = 180
+/** Busy-channel duration for lighting an unlit campfire (not "dołóż gałąź",
+ *  which stays instant) — real minutes, blurred overlay. */
+const IGNITE_DURATION_SEC = 120
 
 let touchControls: TouchControls | null = null
 
@@ -275,6 +279,7 @@ export async function createApp(
     bundle.chunkManager.sampleFloor,
     bundle.chunkManager.waterLevel,
     bundle.chunkManager.collidersNear,
+    (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
   )
   if (initialSave) {
     // Set look before position — setPosition() calls syncCamera(), which reads yaw/pitch.
@@ -498,6 +503,7 @@ export async function createApp(
         bundle.chunkManager.sampleFloor,
         bundle.chunkManager.waterLevel,
         bundle.chunkManager.collidersNear,
+        (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
       )
       player.setPosition(bundle.settlementsManager.home.spawn.x, bundle.settlementsManager.home.spawn.z)
       pauseMenu.setSeed(config.seed)
@@ -861,6 +867,16 @@ export async function createApp(
   }
   vueUi.configureAbortRest(abortRest)
 
+  /** Esc during a `busy` channel (fire-lighting, cooking, butchering, …) —
+   *  cancels without running `onComplete`, so nothing is consumed/produced. */
+  const abortBusy = (): boolean => {
+    if (!busy.isActive()) return false
+    busy.cancel()
+    busyOverlay.hide()
+    return true
+  }
+  vueUi.configureAbortBusy(abortBusy)
+
   const isNearTown = (): boolean => bundle.settlementsManager
     .getLoaded()
     .some((s) => s.center.distanceTo(player.mesh.position) <= REST_IN_TOWN_RADIUS)
@@ -964,7 +980,29 @@ export async function createApp(
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       onInventoryChanged()
       toast.show('+1 Surowe mięso', 'pickup')
-    })
+    }, { blurred: true })
+  }
+
+  /** Lights an unlit campfire (busy channel, blurred) — "dołóż gałąź" on an
+   *  already-lit fire stays instant/inline in `gameLoop.ts`, not routed
+   *  through here. */
+  const startIgniteFire = (fire: VillageFire): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (!inventory.has('firestarter', 1)) {
+      toast.show('Potrzebujesz krzesiwa, żeby rozpalić ogień.', 'error')
+      return
+    }
+    if (!inventory.has('branch', 1)) {
+      toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
+      return
+    }
+    busy.start(IGNITE_DURATION_SEC, 'Rozpalanie ogniska…', () => {
+      if (fire.isLit() || !inventory.remove('branch', 1)) return
+      fire.light()
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      toast.show('Ognisko zapłonęło.')
+    }, { blurred: true })
   }
 
   /** Cooks the first held recipe's input at a lit campfire (plan 106 §6). */
@@ -996,7 +1034,7 @@ export async function createApp(
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       onInventoryChanged()
       toast.show(`+${recipe.count} ${ITEM_DEFS[recipe.output].label}`, 'pickup')
-    })
+    }, { blurred: true })
   }
 
   /** Instant drink at a well/lake (plan 106 §4) — no busy channel, matching
@@ -1340,6 +1378,7 @@ export async function createApp(
     startBuryCorpse,
     startHarvestMeat,
     startCookAt,
+    startIgniteFire,
     drinkFromWaterSource,
     fillWaterskin,
     startTentRest,

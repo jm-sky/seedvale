@@ -18,11 +18,12 @@ import TouchChrome from './screens/TouchChrome.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
 import WorldConfigScreen from './screens/WorldConfigScreen.vue'
 import WorldMapScreen from './screens/WorldMapScreen.vue'
-import { abortRest, closeTopOverlay, togglePause, ui } from './store'
+import { abortBusy, abortRest, closeTopOverlay, togglePause, ui } from './store'
 
 function onKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
   if (abortRest()) return
+  if (abortBusy()) return
   if (ui.openStack.length > 0) closeTopOverlay()
   else togglePause()
 }

@@ -15,9 +15,9 @@ export const COOKING_RECIPES: readonly CookingRecipe[] = [
   { input: 'raw_meat', output: 'roasted_meat', count: 1 },
 ]
 
-/** Busy-channel duration for cooking one item — short, same order of
- *  magnitude as `AnimalAgent.ts`'s `BURY_DURATION_SEC`. */
-export const COOK_DURATION_SEC = 2
+/** Busy-channel duration for cooking one item — real minutes, with the
+ *  vision blur+desaturate overlay (tune during playtest). */
+export const COOK_DURATION_SEC = 300
 
 /** First recipe the player currently holds the input for, or null. */
 export function findCookingRecipe(inventory: Inventory): CookingRecipe | null {

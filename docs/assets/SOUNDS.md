@@ -34,7 +34,7 @@ If the feature needs no new sound, do nothing to this file.
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
 | UI | `ui-click-01` | Inventory / pause / dialog (open + click) |
 | Actions | dig ×4, wood-chop ×1, melee hit/kill, well ×1, fire ignite/extinguish | Shovel / axe / melee / well / campfire |
-| Player move | footsteps ×4, jump cloth, water-lap, door open/close/latch/creak | Walk/sprint, jump stand-in, enter water, house threshold |
+| Player move | footsteps ×5 terrain sets (grass/dirt/sand/stone/road), jump cloth, water-lap, door open/close/latch/creak | Walk/sprint terrain-classified, jump stand-in, enter water, house threshold |
 
 ## Backlog
 
@@ -42,7 +42,7 @@ If the feature needs no new sound, do nothing to this file.
 
 | ID | Sound | Context | Status | Related |
 |----|-------|---------|--------|---------|
-| S01 | Footsteps (grass / dirt / wood) | Player move; 2–3 variants + light sprint | `wired` | `footstep-01…04` (Kenney hard surface — grass/dirt still open) |
+| S01 | Footsteps (grass / dirt / sand / stone / road) | Player move; terrain-classified via `src/terrain/footstepSurface.ts`, sprint variant | `wired` | `footstep-{grass,dirt,sand,stone,road}-NN` (see `public/sounds/README.md` "Footsteps (terrain)"); old `footstep-01…04` (Kenney hard surface) kept only for the jump-land thud. Swamp/mud and snow variants still open — falls back to grass/dirt. |
 | S02 | Splash / wade | Enter water / swim | `wired` | `water-lap-01` candidate only — true splash/wade still open |
 | S03 | Fire (loop + ignite) | Campfire / torch / fire pit | `wired` | `ambient-fire-loop-01` + `action-fire-ignite-01` / `action-fire-extinguish-01` |
 | S04 | Melee hit (knife/axe) | Player → animal melee | `wired` | `action-melee-hit-01` / `action-melee-kill-01` |

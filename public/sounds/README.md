@@ -78,6 +78,25 @@ candidates still under review: [`_temp/Sounds/README.md`](../../_temp/Sounds/REA
 | water-lap-01.ogg | WATRLap_Summer Tennessee Lake Dock Water Ripples…_ESM_CPS.wav | Sonniss GDC 2026 — Epic Stock Media Storms Lakes Parks | **S02 candidate** only (gentle lap trimmed ~2 s — not a true splash/wade yet) |
 | action-jump-cloth-01.ogg | cloth1.ogg | Kenney RPG sounds (CC0) | S17 jump takeoff stand-in (cloth whoosh) |
 
+## Footsteps (terrain)
+
+Per-surface player footstep variants (S01), replacing the single generic
+`footstep-01…04.ogg` set above for walking/sprinting — that set stays in the
+tree, now reused only for the jump-land thud. Terrain classification and
+wiring: `src/terrain/footstepSurface.ts`, `src/audio/playerMoveSounds.ts`.
+
+| filename | oryginal filename | source url | notes |
+|----------|-------------------|------------|-------|
+| footstep-grass-01…09.ogg | footstep-grass.wav (derivative), swuing | https://freesound.org/people/swuing/sounds/38874/ | CC-BY 3.0; grass/forest/meadow default |
+| footstep-road-01…10.ogg | Gravel Footsteps pack, Ali_6868 | https://freesound.org/people/Ali_6868/packs/21608/ | CC0; packed dirt/gravel road & path corridors |
+| footstep-dirt-01…09.ogg | footstep-concrete.wav (derivative), swuing | https://freesound.org/people/swuing/sounds/38873/ | CC-BY 3.0; dry/desert-weighted ground fallback |
+| footstep-sand-01…06.ogg | Fantozzi-Sand{L,R}{1,2,3}.ogg | unknown (staged as "Fantozzi footsteps") | **license unverified — confirm source/terms before shipping** |
+| footstep-stone-01…06.ogg | Fantozzi-Stone{L,R}{1,2,3}.ogg | unknown (staged as "Fantozzi footsteps") | **license unverified — confirm source/terms before shipping**; rock/mountain-ridge terrain |
+
+Swamp/mud and snow-specific footstep variants are still open (no dedicated
+recording sourced yet) — that ground currently falls back to the grass/dirt
+sets. See `docs/assets/SOUNDS.md` S01.
+
 ## Actions
 
 | filename         | oryginal filename | source url | notes |

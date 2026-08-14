@@ -7,9 +7,8 @@ import { firstUpperCase } from '@/lib/firstUpperCase'
 import { isToolKind } from '../../items/HeldTool'
 import { ITEM_CATALOG } from '../../items/itemCatalog'
 import { ITEM_DEFS, type ItemDef, type ItemKind } from '../../items/items'
-import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { closeInventory, isInventoryOpen, ui } from '../store'
+import { ui } from '../store'
 
 const props = defineProps<{
   selectedItem: ItemKind | null
@@ -28,7 +27,6 @@ const itemDamage = computed<number | null>(() => ITEM_CATALOG[props.selectedItem
 const consumable = computed(() => props.selectedItem ? ITEM_CATALOG[props.selectedItem].consumable ?? null : null)
 const consumeLabel = computed(() => consumable.value?.need === 'thirst' ? 'Wypij' : 'Zjedz')
 
-useOverlayScreen('inventory', isInventoryOpen, closeInventory)
 useTouchScroll(panel)
 
 function formatWeight(kg: number): string { return `${kg.toFixed(1)} kg` }

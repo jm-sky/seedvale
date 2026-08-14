@@ -173,6 +173,9 @@ export type GameLoopDeps = {
   startHarvestMeat?: (animal: AnimalAgent) => void
   /** Cook the first held recipe's input at a lit campfire (busy channel, plan 106 §6). */
   startCookAt?: (fire: VillageFire) => void
+  /** Light an unlit campfire (busy channel, blurred). Adding fuel to an
+   *  already-lit fire stays instant/inline — not routed through this. */
+  startIgniteFire?: (fire: VillageFire) => void
   /** Instant drink from a well/lake `WaterSource` — restores thirst (plan 106 §4). */
   drinkFromWaterSource?: (source: WaterSource) => void
   /** Instant fill of a carried empty waterskin at a well/lake (plan 106 §4). */
@@ -217,7 +220,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
-    startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt,
+    startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     drinkFromWaterSource, fillWaterskin, startTentRest, packTent, onInventoryChanged, setFrameTiming,
   } = deps
 
@@ -314,7 +317,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
 
     const busyTick = busy.tick(dt)
     if (busyTick) {
-      busyOverlay.show(busyTick.label)
+      busyOverlay.show(busyTick.label, busyTick.blurred)
       if (busyTick.justFinished) busyOverlay.hide()
       keyboard.state.forward = false
       keyboard.state.backward = false
@@ -463,17 +466,17 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (altInteractPressed) packTent(target.id)
       } else if (target?.kind === 'campfire') {
         if (interactPressed) {
-          const wasLit = target.fire.isLit()
-          if (!wasLit && !inventory.has('firestarter', 1)) {
-            toast.show('Potrzebujesz krzesiwa, żeby rozpalić ogień.', 'error')
-          } else if (inventory.remove('branch', 1)) {
-            if (wasLit) target.fire.addFuel()
-            else target.fire.light()
-            hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-            onInventoryChanged()
-            toast.show(wasLit ? 'Dołożono gałąź do ogniska.' : 'Ognisko zapłonęło.')
+          if (target.fire.isLit()) {
+            if (inventory.remove('branch', 1)) {
+              target.fire.addFuel()
+              hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+              onInventoryChanged()
+              toast.show('Dołożono gałąź do ogniska.')
+            } else {
+              toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
+            }
           } else {
-            toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
+            startIgniteFire?.(target.fire)
           }
         }
         if (altInteractPressed) startCookAt?.(target.fire)

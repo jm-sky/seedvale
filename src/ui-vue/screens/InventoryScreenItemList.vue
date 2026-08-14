@@ -3,28 +3,29 @@ import { computed, ref } from 'vue'
 import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { isToolKind } from '../../items/HeldTool'
+import { ITEM_CATALOG } from '../../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../../items/items'
-import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { closeInventory, isInventoryOpen, ui } from '../store'
+import { ui } from '../store'
 
 const panel = ref<HTMLElement | null>(null)
 
 const { categoryLabel } = useItemCategoryLabels()
 
-const items = computed(() => (Object.keys(ITEM_DEFS) as ItemKind[]).filter((kind) => (ui.inventory.counts[kind] ?? 0) > 0).map((kind) => ({ kind, def: ITEM_DEFS[kind], count: ui.inventory.counts[kind] ?? 0 })))
+const items = computed(() => (Object.keys(ITEM_DEFS) as ItemKind[]).filter((kind) => (ui.inventory.counts[kind] ?? 0) > 0).map((kind) => ({ kind, def: ITEM_DEFS[kind], count: ui.inventory.counts[kind] ?? 0, consumable: ITEM_CATALOG[kind].consumable ?? null })))
 
 const emit = defineEmits<{
   'select-item': [item: ItemKind],
 }>()
 
-useOverlayScreen('inventory', isInventoryOpen, closeInventory)
 useTouchScroll(panel)
 
 function formatWeight(kg: number): string { return `${kg.toFixed(1)} kg` }
+function consumeLabel(need: 'hunger' | 'thirst'): string { return need === 'thirst' ? 'Wypij' : 'Zjedz' }
 function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
 function onEquip(kind: ItemKind): void { ui.inventory.onEquip?.(kind) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
+function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
 </script>
 
 <template>
@@ -76,18 +77,27 @@ function onUnequip(): void { ui.inventory.onUnequip?.() }
         <div class="mt-1 -mb-1 flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center justify-start gap-2">
             <ItemsScreenItemButton
+              v-if="item.consumable"
+              class="min-h-0 py-1"
+              :label="consumeLabel(item.consumable.need)"
+              @click="onConsume(item.kind)"
+            />
+            <ItemsScreenItemButton
               v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"
+              class="min-h-0 py-1"
               label="Weź"
               @click="onEquip(item.kind)"
             />
             <ItemsScreenItemButton
               v-if="ui.inventory.heldTool === item.kind"
+              class="min-h-0 py-1"
               label="Odłóż"
               @click="onUnequip"
             />
           </div>
           <div class="flex items-center justify-end gap-2">
             <ItemsScreenItemButton
+              class="min-h-0 py-1"
               label="Wyrzuć"
               destructive
               @click="onDrop(item.kind)"

@@ -3,6 +3,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { KeyState } from '../input/Keyboard'
 import type { ToolKind } from '../items/HeldTool'
+import type { FootstepSurface } from '../terrain/footstepSurface'
 import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
 import {
   playFootstep,
@@ -90,6 +91,7 @@ export class PlayerController {
   private sampleFloor: HeightSampler
   private waterLevel: number
   private collidersNear: ColliderSource
+  private sampleFootstepSurface: (x: number, z: number) => FootstepSurface
   private readonly isCapsule: boolean
   /** The GLB scene root (or capsule mesh) — rotated independently of `mesh`
    *  (the wrapper, which also carries the label at a fixed height) for
@@ -140,6 +142,7 @@ export class PlayerController {
     sampleFloor: HeightSampler,
     waterLevel: number,
     collidersNear: ColliderSource,
+    sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ) {
     this.camera = camera
     this.keys = keys
@@ -148,6 +151,7 @@ export class PlayerController {
     this.sampleFloor = sampleFloor
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
+    this.sampleFootstepSurface = sampleFootstepSurface
     this.isCapsule = isCapsule
     this.health = createHealthState(PLAYER_MAX_HP)
     this.needs = createPlayerNeeds()
@@ -213,6 +217,7 @@ export class PlayerController {
     sampleFloor: HeightSampler,
     waterLevel: number,
     collidersNear: ColliderSource,
+    sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
     modelUrl = PLAYER_MODEL_URL,
   ): Promise<PlayerController> {
     try {
@@ -229,6 +234,7 @@ export class PlayerController {
         sampleFloor,
         waterLevel,
         collidersNear,
+        sampleFootstepSurface,
       )
     } catch (err) {
       console.warn(`[player] failed to load ${modelUrl}, using capsule`, err)
@@ -240,6 +246,7 @@ export class PlayerController {
         sampleFloor,
         waterLevel,
         collidersNear,
+        sampleFootstepSurface,
       )
     }
   }
@@ -252,6 +259,7 @@ export class PlayerController {
     sampleFloor: HeightSampler,
     waterLevel: number,
     collidersNear: ColliderSource,
+    sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ): PlayerController {
     const body = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.35, 0.9, 4, 8),
@@ -273,6 +281,7 @@ export class PlayerController {
       sampleFloor,
       waterLevel,
       collidersNear,
+      sampleFootstepSurface,
     )
   }
 
@@ -282,11 +291,13 @@ export class PlayerController {
     sampleFloor: HeightSampler,
     waterLevel: number,
     collidersNear: ColliderSource,
+    sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ): void {
     this.sampleHeight = sampleHeight
     this.sampleFloor = sampleFloor
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
+    this.sampleFootstepSurface = sampleFootstepSurface
     this.snapToGround()
   }
 
@@ -561,10 +572,12 @@ export class PlayerController {
     this.footstepAccum += dt
     if (this.footstepAccum < interval) return
     this.footstepAccum = 0
+    const surface = this.sampleFootstepSurface(this.mesh.position.x, this.mesh.position.z)
     playFootstep(
       this.playAt,
       { x: this.mesh.position.x, y: this.mesh.position.y, z: this.mesh.position.z },
       this.sprinting,
+      surface,
     )
   }
 

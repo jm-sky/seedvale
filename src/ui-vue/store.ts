@@ -86,7 +86,7 @@ type MerchantState = {
   onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>) => TradeResult) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number }
-type BusyState = { visible: boolean; label: string }
+type BusyState = { visible: boolean; label: string; blurred: boolean }
 /** `config`/`dayNight` are the *same* mutable objects `createApp.ts` already
  *  holds (see plan 005 — "Nie duplikować stanu"), assigned once via
  *  `configureWorldConfigScreen`, not copied per-open. Vue's `reactive()`
@@ -194,7 +194,7 @@ export const ui = reactive({
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
   merchant: { open: false, npc: null, counts: {}, onBuyShells: null, onBuyBarter: null } as MerchantState,
-  busy: { visible: false, label: '' } as BusyState,
+  busy: { visible: false, label: '', blurred: false } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
   worldMap: { open: false, playerX: 0, playerZ: 0 } as WorldMapState,
@@ -395,13 +395,25 @@ export function finishTimeSkipHide(): void {
   }
 }
 
-export function showBusy(label: string): void {
+export function showBusy(label: string, blurred = false): void {
   ui.busy.visible = true
   ui.busy.label = label
+  ui.busy.blurred = blurred
 }
 export function hideBusy(): void {
   ui.busy.visible = false
   ui.busy.label = ''
+  ui.busy.blurred = false
+}
+
+/** Esc during a `busy` channel (fire-lighting, cooking, butchering, …) — not
+ *  `rest`. Returns true if consumed. Mirrors `abortRest`/`configureAbortRest`. */
+let abortBusyHandler: (() => boolean) | null = null
+export function configureAbortBusy(handler: (() => boolean) | null): void {
+  abortBusyHandler = handler
+}
+export function abortBusy(): boolean {
+  return abortBusyHandler?.() ?? false
 }
 
 export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: {

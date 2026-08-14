@@ -13,6 +13,7 @@ const FORWARDED_FNS = [
   'openFlavorDialog', 'setFlavorPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',
   'configureQuickActions', 'setQuickActionsHasShovel', 'setQuickActionsHasTent', 'setQuickActionsNearTown', 'setQuickActionsFireAvailability', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
   'configureAbortRest', 'abortRest',
+  'configureAbortBusy', 'abortBusy',
   'showTimeSkip', 'hideTimeSkip',
   'showBusy', 'hideBusy',
   'configureWorldConfigScreen', 'openWorldConfigScreen', 'closeWorldConfigScreen', 'isWorldConfigScreenOpen',

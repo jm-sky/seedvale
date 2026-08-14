@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { type ItemKind } from '../../items/items'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
@@ -14,8 +14,24 @@ const selectedItem = ref<ItemKind | null>(null)
 const panel = ref<HTMLElement | null>(null)
 const touchDevice = isTouchDevice()
 
-useOverlayScreen('inventory', isInventoryOpen, closeInventory)
+function onEscape(): void {
+  if (currentView.value === 'details') {
+    currentView.value = 'list'
+    selectedItem.value = null
+  } else {
+    closeInventory()
+  }
+}
+
+useOverlayScreen('inventory', isInventoryOpen, onEscape)
 useTouchScroll(panel)
+
+watch(() => ui.inventory.open, (open) => {
+  if (!open) {
+    currentView.value = 'list'
+    selectedItem.value = null
+  }
+})
 
 const onSelectItem = (item: ItemKind) => {
   emitUiClick()
