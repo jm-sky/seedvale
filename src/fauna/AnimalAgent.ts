@@ -1457,7 +1457,9 @@ export class AnimalAgent {
   ): THREE.AnimationAction | null {
     if (!this.mixer) return null
     for (const name of names) {
-      const clip = clips.find((c) => c.name === name)
+      // Some packs (e.g. Farm Animals cow/sheep) export clips as "Armature|Walk"
+      // instead of a bare "Walk" — match either form.
+      const clip = clips.find((c) => c.name === name || c.name.endsWith(`|${name}`))
       if (clip) return this.mixer.clipAction(clip)
     }
     return null
