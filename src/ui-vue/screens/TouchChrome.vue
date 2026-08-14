@@ -11,7 +11,7 @@ const touch = isTouchDevice()
     <!-- Pause — top-right; MinimapScreen sits directly below this button. -->
     <button
       type="button"
-      class="pointer-events-auto fixed z-[8] flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-white/25 bg-[rgba(20,24,28,0.6)] text-ink [-webkit-tap-highlight-color:transparent]"
+      class="pointer-events-auto fixed z-8 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-white/25 bg-[rgba(20,24,28,0.6)] text-ink [-webkit-tap-highlight-color:transparent]"
       style="top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right))"
       :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
       aria-label="Pauza"

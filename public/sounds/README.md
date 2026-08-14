@@ -60,10 +60,10 @@ candidates still under review: [`_temp/Sounds/README.md`](../../_temp/Sounds/REA
 
 | filename | oryginal filename | source url | notes |
 |----------|-------------------|------------|-------|
-| ui-click-01.ogg | metalClick.ogg | Kenney RPG sounds (CC0) — https://kenney.nl | S05 hard click |
-| ui-click-02.ogg | UIMisc_Kalimba 3 Up_CB Sounddesign_APPlicable Sounds.wav | Sonniss GDC 2026 — CB Sounddesign Organic UI | S05 soft confirm |
-| ui-click-03.ogg | interface1.wav | RPG Sound Pack (artisticdude / OpenGameArt; verify CC0) | S05 short UI blip |
-| ui-open-01.ogg | TOONMisc_Bird Flutes 3_CB Sounddesign_APPlicable Sounds.wav | Sonniss GDC 2026 — CB Sounddesign Organic UI | S05 open / positive |
+| ui-click-01.ogg | metalClick.ogg | Kenney RPG sounds (CC0) — https://kenney.nl | S05 click + panel open |
+| ui-click-02.ogg | UIMisc_Kalimba 3 Up_CB Sounddesign_APPlicable Sounds.wav | Sonniss GDC 2026 — CB Sounddesign Organic UI | unused (soft confirm) |
+| ui-click-03.ogg | interface1.wav | RPG Sound Pack (artisticdude / OpenGameArt; verify CC0) | unused (short blip) |
+| ui-open-01.ogg | TOONMisc_Bird Flutes 3_CB Sounddesign_APPlicable Sounds.wav | Sonniss GDC 2026 — CB Sounddesign Organic UI | unused (too cartoon for panel open) |
 
 ## Player / world interaction
 

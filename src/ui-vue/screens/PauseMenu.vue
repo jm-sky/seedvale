@@ -23,6 +23,7 @@ watch(() => ui.pauseMenu.open, (open) => {
   <div
     v-if="ui.pauseMenu.open"
     class="pointer-events-auto fixed inset-0 z-11 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
+    data-test-id="pause-menu"
     @click.self="closePauseMenu"
   >
     <PauseMenuEntriesMain

@@ -32,7 +32,7 @@ If the feature needs no new sound, do nothing to this file.
 | Animals | chicken, cow, wolf | `[E]` on animal (donkey/horse/sheep reuse silence until clips exist) |
 | Ambient | forest, night crickets, coast, wind, meadow, soft waves, fire loop | Area / time / mountain / campfire loops |
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
-| UI | click ×3, open ×1 | Inventory / pause / dialog |
+| UI | `ui-click-01` | Inventory / pause / dialog (open + click) |
 | Actions | dig ×4, wood-chop ×1, melee hit/kill, well ×1, fire ignite/extinguish | Shovel / axe / melee / well / campfire |
 | Player move | footsteps ×4, jump cloth, water-lap, door open/close/latch/creak | Walk/sprint, jump stand-in, enter water, house threshold |
 
@@ -46,7 +46,7 @@ If the feature needs no new sound, do nothing to this file.
 | S02 | Splash / wade | Enter water / swim | `wired` | `water-lap-01` candidate only — true splash/wade still open |
 | S03 | Fire (loop + ignite) | Campfire / torch / fire pit | `wired` | `ambient-fire-loop-01` + `action-fire-ignite-01` / `action-fire-extinguish-01` |
 | S04 | Melee hit (knife/axe) | Player → animal melee | `wired` | `action-melee-hit-01` / `action-melee-kill-01` |
-| S05 | UI click / open-close | Inventory, pause, dialog (coherent set) | `wired` | `ui-click-01…03` + `ui-open-01` |
+| S05 | UI click / open-close | Inventory, pause, dialog | `wired` | `ui-click-01` (Kenney metalClick) for click and open; `ui-open-01` unused |
 
 ### P1 — world feels alive
 
