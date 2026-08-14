@@ -1,5 +1,4 @@
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
-import type { AmbientSamplers } from '../audio/ambientWeights'
 import type { SaveData } from '../persistence/saveData'
 import { playActionChop, playActionDig, playActionMine } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
@@ -65,6 +64,7 @@ import { createTimeSkip } from '../world/timeSkip'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
 import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChopStage } from '../world/treeLifecycle'
 import { WATER_RENDER_LAYER } from '../world/waterMirror'
+import { createWorldContext } from '../world/worldContext'
 import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
 import { DIG_REACH } from './interactables'
@@ -193,22 +193,16 @@ export async function createApp(
     initialSave?.placedTents ?? [],
     treeLifecycle,
     getWorldDays,
+    dayNight,
+    initialSave?.settlementEconomies,
   )
 
   // Indirection (not a direct destructure) so this keeps sampling whichever
   // bundle.chunkManager/config.terrain are current across `rebuildWorld()`
   // mutating `bundle`'s fields in place — see `worldBundle.ts`'s `WorldBundle`
   // doc comment.
-  const ambientSamplers: AmbientSamplers = {
-    sampleFloor: (x, z) => bundle.chunkManager.sampleFloor(x, z),
-    sampleContinentalness: (x, z) => bundle.chunkManager.sampleContinentalness(x, z),
-    sampleMountainRidge: (x, z) => bundle.chunkManager.sampleMountainRidge(x, z),
-    sampleMoistureRegion: (x, z) => bundle.chunkManager.sampleMoistureRegion(x, z),
-    get waterLevel() { return bundle.chunkManager.waterLevel },
-    get heightScale() { return config.terrain.heightScale },
-    get region() { return config.terrain.region },
-  }
-  const ambientAudio = createAmbientAudio(worldAudio, ambientSamplers)
+  const worldContext = createWorldContext(() => bundle.chunkManager, config, dayNight)
+  const ambientAudio = createAmbientAudio(worldAudio, worldContext)
   const fireAudio = createFireAudio(worldAudio)
   const houseDoors = createHouseDoorTracker()
   configureUiSounds(worldAudio.playOnce)
@@ -422,6 +416,7 @@ export async function createApp(
         worldAudio.playAt,
         treeLifecycle,
         getWorldDays,
+        dayNight,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
 
@@ -457,7 +452,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 11,
+    version: 12,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -491,6 +486,7 @@ export async function createApp(
     placedTents: bundle.placedTents.nodes().map((tent) => ({ ...tent })),
     worldFlags: { ...worldFlags },
     map: { discoveredCells: mapDiscovery.serialize() },
+    settlementEconomies: bundle.settlementsManager.snapshotEconomies(),
   })
 
   const saveNow = (): void => {

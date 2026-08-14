@@ -1,3 +1,5 @@
+import { pickActionKind } from '../simulation'
+
 export type NeedId = 'food' | 'idle' | 'water' | 'wood'
 
 export type NeedState = {
@@ -41,11 +43,16 @@ export function pickNeed(needs: NeedState, options: PickNeedOptions = {}): NeedI
   const foodScore = needs.hunger > foodThreshold ? needs.hunger * foodMult : 0
   const idleScore = 0.12
 
-  const best = Math.max(waterScore, woodScore, foodScore, idleScore)
-  if (best === waterScore && waterScore > 0) return 'water'
-  if (best === woodScore && woodScore > 0) return 'wood'
-  if (best === foodScore && foodScore > 0) return 'food'
-  return 'idle'
+  // Order matters for tie-breaking: `pickHighestScore` only replaces its
+  // running best on a strict improvement, so the first-listed of any tied
+  // candidates wins — same precedence the old if-chain (water/wood/food,
+  // idle only as the implicit fallback) encoded explicitly.
+  return pickActionKind<NeedId>([
+    { kind: 'water', score: waterScore },
+    { kind: 'wood', score: woodScore },
+    { kind: 'food', score: foodScore },
+    { kind: 'idle', score: idleScore },
+  ], 'idle')
 }
 
 export function needColor(need: NeedId): number {

@@ -1,3 +1,4 @@
+import type { EconomicKind } from './kinds'
 import { demandsFor, initialStockFor, type SettlementEconomySeed } from './initial'
 import { createSettlementEconomy, type SettlementEconomy } from './settlementEconomy'
 
@@ -10,9 +11,14 @@ export type EconomyRegistry = {
   getOrCreate: (seed: SettlementEconomySeed) => SettlementEconomy
   get: (id: string) => SettlementEconomy | undefined
   clear: () => void
+  /** Stock-only snapshot of every economy created so far — reservations/
+   *  developments are intentionally not included, same as `snapshot()`. */
+  serialize: () => Record<string, Partial<Record<EconomicKind, number>>>
 }
 
-export function createEconomyRegistry(): EconomyRegistry {
+export function createEconomyRegistry(
+  initialStocks?: Record<string, Partial<Record<EconomicKind, number>>>,
+): EconomyRegistry {
   const byId = new Map<string, SettlementEconomy>()
   return {
     getOrCreate(seed) {
@@ -20,7 +26,7 @@ export function createEconomyRegistry(): EconomyRegistry {
       if (existing) return existing
       const created = createSettlementEconomy(
         seed.id,
-        initialStockFor(seed),
+        initialStocks?.[seed.id] ?? initialStockFor(seed),
         demandsFor(seed),
       )
       byId.set(seed.id, created)
@@ -31,6 +37,11 @@ export function createEconomyRegistry(): EconomyRegistry {
     },
     clear() {
       byId.clear()
+    },
+    serialize() {
+      const result: Record<string, Partial<Record<EconomicKind, number>>> = {}
+      for (const [id, economy] of byId) result[id] = economy.snapshot()
+      return result
     },
   }
 }

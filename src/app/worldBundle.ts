@@ -1,8 +1,9 @@
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
+import type { EconomicKind } from '../economy/kinds'
 import type { Settlement } from '../settlement/createSettlement'
 import type { ChunkCoord } from '../terrain/chunkGrid'
-import type { ResourceEnv } from '../terrain/naturalResources'
+import type { DayNightState } from '../world/dayNight'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
@@ -24,6 +25,7 @@ import { createResourceDeposits, type ResourceDeposits } from '../terrain/resour
 import { createLargeCaves, type LargeCaves } from '../world/createLargeCaves'
 import { createOcean, type WorldOcean } from '../world/createOcean'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
+import { createWorldContext, type WorldContext } from '../world/worldContext'
 import type { Scene } from 'three'
 
 /** Fixed radius (world units) for settlement/fauna spatial logic — deliberately
@@ -52,7 +54,7 @@ export function homeChunks(): ChunkCoord[] {
 /** The ten world systems that are always created/disposed/rebuilt together
  *  (new seed, terrain-param change) — see `docs/plans/archive/2026-08-10--053`. A
  *  single mutable container, not a `let` reassigned to a new object: every
- *  closure created before a rebuild (`ambientSamplers`/`resourceEnv` in
+ *  closure created before a rebuild (`worldContext`/`ambientAudio` in
  *  `createApp.ts`, the game loop) holds this same object reference, so it
  *  must keep seeing the live world through field reads (`bundle.chunkManager`),
  *  never by capturing a field's value up front. Only `rebuildWorldBundle`
@@ -129,6 +131,8 @@ function buildSettlementsManager(
   playAt: PlayAt,
   config: WorldConfig,
   forest: SettlementForestHooks,
+  worldContext: WorldContext,
+  initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -139,11 +143,7 @@ function buildSettlementsManager(
     playAt,
     SETTLEMENT_LOAD_RADIUS,
     SETTLEMENT_UNLOAD_RADIUS,
-    {
-      sampleContinentalness: chunkManager.sampleContinentalness,
-      sampleMountainRidge: chunkManager.sampleMountainRidge,
-      sampleMoistureRegion: chunkManager.sampleMoistureRegion,
-    },
+    worldContext,
     config.terrain.heightScale,
     config.terrain.region,
     chunkManager.waitForChunks,
@@ -153,6 +153,7 @@ function buildSettlementsManager(
     chunkManager.clearColliders,
     forest,
     config.settlements.homeSize,
+    initialEconomies,
   )
 }
 
@@ -219,28 +220,17 @@ function buildItemSpawners(
   )
 }
 
-/** `env` is rebuilt fresh from `chunkManager` on every call rather than kept
- *  as a long-lived indirection — unlike `ambientSamplers`/`resourceEnv` used
- *  to be in `createApp.ts`, this `ResourceDeposits` instance's lifetime is
- *  already tied 1:1 to the `chunkManager` passed in (both disposed/rebuilt
- *  together by `rebuildWorldBundle`), so there's no reassignment for it to
- *  survive. */
+/** `worldContext` here is the call-scoped instance built fresh in
+ *  `createWorldBundle`/`rebuildWorldBundle` — this `ResourceDeposits`
+ *  instance's lifetime is already tied 1:1 to the `chunkManager` it closes
+ *  over (both disposed/rebuilt together by `rebuildWorldBundle`), so there's
+ *  no reassignment for it to survive. */
 function buildResourceDeposits(
   scene: Scene,
-  chunkManager: ChunkManager,
-  config: WorldConfig,
+  worldContext: WorldContext,
   seed: number,
 ): ResourceDeposits {
-  const env: ResourceEnv = {
-    sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
-    sampleContinentalness: (x, z) => chunkManager.sampleContinentalness(x, z),
-    sampleMountainRidge: (x, z) => chunkManager.sampleMountainRidge(x, z),
-    sampleMoistureRegion: (x, z) => chunkManager.sampleMoistureRegion(x, z),
-    get waterLevel() { return chunkManager.waterLevel },
-    get heightScale() { return config.terrain.heightScale },
-    get region() { return config.terrain.region },
-  }
-  return createResourceDeposits(scene, env, seed)
+  return createResourceDeposits(scene, worldContext, seed)
 }
 
 export async function createWorldBundle(
@@ -253,6 +243,8 @@ export async function createWorldBundle(
   initialPlacedTents: readonly PlacedTent[],
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
+  dayNight: DayNightState,
+  initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
 ): Promise<WorldBundle> {
   const waterMirror = createWaterMirror({
     waterLevel: config.terrain.waterLevel,
@@ -262,18 +254,19 @@ export async function createWorldBundle(
   chunkManager.update(0, 0)
   await chunkManager.waitForChunks(homeChunks())
 
+  const worldContext = createWorldContext(() => chunkManager, config, dayNight)
   const forest: SettlementForestHooks = {
     lifecycle: treeLifecycle,
     getWorldDays,
-    sampleEnv: (x, z) => chunkManager.sampleTreeEnv(x, z),
+    sampleEnv: worldContext.sampleTreeEnv,
   }
   const ocean = buildOcean(scene, config, waterMirror)
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, initialEconomies)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
-  const resourceDeposits = buildResourceDeposits(scene, chunkManager, config, config.seed)
+  const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
   const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt)
   const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
@@ -309,6 +302,7 @@ export async function rebuildWorldBundle(
   playAt: PlayAt,
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
+  dayNight: DayNightState,
 ): Promise<void> {
   bundle.fauna.dispose()
   bundle.itemSpawners.dispose()
@@ -320,6 +314,7 @@ export async function rebuildWorldBundle(
   bundle.placedFires.dispose()
   const carriedTents = resetCollectedItems ? [] : [...bundle.placedTents.nodes()]
   bundle.placedTents.dispose()
+  const carriedEconomies = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotEconomies()
   bundle.largeCaves.dispose()
   bundle.resourceDeposits.dispose()
   bundle.settlementsManager.dispose()
@@ -344,18 +339,19 @@ export async function rebuildWorldBundle(
   bundle.chunkManager.update(0, 0)
   await bundle.chunkManager.waitForChunks(homeChunks())
 
+  const worldContext = createWorldContext(() => bundle.chunkManager, config, dayNight)
   const forest: SettlementForestHooks = {
     lifecycle: treeLifecycle,
     getWorldDays,
-    sampleEnv: (x, z) => bundle.chunkManager.sampleTreeEnv(x, z),
+    sampleEnv: worldContext.sampleTreeEnv,
   }
   bundle.ocean = buildOcean(scene, config, waterMirror)
-  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest)
+  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, carriedEconomies)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
-  bundle.resourceDeposits = buildResourceDeposits(scene, bundle.chunkManager, config, config.seed)
+  bundle.resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
   bundle.droppedItems = createDroppedItems(scene, bundle.chunkManager.sampleHeight, carriedDrops)
   bundle.placedFires = createPlacedFires(scene, bundle.chunkManager.sampleHeight, carriedFires, playAt)
   bundle.placedTents = createPlacedTents(scene, bundle.chunkManager.sampleHeight, carriedTents)

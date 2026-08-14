@@ -2,6 +2,7 @@ import { type Object3D, type Scene, Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
+import type { EconomicKind } from '../economy/kinds'
 import type { VillageInfo } from '../fauna/AnimalAgent'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
@@ -98,6 +99,9 @@ export type SettlementsManager = {
   getHomeDef: () => SettlementDef
   /** Resolve a settlement def from the shared plan cache without loading meshes. */
   peekDef: (cell: SettlementCell) => SettlementDef | null
+  /** Stock-only snapshot of every settlement economy created so far (loaded
+   *  or previously streamed out) — see `EconomyRegistry.serialize`. */
+  snapshotEconomies: () => Record<string, Partial<Record<EconomicKind, number>>>
   dispose: () => void
 }
 
@@ -122,6 +126,7 @@ export async function createSettlementsManager(
   clearColliders: (ownerKey: string) => void,
   forest?: SettlementForestHooks,
   homeSize: HomeVillageSize = 'auto',
+  initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -148,7 +153,7 @@ export async function createSettlementsManager(
     })
   }
 
-  const economies = createEconomyRegistry()
+  const economies = createEconomyRegistry(initialEconomies)
   function economyFor(def: SettlementDef) {
     return economies.getOrCreate({
       id: def.id,
@@ -375,6 +380,7 @@ export async function createSettlementsManager(
     },
     getHomeDef: () => homeDef,
     peekDef: (cell) => defFor(cell),
+    snapshotEconomies: () => economies.serialize(),
     dispose() {
       for (const entry of entries.values()) entry.settlement?.dispose()
       for (const instances of midpoints.values()) {

@@ -1,4 +1,5 @@
 import type { WorldConfig } from '../config/worldConfig'
+import type { EconomicKind } from '../economy/kinds'
 import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
 import { isToolKind } from '../items/HeldTool'
@@ -205,10 +206,15 @@ export type SaveDataV10 = {
   worldFlags: SaveWorldFlags
 }
 
-/** Canonical save shape — always v11. `loadSaveData` migrates older saves up. */
-export type SaveData = Omit<SaveDataV10, 'version'> & {
+export type SaveDataV11 = Omit<SaveDataV10, 'version'> & {
   version: 11
   map: SaveMap
+}
+
+/** Canonical save shape — always v12. `loadSaveData` migrates older saves up. */
+export type SaveData = Omit<SaveDataV11, 'version'> & {
+  version: 12
+  settlementEconomies: Record<string, Partial<Record<EconomicKind, number>>>
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -433,7 +439,7 @@ export function isSaveDataV10(value: unknown): value is SaveDataV10 {
   return true
 }
 
-export function isSaveDataV11(value: unknown): value is SaveData {
+export function isSaveDataV11(value: unknown): value is SaveDataV11 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 11) return false
@@ -453,6 +459,41 @@ export function isSaveDataV11(value: unknown): value is SaveData {
   if (!isPlacedTentsField(v.placedTents)) return false
   if (!isWorldFlagsField(v.worldFlags)) return false
   if (!isSaveMap(v.map)) return false
+  return true
+}
+
+function isSettlementEconomiesField(value: unknown): value is Record<string, Partial<Record<EconomicKind, number>>> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  for (const stock of Object.values(value as Record<string, unknown>)) {
+    if (!stock || typeof stock !== 'object' || Array.isArray(stock)) return false
+    for (const amount of Object.values(stock as Record<string, unknown>)) {
+      if (typeof amount !== 'number') return false
+    }
+  }
+  return true
+}
+
+export function isSaveDataV12(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 12) return false
+  if (!isSaveConfig(v.config)) return false
+  if (!isSavePlayer(v.player)) return false
+  if (typeof v.savedAt !== 'number') return false
+  if (!v.quests || typeof v.quests !== 'object') return false
+  if (!v.inventory || typeof v.inventory !== 'object') return false
+  if (!Array.isArray(v.collectedItemIds)) return false
+  if (!Array.isArray(v.droppedItems)) return false
+  if (!Array.isArray(v.placedFires)) return false
+  if (typeof v.timeOfDay !== 'number') return false
+  if (typeof v.elapsedDays !== 'number') return false
+  if (!isHeldToolField(v.heldTool)) return false
+  if (!isTreeOverridesField(v.treeOverrides)) return false
+  if (!isPlayerTorchField(v.playerTorch)) return false
+  if (!isPlacedTentsField(v.placedTents)) return false
+  if (!isWorldFlagsField(v.worldFlags)) return false
+  if (!isSaveMap(v.map)) return false
+  if (!isSettlementEconomiesField(v.settlementEconomies)) return false
   return true
 }
 
@@ -507,7 +548,7 @@ function toV10(fields: Omit<SaveDataV10, 'version' | 'heldTool' | 'elapsedDays' 
   }
 }
 
-function toV11(v10: SaveDataV10): SaveData {
+function toV11(v10: SaveDataV10): SaveDataV11 {
   const { version: _version, ...rest } = v10
   return {
     ...rest,
@@ -516,13 +557,23 @@ function toV11(v10: SaveDataV10): SaveData {
   }
 }
 
-/** Accepts a stored v1–v11 save and always returns the canonical v11 shape. */
+function toV12(v11: SaveDataV11): SaveData {
+  const { version: _version, ...rest } = v11
+  return {
+    ...rest,
+    version: 12,
+    settlementEconomies: {},
+  }
+}
+
+/** Accepts a stored v1–v12 save and always returns the canonical v12 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV11(value)) return value
-    if (isSaveDataV10(value)) return toV11(value)
+    if (isSaveDataV12(value)) return value
+    if (isSaveDataV11(value)) return toV12(value)
+    if (isSaveDataV10(value)) return toV12(toV11(value))
     if (isSaveDataV9(value)) {
-      return toV11(toV10({
+      return toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -536,10 +587,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         heldTool: value.heldTool,
         treeOverrides: value.treeOverrides,
         playerTorch: value.playerTorch,
-      }))
+      })))
     }
     if (isSaveDataV8(value)) {
-      return toV11(toV10({
+      return toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -553,10 +604,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         heldTool: value.heldTool,
         treeOverrides: value.treeOverrides,
         playerTorch: null,
-      }))
+      })))
     }
     if (isSaveDataV7(value)) {
-      return toV11(toV10({
+      return toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -567,10 +618,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: value.placedFires,
         timeOfDay: value.timeOfDay,
         heldTool: value.heldTool,
-      }))
+      })))
     }
     if (isSaveDataV6(value)) {
-      return toV11(toV10({
+      return toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -581,10 +632,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: value.placedFires,
         timeOfDay: value.timeOfDay,
         heldTool: null,
-      }))
+      })))
     }
     if (isSaveDataV5(value)) {
-      return toV11(toV10({
+      return toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -595,10 +646,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: migratePlacedFires(value.placedFires),
         timeOfDay: value.timeOfDay,
         heldTool: null,
-      }))
+      })))
     }
     if (isSaveDataV4(value)) {
-      return toV11(toV10({
+      return toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -609,10 +660,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: migratePlacedFires(value.placedFires),
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))
+      })))
     }
     if (isSaveDataV3(value)) {
-      return toV11(toV10({
+      return toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -623,10 +674,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))
+      })))
     }
     if (isSaveDataV2(value)) {
-      return toV11(toV10({
+      return toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -637,10 +688,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))
+      })))
     }
     if (isSaveDataV1(value)) {
-      return toV11(toV10({
+      return toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -651,7 +702,7 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))
+      })))
     }
     return null
   } catch {
