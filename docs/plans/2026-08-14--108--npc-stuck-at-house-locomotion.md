@@ -4,7 +4,8 @@
 **Created:** 2026-08-14  
 **Priority:** 🔴 high  
 **Effort:** `M`  
-**Depends on:** ~~097~~ (kolizje + łatka wyjścia z domu)
+**Depends on:** ~~097~~ (kolizje + łatka wyjścia z domu)  
+**Prompt:** [docs/prompts/2026-08-14--005--npc-stuck-at-house-locomotion.md](../prompts/2026-08-14--005--npc-stuck-at-house-locomotion.md)
 
 Playtest po watchdogu (S8 / commit `b99b248`) i gospodarstwach (069 / `d50a3fd`). Nie kodować z samego tytułu — ten dokument jest review + kontraktem naprawy.
 
