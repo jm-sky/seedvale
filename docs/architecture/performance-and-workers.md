@@ -121,6 +121,10 @@ Before adding a recurring simulation/update loop, ask:
 
 Prefer the smallest architecture that keeps the main thread responsive and scales with world size.
 
+## Multiplayer readiness (not implemented)
+
+Seedvale is single-player; no multiplayer, netcode or WebSocket layer exists or is planned now. The simulation/presentation split above, however, is deliberately the same shape a future server-authoritative model would need: simulation state that is serializable and evaluable independent of Three.js objects is state that could later be evaluated off the client entirely, not just off the main thread. Keep that separation intact when adding new systems; do not design networking now.
+
 ## Related systems
 
 This principle applies particularly to:

@@ -24,6 +24,7 @@ Before making a non-trivial change:
 - Do not mark visual Three.js work as fully verified solely because TypeScript/lint/build pass.
 - Shader GLSL lives inside JS/TS template literals. Never put backticks or markdown in comments inside those strings: a backtick closes the template literal and is a syntax error.
 - **Performance is an architectural constraint.** Keep the main thread responsive; prefer event-driven/batched simulation and use workers for CPU-heavy, data-oriented work when the cost of worker communication is justified. See [Performance & Simulation Architecture](docs/architecture/performance-and-workers.md).
+- **Seedvale is single-player today; do not build multiplayer, netcode or WebSockets.** But keep decisions from foreclosing a later move to a small (~2–5 player) shared world with server-authoritative simulation: keep simulation state representable independently of Three.js/rendering objects and avoid baking in an implicit single-client owner of world state. See [Performance & Simulation Architecture](docs/architecture/performance-and-workers.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Development
 

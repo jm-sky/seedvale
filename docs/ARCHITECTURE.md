@@ -130,6 +130,10 @@ The game loop is the runtime coordination point for simulation updates and inter
 
 Modal UI can gate parts of simulation/input. Changes to modal behaviour should therefore be checked against the game loop and all relevant UI entry points, not only the component being changed.
 
+## Multiplayer readiness (not implemented)
+
+Seedvale is single-player today; there is no multiplayer, netcode or WebSocket layer, and none is planned in the near term. That said, keep architectural decisions from foreclosing a later move to a small (~2–5 player) shared world with server-authoritative simulation. The simulation/presentation split this document already assumes — world state that is representable and evaluable independent of Three.js objects — is the same shape that split would need. Do not design networking now; just avoid coupling world/NPC/economy state so tightly to the client or to rendering objects that such a split becomes a rewrite.
+
 ## Persistence
 
 Persistence is orchestrated from `createApp.ts`, but ownership is split by responsibility:
@@ -162,6 +166,7 @@ Before adding a subsystem, answer:
 5. What existing environment/simulation API should it consume instead of duplicating logic?
 6. Does it need persistence? If yes, what is the compatibility story for old saves?
 7. Does it belong to simulation, world generation, interaction, or presentation?
+8. Is its state representable independently of the client/renderer, so a future server-authoritative split wouldn't require a rewrite?
 
 Prefer extending an existing coupling over introducing a parallel subsystem that solves the same problem.
 
