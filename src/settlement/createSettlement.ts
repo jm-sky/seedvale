@@ -25,7 +25,6 @@ import {
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
 import { applyTreeStageVisual } from '../world/treeVisuals'
-import { houseCatalogById } from './houseCatalog'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
@@ -87,6 +86,10 @@ const NIGHT_FIRE_IGNITE_CHANCE: Record<VillageSize, number> = {
  *  `nearbyNpcCount` for `NpcAgent`'s group reaction-chance dampening (issue
  *  010). */
 const GROUP_REACTION_RADIUS = 6
+/** How close the observer must be to a house entrance before the door swings open. */
+const HOUSE_DOOR_OPEN_DISTANCE = 2.6
+const HOUSE_DOOR_CLOSE_DISTANCE = 3.4
+const _entranceWorld = new Vector3()
 
 export type Settlement = {
   id: string
@@ -172,7 +175,7 @@ export async function createSettlement(
   const roadSegments = def.isHome && roadCtx
     ? segmentsNear(site.x, site.z, localRadius * 2, roadCtx)
     : []
-  const { group, landmarks, houseLights, villageTorches } = await buildSettlementProps(
+  const { group, landmarks, houseLights, villageTorches, houseAssemblies } = await buildSettlementProps(
     site,
     sampleHeight,
     waterLevel,
@@ -200,7 +203,7 @@ export async function createSettlement(
     ...landmarks.houses.map((house) => ({
       x: house.position.x,
       z: house.position.z,
-      radius: houseCatalogById(house.houseId).footprintRadius,
+      radius: house.footprintRadius,
     })),
   ])
 
@@ -487,6 +490,24 @@ export async function createSettlement(
       fire?.update(dt)
       placeWoodshedIfComplete()
       for (const torch of villageTorches) torch.update(dt)
+      for (const assembly of houseAssemblies) {
+        let wantOpen = false
+        for (const point of assembly.interactionPoints) {
+          if (point.kind !== 'entrance' && point.kind !== 'door') continue
+          _entranceWorld.set(point.position.x, point.position.y, point.position.z)
+          assembly.root.localToWorld(_entranceWorld)
+          const dist = Math.hypot(
+            observerPos.x - _entranceWorld.x,
+            observerPos.z - _entranceWorld.z,
+          )
+          const threshold = assembly.doors.some((d) => d.isOpen())
+            ? HOUSE_DOOR_CLOSE_DISTANCE
+            : HOUSE_DOOR_OPEN_DISTANCE
+          if (dist <= threshold) wantOpen = true
+        }
+        for (const door of assembly.doors) door.setOpen(wantOpen)
+        assembly.update(dt)
+      }
       for (const sp of signposts) {
         sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))
       }

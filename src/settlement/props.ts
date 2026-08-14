@@ -7,6 +7,8 @@ import type { VillageLandmarkPlan, VillagePlan } from './villagePlan'
 import { discoverGlbAnchors, resolveAssetAnchors } from '../assets/anchorResolve'
 import { anchorsForAsset } from '../assets/assetAnchorData'
 import { mergeAnchorDefs } from '../assets/assetAnchors'
+import { buildConstructionCatalog } from '../assets/constructionCatalog'
+import { pickHouseDefinition } from '../assets/houseDefinitionExample'
 import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../assets/loadGltf'
 import { isDebugMode } from '../debug/debugMode'
 import { createHorseModel } from '../fauna/proceduralAnimals'
@@ -26,6 +28,15 @@ import {
   gardenPlotRadius,
   type GardenScale,
 } from './gardenScale'
+import {
+  buildHouse,
+  createHouseStaticBatch,
+  type HouseAssembly,
+  type HouseBuildContext,
+  houseDefinitionAssetIds,
+  houseFootprintRadius,
+  loadHousePartTemplates,
+} from './houseBuilder'
 import {
   HOUSE_FLOOR_LAMP_Y,
   HOUSE_LAMP_MAX_LOCAL_Y,
@@ -60,10 +71,20 @@ import { pathPlansToCorridorData } from './villagePlanner'
 
 export type SettlementHouseLandmark = {
   position: THREE.Vector3
+  /**
+   * Visual variant id. For MegaKit houses this is `HouseDefinition.id`
+   * (`definitionId`). For the legacy catalog-GLB fallback it is the catalog
+   * entry id. Same string as `definitionId` — kept as `houseId` for existing
+   * examine / debug callers.
+   */
   houseId: string
+  /** HouseDefinition id for assembled houses; catalog id for the GLB fallback. */
+  definitionId: string
   modelUrl: string | null
   label: string
   examine: string
+  /** Collision disk used by `createSettlement` / door-sound tracker. */
+  footprintRadius: number
   /** Local lamp mount used at build time (for debug gaze / catalog paste). */
   lampMount: HouseLampMount | null
   lampMountSource: string | null
@@ -1910,6 +1931,7 @@ export async function buildSettlementProps(
   landmarks: SettlementLandmarks
   houseLights: HouseLight[]
   villageTorches: VillageTorch[]
+  houseAssemblies: HouseAssembly[]
 }> {
   const group = new THREE.Group()
   group.name = 'settlement'
@@ -2072,24 +2094,23 @@ export async function buildSettlementProps(
     .sort((a, b) => (a.familyIndex ?? 0) - (b.familyIndex ?? 0))
   const houseRing = villageSizeConfig(size).houseRingMax * 0.85
   const houseYawRandom = createSeededRandom(seed ^ 0xa11ce)
+  const houseAssemblies: HouseAssembly[] = []
+  const plannedDefs = clearings.houses.map((_, i) => pickHouseDefinition(size, i, seed))
+  let builderReady: HouseBuildContext | null = null
+  try {
+    const catalog = buildConstructionCatalog()
+    const templates = await loadHousePartTemplates(
+      catalog,
+      plannedDefs.flatMap(houseDefinitionAssetIds),
+    )
+    builderReady = { catalog, templates }
+  } catch (err) {
+    console.warn('[settlement] HouseBuilder assets unavailable — catalog GLB houses', err)
+  }
+  const staticBatch = createHouseStaticBatch()
+
   for (let i = 0; i < clearings.houses.length; i++) {
     const area = clearings.houses[i]!
-    const entry = pickHomeHouse(size, i, seed)
-    const targetHeight = resolveHouseHeight(entry)
-    const hut = entry.url
-      ? await loadPropOrFallback(entry.url, targetHeight, createHut)
-      : (() => {
-          const fallback = createHut()
-          prepareProp(fallback, targetHeight)
-          return fallback
-        })()
-    // Computed before `placeOnGround` moves `hut.position` to world
-    // coordinates, so this is in the hut's own local frame — exactly what a
-    // child (`houseLight.object`) needs to be positioned relative to.
-    const hutBounds = new THREE.Box3().setFromObject(hut)
-    const hutHeight = hutBounds.max.y - hutBounds.min.y
-    const lampMount = resolveHouseLampMount(entry, hut, hutHeight)
-
     const plot = housePlots[i]
     const outward =
       plot?.rotation ??
@@ -2100,39 +2121,90 @@ export async function buildSettlementProps(
     if (dist > houseRing * 0.75) {
       yaw += (houseYawRandom() - 0.5) * Math.PI * 0.9
     }
-    hut.rotation.y = yaw
 
-    placeOnGround(hut, area.x, area.z, sampleHeight, entry.groundYOffset)
-    hut.name = `house:${entry.id}`
-    hut.userData.houseId = entry.id
-    hut.userData.houseModelUrl = entry.url
-    hut.userData.hasWalls = entry.hasWalls
+    const def = plannedDefs[i]!
+    let hut: THREE.Object3D
+    let houseId = def.id
+    let definitionId = def.id
+    let modelUrl: string | null = null
+    let label = def.label ?? 'Chata'
+    let examine = def.examine ?? 'Tynkowana chata złożona z modularnych części MegaKit.'
+    let hasWalls = def.hasWalls ?? true
+    let groundYOffset = def.groundYOffset ?? 0
+    let footprintRadius = houseFootprintRadius(def)
+    let lampStyle: HouseLampStyle = def.lamp?.style ?? 'wall'
+    let lampMount: ResolvedHouseLampMount = def.lamp?.mount
+      ? { ...def.lamp.mount, source: 'definition' }
+      : {
+          x: def.footprint.width * 0.25,
+          y: 1.85,
+          z: -def.footprint.depth / 2 - 0.12,
+          source: 'definitionDefault',
+        }
+
+    if (builderReady) {
+      const assembly = buildHouse(def, builderReady)
+      hut = assembly.root
+      houseAssemblies.push(assembly)
+    } else {
+      const entry = pickHomeHouse(size, i, seed)
+      const targetHeight = resolveHouseHeight(entry)
+      hut = entry.url
+        ? await loadPropOrFallback(entry.url, targetHeight, createHut)
+        : (() => {
+            const fallback = createHut()
+            prepareProp(fallback, targetHeight)
+            return fallback
+          })()
+      const hutBounds = new THREE.Box3().setFromObject(hut)
+      const hutHeight = hutBounds.max.y - hutBounds.min.y
+      lampMount = resolveHouseLampMount(entry, hut, hutHeight)
+      lampStyle = entry.lampStyle
+      houseId = entry.id
+      definitionId = entry.id
+      modelUrl = entry.url
+      label = entry.label
+      examine = entry.examine
+      hasWalls = entry.hasWalls
+      groundYOffset = entry.groundYOffset
+      footprintRadius = entry.footprintRadius
+    }
+
+    hut.rotation.y = yaw
+    placeOnGround(hut, area.x, area.z, sampleHeight, groundYOffset)
+    hut.name = `house:${houseId}`
+    hut.userData.houseId = houseId
+    hut.userData.definitionId = definitionId
+    hut.userData.houseModelUrl = modelUrl
+    hut.userData.hasWalls = hasWalls
     hut.userData.lampMount = { x: lampMount.x, y: lampMount.y, z: lampMount.z }
     hut.userData.lampMountSource = lampMount.source
     group.add(hut)
 
     const foot = new THREE.Vector3(
       area.x,
-      sampleHeight(area.x, area.z) + entry.groundYOffset,
+      sampleHeight(area.x, area.z) + groundYOffset,
       area.z,
     )
     landmarks.homes.push(foot)
     landmarks.houses.push({
       position: foot.clone(),
-      houseId: entry.id,
-      modelUrl: entry.url,
-      label: entry.label,
-      examine: entry.examine,
+      houseId,
+      definitionId,
+      modelUrl,
+      label,
+      examine,
+      footprintRadius,
       lampMount: { x: lampMount.x, y: lampMount.y, z: lampMount.z },
       lampMountSource: lampMount.source,
     })
 
-    const lanternTpl = entry.lampStyle === 'wall' ? lanternWall : lanternFloor
+    const lanternTpl = lampStyle === 'wall' ? lanternWall : lanternFloor
     const houseLight = createHouseLight(
       lampMount.y,
       lampMount.x,
       lampMount.z,
-      entry.lampStyle,
+      lampStyle,
       lanternTpl,
       lampMount.yaw,
     )
@@ -2141,8 +2213,8 @@ export async function buildSettlementProps(
 
     if (isDebugMode()) {
       console.info('[house:lamp]', {
-        id: entry.id,
-        style: entry.lampStyle,
+        id: houseId,
+        style: lampStyle,
         source: lampMount.source,
         anchor: lampMount.source === 'anchor',
         mount: { x: +lampMount.x.toFixed(3), y: +lampMount.y.toFixed(3), z: +lampMount.z.toFixed(3) },
@@ -2150,6 +2222,15 @@ export async function buildSettlementProps(
       })
     }
     await yieldProp()
+  }
+
+  if (houseAssemblies.length > 0) {
+    group.add(staticBatch.group)
+    for (const assembly of houseAssemblies) {
+      assembly.root.updateMatrixWorld(true)
+      staticBatch.ingest(assembly)
+    }
+    staticBatch.commit()
   }
 
   // A couple of barrels by the stockpile — everyday clutter, purely
@@ -2567,7 +2648,7 @@ export async function buildSettlementProps(
     }
   }
 
-  return { group, landmarks, houseLights, villageTorches }
+  return { group, landmarks, houseLights, villageTorches, houseAssemblies }
 }
 
 export function disposeSettlementGroup(group: THREE.Group): void {

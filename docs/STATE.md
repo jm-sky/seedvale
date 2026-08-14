@@ -117,7 +117,8 @@ Before adding a new abstraction, check whether one of these already owns the res
 ## Developer tooling
 
 - **Asset alignment browser** — `/asset-browser.html` (`src/tools/assetBrowser/`), included in production `vite build`. Wired registries via `buildAssetIndex()` plus parked files from `/asset-browser-models.json` (`status` / `pack` / `kind`, MegaKit 176 GLB). Search, `prepare: none` for parked/URL, per-slot native/prepared AABB. Browser verification: plan 107.
-- **Construction Catalog** — `src/assets/constructionCatalog.ts` (plan 109, reviews [009](./reviews/2026-08-14--009--megakit-construction-audit.md) / [011](./reviews/2026-08-14--011--megakit-construction-browser-verification.md)). Layers construction semantics (kind/dimensions/module/anchors) over `AssetIndex` for the 176 parked MegaKit GLB, sourced from a Node-parsed geometry audit (`src/assets/megakitAudit.generated.json`, `scripts/audit-megakit.mjs`). Browser pass confirmed the modular subset (plaster walls, `floor_wooddark`, corner posts, `wooden_2x1` roofs, door frame at identity, `door_1_flat` hinge offset `x ≈ -0.51 m`, window insert at identity) is a sufficient foundation for a future `HouseBuilder`, which does not exist yet. `houseDefinitionExample.ts` shows the intended data shape.
+- **Construction Catalog** — `src/assets/constructionCatalog.ts` (plan 109, reviews [009](./reviews/2026-08-14--009--megakit-construction-audit.md) / [011](./reviews/2026-08-14--011--megakit-construction-browser-verification.md)). Layers construction semantics over `AssetIndex` for the 176 parked MegaKit GLB.
+- **House Builder** (`src/settlement/houseBuilder.ts`, plan 111) assembles MegaKit cottages (4×4 / 6×4) and medium farmsteads (6×6 / 8×6) from that catalog (native metres ×1.1, cap roofs + gables, plaster/woodgrid/brick kits, chimney on some variants, instanced static parts, hinge doors). Wired into `buildSettlementProps()`; `houseCatalog.ts` remains for Asset Browser / procedural fallback. Browser and `?perf=1` verification are still open.
 - **Performance diagnostics (plan 103)** — `src/perf/` sampler/benchmark; lil-gui Performance + `?perf=1` / `?benchmark=<id>`. Graphics quality presets Low/Medium/High/Custom in Pauza → Świat → Grafika. Adaptive Quality is stored-off, not implemented. Draw calls / triangles are accumulated across composer+mirror (`info.autoReset = false`); diagnosis: [review 012](./reviews/2026-08-14--012--perf-bottleneck-diagnosis.md).
 
 ## Important code entry points
@@ -131,6 +132,10 @@ src/terrain/chunkManager.ts
 src/terrain/chunkEnvironment.ts
 src/settlement/SettlementsManager.ts
 src/settlement/createSettlement.ts
+src/settlement/houseBuilder.ts
+src/settlement/props.ts
+src/assets/constructionCatalog.ts
+src/assets/houseDefinitionExample.ts
 src/economy/
 src/ai/NpcAgent.ts
 src/ai/Needs.ts

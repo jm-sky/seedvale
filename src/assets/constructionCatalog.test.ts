@@ -5,7 +5,7 @@ import {
   CONSTRUCTION_RULES,
   megakitUrls,
 } from './constructionCatalog'
-import { TEST_HOUSE_01 } from './houseDefinitionExample'
+import { HOME_HOUSE_DEFINITIONS, TEST_HOUSE_01, TEST_HOUSE_02 } from './houseDefinitionExample'
 
 describe('constructionCatalog: discovery', () => {
   const catalog = buildConstructionCatalog()
@@ -171,12 +171,43 @@ describe('houseDefinitionExample: TEST_HOUSE_01 references real, correctly-kinde
     expect(catalog.byAssetId.get(opening!.fillAssetId)?.kind).toBe('door')
   })
 
-  it('the roof asset exists and is a roof', () => {
-    expect(catalog.byAssetId.get(TEST_HOUSE_01.roof.assetId)?.kind).toBe('roof')
+  it('every roof part resolves to a roof', () => {
+    const parts = TEST_HOUSE_01.roof.parts ?? []
+    expect(parts.length).toBeGreaterThan(0)
+    for (const part of parts) {
+      expect(catalog.byAssetId.get(part.assetId)?.kind, part.assetId).toBe('roof')
+    }
+  })
+
+  it('TEST_HOUSE_02 window opening resolves to a wall+insert pair', () => {
+    const window = TEST_HOUSE_02.openings.find((o) => o.type === 'window')
+    expect(window).toBeDefined()
+    expect(catalog.byAssetId.get(window!.wallAssetId)?.kind).toBe('wall')
+    expect(catalog.byAssetId.get(window!.fillAssetId)?.kind).toBe('window')
   })
 
   it('footprint is a multiple of the wall/floor module (2 m)', () => {
     expect(TEST_HOUSE_01.footprint.width % 2).toBe(0)
     expect(TEST_HOUSE_01.footprint.depth % 2).toBe(0)
+  })
+
+  it('every village home resolves to real, correctly-kinded parts', () => {
+    expect(HOME_HOUSE_DEFINITIONS.length).toBeGreaterThanOrEqual(10)
+    for (const def of HOME_HOUSE_DEFINITIONS) {
+      expect(def.footprint.width * def.footprint.depth).toBeGreaterThanOrEqual(16)
+      expect(catalog.byAssetId.get(def.floor.assetId)?.kind, def.id).toBe('floor')
+      for (const wall of def.walls) {
+        expect(catalog.byAssetId.get(wall.assetId)?.kind, `${def.id}:${wall.assetId}`).toBe('wall')
+      }
+      for (const part of def.roof.parts ?? []) {
+        expect(catalog.byAssetId.get(part.assetId)?.kind, `${def.id}:${part.assetId}`).toBe('roof')
+      }
+      const door = def.openings.find((o) => o.type === 'door')
+      expect(door, def.id).toBeDefined()
+      expect(catalog.byAssetId.get(door!.fillAssetId)?.kind).toBe('door')
+      for (const deco of def.decorations ?? []) {
+        expect(catalog.byAssetId.has(deco.assetId), `${def.id}:${deco.assetId}`).toBe(true)
+      }
+    }
   })
 })

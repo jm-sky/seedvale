@@ -28,7 +28,7 @@ If the feature needs no new model, do nothing to this file.
 
 | ID | Model | Need / context | Status | Related |
 |----|-------|----------------|--------|---------|
-| M01 | Richer house shells / wall segments (MegaKit) | Fantasy RTS cottages are roof-heavy; full MegaKit Standard parked (176 GLB: walls/roofs/doors/windows) — not wired into generation. Construction Catalog (dimensions/modules/anchors over `AssetIndex`) exists; `HouseBuilder` does not | `in repo` | [research 006](../research/2026-08-11--006--medieval-model-library-complement.md), [review 008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md), [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [plan 109](../plans/2026-08-14--109--megakit-construction-catalog.md), [issue 018](../issues/2026-08-12--018--house-scale-vs-npc.md) |
+| M01 | Richer house shells / wall segments (MegaKit) | Fantasy RTS cottages are roof-heavy. Modular subset (plaster walls, `floor_wooddark`, corner posts, `wooden_2x1` roofs, door/window) is wired through `HouseBuilder` into settlement homes (plan 111). Remaining MegaKit files stay parked | `wired` (HouseBuilder subset) / `in repo` (rest) | [research 006](../research/2026-08-11--006--medieval-model-library-complement.md), [review 008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md), [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [plan 109](../plans/2026-08-14--109--megakit-construction-catalog.md), [plan 111](../plans/2026-08-14--111--house-construction.md), [issue 018](../issues/2026-08-12--018--house-scale-vs-npc.md) |
 | M02 | Yard fence / gate runs | Better palisade/yard than single `wall.glb` stubs | `in repo` | MegaKit `fence_*`, `wall_arch` |
 | M03 | Settlement clutter (wagon, chimney, vines…) | Optional village density props. Home Kupiec wagon uses MegaKit `wagon.glb` | `wired` (merchant wagon) | MegaKit parked set, [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 | M04 | Economy / outpost buildings | Market, windmill, towncenter, watchtower, barracks, temple, port. `farm.glb` wired as village wheat field | `wired` (farm) / `in repo` (rest) | [CREDITS](./CREDITS.md), [plan 099](../plans/archive/2026-08-13--099--wheat-field-glb.md), plan 071 |
@@ -73,7 +73,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Characters | Modular men/women NPCs, Adventurer player |
 | Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
 | Nature (active) | trees/bushes, cactus/reed, rock/log, ore piles, cemetery / gravestones |
-| Settlement (active) | huts, towerhouse, wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB |
+| Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
 | FX | fire tip; blood splat (animal death) |

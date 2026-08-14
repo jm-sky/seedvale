@@ -1,11 +1,11 @@
 # Plan 111: House Construction / House Builder
 
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Created:** 2026-08-14  
 **Priority:** 🔴 high  
 **Effort:** `XL`  
 **Depends on:** ~~109~~ MegaKit Construction Catalog  
-**Related:** [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md), [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md), [plan 109](./2026-08-14--109--megakit-construction-catalog.md)
+**Related:** [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md), [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md), [plan 109](./2026-08-14--109--megakit-construction-catalog.md), [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md)
 
 ## Cel
 
@@ -360,15 +360,15 @@ Nie traktować konkretnego mechanizmu instancingu/merge jako celu samego w sobie
 
 ## Definition of Done
 
-- [ ] `HouseDefinition` jest jednym kontraktem używanym przez builder i przykład.
-- [ ] `HouseBuilder` składa pierwszy dom z Construction Catalog.
-- [ ] Dom używa modularnego subsetu potwierdzonego w review 011.
-- [ ] Drzwi mają poprawny hinge pivot i animację bez przebudowy domu.
-- [ ] Static repeated parts są instancjonowane/łączone tam, gdzie jest to bezpieczne i daje sensowną redukcję renderables.
-- [ ] Settlement używa buildera zamiast starego pojedynczego GLB domu.
-- [ ] `landmarks.homes`, `landmarks.houses`, colliders, `Place`, households i livestock nadal działają.
-- [ ] Lifecycle/dispose jest poprawny dla stream-out/rebuild.
-- [ ] Tests przechodzą.
+- [x] `HouseDefinition` jest jednym kontraktem używanym przez builder i przykład.
+- [x] `HouseBuilder` składa pierwszy dom z Construction Catalog.
+- [x] Dom używa modularnego subsetu potwierdzonego w review 011.
+- [x] Drzwi mają poprawny hinge pivot i animację bez przebudowy domu.
+- [x] Static repeated parts są instancjonowane/łączone tam, gdzie jest to bezpieczne i daje sensowną redukcję renderables.
+- [x] Settlement używa buildera zamiast starego pojedynczego GLB domu.
+- [x] `landmarks.homes`, `landmarks.houses`, colliders, `Place`, households i livestock nadal działają.
+- [x] Lifecycle/dispose jest poprawny dla stream-out/rebuild.
+- [x] Tests przechodzą.
 - [ ] Browser verification potwierdza wizualny assembly.
 - [ ] Performance verification nie pokazuje regresji i potwierdza sensowną liczbę renderable objects per house.
-- [ ] Brak drugiego asset registry, drugiego settlement building systemu i nowego globalnego render managera.
+- [x] Brak drugiego asset registry, drugiego settlement building systemu i nowego globalnego render managera.
