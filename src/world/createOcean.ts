@@ -14,7 +14,7 @@ export type WorldOcean = {
    *  geometry/texture rebuild), unlike a chunked world's terrain/water. */
   follow: (x: number, z: number) => void
   setReflections: (enabled: boolean) => void
-  /** Shared 256² planar pass — call once per frame before the composer. */
+  /** Shared 128² planar pass — throttled to 60 Hz inside `waterMirror`. */
   renderMirror: (renderer: WebGLRenderer, scene: Scene, camera: Camera) => void
   addTo: (scene: Scene) => void
   dispose: () => void

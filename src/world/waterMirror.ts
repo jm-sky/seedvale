@@ -17,8 +17,13 @@ import {
  *  `layers.enable(WATER_RENDER_LAYER)` or the water disappears. */
 export const WATER_RENDER_LAYER = 1
 
-/** One shared planar-reflection pass (256²) for every water material. */
-export const WATER_MIRROR_SIZE = 256
+/** One shared planar-reflection pass (128²) for every water material. */
+export const WATER_MIRROR_SIZE = 128
+
+/** Mirror re-renders at most this often — per-frame above 60 Hz was redundant
+ *  (perf review 012) while still costing a full scene pass. */
+const MIRROR_MAX_HZ = 60
+const MIRROR_MIN_INTERVAL_S = 1 / MIRROR_MAX_HZ
 
 export type WaterMirrorUniforms = {
   uMirror: { value: WebGLRenderTarget['texture'] }
@@ -73,6 +78,7 @@ export function createWaterMirror(opts: {
   const waterLevel = opts.waterLevel
   let enabled = opts.enabled
   let disposed = false
+  let lastRenderSec = -Infinity
 
   return {
     uniforms,
@@ -83,6 +89,10 @@ export function createWaterMirror(opts: {
     isEnabled: () => enabled && !disposed,
     render(renderer, scene, camera) {
       if (!enabled || disposed) return
+
+      const nowSec = performance.now() * 0.001
+      if (nowSec - lastRenderSec < MIRROR_MIN_INTERVAL_S) return
+      lastRenderSec = nowSec
 
       _cameraWorld.setFromMatrixPosition(camera.matrixWorld)
       // Camera under the plane — skip, same as Water.js facing-away early out.

@@ -5,7 +5,7 @@
 **Priority:** 🟡 medium
 **Effort:** `L`
 **Depends on:** ~~—~~ (107 landed mid-session; `constructionCatalog.ts` reuses its `status`/`pack`/`kind`/`mergeParkedManifest`)
-**Related:** [review 008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md), [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md), [plan 107](./2026-08-14--107--asset-browser-agent-discovery.md), [megakit README](../../public/models/settlement/megakit/README.md)
+**Related:** [review 008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md), [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md), [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md), [plan 107](./2026-08-14--107--asset-browser-agent-discovery.md), [megakit README](../../public/models/settlement/megakit/README.md)
 
 ## Po co
 
@@ -85,3 +85,51 @@ Full detail: [review 009](../reviews/2026-08-14--009--megakit-construction-audit
   `wooden_2x1` family composes with per-part origins; `roof_roundtiles_4x4` is a complete cap
   whose name is not a 2 m module count. Catalog is a sufficient foundation for `HouseBuilder`
   on that modular subset. No catalog code changes from the visual pass.
+
+## Performance guardrails for `HouseBuilder` (future plan)
+
+**Context:** [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md) measured
+~567–780 individual settlement meshes in view (~50% of draw calls in village scenarios). A
+naive `HouseBuilder` that emits one `Mesh` per catalog placement would repeat that pattern at
+house scale. These are **design constraints for the next plan**, not runtime optimizations to
+implement now.
+
+**Do not add in this follow-up:** LOD system, render manager, settlement architecture rewrite,
+batching framework, or any production optimization code. Reuse existing Three.js patterns
+(e.g. settlement `instancedProps`) only where the builder plan naturally fits them.
+
+### 1. Avoid one `Mesh` per structural placement by default
+
+Repeatable, non-interactive construction parts — walls, posts, beams, repeatable roof
+segments/tiles — should be **grouped or instanced**, not emitted as hundreds of independent
+render objects when geometry and material are shared. `HouseDefinition` / catalog semantics
+stay per-part; the **runtime assembly** should batch what it can.
+
+### 2. Prefer `InstancedMesh` when geometry + material match
+
+When many placements share the same `assetId` (same geometry and material) and differ only by
+transform, prefer a single `InstancedMesh` (or equivalent existing instancing path) over N
+separate meshes. **Not required** for parts that must remain independent (see §3).
+
+### 3. Keep interactive / animated parts as separate objects
+
+Do not sacrifice builder functionality for draw-call savings. These stay individual meshes
+(or their own small subgraphs) so transform, animation, and future interaction stay local:
+
+- doors (leaf + frame if needed separately),
+- windows (inserts that may open later),
+- any animated or gameplay-tagged element.
+
+### 4. Limit material proliferation
+
+Avoid creating a new `Material` instance per placement when the catalog asset already implies
+one shared look. Different materials ⇒ more draw calls. **`ConstructionCatalog` remains the
+source of asset identity and properties**; the builder should map catalog entries to shared
+materials, not fork materials per instance.
+
+### 5. Scope boundary — guardrails only
+
+This section records **how** the future `HouseBuilder` should assemble meshes, not **what**
+optimization system to build. No new cross-cutting perf subsystem in the builder's first
+iteration; validate assembly choices against the same census / draw-call tooling review 012
+used once houses exist in a test scene.

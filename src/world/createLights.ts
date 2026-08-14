@@ -22,8 +22,8 @@ export function createLights(shadowMapSize = 1024): WorldLights {
   sun.position.set(40, 70, 30)
   sun.castShadow = true
   // 1024 is enough for the ~160-unit shadow frustum around the player;
-  // 2048 mostly burned fill-rate without a matching clarity gain.
-  const size = shadowMapSize === 512 || shadowMapSize === 2048 ? shadowMapSize : 1024
+  // 2048 mostly burned fill-rate without a matching clarity gain (perf 012).
+  const size = shadowMapSize === 512 ? 512 : 1024
   sun.shadow.mapSize.set(size, size)
   sun.shadow.camera.near = 1
   sun.shadow.camera.far = 200
@@ -49,7 +49,7 @@ export function createLights(shadowMapSize = 1024): WorldLights {
       sun.target.updateMatrixWorld()
     },
     setShadowMapSize(next) {
-      const resolved = next === 512 || next === 2048 ? next : 1024
+      const resolved = next === 512 ? 512 : 1024
       if (sun.shadow.mapSize.x === resolved) return
       sun.shadow.mapSize.set(resolved, resolved)
       if (sun.shadow.map) {
