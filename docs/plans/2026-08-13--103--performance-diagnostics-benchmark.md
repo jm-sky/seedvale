@@ -1,6 +1,6 @@
 # 103 — Performance Diagnostics, Benchmark & Adaptive Quality
 
-**Status:** `todo`
+**Status:** `verification needed`
 **Priority:** 🔴 high  
 **Effort:** XL  
 **Depends on:** —

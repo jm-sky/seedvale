@@ -133,7 +133,9 @@ function minimalConfig(): WorldConfig {
       pixelRatioCap: 2,
       terrainCastsShadow: true,
       waterReflections: true,
+      shadowMapSize: 1024,
     },
+    quality: { preset: 'High', lodScale: 1, adaptiveEnabled: false },
     showGui: true,
     player: { name: 'Ja' },
     settlements: { homeSize: 'auto' },
@@ -199,6 +201,17 @@ describe('persistConfig domains (issue 019)', () => {
 
     const loaded = loadDomainConfigs()
     expect(loaded?.postProcessing?.waterReflections).toBe(false)
+  })
+
+  it('round-trips quality preset through saveGraphics', () => {
+    const config = minimalConfig()
+    config.quality.preset = 'Low'
+    config.quality.lodScale = 0.5
+    saveGraphics(config)
+
+    const loaded = loadDomainConfigs()
+    expect(loaded?.quality?.preset).toBe('Low')
+    expect(loaded?.quality?.lodScale).toBe(0.5)
   })
 
   it('defaults waterReflections to true when stored graphics omit the flag', () => {

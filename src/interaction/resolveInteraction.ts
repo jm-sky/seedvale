@@ -31,15 +31,18 @@ function capitalize(text: string): string {
   return text.length > 0 ? text[0]!.toUpperCase() + text.slice(1) : text
 }
 
-/** Dispatches an `[E]`-pressed `Interactable` (everything except `item`/`campfire`,
- *  which `app/createApp.ts` handles directly — both need `Inventory` access this
- *  module doesn't have — without opening this generic dialog; `npc`, which
- *  opens the dedicated Vue dialogue menu instead — see `ui-vue/store.ts`'s
+/** Dispatches an `[E]`-pressed `Interactable` (everything except `item`/`campfire`/
+ *  `corpse`/`deposit`/`tent`/`waterEdge`, which `app/gameLoop.ts`/`createApp.ts`
+ *  handle directly — all need `Inventory`/`PlayerNeeds` access this module
+ *  doesn't have — without opening this generic dialog; `npc`, which opens the
+ *  dedicated Vue dialogue menu instead — see `ui-vue/store.ts`'s
  *  `openNpcDialogueMenu`; and `dig`, which `gameLoop.ts` handles directly for
- *  the same `Inventory`-access reason as `item`/`campfire`) to the right
- *  `QuestManager` call, falling back to flavor text when no active quest cares. */
+ *  the same `Inventory`-access reason) to the right `QuestManager` call,
+ *  falling back to flavor text when no active quest cares. `well` still goes
+ *  through here for its flavor line/quest hook — `gameLoop.ts` additionally
+ *  handles its own drink/fill mechanics (plan 106) alongside the call. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'waterEdge' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

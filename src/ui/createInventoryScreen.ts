@@ -5,6 +5,8 @@ export type InventoryScreenHandlers = {
   onDrop?: (kind: ItemKind) => void
   onEquip?: (kind: ItemKind) => void
   onUnequip?: () => void
+  /** "Zjedz"/"Wypij" (plan 106) — only offered for consumable items. */
+  onConsume?: (kind: ItemKind) => void
   onClose?: () => void
 }
 
@@ -46,6 +48,7 @@ export function createInventoryScreen(
       (kind) => handlers.onDrop?.(kind),
       (kind) => handlers.onEquip?.(kind),
       () => handlers.onUnequip?.(),
+      (kind) => handlers.onConsume?.(kind),
     )
   }
 

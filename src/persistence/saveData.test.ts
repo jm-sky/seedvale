@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isSaveDataV12, loadSaveData, type SaveConfig, type SaveDataV10, type SaveDataV11 } from './saveData'
+import { isSaveDataV13, loadSaveData, type SaveConfig, type SaveDataV10, type SaveDataV11 } from './saveData'
 
 const config = {
   seed: 1,
@@ -31,11 +31,12 @@ describe('loadSaveData v11 map discovery', () => {
   it('migrates a v10 save to empty discovery', () => {
     const loaded = loadSaveData(v10)
     expect(loaded).not.toBeNull()
-    expect(loaded?.version).toBe(12)
+    expect(loaded?.version).toBe(13)
     expect(loaded?.map.discoveredCells).toEqual([])
     expect(loaded?.player.x).toBe(3)
     expect(loaded?.elapsedDays).toBe(2)
     expect(loaded?.settlementEconomies).toEqual({})
+    expect(loaded?.playerNeeds).toEqual({ hunger: 100, thirst: 100, vigor: 100 })
   })
 
   it('keeps discovered cells from a v11 save', () => {
@@ -45,7 +46,7 @@ describe('loadSaveData v11 map discovery', () => {
       map: { discoveredCells: ['0,0', '1,0'] },
     }
     const loaded = loadSaveData(v11)
-    expect(isSaveDataV12(loaded)).toBe(true)
+    expect(isSaveDataV13(loaded)).toBe(true)
     expect(loaded?.map.discoveredCells).toEqual(['0,0', '1,0'])
     expect(loaded?.settlementEconomies).toEqual({})
   })
@@ -61,7 +62,7 @@ describe('loadSaveData v11 map discovery', () => {
       player: { x: 0, z: 0, yaw: 0, pitch: 0 },
       savedAt: 1,
     })
-    expect(loaded?.version).toBe(12)
+    expect(loaded?.version).toBe(13)
     expect(loaded?.map.discoveredCells).toEqual([])
   })
 
@@ -73,7 +74,8 @@ describe('loadSaveData v11 map discovery', () => {
       settlementEconomies: { home: { food: 3, wood: 1 } },
     }
     const loaded = loadSaveData(v12)
-    expect(isSaveDataV12(loaded)).toBe(true)
+    expect(isSaveDataV13(loaded)).toBe(true)
     expect(loaded?.settlementEconomies).toEqual({ home: { food: 3, wood: 1 } })
+    expect(loaded?.playerNeeds).toEqual({ hunger: 100, thirst: 100, vigor: 100 })
   })
 })

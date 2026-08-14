@@ -39,13 +39,16 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 | `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów | 🟡 | L | ~~060~~ ~~071~~ |
 | `2026-08-11--070--world-observatory.md` | Panel obserwacji życia świata | ⚪ | XL | 071, 069 |
 | `2026-08-08--037--npc-genealogy-lineages.md` | Rody NPC (kompas N → ~~067~~) | ⚪ | L | ~~022~~ ~~031~~ |
-| `2026-08-13--103--performance-diagnostics-benchmark.md` | Diagnostyka wydajności, benchmarki, profile jakości | 🔴 | XL | — |
 
 ---
 
 ## Verification needed
 
 Implementation complete; needs play/browser check. This section lists **plans in this folder**. After the 2026-08-14 archive freeze it is empty; new verified-but-unplayed work belongs here.
+
+| File | Summary | Pri | Effort | Depends |
+|------|---------|-----|--------|---------|
+| `2026-08-13--103--performance-diagnostics-benchmark.md` | Diagnostyka wydajności, benchmarki, profile jakości (etapy 1–4; Adaptive = później) | 🔴 | XL | — |
 
 Historical playtest queue (files in archive): [below](#playtest-queue-archived-batch).
 

@@ -22,6 +22,12 @@ export type ItemKind =
   | 'coal'
   | 'iron'
   | 'gold'
+  | 'tomato'
+  | 'raw_meat'
+  | 'roasted_meat'
+  | 'bread'
+  | 'waterskin_empty'
+  | 'waterskin_full'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility'
 
@@ -195,6 +201,54 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     weight: 0.4,
     color: 0xd4af37,
     description: 'Rzadka i cenna ruda o charakterystycznym złotym połysku. Ceniona za swoją wartość i piękno.'
+  },
+  tomato: {
+    kind: 'tomato',
+    label: 'pomidor',
+    category: 'resource',
+    weight: 0.15,
+    color: 0xc0392b,
+    description: 'Dojrzały pomidor zerwany z przydomowego ogródka. Zaspokaja głód.'
+  },
+  raw_meat: {
+    kind: 'raw_meat',
+    label: 'surowe mięso',
+    category: 'resource',
+    weight: 0.8,
+    color: 0xa5453f,
+    description: 'Świeżo pozyskane mięso. Lepiej upiec je przy ognisku, zanim się je zje.'
+  },
+  roasted_meat: {
+    kind: 'roasted_meat',
+    label: 'pieczone mięso',
+    category: 'resource',
+    weight: 0.7,
+    color: 0x8a5a3a,
+    description: 'Mięso upieczone przy ognisku. Sycący posiłek.'
+  },
+  bread: {
+    kind: 'bread',
+    label: 'chleb',
+    category: 'resource',
+    weight: 0.5,
+    color: 0xc99a52,
+    description: 'Bochenek chleba. Dobrze się przechowuje — przydatny na czarną godzinę.'
+  },
+  waterskin_empty: {
+    kind: 'waterskin_empty',
+    label: 'bukłak (pusty)',
+    category: 'utility',
+    weight: 0.3,
+    color: 0x6b5a3a,
+    description: 'Skórzany bukłak na wodę. Pusty — napełnij go przy studni lub jeziorze.'
+  },
+  waterskin_full: {
+    kind: 'waterskin_full',
+    label: 'bukłak (pełny)',
+    category: 'utility',
+    weight: 1.3,
+    color: 0x4a9fd8,
+    description: 'Skórzany bukłak pełen wody. Ugasi pragnienie.'
   },
 }
 
@@ -401,6 +455,54 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     blade.position.set(0.06, 0.08, 0.02)
     blade.castShadow = true
     group.add(blade)
+    return group
+  }
+  if (kind === 'tomato') {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.09, 8, 6),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.tomato.color, flatShading: true }),
+    )
+    mesh.position.y = 0.09
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'raw_meat' || kind === 'roasted_meat') {
+    const mesh = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(0.11, 0),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),
+    )
+    mesh.scale.set(1.3, 0.7, 1)
+    mesh.position.y = 0.08
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'bread') {
+    const mesh = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.08, 0.18, 4, 6),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.bread.color, flatShading: true }),
+    )
+    mesh.rotation.z = Math.PI / 2
+    mesh.position.y = 0.08
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'waterskin_empty' || kind === 'waterskin_full') {
+    const group = new THREE.Group()
+    const body = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 8, 6),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),
+    )
+    body.scale.set(0.85, 1.15, 0.85)
+    body.position.y = 0.14
+    body.castShadow = true
+    group.add(body)
+    const neck = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.04, 0.08, 6),
+      new THREE.MeshStandardMaterial({ color: 0x4a3324, flatShading: true }),
+    )
+    neck.position.y = 0.26
+    neck.castShadow = true
+    group.add(neck)
     return group
   }
   if (kind === 'coal' || kind === 'iron' || kind === 'gold') {

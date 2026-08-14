@@ -1,5 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { ui } from '../store'
+
+/** Plan 106 — colors match the existing NPC/animal label bars
+ *  (`.npc-label__bar--{stamina,vigor,satiety,hydration}`, index.html) so the
+ *  player's own bars read as the same visual language. */
+const needBars = computed(() => [
+  { key: 'stamina', label: 'Kondycja', value: ui.hud.playerNeeds.stamina, color: '#e0c040' },
+  { key: 'vigor', label: 'Wigor', value: ui.hud.playerNeeds.vigor, color: '#5cbfa8' },
+  { key: 'hunger', label: 'Głód', value: ui.hud.playerNeeds.hunger, color: '#d4893a' },
+  { key: 'thirst', label: 'Pragnienie', value: ui.hud.playerNeeds.thirst, color: '#4a9fd8' },
+])
 </script>
 
 <template>
@@ -17,6 +28,17 @@ import { ui } from '../store'
       <span v-if="ui.hud.weight">{{ ui.hud.weight }}</span>
       <span v-if="ui.hud.held">{{ ui.hud.held }}</span>
     </div>
+    <div class="mt-2 flex w-[130px] flex-col gap-1 max-[700px]:w-[100px]">
+      <div v-for="bar in needBars" :key="bar.key" class="flex items-center gap-1.5" :title="bar.label">
+        <div class="h-[3px] flex-1 overflow-hidden rounded-full bg-black/45">
+          <div
+            class="h-full rounded-full transition-[width]"
+            :style="{ width: `${Math.round(bar.value * 100)}%`, background: bar.color }"
+          />
+        </div>
+      </div>
+    </div>
+
     <div class="mt-2.5 text-xs opacity-70 max-[700px]:hidden">
       {{ ui.hud.hint }}
     </div>

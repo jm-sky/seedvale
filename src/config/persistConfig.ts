@@ -9,6 +9,7 @@ const WORLD_KEY = 'seedvale:world:v1'
 
 export type StoredGraphics = {
   postProcessing: WorldConfig['postProcessing']
+  quality?: WorldConfig['quality']
 }
 
 export type StoredPlayer = {
@@ -127,6 +128,7 @@ export function loadDomainConfigs(): StoredConfig | null {
 
   return {
     postProcessing: graphics?.postProcessing ?? legacy?.postProcessing,
+    quality: graphics?.quality,
     player: player?.player ?? legacy?.player,
     seed: world?.seed ?? legacy?.seed,
     terrain: world?.terrain ?? legacy?.terrain,
@@ -143,6 +145,7 @@ export function loadStoredConfig(): StoredConfig | null {
 export function saveGraphics(config: WorldConfig): void {
   const payload: StoredGraphics = {
     postProcessing: { ...config.postProcessing },
+    quality: { ...config.quality },
   }
   writeJson(GRAPHICS_KEY, payload)
 }

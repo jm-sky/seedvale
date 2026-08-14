@@ -1,12 +1,18 @@
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { SaveData } from '../persistence/saveData'
-import { playActionChop, playActionDig, playActionMine } from '../audio/actionSounds'
+import { playActionChop, playActionDig, playActionMine, playActionWell } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { createHouseDoorTracker } from '../audio/doorSounds'
 import { createFireAudio, playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { saveAllDomains, saveGraphics, savePlayer, saveWorld } from '../config/persistConfig'
+import {
+  applyQualityPreset,
+  knobsFromConfig,
+  matchQualityPreset,
+  type QualityPreset,
+} from '../config/qualityProfiles'
 import {
   applyStoredPlayer,
   applyStoredSettlements,
@@ -19,21 +25,32 @@ import { createTouchControls, type TouchControls } from '../input/createTouchCon
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
+import { COOK_DURATION_SEC, findCookingRecipe } from '../items/campfireCooking'
 import { askGuardForSword, shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
+import { ITEM_CATALOG } from '../items/itemCatalog'
 import { Inventory } from '../items/Inventory'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { evaluateTentPlacement, TENT_PLACEMENT_MESSAGE } from '../items/tentPlacement'
 import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
 import { buyWithBarter, buyWithShells } from '../items/trade'
+import {
+  benchmarkScenarioFromUrl,
+  createBenchmarkRunner,
+  createPerfMonitor,
+  isPerfUrlEnabled,
+  setActiveMonitor,
+} from '../perf'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
+import { eatFood, drinkWater as drinkWaterNeeds, restorePersistedNeeds } from '../player/PlayerNeeds'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { QuestManager } from '../quests/QuestManager'
 import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
+import type { VillageFire } from '../settlement/VillageFire'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { MINE_DURATION_SEC, yieldForOre } from '../terrain/depositMining'
@@ -64,6 +81,7 @@ import { createTimeSkip } from '../world/timeSkip'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
 import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChopStage } from '../world/treeLifecycle'
 import { WATER_RENDER_LAYER } from '../world/waterMirror'
+import { DRINK_THIRST_RELIEF, UNSAFE_WATER_WARNING, type WaterSource } from '../world/WaterSource'
 import { createWorldContext } from '../world/worldContext'
 import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
@@ -88,6 +106,9 @@ const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
  *  extent (core + house ring, `ringMax + houseRadius*2 ≈ 39.6` at default
  *  `coreRadius`/`houseRadius`), not the much larger `HOME_RADIUS`. */
 const REST_IN_TOWN_RADIUS = 40
+/** Busy-channel duration for knife-harvesting raw_meat from a corpse (plan
+ *  106) — same order of magnitude as `BURY_DURATION_SEC`. */
+const HARVEST_MEAT_DURATION_SEC = 1.5
 
 let touchControls: TouchControls | null = null
 
@@ -117,6 +138,9 @@ export async function createApp(
   const loadingScreen = createLoadingScreen(container)
 
   const config = createWorldConfig()
+  const perfMonitor = createPerfMonitor()
+  setActiveMonitor(perfMonitor)
+  if (isPerfUrlEnabled()) perfMonitor.setSource('url', true)
   if (initialSave) {
     config.seed = initialSave.config.seed
     // Merge field-by-field rather than replacing `config.terrain` wholesale —
@@ -175,7 +199,7 @@ export async function createApp(
     config.postProcessing,
   )
 
-  const lights = createLights()
+  const lights = createLights(config.postProcessing.shadowMapSize)
   lights.addTo(scene)
 
   const sky = createSky(config.sky)
@@ -244,6 +268,7 @@ export async function createApp(
     mouseLook.state.yaw = initialSave.player.yaw
     mouseLook.state.pitch = initialSave.player.pitch
     player.setPosition(initialSave.player.x, initialSave.player.z)
+    restorePersistedNeeds(player.needs, initialSave.playerNeeds)
   } else {
     player.setPosition(bundle.settlementsManager.home.spawn.x, bundle.settlementsManager.home.spawn.z)
   }
@@ -452,7 +477,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 12,
+    version: 13,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -487,6 +512,11 @@ export async function createApp(
     worldFlags: { ...worldFlags },
     map: { discoveredCells: mapDiscovery.serialize() },
     settlementEconomies: bundle.settlementsManager.snapshotEconomies(),
+    playerNeeds: {
+      hunger: player.needs.hunger.current,
+      thirst: player.needs.thirst.current,
+      vigor: player.needs.vigor.current,
+    },
   })
 
   const saveNow = (): void => {
@@ -499,10 +529,27 @@ export async function createApp(
     saveWorld(config)
   }
 
+  const syncQualityLabel = () => {
+    config.quality.preset = matchQualityPreset(knobsFromConfig(config))
+  }
+
+  const applyLiveGraphics = () => {
+    postProcessing.applyConfig(config.postProcessing)
+    bundle.ocean.setReflections(config.postProcessing.waterReflections)
+    bundle.chunkManager.setWaterReflections(config.postProcessing.waterReflections)
+    const pixelRatio = Math.min(window.devicePixelRatio, config.postProcessing.pixelRatioCap)
+    renderer.setPixelRatio(pixelRatio)
+    postProcessing.setPixelRatio(pixelRatio)
+    lights.setShadowMapSize(config.postProcessing.shadowMapSize)
+    bundle.chunkManager.setTerrainCastsShadow(config.postProcessing.terrainCastsShadow)
+    bundle.chunkManager.setLodScale(config.quality.lodScale)
+  }
+
   const updatePostProcessingFromGui = () => {
     postProcessing.applyConfig(config.postProcessing)
     bundle.ocean.setReflections(config.postProcessing.waterReflections)
     bundle.chunkManager.setWaterReflections(config.postProcessing.waterReflections)
+    syncQualityLabel()
     saveGraphics(config)
   }
 
@@ -514,6 +561,7 @@ export async function createApp(
     const pixelRatio = Math.min(window.devicePixelRatio, config.postProcessing.pixelRatioCap)
     renderer.setPixelRatio(pixelRatio)
     postProcessing.setPixelRatio(pixelRatio)
+    syncQualityLabel()
     saveGraphics(config)
   }
 
@@ -524,7 +572,35 @@ export async function createApp(
   // `bundle` object (see `WorldBundle` lifecycle note in CLAUDE.md).
   const updateTerrainShadowFromGui = () => {
     bundle.chunkManager.setTerrainCastsShadow(config.postProcessing.terrainCastsShadow)
+    syncQualityLabel()
     saveGraphics(config)
+  }
+
+  const updateShadowMapFromGui = () => {
+    lights.setShadowMapSize(config.postProcessing.shadowMapSize)
+    syncQualityLabel()
+    saveGraphics(config)
+  }
+
+  const updateLodScaleFromGui = () => {
+    bundle.chunkManager.setLodScale(config.quality.lodScale)
+    syncQualityLabel()
+    saveGraphics(config)
+  }
+
+  const applyNamedQualityPreset = (preset: Exclude<QualityPreset, 'Custom'>) => {
+    applyQualityPreset(config, preset)
+    applyLiveGraphics()
+    saveGraphics(config)
+  }
+
+  const onQualityPresetChange = (preset: QualityPreset) => {
+    if (preset === 'Custom') {
+      config.quality.preset = 'Custom'
+      saveGraphics(config)
+      return
+    }
+    applyNamedQualityPreset(preset)
   }
 
   const onDayNightChange = () => {
@@ -537,6 +613,19 @@ export async function createApp(
     void rebuildWorld()
   }
 
+  const benchmark = createBenchmarkRunner({
+    config,
+    chunkManager: bundle.chunkManager,
+    home: () => {
+      const def = bundle.settlementsManager.getHomeDef()
+      return { x: def.x, z: def.z }
+    },
+    dayNight,
+    player,
+    monitor: perfMonitor,
+    applyQualityPreset: applyNamedQualityPreset,
+  })
+
   const gui = createDebugGui(config, dayNight, renderer, {
     onTerrainChange,
     onSkyChange: updateSkyFromGui,
@@ -547,12 +636,22 @@ export async function createApp(
     onDumpVillagePlan: () => {
       console.log(summarizeVillagePlan(bundle.settlementsManager.getHomeDef().plan))
     },
+    onQualityPresetChange,
+    onShadowMapSizeChange: updateShadowMapFromGui,
+    onLodScaleChange: updateLodScaleFromGui,
+    onPerfTimingsToggle: (enabled) => { perfMonitor.setSource('gui', enabled) },
+    onRunBenchmark: (id) => { void benchmark.run(id) },
   })
   if (!config.showGui) gui.toggle()
   vueUi.configureWorldConfigScreen(config, dayNight, {
     onTerrainChange,
     onDayNightChange,
     onPostProcessingChange: updatePostProcessingFromGui,
+    onRenderQualityChange: updateRenderQualityFromGui,
+    onTerrainShadowChange: updateTerrainShadowFromGui,
+    onQualityPresetChange,
+    onShadowMapSizeChange: updateShadowMapFromGui,
+    onLodScaleChange: updateLodScaleFromGui,
   })
 
   // Created before pauseMenu so their Escape listeners register first — see
@@ -605,6 +704,7 @@ export async function createApp(
     onDrop: dropItemStack,
     onEquip: equipTool,
     onUnequip: unequipTool,
+    onConsume: (kind) => consumeItem(kind),
   })
 
   const { buildSimpleFire, buildFirePit, lightBranch, lightWoodenTorch } = getUserActions(
@@ -622,6 +722,17 @@ export async function createApp(
   const busy = createBusyAction()
   const busyOverlay = createBusyOverlay(container)
   const restCamp = createRestCampSequence(scene, player, (x, z) => bundle.chunkManager.sampleHeight(x, z))
+
+  /** Extracted out of the `createGameLoop` deps object literal so plan 106's
+   *  new consume/cook/harvest/fill actions (defined below, all outside the
+   *  game loop) can call the same post-inventory-mutation sync as everything
+   *  else — trade, tree chop, deposit mine, etc. */
+  const onInventoryChanged = (): void => {
+    heldTool.syncWithInventory()
+    syncHeldHud()
+    syncShovelQuickActions()
+    syncMerchantIfOpen()
+  }
 
   const tentAimPoint = (): { x: number, z: number, yaw: number } => {
     const yaw = mouseLook.state.yaw
@@ -799,6 +910,103 @@ export async function createApp(
       animal.bury()
       toast.show('Zwłoki zakopane.')
     })
+  }
+
+  /** Knife-harvest raw_meat from a corpse (plan 106) — same shape as
+   *  `startBuryCorpse`, just knife-gated and yielding an item instead of
+   *  disposing the corpse. */
+  const startHarvestMeat = (animal: AnimalAgent): void => {
+    if (heldTool.held() !== 'knife' || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (!animal.canHarvestMeat()) return
+    if (!inventory.canAdd('raw_meat', 1)) {
+      toast.show('Ekwipunek jest za ciężki.', 'error')
+      return
+    }
+    busy.start(HARVEST_MEAT_DURATION_SEC, 'Wycinanie mięsa…', () => {
+      if (!animal.canHarvestMeat() || !inventory.canAdd('raw_meat', 1)) return
+      animal.harvestMeat()
+      inventory.add('raw_meat', 1)
+      playInventoryPickUp(worldAudio.playOnce)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      toast.show('+1 Surowe mięso', 'pickup')
+    })
+  }
+
+  /** Cooks the first held recipe's input at a lit campfire (plan 106 §6). */
+  const startCookAt = (fire: VillageFire): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (!fire.isLit()) {
+      toast.show('Ognisko musi się palić.', 'error')
+      return
+    }
+    const recipe = findCookingRecipe(inventory)
+    if (!recipe) {
+      toast.show('Potrzebujesz surowego mięsa.', 'error')
+      return
+    }
+    if (!inventory.canAdd(recipe.output, recipe.count)) {
+      toast.show('Ekwipunek jest za ciężki.', 'error')
+      return
+    }
+    busy.start(COOK_DURATION_SEC, 'Pieczenie mięsa…', () => {
+      if (!fire.isLit()) {
+        toast.show('Ogień zgasł.', 'error')
+        return
+      }
+      if (!inventory.canAdd(recipe.output, recipe.count) || !inventory.remove(recipe.input, 1)) {
+        toast.show('Ekwipunek jest za ciężki.', 'error')
+        return
+      }
+      inventory.add(recipe.output, recipe.count)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      toast.show(`+${recipe.count} ${ITEM_DEFS[recipe.output].label}`, 'pickup')
+    })
+  }
+
+  /** Instant drink at a well/lake (plan 106 §4) — no busy channel, matching
+   *  other instant world actions (item pickup). */
+  const drinkFromWaterSource = (source: WaterSource): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    drinkWaterNeeds(player.needs, DRINK_THIRST_RELIEF)
+    playActionWell(worldAudio.playAt, player.mesh.position)
+    toast.show(source.quality === 'unsafe' ? UNSAFE_WATER_WARNING : 'Napito się wody.', source.quality === 'unsafe' ? 'error' : undefined)
+  }
+
+  /** Instant fill of a carried empty waterskin (plan 106 §4). Removes the
+   *  empty one first, then adds the full one — if the (heavier) full
+   *  waterskin doesn't fit, the empty one is refunded rather than lost. */
+  const fillWaterskin = (): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (!inventory.remove('waterskin_empty', 1)) {
+      toast.show('Potrzebujesz pustego bukłaka.', 'error')
+      return
+    }
+    if (!inventory.add('waterskin_full', 1)) {
+      inventory.add('waterskin_empty', 1)
+      toast.show('Ekwipunek jest za ciężki.', 'error')
+      return
+    }
+    playActionWell(worldAudio.playAt, player.mesh.position)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    onInventoryChanged()
+    toast.show('Napełniono bukłak.', 'pickup')
+  }
+
+  /** Inventory-screen "Zjedz"/"Wypij" (plan 106) — driven by
+   *  `ITEM_CATALOG[kind].consumable`, the same catalog entry the well/lake/
+   *  cooking paths' relief amounts come from. */
+  const consumeItem = (kind: ItemKind): void => {
+    const entry = ITEM_CATALOG[kind].consumable
+    if (!entry || !inventory.remove(kind, 1)) return
+    if (entry.resultKind) inventory.add(entry.resultKind, 1)
+    if (entry.need === 'hunger') eatFood(player.needs, entry.relief)
+    else drinkWaterNeeds(player.needs, entry.relief)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    onInventoryChanged()
+    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
+    toast.show(entry.need === 'hunger' ? 'Zjedzono.' : 'Wypito.', 'pickup')
   }
 
   const startTreeChop = (treeId: string, x: number, z: number): void => {
@@ -1096,14 +1304,13 @@ export async function createApp(
     startTreeChop,
     startDepositMine,
     startBuryCorpse,
+    startHarvestMeat,
+    startCookAt,
+    drinkFromWaterSource,
+    fillWaterskin,
     startTentRest,
     packTent,
-    onInventoryChanged: () => {
-      heldTool.syncWithInventory()
-      syncHeldHud()
-      syncShovelQuickActions()
-      syncMerchantIfOpen()
-    },
+    onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,
   })
   gameLoop.resyncDayNight()
@@ -1141,6 +1348,16 @@ export async function createApp(
   tick()
   loadingScreen.hide()
 
+  perfMonitor.setContextProvider(() => ({
+    loadedChunks: bundle.chunkManager.loadedChunkCount(),
+    npcCount: bundle.settlementsManager.getLoaded().reduce((n, s) => n + s.npcs.length, 0),
+    faunaCount: bundle.fauna.getAgents().length,
+    pixelRatio: renderer.getPixelRatio(),
+    quality: config.quality.preset,
+  }))
+  const autoBench = benchmarkScenarioFromUrl()
+  if (autoBench) void benchmark.run(autoBench)
+
   return () => {
     cancelAnimationFrame(frameId)
     window.removeEventListener('resize', onResize)
@@ -1177,6 +1394,7 @@ export async function createApp(
     configureUiSounds(null)
     worldAudio.dispose()
     disposeWorldBundle(bundle)
+    setActiveMonitor(null)
     playerTorch.dispose()
     player.dispose()
     disposeChunkWorkerPool()

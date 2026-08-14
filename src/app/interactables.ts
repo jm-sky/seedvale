@@ -8,13 +8,15 @@ import type { Settlement } from '../settlement/createSettlement'
 import type { PlacedFires } from '../settlement/PlacedFires'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { ResourceDeposits } from '../terrain/resourceDeposits'
-import { ANIMAL_LABELS, type AnimalKind } from '../fauna/AnimalAgent'
+import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { ORE_YIELD_LABEL } from '../terrain/depositMining'
 import { canLevelAt, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
+import { oceanMixAt } from '../terrain/waterBodies'
 import { isChoppableStage } from '../world/treeLifecycle'
+import { createWaterSource } from '../world/WaterSource'
 import type { Vector3 } from 'three'
 
 /** How close (world units) the player must be to an interactable before it's
@@ -37,9 +39,48 @@ export const KNIFE_BRANCH_BONUS = 0.15
  *  offered; see `buildDigTarget`. */
 export const DIG_REACH = 1.5
 
+/** Plan 106 §4 — `[E]` always drinks directly (well or lake); `[R]` fills a
+ *  carried empty waterskin. Static regardless of inventory (same convention
+ *  as `campfire`'s "Dołóż gałąź" prompt not checking for a branch first) —
+ *  `gameLoop.ts` toasts an error if `[R]` is pressed without one. */
+const WATER_SOURCE_PROMPT = '[E] Napij się · [R] Napełnij bukłak'
+/** Lit campfire — `[E]` adds fuel (existing), `[R]` cooks raw_meat (plan
+ *  106 §6). Static regardless of inventory, same convention as
+ *  `WATER_SOURCE_PROMPT`. */
+const CAMPFIRE_LIT_PROMPT = '[E] Dołóż gałąź · [R] Upiecz mięso'
+
 function animalPromptLabel(kind: AnimalKind, heldTool: ToolKind | null): string {
   const label = ANIMAL_LABELS[kind]
   return isMeleeTool(heldTool) ? `Atakuj: ${label}` : `Obserwuj: ${label}`
+}
+
+/** `bury` (shovel) and `harvest` (knife, plan 106) never overlap on the same
+ *  corpse — the single `HeldTool` slot means only one tool is held at once. */
+function corpseCandidate(
+  animal: AnimalAgent,
+  shovelHeld: boolean,
+  knifeHeld: boolean,
+): Interactable | null {
+  const label = ANIMAL_LABELS[animal.def.kind]
+  if (shovelHeld && !animal.readyToRemove()) {
+    return {
+      kind: 'corpse',
+      position: animal.mesh.position,
+      promptLabel: `Zakop zwłoki: ${label}`,
+      animal,
+      action: 'bury',
+    }
+  }
+  if (knifeHeld && animal.canHarvestMeat()) {
+    return {
+      kind: 'corpse',
+      position: animal.mesh.position,
+      promptLabel: `Wytnij mięso: ${label}`,
+      animal,
+      action: 'harvest',
+    }
+  }
+  return null
 }
 
 /** True if `(x, z)` is within `range` of `playerPos` (XZ plane, squared distance). */
@@ -47,6 +88,26 @@ function withinRange(x: number, z: number, playerPos: Vector3, range: number): b
   const dx = x - playerPos.x
   const dz = z - playerPos.z
   return dx * dx + dz * dz <= range * range
+}
+
+/** True when the player is standing at the edge of an inland (non-ocean) body
+ *  of water — reuses fauna's own shoreline probe (`shoreProbeHits`, plan 094)
+ *  rather than a second implementation, plus a continentalness check
+ *  (`oceanMixAt`, `terrain/waterBodies.ts` — the same signal the water shader
+ *  uses to mix lake vs ocean) so the ocean shore doesn't also offer a drink
+ *  prompt. No discrete "Lake" world object exists (plan 106 §4) — this is a
+ *  synthetic candidate built fresh each frame, same pattern as `buildDigTarget`. */
+function isNearLakeShore(playerPos: Vector3, chunkManager: ChunkManager): boolean {
+  if (shoreProbeHits(playerPos.x, playerPos.z, chunkManager.sampleHeight, chunkManager.waterLevel) === 0) {
+    return false
+  }
+  const continentalness = chunkManager.sampleContinentalness(playerPos.x, playerPos.z)
+  const oceanMix = oceanMixAt(
+    continentalness,
+    chunkManager.region.oceanThreshold,
+    chunkManager.region.coastThreshold,
+  )
+  return oceanMix <= 0.5
 }
 
 /** Assembles this frame's `Interactable` candidates from every world system —
@@ -75,6 +136,7 @@ export function buildInteractables(
   const axeHeld = heldTool === 'axe'
   const shovelHeld = heldTool === 'shovel'
   const pickaxeHeld = heldTool === 'pickaxe'
+  const knifeHeld = heldTool === 'knife'
 
   for (const pf of placedFires.list()) {
     if (!withinRange(pf.x, pf.z, playerPos, GAZE_RANGE)) continue
@@ -82,7 +144,7 @@ export function buildInteractables(
       kind: 'campfire',
       position: { x: pf.x, z: pf.z },
       promptLabel: pf.fire.isLit()
-        ? 'Dołóż gałąź'
+        ? CAMPFIRE_LIT_PROMPT
         : pf.kind === 'pit' ? 'Zapal ognisko w palenisku' : 'Zapal ognisko',
       fire: pf.fire,
     })
@@ -113,14 +175,8 @@ export function buildInteractables(
     for (const animal of settlement.livestock) {
       if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, GAZE_RANGE)) continue
       if (animal.isDead()) {
-        if (shovelHeld && !animal.readyToRemove()) {
-          list.push({
-            kind: 'corpse',
-            position: animal.mesh.position,
-            promptLabel: `Zakop zwłoki: ${ANIMAL_LABELS[animal.def.kind]}`,
-            animal,
-          })
-        }
+        const corpse = corpseCandidate(animal, shovelHeld, knifeHeld)
+        if (corpse) list.push(corpse)
         continue
       }
       list.push({
@@ -135,7 +191,7 @@ export function buildInteractables(
       list.push({
         kind: 'well',
         position: settlement.landmarks.well,
-        promptLabel: 'Zaczerpnij wody',
+        promptLabel: WATER_SOURCE_PROMPT,
       })
     }
 
@@ -161,7 +217,7 @@ export function buildInteractables(
       list.push({
         kind: 'campfire',
         position: settlement.fire.position,
-        promptLabel: settlement.fire.isLit() ? 'Dołóż gałąź' : 'Zapal ognisko',
+        promptLabel: settlement.fire.isLit() ? CAMPFIRE_LIT_PROMPT : 'Zapal ognisko',
         fire: settlement.fire,
       })
     }
@@ -195,14 +251,8 @@ export function buildInteractables(
   for (const animal of fauna.getAgents()) {
     if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, GAZE_RANGE)) continue
     if (animal.isDead()) {
-      if (shovelHeld && !animal.readyToRemove()) {
-        list.push({
-          kind: 'corpse',
-          position: animal.mesh.position,
-          promptLabel: `Zakop zwłoki: ${ANIMAL_LABELS[animal.def.kind]}`,
-          animal,
-        })
-      }
+      const corpse = corpseCandidate(animal, shovelHeld, knifeHeld)
+      if (corpse) list.push(corpse)
       continue
     }
     list.push({
@@ -262,6 +312,15 @@ export function buildInteractables(
         oreType: deposit.type,
       })
     }
+  }
+
+  if (isNearLakeShore(playerPos, chunkManager)) {
+    list.push({
+      kind: 'waterEdge',
+      position: { x: playerPos.x, z: playerPos.z },
+      promptLabel: WATER_SOURCE_PROMPT,
+      source: createWaterSource('lake'),
+    })
   }
 
   return list

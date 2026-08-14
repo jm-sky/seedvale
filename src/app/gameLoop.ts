@@ -14,6 +14,7 @@ import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
 import type { PostProcessing } from '../render/createPostProcessing'
+import type { VillageFire } from '../settlement/VillageFire'
 import type { VueUi } from '../ui-vue/mount'
 import type { BusyOverlay } from '../ui/createBusyOverlay'
 import type { Hud } from '../ui/createHud'
@@ -30,6 +31,7 @@ import type { WorldSky } from '../world/createSky'
 import type { DayNightState } from '../world/dayNight'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
 import type { TimeSkip } from '../world/timeSkip'
+import type { WaterSource } from '../world/WaterSource'
 import type { BusyAction } from './busyAction'
 import type { RestCampSequence } from './restCampSequence'
 import type { WorldBundle } from './worldBundle'
@@ -45,11 +47,22 @@ import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { getMonitor, withCategory } from '../perf'
+import {
+  applyStarvationDamage,
+  restoreNeedsFromSleep,
+  tickPlayerNeeds,
+} from '../player/PlayerNeeds'
 import { villageSizeConfig } from '../settlement/families'
 import { houseCatalogById } from '../settlement/houseCatalog'
 import { damageHealth } from '../shared/HealthState'
+import { getHungerRatio } from '../shared/HungerState'
+import { getStaminaRatio } from '../shared/StaminaState'
+import { getThirstRatio } from '../shared/ThirstState'
+import { getVigorRatio } from '../shared/VigorState'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
+import { createWaterSource } from '../world/WaterSource'
 import {
   buildDigTarget,
   buildInteractables,
@@ -155,6 +168,14 @@ export type GameLoopDeps = {
   startDepositMine: (depositId: string, x: number, z: number) => void
   /** Shovel-bury a dead animal corpse (busy channel). */
   startBuryCorpse: (animal: AnimalAgent) => void
+  /** Knife-harvest raw_meat from a dead animal corpse (busy channel, plan 106). */
+  startHarvestMeat?: (animal: AnimalAgent) => void
+  /** Cook the first held recipe's input at a lit campfire (busy channel, plan 106 §6). */
+  startCookAt?: (fire: VillageFire) => void
+  /** Instant drink from a well/lake `WaterSource` — restores thirst (plan 106 §4). */
+  drinkFromWaterSource?: (source: WaterSource) => void
+  /** Instant fill of a carried empty waterskin at a well/lake (plan 106 §4). */
+  fillWaterskin?: () => void
   startTentRest: (id: string) => void
   packTent: (id: string) => void
   onInventoryChanged: () => void
@@ -195,7 +216,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
-    startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startTentRest, packTent, onInventoryChanged, setFrameTiming,
+    startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt,
+    drinkFromWaterSource, fillWaterskin, startTentRest, packTent, onInventoryChanged, setFrameTiming,
   } = deps
 
   const clock = new Clock()
@@ -228,6 +250,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
 
   const tick = (): void => {
     const frameStart = performance.now()
+    const monitor = getMonitor()
     const rawDt = clock.getDelta()
     const dt = Math.min(rawDt, 0.05)
     if (rawDt > 0) {
@@ -254,6 +277,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           player.standUp()
         }
         bundle.settlementsManager.resolveTimeSkip(skip.startTimeOfDay, skip.hours, dayNight.dayLengthSec)
+        // Player needs freeze (worldDt=0 below) while a skip is in flight,
+        // same convention as fauna/settlements — catch up in one lump here.
+        // `fadeStrength === 1` is rest/sleep (`world/timeSkip.ts`'s doc
+        // comment): a full night fully restores vigor/stamina on top of the
+        // drain the skipped hours would otherwise apply.
+        tickPlayerNeeds(player.needs, skip.hours * 3600)
+        if (skip.fadeStrength === 1) restoreNeedsFromSleep(player.needs)
       }
       keyboard.state.forward = false
       keyboard.state.backward = false
@@ -430,6 +460,33 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'tent') {
         if (interactPressed) startTentRest(target.id)
         if (altInteractPressed) packTent(target.id)
+      } else if (target?.kind === 'campfire') {
+        if (interactPressed) {
+          const wasLit = target.fire.isLit()
+          if (!wasLit && !inventory.has('firestarter', 1)) {
+            toast.show('Potrzebujesz krzesiwa, żeby rozpalić ogień.', 'error')
+          } else if (inventory.remove('branch', 1)) {
+            if (wasLit) target.fire.addFuel()
+            else target.fire.light()
+            hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+            onInventoryChanged()
+            toast.show(wasLit ? 'Dołożono gałąź do ogniska.' : 'Ognisko zapłonęło.')
+          } else {
+            toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
+          }
+        }
+        if (altInteractPressed) startCookAt?.(target.fire)
+      } else if (target?.kind === 'well') {
+        if (interactPressed) {
+          const outcome = resolveInteraction(target, questManager)
+          playActionWell(worldAudio.playAt, target.position)
+          npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
+          drinkFromWaterSource?.(createWaterSource('well'))
+        }
+        if (altInteractPressed) fillWaterskin?.()
+      } else if (target?.kind === 'waterEdge') {
+        if (interactPressed) drinkFromWaterSource?.(target.source)
+        if (altInteractPressed) fillWaterskin?.()
       } else if (target && interactPressed) {
         if (target.kind === 'item') {
           if (!inventory.canAdd(target.item.kind)) {
@@ -442,19 +499,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
               onInventoryChanged()
             }
-          }
-        } else if (target.kind === 'campfire') {
-          const wasLit = target.fire.isLit()
-          if (!wasLit && !inventory.has('firestarter', 1)) {
-            toast.show('Potrzebujesz krzesiwa, żeby rozpalić ogień.', 'error')
-          } else if (inventory.remove('branch', 1)) {
-            if (wasLit) target.fire.addFuel()
-            else target.fire.light()
-            hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-            onInventoryChanged()
-            toast.show(wasLit ? 'Dołożono gałąź do ogniska.' : 'Ognisko zapłonęło.')
-          } else {
-            toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
           }
         } else if (target.kind === 'tree') {
           if (target.canHarvest) {
@@ -476,7 +520,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         } else if (target.kind === 'deposit') {
           startDepositMine(target.id, target.position.x, target.position.z)
         } else if (target.kind === 'corpse') {
-          startBuryCorpse(target.animal)
+          if (target.action === 'bury') startBuryCorpse(target.animal)
+          else startHarvestMeat?.(target.animal)
         } else if (target.kind === 'npc') {
           // Buttons need a visible cursor — same pointer-lock release the
           // pause menu already does on open (createPauseMenu's onPause).
@@ -500,10 +545,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
             npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
           }
-        } else if (target.kind === 'well') {
-          const outcome = resolveInteraction(target, questManager)
-          playActionWell(worldAudio.playAt, target.position)
-          npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
         } else {
           const outcome = resolveInteraction(target, questManager)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
@@ -588,7 +629,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       )
       hud.setTime(dayNight.timeOfDay)
       hud.setExp(questManager.getExp())
-      player.update(dt)
+      withCategory(monitor, 'PHYSICS', () => { player.update(dt) })
+      // Hunger/thirst/vigor freeze during an active time-skip (worldDt=0,
+      // caught up in one lump above on `skip.justFinished`) — stamina keeps
+      // ticking inside `player.update(dt)` on raw `dt` (tied to sprint).
+      tickPlayerNeeds(player.needs, worldDt)
+      applyStarvationDamage(player.needs, player.health, worldDt)
+      hud.setPlayerNeeds({
+        stamina: getStaminaRatio(player.needs.stamina),
+        vigor: getVigorRatio(player.needs.vigor),
+        hunger: getHungerRatio(player.needs.hunger),
+        thirst: getThirstRatio(player.needs.thirst),
+      })
       houseDoors.update(
         player.mesh.position.x,
         player.mesh.position.z,
@@ -603,7 +655,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         worldAudio.playAt,
       )
       mapDiscovery.update(player.mesh.position.x, player.mesh.position.z)
-      bundle.chunkManager.update(player.mesh.position.x, player.mesh.position.z)
+      withCategory(monitor, 'TERRAIN', () => {
+        bundle.chunkManager.update(player.mesh.position.x, player.mesh.position.z)
+      })
       lights.follow(player.mesh.position.x, player.mesh.position.z)
       bundle.ocean.follow(player.mesh.position.x, player.mesh.position.z)
       // Computed before `settlementsManager.update` (not after, as before
@@ -634,33 +688,37 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             .map((npc) => ({ x: npc.mesh.position.x, z: npc.mesh.position.z })),
         ),
       )
-      bundle.settlementsManager.update(
-        worldDt,
-        player.mesh.position,
-        mouseLook.state.yaw,
-        dayNight.timeOfDay,
-        dayFactor,
-        litFires,
-        villages,
-      )
+      withCategory(monitor, 'NPC', () => {
+        bundle.settlementsManager.update(
+          worldDt,
+          player.mesh.position,
+          mouseLook.state.yaw,
+          dayNight.timeOfDay,
+          dayFactor,
+          litFires,
+          villages,
+        )
+      })
       bundle.resourceDeposits.update(player.mesh.position.x, player.mesh.position.z)
-      bundle.fauna.update(
-        worldDt,
-        player.mesh.position,
-        dayNight.timeOfDay,
-        litFires,
-        villages,
-        nearbyHumanCount,
-        (amount) => damageHealth(player.health, amount),
-      )
+      withCategory(monitor, 'FAUNA', () => {
+        bundle.fauna.update(
+          worldDt,
+          player.mesh.position,
+          dayNight.timeOfDay,
+          litFires,
+          villages,
+          nearbyHumanCount,
+          (amount) => damageHealth(player.health, amount),
+        )
+      })
       bundle.itemSpawners.update(dt, player.mesh.position, dayFactor)
       bundle.droppedItems.tick(dt)
       bundle.placedFires.update(dt)
       playerTorch.update(dt)
-      bundle.chunkManager.tickWater(dt)
-      bundle.chunkManager.tickGrass(dt)
+      withCategory(monitor, 'WATER', () => { bundle.chunkManager.tickWater(dt) })
+      withCategory(monitor, 'GRASS', () => { bundle.chunkManager.tickGrass(dt) })
       updateFoliageWind(dt)
-      bundle.ocean.update(dt)
+      withCategory(monitor, 'WATER', () => { bundle.ocean.update(dt) })
       worldAudio.update(dt)
       minimap.update(
         player.mesh.position,
@@ -669,12 +727,24 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       )
     }
     const renderStart = performance.now()
-    bundle.ocean.renderMirror(renderer, scene, camera)
+    withCategory(monitor, 'WATER', () => {
+      bundle.ocean.renderMirror(renderer, scene, camera)
+    })
     postProcessing.updateGodRays(camera, sky.sunPosition, cachedSky.elev)
-    postProcessing.render()
-    labelRenderer.render(scene, camera)
+    withCategory(monitor, 'RENDER', () => {
+      postProcessing.render()
+      labelRenderer.render(scene, camera)
+    })
     const renderEnd = performance.now()
-    setFrameTiming(renderStart - frameStart, renderEnd - renderStart)
+    const simulateMs = renderStart - frameStart
+    const renderMs = renderEnd - renderStart
+    monitor.endFrame({
+      simulateMs,
+      renderMs,
+      drawCalls: renderer.info.render.calls,
+      triangles: renderer.info.render.triangles,
+    })
+    setFrameTiming(simulateMs, renderMs)
   }
 
   return {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { QUALITY_PRESET_IDS, type QualityPreset } from '../../config/qualityProfiles'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { closeWorldConfigScreen, isWorldConfigScreenOpen, ui } from '../store'
@@ -20,6 +21,26 @@ function onFlatShadingChange(): void {
 
 function onGraphicsChange(): void {
   state.onPostProcessingChange?.()
+}
+
+function onPresetChange(preset: QualityPreset): void {
+  state.onQualityPresetChange?.(preset)
+}
+
+function onPixelRatioChange(): void {
+  state.onRenderQualityChange?.()
+}
+
+function onTerrainShadowChange(): void {
+  state.onTerrainShadowChange?.()
+}
+
+function onShadowMapChange(): void {
+  state.onShadowMapSizeChange?.()
+}
+
+function onLodScaleChange(): void {
+  state.onLodScaleChange?.()
 }
 
 function applySeed(): void {
@@ -179,7 +200,49 @@ function onHomeSizeSelect(event: Event): void {
         <h2 class="mb-2 text-xs font-semibold uppercase tracking-widest opacity-60">
           Grafika
         </h2>
-        <label class="flex items-center gap-2 text-sm">
+        <fieldset class="mb-3">
+          <legend class="mb-2 text-xs opacity-75">
+            Jakość
+          </legend>
+          <label
+            v-for="preset in QUALITY_PRESET_IDS"
+            :key="preset"
+            class="mb-1 flex items-center gap-2 text-sm"
+          >
+            <input
+              v-model="state.config!.quality.preset"
+              type="radio"
+              :value="preset"
+              @change="onPresetChange(preset)"
+            >
+            {{ preset }}
+          </label>
+        </fieldset>
+        <label class="mb-3 flex items-center gap-2 text-sm">
+          <input
+            v-model="state.config!.postProcessing.aoEnabled"
+            type="checkbox"
+            @change="onGraphicsChange"
+          >
+          Ambient occlusion
+        </label>
+        <label class="mb-3 flex items-center gap-2 text-sm">
+          <input
+            v-model="state.config!.postProcessing.bloomEnabled"
+            type="checkbox"
+            @change="onGraphicsChange"
+          >
+          Bloom
+        </label>
+        <label class="mb-3 flex items-center gap-2 text-sm">
+          <input
+            v-model="state.config!.postProcessing.godRaysEnabled"
+            type="checkbox"
+            @change="onGraphicsChange"
+          >
+          God rays
+        </label>
+        <label class="mb-3 flex items-center gap-2 text-sm">
           <input
             v-model="state.config!.postProcessing.waterReflections"
             type="checkbox"
@@ -187,6 +250,62 @@ function onHomeSizeSelect(event: Event): void {
           >
           Odbicia wody
         </label>
+        <label class="mb-3 flex items-center gap-2 text-sm">
+          <input
+            v-model="state.config!.postProcessing.terrainCastsShadow"
+            type="checkbox"
+            @change="onTerrainShadowChange"
+          >
+          Cienie terenu
+        </label>
+        <label
+          class="mb-1 block text-xs opacity-75"
+          for="seedvale-pixel-ratio"
+        >Skala renderu ({{ state.config!.postProcessing.pixelRatioCap }}×)</label>
+        <input
+          id="seedvale-pixel-ratio"
+          v-model.number="state.config!.postProcessing.pixelRatioCap"
+          type="range"
+          min="1"
+          max="2"
+          step="0.25"
+          class="mb-3 w-full"
+          @change="onPixelRatioChange"
+        >
+        <label
+          class="mb-1 block text-xs opacity-75"
+          for="seedvale-shadow-map"
+        >Mapa cieni</label>
+        <select
+          id="seedvale-shadow-map"
+          v-model.number="state.config!.postProcessing.shadowMapSize"
+          class="mb-3 w-full rounded-md border border-white/15 bg-[rgb(28,34,40)] px-2.5 py-2 text-sm text-ink outline-none focus:border-blue-400/60 [color-scheme:dark]"
+          @change="onShadowMapChange"
+        >
+          <option :value="512">
+            512
+          </option>
+          <option :value="1024">
+            1024
+          </option>
+          <option :value="2048">
+            2048
+          </option>
+        </select>
+        <label
+          class="mb-1 block text-xs opacity-75"
+          for="seedvale-lod-scale"
+        >LOD roślinności ({{ state.config!.quality.lodScale.toFixed(2) }})</label>
+        <input
+          id="seedvale-lod-scale"
+          v-model.number="state.config!.quality.lodScale"
+          type="range"
+          min="0.25"
+          max="1"
+          step="0.05"
+          class="w-full"
+          @change="onLodScaleChange"
+        >
       </div>
 
       <button

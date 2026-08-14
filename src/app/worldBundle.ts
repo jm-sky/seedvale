@@ -106,6 +106,7 @@ function buildChunkManager(
     treeLifecycle,
     getWorldDays,
     waterMirror,
+    lodScale: config.quality.lodScale,
   }
   return createChunkManager(scene, cfg)
 }

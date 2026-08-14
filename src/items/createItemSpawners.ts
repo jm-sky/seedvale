@@ -65,6 +65,14 @@ const VILLAGE_TOOL_COUNT_MIN = 1
 const VILLAGE_TOOL_COUNT_MAX = 3
 const VILLAGE_TOOL_KINDS: readonly ItemKind[] = ['pitchfork', 'sickle']
 
+/** Plan 106 — one renewable tomato pickup per garden pad ("collected from
+ *  settlement gardens"). Same renewable-pool mechanism as `SPAWN_SPECS`
+ *  (stone/shell), just anchored per-garden like the farm tools above instead
+ *  of the settlement center. */
+const TOMATO_RESPAWN_TIME = 90
+const TOMATO_MIN_DIST = 0.6
+const TOMATO_MAX_DIST = 3
+
 /** One-time village pickaxe (plan 090) — stockpile, same Infinity-respawn as shovel. */
 const PICKAXE_RESPAWN_TIME = Infinity
 const PICKAXE_STOCK_MIN_DIST = 0.8
@@ -230,6 +238,16 @@ export function createItemSpawners(
     if (stock) {
       const pos = findWalkableNear(stock.x, stock.z, PICKAXE_STOCK_MIN_DIST, PICKAXE_STOCK_MAX_DIST)
       if (pos) addSpawnPoint('pickaxe', PICKAXE_RESPAWN_TIME, pos)
+    }
+  }
+
+  {
+    // One tomato pickup per garden pad — falls back to the main garden when
+    // the settlement has no extra pads (same fallback `VILLAGE_TOOL_KINDS` uses).
+    const anchors = gardens.length > 0 ? gardens : [shovelLandmarks.garden]
+    for (const anchor of anchors) {
+      const pos = findWalkableNear(anchor.x, anchor.z, TOMATO_MIN_DIST, TOMATO_MAX_DIST)
+      if (pos) addSpawnPoint('tomato', TOMATO_RESPAWN_TIME, pos)
     }
   }
 

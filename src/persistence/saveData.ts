@@ -211,10 +211,19 @@ export type SaveDataV11 = Omit<SaveDataV10, 'version'> & {
   map: SaveMap
 }
 
-/** Canonical save shape — always v12. `loadSaveData` migrates older saves up. */
-export type SaveData = Omit<SaveDataV11, 'version'> & {
+export type SaveDataV12 = Omit<SaveDataV11, 'version'> & {
   version: 12
   settlementEconomies: Record<string, Partial<Record<EconomicKind, number>>>
+}
+
+/** Plan 106 — hunger/thirst/vigor pools (`player/PlayerNeeds.ts`). Stamina
+ *  stays transient per the plan §8 (short-term, not worth persisting). */
+export type SavePlayerNeeds = { hunger: number, thirst: number, vigor: number }
+
+/** Canonical save shape — always v13. `loadSaveData` migrates older saves up. */
+export type SaveData = Omit<SaveDataV12, 'version'> & {
+  version: 13
+  playerNeeds: SavePlayerNeeds
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -473,7 +482,7 @@ function isSettlementEconomiesField(value: unknown): value is Record<string, Par
   return true
 }
 
-export function isSaveDataV12(value: unknown): value is SaveData {
+export function isSaveDataV12(value: unknown): value is SaveDataV12 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 12) return false
@@ -494,6 +503,37 @@ export function isSaveDataV12(value: unknown): value is SaveData {
   if (!isWorldFlagsField(v.worldFlags)) return false
   if (!isSaveMap(v.map)) return false
   if (!isSettlementEconomiesField(v.settlementEconomies)) return false
+  return true
+}
+
+function isPlayerNeedsField(value: unknown): value is SavePlayerNeeds {
+  if (!value || typeof value !== 'object') return false
+  const n = value as Record<string, unknown>
+  return typeof n.hunger === 'number' && typeof n.thirst === 'number' && typeof n.vigor === 'number'
+}
+
+export function isSaveDataV13(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 13) return false
+  if (!isSaveConfig(v.config)) return false
+  if (!isSavePlayer(v.player)) return false
+  if (typeof v.savedAt !== 'number') return false
+  if (!v.quests || typeof v.quests !== 'object') return false
+  if (!v.inventory || typeof v.inventory !== 'object') return false
+  if (!Array.isArray(v.collectedItemIds)) return false
+  if (!Array.isArray(v.droppedItems)) return false
+  if (!Array.isArray(v.placedFires)) return false
+  if (typeof v.timeOfDay !== 'number') return false
+  if (typeof v.elapsedDays !== 'number') return false
+  if (!isHeldToolField(v.heldTool)) return false
+  if (!isTreeOverridesField(v.treeOverrides)) return false
+  if (!isPlayerTorchField(v.playerTorch)) return false
+  if (!isPlacedTentsField(v.placedTents)) return false
+  if (!isWorldFlagsField(v.worldFlags)) return false
+  if (!isSaveMap(v.map)) return false
+  if (!isSettlementEconomiesField(v.settlementEconomies)) return false
+  if (!isPlayerNeedsField(v.playerNeeds)) return false
   return true
 }
 
@@ -557,7 +597,7 @@ function toV11(v10: SaveDataV10): SaveDataV11 {
   }
 }
 
-function toV12(v11: SaveDataV11): SaveData {
+function toV12(v11: SaveDataV11): SaveDataV12 {
   const { version: _version, ...rest } = v11
   return {
     ...rest,
@@ -566,14 +606,28 @@ function toV12(v11: SaveDataV11): SaveData {
   }
 }
 
-/** Accepts a stored v1–v12 save and always returns the canonical v12 shape. */
+/** Full pools — matches `player/PlayerNeeds.ts`'s `createPlayerNeeds()` default,
+ *  for saves that predate plan 106. */
+const DEFAULT_PLAYER_NEEDS: SavePlayerNeeds = { hunger: 100, thirst: 100, vigor: 100 }
+
+function toV13(v12: SaveDataV12): SaveData {
+  const { version: _version, ...rest } = v12
+  return {
+    ...rest,
+    version: 13,
+    playerNeeds: DEFAULT_PLAYER_NEEDS,
+  }
+}
+
+/** Accepts a stored v1–v13 save and always returns the canonical v13 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV12(value)) return value
-    if (isSaveDataV11(value)) return toV12(value)
-    if (isSaveDataV10(value)) return toV12(toV11(value))
+    if (isSaveDataV13(value)) return value
+    if (isSaveDataV12(value)) return toV13(value)
+    if (isSaveDataV11(value)) return toV13(toV12(value))
+    if (isSaveDataV10(value)) return toV13(toV12(toV11(value)))
     if (isSaveDataV9(value)) {
-      return toV12(toV11(toV10({
+      return toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -587,10 +641,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         heldTool: value.heldTool,
         treeOverrides: value.treeOverrides,
         playerTorch: value.playerTorch,
-      })))
+      }))))
     }
     if (isSaveDataV8(value)) {
-      return toV12(toV11(toV10({
+      return toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -604,10 +658,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         heldTool: value.heldTool,
         treeOverrides: value.treeOverrides,
         playerTorch: null,
-      })))
+      }))))
     }
     if (isSaveDataV7(value)) {
-      return toV12(toV11(toV10({
+      return toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -618,10 +672,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: value.placedFires,
         timeOfDay: value.timeOfDay,
         heldTool: value.heldTool,
-      })))
+      }))))
     }
     if (isSaveDataV6(value)) {
-      return toV12(toV11(toV10({
+      return toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -632,10 +686,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: value.placedFires,
         timeOfDay: value.timeOfDay,
         heldTool: null,
-      })))
+      }))))
     }
     if (isSaveDataV5(value)) {
-      return toV12(toV11(toV10({
+      return toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -646,10 +700,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: migratePlacedFires(value.placedFires),
         timeOfDay: value.timeOfDay,
         heldTool: null,
-      })))
+      }))))
     }
     if (isSaveDataV4(value)) {
-      return toV12(toV11(toV10({
+      return toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -660,10 +714,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: migratePlacedFires(value.placedFires),
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      })))
+      }))))
     }
     if (isSaveDataV3(value)) {
-      return toV12(toV11(toV10({
+      return toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -674,10 +728,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      })))
+      }))))
     }
     if (isSaveDataV2(value)) {
-      return toV12(toV11(toV10({
+      return toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -688,10 +742,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      })))
+      }))))
     }
     if (isSaveDataV1(value)) {
-      return toV12(toV11(toV10({
+      return toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -702,7 +756,7 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      })))
+      }))))
     }
     return null
   } catch {

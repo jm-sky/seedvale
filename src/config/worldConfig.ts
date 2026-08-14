@@ -3,6 +3,7 @@ import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { FbmParams } from '../terrain/fbm'
 import { parseSeedFromUrl } from '../world/parseSeed'
 import { loadDomainConfigs } from './persistConfig'
+import { applyQualityPreset, isQualityPreset, knobsFromConfig, matchQualityPreset, type QualityPreset } from './qualityProfiles'
 
 /** Player override for the home settlement size — `auto` keeps terrain-weighted roll. */
 export type HomeVillageSize = 'auto' | RolledVillageSize
@@ -116,6 +117,16 @@ export type WorldConfig = {
     /** Shared planar water mirror (256²). Off skips the extra scene pass;
      *  water falls back to sky color + sun specular. */
     waterReflections: boolean
+    /** Directional-light shadow map edge (plan 103). Live resize, no rebuild. */
+    shadowMapSize: number
+  }
+  /** Player-facing graphics quality (plan 103). Live knobs only — not world-gen. */
+  quality: {
+    preset: QualityPreset
+    /** Multiplier on grass/vegetation distance LOD (`setLodFraction`). */
+    lodScale: number
+    /** Adaptive Quality (plan 103 etap 5) — stored, ignored until implemented. */
+    adaptiveEnabled: boolean
   }
   /** Show lil-gui panel (`?gui=0` to hide). */
   showGui: boolean
@@ -260,6 +271,12 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       // (issue: default-off read as a visual regression), opt-in via GUI.
       terrainCastsShadow: true,
       waterReflections: true,
+      shadowMapSize: 1024,
+    },
+    quality: {
+      preset: 'High',
+      lodScale: 1,
+      adaptiveEnabled: false,
     },
     showGui: true,
     player: {
@@ -395,6 +412,29 @@ export function applyStoredPlayer(
   if (typeof p?.name === 'string' && p.name.trim()) target.name = p.name
 }
 
+const SHADOW_MAP_SIZES = new Set([512, 1024, 2048])
+
+export function applyStoredQuality(
+  target: WorldConfig['quality'],
+  q: Partial<WorldConfig['quality']> | undefined,
+): void {
+  if (!q || typeof q !== 'object') return
+  if (isQualityPreset(q.preset)) target.preset = q.preset
+  if (typeof q.lodScale === 'number' && Number.isFinite(q.lodScale)) {
+    target.lodScale = Math.min(1, Math.max(0.25, q.lodScale))
+  }
+  if (typeof q.adaptiveEnabled === 'boolean') target.adaptiveEnabled = q.adaptiveEnabled
+}
+
+export function applyStoredPostProcessing(
+  target: WorldConfig['postProcessing'],
+  p: Partial<WorldConfig['postProcessing']> | undefined,
+): void {
+  if (!p || typeof p !== 'object') return
+  Object.assign(target, p)
+  if (!SHADOW_MAP_SIZES.has(target.shadowMapSize)) target.shadowMapSize = 1024
+}
+
 /**
  * Priority: URL query (`seed`, `res`, `gui`) > localStorage domains > defaults.
  */
@@ -426,9 +466,15 @@ export function createWorldConfig(): WorldConfig {
 
   applyStoredSky(config.sky, stored?.sky)
   applyStoredSettlements(config.settlements, stored?.settlements)
-
-  if (stored?.postProcessing && typeof stored.postProcessing === 'object') {
-    config.postProcessing = { ...config.postProcessing, ...stored.postProcessing }
+  applyStoredPostProcessing(config.postProcessing, stored?.postProcessing)
+  applyStoredQuality(config.quality, stored?.quality)
+  if (
+    stored?.quality
+    && (config.quality.preset === 'Low' || config.quality.preset === 'Medium' || config.quality.preset === 'High')
+  ) {
+    applyQualityPreset(config, config.quality.preset)
+  } else {
+    config.quality.preset = matchQualityPreset(knobsFromConfig(config))
   }
 
   applyStoredPlayer(config.player, stored?.player)

@@ -30,6 +30,11 @@ export type ItemCatalogEntry = {
   notes: string
   /** Planned work — not implemented. */
   roadmap?: string
+  /** Inventory-screen "Zjedz"/"Wypij" action (plan 106) — `need` is the
+   *  `PlayerNeeds` pool restored, `relief` the flat amount. `resultKind` is
+   *  set only for a container swap (full waterskin → empty), not for food,
+   *  which is simply consumed. */
+  consumable?: { need: 'hunger' | 'thirst', relief: number, resultKind?: ItemKind }
 }
 
 export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
@@ -238,6 +243,71 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     notes: 'Pickaxe yield from gold deposits (plan 090).',
+  },
+  tomato: {
+    kind: 'tomato',
+    label: 'pomidor',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'village_renewable',
+    modelUrl: null,
+    notes: 'Plan 106 — renewable near settlement garden pads, same pool mechanism as shell/stone.',
+    consumable: { need: 'hunger', relief: 12 },
+  },
+  raw_meat: {
+    kind: 'raw_meat',
+    label: 'surowe mięso',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 106 — knife-harvest from a suitable animal corpse (`AnimalAgent.harvestMeat`). Edible raw at a reduced relief; better roasted.',
+    consumable: { need: 'hunger', relief: 15 },
+  },
+  roasted_meat: {
+    kind: 'roasted_meat',
+    label: 'pieczone mięso',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 106 — cooked from raw_meat at a lit campfire (`items/campfireCooking.ts`).',
+    consumable: { need: 'hunger', relief: 35 },
+  },
+  bread: {
+    kind: 'bread',
+    label: 'chleb',
+    category: 'resource',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 106 — buy from Kupiec (`tradeCatalog.ts`); prepared for future/emergency use per the plan.',
+    consumable: { need: 'hunger', relief: 30 },
+  },
+  waterskin_empty: {
+    kind: 'waterskin_empty',
+    label: 'bukłak (pusty)',
+    category: 'utility',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 106 — buy from Kupiec; fill at a well/lake `[R]` (becomes waterskin_full). Not a `HeldTool` slot item.',
+  },
+  waterskin_full: {
+    kind: 'waterskin_full',
+    label: 'bukłak (pełny)',
+    category: 'utility',
+    holdable: false,
+    meleeDamage: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 106 — filled at a well/lake; drink via inventory "Wypij" (becomes waterskin_empty) or it empties automatically when drunk from the world prompt.',
+    consumable: { need: 'thirst', relief: 45, resultKind: 'waterskin_empty' },
   },
 }
 

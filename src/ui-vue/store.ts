@@ -1,6 +1,7 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { LightActionResult } from '../app/userActions'
+import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
 import type { ItemKind } from '../items/items'
 import type { TradeResult } from '../items/trade'
@@ -35,6 +36,8 @@ type InventoryState = {
   onDrop: ((kind: ItemKind) => void) | null
   onEquip: ((kind: ItemKind) => void) | null
   onUnequip: (() => void) | null
+  /** "Zjedz"/"Wypij" (plan 106) — only offered for `ITEM_CATALOG[kind].consumable` items. */
+  onConsume: ((kind: ItemKind) => void) | null
 }
 type PauseMenuState = {
   open: boolean; seed: number; playerName: string
@@ -94,6 +97,11 @@ type WorldConfigScreenState = {
   /** Cheap — toggles water reflections / other graphics without a rebuild.
    *  Same handler as debug GUI's `onPostProcessingChange`. */
   onPostProcessingChange: (() => void) | null
+  onRenderQualityChange: (() => void) | null
+  onTerrainShadowChange: (() => void) | null
+  onQualityPresetChange: ((preset: QualityPreset) => void) | null
+  onShadowMapSizeChange: (() => void) | null
+  onLodScaleChange: (() => void) | null
 }
 type NotesState = { open: boolean }
 type WorldMapState = { open: boolean; playerX: number; playerZ: number }
@@ -105,6 +113,8 @@ type HudState = {
   weight: string
   held: string
   hint: string
+  /** Ratios (0-1) for the four player-needs bars (plan 106). */
+  playerNeeds: { stamina: number, vigor: number, hunger: number, thirst: number }
 }
 type MinimapState = { collapsed: boolean }
 export type ToastItem = { id: number; text: string; variant: ToastVariant; fading: boolean }
@@ -142,7 +152,7 @@ export function emitUiClick(): void {
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, onAskSword: null, onOpenTrade: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
-  inventory: { open: false, counts: {}, totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null } as InventoryState,
+  inventory: { open: false, counts: {}, totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onRefresh: null,
@@ -160,7 +170,7 @@ export const ui = reactive({
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
   merchant: { open: false, npc: null, counts: {}, onBuyShells: null, onBuyBarter: null } as MerchantState,
   busy: { visible: false, label: '' } as BusyState,
-  worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null } as WorldConfigScreenState,
+  worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
   worldMap: { open: false, playerX: 0, playerZ: 0 } as WorldMapState,
   hud: {
@@ -171,6 +181,7 @@ export const ui = reactive({
     weight: '',
     held: '',
     hint: isTouchDevice() ? HUD_HINT_TOUCH : HUD_HINT_DESKTOP,
+    playerNeeds: { stamina: 1, vigor: 1, hunger: 1, thirst: 1 },
   } as HudState,
   minimap: { collapsed: false } as MinimapState,
   toast: { items: [] as ToastItem[] } as ToastState,
@@ -243,6 +254,7 @@ export function openInventory(
   onDrop: (kind: ItemKind) => void,
   onEquip: (kind: ItemKind) => void,
   onUnequip: () => void,
+  onConsume: (kind: ItemKind) => void,
 ): void {
   ui.inventory.counts = { ...counts }
   ui.inventory.totalWeight = totalWeight
@@ -251,6 +263,7 @@ export function openInventory(
   ui.inventory.onDrop = onDrop
   ui.inventory.onEquip = onEquip
   ui.inventory.onUnequip = onUnequip
+  ui.inventory.onConsume = onConsume
   ui.inventory.open = true
   emitUiOpen()
 }
@@ -360,12 +373,26 @@ export function hideBusy(): void {
   ui.busy.label = ''
 }
 
-export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: { onTerrainChange: () => void; onDayNightChange: () => void; onPostProcessingChange: () => void }): void {
+export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: {
+  onTerrainChange: () => void
+  onDayNightChange: () => void
+  onPostProcessingChange: () => void
+  onRenderQualityChange: () => void
+  onTerrainShadowChange: () => void
+  onQualityPresetChange: (preset: QualityPreset) => void
+  onShadowMapSizeChange: () => void
+  onLodScaleChange: () => void
+}): void {
   ui.worldConfigScreen.config = config
   ui.worldConfigScreen.dayNight = dayNight
   ui.worldConfigScreen.onTerrainChange = handlers.onTerrainChange
   ui.worldConfigScreen.onDayNightChange = handlers.onDayNightChange
   ui.worldConfigScreen.onPostProcessingChange = handlers.onPostProcessingChange
+  ui.worldConfigScreen.onRenderQualityChange = handlers.onRenderQualityChange
+  ui.worldConfigScreen.onTerrainShadowChange = handlers.onTerrainShadowChange
+  ui.worldConfigScreen.onQualityPresetChange = handlers.onQualityPresetChange
+  ui.worldConfigScreen.onShadowMapSizeChange = handlers.onShadowMapSizeChange
+  ui.worldConfigScreen.onLodScaleChange = handlers.onLodScaleChange
 }
 export function openWorldConfigScreen(): void { ui.worldConfigScreen.open = true }
 export function closeWorldConfigScreen(): void { ui.worldConfigScreen.open = false }
@@ -413,6 +440,11 @@ export function setHudHeldTool(label: string): void {
   const text = label ? `w ręce: ${label}` : ''
   if (ui.hud.held === text) return
   ui.hud.held = text
+}
+export function setHudPlayerNeeds(needs: { stamina: number, vigor: number, hunger: number, thirst: number }): void {
+  const p = ui.hud.playerNeeds
+  if (p.stamina === needs.stamina && p.vigor === needs.vigor && p.hunger === needs.hunger && p.thirst === needs.thirst) return
+  ui.hud.playerNeeds = needs
 }
 
 export function toggleMinimap(): void { ui.minimap.collapsed = !ui.minimap.collapsed }

@@ -9,9 +9,12 @@ export type WorldLights = {
    *  frustum only needs to cover the area immediately around the camera, not
    *  the whole loaded region, so its size stays fixed and only the target moves. */
   follow: (x: number, z: number) => void
+  /** Live resize of the directional shadow map (plan 103). Disposes the
+   *  current GPU target so Three.js reallocates on the next shadow pass. */
+  setShadowMapSize: (size: number) => void
 }
 
-export function createLights(): WorldLights {
+export function createLights(shadowMapSize = 1024): WorldLights {
   const ambient = new THREE.AmbientLight(0xc5d8ea, 0.35)
   const hemi = new THREE.HemisphereLight(0x9ec9ff, 0x6b8f4a, 0.55)
 
@@ -20,7 +23,8 @@ export function createLights(): WorldLights {
   sun.castShadow = true
   // 1024 is enough for the ~160-unit shadow frustum around the player;
   // 2048 mostly burned fill-rate without a matching clarity gain.
-  sun.shadow.mapSize.set(1024, 1024)
+  const size = shadowMapSize === 512 || shadowMapSize === 2048 ? shadowMapSize : 1024
+  sun.shadow.mapSize.set(size, size)
   sun.shadow.camera.near = 1
   sun.shadow.camera.far = 200
   sun.shadow.camera.left = -80
@@ -43,6 +47,15 @@ export function createLights(): WorldLights {
       sun.position.set(x + 40, 70, z + 30)
       sun.target.position.set(x, 0, z)
       sun.target.updateMatrixWorld()
+    },
+    setShadowMapSize(next) {
+      const resolved = next === 512 || next === 2048 ? next : 1024
+      if (sun.shadow.mapSize.x === resolved) return
+      sun.shadow.mapSize.set(resolved, resolved)
+      if (sun.shadow.map) {
+        sun.shadow.map.dispose()
+        sun.shadow.map = null
+      }
     },
   }
 }

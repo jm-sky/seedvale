@@ -1,8 +1,12 @@
 import GUI, { type Controller } from 'lil-gui'
+import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
 import type { DayNightState } from '../world/dayNight'
+import { QUALITY_PRESET_IDS } from '../config/qualityProfiles'
 import { triangleCount } from '../config/worldConfig'
 import { isTouchDevice } from '../input/isTouchDevice'
+import { getMonitor } from '../perf/active'
+import { BENCHMARK_SCENARIO_IDS, type BenchmarkScenarioId } from '../perf/benchmarkScenarios'
 import type { WebGLRenderer } from 'three'
 
 export type DebugGuiHandlers = {
@@ -20,6 +24,11 @@ export type DebugGuiHandlers = {
   onTerrainShadowChange: () => void
   /** Log the home settlement's VillagePlan summary to the console (plan 047). */
   onDumpVillagePlan?: () => void
+  onQualityPresetChange: (preset: QualityPreset) => void
+  onShadowMapSizeChange: () => void
+  onLodScaleChange: () => void
+  onPerfTimingsToggle: (enabled: boolean) => void
+  onRunBenchmark: (id: BenchmarkScenarioId) => void
 }
 
 export type DebugGuiHandle = {
@@ -510,6 +519,10 @@ export function createDebugGui(
 
   const postFx = gui.addFolder('Post-processing')
   postFx
+    .add(config.quality, 'preset', [...QUALITY_PRESET_IDS])
+    .name('Quality preset')
+    .onChange((preset: QualityPreset) => handlers.onQualityPresetChange(preset))
+  postFx
     .add(config.postProcessing, 'aoEnabled')
     .name('Ambient occlusion')
     .onChange(handlers.onPostProcessingChange)
@@ -574,6 +587,14 @@ export function createDebugGui(
     .add(config.postProcessing, 'waterReflections')
     .name('Water reflections')
     .onChange(handlers.onPostProcessingChange)
+  postFx
+    .add(config.postProcessing, 'shadowMapSize', { '512': 512, '1024': 1024, '2048': 2048 })
+    .name('Shadow map size')
+    .onFinishChange(handlers.onShadowMapSizeChange)
+  postFx
+    .add(config.quality, 'lodScale', 0.25, 1, 0.05)
+    .name('Vegetation LOD scale')
+    .onFinishChange(handlers.onLodScaleChange)
 
   terrainControllers.push(
     gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild world'),
@@ -588,6 +609,19 @@ export function createDebugGui(
   const perf = {
     simulateMs: 0,
     renderMs: 0,
+    enableTimings: false,
+    benchmark: 'current' as BenchmarkScenarioId,
+    run: () => handlers.onRunBenchmark(perf.benchmark),
+    get fps() {
+      const stats = getMonitor().getLiveStats()
+      return stats.frameMs > 0 ? Math.round((1000 / stats.frameMs) * 10) / 10 : 0
+    },
+    get p95() {
+      return Math.round(getMonitor().getLiveStats().p95 * 100) / 100
+    },
+    get loadedChunks() {
+      return getMonitor().getLiveStats().loadedChunks
+    },
     get drawCalls() {
       return renderer.info.render.calls
     },
@@ -602,12 +636,21 @@ export function createDebugGui(
     },
   }
   const perfFolder = gui.addFolder('Performance')
+  perfFolder
+    .add(perf, 'enableTimings')
+    .name('Enable timings')
+    .onChange((on: boolean) => handlers.onPerfTimingsToggle(on))
+  perfFolder.add(perf, 'fps').name('FPS').listen().disable()
+  perfFolder.add(perf, 'p95').name('Frame p95 (ms)').listen().disable()
+  perfFolder.add(perf, 'loadedChunks').name('Chunks loaded').listen().disable()
   perfFolder.add(perf, 'drawCalls').name('Draw calls').listen().disable()
   perfFolder.add(perf, 'triangles').name('Triangles (rendered)').listen().disable()
   perfFolder.add(perf, 'geometries').name('Geometries (GPU)').listen().disable()
   perfFolder.add(perf, 'textures').name('Textures (GPU)').listen().disable()
   perfFolder.add(perf, 'simulateMs').name('Simulate (ms)').listen().disable()
   perfFolder.add(perf, 'renderMs').name('Render (ms)').listen().disable()
+  perfFolder.add(perf, 'benchmark', [...BENCHMARK_SCENARIO_IDS]).name('Benchmark')
+  perfFolder.add(perf, 'run').name('Run benchmark')
 
   function setFrameTiming(simulateMs: number, renderMs: number): void {
     perf.simulateMs = Math.round(simulateMs * 100) / 100

@@ -6,6 +6,7 @@ import type { Settlement } from '../settlement/createSettlement'
 import type { VillageFire } from '../settlement/VillageFire'
 import type { DigProfile } from '../terrain/dig'
 import type { TreeGrowthStage, TreeSizeClass } from '../world/treeLifecycle'
+import type { WaterSource } from '../world/WaterSource'
 
 export type WorldItemRef = {
   id: string
@@ -21,9 +22,17 @@ export type WorldItemRef = {
 export type Interactable =
   | { kind: 'npc', position: { x: number, z: number }, promptLabel: string, npc: NpcAgent, settlement: Settlement }
   | { kind: 'animal', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent }
-  /** Dead animal corpse — shovel bury prompt (only offered while shovel is held). */
-  | { kind: 'corpse', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent }
+  /** Dead animal corpse — shovel `bury` (only offered while shovel is held)
+   *  or knife `harvest` for raw_meat (plan 106, only while knife is held and
+   *  not yet harvested). The single `HeldTool` slot means these two never
+   *  overlap on the same corpse at once. */
+  | { kind: 'corpse', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent, action: 'bury' | 'harvest' }
+  /** `[E]` drinks directly; `[R]` fills a carried empty waterskin (plan 106 §4). */
   | { kind: 'well', position: { x: number, z: number }, promptLabel: string }
+  /** Synthetic target for a nearby freshwater (non-ocean) shoreline — built
+   *  fresh each frame from `chunkManager` terrain sampling, no discrete world
+   *  object (plan 106 §4's Lake). Same `[E]`/`[R]` drink/fill contract as `well`. */
+  | { kind: 'waterEdge', position: { x: number, z: number }, promptLabel: string, source: WaterSource }
   | {
     kind: 'house'
     position: { x: number, z: number }

@@ -25,6 +25,8 @@ const { categoryLabel } = useItemCategoryLabels()
 const item = computed<ItemDef | null>(() => props.selectedItem ? ITEM_DEFS[props.selectedItem] : null)
 const itemCount = computed<number>(() => ui.inventory.counts[props.selectedItem as ItemKind ?? ''] ?? 0)
 const itemDamage = computed<number | null>(() => ITEM_CATALOG[props.selectedItem as ItemKind]?.meleeDamage ?? null)
+const consumable = computed(() => props.selectedItem ? ITEM_CATALOG[props.selectedItem].consumable ?? null : null)
+const consumeLabel = computed(() => consumable.value?.need === 'thirst' ? 'Wypij' : 'Zjedz')
 
 useOverlayScreen('inventory', isInventoryOpen, closeInventory)
 useTouchScroll(panel)
@@ -33,6 +35,7 @@ function formatWeight(kg: number): string { return `${kg.toFixed(1)} kg` }
 function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
 function onEquip(kind: ItemKind): void { ui.inventory.onEquip?.(kind) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
+function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
 </script>
 
 <template>
@@ -88,6 +91,11 @@ function onUnequip(): void { ui.inventory.onUnequip?.() }
     <div class="my-4 h-px border-white/20 border-b" />
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mx-auto max-w-md">
+      <ItemsScreenItemButton
+        v-if="consumable"
+        :label="consumeLabel"
+        @click="onConsume(item.kind)"
+      />
       <ItemsScreenItemButton
         v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"
         label="Weź"

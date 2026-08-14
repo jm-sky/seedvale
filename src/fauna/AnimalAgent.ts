@@ -560,6 +560,10 @@ export class AnimalAgent {
   /** Set once a predator finishes eating this corpse — the carcass stays
    *  visible for the rest of its linger time, but is no longer food. */
   private foodConsumed = false
+  /** Set once the player knife-harvests `raw_meat` from this corpse (plan
+   *  106) — independent of `foodConsumed` (predator eating and player
+   *  harvesting are different consumers), guards against harvesting twice. */
+  private meatHarvested = false
 
   constructor(
     def: AnimalDef,
@@ -702,6 +706,18 @@ export class AnimalAgent {
   bury(): void {
     if (!this.health.dead) return
     this.timeSinceDeath = CORPSE_LINGER_SECONDS
+  }
+
+  /** Plan 106 — a dead, not-yet-harvested corpse can yield `raw_meat`. */
+  canHarvestMeat(): boolean {
+    return this.health.dead && !this.meatHarvested
+  }
+
+  /** Player knife-harvest: marks this corpse's meat as taken. Once only —
+   *  callers check `canHarvestMeat()` first. */
+  harvestMeat(): void {
+    if (!this.health.dead) return
+    this.meatHarvested = true
   }
 
   takeDamage(damage: number, source?: 'player'): void {

@@ -21,7 +21,9 @@ import {
   mountHeldToolOnSocket,
 } from '../items/heldToolVisual'
 import { createHealthState, type HealthState } from '../shared/HealthState'
+import { isExhausted } from '../shared/StaminaState'
 import { type Collider, resolvePosition } from '../world/collision'
+import { createPlayerNeeds, type PlayerNeeds, tickPlayerStamina } from './PlayerNeeds'
 
 const MOVE_SPEED = 8
 /** Matches the capsule fallback's `CapsuleGeometry` radius (plan 097 §2.2) —
@@ -77,6 +79,10 @@ export class PlayerController {
   readonly mesh: THREE.Object3D
   /** Shared survival HP — domain state only in v1 (no death UI / respawn). */
   readonly health: HealthState
+  /** Stamina/vigor/hunger/thirst (plan 106) — `stamina` is ticked here
+   *  (tightly coupled to sprint below); `app/gameLoop.ts` ticks the other
+   *  three pools each frame via `PlayerNeeds.ts`'s helpers. */
+  readonly needs: PlayerNeeds
   private readonly camera: THREE.PerspectiveCamera
   private readonly keys: KeyState
   private readonly look: LookState
@@ -144,6 +150,7 @@ export class PlayerController {
     this.collidersNear = collidersNear
     this.isCapsule = isCapsule
     this.health = createHealthState(PLAYER_MAX_HP)
+    this.needs = createPlayerNeeds()
 
     this.mesh = new THREE.Group()
     this.mesh.add(root)
@@ -371,6 +378,7 @@ export class PlayerController {
 
   update(dt: number): void {
     if (this.pose !== 'stand') {
+      tickPlayerStamina(this.needs.stamina, dt, false)
       this.syncCamera()
       this.syncHpBar()
       this.mixer?.update(dt)
@@ -387,7 +395,8 @@ export class PlayerController {
     if (this.keys.right) this.wish.add(this.right)
 
     this.moving = this.wish.lengthSq() > 0
-    this.sprinting = this.moving && this.keys.sprint
+    this.sprinting = this.moving && this.keys.sprint && !isExhausted(this.needs.stamina)
+    tickPlayerStamina(this.needs.stamina, dt, this.sprinting)
     if (this.moving) {
       const speed = this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED
       this.wish.normalize().multiplyScalar(speed * dt)

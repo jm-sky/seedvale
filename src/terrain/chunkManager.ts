@@ -307,6 +307,11 @@ export type ChunkManager = {
   /** World seed — shared with shore/dig helpers (`sandBandAt`). */
   seed: number
   waterLevel: number
+  /** Ocean/coast continentalness thresholds — lets a caller distinguish an
+   *  inland lake shoreline from the ocean shore via `oceanMixAt`
+   *  (`terrain/waterBodies.ts`), e.g. `app/interactables.ts`'s lake drink/fill
+   *  prompt (plan 106). */
+  region: RegionParams
   loadedChunkCount: () => number
   /** Resolves once every listed chunk has finished generating (or failed/cancelled). */
   waitForChunks: (coords: ChunkCoord[]) => Promise<void>
@@ -1311,6 +1316,7 @@ export function createChunkManager(
     sampleBaseHeight: (x, z) => sampleHeightAt(x, z, fallbackParams),
     seed: config.seed,
     waterLevel: config.waterLevel,
+    region: config.region,
     loadedChunkCount: () => chunks.size,
     waitForChunks: (coords) => Promise.all(coords.map((c) => ensureLoaded(c))).then(() => undefined),
     roadCorridorsNear(worldX, worldZ, querySize) {
@@ -1321,6 +1327,17 @@ export function createChunkManager(
       config.terrainCastsShadow = value
       for (const record of chunks.values()) {
         if (record.mesh) record.mesh.castShadow = value
+      }
+    },
+    setLodScale(scale) {
+      lodScale = Math.min(1, Math.max(0.25, scale))
+      for (const record of chunks.values()) {
+        syncInstancedLodForRecord(record, lastPlayerChunk)
+        if (record.grass) {
+          const dist = chebyshevDistance(record.coord, lastPlayerChunk)
+          const { mainFrac, fillerFrac } = grassLodForDistance(dist)
+          record.grass.setLodFraction(mainFrac, fillerFrac)
+        }
       }
     },
     collidersNear: (x, z) => colliderRegistry.query(x, z),

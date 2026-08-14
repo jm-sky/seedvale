@@ -10,6 +10,8 @@ export type Hud = {
   setInventoryWeight: (current: number, max: number) => void
   /** Label for the held tool slot — empty string hides it. */
   setHeldTool: (label: string) => void
+  /** Ratios (0-1) for the four player-needs bars (plan 106). */
+  setPlayerNeeds: (needs: { stamina: number, vigor: number, hunger: number, thirst: number }) => void
   dispose: () => void
 }
 
@@ -23,6 +25,7 @@ export function createHud(_parent: HTMLElement): Hud {
     setExp: (exp) => { if (!disposed) getUi()?.setHudExp(exp) },
     setInventoryWeight: (current, max) => { if (!disposed) getUi()?.setHudInventoryWeight(current, max) },
     setHeldTool: (label) => { if (!disposed) getUi()?.setHudHeldTool(label) },
+    setPlayerNeeds: (needs) => { if (!disposed) getUi()?.setHudPlayerNeeds(needs) },
     dispose: () => { disposed = true },
   }
 }
