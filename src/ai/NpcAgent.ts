@@ -343,6 +343,11 @@ const STAMINA_EXHAUSTED_RESUME_RATIO = 0.35
 const ABANDON_RETRY_COOLDOWN_SEC = 2.5
 const ABANDON_DEST_MATCH_DIST = 1.0
 
+/** Throttle for `tickCriticalInterrupt` — checked at most this often while
+ *  `goTo`/`execute` is in flight, not every frame (plan 114). Same order of
+ *  magnitude as the watchdog's `STUCK_CHECK_INTERVAL_SEC`. */
+const CRITICAL_INTERRUPT_CHECK_INTERVAL_SEC = 1
+
 /** Below this currentHp/maxHp fraction, walk speed starts dropping toward the floor.
  *  Kept for real damage later — fatigue no longer touches HP (plan 045). */
 const HP_SLOW_THRESHOLD = 0.3
@@ -465,6 +470,11 @@ export class NpcAgent {
   private abandonedDestX = 0
   private abandonedDestZ = 0
   private hasAbandonedDest = false
+  /** Counts down while `phase` is `goTo`/`execute`; the critical-need/vigor-
+   *  collapse interrupt check runs only when it reaches 0 (plan 114), then
+   *  resets regardless of outcome — mirrors the watchdog's own throttle
+   *  instead of scoring needs every frame. */
+  private criticalInterruptCooldown = 0
   private readonly tmp = new THREE.Vector3()
   private readonly tmpAvoid = new THREE.Vector3()
   private readonly labelEl: HTMLDivElement
@@ -866,6 +876,10 @@ export class NpcAgent {
 
     if (WATCHDOG_PHASES.has(this.phase)) {
       this.tickWatchdog(dt)
+    }
+
+    if ((this.phase === 'goTo' || this.phase === 'execute') && this.pendingAction) {
+      this.tickCriticalInterrupt(dt)
     }
 
     if (this.pauseCooldown > 0) this.pauseCooldown -= dt
@@ -1701,6 +1715,47 @@ export class NpcAgent {
     if (stage === 'repath') this.attemptRepath()
     else if (stage === 'escape') this.attemptLocalEscape()
     else if (stage === 'abandon') this.abandonStuckAction()
+  }
+
+  /** Throttled check for a genuinely urgent reason to abandon a schedule-
+   *  driven action already in flight — vigor collapse or a critical need.
+   *  Mirrors `choose()`'s own precedence: vigor collapse outranks needs
+   *  unconditionally; a critical need only outranks a schedule-driven
+   *  action, so it's gated on `activeNeed === 'idle'` (an already need-
+   *  driven action is left alone — no thrashing between two needs).
+   *  Ordinary schedule/time changes still do not interrupt (plan 060) —
+   *  this only ever fires on `pickNeed`'s stricter `critical` thresholds. */
+  private tickCriticalInterrupt(dt: number): void {
+    this.criticalInterruptCooldown -= dt
+    if (this.criticalInterruptCooldown > 0) return
+    this.criticalInterruptCooldown = CRITICAL_INTERRUPT_CHECK_INTERVAL_SEC
+    if (shouldCollapseSleep(this.vigor)) {
+      this.interruptCurrentAction()
+      return
+    }
+    if (this.activeNeed !== 'idle') return
+    const need = pickNeed(this.needs, { ...this.needPickOptions(), critical: true })
+    if (need !== 'idle') this.interruptCurrentAction()
+  }
+
+  /** Cancels the in-flight `pendingAction` for a genuinely urgent reason
+   *  (see `tickCriticalInterrupt`) and returns to `choose` so the existing
+   *  single arbitration point re-derives what to do next — vigor collapse,
+   *  the need itself, or (once satisfied later) whatever the effective
+   *  schedule still says at that point. Does not set `activeNeed` itself —
+   *  `choose()` remains the only place that decides "what now". Same
+   *  `pendingAction`/path/wait/queue cleanup as `abandonStuckAction()`,
+   *  minus the stuck-specific abandoned-destination/escalation bookkeeping,
+   *  which doesn't apply to a healthy NPC that's simply needed elsewhere. */
+  private interruptCurrentAction(): void {
+    failActionLifecycle(this.actionLifecycle)
+    this.leaveActiveQueue()
+    this.pendingAction = null
+    this.pathWaypoints = []
+    this.pathIndex = 0
+    this.wait = 0
+    this.repathActive = false
+    this.phase = 'choose'
   }
 
   /** Rescue Level 1 — steer through a small random nearby waypoint instead

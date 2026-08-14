@@ -24,6 +24,7 @@ Historia zakresu: zarchiwizowane plany [047](./plans/archive/2026-08-09--047--vi
 | S6 | `VigorState` ≠ `StaminaState`. Wigor to budżet dnia; zwykły odpoczynek odnawia tylko staminę. Collapse → istniejący `goSleep`/`sleep`. | fauna nie używa wigoru |
 | S7 | Runtime NPC (needs, AI, vigor) **nie** jest w save. Continue nie przywraca pełnej symulacji. | vigor startuje pełny przy spawnie |
 | S8 | Ruch NPC ma watchdog utknięcia — brak postępu pozycji eskaluje `repath` → `local escape` → `abandon` → (przy powtarzającym się utknięciu) emergency teleport. Cel w obcym dysku (dom, studnia) jest snapowany na obręcz od strony NPC (`destinationOnColliderRim`); rescue próbuje tylko punkty **na zewnątrz** zajętego collidera; teleport nie wraca na środek domu. Drenaż staminy zależy od tego, co NPC robi (chodzenie tanie, ciężka `execute` drogie), nie samej fazy. `stamina === 0` w `goTo`/`execute` → faza `exhausted` (odpoczynek w miejscu, ta sama akcja wznawia się po odzyskaniu progu). | `src/ai/npcMovementWatchdog.ts`, `src/ai/npcColliderRim.ts`; emergency teleport zawsze loguje `console.warn('[npc:rescue] emergency teleport', ...)` |
+| S9 | Kolaps wigoru i **krytyczna** potrzeba (`pickNeed({ critical: true })`, progi wyraźnie wyżej niż zwykłe `pickNeed`) przerywają akcję już w locie (`goTo`/`execute`) — throttled check (~1 s) w `NpcAgent.update()`, tylko gdy `activeNeed === 'idle'` (akcja harmonogramowa, nie need-driven — unika przerzucania między potrzebami). Zwykła zmiana godziny nadal **nie** przerywa (plan 060 obowiązuje dalej). | `src/ai/NpcAgent.ts`'s `tickCriticalInterrupt`/`interruptCurrentAction`, `src/ai/Needs.ts`'s `pickNeed`'s `critical` option (plan [114](./plans/2026-08-14--114--npc-critical-need-vigor-interrupt.md)) |
 
 Multiplayer nie jest planowany teraz i nie projektujemy go tutaj. Ale S3/S7 pokazują, że ownership stanu (ekonomia osady, runtime NPC) jest już oddzielony od `Inventory` gracza i od save gracza — utrzymuj ten podział, żeby ewentualne przejście na server-authoritative symulację (mały świat, ~2–5 graczy) nie wymagało przepisania. Zob. [performance-and-workers.md](./architecture/performance-and-workers.md).
 
@@ -66,7 +67,7 @@ Multiplayer nie jest planowany teraz i nie projektujemy go tutaj. Ale S3/S7 poka
 ### NPC
 
 - Needs + FSM + osobowość/cechy/Big Five; HP przez `HealthState`, wysiłek przez `StaminaState`.
-- Harmonogram: `eat` / `home` / `wake` / `work` / `sleep` przez istniejący FSM. `night_owl` przesuwa dzień; `fast_worker` wydłuża pracę.
+- Harmonogram: `eat` / `home` / `wake` / `work` / `sleep` przez istniejący FSM. `night_owl` przesuwa dzień; `fast_worker` wydłuża pracę. Kolaps wigoru i krytyczna potrzeba przerywają akcję już w locie (plan 114); zwykła zmiana godziny nadal nie przerywa.
 - Kupiec pomija `woodDuty` (zostaje przy straganie).
 - Ciężka `work`/`chop` drenuje wigor; sen (grafik albo forced) go przywraca.
 - Stamina: chodzenie (`goTo`) drenuje mało, lekka `execute` (drink/eat/deposit) prawie nic, ciężka `execute` (chop/work) drenuje pełną stawką. Wyczerpanie w trakcie ruchu/pracy → faza `exhausted` (bez utraty `pendingAction`), wznowienie po odzyskaniu progu staminy.

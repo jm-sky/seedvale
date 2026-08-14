@@ -31,15 +31,32 @@ export type PickNeedOptions = {
   woodShortage?: boolean
   /** Settlement food shortage — same light bias as `woodShortage`. */
   foodShortage?: boolean
+  /** Use the stricter `CRITICAL_*_THRESHOLD`s instead of the normal ones —
+   *  "genuinely urgent enough to interrupt an in-flight action", not just
+   *  "worth doing next" (plan 114, `NpcAgent.tickCriticalInterrupt`).
+   *  `woodShortage`/`foodShortage` are ignored in this mode — urgency stays
+   *  a fixed, predictable bar regardless of settlement economy state. */
+  critical?: boolean
 }
 
+/** Thresholds for `pickNeed({ critical: true })` — used only by
+ *  `NpcAgent`'s in-flight interrupt check (plan 114), never by the normal
+ *  `choose()` pick. Meaningfully above the thresholds below so an interrupt
+ *  fires only for a genuinely urgent need ("bardzo spragniony"), not merely
+ *  "worth doing next". Same score multipliers as the normal non-shortage
+ *  case — only the threshold moves. */
+const CRITICAL_WATER_THRESHOLD = 0.75
+const CRITICAL_WOOD_THRESHOLD = 0.85
+const CRITICAL_FOOD_THRESHOLD = 0.7
+
 export function pickNeed(needs: NeedState, options: PickNeedOptions = {}): NeedId {
-  const waterScore = needs.thirst > 0.35 ? needs.thirst * 1.35 : 0
-  const woodThreshold = options.woodShortage ? 0.22 : 0.3
-  const woodMult = options.woodShortage ? 1.35 : 1.1
+  const waterThreshold = options.critical ? CRITICAL_WATER_THRESHOLD : 0.35
+  const waterScore = needs.thirst > waterThreshold ? needs.thirst * 1.35 : 0
+  const woodThreshold = options.critical ? CRITICAL_WOOD_THRESHOLD : options.woodShortage ? 0.22 : 0.3
+  const woodMult = options.critical ? 1.1 : options.woodShortage ? 1.35 : 1.1
   const woodScore = options.skipWood ? 0 : (needs.woodDuty > woodThreshold ? needs.woodDuty * woodMult : 0)
-  const foodThreshold = options.foodShortage ? 0.24 : 0.32
-  const foodMult = options.foodShortage ? 1.4 : 1.2
+  const foodThreshold = options.critical ? CRITICAL_FOOD_THRESHOLD : options.foodShortage ? 0.24 : 0.32
+  const foodMult = options.critical ? 1.2 : options.foodShortage ? 1.4 : 1.2
   const foodScore = needs.hunger > foodThreshold ? needs.hunger * foodMult : 0
   const idleScore = 0.12
 

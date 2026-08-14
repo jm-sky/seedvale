@@ -164,7 +164,7 @@ src/ui-vue/
 
 - **World visual overhaul (024)** — plants done in part; sky/clouds and distant mountains remain.
 - **UI** — Vue Fazy 0–4 implemented, browser verification pending. Plan 105's audit (review 007) is done; H1 (all 5) and 2/3 of H2 are now implemented (see plan 105 §11 implementation notes) — H2.1 (touch layout collision, C2) and all of H3/H4 remain open. A new Character screen (HP/hunger/thirst/vigor from `PlayerNeeds`/`HealthState`, plan 105) also exists — `src/ui-vue/screens/CharacterScreen.vue`, opened via pause menu's "Postać". None of this has browser/manual verification yet. Do not assume every future UI belongs in Vue; extend the existing facade + store pattern when migrating.
-- **NPC daily routine** — Place + executable schedule + vigor are implemented. Household resource layer (plan 069) is also implemented — see below. Remaining gaps are intentional: no social landmark, ordinary schedule changes do not interrupt an action in flight. See [SETTLEMENTS.md](./SETTLEMENTS.md).
+- **NPC daily routine** — Place + executable schedule + vigor are implemented. Household resource layer (plan 069) is also implemented — see below. Vigor collapse and a critical need (plan 114) now interrupt a schedule-driven action already in flight (`goTo`/`execute`); ordinary schedule/time-of-day changes still do not. Remaining gap is intentional: no social landmark. See [SETTLEMENTS.md](./SETTLEMENTS.md).
 
 ## Verification state
 
