@@ -1,5 +1,7 @@
 # Seedvale — 3D Asset Capability & Architecture Audit
 
+**Status:** `done` (2026-08-14)
+
 ## Cel
 
 Wykonaj pełny audyt assetów 3D używanych i dostępnych dla projektu Seedvale.

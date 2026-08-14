@@ -1,5 +1,7 @@
 # Seedvale — Architecture Alignment Review
 
+**Status:** `done` (2026-08-14)
+
 ## Cel
 
 Wykonaj kompleksowy review obecnej architektury Seedvale pod kątem zgodności z docelowym modelem systemów opisanym w:
