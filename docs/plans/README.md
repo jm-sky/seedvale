@@ -29,6 +29,8 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059) | 🔴 | XL | ~~015~~ ~~018~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
+| `docs/plans/2026-08-14--105--ui-ux-review.md` | UI/UX review | 🟡 | L |  |
+| `2026-08-14--106--player-needs-food-and-cooking.md` | Player hunger/thirst/ stamina/vigor, and food/water items | 🔴 | L | ? |
 
 ---
 
