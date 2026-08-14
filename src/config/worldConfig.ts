@@ -114,7 +114,7 @@ export type WorldConfig = {
      *  steep slopes at low sun angle. Defaults on (the pre-review look);
      *  applies live to already-loaded chunks, no world rebuild. */
     terrainCastsShadow: boolean
-    /** Shared planar water mirror (256²). Off skips the extra scene pass;
+    /** Shared planar water mirror (128²). Off skips the extra scene pass;
      *  water falls back to sky color + sun specular. */
     waterReflections: boolean
     /** Directional-light shadow map edge (plan 103). Live resize, no rebuild. */
@@ -433,6 +433,7 @@ export function applyStoredPostProcessing(
   if (!p || typeof p !== 'object') return
   Object.assign(target, p)
   if (!SHADOW_MAP_SIZES.has(target.shadowMapSize)) target.shadowMapSize = 1024
+  if (target.shadowMapSize === 2048) target.shadowMapSize = 1024
 }
 
 /**

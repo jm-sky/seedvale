@@ -229,7 +229,7 @@ const FRAGMENT_SHADER = /* glsl */ `
 /**
  * Shared lake/ocean ShaderMaterial. Chunk water passes height/floor/bodyScale
  * textures (USE_CHUNK_MASK). The ocean singleton omits them and sets ocean=1.
- * Planar scene reflections come from a shared 256 RT (bindWaterMirror); off
+ * Planar scene reflections come from a shared 128² RT (bindWaterMirror); off
  * keeps sky + sun specular with uReflections = 0.
  */
 export function createWaterMaterial(opts: WaterMaterialOptions): ShaderMaterial {
