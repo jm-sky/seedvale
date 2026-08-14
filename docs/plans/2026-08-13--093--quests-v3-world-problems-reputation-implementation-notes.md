@@ -398,11 +398,65 @@ Rozszerzony `src/quests/QuestManager.test.ts` (12 testów łącznie, +3): wiąza
 
 `npx tsc --noEmit`, `npm run lint` (0 błędów w zmienionych plikach — te same niepowiązane błędy w `_temp/asset-audit/inspect.mjs` co poprzednio), `npm run build`, `npm run test` (602/602, 87 plików) — wszystkie przechodzą. Weryfikacja w przeglądarce **nie została wykonana** — brak potwierdzenia, że wilk faktycznie zostaje związany i zabity end-to-end w realnej rozgrywce (spawn, `trusted` relation z Anną, walka melee, powrót do Anny).
 
-## 12. Co zostaje otwarte po Etapie D
+## 12. Co zostawało otwarte po Etapie D (domknięte niżej w §13, gdzie zaznaczono)
 
-- **Etap E — `WolfDen`**: nowy byt świata (`position`/`identity`/spawning zagrożenia), zamiast celowania w jednego z ambientowych wilków. Wymaga decyzji, czy `PreySpawner` da się rozszerzyć semantycznie (plan preferuje to nad `QuestSpawnerem`).
+- ~~**Etap E — `WolfDen`**~~ — zaimplementowane, patrz §13.
 - **Etap F — landmark objectives**: czeka na potwierdzenie stabilnego `landmarkId` z planu 049 (nadal `in progress`).
 - **Etap G — livestock identity**: `animalId` już istnieje (ten przebieg), ale bez udokumentowanego/ustandaryzowanego `ownerHouseId` jako osobnego pola/konceptu — dziś tylko zakodowany w stringu id.
 - **Etap H — tree/dig/resource objectives**.
 - **Faza 9 — bandyci**.
-- **Generyczny event śmierci zwierzęcia** (niezależny od przyczyny) — potrzebny, jeśli przyszły quest ma obserwować zabicie przez inne zwierzę, nie tylko przez gracza.
+- **Generyczny event śmierci zwierzęcia** (niezależny od przyczyny) — potrzebny, jeśli przyszły quest ma obserwować zabicie przez inne zwierzę, nie tylko przez gracza. Nadal otwarte po Etapie E — patrz §13.
+
+---
+
+## 13. Stan implementacji — Etap E: „wilcza jama” (`WolfDen`) (2026-08-14, trzeci przebieg)
+
+Zaimplementowane **celowo minimalnie** — użytkownik potwierdził, że docelowo `WolfDen` może kiedyś stać się prawdziwą jaskinią (plan 104, `CaveVolume`, nadal `planned`/pre-review), ale na tym etapie ma zostać prosty. Nie czekano więc na plan 104 ani nie próbowano przewidzieć jego API — tylko zostawiono komentarz-wskazówkę w kodzie, że wizualizacja/pozycja jamy da się później podmienić bez zmiany kontraktu questowego (`denId`/`clear_wolf_den`).
+
+### Decyzja architektoniczna: rozszerzono `PreySpawner`, bez `QuestSpawnera`
+
+Zgodnie z planem („Jeżeli istniejący `PreySpawner` może zostać rozszerzony semantycznie do tego przypadku, należy go wykorzystać”):
+
+- `src/fauna/AnimalSpawner.ts`: `SpawnerType` dostał czwartą wartość `'wolfDen'`; nowa wyeksportowana stała `WOLF_DEN_ID = 'wolf-den'` — jedna jama na osadę (tak jak dziś istnieje dokładnie jedna `cave` i jeden `thicket` na osadę), więc stały string identity jest wystarczający zamiast rejestru/licznika.
+- `src/fauna/createFauna.ts`:
+  - `SPAWNER_SPECS` dostał wpis `{ type: 'wolfDen', kind: 'wolf', respawnTime: Infinity, maxPreyCount: 2 }` — `Infinity` gwarantuje, że generyczna pętla `updateSpawners()` (współdzielona z cave/thicket) nigdy nie odpali dla niego respawnu; populacja jamy jest jednorazowa, nie utrzymywana w czasie jak u prey.
+  - Wizualnie jama używa tego samego propa co `cave` (`createCaveMouth`) — bez carvingu terenu (to specyficzne dla cave/083) i bez wyszukiwania zbocza (to też cave-specific); placement jak `thicket` (płasko, `offRoad`, z dala od innych spawn-pointów).
+  - Zaraz po umieszczeniu spawnera i propa, w tej samej gałęzi `if/else if`, jama od razu spawnuje `spec.maxPreyCount` (2) wilków w jej okolicy (`findWalkableNear(pos, 0, 4)`), ich `animalId` trafiają do nowego `Set<string>` `denWolfAnimalIds` w domknięciu `createFauna`.
+  - Nowa metoda `Fauna.isWolfDenCleared()`: `false` jeśli `denWolfAnimalIds` jest puste (jama nie została poprawnie umieszczona — nigdy fałszywie „cleared”) albo dowolny śledzony wilk wciąż żyje w `agents`; w przeciwnym razie `true`. Nie wymaga osobnego rejestru per-den (jest tylko jeden), ale kształt (`Set` + prosty predykat) łatwo rozszerzyć na wiele jam później.
+- `SPAWNER_LABELS` dostał `wolfDen: 'wilcza jama'` — etykieta/opacity-by-distance działają od razu, za darmo, dzięki reużyciu istniejącego `spawnerLabels` mechanizmu.
+
+### Quest-facing kontrakt — bez wiązania per-instancja (prościej niż Etap D)
+
+W przeciwieństwie do „groźnego wilka” (gdzie `QuestManager` wiąże się do JEDNEGO konkretnego `animalId` przez wstrzyknięty resolver), „wilcza jama” nie potrzebuje takiego mechanizmu — jama ma jedną, znaną już w momencie definicji questa tożsamość (`WOLF_DEN_ID`), więc dopasowanie jest bezpośrednie:
+
+- `src/quests/quests.ts`: nowy wariant `QuestObjective` — `{ type: 'clear_wolf_den', denId: string }`; import `WOLF_DEN_ID` z `fauna/AnimalSpawner` (moduł już importowany dla `SpawnerType`).
+- `src/quests/QuestManager.ts`: nowy wariant `ObjectiveRef` — `{ type: 'wolf_den_cleared', denId: string }`; `objectiveMatchesRef()` dostał case `objective.type === 'clear_wolf_den' && objective.denId === ref.denId` — brak zmian w `onInteractObjective()` (już generyczna).
+- `src/app/gameLoop.ts`: w tym samym bloku wykrywania zabicia melee co Etap D, po zgłoszeniu `animal_died`, sprawdzane jest `bundle.fauna.isWolfDenCleared()`; jeśli `true`, dodatkowo zgłaszane jest `{ type: 'wolf_den_cleared', denId: WOLF_DEN_ID }`. Sprawdzenie jest bezwarunkowe po każdym zabiciu (nie tylko wilka) — tanie (mały `Set`, krótka pętla po `agents`), a `onInteractObjective` jest bezpieczne do wywoływania wielokrotnie/gdy żaden quest nie słucha (zwraca `null`). Toast pokazuje `wolf_den_cleared`-line jeśli dopasowany, inaczej `animal_died`-line, inaczej domyślny „<Zwierzę> pada.”
+
+### Quest „wilcza jama”
+
+- `src/quests/quests.ts`, `QUESTS`: `id: 'wilcza-jama'`, `giverName: 'Anna'`, `availability: { relation: { npcName: 'Anna', minimum: 'trusted' } }` (ten sam próg co „groźny wilk” — nie ma jeszcze mechanizmu wymagania „quest X ukończony” jako warunku dostępności, więc oba questy stają się dostępne razem po osiągnięciu `trusted`; to świadome uproszczenie, nie próbowano dodawać prerekwizytów międzyquestowych w tym przebiegu), jeden etap `clear_wolf_den`, `effects: { relation: 3, exp: 30 }` (wyżej niż „groźny wilk” — odpowiada narracyjnie „większemu problemowi”).
+
+### Co świadomie pominięto
+
+- **Nadal brak generycznego eventu śmierci zwierzęcia niezależnego od przyczyny.** `isWolfDenCleared()` jest sprawdzane tylko z poziomu gameLoop.ts po zabiciu przez gracza — jeśli inny drapieżnik zabije jednego z wilków jamy, quest tego nie zauważy, dopóki gracz nie zabije *czegokolwiek* melee (co odpali sprawdzenie ponownie). W praktyce to rzadki edge case (drapieżnik rzadko atakuje innego wilka), ale to nadal nie jest prawdziwy event-driven system.
+- **Brak realnej groty/jaskini** — celowo, zgodnie z wytyczną użytkownika. `createCaveMouth` jest reużyty jeden do jednego z istniejącym `cave` — bez nowego modelu/assetu (nic do dopisania w `docs/assets/MODELS.md`).
+- **Brak wielu jam / rejestru per-osadę** — jeden `WOLF_DEN_ID`, jak opisano wyżej; wystarczające przy jednej żywej `Fauna` na sesję gry (potwierdzone w Etapie D).
+- **Jama nie odradza się nigdy** (`respawnTime: Infinity`) — to zamierzone (jednorazowy „world problem”, nie nieskończona farma wilków), ale oznacza, że po wyczyszczeniu jama fizycznie zostaje na mapie bez żadnych wilków (prop nie znika) — brak wizualnego/fabularnego zamknięcia poza samym questem. Uznane za akceptowalne dla tego zakresu.
+
+### Testy
+
+`src/quests/QuestManager.test.ts` (13 testów łącznie, +1): `clear_wolf_den`/`wolf_den_cleared` dopasowanie po `denId` — inny `denId` nie kończy questa, właściwy `denId` przenosi do `ready_to_report`. (`isWolfDenCleared()` samo w sobie nie ma testu jednostkowego — wymagałoby budowania pełnego `Fauna` przez `createFauna()`, co ciągnie za sobą async GLB loading/Three.js scene; uznano to za nieproporcjonalne dla tego zakresu, skoro logika jest trywialna (pusty `Set` → `false`, w przeciwnym razie liniowe „czy ktoś żyje”) i przejrzysta przy code review.)
+
+### Weryfikacja
+
+`npx tsc --noEmit`, `npm run lint` (0 błędów w zmienionych plikach — te same niepowiązane błędy w `_temp/asset-audit/inspect.mjs`), `npm run build`, `npm run test` (603/603, 87 plików) — wszystkie przechodzą. Weryfikacja w przeglądarce **nie została wykonana** — brak potwierdzenia, że jama faktycznie pojawia się w świecie z etykietą „wilcza jama”, że oba wilki się spawnują obok niej, i że zabicie obu kończy quest po powrocie do Anny.
+
+## 14. Co zostaje otwarte po Etapie E
+
+- **Etap F — landmark objectives**: nadal czeka na potwierdzenie stabilnego `landmarkId` z planu 049.
+- **Etap G — livestock identity**: `ownerHouseId` jako osobny, udokumentowany koncept (dziś tylko w stringu id).
+- **Etap H — tree/dig/resource objectives**.
+- **Faza 9 — bandyci**.
+- **Generyczny event śmierci zwierzęcia** (niezależny od przyczyny/obserwatora) — potrzebny dla przyszłych questów typu „chroń zwierzę gospodarskie przed drapieżnikami” i dla w pełni poprawnego `isWolfDenCleared()` bez zależności od tego, kiedy akurat gracz coś zabije.
+- **Weryfikacja w przeglądarce Etap D + E** — oba przebiegi mają tylko zieloną weryfikację techniczną.

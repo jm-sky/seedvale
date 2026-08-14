@@ -49,6 +49,10 @@ export type Fauna = {
   dispose: () => void
   getAgents: () => AnimalAgent[]
   getSpawners: () => readonly PreySpawner[]
+  /** True once every wolf originally spawned by the wolf den (`WOLF_DEN_ID`,
+   *  plan 093 Etap E) is dead — `false` if the den has none tracked yet
+   *  (including a failed placement) or any tracked wolf is still alive. */
+  isWolfDenCleared: () => boolean
   /** Label suffix (e.g. quest `!`/`?`) for a spawner type's CSS2D label — set
    *  externally (e.g. by a QuestManager), mirrors `NpcAgent.setQuestMarker`. */
   setSpawnerMarker: (type: PreySpawner['type'], marker: string | null) => void
@@ -155,16 +159,22 @@ export function measureSlope(
   return { yaw: bestYaw, drop: bestDrop }
 }
 
-/** Hardcoded prey spawners (cave / thicket) — see docs/plans/archive/2026-08-07--predator-prey-system.md. */
+/** Hardcoded prey spawners (cave / thicket) — see docs/plans/archive/2026-08-07--predator-prey-system.md.
+ *  `wolfDen` (plan 093 Etap E) piggybacks on the same list/shape purely to
+ *  get a placed prop + labeled marker for free — `respawnTime: Infinity`
+ *  keeps `updateSpawners` from ever repopulating it; its initial pack is
+ *  spawned once, directly, in the placement loop below. */
 const SPAWNER_SPECS: { type: PreySpawner['type'], kind: AnimalKind, respawnTime: number, maxPreyCount: number }[] = [
   { type: 'cave', kind: 'deer', respawnTime: 8, maxPreyCount: 3 },
   { type: 'thicket', kind: 'stag', respawnTime: 12, maxPreyCount: 2 },
+  { type: 'wolfDen', kind: 'wolf', respawnTime: Infinity, maxPreyCount: 2 },
 ]
 
 export const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
   cave: 'jaskinia',
   thicket: 'zagajnik',
   grove: 'gaj',
+  wolfDen: 'wilcza jama',
 }
 
 /** Wild fauna GLBs (Quaternius pack). Livestock GLBs live in `livestock.ts`. */
@@ -256,6 +266,11 @@ export async function createFauna(
 ): Promise<Fauna> {
   const random = createSeededRandom(seed ^ 0xfa11)
   let agents: AnimalAgent[] = []
+  /** `animalId`s of the wolf den's initial pack (plan 093 Etap E) — set once
+   *  at placement, checked by `isWolfDenCleared()`. Empty if the den failed
+   *  to find a valid site (`isWolfDenCleared()` then always reports `false`,
+   *  never a false "cleared"). */
+  const denWolfAnimalIds = new Set<string>()
   const templates = await loadFaunaTemplates()
   const spawnerMeshes: Object3D[] = []
 
@@ -461,13 +476,34 @@ export async function createFauna(
       thicket.rotation.y = random() * Math.PI * 2
       scene.add(thicket)
       spawnerMeshes.push(thicket)
+    } else if (spec.type === 'wolfDen') {
+      // Reuses the cave-mouth prop (no dedicated den asset yet — plan 093
+      // Etap E keeps this deliberately simple; a real `CaveVolume` (plan 104)
+      // could replace this visual later without touching the den's identity/
+      // quest contract). No terrain carving — that's cave-specific (083).
+      const facingVillage = Math.atan2(pos.x - settlementCenter.x, pos.z - settlementCenter.z)
+      const mouth = createCaveMouth(1, random())
+      mouth.position.set(pos.x, groundY, pos.z)
+      mouth.rotation.y = facingVillage
+      scene.add(mouth)
+      spawnerMeshes.push(mouth)
+
+      // Initial pack, spawned once — see `SPAWNER_SPECS`' comment for why
+      // `updateSpawners` never repopulates this spawner.
+      for (let i = 0; i < spec.maxPreyCount; i++) {
+        const spot = findWalkableNear(pos.x, pos.z, 0, 4) ?? pos
+        const wolf = spawnAgent('wolf', spot.x, spot.z)
+        scene.add(wolf.mesh)
+        agents.push(wolf)
+        denWolfAnimalIds.add(wolf.animalId)
+      }
     }
 
     const el = document.createElement('div')
     el.className = 'npc-label'
     el.textContent = SPAWNER_LABELS[spec.type]
     const label = new CSS2DObject(el)
-    const labelH = spec.type === 'cave'
+    const labelH = spec.type === 'cave' || spec.type === 'wolfDen'
       ? CAVE_LABEL_HEIGHT
       : spec.type === 'thicket'
         ? THICKET_LABEL_HEIGHT
@@ -541,6 +577,13 @@ export async function createFauna(
     },
     getAgents: () => agents,
     getSpawners: () => spawners,
+    isWolfDenCleared() {
+      if (denWolfAnimalIds.size === 0) return false
+      for (const a of agents) {
+        if (denWolfAnimalIds.has(a.animalId) && !a.isDead()) return false
+      }
+      return true
+    },
     setSpawnerMarker(type, marker) {
       for (const entry of spawnerLabels) {
         if (entry.type !== type || entry.marker === marker) continue

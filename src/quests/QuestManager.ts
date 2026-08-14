@@ -52,6 +52,7 @@ export type ObjectiveRef =
   | { type: 'interact_spawner', spawnerType: SpawnerType }
   | { type: 'spot_animal', kind: AnimalKind }
   | { type: 'animal_died', animalId: string }
+  | { type: 'wolf_den_cleared', denId: string }
 
 /** Looks up a live individual of `kind` to bind a `kill_target_animal` stage
  *  to (its `AnimalAgent.animalId`), or `undefined` if none is available right
@@ -81,6 +82,8 @@ function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, bound
       return objective.type === 'interact_well'
     case 'spot_animal':
       return objective.type === 'spot_animal' && objective.kind === ref.kind
+    case 'wolf_den_cleared':
+      return objective.type === 'clear_wolf_den' && objective.denId === ref.denId
   }
 }
 

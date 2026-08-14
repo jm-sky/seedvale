@@ -1,6 +1,19 @@
 import type { AnimalKind } from './AnimalAgent'
 
-export type SpawnerType = 'cave' | 'thicket' | 'grove'
+/** `wolfDen` (plan 093 Etap E) reuses this same spawner shape — a fixed
+ *  `respawnTime: Infinity` opts it out of `updateSpawners`' respawn loop
+ *  below, since a den's pack is a one-time discovered threat, not an
+ *  ongoing population like `cave`/`thicket` prey. If plan 104 (real
+ *  underground caves) later lands, the den's position/label can be
+ *  re-anchored to an actual cave volume without touching the quest-facing
+ *  `WOLF_DEN_ID`/`clear_wolf_den` contract in `quests.ts`/`QuestManager.ts`. */
+export type SpawnerType = 'cave' | 'thicket' | 'grove' | 'wolfDen'
+
+/** Single wolf den's stable identity — one per settlement today (mirrors
+ *  the existing one-cave/one-thicket-per-settlement reality), so a plain
+ *  constant is enough; a real per-den registry can replace this if/when
+ *  multiple dens are ever needed. */
+export const WOLF_DEN_ID = 'wolf-den'
 
 export type PreySpawner = {
   x: number

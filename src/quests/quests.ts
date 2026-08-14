@@ -1,6 +1,7 @@
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { ItemKind } from '../items/items'
+import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 
 export type QuestState =
   | 'active'
@@ -58,6 +59,10 @@ export type QuestObjective =
    *  moment this stage becomes active (via an injected resolver, not by
    *  importing fauna itself), so only that individual's death clears it. */
   | { type: 'kill_target_animal', kind: AnimalKind }
+  /** The wolf den's whole initial pack is dead (plan 093 Etap E) — reported
+   *  by `Fauna.isWolfDenCleared()`, not per-individual like `animal_died`,
+   *  since the den (not one wolf) is the world entity with identity here. */
+  | { type: 'clear_wolf_den', denId: string }
 
 export type QuestStage = {
   objective: QuestObjective
@@ -175,5 +180,22 @@ export const QUESTS: readonly QuestDef[] = [
     reportLine: 'Dzięki Tobie znowu można spokojnie wychodzić poza osadę.',
     availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
     effects: { relation: 2, exp: 20 },
+  },
+  {
+    id: 'wilcza-jama',
+    giverName: 'Anna',
+    offerLine:
+      'Te wilki skądś się biorą — mają jamę niedaleko. Znajdź ją i rozwiąż ten problem raz na zawsze.',
+    stages: [
+      {
+        objective: { type: 'clear_wolf_den', denId: WOLF_DEN_ID },
+        description: 'Znajdź wilczą jamę i zlikwiduj zagrożenie.',
+        reminderLine: 'Jama wciąż jest zamieszkana.',
+        progressLine: 'Jama opustoszała. Wróć do Anny.',
+      },
+    ],
+    reportLine: 'Teraz w okolicy będzie spokojniej. Dziękuję.',
+    availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
+    effects: { relation: 3, exp: 30 },
   },
 ]

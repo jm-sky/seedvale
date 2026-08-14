@@ -175,6 +175,28 @@ describe('QuestManager kill_target_animal binding', () => {
   })
 })
 
+describe('QuestManager clear_wolf_den', () => {
+  const denQuest: QuestDef = {
+    id: 'den',
+    giverName: 'Anna',
+    offerLine: 'offer den',
+    stages: [
+      { objective: { type: 'clear_wolf_den', denId: 'wolf-den' }, description: 'clear den', reminderLine: 'remind' },
+    ],
+    reportLine: 'report den',
+  }
+
+  it('only completes when the matching denId is reported', () => {
+    const qm = makeManager([denQuest])
+    acceptOffer(qm, 'Anna')
+    expect(qm.onInteractObjective({ type: 'wolf_den_cleared', denId: 'other-den' })).toBeNull()
+    expect(qm.getState('den')).toBe('active')
+    const override = qm.onInteractObjective({ type: 'wolf_den_cleared', denId: 'wolf-den' })
+    expect(override?.line).toBe('clear den')
+    expect(qm.getState('den')).toBe('ready_to_report')
+  })
+})
+
 describe('QuestManager reset', () => {
   it('clears relation, exp and progress back to fresh state', () => {
     const qm = makeManager([effectsQuest])

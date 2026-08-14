@@ -51,7 +51,8 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 
 - Predator/prey roles, chase/flee, player-awareness, shared `HealthState`.
 - Animal life: hunger/thirst/stamina. Elevated needs retarget to a real source (forage / shoreline / scavenged corpse); wander arrival no longer relieves needs.
-- Prey spawners (cave / thicket) with respawn; placement rejects roads, coast/beach, and other spawn points; village avoidance uses each settlement’s real footprint radius.
+- Prey spawners (cave / thicket) with respawn; placement rejects roads, coast/beach, and other spawn points; village avoidance uses each settlement’s real footprint radius. A `wolfDen` spawner (plan 093 Etap E) reuses the same shape/prop for a one-time, non-respawning wolf pack (quest target, not a nuisance spawner).
+- `AnimalAgent.animalId` (plan 093 Etap D) is a stable per-instance id, distinct from `def.kind`, set at spawn time (wild fauna + livestock).
 - Hungry predators choose chase vs flee via `predatorHumanDecision` (hunger vs proximity/fire/crowd). Corpses linger 60s; shovel can bury; predators may eat an unclaimed corpse once.
 - GLB models: wild wolf/fox/deer/stag; village livestock chicken/sheep/cow/horse/donkey (procedural fallback).
 
@@ -70,6 +71,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 
 - `QuestManager` with definitions, objectives and stages (relay v1 + multi-stage world interactions).
 - Quest progress, EXP and NPC relations persist. LLM quest generation is not implemented.
+- Quest v3 (plan 093, Etap A–E): relation levels (`stranger`/`acquainted`/`friendly`/`trusted`, centralized thresholds) gate quest availability (`QuestDef.availability`); `QuestDef.effects` overrides the flat v2 relation/exp reward; two world-problem quests exist end-to-end — "groźny wilk" (kill a specific ambient wolf, bound to its `AnimalAgent.animalId` via an injected resolver, no fauna import in `QuestManager`) and "wilcza jama" (a lightweight `wolfDen` spawner — reuses the `PreySpawner`/cave-mouth prop, one-time pack, no respawn — cleared once its whole pack is dead). `WolfDen`/livestock `ownerHouseId`/landmark/bandit objectives remain unimplemented.
 
 ### Persistence
 

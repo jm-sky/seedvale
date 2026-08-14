@@ -40,6 +40,7 @@ import { playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { isDebugMode } from '../debug/debugMode'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
+import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { isMeleeTool, playerToolDamage } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
@@ -540,7 +541,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 type: 'animal_died',
                 animalId: target.animal.animalId,
               })
-              toast.show(override?.line ?? `${label} pada.`)
+              const denOverride = bundle.fauna.isWolfDenCleared()
+                ? questManager.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })
+                : null
+              toast.show(denOverride?.line ?? override?.line ?? `${label} pada.`)
             } else {
               toast.show(`Trafiono: ${label}`)
             }
