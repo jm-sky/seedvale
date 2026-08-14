@@ -19,7 +19,9 @@
 
 Narzędzie jest dobre w tym, do czego powstało (plan 088): **alignment pary reference/target** (głównie postać + trzymany przedmiot, lampa na `lamp_mount`). Nie jest katalogiem semanticznym ani przeglądarką kitu budowlanego.
 
-Same parked kawałki MegaKit **są** modularne w skali (ściany 2.00 × 3.12 × 0.41 m). Browser tego nie pokazuje — a Free URL aktywnie **kłamie o skali**. Z parked zestawu **nie da się** złożyć kompletnego domku (brak dachu, narożnika, okna, skrzydła drzwi, podłogi). Tę lukę agent powinien zobaczyć w 30 sekund; dziś wymaga znajomości `public/models/` i README.
+Same parked kawałki MegaKit **są** modularne w skali (ściany 2.00 × 3.12 × 0.41 m). Browser tego nie pokazuje — a Free URL aktywnie **kłamie o skali**.
+
+**Biblioteka (2026-08-14, po konwersji):** pełny MegaKit Standard (176 GLB) jest w `public/models/settlement/megakit/`. Z tych plików **da się** zestawić plaster cottage (ściana / doorway / skrzydło / okno / podłoga 2×2 / dach wooden 2×1 / komin). To nie naprawia Asset Browsera — dropdown nadal 73 wired, kit nadal tylko w dataliście Free URL.
 
 Nie wymyślam nowego systemu assetów. Największy zysk to **ten sam** `AssetIndexEntry` + wyszukiwarka + uczciwy prepare/AABB.
 
@@ -33,18 +35,18 @@ Uzasadnienie wyboru: audyt 3D już ustalił, że `hut_d` nie ma geometrycznego w
 
 ### Minimalny zestaw
 
-| Rola | Potrzeba | W dropdownie registry | W manifeście `public/models/` | Werdykt |
-|------|----------|----------------------|-------------------------------|---------|
-| Ściana prosta | tak | tylko `settlement:wall` = palisada RTS | `megakit/wall_plaster_straight`, `wall_brick_straight` | parked, poza indexem |
-| Narożnik | tak | nie | **brak** | luka biblioteki |
-| Drzwi | tak | nie | `wall_*_door` = **ściana z otworem**, nie skrzydło | brak `Door_*` / framugi |
-| Okno | tak | nie | **brak** | luka |
-| Fundament / podłoga | tak | nie | `border_straight` (obrzeże 2 m, nie podłoga) | częściowo |
-| Dach | tak | nie | **brak** (`roof` → 0 plików) | luka |
+| Rola | Potrzeba | W dropdownie registry | W manifeście `public/models/` (po 176 GLB) | Werdykt |
+|------|----------|----------------------|-------------------------------------------|---------|
+| Ściana prosta | tak | tylko `settlement:wall` = palisada RTS | `wall_plaster_straight` (+ `_l`/`_r`), brick | parked, poza indexem; bbox 2.00×3.12×0.41 |
+| Narożnik | tak | nie | `corner_exterior_wood` (słupek 0.21×3.00) **albo** `wall_plaster_straight_l/r` | kit ma L/R wall, nie L-mesh 2 m |
+| Drzwi | tak | nie | `wall_plaster_door_flat` (otwór) + `doorframe_flat_wooddark` + `door_1_flat` (liść 1.12×2.10) | komplet w parked |
+| Okno | tak | nie | `wall_plaster_window_wide_flat` + `window_wide_flat1` + shutters | komplet w parked |
+| Fundament / podłoga | tak | nie | `floor_wooddark` **2×2 m**; `border_straight` 2 m | komplet w parked |
+| Dach | tak | nie | 39× `roof_*` (m.in. `roof_wooden_2x1` + `_l/_r/_corner/_middle`) | komplet w parked |
 | Komin | opcjonalnie | nie | `chimney`, `chimney_2` | parked |
-| Dekor | opcjonalnie | nie | `vine_1/6`, `support`, `stairs_exterior` | parked |
+| Dekor | opcjonalnie | nie | vines, support, stairs, balcony, overhang | parked |
 
-**Czy da się złożyć kompletny domek z tego, co leży w `public/models/`?** Nie. Ściany + otwór drzwiowy + komin + obrzeże + schody — tak. Dach / narożnik / okno / skrzydło drzwi — nie, dopóki nie wrócą z pełnego MegaKit (lokalnie `_temp` w tym worktree **nie istnieje**).
+**Czy da się złożyć kompletny domek z `public/models/`?** **Tak, geometrycznie** — po konwersji pełnego MegaKit Standard (2026-08-14). Nadal **nie** da się tego zrobić *przez dropdown* Asset Browsera. Nadal **nie** ma prefabu ani wiring do osad.
 
 ---
 
@@ -307,10 +309,10 @@ Dwa osobne limity:
 
 | Limit | Czyj to problem | Blokuje agenta? |
 |-------|-----------------|-----------------|
-| UI/index/prepare/raport | Asset Browser | **tak** — nawet istniejące ściany są trudne do znalezienia i **źle przeskalowane** |
-| Brak dachu/narożnika/okna/Door_* w `public/models/` | biblioteka (parked subset 19 szt.) | **tak** dla kompletnego prefabu; **nie** dla prototytu wall+door opening |
+| UI/index/prepare/raport | Asset Browser | **tak** — nawet 176 MegaKit jest w dataliście, nie w dropdownie; fitMax 1 nadal kłamie |
+| Brak dachu/narożnika/okna/Door_* | biblioteka | **zamknięte 2026-08-14** — pełny Standard kit w `public/models/settlement/megakit/` (176 GLB) |
 
-Większa praca nad modularnymi domami i tak wymaga doniesienia brakujących kawałków z pełnego MegaKit (to już jest wniosek audytu 3D). Browser powinien to **pokazać**, nie zmuszać do `find public/models | rg roof`.
+Biblioteka nie jest już blokerem kompletnego *zestawu plików*. Browser nadal nie pokazuje ról, skali ani wired/parked. Kolejny krok na kit: plan 107, potem (osobno) prefab + entrance z audytu 3D §34.
 
 ---
 
@@ -328,17 +330,17 @@ Nie budować przy okazji modular building system, colliderów z otworem ani entr
 
 | ID | Severity | Problem | Evidence |
 |----|----------|---------|----------|
-| F1 | High | Index ukrywa parked MegaKit | dropdown 73 vs manifest 108; brak `megakit` w `assetIndex.ts` |
+| F1 | High | Index ukrywa parked MegaKit | dropdown 73 vs manifest **265**; 176× megakit poza `assetIndex.ts` |
 | F2 | High | Free URL `fitMax: 1` niszczy authored scale | `AssetBrowser.vue` `loadTarget`; native wall 3.12 m |
 | F3 | High | Overlay AABB nieużywalny do snap/skali | raport `size_m` 500–3276 m vs native ~2–3 m |
-| F4 | High | Brak search / semantyki | UI: dwa `<select>` + datalist |
+| F4 | High | Brak search / semantyki | UI: dwa `<select>` + datalist; agent musi wpisać `roof` żeby zobaczyć 39 dachów |
 | F5 | Medium | Reference nie ładuje parked URL | tylko Target ma Free URL |
 | F6 | Medium | „Wall segment” myli z murem domu | `settlement:wall` → `wall.glb` RTS |
 | F7 | Medium | Duplikat labeli house | dwie „Chałupa” |
 | F8 | Medium | Wagon wired, nie w indexie | `props.ts` vs `buildAssetIndex()` |
 | F9 | Medium | Held offset + camera persist na kicie | `HELD_SIDE_OFFSET`, `cameraPersist` |
 | F10 | Low | Stale anchor `hand.right` na hut_d | URL po zmianie reference |
-| F11 | Info | Parked kit niekompletny na domek | manifest: 0 roof/window/corner |
+| F11 | Info | ~~Parked kit niekompletny~~ | **zamknięte:** 176 GLB; Free URL `roof` → 39, `window` → 21, `corner` → 20 |
 
 ---
 
@@ -346,7 +348,45 @@ Nie budować przy okazji modular building system, colliderów z otworem ani entr
 
 | Warstwa | Stan |
 |---------|------|
-| Kod + manifest + GLB AABB/materiały/tris | zrobione 2026-08-14 |
-| Sesja `/asset-browser.html` (dropdown, Free URL, raport, deep link) | zrobione |
-| Wizualna ocena MegaKit w viewportcie | **nie** — framing za zepsutym AABB; osobno: natywne wymiary z loadera są wiarygodne |
-| Implementacja poprawek | nie (plan 107) |
+| Kod + manifest + GLB AABB/materiały | zrobione 2026-08-14 (19, potem 176) |
+| Sesja `/asset-browser.html` | zrobione; po kopii: datalist 265, dropdown nadal 73 |
+| Konwersja MegaKit Standard → `public/models/settlement/megakit/` | 157 nowych GLB + 19 legacy, 0 fail, ~18 MB |
+| Wizualna ocena w viewportcie | nadal słaba (framing/AABB) — natywne wymiary z loadera OK |
+| Implementacja poprawek browsera | nie (plan 107) |
+
+---
+
+## 11. Kontynuacja — pełny kit w `public/` (2026-08-14)
+
+Źródło: `seedvale/_temp/Models/Medieval Village MegaKit - Standard/` (nie worktree seedvale-2). Pipeline: `@gltf-transform` WebP 512 + `gltfpack -cc`. 19 legacy nazw bez zmian (`wagon.glb`).
+
+Manifest po kopii: **265** plików (`megakit`: 176). Dropdown: nadal **73**.
+
+Native AABB zestawu plaster cottage (bez prepare browsera):
+
+| Część | Size (m) | Uwaga |
+|-------|----------|--------|
+| `wall_plaster_straight` / `_l` / `_r` / `door_flat` / `window_wide_flat` | **2.00 × 3.12 × 0.41** | ten sam moduł |
+| `floor_wooddark` | **2.00 × 0.02 × 2.00** | kafelek 2 m |
+| `door_1_flat` | 1.12 × 2.10 × 0.12 | liść; szkło `MI_WindowGlass` |
+| `doorframe_flat_wooddark` | 1.57 × 2.31 × 0.39 | pasuje do otworu |
+| `window_wide_flat1` | 1.61 × 1.58 × 0.68 | wkładka, nie ściana |
+| `corner_exterior_wood` | 0.21 × 3.00 × 0.24 | słupek, nie narożnik 2×2 |
+| `roof_wooden_2x1` | 2.26 × 1.25 × 1.56 | okap > 2 m |
+| `chimney` | 0.95 × 3.18 × 1.00 | |
+| `border_straight` | 2.00 × 0.13 × 0.70 | ta sama szerokość co ściana |
+
+Wniosek: **moduł 2 m trzyma się** na ścianach, oknie-ścianie i podłodze. Dach i narożnik-słupek wymagają świadomego składania, nie ślepego AABB-snap. Nadal 0 animacji / 0 `SV_*`.
+
+Pytania z briefu **po kopii**, nadal przez obecny browser:
+
+| Pytanie | Po 176 GLB |
+|---------|------------|
+| Jakie ściany? | Datalist `wall` → 20 megakit + palisada. Dropdown nadal kłamie. |
+| Drzwi stylistycznie? | `door_1_flat` vs `_2/_4/_8`, flat/round — tylko z nazwy pliku. |
+| Warianty dachu? | **39** w manifeście. UI nie grupuje. |
+| Zgodna skala? | Tak w GLB (2 m). Browser nadal fitMax 1. |
+| Używane w grze? | Nadal nie (oprócz wagonu poza indexem). |
+| Kompletny domek? | **Pliki: tak.** Narzędzie i runtime: nie. |
+
+Werdykt się nie zmienia: **fix first** (plan 107). Zmienił się tylko limit biblioteki.

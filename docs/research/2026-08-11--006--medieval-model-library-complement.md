@@ -32,9 +32,9 @@ Brakuje głównie **bogatszej architektury mieszkalnej i ogrodzeń** — MegaKit
 
 Pipeline bez zmian: zip → wybrane GLB → `gltf-transform` → `public/models/settlement/` → CREDITS.
 
-## Parked (2026-08-12)
+## Parked (2026-08-12; pełny kit 2026-08-14)
 
-19 modeli z MegaKit Standard jest w `public/models/settlement/megakit/` (meshopt + WebP 512). Niepodpięte do runtime — lista w `megakit/README.md`.
+176 modeli z MegaKit Standard jest w `public/models/settlement/megakit/` (meshopt + WebP 512). Niepodpięte do generatora osad — lista ról w `megakit/README.md`. `wagon.glb` wired (Kupiec).
 
 ## Czego unikać
 

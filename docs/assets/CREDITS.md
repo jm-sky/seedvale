@@ -88,4 +88,4 @@ Fauna: [quaternius-ultimate-animated-animals-license.txt](./quaternius-ultimate-
 
 Research: [../research/2026-08-07-3d-asset-sources.md](../research/2026-08-07-3d-asset-sources.md).
 
-| `public/models/settlement/megakit/*.glb` (19 szt.) | Medieval Village MegaKit Standard / Quaternius | [quaternius.itch.io/medieval-village-megakit](https://quaternius.itch.io/medieval-village-megakit) | CC0 1.0 | Fences, wagon, crate, chimneys, vines, walls, stairs — parked (not wired); see `public/models/settlement/megakit/README.md`. License: [quaternius-medieval-village-megakit-license.txt](./quaternius-medieval-village-megakit-license.txt) |
+| `public/models/settlement/megakit/*.glb` (176 szt.) | Medieval Village MegaKit Standard / Quaternius | [quaternius.itch.io/medieval-village-megakit](https://quaternius.itch.io/medieval-village-megakit) | CC0 1.0 | Full Standard kit (walls/roofs/doors/windows/floors) — parked except home Kupiec `wagon.glb`; see `public/models/settlement/megakit/README.md`. License: [quaternius-medieval-village-megakit-license.txt](./quaternius-medieval-village-megakit-license.txt) |
