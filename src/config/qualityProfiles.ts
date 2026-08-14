@@ -45,7 +45,7 @@ export const QUALITY_PRESETS: Record<Exclude<QualityPreset, 'Custom'>, QualityKn
   },
   High: {
     pixelRatioCap: 2,
-    aoEnabled: true,
+    aoEnabled: false,
     aoQuality: 'Low',
     bloomEnabled: true,
     godRaysEnabled: true,

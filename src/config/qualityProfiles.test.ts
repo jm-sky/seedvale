@@ -12,7 +12,7 @@ function target(preset: QualityPreset = 'High') {
   return {
     postProcessing: {
       pixelRatioCap: 2,
-      aoEnabled: true,
+      aoEnabled: false,
       aoQuality: 'Low' as const,
       bloomEnabled: true,
       godRaysEnabled: true,
