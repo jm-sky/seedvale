@@ -297,7 +297,7 @@ The exact status of plans belongs in `docs/plans/README.md`, not here. As of thi
 
 ### Plan 094 — Fauna food/water
 - Czy zjedzone przez drapieżnika zwłoki są faktycznie usuwane po konsumpcji?
-- Czy żerowanie roślinożerców wykorzystuje wirtualne/habitatowe żerowiska, czy realne obiekty świata (np. konkretne kępy trawy)?
+- ~~Czy żerowanie roślinożerców wykorzystuje wirtualne/habitatowe żerowiska, czy realne obiekty świata~~ — odpowiedź (review 006): wirtualne/habitatowe (`AnimalAgent.findForageTarget` scoruje `sampleForestFactor`/`forestDensityAt`, procedural noise field niezwiązany z konkretnymi instancjami drzew/trawy). Świadome uproszczenie, zgodne z targetem ("complete ecological simulation is not required").
 
 ### Plan 092 — NPC stamina / daily vigor
 - Czy stamina lub vigor zależą od płci NPC?
