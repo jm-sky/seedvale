@@ -27,6 +27,7 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-14--108--npc-stuck-at-house-locomotion.md` | NPC utyka w/przy domku (drewno, woda) — review watchdog+097+069; cel na obręczy, rescue na zewnątrz; bez kodu do akceptacji | 🔴 | M | ~~097~~ |
 | `2026-08-14--107--asset-browser-agent-discovery.md` | Asset Browser: search + parked MegaKit w indexie + authored scale (review [008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md)) | 🟡 | M | ~~088~~ |
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
@@ -104,6 +105,7 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the 
 
 ## Quick notes / bugs
 
+- **NPC utyka w/przy domku** — drewno w chatce / woda z Walk bez ruchu; stamina OK. Review + plan naprawy: [108](./2026-08-14--108--npc-stuck-at-house-locomotion.md).
 - **Światło w domach** — `findWallMount` raycastuje bryłę; 2026-08-11: nadal nierówne, potrzeba mapowania per model.
 - **Latające obiekty** — `waitForChunks` przed propsami osady; 2026-08-11: nadal nieidealne.
 - **Morze (telefon)** — artefakty krawędzi, plamy; spróbować bardziej przezroczystej wody.
