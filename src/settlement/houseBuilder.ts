@@ -37,6 +37,8 @@ import { disposeObject3D, loadGltf } from '../assets/loadGltf'
 export const DOOR_1_FLAT_HINGE_OFFSET_X = -0.51
 export const DOOR_OPEN_ANGLE = Math.PI / 2
 export const DOOR_ANIM_SPEED = 4
+/** Uniform world scale on the assembled house — native MegaKit metres × this. */
+export const HOUSE_ASSEMBLY_SCALE = 1.1
 
 const Y_AXIS = new Vector3(0, 1, 0)
 const _pos = new Vector3()
@@ -204,7 +206,7 @@ export function floorTilePositions(
 
 export function houseFootprintRadius(def: HouseDefinition): number {
   if (def.footprintRadius != null) return def.footprintRadius
-  return 0.5 * Math.hypot(def.footprint.width, def.footprint.depth) + 0.45
+  return (0.5 * Math.hypot(def.footprint.width, def.footprint.depth) + 0.45) * HOUSE_ASSEMBLY_SCALE
 }
 
 export function matchingWallPlacement(def: HouseDefinition, opening: HouseOpening): HouseWallPlacement {
@@ -525,6 +527,7 @@ export function buildHouse(def: HouseDefinition, ctx: HouseBuildContext): HouseA
   }
 
   instantiateStatics(staticGroup, staticSpecs, ctx)
+  root.scale.setScalar(HOUSE_ASSEMBLY_SCALE)
 
   const interactionPoints = derivedInteractionPoints(def, def.interactionPoints)
   const census = censusAssembly(staticGroup, interactiveGroup)

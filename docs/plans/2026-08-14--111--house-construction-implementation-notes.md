@@ -5,7 +5,7 @@
 
 ## What landed
 
-- `HouseDefinition` in `src/assets/houseDefinitionExample.ts` is the single data contract. Village homes: cottages 4×4 / 6×4 and medium houses 6×6 / 8×6 with explicit MegaKit cap roofs (`roundtiles_4x4` / `4x6` / `6x6`). `TEST_HOUSE_01` remains the 4×2 wooden_2x1 unit-test house and is not used as a village home.
+- `HouseDefinition` in `src/assets/houseDefinitionExample.ts` is the single data contract. Village homes: cottages 4×4 / 6×4 and medium houses 6×6 / 8×6 with explicit MegaKit cap roofs (`roundtiles_4x4` / `4x6` / `6x6`) plus `roof_front_brick*` gable infill on the two non-slope sides. Wall kits mix plaster, plaster-woodgrid and brick (door/window bays stay on verified plaster openings). Some variants add a `chimney` decoration. Assembly is uniformly scaled ×1.1. `TEST_HOUSE_01` remains the 4×2 wooden_2x1 unit-test house and is not used as a village home.
 - `pickHouseDefinition` is size-aware: outposts stay on cottages; MD+ mix in 6×6 / 8×6 farmsteads.
 - `src/settlement/houseBuilder.ts` resolves parts through the existing `ConstructionCatalog` / `loadGltf` cache. No second asset registry.
 - Static repeats become per-house `InstancedMesh` buckets; after placement, `createHouseStaticBatch()` merges identical geometry+material across houses into settlement-owned InstancedMeshes. Doors stay interactive.

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { buildConstructionCatalog } from '../assets/constructionCatalog'
 import {
   COTTAGE_4X4_A,
+  HOME_HOUSE_DEFINITIONS,
   HOUSE_8X6_A,
   HOUSE_MODULE_M,
   pickHouseDefinition,
@@ -19,6 +20,7 @@ import {
   DOOR_OPEN_ANGLE,
   fillOffsetFor,
   floorTilePositions,
+  HOUSE_ASSEMBLY_SCALE,
   type HouseBuildContext,
   houseDefinitionAssetIds,
   houseFootprintRadius,
@@ -254,6 +256,24 @@ describe('village house definitions', () => {
     farm.dispose()
   })
 
+  it('places triangular gable infill on the two non-slope sides', () => {
+    const parts = COTTAGE_4X4_A.roof.parts ?? []
+    expect(parts).toHaveLength(3)
+    const gables = parts.filter((p) => p.position.z !== 0)
+    expect(gables).toHaveLength(2)
+    const zs = gables.map((p) => p.position.z).sort((a, b) => a - b)
+    expect(zs).toEqual([-2, 2])
+    expect(gables.map((p) => p.rotationY).sort()).toEqual([0, Math.PI])
+  })
+
+  it('scales the assembled house by 10%', () => {
+    const assembly = buildHouse(TEST_HOUSE_01, contextFor())
+    expect(assembly.root.scale.x).toBeCloseTo(HOUSE_ASSEMBLY_SCALE)
+    expect(assembly.root.scale.y).toBeCloseTo(HOUSE_ASSEMBLY_SCALE)
+    expect(assembly.root.scale.z).toBeCloseTo(HOUSE_ASSEMBLY_SCALE)
+    assembly.dispose()
+  })
+
   it('pickHouseDefinition keeps outposts on cottages and mixes farmsteads into large villages', () => {
     for (let i = 0; i < 8; i++) {
       const def = pickHouseDefinition('OUTPOST', i, 7)
@@ -263,5 +283,15 @@ describe('village house definitions', () => {
     const large = Array.from({ length: 12 }, (_, i) => pickHouseDefinition('LG', i, 99))
     expect(large.some((d) => d.sizeClass === 'house')).toBe(true)
     expect(large.some((d) => d.footprint.width >= 6)).toBe(true)
+  })
+
+  it('village homes mix plaster, woodgrid and brick wall kits', () => {
+    const walls = new Set(
+      HOME_HOUSE_DEFINITIONS.flatMap((def) => def.walls.map((w) => w.assetId)),
+    )
+    expect([...walls].some((id) => id.includes('wall_plaster_straight'))).toBe(true)
+    expect([...walls].some((id) => id.includes('wall_plaster_woodgrid'))).toBe(true)
+    expect([...walls].some((id) => id.includes('wall_brick_straight'))).toBe(true)
+    expect(HOME_HOUSE_DEFINITIONS.some((def) => (def.decorations ?? []).some((d) => d.assetId.includes('chimney')))).toBe(true)
   })
 })

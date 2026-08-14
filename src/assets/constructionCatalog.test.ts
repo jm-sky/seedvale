@@ -192,7 +192,7 @@ describe('houseDefinitionExample: TEST_HOUSE_01 references real, correctly-kinde
   })
 
   it('every village home resolves to real, correctly-kinded parts', () => {
-    expect(HOME_HOUSE_DEFINITIONS.length).toBeGreaterThanOrEqual(6)
+    expect(HOME_HOUSE_DEFINITIONS.length).toBeGreaterThanOrEqual(10)
     for (const def of HOME_HOUSE_DEFINITIONS) {
       expect(def.footprint.width * def.footprint.depth).toBeGreaterThanOrEqual(16)
       expect(catalog.byAssetId.get(def.floor.assetId)?.kind, def.id).toBe('floor')
@@ -205,6 +205,9 @@ describe('houseDefinitionExample: TEST_HOUSE_01 references real, correctly-kinde
       const door = def.openings.find((o) => o.type === 'door')
       expect(door, def.id).toBeDefined()
       expect(catalog.byAssetId.get(door!.fillAssetId)?.kind).toBe('door')
+      for (const deco of def.decorations ?? []) {
+        expect(catalog.byAssetId.has(deco.assetId), `${def.id}:${deco.assetId}`).toBe(true)
+      }
     }
   })
 })
