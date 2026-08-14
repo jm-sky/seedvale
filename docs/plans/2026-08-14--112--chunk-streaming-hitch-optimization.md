@@ -9,250 +9,357 @@
 
 ## Cel
 
-Zmniejszyć jednorazowy koszt `buildAndAttachMesh` przypadający na jedną klatkę podczas szybkiego streamingu chunków.
+Zmniejszyć **frame hitching podczas szybkiego streamingu chunków**.
 
-To jest problem **frame hitching**, nie średniego FPS. Review 012 potwierdził dla scenariusza `stream`:
+Review 012 potwierdził dla scenariusza `stream`:
 
-- `chunk mesh`: **48 hitchy**;
-- average: **29.9 ms**;
-- maximum: **53.6 ms**;
-- inne kategorie streamingu (`grass`, `vegetation`, `environment`, `glb`, `unload`) nie przekroczyły progu 8 ms.
+- `chunk mesh`: **48 hitchy**
+- average: **29.9 ms**
+- maximum: **53.6 ms**
+- pozostałe kategorie streamingu (`grass`, `vegetation`, `environment`, `glb`, `unload`) nie przekroczyły progu 8 ms.
 
-Istniejący pipeline już posiada mechanizm rozłożenia ładowania chunków na wiele klatek. Plan ma **dostroić ten istniejący scheduler/budget**, a nie wprowadzać drugi system streamingu.
+To nie jest problem średniego FPS.
 
-## Prompt dla Cursor
+### Istotny kontekst
 
-```text
-# Seedvale — Chunk Streaming Hitch Optimization
+Obecny `ChunkManager` już ogranicza **start generowania** do:
 
-Przejrzyj aktualny codebase oraz:
+`CHUNKS_STARTED_PER_FRAME = 2`
 
-`docs/reviews/2026-08-14--012--perf-bottleneck-diagnosis.md`
+Nie oznacza to jednak, że finalny koszt:
 
-Problem potwierdzony przez Performance Diagnose:
+`worker result → buildAndAttachMesh() → scene.add()`
 
-Podczas scenariusza `stream`:
-- `buildAndAttachMesh` / `chunk mesh`
-- 48 hitchy,
-- średnio ~29.9 ms,
-- maksimum ~53.6 ms.
+jest rozłożony na klatki.
 
-To jest problem **płynności podczas streamingu**, a nie średniego FPS.
+Kilka wyników workera może być gotowych w podobnym czasie, a ich synchroniczne `buildAndAttachMesh()` może zostać wykonane w tej samej klatce.
 
-## Cel
+**Celem planu jest więc rozdzielenie worker completion od main-thread mesh finalization.**
 
-Zmniejszyć jednorazowy koszt budowania i dołączania chunk mesh do jednej klatki.
+Nie tworzyć nowego systemu streamingu. Rozszerzyć istniejący pipeline.
 
-Wykorzystaj istniejący pipeline chunków i scheduler. Nie projektuj nowego systemu.
+---
 
-### Preferowane rozwiązanie
+# Prompt dla Cursor
 
-Rozłóż koszt `buildAndAttachMesh` na wiele klatek poprzez istniejący mechanizm kolejkowania/budżetowania pracy.
+    # Seedvale — Chunk Streaming Hitch Optimization
 
-Najważniejsze:
-- ograniczyć ilość pracy wykonywanej w jednej klatce,
-- zachować kolejność i poprawność streamingu,
-- nie powodować widocznych opóźnień w pojawianiu się chunków,
-- nie zmieniać semantyki generowania świata.
+    Przejrzyj aktualny codebase oraz:
 
-Jeżeli istnieje już scheduler/budget dla chunków, **dostosuj go zamiast tworzyć drugi mechanizm**.
+    `docs/reviews/2026-08-14--012--perf-bottleneck-diagnosis.md`
 
-## Ograniczenia
+    Problem potwierdzony przez Performance Diagnose:
 
-Nie:
-- przenoś Three.js rendering/scene manipulation do Web Workera,
-- nie przebudowuj całego chunk systemu,
-- nie zmieniaj gameplay semantics,
-- nie optymalizuj grass/vegetation/water,
-- nie zmieniaj NPC,
-- nie twórz równoległego systemu streamingu.
+    Podczas scenariusza `stream`:
+    - `buildAndAttachMesh` / `chunk mesh`
+    - 48 hitchy,
+    - średnio ~29.9 ms,
+    - maksimum ~53.6 ms.
 
-Worker może przygotowywać dane, ale finalne tworzenie i attach Three.js objects pozostaje na main thread.
+    To jest problem frame hitching podczas streamingu, nie średniego FPS.
 
-## Weryfikacja
+    ## Ważny kontekst aktualnego kodu
 
-Po implementacji:
+    `ChunkManager` już posiada:
+    - `loadQueue`,
+    - nearest-first ordering,
+    - `drainLoadQueue()`,
+    - `CHUNKS_STARTED_PER_FRAME = 2`.
 
-1. uruchom build/testy,
-2. uruchom istniejący benchmark `stream`,
-3. porównaj:
-   - hitch count,
-   - average hitch,
-   - maximum hitch,
-4. sprawdź, czy chunki nadal pojawiają się wystarczająco szybko,
-5. sprawdź, czy nie ma brakujących chunków ani artefaktów.
+    Ten limit kontroluje jednak **starty generowania chunków**, a niekoniecznie finalny main-thread etap:
 
-Najważniejszy rezultat:
+    `worker result → buildAndAttachMesh() → scene.add()`
 
-**mniej i krótsze hitchy podczas szybkiego przemieszczania się po świecie.**
+    Najpierw potwierdź to w aktualnym kodzie.
 
-Na końcu podaj krótko:
+    Nie zakładaj konkretnej implementacji na podstawie tego promptu — odczytaj aktualny pipeline.
 
-- źródło hitcha,
-- zastosowane rozwiązanie,
-- Before → After dla `count / avg / max`,
-- ewentualny kompromis.
+    ## Cel
 
-Pracuj oszczędnie. Najpierw prześledź wyłącznie istniejący pipeline chunków związany z `buildAndAttachMesh` i streamingiem. Nie wykonuj szerokiego przeglądu repozytorium.
-```
+    Zmniejszyć koncentrację `buildAndAttachMesh()` w jednej klatce.
 
-## 1. Aktualny pipeline — punkt wejścia
+    Preferowany model:
 
-Przed zmianą prześledzić wyłącznie ścieżkę odpowiedzialną za streamed chunk mesh:
+    worker result ready
+            ↓
+    existing chunk pipeline / queue
+            ↓
+    per-frame finalization limit
+            ↓
+    1 × buildAndAttachMesh()
+            ↓
+    scene.add()
 
-`ChunkManager.update()` → istniejąca kolejka/budget → `requestChunkTile()` / wynik workera → `buildAndAttachMesh()` → `scene.add()` oraz lifecycle/dispose.
+    zamiast:
 
-Nie wykonywać szerokiego audytu `ChunkManager`. Interesują tylko miejsca, w których wiele gotowych wyników może doprowadzić do wielu `buildAndAttachMesh()` w tej samej klatce.
+    worker result ready
+            ↓
+    Promise continuation
+            ↓
+    wiele buildAndAttachMesh() w tej samej klatce
 
-`ChunkManager` jest właścicielem streamingu chunków i ma już mechanizm ograniczający liczbę nowych chunków uruchamianych w jednej klatce. Istniejący commit dotyczący budgeted chunk streaming rozkładał wcześniej ładowanie „a few per frame”; problem 012 pokazuje, że sam koszt finalnego main-thread attach/build nadal może koncentrować się w jednej klatce. Nie zakładać jednak konkretnego obecnego limitu — odczytać aktualny kod i dostroić rzeczywisty scheduler.
+    ## Najpierw wykonaj bardzo wąski code trace
 
-## 2. Strategia implementacji
+    Prześledź wyłącznie:
 
-### 2.1 Najpierw ustalić prawdziwy punkt koncentracji pracy
+    `ChunkManager.update()`
+    → `drainLoadQueue()`
+    → `ensureLoaded()`
+    → worker result
+    → `buildAndAttachMesh()`
+    → `scene.add()`
 
-Sprawdzić:
+    Ustal:
 
-- gdzie scheduler wybiera chunk do rozpoczęcia;
-- gdzie wynik workera trafia z powrotem na main thread;
-- czy `buildAndAttachMesh()` jest wykonywane bezpośrednio w callbacku Promise/worker;
-- czy kilka gotowych wyników może zostać obsłużonych kolejno w tej samej klatce;
-- czy obecny budget obejmuje **tylko start generation**, czy również finalny mesh build/attach.
+    1. gdzie worker result wraca na main thread;
+    2. czy `buildAndAttachMesh()` wykonywane jest bezpośrednio w continuation/callbacku;
+    3. czy wiele gotowych wyników może wykonać `buildAndAttachMesh()` w jednej klatce;
+    4. czy obecny `CHUNKS_STARTED_PER_FRAME` faktycznie chroni finalization stage;
+    5. ile kosztuje pojedyncze `buildAndAttachMesh()`.
 
-Nie dodawać nowego `requestAnimationFrame`/queue managera, jeśli istniejąca kolejka może zostać rozszerzona o etap finalizacji.
+    Nie wykonuj szerokiego audytu `ChunkManager`.
 
-### 2.2 Preferowany model
+    ## Mikroprofiling
 
-Jeżeli obecny scheduler nie ogranicza finalizacji gotowych tile results, rozszerzyć jego istniejący budżet tak, aby również `buildAndAttachMesh` podlegał limitowi na klatkę.
+    Jeżeli aktualny instrumentation nie pozwala określić struktury kosztu `buildAndAttachMesh()`, dodaj tylko minimalny pomiar potrzebny do ustalenia:
 
-Preferować prosty deterministyczny limit, np.:
+    - całkowitego czasu `buildAndAttachMesh()`;
+    - kosztu głównego geometry/build stage;
+    - ewentualnych wyraźnie dominujących podoperacji.
 
-- maksymalna liczba finalizacji chunków na klatkę;
-- lub mały time budget dla finalnego build/attach, jeśli istniejący scheduler już operuje czasowo.
+    Nie optymalizuj tych podoperacji w ramach tego planu, chyba że okaże się, że istnieje oczywisty, lokalny błąd powodujący niepotrzebny koszt.
 
-Wybrać rozwiązanie zgodne z istniejącym stylem kodu. Nie tworzyć dwóch niezależnych budżetów, które mogą się wzajemnie omijać.
+    Najpierw rozwiązuj problem koncentracji pracy między klatkami.
 
-Jeżeli aktualny scheduler już posiada jeden wspólny budget, dostosować jego wartość/warunek i pozostawić strukturę bez zmian.
+    ## Preferowane rozwiązanie
 
-### 2.3 Kolejność
+    Jeżeli potwierdzi się, że worker results są finalizowane bezpośrednio po ukończeniu:
 
-Zachować obecną deterministyczną kolejność streamingu. Jeżeli scheduler ma kolejkę `desired`/distance/order, nie zastępować jej prostym FIFO bez uzasadnienia.
+    1. dodaj wyniki do istniejącego pipeline/kolejki finalizacji;
+    2. finalizuj ograniczoną liczbę gotowych chunków na klatkę;
+    3. rozpocznij od prostego limitu:
 
-Ważne jest, aby ograniczenie pracy nie powodowało:
+    `1 × buildAndAttachMesh() / frame`
 
-- ładowania odległych chunków przed potrzebnymi;
-- trwałego starvation blisko gracza;
-- race condition po stream-out;
-- attachu anulowanego/starego chunk result.
+    4. zachowaj istniejący `loadQueue`, ordering i `CHUNKS_STARTED_PER_FRAME`.
 
-## 3. Frame-yield
+    Nie twórz drugiego systemu streamingu.
 
-Jeżeli konieczne jest rozdzielenie istniejącej kolejki finalizacji na kolejne klatki, użyć mechanizmu zgodnego z obecnym schedulerem.
+    Nie twórz globalnego scheduler systemu.
 
-Nie wprowadzać globalnego scheduler systemu. Yield ma dotyczyć tylko istniejącego chunk pipeline.
+    Nie dodawaj osobnego `requestAnimationFrame` managera, jeżeli istniejący `ChunkManager.update()` może obsłużyć ten etap.
 
-Preferowana własność:
+    ## Dlaczego zaczynamy od 1 finalizacji/frame
 
-```text
-worker result ready
+    Pojedynczy `buildAndAttachMesh()` może sam kosztować kilkanaście–kilkadziesiąt ms.
+
+    Budżet na liczbę finalizacji nie może przerwać pojedynczego synchronicznego builda.
+
+    Celem pierwszej zmiany jest więc:
+
+    Frame N     → chunk A finalization
+    Frame N+1   → chunk B finalization
+    Frame N+2   → chunk C finalization
+
+    zamiast:
+
+    Frame N → A + B + C finalization
+
+    Jeżeli benchmark pokaże zbyt duże opóźnienie wizualnego streamingu, dopiero wtedy rozważ `2/frame` lub istniejący czasowy budget.
+
+    Nie wprowadzaj adaptacyjnego budgetu bez potrzeby.
+
+    ## Kolejność
+
+    Zachowaj aktualną deterministyczną kolejność chunków.
+
+    Jeżeli obecna kolejka jest nearest-first / distance ordered, nie zastępuj jej FIFO.
+
+    Finalization queue musi:
+
+    - preferować potrzebne/nearby chunki;
+    - nie powodować starvation;
+    - ignorować wyniki chunków, które zostały już unloadowane;
+    - respektować aktualny lifecycle `chunks`, `pendingPromise` i cancellation.
+
+    Nie zmieniaj semantyki streamingu.
+
+    ## Lifecycle / stale results
+
+    Obecny kod zawiera zabezpieczenia przed sytuacją:
+
+    worker result
         ↓
-existing chunk queue
-        ↓
-per-frame budget
-        ↓
-1..N × buildAndAttachMesh
-        ↓
-scene.add
-```
+    chunk został już unloadowany
 
-Zamiast:
+    Zachowaj istniejące guardy.
 
-```text
-many worker results become ready
-        ↓
-Promise callbacks immediately build everything
-        ↓
-one long main-thread frame
-```
+    Przeniesienie wyniku do kolejki finalizacji nie może spowodować:
 
-## 4. Performance constraints
+    - attachu starego chunk result;
+    - odbudowania unloadowanego chunku;
+    - pozostawienia `pendingPromise`;
+    - wycieku Three.js objects;
+    - błędnego `state`.
 
-Cel optymalizacji to **frame-time distribution**, nie zmniejszenie całkowitej liczby wygenerowanych chunków.
+    Jeżeli chunk zostanie unloadowany przed finalization, wynik powinien zostać pominięty zgodnie z obecnym lifecycle.
 
-Nie zmieniać:
+    ## Nie zmieniaj
 
-- rozdzielczości `Insane 193`;
-- geometrii terenu;
-- grass generation;
-- vegetation;
-- water;
-- settlement rendering;
-- worker protocol, jeśli nie jest to konieczne do poprawnego budżetowania;
-- gameplay semantics.
+    Nie zmieniaj:
 
-Nie przenosić `THREE.Mesh`, `THREE.BufferGeometry`, `scene.add()` ani innych operacji Three.js na worker.
+    - procedural generation;
+    - worker generation algorithm;
+    - terrain resolution;
+    - `Insane 193`;
+    - grass generation;
+    - vegetation generation;
+    - water;
+    - settlement rendering;
+    - NPC;
+    - gameplay semantics;
+    - chunk coordinates;
+    - load/unload radii;
+    - worker protocol, jeżeli nie jest to konieczne.
 
-Jeżeli zmiana zwiększy wall-clock time pełnego dogonienia streamingu, jest to akceptowalny kompromis tylko wtedy, gdy hitchy wyraźnie spadają i opóźnienie wizualnego pojawiania się chunków pozostaje praktycznie niezauważalne.
+    Nie przenoś do Workera:
 
-## 5. Weryfikacja techniczna
+    - `THREE.Mesh`;
+    - `THREE.BufferGeometry`;
+    - `scene.add()`;
+    - innych operacji wymagających Three.js scene/render objects.
 
-Uruchomić istniejące:
+    Worker może przygotowywać dane. Final mesh construction i scene attachment pozostają na main thread.
 
-```text
-npm run test
-npm run build
-```
+    ## Minimalna zmiana
 
-Jeżeli repo ma osobny `tsc`/lint wymagany przez aktualny workflow, uruchomić również istniejące standardowe checki.
+    Preferuj rozwiązanie polegające na:
 
-Następnie uruchomić benchmark:
+    istniejący loadQueue
+            +
+    istniejący update()
+            +
+    mała kolejka gotowych wyników
+            +
+    limit finalizacji/frame
 
-```text
-?benchmark=stream
-```
+    zamiast przebudowy `ChunkManager`.
 
-Użyć tego samego scenariusza, seed/load/quality i środowiska co Review 012, o ile benchmark nadal to wymusza. Nie porównywać wyników z inną konfiguracją bez zaznaczenia różnicy.
+    Nie twórz równoległego mechanizmu streamingu.
 
-## 6. Kryteria sukcesu
+    Jeżeli istniejąca struktura może zostać rozszerzona bez dodatkowej kolejki, preferuj tę opcję.
 
-Baseline z Review 012:
+    ## Ważne rozróżnienie
 
-| Metric | Before |
-|---|---:|
-| hitch count | 48 |
-| hitch avg | 29.9 ms |
-| hitch max | 53.6 ms |
+    Nie zakładaj, że:
 
-Po zmianie oczekiwane jest:
+    `CHUNKS_STARTED_PER_FRAME = 2`
 
-- wyraźnie mniej hitchy;
-- niższy average hitch;
-- niższy maximum hitch;
-- brak regresji poprawności streamingu;
-- brak widocznego „pustego pasa” chunków przy szybkim ruchu.
+    rozwiązuje problem.
 
-Nie ustalać sztucznego progu typu „musi być <16 ms”, jeśli rzeczywisty benchmark pokazuje inny sensowny kompromis. Raportować rzeczywisty Before → After.
+    Ten limit dotyczy startu pracy.
 
-## 7. Browser / visual verification
+    Plan dotyczy:
 
-Podczas `stream` sprawdzić:
+    `READY RESULT → buildAndAttachMesh()`
 
-1. szybki ruch w osi używanej przez benchmark;
-2. brak brakujących chunków;
-3. brak widocznych seamów/artefaktów;
-4. brak trwałego opóźnienia chunków względem gracza;
-5. poprawne stream-out za graczem;
-6. powrót w stronę wcześniej opuszczonego obszaru nadal odtwarza poprawne chunki.
+    To właśnie ten etap musi zostać rozłożony na klatki.
 
-W razie potrzeby użyć istniejącego `?perf=1` i benchmark reportów. Nie dodawać nowego narzędzia diagnostycznego tylko dla tego planu.
+    ## Performance trade-off
 
-## 8. Raport końcowy
+    Akceptowalny jest niewielki wzrost całkowitego czasu dogonienia streamingu, jeżeli:
 
-Na końcu implementacji podać krótko:
+    - hitch count wyraźnie spada;
+    - hitch max/avg wyraźnie spada;
+    - gracz nie obserwuje trwałego opóźnienia chunków.
 
-- **Źródło hitcha:** gdzie dokładnie wiele `buildAndAttachMesh` kumulowało się w jednej klatce;
-- **Rozwiązanie:** który istniejący scheduler/budget został dostosowany;
-- **Before → After:** `count / avg / max`;
-- **Streaming latency:** czy pojawianie się chunków pozostało wystarczająco szybkie;
-- **Kompromis:** tylko jeśli rzeczywiście wystąpił.
+    Nie optymalizuj pod „najmniejszy możliwy wall-clock time”.
 
-Nie rozbudowywać raportu o inne bottlenecks z Review 012. Ten plan dotyczy wyłącznie hitchy `chunk mesh`.
+    W tym planie priorytetem jest:
+
+    **frame-time distribution / smoothness podczas streamingu.**
+
+    ## Weryfikacja
+
+    Uruchom istniejące standardowe checki projektu:
+
+    `npm run test`
+    `npm run build`
+
+    Jeżeli aktualny workflow wymaga dodatkowego `tsc`/lint, użyj istniejących checków repozytorium.
+
+    Następnie uruchom istniejący benchmark:
+
+    `?benchmark=stream`
+
+    Użyj tej samej konfiguracji, seed/load/quality i scenariusza co Review 012, o ile benchmark nadal to definiuje.
+
+    Nie porównuj wyników z inną konfiguracją bez zaznaczenia różnicy.
+
+    ## Baseline
+
+    Review 012:
+
+    | Metric | Before |
+    |---|---:|
+    | hitch count | 48 |
+    | hitch avg | 29.9 ms |
+    | hitch max | 53.6 ms |
+
+    Po implementacji raportuj:
+
+    | Metric | Before | After |
+    |---|---:|---:|
+    | hitch count | 48 | ? |
+    | hitch avg | 29.9 ms | ? |
+    | hitch max | 53.6 ms | ? |
+
+    Nie ustalaj sztucznego progu sukcesu typu `<16 ms`.
+
+    Najważniejsze jest wyraźne zmniejszenie hitching przy zachowaniu odpowiedniej szybkości streamingu.
+
+    ## Browser / visual verification
+
+    Podczas istniejącego scenariusza `stream` sprawdź:
+
+    1. szybki ruch zgodny z benchmarkiem;
+    2. brak brakujących/pustych chunków;
+    3. brak widocznych seamów lub artefaktów;
+    4. brak trwałego opóźnienia chunków względem gracza;
+    5. poprawny stream-out;
+    6. brak problemów po zmianie kierunku ruchu.
+
+    Nie dodawaj nowego narzędzia diagnostycznego.
+
+    Użyj istniejącego `?perf=1` / benchmark reportów, jeśli jest to przydatne.
+
+    ## Kryteria sukcesu
+
+    Plan jest udany, jeżeli:
+
+    - `buildAndAttachMesh()` nie kumuluje się już masowo w jednej klatce;
+    - hitch count wyraźnie spada;
+    - average hitch spada;
+    - maximum hitch spada lub przynajmniej nie pogarsza się;
+    - streaming pozostaje wizualnie wystarczająco szybki;
+    - nie ma regresji lifecycle/cancellation/unload;
+    - zmiana pozostaje mała i wykorzystuje istniejący chunk pipeline.
+
+    Jeżeli pojedynczy `buildAndAttachMesh()` nadal powoduje duży pojedynczy hitch po rozłożeniu finalizacji, **nie rozszerzaj zakresu automatycznie**.
+
+    Zarejestruj ten fakt jako osobny, konkretny bottleneck do kolejnego planu.
+
+    ## Raport końcowy
+
+    Podaj krótko:
+
+    - **Źródło hitcha:** gdzie dokładnie kumulowała się praca;
+    - **Potwierdzenie:** czy `CHUNKS_STARTED_PER_FRAME` nie ograniczał finalization stage;
+    - **Rozwiązanie:** jak istniejący pipeline został dostosowany;
+    - **Before → After:** `count / avg / max`;
+    - **Streaming latency:** czy wizualne pojawianie się chunków pozostało wystarczająco szybkie;
+    - **Kompromis:** tylko jeśli rzeczywiście wystąpił;
+    - **Follow-up:** tylko jeśli pojedynczy `buildAndAttachMesh()` pozostaje niezależnym bottleneckiem.
+
+    Nie raportuj innych bottlenecków z Review 012.
+    Ten plan dotyczy wyłącznie `chunk mesh` hitching.
