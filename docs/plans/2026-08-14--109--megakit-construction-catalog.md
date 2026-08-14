@@ -1,11 +1,11 @@
 # Plan 109: MegaKit Construction Audit & Construction Catalog
 
-**Status:** `planned`
+**Status:** `verification needed` — implemented + audited 2026-08-14, technical checks green, no browser session this session
 **Created:** 2026-08-14
 **Priority:** 🟡 medium
 **Effort:** `L`
-**Depends on:** — (does not depend on 107; both extend `AssetIndex` independently, see below)
-**Related:** [review 008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md), [plan 107](./2026-08-14--107--asset-browser-agent-discovery.md), [megakit README](../../public/models/settlement/megakit/README.md)
+**Depends on:** ~~—~~ (107 landed mid-session; `constructionCatalog.ts` reuses its `status`/`pack`/`kind`/`mergeParkedManifest`)
+**Related:** [review 008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md), [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [plan 107](./2026-08-14--107--asset-browser-agent-discovery.md), [megakit README](../../public/models/settlement/megakit/README.md)
 
 ## Po co
 
@@ -63,3 +63,22 @@ the catalog against the Asset Browser is left for a browser-enabled session (Cur
 
 `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test`. No browser verification
 in this session (see above).
+
+## Implementation notes (2026-08-14)
+
+Full detail: [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md).
+
+- `scripts/audit-megakit.mjs` — parses all 176 GLB JSON chunks directly (no vertex decode;
+  uses required `POSITION` accessor min/max) → `src/assets/megakitAudit.generated.json`.
+- `src/assets/constructionCatalog.ts` — `buildConstructionCatalog(assetIndex)`, layered on
+  `mergeParkedManifest` from plan 107 (no second registry). Kinds: wall/door/window/floor/
+  roof/corner/opening/decoration. Per-part measured dimensions, face-midpoint anchors,
+  detected module size, `gridReliable` flag, and a small geometry-derived
+  `CONSTRUCTION_RULES` list.
+- `src/assets/houseDefinitionExample.ts` — `TEST_HOUSE_01`, a 4×2 m one-room hut, data only.
+- `src/assets/constructionCatalog.test.ts` — 22 tests (discovery, dimensions, module/grid
+  reliability, rule consistency, example-house referential integrity against the catalog).
+- Technical checks green: `tsc`, `lint`, `build`, `test` (651/651). Browser verification not
+  done (no browser access this session) — see review 009 §5 for what a browser pass should
+  confirm (`_l`/`_r` wall mitre geometry, large roof-cap footprint mapping, face-orientation
+  assumption).

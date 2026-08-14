@@ -114,6 +114,7 @@ Before adding a new abstraction, check whether one of these already owns the res
 ## Developer tooling
 
 - **Asset alignment browser** — `/asset-browser.html` (`src/tools/assetBrowser/`), included in production `vite build`. Wired registries via `buildAssetIndex()` plus parked files from `/asset-browser-models.json` (`status` / `pack` / `kind`, MegaKit 176 GLB). Search, `prepare: none` for parked/URL, per-slot native/prepared AABB. Browser verification: plan 107.
+- **Construction Catalog** — `src/assets/constructionCatalog.ts` (plan 109, review 009). Layers construction semantics (kind/dimensions/module/anchors) over `AssetIndex` for the 176 parked MegaKit GLB, sourced from a Node-parsed geometry audit (`src/assets/megakitAudit.generated.json`, `scripts/audit-megakit.mjs`) — not from the browser. Foundation for a future `HouseBuilder`, which does not exist yet. `houseDefinitionExample.ts` shows the intended data shape.
 - **Performance diagnostics (plan 103)** — `src/perf/` sampler/benchmark; lil-gui Performance + `?perf=1` / `?benchmark=<id>`. Graphics quality presets Low/Medium/High/Custom in Pauza → Świat → Grafika. Adaptive Quality is stored-off, not implemented.
 
 ## Important code entry points

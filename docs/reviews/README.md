@@ -28,6 +28,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | Architecture alignment | Zgodność obecnej architektury z docelowym modelem systemów (`docs/roadmap/02-systems-fixed.md`) — system boundaries, WorldContext, NPC→Household→Settlement, needs/pressure, economy/actions, events/ecosystem, time/persistence, player/quests | `done` | [2026-08-14--006--architecture-alignment.md](./2026-08-14--006--architecture-alignment.md) |
 | UI/UX audit | Desktop + A55 landscape — HUD, pauza, QA, inventory, Vue/CSS/shadcn; plan implementacji w [105](../plans/2026-08-14--105--ui-ux-review.md) §8 | `done` | [2026-08-14--007--ui-ux.md](./2026-08-14--007--ui-ux.md) |
 | Asset Browser × modular cottage | Czy agent znajdzie/oceni części jednego domku MegaKit; **fix first** — plan [107](../plans/2026-08-14--107--asset-browser-agent-discovery.md) | `done` | [2026-08-14--008--asset-browser-modular-cottage.md](./2026-08-14--008--asset-browser-modular-cottage.md) |
+| MegaKit construction audit | Audyt wymiarów/modularności wszystkich 176 GLB (Node, bez przeglądarki) + `ConstructionCatalog` nad `AssetIndex` — plan [109](../plans/2026-08-14--109--megakit-construction-catalog.md) | `done` | [2026-08-14--009--megakit-construction-audit.md](./2026-08-14--009--megakit-construction-audit.md) |
 
 ## After each run
 
