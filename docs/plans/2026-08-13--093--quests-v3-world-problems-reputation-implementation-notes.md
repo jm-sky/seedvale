@@ -315,3 +315,40 @@ relation / consequences
 ```
 
 To dobrze pasuje do obecnego kierunku Seedvale i pozwala później dokładać kolejne problemy świata bez budowania drugiego systemu questów.
+
+---
+
+## 10. Stan implementacji (2026-08-14)
+
+Zaimplementowano **Etap A–C** z §2 (pierwszy milestone minus quest "groźny wilk"):
+
+### Etap A — relation levels + availability
+
+- `src/quests/quests.ts`: `RelationLevel`, `RELATION_LEVEL_THRESHOLDS` (`stranger: 0, acquainted: 1, friendly: 3, trusted: 6`), `relationToLevel()`, `QuestAvailability` (`{ relation?: { npcName, minimum } }`), opcjonalne `QuestDef.availability`.
+- `src/quests/QuestManager.ts`: `getRelationLevel(npcName)`, prywatne `meetsAvailability(def)`, publiczne `isQuestAvailable(id)`.
+- `handleGiverInteract()` nie przechodzi `not_offered → offered`, jeśli `meetsAvailability` zwraca `false` (zwraca `null`, NPC wraca do zwykłego dialogu).
+- `labelMarker()` nie pokazuje `!` nad głową NPC dla `not_offered` questa, który nie spełnia availability.
+
+### Etap B — quest effects
+
+- `src/quests/quests.ts`: `QuestEffects = { relation?: number, exp?: number }`, opcjonalne `QuestDef.effects`.
+- `completeQuest()` używa `def.effects?.relation ?? QUEST_RELATION_REWARD` i `def.effects?.exp ?? QUEST_EXP_REWARD` — istniejące questy v2 (bez `effects`) zachowują dotychczasowe `+1 relation` / `+10 exp`.
+
+### Etap C — UI
+
+- `QuestManager.list()` filtruje questy `not_offered`, które nie spełniają availability — **domyślnie ukryte**, zgodnie z preferowanym wariantem z Fazy 11 planu (brak jeszcze bannera „🔒 Zaufanie wymagane" — to osobny, nie zaimplementowany krok, gdyby design tego zażądał).
+- Nie ruszano `QuestListEntry`, `QuestLogScreen.vue` ani `store.ts` — ukrywanie dzieje się w `QuestManager`, UI konsumuje dane bez zmian.
+
+### Nie zaimplementowano (świadomie odłożone, zgodne z §2 Etap D–H tego dokumentu)
+
+- Quest „groźny wilk” (Etap D) — wymaga stabilnego `animalId` na `AnimalAgent` i mostku zdarzenia śmierci (`takeDamage()` → `HealthState.dead` → quest event); obecnie śmierć wykrywana jest tylko inline w `gameLoop.ts` (diff `isDead()` przed/po ataku gracza), bez ID ani ogólnego obserwatora. To dotyka współdzielonego `AnimalAgent`/`HealthState` i zasługuje na osobny przebieg z jaśniejszym zakresem.
+- `WolfDen` (Etap E), livestock identity (Etap G), landmark objectives (Etap F), tree/dig/resource objectives (Etap H), bandyci (Faza 9) — bez zmian.
+- Brak nowego `QuestObjective`/`ObjectiveRef` wariantu (np. `animal_died`) — nie było potrzebny dla A–C.
+
+### Testy
+
+Nowy `src/quests/QuestManager.test.ts` (9 testów): `relationToLevel` progi, quest niedostępny/ukryty poniżej progu, `isQuestAvailable` nie mutuje stanu, odblokowanie po przekroczeniu progu (przez `effects.relation`), domyślne nagrody v2 nienaruszone, custom `effects` aplikowane dokładnie raz, `reset()` czyści relation/exp/progress.
+
+### Weryfikacja
+
+`npx tsc --noEmit`, `npm run lint` (0 błędów w plikach questów — pozostałe błędy lintera są w niepowiązanym, niewersjonowanym `_temp/asset-audit/inspect.mjs`), `npm run build`, `npm run test` (599/599, 87 plików) — wszystkie przechodzą. Weryfikacja w przeglądarce nie została wykonana w tym przebiegu.

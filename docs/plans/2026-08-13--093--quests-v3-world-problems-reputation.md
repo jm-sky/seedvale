@@ -1,6 +1,6 @@
 # Plan: Questy v3 — problemy świata, reputacja i questy kontekstowe
 
-**Status:** `planned`  
+**Status:** `in progress` (Etap A–C zaimplementowane; Etap D+ pozostają)  
 **Created:** 2026-08-12  
 **Priority:** 🔴 `high`  
 **Effort:** XL

@@ -3,7 +3,15 @@ import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import { genderForName, NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/NpcAgent'
-import { type QuestDef, type QuestObjective, QUESTS, type QuestStage, type QuestState } from './quests'
+import {
+  type QuestDef,
+  type QuestObjective,
+  QUESTS,
+  type QuestStage,
+  type QuestState,
+  type RelationLevel,
+  relationToLevel,
+} from './quests'
 
 export type QuestDialogOverride = {
   line: string
@@ -148,6 +156,30 @@ export class QuestManager {
     return this.relations.get(npcName) ?? 0
   }
 
+  /** Coarse relation tier for an NPC by name — see `RelationLevel`. */
+  getRelationLevel(npcName: string): RelationLevel {
+    return relationToLevel(this.getRelation(npcName))
+  }
+
+  /** Whether `def`'s `availability` gate (if any) is currently satisfied.
+   *  Absent gate = always available, matching existing v2 quests. */
+  private meetsAvailability(def: QuestDef): boolean {
+    const required = def.availability?.relation
+    if (!required) return true
+    const order: readonly RelationLevel[] = ['stranger', 'acquainted', 'friendly', 'trusted']
+    const have = order.indexOf(this.getRelationLevel(required.npcName))
+    const need = order.indexOf(required.minimum)
+    return have >= need
+  }
+
+  /** Whether `id` can currently be offered — false either because it's past
+   *  `not_offered`/`offered` already, or its availability gate isn't met yet. */
+  isQuestAvailable(id: string): boolean {
+    const def = this.defs.find((d) => d.id === id)
+    if (!def) return false
+    return this.meetsAvailability(def)
+  }
+
   private objectiveDescription(stage: QuestStage): string {
     if (stage.objective.type === 'gather_item') {
       const { kind, count } = stage.objective
@@ -157,19 +189,25 @@ export class QuestManager {
     return stage.description
   }
 
+  /** Omits `not_offered` quests whose availability gate isn't met yet — an
+   *  unmet-availability quest stays fully hidden rather than shown as locked
+   *  (plan 093 Etap C's default; a future milestone may add an explicit
+   *  "locked" surface for quests the design wants to hint at). */
   list(): QuestListEntry[] {
-    return this.defs.map((def) => {
-      const s = this.stateOf(def.id)
-      const stage = this.currentStage(def, s.stageIndex)
-      return {
-        id: def.id,
-        giverName: def.giverName,
-        state: s.state,
-        stageIndex: s.stageIndex,
-        totalStages: def.stages.length,
-        currentObjective: s.state === 'active' && stage ? this.objectiveDescription(stage) : null,
-      }
-    })
+    return this.defs
+      .filter((def) => this.stateOf(def.id).state !== 'not_offered' || this.meetsAvailability(def))
+      .map((def) => {
+        const s = this.stateOf(def.id)
+        const stage = this.currentStage(def, s.stageIndex)
+        return {
+          id: def.id,
+          giverName: def.giverName,
+          state: s.state,
+          stageIndex: s.stageIndex,
+          totalStages: def.stages.length,
+          currentObjective: s.state === 'active' && stage ? this.objectiveDescription(stage) : null,
+        }
+      })
   }
 
   private bumpRelation(npcName: string, amount: number): void {
@@ -187,11 +225,12 @@ export class QuestManager {
 
   private completeQuest(def: QuestDef): string {
     this.setQuestState(def.id, { state: 'complete', stageIndex: def.stages.length })
-    this.exp += QUEST_EXP_REWARD
-    this.bumpRelation(def.giverName, QUEST_RELATION_REWARD)
+    const relationReward = def.effects?.relation ?? QUEST_RELATION_REWARD
+    this.exp += def.effects?.exp ?? QUEST_EXP_REWARD
+    this.bumpRelation(def.giverName, relationReward)
     for (const stage of def.stages) {
       if (stage.objective.type === 'talk_to_npc') {
-        this.bumpRelation(stage.objective.npcName, QUEST_RELATION_REWARD)
+        this.bumpRelation(stage.objective.npcName, relationReward)
       }
     }
     this.playQuestCompleteSound(def.giverName)
@@ -214,6 +253,7 @@ export class QuestManager {
     s: { state: QuestState, stageIndex: number },
   ): QuestDialogOverride | null {
     if (s.state === 'not_offered' || s.state === 'offered') {
+      if (!this.meetsAvailability(def)) return null
       this.setQuestState(def.id, { state: 'offered', stageIndex: 0 })
       return {
         line: def.offerLine,
@@ -287,7 +327,8 @@ export class QuestManager {
       const s = this.stateOf(def.id)
       if (npcName === def.giverName) {
         if (s.state === 'ready_to_report') return '?'
-        if (s.state === 'not_offered' || s.state === 'offered' || s.state === 'active') return '!'
+        if (s.state === 'offered' || s.state === 'active') return '!'
+        if (s.state === 'not_offered' && this.meetsAvailability(def)) return '!'
       }
       if (s.state === 'active') {
         const stage = this.currentStage(def, s.stageIndex)

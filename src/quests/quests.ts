@@ -9,6 +9,43 @@ export type QuestState =
   | 'offered'
   | 'ready_to_report'
 
+/** Coarse sympathy tiers derived from `QuestManager`'s numeric relation —
+ *  see `RELATION_LEVEL_THRESHOLDS`. Ordered low to high. */
+export type RelationLevel = 'stranger' | 'acquainted' | 'friendly' | 'trusted'
+
+/** Minimum numeric relation for each level. Centralized here so availability
+ *  gating and UI/tuning read a single source of truth (plan 093 Etap A/B). */
+export const RELATION_LEVEL_THRESHOLDS: Record<RelationLevel, number> = {
+  stranger: 0,
+  acquainted: 1,
+  friendly: 3,
+  trusted: 6,
+}
+
+/** Highest level first, so `relationToLevel` can return on the first match. */
+const RELATION_LEVELS_DESCENDING: readonly RelationLevel[] = ['trusted', 'friendly', 'acquainted', 'stranger']
+
+export function relationToLevel(relation: number): RelationLevel {
+  for (const level of RELATION_LEVELS_DESCENDING) {
+    if (relation >= RELATION_LEVEL_THRESHOLDS[level]) return level
+  }
+  return 'stranger'
+}
+
+/** Gates whether a quest is offered at all. Absent = always available
+ *  (existing v2 quests keep their current behaviour). */
+export type QuestAvailability = {
+  relation?: { npcName: string, minimum: RelationLevel }
+}
+
+/** End-of-quest effects applied once by `QuestManager.completeQuest()`.
+ *  Absent fields fall back to the v2 flat defaults (`QUEST_RELATION_REWARD`/
+ *  `QUEST_EXP_REWARD`) so existing quests are unaffected. */
+export type QuestEffects = {
+  relation?: number
+  exp?: number
+}
+
 export type QuestObjective =
   | { type: 'talk_to_npc', npcName: string }
   | { type: 'interact_well' }
@@ -40,6 +77,11 @@ export type QuestDef = {
   reportLine: string
   /** Optional inventory grant on turn-in (plan 090 sword from Strażnik). */
   reward?: { kind: ItemKind, count: number }
+  /** Relation gate; quest stays `not_offered` and hidden from the giver/log
+   *  until met (plan 093 Etap A). */
+  availability?: QuestAvailability
+  /** Overrides the flat v2 relation/exp reward on completion (plan 093 Etap B). */
+  effects?: QuestEffects
 }
 
 export const QUESTS: readonly QuestDef[] = [
