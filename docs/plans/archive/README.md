@@ -88,6 +88,7 @@ Implemented; still waiting on browser/play check. Compact queue also in the [liv
 | 007 | [world-streaming-persistence](./2026-08-07--007--world-streaming-persistence.md) | Load/unload chunków + IndexedDB |
 | 008 | [grass-rendering](./2026-08-07--008--grass-rendering.md) | Instanced grass + wind |
 | 009 | [post-processing-pipeline](./2026-08-07--009--post-processing-pipeline.md) | EffectComposer, N8AO, SMAA |
+| 024 | [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) | Więcej drzew/krzewów + sky rayleigh (~50%); chmury/góry poza zakresem |
 | 028 | [biome-regions](./2026-08-07--028--biome-regions.md) | Biomy / wilgotność |
 | 062 | [terrain-generation-overhaul](./2026-08-11--062--terrain-generation-overhaul.md) | Makro + ridges + FBM detalu |
 | 063 | [forest-regions-and-habitat-distribution](./2026-08-11--063--forest-regions-and-habitat-distribution.md) | `forestDensityAt`, habitat fauny |

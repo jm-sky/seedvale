@@ -1,6 +1,6 @@
 # Plan: Wizualny overhaul świata (rośliny, niebo/chmury, góry w tle)
 
-**Status:** `in progress` (~50%) — część 1 (roślinność) i 2 (kolor nieba, bez chmur) zaimplementowane; część 3 (góry) i chmury z części 2 nadal `planned`
+**Status:** `done` (~50%) — część 1 (roślinność) i 2 (kolor nieba, bez chmur) zaimplementowane; ~~część 3 (góry) i chmury z części 2 nadal `planned`~~
 **Created:** 2026-08-07
 **Priority:** średni — kolejkowane **po** [terrain-worker-pool](./archive/2026-08-07--006--terrain-worker-pool.md) (obecny priorytet #1); nie zakłada istnienia workerów, tylko dzisiejszy main-thread kod. Części 1+2 wykonane równolegle do worker-poola (zero styku plików), część 3 (wymaga `createApp.ts`) odłożona do po scaleniu worker-poola.
 
@@ -29,7 +29,7 @@ Rozszerzyć `src/settlement/props.ts` bez nowej abstrakcji:
 
 **Assety — nieblokujące.** `loadPropOrFallback` już dziś łapie błąd ładowania i używa fallbacku, więc `tree_c.glb`/`bush_a.glb`/`bush_b.glb` mogą fizycznie nie istnieć w `public/models/nature/` i gra i tak wyrenderuje się poprawnie proceduralnym fallbackiem. Źródło docelowe: Quaternius "Ultimate Stylized Nature" (CC0, glTF) — zidentyfikowane w [research/2026-08-07-3d-asset-sources.md](../research/2026-08-07-3d-asset-sources.md). Zero zmian w kodzie potrzebnych, gdy user podrzuci pliki pod właściwą nazwą.
 
-## 2. Niebo: gradient (`done`) + chmury (`planned`)
+## 2. Niebo: gradient (`done`) + ~~chmury (`planned`)~~
 
 **Fix "wypłukanego" wyglądu** (niezależnie od chmur) — `done`, 2 iteracje: w `src/world/dayNight.ts` (`skyParamsFromTime`) dzienne `rayleigh` sięgało ~2.6 przy południu — pierwsza próba (podniesienie `rayleigh` do 3.4 licząc na "głębszy błękit") pogorszyła sprawę. Sprawdzone w źródle `node_modules/three/examples/jsm/objects/Sky.js`: domyślny `rayleigh` shadera to **1** — wysoki `rayleigh` pcha człon ekstynkcji (`Fex`) w stronę 0 na całej kopule, co saturuje każdy kanał koloru i zaciera różnicę per-długość-fali odpowiedzialną za błękit (stąd biel/szarość zamiast koloru — potwierdzone manualnym testem usera: turbidity 1-2 + rayleigh 3.5 + wysokie słońce = dalej biało). Poprawka: `rayleigh` bliżej natywnej skali shadera (`0.85 + dayFactor * 0.95`, południe: 1.8), `turbidity` zostaje głównym driverem ciepłego/mglistego horyzontu przy niskim słońcu (`1.6 + (1 - |elev|) * 2.8`, południe: 1.6, horyzont: 4.4). **Zweryfikowane przez usera (2026-08-07):** średnio/słabo, ale "ujdzie" — odłożone na razie, nie dalszej iteracji teraz. Wrócić do tego przy okazji chmur (część 2 dalej) albo jeśli ktoś zgłosi że nadal razi.
 
@@ -39,7 +39,7 @@ Odrzucone: noise-shader na kopule (custom `ShaderMaterial` — nikt dziś w proj
 
 **Nowy plik:** `src/world/createClouds.ts` — wzorzec jak `createSky.ts`/`createOcean.ts` (`addTo(scene)`, `update(dt)`, `dispose()`), wpięty w `createApp.ts` obok `sky`/`ocean` w `tick()`.
 
-## 3. Górski horyzont
+## 3. ~~Górski horyzont~~
 
 Jeden statyczny mesh — pierścień/sylwetka gór, promień poza `halfExtent` (dziś 64, z `worldConfig.terrain.size=128`) + margines, np. r≈180–220 (mieści się przed `fogFar` 260 i `camera.far` 500). Wierzchołki górnej krawędzi przesunięte pionowo przez `fbm01()` z `src/terrain/fbm.ts` (reużycie istniejącej funkcji, nowy seed tylko na sylwetkę szczytów). Materiał: `flatShading: true` (spójne z `biomeColors.ts`/`props.ts`), stonowany fioletowo-niebieski, `fog: true` żeby wtapiał się o zmierzchu/nocy, bez cieni (`castShadow`/`receiveShadow` = false — to tło, nie gameplay). Brak LOD/streamingu — to **nie** jest to samo co duży/sferyczny świat ([world-streaming-persistence](./archive/2026-08-07--007--world-streaming-persistence.md), osobna dużo większa inicjatywa) — statyczna geometria budowana raz przy starcie/rebuildzie świata, tak jak `terrain.mesh`.
 
