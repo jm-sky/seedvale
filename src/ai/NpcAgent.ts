@@ -157,7 +157,7 @@ function modelUrlFor(gender: NpcGender, treeIndex: number): string {
   return pool[treeIndex % pool.length]!
 }
 
-/** v2 stage 2 (`docs/plans/2026-08-07--020...`) collapses the old
+/** v2 stage 2 (`docs/plans/archive/2026-08-07--020...`) collapses the old
  *  resource-specific `goGarden/goHomeDrink/goStock/goTree/goWell` +
  *  `chop/deposit/drink/eat` phases into one generic `goTo` → `execute` pair,
  *  parameterized by shared `PlannedAction` (`src/simulation`, plan 055).
@@ -195,7 +195,7 @@ type NpcPlannedAction = PlannedAction<ActionId> & {
 /** Public, dialogue-facing summary of what an NPC is doing right now — a
  *  narrower, stable view over the private `phase`/`pendingAction` FSM state
  *  (`getCurrentActivity()` below), so callers outside this class never see
- *  `Phase`/`PlannedAction` themselves (`docs/plans/2026-08-09--048...`). */
+ *  `Phase`/`PlannedAction` themselves (`docs/plans/archive/2026-08-09--048...`). */
 export type CurrentActivityKind = 'eat' | 'idle' | 'need' | 'sleep' | 'talking' | 'wander' | 'work'
 
 export type CurrentActivity = {
@@ -233,7 +233,7 @@ const WOOD_SATISFY_AMOUNT = 0.55
  *  to the natural re-trigger cadence of the fastest-decaying need (`thirst`)
  *  at default `Needs.ts`/`dayNight.ts` rates, so a multi-hour skip still
  *  resolves roughly as many satisfy-cycles as unskipped play would have.
- *  See `docs/plans/2026-08-12--075--time-skip-npc-catchup.md`. */
+ *  See `docs/plans/archive/2026-08-12--075--time-skip-npc-catchup.md`. */
 const TIME_SKIP_SAMPLE_HOURS = 0.5
 
 /** Chance per `choose` cycle — when no active need routes the NPC anywhere
@@ -970,7 +970,7 @@ export class NpcAgent {
    *  activity says this NPC belongs — no `steerTo` walk, matching how a
    *  time-lapse only shows someone where they linger. Called once per skip
    *  by `SettlementsManager.resolveTimeSkip`, never per-frame.
-   *  See `docs/plans/2026-08-12--075--time-skip-npc-catchup.md`. */
+   *  See `docs/plans/archive/2026-08-12--075--time-skip-npc-catchup.md`. */
   resolveTimeSkip(startTimeOfDay: number, hours: number, dayLengthSec: number): void {
     let finalActivity: ScheduleActivity | null = null
     let elapsed = 0

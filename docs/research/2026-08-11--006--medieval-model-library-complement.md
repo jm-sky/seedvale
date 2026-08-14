@@ -45,6 +45,6 @@ Pipeline bez zmian: zip → wybrane GLB → `gltf-transform` → `public/models/
 ## Powiązane
 
 - [2026-08-07--002--3d-asset-sources.md](./2026-08-07--002--3d-asset-sources.md)
-- [plans/2026-08-11--072--settlement-visuals-nameplate-palisade.md](../plans/2026-08-11--072--settlement-visuals-nameplate-palisade.md)
+- [plans/archive/2026-08-11--072--settlement-visuals-nameplate-palisade.md](../plans/archive/2026-08-11--072--settlement-visuals-nameplate-palisade.md)
 - [docs/assets/CREDITS.md](../assets/CREDITS.md)
 - Living model backlog: [docs/assets/MODELS.md](../assets/MODELS.md) (M01–M03)

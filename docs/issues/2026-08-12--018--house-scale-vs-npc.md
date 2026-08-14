@@ -19,7 +19,7 @@ Make settlement buildings feel physically believable relative to the inhabitants
 
 ## Fix (2026-08-12) — systematic
 
-See plan [074](../plans/2026-08-12--074--house-catalog-scale-lamps-debug.md).
+See plan [074](../plans/archive/2026-08-12--074--house-catalog-scale-lamps-debug.md).
 
 - Per-model `HOUSE_CATALOG` (`src/settlement/houseCatalog.ts`) with individual `height` / lamp fractions.
 - `towerhouse` removed from family-home rotation.

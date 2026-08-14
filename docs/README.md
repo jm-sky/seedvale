@@ -4,36 +4,38 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 
 ## Główne dokumenty
 
-- **[VISION.md](./VISION.md)** — wizja i kontekst produktu (czym jest Seedvale, dla kogo, filozofia projektowania — czytaj przed planowaniem nowych funkcji)
+- **[VISION.md](./VISION.md)** — wizja i kontekst produktu (czytaj przed planowaniem nowych funkcji)
 - **[STATE.md](./STATE.md)** — factual current implementation state
-- **[GRAPHICS.md](./GRAPHICS.md)** — log decyzji / kontraktów graficznych (materiały, woda, post-process, performance wizualny)
-- **[WATER.md](./WATER.md)** — źródło prawdy dla wody (ocean + jeziora: stan, decyzje, historia)
-- **[ROADMAP.md](./ROADMAP.md)** — punkt wejścia + handoff  
-- **[../CLAUDE.md](../CLAUDE.md)** — reguły dla agentów  
-- **[features/](./features/)** — FEATURE-y (jeszcze puste)  
-- **[reviews/](./reviews/README.md)** — kolejka `to-do--*` (woda)  
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — mapa architektury (WorldBundle, lifecycle, save)
+- **[SETTLEMENTS.md](./SETTLEMENTS.md)** — osady i życie NPC (stan + standing decisions)
+- **[GRAPHICS.md](./GRAPHICS.md)** — log decyzji / kontraktów graficznych
+- **[WATER.md](./WATER.md)** — woda (ocean + jeziora: stan, decyzje, historia)
+- **[ROADMAP.md](./ROADMAP.md)** — kierunek produktu
+- **[../CLAUDE.md](../CLAUDE.md)** — reguły dla agentów
 
 ## Workflow (issues, reviews, research, plans, assets)
 
 | Katalog | Przeznaczenie |
 |---------|---------------|
 | [issues/](./issues/README.md) | Błędy, usprawnienia, dług techniczny |
-| [reviews/](./reviews/README.md) | Sesje przeglądu (security, code quality, UX, performance) |
+| [reviews/](./reviews/README.md) | Sesje przeglądu |
 | [research/](./research/README.md) | Analizy, spike'i, porównania przed decyzją |
-| [plans/](./plans/README.md) | Plany implementacji większych zmian |
+| [plans/](./plans/README.md) | Plany implementacji (wszystkie statusy) |
+| [plans/archive/](./plans/archive/README.md) | Jednorazowo zamrożony batch planów z 2026-08-07–2026-08-14 |
 | [assets/](./assets/README.md) | Żywe listy wymaganych modeli/dźwięków + CREDITS |
-| [GRAPHICS.md](./GRAPHICS.md) | Decyzje i uwagi graficzne (SoT, nie katalog) |
-| [WATER.md](./WATER.md) | Woda — stan techniczny/wizualny, decyzje, historia poprawek |
+| [items/CATALOG.md](./items/CATALOG.md) | Itemy: hold / melee / spawn |
 
 Statusy: `todo` · `planned` · `in progress` · `done` · `verification needed`
 
-## Struktura katalogów
+Nowe plany zostają w `plans/` niezależnie od statusu. `plans/archive/` nie przyjmuje kolejnych plików.
 
-### `features/`
-Szczegółowe plany implementacji poszczególnych funkcji z roadmap.
+## Struktura katalogów
 
 ### `plans/`
 Plany implementacji — indeks w [plans/README.md](./plans/README.md).
+
+### `plans/archive/`
+Zamrożona historia pierwszego okresu. Nie source of truth dla stanu kodu.
 
 ### `research/`
 Analizy i porównania — indeks w [research/README.md](./research/README.md).
@@ -41,11 +43,14 @@ Analizy i porównania — indeks w [research/README.md](./research/README.md).
 ### `reviews/`
 Sesje przeglądu — indeks w [reviews/README.md](./reviews/README.md).
 
+### `features/`
+Nieużywane. Plany żyją w `plans/`, nie tutaj.
+
 ### `examples/`
 Przykładowe pliki, snippety, referencje zewnętrzne.
 
 ### `archive/`
-Przestarzałe dokumenty przeniesione do archiwum.
+Przestarzałe dokumenty top-level (nie plany). Osobne od `plans/archive/`.
 
 ### `deployment/`
 Deploy / hosting (gdy będzie potrzebny).
@@ -58,4 +63,4 @@ Meta-prompty do powtarzalnych zadań (struktura docs, review, itd.).
 
 ---
 
-**Ostatnia aktualizacja:** 2026-08-13
+**Ostatnia aktualizacja:** 2026-08-14

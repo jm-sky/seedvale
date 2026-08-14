@@ -2,12 +2,13 @@
 
 **Purpose:** describe the architecture that exists in the code today. This is an architectural map, not a product roadmap.
 
-**Last verified:** 2026-08-10
+**Last verified:** 2026-08-14
 
 ## Source of truth
 
 - `CLAUDE.md` — how agents should work.
 - `docs/STATE.md` — what is currently implemented.
+- `docs/SETTLEMENTS.md` — settlements and NPC life as implemented.
 - `docs/ROADMAP.md` — product direction.
 - `docs/plans/README.md` — plan/status index.
 - Source code — authoritative when documentation conflicts with implementation.
@@ -27,10 +28,12 @@ WorldBundle
 ├── ItemSpawners
 ├── ResourceDeposits
 ├── DroppedItems
-└── PlacedFires
+├── PlacedFires
+├── PlacedTents
+└── LargeCaves
 ```
 
-`WorldBundle` is mutated in place during rebuild. Callers that need a live world reference should retain the bundle and read its fields when used; they must not capture a bundle field before a rebuild and expect it to remain current. This is the intended lifecycle rule, but plan 054 exists because a few long-lived callbacks still need to be brought into full compliance.
+`WorldBundle` is mutated in place during rebuild. Callers that need a live world reference should retain the bundle and read its fields when used; they must not capture a bundle field before a rebuild and expect it to remain current. Plan 054 audited long-lived closures against this rule and is done.
 
 ## Major subsystems
 
@@ -44,7 +47,7 @@ Application
     │       ├── Settlements / NPCs
     │       ├── Fauna
     │       ├── Natural resources
-    │       └── World items / fires
+    │       └── World items / fires / tents / large caves
     ├── Player
     │   ├── PlayerController
     │   ├── Inventory
@@ -119,7 +122,7 @@ NPC behaviour is built around needs/FSM/personality/dialogue/quest interactions.
 
 ## Items and interaction
 
-`Inventory` is owned by the application/player-facing layer. World-side item state such as dropped items, item spawners and placed fires lives in `WorldBundle`. Interaction code connects player actions to those systems rather than moving all item state into the player controller.
+`Inventory` is owned by the application/player-facing layer. World-side item state such as dropped items, item spawners, placed fires and placed tents lives in `WorldBundle`. Interaction code connects player actions to those systems rather than moving all item state into the player controller.
 
 ## Simulation vs presentation
 
@@ -135,7 +138,7 @@ Persistence is orchestrated from `createApp.ts`, but ownership is split by respo
 - `src/persistence/saveData.ts` owns the `SaveData` schema, validation/defaulting and migrations.
 - `src/persistence/saveDb.ts` owns the IndexedDB storage operations.
 
-The current save schema is version 6. It contains world configuration, player position/orientation, quest progress/EXP/relations, inventory, collected item IDs, dropped items, placed fires and time of day. NPC runtime state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
+The current save schema is version **11**. It contains world configuration, player position/orientation, time of day, elapsed game days, quest progress/EXP/relations, inventory, held tool, collected item IDs, dropped items, placed fires, placed tents, player torch, world flags, sparse tree lifecycle overrides and map discovery cells. NPC runtime state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
 
 When changing `SaveData`, preserve compatibility with older saves and use the existing migration/defaulting patterns in the config and persistence code.
 
@@ -143,7 +146,7 @@ When changing `SaveData`, preserve compatibility with older saves and use the ex
 
 1. `WorldBundle` itself is stable across rebuilds; its fields are replaced in place.
 2. A system whose world dependency is replaced must either be recreated or explicitly rebound to the new dependency.
-3. Long-lived closures should read the current bundle field instead of capturing a replaceable field value. This is the intended pattern, but the current code still has known follow-up work around `PlacedFires` callbacks (plan 054).
+3. Long-lived closures should read the current bundle field instead of capturing a replaceable field value.
 4. World-owned resources must be disposed before replacement.
 5. Module-level caches whose keys are not seed-scoped must be cleared when switching worlds.
 6. New-world reset decisions belong to the caller; low-level rebuild helpers should not silently reset unrelated player/world state.

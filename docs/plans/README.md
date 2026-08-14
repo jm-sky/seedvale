@@ -1,6 +1,6 @@
 # Plans
 
-Implementation plans. Active work is **In progress / Planned / Todo**. The rest is grouped for lookup, not daily scanning.
+Implementation plans. Active work is **In progress / Planned / Todo**. New plans stay in this folder regardless of status.
 
 Status: `in progress` 🔄 · `verification needed` 🔍 · `planned` 📋 · `todo` ⬜ · `done` ✅
 Priority: 🔴 high · 🟡 medium · ⚪ low
@@ -8,7 +8,9 @@ Effort: `XS` minuty · `S` ~15–30 min · `M` ~30–90 min · `L` ~1–3 h · `
 
 **Depends on** = implementation prerequisites (plan IDs). ~~done~~ is crossed out. A plan is ready when every dependency is struck. Thematic overlap is not a dependency.
 
-Paths below are files in this folder. Implementation notes / reviews stay next to the plan (`*-implementation-notes.md`, `*-review.md`) and are not indexed separately.
+Paths below are files in this folder unless noted. Implementation notes / reviews stay next to the plan (`*-implementation-notes.md`, `*-review.md`) and are not indexed separately.
+
+Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` live in [archive/](./archive/README.md) (one-time freeze). New completed plans are **not** moved there.
 
 ---
 
@@ -28,9 +30,8 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 | `2026-08-14--105--ui-ux-review.md` | Audyt UI/UX (desktop + mobile); bez implementacji w sesji review | 🟡 | L | ~~046~~ ~~005~~ ~~023~~ |
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059) | 🔴 | XL | ~~015~~ ~~018~~ |
+| `2026-08-14--106--player-needs-food-and-cooking.md` | Głód/pragnienie/stamina/vigor gracza + jedzenie/woda | 🔴 | L | — |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
-| `docs/plans/2026-08-14--105--ui-ux-review.md` | UI/UX review | 🟡 | L |  |
-| `2026-08-14--106--player-needs-food-and-cooking.md` | Player hunger/thirst/ stamina/vigor, and food/water items | 🔴 | L | ? |
 
 ---
 
@@ -47,7 +48,31 @@ Paths below are files in this folder. Implementation notes / reviews stay next t
 
 ## Verification needed
 
-Implementation complete; needs play/browser check. Grouped; full write-up is in the plan file.
+Implementation complete; needs play/browser check. This section lists **plans in this folder**. After the 2026-08-14 archive freeze it is empty; new verified-but-unplayed work belongs here.
+
+Historical playtest queue (files in archive): [below](#playtest-queue-archived-batch).
+
+---
+
+## Done
+
+Completed plans **in this folder**. After the 2026-08-14 archive freeze it is empty; new `done` work belongs here.
+
+Older completed work: [archive/README.md](./archive/README.md).
+
+What already landed in that period (snapshot, not a status tracker):
+
+- **Fundament:** chunked terrain + workery + streaming/save, biomy, las jako `forestDensityAt`.
+- **Osady:** `VillagePlan` → runtime, katalog domów, ogrody/pola, lokalna gospodarka (stock, nie household).
+- **NPC:** Place + executable schedule + vigor; dialog v2 / handel.
+- **Przedmioty/świat:** inventory, held tools, kopanie/ścinanie, woda (plan 098) — szczegóły w [CATALOG](../items/CATALOG.md) / [WATER](../WATER.md) / [SETTLEMENTS](../SETTLEMENTS.md).
+- **App:** `WorldBundle`, Vue Fazy 0–4 (weryfikacja w przeglądarce nadal otwarta).
+
+---
+
+## Playtest queue (archived batch)
+
+Implementation complete before the 2026-08-14 freeze; files are in [archive/](./archive/). Still waiting on browser/play check.
 
 **Osady / wioski** — `036` siting trudny teren (częściowo) · `074` katalog domów · `076` polish generatora · `077` ogrody S/M/L · `095` stóg siana + ogród poza placem · issue [029](../issues/2026-08-13--029--village-in-open-ocean.md) wioska na oceanie · `071` lokalna gospodarka osady (stock/produkcja/woodshed)
 
@@ -57,31 +82,17 @@ Implementation complete; needs play/browser check. Grouped; full write-up is in 
 
 **Fizyka** — `097` opadanie przedmiotów, kolizje gracz/NPC/fauna, skok (3 fazy zaimplementowane)
 
-**UI / audio / rest** — `059` SFX pick/drop (`2026-08-11--059--inventory-pick-drop-sfx.md`) · `075` time-skip catch-up NPC · `078` `playAt` falloff · `084` obóz + town rest · `088` asset alignment browser · `089` minimapa + mapa świata / FoW · `090` miecz/kupiec/namiot/jaskinie/kilof · `102` frame-yield budowy osady (issue 027)
+**UI / audio / rest** — `059` SFX pick/drop · `075` time-skip catch-up NPC · `078` `playAt` falloff · `084` obóz + town rest · `088` asset alignment browser · `089` minimapa + mapa świata / FoW · `090` miecz/kupiec/namiot/jaskinie/kilof · `102` frame-yield budowy osady (issue 027)
 
 **NPC** — `060` wykonywalny grafik (`eat`/`home`/`wake`) + overlay traits (`night_owl` / `fast_worker` / `sociable`) · `092` stamina (burst) + dzienny wigor / zasypianie w pracy
 
 ---
 
-## Done
-
-Compact ID list. Open the file only when you need the original scope.
-
-- **Fundament:** `001` teren · `003` zegar · `006` terrain workers · `007` streaming/save · `008` trawa · `009` postprocess · `028` biomy · `062` terrain overhaul · `063` las/habitat · `066` VFX · `068` nierówne drogi
-- **Osady / NPC:** `002` osada+NPC · `011` dialog · `013` płeć · `014` SFX reakcji · `020` grafik/place · `022` character depth · `025` multi-osady · `026` drogi · `027` imiona · `031` gen. wiosek · `038` ogniska · `044` detale świata · `048` dialogi v2 · `073` typy drzew · `047` village overhaul · `072` nameplate/palisada· `079` InteractionQueue / studnia · `099` pole pszenicy GLB + ogród crops · `100` ogród 2× + pad pod crops · `101` kaktus/reed/studnia/stos drewna
-- **Fauna / walka:** `004` chase/flee · `010` predator-prey · `021` animal life · `042` świadomość gracza · `045` Health/Stamina
-- **Itemy / świat:** `015` questy v1 · `016` ambient audio · `017` gaze labels · `018` questy v2 · `029` minimapa · `030` zbieralne · `041` czekaj/odpoczynek · `043` ekwipunek · `050` pochodnia · `051` atmosfera · `067` minimapa N · `052` łopata/kamienie · `057` siekiera · `082` widły/sierp/clutter
-- **App / UI:** `005` ekrany · `023` touch · `053` createApp refactor · `054` WorldBundle refs · `055` shared simulation · `046` Vue+Tailwind
-- **Woda / grafika:** `098` jedna rodzina shadera + brzeg + lustro 256² / Vue
-- **Archiwum:** `012` etykiety → `017`/`022` · `019` identity → `022` · `032` zasoby naturalne· `039` znaki drogowe
-
----
-
 ## Index completeness
 
-Every `docs/plans/YYYY-MM-DD--NNN--*.md` (except `*-implementation-notes.md`, `*-review.md`, `README.md`) belongs in a section above. `012` / `019` are archived under Done.
+Every `docs/plans/YYYY-MM-DD--NNN--*.md` in **this folder** (except `*-implementation-notes.md`, `*-review.md`, `README.md`, `archive/`) belongs in a section above, regardless of status.
 
-New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the matching section.
+New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the matching section. Do not move completed plans into `archive/`.
 
 ---
 
@@ -90,7 +101,7 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the 
 - **Światło w domach** — `findWallMount` raycastuje bryłę; 2026-08-11: nadal nierówne, potrzeba mapowania per model.
 - **Latające obiekty** — `waitForChunks` przed propsami osady; 2026-08-11: nadal nieidealne.
 - **Morze (telefon)** — artefakty krawędzi, plamy; spróbować bardziej przezroczystej wody.
-- **Woda** — plan [098](./2026-08-13--098--water-unified-shader-shore-reflections.md) `done` (2026-08-13). Telefon: off odbić jako ucieczka od artefaktów krawędzi (notatka wyżej).
+- **Woda** — plan [098](./archive/2026-08-13--098--water-unified-shader-shore-reflections.md) `done` (2026-08-13). Telefon: off odbić jako ucieczka od artefaktów krawędzi (notatka wyżej).
 
 ## Audits (not implementation plans)
 
@@ -100,4 +111,4 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the 
 
 ## Related
 
-`docs/research/README.md` · `docs/reviews/README.md` · `docs/issues/README.md`
+`docs/research/README.md` · `docs/reviews/README.md` · `docs/issues/README.md` · [archive/README.md](./archive/README.md)

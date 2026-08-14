@@ -8,7 +8,7 @@ import type { NeedId } from './Needs'
 import type { CurrentActivity, CurrentActivityKind } from './NpcAgent'
 
 /**
- * New topics for the NPC dialogue menu (`docs/plans/2026-08-09--048--npc-dialogues-v2.md`)
+ * New topics for the NPC dialogue menu (`docs/plans/archive/2026-08-09--048--npc-dialogues-v2.md`)
  * — deliberately a separate module from `dialogue.ts` (needs-based flavor
  * lines, reused as-is for the "help" topic) rather than an extension of it.
  * Every function here is pure: plain data in, a ready-to-show Polish

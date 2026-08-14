@@ -15,7 +15,7 @@ export type TimeSkipTickResult = {
   /** Total hours this skip advances the clock by. Combined with
    *  `startTimeOfDay`, lets a `justFinished` caller (`SettlementsManager.
    *  resolveTimeSkip`) replay the skipped period for NPC needs/stamina/
-   *  position catch-up (`docs/plans/2026-08-12--075...`). */
+   *  position catch-up (`docs/plans/archive/2026-08-12--075...`). */
   hours: number
   /** `dayNight.timeOfDay` (0-1) at the moment this skip started. */
   startTimeOfDay: number
@@ -50,7 +50,7 @@ export type TimeSkip = {
  * flight. `hours`/`startTimeOfDay` on the `justFinished` result let the
  * caller replay the skipped period afterward instead — see
  * `NpcAgent.resolveTimeSkip` / `SettlementsManager.resolveTimeSkip`
- * (`docs/plans/2026-08-12--075--time-skip-npc-catchup.md`), which catch NPC
+ * (`docs/plans/archive/2026-08-12--075--time-skip-npc-catchup.md`), which catch NPC
  * needs/stamina/position up to where they'd be after that many hours of
  * normal play, then teleport instead of walking. `app/createApp.ts` is
  * responsible for blocking player input while active and for not gating this

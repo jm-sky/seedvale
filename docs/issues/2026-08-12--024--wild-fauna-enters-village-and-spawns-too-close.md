@@ -4,7 +4,7 @@
 
 ## Fix (2026-08-12)
 
-See plan [080](../plans/2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md)
+See plan [080](../plans/archive/2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md)
 — implemented, technical checks pass, browser verification pending.
 
 ## Problem
@@ -71,7 +71,7 @@ close together by chance.
 
 ## Related
 
-- Plan [080](../plans/2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md) — fix.
-- Plan [047](../plans/2026-08-09--047--village-generation-overhaul.md) — introduced the larger `SM`–`XL` footprint radii.
-- Plan [076](../plans/2026-08-12--076--village-generator-polish.md) / [077](../plans/2026-08-12--077--village-gardens-scale.md) — most recent village-size-scaling work, prompted this issue.
-- Plan [044](../plans/2026-08-08--044--world-life-details.md) — original village-avoidance/spawn-ring fauna behaviour, predates plan 047's bigger footprints.
+- Plan [080](../plans/archive/2026-08-12--080--wild-fauna-village-avoidance-and-spawn-spacing.md) — fix.
+- Plan [047](../plans/archive/2026-08-09--047--village-generation-overhaul.md) — introduced the larger `SM`–`XL` footprint radii.
+- Plan [076](../plans/archive/2026-08-12--076--village-generator-polish.md) / [077](../plans/archive/2026-08-12--077--village-gardens-scale.md) — most recent village-size-scaling work, prompted this issue.
+- Plan [044](../plans/archive/2026-08-08--044--world-life-details.md) — original village-avoidance/spawn-ring fauna behaviour, predates plan 047's bigger footprints.

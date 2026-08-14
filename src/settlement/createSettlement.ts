@@ -70,7 +70,7 @@ const WELL_COLLISION_RADIUS = 1.0
 /** `setDayNight`'s `t` (0 day .. 1 full night) above this triggers the
  *  settlement fire's dusk-ignition roll (see `nightIndex`/`setDayNight`
  *  below). NPC sleep timing moved to `NpcAgent`'s own `schedule` (v2 stage
- *  2, `docs/plans/2026-08-07--020...`) — this threshold is now fire-only. */
+ *  2, `docs/plans/archive/2026-08-07--020...`) — this threshold is now fire-only. */
 const NIGHT_FIRE_THRESHOLD = 0.6
 /** Per-size chance the settlement fire is already lit at dusk (villagers keep
  *  it going — no player branch). OUTPOST/SM have no campfire prop. */
@@ -95,7 +95,7 @@ export type Settlement = {
    *  badge (`ui/createVillagersScreen.ts`). */
   foodSourceType: FoodSourceType
   /** `SM/MD/LG/XL/OUTPOST`, straight from `SettlementDef` — see
-   *  `docs/plans/2026-08-09--048...`'s "aboutVillage" dialogue topic. */
+   *  `docs/plans/archive/2026-08-09--048...`'s "aboutVillage" dialogue topic. */
   size: VillageSize
   /** Terrain feature the naming generator picked up around the site — see
    *  `SettlementDef.terrain`'s doc comment. */

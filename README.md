@@ -198,5 +198,5 @@ Szczegóły: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 - [docs/](docs/README.md) — hub dokumentacji
 - [docs/ROADMAP.md](docs/ROADMAP.md) — produkt i wersje
-- [docs/plans/2026-08-07-v01-terrain-walking.md](docs/plans/2026-08-07-v01-terrain-walking.md) — plan v0.1
+- [docs/plans/archive/2026-08-07--001--v01-terrain-walking.md](docs/plans/archive/2026-08-07--001--v01-terrain-walking.md) — plan v0.1
 - [docs/research/2026-08-06-threejs-terrain-ai-tech-research.md](docs/research/2026-08-06-threejs-terrain-ai-tech-research.md) — research tech

@@ -3,7 +3,7 @@ import type { SettlementLandmarks } from './props'
 import type { Vector3 } from 'three'
 
 /**
- * v1 of the Place system (`docs/plans/2026-08-07--020--npc-2-daily-routine-and-place.md`)
+ * v1 of the Place system (`docs/plans/archive/2026-08-07--020--npc-2-daily-routine-and-place.md`)
  * formalized `home` (`createSettlement.ts`) as a `Place` instead of a bare
  * `Vector3` — purely organizational, no behavior change.
  *

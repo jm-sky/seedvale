@@ -2,11 +2,11 @@
 
 **Status:** `todo`
 **Created:** 2026-08-08
-**Scope:** rozszerza [village-generation](./2026-08-08--031--village-generation.md) (`families.ts`, `settlementGenerator.ts`) o nowy, dodatkowy wymiar fabularny. (Kompas „N” na minimapie — superseded przez [067](./2026-08-11--067--minimap-heading-and-north.md).)
+**Scope:** rozszerza [village-generation](./archive/2026-08-08--031--village-generation.md) (`families.ts`, `settlementGenerator.ts`) o nowy, dodatkowy wymiar fabularny. (Kompas „N” na minimapie — superseded przez [067](./archive/2026-08-11--067--minimap-heading-and-north.md).)
 
 ## Skąd to się wzięło
 
-Propozycja użytkownika po teście wiosek: NPC-e mają pochodzić z drzewa genealogicznego zaczynającego się od Adama i Ewy, ale **najstarsze NPC-e obecne w grze to synowie Noego** — czyli genealogia od Adama do Noego jest tłem fabularnym (lore), nie symulowanym drzewem z konkretnymi postaciami. Od synów Noego (Sem, Cham, Jafet) w dół, ich potomstwo (czyli wszystkie generowane wioski/rodziny w grze) powinno być rozmieszczone po mapie zgodnie z **kierunkami świata**, tak jak tradycyjnie kojarzy się ich potomków (Tabela Narodów, Rdz 10): Jafet → północ, Sem → wschód, Cham → południe. (Kompas na minimapie był w pierwotnym szkicu „przy okazji”; zrobiony osobno w [067](./2026-08-11--067--minimap-heading-and-north.md).)
+Propozycja użytkownika po teście wiosek: NPC-e mają pochodzić z drzewa genealogicznego zaczynającego się od Adama i Ewy, ale **najstarsze NPC-e obecne w grze to synowie Noego** — czyli genealogia od Adama do Noego jest tłem fabularnym (lore), nie symulowanym drzewem z konkretnymi postaciami. Od synów Noego (Sem, Cham, Jafet) w dół, ich potomstwo (czyli wszystkie generowane wioski/rodziny w grze) powinno być rozmieszczone po mapie zgodnie z **kierunkami świata**, tak jak tradycyjnie kojarzy się ich potomków (Tabela Narodów, Rdz 10): Jafet → północ, Sem → wschód, Cham → południe. (Kompas na minimapie był w pierwotnym szkicu „przy okazji”; zrobiony osobno w [067](./archive/2026-08-11--067--minimap-heading-and-north.md).)
 
 To czysto fabularna/kosmetyczna warstwa — **nie** próba teologicznej precyzji, tylko world-building nawiązujący do znanego schematu.
 
@@ -29,7 +29,7 @@ To czysto fabularna/kosmetyczna warstwa — **nie** próba teologicznej precyzji
 1. `SettlementDef` (`settlementGenerator.ts`) += `lineage: Lineage | null` (`null` tylko dla home) — liczone raz przy `generateSettlementDef`, deterministycznie z `(gx, gz)`.
 2. Wyświetlenie: ekran „Mieszkańcy" (`createVillagersScreen.ts`) pokazuje ród NPC-a (dziedziczony z jego osady) jako dodatkowy tag/etykietę — np. „Ród: Sem" obok roli/osobowości. Ewentualnie nazwa osady (`generateSettlementName`) mogłaby dostać rodowy prefiks/sufiks — do rozstrzygnięcia przy implementacji, nie blokujące.
 3. **Nie zmienia** `nameCulture`/`generateNpcName` (osobna, już działająca oś — patrz `families.ts`), **nie zmienia** roli/cech/osobowości/needs — czysto deskryptywna etykieta, jak `FamilyRelation` już jest w tej samej warstwie.
-4. ~~**Minimapa: kompas „N".**~~ — **superseded by [067](./2026-08-11--067--minimap-heading-and-north.md)** (heading-up + N na ramce; nie statyczne N u góry). **Zrobione 2026-08-11**
+4. ~~**Minimapa: kompas „N".**~~ — **superseded by [067](./archive/2026-08-11--067--minimap-heading-and-north.md)** (heading-up + N na ramce; nie statyczne N u góry). **Zrobione 2026-08-11**
 
 ## Poza zakresem v1
 
@@ -55,5 +55,5 @@ src/ui/createVillagersScreen.ts        # + etykieta rodu przy NPC (dziedziczona 
 
 ## Powiązane
 
-- [village-generation](./2026-08-08--031--village-generation.md) — `families.ts`, `settlementGenerator.ts`, wzorzec dodawania czysto deskryptywnych etykiet (`FamilyRelation`)
-- [minimap-heading-and-north](./2026-08-11--067--minimap-heading-and-north.md) — kompas N (były punkt 4)
+- [village-generation](./archive/2026-08-08--031--village-generation.md) — `families.ts`, `settlementGenerator.ts`, wzorzec dodawania czysto deskryptywnych etykiet (`FamilyRelation`)
+- [minimap-heading-and-north](./archive/2026-08-11--067--minimap-heading-and-north.md) — kompas N (były punkt 4)

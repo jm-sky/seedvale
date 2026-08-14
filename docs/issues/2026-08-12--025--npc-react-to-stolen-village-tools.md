@@ -1,7 +1,7 @@
 # 025 — NPC react when player takes village farm tools
 
 **Status:** `todo`  
-**Related:** [plan 082](../plans/2026-08-12--082--village-tool-props-and-temp-assets.md), [`MODELS.md`](../assets/MODELS.md) M08/M09
+**Related:** [plan 082](../plans/archive/2026-08-12--082--village-tool-props-and-temp-assets.md), [`MODELS.md`](../assets/MODELS.md) M08/M09
 
 ## Problem / desired behaviour
 

@@ -144,7 +144,7 @@ export type FamilyDef = {
 /** A family member as seen from another member's dialogue — just enough to
  *  say "I have a wife Anna" (name/relation), no live reference to the other
  *  member's own `NpcAgent`/state (`NpcAgent.familyMembers`, see
- *  `docs/plans/2026-08-09--048--npc-dialogues-v2.md`). */
+ *  `docs/plans/archive/2026-08-09--048--npc-dialogues-v2.md`). */
 export type FamilyMemberRef = {
   name: string
   lastName: string

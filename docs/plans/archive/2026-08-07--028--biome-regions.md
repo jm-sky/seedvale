@@ -2,7 +2,7 @@
 
 **Status:** `done` — zaimplementowane i zweryfikowane.
 **Created:** 2026-08-07
-**Priority:** średni — rozszerza istniejący system dużych regionów ([world-streaming-persistence](./2026-08-07--007--world-streaming-persistence.md)), naturalne uzupełnienie [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) (roślinność). Nie blokuje ani nie jest blokowany przez inne kolejkowane plany — czysto terenowo/wizualny dodatek.
+**Priority:** średni — rozszerza istniejący system dużych regionów ([world-streaming-persistence](./2026-08-07--007--world-streaming-persistence.md)), naturalne uzupełnienie [world-visual-overhaul](../2026-08-07--024--world-visual-overhaul.md) (roślinność). Nie blokuje ani nie jest blokowany przez inne kolejkowane plany — czysto terenowo/wizualny dodatek.
 
 ## Potrzeba
 
@@ -81,7 +81,7 @@ Klasyfikacja wagowa (`BiomeWeights`) jest zaprojektowana tak, by dodanie czwarte
 
 - [roads-and-paths](./2026-08-07--026--roads-and-paths.md) — kolejna warstwa na tym samym `sampleRawTexel`/`ChunkTileData` (droga/ścieżka jako jeszcze jeden blend koloru + wpływ na roślinność, ten sam wzorzec)
 - [world-streaming-persistence](./2026-08-07--007--world-streaming-persistence.md) — makro regiony (oceany/góry), ten plan to ta sama oś rozszerzona o wilgotność
-- [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) — kierunek "więcej roślinności", kaktus/trzcina to jego naturalna kontynuacja
+- [world-visual-overhaul](../2026-08-07--024--world-visual-overhaul.md) — kierunek "więcej roślinności", kaktus/trzcina to jego naturalna kontynuacja
 - [ambient-world-audio](./2026-08-07--016--ambient-world-audio.md) — przyszły follow-up (dźwięki per biom)
 - [research/2026-08-07--3d-asset-sources.md](../research/2026-08-07--002--3d-asset-sources.md) — Quaternius jako źródło assetów; brak jeszcze zidentyfikowanego pack'u z kaktusem/trzciną, do sprawdzenia przy implementacji (nieblokujące — fallback proceduralny)
 - `src/terrain/chunkHeightmap.ts`, `src/terrain/biomeColors.ts`, `src/terrain/chunkVegetation.ts`, `src/terrain/grass.ts`, `src/settlement/props.ts`, `src/terrain/chunkManager.ts`, `src/config/worldConfig.ts`, `src/ui/createDebugGui.ts`

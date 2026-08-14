@@ -70,6 +70,11 @@ Intencje przez istniejący lifecycle (`setIntent` / `wander` / chase), bez drugi
 - Nowa geometria rzek / poideł / karmników.
 - Nowe assety modeli/dźwięków w v1 (cisza albo istniejący SFX, jeśli naturalnie pasuje).
 
+## Open questions (from STATE, 2026-08-14)
+
+- Czy zjedzone przez drapieżnika zwłoki są faktycznie usuwane po konsumpcji?
+- Czy żerowanie roślinożerców wykorzystuje wirtualne/habitatowe żerowiska, czy realne obiekty świata (np. konkretne kępy trawy)?
+
 ## Kryteria
 
 1. Głodne/spragnione zwierzę idzie do **konkretnego** źródła, nie tylko szerzej błądzi.

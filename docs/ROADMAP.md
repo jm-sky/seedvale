@@ -58,7 +58,7 @@ Focus areas:
 - stronger persistence of world/NPC state,
 - clean lifecycle boundaries for streamed/rebuilt world systems.
 
-Relevant work currently includes plans [045](./plans/2026-08-08--045--health-stamina-threat.md), [020](./plans/2026-08-07--020--npc-2-daily-routine-and-place.md), [021](./plans/2026-08-07--021--npc-3-animal-life.md) and [054](./plans/2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md).
+Relevant work currently includes plans [045](./plans/archive/2026-08-08--045--health-stamina-threat.md), [020](./plans/archive/2026-08-07--020--npc-2-daily-routine-and-place.md), [021](./plans/archive/2026-08-07--021--npc-3-animal-life.md) and [054](./plans/archive/2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md).
 
 ### 2. Make settlements feel like real places
 
@@ -72,7 +72,7 @@ Direction:
 - families and roles tied to what a settlement actually has access to,
 - eventually multiple settlements connected through movement, resources and quests.
 
-Relevant plans include [047](./plans/2026-08-09--047--village-generation-overhaul.md), [032](./plans/2026-08-08--032--natural-resources-economy.md) and [049](./plans/2026-08-09--049--procedural-world-landmarks.md).
+Relevant plans include [047](./plans/archive/2026-08-09--047--village-generation-overhaul.md), [032](./plans/archive/2026-08-08--032--natural-resources-economy.md) and [049](./plans/2026-08-09--049--procedural-world-landmarks.md).
 
 ### 3. Deepen NPC life
 

@@ -1099,7 +1099,7 @@ export function createFallenLog(scale = 1, length = 2.4): THREE.Group {
 }
 
 /** Old campfire remains — stone ring + ash patch + a few branches. Purely
- *  decorative, not an `Interactable` (see plans/2026-08-07--030). */
+ *  decorative, not an `Interactable` (see plans/archive/2026-08-07--030). */
 export function createCampfire(scale = 1): THREE.Group {
   const fire = new THREE.Group()
   const stoneMat = new THREE.MeshStandardMaterial({ color: 0x6f6b63, flatShading: true })
@@ -1314,7 +1314,7 @@ export function createCaveMouth(scale = 1, variant = 0.5): THREE.Group {
 
 /** A minimal "prosta ognisko" base — ash patch + a couple of branches, no
  *  stone ring (that's what distinguishes it from `createCampfire()`'s
- *  palenisko look, see `docs/plans/2026-08-09--050`). Used by
+ *  palenisko look, see `docs/plans/archive/2026-08-09--050`). Used by
  *  `PlacedFires.ts` for the cheaper, shorter-burning `kind: 'simple'` fire. */
 export function createSimpleFireBase(scale = 1): THREE.Group {
   const fire = new THREE.Group()

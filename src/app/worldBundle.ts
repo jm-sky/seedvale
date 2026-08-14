@@ -49,8 +49,8 @@ export function homeChunks(): ChunkCoord[] {
   return coords
 }
 
-/** The eight world systems that are always created/disposed/rebuilt together
- *  (new seed, terrain-param change) — see `docs/plans/2026-08-10--053`. A
+/** The ten world systems that are always created/disposed/rebuilt together
+ *  (new seed, terrain-param change) — see `docs/plans/archive/2026-08-10--053`. A
  *  single mutable container, not a `let` reassigned to a new object: every
  *  closure created before a rebuild (`ambientSamplers`/`resourceEnv` in
  *  `createApp.ts`, the game loop) holds this same object reference, so it

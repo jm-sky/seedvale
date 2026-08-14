@@ -2,7 +2,7 @@
 
 **Status:** `done` — zaimplementowane i zweryfikowane.
 **Created:** 2026-08-07
-**Priority:** niski/średni — kosmetyczne wypełnienie świata, nie blokuje ani nie jest blokowany przez inne kolejkowane plany. Naturalna kontynuacja [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) i [biome-regions](./2026-08-07--028--biome-regions.md) (reużywa te same makro-osie do doboru preferencji środowiskowych) oraz [quests-v2-world-interactions](./2026-08-07--018--quests-v2-world-interactions.md) (reużywa mechanizm zbieralnych przedmiotów).
+**Priority:** niski/średni — kosmetyczne wypełnienie świata, nie blokuje ani nie jest blokowany przez inne kolejkowane plany. Naturalna kontynuacja [world-visual-overhaul](../2026-08-07--024--world-visual-overhaul.md) i [biome-regions](./2026-08-07--028--biome-regions.md) (reużywa te same makro-osie do doboru preferencji środowiskowych) oraz [quests-v2-world-interactions](./2026-08-07--018--quests-v2-world-interactions.md) (reużywa mechanizm zbieralnych przedmiotów).
 
 ## Skąd to się wzięło
 
@@ -127,7 +127,7 @@ Dekoracje (głazy, pnie, ogniska) **nie są** `Interactable` w tej iteracji — 
 
 - [biome-regions](./2026-08-07--028--biome-regions.md) — źródło `biomeWeightsAt`/`moistureRegion` reużywane do preferencji środowiskowych
 - [quests-v2-world-interactions](./2026-08-07--018--quests-v2-world-interactions.md) — źródło mechanizmu zbieralnych przedmiotów (`ItemKind`/`chunkItems.ts`/`Inventory`) rozszerzanego tu
-- [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) — kierunek "mniej pusty świat", ten plan to jego kontynuacja
+- [world-visual-overhaul](../2026-08-07--024--world-visual-overhaul.md) — kierunek "mniej pusty świat", ten plan to jego kontynuacja
 - `src/terrain/chunkVegetation.ts`, `src/terrain/chunkItems.ts`, `src/terrain/chunkEnvironment.ts` (nowy), `src/settlement/props.ts`, `src/terrain/chunkManager.ts`, `src/items/items.ts`
 
 ---

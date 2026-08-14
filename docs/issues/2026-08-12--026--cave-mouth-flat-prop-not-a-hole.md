@@ -4,7 +4,7 @@
 
 ## Fix (2026-08-12)
 
-See plan [083](../plans/2026-08-12--083--cave-mouth-terrain-depression.md) —
+See plan [083](../plans/archive/2026-08-12--083--cave-mouth-terrain-depression.md) —
 implemented, technical checks pass, browser verification pending.
 
 ## Problem
@@ -47,5 +47,5 @@ an angle (carved into a slope), not a flat symmetric pit on level ground.
 
 ## Related
 
-- Plan [083](../plans/2026-08-12--083--cave-mouth-terrain-depression.md) — fix.
-- Plan [064 — cave spawner road avoidance and visual](../plans/2026-08-11--064--cave-spawner-road-avoidance-and-visual.md) — introduced the current flat-disc prop; explicitly scoped out real terrain geometry.
+- Plan [083](../plans/archive/2026-08-12--083--cave-mouth-terrain-depression.md) — fix.
+- Plan [064 — cave spawner road avoidance and visual](../plans/archive/2026-08-11--064--cave-spawner-road-avoidance-and-visual.md) — introduced the current flat-disc prop; explicitly scoped out real terrain geometry.

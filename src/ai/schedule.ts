@@ -1,8 +1,8 @@
 import type { Role, Trait } from './characters'
 
 /**
- * Schedule Template (`docs/plans/2026-08-07--020--npc-2-daily-routine-and-place.md`,
- * overlays: `docs/plans/2026-08-11--060--npc-schedule-actions-and-trait-overlays.md`)
+ * Schedule Template (`docs/plans/archive/2026-08-07--020--npc-2-daily-routine-and-place.md`,
+ * overlays: `docs/plans/archive/2026-08-11--060--npc-schedule-actions-and-trait-overlays.md`)
  *
  * Per-role daily plan. `NpcAgent` stores the **effective** per-NPC schedule
  * (`effectiveScheduleFor` of this template + traits) and consumes it at
@@ -272,7 +272,7 @@ export function activityAt(template: ScheduleTemplate, timeOfDay: number): Sched
 
 /** The schedule entry that starts next after `timeOfDay` — the complement of
  *  `activityAt` (which looks backward to "what most recently started"), used
- *  for "...until HH:MM" dialogue lines (`docs/plans/2026-08-09--048...`).
+ *  for "...until HH:MM" dialogue lines (`docs/plans/archive/2026-08-09--048...`).
  *  Wraps cyclically at midnight regardless of the template array's own
  *  order, same as `activityAt`. `null` only for an empty template. */
 export function nextBoundary(template: ScheduleTemplate, timeOfDay: number): ScheduleEntry | null {

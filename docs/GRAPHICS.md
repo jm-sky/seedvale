@@ -33,7 +33,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G7 | Post-process: EffectComposer + N8AO + SMAA (+ bloom / god rays / film grade). Hardware MSAA wyłączone (i tak bez efektu na targetach composera). | `createPostProcessing.ts`, `createRenderer.ts` |
 | G8 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | `CLAUDE.md` |
 | G9 | Droga = tint korytarza na meshu terenu (nie osobny mesh). Miękki brzeg + ziarno dirtu; trawa **soft-fade** w korytarzu, nie hard bald cut. Extra gęstość łąki = **near-field filler LOD**, nie globalny bump `grass.density`. | `chunkHeightmap` / `biomeColors` / `grass` / `chunkManager`, issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
-| G10 | Asset alignment browser **Game-like** mode reuses `createRenderer` / `createLights` / `createSky` / `skyParamsFromTime` — no parallel preview rig. Post-processing composer runs in **single-view only** (not 4-up). | `src/tools/assetBrowser/`, plan [088](./plans/2026-08-12--088--asset-alignment-browser.md) |
+| G10 | Asset alignment browser **Game-like** mode reuses `createRenderer` / `createLights` / `createSky` / `skyParamsFromTime` — no parallel preview rig. Post-processing composer runs in **single-view only** (not 4-up). | `src/tools/assetBrowser/`, plan [088](./plans/archive/2026-08-12--088--asset-alignment-browser.md) |
 
 ---
 
@@ -76,7 +76,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ### 2026-08-13 — W8 faza 1: inland nie jest oceanem ✅
 
 - `computeBodyScale`: ocean = niska kontynentalność; jeziora cap `LAKE_SCALE_MAX` 0.85 (poniżej discard 0.9). Usunięte `isLarge` / 35% chunka.
-- Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) — `done`. Plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1.
+- Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) — `done`. Plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1.
 
 ### 2026-08-13 — Kierunek wody: jedna rodzina, W8, lustro z Vue 📝
 
@@ -124,13 +124,13 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 | Temat | Status | Link |
 |-------|--------|------|
-| Soft shore fade ocean ↔ ląd | `done` (browser 2026-08-13) | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md), plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 |
-| Śródlądzie = dwa materiały wody | `done` | [WATER.md](./WATER.md) W8, issue [028](./issues/2026-08-13--028--inland-water-dual-material.md), plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1 |
-| Lustro wody + toggle Vue | `verification needed` | W9, plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 3 |
+| Soft shore fade ocean ↔ ląd | `done` (browser 2026-08-13) | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md), plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 |
+| Śródlądzie = dwa materiały wody | `done` | [WATER.md](./WATER.md) W8, issue [028](./issues/2026-08-13--028--inland-water-dual-material.md), plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1 |
+| Lustro wody + toggle Vue | `verification needed` | W9, plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 3 |
 | Droga/trawa ground cover (#1–#3) | `done` | issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
 | God rays whiteout (fix) | `done` | issue [016](./issues/2026-08-11--016--god-rays-mountain-whiteout.md) |
 | Terrain detail normal „camo” (G vs B) | `verification needed` | issue [014](./issues/2026-08-10--014--terrain-detail-normal-map-green-channel.md) |
-| Tree size/age visual overhaul | `planned` | plan [073](./plans/2026-08-12--073--tree-types-height-age-overhaul.md) |
+| Tree size/age visual overhaul | `planned` | plan [073](./plans/archive/2026-08-12--073--tree-types-height-age-overhaul.md) |
 | World visual overhaul (rośliny, niebo, góry) | `in progress` | plan [024](./plans/2026-08-07--024--world-visual-overhaul.md) |
 
 ---

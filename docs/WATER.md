@@ -115,7 +115,7 @@ Ocean powstaje w `rebuildWorldBundle()`; rozmiar plane = `(unloadRadius * 2 + 4)
 | Toggle odbić | `WorldConfig.postProcessing.waterReflections`; Vue Pauza → Świat → Grafika; lil-gui Post-processing; `seedvale:graphics:v1` |
 | Mokry piasek | terrain fragment: przyciemnienie albedo w paśmie `waterLevel` .. `+0.4` |
 | Szwy chunków | mesh wody = `chunkSize` (bez overlap 1.02); faza fal wspólna (world-space) |
-| Gameplay | NPC/fauna/drogi/namiot/kopanie **odrzucają** wodę; gracz pływa (cap głębokości). Picie zwierząt = plan [094](./plans/2026-08-13--094--fauna-food-water-for-satiety-hydration.md), nie render |
+| Gameplay | NPC/fauna/drogi/namiot/kopanie **odrzucają** wodę; gracz pływa (cap głębokości). Picie zwierząt = plan [094](./plans/archive/2026-08-13--094--fauna-food-water-for-satiety-hydration.md), nie render |
 
 Wejścia kodu:
 
@@ -160,7 +160,7 @@ Pas piasku terenu (issue 001, `sandBandAt` 0.6–3) jest w kodzie wygładzony; n
 
 ## Kolejność implementacji (po decyzjach)
 
-Plan: [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) — `done` (fazy 1–3, browser ✅ 2026-08-13).
+Plan: [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) — `done` (fazy 1–3, browser ✅ 2026-08-13).
 
 ### P0 — jeden materiał na jednym zbiorniku (issue 028)
 
@@ -198,7 +198,7 @@ Najnowsze na górze.
 - `waterMirror.ts`: jeden RT 256², kamera względem `y = waterLevel`, oblique clip, warstwa 1 na meshach wody (brak rekursji).
 - Shader: `mix` lustra z capem reflectance 0.4 i tint 0.55 w stronę koloru wody (jak patch Water.js). Off: `uReflections = 0`, pass nie startuje.
 - Vue: Pauza → Świat → Grafika → „Odbicia wody”; lil-gui Post-processing; persist `seedvale:graphics:v1`.
-- Browser: użytkownik 2026-08-13. Plan [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) → `done`.
+- Browser: użytkownik 2026-08-13. Plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) → `done`.
 
 ### 2026-08-13 — Faza 2 planu 098: jedna rodzina shadera + brzeg ✅
 
@@ -218,7 +218,7 @@ Najnowsze na górze.
 
 ### 2026-08-13 — Plan 098 (P0–P1) 📝
 
-- Plan: [098](./plans/2026-08-13--098--water-unified-shader-shore-reflections.md) — faza 1 W8, faza 2 shader+brzeg, faza 3 lustro+Vue.
+- Plan: [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) — faza 1 W8, faza 2 shader+brzeg, faza 3 lustro+Vue.
 - Kod **bez zmian**.
 
 ### 2026-08-13 — Kierunek: jedna rodzina, W8, lustro z wyłącznikiem 📝
@@ -282,7 +282,7 @@ Nierozwiązane z [review 001](./reviews/2026-08-07--001--water-quality.md):
 |-------|--------|------|
 | Blotches w lustrze oceanu | `verification needed` | issue [009](./issues/2026-08-10--009--ocean-normal-map-reflection-blotches.md) — pass 256² wrócił w fazie 3; nie zagęszczać detail normals |
 | Artefakty oceanu na telefonie | notatka | [plans/README.md](./plans/README.md) Quick notes; wyłączenie odbić (W9) |
-| Fauna pije wodę (symulacja) | `todo` | plan [094](./plans/2026-08-13--094--fauna-food-water-for-satiety-hydration.md) |
+| Fauna pije wodę (symulacja) | `todo` | plan [094](./plans/archive/2026-08-13--094--fauna-food-water-for-satiety-hydration.md) |
 
 ---
 

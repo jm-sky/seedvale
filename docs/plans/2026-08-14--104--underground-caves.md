@@ -6,7 +6,7 @@
 **Źródła (wiążące):**
 - [research 008 — brief](../research/2026-08-13--008--real-caves-in-three-js--brief.md)
 - [research 009 — underground caves](../research/2026-08-13--009--underground-caves.md) — zwłaszcza §11 (werdykt po odpowiedziach)
-- Physics: [plan 097](./2026-08-13--097--physics-falling-collisions-jumping.md) — **zaimplementowane** (`verification needed`), nie blocker
+- Physics: [plan 097](./archive/2026-08-13--097--physics-falling-collisions-jumping.md) — **zaimplementowane** (`verification needed`), nie blocker
 
 > **Charakter:** szkic całości (L2-capable `CaveVolume`, v1 = 1 krawędź). Review ma zweryfikować kod wobec tego dokumentu, domknąć §8 albo zostawić jawne ❓, i dopisać implementation notes. **Nie implementować w ramach review.**
 

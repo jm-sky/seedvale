@@ -64,10 +64,10 @@ If the feature needs no new sound, do nothing to this file.
 | ID | Sound | Context | Status | Related |
 |----|-------|---------|--------|---------|
 | S12 | Market / crowd bed | Near market / larger village | `in repo` | `ambient-crowd-kids-01` weak stand-in (playground walla) |
-| S13 | Smithing / woodwork (workplace) | When NPCs really work | `needed` | [plan 060](../plans/2026-08-11--060--npc-schedule-actions-and-trait-overlays.md)+ |
+| S13 | Smithing / woodwork (workplace) | When NPCs really work | `needed` | [plan 060](../plans/archive/2026-08-11--060--npc-schedule-actions-and-trait-overlays.md)+ |
 | S14 | Gate / creak | Palisade / future fortifications | `wired` | `door-creak-01…02` / `door-latch-01` (with S09 house threshold) |
 | S15 | Stone find (distinct from dig) | Dig notice — today reuses dig SFX | `needed` | — |
-| S16 | Pickaxe / ore strike | Mine channel — today reuses dig clips via `playActionMine` | `needed` | [plan 090](../plans/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
+| S16 | Pickaxe / ore strike | Mine channel — today reuses dig clips via `playActionMine` | `needed` | [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 | S17 | Jump / land (player) | New jump mechanic — takeoff + landing thud | `wired` | Stand-in: Kenney `cloth1` (`action-jump-cloth-01`) + louder footstep land — dedicated jump clip still open |
 
 ## Acquisition rules

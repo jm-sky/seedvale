@@ -360,7 +360,7 @@ Rekomendacja: **(1) na v1**, (2) dopiero jeśli pomiar pokaże, że nizin bez zb
 
 ### 11.4 Fizyka i kolizje (odpowiedź 3) — unieważnia część rekomendacji z §1
 
-Użytkownik chce **realnego systemu kolizji** (plan [`097`](../plans/2026-08-13--097--physics-falling-collisions-jumping.md)). To zmienia rekomendację „kolizja z grafu, nie z mesha”:
+Użytkownik chce **realnego systemu kolizji** (plan [`097`](../plans/archive/2026-08-13--097--physics-falling-collisions-jumping.md)). To zmienia rekomendację „kolizja z grafu, nie z mesha”:
 
 - **Nie budować dla jaskini własnej kolizji**, jeśli system kolizji i tak powstaje (CLAUDE.md: rozszerzać istniejące couplingi, nie tworzyć równoległych mechanizmów). Ściany jaskini stają się po prostu ciałami statycznymi w tym systemie.
 - **Ale graf layoutu zostaje** — z trzech innych powodów, niezależnych od kolizji: (a) jest źródłem mesha, (b) jest źródłem sitingu/testu nadkładu, (c) **jest navmeshem dla zwierzęcia w środku** (odpowiedź 3: wilk/niedźwiedź).

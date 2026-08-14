@@ -64,12 +64,14 @@ Do **not** launch headless Chrome/Playwright yourself as the default way to test
 |---|---|
 | Product vision | [docs/VISION.md](docs/VISION.md) |
 | Current implementation state | [docs/STATE.md](docs/STATE.md) |
+| Settlements / NPC life | [docs/SETTLEMENTS.md](docs/SETTLEMENTS.md) |
 | Graphics decisions / visual contracts | [docs/GRAPHICS.md](docs/GRAPHICS.md) |
 | Water (ocean + lakes) | [docs/WATER.md](docs/WATER.md) |
 | Strategic roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Plan index/status | [docs/plans/README.md](docs/plans/README.md) |
 | Implementation plans | [docs/plans/](docs/plans/) |
-| Architecture | [docs/architecture/](docs/architecture/) |
+| Archived plans (frozen batch) | [docs/plans/archive/](docs/plans/archive/) |
+| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/architecture/](docs/architecture/) |
 | Issues | [docs/issues/README.md](docs/issues/README.md) |
 | Reviews | [docs/reviews/README.md](docs/reviews/README.md) |
 | Research | [docs/research/README.md](docs/research/README.md) |
@@ -78,7 +80,7 @@ Do **not** launch headless Chrome/Playwright yourself as the default way to test
 
 Statuses are: `todo` · `planned` · `in progress` · `done` · `verification needed`.
 
-New issue/plan/review/research files use `YYYY-MM-DD--NNN--slug.md` with an independent sequence per document type.
+New issue/plan/review/research files use `YYYY-MM-DD--NNN--slug.md` with an independent sequence per document type. New plans stay in `docs/plans/` regardless of status; `docs/plans/archive/` is a one-time freeze of the 2026-08-07–2026-08-14 batch.
 
 ## Plan execution rules
 

@@ -95,5 +95,5 @@ Nowa sekcja `region.roads` w `worldConfig.ts` (`roadHalfWidth`, `roadHeightStren
 - [multi-settlements](./2026-08-07--025--multi-settlements.md) — siatka osad, `settlementGenerator.ts` (`generateSettlementDef`, `SETTLEMENT_GRID_STEP`, `cellsWithinRadius`) reużyte 1:1
 - [biome-regions](./2026-08-07--028--biome-regions.md) — ta sama warstwa `sampleRawTexel`/`ChunkTileData`, ten sam wzorzec (nowa makro-cecha → blend koloru + wpływ na roślinność)
 - [npc-2-daily-routine-and-place](./2026-08-07--020--npc-2-daily-routine-and-place.md) — naturalny punkt zaczepienia dla przyszłego NPC-ruchu międzyosadowego
-- [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md) — `props.ts` wzorzec fallbacków, ten sam mechanizm dla `DOCK_SPECS`
+- [world-visual-overhaul](../2026-08-07--024--world-visual-overhaul.md) — `props.ts` wzorzec fallbacków, ten sam mechanizm dla `DOCK_SPECS`
 - `src/settlement/settlementGenerator.ts`, `src/settlement/findSettlementSite.ts`, `src/terrain/chunkHeightmap.ts`, `src/terrain/biomeColors.ts`, `src/terrain/chunkManager.ts`, `src/terrain/buildChunkGeometry.ts`, `src/ai/NpcAgent.ts`, `src/settlement/props.ts`

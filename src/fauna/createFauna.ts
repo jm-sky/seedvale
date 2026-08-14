@@ -155,7 +155,7 @@ export function measureSlope(
   return { yaw: bestYaw, drop: bestDrop }
 }
 
-/** Hardcoded prey spawners (cave / thicket) — see docs/plans/2026-08-07--predator-prey-system.md. */
+/** Hardcoded prey spawners (cave / thicket) — see docs/plans/archive/2026-08-07--predator-prey-system.md. */
 const SPAWNER_SPECS: { type: PreySpawner['type'], kind: AnimalKind, respawnTime: number, maxPreyCount: number }[] = [
   { type: 'cave', kind: 'deer', respawnTime: 8, maxPreyCount: 3 },
   { type: 'thicket', kind: 'stag', respawnTime: 12, maxPreyCount: 2 },

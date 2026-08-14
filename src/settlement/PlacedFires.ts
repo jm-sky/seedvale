@@ -9,7 +9,7 @@ import { createVillageFire, type VillageFire } from './VillageFire'
 /** `'pit'` — built from 4x stone (`createCampfire`'s stone-ring look), same
  *  fuel-per-branch as a settlement fire (longer burn). `'simple'` — built
  *  directly from 2x branch (`createSimpleFireBase`, no stone ring), shorter
- *  burn. See `docs/plans/2026-08-09--050`. */
+ *  burn. See `docs/plans/archive/2026-08-09--050`. */
 export type PlacedFireKind = 'simple' | 'pit'
 
 /** Seconds of burn time one branch adds for a `kind: 'simple'` fire — shorter
@@ -34,7 +34,7 @@ const despawnDelayFor = (kind: PlacedFireKind): number =>
 /** Persisted shape — positions aren't derivable from the seed (player chose
  *  them), so the full record round-trips through the save, same as
  *  `items/createDroppedItems.ts`'s `DroppedItem`. Lit/fuel state is *not*
- *  persisted (consistent with settlement campfires, see plans/2026-08-08--038
+ *  persisted (consistent with settlement campfires, see plans/archive/2026-08-08--038
  *  "Poza zakresu") — every placed fire loads unlit, ready to relight, so the
  *  despawn-after-burnout countdown below (`unlitSeconds`) restarts too. */
 export type PlacedFire = { id: string, x: number, z: number, kind: PlacedFireKind }

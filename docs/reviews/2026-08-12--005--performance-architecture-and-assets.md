@@ -428,8 +428,8 @@ plus licznik czasu klatki z rozbiciem na `simulate` / `render` (dwa `performance
 | 11 | `pixelRatio` jako suwak jakości + bloom half-res (**A3.2/3.3**) | perf | średni | niskie |
 | 12 | Budżetowanie chunków na klatkę (**A4b**) | perf | średni | brak |
 | 13 | `castShadow = false` dla terenu (**A2**) — osobno, z weryfikacją w przeglądarce | perf | mały | **średnie** |
-| 14 | **Trawa do workera** (**A4a**) — [plan 086](../plans/2026-08-12--086--grass-generation-in-worker.md) | perf | duży | brak |
-| 15 | **Instancing roślinności i propsów** (**A1**) — [plan 087](../plans/2026-08-12--087--vegetation-and-prop-instancing.md) | architektura | duży | brak |
+| 14 | **Trawa do workera** (**A4a**) — [plan 086](../plans/archive/2026-08-12--086--grass-generation-in-worker.md) | perf | duży | brak |
+| 15 | **Instancing roślinności i propsów** (**A1**) — [plan 087](../plans/archive/2026-08-12--087--vegetation-and-prop-instancing.md) | architektura | duży | brak |
 | 16 | R2/R3: wspólny `AnimationSet`, wspólny `steerWithShoreSlide` | refactor | mały | brak |
 
 Pozycje 0–9 to jedna sesja i kandydaci na wpisy w [issues/README.md](../issues/README.md).
@@ -452,8 +452,8 @@ Pozycje **14** i **15** zasługują na własne plany w [plans/](../plans/README.
 - [x] 11 — A3.2/3.3: `pixelRatio` jako suwak jakości + bloom half-res
 - [x] 12 — A4b: budżetowanie chunków na klatkę (`loadQueue` + `CHUNKS_STARTED_PER_FRAME`)
 - [x] 13 — A2 (teren): opt-in suwak „Terrain self-shadow" (domyślnie `true` = bez zmian)
-- [x] 14 — A4a: trawa w workerze — [plan 086](../plans/2026-08-12--086--grass-generation-in-worker.md) (`verification needed`: baseline `Simulate (ms)` potwierdzony w przeglądarce, pixel-identyczny layout nie porównany explicite)
-- [x] 15 — A1: instancing roślinności/propsów — [plan 087](../plans/2026-08-12--087--vegetation-and-prop-instancing.md) (`verification needed`: brak pomiaru draw calls przed/po)
+- [x] 14 — A4a: trawa w workerze — [plan 086](../plans/archive/2026-08-12--086--grass-generation-in-worker.md) (`verification needed`: baseline `Simulate (ms)` potwierdzony w przeglądarce, pixel-identyczny layout nie porównany explicite)
+- [x] 15 — A1: instancing roślinności/propsów — [plan 087](../plans/archive/2026-08-12--087--vegetation-and-prop-instancing.md) (`verification needed`: brak pomiaru draw calls przed/po)
 - [ ] 16 — R2/R3: wspólny `AnimationSet` / `steerWithShoreSlide` — **nie zrobione**, duplikacja nadal w `PlayerController.ts`/`AnimalAgent.ts`/`NpcAgent.ts` (`findAction`/`playAction` trojaczki, `steerTo`/`steerToward` z osobnym `WATER_MARGIN` w dwóch plikach)
 
 ### Follow-up (sekcja niżej w tym dokumencie) — stan
@@ -468,7 +468,7 @@ Weryfikacja w przeglądarce planu 086 (pozycja 14) ujawniła osobny freeze przy 
 (~89 ms, `SettlementsManager`/`buildSettlementProps` — mikrotaski z cache'owanego GLTF loadera nie
 oddają sterowania do renderu). Nie było to findingiem tego review (dotyczy osad, nie trawy/chunków),
 udokumentowane jako [issue 027](../issues/2026-08-13--027--settlement-streaming-main-thread-freeze.md)
-i naprawione w [plan 102](../plans/2026-08-13--102--settlement-build-frame-yielding.md) (2026-08-13,
+i naprawione w [plan 102](../plans/archive/2026-08-13--102--settlement-build-frame-yielding.md) (2026-08-13,
 `verification needed`).
 
 ### Implementacja — pozycje 0–9 (2026-08-12)

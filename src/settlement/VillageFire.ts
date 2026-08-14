@@ -44,11 +44,11 @@ export type VillageFire = {
  * toggles `flame`'s visibility to match. Unlike the world-scattered
  * decorative campfires (`terrain/chunkEnvironment.ts`), this one is a fixed
  * piece of settlement infrastructure: going out doesn't despawn it, it just
- * goes back to unlit and can be relit (see `docs/plans/2026-08-08--038`).
+ * goes back to unlit and can be relit (see `docs/plans/archive/2026-08-08--038`).
  *
  * Also reused verbatim for player-built free-standing fires
  * (`PlacedFires.ts`), with an explicit `fuelPerBranch` for the shorter-burning
- * "prosta ognisko" variant (`docs/plans/2026-08-09--050`).
+ * "prosta ognisko" variant (`docs/plans/archive/2026-08-09--050`).
  */
 export function createVillageFire(
   position: THREE.Vector3,

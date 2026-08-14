@@ -3,7 +3,7 @@
 **Status:** `done`
 **Created:** 2026-08-13
 **Updated:** 2026-08-13
-**Plan:** [098](../plans/2026-08-13--098--water-unified-shader-shore-reflections.md) (fazy 1–2)
+**Plan:** [098](../plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) (fazy 1–2)
 **Źródło:** screen użytkownika — staw/ciek przy piaszczystym brzegu; SoT [WATER.md](../WATER.md)
 
 ## Problem

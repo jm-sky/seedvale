@@ -7,7 +7,7 @@ import type { WorldBundle } from './worldBundle'
 
 /** Resource costs for the fire-building/lighting quick actions
  *  (`settlement/PlacedFires.ts`, `player/PlayerTorch.ts`) — see
- *  `docs/plans/2026-08-09--050` / plan 085. A "prosta ognisko" is built directly from
+ *  `docs/plans/archive/2026-08-09--050` / plan 085. A "prosta ognisko" is built directly from
  *  branches alone (shorter burn); a "palenisko" is a stone fire pit built
  *  cold, then lit later via the existing `[E]` campfire interaction (longer
  *  burn). Both, like the `[E]` interaction, require a firestarter in

@@ -2,7 +2,7 @@
 
 **Status:** `done`
 **Created:** 2026-08-07
-**Priority:** niski — pomysł na boku, nie blokuje ani nie jest blokowany przez [terrain-worker-pool](./2026-08-07--006--terrain-worker-pool.md) / [world-visual-overhaul](./2026-08-07--024--world-visual-overhaul.md); zero styku plików z tym, co dziś w toku (nowy plik + wpięcie w `chunkManager.ts` dopiero przy implementacji)
+**Priority:** niski — pomysł na boku, nie blokuje ani nie jest blokowany przez [terrain-worker-pool](./2026-08-07--006--terrain-worker-pool.md) / [world-visual-overhaul](../2026-08-07--024--world-visual-overhaul.md); zero styku plików z tym, co dziś w toku (nowy plik + wpięcie w `chunkManager.ts` dopiero przy implementacji)
 
 ## Stan implementacji (2026-08-07)
 
@@ -74,5 +74,5 @@ Nie ma dziś w projekcie żadnego pomiaru FPS z instancingiem, więc liczby niż
 - `src/terrain/chunkManager.ts`, `src/terrain/chunkWorkerPool.ts`, `src/terrain/chunkHeightmap.worker.ts`, `src/terrain/chunkHeightmapProtocol.ts` — istniejący chunk/worker system do reużycia
 - `src/terrain/biomeColors.ts` — height/moisture/slope sygnały do density/eligibility
 - `src/terrain/buildChunkGeometry.ts` — wzorzec integracji per-chunk (gdzie w cyklu życia chunka wpiąć budowę instancji)
-- [plans/2026-08-07--024--world-visual-overhaul.md](./2026-08-07--024--world-visual-overhaul.md) — sąsiednia inicjatywa roślinności (drzewa/krzewy jako dyskretne propsy, nie ground cover — różny mechanizm, nie mylić)
+- [plans/2026-08-07--024--world-visual-overhaul.md](../2026-08-07--024--world-visual-overhaul.md) — sąsiednia inicjatywa roślinności (drzewa/krzewy jako dyskretne propsy, nie ground cover — różny mechanizm, nie mylić)
 - [plans/2026-08-07--006--terrain-worker-pool.md](./2026-08-07--006--terrain-worker-pool.md) — `done`, status odświeżony 2026-08-07 (worker pool per chunk realnie istnieje w kodzie)

@@ -27,7 +27,7 @@ export type SaveQuests = {
 
 export type SaveDroppedItem = { id: string, kind: ItemKind, x: number, z: number }
 
-/** `kind` added in v6 (`docs/plans/2026-08-09--050`) — `'pit'` (stone-ring,
+/** `kind` added in v6 (`docs/plans/archive/2026-08-09--050`) — `'pit'` (stone-ring,
  *  longer burn) vs `'simple'` (branches only, shorter burn). Older saves
  *  (v5 and below) predate the distinction; migrated as `'pit'`, matching what
  *  the single old "Zbuduj ognisko" (2x branch + 2x stone) action always
@@ -480,7 +480,7 @@ export function isSaveDataV9(value: unknown): value is SaveDataV9 {
  *  mirrors `dayNight.ts::createDayNightState`'s own default. */
 const DEFAULT_TIME_OF_DAY = 0.32
 
-/** `kind` didn't exist before v6 (`docs/plans/2026-08-09--050`) — every
+/** `kind` didn't exist before v6 (`docs/plans/archive/2026-08-09--050`) — every
  *  pre-v6 placed fire was built by the single old "Zbuduj ognisko" action
  *  (2x branch + 2x stone), which matches today's `'pit'` variant. */
 function migratePlacedFires(placedFires: readonly LegacySavePlacedFire[]): SavePlacedFire[] {

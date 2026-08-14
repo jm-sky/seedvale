@@ -91,7 +91,7 @@ export type SettlementsManager = {
    *  position catch-up) instead of leaving them to walk it off in real time.
    *  Only loaded settlements' NPCs exist to update; unloaded ones re-seed
    *  from scratch on load regardless. See `NpcAgent.resolveTimeSkip`
-   *  (`docs/plans/2026-08-12--075--time-skip-npc-catchup.md`). */
+   *  (`docs/plans/archive/2026-08-12--075--time-skip-npc-catchup.md`). */
   resolveTimeSkip: (startTimeOfDay: number, hours: number, dayLengthSec: number) => void
   getLoaded: () => Settlement[]
   /** Home settlement definition (includes authoritative `VillagePlan`). */

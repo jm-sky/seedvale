@@ -6,7 +6,7 @@
 
 ## Kontekst
 
-`src/ui/createVillagersScreen.ts` renderuje **całą** listę NPC naraz (`render()` buduje jeden `<div>` per villager, wszystkie w `.seedvale-villagers__list`, scrollowane wewnątrz `.seedvale-villagers__panel`). Przy małej liczbie mieszkańców (dziś: pojedyncza osada, kilku NPC) nieodczuwalne — ale [multi-settlements](../plans/2026-08-07--025--multi-settlements.md) już generuje wiele wiosek, więc lista może realnie urosnąć do dziesiątek wpisów, każdy z HP barem + tagami cech.
+`src/ui/createVillagersScreen.ts` renderuje **całą** listę NPC naraz (`render()` buduje jeden `<div>` per villager, wszystkie w `.seedvale-villagers__list`, scrollowane wewnątrz `.seedvale-villagers__panel`). Przy małej liczbie mieszkańców (dziś: pojedyncza osada, kilku NPC) nieodczuwalne — ale [multi-settlements](../plans/archive/2026-08-07--025--multi-settlements.md) już generuje wiele wiosek, więc lista może realnie urosnąć do dziesiątek wpisów, każdy z HP barem + tagami cech.
 
 ## Propozycja (nierozstrzygnięta, do wyboru przy implementacji)
 

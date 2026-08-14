@@ -59,6 +59,12 @@ AI / schedule → co NPC robi, w tym forced sleep przy vigor ≈ 0
 - Gospodarstwa / ekonomia (069, 071).
 - Zmiana semantyki staminy fauny (chyba że ten sam typ da się podłączyć bez zmiany zachowania).
 
+## Open questions (from STATE, 2026-08-14)
+
+- Czy stamina lub vigor zależą od płci NPC?
+- Czy stamina/vigor zależą od wieku NPC?
+- Docelowo rozważyć modyfikatory wynikające z wieku, płci, zdrowia i cech NPC zamiast jednakowych wartości bazowych.
+
 ## Kryteria
 
 1. Praca/stres/obrażenia obniżają wigor, nie HP.

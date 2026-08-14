@@ -28,31 +28,31 @@ If the feature needs no new model, do nothing to this file.
 
 | ID | Model | Need / context | Status | Related |
 |----|-------|----------------|--------|---------|
-| M01 | Richer house shells / wall segments (MegaKit) | Fantasy RTS cottages are roof-heavy; MegaKit walls/fences for denser settlement look | `in repo` | [research 006](../research/2026-08-11--006--medieval-model-library-complement.md), [plan 072](../plans/2026-08-11--072--settlement-visuals-nameplate-palisade.md), [issue 018](../issues/2026-08-12--018--house-scale-vs-npc.md) |
+| M01 | Richer house shells / wall segments (MegaKit) | Fantasy RTS cottages are roof-heavy; MegaKit walls/fences for denser settlement look | `in repo` | [research 006](../research/2026-08-11--006--medieval-model-library-complement.md), [plan 072](../plans/archive/2026-08-11--072--settlement-visuals-nameplate-palisade.md), [issue 018](../issues/2026-08-12--018--house-scale-vs-npc.md) |
 | M02 | Yard fence / gate runs | Better palisade/yard than single `wall.glb` stubs | `in repo` | MegaKit `fence_*`, `wall_arch` |
-| M03 | Settlement clutter (wagon, chimney, vines…) | Optional village density props. Home Kupiec wagon uses MegaKit `wagon.glb` | `wired` (merchant wagon) | MegaKit parked set, [plan 090](../plans/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
-| M04 | Economy / outpost buildings | Market, windmill, towncenter, watchtower, barracks, temple, port. `farm.glb` wired as village wheat field | `wired` (farm) / `in repo` (rest) | [CREDITS](./CREDITS.md), [plan 099](../plans/2026-08-13--099--wheat-field-glb.md), plan 071 |
+| M03 | Settlement clutter (wagon, chimney, vines…) | Optional village density props. Home Kupiec wagon uses MegaKit `wagon.glb` | `wired` (merchant wagon) | MegaKit parked set, [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
+| M04 | Economy / outpost buildings | Market, windmill, towncenter, watchtower, barracks, temple, port. `farm.glb` wired as village wheat field | `wired` (farm) / `in repo` (rest) | [CREDITS](./CREDITS.md), [plan 099](../plans/archive/2026-08-13--099--wheat-field-glb.md), plan 071 |
 | M05 | Background mountains | Distant silhouette meshes | `in repo` | [plan 024](../plans/2026-08-07--024--world-visual-overhaul.md) (`mountain_a/b/c`) |
 | M06 | Extra flora variants | `bush_flowers_1`, `flower_clump_2` (and further variety as needed) | `in repo` | nature reserve in CREDITS |
-| M07 | Farm animals (chicken / cow / sheep / horse / donkey) | Village livestock GLB; home Kupiec decorative horse | `wired` | [SOUNDS](./SOUNDS.md), [plan 096](../plans/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md) |
-| M08 | Village pitchfork | Garden pickup + holdable melee | `wired` | [plan 082](../plans/2026-08-12--082--village-tool-props-and-temp-assets.md), [plan 096](../plans/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md), [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md) |
+| M07 | Farm animals (chicken / cow / sheep / horse / donkey) | Village livestock GLB; home Kupiec decorative horse | `wired` | [SOUNDS](./SOUNDS.md), [plan 096](../plans/archive/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md) |
+| M08 | Village pitchfork | Garden pickup + holdable melee | `wired` | [plan 082](../plans/archive/2026-08-12--082--village-tool-props-and-temp-assets.md), [plan 096](../plans/archive/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md), [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md) |
 | M09 | Village sickle | Garden pickup + holdable melee | `wired` | plan 082, plan 096, issue 025 |
 | M10 | Hay bale clutter | Decorative hay near gardens | `wired` | plan 082 |
-| M11 | Pickaxe (mining gameplay) | Held tool; one-time stockpile pickup; mines ore deposits | `wired` | [plan 090](../plans/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
+| M11 | Pickaxe (mining gameplay) | Held tool; one-time stockpile pickup; mines ore deposits | `wired` | [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 | M12 | Pine tree variant | `pine_trees.glb` parked under nature | `in repo` | plan 082 / 073 |
 | M13 | Grass clump GLB | Optional complement to instanced grass | `in repo` | plan 082 |
-| M14 | Long sword | Held melee; Strażnik quest/dialog + Kupiec | `wired` | [plan 090](../plans/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
+| M14 | Long sword | Held melee; Strażnik quest/dialog + Kupiec | `wired` | [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 | M15 | Fishing rod | `_temp` FBX parked; license ❓ + convert to GLB | `needed` | `public/models/parked/FishingRod_Lvl2.fbx` |
-| M16 | Blood splat death VFX | Spawn at animal death (corpse linger); NPC later | `wired` | [plan 096](../plans/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md) |
+| M16 | Blood splat death VFX | Spawn at animal death (corpse linger); NPC later | `wired` | [plan 096](../plans/archive/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md) |
 | M17 | Poly Farm building | Alternate farm shell vs Fantasy RTS `farm.glb` (CC-BY) | `in repo` | plan 082 (`settlement/farm_poly.glb`) |
 | M18 | Rock variant B | Extra rock prop beside wired `rock_a` | `in repo` | plan 082 (`nature/rock_b.glb`) |
 | M19 | Held shovel / axe / knife GLB | Drop + hand attach (`heldToolVisual`) | `wired` | `items/shovel.glb`, `axe.glb`, `knife.glb` |
-| M20 | Wooden torch (held) | Holdable item; longer/brighter than lit branch | `wired` | [plan 085](../plans/2026-08-12--085--handheld-lights-and-village-torches.md) |
+| M20 | Wooden torch (held) | Holdable item; longer/brighter than lit branch | `wired` | [plan 085](../plans/archive/2026-08-12--085--handheld-lights-and-village-torches.md) |
 | M21 | Branch GLB | Ground + lit-hand mesh | `wired` | plan 085 |
 | M22 | Fire tip FX | Handheld + village torch flame | `wired` | plan 085 (`fx/fire.glb`, CC-BY) |
 | M23 | House lantern GLB | Replaces procedural lamp body | `wired` | plan 085 |
-| M25 | Garden crop beds | Vegetable plots (tomato/pumpkin/lettuce) for all village gardens | `wired` | [plan 099](../plans/2026-08-13--099--wheat-field-glb.md) (`settlement/crops.glb`) |
-| M26 | Mushroom | Forest-floor clutter | `in repo` | [plan 101](../plans/2026-08-13--101--cactus-reed-well-woodpile.md) (`nature/mushroom_a.glb`) |
+| M25 | Garden crop beds | Vegetable plots (tomato/pumpkin/lettuce) for all village gardens | `wired` | [plan 099](../plans/archive/2026-08-13--099--wheat-field-glb.md) (`settlement/crops.glb`) |
+| M26 | Mushroom | Forest-floor clutter | `in repo` | [plan 101](../plans/archive/2026-08-13--101--cactus-reed-well-woodpile.md) (`nature/mushroom_a.glb`) |
 | M27 | Fern | Forest undergrowth | `in repo` | plan 101 (`nature/fern_a.glb`) |
 | M28 | Rock path (round wide) | Candidate cobble for village/path tiles (roads are terrain tint today) | `in repo` | plan 101 (`nature/rock_path_round_wide.glb`) |
 | M29 | Campfire unlit body | Stones + stacked wood, no flame — future `VillageFire` body | `in repo` | plan 101 (`settlement/campfire_unlit.glb`) |
