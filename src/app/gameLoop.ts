@@ -55,7 +55,6 @@ import {
   tickPlayerNeeds,
 } from '../player/PlayerNeeds'
 import { villageSizeConfig } from '../settlement/families'
-import { houseCatalogById } from '../settlement/houseCatalog'
 import { damageHealth } from '../shared/HealthState'
 import { getHungerRatio } from '../shared/HungerState'
 import { getStaminaRatio } from '../shared/StaminaState'
@@ -667,7 +666,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             id: `${s.id}:${house.position.x.toFixed(2)}:${house.position.z.toFixed(2)}`,
             x: house.position.x,
             z: house.position.z,
-            radius: houseCatalogById(house.houseId).footprintRadius,
+            radius: house.footprintRadius,
           })),
         ),
         worldAudio.playAt,

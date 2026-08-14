@@ -14,9 +14,9 @@ import megakitAuditRaw from './megakitAudit.generated.json'
  * `min`/`max` (no vertex-buffer decode) into `megakitAudit.generated.json`. See
  * docs/reviews/2026-08-14--009--megakit-construction-audit.md for the full audit.
  *
- * Does not implement a HouseBuilder. This module only answers: what construction
- * parts exist, their measured dimensions, whether they snap on the kit's ~2 m grid,
- * and their face-midpoint connection anchors.
+ * This module answers: what construction parts exist, their measured dimensions,
+ * whether they snap on the kit's ~2 m grid, and their face-midpoint connection
+ * anchors. House assembly lives in `src/settlement/houseBuilder.ts` (plan 111).
  */
 
 export type ConstructionPartKind =
