@@ -1,5 +1,6 @@
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { SaveData } from '../persistence/saveData'
+import type { VillageFire } from '../settlement/VillageFire'
 import { playActionChop, playActionDig, playActionMine, playActionWell } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
@@ -28,8 +29,8 @@ import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '..
 import { COOK_DURATION_SEC, findCookingRecipe } from '../items/campfireCooking'
 import { askGuardForSword, shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
-import { ITEM_CATALOG } from '../items/itemCatalog'
 import { Inventory } from '../items/Inventory'
+import { ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { evaluateTentPlacement, TENT_PLACEMENT_MESSAGE } from '../items/tentPlacement'
 import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
@@ -43,14 +44,13 @@ import {
 } from '../perf'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
-import { eatFood, drinkWater as drinkWaterNeeds, restorePersistedNeeds } from '../player/PlayerNeeds'
+import { drinkWater as drinkWaterNeeds, eatFood, resetPlayerNeeds, restorePersistedNeeds } from '../player/PlayerNeeds'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { QuestManager } from '../quests/QuestManager'
 import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
-import type { VillageFire } from '../settlement/VillageFire'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { MINE_DURATION_SEC, yieldForOre } from '../terrain/depositMining'
@@ -453,6 +453,7 @@ export async function createApp(
         mapDiscovery.clear()
         playerTorch.extinguish()
         worldFlags.guardSwordGifted = false
+        resetPlayerNeeds(player.needs)
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         syncHeldHud()
         hud.setExp(questManager.getExp())

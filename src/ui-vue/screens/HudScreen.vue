@@ -29,7 +29,12 @@ const needBars = computed(() => [
       <span v-if="ui.hud.held">{{ ui.hud.held }}</span>
     </div>
     <div class="mt-2 flex w-[130px] flex-col gap-1 max-[700px]:w-[100px]">
-      <div v-for="bar in needBars" :key="bar.key" class="flex items-center gap-1.5" :title="bar.label">
+      <div
+        v-for="bar in needBars"
+        :key="bar.key"
+        class="flex items-center gap-1.5"
+        :title="bar.label"
+      >
         <div class="h-[3px] flex-1 overflow-hidden rounded-full bg-black/45">
           <div
             class="h-full rounded-full transition-[width]"

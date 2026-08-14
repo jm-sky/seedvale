@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-13
+**Last updated:** 2026-08-14
 
 ## Quick rules
 
@@ -18,6 +18,10 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Melee vs animals | `faunaCombat.ts` — sword 28, axe 20, pitchfork 14, knife/sickle 12, shovel 8 |
 | Village one-time tools | `createItemSpawners.ts` |
 | Portable light | `PlayerTorch` — lit branch (90s) or held wooden_torch (240s); exclusive right hand |
+| Consumable (Zjedz/Wypij) | `ITEM_CATALOG[kind].consumable` (plan 106) — `{ need: 'hunger'\|'thirst', relief, resultKind? }`; driven from inventory screen (`InventoryScreenItemDetails.vue`) or world drink/cook actions |
+| Player needs | `player/PlayerNeeds.ts` — stamina/vigor/hunger/thirst pools on `PlayerController.needs`; HUD bars in `HudScreen.vue` |
+| Water source (well/lake) | `world/WaterSource.ts` — `[E]` drink, `[R]` fill waterskin; lake is a synthetic per-frame target (`interactables.ts`'s `isNearLakeShore`), not a discrete world object |
+| Cooking (campfire) | `items/campfireCooking.ts` — `raw_meat → roasted_meat` at a lit campfire, `[R]` |
 
 ## Items
 
@@ -43,6 +47,12 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | coal | węgiel | — | — | pickaxe yield | procedural | plan 090 |
 | iron | żelazo | — | — | pickaxe yield | procedural | plan 090 |
 | gold | złoto | — | — | pickaxe yield | procedural | plan 090 |
+| tomato | pomidor | — | — | renewable garden | procedural | plan 106; Zjedz (+12 hunger) |
+| raw_meat | surowe mięso | — | — | corpse harvest (knife) | procedural | plan 106; Zjedz (+15 hunger, less than roasted) |
+| roasted_meat | pieczone mięso | — | — | campfire cooking | procedural | plan 106; Zjedz (+35 hunger) |
+| bread | chleb | — | — | none (Kupiec) | procedural | plan 106; Zjedz (+30 hunger) |
+| waterskin_empty | bukłak (pusty) | — | — | none (Kupiec) | procedural | plan 106; `[R]` fill at well/lake → waterskin_full |
+| waterskin_full | bukłak (pełny) | — | — | well/lake fill | procedural | plan 106; Wypij (+45 thirst) → back to waterskin_empty |
 
 ## Roadmap (not done)
 

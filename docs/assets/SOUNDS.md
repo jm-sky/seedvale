@@ -69,6 +69,9 @@ If the feature needs no new sound, do nothing to this file.
 | S15 | Stone find (distinct from dig) | Dig notice — today reuses dig SFX | `needed` | — |
 | S16 | Pickaxe / ore strike | Mine channel — today reuses dig clips via `playActionMine` | `needed` | [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 | S17 | Jump / land (player) | New jump mechanic — takeoff + landing thud | `wired` | Stand-in: Kenney `cloth1` (`action-jump-cloth-01`) + louder footstep land — dedicated jump clip still open |
+| S18 | Eat (bite/chew) | Consume food item (inventory Zjedz) | `needed` | plan 106 — currently silent |
+| S19 | Drink / gulp | Consume waterskin, well/lake `[E]` | `needed` | plan 106 — currently reuses `action-well-01` (S08) |
+| S20 | Sizzle / cook | `[R]` cooking raw_meat at a lit campfire | `needed` | plan 106 — currently silent |
 
 ## Acquisition rules
 

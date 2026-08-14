@@ -57,11 +57,13 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 
 ### Items / player
 
-- `Inventory` / `ItemKind` / single `HeldTool` slot (right hand exclusive). Flags, melee and spawn: [CATALOG.md](./items/CATALOG.md).
+- `Inventory` / `ItemKind` / single `HeldTool` slot (right hand exclusive). Flags, melee, spawn and consumables: [CATALOG.md](./items/CATALOG.md).
 - Player has shared `HealthState` (100 HP, CSS2D bar; no death UI/respawn yet). Held melee damages animals via `[E]` gaze.
+- Player survival pools (`PlayerController.needs`, plan 106): stamina/vigor/hunger/thirst (`src/player/PlayerNeeds.ts`), HUD bars in `HudScreen.vue`. Hunger/thirst reaching 0 costs HP (`applyStarvationDamage`) — no new death/disease system, reuses `damageHealth`. Sprint gated on stamina.
+- Food (tomato, raw_meat, roasted_meat, bread) and water (`waterskin_empty`/`waterskin_full`) are ordinary `Inventory` items with a `consumable` catalog flag ("Zjedz"/"Wypij" in the inventory screen). Cooking (`raw_meat → roasted_meat`) is a flat recipe table (`items/campfireCooking.ts`), `[R]` at a lit campfire. `WaterSource` (`src/world/WaterSource.ts`) is the shared well/lake drink/fill abstraction; lake is a synthetic per-frame candidate (no discrete world object), reusing fauna's shoreline probe.
 - Portable light: lit branch (~90s) or held wooden torch (~240s); persists in `SaveData.playerTorch`.
-- Tools in the world: shovel (dig/level soil), axe (multi-stage tree harvest), pickaxe (ore + mountain rock), tent (place/rest/pack), garden pitchfork/sickle. Starting kit: knife, firestarter, blanket when missing.
-- Wait / camp rest / town rest / tent rest exist. Quick Actions gate town rest on `nearTown`. Esc during rest aborts the skip before opening pause.
+- Tools in the world: shovel (dig/level soil), axe (multi-stage tree harvest), pickaxe (ore + mountain rock), knife (melee + corpse meat harvest), tent (place/rest/pack), garden pitchfork/sickle. Starting kit: knife, firestarter, blanket when missing.
+- Wait / camp rest / town rest / tent rest exist. Quick Actions gate town rest on `nearTown`. Esc during rest aborts the skip before opening pause. Rest fully restores vigor/stamina (plan 106).
 - Dropped items, item spawners, placed fires and large walk-in caves (`world/largeCaves.ts`, empty of loot/mobs) exist.
 
 ### Quests / progression
@@ -71,7 +73,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 
 ### Persistence
 
-- IndexedDB in `src/persistence/`. Canonical save schema is **v11** (`saveData.ts`): world config (including optional `settlements.homeSize`), player pose, time of day, elapsed days, quests/EXP/relations, inventory, held tool, collected IDs, dropped items, placed fires, placed tents, player torch, world flags, sparse tree overrides, map discovery cells.
+- IndexedDB in `src/persistence/`. Canonical save schema is **v13** (`saveData.ts`): world config (including optional `settlements.homeSize`), player pose, time of day, elapsed days, quests/EXP/relations, inventory, held tool, collected IDs, dropped items, placed fires, placed tents, player torch, world flags, sparse tree overrides, map discovery cells, settlement economies, player hunger/thirst/vigor (stamina stays transient).
 - localStorage is split by domain (`src/config/persistConfig.ts`): graphics / player / world; legacy `seedvale:worldConfig:v1` migrates on first load.
 - NPC runtime state is **not** a full simulation snapshot. Tree lifecycle uses sparse overrides + lazy growth from `elapsedDays` (`src/world/treeLifecycle.ts`).
 
@@ -91,6 +93,8 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `HealthState` — shared health/damage/death (`src/shared/HealthState.ts`) used by fauna, NPCs and the player.
 - `StaminaState` — shared physical-effort capacity (`src/shared/StaminaState.ts`) used by fauna and NPCs.
 - `VigorState` — NPC daily physiological budget (`src/shared/VigorState.ts`); collapse gates sleep through the existing NPC FSM. Not used by fauna.
+- `PlayerNeeds` — player stamina/vigor/hunger/thirst pools (`src/player/PlayerNeeds.ts`, plan 106), reusing `StaminaState`/`VigorState`; hunger/thirst are a new `HungerState`/`ThirstState` pool pair, same `{max, current}` shape.
+- `WaterSource` — shared well/lake drink/fill abstraction (`src/world/WaterSource.ts`, plan 106); future river/polluted/treated sources should reuse it.
 - Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/`. NPC + fauna adapters; predator scoring in `src/fauna/predatorHumanDecision.ts`.
 - `SettlementEconomy` — settlement-owned bulk stock (`src/economy/`). Not player `Inventory`. Not in save data yet.
 - `NpcAgent` / `AnimalAgent` — central behaviour integration points.
@@ -132,6 +136,10 @@ src/shared/StaminaState.ts
 src/shared/VigorState.ts
 src/items/Inventory.ts
 src/items/HeldTool.ts
+src/items/itemCatalog.ts
+src/items/campfireCooking.ts
+src/player/PlayerNeeds.ts
+src/world/WaterSource.ts
 src/quests/QuestManager.ts
 src/world/dayNight.ts
 src/world/treeLifecycle.ts

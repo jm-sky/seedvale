@@ -62,6 +62,7 @@ If the feature needs no new model, do nothing to this file.
 | M33 | Wood pile stockpile | Stacked beams; replaces wired `logs.glb` | `wired` | plan 101 (`settlement/wood_pile.glb`, CC-BY) |
 | M34 | Fantasy RTS logs | Former stockpile mesh | `in repo` | `settlement/logs.glb` |
 | M35 | Cemetery / gravestones | Village-fringe landmark (`cemetery`); Poly plot + extra stones | `wired` | plan 049 (`nature/cemetery.glb`, `nature/grave_a.glb`) |
+| M36 | Food items (tomato/raw_meat/roasted_meat/bread) + waterskin | Pickup/inventory meshes; procedural fallback in place and functional | `needed` | plan 106 (`items/items.ts`'s `createItemMesh`) |
 
 ## Wired (reference — do not treat as open work)
 
