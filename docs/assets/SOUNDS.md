@@ -28,7 +28,7 @@ If the feature needs no new sound, do nothing to this file.
 
 | Category | Files | Notes |
 |----------|-------|-------|
-| NPC | hmm / thank-you (M/F) | Dialogue reactions |
+| NPC | hmm / thank-you / greeting / farewell / confirmation (M/F, per-actor voice) | Dialogue reactions + Super Dialogue Audio Pack v1 (plan 116) — greeting on dialogue open, farewell on close, confirmation on offer accept, extra hmm/thank-you variety |
 | Animals | chicken, cow, wolf | `[E]` on animal (donkey/horse/sheep reuse silence until clips exist) |
 | Ambient | forest, night crickets, coast, wind, meadow, soft waves, fire loop | Area / time / mountain / campfire loops |
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |

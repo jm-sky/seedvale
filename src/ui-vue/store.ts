@@ -1,6 +1,7 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { LightActionResult } from '../app/userActions'
+import type { PlayAt } from '../audio/createWorldAudio'
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
 import type { ItemKind } from '../items/items'
@@ -10,6 +11,7 @@ import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
 import type { RestOutcome, RestVariant } from '../ui/createQuickActions'
 import type { ToastVariant } from '../ui/createToast'
+import { pickNpcConfirmationSound, pickNpcFarewellSound, pickNpcGreetingSound } from '../ai/NpcAgent'
 import { playUiClick, playUiOpen } from '../audio/uiSounds'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { type DayNightState, formatClock, phaseName } from '../world/dayNight'
@@ -169,6 +171,18 @@ function emitUiOpen(): void {
   if (uiPlayOnce) playUiOpen(uiPlayOnce)
 }
 
+let npcVoicePlayAt: PlayAt | null = null
+/** Quiet enough to sit under the `emitUiOpen()` panel chirp. */
+const NPC_VOICE_VOLUME = 0.35
+
+export function configureNpcVoiceSounds(playAt: PlayAt | null): void {
+  npcVoicePlayAt = playAt
+}
+
+function playNpcVoice(npc: NpcAgent | null, url: string | undefined): void {
+  if (npc && url && npcVoicePlayAt) npcVoicePlayAt(url, npc.mesh.position, NPC_VOICE_VOLUME)
+}
+
 export function emitUiClick(): void {
   if (uiPlayOnce) playUiClick(uiPlayOnce)
 }
@@ -261,15 +275,29 @@ export function refreshVillagers(entries: readonly VillagerRefreshEntry[]): void
 export function isVillagersOpen(): boolean { return ui.villagers.open }
 export function setVillagersPage(page: number): void { ui.villagers.page = page }
 
-export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void { const state = ui.npcDialogueMenu; const override = questManager.onInteract(npc.name); state.npc = markRaw(npc); state.settlement = settlement; state.timeOfDay = timeOfDay; state.helpResult = override ?? { line: npc.getDialogueLine() }; state.open = true; emitUiOpen() }
+export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void { const state = ui.npcDialogueMenu; const override = questManager.onInteract(npc.name); state.npc = markRaw(npc); state.settlement = settlement; state.timeOfDay = timeOfDay; state.helpResult = override ?? { line: npc.getDialogueLine() }; state.open = true; emitUiOpen(); playNpcVoice(npc, pickNpcGreetingSound(npc.voiceActor)) }
 function resetNpcDialogueMenu(): void { const state = ui.npcDialogueMenu; state.open = false; state.npc = null; state.settlement = null; state.helpResult = null }
+/** `decline: false` means this close is a transition (e.g. into trade — see
+ *  `openMerchantFromDialogue`), not the player actually leaving/declining — skip
+ *  both `onDecline()` and the farewell line in that case, same guard. */
 export function closeNpcDialogueMenu(opts?: { decline?: boolean }): void {
   const state = ui.npcDialogueMenu
   if (!state.open) return
-  if (opts?.decline !== false) state.helpResult?.offer?.onDecline()
+  const npc = state.npc as NpcAgent | null
+  if (opts?.decline !== false) {
+    state.helpResult?.offer?.onDecline()
+    playNpcVoice(npc, npc ? pickNpcFarewellSound(npc.voiceActor) : undefined)
+  }
   resetNpcDialogueMenu()
 }
-export function acceptNpcDialogueOffer(): void { const state = ui.npcDialogueMenu; if (!state.open || !state.helpResult?.offer) return; state.helpResult.offer.onAccept(); resetNpcDialogueMenu() }
+export function acceptNpcDialogueOffer(): void {
+  const state = ui.npcDialogueMenu
+  if (!state.open || !state.helpResult?.offer) return
+  const npc = state.npc as NpcAgent | null
+  state.helpResult.offer.onAccept()
+  playNpcVoice(npc, npc ? pickNpcConfirmationSound(npc.voiceActor) : undefined)
+  resetNpcDialogueMenu()
+}
 export function isNpcDialogueMenuOpen(): boolean { return ui.npcDialogueMenu.open }
 export function configureNpcDialogueMenu(handlers: { onAskSword: () => string, onOpenTrade: () => void }): void {
   ui.npcDialogueMenu.onAskSword = handlers.onAskSword

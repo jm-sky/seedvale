@@ -58,7 +58,7 @@ import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isR
 import { applyDigAt, applyLevelAt } from '../terrain/digAction'
 import { sampleFootstepSurface } from '../terrain/footstepSurface'
 import { mountVueUi } from '../ui-vue/mount'
-import { configureUiSounds } from '../ui-vue/store'
+import { configureNpcVoiceSounds, configureUiSounds } from '../ui-vue/store'
 import { createBusyOverlay } from '../ui/createBusyOverlay'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
@@ -242,6 +242,7 @@ export async function createApp(
   const fireAudio = createFireAudio(worldAudio)
   const houseDoors = createHouseDoorTracker()
   configureUiSounds(worldAudio.playOnce)
+  configureNpcVoiceSounds(worldAudio.playAt)
 
   const mapDiscovery = createMapDiscovery(initialSave?.map.discoveredCells)
   const mapProjection = createMapProjection(rawSampleParamsFromWorld(config))
@@ -1511,6 +1512,7 @@ export async function createApp(
     ambientAudio.dispose()
     fireAudio.dispose()
     configureUiSounds(null)
+    configureNpcVoiceSounds(null)
     worldAudio.dispose()
     disposeWorldBundle(bundle)
     setActiveMonitor(null)

@@ -56,6 +56,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 | `2026-08-14--106--player-needs-food-and-cooking.md` | Głód/pragnienie/stamina/vigor gracza + jedzenie/woda/gotowanie — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🔴 | L | — |
 | `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🟡 | L | ~~060~~ ~~071~~ |
 | `2026-08-14--110--quests-v3-closure-world-identity-and-lifecycle.md` | Domknięcie planu 093: lifecycle `failed`/`invalidated`, generyczny sygnał śmierci zwierzęcia (predator kills), trait "groźny wilk", failure "zagubionej owcy", stabilne `landmarkId` (tylko pole, bez rejestru), rebind/invalidate animal target po save/load — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🔴 | L | ~~093~~ |
+| `2026-08-14--116--super-dialogue-audio-pack.md` | Super Dialogue Audio Pack v1: powitanie/pożegnanie/potwierdzenie na dialogu NPC + rozszerzone hmm/thank-you, głos przypisany deterministycznie per NPC (5 aktorów, CC BY 4.0) — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🟡 | M | — |
 
 Historical playtest queue (files in archive): [below](#playtest-queue-archived-batch).
 

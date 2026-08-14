@@ -26,6 +26,30 @@ candidates still under review: [`_temp/Sounds/README.md`](../../_temp/Sounds/REA
 | male-thank-you-02.ogg | 429036__theuncertainman__thank-you-npc-british-male.wav | https://freesound.org/  | generic |
 | female-thank-you-01.mp3       | 624079__djhamsammich__thank-you-anne.mp3 | https://freesound.org/ | Simple, short |
 
+### NPC voice lines — Super Dialogue Audio Pack v1 (plan 116)
+
+95 clips, curated from `Super Dialogue Audio Pack V1` by **Dillon Becker**
+(dillonbecker.com) — **CC BY 4.0**, attribution + license link required (see
+`## License notes` below; this is the first CC-BY, non-CC0 source in this
+folder). Original pack (WAV, staged, not kept in the tree beyond git history):
+`_temp/Sounds/Super Dialogue Audio Pack v1/`.
+
+Naming: `{gender}-{slug}-{actor}-{NN}.ogg`. Actor = one of the 5 recorded voice
+actors, assigned deterministically per NPC (`voiceActorForIndex` in
+`src/ai/NpcAgent.ts`, same pattern as the body-model pool) so each NPC keeps
+one consistent voice: male → `alex` (Alex Brodie) / `ian` (Ian Lampert) /
+`sean` (Sean Lenhart); female → `karen` (Karen Cenon) / `meghan` (Meghan
+Christian). `NN` is our curated sequence, not the pack's original line number
+— mapping back to the pack's `Reference Sheet.pdf` below. Each row ×5 actors.
+
+| slug (our category) | NN | pack category | pack line # | transcript | used for |
+|---|---|---|---|---|---|
+| greeting | 01–04 | Greeting | 1, 3, 6, 7 | Hello / Hey / Welcome / Greetings | `NPC_GREETING_SOUND_URLS` — dialogue panel opens (`openNpcDialogueMenu`, `src/ui-vue/store.ts`) |
+| farewell | 01–04 | Farewell | 1, 6, 8, 9 | Goodbye / Take care / Farewell / Good luck | `NPC_FAREWELL_SOUND_URLS` — dialogue panel closes without accepting (`closeNpcDialogueMenu`) |
+| confirmation | 01–04 | Confirmation | 3, 4, 5, 9 | Yes / You got it / On my way / Alright | `NPC_CONFIRMATION_SOUND_URLS` — player accepts the NPC's offer (`acceptNpcDialogueOffer`) |
+| thank-you | 01–04 | Completion | 1, 2, 3, 4 | All done / Finished / Complete / Ready | merged into `NPC_QUEST_COMPLETE_SOUND_URLS` (`src/ai/NpcAgent.ts`) — extra variety for quest turn-in |
+| hmm | 01–03 | Miscellaneous | 2, 3, 10 | Hmm… / Huh? / Wow! | merged into `NPC_REACTION_SOUND_URLS` picks in `playReactionSound()` — extra variety for the `lookAtPlayer` reaction |
+
 ## Animals
 
 | filename         | oryginal filename | source url | notes |
@@ -116,3 +140,9 @@ sets. See `docs/assets/SOUNDS.md` S01.
 | Kenney RPG sounds | **CC0** (see `_temp/Sounds/RPGsounds_Kenney/license.txt`) |
 | RPG Sound Pack (`ui-click-03`) | Typically CC0 on OpenGameArt (artisticdude) — **verify before commercial ship** |
 | Sonniss.com GDC 2026 Game Audio Bundle samples | Promo/eval samples — **confirm Sonniss GDC license terms before shipping** the fire/wind/rain/meadow/waves/dog/crowd/UI clips |
+
+## License notes (2026-08-14 batch)
+
+| Source | License posture |
+|--------|-----------------|
+| Super Dialogue Audio Pack V1 — Dillon Becker (dillonbecker.com) | **CC BY 4.0** — attribution required. Credit: "Super Dialogue Audio Pack V1 by Dillon Becker (dillonbecker.com), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)." First non-CC0 source in this folder — every prior entry above is CC0 or promo/eval-only; if the game gets a public release, this credit needs to appear somewhere player-visible (no in-game credits screen exists yet — open item, not solved by plan 116). |
