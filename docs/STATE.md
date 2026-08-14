@@ -81,7 +81,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 - Vue 3 + Tailwind v4 + `lucide-vue-next` mounts under `#vue-ui`. Migration is incremental: pause, quest log, inventory, quick actions, time-skip, busy overlay, world config, notes, HUD, minimap, world map, toast and touch chrome are Vue; `src/ui/create*.ts` for these are facades.
 - Minimap is heading-up with a rim `N` marker; `M` opens the north-up world map. Discovery is permanent (radius 48, `SaveData.map`, schema v11) and does not load chunks.
 - lil-gui remains the full debug UI; pause → Świat exposes the player-facing subset of the same `WorldConfig`.
-- Vue Fazy 0–4 are implemented; desktop + touch browser verification is still open (plan 046). Plan 105 is a planned UI/UX audit.
+- Vue Fazy 0–4 are implemented; desktop + touch browser verification is still open (plan 046). Plan 105 UI/UX audit is done ([review 007](./reviews/2026-08-14--007--ui-ux.md)); implementation phases live in plan 105 §8.
 
 ## Important shared concepts
 
