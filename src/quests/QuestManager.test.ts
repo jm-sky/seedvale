@@ -36,8 +36,21 @@ const effectsQuest: QuestDef = {
   effects: { relation: 3, exp: 25 },
 }
 
-function makeManager(defs: readonly QuestDef[]): QuestManager {
-  return new QuestManager(defs, undefined, new Inventory())
+function makeManager(
+  defs: readonly QuestDef[],
+  resolveAnimalTarget?: (kind: string) => string | undefined,
+): QuestManager {
+  return new QuestManager(defs, undefined, new Inventory(), undefined, undefined, resolveAnimalTarget)
+}
+
+const wolfQuest: QuestDef = {
+  id: 'wolf',
+  giverName: 'Anna',
+  offerLine: 'offer wolf',
+  stages: [
+    { objective: { type: 'kill_target_animal', kind: 'wolf' }, description: 'kill wolf', reminderLine: 'remind' },
+  ],
+  reportLine: 'report wolf',
 }
 
 /** Talks to `npcName` and accepts the offer, moving the matching quest to `active`. */
@@ -125,6 +138,40 @@ describe('QuestManager effects', () => {
     qm.onInteract('Kasia')
     expect(qm.getExp()).toBe(25)
     expect(qm.getRelation('Kasia')).toBe(3)
+  })
+})
+
+describe('QuestManager kill_target_animal binding', () => {
+  it('binds to the resolver-supplied animalId on accept, and completes only on that animal\'s death', () => {
+    const qm = makeManager([wolfQuest], () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState('wolf')).toBe('active')
+
+    // A different wolf dying does not satisfy the objective.
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-2' })).toBeNull()
+    expect(qm.getState('wolf')).toBe('active')
+
+    // The bound wolf dying does.
+    const override = qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
+    expect(override?.line).toBe('kill wolf')
+    expect(qm.getState('wolf')).toBe('ready_to_report')
+  })
+
+  it('does not bind a target when the resolver finds no live candidate', () => {
+    const qm = makeManager([wolfQuest], () => undefined)
+    acceptOffer(qm, 'Anna')
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })).toBeNull()
+    expect(qm.getState('wolf')).toBe('active')
+  })
+
+  it('clears the binding on completion so a stale id cannot re-trigger it', () => {
+    const qm = makeManager([wolfQuest], () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
+    qm.onInteract('Anna') // report -> complete
+    expect(qm.getState('wolf')).toBe('complete')
+    // Re-reporting a death for the same id afterward must not affect anything.
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })).toBeNull()
   })
 })
 

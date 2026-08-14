@@ -371,6 +371,9 @@ export async function createApp(
       grantItem(kind, count)
       toast.show(`+${count} ${ITEM_DEFS[kind].label}`, 'pickup')
     },
+    // Reads `bundle` (not a destructured `bundle.fauna`) so this stays valid
+    // across `rebuildWorldBundle()` — see `worldBundle.ts`'s header comment.
+    (kind) => bundle.fauna.getAgents().find((a) => a.def.kind === kind && !a.isDead())?.animalId,
   )
   hud.setExp(questManager.getExp())
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)

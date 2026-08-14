@@ -328,6 +328,11 @@ export async function createFauna(
     }
   }
 
+  /** Per-build counter for `animalId` — unique within this settlement's live
+   *  `Fauna` (one instance per game session, see `worldBundle.ts`'s
+   *  `buildFauna`), covering both the initial ring spawn and later
+   *  spawner-driven respawns below. */
+  let nextAnimalId = 0
   const spawnAgent = (kind: AnimalKind, x: number, z: number): AnimalAgent => {
     const tpl = templates[kind]
     let visual: Object3D | undefined
@@ -338,8 +343,10 @@ export async function createFauna(
     } else {
       visual = PROCEDURAL_FALLBACKS[kind]?.()
     }
+    const animalId = `${kind}-${nextAnimalId++}`
     return new AnimalAgent(
       ANIMAL_DEFS[kind],
+      animalId,
       sampleHeight,
       waterLevel,
       collidersNear,

@@ -339,16 +339,70 @@ Zaimplementowano **Etap A–C** z §2 (pierwszy milestone minus quest "groźny w
 - `QuestManager.list()` filtruje questy `not_offered`, które nie spełniają availability — **domyślnie ukryte**, zgodnie z preferowanym wariantem z Fazy 11 planu (brak jeszcze bannera „🔒 Zaufanie wymagane" — to osobny, nie zaimplementowany krok, gdyby design tego zażądał).
 - Nie ruszano `QuestListEntry`, `QuestLogScreen.vue` ani `store.ts` — ukrywanie dzieje się w `QuestManager`, UI konsumuje dane bez zmian.
 
-### Nie zaimplementowano (świadomie odłożone, zgodne z §2 Etap D–H tego dokumentu)
+### Nie zaimplementowano po Etapie A–C (odłożone w tamtym przebiegu, domknięte niżej lub nadal otwarte)
 
-- Quest „groźny wilk” (Etap D) — wymaga stabilnego `animalId` na `AnimalAgent` i mostku zdarzenia śmierci (`takeDamage()` → `HealthState.dead` → quest event); obecnie śmierć wykrywana jest tylko inline w `gameLoop.ts` (diff `isDead()` przed/po ataku gracza), bez ID ani ogólnego obserwatora. To dotyka współdzielonego `AnimalAgent`/`HealthState` i zasługuje na osobny przebieg z jaśniejszym zakresem.
-- `WolfDen` (Etap E), livestock identity (Etap G), landmark objectives (Etap F), tree/dig/resource objectives (Etap H), bandyci (Faza 9) — bez zmian.
-- Brak nowego `QuestObjective`/`ObjectiveRef` wariantu (np. `animal_died`) — nie było potrzebny dla A–C.
+- `WolfDen` (Etap E), livestock identity (Etap G), landmark objectives (Etap F), tree/dig/resource objectives (Etap H), bandyci (Faza 9) — nadal bez zmian, patrz §12.
 
-### Testy
+### Testy (Etap A–C)
 
-Nowy `src/quests/QuestManager.test.ts` (9 testów): `relationToLevel` progi, quest niedostępny/ukryty poniżej progu, `isQuestAvailable` nie mutuje stanu, odblokowanie po przekroczeniu progu (przez `effects.relation`), domyślne nagrody v2 nienaruszone, custom `effects` aplikowane dokładnie raz, `reset()` czyści relation/exp/progress.
+`src/quests/QuestManager.test.ts` (stan po Etapie A–C: 9 testów): `relationToLevel` progi, quest niedostępny/ukryty poniżej progu, `isQuestAvailable` nie mutuje stanu, odblokowanie po przekroczeniu progu (przez `effects.relation`), domyślne nagrody v2 nienaruszone, custom `effects` aplikowane dokładnie raz, `reset()` czyści relation/exp/progress.
 
-### Weryfikacja
+### Weryfikacja (Etap A–C)
 
 `npx tsc --noEmit`, `npm run lint` (0 błędów w plikach questów — pozostałe błędy lintera są w niepowiązanym, niewersjonowanym `_temp/asset-audit/inspect.mjs`), `npm run build`, `npm run test` (599/599, 87 plików) — wszystkie przechodzą. Weryfikacja w przeglądarce nie została wykonana w tym przebiegu.
+
+---
+
+## 11. Stan implementacji — Etap D: quest „groźny wilk” (2026-08-14, drugi przebieg)
+
+Zaimplementowano pełny end-to-end vertical slice, zgodnie z §2 Etap D. Nie zaczęto od `WolfDen` (Etap E nadal otwarty) — wilk jest jednym z dwóch ambientowych wilków spawnowanych już dziś w initial ring (`createFauna.ts`'s `SPAWNS`), nie nowym bytem generowanym przez „world problem”.
+
+### Identity zwierzęcia
+
+- `src/fauna/AnimalAgent.ts`: nowe pole `readonly animalId: string`, wymagany parametr konstruktora (wstawiony zaraz po `def`, przed resztą pozycyjnych argumentów) — stabilne przez cały czas życia instancji, odrębne od `def.kind` (współdzielonego przez cały gatunek).
+- `src/fauna/createFauna.ts`: `spawnAgent()` generuje `` `${kind}-${licznik}` `` z lokalnego licznika w domknięciu `createFauna` — pokrywa zarówno initial ring, jak i respawny ze spawnera.
+- `src/settlement/livestock.ts`: `spawnLivestock()` generuje `` `${kind}-house${i}-${indeksWDomu}` `` — wystarczające dla pola, choć pełna semantyka „Etap G” (`ownerHouseId` jako osobny, udokumentowany koncept) nadal nie istnieje.
+- Oba miejsca konstrukcji `new AnimalAgent(...)` w repo zaktualizowane (potwierdzone grepem — nie ma innych call site'ów, żadne testy nie konstruują `AnimalAgent` bezpośrednio).
+
+### Wiązanie celu questa (bez importowania fauny do QuestManagera)
+
+Zamiast dopisywać `onDeath`-callback do `AnimalAgent`/`collapse()` (co wymagałoby generycznego event-bus po stronie `Fauna`), przyjęto węższe, wystarczające dla tego questa rozwiązanie: **QuestManager wiąże cel raz, w momencie przyjęcia questa**, przez wstrzykniętą funkcję-resolver — nie skanuje fauny sam i nie obserwuje śmierci drapieżnik-na-zwierzę (tylko zabicie przez gracza jest dziś zgłaszane; patrz „Co świadomie pominięto” niżej).
+
+- `src/quests/quests.ts`: nowy wariant `QuestObjective` — `{ type: 'kill_target_animal', kind: AnimalKind }` (statyczna definicja, „jakiś wilk”, nie konkretna instancja).
+- `src/quests/QuestManager.ts`:
+  - nowy wariant `ObjectiveRef` — `{ type: 'animal_died', animalId: string }` (zdarzenie zgłaszane przez świat, z konkretnym id);
+  - `AnimalTargetResolver = (kind: AnimalKind) => string | undefined`, wstrzykiwany jako opcjonalny 6. parametr konstruktora `QuestManager` (domyślnie `() => undefined`), więc `QuestManager` nadal nie importuje `AnimalAgent`;
+  - `private readonly animalTargets = new Map<string, string>()` — `questId → animalId` związany dla bieżącego etapu `kill_target_animal`;
+  - `bindAnimalTargetIfNeeded(def, stageIndex)` — wywoływana z `onAccept` (etap 0) i z `advanceStage` (kolejne etapy); no-op jeśli już związany albo etap nie jest `kill_target_animal`; jeśli resolver nic nie zwróci, wiązanie po prostu nie następuje (bez błędu — quest zostaje aktywny, ale nieukończalny dopóki gracz/retry nie odświeży stanu przez ponowne wejście w ten etap — akceptowalne dla pierwszego wcielenia, bo w praktyce zawsze są ≥2 wilki na osadę);
+  - `objectiveMatchesRef()` dostał trzeci parametr `boundAnimalId?: string` i case `animal_died`: `objective.type === 'kill_target_animal' && boundAnimalId === ref.animalId` — dopasowanie po konkretnym osobniku, nie po gatunku;
+  - `completeQuest()` czyści `animalTargets.delete(def.id)`; `reset()` czyści całą mapę.
+- `src/app/gameLoop.ts`: w bloku wykrywania zabicia melee (istniejący `beforeDead`/`killed` diff, linia ok. 530) po `killed === true` wywoływane jest `questManager.onInteractObjective({ type: 'animal_died', animalId: target.animal.animalId })`; jeśli quest to skonsumuje, toast pokazuje `override.line` (np. „Wilk pokonany. Wróć do Anny.”) zamiast domyślnego „<Zwierzę> pada.” — ten sam fallback-pattern co `resolveInteraction.ts`.
+- `src/app/createApp.ts`: `new QuestManager(...)` dostaje resolver `(kind) => bundle.fauna.getAgents().find((a) => a.def.kind === kind && !a.isDead())?.animalId` — czyta `bundle` (nie zdestrukturyzowane `bundle.fauna`), więc zostaje poprawny po `rebuildWorldBundle()`.
+
+### Quest „groźny wilk”
+
+- `src/quests/quests.ts`, `QUESTS`: nowy `QuestDef` `id: 'grozny-wilk'`, `giverName: 'Anna'`, `availability: { relation: { npcName: 'Anna', minimum: 'trusted' } }`, jeden etap `kill_target_animal` (`kind: 'wolf'`), `effects: { relation: 2, exp: 20 }` (wyżej niż domyślne v2 `+1/+10` — odpowiedzialniejszy problem świata w duchu przykładowego przepływu z planu).
+
+### Co świadomie pominięto w tym przebiegu
+
+- **Drapieżnik-na-zwierzę śmierć nie jest obserwowana.** Jeśli inny wilk/drapieżnik zabije związanego wilka (`AnimalAgent.attack()` → `prey.takeDamage()`, `AnimalAgent.ts`), quest tego nie zauważy — tylko zabicie przez gracza w `gameLoop.ts` zgłasza `animal_died`. `collapse()` (jedyny wspólny punkt śmierci obu ścieżek) nie dostał żadnego callbacku. Dla „groźnego wilka” to wystarczające (cel questa to eliminacja przez gracza), ale nie jest to generyczny event śmierci — przyszły quest w stylu „chroń owcę przed wilkami” będzie tego wymagał i to osobna, większa zmiana w `AnimalAgent`/`Fauna`.
+- **Brak retry/re-bindingu po nieudanym resolverze poza naturalnym wejściem w kolejny etap** — jeśli oba wilki zdążą zginąć/zniknąć między `offer` a `accept` (skrajnie mało prawdopodobne przy 2 stałych wilkach bez respawnu), quest zostaje aktywny bez związanego celu; nie dodano żadnego UI-komunikatu na ten wypadek.
+- **Brak markera w świecie** nad związanym wilkiem (odpowiednika `setSpawnerMarker`/`labelMarker`) — quest log jest jedynym źródłem informacji „gdzie szukać”, zgodnie z Fazą 11 planu (feedback minimalny, nie GPS-marker).
+- `WolfDen`, livestock identity (pełne `ownerHouseId`), landmark objectives, tree/dig/resource objectives, bandyci — bez zmian, patrz §12.
+
+### Testy (Etap D)
+
+Rozszerzony `src/quests/QuestManager.test.ts` (12 testów łącznie, +3): wiązanie do id zwróconego przez resolver na accept + dopasowanie tylko tego id (inny `animalId` nie ukończy questa), brak wiązania gdy resolver zwraca `undefined` (quest zostaje `active`, żadne zdarzenie go nie kończy), `completeQuest()` czyści wiązanie (spóźnione zdarzenie po ukończeniu jest no-opem).
+
+### Weryfikacja (Etap D)
+
+`npx tsc --noEmit`, `npm run lint` (0 błędów w zmienionych plikach — te same niepowiązane błędy w `_temp/asset-audit/inspect.mjs` co poprzednio), `npm run build`, `npm run test` (602/602, 87 plików) — wszystkie przechodzą. Weryfikacja w przeglądarce **nie została wykonana** — brak potwierdzenia, że wilk faktycznie zostaje związany i zabity end-to-end w realnej rozgrywce (spawn, `trusted` relation z Anną, walka melee, powrót do Anny).
+
+## 12. Co zostaje otwarte po Etapie D
+
+- **Etap E — `WolfDen`**: nowy byt świata (`position`/`identity`/spawning zagrożenia), zamiast celowania w jednego z ambientowych wilków. Wymaga decyzji, czy `PreySpawner` da się rozszerzyć semantycznie (plan preferuje to nad `QuestSpawnerem`).
+- **Etap F — landmark objectives**: czeka na potwierdzenie stabilnego `landmarkId` z planu 049 (nadal `in progress`).
+- **Etap G — livestock identity**: `animalId` już istnieje (ten przebieg), ale bez udokumentowanego/ustandaryzowanego `ownerHouseId` jako osobnego pola/konceptu — dziś tylko zakodowany w stringu id.
+- **Etap H — tree/dig/resource objectives**.
+- **Faza 9 — bandyci**.
+- **Generyczny event śmierci zwierzęcia** (niezależny od przyczyny) — potrzebny, jeśli przyszły quest ma obserwować zabicie przez inne zwierzę, nie tylko przez gracza.

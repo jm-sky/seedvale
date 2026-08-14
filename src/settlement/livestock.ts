@@ -182,11 +182,14 @@ export async function spawnLivestock(
   const agents: AnimalAgent[] = []
   homes.forEach((home, i) => {
     const random = createSeededRandom(houseSeed(settlementSeed, i))
+    let houseAnimalIndex = 0
     for (const kind of kindsForHouse(size, random)) {
       const { x, z } = findSpotNearHouse(home, sampleHeight, waterLevel, random)
       const { visual, animations } = visualFor(kind)
+      const animalId = `${kind}-house${i}-${houseAnimalIndex++}`
       const agent = new AnimalAgent(
         ANIMAL_DEFS[kind],
+        animalId,
         sampleHeight,
         waterLevel,
         collidersNear,

@@ -482,6 +482,11 @@ export class AnimalAgent {
   /** Visual root (GLB group or capsule mesh). */
   readonly mesh: THREE.Object3D
   readonly def: AnimalDef
+  /** Stable per-instance id, distinct from `def.kind` (shared across every
+   *  animal of that species) — assigned by the spawn site (`createFauna.ts`/
+   *  `livestock.ts`). Lets a quest objective target one specific animal
+   *  instead of scanning by kind (plan 093 Etap D). */
+  readonly animalId: string
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
   private readonly collidersNear: ColliderSource
@@ -567,6 +572,7 @@ export class AnimalAgent {
 
   constructor(
     def: AnimalDef,
+    animalId: string,
     sampleHeight: HeightSampler,
     waterLevel: number,
     collidersNear: ColliderSource,
@@ -578,6 +584,7 @@ export class AnimalAgent {
     sampleForestFactor?: (x: number, z: number) => number,
   ) {
     this.def = def
+    this.animalId = animalId
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear

@@ -536,7 +536,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             else playActionMeleeHit(worldAudio.playAt, target.position)
             const label = ANIMAL_LABELS[target.animal.def.kind]
             if (killed) {
-              toast.show(`${label} pada.`)
+              const override = questManager.onInteractObjective({
+                type: 'animal_died',
+                animalId: target.animal.animalId,
+              })
+              toast.show(override?.line ?? `${label} pada.`)
             } else {
               toast.show(`Trafiono: ${label}`)
             }

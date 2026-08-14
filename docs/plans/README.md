@@ -19,7 +19,7 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
 | `2026-08-14--105--ui-ux-review.md` | Audyt UI/UX ✅ ([review 007](../reviews/2026-08-14--007--ui-ux.md)); H1+H2(2/3)+ekran Character zaimplementowane, bez weryfikacji w przeglądarce (§11); H2.1/H3/H4 otwarte | 🟡 | L | ~~046~~ ~~005~~ ~~023~~ |
-| `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059); Etap A–C (relation levels, availability, effects) zaimplementowane i przetestowane, Etap D+ (quest "groźny wilk", `WolfDen`, livestock/landmark objectives, bandyci) otwarte | 🔴 | XL | ~~015~~ ~~018~~ |
+| `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059); Etap A–D (relation levels, availability, effects, `animalId` + quest "groźny wilk" end-to-end) zaimplementowane i przetestowane, bez weryfikacji w przeglądarce; Etap E+ (`WolfDen`, livestock/landmark objectives, bandyci) otwarte | 🔴 | XL | ~~015~~ ~~018~~ |
 
 ---
 

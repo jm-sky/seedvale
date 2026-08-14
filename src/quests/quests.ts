@@ -53,6 +53,11 @@ export type QuestObjective =
   | { type: 'interact_spawner', spawnerType: SpawnerType }
   | { type: 'spot_animal', kind: AnimalKind }
   | { type: 'gather_item', kind: ItemKind, count: number }
+  /** "A dangerous wolf" (plan 093 Etap D) — defined by kind, but
+   *  `QuestManager` binds it to one concrete `AnimalAgent.animalId` the
+   *  moment this stage becomes active (via an injected resolver, not by
+   *  importing fauna itself), so only that individual's death clears it. */
+  | { type: 'kill_target_animal', kind: AnimalKind }
 
 export type QuestStage = {
   objective: QuestObjective
@@ -153,5 +158,22 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'Dobra robota, zwiadowco. Teraz wiem, że okolica bezpieczna.',
+  },
+  {
+    id: 'grozny-wilk',
+    giverName: 'Anna',
+    offerLine:
+      'W okolicy wioski pojawił się groźny wilk. Ludzie boją się wychodzić poza osadę — zajmiesz się nim?',
+    stages: [
+      {
+        objective: { type: 'kill_target_animal', kind: 'wolf' },
+        description: 'Znajdź i pokonaj groźnego wilka.',
+        reminderLine: 'Wilk wciąż grasuje w okolicy.',
+        progressLine: 'Wilk pokonany. Wróć do Anny.',
+      },
+    ],
+    reportLine: 'Dzięki Tobie znowu można spokojnie wychodzić poza osadę.',
+    availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
+    effects: { relation: 2, exp: 20 },
   },
 ]

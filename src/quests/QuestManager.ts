@@ -51,6 +51,13 @@ export type ObjectiveRef =
   | { type: 'interact_tree' }
   | { type: 'interact_spawner', spawnerType: SpawnerType }
   | { type: 'spot_animal', kind: AnimalKind }
+  | { type: 'animal_died', animalId: string }
+
+/** Looks up a live individual of `kind` to bind a `kill_target_animal` stage
+ *  to (its `AnimalAgent.animalId`), or `undefined` if none is available right
+ *  now. Implemented by the world layer (has `Fauna`/`AnimalAgent` access) and
+ *  injected — `QuestManager` never imports fauna to scan it itself. */
+export type AnimalTargetResolver = (kind: AnimalKind) => string | undefined
 
 /** Exp granted on turning in a quest. Flat for v1 — no per-quest tuning yet. */
 const QUEST_EXP_REWARD = 10
@@ -59,8 +66,13 @@ const QUEST_RELATION_REWARD = 1
 /** Same headroom as NPC reaction clips (NpcAgent.ts) — a one-shot "thank you", not a focal cue. */
 const QUEST_COMPLETE_SOUND_VOLUME = 0.35
 
-function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef): boolean {
+/** `boundAnimalId` is the specific individual this quest's `kill_target_animal`
+ *  stage was bound to (if any) — an `animal_died` ref only matches that one
+ *  animal, never any animal of the right kind. */
+function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, boundAnimalId?: string): boolean {
   switch (ref.type) {
+    case 'animal_died':
+      return objective.type === 'kill_target_animal' && boundAnimalId === ref.animalId
     case 'interact_spawner':
       return objective.type === 'interact_spawner' && objective.spawnerType === ref.spawnerType
     case 'interact_tree':
@@ -79,8 +91,12 @@ export class QuestManager {
   private readonly inventory: Inventory
   private readonly states = new Map<string, { state: QuestState, stageIndex: number }>()
   private readonly relations = new Map<string, number>()
+  /** `questId → animalId` bound the moment a `kill_target_animal` stage
+   *  becomes active — see `bindAnimalTargetIfNeeded`. */
+  private readonly animalTargets = new Map<string, string>()
   private readonly playSound: (url: string, volume?: number) => void
   private readonly grantItem: QuestItemGrant
+  private readonly resolveAnimalTarget: AnimalTargetResolver
   private exp = 0
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
@@ -94,11 +110,13 @@ export class QuestManager {
     inventory: Inventory,
     initial?: QuestManagerInitial,
     grantItem: QuestItemGrant = () => {},
+    resolveAnimalTarget: AnimalTargetResolver = () => undefined,
   ) {
     this.defs = defs
     this.playSound = playSound
     this.inventory = inventory
     this.grantItem = grantItem
+    this.resolveAnimalTarget = resolveAnimalTarget
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
@@ -117,6 +135,7 @@ export class QuestManager {
   reset(): void {
     for (const def of this.defs) this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 })
     this.relations.clear()
+    this.animalTargets.clear()
     this.exp = 0
   }
 
@@ -223,8 +242,22 @@ export class QuestManager {
     if (url) this.playSound(url, QUEST_COMPLETE_SOUND_VOLUME)
   }
 
+  /** Binds `stageIndex`'s objective to one concrete `animalId` if it's a
+   *  `kill_target_animal` stage and isn't bound yet — a no-op otherwise
+   *  (including when `resolveAnimalTarget` has no live candidate right now;
+   *  it's retried the next time this is called for the same quest, since
+   *  `animalTargets` only gets an entry once resolution succeeds). */
+  private bindAnimalTargetIfNeeded(def: QuestDef, stageIndex: number): void {
+    if (this.animalTargets.has(def.id)) return
+    const objective = this.currentStage(def, stageIndex)?.objective
+    if (objective?.type !== 'kill_target_animal') return
+    const animalId = this.resolveAnimalTarget(objective.kind)
+    if (animalId) this.animalTargets.set(def.id, animalId)
+  }
+
   private completeQuest(def: QuestDef): string {
     this.setQuestState(def.id, { state: 'complete', stageIndex: def.stages.length })
+    this.animalTargets.delete(def.id)
     const relationReward = def.effects?.relation ?? QUEST_RELATION_REWARD
     this.exp += def.effects?.exp ?? QUEST_EXP_REWARD
     this.bumpRelation(def.giverName, relationReward)
@@ -242,10 +275,9 @@ export class QuestManager {
    *  `ready_to_report` once the last one clears. */
   private advanceStage(def: QuestDef, s: { state: QuestState, stageIndex: number }): void {
     const nextIndex = s.stageIndex + 1
-    this.setQuestState(def.id, {
-      state: nextIndex >= def.stages.length ? 'ready_to_report' : 'active',
-      stageIndex: nextIndex,
-    })
+    const nextState = nextIndex >= def.stages.length ? 'ready_to_report' : 'active'
+    this.setQuestState(def.id, { state: nextState, stageIndex: nextIndex })
+    if (nextState === 'active') this.bindAnimalTargetIfNeeded(def, nextIndex)
   }
 
   private handleGiverInteract(
@@ -258,7 +290,10 @@ export class QuestManager {
       return {
         line: def.offerLine,
         offer: {
-          onAccept: () => this.setQuestState(def.id, { state: 'active', stageIndex: 0 }),
+          onAccept: () => {
+            this.setQuestState(def.id, { state: 'active', stageIndex: 0 })
+            this.bindAnimalTargetIfNeeded(def, 0)
+          },
           onDecline: () => this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 }),
         },
       }
@@ -314,7 +349,7 @@ export class QuestManager {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
       const stage = this.currentStage(def, s.stageIndex)
-      if (!stage || !objectiveMatchesRef(stage.objective, ref)) continue
+      if (!stage || !objectiveMatchesRef(stage.objective, ref, this.animalTargets.get(def.id))) continue
       this.advanceStage(def, s)
       return { line: stage.progressLine ?? stage.description }
     }
