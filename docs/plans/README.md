@@ -90,6 +90,12 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the 
 - **Morze (telefon)** — artefakty krawędzi, plamy; spróbować bardziej przezroczystej wody.
 - **Woda** — plan [098](./2026-08-13--098--water-unified-shader-shore-reflections.md) `done` (2026-08-13). Telefon: off odbić jako ucieczka od artefaktów krawędzi (notatka wyżej).
 
+## Audits (not implementation plans)
+
+| File | Summary | Date |
+|------|---------|------|
+| `2026-08-14--asset-audit-3d-models.md` | Możliwości GLB/GLTF (drzwi, szkielety, klipy, packi Quaternius) + rekomendacja pipeline’u | 2026-08-14 |
+
 ## Related
 
 `docs/research/README.md` · `docs/reviews/README.md` · `docs/issues/README.md`
