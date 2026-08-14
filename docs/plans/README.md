@@ -28,11 +28,9 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
 | `2026-08-14--112--chunk-streaming-hitch-optimization.md` | Rozłożenie kosztu `buildAndAttachMesh` na wiele klatek przez istniejący scheduler; cel: mniej i krótsze hitchy `chunk mesh` w benchmarku `stream` | 🔴 | M | — |
-| `2026-08-14--114--npc-critical-need-vigor-interrupt.md` | Krytyczna potrzeba / kolaps wigoru przerywa akcję NPC już w locie (`goTo`/`execute`); nowa opcja `critical` w `pickNeed()`, throttled check w `NpcAgent.update()`; zwykła zmiana godziny nadal nie przerywa (plan 060 dalej obowiązuje); techniczna weryfikacja zielona, bez testu w przeglądarce | 🟡 | S | ~~060~~ |
 | `2026-08-14--113--rendering-performance-gpu-scaling.md` | Większa skala grafiki | 🔴 | ? |  |
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
-
 
 ---
 
@@ -71,6 +69,7 @@ Completed plans **in this folder**. After the 2026-08-14 archive freeze new `don
 |------|---------|
 | `2026-08-14--109--megakit-construction-catalog.md` | Audyt 176 MegaKit GLB + `ConstructionCatalog` (review [009](../reviews/2026-08-14--009--megakit-construction-audit.md)); weryfikacja w przeglądarce [011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md); guardrails wydajnościowe dla przyszłego `HouseBuilder` (review [012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md)) |
 | `2026-08-09--049--procedural-world-landmarks.md` | Landmarki v1: monolith / stoneCircle / smallRuins / cemetery + bias terenu |
+| `2026-08-14--114--npc-critical-need-vigor-interrupt.md` | Krytyczna potrzeba / kolaps wigoru przerywa akcję NPC już w locie (`goTo`/`execute`); nowa opcja `critical` w `pickNeed()`, throttled check w `NpcAgent.update()`; zwykła zmiana godziny nadal nie przerywa (plan 060 dalej obowiązuje); techniczna weryfikacja zielona, bez formalnego testu w przeglądarce |
 
 Older completed work: [archive/README.md](./archive/README.md).
 

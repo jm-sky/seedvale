@@ -1,6 +1,6 @@
 # Plan 114: NPC — krytyczna potrzeba / kolaps wigoru przerywa akcję w locie
 
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Created:** 2026-08-14
 **Priority:** 🟡 medium
 **Effort:** `S`
@@ -100,4 +100,4 @@ npm run test
 
 Wszystkie zielone; 700/700 testów przechodzi (w tym 5 nowych przypadków `pickNeed critical mode`).
 
-Ręczna/w przeglądarce (do zrobienia osobno, nie w tej sesji): przyspieszyć czas, obserwować NPC w trakcie `goTo`/`execute`-work, którego pragnienie przekracza próg krytyczny — potwierdzić porzucenie pracy, dojście do wody, wypicie, i powrót do normalnego harmonogramu (praca, jeśli nadal trwa blok pracy, w przeciwnym razie to, co mówi harmonogram dalej). Status zmienić na `verification needed` dopiero po tym teście.
+Ręczna/w przeglądarce: nieprzeprowadzona w żadnej sesji (agent jej nie wykonuje — patrz zasada w `CLAUDE.md`). Status ustawiony na `done` na wyraźną decyzję użytkownika (2026-08-14), mimo że scenariusz opisany wyżej (przyspieszyć czas, obserwować NPC w trakcie `goTo`/`execute`-work, którego pragnienie przekracza próg krytyczny — potwierdzić porzucenie pracy, dojście do wody, wypicie, i powrót do normalnego harmonogramu) nie został formalnie zweryfikowany w przeglądarce.
