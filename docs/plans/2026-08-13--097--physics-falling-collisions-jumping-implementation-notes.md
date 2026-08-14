@@ -270,6 +270,27 @@ o generycznych counter-collision (`NPC_COLLIDER_APPROACH_BUFFER`/
   nie pomiary z geometrii GLB — do dostrojenia na podstawie manualnego
   playtestu (patrz plan, kryteria akceptacji fazy 2.2).
 
+## 4.6 Bugfix (2026-08-14): NPC uwięzieni w domach
+
+Manualny playtest po 2.2 pokazał regresję: `NpcAgent.home` = pozycja domu = środek
+jego własnego collidera (`house.position` w `createSettlement.ts`), więc każdy NPC
+spawnuje się w odległości 0 od collidera własnego domu. `isWalkable` nie miał
+wyjątku „już jestem w środku" — sprawdzał tylko odległość kandydata/`pendingAction
+.destination` od collidera, więc fazy bez `pendingAction` (`wander`, `goSleep`)
+blokowały każdy krok NPC wychodzącego z domu.
+
+**Szybka łatka** (`NpcAgent.ts:1322`, `isWalkable`): dodany wyjątek — jeśli
+aktualna pozycja NPC (`this.mesh.position`) jest już wewnątrz danego collidera,
+ten collider go nie blokuje (wolne wyjście w dowolnym kierunku, bo okrąg nie ma
+modelowanych drzwi). Blokowanie normalnie wznawia się, gdy NPC opuści promień.
+Generyczne (nie tylko domy), symetryczne z filozofią `resolvePosition` gracza
+(nigdy nie więzi, tylko blokuje wejście z zewnątrz).
+
+**Poza zakresem tej łatki (świadomie):** prawdziwe metadane drzwi/pozycji wejścia,
+kolizja domu jako coś innego niż pojedynczy okrąg, analogiczny fix dla
+`AnimalAgent.ts` (nie zgłoszony jako problem). Właściwy fix „u korzeni" — osobny
+przyszły research/plan.
+
 ---
 
 # 5. Faza 2.3 — Skok (zaimplementowane 2026-08-13)

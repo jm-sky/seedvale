@@ -1325,6 +1325,14 @@ export class NpcAgent {
     for (const collider of this.collidersNear(x, z)) {
       const dist = Math.hypot(x - collider.x, z - collider.z)
       if (dist >= collider.radius) continue
+      const distFromCurrent = Math.hypot(
+        this.mesh.position.x - collider.x,
+        this.mesh.position.z - collider.z,
+      )
+      // Already inside this collider (e.g. spawned at home, home == collider
+      // center) — let it leave instead of trapping it; blocking only applies
+      // to entering from outside.
+      if (distFromCurrent < collider.radius) continue
       const approachAllow = collider.radius + NPC_COLLIDER_APPROACH_BUFFER
       const destNearCollider =
         !!dest
