@@ -9,6 +9,7 @@ import {
   Quaternion,
   Vector3,
 } from 'three'
+import type { Collider } from '../world/collision'
 import { type ConstructionCatalog } from '../assets/constructionCatalog'
 import {
   HOUSE_MODULE_M,
@@ -39,6 +40,10 @@ export const DOOR_OPEN_ANGLE = Math.PI / 2
 export const DOOR_ANIM_SPEED = 4
 /** Uniform world scale on the assembled house — native MegaKit metres × this. */
 export const HOUSE_ASSEMBLY_SCALE = 1.1
+/** Circle radius for each 2 m wall-module collider (local metres, pre-scale). */
+export const HOUSE_WALL_COLLIDER_RADIUS = 0.95
+/** Closed door leaf — blocks the doorway opening (local metres, pre-scale). */
+export const HOUSE_DOOR_COLLIDER_RADIUS = 0.45
 
 const Y_AXIS = new Vector3(0, 1, 0)
 const _pos = new Vector3()
@@ -107,6 +112,7 @@ export type HouseAssemblyCensus = {
 }
 
 export type HouseAssembly = {
+  definition: HouseDefinition
   definitionId: string
   root: Group
   staticGroup: Group
@@ -420,6 +426,106 @@ function createDoorController(hinge: Object3D, leaf: Object3D): HouseDoor {
   }
 }
 
+function wallModuleKey(side: HouseWallSide, moduleIndex: number): string {
+  return `${side}:${moduleIndex}`
+}
+
+function doorWallKeys(def: HouseDefinition): Set<string> {
+  const keys = new Set<string>()
+  for (const opening of def.openings) {
+    if (opening.type !== 'door') continue
+    const wall = matchingWallPlacement(def, opening)
+    keys.add(wallModuleKey(wall.side, wall.moduleIndex))
+  }
+  return keys
+}
+
+/** Per-wall-module circles in the house's local frame (no doorway modules). */
+export function buildHouseWallCollidersLocal(def: HouseDefinition): Collider[] {
+  const skip = doorWallKeys(def)
+  const colliders: Collider[] = []
+  for (const wall of def.walls) {
+    if (skip.has(wallModuleKey(wall.side, wall.moduleIndex))) continue
+    const pose = addVec(
+      wall.transform?.position,
+      wallLocalTransform(def.footprint, wall.side, wall.moduleIndex),
+    )
+    colliders.push({ x: pose.x, z: pose.z, radius: HOUSE_WALL_COLLIDER_RADIUS })
+  }
+  return colliders
+}
+
+/** Doorway circles for closed leaves — one per door opening index. */
+export function buildHouseDoorCollidersLocal(
+  def: HouseDefinition,
+  closedDoors: readonly boolean[],
+): Collider[] {
+  const colliders: Collider[] = []
+  let doorIndex = 0
+  for (const opening of def.openings) {
+    if (opening.type !== 'door') continue
+    if (!closedDoors[doorIndex]) {
+      doorIndex++
+      continue
+    }
+    const wall = matchingWallPlacement(def, opening)
+    const pose = addVec(
+      wall.transform?.position,
+      wallLocalTransform(def.footprint, wall.side, wall.moduleIndex),
+    )
+    colliders.push({ x: pose.x, z: pose.z, radius: HOUSE_DOOR_COLLIDER_RADIUS })
+    doorIndex++
+  }
+  return colliders
+}
+
+export function transformHouseCollidersToWorld(
+  localColliders: readonly Collider[],
+  worldX: number,
+  worldZ: number,
+  yaw: number,
+  scale = HOUSE_ASSEMBLY_SCALE,
+): Collider[] {
+  const cos = Math.cos(yaw)
+  const sin = Math.sin(yaw)
+  return localColliders.map((collider) => {
+    const lx = collider.x * scale
+    const lz = collider.z * scale
+    return {
+      x: worldX + lx * cos - lz * sin,
+      z: worldZ + lx * sin + lz * cos,
+      radius: collider.radius * scale,
+    }
+  })
+}
+
+/** Wall segments plus optional closed-door disks in world space. */
+export function buildHouseCollidersWorld(
+  def: HouseDefinition,
+  worldX: number,
+  worldZ: number,
+  yaw: number,
+  closedDoors: readonly boolean[],
+  scale = HOUSE_ASSEMBLY_SCALE,
+): Collider[] {
+  const local = [
+    ...buildHouseWallCollidersLocal(def),
+    ...buildHouseDoorCollidersLocal(def, closedDoors),
+  ]
+  return transformHouseCollidersToWorld(local, worldX, worldZ, yaw, scale)
+}
+
+export function buildAssemblyCollidersWorld(assembly: HouseAssembly): Collider[] {
+  const root = assembly.root
+  return buildHouseCollidersWorld(
+    assembly.definition,
+    root.position.x,
+    root.position.z,
+    root.rotation.y,
+    assembly.doors.map((door) => !door.isOpen()),
+  )
+}
+
 function derivedInteractionPoints(
   def: HouseDefinition,
   authored: readonly HouseInteractionPoint[] | undefined,
@@ -533,6 +639,7 @@ export function buildHouse(def: HouseDefinition, ctx: HouseBuildContext): HouseA
   const census = censusAssembly(staticGroup, interactiveGroup)
 
   return {
+    definition: def,
     definitionId: def.id,
     root,
     staticGroup,

@@ -25,6 +25,7 @@ import {
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
 import { applyTreeStageVisual } from '../world/treeVisuals'
+import { buildAssemblyCollidersWorld, type HouseAssembly } from './houseBuilder'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
@@ -90,6 +91,27 @@ const GROUP_REACTION_RADIUS = 6
 const HOUSE_DOOR_OPEN_DISTANCE = 2.6
 const HOUSE_DOOR_CLOSE_DISTANCE = 3.4
 const _entranceWorld = new Vector3()
+
+function settlementHouseColliders(
+  houses: SettlementLandmarks['houses'],
+  houseAssemblies: readonly HouseAssembly[],
+): Collider[] {
+  const colliders: Collider[] = []
+  for (let i = 0; i < houses.length; i++) {
+    const house = houses[i]!
+    const assembly = houseAssemblies[i]
+    if (assembly) {
+      colliders.push(...buildAssemblyCollidersWorld(assembly))
+    } else {
+      colliders.push({
+        x: house.position.x,
+        z: house.position.z,
+        radius: house.footprintRadius,
+      })
+    }
+  }
+  return colliders
+}
 
 export type Settlement = {
   id: string
@@ -198,14 +220,16 @@ export async function createSettlement(
   )
   scene.add(group)
 
-  registerColliders(def.id, [
-    { x: landmarks.well.x, z: landmarks.well.z, radius: WELL_COLLISION_RADIUS },
-    ...landmarks.houses.map((house) => ({
-      x: house.position.x,
-      z: house.position.z,
-      radius: house.footprintRadius,
-    })),
-  ])
+  const registerSettlementColliders = (): void => {
+    registerColliders(def.id, [
+      { x: landmarks.well.x, z: landmarks.well.z, radius: WELL_COLLISION_RADIUS },
+      ...settlementHouseColliders(landmarks.houses, houseAssemblies),
+    ])
+  }
+  registerSettlementColliders()
+  let doorColliderSignature = houseAssemblies
+    .map((a) => a.doors.map((d) => (d.isOpen() ? '1' : '0')).join(''))
+    .join('|')
 
   if (forest) {
     const worldDays = forest.getWorldDays()
@@ -507,6 +531,13 @@ export async function createSettlement(
         }
         for (const door of assembly.doors) door.setOpen(wantOpen)
         assembly.update(dt)
+      }
+      const doorSignature = houseAssemblies
+        .map((a) => a.doors.map((d) => (d.isOpen() ? '1' : '0')).join(''))
+        .join('|')
+      if (doorSignature !== doorColliderSignature) {
+        doorColliderSignature = doorSignature
+        registerSettlementColliders()
       }
       for (const sp of signposts) {
         sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))
