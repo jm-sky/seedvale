@@ -5,7 +5,6 @@ import type { HTMLAttributes } from 'vue'
 const props = defineProps<{
   label: string
   cost?: string
-  status?: string
   class?: HTMLAttributes['class']
 }>()
 
@@ -27,9 +26,5 @@ const emit = defineEmits<{
     >
       {{ cost }}
     </div>
-    <span
-      v-if="status"
-      class="mt-1 block text-[11px] opacity-75"
-    >{{ status }}</span>
   </button>
 </template>

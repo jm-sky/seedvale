@@ -1,3 +1,4 @@
+import type { CharacterStats } from '../ui-vue/store'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type Hud = {
@@ -12,6 +13,9 @@ export type Hud = {
   setHeldTool: (label: string) => void
   /** Ratios (0-1) for the four player-needs bars (plan 106). */
   setPlayerNeeds: (needs: { stamina: number, vigor: number, hunger: number, thirst: number }) => void
+  /** Raw current/max for the Character screen (plan 105) — the HUD bars above
+   *  only need ratios, but the Character screen also shows absolute values. */
+  setCharacterStats: (stats: CharacterStats) => void
   dispose: () => void
 }
 
@@ -26,6 +30,7 @@ export function createHud(_parent: HTMLElement): Hud {
     setInventoryWeight: (current, max) => { if (!disposed) getUi()?.setHudInventoryWeight(current, max) },
     setHeldTool: (label) => { if (!disposed) getUi()?.setHudHeldTool(label) },
     setPlayerNeeds: (needs) => { if (!disposed) getUi()?.setHudPlayerNeeds(needs) },
+    setCharacterStats: (stats) => { if (!disposed) getUi()?.setCharacterStats(stats) },
     dispose: () => { disposed = true },
   }
 }

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Zap } from 'lucide-vue-next'
-import { onUnmounted, ref, type Ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import type { LightActionResult } from '../../app/userActions'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import QuickActionsButton from '../components/QuickActionsButton.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { closeQuickActions, isQuickActionsOpen, toggleQuickActions, ui } from '../store'
+import { closeQuickActions, isQuickActionsOpen, showToast, toggleQuickActions, ui } from '../store'
 
 const panel = ref<HTMLElement | null>(null)
 const touchDevice = isTouchDevice()
@@ -15,6 +15,10 @@ const touchDevice = isTouchDevice()
 useOverlayScreen('quick-actions', isQuickActionsOpen, closeQuickActions)
 useTouchScroll(panel)
 
+// Result feedback goes to the toast stack, not inline button text (review 007
+// C3) — the buttons below only render when `ui.quickActions.fireAvailability`
+// says the action's guard passes (C4), so the "missing"/"already-lit" toast
+// text mainly covers the rare race where state changed between render and click.
 const restStatusText: Record<Exclude<RestOutcome, 'ok'>, string> = {
   'too-far': 'Musisz być bliżej wioski',
   'no-blanket': 'Potrzebujesz koca',
@@ -26,45 +30,24 @@ const lightStatusText: Record<Exclude<LightActionResult, 'ok'>, string> = {
   'need-hold': 'Weź pochodnię w rękę',
 }
 
-const campfireStatus = ref('')
-const firePitStatus = ref('')
-const branchStatus = ref('')
-const torchStatus = ref('')
-const campStatus = ref('')
-const townStatus = ref('')
-let simpleFireTimeout = 0
-let firePitTimeout = 0
-let branchTimeout = 0
-let torchTimeout = 0
-let campTimeout = 0
-let townTimeout = 0
-
 function buildFirePit(): void {
   const built = ui.quickActions.onBuildFirePit?.() ?? false
-  firePitStatus.value = built ? 'Zbudowano!' : 'Brakuje surowców'
-  window.clearTimeout(firePitTimeout)
-  firePitTimeout = window.setTimeout(() => { firePitStatus.value = '' }, 1500)
+  showToast(built ? 'Zbudowano palenisko!' : 'Brakuje kamieni', built ? 'info' : 'error')
 }
 
 function buildSimpleFire(): void {
   const built = ui.quickActions.onBuildSimpleFire?.() ?? false
-  campfireStatus.value = built ? 'Zbudowano!' : 'Brakuje surowców'
-  window.clearTimeout(simpleFireTimeout)
-  simpleFireTimeout = window.setTimeout(() => { campfireStatus.value = '' }, 1500)
+  showToast(built ? 'Zbudowano ognisko!' : 'Brakuje surowców', built ? 'info' : 'error')
 }
 
 function lightBranch(): void {
   const result = ui.quickActions.onLightBranch?.() ?? 'missing'
-  branchStatus.value = result === 'ok' ? 'Zapalono!' : lightStatusText[result]
-  window.clearTimeout(branchTimeout)
-  branchTimeout = window.setTimeout(() => { branchStatus.value = '' }, 1500)
+  showToast(result === 'ok' ? 'Zapalono gałąź!' : lightStatusText[result], result === 'ok' ? 'info' : 'error')
 }
 
 function lightWoodenTorch(): void {
   const result = ui.quickActions.onLightWoodenTorch?.() ?? 'missing'
-  torchStatus.value = result === 'ok' ? 'Zapalono!' : lightStatusText[result]
-  window.clearTimeout(torchTimeout)
-  torchTimeout = window.setTimeout(() => { torchStatus.value = '' }, 1500)
+  showToast(result === 'ok' ? 'Zapalono pochodnię!' : lightStatusText[result], result === 'ok' ? 'info' : 'error')
 }
 
 function wait(hours: number): void {
@@ -75,10 +58,7 @@ function wait(hours: number): void {
 function rest(variant: RestVariant): void {
   const result = ui.quickActions.onRest?.(variant) ?? (variant === 'camp' ? 'no-blanket' : 'too-far')
   if (result !== 'ok') {
-    const status = variant === 'camp' ? campStatus : townStatus
-    status.value = restStatusText[result]
-    if (variant === 'camp') { window.clearTimeout(campTimeout); campTimeout = window.setTimeout(() => { campStatus.value = '' }, 1500) }
-    else { window.clearTimeout(townTimeout); townTimeout = window.setTimeout(() => { townStatus.value = '' }, 1500) }
+    showToast(restStatusText[result], 'error')
     return
   }
   closeQuickActions()
@@ -115,11 +95,6 @@ watch(() => ui.quickActions.open, (open) => {
 })
 onUnmounted(() => {
   window.clearTimeout(attachTimeout)
-  window.clearTimeout(simpleFireTimeout)
-  window.clearTimeout(branchTimeout)
-  window.clearTimeout(torchTimeout)
-  window.clearTimeout(campTimeout)
-  window.clearTimeout(townTimeout)
   document.removeEventListener('click', onDocumentClick)
 })
 
@@ -127,48 +102,31 @@ type Action = {
   label: string
   cost: string
   onClick: () => void
-  status: Ref<string> | null
 }
 
-const actions: Action[] = [
-  {
-    label: 'Zapal gałąź',
-    cost: '1x gałąź',
-    onClick: lightBranch,
-    status: branchStatus,
-  },
-  {
-    label: 'Zapal pochodnię',
-    cost: 'pochodnia w ręce',
-    onClick: lightWoodenTorch,
-    status: torchStatus,
-  },
-  {
-    label: 'Zbuduj palenisko',
-    cost: '3x kamień',
-    onClick: buildFirePit,
-    status: firePitStatus,
-  },
-  {
-    label: 'Zbuduj ognisko',
-    cost: '2x gałąź',
-    onClick: buildSimpleFire,
-    status: campfireStatus,
-  },
-]
+// Only actions whose resource/state guard currently passes are offered
+// (review 007 C4) — `ui.quickActions.fireAvailability` is kept live by
+// `createApp.ts`'s `syncQuickActionAvailability`.
+const actions = computed<Action[]>(() => {
+  const avail = ui.quickActions.fireAvailability
+  const list: Action[] = []
+  if (avail.lightBranch) list.push({ label: 'Zapal gałąź', cost: '1x gałąź', onClick: lightBranch })
+  if (avail.lightWoodenTorch) list.push({ label: 'Zapal pochodnię', cost: 'pochodnia w ręce', onClick: lightWoodenTorch })
+  if (avail.buildFirePit) list.push({ label: 'Zbuduj palenisko', cost: '3x kamień', onClick: buildFirePit })
+  if (avail.buildSimpleFire) list.push({ label: 'Zbuduj ognisko', cost: '2x gałąź', onClick: buildSimpleFire })
+  return list
+})
 
 const shovelActions: Action[] = [
   {
     label: 'Wykop dołek',
     cost: 'łopata',
     onClick: dig,
-    status: null,
   },
   {
     label: 'Wyrównaj',
     cost: 'łopata',
     onClick: level,
-    status: null,
   },
 ]
 
@@ -198,7 +156,6 @@ const shovelActions: Action[] = [
       <QuickActionsButton
         :label="action.label"
         :cost="action.cost"
-        :status="action.status?.value"
         @click="action.onClick"
       />
     </template>
@@ -240,13 +197,11 @@ const shovelActions: Action[] = [
     />
     <QuickActionsButton
       label="Rozbij obóz (8h)"
-      :status="campStatus"
       @click="rest('camp')"
     />
     <QuickActionsButton
       v-if="ui.quickActions.nearTown"
       label="Odpocznij w mieście (8h)"
-      :status="townStatus"
       @click="rest('town')"
     />
   </div>

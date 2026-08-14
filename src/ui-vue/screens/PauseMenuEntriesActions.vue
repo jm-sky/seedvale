@@ -1,18 +1,7 @@
 <script setup lang="ts">
-import { computed, type ComputedRef, ref } from 'vue'
+import { computed, type ComputedRef } from 'vue'
 import type { LightActionResult } from '../../app/userActions'
-import {
-  setPauseBranchStatus,
-  setPauseFirePitStatus,
-  setPauseSimpleFireStatus,
-  setPauseTorchStatus,
-  ui,
-} from '../store'
-
-const branchTimer = ref<number | null>(null)
-const torchTimer = ref<number | null>(null)
-const firePitTimer = ref<number | null>(null)
-const simpleFireTimer = ref<number | null>(null)
+import { showToast, ui } from '../store'
 
 const emit = defineEmits<{
   (e: 'close-actions'): void
@@ -26,67 +15,41 @@ const lightStatusText: Record<Exclude<LightActionResult, 'ok'>, string> = {
 
 function lightBranch(): void {
   const result = ui.pauseMenu.onLightBranch?.() ?? 'missing'
-  setPauseBranchStatus(result === 'ok' ? 'Zapalono!' : lightStatusText[result])
-  if (branchTimer.value !== null) window.clearTimeout(branchTimer.value)
-  branchTimer.value = window.setTimeout(() => setPauseBranchStatus(''), 1500)
+  showToast(result === 'ok' ? 'Zapalono gałąź!' : lightStatusText[result], result === 'ok' ? 'info' : 'error')
 }
 
 function lightWoodenTorch(): void {
   const result = ui.pauseMenu.onLightWoodenTorch?.() ?? 'missing'
-  setPauseTorchStatus(result === 'ok' ? 'Zapalono!' : lightStatusText[result])
-  if (torchTimer.value !== null) window.clearTimeout(torchTimer.value)
-  torchTimer.value = window.setTimeout(() => setPauseTorchStatus(''), 1500)
+  showToast(result === 'ok' ? 'Zapalono pochodnię!' : lightStatusText[result], result === 'ok' ? 'info' : 'error')
 }
 
 function buildFirePit(): void {
-  const built = ui.pauseMenu.onBuildFirePit?.() ?? false; setPauseFirePitStatus(built ? 'Zbudowano!' : 'Brakuje kamieni')
-  if (firePitTimer.value !== null) {
-    window.clearTimeout(firePitTimer.value)
-  }
-  firePitTimer.value = window.setTimeout(() => setPauseFirePitStatus(''), 1500)
+  const built = ui.pauseMenu.onBuildFirePit?.() ?? false
+  showToast(built ? 'Zbudowano palenisko!' : 'Brakuje kamieni', built ? 'info' : 'error')
 }
 
 function buildSimpleFire(): void {
-  const built = ui.pauseMenu.onBuildSimpleFire?.() ?? false; setPauseSimpleFireStatus(built ? 'Zapłonęło!' : 'Brakuje gałęzi/krzesiwa')
-  if (simpleFireTimer.value !== null) {
-    window.clearTimeout(simpleFireTimer.value)
-  }
-  simpleFireTimer.value = window.setTimeout(() => setPauseSimpleFireStatus(''), 1500)
+  const built = ui.pauseMenu.onBuildSimpleFire?.() ?? false
+  showToast(built ? 'Zapłonęło ognisko!' : 'Brakuje gałęzi/krzesiwa', built ? 'info' : 'error')
 }
 
 type Action = {
   label: string
   cost: string
   onClick: () => void
-  status: string | null
 }
 
-const actions: ComputedRef<readonly Action[]> = computed(() => [
-  {
-    label: 'Zapal gałąź',
-    cost: '1x gałąź',
-    onClick: lightBranch,
-    status: ui.pauseMenu.branchStatus,
-  },
-  {
-    label: 'Zapal pochodnię',
-    cost: 'pochodnia w ręce',
-    onClick: lightWoodenTorch,
-    status: ui.pauseMenu.torchStatus,
-  },
-  {
-    label: 'Zbuduj palenisko',
-    cost: '3x kamień',
-    onClick: buildFirePit,
-    status: ui.pauseMenu.firePitStatus,
-  },
-  {
-    label: 'Zbuduj ognisko',
-    cost: '2x gałąź',
-    onClick: buildSimpleFire,
-    status: ui.pauseMenu.simpleFireStatus,
-  },
-])
+// Same `ui.quickActions.fireAvailability` source Quick Actions reads (review
+// 007 C4/C8) — only currently-available fire actions are offered here too.
+const actions: ComputedRef<readonly Action[]> = computed(() => {
+  const avail = ui.quickActions.fireAvailability
+  const list: Action[] = []
+  if (avail.lightBranch) list.push({ label: 'Zapal gałąź', cost: '1x gałąź', onClick: lightBranch })
+  if (avail.lightWoodenTorch) list.push({ label: 'Zapal pochodnię', cost: 'pochodnia w ręce', onClick: lightWoodenTorch })
+  if (avail.buildFirePit) list.push({ label: 'Zbuduj palenisko', cost: '3x kamień', onClick: buildFirePit })
+  if (avail.buildSimpleFire) list.push({ label: 'Zbuduj ognisko', cost: '2x gałąź', onClick: buildSimpleFire })
+  return list
+})
 </script>
 
 <template>
@@ -112,7 +75,7 @@ const actions: ComputedRef<readonly Action[]> = computed(() => [
         class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
         @click="action.onClick"
       >
-        {{ action.label }} ({{ action.cost }})<span class="ml-2 text-xs opacity-75">{{ action.status }}</span>
+        {{ action.label }} ({{ action.cost }})
       </button>
     </template>
   </div>

@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted } from 'vue'
 import NpcDialogueMenu from './NpcDialogueMenu.vue'
 import BusyOverlay from './screens/BusyOverlay.vue'
+import CharacterScreen from './screens/CharacterScreen.vue'
 import FlavorDialog from './screens/FlavorDialog.vue'
 import HudScreen from './screens/HudScreen.vue'
 import InventoryScreen from './screens/InventoryScreen.vue'
@@ -40,6 +41,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <QuestLogScreen />
     <VillagersScreen />
     <InventoryScreen />
+    <CharacterScreen />
     <MerchantScreen />
     <QuickActionsScreen />
     <WorldConfigScreen />

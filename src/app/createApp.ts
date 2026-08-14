@@ -247,9 +247,22 @@ export async function createApp(
   const inventory = new Inventory(initialSave?.inventory)
   grantStartingLoadout(inventory)
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
-  const syncShovelQuickActions = (): void => {
+  // Renamed from `syncShovelQuickActions` — now the single post-inventory-
+  // mutation refresh for every Quick Actions / Pause→Akcje availability flag
+  // (review 007 C4), not just shovel/tent. `canBuild*`/`canLight*` come from
+  // `getUserActions()` below; safe to reference here despite the earlier
+  // declaration since this function is only ever *called* from closures that
+  // run after `createApp`'s synchronous setup (including `getUserActions`)
+  // has finished.
+  const syncQuickActionAvailability = (): void => {
     vueUi.setQuickActionsHasShovel(inventory.has('shovel', 1))
     vueUi.setQuickActionsHasTent(inventory.has('tent', 1))
+    vueUi.setQuickActionsFireAvailability({
+      buildSimpleFire: canBuildSimpleFire(),
+      buildFirePit: canBuildFirePit(),
+      lightBranch: canLightBranch(),
+      lightWoodenTorch: canLightWoodenTorch(),
+    })
   }
 
   const keyboard = createKeyboard()
@@ -341,7 +354,7 @@ export async function createApp(
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     heldTool.syncWithInventory()
     syncHeldHud()
-    syncShovelQuickActions()
+    syncQuickActionAvailability()
   }
 
   const minimap = createMinimap(container)
@@ -373,7 +386,7 @@ export async function createApp(
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         heldTool.syncWithInventory()
         syncHeldHud()
-        syncShovelQuickActions()
+        syncQuickActionAvailability()
         vueUi.refreshMerchant(inventory.toJSON())
         toast.show(`+1 ${ITEM_DEFS[kind].label}`, 'pickup')
       }
@@ -385,7 +398,7 @@ export async function createApp(
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         heldTool.syncWithInventory()
         syncHeldHud()
-        syncShovelQuickActions()
+        syncQuickActionAvailability()
         vueUi.refreshMerchant(inventory.toJSON())
         toast.show(`+1 ${ITEM_DEFS[kind].label}`, 'pickup')
       }
@@ -457,7 +470,7 @@ export async function createApp(
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         syncHeldHud()
         hud.setExp(questManager.getExp())
-        syncShovelQuickActions()
+        syncQuickActionAvailability()
       }
       // New chunkManager/ocean instances start with default (untinted) water —
       // resync immediately rather than waiting for the tick loop's throttled
@@ -684,7 +697,7 @@ export async function createApp(
     playInventoryDrop(worldAudio.playOnce)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     syncHeldHud()
-    syncShovelQuickActions()
+    syncQuickActionAvailability()
     inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
   }
 
@@ -708,7 +721,10 @@ export async function createApp(
     onConsume: (kind) => consumeItem(kind),
   })
 
-  const { buildSimpleFire, buildFirePit, lightBranch, lightWoodenTorch } = getUserActions(
+  const {
+    buildSimpleFire, buildFirePit, lightBranch, lightWoodenTorch,
+    canBuildSimpleFire, canBuildFirePit, canLightBranch, canLightWoodenTorch,
+  } = getUserActions(
     inventory,
     bundle,
     playerTorch,
@@ -731,7 +747,7 @@ export async function createApp(
   const onInventoryChanged = (): void => {
     heldTool.syncWithInventory()
     syncHeldHud()
-    syncShovelQuickActions()
+    syncQuickActionAvailability()
     syncMerchantIfOpen()
   }
 
@@ -781,7 +797,7 @@ export async function createApp(
     if (!inventory.remove('tent', 1)) return
     bundle.placedTents.place(aim.x, aim.z, aim.yaw)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    syncShovelQuickActions()
+    syncQuickActionAvailability()
     toast.show('Rozstawiono namiot.')
   }
 
@@ -812,7 +828,7 @@ export async function createApp(
     if (!packed) return
     inventory.add('tent', 1)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    syncShovelQuickActions()
+    syncQuickActionAvailability()
     toast.show('+1 Namiot', 'pickup')
   }
 
@@ -858,7 +874,7 @@ export async function createApp(
     playActionDig(worldAudio.playOnce)
     busy.start(DIG_DURATION_SEC, 'Kopanie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
-      syncShovelQuickActions()
+      syncQuickActionAvailability()
     })
   }
 
@@ -872,7 +888,7 @@ export async function createApp(
     playActionMine(worldAudio.playAt, { x, z })
     busy.start(DIG_DURATION_SEC, 'Kucie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
-      syncShovelQuickActions()
+      syncQuickActionAvailability()
     })
   }
 
@@ -1063,7 +1079,7 @@ export async function createApp(
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       heldTool.syncWithInventory()
       syncHeldHud()
-      syncShovelQuickActions()
+      syncQuickActionAvailability()
       toast.show(`+${result.yield.count} Gałąź`, 'pickup')
     })
   }
@@ -1157,7 +1173,7 @@ export async function createApp(
     },
     onPlaceTent: placeTentAtAim,
   })
-  syncShovelQuickActions()
+  syncQuickActionAvailability()
   syncNearTownQuickActions()
 
   // Close on Q inside the keydown gesture so onClose can re-request pointer
@@ -1215,7 +1231,7 @@ export async function createApp(
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,
     onNewGame: () => {
-      if (!window.confirm('Start a new game? Your saved progress will be cleared.')) return
+      if (!window.confirm('Rozpocząć nową grę? Zapisany postęp zostanie usunięty.')) return
       void clearSave()
       config.seed = randomSeed()
       void rebuildWorld(true)

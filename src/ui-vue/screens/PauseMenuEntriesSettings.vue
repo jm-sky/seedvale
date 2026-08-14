@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { closePauseMenu, isPauseMenuOpen, openNotes, openWorldConfigScreen, setPausePlayerName, ui } from '../store'
+import { closePauseMenu, isPauseMenuOpen, openNotes, openWorldConfigScreen, setPausePlayerName, toggleHudFpsVisible, ui } from '../store'
 
 const panel = ref<HTMLElement | null>(null)
 const name = ref(ui.pauseMenu.playerName)
@@ -40,12 +40,12 @@ function openNotesScreen(): void { closePauseMenu(); openNotes() }
     </button>
     <div class="mb-5 text-left">
       <h2 class="mb-2 text-xs font-semibold uppercase tracking-widest opacity-60">
-        Character
+        Postać
       </h2>
       <label
         class="mb-1 block text-xs opacity-75"
         for="seedvale-character-name"
-      >Name</label>
+      >Imię</label>
       <input
         id="seedvale-character-name"
         v-model="name"
@@ -84,7 +84,14 @@ function openNotesScreen(): void { closePauseMenu(); openNotes() }
       class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
       @click="ui.pauseMenu.onToggleGui?.()"
     >
-      Toggle debug panel
+      Panel debug
+    </button>
+    <button
+      type="button"
+      class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
+      @click="toggleHudFpsVisible"
+    >
+      FPS w HUD<span class="ml-2 text-xs opacity-75">{{ ui.hud.showFps ? 'włączone' : 'wyłączone' }}</span>
     </button>
   </div>
 </template>

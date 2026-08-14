@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { closePauseMenu, emitUiClick, isPauseMenuOpen, setPauseSaveStatus, ui } from '../store'
+import { closePauseMenu, emitUiClick, isPauseMenuOpen, openCharacterScreen, setPauseSaveStatus, ui } from '../store'
 
 const panel = ref<HTMLElement | null>(null)
 const name = ref(ui.pauseMenu.playerName)
@@ -18,9 +18,10 @@ useOverlayScreen('pause-menu', isPauseMenuOpen, closePauseMenu)
 useTouchScroll(panel)
 watch(() => ui.pauseMenu.playerName, (value) => { name.value = value })
 
-function save(): void { emitUiClick(); ui.pauseMenu.onSave?.(); setPauseSaveStatus('Saved'); if (saveTimer.value !== null) window.clearTimeout(saveTimer.value); saveTimer.value = window.setTimeout(() => setPauseSaveStatus(''), 1500) }
+function save(): void { emitUiClick(); ui.pauseMenu.onSave?.(); setPauseSaveStatus('Zapisano'); if (saveTimer.value !== null) window.clearTimeout(saveTimer.value); saveTimer.value = window.setTimeout(() => setPauseSaveStatus(''), 1500) }
 function openQuestLog(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onQuestLog?.() }
 function openInventory(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onInventory?.() }
+function openCharacter(): void { emitUiClick(); closePauseMenu(); openCharacterScreen() }
 function openMap(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onWorldMap?.() }
 function resume(): void { emitUiClick(); closePauseMenu() }
 function openActions(): void { emitUiClick(); emit('open-actions') }
@@ -41,7 +42,7 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
       class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-blue-600 px-3.5 py-2.5 text-sm text-white hover:bg-blue-500"
       @click="resume"
     >
-      Resume
+      Wznów
     </button>
     <button
       type="button"
@@ -56,6 +57,13 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
       @click="openInventory"
     >
       Ekwipunek [I]
+    </button>
+    <button
+      type="button"
+      class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
+      @click="openCharacter"
+    >
+      Postać
     </button>
     <button
       type="button"
@@ -84,7 +92,7 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
       class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
       @click="save"
     >
-      Save<span class="ml-2 text-xs opacity-75">{{ ui.pauseMenu.saveStatus }}</span>
+      Zapisz<span class="ml-2 text-xs opacity-75">{{ ui.pauseMenu.saveStatus }}</span>
     </button>
     <button
       type="button"
@@ -98,7 +106,7 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
       class="mb-2 block w-full cursor-pointer rounded-md border border-red-400/40 bg-transparent px-3.5 py-2.5 text-sm text-red-300 hover:bg-red-400/10"
       @click="emitUiClick(); ui.pauseMenu.onNewGame?.()"
     >
-      New Game
+      Nowa gra
     </button>
     <div class="mt-1 text-[11px] opacity-60">
       {{ isTouchDevice() ? 'Joystick — ruch · przeciągnij ekran — rozglądanie · dotknij poza oknem — zamknij' : 'WASD — ruch · mysz (klik) — rozglądanie · Esc — pauza' }}

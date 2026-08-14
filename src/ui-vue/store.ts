@@ -47,14 +47,24 @@ type PauseMenuState = {
   onBuildSimpleFire: (() => boolean) | null; onBuildFirePit: (() => boolean) | null
   onLightBranch: (() => LightActionResult) | null; onLightWoodenTorch: (() => LightActionResult) | null
   onNewGame: (() => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
-  saveStatus: string; simpleFireStatus: string; firePitStatus: string; torchStatus: string; branchStatus: string
+  saveStatus: string
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
 type FlavorDialogState = { open: boolean; prompt: string | null; name: string; line: string }
+/** Whether each fire action's resource/state guard currently passes (review
+ *  007 C4) — kept live by `createApp.ts`'s `syncQuickActionAvailability`, not
+ *  recomputed here (Quick Actions / Pause→Akcje are presentation only). */
+export type QuickActionsFireAvailability = {
+  buildSimpleFire: boolean
+  buildFirePit: boolean
+  lightBranch: boolean
+  lightWoodenTorch: boolean
+}
 type QuickActionsState = {
   open: boolean
   hasShovel: boolean
   nearTown: boolean
+  fireAvailability: QuickActionsFireAvailability
   onBuildSimpleFire: (() => boolean) | null
   onBuildFirePit: (() => boolean) | null
   onLightBranch: (() => LightActionResult) | null
@@ -105,10 +115,22 @@ type WorldConfigScreenState = {
 }
 type NotesState = { open: boolean }
 type WorldMapState = { open: boolean; playerX: number; playerZ: number }
+type StatBar = { current: number, max: number }
+/** Character screen (plan 105 §"Character Screen") — presentation-only
+ *  mirror of `HealthState` + `PlayerNeeds`, pushed once/frame from
+ *  `gameLoop.ts` via `Hud.setCharacterStats` (same convention as
+ *  `HudState.playerNeeds`). The screen never mutates these directly; UI is a
+ *  read-only layer over "Player state → Needs/Health → Character UI" so a
+ *  later server-authoritative move doesn't have to unwind UI-owned state. */
+export type CharacterStats = { hp: StatBar, stamina: StatBar, vigor: StatBar, hunger: StatBar, thirst: StatBar }
+type CharacterScreenState = CharacterStats & { open: boolean }
 type HudState = {
   time: string
   phase: string
   fps: string
+  /** FPS is debug chrome, not player-facing UI (review 007 C6) — hidden by
+   *  default, toggled from Ustawienia. */
+  showFps: boolean
   exp: string
   weight: string
   held: string
@@ -127,10 +149,12 @@ type TouchChromeState = {
   onInteract: (() => void) | null
 }
 
-type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'simpleFireStatus' | 'firePitStatus' | 'torchStatus' | 'branchStatus'>>
+type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus'>>
 
 const HUD_HINT_TOUCH = 'Joystick = ruch · przeciągnij = kamera · E = interakcja'
-const HUD_HINT_DESKTOP = 'WASD · klik = mysz · Esc = kursor · E = interakcja · R = alt · L = działania · I = ekwipunek · G = upuść · M = mapa'
+/** Shortened (review 007 C6) — Notatki (Ustawienia) is now canon for the full
+ *  keybinding list, so the always-visible HUD hint only needs to point there. */
+const HUD_HINT_DESKTOP = 'Esc = pauza · E = interakcja · I = ekwipunek · pełne sterowanie w Notatkach'
 const TOAST_VISIBLE_MS = 2200
 const TOAST_FADE_MS = 300
 
@@ -158,12 +182,13 @@ export const ui = reactive({
     onNameChange: null, onNameCommit: null, onSave: null, onRefresh: null,
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
     onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null,
-    saveStatus: '', simpleFireStatus: '', firePitStatus: '', torchStatus: '', branchStatus: '',
+    saveStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
   quickActions: {
     open: false, hasShovel: false, nearTown: false, hasTent: false,
+    fireAvailability: { buildSimpleFire: false, buildFirePit: false, lightBranch: false, lightWoodenTorch: false },
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null, onDig: null, onLevel: null, onOpen: null, onClose: null,
   } as QuickActionsState,
@@ -173,10 +198,19 @@ export const ui = reactive({
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
   worldMap: { open: false, playerX: 0, playerZ: 0 } as WorldMapState,
+  characterScreen: {
+    open: false,
+    hp: { current: 100, max: 100 },
+    stamina: { current: 100, max: 100 },
+    vigor: { current: 100, max: 100 },
+    hunger: { current: 100, max: 100 },
+    thirst: { current: 100, max: 100 },
+  } as CharacterScreenState,
   hud: {
     time: '--',
     phase: '',
     fps: '',
+    showFps: false,
     exp: '',
     weight: '',
     held: '',
@@ -209,10 +243,6 @@ export function configurePauseMenu(seed: number, playerName: string, handlers: P
 export function setPauseSeed(seed: number): void { ui.pauseMenu.seed = seed }
 export function setPausePlayerName(name: string): void { ui.pauseMenu.playerName = name }
 export function setPauseSaveStatus(status: string): void { ui.pauseMenu.saveStatus = status }
-export function setPauseSimpleFireStatus(status: string): void { ui.pauseMenu.simpleFireStatus = status }
-export function setPauseFirePitStatus(status: string): void { ui.pauseMenu.firePitStatus = status }
-export function setPauseTorchStatus(status: string): void { ui.pauseMenu.torchStatus = status }
-export function setPauseBranchStatus(status: string): void { ui.pauseMenu.branchStatus = status }
 
 export function openQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation; ui.questLog.open = true; emitUiOpen() }
 export function refreshQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation }
@@ -313,6 +343,7 @@ export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 
 export function setQuickActionsHasShovel(hasShovel: boolean): void { ui.quickActions.hasShovel = hasShovel }
 export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions.hasTent = hasTent }
 export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }
+export function setQuickActionsFireAvailability(availability: QuickActionsFireAvailability): void { ui.quickActions.fireAvailability = availability }
 export function openQuickActions(): void {
   if (ui.quickActions.open) return
   ui.quickActions.open = true
@@ -415,11 +446,34 @@ export function toggleWorldMap(playerX: number, playerZ: number): void {
   else openWorldMap(playerX, playerZ)
 }
 
+export function openCharacterScreen(): void { ui.characterScreen.open = true; emitUiOpen() }
+export function closeCharacterScreen(): void { ui.characterScreen.open = false }
+export function isCharacterScreenOpen(): boolean { return ui.characterScreen.open }
+/** Pushed once/frame by `gameLoop.ts` regardless of whether the screen is
+ *  open — same convention as `setHudPlayerNeeds` — with a cheap bail so an
+ *  unchanged frame doesn't touch the reactive object. */
+export function setCharacterStats(stats: CharacterStats): void {
+  const c = ui.characterScreen
+  if (
+    c.hp.current === stats.hp.current && c.hp.max === stats.hp.max &&
+    c.stamina.current === stats.stamina.current && c.stamina.max === stats.stamina.max &&
+    c.vigor.current === stats.vigor.current && c.vigor.max === stats.vigor.max &&
+    c.hunger.current === stats.hunger.current && c.hunger.max === stats.hunger.max &&
+    c.thirst.current === stats.thirst.current && c.thirst.max === stats.thirst.max
+  ) return
+  c.hp = stats.hp
+  c.stamina = stats.stamina
+  c.vigor = stats.vigor
+  c.hunger = stats.hunger
+  c.thirst = stats.thirst
+}
+
 export function setHudFps(fps: number): void {
   const text = `${Math.round(fps)} FPS`
   if (ui.hud.fps === text) return
   ui.hud.fps = text
 }
+export function toggleHudFpsVisible(): void { ui.hud.showFps = !ui.hud.showFps }
 export function setHudTime(timeOfDay: number): void {
   const time = formatClock(timeOfDay)
   if (ui.hud.time !== time) ui.hud.time = time

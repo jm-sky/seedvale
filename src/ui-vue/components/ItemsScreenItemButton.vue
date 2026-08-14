@@ -19,7 +19,7 @@ const emit = defineEmits<{
   <button
     type="button"
     :class="cn(
-      'cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-1 text-xs hover:bg-white/10',
+      'min-h-11 cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-1.5 text-xs hover:bg-white/10',
       selected && 'border-primary/50',
       disabled && 'opacity-50',
       destructive && 'hover:border-destructive/80',

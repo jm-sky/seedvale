@@ -641,6 +641,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         hunger: getHungerRatio(player.needs.hunger),
         thirst: getThirstRatio(player.needs.thirst),
       })
+      hud.setCharacterStats({
+        hp: { current: player.health.currentHp, max: player.health.maxHp },
+        stamina: { current: player.needs.stamina.current, max: player.needs.stamina.max },
+        vigor: { current: player.needs.vigor.current, max: player.needs.vigor.max },
+        hunger: { current: player.needs.hunger.current, max: player.needs.hunger.max },
+        thirst: { current: player.needs.thirst.current, max: player.needs.thirst.max },
+      })
       houseDoors.update(
         player.mesh.position.x,
         player.mesh.position.z,

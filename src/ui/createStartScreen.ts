@@ -16,8 +16,8 @@ export function createStartScreen(parent: HTMLElement, savedAt: number): StartSc
     <div class="seedvale-pause__panel">
       <h1>Seedvale</h1>
       <div class="seedvale-pause__row"><span>Zapisano</span><span>${savedLabel}</span></div>
-      <button type="button" data-continue class="seedvale-pause__button">Continue</button>
-      <button type="button" data-new-game class="seedvale-pause__button seedvale-pause__button--ghost">New Game</button>
+      <button type="button" data-continue class="seedvale-pause__button">Kontynuuj</button>
+      <button type="button" data-new-game class="seedvale-pause__button seedvale-pause__button--ghost">Nowa gra</button>
     </div>
   `
   parent.appendChild(root)

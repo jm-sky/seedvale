@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { isTouchDevice } from '../../input/isTouchDevice'
 import { ui } from '../store'
+
+const touchDevice = isTouchDevice()
 
 /** Plan 106 — colors match the existing NPC/animal label bars
  *  (`.npc-label__bar--{stamina,vigor,satiety,hydration}`, index.html) so the
@@ -23,7 +26,7 @@ const needBars = computed(() => [
     </div>
     <div class="mt-0.5 flex gap-3 text-[13px] opacity-90">
       <span v-if="ui.hud.phase">{{ ui.hud.phase }}</span>
-      <span v-if="ui.hud.fps">{{ ui.hud.fps }}</span>
+      <span v-if="ui.hud.showFps && ui.hud.fps">{{ ui.hud.fps }}</span>
       <span v-if="ui.hud.exp">{{ ui.hud.exp }}</span>
       <span v-if="ui.hud.weight">{{ ui.hud.weight }}</span>
       <span v-if="ui.hud.held">{{ ui.hud.held }}</span>
@@ -44,7 +47,10 @@ const needBars = computed(() => [
       </div>
     </div>
 
-    <div class="mt-2.5 text-xs opacity-70 max-[700px]:hidden">
+    <div
+      v-if="!touchDevice"
+      class="mt-2.5 text-xs opacity-70 max-[700px]:hidden"
+    >
       {{ ui.hud.hint }}
     </div>
   </div>

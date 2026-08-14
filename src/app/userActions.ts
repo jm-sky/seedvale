@@ -74,11 +74,30 @@ const getUserActions = (
     return 'ok'
   }
 
+  // Availability predicates (review 007 C4) — read-only mirrors of the guard
+  // clauses above, so Quick Actions / Pause→Akcje can hide an action instead
+  // of always offering it and reporting failure after the click.
+  const canBuildSimpleFire = (): boolean =>
+    inventory.has('firestarter', 1) && inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)
+  const canBuildFirePit = (): boolean => inventory.has('stone', FIRE_PIT_STONE_COST)
+  const canLightBranch = (): boolean =>
+    !playerTorch.isLit() && inventory.has('firestarter', 1) && inventory.has('branch', TORCH_BRANCH_COST)
+  const canLightWoodenTorch = (): boolean => {
+    if (playerTorch.isLit()) return false
+    if (!inventory.has('firestarter', 1)) return false
+    if (heldTool.held() === 'wooden_torch') return true
+    return heldTool.held() === null && inventory.has('wooden_torch', 1)
+  }
+
   return {
     buildSimpleFire,
     buildFirePit,
     lightBranch,
     lightWoodenTorch,
+    canBuildSimpleFire,
+    canBuildFirePit,
+    canLightBranch,
+    canLightWoodenTorch,
   }
 }
 
