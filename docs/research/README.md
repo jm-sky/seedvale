@@ -18,6 +18,6 @@ Analyses, spikes, comparisons, and notes collected before implementation decisio
 | [2026-08-11--006--medieval-model-library-complement.md](2026-08-11--006--medieval-model-library-complement.md) | Uzupełniająca paczka modeli: Quaternius Medieval Village MegaKit (CC0) | `done` |
 | [2026-08-11--007--sound-needs.md](2026-08-11--007--sound-needs.md) | Inwentarz SFX + lista braków (kroki, ogień, melee, UI…) | `done` |
 | [2026-08-13--008--real-caves-in-three-js--brief.md](2026-08-13--008--real-caves-in-three-js--brief.md) | Brief: prawdziwe jaskinie podziemne — pytania i zakres researchu (odpowiedź: [009](2026-08-13--009--underground-caves.md)) | `done` |
-| [2026-08-13--009--underground-caves.md](2026-08-13--009--underground-caves.md) | Jaskinie podziemne: osobny mesh wnętrza (technika B), tabela technik A–F, couplingi; §11 = uzupełnienie po odpowiedziach użytkownika (siatka jaskiń ~500 m, kolizje z planu 097, zwierzę + skarb w v1) | `done` |
+| [2026-08-13--009--underground-caves.md](2026-08-13--009--underground-caves.md) | Jaskinie podziemne: osobny mesh wnętrza (technika B), tabela technik A–F, couplingi; §11 = uzupełnienie po odpowiedziach; plan: [104](../plans/2026-08-14--104--underground-caves.md) | `done` |
 
 When adding a new entry: create `YYYY-MM-DD--{NNN}--slug.md` (next sequential number in research), add a row here.
