@@ -31,8 +31,9 @@ export function benchmarkScenarioFromUrl(): BenchmarkScenarioId | null {
     || id === 'forest'
     || id === 'settlement'
     || id === 'water'
-    || id === 'night'
+    ||     id === 'night'
     || id === 'stress'
+    || id === 'stream'
   ) {
     return id
   }

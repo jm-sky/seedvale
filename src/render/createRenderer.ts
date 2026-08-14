@@ -21,6 +21,11 @@ export function createRenderer(
   renderer.setSize(container.clientWidth, container.clientHeight)
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  // EffectComposer / N8AO / the water mirror each call `renderer.render()`.
+  // Default `autoReset` zeroes `info.render` at the start of every one of
+  // those, so a post-frame read only saw the last fullscreen blit (calls=1).
+  // Reset explicitly once per game frame instead (see `gameLoop.ts`).
+  renderer.info.autoReset = false
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   // Slightly under 1 — midday sky + hemi easily clip to a white dome otherwise.
   renderer.toneMappingExposure = 0.88

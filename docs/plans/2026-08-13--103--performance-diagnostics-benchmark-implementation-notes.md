@@ -16,7 +16,7 @@ Dwa `performance.now()` na klatkę (simulate / render) zostają — były już w
 
 CPU timer mierzy CPU. Cienie i post-process siedzą w jednym `postProcessing.render()` — kategorie `SHADOWS` / `POSTPROCESS` zostają puste, zamiast zgadywać GPU. Koszt GPU zgłasza się jako `RENDER`.
 
-Hitch streamingu: `recordHitch` wokół `buildAndAttachMesh` (`STREAMING`) i `buildGrassChunkMeshes` (`GRASS`). Próg 8 ms.
+Hitch streamingu: `recordHitch` wokół `buildAndAttachMesh` (`STREAMING` / `chunk mesh`), `createChunkWater`, vegetation/environment/items, unload oraz `buildGrassChunkMeshes` (`GRASS`). Próg 8 ms. 2026-08-14: `renderer.info.autoReset = false` — poprzedni odczyt po EffectComposerze pokazywał `calls = 1`. GUI i raport biorą snapshot z `endFrame`. Census sceny + isolation probes + scenariusz `stream` opisane w [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md).
 
 ## Profile jakości
 
@@ -32,13 +32,13 @@ Preset Low / Medium / High nadpisuje te gałki. Ręczna zmiana → `Custom` (`ma
 
 UI gracza: Pauza → Świat → Grafika. Benchmark: lil-gui + `?benchmark=<id>` (nie Vue).
 
-JSON ostatniego raportu: `window.__seedvalePerfLastReport`.
+JSON ostatniego raportu: `window.__seedvalePerfLastReport`. Łańcuch: `window.__seedvalePerfReports`, `window.__seedvaleRunBenchmark(id)`. `?benchmark=` / `?perf=1` pomija menu Kontynuuj.
 
 ## Scenariusze benchmarku
 
-`current` · `settlement` · `forest` · `water` · `night` · `stress`
+`current` · `settlement` · `forest` · `water` · `night` · `stress` · `stream`
 
-Po teleportcie: `waitForChunks` pierścienia load + 1 s settle (poza raportem). Domyślnie 30 s pomiaru. Stan (pose, `timeOfDay`, preset) jest przywracany.
+Po teleportcie: `waitForChunks` pierścienia load + 1 s settle (poza raportem). Domyślnie 30 s pomiaru. Stan (pose, `timeOfDay`, preset) jest przywracany. `stream` teleportuje gracza w +X z prędkością sprintu. Po 30 s (poza `stream`) krótkie isolation probes.
 
 ## Weryfikacja w przeglądarce
 

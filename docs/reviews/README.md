@@ -31,6 +31,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | MegaKit construction audit | Audyt wymiarów/modularności wszystkich 176 GLB (Node, bez przeglądarki) + `ConstructionCatalog` nad `AssetIndex` — plan [109](../plans/2026-08-14--109--megakit-construction-catalog.md) | `done` | [2026-08-14--009--megakit-construction-audit.md](./2026-08-14--009--megakit-construction-audit.md) |
 | Perf benchmark raw data | Surowe wyniki `?benchmark=*` + krótki `?perf=1` (bez wniosków / bez zmian w kodzie) | `done` | [2026-08-14--010--perf-benchmark-data.md](./2026-08-14--010--perf-benchmark-data.md) |
 | MegaKit Construction Catalog (browser) | Wizualna weryfikacja 4 założeń katalogu, których nie dało się potwierdzić z AABB — plan [109](../plans/2026-08-14--109--megakit-construction-catalog.md) | `done` | [2026-08-14--011--megakit-construction-browser-verification.md](./2026-08-14--011--megakit-construction-browser-verification.md) |
+| Perf bottleneck diagnosis v2 | Naprawa `drawCalls=1`, ponowne benchmarki, spis sceny, izolacja, streaming — follow-up do [010](./2026-08-14--010--perf-benchmark-data.md) | `done` | [2026-08-14--012--perf-bottleneck-diagnosis.md](./2026-08-14--012--perf-bottleneck-diagnosis.md) |
 
 ## After each run
 

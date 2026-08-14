@@ -1,6 +1,7 @@
 import type { SessionTotals } from './monitor'
-import type { PerfContext, PerfReportJson } from './types'
+import type { IsolationProbeRow, PerfContext, PerfReportJson } from './types'
 import { percentile } from './percentile'
+import { SCENE_BUCKETS, type SceneCensus } from './sceneCensus'
 import { PERF_CATEGORIES, PERF_CATEGORY_COUNT } from './types'
 
 const EMPTY_CONTEXT: PerfContext = {
@@ -16,6 +17,8 @@ export function buildReport(input: {
   scenario: string
   totals: SessionTotals
   context?: PerfContext
+  scene?: SceneCensus
+  isolation?: IsolationProbeRow[]
 }): PerfReportJson {
   const { totals, durationSec, scenario } = input
   const n = Math.max(1, totals.frames)
@@ -48,6 +51,16 @@ export function buildReport(input: {
   }
   spikes.sort((a, b) => b.count - a.count)
 
+  const hitches = [...(totals.hitchByLabel?.values() ?? [])]
+    .map((row) => ({
+      category: row.category,
+      label: row.label,
+      count: row.count,
+      avgMs: round1(row.sumMs / Math.max(1, row.count)),
+      maxMs: round1(row.maxMs),
+    }))
+    .sort((a, b) => b.maxMs - a.maxMs)
+
   const top = ranked[0]
   const recommendation = top
     ? `${top.name} is the primary sustained bottleneck.`
@@ -72,7 +85,13 @@ export function buildReport(input: {
       drawCallsAvg: Math.round(totals.drawCallsSum / n),
       drawCallsMax: totals.drawCallsMax,
       trianglesAvg: Math.round(totals.trianglesSum / n),
+      mirrorDrawCallsAvg: Math.round((totals.mirrorDrawCallsSum ?? 0) / n),
+      geometries: ctx.geometries ?? totals.geometriesLast,
+      textures: ctx.textures ?? totals.texturesLast,
     },
+    scene: input.scene,
+    hitches,
+    isolation: input.isolation,
     systems,
     bottlenecks,
     spikes,
@@ -87,6 +106,22 @@ export function formatReport(report: PerfReportJson): string {
     .join('\n')
   const bottlenecks = report.bottlenecks.map((b, i) => `  ${i + 1}. ${b}`).join('\n') || '  (none attributed)'
   const spikes = report.spikes.map((s) => `  ${s.category}: ${s.count}`).join('\n') || '  (none)'
+  const hitchLines = (report.hitches ?? [])
+    .map((h) => `  ${h.label.padEnd(22)} n=${h.count} avg=${h.avgMs.toFixed(1)} max=${h.maxMs.toFixed(1)}`)
+    .join('\n')
+  const sceneLines = report.scene
+    ? SCENE_BUCKETS
+      .map((bucket) => {
+        const row = report.scene![bucket]
+        if (row.drawCalls <= 0) return null
+        return `  ${bucket.padEnd(14)} draws=${row.drawCalls} tris=${formatTriangles(row.triangles)} meshes=${row.meshes} inst=${row.instances}`
+      })
+      .filter((line): line is string => line !== null)
+      .join('\n')
+    : ''
+  const isolationLines = (report.isolation ?? [])
+    .map((row) => `  ${row.id.padEnd(18)} render=${row.renderMsAvg.toFixed(1)} ms draws=${row.drawCallsAvg} tris=${formatTriangles(row.trianglesAvg)}`)
+    .join('\n')
   return [
     '[Seedvale Benchmark]',
     '',
@@ -108,6 +143,12 @@ export function formatReport(report: PerfReportJson): string {
     'Rendering:',
     `  draw calls: ${report.rendering.drawCallsAvg} avg / ${report.rendering.drawCallsMax} max`,
     `  triangles: ${formatTriangles(report.rendering.trianglesAvg)} avg`,
+    `  mirror draws: ${report.rendering.mirrorDrawCallsAvg ?? 0} avg`,
+    `  geometries: ${report.rendering.geometries ?? report.context.geometries ?? 0}`,
+    `  textures: ${report.rendering.textures ?? report.context.textures ?? 0}`,
+    '',
+    'Scene (one-pass estimate):',
+    sceneLines || '  (not sampled)',
     '',
     'Systems:',
     sysLines || '  (no per-system CPU samples)',
@@ -117,6 +158,12 @@ export function formatReport(report: PerfReportJson): string {
     '',
     'Critical spikes:',
     spikes,
+    '',
+    'Hitches (>= 8 ms):',
+    hitchLines || '  (none)',
+    '',
+    'Isolation probes:',
+    isolationLines || '  (not run)',
     '',
     'Recommendation:',
     report.recommendation,

@@ -1,3 +1,5 @@
+import type { SceneCensus } from './sceneCensus'
+
 /** Categories from plan 103 §2. CPU timers attribute work to these buckets.
  *  SHADOWS / POSTPROCESS are reserved for future GPU-pass splits — today's
  *  Three.js composer is one `RENDER` submission, so those two stay empty
@@ -63,6 +65,26 @@ export type PerfContext = {
   faunaCount: number
   pixelRatio: number
   quality: string
+  seed?: number
+  terrainResolution?: number
+  loadRadius?: number
+  geometries?: number
+  textures?: number
+}
+
+export type HitchReportRow = {
+  category: PerfCategory
+  label: string
+  count: number
+  avgMs: number
+  maxMs: number
+}
+
+export type IsolationProbeRow = {
+  id: string
+  renderMsAvg: number
+  drawCallsAvg: number
+  trianglesAvg: number
 }
 
 export type PerfLiveStats = {
@@ -79,6 +101,10 @@ export type PerfLiveStats = {
   drawCalls: number
   triangles: number
   loadedChunks: number
+  geometries: number
+  textures: number
+  mirrorDrawCalls: number
+  mirrorTriangles: number
   categoryAvgMs: Record<PerfCategory, number>
 }
 
@@ -114,7 +140,17 @@ export type PerfReportJson = {
   scenario: string
   fps: { avg: number; min: number; p1: number }
   frameTime: { avg: number; p95: number; max: number }
-  rendering: { drawCallsAvg: number; drawCallsMax: number; trianglesAvg: number }
+  rendering: {
+    drawCallsAvg: number
+    drawCallsMax: number
+    trianglesAvg: number
+    mirrorDrawCallsAvg?: number
+    geometries?: number
+    textures?: number
+  }
+  scene?: SceneCensus
+  hitches?: HitchReportRow[]
+  isolation?: IsolationProbeRow[]
   systems: Partial<Record<PerfCategory, number>>
   bottlenecks: string[]
   spikes: { category: string; count: number }[]

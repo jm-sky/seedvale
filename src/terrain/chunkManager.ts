@@ -721,6 +721,7 @@ export function createChunkManager(
         const coreHeights = extractCoreGrid(tile.heights, apronRes, config.resolution)
         const coreFloorHeights = extractCoreGrid(tile.floorHeights, apronRes, config.resolution)
         const coreBodyScale = extractCoreGrid(tile.bodyScale, apronRes, config.resolution)
+        const waterT0 = performance.now()
         rec.water = createChunkWater(
           coreHeights,
           coreFloorHeights,
@@ -733,6 +734,7 @@ export function createChunkManager(
           config.waterMirror,
         )
         if (rec.water) scene.add(rec.water.mesh)
+        getMonitor().recordHitch('WATER', performance.now() - waterT0, 'chunk water')
 
         rec.state = 'ready'
         syncGrassForRecord(rec, lastPlayerChunk)
@@ -745,15 +747,18 @@ export function createChunkManager(
           sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
 
         if (tile.vegetation.length > 0) {
+          const glbT0 = performance.now()
           const [treeTemplates, bushTemplates, cactusTemplates, reedTemplates] = await Promise.all([
             getTreeTemplates(),
             getBushTemplates(),
             getCactusTemplates(),
             getReedTemplates(),
           ])
+          getMonitor().recordHitch('STREAMING', performance.now() - glbT0, 'chunk vegetation glb')
           // Re-check after the await — chunk may have unloaded while templates loaded.
           if (!chunks.has(key)) return
 
+          const vegT0 = performance.now()
           const treeIds: string[] = []
           const treeYaw = new Map<string, number>()
           const treePlacements = tile.vegetation.filter((p) => p.kind === 'tree')
@@ -856,8 +861,10 @@ export function createChunkManager(
           }
           if (vegetationInstances.length > 0) rec.vegetationInstances = vegetationInstances
           syncInstancedLodForRecord(rec, lastPlayerChunk)
+          getMonitor().recordHitch('VEGETATION', performance.now() - vegT0, 'chunk vegetation')
         }
 
+        const itemsT0 = performance.now()
         rec.items = buildPlacementGroup('chunk-items', tile.items, (placement) => {
           if (config.collectedItemIds.has(placement.id)) return null
           const itemMesh = createItemMesh(placement.kind)
@@ -866,6 +873,7 @@ export function createChunkManager(
           placeOnGround(itemMesh, placement.x, placement.z, sampleTileHeight)
           return itemMesh
         })
+        getMonitor().recordHitch('PROPS', performance.now() - itemsT0, 'chunk items')
 
         const needsEnvGlb = tile.environment.some((p) => GLB_ENV_KINDS.has(p.kind))
         const needsCemetery = tile.environment.some((p) => p.kind === 'cemetery')
@@ -875,6 +883,7 @@ export function createChunkManager(
         let cemeteryPlot: THREE.Object3D | undefined
         let graveTemplates: THREE.Object3D[] | undefined
         if (needsEnvGlb || needsCemetery) {
+          const envGlbT0 = performance.now()
           const [rocks, clusters, logs, plots, graves] = await Promise.all([
             needsEnvGlb ? getRockTemplates() : Promise.resolve(null),
             needsEnvGlb ? getRockClusterTemplates() : Promise.resolve(null),
@@ -882,6 +891,7 @@ export function createChunkManager(
             needsCemetery ? getCemeteryTemplates() : Promise.resolve(null),
             needsCemetery ? getGraveTemplates() : Promise.resolve(null),
           ])
+          getMonitor().recordHitch('STREAMING', performance.now() - envGlbT0, 'chunk environment glb')
           if (!chunks.has(key)) return
           rockTemplates = rocks
           rockClusterTemplates = clusters
@@ -892,6 +902,7 @@ export function createChunkManager(
 
         // Procedural-only landmark kinds (§2.5 — geometry built per placement,
         // nothing to batch): unchanged individual-`Object3D` path.
+        const envT0 = performance.now()
         const proceduralEnvPlacements = tile.environment.filter((p) => !GLB_ENV_KINDS.has(p.kind))
         rec.environment = buildPlacementGroup('chunk-environment', proceduralEnvPlacements, (placement) => {
           const prop =
@@ -937,6 +948,7 @@ export function createChunkManager(
         }
         if (environmentInstances.length > 0) rec.environmentInstances = environmentInstances
         syncInstancedLodForRecord(rec, lastPlayerChunk)
+        getMonitor().recordHitch('PROPS', performance.now() - envT0, 'chunk environment')
         rebuildColliders(rec)
       })
       .catch((err: unknown) => {
@@ -984,6 +996,7 @@ export function createChunkManager(
   }
 
   function unload(record: ChunkRecord): void {
+    const unloadT0 = performance.now()
     if (record.state === 'generating') cancelChunkTile(record.key)
     colliderRegistry.clearColliders(record.key)
     if (record.treeIds) {
@@ -1021,6 +1034,7 @@ export function createChunkManager(
       record.environmentInstances = undefined
     }
     chunks.delete(record.key)
+    getMonitor().recordHitch('STREAMING', performance.now() - unloadT0, 'chunk unload')
   }
 
   function sampleTreeEnvAt(

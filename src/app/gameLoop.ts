@@ -745,9 +745,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       )
     }
     const renderStart = performance.now()
+    renderer.info.reset()
     withCategory(monitor, 'WATER', () => {
       bundle.ocean.renderMirror(renderer, scene, camera)
     })
+    const mirrorDrawCalls = renderer.info.render.calls
+    const mirrorTriangles = renderer.info.render.triangles
     postProcessing.updateGodRays(camera, sky.sunPosition, cachedSky.elev)
     withCategory(monitor, 'RENDER', () => {
       postProcessing.render()
@@ -761,6 +764,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       renderMs,
       drawCalls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
+      geometries: renderer.info.memory.geometries,
+      textures: renderer.info.memory.textures,
+      mirrorDrawCalls,
+      mirrorTriangles,
     })
     setFrameTiming(simulateMs, renderMs)
   }

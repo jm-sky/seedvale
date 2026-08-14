@@ -2,10 +2,13 @@ import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
 import type { DayNightState } from '../world/dayNight'
 import type { BenchmarkScenarioId } from './benchmarkScenarios'
+import type { IsolationHost } from './isolationProbe'
 import type { PerfMonitor } from './monitor'
 import type { PerfReportJson } from './types'
 import { worldToChunk } from '../terrain/chunkGrid'
+import { runIsolationProbes } from './isolationProbe'
 import { buildReport, formatReport } from './report'
+import { censusScene } from './sceneCensus'
 
 const SETTLE_MS = 1000
 const DEFAULT_DURATION_SEC = 30
@@ -30,6 +33,7 @@ export type BenchmarkHost = {
   player: { setPosition: (x: number, z: number) => void; mesh: { position: { x: number; z: number } } }
   monitor: PerfMonitor
   applyQualityPreset: (preset: Exclude<QualityPreset, 'Custom'>) => void
+  isolation: IsolationHost
 }
 
 function sleep(ms: number): Promise<void> {
@@ -116,16 +120,36 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
           z = found.z
         }
         if (id === 'night' || id === 'stress') timeOfDay = 0.05
-        if (id === 'stress') host.applyQualityPreset('High')
+        host.applyQualityPreset('High')
+        if (id === 'stream') {
+          x = home.x
+          z = home.z
+        }
 
         if (x !== saved.x || z !== saved.z) player.setPosition(x, z)
         dayNight.timeOfDay = timeOfDay
         await waitSettled(x, z)
 
+        let streamTimer = 0
+        if (id === 'stream') {
+          const sprintMps = 8 * 1.8
+          let streamX = x
+          streamTimer = window.setInterval(() => {
+            streamX += sprintMps * 0.1
+            player.setPosition(streamX, z)
+          }, 100)
+        }
+
         monitor.setSource('benchmark', true)
         monitor.beginSession()
         await sleep(durationSec * 1000)
         const totals = monitor.endSession()
+        if (streamTimer) window.clearInterval(streamTimer)
+
+        const scene = censusScene(host.isolation.scene)
+        const isolation = id === 'stream'
+          ? undefined
+          : await runIsolationProbes(host.isolation, monitor)
         monitor.setSource('benchmark', false)
 
         const report = buildReport({
@@ -133,11 +157,15 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
           scenario: id,
           totals,
           context: monitor.getContext(),
+          scene,
+          isolation,
         })
         console.log(formatReport(report))
         console.log(report)
         if (typeof window !== 'undefined') {
           window.__seedvalePerfLastReport = report
+          const previous = window.__seedvalePerfReports ?? []
+          window.__seedvalePerfReports = [...previous, report]
         }
         return report
       } finally {
@@ -155,5 +183,8 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
 declare global {
   interface Window {
     __seedvalePerfLastReport?: PerfReportJson
+    __seedvalePerfReports?: PerfReportJson[]
+    __seedvaleRunBenchmark?: (id: BenchmarkScenarioId, durationSec?: number) => Promise<PerfReportJson | null>
+    __seedvaleReady?: boolean
   }
 }

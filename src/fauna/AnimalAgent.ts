@@ -637,6 +637,7 @@ export class AnimalAgent {
     }
 
     this.mesh.position.set(x, 0, z)
+    this.mesh.name = 'fauna'
     this.mesh.userData.animalKind = def.kind
     this.mesh.userData.animalRole = def.role
 

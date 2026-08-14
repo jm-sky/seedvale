@@ -680,6 +680,22 @@ export async function createApp(
     player,
     monitor: perfMonitor,
     applyQualityPreset: applyNamedQualityPreset,
+    isolation: {
+      scene,
+      sun: lights.sun,
+      applyPostConfig: () => {
+        postProcessing.applyConfig(config.postProcessing)
+        bundle.ocean.setReflections(config.postProcessing.waterReflections)
+        bundle.chunkManager.setWaterReflections(config.postProcessing.waterReflections)
+      },
+      setAoEnabled: (on) => {
+        postProcessing.applyConfig({ ...config.postProcessing, aoEnabled: on })
+      },
+      setReflections: (on) => {
+        bundle.ocean.setReflections(on)
+        bundle.chunkManager.setWaterReflections(on)
+      },
+    },
   })
 
   const gui = createDebugGui(config, dayNight, renderer, {
@@ -1439,6 +1455,9 @@ export async function createApp(
   }
   tick()
   loadingScreen.hide()
+  if (typeof window !== 'undefined') {
+    window.__seedvaleReady = true
+  }
 
   perfMonitor.setContextProvider(() => ({
     loadedChunks: bundle.chunkManager.loadedChunkCount(),
@@ -1446,8 +1465,16 @@ export async function createApp(
     faunaCount: bundle.fauna.getAgents().length,
     pixelRatio: renderer.getPixelRatio(),
     quality: config.quality.preset,
+    seed: config.seed,
+    terrainResolution: config.terrain.resolution,
+    loadRadius: config.terrain.loadRadius,
+    geometries: renderer.info.memory.geometries,
+    textures: renderer.info.memory.textures,
   }))
   const autoBench = benchmarkScenarioFromUrl()
+  if (typeof window !== 'undefined') {
+    window.__seedvaleRunBenchmark = (id, durationSec) => benchmark.run(id, durationSec)
+  }
   if (autoBench) void benchmark.run(autoBench)
 
   return () => {

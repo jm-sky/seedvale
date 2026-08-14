@@ -32,6 +32,10 @@ export type FrameEndInput = {
   renderMs: number
   drawCalls: number
   triangles: number
+  geometries?: number
+  textures?: number
+  mirrorDrawCalls?: number
+  mirrorTriangles?: number
 }
 
 export type SessionTotals = {
@@ -46,6 +50,10 @@ export type SessionTotals = {
   categoryMsSum: Float64Array
   spikeCounts: Int32Array
   hitchCounts: Int32Array
+  hitchByLabel: Map<string, { category: PerfCategory; label: string; count: number; sumMs: number; maxMs: number }>
+  mirrorDrawCallsSum: number
+  geometriesLast: number
+  texturesLast: number
 }
 
 export type PerfMonitor = {
@@ -87,6 +95,10 @@ function emptySession(): SessionTotals {
     categoryMsSum: new Float64Array(PERF_CATEGORY_COUNT),
     spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
     hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
+    hitchByLabel: new Map(),
+    mirrorDrawCallsSum: 0,
+    geometriesLast: 0,
+    texturesLast: 0,
   }
 }
 
@@ -116,6 +128,10 @@ export function createPerfMonitor(budgetMs = 1000 / 60): PerfMonitor {
   let lastFrame = 0
   let lastDraw = 0
   let lastTris = 0
+  let lastGeometries = 0
+  let lastTextures = 0
+  let lastMirrorDraw = 0
+  let lastMirrorTris = 0
   let lastLoaded = 0
   let categoryAvg = emptyCategoryAvg()
   let overBudgetWindows = 0
@@ -176,7 +192,24 @@ export function createPerfMonitor(budgetMs = 1000 / 60): PerfMonitor {
         atMs: performance.now(),
         label,
       })
-      if (session) session.hitchCounts[PERF_CATEGORY_INDEX[category]]! += 1
+      if (session) {
+        session.hitchCounts[PERF_CATEGORY_INDEX[category]]! += 1
+        const key = `${category}:${label ?? category}`
+        const existing = session.hitchByLabel.get(key)
+        if (existing) {
+          existing.count += 1
+          existing.sumMs += durationMs
+          existing.maxMs = Math.max(existing.maxMs, durationMs)
+        } else {
+          session.hitchByLabel.set(key, {
+            category,
+            label: label ?? category,
+            count: 1,
+            sumMs: durationMs,
+            maxMs: durationMs,
+          })
+        }
+      }
       log.push({
         category,
         severity: durationMs > currentBudget ? 'warning' : 'info',
@@ -190,6 +223,10 @@ export function createPerfMonitor(budgetMs = 1000 / 60): PerfMonitor {
       lastFrame = input.simulateMs + input.renderMs
       lastDraw = input.drawCalls
       lastTris = input.triangles
+      lastGeometries = input.geometries ?? lastGeometries
+      lastTextures = input.textures ?? lastTextures
+      lastMirrorDraw = input.mirrorDrawCalls ?? 0
+      lastMirrorTris = input.mirrorTriangles ?? 0
       lastLoaded = contextProvider().loadedChunks
       if (!enabled()) {
         accum.fill(0)
@@ -217,6 +254,9 @@ export function createPerfMonitor(budgetMs = 1000 / 60): PerfMonitor {
         session.drawCallsSum += input.drawCalls
         session.drawCallsMax = Math.max(session.drawCallsMax, input.drawCalls)
         session.trianglesSum += input.triangles
+        session.mirrorDrawCallsSum += input.mirrorDrawCalls ?? 0
+        session.geometriesLast = input.geometries ?? session.geometriesLast
+        session.texturesLast = input.textures ?? session.texturesLast
         for (let c = 0; c < PERF_CATEGORY_COUNT; c++) {
           session.categoryMsSum[c]! += accum[c]!
         }
@@ -280,6 +320,10 @@ export function createPerfMonitor(budgetMs = 1000 / 60): PerfMonitor {
         drawCalls: lastDraw,
         triangles: lastTris,
         loadedChunks: lastLoaded,
+        geometries: lastGeometries,
+        textures: lastTextures,
+        mirrorDrawCalls: lastMirrorDraw,
+        mirrorTriangles: lastMirrorTris,
         categoryAvgMs: categoryAvg,
       }
     },

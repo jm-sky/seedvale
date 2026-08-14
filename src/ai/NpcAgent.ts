@@ -570,6 +570,7 @@ export class NpcAgent {
     // on the adult model instead (`member.scale`, rolled in `families.ts`).
     if (member.scale !== 1) wrapper.scale.setScalar(member.scale)
     this.mesh = wrapper
+    this.mesh.name = 'npc'
     this.mesh.position.copy(home.position)
     this.mesh.position.y = sampleHeight(home.position.x, home.position.z)
 

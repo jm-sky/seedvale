@@ -623,16 +623,16 @@ export function createDebugGui(
       return getMonitor().getLiveStats().loadedChunks
     },
     get drawCalls() {
-      return renderer.info.render.calls
+      return getMonitor().getLiveStats().drawCalls
     },
     get triangles() {
-      return renderer.info.render.triangles.toLocaleString()
+      return getMonitor().getLiveStats().triangles.toLocaleString()
     },
     get geometries() {
-      return renderer.info.memory.geometries
+      return getMonitor().getLiveStats().geometries || renderer.info.memory.geometries
     },
     get textures() {
-      return renderer.info.memory.textures
+      return getMonitor().getLiveStats().textures || renderer.info.memory.textures
     },
   }
   const perfFolder = gui.addFolder('Performance')

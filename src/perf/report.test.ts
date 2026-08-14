@@ -13,6 +13,21 @@ describe('createPerfMonitor', () => {
     expect(mon.getLiveStats().p95).toBe(0)
   })
 
+  it('aggregates hitch labels during a session', () => {
+    const mon = createPerfMonitor()
+    mon.setSource('gui', true)
+    mon.beginSession()
+    mon.recordHitch('STREAMING', 20, 'chunk mesh')
+    mon.recordHitch('STREAMING', 12, 'chunk mesh')
+    mon.recordHitch('GRASS', 40, 'grass generation')
+    mon.endFrame({ simulateMs: 4, renderMs: 8, drawCalls: 200, triangles: 50000 })
+    const totals = mon.endSession()
+    const mesh = totals.hitchByLabel.get('STREAMING:chunk mesh')
+    expect(mesh?.count).toBe(2)
+    expect(mesh?.maxMs).toBe(20)
+    expect(totals.hitchByLabel.get('GRASS:grass generation')?.count).toBe(1)
+  })
+
   it('aggregates frame times once enabled', () => {
     const mon = createPerfMonitor()
     mon.setSource('gui', true)
@@ -52,6 +67,10 @@ describe('buildReport', () => {
         categoryMsSum,
         spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
         hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchByLabel: new Map(),
+        mirrorDrawCallsSum: 0,
+        geometriesLast: 0,
+        texturesLast: 0,
       },
       context: {
         loadedChunks: 49,
@@ -64,6 +83,8 @@ describe('buildReport', () => {
     expect(report.fps.avg).toBeGreaterThan(50)
     expect(report.systems.RENDER).toBe(8)
     expect(report.bottlenecks[0]).toBe('RENDER')
+    expect(report.rendering.drawCallsAvg).toBe(1000)
+    expect(report.rendering.trianglesAvg).toBe(1_000_000)
     const text = formatReport(report)
     expect(text).toContain('[Seedvale Benchmark]')
     expect(text).toContain('Recommendation:')
