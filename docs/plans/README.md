@@ -2,8 +2,8 @@
 
 Implementation plans. Active work is **In progress / Planned / Todo**. New plans stay in this folder regardless of status.
 
-Status: `in progress` 🔄 · `verification needed` 🔍 · `planned` 📋 · `todo` ⬜ · `done` ✅
-Priority: 🔴 high · 🟡 medium · ⚪ low
+Status: `in progress` 🔄 · `verification needed` 🔍 · `planned` 📋 · `todo` ⬜ · `done` ✅  
+Priority: 🔴 high · 🟡 medium · ⚪ low  
 Effort: `XS` minuty · `S` ~15–30 min · `M` ~30–90 min · `L` ~1–3 h · `XL` kilka sesji
 
 **Depends on** = implementation prerequisites (plan IDs). ~~done~~ is crossed out. A plan is ready when every dependency is struck. Thematic overlap is not a dependency.
@@ -27,6 +27,7 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-14--112--chunk-streaming-hitch-optimization.md` | Rozłożenie kosztu `buildAndAttachMesh` na wiele klatek przez istniejący scheduler; cel: mniej i krótsze hitchy `chunk mesh` w benchmarku `stream` | 🔴 | M | — |
 | `2026-08-14--111--house-construction.md` | House Builder: składanie domów z MegaKit Construction Catalog, performance-aware assembly, drzwi z hinge pivotem i integracja z istniejącym settlementem | 🔴 | XL | ~~109~~ |
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
