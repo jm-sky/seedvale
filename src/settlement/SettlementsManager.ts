@@ -14,6 +14,7 @@ import { createEconomyRegistry } from '../economy'
 import { type ChunkCoord, worldToChunk } from '../terrain/chunkGrid'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSettlement, type Settlement } from './createSettlement'
+import { createHouseholdRegistry } from './household'
 import { createSignpost, placeOnGround } from './props'
 import {
   type MidpointSignpost,
@@ -164,6 +165,10 @@ export async function createSettlementsManager(
     })
   }
 
+  // Households (plan 069) live here, not per-`Settlement` — same reason as
+  // `economies`: streaming a settlement out/in must reuse the same stock.
+  const households = createHouseholdRegistry()
+
   const homeDef = defFor({ gx: 0, gz: 0 })
   if (!homeDef) {
     throw new Error('[SettlementsManager] home settlement (0,0) failed to generate')
@@ -176,6 +181,7 @@ export async function createSettlementsManager(
     seed,
     homeDef,
     economyFor(homeDef),
+    households,
     collidersNear,
     registerColliders,
     clearColliders,
@@ -284,6 +290,7 @@ export async function createSettlementsManager(
         seed,
         def,
         economyFor(def),
+        households,
         collidersNear,
         registerColliders,
         clearColliders,
@@ -389,6 +396,7 @@ export async function createSettlementsManager(
       midpoints.clear()
       entries.clear()
       economies.clear()
+      households.clear()
     },
   }
 }

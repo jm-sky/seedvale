@@ -26,6 +26,7 @@ import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
 import { applyTreeStageVisual } from '../world/treeVisuals'
 import { houseCatalogById } from './houseCatalog'
+import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
 import { type Place, workplaceFor } from './places'
@@ -113,6 +114,8 @@ export type Settlement = {
   landmarks: SettlementLandmarks
   /** Settlement-owned bulk stock / demand / development (plan 071). */
   economy: SettlementEconomy
+  /** One household per family, index-aligned with `def.families` (plan 069). */
+  households: readonly Household[]
   /** Only present for MD/LG villages, see `props.ts`'s `buildSettlementProps`. */
   fire?: VillageFire
   update: (
@@ -143,6 +146,7 @@ export async function createSettlement(
   seed: number,
   def: SettlementDef,
   economy: SettlementEconomy,
+  householdRegistry: HouseholdRegistry,
   collidersNear: ColliderSource,
   /** Registers this settlement's static colliders (well + houses) under
    *  `def.id` — plan 097 §2.2. Cleared again in `dispose()` below. */
@@ -338,14 +342,25 @@ export async function createSettlement(
     ],
   ])
 
+  // 1 family = 1 household = 1 house (plan 069 §5): every member of a family
+  // shares that family's home place and household stock. `households` stays
+  // index-aligned with `def.families` — the registry itself lives on
+  // `SettlementsManager` so stream-out/stream-in reuses the same stock.
+  const households: Household[] = def.families.map((_family, familyIndex) => {
+    const home = homePlaces[familyIndex % homePlaces.length]!
+    return householdRegistry.getOrCreate(householdIdFor(def.id, familyIndex), def.id, home.id)
+  })
+
   // 1 family = 1 house: every member of a family shares that family's home
   // place (`homePlaces[familyIndex]`), not a bare `i % homePlaces.length`
   // cycle — flattened here so the NPC-creation `Promise.all` below stays a
   // single parallel batch, same concurrency as before family grouping existed.
   const flatMembers = def.families.flatMap((family, familyIndex) => {
     const home = homePlaces[familyIndex % homePlaces.length]!
+    const household = households[familyIndex]!
     return family.members.map((member) => ({
       home,
+      household,
       member,
       // Rest of this member's own family, by name — see `NpcAgent.familyMembers`'s
       // doc comment (dialogue-facing, not a live reference to their `NpcAgent`).
@@ -356,7 +371,7 @@ export async function createSettlement(
   })
 
   const agents = await Promise.all(
-    flatMembers.map(async ({ home, member, familyMembers }, i) => {
+    flatMembers.map(async ({ home, household, member, familyMembers }, i) => {
       const workplace = workplaceFor(def.id, member.character.role, landmarks, i)
       const agent = await NpcAgent.create(
         sampleHeight,
@@ -376,6 +391,7 @@ export async function createSettlement(
         queues,
         wellQid,
         economy,
+        household,
       )
       scene.add(agent.mesh)
       return agent
@@ -432,6 +448,7 @@ export async function createSettlement(
     livestock,
     landmarks,
     economy,
+    households,
     fire,
     update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages) {
       for (let i = 0; i < agents.length; i++) {

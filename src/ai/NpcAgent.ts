@@ -3,6 +3,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
+import type { Household } from '../settlement/household'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
@@ -17,6 +18,8 @@ import {
   commitRoleWork,
   commitWoodcutterDeposit,
   type SettlementEconomy,
+  tryAdvanceDevelopment,
+  WOODCUTTING_PRODUCTION,
 } from '../economy'
 import { createHealthState, damageHealth, type HealthState } from '../shared/HealthState'
 import {
@@ -246,6 +249,39 @@ const WATER_SATISFY_AMOUNT = 0.65
 const FOOD_SATISFY_AMOUNT = 0.6
 const WOOD_SATISFY_AMOUNT = 0.55
 
+/** Household resource flow (plan 069). `WOOD_HARVEST_AMOUNT` mirrors
+ *  `WOODCUTTING_PRODUCTION`'s existing settlement yield — a chop still
+ *  produces the same amount of wood, it now lands in the chopper's own
+ *  household first (capped, overflow to the settlement) instead of going
+ *  straight to `SettlementEconomy`. `FOOD_GATHER_AMOUNT` is a new, equally
+ *  small constant — there is no real farming yield to reuse yet (071). */
+const WOOD_HARVEST_AMOUNT =
+  WOODCUTTING_PRODUCTION.outputs.find((o) => o.kind === 'wood')?.amount ?? 2
+const FOOD_GATHER_AMOUNT = 2
+
+/** Chop → deposit completion, household-aware. A household caps how much of
+ *  the harvest it keeps (see `Household.deposit`); anything over that still
+ *  reaches the settlement economy, so `tryAdvanceDevelopment` (woodshed)
+ *  keeps working the same way it did before households existed. No
+ *  household (isolated fallback) reproduces the old settlement-only path. */
+function depositWoodHarvest(household: Household | null, economy: SettlementEconomy | null): void {
+  if (household) {
+    household.deposit('wood', WOOD_HARVEST_AMOUNT, economy)
+    if (economy) tryAdvanceDevelopment(economy)
+  } else if (economy) {
+    commitWoodcutterDeposit(economy)
+  }
+}
+
+/** Garden visit gathers a small amount of food into the household (capped,
+ *  overflow to the settlement economy) before the NPC eats from it — the
+ *  personal-need equivalent of `depositWoodHarvest`. No-op without a
+ *  household (isolated fallback) — matches the pre-069 behaviour where
+ *  eating did not touch any resource pool. */
+function depositFoodHarvest(household: Household | null, economy: SettlementEconomy | null): void {
+  household?.deposit('food', FOOD_GATHER_AMOUNT, economy)
+}
+
 /** Game-time step used by `resolveTimeSkip` to replay a `timeSkip.ts`
  *  period in coarse increments instead of one big end-of-skip jump — close
  *  to the natural re-trigger cadence of the fastest-decaying need (`thirst`)
@@ -435,6 +471,8 @@ export class NpcAgent {
   private activeQueueId: string | null = null
   /** Settlement-owned bulk stock (plan 071). Null only in isolated fallbacks. */
   private readonly economy: SettlementEconomy | null
+  /** This NPC's family stock (plan 069). Null only in isolated fallbacks. */
+  private readonly household: Household | null
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
@@ -464,6 +502,7 @@ export class NpcAgent {
     queues: ReadonlyMap<string, InteractionQueue>,
     wellQueueId: string | null,
     economy: SettlementEconomy | null,
+    household: Household | null,
   ) {
     this.playAt = playAt
     this.forest = forest
@@ -471,6 +510,7 @@ export class NpcAgent {
     this.queues = queues
     this.wellQueueId = wellQueueId
     this.economy = economy
+    this.household = household
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
@@ -593,6 +633,7 @@ export class NpcAgent {
     queues: ReadonlyMap<string, InteractionQueue> = new Map(),
     wellQueueId: string | null = null,
     economy: SettlementEconomy | null = null,
+    household: Household | null = null,
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -615,6 +656,7 @@ export class NpcAgent {
         queues,
         wellQueueId,
         economy,
+        household,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -635,6 +677,7 @@ export class NpcAgent {
         queues,
         wellQueueId,
         economy,
+        household,
       )
     }
   }
@@ -656,6 +699,7 @@ export class NpcAgent {
     queues: ReadonlyMap<string, InteractionQueue>,
     wellQueueId: string | null,
     economy: SettlementEconomy | null,
+    household: Household | null,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -687,6 +731,7 @@ export class NpcAgent {
       queues,
       wellQueueId,
       economy,
+      household,
     )
   }
 
@@ -1156,8 +1201,11 @@ export class NpcAgent {
       ? Math.hypot(dest.x - this.mesh.position.x, dest.z - this.mesh.position.z).toFixed(1)
       : '-'
     const staminaPercent = Math.round(getStaminaRatio(this.stamina) * 100)
+    const householdText = this.household
+      ? ` · hh f${this.household.stock.query('food')} w${this.household.stock.query('wood')}`
+      : ''
     const text = `${this.phase} · ${this.pendingAction?.kind ?? '-'} · dist ${distText} · `
-      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})`
+      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})${householdText}`
     if (text !== this.lastDebugText) {
       this.lastDebugText = text
       this.debugEl.textContent = text
@@ -1203,8 +1251,8 @@ export class NpcAgent {
   private needPickOptions(): PickNeedOptions {
     return {
       skipWood: this.role === 'trader',
-      woodShortage: this.economy?.hasShortage('wood') ?? false,
-      foodShortage: this.economy?.hasShortage('food') ?? false,
+      woodShortage: (this.economy?.hasShortage('wood') ?? false) || (this.household?.shortage('wood') ?? 0) > 0,
+      foodShortage: (this.economy?.hasShortage('food') ?? false) || (this.household?.shortage('food') ?? 0) > 0,
     }
   }
 
@@ -1290,11 +1338,31 @@ export class NpcAgent {
       return
     }
     if (need === 'food') {
+      // Household-aware (plan 069): eat from household stock when there is
+      // any (quick, at home); otherwise walk to the garden, gather a little
+      // food into the household, and eat from that.
+      const household = this.household
+      if (household?.has('food', 1)) {
+        this.startAction({
+          kind: 'eat',
+          destination: copyVec3(this.home),
+          durationSec: 1.2 * this.waitMultiplier,
+          onComplete: () => {
+            household.stock.remove('food', 1)
+            this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+          },
+        })
+        return
+      }
       this.startAction({
         kind: 'eat',
         destination: copyVec3(this.landmarks.garden),
         durationSec: 1.4 * this.waitMultiplier,
-        onComplete: () => { this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT) },
+        onComplete: () => {
+          depositFoodHarvest(household, this.economy)
+          household?.stock.remove('food', Math.min(1, household.stock.query('food')))
+          this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+        },
       })
       return
     }
@@ -1337,7 +1405,7 @@ export class NpcAgent {
           durationSec: 0.8 * this.waitMultiplier,
           onComplete: () => {
             this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
-            if (this.economy) commitWoodcutterDeposit(this.economy)
+            depositWoodHarvest(this.household, this.economy)
           },
         },
       })
@@ -1376,6 +1444,8 @@ export class NpcAgent {
           destination: copyVec3(this.landmarks.garden),
           durationSec: 1.4 * this.waitMultiplier,
           onComplete: () => {
+            depositFoodHarvest(this.household, this.economy)
+            this.household?.stock.remove('food', Math.min(1, this.household.stock.query('food')))
             this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
             this.settledIdleActivity = 'eat'
           },

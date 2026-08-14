@@ -97,6 +97,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `WaterSource` — shared well/lake drink/fill abstraction (`src/world/WaterSource.ts`, plan 106); future river/polluted/treated sources should reuse it.
 - Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/`. NPC + fauna adapters; predator scoring in `src/fauna/predatorHumanDecision.ts`.
 - `SettlementEconomy` — settlement-owned bulk stock (`src/economy/`). Not player `Inventory`. Not in save data yet.
+- `Household` — one family's own `food`/`wood` stock (plan 069, `src/settlement/household.ts`), reusing `SettlementEconomy`'s `EconomicStock`. Sits between NPC carrying and `SettlementEconomy`; registry lives on `SettlementsManager` like `EconomyRegistry`. Not in save data yet.
 - `NpcAgent` / `AnimalAgent` — central behaviour integration points.
 - `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot.
 - `TreeLifecycle` / `harvestWorldTree*` — tree growth + multi-stage chop (`src/world/treeLifecycle.ts`, `treeHarvest.ts`).
@@ -152,7 +153,7 @@ src/ui-vue/
 
 - **World visual overhaul (024)** — plants done in part; sky/clouds and distant mountains remain.
 - **UI** — Vue Fazy 0–4 implemented, browser verification pending. Plan 105's audit (review 007) is done; H1 (all 5) and 2/3 of H2 are now implemented (see plan 105 §11 implementation notes) — H2.1 (touch layout collision, C2) and all of H3/H4 remain open. A new Character screen (HP/hunger/thirst/vigor from `PlayerNeeds`/`HealthState`, plan 105) also exists — `src/ui-vue/screens/CharacterScreen.vue`, opened via pause menu's "Postać". None of this has browser/manual verification yet. Do not assume every future UI belongs in Vue; extend the existing facade + store pattern when migrating.
-- **NPC daily routine** — Place + executable schedule + vigor are implemented. Remaining gaps are intentional: no social landmark, no household economy, ordinary schedule changes do not interrupt an action in flight. See [SETTLEMENTS.md](./SETTLEMENTS.md).
+- **NPC daily routine** — Place + executable schedule + vigor are implemented. Household resource layer (plan 069) is also implemented — see below. Remaining gaps are intentional: no social landmark, ordinary schedule changes do not interrupt an action in flight. See [SETTLEMENTS.md](./SETTLEMENTS.md).
 
 ## Verification state
 
@@ -166,7 +167,7 @@ Do not treat a passing build as proof that a visual Three.js feature is correct.
 - Social Place assignment for `sociable` schedule overlays.
 - Shared Threat context type (existing fauna perception covers current consumers).
 - LLM/AI-generated quests.
-- Inter-settlement trade, player crafting, and household (069) consumption of settlement stock.
+- Inter-settlement trade and player crafting.
 - Full combat system for the player; full NPC-vs-fauna combat wiring.
 - Cube-sphere / fully spherical world architecture.
 - Clouds and distant background mountains.

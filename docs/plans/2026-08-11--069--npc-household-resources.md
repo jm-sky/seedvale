@@ -1,6 +1,6 @@
 # Etap 1 — Gospodarstwa NPC i przepływ zasobów
 
-**Status:** `todo`
+**Status:** `verification needed` — implemented, technical checks green (`tsc`/`lint`/`build`/`test`); no browser/play verification yet.
 **Created:** 2026-08-12
 **Priority:** 🟡 medium · **Effort:** L · **Depends on:** ~~060~~, ~~071~~
 
@@ -240,3 +240,49 @@ Etap można uznać za zakończony, gdy:
 ```
 
 To stanowi fundament kolejnego etapu: **produkcji, transportu i pełnego cyklu zasobów**.
+
+---
+
+## Implementation summary (2026-08-14)
+
+**Implemented:**
+
+- `src/settlement/household.ts` — `Household` (`food`/`wood` stock, reusing
+  `EconomicStock`; `water` stays source-based per the implementation notes'
+  §9), `householdIdFor` (`${settlementId}:household:${familyIndex}`),
+  deterministic small starting stock, `minimum`/`target`/`capacity` policy
+  (1/3/5), `deposit()` that caps at capacity and routes the remainder to a
+  `SettlementEconomy` when given. `HouseholdRegistry` mirrors
+  `economy/registry.ts`'s `EconomyRegistry`.
+- `SettlementsManager` owns the registry (survives settlement stream-out/in,
+  same as `EconomyRegistry`); `createSettlement.ts` builds one household per
+  family, index-aligned with `def.families`/`homePlaces`, and passes it to
+  each member's `NpcAgent.create(...)` call.
+- `NpcAgent`: hunger now checks the NPC's own household first — eats at home
+  from household stock when available, otherwise walks to the garden,
+  deposits a small gathered amount into the household (capped, overflow to
+  the settlement economy), and eats from that. The scheduled `eat` block in
+  `beginIdle` follows the same household bookkeeping.
+- Wood: the existing chop → deposit action now deposits into the chopper's
+  own household first (capped, overflow to `SettlementEconomy`); the woodshed
+  development (`tryAdvanceDevelopment`) still runs off the settlement stock,
+  so it keeps working, just paced by household capacity. No household falls
+  back to the pre-069 direct-to-settlement path (`commitWoodcutterDeposit`).
+- `pickNeed`'s `woodShortage`/`foodShortage` bias now also considers the
+  NPC's own household shortage, not only the settlement's.
+- `?debug=1` NPC label line gains `hh f<food> w<wood>`.
+- Tests: `src/settlement/household.test.ts` (stock/policy/deposit-overflow/
+  registry-reuse — mirrors `economy/registry.test.ts`'s conventions).
+
+**Deliberately not done** (see implementation notes §33 — unchanged):
+production chains/farming, resource reservations, a physical storage
+building, trade, and `Household` persistence in `SaveData` (registry lives
+on `SettlementsManager` only, same as `EconomyRegistry` today).
+
+**Technically verified:** `npx tsc --noEmit`, `npm run lint` (touched files),
+`npm run build`, `npm run test` (590 tests incl. the new household suite) —
+all green.
+
+**Not yet browser/manual verified** — no play-session check that households
+visibly fill/drain, that a hungry NPC's home-vs-garden choice looks right, or
+that wood still reaches the woodshed threshold at a reasonable pace.
