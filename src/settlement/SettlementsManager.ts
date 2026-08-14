@@ -128,6 +128,10 @@ export async function createSettlementsManager(
   forest?: SettlementForestHooks,
   homeSize: HomeVillageSize = 'auto',
   initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
+  /** Reports any settlement's livestock deaths (any cause) by `animalId` —
+   *  forwarded into every `createSettlement` call, home and streamed-in
+   *  alike (plan 110). */
+  onAnimalDeath?: (animalId: string) => void,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -188,6 +192,7 @@ export async function createSettlementsManager(
     playAt,
     roadCtx,
     forest,
+    onAnimalDeath,
   )
 
   const entries = new Map<string, Entry>()
@@ -297,6 +302,7 @@ export async function createSettlementsManager(
         playAt,
         roadCtx,
         forest,
+        onAnimalDeath,
       ))
       .then((settlement) => {
         const cur = entries.get(def.id)

@@ -228,8 +228,12 @@ function wrapModel(model: Object3D): Group {
 function disposeAgent(agent: AnimalAgent): void {
   agent.dispose()
   agent.mesh.removeFromParent()
-  // GLB clones share GPU resources with the loader cache — only free capsules.
-  if (agent.mesh.userData.faunaCapsule) disposeObject3D(agent.mesh)
+  // `disposeObject3D` checks `sharedGpu` per mesh/material, so it already
+  // no-ops safely on anything still cache-shared with the GLB loader — this
+  // is unconditional so materials un-shared by e.g. `markDangerous()`'s
+  // `tintPropMaterials` clone (plan 110) actually get freed on despawn
+  // (matches the existing pattern in `terrain/resourceDeposits.ts`).
+  disposeObject3D(agent.mesh)
 }
 
 /**
@@ -263,6 +267,9 @@ export async function createFauna(
     modifyTerrain: (x: number, z: number, radius: number, depth: number) => boolean
     sampleMountainRidge: (x: number, z: number) => number
   },
+  /** Reports any wild-fauna death (any cause) by `animalId` — forwarded into
+   *  every `AnimalAgent` this factory spawns (plan 110). */
+  onAnimalDeath?: (animalId: string) => void,
 ): Promise<Fauna> {
   const random = createSeededRandom(seed ^ 0xfa11)
   let agents: AnimalAgent[] = []
@@ -371,6 +378,8 @@ export async function createFauna(
       animations,
       undefined,
       sampleForestFactor,
+      undefined,
+      onAnimalDeath,
     )
   }
 

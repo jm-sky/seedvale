@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   cemeteryFitsVillageFringe,
+  deriveLandmarkId,
   LANDMARK_BIAS_MAX,
   LANDMARK_BIAS_MIN,
   landmarkChanceBias,
@@ -76,5 +77,28 @@ describe('cemeteryFitsVillageFringe', () => {
   it('rejects inside the inner band and past the outer band', () => {
     expect(cemeteryFitsVillageFringe(10, 0, [village], [])).toBe(false)
     expect(cemeteryFitsVillageFringe(50, 0, [village], [])).toBe(false)
+  })
+})
+
+describe('deriveLandmarkId', () => {
+  it('is deterministic for identical (seed, chunk, kind, ordinal)', () => {
+    expect(deriveLandmarkId(123, 4, -7, 'monolith', 0)).toBe(deriveLandmarkId(123, 4, -7, 'monolith', 0))
+  })
+
+  it('differs across chunk coordinates', () => {
+    expect(deriveLandmarkId(123, 4, -7, 'monolith', 0)).not.toBe(deriveLandmarkId(123, 5, -7, 'monolith', 0))
+    expect(deriveLandmarkId(123, 4, -7, 'monolith', 0)).not.toBe(deriveLandmarkId(123, 4, -6, 'monolith', 0))
+  })
+
+  it('differs across landmark kind at the same chunk', () => {
+    expect(deriveLandmarkId(123, 4, -7, 'monolith', 0)).not.toBe(deriveLandmarkId(123, 4, -7, 'cemetery', 0))
+  })
+
+  it('differs across ordinal for the same kind/chunk (future multi-roll support)', () => {
+    expect(deriveLandmarkId(123, 4, -7, 'monolith', 0)).not.toBe(deriveLandmarkId(123, 4, -7, 'monolith', 1))
+  })
+
+  it('differs across world seed for the same chunk/kind', () => {
+    expect(deriveLandmarkId(123, 4, -7, 'monolith', 0)).not.toBe(deriveLandmarkId(456, 4, -7, 'monolith', 0))
   })
 })

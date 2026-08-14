@@ -518,3 +518,14 @@ Etap H (drzewa/kopanie/zbieractwo) potraktowano jako **częściowo zamknięty** 
 - **Generyczny event śmierci zwierzęcia** (niezależny od przyczyny) — jak w §14, nadal otwarte.
 - **`ownerHouseId` bez konsumenta** — pole istnieje i jest poprawnie wypełniane, ale żaden quest/UI jeszcze go nie czyta (np. by nazwać questa po konkretnym gospodarstwie/domu zamiast ogólnie po gatunku).
 - **Weryfikacja w przeglądarce Etap D–G** — wszystkie cztery przebiegi mają tylko zieloną weryfikację techniczną.
+
+### Addendum (2026-08-14) — domknięte przez plan 110
+
+Plan [110](./2026-08-14--110--quests-v3-closure-world-identity-and-lifecycle.md) domknął większość powyższej listy:
+
+- **Generyczny event śmierci zwierzęcia** — zrobione: `AnimalAgent.collapse()` woła wstrzyknięty `onDeath?(animalId)`, niezależnie od przyczyny śmierci (gracz melee lub predator).
+- **Etap F — landmark objectives** — częściowo: `EnvironmentPlacement.id` dodane (deterministyczne z `seed/chunk/kind/ordinal`), ale świadomie **bez** rejestru/lookupu/discovery UI — brak jeszcze konsumenta. Rejestr zostaje do zaprojektowania osobno, gdy pojawi się realny quest/system, który go potrzebuje.
+- **`ownerHouseId` bez konsumenta** — potwierdzone ponownie audytem w planie 110: nadal zero konsumentów, świadomie bez zmian.
+- **Weryfikacja w przeglądarce Etap D–G** — nadal otwarte; plan 110 dodaje kroki weryfikacji obejmujące też nowe `failed`/`invalidated`/dangerous-wolf flow, patrz jego implementation notes.
+
+Wciąż otwarte, poza zakresem planu 110: Etap H (ścinanie/kopanie jako cel questa), Faza 9 (bandyci), pełny rejestr/discovery landmarków.

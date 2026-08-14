@@ -134,6 +134,7 @@ function buildSettlementsManager(
   forest: SettlementForestHooks,
   worldContext: WorldContext,
   initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
+  onAnimalDeath?: (animalId: string) => void,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -155,6 +156,7 @@ function buildSettlementsManager(
     forest,
     config.settlements.homeSize,
     initialEconomies,
+    onAnimalDeath,
   )
 }
 
@@ -164,6 +166,7 @@ function buildFauna(
   settlement: Settlement,
   seed: number,
   coastThreshold: number,
+  onAnimalDeath?: (animalId: string) => void,
 ): Promise<Fauna> {
   const footprintRadius = villageSizeConfig(settlement.size).footprintRadius
   // Spawner ring now reaches `footprintRadius + SPAWNER_RING_OFFSET[1]` (plan
@@ -195,6 +198,7 @@ function buildFauna(
       modifyTerrain: chunkManager.modifyTerrain,
       sampleMountainRidge: chunkManager.sampleMountainRidge,
     },
+    onAnimalDeath,
   )
 }
 
@@ -246,6 +250,10 @@ export async function createWorldBundle(
   getWorldDays: () => number,
   dayNight: DayNightState,
   initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
+  /** Reports any wild-fauna or livestock death (any cause) by `animalId` —
+   *  threaded down into `buildFauna`/`buildSettlementsManager` so
+   *  `QuestManager` can observe `animal_died` generically (plan 110). */
+  onAnimalDeath?: (animalId: string) => void,
 ): Promise<WorldBundle> {
   const waterMirror = createWaterMirror({
     waterLevel: config.terrain.waterLevel,
@@ -262,8 +270,8 @@ export async function createWorldBundle(
     sampleEnv: worldContext.sampleTreeEnv,
   }
   const ocean = buildOcean(scene, config, waterMirror)
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, initialEconomies)
-  const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, initialEconomies, onAnimalDeath)
+  const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
@@ -304,6 +312,7 @@ export async function rebuildWorldBundle(
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
   dayNight: DayNightState,
+  onAnimalDeath?: (animalId: string) => void,
 ): Promise<void> {
   bundle.fauna.dispose()
   bundle.itemSpawners.dispose()
@@ -347,8 +356,8 @@ export async function rebuildWorldBundle(
     sampleEnv: worldContext.sampleTreeEnv,
   }
   bundle.ocean = buildOcean(scene, config, waterMirror)
-  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, carriedEconomies)
-  bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold)
+  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, carriedEconomies, onAnimalDeath)
+  bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)

@@ -6,6 +6,14 @@ import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 export type QuestState =
   | 'active'
   | 'complete'
+  /** The stage's bound world entity can no longer be completed (e.g. a
+   *  `find_animal` target died before being found) — terminal, no reward. */
+  | 'failed'
+  /** Set only on save/load restore when the quest's world binding can't be
+   *  trusted to still refer to the same entity (e.g. an `active` quest bound
+   *  to a wild-fauna `animalId`, which isn't stable across a reload) —
+   *  terminal, no reward. See `QuestManager`'s constructor. */
+  | 'invalidated'
   | 'not_offered'
   | 'offered'
   | 'ready_to_report'
@@ -58,7 +66,14 @@ export type QuestObjective =
    *  `QuestManager` binds it to one concrete `AnimalAgent.animalId` the
    *  moment this stage becomes active (via an injected resolver, not by
    *  importing fauna itself), so only that individual's death clears it. */
-  | { type: 'kill_target_animal', kind: AnimalKind }
+  | {
+      type: 'kill_target_animal'
+      kind: AnimalKind
+      /** When true, `QuestManager` marks the bound individual with
+       *  `AnimalAgent.markDangerous()` at bind time (plan 110) — a visible,
+       *  gameplay-distinct individual, not a separate animal type. */
+      dangerous?: boolean
+    }
   /** The wolf den's whole initial pack is dead (plan 093 Etap E) — reported
    *  by `Fauna.isWolfDenCleared()`, not per-individual like `animal_died`,
    *  since the den (not one wolf) is the world entity with identity here. */
@@ -70,7 +85,9 @@ export type QuestObjective =
    *  resolver searches settlement livestock as well as wild fauna, so
    *  `kind` alone is enough to pick the right population (sheep/chicken/etc.
    *  only ever exist as livestock; wolf/deer/etc. only ever exist as wild
-   *  fauna) — no separate "owned" objective shape needed. */
+   *  fauna) — no separate "owned" objective shape needed. If the bound
+   *  individual dies before being found, `QuestManager` transitions the
+   *  quest to `failed` instead of `ready_to_report` (plan 110). */
   | { type: 'find_animal', kind: AnimalKind }
 
 export type QuestStage = {
@@ -84,6 +101,10 @@ export type QuestStage = {
    *  world-interaction objectives. Not used for `gather_item` (cleared and
    *  reported in the same giver conversation — see `QuestManager`). */
   progressLine?: string
+  /** Reported when the stage transitions to `failed` (e.g. a `find_animal`
+   *  target dies before being found). Falls back to a generic line in
+   *  `QuestManager` when absent. */
+  failLine?: string
 }
 
 export type QuestDef = {
@@ -184,6 +205,7 @@ export const QUESTS: readonly QuestDef[] = [
         description: 'Znajdź zagubioną owcę.',
         reminderLine: 'Owca wciąż się gdzieś włóczy.',
         progressLine: 'Jest! Wróć i powiedz Annie, gdzie ją znalazłeś.',
+        failLine: 'Zbyt późno... to na pewno była ona. Przykro mi, Anno.',
       },
     ],
     reportLine: 'Uff, dzięki. Już się bałam, że coś ją spotkało.',
@@ -208,7 +230,7 @@ export const QUESTS: readonly QuestDef[] = [
       'W okolicy wioski pojawił się groźny wilk. Ludzie boją się wychodzić poza osadę — zajmiesz się nim?',
     stages: [
       {
-        objective: { type: 'kill_target_animal', kind: 'wolf' },
+        objective: { type: 'kill_target_animal', kind: 'wolf', dangerous: true },
         description: 'Znajdź i pokonaj groźnego wilka.',
         reminderLine: 'Wilk wciąż grasuje w okolicy.',
         progressLine: 'Wilk pokonany. Wróć do Anny.',

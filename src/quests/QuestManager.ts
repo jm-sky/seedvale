@@ -3,6 +3,7 @@ import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import { genderForName, NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/NpcAgent'
+import { LIVESTOCK_KINDS } from '../settlement/livestock'
 import {
   type QuestDef,
   type QuestObjective,
@@ -64,12 +65,19 @@ export type ObjectiveRef =
  *  injected — `QuestManager` never imports fauna to scan it itself. */
 export type AnimalTargetResolver = (kind: AnimalKind) => string | undefined
 
+/** Applies the "dangerous" visual/gameplay trait to one bound `animalId`
+ *  (plan 110's `AnimalAgent.markDangerous()`) — implemented by the world
+ *  layer and injected, same reasoning as `AnimalTargetResolver`. */
+export type DangerousTraitApplier = (animalId: string) => void
+
 /** Exp granted on turning in a quest. Flat for v1 — no per-quest tuning yet. */
 const QUEST_EXP_REWARD = 10
 /** Relation bump for the giver and any NPC named in a `talk_to_npc` stage. */
 const QUEST_RELATION_REWARD = 1
 /** Same headroom as NPC reaction clips (NpcAgent.ts) — a one-shot "thank you", not a focal cue. */
 const QUEST_COMPLETE_SOUND_VOLUME = 0.35
+/** Used when a failed stage has no `failLine` of its own. */
+const QUEST_FAILED_FALLBACK_LINE = 'To się już nie uda.'
 
 /** `boundAnimalId` is the specific individual this quest's `kill_target_animal`
  *  stage was bound to (if any) — an `animal_died` ref only matches that one
@@ -106,6 +114,7 @@ export class QuestManager {
   private readonly playSound: (url: string, volume?: number) => void
   private readonly grantItem: QuestItemGrant
   private readonly resolveAnimalTarget: AnimalTargetResolver
+  private readonly applyDangerousTrait: DangerousTraitApplier
   private exp = 0
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
@@ -120,18 +129,37 @@ export class QuestManager {
     initial?: QuestManagerInitial,
     grantItem: QuestItemGrant = () => {},
     resolveAnimalTarget: AnimalTargetResolver = () => undefined,
+    applyDangerousTrait: DangerousTraitApplier = () => {},
   ) {
     this.defs = defs
     this.playSound = playSound
     this.inventory = inventory
     this.grantItem = grantItem
     this.resolveAnimalTarget = resolveAnimalTarget
+    this.applyDangerousTrait = applyDangerousTrait
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
-        if (this.states.has(entry.id)) {
+        if (!this.states.has(entry.id)) continue
+        // `animalTargets` is never persisted (see its field comment), so an
+        // `active` animal-bound quest needs to either rebind or be flagged as
+        // unrecoverable on restore. Wild fauna's `animalId`/dead-alive state
+        // isn't persisted either, so a naive rebind could silently retarget a
+        // different individual — only livestock's deterministic spawn makes
+        // rebinding trustworthy (plan 110).
+        const def = this.defs.find((d) => d.id === entry.id)
+        const stage = entry.state === 'active' ? def?.stages[entry.stageIndex] : undefined
+        const objective = stage?.objective
+        if (def && (objective?.type === 'kill_target_animal' || objective?.type === 'find_animal')) {
+          if (!LIVESTOCK_KINDS.has(objective.kind)) {
+            this.states.set(entry.id, { state: 'invalidated', stageIndex: entry.stageIndex })
+            continue
+          }
           this.states.set(entry.id, { state: entry.state, stageIndex: entry.stageIndex })
+          this.bindAnimalTargetIfNeeded(def, entry.stageIndex)
+          continue
         }
+        this.states.set(entry.id, { state: entry.state, stageIndex: entry.stageIndex })
       }
       this.exp = initial.exp
       for (const [name, value] of Object.entries(initial.relations)) this.relations.set(name, value)
@@ -262,7 +290,10 @@ export class QuestManager {
     const objective = this.currentStage(def, stageIndex)?.objective
     if (objective?.type !== 'kill_target_animal' && objective?.type !== 'find_animal') return
     const animalId = this.resolveAnimalTarget(objective.kind)
-    if (animalId) this.animalTargets.set(def.id, animalId)
+    if (animalId) {
+      this.animalTargets.set(def.id, animalId)
+      if (objective.type === 'kill_target_animal' && objective.dangerous) this.applyDangerousTrait(animalId)
+    }
   }
 
   private completeQuest(def: QuestDef): string {
@@ -279,6 +310,16 @@ export class QuestManager {
     this.playQuestCompleteSound(def.giverName)
     if (def.reward) this.grantItem(def.reward.kind, def.reward.count)
     return def.reportLine
+  }
+
+  /** Terminal failure — the current stage's bound world entity can no longer
+   *  be completed (e.g. a `find_animal` target died before being found).
+   *  Mirrors `completeQuest`'s cleanup (clears any animal binding) but grants
+   *  no reward and cannot be re-entered from `failed`. */
+  private failQuest(def: QuestDef, stageIndex: number): string {
+    this.setQuestState(def.id, { state: 'failed', stageIndex })
+    this.animalTargets.delete(def.id)
+    return this.currentStage(def, stageIndex)?.failLine ?? QUEST_FAILED_FALLBACK_LINE
   }
 
   /** Advances past the current stage — to the next stage if any remain, or to
@@ -359,7 +400,15 @@ export class QuestManager {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
       const stage = this.currentStage(def, s.stageIndex)
-      if (!stage || !objectiveMatchesRef(stage.objective, ref, this.animalTargets.get(def.id))) continue
+      if (!stage) continue
+      const boundAnimalId = this.animalTargets.get(def.id)
+      // `find_animal`'s bound target dying is failure, not progress — unlike
+      // `kill_target_animal`, where the same `animal_died` ref means success
+      // (handled below via `objectiveMatchesRef`).
+      if (ref.type === 'animal_died' && stage.objective.type === 'find_animal' && boundAnimalId === ref.animalId) {
+        return { line: this.failQuest(def, s.stageIndex) }
+      }
+      if (!objectiveMatchesRef(stage.objective, ref, boundAnimalId)) continue
       this.advanceStage(def, s)
       return { line: stage.progressLine ?? stage.description }
     }

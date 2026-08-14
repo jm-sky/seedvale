@@ -155,6 +155,9 @@ export async function createSettlement(
   playAt: PlayAt = () => {},
   roadCtx?: RoadNetworkContext,
   forest?: SettlementForestHooks,
+  /** Reports any of this settlement's livestock deaths (any cause) by
+   *  `animalId` — forwarded into `spawnLivestock` (plan 110). */
+  onAnimalDeath?: (animalId: string) => void,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
@@ -234,6 +237,7 @@ export async function createSettlement(
     def.size,
     settlementSeed,
     def.id,
+    onAnimalDeath,
   )
 
   type SignpostInstance = { labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }

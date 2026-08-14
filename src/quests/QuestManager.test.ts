@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { QuestManagerInitial } from './QuestManager'
 import type { QuestDef } from './quests'
 import { Inventory } from '../items/Inventory'
 import { QuestManager } from './QuestManager'
@@ -242,5 +243,175 @@ describe('QuestManager reset', () => {
     expect(qm.getExp()).toBe(0)
     expect(qm.getRelation('Kasia')).toBe(0)
     expect(qm.getState('effects')).toBe('not_offered')
+  })
+})
+
+const sheepQuest: QuestDef = {
+  id: 'sheep',
+  giverName: 'Anna',
+  offerLine: 'offer sheep',
+  stages: [
+    {
+      objective: { type: 'find_animal', kind: 'sheep' },
+      description: 'find sheep',
+      reminderLine: 'remind',
+      failLine: 'too late',
+    },
+  ],
+  reportLine: 'report sheep',
+}
+
+describe('QuestManager failed lifecycle', () => {
+  it('transitions find_animal to failed when the bound target dies before being found', () => {
+    const qm = makeManager([sheepQuest], () => 'sheep-house0-0')
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState('sheep')).toBe('active')
+
+    // A different sheep dying does not fail the quest.
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'sheep-house1-0' })).toBeNull()
+    expect(qm.getState('sheep')).toBe('active')
+
+    const override = qm.onInteractObjective({ type: 'animal_died', animalId: 'sheep-house0-0' })
+    expect(override?.line).toBe('too late')
+    expect(qm.getState('sheep')).toBe('failed')
+  })
+
+  it('falls back to a generic line when the stage has no failLine', () => {
+    const noFailLineQuest: QuestDef = { ...sheepQuest, id: 'sheep2', stages: [{ ...sheepQuest.stages[0], failLine: undefined }] }
+    const qm = makeManager([noFailLineQuest], () => 'sheep-house0-0')
+    acceptOffer(qm, 'Anna')
+    const override = qm.onInteractObjective({ type: 'animal_died', animalId: 'sheep-house0-0' })
+    expect(override?.line).toBeTruthy()
+    expect(qm.getState('sheep2')).toBe('failed')
+  })
+
+  it('grants no reward and cannot be re-completed once failed', () => {
+    const qm = makeManager([sheepQuest], () => 'sheep-house0-0')
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'sheep-house0-0' })
+    expect(qm.getExp()).toBe(0)
+    expect(qm.getRelation('Anna')).toBe(0)
+    // Talking to the giver again must not offer a fresh instance or complete it.
+    expect(qm.onInteract('Anna')).toBeNull()
+    expect(qm.getState('sheep')).toBe('failed')
+  })
+
+  it('clears the animal binding on failure so a stale id cannot re-trigger it', () => {
+    const qm = makeManager([sheepQuest], () => 'sheep-house0-0')
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'sheep-house0-0' })
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'sheep-house0-0' })).toBeNull()
+  })
+
+  it('kill_target_animal still treats animal_died as success, not failure', () => {
+    const qm = makeManager([wolfQuest], () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
+    expect(qm.getState('wolf')).toBe('ready_to_report')
+  })
+})
+
+describe('QuestManager save/load restore of animal-bound quests', () => {
+  const wolfDef: QuestDef = {
+    id: 'wolf',
+    giverName: 'Anna',
+    offerLine: 'offer wolf',
+    stages: [
+      { objective: { type: 'kill_target_animal', kind: 'wolf' }, description: 'kill wolf', reminderLine: 'remind' },
+    ],
+    reportLine: 'report wolf',
+  }
+
+  function makeRestoredManager(
+    defs: readonly QuestDef[],
+    initial: QuestManagerInitial,
+    resolveAnimalTarget: (kind: string) => string | undefined,
+  ): QuestManager {
+    return new QuestManager(defs, undefined, new Inventory(), initial, undefined, resolveAnimalTarget)
+  }
+
+  it('rebinds an active livestock-kind quest (sheep) on restore and can still complete it', () => {
+    const initial: QuestManagerInitial = {
+      progress: [{ id: 'sheep', state: 'active', stageIndex: 0 }],
+      exp: 0,
+      relations: {},
+    }
+    const qm = makeRestoredManager([sheepQuest], initial, () => 'sheep-house0-0')
+    expect(qm.getState('sheep')).toBe('active')
+    const override = qm.onInteractObjective({ type: 'animal_found', animalId: 'sheep-house0-0' })
+    expect(override?.line).toBe('find sheep')
+    expect(qm.getState('sheep')).toBe('ready_to_report')
+  })
+
+  it('invalidates an active wild-fauna-kind quest (wolf) on restore instead of rebinding', () => {
+    const initial: QuestManagerInitial = {
+      progress: [{ id: 'wolf', state: 'active', stageIndex: 0 }],
+      exp: 0,
+      relations: {},
+    }
+    const qm = makeRestoredManager([wolfDef], initial, () => 'wolf-1')
+    expect(qm.getState('wolf')).toBe('invalidated')
+    // No fresh binding should have been made — a death report for a "resolved"
+    // id must not complete an invalidated quest.
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })).toBeNull()
+    expect(qm.getState('wolf')).toBe('invalidated')
+  })
+
+  it('leaves non-animal-bound quest states untouched on restore', () => {
+    const initial: QuestManagerInitial = {
+      progress: [{ id: 'simple', state: 'ready_to_report', stageIndex: 0 }],
+      exp: 5,
+      relations: { Anna: 2 },
+    }
+    const qm = makeRestoredManager([simpleQuest], initial, () => undefined)
+    expect(qm.getState('simple')).toBe('ready_to_report')
+    expect(qm.getExp()).toBe(5)
+    expect(qm.getRelation('Anna')).toBe(2)
+  })
+})
+
+describe('QuestManager dangerous trait binding', () => {
+  const dangerousWolfQuest: QuestDef = {
+    id: 'dangerous-wolf',
+    giverName: 'Anna',
+    offerLine: 'offer dangerous wolf',
+    stages: [
+      {
+        objective: { type: 'kill_target_animal', kind: 'wolf', dangerous: true },
+        description: 'kill dangerous wolf',
+        reminderLine: 'remind',
+      },
+    ],
+    reportLine: 'report dangerous wolf',
+  }
+
+  it('applies the dangerous trait to the bound animal on bind, not to unrelated wolves', () => {
+    const applied: string[] = []
+    const qm = new QuestManager(
+      [dangerousWolfQuest, wolfQuest],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      () => 'wolf-1',
+      (animalId) => applied.push(animalId),
+    )
+    acceptOffer(qm, 'Anna') // matches the first def with 'Anna' as giver in not_offered/offered
+    expect(applied).toEqual(['wolf-1'])
+  })
+
+  it('does not apply the trait for a plain kill_target_animal quest', () => {
+    const applied: string[] = []
+    const qm = new QuestManager(
+      [wolfQuest],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      () => 'wolf-1',
+      (animalId) => applied.push(animalId),
+    )
+    acceptOffer(qm, 'Anna')
+    expect(applied).toEqual([])
   })
 })

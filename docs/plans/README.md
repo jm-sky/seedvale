@@ -19,7 +19,7 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
 | `2026-08-14--105--ui-ux-review.md` | Audyt UI/UX ✅ ([review 007](../reviews/2026-08-14--007--ui-ux.md)); H1+H2(2/3)+ekran Character zaimplementowane, bez weryfikacji w przeglądarce (§11); H2.1/H3/H4 otwarte | 🟡 | L | ~~046~~ ~~005~~ ~~023~~ |
-| `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059); Etap A–G (relation levels, availability, effects, `animalId`, questy "groźny wilk" + "wilcza jama" + "zagubiona owca" + "drewno na naprawę" end-to-end, lekki `wolfDen` na bazie `PreySpawner`, livestock `ownerHouseId`) zaimplementowane i przetestowane, bez weryfikacji w przeglądarce; Etap F (landmark objectives) zablokowane — brak `landmarkId`/rejestru w `chunkEnvironment.ts`, wymaga osobnej warstwy identity, nie tylko pola na queście; bandyci otwarte | 🔴 | XL | ~~015~~ ~~018~~ |
+| `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059); Etap A–G (relation levels, availability, effects, `animalId`, questy "groźny wilk" + "wilcza jama" + "zagubiona owca" + "drewno na naprawę" end-to-end, lekki `wolfDen` na bazie `PreySpawner`, livestock `ownerHouseId`) zaimplementowane i przetestowane; lifecycle/identity gaps (event śmierci, `failed`/`invalidated`, dangerous wolf, `landmarkId`) domknięte przez plan 110; bez weryfikacji w przeglądarce; Etap H (drzewa/kopanie) i bandyci otwarte | 🔴 | XL | ~~015~~ ~~018~~ |
 
 ---
 
@@ -52,6 +52,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 | `2026-08-13--103--performance-diagnostics-benchmark.md` | Diagnostyka wydajności, benchmarki, profile jakości (etapy 1–4; Adaptive = później) | 🔴 | XL | — |
 | `2026-08-14--106--player-needs-food-and-cooking.md` | Głód/pragnienie/stamina/vigor gracza + jedzenie/woda/gotowanie — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🔴 | L | — |
 | `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🟡 | L | ~~060~~ ~~071~~ |
+| `2026-08-14--110--quests-v3-closure-world-identity-and-lifecycle.md` | Domknięcie planu 093: lifecycle `failed`/`invalidated`, generyczny sygnał śmierci zwierzęcia (predator kills), trait "groźny wilk", failure "zagubionej owcy", stabilne `landmarkId` (tylko pole, bez rejestru), rebind/invalidate animal target po save/load — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🔴 | L | ~~093~~ |
 
 Historical playtest queue (files in archive): [below](#playtest-queue-archived-batch).
 

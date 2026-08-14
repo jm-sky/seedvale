@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
+import { tintPropMaterials } from '../settlement/props'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
 import {
@@ -40,6 +41,12 @@ const CONTACT_RANGE = 0.8
 const ATTACK_COOLDOWN = 0.6
 /** Seconds a corpse stays in the scene (frozen pose) before it's disposed. */
 const CORPSE_LINGER_SECONDS = 60
+/** "Groźny wilk" (plan 110) — `markDangerous()` tuning. A visible, tougher
+ *  individual, not a separate animal type or model. */
+const DANGEROUS_HP_MULTIPLIER = 2
+const DANGEROUS_DAMAGE_MULTIPLIER = 2
+const DANGEROUS_SCALE_FACTOR = 1.25
+const DANGEROUS_TINT_HEX = 0x1a0f0f
 /** Busy-channel duration for shovel-burying a corpse. */
 export const BURY_DURATION_SEC = 1.5
 /** Prey wander speed at night vs. day (half speed — cautious/less active). */
@@ -491,6 +498,12 @@ export class AnimalAgent {
    *  `homePlaceId`) — set only for livestock (`settlement/livestock.ts`);
    *  `undefined` for wild fauna, which has no owner (plan 093 Etap G). */
   readonly ownerHouseId?: string
+  /** Reports this animal's death, once, regardless of cause (player melee or
+   *  predator kill) — called from `collapse()`. Lets `QuestManager` observe
+   *  `animal_died` generically without `AnimalAgent` importing quests
+   *  (plan 110); injected the same way as `ownerHouseId`'s callers thread
+   *  cross-cutting concerns in from the spawn site. */
+  private readonly onDeath?: (animalId: string) => void
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
   private readonly collidersNear: ColliderSource
@@ -573,6 +586,10 @@ export class AnimalAgent {
    *  106) — independent of `foodConsumed` (predator eating and player
    *  harvesting are different consumers), guards against harvesting twice. */
   private meatHarvested = false
+  /** Set once by `markDangerous()` — a visibly/gameplay-distinct individual
+   *  bound to a `kill_target_animal { dangerous: true }` quest stage
+   *  (plan 110), not a separate animal type. */
+  private dangerous = false
 
   constructor(
     def: AnimalDef,
@@ -587,10 +604,12 @@ export class AnimalAgent {
     wanderRadius: readonly [number, number] = DEFAULT_WANDER_RADIUS,
     sampleForestFactor?: (x: number, z: number) => number,
     ownerHouseId?: string,
+    onDeath?: (animalId: string) => void,
   ) {
     this.def = def
     this.animalId = animalId
     this.ownerHouseId = ownerHouseId
+    this.onDeath = onDeath
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
@@ -702,6 +721,22 @@ export class AnimalAgent {
     return this.health.dead
   }
 
+  /** Marks this individual as "the" dangerous target of a `kill_target_animal
+   *  { dangerous: true }` quest (plan 110) — bumps HP/outgoing damage, scales
+   *  the mesh up, tints its material (GLB-sourced meshes only — the capsule
+   *  fallback already carries `def.color`), and relabels it so the player can
+   *  recognize the specific individual. Idempotent; applied once at bind time
+   *  by `QuestManager`'s injected `applyDangerousTrait`, not at spawn. */
+  markDangerous(): void {
+    if (this.dangerous) return
+    this.dangerous = true
+    this.health.maxHp *= DANGEROUS_HP_MULTIPLIER
+    this.health.currentHp = this.health.maxHp
+    this.mesh.scale.multiplyScalar(DANGEROUS_SCALE_FACTOR)
+    if (!this.isCapsule) tintPropMaterials(this.mesh, DANGEROUS_TINT_HEX)
+    this.labelNameEl.textContent = `Groźny ${ANIMAL_LABELS[this.def.kind]}`
+  }
+
   /** Toggles the gaze-highlight glow on this animal's label. Idempotent — no
    *  redundant DOM writes if the state doesn't actually change. */
   setHighlighted(active: boolean): void {
@@ -747,6 +782,7 @@ export class AnimalAgent {
   /** Tip the corpse onto its side (relative to its facing direction) instead
    *  of leaving it frozen standing up. */
   private collapse(): void {
+    this.onDeath?.(this.animalId)
     this.mixer?.stopAllAction()
     const side = Math.random() < 0.5 ? 1 : -1
     this.mesh.rotation.z = side * (Math.PI / 2)
@@ -972,7 +1008,7 @@ export class AnimalAgent {
     if (isExhausted(this.life.stamina)) return
     this.attackCooldown = ATTACK_COOLDOWN
     drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
-    onHumanHit(damageVsHuman(this.def.kind))
+    onHumanHit(damageVsHuman(this.def.kind) * (this.dangerous ? DANGEROUS_DAMAGE_MULTIPLIER : 1))
   }
 
   /**

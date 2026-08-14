@@ -33,6 +33,13 @@ export type EnvironmentPlacement = {
    *  `createStoneCircle`/`createSmallRuins`/`createCemetery`
    *  in `settlement/props.ts`. */
   variant: number
+  /** Stable identity, present only for the four proper "landmark" kinds
+   *  (`monolith`/`stoneCircle`/`smallRuins`/`cemetery`) — purely derived from
+   *  `(seed, chunk, kind, ordinal)`, so it regenerates identically on every
+   *  chunk reload without needing save-game persistence (plan 110). Absent
+   *  for the purely decorative kinds (rock/log/campfire), which have no
+   *  identity need. See `deriveLandmarkId`. */
+  id?: string
 }
 
 const ROCK_CANDIDATES_PER_CHUNK = 4
@@ -160,6 +167,17 @@ function hashChunk(cx: number, cz: number, salt: number): number {
   let h = (cx * 668265263 + cz * 374761393 + salt * 2654435761) | 0
   h = (h ^ (h >>> 13)) * 1274126177
   return (h ^ (h >>> 16)) >>> 0
+}
+
+/** Stable id for one of the four proper landmark kinds — pure function of
+ *  `(seed, chunk, kind, ordinal)`, so identical world seed + chunk coords
+ *  regenerate the exact same id (plan 110). `ordinal` distinguishes multiple
+ *  rolls of the same `kind` in one chunk; today each kind rolls at most once
+ *  per chunk (see the single-roll blocks below), so callers always pass `0` —
+ *  kept as a parameter so a future multi-roll change doesn't silently
+ *  collide ids. */
+export function deriveLandmarkId(seed: number, cx: number, cz: number, kind: EnvironmentKind, ordinal: number): string {
+  return `${kind}:${cx}:${cz}:${ordinal}:${(seed >>> 0).toString(36)}`
 }
 
 function nearTree(vegetation: readonly VegetationPlacement[], x: number, z: number, radius: number): boolean {
@@ -316,6 +334,7 @@ export function computeChunkEnvironment(
         scale: 0.85 + monolithRandom() * 0.5,
         rotationY: monolithRandom() * Math.PI * 2,
         variant: monolithRandom(),
+        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'monolith', 0),
       })
     }
   }
@@ -340,6 +359,7 @@ export function computeChunkEnvironment(
         scale: 0.9 + stoneCircleRandom() * 0.4,
         rotationY: stoneCircleRandom() * Math.PI * 2,
         variant: stoneCircleRandom(),
+        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'stoneCircle', 0),
       })
     }
   }
@@ -364,6 +384,7 @@ export function computeChunkEnvironment(
         scale: 0.85 + ruinsRandom() * 0.4,
         rotationY: ruinsRandom() * Math.PI * 2,
         variant: ruinsRandom(),
+        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'smallRuins', 0),
       })
     }
   }
@@ -388,6 +409,7 @@ export function computeChunkEnvironment(
         scale: 0.9 + cemeteryRandom() * 0.3,
         rotationY: cemeteryRandom() * Math.PI * 2,
         variant: cemeteryRandom(),
+        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'cemetery', 0),
       })
     }
   }

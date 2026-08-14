@@ -211,6 +211,13 @@ export async function createApp(
   sky.applySun(lights.sun)
 
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
+  // `questManager` doesn't exist yet at this point (fauna/settlements build
+  // before it does), so `onAnimalDeath` can't close over it directly —
+  // mirrors the existing `bundle`-not-destructured indirection just below:
+  // a mutable binding assigned once, read through a stable closure that
+  // survives `rebuildWorldBundle()` (plan 110).
+  let onAnimalDeathTarget: ((animalId: string) => void) | null = null
+  const onAnimalDeath = (animalId: string): void => { onAnimalDeathTarget?.(animalId) }
   const bundle = await createWorldBundle(
     scene,
     config,
@@ -223,6 +230,7 @@ export async function createApp(
     getWorldDays,
     dayNight,
     initialSave?.settlementEconomies,
+    onAnimalDeath,
   )
 
   // Indirection (not a direct destructure) so this keeps sampling whichever
@@ -393,7 +401,17 @@ export async function createApp(
       }
       return undefined
     },
+    // Wolves are wild-fauna-only (see the resolver above), so no need to also
+    // scan settlement livestock here (plan 110's `grozny-wilk` trait).
+    (animalId) => {
+      bundle.fauna.getAgents().find((a) => a.animalId === animalId)?.markDangerous()
+    },
   )
+  // Now that `questManager` exists, the closure passed into `createWorldBundle`
+  // above can actually reach it — see that call site's comment.
+  onAnimalDeathTarget = (animalId) => {
+    questManager.onInteractObjective({ type: 'animal_died', animalId })
+  }
   hud.setExp(questManager.getExp())
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
 
@@ -477,6 +495,7 @@ export async function createApp(
         treeLifecycle,
         getWorldDays,
         dayNight,
+        onAnimalDeath,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
 

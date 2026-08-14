@@ -7,7 +7,7 @@ import {
   loadGltfAsset,
   prepareProp,
 } from '../assets/loadGltf'
-import { ANIMAL_DEFS, AnimalAgent } from '../fauna/AnimalAgent'
+import { ANIMAL_DEFS, AnimalAgent, type AnimalKind } from '../fauna/AnimalAgent'
 import {
   createChickenModel,
   createCowModel,
@@ -29,6 +29,11 @@ export const LIVESTOCK_URLS: Record<LivestockKind, string> = {
   sheep: '/models/fauna/sheep.glb',
   chicken: '/models/fauna/chicken.glb',
 }
+
+/** Single source of truth for "is this kind's `animalId` trustworthy after a
+ *  reload" — livestock respawns deterministically per settlement/house seed,
+ *  wild fauna does not (plan 110, `QuestManager`'s restore loop). */
+export const LIVESTOCK_KINDS: ReadonlySet<AnimalKind> = new Set(Object.keys(LIVESTOCK_URLS) as AnimalKind[])
 
 const MODEL_BUILDERS: Record<LivestockKind, () => THREE.Object3D> = {
   horse: createHorseModel,
@@ -179,6 +184,9 @@ export async function spawnLivestock(
   size: VillageSize,
   settlementSeed: number,
   settlementId: string,
+  /** Reports any livestock death (any cause) by `animalId` — forwarded into
+   *  every `AnimalAgent` this factory spawns (plan 110). */
+  onAnimalDeath?: (animalId: string) => void,
 ): Promise<AnimalAgent[]> {
   await ensureLivestockTemplates()
   const agents: AnimalAgent[] = []
@@ -206,6 +214,7 @@ export async function spawnLivestock(
         LIVESTOCK_WANDER_RADIUS,
         undefined,
         ownerHouseId,
+        onAnimalDeath,
       )
       scene.add(agent.mesh)
       agents.push(agent)
