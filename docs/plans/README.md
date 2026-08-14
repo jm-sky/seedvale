@@ -26,6 +26,7 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-14--107--asset-browser-agent-discovery.md` | Asset Browser: search + parked MegaKit w indexie + authored scale (review [008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md)) | 🟡 | M | ~~088~~ |
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059) | 🔴 | XL | ~~015~~ ~~018~~ |
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
@@ -113,6 +114,8 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the 
 | File | Summary | Date |
 |------|---------|------|
 | `2026-08-14--asset-audit-3d-models.md` | Możliwości GLB/GLTF (drzwi, szkielety, klipy, packi Quaternius) + rekomendacja pipeline’u | 2026-08-14 |
+
+Related review (tool, not GLB capability): [008 — Asset Browser × modular cottage](../reviews/2026-08-14--008--asset-browser-modular-cottage.md); implementation: [107](./2026-08-14--107--asset-browser-agent-discovery.md).
 
 ## Related
 
