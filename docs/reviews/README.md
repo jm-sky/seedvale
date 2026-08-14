@@ -30,6 +30,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | Asset Browser × modular cottage | Czy agent znajdzie/oceni części jednego domku MegaKit; **fix first** — plan [107](../plans/2026-08-14--107--asset-browser-agent-discovery.md) | `done` | [2026-08-14--008--asset-browser-modular-cottage.md](./2026-08-14--008--asset-browser-modular-cottage.md) |
 | MegaKit construction audit | Audyt wymiarów/modularności wszystkich 176 GLB (Node, bez przeglądarki) + `ConstructionCatalog` nad `AssetIndex` — plan [109](../plans/2026-08-14--109--megakit-construction-catalog.md) | `done` | [2026-08-14--009--megakit-construction-audit.md](./2026-08-14--009--megakit-construction-audit.md) |
 | Perf benchmark raw data | Surowe wyniki `?benchmark=*` + krótki `?perf=1` (bez wniosków / bez zmian w kodzie) | `done` | [2026-08-14--010--perf-benchmark-data.md](./2026-08-14--010--perf-benchmark-data.md) |
+| MegaKit Construction Catalog (browser) | Wizualna weryfikacja 4 założeń katalogu, których nie dało się potwierdzić z AABB — plan [109](../plans/2026-08-14--109--megakit-construction-catalog.md) | `done` | [2026-08-14--011--megakit-construction-browser-verification.md](./2026-08-14--011--megakit-construction-browser-verification.md) |
 
 ## After each run
 

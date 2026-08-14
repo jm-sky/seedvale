@@ -49,7 +49,6 @@ Implementation complete; needs play/browser check. This section lists **plans in
 |------|---------|-----|--------|---------|
 | `2026-08-14--108--npc-stuck-at-house-locomotion.md` | NPC utyka w/przy domku (drewno, woda) — P0+P1 zaimplementowane (cel na obręczy, rescue na zewnątrz, bez moonwalku); brak testu w przeglądarce | 🔴 | M | ~~097~~ |
 | `2026-08-14--107--asset-browser-agent-discovery.md` | Asset Browser: search + parked MegaKit + authored scale (review [008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md)); v1 zaimplementowane, bez weryfikacji w przeglądarce | 🟡 | M | ~~088~~ |
-| `2026-08-14--109--megakit-construction-catalog.md` | Audyt 176 MegaKit GLB (Node, bez przeglądarki) + `ConstructionCatalog` nad `AssetIndex` (review [009](../reviews/2026-08-14--009--megakit-construction-audit.md)); zaimplementowane, bez weryfikacji w przeglądarce | 🟡 | L | ~~107~~ |
 | `2026-08-13--103--performance-diagnostics-benchmark.md` | Diagnostyka wydajności, benchmarki, profile jakości (etapy 1–4; Adaptive = później) | 🔴 | XL | — |
 | `2026-08-14--106--player-needs-food-and-cooking.md` | Głód/pragnienie/stamina/vigor gracza + jedzenie/woda/gotowanie — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🔴 | L | — |
 | `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🟡 | L | ~~060~~ ~~071~~ |
@@ -64,6 +63,7 @@ Completed plans **in this folder**. After the 2026-08-14 archive freeze new `don
 
 | File | Summary |
 |------|---------|
+| `2026-08-14--109--megakit-construction-catalog.md` | Audyt 176 MegaKit GLB + `ConstructionCatalog` (review [009](../reviews/2026-08-14--009--megakit-construction-audit.md)); weryfikacja w przeglądarce [011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md) |
 | `2026-08-09--049--procedural-world-landmarks.md` | Landmarki v1: monolith / stoneCircle / smallRuins / cemetery + bias terenu |
 
 Older completed work: [archive/README.md](./archive/README.md).

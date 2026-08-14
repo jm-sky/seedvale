@@ -4,7 +4,7 @@
 **Date:** 2026-08-14
 **Scope:** audit all 176 GLB in `public/models/settlement/megakit/` and design/implement a `ConstructionCatalog` layer over `AssetIndex` (plan [109](../plans/2026-08-14--109--megakit-construction-catalog.md)).
 **Not in scope:** `HouseBuilder`, settlement wiring, colliders, entrance system.
-**Related:** [review 008](./2026-08-14--008--asset-browser-modular-cottage.md), [plan 107](../plans/2026-08-14--107--asset-browser-agent-discovery.md) (landed during this session — `AssetIndexEntry.status/pack/kind`, `mergeParkedManifest`), [megakit README](../../public/models/settlement/megakit/README.md)
+**Related:** [review 008](./2026-08-14--008--asset-browser-modular-cottage.md), [plan 107](../plans/2026-08-14--107--asset-browser-agent-discovery.md) (landed during this session — `AssetIndexEntry.status/pack/kind`, `mergeParkedManifest`), [review 011](./2026-08-14--011--megakit-construction-browser-verification.md) (browser pass), [megakit README](../../public/models/settlement/megakit/README.md)
 
 ## Method — no browser this session
 
@@ -19,11 +19,11 @@ zero errors and zero missing bounds. Spot-checked against review 008's manual me
 `2.00 × 3.12 × 0.41`) — matches to the reported precision.
 
 **Consequence:** all geometry facts below (dimensions, symmetry, origin placement) are
-measured, not guessed. Anything that requires *seeing* the model (which face is visually
-"front"/exterior, whether `_l`/`_r` wall variants are mitred corners or texture-seam
-variants, whether large roof caps actually look right on a matching footprint) is **not**
-confirmed and is called out explicitly in §5. That visual pass is left for a browser-enabled
-session (the Asset Browser plan 107 just shipped is the right tool for it).
+measured, not guessed. Anything that requires *seeing* the model was left open in §5 and
+confirmed later the same day in [review 011](./2026-08-14--011--megakit-construction-browser-verification.md)
+(`_l`/`_r` wall semantics, door/window identity vs hinge offset, `wooden_2x1` composition,
+`roof_roundtiles_4x4` naming vs footprint). Face-orientation (`front`/`back` as exterior)
+is still an assumption — not load-bearing until snap logic exists.
 
 ## 1. Scope
 
@@ -95,19 +95,18 @@ unchanged. `ConstructionAnchor` is a structural connection-side concept for a fu
 Flagged explicitly rather than guessed, per the task's instruction not to author anchors "on
 sight":
 
-1. **`wall_plaster_straight_l` / `_r` semantics unconfirmed.** Same 2.00 m footprint as the
-   plain `_straight` wall (not a narrower corner mesh). Likely a mitred/bevelled edge
-   geometry variant for meeting another wall at a corner without a post, but this is
-   inferred from the name + Quaternius convention, **not confirmed visually**. Needs a
-   browser look (Asset Browser, plan 107) before a `HouseBuilder` decides whether corners
-   use `corner_*` posts, `_l`/`_r` mitres, or both.
+1. **`wall_plaster_straight_l` / `_r` semantics.** Same 2.00 m footprint as the
+   plain `_straight` wall (not a narrower corner mesh). **Browser pass (review 011):**
+   not 45° mitres and not a texture-only swap — different mesh (`_l` 72 tris vs 86) plus
+   extra `MI_Brick` (end-return for a post-less corner). Current left/right anchors apply.
+   First houses should still prefer `straight` + `corner_*` posts.
 2. **Roof composition is not one rule.** Only the 7-file `wooden_2x1` sub-family
    (straight/l/r/corner/middle/center/center_mirror) is modular; `corner` and `middle`
    pieces have non-centered/elevated pivots that a builder must hardcode per-part, not infer
-   generically. The other 32 roof files are pre-sized caps — whether e.g.
-   `roof_roundtiles_4x4`'s "4x4" refers to 4×4 wall-modules (8 m × 8 m footprint, which the
-   measured 5.51 × … × 5.56 m does **not** match) or something else in the vendor's own
-   convention is **unresolved** — flagged rather than assumed.
+   generically. **Browser pass (review 011):** `_middle` sits on the straight slope at
+   identity (`Y ≈ 0.99`); `_corner` origin is the inner L; `roof_roundtiles_4x4` is a
+   complete cap at 5.51 × 4.25 × 5.56 m — the vendor `4x4` name is **not** 4×4 wall-modules
+   of 2 m (that would be 8×8 m).
 3. **`overhang_*` (20 files) sits structurally between "wall/roof" and "decoration".** It's
    the roof-to-wall transition piece a real house needs, but it doesn't cleanly fit any of
    the 6 named kinds (wall/door/window/floor/roof/corner) requested for this catalog, so it
@@ -126,8 +125,8 @@ sight":
 
 ## 6. MegaKit limitations for a future `HouseBuilder`
 
-- No L-shaped corner wall mesh — corners are posts (`corner_*`) or (unconfirmed, see §5.1)
-  mitred wall ends.
+- No L-shaped corner wall mesh — corners are posts (`corner_*`) or `_l`/`_r` end-return
+  wall variants (same 2 m anchors; confirmed visually in review 011, not 45° mitres).
 - No small modular roof kit beyond the 7-file `wooden_2x1` family; anything bigger needs a
   single pre-sized cap matched to the footprint, not a tiled assembly.
 - `door_*` leaf styles (`1/2/4/8`, flat/round) are design variants, not size tiers — all ~1.1
@@ -139,10 +138,10 @@ sight":
 Start a `HouseBuilder` from the **fully grid-reliable, fully modular** subset only: plaster
 walls (straight + door + window variants), `floor_wooddark` tiles, `corner_exterior_wood`
 posts, the `wooden_2x1` roof sub-family, `door_1_flat` + `doorframe_flat_wooddark`,
-`window_wide_flat1`. Everything else (large roof caps, `_l`/`_r` wall mitres, overhang) needs
-either a visual pass in the Asset Browser (plan 107, browser session) or per-part hardcoded
-offsets before it's safe to snap automatically. Do not attempt automatic snapping for
-`gridReliable: false` parts without that pass.
+`window_wide_flat1`. Browser pass (review 011) confirmed that subset: doorframe/window at
+identity on the matching wall; `door_1_flat` needs a recorded `x ≈ -0.51 m` hinge offset;
+`_l`/`_r` walls and large roof caps stay out of automatic snap. Do not attempt automatic
+snapping for `gridReliable: false` parts without those per-part offsets.
 
 ## 8. Example `HouseDefinition`
 
@@ -173,5 +172,5 @@ documentation example that can drift from the code.
 - [x] `npx tsc --noEmit` passes.
 - [x] `npm run lint` passes.
 - [x] `npm run test` passes (651/651, including the 22 new tests).
-- [ ] Browser verification — not done this session (no browser access); left for a
-      Cursor/browser session per plan 109's stated limitation.
+- [x] Browser verification — [review 011](./2026-08-14--011--megakit-construction-browser-verification.md)
+      (Asset Browser overlays; `_l`/`_r`, door/window pivots, wooden_2x1 + one large cap).

@@ -1,11 +1,11 @@
 # Plan 109: MegaKit Construction Audit & Construction Catalog
 
-**Status:** `verification needed` — implemented + audited 2026-08-14, technical checks green, no browser session this session
+**Status:** `done` — implemented + audited 2026-08-14; browser verification 2026-08-14 ([review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md))
 **Created:** 2026-08-14
 **Priority:** 🟡 medium
 **Effort:** `L`
 **Depends on:** ~~—~~ (107 landed mid-session; `constructionCatalog.ts` reuses its `status`/`pack`/`kind`/`mergeParkedManifest`)
-**Related:** [review 008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md), [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [plan 107](./2026-08-14--107--asset-browser-agent-discovery.md), [megakit README](../../public/models/settlement/megakit/README.md)
+**Related:** [review 008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md), [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md), [plan 107](./2026-08-14--107--asset-browser-agent-discovery.md), [megakit README](../../public/models/settlement/megakit/README.md)
 
 ## Po co
 
@@ -53,16 +53,16 @@ entrance system, `SettlementsManager` changes, procedural 10-house generation. N
 (after this one, separately scoped) is Construction Catalog → `HouseBuilder` →
 `HouseValidator` → 10-house test scene.
 
-## Ograniczenia sesji
+## Ograniczenia sesji (audit)
 
-No browser access in this session — geometry audit uses a Node-side GLB parser (accessor
-bounds), not the Asset Browser UI or a headless render. Visual/in-editor verification of
-the catalog against the Asset Browser is left for a browser-enabled session (Cursor).
+The 2026-08-14 audit session had no browser access — geometry used a Node-side GLB parser
+(accessor bounds). Visual verification landed the same day in a separate Cursor/browser
+session: [review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md).
 
 ## Weryfikacja
 
-`npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test`. No browser verification
-in this session (see above).
+`npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` — green at implementation.
+Browser pass (Asset Browser overlays of representative walls/doors/windows/roofs): [review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md).
 
 ## Implementation notes (2026-08-14)
 
@@ -78,7 +78,10 @@ Full detail: [review 009](../reviews/2026-08-14--009--megakit-construction-audit
 - `src/assets/houseDefinitionExample.ts` — `TEST_HOUSE_01`, a 4×2 m one-room hut, data only.
 - `src/assets/constructionCatalog.test.ts` — 22 tests (discovery, dimensions, module/grid
   reliability, rule consistency, example-house referential integrity against the catalog).
-- Technical checks green: `tsc`, `lint`, `build`, `test` (651/651). Browser verification not
-  done (no browser access this session) — see review 009 §5 for what a browser pass should
-  confirm (`_l`/`_r` wall mitre geometry, large roof-cap footprint mapping, face-orientation
-  assumption).
+- Technical checks green: `tsc`, `lint`, `build`, `test` (651/651).
+- Browser verification 2026-08-14 ([review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md)):
+  `_l`/`_r` walls are end-return variants on the same 2 m anchors (not 45° mitres);
+  doorframe/window sit at identity on the matching wall; `door_1_flat` needs `x ≈ -0.51 m`;
+  `wooden_2x1` family composes with per-part origins; `roof_roundtiles_4x4` is a complete cap
+  whose name is not a 2 m module count. Catalog is a sufficient foundation for `HouseBuilder`
+  on that modular subset. No catalog code changes from the visual pass.
