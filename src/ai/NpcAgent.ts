@@ -68,6 +68,12 @@ import {
   tickNeeds,
 } from './Needs'
 import {
+  destinationOnColliderRim,
+  isExteriorPoint,
+  localEscapeRadii,
+  pickEmergencyTeleportPoint,
+} from './npcColliderRim'
+import {
   createMovementWatchdog,
   type MovementWatchdog,
   registerAbandon,
@@ -331,6 +337,11 @@ const ENERGETIC_REST_MULT = 1.5
  *  same order of magnitude as fauna's existing `STAMINA_REST_THRESHOLD`
  *  (`AnimalLife.ts`). */
 const STAMINA_EXHAUSTED_RESUME_RATIO = 0.35
+/** After a stuck `abandon`, skip restarting the same destination so `choose`
+ *  in this frame (and the next couple of seconds) cannot immediately rebuild
+ *  the trapped action. */
+const ABANDON_RETRY_COOLDOWN_SEC = 2.5
+const ABANDON_DEST_MATCH_DIST = 1.0
 
 /** Below this currentHp/maxHp fraction, walk speed starts dropping toward the floor.
  *  Kept for real damage later — fatigue no longer touches HP (plan 045). */
@@ -445,6 +456,15 @@ export class NpcAgent {
    *  destination, while `repathActive` is true. */
   private readonly repathTarget = new THREE.Vector3()
   private repathActive = false
+  /** Cached `goSleep` target — house rim from the NPC's side, not `home`
+   *  center. Frozen at sleep-start so the rim point does not orbit. */
+  private readonly sleepDest = new THREE.Vector3()
+  /** Seconds remaining after a stuck abandon during which the same dest is
+   *  not restarted (plan 108). */
+  private abandonCooldown = 0
+  private abandonedDestX = 0
+  private abandonedDestZ = 0
+  private hasAbandonedDest = false
   private readonly tmp = new THREE.Vector3()
   private readonly tmpAvoid = new THREE.Vector3()
   private readonly labelEl: HTMLDivElement
@@ -841,6 +861,8 @@ export class NpcAgent {
       applySleepVigor(this.vigor, dt)
     }
 
+    if (this.abandonCooldown > 0) this.abandonCooldown -= dt
+
     if (WATCHDOG_PHASES.has(this.phase)) {
       this.tickWatchdog(dt)
     }
@@ -885,8 +907,7 @@ export class NpcAgent {
         }
         if (decisionContext.scheduleActivity === 'sleep') {
           this.sleepReason = 'schedule'
-          this.phase = 'goSleep'
-          resetMovementWatchdog(this.watchdog)
+          this.beginGoSleep()
           break
         }
         this.beginIdle(scheduledActivity)
@@ -908,6 +929,7 @@ export class NpcAgent {
           action?.onComplete()
           if (action?.next) {
             this.pendingAction = action.next
+            this.applyRimDestination(action.next.destination)
             // Chained step stays `active` — do not complete between links.
             this.phase = 'goTo'
           } else {
@@ -945,7 +967,7 @@ export class NpcAgent {
         if (!shouldStayAsleep(this.vigor, scheduledActivity, this.sleepReason)) {
           this.sleepReason = null
           this.phase = 'choose'
-        } else if (this.steerWithRescue(this.home, dt)) this.phase = 'sleep'
+        } else if (this.steerWithRescue(this.sleepDest, dt)) this.phase = 'sleep'
         break
       case 'goTo': {
         const action = this.pendingAction
@@ -1226,6 +1248,12 @@ export class NpcAgent {
    *  is set; we only clear a *different* prior queue here so we do not
    *  immediately `leave` the membership just established. */
   private startAction(action: NpcPlannedAction): void {
+    this.applyRimDestination(action.destination)
+    if (this.isAbandonedDestination(action.destination.x, action.destination.z)) {
+      this.leaveActiveQueue()
+      this.beginUnscheduledIdle()
+      return
+    }
     if (!action.queueId) {
       this.leaveActiveQueue()
     } else if (action.queueId !== this.activeQueueId) {
@@ -1293,6 +1321,7 @@ export class NpcAgent {
       this.mesh.position.z - this.home.z,
     )
     this.phase = preferHomeSleep(dist) ? 'goSleep' : 'sleep'
+    if (this.phase === 'goSleep') this.prepareSleepDestination()
   }
 
   /** `need` is `'water' | 'food' | 'wood'` in practice — `'choose'` routes
@@ -1461,7 +1490,7 @@ export class NpcAgent {
     }
     if (intent === 'sleep') {
       this.sleepReason = 'schedule'
-      this.phase = 'goSleep'
+      this.beginGoSleep()
       return
     }
     this.beginUnscheduledIdle()
@@ -1487,13 +1516,14 @@ export class NpcAgent {
     for (let attempt = 0; attempt < 6; attempt++) {
       const x = anchor.x + (Math.random() - 0.5) * IDLE_WANDER_SPREAD
       const z = anchor.z + (Math.random() - 0.5) * IDLE_WANDER_SPREAD
-      if (this.isWalkable(x, z)) {
+      if (this.isWalkableExterior(x, z)) {
         this.target.set(x, 0, z)
         this.phase = 'wander'
         return
       }
     }
     this.target.copy(anchor)
+    this.applyRimDestination(this.target)
     this.phase = 'wander'
   }
 
@@ -1529,18 +1559,61 @@ export class NpcAgent {
     return true
   }
 
+  /** Rescue/wander probe: no 097 occupied-exit exception — a point inside
+   *  any nearby disk is not a valid recovery target (plan 108). */
+  private isWalkableExterior(x: number, z: number): boolean {
+    if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
+    return isExteriorPoint(x, z, this.collidersNear(x, z))
+  }
+
+  /** Snap `dest` onto a foreign collider's rim (house/well core is not a
+   *  reachable stand point from outside). Occupied disks are left alone. */
+  private applyRimDestination(dest: { x: number, z: number }): void {
+    const rim = destinationOnColliderRim(
+      this.mesh.position,
+      dest,
+      this.collidersNear(dest.x, dest.z),
+    )
+    dest.x = rim.x
+    dest.z = rim.z
+  }
+
+  private beginGoSleep(): void {
+    this.prepareSleepDestination()
+    if (this.isAbandonedDestination(this.sleepDest.x, this.sleepDest.z)) return
+    resetMovementWatchdog(this.watchdog)
+    this.repathActive = false
+    this.phase = 'goSleep'
+  }
+
+  private prepareSleepDestination(): void {
+    this.sleepDest.copy(this.home)
+    this.applyRimDestination(this.sleepDest)
+  }
+
+  private isAbandonedDestination(x: number, z: number): boolean {
+    if (!this.hasAbandonedDest || this.abandonCooldown <= 0) return false
+    return Math.hypot(x - this.abandonedDestX, z - this.abandonedDestZ) < ABANDON_DEST_MATCH_DIST
+  }
+
   /**
    * If the straight segment from the NPC to `dest` cuts through a nearby
    * collider's disk, return a bypass point on that disk's rim; otherwise
    * `dest`. Destinations already allowed to approach a collider (queued
-   * drink / guard work right next to it) are left alone. Only resolves the
-   * first blocking collider found — matches `isWalkable`'s "closest
-   * obstacle" simplicity (plan 097 §2.2), not full multi-obstacle routing.
+   * drink / guard work right next to it) are left alone. Colliders the NPC
+   * already stands in are skipped so an interior NPC walks *out* toward
+   * dest instead of being redirected to its own house rim (plan 108 F3).
+   * Only resolves the first blocking collider found — matches `isWalkable`'s
+   * "closest obstacle" simplicity (plan 097 §2.2), not full multi-obstacle
+   * routing.
    */
   private resolveSteerTarget(dest: THREE.Vector3): THREE.Vector3 {
     const px = this.mesh.position.x
     const pz = this.mesh.position.z
     for (const collider of this.collidersNear(px, pz)) {
+      const distFromCurrent = Math.hypot(px - collider.x, pz - collider.z)
+      if (distFromCurrent < collider.radius) continue
+
       const destDist = Math.hypot(dest.x - collider.x, dest.z - collider.z)
       if (destDist <= collider.radius + NPC_COLLIDER_APPROACH_BUFFER) continue
 
@@ -1592,7 +1665,6 @@ export class NpcAgent {
     const stepX = this.tmp.x * speed * dt
     const stepZ = this.tmp.z * speed * dt
     this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
-    this.moving = true
     const x = this.mesh.position.x
     const z = this.mesh.position.z
     if (this.isWalkable(x + stepX, z + stepZ)) {
@@ -1603,6 +1675,7 @@ export class NpcAgent {
     } else if (this.isWalkable(x, z + stepZ)) {
       this.mesh.position.z += stepZ
     }
+    this.moving = this.mesh.position.x !== x || this.mesh.position.z !== z
     return false
   }
 
@@ -1630,14 +1703,19 @@ export class NpcAgent {
   }
 
   /** Rescue Level 1 — steer through a small random nearby waypoint instead
-   *  of retrying the exact same (already-failing) direct line. */
+   *  of retrying the exact same (already-failing) direct line. Samples must
+   *  be exterior (plan 108) so a hop inside the occupied house is rejected. */
   private attemptRepath(): void {
+    const occupied = this.collidersNear(this.mesh.position.x, this.mesh.position.z)
+    const radii = localEscapeRadii(this.mesh.position, occupied)
+    const minR = radii[0] ?? 2
+    const span = 1.5
     for (let attempt = 0; attempt < 6; attempt++) {
       const angle = Math.random() * Math.PI * 2
-      const radius = 2 + Math.random() * 1.5
+      const radius = minR + Math.random() * span
       const x = this.mesh.position.x + Math.cos(angle) * radius
       const z = this.mesh.position.z + Math.sin(angle) * radius
-      if (this.isWalkable(x, z)) {
+      if (this.isWalkableExterior(x, z)) {
         this.repathTarget.set(x, 0, z)
         this.repathActive = true
         return
@@ -1646,17 +1724,17 @@ export class NpcAgent {
   }
 
   /** Rescue Level 2 — still stuck after a repath attempt: hop directly to
-   *  the nearest walkable point on a small ring around the NPC instead of
-   *  waiting for `steerTo` to find one. A bounded local nudge, not a
-   *  long-range teleport. */
+   *  the nearest walkable *exterior* point on a ring that exits any occupied
+   *  disk, instead of a 1.5 m hop that stays in the house core. */
   private attemptLocalEscape(): void {
-    const radii = [1.5, 3]
+    const occupied = this.collidersNear(this.mesh.position.x, this.mesh.position.z)
+    const radii = localEscapeRadii(this.mesh.position, occupied)
     for (const radius of radii) {
       for (let i = 0; i < 8; i++) {
         const angle = (i / 8) * Math.PI * 2
         const x = this.mesh.position.x + Math.cos(angle) * radius
         const z = this.mesh.position.z + Math.sin(angle) * radius
-        if (this.isWalkable(x, z)) {
+        if (this.isWalkableExterior(x, z)) {
           this.mesh.position.x = x
           this.mesh.position.z = z
           this.repathActive = false
@@ -1673,6 +1751,23 @@ export class NpcAgent {
    *  safety net, not a new mechanism). Escalates to an emergency teleport
    *  when this has happened repeatedly within `RECENT_RESCUE_WINDOW_SEC`. */
   private abandonStuckAction(): void {
+    const dest = this.pendingAction?.destination
+    if (dest) {
+      this.abandonedDestX = dest.x
+      this.abandonedDestZ = dest.z
+      this.hasAbandonedDest = true
+    } else if (this.phase === 'goSleep') {
+      this.abandonedDestX = this.sleepDest.x
+      this.abandonedDestZ = this.sleepDest.z
+      this.hasAbandonedDest = true
+    } else if (this.phase === 'wander') {
+      this.abandonedDestX = this.target.x
+      this.abandonedDestZ = this.target.z
+      this.hasAbandonedDest = true
+    } else {
+      this.hasAbandonedDest = false
+    }
+    this.abandonCooldown = ABANDON_RETRY_COOLDOWN_SEC
     failActionLifecycle(this.actionLifecycle)
     this.leaveActiveQueue()
     this.pendingAction = null
@@ -1690,26 +1785,40 @@ export class NpcAgent {
   /** Rescue Level 4 — last-resort safety net, expected to be rare: snap to a
    *  validated-walkable known-safe point rather than continuing to retry
    *  local geometry that has already defeated repath + escape twice in a
-   *  row. Always logged (not gated behind `isDebugMode()`) — this path
-   *  should stay rare enough to never be console noise. */
+   *  row. Never picks `home` (house center is the trap). Always logged (not
+   *  gated behind `isDebugMode()`) — this path should stay rare enough to
+   *  never be console noise. */
   private emergencyTeleport(): void {
-    const candidates: { x: number, z: number }[] = [
-      this.home,
+    const pos = this.mesh.position
+    const colliders = [
+      ...this.collidersNear(pos.x, pos.z),
+      ...this.collidersNear(this.landmarks.well.x, this.landmarks.well.z),
+      ...this.collidersNear(this.landmarks.stockpile.x, this.landmarks.stockpile.z),
+      ...this.collidersNear(this.landmarks.garden.x, this.landmarks.garden.z),
+    ]
+    const candidates = [
       this.landmarks.well,
       this.landmarks.stockpile,
+      this.landmarks.garden,
     ]
-    for (const candidate of candidates) {
-      if (this.isWalkable(candidate.x, candidate.z)) {
-        this.mesh.position.x = candidate.x
-        this.mesh.position.z = candidate.z
-        this.mesh.position.y = this.sampleHeight(candidate.x, candidate.z)
-        console.warn('[npc:rescue] emergency teleport', this.name, { x: candidate.x, z: candidate.z })
-        return
-      }
+    const picked = pickEmergencyTeleportPoint(
+      pos,
+      candidates,
+      colliders,
+      (x, z) => this.isWalkableExterior(x, z),
+    )
+    if (picked) {
+      this.mesh.position.x = picked.x
+      this.mesh.position.z = picked.z
+      this.mesh.position.y = this.sampleHeight(picked.x, picked.z)
+      console.warn('[npc:rescue] emergency teleport', this.name, { x: picked.x, z: picked.z })
+      return
     }
-    this.mesh.position.x = this.home.x
-    this.mesh.position.z = this.home.z
-    this.mesh.position.y = this.sampleHeight(this.home.x, this.home.z)
-    console.warn('[npc:rescue] emergency teleport (no validated candidate, fell back to home)', this.name)
+    // Last resort: occupied-disk rim facing the well (plaza), never house center.
+    const fallback = destinationOnColliderRim(this.landmarks.well, pos, colliders)
+    this.mesh.position.x = fallback.x
+    this.mesh.position.z = fallback.z
+    this.mesh.position.y = this.sampleHeight(fallback.x, fallback.z)
+    console.warn('[npc:rescue] emergency teleport', this.name, { x: fallback.x, z: fallback.z })
   }
 }

@@ -27,7 +27,6 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-14--108--npc-stuck-at-house-locomotion.md` | NPC utyka w/przy domku (drewno, woda) — review watchdog+097+069; cel na obręczy, rescue na zewnątrz; bez kodu do akceptacji | 🔴 | M | ~~097~~ |
 | `2026-08-14--107--asset-browser-agent-discovery.md` | Asset Browser: search + parked MegaKit w indexie + authored scale (review [008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md)) | 🟡 | M | ~~088~~ |
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
@@ -49,6 +48,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-14--108--npc-stuck-at-house-locomotion.md` | NPC utyka w/przy domku (drewno, woda) — P0+P1 zaimplementowane (cel na obręczy, rescue na zewnątrz, bez moonwalku); brak testu w przeglądarce | 🔴 | M | ~~097~~ |
 | `2026-08-13--103--performance-diagnostics-benchmark.md` | Diagnostyka wydajności, benchmarki, profile jakości (etapy 1–4; Adaptive = później) | 🔴 | XL | — |
 | `2026-08-14--106--player-needs-food-and-cooking.md` | Głód/pragnienie/stamina/vigor gracza + jedzenie/woda/gotowanie — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🔴 | L | — |
 | `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🟡 | L | ~~060~~ ~~071~~ |
@@ -105,7 +105,7 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the 
 
 ## Quick notes / bugs
 
-- **NPC utyka w/przy domku** — drewno w chatce / woda z Walk bez ruchu; stamina OK. Review + plan naprawy: [108](./2026-08-14--108--npc-stuck-at-house-locomotion.md).
+- **NPC utyka w/przy domku** — P0+P1 planu [108](./2026-08-14--108--npc-stuck-at-house-locomotion.md) w kodzie; playtest w `?debug=1` otwarty.
 - **Światło w domach** — `findWallMount` raycastuje bryłę; 2026-08-11: nadal nierówne, potrzeba mapowania per model.
 - **Latające obiekty** — `waitForChunks` przed propsami osady; 2026-08-11: nadal nieidealne.
 - **Morze (telefon)** — artefakty krawędzi, plamy; spróbować bardziej przezroczystej wody.

@@ -23,7 +23,7 @@ Historia zakresu: zarchiwizowane plany [047](./plans/archive/2026-08-09--047--vi
 | S5 | Dzienny rytm = szablon roli + overlay cech (`effectiveScheduleFor`). Pilne potrzeby wygrywają w `choose()`. | brak social Place — overlay `sociable` nie ma producenta |
 | S6 | `VigorState` ≠ `StaminaState`. Wigor to budżet dnia; zwykły odpoczynek odnawia tylko staminę. Collapse → istniejący `goSleep`/`sleep`. | fauna nie używa wigoru |
 | S7 | Runtime NPC (needs, AI, vigor) **nie** jest w save. Continue nie przywraca pełnej symulacji. | vigor startuje pełny przy spawnie |
-| S8 | Ruch NPC ma watchdog utknięcia — brak postępu pozycji eskaluje `repath` → `local escape` → `abandon` → (przy powtarzającym się utknięciu) emergency teleport. Drenaż staminy zależy od tego, co NPC robi (chodzenie tanie, ciężka `execute` drogie), nie samej fazy. `stamina === 0` w `goTo`/`execute` → faza `exhausted` (odpoczynek w miejscu, ta sama akcja wznawia się po odzyskaniu progu). Watchdog **nie** uwalnia NPC uwięzionych dyskiem domu (`home` = środek collidera) — playtest 2026-08-14, plan [108](./plans/2026-08-14--108--npc-stuck-at-house-locomotion.md). | `src/ai/npcMovementWatchdog.ts`; emergency teleport zawsze loguje `console.warn('[npc:rescue] emergency teleport', ...)` |
+| S8 | Ruch NPC ma watchdog utknięcia — brak postępu pozycji eskaluje `repath` → `local escape` → `abandon` → (przy powtarzającym się utknięciu) emergency teleport. Cel w obcym dysku (dom, studnia) jest snapowany na obręcz od strony NPC (`destinationOnColliderRim`); rescue próbuje tylko punkty **na zewnątrz** zajętego collidera; teleport nie wraca na środek domu. Drenaż staminy zależy od tego, co NPC robi (chodzenie tanie, ciężka `execute` drogie), nie samej fazy. `stamina === 0` w `goTo`/`execute` → faza `exhausted` (odpoczynek w miejscu, ta sama akcja wznawia się po odzyskaniu progu). | `src/ai/npcMovementWatchdog.ts`, `src/ai/npcColliderRim.ts`; emergency teleport zawsze loguje `console.warn('[npc:rescue] emergency teleport', ...)` |
 
 Multiplayer nie jest planowany teraz i nie projektujemy go tutaj. Ale S3/S7 pokazują, że ownership stanu (ekonomia osady, runtime NPC) jest już oddzielony od `Inventory` gracza i od save gracza — utrzymuj ten podział, żeby ewentualne przejście na server-authoritative symulację (mały świat, ~2–5 graczy) nie wymagało przepisania. Zob. [performance-and-workers.md](./architecture/performance-and-workers.md).
 
@@ -70,7 +70,7 @@ Multiplayer nie jest planowany teraz i nie projektujemy go tutaj. Ale S3/S7 poka
 - Kupiec pomija `woodDuty` (zostaje przy straganie).
 - Ciężka `work`/`chop` drenuje wigor; sen (grafik albo forced) go przywraca.
 - Stamina: chodzenie (`goTo`) drenuje mało, lekka `execute` (drink/eat/deposit) prawie nic, ciężka `execute` (chop/work) drenuje pełną stawką. Wyczerpanie w trakcie ruchu/pracy → faza `exhausted` (bez utraty `pendingAction`), wznowienie po odzyskaniu progu staminy.
-- Watchdog utknięcia obserwuje `goTo`/`followPath`/`wander`/`goSleep`; brak realnego postępu pozycji eskaluje rescue (repath → local escape → abandon), emergency teleport tylko przy powtarzającym się utknięciu (`src/ai/npcMovementWatchdog.ts`). Playtest 2026-08-14: przy dysku domu rescue nie uwalnia — plan [108](./plans/2026-08-14--108--npc-stuck-at-house-locomotion.md).
+- Watchdog utknięcia obserwuje `goTo`/`followPath`/`wander`/`goSleep`; brak realnego postępu pozycji eskaluje rescue (repath → local escape → abandon), emergency teleport tylko przy powtarzającym się utknięciu (`src/ai/npcMovementWatchdog.ts`). Cel w rdzeniu obcego dysku (dom / studnia) leży na obręczy od zewnątrz (`src/ai/npcColliderRim.ts`, plan [108](./plans/2026-08-14--108--npc-stuck-at-house-locomotion.md)); probe rescue nie akceptuje wnętrza zajętego collidera; `moving` tylko przy realnym przesunięciu x/z. Playtest w przeglądarce — `verification needed`.
 - `?debug=1` dorzuca do etykiety NPC linię diagnostyczną (faza, akcja, dystans, stamina, stan watchdoga).
 - Dialog v2 = ekran Vue. W osadzie domowej: handel u kupca; strażnik może oddać miecz.
 
@@ -95,6 +95,7 @@ src/ai/NpcAgent.ts
 src/ai/Needs.ts
 src/ai/schedule.ts
 src/ai/npcMovementWatchdog.ts
+src/ai/npcColliderRim.ts
 src/shared/VigorState.ts
 src/shared/StaminaState.ts
 ```

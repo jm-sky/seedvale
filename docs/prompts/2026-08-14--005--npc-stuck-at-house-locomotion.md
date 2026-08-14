@@ -1,6 +1,6 @@
 # Seedvale — napraw locomotion NPC przy dysku domu (plan 108)
 
-**Status:** `todo`  
+**Status:** `verification needed`  
 **Created:** 2026-08-14  
 **Plan (wiążący):** [docs/plans/2026-08-14--108--npc-stuck-at-house-locomotion.md](../plans/2026-08-14--108--npc-stuck-at-house-locomotion.md)
 
