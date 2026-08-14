@@ -113,7 +113,7 @@ Before adding a new abstraction, check whether one of these already owns the res
 
 ## Developer tooling
 
-- **Asset alignment browser** — `/asset-browser.html` (`src/tools/assetBrowser/`), included in production `vite build`. Aggregates registries via `src/assets/assetIndex.ts`. Browser verification: plan 088 (archived).
+- **Asset alignment browser** — `/asset-browser.html` (`src/tools/assetBrowser/`), included in production `vite build`. Wired registries via `buildAssetIndex()` plus parked files from `/asset-browser-models.json` (`status` / `pack` / `kind`, MegaKit 176 GLB). Search, `prepare: none` for parked/URL, per-slot native/prepared AABB. Browser verification: plan 107.
 - **Performance diagnostics (plan 103)** — `src/perf/` sampler/benchmark; lil-gui Performance + `?perf=1` / `?benchmark=<id>`. Graphics quality presets Low/Medium/High/Custom in Pauza → Świat → Grafika. Adaptive Quality is stored-off, not implemented.
 
 ## Important code entry points

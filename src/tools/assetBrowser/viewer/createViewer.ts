@@ -58,7 +58,12 @@ export function createViewer(container: HTMLElement): AssetViewer {
   const { scene, world, ground, grid, axes, lighting } = createViewerScene()
   const reference = createAssetSlot('reference', world)
   const target = createAssetSlot('target', world)
-  target.group.position.x = HELD_SIDE_OFFSET
+
+  const defaultTargetOffset = () => (
+    computeHeldPreviewState(reference, target).mode === 'off' ? 0 : HELD_SIDE_OFFSET
+  )
+
+  const usesAuthoredScale = (slot: AssetSlot) => slot.entry?.prepare.mode === 'none'
 
   const refreshHeldPreview = () => {
     reference.setPose(browserState.pose === 'idle' ? 'idle' : 'rest')
@@ -225,7 +230,12 @@ export function createViewer(container: HTMLElement): AssetViewer {
   }
 
   const tryRestoreOrFrame = () => {
-    if (multi.restorePersistedCameras()) {
+    // Grip camera persist is global; parked/URL kit must not inherit the axe view.
+    if (
+      !usesAuthoredScale(reference)
+      && !usesAuthoredScale(target)
+      && multi.restorePersistedCameras()
+    ) {
       markDirty()
       return
     }
@@ -257,7 +267,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
       validateSelections(prevRef, prevTgt)
       refreshHeldPreview()
       if (browserState.resetTransformOnReload && computeHeldPreviewState(reference, target).mode !== 'in-hand') {
-        target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
+        target.group.position.set(defaultTargetOffset(), 0, 0)
       }
       markDirty()
     },
@@ -269,7 +279,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
       validateSelections(prevRef, prevTgt)
       refreshHeldPreview()
       if (browserState.resetTransformOnReload && computeHeldPreviewState(reference, target).mode !== 'in-hand') {
-        target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
+        target.group.position.set(defaultTargetOffset(), 0, 0)
       }
       markDirty()
     },
@@ -293,7 +303,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
     },
     resetTargetTransform() {
       clearHeldPreviewMount(target)
-      target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
+      target.group.position.set(defaultTargetOffset(), 0, 0)
       target.group.rotation.set(0, 0, 0)
       target.group.scale.set(1, 1, 1)
       refreshHeldPreview()

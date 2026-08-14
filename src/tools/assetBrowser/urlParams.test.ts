@@ -11,6 +11,7 @@ function baseState(overrides: Partial<BrowserState> = {}): BrowserState {
     referenceId: 'character:player',
     targetId: null,
     freeUrl: '',
+    referenceFreeUrl: '',
     referenceAnchor: 'hand.right',
     targetAnchor: null,
     layout: 'quad',
@@ -59,6 +60,12 @@ describe('parseAssetBrowserUrlParams', () => {
     expect(parseAssetBrowserUrlParams('?targetUrl=/models/a.glb&refAnchor=origin')).toEqual({
       freeUrl: '/models/a.glb',
       referenceAnchor: 'origin',
+    })
+    expect(parseAssetBrowserUrlParams(
+      '?refUrl=/models/settlement/megakit/wall_plaster_straight.glb&url=/models/settlement/megakit/wall_plaster_door_flat.glb',
+    )).toEqual({
+      referenceFreeUrl: '/models/settlement/megakit/wall_plaster_straight.glb',
+      freeUrl: '/models/settlement/megakit/wall_plaster_door_flat.glb',
     })
   })
 
@@ -111,6 +118,13 @@ describe('applyAssetBrowserUrlParams', () => {
     applyAssetBrowserUrlParams(state, { freeUrl: '/models/items/axe.glb' })
     expect(state.targetId).toBeNull()
     expect(state.freeUrl).toBe('/models/items/axe.glb')
+  })
+
+  it('clears referenceId when only reference URL is set', () => {
+    const state = baseState({ referenceId: 'character:player' })
+    applyAssetBrowserUrlParams(state, { referenceFreeUrl: '/models/settlement/megakit/chimney.glb' })
+    expect(state.referenceId).toBeNull()
+    expect(state.referenceFreeUrl).toBe('/models/settlement/megakit/chimney.glb')
   })
 
   it('lets free URL and target id coexist when both provided', () => {

@@ -69,6 +69,37 @@ describe('alignmentReport', () => {
     expect(formatAlignmentReport(report)).toBe(text)
   })
 
+  it('prints per-slot native and prepared AABB', () => {
+    const report = buildAlignmentReport({
+      mode: 'single',
+      status: 'SINGLE_ASSET',
+      referenceAssetId: 'parked:settlement/megakit/wall_plaster_straight',
+      referenceBounds: {
+        prepare: 'none',
+        status: 'parked',
+        pack: 'megakit',
+        kind: 'wall',
+        nativeSize: [2, 3.12, 0.41],
+        preparedSize: [2, 3.12, 0.41],
+        min: [-1, 0, -0.205],
+        max: [1, 3.12, 0.205],
+        size: [2, 3.12, 0.41],
+        center: [0, 1.56, 0],
+        minY: 0,
+        triangles: 86,
+        materials: ['MI_Plaster', 'MI_WoodTrim'],
+        clipCount: 0,
+      },
+    })
+    const text = formatAlignmentReport(report)
+    expect(text).toContain('reference_bounds:')
+    expect(text).toContain('native_size_m: [2.000, 3.120, 0.410]')
+    expect(text).toContain('prepared_size_m: [2.000, 3.120, 0.410]')
+    expect(text).toContain('status: parked')
+    expect(text).toContain('pack: megakit')
+    expect(text).not.toContain('\nbounds:')
+  })
+
   it('computes ALIGNED/MISALIGNED thresholds', () => {
     expect(computeAlignmentStatus(0, 0, true)).toBe('ALIGNED')
     expect(computeAlignmentStatus(ALIGNED_POSITION_EPSILON_M, 0, true)).toBe('ALIGNED')

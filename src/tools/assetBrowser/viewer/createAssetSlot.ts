@@ -22,6 +22,11 @@ import {
 } from '../../../assets/loadGltf'
 import { type AnchorGizmoGroup, createAnchorGizmos } from './createAnchorGizmos'
 
+export type MeshStats = {
+  triangles: number
+  materials: string[]
+}
+
 export type AssetSlot = {
   role: 'reference' | 'target'
   group: Group
@@ -34,23 +39,56 @@ export type AssetSlot = {
   gizmos: AnchorGizmoGroup | null
   bboxHelper: Box3Helper | null
   mixer: AnimationMixer | null
+  clipCount: number
+  meshStats: MeshStats
   load: (entry: AssetIndexEntry | null, url?: string) => Promise<void>
   reload: () => Promise<void>
   unload: () => void
   setPose: (pose: 'rest' | 'idle') => void
+  /** World AABB of the model only — never the slot group (helpers inflate it). */
   getBounds: () => Box3 | null
+  getNativeBounds: () => Box3 | null
+  getPreparedBounds: () => Box3 | null
   refreshAnchors: () => void
   dispose: () => void
 }
 
-const _box = new Box3()
 const _size = new Vector3()
 const _center = new Vector3()
 
 function applyPrepare(object: Object3D, prepare: AssetPrepare): void {
   if (prepare.mode === 'height') prepareProp(object, prepare.value)
   else if (prepare.mode === 'fitMax') preparePropFitMax(object, prepare.value)
+  // mode 'none' — leave authored meters
 }
+
+/** AABB of the model itself. Do not pass the slot group (Box3Helper + gizmos). */
+export function boxFromModel(model: Object3D): Box3 {
+  model.updateMatrixWorld(true)
+  return new Box3().setFromObject(model)
+}
+
+export function collectMeshStats(root: Object3D | null): MeshStats {
+  const names = new Set<string>()
+  let triangles = 0
+  if (!root) return { triangles: 0, materials: [] }
+  root.traverse((obj) => {
+    const mesh = obj as Mesh
+    if (!mesh.isMesh || !mesh.geometry) return
+    const geom = mesh.geometry
+    const index = geom.getIndex()
+    const pos = geom.getAttribute('position')
+    if (index) triangles += index.count / 3
+    else if (pos) triangles += pos.count / 3
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const mat of mats) {
+      if (mat && mat.name) names.add(mat.name)
+    }
+  })
+  return { triangles: Math.round(triangles), materials: [...names].sort((a, b) => a.localeCompare(b)) }
+}
+
+const emptyMeshStats = (): MeshStats => ({ triangles: 0, materials: [] })
 
 export function createAssetSlot(role: 'reference' | 'target', scene: Group): AssetSlot {
   const group = new Group()
@@ -67,6 +105,9 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
   let bboxHelper: Box3Helper | null = null
   let mixer: AnimationMixer | null = null
   let clips: import('three').AnimationClip[] = []
+  let nativeBox: Box3 | null = null
+  let preparedBox: Box3 | null = null
+  let meshStat: MeshStats = emptyMeshStats()
 
   const refreshBbox = () => {
     if (bboxHelper) {
@@ -76,8 +117,11 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
       bboxHelper = null
     }
     if (!model) return
-    _box.setFromObject(group)
-    bboxHelper = new Box3Helper(_box, new Color(role === 'reference' ? 0x4a9fd8 : 0xe0a040))
+    // Own Box3 — Box3Helper keeps a live reference; mutating a shared _box
+    // (or including the helper in setFromObject(group)) inflates AABB to km.
+    const box = boxFromModel(model)
+    bboxHelper = new Box3Helper(box, new Color(role === 'reference' ? 0x4a9fd8 : 0xe0a040))
+    bboxHelper.name = `${role}-bbox`
     group.add(bboxHelper)
   }
 
@@ -123,6 +167,8 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
     get gizmos() { return gizmos },
     get bboxHelper() { return bboxHelper },
     get mixer() { return mixer },
+    get clipCount() { return clips.length },
+    get meshStats() { return meshStat },
     async load(nextEntry, customUrl) {
       slot.unload()
       entry = nextEntry
@@ -136,8 +182,11 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
 
       model = loaded.scene
       clips = loaded.animations
+      nativeBox = boxFromModel(model)
       applyPrepare(model, nextEntry.prepare)
       if (nextEntry.id === 'held:wooden_torch') model.rotation.x = Math.PI / 2
+      preparedBox = boxFromModel(model)
+      meshStat = collectMeshStats(model)
 
       group.add(model)
       resolveAnchors()
@@ -174,6 +223,9 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
       anchors = []
       anchorIssues = []
       clips = []
+      nativeBox = null
+      preparedBox = null
+      meshStat = emptyMeshStats()
     },
     setPose(pose) {
       if (!model || !mixer || !clips.length) return
@@ -189,7 +241,13 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
     },
     getBounds() {
       if (!model) return null
-      return _box.setFromObject(group)
+      return boxFromModel(model)
+    },
+    getNativeBounds() {
+      return nativeBox ? nativeBox.clone() : null
+    },
+    getPreparedBounds() {
+      return preparedBox ? preparedBox.clone() : null
     },
     refreshAnchors() {
       if (!model) return

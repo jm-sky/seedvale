@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, type Ref, watch } from 'vue'
+import type { AssetIndexEntry } from '../../../assets/assetIndex'
 import type { AssetViewer } from '../viewer/createViewer'
-import { buildAssetIndex, findAssetEntry } from '../../../assets/assetIndex'
+import {
+  buildAssetIndex,
+  filterAssetIndex,
+  formatAssetLabel,
+  mergeParkedManifest,
+  resolveLoadEntry,
+} from '../../../assets/assetIndex'
 import {
   bumpGripEdit,
   formatHeldAttachSnippet,
@@ -19,6 +26,13 @@ const props = defineProps<{ viewerRef: Ref<AssetViewer | null> }>()
 const viewer = computed(() => props.viewerRef.value)
 
 const modelFiles = ref<string[]>([])
+const searchQuery = ref('')
+const wiredIndex = buildAssetIndex()
+const assetIndex = ref<AssetIndexEntry[]>(wiredIndex)
+const indexReady = ref(false)
+
+const filteredIndex = computed(() => filterAssetIndex(assetIndex.value, searchQuery.value))
+const searchMatchCount = computed(() => filteredIndex.value.length)
 
 async function fetchModelFiles(): Promise<void> {
   try {
@@ -41,10 +55,9 @@ function onModelHmr(event: string, data?: { url?: string }) {
   if (clean(tgtUrl ?? null) === data.url) void viewer.value?.reloadTarget()
 }
 
-const assetIndex = buildAssetIndex()
 const grouped = computed(() => {
-  const map = new Map<string, typeof assetIndex>()
-  for (const entry of assetIndex) {
+  const map = new Map<string, AssetIndexEntry[]>()
+  for (const entry of filteredIndex.value) {
     const list = map.get(entry.group) ?? []
     list.push(entry)
     map.set(entry.group, list)
@@ -80,27 +93,21 @@ function syncSlot(which: 'reference' | 'target') {
 
 async function loadReference() {
   if (!viewer.value) return
-  const entry = browserState.referenceId ? findAssetEntry(browserState.referenceId) : null
-  await viewer.value.loadReference(entry ?? null, entry?.url)
+  const entry = resolveLoadEntry(assetIndex.value, {
+    id: browserState.referenceId,
+    url: browserState.referenceFreeUrl,
+  })
+  await viewer.value.loadReference(entry, entry?.url)
   syncSlot('reference')
 }
 
 async function loadTarget() {
   if (!viewer.value) return
-  if (browserState.freeUrl.trim()) {
-    await viewer.value.loadTarget({
-      id: 'custom:url',
-      url: browserState.freeUrl.trim(),
-      label: 'Custom URL',
-      group: 'other',
-      prepare: { mode: 'fitMax', value: 1 },
-      skinned: false,
-      anchors: [],
-    }, browserState.freeUrl.trim())
-  } else {
-    const entry = browserState.targetId ? findAssetEntry(browserState.targetId) : null
-    await viewer.value.loadTarget(entry ?? null, entry?.url)
-  }
+  const entry = resolveLoadEntry(assetIndex.value, {
+    id: browserState.targetId,
+    url: browserState.freeUrl,
+  })
+  await viewer.value.loadTarget(entry, entry?.url)
   loadGripEditor(browserState.freeUrl.trim() ? null : browserState.targetId)
   syncSlot('target')
 }
@@ -117,7 +124,7 @@ async function copyGripSnippet() {
 }
 
 watch(() => viewer.value, (v) => {
-  if (!v) return
+  if (!v || !indexReady.value) return
   installGripApi(() => {
     v.remountHeld()
     syncSlot('target')
@@ -125,9 +132,19 @@ watch(() => viewer.value, (v) => {
   void loadReference()
   if (browserState.targetId || browserState.freeUrl) void loadTarget()
 })
+watch(() => indexReady.value, (ready) => {
+  if (!ready || !viewer.value) return
+  installGripApi(() => {
+    viewer.value?.remountHeld()
+    syncSlot('target')
+  })
+  void loadReference()
+  if (browserState.targetId || browserState.freeUrl) void loadTarget()
+})
 watch(() => browserState.referenceId, loadReference)
 watch(() => browserState.targetId, loadTarget)
-watch(() => browserState.freeUrl, () => { if (browserState.freeUrl.trim()) void loadTarget() })
+watch(() => browserState.freeUrl, () => { void loadTarget() })
+watch(() => browserState.referenceFreeUrl, () => { void loadReference() })
 watch(browserState, () => viewer.value?.refresh(), { deep: true })
 
 watch(
@@ -140,6 +157,7 @@ watch(
     browserState.referenceId,
     browserState.targetId,
     browserState.freeUrl,
+    browserState.referenceFreeUrl,
     browserState.referenceAnchor,
     browserState.targetAnchor,
     browserState.focus,
@@ -158,7 +176,11 @@ watch(
 )
 
 onMounted(() => {
-  void fetchModelFiles()
+  void (async () => {
+    await fetchModelFiles()
+    assetIndex.value = mergeParkedManifest(wiredIndex, modelFiles.value)
+    indexReady.value = true
+  })()
   if (import.meta.hot) {
     import.meta.hot.on('asset-browser:model-changed', (data: { url?: string }) => {
       onModelHmr('asset-browser:model-changed', data)
@@ -208,6 +230,30 @@ function lampMountSnippet() {
 
       <section>
         <h2 class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Search
+        </h2>
+        <input
+          v-model="searchQuery"
+          class="w-full rounded bg-slate-800 px-2 py-1"
+          placeholder="id, label, url, pack, kind…"
+          type="search"
+        >
+        <p
+          v-if="searchQuery.trim() && searchMatchCount === 0"
+          class="mt-1 text-xs text-amber-300"
+        >
+          {{ searchQuery.trim() }}: 0
+        </p>
+        <p
+          v-else-if="searchQuery.trim()"
+          class="mt-1 text-[10px] text-slate-500"
+        >
+          {{ searchMatchCount }} matches
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
           Reference
         </h2>
         <select
@@ -227,10 +273,17 @@ function lampMountSnippet() {
               :key="e.id"
               :value="e.id"
             >
-              {{ e.label }}
+              {{ formatAssetLabel(e) }}
             </option>
           </optgroup>
         </select>
+        <label class="mt-2 block text-xs text-slate-400">Free URL</label>
+        <input
+          v-model="browserState.referenceFreeUrl"
+          class="w-full rounded bg-slate-800 px-2 py-1"
+          placeholder="/models/..."
+          list="asset-browser-model-list"
+        >
         <label class="mt-2 block text-xs text-slate-400">Anchor</label>
         <select
           v-model="browserState.referenceAnchor"
@@ -276,7 +329,7 @@ function lampMountSnippet() {
               :key="e.id"
               :value="e.id"
             >
-              {{ e.label }}
+              {{ formatAssetLabel(e) }}
             </option>
           </optgroup>
         </select>

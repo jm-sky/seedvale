@@ -1,5 +1,6 @@
 import { Euler } from 'three'
 import type { ResolvedAnchor } from '../../../assets/anchorResolve'
+import type { AssetIndexEntry } from '../../../assets/assetIndex'
 import type { BrowserState } from '../state'
 import type { AssetSlot } from './createAssetSlot'
 import {
@@ -15,9 +16,43 @@ import {
   formatAlignmentReport,
   groundContactVerdict,
   type ReportAnchor,
+  type ReportSlotBounds,
 } from '../../../assets/alignmentReport'
 import { boundsData } from './createAssetSlot'
 import { computeHeldPreviewState } from './mountHeldPreview'
+
+function formatPrepare(entry: AssetIndexEntry | null): string {
+  if (!entry) return 'none'
+  if (entry.prepare.mode === 'none') return 'none'
+  return `${entry.prepare.mode} ${entry.prepare.value}`
+}
+
+function slotBoundsReport(slot: AssetSlot): ReportSlotBounds | null {
+  if (!slot.model) return null
+  const world = slot.getBounds()
+  if (!world) return null
+  const worldData = boundsData(world)
+  const native = slot.getNativeBounds()
+  const prepared = slot.getPreparedBounds()
+  const nativeSize = native ? boundsData(native).size : worldData.size
+  const preparedSize = prepared ? boundsData(prepared).size : worldData.size
+  return {
+    prepare: formatPrepare(slot.entry),
+    status: slot.entry?.status ?? null,
+    pack: slot.entry?.pack ?? null,
+    kind: slot.entry?.kind ?? null,
+    nativeSize,
+    preparedSize,
+    min: worldData.min,
+    max: worldData.max,
+    size: worldData.size,
+    center: worldData.center,
+    minY: worldData.minY,
+    triangles: slot.meshStats.triangles,
+    materials: slot.meshStats.materials,
+    clipCount: slot.clipCount,
+  }
+}
 
 function rootTransform(group: import('three').Group): {
   position: [number, number, number]
@@ -64,8 +99,9 @@ export function buildReportFromScene(input: {
     ?? reference.anchors.find((a) => a.def.name === state.targetAnchor)
 
   const hasPair = !!(refAnchor && tgtAnchor && target.model)
-  const bounds = target.getBounds() ?? reference.getBounds()
-  const boundsReport = bounds ? boundsData(bounds) : null
+  const referenceBounds = slotBoundsReport(reference)
+  const targetBounds = slotBoundsReport(target)
+  const boundsReport = targetBounds ?? referenceBounds
   const ground = boundsReport ? groundContactVerdict(boundsReport.minY) : null
 
   let delta = {
@@ -123,6 +159,8 @@ export function buildReportFromScene(input: {
     targetRoot: target.model ? rootTransform(target.group) : null,
     delta,
     bounds: boundsReport,
+    referenceBounds,
+    targetBounds,
     groundContact: ground,
     anchors: allAnchors.map(anchorToReport),
     issues: [

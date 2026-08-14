@@ -128,6 +128,9 @@ export function applyHeldPreview(
   if (state.mode !== 'in-hand') {
     if (state.mode === 'side-by-side') {
       target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
+    } else {
+      // Kit / pair compare: overlap at origin so authored meters match.
+      target.group.position.set(0, 0, 0)
     }
     return state
   }

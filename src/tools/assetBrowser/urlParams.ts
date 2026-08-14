@@ -20,6 +20,7 @@ export type AssetBrowserUrlParams = {
   referenceId?: string | null
   targetId?: string | null
   freeUrl?: string
+  referenceFreeUrl?: string
   referenceAnchor?: string | null
   targetAnchor?: string | null
   focus?: FocusMode
@@ -139,6 +140,9 @@ export function parseAssetBrowserUrlParams(
   const url = firstPresent(params, ['url', 'targetUrl', 'freeUrl'])
   if (url !== undefined) out.freeUrl = url.trim()
 
+  const refUrl = firstPresent(params, ['referenceUrl', 'refUrl'])
+  if (refUrl !== undefined) out.referenceFreeUrl = refUrl.trim()
+
   const refAnchor = normalizeOptionalString(
     firstPresent(params, ['referenceAnchor', 'refAnchor']),
   )
@@ -204,6 +208,10 @@ export function applyAssetBrowserUrlParams(
     state.freeUrl = parsed.freeUrl
     if (parsed.freeUrl && parsed.targetId === undefined) state.targetId = null
   }
+  if (parsed.referenceFreeUrl !== undefined) {
+    state.referenceFreeUrl = parsed.referenceFreeUrl
+    if (parsed.referenceFreeUrl && parsed.referenceId === undefined) state.referenceId = null
+  }
   if (parsed.referenceAnchor !== undefined) state.referenceAnchor = parsed.referenceAnchor
   if (parsed.targetAnchor !== undefined) state.targetAnchor = parsed.targetAnchor
   if (parsed.focus !== undefined) state.focus = parsed.focus
@@ -240,7 +248,7 @@ export function syncAssetBrowserUrlParams(state: BrowserState): void {
 
   // Canonical names only (drop aliases so the bar stays short).
   for (const alias of [
-    'ref', 'targetUrl', 'freeUrl', 'refAnchor', 'radius', 'zoom', 'activeView',
+    'ref', 'targetUrl', 'freeUrl', 'refUrl', 'refAnchor', 'radius', 'zoom', 'activeView',
     'light', 'preset', 'showBbox', 'showGrid', 'showAxes', 'showGround', 'report',
   ] as const) {
     url.searchParams.delete(alias)
@@ -249,6 +257,7 @@ export function syncAssetBrowserUrlParams(state: BrowserState): void {
   setOrDelete(url, 'reference', state.referenceId)
   setOrDelete(url, 'target', state.targetId)
   setOrDelete(url, 'url', state.freeUrl.trim() || null)
+  setOrDelete(url, 'referenceUrl', state.referenceFreeUrl.trim() || null)
   setOrDelete(url, 'referenceAnchor', state.referenceAnchor)
   setOrDelete(url, 'targetAnchor', state.targetAnchor)
 

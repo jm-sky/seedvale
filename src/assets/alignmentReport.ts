@@ -18,6 +18,23 @@ export type ReportAnchor = {
   worldRotationDeg: [number, number, number] | null
 }
 
+export type ReportSlotBounds = {
+  prepare: string
+  status: string | null
+  pack: string | null
+  kind: string | null
+  nativeSize: [number, number, number]
+  preparedSize: [number, number, number]
+  min: [number, number, number]
+  max: [number, number, number]
+  size: [number, number, number]
+  center: [number, number, number]
+  minY: number
+  triangles: number | null
+  materials: string[]
+  clipCount: number | null
+}
+
 export type AlignmentReport = {
   version: number
   mode: 'pair' | 'single'
@@ -58,6 +75,8 @@ export type AlignmentReport = {
     center: [number, number, number]
     minY: number
   } | null
+  referenceBounds: ReportSlotBounds | null
+  targetBounds: ReportSlotBounds | null
   groundContact: {
     verdict: 'ok' | 'floating' | 'sunken'
     offsetM: number
@@ -82,6 +101,8 @@ export type AlignmentReportInput = {
   targetRoot?: AlignmentReport['targetRoot']
   delta?: AlignmentReport['delta']
   bounds?: AlignmentReport['bounds']
+  referenceBounds?: ReportSlotBounds | null
+  targetBounds?: ReportSlotBounds | null
   groundContact?: AlignmentReport['groundContact']
   anchors?: ReportAnchor[]
   issues?: string[]
@@ -103,6 +124,27 @@ function fmtPos(p: [number, number, number]): string {
 function fmtRot(r: [number, number, number] | null): string {
   if (!r) return 'null'
   return `[${fmt1(r[0])}, ${fmt1(r[1])}, ${fmt1(r[2])}]`
+}
+
+function formatSlotBounds(label: string, b: ReportSlotBounds): string[] {
+  const lines: string[] = []
+  lines.push(`${label}:`)
+  lines.push(`  prepare: ${b.prepare}`)
+  if (b.status) lines.push(`  status: ${b.status}`)
+  if (b.pack) lines.push(`  pack: ${b.pack}`)
+  if (b.kind) lines.push(`  kind: ${b.kind}`)
+  lines.push(`  native_size_m: ${fmtPos(b.nativeSize)}`)
+  lines.push(`  prepared_size_m: ${fmtPos(b.preparedSize)}`)
+  lines.push(`  min_m: ${fmtPos(b.min)}`)
+  lines.push(`  max_m: ${fmtPos(b.max)}`)
+  lines.push(`  size_m: ${fmtPos(b.size)}`)
+  lines.push(`  center_m: ${fmtPos(b.center)}`)
+  lines.push(`  min_y_m: ${fmt3(b.minY)}`)
+  if (b.triangles !== null) lines.push(`  triangles: ${b.triangles}`)
+  if (b.materials.length) lines.push(`  materials: [${b.materials.join(', ')}]`)
+  if (b.clipCount !== null) lines.push(`  clip_count: ${b.clipCount}`)
+  lines.push('')
+  return lines
 }
 
 export function buildAlignmentReport(input: AlignmentReportInput): AlignmentReport {
@@ -132,6 +174,8 @@ export function buildAlignmentReport(input: AlignmentReportInput): AlignmentRepo
       orientationKnown: false,
     },
     bounds: input.bounds ?? null,
+    referenceBounds: input.referenceBounds ?? null,
+    targetBounds: input.targetBounds ?? null,
     groundContact: input.groundContact ?? null,
     anchors: input.anchors ?? [],
     issues: input.issues ?? [],
@@ -193,7 +237,15 @@ export function formatAlignmentReport(report: AlignmentReport): string {
     lines.push('')
   }
 
-  if (report.bounds) {
+  if (report.referenceBounds) {
+    lines.push(...formatSlotBounds('reference_bounds', report.referenceBounds))
+  }
+
+  if (report.targetBounds) {
+    lines.push(...formatSlotBounds('target_bounds', report.targetBounds))
+  }
+
+  if (report.bounds && !report.referenceBounds && !report.targetBounds) {
     lines.push('bounds:')
     lines.push(`  min_m: ${fmtPos(report.bounds.min)}`)
     lines.push(`  max_m: ${fmtPos(report.bounds.max)}`)

@@ -14,6 +14,7 @@ export type BrowserState = {
   referenceId: string | null
   targetId: string | null
   freeUrl: string
+  referenceFreeUrl: string
   referenceAnchor: string | null
   targetAnchor: string | null
   layout: ViewLayout
@@ -44,6 +45,7 @@ export const browserState = reactive<BrowserState>({
   referenceId: 'character:player',
   targetId: null,
   freeUrl: '',
+  referenceFreeUrl: '',
   referenceAnchor: 'hand.right',
   targetAnchor: null,
   layout: 'quad',
@@ -73,6 +75,7 @@ if (applyAssetBrowserUrlParams(browserState)) {
     browserState.referenceId ? `ref=${browserState.referenceId}` : null,
     browserState.targetId ? `target=${browserState.targetId}` : null,
     browserState.freeUrl.trim() ? `url=${browserState.freeUrl.trim()}` : null,
+    browserState.referenceFreeUrl.trim() ? `refUrl=${browserState.referenceFreeUrl.trim()}` : null,
   ].filter(Boolean)
   browserState.statusMessage = parts.length
     ? `Loaded from URL (${parts.join(', ')})`

@@ -1,6 +1,6 @@
 # Plan 107: Asset Browser — discovery dla agenta (index, search, uczciwa skala)
 
-**Status:** `planned`  
+**Status:** `verification needed`  
 **Created:** 2026-08-14  
 **Priority:** 🟡 medium  
 **Effort:** `M`  
@@ -19,7 +19,7 @@ Agent na `/asset-browser.html` potrafi w minutę odpowiedzieć:
 
 1. jakie mamy ściany (i że `settlement:wall` to palisada, a MegaKit to mur 2×3.12 m),
 2. które doorway walls są plaster vs brick,
-3. czy są warianty dachu (dziś: zero — UI ma to powiedzieć),
+3. czy są warianty dachu (~39× `roof_*` parked MegaKit — UI ma je znaleźć),
 4. jaka jest **authored** skala vs prepare runtime,
 5. czy plik jest `wired` czy `parked`,
 6. co jeszcze jest z tej samej paczki (`megakit/`),
@@ -29,7 +29,7 @@ Agent na `/asset-browser.html` potrafi w minutę odpowiedzieć:
 
 - Prefab domu, snap grid, settlement generation, physics z otworem.
 - Nowa ontologia / osobny asset graph.
-- Import brakujących GLB z pełnego MegaKit (dach, narożnik, okno, `Door_*`) — to backlog MODELS M01 + audyt 3D, nie ten plan.
+- Import brakujących GLB z pełnego MegaKit (dach, narożnik, okno, `Door_*`) — **zrobione 2026-08-14** (176 GLB w `public/models/settlement/megakit/`); nie konwertować od nowa.
 - Authoring kotwic `entrance` / `SV_*` w GLB.
 - Przeróbka grip editora / held preview (zostaje).
 
@@ -37,7 +37,7 @@ Agent na `/asset-browser.html` potrafi w minutę odpowiedzieć:
 
 1. **Index parked** — `buildAssetIndex()` nadal źródło wired. Dodać wpisy z `/asset-browser-models.json` (albo na start tylko ` /models/settlement/megakit/`), `id` w stylu `parked:settlement/megakit/wall_plaster_straight`, `status: 'parked'`, `prepare: { mode: 'none' }`. Wagon (`/models/settlement/megakit/wagon.glb`) oznaczyć `wired` (już ładuje `props.ts`) zamiast duplikować jako parked.
 2. **`AssetIndexEntry`** — opcjonalne `status?: 'wired' | 'parked' | 'extra'`, `pack?: string` (segment ścieżki). Bez nowego pliku registry. Opcjonalnie `kind` tylko dla znanej tabeli MegaKit README (wall / door / chimney / fence / prop) — mapowanie z nazwy pliku, nie ręczna baza 108 tagów.
-3. **Search** w pickerze Reference i Target (jedno pole filtruje optgroupy). Puste zapytanie `roof` → 0 wyników, nie cisza.
+3. **Search** w pickerze Reference i Target (jedno pole filtruje optgroupy). Puste dopasowanie (`xyzzy`) pokazuje `query: 0`, nie ciszę. Search `roof` → ~39 parked dachów.
 4. **Free URL prepare `none`**, nie `fitMax: 1`. Toggle prepare przy slocie: none / height / fitMax (P1 jeśli v1 ma tylko none+istniejące wired).
 5. **Reference ładuje Free URL** tak samo jak Target.
 6. **Raport** — `reference_bounds` i `target_bounds` osobno; native AABB z modelu **przed** helperami; prepared AABB po `prepareProp*`. Nie jeden `bounds` z `setFromObject(slot.group)`.
@@ -71,11 +71,46 @@ Techniczna: `npx tsc --noEmit`, `npm run lint`, `npm run test` (index + alignmen
 Browser (użytkownik, nie headless):
 
 1. `/asset-browser.html` — search `wall` pokazuje palisadę **i** `wall_plaster_*` / `wall_brick_*`.
-2. Search `roof` → 0.
-3. Load `parked:…/wall_plaster_straight` vs `wall_plaster_door` — oba ~2 × 3.12 × 0.4 m w raporcie, nie 1 m.
+2. Search `roof` → ~39 parked dachów MegaKit (nie pusto; stary punkt „0” był przy 19 parked).
+3. Load `parked:…/wall_plaster_straight` vs `wall_plaster_door_flat` — oba ~2 × 3.12 × 0.4 m w raporcie, nie 1 m.
 4. Load `house:hut_d` — label zawiera `hut_d`; AABB native ≠ 8.2 m (8.2 to prepare height).
 5. Deep link `?url=/models/settlement/megakit/chimney.glb` nie fitMax-uje komina do 1 m.
 
 ## Definition of done
 
-Agent bez znajomości drzewa katalogów potrafi: znaleźć MegaKit walls, odróżnić je od palisady, odczytać zgodną skalę 2 m, zobaczyć że dachu nie ma, zobaczyć że kit jest parked. Nie potrafi jeszcze złożyć domu w świecie — to nie ten plan.
+Agent bez znajomości drzewa katalogów potrafi: znaleźć MegaKit walls, odróżnić je od palisady, odczytać zgodną skalę 2 m, zobaczyć warianty dachu (~39), zobaczyć że kit jest parked. Nie potrafi jeszcze złożyć domu w świecie — to nie ten plan.
+
+## Implementation notes (2026-08-14)
+
+v1 / P0 zrobione. Część v1.1 weszła przy okazji (mały koszt, ten sam szew).
+
+### v1 (P0)
+
+- `AssetIndexEntry`: opcjonalne `status` / `pack` / `kind`. `buildAssetIndex()` nadal tylko wired; `mergeParkedManifest()` dokłada pliki z `/asset-browser-models.json`.
+- Wagon (`/models/settlement/megakit/wagon.glb`) jest `settlement:wagon` **wired** (`fitMax` 3.8 jak `props.ts`); merge nie duplikuje parked.
+- Search filtruje oba pickery po id/label/url/status/pack/kind. Empty state: `{query}: 0`.
+- Free URL i parked: `prepare: none`. Wired zachowują dotychczasowy prepare.
+- Reference ma Free URL (`referenceUrl` / `refUrl` w query).
+- Raport: `reference_bounds` / `target_bounds` z `native_size_m` + `prepared_size_m`. `getBounds()` mierzy model, nie group z `Box3Helper`.
+- Labele: `hut_d — Chata` / `hut_a — Chałupa` (koniec dwóch identycznych „Chałupa”).
+
+### v1.1 (w tej sesji)
+
+- Materiały + tris + `clip_count` w per-slot bounds.
+- Brak `HELD_SIDE_OFFSET`, gdy preview nie jest held (`mode === 'off'`).
+- Palisada: `Wall segment (RTS palisade)`.
+- Camera persist **nie** jest przywracane dla `prepare: none` (parked/URL) — framing z AABB modelu. Persist nadal globalny dla grip (nie per para).
+
+### Weryfikacja
+
+**Techniczna (zrobione):** `npx tsc --noEmit` OK · `npm run lint` OK · `npm run test` 618/618.
+
+**Browser/manual — do użytkownika** na `localhost:5577` (nie headless):
+
+1. `/asset-browser.html` — search `wall` → palisada RTS **i** `wall_plaster_*` / `wall_brick_*`.
+2. Search `roof` → ~39 dachów `[parked]`, nie pusto.
+3. Para `wall_plaster_straight` vs `wall_plaster_door_flat` — raport ~2 × 3.12 × 0.4 m, **nie** 1 m.
+4. `house:hut_d` — label zawiera `hut_d`; `native_size_m` ≠ prepare height 8.2.
+5. `?url=/models/settlement/megakit/chimney.glb` — komin w authored metrach, nie fitMax 1.
+
+Nie commitowano.

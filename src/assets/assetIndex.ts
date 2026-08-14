@@ -56,6 +56,8 @@ export type AssetIndexGroup =
   | 'fx'
   | 'other'
 
+export type AssetIndexStatus = 'wired' | 'parked' | 'extra'
+
 export type AssetIndexEntry = {
   id: string
   url: string
@@ -64,12 +66,184 @@ export type AssetIndexEntry = {
   prepare: AssetPrepare
   skinned: boolean
   anchors: readonly AssetAnchorDef[]
+  /** Present on every built entry. Wired = game registry; parked = disk-only. */
+  status?: AssetIndexStatus
+  /** Path segment (e.g. `megakit`, `nature`, `settlement`). */
+  pack?: string
+  /** Light MegaKit role from filename (`wall`, `roof`, …) — not a global ontology. */
+  kind?: string
 }
 
-function basenameFromUrl(url: string): string {
+const WAGON_URL = '/models/settlement/megakit/wagon.glb'
+const WAGON_FIT_MAX = 3.8
+
+/** Filename prefixes from `public/models/settlement/megakit/README.md` — longest first. */
+const MEGAKIT_KIND_PREFIXES = [
+  'windowshutters',
+  'doorframe',
+  'overhang',
+  'holecover',
+  'balcony',
+  'chimney',
+  'support',
+  'stairs',
+  'stair',
+  'window',
+  'border',
+  'corner',
+  'fence',
+  'floor',
+  'crate',
+  'wagon',
+  'vine',
+  'roof',
+  'wall',
+  'door',
+] as const
+
+export function basenameFromUrl(url: string): string {
   const parts = url.split('/')
   const file = parts[parts.length - 1] ?? url
   return file.replace(/\.glb$/i, '')
+}
+
+export function packFromUrl(url: string): string | undefined {
+  const parts = url.replace(/^\//, '').split('/').filter(Boolean)
+  // `/models/settlement/megakit/foo.glb` → models, settlement, megakit, foo.glb
+  if (parts[0] !== 'models' || parts.length < 3) return undefined
+  if (parts.length >= 4) return parts[parts.length - 2]
+  return parts[1]
+}
+
+export function kindFromBasename(name: string): string | undefined {
+  const n = name.toLowerCase()
+  for (const prefix of MEGAKIT_KIND_PREFIXES) {
+    if (n === prefix || n.startsWith(`${prefix}_`)) return prefix
+  }
+  return undefined
+}
+
+export function parkedIdFromUrl(url: string): string {
+  const path = url.replace(/^\/models\//, '').replace(/\.glb$/i, '')
+  return `parked:${path}`
+}
+
+export function groupFromModelUrl(url: string): AssetIndexGroup {
+  const folder = url.replace(/^\/models\//, '').split('/')[0]
+  switch (folder) {
+    case 'characters': return 'character'
+    case 'fauna': return 'fauna'
+    case 'fx': return 'fx'
+    case 'items': return 'item'
+    case 'nature': return 'nature'
+    case 'npc': return 'npc'
+    case 'settlement': return 'settlement'
+    case 'world': return 'other'
+    default: return 'other'
+  }
+}
+
+function decorateEntry(entry: AssetIndexEntry): AssetIndexEntry {
+  const pack = entry.pack ?? packFromUrl(entry.url)
+  const kind = entry.kind ?? (pack === 'megakit' ? kindFromBasename(basenameFromUrl(entry.url)) : undefined)
+  return {
+    ...entry,
+    status: entry.status ?? 'wired',
+    pack,
+    kind,
+  }
+}
+
+export function formatAssetLabel(entry: AssetIndexEntry): string {
+  if (entry.status === 'parked') return `${entry.label} [parked]`
+  return entry.label
+}
+
+export function assetEntryMatchesQuery(entry: AssetIndexEntry, queryLower: string): boolean {
+  const hay = [
+    entry.id,
+    entry.label,
+    entry.url,
+    entry.group,
+    entry.status ?? '',
+    entry.pack ?? '',
+    entry.kind ?? '',
+  ].join(' ').toLowerCase()
+  return hay.includes(queryLower)
+}
+
+export function filterAssetIndex(
+  entries: readonly AssetIndexEntry[],
+  query: string,
+): AssetIndexEntry[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return [...entries]
+  return entries.filter((e) => assetEntryMatchesQuery(e, q))
+}
+
+export function customUrlEntry(url: string): AssetIndexEntry {
+  const name = basenameFromUrl(url)
+  const pack = packFromUrl(url)
+  return {
+    id: 'custom:url',
+    url,
+    label: url,
+    group: groupFromModelUrl(url),
+    prepare: { mode: 'none' },
+    skinned: false,
+    anchors: [],
+    status: 'parked',
+    pack,
+    kind: pack === 'megakit' ? kindFromBasename(name) : undefined,
+  }
+}
+
+/** Prefer a known index row (wired or parked); otherwise authored-scale custom URL. */
+export function resolveLoadEntry(
+  index: readonly AssetIndexEntry[],
+  opts: { id?: string | null, url?: string | null },
+): AssetIndexEntry | null {
+  const url = opts.url?.trim()
+  if (url) return entryFromUrl(url, index) ?? customUrlEntry(url)
+  const id = opts.id?.trim()
+  if (id) return findAssetEntry(id, index) ?? null
+  return null
+}
+
+export function makeParkedEntry(url: string): AssetIndexEntry {
+  const name = basenameFromUrl(url)
+  const pack = packFromUrl(url)
+  return {
+    id: parkedIdFromUrl(url),
+    url,
+    label: name,
+    group: groupFromModelUrl(url),
+    prepare: { mode: 'none' },
+    skinned: false,
+    anchors: [],
+    status: 'parked',
+    pack,
+    kind: pack === 'megakit' ? kindFromBasename(name) : undefined,
+  }
+}
+
+/** Append disk-only GLBs from the asset-browser manifest. Skip URLs already wired. */
+export function mergeParkedManifest(
+  wired: readonly AssetIndexEntry[],
+  files: readonly string[],
+): AssetIndexEntry[] {
+  const seenUrls = new Set(wired.map((e) => e.url))
+  const seenIds = new Set(wired.map((e) => e.id))
+  const out = wired.map(decorateEntry)
+  for (const url of files) {
+    if (!url.endsWith('.glb') || seenUrls.has(url)) continue
+    const parked = makeParkedEntry(url)
+    if (seenIds.has(parked.id)) continue
+    seenUrls.add(url)
+    seenIds.add(parked.id)
+    out.push(parked)
+  }
+  return out
 }
 
 function pushHeldSpecs(out: AssetIndexEntry[]): void {
@@ -235,7 +409,7 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     out.push({
       id,
       url: entry.url,
-      label: entry.label,
+      label: `${entry.id} — ${entry.label}`,
       group: 'house',
       prepare: { mode: 'height', value: entry.height },
       skinned: false,
@@ -262,7 +436,8 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     { id: 'settlement:lantern', url: LANTERN_URL, label: 'Lantern', prepare: { mode: 'fitMax', value: LANTERN_FLOOR_MAX } },
     { id: 'settlement:lantern_wall', url: LANTERN_URL, label: 'Lantern (wall)', prepare: { mode: 'fitMax', value: LANTERN_WALL_MAX } },
     { id: 'settlement:torch', url: VILLAGE_TORCH_URL, label: 'Village torch', prepare: { mode: 'height', value: VILLAGE_TORCH_HEIGHT } },
-    { id: 'settlement:wall', url: WALL_URL, label: 'Wall segment', prepare: { mode: 'height', value: 1.85 } },
+    { id: 'settlement:wall', url: WALL_URL, label: 'Wall segment (RTS palisade)', prepare: { mode: 'height', value: 1.85 } },
+    { id: 'settlement:wagon', url: WAGON_URL, label: 'Wagon (Kupiec)', prepare: { mode: 'fitMax', value: WAGON_FIT_MAX } },
     { id: 'settlement:well', url: WELL_URL, label: 'Well', prepare: { mode: 'height', value: WELL_HEIGHT } },
     { id: 'settlement:wood_pile', url: WOOD_PILE_URL, label: 'Wood pile', prepare: { mode: 'height', value: WOOD_PILE_HEIGHT } },
     { id: 'fx:fire', url: FIRE_FX_URL, label: 'Fire FX', prepare: { mode: 'fitMax', value: 0.11 } },
@@ -278,19 +453,27 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     })
   }
 
-  return out
+  return out.map(decorateEntry)
 }
 
-export function assetIndexById(index: AssetIndexEntry[] = buildAssetIndex()): Map<string, AssetIndexEntry> {
+export function assetIndexById(
+  index: readonly AssetIndexEntry[] = buildAssetIndex(),
+): Map<string, AssetIndexEntry> {
   return new Map(index.map((e) => [e.id, e]))
 }
 
-export function findAssetEntry(id: string, index?: AssetIndexEntry[]): AssetIndexEntry | undefined {
+export function findAssetEntry(
+  id: string,
+  index?: readonly AssetIndexEntry[],
+): AssetIndexEntry | undefined {
   const list = index ?? buildAssetIndex()
   return list.find((e) => e.id === id)
 }
 
-export function entryFromUrl(url: string, index?: AssetIndexEntry[]): AssetIndexEntry | undefined {
+export function entryFromUrl(
+  url: string,
+  index?: readonly AssetIndexEntry[],
+): AssetIndexEntry | undefined {
   const list = index ?? buildAssetIndex()
   return list.find((e) => e.url === url)
 }
