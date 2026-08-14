@@ -293,3 +293,14 @@ Przed implementacją należy przede wszystkim sprawdzić aktualny stan:
 - `src/terrain/chunkHeightmap.ts` / protocol, jeśli potrzebne.
 
 Nie należy ponownie projektować architektury świata. Jeśli istniejący kod pozwala osiągnąć cel przez małe rozszerzenie, należy wybrać tę opcję zamiast nowego subsystemu.
+
+## Zamknięcie v1 (2026-08-14)
+
+Zrobione poza pierwszym cięciem 2–3 typów:
+
+- `cemetery` — GLB `nature/cemetery.glb` (Poly) + `nature/grave_a.glb` (Jarlan Perez), pas `[0.55, 1.05] × regional.radius` poza clearingami. Szansa bazowa `0.28`, bo filtr wsi jest właściwą rzadkością.
+- Home chunks nadal bez skał/kłód/ognisk; landmarki (w tym cmentarz) się toczą — inaczej spawn village nigdy nie dostałby cmentarza.
+- Miękki `landmarkChanceBias` dla `monolith` / `stoneCircle` / `smallRuins` w `[0.2, 2]`.
+- Kolizja cmentarza `0` (jak krąg/ruiny).
+
+Świadomie poza v1: kapliczka, most, wieża, bardzo rzadkie, `landmarkId`, questy.

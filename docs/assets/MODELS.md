@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-08-13
+**Last updated:** 2026-08-14
 
 ## How to use
 
@@ -61,6 +61,7 @@ If the feature needs no new model, do nothing to this file.
 | M32 | Village well GLB | Replaces procedural `createWell` (fallback kept) | `wired` | plan 101 (`settlement/well.glb`) |
 | M33 | Wood pile stockpile | Stacked beams; replaces wired `logs.glb` | `wired` | plan 101 (`settlement/wood_pile.glb`, CC-BY) |
 | M34 | Fantasy RTS logs | Former stockpile mesh | `in repo` | `settlement/logs.glb` |
+| M35 | Cemetery / gravestones | Village-fringe landmark (`cemetery`); Poly plot + extra stones | `wired` | plan 049 (`nature/cemetery.glb`, `nature/grave_a.glb`) |
 
 ## Wired (reference — do not treat as open work)
 
@@ -70,7 +71,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 |------|----------|
 | Characters | Modular men/women NPCs, Adventurer player |
 | Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
-| Nature (active) | trees/bushes, cactus/reed, rock/log, ore piles |
+| Nature (active) | trees/bushes, cactus/reed, rock/log, ore piles, cemetery / gravestones |
 | Settlement (active) | huts, towerhouse, wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |

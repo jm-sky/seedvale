@@ -74,6 +74,8 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/settlement/campfire_unlit.glb` | Quaternius | [poly.pizza/m/Azj9hJwwwG](https://poly.pizza/m/Azj9hJwwwG) | CC0 1.0 | `Bonfire` (kamienie+drewno, bez płomienia) — **parked**; przyszłe ciało ogniska |
 | `public/models/settlement/campfire_burning_q.glb` | Quaternius | [poly.pizza/m/k1e0cOzi8A](https://poly.pizza/m/k1e0cOzi8A) | CC0 1.0 | `Bonfire` (palące drewno) — **parked**; płomień w meshu |
 | `public/models/settlement/campfire_burning_poly.glb` | Poly by Google | [poly.pizza/m/0vzzmM-t8CP](https://poly.pizza/m/0vzzmM-t8CP) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Campfire` — **parked**; wymagana atrybucja; płomień w meshu |
+| `public/models/nature/cemetery.glb` | Poly by Google | [poly.pizza/m/c5L6hAdX3ua](https://poly.pizza/m/c5L6hAdX3ua) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Cemetary` — sylwetka cmentarza (plan 049); wymagana atrybucja |
+| `public/models/nature/grave_a.glb` | Jarlan Perez | [poly.pizza/m/4wvz0NJ33k3](https://poly.pizza/m/4wvz0NJ33k3) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Grave Stone` — dodatkowe nagrobki przy cmentarzu (plan 049); wymagana atrybucja |
 
 Kopia tekstu licencji z paczki: [quaternius-ultimate-fantasy-rts-license.txt](./quaternius-ultimate-fantasy-rts-license.txt) (w zipie oznaczona mylnie jako „Platformer Pack”; treść = CC0).  
 Modular Men: [quaternius-ultimate-modular-men-license.txt](./quaternius-ultimate-modular-men-license.txt).  

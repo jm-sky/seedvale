@@ -37,7 +37,7 @@ Seedvale is a browser 3D sandbox built with **Three.js + WebGL2 + Vite + TypeScr
 - Instanced grass (custom wind shader, near-field filler blades). Tree/bush leaves share cheap vertex wind; GLTF `BLEND` foliage is hardened to opaque `alphaTest` cutouts.
 - Continuous `forestDensityAt` drives tree density and fauna habitat (`ChunkManager.sampleForestFactor`); no separate forest manager.
 - Per-chunk vegetation and rocks are `InstancedMesh` buckets (`src/render/instancedProps.ts`); stage meshes and procedural landmarks stay individual `Object3D`s. Settlement trees/bushes are not instanced.
-- Chunk rocks/logs and visible iron/coal/gold deposits use GLB templates with procedural fallbacks. Landmark pipeline exists and is being extended under plan 049.
+- Chunk rocks/logs and visible iron/coal/gold deposits use GLB templates with procedural fallbacks. Procedural landmarks: monolith, stone circle, small ruins, village-fringe cemetery (plan 049).
 - Ocean, sky, lighting, day/night and fog are implemented. Post-processing: EffectComposer, N8AO, SMAA, subtle film grade.
 - Visual contracts: [GRAPHICS.md](./GRAPHICS.md). Water (ocean + lakes): [WATER.md](./WATER.md).
 
@@ -141,7 +141,6 @@ src/ui-vue/
 
 ## Current architectural seams / active refactors
 
-- **Procedural landmarks (049)** — pipeline is integrated into chunk environment / settlement props / chunk manager; browser verification across seeds and streaming is still required.
 - **World visual overhaul (024)** — plants done in part; sky/clouds and distant mountains remain.
 - **UI** — Vue Fazy 0–4 implemented, browser verification pending. Plan 105 is a planned audit (no implementation in the review session). Do not assume every future UI belongs in Vue; extend the existing facade + store pattern when migrating.
 - **NPC daily routine** — Place + executable schedule + vigor are implemented. Remaining gaps are intentional: no social landmark, no household economy, ordinary schedule changes do not interrupt an action in flight. See [SETTLEMENTS.md](./SETTLEMENTS.md).

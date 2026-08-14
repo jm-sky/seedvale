@@ -11,6 +11,7 @@ import { LIVESTOCK_URLS } from '../settlement/livestock'
 import {
   BUSH_SPECS,
   CACTUS_SPECS,
+  CEMETERY_SPECS,
   CROPS_FIT_MAX,
   CROPS_URL,
   DOCK_SPECS,
@@ -18,6 +19,7 @@ import {
   FARM_HEIGHT,
   FARM_URL,
   FIRE_FX_URL,
+  GRAVE_SPECS,
   LANTERN_FLOOR_MAX,
   LANTERN_URL,
   LANTERN_WALL_MAX,
@@ -248,6 +250,8 @@ export function buildAssetIndex(): AssetIndexEntry[] {
   pushHeightSpecs(out, ROCK_SPECS, 'nature', 'nature')
   pushHeightSpecs(out, ROCK_CLUSTER_SPECS, 'nature', 'nature')
   pushHeightSpecs(out, FALLEN_LOG_SPECS, 'nature', 'nature')
+  pushHeightSpecs(out, CEMETERY_SPECS, 'nature', 'nature')
+  pushHeightSpecs(out, GRAVE_SPECS, 'nature', 'nature')
   pushHeightSpecs(out, RESOURCE_GOLD_SPECS, 'nature', 'nature')
   pushHeightSpecs(out, RESOURCE_ROCK_SPECS, 'nature', 'nature')
   pushHeightSpecs(out, DOCK_SPECS, 'settlement', 'settlement')

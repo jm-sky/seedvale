@@ -17,6 +17,7 @@ export type EnvironmentKind =
   | 'monolith'
   | 'stoneCircle'
   | 'smallRuins'
+  | 'cemetery'
 
 export type EnvironmentPlacement = {
   x: number
@@ -27,8 +28,9 @@ export type EnvironmentPlacement = {
   /** Meaning depends on `kind`: boulder irregularity 0..1 (`largeRock`/
    *  `rockCluster`), log length in world units (`fallenLog`), unused
    *  (`campfire`), height/count/damage variation 0..1 (`monolith`/
-   *  `stoneCircle`/`smallRuins`) — see `createLargeRock`/`createRockCluster`/
-   *  `createFallenLog`/`createMonolith`/`createStoneCircle`/`createSmallRuins`
+   *  `stoneCircle`/`smallRuins`/`cemetery`) — see `createLargeRock`/
+   *  `createRockCluster`/`createFallenLog`/`createMonolith`/
+   *  `createStoneCircle`/`createSmallRuins`/`createCemetery`
    *  in `settlement/props.ts`. */
   variant: number
 }
@@ -58,6 +60,9 @@ const ROAD_TINT_REJECT = 0.15
 const MONOLITH_CHANCE = 0.02
 const STONE_CIRCLE_CHANCE = 0.008
 const SMALL_RUINS_CHANCE = 0.008
+/** Village-fringe filter is the real rarity gate; within that band most
+ *  settlements should roll ~one cemetery rather than 1-in-30. */
+const CEMETERY_CHANCE = 0.28
 /** Multi-point landmarks want sturdier, flatter footing than a single rock. */
 const SLOPE_REJECT_LANDMARK = 0.6
 /** Keep the whole landmark footprint inside its own chunk (simpler than
@@ -65,6 +70,91 @@ const SLOPE_REJECT_LANDMARK = 0.6
 const MONOLITH_MARGIN = 1.2
 const STONE_CIRCLE_MARGIN = 4
 const SMALL_RUINS_MARGIN = 2.5
+const CEMETERY_MARGIN = 6
+/** Cemetery sits on the village smoothing-disk fringe, past house clearings. */
+export const CEMETERY_INNER_FRAC = 0.55
+export const CEMETERY_OUTER_FRAC = 1.05
+export const CEMETERY_CLEARING_PAD = 2
+export const LANDMARK_BIAS_MIN = 0.2
+export const LANDMARK_BIAS_MAX = 2
+
+export type LandmarkBiasKind = 'monolith' | 'stoneCircle' | 'smallRuins'
+
+export type LandmarkBiasInput = {
+  mountainRidge: number
+  altitude01: number
+  slope: number
+  desert: number
+  swamp: number
+  forest: number
+}
+
+export type VillageDisk = {
+  x: number
+  z: number
+  radius: number
+}
+
+function clampBias(n: number): number {
+  return Math.min(LANDMARK_BIAS_MAX, Math.max(LANDMARK_BIAS_MIN, n))
+}
+
+/** Soft multiplier on landmark base chance. Unsuitable terrain still places,
+ *  just less often — never a hard gate. */
+export function landmarkChanceBias(kind: LandmarkBiasKind, s: LandmarkBiasInput): number {
+  switch (kind) {
+    case 'monolith':
+      return clampBias(
+        0.45 + s.mountainRidge * 1.1 + Math.min(1, Math.max(0, s.altitude01)) * 0.7 - s.swamp * 0.5,
+      )
+    case 'smallRuins': {
+      const midAlt = 1 - Math.abs((s.altitude01 - 0.22) / 0.35)
+      return clampBias(
+        0.35 +
+          s.forest * 0.9 +
+          Math.max(0, midAlt) * 0.4 -
+          s.mountainRidge * 0.85 -
+          s.desert * 0.7 -
+          s.swamp * 0.7,
+      )
+    }
+    case 'stoneCircle': {
+      const hill = Math.min(1, Math.max(0, s.altitude01) * 1.4)
+      const flatHill = s.mountainRidge * (1 - Math.min(1, s.slope / SLOPE_REJECT_LANDMARK))
+      return clampBias(0.4 + hill * 0.8 + flatHill * 0.6 - s.desert * 0.6 - s.swamp * 0.7)
+    }
+  }
+}
+
+/** True when `(x,z)` is on a village smoothing-disk fringe and outside
+ *  plaza/house/garden clearings. No regional disks → never. */
+export function cemeteryFitsVillageFringe(
+  x: number,
+  z: number,
+  regional: readonly VillageDisk[],
+  clearings: readonly VillageDisk[],
+): boolean {
+  if (regional.length === 0) return false
+  let nearest: VillageDisk | null = null
+  let nearestDist = Infinity
+  for (const disk of regional) {
+    const d = Math.hypot(x - disk.x, z - disk.z)
+    if (d < nearestDist) {
+      nearestDist = d
+      nearest = disk
+    }
+  }
+  if (!nearest) return false
+  const inner = nearest.radius * CEMETERY_INNER_FRAC
+  const outer = nearest.radius * CEMETERY_OUTER_FRAC
+  if (nearestDist < inner || nearestDist > outer) return false
+  for (const clearing of clearings) {
+    if (Math.hypot(x - clearing.x, z - clearing.z) <= clearing.radius + CEMETERY_CLEARING_PAD) {
+      return false
+    }
+  }
+  return true
+}
 
 function hashChunk(cx: number, cz: number, salt: number): number {
   let h = (cx * 668265263 + cz * 374761393 + salt * 2654435761) | 0
@@ -94,8 +184,6 @@ export function computeChunkEnvironment(
   params: ChunkTileParams,
   vegetation: readonly VegetationPlacement[],
 ): EnvironmentPlacement[] {
-  if (params.isHomeChunk) return []
-
   const { chunkSize, waterLevel, heightScale, region } = params
   const o = apronOriginWorld(coord.cx, coord.cz, chunkSize, params.resolution)
   const sample = (grid: Float32Array, x: number, z: number) =>
@@ -112,6 +200,22 @@ export function computeChunkEnvironment(
     )
   }
 
+  const chanceBiasAt = (kind: LandmarkBiasKind, wx: number, wz: number, h: number, slope: number): number => {
+    const altitude01 = (h - waterLevel) / Math.max(heightScale, 0.001)
+    const biome = biomeWeightsAt(sample(tile.moistureRegion, wx, wz), altitude01, region)
+    return landmarkChanceBias(kind, {
+      mountainRidge: sample(tile.mountainRidge, wx, wz),
+      altitude01,
+      slope,
+      desert: biome.desert,
+      swamp: biome.swamp,
+      forest: biome.forest,
+    })
+  }
+
+  // Home chunks skip rocks/logs/campfires (settlement plants its own forest)
+  // but still roll landmarks so the spawn village can get a cemetery.
+  if (!params.isHomeChunk) {
   // --- Rocks: large boulders + small clusters ---
   const rockRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 1) ^ 0x2f6a1)
   for (let i = 0; i < ROCK_CANDIDATES_PER_CHUNK; i++) {
@@ -190,6 +294,7 @@ export function computeChunkEnvironment(
       variant: 0,
     })
   }
+  }
 
   // --- Monolith: single standing stone, "częste" landmark tier ---
   const monolithRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 4) ^ 0x1d4b7)
@@ -197,11 +302,12 @@ export function computeChunkEnvironment(
     const wx = coord.cx * chunkSize + (monolithRandom() * 2 - 1) * (half - MONOLITH_MARGIN)
     const wz = coord.cz * chunkSize + (monolithRandom() * 2 - 1) * (half - MONOLITH_MARGIN)
     const h = sample(tile.heights, wx, wz)
+    const slope = slopeAt(wx, wz)
     if (
       h > waterLevel + 0.3 &&
       sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
-      slopeAt(wx, wz) <= SLOPE_REJECT_LANDMARK &&
-      monolithRandom() <= MONOLITH_CHANCE
+      slope <= SLOPE_REJECT_LANDMARK &&
+      monolithRandom() <= MONOLITH_CHANCE * chanceBiasAt('monolith', wx, wz, h, slope)
     ) {
       placements.push({
         x: wx,
@@ -220,11 +326,12 @@ export function computeChunkEnvironment(
     const wx = coord.cx * chunkSize + (stoneCircleRandom() * 2 - 1) * (half - STONE_CIRCLE_MARGIN)
     const wz = coord.cz * chunkSize + (stoneCircleRandom() * 2 - 1) * (half - STONE_CIRCLE_MARGIN)
     const h = sample(tile.heights, wx, wz)
+    const slope = slopeAt(wx, wz)
     if (
       h > waterLevel + 0.3 &&
       sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
-      slopeAt(wx, wz) <= SLOPE_REJECT_LANDMARK &&
-      stoneCircleRandom() <= STONE_CIRCLE_CHANCE
+      slope <= SLOPE_REJECT_LANDMARK &&
+      stoneCircleRandom() <= STONE_CIRCLE_CHANCE * chanceBiasAt('stoneCircle', wx, wz, h, slope)
     ) {
       placements.push({
         x: wx,
@@ -243,11 +350,12 @@ export function computeChunkEnvironment(
     const wx = coord.cx * chunkSize + (ruinsRandom() * 2 - 1) * (half - SMALL_RUINS_MARGIN)
     const wz = coord.cz * chunkSize + (ruinsRandom() * 2 - 1) * (half - SMALL_RUINS_MARGIN)
     const h = sample(tile.heights, wx, wz)
+    const slope = slopeAt(wx, wz)
     if (
       h > waterLevel + 0.3 &&
       sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
-      slopeAt(wx, wz) <= SLOPE_REJECT_LANDMARK &&
-      ruinsRandom() <= SMALL_RUINS_CHANCE
+      slope <= SLOPE_REJECT_LANDMARK &&
+      ruinsRandom() <= SMALL_RUINS_CHANCE * chanceBiasAt('smallRuins', wx, wz, h, slope)
     ) {
       placements.push({
         x: wx,
@@ -256,6 +364,30 @@ export function computeChunkEnvironment(
         scale: 0.85 + ruinsRandom() * 0.4,
         rotationY: ruinsRandom() * Math.PI * 2,
         variant: ruinsRandom(),
+      })
+    }
+  }
+
+  // --- Cemetery: rare village-fringe landmark (plan 049) ---
+  const cemeteryRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 7) ^ 0x6a18d)
+  {
+    const wx = coord.cx * chunkSize + (cemeteryRandom() * 2 - 1) * (half - CEMETERY_MARGIN)
+    const wz = coord.cz * chunkSize + (cemeteryRandom() * 2 - 1) * (half - CEMETERY_MARGIN)
+    const h = sample(tile.heights, wx, wz)
+    if (
+      h > waterLevel + 0.3 &&
+      sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
+      slopeAt(wx, wz) <= SLOPE_REJECT_LANDMARK &&
+      cemeteryFitsVillageFringe(wx, wz, params.regional, params.clearings) &&
+      cemeteryRandom() <= CEMETERY_CHANCE
+    ) {
+      placements.push({
+        x: wx,
+        z: wz,
+        kind: 'cemetery',
+        scale: 0.9 + cemeteryRandom() * 0.3,
+        rotationY: cemeteryRandom() * Math.PI * 2,
+        variant: cemeteryRandom(),
       })
     }
   }

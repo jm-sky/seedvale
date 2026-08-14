@@ -42,6 +42,14 @@ export const FALLEN_LOG_SPECS = [
   { url: '/models/nature/fallen_log_a.glb', height: 0.55 },
 ] as const
 
+export const CEMETERY_SPECS = [
+  { url: '/models/nature/cemetery.glb', height: 1.6 },
+] as const
+
+export const GRAVE_SPECS = [
+  { url: '/models/nature/grave_a.glb', height: 0.95 },
+] as const
+
 export const RESOURCE_GOLD_SPECS = [
   { url: '/models/nature/resource_gold_1.glb', height: 1.1 },
 ] as const

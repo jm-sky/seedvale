@@ -132,6 +132,7 @@ const PALISADE_SEGMENTS_PER_SIDE: Record<VillageSize, number> = {
 export {
   BUSH_SPECS,
   CACTUS_SPECS,
+  CEMETERY_SPECS,
   CROPS_FIT_MAX,
   CROPS_URL,
   DOCK_SPECS,
@@ -139,6 +140,7 @@ export {
   FARM_HEIGHT,
   FARM_URL,
   FIRE_FX_URL,
+  GRAVE_SPECS,
   LANTERN_FLOOR_MAX,
   LANTERN_URL,
   LANTERN_WALL_MAX,
@@ -1237,6 +1239,93 @@ export function createSmallRuins(scale = 1, variant = 0.5): THREE.Group {
     rubble.rotation.set(a, a * 1.2, 0)
     rubble.castShadow = true
     group.add(rubble)
+  }
+
+  return group
+}
+
+/** Single headstone fallback (plans/2026-08-09--049) — used when the Jarlan
+ *  Perez `grave_a.glb` fails to load, and as extra stones around the cemetery
+ *  plot. Origin at feet. */
+export function createGraveStone(scale = 1): THREE.Group {
+  const group = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x7a756c, flatShading: true, roughness: 1 })
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(0.38 * scale, 0.85 * scale, 0.12 * scale), mat)
+  slab.position.y = 0.42 * scale
+  slab.castShadow = true
+  slab.receiveShadow = true
+  group.add(slab)
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.1 * scale, 0.22 * scale), mat)
+  base.position.y = 0.05 * scale
+  base.castShadow = true
+  base.receiveShadow = true
+  group.add(base)
+  return group
+}
+
+/** Compact cemetery-plot fallback if the Poly cemetery GLB fails to load —
+ *  a dirt pad plus three procedural headstones so the silhouette still reads. */
+export function createCemeteryPlot(scale = 1): THREE.Group {
+  const group = new THREE.Group()
+  const dirt = new THREE.MeshStandardMaterial({ color: 0x4a4034, flatShading: true, roughness: 1 })
+  const pad = new THREE.Mesh(new THREE.BoxGeometry(3.4 * scale, 0.08 * scale, 2.4 * scale), dirt)
+  pad.position.y = 0.04 * scale
+  pad.receiveShadow = true
+  group.add(pad)
+  for (let i = 0; i < 3; i++) {
+    const stone = createGraveStone(scale * (0.85 + i * 0.05))
+    stone.position.set((i - 1) * 0.95 * scale, 0, -0.15 * scale)
+    group.add(stone)
+  }
+  return group
+}
+
+export type CemeteryTemplates = {
+  plot?: THREE.Object3D
+  graves?: readonly THREE.Object3D[]
+}
+
+/** Small village-fringe cemetery (plans/2026-08-09--049, "rzadkie" tier) —
+ *  Poly cemetery scene as the readable centre plus a short row of extra
+ *  stones. `variant` (0..1) drives extra-stone count (4–8) and jitter. */
+export function createCemetery(
+  scale = 1,
+  variant = 0.5,
+  templates?: CemeteryTemplates,
+): THREE.Group {
+  const group = new THREE.Group()
+
+  if (templates?.plot) {
+    const plot = templates.plot.clone(true)
+    plot.scale.multiplyScalar(scale)
+    group.add(plot)
+  } else {
+    group.add(createCemeteryPlot(scale))
+  }
+
+  const extra = 4 + Math.floor(variant * 5)
+  const graves = templates?.graves
+  for (let i = 0; i < extra; i++) {
+    const col = i % 4
+    const row = Math.floor(i / 4)
+    const jitterX = ((variant * (i + 3)) % 1 - 0.5) * 0.25 * scale
+    const jitterZ = ((variant * (i + 7)) % 1 - 0.5) * 0.2 * scale
+    const x = (col - 1.5) * 0.85 * scale + jitterX
+    const z = (1.15 + row * 0.9) * scale + jitterZ
+    const yaw = ((variant * (i + 2)) % 1 - 0.5) * 0.18
+    if (graves && graves.length > 0) {
+      const src = graves[i % graves.length]!
+      const stone = src.clone(true)
+      stone.scale.multiplyScalar(scale * (0.85 + ((variant * (i + 5)) % 1) * 0.25))
+      stone.position.set(x, 0, z)
+      stone.rotation.y = yaw
+      group.add(stone)
+    } else {
+      const stone = createGraveStone(scale * (0.8 + ((variant * (i + 5)) % 1) * 0.25))
+      stone.position.set(x, 0, z)
+      stone.rotation.y = yaw
+      group.add(stone)
+    }
   }
 
   return group

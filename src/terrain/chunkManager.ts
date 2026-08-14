@@ -8,14 +8,19 @@ import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtoc
 import type { FbmParams } from './fbm'
 import { disposeObject3D } from '../assets/loadGltf'
 import { createItemMesh, type ItemKind } from '../items/items'
+import { getMonitor } from '../perf/active'
 import { buildInstancedProps, type InstancedPropGroup, type PropPlacement } from '../render/instancedProps'
 import {
   BUSH_SPECS,
   CACTUS_SPECS,
+  CEMETERY_SPECS,
   createBush,
   createCactus,
   createCampfire,
+  createCemetery,
+  createCemeteryPlot,
   createFallenLog,
+  createGraveStone,
   createLargeRock,
   createMonolith,
   createReed,
@@ -24,6 +29,7 @@ import {
   createStoneCircle,
   createTree,
   FALLEN_LOG_SPECS,
+  GRAVE_SPECS,
   loadPropTemplates,
   placeOnGround,
   REED_SPECS,
@@ -84,17 +90,15 @@ const getReedTemplates = memoTemplates(REED_SPECS, () => createReed(1))
 const getRockTemplates = memoTemplates(ROCK_SPECS, () => createLargeRock(1))
 const getRockClusterTemplates = memoTemplates(ROCK_CLUSTER_SPECS, () => createRockCluster(1))
 const getFallenLogTemplates = memoTemplates(FALLEN_LOG_SPECS, () => createFallenLog(1))
+const getCemeteryTemplates = memoTemplates(CEMETERY_SPECS, () => createCemeteryPlot(1))
+const getGraveTemplates = memoTemplates(GRAVE_SPECS, () => createGraveStone(1))
 
 const GLB_ENV_KINDS = new Set<EnvironmentKind>(['fallenLog', 'largeRock', 'rockCluster'])
 
 /** Base collision radius (world meters, before `* placement.scale`) per
- *  environment kind — plan 097 §2.2. `stoneCircle`/`smallRuins` are left at
- *  0 (no collider): both are landmarks with a walkable interior/L-shaped
- *  footprint that a single circle would misrepresent (blocking the very
- *  space you're meant to walk into) — deferred rather than approximated
- *  badly. Values are manual estimates from each `create*` prop's geometry
- *  in `settlement/props.ts`, tunable on playtest like `WELL_COLLISION_RADIUS`
- *  was before this table replaced it (`ai/NpcAgent.ts`). */
+ *  environment kind — plan 097 §2.2. `stoneCircle`/`smallRuins`/`cemetery`
+ *  are left at 0 (no collider): walkable interiors / grave rows that a
+ *  single circle would misrepresent. */
 const ENVIRONMENT_COLLISION_RADIUS: Record<EnvironmentKind, number> = {
   largeRock: 0.9,
   rockCluster: 0.5,
@@ -103,6 +107,7 @@ const ENVIRONMENT_COLLISION_RADIUS: Record<EnvironmentKind, number> = {
   monolith: 0.4,
   stoneCircle: 0,
   smallRuins: 0,
+  cemetery: 0,
 }
 
 /** Flat trunk collision radius for every tree — `VegetationPlacement.scale`
@@ -121,6 +126,8 @@ function createProceduralEnvironmentProp(
   switch (kind) {
     case 'campfire':
       return createCampfire(scale)
+    case 'cemetery':
+      return createCemetery(scale, variant)
     case 'fallenLog':
       return createFallenLog(scale, variant)
     case 'largeRock':
@@ -190,6 +197,8 @@ export type ChunkManagerConfig = {
   getWorldDays: () => number
   /** Shared planar water mirror — bound onto every chunk-water material. */
   waterMirror: WaterMirror
+  /** Quality-profile multiplier on grass/vegetation LOD (plan 103). Live. */
+  lodScale: number
 }
 
 type ChunkState = 'generating' | 'ready'
@@ -221,9 +230,9 @@ type ChunkRecord = {
    *  `refreshTreeVisual` to re-place a tree it no longer has a mesh for. */
   treeYaw?: Map<string, number>
   items?: THREE.Group
-  /** Procedural-only landmark kinds (campfire/monolith/stoneCircle/smallRuins)
-   *  — geometry is built per placement, not from a shared template, so these
-   *  stay unbatched (plan 087 §2.5). */
+  /** Procedural-only landmark kinds (campfire/monolith/stoneCircle/smallRuins/
+   *  cemetery) — geometry is built per placement, not from a shared template, so these
+   *  stay unbatched (plan 087 §2.5). Cemetery clones GLB graves into one Group. */
   environment?: THREE.Group
   /** GLB environment kinds (largeRock/rockCluster/fallenLog, faza 5/087) —
    *  no runtime state, same "simplest case" instancing as `vegetationInstances`. */
@@ -308,6 +317,9 @@ export type ChunkManager = {
   /** Live toggle, no rebuild — flips `castShadow` on every currently-loaded
    *  chunk mesh and on every chunk built afterward (perf review A2/#13). */
   setTerrainCastsShadow: (value: boolean) => void
+  /** Live quality-profile LOD scale (plan 103). Re-applies grass/vegetation
+   *  `setLodFraction` on already-loaded chunks. */
+  setLodScale: (scale: number) => void
   /** Collision colliders (plan 097 §2.2) near (x, z) — terrain-chunk
    *  environment/vegetation plus anything registered via `registerColliders`
    *  (settlements, the well). Feed straight into `world/collision.ts`'s
@@ -496,18 +508,20 @@ export function createChunkManager(
   }
 
   let lastPlayerChunk: ChunkCoord = { cx: 0, cz: 0 }
+  let lodScale = Math.min(1, Math.max(0.25, config.lodScale ?? 1))
 
   /** Cheap distance LOD: render fewer blades in farther chunks (down to ~25%
    *  at the visible edge) — imperceptible at that distance/fog, no
    *  reallocation, just narrows the instanced draw range. Keeps near-field
    *  density (the intentional visual choice) while cutting fill-rate cost.
    *  Short filler blades only in the player's chunk + immediate ring
-   *  (issue 023) — zero draw cost beyond that. */
+   *  (issue 023) — zero draw cost beyond that. `lodScale` (plan 103) multiplies
+   *  the distance curve without changing generation density. */
   function grassLodForDistance(dist: number): { mainFrac: number, fillerFrac: number } {
     const t = dist / Math.max(1, effectiveGrassRadius)
     return {
-      mainFrac: Math.max(0.25, 1 - t * 0.75),
-      fillerFrac: dist <= 1 ? Math.max(0, 1 - dist * 0.55) : 0,
+      mainFrac: Math.max(0.05, Math.min(1, Math.max(0.25, 1 - t * 0.75) * lodScale)),
+      fillerFrac: dist <= 1 ? Math.max(0, (1 - dist * 0.55) * lodScale) : 0,
     }
   }
 
@@ -517,7 +531,7 @@ export function createChunkManager(
    *  regression from losing per-object frustum culling (plan 087 faza 7 / R3). */
   function vegetationLodForDistance(dist: number): number {
     const t = dist / Math.max(1, config.loadRadius)
-    return Math.max(0.25, 1 - t * 0.75)
+    return Math.max(0.05, Math.min(1, Math.max(0.25, 1 - t * 0.75) * lodScale))
   }
 
   function syncInstancedLodForRecord(record: ChunkRecord, playerChunk: ChunkCoord): void {
@@ -571,7 +585,9 @@ export function createChunkManager(
         rec.grassPending = false
         const dist = chebyshevDistance(coord, lastPlayerChunk)
         if (dist > grassUnloadRadius) return // out of range by the time the result came back
+        const t0 = performance.now()
         const grass = grassSystem.buildGrassChunkMeshes(data, x, z)
+        getMonitor().recordHitch('GRASS', performance.now() - t0, 'grass generation')
         rec.grass = grass
         if (grass) {
           scene.add(grass.mesh)
@@ -691,7 +707,9 @@ export function createChunkManager(
             (wx, wz) => sampleHeightAt(wx, wz, fallbackParams),
           )
         }
+        const streamT0 = performance.now()
         buildAndAttachMesh(rec, tile)
+        getMonitor().recordHitch('STREAMING', performance.now() - streamT0, 'chunk mesh')
 
         const { x, z } = chunkCenter(coord, config.chunkSize)
         const apronRes = config.resolution + 2
@@ -845,23 +863,39 @@ export function createChunkManager(
         })
 
         const needsEnvGlb = tile.environment.some((p) => GLB_ENV_KINDS.has(p.kind))
+        const needsCemetery = tile.environment.some((p) => p.kind === 'cemetery')
         let rockTemplates: THREE.Object3D[] | null = null
         let rockClusterTemplates: THREE.Object3D[] | null = null
         let fallenLogTemplates: THREE.Object3D[] | null = null
-        if (needsEnvGlb) {
-          ;[rockTemplates, rockClusterTemplates, fallenLogTemplates] = await Promise.all([
-            getRockTemplates(),
-            getRockClusterTemplates(),
-            getFallenLogTemplates(),
+        let cemeteryPlot: THREE.Object3D | undefined
+        let graveTemplates: THREE.Object3D[] | undefined
+        if (needsEnvGlb || needsCemetery) {
+          const [rocks, clusters, logs, plots, graves] = await Promise.all([
+            needsEnvGlb ? getRockTemplates() : Promise.resolve(null),
+            needsEnvGlb ? getRockClusterTemplates() : Promise.resolve(null),
+            needsEnvGlb ? getFallenLogTemplates() : Promise.resolve(null),
+            needsCemetery ? getCemeteryTemplates() : Promise.resolve(null),
+            needsCemetery ? getGraveTemplates() : Promise.resolve(null),
           ])
           if (!chunks.has(key)) return
+          rockTemplates = rocks
+          rockClusterTemplates = clusters
+          fallenLogTemplates = logs
+          cemeteryPlot = plots?.[0]
+          graveTemplates = graves ?? undefined
         }
 
         // Procedural-only landmark kinds (§2.5 — geometry built per placement,
         // nothing to batch): unchanged individual-`Object3D` path.
         const proceduralEnvPlacements = tile.environment.filter((p) => !GLB_ENV_KINDS.has(p.kind))
         rec.environment = buildPlacementGroup('chunk-environment', proceduralEnvPlacements, (placement) => {
-          const prop = createProceduralEnvironmentProp(placement.kind, placement.scale, placement.variant)
+          const prop =
+            placement.kind === 'cemetery'
+              ? createCemetery(placement.scale, placement.variant, {
+                  plot: cemeteryPlot,
+                  graves: graveTemplates,
+                })
+              : createProceduralEnvironmentProp(placement.kind, placement.scale, placement.variant)
           prop.rotation.y = placement.rotationY
           placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
           return prop

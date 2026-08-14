@@ -16,9 +16,7 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 
 ## In progress
 
-| File | Summary | % | Pri | Effort | Depends |
-|------|---------|---|-----|--------|---------|
-| `2026-08-09--049--procedural-world-landmarks.md` | Proceduralne obiekty, ruiny, landmarki | 40 | 🟡 | XL | ~~001~~ ~~006~~ ~~007~~ ~~028~~ ~~030~~ |
+*(none)*
 
 ---
 
@@ -55,7 +53,11 @@ Historical playtest queue (files in archive): [below](#playtest-queue-archived-b
 
 ## Done
 
-Completed plans **in this folder**. After the 2026-08-14 archive freeze it is empty; new `done` work belongs here.
+Completed plans **in this folder**. After the 2026-08-14 archive freeze new `done` work belongs here.
+
+| File | Summary |
+|------|---------|
+| `2026-08-09--049--procedural-world-landmarks.md` | Landmarki v1: monolith / stoneCircle / smallRuins / cemetery + bias terenu |
 
 Older completed work: [archive/README.md](./archive/README.md).
 

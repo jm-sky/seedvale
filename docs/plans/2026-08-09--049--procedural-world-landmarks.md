@@ -2,7 +2,9 @@
 
 > **Implementation notes:** [2026-08-09--049--procedural-world-landmarks-implementation-notes.md](./2026-08-09--049--procedural-world-landmarks-implementation-notes.md) — techniczna mapa implementacji i wskazówki dla Claude Code.
 
-**Status:** `in progress` 🔄
+**Status:** `done` ✅ (2026-08-14)
+
+v1 zamknięte: pipeline chunk environment + cztery czytelne typy (`monolith`, `stoneCircle`, `smallRuins`, `cemetery`) + miękki bias terenu. Katalog „bardzo rzadkie” (kapliczka, most, wieża, Stonehenge, właz, świątynia) oraz generator modułowy są **świadomie poza** tym zamknięciem — osobny plan, jeśli wrócą.
 
 ## Cel
 
