@@ -48,7 +48,11 @@ export function resolveInteraction(
   switch (target.kind) {
     case 'animal': {
       const kind = target.animal.def.kind
-      const override = questManager.onInteractObjective({ type: 'spot_animal', kind })
+      // `find_animal` (bound to this exact instance) takes priority over the
+      // by-kind `spot_animal` — both can be active at once, but only the
+      // specific animal a "lost sheep"-style quest cares about should clear it.
+      const override = questManager.onInteractObjective({ type: 'animal_found', animalId: target.animal.animalId })
+        ?? questManager.onInteractObjective({ type: 'spot_animal', kind })
       return {
         speakerName: capitalize(ANIMAL_LABELS[kind]),
         line: override?.line ?? pickAnimalFlavorLine(kind),

@@ -25,6 +25,14 @@ export type Place = {
   position: Vector3
 }
 
+/** A home `Place.id` for the `index`-th house in `settlementId` (`homes[i]`/
+ *  `households[i]` share this same index — see `createSettlement.ts`).
+ *  Centralized so `livestock.ts`'s `ownerHouseId` (plan 093 Etap G) can't
+ *  drift from the `Place`/`Household` id format. */
+export function homePlaceId(settlementId: string, index: number): string {
+  return `${settlementId}:home:${index}`
+}
+
 /**
  * Per-role workplace — hybrid per the 2026-08-09 decision: roles that
  * already have a matching communal landmark reuse it as-is (no new world

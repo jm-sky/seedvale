@@ -1,6 +1,6 @@
 # Plan: Questy v3 — problemy świata, reputacja i questy kontekstowe
 
-**Status:** `in progress` (Etap A–E zaimplementowane; Etap F+ pozostają)  
+**Status:** `in progress` (Etap A–G zaimplementowane; Etap F zablokowane brakiem `landmarkId`/rejestru — patrz implementation notes §15; bandyci pozostają)  
 **Created:** 2026-08-12  
 **Priority:** 🔴 `high`  
 **Effort:** XL

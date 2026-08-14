@@ -17,6 +17,7 @@ import {
 } from '../fauna/proceduralAnimals'
 import { createSeededRandom } from '../world/parseSeed'
 import { type VillageSize, villageSizeConfig } from './families'
+import { homePlaceId } from './places'
 
 /** Owned farm animal kinds — the only `AnimalKind`s this module ever spawns. */
 type LivestockKind = 'horse' | 'donkey' | 'cow' | 'sheep' | 'chicken'
@@ -177,12 +178,17 @@ export async function spawnLivestock(
   homes: readonly THREE.Vector3[],
   size: VillageSize,
   settlementSeed: number,
+  settlementId: string,
 ): Promise<AnimalAgent[]> {
   await ensureLivestockTemplates()
   const agents: AnimalAgent[] = []
   homes.forEach((home, i) => {
     const random = createSeededRandom(houseSeed(settlementSeed, i))
     let houseAnimalIndex = 0
+    // Same index `i` the settlement uses for `homePlaces[i]`/households
+    // (`createSettlement.ts`) — so a livestock's owner is the same house a
+    // quest could later look up via `Household`/`Place` (plan 093 Etap G).
+    const ownerHouseId = homePlaceId(settlementId, i)
     for (const kind of kindsForHouse(size, random)) {
       const { x, z } = findSpotNearHouse(home, sampleHeight, waterLevel, random)
       const { visual, animations } = visualFor(kind)
@@ -198,6 +204,8 @@ export async function spawnLivestock(
         visual,
         animations,
         LIVESTOCK_WANDER_RADIUS,
+        undefined,
+        ownerHouseId,
       )
       scene.add(agent.mesh)
       agents.push(agent)

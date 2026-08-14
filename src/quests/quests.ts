@@ -63,6 +63,15 @@ export type QuestObjective =
    *  by `Fauna.isWolfDenCleared()`, not per-individual like `animal_died`,
    *  since the den (not one wolf) is the world entity with identity here. */
   | { type: 'clear_wolf_den', denId: string }
+  /** "A lost farm animal" (plan 093 Etap G) — like `kill_target_animal`,
+   *  defined by kind and bound to one concrete `AnimalAgent.animalId` when
+   *  the stage becomes active, but cleared by the player finding it (an
+   *  `[E]` interact reporting `animal_found`) rather than killing it. The
+   *  resolver searches settlement livestock as well as wild fauna, so
+   *  `kind` alone is enough to pick the right population (sheep/chicken/etc.
+   *  only ever exist as livestock; wolf/deer/etc. only ever exist as wild
+   *  fauna) — no separate "owned" objective shape needed. */
+  | { type: 'find_animal', kind: AnimalKind }
 
 export type QuestStage = {
   objective: QuestObjective
@@ -163,6 +172,34 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'Dobra robota, zwiadowco. Teraz wiem, że okolica bezpieczna.',
+  },
+  {
+    id: 'zagubiona-owca',
+    giverName: 'Anna',
+    offerLine:
+      'Owca gdzieś mi się zawieruszyła. Rozejrzysz się po okolicy i ją znajdziesz?',
+    stages: [
+      {
+        objective: { type: 'find_animal', kind: 'sheep' },
+        description: 'Znajdź zagubioną owcę.',
+        reminderLine: 'Owca wciąż się gdzieś włóczy.',
+        progressLine: 'Jest! Wróć i powiedz Annie, gdzie ją znalazłeś.',
+      },
+    ],
+    reportLine: 'Uff, dzięki. Już się bałam, że coś ją spotkało.',
+  },
+  {
+    id: 'drewno-na-naprawe',
+    giverName: 'Piotr',
+    offerLine: 'Płot mi się rozłazi — zbierzesz kilka gałęzi, żebym miał czym go naprawić?',
+    stages: [
+      {
+        objective: { type: 'gather_item', kind: 'branch', count: 5 },
+        description: 'Zbierz 5 gałęzi.',
+        reminderLine: 'Masz już dość gałęzi na naprawę?',
+      },
+    ],
+    reportLine: 'To starczy w zupełności. Płot znów będzie trzymał się kupy.',
   },
   {
     id: 'grozny-wilk',

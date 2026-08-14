@@ -29,7 +29,7 @@ import { houseCatalogById } from './houseCatalog'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
-import { type Place, workplaceFor } from './places'
+import { homePlaceId, type Place, workplaceFor } from './places'
 import {
   buildSettlementProps,
   cloneProp,
@@ -233,6 +233,7 @@ export async function createSettlement(
     landmarks.homes,
     def.size,
     settlementSeed,
+    def.id,
   )
 
   type SignpostInstance = { labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
@@ -308,7 +309,7 @@ export async function createSettlement(
   // guarantee it).
   const homePlaces: Place[] =
     landmarks.homes.length > 0
-      ? landmarks.homes.map((position, i) => ({ id: `${def.id}:home:${i}`, type: 'home', position }))
+      ? landmarks.homes.map((position, i) => ({ id: homePlaceId(def.id, i), type: 'home', position }))
       : [{ id: `${def.id}:home:fallback`, type: 'home', position: landmarks.well.clone() }]
 
   // Interaction queues (plan 079): well drink first; garden/stall later reuse

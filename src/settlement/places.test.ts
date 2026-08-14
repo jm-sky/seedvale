@@ -1,7 +1,7 @@
 import { Object3D, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import type { SettlementLandmarks, SettlementTreeLandmark } from './props'
-import { workplaceFor } from './places'
+import { homePlaceId, workplaceFor } from './places'
 
 function makeTree(id: string, x: number, z: number): SettlementTreeLandmark {
   return {
@@ -73,5 +73,12 @@ describe('workplaceFor', () => {
   it('ids are namespaced by settlement id', () => {
     const landmarks = makeLandmarks()
     expect(workplaceFor('village_a', 'guard', landmarks, 0)?.id).toBe('village_a:workplace:well')
+  })
+})
+
+describe('homePlaceId', () => {
+  it('namespaces by settlement id and index, matching the existing home Place id format', () => {
+    expect(homePlaceId('0_0', 2)).toBe('0_0:home:2')
+    expect(homePlaceId('1_-2', 0)).toBe('1_-2:home:0')
   })
 })

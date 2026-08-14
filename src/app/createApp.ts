@@ -373,7 +373,21 @@ export async function createApp(
     },
     // Reads `bundle` (not a destructured `bundle.fauna`) so this stays valid
     // across `rebuildWorldBundle()` — see `worldBundle.ts`'s header comment.
-    (kind) => bundle.fauna.getAgents().find((a) => a.def.kind === kind && !a.isDead())?.animalId,
+    // Wild fauna and settlement livestock are disjoint populations by kind
+    // (wolf/deer/etc. are never livestock, sheep/chicken/etc. are never wild
+    // — see `AnimalAgent.ts`'s `ANIMAL_DEFS`), so trying wild fauna first and
+    // falling back to loaded settlements' livestock covers both without the
+    // resolver needing to know which population a given kind belongs to
+    // (plan 093 Etap G — lets `find_animal: { kind: 'sheep' }` resolve).
+    (kind) => {
+      const wild = bundle.fauna.getAgents().find((a) => a.def.kind === kind && !a.isDead())
+      if (wild) return wild.animalId
+      for (const settlement of bundle.settlementsManager.getLoaded()) {
+        const owned = settlement.livestock.find((a) => a.def.kind === kind && !a.isDead())
+        if (owned) return owned.animalId
+      }
+      return undefined
+    },
   )
   hud.setExp(questManager.getExp())
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)

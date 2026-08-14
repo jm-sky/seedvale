@@ -460,3 +460,61 @@ W przeciwieństwie do „groźnego wilka” (gdzie `QuestManager` wiąże się d
 - **Faza 9 — bandyci**.
 - **Generyczny event śmierci zwierzęcia** (niezależny od przyczyny/obserwatora) — potrzebny dla przyszłych questów typu „chroń zwierzę gospodarskie przed drapieżnikami” i dla w pełni poprawnego `isWolfDenCleared()` bez zależności od tego, kiedy akurat gracz coś zabije.
 - **Weryfikacja w przeglądarce Etap D + E** — oba przebiegi mają tylko zieloną weryfikację techniczną.
+
+---
+
+## 15. Stan implementacji — Etap G: livestock `ownerHouseId` + quest „zagubiona owca” (2026-08-14, czwarty przebieg)
+
+### Review względem kodu przed implementacją
+
+Sprawdzono `createSettlement.ts`/`livestock.ts`/`household.ts`: `spawnLivestock()` iteruje `landmarks.homes` z tym samym indeksem `i`, którego `createSettlement.ts` używa zarówno do `homePlaces[i].id` (`` `${def.id}:home:${i}` ``) jak i do `households[familyIndex]` (`homePlaces[familyIndex % homePlaces.length]`). Innymi słowy — indeks domu, do którego już dziś kotwiczone jest zwierzę gospodarskie (`findSpotNearHouse(home, ...)`), jest tym samym indeksem co istniejący `Place.id` domu. Nie trzeba było wprowadzać żadnego nowego rejestru — wystarczyło policzyć ten sam string w miejscu spawnu.
+
+### Zmiany
+
+- `src/settlement/places.ts`: nowa funkcja `homePlaceId(settlementId, index)` — scentralizowany format `` `${settlementId}:home:${index}` ``, który wcześniej był inline'owany tylko w `createSettlement.ts`. `createSettlement.ts`'s `homePlaces` teraz go używa (bez zmiany zachowania — sam refaktor).
+- `src/settlement/livestock.ts`: `spawnLivestock()` dostał nowy parametr `settlementId: string` (przekazywany z `createSettlement.ts` jako `def.id`); liczy `ownerHouseId = homePlaceId(settlementId, i)` raz na dom i przekazuje go do każdego `new AnimalAgent(...)` z tego domu.
+- `src/fauna/AnimalAgent.ts`: nowe `readonly ownerHouseId?: string` — opcjonalny, trailing parametr konstruktora (nie przesuwa pozycji istniejących parametrów, więc `createFauna.ts`'s dzika fauna, która go nie przekazuje, ma po prostu `undefined`).
+
+`ownerHouseId` nie jest jeszcze konsumowany przez żaden quest ani UI poza samym polem — to świadomie zakres Etapu G ([]„zwierzę gospodarskie musi posiadać stabilną identity oraz informację o właścicielu/gospodarstwie”), przygotowujący grunt pod przyszłe questy odwołujące się do konkretnego gospodarstwa (np. „to zwierzę Anny”), bez ich jeszcze implementowania.
+
+### Quest-facing kontrakt: `find_animal` / `animal_found` (nowy, osobny od `kill_target_animal`)
+
+Ten sam mechanizm wiązania co „groźny wilk” (resolver → `animalTargets: questId → animalId`), ale zdarzenie źródłowe to **znalezienie** zwierzęcia (`[E]` interact), nie jego śmierć:
+
+- `src/quests/quests.ts`: nowy wariant `QuestObjective` — `{ type: 'find_animal', kind: AnimalKind }`.
+- `src/quests/QuestManager.ts`:
+  - nowy wariant `ObjectiveRef` — `{ type: 'animal_found', animalId: string }`;
+  - `objectiveMatchesRef()` dostał case `animal_found` (analogiczny do `animal_died`);
+  - `bindAnimalTargetIfNeeded()` teraz wiąże zarówno `kill_target_animal` jak i `find_animal` (ten sam `AnimalTargetResolver`, ta sama mapa `animalTargets` — jeden mechanizm bindowania na dwa różne "co się liczy jako ukończenie" zdarzenia).
+- `src/interaction/resolveInteraction.ts`: `'animal'` case najpierw próbuje `animal_found` (po `animalId` związanego zwierzęcia), dopiero potem — jeśli nic nie dopasowało — istniejący `spot_animal` (po `kind`). Oba mogą być aktywne jednocześnie (np. „zwiadowca” i „zagubiona owca” równolegle); `find_animal` ma pierwszeństwo, bo jest bardziej specyficzny.
+- `src/app/createApp.ts`: `AnimalTargetResolver` wstrzykiwany do `QuestManager` teraz przeszukuje **najpierw dziką faunę** (`bundle.fauna.getAgents()`, jak wcześniej), **a jeśli nic nie znajdzie — inwentarz żywy każdej załadowanej osady** (`bundle.settlementsManager.getLoaded()[].livestock`). Działa bez rozgałęzień na "czy to zwierzę dzikie czy gospodarskie", bo populacje są rozłączne po `kind` (wilk/sarna/itd. nigdy nie są livestock; owca/kura/itd. nigdy nie są dzikie — `AnimalAgent.ts`'s `ANIMAL_DEFS`).
+
+### Nowe questy
+
+- `zagubiona-owca` (Anna, **bez `availability`** — celowo, w przeciwieństwie do obu questów wilczych): „Owca gdzieś mi się zawieruszyła...”, jeden etap `find_animal: { kind: 'sheep' }`, domyślne nagrody v2 (`+1 relation`/`+10 exp`, brak `effects`). Anna dziś ma tylko dwa questy zablokowane `trusted` — ten quest daje jej pierwszy, od razu dostępny problem, więc realnie staje się drogą do zbudowania relacji, która później odblokowuje „groźnego wilka”/„wilczą jamę” (dokładnie przepływ z §„Przykładowy przepływ” planu).
+- `drewno-na-naprawe` (Piotr — woodcutter, więc tematycznie spójny): „Płot mi się rozłazi...”, jeden etap **istniejącego** `gather_item: { kind: 'branch', count: 5 }` — zero nowego kodu mechaniki, czysto nowe dane. To jest przykład z §Etap H („Zdobądź drewno potrzebne do naprawy”) zrealizowany bez ruszania tree lifecycle: `branch` to już dziś zbieralny item (odnawialne gałęzie, plan 091), a `gather_item` już dziś generycznie obsługuje dowolny `ItemKind`. Uwaga terminologiczna: w `Inventory`/`ItemKind` nie ma osobnego itemu `'wood'` (to tylko `EconomicKind` w household/economy) — `branch` jest najbliższym odpowiednikiem „drewna" po stronie gracza, stąd fabularne „gałęzie na płot”, nie „drewno na dom”.
+
+### Co świadomie pominięto / dlaczego Etap F (landmarki) nadal nie ruszony
+
+Sprawdzono `src/terrain/chunkEnvironment.ts` (monolith/stoneCircle/smallRuins/cemetery, plan 049): `EnvironmentPlacement` **nie ma pola `id`** — to czysto proceduralna, deterministyczna z seeda geometria liczona per-chunk on-the-fly, bez żadnego globalnego rejestru "odkrytych" landmarków, bez punktu interakcji (`[E]`), bez query typu "najbliższy landmark typu X". W przeciwieństwie do `WolfDen`/`AnimalAgent`/`Household`, tu nie ma czego rozszerzyć — brakująca `landmarkId`/rejestr to nie brakujące pole na istniejącej strukturze, tylko cała nieistniejąca warstwa (odkrywanie, identity, ewentualnie trwałość w save). Zbudowanie jej "przy okazji" tego przebiegu byłoby dokładnie tym rodzajem architektonicznego skoku, przed którym ostrzega plan (i użytkownik w briefie tej sesji) — nie podjęto tej próby. Etap F zostaje zablokowany na tym samym warunku co poprzednio (plan 049), z dopiskiem: **potrzebna praca to nie "dodaj pole do questa", tylko projekt osobnego rejestru identity dla proceduralnych landmarków** — warto to rozważyć jako osobny, świadomie zaplanowany krok (ew. osobna notatka/ADR), a nie doklejać pod postacią questa.
+
+Etap H (drzewa/kopanie/zbieractwo) potraktowano jako **częściowo zamknięty** — `gather_item` już dziś pokrywa "zbierz X" dla dowolnego zbieralnego itemu (branch/stone/shell pokazane), więc kolejne tego typu questy to czyste dane, nie nowy kod. Nie ruszono `interact_tree` w stronę "ścinanie jako cel questa" (odróżnienie od samej inspekcji) ani obiektów typu "wykop kamień z konkretnego miejsca" — to nadal wymagałoby nowego `ObjectiveRef`/eventu z `treeHarvest.ts`/digging, analogicznie do `animal_found` powyżej, ale nie było potrzebne dla tego przebiegu.
+
+### Testy
+
+- `src/settlement/places.test.ts` (nowy plik): `homePlaceId()` format.
+- `src/quests/QuestManager.test.ts` (+3 testy, 16 łącznie): `find_animal`/`animal_found` — wiązanie do resolver-owego id, inny `animalId` nie kończy questa, brak wiązania gdy resolver nic nie zwraca.
+- Nie dodano testu integracyjnego na `spawnLivestock()`'s `ownerHouseId` bezpośrednio (wymagałoby budowania sceny/async GLB load jak w Etapie E dla `Fauna`) — pole jest trywialnym przekazaniem stringa z `homePlaceId()`, którego format jest już przetestowany osobno; ryzyko uznano za niskie i nieproporcjonalne do kosztu testu integracyjnego.
+
+### Weryfikacja
+
+`npx tsc --noEmit`, `npm run lint` (0 błędów w zmienionych plikach — te same niepowiązane błędy w `_temp/asset-audit/inspect.mjs`), `npm run build`, `npm run test` (647/647, 90 plików) — wszystkie przechodzą. Weryfikacja w przeglądarce **nie została wykonana** — brak potwierdzenia, że quest „zagubiona owca” faktycznie oferuje się od razu u Anny, że `[E]` na żywej owcy go kończy, i że „drewno na naprawę” u Piotra działa jak istniejące questy `gather_item`.
+
+## 16. Co zostaje otwarte po Etapie G
+
+- **Etap F — landmark objectives**: zablokowane na braku `landmarkId`/rejestru dla proceduralnych landmarków (patrz §15) — to teraz jawnie większy, osobny kawałek pracy, nie tylko "czekanie na plan 049".
+- **Etap H — pozostała część**: ścinanie/kopanie jako bezpośredni cel questa (odróżniony od `interact_tree`/inspekcji) wciąż wymaga nowego `ObjectiveRef`.
+- **Faza 9 — bandyci**.
+- **Generyczny event śmierci zwierzęcia** (niezależny od przyczyny) — jak w §14, nadal otwarte.
+- **`ownerHouseId` bez konsumenta** — pole istnieje i jest poprawnie wypełniane, ale żaden quest/UI jeszcze go nie czyta (np. by nazwać questa po konkretnym gospodarstwie/domu zamiast ogólnie po gatunku).
+- **Weryfikacja w przeglądarce Etap D–G** — wszystkie cztery przebiegi mają tylko zieloną weryfikację techniczną.

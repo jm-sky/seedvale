@@ -175,6 +175,40 @@ describe('QuestManager kill_target_animal binding', () => {
   })
 })
 
+describe('QuestManager find_animal binding', () => {
+  const sheepQuest: QuestDef = {
+    id: 'sheep',
+    giverName: 'Anna',
+    offerLine: 'offer sheep',
+    stages: [
+      { objective: { type: 'find_animal', kind: 'sheep' }, description: 'find sheep', reminderLine: 'remind' },
+    ],
+    reportLine: 'report sheep',
+  }
+
+  it('binds to the resolver-supplied animalId on accept, and completes only when that animal is found', () => {
+    const qm = makeManager([sheepQuest], () => 'sheep-house0-0')
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState('sheep')).toBe('active')
+
+    // A different sheep being found does not satisfy the objective.
+    expect(qm.onInteractObjective({ type: 'animal_found', animalId: 'sheep-house1-0' })).toBeNull()
+    expect(qm.getState('sheep')).toBe('active')
+
+    // The bound sheep being found does.
+    const override = qm.onInteractObjective({ type: 'animal_found', animalId: 'sheep-house0-0' })
+    expect(override?.line).toBe('find sheep')
+    expect(qm.getState('sheep')).toBe('ready_to_report')
+  })
+
+  it('does not bind a target when the resolver finds no live candidate', () => {
+    const qm = makeManager([sheepQuest], () => undefined)
+    acceptOffer(qm, 'Anna')
+    expect(qm.onInteractObjective({ type: 'animal_found', animalId: 'sheep-house0-0' })).toBeNull()
+    expect(qm.getState('sheep')).toBe('active')
+  })
+})
+
 describe('QuestManager clear_wolf_den', () => {
   const denQuest: QuestDef = {
     id: 'den',

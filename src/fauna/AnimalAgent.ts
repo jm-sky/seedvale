@@ -487,6 +487,10 @@ export class AnimalAgent {
    *  `livestock.ts`). Lets a quest objective target one specific animal
    *  instead of scanning by kind (plan 093 Etap D). */
   readonly animalId: string
+  /** Owning household's home `Place.id` (`settlement/places.ts`'s
+   *  `homePlaceId`) — set only for livestock (`settlement/livestock.ts`);
+   *  `undefined` for wild fauna, which has no owner (plan 093 Etap G). */
+  readonly ownerHouseId?: string
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
   private readonly collidersNear: ColliderSource
@@ -582,9 +586,11 @@ export class AnimalAgent {
     animations: THREE.AnimationClip[] = [],
     wanderRadius: readonly [number, number] = DEFAULT_WANDER_RADIUS,
     sampleForestFactor?: (x: number, z: number) => number,
+    ownerHouseId?: string,
   ) {
     this.def = def
     this.animalId = animalId
+    this.ownerHouseId = ownerHouseId
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear

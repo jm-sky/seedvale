@@ -53,6 +53,10 @@ export type ObjectiveRef =
   | { type: 'spot_animal', kind: AnimalKind }
   | { type: 'animal_died', animalId: string }
   | { type: 'wolf_den_cleared', denId: string }
+  /** A live `[E]`-interacted animal matches this exact instance — reported
+   *  by `resolveInteraction.ts`'s `animal` case alongside `spot_animal`
+   *  (plan 093 Etap G). */
+  | { type: 'animal_found', animalId: string }
 
 /** Looks up a live individual of `kind` to bind a `kill_target_animal` stage
  *  to (its `AnimalAgent.animalId`), or `undefined` if none is available right
@@ -74,6 +78,8 @@ function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, bound
   switch (ref.type) {
     case 'animal_died':
       return objective.type === 'kill_target_animal' && boundAnimalId === ref.animalId
+    case 'animal_found':
+      return objective.type === 'find_animal' && boundAnimalId === ref.animalId
     case 'interact_spawner':
       return objective.type === 'interact_spawner' && objective.spawnerType === ref.spawnerType
     case 'interact_tree':
@@ -246,14 +252,15 @@ export class QuestManager {
   }
 
   /** Binds `stageIndex`'s objective to one concrete `animalId` if it's a
-   *  `kill_target_animal` stage and isn't bound yet — a no-op otherwise
-   *  (including when `resolveAnimalTarget` has no live candidate right now;
-   *  it's retried the next time this is called for the same quest, since
-   *  `animalTargets` only gets an entry once resolution succeeds). */
+   *  `kill_target_animal`/`find_animal` stage and isn't bound yet — a no-op
+   *  otherwise (including when `resolveAnimalTarget` has no live candidate
+   *  right now; it's retried the next time this is called for the same
+   *  quest, since `animalTargets` only gets an entry once resolution
+   *  succeeds). */
   private bindAnimalTargetIfNeeded(def: QuestDef, stageIndex: number): void {
     if (this.animalTargets.has(def.id)) return
     const objective = this.currentStage(def, stageIndex)?.objective
-    if (objective?.type !== 'kill_target_animal') return
+    if (objective?.type !== 'kill_target_animal' && objective?.type !== 'find_animal') return
     const animalId = this.resolveAnimalTarget(objective.kind)
     if (animalId) this.animalTargets.set(def.id, animalId)
   }
