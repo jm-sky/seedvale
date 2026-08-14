@@ -12,6 +12,7 @@ import {
   prepareProp,
 } from '../assets/loadGltf'
 import { playActionWell } from '../audio/actionSounds'
+import { isDebugMode } from '../debug/debugMode'
 import {
   commitRoleWork,
   commitWoodcutterDeposit,
@@ -21,6 +22,8 @@ import { createHealthState, damageHealth, type HealthState } from '../shared/Hea
 import {
   createStaminaState,
   drainStamina,
+  getStaminaRatio,
+  isExhausted,
   restoreStamina,
   type StaminaState,
 } from '../shared/StaminaState'
@@ -61,6 +64,13 @@ import {
   type PickNeedOptions,
   tickNeeds,
 } from './Needs'
+import {
+  createMovementWatchdog,
+  type MovementWatchdog,
+  registerAbandon,
+  resetMovementWatchdog,
+  tickMovementWatchdog,
+} from './npcMovementWatchdog'
 import {
   applyDamageVigor,
   applySleepVigor,
@@ -167,6 +177,7 @@ function modelUrlFor(gender: NpcGender, treeIndex: number): string {
 type Phase =
   | 'choose'
   | 'execute'
+  | 'exhausted'
   | 'followPath'
   | 'goSleep'
   | 'goTo'
@@ -217,9 +228,16 @@ const PAUSE_INTERRUPTIBLE_PHASES: ReadonlySet<Phase> = new Set([
   'wander',
 ])
 
-/** Phases that drain stamina (effort) vs. ones that regenerate it. */
-const FATIGUE_PHASES: ReadonlySet<Phase> = new Set(['execute', 'goTo'])
-const REST_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'lookAtPlayer', 'sleep', 'wander'])
+/** Phases that regenerate stamina. `execute`/`goTo` drain it instead — at a
+ *  rate that depends on what's actually happening (see `WALK_FATIGUE_RATE`
+ *  / `LIGHT_EXECUTE_FATIGUE_RATE` / `BASE_FATIGUE_RATE`), not a flat
+ *  per-phase rate. */
+const REST_PHASES: ReadonlySet<Phase> = new Set(['exhausted', 'followPath', 'goSleep', 'lookAtPlayer', 'sleep', 'wander'])
+/** Movement phases the stuck-detection watchdog should watch — phases where
+ *  `steerTo` is chasing a real, externally-meaningful target. `execute`,
+ *  `choose`, `sleep`, `lookAtPlayer`, `exhausted` are deliberately stationary
+ *  and must never be flagged as stuck. */
+const WATCHDOG_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'goTo', 'wander'])
 
 /** Need reduction applied on satisfying water/food/wood — shared by
  *  `beginNeed`'s `onComplete` effects and `resolveTimeSkip`'s catch-up steps
@@ -259,10 +277,24 @@ const WORK_DURATION_RANGE: [number, number] = [2, 4]
 
 const MAX_HP = 100
 const MAX_STAMINA = 100
-const BASE_FATIGUE_RATE = 3 // stamina/sec while in a FATIGUE_PHASES phase
+/** stamina/sec while walking toward a task (`goTo`) — deliberately low so
+ *  ordinary errands (house → well → workplace → storage) don't meaningfully
+ *  dent stamina; only sustained heavy work should. */
+const WALK_FATIGUE_RATE = 0.5
+/** stamina/sec while performing a heavy `execute` action (`isHeavyWorkKind`
+ *  — chop/work). */
+const BASE_FATIGUE_RATE = 3
+/** stamina/sec while performing a light `execute` action (drink/eat/deposit)
+ *  — these are brief (~1-1.6s) regardless, so this mostly keeps the
+ *  small-effort/small-cost contract explicit rather than being impactful. */
+const LIGHT_EXECUTE_FATIGUE_RATE = 0.3
 const BASE_REST_RATE = 6 // stamina/sec while in a REST_PHASES phase
 const ENERGETIC_FATIGUE_MULT = 0.6
 const ENERGETIC_REST_MULT = 1.5
+/** Forced-rest (`'exhausted'`) ends once stamina climbs back to this ratio —
+ *  same order of magnitude as fauna's existing `STAMINA_REST_THRESHOLD`
+ *  (`AnimalLife.ts`). */
+const STAMINA_EXHAUSTED_RESUME_RATIO = 0.35
 
 /** Below this currentHp/maxHp fraction, walk speed starts dropping toward the floor.
  *  Kept for real damage later — fatigue no longer touches HP (plan 045). */
@@ -326,7 +358,10 @@ export class NpcAgent {
   readonly familyMembers: readonly FamilyMemberRef[]
   private readonly dialogueArchetype: Personality
   private readonly pauseParams: PausePersonalityParams
-  private readonly fatigueRate: number
+  /** Multiplier on top of the situational fatigue rate constants
+   *  (`WALK_FATIGUE_RATE`/`BASE_FATIGUE_RATE`/`LIGHT_EXECUTE_FATIGUE_RATE`) —
+   *  `energetic` drains slower. */
+  private readonly fatigueMult: number
   private readonly restRate: number
   private readonly waitMultiplier: number
   private readonly sampleHeight: HeightSampler
@@ -366,6 +401,14 @@ export class NpcAgent {
   private previousPhase: Phase | null = null
   private pauseTimer = 0
   private pauseCooldown = 0
+  /** Stuck-movement detection + rescue-stage escalation — ticked only while
+   *  `phase` is in `WATCHDOG_PHASES`. Pure state, see `npcMovementWatchdog.ts`. */
+  private readonly watchdog: MovementWatchdog = createMovementWatchdog()
+  /** One-shot bypass waypoint set by a `repath` rescue attempt (`attemptRepath`)
+   *  — `steerWithRescue` steers through this before resuming the phase's real
+   *  destination, while `repathActive` is true. */
+  private readonly repathTarget = new THREE.Vector3()
+  private repathActive = false
   private readonly tmp = new THREE.Vector3()
   private readonly tmpAvoid = new THREE.Vector3()
   private readonly labelEl: HTMLDivElement
@@ -374,6 +417,9 @@ export class NpcAgent {
   private readonly hpFillEl: HTMLDivElement
   private readonly staminaFillEl: HTMLDivElement
   private readonly vigorFillEl: HTMLDivElement
+  /** Debug-only diagnostic line (`?debug=1`) — phase/action/stamina/rescue
+   *  state, per the movement-resilience plan's instrumentation requirement. */
+  private readonly debugEl: HTMLDivElement
   /** Why the NPC is currently in `goSleep`/`sleep`. `null` when awake. */
   private sleepReason: SleepReason | null = null
   /** Set externally (e.g. by a QuestManager) — NpcAgent stays quest-agnostic. */
@@ -397,6 +443,7 @@ export class NpcAgent {
   private lastStaminaPercent = -1
   private lastVigorPercent = -1
   private lastBarsVisible: boolean | null = null
+  private lastDebugText = ''
 
   private constructor(
     root: THREE.Object3D,
@@ -450,7 +497,7 @@ export class NpcAgent {
     this.dialogueArchetype = nearestArchetype(this.personality)
     this.pauseParams = applySociableBoost(pausePersonalityParams(this.personality), this.traits)
     const energetic = this.traits.includes('energetic')
-    this.fatigueRate = BASE_FATIGUE_RATE * (energetic ? ENERGETIC_FATIGUE_MULT : 1)
+    this.fatigueMult = energetic ? ENERGETIC_FATIGUE_MULT : 1
     this.restRate = BASE_REST_RATE * (energetic ? ENERGETIC_REST_MULT : 1)
     this.waitMultiplier = this.traits.includes('fast_worker') ? FAST_WORKER_WAIT_MULT : 1
     this.treeIndex = treeIndex % Math.max(1, landmarks.trees.length)
@@ -516,7 +563,12 @@ export class NpcAgent {
     vigorBar.appendChild(this.vigorFillEl)
 
     this.labelBarsEl.append(hpBar, staminaBar, vigorBar)
-    this.labelEl.append(this.labelNameEl, this.labelBarsEl)
+
+    this.debugEl = document.createElement('div')
+    this.debugEl.className = 'npc-label__debug'
+    this.debugEl.style.display = 'none'
+
+    this.labelEl.append(this.labelNameEl, this.labelBarsEl, this.debugEl)
 
     this.label = new CSS2DObject(this.labelEl)
     this.label.position.set(0, NPC_HEIGHT + 0.55, 0)
@@ -663,6 +715,7 @@ export class NpcAgent {
       case 'choose':
         return { kind: 'idle' }
       case 'execute':
+      case 'exhausted':
       case 'goTo':
         if (this.pendingAction?.kind === 'work') return { kind: 'work', endHour }
         if (this.pendingAction?.kind === 'eat' && this.activeNeed === 'idle') {
@@ -724,15 +777,27 @@ export class NpcAgent {
     this.moving = false
     const scheduledActivity = this.getScheduledActivity(timeOfDay)
 
-    if (FATIGUE_PHASES.has(this.phase)) {
-      drainStamina(this.stamina, this.fatigueRate * dt)
+    const executeIsHeavy = this.phase === 'execute' && !!this.pendingAction && isHeavyWorkKind(this.pendingAction.kind)
+    if (this.phase === 'goTo') {
+      drainStamina(this.stamina, WALK_FATIGUE_RATE * this.fatigueMult * dt)
+    } else if (this.phase === 'execute') {
+      const rate = executeIsHeavy ? BASE_FATIGUE_RATE : LIGHT_EXECUTE_FATIGUE_RATE
+      drainStamina(this.stamina, rate * this.fatigueMult * dt)
     } else if (REST_PHASES.has(this.phase)) {
       restoreStamina(this.stamina, this.restRate * dt)
     }
-    if (this.phase === 'execute' && this.pendingAction && isHeavyWorkKind(this.pendingAction.kind)) {
+    if ((this.phase === 'goTo' || this.phase === 'execute') && isExhausted(this.stamina)) {
+      this.previousPhase = this.phase
+      this.phase = 'exhausted'
+    }
+    if (executeIsHeavy) {
       applyWorkVigor(this.vigor, dt)
     } else if (this.phase === 'sleep') {
       applySleepVigor(this.vigor, dt)
+    }
+
+    if (WATCHDOG_PHASES.has(this.phase)) {
+      this.tickWatchdog(dt)
     }
 
     if (this.pauseCooldown > 0) this.pauseCooldown -= dt
@@ -776,6 +841,7 @@ export class NpcAgent {
         if (decisionContext.scheduleActivity === 'sleep') {
           this.sleepReason = 'schedule'
           this.phase = 'goSleep'
+          resetMovementWatchdog(this.watchdog)
           break
         }
         this.beginIdle(scheduledActivity)
@@ -807,14 +873,25 @@ export class NpcAgent {
         }
         break
       }
+      case 'exhausted':
+        if (getStaminaRatio(this.stamina) >= STAMINA_EXHAUSTED_RESUME_RATIO) {
+          this.phase = this.previousPhase ?? 'choose'
+          this.previousPhase = null
+          // The watchdog's pre-rest baseline is now stale (the NPC stood
+          // still for the whole rest by definition) — resume with a fresh
+          // check window instead of an immediate false "no progress" strike.
+          resetMovementWatchdog(this.watchdog)
+        }
+        break
       case 'followPath': {
         const waypoint = this.pathWaypoints[this.pathIndex]
         if (!waypoint) {
           this.phase = 'choose'
           break
         }
-        if (this.steerTo(waypoint, dt)) {
+        if (this.steerWithRescue(waypoint, dt)) {
           this.pathIndex++
+          resetMovementWatchdog(this.watchdog)
           if (this.pathIndex >= this.pathWaypoints.length) this.phase = 'choose'
         }
         break
@@ -823,7 +900,7 @@ export class NpcAgent {
         if (!shouldStayAsleep(this.vigor, scheduledActivity, this.sleepReason)) {
           this.sleepReason = null
           this.phase = 'choose'
-        } else if (this.steerTo(this.home, dt)) this.phase = 'sleep'
+        } else if (this.steerWithRescue(this.home, dt)) this.phase = 'sleep'
         break
       case 'goTo': {
         const action = this.pendingAction
@@ -841,7 +918,7 @@ export class NpcAgent {
         }
         this.tmp.set(action.destination.x, action.destination.y, action.destination.z)
         const steerTarget = this.resolveSteerTarget(this.tmp)
-        if (this.steerTo(steerTarget, dt)) {
+        if (this.steerWithRescue(steerTarget, dt)) {
           // Skirt waypoint reached — keep going toward the real destination.
           if (steerTarget !== this.tmp && this.tmp.distanceTo(steerTarget) > ARRIVE) {
             break
@@ -885,6 +962,10 @@ export class NpcAgent {
           this.phase = this.previousPhase ?? 'choose'
           this.previousPhase = null
           this.pauseCooldown = randRange(this.pauseParams.cooldownRange)
+          // Same reasoning as the `exhausted` resume: the watchdog's
+          // pre-pause baseline is stale after standing still to look at the
+          // player, so resume with a fresh check window.
+          resetMovementWatchdog(this.watchdog)
         }
         break
       }
@@ -895,7 +976,7 @@ export class NpcAgent {
         }
         break
       case 'wander':
-        if (this.steerTo(this.target, dt)) this.phase = 'choose'
+        if (this.steerWithRescue(this.target, dt)) this.phase = 'choose'
         break
     }
 
@@ -934,6 +1015,7 @@ export class NpcAgent {
       this.lastVigorPercent = vigorPercent
       this.vigorFillEl.style.width = `${vigorPercent}%`
     }
+    this.updateDebugLabel()
     const gaze = gazeOpacityFactor(
       this.mesh.position.x - observerPos.x,
       this.mesh.position.z - observerPos.z,
@@ -991,7 +1073,7 @@ export class NpcAgent {
       if (activity === 'sleep' || vigorStep.slept) {
         restoreStamina(this.stamina, this.restRate * stepDt)
       } else {
-        if (activity === 'work') drainStamina(this.stamina, this.fatigueRate * stepDt)
+        if (activity === 'work') drainStamina(this.stamina, BASE_FATIGUE_RATE * this.fatigueMult * stepDt)
         else restoreStamina(this.stamina, this.restRate * stepDt)
         // Not asleep this step — resolve whichever need would have sent the
         // NPC off to drink/eat/gather, same amounts `beginNeed` applies.
@@ -1020,6 +1102,8 @@ export class NpcAgent {
     this.wait = 0
     this.pathWaypoints = []
     this.pathIndex = 0
+    this.previousPhase = null
+    resetMovementWatchdog(this.watchdog)
     this.phase = napping ? 'sleep' : 'choose'
   }
 
@@ -1058,6 +1142,28 @@ export class NpcAgent {
     return this.phase === 'execute' || this.phase === 'lookAtPlayer'
   }
 
+  /** `?debug=1`-only diagnostic line — phase/action/distance/stamina/rescue
+   *  state, per the movement-resilience plan's instrumentation requirement.
+   *  Hidden (and left unwritten) outside debug mode. */
+  private updateDebugLabel(): void {
+    if (!isDebugMode()) {
+      if (this.debugEl.style.display !== 'none') this.debugEl.style.display = 'none'
+      return
+    }
+    if (this.debugEl.style.display === 'none') this.debugEl.style.display = ''
+    const dest = this.pendingAction?.destination
+    const distText = dest
+      ? Math.hypot(dest.x - this.mesh.position.x, dest.z - this.mesh.position.z).toFixed(1)
+      : '-'
+    const staminaPercent = Math.round(getStaminaRatio(this.stamina) * 100)
+    const text = `${this.phase} · ${this.pendingAction?.kind ?? '-'} · dist ${distText} · `
+      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})`
+    if (text !== this.lastDebugText) {
+      this.lastDebugText = text
+      this.debugEl.textContent = text
+    }
+  }
+
   private crossfade(next: THREE.AnimationAction): void {
     if (next.isRunning() && next.getEffectiveWeight() > 0.9) return
     next.reset().fadeIn(0.2).play()
@@ -1083,6 +1189,8 @@ export class NpcAgent {
     this.pendingAction = action
     replaceActionLifecycle(this.actionLifecycle)
     this.phase = 'goTo'
+    resetMovementWatchdog(this.watchdog)
+    this.repathActive = false
   }
 
   private leaveActiveQueue(): void {
@@ -1130,6 +1238,8 @@ export class NpcAgent {
     this.pendingAction = null
     this.wait = 0
     this.pathWaypoints = []
+    resetMovementWatchdog(this.watchdog)
+    this.repathActive = false
     const dist = Math.hypot(
       this.mesh.position.x - this.home.x,
       this.mesh.position.z - this.home.z,
@@ -1294,12 +1404,16 @@ export class NpcAgent {
       this.pathWaypoints = this.landmarks.dockRoute
       this.pathIndex = 0
       this.phase = 'followPath'
+      resetMovementWatchdog(this.watchdog)
+      this.repathActive = false
       return
     }
     this.wanderNear(this.home)
   }
 
   private wanderNear(anchor: THREE.Vector3): void {
+    resetMovementWatchdog(this.watchdog)
+    this.repathActive = false
     for (let attempt = 0; attempt < 6; attempt++) {
       const x = anchor.x + (Math.random() - 0.5) * IDLE_WANDER_SPREAD
       const z = anchor.z + (Math.random() - 0.5) * IDLE_WANDER_SPREAD
@@ -1420,5 +1534,112 @@ export class NpcAgent {
       this.mesh.position.z += stepZ
     }
     return false
+  }
+
+  /** `steerTo` wrapper that detours through a one-shot `repathTarget` (set by
+   *  `attemptRepath`) before resuming the phase's real `dest` — the stuck
+   *  rescue's Level 1. Returns `false` (never "arrived at `dest`") for every
+   *  frame spent on the detour; the caller's normal arrival handling only
+   *  ever sees `dest` itself. */
+  private steerWithRescue(dest: THREE.Vector3, dt: number): boolean {
+    if (this.repathActive) {
+      if (this.steerTo(this.repathTarget, dt)) this.repathActive = false
+      return false
+    }
+    return this.steerTo(dest, dt)
+  }
+
+  /** Advances the stuck-movement watchdog and acts on whatever rescue stage
+   *  it reports this frame — only called while `phase` is in
+   *  `WATCHDOG_PHASES` (see `update()`). */
+  private tickWatchdog(dt: number): void {
+    const stage = tickMovementWatchdog(this.watchdog, dt, this.mesh.position.x, this.mesh.position.z)
+    if (stage === 'repath') this.attemptRepath()
+    else if (stage === 'escape') this.attemptLocalEscape()
+    else if (stage === 'abandon') this.abandonStuckAction()
+  }
+
+  /** Rescue Level 1 — steer through a small random nearby waypoint instead
+   *  of retrying the exact same (already-failing) direct line. */
+  private attemptRepath(): void {
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const angle = Math.random() * Math.PI * 2
+      const radius = 2 + Math.random() * 1.5
+      const x = this.mesh.position.x + Math.cos(angle) * radius
+      const z = this.mesh.position.z + Math.sin(angle) * radius
+      if (this.isWalkable(x, z)) {
+        this.repathTarget.set(x, 0, z)
+        this.repathActive = true
+        return
+      }
+    }
+  }
+
+  /** Rescue Level 2 — still stuck after a repath attempt: hop directly to
+   *  the nearest walkable point on a small ring around the NPC instead of
+   *  waiting for `steerTo` to find one. A bounded local nudge, not a
+   *  long-range teleport. */
+  private attemptLocalEscape(): void {
+    const radii = [1.5, 3]
+    for (const radius of radii) {
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2
+        const x = this.mesh.position.x + Math.cos(angle) * radius
+        const z = this.mesh.position.z + Math.sin(angle) * radius
+        if (this.isWalkable(x, z)) {
+          this.mesh.position.x = x
+          this.mesh.position.z = z
+          this.repathActive = false
+          if (isDebugMode()) console.warn('[npc:rescue] local escape', this.name, { x, z })
+          return
+        }
+      }
+    }
+  }
+
+  /** Rescue Level 3 — still stuck after repath + escape: give up on the
+   *  current action/wander/path and return to `choose`, same recovery path
+   *  already used for a `goTo` with no `pendingAction` (an invalid-state
+   *  safety net, not a new mechanism). Escalates to an emergency teleport
+   *  when this has happened repeatedly within `RECENT_RESCUE_WINDOW_SEC`. */
+  private abandonStuckAction(): void {
+    failActionLifecycle(this.actionLifecycle)
+    this.leaveActiveQueue()
+    this.pendingAction = null
+    this.pathWaypoints = []
+    this.pathIndex = 0
+    this.wait = 0
+    this.sleepReason = null
+    this.repathActive = false
+    const escalate = registerAbandon(this.watchdog)
+    resetMovementWatchdog(this.watchdog)
+    if (escalate) this.emergencyTeleport()
+    this.phase = 'choose'
+  }
+
+  /** Rescue Level 4 — last-resort safety net, expected to be rare: snap to a
+   *  validated-walkable known-safe point rather than continuing to retry
+   *  local geometry that has already defeated repath + escape twice in a
+   *  row. Always logged (not gated behind `isDebugMode()`) — this path
+   *  should stay rare enough to never be console noise. */
+  private emergencyTeleport(): void {
+    const candidates: { x: number, z: number }[] = [
+      this.home,
+      this.landmarks.well,
+      this.landmarks.stockpile,
+    ]
+    for (const candidate of candidates) {
+      if (this.isWalkable(candidate.x, candidate.z)) {
+        this.mesh.position.x = candidate.x
+        this.mesh.position.z = candidate.z
+        this.mesh.position.y = this.sampleHeight(candidate.x, candidate.z)
+        console.warn('[npc:rescue] emergency teleport', this.name, { x: candidate.x, z: candidate.z })
+        return
+      }
+    }
+    this.mesh.position.x = this.home.x
+    this.mesh.position.z = this.home.z
+    this.mesh.position.y = this.sampleHeight(this.home.x, this.home.z)
+    console.warn('[npc:rescue] emergency teleport (no validated candidate, fell back to home)', this.name)
   }
 }
