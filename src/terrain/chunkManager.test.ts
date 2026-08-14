@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
 import { apronOriginWorld } from './chunkHeightmap'
-import { applyModificationToTile, type TerrainModification } from './chunkManager'
+import { applyModificationToTile, pickNearestQueuedKey, type TerrainModification } from './chunkManager'
 
 // Small grid so texel math is easy to reason about by hand: resolution 5,
 // chunkSize 32 -> step 8, apronRes 7 (world x/z per texel: -24,-16,-8,0,8,16,24
@@ -97,5 +97,20 @@ describe('applyModificationToTile', () => {
     const touched = applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod, () => 10)
     expect(touched).toBe(false)
     expect(heightAtWorld(tile, 0, 0, 0, 0)).toBe(10)
+  })
+})
+
+describe('pickNearestQueuedKey', () => {
+  it('picks the nearest valid key and skips stale ones', () => {
+    const dist: Record<string, number | null> = { a: 3, b: null, c: 1, d: 2 }
+    expect(pickNearestQueuedKey(['a', 'b', 'c', 'd'], (k) => dist[k] ?? null)).toBe('c')
+  })
+
+  it('keeps queue order when distances are equal', () => {
+    expect(pickNearestQueuedKey(['far-old', 'far-new'], () => 4)).toBe('far-old')
+  })
+
+  it('returns undefined when every key is stale', () => {
+    expect(pickNearestQueuedKey(['a', 'b'], () => null)).toBeUndefined()
   })
 })

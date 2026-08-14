@@ -246,6 +246,10 @@ type ChunkRecord = {
    *  `grass` stays `undefined` until it resolves. */
   grassPending?: boolean
   pendingPromise?: Promise<void>
+  /** Set while this chunk's worker tile is waiting for the per-frame
+   *  `buildAndAttachMesh` slot (plan 112). Resolved by `drainFinalizeQueue`
+   *  after attach, or by `unload` if the chunk leaves range first. */
+  finalizeWaiter?: { resolve: () => void, reject: (err: unknown) => void }
 }
 
 export type ChunkManager = {
@@ -399,6 +403,24 @@ export function applyModificationToTile(
   return touched
 }
 
+/** Nearest still-valid key in a finalize/load-style queue. `distanceOf`
+ *  returning `null` skips that key (stale / already gone). Equal distances
+ *  keep queue order so same-ring chunks don't starve. Exported for tests. */
+export function pickNearestQueuedKey(
+  keys: readonly string[],
+  distanceOf: (key: string) => number | null,
+): string | undefined {
+  let best: string | undefined
+  let bestDist = Infinity
+  for (const key of keys) {
+    const dist = distanceOf(key)
+    if (dist === null || dist >= bestDist) continue
+    bestDist = dist
+    best = key
+  }
+  return best
+}
+
 export function createChunkManager(
   scene: THREE.Scene,
   config: ChunkManagerConfig,
@@ -426,14 +448,23 @@ export function createChunkManager(
   // Chunks `recheck()` wants but hasn't started loading yet, nearest first —
   // drained a few at a time in `update()` (every frame, unlike the throttled
   // `recheck()` itself) instead of firing `ensureLoaded` for the whole
-  // missing set in one synchronous burst. `ensureLoaded`'s per-chunk cost
-  // (worker round-trip result triggers a main-thread grass build, ~150k
-  // candidates) is what actually hitches; spreading *starts* across frames
-  // spreads when those results land too (perf review A4b). Replaced wholesale
-  // on every `recheck()` — always reflects the latest player position, so a
-  // stale entry from before a big jump never blocks fresher ones behind it.
+  // missing set in one synchronous burst. Replaced wholesale on every
+  // `recheck()` — always reflects the latest player position, so a stale
+  // entry from before a big jump never blocks fresher ones behind it.
+  //
+  // `CHUNKS_STARTED_PER_FRAME` only caps worker *starts*. Worker completions
+  // used to run `buildAndAttachMesh()` immediately in the promise
+  // continuation, so several results landing in one frame stacked 30–50 ms
+  // mesh builds (review 012 / plan 112). Ready tiles now wait in
+  // `finalizeQueue` and `update()` finalizes at most one mesh per frame.
   let loadQueue: ChunkCoord[] = []
   const CHUNKS_STARTED_PER_FRAME = 2
+  const CHUNKS_FINALIZED_PER_FRAME = 1
+  let finalizeQueue: string[] = []
+  // `waitForChunks` must not deadlock at init (no game loop yet). If
+  // `update()` hasn't run recently, the waiter pumps finalization itself.
+  let lastUpdateAt = 0
+  const GAME_LOOP_IDLE_MS = 48
   // Chunks only exist within loadRadius, so a grass radius beyond it is a dead
   // knob — clamp so the GUI slider (1-12) can't silently do nothing, and so
   // raising loadRadius later doesn't make grass range jump unexpectedly.
@@ -682,6 +713,302 @@ export function createChunkManager(
     rec.meshDispose = dispose
   }
 
+  function waitForFinalizeSlot(rec: ChunkRecord): Promise<void> {
+    return new Promise((resolve, reject) => {
+      rec.finalizeWaiter = { resolve, reject }
+      finalizeQueue.push(rec.key)
+    })
+  }
+
+  function takeNearestFinalizeKey(): string | undefined {
+    finalizeQueue = finalizeQueue.filter((k) => {
+      const rec = chunks.get(k)
+      return !!(rec?.tile && rec.finalizeWaiter && rec.state === 'generating')
+    })
+    const key = pickNearestQueuedKey(finalizeQueue, (k) => {
+      const rec = chunks.get(k)
+      return rec ? chebyshevDistance(rec.coord, lastPlayerChunk) : null
+    })
+    if (!key) return undefined
+    const i = finalizeQueue.indexOf(key)
+    if (i >= 0) finalizeQueue.splice(i, 1)
+    return key
+  }
+
+  async function runFinalize(rec: ChunkRecord): Promise<void> {
+    const waiter = rec.finalizeWaiter
+    rec.finalizeWaiter = undefined
+    if (!waiter) return
+    try {
+      if (!chunks.has(rec.key) || !rec.tile || rec.state !== 'generating') {
+        waiter.resolve()
+        return
+      }
+      await attachGeneratedChunk(rec, rec.tile)
+      waiter.resolve()
+    } catch (err) {
+      waiter.reject(err)
+    }
+  }
+
+  /** Caps how many ready worker tiles become meshes this visit. `update()`
+   *  uses 1; `waitForChunks` may flush the rest when the game loop is idle
+   *  so world init cannot deadlock waiting for a drain that never comes. */
+  function drainFinalizeQueue(limit: number): void {
+    let n = 0
+    while (n < limit) {
+      const key = takeNearestFinalizeKey()
+      if (!key) break
+      const rec = chunks.get(key)
+      if (!rec) continue
+      n++
+      void runFinalize(rec)
+    }
+  }
+
+  /** Worker tile → mesh / water / vegetation / items / environment.
+   *  `buildAndAttachMesh` is the expensive sync step (review 012); callers
+   *  must not run more than `CHUNKS_FINALIZED_PER_FRAME` of these per
+   *  game-loop frame. Digs are applied here (not at enqueue) so a
+   *  modification that lands while the tile is queued still reaches the mesh. */
+  async function attachGeneratedChunk(rec: ChunkRecord, tile: ChunkTileResult): Promise<void> {
+    const key = rec.key
+    const coord = rec.coord
+    // Re-apply any digs made before this chunk was (re)generated — see
+    // `ChunkManager.modifyTerrain`'s doc comment. Done here, not at enqueue,
+    // so a dig that lands while the tile is queued still reaches the mesh.
+    for (const mod of modifications) {
+      applyModificationToTile(
+        tile,
+        coord,
+        config.chunkSize,
+        config.resolution,
+        mod,
+        (wx, wz) => sampleHeightAt(wx, wz, fallbackParams),
+      )
+    }
+    const streamT0 = performance.now()
+    buildAndAttachMesh(rec, tile)
+    getMonitor().recordHitch('STREAMING', performance.now() - streamT0, 'chunk mesh')
+
+    const { x, z } = chunkCenter(coord, config.chunkSize)
+    const apronRes = config.resolution + 2
+    const coreHeights = extractCoreGrid(tile.heights, apronRes, config.resolution)
+    const coreFloorHeights = extractCoreGrid(tile.floorHeights, apronRes, config.resolution)
+    const coreBodyScale = extractCoreGrid(tile.bodyScale, apronRes, config.resolution)
+    const waterT0 = performance.now()
+    rec.water = createChunkWater(
+      coreHeights,
+      coreFloorHeights,
+      coreBodyScale,
+      config.resolution,
+      x,
+      z,
+      config.chunkSize,
+      config.waterLevel,
+      config.waterMirror,
+    )
+    if (rec.water) scene.add(rec.water.mesh)
+    getMonitor().recordHitch('WATER', performance.now() - waterT0, 'chunk water')
+
+    rec.state = 'ready'
+    syncGrassForRecord(rec, lastPlayerChunk)
+
+    const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
+    const sampleTileHeight: HeightSampler = (sx, sz) =>
+      sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
+
+    if (tile.vegetation.length > 0) {
+      const glbT0 = performance.now()
+      const [treeTemplates, bushTemplates, cactusTemplates, reedTemplates] = await Promise.all([
+        getTreeTemplates(),
+        getBushTemplates(),
+        getCactusTemplates(),
+        getReedTemplates(),
+      ])
+      getMonitor().recordHitch('STREAMING', performance.now() - glbT0, 'chunk vegetation glb')
+      // Re-check after the await — chunk may have unloaded while templates loaded.
+      if (!chunks.has(key)) return
+
+      const vegT0 = performance.now()
+      const treeIds: string[] = []
+      const treeYaw = new Map<string, number>()
+      const treePlacements = tile.vegetation.filter((p) => p.kind === 'tree')
+      const livingTreePlacements: PropPlacement[] = []
+      const extras = new THREE.Group()
+      extras.name = 'chunk-vegetation-extras'
+      let hasExtras = false
+
+      for (const placement of treePlacements) {
+        const initialStage = placement.growthStage ?? 'mature'
+        const sizeClass = placement.sizeClass ?? 'medium'
+        const sizeJitter = placement.sizeJitter ?? placement.scale
+        const id = config.treeLifecycle.makeId(placement.x, placement.z, placement.speciesIndex)
+        const presence = {
+          id,
+          x: placement.x,
+          z: placement.z,
+          speciesIndex: placement.speciesIndex,
+          initialStage,
+          sizeClass,
+          sizeJitter,
+        }
+        config.treeLifecycle.registerPresence(presence)
+        treeIds.push(id)
+        treeYaw.set(id, placement.rotationY)
+        const env = sampleTreeEnvAt(placement.x, placement.z, tile, coord)
+        const resolved = config.treeLifecycle.resolve(presence, env, config.getWorldDays())
+
+        if (resolved.visual === 'living') {
+          livingTreePlacements.push({
+            speciesIndex: placement.speciesIndex,
+            x: placement.x,
+            z: placement.z,
+            groundY: sampleTileHeight(placement.x, placement.z),
+            rotationY: placement.rotationY,
+            scale: resolved.scale,
+            key: id,
+          })
+          continue
+        }
+
+        const prop = createTreeStageMesh(resolved.visual, resolved.scale, id)
+        prop.rotation.y = placement.rotationY
+        placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
+        tagTreeMesh(prop, resolved, sizeClass, sizeJitter, placement.speciesIndex, initialStage)
+        extras.add(prop)
+        hasExtras = true
+      }
+      rec.treeIds = treeIds
+      rec.treeYaw = treeYaw
+
+      if (hasExtras) {
+        scene.add(extras)
+        rec.vegetationExtras = extras
+      }
+      const treeInstances = buildInstancedProps(
+        treeTemplates,
+        livingTreePlacements,
+        'chunk-vegetation-tree-living',
+      )
+      if (treeInstances) {
+        scene.add(treeInstances.group)
+        rec.treeInstances = treeInstances
+      }
+
+      const instancedTemplatesByKind = {
+        bush: bushTemplates,
+        cactus: cactusTemplates,
+        reed: reedTemplates,
+      }
+      const vegetationInstances: InstancedPropGroup[] = []
+      for (const kind of ['bush', 'cactus', 'reed'] as const) {
+        const placements = tile.vegetation.filter((p) => p.kind === kind)
+        if (placements.length === 0) continue
+        const propPlacements: PropPlacement[] = placements.map((p) => ({
+          speciesIndex: p.speciesIndex,
+          x: p.x,
+          z: p.z,
+          groundY: sampleTileHeight(p.x, p.z),
+          rotationY: p.rotationY,
+          scale: p.scale,
+        }))
+        const instanced = buildInstancedProps(
+          instancedTemplatesByKind[kind],
+          propPlacements,
+          `chunk-vegetation-${kind}`,
+        )
+        if (instanced) {
+          scene.add(instanced.group)
+          vegetationInstances.push(instanced)
+        }
+      }
+      if (vegetationInstances.length > 0) rec.vegetationInstances = vegetationInstances
+      syncInstancedLodForRecord(rec, lastPlayerChunk)
+      getMonitor().recordHitch('VEGETATION', performance.now() - vegT0, 'chunk vegetation')
+    }
+
+    const itemsT0 = performance.now()
+    rec.items = buildPlacementGroup('chunk-items', tile.items, (placement) => {
+      if (config.collectedItemIds.has(placement.id)) return null
+      const itemMesh = createItemMesh(placement.kind)
+      itemMesh.userData.itemId = placement.id
+      itemMesh.userData.itemKind = placement.kind
+      placeOnGround(itemMesh, placement.x, placement.z, sampleTileHeight)
+      return itemMesh
+    })
+    getMonitor().recordHitch('PROPS', performance.now() - itemsT0, 'chunk items')
+
+    const needsEnvGlb = tile.environment.some((p) => GLB_ENV_KINDS.has(p.kind))
+    const needsCemetery = tile.environment.some((p) => p.kind === 'cemetery')
+    let rockTemplates: THREE.Object3D[] | null = null
+    let rockClusterTemplates: THREE.Object3D[] | null = null
+    let fallenLogTemplates: THREE.Object3D[] | null = null
+    let cemeteryPlot: THREE.Object3D | undefined
+    let graveTemplates: THREE.Object3D[] | undefined
+    if (needsEnvGlb || needsCemetery) {
+      const envGlbT0 = performance.now()
+      const [rocks, clusters, logs, plots, graves] = await Promise.all([
+        needsEnvGlb ? getRockTemplates() : Promise.resolve(null),
+        needsEnvGlb ? getRockClusterTemplates() : Promise.resolve(null),
+        needsEnvGlb ? getFallenLogTemplates() : Promise.resolve(null),
+        needsCemetery ? getCemeteryTemplates() : Promise.resolve(null),
+        needsCemetery ? getGraveTemplates() : Promise.resolve(null),
+      ])
+      getMonitor().recordHitch('STREAMING', performance.now() - envGlbT0, 'chunk environment glb')
+      if (!chunks.has(key)) return
+      rockTemplates = rocks
+      rockClusterTemplates = clusters
+      fallenLogTemplates = logs
+      cemeteryPlot = plots?.[0]
+      graveTemplates = graves ?? undefined
+    }
+
+    const envT0 = performance.now()
+    const proceduralEnvPlacements = tile.environment.filter((p) => !GLB_ENV_KINDS.has(p.kind))
+    rec.environment = buildPlacementGroup('chunk-environment', proceduralEnvPlacements, (placement) => {
+      const prop =
+        placement.kind === 'cemetery'
+          ? createCemetery(placement.scale, placement.variant, {
+              plot: cemeteryPlot,
+              graves: graveTemplates,
+            })
+          : createProceduralEnvironmentProp(placement.kind, placement.scale, placement.variant)
+      prop.rotation.y = placement.rotationY
+      placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
+      return prop
+    })
+
+    const envInstancedSources: { kind: EnvironmentKind, templates: THREE.Object3D[] | null }[] = [
+      { kind: 'largeRock', templates: rockTemplates },
+      { kind: 'rockCluster', templates: rockClusterTemplates },
+      { kind: 'fallenLog', templates: fallenLogTemplates },
+    ]
+    const environmentInstances: InstancedPropGroup[] = []
+    for (const { kind, templates } of envInstancedSources) {
+      if (!templates) continue
+      const placements = tile.environment.filter((p) => p.kind === kind)
+      if (placements.length === 0) continue
+      const propPlacements: PropPlacement[] = placements.map((p) => ({
+        speciesIndex: 0,
+        x: p.x,
+        z: p.z,
+        groundY: sampleTileHeight(p.x, p.z),
+        rotationY: p.rotationY,
+        scale: p.scale,
+      }))
+      const instanced = buildInstancedProps(templates, propPlacements, `chunk-environment-${kind}`)
+      if (instanced) {
+        scene.add(instanced.group)
+        environmentInstances.push(instanced)
+      }
+    }
+    if (environmentInstances.length > 0) rec.environmentInstances = environmentInstances
+    syncInstancedLodForRecord(rec, lastPlayerChunk)
+    getMonitor().recordHitch('PROPS', performance.now() - envT0, 'chunk environment')
+    rebuildColliders(rec)
+  }
+
   function ensureLoaded(coord: ChunkCoord): Promise<void> {
     const key = chunkKey(coord)
     const existing = chunks.get(key)
@@ -696,260 +1023,11 @@ export function createChunkManager(
     chunks.set(key, record)
 
     const promise = requestChunkTile(key, paramsFor(coord))
-      .then(async (tile) => {
+      .then((tile) => {
         const rec = chunks.get(key)
         if (!rec) return // unloaded while generating
         rec.tile = tile
-        // Re-apply any digs made before this chunk was (re)generated — see
-        // `ChunkManager.modifyTerrain`'s doc comment.
-        for (const mod of modifications) {
-          applyModificationToTile(
-            tile,
-            coord,
-            config.chunkSize,
-            config.resolution,
-            mod,
-            (wx, wz) => sampleHeightAt(wx, wz, fallbackParams),
-          )
-        }
-        const streamT0 = performance.now()
-        buildAndAttachMesh(rec, tile)
-        getMonitor().recordHitch('STREAMING', performance.now() - streamT0, 'chunk mesh')
-
-        const { x, z } = chunkCenter(coord, config.chunkSize)
-        const apronRes = config.resolution + 2
-        const coreHeights = extractCoreGrid(tile.heights, apronRes, config.resolution)
-        const coreFloorHeights = extractCoreGrid(tile.floorHeights, apronRes, config.resolution)
-        const coreBodyScale = extractCoreGrid(tile.bodyScale, apronRes, config.resolution)
-        const waterT0 = performance.now()
-        rec.water = createChunkWater(
-          coreHeights,
-          coreFloorHeights,
-          coreBodyScale,
-          config.resolution,
-          x,
-          z,
-          config.chunkSize,
-          config.waterLevel,
-          config.waterMirror,
-        )
-        if (rec.water) scene.add(rec.water.mesh)
-        getMonitor().recordHitch('WATER', performance.now() - waterT0, 'chunk water')
-
-        rec.state = 'ready'
-        syncGrassForRecord(rec, lastPlayerChunk)
-
-        // Identical for vegetation/items/environment — the apron/origin doesn't
-        // depend on what's being placed on it — so computed once up front
-        // rather than redundantly inside each of the three blocks below.
-        const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
-        const sampleTileHeight: HeightSampler = (sx, sz) =>
-          sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
-
-        if (tile.vegetation.length > 0) {
-          const glbT0 = performance.now()
-          const [treeTemplates, bushTemplates, cactusTemplates, reedTemplates] = await Promise.all([
-            getTreeTemplates(),
-            getBushTemplates(),
-            getCactusTemplates(),
-            getReedTemplates(),
-          ])
-          getMonitor().recordHitch('STREAMING', performance.now() - glbT0, 'chunk vegetation glb')
-          // Re-check after the await — chunk may have unloaded while templates loaded.
-          if (!chunks.has(key)) return
-
-          const vegT0 = performance.now()
-          const treeIds: string[] = []
-          const treeYaw = new Map<string, number>()
-          const treePlacements = tile.vegetation.filter((p) => p.kind === 'tree')
-          const livingTreePlacements: PropPlacement[] = []
-          const extras = new THREE.Group()
-          extras.name = 'chunk-vegetation-extras'
-          let hasExtras = false
-
-          for (const placement of treePlacements) {
-            const initialStage = placement.growthStage ?? 'mature'
-            const sizeClass = placement.sizeClass ?? 'medium'
-            const sizeJitter = placement.sizeJitter ?? placement.scale
-            const id = config.treeLifecycle.makeId(placement.x, placement.z, placement.speciesIndex)
-            const presence = {
-              id,
-              x: placement.x,
-              z: placement.z,
-              speciesIndex: placement.speciesIndex,
-              initialStage,
-              sizeClass,
-              sizeJitter,
-            }
-            config.treeLifecycle.registerPresence(presence)
-            treeIds.push(id)
-            treeYaw.set(id, placement.rotationY)
-            const env = sampleTreeEnvAt(placement.x, placement.z, tile, coord)
-            const resolved = config.treeLifecycle.resolve(presence, env, config.getWorldDays())
-
-            if (resolved.visual === 'living') {
-              // Instanced (plan 087 faza 4) — `cloneProp`'s exact transform
-              // math is reproduced by `buildInstancedProps` (§2.1), so no
-              // per-instance Object3D/userData is needed here.
-              livingTreePlacements.push({
-                speciesIndex: placement.speciesIndex,
-                x: placement.x,
-                z: placement.z,
-                groundY: sampleTileHeight(placement.x, placement.z),
-                rotationY: placement.rotationY,
-                scale: resolved.scale,
-                key: id,
-              })
-              continue
-            }
-
-            const prop = createTreeStageMesh(resolved.visual, resolved.scale, id)
-            prop.rotation.y = placement.rotationY
-            placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
-            tagTreeMesh(prop, resolved, sizeClass, sizeJitter, placement.speciesIndex, initialStage)
-            extras.add(prop)
-            hasExtras = true
-          }
-          rec.treeIds = treeIds
-          rec.treeYaw = treeYaw
-
-          if (hasExtras) {
-            scene.add(extras)
-            rec.vegetationExtras = extras
-          }
-          const treeInstances = buildInstancedProps(
-            treeTemplates,
-            livingTreePlacements,
-            'chunk-vegetation-tree-living',
-          )
-          if (treeInstances) {
-            scene.add(treeInstances.group)
-            rec.treeInstances = treeInstances
-          }
-
-          // Bush/cactus/reed carry no runtime state (unlike trees — no
-          // lifecycle, no `refreshTreeVisual`-style single-instance swap), so
-          // they're the "simplest case" instancing target from plan 087 §2.5:
-          // one `InstancedMesh` bucket per (species, primitive) instead of
-          // one cloned `Object3D` tree per placement.
-          const instancedTemplatesByKind = {
-            bush: bushTemplates,
-            cactus: cactusTemplates,
-            reed: reedTemplates,
-          }
-          const vegetationInstances: InstancedPropGroup[] = []
-          for (const kind of ['bush', 'cactus', 'reed'] as const) {
-            const placements = tile.vegetation.filter((p) => p.kind === kind)
-            if (placements.length === 0) continue
-            const propPlacements: PropPlacement[] = placements.map((p) => ({
-              speciesIndex: p.speciesIndex,
-              x: p.x,
-              z: p.z,
-              groundY: sampleTileHeight(p.x, p.z),
-              rotationY: p.rotationY,
-              scale: p.scale,
-            }))
-            const instanced = buildInstancedProps(
-              instancedTemplatesByKind[kind],
-              propPlacements,
-              `chunk-vegetation-${kind}`,
-            )
-            if (instanced) {
-              scene.add(instanced.group)
-              vegetationInstances.push(instanced)
-            }
-          }
-          if (vegetationInstances.length > 0) rec.vegetationInstances = vegetationInstances
-          syncInstancedLodForRecord(rec, lastPlayerChunk)
-          getMonitor().recordHitch('VEGETATION', performance.now() - vegT0, 'chunk vegetation')
-        }
-
-        const itemsT0 = performance.now()
-        rec.items = buildPlacementGroup('chunk-items', tile.items, (placement) => {
-          if (config.collectedItemIds.has(placement.id)) return null
-          const itemMesh = createItemMesh(placement.kind)
-          itemMesh.userData.itemId = placement.id
-          itemMesh.userData.itemKind = placement.kind
-          placeOnGround(itemMesh, placement.x, placement.z, sampleTileHeight)
-          return itemMesh
-        })
-        getMonitor().recordHitch('PROPS', performance.now() - itemsT0, 'chunk items')
-
-        const needsEnvGlb = tile.environment.some((p) => GLB_ENV_KINDS.has(p.kind))
-        const needsCemetery = tile.environment.some((p) => p.kind === 'cemetery')
-        let rockTemplates: THREE.Object3D[] | null = null
-        let rockClusterTemplates: THREE.Object3D[] | null = null
-        let fallenLogTemplates: THREE.Object3D[] | null = null
-        let cemeteryPlot: THREE.Object3D | undefined
-        let graveTemplates: THREE.Object3D[] | undefined
-        if (needsEnvGlb || needsCemetery) {
-          const envGlbT0 = performance.now()
-          const [rocks, clusters, logs, plots, graves] = await Promise.all([
-            needsEnvGlb ? getRockTemplates() : Promise.resolve(null),
-            needsEnvGlb ? getRockClusterTemplates() : Promise.resolve(null),
-            needsEnvGlb ? getFallenLogTemplates() : Promise.resolve(null),
-            needsCemetery ? getCemeteryTemplates() : Promise.resolve(null),
-            needsCemetery ? getGraveTemplates() : Promise.resolve(null),
-          ])
-          getMonitor().recordHitch('STREAMING', performance.now() - envGlbT0, 'chunk environment glb')
-          if (!chunks.has(key)) return
-          rockTemplates = rocks
-          rockClusterTemplates = clusters
-          fallenLogTemplates = logs
-          cemeteryPlot = plots?.[0]
-          graveTemplates = graves ?? undefined
-        }
-
-        // Procedural-only landmark kinds (§2.5 — geometry built per placement,
-        // nothing to batch): unchanged individual-`Object3D` path.
-        const envT0 = performance.now()
-        const proceduralEnvPlacements = tile.environment.filter((p) => !GLB_ENV_KINDS.has(p.kind))
-        rec.environment = buildPlacementGroup('chunk-environment', proceduralEnvPlacements, (placement) => {
-          const prop =
-            placement.kind === 'cemetery'
-              ? createCemetery(placement.scale, placement.variant, {
-                  plot: cemeteryPlot,
-                  graves: graveTemplates,
-                })
-              : createProceduralEnvironmentProp(placement.kind, placement.scale, placement.variant)
-          prop.rotation.y = placement.rotationY
-          placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
-          return prop
-        })
-
-        // GLB env kinds (faza 5) — instanced, same shape as bush/cactus/reed
-        // (§2.5's other "no runtime state" row). `EnvironmentPlacement` has
-        // no `speciesIndex` (today's code always clones template index 0 for
-        // these kinds — `clonePropWithYaw(rockTemplates, 0, ...)` — so
-        // `speciesIndex: 0` here preserves that, not a new simplification).
-        const envInstancedSources: { kind: EnvironmentKind, templates: THREE.Object3D[] | null }[] = [
-          { kind: 'largeRock', templates: rockTemplates },
-          { kind: 'rockCluster', templates: rockClusterTemplates },
-          { kind: 'fallenLog', templates: fallenLogTemplates },
-        ]
-        const environmentInstances: InstancedPropGroup[] = []
-        for (const { kind, templates } of envInstancedSources) {
-          if (!templates) continue
-          const placements = tile.environment.filter((p) => p.kind === kind)
-          if (placements.length === 0) continue
-          const propPlacements: PropPlacement[] = placements.map((p) => ({
-            speciesIndex: 0,
-            x: p.x,
-            z: p.z,
-            groundY: sampleTileHeight(p.x, p.z),
-            rotationY: p.rotationY,
-            scale: p.scale,
-          }))
-          const instanced = buildInstancedProps(templates, propPlacements, `chunk-environment-${kind}`)
-          if (instanced) {
-            scene.add(instanced.group)
-            environmentInstances.push(instanced)
-          }
-        }
-        if (environmentInstances.length > 0) rec.environmentInstances = environmentInstances
-        syncInstancedLodForRecord(rec, lastPlayerChunk)
-        getMonitor().recordHitch('PROPS', performance.now() - envT0, 'chunk environment')
-        rebuildColliders(rec)
+        return waitForFinalizeSlot(rec)
       })
       .catch((err: unknown) => {
         if (!(err instanceof HeightmapGenerationCancelledError)) {
@@ -997,6 +1075,11 @@ export function createChunkManager(
 
   function unload(record: ChunkRecord): void {
     const unloadT0 = performance.now()
+    if (record.finalizeWaiter) {
+      record.finalizeWaiter.resolve()
+      record.finalizeWaiter = undefined
+    }
+    finalizeQueue = finalizeQueue.filter((k) => k !== record.key)
     if (record.state === 'generating') cancelChunkTile(record.key)
     colliderRegistry.clearColliders(record.key)
     if (record.treeIds) {
@@ -1178,10 +1261,31 @@ export function createChunkManager(
   }
 
   function update(playerX: number, playerZ: number): void {
+    lastUpdateAt = performance.now()
     if (Math.hypot(playerX - lastCheckX, playerZ - lastCheckZ) >= recheckDistance) {
       recheck(playerX, playerZ)
     }
     drainLoadQueue()
+    drainFinalizeQueue(CHUNKS_FINALIZED_PER_FRAME)
+  }
+
+  /** Resolves once every listed chunk has finished generating (or failed /
+   *  cancelled), including mesh finalization. During gameplay `update()`
+   *  drains one mesh per frame; at init / rebuild there is no game loop, so
+   *  this pumps the queue itself after `GAME_LOOP_IDLE_MS`. */
+  async function waitForChunks(coords: ChunkCoord[]): Promise<void> {
+    const pending = Promise.all(coords.map((c) => ensureLoaded(c))).then(() => undefined)
+    const waiting = {}
+    for (;;) {
+      const winner = await Promise.race([pending, Promise.resolve(waiting)])
+      if (winner !== waiting) return
+      if (performance.now() - lastUpdateAt > GAME_LOOP_IDLE_MS) {
+        drainFinalizeQueue(Number.POSITIVE_INFINITY)
+      }
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve())
+      })
+    }
   }
 
   function readField(
@@ -1332,7 +1436,7 @@ export function createChunkManager(
     waterLevel: config.waterLevel,
     region: config.region,
     loadedChunkCount: () => chunks.size,
-    waitForChunks: (coords) => Promise.all(coords.map((c) => ensureLoaded(c))).then(() => undefined),
+    waitForChunks,
     roadCorridorsNear(worldX, worldZ, querySize) {
       const village = villageSegmentsNear(worldX, worldZ, querySize, roadCtx)
       return [...segmentsNear(worldX, worldZ, querySize, roadCtx), ...village.paths]

@@ -32,7 +32,7 @@ Seedvale is a browser 3D sandbox built with **Three.js + WebGL2 + Vite + TypeScr
 
 ### World / terrain
 
-- Procedural chunked terrain (macro continental bias + ridges, hills/valleys, softened detail FBM) with a worker pool, load/unload radii and pinned home chunks.
+- Procedural chunked terrain (macro continental bias + ridges, hills/valleys, softened detail FBM) with a worker pool, load/unload radii and pinned home chunks. Worker tile results are queued and `buildAndAttachMesh` runs at most once per frame (plan 112); `CHUNKS_STARTED_PER_FRAME = 2` still only caps generation starts.
 - Shore sand band varies in world space; grass thins into mountain foothills; road corridors use soft tint + dirt micro-contrast (grass soft-fades, not a hard bald cut).
 - Instanced grass (custom wind shader, near-field filler blades). Tree/bush leaves share cheap vertex wind; GLTF `BLEND` foliage is hardened to opaque `alphaTest` cutouts.
 - Continuous `forestDensityAt` drives tree density and fauna habitat (`ChunkManager.sampleForestFactor`); no separate forest manager.
