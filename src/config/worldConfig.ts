@@ -252,7 +252,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       rayleigh: 2.4,
     },
     postProcessing: {
-      aoEnabled: true,
+      aoEnabled: false,
       aoRadius: 2,
       aoIntensity: 3,
       aoQuality: 'Low',
