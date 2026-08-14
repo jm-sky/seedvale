@@ -11,9 +11,9 @@
 
 Zastąpić obecne pojedyncze modele domów z `houseCatalog.ts` składanym z MegaKit domu, używając istniejącego `ConstructionCatalog` i kształtu `HouseDefinition` z `src/assets/houseDefinitionExample.ts`.
 
-House Builder ma być **warstwą assembly**, nie nowym systemem budynków. Settlement nadal decyduje gdzie znajduje się dom, do której rodziny należy i jak jest używany przez NPC. Builder odpowiada tylko za złożenie wizualnego domu z assetów Construction Catalog, jego lifecycle oraz elementy wymagające osobnej transformacji/interakcji.
+House Builder ma być **warstwą assembly**, nie nowym systemem budynków. Settlement nadal decyduje gdzie znajduje się dom, do której rodziny należy i jak jest używany przez NPC. Builder odpowiada za złożenie wizualnego domu z assetów Construction Catalog, jego lifecycle oraz elementy wymagające osobnej transformacji/interakcji.
 
-Performance jest częścią projektu od początku. Review 012 wykazał **567–780 nieinstancowanych meshów settlementu** i potwierdził, że osada jest jednym z głównych kosztów renderingu. Nowy builder nie może powtórzyć modelu „jeden GLB element = jeden Mesh”.
+Performance jest częścią projektu od początku. Review 012 wykazał **567–780 nieinstancowanych meshów settlementu** i potwierdził, że osada jest jednym z głównych kosztów renderingu. Nowy builder nie powinien powielać modelu „jeden GLB element = jeden niezależny renderowany Mesh”.
 
 ## 1. House Definition
 
@@ -25,17 +25,19 @@ Definicja powinna pozostać **data-only** i opisywać:
 
 - `id` — stabilny identyfikator wariantu domu;
 - `footprint.width/depth` — rozmiar w metrach, zgodny z modułem 2 m;
-- `transform` — opcjonalna rotacja/offset całego domu, jeśli potrzebne;
+- `transform` — opcjonalna rotacja/offset całego domu, jeśli rzeczywiście potrzebne;
 - `floor` — asset + liczba/moduły płytek;
 - `walls[]` — asset, strona, `moduleIndex` oraz ewentualny jawny lokalny transform;
 - `corners[]` — cztery posty narożne z pozycją wynikającą z footprintu;
 - `openings[]` — door/window, wall asset, frame/fill asset i ewentualne transformacje;
 - `roof` — **rozszerzyć obecne `{ assetId, segmentCount }`**, tak aby obsługiwało co najmniej dwa slope/ridge runs i jawne per-part transforms; nie próbować wywnioskować pozycji z AABB dla `gridReliable: false`;
 - `decorations[]` — opcjonalne elementy statyczne, z jawnym assetem i transformem;
-- `materials` — tylko jeśli konkretny wariant wymaga jawnego override; domyślnie używać materiałów assetu;
+- `materials` — opcjonalny override tylko wtedy, gdy konkretny wariant rzeczywiście go wymaga; domyślnie używać materiałów assetu;
 - `interactionPoints` — opcjonalne punkty typu `door`, `entrance`, `work`, `storage` jako dane lokalne domu, bez tworzenia nowego systemu interakcji.
 
 Nie dodawać do `HouseDefinition` logiki Three.js, loaderów ani runtime state.
+
+Powyższe rozszerzenia są propozycją kontraktu docelowego. Jeżeli implementacja pokaże, że część pól nie jest potrzebna dla pierwszych wariantów, można ograniczyć v1 i dodać je później.
 
 ### 1.2 Pierwszy wspierany wariant
 
@@ -69,6 +71,8 @@ Minimalny kontrakt:
 - `interactive` — np. drzwi;
 - opcjonalne `interactionPoints` przeliczone do lokalnego/world transformu;
 - `dispose()` — zwalniające wyłącznie zasoby będące własnością assembly, bez niszczenia współdzielonych assetów z cache.
+
+Nie ma potrzeby projektowania od razu pełnego, generycznego frameworka assembly. API powinno być wystarczające dla pierwszego domu i kilku kolejnych wariantów.
 
 ## 3. Construction / Assembly
 
@@ -109,6 +113,8 @@ Material override ma być wyjątkiem i być współdzielony tam, gdzie to bezpie
 
 Jeżeli builder musi modyfikować materiał konkretnego domu, klonować tylko ten materiał i oznaczyć go jako własność assembly zgodnie z istniejącym wzorcem `tintPropMaterials`.
 
+Nie projektować na tym etapie rozbudowanego systemu materiałowych wariantów domu, dopóki rzeczywiste house definitions nie pokażą takiej potrzeby.
+
 ## 4. Performance-aware assembly
 
 ### 4.1 Najważniejsza zasada
@@ -122,6 +128,8 @@ Review 012 wykazał:
 - `hide-settlement` zmniejszało liczbę draw calls mniej więcej o połowę w scenie settlementu;
 - problem dotyczy przede wszystkim liczby submissions, nie liczby trójkątów.
 
+Jednocześnie House Builder nie powinien próbować rozwiązywać całego problemu renderingu settlementu. Celem jest przede wszystkim **nie pogorszyć istniejącej sytuacji wraz z liczbą domów**.
+
 ### 4.2 Statyczne elementy
 
 Preferowana kolejność optymalizacji:
@@ -134,6 +142,8 @@ Preferowana kolejność optymalizacji:
 Pierwszy kandydat do instancingu to powtarzalne `floor_wooddark` / identyczne części ścian i inne dokładnie te same geometry+material pairs występujące w wielu domach.
 
 Nie próbować instancjonować elementów o różnych geometriach/materialach tylko po to, aby zmniejszyć liczbę obiektów.
+
+**Sugestia:** pierwsza implementacja może zacząć od najprostszego bezpiecznego batchingu/instancingu. Nie jest konieczne budowanie od razu generycznego systemu batchingu dla całego settlementu.
 
 ### 4.3 Drzwi i elementy gameplayowe
 
@@ -229,7 +239,9 @@ Pozostała odpowiedzialność settlementu zostaje bez zmian:
 - household/livestock ownership;
 - day/night house lights.
 
-`SettlementHouseLandmark` należy rozszerzyć/migrować tak, aby przechowywał `definitionId` i dane potrzebne obecnym callerom. Nie utrzymywać równolegle dwóch identyfikatorów opisujących ten sam dom bez wyraźnej potrzeby migracyjnej.
+`SettlementHouseLandmark` należy rozszerzyć/migrować tak, aby przechowywał `definitionId` i dane potrzebne obecnym callerom.
+
+Warto unikać równoległego utrzymywania wielu identyfikatorów opisujących ten sam wizualny wariant domu. Jeżeli obecne `houseId` i nowe `definitionId` mają różne znaczenie, powinno to być jawne w typach i nazwach.
 
 ### 6.3 `houseCatalog.ts`
 
@@ -266,7 +278,7 @@ Minimum:
 7. roof parts używają jawnych transformów i nie korzystają z błędnego generic snap;
 8. builder nie tworzy dodatkowego asset registry;
 9. `dispose()` nie niszczy współdzielonych asset resources;
-10. powtarzalne statyczne elementy są batchowane/instancjonowane zgodnie z regułami buildera.
+10. powtarzalne statyczne elementy są batchowane/instancjonowane zgodnie z przyjętą strategią buildera.
 
 Jeżeli testowanie render-time `drawCalls` w unit testach jest niepraktyczne, dodać mały deterministyczny assembly census (liczba renderowanych Mesh/InstancedMesh oraz interactive meshes) zamiast testu GPU.
 
@@ -289,17 +301,19 @@ Nie wymagać w tym planie konkretnego FPS, ponieważ review 012 nie rozdziela uc
 
 ## 10. Performance guardrails
 
-House Builder jest uznany za gotowy tylko jeśli:
+House Builder jest uznany za gotowy jeśli:
 
 - nie zwiększa liczby draw calls liniowo przez każdy nowy statyczny element domu;
-- identyczne static geometry/material pairs są instancjonowane lub bezpiecznie łączone;
+- identyczne static geometry/material pairs są instancjonowane lub bezpiecznie łączone tam, gdzie daje to realną korzyść;
 - drzwi i inne elementy interaktywne pozostają osobne tylko tam, gdzie to uzasadnione;
 - materiały nie są klonowane per mesh bez potrzeby;
 - `dispose()` nie powoduje double-dispose współdzielonych assetów;
-- assembly census pokazuje wyraźnie mniej renderable objects na dom niż obecny model „GLB jako jeden niezależny obiekt z całym poddrzewem”; 
+- assembly census pokazuje sensowną liczbę renderable objects na dom;
 - benchmark settlement nie wykazuje nowego sustained/hitch kosztu podczas normalnego renderingu.
 
-**Cel praktyczny:** po dodaniu kilku domów liczba render submissions settlementu ma rosnąć znacznie wolniej niż liczba elementów konstrukcyjnych. Jeśli każda ściana/płytka/element dekoracyjny kończy jako osobny Mesh, implementacja nie spełnia planu.
+**Cel praktyczny:** po dodaniu kilku domów liczba render submissions settlementu ma rosnąć znacznie wolniej niż liczba elementów konstrukcyjnych. Jeśli każda ściana/płytka/element dekoracyjny kończy jako osobny Mesh, warto ponownie przeanalizować assembly strategy.
+
+Nie traktować konkretnego mechanizmu instancingu/merge jako celu samego w sobie. Jeżeli pomiar pokaże, że prostsza strategia daje właściwy rezultat, preferowana jest prostsza implementacja.
 
 ## 11. Scope
 
@@ -310,7 +324,7 @@ House Builder jest uznany za gotowy tylko jeśli:
 - assembly z Construction Catalog;
 - 4×2 m test house;
 - walls/floor/corners/openings/roof;
-- performance-aware batching/instancing dla statycznych powtarzalnych elementów;
+- performance-aware batching/instancing dla statycznych powtarzalnych elementów, w zakresie uzasadnionym przez rzeczywistą implementację;
 - osobny door pivot + podstawowe open/close;
 - lifecycle/dispose;
 - integrację z obecnym `buildSettlementProps()` / `createSettlement()` bez drugiego systemu budynków;
@@ -327,7 +341,8 @@ House Builder jest uznany za gotowy tylko jeśli:
 - ekonomii budowy / kosztów materiałów;
 - proceduralnego edytora domów;
 - zaawansowanej logiki NPC używającej drzwi;
-- automatycznego supportu całego 176-asset MegaKit.
+- automatycznego supportu całego 176-asset MegaKit;
+- generycznego globalnego systemu batchingu/instancingu dla całego settlementu.
 
 ## 12. Implementation order
 
@@ -335,7 +350,7 @@ House Builder jest uznany za gotowy tylko jeśli:
 2. **Builder core** — asset resolution, deterministic transforms, static/interactive split, lifecycle.
 3. **Basic assembly** — floor → walls → corners → openings → roof.
 4. **Doors** — hinge pivot + open/close.
-5. **Performance layer** — instancing/merge dla static repeats; assembly census.
+5. **Performance layer** — najprostszy bezpieczny instancing/merge dla static repeats; assembly census.
 6. **Settlement migration** — podmiana istniejącego house creation w `buildSettlementProps()`.
 7. **Landmarks/colliders compatibility** — zachować obecne `homes`, `houses`, `Place`, household/livestock i collider ownership.
 8. **Tests** — builder + definition + lifecycle + assembly census.
@@ -349,11 +364,11 @@ House Builder jest uznany za gotowy tylko jeśli:
 - [ ] `HouseBuilder` składa pierwszy dom z Construction Catalog.
 - [ ] Dom używa modularnego subsetu potwierdzonego w review 011.
 - [ ] Drzwi mają poprawny hinge pivot i animację bez przebudowy domu.
-- [ ] Static repeated parts są instancjonowane/łączone zamiast generować niepotrzebne meshe.
+- [ ] Static repeated parts są instancjonowane/łączone tam, gdzie jest to bezpieczne i daje sensowną redukcję renderables.
 - [ ] Settlement używa buildera zamiast starego pojedynczego GLB domu.
 - [ ] `landmarks.homes`, `landmarks.houses`, colliders, `Place`, households i livestock nadal działają.
 - [ ] Lifecycle/dispose jest poprawny dla stream-out/rebuild.
 - [ ] Tests przechodzą.
 - [ ] Browser verification potwierdza wizualny assembly.
-- [ ] Performance verification nie pokazuje regresji i potwierdza sensowny spadek liczby renderable objects per house.
+- [ ] Performance verification nie pokazuje regresji i potwierdza sensowną liczbę renderable objects per house.
 - [ ] Brak drugiego asset registry, drugiego settlement building systemu i nowego globalnego render managera.
