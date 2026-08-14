@@ -31,6 +31,9 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
 
++ `2026-08-14--117--npc-reaction-to-player.md`
++ `2026-08-14--118--fauna-stada-i-mlode.md`
+
 ---
 
 ## Todo
