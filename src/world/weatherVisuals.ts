@@ -1,5 +1,5 @@
 import { Color } from 'three'
-import type { Weather, WeatherState } from './weather'
+import type { WeatherState, WeatherType } from './weather'
 
 /** Weather → fog/light overlay applied on top of `skyParamsFromTime`'s
  *  day/night result (`gameLoop.ts`'s `applyDayNight`). Deliberately leaves
@@ -24,7 +24,7 @@ type WeatherVisualProfile = {
   fogTintStrength: number
 }
 
-const WEATHER_VISUAL_PROFILES: Record<Weather, WeatherVisualProfile> = {
+const WEATHER_VISUAL_PROFILES: Record<WeatherType, WeatherVisualProfile> = {
   clear: { lightScale: 1, fogNearMul: 1, fogFarMul: 1, fogTint: null, fogTintStrength: 0 },
   cloudy: { lightScale: 0.8, fogNearMul: 0.9, fogFarMul: 0.85, fogTint: 0x8a97a3, fogTintStrength: 0.35 },
   rain: { lightScale: 0.62, fogNearMul: 0.55, fogFarMul: 0.55, fogTint: 0x5c6b78, fogTintStrength: 0.55 },

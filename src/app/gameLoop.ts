@@ -33,7 +33,7 @@ import type { DayNightState } from '../world/dayNight'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
 import type { TimeSkip } from '../world/timeSkip'
 import type { WaterSource } from '../world/WaterSource'
-import type { WeatherState } from '../world/weather'
+import type { ClimateState, WeatherState } from '../world/weather'
 import type { WeatherParticles } from '../world/weatherParticles'
 import type { BusyAction } from './busyAction'
 import type { RestCampSequence } from './restCampSequence'
@@ -66,7 +66,7 @@ import { getVigorRatio } from '../shared/VigorState'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
 import { createWaterSource } from '../world/WaterSource'
-import { seasonFromElapsedDays, tickWeather } from '../world/weather'
+import { tickClimate } from '../world/weather'
 import { applyWeatherOverlay } from '../world/weatherVisuals'
 import {
   buildDigTarget,
@@ -143,9 +143,13 @@ export type GameLoopDeps = {
   lights: WorldLights
   postProcessing: PostProcessing
   dayNight: DayNightState
-  weather: WeatherState
+  climate: ClimateState
   weatherParticles: WeatherParticles
   weatherAudio: WeatherAudio
+  /** Current world seed — weather is a pure function of `(seed, elapsedDays)`
+   *  (plan 040 §7), and `config.seed` can change on `rebuildWorld()`, so this
+   *  is a live accessor rather than a captured value. */
+  getSeed: () => number
   keyboard: ReturnType<typeof createKeyboard>
   mouseLook: ReturnType<typeof createMouseLook>
   touchControls: TouchControls | null
@@ -229,7 +233,7 @@ export type GameLoop = {
 export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
-    weather, weatherParticles, weatherAudio,
+    climate, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
@@ -245,8 +249,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
    *  here (not just the day/night threshold) also has to trigger a resync,
    *  or weather-driven fog would only "pop" in on the next unrelated
    *  threshold crossing instead of when the weather actually changes. */
-  let lastAppliedWeatherType = weather.type
-  let lastAppliedWeatherIntensity = weather.intensity
+  let lastAppliedWeatherType = climate.weather.type
+  let lastAppliedWeatherIntensity = climate.weather.intensity
   /** Cached `skyParamsFromTime(dayNight.timeOfDay)` — recomputed at most once
    *  per frame (only while unpaused, since `timeOfDay` is frozen otherwise),
    *  instead of once per call site (`ambientAudio`, `dayFactor`, `godRays`). */
@@ -270,11 +274,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   }
 
   const resyncDayNight = (): void => {
-    cachedSky = applyDayNight(dayNight.timeOfDay, weather, sky, lights, scene, bundle.chunkManager, bundle.ocean)
+    cachedSky = applyDayNight(dayNight.timeOfDay, climate.weather, sky, lights, scene, bundle.chunkManager, bundle.ocean)
     bundle.settlementsManager.setDayNight(1 - cachedSky.dayFactor)
     lastAppliedTimeOfDay = dayNight.timeOfDay
-    lastAppliedWeatherType = weather.type
-    lastAppliedWeatherIntensity = weather.intensity
+    lastAppliedWeatherType = climate.weather.type
+    lastAppliedWeatherIntensity = climate.weather.intensity
   }
 
   const tick = (): void => {
@@ -646,10 +650,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // clock itself) stays real — the sky/clock still has to race ahead.
       const worldDt = timeSkip.isActive() ? 0 : dt
       tickDayNight(dayNight, dt)
-      tickWeather(weather, dayNight, seasonFromElapsedDays(dayNight.elapsedDays))
+      // Cheap: `tickClimate` only recomputes `weather` from the deterministic
+      // hash when `elapsedDays` crosses into a new weather cycle (plan §17);
+      // `season`/`seasonProgress` are trivial arithmetic recomputed every call.
+      tickClimate(climate, getSeed(), dayNight.elapsedDays)
       const weatherVisualChanged =
-        weather.type !== lastAppliedWeatherType ||
-        Math.abs(weather.intensity - lastAppliedWeatherIntensity) >= 0.03
+        climate.weather.type !== lastAppliedWeatherType ||
+        Math.abs(climate.weather.intensity - lastAppliedWeatherIntensity) >= 0.03
       if (
         dayNight.enabled &&
         (timeOfDayDelta(dayNight.timeOfDay, lastAppliedTimeOfDay) >= DAY_NIGHT_APPLY_THRESHOLD ||
@@ -662,8 +669,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // reused below (`dayFactor`) and after this block (`postProcessing`)
       // instead of each call site recomputing the same params object.
       cachedSky = skyParamsFromTime(dayNight.timeOfDay)
-      weatherParticles.update(dt, weather, player.mesh.position.x, player.mesh.position.y, player.mesh.position.z)
-      weatherAudio.update(weather)
+      weatherParticles.update(dt, climate.weather, player.mesh.position.x, player.mesh.position.y, player.mesh.position.z)
+      weatherAudio.update(climate.weather)
       ambientAudio.update(
         dt,
         cachedSky.dayFactor,

@@ -6,7 +6,15 @@ import type { WeatherState } from './weather'
  *  scaled up into a box volume (rather than one fire's local shower) since
  *  precipitation has to cover the visible frustum around a moving player.
  *  Positions are stored as offsets from the emitter center and re-added every
- *  frame, so the volume "follows" the player without any world-space drift. */
+ *  frame, so the volume "follows" the player without any world-space drift.
+ *
+ *  Known deviation from plan 040 §2/§11-12: the plan's preferred technique is
+ *  GPU shader-based weather (procedural per-fragment rain/snow, no CPU-side
+ *  per-particle position updates); this is the disfavored `THREE.Points`/CPU
+ *  fallback the plan allows only "gdy okaże się prostszy... przy akceptowalnym
+ *  koszcie". Kept as an explicit stopgap for Etap 1 so weather is visible at
+ *  all; a GPU rain/snow shader (plan §13's `WeatherRenderer`) is open work,
+ *  not implemented here. Particle count is fixed (not perf-preset-scaled). */
 
 const VOLUME_RADIUS = 26
 const VOLUME_HEIGHT = 20

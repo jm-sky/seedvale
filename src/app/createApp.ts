@@ -85,7 +85,7 @@ import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest
 import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChopStage } from '../world/treeLifecycle'
 import { AGENT_RENDER_LAYER, WATER_RENDER_LAYER } from '../world/waterMirror'
 import { DRINK_THIRST_RELIEF, UNSAFE_WATER_WARNING, type WaterSource } from '../world/WaterSource'
-import { createWeatherState } from '../world/weather'
+import { createClimateState } from '../world/weather'
 import { createWeatherParticles } from '../world/weatherParticles'
 import { createWorldContext } from '../world/worldContext'
 import { createBusyAction } from './busyAction'
@@ -171,17 +171,10 @@ export async function createApp(
       ? { timeOfDay: initialSave.timeOfDay, elapsedDays: initialSave.elapsedDays }
       : undefined,
   )
-  const weather = createWeatherState(
-    initialSave?.weather
-      ? {
-          type: initialSave.weather.type,
-          intensity: initialSave.weather.intensity,
-          temperature: initialSave.weather.temperature,
-          startedAt: initialSave.weather.startedAt,
-          duration: initialSave.weather.duration,
-        }
-      : undefined,
-  )
+  // Climate (season + weather) is a pure function of (seed, elapsedDays) —
+  // no save field, "restored" for free by re-deriving from the values above
+  // (plan 040 §7/§19). See `world/weather.ts`'s header comment.
+  const climate = createClimateState(config.seed, dayNight.elapsedDays)
 
   let treeLifecycle = createTreeLifecycle(
     config.seed,
@@ -564,7 +557,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 14,
+    version: 13,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -603,13 +596,6 @@ export async function createApp(
       hunger: player.needs.hunger.current,
       thirst: player.needs.thirst.current,
       vigor: player.needs.vigor.current,
-    },
-    weather: {
-      type: weather.type,
-      intensity: weather.intensity,
-      temperature: weather.temperature,
-      startedAt: weather.startedAt,
-      duration: weather.duration,
     },
   })
 
@@ -748,7 +734,7 @@ export async function createApp(
     },
   })
 
-  const gui = createDebugGui(config, dayNight, weather, renderer, {
+  const gui = createDebugGui(config, dayNight, climate, renderer, {
     onTerrainChange,
     onSkyChange: updateSkyFromGui,
     onDayNightChange,
@@ -1448,7 +1434,7 @@ export async function createApp(
 
   const gameLoop = createGameLoop({
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
-    weather, weatherParticles, weatherAudio,
+    climate, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,

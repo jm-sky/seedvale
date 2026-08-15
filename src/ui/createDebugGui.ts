@@ -2,13 +2,13 @@ import GUI, { type Controller } from 'lil-gui'
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
 import type { DayNightState } from '../world/dayNight'
-import type { WeatherState } from '../world/weather'
+import type { ClimateState } from '../world/weather'
 import { QUALITY_PRESET_IDS } from '../config/qualityProfiles'
 import { triangleCount } from '../config/worldConfig'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { getMonitor } from '../perf/active'
 import { BENCHMARK_SCENARIO_IDS, type BenchmarkScenarioId } from '../perf/benchmarkScenarios'
-import { SEASON_LABELS, seasonFromElapsedDays, WEATHER_LABELS } from '../world/weather'
+import { SEASON_LABELS, WEATHER_LABELS } from '../world/weather'
 import type { WebGLRenderer } from 'three'
 
 export type DebugGuiHandlers = {
@@ -48,7 +48,7 @@ export type DebugGuiHandle = {
 export function createDebugGui(
   config: WorldConfig,
   dayNight: DayNightState,
-  weather: WeatherState,
+  climate: ClimateState,
   renderer: WebGLRenderer,
   handlers: DebugGuiHandlers,
 ): DebugGuiHandle {
@@ -101,26 +101,35 @@ export function createDebugGui(
     .listen()
     .onChange(() => handlers.onDayNightChange?.())
 
-  // Plan 040 Etap 1 — season is a pure readout (derived from `dayNight.elapsedDays`,
-  // no separate clock); weather's live fields are shown via `.listen()` and can
-  // be overridden with `forced` for testing rain/snow/fog without waiting.
+  // Plan 040 — season/weather are pure functions of (seed, elapsedDays)
+  // (`tickClimate` replaces `climate.weather` wholesale on each cycle
+  // change, so these are getter-wrapper readouts rather than binding
+  // directly to `climate.weather`'s fields — a direct binding would go
+  // stale the first time `.weather` is replaced with a new object).
+  // `forced` can be overridden for testing rain/snow/fog without waiting.
   const seasonWeather = gui.addFolder('Pora roku / Pogoda')
   const seasonInfo = {
     get season() {
-      return SEASON_LABELS[seasonFromElapsedDays(dayNight.elapsedDays)]
+      return SEASON_LABELS[climate.season]
     },
   }
   seasonWeather.add(seasonInfo, 'season').name('Sezon').listen().disable()
-  const weatherTypeInfo = {
+  const weatherInfo = {
     get label() {
-      return WEATHER_LABELS[weather.type]
+      return WEATHER_LABELS[climate.weather.type]
+    },
+    get intensity() {
+      return climate.weather.intensity
+    },
+    get temperature() {
+      return climate.weather.temperature
     },
   }
-  seasonWeather.add(weatherTypeInfo, 'label').name('Pogoda (aktualna)').listen().disable()
-  seasonWeather.add(weather, 'intensity', 0, 1, 0.01).name('Intensywność').listen().disable()
-  seasonWeather.add(weather, 'temperature', -20, 40, 0.1).name('Temperatura (°C)').listen().disable()
+  seasonWeather.add(weatherInfo, 'label').name('Pogoda (aktualna)').listen().disable()
+  seasonWeather.add(weatherInfo, 'intensity', 0, 1, 0.01).name('Intensywność').listen().disable()
+  seasonWeather.add(weatherInfo, 'temperature', -20, 40, 0.1).name('Temperatura (°C)').listen().disable()
   seasonWeather
-    .add(weather, 'forced', ['auto', 'clear', 'cloudy', 'rain', 'fog', 'snow'])
+    .add(climate, 'forced', ['auto', 'clear', 'cloudy', 'rain', 'fog', 'snow'])
     .name('Wymuś pogodę')
 
   const terrain = gui.addFolder('Terrain mesh')
