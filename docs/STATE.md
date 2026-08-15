@@ -26,7 +26,7 @@ Seedvale is a browser 3D sandbox built with **Three.js + WebGL2 + Vite + TypeScr
 - `ItemSpawners`, `ResourceDeposits`, `DroppedItems`
 - `PlacedFires`, `PlacedTents`, `LargeCaves`
 
-`rebuildWorldBundle()` disposes and recreates these systems while mutating the existing bundle object in place. Keep the bundle reference; do not capture a replaceable field. Lifecycle details: [ARCHITECTURE.md](./ARCHITECTURE.md).
+Rebuild/lifetime invariant (keep the bundle reference, don't capture a replaceable field): canonical in [ARCHITECTURE.md](./ARCHITECTURE.md) — "World lifecycle" / "Rebuild / lifetime invariants". Not restated here.
 
 ## Major implemented systems
 

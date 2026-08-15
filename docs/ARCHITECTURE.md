@@ -2,7 +2,7 @@
 
 **Purpose:** describe the architecture that exists in the code today. This is an architectural map, not a product roadmap.
 
-**Last verified:** 2026-08-14
+**Last verified:** 2026-08-15
 
 ## Source of truth
 
@@ -142,7 +142,7 @@ Persistence is orchestrated from `createApp.ts`, but ownership is split by respo
 - `src/persistence/saveData.ts` owns the `SaveData` schema, validation/defaulting and migrations.
 - `src/persistence/saveDb.ts` owns the IndexedDB storage operations.
 
-The current save schema is version **11**. It contains world configuration, player position/orientation, time of day, elapsed game days, quest progress/EXP/relations, inventory, held tool, collected item IDs, dropped items, placed fires, placed tents, player torch, world flags, sparse tree lifecycle overrides and map discovery cells. NPC runtime state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
+The canonical save schema version and the full field list are documented in [docs/STATE.md](./STATE.md) ("Persistence") — do not restate the field list here, it drifts. NPC runtime state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
 
 When changing `SaveData`, preserve compatibility with older saves and use the existing migration/defaulting patterns in the config and persistence code.
 

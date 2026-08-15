@@ -10,7 +10,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 - **[SETTLEMENTS.md](./SETTLEMENTS.md)** — osady i życie NPC (stan + standing decisions)
 - **[GRAPHICS.md](./GRAPHICS.md)** — log decyzji / kontraktów graficznych
 - **[WATER.md](./WATER.md)** — woda (ocean + jeziora: stan, decyzje, historia)
-- **[ROADMAP.md](./ROADMAP.md)** — kierunek produktu
+- **[ROADMAP.md](./ROADMAP.md)** — kierunek produktu (canonical roadmap Seedvale; `roadmap/` niżej to coś innego — zamrożony log sesji, nie roadmapa)
 - **[../CLAUDE.md](../CLAUDE.md)** — reguły dla agentów
 
 ## Workflow (issues, reviews, research, plans, assets)
@@ -22,6 +22,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 | [research/](./research/README.md) | Analizy, spike'i, porównania przed decyzją |
 | [plans/](./plans/README.md) | Plany implementacji (wszystkie statusy) |
 | [plans/archive/](./plans/archive/README.md) | Jednorazowo zamrożony batch planów z 2026-08-07–2026-08-14 |
+| [roadmap/](./roadmap/README.md) | Zamrożony log sesji projektowania docelowej architektury (2026-08-12–14), wnioski zsyntetyzowane w [review 006](./reviews/2026-08-14--006--architecture-alignment.md). Nie jest to roadmapa produktu — tą jest [ROADMAP.md](./ROADMAP.md) |
 | [assets/](./assets/README.md) | Żywe listy wymaganych modeli/dźwięków + CREDITS |
 | [items/CATALOG.md](./items/CATALOG.md) | Itemy: hold / melee / spawn |
 
@@ -63,4 +64,4 @@ Meta-prompty do powtarzalnych zadań (struktura docs, review, itd.).
 
 ---
 
-**Ostatnia aktualizacja:** 2026-08-14
+**Ostatnia aktualizacja:** 2026-08-15

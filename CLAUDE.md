@@ -55,6 +55,8 @@ npm run test
 
 For `.vue` files, `npm run build` uses `vue-tsc`. Unit tests use Vitest (`*.test.ts`). Current unit coverage is primarily pure logic rather than Three.js/DOM/`.vue` integration.
 
+CI (`.github/workflows/ci.yml`) runs `type-check`, `lint`, `build` and `test` on every PR and on push to `main` as a verification gate — it does not replace running these locally before committing.
+
 ### Browser verification
 
 Do **not** launch headless Chrome/Playwright yourself as the default way to test visual/gameplay changes. First run technical checks. If manual browser verification is needed, ask the user to test the already-running dev server and provide concrete steps and expected results.
@@ -95,32 +97,20 @@ New issue/plan/review/research files use `YYYY-MM-DD--NNN--slug.md` with an inde
 8. Run the relevant technical checks.
 9. Clearly separate **implemented**, **technically verified**, and **browser/manual verified**.
 
+## Git workflow for agents
+
+`main` is the production branch — Cloudflare Pages deploys it automatically on every push. There is no separate deploy step to trigger; CI (see below) is the verification gate before/after a change lands, not a replacement for it.
+
+- Committing is part of finishing a task, not an optional extra step — don't leave finished work uncommitted.
+- Before pushing, sync with the remote (`git pull --rebase origin main`, or the current branch's upstream) rather than pushing on top of stale local history.
+- Never use `git reset --hard` or force-push to resolve a rejected push or a conflict. Rebase, resolve conflicts normally, and keep other agents'/contributors' changes — do not silently overwrite them.
+- If a push is rejected because `main` moved, rebase, re-resolve, re-run the relevant technical checks, then push again.
+
 ## Important architecture
 
-The core world lifetime is grouped in `src/app/worldBundle.ts` as `WorldBundle`. `rebuildWorldBundle()` disposes and recreates its members while mutating the same bundle object. Code that must survive a world rebuild should capture the bundle object and read fields through it; do not destructure a replaceable member into a stale closure.
+`WorldBundle` (`src/app/worldBundle.ts`) is the core world lifetime/rebuild boundary. The authoritative rebuild/lifetime rule (don't capture a replaceable bundle field in a stale closure) lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — "World lifecycle" / "Rebuild / lifetime invariants". Read it there; it is not restated here.
 
-Important entry points:
-
-```text
-src/app/createApp.ts
-src/app/gameLoop.ts
-src/app/worldBundle.ts
-src/config/worldConfig.ts
-src/terrain/chunkManager.ts
-src/terrain/chunkEnvironment.ts
-src/settlement/SettlementsManager.ts
-src/settlement/createSettlement.ts
-src/ai/NpcAgent.ts
-src/ai/Needs.ts
-src/fauna/AnimalAgent.ts
-src/fauna/HealthState.ts
-src/items/Inventory.ts
-src/quests/QuestManager.ts
-src/persistence/saveData.ts
-src/persistence/saveDb.ts
-src/ui/
-src/ui-vue/
-```
+Entry points: the canonical, kept-current list is [docs/STATE.md](docs/STATE.md) — "Important code entry points".
 
 ## Current configuration / stack facts
 

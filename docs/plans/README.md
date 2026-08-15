@@ -10,6 +10,24 @@ Effort: `XS` minuty · `S` ~15–30 min · `M` ~30–90 min · `L` ~1–3 h · `
 
 Paths below are files in this folder unless noted. Implementation notes / reviews stay next to the plan (`*-implementation-notes.md`, `*-review.md`) and are not indexed separately.
 
+## Plan domains
+
+New plans should declare a primary `domain:` in frontmatter (and, if the plan genuinely spans more than one area, optional `tags:` for the secondary domain(s)). This is **not retroactive** — the 147 existing plans (live + archived) are not being touched.
+
+Canonical domains (match [docs/STATE.md](../STATE.md)'s section headers, so a domain always maps onto exactly one part of the current-state doc):
+
+| Domain | Covers |
+|---|---|
+| `world-terrain` | Procedural terrain, chunk streaming, ocean, environment/landmarks |
+| `settlements-npcs` | Villages, NPC needs/FSM/schedule, dialogue, household/settlement economy |
+| `fauna` | Wildlife needs, predator/prey, herds |
+| `items-player` | Inventory, held tools, player survival needs, world items (dropped items, fires, tents) |
+| `quests-progression` | `QuestManager`, relations, EXP |
+| `persistence` | `SaveData` schema, IndexedDB, config persistence |
+| `ui-input` | Vanilla + Vue UI, input, HUD |
+
+`domain` is "where to look first" — pick one, even for a plan that touches several systems. Use `tags` for a second domain only when the plan is genuinely about both (e.g. a quest wired to a specific fauna mechanic is `domain: quests-progression`, `tags: [fauna]`). Don't tag every domain a plan happens to touch a file in.
+
 Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` live in [archive/](./archive/README.md) (one-time freeze). New completed plans are **not** moved there.
 
 ---
@@ -110,7 +128,7 @@ Implementation complete before the 2026-08-14 freeze; files are in [archive/](./
 
 Every `docs/plans/YYYY-MM-DD--NNN--*.md` in **this folder** (except `*-implementation-notes.md`, `*-review.md`, `README.md`, `archive/`) belongs in a section above, regardless of status.
 
-New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), then a row in the matching section. Do not move completed plans into `archive/`.
+New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), a `domain:`/optional `tags:` per [Plan domains](#plan-domains) above, then a row in the matching section. Do not move completed plans into `archive/`.
 
 ---
 

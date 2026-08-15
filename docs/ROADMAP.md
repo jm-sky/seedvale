@@ -1,8 +1,10 @@
 # Seedvale Roadmap
 
-**Updated:** 2026-08-10
+**Updated:** 2026-08-15
 
-This document describes **product direction and major milestones**. It is intentionally not a second implementation-status database. For exact plan status, see [docs/plans/README.md](./plans/README.md). For the factual current codebase state, see [docs/STATE.md](./STATE.md).
+This document is the **canonical Seedvale roadmap** — product direction and major milestones. It is intentionally not a second implementation-status database. For exact plan status, see [docs/plans/README.md](./plans/README.md). For the factual current codebase state, see [docs/STATE.md](./STATE.md).
+
+`docs/roadmap/` (lowercase) is a different, frozen document set — an architecture-design session log, not a roadmap. See [docs/roadmap/README.md](./roadmap/README.md) if you land there.
 
 ## Product direction
 
