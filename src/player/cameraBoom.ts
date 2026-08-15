@@ -14,7 +14,7 @@ export const CAMERA_OCCLUDER_HEIGHT = 8
 /** Never sit closer than this (metres) to the look-at — keeps the near
  *  plane out of the chest, but stays small enough that a steep look-up
  *  can still rest above the ground instead of being forced underground. */
-export const CAMERA_BOOM_MIN_DISTANCE = 0.35
+export const CAMERA_BOOM_MIN_DISTANCE = 1 // TEMP: isolation test — change minimal distance
 /** Pull this many metres back from the first hit so the near plane (0.1)
  *  isn't sitting inside the surface. */
 export const CAMERA_BOOM_PULL_IN = 0.2
