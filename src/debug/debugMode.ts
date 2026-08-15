@@ -55,3 +55,23 @@ export function isRenderStateDebugMode(): boolean {
 export function isMinimalSceneDebugMode(): boolean {
   return urlFlag('debugMinimalScene')
 }
+
+// TEMP: isolation test — scene object groups
+export type MinimalSceneGroup = 'props' | 'npcs' | 'trees' | 'buildings' | 'all'
+
+const MINIMAL_SCENE_GROUPS: ReadonlySet<string> = new Set(['props', 'npcs', 'trees', 'buildings', 'all'])
+
+/** `?debugSceneGroup=props|npcs|trees|buildings|all` — TEMP: isolation test —
+ *  only meaningful together with `?debugMinimalScene=1`. Re-shows one
+ *  category that `debugMinimalScene` would otherwise hide (or, with `all`,
+ *  everything it hides) so each can be isolated without a new deploy
+ *  (issue 032 follow-up). */
+export function getMinimalSceneGroup(): MinimalSceneGroup | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = new URLSearchParams(window.location.search).get('debugSceneGroup')
+    return raw !== null && MINIMAL_SCENE_GROUPS.has(raw) ? (raw as MinimalSceneGroup) : null
+  } catch {
+    return null
+  }
+}
