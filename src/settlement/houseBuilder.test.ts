@@ -12,7 +12,11 @@ import {
 } from '../assets/houseDefinitionExample'
 import { disposeObject3D } from '../assets/loadGltf'
 import {
+  buildAssemblyCollidersWorld,
   buildHouse,
+  buildHouseCollidersWorld,
+  buildHouseDoorCollidersLocal,
+  buildHouseWallCollidersLocal,
   censusAssembly,
   cornerLocalPosition,
   createHouseStaticBatch,
@@ -21,11 +25,14 @@ import {
   fillOffsetFor,
   floorTilePositions,
   HOUSE_ASSEMBLY_SCALE,
+  HOUSE_DOOR_COLLIDER_RADIUS,
+  HOUSE_WALL_COLLIDER_RADIUS,
   type HouseBuildContext,
   houseDefinitionAssetIds,
   houseFootprintRadius,
   matchingWallPlacement,
   resolveRoofParts,
+  transformHouseCollidersToWorld,
   WALL_YAW,
   wallLocalTransform,
 } from './houseBuilder'
@@ -226,6 +233,59 @@ describe('house static batch', () => {
     expect(instSpy).toHaveBeenCalled()
     a.dispose()
     b.dispose()
+  })
+})
+
+describe('house colliders', () => {
+  it('skips doorway wall modules but keeps straight walls and windows', () => {
+    const walls = buildHouseWallCollidersLocal(TEST_HOUSE_01)
+    const doorWall = matchingWallPlacement(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
+    const doorPose = wallLocalTransform(TEST_HOUSE_01.footprint, doorWall.side, doorWall.moduleIndex)
+    expect(walls.some((c) => c.x === doorPose.x && c.z === doorPose.z)).toBe(false)
+    expect(walls.length).toBe(TEST_HOUSE_01.walls.length - 1)
+    expect(walls.every((c) => c.radius === HOUSE_WALL_COLLIDER_RADIUS)).toBe(true)
+
+    const withWindow = buildHouseWallCollidersLocal(TEST_HOUSE_02)
+    const windowWall = matchingWallPlacement(TEST_HOUSE_02, TEST_HOUSE_02.openings[1]!)
+    const windowPose = wallLocalTransform(TEST_HOUSE_02.footprint, windowWall.side, windowWall.moduleIndex)
+    expect(withWindow.some((c) => c.x === windowPose.x && c.z === windowPose.z)).toBe(true)
+  })
+
+  it('adds a doorway disk only while the door is closed', () => {
+    expect(buildHouseDoorCollidersLocal(TEST_HOUSE_01, [false])).toHaveLength(0)
+    const closed = buildHouseDoorCollidersLocal(TEST_HOUSE_01, [true])
+    expect(closed).toHaveLength(1)
+    expect(closed[0]!.radius).toBe(HOUSE_DOOR_COLLIDER_RADIUS)
+    const doorWall = matchingWallPlacement(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
+    const doorPose = wallLocalTransform(TEST_HOUSE_01.footprint, doorWall.side, doorWall.moduleIndex)
+    expect(closed[0]).toMatchObject({ x: doorPose.x, z: doorPose.z })
+  })
+
+  it('transforms local colliders with house yaw and assembly scale', () => {
+    const local = [{ x: 1, z: 0, radius: 1 }]
+    const world = transformHouseCollidersToWorld(local, 10, 20, Math.PI / 2, HOUSE_ASSEMBLY_SCALE)
+    expect(world[0]!.x).toBeCloseTo(10)
+    expect(world[0]!.z).toBeCloseTo(20 + 1.1)
+    expect(world[0]!.radius).toBeCloseTo(1.1)
+  })
+
+  it('buildAssemblyCollidersWorld omits the doorway when the door is open', () => {
+    const assembly = buildHouse(TEST_HOUSE_01, contextFor())
+    assembly.root.position.set(5, 0, 5)
+    assembly.root.rotation.y = 0
+    const closedCount = buildAssemblyCollidersWorld(assembly).length
+    assembly.doors[0]!.setOpen(true)
+    const openCount = buildAssemblyCollidersWorld(assembly).length
+    expect(openCount).toBe(closedCount - 1)
+    assembly.dispose()
+  })
+
+  it('buildHouseCollidersWorld covers cottage perimeter without a centre disk', () => {
+    const closed = buildHouseCollidersWorld(COTTAGE_4X4_A, 0, 0, 0, [true])
+    expect(closed.some((c) => c.x === 0 && c.z === 0)).toBe(false)
+    expect(closed.length).toBeGreaterThan(COTTAGE_4X4_A.walls.length - 1)
+    const open = buildHouseCollidersWorld(COTTAGE_4X4_A, 0, 0, 0, [false])
+    expect(open.length).toBe(closed.length - 1)
   })
 })
 
