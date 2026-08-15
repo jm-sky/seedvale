@@ -1,197 +1,975 @@
-# Seedvale — wybrane funkcjonalności do dokończenia
+# Seedvale — NEXT-IDEAS: kolejność wdrożenia i zależności
 
-**Data:** 2026-08-15
+## Cel
 
+`docs/plans/NEXT-IDEAS.md` zawiera funkcjonalności odzyskane z wcześniejszych planów, które zostały świadomie odłożone.
 
-## 1. Rozwój ekonomii gospodarstw domowych
+Poniższa kolejność została ułożona na podstawie:
 
-**Źródło:** plan 071 — Local Economy and Settlement Development
+- aktualnego codebase,
+- `docs/STATE.md`,
+- istniejących planów,
+- zależności pomiędzy systemami,
+- kierunku Seedvale,
+- wartości integracyjnej i emergent behaviour.
 
-Podstawy lokalnej ekonomii już istnieją: gospodarstwa mają zapasy i zapotrzebowanie, a osada potrafi uwzględniać dostępne zasoby.
+Nie jest to roadmapa produktu. Jest to **proponowana kolejność wdrażania istniejących pozycji z NEXT-IDEAS**.
 
-Brakuje pełniejszego modelu produkcji dóbr. NPC powinien nie tylko wykonywać pracę, ale rzeczywiście przekształcać dostępne zasoby w produkty, które trafiają do gospodarstw i magazynów.
+> Preferować rozszerzanie istniejących systemów i łączenie ich ze sobą zamiast tworzenia równoległych mechanizmów.
+
+---
+
+# 1. Recommended implementation order
+
+## Front backlog
+
+### 0. GPU Weather Renderer
+
+**Źródłowy plan:** 040 — Seasons & Weather  
+**Effort:** M/L  
+**Charakter:** rendering / performance
+
+**Dependencies:**
+
+- istniejący Climate / Weather state,
+- istniejący day/night,
+- istniejący renderer,
+- WebGL2.
+
+**Dlaczego teraz:**
+
+Obecny weather rendering wykorzystuje CPU particles jako świadomy stopgap. GPU Weather Renderer domyka istniejący system bez wprowadzania nowej mechaniki symulacyjnej.
+
+```text
+Weather State
+      ↓
+GPU Weather Renderer
+      ↓
+Rain / Snow
+```
+
+Nie powinien jednak blokować późniejszego gameplayu.
+
+---
+
+### 1. Zbieranie naturalnych zasobów
+
+**Źródłowy plan:** 032 — Natural Resources  
+**Effort:** M
+
+**Dependencies:**
+
+- `NaturalResource`,
+- resource deposits,
+- NPC professions,
+- NPC work/actions,
+- `Inventory`,
+- `ItemKind`,
+- Household / storage.
+
+**Dlaczego teraz:**
+
+Natural Resources już istnieją jako fundament świata. Brakuje przede wszystkim rzeczywistego przepływu:
+
+```text
+Natural Resource
+      ↓
+NPC gathering
+      ↓
+Inventory / storage
+```
+
+To pierwszy krok od zasobów istniejących w świecie do realnej gospodarki.
+
+**Ważne:**
+
+Nie budować ponownie Natural Resources. Większość fundamentu już istnieje.
+
+---
+
+### 2. Produkcja i przetwarzanie dóbr
+
+**Źródłowy plan:** 071 — Local Economy / Production  
+**Effort:** L
+
+**Dependencies:**
+
+- resource gathering,
+- NPC professions,
+- work actions,
+- `ItemKind`,
+- inventory/storage,
+- existing household/economy state.
+
+**Dlaczego teraz:**
+
+Po gathering naturalnie powstaje kolejny etap:
+
+```text
+Resources
+    ↓
+Gathering
+    ↓
+Production
+    ↓
+Goods
+```
+
+To powinno rozszerzać istniejący system ekonomiczny, a nie tworzyć osobny production subsystem.
+
+---
+
+### 3. Miejsca społeczne i życie społeczne NPC
+
+**Źródłowy plan:** 020 — NPC Schedule / Places  
+**Effort:** M
+
+**Dependencies:**
+
+- `Place`,
+- `Schedule`,
+- NPC FSM,
+- existing NPC behaviour,
+- relationships.
+
+**Dlaczego teraz:**
+
+Fundament już istnieje:
+
+```text
+Place
+  ↓
+Schedule
+  ↓
+FSM
+  ↓
+goTo(place)
+  ↓
+action
+```
+
+Istnieją również typy miejsc związane m.in. z `home`, `workplace`, `food` i `social`.
+
+Rozszerzenie social behaviour może więc wykorzystać istniejący `Place`/`Schedule`/FSM zamiast tworzyć nowy system społeczny.
+
+---
+
+### 4. Questy związane z landmarkami
+
+**Źródłowe plany:** 093 / 049  
+**Effort:** M
+
+**Dependencies:**
+
+- QuestManager,
+- existing world-driven quests,
+- procedural landmarks,
+- stable `landmarkId`,
+- player interaction.
+
+**Dlaczego teraz:**
+
+Większość fundamentu już istnieje.
+
+Landmarki mają stabilną identyfikację, a QuestManager i world-driven quest foundations są już obecne.
+
+Brakuje przede wszystkim połączenia:
+
+```text
+Landmark
+    ↓
+stable landmarkId
+    ↓
+Quest objective
+    ↓
+Player action
+    ↓
+World consequence
+```
+
+To daje dużo world-driven content bez budowania nowego dużego systemu symulacji.
+
+---
+
+### 5. Dalsze detale wizualne terenu
+
+**Źródłowy plan:** terrain rendering / world visual detail  
+**Effort:** S/M  
+**Charakter:** rendering polish
+
+**Dependencies:**
+
+- istniejący terrain renderer,
+- chunk geometry,
+- aktualny material/shader pipeline,
+- benchmark renderingu.
+
+To osobny temat od gameplayu.
+
+Może poprawić jakość świata po wykonaniu wcześniejszych zmian renderingu, ale nie powinien blokować systemów symulacyjnych.
+
+---
+
+# 2. Główny ciąg dalszego rozwoju
+
+Po pierwszych pięciu elementach naturalny dalszy kierunek wygląda następująco.
+
+## 6. Rozwój ekonomii gospodarstw domowych
+
+**Effort:** L
+
+**Dependencies:**
+
+- gathering,
+- production,
+- goods,
+- Inventory / ItemKind,
+- Household,
+- SettlementEconomy,
+- NPC needs.
+
+Fundament `Household` już istnieje.
+
+Nie należy tworzyć nowego Household System.
+
+Rozszerzenie powinno pogłębić istniejący przepływ:
+
+```text
+Goods
+  ↓
+Household
+  ↓
+Consumption
+  ↓
+Stock / Shortage
+  ↓
+Needs / Pressure
+  ↓
+Work / Acquisition
+```
+
+---
+
+## 7. Wspólny łańcuch ekonomiczny NPC + gracz
+
+**Effort:** M/L
+
+**Dependencies:**
+
+- gathering,
+- production,
+- household economy,
+- inventory,
+- ItemKind,
+- settlement economy.
 
 Docelowy przepływ:
 
-`zasoby → praca → produkcja → dobra → magazynowanie → konsumpcja`
+```text
+Natural Resources
+      ↓
+Gathering
+      ↓
+Production
+      ↓
+Goods
+      ↓
+Household
+      ↓
+Settlement Economy
+      ↓
+Surplus / Shortage
+      ↓
+Trade
+```
+
+Gracz powinien uczestniczyć w tych samych podstawowych mechanizmach gospodarczych co NPC, zamiast otrzymywać równoległą ekonomię.
 
 ---
 
-## 6. Miejsca społeczne i życie społeczne NPC
+## 8. Sezonowy wpływ na pozostałe systemy
 
-**Źródło:** plan 020 — NPC Daily Routine and Place
+**Źródłowy plan:** 040 — Seasons & Weather  
+**Effort:** L
 
-Plan przewidywał bardziej konkretne miejsca, w których NPC mogą wykonywać czynności społeczne.
+**Dependencies:**
 
-Nie chodzi tylko o to, że dwóch NPC stoi obok siebie. Istniejące `schedule → place → behaviour` powinno umożliwiać NPC spotykanie się, rozmowy, wspólne przebywanie i wykonywanie aktywności społecznych.
+- ClimateState,
+- resources,
+- production,
+- household economy,
+- NPC behaviour,
+- fauna.
 
-To ma być rozwinięcie istniejącego systemu, a nie osobny system „social AI”.
+Sam system sezonów/pogody jest już częściowo wykonany.
 
----
+Największa wartość kolejnego etapu będzie pochodzić z jego konsumpcji przez inne systemy:
 
-## 7. Zbieranie naturalnych zasobów
+```text
+Season / Weather
+       ↓
+Natural Resources
+       ↓
+Production
+       ↓
+Household
+       ↓
+Settlement
+```
 
-**Źródło:** plan 032 — Natural Resources & Economy
+oraz:
 
-Natural resources już istnieją w świecie i mogą wpływać na generowanie osad.
+```text
+Season / Weather
+       ↓
+Fauna
+       ↓
+Habitat
+       ↓
+Population
+```
 
-Brakuje jednak faktycznego wykorzystania ich jako źródeł surowców.
-
-Przykładowy przepływ:
-
-`drzewo → drewno → NPC zbiera drewno → drewno trafia do gospodarstwa lub magazynu`
-
-To samo podejście może później obejmować inne zasoby świata.
-
----
-
-## 8. Produkcja i przetwarzanie dóbr
-
-**Źródło:** plan 071
-
-Kolejny etap po samym zbieraniu zasobów.
-
-Zasoby powinny być przekształcane przez pracę NPC w dobra użyteczne dla gospodarstw i osad.
-
-Czyli:
-
-`surowiec → praca NPC → produkt → magazyn/konsumpcja`
-
-Pełny łańcuch produkcyjny nie został jeszcze zrealizowany.
-
----
-
-## 11. Wspólny łańcuch ekonomiczny dla NPC i gracza
-
-**Źródło:** plan 071 + VISION
-
-Docelowo ekonomia NPC i gracza nie powinna być dwoma oddzielnymi systemami.
-
-Te same `ItemKind`, zasoby, miejsca i mechanizmy gospodarki powinny być używane przez oba światy.
-
-Docelowy łańcuch:
-
-`world resources → gathering → items → production → storage → consumption → trade`
-
-Gracz powinien uczestniczyć w istniejącej gospodarce świata, zamiast korzystać z osobnej „ekonomii gracza”.
+Nie tworzyć kolejnego systemu pogodowego.
 
 ---
 
-## 14. Terytoria zwierząt
+## 9. Terytoria zwierząt
 
-**Źródło:** plan 118 — Fauna
+**Źródłowy plan:** 118 / fauna evolution  
+**Effort:** M/L
 
-Fauna ma już podstawowe zachowania związane ze stadem i środowiskiem.
+**Dependencies:**
 
-Odłożone zostało bardziej trwałe pojęcie terytorium.
+- existing fauna,
+- habitat,
+- herds,
+- juveniles,
+- movement,
+- world terrain/environment.
 
-Zwierzęta mogłyby preferować konkretne obszary świata zależnie od gatunku, pożywienia, wody i warunków środowiskowych.
+Fauna ma już podstawowe potrzeby, drapieżnictwo, stada i osobniki młode.
 
-Terytorium powinno być częścią naturalnego modelu zachowania zwierząt, a nie ręcznie przypisaną strefą.
+Kolejnym krokiem powinno być dodanie przestrzennego modelu:
 
----
-
-## 19. Persystencja fauny
-
-**Źródło:** plan 118 — Fauna
-
-Jeżeli gracz opuści obszar, zwierzęta nie powinny po prostu zostać zniszczone i pojawić się ponownie w przypadkowym stanie.
-
-Odłożona została persystencja istotnego stanu fauny.
-
-Celem jest zachowanie ciągłości:
-
-`świat → fauna → stan populacji → opuszczenie regionu → symulacja/off-screen → powrót`
-
-Po powrocie świat powinien odzwierciedlać to, co wydarzyło się podczas nieobecności gracza.
-
----
-
-## 21. Questy związane z konkretnymi landmarkami
-
-**Źródło:** plan 093 + plan 049
-
-System landmarków istnieje jako fundament, ale pełniejsze wykorzystanie ich przez questy zostało odłożone.
-
-Quest powinien móc odnosić się do konkretnego, stabilnego landmarku świata, zamiast tylko wskazywać ogólną lokalizację.
-
-Przykładowo:
-
-`quest → konkretny landmark → podróż → odkrycie/interakcja → postęp questa`
+```text
+Habitat
+   ↓
+Territory
+   ↓
+Herd / Population
+   ↓
+Movement / Feeding / Reproduction
+```
 
 ---
 
-## 22. Bandyci jako problemy świata
+## 10. Persystencja / off-screen simulation fauny
 
-**Źródło:** plan 093 — Quests V3
+**Źródłowy plan:** 118  
+**Effort:** L/XL
 
-Bandyci zostali przewidziani nie jako zwykły zestaw ręcznie napisanych questów, ale jako kolejny rodzaj problemu świata.
+**Dependencies:**
 
-Docelowy kierunek:
+- fauna territories,
+- population model,
+- herds,
+- off-screen simulation,
+- world streaming,
+- persistence.
 
-`grupa bandytów → problem lokalny → wpływ na NPC/osadę → quest → reakcja świata`
+Nie należy zaczynać od samego zapisywania aktywnych zwierząt.
 
-Dzięki temu bandyci mogą być źródłem konsekwencji dla istniejących systemów, a nie tylko przeciwnikami czekającymi na gracza.
+Docelowy model powinien łączyć:
 
----
+```text
+Detailed Simulation
+        ↕
+Aggregated Remote Simulation
+        ↕
+Persistent World State
+```
 
-## 23. Sezonowy wpływ na pozostałe systemy
-
-**Źródło:** plan 040 — Seasons & Weather
-
-System pór roku i pogody został częściowo wykonany.
-
-Odłożone zostało jednak rozszerzenie sezonów poza warstwę wizualną.
-
-Sezon powinien wpływać również na:
-
-- NPC,
-- faunę,
-- dostępność zasobów,
-- produkcję,
-- gospodarkę,
-- zachowania świata.
-
-Czyli:
-
-`sezon → zmiana warunków → zmiana dostępności zasobów → zmiana zachowań → konsekwencje dla świata`
+Dzięki temu świat może kontynuować rozwój poza aktualnie załadowanymi chunkami.
 
 ---
 
-## 24. GPU Weather Renderer
+## 11. Bandyci jako problemy świata
 
-**Źródło:** plan 040 — Seasons & Weather
+**Źródłowy plan:** 093  
+**Effort:** L/XL
 
-Deszcz i śnieg działają obecnie przez CPU `THREE.Points`.
+**Dependencies:**
 
-Pierwsza implementacja została potraktowana jako rozwiązanie tymczasowe.
+- NPC/group simulation,
+- world problems,
+- settlements,
+- NPC relationships,
+- quests,
+- consequences.
 
-Odłożona została wersja wykorzystująca GPU/shadery, która pozwoliłaby przenieść większą część kosztu symulacji i renderowania pogody na GPU.
+Bandyci nie powinni być tylko nowym typem przeciwnika.
 
-To jest przede wszystkim zadanie wydajnościowe, a nie nowa mechanika świata.
+Lepszy model:
+
+```text
+Hostile Group
+      ↓
+Local Problem
+      ↓
+NPC / Settlement Consequences
+      ↓
+Quest
+      ↓
+Player Intervention
+      ↓
+World Change
+```
+
+---
+
+# 3. Dependency map
+
+## Economy
+
+```text
+Natural Resources
+       ↓
+Resource Gathering
+       ↓
+NPC Professions / Work
+       ↓
+Production / Processing
+       ↓
+Goods / ItemKind
+       ↓
+Household
+       ↓
+Settlement Economy
+       ↓
+Surplus / Shortage
+       ↓
+Trade
+```
+
+## NPC life
+
+```text
+Identity
+   +
+Profession
+   +
+Needs
+   +
+Place
+   +
+Schedule
+   ↓
+FSM
+   ↓
+Daily Behaviour
+   ↓
+Social Behaviour
+   ↓
+Relationships
+   ↓
+Dialogue / Quests
+```
+
+## Fauna
+
+```text
+Habitat
+   ↓
+Territory
+   ↓
+Population / Herd
+   ↓
+Movement / Feeding / Reproduction
+   ↓
+Off-screen Simulation
+   ↓
+Persistence
+   ↓
+Detailed Simulation after Streaming
+```
+
+## Climate
+
+```text
+Season / Weather
+       ↓
+Environment
+       ↓
+Resources
+       ↓
+Production
+       ↓
+Household
+       ↓
+Settlement
+```
+
+or:
+
+```text
+Season / Weather
+       ↓
+Fauna Habitat
+       ↓
+Population
+       ↓
+Migration / Survival
+```
+
+## Quests
+
+```text
+World State
+      ↓
+Problem
+      ↓
+Pressure
+      ↓
+Quest
+      ↓
+Player Action
+      ↓
+World Change
+      ↓
+New State / New Problems
+```
+
+Landmarks:
+
+```text
+Landmark
+    ↓
+Stable landmarkId
+    ↓
+Quest Objective
+    ↓
+Discovery / Travel / Interaction
+```
+
+Bandits:
+
+```text
+Group
+   ↓
+Hostile Behaviour
+   ↓
+Local Problem
+   ↓
+Settlement / NPC Consequences
+   ↓
+Quest
+```
 
 ---
 
-## 30. Dalsze detale wizualne terenu
+# 4. Natural implementation phases
 
-**Źródło:** plan 044
+## Phase A — Technical rendering cleanup
 
-Plan przewidywał dodatkowe detale powierzchni terenu, między innymi normal/bump detail.
+```text
+GPU Weather Renderer
+        ↓
+Terrain Visual Detail
+```
 
-Celem jest poprawienie wizualnej jakości powierzchni bez zmiany samej geometrii terenu.
+Cel:
 
-To pozostaje warstwą wizualną, a nie nowym systemem symulacji.
+- zamknąć obecny weather rendering stopgap,
+- poprawić visual quality,
+- zweryfikować performance.
+
+---
+
+## Phase B — Material economy foundation
+
+```text
+Natural Resources
+      ↓
+Gathering
+      ↓
+Production
+```
+
+Cel:
+
+> Wprowadzić rzeczywisty przepływ materiałów przez świat.
 
 ---
 
-## 31. Temporal Rendering i dalsze techniki GPU
+## Phase C — NPC community life
 
-**Źródło:** plan 113 — Rendering Performance & GPU Scaling
+```text
+Existing Places
+      ↓
+Social Places
+      ↓
+Social Behaviour
+```
 
-W późniejszych etapach optymalizacji renderingu przewidziano bardziej zaawansowane techniki renderowania czasowego oraz dalsze wykorzystanie GPU.
+Cel:
 
-Obejmuje to między innymi techniki pozwalające ograniczyć koszt renderowania przy zachowaniu odpowiedniej jakości obrazu.
-
-Jest to część późniejszego skalowania renderingu, a nie brakująca mechanika świata.
+> NPC mają funkcjonować jako społeczność, a nie tylko jako wykonawcy pracy.
 
 ---
+
+## Phase D — World-driven content
+
+```text
+Landmarks
+     ↓
+Landmark Quests
+```
+
+Następnie, znacznie później:
+
+```text
+World Problems
+     ↓
+Bandits / Conflict
+     ↓
+Quests
+```
+
+---
+
+## Phase E — Living economy
+
+```text
+Production
+    ↓
+Household Economy
+    ↓
+Settlement Economy
+    ↓
+Surplus / Shortage
+    ↓
+Trade
+```
+
+---
+
+## Phase F — Living ecosystem
+
+```text
+Climate
+    ↓
+Resources / Fauna
+    ↓
+Territories
+    ↓
+Population
+    ↓
+Off-screen Simulation
+    ↓
+Persistence
+```
+
+---
+
+## Phase G — Advanced rendering / scaling
+
+```text
+Benchmark
+    ↓
+Less Work
+    ↓
+Batching
+    ↓
+LOD / Culling
+    ↓
+HLOD
+    ↓
+Temporal Rendering
+    ↓
+Advanced GPU Techniques
+```
+
+---
+
+# 5. Items that should NOT be treated as immediate gameplay work
+
+## GPU Weather Renderer
+
+**Rendering / performance**
+
+Obecny CPU particle approach jest stopgapem.
+
+To techniczne domknięcie istniejącego systemu, a nie nowa mechanika gameplayowa.
+
+## Terrain visual detail
+
+**Rendering polish**
+
+Poprawia jakość wizualną świata, ale nie tworzy nowych zależności symulacyjnych.
+
+## Temporal Rendering
+
+**Advanced rendering / scalability**
+
+Nie powinien być traktowany jako kolejny feature gameplayowy.
+
+Preferowana kolejność:
+
+```text
+Less Work
+    ↓
+Batching
+    ↓
+LOD / Culling
+    ↓
+HLOD
+    ↓
+Temporal techniques
+```
+
+Temporal Rendering powinien wynikać z benchmarków i rzeczywistego bottlenecku.
+
+---
+
+# 6. Important findings
+
+## 6.1. Ekonomia z NEXT-IDEAS jest w rzeczywistości jednym systemem
+
+Pozycje dotyczące:
+
+- gathering,
+- production,
+- household economy,
+- shared NPC/player economy
+
+nie powinny prowadzić do czterech niezależnych mechanizmów.
+
+Docelowo:
+
+```text
+Natural Resources
+      ↓
+Work
+      ↓
+Gathering
+      ↓
+Production
+      ↓
+Goods
+      ↓
+Household
+      ↓
+Settlement
+      ↓
+Trade
+```
+
+---
+
+## 6.2. Natural Resources są już częściowo wykonane
+
+Istnieją m.in.:
+
+- resource generation,
+- richness,
+- resource attraction,
+- resource-aware settlements,
+- resource-aware families,
+- resource-aware roles,
+- resource deposits.
+
+Brakującą warstwą jest przede wszystkim:
+
+```text
+Resource
+   ↓
+Acquisition
+   ↓
+Inventory / Storage
+```
+
+Nie należy ponownie implementować fundamentu Natural Resources.
+
+---
+
+## 6.3. Household już istnieje
+
+`Household` oraz podstawowy ekonomiczny state istnieją.
+
+Nie należy tworzyć drugiego systemu gospodarstw.
+
+Przyszły rozwój powinien rozszerzać:
+
+```text
+Household
++
+Inventory / ItemKind
++
+SettlementEconomy
+```
+
+---
+
+## 6.4. NPC Schedule / Place już istnieje
+
+Istnieje fundament:
+
+```text
+Place → Schedule → FSM
+```
+
+Social behaviour powinien być rozszerzeniem tego mechanizmu.
+
+---
+
+## 6.5. Landmark identity jest już rozwiązane
+
+Stabilne `landmarkId` już istnieje.
+
+Największa brakująca warstwa to:
+
+```text
+Landmark
+   ↓
+Quest
+```
+
+a nie generowanie/identyfikacja landmarków od nowa.
+
+---
+
+## 6.6. Fauna persistence wymaga wcześniejszego modelu terytoriów/populacji
+
+Nie wystarczy:
+
+```text
+save active animals
+```
+
+Potrzebny jest model:
+
+```text
+Active Population
+       ↕
+Remote Population
+       ↕
+Persistent World State
+```
+
+Dlatego Territory powinno poprzedzać pełną persistence.
+
+---
+
+## 6.7. Seasons powinny być shared input
+
+ClimateState już istnieje.
+
+Przyszła wartość powinna wynikać z:
+
+```text
+Climate
+   ↓
+Resources
+   ↓
+Economy
+   ↓
+NPC
+   ↓
+Fauna
+```
+
+Nie należy tworzyć równoległych mechanizmów sezonowych dla każdego systemu.
+
+---
+
+## 6.8. Rendering powinien mieć osobny tor
+
+Gameplay / simulation:
+
+```text
+economy
+NPC
+fauna
+quests
+world state
+```
+
+Rendering / performance:
+
+```text
+weather renderer
+terrain detail
+chunk streaming
+LOD
+temporal rendering
+```
+
+Te dwa tory mogą rozwijać się równolegle.
+
+---
+
+# 7. Final proposed sequence
+
+```text
+0.  GPU Weather Renderer
+
+1.  Zbieranie naturalnych zasobów
+2.  Produkcja i przetwarzanie dóbr
+3.  Miejsca społeczne i życie społeczne NPC
+4.  Questy związane z landmarkami
+5.  Dalsze detale wizualne terenu
+
+6.  Rozwój ekonomii gospodarstw domowych
+7.  Wspólny łańcuch ekonomiczny NPC + gracz
+
+8.  Sezonowy wpływ na pozostałe systemy
+
+9.  Terytoria zwierząt
+10. Persystencja / off-screen simulation fauny
+
+11. Bandyci jako problemy świata
+
+--- osobny późniejszy tor techniczny ---
+
+12. Temporal Rendering / Advanced GPU Techniques
+```
+
+## Główna zasada kolejności
+
+```text
+Existing System
+      ↓
+New Consumer
+      ↓
+New Integration
+      ↓
+Emergent Behaviour
+      ↓
+Next System
+```
+
+Celem nie jest maksymalna liczba feature'ów.
+
+Celem jest stopniowe uzyskanie:
+
+```text
+resources
+   ↓
+work
+   ↓
+goods
+   ↓
+households
+   ↓
+settlements
+   ↓
+relationships
+   ↓
+problems
+   ↓
+quests
+   ↓
+world consequences
+```
+
+czyli coraz bardziej **samodzielnego świata, który działa również bez gracza**.
