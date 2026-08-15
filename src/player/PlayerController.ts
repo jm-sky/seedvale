@@ -120,7 +120,11 @@ export class PlayerController {
   private readonly idleAction: THREE.AnimationAction | null
   private readonly walkAction: THREE.AnimationAction | null
   private readonly runAction: THREE.AnimationAction | null
+  private readonly attackAction: THREE.AnimationAction | null
   private currentAction: THREE.AnimationAction | null = null
+  /** True while `playerMelee` is in-flight — `syncAnimation` must not
+   *  overwrite `Sword_Slash` with Idle/Walk until recovery ends. */
+  private meleeAttacking = false
   private moving = false
   private sprinting = false
   private wasInWater = false
@@ -187,12 +191,14 @@ export class PlayerController {
       this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral'])
       this.walkAction = this.findAction(animations, ['Walk', 'Run'])
       this.runAction = this.findAction(animations, ['Run'])
+      this.attackAction = this.findAction(animations, ['Sword_Slash', 'Punch_Right', 'Punch_Left'])
       this.playAction(this.idleAction)
     } else {
       this.mixer = null
       this.idleAction = null
       this.walkAction = null
       this.runAction = null
+      this.attackAction = null
     }
 
     this.labelEl = document.createElement('div')
@@ -377,6 +383,37 @@ export class PlayerController {
       return
     }
     this.heldToolSwingPivot.rotation.set(rotation.x, rotation.y, rotation.z)
+  }
+
+  /** True when Adventurer's `Sword_Slash` (or punch fallback) is available —
+   *  callers skip the procedural tool-pivot swing so it doesn't double the
+   *  arm motion already in the clip. Capsule fallback has no clip. */
+  hasMeleeAttackClip(): boolean {
+    return this.attackAction !== null
+  }
+
+  /** Plays the attack clip once, time-scaled to `durationSec` so the slash
+   *  lands with `playerMelee`'s hit window (damage resolves at wind-up end /
+   *  ~1/3 of the total attack). No-op on the capsule fallback. */
+  beginMeleeAttack(durationSec: number): void {
+    this.meleeAttacking = true
+    if (!this.attackAction) return
+    const clipDuration = this.attackAction.getClip().duration
+    const timeScale = durationSec > 1e-4 ? clipDuration / durationSec : 1
+    this.currentAction?.fadeOut(0.08)
+    this.attackAction.reset()
+    this.attackAction.setLoop(THREE.LoopOnce, 1)
+    this.attackAction.clampWhenFinished = true
+    this.attackAction.setEffectiveTimeScale(timeScale)
+    this.attackAction.setEffectiveWeight(1)
+    this.attackAction.fadeIn(0.08).play()
+    this.currentAction = this.attackAction
+  }
+
+  /** Lets `syncAnimation` return to idle/walk after recovery (or a modal
+   *  cancel). Safe to call when idle. */
+  endMeleeAttack(): void {
+    this.meleeAttacking = false
   }
 
   /** Current movement tier for fauna stealth calculations (plan 124 §4) —
@@ -564,6 +601,7 @@ export class PlayerController {
   }
 
   private syncAnimation(): void {
+    if (this.meleeAttacking && this.attackAction) return
     if (!this.moving) {
       this.playAction(this.idleAction)
       return

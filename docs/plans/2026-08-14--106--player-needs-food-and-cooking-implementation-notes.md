@@ -28,7 +28,7 @@
 ### 5. Animal → meat
 - `AnimalAgent.canHarvestMeat()` / `harvestMeat()` — a `meatHarvested` flag alongside the existing `foodClaimedBy`/`foodConsumed` predator-feeding flags (independent consumer, same corpse-state pattern).
 - Interactable `corpse` variant now carries `action: 'bury' | 'harvest'` — knife-held offers harvest, shovel-held offers bury. These never compete for the same corpse since `HeldTool` is a single slot (only one tool held at once).
-- `createApp.ts`'s `startHarvestMeat` mirrors `startBuryCorpse` exactly (busy channel, same duration order of magnitude) but yields `raw_meat` instead of disposing the corpse.
+- `createApp.ts`'s `startHarvestMeat` mirrors `startBuryCorpse` (busy channel) but yields `raw_meat` instead of disposing the corpse. Harvest is `HARVEST_MEAT_DURATION_SEC` = 4s (same order of magnitude as bury 1.5s / chop 1.5s). A 2026-08-15 bug had harvest/ignite/cook at 180/120/300 real seconds of a blocking blur overlay — that read as a freeze; durations now live next to their systems (`AnimalAgent`, `VillageFire`, `campfireCooking`) and are regression-tested in `busyChannelDurations.test.ts`. The harvest channel pins the corpse (`holdCorpse`) so linger cannot despawn it mid-cut; Esc cancels without yielding meat.
 
 ### 6. Cooking
 - `src/items/campfireCooking.ts` — `COOKING_RECIPES: { input, output, count }[]` flat lookup table (currently one row: `raw_meat → roasted_meat`) + `findCookingRecipe(inventory)`. A future recipe is another row, not a new mechanism — no crafting UI was added.
@@ -45,6 +45,7 @@
 ## Deviations / judgment calls
 - Raw meat is directly edible (reduced relief, no penalty) rather than inedible — the plan lists `raw_meat`/`roasted_meat` as separate items without explicitly forbidding eating raw meat, and "Consuming a food item reduces hunger according to its definition" reads as a per-item rule rather than an exclusion list. No disease system exists to attach an eating-raw-meat penalty to.
 - Drinking/filling at a water source is instant (no busy channel) — consistent with other instant world actions (item pickup); only dig/chop/mine/cook/bury/harvest use the busy channel.
+- Harvest/ignite/cook busy durations are seconds of real time with a progress bar (4 / 3 / 5), not a time-skip and not minutes of a frozen overlay. Cooking is slightly longer than harvest; both stay well under corpse linger (60s).
 - Balance numbers (drain rates, relief amounts, merchant prices) are placeholder — not tuned by actual play.
 
 ## Technical verification

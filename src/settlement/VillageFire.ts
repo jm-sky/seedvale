@@ -6,6 +6,10 @@ import type * as THREE from 'three'
  *  `settlement/PlacedFires.ts`) — a simple campfire without a stone ring
  *  passes a shorter value explicitly (plan `2026-08-09--050`). */
 export const FUEL_PER_BRANCH = 75
+/** Busy-channel duration for lighting an unlit campfire — real-time (not a
+ *  time-skip), same order of magnitude as dig/chop. Adding a branch to an
+ *  already-lit fire stays instant. */
+export const IGNITE_DURATION_SEC = 3
 
 /** Fuel-to-visual-size curve for `CampfireFlame.setSize` — `ratio` is fuel
  *  remaining in units of one branch. Below 1 it shrinks in lockstep as

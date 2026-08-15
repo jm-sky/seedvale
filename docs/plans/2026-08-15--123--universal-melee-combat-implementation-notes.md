@@ -350,6 +350,8 @@ No new 3D model is required by the reviewed implementation approach. Existing he
 
 Do not update `docs/assets/MODELS.md` unless implementation discovers that a genuinely new asset is required.
 
+**Follow-up (2026-08-15):** Adventurer already ships `Sword_Slash` (plus punch fallbacks). Runtime now plays that clip via `PlayerController.beginMeleeAttack`, time-scaled to windUp+hitWindow+recovery so the slash lands with the hit window. Procedural `setMeleeSwing` remains only for the capsule fallback (no mixer). Still no new asset pack / UAL migration.
+
 ## Verification commands
 
 Run the standard checks from `CLAUDE.md`:

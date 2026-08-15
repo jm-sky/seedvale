@@ -359,7 +359,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
 
     const busyTick = busy.tick(dt)
     if (busyTick) {
-      busyOverlay.show(busyTick.label, busyTick.blurred)
+      busyOverlay.show(busyTick.label, busyTick.blurred, busyTick.progress)
       if (busyTick.justFinished) busyOverlay.hide()
       keyboard.state.forward = false
       keyboard.state.backward = false
@@ -392,6 +392,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // it keep timing out/resolving while input is blocked.
       if (playerMelee.isAttacking()) {
         playerMelee.reset()
+        player.endMeleeAttack()
         player.setMeleeSwing(null)
       }
 
@@ -454,11 +455,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         meleeAnimalById.set(item.animal.animalId, item.animal)
       }
       const meleeTick = playerMelee.update(dt)
-      player.setMeleeSwing(
-        playerMelee.isAttacking()
-          ? { x: 0, y: meleeSwingAngle(playerMelee.state(), playerMelee.phaseProgress()), z: 0 }
-          : null,
-      )
+      if (!playerMelee.isAttacking()) {
+        player.endMeleeAttack()
+        player.setMeleeSwing(null)
+      } else if (!player.hasMeleeAttackClip()) {
+        player.setMeleeSwing({
+          x: 0,
+          y: meleeSwingAngle(playerMelee.state(), playerMelee.phaseProgress()),
+          z: 0,
+        })
+      } else {
+        player.setMeleeSwing(null)
+      }
       if (meleeTick.hitReady && meleeTick.config) {
         const hitIds = resolveMeleeHits(
           player.mesh.position.x,
@@ -658,6 +666,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                   target.position.z,
                 )
                 if (result.started) {
+                  player.beginMeleeAttack(config.windUp + config.hitWindow + config.recovery)
                   player.faceToward(target.position.x, target.position.z)
                   if (result.moveX !== 0 || result.moveZ !== 0) {
                     player.gapClose(result.moveX, result.moveZ)

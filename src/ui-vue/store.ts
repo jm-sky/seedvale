@@ -88,7 +88,7 @@ type MerchantState = {
   onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>) => TradeResult) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number }
-type BusyState = { visible: boolean; label: string; blurred: boolean }
+type BusyState = { visible: boolean; label: string; blurred: boolean; progress: number | null }
 /** `config`/`dayNight` are the *same* mutable objects `createApp.ts` already
  *  holds (see plan 005 — "Nie duplikować stanu"), assigned once via
  *  `configureWorldConfigScreen`, not copied per-open. Vue's `reactive()`
@@ -219,7 +219,7 @@ export const ui = reactive({
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
   merchant: { open: false, npc: null, counts: {}, onBuyShells: null, onBuyBarter: null } as MerchantState,
-  busy: { visible: false, label: '', blurred: false } as BusyState,
+  busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
   worldMap: { open: false, playerX: 0, playerZ: 0 } as WorldMapState,
@@ -435,15 +435,17 @@ export function finishTimeSkipHide(): void {
   }
 }
 
-export function showBusy(label: string, blurred = false): void {
+export function showBusy(label: string, blurred = false, progress: number | null = null): void {
   ui.busy.visible = true
   ui.busy.label = label
   ui.busy.blurred = blurred
+  ui.busy.progress = progress
 }
 export function hideBusy(): void {
   ui.busy.visible = false
   ui.busy.label = ''
   ui.busy.blurred = false
+  ui.busy.progress = null
 }
 
 /** Esc during a `busy` channel (fire-lighting, cooking, butchering, …) — not

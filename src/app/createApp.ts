@@ -1,7 +1,6 @@
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { SaveData } from '../persistence/saveData'
-import type { VillageFire } from '../settlement/VillageFire'
 import { playActionChop, playActionDig, playActionMine, playActionWell } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
@@ -26,7 +25,7 @@ import {
 } from '../config/worldConfig'
 import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
 import { isCameraDebugMode } from '../debug/debugMode'
-import { type AnimalAgent, BURY_DURATION_SEC } from '../fauna/AnimalAgent'
+import { type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
@@ -58,6 +57,7 @@ import { createRenderer } from '../render/createRenderer'
 import { MIN_RENDERER_SIZE, shouldApplyRendererResize } from '../render/rendererResize'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
+import { IGNITE_DURATION_SEC, type VillageFire } from '../settlement/VillageFire'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { MINE_DURATION_SEC, yieldForOre } from '../terrain/depositMining'
@@ -116,12 +116,6 @@ const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
  *  extent (core + house ring, `ringMax + houseRadius*2 ≈ 39.6` at default
  *  `coreRadius`/`houseRadius`), not the much larger `HOME_RADIUS`. */
 const REST_IN_TOWN_RADIUS = 40
-/** Busy-channel duration for knife-harvesting raw_meat from a corpse — real
- *  minutes, with the vision blur+desaturate overlay (tune during playtest). */
-const HARVEST_MEAT_DURATION_SEC = 180
-/** Busy-channel duration for lighting an unlit campfire (not "dołóż gałąź",
- *  which stays instant) — real minutes, blurred overlay. */
-const IGNITE_DURATION_SEC = 120
 
 let touchControls: TouchControls | null = null
 
@@ -1050,15 +1044,20 @@ export async function createApp(
       toast.show('Ekwipunek jest za ciężki.', 'error')
       return
     }
+    animal.holdCorpse()
     busy.start(HARVEST_MEAT_DURATION_SEC, 'Wycinanie mięsa…', () => {
-      if (!animal.canHarvestMeat() || !inventory.canAdd('raw_meat', 1)) return
-      animal.harvestMeat()
-      inventory.add('raw_meat', 1)
-      playInventoryPickUp(worldAudio.playOnce)
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      toast.show('+1 Surowe mięso', 'pickup')
-    }, { blurred: true })
+      try {
+        if (!animal.canHarvestMeat() || !inventory.canAdd('raw_meat', 1)) return
+        animal.harvestMeat()
+        inventory.add('raw_meat', 1)
+        playInventoryPickUp(worldAudio.playOnce)
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        onInventoryChanged()
+        toast.show('+1 Surowe mięso', 'pickup')
+      } finally {
+        animal.releaseCorpseHold()
+      }
+    }, { blurred: true, onCancel: () => animal.releaseCorpseHold() })
   }
 
   /** Lights an unlit campfire (busy channel, blurred) — "dołóż gałąź" on an

@@ -13,6 +13,15 @@ import { ui } from '../store'
     />
     <div class="relative rounded-lg bg-panel px-4.5 py-2 text-[15px] text-ink [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
       {{ ui.busy.label }}
+      <div
+        v-if="ui.busy.progress !== null"
+        class="mt-1.5 h-1 w-40 overflow-hidden rounded-full bg-white/20"
+      >
+        <div
+          class="h-full bg-ink transition-[width] duration-100 ease-linear"
+          :style="{ width: `${Math.round(ui.busy.progress * 100)}%` }"
+        />
+      </div>
     </div>
   </div>
 </template>

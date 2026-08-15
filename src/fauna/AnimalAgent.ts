@@ -61,6 +61,9 @@ const DANGEROUS_SCALE_FACTOR = 1.25
 const DANGEROUS_TINT_HEX = 0x1a0f0f
 /** Busy-channel duration for shovel-burying a corpse. */
 export const BURY_DURATION_SEC = 1.5
+/** Busy-channel duration for knife-harvesting `raw_meat` from a corpse —
+ *  real-time (not a time-skip), same order of magnitude as bury/chop. */
+export const HARVEST_MEAT_DURATION_SEC = 4
 /** Prey wander speed at night vs. day (half speed — cautious/less active). */
 const NIGHT_PREY_WALK_MULT = 0.5
 /** Prey flee/sprint speed at night vs. day — smaller penalty than wander,
@@ -630,6 +633,9 @@ export class AnimalAgent {
    *  106) — independent of `foodConsumed` (predator eating and player
    *  harvesting are different consumers), guards against harvesting twice. */
   private meatHarvested = false
+  /** Pauses corpse linger while the player is mid-harvest (Esc-cancellable
+   *  busy channel) so the body can't despawn underneath the overlay. */
+  private corpseHeld = false
   /** Set once by `markDangerous()` — a visibly/gameplay-distinct individual
    *  bound to a `kill_target_animal { dangerous: true }` quest stage
    *  (plan 110), not a separate animal type. */
@@ -846,7 +852,7 @@ export class AnimalAgent {
 
   /** True once a dead agent's corpse has lingered long enough to be disposed. */
   readyToRemove(): boolean {
-    return this.health.dead && this.timeSinceDeath >= CORPSE_LINGER_SECONDS
+    return this.health.dead && !this.corpseHeld && this.timeSinceDeath >= CORPSE_LINGER_SECONDS
   }
 
   /** Player shovel-bury: mark corpse for disposal on the next fauna/settlement tick. */
@@ -865,6 +871,17 @@ export class AnimalAgent {
   harvestMeat(): void {
     if (!this.health.dead) return
     this.meatHarvested = true
+  }
+
+  /** Pin this corpse for the duration of a player harvest channel. Linger
+   *  does not advance and `readyToRemove()` stays false until `releaseCorpseHold`. */
+  holdCorpse(): void {
+    if (!this.health.dead) return
+    this.corpseHeld = true
+  }
+
+  releaseCorpseHold(): void {
+    this.corpseHeld = false
   }
 
   takeDamage(damage: number, source?: 'player'): void {
@@ -924,7 +941,7 @@ export class AnimalAgent {
     playerStealth: PlayerStealthState = { sneakValue: 0, sneakActive: false, movement: 'stationary' },
   ): void {
     if (this.health.dead) {
-      this.timeSinceDeath += dt
+      if (!this.corpseHeld) this.timeSinceDeath += dt
       return
     }
     if (this.attackCooldown > 0) this.attackCooldown -= dt
