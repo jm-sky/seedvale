@@ -93,6 +93,12 @@ import {
   tickVigorForSimulatedStep,
 } from './npcVigor'
 import {
+  computeReactionChance,
+  type PlayerSocialLookup,
+  type ReactionTier,
+  reactionTierForRelation,
+} from './reactionChance'
+import {
   activityAt,
   effectiveScheduleFor,
   idleIntentFor,
@@ -597,6 +603,10 @@ export class NpcAgent {
   private readonly economy: SettlementEconomy | null
   /** This NPC's family stock (plan 069). Null only in isolated fallbacks. */
   private readonly household: Household | null
+  /** Relation level + player standing lookup, by NPC name — keeps `NpcAgent`
+   *  quest-agnostic (`QuestManager.getRelationLevel`/`getPlayerStanding`
+   *  injected from `createApp.ts`, plan 117). */
+  private readonly getPlayerSocial: PlayerSocialLookup
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
@@ -627,6 +637,7 @@ export class NpcAgent {
     wellQueueId: string | null,
     economy: SettlementEconomy | null,
     household: Household | null,
+    getPlayerSocial: PlayerSocialLookup,
   ) {
     this.playAt = playAt
     this.forest = forest
@@ -635,6 +646,7 @@ export class NpcAgent {
     this.wellQueueId = wellQueueId
     this.economy = economy
     this.household = household
+    this.getPlayerSocial = getPlayerSocial
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
@@ -760,6 +772,7 @@ export class NpcAgent {
     wellQueueId: string | null = null,
     economy: SettlementEconomy | null = null,
     household: Household | null = null,
+    getPlayerSocial: PlayerSocialLookup = () => ({ relationLevel: 'stranger', standing: 0 }),
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -783,6 +796,7 @@ export class NpcAgent {
         wellQueueId,
         economy,
         household,
+        getPlayerSocial,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -804,6 +818,7 @@ export class NpcAgent {
         wellQueueId,
         economy,
         household,
+        getPlayerSocial,
       )
     }
   }
@@ -826,6 +841,7 @@ export class NpcAgent {
     wellQueueId: string | null,
     economy: SettlementEconomy | null,
     household: Household | null,
+    getPlayerSocial: PlayerSocialLookup,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -858,6 +874,7 @@ export class NpcAgent {
       wellQueueId,
       economy,
       household,
+      getPlayerSocial,
     )
   }
 
@@ -983,17 +1000,29 @@ export class NpcAgent {
       const dz = this.mesh.position.z - observerPos.z
       const params = this.pauseParams
       if (Math.hypot(dx, dz) < params.triggerDistance) {
-        // A lone NPC (nearbyNpcCount 0) always reacts, same as before this
-        // was added. In a group, the chance drops with how many others are
-        // close by — scaled by (1 - openness) so an open/curious NPC barely
-        // cares about the crowd while a closed one goes quiet in company.
-        const reactionChance =
+        // Being in range no longer means an automatic reaction (plan 117) —
+        // personality/traits/relation/reputation decide *whether* an NPC
+        // reacts at all; group suppression (below) then further dampens a
+        // crowd all noticing the Hero at once, same math as before this plan.
+        const social = this.getPlayerSocial(this.name)
+        const socialChance = computeReactionChance({
+          personality: this.personality,
+          traits: this.traits,
+          relationLevel: social.relationLevel,
+          reputationStanding: social.standing,
+        })
+        // A lone NPC (nearbyNpcCount 0) keeps its full chance. In a group it
+        // drops with how many others are close by — scaled by (1 - openness)
+        // so an open/curious NPC barely cares about the crowd while a closed
+        // one goes quiet in company (issue 010).
+        const suppression =
           1 / (1 + GROUP_SUPPRESSION_STRENGTH * nearbyNpcCount * (1 - this.personality.openness))
+        const reactionChance = Math.min(1, Math.max(0, socialChance * suppression))
         if (Math.random() < reactionChance) {
           this.previousPhase = this.phase
           this.phase = 'lookAtPlayer'
           this.pauseTimer = randRange(params.lookDurationRange)
-          this.playReactionSound()
+          this.playReactionSound(reactionTierForRelation(social.relationLevel))
         } else {
           this.pauseCooldown = SUPPRESSED_REACTION_RETRY_COOLDOWN
         }
@@ -1637,8 +1666,15 @@ export class NpcAgent {
     this.phase = 'wander'
   }
 
-  private playReactionSound(): void {
-    const pool = [...NPC_REACTION_SOUND_URLS[this.gender], ...NPC_HMM_VOICE_URLS[this.voiceActor]]
+  /** Reuses existing voice pools per tier (plan 117 §3) — no new audio
+   *  assets: `warm` borrows the greeting pool ("Hej!"), `enthusiastic`
+   *  borrows the quest-complete/cheer pool ("Brawo!"). */
+  private playReactionSound(tier: ReactionTier): void {
+    const pool = tier === 'warm'
+      ? NPC_GREETING_SOUND_URLS[this.voiceActor]
+      : tier === 'enthusiastic'
+        ? NPC_QUEST_COMPLETE_SOUND_URLS[this.gender]
+        : [...NPC_REACTION_SOUND_URLS[this.gender], ...NPC_HMM_VOICE_URLS[this.voiceActor]]
     const url = pool[Math.floor(Math.random() * pool.length)]
     if (url) this.playAt(url, this.mesh.position, REACTION_SOUND_VOLUME)
   }

@@ -3,6 +3,7 @@ import {
   Vector3,
 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { AnimalAgent, VillageInfo } from '../fauna/AnimalAgent'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
@@ -161,6 +162,9 @@ export async function createSettlement(
   /** Reports any of this settlement's livestock deaths (any cause) by
    *  `animalId` — forwarded into `spawnLivestock` (plan 110). */
   onAnimalDeath?: (animalId: string) => void,
+  /** Resolves an NPC's relation level + general player standing by name —
+   *  forwarded into every `NpcAgent.create` call below (plan 117). */
+  getPlayerSocial?: PlayerSocialLookup,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
@@ -400,6 +404,7 @@ export async function createSettlement(
         wellQid,
         economy,
         household,
+        getPlayerSocial,
       )
       scene.add(agent.mesh)
       return agent

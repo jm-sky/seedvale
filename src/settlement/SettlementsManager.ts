@@ -1,5 +1,6 @@
 import { type Object3D, type Scene, Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
@@ -132,6 +133,10 @@ export async function createSettlementsManager(
    *  forwarded into every `createSettlement` call, home and streamed-in
    *  alike (plan 110). */
   onAnimalDeath?: (animalId: string) => void,
+  /** Resolves an NPC's relation level + general player standing by name —
+   *  forwarded into every `createSettlement` call the same way as
+   *  `onAnimalDeath` above (plan 117). */
+  getPlayerSocial?: PlayerSocialLookup,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -193,6 +198,7 @@ export async function createSettlementsManager(
     roadCtx,
     forest,
     onAnimalDeath,
+    getPlayerSocial,
   )
 
   const entries = new Map<string, Entry>()
@@ -303,6 +309,7 @@ export async function createSettlementsManager(
         roadCtx,
         forest,
         onAnimalDeath,
+        getPlayerSocial,
       ))
       .then((settlement) => {
         const cur = entries.get(def.id)

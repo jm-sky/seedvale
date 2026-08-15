@@ -14,8 +14,9 @@ export type Role = 'woodcutter' | 'farmer' | 'guard' | 'trader' | 'miner' | 'fis
 
 /** Closed pool of lightweight, deterministic modifiers — execution effects
  *  live in `NpcAgent` (wait times, stamina, PAUSE_PARAMS); schedule overlays
- *  (`night_owl` / `fast_worker` / `sociable`) live in `effectiveScheduleFor`. */
-export type Trait = 'energetic' | 'fast_worker' | 'night_owl' | 'sociable'
+ *  (`night_owl` / `fast_worker` / `sociable`) live in `effectiveScheduleFor`;
+ *  `curious` boosts player-reaction chance (`ai/reactionChance.ts`, plan 117). */
+export type Trait = 'curious' | 'energetic' | 'fast_worker' | 'night_owl' | 'sociable'
 
 export type CharacterDef = {
   name: string
@@ -33,7 +34,7 @@ export type CharacterDef = {
 /** Random family members never roll `trader` — plan 090 wants exactly one
  *  Kupiec (reserved Kasia in the home settlement), none elsewhere. */
 const RANDOM_ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'miner', 'fisher']
-const TRAITS: readonly Trait[] = ['energetic', 'fast_worker', 'night_owl', 'sociable']
+const TRAITS: readonly Trait[] = ['curious', 'energetic', 'fast_worker', 'night_owl', 'sociable']
 
 type ReservedSeed = Omit<CharacterDef, 'personality'>
 

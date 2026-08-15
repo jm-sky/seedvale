@@ -10,6 +10,7 @@ import {
   QUESTS,
   type QuestStage,
   type QuestState,
+  RELATION_LEVEL_THRESHOLDS,
   type RelationLevel,
   relationToLevel,
 } from './quests'
@@ -215,6 +216,18 @@ export class QuestManager {
   /** Coarse relation tier for an NPC by name — see `RelationLevel`. */
   getRelationLevel(npcName: string): RelationLevel {
     return relationToLevel(this.getRelation(npcName))
+  }
+
+  /** How well-known/liked the player is across every NPC met so far, derived
+   *  from the existing per-NPC `relations` — not a separate reputation store
+   *  (plan 117). `0..1`, normalized against `trusted`'s threshold; `0` before
+   *  any relation exists. */
+  getPlayerStanding(): number {
+    if (this.relations.size === 0) return 0
+    let sum = 0
+    for (const value of this.relations.values()) sum += value
+    const average = sum / this.relations.size
+    return Math.min(1, Math.max(0, average / RELATION_LEVEL_THRESHOLDS.trusted))
   }
 
   /** Whether `def`'s `availability` gate (if any) is currently satisfied.

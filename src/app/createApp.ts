@@ -1,4 +1,5 @@
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { SaveData } from '../persistence/saveData'
 import type { VillageFire } from '../settlement/VillageFire'
 import { playActionChop, playActionDig, playActionMine, playActionWell } from '../audio/actionSounds'
@@ -218,6 +219,11 @@ export async function createApp(
   // survives `rebuildWorldBundle()` (plan 110).
   let onAnimalDeathTarget: ((animalId: string) => void) | null = null
   const onAnimalDeath = (animalId: string): void => { onAnimalDeathTarget?.(animalId) }
+  // Same indirection as `onAnimalDeath` above, for the same reason — `NpcAgent`
+  // reads this every reaction check (plan 117), before `questManager` exists.
+  let getPlayerSocialTarget: PlayerSocialLookup | null = null
+  const getPlayerSocial: PlayerSocialLookup = (npcName) =>
+    getPlayerSocialTarget?.(npcName) ?? { relationLevel: 'stranger', standing: 0 }
   const bundle = await createWorldBundle(
     scene,
     config,
@@ -231,6 +237,7 @@ export async function createApp(
     dayNight,
     initialSave?.settlementEconomies,
     onAnimalDeath,
+    getPlayerSocial,
   )
 
   // Indirection (not a direct destructure) so this keeps sampling whichever
@@ -408,8 +415,12 @@ export async function createApp(
       bundle.fauna.getAgents().find((a) => a.animalId === animalId)?.markDangerous()
     },
   )
-  // Now that `questManager` exists, the closure passed into `createWorldBundle`
-  // above can actually reach it — see that call site's comment.
+  // Now that `questManager` exists, the closures passed into `createWorldBundle`
+  // above can actually reach it — see those call sites' comments.
+  getPlayerSocialTarget = (npcName) => ({
+    relationLevel: questManager.getRelationLevel(npcName),
+    standing: questManager.getPlayerStanding(),
+  })
   onAnimalDeathTarget = (animalId) => {
     questManager.onInteractObjective({ type: 'animal_died', animalId })
   }
@@ -497,6 +508,7 @@ export async function createApp(
         getWorldDays,
         dayNight,
         onAnimalDeath,
+        getPlayerSocial,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
 

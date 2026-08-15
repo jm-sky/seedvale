@@ -1,6 +1,6 @@
 Plan: 117 - NPC — naturalne reakcje na Bohatera
 
-Status: "planned"
+Status: `done` (technical verification green; no browser/play check yet)
 Scope: mała zmiana istniejącego systemu "lookAtPlayer" / reakcji NPC
 Cel: NPC mają zwykle ignorować gracza, ale ich osobowość, relacja z Bohaterem i reputacja Bohatera mogą sprawić, że zaczną reagować coraz wyraźniej.
 
@@ -217,3 +217,49 @@ Z czasem, przez relacje i reputację, coraz częściej można zauważyć:
 «spojrzenie → zatrzymanie → „Hej!” → „Bohater!” → entuzjastyczna reakcja.»
 
 To powinno być małe rozszerzenie istniejącego systemu, a nie nowy subsystem społeczny.
+
+## What changed
+
+- `src/ai/reactionChance.ts` (new) — pure `computeReactionChance()` (base 0.05 + personality
+  bonus from openness/extraversion, same 50/50 weighting as `pausePersonalityParams`'s
+  `triggerDistance` + `curious` trait bonus + relation-level bonus + reputation bonus, clamped
+  0..1) and `reactionTierForRelation()` (`stranger`/`acquainted` → `normal`, `friendly` →
+  `warm`, `trusted` → `enthusiastic`). `reactionChance.test.ts` covers the extremes named in
+  this plan's §4 (very open+curious+trusted+famous ≈ 80-100%; closed+distrustful-but-liked
+  ≈ 40-60%), monotonicity by relation level, and the `curious` trait bonus.
+- `src/ai/characters.ts` — added `'curious'` to the `Trait` union and the random `TRAITS` pool
+  (was only a `Personality` archetype before, a separate concept — see plan §6 note).
+- `src/ai/NpcAgent.ts` — the `triggerDistance` proximity check in `update()` no longer rolls the
+  old crowd-only `reactionChance` directly. It now computes a `PlayerSocialLookup`-derived
+  social chance via `computeReactionChance()`, multiplies it by the existing group-suppression
+  factor (`GROUP_SUPPRESSION_STRENGTH`/`nearbyNpcCount`/`openness` — unchanged formula, §5's
+  "don't remove suppression"), clamps, then rolls once. `playReactionSound()` now takes a
+  `ReactionTier` and reuses existing pools per tier — no new audio assets (§3's "can be just the
+  existing audio system"): `normal` keeps the old hmm/reaction pool, `warm` borrows
+  `NPC_GREETING_SOUND_URLS`, `enthusiastic` borrows `NPC_QUEST_COMPLETE_SOUND_URLS`.
+- `src/quests/QuestManager.ts` — new `getPlayerStanding(): number` (0..1), averaging the
+  existing `relations` Map and normalizing against `RELATION_LEVEL_THRESHOLDS.trusted`. This is
+  the plan §2 "reputationBonus" data source: no player-reputation system exists in the codebase
+  (confirmed absent; plans 093/110 explicitly deferred it), and per this plan's own instruction
+  ("find the existing data source, don't build a parallel reputation system"), reputation is
+  derived from the relation ledger `QuestManager` already keeps rather than added as new state.
+  No new storage, no persistence change.
+- Threading (mirrors the existing `onAnimalDeath` hook from plan 110 exactly, so `NpcAgent`
+  stays quest-agnostic — no `QuestManager` import): `createApp.ts` (mutable-binding indirection,
+  assigned once `questManager` exists) → `worldBundle.ts`'s `createWorldBundle`/
+  `rebuildWorldBundle` → `SettlementsManager.ts`'s `createSettlementsManager` → every
+  `createSettlement.ts` call (home + streamed-in) → `NpcAgent.create`/constructor as
+  `getPlayerSocial: PlayerSocialLookup`.
+- `src/ui-vue/screens/VillagersScreen.vue` — added the `curious` row to `TRAIT_LABEL` (Vue's
+  exhaustive `Record<Trait, string>` — TS caught this at build time).
+
+## Verification
+
+- `npx tsc --noEmit`, `npm run lint` (clean on changed files — pre-existing unrelated errors in
+  `_temp/asset-audit/inspect.mjs` only), `npm run build`, `npm run test` (712/712) — all green.
+- **Not yet done:** browser/play check — approach a few NPCs with different personalities/
+  traits before building any relation (should mostly ignore, occasional plain look), then talk
+  to one repeatedly to raise relation to `friendly`/`trusted` and confirm warm/enthusiastic
+  reactions start appearing (and other, unrelated NPCs start reacting slightly more often too,
+  from the reputation signal), and confirm group suppression still holds when several NPCs are
+  clustered near the player.

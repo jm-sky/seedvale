@@ -28,6 +28,7 @@ const PERSONALITY_LABEL: Record<Personality, string> = {
 }
 
 const TRAIT_LABEL: Record<Trait, string> = {
+  curious: 'Ciekawski',
   fast_worker: 'Szybki w pracy',
   energetic: 'Energiczny',
   night_owl: 'Nocny Marek',
