@@ -669,7 +669,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // reused below (`dayFactor`) and after this block (`postProcessing`)
       // instead of each call site recomputing the same params object.
       cachedSky = skyParamsFromTime(dayNight.timeOfDay)
-      weatherParticles.update(dt, climate.weather, player.mesh.position.x, player.mesh.position.y, player.mesh.position.z)
+      weatherParticles.update(
+        dt, climate.weather, player.mesh.position.x, player.mesh.position.y, player.mesh.position.z,
+        camera.fov, renderer.domElement.clientHeight,
+      )
       weatherAudio.update(climate.weather)
       ambientAudio.update(
         dt,

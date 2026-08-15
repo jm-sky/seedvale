@@ -1,7 +1,7 @@
 # Plan: Pory roku i pogoda
 
 **Created:** 2026-08-15  
-**Status:** `in progress` 🔄 — Etap 1 done, Etap 2 (day/night integration) done, Etap 3 (rendering) done with a known deviation (CPU particles, not GPU shader), Etap 4 (debug/save) partial, Etap 5 (perf verification) open. See [implementation notes](./2026-08-08--040--seasons-weather-implementation-notes.md).  
+**Status:** `in progress` 🔄 — Etap 1 done, Etap 2 (day/night integration) done, Etap 3 (GPU weather rendering) done 2026-08-15 — closes the earlier CPU-particle deviation, no browser/perf verification yet, Etap 4 (debug/save) partial, Etap 5 (perf verification) open. See [implementation notes](./2026-08-08--040--seasons-weather-implementation-notes.md).  
 **Priority:** medium 🟡 · **Effort:** L  
 **Depends on:** ~~003~~ ~~028~~
 
@@ -678,15 +678,15 @@ Debug override nie powinien zmieniać deterministycznego modelu świata.
 
 ### Etap 3 — GPU weather renderer
 
-- [ ] wspólna infrastruktura weather renderer
-- [ ] rain shader
-- [ ] snow shader
-- [ ] lokalny weather volume
-- [ ] proceduralne pozycje w shaderze
-- [ ] uniform-based intensity
-- [ ] wind parameter
-- [ ] brak per-particle CPU updates
-- [ ] brak per-frame allocations
+- [x] wspólna infrastruktura weather renderer (jeden shader, rain/snow jako parametry emitera)
+- [x] rain shader
+- [x] snow shader
+- [x] lokalny weather volume
+- [x] proceduralne pozycje w shaderze
+- [x] uniform-based intensity
+- [x] wind parameter (sinusoidalny `uDrift`, ten sam koncept co w CPU stopgapie — bez nowego pola `WeatherState`)
+- [x] brak per-particle CPU updates
+- [x] brak per-frame allocations
 
 ### Etap 4 — Debug + time/save verification
 

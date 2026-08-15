@@ -23,11 +23,13 @@ Nie jest to roadmapa produktu. Jest to **proponowana kolejność wdrażania istn
 
 ## Front backlog
 
-### 0. GPU Weather Renderer
+### 0. GPU Weather Renderer — ✅ zaimplementowane 2026-08-15
 
-**Źródłowy plan:** 040 — Seasons & Weather  
+**Źródłowy plan:** 040 — Seasons & Weather (Etap 3, [implementation notes](./2026-08-08--040--seasons-weather-implementation-notes.md))  
 **Effort:** M/L  
 **Charakter:** rendering / performance
+
+`world/weatherParticles.ts` przeszedł z CPU `THREE.Points` na GPU `ShaderMaterial` (proceduralne pozycje w vertex shaderze, bez per-particle CPU update loop). Techniczna weryfikacja zielona; brak testu w przeglądarce i brak zmierzonego benchmarku before/after — patrz implementation notes Etap 5.
 
 **Dependencies:**
 

@@ -258,7 +258,7 @@ export async function createApp(
   const ambientAudio = createAmbientAudio(worldAudio, worldContext)
   const fireAudio = createFireAudio(worldAudio)
   const weatherAudio = createWeatherAudio(worldAudio)
-  const weatherParticles = createWeatherParticles()
+  const weatherParticles = createWeatherParticles({ getLodScale: () => config.quality.lodScale })
   weatherParticles.addTo(scene)
   const houseDoors = createHouseDoorTracker()
   configureUiSounds(worldAudio.playOnce)

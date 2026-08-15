@@ -56,6 +56,13 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 ## Log
 
+### 2026-08-15 — GPU weather renderer (plan 040 Etap 3) 🔧
+
+- `world/weatherParticles.ts`: rain/snow moved from CPU `THREE.Points` (per-particle `BufferAttribute` update every frame) to a shared vertex/fragment `ShaderMaterial`; particle fall/drift computed procedurally from a fixed-at-creation per-particle attribute + `uTime`, no per-particle JS loop.
+- Same `fog_pars_*`/`fog_vertex`/`fog_fragment` chunk pattern as `waterMaterial.ts` (`fog: true` + `UniformsLib.fog`) — no parallel fog handling.
+- Density (weather intensity) and a mobile cap (`WorldConfig.quality.lodScale`) both gate visibility via one `uVisibleFraction` uniform; gated-out particles are pushed outside the clip volume in the vertex shader rather than looped/hidden on the CPU.
+- Not measured: no `?benchmark=` pass comparing old CPU vs new GPU frame cost. See [plan 040 implementation notes](./plans/2026-08-08--040--seasons-weather-implementation-notes.md).
+
 ### 2026-08-15 — Rendering budget P0/P1 (plan 113) 🔧
 
 - High: N8AO on at **Performance** + half-res; auto-suppress when last Render ms ≥ 15 (restore ≤ 10). Isolation probes cover bloom/SMAA/god rays/film grade.
