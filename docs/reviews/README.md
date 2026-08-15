@@ -34,6 +34,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | Perf bottleneck diagnosis v2 | Naprawa `drawCalls=1`, ponowne benchmarki, spis sceny, izolacja, streaming — follow-up do [010](./2026-08-14--010--perf-benchmark-data.md) | `done` | [2026-08-14--012--perf-bottleneck-diagnosis.md](./2026-08-14--012--perf-bottleneck-diagnosis.md) |
 | Architecture & performance audit | Pełny lokalny audyt (bez przeglądarki) po ostatnich 20 commitach — CPU/GPU hot paths, chunk streaming, NPC/fauna scaling, instancing, memory, workers | `done` | [2026-08-15--013--architecture-and-performance-audit.md](./2026-08-15--013--architecture-and-performance-audit.md) |
 | AI agent workflow audit | Repo audit for Claude Code / Cursor Agent context & cost optimization — doc duplication, plan domains, automation, skills, MCP, Claude vs Cursor split, multi-agent git workflow | `done` | [2026-08-15--014--ai-agent-workflow-audit.md](./2026-08-15--014--ai-agent-workflow-audit.md) |
+| Browser performance benchmark | Powtórzenie `?benchmark=*` po review 013 (GPU/streaming) — porównanie z [010](./2026-08-14--010--perf-benchmark-data.md), bez optymalizacji | `done` | [2026-08-15--015--browser-performance-benchmark.md](./2026-08-15--015--browser-performance-benchmark.md) |
 
 ## After each run
 
