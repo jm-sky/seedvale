@@ -9,22 +9,21 @@ const uFoliageTime = { value: 0 }
  *  Trunk/bark names (`Wood`, `*Bark`) intentionally do not match. */
 const FOLIAGE_NAME_RE = /leaves|green|flowers/i
 
-// v2: instancing branch (plan 087 §2.2) — bumped because the shader text
-// changed, so three.js's material program cache doesn't reuse a v1 program
-// (compiled without the instanceMatrix branch) for instanced foliage.
-const WIND_CACHE_KEY = 'foliage-wind-v2'
+// TEMP: isolation test — disable foliage wind for InstancedMesh
+// v3: bumped because the shader text changed again (the USE_INSTANCING body
+// below became a no-op), so three.js's material program cache doesn't reuse
+// a v2 program (with the live instanceMatrix sway) for instanced foliage.
+const WIND_CACHE_KEY = 'foliage-wind-v3'
 
 const BEGIN_VERTEX_WIND = /* glsl */ `
   #include <begin_vertex>
+  // TEMP: isolation test — disable foliage wind for InstancedMesh: the sway
+  // below only runs for non-instanced foliage now — instancing itself stays
+  // on, only the wind displacement is skipped for InstancedMesh (issue 032
+  // follow-up: black-flicker isolation pointed at exactly this combination).
+  #ifndef USE_INSTANCING
   {
-    // Under instancing, modelMatrix is the InstancedMesh's (chunk-group)
-    // matrix, not any individual instance's — fold in instanceMatrix so
-    // amplitude/phase are computed per-instance instead of every instance in
-    // the mesh sharing one phase (plan 087 §2.2 / finding #2).
     mat4 propMatrix = modelMatrix;
-    #ifdef USE_INSTANCING
-      propMatrix = modelMatrix * instanceMatrix;
-    #endif
     // World-meter amplitude independent of prepareProp()'s object.scale —
     // propMatrix column length is that uniform scale.
     float objScale = length( propMatrix[ 0 ].xyz );
@@ -38,6 +37,7 @@ const BEGIN_VERTEX_WIND = /* glsl */ `
     transformed.x += sin( t * 1.15 + phase ) * amp * bend;
     transformed.z += cos( t * 0.95 + phase * 1.25 ) * amp * 0.75 * bend;
   }
+  #endif
 `
 
 function isFoliageMaterial(mat: Material): boolean {
