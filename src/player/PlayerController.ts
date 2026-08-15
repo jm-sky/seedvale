@@ -375,6 +375,38 @@ export class PlayerController {
     this.syncCamera()
   }
 
+  /** Turns the character to face `(x, z)` — an instant snap, matching the
+   *  existing movement-facing convention (no rotation smoothing anywhere on
+   *  this rig). Used to soften the aim requirement for melee (plan 124 §4)
+   *  without touching camera yaw or the hit-resolution arc test. */
+  faceToward(x: number, z: number): void {
+    const dx = x - this.mesh.position.x
+    const dz = z - this.mesh.position.z
+    if (Math.hypot(dx, dz) < 1e-4) return
+    this.mesh.rotation.y = Math.atan2(dx, dz)
+  }
+
+  /** Collision-safe displacement toward a point — the melee gap-close/
+   *  fallback hop (plan 124 §3). Never a teleport: `dx`/`dz` are already
+   *  bounded by the caller (`playerMelee.requestAttack`'s `moveX`/`moveZ`).
+   *  Mirrors `update()`'s per-frame movement resolution so the player can't
+   *  lunge through walls/houses. */
+  gapClose(dx: number, dz: number): void {
+    if (dx === 0 && dz === 0) return
+    const candidateX = this.mesh.position.x + dx
+    const candidateZ = this.mesh.position.z + dz
+    const resolved = resolvePosition(
+      candidateX,
+      candidateZ,
+      PLAYER_COLLISION_RADIUS,
+      this.collidersNear(candidateX, candidateZ),
+    )
+    this.mesh.position.x = resolved.x
+    this.mesh.position.z = resolved.z
+    this.snapToGround()
+    this.syncCamera()
+  }
+
   /** Procedural squat — camp-rest setup/teardown between stand and lie. */
   crouch(): void {
     if (this.pose === 'crouch') return

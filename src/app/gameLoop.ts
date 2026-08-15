@@ -76,6 +76,7 @@ import { createWaterSource } from '../world/WaterSource'
 import { tickClimate } from '../world/weather'
 import { applyWeatherOverlay } from '../world/weatherVisuals'
 import {
+  buildCombatTarget,
   buildDigTarget,
   buildInteractables,
   collectItem,
@@ -469,6 +470,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         for (const id of hitIds) {
           const animal = meleeAnimalById.get(id)
           if (!animal || animal.isDead()) continue
+          playerMelee.rememberHit(id)
           animal.takeDamage(meleeTick.config.damage, 'player')
           const killed = animal.isDead()
           if (killed) playActionMeleeKill(worldAudio.playAt, animal.mesh.position)
@@ -502,6 +504,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         mouseLook.state.yaw,
         held,
         bundle.chunkManager,
+      ) ?? buildCombatTarget(
+        bundle.settlementsManager.getLoaded(),
+        bundle.fauna,
+        player.mesh.position,
+        mouseLook.state.yaw,
+        held,
+        playerMelee.recentTargetIds(),
       )
       npcDialog.setPrompt(target ? target.promptLabel : null)
 
@@ -640,7 +649,20 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               if (player.needs.stamina.current < config.staminaCost) {
                 toast.show('Brak siły na atak.', 'error')
               } else {
-                playerMelee.requestAttack(config, player.needs.stamina)
+                const result = playerMelee.requestAttack(
+                  config,
+                  player.needs.stamina,
+                  player.mesh.position.x,
+                  player.mesh.position.z,
+                  target.position.x,
+                  target.position.z,
+                )
+                if (result.started) {
+                  player.faceToward(target.position.x, target.position.z)
+                  if (result.moveX !== 0 || result.moveZ !== 0) {
+                    player.gapClose(result.moveX, result.moveZ)
+                  }
+                }
               }
             }
           } else {

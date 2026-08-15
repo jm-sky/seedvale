@@ -1,9 +1,14 @@
+---
+domain: items-player
+tags: [fauna]
+---
+
 # Plan: Universal Melee Combat — forgiving targeting & gap close
 
 **Created:** 2026-08-15  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — zaimplementowane, techniczna weryfikacja zielona (tsc/lint/test/build); brak testu w przeglądarce  
 **Priority:** medium · **Effort:** S  
-**Depends on:** 123
+**Depends on:** ~~123~~
 
 ## Cel
 
@@ -126,5 +131,17 @@ Nie hardkodować tych wartości w kilku miejscach.
    - brak staminy,
    - cel poza zasięgiem.
 4. Sprawdzić, czy normalny ruch gracza, stamina i istniejący combat nie zostały zaburzone.
+
+## Implementation notes
+
+Zaimplementowane bez osobnego pliku implementation-notes (effort S):
+
+- `player/playerMelee.ts`: `pickCombatTarget()` (dot → dystans → pamięć, z tolerancjami tak, by słabsze kryteria realnie miały szansę zadziałać), `requestAttack()` rozszerzony o gap-close (przyjmuje teraz pozycję gracza/celu, zwraca `{ started, moveX, moveZ }` zamiast `boolean`), `recentTargetIds()`/`rememberHit()` (FIFO N=`COMBAT_TARGET_MEMORY`=3). Nowe stałe: `COMBAT_TARGET_MEMORY`, `MAX_LUNGE_DISTANCE`=3, `LUNGE_STAMINA_COST`=15, `FALLBACK_APPROACH_DISTANCE`=1.
+- `app/interactables.ts`: `COMBAT_TARGET_RANGE`=7 (> `GAZE_RANGE`=5), `COMBAT_TARGET_CONE_DOT`=`cos(45°)` (pełny stożek 90°), `buildCombatTarget()` — trzeci fallback po `pickInGaze()` i `buildDigTarget()` (kolejność: precyzyjny gaze > kopanie łopatą/kilofem > forgiving combat), zwraca istniejący `Interactable{kind:'animal'}` więc `gameLoop.ts`'s `[E]`-branch dla ataku jest niezmieniony.
+- `player/PlayerController.ts`: `faceToward()` (natychmiastowy obrót modelu w stronę celu, nie rusza yaw kamery/hit-testu) i `gapClose()` (przesunięcie z `resolvePosition`/kolizjami, jak w `update()`).
+- `app/gameLoop.ts`: `target = pickInGaze() ?? buildDigTarget() ?? buildCombatTarget()`; po udanym `requestAttack()` wywołuje `player.faceToward()` + `player.gapClose()`; `rememberHit()` wołane dla każdego trafionego id w `resolveMeleeHits`.
+- `faunaCombat.ts` nietknięty.
+- Testy jednostkowe: `playerMelee.test.ts` rozszerzony o `pickCombatTarget` (centralny vs boczny, bliższy, pamięć, martwe/za daleko/poza stożkiem) i gap-close (bez ruchu w zasięgu, lunge, cap lunge, fallback ≤1 m bez dodatkowego kosztu staminy, wciąż za daleko → brak trafienia). Przy pisaniu testu na remis dot/dystans znaleziony i naprawiony realny bug: sentinel `Infinity` dla "nie w pamięci" dawał `Infinity - Infinity = NaN` w komparatorze sortowania przy dwóch niezapamiętanych remisujących kandydatach — zamieniony na skończony sentinel (`recentTargetIds.length`).
+- `npx tsc --noEmit` / `npm run lint` / `npm run build` / `npm run test` (817 testów) zielone. Brak testu w przeglądarce.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

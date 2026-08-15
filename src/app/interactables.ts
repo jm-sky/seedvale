@@ -12,6 +12,7 @@ import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from
 import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
 import { ORE_YIELD_LABEL } from '../terrain/depositMining'
 import { canLevelAt, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
 import { oceanMixAt } from '../terrain/waterBodies'
@@ -38,6 +39,15 @@ export const KNIFE_BRANCH_BONUS = 0.15
  *  target sits — inside `INTERACT_RANGE` so it's always within reach once
  *  offered; see `buildDigTarget`. */
 export const DIG_REACH = 1.5
+/** Melee target-acquisition range (plan 124 §1) — deliberately larger than
+ *  `GAZE_RANGE` so `buildCombatTarget`'s forgiving fallback still finds a
+ *  live animal even when the player isn't standing right on top of it.
+ *  Independent of `MeleeConfig.range` (the actual weapon hit range, plan
+ *  124 §2) and of `GAZE_RANGE` (shared by every other interactable kind). */
+export const COMBAT_TARGET_RANGE = 7
+/** 90° full target-acquisition cone (`cos(45°)`), wider than
+ *  `INTERACT_MIN_DOT`'s ~60° cone — plan 124 §1. */
+export const COMBAT_TARGET_CONE_DOT = Math.SQRT1_2
 
 /** Plan 106 §4 — `[E]` always drinks directly (well or lake); `[R]` fills a
  *  carried empty waterskin. Static regardless of inventory (same convention
@@ -379,6 +389,54 @@ export function buildDigTarget(
   }
 
   return null
+}
+
+/** Forgiving melee-attack fallback (plan 124 §1) — same "only tried once
+ *  nothing narrower was found" pattern as `buildDigTarget` above. Reuses the
+ *  existing `kind: 'animal'` `Interactable`/`[E]` attack branch in
+ *  `gameLoop.ts` unchanged: this only widens which live animal that branch
+ *  sees, it is not a second targeting system. Only searches while a melee
+ *  tool is held. */
+export function buildCombatTarget(
+  settlements: readonly Settlement[],
+  fauna: Fauna,
+  playerPos: Vector3,
+  playerYaw: number,
+  heldTool: ToolKind | null,
+  recentTargetIds: readonly string[],
+): Interactable | null {
+  if (!isMeleeTool(heldTool)) return null
+
+  const candidates: MeleeHitCandidate[] = []
+  const byId = new Map<string, AnimalAgent>()
+  const collect = (animal: AnimalAgent): void => {
+    if (animal.isDead()) return
+    if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, COMBAT_TARGET_RANGE)) return
+    candidates.push({ id: animal.animalId, x: animal.mesh.position.x, z: animal.mesh.position.z, alive: true })
+    byId.set(animal.animalId, animal)
+  }
+  for (const settlement of settlements) {
+    for (const animal of settlement.livestock) collect(animal)
+  }
+  for (const animal of fauna.getAgents()) collect(animal)
+
+  const targetId = pickCombatTarget(
+    candidates,
+    playerPos.x,
+    playerPos.z,
+    playerYaw,
+    COMBAT_TARGET_RANGE,
+    COMBAT_TARGET_CONE_DOT,
+    recentTargetIds,
+  )
+  const animal = targetId ? byId.get(targetId) ?? null : null
+  if (!animal) return null
+  return {
+    kind: 'animal',
+    position: animal.mesh.position,
+    promptLabel: animalPromptLabel(animal.def.kind, heldTool),
+    animal,
+  }
 }
 
 /** Routes a picked-up `WorldItemRef` to whichever registry it came from —
