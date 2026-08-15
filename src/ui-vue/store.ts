@@ -126,6 +126,17 @@ type StatBar = { current: number, max: number }
  *  later server-authoritative move doesn't have to unwind UI-owned state. */
 export type CharacterStats = { hp: StatBar, stamina: StatBar, vigor: StatBar, hunger: StatBar, thirst: StatBar }
 type CharacterScreenState = CharacterStats & { open: boolean }
+/** Skills screen (plan 124) — same presentation-only convention as
+ *  `CharacterScreenState`: `sneakValue`/`sneakActive` mirror
+ *  `PlayerController.skills.sneak`, pushed once/frame from `gameLoop.ts`.
+ *  `onToggleSneak` is the one write path back out, wired once via
+ *  `configureSkillsScreen` (same pattern as `PauseHandlers`). */
+type SkillsScreenState = {
+  open: boolean
+  sneakValue: number
+  sneakActive: boolean
+  onToggleSneak: (() => void) | null
+}
 type HudState = {
   time: string
   phase: string
@@ -220,6 +231,7 @@ export const ui = reactive({
     hunger: { current: 100, max: 100 },
     thirst: { current: 100, max: 100 },
   } as CharacterScreenState,
+  skillsScreen: { open: false, sneakValue: 0, sneakActive: false, onToggleSneak: null } as SkillsScreenState,
   hud: {
     time: '--',
     phase: '',
@@ -506,6 +518,21 @@ export function setCharacterStats(stats: CharacterStats): void {
   c.vigor = stats.vigor
   c.hunger = stats.hunger
   c.thirst = stats.thirst
+}
+
+export function openSkillsScreen(): void { ui.skillsScreen.open = true; emitUiOpen() }
+export function closeSkillsScreen(): void { ui.skillsScreen.open = false }
+export function isSkillsScreenOpen(): boolean { return ui.skillsScreen.open }
+export function configureSkillsScreen(handlers: { onToggleSneak: () => void }): void {
+  ui.skillsScreen.onToggleSneak = handlers.onToggleSneak
+}
+/** Pushed once/frame by `gameLoop.ts`, same cheap-bail convention as
+ *  `setCharacterStats`. */
+export function setSkillsState(sneakValue: number, sneakActive: boolean): void {
+  const s = ui.skillsScreen
+  if (s.sneakValue === sneakValue && s.sneakActive === sneakActive) return
+  s.sneakValue = sneakValue
+  s.sneakActive = sneakActive
 }
 
 export function setHudFps(fps: number): void {

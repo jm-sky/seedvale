@@ -21,6 +21,7 @@ const FORWARDED_FNS = [
   'openWorldMap', 'closeWorldMap', 'isWorldMapOpen', 'toggleWorldMap',
   'setHudFps', 'setHudTime', 'setHudExp', 'setHudInventoryWeight', 'setHudHeldTool', 'setHudPlayerNeeds',
   'setCharacterStats',
+  'configureSkillsScreen', 'setSkillsState',
   'toggleMinimap', 'setMinimapCollapsed', 'isMinimapCollapsed',
   'showToast', 'clearToasts',
   'configureTouchChrome', 'setTouchInputEnabled', 'clearTouchChrome',

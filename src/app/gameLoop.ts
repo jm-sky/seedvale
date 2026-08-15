@@ -786,6 +786,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         hunger: { current: player.needs.hunger.current, max: player.needs.hunger.max },
         thirst: { current: player.needs.thirst.current, max: player.needs.thirst.max },
       })
+      // Sneak's `active` flag can flip outside the Skills screen's own
+      // toggle (rest auto-deactivates it, `PlayerController.crouch`/
+      // `lieDown`) — pushed every frame with the same cheap-bail convention
+      // as the stats above so the UI never goes stale.
+      vueUi.setSkillsState(player.skills.sneak.value, player.skills.sneak.active)
       houseDoors.update(
         player.mesh.position.x,
         player.mesh.position.z,
@@ -854,6 +859,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           villages,
           nearbyHumanCount,
           (amount) => damageHealth(player.health, amount),
+          {
+            sneakValue: player.skills.sneak.value,
+            sneakActive: player.skills.sneak.active,
+            movement: player.movementState(),
+          },
         )
       })
       bundle.itemSpawners.update(dt, player.mesh.position, dayFactor)

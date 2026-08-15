@@ -50,7 +50,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 
 ### Fauna
 
-- Predator/prey roles, chase/flee, player-awareness, shared `HealthState`.
+- Predator/prey roles, chase/flee, player-awareness (probabilistic detection, `fauna/playerAwareness.ts`, plan 120, now Sneak-aware per plan 124 — see Items/player), shared `HealthState`.
 - Animal life: hunger/thirst/stamina. Elevated needs retarget to a real source (forage / shoreline / scavenged corpse); wander arrival no longer relieves needs. Livestock thirst prefers the owning household's `AnimalTrough` reserve (`AnimalAgent.household`, plan 122 — `ownerHouseId`'s first real consumer) before falling back to the shoreline search; wild fauna has no `household` and is unaffected.
 - Prey spawners (cave / thicket) with respawn; placement rejects roads, coast/beach, and other spawn points; village avoidance uses each settlement’s real footprint radius. A `wolfDen` spawner (plan 093 Etap E) reuses the same shape/prop for a one-time, non-respawning wolf pack (quest target, not a nuisance spawner).
 - `AnimalAgent.animalId` (plan 093 Etap D) is a stable per-instance id, distinct from `def.kind`, set at spawn time (wild fauna + livestock).
@@ -62,6 +62,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 - `Inventory` / `ItemKind` / single `HeldTool` slot (right hand exclusive). Flags, melee, spawn and consumables: [CATALOG.md](./items/CATALOG.md).
 - Player has shared `HealthState` (100 HP, CSS2D bar; no death UI/respawn yet). Universal melee (plan 123): `ITEM_CATALOG[kind].melee` is the single source of truth (damage/range/arcDot/windUp/hitWindow/recovery/staminaCost) for all six melee tools (knife/long_sword/axe/pitchfork/sickle/shovel); `player/playerMelee.ts` is a pure windUp→hitWindow→recovery state machine (hit resolves once per attack, stamina-gated) plus a deterministic range+facing-arc hit test (no raycasting) run against active `AnimalAgent`s independently of the single `pickInGaze` target. `[E]` over a live animal with a melee tool held still triggers the attack (`gameLoop.ts`); `PlayerController.setMeleeSwing` drives a minimal procedural swing (pivot `Group` on the hand socket) synced to the same lifecycle. `HealthState`/`AnimalAgent.collapse()`/the quest `onDeath` hook are unchanged — only how damage reaches them changed. No browser verification yet.
 - Player survival pools (`PlayerController.needs`, plan 106): stamina/vigor/hunger/thirst (`src/player/PlayerNeeds.ts`), HUD bars in `HudScreen.vue`. Hunger/thirst reaching 0 costs HP (`applyStarvationDamage`) — no new death/disease system, reuses `damageHealth`. Sprint gated on stamina.
+- Player skills foundation (`PlayerController.skills`, `src/player/PlayerSkills.ts`, plan 124): identity/value/active-state model, no XP/progression/persistence yet. First skill is Sneak, fixed at 0.5, toggled from the pause menu's "Umiejętności" (`SkillsScreen.vue`) — desktop and touch share the same menu, no dedicated hotkey. Active Sneak slows walk/sprint ×0.65 (`applySneakSpeedModifier`) and auto-deactivates on the existing rest pose transitions (`crouch()`/`lieDown()`); feeds `fauna/playerAwareness.ts`'s `detectionProbability` via the new `NoticeParams.stealthMultiplier` extension point (plan 120 §7) so stationary/moving/sprinting scale how much of the skill's benefit applies — no second detection system.
 - Food (tomato, raw_meat, roasted_meat, bread) and water (`waterskin_empty`/`waterskin_full`) are ordinary `Inventory` items with a `consumable` catalog flag ("Zjedz"/"Wypij" in the inventory screen). Cooking (`raw_meat → roasted_meat`) is a flat recipe table (`items/campfireCooking.ts`), `[R]` at a lit campfire. `WaterSource` (`src/world/WaterSource.ts`) is the shared well/lake drink/fill abstraction; lake is a synthetic per-frame candidate (no discrete world object), reusing fauna's shoreline probe.
 - Portable light: lit branch (~90s) or held wooden torch (~240s); persists in `SaveData.playerTorch`.
 - Tools in the world: shovel (dig/level soil), axe (multi-stage tree harvest), pickaxe (ore + mountain rock), knife (melee + corpse meat harvest), tent (place/rest/pack), garden pitchfork/sickle. Starting kit: knife, firestarter, blanket when missing.
@@ -154,6 +155,7 @@ src/items/HeldTool.ts
 src/items/itemCatalog.ts
 src/items/campfireCooking.ts
 src/player/PlayerNeeds.ts
+src/player/PlayerSkills.ts
 src/player/playerMelee.ts
 src/world/WaterSource.ts
 src/quests/QuestManager.ts

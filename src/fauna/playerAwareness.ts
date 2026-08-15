@@ -1,3 +1,5 @@
+import type { PlayerMovementState } from '../player/PlayerController'
+
 /**
  * Pure "does this animal notice the player" check — kept free of `THREE`/DOM
  * so it can be unit tested (see `CLAUDE.md`'s testing split: `src/fauna/`
@@ -12,6 +14,11 @@
  * separate pure functions (each independently testable); `isPlayerNoticed`
  * just compares one against the other, keeping this module allocation-free
  * and free of `Math.random()`.
+ *
+ * Plan 124: Sneak folds in as `NoticeParams.stealthMultiplier` — the exact
+ * "stealth modifier" extension point plan 120 §7 asked for, applied after
+ * distance/facing so `AnimalAgent`/the rest of this pipeline need no
+ * changes beyond computing that one number (`sneakDetectionMultiplier`).
  */
 export type NoticeParams = {
   /** XZ distance between the animal and the player. */
@@ -36,6 +43,12 @@ export type NoticeParams = {
    *  `detectionRoll`. Passed in rather than rolled internally so this stays
    *  a pure function; the caller (`AnimalAgent`) owns roll cadence. */
   roll: number
+  /** [0, 1] extra multiplier folded into the final probability, applied
+   *  after distance/facing (see `detectionProbability`) — Sneak (plan 124,
+   *  `sneakDetectionMultiplier`) or any later stealth modifier. Omitted /
+   *  `undefined` means "no effect" (1), so every pre-plan-124 call site and
+   *  test keeps its exact prior behaviour. */
+  stealthMultiplier?: number
 }
 
 /** Night halves the effective notice range at most; forest dampens it by up
@@ -123,9 +136,10 @@ function facingModifier(facingDot: number, minFacingDot: number): number {
 export function detectionProbability(p: Omit<NoticeParams, 'roll'>): number {
   const range = effectiveNoticeRange(p.noticeRange, p.dayFactor, p.forestFactor)
   if (range <= 0 || p.distance >= range) return 0
-  if (p.distance <= p.panicRange) return closeRangeProbability(p.distance, p.panicRange)
+  const stealth = p.stealthMultiplier ?? 1
+  if (p.distance <= p.panicRange) return closeRangeProbability(p.distance, p.panicRange) * stealth
   const distanceProb = farRangeProbability(p.distance, p.panicRange, range)
-  return distanceProb * facingModifier(p.facingDot, p.minFacingDot)
+  return distanceProb * facingModifier(p.facingDot, p.minFacingDot) * stealth
 }
 
 /** FNV-1a idiom — same as `settlement/household.ts`/`economy/initial.ts`'s
@@ -166,4 +180,49 @@ export function detectionRoll(animalId: string, tick: number): number {
 
 export function isPlayerNoticed(p: NoticeParams): boolean {
   return p.roll < detectionProbability(p)
+}
+
+/** Player-side stealth inputs for one perception check (plan 124 §4) —
+ *  bundled so `AnimalAgent.update()`/`Fauna.update()` gain one parameter
+ *  instead of three, and so later stealth modifiers (movement noise,
+ *  visibility/cover) extend this type instead of the call chain. */
+export type PlayerStealthState = {
+  /** `PlayerSkills['sneak'].value` — [0, 1], fixed at 0.5 until progression
+   *  exists (plan 124 §1). */
+  sneakValue: number
+  /** `PlayerSkills['sneak'].active`. */
+  sneakActive: boolean
+  movement: PlayerMovementState
+}
+
+/** How much of Sneak's benefit survives at each movement tier — faster
+ *  movement is noisier, so less of the skill value applies, but sprint
+ *  always keeps a sliver (plan 124 §3: "sprint remains possible... low
+ *  stealth benefit"). This game has no separate walk/run input (only
+ *  moving/sprinting, see `PlayerController.movementState()`), so `moving`
+ *  covers both the plan's "walking" and "running" targets. */
+const MOVEMENT_STEALTH_FACTOR: Record<PlayerMovementState, number> = {
+  stationary: 1,
+  moving: 0.7,
+  sprinting: 0.25,
+}
+
+/** Ceiling on how much Sneak can shrink detection probability — even at full
+ *  skill value while stationary, some residual chance always remains (no
+ *  hard invisibility toggle, consistent with `detectionProbability` never
+ *  hard-zeroing inside the notice range). */
+const MAX_STEALTH_REDUCTION = 0.9
+
+/**
+ * [0, 1] multiplier for `NoticeParams.stealthMultiplier` — 1 (no effect)
+ * when Sneak is inactive or has zero value, otherwise scaled down by skill
+ * value × the current movement tier's noise factor, clamped so it never
+ * goes negative. Deterministic and side-effect free — same inputs always
+ * produce the same multiplier.
+ */
+export function sneakDetectionMultiplier(state: PlayerStealthState): number {
+  if (!state.sneakActive) return 1
+  const value = clamp01(state.sneakValue)
+  const reduction = value * MOVEMENT_STEALTH_FACTOR[state.movement] * MAX_STEALTH_REDUCTION
+  return clamp01(1 - reduction)
 }

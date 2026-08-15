@@ -5,6 +5,8 @@ import {
   effectiveNoticeRange,
   isPlayerNoticed,
   type NoticeParams,
+  type PlayerStealthState,
+  sneakDetectionMultiplier,
 } from './playerAwareness'
 
 const base: Omit<NoticeParams, 'roll'> = {
@@ -130,5 +132,75 @@ describe('isPlayerNoticed', () => {
 
   it('never notices beyond the effective range, regardless of roll', () => {
     expect(isPlayerNoticed({ ...base, distance: 20, roll: 0 })).toBe(false)
+  })
+})
+
+describe('detectionProbability with stealthMultiplier (plan 124)', () => {
+  it('is unaffected when stealthMultiplier is omitted', () => {
+    expect(detectionProbability({ ...base, distance: 6 }))
+      .toBe(detectionProbability({ ...base, distance: 6, stealthMultiplier: 1 }))
+  })
+
+  it('scales the far-range probability down', () => {
+    const plain = detectionProbability({ ...base, distance: 10 })
+    const stealthy = detectionProbability({ ...base, distance: 10, stealthMultiplier: 0.5 })
+    expect(stealthy).toBeCloseTo(plain * 0.5)
+  })
+
+  it('also scales the close-range (panic) probability', () => {
+    const plain = detectionProbability({ ...base, distance: 1 })
+    const stealthy = detectionProbability({ ...base, distance: 1, stealthMultiplier: 0.5 })
+    expect(stealthy).toBeCloseTo(plain * 0.5)
+  })
+
+  it('never re-opens detection beyond the effective notice range', () => {
+    expect(detectionProbability({ ...base, distance: 20, stealthMultiplier: 0.1 })).toBe(0)
+  })
+})
+
+describe('sneakDetectionMultiplier (plan 124 §4)', () => {
+  const stealth = (overrides: Partial<PlayerStealthState>): PlayerStealthState => ({
+    sneakValue: 0.5,
+    sneakActive: true,
+    movement: 'stationary',
+    ...overrides,
+  })
+
+  it('is 1 (no effect) when Sneak is inactive, regardless of movement', () => {
+    expect(sneakDetectionMultiplier(stealth({ sneakActive: false, movement: 'stationary' }))).toBe(1)
+    expect(sneakDetectionMultiplier(stealth({ sneakActive: false, movement: 'sprinting' }))).toBe(1)
+  })
+
+  it('is 1 when the skill value is zero even if active', () => {
+    expect(sneakDetectionMultiplier(stealth({ sneakValue: 0 }))).toBe(1)
+  })
+
+  it('reduces detection probability least while sprinting, most while stationary', () => {
+    const stationary = sneakDetectionMultiplier(stealth({ movement: 'stationary' }))
+    const moving = sneakDetectionMultiplier(stealth({ movement: 'moving' }))
+    const sprinting = sneakDetectionMultiplier(stealth({ movement: 'sprinting' }))
+    expect(stationary).toBeLessThan(moving)
+    expect(moving).toBeLessThan(sprinting)
+    expect(sprinting).toBeLessThan(1) // sprint still keeps some stealth benefit
+  })
+
+  it('never drops below 0 and never exceeds 1', () => {
+    for (const movement of ['stationary', 'moving', 'sprinting'] as const) {
+      for (const sneakValue of [0, 0.25, 0.5, 0.75, 1]) {
+        const m = sneakDetectionMultiplier(stealth({ movement, sneakValue }))
+        expect(m).toBeGreaterThanOrEqual(0)
+        expect(m).toBeLessThanOrEqual(1)
+      }
+    }
+  })
+
+  it('feeding into detectionProbability makes a stationary sneaking player harder to detect', () => {
+    const plain = detectionProbability({ ...base, distance: 10 })
+    const withSneak = detectionProbability({
+      ...base,
+      distance: 10,
+      stealthMultiplier: sneakDetectionMultiplier(stealth({ movement: 'stationary' })),
+    })
+    expect(withSneak).toBeLessThan(plain)
   })
 })

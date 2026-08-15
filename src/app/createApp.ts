@@ -50,6 +50,7 @@ import {
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
 import { drinkWater as drinkWaterNeeds, eatFood, resetPlayerNeeds, restorePersistedNeeds } from '../player/PlayerNeeds'
+import { toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { QuestManager } from '../quests/QuestManager'
 import { createPostProcessing } from '../render/createPostProcessing'
@@ -325,6 +326,7 @@ export async function createApp(
   player.setName(config.player.name)
   player.setMoveAudio(worldAudio.playAt)
   scene.add(player.mesh)
+  vueUi.configureSkillsScreen({ onToggleSneak: () => toggleSneak(player.skills) })
   const hud = createHud(container)
   hud.setTime(dayNight.timeOfDay)
   const toast = createToast(container)

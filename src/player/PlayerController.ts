@@ -26,6 +26,13 @@ import { isExhausted } from '../shared/StaminaState'
 import { type Collider, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerStamina } from './PlayerNeeds'
+import { applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
+
+/** Stationary/moving/sprinting classification of the player's current
+ *  movement, derived from the same `moving`/`sprinting` flags `update()`
+ *  already tracks each frame — no new state. Consumed by fauna detection
+ *  (plan 124 §4, `fauna/playerAwareness.ts`) to scale Sneak's benefit. */
+export type PlayerMovementState = 'stationary' | 'moving' | 'sprinting'
 
 const MOVE_SPEED = 8
 /** Matches the capsule fallback's `CapsuleGeometry` radius (plan 097 §2.2) —
@@ -85,6 +92,9 @@ export class PlayerController {
    *  (tightly coupled to sprint below); `app/gameLoop.ts` ticks the other
    *  three pools each frame via `PlayerNeeds.ts`'s helpers. */
   readonly needs: PlayerNeeds
+  /** Sneak + future skills (plan 124 §1) — value/active state only, no
+   *  progression yet. */
+  readonly skills: PlayerSkills
   private readonly camera: THREE.PerspectiveCamera
   private readonly keys: KeyState
   private readonly look: LookState
@@ -161,6 +171,7 @@ export class PlayerController {
     this.isCapsule = isCapsule
     this.health = createHealthState(PLAYER_MAX_HP)
     this.needs = createPlayerNeeds()
+    this.skills = createPlayerSkills()
 
     this.mesh = new THREE.Group()
     this.mesh.add(root)
@@ -368,6 +379,13 @@ export class PlayerController {
     this.heldToolSwingPivot.rotation.set(rotation.x, rotation.y, rotation.z)
   }
 
+  /** Current movement tier for fauna stealth calculations (plan 124 §4) —
+   *  reuses `update()`'s own `moving`/`sprinting` flags. */
+  movementState(): PlayerMovementState {
+    if (!this.moving) return 'stationary'
+    return this.sprinting ? 'sprinting' : 'moving'
+  }
+
   setPosition(x: number, z: number): void {
     this.mesh.position.x = x
     this.mesh.position.z = z
@@ -412,6 +430,10 @@ export class PlayerController {
     if (this.pose === 'crouch') return
     this.clearPoseVisual()
     this.pose = 'crouch'
+    // Resting invalidates Sneak (plan 124 §2) — the only existing pose
+    // transition that makes the mode meaningless, so this is the one place
+    // it auto-deactivates.
+    this.skills.sneak.active = false
     this.currentAction?.fadeOut(0.15)
     this.currentAction = null
     this.modelRoot.rotation.x = CROUCH_ROTATION_X
@@ -427,6 +449,9 @@ export class PlayerController {
     if (this.pose === 'lie') return
     this.clearPoseVisual()
     this.pose = 'lie'
+    // Same reasoning as `crouch()` — town rest calls this directly without
+    // going through the crouch phase first.
+    this.skills.sneak.active = false
     this.currentAction?.fadeOut(0.15)
     this.currentAction = null
     this.modelRoot.rotation.x = LIE_DOWN_ROTATION_X
@@ -470,7 +495,8 @@ export class PlayerController {
     this.sprinting = this.moving && this.keys.sprint && !isExhausted(this.needs.stamina)
     tickPlayerStamina(this.needs.stamina, dt, this.sprinting)
     if (this.moving) {
-      const speed = this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED
+      const baseSpeed = this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED
+      const speed = applySneakSpeedModifier(baseSpeed, this.skills.sneak.active)
       this.wish.normalize().multiplyScalar(speed * dt)
       const candidateX = this.mesh.position.x + this.wish.x
       const candidateZ = this.mesh.position.z + this.wish.z

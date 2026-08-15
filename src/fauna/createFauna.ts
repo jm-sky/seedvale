@@ -2,6 +2,7 @@ import { Group, type Object3D, type Scene, type Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
+import type { PlayerStealthState } from './playerAwareness'
 import {
   disposeObject3D,
   type GltfAsset,
@@ -50,6 +51,9 @@ export type Fauna = {
     nearbyHumanCount?: number,
     /** Fauna→player damage callback when a predator bites in contact range. */
     onHumanHit?: (damage: number) => void,
+    /** Sneak/movement stealth inputs (plan 124 §4). Defaults to "no effect"
+     *  (see `AnimalAgent.update`'s own default) when omitted. */
+    playerStealth?: PlayerStealthState,
   ) => void
   dispose: () => void
   getAgents: () => AnimalAgent[]
@@ -589,7 +593,7 @@ export async function createFauna(
   }
 
   return {
-    update(dt, observerPos, timeOfDay, litFires, villages, nearbyHumanCount = 1, onHumanHit) {
+    update(dt, observerPos, timeOfDay, litFires, villages, nearbyHumanCount = 1, onHumanHit, playerStealth) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       for (const a of agents) {
         const forestFactor = sampleForestFactor(a.mesh.position.x, a.mesh.position.z)
@@ -603,6 +607,7 @@ export async function createFauna(
           villages,
           nearbyHumanCount,
           onHumanHit,
+          playerStealth,
         )
       }
 

@@ -12,6 +12,7 @@ import NotesScreen from './screens/NotesScreen.vue'
 import PauseMenu from './screens/PauseMenu.vue'
 import QuestLogScreen from './screens/QuestLogScreen.vue'
 import QuickActionsScreen from './screens/QuickActionsScreen.vue'
+import SkillsScreen from './screens/SkillsScreen.vue'
 import TimeSkipOverlay from './screens/TimeSkipOverlay.vue'
 import ToastStack from './screens/ToastStack.vue'
 import TouchChrome from './screens/TouchChrome.vue'
@@ -43,6 +44,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <VillagersScreen />
     <InventoryScreen />
     <CharacterScreen />
+    <SkillsScreen />
     <MerchantScreen />
     <QuickActionsScreen />
     <WorldConfigScreen />

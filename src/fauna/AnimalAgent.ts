@@ -35,7 +35,7 @@ import {
   MOTHER_FOLLOW_RADIUS,
   pickHerdLeader,
 } from './herdCohesion'
-import { detectionRoll, isPlayerNoticed } from './playerAwareness'
+import { detectionRoll, isPlayerNoticed, type PlayerStealthState, sneakDetectionMultiplier } from './playerAwareness'
 import {
   decidePredatorHumanIntent,
   type PredatorHumanIntent,
@@ -919,6 +919,9 @@ export class AnimalAgent {
     nearbyHumanCount = 1,
     /** Optional fauna→human damage seam (plan 056). Absent → chase only. */
     onHumanHit?: (damage: number) => void,
+    /** Sneak/movement stealth inputs (plan 124 §4). Defaults to "no effect"
+     *  so existing callers/tests that don't pass it keep prior behaviour. */
+    playerStealth: PlayerStealthState = { sneakValue: 0, sneakActive: false, movement: 'stationary' },
   ): void {
     if (this.health.dead) {
       this.timeSinceDeath += dt
@@ -934,7 +937,7 @@ export class AnimalAgent {
     this.currentVillages = villages
     this.currentOthers = others
     this.tickMaturity(dt)
-    const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires)
+    const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires, playerStealth)
 
     if (sense.playerActive) {
       this.cancelSourceTarget()
@@ -1128,6 +1131,7 @@ export class AnimalAgent {
     dayFactor: number,
     forestFactor: number,
     litFires: readonly { x: number, z: number }[],
+    playerStealth: PlayerStealthState,
   ): EnvironmentSense {
     const dx = observerPos.x - this.mesh.position.x
     const dz = observerPos.z - this.mesh.position.z
@@ -1153,6 +1157,7 @@ export class AnimalAgent {
       forestFactor,
       minFacingDot: PLAYER_NOTICE_CONE_DOT,
       roll: this.cachedPerceptionRoll,
+      stealthMultiplier: sneakDetectionMultiplier(playerStealth),
     })
     if (noticed) this.alertTimer = ALERT_HOLD_SEC
     const playerActive = noticed || this.alertTimer > 0

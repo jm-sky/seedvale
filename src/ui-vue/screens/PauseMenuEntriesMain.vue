@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { closePauseMenu, emitUiClick, isPauseMenuOpen, openCharacterScreen, setPauseSaveStatus, ui } from '../store'
+import { closePauseMenu, emitUiClick, isPauseMenuOpen, openCharacterScreen, openSkillsScreen, setPauseSaveStatus, ui } from '../store'
 
 const panel = ref<HTMLElement | null>(null)
 const name = ref(ui.pauseMenu.playerName)
@@ -22,6 +22,7 @@ function save(): void { emitUiClick(); ui.pauseMenu.onSave?.(); setPauseSaveStat
 function openQuestLog(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onQuestLog?.() }
 function openInventory(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onInventory?.() }
 function openCharacter(): void { emitUiClick(); closePauseMenu(); openCharacterScreen() }
+function openSkills(): void { emitUiClick(); closePauseMenu(); openSkillsScreen() }
 function openMap(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onWorldMap?.() }
 function resume(): void { emitUiClick(); closePauseMenu() }
 function openActions(): void { emitUiClick(); emit('open-actions') }
@@ -50,6 +51,13 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
       @click="openCharacter"
     >
       Postać
+    </button>
+    <button
+      type="button"
+      class="mb-2 block w-full cursor-pointer rounded-md border border-white/15 bg-transparent px-3.5 py-2.5 text-sm hover:bg-white/10"
+      @click="openSkills"
+    >
+      Umiejętności
     </button>
     <button
       type="button"
