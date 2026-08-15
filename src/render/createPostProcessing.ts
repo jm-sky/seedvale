@@ -107,6 +107,8 @@ export function createPostProcessing(
   const filmGradeUniform = outputPass.uniforms.filmGradeIntensity as { value: number }
 
   let aoWanted = config.aoEnabled
+  aoWanted = false // TEMP: isolation
+
   let aoSuppressed = false
   // 0 reads as "unbounded time since last change," so the first real check
   // in applyFrameBudget is never held back by the min-stable-time floor.
