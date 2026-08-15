@@ -320,6 +320,8 @@ export async function createApp(
   player.setName(config.player.name)
   player.setMoveAudio(worldAudio.playAt)
   scene.add(player.mesh)
+  // TEMP: isolation test — disable player mesh rendering
+  player.mesh.visible = false
   vueUi.configureSkillsScreen({ onToggleSneak: () => toggleSneak(player.skills) })
   const hud = createHud(container)
   hud.setTime(dayNight.timeOfDay)
