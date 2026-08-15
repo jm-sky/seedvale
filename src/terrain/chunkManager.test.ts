@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
 import { apronOriginWorld } from './chunkHeightmap'
-import { applyModificationToTile, pickNearestQueuedKey, type TerrainModification } from './chunkManager'
+import { applyModificationToTile, pickNearestQueuedKey, pickNextFinalizeKey, type TerrainModification } from './chunkManager'
 
 // Small grid so texel math is easy to reason about by hand: resolution 5,
 // chunkSize 32 -> step 8, apronRes 7 (world x/z per texel: -24,-16,-8,0,8,16,24
@@ -112,5 +112,47 @@ describe('pickNearestQueuedKey', () => {
 
   it('returns undefined when every key is stale', () => {
     expect(pickNearestQueuedKey(['a', 'b'], () => null)).toBeUndefined()
+  })
+})
+
+describe('pickNextFinalizeKey', () => {
+  const distOf = (dist: Record<string, number | null>) => (k: string) => dist[k] ?? null
+
+  it('prefers a mesh job over closer content', () => {
+    const jobs = [
+      { key: 'content-near', stage: 'content' as const },
+      { key: 'mesh-far', stage: 'mesh' as const },
+    ]
+    expect(
+      pickNextFinalizeKey(jobs, distOf({ 'content-near': 0, 'mesh-far': 3 }), () => true),
+    ).toBe('mesh-far')
+  })
+
+  it('picks the nearest content when no mesh jobs remain', () => {
+    const jobs = [
+      { key: 'far', stage: 'content' as const },
+      { key: 'near', stage: 'content' as const },
+    ]
+    expect(pickNextFinalizeKey(jobs, distOf({ far: 4, near: 1 }), () => true)).toBe('near')
+  })
+
+  it('skips content that cannot run so blocked jobs stay queued', () => {
+    const jobs = [
+      { key: 'blocked-near', stage: 'content' as const },
+      { key: 'ready-far', stage: 'content' as const },
+    ]
+    expect(
+      pickNextFinalizeKey(
+        jobs,
+        distOf({ 'blocked-near': 0, 'ready-far': 5 }),
+        (k) => k === 'ready-far',
+      ),
+    ).toBe('ready-far')
+  })
+
+  it('returns undefined when only blocked content remains', () => {
+    expect(
+      pickNextFinalizeKey([{ key: 'a', stage: 'content' }], () => 1, () => false),
+    ).toBeUndefined()
   })
 })

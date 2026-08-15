@@ -77,12 +77,36 @@ import { createGrassSystem, type WorldGrassChunk } from './grass'
 
 // Loaded once and reused across every chunk (GLTF loader also caches by URL, but
 // this avoids rebuilding the template array + re-running `prepareProp` per chunk).
+// `peek()` is sync so chunk content finalization never `await`s a shared GLB
+// promise (plan 119 — that await was the vegetation stampede).
+type TemplateCache = {
+  start: () => Promise<THREE.Object3D[]>
+  peek: () => THREE.Object3D[] | null
+}
+
 function memoTemplates(
   specs: Parameters<typeof loadPropTemplates>[0],
   fallback: () => THREE.Object3D,
-): () => Promise<THREE.Object3D[]> {
+): TemplateCache {
   let promise: Promise<THREE.Object3D[]> | null = null
-  return () => (promise ??= loadPropTemplates(specs, fallback))
+  let value: THREE.Object3D[] | null = null
+  return {
+    start() {
+      promise ??= loadPropTemplates(specs, fallback).then(
+        (templates) => {
+          value = templates
+          return templates
+        },
+        (err: unknown) => {
+          console.error('[chunkManager] prop template load failed', err)
+          value = []
+          return value
+        },
+      )
+      return promise
+    },
+    peek: () => value,
+  }
 }
 const getTreeTemplates = memoTemplates(TREE_SPECS, () => createTree(1))
 const getBushTemplates = memoTemplates(BUSH_SPECS, () => createBush(1))
@@ -93,6 +117,18 @@ const getRockClusterTemplates = memoTemplates(ROCK_CLUSTER_SPECS, () => createRo
 const getFallenLogTemplates = memoTemplates(FALLEN_LOG_SPECS, () => createFallenLog(1))
 const getCemeteryTemplates = memoTemplates(CEMETERY_SPECS, () => createCemeteryPlot(1))
 const getGraveTemplates = memoTemplates(GRAVE_SPECS, () => createGraveStone(1))
+
+function preloadPropTemplates(): void {
+  void getTreeTemplates.start()
+  void getBushTemplates.start()
+  void getCactusTemplates.start()
+  void getReedTemplates.start()
+  void getRockTemplates.start()
+  void getRockClusterTemplates.start()
+  void getFallenLogTemplates.start()
+  void getCemeteryTemplates.start()
+  void getGraveTemplates.start()
+}
 
 const GLB_ENV_KINDS = new Set<EnvironmentKind>(['fallenLog', 'largeRock', 'rockCluster'])
 
@@ -203,6 +239,8 @@ export type ChunkManagerConfig = {
 }
 
 type ChunkState = 'generating' | 'ready'
+/** Mesh attach vs vegetation/env/items. Same `finalizeQueue`; mesh wins when both wait. */
+export type FinalizeStage = 'mesh' | 'content'
 type ChunkRecord = {
   coord: ChunkCoord
   key: string
@@ -247,9 +285,10 @@ type ChunkRecord = {
    *  `grass` stays `undefined` until it resolves. */
   grassPending?: boolean
   pendingPromise?: Promise<void>
-  /** Set while this chunk's worker tile is waiting for the per-frame
-   *  `buildAndAttachMesh` slot (plan 112). Resolved by `drainFinalizeQueue`
-   *  after attach, or by `unload` if the chunk leaves range first. */
+  /** Set while this chunk is waiting for a per-frame finalize slot (plan 112/119).
+   *  `mesh` = `buildAndAttachMesh`; `content` = vegetation/env/items after terrain
+   *  is already `ready`. Resolved when both stages finish, or by `unload`. */
+  finalizeStage?: FinalizeStage
   finalizeWaiter?: { resolve: () => void, reject: (err: unknown) => void }
 }
 
@@ -318,7 +357,8 @@ export type ChunkManager = {
    *  prompt (plan 106). */
   region: RegionParams
   loadedChunkCount: () => number
-  /** Resolves once every listed chunk has finished generating (or failed/cancelled). */
+  /** Resolves once every listed chunk has finished generating (or failed/cancelled),
+   *  including mesh and content (vegetation/env) finalization. */
   waitForChunks: (coords: ChunkCoord[]) => Promise<void>
   /** Road/path corridors near a world point — same merge as `paramsFor`
    *  (`segmentsNear` + village house↔core paths). Used by fauna spawners to
@@ -422,6 +462,25 @@ export function pickNearestQueuedKey(
   return best
 }
 
+/** One finalize slot: nearest `mesh` always beats `content`. Content whose
+ *  templates are not ready is skipped (stays in the queue) so it cannot starve
+ *  terrain. Exported for tests — pure pick, no Three/worker. */
+export function pickNextFinalizeKey(
+  jobs: readonly { key: string, stage: FinalizeStage }[],
+  distanceOf: (key: string) => number | null,
+  contentCanRun: (key: string) => boolean,
+): string | undefined {
+  const mesh = pickNearestQueuedKey(
+    jobs.filter((job) => job.stage === 'mesh').map((job) => job.key),
+    distanceOf,
+  )
+  if (mesh) return mesh
+  return pickNearestQueuedKey(
+    jobs.filter((job) => job.stage === 'content').map((job) => job.key),
+    (key) => (contentCanRun(key) ? distanceOf(key) : null),
+  )
+}
+
 export function createChunkManager(
   scene: THREE.Scene,
   config: ChunkManagerConfig,
@@ -434,6 +493,9 @@ export function createChunkManager(
   // settlements (outside this manager entirely) register theirs keyed by
   // their own id through `registerColliders`/`clearColliders`.
   const colliderRegistry = createColliderRegistry(config.chunkSize)
+  // Kick GLB template loads off the chunk-finalize path (plan 119). Memoized
+  // at module level, so a later world rebuild is already warm.
+  preloadPropTemplates()
   // One material for every chunk this manager ever builds (perf review 005,
   // A5) — `flatShading`/`detailNormal` changes go through `onTerrainChange` →
   // full world rebuild, which recreates the whole `ChunkManager`, so this
@@ -457,7 +519,8 @@ export function createChunkManager(
   // used to run `buildAndAttachMesh()` immediately in the promise
   // continuation, so several results landing in one frame stacked 30–50 ms
   // mesh builds (review 012 / plan 112). Ready tiles now wait in
-  // `finalizeQueue` and `update()` finalizes at most one mesh per frame.
+  // `finalizeQueue`. `update()` spends the one slot on either a mesh or a
+  // content stage (plan 119) — never both in the same gameplay frame.
   let loadQueue: ChunkCoord[] = []
   const CHUNKS_STARTED_PER_FRAME = 2
   const CHUNKS_FINALIZED_PER_FRAME = 1
@@ -713,44 +776,118 @@ export function createChunkManager(
   function waitForFinalizeSlot(rec: ChunkRecord): Promise<void> {
     return new Promise((resolve, reject) => {
       rec.finalizeWaiter = { resolve, reject }
+      rec.finalizeStage = 'mesh'
       finalizeQueue.push(rec.key)
     })
+  }
+
+  function chunkNeedsContent(tile: ChunkTileResult): boolean {
+    return tile.vegetation.length > 0 || tile.environment.length > 0 || tile.items.length > 0
+  }
+
+  function contentTemplatesReady(tile: ChunkTileResult): boolean {
+    if (tile.vegetation.length > 0) {
+      if (
+        !getTreeTemplates.peek()
+        || !getBushTemplates.peek()
+        || !getCactusTemplates.peek()
+        || !getReedTemplates.peek()
+      ) {
+        return false
+      }
+    }
+    if (tile.environment.some((p) => GLB_ENV_KINDS.has(p.kind))) {
+      if (
+        !getRockTemplates.peek()
+        || !getRockClusterTemplates.peek()
+        || !getFallenLogTemplates.peek()
+      ) {
+        return false
+      }
+    }
+    if (tile.environment.some((p) => p.kind === 'cemetery')) {
+      if (!getCemeteryTemplates.peek() || !getGraveTemplates.peek()) return false
+    }
+    return true
   }
 
   function takeNearestFinalizeKey(): string | undefined {
     finalizeQueue = finalizeQueue.filter((k) => {
       const rec = chunks.get(k)
-      return !!(rec?.tile && rec.finalizeWaiter && rec.state === 'generating')
+      if (!rec?.tile || !rec.finalizeWaiter || !rec.finalizeStage) return false
+      if (rec.finalizeStage === 'mesh') return rec.state === 'generating'
+      return rec.state === 'ready'
     })
-    const key = pickNearestQueuedKey(finalizeQueue, (k) => {
-      const rec = chunks.get(k)
-      return rec ? chebyshevDistance(rec.coord, lastPlayerChunk) : null
+    const jobs = finalizeQueue.flatMap((key) => {
+      const rec = chunks.get(key)
+      return rec?.finalizeStage ? [{ key, stage: rec.finalizeStage }] : []
     })
+    const key = pickNextFinalizeKey(
+      jobs,
+      (k) => {
+        const rec = chunks.get(k)
+        return rec ? chebyshevDistance(rec.coord, lastPlayerChunk) : null
+      },
+      (k) => {
+        const rec = chunks.get(k)
+        return !!(rec?.tile && contentTemplatesReady(rec.tile))
+      },
+    )
     if (!key) return undefined
     const i = finalizeQueue.indexOf(key)
     if (i >= 0) finalizeQueue.splice(i, 1)
     return key
   }
 
-  async function runFinalize(rec: ChunkRecord): Promise<void> {
+  function finishFinalize(rec: ChunkRecord, err?: unknown): void {
     const waiter = rec.finalizeWaiter
     rec.finalizeWaiter = undefined
+    rec.finalizeStage = undefined
     if (!waiter) return
+    if (err !== undefined) waiter.reject(err)
+    else waiter.resolve()
+  }
+
+  /** Sync — both stages run without `await`, so continuations cannot stampede
+   *  when a shared GLB promise resolves (plan 119). */
+  function runFinalize(rec: ChunkRecord): void {
+    const tile = rec.tile
+    const stage = rec.finalizeStage
+    if (!tile || !stage || !rec.finalizeWaiter) return
+    if (!chunks.has(rec.key)) {
+      finishFinalize(rec)
+      return
+    }
     try {
-      if (!chunks.has(rec.key) || !rec.tile || rec.state !== 'generating') {
-        waiter.resolve()
+      if (stage === 'mesh') {
+        if (rec.state !== 'generating') {
+          finishFinalize(rec)
+          return
+        }
+        attachChunkMesh(rec, tile)
+        if (chunkNeedsContent(tile)) {
+          rec.finalizeStage = 'content'
+          finalizeQueue.push(rec.key)
+        } else {
+          rebuildColliders(rec)
+          finishFinalize(rec)
+        }
         return
       }
-      await attachGeneratedChunk(rec, rec.tile)
-      waiter.resolve()
+      if (rec.state !== 'ready' || !chunks.has(rec.key)) {
+        finishFinalize(rec)
+        return
+      }
+      attachChunkContent(rec, tile)
+      finishFinalize(rec)
     } catch (err) {
-      waiter.reject(err)
+      finishFinalize(rec, err)
     }
   }
 
-  /** Caps how many ready worker tiles become meshes this visit. `update()`
-   *  uses 1; `waitForChunks` may flush the rest when the game loop is idle
-   *  so world init cannot deadlock waiting for a drain that never comes. */
+  /** Caps how many mesh *or* content stages run this visit. `update()` uses 1
+   *  total (not 1+1). `waitForChunks` may flush the rest when the game loop is
+   *  idle so world init cannot deadlock waiting for a drain that never comes. */
   function drainFinalizeQueue(limit: number): void {
     let n = 0
     while (n < limit) {
@@ -759,21 +896,15 @@ export function createChunkManager(
       const rec = chunks.get(key)
       if (!rec) continue
       n++
-      void runFinalize(rec)
+      runFinalize(rec)
     }
   }
 
-  /** Worker tile → mesh / water / vegetation / items / environment.
-   *  `buildAndAttachMesh` is the expensive sync step (review 012); callers
-   *  must not run more than `CHUNKS_FINALIZED_PER_FRAME` of these per
-   *  game-loop frame. Digs are applied here (not at enqueue) so a
-   *  modification that lands while the tile is queued still reaches the mesh. */
-  async function attachGeneratedChunk(rec: ChunkRecord, tile: ChunkTileResult): Promise<void> {
-    const key = rec.key
+  /** Terrain + water + grass request. Sets `state = 'ready'` so the player
+   *  can stand on the chunk before trees/rocks exist. Digs are applied here
+   *  (not at enqueue) so a modification while queued still reaches the mesh. */
+  function attachChunkMesh(rec: ChunkRecord, tile: ChunkTileResult): void {
     const coord = rec.coord
-    // Re-apply any digs made before this chunk was (re)generated — see
-    // `ChunkManager.modifyTerrain`'s doc comment. Done here, not at enqueue,
-    // so a dig that lands while the tile is queued still reaches the mesh.
     for (const mod of modifications) {
       applyModificationToTile(
         tile,
@@ -810,22 +941,21 @@ export function createChunkManager(
 
     rec.state = 'ready'
     syncGrassForRecord(rec, lastPlayerChunk)
+  }
 
+  /** Vegetation / items / environment / colliders. Caller guarantees the
+   *  needed GLB templates are already in cache (`contentTemplatesReady`). */
+  function attachChunkContent(rec: ChunkRecord, tile: ChunkTileResult): void {
+    const coord = rec.coord
     const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
     const sampleTileHeight: HeightSampler = (sx, sz) =>
       sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
 
     if (tile.vegetation.length > 0) {
-      const glbT0 = performance.now()
-      const [treeTemplates, bushTemplates, cactusTemplates, reedTemplates] = await Promise.all([
-        getTreeTemplates(),
-        getBushTemplates(),
-        getCactusTemplates(),
-        getReedTemplates(),
-      ])
-      getMonitor().recordHitch('STREAMING', performance.now() - glbT0, 'chunk vegetation glb')
-      // Re-check after the await — chunk may have unloaded while templates loaded.
-      if (!chunks.has(key)) return
+      const treeTemplates = getTreeTemplates.peek() ?? []
+      const bushTemplates = getBushTemplates.peek() ?? []
+      const cactusTemplates = getCactusTemplates.peek() ?? []
+      const reedTemplates = getReedTemplates.peek() ?? []
 
       const vegT0 = performance.now()
       const treeIds: string[] = []
@@ -936,30 +1066,11 @@ export function createChunkManager(
     })
     getMonitor().recordHitch('PROPS', performance.now() - itemsT0, 'chunk items')
 
-    const needsEnvGlb = tile.environment.some((p) => GLB_ENV_KINDS.has(p.kind))
-    const needsCemetery = tile.environment.some((p) => p.kind === 'cemetery')
-    let rockTemplates: THREE.Object3D[] | null = null
-    let rockClusterTemplates: THREE.Object3D[] | null = null
-    let fallenLogTemplates: THREE.Object3D[] | null = null
-    let cemeteryPlot: THREE.Object3D | undefined
-    let graveTemplates: THREE.Object3D[] | undefined
-    if (needsEnvGlb || needsCemetery) {
-      const envGlbT0 = performance.now()
-      const [rocks, clusters, logs, plots, graves] = await Promise.all([
-        needsEnvGlb ? getRockTemplates() : Promise.resolve(null),
-        needsEnvGlb ? getRockClusterTemplates() : Promise.resolve(null),
-        needsEnvGlb ? getFallenLogTemplates() : Promise.resolve(null),
-        needsCemetery ? getCemeteryTemplates() : Promise.resolve(null),
-        needsCemetery ? getGraveTemplates() : Promise.resolve(null),
-      ])
-      getMonitor().recordHitch('STREAMING', performance.now() - envGlbT0, 'chunk environment glb')
-      if (!chunks.has(key)) return
-      rockTemplates = rocks
-      rockClusterTemplates = clusters
-      fallenLogTemplates = logs
-      cemeteryPlot = plots?.[0]
-      graveTemplates = graves ?? undefined
-    }
+    const rockTemplates = getRockTemplates.peek()
+    const rockClusterTemplates = getRockClusterTemplates.peek()
+    const fallenLogTemplates = getFallenLogTemplates.peek()
+    const cemeteryPlot = getCemeteryTemplates.peek()?.[0]
+    const graveTemplates = getGraveTemplates.peek() ?? undefined
 
     const envT0 = performance.now()
     const proceduralEnvPlacements = tile.environment.filter((p) => !GLB_ENV_KINDS.has(p.kind))
@@ -1076,6 +1187,7 @@ export function createChunkManager(
       record.finalizeWaiter.resolve()
       record.finalizeWaiter = undefined
     }
+    record.finalizeStage = undefined
     finalizeQueue = finalizeQueue.filter((k) => k !== record.key)
     if (record.state === 'generating') cancelChunkTile(record.key)
     colliderRegistry.clearColliders(record.key)
@@ -1267,9 +1379,9 @@ export function createChunkManager(
   }
 
   /** Resolves once every listed chunk has finished generating (or failed /
-   *  cancelled), including mesh finalization. During gameplay `update()`
-   *  drains one mesh per frame; at init / rebuild there is no game loop, so
-   *  this pumps the queue itself after `GAME_LOOP_IDLE_MS`. */
+   *  cancelled), including mesh *and* content finalization. During gameplay
+   *  `update()` drains one stage per frame; at init / rebuild there is no
+   *  game loop, so this pumps the queue itself after `GAME_LOOP_IDLE_MS`. */
   async function waitForChunks(coords: ChunkCoord[]): Promise<void> {
     const pending = Promise.all(coords.map((c) => ensureLoaded(c))).then(() => undefined)
     const waiting = {}
