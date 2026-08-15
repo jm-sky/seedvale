@@ -225,7 +225,8 @@ export function createPostProcessing(
   }
 
   return {
-    render: () => composer.render(),
+    // TEMP: isolation test — bypass EffectComposer
+    render: () => renderer.render(scene, camera),
     setSize: (w, h) => composer.setSize(w, h),
     setPixelRatio: (pixelRatio) => composer.setPixelRatio(pixelRatio),
     applyConfig,
