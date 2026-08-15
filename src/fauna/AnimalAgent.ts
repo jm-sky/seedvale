@@ -26,6 +26,14 @@ import {
 } from './AnimalLife'
 import { createBloodSplat, disposeBloodSplat } from './bloodSplat'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
+import {
+  HERD_FOLLOW_RADIUS,
+  HERD_SPECIES,
+  JUVENILE_MATURITY_SECONDS,
+  JUVENILE_SCALE_FACTOR,
+  MOTHER_FOLLOW_RADIUS,
+  pickHerdLeader,
+} from './herdCohesion'
 import { isPlayerNoticed } from './playerAwareness'
 import {
   decidePredatorHumanIntent,
@@ -258,6 +266,10 @@ export type AnimalRole = 'predator' | 'prey' | 'livestock'
  *  animals aren't afraid of people and treat the village/farmstead as safe
  *  ground to flee toward (plan 044 §2.3/§2.4). */
 export type AnimalSociability = 'wild' | 'domestic'
+/** `juvenile` follows its mother and is visually scaled down
+ *  (`JUVENILE_SCALE_FACTOR`) until it ages past `JUVENILE_MATURITY_SECONDS`
+ *  (plan 118). Only assigned by herding-species spawn logic. */
+export type AnimalLifeStage = 'adult' | 'juvenile'
 /** wolf/fox/deer/stag + livestock (chicken/sheep/cow/horse/donkey) have GLBs
  *  under `public/models/fauna/`; rabbit/duck/boar stay procedural. */
 export type AnimalKind =
@@ -594,6 +606,20 @@ export class AnimalAgent {
    *  bound to a `kill_target_animal { dangerous: true }` quest stage
    *  (plan 110), not a separate animal type. */
   private dangerous = false
+  /** Shared id for herd members, assigned only at spawn for species in
+   *  `HERD_SPECIES` — never mutated after construction (plan 118). Leadership
+   *  is computed on demand (`pickHerdLeader`), not stored. */
+  readonly herdId?: string
+  /** `motherId`/`age` are only meaningful while `lifeStage === 'juvenile'`
+   *  (plan 118) — cleared/reset once the animal matures. */
+  private lifeStage: AnimalLifeStage
+  private motherId?: string
+  private age = 0
+  /** This frame's live agent array, refreshed at the top of every `update()`
+   *  call — read by `pickWanderTarget()`'s herd/mother bias without
+   *  threading it through `wander()`'s call sites (same technique as
+   *  `currentVillages` above, plan 118). */
+  private currentOthers: AnimalAgent[] = []
 
   constructor(
     def: AnimalDef,
@@ -609,9 +635,15 @@ export class AnimalAgent {
     sampleForestFactor?: (x: number, z: number) => number,
     ownerHouseId?: string,
     onDeath?: (animalId: string) => void,
+    herdId?: string,
+    lifeStage: AnimalLifeStage = 'adult',
+    motherId?: string,
   ) {
     this.def = def
     this.animalId = animalId
+    this.herdId = herdId
+    this.lifeStage = lifeStage
+    this.motherId = motherId
     this.ownerHouseId = ownerHouseId
     this.onDeath = onDeath
     this.sampleHeight = sampleHeight
@@ -644,6 +676,13 @@ export class AnimalAgent {
     this.mesh.name = 'fauna'
     this.mesh.userData.animalKind = def.kind
     this.mesh.userData.animalRole = def.role
+    // Juvenile down-scale (plan 118) — mirrors `markDangerous()`'s post-hoc
+    // `mesh.scale.multiplyScalar`, applied uniformly here whether `mesh` is a
+    // GLB clone, a procedural builder's group, or the capsule fallback above
+    // (all are feet-grounded at their own root, see `snapY()`).
+    if (this.lifeStage === 'juvenile') {
+      this.mesh.scale.multiplyScalar(JUVENILE_SCALE_FACTOR[def.kind] ?? 1)
+    }
 
     if (animations.length > 0) {
       // Prefer skinned model root (child of wrap) so clip bindings resolve.
@@ -703,16 +742,39 @@ export class AnimalAgent {
     this.labelEl.append(this.labelNameEl, this.labelBarsEl)
 
     this.label = new CSS2DObject(this.labelEl)
-    const labelHeight = this.isCapsule
-      ? 0.45 * def.scale + 0.3
-      : def.modelHeight + 0.3
-    this.label.position.set(0, labelHeight, 0)
+    this.label.position.set(0, this.labelHeight(), 0)
     this.mesh.add(this.label)
 
     assignRenderLayer(this.mesh, AGENT_RENDER_LAYER)
 
     this.snapY()
     this.pickWanderTarget()
+  }
+
+  /** Ages a juvenile and flips it to `adult` past `JUVENILE_MATURITY_SECONDS`
+   *  — restores adult mesh/label scale and drops `motherId` (plan 118). The
+   *  one-time `lifeStage` transition is its own guard; no-op for adults. */
+  private tickMaturity(dt: number): void {
+    if (this.lifeStage !== 'juvenile') return
+    this.age += dt
+    if (this.age < JUVENILE_MATURITY_SECONDS) return
+    this.lifeStage = 'adult'
+    this.motherId = undefined
+    const factor = JUVENILE_SCALE_FACTOR[this.def.kind]
+    if (factor) this.mesh.scale.multiplyScalar(1 / factor)
+    this.label.position.y = this.labelHeight()
+  }
+
+  /** Name/HP label height above the mesh root — folds in the juvenile scale
+   *  factor so a shrunk animal's label doesn't float above its body (plan
+   *  118). Recomputed at maturity to match the restored adult scale. */
+  private labelHeight(): number {
+    const juvenileFactor = this.lifeStage === 'juvenile'
+      ? JUVENILE_SCALE_FACTOR[this.def.kind] ?? 1
+      : 1
+    return this.isCapsule
+      ? (0.45 * this.def.scale + 0.3) * juvenileFactor
+      : (this.def.modelHeight + 0.3) * juvenileFactor
   }
 
   dispose(): void {
@@ -840,6 +902,8 @@ export class AnimalAgent {
     this.moving = false
     this.sprinting = false
     this.currentVillages = villages
+    this.currentOthers = others
+    this.tickMaturity(dt)
     const sense = this.senseEnvironment(observerPos, dayFactor, forestFactor, litFires)
 
     if (sense.playerActive) {
@@ -1427,21 +1491,69 @@ export class AnimalAgent {
   }
 
   private pickWanderTarget(): void {
-    const [minR, maxR] = this.wanderRadius
     const bias = this.needWanderBias()
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const r = (minR + Math.random() * (maxR - minR)) * bias
-      const a = Math.random() * Math.PI * 2
-      const x = this.home.x + Math.cos(a) * r
-      const z = this.home.z + Math.sin(a) * r
-      if (this.isWalkable(x, z) && (this.def.sociability !== 'wild' || !this.isNearVillage({ x, z }))) {
-        this.target.set(x, 0, z)
-        this.wanderTimer = (3 + Math.random() * 4) / bias
-        return
-      }
+    if (this.pickFollowTarget()) {
+      // Shorter cadence than the default retarget below — cohesion is
+      // retarget-driven, not continuously tracked, so a tighter interval
+      // keeps following visibly responsive (plan 118).
+      this.wanderTimer = (1.5 + Math.random() * 2) / bias
+      return
+    }
+    const [minR, maxR] = this.wanderRadius
+    if (this.pickPointNear(this.home.x, this.home.z, minR * bias, maxR * bias)) {
+      this.wanderTimer = (3 + Math.random() * 4) / bias
+      return
     }
     this.target.copy(this.home)
     this.wanderTimer = (3 + Math.random() * 4) / bias
+  }
+
+  /** Mother/herd wander bias (plan 118), tried before the home-anchored
+   *  target above. Mother-follow takes priority over generic herd cohesion.
+   *  Threat/flee never reaches here — `updatePrey()`'s threat branch returns
+   *  before `wander()`/`pickWanderTarget()` is ever called, so this can't
+   *  interfere with fleeing. Returns true if it picked a target. */
+  private pickFollowTarget(): boolean {
+    if (this.lifeStage === 'juvenile' && this.motherId) {
+      const mother = this.currentOthers.find((o) => o.animalId === this.motherId && !o.isDead())
+      if (mother) {
+        const [minR, maxR] = MOTHER_FOLLOW_RADIUS
+        if (this.pickPointNear(mother.mesh.position.x, mother.mesh.position.z, minR, maxR)) return true
+      } else {
+        // Mother is dead or gone (corpse expired) — drop the stale
+        // reference instead of re-checking every retarget (plan 118 §5).
+        this.motherId = undefined
+      }
+    }
+    if (this.herdId) {
+      const tier = HERD_SPECIES[this.def.kind]
+      if (tier) {
+        const leader = pickHerdLeader(this.currentOthers, this.herdId)
+        if (leader && leader !== this) {
+          const [minR, maxR] = HERD_FOLLOW_RADIUS[tier]
+          if (this.pickPointNear(leader.mesh.position.x, leader.mesh.position.z, minR, maxR)) return true
+        }
+      }
+    }
+    return false
+  }
+
+  /** Picks a walkable point within `[minR,maxR]` of `(cx,cz)` (outside
+   *  villages for wild animals), up to 8 attempts. Sets `this.target` and
+   *  returns true on success, otherwise leaves it untouched. Shared by the
+   *  default home-anchored wander and the herd/mother follow bias. */
+  private pickPointNear(cx: number, cz: number, minR: number, maxR: number): boolean {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const r = minR + Math.random() * (maxR - minR)
+      const a = Math.random() * Math.PI * 2
+      const x = cx + Math.cos(a) * r
+      const z = cz + Math.sin(a) * r
+      if (this.isWalkable(x, z) && (this.def.sociability !== 'wild' || !this.isNearVillage({ x, z }))) {
+        this.target.set(x, 0, z)
+        return true
+      }
+    }
+    return false
   }
 
   private isWalkable(x: number, z: number): boolean {

@@ -1,6 +1,6 @@
 Plan: Fauna — stada i młode
 
-Status: "planned" 📋
+Status: `done` (technical verification green; no browser/play check yet)
 Created: 2026-08-14
 Priority: 🟡 medium · Effort: M
 Depends on: /094/
@@ -260,3 +260,27 @@ Ten plan powinien zostawić prostą bazę pod:
 - naturalną dynamikę populacji.
 
 Ważne: v1 ma przede wszystkim sprawić, żeby fauna wyglądała na bardziej żywą. Nie próbujemy jeszcze symulować całego cyklu życia zwierząt.
+
+## What changed
+
+**Note on scope vs. the text above**: the "Nie zmieniać jeszcze modelu 3D ani rozmiaru w runtime" line was explicitly overridden by the user for this implementation — juveniles *are* visually scaled down at runtime (see below). Everything else in "Poza zakresem" was respected as written.
+
+- New pure module `src/fauna/herdCohesion.ts` (+ `herdCohesion.test.ts`) — no Three.js/DOM, mirrors the `predatorHumanDecision.ts` convention:
+  - `HERD_SPECIES`: `deer`/`stag`/`boar` → `'tight'`, `rabbit` → `'loose'` (wolf out of scope, matches the plan's table).
+  - `JUVENILE_SCALE_FACTOR`: `deer`/`stag` → `0.6` (40% down, large bucket), `boar`/`rabbit` → `0.72`/`0.75` (28%/25% down, small bucket — boar was deliberately put in the small bucket by user choice, independent of its "tight" cohesion tier).
+  - `JUVENILE_SPAWN_CHANCE`, `HERD_CLUSTER_RADIUS`, `HERD_FOLLOW_RADIUS`, `MOTHER_FOLLOW_RADIUS`, `JUVENILE_MATURITY_SECONDS` (600s, anchored against `dayNight.ts`'s `dayLengthSec=480`).
+  - `pickHerdLeader()` — a pure, deterministic function (lexicographically-smallest live `animalId` within a herd). No leader is ever stored: every herd member computes this independently and agrees, so a dead leader is replaced automatically with zero reassignment bookkeeping.
+- `src/fauna/AnimalAgent.ts`:
+  - New optional constructor params `herdId`, `lifeStage` (`'adult'|'juvenile'`, new exported `AnimalLifeStage` type), `motherId`, added strictly after the existing trailing params — every pre-existing call site keeps compiling unchanged.
+  - Juvenile down-scale applied once at construction via `mesh.scale.multiplyScalar(...)`, mirroring the existing `markDangerous()` precedent; the once-computed label height now folds in the same factor so a shrunk juvenile's name/HP label doesn't float above its body.
+  - `update()` now ages juveniles (`tickMaturity()`) and, past `JUVENILE_MATURITY_SECONDS`, flips `lifeStage` to `adult`, clears `motherId`, and restores mesh/label scale.
+  - `pickWanderTarget()` gained a `pickFollowTarget()` bias step, tried first: a juvenile with a live mother targets near her (tighter radius, shorter retarget cadence); otherwise a herd member targets near the live herd leader (`pickHerdLeader`). Both read a new `currentOthers` field set once per frame in `update()` — same technique as the existing `currentVillages`, so no signature change was needed on `wander()`'s five call sites. A juvenile whose mother is dead/gone explicitly clears `motherId` right there (no dangling reference survives past the animal's next retarget).
+  - Threat/flee is untouched — `updatePrey()`'s threat branch returns before `wander()`/`pickWanderTarget()` is ever reached, so herd/mother bias structurally cannot interfere with fleeing.
+- `src/fauna/createFauna.ts`: `spawnAgent()` extended with optional `herdId`/`lifeStage`/`motherId`, threaded straight into the new `AnimalAgent` params. The `SPAWNS` ring-spawn loop now branches on `HERD_SPECIES[spec.kind]`: herding species place one anchor point (same call as before, still separation-checked against other spawns) then cluster the rest of the species' count around it (mirrors the existing one-time `wolfDen` pack pattern, no `farFromOtherSpawns` filter on individual cluster members), all sharing one `herdId`; then 0–2 juveniles are rolled per herd (`JUVENILE_SPAWN_CHANCE`), each bound via `motherId` to a random already-placed adult from that herd. Non-herding species (duck, predators, livestock) and the cave/thicket spawner respawn path are untouched — respawned deer/stag come back solitary, intentionally (no rebalancing/reorg system, per scope).
+- No changes to `AnimalLife.ts`, `AnimalSpawner.ts`, `faunaCombat.ts`, `QuestManager.ts`, or `quests.ts` — quest animal-target resolution is by `AnimalKind` only and never touches `herdId`/`lifeStage`.
+- No `docs/assets/MODELS.md`/`docs/items/CATALOG.md` updates — no new GLB, procedural builder, or sound; juvenile scale is a runtime multiplier on already-wired assets.
+
+## Verification
+
+- `npx tsc --noEmit`, `npm run lint` (clean on changed/new files — pre-existing unrelated errors in `_temp/asset-audit/inspect.mjs` only), `npm run build`, `npm run test` (94/94 files, 719/719 tests, including new `herdCohesion.test.ts`) — all green.
+- **Not yet done:** browser/play check — load a settlement and confirm deer/stag/boar clusters visibly move together (rabbit groups visibly looser), a juvenile (visibly smaller) stays near and follows an adult, flee/chase still works normally for herd/juvenile animals, killing a herd leader or a mother produces no errors and the group/juvenile continues, and (optionally, given the 600s timer) a juvenile eventually grows back to adult size and stops following its mother.

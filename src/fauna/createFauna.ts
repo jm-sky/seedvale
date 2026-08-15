@@ -14,8 +14,13 @@ import { isCoastalPlacement } from '../terrain/coastPlacement'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
-import { ANIMAL_DEFS, AnimalAgent, type AnimalKind, type VillageInfo } from './AnimalAgent'
+import { ANIMAL_DEFS, AnimalAgent, type AnimalKind, type AnimalLifeStage, type VillageInfo } from './AnimalAgent'
 import { type PreySpawner, updateSpawners } from './AnimalSpawner'
+import {
+  HERD_CLUSTER_RADIUS,
+  HERD_SPECIES,
+  JUVENILE_SPAWN_CHANCE,
+} from './herdCohesion'
 import { createBoarModel, createDuckModel, createRabbitModel } from './proceduralAnimals'
 
 /** Extra clearance past each corridor's `halfWidth` — matches forest-belt
@@ -355,7 +360,18 @@ export async function createFauna(
    *  `buildFauna`), covering both the initial ring spawn and later
    *  spawner-driven respawns below. */
   let nextAnimalId = 0
-  const spawnAgent = (kind: AnimalKind, x: number, z: number): AnimalAgent => {
+  /** Per-build counter for `herdId` (plan 118) — mirrors `nextAnimalId`,
+   *  only consumed by the ring-spawn loop below (spawner respawns stay
+   *  solitary, see its own comment). */
+  let nextHerdId = 0
+  const spawnAgent = (
+    kind: AnimalKind,
+    x: number,
+    z: number,
+    herdId?: string,
+    lifeStage?: AnimalLifeStage,
+    motherId?: string,
+  ): AnimalAgent => {
     const tpl = templates[kind]
     let visual: Object3D | undefined
     let animations = tpl?.animations ?? []
@@ -380,6 +396,9 @@ export async function createFauna(
       sampleForestFactor,
       undefined,
       onAnimalDeath,
+      herdId,
+      lifeStage,
+      motherId,
     )
   }
 
@@ -388,6 +407,53 @@ export async function createFauna(
     const habitatFilter = habitatFilterFor(spec.profile)
     const filter = (x: number, z: number) =>
       (!habitatFilter || habitatFilter(x, z)) && farFromOtherSpawns(x, z)
+    const herdTier = HERD_SPECIES[spec.kind]
+    if (herdTier) {
+      // Herd spawn (plan 118): one anchor point placed exactly like a
+      // solitary spawn below (habitat-filtered, separation-checked against
+      // other species' spawns), then the rest of the herd clusters around
+      // it — mirrors the one-time `wolfDen` pack pattern further down
+      // (`findWalkableNear(pos.x, pos.z, 0, 4)`, no `farFromOtherSpawns` on
+      // individual pack members).
+      const anchor = findWalkableNear(
+        settlementCenter.x,
+        settlementCenter.z,
+        footprintRadius + minOffset,
+        footprintRadius + maxOffset,
+        filter,
+      )
+      if (!anchor) continue
+      placedSpawnPoints.push(anchor)
+      const herdId = `${spec.kind}-herd-${nextHerdId++}`
+      const [clusterMin, clusterMax] = HERD_CLUSTER_RADIUS[herdTier]
+      const adults: AnimalAgent[] = []
+      const anchorAgent = spawnAgent(spec.kind, anchor.x, anchor.z, herdId, 'adult')
+      scene.add(anchorAgent.mesh)
+      agents.push(anchorAgent)
+      adults.push(anchorAgent)
+      for (let i = 1; i < spec.count; i++) {
+        const pos = findWalkableNear(anchor.x, anchor.z, clusterMin, clusterMax) ?? anchor
+        const agent = spawnAgent(spec.kind, pos.x, pos.z, herdId, 'adult')
+        scene.add(agent.mesh)
+        agents.push(agent)
+        adults.push(agent)
+      }
+      // 0-2 juveniles per herd, each bound to a random already-placed adult
+      // as `motherId` — deliberately rarer than adults (plan 118 §2).
+      const juvenileChance = JUVENILE_SPAWN_CHANCE[spec.kind]
+      if (juvenileChance) {
+        for (const chance of [juvenileChance.first, juvenileChance.second]) {
+          if (random() >= chance) continue
+          const mother = adults[Math.floor(random() * adults.length)]
+          const pos = findWalkableNear(mother.mesh.position.x, mother.mesh.position.z, clusterMin, clusterMax)
+            ?? { x: mother.mesh.position.x, z: mother.mesh.position.z }
+          const juvenile = spawnAgent(spec.kind, pos.x, pos.z, herdId, 'juvenile', mother.animalId)
+          scene.add(juvenile.mesh)
+          agents.push(juvenile)
+        }
+      }
+      continue
+    }
     for (let i = 0; i < spec.count; i++) {
       const pos = findWalkableNear(
         settlementCenter.x,

@@ -31,7 +31,6 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda | 🟡 | XL | ~~003~~ ~~028~~ |
 
 + `2026-08-14--117--npc-reaction-to-player.md`
-+ `2026-08-14--118--fauna-stada-i-mlode.md`
 
 ---
 
@@ -61,6 +60,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 | `2026-08-14--110--quests-v3-closure-world-identity-and-lifecycle.md` | Domknięcie planu 093: lifecycle `failed`/`invalidated`, generyczny sygnał śmierci zwierzęcia (predator kills), trait "groźny wilk", failure "zagubionej owcy", stabilne `landmarkId` (tylko pole, bez rejestru), rebind/invalidate animal target po save/load — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🔴 | L | ~~093~~ |
 | `2026-08-14--116--super-dialogue-audio-pack.md` | Super Dialogue Audio Pack v1: powitanie/pożegnanie/potwierdzenie na dialogu NPC + rozszerzone hmm/thank-you, głos przypisany deterministycznie per NPC (5 aktorów, CC BY 4.0) — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🟡 | M | — |
 | `2026-08-14--117--npc-reaction-to-player.md` | Naturalne reakcje NPC na Bohatera: `reactionChance` (osobowość/`curious` trait/relacja/reputacja) zastępuje automatyczną reakcję z samego dystansu, 3 poziomy reakcji (normal/warm/enthusiastic, reużywają istniejące pule dźwięków), `QuestManager.getPlayerStanding()` jako reputacja wyprowadzona z istniejących `relations` (bez nowego systemu) — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🟡 | M | — |
+| `2026-08-14--118--fauna-stada-i-mlode.md` | Stada (deer/stag/boar zwarte, rabbit luźne) przez `herdId` + deterministyczny `pickHerdLeader()` (bez przechowywanego lidera) i młode (`lifeStage`/`motherId`/wiek, dorastanie po 600s) przez bias w `pickWanderTarget()` — nowy moduł `herdCohesion.ts`; młode wizualnie pomniejszone w runtime (30–50% duże gatunki, 20–30% małe, decyzja użytkownika ponad tekstem planu) — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🟡 | M | ~~094~~ |
 
 Historical playtest queue (files in archive): [below](#playtest-queue-archived-batch).
 
