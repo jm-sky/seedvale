@@ -1422,7 +1422,8 @@ export function createChunkManager(
       const winner = await Promise.race([pending, Promise.resolve(waiting)])
       if (winner !== waiting) return
       if (performance.now() - lastUpdateAt > GAME_LOOP_IDLE_MS) {
-        drainFinalizeQueueByBudget(FINALIZE_DRAIN_BUDGET_MS)
+        // TEMP: isolation test — disable finalize budget
+        drainFinalizeQueueByBudget(Infinity)
       }
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => resolve())
