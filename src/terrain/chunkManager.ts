@@ -542,12 +542,6 @@ export function createChunkManager(
   // `update()` hasn't run recently, the waiter pumps finalization itself.
   let lastUpdateAt = 0
   const GAME_LOOP_IDLE_MS = 48
-  // Wall-clock cap on the idle catch-up drain below — job cost varies too
-  // much (mesh vs content stage, GLB clone cost) for a job-count cap to
-  // bound actual main-thread time, so this bounds time spent per rAF tick
-  // instead. Matches the hitch threshold (`HITCH_MS` in perf/monitor.ts) so
-  // a catch-up burst reads as "at most one hitch," not a multi-second stall.
-  const FINALIZE_DRAIN_BUDGET_MS = 8
   // Chunks only exist within loadRadius, so a grass radius beyond it is a dead
   // knob — clamp so the GUI slider (1-12) can't silently do nothing, and so
   // raising loadRadius later doesn't make grass range jump unexpectedly.
