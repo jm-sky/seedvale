@@ -11,9 +11,9 @@ const ROAD_QUERY_SIZE = 8
 /** Small margin beyond a corridor's `halfWidth` so the road clip doesn't cut
  *  off right at the geometric edge. */
 const ROAD_FEATHER = 0.6
-/** Above this `TreeEnvSample.biome.desert` weight, ground reads as dry/packed
- *  dirt rather than grass — matches `envGrowthFactor`'s desert/forest split. */
-const DESERT_DIRT_THRESHOLD = 0.4
+/** Above this `TreeEnvSample.biome.desert` weight, ground reads as sand
+ *  rather than grass — arid land is visually dust/sand, not packed dirt. */
+const DESERT_SAND_THRESHOLD = 0.4
 
 function distanceToSegment(x: number, z: number, seg: RoadCorridorSegment): number {
   const dx = seg.bx - seg.ax
@@ -30,7 +30,8 @@ function distanceToSegment(x: number, z: number, seg: RoadCorridorSegment): numb
  *  (desert weight) already key off, so "looks like sand/rock" and "sounds
  *  like sand/rock" stay in sync without a second terrain-type system. Sand
  *  and road are checked first so a sandy or desert road still reads as
- *  sand/road, not stone/dirt. */
+ *  sand/road, not stone. Desert biome is `sand` (visual dust/sand), not
+ *  packed-dirt — the `dirt` surface stays on the type for A/B packs. */
 export function sampleFootstepSurface(chunkManager: ChunkManager, x: number, z: number): FootstepSurface {
   const height = chunkManager.sampleHeight(x, z)
   if (height < chunkManager.waterLevel + sandBandAt(x, z, chunkManager.seed)) return 'sand'
@@ -43,5 +44,5 @@ export function sampleFootstepSurface(chunkManager: ChunkManager, x: number, z: 
   if (isRockGround(x, z, chunkManager)) return 'stone'
 
   const { biome } = chunkManager.sampleTreeEnv(x, z)
-  return biome.desert > DESERT_DIRT_THRESHOLD ? 'dirt' : 'grass'
+  return biome.desert > DESERT_SAND_THRESHOLD ? 'sand' : 'grass'
 }

@@ -8,6 +8,7 @@ import { createWorldAudio } from '../audio/createWorldAudio'
 import { createHouseDoorTracker } from '../audio/doorSounds'
 import { createFireAudio, playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
+import { applyFootstepPackFromUrl } from '../audio/playerMoveSounds'
 import { createWeatherAudio } from '../audio/weatherSounds'
 import { saveAllDomains, saveGraphics, savePlayer, saveWorld } from '../config/persistConfig'
 import {
@@ -202,6 +203,7 @@ export async function createApp(
   camera.layers.enable(WATER_RENDER_LAYER)
   camera.layers.enable(AGENT_RENDER_LAYER)
   const worldAudio = createWorldAudio(camera)
+  applyFootstepPackFromUrl()
 
   const postProcessing = createPostProcessing(
     renderer,

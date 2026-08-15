@@ -3,6 +3,13 @@ import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
 import type { DayNightState } from '../world/dayNight'
 import type { ClimateState } from '../world/weather'
+import {
+  FOOTSTEP_PACK_IDS,
+  type FootstepPackId,
+  getFootstepPack,
+  getLastFootstepSurface,
+  setFootstepPack,
+} from '../audio/playerMoveSounds'
 import { QUALITY_PRESET_IDS } from '../config/qualityProfiles'
 import { triangleCount } from '../config/worldConfig'
 import { isTouchDevice } from '../input/isTouchDevice'
@@ -669,6 +676,19 @@ export function createDebugGui(
       return getMonitor().getLiveStats().textures || renderer.info.memory.textures
     },
   }
+  const audio = {
+    pack: getFootstepPack(),
+    get surface() {
+      return getLastFootstepSurface() ?? '—'
+    },
+  }
+  const audioFolder = gui.addFolder('Audio')
+  audioFolder
+    .add(audio, 'pack', [...FOOTSTEP_PACK_IDS])
+    .name('Footstep pack')
+    .onChange((pack: FootstepPackId) => setFootstepPack(pack))
+  audioFolder.add(audio, 'surface').name('Footstep surface').listen().disable()
+
   const perfFolder = gui.addFolder('Performance')
   perfFolder
     .add(perf, 'enableTimings')

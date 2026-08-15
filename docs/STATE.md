@@ -67,6 +67,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 - Tools in the world: shovel (dig/level soil), axe (multi-stage tree harvest), pickaxe (ore + mountain rock), knife (melee + corpse meat harvest), tent (place/rest/pack), garden pitchfork/sickle. Starting kit: knife, firestarter, blanket when missing.
 - Wait / camp rest / town rest / tent rest exist. Quick Actions gate town rest on `nearTown`. Esc during rest aborts the skip before opening pause. Rest fully restores vigor/stamina (plan 106).
 - Dropped items, item spawners, placed fires and large walk-in caves (`world/largeCaves.ts`, empty of loot/mobs) exist.
+- Player footsteps are terrain-classified (`src/terrain/footstepSurface.ts` → `audio/playerMoveSounds.ts`, plan 121): beach **and** desert biome play sand (Anton Z default). A/B packs: `?footsteps=anton|legacy|mayra` or lil-gui Audio.
 
 ### Quests / progression
 

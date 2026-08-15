@@ -4,7 +4,7 @@ Living backlog of sound effects Seedvale still needs (or has but must wire).
 
 Inventory of files already in the repo: [`public/sounds/README.md`](../../public/sounds/README.md). One-shot research snapshot that seeded this list: [research 007](../research/2026-08-11--007--sound-needs.md).
 
-**Last updated:** 2026-08-14
+**Last updated:** 2026-08-15
 
 ## How to use
 
@@ -34,7 +34,7 @@ If the feature needs no new sound, do nothing to this file.
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
 | UI | `ui-click-01` | Inventory / pause / dialog (open + click) |
 | Actions | dig ×4, wood-chop ×1, melee hit/kill, well ×1, fire ignite/extinguish | Shovel / axe / melee / well / campfire |
-| Player move | footsteps ×5 terrain sets (grass/dirt/sand/stone/road), jump cloth, water-lap, door open/close/latch/creak | Walk/sprint terrain-classified, jump stand-in, enter water, house threshold |
+| Player move | footsteps × terrain sets (grass/sand/stone/road; dirt aliases sand), jump cloth, water-lap, door open/close/latch/creak | Walk/sprint terrain-classified (Anton Z default, plan 121); jump stand-in, enter water, house threshold |
 
 ## Backlog
 
@@ -42,8 +42,8 @@ If the feature needs no new sound, do nothing to this file.
 
 | ID | Sound | Context | Status | Related |
 |----|-------|---------|--------|---------|
-| S01 | Footsteps (grass / dirt / sand / stone / road) | Player move; terrain-classified via `src/terrain/footstepSurface.ts`, sprint variant | `wired` | `footstep-{grass,dirt,sand,stone,road}-NN` (see `public/sounds/README.md` "Footsteps (terrain)"); old `footstep-01…04` (Kenney hard surface) kept only for the jump-land thud. Swamp/mud and snow variants still open — falls back to grass/dirt. |
-| S02 | Splash / wade | Enter water / swim | `wired` | `water-lap-01` candidate only — true splash/wade still open |
+| S01 | Footsteps (grass / dirt / sand / stone / road) | Player move; terrain-classified via `src/terrain/footstepSurface.ts`, sprint variant | `wired` | Default pack Anton Z `footstep-{grass,sand,stone}-01…07` + existing road gravel (plan 121). Beach **and** desert biome play sand. A/B: `?footsteps=legacy\|mayra`. Old Kenney `footstep-01…04` still jump-land only. Swamp/mud still open (falls back to grass). Snow clip in repo as `footstep-snow-alt-mayra-01` — not wired (no snow surface yet). |
+| S02 | Splash / wade | Enter water / swim | `wired` | `water-lap-01` candidate only — true splash/wade still open. Anton Z `footstep-water-01…06` in repo, not wired. |
 | S03 | Fire (loop + ignite) | Campfire / torch / fire pit | `wired` | `ambient-fire-loop-01` + `action-fire-ignite-01` / `action-fire-extinguish-01` |
 | S04 | Melee hit (knife/axe) | Player → animal melee | `wired` | `action-melee-hit-01` / `action-melee-kill-01` |
 | S05 | UI click / open-close | Inventory, pause, dialog | `wired` | `ui-click-01` (Kenney metalClick) for click and open; `ui-open-01` unused |

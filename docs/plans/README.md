@@ -65,6 +65,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-15--121--footstep-sound-refresh.md` | Kroki: Anton Z jako default (sand/grass/stone), pustynia → sand, A/B `?footsteps=legacy\|mayra`; Fantozzi/swuing zostają legacy. Techniczna weryfikacja w commicie; brak testu w przeglądarce | 🟡 | S | — |
 | `2026-08-15--119--chunk-streaming-performance.md` | Hitchy chunk streaming: preload GLB + kolejka mesh/content (1 etap/klatkę, priorytet mesh); stampede po `await` szablonów usunięty; techniczna weryfikacja zielona, brak `?benchmark=*` vs review 015 / capture planu | 🔴 | M | ~~112~~ |
 | `2026-08-15--120--fauna-probabilistic-perception.md` | Probabilistyczna percepcja zwierząt: `playerAwareness` z binarnego progu na ciągły falloff dystansu × facingDot × day/night/las, deterministyczny roll (bez `Math.random()`, throttlowany co 0.5s per zwierzę), bez zmian flee/react — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🟡 | M | — |
 | `2026-08-14--113--rendering-performance-gpu-scaling.md` | P0/P1 (+ tani P2 LOD/cienie): tańsze N8AO na High, cień raz/klatkę, instancing palisady/krzaków, lustro 30 Hz bez NPC, agresywniejszy grass LOD; P3/P4 i merge vegetation odłożone; techniczna weryfikacja zielona, brak `?benchmark=*` vs review 012 | 🔴 | L | ~~112~~ |

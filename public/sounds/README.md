@@ -109,17 +109,43 @@ Per-surface player footstep variants (S01), replacing the single generic
 tree, now reused only for the jump-land thud. Terrain classification and
 wiring: `src/terrain/footstepSurface.ts`, `src/audio/playerMoveSounds.ts`.
 
+**Default pack (`anton`, plan 121):** Anton Z Walk one-shots, peak-normalized
+mono 48 kHz. Beach **and** desert biome play `sand` (previously desert used
+concrete-derived `dirt` and Fantozzi sand sounded like a hard floor). A/B
+without rebuild: `?footsteps=anton|legacy|mayra` or lil-gui → Audio.
+
 | filename | oryginal filename | source url | notes |
 |----------|-------------------|------------|-------|
-| footstep-grass-01…09.ogg | footstep-grass.wav (derivative), swuing | https://freesound.org/people/swuing/sounds/38874/ | CC-BY 3.0; grass/forest/meadow default |
-| footstep-road-01…10.ogg | Gravel Footsteps pack, Ali_6868 | https://freesound.org/people/Ali_6868/packs/21608/ | CC0; packed dirt/gravel road & path corridors |
-| footstep-dirt-01…09.ogg | footstep-concrete.wav (derivative), swuing | https://freesound.org/people/swuing/sounds/38873/ | CC-BY 3.0; dry/desert-weighted ground fallback |
-| footstep-sand-01…06.ogg | Fantozzi-Sand{L,R}{1,2,3}.ogg | unknown (staged as "Fantozzi footsteps") | **license unverified — confirm source/terms before shipping** |
-| footstep-stone-01…06.ogg | Fantozzi-Stone{L,R}{1,2,3}.ogg | unknown (staged as "Fantozzi footsteps") | **license unverified — confirm source/terms before shipping**; rock/mountain-ridge terrain |
+| footstep-grass-01…07.ogg | Antons_Footsteps_FS_Grass_Walk_01…07.wav | https://trade-a-chest.itch.io/footstep-sound-effects | **wired default**; Anton Z; grass/forest/meadow |
+| footstep-sand-01…07.ogg | Antons_Footsteps_FS_Sand_Walk_01…07.wav | j.w. | **wired default**; beach + desert. Soft grain, not a floor thud |
+| footstep-stone-01…07.ogg | Antons_Footsteps_FS_Stone_Walk_01…07.wav | j.w. | **wired default**; rock / mountain ridge |
+| footstep-road-01…10.ogg | Gravel Footsteps pack, Ali_6868 | https://freesound.org/people/Ali_6868/packs/21608/ | CC0; unchanged — Anton Z has no gravel |
+| footstep-wood-01…07.ogg | Antons_Footsteps_FS_Wood_Walk_01…07.wav | Anton Z (same itch page) | **not wired**; candidate for house interiors |
+| footstep-water-01…06.ogg | Antons_Footsteps_FS_Water_Walk_01…06.wav | j.w. | **not wired**; S02 wade candidate (better than `water-lap-01`) |
 
-Swamp/mud and snow-specific footstep variants are still open (no dedicated
-recording sourced yet) — that ground currently falls back to the grass/dirt
-sets. See `docs/assets/SOUNDS.md` S01.
+### Footsteps — A/B alts (not the default)
+
+Kept so a playtest can pick a better option without reconverting. Switch via
+`?footsteps=legacy` / `?footsteps=mayra`.
+
+| filename | oryginal filename | source url | notes |
+|----------|-------------------|------------|-------|
+| footstep-grass-legacy-01…09.ogg | footstep-grass.wav (derivative), swuing | https://freesound.org/people/swuing/sounds/38874/ | CC-BY 3.0; previous default grass |
+| footstep-dirt-legacy-01…09.ogg | footstep-concrete.wav (derivative), swuing | https://freesound.org/people/swuing/sounds/38873/ | CC-BY 3.0; previous desert fallback — sounds like floor |
+| footstep-sand-legacy-01…06.ogg | Fantozzi-Sand{L,R}{1,2,3}.ogg | unknown (staged as "Fantozzi footsteps") | **license unverified**; previous sand — the floor-thud set |
+| footstep-stone-legacy-01…06.ogg | Fantozzi-Stone{L,R}{1,2,3}.ogg | unknown (staged as "Fantozzi footsteps") | **license unverified**; previous stone |
+| footstep-sand-alt-mayra-01.ogg | Sand.wav | https://mayragandra.itch.io/free-footsteps-sound-effects | Mayra Free Footsteps Pack; 1 clip — A/B only |
+| footstep-grass-alt-mayra-01.ogg / `-run-01` | Grass 1.wav / Grass Running.wav | j.w. | Mayra |
+| footstep-forest-alt-mayra-01…02.ogg | Forest 1.wav / Forest 2.wav | j.w. | Mayra; used as mayra grass/dirt extras |
+| footstep-gravel-alt-mayra-01.ogg / `-run-01` | Gravel 1.wav / Gravel - Run.wav | j.w. | Mayra; mayra `road` |
+| footstep-stone-alt-mayra-01…02.ogg | Concrete 1.wav / Concrete 2.wav | j.w. | Mayra; mayra `stone` |
+| footstep-snow-alt-mayra-01.ogg | Snow.wav | j.w. | **not wired**; S01 snow still open |
+
+`BVKER-Footsteps` (CC0 foley library) was staged and **not promoted** — mixed
+lighters/coins/forest beds, not per-surface walk one-shots.
+
+Swamp/mud-specific footstep variants are still open — that ground currently
+falls back to grass. See `docs/assets/SOUNDS.md` S01.
 
 ## Actions
 
@@ -146,3 +172,11 @@ sets. See `docs/assets/SOUNDS.md` S01.
 | Source | License posture |
 |--------|-----------------|
 | Super Dialogue Audio Pack V1 — Dillon Becker (dillonbecker.com) | **CC BY 4.0** — attribution required. Credit: "Super Dialogue Audio Pack V1 by Dillon Becker (dillonbecker.com), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)." First non-CC0 source in this folder — every prior entry above is CC0 or promo/eval-only; if the game gets a public release, this credit needs to appear somewhere player-visible (no in-game credits screen exists yet — open item, not solved by plan 116). |
+
+## License notes (2026-08-15 batch)
+
+| Source | License posture |
+|--------|-----------------|
+| Footstep Sound Effects — Anton Z. (trade-a-chest.itch.io) | Custom itch license: **use in commercial/non-commercial projects OK**; do not resell/redistribute the assets themselves (including edited as a pack). Not CC0. Credit not required; pack page: https://trade-a-chest.itch.io/footstep-sound-effects |
+| Free Footsteps Sound Effects — Mayra (mayragandra.itch.io) | Commercial/non-commercial use OK; credit not required but appreciated. Do not treat as CC0. https://mayragandra.itch.io/free-footsteps-sound-effects |
+| BVKER Foley / Footsteps (bvker.com) | Staged only, **not shipped**. Pack page claims CC0; contents are mixed foley, not terrain walk one-shots. |
