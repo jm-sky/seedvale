@@ -8,6 +8,9 @@ import { closePauseMenu, emitUiClick, isPauseMenuOpen, openCharacterScreen, open
 const panel = ref<HTMLElement | null>(null)
 const name = ref(ui.pauseMenu.playerName)
 const saveTimer = ref<number | null>(null)
+const appVersion = __APP_VERSION__
+const gitCommit = __GIT_COMMIT__
+const buildDate = __BUILD_DATE__
 
 const emit = defineEmits<{
   'open-actions': []
@@ -116,6 +119,9 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
     >
       Nowa gra
     </button>
+    <div class="mt-4 border-t border-white/10 pt-3 text-center font-mono text-[10px] opacity-40">
+      v{{ appVersion }} | {{ gitCommit }} | {{ buildDate }}
+    </div>
     <div class="mt-1 text-[11px] opacity-60">
       {{ isTouchDevice() ? 'Joystick — ruch · przeciągnij ekran — rozglądanie · dotknij poza oknem — zamknij' : 'WASD — ruch · mysz (klik) — rozglądanie · Esc — pauza' }}
     </div>
