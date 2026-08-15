@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-14
+**Last updated:** 2026-08-15
 
 ## Quick rules
 
@@ -15,7 +15,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, pitchfork, sickle |
 | Held 3D attach | `heldToolVisual.ts` → `WristR` + `HELD_ATTACH` (Phase 6: migrate per-tool numbers to `grip` anchors via alignment browser) |
 | Ground GLB scale | `itemModels.ts` → `preparePropFitMax` (not height-only) |
-| Melee vs animals | `faunaCombat.ts` — sword 28, axe 20, pitchfork 14, knife/sickle 12, shovel 8 |
+| Melee vs animals | `ITEM_CATALOG[kind].melee` (plan 123, `itemCatalog.ts`) — single source of truth for damage/range/arcDot/windUp/hitWindow/recovery/staminaCost; `player/playerMelee.ts` runs the windUp→hitWindow→recovery lifecycle + range/facing-arc hit test. `faunaCombat.ts`'s `isMeleeTool()` just reads this. Damage unchanged: sword 28, axe 20, pitchfork 14, knife/sickle 12, shovel 8 |
 | Village one-time tools | `createItemSpawners.ts` |
 | Portable light | `PlayerTorch` — lit branch (90s) or held wooden_torch (240s); exclusive right hand |
 | Consumable (Zjedz/Wypij) | `ITEM_CATALOG[kind].consumable` (plan 106) — `{ need: 'hunger'\|'thirst', relief, resultKind? }`; driven from inventory screen (`InventoryScreenItemDetails.vue`) or world drink/cook actions |

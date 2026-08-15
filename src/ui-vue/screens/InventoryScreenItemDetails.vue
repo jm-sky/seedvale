@@ -23,7 +23,7 @@ const { categoryLabel } = useItemCategoryLabels()
 
 const item = computed<ItemDef | null>(() => props.selectedItem ? ITEM_DEFS[props.selectedItem] : null)
 const itemCount = computed<number>(() => ui.inventory.counts[props.selectedItem as ItemKind ?? ''] ?? 0)
-const itemDamage = computed<number | null>(() => ITEM_CATALOG[props.selectedItem as ItemKind]?.meleeDamage ?? null)
+const itemDamage = computed<number | null>(() => ITEM_CATALOG[props.selectedItem as ItemKind]?.melee?.damage ?? null)
 const consumable = computed(() => props.selectedItem ? ITEM_CATALOG[props.selectedItem].consumable ?? null : null)
 const consumeLabel = computed(() => consumable.value?.need === 'thirst' ? 'Wypij' : 'Zjedz')
 

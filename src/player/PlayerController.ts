@@ -131,6 +131,11 @@ export class PlayerController {
   private heldToolKind: ToolKind | null = null
   /** Bumps on each `setHeldTool` so stale async GLB loads are ignored. */
   private heldToolLoadToken = 0
+  /** Empty group parented on the hand socket, between it and the mounted
+   *  held-tool object (plan 123) — `setMeleeSwing` rotates only this, so the
+   *  tool's normal `HELD_ATTACH` grip transform (set on `heldToolObject`
+   *  itself) is never touched by the attack animation. */
+  private heldToolSwingPivot: THREE.Object3D | null = null
 
   private constructor(
     root: THREE.Object3D,
@@ -325,19 +330,42 @@ export class PlayerController {
       disposeObject3D(this.heldToolObject)
       this.heldToolObject = null
     }
+    if (this.heldToolSwingPivot) {
+      this.heldToolSwingPivot.removeFromParent()
+      this.heldToolSwingPivot = null
+    }
     if (!kind) return
 
     const parent = this.handSocket()
+    const pivot = new THREE.Group()
+    parent.add(pivot)
     void createHeldToolObject(kind).then((tool) => {
       if (loadToken !== this.heldToolLoadToken || this.heldToolKind !== kind) {
         disposeObject3D(tool)
+        pivot.removeFromParent()
         return
       }
-      this.heldToolObject = mountHeldToolOnSocket(tool, parent, kind, {
+      this.heldToolObject = mountHeldToolOnSocket(tool, pivot, kind, {
         characterRoot: this.modelRoot,
         characterHeight: PLAYER_HEIGHT,
       })
+      this.heldToolSwingPivot = pivot
     })
+  }
+
+  /** Additive rotation (radians) on the held-tool socket during a melee
+   *  attack (plan 123) — layered via `heldToolSwingPivot` so it composes
+   *  cleanly on top of the tool's own grip transform regardless of whether
+   *  that transform came from `HELD_ATTACH` or the anchor-pair solver.
+   *  `null` resets to the tool's normal held pose. No-op before the held
+   *  tool's async GLB load resolves (pivot not yet created). */
+  setMeleeSwing(rotation: { x: number, y: number, z: number } | null): void {
+    if (!this.heldToolSwingPivot) return
+    if (!rotation) {
+      this.heldToolSwingPivot.rotation.set(0, 0, 0)
+      return
+    }
+    this.heldToolSwingPivot.rotation.set(rotation.x, rotation.y, rotation.z)
   }
 
   setPosition(x: number, z: number): void {

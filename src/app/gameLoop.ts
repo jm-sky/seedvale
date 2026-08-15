@@ -44,14 +44,21 @@ import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds
 import { isDebugMode } from '../debug/debugMode'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
-import { isMeleeTool, playerToolDamage } from '../fauna/faunaCombat'
+import { isMeleeTool } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
+import { ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { getMonitor, withCategory } from '../perf'
+import {
+  createPlayerMelee,
+  type MeleeHitCandidate,
+  meleeSwingAngle,
+  resolveMeleeHits,
+} from '../player/playerMelee'
 import {
   applyStarvationDamage,
   restoreNeedsFromSleep,
@@ -261,6 +268,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   /** Previous frame's `composer.render()` cost — drives N8AO auto-budget. */
   let lastRenderMs = 0
 
+  /** Universal melee attack lifecycle (plan 123) — owns wind-up/hit/recovery
+   *  timing shared by every melee tool; `ITEM_CATALOG[kind].melee` supplies
+   *  the per-weapon config. */
+  const playerMelee = createPlayerMelee()
+
   /** Currently gaze-highlighted NPC/animal, if any — tracked so we only toggle
    *  the CSS class on change instead of writing every frame. */
   let highlightedTarget: Highlightable | null = null
@@ -375,6 +387,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const quickActionsConsumed = keyboard.consumeQuickActions()
       const minimapConsumed = keyboard.consumeMinimap()
       setHighlight(null)
+      // Modal safety (plan 123): cancel any in-flight attack rather than let
+      // it keep timing out/resolving while input is blocked.
+      if (playerMelee.isAttacking()) {
+        playerMelee.reset()
+        player.setMeleeSwing(null)
+      }
 
       switch (modal) {
         case 'busy':
@@ -420,6 +438,57 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.mesh.position,
         held,
       )
+
+      // Universal melee tick (plan 123) — runs every frame regardless of
+      // input. Candidates are read from `interactables`'s already-filtered
+      // `animal` entries (GAZE_RANGE, currently 5, comfortably covers every
+      // weapon's configured `range`, currently <=2.6), not a fresh world
+      // query — the hit test itself is independent of whichever single
+      // target `pickInGaze` would pick below.
+      const meleeCandidates: MeleeHitCandidate[] = []
+      const meleeAnimalById = new Map<string, AnimalAgent>()
+      for (const item of interactables) {
+        if (item.kind !== 'animal') continue
+        meleeCandidates.push({ id: item.animal.animalId, x: item.position.x, z: item.position.z, alive: true })
+        meleeAnimalById.set(item.animal.animalId, item.animal)
+      }
+      const meleeTick = playerMelee.update(dt)
+      player.setMeleeSwing(
+        playerMelee.isAttacking()
+          ? { x: 0, y: meleeSwingAngle(playerMelee.state(), playerMelee.phaseProgress()), z: 0 }
+          : null,
+      )
+      if (meleeTick.hitReady && meleeTick.config) {
+        const hitIds = resolveMeleeHits(
+          player.mesh.position.x,
+          player.mesh.position.z,
+          mouseLook.state.yaw,
+          meleeTick.config,
+          meleeCandidates,
+        )
+        for (const id of hitIds) {
+          const animal = meleeAnimalById.get(id)
+          if (!animal || animal.isDead()) continue
+          animal.takeDamage(meleeTick.config.damage, 'player')
+          const killed = animal.isDead()
+          if (killed) playActionMeleeKill(worldAudio.playAt, animal.mesh.position)
+          else playActionMeleeHit(worldAudio.playAt, animal.mesh.position)
+          const label = ANIMAL_LABELS[animal.def.kind]
+          if (killed) {
+            const override = questManager.onInteractObjective({
+              type: 'animal_died',
+              animalId: animal.animalId,
+            })
+            const denOverride = bundle.fauna.isWolfDenCleared()
+              ? questManager.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })
+              : null
+            toast.show(denOverride?.line ?? override?.line ?? `${label} pada.`)
+          } else {
+            toast.show(`Trafiono: ${label}`)
+          }
+        }
+      }
+
       // Ground-work (shovel soil / pickaxe rock) is a fallback, not a competing
       // candidate — only synthesized when nothing else is being gazed at.
       const target = pickInGaze(
@@ -562,23 +631,17 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           vueUi.openNpcDialogueMenu(target.npc, target.settlement, questManager, dayNight.timeOfDay)
         } else if (target.kind === 'animal') {
           if (isMeleeTool(held)) {
-            const beforeDead = target.animal.isDead()
-            target.animal.takeDamage(playerToolDamage(held), 'player')
-            const killed = !beforeDead && target.animal.isDead()
-            if (killed) playActionMeleeKill(worldAudio.playAt, target.position)
-            else playActionMeleeHit(worldAudio.playAt, target.position)
-            const label = ANIMAL_LABELS[target.animal.def.kind]
-            if (killed) {
-              const override = questManager.onInteractObjective({
-                type: 'animal_died',
-                animalId: target.animal.animalId,
-              })
-              const denOverride = bundle.fauna.isWolfDenCleared()
-                ? questManager.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })
-                : null
-              toast.show(denOverride?.line ?? override?.line ?? `${label} pada.`)
-            } else {
-              toast.show(`Trafiono: ${label}`)
+            // `[E]` over a gazed live animal is the attack *trigger* (keeps
+            // the existing "Atakuj: X" prompt UX) — the actual hit/damage is
+            // resolved geometrically above, independent of this single
+            // gazed target (plan 123 §3).
+            const config = ITEM_CATALOG[held].melee
+            if (config && !playerMelee.isAttacking()) {
+              if (player.needs.stamina.current < config.staminaCost) {
+                toast.show('Brak siły na atak.', 'error')
+              } else {
+                playerMelee.requestAttack(config, player.needs.stamina)
+              }
             }
           } else {
             const outcome = resolveInteraction(target, questManager)

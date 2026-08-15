@@ -6,7 +6,7 @@ tags: [fauna]
 # Plan: Universal Melee Combat
 
 **Created:** 2026-08-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented, technical checks green (tsc/lint/test/build); no browser verification yet. See [implementation notes](./2026-08-15--123--universal-melee-combat-implementation-notes.md).
 **Priority:** high · **Effort:** M
 **Depends on:** none
 

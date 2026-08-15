@@ -15,6 +15,24 @@ export type ItemSpawnKind =
   | 'world_chunk'
   | 'decorative_only'
 
+/** Player melee attack tuning for a single held tool (plan 123). Single
+ *  source of truth for damage/timing/range/stamina — `player/playerMelee.ts`
+ *  reads this directly instead of a parallel weapon-stat table. */
+export type MeleeConfig = {
+  damage: number
+  /** Max XZ distance (world units) a target can be hit from. */
+  range: number
+  /** Minimum dot(playerForward, toTarget) to count as inside the attack arc. */
+  arcDot: number
+  /** Seconds from attack request until the hit window opens. */
+  windUp: number
+  /** Seconds the hit window stays open — damage resolves once, at its start. */
+  hitWindow: number
+  /** Seconds after the hit window before another attack can be requested. */
+  recovery: number
+  staminaCost: number
+}
+
 export type ItemCatalogEntry = {
   kind: ItemKind
   /** Polish label — mirrors ITEM_DEFS. */
@@ -22,8 +40,8 @@ export type ItemCatalogEntry = {
   category: 'resource' | 'tool' | 'utility'
   /** Can occupy HeldTool slot + Weź in inventory. */
   holdable: boolean
-  /** Player melee vs animals while held (`faunaCombat.ts`). */
-  meleeDamage: number | null
+  /** Player melee vs animals while held (plan 123 — `player/playerMelee.ts`). */
+  melee: MeleeConfig | null
   spawn: ItemSpawnKind
   /** Runtime GLB under public/ when present. */
   modelUrl: string | null
@@ -43,7 +61,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'muszla',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'village_renewable',
     modelUrl: null,
     notes: 'Procedural mesh; renewable near settlement.',
@@ -53,7 +71,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'kamień',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'village_renewable',
     modelUrl: null,
     notes: 'Procedural; also dig loot / drops.',
@@ -63,7 +81,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'gałąź',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'village_renewable',
     modelUrl: '/models/items/branch.glb',
     notes: 'Renewable near settlement trees; axe harvest yield; lit hand visual (plan 085).',
@@ -75,7 +93,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'grzyb',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'world_chunk',
     modelUrl: null,
     notes: 'World chunk collectible.',
@@ -85,7 +103,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'kwiat',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'world_chunk',
     modelUrl: null,
     notes: 'World chunk collectible.',
@@ -95,7 +113,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'szyszka',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'world_chunk',
     modelUrl: null,
     notes: 'World chunk collectible.',
@@ -105,10 +123,10 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'nóż',
     category: 'tool',
     holdable: true,
-    meleeDamage: 12,
+    melee: { damage: 12, range: 1.6, arcDot: 0.6, windUp: 0.12, hitWindow: 0.08, recovery: 0.18, staminaCost: 4 },
     spawn: 'starting',
     modelUrl: '/models/items/knife.glb',
-    notes: 'Starting loadout; held visual on Wrist.R; melee on animals.',
+    notes: 'Starting loadout; held visual on Wrist.R; melee on animals. Fast/narrow (plan 123).',
   },
   // TODO: Add long_sword to the game, review all configs.
   long_sword: {
@@ -116,17 +134,17 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'miecz',
     category: 'tool',
     holdable: true,
-    meleeDamage: 28,
+    melee: { damage: 28, range: 2.6, arcDot: 0.35, windUp: 0.28, hitWindow: 0.12, recovery: 0.38, staminaCost: 12 },
     spawn: 'none',
     modelUrl: '/models/items/long_sword.glb',
-    notes: 'Held melee (plan 090). Acquire via Strażnik/Kupiec — not a world spawn.',
+    notes: 'Held melee (plan 090). Acquire via Strażnik/Kupiec — not a world spawn. Longest range, medium/slow, highest damage (plan 123).',
   },
   firestarter: {
     kind: 'firestarter',
     label: 'krzesiwo',
     category: 'tool',
     holdable: true,
-    meleeDamage: null,
+    melee: null,
     spawn: 'starting',
     modelUrl: null,
     notes: 'Starting loadout; procedural held/drop mesh; lights fires.',
@@ -136,7 +154,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'koc',
     category: 'utility',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'starting',
     modelUrl: null,
     notes: 'Starting loadout; rest / camp UX.',
@@ -146,30 +164,30 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'łopata',
     category: 'tool',
     holdable: true,
-    meleeDamage: 8,
+    melee: { damage: 8, range: 2.0, arcDot: 0.45, windUp: 0.25, hitWindow: 0.1, recovery: 0.35, staminaCost: 8 },
     spawn: 'village_onetime',
     modelUrl: '/models/items/shovel.glb',
-    notes: 'One-time near campfire/garden; dig + level; melee; held GLB.',
+    notes: 'One-time near campfire/garden; dig + level; melee; held GLB. Slow (plan 123).',
   },
   axe: {
     kind: 'axe',
     label: 'siekiera',
     category: 'tool',
     holdable: true,
-    meleeDamage: 20,
+    melee: { damage: 20, range: 2.0, arcDot: 0.4, windUp: 0.3, hitWindow: 0.12, recovery: 0.4, staminaCost: 10 },
     spawn: 'village_onetime',
     modelUrl: '/models/items/axe.glb',
-    notes: 'One-time near settlement tree; chop trees; melee; held GLB.',
+    notes: 'One-time near settlement tree; chop trees; melee; held GLB. Slow/heavy (plan 123).',
   },
   pitchfork: {
     kind: 'pitchfork',
     label: 'widły',
     category: 'tool',
     holdable: true,
-    meleeDamage: 14,
+    melee: { damage: 14, range: 2.4, arcDot: 0.5, windUp: 0.2, hitWindow: 0.12, recovery: 0.28, staminaCost: 7 },
     spawn: 'village_onetime',
     modelUrl: '/models/items/pitchfork.glb',
-    notes: '1–3 with sickle near gardens (plan 082). Holdable melee (plan 096).',
+    notes: '1–3 with sickle near gardens (plan 082). Holdable melee, longer range/medium speed (plan 096/123).',
     roadmap: 'NPC protest on village theft (issue 025).',
   },
   sickle: {
@@ -177,10 +195,10 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'sierp',
     category: 'tool',
     holdable: true,
-    meleeDamage: 12,
+    melee: { damage: 12, range: 1.8, arcDot: 0.55, windUp: 0.15, hitWindow: 0.1, recovery: 0.2, staminaCost: 5 },
     spawn: 'village_onetime',
     modelUrl: '/models/items/sickle.glb',
-    notes: '1–3 with pitchfork near gardens (plan 082). Holdable melee (plan 096).',
+    notes: '1–3 with pitchfork near gardens (plan 082). Holdable melee, medium speed (plan 096/123).',
     roadmap: 'NPC protest on village theft (issue 025).',
   },
   wooden_torch: {
@@ -188,7 +206,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'pochodnia',
     category: 'tool',
     holdable: true,
-    meleeDamage: null,
+    melee: null,
     spawn: 'starting',
     modelUrl: '/models/items/wooden_torch.glb',
     notes:
@@ -199,7 +217,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'kilof',
     category: 'tool',
     holdable: true,
-    meleeDamage: null,
+    melee: null,
     spawn: 'village_onetime',
     modelUrl: '/models/items/pickaxe.glb',
     notes: 'One-time near stockpile (plan 090). Held; mines iron/coal/gold deposits and mountain-rock ground (stone).',
@@ -209,7 +227,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'namiot',
     category: 'utility',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'none',
     modelUrl: null,
     notes: 'Buy from Kupiec; place / rest / pack (plan 090). Not a world spawn.',
@@ -219,7 +237,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'węgiel',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'none',
     modelUrl: null,
     notes: 'Pickaxe yield from coal deposits (plan 090).',
@@ -229,7 +247,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'żelazo',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'none',
     modelUrl: null,
     notes: 'Pickaxe yield from iron deposits (plan 090).',
@@ -239,7 +257,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'złoto',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'none',
     modelUrl: null,
     notes: 'Pickaxe yield from gold deposits (plan 090).',
@@ -249,7 +267,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'pomidor',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'village_renewable',
     modelUrl: null,
     notes: 'Plan 106 — renewable near settlement garden pads, same pool mechanism as shell/stone.',
@@ -260,7 +278,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'surowe mięso',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan 106 — knife-harvest from a suitable animal corpse (`AnimalAgent.harvestMeat`). Edible raw at a reduced relief; better roasted.',
@@ -271,7 +289,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'pieczone mięso',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan 106 — cooked from raw_meat at a lit campfire (`items/campfireCooking.ts`).',
@@ -282,7 +300,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'chleb',
     category: 'resource',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan 106 — buy from Kupiec (`tradeCatalog.ts`); prepared for future/emergency use per the plan.',
@@ -293,7 +311,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'bukłak (pusty)',
     category: 'utility',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan 106 — buy from Kupiec; fill at a well/lake `[R]` (becomes waterskin_full). Not a `HeldTool` slot item.',
@@ -303,7 +321,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'bukłak (pełny)',
     category: 'utility',
     holdable: false,
-    meleeDamage: null,
+    melee: null,
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan 106 — filled at a well/lake; drink via inventory "Wypij" (becomes waterskin_empty) or it empties automatically when drunk from the world prompt.',

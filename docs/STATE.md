@@ -60,7 +60,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 ### Items / player
 
 - `Inventory` / `ItemKind` / single `HeldTool` slot (right hand exclusive). Flags, melee, spawn and consumables: [CATALOG.md](./items/CATALOG.md).
-- Player has shared `HealthState` (100 HP, CSS2D bar; no death UI/respawn yet). Held melee damages animals via `[E]` gaze.
+- Player has shared `HealthState` (100 HP, CSS2D bar; no death UI/respawn yet). Universal melee (plan 123): `ITEM_CATALOG[kind].melee` is the single source of truth (damage/range/arcDot/windUp/hitWindow/recovery/staminaCost) for all six melee tools (knife/long_sword/axe/pitchfork/sickle/shovel); `player/playerMelee.ts` is a pure windUp→hitWindow→recovery state machine (hit resolves once per attack, stamina-gated) plus a deterministic range+facing-arc hit test (no raycasting) run against active `AnimalAgent`s independently of the single `pickInGaze` target. `[E]` over a live animal with a melee tool held still triggers the attack (`gameLoop.ts`); `PlayerController.setMeleeSwing` drives a minimal procedural swing (pivot `Group` on the hand socket) synced to the same lifecycle. `HealthState`/`AnimalAgent.collapse()`/the quest `onDeath` hook are unchanged — only how damage reaches them changed. No browser verification yet.
 - Player survival pools (`PlayerController.needs`, plan 106): stamina/vigor/hunger/thirst (`src/player/PlayerNeeds.ts`), HUD bars in `HudScreen.vue`. Hunger/thirst reaching 0 costs HP (`applyStarvationDamage`) — no new death/disease system, reuses `damageHealth`. Sprint gated on stamina.
 - Food (tomato, raw_meat, roasted_meat, bread) and water (`waterskin_empty`/`waterskin_full`) are ordinary `Inventory` items with a `consumable` catalog flag ("Zjedz"/"Wypij" in the inventory screen). Cooking (`raw_meat → roasted_meat`) is a flat recipe table (`items/campfireCooking.ts`), `[R]` at a lit campfire. `WaterSource` (`src/world/WaterSource.ts`) is the shared well/lake drink/fill abstraction; lake is a synthetic per-frame candidate (no discrete world object), reusing fauna's shoreline probe.
 - Portable light: lit branch (~90s) or held wooden torch (~240s); persists in `SaveData.playerTorch`.
@@ -154,6 +154,7 @@ src/items/HeldTool.ts
 src/items/itemCatalog.ts
 src/items/campfireCooking.ts
 src/player/PlayerNeeds.ts
+src/player/playerMelee.ts
 src/world/WaterSource.ts
 src/quests/QuestManager.ts
 src/world/dayNight.ts

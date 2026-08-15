@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createHealthState, damageFor, damageVsHuman, isMeleeTool, MAX_HP, playerToolDamage } from './faunaCombat'
+import { createHealthState, damageFor, damageVsHuman, isMeleeTool, MAX_HP } from './faunaCombat'
 
 describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageFor fauna-local)', () => {
   it('createHealthState still builds a full-health state after the shared/ extraction', () => {
@@ -35,16 +35,13 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
     expect(damageVsHuman('boar')).toBe(8) // no table entry -> DEFAULT_DAMAGE
   })
 
-  it('ranks player melee tools sword > axe > pitchfork > knife = sickle > shovel', () => {
-    expect(playerToolDamage('long_sword')).toBeGreaterThan(playerToolDamage('axe'))
-    expect(playerToolDamage('axe')).toBeGreaterThan(playerToolDamage('pitchfork'))
-    expect(playerToolDamage('pitchfork')).toBeGreaterThan(playerToolDamage('knife'))
-    expect(playerToolDamage('knife')).toBe(playerToolDamage('sickle'))
-    expect(playerToolDamage('sickle')).toBeGreaterThan(playerToolDamage('shovel'))
+  it('flags melee-capable tools via ITEM_CATALOG (plan 123 — damage/timing assertions moved to playerMelee.test.ts)', () => {
     expect(isMeleeTool('long_sword')).toBe(true)
     expect(isMeleeTool('axe')).toBe(true)
     expect(isMeleeTool('pitchfork')).toBe(true)
     expect(isMeleeTool('sickle')).toBe(true)
+    expect(isMeleeTool('knife')).toBe(true)
+    expect(isMeleeTool('shovel')).toBe(true)
     expect(isMeleeTool('pickaxe')).toBe(false)
     expect(isMeleeTool('firestarter')).toBe(false)
     expect(isMeleeTool(null)).toBe(false)

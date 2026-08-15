@@ -52,8 +52,6 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 |------|---------|-----|--------|---------|
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 
-+ `docs/plans/2026-08-15--123--universal-melee-combat.md`
-
 ---
 
 ## Todo
@@ -71,6 +69,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-15--123--universal-melee-combat.md` | Uniwersalny melee (wg [implementation notes](./2026-08-15--123--universal-melee-combat-implementation-notes.md)): `ITEM_CATALOG[kind].melee` jako jedyne źródło prawdy (damage/range/arcDot/windUp/hitWindow/recovery/staminaCost) dla wszystkich 6 narzędzi (nóż/miecz/siekiera/widły/sierp/łopata); nowy `player/playerMelee.ts` (czysta maszyna stanów windUp→hitWindow→recovery, hit rozwiązywany raz na atak, guard staminy) + deterministyczny hit test (dystans XZ + facing arc dot, bez raycastów) niezależny od pojedynczego `pickInGaze` targetu; `[E]` nad żywym zwierzęciem z bronią melee = trigger ataku (zachowany prompt "Atakuj: X"), `gameLoop.ts` przepięty z bezpośredniego `takeDamage` na `playerMelee.requestAttack`/`update`; minimalny proceduralny swing (`PlayerController.setMeleeSwing`, pivot Group na hand sockecie) zsynchronizowany z hit window; `HealthState`/`AnimalAgent.collapse()`/quest `onDeath` hook nietknięte. Zaimplementowane, techniczna weryfikacja zielona (tsc/lint/test/build); brak testu w przeglądarce | 🔴 | M | — |
 | `2026-08-15--121--footstep-sound-refresh.md` | Kroki: Anton Z jako default (sand/grass/stone), pustynia → sand, A/B `?footsteps=legacy\|mayra`; Fantozzi/swuing zostają legacy. Techniczna weryfikacja w commicie; brak testu w przeglądarce | 🟡 | S | — |
 | `2026-08-15--122--natural-resource-gathering-and-water-distribution.md` | Water logistics (zawężone wg [implementation notes](./2026-08-15--122--natural-resource-gathering-and-water-distribution-implementation-notes.md)): studnia → NPC carrying (chain `drink`→`deposit`, jak istniejący `chop`→`deposit`) → `household.water` (nowy `WaterReserve`, osobny od `EconomicStock`); nowa potrzeba `waterDuty` (mirror `woodDuty`) napędza uzupełnianie; osobisty `thirst` najpierw pije z zapasu domowego, potem studnia (bez zmian). Fizyczne `WaterBarrel`/`AnimalTrough` per dom (instancowane propsy, prezentacja — ilość tylko w `household.water`); livestock thirst preferuje trough przed brzegiem (pierwszy konsument `ownerHouseId`). Village Storehouse i pełna generalizacja wood/food/stone/ore odłożone (już w większości pokryte istniejącym chop/deposit + garden gather). Zaimplementowane, techniczna weryfikacja zielona (tsc/lint/test/build); brak testu w przeglądarce | 🔴 | M | ~~032~~ |
 | `2026-08-15--119--chunk-streaming-performance.md` | Hitchy chunk streaming: preload GLB + kolejka mesh/content (1 etap/klatkę, priorytet mesh); stampede po `await` szablonów usunięty; techniczna weryfikacja zielona, brak `?benchmark=*` vs review 015 / capture planu | 🔴 | M | ~~112~~ |

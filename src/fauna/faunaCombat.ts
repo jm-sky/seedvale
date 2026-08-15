@@ -1,5 +1,6 @@
 import type { ToolKind } from '../items/HeldTool'
 import type { AnimalKind } from './AnimalAgent'
+import { ITEM_CATALOG } from '../items/itemCatalog'
 
 export type { HealthState } from '../shared/HealthState'
 export { createHealthState } from '../shared/HealthState'
@@ -42,24 +43,11 @@ export type MeleeToolKind = Extract<
   'long_sword' | 'axe' | 'pitchfork' | 'knife' | 'sickle' | 'shovel'
 >
 
-const PLAYER_TOOL_DAMAGE: Record<MeleeToolKind, number> = {
-  long_sword: 28,
-  axe: 20,
-  pitchfork: 14,
-  knife: 12,
-  sickle: 12,
-  shovel: 8,
-}
-
+/** `ITEM_CATALOG[kind].melee` is the single source of truth for which tools
+ *  are melee-capable and their damage/timing (plan 123) — this is a thin type
+ *  guard over that, not a parallel list. */
 export function isMeleeTool(kind: ToolKind | null | undefined): kind is MeleeToolKind {
-  return (
-    kind === 'long_sword'
-    || kind === 'axe'
-    || kind === 'pitchfork'
-    || kind === 'knife'
-    || kind === 'sickle'
-    || kind === 'shovel'
-  )
+  return kind != null && ITEM_CATALOG[kind]?.melee != null
 }
 
 export function damageFor(predator: AnimalKind, prey: AnimalKind): number {
@@ -68,8 +56,4 @@ export function damageFor(predator: AnimalKind, prey: AnimalKind): number {
 
 export function damageVsHuman(predator: AnimalKind): number {
   return HUMAN_DAMAGE[predator] ?? DEFAULT_DAMAGE
-}
-
-export function playerToolDamage(tool: MeleeToolKind): number {
-  return PLAYER_TOOL_DAMAGE[tool]
 }
