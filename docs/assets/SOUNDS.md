@@ -30,7 +30,7 @@ If the feature needs no new sound, do nothing to this file.
 |----------|-------|-------|
 | NPC | hmm / thank-you / greeting / farewell / confirmation (M/F, per-actor voice) | Dialogue reactions + Super Dialogue Audio Pack v1 (plan 116) — greeting on dialogue open, farewell on close, confirmation on offer accept, extra hmm/thank-you variety |
 | Animals | chicken, cow, wolf | `[E]` on animal (donkey/horse/sheep reuse silence until clips exist) |
-| Ambient | forest, night crickets, coast, wind, meadow, soft waves, fire loop | Area / time / mountain / campfire loops |
+| Ambient | forest, night crickets, coast, wind, meadow, soft waves, fire loop, rain loop | Area / time / mountain / campfire loops; rain loop gain = weather intensity (plan 040 Etap 1) |
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
 | UI | `ui-click-01` | Inventory / pause / dialog (open + click) |
 | Actions | dig ×4, wood-chop ×1, melee hit/kill, well ×1, fire ignite/extinguish | Shovel / axe / melee / well / campfire |
@@ -53,7 +53,7 @@ If the feature needs no new sound, do nothing to this file.
 | ID | Sound | Context | Status | Related |
 |----|-------|---------|--------|---------|
 | S06 | Wind (light loop) | Open / mountain; fade with ridge | `wired` | `ambient-wind-loop-01` + `ambient-meadow-loop-01` + `ambient-waves-soft-01` |
-| S07 | Rain | When weather exists | `in repo` | `ambient-rain-loop-01` |
+| S07 | Rain | Weather = `rain` (plan 040 Etap 1, `audio/weatherSounds.ts`) | `wired` | `ambient-rain-loop-01` |
 | S08 | Well / draw water | NPC or player at well | `wired` | `action-well-01` |
 | S09 | Door / enter house | Optional on house proximity | `wired` | `door-open-01` / `door-close-01` + latch/creak |
 | S10 | Fauna: deer / fox / stag one-shot | Today only chicken/cow/wolf SFX | `needed` | `animal-dog-01` in repo (village dog — does not close deer/fox) |
@@ -72,6 +72,7 @@ If the feature needs no new sound, do nothing to this file.
 | S18 | Eat (bite/chew) | Consume food item (inventory Zjedz) | `needed` | plan 106 — currently silent |
 | S19 | Drink / gulp | Consume waterskin, well/lake `[E]` | `needed` | plan 106 — currently reuses `action-well-01` (S08) |
 | S20 | Sizzle / cook | `[R]` cooking raw_meat at a lit campfire | `needed` | plan 106 — currently silent |
+| S21 | Snow ambience (wind flurry) | Weather = `snow` (plan 040 Etap 1) | `needed` | No asset yet — snow stays visual-only (`world/weatherParticles.ts`) until acquired |
 
 ## Acquisition rules
 

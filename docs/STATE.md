@@ -39,6 +39,7 @@ Rebuild/lifetime invariant (keep the bundle reference, don't capture a replaceab
 - Per-chunk vegetation and rocks are `InstancedMesh` buckets (`src/render/instancedProps.ts`); stage meshes and procedural landmarks stay individual `Object3D`s. Settlement palisade / bushes / barrels / hay are instanced the same way; harvestable settlement trees stay individual (plan 113).
 - Chunk rocks/logs and visible iron/coal/gold deposits use GLB templates with procedural fallbacks. Procedural landmarks: monolith, stone circle, small ruins, village-fringe cemetery (plan 049).
 - Ocean, sky, lighting, day/night and fog are implemented. Post-processing: EffectComposer, N8AO (High = Performance quality + half-res, auto-suppressed on heavy frames), SMAA, subtle film grade. Shadow map updates once per frame after the water mirror. Mirror is 128² at 30 Hz and skips NPC/fauna layers.
+- Seasons + weather Etap 1 (plan 040, visual/audio layer only — `world/weather.ts`): `Season` is a pure derivation from `DayNightState.elapsedDays` (`seasonFromElapsedDays`, `DAYS_PER_SEASON = 3`), no separate clock. `WeatherState` (clear/cloudy/rain/fog/snow) transitions via per-season weighted odds (`world/weather.ts`'s `tickWeather`/`pickWeightedWeather`), duration measured in `elapsedDays` so it survives time-skip; a debug-only `forced` field (lil-gui "Pora roku / Pogoda") overrides natural transitions, not persisted. Visuals: `world/weatherVisuals.ts`'s `applyWeatherOverlay` dims sun/ambient/hemi and adjusts fog color/near/far on top of `applyDayNight` (`gameLoop.ts`) — no cloud geometry or dome material change yet. `world/weatherParticles.ts` drives rain/snow `Points` volumes that follow the player. Audio: `audio/weatherSounds.ts`'s rain loop (gain = intensity); no snow ambience asset yet (`docs/assets/SOUNDS.md` S21). Etap 2+ (AI/resource/NPC-need coupling) is not implemented.
 - Visual contracts: [GRAPHICS.md](./GRAPHICS.md). Water (ocean + lakes): [WATER.md](./WATER.md).
 
 ### Settlements / NPCs
@@ -77,7 +78,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 
 ### Persistence
 
-- IndexedDB in `src/persistence/`. Canonical save schema is **v13** (`saveData.ts`): world config (including optional `settlements.homeSize`), player pose, time of day, elapsed days, quests/EXP/relations, inventory, held tool, collected IDs, dropped items, placed fires, placed tents, player torch, world flags, sparse tree overrides, map discovery cells, settlement economies, player hunger/thirst/vigor (stamina stays transient).
+- IndexedDB in `src/persistence/`. Canonical save schema is **v14** (`saveData.ts`): world config (including optional `settlements.homeSize`), player pose, time of day, elapsed days, quests/EXP/relations, inventory, held tool, collected IDs, dropped items, placed fires, placed tents, player torch, world flags, sparse tree overrides, map discovery cells, settlement economies, player hunger/thirst/vigor (stamina stays transient), weather (type/intensity/temperature/startedAt/duration — plan 040 Etap 1; the debug `forced` override is not persisted).
 - localStorage is split by domain (`src/config/persistConfig.ts`): graphics / player / world; legacy `seedvale:worldConfig:v1` migrates on first load.
 - NPC runtime state is **not** a full simulation snapshot. Tree lifecycle uses sparse overrides + lazy growth from `elapsedDays` (`src/world/treeLifecycle.ts`).
 - `QuestManager`'s `questId → animalId` binding is never persisted (plan 110) — on restore, an `active` `kill_target_animal`/`find_animal` quest re-derives its binding: livestock kinds (deterministic `animalId` per settlement/house seed, `settlement/livestock.ts`'s `LIVESTOCK_KINDS`) rebind via the normal resolver; wild-fauna kinds (unseeded per-session `animalId` counter, dead/alive state not persisted at all) become `invalidated` instead of silently retargeting a different individual. Fauna/livestock HP/death/corpse state is not persisted — killed animals resurrect on reload; this is why the wild-fauna case can't safely rebind.
@@ -154,6 +155,7 @@ src/player/PlayerNeeds.ts
 src/world/WaterSource.ts
 src/quests/QuestManager.ts
 src/world/dayNight.ts
+src/world/weather.ts
 src/world/treeLifecycle.ts
 src/persistence/saveData.ts
 src/ui/

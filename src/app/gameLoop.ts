@@ -5,6 +5,7 @@ import type { createAmbientAudio } from '../audio/createAmbientAudio'
 import type { createWorldAudio } from '../audio/createWorldAudio'
 import type { createHouseDoorTracker } from '../audio/doorSounds'
 import type { createFireAudio } from '../audio/fireSounds'
+import type { WeatherAudio } from '../audio/weatherSounds'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { TouchControls } from '../input/createTouchControls'
 import type { createKeyboard } from '../input/Keyboard'
@@ -32,6 +33,8 @@ import type { DayNightState } from '../world/dayNight'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
 import type { TimeSkip } from '../world/timeSkip'
 import type { WaterSource } from '../world/WaterSource'
+import type { WeatherState } from '../world/weather'
+import type { WeatherParticles } from '../world/weatherParticles'
 import type { BusyAction } from './busyAction'
 import type { RestCampSequence } from './restCampSequence'
 import type { WorldBundle } from './worldBundle'
@@ -63,6 +66,8 @@ import { getVigorRatio } from '../shared/VigorState'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
 import { createWaterSource } from '../world/WaterSource'
+import { seasonFromElapsedDays, tickWeather } from '../world/weather'
+import { applyWeatherOverlay } from '../world/weatherVisuals'
 import {
   buildDigTarget,
   buildInteractables,
@@ -91,6 +96,7 @@ function timeOfDayDelta(a: number, b: number): number {
 
 function applyDayNight(
   timeOfDay: number,
+  weather: WeatherState,
   sky: WorldSky,
   lights: WorldLights,
   scene: Scene,
@@ -107,14 +113,18 @@ function applyDayNight(
     },
     lights.sun,
   )
-  lights.sun.intensity = p.sunIntensity
-  lights.ambient.intensity = p.ambientIntensity
-  lights.hemi.intensity = p.hemiIntensity
+  // Weather overlays fog/light on top of the day/night result — `dayFactor`/
+  // `elev` (returned below) and the sky dome itself stay weather-independent
+  // in Etap 1 (see `weatherVisuals.ts`'s header comment).
+  const overlay = applyWeatherOverlay({ fogColor: p.fogColor, fogNear: p.fogNear, fogFar: p.fogFar }, weather)
+  lights.sun.intensity = p.sunIntensity * overlay.lightScale
+  lights.ambient.intensity = p.ambientIntensity * overlay.lightScale
+  lights.hemi.intensity = p.hemiIntensity * overlay.lightScale
   const fog = scene.fog
   if (fog instanceof Fog) {
-    fog.color.setHex(p.fogColor)
-    fog.near = p.fogNear
-    fog.far = p.fogFar
+    fog.color.setHex(overlay.fogColor)
+    fog.near = overlay.fogNear
+    fog.far = overlay.fogFar
   }
   chunkManager.setWaterDayNight(p.dayFactor, sky.sunPosition)
   chunkManager.setGrassDayNight(p.dayFactor, sky.sunPosition)
@@ -133,6 +143,9 @@ export type GameLoopDeps = {
   lights: WorldLights
   postProcessing: PostProcessing
   dayNight: DayNightState
+  weather: WeatherState
+  weatherParticles: WeatherParticles
+  weatherAudio: WeatherAudio
   keyboard: ReturnType<typeof createKeyboard>
   mouseLook: ReturnType<typeof createMouseLook>
   touchControls: TouchControls | null
@@ -216,6 +229,7 @@ export type GameLoop = {
 export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
+    weather, weatherParticles, weatherAudio,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
@@ -227,6 +241,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
 
   const clock = new Clock()
   let lastAppliedTimeOfDay = dayNight.timeOfDay
+  /** Last weather values `resyncDayNight()` applied to fog/lights — a change
+   *  here (not just the day/night threshold) also has to trigger a resync,
+   *  or weather-driven fog would only "pop" in on the next unrelated
+   *  threshold crossing instead of when the weather actually changes. */
+  let lastAppliedWeatherType = weather.type
+  let lastAppliedWeatherIntensity = weather.intensity
   /** Cached `skyParamsFromTime(dayNight.timeOfDay)` — recomputed at most once
    *  per frame (only while unpaused, since `timeOfDay` is frozen otherwise),
    *  instead of once per call site (`ambientAudio`, `dayFactor`, `godRays`). */
@@ -250,9 +270,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   }
 
   const resyncDayNight = (): void => {
-    cachedSky = applyDayNight(dayNight.timeOfDay, sky, lights, scene, bundle.chunkManager, bundle.ocean)
+    cachedSky = applyDayNight(dayNight.timeOfDay, weather, sky, lights, scene, bundle.chunkManager, bundle.ocean)
     bundle.settlementsManager.setDayNight(1 - cachedSky.dayFactor)
     lastAppliedTimeOfDay = dayNight.timeOfDay
+    lastAppliedWeatherType = weather.type
+    lastAppliedWeatherIntensity = weather.intensity
   }
 
   const tick = (): void => {
@@ -624,9 +646,14 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // clock itself) stays real — the sky/clock still has to race ahead.
       const worldDt = timeSkip.isActive() ? 0 : dt
       tickDayNight(dayNight, dt)
+      tickWeather(weather, dayNight, seasonFromElapsedDays(dayNight.elapsedDays))
+      const weatherVisualChanged =
+        weather.type !== lastAppliedWeatherType ||
+        Math.abs(weather.intensity - lastAppliedWeatherIntensity) >= 0.03
       if (
         dayNight.enabled &&
-        timeOfDayDelta(dayNight.timeOfDay, lastAppliedTimeOfDay) >= DAY_NIGHT_APPLY_THRESHOLD
+        (timeOfDayDelta(dayNight.timeOfDay, lastAppliedTimeOfDay) >= DAY_NIGHT_APPLY_THRESHOLD ||
+          weatherVisualChanged)
       ) {
         resyncDayNight()
       }
@@ -635,6 +662,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // reused below (`dayFactor`) and after this block (`postProcessing`)
       // instead of each call site recomputing the same params object.
       cachedSky = skyParamsFromTime(dayNight.timeOfDay)
+      weatherParticles.update(dt, weather, player.mesh.position.x, player.mesh.position.y, player.mesh.position.z)
+      weatherAudio.update(weather)
       ambientAudio.update(
         dt,
         cachedSky.dayFactor,

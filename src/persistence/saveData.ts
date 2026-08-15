@@ -220,10 +220,26 @@ export type SaveDataV12 = Omit<SaveDataV11, 'version'> & {
  *  stays transient per the plan §8 (short-term, not worth persisting). */
 export type SavePlayerNeeds = { hunger: number, thirst: number, vigor: number }
 
-/** Canonical save shape — always v13. `loadSaveData` migrates older saves up. */
-export type SaveData = Omit<SaveDataV12, 'version'> & {
+export type SaveDataV13 = Omit<SaveDataV12, 'version'> & {
   version: 13
   playerNeeds: SavePlayerNeeds
+}
+
+/** Plan 040 Etap 1 — `world/weather.ts`'s `WeatherState`, minus the debug-only
+ *  `forced` field (not persisted, same convention as `DayNightState.enabled`/
+ *  `timeMultiplier`). `startedAt`/`duration` are `elapsedDays` units. */
+export type SaveWeather = {
+  type: 'clear' | 'cloudy' | 'rain' | 'fog' | 'snow'
+  intensity: number
+  temperature: number
+  startedAt: number
+  duration: number
+}
+
+/** Canonical save shape — always v14. `loadSaveData` migrates older saves up. */
+export type SaveData = Omit<SaveDataV13, 'version'> & {
+  version: 14
+  weather: SaveWeather
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -512,7 +528,7 @@ function isPlayerNeedsField(value: unknown): value is SavePlayerNeeds {
   return typeof n.hunger === 'number' && typeof n.thirst === 'number' && typeof n.vigor === 'number'
 }
 
-export function isSaveDataV13(value: unknown): value is SaveData {
+export function isSaveDataV13(value: unknown): value is SaveDataV13 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 13) return false
@@ -534,6 +550,46 @@ export function isSaveDataV13(value: unknown): value is SaveData {
   if (!isSaveMap(v.map)) return false
   if (!isSettlementEconomiesField(v.settlementEconomies)) return false
   if (!isPlayerNeedsField(v.playerNeeds)) return false
+  return true
+}
+
+const WEATHER_TYPES = ['clear', 'cloudy', 'rain', 'fog', 'snow'] as const
+
+function isSaveWeatherField(value: unknown): value is SaveWeather {
+  if (!value || typeof value !== 'object') return false
+  const w = value as Record<string, unknown>
+  if (typeof w.type !== 'string' || !(WEATHER_TYPES as readonly string[]).includes(w.type)) return false
+  return (
+    typeof w.intensity === 'number' &&
+    typeof w.temperature === 'number' &&
+    typeof w.startedAt === 'number' &&
+    typeof w.duration === 'number'
+  )
+}
+
+export function isSaveDataV14(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 14) return false
+  if (!isSaveConfig(v.config)) return false
+  if (!isSavePlayer(v.player)) return false
+  if (typeof v.savedAt !== 'number') return false
+  if (!v.quests || typeof v.quests !== 'object') return false
+  if (!v.inventory || typeof v.inventory !== 'object') return false
+  if (!Array.isArray(v.collectedItemIds)) return false
+  if (!Array.isArray(v.droppedItems)) return false
+  if (!Array.isArray(v.placedFires)) return false
+  if (typeof v.timeOfDay !== 'number') return false
+  if (typeof v.elapsedDays !== 'number') return false
+  if (!isHeldToolField(v.heldTool)) return false
+  if (!isTreeOverridesField(v.treeOverrides)) return false
+  if (!isPlayerTorchField(v.playerTorch)) return false
+  if (!isPlacedTentsField(v.placedTents)) return false
+  if (!isWorldFlagsField(v.worldFlags)) return false
+  if (!isSaveMap(v.map)) return false
+  if (!isSettlementEconomiesField(v.settlementEconomies)) return false
+  if (!isPlayerNeedsField(v.playerNeeds)) return false
+  if (!isSaveWeatherField(v.weather)) return false
   return true
 }
 
@@ -610,7 +666,7 @@ function toV12(v11: SaveDataV11): SaveDataV12 {
  *  for saves that predate plan 106. */
 const DEFAULT_PLAYER_NEEDS: SavePlayerNeeds = { hunger: 100, thirst: 100, vigor: 100 }
 
-function toV13(v12: SaveDataV12): SaveData {
+function toV13(v12: SaveDataV12): SaveDataV13 {
   const { version: _version, ...rest } = v12
   return {
     ...rest,
@@ -619,15 +675,29 @@ function toV13(v12: SaveDataV12): SaveData {
   }
 }
 
-/** Accepts a stored v1–v13 save and always returns the canonical v13 shape. */
+/** Matches `world/weather.ts::createWeatherState()`'s own `clear` default,
+ *  for saves that predate plan 040. */
+const DEFAULT_WEATHER: SaveWeather = { type: 'clear', intensity: 0, temperature: 12, startedAt: 0, duration: 0.5 }
+
+function toV14(v13: SaveDataV13): SaveData {
+  const { version: _version, ...rest } = v13
+  return {
+    ...rest,
+    version: 14,
+    weather: DEFAULT_WEATHER,
+  }
+}
+
+/** Accepts a stored v1–v14 save and always returns the canonical v14 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV13(value)) return value
-    if (isSaveDataV12(value)) return toV13(value)
-    if (isSaveDataV11(value)) return toV13(toV12(value))
-    if (isSaveDataV10(value)) return toV13(toV12(toV11(value)))
+    if (isSaveDataV14(value)) return value
+    if (isSaveDataV13(value)) return toV14(value)
+    if (isSaveDataV12(value)) return toV14(toV13(value))
+    if (isSaveDataV11(value)) return toV14(toV13(toV12(value)))
+    if (isSaveDataV10(value)) return toV14(toV13(toV12(toV11(value))))
     if (isSaveDataV9(value)) {
-      return toV13(toV12(toV11(toV10({
+      return toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -641,10 +711,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         heldTool: value.heldTool,
         treeOverrides: value.treeOverrides,
         playerTorch: value.playerTorch,
-      }))))
+      })))))
     }
     if (isSaveDataV8(value)) {
-      return toV13(toV12(toV11(toV10({
+      return toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -658,10 +728,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         heldTool: value.heldTool,
         treeOverrides: value.treeOverrides,
         playerTorch: null,
-      }))))
+      })))))
     }
     if (isSaveDataV7(value)) {
-      return toV13(toV12(toV11(toV10({
+      return toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -672,10 +742,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: value.placedFires,
         timeOfDay: value.timeOfDay,
         heldTool: value.heldTool,
-      }))))
+      })))))
     }
     if (isSaveDataV6(value)) {
-      return toV13(toV12(toV11(toV10({
+      return toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -686,10 +756,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: value.placedFires,
         timeOfDay: value.timeOfDay,
         heldTool: null,
-      }))))
+      })))))
     }
     if (isSaveDataV5(value)) {
-      return toV13(toV12(toV11(toV10({
+      return toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -700,10 +770,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: migratePlacedFires(value.placedFires),
         timeOfDay: value.timeOfDay,
         heldTool: null,
-      }))))
+      })))))
     }
     if (isSaveDataV4(value)) {
-      return toV13(toV12(toV11(toV10({
+      return toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -714,10 +784,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: migratePlacedFires(value.placedFires),
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))))
+      })))))
     }
     if (isSaveDataV3(value)) {
-      return toV13(toV12(toV11(toV10({
+      return toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -728,10 +798,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))))
+      })))))
     }
     if (isSaveDataV2(value)) {
-      return toV13(toV12(toV11(toV10({
+      return toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -742,10 +812,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))))
+      })))))
     }
     if (isSaveDataV1(value)) {
-      return toV13(toV12(toV11(toV10({
+      return toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -756,7 +826,7 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))))
+      })))))
     }
     return null
   } catch {

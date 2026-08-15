@@ -8,6 +8,7 @@ import { createWorldAudio } from '../audio/createWorldAudio'
 import { createHouseDoorTracker } from '../audio/doorSounds'
 import { createFireAudio, playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
+import { createWeatherAudio } from '../audio/weatherSounds'
 import { saveAllDomains, saveGraphics, savePlayer, saveWorld } from '../config/persistConfig'
 import {
   applyQualityPreset,
@@ -84,6 +85,8 @@ import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest
 import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChopStage } from '../world/treeLifecycle'
 import { AGENT_RENDER_LAYER, WATER_RENDER_LAYER } from '../world/waterMirror'
 import { DRINK_THIRST_RELIEF, UNSAFE_WATER_WARNING, type WaterSource } from '../world/WaterSource'
+import { createWeatherState } from '../world/weather'
+import { createWeatherParticles } from '../world/weatherParticles'
 import { createWorldContext } from '../world/worldContext'
 import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
@@ -168,6 +171,17 @@ export async function createApp(
       ? { timeOfDay: initialSave.timeOfDay, elapsedDays: initialSave.elapsedDays }
       : undefined,
   )
+  const weather = createWeatherState(
+    initialSave?.weather
+      ? {
+          type: initialSave.weather.type,
+          intensity: initialSave.weather.intensity,
+          temperature: initialSave.weather.temperature,
+          startedAt: initialSave.weather.startedAt,
+          duration: initialSave.weather.duration,
+        }
+      : undefined,
+  )
 
   let treeLifecycle = createTreeLifecycle(
     config.seed,
@@ -248,6 +262,9 @@ export async function createApp(
   const worldContext = createWorldContext(() => bundle.chunkManager, config, dayNight)
   const ambientAudio = createAmbientAudio(worldAudio, worldContext)
   const fireAudio = createFireAudio(worldAudio)
+  const weatherAudio = createWeatherAudio(worldAudio)
+  const weatherParticles = createWeatherParticles()
+  weatherParticles.addTo(scene)
   const houseDoors = createHouseDoorTracker()
   configureUiSounds(worldAudio.playOnce)
   configureNpcVoiceSounds(worldAudio.playAt)
@@ -547,7 +564,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 13,
+    version: 14,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -586,6 +603,13 @@ export async function createApp(
       hunger: player.needs.hunger.current,
       thirst: player.needs.thirst.current,
       vigor: player.needs.vigor.current,
+    },
+    weather: {
+      type: weather.type,
+      intensity: weather.intensity,
+      temperature: weather.temperature,
+      startedAt: weather.startedAt,
+      duration: weather.duration,
     },
   })
 
@@ -724,7 +748,7 @@ export async function createApp(
     },
   })
 
-  const gui = createDebugGui(config, dayNight, renderer, {
+  const gui = createDebugGui(config, dayNight, weather, renderer, {
     onTerrainChange,
     onSkyChange: updateSkyFromGui,
     onDayNightChange,
@@ -1424,6 +1448,7 @@ export async function createApp(
 
   const gameLoop = createGameLoop({
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
+    weather, weatherParticles, weatherAudio,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
@@ -1536,6 +1561,8 @@ export async function createApp(
     sky.dispose()
     ambientAudio.dispose()
     fireAudio.dispose()
+    weatherAudio.dispose()
+    weatherParticles.dispose()
     configureUiSounds(null)
     configureNpcVoiceSounds(null)
     worldAudio.dispose()
