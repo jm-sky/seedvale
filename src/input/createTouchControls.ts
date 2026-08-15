@@ -191,6 +191,7 @@ export function createTouchControls(
     onPause: () => handlers.onPauseToggle(),
     onQuickActions: () => handlers.onQuickActions?.(),
     onInteract: () => { keys.interact = true },
+    onAltInteract: () => { keys.altInteract = true },
   })
 
   let inputEnabled = true

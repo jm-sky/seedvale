@@ -30,21 +30,32 @@ const touch = isTouchDevice()
     >
       <button
         type="button"
-        class="pointer-events-auto flex h-[52px] w-[52px] cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(20,24,28,0.6)] text-ink [-webkit-tap-highlight-color:transparent]"
+        class="pointer-events-auto flex size-13 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(20,24,28,0.6)] text-ink [-webkit-tap-highlight-color:transparent]"
         :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
         aria-label="Szybkie działania"
         @click="ui.touch.onQuickActions?.()"
       >
         <Zap :size="22" />
       </button>
-      <button
-        type="button"
-        class="pointer-events-auto flex h-[68px] w-[68px] cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(61,123,209,0.75)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
-        aria-label="Interakcja"
-        @click="ui.touch.onInteract?.()"
-      >
-        E
-      </button>
+      <div class="relative">
+        <button
+          type="button"
+          class="pointer-events-auto flex size-17 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(61,123,209,0.75)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
+          aria-label="Interakcja"
+          @click="ui.touch.onInteract?.()"
+        >
+          E
+        </button>
+        <button
+          type="button"
+          class="absolute right-full mr-1 top-2 pointer-events-auto flex size-13 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(161,123,209,0.50)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
+          :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
+          aria-label="Interakcja alternatywna"
+          @click="ui.touch.onAltInteract?.()"
+        >
+          R
+        </button>
+      </div>
     </div>
   </template>
 </template>

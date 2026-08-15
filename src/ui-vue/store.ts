@@ -160,6 +160,7 @@ type TouchChromeState = {
   onPause: (() => void) | null
   onQuickActions: (() => void) | null
   onInteract: (() => void) | null
+  onAltInteract: (() => void) | null
 }
 
 type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus'>>
@@ -251,6 +252,7 @@ export const ui = reactive({
     onPause: null,
     onQuickActions: null,
     onInteract: null,
+    onAltInteract: null,
   } as TouchChromeState,
   openStack: [] as string[],
 })
@@ -598,7 +600,7 @@ export function clearToasts(): void {
   ui.toast.items = []
 }
 
-type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract'>>
+type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract' | 'onAltInteract'>>
 export function configureTouchChrome(handlers: TouchChromeHandlers): void {
   ui.touch.visible = true
   Object.assign(ui.touch, handlers)
@@ -613,4 +615,5 @@ export function clearTouchChrome(): void {
   ui.touch.onPause = null
   ui.touch.onQuickActions = null
   ui.touch.onInteract = null
+  ui.touch.onAltInteract = null
 }
