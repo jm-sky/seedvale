@@ -24,3 +24,17 @@ export function isDebugMode(): boolean {
 export function isCameraDebugMode(): boolean {
   return urlFlag('camdebug')
 }
+
+/** `?debugNoShadows=1` — TEMP: isolation test — disable shadow map rendering
+ *  entirely, to help rule shadows in/out as a source of the mobile
+ *  black-poly flicker (issue 032 follow-up). */
+export function isNoShadowsDebugMode(): boolean {
+  return urlFlag('debugNoShadows')
+}
+
+/** `?debugCameraMesh=1` — TEMP: isolation test — raycast from the camera each
+ *  frame and log the first mesh it hits, to identify what's rendering in
+ *  front of the camera during the mobile black-poly flicker. */
+export function isCameraMeshDebugMode(): boolean {
+  return urlFlag('debugCameraMesh')
+}

@@ -24,7 +24,7 @@ import {
   createWorldConfig,
 } from '../config/worldConfig'
 import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
-import { isCameraDebugMode } from '../debug/debugMode'
+import { isCameraDebugMode, isNoShadowsDebugMode } from '../debug/debugMode'
 import { type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
@@ -182,6 +182,9 @@ export async function createApp(
   const getWorldDays = () => dayNight.elapsedDays
 
   const renderer = createRenderer(container, config.postProcessing.pixelRatioCap)
+  if (isNoShadowsDebugMode()) {
+    renderer.shadowMap.enabled = false // TEMP: isolation test — disable shadows
+  }
   const labelRenderer = new CSS2DRenderer()
   labelRenderer.setSize(container.clientWidth, container.clientHeight)
   labelRenderer.domElement.style.position = 'absolute'

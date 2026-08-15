@@ -1,4 +1,4 @@
-import { Clock, Fog } from 'three'
+import { Clock, Fog, Raycaster, Vector3 } from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { createAmbientAudio } from '../audio/createAmbientAudio'
@@ -41,7 +41,7 @@ import type { WorldBundle } from './worldBundle'
 import { playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audio/actionSounds'
 import { playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
-import { isDebugMode } from '../debug/debugMode'
+import { isCameraMeshDebugMode, isDebugMode } from '../debug/debugMode'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { isMeleeTool } from '../fauna/faunaCombat'
@@ -87,7 +87,7 @@ import {
   TREE_BRANCH_CHANCE,
 } from './interactables'
 import { activeModal } from './modalState'
-import type { PerspectiveCamera, Scene, WebGLRenderer } from 'three'
+import type { Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
 
 type Highlightable = NpcAgent | AnimalAgent
 
@@ -268,6 +268,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   let fpsHudAge = 0
   /** Previous frame's `composer.render()` cost — drives N8AO auto-budget. */
   let lastRenderMs = 0
+
+  // TEMP: isolation test — identify mesh in front of camera
+  const cameraMeshRaycaster = new Raycaster()
+  const cameraMeshDirection = new Vector3()
+  let lastCameraMeshUuid: string | null = null
 
   /** Universal melee attack lifecycle (plan 123) — owns wind-up/hit/recovery
    *  timing shared by every melee tool; `ITEM_CATALOG[kind].melee` supplies
@@ -890,6 +895,31 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         mouseLook.state.yaw,
       )
     }
+    // TEMP: isolation test — identify mesh in front of camera
+    if (isCameraMeshDebugMode()) {
+      camera.getWorldDirection(cameraMeshDirection)
+      cameraMeshRaycaster.set(camera.position, cameraMeshDirection)
+      const hits = cameraMeshRaycaster.intersectObjects(scene.children, true)
+      const hit = hits.find((h) => (h.object as { isMesh?: boolean }).isMesh)
+      const hitUuid = hit?.object.uuid ?? null
+      if (hitUuid !== lastCameraMeshUuid) {
+        lastCameraMeshUuid = hitUuid
+        if (hit) {
+          let root: Object3D | null = hit.object.parent
+          let rootName = hit.object.parent?.name || ''
+          while (root && root !== scene) {
+            if (root.name) rootName = root.name
+            root = root.parent
+          }
+          console.info(
+            `[CameraMeshDebug]\nname=${hit.object.name || '(unnamed)'}\ntype=${hit.object.type}\nuuid=${hit.object.uuid}\nparent=${rootName || '(scene root)'}\ndistance=${hit.distance.toFixed(3)}`,
+          )
+        } else {
+          console.info('[CameraMeshDebug]\nname=(none)\ntype=-\nuuid=-\nparent=-\ndistance=-')
+        }
+      }
+    }
+
     const renderStart = performance.now()
     renderer.info.reset()
     postProcessing.applyFrameBudget(lastRenderMs)
