@@ -83,6 +83,8 @@ export function createPlacedFires(
 
   const spawn = (pf: PlacedFire): void => {
     const group = pf.kind === 'simple' ? createSimpleFireBase() : createCampfire()
+    // TEMP: isolation test — props/tree subgroups
+    group.name = 'fire'
     placeOnGround(group, pf.x, pf.z, sampleHeight)
     const flame = createCampfireFlame()
     group.add(flame.object)

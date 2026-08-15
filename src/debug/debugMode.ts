@@ -56,16 +56,46 @@ export function isMinimalSceneDebugMode(): boolean {
   return urlFlag('debugMinimalScene')
 }
 
-// TEMP: isolation test — scene object groups
-export type MinimalSceneGroup = 'props' | 'npcs' | 'trees' | 'buildings' | 'all'
+// TEMP: isolation test — scene object groups / props/tree subgroups
+export type MinimalSceneGroup =
+  | 'props'
+  | 'props-environment'
+  | 'props-settlement'
+  | 'props-fire'
+  | 'props-dropped'
+  | 'props-tents'
+  | 'props-other'
+  | 'npcs'
+  | 'trees'
+  | 'trees-living'
+  | 'trees-extra'
+  | 'trees-settlement'
+  | 'buildings'
+  | 'all'
 
-const MINIMAL_SCENE_GROUPS: ReadonlySet<string> = new Set(['props', 'npcs', 'trees', 'buildings', 'all'])
+const MINIMAL_SCENE_GROUPS: ReadonlySet<string> = new Set<MinimalSceneGroup>([
+  'props',
+  'props-environment',
+  'props-settlement',
+  'props-fire',
+  'props-dropped',
+  'props-tents',
+  'props-other',
+  'npcs',
+  'trees',
+  'trees-living',
+  'trees-extra',
+  'trees-settlement',
+  'buildings',
+  'all',
+])
 
-/** `?debugSceneGroup=props|npcs|trees|buildings|all` — TEMP: isolation test —
- *  only meaningful together with `?debugMinimalScene=1`. Re-shows one
- *  category that `debugMinimalScene` would otherwise hide (or, with `all`,
- *  everything it hides) so each can be isolated without a new deploy
- *  (issue 032 follow-up). */
+/** `?debugSceneGroup=props|npcs|trees|buildings|all`, or one of the finer
+ *  `props-*`/`trees-*` subgroups (props/tree subgroups isolation) — TEMP:
+ *  isolation test — only meaningful together with `?debugMinimalScene=1`.
+ *  Re-shows one category that `debugMinimalScene` would otherwise hide (or,
+ *  with `all`, everything it hides) so each can be isolated without a new
+ *  deploy (issue 032 follow-up). */
 export function getMinimalSceneGroup(): MinimalSceneGroup | null {
   if (typeof window === 'undefined') return null
   try {

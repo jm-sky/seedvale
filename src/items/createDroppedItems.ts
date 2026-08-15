@@ -51,6 +51,8 @@ export function createDroppedItems(
 
   const spawnMesh = (item: DroppedItem, yOffset = 0): void => {
     const mesh = createItemMesh(item.kind)
+    // TEMP: isolation test — props/tree subgroups
+    mesh.name = 'dropped-item'
     placeOnGround(mesh, item.x, item.z, sampleHeight, yOffset)
     scene.add(mesh)
     meshes.set(item.id, mesh)
