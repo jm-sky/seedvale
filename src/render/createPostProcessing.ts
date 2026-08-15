@@ -121,7 +121,7 @@ export function createPostProcessing(
   }
 
   function applyConfig(next: WorldConfig['postProcessing']): void {
-    aoWanted = next.aoEnabled
+    aoWanted = false // TEMP: isolation — disable N8AO
     aoSuppressed = false
     aoSuppressedChangedAt = 0
     syncAoPass()
