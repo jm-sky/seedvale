@@ -5,7 +5,7 @@ domain: fauna
 # Plan: probabilistyczna percepcja zwierząt
 
 **Created:** 2026-08-15  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce (zob. [implementation notes](./2026-08-15--120--fauna-probabilistic-perception-implementation-notes.md))  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none
 

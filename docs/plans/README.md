@@ -47,7 +47,6 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
 | `2026-08-15--119--chunk-streaming-performance.md` | Hitchy chunk streaming: stampede po `await` GLB w `attachGeneratedChunk` + 1 mesh/klatkę z planu 112 nie obejmuje etapu content; preload szablonów + kolejka mesh/content | 🔴 | M | 112 |
-| `2026-08-15--120--fauna-probabilistic-perception.md` | Probabilistyczna percepcja zwierząt: `playerAwareness` z binarnego progu na ciągły falloff dystansu × facingDot × day/night/las, deterministyczny roll (bez `Math.random()`), bez zmian flee/react | 🟡 | M | — |
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 
 ---
@@ -67,6 +66,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-15--120--fauna-probabilistic-perception.md` | Probabilistyczna percepcja zwierząt: `playerAwareness` z binarnego progu na ciągły falloff dystansu × facingDot × day/night/las, deterministyczny roll (bez `Math.random()`, throttlowany co 0.5s per zwierzę), bez zmian flee/react — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce | 🟡 | M | — |
 | `2026-08-14--113--rendering-performance-gpu-scaling.md` | P0/P1 (+ tani P2 LOD/cienie): tańsze N8AO na High, cień raz/klatkę, instancing palisady/krzaków, lustro 30 Hz bez NPC, agresywniejszy grass LOD; P3/P4 i merge vegetation odłożone; techniczna weryfikacja zielona, brak `?benchmark=*` vs review 012 | 🔴 | L | ~~112~~ |
 | `2026-08-14--112--chunk-streaming-hitch-optimization.md` | Rozłożenie `buildAndAttachMesh` na 1/klatkę przez istniejącą kolejkę `ChunkManager`; hitch `chunk mesh` w `?benchmark=stream` do porównania z review 012; techniczna weryfikacja zielona, brak testu w przeglądarce | 🔴 | M | — |
 | `2026-08-14--111--house-construction.md` | House Builder: składanie domów z MegaKit Construction Catalog, instancing/batch statycznych części, drzwi z hinge pivotem, integracja z `buildSettlementProps`; techniczna weryfikacja zielona; brak testu w przeglądarce / `?perf=1` | 🔴 | XL | ~~109~~ |

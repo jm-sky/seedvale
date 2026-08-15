@@ -34,7 +34,7 @@ import {
   MOTHER_FOLLOW_RADIUS,
   pickHerdLeader,
 } from './herdCohesion'
-import { isPlayerNoticed } from './playerAwareness'
+import { detectionRoll, isPlayerNoticed } from './playerAwareness'
 import {
   decidePredatorHumanIntent,
   type PredatorHumanIntent,
@@ -80,6 +80,12 @@ const PLAYER_NOTICE_CONE_DOT = 0.3
  *  them, even if the fresh geometric check (range/cone) would now fail —
  *  hysteresis, avoids flicker right at the edge of the notice range/cone. */
 const ALERT_HOLD_SEC = 5
+/** How often (seconds) the player-notice dice re-rolls (plan 120 §5/§6) —
+ *  `detectionProbability` itself is still evaluated every `senseEnvironment`
+ *  call (live distance/facing), but the random draw it's compared against is
+ *  cached across this window so the roll doesn't redraw 60x/sec. Mirrors the
+ *  `humanDecisionTimer`/`HUMAN_DECISION_INTERVAL_SEC` caching idiom below. */
+const PERCEPTION_ROLL_INTERVAL_SEC = 0.5
 /** Radius (world units) within which a *lit* campfire (village or
  *  player-placed, see `app/createApp.ts`'s `litFires`) repels any animal,
  *  predator or prey alike — pure distance, no facing cone (you don't need to
@@ -324,8 +330,9 @@ export type AnimalDef = {
    *  Applies to both roles: predators are wary of humans too, just less
    *  skittish than prey (smaller range). */
   playerNoticeRange: number
-  /** Hard radius (m) within which the animal notices the player regardless
-   *  of facing direction — startled at close range. */
+  /** Radius (m) within which the animal very likely notices the player
+   *  regardless of facing direction — startled at close range, though even
+   *  here detection is probabilistic, not absolute (plan 120). */
   playerPanicRange: number
 }
 
@@ -564,6 +571,14 @@ export class AnimalAgent {
   /** Counts down from `ALERT_HOLD_SEC` after last noticing the player —
    *  hysteresis for `checkEnvironmentalDanger()`, see its comment. */
   private alertTimer = 0
+  /** Counts down to the next `detectionRoll()` re-roll (plan 120). */
+  private perceptionRollTimer = 0
+  /** Monotonic per-agent perception tick, salt for `detectionRoll()`. */
+  private perceptionTick = 0
+  /** Cached `detectionRoll()` output, refreshed every
+   *  `PERCEPTION_ROLL_INTERVAL_SEC` — compared against the live
+   *  `detectionProbability()` every frame in between. */
+  private cachedPerceptionRoll = 0
   /** This frame's loaded-settlement centers, refreshed at the top of every
    *  `update()` call — read by `fleeFrom`/`wander`/`updatePredator` without
    *  threading it through every method signature (plan 044 §2.3/§2.4). */
@@ -904,7 +919,7 @@ export class AnimalAgent {
     this.currentVillages = villages
     this.currentOthers = others
     this.tickMaturity(dt)
-    const sense = this.senseEnvironment(observerPos, dayFactor, forestFactor, litFires)
+    const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires)
 
     if (sense.playerActive) {
       this.cancelSourceTarget()
@@ -1093,6 +1108,7 @@ export class AnimalAgent {
    * is chosen by `update()` (plan 055: perception ≠ action).
    */
   private senseEnvironment(
+    dt: number,
     observerPos: THREE.Vector3,
     dayFactor: number,
     forestFactor: number,
@@ -1107,6 +1123,12 @@ export class AnimalAgent {
       const forwardZ = -Math.cos(this.mesh.rotation.y)
       facingDot = (dx / distance) * forwardX + (dz / distance) * forwardZ
     }
+    this.perceptionRollTimer -= dt
+    if (this.perceptionRollTimer <= 0) {
+      this.perceptionRollTimer = PERCEPTION_ROLL_INTERVAL_SEC
+      this.perceptionTick += 1
+      this.cachedPerceptionRoll = detectionRoll(this.animalId, this.perceptionTick)
+    }
     const noticed = isPlayerNoticed({
       distance,
       facingDot,
@@ -1115,6 +1137,7 @@ export class AnimalAgent {
       dayFactor,
       forestFactor,
       minFacingDot: PLAYER_NOTICE_CONE_DOT,
+      roll: this.cachedPerceptionRoll,
     })
     if (noticed) this.alertTimer = ALERT_HOLD_SEC
     const playerActive = noticed || this.alertTimer > 0
