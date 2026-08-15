@@ -47,7 +47,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 029 | [2026-08-13--029--village-in-open-ocean.md](./2026-08-13--029--village-in-open-ocean.md) | Wioska na otwartym oceanie / zalewanej ławicy | `verification needed` |
 | 030 | [2026-08-14--030--perf-render-bottlenecks.md](./2026-08-14--030--perf-render-bottlenecks.md) | Diagnostyka 012: N8AO + draw calle osady/NPC + shadow/mirror + hitch `chunk mesh` — bez optymalizacji jeszcze | `todo` |
 | 031 | [2026-08-15--031--unbounded-proximity-scans-fauna-settlement.md](./2026-08-15--031--unbounded-proximity-scans-fauna-settlement.md) | Audyt 013: O(N²) proximity scany bez spatial index — `AnimalAgent.nearest()` i `createSettlement.ts` `nearbyNpcCount` (drugi bez gatingu w ogóle) | `todo` |
+| 032 | [2026-08-15--032--mobile-black-world-screen.md](./2026-08-15--032--mobile-black-world-screen.md) | Telefon: sporadyczny czarny świat 3D przy działającym UI/HUD — kamera w terenie/domu + 0-size composer resize | `verification needed` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `032`
+**Next ID:** `033`

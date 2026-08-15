@@ -68,6 +68,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 - Wait / camp rest / town rest / tent rest exist. Quick Actions gate town rest on `nearTown`. Esc during rest aborts the skip before opening pause. Rest fully restores vigor/stamina (plan 106).
 - Dropped items, item spawners, placed fires and large walk-in caves (`world/largeCaves.ts`, empty of loot/mobs) exist.
 - Player footsteps are terrain-classified (`src/terrain/footstepSurface.ts` → `audio/playerMoveSounds.ts`, plan 121): beach **and** desert biome play sand (Anton Z default). A/B packs: `?footsteps=anton|legacy|mayra` or lil-gui Audio.
+- Third-person camera boom (`src/player/cameraBoom.ts`, issue [032](./issues/2026-08-15--032--mobile-black-world-screen.md)) is pulled along the look-at → camera segment so the lens stays above the heightfield and outside house-sized plan-097 colliders. It does not teleport the player. URL `?camdebug=1` overlays pose / terrainY / draw stats (off by default).
 
 ### Quests / progression
 

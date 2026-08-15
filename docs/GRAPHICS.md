@@ -35,6 +35,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G9 | Droga = tint korytarza na meshu terenu (nie osobny mesh). Miękki brzeg + ziarno dirtu; trawa **soft-fade** w korytarzu, nie hard bald cut. Extra gęstość łąki = **near-field filler LOD**, nie globalny bump `grass.density`. | `chunkHeightmap` / `biomeColors` / `grass` / `chunkManager`, issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
 | G10 | Asset alignment browser **Game-like** mode reuses `createRenderer` / `createLights` / `createSky` / `skyParamsFromTime` — no parallel preview rig. Post-processing composer runs in **single-view only** (not 4-up). | `src/tools/assetBrowser/`, plan [088](./plans/archive/2026-08-12--088--asset-alignment-browser.md) |
 | G11 | Profile jakości Low/Medium/High/Custom sterują **tylko gałkami live** (pixel ratio, AO/bloom/god rays, odbicia, shadow map, LOD scale). Nie zastępują optymalizacji architektury i nie rebuildują świata. | `src/config/qualityProfiles.ts`, plan [103](./plans/2026-08-13--103--performance-diagnostics-benchmark.md) |
+| G12 | Third-person kamera zostaje **poza heightfieldem i dużymi colliderami** (domy): boom jest skracany wzdłuż odcinka look-at → desired, bez teleportu gracza i bez osobnego raycastu sceny. | `src/player/cameraBoom.ts`, issue [032](./issues/2026-08-15--032--mobile-black-world-screen.md) |
 
 ---
 
@@ -55,6 +56,13 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-08-15 — Czarny świat 3D na mobile (issue 032) 🔧
+
+- Boom kamery (`PlayerController.syncCamera`) nie miał kolizji: look-up (pitch −0.9, distance 12) chował soczewkę pod teren; w wiosce boom 12 m przecinał dachy. Canvas czarny (near clip / backface cull / clearColor), UI i CSS2D etykiety bez zmian.
+- `resolveCameraBoom` skraca boom nad `sampleHeight + 0.45 m` i przed cylindrami colliderów `radius ≥ 1.2` (domy; pnie drzew pomijane).
+- `visualViewport` resize: skip `< 16 px`, no-op gdy integer size ten sam, coalesce do rAF; po `webglcontextrestored` force `composer.setSize` (Three.js odtwarza GL, nie RT N8AO).
+- Diagnostyka: `?camdebug=1`. Browser/device verification otwarta.
 
 ### 2026-08-15 — GPU weather renderer (plan 040 Etap 3) 🔧
 

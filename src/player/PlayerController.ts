@@ -24,6 +24,7 @@ import {
 import { createHealthState, type HealthState } from '../shared/HealthState'
 import { isExhausted } from '../shared/StaminaState'
 import { type Collider, resolvePosition } from '../world/collision'
+import { resolveCameraBoom } from './cameraBoom'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerStamina } from './PlayerNeeds'
 
 const MOVE_SPEED = 8
@@ -581,6 +582,9 @@ export class PlayerController {
     )
   }
 
+  /** Third-person boom. Desired pose is unconstrained orbit; `resolveCameraBoom`
+   *  then pulls along the look-at → camera segment so the lens stays out of
+   *  the heightfield and house-sized colliders (plan 097 circles, extruded). */
   private syncCamera(): void {
     const { yaw, pitch, distance } = this.look
     const cosPitch = Math.cos(pitch)
@@ -603,15 +607,22 @@ export class PlayerController {
       zoomT,
     )
     const targetY = this.mesh.position.y + lookAtOffset
-    this.camera.position.set(
-      this.mesh.position.x + this.camOffset.x,
-      targetY + this.camOffset.y,
-      this.mesh.position.z + this.camOffset.z,
-    )
-    this.camera.lookAt(
-      this.mesh.position.x,
-      targetY,
-      this.mesh.position.z,
-    )
+    const originX = this.mesh.position.x
+    const originZ = this.mesh.position.z
+    const desiredX = originX + this.camOffset.x
+    const desiredY = targetY + this.camOffset.y
+    const desiredZ = originZ + this.camOffset.z
+    const resolved = resolveCameraBoom({
+      originX,
+      originY: targetY,
+      originZ,
+      camX: desiredX,
+      camY: desiredY,
+      camZ: desiredZ,
+      sampleHeight: this.sampleHeight,
+      colliders: this.collidersNear(originX, originZ),
+    })
+    this.camera.position.set(resolved.x, resolved.y, resolved.z)
+    this.camera.lookAt(originX, targetY, originZ)
   }
 }

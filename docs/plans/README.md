@@ -142,6 +142,7 @@ New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), a `domain:`/option
 
 ## Quick notes / bugs
 
+- **Czarny świat 3D na telefonie** — issue [032](../issues/2026-08-15--032--mobile-black-world-screen.md): boom kamery w terenie/domu + 0-size composer. Fix w kodzie; playtest: wioska, look-up, orbit przy dachach, obrót telefonu, `?camdebug=1`.
 - **NPC utyka w/przy domku** — P0+P1 planu [108](./2026-08-14--108--npc-stuck-at-house-locomotion.md) w kodzie; playtest w `?debug=1` otwarty.
 - **Światło w domach** — `findWallMount` raycastuje bryłę; 2026-08-11: nadal nierówne, potrzeba mapowania per model.
 - **Latające obiekty** — `waitForChunks` przed propsami osady; 2026-08-11: nadal nieidealne.

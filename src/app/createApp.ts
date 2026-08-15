@@ -24,6 +24,8 @@ import {
   applyStoredTerrain,
   createWorldConfig,
 } from '../config/worldConfig'
+import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
+import { isCameraDebugMode } from '../debug/debugMode'
 import { type AnimalAgent, BURY_DURATION_SEC } from '../fauna/AnimalAgent'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
@@ -52,6 +54,7 @@ import { createPlayerTorch } from '../player/PlayerTorch'
 import { QuestManager } from '../quests/QuestManager'
 import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
+import { MIN_RENDERER_SIZE, shouldApplyRendererResize } from '../render/rendererResize'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
@@ -1463,34 +1466,82 @@ export async function createApp(
   gameLoop.resyncDayNight()
 
   let frameId = 0
+  let lastViewportWidth = -1
+  let lastViewportHeight = -1
+  let resizeScheduled = false
+  let webglContextLost = false
+  const cameraDebug = isCameraDebugMode() ? createCameraDebugOverlay(container) : null
 
-  const onResize = () => {
-    const width = container.clientWidth
-    const height = container.clientHeight
+  const applyViewportSize = (force = false) => {
+    let width = container.clientWidth
+    let height = container.clientHeight
+    if (width < MIN_RENDERER_SIZE || height < MIN_RENDERER_SIZE) {
+      if (!force || lastViewportWidth < MIN_RENDERER_SIZE) return
+      width = lastViewportWidth
+      height = lastViewportHeight
+    }
+    if (!force && !shouldApplyRendererResize(width, height, lastViewportWidth, lastViewportHeight)) {
+      return
+    }
+    lastViewportWidth = Math.round(width)
+    lastViewportHeight = Math.round(height)
     camera.aspect = width / height
     camera.updateProjectionMatrix()
     renderer.setSize(width, height)
     labelRenderer.setSize(width, height)
     postProcessing.setSize(width, height)
   }
-  window.addEventListener('resize', onResize)
+  const requestResize = () => {
+    if (resizeScheduled) return
+    resizeScheduled = true
+    requestAnimationFrame(() => {
+      resizeScheduled = false
+      applyViewportSize()
+    })
+  }
+  window.addEventListener('resize', requestResize)
   // Mobile browsers resize the *visual* viewport (address bar show/hide,
   // on-screen keyboard) without always firing a plain window 'resize' — and
   // orientation changes on some Android WebViews fire neither reliably.
   // Covering both keeps the canvas from getting stuck at a stale size
   // (reported: Chrome mobile rendering only into half the screen width after
   // the initial address-bar layout settled).
-  window.addEventListener('orientationchange', onResize)
-  window.visualViewport?.addEventListener('resize', onResize)
+  // Coalesce + skip 0-size blips: visualViewport fires continuously while the
+  // address bar animates, and a 0-height composer target reads as a black
+  // world while the DOM UI keeps working.
+  window.addEventListener('orientationchange', requestResize)
+  window.visualViewport?.addEventListener('resize', requestResize)
+  const onOrientationSettled = () => { window.setTimeout(requestResize, 250) }
+  window.addEventListener('orientationchange', onOrientationSettled)
   // Defensive re-measure a couple frames after first paint, in case the very
   // first `container.clientWidth/clientHeight` read (used above to size the
   // renderer/camera) happened before the mobile browser's chrome/address-bar
   // layout had fully settled.
-  requestAnimationFrame(() => requestAnimationFrame(onResize))
+  requestAnimationFrame(() => requestAnimationFrame(requestResize))
+
+  const canvas = renderer.domElement
+  const onWebglContextLost = () => {
+    webglContextLost = true
+    console.warn('[renderer] WebGL context lost')
+  }
+  const onWebglContextRestored = () => {
+    webglContextLost = false
+    console.warn('[renderer] WebGL context restored — reallocating composer targets')
+    applyViewportSize(true)
+  }
+  canvas.addEventListener('webglcontextlost', onWebglContextLost)
+  canvas.addEventListener('webglcontextrestored', onWebglContextRestored)
 
   const tick = () => {
     frameId = requestAnimationFrame(tick)
     gameLoop.tick()
+    cameraDebug?.update({
+      camera,
+      renderer,
+      scene,
+      sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
+      contextLost: webglContextLost,
+    })
   }
   tick()
   loadingScreen.hide()
@@ -1518,9 +1569,13 @@ export async function createApp(
 
   return () => {
     cancelAnimationFrame(frameId)
-    window.removeEventListener('resize', onResize)
-    window.removeEventListener('orientationchange', onResize)
-    window.visualViewport?.removeEventListener('resize', onResize)
+    window.removeEventListener('resize', requestResize)
+    window.removeEventListener('orientationchange', requestResize)
+    window.removeEventListener('orientationchange', onOrientationSettled)
+    window.visualViewport?.removeEventListener('resize', requestResize)
+    canvas.removeEventListener('webglcontextlost', onWebglContextLost)
+    canvas.removeEventListener('webglcontextrestored', onWebglContextRestored)
+    cameraDebug?.dispose()
     window.removeEventListener('beforeunload', saveNow)
     document.removeEventListener('visibilitychange', onVisibilityChange)
     window.removeEventListener('pagehide', saveNow)
