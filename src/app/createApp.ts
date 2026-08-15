@@ -1487,6 +1487,19 @@ export async function createApp(
     debugEvents.push(`[${t}s] ${label}`)
     if (debugEvents.length > MAX_DEBUG_EVENTS) debugEvents.shift()
   }
+  // Issue 032 follow-up: EffectComposer + N8AO + UnrealBloomPass allocate ~15
+  // HalfFloatType/FloatType render targets. Rendering into them needs
+  // EXT_color_buffer_half_float / EXT_color_buffer_float; without it a mobile
+  // driver can leave the framebuffer incomplete (or silently downgrade the
+  // attachment) with no WebGL API error and no context loss — matching the
+  // reported symptom (black 3D canvas, UI intact, `gl error NONE`,
+  // `contextLost false`). Logged once so the next repro's `events:` section
+  // can confirm or rule this out.
+  if (cameraDebug) {
+    const halfFloatRt = renderer.extensions.has('EXT_color_buffer_half_float')
+    const floatRt = renderer.extensions.has('EXT_color_buffer_float')
+    pushDebugEvent(`float RT support: half=${halfFloatRt} full=${floatRt}`)
+  }
 
   const applyViewportSize = (force = false) => {
     let width = container.clientWidth

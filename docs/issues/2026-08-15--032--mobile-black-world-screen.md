@@ -79,3 +79,59 @@ Użytkownik zgłosił, że mruganie na czarno nadal występuje **poza wioską, b
 ### Next step
 
 Przy następnym wystąpieniu migotania: otwórz grę z `?camdebug=1` na telefonie, zagraj normalnie do momentu wystąpienia migotania, następnie **bez odświeżania strony** spójrz na sekcję `events:` w overlayu w lewym dolnym rogu. Jeśli pojawi się linia `contextLost` / `contextRestored after Nms` — to potwierdza hipotezę #1 (utrata kontekstu WebGL) i uzasadnia dalszą pracę (np. redukcję liczby jednoczesnych render targetów na słabszych urządzeniach). Jeśli overlay pokaże `camera invalid` lub `invalid viewport` — to wskazuje inną, jeszcze nieprzewidzianą ścieżkę i wymaga dalszego śledztwa w tym konkretnym miejscu. Jeśli `events:` pozostanie puste mimo zaobserwowanego migotania — przyczyna leży poza tym, co ten audyt potrafił tanio zdiagnozować (np. sterownik GPU/kompozytor przeglądarki poza kontrolą Three.js) i potrzebna będzie inna metoda (np. `chrome://gpu` po incydencie, albo nagranie ekranu z overlayem widocznym).
+
+## Audyt render pipeline (2026-08-15, po realnym screenshocie z telefonu) — hipoteza #1 (context loss) NIE potwierdzona
+
+Użytkownik dostarczył **realny screenshot** z telefonu Android zrobiony w momencie czarnego ekranu, z `?camdebug=1` aktywnym. Zawartość overlayu:
+
+```text
+pos 123.86 8.94 -25.92 / rot -2.60 -1.31 -2.61
+clip near 0.1 far 300 aspect=2.52
+terrainY 2.20  cam-ground 6.74
+scene 8169  calls 1058  tris 1786147
+dpr 2.00  size 1504x596
+gl error NONE  contextLost false
+events: (none)
+```
+
+Czyli w momencie realnego czarnego ekranu: kamera poprawna, viewport poprawny, brak `gl error`, brak `contextLost`, **i sticky event log — dodany właśnie po to, by złapać krótkie miganie między odświeżeniami overlayu — jest pusty**. To bezpośrednio podważa hipotezę #1 z poprzedniego audytu (przejściowa utrata kontekstu WebGL): gdyby `webglcontextlost` faktycznie wystąpił, `onWebglContextLost` (`src/app/createApp.ts:1540`) pushowałby `contextLost` do tego samego logu przed jakimkolwiek kolejnym renderem — a listener jest zarejestrowany od startu aplikacji, nie tylko w oknie 250ms. Pusty `events:` przy jednocześnie czarnym canvasie to silny dowód **przeciw** context loss jako przyczynie tego konkretnego incydentu.
+
+### Nowa wiodąca hipoteza: render targety EffectComposer/N8AO/Bloom są `HalfFloatType`/`FloatType`, a ich poprawne renderowanie zależy od rozszerzeń WebGL2, które nie są gwarantowane na każdym mobilnym GPU
+
+Zweryfikowane w kodzie (three 0.180.0 w `node_modules`):
+
+- `EffectComposer` (`node_modules/three/examples/jsm/postprocessing/EffectComposer.js`) tworzy swoje dwa główne render targety (`renderTarget1`/`renderTarget2`) jako `{ type: HalfFloatType }`, gdy `createPostProcessing` (`src/render/createPostProcessing.ts:63`) nie przekazuje własnego RT do konstruktora — a nie przekazuje.
+- `UnrealBloomPass` (`node_modules/three/examples/jsm/postprocessing/UnrealBloomPass.js`) alokuje **11 dodatkowych** `HalfFloatType` render targetów (bright pass + 5-poziomowy separable blur w obu osiach).
+- `n8ao` (`node_modules/n8ao/dist/N8AO.js`) używa zarówno `HalfFloatType`, jak i `FloatType` dla swoich wewnętrznych buforów (depth/normal do obliczeń GTAO).
+- Razem to ~15 jednocześnie żywych float/half-float render targetów, poza `WaterMirror` (128², `UnsignedByteType` domyślnie — bezpieczny) i shadow mapą.
+- Renderowanie *do* takiego RT w WebGL2 (nie samo próbkowanie) wymaga `EXT_color_buffer_half_float` lub `EXT_color_buffer_float` (`node_modules/three/src/renderers/webgl/WebGLCapabilities.js:41`, `WebGLExtensions.js:56-59`). **Three.js nie sprawdza tego przed renderowaniem do custom `WebGLRenderTarget`** — `textureTypeReadable()` (jedyne miejsce, które w ogóle patrzy na te rozszerzenia) jest używane tylko przy `readRenderTargetPixels`, nie przy zwykłym `renderer.render()` do docelowego RT. Nie ma więc żadnego preflight-guarda ani fallbacku w samym Three.js.
+- Jeśli sterownik/GPU danego telefonu nie wspiera (albo pod presją pamięci/termiczną chwilowo nie dostarcza) tego rozszerzenia poprawnie, skutek zależy od implementacji drivera: niektóre GPU zgłaszają `INVALID_FRAMEBUFFER_OPERATION` przy próbie rysowania do niekompletnego framebuffera (co *powinno* zostać złapane przez istniejący `gl.getError()` poll co 250ms w `createCameraDebugOverlay.ts:55`), ale inne (typowe dla części Android ANGLE/GLES ścieżek) po cichu tworzą framebuffer z downgradowanym formatem (np. RGBA16F → RGBA8) albo zostawiają go pustym/czarnym **bez zgłoszenia błędu WebGL**. To dokładnie pasuje do obserwacji: `gl error NONE` + `contextLost false` + całkowicie czarny finalny frame.
+- Sporadyczność objawu pasuje do tej hipotezy: to nie stały brak wsparcia (bo wtedy ekran byłby czarny cały czas), tylko prawdopodobnie chwilowa niestabilność drivera pod obciążeniem — scena ze screenshotu jest bardzo ciężka jak na telefon (`tris 1786147`, `calls 1058`, `dpr 2.00`), co zwiększa presję pamięci GPU dokładnie w момencie, gdy te ~15 float RT + shadow map + wszystkie tekstury sceny muszą współistnieć.
+
+### Sprawdzone i wykluczone/uznane za bezpieczne w tym audycie
+
+- **`EffectComposer.render()` (kolejność passów, swap, `renderToScreen`)** — przeanalizowane linia po linii. `pass.renderToScreen = this.renderToScreen && this.isLastEnabledPass(i)` jest przeliczane przy każdym `render()`, więc niezależnie od tego, które passy są aktualnie włączone (np. `godRaysPass`/`bloomPass` wyłączone w danej klatce), ostatni **włączony** pass zawsze poprawnie renderuje na ekran. `outputPass` (grading + tone mapping + output color space) jest zawsze dodany i nigdy nie jest programowo wyłączany w tym kodzie (`setPassEnabled` nie ma gałęzi dla `outputPass`) — więc zawsze jest ostatnim włączonym passem. Brak state-leak w samym composerze.
+- **`renderPass`/`aoPass` wzajemne wykluczanie (`syncAoPass()`, `src/render/createPostProcessing.ts:112`)** — `aoPass.enabled` i `renderPass.enabled = !aoOn` są ustawiane synchronicznie w jednej funkcji, wywoływanej z każdego miejsca, które zmienia stan AO (`applyConfig`, `applyFrameBudget`, `setPassEnabled`). Nie ma ścieżki kodu, w której oba są `false` jednocześnie (scena w ogóle nie renderowana) ani oba `true` (podwójny render).
+- **`WaterMirror.render()`** — zapisuje i przywraca `renderer.getRenderTarget()`, `xr.enabled`, `shadowMap.autoUpdate` wokół własnego renderu; `renderer.setRenderTarget(currentTarget)` na końcu gwarantuje, że `composer.render()` zawsze zaczyna z poprawnym target = null (ekran) / właściwym RT. Nie zostawia scissor/viewport w złym stanie (nie modyfikuje ich w ogóle). Bezpieczne.
+- **`createRenderer.ts`** — `antialias: false` (celowe, AA robi SMAA w composerze), `renderer.info.autoReset = false` (celowe, patrz komentarz w pliku) — obie decyzje nieszkodliwe dla czarnego frame'a.
+
+### Changes
+
+- `src/app/createApp.ts` — jednorazowy (przy starcie, tylko gdy `?camdebug=1`) sticky event log: `float RT support: half=<bool> full=<bool>`, sprawdzający `renderer.extensions.has('EXT_color_buffer_half_float' | 'EXT_color_buffer_float')`. Zero kosztu w produkcji (gated za `cameraDebug`), zero kosztu per-frame (liczone raz). Cel: przy następnym repro na telefonie użytkownika, ten wpis w `events:` bezpośrednio potwierdzi lub obali powyższą hipotezę — jeśli obie flagi są `false` na tym urządzeniu, to bardzo mocny dowód na przyczynę. Jeśli obie `true`, hipoteza się nie utrzymuje i trzeba szukać dalej (np. chwilowa utrata rozszerzenia pod presją pamięci — do tego potrzebny byłby per-frame check, celowo pominięty tutaj jako zbyt kosztowny bez dowodu, że jest potrzebny).
+- Brak zmian w logice renderowania, passach, composerze czy `WaterMirror` — czysto diagnostyczne, jak nakazywał zakres audytu.
+
+### Verification
+
+- `npx tsc --noEmit` — pass.
+- `npx eslint src/app/createApp.ts` — czysto.
+- `npm run test` — 831/831 pass.
+- `npm run build` — pass (`vue-tsc --noEmit && vite build`).
+
+### Browser verification
+
+`NOT VERIFIED`
+
+### Next step
+
+1. Przy następnym wystąpieniu migotania na telefonie z `?camdebug=1` aktywnym od startu sesji: sprawdzić linię `float RT support: half=... full=...` w `events:`. `false`/`false` (lub nawet tylko `half=false`, bo half-float jest głównym typem używanym w tym pipeline) silnie potwierdza hipotezę powyżej i uzasadnia fallback — np. wykrycie braku wsparcia i przekazanie do `EffectComposer`/`UnrealBloomPass`/`N8AOPass` `WebGLRenderTarget` z `type: UnsignedByteType` zamiast domyślnego float/half-float na dotkniętych urządzeniach (osobna zmiana, poza zakresem tego audytu — wymaga najpierw potwierdzenia na realnym urządzeniu).
+2. Jeśli `half=true`/`full=true` na dotkniętym telefonie mimo to: hipoteza przesuwa się z "brak wsparcia rozszerzenia" na "chwilowa niestabilność sterownika pod presją pamięci GPU przy tej scenie" (`tris 1786147`, ~15 float RT jednocześnie) — wtedy warto rozważyć per-frame (lub co N klatek, tanio) `gl.checkFramebufferStatus` na aktualnie bindowanym framebufferze tuż po `composer.render()`, gated za `?camdebug=1`, jako kolejny krok diagnostyczny (celowo NIE dodane w tym audycie, bo nie ma jeszcze dowodu, że jest potrzebne, i wymagałoby sięgnięcia po prywatne `renderer.properties` API Three.js).
