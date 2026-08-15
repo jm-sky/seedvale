@@ -11,6 +11,10 @@ export type CameraDebugSnapshot = {
    *  between two 250ms overlay refreshes is still visible afterward — a live
    *  snapshot alone would miss anything shorter than the throttle window. */
   events: readonly string[]
+  /** `?debugRenderState=1` diagnostic block (see `renderStateDebug.ts`), or
+   *  `null` when the flag is off. Pre-formatted by the caller — this overlay
+   *  just appends it verbatim. */
+  renderStateText: string | null
 }
 
 export type CameraDebugOverlay = {
@@ -50,7 +54,7 @@ export function createCameraDebugOverlay(parent: HTMLElement): CameraDebugOverla
     if (age < 250 && lastText !== '') return
     age = 0
 
-    const { camera, renderer, scene, sampleHeight, contextLost, events } = snapshot
+    const { camera, renderer, scene, sampleHeight, contextLost, events, renderStateText } = snapshot
     const gl = renderer.getContext()
     const err = gl.getError()
     if (err !== gl.NO_ERROR) lastGlError = String(err)
@@ -69,6 +73,7 @@ export function createCameraDebugOverlay(parent: HTMLElement): CameraDebugOverla
       `dpr ${fmt(renderer.getPixelRatio())}  size ${renderer.domElement.width}x${renderer.domElement.height}`,
       `gl error ${lastGlError}  contextLost ${contextLost || gl.isContextLost()}`,
       events.length > 0 ? `events:\n${events.join('\n')}` : 'events: (none)',
+      ...(renderStateText ? ['', renderStateText] : []),
     ].join('\n')
     if (text !== lastText) {
       lastText = text

@@ -42,6 +42,7 @@ import { playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audi
 import { playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { isCameraMeshDebugMode, isDebugMode } from '../debug/debugMode'
+import { setCameraMeshHit } from '../debug/renderStateDebug'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { isMeleeTool } from '../fauna/faunaCombat'
@@ -902,15 +903,31 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const hits = cameraMeshRaycaster.intersectObjects(scene.children, true)
       const hit = hits.find((h) => (h.object as { isMesh?: boolean }).isMesh)
       const hitUuid = hit?.object.uuid ?? null
+      let rootName = ''
+      if (hit) {
+        let root: Object3D | null = hit.object.parent
+        rootName = hit.object.parent?.name || ''
+        while (root && root !== scene) {
+          if (root.name) rootName = root.name
+          root = root.parent
+        }
+      }
+      // `?debugRenderState=1` reads this every frame (distance changes even
+      // when the hit mesh doesn't) — reuses this raycast rather than running
+      // a second independent one.
+      setCameraMeshHit(
+        hit
+          ? {
+              name: hit.object.name || '(unnamed)',
+              uuid: hit.object.uuid,
+              parentName: rootName || '(scene root)',
+              distance: hit.distance,
+            }
+          : null,
+      )
       if (hitUuid !== lastCameraMeshUuid) {
         lastCameraMeshUuid = hitUuid
         if (hit) {
-          let root: Object3D | null = hit.object.parent
-          let rootName = hit.object.parent?.name || ''
-          while (root && root !== scene) {
-            if (root.name) rootName = root.name
-            root = root.parent
-          }
           console.info(
             `[CameraMeshDebug]\nname=${hit.object.name || '(unnamed)'}\ntype=${hit.object.type}\nuuid=${hit.object.uuid}\nparent=${rootName || '(scene root)'}\ndistance=${hit.distance.toFixed(3)}`,
           )

@@ -38,3 +38,11 @@ export function isNoShadowsDebugMode(): boolean {
 export function isCameraMeshDebugMode(): boolean {
   return urlFlag('debugCameraMesh')
 }
+
+/** `?debugRenderState=1` — TEMP: adds low-level render-call diagnostics
+ *  (viewport/scissor/visible-mesh-count/anomaly detection) to the `camdebug`
+ *  overlay, sampled immediately before `renderer.render(scene, camera)`.
+ *  Requires `?camdebug=1` to actually be visible (issue 032 follow-up). */
+export function isRenderStateDebugMode(): boolean {
+  return urlFlag('debugRenderState')
+}

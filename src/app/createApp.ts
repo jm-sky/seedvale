@@ -24,7 +24,8 @@ import {
   createWorldConfig,
 } from '../config/worldConfig'
 import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
-import { isCameraDebugMode, isNoShadowsDebugMode } from '../debug/debugMode'
+import { isCameraDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode } from '../debug/debugMode'
+import { getRenderStateDebugText } from '../debug/renderStateDebug'
 import { type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
@@ -1594,6 +1595,7 @@ export async function createApp(
         sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
         contextLost: webglContextLost,
         events: debugEvents,
+        renderStateText: isRenderStateDebugMode() ? getRenderStateDebugText() : null,
       })
     }
   }

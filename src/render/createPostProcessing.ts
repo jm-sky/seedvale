@@ -6,10 +6,12 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import type { WorldConfig } from '../config/worldConfig'
+import { isRenderStateDebugMode } from '../debug/debugMode'
+import { sampleRenderState } from '../debug/renderStateDebug'
 import { shouldSuppressAo } from './aoBudget'
 import { GodRaysShader } from './godRaysShader'
 import { createGradedOutputPass } from './gradedOutputPass'
-import type { Camera, Scene, WebGLRenderer } from 'three'
+import type { Camera, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
 
 export type PostPassId = 'ao' | 'bloom' | 'smaa' | 'godRays' | 'filmGrade'
 
@@ -226,7 +228,12 @@ export function createPostProcessing(
 
   return {
     // TEMP: isolation test — bypass EffectComposer
-    render: () => renderer.render(scene, camera),
+    render: () => {
+      // `?debugRenderState=1` — diagnostics only, sampled immediately before
+      // the actual render call; never mutates renderer/camera/scene state.
+      if (isRenderStateDebugMode()) sampleRenderState(renderer, scene, camera as PerspectiveCamera)
+      renderer.render(scene, camera)
+    },
     setSize: (w, h) => composer.setSize(w, h),
     setPixelRatio: (pixelRatio) => composer.setPixelRatio(pixelRatio),
     applyConfig,
