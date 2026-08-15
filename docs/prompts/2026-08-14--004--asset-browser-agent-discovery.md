@@ -1,8 +1,8 @@
 # Seedvale — Asset Browser: discovery dla agenta (plan 107)
 
-**Status:** `todo`  
-**Created:** 2026-08-14  
-**Plan:** [docs/plans/2026-08-14--107--asset-browser-agent-discovery.md](../plans/2026-08-14--107--asset-browser-agent-discovery.md)  
+**Status:** `verification needed`
+**Created:** 2026-08-14
+**Plan:** [docs/plans/2026-08-14--107--asset-browser-agent-discovery.md](../plans/2026-08-14--107--asset-browser-agent-discovery.md)
 **Review (źródło tarcia):** [docs/reviews/2026-08-14--008--asset-browser-modular-cottage.md](../reviews/2026-08-14--008--asset-browser-modular-cottage.md)
 
 ## Cel

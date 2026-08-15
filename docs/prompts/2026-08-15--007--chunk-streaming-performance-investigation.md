@@ -1,5 +1,8 @@
 Zbadaj WYŁĄCZNIE problem chunk-streaming hitchy w Seedvale i przygotuj plan poprawy.
 
+**Status:** `done`
+**Pla:**: `docs/plans/2026-08-15--119--chunk-streaming-performance.md`
+
 ## Cel
 
 Zidentyfikować przyczynę bardzo długich klatek podczas chunk streaming oraz przygotować konkretny plan implementacji.
@@ -83,7 +86,7 @@ Ustal konkretnie:
    - backpressure,
    - cancellation,
    - worker pipeline,
-   
+
    i czy są faktycznie używane.
 6. Czy streaming może wykonać zbyt dużo pracy jednocześnie po większym ruchu/teleporcie.
 7. Czy unload starych chunków może kolidować z load nowych.
@@ -359,4 +362,4 @@ Do not implement anything.
 
 Do not perform a general performance audit.
 
-After this verification, proceed to the planned **chunk streaming investigation**. 
+After this verification, proceed to the planned **chunk streaming investigation**.
