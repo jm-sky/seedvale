@@ -143,3 +143,26 @@ Użytkownik dostarczył kolejny debug capture w trakcie czarnego ekranu z dokła
 Static-analysis regression audit (nie ten sam wątek co czarny-ekran-w-domu z Przyczyny 1 wyżej) znalazł niezależną ścieżkę, która pasuje do wszystkich dotychczasowych obserwacji (`gl error NONE`, `contextLost false`, UI/HUD działa, świat 3D czarny 1-3s) **bez wymagania utraty kontekstu ani driver-niestabilności**: `SettlementsManager.ensureLoaded()` → `waitForChunks()` (`src/terrain/chunkManager.ts:1385-1396`) może przy przerwie >48ms w game loop (typowe na mobile: background/foreground, throttling termiczny) zdrenować całą kolejkę finalizacji chunków **synchronicznie, bez żadnego `await`** (od `e25cce9` finalize nie ma już punktu yield), po czym `createSettlement()` buduje wszystkie propsy osady też synchronicznie (`080fd3f` usunął frame-yielding z planu 102 — patrz [issue 027](./2026-08-13--027--settlement-streaming-main-thread-freeze.md)). To może zablokować main thread na tyle długo, że przeglądarka na mobile pomija kilka klatek renderu — z zewnątrz nieodróżnialne od "czarnego ekranu", ale przyczyna to CPU stall, nie GPU/render-target failure. Szczegóły i dokładna ścieżka kodu: [review 017](../reviews/2026-08-15--017--rendering-regression-audit.md), sekcja "Most likely regression / A".
 
 Nie potwierdzone w przeglądarce. Następny krok: powtórzyć next-experiment #1 z review 017 (wejście w zasięg nieodwiedzonej osady + backgrounding taba na mobile tuż przed rozwiązaniem `waitForChunks`) i sprawdzić, czy czarny ekran koreluje z tym momentem, niezależnie od `?camdebug=1`'s `events:` (ta ścieżka nie jest utratą kontekstu, więc `events:` pozostanie puste nawet jeśli to jest przyczyna — co samo w sobie jest zgodne z dotychczasową obserwacją "events: (none)" przy czarnym ekranie).
+
+## Fix (2026-08-15) — twardy budżet czasu na idle-drain finalizacji chunków
+
+Zaimplementowany minimalny fix dla ścieżki main-thread-stall opisanej wyżej (nie dotyka hipotez GPU/context-loss z wcześniejszych sekcji tego issue — te pozostają niepotwierdzone/niewykluczone niezależnie od tej zmiany).
+
+**Root cause (potwierdzone w kodzie):** `waitForChunks()` (`src/terrain/chunkManager.ts`) wołał `drainFinalizeQueue(Number.POSITIVE_INFINITY)`, gdy gap w game loop przekroczył `GAME_LOOP_IDLE_MS` (48ms) — od `e25cce9` `runFinalize` jest w pełni synchroniczne (bez `await`), więc ta gałąź mogła zdrenować całą kolejkę (do 9 chunków × 2 etapy dla bloku osady) w jednym nieprzerwanym ticku JS.
+
+**Zmiana:** `drainFinalizeQueue(Number.POSITIVE_INFINITY)` → `drainFinalizeQueueByBudget(FINALIZE_DRAIN_BUDGET_MS)` (budżet = 8ms, zgodny z `HITCH_MS` w `perf/monitor.ts`). Nowa funkcja (`drainByBudget`, eksportowana i pokryta testem jednostkowym z fake-clockiem) drenuje kolejkę do wyczerpania budżetu czasu, nie liczby zadań — zawsze przetwarza co najmniej jedno zadanie (gwarancja postępu), po czym oddaje sterowanie z powrotem do pętli `waitForChunks` (`requestAnimationFrame`), która i tak już czeka na kolejną klatkę między iteracjami. Init świata (brak game loopu) nadal w pełni się drenuje — tylko rozłożone na więcej klatek zamiast jednego bloku.
+
+**Nie dotknięto:** `src/settlement/props.ts` (`buildInstancedProps`). Re-audyt kodu pokazał, że cooperative-yield gate (`createPropYieldGate`/`yieldProp`) nadal istnieje wokół pętli zbierających placementy (domy, ogrody, krzaki placu) — `080fd3f` zamienił tylko finalny krok "zbuduj `InstancedMesh` z już zebranych placementów" na jedno synchroniczne wywołanie per kategoria (palisada/beczki/siano/krzaki), co jest tanią operacją CPU (macierze/bufory), nie GLB-clone+material-tint jak reszta budowy. To osłabia (nie eliminuje) drugorzędny wkład tej ścieżki do freeze'u z [issue 027](./2026-08-13--027--settlement-streaming-main-thread-freeze.md) — pozostaje tam otwarte, poza zakresem tego fixu.
+
+### Verification
+
+```text
+typecheck: pass (npx tsc --noEmit)
+lint: pass na dotkniętych plikach (npx eslint src/terrain/chunkManager.ts src/terrain/chunkManager.test.ts) — 11 pre-existing błędów w niepowiązanym _temp/asset-audit/inspect.mjs (poza zakresem)
+tests: 840/840 pass (npm run test), w tym nowe testy drainByBudget (spread across ticks, min. 1 job progress, stop gdy brak pracy)
+build: pass (npm run build)
+```
+
+### Browser verification
+
+`NOT VERIFIED` — next-experiment #1 z review 017 (backgrounding taba tuż przed rozwiązaniem `waitForChunks` przy wejściu w zasięg nieodwiedzonej osady) nadal do wykonania na realnym urządzeniu.

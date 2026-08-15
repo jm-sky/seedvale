@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
 import { apronOriginWorld } from './chunkHeightmap'
-import { applyModificationToTile, pickNearestQueuedKey, pickNextFinalizeKey, type TerrainModification } from './chunkManager'
+import { applyModificationToTile, drainByBudget, pickNearestQueuedKey, pickNextFinalizeKey, type TerrainModification } from './chunkManager'
 
 // Small grid so texel math is easy to reason about by hand: resolution 5,
 // chunkSize 32 -> step 8, apronRes 7 (world x/z per texel: -24,-16,-8,0,8,16,24
@@ -154,5 +154,65 @@ describe('pickNextFinalizeKey', () => {
     expect(
       pickNextFinalizeKey([{ key: 'a', stage: 'content' }], () => 1, () => false),
     ).toBeUndefined()
+  })
+})
+
+describe('drainByBudget', () => {
+  function fakeClock(startMs = 0) {
+    let now = startMs
+    return { now: () => now, advance: (ms: number) => { now += ms } }
+  }
+
+  it('spreads many pending jobs across ticks instead of draining them all at once', () => {
+    // Regression case for review 017: many chunks finish at once (a whole
+    // settlement's 3x3 block), each job costing more than a single frame's
+    // budget should allow through in one go.
+    const clock = fakeClock()
+    let remaining = 20
+    let ran = 0
+    drainByBudget(
+      () => {
+        if (remaining <= 0) return false
+        remaining--
+        ran++
+        clock.advance(3) // each job costs 3ms
+        return true
+      },
+      8, // budget
+      clock.now,
+    )
+    // 8ms budget / 3ms per job -> a handful of jobs run, not all 20.
+    expect(ran).toBeGreaterThan(0)
+    expect(ran).toBeLessThan(20)
+    expect(remaining).toBeGreaterThan(0)
+  })
+
+  it('always runs at least one job even when a single job already exceeds the budget', () => {
+    const clock = fakeClock()
+    let ran = 0
+    drainByBudget(
+      () => {
+        ran++
+        clock.advance(50) // costs more than the whole budget by itself
+        return ran < 1 // stop after one job
+      },
+      8,
+      clock.now,
+    )
+    expect(ran).toBe(1)
+  })
+
+  it('stops immediately once the step function reports no work left', () => {
+    const clock = fakeClock()
+    let calls = 0
+    drainByBudget(
+      () => {
+        calls++
+        return false
+      },
+      1000,
+      clock.now,
+    )
+    expect(calls).toBe(1)
   })
 })

@@ -108,6 +108,9 @@ export function createPostProcessing(
 
   let aoWanted = config.aoEnabled
   let aoSuppressed = false
+  // 0 reads as "unbounded time since last change," so the first real check
+  // in applyFrameBudget is never held back by the min-stable-time floor.
+  let aoSuppressedChangedAt = 0
 
   function syncAoPass(): void {
     const aoOn = aoWanted && !aoSuppressed
@@ -118,6 +121,7 @@ export function createPostProcessing(
   function applyConfig(next: WorldConfig['postProcessing']): void {
     aoWanted = next.aoEnabled
     aoSuppressed = false
+    aoSuppressedChangedAt = 0
     syncAoPass()
     aoPass.setQualityMode(next.aoQuality)
     aoPass.configuration.aoRadius = next.aoRadius
@@ -142,7 +146,10 @@ export function createPostProcessing(
       syncAoPass()
       return
     }
-    aoSuppressed = shouldSuppressAo(aoSuppressed, renderMs)
+    const now = performance.now()
+    const next = shouldSuppressAo(aoSuppressed, renderMs, now - aoSuppressedChangedAt)
+    if (next !== aoSuppressed) aoSuppressedChangedAt = now
+    aoSuppressed = next
     syncAoPass()
   }
 
@@ -151,6 +158,7 @@ export function createPostProcessing(
       case 'ao':
         aoWanted = enabled
         aoSuppressed = false
+        aoSuppressedChangedAt = 0
         syncAoPass()
         break
       case 'bloom':

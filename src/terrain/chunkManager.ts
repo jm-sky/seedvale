@@ -481,6 +481,19 @@ export function pickNextFinalizeKey(
   )
 }
 
+/** Repeatedly calls `step()` until it returns `false` (nothing left to do) or
+ *  the wall-clock budget elapses — always calls `step()` at least once, so a
+ *  caller with pending work keeps making progress even when a single step's
+ *  cost already exceeds the budget. `now` is injectable so the "many pending
+ *  jobs get spread across ticks, not drained unboundedly" behavior can be
+ *  unit tested with a fake clock, independent of `performance.now()`. */
+export function drainByBudget(step: () => boolean, budgetMs: number, now: () => number = () => performance.now()): void {
+  const start = now()
+  do {
+    if (!step()) return
+  } while (now() - start < budgetMs)
+}
+
 export function createChunkManager(
   scene: THREE.Scene,
   config: ChunkManagerConfig,
@@ -529,6 +542,12 @@ export function createChunkManager(
   // `update()` hasn't run recently, the waiter pumps finalization itself.
   let lastUpdateAt = 0
   const GAME_LOOP_IDLE_MS = 48
+  // Wall-clock cap on the idle catch-up drain below — job cost varies too
+  // much (mesh vs content stage, GLB clone cost) for a job-count cap to
+  // bound actual main-thread time, so this bounds time spent per rAF tick
+  // instead. Matches the hitch threshold (`HITCH_MS` in perf/monitor.ts) so
+  // a catch-up burst reads as "at most one hitch," not a multi-second stall.
+  const FINALIZE_DRAIN_BUDGET_MS = 8
   // Chunks only exist within loadRadius, so a grass radius beyond it is a dead
   // knob — clamp so the GUI slider (1-12) can't silently do nothing, and so
   // raising loadRadius later doesn't make grass range jump unexpectedly.
@@ -886,8 +905,7 @@ export function createChunkManager(
   }
 
   /** Caps how many mesh *or* content stages run this visit. `update()` uses 1
-   *  total (not 1+1). `waitForChunks` may flush the rest when the game loop is
-   *  idle so world init cannot deadlock waiting for a drain that never comes. */
+   *  total (not 1+1). */
   function drainFinalizeQueue(limit: number): void {
     let n = 0
     while (n < limit) {
@@ -898,6 +916,21 @@ export function createChunkManager(
       n++
       runFinalize(rec)
     }
+  }
+
+  /** Same drain as above, capped by wall-clock time instead of job count
+   *  (via `drainByBudget`) — used by `waitForChunks`' idle catch-up, which
+   *  can face a queue with many jobs at once (whole settlement's chunk
+   *  block) and must not turn into a multi-second synchronous burst just
+   *  because `limit` was set high. */
+  function drainFinalizeQueueByBudget(budgetMs: number): void {
+    drainByBudget(() => {
+      const key = takeNearestFinalizeKey()
+      if (!key) return false
+      const rec = chunks.get(key)
+      if (rec) runFinalize(rec)
+      return true
+    }, budgetMs)
   }
 
   /** Terrain + water + grass request. Sets `state = 'ready'` so the player
@@ -1389,7 +1422,7 @@ export function createChunkManager(
       const winner = await Promise.race([pending, Promise.resolve(waiting)])
       if (winner !== waiting) return
       if (performance.now() - lastUpdateAt > GAME_LOOP_IDLE_MS) {
-        drainFinalizeQueue(Number.POSITIVE_INFINITY)
+        drainFinalizeQueueByBudget(FINALIZE_DRAIN_BUDGET_MS)
       }
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => resolve())
