@@ -249,3 +249,114 @@ dodając nowy plan ze statusem `planned`.
 Plan ma kończyć się dokładnie:
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+-----
+
+## Quick verification before Chunk Streaming Investigation
+
+Before starting the chunk streaming investigation, verify whether the performance fixes from these commits are actually active in the current browser benchmark:
+
+- `c4c8c9d` — Disable N8AO
+- `94874a5` — Tune water mirror and shadow map resolution
+- `080fd3f` — Cut CPU frame cost
+
+Do NOT implement any changes. This is only a focused verification.
+
+### 1. N8AO
+
+Verify the actual runtime configuration during `?benchmark=`.
+
+Check:
+- `High` preset configuration after all later changes,
+- whether benchmark mode overrides AO settings,
+- whether localStorage/config can override them,
+- actual `aoEnabled` / AO quality at runtime,
+- whether the benchmark is really running with AO OFF.
+
+Important: compare the current implementation against commit `c4c8c9d` and later changes in `080fd3f`.
+
+If AO is ON during the benchmark, determine exactly why.
+
+### 2. Shadows
+
+Verify the fix from `080fd3f` / related shadow changes.
+
+Check the actual runtime render flow:
+
+- `shadowMap.autoUpdate`
+- `shadowMap.needsUpdate`
+- mirror render
+- beauty render
+- number of shadow-map updates per frame
+
+Confirm whether the intended behaviour is:
+
+> one shadow-map update per frame, after mirror rendering
+
+Do not assume that a high number of total draw calls means shadows are being rendered multiple times.
+
+### 3. Water mirror
+
+Verify that the current benchmark actually uses the tuned water settings from `94874a5`:
+
+- mirror resolution
+- mirror update frequency
+- whether mirror rendering is skipped on alternate frames
+- whether NPC/fauna are excluded from mirror rendering
+
+Confirm the actual runtime values rather than only reading configuration defaults.
+
+### 4. Construction Catalog / settlement
+
+Do a focused check of the current Construction Catalog / House Builder output.
+
+We observed roughly 500–780 settlement draws in the previous benchmarks.
+
+Determine:
+
+- whether the optimization from `080fd3f` is active,
+- which settlement objects are instanced,
+- which parts of houses remain separate meshes/submeshes,
+- whether the high draw count is expected from the current construction pipeline.
+
+Do NOT redesign or optimize the builder.
+
+### Browser benchmark
+
+Use the existing benchmark workflow and existing scenarios. Prefer:
+
+- `settlement`
+- `current`
+- `water`
+- `night`
+
+Do not create new instrumentation unless absolutely necessary.
+
+### Output
+
+Create a short report in `docs/reviews/` only if useful.
+
+For each area:
+
+| Area | Fix present? | Active in benchmark? | Conclusion |
+|---|---|---|---|
+| N8AO | | | |
+| Shadows | | | |
+| Water mirror | | | |
+| Settlement construction | | | |
+
+For every unexpected result, give the exact file/function/config responsible.
+
+Clearly distinguish:
+
+- **fixed and verified**
+- **fixed but benchmark overrides it**
+- **fixed but runtime behaviour differs**
+- **not fixed**
+- **unclear**
+
+Do not implement anything.
+
+Do not perform a general performance audit.
+
+After this verification, proceed to the planned **chunk streaming investigation**. 
