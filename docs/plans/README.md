@@ -51,6 +51,7 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
+| `2026-08-16--125--fauna-spawn-point-population-limits.md` | Niszczenie fauna spawn points i limit populacji | 🟡 | L | ~~110~~ ~~118~~ |
 
 ---
 
