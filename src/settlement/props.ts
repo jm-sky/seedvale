@@ -348,6 +348,27 @@ export function createHayBale(scale = 1): THREE.Group {
   return hay
 }
 
+/** Household `AnimalTrough` (plan 122) — no GLB yet (`docs/assets/MODELS.md`),
+ *  procedural only. Low open wooden basin with a water-colored inset so it
+ *  reads as "holds water" even without a per-instance fill-level visual
+ *  (instanced like `createBarrel`/`createHayBale`, see `buildSettlementProps`). */
+export function createTrough(scale = 1): THREE.Group {
+  const trough = new THREE.Group()
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6e4f30, flatShading: true })
+  const waterMat = new THREE.MeshStandardMaterial({ color: 0x3a7ea8, flatShading: true, roughness: 0.25 })
+
+  const basin = new THREE.Mesh(new THREE.BoxGeometry(0.95 * scale, 0.28 * scale, 0.38 * scale), woodMat)
+  basin.position.y = 0.14 * scale
+  basin.castShadow = true
+  trough.add(basin)
+
+  const water = new THREE.Mesh(new THREE.BoxGeometry(0.82 * scale, 0.05 * scale, 0.27 * scale), waterMat)
+  water.position.y = 0.24 * scale
+  trough.add(water)
+
+  return trough
+}
+
 /** Fallback mesh if `pickaxe.glb` fails — also used as item procedural stand-in. */
 export function createPickaxeProp(): THREE.Group {
   const group = new THREE.Group()
@@ -2260,6 +2281,43 @@ export async function buildSettlementProps(
   }))
   const barrelInstances = buildInstancedProps(barrelTemplates, barrelPlacements, 'settlement-barrels')
   if (barrelInstances) group.add(barrelInstances.group)
+
+  // Household `WaterBarrel` + `AnimalTrough` (plan 122) — one of each in
+  // every house's yard, presentation only: the authoritative water quantity
+  // lives on `Household` (`settlement/household.ts`), not on these props.
+  // Placed at every house regardless of the livestock roll (`spawnLivestock`
+  // has its own separate seeded roll) — same simplification as garden/hay
+  // decorative placement not tracking who actually eats/drinks there.
+  const houseYardPlacements = (offsetDist: number, jitter: number): PropPlacement[] =>
+    landmarks.houses.map((house) => {
+      const angle = Math.atan2(house.position.z - clearings.core.z, house.position.x - clearings.core.x)
+      const spread = (coreRandom() - 0.5) * jitter
+      const dist = house.footprintRadius + offsetDist
+      const x = house.position.x + Math.cos(angle + spread) * dist
+      const z = house.position.z + Math.sin(angle + spread) * dist
+      return {
+        speciesIndex: 0,
+        x,
+        z,
+        groundY: sampleHeight(x, z),
+        rotationY: coreRandom() * Math.PI * 2,
+        scale: 0.85 + coreRandom() * 0.25,
+      }
+    })
+  const householdBarrelInstances = buildInstancedProps(
+    barrelTemplates,
+    houseYardPlacements(0.85, 0.9),
+    'settlement-household-barrels',
+  )
+  if (householdBarrelInstances) group.add(householdBarrelInstances.group)
+
+  const troughTemplates = [createTrough()]
+  const troughInstances = buildInstancedProps(
+    troughTemplates,
+    houseYardPlacements(1.35, 0.9),
+    'settlement-household-troughs',
+  )
+  if (troughInstances) group.add(troughInstances.group)
 
   // Hay stacks near garden pads (plan 082 B / 095). Pickaxe is a one-time
   // stockpile pickup via item spawners (plan 090), not a decorative prop.

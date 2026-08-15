@@ -47,6 +47,46 @@ describe('createHousehold', () => {
   })
 })
 
+describe('household water reserve (plan 122)', () => {
+  it('starts with a small deterministic reserve, same idiom as food/wood', () => {
+    const a = createHousehold(householdIdFor('0_0', 0), '0_0', '0_0:home:0')
+    const again = createHousehold(householdIdFor('0_0', 0), '0_0', '0_0:home:0')
+    expect(a.water.current).toEqual(again.water.current)
+    expect(a.water.current).toBeGreaterThan(0)
+    expect(a.water.current).toBeLessThan(a.water.capacity)
+  })
+
+  it('reports shortage/shouldFetch relative to policy, not raw amounts', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.water.remove(household.water.current)
+    expect(household.water.shortage()).toBeGreaterThan(0)
+    expect(household.water.shouldFetch()).toBe(true)
+    household.water.add(10)
+    expect(household.water.shortage()).toBe(0)
+    expect(household.water.shouldFetch()).toBe(false)
+  })
+
+  it('caps additions at capacity — a well trip cannot overfill the barrel/trough', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.water.add(100)
+    expect(household.water.current).toBe(household.water.capacity)
+  })
+
+  it('never drains below zero', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.water.remove(household.water.current + 5)
+    expect(household.water.current).toBe(0)
+    expect(household.water.has(1)).toBe(false)
+  })
+
+  it('is independent of the food/wood EconomicStock (not an EconomicKind)', () => {
+    const household = createHousehold('h', 's', 'home')
+    const waterBefore = household.water.current
+    household.deposit('wood', 5)
+    expect(household.water.current).toBe(waterBefore)
+  })
+})
+
 describe('householdIdFor', () => {
   it('is stable and namespaced per settlement/family', () => {
     expect(householdIdFor('0_0', 0)).toBe(householdIdFor('0_0', 0))
@@ -64,6 +104,7 @@ describe('createHouseholdRegistry', () => {
     const again = registry.getOrCreate(id, '0_0', '0_0:home:0')
     expect(again).toBe(first)
     expect(again.stock.query('wood')).toBe(first.stock.query('wood'))
+    expect(again.water.current).toBe(first.water.current)
   })
 
   it('keeps different families in the same settlement on separate stock', () => {

@@ -152,6 +152,27 @@ const BANK: Record<NeedId, PersonalityLines> = {
       ],
     },
   },
+  waterDuty: {
+    cheerful: {
+      seeking: ['Beczka w domu prawie pusta — lecę po wodę!', 'Trzeba uzupełnić wodę, zanim ktoś się poskarży.'],
+      doing: ['Ostatnia beczka na dziś, i gotowe!', 'Napełniam beczkę po brzegi.'],
+    },
+    calm: {
+      seeking: ['Czas nabrać wody do beczki.', 'Trzeba dolać wody do domu, bez pośpiechu.'],
+      doing: ['Powoli, żeby nie rozlać.', 'Jeszcze trochę i beczka pełna.'],
+    },
+    grumpy: {
+      seeking: ['Znowu ta beczka pusta...', 'Ktoś musi nosić tę wodę.'],
+      doing: ['Ciężkie te wiadra.', 'Ostatni kurs na dziś, mam nadzieję.'],
+    },
+    curious: {
+      seeking: [
+        'Ciekawe, ile wody zużywa nasze gospodarstwo w tydzień.',
+        'Idę napełnić beczkę — a Ty masz dość wody w domu?',
+      ],
+      doing: ['Zastanawiam się, czy koryto dla zwierząt też trzeba dolać.', 'Ta studnia chyba nigdy nie wysycha.'],
+    },
+  },
   food: {
     cheerful: {
       seeking: ['Zgłodniałem! Do ogrodu po coś dobrego.', 'Czas na przekąskę!'],

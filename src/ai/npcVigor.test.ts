@@ -110,7 +110,7 @@ describe('collapse sleep gate', () => {
   it('collapsed vigor requests sleep even when needs and work would win', () => {
     const vigor = createVigorState(100)
     vigor.current = 0
-    const needs = { thirst: 0.9, woodDuty: 0.9, hunger: 0.9 }
+    const needs = { thirst: 0.9, woodDuty: 0.9, waterDuty: 0.9, hunger: 0.9 }
     expect(shouldCollapseSleep(vigor)).toBe(true)
     expect(pickNeed(needs)).toBe('water')
     expect(shouldStayAsleep(vigor, 'work', 'collapse')).toBe(true)

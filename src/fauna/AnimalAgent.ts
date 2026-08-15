@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
+import type { Household } from '../settlement/household'
 import { tintPropMaterials } from '../settlement/props'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
@@ -184,7 +185,15 @@ type SourceTarget = {
   x: number
   z: number
   corpse?: AnimalAgent
+  /** Set when this `water` target is the owning household's `AnimalTrough`
+   *  (plan 122) rather than a natural shoreline — `performSourceAction`
+   *  drains `household.water` in addition to relieving `life.thirst`. */
+  trough?: boolean
 }
+
+/** One trough visit's draw against the household water reserve — same order
+ *  of magnitude as `NpcAgent`'s `WATER_DRINK_FROM_STOCK_AMOUNT`. */
+const TROUGH_DRINK_AMOUNT = 1
 
 /** Count of `SHORE_PROBE_OFFSETS` around (x, z) that dip at/below the water
  *  threshold — a lightweight "is this the edge of a water body" signal for
@@ -520,6 +529,10 @@ export class AnimalAgent {
    *  `homePlaceId`) — set only for livestock (`settlement/livestock.ts`);
    *  `undefined` for wild fauna, which has no owner (plan 093 Etap G). */
   readonly ownerHouseId?: string
+  /** Owning household, when known (plan 122) — livestock only, set the same
+   *  way as `ownerHouseId`. Lets thirst pursuit prefer the household's
+   *  `AnimalTrough` reserve over a natural shoreline search (`findWaterTarget`). */
+  private readonly household?: Household | null
   /** Reports this animal's death, once, regardless of cause (player melee or
    *  predator kill) — called from `collapse()`. Lets `QuestManager` observe
    *  `animal_died` generically without `AnimalAgent` importing quests
@@ -653,6 +666,7 @@ export class AnimalAgent {
     herdId?: string,
     lifeStage: AnimalLifeStage = 'adult',
     motherId?: string,
+    household?: Household | null,
   ) {
     this.def = def
     this.animalId = animalId
@@ -660,6 +674,7 @@ export class AnimalAgent {
     this.lifeStage = lifeStage
     this.motherId = motherId
     this.ownerHouseId = ownerHouseId
+    this.household = household
     this.onDeath = onDeath
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
@@ -1384,7 +1399,17 @@ export class AnimalAgent {
     const duration = target.kind === 'water' ? DRINK_DURATION_SEC : EAT_DURATION_SEC
     if (this.actionTimer < duration) return
     if (target.kind === 'water') {
-      drinkWater(this.life)
+      if (target.trough) {
+        // Trough may have run dry while approaching (another animal/NPC
+        // drank first) — no free relief; next search re-checks the
+        // household reserve and falls back to a shoreline (plan 122).
+        if (this.household?.water.has(TROUGH_DRINK_AMOUNT)) {
+          this.household.water.remove(TROUGH_DRINK_AMOUNT)
+          drinkWater(this.life)
+        }
+      } else {
+        drinkWater(this.life)
+      }
     } else {
       consumeFood(this.life)
       if (target.kind === 'carcass') target.corpse?.markFoodConsumed()
@@ -1392,7 +1417,19 @@ export class AnimalAgent {
     this.cancelSourceTarget()
   }
 
+  /** Household `AnimalTrough` (plan 122) — preferred over a natural
+   *  shoreline search when the owning household has stored water, the same
+   *  "prefer local stored water" hierarchy `NpcAgent`'s personal thirst
+   *  uses. Only livestock have a `household` (wild fauna: always `undefined`,
+   *  falls straight through to the shoreline search below). */
+  private findTroughTarget(): SourceTarget | null {
+    if (!this.household?.water.has(TROUGH_DRINK_AMOUNT)) return null
+    return { kind: 'water', x: this.home.x, z: this.home.z, trough: true }
+  }
+
   private findWaterTarget(): SourceTarget | null {
+    const trough = this.findTroughTarget()
+    if (trough) return trough
     let best: SourceTarget | null = null
     let bestScore = -Infinity
     for (let attempt = 0; attempt < WATER_SEARCH_ATTEMPTS; attempt++) {

@@ -355,6 +355,7 @@ const WATCHDOG_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'g
 const WATER_SATISFY_AMOUNT = 0.65
 const FOOD_SATISFY_AMOUNT = 0.6
 const WOOD_SATISFY_AMOUNT = 0.55
+const WATER_DUTY_SATISFY_AMOUNT = 0.55
 
 /** Household resource flow (plan 069). `WOOD_HARVEST_AMOUNT` mirrors
  *  `WOODCUTTING_PRODUCTION`'s existing settlement yield — a chop still
@@ -365,6 +366,12 @@ const WOOD_SATISFY_AMOUNT = 0.55
 const WOOD_HARVEST_AMOUNT =
   WOODCUTTING_PRODUCTION.outputs.find((o) => o.kind === 'wood')?.amount ?? 2
 const FOOD_GATHER_AMOUNT = 2
+/** Water logistics (plan 122) — one well trip fills this much of the
+ *  household's `WaterBarrel`/`AnimalTrough` reserve. Same order of
+ *  magnitude as `FOOD_GATHER_AMOUNT` against `WATER_POLICY`'s capacity 5. */
+const WATER_FETCH_AMOUNT = 2
+/** How much stored household water one drink-at-home visit consumes. */
+const WATER_DRINK_FROM_STOCK_AMOUNT = 1
 
 /** Chop → deposit completion, household-aware. A household caps how much of
  *  the harvest it keeps (see `Household.deposit`); anything over that still
@@ -405,13 +412,6 @@ const TIME_SKIP_SAMPLE_HOURS = 0.5
 const FOLLOW_DOCK_PATH_CHANCE = 0.08
 /** Random wander radius around home / garden while lingering on a schedule block. */
 const IDLE_WANDER_SPREAD = 4
-
-/** Chance a `water` need routes the NPC to drink at home instead of the
- *  village well — same destination-swap idea as `FOLLOW_DOCK_PATH_CHANCE`,
- *  see `beginNeed()`. Not a "carry water" mechanic — drinking at home is
- *  identical to drinking at the well (same `drink` phase, same instant
- *  thirst reduction), just a different destination. */
-const HOME_WATER_CHANCE = 0.45
 
 /** How long (seconds, before `waitMultiplier`) a scheduled `work` action
  *  occupies an NPC at its `workplace` before it loops back to `choose` —
@@ -1295,8 +1295,13 @@ export class NpcAgent {
         // Not asleep this step — resolve whichever need would have sent the
         // NPC off to drink/eat/gather, same amounts `beginNeed` applies.
         const need = pickNeed(this.needs, this.needPickOptions())
-        if (need === 'water') this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
-        else if (need === 'food') this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+        if (need === 'water') {
+          this.household?.water.remove(WATER_DRINK_FROM_STOCK_AMOUNT)
+          this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
+        } else if (need === 'waterDuty' && this.household) {
+          this.needs.waterDuty = Math.max(0, this.needs.waterDuty - WATER_DUTY_SATISFY_AMOUNT)
+          this.household.water.add(WATER_FETCH_AMOUNT)
+        } else if (need === 'food') this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
         else if (need === 'wood' && this.landmarks.trees.length > 0) {
           this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
         }
@@ -1374,7 +1379,7 @@ export class NpcAgent {
       : '-'
     const staminaPercent = Math.round(getStaminaRatio(this.stamina) * 100)
     const householdText = this.household
-      ? ` · hh f${this.household.stock.query('food')} w${this.household.stock.query('wood')}`
+      ? ` · hh f${this.household.stock.query('food')} w${this.household.stock.query('wood')} h2o${this.household.water.current}`
       : ''
     const text = `${this.phase} · ${this.pendingAction?.kind ?? '-'} · dist ${distText} · `
       + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})${householdText}`
@@ -1431,6 +1436,7 @@ export class NpcAgent {
       skipWood: this.role === 'trader',
       woodShortage: (this.economy?.hasShortage('wood') ?? false) || (this.household?.shortage('wood') ?? 0) > 0,
       foodShortage: (this.economy?.hasShortage('food') ?? false) || (this.household?.shortage('food') ?? 0) > 0,
+      waterShortage: (this.household?.water.shortage() ?? 0) > 0,
     }
   }
 
@@ -1442,6 +1448,7 @@ export class NpcAgent {
       needs: {
         thirst: this.needs.thirst,
         woodDuty: this.needs.woodDuty,
+        waterDuty: this.needs.waterDuty,
         hunger: this.needs.hunger,
       },
       scheduleActivity,
@@ -1474,17 +1481,23 @@ export class NpcAgent {
     if (this.phase === 'goSleep') this.prepareSleepDestination()
   }
 
-  /** `need` is `'water' | 'food' | 'wood'` in practice — `'choose'` routes
-   *  `'idle'` to `beginIdle` instead and already set `this.activeNeed`. */
+  /** `need` is `'water' | 'waterDuty' | 'food' | 'wood'` in practice —
+   *  `'choose'` routes `'idle'` to `beginIdle` instead and already set
+   *  `this.activeNeed`. */
   private beginNeed(need: NeedId): void {
     if (need === 'water') {
-      const drinkAtHome = Math.random() < HOME_WATER_CHANCE
-      if (drinkAtHome) {
+      // Household-aware (plan 122): drink stored `WaterBarrel` water at
+      // home when there is any — the personal-thirst equivalent of the
+      // `food` branch below. Otherwise fall back to the well (queued when
+      // this settlement has one), same as before households owned water.
+      const household = this.household
+      if (household?.water.has(WATER_DRINK_FROM_STOCK_AMOUNT)) {
         this.startAction({
           kind: 'drink',
           destination: copyVec3(this.home),
           durationSec: 1.2 * this.waitMultiplier,
           onComplete: () => {
+            household.water.remove(WATER_DRINK_FROM_STOCK_AMOUNT)
             this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
           },
         })
@@ -1514,6 +1527,40 @@ export class NpcAgent {
           this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
         },
       })
+      return
+    }
+    if (need === 'waterDuty' && this.household) {
+      // Household water refill (plan 122) — mirrors the `wood` chop→deposit
+      // chain below: fetch at the well (queued, so it shares the well's
+      // existing FIFO with personal-thirst drinkers), then walk home and
+      // deposit into the household's `WaterBarrel`/`AnimalTrough` reserve.
+      // Reuses `kind: 'drink'` for the well leg so it gets the same
+      // face-well rotation + draw SFX as a real drink (see `execute`/`goTo`).
+      const household = this.household
+      const queue = this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
+      const fetchStep = (destination: ReturnType<typeof copyVec3>, queueId?: string): NpcPlannedAction => ({
+        kind: 'drink',
+        destination,
+        durationSec: 1.2 * this.waitMultiplier,
+        queueId,
+        onComplete: () => {},
+        next: {
+          kind: 'deposit',
+          destination: copyVec3(this.home),
+          durationSec: 0.8 * this.waitMultiplier,
+          onComplete: () => {
+            this.needs.waterDuty = Math.max(0, this.needs.waterDuty - WATER_DUTY_SATISFY_AMOUNT)
+            household.water.add(WATER_FETCH_AMOUNT)
+          },
+        },
+      })
+      if (queue && this.wellQueueId) {
+        this.leaveActiveQueue()
+        queue.join(this.id)
+        this.startAction(fetchStep(queue.worldDestination(this.id), this.wellQueueId))
+        return
+      }
+      this.startAction(fetchStep(copyVec3(this.landmarks.well)))
       return
     }
     if (need === 'food') {

@@ -34,12 +34,56 @@ const HOUSEHOLD_POLICY: Record<HouseholdResourceKind, HouseholdPolicy> = {
   wood: { minimum: 1, target: 3, capacity: 5 },
 }
 
+/** Household water reserve (plan 122) — deliberately not an `EconomicKind`
+ *  (implementation notes §4: no production/trade needs water yet). Same
+ *  minimum/target/capacity shape as `HOUSEHOLD_POLICY` for consistency, but
+ *  kept as its own small state instead of routing through `EconomicStock` —
+ *  fed by `WaterBarrel`/well fetching, drained by NPC + animal drinking. One
+ *  reserve backs both the `WaterBarrel` (NPC) and `AnimalTrough` (livestock)
+ *  presentation props — implementation notes §5: one authoritative owner,
+ *  not duplicated quantities. */
+const WATER_POLICY: HouseholdPolicy = { minimum: 1, target: 3, capacity: 5 }
+
+export type WaterReserve = {
+  readonly current: number
+  readonly capacity: number
+  has: (amount: number) => boolean
+  /** > 0 when below the urgent minimum. */
+  shortage: () => number
+  /** True while stock is below target (worth fetching, not urgent). */
+  shouldFetch: () => boolean
+  add: (amount: number) => void
+  remove: (amount: number) => void
+}
+
+function createWaterReserve(initial: number): WaterReserve {
+  let current = Math.min(WATER_POLICY.capacity, initial)
+  return {
+    get current() {
+      return current
+    },
+    capacity: WATER_POLICY.capacity,
+    has: (amount) => current >= amount,
+    shortage: () => Math.max(0, WATER_POLICY.minimum - current),
+    shouldFetch: () => current < WATER_POLICY.target,
+    add: (amount) => {
+      current = Math.min(WATER_POLICY.capacity, current + amount)
+    },
+    remove: (amount) => {
+      current = Math.max(0, current - amount)
+    },
+  }
+}
+
 export type Household = {
   readonly id: HouseholdId
   readonly settlementId: string
   /** The `Place.id` of this household's home. */
   readonly homeId: string
   readonly stock: EconomicStock
+  /** Water reserve backing this household's `WaterBarrel`/`AnimalTrough`
+   *  (plan 122) — separate from `stock` since water is not an `EconomicKind`. */
+  readonly water: WaterReserve
   has: (kind: EconomicKind, amount: number) => boolean
   /** > 0 when stock is below the resource's minimum (urgent). */
   shortage: (kind: HouseholdResourceKind) => number
@@ -80,11 +124,13 @@ function initialHouseholdStock(id: HouseholdId): Partial<Record<HouseholdResourc
 
 export function createHousehold(id: HouseholdId, settlementId: string, homeId: string): Household {
   const stock = new EconomicStock(initialHouseholdStock(id))
+  const water = createWaterReserve(1 + (hashString(`${id}:water`) % 2))
   return {
     id,
     settlementId,
     homeId,
     stock,
+    water,
     has: (kind, amount) => stock.has(kind, amount),
     shortage: (kind) => Math.max(0, HOUSEHOLD_POLICY[kind].minimum - stock.query(kind)),
     shouldAcquire: (kind) => stock.query(kind) < HOUSEHOLD_POLICY[kind].target,

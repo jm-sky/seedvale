@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
+import type { Household } from './household'
 import {
   disposeObject3D,
   type GltfAsset,
@@ -187,6 +188,12 @@ export async function spawnLivestock(
   /** Reports any livestock death (any cause) by `animalId` — forwarded into
    *  every `AnimalAgent` this factory spawns (plan 110). */
   onAnimalDeath?: (animalId: string) => void,
+  /** `homeId -> Household` (plan 122), built by `createSettlement.ts` before
+   *  this call — gives house-anchored livestock their owning household's
+   *  water reserve so thirst can prefer the `AnimalTrough` over a shoreline
+   *  search. `undefined`/missing entries fall back to the pre-122 shoreline
+   *  behaviour (same as wild fauna). */
+  householdByHomeId?: ReadonlyMap<string, Household>,
 ): Promise<AnimalAgent[]> {
   await ensureLivestockTemplates()
   const agents: AnimalAgent[] = []
@@ -197,6 +204,7 @@ export async function spawnLivestock(
     // (`createSettlement.ts`) — so a livestock's owner is the same house a
     // quest could later look up via `Household`/`Place` (plan 093 Etap G).
     const ownerHouseId = homePlaceId(settlementId, i)
+    const household = householdByHomeId?.get(ownerHouseId)
     for (const kind of kindsForHouse(size, random)) {
       const { x, z } = findSpotNearHouse(home, sampleHeight, waterLevel, random)
       const { visual, animations } = visualFor(kind)
@@ -215,6 +223,10 @@ export async function spawnLivestock(
         undefined,
         ownerHouseId,
         onAnimalDeath,
+        undefined,
+        undefined,
+        undefined,
+        household,
       )
       scene.add(agent.mesh)
       agents.push(agent)

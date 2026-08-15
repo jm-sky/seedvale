@@ -51,7 +51,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 ### Fauna
 
 - Predator/prey roles, chase/flee, player-awareness, shared `HealthState`.
-- Animal life: hunger/thirst/stamina. Elevated needs retarget to a real source (forage / shoreline / scavenged corpse); wander arrival no longer relieves needs.
+- Animal life: hunger/thirst/stamina. Elevated needs retarget to a real source (forage / shoreline / scavenged corpse); wander arrival no longer relieves needs. Livestock thirst prefers the owning household's `AnimalTrough` reserve (`AnimalAgent.household`, plan 122 — `ownerHouseId`'s first real consumer) before falling back to the shoreline search; wild fauna has no `household` and is unaffected.
 - Prey spawners (cave / thicket) with respawn; placement rejects roads, coast/beach, and other spawn points; village avoidance uses each settlement’s real footprint radius. A `wolfDen` spawner (plan 093 Etap E) reuses the same shape/prop for a one-time, non-respawning wolf pack (quest target, not a nuisance spawner).
 - `AnimalAgent.animalId` (plan 093 Etap D) is a stable per-instance id, distinct from `def.kind`, set at spawn time (wild fauna + livestock).
 - Hungry predators choose chase vs flee via `predatorHumanDecision` (hunger vs proximity/fire/crowd). Corpses linger 60s; shovel can bury; predators may eat an unclaimed corpse once.
@@ -104,7 +104,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `WaterSource` — shared well/lake drink/fill abstraction (`src/world/WaterSource.ts`, plan 106); future river/polluted/treated sources should reuse it.
 - Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/`. NPC + fauna adapters; predator scoring in `src/fauna/predatorHumanDecision.ts`.
 - `SettlementEconomy` — settlement-owned bulk stock (`src/economy/`). Not player `Inventory`. Not in save data yet.
-- `Household` — one family's own `food`/`wood` stock (plan 069, `src/settlement/household.ts`), reusing `SettlementEconomy`'s `EconomicStock`. Sits between NPC carrying and `SettlementEconomy`; registry lives on `SettlementsManager` like `EconomyRegistry`. Not in save data yet.
+- `Household` — one family's own `food`/`wood` stock (plan 069, `src/settlement/household.ts`), reusing `SettlementEconomy`'s `EconomicStock`, plus a separate `water` reserve (`WaterReserve`, plan 122 — deliberately not an `EconomicKind`) backing that household's `WaterBarrel`/`AnimalTrough`. Sits between NPC carrying and `SettlementEconomy`; registry lives on `SettlementsManager` like `EconomyRegistry`. Not in save data yet.
 - `NpcAgent` / `AnimalAgent` — central behaviour integration points.
 - `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot.
 - `TreeLifecycle` / `harvestWorldTree*` — tree growth + multi-stage chop (`src/world/treeLifecycle.ts`, `treeHarvest.ts`).

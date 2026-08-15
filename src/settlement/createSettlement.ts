@@ -235,6 +235,31 @@ export async function createSettlement(
     }
   }
 
+  // Place v1: formalizes the home assignment that already existed
+  // (`landmarks.homes[i % length]`) as a `Place` instead of a bare
+  // `Vector3` — see `places.ts`. Same fallback as before when a settlement
+  // somehow has no huts (shouldn't happen, but `findSettlementSite` doesn't
+  // guarantee it). Built before `spawnLivestock` (moved up from its
+  // original spot further down, plan 122) so livestock can look up their
+  // owning household's `AnimalTrough` water at spawn time.
+  const homePlaces: Place[] =
+    landmarks.homes.length > 0
+      ? landmarks.homes.map((position, i) => ({ id: homePlaceId(def.id, i), type: 'home', position }))
+      : [{ id: `${def.id}:home:fallback`, type: 'home', position: landmarks.well.clone() }]
+
+  // 1 family = 1 household = 1 house (plan 069 §5): every member of a family
+  // shares that family's home place and household stock. `households` stays
+  // index-aligned with `def.families` — the registry itself lives on
+  // `SettlementsManager` so stream-out/stream-in reuses the same stock.
+  const households: Household[] = def.families.map((_family, familyIndex) => {
+    const home = homePlaces[familyIndex % homePlaces.length]!
+    return householdRegistry.getOrCreate(householdIdFor(def.id, familyIndex), def.id, home.id)
+  })
+  // `homeId -> Household` (plan 122) so `spawnLivestock` can hand each
+  // house-anchored animal its owning household's water reserve — keyed the
+  // same way `ownerHouseId` already is (`homePlaceId(def.id, i)`).
+  const householdByHomeId = new Map(households.map((h) => [h.homeId, h]))
+
   const livestock = await spawnLivestock(
     scene,
     sampleHeight,
@@ -245,6 +270,7 @@ export async function createSettlement(
     settlementSeed,
     def.id,
     onAnimalDeath,
+    householdByHomeId,
   )
 
   type SignpostInstance = { labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
@@ -313,16 +339,6 @@ export async function createSettlement(
     }
   }
 
-  // Place v1: formalizes the home assignment that already existed
-  // (`landmarks.homes[i % length]`) as a `Place` instead of a bare
-  // `Vector3` — see `places.ts`. Same fallback as before when a settlement
-  // somehow has no huts (shouldn't happen, but `findSettlementSite` doesn't
-  // guarantee it).
-  const homePlaces: Place[] =
-    landmarks.homes.length > 0
-      ? landmarks.homes.map((position, i) => ({ id: homePlaceId(def.id, i), type: 'home', position }))
-      : [{ id: `${def.id}:home:fallback`, type: 'home', position: landmarks.well.clone() }]
-
   // Interaction queues (plan 079): well drink first; garden/stall later reuse
   // the same map. Line runs +Z from the well so waiters stand south of the rim.
   // servingOffset: rim + 0.3 m (`settlement:well` anchor). GLB well uses
@@ -353,15 +369,6 @@ export async function createSettlement(
       ),
     ],
   ])
-
-  // 1 family = 1 household = 1 house (plan 069 §5): every member of a family
-  // shares that family's home place and household stock. `households` stays
-  // index-aligned with `def.families` — the registry itself lives on
-  // `SettlementsManager` so stream-out/stream-in reuses the same stock.
-  const households: Household[] = def.families.map((_family, familyIndex) => {
-    const home = homePlaces[familyIndex % homePlaces.length]!
-    return householdRegistry.getOrCreate(householdIdFor(def.id, familyIndex), def.id, home.id)
-  })
 
   // 1 family = 1 house: every member of a family shares that family's home
   // place (`homePlaces[familyIndex]`), not a bare `i % homePlaces.length`

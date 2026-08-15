@@ -97,6 +97,7 @@ const ACTIVITY_LABEL: Record<Exclude<CurrentActivityKind, 'need'>, string> = {
 
 const NEED_ACTIVITY_LABEL: Record<NeedId, string> = {
   water: 'idę po wodę',
+  waterDuty: 'napełniam beczkę z wodą',
   food: 'szukam jedzenia',
   wood: 'zajmuję się drewnem',
   idle: 'nic szczególnego nie robię',

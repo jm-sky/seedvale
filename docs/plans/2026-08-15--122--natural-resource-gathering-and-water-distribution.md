@@ -1,7 +1,7 @@
 # Plan: Natural Resource Gathering & Water Distribution
 
 **Created:** 2026-08-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — first complete water path (well → NPC carrying → household `WaterBarrel`/`AnimalTrough`) implemented per the [implementation notes](./2026-08-15--122--natural-resource-gathering-and-water-distribution-implementation-notes.md)'s narrower scope; technical verification green; no browser test yet. Village Storehouse (§6) and wood/branches/stone/ore generalisation beyond the water path (§7/§8, mostly already covered by the pre-existing chop/deposit + garden gather flow) intentionally deferred — see implementation notes §6/§8.
 **Priority:** high · **Effort:** M
 **Depends on:** ~~032~~
 
