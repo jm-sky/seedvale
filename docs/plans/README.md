@@ -32,6 +32,10 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 
 ---
 
+Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
+
+---
+
 ## In progress
 
 | File | Summary | Pri | Effort | Depends |
