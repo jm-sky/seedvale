@@ -78,6 +78,11 @@ export type Fauna = {
 type SpawnProfile = 'open' | 'meadow' | 'forest' | 'water'
 type SpawnSpec = { kind: AnimalKind, count: number, profile: SpawnProfile }
 
+// Temporary: A/B diagnostic for issue 032 (mobile black screen) — fully
+// disables wild-fauna spawn/respawn to test whether scene growth/black-screen
+// still occurs with zero animals. Revert by removing this flag and its guards.
+const TEMP_DISABLE_WILD_FAUNA = true
+
 const SPAWNS: SpawnSpec[] = [
   { kind: 'wolf', count: 2, profile: 'open' },
   { kind: 'fox', count: 2, profile: 'open' },
@@ -406,7 +411,8 @@ export async function createFauna(
     )
   }
 
-  for (const spec of SPAWNS) {
+  // Temporary: see TEMP_DISABLE_WILD_FAUNA above.
+  for (const spec of TEMP_DISABLE_WILD_FAUNA ? [] : SPAWNS) {
     const [minOffset, maxOffset] = SPAWN_RING_OFFSET[spec.profile]
     const habitatFilter = habitatFilterFor(spec.profile)
     const filter = (x: number, z: number) =>
@@ -494,7 +500,9 @@ export async function createFauna(
     })
   }
   const [spawnerMinOffset, spawnerMaxOffset] = SPAWNER_RING_OFFSET
-  for (const spec of SPAWNER_SPECS) {
+  // Temporary: see TEMP_DISABLE_WILD_FAUNA above — also skips prey spawners
+  // (cave/thicket/wolfDen), so no respawn/replenishment can occur either.
+  for (const spec of TEMP_DISABLE_WILD_FAUNA ? [] : SPAWNER_SPECS) {
     // Thicket also prefers some forest cover so it doesn't land on open sand/meadow shore.
     const baseFilter = spec.type === 'thicket'
       ? (x: number, z: number) => spawnerSiteOk(x, z) && sampleForestFactor(x, z) > 0.28
