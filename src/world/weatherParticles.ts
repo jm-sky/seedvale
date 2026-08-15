@@ -166,7 +166,8 @@ function updateEmitter(
   qualityCeiling: number,
 ): void {
   const visible = active && intensity > 0.02
-  emitter.points.visible = visible
+  // TEMP: isolation test — disable weather rendering
+  emitter.points.visible = false
   if (!visible) return
   emitter.time += dt
   const u = emitter.material.uniforms
