@@ -32,7 +32,7 @@ Trwałe reguły. Zmiana = nowy wpis w historii + aktualizacja tej tabeli.
 | W3 | Woda: `transparent: true`, **`depthWrite: false`**. Nie łączyć transparent + depthWrite + wysokiego `renderOrder`. | G4, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
 | W4 | Liście GLTF `BLEND` → opaque `alphaTest` cutout. Korony piszą depth, woda nie. | G3 |
 | W5 | Chunk water maskuje się heightmapą (`vCover`). `bodyScale` 1 = strojenie oceanu (nie discard). | W8 + faza 2 ✅ |
-| W6 | **Performance jest constraint.** Lustro sceny = **jeden** wspólny pass (nie per-chunk). Wyłącznik w Vue. Mirror RT mały (256²). | G2; faza 3 ✅ |
+| W6 | **Performance jest constraint.** Lustro sceny = **jeden** wspólny pass (nie per-chunk). Wyłącznik w Vue. Mirror RT mały (**128²**), max **30 Hz**, bez NPC/fauny. | G2; G5; plan 113 |
 | W7 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | G8 |
 | W8 | **Ocean tylko morze / wybrzeże.** Śródlądowe jeziora, stawy i cieki nigdy nie używają materiału oceanu, niezależnie od powierzchni w chunku. | issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) ✅ |
 | W9 | **Lustro sceny** (planar, jedna RT) na jeziorach **i** oceanie, z opcją wyłączenia w Vue (Pauza → Świat / Grafika) + `seedvale:graphics:v1`. Off → niebo + specular, **zero** extra passu. Default: włączone. | `waterMirror.ts`; faza 3 ✅ |
@@ -54,10 +54,10 @@ Rozmowa: pół-realistyczna, trochę przezroczysta, bez ciężkiego CPU/GPU. Pot
 | Maskowanie | heightmap `vCover` (jak dziś) | shore fade na singleton plane (issue 003) |
 | Głębokość | `floorHeights` → alpha + kolor | to samo na styku z lądem; otwarte morze gęstsze |
 | Brzeg | fade + piana + mokry piasek | fade + piana + mokry piasek |
-| Odbicia | wspólne lustro 256², albo sky+spec gdy off | to samo lustro / ten sam fallback |
+| Odbicia | wspólne lustro 128² @ 30 Hz, albo sky+spec gdy off | to samo lustro / ten sam fallback |
 | Nurt | nie teraz | n/d |
 
-**Koszt lustra:** jeden extra render sceny na klatkę, jak dzisiejszy ocean — nie N jezior × Water.js. Wyłączenie w menu ma być realnym spadkiem GPU (pass w ogóle nie startuje). Miejsce UI: Pauza → **Świat**, sekcja grafiki (obok flat shading); persist jak AO/bloom (`seedvale:graphics:v1`). lil-gui zostaje debugowym odpowiednikiem.
+**Koszt lustra:** jeden extra render sceny, throttled to 30 Hz, without NPC/fauna. Wyłączenie w menu ma być realnym spadkiem GPU (pass w ogóle nie startuje). Miejsce UI: Pauza → **Świat**, sekcja grafiki (obok flat shading); persist jak AO/bloom (`seedvale:graphics:v1`). lil-gui zostaje debugowym odpowiednikiem.
 
 **Świadomie nie:** SSR, refrakcja, caustics, flow rzek, mesh per basen, powiększanie mirror > 256².
 
@@ -76,7 +76,7 @@ computeBodyScale()   — 0 ląd · jezioro < 0.9 · 1.0 ocean (kontynentalność
         ↓
 src/world/waterMaterial.ts     jedna rodzina ShaderMaterial (uOcean 0..1)
         ↓
-src/world/waterMirror.ts       jeden RT 256²; y = waterLevel; hide water (layer 1)
+src/world/waterMirror.ts       jeden RT 128² @ 30 Hz; y = waterLevel; hide water (layer 1) + agents (layer 2)
         ↓
 ┌───────────────────────────────────┬─────────────────────────────────────┐
 │ createChunkWater (per chunk)      │ createOcean (singleton, WorldBundle)│
@@ -185,6 +185,11 @@ Plan: [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflecti
 ## Historia poprawek
 
 Najnowsze na górze.
+
+### 2026-08-15 — Budżet lustra (plan 113) 🔧
+
+- RT pozostaje 128². Pass max 30 Hz. NPC/fauna na `AGENT_RENDER_LAYER`, lustro ich nie rysuje.
+- Browser: otwarte (porównanie z review 012 `?benchmark=water`).
 
 ### 2026-08-13 — Wanna: mesh terenu z `floorHeights` ✅
 

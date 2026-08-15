@@ -13,6 +13,7 @@ import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../as
 import { isDebugMode } from '../debug/debugMode'
 import { createHorseModel } from '../fauna/proceduralAnimals'
 import { distanceToSegment, projectOntoSegment } from '../math/segment'
+import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
 import { createSparks, type Sparks } from '../shared/getFireParticles'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
 import { patchProceduralFoliageMaterial } from '../world/foliageWind'
@@ -828,10 +829,7 @@ async function plantEntrancePalisade(
 
   const wall = await loadPropOrFallback(WALL_URL, WALL_TARGET_HEIGHT, createPalisadeStake)
   const step = (WALL_HALF_LENGTH * 2) / radius
-  // Own gate (own counter) — palisade stakes are all-cached clones (`wall`
-  // loaded once above), same freeze risk as the loops in
-  // `buildSettlementProps` (issue 027).
-  const yieldStake = createPropYieldGate()
+  const placements: PropPlacement[] = []
 
   for (const side of [-1, 1] as const) {
     for (let i = 0; i < segmentsPerSide; i++) {
@@ -840,15 +838,20 @@ async function plantEntrancePalisade(
       const z = site.z + Math.sin(ang) * radius
       if (isCoastalPlacement(x, z, coastEnv)) continue
       if (pointHitsCorridor(x, z, corridors, WALL_HALF_LENGTH + 0.4)) continue
-      const segment = wall.clone(true)
-      // Wall's long axis is local +X in the Quaternius asset — tangent to the ring.
       const tangent = ang + Math.PI / 2
-      segment.rotation.y = yawToward(Math.cos(tangent), Math.sin(tangent))
-      placeOnGround(segment, x, z, sampleHeight)
-      group.add(segment)
-      await yieldStake()
+      placements.push({
+        speciesIndex: 0,
+        x,
+        z,
+        groundY: sampleHeight(x, z),
+        rotationY: yawToward(Math.cos(tangent), Math.sin(tangent)),
+        scale: 1,
+      })
     }
   }
+
+  const instanced = buildInstancedProps([wall], placements, 'settlement-palisade')
+  if (instanced) group.add(instanced.group)
 }
 
 /** True when `(x,z)` lies inside any corridor capsule (+ extra clearance). */
@@ -1718,6 +1721,7 @@ function plantTreeCluster(
   bushCounter: { n: number },
   worldSeed: number,
   courtyardRadius = 0,
+  bushPlacements: PropPlacement[],
 ): void {
   const count =
     size === 'small' ? 4 + Math.floor(random() * 4) : 7 + Math.floor(random() * 6)
@@ -1741,9 +1745,15 @@ function plantTreeCluster(
 
     if (isBush) {
       const scale = 0.6 + random() * 0.5
-      const bush = cloneProp(bushTemplates, bushCounter.n++, scale)
-      placeOnGround(bush, tx, tz, sampleHeight)
-      group.add(bush)
+      const speciesIndex = bushCounter.n++ % Math.max(1, bushTemplates.length)
+      bushPlacements.push({
+        speciesIndex,
+        x: tx,
+        z: tz,
+        groundY: y,
+        rotationY: random() * Math.PI * 2,
+        scale,
+      })
     } else {
       const sizeClass = rollSizeClass(random())
       const sizeJitter = random()
@@ -2240,12 +2250,16 @@ export async function buildSettlementProps(
     () => createBarrel(1),
   )
   const barrelSpots: Array<[number, number]> = [[1.1, -0.6], [1.6, 0.4]]
-  for (const [dx, dz] of barrelSpots) {
-    const barrel = cloneProp(barrelTemplates, 0, 0.85 + coreRandom() * 0.3)
-    placeOnGround(barrel, stockX + dx, stockZ + dz, sampleHeight)
-    group.add(barrel)
-    await yieldProp()
-  }
+  const barrelPlacements: PropPlacement[] = barrelSpots.map(([dx, dz]) => ({
+    speciesIndex: 0,
+    x: stockX + dx,
+    z: stockZ + dz,
+    groundY: sampleHeight(stockX + dx, stockZ + dz),
+    rotationY: coreRandom() * Math.PI * 2,
+    scale: 0.85 + coreRandom() * 0.3,
+  }))
+  const barrelInstances = buildInstancedProps(barrelTemplates, barrelPlacements, 'settlement-barrels')
+  if (barrelInstances) group.add(barrelInstances.group)
 
   // Hay stacks near garden pads (plan 082 B / 095). Pickaxe is a one-time
   // stockpile pickup via item spawners (plan 090), not a decorative prop.
@@ -2255,6 +2269,7 @@ export async function buildSettlementProps(
   )
   const hayGardens = landmarks.gardens.length > 0 ? landmarks.gardens : [landmarks.garden]
   const hayCount = Math.min(2, Math.max(1, hayGardens.length))
+  const hayPlacements: PropPlacement[] = []
   for (let i = 0; i < hayCount; i++) {
     const g = hayGardens[i % hayGardens.length]!
     const hayScale: GardenScale =
@@ -2263,12 +2278,19 @@ export async function buildSettlementProps(
         : undefined) ?? 'S'
     const ang = coreRandom() * Math.PI * 2
     const dist = gardenPlotRadius(hayScale) + 1.4 + coreRandom() * 1.2
-    const hay = cloneProp(hayTemplates, 0, 0.9 + coreRandom() * 0.25)
-    hay.rotation.y = coreRandom() * Math.PI * 2
-    placeOnGround(hay, g.x + Math.cos(ang) * dist, g.z + Math.sin(ang) * dist, sampleHeight)
-    group.add(hay)
-    await yieldProp()
+    const hx = g.x + Math.cos(ang) * dist
+    const hz = g.z + Math.sin(ang) * dist
+    hayPlacements.push({
+      speciesIndex: 0,
+      x: hx,
+      z: hz,
+      groundY: sampleHeight(hx, hz),
+      rotationY: coreRandom() * Math.PI * 2,
+      scale: 0.9 + coreRandom() * 0.25,
+    })
   }
+  const hayInstances = buildInstancedProps(hayTemplates, hayPlacements, 'settlement-hay')
+  if (hayInstances) group.add(hayInstances.group)
 
   // Infrastructure counts come from centralized `VILLAGE_SIZE_CONFIG` (plan
   // 047) — OUTPOST/SM stay without a village campfire; MD+ get one; LG/XL
@@ -2468,6 +2490,7 @@ export async function buildSettlementProps(
     const bushTemplates = await loadPropTemplates(BUSH_SPECS, () => createBush(1))
     const treeCounter = { n: 0 }
     const bushCounter = { n: 0 }
+    const bushPlacements: PropPlacement[] = []
     // Inter-settlement roads + local VillagePlan paths — trees on the dirt strip
     // came from only checking house↔core chords + segmentsNear (no local paths).
     const treeCorridors = pathCorridors
@@ -2560,6 +2583,7 @@ export async function buildSettlementProps(
         bushCounter,
         seed,
         courtyardRadius,
+        bushPlacements,
       )
       await yieldProp()
     }
@@ -2587,6 +2611,7 @@ export async function buildSettlementProps(
         bushCounter,
         seed,
         courtyardRadius,
+        bushPlacements,
       )
       await yieldProp()
     }
@@ -2614,6 +2639,7 @@ export async function buildSettlementProps(
         bushCounter,
         seed,
         courtyardRadius,
+        bushPlacements,
       )
       await yieldProp()
     }
@@ -2643,9 +2669,13 @@ export async function buildSettlementProps(
         bushCounter,
         seed,
         courtyardRadius,
+        bushPlacements,
       )
       await yieldProp()
     }
+
+    const bushInstances = buildInstancedProps(bushTemplates, bushPlacements, 'settlement-bushes')
+    if (bushInstances) group.add(bushInstances.group)
   }
 
   return { group, landmarks, houseLights, villageTorches, houseAssemblies }

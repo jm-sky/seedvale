@@ -2,7 +2,7 @@
 
 **Purpose:** factual snapshot of the implemented codebase. This document describes what exists now, not the desired future state.
 
-**Last verified:** 2026-08-14
+**Last verified:** 2026-08-15
 
 ## Read this first
 
@@ -36,9 +36,9 @@ Seedvale is a browser 3D sandbox built with **Three.js + WebGL2 + Vite + TypeScr
 - Shore sand band varies in world space; grass thins into mountain foothills; road corridors use soft tint + dirt micro-contrast (grass soft-fades, not a hard bald cut).
 - Instanced grass (custom wind shader, near-field filler blades). Tree/bush leaves share cheap vertex wind; GLTF `BLEND` foliage is hardened to opaque `alphaTest` cutouts.
 - Continuous `forestDensityAt` drives tree density and fauna habitat (`ChunkManager.sampleForestFactor`); no separate forest manager.
-- Per-chunk vegetation and rocks are `InstancedMesh` buckets (`src/render/instancedProps.ts`); stage meshes and procedural landmarks stay individual `Object3D`s. Settlement trees/bushes are not instanced.
+- Per-chunk vegetation and rocks are `InstancedMesh` buckets (`src/render/instancedProps.ts`); stage meshes and procedural landmarks stay individual `Object3D`s. Settlement palisade / bushes / barrels / hay are instanced the same way; harvestable settlement trees stay individual (plan 113).
 - Chunk rocks/logs and visible iron/coal/gold deposits use GLB templates with procedural fallbacks. Procedural landmarks: monolith, stone circle, small ruins, village-fringe cemetery (plan 049).
-- Ocean, sky, lighting, day/night and fog are implemented. Post-processing: EffectComposer, N8AO, SMAA, subtle film grade.
+- Ocean, sky, lighting, day/night and fog are implemented. Post-processing: EffectComposer, N8AO (High = Performance quality + half-res, auto-suppressed on heavy frames), SMAA, subtle film grade. Shadow map updates once per frame after the water mirror. Mirror is 128² at 30 Hz and skips NPC/fauna layers.
 - Visual contracts: [GRAPHICS.md](./GRAPHICS.md). Water (ocean + lakes): [WATER.md](./WATER.md).
 
 ### Settlements / NPCs
@@ -119,7 +119,7 @@ Before adding a new abstraction, check whether one of these already owns the res
 - **Asset alignment browser** — `/asset-browser.html` (`src/tools/assetBrowser/`), included in production `vite build`. Wired registries via `buildAssetIndex()` plus parked files from `/asset-browser-models.json` (`status` / `pack` / `kind`, MegaKit 176 GLB). Search, `prepare: none` for parked/URL, per-slot native/prepared AABB. Browser verification: plan 107.
 - **Construction Catalog** — `src/assets/constructionCatalog.ts` (plan 109, reviews [009](./reviews/2026-08-14--009--megakit-construction-audit.md) / [011](./reviews/2026-08-14--011--megakit-construction-browser-verification.md)). Layers construction semantics over `AssetIndex` for the 176 parked MegaKit GLB.
 - **House Builder** (`src/settlement/houseBuilder.ts`, plan 111) assembles MegaKit cottages (4×4 / 6×4) and medium farmsteads (6×6 / 8×6) from that catalog (native metres ×1.1, cap roofs + gables, plaster/woodgrid/brick kits, chimney on some variants, instanced static parts, hinge doors). Wired into `buildSettlementProps()`; `houseCatalog.ts` remains for Asset Browser / procedural fallback. Browser and `?perf=1` verification are still open.
-- **Performance diagnostics (plan 103)** — `src/perf/` sampler/benchmark; lil-gui Performance + `?perf=1` / `?benchmark=<id>`. Graphics quality presets Low/Medium/High/Custom in Pauza → Świat → Grafika. Adaptive Quality is stored-off, not implemented. Draw calls / triangles are accumulated across composer+mirror (`info.autoReset = false`); diagnosis: [review 012](./reviews/2026-08-14--012--perf-bottleneck-diagnosis.md).
+- **Performance diagnostics (plan 103)** — `src/perf/` sampler/benchmark; lil-gui Performance + `?perf=1` / `?benchmark=<id>`. Graphics quality presets Low/Medium/High/Custom in Pauza → Świat → Grafika. High AO is Performance quality with a heavy-frame auto-suppress (plan 113). Adaptive Quality is stored-off, not implemented. Draw calls / triangles are accumulated across composer+mirror (`info.autoReset = false`); diagnosis: [review 012](./reviews/2026-08-14--012--perf-bottleneck-diagnosis.md). Rendering-budget follow-up: [plan 113](./plans/2026-08-14--113--rendering-performance-gpu-scaling.md).
 
 ## Important code entry points
 

@@ -44,6 +44,7 @@ import {
 } from '../simulation'
 import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
+import { AGENT_RENDER_LAYER, assignRenderLayer, setSubtreeCastShadow } from '../world/waterMirror'
 import {
   type CharacterDef,
   genderForName,
@@ -115,6 +116,9 @@ function randRange([min, max]: [number, number]): number {
 const WALK_SPEED = 2.4
 const ARRIVE = 0.55
 export const NPC_HEIGHT = 1.75
+/** Skip the shadow pass for NPCs beyond this distance — they still draw, but
+ *  ~9 skinned submeshes × shadow map was a large submit cost (plan 113 P2). */
+const NPC_SHADOW_DISTANCE = 36
 /** Minimum clearance above waterLevel an NPC will walk into or wander toward. */
 const WATER_MARGIN = 0.3
 /**
@@ -616,6 +620,7 @@ export class NpcAgent {
   private lastVigorPercent = -1
   private lastBarsVisible: boolean | null = null
   private lastDebugText = ''
+  private lastShadowCasting: boolean | null = null
 
   private constructor(
     root: THREE.Object3D,
@@ -751,6 +756,7 @@ export class NpcAgent {
     this.label = new CSS2DObject(this.labelEl)
     this.label.position.set(0, NPC_HEIGHT + 0.55, 0)
     this.mesh.add(this.label)
+    assignRenderLayer(this.mesh, AGENT_RENDER_LAYER)
   }
 
   static async create(
@@ -1232,6 +1238,11 @@ export class NpcAgent {
     if (showBars !== this.lastBarsVisible) {
       this.lastBarsVisible = showBars
       this.labelBarsEl.style.display = showBars ? '' : 'none'
+    }
+    const shadowCasting = dist <= NPC_SHADOW_DISTANCE
+    if (shadowCasting !== this.lastShadowCasting) {
+      this.lastShadowCasting = shadowCasting
+      setSubtreeCastShadow(this.mesh, shadowCasting)
     }
     // Quantized before comparing — `dist`/`gaze` change by a hair every frame
     // while the player moves, so an unrounded guard never catches a repeat.

@@ -2,6 +2,7 @@ import {
   type Camera,
   LinearFilter,
   Matrix4,
+  type Object3D,
   PerspectiveCamera,
   Plane,
   type Scene,
@@ -17,13 +18,31 @@ import {
  *  `layers.enable(WATER_RENDER_LAYER)` or the water disappears. */
 export const WATER_RENDER_LAYER = 1
 
+/** NPC / fauna presentation. Mirror camera stays on layer 0, so agents do
+ *  not pay a second scene submit in the reflection pass (plan 113 P1). The
+ *  main camera and the sun's shadow camera must `layers.enable` this. */
+export const AGENT_RENDER_LAYER = 2
+
 /** One shared planar-reflection pass (128²) for every water material. */
 export const WATER_MIRROR_SIZE = 128
 
-/** Mirror re-renders at most this often — per-frame above 60 Hz was redundant
- *  (perf review 012) while still costing a full scene pass. */
-const MIRROR_MAX_HZ = 60
+/** Mirror re-renders at most this often — every-other-frame at 60 Hz (plan
+ *  113 P1). Still a full scene pass, so don't raise this without a benchmark. */
+const MIRROR_MAX_HZ = 30
 const MIRROR_MIN_INTERVAL_S = 1 / MIRROR_MAX_HZ
+
+export function assignRenderLayer(root: Object3D, layer: number): void {
+  root.traverse((obj) => {
+    obj.layers.set(layer)
+  })
+}
+
+export function setSubtreeCastShadow(root: Object3D, cast: boolean): void {
+  root.traverse((obj) => {
+    const mesh = obj as { isMesh?: boolean, castShadow?: boolean }
+    if (mesh.isMesh) mesh.castShadow = cast
+  })
+}
 
 export type WaterMirrorUniforms = {
   uMirror: { value: WebGLRenderTarget['texture'] }

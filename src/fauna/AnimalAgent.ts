@@ -13,6 +13,7 @@ import {
   type PlannedAction,
 } from '../simulation'
 import { barsVisibleForDistance, labelOpacityForDistance } from '../ui/labelDistance'
+import { AGENT_RENDER_LAYER, assignRenderLayer, setSubtreeCastShadow } from '../world/waterMirror'
 import {
   type AnimalLifeState,
   BIAS_STRENGTH,
@@ -34,6 +35,8 @@ import {
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
 const WATER_MARGIN = 0.3
+/** Skip the shadow pass for distant animals (plan 113 P2). */
+const FAUNA_SHADOW_DISTANCE = 36
 /** Distance at which a predator can bite the prey it's chasing. */
 const CONTACT_RANGE = 0.8
 /** Minimum seconds between bites from the same predator, so contact doesn't
@@ -539,6 +542,7 @@ export class AnimalAgent {
   private lastSatietyPercent = -1
   private lastHydrationPercent = -1
   private lastBarsVisible: boolean | null = null
+  private lastShadowCasting: boolean | null = null
   readonly health: HealthState
   readonly life: AnimalLifeState
   private attackCooldown = 0
@@ -704,6 +708,8 @@ export class AnimalAgent {
       : def.modelHeight + 0.3
     this.label.position.set(0, labelHeight, 0)
     this.mesh.add(this.label)
+
+    assignRenderLayer(this.mesh, AGENT_RENDER_LAYER)
 
     this.snapY()
     this.pickWanderTarget()
@@ -910,6 +916,11 @@ export class AnimalAgent {
     if (showBars !== this.lastBarsVisible) {
       this.lastBarsVisible = showBars
       this.labelBarsEl.style.display = showBars ? '' : 'none'
+    }
+    const shadowCasting = dist <= FAUNA_SHADOW_DISTANCE
+    if (shadowCasting !== this.lastShadowCasting) {
+      this.lastShadowCasting = shadowCasting
+      setSubtreeCastShadow(this.mesh, shadowCasting)
     }
     // Quantized before comparing — `dist` changes by a hair every frame while
     // the player moves, so an unrounded guard never catches a repeat.

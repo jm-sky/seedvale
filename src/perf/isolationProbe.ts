@@ -17,6 +17,10 @@ export type IsolationHost = {
   applyPostConfig: () => void
   setAoEnabled: (on: boolean) => void
   setReflections: (on: boolean) => void
+  setBloomEnabled: (on: boolean) => void
+  setSmaaEnabled: (on: boolean) => void
+  setGodRaysEnabled: (on: boolean) => void
+  setFilmGradeEnabled: (on: boolean) => void
 }
 
 function sleep(ms: number): Promise<void> {
@@ -77,6 +81,34 @@ export async function runIsolationProbes(
   host.setAoEnabled(false)
   try {
     results.push(await sampleProbe(monitor, 'no-ao'))
+  } finally {
+    host.applyPostConfig()
+  }
+
+  host.setBloomEnabled(false)
+  try {
+    results.push(await sampleProbe(monitor, 'no-bloom'))
+  } finally {
+    host.applyPostConfig()
+  }
+
+  host.setSmaaEnabled(false)
+  try {
+    results.push(await sampleProbe(monitor, 'no-smaa'))
+  } finally {
+    host.applyPostConfig()
+  }
+
+  host.setGodRaysEnabled(false)
+  try {
+    results.push(await sampleProbe(monitor, 'no-god-rays'))
+  } finally {
+    host.applyPostConfig()
+  }
+
+  host.setFilmGradeEnabled(false)
+  try {
+    results.push(await sampleProbe(monitor, 'no-film-grade'))
   } finally {
     host.applyPostConfig()
   }

@@ -4,7 +4,7 @@
 
 **Nie jest:** listą assetów ([assets/](./assets/README.md)), stanem implementacji ([STATE.md](./STATE.md)), domeną wody ([WATER.md](./WATER.md)), ani planem ([plans/](./plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
 
-**Last updated:** 2026-08-14
+**Last updated:** 2026-08-15
 
 Domena wody (stan, historia, kolejność poprawek): [WATER.md](./WATER.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
 
@@ -28,7 +28,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G2 | **Performance jest constraint architektury** — nie dokładamy passów, mirror RT ani per-frame CPU „dla ładniejszej wody/liści” bez świadomej ceny. | [architecture/performance-and-workers.md](./architecture/performance-and-workers.md) |
 | G3 | Liście / kwiaty z GLTF `alphaMode: BLEND` → przy loadzie **opaque `alphaTest` cutout** (`hardenFoliageAlpha`). Korony piszą depth. | `src/world/foliageWind.ts`, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
 | G4 | Woda transparentna: ocean i jeziora mają **`depthWrite: false`**. Nie łączyć `transparent` + `depthWrite: true` + wysokiego `renderOrder` — to maluje wodę przez korony. | `createOcean.ts`, `createWater.ts` |
-| G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Shader = rodzina jezior (`waterMaterial.ts`). Lustro sceny = jeden RT 256² (`waterMirror.ts`), wyłącznik Vue. | `createOcean.ts` |
+| G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Shader = rodzina jezior (`waterMaterial.ts`). Lustro sceny = jeden RT **128²** @ 30 Hz (`waterMirror.ts`), wyłącznik Vue; NPC/fauna poza lustrem (`AGENT_RENDER_LAYER`). | `createOcean.ts` |
 | G6 | Jeziora = per-chunk ten sam shader, maska heightmap + głębokość z `floorHeights`. `bodyScale` 1 stroi ocean, nie discarduje piksela. | `createWater.ts`, `waterMaterial.ts`, `waterBodies.ts` |
 | G7 | Post-process: EffectComposer + N8AO + SMAA (+ bloom / god rays / film grade). Hardware MSAA wyłączone (i tak bez efektu na targetach composera). | `createPostProcessing.ts`, `createRenderer.ts` |
 | G8 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | `CLAUDE.md` |
@@ -55,6 +55,15 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-08-15 — Rendering budget P0/P1 (plan 113) 🔧
+
+- High: N8AO on at **Performance** + half-res; auto-suppress when last Render ms ≥ 15 (restore ≤ 10). Isolation probes cover bloom/SMAA/god rays/film grade.
+- Shadow map: one update per game frame, after the water mirror, before beauty (`autoUpdate = false`).
+- Settlement palisade / bushes / barrels / hay use `buildInstancedProps`. Harvestable trees stay individual.
+- Water mirror 30 Hz, 128²; NPC/fauna on layer 2 so they skip the reflection pass.
+- Grass/vegetation far LOD floor ~8% (was ~25%). Distant NPC/fauna drop `castShadow` beyond 36 units.
+- Not in this pass: HLOD, TAA, WebGPU, cross-chunk vegetation merge. Browser `?benchmark=*` vs review 012 still open.
 
 ### 2026-08-14 — Quality profiles + perf diagnostics (plan 103) 🔧
 

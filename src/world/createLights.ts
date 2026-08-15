@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { AGENT_RENDER_LAYER } from '../world/waterMirror'
 
 export type WorldLights = {
   ambient: THREE.AmbientLight
@@ -32,6 +33,9 @@ export function createLights(shadowMapSize = 1024): WorldLights {
   sun.shadow.camera.top = 80
   sun.shadow.camera.bottom = -80
   sun.shadow.bias = -0.0002
+  // Agents live on AGENT_RENDER_LAYER so the water mirror (layer 0) skips
+  // them. Keep them in the shadow camera or NPC/fauna stop casting.
+  sun.shadow.camera.layers.enable(AGENT_RENDER_LAYER)
 
   return {
     ambient,

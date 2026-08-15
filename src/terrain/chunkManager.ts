@@ -72,6 +72,7 @@ import {
   requestChunkGrass,
   requestChunkTile,
 } from './chunkWorkerPool'
+import { densityLodFraction, grassFillerLodFraction } from './distanceLod'
 import { createGrassSystem, type WorldGrassChunk } from './grass'
 
 // Loaded once and reused across every chunk (GLTF loader also caches by URL, but
@@ -546,18 +547,15 @@ export function createChunkManager(
   let lastPlayerChunk: ChunkCoord = { cx: 0, cz: 0 }
   let lodScale = Math.min(1, Math.max(0.25, config.lodScale ?? 1))
 
-  /** Cheap distance LOD: render fewer blades in farther chunks (down to ~25%
-   *  at the visible edge) — imperceptible at that distance/fog, no
-   *  reallocation, just narrows the instanced draw range. Keeps near-field
-   *  density (the intentional visual choice) while cutting fill-rate cost.
-   *  Short filler blades only in the player's chunk + immediate ring
-   *  (issue 023) — zero draw cost beyond that. `lodScale` (plan 103) multiplies
-   *  the distance curve without changing generation density. */
+  /** Cheap distance LOD: render fewer blades in farther chunks. Near stays
+   *  full density; far drops to ~8% (plan 113 P2) instead of the old ~25%
+   *  floor. Short filler blades only in the player's chunk + immediate ring
+   *  (issue 023). `lodScale` (plan 103) multiplies the curve without changing
+   *  generation density. */
   function grassLodForDistance(dist: number): { mainFrac: number, fillerFrac: number } {
-    const t = dist / Math.max(1, effectiveGrassRadius)
     return {
-      mainFrac: Math.max(0.05, Math.min(1, Math.max(0.25, 1 - t * 0.75) * lodScale)),
-      fillerFrac: dist <= 1 ? Math.max(0, (1 - dist * 0.55) * lodScale) : 0,
+      mainFrac: densityLodFraction(dist, effectiveGrassRadius, lodScale),
+      fillerFrac: grassFillerLodFraction(dist, lodScale),
     }
   }
 
@@ -566,8 +564,7 @@ export function createChunkManager(
    *  which has its own smaller radius). Recovers the triangle-count
    *  regression from losing per-object frustum culling (plan 087 faza 7 / R3). */
   function vegetationLodForDistance(dist: number): number {
-    const t = dist / Math.max(1, config.loadRadius)
-    return Math.max(0.05, Math.min(1, Math.max(0.25, 1 - t * 0.75) * lodScale))
+    return densityLodFraction(dist, config.loadRadius, lodScale)
   }
 
   function syncInstancedLodForRecord(record: ChunkRecord, playerChunk: ChunkCoord): void {

@@ -82,7 +82,7 @@ import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
 import { createTimeSkip } from '../world/timeSkip'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
 import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChopStage } from '../world/treeLifecycle'
-import { WATER_RENDER_LAYER } from '../world/waterMirror'
+import { AGENT_RENDER_LAYER, WATER_RENDER_LAYER } from '../world/waterMirror'
 import { DRINK_THIRST_RELIEF, UNSAFE_WATER_WARNING, type WaterSource } from '../world/WaterSource'
 import { createWorldContext } from '../world/worldContext'
 import { createBusyAction } from './busyAction'
@@ -193,6 +193,7 @@ export async function createApp(
   const scene = createScene()
   const camera = createCamera(container.clientWidth / container.clientHeight)
   camera.layers.enable(WATER_RENDER_LAYER)
+  camera.layers.enable(AGENT_RENDER_LAYER)
   const worldAudio = createWorldAudio(camera)
 
   const postProcessing = createPostProcessing(
@@ -702,11 +703,23 @@ export async function createApp(
         bundle.chunkManager.setWaterReflections(config.postProcessing.waterReflections)
       },
       setAoEnabled: (on) => {
-        postProcessing.applyConfig({ ...config.postProcessing, aoEnabled: on })
+        postProcessing.setPassEnabled('ao', on)
       },
       setReflections: (on) => {
         bundle.ocean.setReflections(on)
         bundle.chunkManager.setWaterReflections(on)
+      },
+      setBloomEnabled: (on) => {
+        postProcessing.setPassEnabled('bloom', on)
+      },
+      setSmaaEnabled: (on) => {
+        postProcessing.setPassEnabled('smaa', on)
+      },
+      setGodRaysEnabled: (on) => {
+        postProcessing.setPassEnabled('godRays', on)
+      },
+      setFilmGradeEnabled: (on) => {
+        postProcessing.setPassEnabled('filmGrade', on)
       },
     },
   })

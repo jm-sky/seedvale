@@ -223,6 +223,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     drinkFromWaterSource, fillWaterskin, startTentRest, packTent, onInventoryChanged, setFrameTiming,
   } = deps
 
+  renderer.shadowMap.autoUpdate = false
+
   const clock = new Clock()
   let lastAppliedTimeOfDay = dayNight.timeOfDay
   /** Cached `skyParamsFromTime(dayNight.timeOfDay)` — recomputed at most once
@@ -232,6 +234,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   /** EMA of instantaneous FPS; HUD text refreshes at most ~4×/s. */
   let fpsEma = 60
   let fpsHudAge = 0
+  /** Previous frame's `composer.render()` cost — drives N8AO auto-budget. */
+  let lastRenderMs = 0
 
   /** Currently gaze-highlighted NPC/animal, if any — tracked so we only toggle
    *  the CSS class on change instead of writing every frame. */
@@ -745,11 +749,15 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     }
     const renderStart = performance.now()
     renderer.info.reset()
+    postProcessing.applyFrameBudget(lastRenderMs)
     withCategory(monitor, 'WATER', () => {
       bundle.ocean.renderMirror(renderer, scene, camera)
     })
     const mirrorDrawCalls = renderer.info.render.calls
     const mirrorTriangles = renderer.info.render.triangles
+    // Shadow map once, against the beauty camera — not during the mirror
+    // pass, which keeps `autoUpdate` off (plan 113 P1).
+    renderer.shadowMap.needsUpdate = true
     postProcessing.updateGodRays(camera, sky.sunPosition, cachedSky.elev)
     withCategory(monitor, 'RENDER', () => {
       postProcessing.render()
@@ -758,6 +766,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     const renderEnd = performance.now()
     const simulateMs = renderStart - frameStart
     const renderMs = renderEnd - renderStart
+    lastRenderMs = renderMs
     monitor.endFrame({
       simulateMs,
       renderMs,

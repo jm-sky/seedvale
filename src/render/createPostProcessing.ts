@@ -6,9 +6,12 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import type { WorldConfig } from '../config/worldConfig'
+import { shouldSuppressAo } from './aoBudget'
 import { GodRaysShader } from './godRaysShader'
 import { createGradedOutputPass } from './gradedOutputPass'
 import type { Camera, Scene, WebGLRenderer } from 'three'
+
+export type PostPassId = 'ao' | 'bloom' | 'smaa' | 'godRays' | 'filmGrade'
 
 export type PostProcessing = {
   render: () => void
@@ -18,6 +21,11 @@ export type PostProcessing = {
    *  drawing buffer (perf review A3.2). */
   setPixelRatio: (pixelRatio: number) => void
   applyConfig: (config: WorldConfig['postProcessing']) => void
+  /** Auto-budget N8AO from last frame's Render ms (plan 113 P0). No-op when
+   *  the user already has AO off. */
+  applyFrameBudget: (renderMs: number) => void
+  /** Isolation-probe toggle. `applyConfig` restores the user/preset state. */
+  setPassEnabled: (pass: PostPassId, enabled: boolean) => void
   /** Sun screen-projection + camera-facing fade change every frame (camera
    *  moves even while `timeOfDay` doesn't), so this runs outside the
    *  throttled day/night apply — unlike `applyConfig` it's not GUI-driven. */
@@ -96,10 +104,21 @@ export function createPostProcessing(
   // grade as a separate pass; A3.1 merges it in without changing the result.
   const outputPass = createGradedOutputPass()
   composer.addPass(outputPass)
+  const filmGradeUniform = outputPass.uniforms.filmGradeIntensity as { value: number }
+
+  let aoWanted = config.aoEnabled
+  let aoSuppressed = false
+
+  function syncAoPass(): void {
+    const aoOn = aoWanted && !aoSuppressed
+    aoPass.enabled = aoOn
+    renderPass.enabled = !aoOn
+  }
 
   function applyConfig(next: WorldConfig['postProcessing']): void {
-    aoPass.enabled = next.aoEnabled
-    renderPass.enabled = !next.aoEnabled
+    aoWanted = next.aoEnabled
+    aoSuppressed = false
+    syncAoPass()
     aoPass.setQualityMode(next.aoQuality)
     aoPass.configuration.aoRadius = next.aoRadius
     aoPass.configuration.intensity = next.aoIntensity
@@ -111,8 +130,43 @@ export function createPostProcessing(
 
     godRaysPass.enabled = next.godRaysEnabled
     godRaysPass.uniforms.exposure!.value = next.godRaysExposure
+
+    smaaPass.enabled = true
+    filmGradeUniform.value = 1
   }
   applyConfig(config)
+
+  function applyFrameBudget(renderMs: number): void {
+    if (!aoWanted) {
+      aoSuppressed = false
+      syncAoPass()
+      return
+    }
+    aoSuppressed = shouldSuppressAo(aoSuppressed, renderMs)
+    syncAoPass()
+  }
+
+  function setPassEnabled(pass: PostPassId, enabled: boolean): void {
+    switch (pass) {
+      case 'ao':
+        aoWanted = enabled
+        aoSuppressed = false
+        syncAoPass()
+        break
+      case 'bloom':
+        bloomPass.enabled = enabled
+        break
+      case 'filmGrade':
+        filmGradeUniform.value = enabled ? 1 : 0
+        break
+      case 'godRays':
+        godRaysPass.enabled = enabled
+        break
+      case 'smaa':
+        smaaPass.enabled = enabled
+        break
+    }
+  }
 
   // Reused across frames — avoids allocating a Vector3 every call.
   const sunWorld = new Vector3()
@@ -165,6 +219,8 @@ export function createPostProcessing(
     setSize: (w, h) => composer.setSize(w, h),
     setPixelRatio: (pixelRatio) => composer.setPixelRatio(pixelRatio),
     applyConfig,
+    applyFrameBudget,
+    setPassEnabled,
     updateGodRays,
     dispose: () => {
       aoPass.dispose()
