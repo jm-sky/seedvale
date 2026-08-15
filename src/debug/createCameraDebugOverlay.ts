@@ -69,7 +69,7 @@ export function createCameraDebugOverlay(parent: HTMLElement): CameraDebugOverla
       `rot  ${fmt(camera.rotation.x)} ${fmt(camera.rotation.y)} ${fmt(camera.rotation.z)}`,
       `clip near=${camera.near} far=${camera.far} aspect=${fmt(camera.aspect)}`,
       `terrainY ${fmt(groundY)}  cam-ground ${fmt(camera.position.y - groundY)}${buried ? '  BURIED' : ''}`,
-      `scene ${countObjects(scene)}  calls ${info.calls}  tris ${info.triangles}`,
+      `scene ${countObjects(scene)}  visibleMeshes ${countVisibleMeshes(scene)}  calls ${info.calls}  tris ${info.triangles}`,
       `dpr ${fmt(renderer.getPixelRatio())}  size ${renderer.domElement.width}x${renderer.domElement.height}`,
       `gl error ${lastGlError}  contextLost ${contextLost || gl.isContextLost()}`,
       events.length > 0 ? `events:\n${events.join('\n')}` : 'events: (none)',
@@ -94,5 +94,16 @@ function fmt(n: number): string {
 function countObjects(scene: Scene): number {
   let n = 0
   scene.traverse(() => { n++ })
+  return n
+}
+
+// TEMP: isolation test — surface visible-mesh count in the base camdebug
+// overlay (not gated behind `?debugRenderState=1`) so `?debugMinimalScene=1`
+// can be checked with just `?camdebug=1`.
+function countVisibleMeshes(scene: Scene): number {
+  let n = 0
+  scene.traverseVisible((obj) => {
+    if ((obj as { isMesh?: boolean }).isMesh) n++
+  })
   return n
 }

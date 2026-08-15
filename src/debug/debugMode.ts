@@ -46,3 +46,12 @@ export function isCameraMeshDebugMode(): boolean {
 export function isRenderStateDebugMode(): boolean {
   return urlFlag('debugRenderState')
 }
+
+/** `?debugMinimalScene=1` — TEMP: isolation test — hide every rendered
+ *  object except the terrain chunk meshes and lights (camera, renderer and
+ *  normal terrain rendering are left untouched), to see whether the mobile
+ *  black/flying-poly artifacts persist with everything else stripped out
+ *  (issue 032 follow-up). */
+export function isMinimalSceneDebugMode(): boolean {
+  return urlFlag('debugMinimalScene')
+}

@@ -6,7 +6,8 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import type { WorldConfig } from '../config/worldConfig'
-import { isRenderStateDebugMode } from '../debug/debugMode'
+import { isMinimalSceneDebugMode, isRenderStateDebugMode } from '../debug/debugMode'
+import { applyMinimalSceneDebug } from '../debug/minimalSceneDebug'
 import { sampleRenderState } from '../debug/renderStateDebug'
 import { shouldSuppressAo } from './aoBudget'
 import { GodRaysShader } from './godRaysShader'
@@ -229,6 +230,8 @@ export function createPostProcessing(
   return {
     // TEMP: isolation test — bypass EffectComposer
     render: () => {
+      // TEMP: isolation test — minimal scene rendering
+      if (isMinimalSceneDebugMode()) applyMinimalSceneDebug(scene)
       // `?debugRenderState=1` — diagnostics only, sampled immediately before
       // the actual render call; never mutates renderer/camera/scene state.
       if (isRenderStateDebugMode()) sampleRenderState(renderer, scene, camera as PerspectiveCamera)
