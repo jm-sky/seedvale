@@ -1471,11 +1471,26 @@ export async function createApp(
   let resizeScheduled = false
   let webglContextLost = false
   const cameraDebug = isCameraDebugMode() ? createCameraDebugOverlay(container) : null
+  // Sticky event log for the camdebug overlay — a live snapshot alone misses
+  // anything shorter than its 250ms refresh, which is exactly the failure
+  // mode we're trying to diagnose (issue 032: sporadic black-world blinks).
+  // No-op (never allocated/pushed to) when cameraDebug is null.
+  const MAX_DEBUG_EVENTS = 6
+  const debugEvents: string[] = []
+  let contextLostAt: number | null = null
+  let lastCameraStateInvalid = false
+  const pushDebugEvent = (label: string): void => {
+    if (!cameraDebug) return
+    const t = (performance.now() / 1000).toFixed(1)
+    debugEvents.push(`[${t}s] ${label}`)
+    if (debugEvents.length > MAX_DEBUG_EVENTS) debugEvents.shift()
+  }
 
   const applyViewportSize = (force = false) => {
     let width = container.clientWidth
     let height = container.clientHeight
     if (width < MIN_RENDERER_SIZE || height < MIN_RENDERER_SIZE) {
+      pushDebugEvent(`invalid viewport ${width}x${height} (force=${force})`)
       if (!force || lastViewportWidth < MIN_RENDERER_SIZE) return
       width = lastViewportWidth
       height = lastViewportHeight
@@ -1522,11 +1537,16 @@ export async function createApp(
   const canvas = renderer.domElement
   const onWebglContextLost = () => {
     webglContextLost = true
+    contextLostAt = performance.now()
+    pushDebugEvent('contextLost')
     console.warn('[renderer] WebGL context lost')
   }
   const onWebglContextRestored = () => {
     webglContextLost = false
-    console.warn('[renderer] WebGL context restored — reallocating composer targets')
+    const durationMs = contextLostAt !== null ? performance.now() - contextLostAt : -1
+    contextLostAt = null
+    pushDebugEvent(`contextRestored after ${durationMs.toFixed(0)}ms`)
+    console.warn(`[renderer] WebGL context restored after ${durationMs.toFixed(0)}ms — reallocating composer targets`)
     applyViewportSize(true)
   }
   canvas.addEventListener('webglcontextlost', onWebglContextLost)
@@ -1535,13 +1555,28 @@ export async function createApp(
   const tick = () => {
     frameId = requestAnimationFrame(tick)
     gameLoop.tick()
-    cameraDebug?.update({
-      camera,
-      renderer,
-      scene,
-      sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
-      contextLost: webglContextLost,
-    })
+    if (cameraDebug) {
+      const posFinite =
+        Number.isFinite(camera.position.x) &&
+        Number.isFinite(camera.position.y) &&
+        Number.isFinite(camera.position.z)
+      const aspectFinite = Number.isFinite(camera.aspect) && camera.aspect > 0
+      const invalid = !posFinite || !aspectFinite
+      if (invalid && !lastCameraStateInvalid) {
+        pushDebugEvent(
+          `camera invalid: pos=(${camera.position.x},${camera.position.y},${camera.position.z}) aspect=${camera.aspect}`,
+        )
+      }
+      lastCameraStateInvalid = invalid
+      cameraDebug.update({
+        camera,
+        renderer,
+        scene,
+        sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
+        contextLost: webglContextLost,
+        events: debugEvents,
+      })
+    }
   }
   tick()
   loadingScreen.hide()

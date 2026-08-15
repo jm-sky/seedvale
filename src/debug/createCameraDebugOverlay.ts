@@ -6,6 +6,11 @@ export type CameraDebugSnapshot = {
   scene: Scene
   sampleHeight: (x: number, z: number) => number
   contextLost: boolean
+  /** Most recent black-frame-relevant events (context loss, invalid viewport/
+   *  camera state), newest last. Kept by the caller so a blink that happens
+   *  between two 250ms overlay refreshes is still visible afterward — a live
+   *  snapshot alone would miss anything shorter than the throttle window. */
+  events: readonly string[]
 }
 
 export type CameraDebugOverlay = {
@@ -45,7 +50,7 @@ export function createCameraDebugOverlay(parent: HTMLElement): CameraDebugOverla
     if (age < 250 && lastText !== '') return
     age = 0
 
-    const { camera, renderer, scene, sampleHeight, contextLost } = snapshot
+    const { camera, renderer, scene, sampleHeight, contextLost, events } = snapshot
     const gl = renderer.getContext()
     const err = gl.getError()
     if (err !== gl.NO_ERROR) lastGlError = String(err)
@@ -63,6 +68,7 @@ export function createCameraDebugOverlay(parent: HTMLElement): CameraDebugOverla
       `scene ${countObjects(scene)}  calls ${info.calls}  tris ${info.triangles}`,
       `dpr ${fmt(renderer.getPixelRatio())}  size ${renderer.domElement.width}x${renderer.domElement.height}`,
       `gl error ${lastGlError}  contextLost ${contextLost || gl.isContextLost()}`,
+      events.length > 0 ? `events:\n${events.join('\n')}` : 'events: (none)',
     ].join('\n')
     if (text !== lastText) {
       lastText = text
