@@ -21,3 +21,7 @@ To osobny problem od [planu 087](../plans/archive/2026-08-12--087--vegetation-an
 ## Poza zakresem teraz
 
 Nie blokuje niczego — jednorazowy freeze przy pierwszym wejściu w zasięg osady, nie powtarzający się stutter. Warto zaplanować osobno, gdy będzie czas na profilowanie i decyzję o podejściu (frame-budowanie vs coś innego).
+
+## Możliwa regresja fixu (2026-08-15, [review 017](../reviews/2026-08-15--017--rendering-regression-audit.md))
+
+Static analysis audit (regression audit for black frames / grass flicker) znalazł, że `080fd3f` zamienił budowę propsów osady (palisada, siano, beczki, krzaki) z pętli `await yieldProp()/yieldStake()` (frame-yielding z planu 102, `createPropYieldGate` w `src/settlement/frameYield.ts`) na jedno synchroniczne wywołanie `buildInstancedProps()` (`src/settlement/props.ts`). Do tego `0c318b0` + `e25cce9` razem sprawiają, że `waitForChunks()` (`src/terrain/chunkManager.ts:1385-1396`), które poprzedza `createSettlement()` w `SettlementsManager.ts:295-296`, może przy odpowiednich warunkach (>48ms przerwy w game loop) zdrenować całą kolejkę finalizacji **synchronicznie i bez await**. Innymi słowy: fix z planu 102 może być częściowo cofnięty przez późniejsze commity — nie potwierdzone w przeglądarce, patrz next-experiment w review 017.

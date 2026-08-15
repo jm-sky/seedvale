@@ -36,6 +36,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | AI agent workflow audit | Repo audit for Claude Code / Cursor Agent context & cost optimization — doc duplication, plan domains, automation, skills, MCP, Claude vs Cursor split, multi-agent git workflow | `done` | [2026-08-15--014--ai-agent-workflow-audit.md](./2026-08-15--014--ai-agent-workflow-audit.md) |
 | Browser performance benchmark | Powtórzenie `?benchmark=*` po review 013 (GPU/streaming) — porównanie z [010](./2026-08-14--010--perf-benchmark-data.md), bez optymalizacji | `done` | [2026-08-15--015--browser-performance-benchmark.md](./2026-08-15--015--browser-performance-benchmark.md) |
 | GPU-fix runtime verification | Czy N8AO/cienie/lustro/instancing osady z `c4c8c9d`/`94874a5`/`080fd3f` są aktywne w `?benchmark=*` — preambuła planu [119](../plans/2026-08-15--119--chunk-streaming-performance.md) | `done` | [2026-08-15--016--gpu-fix-runtime-verification.md](./2026-08-15--016--gpu-fix-runtime-verification.md) |
+| Rendering regression audit | Black frames (mobile) / grass flicker (desktop) po `0c318b0`/`e25cce9`/`080fd3f`/`14ee5c7`/`7a90408` — static analysis, brak fixu, 2 hipotezy do potwierdzenia w przeglądarce | `verification needed` | [2026-08-15--017--rendering-regression-audit.md](./2026-08-15--017--rendering-regression-audit.md) |
 
 ## After each run
 
