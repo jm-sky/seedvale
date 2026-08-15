@@ -30,8 +30,6 @@ export function createPlacedTents(
 
   const spawn = (record: PlacedTent): void => {
     const mesh = createPlacedTentProp()
-    // TEMP: isolation test — props/tree subgroups
-    mesh.name = 'placed-tent'
     mesh.rotation.y = record.yaw
     placeOnGround(mesh, record.x, record.z, sampleHeight)
     scene.add(mesh)

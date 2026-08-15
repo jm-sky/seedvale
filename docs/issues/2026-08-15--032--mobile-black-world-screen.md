@@ -166,3 +166,9 @@ build: pass (npm run build)
 ### Browser verification
 
 `NOT VERIFIED` — next-experiment #1 z review 017 (backgrounding taba tuż przed rozwiązaniem `waitForChunks` przy wejściu w zasięg nieodwiedzonej osady) nadal do wykonania na realnym urządzeniu.
+
+## Kolejny wariant (2026-08-15) — czarne latające poligony poza wioską, InstancedMesh + foliageWind
+
+Użytkownik zgłosił, że migotanie na czarno/czarne latające poligony nadal występowały **cyklicznie**, również poza zabudową, przy `contextLost=false` i `gl error NONE` — czyli poza zakresem obu wcześniejszych przyczyn i main-thread-stall fixu wyżej. Systematyczna izolacja per-kategoria obiektów sceny (`?debugMinimalScene=1`/`?debugSceneGroup=`, od tego czasu usunięte — patrz research) znalazła precyzyjny wspólny mianownik: **`THREE.InstancedMesh` renderujący materiał spatchowany przez foliage-wind shader** (`src/world/foliageWind.ts`, instancing branch z commitu `cee1a4c`, plan 087 §2.2). Wyłączenie wind-sway wyłącznie dla `InstancedMesh` (commit `a75ed44`, `#ifndef USE_INSTANCING`) **potwierdzone jako usuwające migotanie**; dokładny defekt GLSL/program-cache pozostaje otwarty jako osobne zadanie.
+
+Pełna diagnostyka, tabela izolacji i dowody: [research 010](../research/2026-08-15--010--mobile-black-flicker-instancedmesh-foliage-wind.md).

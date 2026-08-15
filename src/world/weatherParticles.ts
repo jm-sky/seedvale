@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { WeatherState } from './weather'
+import { isSystemEnabled } from '../debug/debugMode'
 
 /** GPU-driven rain/snow (plan 040 §11-13 — closes the Etap 3 deviation noted
  *  in the implementation notes). Per-particle position/fall/drift is computed
@@ -165,9 +166,8 @@ function updateEmitter(
   sizeScale: number,
   qualityCeiling: number,
 ): void {
-  const visible = active && intensity > 0.02
-  // TEMP: isolation test — disable weather rendering
-  emitter.points.visible = false
+  const visible = isSystemEnabled('weather') && active && intensity > 0.02
+  emitter.points.visible = visible
   if (!visible) return
   emitter.time += dt
   const u = emitter.material.uniforms

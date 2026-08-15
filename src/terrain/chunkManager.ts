@@ -7,6 +7,7 @@ import type { EnvironmentKind } from './chunkEnvironment'
 import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
 import { disposeObject3D } from '../assets/loadGltf'
+import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
 import { getMonitor } from '../perf/active'
 import { buildInstancedProps, type InstancedPropGroup, type PropPlacement } from '../render/instancedProps'
@@ -542,6 +543,12 @@ export function createChunkManager(
   // `update()` hasn't run recently, the waiter pumps finalization itself.
   let lastUpdateAt = 0
   const GAME_LOOP_IDLE_MS = 48
+  // Wall-clock cap on the idle catch-up drain below — job cost varies too
+  // much (mesh vs content stage, GLB clone cost) for a job-count cap to
+  // bound actual main-thread time, so this bounds time spent per rAF tick
+  // instead. Matches the hitch threshold (`HITCH_MS` in perf/monitor.ts) so
+  // a catch-up burst reads as "at most one hitch," not a multi-second stall.
+  const FINALIZE_DRAIN_BUDGET_MS = 8
   // Chunks only exist within loadRadius, so a grass radius beyond it is a dead
   // knob — clamp so the GUI slider (1-12) can't silently do nothing, and so
   // raising loadRadius later doesn't make grass range jump unexpectedly.
@@ -699,8 +706,7 @@ export function createChunkManager(
         getMonitor().recordHitch('GRASS', performance.now() - t0, 'grass generation')
         rec.grass = grass
         if (grass) {
-          // TEMP: isolation test — disable grass rendering
-          // scene.add(grass.mesh)
+          if (isSystemEnabled('grass')) scene.add(grass.mesh)
           const { mainFrac, fillerFrac } = grassLodForDistance(dist)
           grass.setLodFraction(mainFrac, fillerFrac)
         }
@@ -1038,7 +1044,7 @@ export function createChunkManager(
       rec.treeYaw = treeYaw
 
       if (hasExtras) {
-        scene.add(extras)
+        if (isSystemEnabled('trees')) scene.add(extras)
         rec.vegetationExtras = extras
       }
       const treeInstances = buildInstancedProps(
@@ -1047,7 +1053,7 @@ export function createChunkManager(
         'chunk-vegetation-tree-living',
       )
       if (treeInstances) {
-        scene.add(treeInstances.group)
+        if (isSystemEnabled('trees')) scene.add(treeInstances.group)
         rec.treeInstances = treeInstances
       }
 
@@ -1417,8 +1423,7 @@ export function createChunkManager(
       const winner = await Promise.race([pending, Promise.resolve(waiting)])
       if (winner !== waiting) return
       if (performance.now() - lastUpdateAt > GAME_LOOP_IDLE_MS) {
-        // TEMP: isolation test — disable finalize budget
-        drainFinalizeQueueByBudget(Infinity)
+        drainFinalizeQueueByBudget(FINALIZE_DRAIN_BUDGET_MS)
       }
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => resolve())

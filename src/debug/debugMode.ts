@@ -25,83 +25,44 @@ export function isCameraDebugMode(): boolean {
   return urlFlag('camdebug')
 }
 
-/** `?debugNoShadows=1` — TEMP: isolation test — disable shadow map rendering
- *  entirely, to help rule shadows in/out as a source of the mobile
- *  black-poly flicker (issue 032 follow-up). */
+/** `?debugNoShadows=1` — disable shadow map rendering entirely, to rule
+ *  shadows in/out as a source of a rendering artifact or to gauge their perf
+ *  cost. */
 export function isNoShadowsDebugMode(): boolean {
   return urlFlag('debugNoShadows')
 }
 
-/** `?debugCameraMesh=1` — TEMP: isolation test — raycast from the camera each
- *  frame and log the first mesh it hits, to identify what's rendering in
- *  front of the camera during the mobile black-poly flicker. */
+/** `?debugCameraMesh=1` — raycast from the camera each frame and log the
+ *  first mesh it hits, to identify what's rendering in front of the camera. */
 export function isCameraMeshDebugMode(): boolean {
   return urlFlag('debugCameraMesh')
 }
 
-/** `?debugRenderState=1` — TEMP: adds low-level render-call diagnostics
+/** `?debugRenderState=1` — adds low-level render-call diagnostics
  *  (viewport/scissor/visible-mesh-count/anomaly detection) to the `camdebug`
  *  overlay, sampled immediately before `renderer.render(scene, camera)`.
- *  Requires `?camdebug=1` to actually be visible (issue 032 follow-up). */
+ *  Requires `?camdebug=1` to actually be visible. */
 export function isRenderStateDebugMode(): boolean {
   return urlFlag('debugRenderState')
 }
 
-/** `?debugMinimalScene=1` — TEMP: isolation test — hide every rendered
- *  object except the terrain chunk meshes and lights (camera, renderer and
- *  normal terrain rendering are left untouched), to see whether the mobile
- *  black/flying-poly artifacts persist with everything else stripped out
- *  (issue 032 follow-up). */
-export function isMinimalSceneDebugMode(): boolean {
-  return urlFlag('debugMinimalScene')
-}
+/** Major rendered subsystems that can be independently switched off for
+ *  perf/mobile/isolation testing (issue 032 diagnostic follow-up) — visual
+ *  only, simulation state keeps running underneath. One name added here per
+ *  future need, not a new query param per system. */
+export type DebugSystemName = 'grass' | 'trees' | 'animals' | 'npcs' | 'playerModel' | 'weather'
 
-// TEMP: isolation test — scene object groups / props/tree subgroups
-export type MinimalSceneGroup =
-  | 'props'
-  | 'props-environment'
-  | 'props-settlement'
-  | 'props-fire'
-  | 'props-dropped'
-  | 'props-tents'
-  | 'props-other'
-  | 'npcs'
-  | 'trees'
-  | 'trees-living'
-  | 'trees-extra'
-  | 'trees-settlement'
-  | 'buildings'
-  | 'all'
-
-const MINIMAL_SCENE_GROUPS: ReadonlySet<string> = new Set<MinimalSceneGroup>([
-  'props',
-  'props-environment',
-  'props-settlement',
-  'props-fire',
-  'props-dropped',
-  'props-tents',
-  'props-other',
-  'npcs',
-  'trees',
-  'trees-living',
-  'trees-extra',
-  'trees-settlement',
-  'buildings',
-  'all',
-])
-
-/** `?debugSceneGroup=props|npcs|trees|buildings|all`, or one of the finer
- *  `props-*`/`trees-*` subgroups (props/tree subgroups isolation) — TEMP:
- *  isolation test — only meaningful together with `?debugMinimalScene=1`.
- *  Re-shows one category that `debugMinimalScene` would otherwise hide (or,
- *  with `all`, everything it hides) so each can be isolated without a new
- *  deploy (issue 032 follow-up). */
-export function getMinimalSceneGroup(): MinimalSceneGroup | null {
-  if (typeof window === 'undefined') return null
+/** `?debugDisableSystems=grass,trees` — central, comma-separated switch for
+ *  the systems above. Absent (or a name not listed) means "enabled" — normal
+ *  play is unaffected unless this flag is present. Kept as one shared param
+ *  instead of a `debugNoX` flag per system. */
+export function isSystemEnabled(name: DebugSystemName): boolean {
+  if (typeof window === 'undefined') return true
   try {
-    const raw = new URLSearchParams(window.location.search).get('debugSceneGroup')
-    return raw !== null && MINIMAL_SCENE_GROUPS.has(raw) ? (raw as MinimalSceneGroup) : null
+    const raw = new URLSearchParams(window.location.search).get('debugDisableSystems')
+    if (!raw) return true
+    return !raw.split(',').map((s) => s.trim()).includes(name)
   } catch {
-    return null
+    return true
   }
 }

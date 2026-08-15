@@ -6,8 +6,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import type { WorldConfig } from '../config/worldConfig'
-import { getMinimalSceneGroup, isMinimalSceneDebugMode, isRenderStateDebugMode } from '../debug/debugMode'
-import { applyMinimalSceneDebug } from '../debug/minimalSceneDebug'
+import { isRenderStateDebugMode } from '../debug/debugMode'
 import { sampleRenderState } from '../debug/renderStateDebug'
 import { shouldSuppressAo } from './aoBudget'
 import { GodRaysShader } from './godRaysShader'
@@ -110,8 +109,6 @@ export function createPostProcessing(
   const filmGradeUniform = outputPass.uniforms.filmGradeIntensity as { value: number }
 
   let aoWanted = config.aoEnabled
-  aoWanted = false // TEMP: isolation
-
   let aoSuppressed = false
   // 0 reads as "unbounded time since last change," so the first real check
   // in applyFrameBudget is never held back by the min-stable-time floor.
@@ -124,7 +121,7 @@ export function createPostProcessing(
   }
 
   function applyConfig(next: WorldConfig['postProcessing']): void {
-    aoWanted = false // TEMP: isolation — disable N8AO
+    aoWanted = next.aoEnabled
     aoSuppressed = false
     aoSuppressedChangedAt = 0
     syncAoPass()
@@ -228,14 +225,11 @@ export function createPostProcessing(
   }
 
   return {
-    // TEMP: isolation test — bypass EffectComposer
     render: () => {
-      // TEMP: isolation test — minimal scene rendering / scene object groups
-      if (isMinimalSceneDebugMode()) applyMinimalSceneDebug(scene, getMinimalSceneGroup())
       // `?debugRenderState=1` — diagnostics only, sampled immediately before
       // the actual render call; never mutates renderer/camera/scene state.
       if (isRenderStateDebugMode()) sampleRenderState(renderer, scene, camera as PerspectiveCamera)
-      renderer.render(scene, camera)
+      composer.render()
     },
     setSize: (w, h) => composer.setSize(w, h),
     setPixelRatio: (pixelRatio) => composer.setPixelRatio(pixelRatio),

@@ -515,8 +515,7 @@ export class PlayerController {
       tickPlayerStamina(this.needs.stamina, dt, false)
       this.syncCamera()
       this.syncHpBar()
-      // TEMP: isolation test — disable player animation
-      // this.mixer?.update(dt)
+      this.mixer?.update(dt)
       return
     }
     const { yaw } = this.look
@@ -554,8 +553,7 @@ export class PlayerController {
     this.syncCamera()
     this.syncAnimation()
     this.syncHpBar()
-    // TEMP: isolation test — disable player animation
-    // this.mixer?.update(dt)
+    this.mixer?.update(dt)
   }
 
   /** Undo the visual offsets of the current pose before switching. */

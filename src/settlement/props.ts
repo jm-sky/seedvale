@@ -2384,8 +2384,6 @@ export async function buildSettlementProps(
       plazaPad,
     ))
     const campfire = createCampfire()
-    // TEMP: isolation test — props/tree subgroups
-    campfire.name = 'fire'
     placeOnGround(campfire, fireX, fireZ, sampleHeight)
     group.add(campfire)
 

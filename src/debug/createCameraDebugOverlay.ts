@@ -97,9 +97,9 @@ function countObjects(scene: Scene): number {
   return n
 }
 
-// TEMP: isolation test — surface visible-mesh count in the base camdebug
-// overlay (not gated behind `?debugRenderState=1`) so `?debugMinimalScene=1`
-// can be checked with just `?camdebug=1`.
+// Cheap visible-mesh count in the base overlay (not gated behind
+// `?debugRenderState=1`) — useful on its own for perf/mobile checks, e.g.
+// combined with `?debugDisableSystems=` to see how much a category costs.
 function countVisibleMeshes(scene: Scene): number {
   let n = 0
   scene.traverseVisible((obj) => {

@@ -8,6 +8,7 @@ import {
   loadGltfAsset,
   prepareProp,
 } from '../assets/loadGltf'
+import { isSystemEnabled } from '../debug/debugMode'
 import { ANIMAL_DEFS, AnimalAgent, type AnimalKind } from '../fauna/AnimalAgent'
 import {
   createChickenModel,
@@ -19,10 +20,6 @@ import {
 import { createSeededRandom } from '../world/parseSeed'
 import { type VillageSize, villageSizeConfig } from './families'
 import { homePlaceId } from './places'
-
-// Temporary: A/B diagnostic for issue 032 (mobile black screen) — see
-// `spawnLivestock`'s early-return guard below. Revert by removing both.
-const TEMP_DISABLE_LIVESTOCK = true
 
 /** Owned farm animal kinds — the only `AnimalKind`s this module ever spawns. */
 type LivestockKind = 'horse' | 'donkey' | 'cow' | 'sheep' | 'chicken'
@@ -199,10 +196,7 @@ export async function spawnLivestock(
    *  behaviour (same as wild fauna). */
   householdByHomeId?: ReadonlyMap<string, Household>,
 ): Promise<AnimalAgent[]> {
-  // Temporary: A/B diagnostic for issue 032 (mobile black screen) — fully
-  // disables livestock spawn to test whether scene growth/black-screen still
-  // occurs with zero animals. Revert by removing this guard.
-  if (TEMP_DISABLE_LIVESTOCK) return []
+  if (!isSystemEnabled('animals')) return []
   await ensureLivestockTemplates()
   const agents: AnimalAgent[] = []
   homes.forEach((home, i) => {

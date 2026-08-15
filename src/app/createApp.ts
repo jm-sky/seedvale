@@ -24,7 +24,7 @@ import {
   createWorldConfig,
 } from '../config/worldConfig'
 import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
-import { isCameraDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode } from '../debug/debugMode'
+import { isCameraDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { getRenderStateDebugText } from '../debug/renderStateDebug'
 import { type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
@@ -184,7 +184,7 @@ export async function createApp(
 
   const renderer = createRenderer(container, config.postProcessing.pixelRatioCap)
   if (isNoShadowsDebugMode()) {
-    renderer.shadowMap.enabled = false // TEMP: isolation test — disable shadows
+    renderer.shadowMap.enabled = false
   }
   const labelRenderer = new CSS2DRenderer()
   labelRenderer.setSize(container.clientWidth, container.clientHeight)
@@ -324,8 +324,7 @@ export async function createApp(
   player.setName(config.player.name)
   player.setMoveAudio(worldAudio.playAt)
   scene.add(player.mesh)
-  // TEMP: isolation test — disable player mesh rendering
-  player.mesh.visible = false
+  player.mesh.visible = isSystemEnabled('playerModel')
   vueUi.configureSkillsScreen({ onToggleSneak: () => toggleSneak(player.skills) })
   const hud = createHud(container)
   hud.setTime(dayNight.timeOfDay)

@@ -270,7 +270,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   /** Previous frame's `composer.render()` cost — drives N8AO auto-budget. */
   let lastRenderMs = 0
 
-  // TEMP: isolation test — identify mesh in front of camera
+  // `?debugCameraMesh=1` — identify the mesh in front of the camera.
   const cameraMeshRaycaster = new Raycaster()
   const cameraMeshDirection = new Vector3()
   let lastCameraMeshUuid: string | null = null
@@ -896,7 +896,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         mouseLook.state.yaw,
       )
     }
-    // TEMP: isolation test — identify mesh in front of camera
     if (isCameraMeshDebugMode()) {
       camera.getWorldDirection(cameraMeshDirection)
       cameraMeshRaycaster.set(camera.position, cameraMeshDirection)

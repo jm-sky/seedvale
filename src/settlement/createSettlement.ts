@@ -16,6 +16,7 @@ import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { disposeObject3D } from '../assets/loadGltf'
 import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
+import { isSystemEnabled } from '../debug/debugMode'
 import { type SettlementEconomy, WOODSHED_DEVELOPMENT } from '../economy'
 import {
   copyVec3,
@@ -437,7 +438,7 @@ export async function createSettlement(
         household,
         getPlayerSocial,
       )
-      scene.add(agent.mesh)
+      if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent
     }),
   )
