@@ -46,9 +46,8 @@ Plans from 2026-08-07–2026-08-14 that reached `done` or `verification needed` 
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-15--119--chunk-streaming-performance.md` | Hitchy chunk streaming: stampede po `await` GLB w `attachGeneratedChunk` + 1 mesh/klatkę z planu 112 nie obejmuje etapu content; preload szablonów + kolejka mesh/content | 🔴 | M | 112 |
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
-
-+ `2026-08-14--117--npc-reaction-to-player.md`
 
 ---
 
