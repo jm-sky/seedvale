@@ -699,7 +699,8 @@ export function createChunkManager(
         getMonitor().recordHitch('GRASS', performance.now() - t0, 'grass generation')
         rec.grass = grass
         if (grass) {
-          scene.add(grass.mesh)
+          // TEMP: isolation test — disable grass rendering
+          // scene.add(grass.mesh)
           const { mainFrac, fillerFrac } = grassLodForDistance(dist)
           grass.setLodFraction(mainFrac, fillerFrac)
         }
