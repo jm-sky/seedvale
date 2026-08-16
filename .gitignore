@@ -6,3 +6,4 @@ CLAUDE.local.md
 .env
 _temp/
 docs/refs/
+trace_processor
