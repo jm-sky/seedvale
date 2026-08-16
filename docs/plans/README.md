@@ -61,6 +61,8 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-16--127--player-built-well.md` | Fizyczna studnia budowana przez gracza; wstępny | 🟡 | M | ~~122~~ |
 | `2026-08-16--128--player-skills-survival-and-camp.md` | Skills v2: rozwój `PlayerSkills` przez użycie + pierwszy pełny skill `Survival`, domyka ognisko+koc+namiot jako spójny system odpoczynku; wstępny | 🟡 | M | ~~124~~ |
 
++ `2026-08-16--136--threejs-180-to-185-upgrade.md`
+
 ---
 
 ## Todo
