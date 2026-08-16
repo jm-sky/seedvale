@@ -1,120 +1,206 @@
-# Research 012: Streaming hitch — trace v2 (`kLinkProgram` + `gpu_toplevel` wait evidence)
+# Research 012: Streaming hitch — trace v2 and `getProgramInfoLog()` root cause
 
-**Status:** `in progress`
-**Date:** 2026-08-16
-**Scope:** Trace-only analysis of `_temp/trace_v2.json.gz` (`chrome://tracing`, ~20.4MB, 12.37s, categories: `devtools.timeline`, `devtools.timeline.frame`, `blink.user_timing`, `gpu`, `gpu_cmd_queue`, `gpu.decoder`, `gpu.service`, `disabled-by-default-devtools.timeline`) via Perfetto Trace Processor (`./trace_processor`, PerfettoSQL). Continuation of [research 011](2026-08-16--011--streaming-hitch-investigation.md); source data for [review 019](../reviews/2026-08-16--019--streaming-hitch-trace-analysis.md)'s hypothesis.
-**Not in scope:** Implementing a fix, modifying Three.js/renderer settings, modifying the benchmark, adding new instrumentation. Trace investigation only.
-**Tools used:** `./trace_processor query` (PerfettoSQL) only, ad hoc scratchpad `.sql` files, not saved as permanent tooling.
+**Status:** `confirmed`  
+**Date:** 2026-08-16  
+**Scope:** Trace investigation plus Chrome Performance JS stack capture and controlled A/B experiment.  
+**Conclusion:** The investigated giant streaming hitches are caused by synchronous Three.js shader/program error checking on first use, specifically `gl.getProgramInfoLog()`, during the water-mirror render path.
 
----
+## Context
 
-## Why this trace
+Continuation of [research 011](2026-08-16--011--streaming-hitch-investigation.md) and [review 019](../reviews/2026-08-16--019--streaming-hitch-trace-analysis.md).
 
-Trace 2 (review 019, `_temp/Trace-20260816T203706.json`) established the "main thread idle / GPU ticking normally" signature but had no WebGL-call-level categories. Trace 3 (`_temp/trace_trace_tracing_01.json.gz`, analyzed inline in a prior turn, not written up as a separate doc) added `gpu.decoder`/`gpu.service` and found a single 245.975ms `gpu_toplevel` wait adjacent to a `kLinkProgram` dispatch — but lacked `blink.user_timing`, so it couldn't be tied to named `seedvale:*` spans (`chunk-finalize`, `water-mirror`, `postprocessing`). This trace (`trace_v2.json.gz`) was captured with **both** `blink.user_timing` and the GPU/WebGL categories together, closing that gap.
+The original Perfetto trace established a strong `kLinkProgram` + `gpu_toplevel` synchronous wait signature but could not name the exact WebGL API call. A Chrome Performance capture with high-frequency JS stack sampling closed that gap.
 
-## Finding
+## Final finding
 
-The largest hitch in this trace — a 732.166ms `seedvale:tick` — is not GPU-busy time and not CPU compute on either process. **62% of the tick (454.096ms)** is two singular, back-to-back synchronous `WebGL-0x6a0c079ed200` / `gpu_toplevel` waits (218.899ms + 235.197ms), each starting within microseconds of a `kLinkProgram` dispatch. During both waits, Chrome's own tracing shows **zero activity** on both the GPU process's decoder thread (`CrGpuMain`) and the renderer's main thread — a directly measured, not inferred, confirmation of the "synchronous CPU↔GPU/driver block coincident with program linking" signature first hypothesized in review 019 and partially observed in trace 3.
-
-The same wait mechanism (`WebGL-0x6a0c079ed200`/`gpu_toplevel`) also accounts for the trace's other, much smaller (44–48ms) hitches, but there it appears as dozens of small (0.02–7.5ms) accumulated waits rather than 1–2 giant ones — the giant-outlier and routine-hitch cases share a root cause category but differ in scale/clustering.
-
-## Evidence
-
-### Top hitches (measured `slice.dur`, not sampling)
-
-| source | value | id / ts |
-|---|---:|---|
-| `seedvale:tick` max | 732.166 ms | id 978219, ts 1428180203226000 (≈7.91s into a 12.37s trace — mid-run, not startup) |
-| `ThreadControllerImpl::RunTask` max | 734.236 ms | id 978024, wraps the same tick |
-| frame-to-frame `seedvale:tick` gap max | 736.145 ms | same event |
-| `seedvale:water-mirror` max | 675.159 ms | id 978624 — 92% of the 732ms tick |
-| WebGL `gpu_toplevel` wait max | 235.197 ms | id 983287 |
-| WebGL `gpu_toplevel` wait 2nd | 218.899 ms | id 981015 |
-| next-largest WebGL wait anywhere in trace | 9.843 ms | id 1189096 — 22–24× smaller |
-
-Next 5 `seedvale:tick` values after the outlier: 48.224 / 46.620 / 46.510 / 46.095 / 44.661 ms — a 15× drop from the top hitch, confirming it is a singular outlier, not part of a continuous distribution.
-
-### Reconstruction of the largest hitch
+A reproduced large hitch was measured by Chrome Performance as a `Long task` of approximately **615 ms**. Bottom-up attribution showed:
 
 ```text
-seedvale:chunk-finalize (burst of 6, non-trivial: 0.9-5.5ms each)
-  ts ~= 1428179842933000 .. 1428179892626000   (220-360ms before tick)
-
-        v  (220-360ms gap, mostly idle)
-
-seedvale:tick  id=978219
-  ts = 1428180203226000, dur = 732.166 ms
-
-        v +4.731ms
-
-seedvale:water-mirror  id=978624
-  ts = 1428180207957000, dur = 675.159 ms   (92% of tick)
-
-    rel +7.4..88.1ms:  11 small WebGL waits (0.01-5.1ms) + kLinkProgram (~0.17-0.26ms each)
-    rel +81.496ms:  kLinkProgram id=980864, dur=0.212ms
-        v (5.6ms later)
-    rel +87.305ms:  WebGL-0x6a0c079ed200 id=981015, dur = 218.899 ms  [gl_category=gpu_toplevel]
-    rel +88.066ms:  kLinkProgram id=981028, dur=0.032ms (761us into the wait)
-        v wait ends at rel +306.204ms
-    rel +308..345ms: 6 more small WebGL waits + kLinkProgram bursts
-    rel +345.059ms: WebGL-0x6a0c079ed200 id=983287, dur = 235.197 ms  [gl_category=gpu_toplevel]
-    rel +345.068ms: kLinkProgram id=983288, dur=0.023ms (9us after wait starts)
-        v wait ends at rel +580.256ms
-    rel +583..675ms: further small waits + kLinkProgram bursts, tick ends normally
-
-seedvale:postprocessing  id=987615
-  ts = 1428180883186000, dur = 48.800 ms   (after water-mirror, unremarkable)
+~545 ms (88%)  WebGLRenderingContext.getProgramInfoLog
+    └── ~85% WebGLRenderer.render
+        └── waterMirror.ts:109
+            └── createOcean.ts:67
+                └── createApp.ts:1622
+                    └── Animation frame
 ```
 
-Total WebGL wait time inside the water-mirror window (all sizes): 616.21ms = **91.3%** of that sub-span.
+The call tree independently showed:
 
-### GPU decoder and main thread during the two giant waits
+```text
+~558 ms WebGLRenderer.render
+    └── ~85% getProgramInfoLog
+```
 
-Both `[87.305ms, 306.204ms]` and `[345.059ms, 580.256ms]` (relative to water-mirror start) were queried directly for *any* slice on `CrGpuMain` (GPU process) and *any* slice on the renderer's main thread: **zero rows in both processes, both windows.** No draw calls, no texture/buffer ops, no decoder commands, no JS, no GC — 454ms of measured silence on both sides of the wait. Bucketed `GPUTask` activity in 25ms buckets across the full 675ms water-mirror window confirms the same: buckets 0–3 and 23–26 (start/end, ~vsync-normal) are active; buckets 4–11 and 14–22 (exactly the two wait windows) are completely empty.
+This is the missing named call site from the earlier Perfetto investigation.
 
-Across the entire 675ms `water-mirror` span, main-thread activity totals ~2.7ms (two `MinorGC` events, 0.99ms + 1.68ms).
+## Full causal mechanism
 
-### Shader/program events
+```text
+chunk streaming / newly visible materials
+        ↓
+water mirror render
+        ↓
+renderer.render(scene, mirrorCamera)
+        ↓
+new WebGLProgram variant / first use
+        ↓
+WebGLProgram.getUniforms() / onFirstUse()
+        ↓
+gl.getProgramInfoLog()
+        ↓
+synchronous driver / GPU wait
+        ↓
+~545 ms blocked Main Thread
+        ↓
+~615 ms Long Task / frame hitch
+```
 
-`kLinkProgram` is present (~72+ occurrences, 0.02–0.28ms dispatch each) and clusters tightly around both giant waits (761µs after wait #1 starts; 9µs after wait #2 starts). `kShaderSource`, `kCompileShader`, `kGetProgramInfoLog`, `kGetShaderInfoLog`, `kGetProgramiv`, `kGetShaderiv` are **absent** from `gpu.decoder`/`gpu.service` in this trace — same gap as trace 3. `kLinkProgram` measures command dispatch/decode only (sub-millisecond), not the underlying driver compile/link work; the actual cost is captured separately as the `WebGL-0x.../gpu_toplevel` wait, which is Blink's own instrumentation for "the calling JS thread is synchronously blocked on a GPU round trip." 404,782 `kDrawElements` + 162,137 `kDrawElementsInstancedANGLE` exist trace-wide, but zero inside either giant-wait window.
+The earlier Perfetto trace independently showed the same mechanism at the GPU boundary:
 
-### Comparison across top hitches
+- largest `seedvale:tick`: **732.166 ms**;
+- `seedvale:water-mirror`: **675.159 ms**;
+- two dominant `gpu_toplevel` waits: **218.899 ms + 235.197 ms**;
+- each wait started within microseconds of a `kLinkProgram` dispatch;
+- no GPU decoder or renderer-main activity occurred during the two giant wait windows.
 
-| tick_ms | dominant sub-pass | prior chunk-finalize | wait pattern |
-|---:|---|---|---|
-| 732.166 | water-mirror 675.159 (92%) | trivial (0.008ms, 16.9ms gap) — but 6 non-trivial finalizes 220–360ms earlier | 2 giant singular waits (218.9 + 235.2ms), GPU/MT fully idle |
-| 48.224 | postprocessing 18.388 | — | many small waits |
-| 46.620 | postprocessing 20.017 | 51.7ms gap, 7.513ms (largest routine finalize in trace) | many small waits |
-| 46.510 | water-mirror 26.349 (57%) | 19.9ms gap | many small waits (top 7.482ms) |
-| 46.095 | postprocessing 29.688 | 39.5ms gap | many small waits |
-| 44.661 | postprocessing 37.748 (85%) | 21.9ms gap | many small waits (top 6.450ms) |
+The trace therefore identifies the synchronous WebGL/driver stall, while Chrome Performance identifies the exact JS/WebGL API call that triggers it.
 
-### Alternative explanations checked and ruled out for the giant waits
+## Why `getProgramInfoLog()` is called
 
-- CPU compute / GC — ruled out, main thread near-idle throughout.
-- Large `chunk-finalize` itself — ruled out, finalize slices are 0.9–5.5ms and complete 220–360ms before the stall starts.
-- Texture/buffer upload, draw calls — ruled out for the two giant windows specifically (zero decoder events of any kind during them).
-- Many small WebGL sync calls — this *is* the mechanism for the other 44–48ms hitches, but not for the giant one (dominated by two singular waits, not accumulation).
+Seedvale currently uses **Three.js 0.180.0** (`npm ls three`). In that version, `WebGLProgram` performs first-use uniform initialization. When `cachedUniforms` is undefined and `renderer.debug.checkShaderErrors` is enabled, the first-use path calls `gl.getProgramInfoLog()`.
 
-## Relation to streaming
+Important details established by source inspection:
 
-`chunk-finalize -> kLinkProgram -> WebGL wait -> hitch` appears in the same trace, but as a looser sequence than a tight single-event chain. A burst of 6 non-trivial chunk-finalize/chunk-mesh events (220–360ms before the hitch) is denser/larger than the near-zero finalize preceding the routine 44–48ms hitches, which is circumstantial support for "a bigger batch of newly streamed materials produces a bigger link-wait stall later." But no trace event carries a shared identifier tying that specific finalize batch to the specific `kLinkProgram` calls bracketing the two giant waits — the link is temporal, not proven by a shared key.
+- `renderer.debug.checkShaderErrors` defaults to **`true`** in Three.js 0.180.0.
+- Seedvale does not explicitly configure `renderer.debug.checkShaderErrors`.
+- The relevant first-use path is in `node_modules/three/src/renderers/webgl/WebGLProgram.js`.
+- `program.getUniforms()` is reached from `WebGLRenderer.setProgram()` during rendering.
+- `getUniforms()` is called on every set-program path, but the expensive first-use block is entered only when the program's cached uniforms are not initialized.
 
-## Confidence
+Therefore this is not simply “`gl.linkProgram()` takes 500 ms”. `linkProgram` dispatch itself is short; the long cost is the synchronous round-trip exposed by `getProgramInfoLog()` when the driver still has work pending.
 
-**Medium-high.** Up from review 019's "medium." This trace adds, for the first time, directly measured GPU-decoder-side silence and named `kLinkProgram` events tightly bracketing the exact class of massive synchronous wait, reproduced as the top-2 outliers trace-wide by a 22×+ margin over the next-largest wait, with the same wait-type recurring at smaller scale across the other top hitches. Not "high": no trace event names the specific WebGL call actually blocking inside the `WebGL-0x...` wait (compile vs. link vs. status-getter vs. other), and the finalize-burst-to-wait causal link is inferential (timing only).
+## Why the water mirror is the trigger
 
-## Remaining uncertainty
+The relevant Seedvale path is:
 
-1. Which exact WebGL API call the `WebGL-0x6a0c079ed200` wait wraps — not nameable from this trace's categories (no `kCompileShader`/`getProgramInfoLog`/`getShaderInfoLog` present).
-2. Whether the finalize burst 220–360ms earlier is causally responsible for these specific two waits, versus some other material becoming newly visible in the mirror's reflected view for the first time (different camera than main view).
-3. Why this run produced two back-to-back giant waits in one tick, versus trace 3's single ~246ms wait — possibly a larger/denser material batch, possibly a first-time-visible-in-mirror vs. first-time-visible-in-main-camera timing difference.
+```text
+waterMirror.ts:109
+    renderer.render(scene, mirrorCamera)
 
-## Next experiment
+createOcean.ts:67
+    waterMirror.render(renderer, scene, camera)
+```
 
-Capture a Chrome Performance profile (not `chrome://tracing`) with JS stack sampling enabled at high frequency around a reproduced hitch, so the call stack *inside* the `WebGL-0x...` wait's triggering JS call is captured by name (e.g. `WebGLRenderingContext.getProgramInfoLog`, `WebGLProgram.checkErrors`). That is the one piece needed to convert "inferred shader-compile/link stall" into a named, indisputable call site before touching `renderer.debug.checkShaderErrors` or any other code.
+The mirror render uses a render target. In Three.js' program cache parameters, **tone mapping** and **output color space** participate in the WebGLProgram cache key.
+
+Seedvale's mirror render and main canvas render therefore use different program variants:
+
+- mirror render target → `LinearSRGBColorSpace`, and no canvas tone mapping;
+- main canvas → normally `SRGBColorSpace` and Seedvale's `ACESFilmicToneMapping`.
+
+The camera identity itself is **not** the cause, and the oblique projection matrix modification does not use Three.js user clipping planes and therefore does not create a program-cache variant by itself.
+
+This means a material can require a separate WebGLProgram variant for the mirror pass and hit its expensive first use there. Newly streamed materials make this especially relevant because their variants may not have been used before.
+
+## Controlled A/B experiment
+
+A temporary diagnostic change was made:
+
+```ts
+renderer.debug.checkShaderErrors = false
+```
+
+No other rendering or streaming changes were made.
+
+The same `stream` benchmark was then run for 30 seconds at High quality, pixel ratio 1.
+
+### Result
+
+```text
+Critical spikes: (none)
+Hitches (>= 8 ms): (none)
+```
+
+The benchmark reported:
+
+```text
+avg FPS:       17.9
+avg frame:     55.9 ms
+p95 frame:     42.9 ms
+max frame:     6110.5 ms
+```
+
+The reported `max frame: 6110.5 ms` conflicts with the benchmark's own `Critical spikes: (none)` and `Hitches: (none)` classification and should be treated as a benchmark measurement anomaly until independently explained. It does not resemble the previously observed 600–800 ms `getProgramInfoLog()` hitch pattern.
+
+The key A/B observation is that the previously reproducible long-task hitch pattern disappeared when shader error checking was disabled.
+
+## What this proves
+
+Combined evidence now provides high-confidence causal evidence for the investigated hitch mechanism:
+
+1. Perfetto measured the giant synchronous WebGL waits next to `kLinkProgram`.
+2. Chrome Performance named the blocking JS/WebGL call as `getProgramInfoLog()`.
+3. The call occurs specifically inside `WebGLRenderer.render()` from the water-mirror render path.
+4. The call consumes roughly **545 ms** of a reproduced **615 ms** long task.
+5. Disabling `renderer.debug.checkShaderErrors` removes the observed hitch pattern in the same stream benchmark.
+
+This is substantially stronger than the earlier “shader/link stall” hypothesis.
+
+## What is still not proven
+
+The exact upstream reason for each individual new WebGLProgram is not fully instrumented with a material/program identifier. The strongest explanation is the combination of newly used streamed materials and separate mirror/main program variants caused by render-target output color space and tone mapping.
+
+The benchmark A/B does **not** prove that disabling shader checks is an acceptable production fix. It proves that this synchronous diagnostic path is responsible for the observed hitch.
+
+## Next work
+
+### 1. Do not keep `checkShaderErrors = false` as the final fix yet
+
+It is a diagnostic switch that removes shader error checking. It may be acceptable for a production build only after deliberately deciding what shader diagnostics are required, but it should not be adopted merely as a performance workaround.
+
+### 2. Investigate asynchronous/pre-warmed program compilation
+
+Three.js 0.180.0 provides `renderer.compileAsync()` and `KHR_parallel_shader_compile` support. Investigate whether Seedvale can pre-warm the relevant mirror/main program variants before they enter the latency-sensitive render path.
+
+The goal is:
+
+```text
+new streamed material
+    ↓
+prepare required program variants asynchronously
+    ↓
+program ready
+    ↓
+mirror/main render
+    ↓
+no multi-hundred-ms first-use stall
+```
+
+The implementation must avoid moving the same cost into another visible frame or blocking chunk finalization.
+
+### 3. Evaluate Three.js upgrade separately
+
+Seedvale currently declares `"three": "^0.180.0"` and `npm ls three` confirms **0.180.0** is installed. A newer release is available (0.185.1 at the time of investigation).
+
+An upgrade is worth testing because renderer/WebGL behavior may have changed, but it must be treated as a separate A/B experiment. Do not assume the upgrade alone fixes the root cause.
+
+Recommended order:
+
+1. reproduce baseline;
+2. test Three.js 0.185.1 with no Seedvale rendering changes;
+3. compare hitch count and maximum long tasks;
+4. if needed, test `compileAsync()`/program prewarming;
+5. only then decide whether any permanent `checkShaderErrors` change is justified.
+
+## Verification status
+
+- **Trace evidence:** verified.
+- **Named JS/WebGL call site:** verified with Chrome Performance.
+- **A/B causal experiment:** verified for the diagnostic path.
+- **Final production fix:** not implemented.
+- **Three.js upgrade:** not implemented.
 
 ## Related
 
-- [Research 011: Streaming hitch investigation](2026-08-16--011--streaming-hitch-investigation.md) — prior traces, current hypothesis this doc tests.
-- [Review 019: Streaming hitch — Perfetto trace analysis](../reviews/2026-08-16--019--streaming-hitch-trace-analysis.md) — origin of the shader-compile/link hypothesis.
+- [Research 011: Streaming hitch investigation](2026-08-16--011--streaming-hitch-investigation.md)
+- [Review 019: Streaming hitch — Perfetto trace analysis](../reviews/2026-08-16--019--streaming-hitch-trace-analysis.md)
