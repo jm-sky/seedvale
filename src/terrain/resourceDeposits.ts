@@ -97,12 +97,31 @@ export type MineResult =
   | { ok: true, yield: { kind: ReturnType<typeof yieldForOre>['kind'], count: number }, remaining: number }
   | { ok: false, reason: 'missing' | 'depleted' }
 
+/** A secondary streaming anchor (plan 131) — e.g. a settlement center — kept
+ *  loaded independently of the player so NPC mining can find a deposit while
+ *  the player is elsewhere. Deliberately not a full player-independent
+ *  rewrite of this module's streaming (implementation notes §4): interest
+ *  points still ride the same load/unload radii and recheck cadence as the
+ *  player, just unioned in. */
+export type InterestPoint = { x: number, z: number }
+
 export type ResourceDeposits = {
-  update: (playerX: number, playerZ: number) => void
-  /** Nearest loaded ore pile the player can mine (plan 090). */
+  /** `interestPoints` — extra anchors (settlement centers) that keep nearby
+   *  deposits loaded even while the player is far away; label fade still
+   *  follows the player only. */
+  update: (playerX: number, playerZ: number, interestPoints?: readonly InterestPoint[]) => void
+  /** Nearest loaded ore pile the player (or an NPC, plan 131) can mine. */
   queryNearest: (x: number, z: number, range: number) => DepositTarget | null
   mine: (id: string) => MineResult
   dispose: () => void
+}
+
+/** Narrow view over `ResourceDeposits` for NPC mining (plan 131) — mirrors
+ *  `SettlementForestHooks`' shape: just the domain operations a settlement
+ *  needs, not `update`/`dispose` (owned by `WorldBundle`). */
+export type SettlementMiningHooks = {
+  queryNearest: ResourceDeposits['queryNearest']
+  mine: ResourceDeposits['mine']
 }
 
 /**
@@ -119,6 +138,10 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
   const depletedIds = new Set<string>()
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
+  /** Forces a `recheck` when the interest-point set itself changes (e.g. a
+   *  settlement streams in/out) even if the player hasn't moved far enough
+   *  to trigger the distance-based recheck below. */
+  let lastInterestCount = -1
   let templatesPromise: Promise<OreTemplates> | null = null
   let templates: OreTemplates | null = null
   let disposed = false
@@ -224,27 +247,36 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
     instances.delete(id)
   }
 
-  function recheck(playerX: number, playerZ: number): void {
+  function recheck(playerX: number, playerZ: number, interestPoints: readonly InterestPoint[]): void {
     lastCheckX = playerX
     lastCheckZ = playerZ
-    const nearby = resourcesNear(playerX, playerZ, LOAD_RADIUS, seed, env)
+    lastInterestCount = interestPoints.length
+    const anchors: InterestPoint[] = [{ x: playerX, z: playerZ }, ...interestPoints]
     const wanted = new Set<string>()
-    for (const resource of nearby) {
-      if (!isVisibleOre(resource.type) || depletedIds.has(resource.id)) continue
-      wanted.add(resource.id)
-      if (!instances.has(resource.id)) spawn(resource)
+    for (const anchor of anchors) {
+      const nearby = resourcesNear(anchor.x, anchor.z, LOAD_RADIUS, seed, env)
+      for (const resource of nearby) {
+        if (!isVisibleOre(resource.type) || depletedIds.has(resource.id)) continue
+        wanted.add(resource.id)
+        if (!instances.has(resource.id)) spawn(resource)
+      }
     }
     for (const [id, instance] of instances) {
       if (wanted.has(id)) continue
-      const dist = Math.hypot(instance.resource.x - playerX, instance.resource.z - playerZ)
-      if (dist > UNLOAD_RADIUS) despawn(id)
+      const nearAnyAnchor = anchors.some(
+        (anchor) => Math.hypot(instance.resource.x - anchor.x, instance.resource.z - anchor.z) <= UNLOAD_RADIUS,
+      )
+      if (!nearAnyAnchor) despawn(id)
     }
   }
 
   return {
-    update(playerX, playerZ) {
-      if (Math.hypot(playerX - lastCheckX, playerZ - lastCheckZ) >= RECHECK_DISTANCE) {
-        recheck(playerX, playerZ)
+    update(playerX, playerZ, interestPoints = []) {
+      if (
+        Math.hypot(playerX - lastCheckX, playerZ - lastCheckZ) >= RECHECK_DISTANCE
+        || interestPoints.length !== lastInterestCount
+      ) {
+        recheck(playerX, playerZ, interestPoints)
       }
       for (const instance of instances.values()) {
         const dist = Math.hypot(instance.resource.x - playerX, instance.resource.z - playerZ)

@@ -11,4 +11,4 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 ## Wpisy
 
-(brak)
+- [ ] 2026-08-16 — `NpcAgent.getCurrentActivity()` pokazuje ore-deliver leg (`deposit` po `mine`) jako `need: idle` zamiast `work`, bo chain traci informację o rodzicu po promocji `next` → `pendingAction`; kosmetyczny błąd etykiety dialogowej, bez wpływu na gathering/ekonomię (plan `2026-08-16--131--natural-resource-gathering.md`)

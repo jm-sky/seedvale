@@ -9,6 +9,7 @@ import type { AnimalAgent, VillageInfo } from '../fauna/AnimalAgent'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
+import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Collider } from '../world/collision'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { VillageSize } from './families'
@@ -188,6 +189,9 @@ export async function createSettlement(
   /** Resolves an NPC's relation level + general player standing by name —
    *  forwarded into every `NpcAgent.create` call below (plan 117). */
   getPlayerSocial?: PlayerSocialLookup,
+  /** NPC ore-mining hooks over `ResourceDeposits` (plan 131) — forwarded into
+   *  every `NpcAgent.create` call below the same way as `forest` above. */
+  mining?: SettlementMiningHooks,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
@@ -437,6 +441,7 @@ export async function createSettlement(
         economy,
         household,
         getPlayerSocial,
+        mining,
       )
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

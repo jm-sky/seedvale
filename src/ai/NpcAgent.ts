@@ -21,6 +21,7 @@ import {
   tryAdvanceDevelopment,
   WOODCUTTING_PRODUCTION,
 } from '../economy'
+import { Inventory } from '../items/Inventory'
 import { createHealthState, damageHealth, type HealthState } from '../shared/HealthState'
 import {
   createStaminaState,
@@ -42,6 +43,8 @@ import {
   type PlannedAction,
   replaceActionLifecycle,
 } from '../simulation'
+import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
+import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer, setSubtreeCastShadow } from '../world/waterMirror'
@@ -295,7 +298,7 @@ type Phase =
   | 'sleep'
   | 'wander'
 
-type ActionId = 'chop' | 'deposit' | 'drink' | 'eat' | 'work'
+type ActionId = 'chop' | 'deposit' | 'drink' | 'eat' | 'mine' | 'work'
 
 /**
  * NPC adapter over the shared `PlannedAction` contract: destination and
@@ -373,14 +376,27 @@ const WATER_FETCH_AMOUNT = 2
 /** How much stored household water one drink-at-home visit consumes. */
 const WATER_DRINK_FROM_STOCK_AMOUNT = 1
 
+/** Ore gathering (plan 131) — `miner`'s `work` schedule block tries a real
+ *  `ResourceDeposits` extraction before falling back to the pre-131 idle
+ *  stand. Search radius mirrors `findHarvestableNear`'s 80 above (same order
+ *  of magnitude as a settlement's local interest range). NPC carry capacity
+ *  only ever needs to hold one extraction's yield (weight ~1) at a time —
+ *  a small fraction of the player's `DEFAULT_MAX_WEIGHT` is ample headroom. */
+const ORE_SEARCH_RADIUS = 80
+const NPC_CARRY_MAX_WEIGHT = 5
+
 /** Chop → deposit completion, household-aware. A household caps how much of
  *  the harvest it keeps (see `Household.deposit`); anything over that still
  *  reaches the settlement economy, so `tryAdvanceDevelopment` (woodshed)
  *  keeps working the same way it did before households existed. No
- *  household (isolated fallback) reproduces the old settlement-only path. */
-function depositWoodHarvest(household: Household | null, economy: SettlementEconomy | null): void {
+ *  household (isolated fallback) reproduces the old settlement-only path.
+ *  `amount` is 0 when the chop step's `harvestWorldTreeFully` call failed
+ *  (tree already harvested by someone else, etc., plan 131) — a no-op guard
+ *  so a failed harvest never still mints wood at deposit time. */
+function depositWoodHarvest(household: Household | null, economy: SettlementEconomy | null, amount: number): void {
+  if (amount <= 0) return
   if (household) {
-    household.deposit('wood', WOOD_HARVEST_AMOUNT, economy)
+    household.deposit('wood', amount, economy)
     if (economy) tryAdvanceDevelopment(economy)
   } else if (economy) {
     commitWoodcutterDeposit(economy)
@@ -607,6 +623,16 @@ export class NpcAgent {
   private readonly economy: SettlementEconomy | null
   /** This NPC's family stock (plan 069). Null only in isolated fallbacks. */
   private readonly household: Household | null
+  /** NPC ore-mining hooks over `ResourceDeposits` (plan 131). Null when this
+   *  settlement wasn't built with one (isolated fallback, same as `economy`/
+   *  `household`) — the miner role then falls back to the pre-131 idle
+   *  workplace stand instead of gathering. */
+  private readonly mining: SettlementMiningHooks | null
+  /** Generic item carrier reused from the player's own `Inventory` (plan
+   *  131) — an NPC's brief hold between extracting a world resource (ore) and
+   *  delivering it, not a persistent belongings system. Small capacity: one
+   *  extraction's worth of ore is all it ever needs to hold at once. */
+  private readonly carried = new Inventory(undefined, NPC_CARRY_MAX_WEIGHT)
   /** Relation level + player standing lookup, by NPC name — keeps `NpcAgent`
    *  quest-agnostic (`QuestManager.getRelationLevel`/`getPlayerStanding`
    *  injected from `createApp.ts`, plan 117). */
@@ -643,6 +669,7 @@ export class NpcAgent {
     economy: SettlementEconomy | null,
     household: Household | null,
     getPlayerSocial: PlayerSocialLookup,
+    mining: SettlementMiningHooks | null,
   ) {
     this.playAt = playAt
     this.forest = forest
@@ -651,6 +678,7 @@ export class NpcAgent {
     this.wellQueueId = wellQueueId
     this.economy = economy
     this.household = household
+    this.mining = mining
     this.getPlayerSocial = getPlayerSocial
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
@@ -779,6 +807,7 @@ export class NpcAgent {
     economy: SettlementEconomy | null = null,
     household: Household | null = null,
     getPlayerSocial: PlayerSocialLookup = () => ({ relationLevel: 'stranger', standing: 0 }),
+    mining: SettlementMiningHooks | null = null,
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -803,6 +832,7 @@ export class NpcAgent {
         economy,
         household,
         getPlayerSocial,
+        mining,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -825,6 +855,7 @@ export class NpcAgent {
         economy,
         household,
         getPlayerSocial,
+        mining,
       )
     }
   }
@@ -848,6 +879,7 @@ export class NpcAgent {
     economy: SettlementEconomy | null,
     household: Household | null,
     getPlayerSocial: PlayerSocialLookup,
+    mining: SettlementMiningHooks | null,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -881,6 +913,7 @@ export class NpcAgent {
       economy,
       household,
       getPlayerSocial,
+      mining,
     )
   }
 
@@ -911,7 +944,7 @@ export class NpcAgent {
       case 'execute':
       case 'exhausted':
       case 'goTo':
-        if (this.pendingAction?.kind === 'work') return { kind: 'work', endHour }
+        if (this.pendingAction?.kind === 'work' || this.pendingAction?.kind === 'mine') return { kind: 'work', endHour }
         if (this.pendingAction?.kind === 'eat' && this.activeNeed === 'idle') {
           return { kind: 'eat', endHour }
         }
@@ -1611,19 +1644,25 @@ export class NpcAgent {
         }
       }
 
+      // Harvest success/failure decides the deposit amount (plan 131) —
+      // another NPC/the player may have felled `landmark` first between this
+      // chop starting and completing; the chained deposit step must not
+      // still mint wood when that happens.
+      let harvestedWood = 0
       this.startAction({
         kind: 'chop',
         destination: copyVec3(landmark.position),
         durationSec: 1.6 * this.waitMultiplier,
         onComplete: () => {
           if (!forest) return
-          harvestWorldTreeFully(
+          const result = harvestWorldTreeFully(
             forest.lifecycle,
             landmark.id,
             forest.getWorldDays(),
             forest.sampleEnv(landmark.position.x, landmark.position.z),
             { landmark },
           )
+          if (result.ok) harvestedWood = WOOD_HARVEST_AMOUNT
         },
         next: {
           kind: 'deposit',
@@ -1631,7 +1670,7 @@ export class NpcAgent {
           durationSec: 0.8 * this.waitMultiplier,
           onComplete: () => {
             this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
-            depositWoodHarvest(this.household, this.economy)
+            depositWoodHarvest(this.household, this.economy, harvestedWood)
           },
         },
       })
@@ -1640,6 +1679,56 @@ export class NpcAgent {
     // 'wood' need but this settlement has no trees yet — same unscheduled
     // idle fallback as a moment with no workplace (not 'work').
     this.beginUnscheduledIdle()
+  }
+
+  /**
+   * Miner's `work` schedule block tries a real ore extraction before falling
+   * back to the idle workplace stand (plan 131) — reuses the same
+   * `ResourceDeposits` the player's pickaxe mines (via the injected `mining`
+   * hooks), so extraction/depletion keeps one owner; no NPC-only ore
+   * registry. Ore is settlement-level raw stock (implementation notes §3),
+   * not household — `Household` stays a family food/wood pantry. Returns
+   * false when there's no mining hooks, no loaded deposit nearby, or no
+   * carry room, so the caller falls back to the pre-131 idle-work stand
+   * (plan 131 §7: profession is a preference, not the only way to act).
+   */
+  private beginOreGathering(): boolean {
+    const mining = this.mining
+    const economy = this.economy
+    if (!mining || !economy) return false
+    const target = mining.queryNearest(this.mesh.position.x, this.mesh.position.z, ORE_SEARCH_RADIUS)
+    if (!target) return false
+    const itemKind = ORE_ITEM[target.type]
+    if (!this.carried.canAdd(itemKind, 1)) return false
+
+    // Set by the `mine` step's onComplete, consumed by the chained `deposit`
+    // step's onComplete — mirrors the wood chop→deposit atomicity fix above:
+    // depletion (another NPC/the player got there first) must not still
+    // credit the settlement economy.
+    let minedCount = 0
+    this.startAction({
+      kind: 'mine',
+      destination: copyVec3({ x: target.x, y: this.sampleHeight(target.x, target.z), z: target.z }),
+      durationSec: MINE_DURATION_SEC * this.waitMultiplier,
+      onComplete: () => {
+        const result = mining.mine(target.id)
+        if (result.ok) {
+          this.carried.add(result.yield.kind, result.yield.count)
+          minedCount = result.yield.count
+        }
+      },
+      next: {
+        kind: 'deposit',
+        destination: copyVec3(this.landmarks.stockpile),
+        durationSec: 0.8 * this.waitMultiplier,
+        onComplete: () => {
+          if (minedCount <= 0) return
+          this.carried.remove(itemKind, minedCount)
+          economy.add(oreEconomicKind(target.type), minedCount)
+        },
+      },
+    })
+    return true
   }
 
   /** No active need (`pickNeed` returned `'idle'`) — follow the effective
@@ -1653,6 +1742,7 @@ export class NpcAgent {
     }
     const intent = idleIntentFor(scheduledActivity)
     if (intent === 'work' && this.workplace) {
+      if (this.role === 'miner' && this.beginOreGathering()) return
       this.startAction({
         kind: 'work',
         destination: copyVec3(this.workplace.position),

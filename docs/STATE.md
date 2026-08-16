@@ -105,10 +105,10 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `PlayerNeeds` — player stamina/vigor/hunger/thirst pools (`src/player/PlayerNeeds.ts`, plan 106), reusing `StaminaState`/`VigorState`; hunger/thirst are a new `HungerState`/`ThirstState` pool pair, same `{max, current}` shape.
 - `WaterSource` — shared well/lake drink/fill abstraction (`src/world/WaterSource.ts`, plan 106); future river/polluted/treated sources should reuse it.
 - Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/`. NPC + fauna adapters; predator scoring in `src/fauna/predatorHumanDecision.ts`.
-- `SettlementEconomy` — settlement-owned bulk stock (`src/economy/`). Not player `Inventory`. Not in save data yet.
-- `Household` — one family's own `food`/`wood` stock (plan 069, `src/settlement/household.ts`), reusing `SettlementEconomy`'s `EconomicStock`, plus a separate `water` reserve (`WaterReserve`, plan 122 — deliberately not an `EconomicKind`) backing that household's `WaterBarrel`/`AnimalTrough`. Sits between NPC carrying and `SettlementEconomy`; registry lives on `SettlementsManager` like `EconomyRegistry`. Not in save data yet.
-- `NpcAgent` / `AnimalAgent` — central behaviour integration points.
-- `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot.
+- `SettlementEconomy` — settlement-owned bulk stock (`src/economy/`), `EconomicKind` = `food`/`water`/`wood`/`iron`/`coal`/`gold` (ore added plan 131 — NPC-mined raw resource stock, no demand target yet). Not player `Inventory`. Not in save data yet.
+- `Household` — one family's own `food`/`wood` stock (plan 069, `src/settlement/household.ts`), reusing `SettlementEconomy`'s `EconomicStock`, plus a separate `water` reserve (`WaterReserve`, plan 122 — deliberately not an `EconomicKind`) backing that household's `WaterBarrel`/`AnimalTrough`. Sits between NPC carrying and `SettlementEconomy`; registry lives on `SettlementsManager` like `EconomyRegistry`. `HouseholdResourceKind` is a fixed `'food' | 'wood'` literal (plan 131, no longer derived from `EconomicKind`) so ore never becomes household-storable by construction. Not in save data yet.
+- `NpcAgent` / `AnimalAgent` — central behaviour integration points. `NpcAgent` also carries a small generic `Inventory` (plan 131) as a brief hold between extracting a world resource (ore) and delivering it — not a persistent belongings system.
+- `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot; `Inventory` itself is generic (player + NPC), not player-only.
 - `TreeLifecycle` / `harvestWorldTree*` — tree growth + multi-stage chop (`src/world/treeLifecycle.ts`, `treeHarvest.ts`).
 - `QuestManager` — quest progress, EXP and relations.
 - `ChunkManager` — terrain sampling, streaming and environment-facing world queries.

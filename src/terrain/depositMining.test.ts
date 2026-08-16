@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { ECONOMIC_KINDS } from '../economy/kinds'
 import {
   hitsForRichness,
   isMineableOre,
   ORE_ITEM,
+  oreEconomicKind,
   yieldForOre,
 } from './depositMining'
 
@@ -12,6 +14,14 @@ describe('depositMining (plan 090)', () => {
     expect(ORE_ITEM.iron).toBe('iron')
     expect(ORE_ITEM.gold).toBe('gold')
     expect(yieldForOre('iron')).toEqual({ kind: 'iron', count: 1 })
+  })
+
+  it('maps ore types to settlement raw-stock EconomicKinds by identity (plan 131)', () => {
+    for (const type of ['coal', 'iron', 'gold'] as const) {
+      const kind = oreEconomicKind(type)
+      expect(kind).toBe(type)
+      expect(ECONOMIC_KINDS).toContain(kind)
+    }
   })
 
   it('accepts only visible ore types', () => {

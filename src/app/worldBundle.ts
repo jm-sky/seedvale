@@ -22,7 +22,11 @@ import {
   type ChunkManagerConfig,
   createChunkManager,
 } from '../terrain/chunkManager'
-import { createResourceDeposits, type ResourceDeposits } from '../terrain/resourceDeposits'
+import {
+  createResourceDeposits,
+  type ResourceDeposits,
+  type SettlementMiningHooks,
+} from '../terrain/resourceDeposits'
 import { createLargeCaves, type LargeCaves } from '../world/createLargeCaves'
 import { createOcean, type WorldOcean } from '../world/createOcean'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
@@ -134,6 +138,7 @@ function buildSettlementsManager(
   config: WorldConfig,
   forest: SettlementForestHooks,
   worldContext: WorldContext,
+  mining: SettlementMiningHooks,
   initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
   onAnimalDeath?: (animalId: string) => void,
   getPlayerSocial?: PlayerSocialLookup,
@@ -160,6 +165,7 @@ function buildSettlementsManager(
     initialEconomies,
     onAnimalDeath,
     getPlayerSocial,
+    mining,
   )
 }
 
@@ -278,12 +284,13 @@ export async function createWorldBundle(
     sampleEnv: worldContext.sampleTreeEnv,
   }
   const ocean = buildOcean(scene, config, waterMirror)
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, initialEconomies, onAnimalDeath, getPlayerSocial)
+  const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
+  const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
-  const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
   const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt)
   const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
@@ -365,12 +372,16 @@ export async function rebuildWorldBundle(
     sampleEnv: worldContext.sampleTreeEnv,
   }
   bundle.ocean = buildOcean(scene, config, waterMirror)
-  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, carriedEconomies, onAnimalDeath, getPlayerSocial)
+  bundle.resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
+  const mining: SettlementMiningHooks = {
+    queryNearest: bundle.resourceDeposits.queryNearest,
+    mine: bundle.resourceDeposits.mine,
+  }
+  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
-  bundle.resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
   bundle.droppedItems = createDroppedItems(scene, bundle.chunkManager.sampleHeight, carriedDrops)
   bundle.placedFires = createPlacedFires(scene, bundle.chunkManager.sampleHeight, carriedFires, playAt)
   bundle.placedTents = createPlacedTents(scene, bundle.chunkManager.sampleHeight, carriedTents)

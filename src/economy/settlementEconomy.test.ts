@@ -137,3 +137,19 @@ describe('settlement isolation', () => {
     expect(b.query('wood')).toBe(3)
   })
 })
+
+describe('raw ore stock (plan 131)', () => {
+  it('accepts NPC-mined ore as settlement-level stock with no demand target', () => {
+    const s = economy()
+    s.add('iron', 1)
+    s.add('iron', 2)
+    s.add('coal', 1)
+    expect(s.query('iron')).toBe(3)
+    expect(s.query('coal')).toBe(1)
+    expect(s.query('gold')).toBe(0)
+    // No demand entry was registered for ore — shortage/surplus stay 0
+    // rather than driving NPC decisions the way wood/food/water do.
+    expect(s.shortage('iron')).toBe(0)
+    expect(s.hasShortage('iron')).toBe(false)
+  })
+})
