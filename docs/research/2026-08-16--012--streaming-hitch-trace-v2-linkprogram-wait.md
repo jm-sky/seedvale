@@ -1,8 +1,8 @@
 # Research 012: Streaming hitch — trace v2 and `getProgramInfoLog()` root cause
 
-**Status:** `confirmed`  
-**Date:** 2026-08-16  
-**Scope:** Trace investigation plus Chrome Performance JS stack capture and controlled A/B experiment.  
+**Status:** `confirmed`
+**Date:** 2026-08-16
+**Scope:** Trace investigation plus Chrome Performance JS stack capture and controlled A/B experiment.
 **Conclusion:** The investigated giant streaming hitches are caused by synchronous Three.js shader/program error checking on first use, specifically `gl.getProgramInfoLog()`, during the water-mirror render path.
 
 ## Context
@@ -202,5 +202,113 @@ Recommended order:
 
 ## Related
 
-- [Research 011: Streaming hitch investigation](2026-08-16--011--streaming-hitch-investigation.md)
-- [Review 019: Streaming hitch — Perfetto trace analysis](../reviews/2026-08-16--019--streaming-hitch-trace-analysis.md)
+- [Research 011: Streaming hitch investigation](2026-08-16--011--streaming-hitch-investigation.md) — prior traces, current hypothesis this doc tests.
+- [Review 019: Streaming hitch — Perfetto trace analysis](../reviews/2026-08-16--019--streaming-hitch-trace-analysis.md) — origin of the shader-compile/link hypothesis.
+
+
+-----
+
+> Poniżej podsumowanie wyniku sprawdzenia Chrome Performance trace.
+
+**Mamy to. To jest brakujący dowód.** 🔥
+
+To praktycznie domyka diagnozę.
+
+### Co właśnie znaleźliśmy
+
+Chrome Performance pokazuje:
+
+```text
+Long task: ~615 ms
+
+WebGLRenderer.render
+  └── getProgramInfoLog
+        └── ~545 ms / 88%
+```
+
+A call site prowadzi dokładnie tutaj:
+
+```text
+createApp.ts:1622
+  → renderMirror()
+    → waterMirror.ts:109
+      → WebGLRenderer.render()
+        → getProgramInfoLog()
+```
+
+Czyli mamy już nie tylko:
+
+```text
+kLinkProgram
+→ WebGL wait
+```
+
+z Perfetto,
+
+ale **konkretne JS/WebGL API call**, które blokuje Main Thread:
+
+```text
+gl.getProgramInfoLog()
+```
+
+i robi to przez około **545 ms**.
+
+### Pełny łańcuch
+
+Teraz wygląda:
+
+```text
+chunk streaming
+      ↓
+nowe materiały/programy
+      ↓
+water mirror render
+      ↓
+WebGLRenderer.render()
+      ↓
+shader/program validation
+      ↓
+gl.getProgramInfoLog()
+      ↓
+~545 ms synchronous driver/GPU wait
+      ↓
+615 ms Long Task
+      ↓
+frame hitch
+```
+
+I to idealnie pasuje do Research 012:
+
+```text
+kLinkProgram
+      ↓
+WebGL gpu_toplevel wait
+      ↓
+~219 ms
+```
+
+oraz:
+
+```text
+kLinkProgram
+      ↓
+WebGL gpu_toplevel wait
+      ↓
+~235 ms
+```
+
+### Co ważne
+
+To oznacza, że **nie musimy już robić kolejnego trace'a tylko po to, żeby znaleźć call site**.
+
+Mamy:
+
+**Perfetto:**
+
+> ogromny synchroniczny WebGL wait związany z `kLinkProgram`.
+
+**Chrome Performance:**
+
+> `WebGLRenderer.render()` → `getProgramInfoLog()` → ~545 ms.
+
+To jest bardzo mocna korelacja dwóch niezależnych narzędzi.
