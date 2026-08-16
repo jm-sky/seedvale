@@ -232,6 +232,42 @@ describe('QuestManager clear_wolf_den', () => {
   })
 })
 
+describe('QuestManager interact_landmark', () => {
+  const landmarkQuest: QuestDef = {
+    id: 'landmark',
+    giverName: 'Anna',
+    offerLine: 'offer landmark',
+    stages: [
+      {
+        objective: { type: 'interact_landmark', landmarkId: 'monolith:4:-7:0:3f' },
+        description: 'inspect landmark',
+        reminderLine: 'remind',
+        progressLine: 'inspected',
+      },
+    ],
+    reportLine: 'report landmark',
+  }
+
+  it('only completes when the bound landmarkId is reported', () => {
+    const qm = makeManager([landmarkQuest])
+    acceptOffer(qm, 'Anna')
+    expect(qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'monolith:9:9:0:3f' })).toBeNull()
+    expect(qm.getState('landmark')).toBe('active')
+    const override = qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'monolith:4:-7:0:3f' })
+    expect(override?.line).toBe('inspected')
+    expect(qm.getState('landmark')).toBe('ready_to_report')
+  })
+
+  it('does not double-complete on a repeated report of the same landmark', () => {
+    const qm = makeManager([landmarkQuest])
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'monolith:4:-7:0:3f' })
+    expect(qm.getState('landmark')).toBe('ready_to_report')
+    expect(qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'monolith:4:-7:0:3f' })).toBeNull()
+    expect(qm.getState('landmark')).toBe('ready_to_report')
+  })
+})
+
 describe('QuestManager reset', () => {
   it('clears relation, exp and progress back to fresh state', () => {
     const qm = makeManager([effectsQuest])

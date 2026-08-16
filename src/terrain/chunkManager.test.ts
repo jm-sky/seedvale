@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
 import { apronOriginWorld } from './chunkHeightmap'
-import { applyModificationToTile, drainByBudget, pickNearestQueuedKey, pickNextFinalizeKey, type TerrainModification } from './chunkManager'
+import {
+  applyModificationToTile,
+  drainByBudget,
+  pickNearestQueuedKey,
+  pickNextFinalizeKey,
+  ringChunkOffsets,
+  type TerrainModification,
+} from './chunkManager'
 
 // Small grid so texel math is easy to reason about by hand: resolution 5,
 // chunkSize 32 -> step 8, apronRes 7 (world x/z per texel: -24,-16,-8,0,8,16,24
@@ -154,6 +161,25 @@ describe('pickNextFinalizeKey', () => {
     expect(
       pickNextFinalizeKey([{ key: 'a', stage: 'content' }], () => 1, () => false),
     ).toBeUndefined()
+  })
+})
+
+describe('ringChunkOffsets', () => {
+  it('starts at the center and returns a deterministic, repeatable order (plan 132)', () => {
+    const offsets = ringChunkOffsets(2)
+    expect(offsets[0]).toEqual({ dx: 0, dz: 0 })
+    expect(offsets).toEqual(ringChunkOffsets(2))
+  })
+
+  it('covers every offset within the radius exactly once, ring by ring', () => {
+    const offsets = ringChunkOffsets(2)
+    expect(offsets).toHaveLength(25) // (2*2+1)^2
+    const seen = new Set(offsets.map((o) => `${o.dx}:${o.dz}`))
+    expect(seen.size).toBe(25)
+    for (let i = 1; i < offsets.length; i++) {
+      const ring = (o: { dx: number, dz: number }) => Math.max(Math.abs(o.dx), Math.abs(o.dz))
+      expect(ring(offsets[i]!)).toBeGreaterThanOrEqual(ring(offsets[i - 1]!))
+    }
   })
 })
 

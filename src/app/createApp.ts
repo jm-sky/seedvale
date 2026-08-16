@@ -53,6 +53,7 @@ import { drinkWater as drinkWaterNeeds, eatFood, resetPlayerNeeds, restorePersis
 import { toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { QuestManager } from '../quests/QuestManager'
+import { buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
 import { MIN_RENDERER_SIZE, shouldApplyRendererResize } from '../render/rendererResize'
@@ -117,6 +118,13 @@ const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
  *  extent (core + house ring, `ringMax + houseRadius*2 ≈ 39.6` at default
  *  `coreRadius`/`houseRadius`), not the much larger `HOME_RADIUS`. */
 const REST_IN_TOWN_RADIUS = 40
+/** Bound on `buildLandmarkQuests`' one-off world-setup search — chunk rings
+ *  outward from the home settlement's center (plan 132). Generous enough
+ *  that even the rarest landmark tier (~0.8% per chunk) is very likely to
+ *  resolve, while still a small, explicit region rather than a full-world
+ *  scan; `findLandmarkNear` stops at the first hit, so most worlds settle
+ *  far short of this cap. */
+const LANDMARK_QUEST_SEARCH_CHUNK_RADIUS = 10
 
 let touchControls: TouchControls | null = null
 
@@ -396,8 +404,20 @@ export async function createApp(
   }
 
   const minimap = createMinimap(container)
+  // Resolved once here (not injected into `QuestManager`, which stays
+  // chunk/terrain-agnostic) — landmarks never change once generated, so
+  // there's nothing to re-resolve at runtime, unlike `kill_target_animal`/
+  // `find_animal`'s live `AnimalTargetResolver` below (plan 132).
+  const landmarkQuests = buildLandmarkQuests((kind) =>
+    bundle.chunkManager.findLandmarkNear(
+      kind,
+      bundle.settlementsManager.home.center.x,
+      bundle.settlementsManager.home.center.z,
+      LANDMARK_QUEST_SEARCH_CHUNK_RADIUS,
+    )?.id,
+  )
   const questManager = new QuestManager(
-    undefined,
+    [...QUESTS, ...landmarkQuests],
     worldAudio.playOnce,
     inventory,
     initialSave?.quests,

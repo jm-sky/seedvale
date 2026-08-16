@@ -59,6 +59,9 @@ export type ObjectiveRef =
    *  by `resolveInteraction.ts`'s `animal` case alongside `spot_animal`
    *  (plan 093 Etap G). */
   | { type: 'animal_found', animalId: string }
+  /** An `[E]`-interacted procedural landmark matches this exact id (plan 132)
+   *  — reported by `resolveInteraction.ts`'s `landmark` case. */
+  | { type: 'interact_landmark', landmarkId: string }
 
 /** Looks up a live individual of `kind` to bind a `kill_target_animal` stage
  *  to (its `AnimalAgent.animalId`), or `undefined` if none is available right
@@ -89,6 +92,8 @@ function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, bound
       return objective.type === 'kill_target_animal' && boundAnimalId === ref.animalId
     case 'animal_found':
       return objective.type === 'find_animal' && boundAnimalId === ref.animalId
+    case 'interact_landmark':
+      return objective.type === 'interact_landmark' && objective.landmarkId === ref.landmarkId
     case 'interact_spawner':
       return objective.type === 'interact_spawner' && objective.spawnerType === ref.spawnerType
     case 'interact_tree':

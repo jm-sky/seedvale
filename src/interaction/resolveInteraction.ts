@@ -1,9 +1,11 @@
 import type { QuestDialogOverride, QuestManager } from '../quests/QuestManager'
+import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { Interactable } from './Interactable'
 import { isDebugMode } from '../debug/debugMode'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { pickAnimalFlavorLine } from '../fauna/animalDialogue'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
+import { LANDMARK_LABELS } from '../terrain/chunkEnvironment'
 import { treeInspectionFlavor } from './treeInspection'
 
 export type InteractionOutcome = {
@@ -22,6 +24,13 @@ const SPAWNER_FLAVOR_LINES = [
   'Widać świeże ślady zwierząt w pobliżu.',
   'Miejsce wygląda na spokojne, na razie nikogo nie widać.',
 ]
+
+const LANDMARK_FLAVOR_LINES: Record<LandmarkKind, readonly string[]> = {
+  monolith: ['Stary głaz, porośnięty mchem. Ktoś ustawił go tu dawno temu.'],
+  stoneCircle: ['Krąg kamieni ułożony z jakimś zamysłem — trudno dziś powiedzieć, jakim.'],
+  smallRuins: ['Fragment starego muru, resztki fundamentów. Nikt tu dawno nie mieszkał.'],
+  cemetery: ['Ciche miejsce. Kilka nagrobków, zarośniętych chwastami.'],
+}
 
 function pickFrom(pool: readonly string[]): string {
   return pool[Math.floor(Math.random() * pool.length)]!
@@ -97,6 +106,16 @@ export function resolveInteraction(
     case 'well': {
       const override = questManager.onInteractObjective({ type: 'interact_well' })
       return { speakerName: 'Studnia', line: override?.line ?? pickFrom(WELL_FLAVOR_LINES) }
+    }
+    case 'landmark': {
+      const override = questManager.onInteractObjective({
+        type: 'interact_landmark',
+        landmarkId: target.landmarkId,
+      })
+      return {
+        speakerName: LANDMARK_LABELS[target.envKind],
+        line: override?.line ?? pickFrom(LANDMARK_FLAVOR_LINES[target.envKind]),
+      }
     }
   }
 }
