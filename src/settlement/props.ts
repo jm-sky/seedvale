@@ -14,7 +14,7 @@ import { isDebugMode } from '../debug/debugMode'
 import { createHorseModel } from '../fauna/proceduralAnimals'
 import { distanceToSegment, projectOntoSegment } from '../math/segment'
 import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
-import { createSparks, type Sparks } from '../shared/getFireParticles'
+import { createEmbers, createIgniteBurst, createSparks } from '../shared/getFireParticles'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
 import { patchProceduralFoliageMaterial } from '../world/foliageWind'
 import { createSeededRandom } from '../world/parseSeed'
@@ -1501,6 +1501,15 @@ export type CampfireFlame = {
   object: THREE.Group
   update: (dt: number) => void
   setSize: (factor: number) => void
+  /** `0` = only embers, no cone/light/sparks yet; `1` = fully grown-in flame
+   *  — driven by `VillageFire`'s ignition ramp (`IGNITE_DURATION_SEC`).
+   *  Defaults to `1`, so callers that never call this (village torches
+   *  reusing this same flame, `createVillageTorchLight`) keep the previous
+   *  instant-full-flame look. */
+  setIntensity: (t: number) => void
+  /** One-shot white flint-strike spark burst — call once at the start of an
+   *  actual player ignition action, not for autonomous/night lighting. */
+  igniteBurst: () => void
 }
 
 export function createCampfireFlame(scale = 1): CampfireFlame {
@@ -1521,20 +1530,50 @@ export function createCampfireFlame(scale = 1): CampfireFlame {
   light.position.y = 0.35 * scale
   flame.add(light)
 
-  const sparks: Sparks = createSparks(scale)
+  const sparks = createSparks(scale)
   flame.add(sparks.points)
+
+  const embers = createEmbers(scale)
+  flame.add(embers.points)
+
+  const burst = createIgniteBurst(scale)
+  flame.add(burst.points)
 
   flame.visible = false
 
+  let sizeFactor = 1
+  let igniteRamp = 1
+
+  function applyVisual() {
+    const clampedSize = THREE.MathUtils.clamp(sizeFactor, FLAME_MIN_SIZE, FLAME_MAX_SIZE)
+    // Smoothstep so the flame eases in/out of full size instead of growing
+    // at a constant linear rate (plan 130 §4).
+    const eased = igniteRamp * igniteRamp * (3 - 2 * igniteRamp)
+    flame.scale.setScalar(clampedSize)
+    cone.visible = eased > 0.08
+    cone.scale.setScalar(Math.max(0.05, eased))
+    light.intensity = baseIntensity * clampedSize * eased
+    light.distance = baseDistance * clampedSize
+    sparks.material.opacity = eased
+  }
+
   function setSize(factor: number) {
-    const clamped = THREE.MathUtils.clamp(factor, FLAME_MIN_SIZE, FLAME_MAX_SIZE)
-    flame.scale.setScalar(clamped)
-    light.intensity = baseIntensity * clamped
-    light.distance = baseDistance * clamped
+    sizeFactor = factor
+    applyVisual()
+  }
+  function setIntensity(t: number) {
+    igniteRamp = THREE.MathUtils.clamp(t, 0, 1)
+    applyVisual()
   }
   setSize(1)
 
-  return { object: flame, update: sparks.update, setSize }
+  function update(dt: number) {
+    sparks.update(dt)
+    embers.update(dt)
+    burst.update(dt)
+  }
+
+  return { object: flame, update, setSize, setIntensity, igniteBurst: () => burst.trigger() }
 }
 
 /** Procedural garden beds — S = one bed (legacy), M/L = side-by-side beds (plan 077). */

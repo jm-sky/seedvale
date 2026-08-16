@@ -25,17 +25,34 @@ function fuelRatioToSizeFactor(ratio: number): number {
   return 1 + (ratio - 2) * 0.5
 }
 
+/** Who/what struck the fire — only `'player'` gets the white flint-spark
+ *  burst + ignite SFX (`hooks.onLight`'s second argument); `'night'`
+ *  (deterministic settlement autolight at dusk, `createSettlement.ts`) and
+ *  `'npc'` still run the same visual ignition ramp but stay silent/burst-free
+ *  since nobody is physically striking a flint (plan 130 §1/§8). */
+export type FireLightSource = 'player' | 'night' | 'npc'
+
 export type VillageFireHooks = {
-  onLight?: (position: THREE.Vector3) => void
+  onLight?: (position: THREE.Vector3, source: FireLightSource) => void
   onExtinguish?: (position: THREE.Vector3) => void
 }
 
 export type VillageFire = {
   readonly position: THREE.Vector3
   isLit: () => boolean
+  /** True only during the brief `IGNITE_DURATION_SEC` ramp right after
+   *  `light()`. `isLit()` is already `true` throughout ignition — existing
+   *  consumers (cooking, fuel top-up, fauna fire-avoidance) keep working
+   *  unaudited; this flag exists purely to drive ignition-only visuals. */
+  isIgniting: () => boolean
+  /** `0` at the start of `light()`, `1` once the flame has fully grown in.
+   *  Stays `1` whenever not currently igniting. */
+  getIgniteProgress: () => number
   /** Ignites from cold — caller is responsible for checking/consuming the
-   *  branch first (see `app/createApp.ts`'s campfire interact handling). */
-  light: () => void
+   *  branch first (see `app/createApp.ts`'s campfire interact handling).
+   *  Defaults to `'player'`, the common case (interactive ignite, building a
+   *  fire) — pass `'night'` for the deterministic settlement autolight. */
+  light: (source?: FireLightSource) => void
   /** Extends an already-lit fire — same fuel amount as `light()`, just
    *  additive instead of resetting. */
   addFuel: () => void
@@ -62,35 +79,47 @@ export function createVillageFire(
 ): VillageFire {
   let lit = false
   let fuelRemaining = 0
+  let igniteRemaining = 0
 
-  const applySize = () => flame.setSize(fuelRatioToSizeFactor(fuelRemaining / fuelPerBranch))
+  const applyVisual = () => {
+    flame.setSize(fuelRatioToSizeFactor(fuelRemaining / fuelPerBranch))
+    flame.setIntensity(igniteRemaining > 0 ? 1 - igniteRemaining / IGNITE_DURATION_SEC : 1)
+  }
 
   return {
     position,
     isLit: () => lit,
-    light() {
+    isIgniting: () => lit && igniteRemaining > 0,
+    getIgniteProgress: () => (igniteRemaining > 0 ? 1 - igniteRemaining / IGNITE_DURATION_SEC : 1),
+    light(source = 'player') {
       const wasLit = lit
       lit = true
       fuelRemaining = fuelPerBranch
+      igniteRemaining = IGNITE_DURATION_SEC
       flame.object.visible = true
-      applySize()
-      if (!wasLit) hooks.onLight?.(position)
+      applyVisual()
+      if (!wasLit) {
+        if (source === 'player') flame.igniteBurst()
+        hooks.onLight?.(position, source)
+      }
     },
     addFuel() {
       fuelRemaining += fuelPerBranch
-      applySize()
+      applyVisual()
     },
     update(dt) {
       if (!lit) return
       flame.update(dt)
+      if (igniteRemaining > 0) igniteRemaining = Math.max(0, igniteRemaining - dt)
       fuelRemaining -= dt
       if (fuelRemaining <= 0) {
         lit = false
         fuelRemaining = 0
+        igniteRemaining = 0
         flame.object.visible = false
         hooks.onExtinguish?.(position)
       } else {
-        applySize()
+        applyVisual()
       }
     },
   }

@@ -1,7 +1,7 @@
 # Plan: Fire & Lighting Polish — Implementation Notes
 
 **Created:** 2026-08-16  
-**Status:** `reviewed` 🔎  
+**Status:** `reviewed` 🔎 — core scope (§15) implemented 2026-08-16, see plan file's "Implementacja — stan faktyczny"; guard lighting (§9) split off, no profession/action foundation exists  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~060~~
 

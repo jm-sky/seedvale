@@ -1,7 +1,7 @@
 # Plan: Fire & Lighting Polish
 
 **Created:** 2026-08-15  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — core visual/audio scope implemented (see [implementation notes](./2026-08-16--130--fire-lighting-polish-implementation-notes.md)); guard/torch NPC lighting split off, no profession/action foundation exists yet; no browser verification  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none
 
@@ -137,15 +137,15 @@ Jeżeli wiele źródeł ognia będzie aktywnych jednocześnie, później można 
 
 ### W zakresie
 
-- [ ] ulepszenie istniejących sparks,
-- [ ] gravity + boczny velocity,
-- [ ] **biały burst iskier przy krzesiwie**,
-- [ ] żar,
-- [ ] płynne `0 → 100%`,
-- [ ] SFX krzesiwa,
-- [ ] strażnik zapalający ognisko,
-- [ ] strażnik zapalający pochodnie,
-- [ ] aktualizacja asset backlogu, jeśli potrzebne są nowe dźwięki.
+- [x] ulepszenie istniejących sparks,
+- [x] gravity + boczny velocity,
+- [x] **biały burst iskier przy krzesiwie**,
+- [x] żar,
+- [x] płynne `0 → 100%`,
+- [x] SFX krzesiwa (istniejący `action-fire-ignite-01`, zsynchronizowany z `light('player')`, wyciszony dla `'night'`),
+- [ ] strażnik zapalający ognisko — **odłożone**: nie istnieje profession/schedule-action foundation dla strażnika (patrz implementation notes §9/§15); wymaga osobnego planu zależnego od 060-owej bazy,
+- [ ] strażnik zapalający pochodnie — **odłożone** z tego samego powodu,
+- [x] aktualizacja asset backlogu, jeśli potrzebne są nowe dźwięki — nie było potrzeby (istniejący SFX pokrywa zakres, patrz implementation notes §6).
 
 ### Poza zakresem
 
@@ -170,12 +170,14 @@ Jeżeli wiele źródeł ognia będzie aktywnych jednocześnie, później można 
 
 ### Techniczna
 
-- [ ] `npx tsc --noEmit`
-- [ ] `npm run lint`
-- [ ] `npm run build`
-- [ ] `npm run test`
+- [x] `npx tsc --noEmit` — zielone
+- [ ] `npm run lint` — pominięte na wyraźne polecenie (task instructions)
+- [x] `npm run build` — zielone
+- [x] `npm run test` — 845/845 zielone
 
 ### Browser/manual
+
+Nie wykonane w tej sesji (zgodnie z poleceniem — użytkownik testuje ręcznie).
 
 - [ ] zapalenie ogniska pokazuje **białe iskry z krzesiwa**,
 - [ ] iskry mają ruch w górę + na boki + opadanie,
@@ -183,10 +185,21 @@ Jeżeli wiele źródeł ognia będzie aktywnych jednocześnie, później można 
 - [ ] płomień rośnie `0 → 100%`,
 - [ ] dźwięk krzesiwa jest zsynchronizowany z akcją,
 - [ ] normalny ogień ma subtelne iskry i żar,
-- [ ] strażnik faktycznie podchodzi i zapala ognisko,
-- [ ] strażnik zapala pochodnie,
 - [ ] kilka źródeł ognia jednocześnie nie powoduje istotnego wzrostu kosztu renderingu.
+- [ ] ~~strażnik faktycznie podchodzi i zapala ognisko~~ — odłożone, patrz wyżej,
+- [ ] ~~strażnik zapala pochodnie~~ — odłożone, patrz wyżej.
 
 Po implementacji porównać `draw calls`, `triangles` i FPS w osadzie z aktywnymi źródłami ognia.
+
+## Implementacja — stan faktyczny (2026-08-16)
+
+Zaimplementowano zgodnie z review w [implementation notes](./2026-08-16--130--fire-lighting-polish-implementation-notes.md) §15 "Core scope":
+
+- `VillageFire` (`src/settlement/VillageFire.ts`): `light(source?: 'player' | 'night' | 'npc')` (default `'player'`) uruchamia proces zapalania zamiast natychmiastowego stanu — `isLit()` prawdziwe od razu (istniejący konsumenci jak cooking/fuel/fauna-fire-avoidance bez zmian), nowe `isIgniting()`/`getIgniteProgress()` napędzają rampę `0 → 1` przez istniejące `IGNITE_DURATION_SEC`. Biały spark-burst (`flame.igniteBurst()`) i `hooks.onLight`'s `source` odpalają się tylko dla `'player'` — autolight nocny (`createSettlement.ts`, `fire.light('night')`) dostaje tę samą wizualną rampę, ale bez krzesiwa/SFX (nikt fizycznie nie krzesa).
+- `CampfireFlame` (`src/settlement/props.ts`): pozostaje warstwą renderingu, nie właścicielem stanu — nowe `setIntensity(t)` (smoothstep ease, steruje widocznością/skalą stożka płomienia + intensywnością światła + opacity iskier) i `igniteBurst()`. `setSize`/fuel-driven skala bez zmian. Domyślnie `intensity = 1`, więc pochodnie (`createVillageTorchLight`), które nigdy nie wołają `setIntensity`, zachowują dotychczasowy efekt.
+- `src/shared/getFireParticles.ts`: przepisane na wspólny, mały `createParticlePool` (grawitacja, boczny drift z tłumieniem, per-vertex fade przez `vertexColors`+`AdditiveBlending` zamiast shadera) używany przez trzy fabryki — `createSparks` (istniejące, rozszerzone), nowe `createEmbers` (żar, 5 punktów, wolny unos, czerwono-pomarańczowy) i `createIgniteBurst` (biały one-shot burst, 10 punktów, `trigger()`). Brak alokacji w `update()`; `PlayerTorch.ts`'s użycie `createSparks` niezmienione (kompatybilny kształt).
+- `PlacedFires.ts` / settlement campfire w `props.ts` dzielą dokładnie ten sam `createCampfireFlame`/`createVillageFire`, więc gracz-zbudowane ogniska (`'simple'` budowane od razu zapalone, `'pit'` zapalane przez istniejącą `[E]` interakcję) dostają identyczny polish bez osobnego kodu.
+- Dźwięk: żaden nowy asset — `action-fire-ignite-01` (już `wired` w `docs/assets/SOUNDS.md`) odtwarzany tylko dla `source === 'player'` w `onLight` hookach (`createSettlement.ts`, `PlacedFires.ts`); nocny autolight jest cichy.
+- Strażnik/pochodnie (plan §7): **nie zaimplementowane** — w kodzie nie istnieje żaden profession/AI-guard, `grep -i guard` w `src/` trafia wyłącznie na `guardSword`/kod niezwiązany z NPC-profession. Zgodnie z implementation notes §9/§15 wymaga to najpierw fundamentu profession/schedule-action (poza planem 060, który dostarcza tylko trait overlays + wykonywalny grafik, nie wybór akcji per-profesja) — rozdzielone do osobnego, przyszłego planu zamiast rozbudowywania 130 w plan AI.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

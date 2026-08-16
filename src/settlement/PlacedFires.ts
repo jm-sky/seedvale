@@ -97,7 +97,7 @@ export function createPlacedFires(
         fuelPerBranch,
         playAt
           ? {
-            onLight: (pos) => playActionFireIgnite(playAt, pos),
+            onLight: (pos, source) => { if (source === 'player') playActionFireIgnite(playAt, pos) },
             onExtinguish: (pos) => playActionFireExtinguish(playAt, pos),
           }
           : undefined,

@@ -451,7 +451,9 @@ export async function createSettlement(
 
   const fire = landmarks.campfire
     ? createVillageFire(landmarks.campfire.position, landmarks.campfire.flame, FUEL_PER_BRANCH, {
-      onLight: (pos) => playActionFireIgnite(playAt, pos),
+      // Deterministic night autolight (`setDayNight` below) passes
+      // `'night'` — no flint SFX, nobody physically struck one (plan 130 §8).
+      onLight: (pos, source) => { if (source === 'player') playActionFireIgnite(playAt, pos) },
       onExtinguish: (pos) => playActionFireExtinguish(playAt, pos),
     })
     : undefined
@@ -562,7 +564,7 @@ export async function createSettlement(
         const random = createSeededRandom(
           settlementSeed ^ Math.imul(nightIndex, 0x9e3779b1) ^ 0x4e494748,
         )
-        if (random() < (NIGHT_FIRE_IGNITE_CHANCE[def.size] ?? 0.75)) fire.light()
+        if (random() < (NIGHT_FIRE_IGNITE_CHANCE[def.size] ?? 0.75)) fire.light('night')
       }
       // Village torches: always light at dusk, extinguish at dawn (plan 085).
       if (nightFactor <= NIGHT_FIRE_THRESHOLD && t > NIGHT_FIRE_THRESHOLD) {
