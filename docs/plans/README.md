@@ -58,6 +58,7 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-16--129--coins-and-land-sales.md` | Monety jako pierwsza fizyczna waluta + sprzedaż działek; wstępny | 🔴 | L | ~~093~~ |
 | `2026-08-16--131--natural-resource-gathering.md` | Zbieractwo naturalnych zasobów, rozszerza istniejącą ekonomię osady; wstępny | 🟡 | M | ~~032~~ |
 | `2026-08-16--132--landmark-quests.md` | Questy powiązane z landmarkami (monolith/stoneCircle/smallRuins/cemetery); wstępny | 🟡 | M | ~~049~~ ~~093~~ ~~110~~ |
+| `2026-08-16--133--weather-surface-effects.md` | Wet ground + snow cover jako czysta pochodna deterministycznego `(seed, elapsedDays)` weather, rozszerza istniejący współdzielony terrain shader (`vWorldPos`/`vBareGround`) zamiast nowego systemu/materiału/tekstury; review zrobiony ([implementation notes](./2026-08-16--133--weather-surface-effects-implementation-notes.md)), feature nie zaimplementowana | 🟡 | M | — |
 
 ---
 
