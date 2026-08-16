@@ -6,6 +6,7 @@ import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlemen
 import type { Household } from '../settlement/household'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
+import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import {
   disposeObject3D,
@@ -44,7 +45,6 @@ import {
   replaceActionLifecycle,
 } from '../simulation'
 import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
-import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer, setSubtreeCastShadow } from '../world/waterMirror'
