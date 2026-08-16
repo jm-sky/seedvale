@@ -17,6 +17,7 @@ export function createRenderer(
     powerPreference: 'high-performance',
     preserveDrawingBuffer: options.preserveDrawingBuffer ?? false,
   })
+  renderer.debug.checkShaderErrors = false // Disable shader error checking (docs/research/2026-08-16--012--streaming-hitch-trace-v2-linkprogram-wait.md)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioCap))
   renderer.setSize(container.clientWidth, container.clientHeight)
   renderer.shadowMap.enabled = true
