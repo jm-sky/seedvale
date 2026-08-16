@@ -88,6 +88,16 @@ export function resolveInteraction(
       }
       return { speakerName: target.label, line }
     }
+    case 'landmark': {
+      const override = questManager.onInteractObjective({
+        type: 'interact_landmark',
+        landmarkId: target.landmarkId,
+      })
+      return {
+        speakerName: LANDMARK_LABELS[target.envKind],
+        line: override?.line ?? pickFrom(LANDMARK_FLAVOR_LINES[target.envKind]),
+      }
+    }
     case 'spawner': {
       const override = questManager.onInteractObjective({
         type: 'interact_spawner',
@@ -106,16 +116,6 @@ export function resolveInteraction(
     case 'well': {
       const override = questManager.onInteractObjective({ type: 'interact_well' })
       return { speakerName: 'Studnia', line: override?.line ?? pickFrom(WELL_FLAVOR_LINES) }
-    }
-    case 'landmark': {
-      const override = questManager.onInteractObjective({
-        type: 'interact_landmark',
-        landmarkId: target.landmarkId,
-      })
-      return {
-        speakerName: LANDMARK_LABELS[target.envKind],
-        line: override?.line ?? pickFrom(LANDMARK_FLAVOR_LINES[target.envKind]),
-      }
     }
   }
 }

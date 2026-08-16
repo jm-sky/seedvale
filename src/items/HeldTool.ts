@@ -19,12 +19,12 @@ const HELD_TOOL_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
   'firestarter',
   'knife',
   'long_sword',
-  'spear',
-  'short_sword',
   'pickaxe',
   'pitchfork',
+  'short_sword',
   'shovel',
   'sickle',
+  'spear',
   'wooden_torch',
 ])
 

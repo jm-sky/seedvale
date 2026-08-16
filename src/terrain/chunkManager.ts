@@ -6,7 +6,6 @@ import type { WaterMirror } from '../world/waterMirror'
 import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
 import { disposeObject3D } from '../assets/loadGltf'
-import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind } from './chunkEnvironment'
 import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
 import { getMonitor } from '../perf/active'
@@ -44,6 +43,7 @@ import { createChunkWater, type WorldWater } from '../world/createWater'
 import { createTreeStageMesh, tagTreeMesh } from '../world/treeVisuals'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import { buildChunkGeometry, createTerrainMaterial } from './buildChunkGeometry'
+import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind } from './chunkEnvironment'
 import {
   chebyshevDistance,
   chunkCenter,
