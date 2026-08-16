@@ -2,7 +2,7 @@ import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { Inventory } from '../items/Inventory'
 import { createLandOwnershipRegistry } from './landOwnership'
-import { purchaseLandPlot, type LandPurchaseTarget } from './landPurchase'
+import { type LandPurchaseTarget, purchaseLandPlot } from './landPurchase'
 
 function settlementWithPlot(price: number, plotId = 'plot-sale-0'): LandPurchaseTarget {
   return {

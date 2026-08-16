@@ -19,8 +19,8 @@ import { createSeededRandom } from '../world/parseSeed'
 import { ANIMAL_DEFS, AnimalAgent, type AnimalKind, type AnimalLifeStage, type VillageInfo } from './AnimalAgent'
 import {
   type PreySpawner,
-  SPAWNER_RADIUS,
   shouldDeplete,
+  SPAWNER_RADIUS,
   tickSpawnPointRecovery,
   updateSpawners,
 } from './AnimalSpawner'
