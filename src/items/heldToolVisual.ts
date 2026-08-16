@@ -99,6 +99,20 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     scale: 1,
     gripLocalOffset: [0, 0, -0.35],
   },
+  // No GLB yet (plan 134) — same grip family as pitchfork (long polearm shaft).
+  spear: {
+    position: [-0.6, 0.13, -0.02],
+    rotation: [Math.PI / 2, -Math.PI / 2, 0],
+    scale: 1,
+    gripLocalOffset: [0, 0, -0.3],
+  },
+  // No GLB yet (plan 134) — same grip family as long_sword, smaller scale.
+  short_sword: {
+    position: [-0.22, 0.12, -0.02],
+    rotation: [0, 0, Math.PI / 2],
+    scale: 0.85,
+    gripLocalOffset: [0, -0.18, 0],
+  },
   sickle: {
     position: [0, 0.12, -0.01],
     rotation: [Math.PI, 0, Math.PI / 2],

@@ -8,6 +8,8 @@ export type ToolKind = 'knife'
 | 'axe'
 | 'wooden_torch'
 | 'long_sword'
+| 'spear'
+| 'short_sword'
 | 'pickaxe'
 | 'pitchfork'
 | 'sickle'
@@ -17,6 +19,8 @@ const HELD_TOOL_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
   'firestarter',
   'knife',
   'long_sword',
+  'spear',
+  'short_sword',
   'pickaxe',
   'pitchfork',
   'shovel',

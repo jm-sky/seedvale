@@ -1,7 +1,7 @@
 # Plan: Item Expansion & World Placement
 
 **Created:** 2026-08-16  
-**Status:** `planned` 📋  
+**Status:** `in progress` 🔄 (implemented, technical verification green, no browser check — see [implementation notes](./2026-08-16--134--item-expansion-and-world-placement-implementation-notes.md) §16)  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none
 

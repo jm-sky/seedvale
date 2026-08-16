@@ -17,8 +17,12 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   pickaxe: 30,
   tent: 30,
   long_sword: 50,
+  spear: 32,
+  short_sword: 40,
   waterskin_empty: 10,
   bread: 6,
+  cheese: 8,
+  dried_meat: 10,
 }
 
 /** Display order for the trade screen — matches the plan 090 mockup. */
@@ -34,8 +38,12 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'pickaxe',
   'tent',
   'long_sword',
+  'spear',
+  'short_sword',
   'waterskin_empty',
   'bread',
+  'cheese',
+  'dried_meat',
 ]
 
 /** Fallback shell-equivalent for items the merchant does not stock. */

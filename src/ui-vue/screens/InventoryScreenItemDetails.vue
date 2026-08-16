@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { Package, Sword, Wheat } from 'lucide-vue-next'
+import { type Component, computed, ref } from 'vue'
 import InventoryScreenSection from '@/components/InventoryScreenSection.vue'
 import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
 import { isToolKind } from '../../items/HeldTool'
 import { ITEM_CATALOG } from '../../items/itemCatalog'
-import { ITEM_DEFS, type ItemDef, type ItemKind } from '../../items/items'
+import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind } from '../../items/items'
+import { tradeValue } from '../../items/tradeCatalog'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { ui } from '../store'
 
@@ -21,11 +23,32 @@ const emit = defineEmits<{
 const panel = ref<HTMLElement | null>(null)
 const { categoryLabel } = useItemCategoryLabels()
 
+/** Fallback icon by category — no per-item art yet (plan 134 §6). Swap for a
+ *  real `imageUrl`/render source later without touching the surrounding markup. */
+const CATEGORY_ICON: Record<ItemCategory, Component> = {
+  tool: Sword,
+  resource: Wheat,
+  utility: Package,
+}
+
 const item = computed<ItemDef | null>(() => props.selectedItem ? ITEM_DEFS[props.selectedItem] : null)
 const itemCount = computed<number>(() => ui.inventory.counts[props.selectedItem as ItemKind ?? ''] ?? 0)
-const itemDamage = computed<number | null>(() => ITEM_CATALOG[props.selectedItem as ItemKind]?.melee?.damage ?? null)
-const consumable = computed(() => props.selectedItem ? ITEM_CATALOG[props.selectedItem].consumable ?? null : null)
+const catalogEntry = computed(() => props.selectedItem ? ITEM_CATALOG[props.selectedItem] : null)
+const melee = computed(() => catalogEntry.value?.melee ?? null)
+const meleeSpeed = computed<string | null>(() => {
+  const m = melee.value
+  if (!m) return null
+  const cycle = m.windUp + m.hitWindow + m.recovery
+  if (cycle < 0.35) return 'szybki'
+  if (cycle < 0.55) return 'średni'
+  return 'wolny'
+})
+const consumable = computed(() => catalogEntry.value?.consumable ?? null)
 const consumeLabel = computed(() => consumable.value?.need === 'thirst' ? 'Wypij' : 'Zjedz')
+const itemValue = computed<number>(() => item.value ? tradeValue(item.value.kind) : 0)
+/** Future per-item render/photo — no seam data yet, always falls back to the
+ *  category icon (see `CATEGORY_ICON`). */
+const imageUrl = computed<string | null>(() => null)
 
 useTouchScroll(panel)
 
@@ -58,6 +81,21 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
 
     <div class="my-4 h-px border-white/20 border-b" />
 
+    <div class="my-4 flex h-28 items-center justify-center rounded-md bg-white/5">
+      <img
+        v-if="imageUrl"
+        :src="imageUrl"
+        :alt="item.label"
+        class="h-full w-full rounded-md object-cover"
+      >
+      <component
+        :is="CATEGORY_ICON[item.category]"
+        v-else
+        :size="40"
+        class="opacity-40"
+      />
+    </div>
+
     <div class="my-2">
       {{ item.description ?? `To jest... ${item.label}.` }}
     </div>
@@ -81,8 +119,32 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
       />
 
       <InventoryScreenSection
+        label="Wartość"
+        :value="`${itemValue} muszli`"
+      />
+
+      <InventoryScreenSection
+        v-if="melee"
         label="Obrażenia"
-        :value="itemDamage?.toString() ?? 'Nie dotyczy'"
+        :value="melee.damage.toString()"
+      />
+
+      <InventoryScreenSection
+        v-if="melee"
+        label="Zasięg"
+        :value="`${melee.range.toFixed(1)} m`"
+      />
+
+      <InventoryScreenSection
+        v-if="meleeSpeed"
+        label="Szybkość ataku"
+        :value="meleeSpeed"
+      />
+
+      <InventoryScreenSection
+        v-if="consumable"
+        label="Efekt"
+        :value="`+${consumable.relief} ${consumable.need === 'thirst' ? 'pragnienia' : 'głodu'}`"
       />
     </div>
 

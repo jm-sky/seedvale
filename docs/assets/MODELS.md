@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-08-14
+**Last updated:** 2026-08-16
 
 ## How to use
 
@@ -62,8 +62,9 @@ If the feature needs no new model, do nothing to this file.
 | M33 | Wood pile stockpile | Stacked beams; replaces wired `logs.glb` | `wired` | plan 101 (`settlement/wood_pile.glb`, CC-BY) |
 | M34 | Fantasy RTS logs | Former stockpile mesh | `in repo` | `settlement/logs.glb` |
 | M35 | Cemetery / gravestones | Village-fringe landmark (`cemetery`); Poly plot + extra stones | `wired` | plan 049 (`nature/cemetery.glb`, `nature/grave_a.glb`) |
-| M36 | Food items (tomato/raw_meat/roasted_meat/bread) + waterskin | Pickup/inventory meshes; procedural fallback in place and functional | `needed` | plan 106 (`items/items.ts`'s `createItemMesh`) |
+| M36 | Food items (tomato/raw_meat/roasted_meat/bread + plan 134 species meats/hide/cheese/dried_meat) + waterskin | Pickup/inventory meshes; procedural fallback in place and functional | `needed` | plan 106, plan 134 (`items/items.ts`'s `createItemMesh`) |
 | M37 | Animal trough | Household `AnimalTrough` prop; procedural-only fallback in place and functional (`props.ts`'s `createTrough`), no GLB yet | `needed` | plan 122 |
+| M38 | Spear / short sword | Held melee weapons (Kupiec stock); procedural fallback + generic held-tool grip in place and functional, no GLB yet | `needed` | plan 134 (`items/items.ts`'s `createItemMesh`, `items/heldToolVisual.ts`'s `HELD_ATTACH`) |
 
 ## Wired (reference — do not treat as open work)
 

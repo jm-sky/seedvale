@@ -26,7 +26,7 @@ import {
 import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
 import { isCameraDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { getRenderStateDebugText } from '../debug/renderStateDebug'
-import { type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
+import { type AnimalAgent, type AnimalKind, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
@@ -1039,26 +1039,45 @@ export async function createApp(
     })
   }
 
-  /** Knife-harvest raw_meat from a corpse (plan 106) — same shape as
-   *  `startBuryCorpse`, just knife-gated and yielding an item instead of
-   *  disposing the corpse. */
+  /** Plan 134 — species-specific meat kind for a knife harvest; species with
+   *  no dedicated kind fall back to the original generic `raw_meat`. Single
+   *  lookup, reused by `startHarvestMeat` only — not a second animal-species
+   *  system. */
+  const MEAT_KIND_BY_ANIMAL: Partial<Record<AnimalKind, ItemKind>> = {
+    deer: 'deer_meat',
+    wolf: 'wolf_meat',
+    boar: 'boar_meat',
+    rabbit: 'rabbit_meat',
+    cow: 'beef',
+  }
+  const meatKindFor = (animal: AnimalAgent): ItemKind => MEAT_KIND_BY_ANIMAL[animal.def.kind] ?? 'raw_meat'
+
+  /** Knife-harvest meat from a corpse (plan 106; species-specific kind +
+   *  hide byproduct added in plan 134) — same shape as `startBuryCorpse`,
+   *  just knife-gated and yielding item(s) instead of disposing the corpse. */
   const startHarvestMeat = (animal: AnimalAgent): void => {
     if (heldTool.held() !== 'knife' || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
     if (!animal.canHarvestMeat()) return
-    if (!inventory.canAdd('raw_meat', 1)) {
+    const meatKind = meatKindFor(animal)
+    if (!inventory.canAdd(meatKind, 1)) {
       toast.show('Ekwipunek jest za ciężki.', 'error')
       return
     }
     animal.holdCorpse()
     busy.start(HARVEST_MEAT_DURATION_SEC, 'Wycinanie mięsa…', () => {
       try {
-        if (!animal.canHarvestMeat() || !inventory.canAdd('raw_meat', 1)) return
+        if (!animal.canHarvestMeat() || !inventory.canAdd(meatKind, 1)) return
         animal.harvestMeat()
-        inventory.add('raw_meat', 1)
+        inventory.add(meatKind, 1)
+        let message = `+1 ${ITEM_DEFS[meatKind].label}`
+        if (inventory.canAdd('hide', 1)) {
+          inventory.add('hide', 1)
+          message += ', +1 skóra'
+        }
         playInventoryPickUp(worldAudio.playOnce)
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         onInventoryChanged()
-        toast.show('+1 Surowe mięso', 'pickup')
+        toast.show(message, 'pickup')
       } finally {
         animal.releaseCorpseHold()
       }

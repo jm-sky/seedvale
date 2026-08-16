@@ -13,6 +13,13 @@ export type CookingRecipe = {
 
 export const COOKING_RECIPES: readonly CookingRecipe[] = [
   { input: 'raw_meat', output: 'roasted_meat', count: 1 },
+  // Plan 134 — every species meat cooks down to the same roasted_meat output;
+  // no separate roasted variant per species.
+  { input: 'deer_meat', output: 'roasted_meat', count: 1 },
+  { input: 'wolf_meat', output: 'roasted_meat', count: 1 },
+  { input: 'boar_meat', output: 'roasted_meat', count: 1 },
+  { input: 'rabbit_meat', output: 'roasted_meat', count: 1 },
+  { input: 'beef', output: 'roasted_meat', count: 1 },
 ]
 
 /** Busy-channel duration for cooking one item — real-time (not a time-skip),

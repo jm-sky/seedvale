@@ -10,6 +10,8 @@ export type ItemKind =
   | 'cone'
   | 'knife'
   | 'long_sword'
+  | 'spear'
+  | 'short_sword'
   | 'firestarter'
   | 'blanket'
   | 'shovel'
@@ -28,6 +30,14 @@ export type ItemKind =
   | 'bread'
   | 'waterskin_empty'
   | 'waterskin_full'
+  | 'deer_meat'
+  | 'wolf_meat'
+  | 'boar_meat'
+  | 'rabbit_meat'
+  | 'beef'
+  | 'hide'
+  | 'cheese'
+  | 'dried_meat'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility'
 
@@ -137,6 +147,22 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     weight: 2.5,
     color: 0x7a7e86,
     description: 'Długi, stalowy miecz. Ostry, wytrzymały i przeznaczony do walki.'
+  },
+  spear: {
+    kind: 'spear',
+    label: 'dzida',
+    category: 'tool',
+    weight: 1.8,
+    color: 0x8a7a5a,
+    description: 'Prosta dzida z drewnianym drzewcem i metalowym grotem. Długi zasięg przydaje się do walki i polowania.'
+  },
+  short_sword: {
+    kind: 'short_sword',
+    label: 'krótki miecz',
+    category: 'tool',
+    weight: 1.6,
+    color: 0x9aa0a8,
+    description: 'Krótki, poręczny miecz. Lżejszy i szybszy od miecza długiego, choć zadaje mniejsze obrażenia.'
   },
   pitchfork: {
     kind: 'pitchfork',
@@ -249,6 +275,70 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     weight: 1.3,
     color: 0x4a9fd8,
     description: 'Skórzany bukłak pełen wody. Ugasi pragnienie.'
+  },
+  deer_meat: {
+    kind: 'deer_meat',
+    label: 'mięso sarny',
+    category: 'resource',
+    weight: 0.9,
+    color: 0xa5453f,
+    description: 'Surowe mięso sarny, pozyskane z upolowanej zwierzyny. Lepiej upiec je przy ognisku.'
+  },
+  wolf_meat: {
+    kind: 'wolf_meat',
+    label: 'mięso wilka',
+    category: 'resource',
+    weight: 0.75,
+    color: 0x8f4a44,
+    description: 'Chude, twarde mięso wilka. Jadalne, choć niezbyt sycące na surowo.'
+  },
+  boar_meat: {
+    kind: 'boar_meat',
+    label: 'mięso dzika',
+    category: 'resource',
+    weight: 0.95,
+    color: 0x9c4b3f,
+    description: 'Tłuste mięso dzika. Sycące, zwłaszcza po upieczeniu.'
+  },
+  rabbit_meat: {
+    kind: 'rabbit_meat',
+    label: 'mięso królika',
+    category: 'resource',
+    weight: 0.4,
+    color: 0xb56a5a,
+    description: 'Niewielka porcja mięsa królika. Niewiele go, ale łatwo o kolejnego.'
+  },
+  beef: {
+    kind: 'beef',
+    label: 'wołowina',
+    category: 'resource',
+    weight: 1.2,
+    color: 0xa14840,
+    description: 'Kawał wołowiny z krowy. Najbardziej sycąca z surowych mięs.'
+  },
+  hide: {
+    kind: 'hide',
+    label: 'skóra',
+    category: 'resource',
+    weight: 0.6,
+    color: 0x7a5a3f,
+    description: 'Skóra zdjęta ze zwierzęcia przy oprawianiu tuszy. Przydatna do wyrobu i handlu.'
+  },
+  cheese: {
+    kind: 'cheese',
+    label: 'ser',
+    category: 'resource',
+    weight: 0.4,
+    color: 0xe8c96a,
+    description: 'Krąg twardego sera. Dobrze się przechowuje i dobrze syci.'
+  },
+  dried_meat: {
+    kind: 'dried_meat',
+    label: 'suszone mięso',
+    category: 'resource',
+    weight: 0.35,
+    color: 0x6b3a2e,
+    description: 'Paski suszonego mięsa. Lekkie, sycące i długo się nie psują — dobre na dłuższą wyprawę.'
   },
 }
 
@@ -365,6 +455,46 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     group.add(blade)
     return group
   }
+  if (kind === 'short_sword') {
+    const group = new THREE.Group()
+    const blade = new THREE.Mesh(
+      new THREE.ConeGeometry(0.03, 0.16, 4),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.short_sword.color, flatShading: true, metalness: 0.4 }),
+    )
+    blade.rotation.x = Math.PI / 2
+    blade.position.set(0, 0.05, 0.09)
+    blade.castShadow = true
+    group.add(blade)
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.02, 0.1, 6),
+      new THREE.MeshStandardMaterial({ color: 0x4a3324, flatShading: true }),
+    )
+    handle.rotation.x = Math.PI / 2
+    handle.position.set(0, 0.05, -0.06)
+    handle.castShadow = true
+    group.add(handle)
+    return group
+  }
+  if (kind === 'spear') {
+    const group = new THREE.Group()
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.018, 0.018, 0.6, 6),
+      new THREE.MeshStandardMaterial({ color: 0x6b4a2f, flatShading: true }),
+    )
+    shaft.rotation.x = Math.PI / 2
+    shaft.position.set(0, 0.06, 0)
+    shaft.castShadow = true
+    group.add(shaft)
+    const head = new THREE.Mesh(
+      new THREE.ConeGeometry(0.03, 0.14, 4),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.spear.color, flatShading: true, metalness: 0.45 }),
+    )
+    head.rotation.x = Math.PI / 2
+    head.position.set(0, 0.06, 0.36)
+    head.castShadow = true
+    group.add(head)
+    return group
+  }
   if (kind === 'firestarter') {
     const mesh = new THREE.Mesh(
       new THREE.DodecahedronGeometry(0.1, 0),
@@ -466,13 +596,45 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.castShadow = true
     return mesh
   }
-  if (kind === 'raw_meat' || kind === 'roasted_meat') {
+  if (
+    kind === 'raw_meat' || kind === 'roasted_meat' ||
+    kind === 'deer_meat' || kind === 'wolf_meat' || kind === 'boar_meat' ||
+    kind === 'rabbit_meat' || kind === 'beef'
+  ) {
     const mesh = new THREE.Mesh(
-      new THREE.DodecahedronGeometry(0.11, 0),
+      new THREE.DodecahedronGeometry(kind === 'rabbit_meat' ? 0.08 : 0.11, 0),
       new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),
     )
     mesh.scale.set(1.3, 0.7, 1)
     mesh.position.y = 0.08
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'hide') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.32, 0.02, 0.26),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.hide.color, flatShading: true }),
+    )
+    mesh.position.y = 0.02
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'cheese') {
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.1, 0.1, 0.09, 10),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.cheese.color, flatShading: true }),
+    )
+    mesh.position.y = 0.045
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'dried_meat') {
+    const mesh = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.025, 0.16, 3, 5),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.dried_meat.color, flatShading: true }),
+    )
+    mesh.rotation.z = Math.PI / 2.2
+    mesh.position.y = 0.04
     mesh.castShadow = true
     return mesh
   }
