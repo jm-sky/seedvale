@@ -72,6 +72,7 @@ Do **not** launch headless Chrome/Playwright yourself as the default way to test
 | Water (ocean + lakes) | [docs/WATER.md](docs/WATER.md) |
 | Strategic roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Plan index/status | [docs/plans/README.md](docs/plans/README.md) |
+| Loose ends found mid-plan (blockers, spun-off ideas, unfinished threads) | [docs/plans/LOOSE-ENDS.md](docs/plans/LOOSE-ENDS.md) |
 | Implementation plans | [docs/plans/](docs/plans/) |
 | Archived plans (frozen batch) | [docs/plans/archive/](docs/plans/archive/) |
 | Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/architecture/](docs/architecture/) |
@@ -96,6 +97,7 @@ New issue/plan/review/research files use `YYYY-MM-DD--NNN--slug.md` with an inde
 7. If the plan needs new models or sounds, update [docs/assets/MODELS.md](docs/assets/MODELS.md) / [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) as part of the work (skip when no new assets are required).
 8. Run the relevant technical checks.
 9. Clearly separate **implemented**, **technically verified**, and **browser/manual verified**.
+10. If a side blocker, spun-off idea, or unfinished thread comes up that's out of scope for the current plan, add a one-line entry to [docs/plans/LOOSE-ENDS.md](docs/plans/LOOSE-ENDS.md) instead of expanding scope or silently dropping it.
 
 ## Git workflow for agents
 
