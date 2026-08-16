@@ -1,3 +1,4 @@
+import type { EconomicKind } from '../economy/kinds'
 import type { ItemKind } from '../items/items'
 
 /** Visible ore piles streamed by `ResourceDeposits` (plan 090). */
@@ -30,4 +31,11 @@ export function hitsForRichness(richness: number): number {
 
 export function yieldForOre(type: MineableOre): { kind: ItemKind, count: number } {
   return { kind: ORE_ITEM[type], count: 1 }
+}
+
+/** `MineableOre`'s literal names are also valid `EconomicKind`s (plan 131) —
+ *  identity mapping from NPC-carried ore `ItemKind` to settlement raw stock,
+ *  no lookup table needed (see `economy/kinds.ts`'s `EconomicKind` doc). */
+export function oreEconomicKind(type: MineableOre): EconomicKind {
+  return type
 }

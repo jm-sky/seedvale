@@ -10,8 +10,12 @@ import { EconomicStock } from '../economy/stock'
 export type HouseholdId = string
 
 /** Water stays source-based (well/`WaterSource`) for 069 — see plan 069
- *  implementation notes §9. Only food/wood become household stock. */
-export type HouseholdResourceKind = Exclude<EconomicKind, 'water'>
+ *  implementation notes §9. Only food/wood become household stock — a
+ *  household is a family pantry, not a village depot. Deliberately *not*
+ *  derived from `EconomicKind` anymore (plan 131): `iron`/`coal`/`gold`
+ *  are settlement-level raw resource stock and must not automatically
+ *  become household-storable just because they're `EconomicKind`s. */
+export type HouseholdResourceKind = 'food' | 'wood'
 
 const HOUSEHOLD_KINDS: readonly HouseholdResourceKind[] = ['food', 'wood']
 

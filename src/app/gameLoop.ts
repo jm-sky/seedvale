@@ -871,7 +871,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           villages,
         )
       })
-      bundle.resourceDeposits.update(player.mesh.position.x, player.mesh.position.z)
+      bundle.resourceDeposits.update(
+        player.mesh.position.x,
+        player.mesh.position.z,
+        loaded.map((s) => ({ x: s.center.x, z: s.center.z })),
+      )
       withCategory(monitor, 'FAUNA', () => {
         bundle.fauna.update(
           worldDt,

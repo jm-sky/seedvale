@@ -23,7 +23,7 @@ export const HOME_SLEEP_RANGE = 16
 
 export type SleepReason = 'collapse' | 'schedule'
 
-const HEAVY_WORK_KINDS = new Set(['chop', 'work'])
+const HEAVY_WORK_KINDS = new Set(['chop', 'mine', 'work'])
 
 export function isHeavyWorkKind(kind: string): boolean {
   return HEAVY_WORK_KINDS.has(kind)

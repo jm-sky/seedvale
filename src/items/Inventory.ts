@@ -2,13 +2,18 @@ import { ITEM_DEFS, type ItemKind } from './items'
 
 /** Default carry limit (kg) — see plan `2026-08-08--043`. Not persisted (the
  *  plan keeps weight/limit derived from config/definitions, not save data);
- *  a future equipment system (backpacks) would vary this per player instead. */
+ *  a future equipment system (backpacks) would vary this per player instead.
+ *  Callers other than the player pass their own `maxWeight` (see `NpcAgent`'s
+ *  small carry cap, plan 131). */
 const DEFAULT_MAX_WEIGHT = 20
 
-/** Player-carried item counters + weight limit. In-memory + persisted via
- *  `toJSON()`/the constructor's `initial` param — see `persistence/saveData.ts`.
- *  `maxWeight` itself is never persisted (derived from `DEFAULT_MAX_WEIGHT`
- *  on every load) — see plan `043` §3/§11. */
+/** Generic item carrier: counters + a weight limit. Originally player-only;
+ *  reused by `NpcAgent` (plan 131) as a brief hold between extracting a
+ *  world resource and delivering it, not a persistent belongings system. The
+ *  player's own instance is in-memory + persisted via `toJSON()`/the
+ *  constructor's `initial` param — see `persistence/saveData.ts`.
+ *  `maxWeight` itself is never persisted (derived on every load) — see plan
+ *  `043` §3/§11. */
 export class Inventory {
   private readonly counts = new Map<ItemKind, number>()
   readonly maxWeight: number

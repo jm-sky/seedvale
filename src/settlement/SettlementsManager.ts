@@ -7,6 +7,7 @@ import type { EconomicKind } from '../economy/kinds'
 import type { VillageInfo } from '../fauna/AnimalAgent'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
+import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Collider } from '../world/collision'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TerrainSamplers } from './settlementTerrain'
@@ -137,6 +138,9 @@ export async function createSettlementsManager(
    *  forwarded into every `createSettlement` call the same way as
    *  `onAnimalDeath` above (plan 117). */
   getPlayerSocial?: PlayerSocialLookup,
+  /** NPC ore-mining hooks over `ResourceDeposits` (plan 131) — forwarded into
+   *  every `createSettlement` call the same way as `forest` above. */
+  mining?: SettlementMiningHooks,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -199,6 +203,7 @@ export async function createSettlementsManager(
     forest,
     onAnimalDeath,
     getPlayerSocial,
+    mining,
   )
 
   const entries = new Map<string, Entry>()
@@ -310,6 +315,7 @@ export async function createSettlementsManager(
         forest,
         onAnimalDeath,
         getPlayerSocial,
+        mining,
       ))
       .then((settlement) => {
         const cur = entries.get(def.id)
