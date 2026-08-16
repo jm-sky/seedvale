@@ -11,6 +11,8 @@ import { LIVESTOCK_URLS } from '../settlement/livestock'
 import {
   BUSH_SPECS,
   CACTUS_SPECS,
+  CAMPFIRE_FIT_MAX,
+  CAMPFIRE_UNLIT_URL,
   CEMETERY_SPECS,
   CROPS_FIT_MAX,
   CROPS_URL,
@@ -440,6 +442,7 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     { id: 'settlement:wagon', url: WAGON_URL, label: 'Wagon (Kupiec)', prepare: { mode: 'fitMax', value: WAGON_FIT_MAX } },
     { id: 'settlement:well', url: WELL_URL, label: 'Well', prepare: { mode: 'height', value: WELL_HEIGHT } },
     { id: 'settlement:wood_pile', url: WOOD_PILE_URL, label: 'Wood pile', prepare: { mode: 'height', value: WOOD_PILE_HEIGHT } },
+    { id: 'settlement:campfire_unlit', url: CAMPFIRE_UNLIT_URL, label: 'Campfire (unlit body)', prepare: { mode: 'fitMax', value: CAMPFIRE_FIT_MAX } },
     { id: 'fx:fire', url: FIRE_FX_URL, label: 'Fire FX', prepare: { mode: 'fitMax', value: 0.11 } },
     { id: 'fx:blood_splat', url: '/models/fx/blood_splat.glb', label: 'Blood splat', prepare: { mode: 'fitMax', value: 1 } },
   ]

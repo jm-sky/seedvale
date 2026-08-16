@@ -57,6 +57,13 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 ## Log
 
+### 2026-08-16 — Campfire GLB body + fire.glb flame (plan 135) 🔧
+
+- Unlit body is `campfire_unlit.glb` fitted with `preparePropFitMax(1.2)` (procedural stone-ring diameter). Four primitives split by material name: `Stone_*` = palenisko, `Wood*` = stos; `kind: 'simple'` hides stones.
+- Lit flame reuses `fx/fire.glb` at `CAMPFIRE_FLAME_FIT_MAX` 0.179, local Y `CAMPFIRE_FLAME_Y` 0.04. Pivot at the coals: ignition eases **only Y-scale** from the base. Materials converted to unlit `MeshBasicMaterial` (no 0.75 opacity / Standard shading — that left outer walls dark under the inner PointLight).
+- Sparks / embers / ignite burst stay on `getFireParticles` (plan 130). `campfire_burning_*` stay parked (baked flame).
+- Not verified: browser scale/offset of ring vs flame vs handheld tip.
+
 ### 2026-08-16 — Weather surface effects: wet ground, puddles, snow cover (plan 133) 🔧
 
 - `terrain/buildChunkGeometry.ts`'s single shared terrain `MeshStandardMaterial` gets two new shared uniforms, `uWetness`/`uSnowAmount` — no per-chunk material, no new mesh/decal for puddles, no chunk-geometry rebuild on weather change (`ChunkManager.setWeatherSurface`, same shape as `setWaterDayNight`/`setGrassDayNight`).

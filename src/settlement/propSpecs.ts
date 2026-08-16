@@ -75,6 +75,16 @@ export const WOOD_PILE_URL = '/models/settlement/wood_pile.glb'
 /** 1.5× the first drop-in height (0.9) so stacked beams read at village scale. */
 export const WOOD_PILE_HEIGHT = 1.35
 
+export const CAMPFIRE_UNLIT_URL = '/models/settlement/campfire_unlit.glb'
+/** Longest-axis fit ≈ procedural stone-ring diameter (`createCampfire` radius 0.6 × 2). */
+export const CAMPFIRE_FIT_MAX = 1.2
+/** Campfire flame mesh — a bit larger than the village-torch tip (`0.28`).
+ *  World +Y like the plaza torch, not the handheld `+Z` tip (that `π/2` laid
+ *  the billboard on its side). */
+export const CAMPFIRE_FLAME_FIT_MAX = 0.179
+/** Local Y of the flame mesh above the unlit body origin (meters at scale 1). */
+export const CAMPFIRE_FLAME_Y = 0.04
+
 export const WALL_URL = '/models/settlement/wall.glb'
 export const LANTERN_URL = '/models/settlement/lantern.glb'
 export const VILLAGE_TORCH_URL = '/models/settlement/torch.glb'

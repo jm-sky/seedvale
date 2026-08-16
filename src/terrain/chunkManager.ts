@@ -32,6 +32,7 @@ import {
   GRAVE_SPECS,
   loadPropTemplates,
   placeOnGround,
+  preloadCampfireTemplates,
   REED_SPECS,
   ROCK_CLUSTER_SPECS,
   ROCK_SPECS,
@@ -130,6 +131,7 @@ function preloadPropTemplates(): void {
   void getFallenLogTemplates.start()
   void getCemeteryTemplates.start()
   void getGraveTemplates.start()
+  void preloadCampfireTemplates()
 }
 
 const GLB_ENV_KINDS = new Set<EnvironmentKind>(['fallenLog', 'largeRock', 'rockCluster'])
@@ -172,9 +174,9 @@ export function ringChunkOffsets(maxRadius: number): { dx: number, dz: number }[
   return offsets
 }
 
-/** Procedural decorative prop for landmark kinds that stay non-GLB
- *  (campfire / monolith / ruins / stone circle). Rocks and fallen logs use
- *  memoized GLB templates with these as `loadPropTemplates` fallbacks. */
+/** Decorative prop for landmark kinds that stay individual Object3Ds.
+ *  Campfire uses a preloaded GLB (`preloadCampfireTemplates`) with this
+ *  procedural fallback. Rocks and fallen logs use instanced GLB templates. */
 function createProceduralEnvironmentProp(
   kind: EnvironmentKind,
   scale: number,

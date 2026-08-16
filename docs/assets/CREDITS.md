@@ -60,7 +60,7 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/nature/rock_b.glb` | Quaternius | [poly.pizza/m/RtLRqYjfMs](https://poly.pizza/m/RtLRqYjfMs) | CC0 1.0 | `Rock` — **parked** wariant obok wired `rock_a` |
 | `public/models/items/wooden_torch.glb` | Quaternius | [poly.pizza/m/pNsfJzhXiD](https://poly.pizza/m/pNsfJzhXiD) | CC0 1.0 | `Wooden Torch` — holdable + lit hand light (plan 085) |
 | `public/models/items/branch.glb` | AssetQuest | [poly.pizza/m/kvLsgIS5nh](https://poly.pizza/m/kvLsgIS5nh) | CC0 1.0 | `Branch B` — ground drop + lit hand (plan 085) |
-| `public/models/fx/fire.glb` | J-Toastie | [poly.pizza/m/8kb5fydmHf](https://poly.pizza/m/8kb5fydmHf) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Fire` — handheld / village torch flame tip (plan 085); wymagana atrybucja |
+| `public/models/fx/fire.glb` | J-Toastie | [poly.pizza/m/8kb5fydmHf](https://poly.pizza/m/8kb5fydmHf) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Fire` — handheld / village torch / campfire flame (plan 085 / 135); wymagana atrybucja |
 | `public/models/settlement/lantern.glb` | Tomáš Bayer | [poly.pizza/m/d80ay-dCqqj](https://poly.pizza/m/d80ay-dCqqj) | CC0 1.0 | `Lantern` — house night lamp body (plan 085) |
 | `public/models/settlement/torch.glb` | Quaternius | [poly.pizza/m/Gq38E7hFZw](https://poly.pizza/m/Gq38E7hFZw) | CC0 1.0 | `Torch` — village plaza/gate night posts (plan 085) |
 | `public/models/nature/cactus_a.glb` | Quaternius | [poly.pizza/m/HsEJgRLQWX](https://poly.pizza/m/HsEJgRLQWX) | CC0 1.0 | `Cactus` — chunk vegetation (pustynia) |
@@ -71,7 +71,7 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/nature/mushroom_a.glb` | Quaternius | [poly.pizza/m/aOW08oSrd4](https://poly.pizza/m/aOW08oSrd4) | CC0 1.0 | `Mushroom` — **parked**; textury 1024→512 WebP |
 | `public/models/nature/fern_a.glb` | Quaternius | [poly.pizza/m/jqcanvH7D6](https://poly.pizza/m/jqcanvH7D6) | CC0 1.0 | `Fern` — **parked**; textury 1024→512 WebP |
 | `public/models/nature/rock_path_round_wide.glb` | Quaternius | [poly.pizza/m/mWb3XxOctl](https://poly.pizza/m/mWb3XxOctl) | CC0 1.0 | `Rock Path Round Wide` — **parked**; kandydat na bruk ścieżki |
-| `public/models/settlement/campfire_unlit.glb` | Quaternius | [poly.pizza/m/Azj9hJwwwG](https://poly.pizza/m/Azj9hJwwwG) | CC0 1.0 | `Bonfire` (kamienie+drewno, bez płomienia) — **parked**; przyszłe ciało ogniska |
+| `public/models/settlement/campfire_unlit.glb` | Quaternius | [poly.pizza/m/Azj9hJwwwG](https://poly.pizza/m/Azj9hJwwwG) | CC0 1.0 | `Bonfire` (kamienie+drewno, bez płomienia) — ciało ogniska (plan 135); kamienie/drewno rozdzielane po materiałach |
 | `public/models/settlement/campfire_burning_q.glb` | Quaternius | [poly.pizza/m/k1e0cOzi8A](https://poly.pizza/m/k1e0cOzi8A) | CC0 1.0 | `Bonfire` (palące drewno) — **parked**; płomień w meshu |
 | `public/models/settlement/campfire_burning_poly.glb` | Poly by Google | [poly.pizza/m/0vzzmM-t8CP](https://poly.pizza/m/0vzzmM-t8CP) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Campfire` — **parked**; wymagana atrybucja; płomień w meshu |
 | `public/models/nature/cemetery.glb` | Poly by Google | [poly.pizza/m/c5L6hAdX3ua](https://poly.pizza/m/c5L6hAdX3ua) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Cemetary` — sylwetka cmentarza (plan 049); wymagana atrybucja |

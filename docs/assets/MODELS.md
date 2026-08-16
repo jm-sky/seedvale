@@ -55,7 +55,7 @@ If the feature needs no new model, do nothing to this file.
 | M26 | Mushroom | Forest-floor clutter | `in repo` | [plan 101](../plans/archive/2026-08-13--101--cactus-reed-well-woodpile.md) (`nature/mushroom_a.glb`) |
 | M27 | Fern | Forest undergrowth | `in repo` | plan 101 (`nature/fern_a.glb`) |
 | M28 | Rock path (round wide) | Candidate cobble for village/path tiles (roads are terrain tint today) | `in repo` | plan 101 (`nature/rock_path_round_wide.glb`) |
-| M29 | Campfire unlit body | Stones + stacked wood, no flame — future `VillageFire` body | `in repo` | plan 101 (`settlement/campfire_unlit.glb`) |
+| M29 | Campfire unlit body | Stones + stacked wood, no baked flame — `VillageFire` / `PlacedFires` / world remains; `simple` hides stone materials | `wired` | plan 101 parked, plan 135 (`settlement/campfire_unlit.glb`) |
 | M30 | Campfire burning (Quaternius) | Baked flame in mesh — not usable with fuel toggle | `in repo` | plan 101 (`campfire_burning_q.glb`) |
 | M31 | Campfire burning (Poly) | Higher-quality baked flame; CC-BY | `in repo` | plan 101 (`campfire_burning_poly.glb`) |
 | M32 | Village well GLB | Replaces procedural `createWell` (fallback kept) | `wired` | plan 101 (`settlement/well.glb`) |
@@ -78,7 +78,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
-| FX | fire tip; blood splat (animal death) |
+| FX | fire tip (handheld, village torch, campfire flame); blood splat (animal death) |
 
 ## Related research
 

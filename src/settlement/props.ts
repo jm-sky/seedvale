@@ -50,6 +50,10 @@ import {
 import { pickMerchantWagonPose } from './merchantWagon'
 import {
   BUSH_SPECS,
+  CAMPFIRE_FIT_MAX,
+  CAMPFIRE_FLAME_FIT_MAX,
+  CAMPFIRE_FLAME_Y,
+  CAMPFIRE_UNLIT_URL,
   CROPS_FIT_MAX,
   CROPS_URL,
   FARM_HEIGHT,
@@ -1157,9 +1161,83 @@ export function createFallenLog(scale = 1, length = 2.4): THREE.Group {
   return log
 }
 
-/** Old campfire remains — stone ring + ash patch + a few branches. Purely
- *  decorative, not an `Interactable` (see plans/archive/2026-08-07--030). */
-export function createCampfire(scale = 1): THREE.Group {
+/** `'pit'` — stone ring + stacked wood. `'simple'` — wood only (stones hidden
+ *  on the GLB, or a bare ash+branch pile on the procedural fallback). */
+export type CampfireBodyKind = 'pit' | 'simple'
+
+type CampfireLayer = 'stone' | 'wood'
+
+let campfireBodyTemplate: THREE.Object3D | null = null
+let campfireFlameTemplate: THREE.Object3D | null = null
+let campfireTemplatesPromise: Promise<void> | null = null
+
+function meshMaterialNames(mesh: THREE.Mesh): string {
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+  return mats.map((m) => m.name ?? '').join(' ')
+}
+
+function tagCampfireLayers(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const names = meshMaterialNames(mesh)
+    if (/stone/i.test(names)) mesh.userData.campfireLayer = 'stone' satisfies CampfireLayer
+    else if (/wood/i.test(names)) mesh.userData.campfireLayer = 'wood' satisfies CampfireLayer
+  })
+}
+
+function applyCampfireBodyKind(root: THREE.Object3D, kind: CampfireBodyKind): void {
+  if (kind !== 'simple') return
+  root.traverse((obj) => {
+    if (obj.userData.campfireLayer === 'stone') obj.visible = false
+  })
+}
+
+function asGroup(object: THREE.Object3D): THREE.Group {
+  if (object instanceof THREE.Group) return object
+  const group = new THREE.Group()
+  group.add(object)
+  return group
+}
+
+/** Starts GLB parse off the `PlacedFires.place()` / chunk-finalize path.
+ *  Safe to call repeatedly — one in-flight promise. */
+export function preloadCampfireTemplates(): Promise<void> {
+  campfireTemplatesPromise ??= (async () => {
+    try {
+      const model = await loadGltf(CAMPFIRE_UNLIT_URL)
+      preparePropFitMax(model, CAMPFIRE_FIT_MAX)
+      tagCampfireLayers(model)
+      campfireBodyTemplate = model
+    } catch (err) {
+      console.warn('[campfire] campfire_unlit.glb unavailable — procedural body', err)
+    }
+    try {
+      const fire = await loadGltf(FIRE_FX_URL)
+      preparePropFitMax(fire, CAMPFIRE_FLAME_FIT_MAX)
+      // Same orientation as village torch posts — authored +Y up. Do not copy
+      // PlayerTorch's extra π/2 (that aligns a stick tip to +Z and dumps the
+      // billboard on its side in world space).
+      campfireFlameTemplate = fire
+    } catch (err) {
+      console.warn('[campfire] fire.glb unavailable — procedural cone flame', err)
+    }
+  })()
+  return campfireTemplatesPromise
+}
+
+export function peekCampfireFlameTemplate(): THREE.Object3D | null {
+  return campfireFlameTemplate
+}
+
+function cloneCampfireBodyFromTemplate(scale: number, kind: CampfireBodyKind): THREE.Group {
+  const clone = campfireBodyTemplate!.clone(true)
+  clone.scale.multiplyScalar(scale)
+  applyCampfireBodyKind(clone, kind)
+  return asGroup(clone)
+}
+
+function createProceduralCampfirePit(scale: number): THREE.Group {
   const fire = new THREE.Group()
   const stoneMat = new THREE.MeshStandardMaterial({ color: 0x6f6b63, flatShading: true })
   const ashMat = new THREE.MeshStandardMaterial({ color: 0x2b2724, flatShading: true, roughness: 1 })
@@ -1194,6 +1272,43 @@ export function createCampfire(scale = 1): THREE.Group {
   }
 
   return fire
+}
+
+function createProceduralSimpleFireBase(scale: number): THREE.Group {
+  const fire = new THREE.Group()
+  const ashMat = new THREE.MeshStandardMaterial({ color: 0x2b2724, flatShading: true, roughness: 1 })
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a3524, flatShading: true })
+
+  const ash = new THREE.Mesh(new THREE.CircleGeometry(0.4 * scale, 10), ashMat)
+  ash.rotation.x = -Math.PI / 2
+  ash.position.y = 0.02
+  ash.receiveShadow = true
+  fire.add(ash)
+
+  for (let i = 0; i < 2; i++) {
+    const a = i * 2.4
+    const branch = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.022 * scale, 0.028 * scale, 0.55 * scale, 5),
+      woodMat,
+    )
+    branch.rotation.set(Math.PI / 2 - 0.25, 0, a)
+    branch.position.y = 0.04 * scale
+    branch.castShadow = true
+    fire.add(branch)
+  }
+
+  return fire
+}
+
+export function createCampfireBody(kind: CampfireBodyKind, scale = 1): THREE.Group {
+  if (campfireBodyTemplate) return cloneCampfireBodyFromTemplate(scale, kind)
+  return kind === 'simple' ? createProceduralSimpleFireBase(scale) : createProceduralCampfirePit(scale)
+}
+
+/** Old campfire remains — stone ring + stacked wood (GLB) or procedural
+ *  fallback. Purely decorative, not an `Interactable` (see plans/archive/2026-08-07--030). */
+export function createCampfire(scale = 1): THREE.Group {
+  return createCampfireBody('pit', scale)
 }
 
 /** Single standing stone landmark (plans/2026-08-09--049, "częste" tier) —
@@ -1458,34 +1573,11 @@ export function createCaveMouth(scale = 1, variant = 0.5): THREE.Group {
   return group
 }
 
-/** A minimal "prosta ognisko" base — ash patch + a couple of branches, no
- *  stone ring (that's what distinguishes it from `createCampfire()`'s
- *  palenisko look, see `docs/plans/archive/2026-08-09--050`). Used by
- *  `PlacedFires.ts` for the cheaper, shorter-burning `kind: 'simple'` fire. */
+/** A minimal "prosta ognisko" base — stacked wood without the stone ring
+ *  (GLB wood layer, or procedural ash+branches). Used by `PlacedFires.ts`
+ *  for the cheaper, shorter-burning `kind: 'simple'` fire (plan 050 / 135). */
 export function createSimpleFireBase(scale = 1): THREE.Group {
-  const fire = new THREE.Group()
-  const ashMat = new THREE.MeshStandardMaterial({ color: 0x2b2724, flatShading: true, roughness: 1 })
-  const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a3524, flatShading: true })
-
-  const ash = new THREE.Mesh(new THREE.CircleGeometry(0.4 * scale, 10), ashMat)
-  ash.rotation.x = -Math.PI / 2
-  ash.position.y = 0.02
-  ash.receiveShadow = true
-  fire.add(ash)
-
-  for (let i = 0; i < 2; i++) {
-    const a = i * 2.4
-    const branch = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.022 * scale, 0.028 * scale, 0.55 * scale, 5),
-      woodMat,
-    )
-    branch.rotation.set(Math.PI / 2 - 0.25, 0, a)
-    branch.position.y = 0.04 * scale
-    branch.castShadow = true
-    fire.add(branch)
-  }
-
-  return fire
+  return createCampfireBody('simple', scale)
 }
 
 /** How small a near-spent fire shrinks to and how large a freshly-stacked
@@ -1495,20 +1587,12 @@ const FLAME_MIN_SIZE = 0.55
 const FLAME_MAX_SIZE = 1.8
 
 /** The lightable/toggleable fire visual for a settlement's own campfire —
- *  separate from `createCampfire()`'s static stone-ring/ash/branches prop
- *  (which stays purely decorative for the world-scattered "old campfire"
- *  elements, `terrain/chunkEnvironment.ts`). `object` bundles a small
- *  emissive cone + a low-range point light + rising spark particles
- *  (`shared/getFireParticles.ts`); `update` must be called each frame (only
- *  while lit — see `settlement/VillageFire.ts`/`player/PlayerTorch.ts`) to
- *  animate the sparks. `setSize(factor)` scales the cone/light/sparks
- *  together (`factor` 1 = the normal single-branch look, clamped to
- *  `[FLAME_MIN_SIZE, FLAME_MAX_SIZE]`) and also scales the light's
- *  intensity/range, which a plain transform scale wouldn't touch — callers
- *  drive this from their current fuel level relative to one branch's worth
- *  (`VillageFire.ts`/`PlayerTorch.ts`), so the fire visibly grows when
- *  refueled and shrinks as it burns down. Caller toggles `.visible` on
- *  `object`; starts hidden. */
+ *  separate from `createCampfire()`'s static stone-ring/wood body (world
+ *  remains in `terrain/chunkEnvironment.ts` stay unlit). `object` bundles
+ *  an optional `fire.glb` (else an emissive cone) + a low-range point light
+ *  + rising spark/ember particles (`shared/getFireParticles.ts`). `update`
+ *  must be called each frame while lit. Pass `flameMesh` for the GLB tip;
+ *  omit it for the procedural cone (`PlayerTorch` / village-torch fallback). */
 export type CampfireFlame = {
   object: THREE.Group
   update: (dt: number) => void
@@ -1524,17 +1608,78 @@ export type CampfireFlame = {
   igniteBurst: () => void
 }
 
-export function createCampfireFlame(scale = 1): CampfireFlame {
-  const flame = new THREE.Group()
-  const flameMat = new THREE.MeshStandardMaterial({
-    color: 0xff9a3c,
-    emissive: 0xff6a1a,
-    emissiveIntensity: 1.4,
-    flatShading: true,
+function muteObjectLights(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    if ('isLight' in obj && (obj as { isLight?: boolean }).isLight) {
+      ;(obj as THREE.PointLight).intensity = 0
+    }
   })
-  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.28 * scale, 0.6 * scale, 6), flameMat)
-  cone.position.y = 0.3 * scale
-  flame.add(cone)
+}
+
+/** Unlit clone of fire.glb materials — Standard + 0.75 opacity made the
+ *  inner faces (lit by the campfire PointLight) glow while outward walls
+ *  shaded dark. Basic + full opacity keeps the whole billboard emissive. */
+function makeUnlitFlameMaterials(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    const converted = mats.map((mat) => {
+      const src = mat as THREE.MeshStandardMaterial
+      const color = src.emissive && src.emissive.getHex() !== 0
+        ? src.color.clone().lerp(src.emissive, 0.55)
+        : (src.color?.clone() ?? new THREE.Color(0xff9a3c))
+      return new THREE.MeshBasicMaterial({
+        color,
+        map: src.map ?? null,
+        alphaMap: src.alphaMap ?? null,
+        transparent: false,
+        opacity: 1,
+        depthWrite: true,
+        side: THREE.DoubleSide,
+        fog: true,
+        toneMapped: false,
+      })
+    })
+    mesh.material = converted.length === 1 ? converted[0]! : converted
+  })
+}
+
+export function createCampfireFlame(
+  scale = 1,
+  flameMesh: THREE.Object3D | null = null,
+): CampfireFlame {
+  const flame = new THREE.Group()
+
+  let meshVisual: THREE.Object3D
+  let meshBaseScale = 1
+  let restY = 0
+  let riseFromBase = false
+  if (flameMesh) {
+    const glFlame = flameMesh.clone(true)
+    muteObjectLights(glFlame)
+    makeUnlitFlameMaterials(glFlame)
+    // Keep preparePropFitMax foot alignment on the mesh. Scale/rise the pivot
+    // so ignition grows up from the coals instead of puffing in XYZ mid-air.
+    const pivot = new THREE.Group()
+    pivot.add(glFlame)
+    restY = CAMPFIRE_FLAME_Y * scale
+    pivot.position.y = restY
+    flame.add(pivot)
+    meshVisual = pivot
+    riseFromBase = true
+  } else {
+    const flameMat = new THREE.MeshStandardMaterial({
+      color: 0xff9a3c,
+      emissive: 0xff6a1a,
+      emissiveIntensity: 1.4,
+      flatShading: true,
+    })
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.28 * scale, 0.6 * scale, 6), flameMat)
+    cone.position.y = 0.3 * scale
+    flame.add(cone)
+    meshVisual = cone
+  }
 
   const baseIntensity = 6
   const baseDistance = 16 * scale
@@ -1562,8 +1707,15 @@ export function createCampfireFlame(scale = 1): CampfireFlame {
     // at a constant linear rate (plan 130 §4).
     const eased = igniteRamp * igniteRamp * (3 - 2 * igniteRamp)
     flame.scale.setScalar(clampedSize)
-    cone.visible = eased > 0.08
-    cone.scale.setScalar(Math.max(0.05, eased))
+    meshVisual.visible = eased > 0.08
+    if (riseFromBase) {
+      // Only Y grows — XZ stays at rest width so the flame doesn't peak
+      // oversized then settle. Pivot origin is the coals.
+      meshVisual.scale.set(1, Math.max(0.08, eased), 1)
+      meshVisual.position.y = restY
+    } else {
+      meshVisual.scale.setScalar(Math.max(0.05, eased) * meshBaseScale)
+    }
     light.intensity = baseIntensity * clampedSize * eased
     light.distance = baseDistance * clampedSize
     sparks.material.opacity = eased
@@ -1586,6 +1738,17 @@ export function createCampfireFlame(scale = 1): CampfireFlame {
   }
 
   return { object: flame, update, setSize, setIntensity, igniteBurst: () => burst.trigger() }
+}
+
+/** Body + toggleable flame for settlement / player-built fires. */
+export function createLitCampfireVisual(
+  kind: CampfireBodyKind,
+  scale = 1,
+): { group: THREE.Group, flame: CampfireFlame } {
+  const group = createCampfireBody(kind, scale)
+  const flame = createCampfireFlame(scale, peekCampfireFlameTemplate())
+  group.add(flame.object)
+  return { group, flame }
 }
 
 /** Procedural garden beds — S = one bed (legacy), M/L = side-by-side beds (plan 077). */
@@ -2440,12 +2603,10 @@ export async function buildSettlementProps(
       clearings.core.z,
       plazaPad,
     ))
-    const campfire = createCampfire()
+    await preloadCampfireTemplates()
+    const { group: campfire, flame } = createLitCampfireVisual('pit')
     placeOnGround(campfire, fireX, fireZ, sampleHeight)
     group.add(campfire)
-
-    const flame = createCampfireFlame()
-    campfire.add(flame.object)
     landmarks.campfire = {
       position: new THREE.Vector3(fireX, sampleHeight(fireX, fireZ), fireZ),
       flame,

@@ -3,12 +3,12 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { HeightSampler } from '../player/PlayerController'
 import { disposeObject3D } from '../assets/loadGltf'
 import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
-import { createCampfire, createCampfireFlame, createSimpleFireBase, placeOnGround } from './props'
+import { createLitCampfireVisual, placeOnGround, preloadCampfireTemplates } from './props'
 import { createVillageFire, type VillageFire } from './VillageFire'
 
-/** `'pit'` — built from 4x stone (`createCampfire`'s stone-ring look), same
+/** `'pit'` — built from 4x stone (`createCampfireBody('pit')` stone ring), same
  *  fuel-per-branch as a settlement fire (longer burn). `'simple'` — built
- *  directly from 2x branch (`createSimpleFireBase`, no stone ring), shorter
+ *  directly from 2x branch (`createCampfireBody('simple')`, wood only), shorter
  *  burn. See `docs/plans/archive/2026-08-09--050`. */
 export type PlacedFireKind = 'simple' | 'pit'
 
@@ -81,11 +81,11 @@ export function createPlacedFires(
   const fires: PlacedFireEntry[] = []
   const meshes = new Map<string, Object3D>()
 
+  void preloadCampfireTemplates()
+
   const spawn = (pf: PlacedFire): void => {
-    const group = pf.kind === 'simple' ? createSimpleFireBase() : createCampfire()
+    const { group, flame } = createLitCampfireVisual(pf.kind === 'simple' ? 'simple' : 'pit')
     placeOnGround(group, pf.x, pf.z, sampleHeight)
-    const flame = createCampfireFlame()
-    group.add(flame.object)
     scene.add(group)
     meshes.set(pf.id, group)
     const fuelPerBranch = pf.kind === 'simple' ? SIMPLE_FIRE_FUEL_PER_BRANCH : undefined
