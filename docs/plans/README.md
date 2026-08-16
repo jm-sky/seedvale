@@ -52,6 +52,13 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 |------|---------|-----|--------|---------|
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-16--125--fauna-spawn-point-population-limits.md` | Niszczenie fauna spawn points i limit populacji | 🟡 | L | ~~110~~ ~~118~~ |
+| `2026-08-16--126--seed-planting.md` | Sadzenie nasion drzew (rozszerza istniejący `TreeLifecycle`) i cropów (nowy prosty `CropLifecycle`) przez gracza, integracja z inventory/garden gather/persistence; wstępny | 🟡 | L | ~~106~~ ~~122~~ |
+| `2026-08-16--127--player-built-well.md` | Fizyczna studnia budowana przez gracza; wstępny | 🟡 | M | ~~122~~ |
+| `2026-08-16--128--player-skills-survival-and-camp.md` | Skills v2: rozwój `PlayerSkills` przez użycie + pierwszy pełny skill `Survival`, domyka ognisko+koc+namiot jako spójny system odpoczynku; wstępny | 🟡 | M | ~~124~~ |
+| `2026-08-16--129--coins-and-land-sales.md` | Monety jako pierwsza fizyczna waluta + sprzedaż działek; wstępny | 🔴 | L | ~~093~~ |
+| `2026-08-16--130--fire-lighting-polish.md` | Polish ognia (wizualia/dźwięk, rozszerza istniejący `VillageFire`/`CampfireFlame`, bez `FireManager`); po review ([implementation notes](./2026-08-16--130--fire-lighting-polish-implementation-notes.md)) plan wymaga korekt (`light()` instant→proces, torch runtime state, guard lighting gap) przed implementacją | 🟡 | M | — |
+| `2026-08-16--131--natural-resource-gathering.md` | Zbieractwo naturalnych zasobów, rozszerza istniejącą ekonomię osady; wstępny | 🟡 | M | ~~032~~ |
+| `2026-08-16--132--landmark-quests.md` | Questy powiązane z landmarkami (monolith/stoneCircle/smallRuins/cemetery); wstępny | 🟡 | M | ~~049~~ ~~093~~ ~~110~~ |
 
 ---
 
