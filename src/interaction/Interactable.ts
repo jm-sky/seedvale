@@ -4,6 +4,7 @@ import type { PreySpawner } from '../fauna/AnimalSpawner'
 import type { ItemKind } from '../items/items'
 import type { Settlement } from '../settlement/createSettlement'
 import type { VillageFire } from '../settlement/VillageFire'
+import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { DigProfile } from '../terrain/dig'
 import type { TreeGrowthStage, TreeSizeClass } from '../world/treeLifecycle'
 import type { WaterSource } from '../world/WaterSource'
@@ -63,3 +64,7 @@ export type Interactable =
    *  `profile` non-null → `[E]` dig; `canLevel` → `[R]` level. */
   | { kind: 'dig', position: { x: number, z: number }, promptLabel: string, profile: DigProfile | null, canLevel: boolean }
   | { kind: 'tent', position: { x: number, z: number }, promptLabel: string, id: string }
+  /** Procedural landmark (`monolith`/`stoneCircle`/`smallRuins`/`cemetery`) —
+   *  purely a quest-objective/flavor interaction, no held-tool mechanic
+   *  (plan 132). `landmarkId` is the stable `EnvironmentPlacement.id`. */
+  | { kind: 'landmark', position: { x: number, z: number }, promptLabel: string, landmarkId: string, envKind: LandmarkKind }

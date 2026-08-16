@@ -1,6 +1,7 @@
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { ItemKind } from '../items/items'
+import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 
 export type QuestState =
@@ -89,6 +90,20 @@ export type QuestObjective =
    *  individual dies before being found, `QuestManager` transitions the
    *  quest to `failed` instead of `ready_to_report` (plan 110). */
   | { type: 'find_animal', kind: AnimalKind }
+  /** Investigate/report on one specific procedural landmark (plan 132) —
+   *  cleared by an `[E]` interact within range while this is the active
+   *  stage. `landmarkId` is resolved once, before the quest is added to
+   *  `QuestManager`, by a bounded deterministic world-layer search
+   *  (`ChunkManager.findLandmarkNear`, see `buildLandmarkQuests` below) —
+   *  never a hardcoded world coordinate, so the same quest binds to a
+   *  different real placement per world seed. Landmarks never change once
+   *  generated, so unlike `kill_target_animal`/`find_animal` this needs no
+   *  runtime resolver injected into `QuestManager` and no restore-time
+   *  rebinding/invalidation: `buildLandmarkQuests` re-resolves the identical
+   *  `landmarkId` on every app boot (same seed, same deterministic search),
+   *  so a persisted `active` quest matches its rebuilt `QuestDef` by `id`
+   *  exactly like every other quest. */
+  | { type: 'interact_landmark', landmarkId: string }
 
 export type QuestStage = {
   objective: QuestObjective
@@ -258,3 +273,83 @@ export const QUESTS: readonly QuestDef[] = [
     effects: { relation: 3, exp: 30 },
   },
 ]
+
+/** Finds an existing `kind` landmark to bind a landmark quest's stage to —
+ *  implemented by the world layer (`ChunkManager.findLandmarkNear`, has
+ *  terrain/chunk access `QuestManager`/`quests.ts` deliberately don't) and
+ *  injected into `buildLandmarkQuests`. `undefined` means no matching
+ *  landmark exists within the resolver's bounded search this session. */
+export type LandmarkResolver = (kind: LandmarkKind) => string | undefined
+
+/** World-driven landmark quests (plan 132) — each hooks an existing
+ *  procedural landmark (`terrain/chunkEnvironment.ts`) to one of the four
+ *  established NPCs' problems, resolved once at world setup via `resolve`
+ *  rather than hardcoded, so the same lines bind to a different real
+ *  placement per world seed (see `interact_landmark`'s doc comment). A kind
+ *  `resolve` can't find within its search bound is simply omitted this
+ *  session rather than offered broken — not every world is guaranteed to
+ *  roll every landmark kind near the home settlement. Callers append the
+ *  result to `QUESTS` before constructing `QuestManager`. */
+export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
+  const quests: QuestDef[] = []
+
+  const ruinsId = resolve('smallRuins')
+  if (ruinsId) {
+    quests.push({
+      id: 'stare-ruiny',
+      giverName: 'Piotr',
+      offerLine:
+        'Podczas ostatniego zwiadu natknąłem się na jakieś stare ruiny, ale nie miałem czasu się im przyjrzeć. Sprawdzisz je?',
+      stages: [
+        {
+          objective: { type: 'interact_landmark', landmarkId: ruinsId },
+          description: 'Zbadaj stare ruiny.',
+          reminderLine: 'Byłeś już przy ruinach?',
+          progressLine: 'Ruiny zbadane. Wróć i opowiedz Piotrowi, co znalazłeś.',
+        },
+      ],
+      reportLine: 'Dobrze wiedzieć, co tam jest, zanim ktoś natknie się na to nieprzygotowany. Dzięki.',
+    })
+  }
+
+  const monolithId = resolve('monolith')
+  if (monolithId) {
+    quests.push({
+      id: 'slad-przy-monolicie',
+      giverName: 'Anna',
+      offerLine:
+        'Jeden z naszych wyruszył w stronę wzgórz kilka dni temu i wciąż nie wrócił. Podobno ostatni raz widziano go przy starym monolicie — sprawdzisz to miejsce?',
+      stages: [
+        {
+          objective: { type: 'interact_landmark', landmarkId: monolithId },
+          description: 'Zbadaj monolit, gdzie ostatnio go widziano.',
+          reminderLine: 'Byłeś już przy monolicie?',
+          progressLine: 'Przy monolicie widać ślady niedawnego obozowiska. Wróć i powiedz Annie.',
+        },
+      ],
+      reportLine: 'Ślady obozowiska... więc żył jeszcze, kiedy tam był. To już coś. Dziękuję, że sprawdziłeś.',
+      effects: { relation: 2, exp: 15 },
+    })
+  }
+
+  const cemeteryId = resolve('cemetery')
+  if (cemeteryId) {
+    quests.push({
+      id: 'zapomniany-cmentarz',
+      giverName: 'Kasia',
+      offerLine:
+        'Cmentarzyk na skraju wioski od dawna zarasta chwastami, nikt tam już nie zagląda. Poszedłbyś sprawdzić, czy groby jeszcze stoją?',
+      stages: [
+        {
+          objective: { type: 'interact_landmark', landmarkId: cemeteryId },
+          description: 'Odwiedź zaniedbany cmentarz.',
+          reminderLine: 'Byłeś już na cmentarzu?',
+          progressLine: 'Groby stoją, tylko mocno zarosły. Wróć i powiedz Kasi.',
+        },
+      ],
+      reportLine: 'To dobrze, że ktoś jeszcze o nich pamięta. Dziękuję, że sprawdziłeś.',
+    })
+  }
+
+  return quests
+}

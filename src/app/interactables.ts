@@ -13,6 +13,7 @@ import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
+import { LANDMARK_LABELS } from '../terrain/chunkEnvironment'
 import { ORE_YIELD_LABEL } from '../terrain/depositMining'
 import { canLevelAt, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
 import { oceanMixAt } from '../terrain/waterBodies'
@@ -270,6 +271,16 @@ export function buildInteractables(
       position: animal.mesh.position,
       promptLabel: animalPromptLabel(animal.def.kind, heldTool),
       animal,
+    })
+  }
+
+  for (const landmark of chunkManager.getNearbyLandmarks(playerPos, GAZE_RANGE)) {
+    list.push({
+      kind: 'landmark',
+      position: { x: landmark.x, z: landmark.z },
+      promptLabel: `Zbadaj: ${LANDMARK_LABELS[landmark.kind]}`,
+      landmarkId: landmark.id,
+      envKind: landmark.kind,
     })
   }
 

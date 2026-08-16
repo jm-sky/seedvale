@@ -87,6 +87,19 @@ export const LANDMARK_BIAS_MAX = 2
 
 export type LandmarkBiasKind = 'monolith' | 'stoneCircle' | 'smallRuins'
 
+/** The four `EnvironmentKind`s that carry a stable `EnvironmentPlacement.id`
+ *  (plan 110) — the only ones a landmark quest can target (plan 132). */
+export type LandmarkKind = 'monolith' | 'stoneCircle' | 'smallRuins' | 'cemetery'
+
+/** Display label for interaction prompts/dialogue speaker names (plan 132) —
+ *  same role as `ANIMAL_LABELS`/`SPAWNER_LABELS` for their own domains. */
+export const LANDMARK_LABELS: Record<LandmarkKind, string> = {
+  monolith: 'Monolit',
+  stoneCircle: 'Krąg kamieni',
+  smallRuins: 'Ruiny',
+  cemetery: 'Cmentarz',
+}
+
 export type LandmarkBiasInput = {
   mountainRidge: number
   altitude01: number

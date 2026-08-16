@@ -3,10 +3,10 @@ import type { DetailNormalConfig } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type { TreeEnvSample, TreeGrowthStage, TreeLifecycle, TreePresence } from '../world/treeLifecycle'
 import type { WaterMirror } from '../world/waterMirror'
-import type { EnvironmentKind } from './chunkEnvironment'
 import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
 import { disposeObject3D } from '../assets/loadGltf'
+import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind } from './chunkEnvironment'
 import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
 import { getMonitor } from '../perf/active'
@@ -54,6 +54,7 @@ import {
 import {
   apronOriginWorld,
   type ChunkTileParams,
+  computeChunkTile,
   extractCoreGrid,
   type RawSampleParams,
   type RegionParams,
@@ -152,6 +153,24 @@ const ENVIRONMENT_COLLISION_RADIUS: Record<EnvironmentKind, number> = {
  *  is documented "unused" for trees (size varies via `sizeJitter`/lifecycle
  *  stage instead), so v1 doesn't attempt to scale this per placement. */
 const TREE_COLLISION_RADIUS = 0.4
+
+/** Chunk-coord offsets in expanding Chebyshev rings out to `maxRadius`,
+ *  center first — the deterministic search order `findLandmarkNear` walks
+ *  so it always returns the same landmark for the same `(kind, center)` and
+ *  stops at the first hit instead of scanning a whole radius up front
+ *  (plan 132). Pure/small enough to recompute per call rather than cache. */
+export function ringChunkOffsets(maxRadius: number): { dx: number, dz: number }[] {
+  const offsets: { dx: number, dz: number }[] = [{ dx: 0, dz: 0 }]
+  for (let r = 1; r <= maxRadius; r++) {
+    for (let dz = -r; dz <= r; dz++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue
+        offsets.push({ dx, dz })
+      }
+    }
+  }
+  return offsets
+}
 
 /** Procedural decorative prop for landmark kinds that stay non-GLB
  *  (campfire / monolith / ruins / stone circle). Rocks and fallen logs use
@@ -327,6 +346,29 @@ export type ChunkManager = {
    *  its id as collected so it won't reappear on chunk reload. Null if `id`
    *  isn't currently instantiated. */
   collectItem: (id: string) => { kind: ItemKind, x: number, z: number } | null
+  /** Procedural landmarks (`monolith`/`stoneCircle`/`smallRuins`/`cemetery`)
+   *  within `radius` of `pos` among currently loaded chunks — same "loaded
+   *  chunks only" contract as `getNearbyItems` (plan 132), used for `[E]`
+   *  interaction targeting. */
+  getNearbyLandmarks: (
+    pos: { x: number, z: number },
+    radius: number,
+  ) => { id: string, kind: LandmarkKind, x: number, z: number }[]
+  /** Deterministically finds the nearest existing `kind` landmark to
+   *  `(worldX, worldZ)`, searching chunks in expanding rings up to
+   *  `maxChunkRadius` and stopping at the first hit (plan 132) — a bounded,
+   *  one-off resolver for binding a landmark quest to a real placement, not a
+   *  per-frame query. Prefers already-loaded chunks' cached tiles; falls back
+   *  to synchronously recomputing a candidate chunk's tile + environment
+   *  (same pure pipeline the worker pool uses) so it also works for chunks
+   *  outside the streaming radius. `undefined` if nothing matches within the
+   *  search bound. */
+  findLandmarkNear: (
+    kind: LandmarkKind,
+    worldX: number,
+    worldZ: number,
+    maxChunkRadius: number,
+  ) => { id: string, x: number, z: number } | undefined
   /** Runtime terrain-deformation layer (plan 052 — shovel digging), additive
    *  on top of the generated height field: a soft radial depression,
    *  `-depth` at the center falling off to 0 at `radius`. Not the seed-derived
@@ -1530,6 +1572,36 @@ export function createChunkManager(
         }
       }
       return out
+    },
+    getNearbyLandmarks(pos, radius) {
+      const out: { id: string, kind: LandmarkKind, x: number, z: number }[] = []
+      for (const rec of chunks.values()) {
+        if (!rec.tile) continue
+        for (const p of rec.tile.environment) {
+          if (!p.id) continue
+          const dx = p.x - pos.x
+          const dz = p.z - pos.z
+          if (Math.hypot(dx, dz) > radius) continue
+          out.push({ id: p.id, kind: p.kind as LandmarkKind, x: p.x, z: p.z })
+        }
+      }
+      return out
+    },
+    findLandmarkNear(kind, worldX, worldZ, maxChunkRadius) {
+      const center = worldToChunk(worldX, worldZ, config.chunkSize)
+      for (const { dx, dz } of ringChunkOffsets(maxChunkRadius)) {
+        const coord: ChunkCoord = { cx: center.cx + dx, cz: center.cz + dz }
+        const rec = chunks.get(chunkKey(coord))
+        const environment = rec?.tile
+          ? rec.tile.environment
+          : (() => {
+              const params = paramsFor(coord)
+              return computeChunkEnvironment(coord, computeChunkTile(params), params, [])
+            })()
+        const found = environment.find((p) => p.kind === kind && p.id)
+        if (found?.id) return { id: found.id, x: found.x, z: found.z }
+      }
+      return undefined
     },
     collectItem(id) {
       for (const rec of chunks.values()) {

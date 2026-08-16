@@ -6,7 +6,7 @@ tags: [world-terrain, settlements-npcs]
 # Plan: Landmark Quests
 
 **Created:** 2026-08-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~049~~ ~~093~~ ~~110~~
 
@@ -339,5 +339,34 @@ W planie końcowym należy wyraźnie rozdzielić:
 - **browser/manual verified** — rzeczywisty test w grze.
 
 Nie oznaczać planu jako zweryfikowanego na podstawie samego builda.
+
+## Implementation summary (2026-08-16)
+
+No pre-existing implementation-notes file was found for this plan (the task pointed at one, but it doesn't exist in the repo) — implemented directly from this plan against the current codebase, deviating where the plan's own text names the tension explicitly (the `landmarkId`-in-static-`QuestDef` question, see below).
+
+Implemented as scoped, no parallel landmark/discovery/quest system introduced.
+
+- **`src/terrain/chunkEnvironment.ts`** — `LandmarkKind` (the four id-bearing kinds) and `LANDMARK_LABELS` (Polish display labels), reused by both the interaction layer and dialogue.
+- **`src/terrain/chunkManager.ts`** — two additions to `ChunkManager`, no new persistent registry:
+  - `getNearbyLandmarks(pos, radius)` — loaded-chunk-only query mirroring `getNearbyItems`'s contract, reading straight from each chunk's already-computed `tile.environment` (no mesh/userData round-trip). Used for `[E]` interaction targeting.
+  - `findLandmarkNear(kind, worldX, worldZ, maxChunkRadius)` — the plan's "cheap lookup" resolver. Deterministic, bounded: walks chunk coordinates in expanding rings (`ringChunkOffsets`, exported/unit-tested) out to `maxChunkRadius`, checking each already-loaded chunk's cached tile first and falling back to synchronously recomputing that one chunk's tile + environment (`computeChunkTile` + `computeChunkEnvironment`, the same pure pipeline the worker pool already runs) only when it isn't loaded. Stops at the first match. Not a global registry, not a full-world scan, and it works for landmarks outside the streaming radius as the plan required.
+- **`src/quests/quests.ts`** — `interact_landmark` added to `QuestObjective` (`{ type, landmarkId }`, exactly the shape the plan sketched). `buildLandmarkQuests(resolve: LandmarkResolver)` builds 3 hand-authored `QuestDef`s (`stare-ruiny`/Piotr/smallRuins, `slad-przy-monolicie`/Anna/monolith, `zapomniany-cmentarz`/Kasia/cemetery), each grounded in one of the four existing NPCs' established persona rather than inventing a new mechanic; a kind `resolve` can't find within its bound is simply omitted that session (matches "nie wymaganie implementacji wszystkich trzech rodzajów w v1").
+- **`src/quests/QuestManager.ts`** — `interact_landmark` added to `ObjectiveRef`/`objectiveMatchesRef` as plain string-equality matching, same shape as `interact_well`/`interact_spawner`. **Deliberate deviation from the plan's literal Etap-2 wording** ("QuestManager potrzebuje... callbacku/resolvera do sprawdzenia jego istnienia"): no resolver is injected into `QuestManager` for landmarks, and none is needed. Unlike `kill_target_animal`/`find_animal`, a landmark never dies or changes once generated, so there is nothing to rebind or invalidate at runtime or on restore — see the next point.
+- **`src/app/createApp.ts`** — `buildLandmarkQuests` is called once per app boot (new game and loaded save alike) with a resolver closing over `bundle.chunkManager.findLandmarkNear` anchored at `bundle.settlementsManager.home.center`, search radius 10 chunks (`LANDMARK_QUEST_SEARCH_CHUNK_RADIUS`). The result is concatenated with the static `QUESTS` and passed into `new QuestManager(...)` — this is where "landmark → real placement" binding happens, once, outside `QuestManager` entirely (plan's "resolver szuka pasującego istniejącego landmarku... quest stage zostaje związany z tym ID", done at the composition root rather than dynamically during play, because landmarks — unlike animals — don't need a live retry).
+- **`src/interaction/Interactable.ts`** / **`src/app/interactables.ts`** / **`src/interaction/resolveInteraction.ts`** — `kind: 'landmark'` added to the existing `Interactable` union and `buildInteractables()` (same `GAZE_RANGE` pattern as `well`/`spawner`/`house`); `resolveInteraction.ts` gets one more switch case reporting `interact_landmark` to `QuestManager` and falling back to a per-kind flavor line. `gameLoop.ts` needed **no change** — landmark falls into the existing generic `else` branch that already opens the NPC-dialog-style outcome for `spawner`/`house`, exactly the "extend, don't add a second interaction manager" instruction.
+
+### Why persistence needed no new code
+
+The plan's Persistence section asks for re-confirmation of a bound landmark's existence after reload. That turned out to be unnecessary here: `buildLandmarkQuests` re-runs the identical deterministic search on every app boot (same seed, same settlement position ⇒ same `landmarkId`), so a persisted `active`/`ready_to_report` quest state keyed by the quest's own static `id` (e.g. `'stare-ruiny'`) lines up against the freshly rebuilt `QuestDef` automatically, through the exact same generic `QuestManager` restore path every other quest already uses. No `invalidated` special-case, no extra `SaveData` field.
+
+### Accepted trade-off
+
+`findLandmarkNear`'s unloaded-chunk fallback (`computeChunkTile` + `computeChunkEnvironment`) is a synchronous main-thread recompute — the same per-chunk cost the worker pool normally pays, just inline. It only runs during `createApp()`'s one-time world setup (not per-frame), and the ring search stops at the first hit, so in practice most of it resolves against chunks already streamed in around the home settlement. The rarest landmark tier (`smallRuins`, ~0.8%/chunk) is the one most likely to walk past the loaded radius before finding (or failing to find) a match within the radius-10 bound — an accepted, bounded, one-off cost, not a per-frame regression.
+
+### Verification
+
+- **Implemented** — all of the above.
+- **Technically verified** — `npx tsc --noEmit` clean; `npm run test` 860/860 passing (new: `chunkManager.test.ts`'s `ringChunkOffsets` determinism/coverage, `quests.test.ts`'s `buildLandmarkQuests`, `QuestManager.test.ts`'s `interact_landmark` binding/no-double-complete); `npm run build` clean (`vue-tsc` + `vite build`). `npm run lint` **not run**, per explicit instruction for this task.
+- **Browser/manual verified** — **not done**, per explicit instruction for this task. Needs: find a landmark, accept one of the three new quests from Piotr/Anna/Kasia (relation ≥ their existing gate, if any — these three are ungated), travel to the bound landmark, confirm the `[E]` prompt reads "Zbadaj: <label>", confirm objective completion + report dialogue, confirm unload/reload of the landmark's chunk doesn't change target identity, and confirm a world whose home settlement rolls no `smallRuins`/`monolith` within 10 chunks simply omits that quest rather than breaking.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
