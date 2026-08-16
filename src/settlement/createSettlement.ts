@@ -1,4 +1,5 @@
 import {
+  type Group,
   type Scene,
   Vector3,
 } from 'three'
@@ -192,6 +193,11 @@ export async function createSettlement(
   /** NPC ore-mining hooks over `ResourceDeposits` (plan 131) — forwarded into
    *  every `NpcAgent.create` call below the same way as `forest` above. */
   mining?: SettlementMiningHooks,
+  /** Persistent land-plot ownership query (plan 129) — a "for sale" sign is
+   *  only materialized for a plot this returns `false` for at build time; a
+   *  purchase made later while the settlement stays loaded is picked up live
+   *  by `update()` below instead, same pattern as `placeWoodshedIfComplete`. */
+  isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
@@ -366,6 +372,35 @@ export async function createSettlement(
         position: new Vector3(sp.position.x, sampleHeight(sp.position.x, sp.position.z), sp.position.z),
       })
     }
+  }
+
+  // Sale-plot "NA SPRZEDAŻ" signs (plan 129) — one per unowned `landmarks
+  // .landPlots` entry, same signpost prop + CSS2D label idiom as the
+  // namepost/directional signs above. Skipped entirely for an already-owned
+  // plot so it never comes back after a stream-out/stream-in (plan 129 §14.1).
+  type LandPlotSignInstance = SignpostInstance & { plotId: string, prop: Group }
+  const landPlotSigns: LandPlotSignInstance[] = []
+  for (const plot of landmarks.landPlots) {
+    if (isLandPlotOwned?.(def.id, plot.plotId)) continue
+    const prop = createSignpost()
+    prop.rotation.y = plot.rotation
+    placeOnGround(prop, plot.position.x, plot.position.z, sampleHeight)
+    group.add(prop)
+
+    const labelEl = document.createElement('div')
+    labelEl.className = 'npc-label'
+    labelEl.innerHTML = `NA SPRZEDAŻ<br>${plot.price} monet`
+    const label = new CSS2DObject(labelEl)
+    label.position.set(0, 2.5, 0)
+    prop.add(label)
+
+    landPlotSigns.push({
+      plotId: plot.plotId,
+      prop,
+      labelEl,
+      label,
+      position: plot.position.clone(),
+    })
   }
 
   // Interaction queues (plan 079): well drink first; garden/stall later reuse
@@ -562,6 +597,21 @@ export async function createSettlement(
       for (const sp of signposts) {
         sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))
       }
+      // Drop a sale sign the moment its plot is bought (same session — a
+      // purchase doesn't tear the settlement down), mirroring
+      // `placeWoodshedIfComplete`'s live world-state → prop sync above.
+      for (let i = landPlotSigns.length - 1; i >= 0; i--) {
+        const sign = landPlotSigns[i]!
+        if (!isLandPlotOwned?.(def.id, sign.plotId)) {
+          sign.labelEl.style.opacity = String(labelOpacityForDistance(sign.position.distanceTo(observerPos)))
+          continue
+        }
+        sign.label.removeFromParent()
+        sign.labelEl.remove()
+        disposeObject3D(sign.prop)
+        sign.prop.removeFromParent()
+        landPlotSigns.splice(i, 1)
+      }
     },
     setDayNight(t) {
       if (fire && !fire.isLit() && nightFactor <= NIGHT_FIRE_THRESHOLD && t > NIGHT_FIRE_THRESHOLD) {
@@ -593,6 +643,10 @@ export async function createSettlement(
       for (const sp of signposts) {
         sp.label.removeFromParent()
         sp.labelEl.remove()
+      }
+      for (const sign of landPlotSigns) {
+        sign.label.removeFromParent()
+        sign.labelEl.remove()
       }
       disposeSettlementGroup(group)
       group.removeFromParent()

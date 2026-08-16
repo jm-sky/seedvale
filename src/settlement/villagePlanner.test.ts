@@ -271,3 +271,69 @@ describe('planVillageLayout (plan 047 steps 5–7)', () => {
     }
   })
 })
+
+describe('sale plots (plan 129)', () => {
+  it('is deterministic for the same seed + settlement identity', () => {
+    const id = identity({ id: '10_0', size: 'LG' })
+    const families = generateFamilies(77, 'LG', false, 'polish')
+    const site = { x: 0, z: 0, y: 12 }
+    const a = planVillageLayout(id, site, families, 77, flatHeight, WATER)
+    const b = planVillageLayout(id, site, families, 77, flatHeight, WATER)
+    expect(a.plots.filter((p) => p.role === 'sale')).toEqual(b.plots.filter((p) => p.role === 'sale'))
+  })
+
+  it('never exceeds the size-configured maximum and prices every sale plot', () => {
+    for (const size of ['SM', 'MD', 'LG', 'XL'] as const) {
+      const max = size === 'LG' || size === 'XL' ? 2 : 1
+      for (let seed = 0; seed < 12; seed++) {
+        const id = identity({ id: `sale_${size}_${seed}`, size })
+        const families = generateFamilies(seed, size, false, 'polish')
+        const layout = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, seed, flatHeight, WATER)
+        const salePlots = layout.plots.filter((p) => p.role === 'sale')
+        expect(salePlots.length, `${size} seed ${seed}`).toBeLessThanOrEqual(max)
+        for (const plot of salePlots) {
+          expect(plot.price, plot.id).toBeGreaterThan(0)
+        }
+      }
+    }
+  })
+
+  it('OUTPOST never generates a sale plot', () => {
+    const iron: NaturalResource = { id: 'r', type: 'iron', x: 30, z: 0, radius: 8, richness: 0.9 }
+    for (let seed = 0; seed < 12; seed++) {
+      const id = identity({ id: `outpost_${seed}`, size: 'OUTPOST', terrain: 'mountain', dominantResource: iron })
+      const families = generateFamilies(seed, 'OUTPOST', false, 'polish', iron)
+      const layout = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, seed, flatHeight, WATER)
+      expect(layout.plots.some((p) => p.role === 'sale')).toBe(false)
+    }
+  })
+
+  it('gives sale plots stable ids and no building/landmark entry', () => {
+    let sawSalePlot = false
+    for (let seed = 0; seed < 30 && !sawSalePlot; seed++) {
+      const id = identity({ id: `bl_${seed}`, size: 'MD' })
+      const families = generateFamilies(seed, 'MD', false, 'polish')
+      const layout = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, seed, flatHeight, WATER)
+      const salePlots = layout.plots.filter((p) => p.role === 'sale')
+      if (salePlots.length === 0) continue
+      sawSalePlot = true
+      const ids = new Set(salePlots.map((p) => p.id))
+      expect(ids.size).toBe(salePlots.length)
+      for (const plot of salePlots) {
+        expect(layout.buildings.some((b) => b.plotId === plot.id)).toBe(false)
+        expect(layout.landmarks.some((l) => l.plotId === plot.id)).toBe(false)
+      }
+    }
+    expect(sawSalePlot).toBe(true)
+  })
+
+  it('keeps sale plots inside the size-dependent boundary', () => {
+    const id = identity({ id: '10_1', size: 'XL' })
+    const families = generateFamilies(2, 'XL', false, 'polish')
+    const layout = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, 2, flatHeight, WATER)
+    for (const plot of layout.plots.filter((p) => p.role === 'sale')) {
+      const dist = Math.hypot(plot.x - layout.boundary.x, plot.z - layout.boundary.z)
+      expect(dist).toBeLessThanOrEqual(layout.boundary.radius + plot.radius + 0.01)
+    }
+  })
+})

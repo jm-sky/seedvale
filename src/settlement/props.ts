@@ -125,6 +125,18 @@ export type SettlementLandmarks = {
    *  hidden until `settlement/VillageFire.ts` lights it. Distinct from the
    *  purely decorative world campfires in `terrain/chunkEnvironment.ts`. */
   campfire?: { position: THREE.Vector3, flame: CampfireFlame }
+  /** Settlement sale plots (plan 129) — static price/position straight from
+   *  `VillagePlan.plots` (`role === 'sale'`). Ownership is separate
+   *  persistent world state, never stored here — see `landOwnership.ts`. */
+  landPlots: SettlementLandPlot[]
+}
+
+/** One settlement sale plot's materialized (non-persistent) data — plan 129. */
+export type SettlementLandPlot = {
+  plotId: string
+  position: THREE.Vector3
+  rotation: number
+  price: number
 }
 
 export type SettlementTreeLandmark = {
@@ -2022,6 +2034,12 @@ export async function buildSettlementProps(
     houses: [],
     trees: [],
     dockRoute: [],
+    landPlots: (plan?.plots.filter((p) => p.role === 'sale') ?? []).map((p) => ({
+      plotId: p.id,
+      position: new THREE.Vector3(p.x, sampleHeight(p.x, p.z), p.z),
+      rotation: p.rotation,
+      price: p.price ?? 0,
+    })),
   }
 
   const coreRandom = createSeededRandom(seed ^ 0x5a17e)

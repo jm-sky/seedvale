@@ -5,6 +5,7 @@ import type { ItemSpawners } from '../items/createItemSpawners'
 import type { PlacedTents } from '../items/createPlacedTents'
 import type { ToolKind } from '../items/HeldTool'
 import type { Settlement } from '../settlement/createSettlement'
+import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { PlacedFires } from '../settlement/PlacedFires'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { ResourceDeposits } from '../terrain/resourceDeposits'
@@ -142,6 +143,10 @@ export function buildInteractables(
   playerPos: Vector3,
   /** Currently held tool — drives axe harvest prompts and animal attack prompts. */
   heldTool: ToolKind | null = null,
+  /** Persistent land-plot ownership (plan 129) — an owned sale plot yields
+   *  no candidate at all (no sign, no purchase prompt). Optional so existing
+   *  callers/tests that never touch land plots don't need one. */
+  landOwnership?: LandOwnershipRegistry,
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = heldTool === 'axe'
@@ -230,6 +235,18 @@ export function buildInteractables(
         position: settlement.fire.position,
         promptLabel: settlement.fire.isLit() ? CAMPFIRE_LIT_PROMPT : 'Zapal ognisko',
         fire: settlement.fire,
+      })
+    }
+
+    for (const plot of settlement.landmarks.landPlots) {
+      if (!withinRange(plot.position.x, plot.position.z, playerPos, GAZE_RANGE)) continue
+      if (landOwnership?.isOwned(settlement.id, plot.plotId)) continue
+      list.push({
+        kind: 'landPlot',
+        position: plot.position,
+        promptLabel: `Kup działkę — ${plot.price} monet`,
+        settlementId: settlement.id,
+        plotId: plot.plotId,
       })
     }
   }

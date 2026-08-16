@@ -45,13 +45,16 @@ function capitalize(text: string): string {
  *  handle directly — all need `Inventory`/`PlayerNeeds` access this module
  *  doesn't have — without opening this generic dialog; `npc`, which opens the
  *  dedicated Vue dialogue menu instead — see `ui-vue/store.ts`'s
- *  `openNpcDialogueMenu`; and `dig`, which `gameLoop.ts` handles directly for
- *  the same `Inventory`-access reason) to the right `QuestManager` call,
- *  falling back to flavor text when no active quest cares. `well` still goes
- *  through here for its flavor line/quest hook — `gameLoop.ts` additionally
- *  handles its own drink/fill mechanics (plan 106) alongside the call. */
+ *  `openNpcDialogueMenu`; `dig`, which `gameLoop.ts` handles directly for
+ *  the same `Inventory`-access reason; and `landPlot`, whose purchase
+ *  (plan 129) also needs `Inventory` access and is handled directly in
+ *  `gameLoop.ts`, never opening this generic dialog) to the right
+ *  `QuestManager` call, falling back to flavor text when no active quest
+ *  cares. `well` still goes through here for its flavor line/quest hook —
+ *  `gameLoop.ts` additionally handles its own drink/fill mechanics (plan 106)
+ *  alongside the call. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'waterEdge' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'waterEdge' | 'landPlot' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

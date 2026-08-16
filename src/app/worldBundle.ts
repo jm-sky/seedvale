@@ -142,6 +142,7 @@ function buildSettlementsManager(
   initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
   onAnimalDeath?: (animalId: string) => void,
   getPlayerSocial?: PlayerSocialLookup,
+  isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -166,6 +167,7 @@ function buildSettlementsManager(
     onAnimalDeath,
     getPlayerSocial,
     mining,
+    isLandPlotOwned,
   )
 }
 
@@ -268,6 +270,12 @@ export async function createWorldBundle(
    *  chance (plan 117). Same `QuestManager`-not-ready-yet indirection as
    *  `onAnimalDeath` above; see that hook's call site in `createApp.ts`. */
   getPlayerSocial?: PlayerSocialLookup,
+  /** Persistent land-plot ownership query (plan 129) — threaded down into
+   *  `buildSettlementsManager` → every `createSettlement` call, same
+   *  indirection-free wiring as `onAnimalDeath`/`getPlayerSocial` above
+   *  (ownership doesn't depend on `QuestManager`, so no mutable-target trick
+   *  is needed — see that hook's call site in `createApp.ts`). */
+  isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
 ): Promise<WorldBundle> {
   const waterMirror = createWaterMirror({
     waterLevel: config.terrain.waterLevel,
@@ -286,7 +294,7 @@ export async function createWorldBundle(
   const ocean = buildOcean(scene, config, waterMirror)
   const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
   const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
@@ -329,6 +337,7 @@ export async function rebuildWorldBundle(
   dayNight: DayNightState,
   onAnimalDeath?: (animalId: string) => void,
   getPlayerSocial?: PlayerSocialLookup,
+  isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
 ): Promise<void> {
   bundle.fauna.dispose()
   bundle.itemSpawners.dispose()
@@ -377,7 +386,7 @@ export async function rebuildWorldBundle(
     queryNearest: bundle.resourceDeposits.queryNearest,
     mine: bundle.resourceDeposits.mine,
   }
-  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial)
+  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath)
   await preloadItemGlbModels()
   await preloadHeldToolModels()

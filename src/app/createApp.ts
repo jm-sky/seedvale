@@ -59,6 +59,7 @@ import { createRenderer } from '../render/createRenderer'
 import { MIN_RENDERER_SIZE, shouldApplyRendererResize } from '../render/rendererResize'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
+import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { IGNITE_DURATION_SEC, type VillageFire } from '../settlement/VillageFire'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
@@ -232,6 +233,10 @@ export async function createApp(
   sky.applySun(lights.sun)
 
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
+  // Persistent player land ownership (plan 129) — sparse, doesn't need the
+  // `bundle`-rebuild indirection `onAnimalDeath`/`getPlayerSocial` use below
+  // (it never depends on `questManager`), so it's threaded straight through.
+  const landOwnership = createLandOwnershipRegistry(initialSave?.ownedLandPlots ?? [])
   // `questManager` doesn't exist yet at this point (fauna/settlements build
   // before it does), so `onAnimalDeath` can't close over it directly —
   // mirrors the existing `bundle`-not-destructured indirection just below:
@@ -258,6 +263,7 @@ export async function createApp(
     initialSave?.settlementEconomies,
     onAnimalDeath,
     getPlayerSocial,
+    landOwnership.isOwned,
   )
 
   // Indirection (not a direct destructure) so this keeps sampling whichever
@@ -532,6 +538,7 @@ export async function createApp(
         collectedItemIds = new Set()
         dayNight.elapsedDays = 0
         treeLifecycle = createTreeLifecycle(config.seed, {})
+        landOwnership.clear()
       }
 
       await rebuildWorldBundle(
@@ -546,6 +553,7 @@ export async function createApp(
         dayNight,
         onAnimalDeath,
         getPlayerSocial,
+        landOwnership.isOwned,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
 
@@ -583,7 +591,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 13,
+    version: 14,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -623,6 +631,7 @@ export async function createApp(
       thirst: player.needs.thirst.current,
       vigor: player.needs.vigor.current,
     },
+    ownedLandPlots: landOwnership.toJSON(),
   })
 
   const saveNow = (): void => {
@@ -1486,7 +1495,7 @@ export async function createApp(
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
     startGroundWork: (mode, x, z) => {
       if (heldTool.held() === 'pickaxe') {

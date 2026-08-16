@@ -434,6 +434,16 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     notes: 'Plan 134 — buy from Kupiec; light, long-lasting travel food.',
     consumable: { need: 'hunger', relief: 25 },
   },
+  coin: {
+    kind: 'coin',
+    label: 'moneta',
+    category: 'resource',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 129 — first physical currency: quest reward item + price paid for a settlement sale plot (`settlement/landPurchase.ts`). Stacks like any other item; near-zero weight so a land-plot price does not blow the carry limit. Not sold/bought by the merchant (separate from the shell/barter trade economy).',
+  },
 }
 
 /** Cross-cutting item systems not tied to a single kind (roadmap only). */

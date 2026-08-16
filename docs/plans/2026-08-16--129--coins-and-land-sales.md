@@ -1,7 +1,7 @@
 # Plan: 129 — Monety i sprzedaż działek
 
 **Created:** 2026-08-16  
-**Status:** `planned` 📋  
+**Status:** `in progress` 🔄 — implemented + technically verified (type-check/test/build green); no browser/manual verification yet. See "Implementation summary" near the end of this file.  
 **Priority:** 🔴 high · **Effort:** L  
 **Depends on:** ~~093~~  
 **Domain:** `items-player`  
@@ -830,5 +830,34 @@ Plan jest ukończony, gdy:
 - nie ma jeszcze żadnej logiki budowania domu;
 - testy techniczne przechodzą;
 - pełny zakup został sprawdzony w przeglądarce.
+
+## Implementation summary (2026-08-16)
+
+Implemented against the current codebase per the implementation notes (which correctly identified `VillagePlot`/`Inventory`/`QuestDef.reward` as the existing mechanisms to extend rather than duplicate). One deliberate divergence from the notes worth flagging: the codebase already treats `shell` as a lightweight barter/trade token (`items/tradeCatalog.ts`'s `buyWithShells`, and `shell`'s own flavor text calls it "podstawowa waluta"). `coin` is *not* a duplicate of that — `shell` stays the small-transaction merchant/barter currency (weight 0.05 kg, prices in the 6–50 range); `coin` is a separate, near-zero-weight (0.001 kg) unit specifically for the larger-value transactions this plan introduces (quest rewards, land price 500–3200), which `shell`'s weight cannot represent without blowing the 20 kg carry limit. Both are ordinary `ItemKind`s in the same `Inventory` — no parallel wallet, no `CurrencyCatalog`.
+
+- **`src/items/items.ts` / `src/items/itemCatalog.ts`** — `coin` added as a normal `ItemKind`/`ItemDef`/`ItemCatalogEntry` (`category: 'resource'`, `weight: 0.001`, `spawn: 'none'`, not holdable, no melee), plus a small procedural pickup/drop mesh. Stacks and removes through the existing generic `Inventory.add/remove/has/count` — no new Inventory API needed.
+- **`src/quests/quests.ts`** — `reward: { kind: 'coin', count: N }` added to the 4 quests the plan named (zagubiona-owca 10, drewno-na-naprawe 15, wilcza-jama 40, grozny-wilk 50), using the existing single-reward `QuestDef.reward` field and `QuestManager.completeQuest`'s existing grant path — no new callback.
+- **`src/settlement/villagePlan.ts`** — `VillagePlotRole` gained `'sale'`; `VillagePlot` gained an optional `price?: number` (only set for sale plots). No second `LandPlot` type.
+- **`src/settlement/villagePlanner.ts`** — sale plots are generated through the exact same deterministic `pickPlot`/`scorePlotCandidate` pipeline every other plot uses (`preferredRing: boundary.radius * 0.82` for an outer-village bias), 0–1 for SM/MD and 0–2 for LG/XL via an independent per-slot seeded roll (`SALE_PLOT_CHANCE`), so a settlement can land on 0. Price comes from a central `SALE_PLOT_PRICE` table by size (SM 500 / MD 1200 / LG 2500 / XL 3200), attached after `pickPlot` returns — the scorer itself stays price-agnostic. Sale plots get no `VillageBuildingPlan`/`VillageLandmarkPlan` (`buildingsAndLandmarksFromPlots` skips `role === 'sale'`) and are added to the "important" path-connection set so each gets a local path like garden/work/food plots do.
+- **`src/settlement/props.ts`** — `SettlementLandmarks.landPlots: SettlementLandPlot[]` (`{ plotId, position, rotation, price }`) is materialized straight from `plan.plots.filter(role === 'sale')` in `buildSettlementProps` — plain static data, no persistence/ownership knowledge here (mirrors how `buildSettlementProps` stays plan-only for everything else).
+- **`src/settlement/landOwnership.ts`** (new) — `LandOwnershipRegistry`, a sparse `Set<"settlementId:plotId">` — the only possible owner in v1 is the player, so no `owner` field is stored, matching the notes' "recommended persistent key" guidance.
+- **`src/settlement/landPurchase.ts`** (new) — `purchaseLandPlot()`, the one domain transaction: resolves the plot from `Settlement.landmarks.landPlots`, validates existence/not-already-owned/positive-price/sufficient coins (in that order, nothing mutated until every check passes), then removes coins and records ownership. No settlement treasury was added — `SettlementEconomy`'s `EconomicKind` (`coal/food/gold/iron/water/wood`) has no money concept, so per the plan's §12 fallback this purchase only registers on the player side, exactly as the notes recommended.
+- **`src/settlement/createSettlement.ts`** — threads an optional `isLandPlotOwned` query (same trailing-optional-param convention as `mining`/`getPlayerSocial`). Builds one "NA SPRZEDAŻ / {price} monet" signpost (reusing `createSignpost()` + the existing CSS2D label idiom) per unowned sale plot at settlement-build time — an already-owned plot never gets one, so it can't come back after stream-out/stream-in. A purchase made while the settlement stays loaded is picked up live: `settlement.update()` checks each remaining sign's ownership every frame (bounded to 0–2 plots) and tears it down immediately, mirroring the existing `placeWoodshedIfComplete()` live-world-state-to-prop pattern.
+- **`src/settlement/SettlementsManager.ts` / `src/app/worldBundle.ts`** — `isLandPlotOwned` threaded through as one more optional trailing parameter, identical shape to `mining`/`getPlayerSocial`, into every `createSettlement` call site (home + streamed-in).
+- **`src/interaction/Interactable.ts` / `src/app/interactables.ts` / `src/app/gameLoop.ts`** — new `{ kind: 'landPlot', settlementId, plotId }` `Interactable`. `buildInteractables()` takes the ownership registry and simply omits the candidate for an owned plot (rebuilt fresh every frame, so it disappears the instant a purchase resolves — no stale snapshot). `gameLoop.ts`'s `[E]` handler resolves the loaded `Settlement` by id and calls `purchaseLandPlot`, toasting the result (`cannot_afford` → "Nie stać cię na tę działkę.", `already_owned`, or success). `resolveInteraction.ts` explicitly excludes `landPlot` (same reason `item`/`campfire`/`dig`/etc. are excluded — it needs `Inventory` access that module doesn't have).
+- **`src/persistence/saveData.ts`** — bumped to v14: `ownedLandPlots: string[]` (sparse composite-key list from `LandOwnershipRegistry.toJSON()`). An absent field on any older save migrates to `[]` — no error, no reset. `src/app/createApp.ts` creates the registry from `initialSave?.ownedLandPlots`, threads `.isOwned` into `createWorldBundle`/`rebuildWorldBundle`/`createGameLoop`, includes `.toJSON()` in `buildSaveData()`, and clears it only on a genuine new-world reset (mirrors `collectedItemIds`).
+- **`docs/items/CATALOG.md`** — one row added for `coin`.
+
+### Accepted scope limits (matches existing architecture, not a shortcut)
+
+- Sale-plot placement reuses `pickPlot()` exactly as garden/market/campfire plots already do, including its existing behavior of always returning *some* position rather than signaling "no valid candidate" for non-house roles. This is the same guarantee level every other optional infra plot already has — a genuinely wider fix (making `pickPlot` return null) would be an unrelated refactor touching every existing caller, out of this plan's scope.
+- No settlement treasury (`SettlementEconomy` has no money concept to plug into — see above).
+- No house-building, no dynamic pricing, no NPC land purchases — all explicitly out of scope per the plan's §19.
+
+### Verification
+
+- **Implemented** — all of the above.
+- **Technically verified** — `npx tsc --noEmit` clean; `npm run test` 881/881 passing (new: `items/coin.test.ts`, `settlement/landPurchase.test.ts` — full purchase transaction matrix from §17.3, `settlement/villagePlanner.test.ts`'s new "sale plots" describe block — determinism, max-count-per-size, OUTPOST-never, no building/landmark leak, boundary containment — plus `persistence/saveData.test.ts`'s v14 migration/round-trip/rejection cases); `npm run build` clean (`vue-tsc` + `vite build`). `npm run lint` **not run**, per explicit instruction for this task.
+- **Browser/manual verified** — **not done**, per explicit instruction for this task. Needs the plan's own §18 scenario: find a settlement with a sale plot, check the sign's price, earn coins via one of the 4 quests, buy the plot, confirm coins deducted + sign disappears immediately, walk far enough to stream the settlement out and back in and confirm the sign stays gone / plot stays owned, save + reload and confirm ownership survives, and repeat across a couple of seeds/settlement sizes plus touch input.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

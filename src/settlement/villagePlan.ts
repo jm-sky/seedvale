@@ -54,7 +54,7 @@ export type VillageZone = {
   radius: number
 }
 
-export type VillagePlotRole = 'house' | 'work' | 'food' | 'livestock' | 'infrastructure'
+export type VillagePlotRole = 'house' | 'work' | 'food' | 'livestock' | 'infrastructure' | 'sale'
 
 export type VillagePlot = {
   id: string
@@ -68,6 +68,10 @@ export type VillagePlot = {
   /** Stable 1:1 link for house plots — same order as `FamilyDef` list. */
   familyIndex: number | null
   familyId: string | null
+  /** Coin price (plan 129) — only set for `role === 'sale'`. Deterministic,
+   *  part of the static plan; ownership is separate persistent world state
+   *  (`settlement/landOwnership.ts`), never stored here. */
+  price?: number
 }
 
 /** Domain building role — not a GLB/asset id. */

@@ -224,6 +224,7 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'Uff, dzięki. Już się bałam, że coś ją spotkało.',
+    reward: { kind: 'coin', count: 10 },
   },
   {
     id: 'drewno-na-naprawe',
@@ -237,6 +238,7 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'To starczy w zupełności. Płot znów będzie trzymał się kupy.',
+    reward: { kind: 'coin', count: 15 },
   },
   {
     id: 'grozny-wilk',
@@ -254,6 +256,7 @@ export const QUESTS: readonly QuestDef[] = [
     reportLine: 'Dzięki Tobie znowu można spokojnie wychodzić poza osadę.',
     availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
     effects: { relation: 2, exp: 20 },
+    reward: { kind: 'coin', count: 50 },
   },
   {
     id: 'wilcza-jama',
@@ -271,6 +274,7 @@ export const QUESTS: readonly QuestDef[] = [
     reportLine: 'Teraz w okolicy będzie spokojniej. Dziękuję.',
     availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
     effects: { relation: 3, exp: 30 },
+    reward: { kind: 'coin', count: 40 },
   },
 ]
 

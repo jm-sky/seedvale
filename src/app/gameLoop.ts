@@ -15,6 +15,7 @@ import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
 import type { PostProcessing } from '../render/createPostProcessing'
+import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { VillageFire } from '../settlement/VillageFire'
 import type { VueUi } from '../ui-vue/mount'
 import type { BusyOverlay } from '../ui/createBusyOverlay'
@@ -66,6 +67,7 @@ import {
   tickPlayerNeeds,
 } from '../player/PlayerNeeds'
 import { villageSizeConfig } from '../settlement/families'
+import { purchaseLandPlot } from '../settlement/landPurchase'
 import { damageHealth } from '../shared/HealthState'
 import { getHungerRatio } from '../shared/HungerState'
 import { getStaminaRatio } from '../shared/StaminaState'
@@ -175,6 +177,9 @@ export type GameLoopDeps = {
   restCamp: RestCampSequence
   inventory: Inventory
   heldTool: HeldTool
+  /** Persistent land-plot ownership (plan 129) — read by `buildInteractables`
+   *  and mutated by the `[E]` purchase handler below. */
+  landOwnership: LandOwnershipRegistry
   toast: Toast
   hud: Hud
   questManager: QuestManager
@@ -244,7 +249,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, toast, hud,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     drinkFromWaterSource, fillWaterskin, startTentRest, packTent, onInventoryChanged, setFrameTiming,
@@ -445,6 +450,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.resourceDeposits,
         player.mesh.position,
         held,
+        landOwnership,
       )
 
       // Universal melee tick (plan 123) — runs every frame regardless of
@@ -684,6 +690,22 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             const outcome = resolveInteraction(target, questManager)
             playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
             npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
+          }
+        } else if (target.kind === 'landPlot') {
+          const settlement = bundle.settlementsManager.getLoaded().find((s) => s.id === target.settlementId)
+          const result = settlement
+            ? purchaseLandPlot(settlement, target.plotId, inventory, landOwnership)
+            : 'not_found'
+          if (result === 'ok') {
+            hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+            onInventoryChanged()
+            toast.show('Działka kupiona!', 'pickup')
+          } else if (result === 'cannot_afford') {
+            toast.show('Nie stać cię na tę działkę.', 'error')
+          } else if (result === 'already_owned') {
+            toast.show('Ta działka jest już Twoja.', 'error')
+          } else {
+            toast.show('Nie można kupić tej działki.', 'error')
           }
         } else {
           const outcome = resolveInteraction(target, questManager)

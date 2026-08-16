@@ -65,6 +65,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | hide | skóra | — | — | corpse harvest byproduct (any species) | procedural | plan 134; sellable via barter (`tradeValue`) |
 | cheese | ser | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+20 hunger) |
 | dried_meat | suszone mięso | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+25 hunger); light, long-lasting |
+| coin | moneta | — | — | none (quest reward) | procedural | plan 129; near-zero weight (0.001 kg); quest reward + land-plot purchase price; separate from the shell/barter merchant economy |
 
 ## Roadmap (not done)
 

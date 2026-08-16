@@ -38,6 +38,7 @@ export type ItemKind =
   | 'hide'
   | 'cheese'
   | 'dried_meat'
+  | 'coin'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility'
 
@@ -339,6 +340,14 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     weight: 0.35,
     color: 0x6b3a2e,
     description: 'Paski suszonego mięsa. Lekkie, sycące i długo się nie psują — dobre na dłuższą wyprawę.'
+  },
+  coin: {
+    kind: 'coin',
+    label: 'moneta',
+    category: 'resource',
+    weight: 0.001,
+    color: 0xc9a227,
+    description: 'Bity krążek metalu. Przyjmowany za większe transakcje — nagrody za trudniejsze przysługi, działki na sprzedaż.'
   },
 }
 
@@ -705,6 +714,16 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
       new THREE.MeshStandardMaterial({ color: ITEM_DEFS.tent.color, flatShading: true }),
     )
     mesh.position.y = 0.07
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'coin') {
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.08, 0.015, 12),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.coin.color, flatShading: true, metalness: 0.6 }),
+    )
+    mesh.rotation.x = Math.PI / 2
+    mesh.position.y = 0.02
     mesh.castShadow = true
     return mesh
   }

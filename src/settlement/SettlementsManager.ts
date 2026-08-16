@@ -141,6 +141,9 @@ export async function createSettlementsManager(
   /** NPC ore-mining hooks over `ResourceDeposits` (plan 131) — forwarded into
    *  every `createSettlement` call the same way as `forest` above. */
   mining?: SettlementMiningHooks,
+  /** Persistent land-plot ownership query (plan 129) — forwarded into every
+   *  `createSettlement` call the same way as `mining` above. */
+  isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -204,6 +207,7 @@ export async function createSettlementsManager(
     onAnimalDeath,
     getPlayerSocial,
     mining,
+    isLandPlotOwned,
   )
 
   const entries = new Map<string, Entry>()
@@ -316,6 +320,7 @@ export async function createSettlementsManager(
         onAnimalDeath,
         getPlayerSocial,
         mining,
+        isLandPlotOwned,
       ))
       .then((settlement) => {
         const cur = entries.get(def.id)

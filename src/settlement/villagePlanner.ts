@@ -1,5 +1,5 @@
 import type { HeightSampler } from '../player/PlayerController'
-import type { FamilyDef } from './families'
+import type { FamilyDef, VillageSize } from './families'
 import type {
   VillageBoundary,
   VillageBuildingPlan,
@@ -56,6 +56,33 @@ const INFRA_PLOT_RADIUS = 2.4
 const WORK_PLOT_RADIUS = 5.5
 const FOOD_PLOT_RADIUS = 6
 const LIVESTOCK_PLOT_RADIUS = 5
+const SALE_PLOT_RADIUS = 5.5
+
+/** Plan 129 §6 — how many sale plots a settlement may generate at most,
+ *  before the independent per-slot roll below decides how many it actually
+ *  gets. Not every settlement has one. */
+const SALE_PLOT_MAX: Record<VillageSize, number> = { OUTPOST: 0, SM: 1, MD: 1, LG: 2, XL: 2 }
+
+/** Plan 129 §7 — coin price for one sale plot, by settlement size. Central
+ *  config so purchase code never branches on size; only the plot's own
+ *  `price` field matters at runtime. */
+const SALE_PLOT_PRICE: Record<VillageSize, number> = { OUTPOST: 0, SM: 500, MD: 1200, LG: 2500, XL: 3200 }
+
+/** Independent per-slot chance a settlement actually rolls a given sale-plot
+ *  slot — keeps "0–N, not every settlement" true instead of always maxing out. */
+const SALE_PLOT_CHANCE = 0.6
+
+/** Deterministic count in `[0, maxCount]` — one independent roll per slot
+ *  rather than a single all-or-nothing roll, so LG/XL can land on 0, 1 or 2. */
+function saleSlotCount(maxCount: number, seedForCell: number): number {
+  if (maxCount <= 0) return 0
+  const random = createSeededRandom(seedForCell ^ 0x5a1e5a1e)
+  let n = 0
+  for (let i = 0; i < maxCount; i++) {
+    if (random() < SALE_PLOT_CHANCE) n++
+  }
+  return n
+}
 
 export type VillageLayoutDraft = {
   boundary: VillageBoundary
@@ -860,6 +887,34 @@ export function planVillageLayout(
     )
   }
 
+  // Plan 129 — settlement sale plots. Placed through the same shared
+  // scorer/spacing pipeline as every other plot (outer-ring preference via
+  // `preferredRing`, not a second placement solver); `price` is attached
+  // after `pickPlot` returns since the scorer itself doesn't need to know it.
+  const saleCount = saleSlotCount(SALE_PLOT_MAX[identity.size] ?? 0, seedForCell)
+  const salePrice = SALE_PLOT_PRICE[identity.size] ?? 0
+  for (let i = 0; i < saleCount; i++) {
+    const plot = pickPlot(
+      {
+        id: `plot-sale-${i}`,
+        role: 'sale',
+        zone: null,
+        radius: SALE_PLOT_RADIUS,
+        familyIndex: null,
+        familyId: null,
+        preferredRing: boundary.radius * 0.82,
+      },
+      center,
+      boundary,
+      plots,
+      seedForCell,
+      sampleHeight,
+      waterLevel,
+      sizeCfg.houseSpacing,
+    )
+    plots.push({ ...plot, price: salePrice })
+  }
+
   const { buildings, landmarks } = buildingsAndLandmarksFromPlots(plots, identity)
   const { paths, entrances } = planLocalPathsAndEntrances({
     identity,
@@ -954,6 +1009,10 @@ export function buildingsAndLandmarksFromPlots(
       pushBuilding('livestock', plot, 'building-livestock-0')
       continue
     }
+
+    // Sale plots (plan 129) get no building/landmark — an empty plot with a
+    // sign, materialized directly from `plots` by `props.ts`/`createSettlement.ts`.
+    if (plot.role === 'sale') continue
 
     // infrastructure — kind from stable plot id
     if (plot.id === 'plot-infra-well') {
@@ -1196,6 +1255,7 @@ export function planLocalPathsAndEntrances(args: {
       plot.role === 'work' ||
       plot.role === 'food' ||
       plot.role === 'livestock' ||
+      plot.role === 'sale' ||
       plot.id.startsWith('plot-infra-stockpile') ||
       plot.id.startsWith('plot-infra-garden')
     if (!important) continue

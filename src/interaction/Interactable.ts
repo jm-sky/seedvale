@@ -68,3 +68,8 @@ export type Interactable =
    *  purely a quest-objective/flavor interaction, no held-tool mechanic
    *  (plan 132). `landmarkId` is the stable `EnvironmentPlacement.id`. */
   | { kind: 'landmark', position: { x: number, z: number }, promptLabel: string, landmarkId: string, envKind: LandmarkKind }
+  /** Settlement sale-plot sign (plan 129) — `[E]` attempts to purchase it.
+   *  Only carries stable references; current price/ownership is resolved
+   *  fresh every frame in `buildInteractables` (never a stale snapshot), and
+   *  again by the purchase domain operation itself at interact time. */
+  | { kind: 'landPlot', position: { x: number, z: number }, promptLabel: string, settlementId: string, plotId: string }
