@@ -198,6 +198,7 @@ function buildFauna(
     chunkManager.collidersNear,
     HOME_RADIUS,
     settlement.center,
+    settlement.id,
     seed,
     footprintRadius,
     roadSegments,

@@ -6,7 +6,7 @@ tags: [items-player, world-terrain]
 # Plan: Fauna — limity populacji i wyczerpywanie spawn pointów
 
 **Created:** 2026-08-16  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** L  
 **Depends on:** ~~110~~ ~~118~~
 
@@ -345,3 +345,25 @@ Browser/play:
 Nie uznawać planu za zweryfikowany wyłącznie na podstawie testów TypeScript/build — wizualne spalenie i zachowanie spawn pointu wymagają browser/play check.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+## Implementation summary (2026-08-16)
+
+Implemented as an extension of the existing `PreySpawner`/`createFauna`/`AnimalAgent`/interaction pipeline, per the review notes — no `SpawnPointManager`, no second death/config system.
+
+- **`src/fauna/AnimalSpawner.ts`** — `PreySpawner` gains `id` (stable, `settlementId:type`), `state: SpawnPointState` (`active`/`depleted`/`disabled`/`recovering`), `deathsThisCycle`, `disabledAtDay`. `maxPreyCount` stays the single population reference (both the pre-existing live-nearby respawn cap and the new `>50%` depletion threshold) — no parallel `SPAWN_POINT_POPULATION_LIMITS` map was added, since `SPAWNER_SPECS` in `createFauna.ts` already is that one central per-species/per-type config, and the review notes explicitly warned against introducing a second one. New pure/exported helpers: `depletionThreshold(maxPreyCount)` (`floor(limit/2)+1`, unit-tested for 2/3/4/6), `shouldDeplete()`, `tickSpawnPointRecovery()` (day-gated, `RECOVERY_DAYS = 21`, `MIN_RECOVERY_POPULATION = 2`). `updateSpawners()` now skips any non-`active` spawner before touching its timer.
+- **`src/fauna/AnimalAgent.ts`** — new optional `readonly spawnPointId?: string`, metadata only (last constructor param, so every existing call site stays source-compatible).
+- **`src/fauna/createFauna.ts`** — new required `settlementId` param (from `Settlement.id`) seeds each managed spawner's `id`. `spawnAgent()` takes an optional trailing `spawnPointId`; when present it registers `animalId → spawnerId` in a local `animalToSpawner` map before constructing the `AnimalAgent`. Every animal this factory spawns now goes through one `handleAnimalDeath` wrapper (not the raw injected `onAnimalDeath`) that consumes the map entry once, increments the owning spawner's `deathsThisCycle` while `active`, and flips it to `depleted` past the threshold — then always forwards to `onAnimalDeath` so the plan-110 quest hook is untouched. Only the cave/thicket spawner-driven respawn path passes a `spawnPointId`; ring spawns, livestock and the one-time `wolfDen` pack deliberately don't, so herd/juvenile spawns never touch a managed spawn point's population accounting (criterion 11 — currently moot, since spawner-driven respawn stays solitary) and `wolfDen` structurally can never reach `depleted` (its wolves' deaths are never counted), preserving its one-time-pack quest semantics without a `type === 'wolfDen'` special case anywhere in the lifecycle logic. `update()` gained a `worldDays` param driving a recovery scan gated to at most once per in-game day (`Math.floor(worldDays)` change), scoped only to spawners currently `disabled`/`recovering`, counting same-kind live `agents` within `SPAWNER_RADIUS` — no per-frame or `O(spawners×animals)` cost. New `destroySpawner(spawnerId, nowDays)`: `depleted → disabled`, tints the spawner's own prop mesh dark (`tintPropMaterials`, the same technique `markDangerous()` already uses) and carves a small shallow scorch depression via the existing `terrainCarving.modifyTerrain()` seam (already threaded in for the cave's own depression, plan 083) — deliberately shallower/narrower than the cave-mouth carve so it doesn't read as a second cave. Returns `false` (no mutation) if the id is unknown or the spawner isn't currently `depleted`.
+- **`src/app/worldBundle.ts`** — `buildFauna()` passes `settlement.id` through to `createFauna()`.
+- **`src/app/interactables.ts`** — spawner prompt is now state-aware (`spawnerPromptLabel()`): `depleted` → `[E] Zniszcz: <label>`, `disabled`/`recovering` → an annotated inspect prompt, everything else unchanged.
+- **`src/app/gameLoop.ts`** — new `spawner` branch in the `[E]` handler: non-`depleted` keeps the existing `resolveInteraction` + dialog flow untouched; `depleted` still resolves any bound `interact_spawner` quest objective (so a quest step can't become unreachable just because the habitat was exhausted first) but skips the dialog, then atomically consumes `SPAWNER_DESTROY_BRANCH_COST = 4` branches, calls `fauna.destroySpawner()`, and only on success places a `bundle.placedFires` `'pit'` fire at the spot (reusing the existing campfire/`VillageFire` pipeline — "duże ognisko" is the existing stone-ring pit, no new fire asset per the review notes). Branches are refunded if `destroySpawner()` unexpectedly fails (stale state), and never spent at all if the player doesn't have 4.
+- **Tests** — `src/fauna/AnimalSpawner.test.ts` (new): `depletionThreshold`/`shouldDeplete` rounding, `updateSpawners`' state gating + live-cap behaviour, `tickSpawnPointRecovery`'s day-gate/population-gate/reset/no-op-for-active-or-depleted.
+
+### Deliberate scope decision: no save persistence
+
+The implementation notes flagged persistence as an open plan gap ("should be made explicit before implementation"). The plan's own acceptance criteria and browser/play checklist never exercise reload, so — to avoid expanding an already-L-effort plan's scope on an ambiguous point — spawn-point lifecycle state (`state`/`deathsThisCycle`/`disabledAtDay`) is **not** persisted in this pass; reloading regenerates every spawner as `active` from the seed, same as before this plan. Logged in `docs/plans/LOOSE-ENDS.md` rather than silently dropped, with the concrete follow-up (a compact `SaveData` collection keyed by `PreySpawner.id`) named there.
+
+### Verification
+
+- **Implemented** — all of the above.
+- **Technically verified** — `npx tsc --noEmit` clean; `npm run test` 890/890 passing (9 new); `npm run build` clean (`vue-tsc` + `vite build`). `npm run lint` **not run**, per explicit instruction for this task.
+- **Browser/manual verified** — **not done**, per explicit instruction for this task. Needs: observe cave/thicket spawn + respawn under the existing cap; kill deer/stag past the `>50%` threshold and confirm `depleted` (no further respawn, `[E]` prompt changes to "Zniszcz"); destroy with ≥4 branches and confirm branches are spent, a lit fire pit appears, the cave/thicket prop visibly darkens, and a small ground depression appears; confirm no branches are spent with <4; skip/advance time past `RECOVERY_DAYS` with <2 nearby same-kind animals (stays `disabled`) and then with ≥2 (returns `active`, respawn resumes, counters reset); confirm `wolfDen`'s pack/quest behaviour (`isWolfDenCleared`) is unaffected and it never offers "Zniszcz".

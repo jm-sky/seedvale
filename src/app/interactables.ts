@@ -10,6 +10,7 @@ import type { PlacedFires } from '../settlement/PlacedFires'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { ResourceDeposits } from '../terrain/resourceDeposits'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
+import type { PreySpawner } from '../fauna/AnimalSpawner'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
@@ -64,6 +65,23 @@ const CAMPFIRE_LIT_PROMPT = '[E] Dołóż gałąź · [R] Upiecz mięso'
 function animalPromptLabel(kind: AnimalKind, heldTool: ToolKind | null): string {
   const label = ANIMAL_LABELS[kind]
   return isMeleeTool(heldTool) ? `Atakuj: ${label}` : `Obserwuj: ${label}`
+}
+
+/** Spawn-point prompt (plan 125 §6) — only `depleted` offers the destructive
+ *  `[E] Zniszcz` action; every other state keeps the existing inspection
+ *  prompt, just annotated so the player can tell why nothing spawns there. */
+function spawnerPromptLabel(spawner: PreySpawner): string {
+  const label = SPAWNER_LABELS[spawner.type]
+  switch (spawner.state) {
+    case 'depleted':
+      return `[E] Zniszcz: ${label}`
+    case 'disabled':
+      return `Zbadaj: ${label} (wypalone)`
+    case 'recovering':
+      return `Zbadaj: ${label} (odradza się)`
+    default:
+      return `Zbadaj: ${label}`
+  }
 }
 
 /** `bury` (shovel) and `harvest` (knife, plan 106) never overlap on the same
@@ -306,7 +324,7 @@ export function buildInteractables(
     list.push({
       kind: 'spawner',
       position: { x: spawner.x, z: spawner.z },
-      promptLabel: `Zbadaj: ${SPAWNER_LABELS[spawner.type]}`,
+      promptLabel: spawnerPromptLabel(spawner),
       spawner,
     })
   }

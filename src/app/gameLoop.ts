@@ -99,6 +99,9 @@ type Highlightable = NpcAgent | AnimalAgent
  *  worth playing at, so re-running `applyDayNight` every frame is wasted work. */
 const DAY_NIGHT_APPLY_THRESHOLD = 1 / 2000
 
+/** Branches consumed by `[E] Zniszcz` on a `depleted` spawn point (plan 125 §6). */
+const SPAWNER_DESTROY_BRANCH_COST = 4
+
 /** Wraparound-aware distance between two `timeOfDay` values (both in [0,1)). */
 function timeOfDayDelta(a: number, b: number): number {
   const diff = Math.abs(a - b) % 1
@@ -691,6 +694,33 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
             npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
           }
+        } else if (target.kind === 'spawner') {
+          if (target.spawner.state !== 'depleted') {
+            const outcome = resolveInteraction(target, questManager)
+            npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
+          } else {
+            // Still resolves any `interact_spawner` quest objective bound to
+            // this spawner type (plan 093's "wilcza jama" onward) even though
+            // `depleted` repurposes `[E]` for the destroy action below — a
+            // quest step shouldn't become unreachable just because the player
+            // exhausted the habitat first. No dialog is opened for it here.
+            resolveInteraction(target, questManager)
+            if (inventory.remove('branch', SPAWNER_DESTROY_BRANCH_COST)) {
+              if (bundle.fauna.destroySpawner(target.spawner.id, dayNight.elapsedDays)) {
+                bundle.placedFires.place(target.position.x, target.position.z, 'pit')
+                hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+                onInventoryChanged()
+                toast.show('Siedlisko zniszczone.', 'pickup')
+              } else {
+                // Spawner state changed under us between the prompt and this
+                // press (e.g. it recovered) — refund, don't silently eat branches.
+                inventory.add('branch', SPAWNER_DESTROY_BRANCH_COST)
+                toast.show('Nie można już tego zniszczyć.', 'error')
+              }
+            } else {
+              toast.show('Potrzebujesz 4 gałęzi.', 'error')
+            }
+          }
         } else if (target.kind === 'landPlot') {
           const settlement = bundle.settlementsManager.getLoaded().find((s) => s.id === target.settlementId)
           const result = settlement
@@ -903,6 +933,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           worldDt,
           player.mesh.position,
           dayNight.timeOfDay,
+          dayNight.elapsedDays,
           litFires,
           villages,
           nearbyHumanCount,

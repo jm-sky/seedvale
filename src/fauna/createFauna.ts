@@ -11,13 +11,19 @@ import {
 } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
 import { distanceToSegment } from '../math/segment'
-import { createCaveMouth, createThicket } from '../settlement/props'
+import { createCaveMouth, createThicket, tintPropMaterials } from '../settlement/props'
 import { isCoastalPlacement } from '../terrain/coastPlacement'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
 import { ANIMAL_DEFS, AnimalAgent, type AnimalKind, type AnimalLifeStage, type VillageInfo } from './AnimalAgent'
-import { type PreySpawner, updateSpawners } from './AnimalSpawner'
+import {
+  type PreySpawner,
+  SPAWNER_RADIUS,
+  shouldDeplete,
+  tickSpawnPointRecovery,
+  updateSpawners,
+} from './AnimalSpawner'
 import {
   HERD_CLUSTER_RADIUS,
   HERD_SPECIES,
@@ -40,6 +46,9 @@ export type Fauna = {
     dt: number,
     observerPos: Vector3,
     timeOfDay: number,
+    /** `dayNight.elapsedDays` — drives the low-frequency spawn-point
+     *  recovery check (plan 125 §8), at most once per in-game day. */
+    worldDays: number,
     litFires: readonly { x: number, z: number }[],
     /** Loaded settlements' centers + real footprint radii
      *  (`SettlementsManager.getLoaded()`, plan 080) — wild animals react to
@@ -66,6 +75,12 @@ export type Fauna = {
   /** Label suffix (e.g. quest `!`/`?`) for a spawner type's CSS2D label — set
    *  externally (e.g. by a QuestManager), mirrors `NpcAgent.setQuestMarker`. */
   setSpawnerMarker: (type: PreySpawner['type'], marker: string | null) => void
+  /** Player "Zniszcz" on a `depleted` spawn point (plan 125 §6) — moves it to
+   *  `disabled`, burns its prop dark and carves a small scorch depression.
+   *  Caller (`gameLoop.ts`) is responsible for consuming the 4 branches and
+   *  placing the fire; returns `false` (no state change, no branches should
+   *  be spent) if `spawnerId` isn't found or isn't currently `depleted`. */
+  destroySpawner: (spawnerId: string, nowDays: number) => boolean
 }
 
 /** Where a species prefers to spawn relative to the home settlement (plan
@@ -121,6 +136,17 @@ export const SPAWNER_RING_OFFSET: [number, number] = [25, 45]
  *  respawn-near-spawner call — that's intentionally close to its own
  *  spawner, not a new independent spawn point. */
 const MIN_SPAWN_SEPARATION = 10
+
+/** "Zniszcz" burn-site depression (plan 125 §7/§9) — a shallow, small scorch
+ *  mark, deliberately shallower/narrower than `CAVE_DEPRESSION_*` below (this
+ *  isn't a walk-in opening, just disturbed ground); the large fire + darkened
+ *  prop are the primary burnt-site read. */
+const BURN_PATCH_RADIUS = 2.5
+const BURN_PATCH_DEPTH = 0.35
+/** Tint applied to a destroyed spawn point's prop (`tintPropMaterials`, same
+ *  technique as `AnimalAgent.markDangerous()`) — dark ash/char, not the
+ *  "dangerous" red-black. */
+const BURNED_SPAWNER_TINT_HEX = 0x241d17
 
 /** Cave depression carve (plan 083) — a real terrain pit under the rock
  *  ring, replacing the old flat dark prop disc. Sized for a walk-in opening,
@@ -266,6 +292,10 @@ export async function createFauna(
   collidersNear: ColliderSource,
   homeRadius: number,
   settlementCenter: Vector3,
+  /** Stable settlement id (`Settlement.id`) — seeds each managed spawn
+   *  point's deterministic `PreySpawner.id` (plan 125 §5), independent of
+   *  runtime spawn order/rebuilds. */
+  settlementId: string,
   seed: number,
   footprintRadius: number,
   roadSegments: readonly RoadCorridorSegment[] = [],
@@ -290,6 +320,39 @@ export async function createFauna(
   const denWolfAnimalIds = new Set<string>()
   const templates = await loadFaunaTemplates()
   const spawnerMeshes: Object3D[] = []
+  /** Managed spawn-point lifecycle state (plan 125), keyed by the stable
+   *  `PreySpawner.id` — same objects also live in the `spawners` array below;
+   *  this map exists purely for O(1) lookup from `destroySpawner()`/death
+   *  accounting instead of a linear scan. */
+  const spawnerById = new Map<string, PreySpawner>()
+  /** A managed spawn point's prop mesh, keyed by `PreySpawner.id` — lets
+   *  `destroySpawner()` tint the right prop without relying on array-index
+   *  correlation with `spawnerMeshes`. */
+  const spawnerMeshById = new Map<string, Object3D>()
+  /** `animalId -> PreySpawner.id` for animals currently alive and generated
+   *  by a managed spawn point (plan 125 §4/§5) — populated by `spawnAgent`
+   *  when given a `spawnPointId`, consumed (and removed) exactly once by
+   *  `handleAnimalDeath` so one animal can never be counted twice. */
+  const animalToSpawner = new Map<string, string>()
+
+  /** Wraps the injected `onAnimalDeath` (quest hook, plan 110) with local
+   *  spawn-point death accounting (plan 125 §4) — every animal this factory
+   *  spawns uses this as its `onDeath`, whether or not it carries a
+   *  `spawnPointId`. Cause-independent (player, predator, life-need
+   *  starvation): `AnimalAgent.collapse()` is the single call site regardless
+   *  of what triggered it. */
+  const handleAnimalDeath = (animalId: string): void => {
+    const spawnerId = animalToSpawner.get(animalId)
+    if (spawnerId) {
+      animalToSpawner.delete(animalId)
+      const spawner = spawnerById.get(spawnerId)
+      if (spawner && spawner.state === 'active') {
+        spawner.deathsThisCycle++
+        if (shouldDeplete(spawner.deathsThisCycle, spawner.maxPreyCount)) spawner.state = 'depleted'
+      }
+    }
+    onAnimalDeath?.(animalId)
+  }
 
   const onRoad = (x: number, z: number): boolean => {
     for (const seg of roadSegments) {
@@ -376,6 +439,10 @@ export async function createFauna(
     herdId?: string,
     lifeStage?: AnimalLifeStage,
     motherId?: string,
+    /** Managed spawn point this animal belongs to (plan 125 §5) — only
+     *  passed by spawner-driven creation (initial placement + respawn) below,
+     *  never by ring spawns/livestock/the one-time `wolfDen` pack. */
+    spawnPointId?: string,
   ): AnimalAgent => {
     const tpl = templates[kind]
     let visual: Object3D | undefined
@@ -387,6 +454,7 @@ export async function createFauna(
       visual = PROCEDURAL_FALLBACKS[kind]?.()
     }
     const animalId = `${kind}-${nextAnimalId++}`
+    if (spawnPointId) animalToSpawner.set(animalId, spawnPointId)
     return new AnimalAgent(
       ANIMAL_DEFS[kind],
       animalId,
@@ -400,10 +468,12 @@ export async function createFauna(
       undefined,
       sampleForestFactor,
       undefined,
-      onAnimalDeath,
+      handleAnimalDeath,
       herdId,
       lifeStage,
       motherId,
+      undefined,
+      spawnPointId,
     )
   }
 
@@ -533,7 +603,17 @@ export async function createFauna(
         )
     if (!pos) continue
     placedSpawnPoints.push(pos)
-    spawners.push({ ...pos, ...spec, timeSinceLastRespawn: 0 })
+    const spawner: PreySpawner = {
+      ...pos,
+      ...spec,
+      id: `${settlementId}:${spec.type}`,
+      timeSinceLastRespawn: 0,
+      state: 'active',
+      deathsThisCycle: 0,
+      disabledAtDay: null,
+    }
+    spawners.push(spawner)
+    spawnerById.set(spawner.id, spawner)
 
     const groundY = sampleHeight(pos.x, pos.z)
     if (spec.type === 'cave') {
@@ -552,12 +632,14 @@ export async function createFauna(
       mouth.rotation.y = slope.drop >= CAVE_MIN_SLOPE_DROP ? slope.yaw : facingVillage
       scene.add(mouth)
       spawnerMeshes.push(mouth)
+      spawnerMeshById.set(spawner.id, mouth)
     } else if (spec.type === 'thicket') {
       const thicket = createThicket(1, random())
       thicket.position.set(pos.x, groundY, pos.z)
       thicket.rotation.y = random() * Math.PI * 2
       scene.add(thicket)
       spawnerMeshes.push(thicket)
+      spawnerMeshById.set(spawner.id, thicket)
     } else if (spec.type === 'wolfDen') {
       // Reuses the cave-mouth prop (no dedicated den asset yet — plan 093
       // Etap E keeps this deliberately simple; a real `CaveVolume` (plan 104)
@@ -595,8 +677,14 @@ export async function createFauna(
     spawnerLabels.push({ type: spec.type, object: label, el, marker: null, lastOpacity: -1 })
   }
 
+  /** Last in-game day (floored) recovery was checked — guards the
+   *  `disabled`/`recovering` scan below to at most once per in-game day
+   *  (plan 125 §9), not per frame. `-1` so the first `update()` call always
+   *  runs it once regardless of the starting `worldDays`. */
+  let lastRecoveryCheckDay = -1
+
   return {
-    update(dt, observerPos, timeOfDay, litFires, villages, nearbyHumanCount = 1, onHumanHit, playerStealth) {
+    update(dt, observerPos, timeOfDay, worldDays, litFires, villages, nearbyHumanCount = 1, onHumanHit, playerStealth) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       for (const a of agents) {
         const forestFactor = sampleForestFactor(a.mesh.position.x, a.mesh.position.z)
@@ -631,11 +719,30 @@ export async function createFauna(
           .map((a) => ({ kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z })),
         (spawner) => {
           const pos = findWalkableNear(spawner.x, spawner.z, 0, 4) ?? spawner
-          const agent = spawnAgent(spawner.kind, pos.x, pos.z)
+          const agent = spawnAgent(spawner.kind, pos.x, pos.z, undefined, undefined, undefined, spawner.id)
           scene.add(agent.mesh)
           agents.push(agent)
         },
       )
+
+      // Recovery check (plan 125 §8) — at most once per in-game day, and
+      // only for spawners actually waiting on it (`disabled`/`recovering`);
+      // `tickSpawnPointRecovery` itself no-ops for every other state. Nearby
+      // same-kind count reuses `agents` (already iterated above), scoped to
+      // `SPAWNER_RADIUS` — no independent per-frame scan.
+      const dayIndex = Math.floor(worldDays)
+      if (dayIndex !== lastRecoveryCheckDay) {
+        lastRecoveryCheckDay = dayIndex
+        for (const spawner of spawners) {
+          if (spawner.state !== 'disabled' && spawner.state !== 'recovering') continue
+          let nearby = 0
+          for (const a of agents) {
+            if (a.isDead() || a.def.kind !== spawner.kind) continue
+            if (Math.hypot(a.mesh.position.x - spawner.x, a.mesh.position.z - spawner.z) < SPAWNER_RADIUS) nearby++
+          }
+          tickSpawnPointRecovery(spawner, worldDays, nearby)
+        }
+      }
 
       for (const entry of spawnerLabels) {
         const opacity = labelOpacityForDistance(entry.object.position.distanceTo(observerPos))
@@ -675,6 +782,16 @@ export async function createFauna(
           ? `${SPAWNER_LABELS[type]} · ${marker}`
           : SPAWNER_LABELS[type]
       }
+    },
+    destroySpawner(spawnerId, nowDays) {
+      const spawner = spawnerById.get(spawnerId)
+      if (!spawner || spawner.state !== 'depleted') return false
+      spawner.state = 'disabled'
+      spawner.disabledAtDay = nowDays
+      const mesh = spawnerMeshById.get(spawnerId)
+      if (mesh) tintPropMaterials(mesh, BURNED_SPAWNER_TINT_HEX)
+      terrainCarving?.modifyTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH)
+      return true
     },
   }
 }
