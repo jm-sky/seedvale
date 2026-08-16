@@ -30,11 +30,21 @@ export type ChunkMeshResult = {
  *  `detailNormal` go through `onTerrainChange` → full world rebuild (see
  *  `createApp.ts`), which recreates the `ChunkManager` and this material with
  *  it — so it never needs to be mutated in place. */
+/** Shared, mutable weather-surface uniform pair — one `THREE.Uniform`-shaped
+ *  object per value, referenced (not copied) by every compiled instance of
+ *  the shared terrain program so `ChunkManager.setWeatherSurface()` can
+ *  update `.value` in place without touching per-chunk geometry or
+ *  triggering a recompile (plan 133). */
+export type TerrainWeatherUniforms = {
+  uWetness: { value: number }
+  uSnowAmount: { value: number }
+}
+
 export function createTerrainMaterial(
   flatShading: boolean,
   detailNormal: DetailNormalConfig,
   waterLevel: number,
-): THREE.MeshStandardMaterial {
+): THREE.MeshStandardMaterial & { weatherUniforms: TerrainWeatherUniforms } {
   // Surface grain, not a substitute for real geometry (plan 044 §4.5, "teren
   // wygląda płasko"). Strength/tiling are GUI knobs — do not hardcode a "cut"
   // here again; see issue 014 for why the last four attempts to tune it in
@@ -51,9 +61,14 @@ export function createTerrainMaterial(
           normalScale: new THREE.Vector2(detailNormal.strength, detailNormal.strength),
         }
       : {}),
-  })
+  }) as THREE.MeshStandardMaterial & { weatherUniforms: TerrainWeatherUniforms }
+  const weatherUniforms: TerrainWeatherUniforms = {
+    uWetness: { value: 0 },
+    uSnowAmount: { value: 0 },
+  }
+  material.weatherUniforms = weatherUniforms
   // Macro color/roughness always; dual-tile normals + distance fade when enabled.
-  applyTerrainSurfaceShader(material, detailOn ? detailNormal : null, waterLevel)
+  applyTerrainSurfaceShader(material, detailOn ? detailNormal : null, waterLevel, weatherUniforms)
   return material
 }
 
@@ -167,6 +182,63 @@ const WET_SAND_CHUNK = /* glsl */ `
   }
 `
 
+/** Plan 133 — deterministic, weather-derived surface visuals (wet ground,
+ *  puddles, snow cover). `uWetness`/`uSnowAmount` are the only new uniforms;
+ *  everything else reuses `vWorldPos`, `vBareGround` and `terrainValueNoise`
+ *  already injected above. `vSlopeUp` is the cheapest available flatness
+ *  signal: the terrain mesh only ever translates (no rotation/scale), so the
+ *  vertex-shader `objectNormal` is already world-space — its `.y` component
+ *  is `cos(slope angle)` with zero extra per-vertex cost beyond the varying
+ *  itself, no new attribute needed. */
+const WEATHER_SURFACE_COLOR_CHUNK = /* glsl */ `
+  float wetGroundAmt = 0.0;
+  float puddleAmt = 0.0;
+  float snowCoverAmt = 0.0;
+  {
+    float aboveWater = smoothstep( uWaterLevel, uWaterLevel + 0.3, vWorldPos.y );
+    float flatUp = clamp( vSlopeUp, 0.0, 1.0 );
+
+    // Broad darkening — dirt/roads read wetter than grass.
+    wetGroundAmt = uWetness * mix( 0.28, 0.82, vBareGround ) * aboveWater;
+
+    // Puddles: low-frequency irregular patches, gated to flat, bare-ish,
+    // above-water ground; threshold tightens as wetness rises so coverage
+    // grows with it instead of popping in at full extent.
+    float puddleNoise = terrainValueNoise( vWorldPos.xz * 0.02 ) * 0.6
+      + terrainValueNoise( vWorldPos.xz * 0.05 ) * 0.4;
+    float puddleThreshold = mix( 0.88, 0.42, uWetness );
+    float puddleShape = smoothstep( puddleThreshold, puddleThreshold + 0.12, puddleNoise );
+    float puddleFlat = smoothstep( 0.72, 0.95, flatUp );
+    float puddleBare = mix( 0.08, 1.0, smoothstep( 0.15, 0.75, vBareGround ) );
+    puddleAmt = puddleShape * puddleFlat * puddleBare * aboveWater * uWetness;
+
+    // Snow cover: brighter blend favoring flat ground, subtle noise breakup
+    // so edges don't read as a hard fill line.
+    float snowNoise = terrainValueNoise( vWorldPos.xz * 0.03 ) * 0.5 + 0.5;
+    float snowFlat = smoothstep( 0.5, 0.9, flatUp );
+    snowCoverAmt = clamp(
+      uSnowAmount * mix( 0.5, 1.0, snowFlat ) * mix( 0.7, 1.05, snowNoise ),
+      0.0, 1.0
+    );
+  }
+  diffuseColor.rgb *= 1.0 - wetGroundAmt * 0.32;
+  diffuseColor.rgb *= 1.0 - puddleAmt * 0.4;
+  diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.90, 0.94, 0.98 ), snowCoverAmt );
+`
+
+/** Wet ground lowers roughness a little; puddles more so (still nowhere near
+ *  a mirror — plan 133 explicitly avoids a reflection pass); snow reads
+ *  slightly rougher (fresh snow, not ice). Reuses `wetGroundAmt`/`puddleAmt`/
+ *  `snowCoverAmt` computed above — same fragment-shader function body, so
+ *  the un-braced `float` declarations in the color chunk are still in scope
+ *  here even though three.js splices this in at a separate `#include`. */
+const WEATHER_SURFACE_ROUGHNESS_CHUNK = /* glsl */ `
+  roughnessFactor = clamp(
+    roughnessFactor - wetGroundAmt * 0.18 - puddleAmt * 0.28 + snowCoverAmt * 0.05,
+    0.05, 1.0
+  );
+`
+
 let warnedMissingInclude = false
 
 /**
@@ -183,10 +255,16 @@ function applyTerrainSurfaceShader(
   material: THREE.MeshStandardMaterial,
   detailNormal: DetailNormalConfig | null,
   waterLevel: number,
+  weatherUniforms: TerrainWeatherUniforms,
 ): void {
   const detailOn = detailNormal !== null
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uWaterLevel = { value: waterLevel }
+    // Referenced, not copied — `ChunkManager.setWeatherSurface()` mutates
+    // `weatherUniforms.uWetness.value` directly, so this stays live without
+    // needing to re-fetch the compiled shader later (plan 133).
+    shader.uniforms.uWetness = weatherUniforms.uWetness
+    shader.uniforms.uSnowAmount = weatherUniforms.uSnowAmount
     if (detailOn) {
       shader.uniforms.uDetailTilesGrass = { value: detailNormal.tilesGrass }
       shader.uniforms.uDetailTilesBare = { value: detailNormal.tilesBare }
@@ -195,11 +273,18 @@ function applyTerrainSurfaceShader(
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
-        '#include <common>\nattribute float aBareGround;\nvarying float vBareGround;\nvarying vec3 vWorldPos;',
+        '#include <common>\nattribute float aBareGround;\nvarying float vBareGround;\nvarying vec3 vWorldPos;\nvarying float vSlopeUp;',
       )
       .replace(
         '#include <begin_vertex>',
         '#include <begin_vertex>\nvBareGround = aBareGround;',
+      )
+      .replace(
+        '#include <beginnormal_vertex>',
+        // Terrain chunks only ever translate (see `buildChunkGeometry()`
+        // below — no rotation/scale), so `objectNormal` is already
+        // world-space here; its .y is the cheapest available flatness signal.
+        '#include <beginnormal_vertex>\nvSlopeUp = objectNormal.y;',
       )
       .replace(
         '#include <worldpos_vertex>',
@@ -212,7 +297,10 @@ function applyTerrainSurfaceShader(
         `#include <common>
 varying float vBareGround;
 varying vec3 vWorldPos;
+varying float vSlopeUp;
 uniform float uWaterLevel;
+uniform float uWetness;
+uniform float uSnowAmount;
 ${MACRO_NOISE_FUNCS}${
           detailOn
             ? '\nuniform float uDetailTilesGrass;\nuniform float uDetailTilesBare;'
@@ -221,11 +309,11 @@ ${MACRO_NOISE_FUNCS}${
       )
       .replace(
         COLOR_FRAGMENT_INCLUDE,
-        `${COLOR_FRAGMENT_INCLUDE}\n${MACRO_COLOR_CHUNK}\n${WET_SAND_CHUNK}`,
+        `${COLOR_FRAGMENT_INCLUDE}\n${MACRO_COLOR_CHUNK}\n${WET_SAND_CHUNK}\n${WEATHER_SURFACE_COLOR_CHUNK}`,
       )
       .replace(
         ROUGHNESSMAP_FRAGMENT_INCLUDE,
-        `${ROUGHNESSMAP_FRAGMENT_INCLUDE}\n${MACRO_ROUGHNESS_CHUNK}`,
+        `${ROUGHNESSMAP_FRAGMENT_INCLUDE}\n${MACRO_ROUGHNESS_CHUNK}\n${WEATHER_SURFACE_ROUGHNESS_CHUNK}`,
       )
 
     if (detailOn) {
@@ -246,9 +334,10 @@ ${MACRO_NOISE_FUNCS}${
   }
   // Every chunk injects identical code for a given detail mode, so they can
   // share one compiled program — but three's default cache key ignores
-  // `onBeforeCompile`, so say so explicitly.
+  // `onBeforeCompile`, so say so explicitly. Bumped to v5 for plan 133's
+  // added uniforms/varyings/chunks so three never reuses a v4 program.
   material.customProgramCacheKey = () =>
-    detailOn ? 'chunk-terrain-surface-detail-v4' : 'chunk-terrain-surface-v4'
+    detailOn ? 'chunk-terrain-surface-detail-v5' : 'chunk-terrain-surface-v5'
 }
 
 /** Where the surface reads as packed dirt/sand rather than vegetated ground:

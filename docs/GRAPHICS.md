@@ -4,7 +4,7 @@
 
 **Nie jest:** listą assetów ([assets/](./assets/README.md)), stanem implementacji ([STATE.md](./STATE.md)), domeną wody ([WATER.md](./WATER.md)), ani planem ([plans/](./plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
 
-**Last updated:** 2026-08-15
+**Last updated:** 2026-08-16
 
 Domena wody (stan, historia, kolejność poprawek): [WATER.md](./WATER.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
 
@@ -56,6 +56,15 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-08-16 — Weather surface effects: wet ground, puddles, snow cover (plan 133) 🔧
+
+- `terrain/buildChunkGeometry.ts`'s single shared terrain `MeshStandardMaterial` gets two new shared uniforms, `uWetness`/`uSnowAmount` — no per-chunk material, no new mesh/decal for puddles, no chunk-geometry rebuild on weather change (`ChunkManager.setWeatherSurface`, same shape as `setWaterDayNight`/`setGrassDayNight`).
+- Both uniforms are pure derived values from `world/weather.ts`'s new `computeSurfaceWeather(seed, elapsedDays)` — a bounded (~12-cycle-lookback) forward simulation over the existing deterministic `computeWeather()`, not a second weather/simulation system and not a new save field.
+- New varying `vSlopeUp = objectNormal.y` for flatness masking: terrain chunks only ever translate (no rotation/scale), so the vertex-shader object-space normal is already world-space — zero-cost, no new per-vertex attribute needed. Puddle/snow breakup reuse the existing `terrainValueNoise()` (low-frequency, no new texture).
+- `customProgramCacheKey()` bumped `v4` → `v5` so three.js can't reuse a pre-plan-133 compiled program.
+- Known gap: desert/beach aren't separately suppressed from road/dirt puddle response — `vBareGround` folds all three into one scalar; adding a split would need a new per-vertex attribute, out of scope. See [plan 133 implementation notes](./plans/2026-08-16--133--weather-surface-effects-implementation-notes.md).
+- Not verified: browser/perf check (fragment cost clear vs rain vs snow, visual read on slopes/roads/beach/desert).
 
 ### 2026-08-15 — Czarny świat 3D na mobile (issue 032) 🔧
 

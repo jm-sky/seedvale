@@ -301,6 +301,10 @@ export type ChunkManager = {
   setWaterReflections: (enabled: boolean) => void
   tickGrass: (dt: number) => void
   setGrassDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void
+  /** Updates the shared terrain material's weather-surface uniforms in
+   *  place (plan 133) — a couple of `.value` writes, not a per-chunk update;
+   *  every loaded (and later-loaded) chunk shares this one material. */
+  setWeatherSurface: (wetness: number, snowAmount: number) => void
   sampleHeight: HeightSampler
   sampleFloor: HeightSampler
   sampleBiome: (x: number, z: number) => number
@@ -1474,6 +1478,10 @@ export function createChunkManager(
     },
     setGrassDayNight(dayFactor, sunDirection) {
       grassSystem.setDayNight(dayFactor, sunDirection)
+    },
+    setWeatherSurface(wetness, snowAmount) {
+      terrainMaterial.weatherUniforms.uWetness.value = wetness
+      terrainMaterial.weatherUniforms.uSnowAmount.value = snowAmount
     },
     sampleHeight: (x, z) => readField('heights', x, z),
     sampleFloor: (x, z) => readField('floorHeights', x, z),

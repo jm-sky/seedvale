@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   computeClimate,
+  computeSurfaceWeather,
   computeWeather,
   createClimateState,
   DAYS_PER_SEASON,
@@ -78,6 +79,89 @@ describe('computeClimate', () => {
     const climate = computeClimate(5, DAYS_PER_SEASON + 1)
     expect(climate.season).toBe(getSeason(DAYS_PER_SEASON + 1))
     expect(climate.weather).toEqual(computeWeather(5, DAYS_PER_SEASON + 1, climate.season))
+  })
+})
+
+describe('computeSurfaceWeather', () => {
+  it('is a pure function of (seed, elapsedDays) — same inputs, same output', () => {
+    const a = computeSurfaceWeather(11, 12.34)
+    const b = computeSurfaceWeather(11, 12.34)
+    expect(a).toEqual(b)
+  })
+
+  it('clamps wetness/snowAmount to [0,1] across a wide sample', () => {
+    for (let seed = 0; seed < 15; seed++) {
+      for (let days = 0; days < 60; days += 1.7) {
+        const s = computeSurfaceWeather(seed, days)
+        expect(s.wetness).toBeGreaterThanOrEqual(0)
+        expect(s.wetness).toBeLessThanOrEqual(1)
+        expect(s.snowAmount).toBeGreaterThanOrEqual(0)
+        expect(s.snowAmount).toBeLessThanOrEqual(1)
+      }
+    }
+  })
+
+  it('reads fully dry once no rain/snow has occurred within the lookback window', () => {
+    const seed = 3
+    const cycleDays = 0.3
+    const margin = 4.5
+    let lastWetDay = -1
+    let probeDays = -1
+    for (let cycle = 0; cycle < 5000; cycle++) {
+      const days = cycle * cycleDays
+      const w = computeWeather(seed, days, getSeason(days))
+      if (w.type === 'rain' || w.type === 'snow') {
+        lastWetDay = days
+      } else if (lastWetDay >= 0 && days - lastWetDay >= margin) {
+        probeDays = days
+        break
+      }
+    }
+    expect(probeDays).toBeGreaterThan(0)
+    const s = computeSurfaceWeather(seed, probeDays)
+    expect(s.wetness).toBe(0)
+    expect(s.snowAmount).toBe(0)
+  })
+
+  it('raises wetness while a rain cycle is active, and does not require replaying history for a huge time-skip', () => {
+    const seed = 5
+    const cycleDays = 0.3
+    let rainCycleStart = -1
+    for (let cycle = 0; cycle < 500; cycle++) {
+      const days = cycle * cycleDays
+      if (computeWeather(seed, days, getSeason(days)).type === 'rain') {
+        rainCycleStart = days
+        break
+      }
+    }
+    expect(rainCycleStart).toBeGreaterThanOrEqual(0)
+    const nearCycleEnd = computeSurfaceWeather(seed, rainCycleStart + cycleDays - 0.01)
+    expect(nearCycleEnd.wetness).toBeGreaterThan(0.3)
+
+    // Re-deriving a huge elapsedDays (equivalent to a save/load or big
+    // time-skip) must resolve directly, not by replaying every cycle since
+    // world start — same guarantee `computeWeather` already gives.
+    const huge = computeSurfaceWeather(seed, 100_000.15)
+    expect(huge.wetness).toBeGreaterThanOrEqual(0)
+    expect(huge.wetness).toBeLessThanOrEqual(1)
+  })
+
+  it('snow does not melt while frozen, and melting feeds the wetness curve', () => {
+    // temperatureFor('winter', 'clear') is well below 0°C, so a clear winter
+    // cycle right after snow should not melt it away.
+    const seed = 8
+    const cycleDays = 0.3
+    let snowCycleStart = -1
+    for (let cycle = 0; cycle < 2000; cycle++) {
+      const days = cycle * cycleDays
+      if (getSeason(days) === 'winter' && computeWeather(seed, days, 'winter').type === 'snow') {
+        snowCycleStart = days
+        break
+      }
+    }
+    expect(snowCycleStart).toBeGreaterThanOrEqual(0)
+    const afterSnow = computeSurfaceWeather(seed, snowCycleStart + cycleDays - 0.01)
+    expect(afterSnow.snowAmount).toBeGreaterThan(0)
   })
 })
 

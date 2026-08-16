@@ -43,6 +43,7 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-14--105--ui-ux-review.md` | Audyt UI/UX ✅ ([review 007](../reviews/2026-08-14--007--ui-ux.md)); H1+H2(2/3)+ekran Character zaimplementowane, bez weryfikacji w przeglądarce (§11); H2.1/H3/H4 otwarte | 🟡 | L | ~~046~~ ~~005~~ ~~023~~ |
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059); Etap A–G (relation levels, availability, effects, `animalId`, questy "groźny wilk" + "wilcza jama" + "zagubiona owca" + "drewno na naprawę" end-to-end, livestock `ownerHouseId`) zaimplementowane i przetestowane; lifecycle/identity gaps (event śmierci, `failed`/`invalidated`, dangerous wolf, `landmarkId`) domknięte przez plan 110; bez weryfikacji w przeglądarce; Etap H (drzewa/kopanie) i bandyci otwarte | 🔴 | XL | ~~015~~ ~~018~~ |
 | `2026-08-08--040--seasons-weather.md` | Pory roku i pogoda — deterministyczny sezon/pogoda jako czysta funkcja `(seed, elapsedDays)` (`world/weather.ts`, bez pola w save), zintegrowany z day/night + fog (`weatherVisuals.ts`) i renderingiem (`weatherParticles.ts` — od 2026-08-15 GPU `ShaderMaterial`/`Points`, domyka odejście od CPU stopgapu), `audio/weatherSounds.ts`; techniczna weryfikacja zielona, bez testu w przeglądarce i bez benchmarku wydajności (patrz [implementation notes](./2026-08-08--040--seasons-weather-implementation-notes.md)) | 🟡 | L | ~~003~~ ~~028~~ |
+| `2026-08-16--133--weather-surface-effects.md` | Wet ground + puddles + snow cover jako czysta pochodna deterministycznego `(seed, elapsedDays)` weather (`weather.ts`'s `computeSurfaceWeather`), rozszerza istniejący współdzielony terrain shader (`buildChunkGeometry.ts` — `uWetness`/`uSnowAmount` uniformy, `vSlopeUp`), 0 nowych draw calli/meshy/per-chunk state; techniczna weryfikacja zielona, bez testu w przeglądarce (patrz [implementation notes](./2026-08-16--133--weather-surface-effects-implementation-notes.md)) | 🟡 | M | — |
 
 ---
 
@@ -58,7 +59,6 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-16--129--coins-and-land-sales.md` | Monety jako pierwsza fizyczna waluta + sprzedaż działek; wstępny | 🔴 | L | ~~093~~ |
 | `2026-08-16--131--natural-resource-gathering.md` | Zbieractwo naturalnych zasobów, rozszerza istniejącą ekonomię osady; wstępny | 🟡 | M | ~~032~~ |
 | `2026-08-16--132--landmark-quests.md` | Questy powiązane z landmarkami (monolith/stoneCircle/smallRuins/cemetery); wstępny | 🟡 | M | ~~049~~ ~~093~~ ~~110~~ |
-| `2026-08-16--133--weather-surface-effects.md` | Wet ground + snow cover jako czysta pochodna deterministycznego `(seed, elapsedDays)` weather, rozszerza istniejący współdzielony terrain shader (`vWorldPos`/`vBareGround`) zamiast nowego systemu/materiału/tekstury; review zrobiony ([implementation notes](./2026-08-16--133--weather-surface-effects-implementation-notes.md)), feature nie zaimplementowana | 🟡 | M | — |
 
 ---
 

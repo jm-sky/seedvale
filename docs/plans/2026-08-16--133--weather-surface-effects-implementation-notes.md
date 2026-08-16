@@ -339,4 +339,27 @@ Performance verification should use the existing performance/debug workflow. Do 
 
 Proceed with the existing architecture, but keep plan 133 explicitly as a **shared terrain-shader visual effect driven by deterministic weather-derived uniforms**. The feature should add no persistent state, no per-chunk updates, no geometry rebuilds, no puddle/snow objects and no new rendering pass. The main implementation risk is unnecessary fragment-shader complexity; the main architectural risk is accidentally turning deterministic weather history into mutable surface state.
 
+## Implementation summary (2026-08-16)
+
+Implemented as reviewed above, no architectural deviation from the plan.
+
+- **`src/world/weather.ts`** — `computeSurfaceWeather(seed, elapsedDays)`: pure, bounded (`SURFACE_SIM_WINDOW_DAYS` ≈ 3.6 days / ~12 weather cycles) forward simulation over `computeWeather()`'s own deterministic per-cycle results. Rain raises `wetness` toward an intensity-scaled target over `WETNESS_RISE_DAYS`; anything else decays it over `WETNESS_DRY_WINDOW_DAYS`. Snow accumulates over `SNOW_ACCUMULATE_WINDOW_DAYS` while it keeps snowing, otherwise melts over `SNOW_MELT_WINDOW_DAYS` at a rate gated by `WeatherState.temperature` (frozen ⇒ no melt), feeding melted amount back into `wetness` so `snow → melting → wet ground` is one continuous curve, not a hand-off between states. No new save field, no runtime history — a huge `elapsedDays` jump (time-skip/reload) resolves in the same bounded number of steps as a small one.
+- **`src/terrain/buildChunkGeometry.ts`** — two new shared uniforms (`uWetness`, `uSnowAmount`) on the existing single terrain `MeshStandardMaterial`, held in a `TerrainWeatherUniforms` object referenced (not copied) by the compiled shader so updates are in-place `.value` writes, no recompile. New varying `vSlopeUp = objectNormal.y` (terrain chunks only translate, never rotate/scale, so object-space normal is already world-space — zero-cost flatness signal, no new per-vertex attribute). New fragment chunks `WEATHER_SURFACE_COLOR_CHUNK`/`WEATHER_SURFACE_ROUGHNESS_CHUNK` spliced into the existing `color_fragment`/`roughnessmap_fragment` injection points, reusing `terrainValueNoise()` (two low-frequency evaluations for puddle breakup, one for snow breakup) and `vBareGround` for surface-class weighting. `customProgramCacheKey()` bumped `v4` → `v5`.
+- **`src/terrain/chunkManager.ts`** — `ChunkManager.setWeatherSurface(wetness, snowAmount)`, same shape as `setWaterDayNight`/`setGrassDayNight`: writes the two shared uniforms, touches no per-chunk state.
+- **`src/app/gameLoop.ts`** — calls `computeSurfaceWeather` + `chunkManager.setWeatherSurface` once per unpaused frame, right after `tickClimate`. Recomputing every frame (not just at weather-cycle boundaries) is what gives the rise/dry curves their smoothness; the derivation itself is a bounded ~12-iteration loop of scalar arithmetic, no allocations, so this stays cheap.
+
+### Known simplifications vs. the review notes
+
+- **Desert puddle suppression** — the review asked for explicit desert exclusion/modulation on top of `vBareGround`. The shader has no separate desert signal today (`aBareGround` folds road/sand/desert into one scalar in `buildChunkGeometry()`); adding one would mean a new per-vertex attribute, which the plan explicitly avoids ("nie tworzyć osobnej... encoding"; review item 4 also warns against a second surface-type attribute). Left as-is: desert gets the same bare-ground puddle/wetness response as roads/dirt. Flagged here rather than silently implemented as "desert handled" — a candidate follow-up if it reads wrong in browser verification.
+- **Beach-specific "wet sand, not puddles"** — same limitation; beaches share `vBareGround` with roads/desert, so they get the same puddle mask (softened by the pre-existing `WET_SAND_CHUNK` waterline darkening, but not otherwise distinguished).
+- Wetness reacts to `rain` only (not `cloudy`/`fog`); `snow` feeds wetness only through melt. This was one of the plan's open decisions (§ "Otwarte decyzje" #1) — resolved this way for a clean rain-vs-not-rain visual signal.
+
+### Verification done
+
+- `npx tsc --noEmit` — clean.
+- `npm run test` — 850/850 passing, including new `computeSurfaceWeather` coverage in `src/world/weather.test.ts` (determinism, `[0,1]` clamping, dry-after-lookback-window, rise during an active rain cycle, huge-time-skip doesn't require replay, no-melt-while-frozen).
+- `npm run build` — clean.
+- `npm run lint` — **not run**, per explicit instruction for this task.
+- Browser/manual/performance verification — **not done**, per explicit instruction for this task (user verifies manually via the existing weather debug override).
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

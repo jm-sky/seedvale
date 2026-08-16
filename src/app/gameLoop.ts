@@ -74,7 +74,7 @@ import { getVigorRatio } from '../shared/VigorState'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
 import { createWaterSource } from '../world/WaterSource'
-import { tickClimate } from '../world/weather'
+import { computeSurfaceWeather, tickClimate } from '../world/weather'
 import { applyWeatherOverlay } from '../world/weatherVisuals'
 import {
   buildCombatTarget,
@@ -754,6 +754,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // hash when `elapsedDays` crosses into a new weather cycle (plan §17);
       // `season`/`seasonProgress` are trivial arithmetic recomputed every call.
       tickClimate(climate, getSeed(), dayNight.elapsedDays)
+      // Pure + bounded (plan 133 — `computeSurfaceWeather`'s lookback is a
+      // fixed cycle count, not proportional to `elapsedDays`), so this is
+      // cheap enough to re-derive every frame for a smooth rise/dry curve
+      // rather than only at weather-cycle boundaries. Two shared uniform
+      // writes, no per-chunk work.
+      const surfaceWeather = computeSurfaceWeather(getSeed(), dayNight.elapsedDays)
+      bundle.chunkManager.setWeatherSurface(surfaceWeather.wetness, surfaceWeather.snowAmount)
       const weatherVisualChanged =
         climate.weather.type !== lastAppliedWeatherType ||
         Math.abs(climate.weather.intensity - lastAppliedWeatherIntensity) >= 0.03
