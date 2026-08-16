@@ -183,9 +183,9 @@ These are isolated events and should not block analysis unless they overlap the 
 
 ### Current state
 
-**Trace 3 has not yet been analyzed.**
+Trace 3 was analyzed inline (not written up as a separate doc): it found a single 245.975ms `gpu_toplevel` wait adjacent to a `kLinkProgram` dispatch, with the GPU decoder silent throughout — but the capture lacked `blink.user_timing`, so it couldn't be tied to named `seedvale:*` spans.
 
-This is the next important step because it was specifically captured with GPU-related categories and should tell us whether the shader/GPU synchronization hypothesis can be observed more directly.
+A follow-up trace (`trace_v2.json.gz`, captured with both `blink.user_timing` and the GPU/WebGL categories together) closed that gap — see **[research 012](2026-08-16--012--streaming-hitch-trace-v2-linkprogram-wait.md)**: a 732ms hitch decomposes into two singular `kLinkProgram`-adjacent `gpu_toplevel` waits (454ms combined) with the GPU process and main thread both completely idle during them, directly measured. Confidence raised to medium-high. The exact WebGL call inside the wait is still not nameable from any trace captured so far — see 012's "Next experiment" for the proposed JS-stack-sampling capture.
 
 ## Current hypothesis
 
