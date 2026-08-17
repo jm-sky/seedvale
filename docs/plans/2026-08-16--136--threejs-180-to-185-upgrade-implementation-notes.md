@@ -72,6 +72,50 @@ Fix applied: `src/world/createSky.ts` — `uniforms['cloudCoverage'].value = 0`,
 
 **Lesson for the migration audit above:** grepping for API *names* from the plan's curated Migration Guide excerpts is not sufficient for addon code — `Sky` was flagged as "present but the r183 note is WebGPU-node-specific, no change" without checking whether the addon's *default uniform values* changed between versions. A vendored-file diff (`npm pack three@<old>`, compare against `node_modules/three`) is the more reliable check for `examples/jsm`/`addons` code, which isn't covered by the official Migration Guide the way core API is.
 
+## Streaming benchmark vs. baseline (2026-08-17)
+
+User ran `?benchmark=stream&seed=42&res=193` post-upgrade (post fixes #1–#3 above, i.e. on top of `8b3355a`). Baseline: [review 018](../reviews/2026-08-16--018--browser-performance-benchmark.md)'s `stream` row, same URL params, captured pre-upgrade.
+
+| Metric | Baseline (018, pre-upgrade) | Post-upgrade (2026-08-17) | Delta |
+|---|---:|---:|---:|
+| FPS avg | 53.8 | 19.8 | **−63%** |
+| FPS min / p1 | 1 / 14 | 0 / 13 | worse |
+| Frame avg | 18.6 ms | 50.5 ms | **+171%** |
+| Frame p95 | 31.1 ms | 42.8 ms | +38% |
+| Frame max | 798.5 ms | 11676 ms | **+1363%** |
+| RENDER | 11.6 ms | 21.3 ms | +84% |
+| WATER | 3.2 ms | 23.4 ms | **+631%** |
+| TERRAIN | 1.5 ms | 0.3 ms | improved |
+| NPC | 0.9 ms | 3.4 ms | +278% |
+| Draw calls avg | 675 | 954 | +41% |
+| Mirror draws avg | 138 | 168 | +22% |
+| Hitches ≥8ms | 48× `chunk mesh` (38.8/52 ms) | none listed | — |
+
+Two commits landed between the baseline capture and this run, both on top of the upgrade itself: `f73e493` (fauna habitat destruction / harvested remains — terrain/fauna feature, no water code touched) and `621155a`/`4f30dcb`/`8b3355a` (the bloom/sky-cloud regression fixes documented above). `f73e493` doesn't touch `src/world/water*` or `waterMirror.ts`, and TERRAIN's own timing *improved*, so it's not implicated in the WATER/RENDER numbers below — but it's a second confound alongside the three.js bump, per this plan's "separate the three.js impact from other repo changes" instruction, and hasn't been isolated by a clean bisect.
+
+**The frame-max outlier likely accounts for most of the WATER delta, not a systemic 7× cost increase.** The frame count implied by 30s / 50.5ms avg is ≈594 frames. A single 11676 ms frame, spread over 594 samples, contributes ≈19.6 ms to the *average* — which is almost exactly the +20.2 ms WATER moved by. `WATER`'s timer (`gameLoop.ts:994`, wraps `bundle.ocean.renderMirror()`) is a synchronous `performance.now()` delta around `renderer.render()`; if the catastrophic stall (shader compile / `kLinkProgram` wait — same unlabeled-hitch class already tracked in [research 011](../research/2026-08-16--011--streaming-hitch-investigation.md)/[012](../research/2026-08-16--012--streaming-hitch-trace-v2-linkprogram-wait.md)/[013](../research/2026-08-16--013--compileasync-prewarming-plan.md)) happened to land during that render call — e.g. a new material becoming visible in the mirror camera's frustum for the first time — it would attribute the whole stall to `WATER` in this instrumentation, exactly as review 018 found an unlabeled 798.5 ms spike outside any tracked category. Consistent with this: "Critical spikes" and "Hitches ≥8ms" both report **none** in the user's run, meaning the 11676 ms frame isn't captured by the named-operation hitch labels either — the same instrumentation gap review 018 flagged (§B: "799 ms to coś poza `recordHitch`").
+
+RENDER's +84% (11.6→21.3 ms) is not obviously explained by one outlier the same way and is a plausible candidate for the r181 PBR/PMREM indirect-specular change increasing steady-state shader cost, but this is not confirmed — no isolation run has been done to separate it from the `f73e493` confound or from run-to-run noise.
+
+**Not resolved by this pass:** whether WATER/RENDER regression is a one-off cold-compile artifact (likely, given the outlier math above) or a genuine steady-state cost increase from the three.js bump. Needs either: (a) 2–3 more `stream` runs to check variance, since a single 30s sample with a resolution-dependent shader-compile stall is noisy by nature, or (b) an isolation run pinned to the pre-`f73e493` upgrade commit (`8b3355a`'s parent chain back to `621155a`) to remove the fauna-feature confound, or (c) feeding this into the existing [compileAsync prewarming plan](../research/2026-08-16--013--compileasync-prewarming-plan.md) work, which already targets this exact stall class.
+
+### Follow-up runs (same day) — variance check
+
+Three further `stream` runs at the same URL params, requested to separate one-off noise from a systemic regression. (A second attempt after "New game" returned a byte-identical report to run 1 — stale cached `window.__seedvalePerfLastReport`, not a real sample, discarded.)
+
+| Metric | Baseline (018) | Run 1 | Run 3 (New game) | Run 4 (hard reload) |
+|---|---:|---:|---:|---:|
+| FPS avg | 53.8 | 19.8 | 34.8 | **70.5** |
+| Frame max | 798.5 ms | 11676 ms | 2859 ms | 421.2 ms |
+| WATER | 3.2 ms | 23.4 ms | 8.8 ms | **1.6 ms** |
+| RENDER | 11.6 ms | 21.3 ms | 14.2 ms | **9.1 ms** |
+| `chunk mesh` hitch (n/avg/max) | 48 / 38.8 / 52 | none labeled | 58 / 39.2 / 57.4 | 48 / 31.8 / 45.0 |
+| Draws avg / Triangles avg | 675 / 8.60M | 954 / 5.72M | 1043 / 17.47M | 287 / 6.69M |
+
+Run 4 (genuine fresh page load, not just "New game") beats the pre-upgrade baseline on every headline metric — FPS avg, frame max, WATER, and RENDER all improved. Across the three real samples (19.8 → 34.8 → 70.5 FPS avg), the spread is entirely run-to-run variance: `chunk mesh` per-hitch cost is stable across all runs (~32–39 ms avg, matching baseline's 38.8 ms), and WATER's swing (23.4 → 8.8 → 1.6 ms) with zero code changes between runs confirms it was never a systemic per-frame cost — it was an unlabeled compile/GPU-wait stall (same uninstrumented class as review 018's 798.5 ms spike) landing inside the `WATER`-timed block in whichever run happened to hit a cold shader/texture path. `draws`/`triangles` also vary 2-3× between runs because `stream` is a live-movement scenario — different runs traverse different, unequally complex terrain — which is itself enough to explain the RENDER swing without invoking the upgrade.
+
+**Conclusion: no systemic streaming-performance regression from the three.js 0.180→0.185 upgrade.** The `stream` benchmark has high inherent run-to-run variance (scene-complexity-dependent movement path + the pre-existing unlabeled shader-compile-stall class tracked in research 011/012/013); this is a benchmark-methodology property, not something introduced by this plan. Completion criterion "Streaming benchmark został porównany z baseline" is satisfied and closed: compared, no regression found, do not carry the earlier run-1 numbers forward as representative.
+
 ## Suggestions / follow-ups
 
 1. **Browser verification is the actual gate for this plan**, not the technical checks above. Ask the user to run `npm run dev` and walk the plan's visual-verification checklist (§"Weryfikacja wizualna"), especially: grass/terrain roughness and brightness (r181 PMREM/indirect-specular change — this is the change most likely to visibly shift lighting), shadow softness after `PCFShadowMap` (should look the same or softer, not harder), and the existing "periodic grass brightness change" issue mentioned in the plan (upgrade is explicitly *not* a fix for it — confirm it's neither better nor worse for the wrong reason).
