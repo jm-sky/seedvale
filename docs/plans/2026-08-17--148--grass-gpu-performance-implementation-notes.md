@@ -32,7 +32,25 @@ ESLint intentionally not run (out of scope for this session per instructions).
 
 ## Not yet done
 
-- **No baseline/S-stage census or benchmark.** The plan's own "Kolejność prac" step 1 (baseline census + benchmark) and step 4 (benchmark S) call for `?benchmark=current|forest|stress|water&seed=42&res=193` runs before/after, recording FPS avg, frame p95, RENDER, drawCallsAvg, triangles and grass mesh/instance census. None of this has been run — browser verification was explicitly out of scope for this implementation pass.
+- **No baseline/S-stage census or benchmark — partially attempted, not completed.** A later session tried to run the plan's `?benchmark=current|forest|stress|water&seed=42&res=193` protocol via `agent-browser` (see [agent-browser-benchmarking.md](../performance/agent-browser-benchmarking.md) for the pitfalls hit — headless start-menu hang, `eval`'s CDP timeout, benchmark-runner reentrancy). One **after-only** data point was captured before the session was stopped (user chose to finish the benchmark manually):
+
+  `current` scenario, seed 42, res 193, quality High, fresh session, 30 s run, this commit (`68e1bf4`):
+
+  | Metric | Value |
+  |---|---:|
+  | FPS avg / min / p1 | 57.5 / 32 / 32 |
+  | Frame time avg / p95 / max | 17.4 / 28.9 / 31.4 ms |
+  | RENDER (system) | 11.8 ms |
+  | Draw calls avg (whole scene) | 1447 |
+  | Triangles avg (whole scene, monitor) | 9,972,722 |
+  | Scene triangles total (census) | 11,976,686 |
+  | `grass` bucket — draw calls / instancedMeshes | 84 / 84 |
+  | `grass` bucket — instances | 315,789 |
+  | `grass` bucket — triangles | 4,529,954 |
+  | Loaded chunks / NPCs / fauna | 61 / 13 / 23 |
+
+  No baseline (pre-geometry-LOD, commit `cfdb83a`) run completed in that session — a `git worktree` + second `vite` dev server (`PORT=5578`) was set up for it (`ln -s`'d `node_modules`, `package.json`/lockfile unchanged between the two commits so this is safe) but the run itself wasn't finished before the session ended. **Whether the geometry LOD change actually reduced grass triangles has not been confirmed** — the number above is a snapshot of the current state, not a comparison. Tear down the worktree (`git worktree remove`) after the baseline run is captured; it isn't meant to be left around.
+- The plan's step 1 (baseline census + benchmark) and step 4 (benchmark S) more broadly — the `forest`/`stress`/`water` scenarios, and the full before/after table across all four scenarios — remain entirely unrun.
 - **No visual regression test.** The plan's "Visual test" scenarios (dense meadow, forest, open terrain, 360° camera rotation, distant flat viewing, top-down, sprint-through, Near→Mid→Far transitions) are unverified — LOD popping risk (flagged by the plan itself) is unconfirmed either way.
 - **M (Density LOD tuning) and M (Far shader simplification) not started** — both are explicitly gated in the plan on S's benchmark result ("Wykonać dopiero po S i tylko jeśli...", "Wykonać tylko jeśli pomiary/profilowanie pokażą..."). Since S itself has no benchmark yet, there's no basis to decide whether either is needed.
 - **L (Billboard/impostor) not started**, per the plan's own explicit deferral ("Nie implementować w pierwszym podejściu").

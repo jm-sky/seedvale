@@ -88,6 +88,8 @@ The latest representative browser benchmark showed approximately:
 
 These values are a historical baseline. Rendering changes made afterwards require a fresh browser benchmark before being treated as the current baseline.
 
+Running the `?benchmark=` harness via `agent-browser`: see [agent-browser-benchmarking.md](./agent-browser-benchmarking.md) for the API, known pitfalls (start-menu hang, `eval`'s CDP timeout, benchmark-runner reentrancy) and the before/after worktree methodology — read it before running a benchmark, it documents real failures hit doing this.
+
 ---
 
 # 4. Confirmed Bottlenecks
