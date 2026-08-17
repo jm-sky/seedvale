@@ -57,6 +57,7 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-17--140--landscape-flora-and-village-cobble.md` | Sosny textured (3× `PineTree_*` FBX), paproć/grzyb w wilgotnym lesie, trzcina przy brzegu, pień po harvestcie, oszczędny bruk MD+; wierzba jeśli będzie textured GLB | 🟡 | L | ~~024~~ ~~073~~ ~~101~~ |
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-16--126--seed-planting.md` | Sadzenie nasion drzew (rozszerza istniejący `TreeLifecycle`) i cropów (nowy prosty `CropLifecycle`) przez gracza, integracja z inventory/garden gather/persistence; wstępny | 🟡 | L | ~~106~~ ~~122~~ |
 | `2026-08-16--127--player-built-well.md` | Fizyczna studnia budowana przez gracza; wstępny | 🟡 | M | ~~122~~ |
