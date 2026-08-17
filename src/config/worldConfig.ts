@@ -249,6 +249,16 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       inclination: 0.36,
       azimuth: 0.25,
       turbidity: 2.2,
+      // NOTE: this static default is only actually rendered for a fraction
+      // of a second at world load and whenever `dayNight.enabled === false`
+      // (set by touching any Sky-folder GUI slider, see
+      // createApp.ts::updateSkyFromGui). During normal play, dayNight.ts's
+      // skyParamsFromTime() recomputes rayleigh every resync from
+      // time-of-day (0.7 + dayFactor*0.45, capped ~1.15) and overwrites this
+      // value outright — see issue 033 for why this default was NOT changed
+      // as part of that fix despite a user rayleigh experiment suggesting
+      // 0.85-1.0 looks better than higher values (that experiment ran with
+      // dayNight disabled, a different mode from normal gameplay).
       rayleigh: 2.4,
     },
     postProcessing: {
@@ -262,12 +272,17 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       // scale with that RGB instead of staying ~constant — the old
       // AdditiveBlending contribution was ~strength² × constant, the new one
       // is ~9× that for the same strength, and grows further with source
-      // brightness. Divided by 3 to restore the old RGB-only magnitude
-      // (issue 033 — full-screen whiteout looking at the sun after the
-      // three@0.185 upgrade, plan 136).
-      bloomStrength: 0.09,
-      bloomRadius: 0.35,
-      bloomThreshold: 0.92,
+      // brightness (issue 033 — full-screen whiteout looking at the sun
+      // after the three@0.185 upgrade, plan 136). bloomStrength/bloomRadius/
+      // bloomThreshold below are the combination the user browser-verified
+      // as removing the white-out while keeping bloom visible elsewhere
+      // (2026-08-17); bloomThreshold's GUI slider is capped at 1 and can't
+      // meaningfully exclude the sun disc's raw HDR magnitude (in the
+      // thousands) on its own — the fix leans on strength/radius, not
+      // threshold, for that reason.
+      bloomStrength: 0.02,
+      bloomRadius: 0.05,
+      bloomThreshold: 0.95,
       godRaysEnabled: true,
       // Kept low so dawn/dusk shafts stay visible without mountain whiteout
       // (issue 016); GUI still allows raising it while tuning.

@@ -85,7 +85,7 @@ export function createPostProcessing(
   const smaaPass = new SMAAPass()
   composer.addPass(smaaPass)
 
-  const bloomPass = new UnrealBloomPass(new Vector2(width / 2, height / 2), 0.09, 0.35, 0.92)
+  const bloomPass = new UnrealBloomPass(new Vector2(width / 2, height / 2), 0.02, 0.05, 0.95)
   // Bloom is a low-frequency effect by construction (5-level mip blur chain) —
   // running its whole chain at half the composer's resolution is not
   // perceptible but halves the pixel count through every blur pass (perf

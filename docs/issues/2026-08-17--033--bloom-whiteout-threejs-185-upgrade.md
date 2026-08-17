@@ -1,6 +1,6 @@
 # Full-screen white-out looking toward the sun after three@0.185 upgrade
 
-**Status:** `verification needed`
+**Status:** `verification needed` (fix #3 applied, bloom confirmed the sole cause via user isolation testing; awaiting final browser confirmation)
 **Created:** 2026-08-17
 **Źródło:** User report po planie [136](../plans/2026-08-16--136--threejs-180-to-185-upgrade.md) (three.js 0.180→0.185)
 **Powiązane:** issue [016](./2026-08-11--016--god-rays-mountain-whiteout.md) (poprzedni, innej przyczyny, whiteout od god rays), `src/render/createPostProcessing.ts`, `src/config/worldConfig.ts`, `src/world/createSky.ts`
@@ -75,17 +75,48 @@ To jest **inny mechanizm niż issue 016** (który dotyczył god rays, nie bloomu
 
 To przywraca RGB część kompozytu 1:1. Nie kompensuje w pełni kwadratowego zachowania nowego `alpha` dla ekstremalnych outlierów (dokładna tarcza słońca) — matematycznie `strength/3` daje ~9× mniejszy wkład blendingu dla tego samego pikselu źródłowego (bo `alpha` też spada 3×, a wkład to `color × alpha`), co powinno wystarczyć w praktyce, ale wymaga potwierdzenia w przeglądarce.
 
+## Update #2 (2026-08-17, izolacja przez użytkownika)
+
+Fix #2 (chmury) nie usunął problemu w pełni. Użytkownik zrobił własną izolację przez debug GUI (istniejące toggle per-pass, `createDebugGui.ts` → `config.postProcessing`):
+
+- **Bloom OFF → efekt znika całkowicie**, niebo czyste.
+- **God rays ON/OFF, AO ON/OFF → brak wpływu**, biała plama zostaje.
+- Objaw obserwowany o 14:00 (słońce wysoko, nie tylko świt/zmierzch) — co dodatkowo wyklucza god rays (`updateGodRays()` w `createPostProcessing.ts` fade'uje do 0 przed południem, `fadeOut = 1 - smoothstep(elev, 0.12, 0.5)`).
+- Opis doprecyzowany: nie czysta biel, tylko **bardzo jasne/prześwietlone highlighty** ("bright/blown highlights").
+
+To jednoznacznie potwierdza: **wyłącznie bloom**, dokładnie zgodnie z Root cause opisanym niżej.
+
+Ważne odkrycie przy tej okazji: **`bloomThreshold`'s GUI slider jest ograniczony do `[0, 1]`** (`createDebugGui.ts`), a surowa jasność tarczy słońca w `createSky.ts`'s `Sky` shaderze to rząd **tysięcy** w przestrzeni liniowej HDR (`vSunE * 19000.0 * Fex`, już ustalone w issue 016 — próg działa pre-tonemap, nie w `[0,1]`). Żadna wartość w tym zakresie suwaka nie wyklucza tego piksela z bright-passu — `bloomThreshold` jest praktycznie martwym gałkiem dla tego konkretnego problemu, niezależnie od tego, jak wysoko go ustawić w GUI.
+
+Dodatkowy eksperyment użytkownika: podniesienie `rayleigh` (Sky folder w GUI) też wizualnie wpływało na efekt (0.85–1.0 wygląda dobrze z widocznym gradientem nieba, ~4 daje niemal białe niebo). **Odkryto jednak, że dotknięcie dowolnego suwaka w folderze Sky wywołuje `updateSkyFromGui()` (`createApp.ts:641`), które ustawia `dayNight.enabled = false`** — permanentnie wyłączając automatyczny cykl dnia/nocy i zamrażając niebo na ręcznie ustawionych wartościach `config.sky`. W normalnej rozgrywce (`dayNight.enabled === true`, domyślne), `dayNight.ts`'s `skyParamsFromTime()` przelicza **własny, dynamiczny** `rayleigh` co resync z pory dnia (`0.7 + dayFactor*0.45`, capped ~1.15 w pełni dnia — patrz komentarz w `dayNight.ts` opisujący **dokładnie ten sam typ whiteoutu z planu 066**), nadpisując statyczny `config.sky.rayleigh` niemal natychmiast po starcie świata. Czyli:
+
+- Statyczny `config.sky.rayleigh` (default `2.4`) praktycznie **nie jest tym, co renderuje się podczas normalnej rozgrywki** — to efemeryczna wartość początkowa, nadpisywana w ułamku sekundy.
+- Test rayleigh użytkownika był realny i wartościowy, ale wykonany w innym trybie (`dayNight.enabled = false`) niż oryginalny zgłoszony bug (14:00, zwykła rozgrywka, automatyczny cykl — czyli rayleigh już był dynamicznie ~1.15, blisko "dobrego" zakresu 0.85–1.0 znalezionego przez użytkownika).
+- **Wniosek: rayleigh nie jest realną przyczyną oryginalnego zgłoszenia** — `dayNight.ts` już trzyma go w rozsądnym zakresie podczas zwykłej gry. Statyczny default **nie został zmieniony** (zostaje `2.4`, z komentarzem wyjaśniającym dlaczego), żeby nie sugerować fałszywej przyczynowości.
+
+## Fix #3 — bloom, finalne wartości (2026-08-17, browser-verified przez użytkownika)
+
+Użytkownik przetestował kombinację w GUI i potwierdził, że usuwa efekt przy zachowaniu widocznego bloomu gdzie indziej (ogniska, pochodnie, okna):
+
+- `bloomStrength`: `0.09 → 0.02`
+- `bloomRadius`: `0.35 → 0.05`
+- `bloomThreshold`: `0.92 → 0.95` (drobna korekta — jak ustalono wyżej, nie jest to główny działający czynnik, `bloomThreshold`'s zakres `[0,1]` i tak nie może wykluczyć tarczy słońca)
+
+Zaimplementowane jako nowe domyślne wartości w `src/config/worldConfig.ts` (`postProcessing.bloomStrength/bloomRadius/bloomThreshold`) i zsynchronizowane w konstruktorze `UnrealBloomPass` (`createPostProcessing.ts`). `src/config/worldConfig.ts`'s `sky.rayleigh` default **pozostał bez zmian** (`2.4`) — patrz uzasadnienie wyżej.
+
 ## Do zrobienia
 
-1. **Weryfikacja w przeglądarce** — spojrzeć wprost w słońce o różnych porach dnia (świt/południe/zmierzch), z kilku pozycji kamery (pierwsza/trzecia osoba), blisko horyzontu i wysoko, potwierdzić brak white-outu i brak prostokątnych artefaktów.
-2. Jeśli po fixie #2 (`cloudCoverage = 0`) nadal widać white-out patrząc bezpośrednio w tarczę słońca: dalsze obniżenie `bloomStrength` nie rozwiąże problemu proporcjonalnie (bo wkład bloomu skaluje się kwadratowo z jasnością źródła, nie liniowo — patrz Root cause) — następny krok to ograniczenie samej jasności HDR trafiającej do bright-passu bloomu (np. clamp sceny przed AO/bloom), a nie dalsze kręcenie `bloomStrength`.
-3. **Jeśli użytkownik wcześniej zmieniał bloom w GUI**, `localStorage` (`applyStoredPostProcessing` w `worldConfig.ts`) nadpisze nowy default zapisaną starą wartością — nowy default zadziała tylko dla świeżego/wyczyszczonego configu graphics, albo trzeba ręcznie przesunąć suwak "Bloom Strength" w debug GUI. `cloudCoverage` nie jest w ogóle wystawione w GUI/configu (ustawione raz na stałe w `createSky.ts`), więc fix #2 nie ma tego problemu.
-4. God rays (issue 016) i bloom są w tym samym łańcuchu (`Bloom → God rays`) — po potwierdzeniu fixu warto też sprawdzić, czy god rays nadal wygląda OK.
-5. Jeśli w przyszłości Seedvale chciałoby użyć wbudowanych chmur `Sky` addonu zamiast/obok własnego systemu pogody — świadoma decyzja projektowa, nie przypadkowy default; na razie zostają wyłączone.
+1. **Finalna weryfikacja w przeglądarce** fixu #3 — spojrzeć wprost w słońce o różnych porach dnia (świt/południe/zmierzch), z kilku pozycji kamery (pierwsza/trzecia osoba), potwierdzić brak white-outu/blown highlightów, i że bloom nadal widocznie działa gdzie indziej (ogniska, pochodnie, okna nocą).
+2. **Jeśli użytkownik wcześniej zmieniał bloom w GUI**, `localStorage` (`applyStoredPostProcessing` w `worldConfig.ts`) nadpisze nowe defaulty zapisaną starą wartością — trzeba albo wyczyścić zapisany config graficzny, albo ręcznie ustawić suwaki na nowe wartości (`0.02`/`0.05`/`0.95`).
+3. Jeśli fix #3 nadal nie wystarcza przy bezpośrednim spojrzeniu w tarczę słońca: kolejny krok to nie dalsze kręcenie `bloomStrength`/`bloomRadius` (diminishing returns, i psuje bloom wszędzie indziej), tylko ograniczenie samej jasności HDR trafiającej do bright-passu bloomu u źródła (np. dedykowany clamp/soft-knee na scenie przed AO/bloom) — patrz Root cause dla mechanizmu (kwadratowe skalowanie `color × alpha`).
+4. `bloomThreshold`'s GUI slider (`createDebugGui.ts`) jest ograniczony do `[0,1]`, mimo że bloom operuje w pre-tonemap liniowym HDR gdzie realne wartości sięgają tysięcy (już ustalone w issue 016, potwierdzone ponownie tutaj) — osobny, mniejszy porządkowy fix do rozważenia: albo rozszerzyć zakres suwaka, albo poprawić opis w `worldConfig.ts` (obecny komentarz "post tone-map ~0-1" jest błędny).
+5. Jeśli w przyszłości Seedvale chciałoby użyć wbudowanych chmur `Sky` addonu zamiast/obok własnego systemu pogody — świadoma decyzja projektowa, nie przypadkowy default; na razie zostają wyłączone (fix #2).
 
 ## Pliki
 
-- `src/world/createSky.ts` (`cloudCoverage` uniform — główny fix)
-- `src/config/worldConfig.ts` (`bloomStrength` default — uzupełniający fix)
+- `src/config/worldConfig.ts` (`postProcessing.bloomStrength/bloomRadius/bloomThreshold` — główny fix; `sky.rayleigh` celowo **nie** zmieniony, patrz Update #2)
 - `src/render/createPostProcessing.ts` (konstruktor `UnrealBloomPass`)
+- `src/world/createSky.ts` (`cloudCoverage` uniform — fix #2, osobna, realna przyczyna artefaktów/dodatkowej jasności)
+- `src/app/createApp.ts` (`updateSkyFromGui` — `dayNight.enabled = false` side effect, wyjaśnia dlaczego test rayleigh w GUI nie odzwierciedlał normalnej rozgrywki)
+- `src/world/dayNight.ts` (`skyParamsFromTime` — już istniejący dynamiczny cap rayleigh ~1.15, z komentarzem o wcześniejszym whiteoucie z planu 066)
 - `node_modules/three/examples/jsm/objects/Sky.js`, `node_modules/three/examples/jsm/postprocessing/UnrealBloomPass.js` (przyczyny, kod vendorowany przez three.js — nie edytowany)
