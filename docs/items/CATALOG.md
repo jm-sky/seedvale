@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-16
+**Last updated:** 2026-08-17
 
 ## Quick rules
 
@@ -45,6 +45,8 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | wooden_torch | pochodnia | yes | — | starting (+ village 1×) | `items/wooden_torch.glb` | plan 085; longer/brighter than lit branch |
 | pickaxe | kilof | yes | — | village 1× + Kupiec | `items/pickaxe.glb` | ore deposits + mountain-rock dig/level (plan 090) |
 | tent | namiot | — | — | none (Kupiec) | procedural | place / rest / pack (plan 090) |
+| trap_simple | prosta pułapka | — | — | none (Kupiec) | procedural | plan 141; Quick Actions „Zastaw…” → `[E]` uzbrój / rozbrój, `[R]` zabierz. 2 użycia, detekcja 0.5, pełne zużycie pogodowe |
+| trap_good | dobra pułapka | — | — | none (Kupiec) | procedural | plan 141; jak wyżej, ale 5 użyć, detekcja 0.3 i ¼ zużycia pogodowego |
 | long_sword | miecz | yes | 28 | none (Strażnik/Kupiec) | `items/long_sword.glb` | hold+melee; Strażnik quest/dialog + Kupiec |
 | coal | węgiel | — | — | pickaxe yield | procedural | plan 090 |
 | iron | żelazo | — | — | pickaxe yield | procedural | plan 090 |

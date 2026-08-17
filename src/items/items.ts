@@ -21,6 +21,8 @@ export type ItemKind =
   | 'wooden_torch'
   | 'pickaxe'
   | 'tent'
+  | 'trap_simple'
+  | 'trap_good'
   | 'coal'
   | 'iron'
   | 'gold'
@@ -204,6 +206,22 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     weight: 3,
     color: 0x8a6a3a,
     description: 'Lekki namiot zapewniający schronienie i miejsce do spania poza osadą.'
+  },
+  trap_simple: {
+    kind: 'trap_simple',
+    label: 'prosta pułapka',
+    category: 'utility',
+    weight: 2,
+    color: 0x6f6a60,
+    description: 'Prosta pułapka na drobną zwierzynę. Tania i lekka, ale szybko psuje się na deszczu i łatwiej ją wypatrzyć.'
+  },
+  trap_good: {
+    kind: 'trap_good',
+    label: 'dobra pułapka',
+    category: 'utility',
+    weight: 3.2,
+    color: 0x9aa0a8,
+    description: 'Solidna, kuta pułapka. Droższa, ale wytrzymuje niepogodę i trudniej ją zauważyć.'
   },
   coal: {
     kind: 'coal',
@@ -716,6 +734,31 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.position.y = 0.07
     mesh.castShadow = true
     return mesh
+  }
+  if (kind === 'trap_simple' || kind === 'trap_good') {
+    // Folded-shut trap as a pickup (the placed prop lives in `trapProp.ts`).
+    const group = new THREE.Group()
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(kind === 'trap_good' ? 0.15 : 0.12, 0.022, 4, 10),
+      new THREE.MeshStandardMaterial({
+        color: ITEM_DEFS[kind].color,
+        flatShading: true,
+        metalness: kind === 'trap_good' ? 0.5 : 0.25,
+      }),
+    )
+    ring.rotation.x = -Math.PI / 2
+    ring.position.y = 0.04
+    ring.castShadow = true
+    group.add(ring)
+    const chain = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.012, 0.18, 4),
+      new THREE.MeshStandardMaterial({ color: 0x4a4a4a, flatShading: true, metalness: 0.5 }),
+    )
+    chain.rotation.z = Math.PI / 2
+    chain.position.set(0.14, 0.03, 0)
+    chain.castShadow = true
+    group.add(chain)
+    return group
   }
   if (kind === 'coin') {
     const mesh = new THREE.Mesh(

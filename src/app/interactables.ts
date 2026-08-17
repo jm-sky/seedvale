@@ -9,6 +9,7 @@ import type { Settlement } from '../settlement/createSettlement'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { ResourceDeposits } from '../terrain/resourceDeposits'
+import type { PlacedTraps } from '../world/createPlacedTraps'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
@@ -19,6 +20,7 @@ import { LANDMARK_LABELS } from '../terrain/chunkEnvironment'
 import { ORE_YIELD_LABEL } from '../terrain/depositMining'
 import { canLevelAt, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
 import { oceanMixAt } from '../terrain/waterBodies'
+import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource } from '../world/WaterSource'
 import type { Vector3 } from 'three'
@@ -99,6 +101,21 @@ function spawnerPromptLabel(spawner: PreySpawner): string {
   }
 }
 
+/** Placed-trap prompt (plan 141 §9) — the state is readable from the prop
+ *  itself, so the prompt only names the action. An armed trap can't be picked
+ *  up (disarm first); a broken one can only be cleared away. */
+function trapPromptLabel(kind: TrapKind, state: TrapState): string {
+  const label = TRAP_DEFS[kind].label
+  switch (state) {
+    case 'active':
+      return `[E] Rozbrój: ${label}`
+    case 'broken':
+      return `[R] Usuń zniszczoną: ${label}`
+    case 'placed':
+      return `[E] Uzbrój · [R] Zabierz: ${label}`
+  }
+}
+
 /** `bury` (shovel) and `harvest` (knife, plan 106) never overlap on the same
  *  corpse — the single `HeldTool` slot means only one tool is held at once. */
 function corpseCandidate(
@@ -172,6 +189,7 @@ export function buildInteractables(
   droppedItems: DroppedItems,
   placedFires: PlacedFires,
   placedTents: PlacedTents,
+  placedTraps: PlacedTraps,
   resourceDeposits: ResourceDeposits,
   playerPos: Vector3,
   /** Currently held tool — drives axe harvest prompts and animal attack prompts. */
@@ -207,6 +225,18 @@ export function buildInteractables(
       position: { x: tent.x, z: tent.z },
       promptLabel: '[E] Odpocznij · [R] Złóż namiot',
       id: tent.id,
+    })
+  }
+
+  for (const trap of placedTraps.list()) {
+    if (!withinRange(trap.x, trap.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'trap',
+      position: { x: trap.x, z: trap.z },
+      promptLabel: trapPromptLabel(trap.kind, trap.state),
+      id: trap.id,
+      trapKind: trap.kind,
+      state: trap.state,
     })
   }
 

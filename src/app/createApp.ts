@@ -1,6 +1,7 @@
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { SaveData } from '../persistence/saveData'
+import type { TrapCaptureEvent } from '../world/createPlacedTraps'
 import { playActionChop, playActionDig, playActionMine, playActionWell } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
@@ -26,7 +27,8 @@ import {
 import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
 import { isCameraDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { getRenderStateDebugText } from '../debug/renderStateDebug'
-import { type AnimalAgent, type AnimalKind, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
+import { type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
+import { meatKindForAnimal } from '../fauna/animalMeat'
 import { DESTROY_SPAWNER_DURATION_SEC, type PreySpawner, SPAWNER_DESTROY_BRANCH_COST } from '../fauna/AnimalSpawner'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
@@ -38,7 +40,7 @@ import { createHeldTool } from '../items/HeldTool'
 import { Inventory } from '../items/Inventory'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
-import { evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
+import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
 import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
 import { buyWithBarter, buyWithShells } from '../items/trade'
 import {
@@ -95,6 +97,15 @@ import { createQuestLog } from '../ui/createQuestLog'
 import { createQuickActions } from '../ui/createQuickActions'
 import { createTimeSkipOverlay } from '../ui/createTimeSkipOverlay'
 import { createToast } from '../ui/createToast'
+import {
+  TRAP_DEFS,
+  TRAP_FOOTPRINT_RADIUS,
+  TRAP_PLACE_REACH,
+  TRAP_PLACEMENT_MESSAGE,
+  TRAP_SEPARATION,
+  TRAP_SETUP_DURATION_SEC,
+  type TrapKind,
+} from '../world/animalTraps'
 import { createLights } from '../world/createLights'
 import { createSky } from '../world/createSky'
 import { createDayNightState } from '../world/dayNight'
@@ -265,6 +276,11 @@ export async function createApp(
   let getPlayerSocialTarget: PlayerSocialLookup | null = null
   const getPlayerSocial: PlayerSocialLookup = (npcName) =>
     getPlayerSocialTarget?.(npcName) ?? { relationLevel: 'stranger', standing: 0 }
+  // Same "target assigned later" indirection as `onAnimalDeath` above — the
+  // trap system is built with the bundle, but awarding Traps XP / toasting
+  // the catch needs `player`/`toast`, which only exist further down.
+  let onTrapCaptureTarget: ((event: TrapCaptureEvent) => void) | null = null
+  const onTrapCapture = (event: TrapCaptureEvent): void => { onTrapCaptureTarget?.(event) }
   const bundle = await createWorldBundle(
     scene,
     config,
@@ -273,6 +289,7 @@ export async function createApp(
     initialSave?.droppedItems ?? [],
     initialSave?.placedFires ?? [],
     initialSave?.placedTents ?? [],
+    initialSave?.placedTraps ?? [],
     treeLifecycle,
     getWorldDays,
     dayNight,
@@ -280,6 +297,7 @@ export async function createApp(
     onAnimalDeath,
     getPlayerSocial,
     landOwnership.isOwned,
+    onTrapCapture,
   )
 
   // Indirection (not a direct destructure) so this keeps sampling whichever
@@ -322,6 +340,10 @@ export async function createApp(
   const syncQuickActionAvailability = (): void => {
     vueUi.setQuickActionsHasShovel(inventory.has('shovel', 1))
     vueUi.setQuickActionsHasTent(inventory.has('tent', 1))
+    vueUi.setQuickActionsTraps({
+      simple: inventory.has(TRAP_DEFS.simple.itemKind, 1),
+      good: inventory.has(TRAP_DEFS.good.itemKind, 1),
+    })
     vueUi.setQuickActionsFireAvailability({
       buildSimpleFire: canBuildSimpleFire(),
       buildFirePit: canBuildFirePit(),
@@ -571,6 +593,7 @@ export async function createApp(
         onAnimalDeath,
         getPlayerSocial,
         landOwnership.isOwned,
+        onTrapCapture,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
 
@@ -608,7 +631,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 15,
+    version: 16,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -640,6 +663,7 @@ export async function createApp(
       ? { source: playerTorch.source()!, fuelRemaining: playerTorch.fuelRemaining() }
       : null,
     placedTents: bundle.placedTents.nodes().map((tent) => ({ ...tent })),
+    placedTraps: bundle.placedTraps.nodes().map((trap) => ({ ...trap })),
     worldFlags: { ...worldFlags },
     map: { discoveredCells: mapDiscovery.serialize() },
     settlementEconomies: bundle.settlementsManager.snapshotEconomies(),
@@ -654,6 +678,7 @@ export async function createApp(
     skills: {
       sneak: { xp: player.skills.sneak.xp },
       survival: { xp: player.skills.survival.xp },
+      traps: { xp: player.skills.traps.xp },
     },
   })
 
@@ -962,6 +987,91 @@ export async function createApp(
     )
   }
 
+  /** Sets a trap down in front of the player (plan 141 §3) — same busy-channel
+   *  shape as pitching a tent: the item is only spent when the channel
+   *  completes, and it lands `placed` (not armed), so arming stays a separate
+   *  `[E]` interaction. Reuses the shared ground-suitability check, just with
+   *  the trap's own footprint. */
+  const placeTrapAtAim = (kind: TrapKind): void => {
+    const def = TRAP_DEFS[kind]
+    if (!inventory.has(def.itemKind, 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const yaw = mouseLook.state.yaw
+    const x = player.mesh.position.x - Math.sin(yaw) * TRAP_PLACE_REACH
+    const z = player.mesh.position.z - Math.cos(yaw) * TRAP_PLACE_REACH
+    const reason = evaluateGroundPlacement({
+      x,
+      z,
+      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+      waterLevel: bundle.chunkManager.waterLevel,
+      roads: bundle.chunkManager.roadCorridorsNear(x, z, 10),
+      blockers: tentBlockers(x, z),
+      peers: [...bundle.placedTraps.nodes(), ...bundle.placedTents.nodes()],
+      footprintRadius: TRAP_FOOTPRINT_RADIUS,
+      separation: TRAP_SEPARATION,
+    })
+    if (reason !== 'ok') {
+      toast.show(TRAP_PLACEMENT_MESSAGE[reason === 'occupied' ? 'trap' : reason], 'error')
+      return
+    }
+    busy.start(TRAP_SETUP_DURATION_SEC, 'Zastawianie pułapki…', () => {
+      if (!inventory.remove(def.itemKind, 1)) return
+      bundle.placedTraps.place(kind, x, z, yaw)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      toast.show(`Zastawiono: ${def.label}.`)
+    })
+  }
+
+  const armTrap = (id: string): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    // The Traps value is snapshotted here, once — the trap then works on its
+    // own, with no reference back to the player (implementation notes §2).
+    if (!bundle.placedTraps.activate(id, player.skills.traps.value, dayNight.elapsedDays)) return
+    toast.show('Pułapka uzbrojona.')
+  }
+
+  const disarmTrap = (id: string): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    // Disarming never costs durability (plan 141 §3).
+    if (!bundle.placedTraps.deactivate(id)) return
+    toast.show('Pułapka rozbrojona.')
+  }
+
+  const collectTrap = (id: string): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const trap = bundle.placedTraps.list().find((entry) => entry.id === id)
+    if (!trap || trap.state === 'active') return
+    const def = TRAP_DEFS[trap.kind]
+    // A broken trap is scrap — it's cleared away, not carried back.
+    if (trap.state !== 'broken' && !inventory.canAdd(def.itemKind)) {
+      toast.show('Ekwipunek jest za ciężki.', 'error')
+      return
+    }
+    const removed = bundle.placedTraps.collect(id)
+    if (!removed) return
+    if (removed.state === 'broken') {
+      toast.show('Zniszczona pułapka nadaje się już tylko na złom.')
+    } else {
+      inventory.add(def.itemKind, 1)
+      toast.show(`Zabrano: ${def.label}.`)
+    }
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    onInventoryChanged()
+  }
+
+  // The single owner of a capture's player-facing consequences (implementation
+  // notes §18) — the kill, the corpse and the dropped meat are all handled
+  // inside `PlacedTraps`, which calls this exactly once per catch.
+  onTrapCaptureTarget = (event) => {
+    awardSkillXp(player.skills, 'traps', SKILL_XP_AWARD.captureTrap)
+    const meatLabel = ITEM_DEFS[event.meatKind].label
+    toast.show(
+      event.broken
+        ? `Pułapka złapała zwierzę i się rozpadła (${meatLabel}).`
+        : `Pułapka złapała zwierzę (${meatLabel}).`,
+    )
+  }
+
   /** Rest quality + XP for the sleep currently in flight (plan 128 §5-§7),
    *  resolved once when rest starts and consumed when the 8h skip finishes.
    *  Null means "no camp context" — a plain town bed, restored in full. */
@@ -1144,26 +1254,13 @@ export async function createApp(
     })
   }
 
-  /** Plan 134 — species-specific meat kind for a knife harvest; species with
-   *  no dedicated kind fall back to the original generic `raw_meat`. Single
-   *  lookup, reused by `startHarvestMeat` only — not a second animal-species
-   *  system. */
-  const MEAT_KIND_BY_ANIMAL: Partial<Record<AnimalKind, ItemKind>> = {
-    deer: 'deer_meat',
-    wolf: 'wolf_meat',
-    boar: 'boar_meat',
-    rabbit: 'rabbit_meat',
-    cow: 'beef',
-  }
-  const meatKindFor = (animal: AnimalAgent): ItemKind => MEAT_KIND_BY_ANIMAL[animal.def.kind] ?? 'raw_meat'
-
   /** Knife-harvest meat from a corpse (plan 106; species-specific kind +
    *  hide byproduct added in plan 134) — same shape as `startBuryCorpse`,
    *  just knife-gated and yielding item(s) instead of disposing the corpse. */
   const startHarvestMeat = (animal: AnimalAgent): void => {
     if (heldTool.held() !== 'knife' || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
     if (!animal.canHarvestMeat()) return
-    const meatKind = meatKindFor(animal)
+    const meatKind = meatKindForAnimal(animal.def.kind)
     if (!inventory.canAdd(meatKind, 1)) {
       toast.show('Ekwipunek jest za ciężki.', 'error')
       return
@@ -1482,6 +1579,7 @@ export async function createApp(
       startLevelAt(p.x, p.z)
     },
     onPlaceTent: placeTentAtAim,
+    onPlaceTrap: placeTrapAtAim,
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()
@@ -1640,6 +1738,9 @@ export async function createApp(
     fillWaterskin,
     startTentRest,
     packTent,
+    armTrap,
+    disarmTrap,
+    collectTrap,
     onSleepFinished,
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,

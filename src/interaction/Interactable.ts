@@ -6,6 +6,7 @@ import type { Settlement } from '../settlement/createSettlement'
 import type { VillageFire } from '../settlement/VillageFire'
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { DigProfile } from '../terrain/dig'
+import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { TreeGrowthStage, TreeSizeClass } from '../world/treeLifecycle'
 import type { WaterSource } from '../world/WaterSource'
 
@@ -64,6 +65,11 @@ export type Interactable =
    *  `profile` non-null → `[E]` dig; `canLevel` → `[R]` level. */
   | { kind: 'dig', position: { x: number, z: number }, promptLabel: string, profile: DigProfile | null, canLevel: boolean }
   | { kind: 'tent', position: { x: number, z: number }, promptLabel: string, id: string }
+  /** Placed animal trap (plan 141) — `[E]` arms/disarms depending on `state`,
+   *  `[R]` picks a non-armed trap back up. Only stable references + the state
+   *  the prompt needs; durability itself is resolved by `PlacedTraps` at
+   *  interact time, never from this per-frame snapshot. */
+  | { kind: 'trap', position: { x: number, z: number }, promptLabel: string, id: string, trapKind: TrapKind, state: TrapState }
   /** Procedural landmark (`monolith`/`stoneCircle`/`smallRuins`/`cemetery`) —
    *  purely a quest-objective/flavor interaction, no held-tool mechanic
    *  (plan 132). `landmarkId` is the stable `EnvironmentPlacement.id`. */

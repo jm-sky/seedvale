@@ -3,6 +3,7 @@ import type { EconomicKind } from '../economy/kinds'
 import type { SkillId } from '../player/PlayerSkills'
 import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
+import type { TrapKind, TrapState } from '../world/animalTraps'
 import { isToolKind } from '../items/HeldTool'
 import { type ItemKind } from '../items/items'
 import { SNEAK_LEGACY_XP } from '../player/PlayerSkills'
@@ -246,8 +247,29 @@ export type SaveDataV15 = Omit<SaveDataV14, 'version'> & {
   skills: SaveSkills
 }
 
-/** Canonical save shape — always v15. `loadSaveData` migrates older saves up. */
-export type SaveData = SaveDataV15
+/** Plan 141 — placed animal traps. Mirrors `world/animalTraps.ts`'s
+ *  `PlacedTrapRecord`: only what cannot be re-derived from `TRAP_DEFS`. The
+ *  per-animal detection cooldown is deliberately absent (wild fauna isn't
+ *  persisted either, so its `animalId`s don't survive a reload). */
+export type SavePlacedTrap = {
+  id: string
+  kind: TrapKind
+  x: number
+  z: number
+  yaw: number
+  state: TrapState
+  durability: number
+  skillAtActivation: number
+  weatherCheckedAtDay: number
+}
+
+export type SaveDataV16 = Omit<SaveDataV15, 'version'> & {
+  version: 16
+  placedTraps: SavePlacedTrap[]
+}
+
+/** Canonical save shape — always v16. `loadSaveData` migrates older saves up. */
+export type SaveData = SaveDataV16
 
 function isSaveConfig(value: unknown): value is SaveConfig {
   if (!value || typeof value !== 'object') return false
@@ -601,7 +623,7 @@ function isSkillsField(value: unknown): value is SaveSkills {
   return isSaveSkill(s.sneak) && isSaveSkill(s.survival)
 }
 
-export function isSaveDataV15(value: unknown): value is SaveData {
+export function isSaveDataV15(value: unknown): value is SaveDataV15 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 15) return false
@@ -625,6 +647,37 @@ export function isSaveDataV15(value: unknown): value is SaveData {
   if (!isPlayerNeedsField(v.playerNeeds)) return false
   if (!isOwnedLandPlotsField(v.ownedLandPlots)) return false
   if (!isSkillsField(v.skills)) return false
+  return true
+}
+
+const TRAP_KINDS: ReadonlySet<string> = new Set<TrapKind>(['good', 'simple'])
+const TRAP_STATES: ReadonlySet<string> = new Set<TrapState>(['active', 'broken', 'placed'])
+
+function isPlacedTrapsField(value: unknown): value is SavePlacedTrap[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const t = entry as Record<string, unknown>
+    return (
+      typeof t.id === 'string' &&
+      typeof t.kind === 'string' && TRAP_KINDS.has(t.kind) &&
+      typeof t.x === 'number' &&
+      typeof t.z === 'number' &&
+      typeof t.yaw === 'number' &&
+      typeof t.state === 'string' && TRAP_STATES.has(t.state) &&
+      typeof t.durability === 'number' &&
+      typeof t.skillAtActivation === 'number' &&
+      typeof t.weatherCheckedAtDay === 'number'
+    )
+  })
+}
+
+export function isSaveDataV16(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 16) return false
+  if (!isSaveDataV15({ ...v, version: 15 })) return false
+  if (!isPlacedTrapsField(v.placedTraps)) return false
   return true
 }
 
@@ -724,28 +777,51 @@ function toV14(v13: SaveDataV13): SaveDataV14 {
 const DEFAULT_SAVE_SKILLS: SaveSkills = {
   sneak: { xp: SNEAK_LEGACY_XP },
   survival: { xp: 0 },
+  traps: { xp: 0 },
 }
 
-function toV15(v14: SaveDataV14): SaveData {
+function toV15(v14: SaveDataV14): SaveDataV15 {
   const { version: _version, ...rest } = v14
   return {
     ...rest,
     version: 15,
-    skills: { sneak: { ...DEFAULT_SAVE_SKILLS.sneak }, survival: { ...DEFAULT_SAVE_SKILLS.survival } },
+    skills: {
+      sneak: { ...DEFAULT_SAVE_SKILLS.sneak },
+      survival: { ...DEFAULT_SAVE_SKILLS.survival },
+      traps: { ...DEFAULT_SAVE_SKILLS.traps },
+    },
   }
 }
 
-/** Accepts a stored v1–v15 save and always returns the canonical v15 shape. */
+/** Plan 141 — adds placed traps and the `traps` skill. A v15 save has no
+ *  `traps` entry (the skill didn't exist), which restores as a fresh skill;
+ *  everything else carries over untouched. */
+function toV16(v15: SaveDataV15): SaveData {
+  const { version: _version, skills, ...rest } = v15
+  return {
+    ...rest,
+    version: 16,
+    skills: {
+      sneak: { xp: skills.sneak?.xp ?? 0 },
+      survival: { xp: skills.survival?.xp ?? 0 },
+      traps: { xp: skills.traps?.xp ?? 0 },
+    },
+    placedTraps: [],
+  }
+}
+
+/** Accepts a stored v1–v16 save and always returns the canonical v16 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV15(value)) return value
-    if (isSaveDataV14(value)) return toV15(value)
-    if (isSaveDataV13(value)) return toV15(toV14(value))
-    if (isSaveDataV12(value)) return toV15(toV14(toV13(value)))
-    if (isSaveDataV11(value)) return toV15(toV14(toV13(toV12(value))))
-    if (isSaveDataV10(value)) return toV15(toV14(toV13(toV12(toV11(value)))))
+    if (isSaveDataV16(value)) return value
+    if (isSaveDataV15(value)) return toV16(value)
+    if (isSaveDataV14(value)) return toV16(toV15(value))
+    if (isSaveDataV13(value)) return toV16(toV15(toV14(value)))
+    if (isSaveDataV12(value)) return toV16(toV15(toV14(toV13(value))))
+    if (isSaveDataV11(value)) return toV16(toV15(toV14(toV13(toV12(value)))))
+    if (isSaveDataV10(value)) return toV16(toV15(toV14(toV13(toV12(toV11(value))))))
     if (isSaveDataV9(value)) {
-      return toV15(toV14(toV13(toV12(toV11(toV10({
+      return toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -759,10 +835,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         heldTool: value.heldTool,
         treeOverrides: value.treeOverrides,
         playerTorch: value.playerTorch,
-      }))))))
+      })))))))
     }
     if (isSaveDataV8(value)) {
-      return toV15(toV14(toV13(toV12(toV11(toV10({
+      return toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -776,10 +852,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         heldTool: value.heldTool,
         treeOverrides: value.treeOverrides,
         playerTorch: null,
-      }))))))
+      })))))))
     }
     if (isSaveDataV7(value)) {
-      return toV15(toV14(toV13(toV12(toV11(toV10({
+      return toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -790,10 +866,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: value.placedFires,
         timeOfDay: value.timeOfDay,
         heldTool: value.heldTool,
-      }))))))
+      })))))))
     }
     if (isSaveDataV6(value)) {
-      return toV15(toV14(toV13(toV12(toV11(toV10({
+      return toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -804,10 +880,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: value.placedFires,
         timeOfDay: value.timeOfDay,
         heldTool: null,
-      }))))))
+      })))))))
     }
     if (isSaveDataV5(value)) {
-      return toV15(toV14(toV13(toV12(toV11(toV10({
+      return toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -818,10 +894,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: migratePlacedFires(value.placedFires),
         timeOfDay: value.timeOfDay,
         heldTool: null,
-      }))))))
+      })))))))
     }
     if (isSaveDataV4(value)) {
-      return toV15(toV14(toV13(toV12(toV11(toV10({
+      return toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -832,10 +908,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: migratePlacedFires(value.placedFires),
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))))))
+      })))))))
     }
     if (isSaveDataV3(value)) {
-      return toV15(toV14(toV13(toV12(toV11(toV10({
+      return toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -846,10 +922,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))))))
+      })))))))
     }
     if (isSaveDataV2(value)) {
-      return toV15(toV14(toV13(toV12(toV11(toV10({
+      return toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -860,10 +936,10 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))))))
+      })))))))
     }
     if (isSaveDataV1(value)) {
-      return toV15(toV14(toV13(toV12(toV11(toV10({
+      return toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -874,7 +950,7 @@ export function loadSaveData(value: unknown): SaveData | null {
         placedFires: [],
         timeOfDay: DEFAULT_TIME_OF_DAY,
         heldTool: null,
-      }))))))
+      })))))))
     }
     return null
   } catch {

@@ -3,6 +3,7 @@ import { Zap } from 'lucide-vue-next'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { LightActionResult } from '../../app/userActions'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
+import type { TrapKind } from '../../world/animalTraps'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import QuickActionsButton from '../components/QuickActionsButton.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
@@ -69,6 +70,11 @@ function placeTent(): void {
   ui.quickActions.onPlaceTent?.()
 }
 
+function placeTrap(kind: TrapKind): void {
+  closeQuickActions()
+  ui.quickActions.onPlaceTrap?.(kind)
+}
+
 function dig(): void {
   closeQuickActions()
   ui.quickActions.onDig?.()
@@ -114,6 +120,19 @@ const actions = computed<Action[]>(() => {
   if (avail.lightWoodenTorch) list.push({ label: 'Zapal pochodnię', cost: 'pochodnia w ręce', onClick: lightWoodenTorch })
   if (avail.buildFirePit) list.push({ label: 'Zbuduj palenisko', cost: '3x kamień', onClick: buildFirePit })
   if (avail.buildSimpleFire) list.push({ label: 'Zbuduj ognisko', cost: '2x gałąź', onClick: buildSimpleFire })
+  return list
+})
+
+// Only trap kinds actually carried are offered — same "guard already passes"
+// convention as the fire actions above (review 007 C4).
+const trapActions = computed<Action[]>(() => {
+  const list: Action[] = []
+  if (ui.quickActions.traps.simple) {
+    list.push({ label: 'Zastaw prostą pułapkę', cost: '1× prosta pułapka', onClick: () => placeTrap('simple') })
+  }
+  if (ui.quickActions.traps.good) {
+    list.push({ label: 'Zastaw dobrą pułapkę', cost: '1× dobra pułapka', onClick: () => placeTrap('good') })
+  }
   return list
 })
 
@@ -165,6 +184,21 @@ const shovelActions: Action[] = [
       </div>
       <template
         v-for="action in shovelActions"
+        :key="action.label"
+      >
+        <QuickActionsButton
+          :label="action.label"
+          :cost="action.cost"
+          @click="action.onClick"
+        />
+      </template>
+    </template>
+    <template v-if="trapActions.length">
+      <div class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-65">
+        Pułapki
+      </div>
+      <template
+        v-for="action in trapActions"
         :key="action.label"
       >
         <QuickActionsButton

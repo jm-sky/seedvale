@@ -9,8 +9,9 @@ import type { TradeResult } from '../items/trade'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
-import type { RestOutcome, RestVariant } from '../ui/createQuickActions'
+import type { QuickActionsTraps, RestOutcome, RestVariant } from '../ui/createQuickActions'
 import type { ToastVariant } from '../ui/createToast'
+import type { TrapKind } from '../world/animalTraps'
 import { pickNpcConfirmationSound, pickNpcFarewellSound, pickNpcGreetingSound } from '../ai/NpcAgent'
 import { playUiClick, playUiOpen } from '../audio/uiSounds'
 import { isTouchDevice } from '../input/isTouchDevice'
@@ -76,7 +77,9 @@ type QuickActionsState = {
   onDig: (() => void) | null
   onLevel: (() => void) | null
   onPlaceTent: (() => void) | null
+  onPlaceTrap: ((kind: TrapKind) => void) | null
   hasTent: boolean
+  traps: QuickActionsTraps
   onOpen: (() => void) | null
   onClose: (() => void) | null
 }
@@ -139,6 +142,8 @@ type SkillsScreenState = {
   sneakXp: number
   survivalValue: number
   survivalXp: number
+  trapsValue: number
+  trapsXp: number
   onToggleSneak: (() => void) | null
 }
 type HudState = {
@@ -218,9 +223,10 @@ export const ui = reactive({
   flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
   quickActions: {
     open: false, hasShovel: false, nearTown: false, hasTent: false,
+    traps: { simple: false, good: false },
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, lightBranch: false, lightWoodenTorch: false },
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
-    onWait: null, onRest: null, onDig: null, onLevel: null, onOpen: null, onClose: null,
+    onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
   merchant: { open: false, npc: null, counts: {}, onBuyShells: null, onBuyBarter: null } as MerchantState,
@@ -243,6 +249,8 @@ export const ui = reactive({
     sneakXp: 0,
     survivalValue: 0,
     survivalXp: 0,
+    trapsValue: 0,
+    trapsXp: 0,
     onToggleSneak: null,
   } as SkillsScreenState,
   hud: {
@@ -397,6 +405,11 @@ export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 
 export function setQuickActionsHasShovel(hasShovel: boolean): void { ui.quickActions.hasShovel = hasShovel }
 export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions.hasTent = hasTent }
 export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }
+export function setQuickActionsTraps(traps: QuickActionsTraps): void {
+  const current = ui.quickActions.traps
+  if (current.simple === traps.simple && current.good === traps.good) return
+  ui.quickActions.traps = { ...traps }
+}
 export function setQuickActionsFireAvailability(availability: QuickActionsFireAvailability): void { ui.quickActions.fireAvailability = availability }
 export function openQuickActions(): void {
   if (ui.quickActions.open) return
@@ -550,17 +563,22 @@ export function setSkillsState(
   sneakXp: number,
   survivalValue: number,
   survivalXp: number,
+  trapsValue: number,
+  trapsXp: number,
 ): void {
   const s = ui.skillsScreen
   if (
     s.sneakValue === sneakValue && s.sneakActive === sneakActive && s.sneakXp === sneakXp &&
-    s.survivalValue === survivalValue && s.survivalXp === survivalXp
+    s.survivalValue === survivalValue && s.survivalXp === survivalXp &&
+    s.trapsValue === trapsValue && s.trapsXp === trapsXp
   ) return
   s.sneakValue = sneakValue
   s.sneakActive = sneakActive
   s.sneakXp = sneakXp
   s.survivalValue = survivalValue
   s.survivalXp = survivalXp
+  s.trapsValue = trapsValue
+  s.trapsXp = trapsXp
 }
 
 export function setHudFps(fps: number): void {

@@ -1,5 +1,10 @@
 import type { LightActionResult } from '../app/userActions'
+import type { TrapKind } from '../world/animalTraps'
 import { getMountedVueUi } from '../ui-vue/mount'
+
+/** Which trap kinds are currently in the inventory — one flag per
+ *  `TrapKind`, kept live by `createApp.ts`'s `syncQuickActionAvailability`. */
+export type QuickActionsTraps = Record<TrapKind, boolean>
 
 export type RestVariant = 'camp' | 'town'
 export type RestOutcome = 'ok' | 'too-far' | 'no-blanket'
@@ -26,10 +31,15 @@ export type QuickActionsHandlers = {
   onDig?: () => void
   onLevel?: () => void
   onPlaceTent?: () => void
+  /** Sets an animal trap down in front of the player (plan 141) — the same
+   *  inventory → world placement shape as `onPlaceTent`. */
+  onPlaceTrap?: (kind: TrapKind) => void
   /** Initial shovel ownership for showing dig/level buttons. */
   hasShovel?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */
   hasTent?: boolean
+  /** Which trap kinds the player currently carries (plan 141). */
+  traps?: QuickActionsTraps
   /** Initial near-settlement flag for showing "Odpocznij w mieście". */
   nearTown?: boolean
   /** Fired when the panel transitions from closed → open (e.g. release pointer lock). */
@@ -62,6 +72,9 @@ export function createQuickActions(
   }
   if (typeof handlers.nearTown === 'boolean') {
     getUi()?.setQuickActionsNearTown(handlers.nearTown)
+  }
+  if (handlers.traps) {
+    getUi()?.setQuickActionsTraps(handlers.traps)
   }
 
   return {

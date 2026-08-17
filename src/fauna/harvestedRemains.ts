@@ -1,7 +1,8 @@
 import * as THREE from 'three'
 import type { AnimalKind } from './AnimalAgent'
 import { disposeObject3D, loadGltf, preparePropFitMax } from '../assets/loadGltf'
-import { createItemMesh, type ItemKind } from '../items/items'
+import { createItemMesh } from '../items/items'
+import { meatKindForAnimal } from './animalMeat'
 
 const PILE_URL = '/models/fx/bones_pile.glb'
 const BONE_URL = '/models/fx/large_bone.glb'
@@ -23,16 +24,6 @@ const TWO_LARGE_BONE_KINDS: ReadonlySet<AnimalKind> = new Set([
   'stag',
 ])
 
-/** Species meat used as leftover scraps on harvested remains — same mapping
- *  as `createApp.ts`'s harvest yield (plan 134). Visual only, not a pickup. */
-const MEAT_KIND_BY_ANIMAL: Partial<Record<AnimalKind, ItemKind>> = {
-  deer: 'deer_meat',
-  wolf: 'wolf_meat',
-  boar: 'boar_meat',
-  rabbit: 'rabbit_meat',
-  cow: 'beef',
-}
-
 const BONE_COLOR = 0xe8d9b8
 
 const MEAT_OFFSETS: ReadonlyArray<readonly [number, number, number]> = [
@@ -50,10 +41,6 @@ type RemainsTemplates = {
 
 let templates: RemainsTemplates | null = null
 let templatesPromise: Promise<RemainsTemplates | null> | null = null
-
-function meatKindFor(kind: AnimalKind): ItemKind {
-  return MEAT_KIND_BY_ANIMAL[kind] ?? 'raw_meat'
-}
 
 function remainsScale(modelHeight: number): number {
   return Math.min(1.6, Math.max(0.45, modelHeight * 0.55))
@@ -73,7 +60,7 @@ export function meatScrapCount(modelHeight: number): number {
 }
 
 function addMeatScraps(group: THREE.Group, kind: AnimalKind, scale: number, count: number): void {
-  const meatKind = meatKindFor(kind)
+  const meatKind = meatKindForAnimal(kind)
   for (let i = 0; i < count; i++) {
     const [x, z, yaw] = MEAT_OFFSETS[i]!
     const scrap = createItemMesh(meatKind)

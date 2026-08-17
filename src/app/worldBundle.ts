@@ -4,6 +4,7 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
 import type { Settlement } from '../settlement/createSettlement'
 import type { ChunkCoord } from '../terrain/chunkGrid'
+import type { PlacedTrapRecord } from '../world/animalTraps'
 import type { DayNightState } from '../world/dayNight'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TreeLifecycle } from '../world/treeLifecycle'
@@ -29,6 +30,7 @@ import {
 } from '../terrain/resourceDeposits'
 import { createLargeCaves, type LargeCaves } from '../world/createLargeCaves'
 import { createOcean, type WorldOcean } from '../world/createOcean'
+import { createPlacedTraps, type PlacedTraps, type PlacedTrapsHooks } from '../world/createPlacedTraps'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
 import type { Scene } from 'three'
@@ -56,7 +58,7 @@ export function homeChunks(): ChunkCoord[] {
   return coords
 }
 
-/** The ten world systems that are always created/disposed/rebuilt together
+/** The eleven world systems that are always created/disposed/rebuilt together
  *  (new seed, terrain-param change) — see `docs/plans/archive/2026-08-10--053`. A
  *  single mutable container, not a `let` reassigned to a new object: every
  *  closure created before a rebuild (`worldContext`/`ambientAudio` in
@@ -74,6 +76,7 @@ export type WorldBundle = {
   droppedItems: DroppedItems
   placedFires: PlacedFires
   placedTents: PlacedTents
+  placedTraps: PlacedTraps
   largeCaves: LargeCaves
 }
 
@@ -259,6 +262,7 @@ export async function createWorldBundle(
   initialDroppedItems: readonly DroppedItem[],
   initialPlacedFires: readonly PlacedFire[],
   initialPlacedTents: readonly PlacedTent[],
+  initialPlacedTraps: readonly PlacedTrapRecord[],
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
   dayNight: DayNightState,
@@ -278,6 +282,9 @@ export async function createWorldBundle(
    *  (ownership doesn't depend on `QuestManager`, so no mutable-target trick
    *  is needed — see that hook's call site in `createApp.ts`). */
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
+  /** Reports a completed trap catch (plan 141) — the single place Traps XP is
+   *  awarded and the catch is announced, owned by `createApp.ts`. */
+  onTrapCapture?: PlacedTrapsHooks['onCapture'],
 ): Promise<WorldBundle> {
   const waterMirror = createWaterMirror({
     waterLevel: config.terrain.waterLevel,
@@ -304,6 +311,13 @@ export async function createWorldBundle(
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
   const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt)
   const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
+  const placedTraps = createPlacedTraps(
+    scene,
+    chunkManager.sampleHeight,
+    config.seed,
+    { dropItem: droppedItems.drop, onCapture: onTrapCapture },
+    initialPlacedTraps,
+  )
   const largeCaves = createLargeCaves(
     scene,
     chunkManager,
@@ -312,7 +326,7 @@ export async function createWorldBundle(
     config.terrain.region.coastThreshold,
   )
 
-  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, largeCaves }
+  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, largeCaves }
 }
 
 /** Disposes every member's current instance and mutates `bundle`'s fields in
@@ -340,6 +354,7 @@ export async function rebuildWorldBundle(
   onAnimalDeath?: (animalId: string) => void,
   getPlayerSocial?: PlayerSocialLookup,
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
+  onTrapCapture?: PlacedTrapsHooks['onCapture'],
 ): Promise<void> {
   bundle.fauna.dispose()
   bundle.itemSpawners.dispose()
@@ -351,6 +366,8 @@ export async function rebuildWorldBundle(
   bundle.placedFires.dispose()
   const carriedTents = resetCollectedItems ? [] : [...bundle.placedTents.nodes()]
   bundle.placedTents.dispose()
+  const carriedTraps = resetCollectedItems ? [] : [...bundle.placedTraps.nodes()]
+  bundle.placedTraps.dispose()
   const carriedEconomies = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotEconomies()
   bundle.largeCaves.dispose()
   bundle.resourceDeposits.dispose()
@@ -396,6 +413,13 @@ export async function rebuildWorldBundle(
   bundle.droppedItems = createDroppedItems(scene, bundle.chunkManager.sampleHeight, carriedDrops)
   bundle.placedFires = createPlacedFires(scene, bundle.chunkManager.sampleHeight, carriedFires, playAt)
   bundle.placedTents = createPlacedTents(scene, bundle.chunkManager.sampleHeight, carriedTents)
+  bundle.placedTraps = createPlacedTraps(
+    scene,
+    bundle.chunkManager.sampleHeight,
+    config.seed,
+    { dropItem: bundle.droppedItems.drop, onCapture: onTrapCapture },
+    carriedTraps,
+  )
   bundle.largeCaves = createLargeCaves(
     scene,
     bundle.chunkManager,
@@ -411,6 +435,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.droppedItems.dispose()
   bundle.placedFires.dispose()
   bundle.placedTents.dispose()
+  bundle.placedTraps.dispose()
   bundle.largeCaves.dispose()
   bundle.resourceDeposits.dispose()
   bundle.settlementsManager.dispose()

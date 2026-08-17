@@ -216,6 +216,10 @@ export type GameLoopDeps = {
   fillWaterskin?: () => void
   startTentRest: (id: string) => void
   packTent: (id: string) => void
+  /** Arm / disarm / pick up a placed animal trap (plan 141 §9). */
+  armTrap: (id: string) => void
+  disarmTrap: (id: string) => void
+  collectTrap: (id: string) => void
   /** A full night's sleep (`fadeStrength === 1` skip) just finished — owner
    *  (`createApp.ts`) applies the rest outcome for whatever camp it resolved
    *  when the rest started, and awards any Survival XP (plan 128 §5-§7). */
@@ -261,7 +265,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
-    drinkFromWaterSource, fillWaterskin, startTentRest, packTent, onSleepFinished, onInventoryChanged, setFrameTiming,
+    drinkFromWaterSource, fillWaterskin, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
+    onSleepFinished, onInventoryChanged, setFrameTiming,
   } = deps
 
   renderer.shadowMap.autoUpdate = false
@@ -471,6 +476,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.droppedItems,
         bundle.placedFires,
         bundle.placedTents,
+        bundle.placedTraps,
         bundle.resourceDeposits,
         player.mesh.position,
         held,
@@ -619,6 +625,14 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'tent') {
         if (interactPressed) startTentRest(target.id)
         if (altInteractPressed) packTent(target.id)
+      } else if (target?.kind === 'trap') {
+        if (interactPressed) {
+          if (target.state === 'active') disarmTrap(target.id)
+          else if (target.state === 'placed') armTrap(target.id)
+          else toast.show('Ta pułapka jest zniszczona.', 'error')
+        }
+        if (altInteractPressed && target.state !== 'active') collectTrap(target.id)
+        else if (altInteractPressed) toast.show('Najpierw rozbrój pułapkę.', 'error')
       } else if (target?.kind === 'campfire') {
         if (interactPressed) {
           if (target.fire.isLit()) {
@@ -896,6 +910,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.skills.sneak.xp,
         player.skills.survival.value,
         player.skills.survival.xp,
+        player.skills.traps.value,
+        player.skills.traps.xp,
       )
       houseDoors.update(
         player.mesh.position.x,
@@ -977,6 +993,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           },
         )
       })
+      // Traps run inside the fauna pass's own cadence (plan 141 §11): the
+      // system throttles itself and early-outs when nothing is armed, and it
+      // reuses the agent list fauna just updated instead of a second query.
+      bundle.placedTraps.update(worldDt, dayNight.elapsedDays, bundle.fauna.getAgents())
       bundle.itemSpawners.update(dt, player.mesh.position, dayFactor)
       bundle.droppedItems.tick(dt)
       bundle.placedFires.update(dt)

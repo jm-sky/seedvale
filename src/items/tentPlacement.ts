@@ -10,14 +10,31 @@ export type TentPlacementReason =
   | 'object'
   | 'tent'
 
-export type TentPlacementInput = {
+/** Shared reason set for "can I put this object down here" checks. `occupied`
+ *  means another object of the same family (tent, trap…) already stands
+ *  there; each caller renames it in its own message table. */
+export type GroundPlacementReason = 'ok' | 'water' | 'slope' | 'road' | 'object' | 'occupied'
+
+export type GroundPlacementInput = {
   x: number
   z: number
   sampleHeight: (x: number, z: number) => number
   waterLevel: number
   roads: readonly RoadCorridorSegment[]
-  /** Nearby blocking points (trees, houses, wells, other tents). */
+  /** Nearby blocking points (trees, houses, wells, other placed objects). */
   blockers: readonly { x: number, z: number, radius: number }[]
+  /** Already-placed objects of the same family — rejected via `separation`. */
+  peers: readonly { x: number, z: number }[]
+  /** Clearance this object needs against `blockers`. */
+  footprintRadius: number
+  /** Minimum centre distance to any entry in `peers`. */
+  separation: number
+}
+
+export type TentPlacementInput = Omit<
+  GroundPlacementInput,
+  'peers' | 'footprintRadius' | 'separation'
+> & {
   otherTents: readonly { x: number, z: number }[]
 }
 
@@ -50,21 +67,36 @@ function onRoad(x: number, z: number, roads: readonly RoadCorridorSegment[]): bo
   return false
 }
 
-/** Suitability for pitching a tent at (x, z). Pure — no Three.js. */
-export function evaluateTentPlacement(input: TentPlacementInput): TentPlacementReason {
+/** Suitability for setting a ground object down at (x, z). Pure — no Three.js.
+ *  Shared by tents and animal traps (plan 141 §3): the rules (dry, flat
+ *  enough, off the road, clear of props and of its own kind) are identical,
+ *  only the footprint/separation differ. */
+export function evaluateGroundPlacement(input: GroundPlacementInput): GroundPlacementReason {
   const { x, z, sampleHeight, waterLevel } = input
   if (sampleHeight(x, z) <= waterLevel + WATER_MARGIN) return 'water'
   if (maxSlopeDelta(x, z, sampleHeight) > SLOPE_MAX_DELTA) return 'slope'
   if (onRoad(x, z, input.roads)) return 'road'
-  for (const tent of input.otherTents) {
-    if (Math.hypot(tent.x - x, tent.z - z) < TENT_SEPARATION) return 'tent'
+  for (const peer of input.peers) {
+    if (Math.hypot(peer.x - x, peer.z - z) < input.separation) return 'occupied'
   }
   for (const blocker of input.blockers) {
-    if (Math.hypot(blocker.x - x, blocker.z - z) < blocker.radius + TENT_FOOTPRINT_RADIUS) {
+    if (Math.hypot(blocker.x - x, blocker.z - z) < blocker.radius + input.footprintRadius) {
       return 'object'
     }
   }
   return 'ok'
+}
+
+/** Suitability for pitching a tent at (x, z). */
+export function evaluateTentPlacement(input: TentPlacementInput): TentPlacementReason {
+  const { otherTents, ...rest } = input
+  const reason = evaluateGroundPlacement({
+    ...rest,
+    peers: otherTents,
+    footprintRadius: TENT_FOOTPRINT_RADIUS,
+    separation: TENT_SEPARATION,
+  })
+  return reason === 'occupied' ? 'tent' : reason
 }
 
 /** Busy-channel duration for pitching a tent (plan 128 §3.2) — the same
