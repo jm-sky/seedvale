@@ -1,9 +1,12 @@
 # Plan: Mobile Combat — Forgiving Target Acquisition & Auto-Facing
 
 **Created:** 2026-08-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~123~~ ~~124~~
+
+domain: `ui-input`
+tags: [items-player, fauna]
 
 ## Cel
 

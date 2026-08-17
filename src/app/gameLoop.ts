@@ -61,6 +61,7 @@ import {
   type MeleeHitCandidate,
   meleeSwingAngle,
   resolveMeleeHits,
+  yawToward,
 } from '../player/playerMelee'
 import {
   applyStarvationDamage,
@@ -83,6 +84,7 @@ import {
   buildDigTarget,
   buildInteractables,
   collectItem,
+  type CombatAimMode,
   GAZE_RANGE,
   INTERACT_MIN_DOT,
   INTERACT_RANGE,
@@ -292,6 +294,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
    *  the per-weapon config. */
   const playerMelee = createPlayerMelee()
 
+  /** Touch rigs aim with the same finger that moves and attacks, so combat
+   *  acquisition/facing is loosened for them (plan 142). Derived from the
+   *  touch chrome actually being mounted, not re-sniffed per frame. */
+  const aimMode: CombatAimMode = touchControls ? 'touch' : 'pointer'
+  /** Yaw the in-flight attack was committed to when it started (plan 142 §2),
+   *  or `null` when the hit should resolve against live camera yaw — always
+   *  the case on `pointer`, which keeps its original behaviour exactly. Set at
+   *  `requestAttack` time and consumed one hit window later, so a touch swing
+   *  lands on the target the player actually tapped rather than on wherever
+   *  the camera happened to drift during wind-up. */
+  let attackYaw: number | null = null
+
   /** Currently gaze-highlighted NPC/animal, if any — tracked so we only toggle
    *  the CSS class on change instead of writing every frame. */
   let highlightedTarget: Highlightable | null = null
@@ -414,6 +428,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         playerMelee.reset()
         player.endMeleeAttack()
         player.setMeleeSwing(null)
+        attackYaw = null
       }
 
       switch (modal) {
@@ -492,7 +507,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         const hitIds = resolveMeleeHits(
           player.mesh.position.x,
           player.mesh.position.z,
-          mouseLook.state.yaw,
+          attackYaw ?? mouseLook.state.yaw,
           meleeTick.config,
           meleeCandidates,
         )
@@ -518,6 +533,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             toast.show(`Trafiono: ${label}`)
           }
         }
+        // One attack commits to one yaw; the rest of the swing (and the next
+        // request) is free to use live camera yaw again.
+        attackYaw = null
       }
 
       // Ground-work (shovel soil / pickaxe rock) is a fallback, not a competing
@@ -540,6 +558,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         mouseLook.state.yaw,
         held,
         playerMelee.recentTargetIds(),
+        aimMode,
       )
       npcDialog.setPrompt(target ? target.promptLabel : null)
 
@@ -692,6 +711,21 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                   if (result.moveX !== 0 || result.moveZ !== 0) {
                     player.gapClose(result.moveX, result.moveZ)
                   }
+                  // Touch auto-facing (plan 142 §2): the character already
+                  // turns to the target above, but the hit test runs off aim
+                  // yaw — commit that too, so a target acquired inside the
+                  // wider touch cone but outside the weapon's arc still
+                  // connects. Computed after the gap-close, since a collision
+                  // can slide the player off the straight line to the target.
+                  // Camera and movement control stay untouched.
+                  attackYaw = aimMode === 'touch'
+                    ? yawToward(
+                        player.mesh.position.x,
+                        player.mesh.position.z,
+                        target.position.x,
+                        target.position.z,
+                      )
+                    : null
                 }
               }
             }

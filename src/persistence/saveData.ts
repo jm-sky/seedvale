@@ -1,11 +1,11 @@
 import type { WorldConfig } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
-import type { QuestState } from '../quests/quests'
 import type { SkillId } from '../player/PlayerSkills'
+import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
 import { isToolKind } from '../items/HeldTool'
-import { SNEAK_LEGACY_XP } from '../player/PlayerSkills'
 import { type ItemKind } from '../items/items'
+import { SNEAK_LEGACY_XP } from '../player/PlayerSkills'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
  *  here so this module doesn't reach into config internals. */

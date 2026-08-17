@@ -48,9 +48,24 @@ export const DIG_REACH = 1.5
  *  Independent of `MeleeConfig.range` (the actual weapon hit range, plan
  *  124 §2) and of `GAZE_RANGE` (shared by every other interactable kind). */
 export const COMBAT_TARGET_RANGE = 7
-/** 90° full target-acquisition cone (`cos(45°)`), wider than
- *  `INTERACT_MIN_DOT`'s ~60° cone — plan 124 §1. */
-export const COMBAT_TARGET_CONE_DOT = Math.SQRT1_2
+/** How the player is aiming this session — a pointer/keyboard rig aims with
+ *  the mouse-look yaw itself, a touch rig has to drag the same finger that
+ *  also moves and attacks (plan 142). Only combat acquisition/facing branches
+ *  on this; nothing else in the interaction pipeline does. */
+export type CombatAimMode = 'pointer' | 'touch'
+
+/** Target-acquisition cone per aim mode (plan 124 §1, plan 142 §1).
+ *  `pointer` keeps the original 90° full cone (`cos(45°)`), already wider than
+ *  `INTERACT_MIN_DOT`'s ~60° cone. `touch` widens it to ~145° full
+ *  (`cos(~72.5°)`) so a tap doesn't require lining the camera up precisely —
+ *  still clearly directional, so an animal off to the side or behind the
+ *  player is never acquired. Targets acquired beyond a weapon's own `arcDot`
+ *  are made hittable by touch auto-facing (plan 142 §2), not by widening the
+ *  hit arc. */
+export const COMBAT_TARGET_CONE_DOT: Record<CombatAimMode, number> = {
+  pointer: Math.SQRT1_2,
+  touch: 0.3,
+}
 
 /** Plan 106 §4 — `[E]` always drinks directly (well or lake); `[R]` fills a
  *  carried empty waterskin. Static regardless of inventory (same convention
@@ -443,7 +458,8 @@ export function buildDigTarget(
  *  existing `kind: 'animal'` `Interactable`/`[E]` attack branch in
  *  `gameLoop.ts` unchanged: this only widens which live animal that branch
  *  sees, it is not a second targeting system. Only searches while a melee
- *  tool is held. */
+ *  tool is held. `aim` selects the acquisition cone (plan 142 §1) — the only
+ *  thing that differs between a pointer and a touch rig here. */
 export function buildCombatTarget(
   settlements: readonly Settlement[],
   fauna: Fauna,
@@ -451,6 +467,7 @@ export function buildCombatTarget(
   playerYaw: number,
   heldTool: ToolKind | null,
   recentTargetIds: readonly string[],
+  aim: CombatAimMode,
 ): Interactable | null {
   if (!isMeleeTool(heldTool)) return null
 
@@ -473,7 +490,7 @@ export function buildCombatTarget(
     playerPos.z,
     playerYaw,
     COMBAT_TARGET_RANGE,
-    COMBAT_TARGET_CONE_DOT,
+    COMBAT_TARGET_CONE_DOT[aim],
     recentTargetIds,
   )
   const animal = targetId ? byId.get(targetId) ?? null : null

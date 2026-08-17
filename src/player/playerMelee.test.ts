@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MeleeConfig } from '../items/itemCatalog'
+import { COMBAT_TARGET_CONE_DOT } from '../app/interactables'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { createStaminaState, type StaminaState } from '../shared/StaminaState'
 import {
@@ -11,6 +12,7 @@ import {
   meleeSwingAngle,
   pickCombatTarget,
   resolveMeleeHits,
+  yawToward,
 } from './playerMelee'
 
 /** Attacks a target 1m directly ahead (-Z, yaw 0) — inside every plan-123
@@ -278,6 +280,54 @@ describe('pickCombatTarget (plan 124 §1)', () => {
 
   it('returns null when there are no candidates', () => {
     expect(pickCombatTarget([], 0, 0, 0, RANGE, CONE_DOT, [])).toBeNull()
+  })
+})
+
+describe('mobile target acquisition & auto-facing (plan 142)', () => {
+  const RANGE = 7
+  /** 60° off the forward axis at 3m — outside the pointer cone (45°), inside
+   *  the touch one, and outside the knife's own 53° hit arc. */
+  const OFF_AXIS: MeleeHitCandidate = { id: 'off-axis', x: 3 * Math.sin(Math.PI / 3), z: -3 * Math.cos(Math.PI / 3), alive: true }
+
+  it('keeps the pointer cone at its plan-124 width', () => {
+    expect(COMBAT_TARGET_CONE_DOT.pointer).toBe(Math.SQRT1_2)
+    expect(pickCombatTarget([OFF_AXIS], 0, 0, 0, RANGE, COMBAT_TARGET_CONE_DOT.pointer, [])).toBeNull()
+  })
+
+  it('acquires an off-axis target on touch that the pointer cone rejects', () => {
+    expect(pickCombatTarget([OFF_AXIS], 0, 0, 0, RANGE, COMBAT_TARGET_CONE_DOT.touch, [])).toBe('off-axis')
+  })
+
+  it('still rejects targets outside any sensible attack direction on touch', () => {
+    const candidates: MeleeHitCandidate[] = [
+      { id: 'perpendicular', x: 3, z: 0, alive: true },
+      { id: 'behind', x: 0, z: 3, alive: true },
+    ]
+    expect(pickCombatTarget(candidates, 0, 0, 0, RANGE, COMBAT_TARGET_CONE_DOT.touch, [])).toBeNull()
+  })
+
+  it('keeps the existing ranking inside the wider touch cone', () => {
+    const candidates: MeleeHitCandidate[] = [OFF_AXIS, { id: 'center', x: 0, z: -3, alive: true }]
+    expect(pickCombatTarget(candidates, 0, 0, 0, RANGE, COMBAT_TARGET_CONE_DOT.touch, [])).toBe('center')
+    expect(pickCombatTarget([...candidates].reverse(), 0, 0, 0, RANGE, COMBAT_TARGET_CONE_DOT.touch, [])).toBe('center')
+  })
+
+  it('yawToward aims straight at the target in the hit test convention', () => {
+    // Forward is (-sin(yaw), -cos(yaw)): -Z is yaw 0, +X is yaw -90°.
+    expect(yawToward(0, 0, 0, -5)).toBeCloseTo(0, 6)
+    expect(yawToward(0, 0, 5, 0)).toBeCloseTo(-Math.PI / 2, 6)
+    expect(yawToward(2, 2, 2, -3)).toBeCloseTo(0, 6)
+  })
+
+  it('returns null instead of a direction when the target is on top of the player', () => {
+    expect(yawToward(1, 1, 1, 1)).toBeNull()
+  })
+
+  it('lets an auto-faced attack connect with a target outside the weapon arc', () => {
+    const target: MeleeHitCandidate = { id: 'off-axis', x: 1.5 * Math.sin(Math.PI / 3), z: -1.5 * Math.cos(Math.PI / 3), alive: true }
+    expect(resolveMeleeHits(0, 0, 0, KNIFE, [target])).toEqual([])
+    const yaw = yawToward(0, 0, target.x, target.z)!
+    expect(resolveMeleeHits(0, 0, yaw, KNIFE, [target])).toEqual(['off-axis'])
   })
 })
 

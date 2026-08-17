@@ -254,6 +254,23 @@ export function pickCombatTarget(
   return scored[0].id
 }
 
+/** Camera/aim yaw (plan 142 §2) that points from `(playerX, playerZ)` straight
+ *  at `(targetX, targetZ)`, in the same convention `resolveMeleeHits` and
+ *  `pickCombatTarget` use for the forward vector (`-sin(yaw)`, `-cos(yaw)`).
+ *  Returns `null` when the two points coincide, so callers keep their current
+ *  yaw instead of snapping to an arbitrary direction. */
+export function yawToward(
+  playerX: number,
+  playerZ: number,
+  targetX: number,
+  targetZ: number,
+): number | null {
+  const dx = targetX - playerX
+  const dz = targetZ - playerZ
+  if (Math.hypot(dx, dz) < 1e-4) return null
+  return Math.atan2(-dx, -dz)
+}
+
 /** Pull-back angle (radians) at the end of wind-up. */
 const SWING_PULL_BACK = 0.5
 /** Forward-swing angle (radians) reached by the end of the hit window. */
