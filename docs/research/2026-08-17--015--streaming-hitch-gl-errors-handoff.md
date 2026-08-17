@@ -10,7 +10,7 @@
 
 Two separate problems, in one investigation thread:
 
-1. **Streaming hitch** (original problem): intermittent, very large frame hitch (up to ~800ms measured) in the water-mirror render path during chunk streaming. **Root cause identified with high confidence.** Currently only *worked around* (`checkShaderErrors=false`, trades away shader error visibility), not fixed. A proper fix (`compileAsync()` prewarming) was attempted through 4 variants — **all 4 made things worse**, two of them severely, and the code has been fully reverted. Not actively being worked right now; needs a decision (accept the workaround, or resume with a narrower repro — see §5). **New trace evidence (§4) casts doubt on whether the workaround is even fully effective — check that before deciding.**
+1. **Streaming hitch** (original problem): intermittent, very large frame hitch (up to ~800ms measured) in the water-mirror render path during chunk streaming. **Root cause identified with high confidence.** Currently only *worked around* (`checkShaderErrors=false`, trades away shader error visibility), **and §4b now confirms this workaround does not fix or reduce the underlying stall — it only relocates which named WebGL call absorbs it** (from `LINK_STATUS` to `ACTIVE_UNIFORMS`; ~21.6s measured across 288 first-use events in one benchmark run). A proper fix (`compileAsync()` prewarming) was attempted through 4 variants — **all 4 made things worse**, two of them severely, and the code has been fully reverted. Not actively being worked right now; needs a decision (accept the workaround as-is now that it's known to buy nothing against the stall, or resume with a narrower repro — see §5, whose angle-3 idea is the strongest lead post-§4b).
 
 2. **GL_INVALID_OPERATION sampler-mismatch errors** (newly discovered side quest, unrelated to #1): confirmed present on a clean `main` with zero diagnostic code active. Leading hypothesis: `n8ao` package's manual multi-render-target texture handling vs. the three.js 0.180→0.185 upgrade. **User has already bumped `n8ao` 2.0.0→2.0.1 (commit `b4081bf`) — this is UNVERIFIED, and there's a lockfile inconsistency that may mean the bump isn't even installed yet.** This is the most actionable next step (§6).
 
@@ -76,6 +76,41 @@ What it confirms and what it changes:
 - **Unusual trigger path**: the call chain bottoms out at `lil-gui.js:245`'s `_listenCallback` calling into `createApp.ts:1660` as a "Function call" — not the normal chunk-streaming path (`chunkManager.update()` inside a `gameLoop.ts` tick). `lil-gui`'s `_listenCallback` is its live-value-polling mechanism for `.listen()`-bound GUI controllers. This ~6s stall may have coincided with a GUI interaction (e.g. a quality-preset change touching every material's program at once) rather than plain movement/streaming — worth confirming which, since it changes whether this is the same bug as §1 or a distinct, GUI-triggered trigger for the same underlying mechanism.
 
 **Next step, before anything else in §6 or elsewhere:** read `node_modules/three/src/renderers/webgl/WebGLProgram.js` in the installed `0.185.1`, find every `gl.getProgramParameter` call site, and check each one against `renderer.debug.checkShaderErrors` gating. This directly determines whether §3's tradeoff is even doing what's assumed.
+
+## 4b. Confirmed (2026-08-17, later same day): `checkShaderErrors=false` does not eliminate the stall — it relocates it
+
+Direct source read of the installed `three@0.185.1` `WebGLProgram.js` (both `node_modules/three/src/renderers/webgl/WebGLProgram.js` and the actual bundle Vite serves, `node_modules/three/build/three.module.js`, confirmed line-for-line identical logic) found **four** live `gl.getProgramParameter()` call sites, one more than assumed in §4's framing:
+
+| Category | Call site | Gated by `checkShaderErrors`? |
+|---|---|---|
+| `ACTIVE_UNIFORMS` | `WebGLUniforms` constructor, invoked from `onFirstUse()` via `new WebGLUniforms(gl, program)` | **No — unconditional** |
+| `ACTIVE_ATTRIBUTES` | `fetchAttributeLocations()`, invoked from `onFirstUse()` | **No — unconditional** |
+| `LINK_STATUS` (+ `VALIDATE_STATUS`) | `onFirstUse()` | Yes |
+| `COMPLETION_STATUS_KHR` | `isReady()`, only reachable via `compileAsync()`'s polling loop | N/A — not reachable, since nothing in the current codebase calls `compileAsync()` |
+
+Critically, `onFirstUse()` calls `new WebGLUniforms(gl, program)` (→ `ACTIVE_UNIFORMS`) and `fetchAttributeLocations(gl, program)` (→ `ACTIVE_ATTRIBUTES`) **unconditionally, in that order, outside the `if (renderer.debug.checkShaderErrors)` block**. `checkShaderErrors=false` only skips `LINK_STATUS`/`VALIDATE_STATUS`/`getProgramInfoLog()`/`getShaderInfoLog()` — it does nothing to the other two.
+
+A temporary, local-only diagnostic (timing each of the four call sites via `performance.now()`, patched directly into `node_modules/three/build/three.module.js`, never committed — reverted after use) was run against the `stream` benchmark on current `main`. Result:
+
+```
+(index)             count   totalMs      maxMs      maxLabel
+ACTIVE_UNIFORMS      288    21,603.4ms   323.8ms    ''
+ACTIVE_ATTRIBUTES    288    0.8ms        0.1ms      ''
+LINK_STATUS            0    —            —          —
+COMPLETION_STATUS_KHR  0    —            —          —
+```
+
+Plus one individually-flagged slow call: `237.60ms`, attributed (via Chrome's ignore-listing of `node_modules`, which resolves the console location to the nearest non-ignored caller frame) to `createPostProcessing.ts:270` — the `EffectComposer.render()` entry point for the postprocessing chain (bloom/AO/SMAA/god rays/output), not `waterMirror.ts`.
+
+**This resolves §4's open question:**
+
+- `LINK_STATUS` = 0 calls confirms `checkShaderErrors=false` does exactly what's assumed for that specific call — it's fully suppressed.
+- `COMPLETION_STATUS_KHR` = 0 calls confirms `compileAsync()` really is unreachable anywhere in the live codebase, consistent with §2/§8's "fully reverted" claim.
+- **But `ACTIVE_UNIFORMS` alone accounts for ~21.6s of the measured cost, dwarfing `ACTIVE_ATTRIBUTES`'s 0.8ms for the exact same 288 first-use events.** This is not a property of `ACTIVE_UNIFORMS` as an operation — it's a property of being the *first* `getProgramParameter`-family call to touch a given program in `onFirstUse()` (it runs before `ACTIVE_ATTRIBUTES`). WebGL drivers commonly defer program-link completion asynchronously; whichever query is first to need the link result forces a synchronous wait for it, and every subsequent query on that same program is then cheap. Previously, with `checkShaderErrors=true`, `LINK_STATUS` was first in line and absorbed this cost (research 012's ~545ms `getProgramInfoLog()` finding). With `checkShaderErrors=false`, `LINK_STATUS` is skipped, so `ACTIVE_UNIFORMS` becomes first in line and absorbs it instead.
+- **Conclusion: the `checkShaderErrors=false` workaround does not fix or reduce the underlying stall. It only changes which named WebGL call is charged for it in a profiler.** The real cost — first-use, synchronous, driver-side program-link completion — is unconditional and cannot be gated off by any `renderer.debug` flag; it is inherent to using a `WebGLProgram` variant (in this case, the mirror pass's distinct `LinearSRGBColorSpace`/`NoToneMapping` cache-key variant, per §1) for the first time.
+- Also new: the one individually-flagged slow call this run came from the `EffectComposer`/postprocessing chain, not `waterMirror.ts`. With 288 total first-use events in this run, most likely still trace to the mirror pass (matching the original trace's dominant `waterMirror.ts:109` branch, §4), but this shows the same mechanism is not exclusive to the mirror pass — it fires wherever a not-yet-used program variant is first drawn, which the postprocessing chain (bloom/AO/SMAA/god rays/output, each with their own materials) also triggers.
+
+**Not fixed. Not attempted here, by design** — this was a diagnostic-only pass. The tradeoff in §3 is now known to buy nothing against this cost (it still suppresses real shader error visibility for no offsetting benefit against the stall) and should be re-evaluated on that basis; §5's angle-3 idea (avoid the mirror-vs-main program-variant divergence itself, rather than trying to hide or reorder the cost of compiling/linking a second variant) remains the most promising lead, since the stall is fundamentally about *first use* of a program variant, not about which diagnostic call happens to trigger the driver wait.
 
 ## 5. If resuming `compileAsync()` prewarming
 
