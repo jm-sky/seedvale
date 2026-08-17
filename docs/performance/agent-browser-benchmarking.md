@@ -97,6 +97,16 @@ agent-browser --session bench1 eval "window.__benchResult"
 
 Already documented once, in plan 143's implementation notes: an initial pass running before/after in two tabs at the same time produced unusable numbers (GPU/CPU contention — a solo "before" run at ~60 fps measured ~37 fps when a second tab was benchmarking at the same time). **One `agent-browser` benchmark run at a time, always**, even when you have two dev servers (before/after) up simultaneously. It's fine for both dev servers to be running; just don't have both pages actively executing `__seedvaleRunBenchmark` at once.
 
+## Pitfall 5 — each `--session <name>` spins up a whole new Chrome process; orphaned ones will bring the host down
+
+This is the one that actually cost the most time in practice — more than Pitfalls 1–4 combined. Every new `--session <name>` you haven't used before launches a **full new headless Chrome instance** (its own `user-data-dir`, its own zygote/gpu-process/renderer tree — `pgrep -af "agent-browser/browsers"` shows ~18-19 OS processes per instance). If you follow "use a fresh session to skip the start menu" (Pitfall 1) repeatedly without closing the previous one first, you accumulate multiple full Chrome instances, each running this app's heavy Three.js scene under software rendering. Three orphaned instances (from three `--session` calls in one session, none explicitly closed) drove the host to **load average >6, <250 MB free RAM**, and turned a nominally-30s benchmark into a 4-minute stall — every subsequent `eval` call, even trivial ones, started timing out, which looks exactly like a hung tab (Pitfall 1/2) but is actually **system-wide resource starvation**, not a per-tab issue.
+
+**Fix:**
+- Before opening a new `--session`, close the previous one: `agent-browser --session <old-name> close`.
+- If you're not sure what's still running, check directly rather than guessing: `pgrep -af "agent-browser/browsers"` (each instance's processes share one `user-data-dir` path in their args, so you can tell instances apart) and `free -m` / `uptime` for overall host health. A load average spike alongside `eval`/`wait` calls suddenly all timing out (including trivial ones) is this problem, not a hang in the page itself — investigate host resources before spending more turns retrying browser commands.
+- Prefer **reusing one session across a full page reload** (`agent-browser open <url>` again, same session/tab) over minting a new named session per navigation — a reload resets the page's JS module state (clears `inFlight`, etc., see Pitfall 3) without spawning a new OS process, and only revisits Pitfall 1's menu screen if that *specific* origin already has a save (a different port/origin is a different profile-storage bucket, so switching between two dev-server ports on the same session doesn't reintroduce the menu).
+- If things do go sideways, recover with `pkill -9 -f "agent-browser/browsers"` (kills every agent-browser Chrome instance) rather than trying to close sessions individually while the host is already struggling to respond.
+
 ## Before/after methodology (isolating one change)
 
 1. `git worktree add <scratch-path> <baseline-commit>` — check out the pre-change commit into a separate directory. Don't touch the main working tree.

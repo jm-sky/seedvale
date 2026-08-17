@@ -6,7 +6,7 @@ tags: [performance]
 # Plan: Grass GPU performance and geometry LOD
 
 **Created:** 2026-08-17  
-**Status:** `verification needed` 🔍 (etap S zaimplementowany; M/M/L nierozpoczęte — patrz [implementation notes](./2026-08-17--148--grass-gpu-performance-implementation-notes.md))  
+**Status:** `verification needed` 🔍 (etap S zaimplementowany i zbenchmarkowany — `current`, grass triangles −47%, ale bez poprawy FPS/RENDER w tym pojedynczym headless runie; M/M/L nierozpoczęte, czekają na real-GPU/powtórzone pomiary — patrz [implementation notes](./2026-08-17--148--grass-gpu-performance-implementation-notes.md))  
 **Priority:** medium · **Effort:** L  
 **Depends on:** none
 

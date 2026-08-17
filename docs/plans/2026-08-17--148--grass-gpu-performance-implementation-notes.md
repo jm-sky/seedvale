@@ -1,6 +1,6 @@
 # Implementation notes — Plan 148 (Grass GPU performance and geometry LOD)
 
-**Status:** S (Geometry LOD) implemented and technically verified (tsc/build/test green). No browser/benchmark verification yet — see "Not yet done". M (density LOD tuning) and M (far shader simplification) are explicitly gated on S's benchmark result per the plan's own ordering and were not started.
+**Status:** S (Geometry LOD) implemented, technically verified (tsc/build/test green), and benchmarked (`current` scenario, one before/after run — see below). Triangle reduction landed as predicted; FPS/frame-time did **not** improve and the tail got measurably worse in this single run pair — per the plan's own closing rule, that's a signal *not* to chase further optimization blindly, not a request to jump straight to M. M (density LOD tuning) and M (far shader simplification) remain gated on this result and were not started — see "Reading this" below for the recommended next step. Only `forest`/`stress`/`water` and repeat runs remain unrun (see "Not yet done").
 
 ## What changed (S — Geometry LOD)
 
@@ -30,28 +30,34 @@ npm run test    # 120 files, 1000 tests, 0 failures (3 new in distanceLod.test.t
 
 ESLint intentionally not run (out of scope for this session per instructions).
 
+## Benchmark: `?benchmark=current`, seed 42, res 193, quality High, single run each
+
+Run via `agent-browser` against two `vite` dev servers, one browser tab at a time (never concurrently — see [agent-browser-benchmarking.md](../performance/agent-browser-benchmarking.md), which also documents the pitfalls hit getting to a clean run: headless start-menu hang on a reused profile, `eval`'s CDP timeout on a direct `await` of the 30s+ benchmark call, benchmark-runner reentrancy, and — the one that actually cost the most time — three orphaned full Chrome processes from earlier `--session` churn left running and starving the host of CPU/RAM, which is what made an early attempt take literally 4 minutes for a 30s benchmark). Before = `main`@`cfdb83a` (the commit immediately prior to this plan's geometry-LOD commit) in a throwaway `git worktree` + `PORT=5578` dev server, `node_modules` symlinked (safe — lockfile unchanged between the two commits). After = this change, the already-running dev server. Both worktree and extra dev server were torn down after the run.
+
+| Metric | Before (`cfdb83a`) | After (`68e1bf4`) | Δ |
+|---|---:|---:|---:|
+| **`grass` bucket triangles** | 8,537,018 | 4,529,954 | **−47.0%** |
+| Scene triangles total (census) | 15,983,750 | 11,976,686 | **−25.1%** |
+| `grass` bucket draw calls / instancedMeshes / instances | 84 / 84 / 315,789 | 84 / 84 / 315,789 | = |
+| Draw calls avg (whole scene) | 1413 | 1447 | +2.4% |
+| FPS avg / min | 60.6 / 44 | 57.5 / 32 | −5.1% / −27% |
+| Frame time avg / p95 / max | 16.5 / 22.9 / 22.9 ms | 17.4 / 28.9 / 31.4 ms | +5.5% / +26% / +37% |
+| RENDER (CPU system) | 11.6 ms | 11.8 ms | +1.7% (flat) |
+| Loaded chunks / NPCs / fauna | 61 / 13 / 23 | 61 / 13 / 23 | = |
+
+**Reading this:**
+
+- The triangle reduction landed almost exactly on the plan's predicted mechanism: grass triangles dropped 47% (within the plan's 25–60% target band for S), and the whole-scene triangle total dropped by the **identical absolute count** (−4,007,064 in both rows) — confirming the change is fully isolated to grass geometry, nothing else in the scene moved, and draw calls didn't increase (`grass` stayed at exactly 84/84/315,789 in both runs — same instance count, same bucket count, only the geometry each `InstancedMesh` points at changed).
+- **FPS/frame-time did not improve, and the tail got measurably worse** — frame p95 +26%, max +37%, min FPS 44→32. RENDER (the CPU-side render-submission system timer) is essentially flat (+1.7%), which is the most telling number: the CPU cost of *submitting* the scene didn't change, consistent with draw calls being flat. This points at the bottleneck in this scenario **not** being raw grass vertex/triangle throughput — matching the plan's own explicit closing guidance: *"Jeżeli triangles spadną, ale RENDER/FPS prawie się nie zmieni, nie należy dodawać kolejnych optymalizacji w ciemno — będzie to sygnał, że głównym ograniczeniem jest inna część GPU pipeline."*
+- **Caveats that keep this from being a confident verdict either way:** single run per state (no repeats to separate signal from run-to-run noise), headless Chrome + SwiftShader **software** rendering (no real GPU — vertex throughput and fragment/fill costs scale very differently than on real hardware, so a triangle-count win that would show up on a real GPU may simply not register here), and the host had just recovered from a period of heavy resource contention earlier in the same session (three orphaned Chrome processes, load average >6, <250 MB free RAM) — fully resolved before this pair of runs (confirmed via `free`/`uptime`/process list immediately before), but still worth flagging as a reason to treat a single pair of numbers cautiously rather than as ground truth.
+- **Recommendation:** don't treat this as either "S succeeded" or "S failed" on FPS grounds alone. The mechanical result (triangles down 47% in the targeted bucket, nothing else regressed structurally) is solid and worth keeping. Whether it's worth pursuing M (density LOD tuning) or M (far shader simplification) next should wait on either (a) a real-GPU browser benchmark (not headless SwiftShader) or (b) a few repeat runs of this same headless comparison to see if the FPS/frame-time delta is consistent or just noise — per the plan's own gate, M is explicitly "only if S doesn't give a sufficient result," and this single run doesn't cleanly establish that either way.
+
 ## Not yet done
 
-- **No baseline/S-stage census or benchmark — partially attempted, not completed.** A later session tried to run the plan's `?benchmark=current|forest|stress|water&seed=42&res=193` protocol via `agent-browser` (see [agent-browser-benchmarking.md](../performance/agent-browser-benchmarking.md) for the pitfalls hit — headless start-menu hang, `eval`'s CDP timeout, benchmark-runner reentrancy). One **after-only** data point was captured before the session was stopped (user chose to finish the benchmark manually):
-
-  `current` scenario, seed 42, res 193, quality High, fresh session, 30 s run, this commit (`68e1bf4`):
-
-  | Metric | Value |
-  |---|---:|
-  | FPS avg / min / p1 | 57.5 / 32 / 32 |
-  | Frame time avg / p95 / max | 17.4 / 28.9 / 31.4 ms |
-  | RENDER (system) | 11.8 ms |
-  | Draw calls avg (whole scene) | 1447 |
-  | Triangles avg (whole scene, monitor) | 9,972,722 |
-  | Scene triangles total (census) | 11,976,686 |
-  | `grass` bucket — draw calls / instancedMeshes | 84 / 84 |
-  | `grass` bucket — instances | 315,789 |
-  | `grass` bucket — triangles | 4,529,954 |
-  | Loaded chunks / NPCs / fauna | 61 / 13 / 23 |
-
-  No baseline (pre-geometry-LOD, commit `cfdb83a`) run completed in that session — a `git worktree` + second `vite` dev server (`PORT=5578`) was set up for it (`ln -s`'d `node_modules`, `package.json`/lockfile unchanged between the two commits so this is safe) but the run itself wasn't finished before the session ended. **Whether the geometry LOD change actually reduced grass triangles has not been confirmed** — the number above is a snapshot of the current state, not a comparison. Tear down the worktree (`git worktree remove`) after the baseline run is captured; it isn't meant to be left around.
-- The plan's step 1 (baseline census + benchmark) and step 4 (benchmark S) more broadly — the `forest`/`stress`/`water` scenarios, and the full before/after table across all four scenarios — remain entirely unrun.
+- **Repeat runs** to separate the FPS/frame-time delta above from run-to-run noise — only one run per state was captured.
+- **Real-GPU verification.** This benchmark ran headless (SwiftShader software rendering) end-to-end — see the caveats above. A browser benchmark on real hardware would be more representative of the plan's actual target environment.
+- **`forest`/`stress`/`water` scenarios** from the plan's own benchmark protocol — only `current` was run.
 - **No visual regression test.** The plan's "Visual test" scenarios (dense meadow, forest, open terrain, 360° camera rotation, distant flat viewing, top-down, sprint-through, Near→Mid→Far transitions) are unverified — LOD popping risk (flagged by the plan itself) is unconfirmed either way.
-- **M (Density LOD tuning) and M (Far shader simplification) not started** — both are explicitly gated in the plan on S's benchmark result ("Wykonać dopiero po S i tylko jeśli...", "Wykonać tylko jeśli pomiary/profilowanie pokażą..."). Since S itself has no benchmark yet, there's no basis to decide whether either is needed.
+- **M (Density LOD tuning) and M (Far shader simplification) not started** — both are explicitly gated in the plan on S's benchmark result ("Wykonać dopiero po S i tylko jeśli...", "Wykonać tylko jeśli pomiary/profilowanie pokażą..."). S now has one benchmark run (see above); it shows a real triangle win but no RENDER/FPS win, which per the plan's own text is a reason to *pause and diagnose*, not a green light to add M in the dark. See "Recommendation" above.
 - **L (Billboard/impostor) not started**, per the plan's own explicit deferral ("Nie implementować w pierwszym podejściu").
-- The plan's success criterion ("30%+ redukcji grass triangles... mierzalna poprawa RENDER/FPS") is therefore unverified. The only thing established mechanically is that per-instance triangle count now decreases with distance (near: unchanged 24–36 tri/instance; mid: ~50% segment reduction; far: ~75–83% segment reduction, plus grain's leaf drop) — actual aggregate triangle savings depend on how instances are distributed across the near/mid/far bands at typical view distances, which the benchmark step exists to measure.
+- The plan's success criterion ("30%+ redukcji grass triangles... mierzalna poprawa RENDER/FPS") is **partially met**: grass triangles −47% (target 30%+, met) but RENDER/FPS did not measurably improve (target: "mierzalna poprawa", not met in this single headless run). Per repeat-run/real-GPU caveats above, this isn't a final verdict.
