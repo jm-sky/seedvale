@@ -1,7 +1,7 @@
 # Plan: Shadow Budget Optimization
 
 **Created:** 2026-08-17
-**Status:** `planned` 📋 — analiza kompletna, implementacja nierozpoczęta
+**Status:** `verification needed` 🔍 — R1+R2 zaimplementowane, technicznie zweryfikowane (tsc/lint/build/test zielone); brak testu wizualnego w przeglądarce i brak benchmarku (patrz [implementation notes](./2026-08-17--145--shadow-budget-optimization-implementation-notes.md))
 **Priority:** 🟡 medium · **Effort:** M
 **Depends on:** —
 

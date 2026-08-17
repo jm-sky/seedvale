@@ -157,16 +157,17 @@ Already implemented:
 - controlled shadow updates,
 - explicit update scheduling,
 - one shadow update per frame,
-- separation from mirror rendering.
+- separation from mirror rendering,
+- distance-based shadow caster filtering for NPC/fauna (`NPC_SHADOW_DISTANCE`/`FAUNA_SHADOW_DISTANCE`, plan 113 P2),
+- distance-based shadow disabling for small procedural props/items (`SMALL_MESH_SHADOW_THRESHOLD`, review 005 A2 and plan 145 R2),
+- pull-based, fail-open dirty/budget shadow-map update (plan 145 R1 — implemented, `verification needed`; benchmark/visual check pending).
+
+Terrain and vegetation/prop distance filtering were investigated (plan 145) and found already covered for free by Three.js's own per-object shadow-frustum culling and by the existing LOD/`InstancedMesh.count` mechanism — no separate mechanism needed there.
 
 ### Remaining direction
 
-Investigate:
-
-- dirty-state shadow updates,
-- distance-based shadow caster filtering,
-- disabling shadows for small/distant props,
-- simplified shadow participation.
+- Confirm plan 145 (R1/R2) with a browser benchmark and visual check before treating the gain as real.
+- Simplified shadow participation for vegetation/terrain beyond what plan 145 already found sufficient — only revisit if a benchmark shows it's still a dominant cost.
 
 ---
 
@@ -272,6 +273,8 @@ This should serve both NPCs and fauna rather than creating separate spatial-quer
 | Frustum culling | ✅ |
 | Camera layers | ✅ |
 | Controlled shadow updates | ✅ |
+| Shadow-map dirty/budget update (plan 145 R1) | ✅ (`verification needed`) |
+| Small-item shadow threshold (plan 145 R2) | ✅ (`verification needed`) |
 | Reflection throttling | ✅ |
 | Reflection layer filtering | ✅ |
 | Half-resolution AO | ✅ |
@@ -293,8 +296,6 @@ This should serve both NPCs and fauna rather than creating separate spatial-quer
 | Region vegetation batching | High | P1 |
 | Program/material consolidation | High | P1 |
 | Safe shader/program pre-warming | High for hitches | P1 |
-| Shadow caster distance filtering | Medium/High | P1 |
-| Dirty-state shadow updates | Medium | P1 |
 | Reflection LOD/culling | Medium/High | P2 |
 | More aggressive grass LOD | Medium | P2 |
 | Terrain LOD | Medium | P2 |
@@ -316,7 +317,7 @@ This should serve both NPCs and fauna rather than creating separate spatial-quer
 | Program/material consolidation | 🟢 | 🔴 | 🟢 | M | M | Very High hitch reduction |
 | Safe shader pre-warming | 🟠 | 🔴 | 🟢 | M/L | M | Very High hitch reduction |
 | Region vegetation batching | 🟠 | 🔴 | 🟢 | L | M | High |
-| Shadow budget | 🟢 | 🔴 | 🟢 | S/M | M | Medium/High |
+| Shadow budget (plan 145, implemented, unbenchmarked) | 🟢 | 🔴 | 🟢 | S/M | M | Medium/High — unconfirmed, likely near-zero in the heaviest (settlement/current) scenarios per the plan's own analysis |
 | Reflection LOD/culling | 🟢 | 🔴 | 🟢 | M | M | Medium/High |
 | Grass LOD | 🟢 | 🔴 | 🟢 | M | M | Medium |
 | Terrain LOD | 🟢 | 🔴 | 🟠 | M | M | Medium |
@@ -368,7 +369,7 @@ Implement region-level batching without destroying spatial culling.
 
 ### 4. Shadow budget
 
-Reduce unnecessary shadow participation and updates.
+Reduce unnecessary shadow participation and updates. Implemented in plan 145 (R1 dirty/budget shadow-map update, R2 small-item shadow threshold); pending benchmark and browser visual verification before the gain is confirmed.
 
 ---
 
@@ -487,6 +488,7 @@ The renderer should remain understandable, scalable and compatible with the game
 
 - [`docs/STATE.md`](../STATE.md)
 - [`Plan 113 — Rendering Performance & GPU Scaling`](../plans/2026-08-14--113--rendering-performance-gpu-scaling.md)
+- [`Plan 145 — Shadow Budget Optimization`](../plans/2026-08-17--145--shadow-budget-optimization.md)
 
 ### Performance reviews
 
