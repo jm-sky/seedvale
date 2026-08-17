@@ -21,7 +21,8 @@ export function createRenderer(
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioCap))
   renderer.setSize(container.clientWidth, container.clientHeight)
   renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  // PCFSoftShadowMap is deprecated as of r182 — PCFShadowMap is now soft too.
+  renderer.shadowMap.type = THREE.PCFShadowMap
   // EffectComposer / N8AO / the water mirror each call `renderer.render()`.
   // Default `autoReset` zeroes `info.render` at the start of every one of
   // those, so a post-frame read only saw the last fullscreen blit (calls=1).

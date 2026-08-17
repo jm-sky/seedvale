@@ -1,4 +1,4 @@
-import { Clock } from 'three'
+import { Timer } from 'three'
 import { NpcAgent } from '../ai/NpcAgent'
 import { PlayerController } from '../player/PlayerController'
 import { ui } from '../ui-vue/store'
@@ -15,8 +15,8 @@ function engagementState(): NpcEngagementState<NpcAgent> {
   }
 }
 
-const originalGetDelta = Clock.prototype.getDelta
-Clock.prototype.getDelta = function (): number {
+const originalGetDelta = Timer.prototype.getDelta
+Timer.prototype.getDelta = function (): number {
   const delta = originalGetDelta.call(this)
   return isNpcEngagementOpen(engagementState()) ? delta * DIALOGUE_TIME_SCALE : delta
 }

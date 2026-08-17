@@ -1,4 +1,4 @@
-import { Clock, Fog, Raycaster, Vector3 } from 'three'
+import { Fog, Raycaster, Timer, Vector3 } from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { createAmbientAudio } from '../audio/createAmbientAudio'
@@ -260,7 +260,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
 
   renderer.shadowMap.autoUpdate = false
 
-  const clock = new Clock()
+  const timer = new Timer()
   let lastAppliedTimeOfDay = dayNight.timeOfDay
   /** Last weather values `resyncDayNight()` applied to fog/lights — a change
    *  here (not just the day/night threshold) also has to trigger a resync,
@@ -311,7 +311,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const tick = (): void => {
     const frameStart = performance.now()
     const monitor = getMonitor()
-    const rawDt = clock.getDelta()
+    timer.update()
+    const rawDt = timer.getDelta()
     const dt = Math.min(rawDt, 0.05)
     if (rawDt > 0) {
       fpsEma = fpsEma * 0.9 + (1 / rawDt) * 0.1
