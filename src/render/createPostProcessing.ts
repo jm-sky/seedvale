@@ -108,6 +108,14 @@ export function createPostProcessing(
   composer.addPass(outputPass)
   const filmGradeUniform = outputPass.uniforms.filmGradeIntensity as { value: number }
 
+  // God rays are only visible around dawn/dusk *and* while looking toward the
+  // sun, so `intensity` resolves to 0 for most of a day. The shader already
+  // early-outs on that, but an enabled `ShaderPass` still costs a full-screen
+  // read + write of a half-float composer target and one more `EffectComposer`
+  // buffer swap every frame. Tracking "wanted" separately from `enabled` lets
+  // `updateGodRays` drop the pass out of the chain entirely when it would only
+  // copy its input — byte-identical output, one less full-screen pass.
+  let godRaysWanted = config.godRaysEnabled
   let aoWanted = config.aoEnabled
   let aoSuppressed = false
   // 0 reads as "unbounded time since last change," so the first real check
@@ -134,7 +142,12 @@ export function createPostProcessing(
     bloomPass.radius = next.bloomRadius
     bloomPass.threshold = next.bloomThreshold
 
-    godRaysPass.enabled = next.godRaysEnabled
+    godRaysWanted = next.godRaysEnabled
+    // Left off until `updateGodRays` finds a non-zero intensity — it runs
+    // every frame, before the composer, so the pass is re-armed in the same
+    // frame the sun comes back into play.
+    godRaysPass.enabled = false
+    godRaysPass.uniforms.intensity!.value = 0
     godRaysPass.uniforms.exposure!.value = next.godRaysExposure
 
     smaaPass.enabled = true
@@ -179,7 +192,8 @@ export function createPostProcessing(
         filmGradeUniform.value = enabled ? 1 : 0
         break
       case 'godRays':
-        godRaysPass.enabled = enabled
+        godRaysWanted = enabled
+        if (!enabled) godRaysPass.enabled = false
         break
       case 'smaa':
         smaaPass.enabled = enabled
@@ -193,7 +207,14 @@ export function createPostProcessing(
   const ndc = new Vector3()
 
   function updateGodRays(cam: Camera, sunDirection: Vector3, elev: number): void {
-    if (!godRaysPass.enabled) return
+    if (!godRaysWanted) return
+
+    // Matches the shader's own `intensity <= 0.001` early-out, so dropping the
+    // pass below cannot change a pixel.
+    const arm = (intensity: number): void => {
+      godRaysPass.uniforms.intensity!.value = intensity
+      godRaysPass.enabled = intensity > 0.001
+    }
 
     // Fades in just above the horizon, peaks at a low sun angle, fades out
     // well before noon — "mainly at dawn/dusk" per the plan, not all day.
@@ -209,7 +230,7 @@ export function createPostProcessing(
     }
 
     if (intensity <= 0) {
-      godRaysPass.uniforms.intensity!.value = 0
+      arm(0)
       return
     }
 
@@ -230,7 +251,7 @@ export function createPostProcessing(
       (1 - MathUtils.smoothstep(ly, 1 - GOD_RAYS_SCREEN_IN, 1 + GOD_RAYS_SCREEN_OUT))
     intensity *= screenFade
 
-    godRaysPass.uniforms.intensity!.value = intensity
+    arm(intensity)
   }
 
   return {

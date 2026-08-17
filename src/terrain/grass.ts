@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { ChunkCoord } from './chunkGrid'
 import type { ChunkTileData, RegionParams } from './chunkHeightmap'
+import { REFLECTION_SKIPPED_LAYER } from '../world/waterMirror'
 import {
   computeChunkGrass,
   GRASS_SPECIES_ORDER,
@@ -443,6 +444,13 @@ export function createGrassSystem(): GrassSystem {
       mesh.castShadow = false
       mesh.receiveShadow = false
       mesh.name = `chunk-grass-${id}`
+      // Skipped by the water mirror: grass is by far the heaviest bucket
+      // (~2.4M of the scene's ~5.7M triangles at 84k instances) and a blade is
+      // far below one texel of the 128² reflection target, which itself
+      // contributes ≤18 % of the water colour. `layers.set` is safe here — the
+      // sun's shadow camera never draws grass anyway (`castShadow = false`
+      // below), so the main camera is the only one that needs this layer.
+      mesh.layers.set(REFLECTION_SKIPPED_LAYER)
       // Filler starts hidden; chunkManager enables it only in the near field.
       if (id === 'filler') mesh.count = 0
       group.add(mesh)

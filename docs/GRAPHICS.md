@@ -28,7 +28,8 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G2 | **Performance jest constraint architektury** — nie dokładamy passów, mirror RT ani per-frame CPU „dla ładniejszej wody/liści” bez świadomej ceny. | [architecture/performance-and-workers.md](./architecture/performance-and-workers.md) |
 | G3 | Liście / kwiaty z GLTF `alphaMode: BLEND` → przy loadzie **opaque `alphaTest` cutout** (`hardenFoliageAlpha`). Korony piszą depth. | `src/world/foliageWind.ts`, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
 | G4 | Woda transparentna: ocean i jeziora mają **`depthWrite: false`**. Nie łączyć `transparent` + `depthWrite: true` + wysokiego `renderOrder` — to maluje wodę przez korony. | `createOcean.ts`, `createWater.ts` |
-| G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Shader = rodzina jezior (`waterMaterial.ts`). Lustro sceny = jeden RT **128²** @ 30 Hz (`waterMirror.ts`), wyłącznik Vue; NPC/fauna poza lustrem (`AGENT_RENDER_LAYER`). | `createOcean.ts` |
+| G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Shader = rodzina jezior (`waterMaterial.ts`). Lustro sceny = jeden RT **128²** @ 30 Hz (`waterMirror.ts`), wyłącznik Vue; NPC/fauna poza lustrem (`AGENT_RENDER_LAYER`), trawa i drobne pickupy poza lustrem (`REFLECTION_SKIPPED_LAYER`). | `createOcean.ts` |
+| G5a | Wkład lustra w kolor wody jest **≤18 %** (`reflectance` clamp 0.4 × `mix(mirrorSample, body, 0.55)`) i ~1 % pod typowym kątem. To jest budżet, w którym wolno wycinać detal z reflection passa — i powód, dla którego nie wolno traktować lustra jako passa „jakościowego”. | `waterMaterial.ts`, research [019](./research/2026-08-17--019--rendering-optimizations.md) §1.1 |
 | G6 | Jeziora = per-chunk ten sam shader, maska heightmap + głębokość z `floorHeights`. `bodyScale` 1 stroi ocean, nie discarduje piksela. | `createWater.ts`, `waterMaterial.ts`, `waterBodies.ts` |
 | G7 | Post-process: EffectComposer + N8AO + SMAA (+ bloom / god rays / film grade). Hardware MSAA wyłączone (i tak bez efektu na targetach composera). | `createPostProcessing.ts`, `createRenderer.ts` |
 | G8 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | `CLAUDE.md` |
@@ -96,6 +97,14 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 - `resolveCameraBoom` skraca boom nad `sampleHeight + 0.45 m` i przed cylindrami colliderów `radius ≥ 1.2` (domy; pnie drzew pomijane).
 - `visualViewport` resize: skip `< 16 px`, no-op gdy integer size ten sam, coalesce do rAF; po `webglcontextrestored` force `composer.setSize` (Three.js odtwarza GL, nie RT N8AO).
 - Diagnostyka: `?camdebug=1`. Browser/device verification otwarta.
+
+### 2026-08-17 — Reflection pass + post chain optimizations (research 019) 🔧
+
+- Wkład lustra w piksel wody jest ≤18 % (typowo ~1 %) — patrz G5a. Na tej podstawie trawa (43 % trójkątów sceny) i `chunk-items` idą na `REFLECTION_SKIPPED_LAYER = 3`: main camera je widzi, mirror camera (layer 0) nie. Shadow camera bez zmian — trawa i tak ma `castShadow = false`.
+- Cap 30 Hz lustra działał tylko powyżej 30 FPS (bramka wall-clock). Poniżej — dodatkowo co druga klatka (`shouldRenderMirror`, unit-tested). **Trade-off czasowy:** przy 23 FPS odbicie odświeża się ~11,5 Hz zamiast ~23 Hz.
+- God rays wypadają z chaina, gdy `intensity == 0` (większość doby) — wcześniej płaciły pełnoekranowy read/write half-float + swap composera za skopiowanie wejścia. Wyjście bit-identyczne.
+- `mirrorCamera.far = camera.far` usunięte: nie wpływało na culling (frustum liczony z `projectionMatrix`, nie z `far`).
+- **Nie zmierzone w przeglądarce.** Baseline i przewidywania: research [019](./research/2026-08-17--019--rendering-optimizations.md).
 
 ### 2026-08-15 — GPU weather renderer (plan 040 Etap 3) 🔧
 

@@ -23,6 +23,17 @@ export const WATER_RENDER_LAYER = 1
  *  main camera and the sun's shadow camera must `layers.enable` this. */
 export const AGENT_RENDER_LAYER = 2
 
+/** Geometry that is too fine to resolve in the reflection. The mirror renders
+ *  into a 128² target whose sample is then attenuated hard by the water
+ *  shader — `reflectance` is clamped to 0.4 and the sample is further diluted
+ *  by `mix(mirrorSample, body, 0.55)` (`waterMaterial.ts`), so the reflection
+ *  never contributes more than ~18 % of the water colour and contributes
+ *  ~1–2 % at ordinary viewing angles. Sub-pixel detail inside that budget is
+ *  not representable; anything on this layer pays no second scene submit.
+ *  Same mechanism as `AGENT_RENDER_LAYER` (plan 113 P1) — the main camera must
+ *  `layers.enable` it. */
+export const REFLECTION_SKIPPED_LAYER = 3
+
 /** One shared planar-reflection pass (128²) for every water material. */
 export const WATER_MIRROR_SIZE = 128
 
@@ -30,6 +41,36 @@ export const WATER_MIRROR_SIZE = 128
  *  113 P1). Still a full scene pass, so don't raise this without a benchmark. */
 const MIRROR_MAX_HZ = 30
 const MIRROR_MIN_INTERVAL_S = 1 / MIRROR_MAX_HZ
+
+/** The wall-clock cap above stops throttling anything once frames get longer
+ *  than `MIRROR_MIN_INTERVAL_S`: at 23 FPS every call is already ≥43 ms apart,
+ *  so "every other frame at 60 Hz" silently becomes "every frame" — precisely
+ *  when the pass is least affordable (research 018 §3 measured it at ~10.5 ms
+ *  and 37 % of all draw calls at that frame rate). Below this frame rate the
+ *  documented every-other-frame intent is enforced by frame count instead.
+ *  Same shape as the N8AO frame budget (`aoBudget.ts`): degrade the effect
+ *  under load rather than the frame rate. */
+const MIRROR_BUDGET_FRAME_S = MIRROR_MIN_INTERVAL_S
+
+/** Timing state for one `WaterMirror.render()` call. `render` is invoked once
+ *  per frame even when it early-outs, so `nowSec - lastCallSec` is the frame
+ *  time — no extra plumbing is needed to know whether we're over budget. */
+export type MirrorCadenceState = {
+  nowSec: number
+  /** `performance.now()` of the previous `render()` call (rendered or not). */
+  lastCallSec: number
+  /** `performance.now()` of the last call that actually drew the pass. */
+  lastRenderSec: number
+  renderedLastCall: boolean
+}
+
+/** Pure cadence decision — extracted so it can be unit-tested without a WebGL
+ *  context (same split as `shouldSuppressAo` in `render/aoBudget.ts`). */
+export function shouldRenderMirror(state: MirrorCadenceState): boolean {
+  const overBudget = state.nowSec - state.lastCallSec > MIRROR_BUDGET_FRAME_S
+  if (overBudget && state.renderedLastCall) return false
+  return state.nowSec - state.lastRenderSec >= MIRROR_MIN_INTERVAL_S
+}
 
 export function assignRenderLayer(root: Object3D, layer: number): void {
   root.traverse((obj) => {
@@ -98,6 +139,8 @@ export function createWaterMirror(opts: {
   let enabled = opts.enabled
   let disposed = false
   let lastRenderSec = -Infinity
+  let lastCallSec = -Infinity
+  let renderedLastCall = false
 
   return {
     uniforms,
@@ -110,7 +153,10 @@ export function createWaterMirror(opts: {
       if (!enabled || disposed) return
 
       const nowSec = performance.now() * 0.001
-      if (nowSec - lastRenderSec < MIRROR_MIN_INTERVAL_S) return
+      const wanted = shouldRenderMirror({ nowSec, lastCallSec, lastRenderSec, renderedLastCall })
+      lastCallSec = nowSec
+      renderedLastCall = wanted
+      if (!wanted) return
       lastRenderSec = nowSec
 
       _cameraWorld.setFromMatrixPosition(camera.matrixWorld)
@@ -140,8 +186,14 @@ export function createWaterMirror(opts: {
       mirrorCamera.up.applyMatrix4(_rotation)
       mirrorCamera.up.reflect(_normal)
       mirrorCamera.lookAt(_target)
-      mirrorCamera.far = camera.far
       mirrorCamera.updateMatrixWorld()
+      // Culling uses `Frustum.setFromProjectionMatrix(projectionMatrix *
+      // matrixWorldInverse)`, never `camera.far` — so assigning
+      // `mirrorCamera.far` here (as this did) could not shorten the reflection
+      // pass; only rebuilding the projection can. Left as a straight copy: the
+      // streamed world only reaches ~`loadRadius` chunks (~316 units at the
+      // default 3×64) while `camera.far` is 500, so a shorter far plane would
+      // cull almost nothing. See research 019 for the measurement.
       mirrorCamera.projectionMatrix.copy(camera.projectionMatrix)
 
       textureMatrix.set(

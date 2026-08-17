@@ -2,7 +2,6 @@ import * as THREE from 'three'
 import type { DetailNormalConfig } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type { TreeEnvSample, TreeGrowthStage, TreeLifecycle, TreePresence } from '../world/treeLifecycle'
-import type { WaterMirror } from '../world/waterMirror'
 import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
 import { disposeObject3D } from '../assets/loadGltf'
@@ -42,6 +41,7 @@ import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../s
 import { type Collider, createColliderRegistry } from '../world/collision'
 import { createChunkWater, type WorldWater } from '../world/createWater'
 import { createTreeStageMesh, tagTreeMesh } from '../world/treeVisuals'
+import { assignRenderLayer, REFLECTION_SKIPPED_LAYER, type WaterMirror } from '../world/waterMirror'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import { buildChunkGeometry, createTerrainMaterial } from './buildChunkGeometry'
 import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind } from './chunkEnvironment'
@@ -1166,6 +1166,11 @@ export function createChunkManager(
       placeOnGround(itemMesh, placement.x, placement.z, sampleTileHeight)
       return itemMesh
     })
+    // Loose ground pickups (sticks, stones, berries) are a per-item draw call
+    // each for almost no geometry — and none of them survive a 128² reflection
+    // that is itself weighted ≤18 % into the water colour. Skip the second
+    // scene submit; the main camera still draws them normally.
+    if (rec.items) assignRenderLayer(rec.items, REFLECTION_SKIPPED_LAYER)
     getMonitor().recordHitch('PROPS', performance.now() - itemsT0, 'chunk items')
 
     const rockTemplates = getRockTemplates.peek()
