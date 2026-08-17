@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   depletionThreshold,
+  EMPTY_HABITAT_RESPAWN_MULTIPLIER,
   MIN_RECOVERY_POPULATION,
   type PreySpawner,
   RECOVERY_DAYS,
+  respawnIntervalDaysFor,
   shouldDeplete,
   tickSpawnPointRecovery,
   updateSpawners,
@@ -16,9 +18,9 @@ function spawner(overrides: Partial<PreySpawner> = {}): PreySpawner {
     z: 0,
     type: 'cave',
     kind: 'deer',
-    respawnTime: 8,
+    respawnIntervalDays: 1,
     maxPreyCount: 3,
-    timeSinceLastRespawn: 0,
+    daysSinceLastRespawn: 0,
     state: 'active',
     deathsThisCycle: 0,
     disabledAtDay: null,
@@ -41,27 +43,69 @@ describe('depletionThreshold / shouldDeplete', () => {
   })
 })
 
+describe('respawnIntervalDaysFor', () => {
+  it('doubles the wait when the habitat is empty', () => {
+    expect(respawnIntervalDaysFor(1, 0)).toBe(EMPTY_HABITAT_RESPAWN_MULTIPLIER)
+    expect(respawnIntervalDaysFor(1, 1)).toBe(1)
+    expect(respawnIntervalDaysFor(2, 0)).toBe(4)
+  })
+})
+
 describe('updateSpawners', () => {
-  it('only respawns active spawners below their live-nearby cap once the timer elapses', () => {
-    const s = spawner({ timeSinceLastRespawn: 8 })
+  it('does not spawn on a zero dayDelta (load / first frame)', () => {
+    const s = spawner({ daysSinceLastRespawn: 10 })
     let respawned = 0
     updateSpawners([s], 0, [], () => { respawned++ })
+    expect(respawned).toBe(0)
+    expect(s.daysSinceLastRespawn).toBe(10)
+  })
+
+  it('waits the empty-habitat interval before the first animal', () => {
+    const s = spawner()
+    let respawned = 0
+    updateSpawners([s], 1, [], () => { respawned++ })
+    expect(respawned).toBe(0)
+    updateSpawners([s], 1, [], () => { respawned++ })
     expect(respawned).toBe(1)
+  })
+
+  it('replaces a loss after one interval when the habitat is not empty', () => {
+    const s = spawner()
+    let respawned = 0
+    updateSpawners([s], 1, [{ kind: 'deer', x: 1, z: 1 }], () => { respawned++ })
+    expect(respawned).toBe(1)
+  })
+
+  it('catch-up on a large dayDelta fills up to the cap, not beyond', () => {
+    const s = spawner({ maxPreyCount: 3 })
+    let respawned = 0
+    // empty: 2 + 1 + 1 = 4 days for 3 animals; 5 days still caps at 3
+    updateSpawners([s], 5, [], () => { respawned++ })
+    expect(respawned).toBe(3)
+    expect(s.daysSinceLastRespawn).toBe(0)
+  })
+
+  it('does not bank time while at the live-nearby cap', () => {
+    const s = spawner({ maxPreyCount: 1 })
+    let respawned = 0
+    updateSpawners([s], 10, [{ kind: 'deer', x: 1, z: 1 }], () => { respawned++ })
+    expect(respawned).toBe(0)
+    expect(s.daysSinceLastRespawn).toBe(0)
   })
 
   it('never respawns a depleted/disabled/recovering spawner', () => {
     for (const state of ['depleted', 'disabled', 'recovering'] as const) {
-      const s = spawner({ state, timeSinceLastRespawn: 100 })
+      const s = spawner({ state, daysSinceLastRespawn: 100 })
       let respawned = 0
-      updateSpawners([s], 0, [], () => { respawned++ })
+      updateSpawners([s], 10, [], () => { respawned++ })
       expect(respawned).toBe(0)
     }
   })
 
-  it('still respects the live-nearby cap for active spawners', () => {
-    const s = spawner({ timeSinceLastRespawn: 8, maxPreyCount: 1 })
+  it('skips Infinity intervals (wolfDen)', () => {
+    const s = spawner({ respawnIntervalDays: Infinity, daysSinceLastRespawn: 100 })
     let respawned = 0
-    updateSpawners([s], 0, [{ kind: 'deer', x: 1, z: 1 }], () => { respawned++ })
+    updateSpawners([s], 10, [], () => { respawned++ })
     expect(respawned).toBe(0)
   })
 })

@@ -1,8 +1,8 @@
 import type { AnimalKind } from './AnimalAgent'
 
 /** `wolfDen` (plan 093 Etap E) reuses this same spawner shape — a fixed
- *  `respawnTime: Infinity` opts it out of `updateSpawners`' respawn loop
- *  below, since a den's pack is a one-time discovered threat, not an
+ *  `respawnIntervalDays: Infinity` opts it out of `updateSpawners`' respawn
+ *  loop below, since a den's pack is a one-time discovered threat, not an
  *  ongoing population like `cave`/`thicket` prey. If plan 104 (real
  *  underground caves) later lands, the den's position/label can be
  *  re-anchored to an actual cave volume without touching the quest-facing
@@ -44,6 +44,10 @@ export const MIN_RECOVERY_POPULATION = 2
 export const SPAWNER_DESTROY_BRANCH_COST = 4
 /** Busy-channel duration for destroying a depleted spawn point (plan 137). */
 export const DESTROY_SPAWNER_DURATION_SEC = 5
+/** Empty habitat (`nearby === 0`) waits this many times longer than a
+ *  replacement spawn (plan 139) — colonizing a vacant site is slower than
+ *  filling one loss in an already-living group. */
+export const EMPTY_HABITAT_RESPAWN_MULTIPLIER = 2
 
 export type PreySpawner = {
   /** Stable identity (plan 125) — deterministic from settlement + spawner
@@ -55,12 +59,17 @@ export type PreySpawner = {
   z: number
   type: SpawnerType
   kind: AnimalKind
-  respawnTime: number
+  /** Game-days between respawns while `active` and below `maxPreyCount`
+   *  (plan 139). `Infinity` opts out (`wolfDen`). */
+  respawnIntervalDays: number
   /** Configured population cap for this spawn point — both the live-nearby
    *  respawn gate (unchanged) and the `>50%` depletion reference population
    *  (plan 125). */
   maxPreyCount: number
-  timeSinceLastRespawn: number
+  /** Accumulated game-days since the last respawn (or since a slot opened).
+   *  Held at 0 while the live-nearby count is at cap so a vacancy starts a
+   *  full interval instead of firing on the next frame. */
+  daysSinceLastRespawn: number
   state: SpawnPointState
   /** Animals bound to this spawn point (`AnimalAgent.spawnPointId`) that
    *  have died since the current `active` cycle started — reset to 0 when
@@ -89,31 +98,50 @@ export function shouldDeplete(deathsThisCycle: number, maxPreyCount: number): bo
   return deathsThisCycle >= depletionThreshold(maxPreyCount)
 }
 
+/** Interval in game-days until the next spawn at the current live-nearby
+ *  count — empty sites use `EMPTY_HABITAT_RESPAWN_MULTIPLIER`. */
+export function respawnIntervalDaysFor(intervalDays: number, nearbyCount: number): number {
+  return nearbyCount === 0 ? intervalDays * EMPTY_HABITAT_RESPAWN_MULTIPLIER : intervalDays
+}
+
 /**
- * Ticks respawn timers and calls `onRespawn` once per `active` spawner
- * that's ready (timer elapsed, below its live-prey cap). Pure timer/count
- * bookkeeping — actual agent creation/placement is the caller's job (needs
- * scene + terrain). `depleted`/`disabled`/`recovering` spawners never
- * respawn (plan 125 §2/§3).
+ * Ticks respawn timers in **game-days** and calls `onRespawn` for each
+ * `active` spawner that's ready (timer elapsed, below its live-prey cap).
+ * A large `dayDelta` (time-skip) may spawn more than once, always capped
+ * at `maxPreyCount`. Pure timer/count bookkeeping — actual agent creation
+ * is the caller's job. `depleted`/`disabled`/`recovering` spawners never
+ * respawn (plan 125 §2/§3); `Infinity` intervals are skipped (plan 139).
  */
 export function updateSpawners(
   spawners: PreySpawner[],
-  dt: number,
+  dayDelta: number,
   preyPositions: { kind: AnimalKind; x: number; z: number }[],
   onRespawn: (spawner: PreySpawner) => void,
 ): void {
+  if (dayDelta <= 0) return
   for (const spawner of spawners) {
     if (spawner.state !== 'active') continue
-    spawner.timeSinceLastRespawn += dt
-    if (spawner.timeSinceLastRespawn < spawner.respawnTime) continue
-    const nearby = preyPositions.filter(
+    if (!Number.isFinite(spawner.respawnIntervalDays) || spawner.respawnIntervalDays <= 0) continue
+    spawner.daysSinceLastRespawn += dayDelta
+
+    let nearby = preyPositions.filter(
       (p) =>
         p.kind === spawner.kind &&
         Math.hypot(p.x - spawner.x, p.z - spawner.z) < SPAWNER_RADIUS,
     ).length
-    if (nearby >= spawner.maxPreyCount) continue
-    spawner.timeSinceLastRespawn = 0
-    onRespawn(spawner)
+    if (nearby >= spawner.maxPreyCount) {
+      spawner.daysSinceLastRespawn = 0
+      continue
+    }
+
+    while (nearby < spawner.maxPreyCount) {
+      const interval = respawnIntervalDaysFor(spawner.respawnIntervalDays, nearby)
+      if (spawner.daysSinceLastRespawn < interval) break
+      spawner.daysSinceLastRespawn -= interval
+      onRespawn(spawner)
+      nearby++
+    }
+    if (nearby >= spawner.maxPreyCount) spawner.daysSinceLastRespawn = 0
   }
 }
 

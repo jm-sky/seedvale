@@ -197,13 +197,19 @@ export function measureSlope(
 
 /** Hardcoded prey spawners (cave / thicket) — see docs/plans/archive/2026-08-07--predator-prey-system.md.
  *  `wolfDen` (plan 093 Etap E) piggybacks on the same list/shape purely to
- *  get a placed prop + labeled marker for free — `respawnTime: Infinity`
+ *  get a placed prop + labeled marker for free — `respawnIntervalDays: Infinity`
  *  keeps `updateSpawners` from ever repopulating it; its initial pack is
- *  spawned once, directly, in the placement loop below. */
-const SPAWNER_SPECS: { type: PreySpawner['type'], kind: AnimalKind, respawnTime: number, maxPreyCount: number }[] = [
-  { type: 'cave', kind: 'deer', respawnTime: 8, maxPreyCount: 3 },
-  { type: 'thicket', kind: 'stag', respawnTime: 12, maxPreyCount: 2 },
-  { type: 'wolfDen', kind: 'wolf', respawnTime: Infinity, maxPreyCount: 2 },
+ *  spawned once, directly, in the placement loop below.
+ *  Cave/thicket intervals are game-days (plan 139), not real-time seconds. */
+const SPAWNER_SPECS: {
+  type: PreySpawner['type']
+  kind: AnimalKind
+  respawnIntervalDays: number
+  maxPreyCount: number
+}[] = [
+  { type: 'cave', kind: 'deer', respawnIntervalDays: 1, maxPreyCount: 3 },
+  { type: 'thicket', kind: 'stag', respawnIntervalDays: 2, maxPreyCount: 2 },
+  { type: 'wolfDen', kind: 'wolf', respawnIntervalDays: Infinity, maxPreyCount: 2 },
 ]
 
 export const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
@@ -608,7 +614,7 @@ export async function createFauna(
       ...pos,
       ...spec,
       id: `${settlementId}:${spec.type}`,
-      timeSinceLastRespawn: 0,
+      daysSinceLastRespawn: 0,
       state: 'active',
       deathsThisCycle: 0,
       disabledAtDay: null,
@@ -664,6 +670,18 @@ export async function createFauna(
       }
     }
 
+    // Cave/thicket start inhabited (plan 139) — slow day-scale respawn only
+    // replaces losses. Tagged with `spawnPointId` so deaths count toward
+    // depletion; wolfDen's pack above is deliberately untagged.
+    if (spec.type === 'cave' || spec.type === 'thicket') {
+      for (let i = 0; i < spec.maxPreyCount; i++) {
+        const spot = findWalkableNear(pos.x, pos.z, 0, 4) ?? pos
+        const agent = spawnAgent(spec.kind, spot.x, spot.z, undefined, undefined, undefined, spawner.id)
+        scene.add(agent.mesh)
+        agents.push(agent)
+      }
+    }
+
     const el = document.createElement('div')
     el.className = 'npc-label'
     el.textContent = SPAWNER_LABELS[spec.type]
@@ -683,6 +701,10 @@ export async function createFauna(
    *  (plan 125 §9), not per frame. `-1` so the first `update()` call always
    *  runs it once regardless of the starting `worldDays`. */
   let lastRecoveryCheckDay = -1
+  /** Previous `worldDays` seen by `update()` — first frame after create/load
+   *  contributes `dayDelta = 0` so a restored `elapsedDays` does not dump a
+   *  backlog of animals (plan 139). */
+  let lastWorldDays: number | null = null
 
   return {
     update(dt, observerPos, timeOfDay, worldDays, litFires, villages, nearbyHumanCount = 1, onHumanHit, playerStealth) {
@@ -712,9 +734,12 @@ export async function createFauna(
         agents = alive
       }
 
+      if (lastWorldDays === null) lastWorldDays = worldDays
+      const dayDelta = Math.max(0, worldDays - lastWorldDays)
+      lastWorldDays = worldDays
       updateSpawners(
         spawners,
-        dt,
+        dayDelta,
         agents
           .filter((a) => a.def.role === 'prey' && !a.isDead())
           .map((a) => ({ kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z })),
