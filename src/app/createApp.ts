@@ -1161,7 +1161,7 @@ export async function createApp(
       }
       // 4 consumed branches become the pit's fuel: `light` sets one branch of
       // fuel, then three `addFuel` calls bring it to ~300 s (`FUEL_PER_BRANCH`).
-      const entry = bundle.placedFires.place(spawner.x, spawner.z, 'pit')
+      const entry = bundle.placedFires.place(spawner.x, spawner.z, 'pit', { habitatBurn: true })
       entry.fire.light('player')
       entry.fire.addFuel()
       entry.fire.addFuel()

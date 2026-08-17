@@ -7,7 +7,6 @@ import type { PlacedTents } from '../items/createPlacedTents'
 import type { ToolKind } from '../items/HeldTool'
 import type { Settlement } from '../settlement/createSettlement'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
-import type { PlacedFires } from '../settlement/PlacedFires'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { ResourceDeposits } from '../terrain/resourceDeposits'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
@@ -15,6 +14,7 @@ import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
+import { isPlayerPlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { LANDMARK_LABELS } from '../terrain/chunkEnvironment'
 import { ORE_YIELD_LABEL } from '../terrain/depositMining'
 import { canLevelAt, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
@@ -173,6 +173,7 @@ export function buildInteractables(
   const knifeHeld = heldTool === 'knife'
 
   for (const pf of placedFires.list()) {
+    if (!isPlayerPlacedFire(pf)) continue
     if (!withinRange(pf.x, pf.z, playerPos, GAZE_RANGE)) continue
     list.push({
       kind: 'campfire',

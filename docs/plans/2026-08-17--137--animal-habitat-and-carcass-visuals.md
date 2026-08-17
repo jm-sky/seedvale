@@ -136,7 +136,7 @@ Browser/play:
 Implemented as an extension of plan 125 spawn-point destroy and plan 106 `meatHarvested`, no new managers.
 
 - **Destroy channel** — `[E] Zniszcz` in `gameLoop.ts` calls `startDestroySpawner` in `createApp.ts` (`DESTROY_SPAWNER_DURATION_SEC = 5`, label `Podpalanie siedliska…`, blurred progress bar). Branches (`SPAWNER_DESTROY_BRANCH_COST = 4`) are spent only on complete; Esc is a no-op. `resolveInteraction` still runs so `interact_spawner` quests stay reachable.
-- **Lit fire** — `PlacedFires.place()` returns the entry. On complete: `place(..., 'pit')` + `light('player')` + `addFuel()` ×3 → ~300 s burn from the 4 consumed branches.
+- **Lit fire** — `PlacedFires.place()` returns the entry. On complete: `place(..., 'pit', { habitatBurn: true })` + `light('player')` + `addFuel()` ×3 → ~300 s burn. Habitat burns are not `[E]` palenisko camps (same coordinates as the cave would steal the prompt), are not saved, and despawn ~8 s after burnout.
 - **Scorch** — `TerrainModification` `mode: 'scorch'`; `ChunkManager.scorchTerrain()` (r=7, d=0.15) dips height/`floorHeights`, bumps `roadTint` (grass fade), rebuilds grass on touched chunks. `buildChunkGeometry` lerps vertex color toward `SCORCH_CHARCOAL` (`0x1a1410`) and raises `aBareGround`.
 - **Burned prop** — mesh stays; `BURNED_SPAWNER_TINT_HEX = 0x0a0806`.
 - **Harvested remains** — `harvestMeat()` hides the living visual, resets tip rotation, parents `createHarvestedRemains()` (procedural bones + meat/hide scraps). Linger `HARVESTED_REMAINS_LINGER_SECONDS = 90`. `isCarcassEdible` rejects `harvested`. `bury()` still disposes immediately.

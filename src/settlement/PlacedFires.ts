@@ -28,8 +28,22 @@ const SIMPLE_FIRE_DESPAWN_DELAY = 60 * 60
  *  keeping around to relight rather than instant clutter cleanup. */
 const PIT_FIRE_DESPAWN_DELAY = 7 * 24 * 60 * 60
 
-const despawnDelayFor = (kind: PlacedFireKind): number =>
-  kind === 'simple' ? SIMPLE_FIRE_DESPAWN_DELAY : PIT_FIRE_DESPAWN_DELAY
+/** Habitat-destroy spectacle (plan 137) — not a player camp. After the ~5 min
+ *  burn, drop the ring quickly so the cave/thicket keeps its own `[E]` and
+ *  does not become "Zapal ognisko w palenisku". */
+export const HABITAT_BURN_DESPAWN_DELAY = 8
+
+export type PlaceFireOpts = { habitatBurn?: boolean }
+
+const despawnDelayFor = (entry: PlacedFireEntry): number => {
+  if (entry.habitatBurn) return HABITAT_BURN_DESPAWN_DELAY
+  return entry.kind === 'simple' ? SIMPLE_FIRE_DESPAWN_DELAY : PIT_FIRE_DESPAWN_DELAY
+}
+
+/** Player-built camps are `[E]`-lit and saved. Habitat-destroy fires are not. */
+export function isPlayerPlacedFire(entry: { habitatBurn: boolean }): boolean {
+  return !entry.habitatBurn
+}
 
 /** Persisted shape — positions aren't derivable from the seed (player chose
  *  them), so the full record round-trips through the save, same as
@@ -47,6 +61,8 @@ export type PlacedFireEntry = {
   /** Seconds since `fire` was last seen lit; only advances once `everLit`.
    *  Reset to 0 whenever the fire is lit or refueled. */
   unlitSeconds: number
+  /** Plan 137 habitat destroy — visual burn only, not a relightable camp. */
+  habitatBurn: boolean
 } & PlacedFire
 
 export type PlacedFires = {
@@ -57,7 +73,7 @@ export type PlacedFires = {
    *  fuel, see `app/createApp.ts`'s `buildSimpleFire`) — a `'pit'` starts
    *  cold unless the caller lights it (plan 137 habitat destroy lights a pit
    *  immediately with the 4 consumed branches as fuel). */
-  place: (x: number, z: number, kind: PlacedFireKind) => PlacedFireEntry
+  place: (x: number, z: number, kind: PlacedFireKind, opts?: PlaceFireOpts) => PlacedFireEntry
   update: (dt: number) => void
   dispose: () => void
 }
@@ -84,7 +100,7 @@ export function createPlacedFires(
 
   void preloadCampfireTemplates()
 
-  const spawn = (pf: PlacedFire): void => {
+  const spawn = (pf: PlacedFire & { habitatBurn?: boolean }): void => {
     const { group, flame } = createLitCampfireVisual(pf.kind === 'simple' ? 'simple' : 'pit')
     placeOnGround(group, pf.x, pf.z, sampleHeight)
     scene.add(group)
@@ -92,6 +108,7 @@ export function createPlacedFires(
     const fuelPerBranch = pf.kind === 'simple' ? SIMPLE_FIRE_FUEL_PER_BRANCH : undefined
     fires.push({
       ...pf,
+      habitatBurn: pf.habitatBurn === true,
       fire: createVillageFire(
         new Vector3(pf.x, sampleHeight(pf.x, pf.z), pf.z),
         flame,
@@ -123,9 +140,17 @@ export function createPlacedFires(
 
   return {
     list: () => fires,
-    nodes: () => fires.map(({ id, x, z, kind }) => ({ id, x, z, kind })),
-    place(x, z, kind) {
-      spawn({ id: `fire:${Date.now()}:${nextFireId++}`, x, z, kind })
+    nodes: () => fires
+      .filter(isPlayerPlacedFire)
+      .map(({ id, x, z, kind }) => ({ id, x, z, kind })),
+    place(x, z, kind, opts) {
+      spawn({
+        id: `fire:${Date.now()}:${nextFireId++}`,
+        x,
+        z,
+        kind,
+        habitatBurn: opts?.habitatBurn === true,
+      })
       const entry = fires[fires.length - 1]!
       if (kind === 'simple') {
         // Both consumed branches count toward starting fuel — the build
@@ -147,7 +172,7 @@ export function createPlacedFires(
         }
         if (!entry.everLit) continue
         entry.unlitSeconds += dt
-        if (entry.unlitSeconds >= despawnDelayFor(entry.kind)) despawn(entry.id)
+        if (entry.unlitSeconds >= despawnDelayFor(entry)) despawn(entry.id)
       }
     },
     dispose() {

@@ -57,6 +57,10 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 ## Log
 
+### 2026-08-17 — Habitat-destroy fire is spectacle, not a palenisko 🔧
+
+- Destroyed cave/thicket still gets a ~5 min `PlacedFires` pit flame, but `habitatBurn` skips `[E] Zapal ognisko w palenisku` (same XZ as the spawner was stealing gaze) and omits the ring from save. Ring despawns ~8 s after burnout; the burned cave prompt stays `Zbadaj: … (wypalone)`.
+
 ### 2026-08-17 — Harvested remains GLB pile (plan 138) 🔧
 
 - Knife harvest leftover is a composed `harvested-remains` group: cached `bones_pile` / `large_bone` / `animal_hide` (`preparePropFitMax` + clone, same pattern as `blood_splat`) plus 2–4 procedural red meat scraps. Hide sits beside the pile, not on it. Load failure keeps the plan-137 cylinder+hide fallback.
