@@ -282,3 +282,45 @@ When performing the Seedvale Three.js audit, inspect at minimum:
 - [ ] whether recommendations apply specifically to Three.js 0.185.1 or only newer versions.
 
 Do not turn this audit into a broad refactor. The goal is to identify concrete, evidence-backed deviations or opportunities and rank them by expected impact and implementation risk.
+
+---
+
+## Seedvale-specific priority after research 015
+
+The streaming-hitch investigation has now confirmed that `renderer.debug.checkShaderErrors = false` does **not** eliminate the underlying stall. It only changes which WebGL query is charged for the synchronous driver-side program-link completion.
+
+The current evidence points to **first use of a previously unused `WebGLProgram` variant** as the underlying cost.
+
+Therefore, the Three.js audit should prioritize:
+
+1. **Program variants and program-cache keys**
+   - Identify why Seedvale creates distinct program variants, especially the mirror/main rendering path.
+   - Pay particular attention to `colorSpace`, `toneMapping`, render targets and other material/program parameters.
+   - Determine whether the variant divergence is necessary or can be removed.
+
+2. **Official shader/program prewarming**
+   - Evaluate `WebGLRenderer.compileAsync()` and `KHR_parallel_shader_compile` as the official mechanism for moving first-use shader compilation/linking outside the critical render path.
+   - Do not assume `compileAsync()` is automatically the correct solution; verify its interaction with Seedvale's render-target/color-management setup and program cache.
+
+3. **Postprocessing program variants**
+   - Audit `EffectComposer` and its passes (AO, bloom, SMAA, god rays, output) for first-use program compilation.
+   - Determine whether postprocessing introduces additional avoidable program variants or first-use stalls.
+
+4. **Render targets and color management**
+   - Verify whether Seedvale's current render-target formats, `colorSpace` and tone-mapping configuration follow current Three.js recommendations.
+   - Pay particular attention to whether these settings unnecessarily split the program cache.
+
+5. **Do not prioritize `checkShaderErrors` as a performance workaround**
+   - The diagnostic result showed that disabling shader-error checks does not remove the underlying first-use stall.
+   - Treat `checkShaderErrors = false` as a development/debugging trade-off, not as the solution to the streaming hitch.
+
+### Audit rule
+
+For every recommendation, distinguish between:
+
+- **Official Three.js recommendation**
+- **Three.js maintainer guidance**
+- **Community workaround**
+- **Seedvale-specific inference**
+
+Recommendations must be checked against the actual `three@0.185.1` version used by Seedvale. Do not assume that behaviour or APIs introduced after r185 are available.
