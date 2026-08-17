@@ -39,6 +39,16 @@ export function createSky(params: SkyParams): WorldSky {
   const uniforms = sky.material.uniforms
   uniforms['mieCoefficient']!.value = 0.004
   uniforms['mieDirectionalG']!.value = 0.85
+  // three r18x's Sky addon added built-in procedural clouds, on by default
+  // (cloudCoverage: 0.4) — Seedvale already has its own weather/cloud system
+  // (weatherVisuals.ts/weatherParticles.ts) and never asked for these. Left
+  // enabled, they render a sin()-based hash noise projected as
+  // direction.xz / direction.y, which blows up toward the horizon
+  // (direction.y -> 0) and loses float precision — sharp rectangular
+  // artifacts that grow with visible sky area — and get brighter facing the
+  // sun (sunInfluence term), compounding the bloom white-out from issue 033.
+  // 0 skips the shader's whole cloud branch (`if (... && cloudCoverage > 0.0)`).
+  uniforms['cloudCoverage']!.value = 0
 
   const sunPosition = new Vector3()
 
