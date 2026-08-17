@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { SMALL_MESH_SHADOW_THRESHOLD } from '../assets/loadGltf'
 import { cloneItemGlb } from './itemModels'
 
 export type ItemKind =
@@ -369,12 +370,35 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   },
 }
 
+const _itemShadowBox = new THREE.Box3()
+const _itemShadowSize = new THREE.Vector3()
+
 /** Pickup mesh — prefers a preloaded GLB clone when available (`itemModels.ts`),
- *  otherwise a cheap procedural stand-in (resources + tool fallbacks). */
+ *  otherwise a cheap procedural stand-in (resources + tool fallbacks). GLB
+ *  meshes already carry a correct per-submesh `castShadow` from `loadGltf.ts`'s
+ *  own size threshold; the procedural fallback is thresholded here instead,
+ *  once, over its whole assembled bbox — `buildProceduralItemMesh`'s inline
+ *  `castShadow = true` is only a provisional default, overridden below
+ *  (plan 145 R2: small pickups — stone/shell/branch/mushroom/... — otherwise
+ *  cost a shadow-pass draw call for a fraction of a shadow-map texel, same
+ *  reasoning as `SMALL_MESH_SHADOW_THRESHOLD`/`createReed`/`createRockCluster`). */
 export function createItemMesh(kind: ItemKind): THREE.Object3D {
   const glb = cloneItemGlb(kind)
   if (glb) return glb
 
+  const root = buildProceduralItemMesh(kind)
+  root.updateMatrixWorld(true)
+  _itemShadowBox.setFromObject(root)
+  const diagonal = _itemShadowBox.getSize(_itemShadowSize).length()
+  const cast = diagonal >= SMALL_MESH_SHADOW_THRESHOLD
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (mesh.isMesh) mesh.castShadow = cast
+  })
+  return root
+}
+
+function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
   if (kind === 'stone') {
     const mesh = new THREE.Mesh(
       new THREE.DodecahedronGeometry(0.14, 0),

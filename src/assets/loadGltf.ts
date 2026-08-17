@@ -22,8 +22,11 @@ loader.setMeshoptDecoder(MeshoptDecoder)
  *  fraction of a shadow-map texel at the world's 1024² map / 160-unit
  *  frustum — casting still costs a full extra draw call per shadow-casting
  *  light. Trees/houses/characters are authored well above this threshold, so
- *  they keep `castShadow`. See docs/reviews/2026-08-12--005--performance-architecture-and-assets.md (A2). */
-const SMALL_MESH_SHADOW_THRESHOLD = 0.5
+ *  they keep `castShadow`. See docs/reviews/2026-08-12--005--performance-architecture-and-assets.md (A2).
+ *  Exported so other procedural-mesh call sites (e.g. `items.ts`'s pickup
+ *  fallbacks) can apply the same threshold instead of duplicating the value
+ *  (plan 145 R2). */
+export const SMALL_MESH_SHADOW_THRESHOLD = 0.5
 const _meshBoxSize = new Vector3()
 
 type CachedGltf = {
