@@ -1756,6 +1756,7 @@ export async function createApp(
     player.dispose()
     disposeChunkWorkerPool()
     postProcessing.dispose()
+    lights.dispose()
     labelRenderer.domElement.remove()
     vueUi.dispose()
     renderer.dispose()

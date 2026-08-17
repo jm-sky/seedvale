@@ -1652,7 +1652,7 @@ export function createCampfireFlame(
   const flame = new THREE.Group()
 
   let meshVisual: THREE.Object3D
-  let meshBaseScale = 1
+  const meshBaseScale = 1
   let restY = 0
   let riseFromBase = false
   if (flameMesh) {

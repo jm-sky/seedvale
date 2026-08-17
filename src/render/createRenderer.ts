@@ -17,7 +17,16 @@ export function createRenderer(
     powerPreference: 'high-performance',
     preserveDrawingBuffer: options.preserveDrawingBuffer ?? false,
   })
-  renderer.debug.checkShaderErrors = false // Disable shader error checking (docs/research/2026-08-16--012--streaming-hitch-trace-v2-linkprogram-wait.md)
+  // `renderer.debug.checkShaderErrors` is left at its Three.js default (`true`).
+  // It was flipped to `false` as a streaming-hitch workaround (research 012),
+  // but research 015 §4b disproved that: `onFirstUse()` calls
+  // `new WebGLUniforms(gl, program)` (→ `ACTIVE_UNIFORMS`) *outside* the
+  // `checkShaderErrors` guard, so whichever query is first to need the link
+  // result absorbs the driver's synchronous program-link wait either way.
+  // Disabling the flag only moved the cost from `LINK_STATUS` to
+  // `ACTIVE_UNIFORMS` (~21.6s over 288 first-use events, measured) while
+  // hiding real shader compile/link errors project-wide. Three.js documents
+  // this flag as something to keep enabled during development.
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioCap))
   renderer.setSize(container.clientWidth, container.clientHeight)
   renderer.shadowMap.enabled = true

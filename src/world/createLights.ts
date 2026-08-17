@@ -13,6 +13,12 @@ export type WorldLights = {
   /** Live resize of the directional shadow map (plan 103). Disposes the
    *  current GPU target so Three.js reallocates on the next shadow pass. */
   setShadowMapSize: (size: number) => void
+  /** Frees the sun's shadow-map render target and detaches the lights from
+   *  their scene. `WebGLRenderer.dispose()` does **not** touch shadow maps
+   *  (see its body in `three/src/renderers/WebGLRenderer.js` — it disposes
+   *  render lists/states/properties/programs, not `shadowMap`), so without
+   *  this the 512²/1024² depth target survives app teardown. */
+  dispose: () => void
 }
 
 export function createLights(shadowMapSize = 1024): WorldLights {
@@ -60,6 +66,15 @@ export function createLights(shadowMapSize = 1024): WorldLights {
         sun.shadow.map.dispose()
         sun.shadow.map = null
       }
+    },
+    dispose() {
+      // `DirectionalLight.dispose()` forwards to `LightShadow.dispose()`,
+      // which frees `shadow.map` (and `shadow.mapPass`, VSM-only).
+      sun.dispose()
+      sun.target.removeFromParent()
+      sun.removeFromParent()
+      hemi.removeFromParent()
+      ambient.removeFromParent()
     },
   }
 }

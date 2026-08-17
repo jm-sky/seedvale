@@ -276,6 +276,11 @@ export function createPostProcessing(
     setPassEnabled,
     updateGodRays,
     dispose: () => {
+      // `EffectComposer.dispose()` only frees its own two render targets and
+      // `copyPass` — every pass added to the chain has to be disposed by its
+      // owner. `RenderPass` currently inherits `Pass`'s no-op `dispose()`, but
+      // disposing it keeps the list exhaustive if that changes upstream.
+      renderPass.dispose()
       aoPass.dispose()
       smaaPass.dispose()
       bloomPass.dispose()
