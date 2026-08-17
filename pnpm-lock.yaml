@@ -28,10 +28,10 @@ importers:
         version: 1.0.0(vue@3.5.41(typescript@5.9.3))
       n8ao:
         specifier: ^2.0.0
-        version: 2.0.0(postprocessing@6.39.4(three@0.180.0))(three@0.180.0)
+        version: 2.0.0(postprocessing@6.39.4(three@0.185.1))(three@0.185.1)
       postprocessing:
         specifier: ^6.39.4
-        version: 6.39.4(three@0.180.0)
+        version: 6.39.4(three@0.185.1)
       simplex-noise:
         specifier: ^4.0.3
         version: 4.0.3
@@ -39,8 +39,8 @@ importers:
         specifier: ^3.6.0
         version: 3.6.0
       three:
-        specifier: ^0.180.0
-        version: 0.180.0
+        specifier: ^0.185.1
+        version: 0.185.1
       vite-plugin-solid:
         specifier: ^2.11.14
         version: 2.11.14(solid-js@1.9.14)(vite@7.3.6(@types/node@26.2.0)(jiti@2.7.0)(lightningcss@1.32.0))
@@ -1442,8 +1442,8 @@ packages:
     resolution: {integrity: sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A==}
     engines: {node: '>=6'}
 
-  three@0.180.0:
-    resolution: {integrity: sha512-o+qycAMZrh+TsE01GqWUxUIKR1AL0S8pq7zDkYOQw8GqfX8b8VoCKYUoHbhiX5j+7hr8XsuHDVU6+gkQJQKg9w==}
+  three@0.185.1:
+    resolution: {integrity: sha512-5aojFCXKwnjBRZvUnt3WFfEcvUJgkN5LlijRFN95hMy8WVkG4I0QNcJE+OuWvuJ0bOdStrbfXn0pkd6/QyiAlg==}
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -2735,10 +2735,10 @@ snapshots:
 
   muggle-string@0.4.1: {}
 
-  n8ao@2.0.0(postprocessing@6.39.4(three@0.180.0))(three@0.180.0):
+  n8ao@2.0.0(postprocessing@6.39.4(three@0.185.1))(three@0.185.1):
     dependencies:
-      postprocessing: 6.39.4(three@0.180.0)
-      three: 0.180.0
+      postprocessing: 6.39.4(three@0.185.1)
+      three: 0.185.1
 
   nanoid@3.3.18: {}
 
@@ -2798,9 +2798,9 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postprocessing@6.39.4(three@0.180.0):
+  postprocessing@6.39.4(three@0.185.1):
     dependencies:
-      three: 0.180.0
+      three: 0.185.1
 
   prelude-ls@1.2.1: {}
 
@@ -2885,7 +2885,7 @@ snapshots:
 
   tapable@2.3.3: {}
 
-  three@0.180.0: {}
+  three@0.185.1: {}
 
   tinybench@2.9.0: {}
 

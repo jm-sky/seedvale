@@ -257,7 +257,15 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       aoIntensity: 3,
       aoQuality: 'Performance',
       bloomEnabled: true,
-      bloomStrength: 0.28,
+      // three r18x (UnrealBloomPass rewrite, upstream PR #31528) bakes a 3.0×
+      // multiplier into the composite shader's RGB output and makes its alpha
+      // scale with that RGB instead of staying ~constant — the old
+      // AdditiveBlending contribution was ~strength² × constant, the new one
+      // is ~9× that for the same strength, and grows further with source
+      // brightness. Divided by 3 to restore the old RGB-only magnitude
+      // (issue 033 — full-screen whiteout looking at the sun after the
+      // three@0.185 upgrade, plan 136).
+      bloomStrength: 0.09,
       bloomRadius: 0.35,
       bloomThreshold: 0.92,
       godRaysEnabled: true,
