@@ -40,12 +40,13 @@ import type { WeatherParticles } from '../world/weatherParticles'
 import type { BusyAction } from './busyAction'
 import type { RestCampSequence } from './restCampSequence'
 import type { WorldBundle } from './worldBundle'
+import { NPC_SHADOW_DISTANCE } from '../ai/NpcAgent'
 import { playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audio/actionSounds'
 import { playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { isCameraMeshDebugMode, isDebugMode } from '../debug/debugMode'
 import { setCameraMeshHit } from '../debug/renderStateDebug'
-import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
+import { ANIMAL_LABELS, FAUNA_SHADOW_DISTANCE } from '../fauna/AnimalAgent'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
@@ -67,6 +68,12 @@ import {
   applyStarvationDamage,
   tickPlayerNeeds,
 } from '../player/PlayerNeeds'
+import {
+  anyWithinRadius,
+  createShadowBudgetState,
+  recordShadowBudgetFrame,
+  shouldUpdateShadowMap,
+} from '../render/shadowBudget'
 import { villageSizeConfig } from '../settlement/families'
 import { purchaseLandPlot } from '../settlement/landPurchase'
 import { damageHealth } from '../shared/HealthState'
@@ -288,6 +295,25 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   let fpsHudAge = 0
   /** Previous frame's `composer.render()` cost — drives N8AO auto-budget. */
   let lastRenderMs = 0
+  /** Pull-based, fail-open shadow-map update budget (plan 145 R1) — see
+   *  `render/shadowBudget.ts`. */
+  const shadowBudgetState = createShadowBudgetState(player.mesh.position.x, player.mesh.position.z)
+
+  /** `true` if any NPC (from a loaded settlement) or fauna agent is currently
+   *  within its own per-agent shadow-casting distance of the player
+   *  (`NPC_SHADOW_DISTANCE`/`FAUNA_SHADOW_DISTANCE`, `NpcAgent.ts`/
+   *  `AnimalAgent.ts`) — reusing those exact radii keeps this consistent by
+   *  construction with the per-agent `castShadow` toggling those already do.
+   *  Fail-open: an agent in range is assumed to be moving (see
+   *  `shadowBudget.ts` module doc), not tracked for actual displacement. */
+  function hasNearbyShadowCaster(playerX: number, playerZ: number): boolean {
+    for (const settlement of bundle.settlementsManager.getLoaded()) {
+      if (anyWithinRadius(playerX, playerZ, settlement.npcs, NPC_SHADOW_DISTANCE, (n) => n.mesh.position)) {
+        return true
+      }
+    }
+    return anyWithinRadius(playerX, playerZ, bundle.fauna.getAgents(), FAUNA_SHADOW_DISTANCE, (a) => a.mesh.position)
+  }
 
   // `?debugCameraMesh=1` — identify the mesh in front of the camera.
   const cameraMeshRaycaster = new Raycaster()
@@ -1060,9 +1086,20 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     })
     const mirrorDrawCalls = renderer.info.render.calls
     const mirrorTriangles = renderer.info.render.triangles
-    // Shadow map once, against the beauty camera — not during the mirror
-    // pass, which keeps `autoUpdate` off (plan 113 P1).
-    renderer.shadowMap.needsUpdate = true
+    // Shadow map at most once, against the beauty camera — not during the
+    // mirror pass, which keeps `autoUpdate` off (plan 113 P1). `needsUpdate`
+    // resets to `false` after `WebGLRenderer` consumes it, so leaving it
+    // unset below is a no-op skip, not a missed update (plan 145 R1).
+    const shadowPlayerX = player.mesh.position.x
+    const shadowPlayerZ = player.mesh.position.z
+    const shadowWanted = shouldUpdateShadowMap(
+      shadowBudgetState,
+      shadowPlayerX,
+      shadowPlayerZ,
+      hasNearbyShadowCaster(shadowPlayerX, shadowPlayerZ),
+    )
+    if (shadowWanted) renderer.shadowMap.needsUpdate = true
+    recordShadowBudgetFrame(shadowBudgetState, shadowPlayerX, shadowPlayerZ, shadowWanted)
     postProcessing.updateGodRays(camera, sky.sunPosition, cachedSky.elev)
     withCategory(monitor, 'RENDER', () => {
       postProcessing.render()

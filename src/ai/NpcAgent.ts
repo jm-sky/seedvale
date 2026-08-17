@@ -120,8 +120,10 @@ const WALK_SPEED = 2.4
 const ARRIVE = 0.55
 export const NPC_HEIGHT = 1.75
 /** Skip the shadow pass for NPCs beyond this distance — they still draw, but
- *  ~9 skinned submeshes × shadow map was a large submit cost (plan 113 P2). */
-const NPC_SHADOW_DISTANCE = 36
+ *  ~9 skinned submeshes × shadow map was a large submit cost (plan 113 P2).
+ *  Exported so `shadowBudget.ts` can reuse the same radius to decide whether
+ *  any shadow-casting NPC is currently in range (plan 145 R1). */
+export const NPC_SHADOW_DISTANCE = 36
 /** Minimum clearance above waterLevel an NPC will walk into or wander toward. */
 const WATER_MARGIN = 0.3
 /**

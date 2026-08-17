@@ -48,8 +48,10 @@ import {
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
 const WATER_MARGIN = 0.3
-/** Skip the shadow pass for distant animals (plan 113 P2). */
-const FAUNA_SHADOW_DISTANCE = 36
+/** Skip the shadow pass for distant animals (plan 113 P2). Exported so
+ *  `shadowBudget.ts` can reuse the same radius to decide whether any
+ *  shadow-casting animal is currently in range (plan 145 R1). */
+export const FAUNA_SHADOW_DISTANCE = 36
 /** Distance at which a predator can bite the prey it's chasing. */
 const CONTACT_RANGE = 0.8
 /** Minimum seconds between bites from the same predator, so contact doesn't
