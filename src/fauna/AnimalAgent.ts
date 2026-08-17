@@ -28,6 +28,10 @@ import {
 import { createBloodSplat, disposeBloodSplat } from './bloodSplat'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 import {
+  createHarvestedRemainsAsync,
+  disposeHarvestedRemains,
+} from './harvestedRemains'
+import {
   HERD_FOLLOW_RADIUS,
   HERD_SPECIES,
   JUVENILE_MATURITY_SECONDS,
@@ -53,6 +57,13 @@ const CONTACT_RANGE = 0.8
 const ATTACK_COOLDOWN = 0.6
 /** Seconds a corpse stays in the scene (frozen pose) before it's disposed. */
 const CORPSE_LINGER_SECONDS = 60
+/** Seconds harvested remains stay after a knife harvest (plan 137) — own
+ *  lifetime, not whatever was left of the unharvested 60 s linger. */
+export const HARVESTED_REMAINS_LINGER_SECONDS = 90
+
+export function corpseLingerSeconds(meatHarvested: boolean): number {
+  return meatHarvested ? HARVESTED_REMAINS_LINGER_SECONDS : CORPSE_LINGER_SECONDS
+}
 /** "Groźny wilk" (plan 110) — `markDangerous()` tuning. A visible, tougher
  *  individual, not a separate animal type or model. */
 const DANGEROUS_HP_MULTIPLIER = 2
@@ -226,15 +237,17 @@ export function forageEdgeScore(forestFactor: number): number {
 /** Whether a corpse can feed this eater (plan 094). `consumed` is set once
  *  an eat action completes, so the same carcass cannot refill hunger
  *  repeatedly. A claim held by someone else blocks selection; a claim held
- *  by `eater` (or no claim) is allowed. */
+ *  by `eater` (or no claim) is allowed. Harvested remains (`harvested`) are
+ *  bones/scraps, not food (plan 137). */
 export function isCarcassEdible(opts: {
   dead: boolean
   expired: boolean
   consumed: boolean
+  harvested?: boolean
   claimedBy: unknown
   eater: unknown
 }): boolean {
-  if (!opts.dead || opts.expired || opts.consumed) return false
+  if (!opts.dead || opts.expired || opts.consumed || opts.harvested) return false
   if (opts.claimedBy != null && opts.claimedBy !== opts.eater) return false
   return true
 }
@@ -616,6 +629,8 @@ export class AnimalAgent {
   private provokedTimer = 0
   private bloodSplat: THREE.Object3D | null = null
   private bloodSplatToken = 0
+  private harvestedRemains: THREE.Object3D | null = null
+  private harvestedRemainsToken = 0
   /** Cached real food/water destination while hunger/thirst is elevated
    *  (plan 094) — `null` when not currently pursuing one. */
   private sourceTarget: SourceTarget | null = null
@@ -822,8 +837,11 @@ export class AnimalAgent {
 
   dispose(): void {
     this.bloodSplatToken++
+    this.harvestedRemainsToken++
     disposeBloodSplat(this.bloodSplat)
     this.bloodSplat = null
+    disposeHarvestedRemains(this.harvestedRemains)
+    this.harvestedRemains = null
     this.label.removeFromParent()
     this.labelEl.remove()
     this.mixer?.stopAllAction()
@@ -859,13 +877,14 @@ export class AnimalAgent {
 
   /** True once a dead agent's corpse has lingered long enough to be disposed. */
   readyToRemove(): boolean {
-    return this.health.dead && !this.corpseHeld && this.timeSinceDeath >= CORPSE_LINGER_SECONDS
+    const linger = corpseLingerSeconds(this.meatHarvested)
+    return this.health.dead && !this.corpseHeld && this.timeSinceDeath >= linger
   }
 
   /** Player shovel-bury: mark corpse for disposal on the next fauna/settlement tick. */
   bury(): void {
     if (!this.health.dead) return
-    this.timeSinceDeath = CORPSE_LINGER_SECONDS
+    this.timeSinceDeath = HARVESTED_REMAINS_LINGER_SECONDS
   }
 
   /** Plan 106 — a dead, not-yet-harvested corpse can yield `raw_meat`. */
@@ -873,11 +892,57 @@ export class AnimalAgent {
     return this.health.dead && !this.meatHarvested
   }
 
-  /** Player knife-harvest: marks this corpse's meat as taken. Once only —
-   *  callers check `canHarvestMeat()` first. */
+  /** Player knife-harvest: marks this corpse's meat as taken and swaps the
+   *  living mesh for harvested remains (plan 137/138). State/TTL is
+   *  synchronous; the GLB pile attaches asynchronously like the blood splat.
+   *  Once only — callers check `canHarvestMeat()` first. */
   harvestMeat(): void {
-    if (!this.health.dead) return
+    if (!this.health.dead || this.meatHarvested) return
     this.meatHarvested = true
+    this.timeSinceDeath = 0
+    this.hideLivingVisual()
+    this.mesh.rotation.z = 0
+    void this.spawnHarvestedRemains()
+    this.snapY()
+    this.labelEl.style.display = 'none'
+  }
+
+  /** GLB remains as a mesh child — token so dispose mid-load does not parent
+   *  a stale clone. Fallback pile is still a Group named `harvested-remains`. */
+  private async spawnHarvestedRemains(): Promise<void> {
+    const token = ++this.harvestedRemainsToken
+    const remains = await createHarvestedRemainsAsync(this.def.kind, this.def.modelHeight)
+    if (token !== this.harvestedRemainsToken || !this.mesh.parent) {
+      disposeHarvestedRemains(remains)
+      return
+    }
+    this.harvestedRemains = remains
+    this.mesh.add(remains)
+  }
+
+  /** Hide the living GLB/capsule without hiding the CSS2D label or the
+   *  remains we'll parent onto the same root. Capsule geometry lives on
+   *  `this.mesh` itself, so `mesh.visible = false` would also hide children. */
+  private hideLivingVisual(): void {
+    if (this.isCapsule) {
+      const mat = (this.mesh as THREE.Mesh).material
+      if (Array.isArray(mat)) {
+        for (const m of mat) m.visible = false
+      } else {
+        mat.visible = false
+      }
+      return
+    }
+    this.mesh.traverse((child) => {
+      if (child === this.mesh) return
+      if ((child as { isCSS2DObject?: boolean }).isCSS2DObject) return
+      let walk: THREE.Object3D | null = child
+      while (walk && walk !== this.mesh) {
+        if (walk.name === 'harvested-remains') return
+        walk = walk.parent
+      }
+      if ((child as THREE.Mesh).isMesh) child.visible = false
+    })
   }
 
   /** Pin this corpse for the duration of a player harvest channel. Linger
@@ -1518,6 +1583,7 @@ export class AnimalAgent {
         dead: o.health.dead,
         expired: o.readyToRemove(),
         consumed: o.foodConsumed,
+        harvested: o.meatHarvested,
         claimedBy: o.foodClaimedBy,
         eater: this,
       })) continue

@@ -208,6 +208,7 @@ function buildFauna(
     },
     {
       modifyTerrain: chunkManager.modifyTerrain,
+      scorchTerrain: chunkManager.scorchTerrain,
       sampleMountainRidge: chunkManager.sampleMountainRidge,
     },
     onAnimalDeath,

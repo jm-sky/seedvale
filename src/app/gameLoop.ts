@@ -7,6 +7,7 @@ import type { createHouseDoorTracker } from '../audio/doorSounds'
 import type { createFireAudio } from '../audio/fireSounds'
 import type { WeatherAudio } from '../audio/weatherSounds'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
+import type { PreySpawner } from '../fauna/AnimalSpawner'
 import type { TouchControls } from '../input/createTouchControls'
 import type { createKeyboard } from '../input/Keyboard'
 import type { HeldTool } from '../items/HeldTool'
@@ -98,9 +99,6 @@ type Highlightable = NpcAgent | AnimalAgent
  *  uniforms for — below this the visual change is sub-pixel at any `dayLengthSec`
  *  worth playing at, so re-running `applyDayNight` every frame is wasted work. */
 const DAY_NIGHT_APPLY_THRESHOLD = 1 / 2000
-
-/** Branches consumed by `[E] Zniszcz` on a `depleted` spawn point (plan 125 §6). */
-const SPAWNER_DESTROY_BRANCH_COST = 4
 
 /** Wraparound-aware distance between two `timeOfDay` values (both in [0,1)). */
 function timeOfDayDelta(a: number, b: number): number {
@@ -204,6 +202,8 @@ export type GameLoopDeps = {
   startBuryCorpse: (animal: AnimalAgent) => void
   /** Knife-harvest raw_meat from a dead animal corpse (busy channel, plan 106). */
   startHarvestMeat?: (animal: AnimalAgent) => void
+  /** Busy-channel `[E] Zniszcz` on a `depleted` spawn point (plan 137). */
+  startDestroySpawner: (spawner: PreySpawner) => void
   /** Cook the first held recipe's input at a lit campfire (busy channel, plan 106 §6). */
   startCookAt?: (fire: VillageFire) => void
   /** Light an unlit campfire (busy channel, blurred). Adding fuel to an
@@ -255,6 +255,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
+    startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, startTentRest, packTent, onInventoryChanged, setFrameTiming,
   } = deps
 
@@ -706,21 +707,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             // quest step shouldn't become unreachable just because the player
             // exhausted the habitat first. No dialog is opened for it here.
             resolveInteraction(target, questManager)
-            if (inventory.remove('branch', SPAWNER_DESTROY_BRANCH_COST)) {
-              if (bundle.fauna.destroySpawner(target.spawner.id, dayNight.elapsedDays)) {
-                bundle.placedFires.place(target.position.x, target.position.z, 'pit')
-                hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-                onInventoryChanged()
-                toast.show('Siedlisko zniszczone.', 'pickup')
-              } else {
-                // Spawner state changed under us between the prompt and this
-                // press (e.g. it recovered) — refund, don't silently eat branches.
-                inventory.add('branch', SPAWNER_DESTROY_BRANCH_COST)
-                toast.show('Nie można już tego zniszczyć.', 'error')
-              }
-            } else {
-              toast.show('Potrzebujesz 4 gałęzi.', 'error')
-            }
+            startDestroySpawner(target.spawner)
           }
         } else if (target.kind === 'landPlot') {
           const settlement = bundle.settlementsManager.getLoaded().find((s) => s.id === target.settlementId)

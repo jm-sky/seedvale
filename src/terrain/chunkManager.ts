@@ -383,6 +383,11 @@ export type ChunkManager = {
    *  is currently standing near, always loaded). Not persisted across saves
    *  (plan 052 explicitly scopes persistence out). */
   modifyTerrain: (x: number, z: number, radius: number, depth: number) => boolean
+  /** Burned-ground overlay (plan 137) — shallow dip + `roadTint` bump so grass
+   *  thins, plus charcoal vertex tint on the next mesh rebuild. Same runtime
+   *  modification list as `modifyTerrain` (reapplied on chunk reload). Also
+   *  rebuilds grass on touched chunks so blades don't linger in the scorch. */
+  scorchTerrain: (x: number, z: number, radius: number, depth: number) => boolean
   /** Raises terrain toward the procedural base (never above it) — "Wyrównaj".
    *  Same runtime overlay as `modifyTerrain`; returns false if nothing changed. */
   levelTerrain: (x: number, z: number, radius: number, maxRaise: number) => boolean
@@ -437,8 +442,10 @@ export type TerrainModification = {
   z: number
   radius: number
   depth: number
-  /** `'dig'` lowers; `'level'` raises toward `sampleBase` and never above it. */
-  mode: 'dig' | 'level'
+  /** `'dig'` lowers; `'level'` raises toward `sampleBase` and never above it;
+   *  `'scorch'` is a shallow dip plus a `roadTint` / charcoal-color burn patch
+   *  (plan 137). */
+  mode: 'dig' | 'level' | 'scorch'
 }
 
 /** Writes one modification's radial falloff directly into `tile.heights`
@@ -486,6 +493,17 @@ export function applyModificationToTile(
         tile.heights[idx] = next
       } else {
         tile.heights[idx] = prev - mod.depth * falloff
+        if (mod.mode === 'scorch') {
+          // Visual mesh Y reads `floorHeights`; bump it too so the dip shows.
+          if (tile.floorHeights) {
+            tile.floorHeights[idx] = tile.floorHeights[idx]! - mod.depth * falloff
+          }
+          // Reuse the road-corridor grass fade (`ROAD_TINT_FADE_*`) so scorched
+          // ground thins blades without a second grass-reject path.
+          if (tile.roadTint) {
+            tile.roadTint[idx] = Math.max(tile.roadTint[idx]!, falloff)
+          }
+        }
       }
       touched = true
     }
@@ -823,6 +841,7 @@ export function createChunkManager(
     rec.mesh?.removeFromParent()
     rec.meshDispose?.()
     const { x, z } = chunkCenter(rec.coord, config.chunkSize)
+    const scorches = modifications.filter((m) => m.mode === 'scorch')
     const { mesh, dispose } = buildChunkGeometry(
       tile,
       config.resolution,
@@ -835,6 +854,7 @@ export function createChunkManager(
       config.region,
       config.seed,
       config.terrainCastsShadow,
+      scorches,
     )
     scene.add(mesh)
     rec.mesh = mesh
@@ -1632,6 +1652,23 @@ export function createChunkManager(
         if (!touched) continue
         touchedAny = true
         buildAndAttachMesh(rec, rec.tile)
+      }
+      return touchedAny
+    },
+    scorchTerrain(x, z, radius, depth) {
+      const mod: TerrainModification = { x, z, radius, depth, mode: 'scorch' }
+      modifications.push(mod)
+      let touchedAny = false
+      for (const rec of chunks.values()) {
+        if (rec.state !== 'ready' || !rec.tile) continue
+        const touched = applyModificationToTile(rec.tile, rec.coord, config.chunkSize, config.resolution, mod)
+        if (!touched) continue
+        touchedAny = true
+        buildAndAttachMesh(rec, rec.tile)
+        // Grass was placed against the pre-scorch `roadTint`; rebuild so the
+        // burned patch actually thins blades instead of leaving green cover.
+        removeGrass(rec)
+        if (config.grass.enabled) ensureGrass(rec)
       }
       return touchedAny
     },

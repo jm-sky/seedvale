@@ -4,7 +4,7 @@
 
 **Nie jest:** listą assetów ([assets/](./assets/README.md)), stanem implementacji ([STATE.md](./STATE.md)), domeną wody ([WATER.md](./WATER.md)), ani planem ([plans/](./plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
 
-**Last updated:** 2026-08-16
+**Last updated:** 2026-08-17
 
 Domena wody (stan, historia, kolejność poprawek): [WATER.md](./WATER.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
 
@@ -56,6 +56,19 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-08-17 — Harvested remains GLB pile (plan 138) 🔧
+
+- Knife harvest leftover is a composed `harvested-remains` group: cached `bones_pile` / `large_bone` / `animal_hide` (`preparePropFitMax` + clone, same pattern as `blood_splat`) plus 2–4 procedural red meat scraps. Hide sits beside the pile, not on it. Load failure keeps the plan-137 cylinder+hide fallback.
+- Gameplay linger (`HARVESTED_REMAINS_LINGER_SECONDS` 90) and `meatHarvested` state are unchanged; mesh attach is async with a dispose token.
+- Not verified: browser silhouette of pile vs hide vs scraps, scale on rabbit vs deer.
+
+### 2026-08-17 — Scorched spawn-point ground + harvested remains (plan 137) 🔧
+
+- Destroyed cave/thicket stays in the world (near-black `tintPropMaterials`). Burned earth is a `TerrainModification` `mode: 'scorch'` patch (~7 m): shallow dip, `roadTint` bump so existing grass fade applies, charcoal vertex lerp (`SCORCH_CHARCOAL` `0x1a1410`) + `aBareGround` in `buildChunkGeometry` — no per-frame burn uniforms, no extra mesh. Grass on touched chunks is rebuilt after scorch.
+- Habitat destroy lights the existing `PlacedFires` pit (`fx/fire.glb` / `CampfireFlame`) with the 4 consumed branches as ~5 min fuel.
+- Harvested corpses swap the living mesh for procedural remains (bones + `createItemMesh` meat/hide scraps). No carcass GLB yet.
+- Not verified: browser read of scorch vs grass/roads, fire duration, remains silhouette.
 
 ### 2026-08-16 — Campfire GLB body + fire.glb flame (plan 135) 🔧
 

@@ -39,6 +39,12 @@ export const RECOVERY_DAYS = 21
  *  `recovering` spawn point to become `active` again. */
 export const MIN_RECOVERY_POPULATION = 2
 
+/** Branches consumed by `[E] Zniszcz` on a `depleted` spawn point (plan 125 §6 /
+ *  plan 137 — spent on channel complete, not on keypress). */
+export const SPAWNER_DESTROY_BRANCH_COST = 4
+/** Busy-channel duration for destroying a depleted spawn point (plan 137). */
+export const DESTROY_SPAWNER_DURATION_SEC = 5
+
 export type PreySpawner = {
   /** Stable identity (plan 125) — deterministic from settlement + spawner
    *  type (one cave/thicket/wolfDen per settlement today), not a runtime

@@ -27,6 +27,7 @@ import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
 import { isCameraDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { getRenderStateDebugText } from '../debug/renderStateDebug'
 import { type AnimalAgent, type AnimalKind, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
+import { DESTROY_SPAWNER_DURATION_SEC, type PreySpawner, SPAWNER_DESTROY_BRANCH_COST } from '../fauna/AnimalSpawner'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
@@ -1135,6 +1136,42 @@ export async function createApp(
     }, { blurred: true })
   }
 
+  /** `[E] Zniszcz` on a `depleted` spawn point (plan 137) — busy channel with
+   *  progress bar; branches are spent only on complete (Esc is a no-op). */
+  const startDestroySpawner = (spawner: PreySpawner): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (spawner.state !== 'depleted') return
+    if (!inventory.has('branch', SPAWNER_DESTROY_BRANCH_COST)) {
+      toast.show('Potrzebujesz 4 gałęzi.', 'error')
+      return
+    }
+    busy.start(DESTROY_SPAWNER_DURATION_SEC, 'Podpalanie siedliska…', () => {
+      if (spawner.state !== 'depleted') {
+        toast.show('Nie można już tego zniszczyć.', 'error')
+        return
+      }
+      if (!inventory.remove('branch', SPAWNER_DESTROY_BRANCH_COST)) {
+        toast.show('Potrzebujesz 4 gałęzi.', 'error')
+        return
+      }
+      if (!bundle.fauna.destroySpawner(spawner.id, dayNight.elapsedDays)) {
+        inventory.add('branch', SPAWNER_DESTROY_BRANCH_COST)
+        toast.show('Nie można już tego zniszczyć.', 'error')
+        return
+      }
+      // 4 consumed branches become the pit's fuel: `light` sets one branch of
+      // fuel, then three `addFuel` calls bring it to ~300 s (`FUEL_PER_BRANCH`).
+      const entry = bundle.placedFires.place(spawner.x, spawner.z, 'pit')
+      entry.fire.light('player')
+      entry.fire.addFuel()
+      entry.fire.addFuel()
+      entry.fire.addFuel()
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      toast.show('Siedlisko zniszczone.', 'pickup')
+    }, { blurred: true })
+  }
+
   /** Cooks the first held recipe's input at a lit campfire (plan 106 §6). */
   const startCookAt = (fire: VillageFire): void => {
     if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
@@ -1510,6 +1547,7 @@ export async function createApp(
     startHarvestMeat,
     startCookAt,
     startIgniteFire,
+    startDestroySpawner,
     drinkFromWaterSource,
     fillWaterskin,
     startTentRest,

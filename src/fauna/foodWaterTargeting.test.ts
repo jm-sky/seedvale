@@ -84,6 +84,17 @@ describe('isCarcassEdible (plan 094)', () => {
     })).toBe(false)
   })
 
+  it('rejects a knife-harvested carcass — remains are not food (plan 137)', () => {
+    expect(isCarcassEdible({
+      dead: true,
+      expired: false,
+      consumed: false,
+      harvested: true,
+      claimedBy: null,
+      eater,
+    })).toBe(false)
+  })
+
   it('rejects live or expired bodies', () => {
     expect(isCarcassEdible({
       dead: false,

@@ -75,11 +75,12 @@ export type Fauna = {
   /** Label suffix (e.g. quest `!`/`?`) for a spawner type's CSS2D label — set
    *  externally (e.g. by a QuestManager), mirrors `NpcAgent.setQuestMarker`. */
   setSpawnerMarker: (type: PreySpawner['type'], marker: string | null) => void
-  /** Player "Zniszcz" on a `depleted` spawn point (plan 125 §6) — moves it to
-   *  `disabled`, burns its prop dark and carves a small scorch depression.
-   *  Caller (`gameLoop.ts`) is responsible for consuming the 4 branches and
-   *  placing the fire; returns `false` (no state change, no branches should
-   *  be spent) if `spawnerId` isn't found or isn't currently `depleted`. */
+  /** Player "Zniszcz" on a `depleted` spawn point (plan 125 §6 / plan 137) —
+   *  moves it to `disabled`, burns its prop dark and carves a charcoal scorch
+   *  patch. Caller (`createApp.ts`) is responsible for the busy channel, the
+   *  4 branches and lighting the fire; returns `false` (no state change, no
+   *  branches should be spent) if `spawnerId` isn't found or isn't currently
+   *  `depleted`. */
   destroySpawner: (spawnerId: string, nowDays: number) => boolean
 }
 
@@ -137,16 +138,15 @@ export const SPAWNER_RING_OFFSET: [number, number] = [25, 45]
  *  spawner, not a new independent spawn point. */
 const MIN_SPAWN_SEPARATION = 10
 
-/** "Zniszcz" burn-site depression (plan 125 §7/§9) — a shallow, small scorch
- *  mark, deliberately shallower/narrower than `CAVE_DEPRESSION_*` below (this
- *  isn't a walk-in opening, just disturbed ground); the large fire + darkened
- *  prop are the primary burnt-site read. */
-const BURN_PATCH_RADIUS = 2.5
-const BURN_PATCH_DEPTH = 0.35
+/** "Zniszcz" burn-site (plan 125 §7, enlarged in plan 137) — a wide, shallow
+ *  charcoal patch around the cave/thicket, not a second walk-in pit. The
+ *  lit fire + darkened prop + vertex-color scorch are the burnt-site read. */
+const BURN_PATCH_RADIUS = 7
+const BURN_PATCH_DEPTH = 0.15
 /** Tint applied to a destroyed spawn point's prop (`tintPropMaterials`, same
- *  technique as `AnimalAgent.markDangerous()`) — dark ash/char, not the
+ *  technique as `AnimalAgent.markDangerous()`) — near-black char, not the
  *  "dangerous" red-black. */
-const BURNED_SPAWNER_TINT_HEX = 0x241d17
+const BURNED_SPAWNER_TINT_HEX = 0x0a0806
 
 /** Cave depression carve (plan 083) — a real terrain pit under the rock
  *  ring, replacing the old flat dark prop disc. Sized for a walk-in opening,
@@ -305,6 +305,7 @@ export async function createFauna(
   },
   terrainCarving?: {
     modifyTerrain: (x: number, z: number, radius: number, depth: number) => boolean
+    scorchTerrain?: (x: number, z: number, radius: number, depth: number) => boolean
     sampleMountainRidge: (x: number, z: number) => number
   },
   /** Reports any wild-fauna death (any cause) by `animalId` — forwarded into
@@ -790,7 +791,11 @@ export async function createFauna(
       spawner.disabledAtDay = nowDays
       const mesh = spawnerMeshById.get(spawnerId)
       if (mesh) tintPropMaterials(mesh, BURNED_SPAWNER_TINT_HEX)
-      terrainCarving?.modifyTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH)
+      if (terrainCarving?.scorchTerrain) {
+        terrainCarving.scorchTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH)
+      } else {
+        terrainCarving?.modifyTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH)
+      }
       return true
     },
   }

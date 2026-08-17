@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-08-16
+**Last updated:** 2026-08-17
 
 ## How to use
 
@@ -65,6 +65,7 @@ If the feature needs no new model, do nothing to this file.
 | M36 | Food items (tomato/raw_meat/roasted_meat/bread + plan 134 species meats/hide/cheese/dried_meat) + waterskin | Pickup/inventory meshes; procedural fallback in place and functional | `needed` | plan 106, plan 134 (`items/items.ts`'s `createItemMesh`) |
 | M37 | Animal trough | Household `AnimalTrough` prop; procedural-only fallback in place and functional (`props.ts`'s `createTrough`), no GLB yet | `needed` | plan 122 |
 | M38 | Spear / short sword | Held melee weapons (Kupiec stock); procedural fallback + generic held-tool grip in place and functional, no GLB yet | `needed` | plan 134 (`items/items.ts`'s `createItemMesh`, `items/heldToolVisual.ts`'s `HELD_ATTACH`) |
+| M39 | Harvested animal remains (bones / hide) | After knife harvest: `bones_pile` + 1–2 `large_bone` + `animal_hide` + 2–4 procedural meat scraps (`fauna/harvestedRemains.ts`). Procedural cylinder+hide fallback if GLB fails. Per-species carcass GLB still out of scope | `wired` | plan 137, plan 138 (`fx/bones_pile.glb`, `fx/large_bone.glb`, `fx/animal_hide.glb`) |
 
 ## Wired (reference — do not treat as open work)
 
@@ -78,7 +79,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
-| FX | fire tip (handheld, village torch, campfire flame); blood splat (animal death) |
+| FX | fire tip (handheld, village torch, campfire flame); blood splat (animal death); harvested remains (pile / large bone / hide) |
 
 ## Related research
 

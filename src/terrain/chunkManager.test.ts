@@ -17,7 +17,12 @@ const CHUNK_SIZE = 32
 const RESOLUTION = 5
 
 function fakeTile(apronRes: number, fill = 10): ChunkTileResult {
-  return { heights: new Float32Array(apronRes * apronRes).fill(fill) } as unknown as ChunkTileResult
+  const n = apronRes * apronRes
+  return {
+    heights: new Float32Array(n).fill(fill),
+    floorHeights: new Float32Array(n).fill(fill),
+    roadTint: new Float32Array(n).fill(0),
+  } as unknown as ChunkTileResult
 }
 
 function heightAtWorld(tile: ChunkTileResult, cx: number, cz: number, wx: number, wz: number): number {
@@ -104,6 +109,28 @@ describe('applyModificationToTile', () => {
     const touched = applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod, () => 10)
     expect(touched).toBe(false)
     expect(heightAtWorld(tile, 0, 0, 0, 0)).toBe(10)
+  })
+
+  it('scorch lowers the center and bumps roadTint toward 1', () => {
+    const tile = fakeTile(7)
+    const mod: TerrainModification = { x: 0, z: 0, radius: 10, depth: 0.15, mode: 'scorch' }
+    applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod)
+    expect(heightAtWorld(tile, 0, 0, 0, 0)).toBeCloseTo(10 - 0.15, 5)
+    const o = apronOriginWorld(0, 0, CHUNK_SIZE, RESOLUTION)
+    const ix = Math.round((0 - o.x) / o.step)
+    const iz = Math.round((0 - o.z) / o.step)
+    expect(tile.roadTint[iz * o.apronRes + ix]).toBeCloseTo(1, 5)
+  })
+
+  it('scorch does not overwrite a stronger existing roadTint', () => {
+    const tile = fakeTile(7)
+    tile.roadTint.fill(1)
+    const mod: TerrainModification = { x: 0, z: 0, radius: 10, depth: 0.15, mode: 'scorch' }
+    applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod)
+    const o = apronOriginWorld(0, 0, CHUNK_SIZE, RESOLUTION)
+    const ix = Math.round((8 - o.x) / o.step)
+    const iz = Math.round((0 - o.z) / o.step)
+    expect(tile.roadTint[iz * o.apronRes + ix]).toBe(1)
   })
 })
 

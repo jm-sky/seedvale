@@ -23,6 +23,32 @@ export type ChunkMeshResult = {
   dispose: () => void
 }
 
+/** World-space burn patches applied as vertex-color charcoal (plan 137) —
+ *  the same `{x,z,radius}` as `TerrainModification` mode `'scorch'`. Kept as
+ *  a narrow type so `buildChunkGeometry` doesn't import `chunkManager`. */
+export type TerrainScorchPatch = { x: number, z: number, radius: number }
+
+/** Charcoal ground color for a fully-scorched vertex. */
+export const SCORCH_CHARCOAL = new THREE.Color(0x1a1410)
+
+/** Radial scorch amount in [0, 1] at a world XZ point — 1 at the center,
+ *  0 at/beyond `radius`. Overlapping patches take the max. Pure/exported
+ *  so the falloff is unit-tested without building a chunk mesh. */
+export function scorchFalloffAt(
+  wx: number,
+  wz: number,
+  patches: readonly TerrainScorchPatch[],
+): number {
+  let best = 0
+  for (const patch of patches) {
+    const dist = Math.hypot(wx - patch.x, wz - patch.z)
+    if (dist >= patch.radius) continue
+    const falloff = 1 - THREE.MathUtils.smoothstep(dist, 0, patch.radius)
+    if (falloff > best) best = falloff
+  }
+  return best
+}
+
 /** Every chunk's material is stateless per-chunk (all differences live in
  *  vertex attributes), so `ChunkManager` builds exactly one and passes it to
  *  every `buildChunkGeometry` call instead of paying for 49 materials/
@@ -403,6 +429,7 @@ export function buildChunkGeometry(
   region: RegionParams,
   seed: number,
   castShadow: boolean,
+  scorches: readonly TerrainScorchPatch[] = [],
 ): ChunkMeshResult {
   const step = chunkSize / (resolution - 1)
   const apronRes = resolution + 2
@@ -457,11 +484,18 @@ export function buildChunkGeometry(
     applyOceanDepthTint(tmp, continentalness, h, waterLevel)
     applyMicroTint(tmp, h, waterLevel, wx, wz, 0.045 + Math.min(1, roadTint) * 0.05)
     applyRoadTint(tmp, roadTint, wx, wz)
+    const scorchAmt = scorchFalloffAt(wx, wz, scorches)
+    if (scorchAmt > 0) {
+      tmp.lerp(SCORCH_CHARCOAL, scorchAmt)
+    }
 
     colors[i * 3] = tmp.r
     colors[i * 3 + 1] = tmp.g
     colors[i * 3 + 2] = tmp.b
-    bareGround[i] = bareGroundWeight(roadTint, h, waterLevel, biomeWeights.desert, sandBand)
+    bareGround[i] = Math.max(
+      bareGroundWeight(roadTint, h, waterLevel, biomeWeights.desert, sandBand),
+      scorchAmt,
+    )
   }
 
   geometry.setAttribute('normal', new THREE.BufferAttribute(normalAttr, 3))

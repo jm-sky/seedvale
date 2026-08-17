@@ -52,11 +52,12 @@ export type PlacedFireEntry = {
 export type PlacedFires = {
   list: () => readonly PlacedFireEntry[]
   nodes: () => readonly PlacedFire[]
-  /** Places a new fire at (x, z). A `'simple'` fire starts already lit (its
-   *  2-branch build cost doubles as its starting fuel, see
-   *  `app/createApp.ts`'s `buildSimpleFire`) — a `'pit'` starts cold, lit
-   *  later via the generic `[E]` campfire interaction. */
-  place: (x: number, z: number, kind: PlacedFireKind) => void
+  /** Places a new fire at (x, z) and returns the live entry. A `'simple'`
+   *  fire starts already lit (its 2-branch build cost doubles as its starting
+   *  fuel, see `app/createApp.ts`'s `buildSimpleFire`) — a `'pit'` starts
+   *  cold unless the caller lights it (plan 137 habitat destroy lights a pit
+   *  immediately with the 4 consumed branches as fuel). */
+  place: (x: number, z: number, kind: PlacedFireKind) => PlacedFireEntry
   update: (dt: number) => void
   dispose: () => void
 }
@@ -125,13 +126,14 @@ export function createPlacedFires(
     nodes: () => fires.map(({ id, x, z, kind }) => ({ id, x, z, kind })),
     place(x, z, kind) {
       spawn({ id: `fire:${Date.now()}:${nextFireId++}`, x, z, kind })
+      const entry = fires[fires.length - 1]!
       if (kind === 'simple') {
         // Both consumed branches count toward starting fuel — the build
         // action already took 2 from the inventory (`app/createApp.ts`).
-        const entry = fires[fires.length - 1]!
         entry.fire.light()
         entry.fire.addFuel()
       }
+      return entry
     },
     update(dt) {
       // Snapshot first — `despawn` splices `fires`, which would skip the
