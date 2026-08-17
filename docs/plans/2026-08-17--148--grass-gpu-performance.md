@@ -6,7 +6,7 @@ tags: [performance]
 # Plan: Grass GPU performance and geometry LOD
 
 **Created:** 2026-08-17  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 (etap S zaimplementowany; M/M/L nierozpoczęte — patrz [implementation notes](./2026-08-17--148--grass-gpu-performance-implementation-notes.md))  
 **Priority:** medium · **Effort:** L  
 **Depends on:** none
 

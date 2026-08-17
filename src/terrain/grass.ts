@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { ChunkCoord } from './chunkGrid'
 import type { ChunkTileData, RegionParams } from './chunkHeightmap'
+import type { GrassGeometryLodTier } from './distanceLod'
 import { REFLECTION_SKIPPED_LAYER } from '../world/waterMirror'
 import {
   computeChunkGrass,
@@ -25,6 +26,12 @@ export type WorldGrassChunk = {
    *  `fillerFraction` (default 0) controls the short ground-cover bucket that
    *  exists only to densify the near field without paying fill-rate far away. */
   setLodFraction: (fraction: number, fillerFraction?: number) => void
+  /** Geometry LOD (plan 148 S): swaps each non-filler species bucket's
+   *  `InstancedMesh.geometry` to a cheaper fin-cluster variant (fewer fins/
+   *  segments) as the chunk gets farther away — orthogonal to `setLodFraction`,
+   *  which only changes how many instances of the *current* geometry draw.
+   *  No-op on the filler bucket, which stays a single cheap near-only shape. */
+  setGeometryLod: (tier: GrassGeometryLodTier) => void
   dispose: () => void
 }
 
@@ -222,6 +229,35 @@ const HERB_FINS: FinSpec[] = radialFins(3, {
   segments: HERB_SEGMENTS,
 })
 
+/** Geometry LOD (plan 148 S) — cheaper fin-cluster variants for `mid`/`far`
+ *  chunks, reusing each species' own fin arrangement (silhouette/shape stays
+ *  recognizable) and only cutting segment count (bend resolution), which is
+ *  where most of a cluster's triangle budget goes. Same fin count as `near`
+ *  keeps the outline stable across LOD transitions (less popping) — except
+ *  `GRAIN_FINS_FAR`, which additionally drops the peeling leaf fin since a
+ *  thin stem cross is already the minimal recognizable shape for that species. */
+const MID_SEGMENTS = 2
+const FAR_SEGMENTS = 1
+
+function withSegments(fins: FinSpec[], segments: number): FinSpec[] {
+  return fins.map((fin) => ({ ...fin, segments }))
+}
+
+const TRI_CLUSTER_FINS_MID = withSegments(TRI_CLUSTER_FINS, MID_SEGMENTS)
+const TRI_CLUSTER_FINS_FAR = withSegments(TRI_CLUSTER_FINS, FAR_SEGMENTS)
+const GRAIN_FINS_MID = withSegments(GRAIN_FINS, MID_SEGMENTS)
+const GRAIN_FINS_FAR = withSegments(GRAIN_FINS.slice(0, 2), FAR_SEGMENTS)
+const HERB_FINS_MID = withSegments(HERB_FINS, MID_SEGMENTS)
+const HERB_FINS_FAR = withSegments(HERB_FINS, FAR_SEGMENTS)
+
+type TieredSpeciesId = Exclude<GrassSpeciesId, 'filler'>
+
+const GEOMETRY_LOD_FINS: Record<TieredSpeciesId, Record<GrassGeometryLodTier, FinSpec[]>> = {
+  tri: { near: TRI_CLUSTER_FINS, mid: TRI_CLUSTER_FINS_MID, far: TRI_CLUSTER_FINS_FAR },
+  grain: { near: GRAIN_FINS, mid: GRAIN_FINS_MID, far: GRAIN_FINS_FAR },
+  herb: { near: HERB_FINS, mid: HERB_FINS_MID, far: HERB_FINS_FAR },
+}
+
 /** Builds one shared position/index buffer from a list of fins — each fin is a
  *  flat tapered strip (a vertical "card") baked with its own rest curve; fins
  *  are concatenated into one geometry (index offsets accumulate per fin), so a
@@ -376,11 +412,20 @@ const FRAGMENT_SHADER = /* glsl */ `
  * worker-offload path (plan 086) calls the two halves separately.
  */
 export function createGrassSystem(): GrassSystem {
-  const templates: Record<GrassSpeciesId, { position: THREE.BufferAttribute, index: THREE.BufferAttribute }> = {
-    tri: buildFinCluster(TRI_CLUSTER_FINS),
-    grain: buildFinCluster(GRAIN_FINS),
-    herb: buildFinCluster(HERB_FINS),
-    filler: buildFinCluster(FILLER_FINS),
+  const fillerTemplate = buildFinCluster(FILLER_FINS)
+  // Built lazily per (species, tier) and cached at the system level — every
+  // chunk's per-tier BufferGeometry clones from here (see `buildTierGeometry`),
+  // so the fin-cluster vertex/index arithmetic runs once per tier ever
+  // touched, not once per chunk.
+  const tieredTemplateCache = new Map<string, { position: THREE.BufferAttribute, index: THREE.BufferAttribute }>()
+  function tieredTemplate(id: TieredSpeciesId, tier: GrassGeometryLodTier) {
+    const key = `${id}:${tier}`
+    let tpl = tieredTemplateCache.get(key)
+    if (!tpl) {
+      tpl = buildFinCluster(GEOMETRY_LOD_FINS[id][tier])
+      tieredTemplateCache.set(key, tpl)
+    }
+    return tpl
   }
 
   const material = new THREE.ShaderMaterial({
@@ -414,28 +459,63 @@ export function createGrassSystem(): GrassSystem {
     group.position.set(chunkOriginX, 0, chunkOriginZ)
     group.name = 'chunk-grass'
 
-    const subMeshes: { mesh: THREE.InstancedMesh, fullCount: number, filler: boolean }[] = []
+    type SubMesh = {
+      mesh: THREE.InstancedMesh
+      fullCount: number
+      filler: boolean
+      // Per-tier geometries, built lazily as `setGeometryLod` actually visits
+      // them and kept around (not disposed) for cheap re-swaps if the chunk's
+      // distance band oscillates. `null` on the filler bucket, which never
+      // participates in geometry LOD (see `WorldGrassChunk.setGeometryLod`).
+      geometryForTier: ((tier: GrassGeometryLodTier) => THREE.BufferGeometry) | null
+      geometryCache: Partial<Record<GrassGeometryLodTier, THREE.BufferGeometry>>
+    }
+    const subMeshes: SubMesh[] = []
     let totalCount = 0
 
     for (const id of GRASS_SPECIES_ORDER) {
       const bucket = data[id]
       if (!bucket) continue
       totalCount += bucket.count
+      const isFiller = id === 'filler'
 
-      const geometry = new THREE.BufferGeometry()
-      // Clone the shared template's attributes rather than referencing them
-      // directly — every chunk's `BufferGeometry.dispose()` (on unload) frees
-      // every attribute it holds, and referencing the template by identity would
-      // free the GPU buffer backing *every other* grass chunk's blade shape too.
-      // Cheap: a few dozen vertices per template.
-      geometry.setAttribute('position', templates[id].position.clone())
-      geometry.setIndex(templates[id].index.clone())
-      geometry.setAttribute('aPhase', new THREE.InstancedBufferAttribute(bucket.phases, 1))
-      geometry.setAttribute('aBaseColor', new THREE.InstancedBufferAttribute(bucket.baseColors, 3))
-      geometry.setAttribute('aTipColor', new THREE.InstancedBufferAttribute(bucket.tipColors, 3))
-      geometry.setAttribute('aWindFactor', new THREE.InstancedBufferAttribute(bucket.windFactors, 1))
+      // Instanced (per-blade) attributes are shared by reference across every
+      // tier's geometry below — three.js's WebGLAttributes caches GPU buffers
+      // by attribute object identity, so attaching the same object to several
+      // BufferGeometrys uploads it once, not once per tier.
+      const aPhase = new THREE.InstancedBufferAttribute(bucket.phases, 1)
+      const aBaseColor = new THREE.InstancedBufferAttribute(bucket.baseColors, 3)
+      const aTipColor = new THREE.InstancedBufferAttribute(bucket.tipColors, 3)
+      const aWindFactor = new THREE.InstancedBufferAttribute(bucket.windFactors, 1)
 
-      const mesh = new THREE.InstancedMesh(geometry, material, bucket.count)
+      function buildTierGeometry(tier: GrassGeometryLodTier): THREE.BufferGeometry {
+        const tpl = isFiller ? fillerTemplate : tieredTemplate(id as TieredSpeciesId, tier)
+        const geometry = new THREE.BufferGeometry()
+        // Clone the shape template's position/index rather than referencing
+        // it directly — this geometry's `dispose()` (on tier-cache teardown)
+        // frees every attribute it holds, and referencing the template by
+        // identity would free the GPU buffer backing every other chunk's/
+        // tier's blade shape too. Cheap: a few dozen vertices per template.
+        geometry.setAttribute('position', tpl.position.clone())
+        geometry.setIndex(tpl.index.clone())
+        geometry.setAttribute('aPhase', aPhase)
+        geometry.setAttribute('aBaseColor', aBaseColor)
+        geometry.setAttribute('aTipColor', aTipColor)
+        geometry.setAttribute('aWindFactor', aWindFactor)
+        return geometry
+      }
+
+      const geometryCache: Partial<Record<GrassGeometryLodTier, THREE.BufferGeometry>> = {}
+      function geometryForTier(tier: GrassGeometryLodTier): THREE.BufferGeometry {
+        let geo = geometryCache[tier]
+        if (!geo) {
+          geo = buildTierGeometry(tier)
+          geometryCache[tier] = geo
+        }
+        return geo
+      }
+
+      const mesh = new THREE.InstancedMesh(geometryForTier('near'), material, bucket.count)
       mesh.instanceMatrix = new THREE.InstancedBufferAttribute(bucket.matrices, 16)
       mesh.instanceMatrix.needsUpdate = true
       mesh.computeBoundingSphere() // instance matrices spread well beyond the unit template's own bounds
@@ -452,9 +532,15 @@ export function createGrassSystem(): GrassSystem {
       // below), so the main camera is the only one that needs this layer.
       mesh.layers.set(REFLECTION_SKIPPED_LAYER)
       // Filler starts hidden; chunkManager enables it only in the near field.
-      if (id === 'filler') mesh.count = 0
+      if (isFiller) mesh.count = 0
       group.add(mesh)
-      subMeshes.push({ mesh, fullCount: bucket.count, filler: id === 'filler' })
+      subMeshes.push({
+        mesh,
+        fullCount: bucket.count,
+        filler: isFiller,
+        geometryForTier: isFiller ? null : geometryForTier,
+        geometryCache,
+      })
     }
 
     if (totalCount === 0) return null
@@ -473,10 +559,23 @@ export function createGrassSystem(): GrassSystem {
           }
         }
       },
+      setGeometryLod(tier) {
+        for (const sub of subMeshes) {
+          if (!sub.geometryForTier) continue
+          const next = sub.geometryForTier(tier)
+          if (sub.mesh.geometry !== next) sub.mesh.geometry = next
+        }
+      },
       dispose: () => {
         group.removeFromParent()
         for (const sub of subMeshes) {
-          sub.mesh.geometry.dispose()
+          // Dispose every tier geometry actually built for this bucket, not
+          // just the currently-active one — each holds its own cloned
+          // position/index GPU buffers. The instanced attributes (aPhase etc.)
+          // are shared across tiers; three.js's WebGLAttributes disposal is
+          // keyed by attribute identity, so freeing the same shared attribute
+          // via more than one geometry here is a safe no-op past the first.
+          for (const geo of Object.values(sub.geometryCache)) geo?.dispose()
           sub.mesh.dispose() // frees instanceMatrix's own GPU buffer — geometry.dispose() alone does not
         }
       },

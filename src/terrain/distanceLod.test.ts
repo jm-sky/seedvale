@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { densityLodFraction, grassFillerLodFraction } from './distanceLod'
+import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
 
 describe('densityLodFraction', () => {
   it('keeps full density in the near field', () => {
@@ -26,5 +26,24 @@ describe('grassFillerLodFraction', () => {
     expect(grassFillerLodFraction(0, 1)).toBe(1)
     expect(grassFillerLodFraction(1, 1)).toBeGreaterThan(0)
     expect(grassFillerLodFraction(2, 1)).toBe(0)
+  })
+})
+
+describe('grassGeometryLodTier', () => {
+  it('shares densityLodFraction\'s near-field breakpoint', () => {
+    expect(grassGeometryLodTier(0, 2)).toBe('near')
+    expect(grassGeometryLodTier(0.7, 2)).toBe('near') // t = 0.35
+  })
+
+  it('steps down through mid before far', () => {
+    expect(grassGeometryLodTier(1.2, 2)).toBe('mid') // t = 0.6
+    expect(grassGeometryLodTier(1.4, 2)).toBe('mid') // t = 0.7, boundary is inclusive
+    expect(grassGeometryLodTier(1.5, 2)).toBe('far') // t = 0.75
+    expect(grassGeometryLodTier(2, 2)).toBe('far')
+  })
+
+  it('is independent of lodScale (only distance/radius matter)', () => {
+    expect(grassGeometryLodTier(0, 2)).toBe('near')
+    expect(grassGeometryLodTier(2, 2)).toBe('far')
   })
 })

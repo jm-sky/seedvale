@@ -13,3 +13,17 @@ export function densityLodFraction(dist: number, radius: number, lodScale: numbe
 export function grassFillerLodFraction(dist: number, lodScale: number): number {
   return dist <= 1 ? Math.max(0, (1 - dist * 0.55) * lodScale) : 0
 }
+
+/** Grass blade-cluster geometry LOD (plan 148 S) — how many fins/segments a
+ *  species' InstancedMesh uses, on top of (not instead of) `densityLodFraction`'s
+ *  instance-count reduction. Reuses `densityLodFraction`'s own near-field
+ *  breakpoint (`t <= 0.35`) as the near/mid line so geometry LOD doesn't
+ *  fight density LOD with a second, uncoordinated threshold. */
+export type GrassGeometryLodTier = 'near' | 'mid' | 'far'
+
+export function grassGeometryLodTier(dist: number, radius: number): GrassGeometryLodTier {
+  const t = dist / Math.max(1, radius)
+  if (t <= 0.35) return 'near'
+  if (t <= 0.7) return 'mid'
+  return 'far'
+}

@@ -75,7 +75,7 @@ import {
   requestChunkGrass,
   requestChunkTile,
 } from './chunkWorkerPool'
-import { densityLodFraction, grassFillerLodFraction } from './distanceLod'
+import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
 import { createGrassSystem, type WorldGrassChunk } from './grass'
 import { createVegetationRegionBatcher } from './vegetationRegionBatcher'
 
@@ -696,10 +696,15 @@ export function createChunkManager(
    *  floor. Short filler blades only in the player's chunk + immediate ring
    *  (issue 023). `lodScale` (plan 103) multiplies the curve without changing
    *  generation density. */
-  function grassLodForDistance(dist: number): { mainFrac: number, fillerFrac: number } {
+  function grassLodForDistance(dist: number): { mainFrac: number, fillerFrac: number, geometryTier: ReturnType<typeof grassGeometryLodTier> } {
     return {
       mainFrac: densityLodFraction(dist, effectiveGrassRadius, lodScale),
       fillerFrac: grassFillerLodFraction(dist, lodScale),
+      // Purely distance-based (not `lodScale`-scaled) — geometry LOD trims
+      // triangles-per-instance, density LOD trims instance count; keeping the
+      // two independent is what plan 148 S asked for ("nie walczyć" with the
+      // existing density curve).
+      geometryTier: grassGeometryLodTier(dist, effectiveGrassRadius),
     }
   }
 
@@ -762,8 +767,9 @@ export function createChunkManager(
         rec.grass = grass
         if (grass) {
           if (isSystemEnabled('grass')) scene.add(grass.mesh)
-          const { mainFrac, fillerFrac } = grassLodForDistance(dist)
+          const { mainFrac, fillerFrac, geometryTier } = grassLodForDistance(dist)
           grass.setLodFraction(mainFrac, fillerFrac)
+          grass.setGeometryLod(geometryTier)
         }
       })
       .catch((err: unknown) => {
@@ -793,8 +799,9 @@ export function createChunkManager(
     const dist = chebyshevDistance(record.coord, playerChunk)
     if (dist <= effectiveGrassRadius) {
       ensureGrass(record)
-      const { mainFrac, fillerFrac } = grassLodForDistance(dist)
+      const { mainFrac, fillerFrac, geometryTier } = grassLodForDistance(dist)
       record.grass?.setLodFraction(mainFrac, fillerFrac)
+      record.grass?.setGeometryLod(geometryTier)
     } else if (dist > grassUnloadRadius && (record.grass !== undefined || record.grassPending)) {
       removeGrass(record)
     }
