@@ -64,7 +64,6 @@ import {
 } from '../player/playerMelee'
 import {
   applyStarvationDamage,
-  restoreNeedsFromSleep,
   tickPlayerNeeds,
 } from '../player/PlayerNeeds'
 import { villageSizeConfig } from '../settlement/families'
@@ -215,6 +214,10 @@ export type GameLoopDeps = {
   fillWaterskin?: () => void
   startTentRest: (id: string) => void
   packTent: (id: string) => void
+  /** A full night's sleep (`fadeStrength === 1` skip) just finished — owner
+   *  (`createApp.ts`) applies the rest outcome for whatever camp it resolved
+   *  when the rest started, and awards any Survival XP (plan 128 §5-§7). */
+  onSleepFinished: () => void
   onInventoryChanged: () => void
   /** Reports this frame's simulate/render split (ms) to the debug GUI's
    *  Performance folder (perf review M1). */
@@ -256,7 +259,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
-    drinkFromWaterSource, fillWaterskin, startTentRest, packTent, onInventoryChanged, setFrameTiming,
+    drinkFromWaterSource, fillWaterskin, startTentRest, packTent, onSleepFinished, onInventoryChanged, setFrameTiming,
   } = deps
 
   renderer.shadowMap.autoUpdate = false
@@ -342,10 +345,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         // Player needs freeze (worldDt=0 below) while a skip is in flight,
         // same convention as fauna/settlements — catch up in one lump here.
         // `fadeStrength === 1` is rest/sleep (`world/timeSkip.ts`'s doc
-        // comment): a full night fully restores vigor/stamina on top of the
-        // drain the skipped hours would otherwise apply.
+        // comment): a full night restores vigor/stamina on top of the drain
+        // the skipped hours would otherwise apply — how much depends on the
+        // camp, which `onSleepFinished` owns.
         tickPlayerNeeds(player.needs, skip.hours * 3600)
-        if (skip.fadeStrength === 1) restoreNeedsFromSleep(player.needs)
+        if (skip.fadeStrength === 1) onSleepFinished()
       }
       keyboard.state.forward = false
       keyboard.state.backward = false
@@ -852,7 +856,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // toggle (rest auto-deactivates it, `PlayerController.crouch`/
       // `lieDown`) — pushed every frame with the same cheap-bail convention
       // as the stats above so the UI never goes stale.
-      vueUi.setSkillsState(player.skills.sneak.value, player.skills.sneak.active)
+      vueUi.setSkillsState(
+        player.skills.sneak.value,
+        player.skills.sneak.active,
+        player.skills.sneak.xp,
+        player.skills.survival.value,
+        player.skills.survival.xp,
+      )
       houseDoors.update(
         player.mesh.position.x,
         player.mesh.position.z,

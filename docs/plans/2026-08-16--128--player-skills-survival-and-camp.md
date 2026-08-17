@@ -1,9 +1,10 @@
 # Plan: Skills v2 — Skill Progression, Survival & Camp System
 
 **Created:** 2026-08-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~124~~
+**Domain:** `items-player` (secondary: `persistence`)
 
 ## Cel
 
@@ -576,3 +577,38 @@ A istniejące przedmioty zaczynają działać razem:
 To jest ważniejsze niż samo dodanie kolejnych bonusów do Survival — tworzy pierwszy mały, spójny system „życia poza osadą”.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+---
+
+# Implementation summary (2026-08-17)
+
+**Status:** zaimplementowane, techniczna weryfikacja zielona (`tsc --noEmit`, `npm run build`, `npm run test` — 943 testy). **Bez weryfikacji w przeglądarce** — lista scenariuszy do ręcznego sprawdzenia jest wyżej w sekcji "Browser verification".
+
+## Co powstało
+
+| Etap | Realizacja |
+|---|---|
+| 1 — progresja | `SkillState { value, xp, active }`, jedna wspólna krzywa `xpToSkillValue()` (`src/player/PlayerSkills.ts`): floor `SKILL_MIN_VALUE = 0.2`, asymptota do 1, `SKILL_XP_HALF_VALUE = 120`. `xp` jest źródłem prawdy, `value` zawsze pochodną — jedyną ścieżką mutacji jest `awardSkillXp()`. Bez poziomów, perków i punktów. |
+| 1 — XP z użycia | `SKILL_XP_AWARD` podpięte wyłącznie do gałęzi sukcesu: ignite (8), namiot (10), gotowanie (6), odpoczynek na biwaku (12), sneak (3 za każde `SNEAK_XP_DISTANCE_M = 15` faktycznie przebytych metrów, `accumulateSneakUse()`). Anulowany busy channel (`Esc`) nie daje nic. |
+| 2 — persistence | `SaveData` v15: nowe pole `skills` (tylko `xp`; `value` odtwarzane, `active` nigdy). Migracja v14 → v15 (`toV15`) daje Sneak `SNEAK_LEGACY_XP` (dokładnie 0.5 z planu 124) i Survival od zera. `restorePersistedSkills()` broni się przed NaN/ujemnym xp. |
+| 3.1 — ognisko | `IGNITE_DURATION_SEC × survivalDurationMultiplier(value)` liczone raz przy starcie kanału (max −40%). Bez drugiego systemu rozpalania. |
+| 3.2 — namiot | Rozstawianie przeniesione z akcji natychmiastowej na busy channel `TENT_SETUP_DURATION_SEC = 4` (`src/items/tentPlacement.ts`), skracany tym samym mnożnikiem. Namiot znika z ekwipunku dopiero na `onComplete`. Zwijanie zostaje natychmiastowe. |
+| 3.3 / 6 / 7 — biwak | Nowy czysty moduł `src/app/campRest.ts`: `CampRestContext { hasBlanket, hasTent, hasWarmFire }` + `campRestQuality()`. Kolejność jakości: sam koc (0.55) < koc + ognisko (0.75) < namiot + koc (0.8) < pełny biwak (1.0). Survival zmniejsza karę (do 60% brakującej jakości), nigdy jej nie kasuje. |
+| 4 — gotowanie | Bez zmian w recepturach i czasie; `survivalFoodMultiplier()` (do +50%) mnoży sytość przy **konsumpcji** `roasted_meat` w `consumeItem`. Jeden item, zero nowych wariantów. |
+| 5 — wykrywanie obozu | Bez `CampManager`: kontekst liczony raz, w momencie startu odpoczynku, z istniejących `PlacedTents.list()` / `PlacedFires.list()` (`hasWarmFireNear` wymaga `fire.isLit()`). Zero skanów per-frame. |
+| 8 — UI | Rozszerzony `SkillsScreen.vue` — oba skille z paskiem postępu, poziomem %, xp i opisem efektów; Survival jest pasywny (bez przełącznika). |
+| 9 — Sneak | Ruch i percepcja fauny bez zmian; zmieniło się tylko źródło wartości (`SNEAK_FIXED_VALUE` usunięte). |
+
+## Zmiany w istniejących kontraktach
+
+- `restoreNeedsFromSleep(needs, quality = 1)` — `quality` ogranicza odzyskany vigor (nigdy go nie obniża); stamina zawsze pełna. Odpoczynek w mieście i wywołania bez kontekstu obozu zachowują dotychczasowe pełne odnowienie.
+- `gameLoop` nie woła już `restoreNeedsFromSleep` bezpośrednio — dostał zależność `onSleepFinished()`, a `createApp.ts` jest właścicielem wyniku odpoczynku (jakość + XP). `abortRest` czyści `pendingRest`, więc przerwany sen nie daje ani XP, ani jakości.
+- `vueUi.setSkillsState()` przyjmuje teraz stan obu skilli (płaskie liczby — push per-frame bez alokacji).
+
+## Świadome decyzje / odstępstwa
+
+- Nowa gra startuje z obydwoma skillami na `SKILL_MIN_VALUE = 0.2`, nie 0 — przy zerze Sneak byłby ściśle gorszy od zwykłego chodzenia (wolniej, zero zysku), więc pętla „używanie → rozwój” nie mogłaby ruszyć. Save sprzed planu 128 wraca dokładnie na 0.5.
+- Ciepło obozu liczą wyłącznie ogniska gracza (`PlacedFires`). Ognisko osady należy do odpoczynku w mieście, który i tak jest pełny.
+- Plan zakładał istniejący czasowy kanał rozstawiania namiotu — w kodzie go nie było; został dodany jako minimalne rozszerzenie (bez tego §3.2 nie da się zrealizować).
+- Implementation notes wskazywały schemat save v13 jako aktualny; w kodzie było już v14, więc nowa wersja to v15.
+- `busyChannelDurations.test.ts` pilnuje teraz również `TENT_SETUP_DURATION_SEC`.

@@ -26,7 +26,7 @@ import { isExhausted } from '../shared/StaminaState'
 import { type Collider, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerStamina } from './PlayerNeeds'
-import { applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
+import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
 
 /** Stationary/moving/sprinting classification of the player's current
  *  movement, derived from the same `moving`/`sprinting` flags `update()`
@@ -127,6 +127,10 @@ export class PlayerController {
   private meleeAttacking = false
   private moving = false
   private sprinting = false
+  /** Metres travelled while sneaking since the last Sneak XP award (plan 128
+   *  §1). Runtime-only and reset whenever Sneak switches off — standing still
+   *  with the toggle on earns nothing. */
+  private sneakUseDistance = 0
   private wasInWater = false
   private footstepAccum = 0
   private playAt: PlayAt | null = null
@@ -531,10 +535,16 @@ export class PlayerController {
     this.moving = this.wish.lengthSq() > 0
     this.sprinting = this.moving && this.keys.sprint && !isExhausted(this.needs.stamina)
     tickPlayerStamina(this.needs.stamina, dt, this.sprinting)
+    if (!this.skills.sneak.active) this.sneakUseDistance = 0
     if (this.moving) {
       const baseSpeed = this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED
       const speed = applySneakSpeedModifier(baseSpeed, this.skills.sneak.active)
       this.wish.normalize().multiplyScalar(speed * dt)
+      // Sneak progresses from distance actually sneaked, not from frames with
+      // the toggle on (plan 128 §1 "nie przyznawać XP co klatkę").
+      if (this.skills.sneak.active) {
+        this.sneakUseDistance = accumulateSneakUse(this.skills, this.sneakUseDistance, this.wish.length())
+      }
       const candidateX = this.mesh.position.x + this.wish.x
       const candidateZ = this.mesh.position.z + this.wish.z
       const resolved = resolvePosition(

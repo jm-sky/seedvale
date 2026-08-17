@@ -38,7 +38,7 @@ import { createHeldTool } from '../items/HeldTool'
 import { Inventory } from '../items/Inventory'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
-import { evaluateTentPlacement, TENT_PLACEMENT_MESSAGE } from '../items/tentPlacement'
+import { evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
 import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
 import { buyWithBarter, buyWithShells } from '../items/trade'
 import {
@@ -50,8 +50,21 @@ import {
 } from '../perf'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
-import { drinkWater as drinkWaterNeeds, eatFood, resetPlayerNeeds, restorePersistedNeeds } from '../player/PlayerNeeds'
-import { toggleSneak } from '../player/PlayerSkills'
+import {
+  drinkWater as drinkWaterNeeds,
+  eatFood,
+  resetPlayerNeeds,
+  restoreNeedsFromSleep,
+  restorePersistedNeeds,
+} from '../player/PlayerNeeds'
+import {
+  awardSkillXp,
+  restorePersistedSkills,
+  SKILL_XP_AWARD,
+  survivalDurationMultiplier,
+  survivalFoodMultiplier,
+  toggleSneak,
+} from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { QuestManager } from '../quests/QuestManager'
 import { buildLandmarkQuests, QUESTS } from '../quests/quests'
@@ -98,6 +111,7 @@ import { createClimateState } from '../world/weather'
 import { createWeatherParticles } from '../world/weatherParticles'
 import { createWorldContext } from '../world/worldContext'
 import { createBusyAction } from './busyAction'
+import { campRestQuality, type CampRestContext, hasTentNear, hasWarmFireNear } from './campRest'
 import { createGameLoop } from './gameLoop'
 import { DIG_REACH } from './interactables'
 import { createRestCampSequence } from './restCampSequence'
@@ -334,6 +348,7 @@ export async function createApp(
     mouseLook.state.pitch = initialSave.player.pitch
     player.setPosition(initialSave.player.x, initialSave.player.z)
     restorePersistedNeeds(player.needs, initialSave.playerNeeds)
+    restorePersistedSkills(player.skills, initialSave.skills)
   } else {
     player.setPosition(bundle.settlementsManager.home.spawn.x, bundle.settlementsManager.home.spawn.z)
   }
@@ -593,7 +608,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 14,
+    version: 15,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -634,6 +649,12 @@ export async function createApp(
       vigor: player.needs.vigor.current,
     },
     ownedLandPlots: landOwnership.toJSON(),
+    // Only XP round-trips — `value` is derived on load and `active` is
+    // runtime-only (plan 128 §2).
+    skills: {
+      sneak: { xp: player.skills.sneak.xp },
+      survival: { xp: player.skills.survival.xp },
+    },
   })
 
   const saveNow = (): void => {
@@ -925,11 +946,59 @@ export async function createApp(
       toast.show(TENT_PLACEMENT_MESSAGE[reason], 'error')
       return
     }
-    if (!inventory.remove('tent', 1)) return
-    bundle.placedTents.place(aim.x, aim.z, aim.yaw)
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    syncQuickActionAvailability()
-    toast.show('Rozstawiono namiot.')
+    // Survival shortens the setup channel; the tent itself is only spent when
+    // the channel completes, so Esc costs nothing (same as ignite/cook).
+    busy.start(
+      TENT_SETUP_DURATION_SEC * survivalDurationMultiplier(player.skills.survival.value),
+      'Rozstawianie namiotu…',
+      () => {
+        if (!inventory.remove('tent', 1)) return
+        bundle.placedTents.place(aim.x, aim.z, aim.yaw)
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        syncQuickActionAvailability()
+        awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.pitchTent)
+        toast.show('Rozstawiono namiot.')
+      },
+    )
+  }
+
+  /** Rest quality + XP for the sleep currently in flight (plan 128 §5-§7),
+   *  resolved once when rest starts and consumed when the 8h skip finishes.
+   *  Null means "no camp context" — a plain town bed, restored in full. */
+  let pendingRest: { quality: number, awardsSurvivalXp: boolean } | null = null
+
+  /** One-shot proximity lookup at rest start — never a per-frame scan. Only
+   *  player-built fires count as camp warmth; a village's own campfire belongs
+   *  to town rest, which is already a full night. */
+  const resolveCampContext = (hasBlanket: boolean, hasTent: boolean): CampRestContext => ({
+    hasBlanket,
+    hasTent: hasTent || hasTentNear(
+      bundle.placedTents.list(),
+      player.mesh.position.x,
+      player.mesh.position.z,
+    ),
+    hasWarmFire: hasWarmFireNear(
+      bundle.placedFires.list(),
+      player.mesh.position.x,
+      player.mesh.position.z,
+    ),
+  })
+
+  const beginCampRest = (context: CampRestContext): void => {
+    pendingRest = {
+      quality: campRestQuality(context, player.skills.survival.value),
+      awardsSurvivalXp: true,
+    }
+  }
+
+  /** Called by `gameLoop` when a `fadeStrength === 1` skip (i.e. a night's
+   *  sleep) finishes. Owns both halves of the rest outcome: how much the
+   *  night restored, and the Survival XP the camp earned. */
+  const onSleepFinished = (): void => {
+    const rest = pendingRest
+    pendingRest = null
+    restoreNeedsFromSleep(player.needs, rest?.quality ?? 1)
+    if (rest?.awardsSurvivalXp) awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.campRest)
   }
 
   const startTentRest = (id: string): void => {
@@ -943,6 +1012,9 @@ export async function createApp(
     restCamp.start({
       variant: 'tent',
       onSleepStart: () => {
+        // Resolved after the pose move so the fire/tent lookup uses where the
+        // player actually sleeps.
+        beginCampRest(resolveCampContext(inventory.has('blanket', 1), true))
         timeSkip.start(8, { fadeStrength: 1, label: 'Odpoczywasz w namiocie...' })
       },
       onComplete: () => {},
@@ -966,6 +1038,8 @@ export async function createApp(
   const abortRest = (): boolean => {
     const resting = restCamp.isActive() || timeSkip.fadeStrength() === 1
     if (!resting) return false
+    // Aborted rest earns nothing and resolves no quality (plan 128 edge cases).
+    pendingRest = null
     timeSkip.cancel()
     timeSkipOverlay.hide()
     busyOverlay.hide()
@@ -1128,11 +1202,15 @@ export async function createApp(
       toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
       return
     }
-    busy.start(IGNITE_DURATION_SEC, 'Rozpalanie ogniska…', () => {
+    // Survival is read once, when the channel starts — a running channel is
+    // never retimed (plan 128 §3.1).
+    const duration = IGNITE_DURATION_SEC * survivalDurationMultiplier(player.skills.survival.value)
+    busy.start(duration, 'Rozpalanie ogniska…', () => {
       if (fire.isLit() || !inventory.remove('branch', 1)) return
       fire.light()
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       onInventoryChanged()
+      awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.igniteFire)
       toast.show('Ognisko zapłonęło.')
     }, { blurred: true })
   }
@@ -1201,6 +1279,7 @@ export async function createApp(
       inventory.add(recipe.output, recipe.count)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       onInventoryChanged()
+      awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.cookMeat)
       toast.show(`+${recipe.count} ${ITEM_DEFS[recipe.output].label}`, 'pickup')
     }, { blurred: true })
   }
@@ -1241,8 +1320,13 @@ export async function createApp(
     const entry = ITEM_CATALOG[kind].consumable
     if (!entry || !inventory.remove(kind, 1)) return
     if (entry.resultKind) inventory.add(entry.resultKind, 1)
-    if (entry.need === 'hunger') eatFood(player.needs, entry.relief)
-    else drinkWaterNeeds(player.needs, entry.relief)
+    // Plan 128 §4 — Survival makes the *same* `roasted_meat` more nourishing;
+    // no roasted variants, no skill-dependent recipes.
+    const relief = kind === 'roasted_meat'
+      ? entry.relief * survivalFoodMultiplier(player.skills.survival.value)
+      : entry.relief
+    if (entry.need === 'hunger') eatFood(player.needs, relief)
+    else drinkWaterNeeds(player.needs, relief)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     onInventoryChanged()
     inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
@@ -1377,6 +1461,9 @@ export async function createApp(
       }
       restCamp.start({
         onSleepStart: () => {
+          // The quick action already required a blanket; the tent/fire halves
+          // of the camp come from what's actually pitched/lit around here.
+          beginCampRest(resolveCampContext(true, false))
           timeSkip.start(8, {
             fadeStrength: 1,
             label: 'Rozbijasz obóz...',
@@ -1553,6 +1640,7 @@ export async function createApp(
     fillWaterskin,
     startTentRest,
     packTent,
+    onSleepFinished,
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,
   })

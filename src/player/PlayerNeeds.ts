@@ -91,12 +91,18 @@ export function tickPlayerStamina(stamina: StaminaState, dt: number, sprinting: 
 }
 
 /** Full night's sleep (tent/camp/town rest quick actions, all 8h skips) —
- *  a flat full restore is simpler and just as deterministic as rate-matching
- *  the drain that happened during the same skip, and matches how NPC sleep
- *  is framed (`ai/npcVigor.ts`'s `VIGOR_WAKE_THRESHOLD` wake-up, here always
- *  a full night so always a full refill). */
-export function restoreNeedsFromSleep(needs: PlayerNeeds): void {
-  needs.vigor.current = needs.vigor.max
+ *  a flat restore is simpler and just as deterministic as rate-matching the
+ *  drain that happened during the same skip, and matches how NPC sleep is
+ *  framed (`ai/npcVigor.ts`'s `VIGOR_WAKE_THRESHOLD` wake-up).
+ *
+ *  `quality` (plan 128 §6, from `app/campRest.ts`) is how good the bivouac
+ *  was: 1 for a bed in town / a full camp, less for a blanket on bare ground.
+ *  It caps the *vigor* the night gives back — sleeping rough never lowers
+ *  vigor below where it already was, it just fails to fill the bar. Stamina
+ *  is short-term effort and always comes back in full. */
+export function restoreNeedsFromSleep(needs: PlayerNeeds, quality = 1): void {
+  const fraction = Number.isFinite(quality) ? Math.max(0, Math.min(1, quality)) : 1
+  needs.vigor.current = Math.max(needs.vigor.current, needs.vigor.max * fraction)
   needs.stamina.current = needs.stamina.max
 }
 

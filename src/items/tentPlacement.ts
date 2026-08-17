@@ -67,6 +67,12 @@ export function evaluateTentPlacement(input: TentPlacementInput): TentPlacementR
   return 'ok'
 }
 
+/** Busy-channel duration for pitching a tent (plan 128 §3.2) — the same
+ *  order of magnitude as dig/ignite/cook, scaled down by Survival at the
+ *  moment the action starts (`PlayerSkills.survivalDurationMultiplier`).
+ *  Packing stays instant: striking camp is the easy half. */
+export const TENT_SETUP_DURATION_SEC = 4
+
 export const TENT_PLACEMENT_MESSAGE: Record<Exclude<TentPlacementReason, 'ok'>, string> = {
   water: 'Tu jest za mokro na namiot.',
   slope: 'Teren jest zbyt stromy.',

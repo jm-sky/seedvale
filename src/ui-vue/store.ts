@@ -126,15 +126,19 @@ type StatBar = { current: number, max: number }
  *  later server-authoritative move doesn't have to unwind UI-owned state. */
 export type CharacterStats = { hp: StatBar, stamina: StatBar, vigor: StatBar, hunger: StatBar, thirst: StatBar }
 type CharacterScreenState = CharacterStats & { open: boolean }
-/** Skills screen (plan 124) — same presentation-only convention as
- *  `CharacterScreenState`: `sneakValue`/`sneakActive` mirror
- *  `PlayerController.skills.sneak`, pushed once/frame from `gameLoop.ts`.
+/** Skills screen (plan 124, progression added by plan 128) — same
+ *  presentation-only convention as `CharacterScreenState`: these mirror
+ *  `PlayerController.skills`, pushed once/frame from `gameLoop.ts`.
  *  `onToggleSneak` is the one write path back out, wired once via
- *  `configureSkillsScreen` (same pattern as `PauseHandlers`). */
+ *  `configureSkillsScreen` (same pattern as `PauseHandlers`). Flat numbers,
+ *  not nested objects, so the per-frame push stays allocation-free. */
 type SkillsScreenState = {
   open: boolean
   sneakValue: number
   sneakActive: boolean
+  sneakXp: number
+  survivalValue: number
+  survivalXp: number
   onToggleSneak: (() => void) | null
 }
 type HudState = {
@@ -232,7 +236,15 @@ export const ui = reactive({
     hunger: { current: 100, max: 100 },
     thirst: { current: 100, max: 100 },
   } as CharacterScreenState,
-  skillsScreen: { open: false, sneakValue: 0, sneakActive: false, onToggleSneak: null } as SkillsScreenState,
+  skillsScreen: {
+    open: false,
+    sneakValue: 0,
+    sneakActive: false,
+    sneakXp: 0,
+    survivalValue: 0,
+    survivalXp: 0,
+    onToggleSneak: null,
+  } as SkillsScreenState,
   hud: {
     time: '--',
     phase: '',
@@ -532,11 +544,23 @@ export function configureSkillsScreen(handlers: { onToggleSneak: () => void }): 
 }
 /** Pushed once/frame by `gameLoop.ts`, same cheap-bail convention as
  *  `setCharacterStats`. */
-export function setSkillsState(sneakValue: number, sneakActive: boolean): void {
+export function setSkillsState(
+  sneakValue: number,
+  sneakActive: boolean,
+  sneakXp: number,
+  survivalValue: number,
+  survivalXp: number,
+): void {
   const s = ui.skillsScreen
-  if (s.sneakValue === sneakValue && s.sneakActive === sneakActive) return
+  if (
+    s.sneakValue === sneakValue && s.sneakActive === sneakActive && s.sneakXp === sneakXp &&
+    s.survivalValue === survivalValue && s.survivalXp === survivalXp
+  ) return
   s.sneakValue = sneakValue
   s.sneakActive = sneakActive
+  s.sneakXp = sneakXp
+  s.survivalValue = survivalValue
+  s.survivalXp = survivalXp
 }
 
 export function setHudFps(fps: number): void {

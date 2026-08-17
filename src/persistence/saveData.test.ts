@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { isSaveDataV14, loadSaveData, type SaveConfig, type SaveDataV10, type SaveDataV11 } from './saveData'
+import { SNEAK_LEGACY_XP } from '../player/PlayerSkills'
+import { isSaveDataV15, loadSaveData, type SaveConfig, type SaveDataV10, type SaveDataV11 } from './saveData'
 
 const config = {
   seed: 1,
@@ -31,7 +32,7 @@ describe('loadSaveData v11 map discovery', () => {
   it('migrates a v10 save to empty discovery', () => {
     const loaded = loadSaveData(v10)
     expect(loaded).not.toBeNull()
-    expect(loaded?.version).toBe(14)
+    expect(loaded?.version).toBe(15)
     expect(loaded?.map.discoveredCells).toEqual([])
     expect(loaded?.player.x).toBe(3)
     expect(loaded?.elapsedDays).toBe(2)
@@ -47,7 +48,7 @@ describe('loadSaveData v11 map discovery', () => {
       map: { discoveredCells: ['0,0', '1,0'] },
     }
     const loaded = loadSaveData(v11)
-    expect(isSaveDataV14(loaded)).toBe(true)
+    expect(isSaveDataV15(loaded)).toBe(true)
     expect(loaded?.map.discoveredCells).toEqual(['0,0', '1,0'])
     expect(loaded?.settlementEconomies).toEqual({})
   })
@@ -63,7 +64,7 @@ describe('loadSaveData v11 map discovery', () => {
       player: { x: 0, z: 0, yaw: 0, pitch: 0 },
       savedAt: 1,
     })
-    expect(loaded?.version).toBe(14)
+    expect(loaded?.version).toBe(15)
     expect(loaded?.map.discoveredCells).toEqual([])
   })
 
@@ -75,7 +76,7 @@ describe('loadSaveData v11 map discovery', () => {
       settlementEconomies: { home: { food: 3, wood: 1 } },
     }
     const loaded = loadSaveData(v12)
-    expect(isSaveDataV14(loaded)).toBe(true)
+    expect(isSaveDataV15(loaded)).toBe(true)
     expect(loaded?.settlementEconomies).toEqual({ home: { food: 3, wood: 1 } })
     expect(loaded?.playerNeeds).toEqual({ hunger: 100, thirst: 100, vigor: 100 })
   })
@@ -91,7 +92,7 @@ describe('loadSaveData v14 land ownership (plan 129)', () => {
       playerNeeds: { hunger: 100, thirst: 100, vigor: 100 },
     }
     const loaded = loadSaveData(v13)
-    expect(isSaveDataV14(loaded)).toBe(true)
+    expect(isSaveDataV15(loaded)).toBe(true)
     expect(loaded?.ownedLandPlots).toEqual([])
   })
 
@@ -105,7 +106,7 @@ describe('loadSaveData v14 land ownership (plan 129)', () => {
       ownedLandPlots: ['0_0:plot-sale-0'],
     }
     const loaded = loadSaveData(v14)
-    expect(isSaveDataV14(loaded)).toBe(true)
+    expect(isSaveDataV15(loaded)).toBe(true)
     expect(loaded?.ownedLandPlots).toEqual(['0_0:plot-sale-0'])
   })
 
@@ -119,5 +120,39 @@ describe('loadSaveData v14 land ownership (plan 129)', () => {
       ownedLandPlots: 'not-an-array',
     }
     expect(loadSaveData(bad)).toBeNull()
+  })
+})
+
+describe('loadSaveData v15 skills (plan 128)', () => {
+  const v14 = {
+    ...v10,
+    version: 14,
+    map: { discoveredCells: [] },
+    settlementEconomies: {},
+    playerNeeds: { hunger: 100, thirst: 100, vigor: 100 },
+    ownedLandPlots: [],
+  }
+
+  it('migrates a v14 save to legacy Sneak and a fresh Survival', () => {
+    const loaded = loadSaveData(v14)
+    expect(isSaveDataV15(loaded)).toBe(true)
+    expect(loaded?.skills.sneak.xp).toBe(SNEAK_LEGACY_XP)
+    expect(loaded?.skills.survival.xp).toBe(0)
+  })
+
+  it('round-trips xp from a native v15 save', () => {
+    const loaded = loadSaveData({
+      ...v14,
+      version: 15,
+      skills: { sneak: { xp: 42 }, survival: { xp: 7 } },
+    })
+    expect(isSaveDataV15(loaded)).toBe(true)
+    expect(loaded?.skills.sneak.xp).toBe(42)
+    expect(loaded?.skills.survival.xp).toBe(7)
+  })
+
+  it('rejects a v15 save with a malformed skills field', () => {
+    expect(loadSaveData({ ...v14, version: 15, skills: { sneak: { xp: 'a' }, survival: { xp: 0 } } })).toBeNull()
+    expect(loadSaveData({ ...v14, version: 15, skills: { sneak: { xp: 1 } } })).toBeNull()
   })
 })
