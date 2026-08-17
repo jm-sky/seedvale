@@ -34,6 +34,14 @@ export const AGENT_RENDER_LAYER = 2
  *  `layers.enable` it. */
 export const REFLECTION_SKIPPED_LAYER = 3
 
+/** Terrain/vegetation/environment content in the outer streaming ring only
+ *  (plan 144 S) — unlike `REFLECTION_SKIPPED_LAYER`, this content *does* cast
+ *  shadows, so the sun's shadow camera must also `layers.enable` it (the
+ *  mirror camera must not, or the exclusion is pointless). Kept as its own
+ *  layer rather than reusing `REFLECTION_SKIPPED_LAYER` specifically so grass/
+ *  items (which never cast shadows) don't have to start doing so. */
+export const REFLECTION_DISTANT_LAYER = 4
+
 /** One shared planar-reflection pass (128²) for every water material. */
 export const WATER_MIRROR_SIZE = 128
 

@@ -1,7 +1,7 @@
 # Plan: Water Reflection GPU Optimization
 
 **Created:** 2026-08-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — Stage S (reflection visibility budget) implemented, technically verified; no browser benchmark yet, so S's own go/no-go gate (§3 "Decyzja") is unconfirmed and M/L are not started (see [implementation notes](./2026-08-17--144--water-reflection-gpu-optimization-implementation-notes.md)). Note: this plan's ID (144) collides with `2026-08-17--144--npc-player-food-drink-help.md` — unrelated plan, different file.
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~143~~
 

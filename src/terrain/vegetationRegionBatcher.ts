@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { isSystemEnabled } from '../debug/debugMode'
 import { buildInstancedProps, type InstancedPropGroup, type PropPlacement } from '../render/instancedProps'
+import { assignRenderLayer, REFLECTION_DISTANT_LAYER } from '../world/waterMirror'
 import { type ChunkCoord, chunkKey, regionKey } from './chunkGrid'
 
 /** Prop kinds batched by this module — mirrors the kinds `chunkManager.ts`'s
@@ -53,6 +54,11 @@ type RegionKindRecord = {
    *  conservative: never under-renders a close chunk sharing this region
    *  with a farther one, see research 020 §4). */
   chunkFractions: Map<string, number>
+  /** Last reflection-visibility flag reported per contributing chunk
+   *  (`syncReflectionVisibility`, plan 144 S) — same "nearest member wins"
+   *  rule as `chunkFractions`: the region stays mirror-visible as long as any
+   *  contributing chunk is within the reflection budget. */
+  chunkReflectionVisible: Map<string, boolean>
   group?: InstancedPropGroup
 }
 
@@ -79,6 +85,9 @@ export type VegetationRegionBatcher = {
   /** Reports `chunkCoord`'s current distance-based LOD fraction to every
    *  kind it contributes to within its region. */
   syncLod: (chunkCoord: ChunkCoord, fraction: number) => void
+  /** Reports `chunkCoord`'s current reflection visibility (plan 144 S) to
+   *  every kind it contributes to within its region. */
+  syncReflectionVisibility: (chunkCoord: ChunkCoord, visible: boolean) => void
   dispose: () => void
 }
 
@@ -95,6 +104,16 @@ function maxFraction(rec: RegionKindRecord): number {
     if (f > frac) frac = f
   }
   return any ? frac : 1
+}
+
+/** Default `true` (mirror-visible) before any chunk has reported a distance
+ *  — same "assume visible until told otherwise" convention as `maxFraction`
+ *  defaulting to 1. */
+function anyReflectionVisible(rec: RegionKindRecord): boolean {
+  for (const ck of rec.chunks.keys()) {
+    if (rec.chunkReflectionVisible.get(ck) ?? true) return true
+  }
+  return true
 }
 
 export function createVegetationRegionBatcher(
@@ -125,6 +144,7 @@ export function createVegetationRegionBatcher(
     if (kind !== 'tree-living' || isSystemEnabled('trees')) scene.add(built.group)
     rec.group = built
     built.setLodFraction(maxFraction(rec))
+    assignRenderLayer(built.group, anyReflectionVisible(rec) ? 0 : REFLECTION_DISTANT_LAYER)
   }
 
   function setChunkPlacements(
@@ -136,7 +156,7 @@ export function createVegetationRegionBatcher(
     const key = tableKey(regionKey(chunkCoord, regionChunks), kind)
     let rec = table.get(key)
     if (!rec) {
-      rec = { chunks: new Map(), chunkFractions: new Map() }
+      rec = { chunks: new Map(), chunkFractions: new Map(), chunkReflectionVisible: new Map() }
       table.set(key, rec)
     }
     rec.chunks.set(chunkKey(chunkCoord), { templates, placements: [...placements] })
@@ -152,6 +172,7 @@ export function createVegetationRegionBatcher(
       if (!rec?.chunks.has(ck)) continue
       rec.chunks.delete(ck)
       rec.chunkFractions.delete(ck)
+      rec.chunkReflectionVisible.delete(ck)
       rebuild(key, kind)
     }
   }
@@ -181,10 +202,22 @@ export function createVegetationRegionBatcher(
     }
   }
 
+  function syncReflectionVisibility(chunkCoord: ChunkCoord, visible: boolean): void {
+    const ck = chunkKey(chunkCoord)
+    const region = regionKey(chunkCoord, regionChunks)
+    for (const kind of ALL_KINDS) {
+      const key = tableKey(region, kind)
+      const rec = table.get(key)
+      if (!rec?.chunks.has(ck)) continue
+      rec.chunkReflectionVisible.set(ck, visible)
+      if (rec.group) assignRenderLayer(rec.group.group, anyReflectionVisible(rec) ? 0 : REFLECTION_DISTANT_LAYER)
+    }
+  }
+
   function dispose(): void {
     for (const rec of table.values()) rec.group?.dispose()
     table.clear()
   }
 
-  return { setChunkPlacements, clearChunkPlacements, removeByKey, syncLod, dispose }
+  return { setChunkPlacements, clearChunkPlacements, removeByKey, syncLod, syncReflectionVisibility, dispose }
 }

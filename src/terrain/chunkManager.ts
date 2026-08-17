@@ -41,7 +41,7 @@ import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../s
 import { type Collider, createColliderRegistry } from '../world/collision'
 import { createChunkWater, type WorldWater } from '../world/createWater'
 import { createTreeStageMesh, tagTreeMesh } from '../world/treeVisuals'
-import { assignRenderLayer, REFLECTION_SKIPPED_LAYER, type WaterMirror } from '../world/waterMirror'
+import { assignRenderLayer, REFLECTION_DISTANT_LAYER, REFLECTION_SKIPPED_LAYER, type WaterMirror } from '../world/waterMirror'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import { buildChunkGeometry, createTerrainMaterial } from './buildChunkGeometry'
 import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind } from './chunkEnvironment'
@@ -615,6 +615,12 @@ export function createChunkManager(
   // raising loadRadius later doesn't make grass range jump unexpectedly.
   const effectiveGrassRadius = Math.min(config.grass.radius, config.loadRadius)
   const grassUnloadRadius = effectiveGrassRadius + 1
+  // Reflection visibility budget (plan 144 S): terrain/vegetation/environment
+  // in the outermost streaming ring pays a second scene submit in the 128²
+  // mirror pass for detail that RT can't resolve and the water shader weighs
+  // ≤18% into the final colour. Only the outer ring is excluded — shorelines
+  // and near terrain stay fully mirrored, keeping the visual risk low.
+  const reflectionVisibleRadius = Math.max(1, config.loadRadius - 1)
 
   const fallbackParams: RawSampleParams = {
     seed: config.seed,
@@ -716,9 +722,27 @@ export function createChunkManager(
     return densityLodFraction(dist, config.loadRadius, lodScale)
   }
 
+  /** Toggles `record`'s terrain mesh / non-instanced vegetation extras /
+   *  procedural environment props between the default layer and
+   *  `REFLECTION_DISTANT_LAYER` (plan 144 S) — chunk-level, not per-frame:
+   *  only called from content attach, tree-visual refresh and `recheck()`
+   *  (movement-throttled), same cadence as the LOD sync it rides along with.
+   *  Grass and dropped items already have their own permanent/independent
+   *  reflection exclusion and are not touched here. */
+  function syncReflectionForRecord(record: ChunkRecord, dist: number): void {
+    const visible = dist <= reflectionVisibleRadius
+    const layer = visible ? 0 : REFLECTION_DISTANT_LAYER
+    if (record.mesh) assignRenderLayer(record.mesh, layer)
+    if (record.vegetationExtras) assignRenderLayer(record.vegetationExtras, layer)
+    if (record.environment) assignRenderLayer(record.environment, layer)
+    vegetationRegionBatcher.syncReflectionVisibility(record.coord, visible)
+  }
+
   function syncInstancedLodForRecord(record: ChunkRecord, playerChunk: ChunkCoord): void {
-    const frac = vegetationLodForDistance(chebyshevDistance(record.coord, playerChunk))
+    const dist = chebyshevDistance(record.coord, playerChunk)
+    const frac = vegetationLodForDistance(dist)
     vegetationRegionBatcher.syncLod(record.coord, frac)
+    syncReflectionForRecord(record, dist)
   }
 
   /** Requests grass placement on the worker pool (plan 086) — `record.grass`

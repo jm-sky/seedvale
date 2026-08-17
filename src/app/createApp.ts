@@ -116,7 +116,7 @@ import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
 import { createTimeSkip } from '../world/timeSkip'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
 import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChopStage } from '../world/treeLifecycle'
-import { AGENT_RENDER_LAYER, REFLECTION_SKIPPED_LAYER, WATER_RENDER_LAYER } from '../world/waterMirror'
+import { AGENT_RENDER_LAYER, REFLECTION_DISTANT_LAYER, REFLECTION_SKIPPED_LAYER, WATER_RENDER_LAYER } from '../world/waterMirror'
 import { DRINK_THIRST_RELIEF, UNSAFE_WATER_WARNING, type WaterSource } from '../world/WaterSource'
 import { createClimateState } from '../world/weather'
 import { createWeatherParticles } from '../world/weatherParticles'
@@ -240,6 +240,7 @@ export async function createApp(
   camera.layers.enable(WATER_RENDER_LAYER)
   camera.layers.enable(AGENT_RENDER_LAYER)
   camera.layers.enable(REFLECTION_SKIPPED_LAYER)
+  camera.layers.enable(REFLECTION_DISTANT_LAYER)
   const worldAudio = createWorldAudio(camera)
   applyFootstepPackFromUrl()
 
