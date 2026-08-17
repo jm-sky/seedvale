@@ -12,6 +12,20 @@
     "preview": "vite preview",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@lucide/vue": "^1.31.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lil-gui": "^0.21.0",
+    "lucide-vue-next": "^1.0.0",
+    "n8ao": "^2.0.1",
+    "postprocessing": "^6.39.4",
+    "simplex-noise": "^4.0.3",
+    "tailwind-merge": "^3.6.0",
+    "three": "^0.185.1",
+    "vite-plugin-solid": "^2.11.14",
+    "vue": "^3.5.41"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin": "^5.10.0",
@@ -30,20 +44,6 @@
     "vitest": "^4.1.10",
     "vue-eslint-parser": "^10.4.1",
     "vue-tsc": "^3.3.9"
-  },
-  "dependencies": {
-    "@lucide/vue": "^1.31.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lil-gui": "^0.21.0",
-    "lucide-vue-next": "^1.0.0",
-    "n8ao": "^2.0.0",
-    "postprocessing": "^6.39.4",
-    "simplex-noise": "^4.0.3",
-    "tailwind-merge": "^3.6.0",
-    "three": "^0.185.1",
-    "vite-plugin-solid": "^2.11.14",
-    "vue": "^3.5.41"
   },
   "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee",
   "overrides": {

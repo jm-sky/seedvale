@@ -27,8 +27,8 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0(vue@3.5.41(typescript@5.9.3))
       n8ao:
-        specifier: ^2.0.0
-        version: 2.0.0(postprocessing@6.39.4(three@0.185.1))(three@0.185.1)
+        specifier: ^2.0.1
+        version: 2.0.1(postprocessing@6.39.4(three@0.185.1))(three@0.185.1)
       postprocessing:
         specifier: ^6.39.4
         version: 6.39.4(three@0.185.1)
@@ -1290,8 +1290,8 @@ packages:
   muggle-string@0.4.1:
     resolution: {integrity: sha512-VNTrAak/KhO2i8dqqnqnAHOa3cYBwXEZe9h+D5h/1ZqFSTEFHdM65lR7RoIqq3tBBYavsOXV84NoHXZ0AkPyqQ==}
 
-  n8ao@2.0.0:
-    resolution: {integrity: sha512-7oajUGXk10jJIcjGxOgjRY2X/gy5wiLOY4eOiAfFJ51ljN6Djmsg+j8HMOip+SpqV7OkwzF9VCkDRLluxVlySA==}
+  n8ao@2.0.1:
+    resolution: {integrity: sha512-MoP1QKUdj4/3cKEnhFl917t0eQwWGER1l43ckz5mNOPyYWGRDGQbVoTOQz/VBvy01in6QVNG+AL6Xxx5AjZBYA==}
     peerDependencies:
       postprocessing: '>=6.30.0'
       three: '>=0.137'
@@ -2735,7 +2735,7 @@ snapshots:
 
   muggle-string@0.4.1: {}
 
-  n8ao@2.0.0(postprocessing@6.39.4(three@0.185.1))(three@0.185.1):
+  n8ao@2.0.1(postprocessing@6.39.4(three@0.185.1))(three@0.185.1):
     dependencies:
       postprocessing: 6.39.4(three@0.185.1)
       three: 0.185.1
