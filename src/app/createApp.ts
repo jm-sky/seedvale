@@ -27,7 +27,7 @@ import {
 import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
 import { isCameraDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { getRenderStateDebugText } from '../debug/renderStateDebug'
-import { type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
+import { ANIMAL_LABELS, type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
 import { meatKindForAnimal } from '../fauna/animalMeat'
 import { DESTROY_SPAWNER_DURATION_SEC, type PreySpawner, SPAWNER_DESTROY_BRANCH_COST } from '../fauna/AnimalSpawner'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
@@ -1060,15 +1060,15 @@ export async function createApp(
   }
 
   // The single owner of a capture's player-facing consequences (implementation
-  // notes §18) — the kill, the corpse and the dropped meat are all handled
-  // inside `PlacedTraps`, which calls this exactly once per catch.
+  // notes §18) — `PlacedTraps` only kills and leaves a corpse; XP and the
+  // toast are decided here, exactly once per catch.
   onTrapCaptureTarget = (event) => {
     awardSkillXp(player.skills, 'traps', SKILL_XP_AWARD.captureTrap)
-    const meatLabel = ITEM_DEFS[event.meatKind].label
+    const animalLabel = ANIMAL_LABELS[event.animalKind]
     toast.show(
       event.broken
-        ? `Pułapka złapała zwierzę i się rozpadła (${meatLabel}).`
-        : `Pułapka złapała zwierzę (${meatLabel}).`,
+        ? `Pułapka złapała zwierzę (${animalLabel}) i się rozpadła.`
+        : `Pułapka złapała zwierzę (${animalLabel}).`,
     )
   }
 

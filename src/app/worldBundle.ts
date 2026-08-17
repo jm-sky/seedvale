@@ -315,7 +315,7 @@ export async function createWorldBundle(
     scene,
     chunkManager.sampleHeight,
     config.seed,
-    { dropItem: droppedItems.drop, onCapture: onTrapCapture },
+    { onCapture: onTrapCapture },
     initialPlacedTraps,
   )
   const largeCaves = createLargeCaves(
@@ -417,7 +417,7 @@ export async function rebuildWorldBundle(
     scene,
     bundle.chunkManager.sampleHeight,
     config.seed,
-    { dropItem: bundle.droppedItems.drop, onCapture: onTrapCapture },
+    { onCapture: onTrapCapture },
     carriedTraps,
   )
   bundle.largeCaves = createLargeCaves(

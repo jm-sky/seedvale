@@ -1,8 +1,6 @@
 import { type Object3D, type Scene } from 'three'
-import type { AnimalAgent } from '../fauna/AnimalAgent'
-import type { ItemKind } from '../items/items'
+import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
 import type { HeightSampler } from '../player/PlayerController'
-import { meatKindForAnimal } from '../fauna/animalMeat'
 import { placeOnGround } from '../settlement/props'
 import {
   accumulateTrapWeatherWear,
@@ -27,8 +25,7 @@ export type TrapCaptureEvent = {
   trapId: string
   trapKind: TrapKind
   animalId: string
-  /** Species meat the catch dropped into the world. */
-  meatKind: ItemKind
+  animalKind: AnimalKind
   x: number
   z: number
   /** True when this catch used up the trap's last durability. */
@@ -36,10 +33,6 @@ export type TrapCaptureEvent = {
 }
 
 export type PlacedTrapsHooks = {
-  /** Existing world drop flow (`items/createDroppedItems.ts`) — a trap never
-   *  writes into the player's `Inventory` directly, it leaves the catch on
-   *  the ground for the normal `[E] Podnieś` pickup (implementation notes §7). */
-  dropItem: (kind: ItemKind, x: number, z: number) => void
   /** Single owner of "a capture happened" side effects — Traps XP, toast.
    *  Called exactly once per catch (implementation notes §18). */
   onCapture?: (event: TrapCaptureEvent) => void
@@ -66,10 +59,6 @@ export type PlacedTraps = {
 
 let nextTrapId = 0
 
-/** How far from the trap centre the catch is dropped, so the meat doesn't
- *  z-fight with the trap prop. */
-const CATCH_DROP_OFFSET = 0.55
-
 /**
  * Player-placed animal traps (plan 141) — the same "player chose the spot, so
  * the whole record round-trips through the save" shape as `PlacedTents` /
@@ -77,9 +66,10 @@ const CATCH_DROP_OFFSET = 0.55
  * no reference to `PlayerController`/`PlayerSkills`, only the skill value
  * snapshotted when it was armed, so it keeps working when the player leaves.
  *
- * `hooks.dropItem` closes over the sibling `DroppedItems` instance; both are
- * created and disposed together by `worldBundle.ts`, so the closure can never
- * outlive its target (same arrangement as `ResourceDeposits` ↔ `ChunkManager`).
+ * A catch only kills — it leaves an ordinary corpse for the player to
+ * harvest/bury through the existing corpse interactions, same as a melee
+ * kill. No meat/hide is auto-yielded and the corpse is not pre-marked
+ * meat-harvested.
  */
 export function createPlacedTraps(
   scene: Scene,
@@ -141,18 +131,18 @@ export function createPlacedTraps(
   }
 
   const capture = (entry: PlacedTrapEntry, animal: AnimalAgent): void => {
-    const meatKind = meatKindForAnimal(animal.def.kind)
     // Death runs through the existing `AnimalAgent` lifecycle (collapse →
     // `onDeath` → spawn-point accounting + quests), never a manual removal.
+    // Capture leaves an ordinary corpse — no meat/hide is auto-yielded and
+    // it is *not* marked meat-harvested, so the player still has to walk up
+    // and knife-harvest it (or shovel-bury it) exactly like any other kill.
     animal.takeDamage(animal.health.maxHp)
-    // The trap already took the meat, so the corpse can't also be knife
-    // harvested for a second portion. Trapping therefore trades the knife
-    // harvest's `hide` byproduct for not having to be there (plan 141 §6).
-    animal.harvestMeat()
-    hooks.dropItem(meatKind, entry.x + CATCH_DROP_OFFSET, entry.z)
 
     const spent = spendTrapDurability(entry.durability, 1)
     entry.durability = spent.durability
+    // A spent trap is always deactivated by a catch — `placed` (re-armable)
+    // if durability remains, `broken` if it doesn't. It never stays `active`
+    // after firing.
     entry.state = spent.state
     setTrapPropState(entry.mesh, entry.kind, entry.state)
     cooldowns.delete(entry.id)
@@ -160,7 +150,7 @@ export function createPlacedTraps(
       trapId: entry.id,
       trapKind: entry.kind,
       animalId: animal.animalId,
-      meatKind,
+      animalKind: animal.def.kind,
       x: entry.x,
       z: entry.z,
       broken: entry.state === 'broken',
