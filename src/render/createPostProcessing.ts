@@ -113,9 +113,6 @@ export function createPostProcessing(
   // 0 reads as "unbounded time since last change," so the first real check
   // in applyFrameBudget is never held back by the min-stable-time floor.
   let aoSuppressedChangedAt = 0
-  // DIAGNOSTIC 2026-08-17: pin N8AO on (frame-budget still observed, not applied).
-  let aoDiagLogged = false
-  const aoDiagEvents: Array<{ t: number; would: 'suppress' | 'restore'; renderMs: number }> = []
 
   function syncAoPass(): void {
     const aoOn = aoWanted && !aoSuppressed
@@ -145,52 +142,26 @@ export function createPostProcessing(
   }
   applyConfig(config)
 
-  // DIAGNOSTIC 2026-08-17: pollable from the browser console / CDP.
-  ;(globalThis as { __aoDiag?: object }).__aoDiag = {
-    get aoWanted() {
-      return aoWanted
-    },
-    get virtualSuppressed() {
-      return aoSuppressed
-    },
-    get aoPassEnabled() {
-      return aoPass.enabled
-    },
-    get renderPassEnabled() {
-      return renderPass.enabled
-    },
-    get events() {
-      return aoDiagEvents
-    },
-  }
-
   function applyFrameBudget(renderMs: number): void {
+    // Every `syncAoPass()` below is gated on an actual state change. Writing
+    // `aoPass.enabled` unconditionally every frame was the candidate cause of
+    // the ~20 Hz tremble this function was temporarily disabled to diagnose;
+    // the hysteresis in `shouldSuppressAo` already prevents rapid flipping, so
+    // the per-frame assignment bought nothing.
     if (!aoWanted) {
-      aoSuppressed = false
-      syncAoPass()
+      if (aoSuppressed) {
+        aoSuppressed = false
+        syncAoPass()
+      }
       return
     }
     const now = performance.now()
     const next = shouldSuppressAo(aoSuppressed, renderMs, now - aoSuppressedChangedAt)
-    // DIAGNOSTIC 2026-08-17: observe would-be auto-budget flips, but keep the
-    // AO pass pinned ON. Original applied `next` via syncAoPass(). Revert by
-    // restoring: if (next !== aoSuppressed) aoSuppressedChangedAt = now;
-    // aoSuppressed = next; syncAoPass()
-    if (!aoDiagLogged) {
-      aoDiagLogged = true
-      console.info('[AO-DIAG] auto-budget switching disabled; N8AO pinned ON')
-    }
     if (next !== aoSuppressed) {
-      const would = next ? 'suppress' : 'restore'
-      aoDiagEvents.push({ t: now, would, renderMs })
-      console.info(
-        `[AO-DIAG] would ${would} AO (renderMs=${renderMs.toFixed(1)}) — pass stays ON`,
-      )
       aoSuppressedChangedAt = now
       aoSuppressed = next
+      syncAoPass()
     }
-    // DIAGNOSTIC: do not write aoPass.enabled here. Assigning it every frame
-    // was a candidate cause of the remaining ~20 Hz tremble.
   }
 
   function setPassEnabled(pass: PostPassId, enabled: boolean): void {
