@@ -21,3 +21,17 @@ export function chunkCenter(coord: ChunkCoord, chunkSize: number): { x: number; 
 export function chebyshevDistance(a: ChunkCoord, b: ChunkCoord): number {
   return Math.max(Math.abs(a.cx - b.cx), Math.abs(a.cz - b.cz))
 }
+
+export type RegionCoord = { rx: number; rz: number }
+
+/** Groups chunks into fixed-size, world-space-aligned regions (plan 143) —
+ *  a pure function of chunk coord, `Math.floor` so negative coords group
+ *  correctly (e.g. cx -1..-3 with regionChunks 3 all map to rx -1). */
+export function regionCoordOf(coord: ChunkCoord, regionChunks: number): RegionCoord {
+  return { rx: Math.floor(coord.cx / regionChunks), rz: Math.floor(coord.cz / regionChunks) }
+}
+
+export function regionKey(coord: ChunkCoord, regionChunks: number): string {
+  const { rx, rz } = regionCoordOf(coord, regionChunks)
+  return `${rx},${rz}`
+}

@@ -1,7 +1,7 @@
 # Plan: Cross-chunk Vegetation Batching
 
 **Created:** 2026-08-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented, technically verified, benchmark-verified in browser (see [implementation notes](./2026-08-17--143--cross-chunk-vegetation-batching-implementation-notes.md)); live chop-near-boundary + LOD-pop visual check still open
 **Priority:** medium · **Effort:** L
 **Depends on:** —
 

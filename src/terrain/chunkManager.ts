@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { DetailNormalConfig } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
+import type { PropPlacement } from '../render/instancedProps'
 import type { TreeEnvSample, TreeGrowthStage, TreeLifecycle, TreePresence } from '../world/treeLifecycle'
 import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtocol'
 import type { FbmParams } from './fbm'
@@ -8,7 +9,6 @@ import { disposeObject3D } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
 import { getMonitor } from '../perf/active'
-import { buildInstancedProps, type InstancedPropGroup, type PropPlacement } from '../render/instancedProps'
 import {
   BUSH_SPECS,
   CACTUS_SPECS,
@@ -77,6 +77,7 @@ import {
 } from './chunkWorkerPool'
 import { densityLodFraction, grassFillerLodFraction } from './distanceLod'
 import { createGrassSystem, type WorldGrassChunk } from './grass'
+import { createVegetationRegionBatcher } from './vegetationRegionBatcher'
 
 // Loaded once and reused across every chunk (GLTF loader also caches by URL, but
 // this avoids rebuilding the template array + re-running `prepareProp` per chunk).
@@ -272,19 +273,12 @@ type ChunkRecord = {
   mesh?: THREE.Mesh
   meshDispose?: () => void
   water?: WorldWater | null
-  /** Bush/cactus/reed (faza 3/087) — no per-instance runtime state, so these
-   *  are instanced (one `InstancedPropGroup` per kind present in this
-   *  chunk). */
-  vegetationInstances?: InstancedPropGroup[]
-  /** Living trees (faza 4/087) — instanced, keyed by `treeId` so a single
-   *  tree can be swap-removed on chop/refresh without rebuilding the whole
-   *  bucket (`InstancedPropGroup.removeByKey`). */
-  treeInstances?: InstancedPropGroup
   /** Non-living tree stage meshes (limbed/felled/stump) — few and mutated
    *  individually, so never instanced (plan 087 §2.3/§2.5). Also receives
    *  whatever `refreshTreeVisual` swaps a tree into afterward, including a
    *  regrown sapling: once a tree needs a runtime refresh it stays a plain
-   *  `Object3D` here rather than re-joining `treeInstances`. */
+   *  `Object3D` here rather than re-joining the region's `tree-living`
+   *  instances (`vegetationRegionBatcher.ts`, plan 143). */
   vegetationExtras?: THREE.Group
   /** `treeId` -> placement yaw — the one piece of tree identity `TreePresence`
    *  doesn't carry (see `TreeLifecycle.getPresence`), needed by
@@ -295,9 +289,6 @@ type ChunkRecord = {
    *  cemetery) — geometry is built per placement, not from a shared template, so these
    *  stay unbatched (plan 087 §2.5). Cemetery clones GLB graves into one Group. */
   environment?: THREE.Group
-  /** GLB environment kinds (largeRock/rockCluster/fallenLog, faza 5/087) —
-   *  no runtime state, same "simplest case" instancing as `vegetationInstances`. */
-  environmentInstances?: InstancedPropGroup[]
   /** TreeIds registered into `treeLifecycle` for this chunk — cleared on unload. */
   treeIds?: string[]
   /** `undefined` = not yet decided (chunk not ready or outside grass radius);
@@ -573,6 +564,10 @@ export function createChunkManager(
   // settlements (outside this manager entirely) register theirs keyed by
   // their own id through `registerColliders`/`clearColliders`.
   const colliderRegistry = createColliderRegistry(config.chunkSize)
+  // Batches vegetation/environment InstancedMesh across chunk boundaries at
+  // region granularity (plan 143) — purely a rendering-side grouping, no new
+  // streaming/lifecycle unit; chunks stay the load/unload boundary.
+  const vegetationRegionBatcher = createVegetationRegionBatcher(scene)
   // Kick GLB template loads off the chunk-finalize path (plan 119). Memoized
   // at module level, so a later world rebuild is already warm.
   preloadPropTemplates()
@@ -718,13 +713,7 @@ export function createChunkManager(
 
   function syncInstancedLodForRecord(record: ChunkRecord, playerChunk: ChunkCoord): void {
     const frac = vegetationLodForDistance(chebyshevDistance(record.coord, playerChunk))
-    record.treeInstances?.setLodFraction(frac)
-    if (record.vegetationInstances) {
-      for (const group of record.vegetationInstances) group.setLodFraction(frac)
-    }
-    if (record.environmentInstances) {
-      for (const group of record.environmentInstances) group.setLodFraction(frac)
-    }
+    vegetationRegionBatcher.syncLod(record.coord, frac)
   }
 
   /** Requests grass placement on the worker pool (plan 086) — `record.grass`
@@ -1115,14 +1104,8 @@ export function createChunkManager(
         if (isSystemEnabled('trees')) scene.add(extras)
         rec.vegetationExtras = extras
       }
-      const treeInstances = buildInstancedProps(
-        treeTemplates,
-        livingTreePlacements,
-        'chunk-vegetation-tree-living',
-      )
-      if (treeInstances) {
-        if (isSystemEnabled('trees')) scene.add(treeInstances.group)
-        rec.treeInstances = treeInstances
+      if (livingTreePlacements.length > 0) {
+        vegetationRegionBatcher.setChunkPlacements(coord, 'tree-living', treeTemplates, livingTreePlacements)
       }
 
       const instancedTemplatesByKind = {
@@ -1130,7 +1113,6 @@ export function createChunkManager(
         cactus: cactusTemplates,
         reed: reedTemplates,
       }
-      const vegetationInstances: InstancedPropGroup[] = []
       for (const kind of ['bush', 'cactus', 'reed'] as const) {
         const placements = tile.vegetation.filter((p) => p.kind === kind)
         if (placements.length === 0) continue
@@ -1142,17 +1124,8 @@ export function createChunkManager(
           rotationY: p.rotationY,
           scale: p.scale,
         }))
-        const instanced = buildInstancedProps(
-          instancedTemplatesByKind[kind],
-          propPlacements,
-          `chunk-vegetation-${kind}`,
-        )
-        if (instanced) {
-          scene.add(instanced.group)
-          vegetationInstances.push(instanced)
-        }
+        vegetationRegionBatcher.setChunkPlacements(coord, kind, instancedTemplatesByKind[kind], propPlacements)
       }
-      if (vegetationInstances.length > 0) rec.vegetationInstances = vegetationInstances
       syncInstancedLodForRecord(rec, lastPlayerChunk)
       getMonitor().recordHitch('VEGETATION', performance.now() - vegT0, 'chunk vegetation')
     }
@@ -1194,12 +1167,11 @@ export function createChunkManager(
       return prop
     })
 
-    const envInstancedSources: { kind: EnvironmentKind, templates: THREE.Object3D[] | null }[] = [
+    const envInstancedSources: { kind: 'largeRock' | 'rockCluster' | 'fallenLog', templates: THREE.Object3D[] | null }[] = [
       { kind: 'largeRock', templates: rockTemplates },
       { kind: 'rockCluster', templates: rockClusterTemplates },
       { kind: 'fallenLog', templates: fallenLogTemplates },
     ]
-    const environmentInstances: InstancedPropGroup[] = []
     for (const { kind, templates } of envInstancedSources) {
       if (!templates) continue
       const placements = tile.environment.filter((p) => p.kind === kind)
@@ -1212,13 +1184,8 @@ export function createChunkManager(
         rotationY: p.rotationY,
         scale: p.scale,
       }))
-      const instanced = buildInstancedProps(templates, propPlacements, `chunk-environment-${kind}`)
-      if (instanced) {
-        scene.add(instanced.group)
-        environmentInstances.push(instanced)
-      }
+      vegetationRegionBatcher.setChunkPlacements(coord, kind, templates, propPlacements)
     }
-    if (environmentInstances.length > 0) rec.environmentInstances = environmentInstances
     syncInstancedLodForRecord(rec, lastPlayerChunk)
     getMonitor().recordHitch('PROPS', performance.now() - envT0, 'chunk environment')
     rebuildColliders(rec)
@@ -1312,14 +1279,7 @@ export function createChunkManager(
       record.vegetationExtras.removeFromParent()
       record.vegetationExtras = undefined
     }
-    if (record.treeInstances) {
-      record.treeInstances.dispose()
-      record.treeInstances = undefined
-    }
-    if (record.vegetationInstances) {
-      for (const instanced of record.vegetationInstances) instanced.dispose()
-      record.vegetationInstances = undefined
-    }
+    vegetationRegionBatcher.clearChunkPlacements(record.coord)
     if (record.items) {
       disposeObject3D(record.items)
       record.items.removeFromParent()
@@ -1327,10 +1287,6 @@ export function createChunkManager(
     if (record.environment) {
       disposeObject3D(record.environment)
       record.environment.removeFromParent()
-    }
-    if (record.environmentInstances) {
-      for (const instanced of record.environmentInstances) instanced.dispose()
-      record.environmentInstances = undefined
     }
     chunks.delete(record.key)
     getMonitor().recordHitch('STREAMING', performance.now() - unloadT0, 'chunk unload')
@@ -1377,7 +1333,8 @@ export function createChunkManager(
   }
 
   /** Rebuild one tree's visual after a lifecycle change (chop step, stump
-   *  regrowth). Living trees load in as instances (`rec.treeInstances`, no
+   *  regrowth). Living trees load in as instances (region-batched
+   *  `tree-living` group, `vegetationRegionBatcher.ts`, plan 143 — no
    *  per-instance `Object3D`/`userData` — see faza 4), so this can no longer
    *  find "the mesh" and read state off it the way it used to: identity data
    *  comes from `treeLifecycle.getPresence` + `rec.treeYaw` instead, and the
@@ -1390,7 +1347,7 @@ export function createChunkManager(
     for (const rec of chunks.values()) {
       if (!rec.treeIds?.includes(treeId) || !rec.tile) continue
 
-      const wasInstance = rec.treeInstances?.removeByKey(treeId) ?? false
+      const wasInstance = vegetationRegionBatcher.removeByKey(rec.coord, treeId)
       if (!wasInstance) {
         const mesh = rec.vegetationExtras?.children.find((c) => c.userData.treeId === treeId)
         if (!mesh) continue
@@ -1730,6 +1687,7 @@ export function createChunkManager(
     clearColliders: (ownerKey) => colliderRegistry.clearColliders(ownerKey),
     dispose() {
       for (const record of [...chunks.values()]) unload(record)
+      vegetationRegionBatcher.dispose()
       grassSystem.dispose()
       terrainMaterial.dispose()
     },
