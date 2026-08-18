@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Zap } from 'lucide-vue-next'
 import { computed, onUnmounted, ref, watch } from 'vue'
+import QuickActionsGroup from '@/components/QuickActionsGroup.vue'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import type { TrapKind } from '../../world/animalTraps'
 import { isTouchDevice } from '../../input/isTouchDevice'
@@ -121,92 +122,84 @@ const shovelActions: Action[] = [
     <div
       v-if="ui.quickActions.open"
       ref="panel"
-      class="pointer-events-auto fixed z-10 flex-wrap lg:flex-nowrap flex flex-col gap-2 overflow-y-auto rounded-lg p-2 backdrop-blur-xs"
-      :class="touchDevice
-        ? 'max-h-[calc(100dvh-120px)] w-[calc(100vw-24px)]'
-        : 'max-h-[calc(100dvh-220px)] w-[min(420px,calc(100vw-40px))]'"
+      class="border border-white/20 pointer-events-auto fixed z-10 flex flex-col flex-wrap lg:flex-nowrap content-start gap-2 overflow-y-auto rounded-lg p-2 backdrop-blur-xs"
+      :class="touchDevice ? '' : 'max-h-[calc(100dvh-220px)] w-[min(420px,calc(100vw-40px))]'"
       :style="touchDevice
-        ? 'left: 12px; right: 12px; bottom: max(20px, calc(env(safe-area-inset-bottom) + 120px)); touch-action: pan-y'
-        : 'right: max(20px, env(safe-area-inset-right)); bottom: max(190px, calc(env(safe-area-inset-bottom) + 190px)); touch-action: pan-y'"
+        ? {
+          top: 'max(12px, env(safe-area-inset-top))',
+          left: 'max(12px, env(safe-area-inset-left))',
+          right: 'max(12px, env(safe-area-inset-right))',
+          bottom: 'max(12px, calc(env(safe-area-inset-bottom) + 100px))',
+          touchAction: 'pan-y',
+        }
+        : {
+          top: 'max(12px, env(safe-area-inset-top))',
+          bottom: 'max(168px, calc(env(safe-area-inset-bottom) + 148px))',
+          right: 'max(20px, env(safe-area-inset-right))',
+          touchAction: 'pan-y',
+        }"
     >
-      <div
+      <QuickActionsGroup
         v-if="fireActions.length"
-        class="grid grid-cols-2 gap-2"
+        label="Ogień"
       >
         <QuickActionsButton
           v-for="action in fireActions"
           :key="action.id"
           :label="action.label"
           :cost="action.cost"
-          is-row-button
           @click="runFireAction(action.run)"
         />
-      </div>
-      <template v-if="ui.quickActions.hasShovel">
-        <div class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-65">
-          Łopata
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <QuickActionsButton
-            v-for="action in shovelActions"
-            :key="action.label"
-            :label="action.label"
-            :cost="action.cost"
-            is-row-button
-            @click="action.onClick"
-          />
-        </div>
-      </template>
-      <template v-if="trapActions.length">
-        <div class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-65">
-          Pułapki
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <QuickActionsButton
-            v-for="action in trapActions"
-            :key="action.label"
-            :label="action.label"
-            :cost="action.cost"
-            is-row-button
-            @click="action.onClick"
-          />
-        </div>
-      </template>
-      <div class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-65">
-        Czekaj
-      </div>
-      <div class="flex gap-2">
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.hasShovel"
+        label="Łopata"
+      >
         <QuickActionsButton
-          v-for="hours in [1, 3, 6]"
+          v-for="action in shovelActions"
+          :key="action.label"
+          :label="action.label"
+          :cost="action.cost"
+          @click="action.onClick"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="trapActions.length"
+        label="Pułapki"
+      >
+        <QuickActionsButton
+          v-for="action in trapActions"
+          :key="action.label"
+          :label="action.label"
+          :cost="action.cost"
+          @click="action.onClick"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup label="Czekaj">
+        <QuickActionsButton
+          v-for="hours in [1, 2, 4, 6]"
           :key="hours"
           :label="`${hours}h`"
-          is-row-button
           @click="wait(hours)"
         />
-      </div>
-      <div class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-65">
-        Odpoczynek
-      </div>
-      <div class="flex flex-wrap gap-2">
+      </QuickActionsGroup>
+      <QuickActionsGroup label="Odpoczynek">
         <QuickActionsButton
           v-if="ui.quickActions.hasTent"
           label="Rozstaw namiot"
           cost="1× namiot"
-          is-row-button
           @click="placeTent"
         />
         <QuickActionsButton
           label="Rozbij obóz (8h)"
-          is-row-button
           @click="rest('camp')"
         />
         <QuickActionsButton
           v-if="ui.quickActions.nearTown"
           label="Odpocznij w mieście (8h)"
-          is-row-button
           @click="rest('town')"
         />
-      </div>
+      </QuickActionsGroup>
     </div>
   </Teleport>
 </template>

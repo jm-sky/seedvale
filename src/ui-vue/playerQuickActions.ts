@@ -57,7 +57,7 @@ export const FIRE_QUICK_ACTIONS: readonly FireActionDef[] = [
   {
     id: 'lightWoodenTorch',
     label: 'Zapal pochodnię',
-    cost: 'pochodnia w ręce',
+    cost: '',
     availableKey: 'lightWoodenTorch',
     run: (handlers) => lightResult(handlers.onLightWoodenTorch?.() ?? 'missing', 'Zapalono pochodnię!'),
   },
