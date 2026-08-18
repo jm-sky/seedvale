@@ -1,7 +1,7 @@
 # Plan: Player Skills — Sneak
 
 **Created:** 2026-08-15
-**Status:** `verification needed` 🔍 — implemented, technical verification green; no browser test yet (see [implementation notes](./2026-08-15--124--player-skills-sneak-implementation-notes.md))
+**Status:** `done` ✅ — playtest accepted 2026-08-18 (see [implementation notes](./2026-08-15--124--player-skills-sneak-implementation-notes.md))
 **Priority:** medium · **Effort:** M
 **Depends on:** 120
 

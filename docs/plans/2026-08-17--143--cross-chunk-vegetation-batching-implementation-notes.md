@@ -1,6 +1,6 @@
 # Implementation notes — Plan 143 (Cross-chunk vegetation batching)
 
-**Status:** technically verified (tsc/lint/build/test green) and benchmark-verified (`?benchmark=stream`, browser, see below). Tree-chop-near-boundary is unit-tested but not yet live-browser-verified.
+**Status:** technically verified (tsc/lint/build/test green), benchmark-verified (`?benchmark=stream`), and playtest accepted 2026-08-18.
 
 ## What changed
 

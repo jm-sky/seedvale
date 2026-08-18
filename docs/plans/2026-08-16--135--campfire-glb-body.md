@@ -1,7 +1,7 @@
 # Plan: Ciało ogniska GLB + płomień FX
 
 **Created:** 2026-08-16  
-**Status:** `verification needed` 🔍 — zaimplementowane, weryfikacja techniczna zielona (tsc/lint-on-changed/build/test, 892 testy); brak testu w przeglądarce  
+**Status:** `done` ✅ — playtest accepted 2026-08-18  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~101~~ ~~130~~ ~~085~~
 
@@ -43,7 +43,7 @@ Ognisko w świecie, osadzie i `PlacedFires` ma wyglądać jak asset, nie jak kó
 
 Techniczna: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test`.
 
-Browser:
+Browser: playtest accepted 2026-08-18.
 
 1. Quick Action palenisko — kamienny krąg + stos, zimne; `[E]` → burst + narastający `fire.glb` + iskry.
 2. Prosta ognisko — bez kamieni, drewno + od razu płomień.

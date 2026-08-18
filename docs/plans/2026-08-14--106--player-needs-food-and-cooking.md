@@ -1,6 +1,6 @@
 # Plan 106 — Player Needs, Food & Cooking
 
-**Status:** planned 📋
+**Status:** `done` ✅ — playtest accepted 2026-08-18
 **Priority:** 🔴 high
 **Effort:** L
 **Date:** 2026-08-14
@@ -202,7 +202,7 @@ Technical checks:
     npm run build
     npm run test
 
-Manual/browser verification should cover:
+Manual/browser verification: playtest accepted 2026-08-18.
 
 1. needs change over time and recover according to their intended rules
 2. tomato can be collected and consumed

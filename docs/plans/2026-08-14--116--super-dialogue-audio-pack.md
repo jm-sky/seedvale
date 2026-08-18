@@ -1,6 +1,6 @@
 # Super Dialogue Audio Pack v1 — NPC voice lines
 
-Status: `done` (technical verification green; no browser/play check yet)
+Status: `done` ✅ — playtest accepted 2026-08-18
 
 ## Context
 
@@ -71,7 +71,4 @@ eventually be expected too; none exists in `src/ui-vue` today. Not built as part
 - `npx tsc --noEmit`, `npm run lint` (clean on changed files — pre-existing unrelated errors in
   `_temp/asset-audit/inspect.mjs` only), `npm run build`, `npm run test` (700/700) — all green.
 - Confirmed all 95 referenced `public/sounds/*.ogg` files exist on disk.
-- **Not yet done:** browser/play check (open dialogue with a few NPCs of both genders/different
-  `treeIndex`, confirm greeting/farewell/confirmation play at the right moments and the same
-  NPC always uses the same voice actor; confirm quest turn-in and `lookAtPlayer` occasionally
-  use the new clips).
+- **Browser/manual verified** — accepted 2026-08-18 (playtest).

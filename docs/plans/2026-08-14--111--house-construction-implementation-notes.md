@@ -15,7 +15,7 @@
 
 ## Not done (plan §9–10)
 
-Browser visual check and `?perf=1` / settlement benchmark census vs review 012. Technical checks (`tsc`, unit tests, `vite build`) passed; do not treat that as visual proof.
+Browser visual check 2026-08-18: **niektóre domki źle złożone** — zostaje 🔍. `?perf=1` / settlement benchmark census vs review 012 still open. Technical checks (`tsc`, unit tests, `vite build`) passed; do not treat that as visual proof.
 
 ## Cleanup left for later
 

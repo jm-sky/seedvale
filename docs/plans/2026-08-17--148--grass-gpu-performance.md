@@ -6,7 +6,7 @@ tags: [performance]
 # Plan: Grass GPU performance and geometry LOD
 
 **Created:** 2026-08-17  
-**Status:** `verification needed` 🔍 (etap S zaimplementowany; headless + real-GPU [review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md): grass triangles −47% na `current`, FPS/RENDER płaskie na Intel Arc 140V — ten sam werdykt co SwiftShader; M/L nierozpoczęte; visual LOD popping nie sprawdzony — patrz [implementation notes](./2026-08-17--148--grass-gpu-performance-implementation-notes.md))  
+**Status:** `done` ✅ — playtest accepted 2026-08-18 (visual LOD). Etap S; M/L nierozpoczęte. Headless + real-GPU [review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md). Patrz [implementation notes](./2026-08-17--148--grass-gpu-performance-implementation-notes.md).  
 **Priority:** medium · **Effort:** L  
 **Depends on:** none
 
@@ -213,7 +213,7 @@ Technicznie:
 - build,
 - istniejące testy.
 
-Browser/manual:
+Browser/manual: playtest accepted 2026-08-18 (visual LOD).
 
 - visual test wszystkich opisanych scenariuszy,
 - benchmark przed/po na stałym `seed=42`, `res=193`,

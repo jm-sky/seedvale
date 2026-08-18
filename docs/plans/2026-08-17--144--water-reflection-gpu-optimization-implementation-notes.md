@@ -82,8 +82,7 @@ S's draw-call gate is weakly met on `current` (low end of the predicted 5–15% 
 
 ## Not verified
 
-- No manual visual check (shoreline, distant village/forest silhouette in the reflection) for a hard
-  cutoff at the new outer-ring boundary.
+- Visual hard-cutoff: playtest accepted 2026-08-18.
 - Checked (by reading, not by rendering) that objects moved to `REFLECTION_DISTANT_LAYER` still cast
   shadows (shadow camera enables the layer). The only other layer-sensitive raycaster in the codebase
   (`gameLoop.ts`'s `cameraMeshRaycaster`, debug-only behind `?camdebug=1`, default layer 0 only) will

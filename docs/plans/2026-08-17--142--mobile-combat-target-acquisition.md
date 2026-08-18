@@ -1,7 +1,7 @@
 # Plan: Mobile Combat — Forgiving Target Acquisition & Auto-Facing
 
 **Created:** 2026-08-17
-**Status:** `verification needed` 🔍
+**Status:** `done` ✅ — playtest accepted 2026-08-18
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~123~~ ~~124b~~
 

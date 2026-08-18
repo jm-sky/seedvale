@@ -2,7 +2,7 @@
 
 **Plan:** [142 — Mobile Combat](./2026-08-17--142--mobile-combat-target-acquisition.md)
 **Created:** 2026-08-17
-**Status:** `verification needed` 🔍
+**Status:** `done` ✅ — playtest accepted 2026-08-18
 
 ## Co zostało zaimplementowane
 
@@ -70,7 +70,7 @@ Nie tworzono nowego frameworka testowego — testy dopisane do istniejącego pli
 
 **Zaimplementowane** ✅
 **Zweryfikowane technicznie** ✅ — `npx tsc --noEmit`, `npm run build`, `npm run test` (116 plików / 950 testów), `npx eslint` czysty na `src/`.
-**Zweryfikowane w przeglądarce** ❌ — brak; wymaga sprawdzenia na mobile viewport / touch emulation wg listy w planie (§ Browser verification).
+**Zweryfikowane w przeglądarce** ✅ — playtest accepted 2026-08-18.
 
 Uwaga: przy starcie pracy `npm run lint` miał 14 błędów odziedziczonych z `main` (`_temp/` — gitignored, oraz kolejność importów w `src/app/createApp.ts` i `src/persistence/saveData.ts`, czyli plikach CI-owych). Trzy błędy w `src/` naprawiono `eslint --fix` przy okazji, bo blokowały bramkę CI; `_temp/` nie jest w repo.
 

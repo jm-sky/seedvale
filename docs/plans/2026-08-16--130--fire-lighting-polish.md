@@ -1,7 +1,7 @@
 # Plan: Fire & Lighting Polish
 
 **Created:** 2026-08-15  
-**Status:** `verification needed` 🔍 — core visual/audio scope implemented (see [implementation notes](./2026-08-16--130--fire-lighting-polish-implementation-notes.md)); guard/torch NPC lighting split off, no profession/action foundation exists yet; no browser verification  
+**Status:** `done` ✅ — playtest accepted 2026-08-18. Core visual/audio scope implemented (see [implementation notes](./2026-08-16--130--fire-lighting-polish-implementation-notes.md)); guard/torch NPC lighting split off.  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none
 
@@ -177,7 +177,7 @@ Jeżeli wiele źródeł ognia będzie aktywnych jednocześnie, później można 
 
 ### Browser/manual
 
-Nie wykonane w tej sesji (zgodnie z poleceniem — użytkownik testuje ręcznie).
+Playtest accepted 2026-08-18.
 
 - [ ] zapalenie ogniska pokazuje **białe iskry z krzesiwa**,
 - [ ] iskry mają ruch w górę + na boki + opadanie,

@@ -1,7 +1,7 @@
 # Plan: Skills v2 — Skill Progression, Survival & Camp System
 
 **Created:** 2026-08-16
-**Status:** `verification needed` 🔍
+**Status:** `done` ✅ — playtest accepted 2026-08-18
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~124~~
 **Domain:** `items-player` (secondary: `persistence`)
@@ -582,7 +582,7 @@ To jest ważniejsze niż samo dodanie kolejnych bonusów do Survival — tworzy 
 
 # Implementation summary (2026-08-17)
 
-**Status:** zaimplementowane, techniczna weryfikacja zielona (`tsc --noEmit`, `npm run build`, `npm run test` — 943 testy). **Bez weryfikacji w przeglądarce** — lista scenariuszy do ręcznego sprawdzenia jest wyżej w sekcji "Browser verification".
+**Status:** zaimplementowane, techniczna weryfikacja zielona (`tsc --noEmit`, `npm run build`, `npm run test` — 943 testy). Playtest accepted 2026-08-18.
 
 ## Co powstało
 

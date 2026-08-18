@@ -1,6 +1,6 @@
 # Etap 1 — Gospodarstwa NPC i przepływ zasobów
 
-**Status:** `verification needed` — implemented, technical checks green (`tsc`/`lint`/`build`/`test`); no browser/play verification yet.
+**Status:** `done` ✅ — playtest accepted 2026-08-18 (limited observability; user could not easily inspect household stock)
 **Created:** 2026-08-12
 **Priority:** 🟡 medium · **Effort:** L · **Depends on:** ~~060~~, ~~071~~
 

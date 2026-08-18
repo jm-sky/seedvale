@@ -6,7 +6,7 @@ tags: [fauna]
 # Plan: Universal Melee Combat — forgiving targeting & gap close
 
 **Created:** 2026-08-15  
-**Status:** `verification needed` 🔍 — zaimplementowane, techniczna weryfikacja zielona (tsc/lint/test/build); brak testu w przeglądarce  
+**Status:** `done` ✅ — playtest accepted 2026-08-18  
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~123~~
 
@@ -123,7 +123,7 @@ Nie hardkodować tych wartości w kilku miejscach.
    - wystarczająca stamina → lunge,
    - niewystarczająca stamina → maks. 1 m,
    - nadal za daleko → brak hitu.
-3. Browser verification:
+3. Browser verification: playtest accepted 2026-08-18.
    - wilk,
    - sarna,
    - kilka zwierząt obok siebie,

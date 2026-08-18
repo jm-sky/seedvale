@@ -1,6 +1,6 @@
 # Plan 107: Asset Browser — discovery dla agenta (index, search, uczciwa skala)
 
-**Status:** `verification needed`  
+**Status:** `done` ✅ — playtest accepted 2026-08-18  
 **Created:** 2026-08-14  
 **Priority:** 🟡 medium  
 **Effort:** `M`  
@@ -68,7 +68,7 @@ Manifest już serwuje `vite-plugin-asset-browser.ts` — reuse, nie drugi skan.
 
 Techniczna: `npx tsc --noEmit`, `npm run lint`, `npm run test` (index + alignment report).
 
-Browser (użytkownik, nie headless):
+Browser: playtest accepted 2026-08-18.
 
 1. `/asset-browser.html` — search `wall` pokazuje palisadę **i** `wall_plaster_*` / `wall_brick_*`.
 2. Search `roof` → ~39 parked dachów MegaKit (nie pusto; stary punkt „0” był przy 19 parked).
@@ -105,7 +105,7 @@ v1 / P0 zrobione. Część v1.1 weszła przy okazji (mały koszt, ten sam szew).
 
 **Techniczna (zrobione):** `npx tsc --noEmit` OK · `npm run lint` OK · `npm run test` 618/618.
 
-**Browser/manual — do użytkownika** na `localhost:5577` (nie headless):
+**Browser/manual — accepted 2026-08-18 (playtest).**
 
 1. `/asset-browser.html` — search `wall` → palisada RTS **i** `wall_plaster_*` / `wall_brick_*`.
 2. Search `roof` → ~39 dachów `[parked]`, nie pusto.

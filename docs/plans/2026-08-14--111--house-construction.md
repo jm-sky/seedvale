@@ -1,6 +1,6 @@
 # Plan 111: House Construction / House Builder
 
-**Status:** `verification needed` 🔍  
+**Status:** `verification needed` 🔍 — playtest 2026-08-18: **niektóre domki źle złożone**; wymaga poprawy assembly  
 **Created:** 2026-08-14  
 **Priority:** 🔴 high  
 **Effort:** `XL`  
@@ -284,6 +284,8 @@ Jeżeli testowanie render-time `drawCalls` w unit testach jest niepraktyczne, do
 
 ## 9. Browser / visual verification
 
+Playtest 2026-08-18: **niektóre domki są źle złożone** — visual assembly nie zaakceptowane; plan zostaje 🔍 do poprawy.
+
 Po implementacji Cursor powinien zweryfikować przynajmniej:
 
 - `TEST_HOUSE_01` jako rzeczywiście złożony dom;
@@ -369,6 +371,6 @@ Nie traktować konkretnego mechanizmu instancingu/merge jako celu samego w sobie
 - [x] `landmarks.homes`, `landmarks.houses`, colliders, `Place`, households i livestock nadal działają.
 - [x] Lifecycle/dispose jest poprawny dla stream-out/rebuild.
 - [x] Tests przechodzą.
-- [ ] Browser verification potwierdza wizualny assembly.
+- [ ] Browser verification potwierdza wizualny assembly. Playtest 2026-08-18: niektóre domki źle złożone.
 - [ ] Performance verification nie pokazuje regresji i potwierdza sensowną liczbę renderable objects per house.
 - [x] Brak drugiego asset registry, drugiego settlement building systemu i nowego globalnego render managera.

@@ -1,6 +1,6 @@
 # Plan 108: NPC utyka przy / w domku — locomotion, nie stamina
 
-**Status:** `verification needed`  
+**Status:** `done` ✅ — playtest accepted 2026-08-18  
 **Created:** 2026-08-14  
 **Priority:** 🔴 high  
 **Effort:** `M`  
@@ -159,7 +159,7 @@ Czysta funkcja `destinationOnColliderRim(pos, dest, colliders) → dest` — tes
 
 Techniczna: `npx tsc --noEmit`, `npm run lint`, `npm run test` (watchdog + nowa funkcja rim).
 
-Browser (`?debug=1`, użytkownik — nie headless):
+Browser (`?debug=1`): playtest accepted 2026-08-18.
 
 1. Podejdź do NPC w domu z `goTo · chop` / „zajmuję się drewnem”. W ≤ ~8 s: albo wychodzi w stronę drzewa, albo debug pokazuje `rescue escape` / `abandon`, a pozycja jest **poza** dyskiem domu (nie teleport na środek). Brak pętli w chatce.
 2. NPC przy ścianie, Walk, „idę po wodę”: albo dochodzi do studni / obręczy domu i `execute`, albo Idle + eskalacja rescue — **bez** moonwalku.

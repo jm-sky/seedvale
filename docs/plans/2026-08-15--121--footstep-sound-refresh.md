@@ -5,7 +5,7 @@ domain: items-player
 # Plan: lepsze dźwięki kroków (piasek nie brzmi jak podłoga)
 
 **Created:** 2026-08-15  
-**Status:** `verification needed` 🔍 — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce  
+**Status:** `verification needed` 🔍 — playtest 2026-08-18: sprint po trawie brzmi jak kamienny korytarz (za głośno, zły charakter)  
 **Priority:** medium · **Effort:** S  
 **Depends on:** none
 
@@ -40,6 +40,8 @@ Droga (`road`) zostaje na Ali_6868 gravel (CC0) — Anton Z nie ma żwiru. Wood/
 Poza zakresem: warstwa Clothes, kroki NPC, śnieg/błoto jako osobna powierzchnia (Mayra snow zostaje alt, nie wired), wade w wodzie.
 
 ## Weryfikacja w przeglądarce (otwarte)
+
+Playtest 2026-08-18: **sprint po trawie brzmi jak kamienny korytarz** — za głośno, nie pasuje (pkt 3 / 6). Pack Anton Z zostaje defaultem; gain/klasyfikacja grass vs stone przy sprincie do poprawy.
 
 Dev server `:5577`. Domyślnie pack `anton`. Porównać `?footsteps=legacy` i `?footsteps=mayra` (albo lil-gui → Audio → Footstep pack).
 

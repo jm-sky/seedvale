@@ -312,6 +312,19 @@ oraz:
 
 Jeśli nie — **nie implementować Phase 1 A**. Przygotować mały dodatkowy repro tylko dla brakującego przypadku.
 
+### Real-GPU gate
+
+Jeżeli Phase 0 instrumentation ma identyfikować rzeczywiste first-use program hitches, finalne wnioski z Phase 0 muszą być potwierdzone w Cursor browser na hardware WebGL.
+
+`agent-browser` może służyć do sprawdzenia, czy instrumentacja działa technicznie, ale nie może być źródłem prawdy dla:
+- GPU/driver waits,
+- shader compile/link timing,
+- frame hitch duration,
+- GPU frame time,
+- FPS.
+
+Jeżeli wyniki headless i real-GPU różnią się, priorytet ma real-GPU benchmark.
+
 ---
 
 ## 9. Phase 1 — minimal safe fix
@@ -652,5 +665,26 @@ Jeżeli okaże się, że chunk streaming wprowadza tylko ograniczony, stabilny z
 Jeżeli census pokaże proliferację variants, najpierw konsolidować konkretne variants.
 
 Jeżeli nie da się bezpiecznie odwzorować program variants poza realnym renderem, zatrzymać się i wykonać mały isolated repro zamiast eksperymentować dalej na pełnym `stream` benchmarku.
+
+## 18. Verification ownership
+
+### Claude Code / agent-browser
+
+Claude Code może wykonać:
+- analizę codebase,
+- implementację Phase 0 instrumentation,
+- unit/type/build checks,
+- lokalne testy,
+- przygotowanie danych diagnostycznych.
+
+`agent-browser` używa headless Chrome bez gwarancji realnego GPU rendering, dlatego **nie traktować jego wyników FPS/GPU/frame-time jako wiarygodnego benchmarku tego problemu**.
+
+### Cursor browser
+
+Real-GPU benchmark i visual verification muszą być wykonane w Cursor embedded browser z potwierdzonym hardware WebGL renderer.
+
+Przed benchmarkiem potwierdzić `WEBGL_debug_renderer_info` i zapisać renderer string.
+
+Claude Code nie powinien uznawać 149 za `done` na podstawie benchmarku wykonanego wyłącznie przez `agent-browser`.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

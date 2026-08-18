@@ -147,9 +147,7 @@ structures.
 
 ## Browser / gameplay verification
 
-Not performed in this session (per `CLAUDE.md`, browser verification is left
-to the user with concrete manual steps). Open items from the plan's
-Verification §5:
+Playtest accepted 2026-08-18.
 
 1. Open pause menu → "Umiejętności" → toggle Sneak on/off on desktop.
 2. Same on a touch/mobile layout.

@@ -6,7 +6,7 @@ tags: [fauna]
 # Plan: Universal Melee Combat
 
 **Created:** 2026-08-15
-**Status:** `verification needed` 🔍 — implemented, technical checks green (tsc/lint/test/build); no browser verification yet. See [implementation notes](./2026-08-15--123--universal-melee-combat-implementation-notes.md).
+**Status:** `done` ✅ — playtest accepted 2026-08-18. See [implementation notes](./2026-08-15--123--universal-melee-combat-implementation-notes.md).
 **Priority:** high · **Effort:** M
 **Depends on:** none
 
@@ -245,7 +245,7 @@ Usunąć zbędne specjal-case'y dla player → animal melee i upewnić się, że
 
 ### Browser / gameplay
 
-Zweryfikować desktop i touch/mobile:
+Playtest accepted 2026-08-18.
 
 1. Wyposażyć nóż i zaatakować zwierzę.
 2. Powtórzyć z mieczem.

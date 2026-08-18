@@ -1,7 +1,7 @@
 # Plan: Natural Resource Gathering & Water Distribution
 
 **Created:** 2026-08-15
-**Status:** `verification needed` 🔍 — first complete water path (well → NPC carrying → household `WaterBarrel`/`AnimalTrough`) implemented per the [implementation notes](./2026-08-15--122--natural-resource-gathering-and-water-distribution-implementation-notes.md)'s narrower scope; technical verification green; no browser test yet. Village Storehouse (§6) and wood/branches/stone/ore generalisation beyond the water path (§7/§8, mostly already covered by the pre-existing chop/deposit + garden gather flow) intentionally deferred — see implementation notes §6/§8.
+**Status:** `done` ✅ — playtest accepted 2026-08-18 (limited observability). First complete water path (well → NPC carrying → household `WaterBarrel`/`AnimalTrough`) implemented per the [implementation notes](./2026-08-15--122--natural-resource-gathering-and-water-distribution-implementation-notes.md)'s narrower scope. Village Storehouse (§6) and wood/branches/stone/ore generalisation beyond the water path (§7/§8) intentionally deferred — see implementation notes §6/§8.
 **Priority:** high · **Effort:** M
 **Depends on:** ~~032~~
 
@@ -571,7 +571,7 @@ Nie tworzyć osobnego `resource request system`, jeśli istniejący `needs/probl
 
 ### Browser / gameplay
 
-Zweryfikować w rzeczywistym świecie:
+Playtest accepted 2026-08-18 (limited observability — user could not easily confirm barrel/trough fill).
 
 1. NPC pobiera wodę ze studni.
 2. NPC wraca do domu.
