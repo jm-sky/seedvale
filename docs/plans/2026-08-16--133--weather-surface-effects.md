@@ -1,7 +1,7 @@
 # Plan: Weather Surface Effects — Wet Ground, Puddles & Snow Cover
 
 **Created:** 2026-08-16
-**Status:** `verification needed` 🔍 — implemented + technically verified (type-check/test/build green); no browser/perf verification yet. See [implementation notes](./2026-08-16--133--weather-surface-effects-implementation-notes.md) — "Implementation summary" section.
+**Status:** `done` ✅ — playtest 2026-08-18. See [implementation notes](./2026-08-16--133--weather-surface-effects-implementation-notes.md) — "Implementation summary" section.
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 

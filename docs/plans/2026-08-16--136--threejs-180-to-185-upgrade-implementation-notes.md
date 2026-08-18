@@ -2,7 +2,7 @@
 
 **Reviewed/implemented:** 2026-08-17
 **Plan:** `docs/plans/2026-08-16--136--threejs-180-to-185-upgrade.md`
-**Status:** `verification needed` 🔍 — implemented + technically verified (tsc/test/build green); no browser/visual/perf verification yet.
+**Status:** `done` ✅ — playtest 2026-08-18.
 
 ## Version
 

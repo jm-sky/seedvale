@@ -1,7 +1,7 @@
 # Plan: Mobile playtest fixes — interactions, quests, health and UI
 
 **Created:** 2026-08-18
-**Status:** `verification needed` 🔍 — see [implementation notes](./2026-08-18--153--mobile-playtest-fixes-implementation-notes.md)
+**Status:** `done` ✅ — playtest 2026-08-18. See [implementation notes](./2026-08-18--153--mobile-playtest-fixes-implementation-notes.md)
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 

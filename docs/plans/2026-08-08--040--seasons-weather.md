@@ -1,7 +1,7 @@
 # Plan: Pory roku i pogoda
 
 **Created:** 2026-08-15  
-**Status:** `verification needed` 🔍 — Etap 1–3 done (GPU weather 2026-08-15); Etap 4 (debug/save) partial; Etap 5 (browser/perf) open. See [implementation notes](./2026-08-08--040--seasons-weather-implementation-notes.md).  
+**Status:** `done` ✅ — playtest 2026-08-18. Etap 1–3 done (GPU weather 2026-08-15); Etap 4 (debug/save) partial. See [implementation notes](./2026-08-08--040--seasons-weather-implementation-notes.md).  
 **Priority:** medium 🟡 · **Effort:** L  
 **Depends on:** ~~003~~ ~~028~~
 

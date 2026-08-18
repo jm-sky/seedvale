@@ -6,7 +6,7 @@ tags: [items-player, world-terrain]
 # Plan: Fauna — limity populacji i wyczerpywanie spawn pointów
 
 **Created:** 2026-08-16  
-**Status:** `verification needed` 🔍  
+**Status:** `done` ✅ — playtest 2026-08-18  
 **Priority:** medium · **Effort:** L  
 **Depends on:** ~~110~~ ~~118~~
 

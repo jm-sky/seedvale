@@ -2,7 +2,7 @@
 
 **Plan:** `2026-08-18--153--mobile-playtest-fixes.md`
 **Implemented:** 2026-08-18
-**Status:** `verification needed` 🔍
+**Status:** `done` ✅ — playtest 2026-08-18
 
 ## Implementation summary
 

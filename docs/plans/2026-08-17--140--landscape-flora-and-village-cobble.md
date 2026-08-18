@@ -6,7 +6,7 @@ tags: [settlements-npcs]
 # Plan: Krajobraz — sosna, poszycie, trzcina, pień, bruk
 
 **Created:** 2026-08-17  
-**Status:** `verification needed` 🔍  
+**Status:** `done` ✅ — playtest 2026-08-18  
 **Priority:** medium · **Effort:** L  
 **Depends on:** ~~024~~ ~~073~~ ~~065~~ ~~082~~ ~~101~~
 
