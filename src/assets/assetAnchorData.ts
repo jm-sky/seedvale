@@ -1,6 +1,18 @@
 import type { AssetAnchorDef } from './assetAnchors'
-import { RIGHT_HAND_BONE_NAMES } from '../items/heldToolVisual'
 import { HOUSE_FLOOR_LAMP_Y } from '../settlement/houseCatalog'
+
+/** Quaternius Modular / Adventurer use `WristR` (no dot). Keep dotted/Mixamo
+ *  aliases for older exports. Lives here (not `items/heldToolVisual.ts`) so
+ *  this data module has no dependency on that consumer — `heldToolVisual.ts`
+ *  already imports `anchorsForAsset`/`heldToolHasGripAnchor` from here, and
+ *  the reverse import created a circular dependency between the two files. */
+export const RIGHT_HAND_BONE_NAMES = [
+  'WristR',
+  'HandR',
+  'Wrist.R',
+  'Hand.R',
+  'mixamorigRightHand',
+] as const
 
 export const CHARACTER_ANCHORS: readonly AssetAnchorDef[] = [
   {

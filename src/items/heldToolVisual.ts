@@ -2,20 +2,10 @@ import { Group, type Object3D, Vector3 } from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { ToolKind } from './HeldTool'
 import { findAnchorNode } from '../assets/anchorResolve'
-import { anchorsForAsset, heldToolHasGripAnchor } from '../assets/assetAnchorData'
+import { anchorsForAsset, heldToolHasGripAnchor, RIGHT_HAND_BONE_NAMES } from '../assets/assetAnchorData'
 import { loadGltf, preparePropFitMax } from '../assets/loadGltf'
 import { mountByAnchorPair } from '../assets/mountByAnchorPair'
 import { createItemMesh } from './items'
-
-/** Quaternius Modular / Adventurer use `WristR` (no dot). Keep dotted/Mixamo
- *  aliases for older exports. */
-export const RIGHT_HAND_BONE_NAMES = [
-  'WristR',
-  'HandR',
-  'Wrist.R',
-  'Hand.R',
-  'mixamorigRightHand',
-] as const
 
 export type HeldAttach = {
   /**
