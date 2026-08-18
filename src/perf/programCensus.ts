@@ -36,6 +36,45 @@ export type ProgramCensusStageEvent = {
   programDelta: number
 }
 
+export type ProgramCensusFirstUseEvent = {
+  kind: 'program-first-use'
+  frame: number
+  tMs: number
+  /** Three's own monotonically-increasing `WebGLProgram.id` — stable even if
+   *  `renderer.info.programs` gets reshuffled by an eviction (unused-program
+   *  release swaps the freed slot with the array's last entry). */
+  programId: number
+  /** Index into `renderer.info.programs` at the moment this program was first
+   *  observed. Not stable across evictions — correlate across snapshots via
+   *  `programId`/`cacheKey`, not this. */
+  index: number
+  /** `WebGLProgram.name` (= `material.name`). Usually `''` — most Seedvale
+   *  materials don't set an explicit name. */
+  name: string
+  /** `WebGLProgram.cacheKey` — Three's own program-cache key, unique per
+   *  distinct shader variant. Public instance property, typed in
+   *  `@types/three` 0.185.x (`WebGLProgram.d.ts`). This is the direct answer
+   *  to "how many distinct program families exist". */
+  cacheKey: string
+  /** `WebGLProgram.type` (= `material.type`, e.g. `MeshStandardMaterial`).
+   *  Present at runtime (`WebGLProgram.js` sets `this.type = parameters.shaderType`)
+   *  but not declared in `@types/three`'s `WebGLProgram.d.ts` for this Three
+   *  version, so it's read defensively via an inline cast and may be
+   *  `undefined` on a future Three release that drops the field. Reading a
+   *  plain instance property Three already sets is not a patch of Three.js —
+   *  no source/node_modules/prototype modification. Best available grouping
+   *  key for "material/program family" (better signal than `name`, which is
+   *  usually empty). */
+  materialType: string | undefined
+  usedTimes: number
+  /** Which stage's `renderer.render()` call first-used this program, if any
+   *  (`undefined` for a program that shows up between stages, e.g. during
+   *  `tickFrame`'s own count check). */
+  stage: ProgramCensusStageKind | undefined
+  programCountBefore: number
+  programCountAfter: number
+}
+
 export type ProgramCensusFrameSnapshot = {
   kind: 'frame-snapshot'
   frame: number
@@ -59,6 +98,16 @@ export type ProgramCensusEvent =
   | ProgramCensusStageEvent
   | ProgramCensusFrameSnapshot
   | ProgramCensusMaterialSnapshot
+  | ProgramCensusFirstUseEvent
+
+export type ProgramCensusFamilyBreakdown = {
+  /** Grouping key: `materialType` when available, else `name`, else `'unknown'`. */
+  key: string
+  count: number
+  firstFrame: number
+  sampleCacheKey: string
+  sampleName: string
+}
 
 export type ProgramCensusSummary = {
   frames: number
@@ -78,6 +127,14 @@ export type ProgramCensusSummary = {
    *  chunk-attach events (same/adjacent `frame`). */
   slowestStages: ProgramCensusStageEvent[]
   finalMaterialSnapshot?: ProgramCensusMaterialSnapshot
+  /** Total number of distinct `WebGLProgram`s observed (one `program-first-use`
+   *  event per program, deduped by object identity — see `dumpProgramFirstUse()`
+   *  for the full per-program list with `cacheKey`/`name`/`materialType`). */
+  firstUseEvents: number
+  /** `program-first-use` events grouped by `materialType`/`name`, sorted by
+   *  count desc — the "which material/program families created the ~230
+   *  programs" breakdown (plan 149 open question). */
+  programFamilies: ProgramCensusFamilyBreakdown[]
 }
 
 export type ProgramCensus = {
@@ -91,6 +148,11 @@ export type ProgramCensus = {
   beginStage: (kind: ProgramCensusStageKind) => void
   endStage: (kind: ProgramCensusStageKind) => void
   events: () => readonly ProgramCensusEvent[]
+  /** Convenience filter over `events()` for just `program-first-use` records —
+   *  the full per-program `id`/`name`/`cacheKey`/`materialType`/first-use-frame
+   *  dump. Same data as `events()`, just pre-filtered for console use, e.g.
+   *  `window.__seedvaleProgramCensus.dumpProgramFirstUse()`. */
+  dumpProgramFirstUse: () => readonly ProgramCensusFirstUseEvent[]
   summarize: () => ProgramCensusSummary
   reset: () => void
 }
@@ -134,6 +196,8 @@ const NOOP_SUMMARY: ProgramCensusSummary = {
   chunkAttachEvents: 0,
   stageGrowth: [],
   slowestStages: [],
+  firstUseEvents: 0,
+  programFamilies: [],
 }
 
 const NOOP_CENSUS: ProgramCensus = {
@@ -143,6 +207,7 @@ const NOOP_CENSUS: ProgramCensus = {
   beginStage: () => {},
   endStage: () => {},
   events: () => [],
+  dumpProgramFirstUse: () => [],
   summarize: () => NOOP_SUMMARY,
   reset: () => {},
 }
@@ -154,6 +219,10 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
   const stageStart = new Map<ProgramCensusStageKind, { t0: number, before: number }>()
   let frame = 0
   let lastProgramCount = 0
+  /** Dedupe key for `program-first-use`: object identity of the `WebGLProgram`
+   *  instance, not `cacheKey`, so a program that's evicted and later recreated
+   *  under the same `cacheKey` is correctly reported as first-used again. */
+  let seenPrograms = new WeakSet<object>()
 
   function programCount(): number {
     return renderer.info.programs?.length ?? 0
@@ -164,14 +233,51 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
     events.push(event)
   }
 
+  /** Diffs `renderer.info.programs` against `seenPrograms` and pushes one
+   *  `program-first-use` event per never-before-seen `WebGLProgram`. Called
+   *  only when the caller already knows the count grew, so this stays a
+   *  single array walk at an existing measurement point (`tickFrame`/
+   *  `endStage`) — no extra render-loop hook, no polling. */
+  function scanNewPrograms(stage: ProgramCensusStageKind | undefined, before: number, after: number): void {
+    const programs = renderer.info.programs
+    if (!programs) return
+    programs.forEach((p, index) => {
+      if (!p || seenPrograms.has(p)) return
+      seenPrograms.add(p)
+      // `type` is a real runtime field (`WebGLProgram.js`: `this.type = parameters.shaderType`)
+      // that `@types/three` doesn't declare for this version — see the
+      // `materialType` doc comment on `ProgramCensusFirstUseEvent`.
+      const raw = p as unknown as { id?: number, name?: string, cacheKey?: string, usedTimes?: number, type?: string }
+      push({
+        kind: 'program-first-use',
+        frame,
+        tMs: performance.now(),
+        programId: raw.id ?? -1,
+        index,
+        name: raw.name ?? '',
+        cacheKey: raw.cacheKey ?? '',
+        materialType: raw.type,
+        usedTimes: raw.usedTimes ?? 0,
+        stage,
+        programCountBefore: before,
+        programCountAfter: after,
+      })
+    })
+  }
+
   return {
     enabled: true,
     tickFrame() {
       frame++
       const count = programCount()
-      const delta = count - lastProgramCount
+      const before = lastProgramCount
+      const delta = count - before
       lastProgramCount = count
       push({ kind: 'frame-snapshot', frame, tMs: performance.now(), programCount: count, programDelta: delta })
+      // Catches first-use programs that show up outside a mirror/postprocess
+      // stage boundary (e.g. a shadow-map render triggered elsewhere in the
+      // frame). `endStage` covers the common case; this is the fallback.
+      if (delta > 0) scanNewPrograms(undefined, before, count)
       if (frame % MATERIAL_SNAPSHOT_EVERY_FRAMES === 0) {
         const mats = collectMaterials([scene])
         push({
@@ -215,14 +321,18 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
         programCountAfter: after,
         programDelta: after - start.before,
       })
+      if (after > start.before) scanNewPrograms(kind, start.before, after)
     },
     events: () => events,
+    dumpProgramFirstUse: () => events.filter((e): e is ProgramCensusFirstUseEvent => e.kind === 'program-first-use'),
     summarize() {
       let programCountMax = 0
       let chunkAttachEvents = 0
       let finalMaterialSnapshot: ProgramCensusMaterialSnapshot | undefined
+      let firstUseEvents = 0
       const growthByKind = new Map<ProgramCensusStageKind, { events: number, totalDelta: number, maxDurationMs: number }>()
       const stageEvents: ProgramCensusStageEvent[] = []
+      const familyByKey = new Map<string, ProgramCensusFamilyBreakdown>()
       for (const ev of events) {
         switch (ev.kind) {
           case 'chunk-content-attach':
@@ -247,9 +357,21 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
               growthByKind.set(ev.kind, g)
             }
             break
+          case 'program-first-use': {
+            firstUseEvents++
+            const key = ev.materialType || ev.name || 'unknown'
+            const existing = familyByKey.get(key)
+            if (existing) {
+              existing.count++
+            } else {
+              familyByKey.set(key, { key, count: 1, firstFrame: ev.frame, sampleCacheKey: ev.cacheKey, sampleName: ev.name })
+            }
+            break
+          }
         }
       }
       const slowestStages = [...stageEvents].sort((a, b) => b.durationMs - a.durationMs).slice(0, 10)
+      const programFamilies = [...familyByKey.values()].sort((a, b) => b.count - a.count)
       return {
         frames: frame,
         programCountFinal: lastProgramCount,
@@ -258,6 +380,8 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
         stageGrowth: [...growthByKind.entries()].map(([kind, g]) => ({ kind, ...g })),
         slowestStages,
         finalMaterialSnapshot,
+        firstUseEvents,
+        programFamilies,
       }
     },
     reset() {
@@ -265,6 +389,7 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
       frame = 0
       lastProgramCount = programCount()
       stageStart.clear()
+      seenPrograms = new WeakSet<object>()
     },
   }
 }

@@ -12,6 +12,10 @@ function namedMesh(name: string): Mesh {
   return mesh
 }
 
+function fakeProgram(overrides: Partial<{ id: number, name: string, cacheKey: string, type: string, usedTimes: number }> = {}): unknown {
+  return { id: 0, name: '', cacheKey: '', type: 'MeshStandardMaterial', usedTimes: 1, ...overrides }
+}
+
 describe('createProgramCensus disabled', () => {
   it('is a no-op that never records', () => {
     const programs: unknown[] = []
@@ -21,6 +25,7 @@ describe('createProgramCensus disabled', () => {
     census.recordChunkAttach('chunk-mesh-attach', 'k', [namedMesh('chunk')])
     withProgramCensusStage(census, 'mirror-render', () => {})
     expect(census.events()).toHaveLength(0)
+    expect(census.dumpProgramFirstUse()).toHaveLength(0)
     expect(census.summarize().frames).toBe(0)
   })
 })
@@ -30,9 +35,38 @@ describe('createProgramCensus enabled', () => {
     const programs: unknown[] = [{}, {}]
     const census = createProgramCensus(fakeRenderer(programs), new Scene(), true)
     census.tickFrame()
-    const events = census.events()
-    expect(events).toHaveLength(1)
-    expect(events[0]).toMatchObject({ kind: 'frame-snapshot', frame: 1, programCount: 2, programDelta: 2 })
+    const frameSnapshot = census.events().find((e) => e.kind === 'frame-snapshot')
+    expect(frameSnapshot).toMatchObject({ kind: 'frame-snapshot', frame: 1, programCount: 2, programDelta: 2 })
+  })
+
+  it('records a program-first-use event per newly observed WebGLProgram, and never re-records the same one', () => {
+    const programs: unknown[] = [fakeProgram({ id: 1, cacheKey: 'terrain-key', type: 'MeshStandardMaterial' })]
+    const census = createProgramCensus(fakeRenderer(programs), new Scene(), true)
+    census.tickFrame()
+    programs.push(fakeProgram({ id: 2, cacheKey: 'water-key', type: 'ShaderMaterial', name: 'water' }))
+    census.tickFrame()
+    census.tickFrame() // no new programs — must not re-record ids 1 or 2
+
+    const dump = census.dumpProgramFirstUse()
+    expect(dump).toHaveLength(2)
+    expect(dump[0]).toMatchObject({ programId: 1, cacheKey: 'terrain-key', materialType: 'MeshStandardMaterial', name: '', frame: 1 })
+    expect(dump[1]).toMatchObject({ programId: 2, cacheKey: 'water-key', materialType: 'ShaderMaterial', name: 'water', frame: 2 })
+  })
+
+  it('summarize groups program-first-use events into families by materialType, sorted by count', () => {
+    const programs: unknown[] = [
+      fakeProgram({ id: 1, cacheKey: 'a', type: 'MeshStandardMaterial' }),
+      fakeProgram({ id: 2, cacheKey: 'b', type: 'MeshStandardMaterial' }),
+      fakeProgram({ id: 3, cacheKey: 'c', type: 'ShaderMaterial' }),
+    ]
+    const census = createProgramCensus(fakeRenderer(programs), new Scene(), true)
+    census.tickFrame()
+    const summary = census.summarize()
+    expect(summary.firstUseEvents).toBe(3)
+    expect(summary.programFamilies).toEqual([
+      { key: 'MeshStandardMaterial', count: 2, firstFrame: 1, sampleCacheKey: 'a', sampleName: '' },
+      { key: 'ShaderMaterial', count: 1, firstFrame: 1, sampleCacheKey: 'c', sampleName: '' },
+    ])
   })
 
   it('emits a material-snapshot every 60th frame, bucketed by scene classification', () => {

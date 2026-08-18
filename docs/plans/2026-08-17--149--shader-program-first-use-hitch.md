@@ -1,7 +1,7 @@
 # Plan: Shader/Program First-Use Hitch
 
 **Created:** 2026-08-17
-**Status:** `in progress` 🔄 — Phase 0 closed (instrumentation + real-GPU census: [review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md)). Phase 1 (loading-time prewarm) not started; dump program `cacheKey`s before implementing.
+**Status:** `in progress` 🔄 — Phase 0 closed (instrumentation + real-GPU census: [review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md)). `src/perf/programCensus.ts` now also records a `program-first-use` event (id/index/`name`/`cacheKey`/`materialType`/`usedTimes`/first-use frame+stage) per new `WebGLProgram`, exposed via `window.__seedvaleProgramCensus.dumpProgramFirstUse()` and `summarize().programFamilies` — real-GPU cacheKey/name dump not yet run. Phase 1 (loading-time prewarm) not started; run that dump on real GPU (Cursor) before implementing.
 **Priority:** high · **Effort:** M/L
 **Depends on:** none
 **domain:** `world-terrain`
