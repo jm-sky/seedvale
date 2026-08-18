@@ -65,6 +65,8 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-17--142--social-places-and-social-behaviour.md` | Social Places v1: istniejący settlement campfire jako `PlaceType: 'social'`, NPC↔NPC `conversation` (2–5 min czasu świata) przez istniejący Schedule/FSM (activity `social`), partner tylko spośród NPC przy tym samym ognisku, symetryczna zmiana relacji NPC↔NPC; bez nowego social managera/schedulera; wstępny, do implementacji (uwaga: ID `142` koliduje z `2026-08-17--142--mobile-combat-target-acquisition.md`) | 🟡 | M | ~~020~~ |
 | `2026-08-17--144--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried `NpcAgent.inventory` (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu), decyzja z relacji + openness/traits + istniejący `getPlayerStanding()`/`reactionChance`, nowa opcja w dialogu NPC v2 (`request_food`/`request_water`); wstępny, do implementacji | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ |
 | `2026-08-17--144--water-reflection-gpu-optimization.md` | Redukcja kosztu współdzielonego 128² water mirror (uwaga: ID `144` koliduje z `2026-08-17--144--npc-player-food-drink-help.md`). Stage S zaimplementowany (`REFLECTION_DISTANT_LAYER`, outer-ring cull). Real-GPU [review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md): `current` mirror draws 206→197, WATER/FPS płaskie; `water` mirror 30→25, scenariusz lekki. Visual cutoff nie sprawdzony; M/L nieruszone. Techniczna weryfikacja zielona (tsc/test 1000/build) — [implementation notes](./2026-08-17--144--water-reflection-gpu-optimization-implementation-notes.md) | 🟡 | M | ~~143~~ |
+| `2026-08-18--149--mobile-playtest-fixes.md` | NCP interaction cycling, quests, health and UI | 🟡 | M | - |
+
 
 ---
 
