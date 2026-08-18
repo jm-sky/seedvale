@@ -298,6 +298,18 @@ describe('mobile target acquisition & auto-facing (plan 142)', () => {
     expect(pickCombatTarget([OFF_AXIS], 0, 0, 0, RANGE, COMBAT_TARGET_CONE_DOT.touch, [])).toBe('off-axis')
   })
 
+  it('acquires a ~75° off-axis target on touch that the old 0.3 cone rejected', () => {
+    const wideOffAxis: MeleeHitCandidate = {
+      id: 'wide-off-axis',
+      x: 3 * Math.sin((75 * Math.PI) / 180),
+      z: -3 * Math.cos((75 * Math.PI) / 180),
+      alive: true,
+    }
+    expect(pickCombatTarget([wideOffAxis], 0, 0, 0, RANGE, COMBAT_TARGET_CONE_DOT.pointer, [])).toBeNull()
+    expect(pickCombatTarget([wideOffAxis], 0, 0, 0, RANGE, 0.3, [])).toBeNull()
+    expect(pickCombatTarget([wideOffAxis], 0, 0, 0, RANGE, COMBAT_TARGET_CONE_DOT.touch, [])).toBe('wide-off-axis')
+  })
+
   it('still rejects targets outside any sensible attack direction on touch', () => {
     const candidates: MeleeHitCandidate[] = [
       { id: 'perpendicular', x: 3, z: 0, alive: true },

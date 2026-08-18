@@ -59,15 +59,15 @@ export type CombatAimMode = 'pointer' | 'touch'
 
 /** Target-acquisition cone per aim mode (plan 124 §1, plan 142 §1).
  *  `pointer` keeps the original 90° full cone (`cos(45°)`), already wider than
- *  `INTERACT_MIN_DOT`'s ~60° cone. `touch` widens it to ~145° full
- *  (`cos(~72.5°)`) so a tap doesn't require lining the camera up precisely —
- *  still clearly directional, so an animal off to the side or behind the
+ *  `INTERACT_MIN_DOT`'s ~60° cone. `touch` widens it to ~168° full
+ *  (`cos(~84°)`) so a tap doesn't require lining the body up with the joystick
+ *  — still clearly directional, so an animal squarely to the side or behind the
  *  player is never acquired. Targets acquired beyond a weapon's own `arcDot`
  *  are made hittable by touch auto-facing (plan 142 §2), not by widening the
  *  hit arc. */
 export const COMBAT_TARGET_CONE_DOT: Record<CombatAimMode, number> = {
   pointer: Math.SQRT1_2,
-  touch: 0.3,
+  touch: 0.1,
 }
 
 /** Plan 106 §4 — `[E]` always drinks directly (well or lake); `[R]` fills a
