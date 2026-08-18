@@ -56,7 +56,7 @@ import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
-import { getMonitor, withCategory } from '../perf'
+import { getMonitor, getProgramCensus, withCategory, withProgramCensusStage } from '../perf'
 import {
   createPlayerMelee,
   type MeleeHitCandidate,
@@ -360,6 +360,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const tick = (): void => {
     const frameStart = performance.now()
     const monitor = getMonitor()
+    const programCensus = getProgramCensus()
     timer.update()
     const rawDt = timer.getDelta()
     const dt = Math.min(rawDt, 0.05)
@@ -1082,7 +1083,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     renderer.info.reset()
     postProcessing.applyFrameBudget(lastRenderMs)
     withCategory(monitor, 'WATER', () => {
-      bundle.ocean.renderMirror(renderer, scene, camera)
+      withProgramCensusStage(programCensus, 'mirror-render', () => {
+        bundle.ocean.renderMirror(renderer, scene, camera)
+      })
     })
     const mirrorDrawCalls = renderer.info.render.calls
     const mirrorTriangles = renderer.info.render.triangles
@@ -1102,7 +1105,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     recordShadowBudgetFrame(shadowBudgetState, shadowPlayerX, shadowPlayerZ, shadowWanted)
     postProcessing.updateGodRays(camera, sky.sunPosition, cachedSky.elev)
     withCategory(monitor, 'RENDER', () => {
-      postProcessing.render()
+      withProgramCensusStage(programCensus, 'postprocess-render', () => {
+        postProcessing.render()
+      })
       labelRenderer.render(scene, camera)
     })
     const renderEnd = performance.now()
@@ -1119,6 +1124,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       mirrorDrawCalls,
       mirrorTriangles,
     })
+    programCensus.tickFrame()
     setFrameTiming(simulateMs, renderMs)
   }
 

@@ -9,6 +9,7 @@ import { disposeObject3D } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
 import { getMonitor } from '../perf/active'
+import { getProgramCensus } from '../perf/programCensus'
 import {
   BUSH_SPECS,
   CACTUS_SPECS,
@@ -1063,6 +1064,7 @@ export function createChunkManager(
 
     rec.state = 'ready'
     syncGrassForRecord(rec, lastPlayerChunk)
+    getProgramCensus().recordChunkAttach('chunk-mesh-attach', rec.key, [rec.mesh])
   }
 
   /** Vegetation / items / environment / colliders. Caller guarantees the
@@ -1219,6 +1221,11 @@ export function createChunkManager(
     }
     syncInstancedLodForRecord(rec, lastPlayerChunk)
     getMonitor().recordHitch('PROPS', performance.now() - envT0, 'chunk environment')
+    getProgramCensus().recordChunkAttach('chunk-content-attach', rec.key, [
+      rec.vegetationExtras,
+      rec.items,
+      rec.environment,
+    ])
     rebuildColliders(rec)
   }
 

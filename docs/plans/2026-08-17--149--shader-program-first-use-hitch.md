@@ -1,7 +1,7 @@
 # Plan: Shader/Program First-Use Hitch
 
 **Created:** 2026-08-17
-**Status:** `planned` 📋
+**Status:** `in progress` 🔄 — Phase 0 (instrumentation/proof) done, see [implementation notes](./2026-08-17--149--shader-program-first-use-hitch-implementation-notes.md). Phase 1/2 not started.
 **Priority:** high · **Effort:** M/L
 **Depends on:** none
 **domain:** `world-terrain`

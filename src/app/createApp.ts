@@ -47,8 +47,11 @@ import {
   benchmarkScenarioFromUrl,
   createBenchmarkRunner,
   createPerfMonitor,
+  createProgramCensus,
   isPerfUrlEnabled,
+  isProgramCensusUrlEnabled,
   setActiveMonitor,
+  setActiveProgramCensus,
 } from '../perf'
 import { clearSave, writeSave } from '../persistence/saveDb'
 import { PlayerController } from '../player/PlayerController'
@@ -236,6 +239,16 @@ export async function createApp(
   const vueUi = mountVueUi(container)
 
   const scene = createScene()
+  // Plan 149 Phase 0 — dev/benchmark-only WebGLProgram/material census. `?benchmark=stream`
+  // enables it automatically; `?programCensus=1` enables it standalone. No-op renderer/scene
+  // change either way (`src/perf/programCensus.ts`).
+  const programCensus = createProgramCensus(
+    renderer,
+    scene,
+    benchmarkScenarioFromUrl() === 'stream' || isProgramCensusUrlEnabled(),
+  )
+  setActiveProgramCensus(programCensus)
+  if (typeof window !== 'undefined') window.__seedvaleProgramCensus = programCensus
   const camera = createCamera(container.clientWidth / container.clientHeight)
   camera.layers.enable(WATER_RENDER_LAYER)
   camera.layers.enable(AGENT_RENDER_LAYER)
@@ -1943,6 +1956,8 @@ export async function createApp(
     worldAudio.dispose()
     disposeWorldBundle(bundle)
     setActiveMonitor(null)
+    setActiveProgramCensus(null)
+    if (typeof window !== 'undefined') window.__seedvaleProgramCensus = undefined
     playerTorch.dispose()
     player.dispose()
     disposeChunkWorkerPool()
