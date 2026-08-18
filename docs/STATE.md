@@ -83,7 +83,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 ### Persistence
 
 - IndexedDB in `src/persistence/`. Canonical save schema is **v16** (`saveData.ts`): world config (including optional `settlements.homeSize`), player pose, time of day, elapsed days, quests/EXP/relations, inventory, held tool, collected IDs, dropped items, placed fires, placed tents, player torch, world flags, sparse tree overrides, map discovery cells, settlement economies, player hunger/thirst/vigor (stamina stays transient), owned land plots (v14), skill XP (v15 — only `xp`; `value` is re-derived and the runtime `active` flag is never restored, and a pre-v15 save comes back with Sneak at the legacy 0.5 and Survival at zero), placed animal traps (v16 — id/kind/position/state/durability/`skillAtActivation`/`weatherCheckedAtDay`, nothing derivable from `TRAP_DEFS`; a v15 save migrates to no traps and a fresh `traps` skill). Weather/season (plan 040) deliberately add **no** save field — they're pure functions of `(seed, elapsedDays)`, both already persisted.
-- localStorage is split by domain (`src/config/persistConfig.ts`): graphics / player / world; legacy `seedvale:worldConfig:v1` migrates on first load.
+- localStorage is split by domain (`src/config/persistConfig.ts`): graphics / player / world; legacy `seedvale:worldConfig:v1` migrates on first load. Audio mix (`seedvale:audio:v1`, `src/audio/audioSettings.ts`) is a separate device preference, not a `WorldConfig` field.
 - NPC runtime state is **not** a full simulation snapshot. Tree lifecycle uses sparse overrides + lazy growth from `elapsedDays` (`src/world/treeLifecycle.ts`).
 - `QuestManager`'s `questId → animalId` binding is never persisted (plan 110) — on restore, an `active` `kill_target_animal`/`find_animal` quest re-derives its binding: livestock kinds (deterministic `animalId` per settlement/house seed, `settlement/livestock.ts`'s `LIVESTOCK_KINDS`) rebind via the normal resolver; wild-fauna kinds (unseeded per-session `animalId` counter, dead/alive state not persisted at all) become `invalidated` instead of silently retargeting a different individual. Fauna/livestock HP/death/corpse state is not persisted — killed animals resurrect on reload; this is why the wild-fauna case can't safely rebind.
 
@@ -94,7 +94,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 - Touch HUD chrome shares `HudRightColumn` (pause + skills + minimap); Quick Actions is a fixed overlay (`Teleport` to `body`) with wrap/grid rows, not a slot in the column. The E/Zap/R cluster stays in `TouchChrome` so it paints above flavor/NPC dialogue. Desktop: skills button stacked above the QA FAB; `U` toggles Umiejętności.
 - Minimap is heading-up with a rim `N` marker; `M` opens the north-up world map. Discovery is permanent (radius 48, `SaveData.map`, schema v11) and does not load chunks.
 - Home-trader `MerchantScreen` is two columns (stock | player bag) with category (`Jedzenie` = `ItemCategory food`) / price / sort filters; buy with shells (Kup ghost, disabled when unaffordable), sell at half `tradeValue`, barter still covers list price. `coin` stays out of the merchant. Toasts sit at `z-20` above the modal.
-- lil-gui is hidden by default; Ustawienia → Panel debug, `?debug=1` or `?gui=1` reveal it (`?gui=0` forces hide). Pause → Świat exposes the player-facing subset of the same `WorldConfig`.
+- lil-gui is hidden by default; Ustawienia → Panel debug, `?debug=1` or `?gui=1` reveal it (`?gui=0` forces hide). Pause → Świat exposes the player-facing subset of the same `WorldConfig`. Pause → Ustawienia → Dźwięk has master / ambient / SFX sliders (`createWorldAudio` GainNode buses; `seedvale:audio:v1` localStorage, not SaveData — plan 154).
 - Vue Fazy 0–4 are implemented; desktop + touch browser verification is still open (plan 046). Plan 105 UI/UX audit is done ([review 007](./reviews/2026-08-14--007--ui-ux.md)); H1–H3 + trade/skills HUD are implemented, pending browser check.
 
 ## Important shared concepts
@@ -169,6 +169,8 @@ src/world/animalTraps.ts
 src/world/weather.ts
 src/world/treeLifecycle.ts
 src/persistence/saveData.ts
+src/audio/createWorldAudio.ts
+src/audio/audioSettings.ts
 src/ui/
 src/ui-vue/
 ```

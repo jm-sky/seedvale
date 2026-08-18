@@ -88,7 +88,7 @@ import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isR
 import { applyDigAt, applyLevelAt } from '../terrain/digAction'
 import { sampleFootstepSurface } from '../terrain/footstepSurface'
 import { mountVueUi } from '../ui-vue/mount'
-import { configureNpcVoiceSounds, configureUiSounds } from '../ui-vue/store'
+import { configureAudioVolumes, configureNpcVoiceSounds, configureUiSounds } from '../ui-vue/store'
 import { createBusyOverlay } from '../ui/createBusyOverlay'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
@@ -256,6 +256,9 @@ export async function createApp(
   camera.layers.enable(REFLECTION_SKIPPED_LAYER)
   camera.layers.enable(REFLECTION_DISTANT_LAYER)
   const worldAudio = createWorldAudio(camera)
+  configureAudioVolumes(worldAudio.getVolumes(), (volumes) => {
+    worldAudio.setVolumes(volumes)
+  })
   applyFootstepPackFromUrl()
 
   const postProcessing = createPostProcessing(
@@ -1970,6 +1973,7 @@ export async function createApp(
     weatherParticles.dispose()
     configureUiSounds(null)
     configureNpcVoiceSounds(null)
+    configureAudioVolumes(worldAudio.getVolumes(), null)
     worldAudio.dispose()
     disposeWorldBundle(bundle)
     setActiveMonitor(null)

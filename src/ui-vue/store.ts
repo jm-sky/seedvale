@@ -13,6 +13,13 @@ import type { QuickActionsTraps, RestOutcome, RestVariant } from '../ui/createQu
 import type { ToastVariant } from '../ui/createToast'
 import type { TrapKind } from '../world/animalTraps'
 import { pickNpcConfirmationSound, pickNpcFarewellSound, pickNpcGreetingSound } from '../ai/NpcAgent'
+import {
+  type AudioVolumeKey,
+  type AudioVolumes,
+  DEFAULT_AUDIO_VOLUMES,
+  normalizeAudioVolumes,
+  saveAudioVolumes,
+} from '../audio/audioSettings'
 import { playUiClick, playUiOpen } from '../audio/uiSounds'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { type DayNightState, formatClock, phaseName } from '../world/dayNight'
@@ -161,6 +168,7 @@ type HudState = {
   /** Ratios (0-1) for the four player-needs bars (plan 106). */
   playerNeeds: { stamina: number, vigor: number, hunger: number, thirst: number }
 }
+type AudioSettingsState = { volumes: AudioVolumes }
 type MinimapState = { collapsed: boolean }
 export type ToastItem = { id: number; text: string; variant: ToastVariant; fading: boolean }
 type ToastState = { items: ToastItem[] }
@@ -265,6 +273,7 @@ export const ui = reactive({
     hint: isTouchDevice() ? HUD_HINT_TOUCH : HUD_HINT_DESKTOP,
     playerNeeds: { stamina: 1, vigor: 1, hunger: 1, thirst: 1 },
   } as HudState,
+  audio: { volumes: { ...DEFAULT_AUDIO_VOLUMES } } as AudioSettingsState,
   minimap: { collapsed: false } as MinimapState,
   toast: { items: [] as ToastItem[] } as ToastState,
   touch: {
@@ -289,6 +298,28 @@ export function openPauseMenu(): void { if (ui.pauseMenu.open) return; ui.pauseM
 export function closePauseMenu(): void { if (!ui.pauseMenu.open) return; ui.pauseMenu.open = false; ui.pauseMenu.onResume?.() }
 export function isPauseMenuOpen(): boolean { return ui.pauseMenu.open }
 export function configurePauseMenu(seed: number, playerName: string, handlers: PauseHandlers): void { ui.pauseMenu.seed = seed; ui.pauseMenu.playerName = playerName; Object.assign(ui.pauseMenu, handlers) }
+
+let audioVolumesOnChange: ((volumes: AudioVolumes) => void) | null = null
+
+export function configureAudioVolumes(
+  volumes: AudioVolumes,
+  onChange: ((volumes: AudioVolumes) => void) | null,
+): void {
+  const next = normalizeAudioVolumes(volumes)
+  ui.audio.volumes.master = next.master
+  ui.audio.volumes.ambient = next.ambient
+  ui.audio.volumes.sfx = next.sfx
+  audioVolumesOnChange = onChange
+}
+
+export function setAudioVolume(key: AudioVolumeKey, value: number): void {
+  const next = normalizeAudioVolumes({ ...ui.audio.volumes, [key]: value })
+  ui.audio.volumes.master = next.master
+  ui.audio.volumes.ambient = next.ambient
+  ui.audio.volumes.sfx = next.sfx
+  saveAudioVolumes(next)
+  audioVolumesOnChange?.(next)
+}
 export function setPauseSeed(seed: number): void { ui.pauseMenu.seed = seed }
 export function setPausePlayerName(name: string): void { ui.pauseMenu.playerName = name }
 export function setPauseSaveStatus(status: string): void { ui.pauseMenu.saveStatus = status }

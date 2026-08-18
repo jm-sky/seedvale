@@ -1,4 +1,10 @@
 import { Audio, AudioListener, AudioLoader, type Camera, Vector3 } from 'three'
+import { type AudioVolumes, loadAudioVolumes } from './audioSettings'
+
+export type { AudioVolumes } from './audioSettings'
+
+/** Mixer bus: environment loops vs one-shot SFX. Optional override on play APIs. */
+export type AudioBusId = 'ambient' | 'sfx'
 
 export type AudioLoopHandle = {
   /** Ramps toward this gain (0-1) on each update() call instead of snapping —
@@ -11,17 +17,26 @@ export type AudioLoopHandle = {
 export type WorldSoundPosition = { x: number; y?: number; z: number }
 
 /** Fire-and-forget clip at a world position — volume falls off with distance. */
-export type PlayAt = (url: string, position: WorldSoundPosition, volume?: number) => void
+export type PlayAt = (
+  url: string,
+  position: WorldSoundPosition,
+  volume?: number,
+  bus?: AudioBusId,
+) => void
 
 export type WorldAudio = {
   listener: AudioListener
   /** Loads a clip, loops it starting at zero gain, and returns a handle to fade
-   *  it in/out via setTargetGain() + update(). */
-  createLoop: (url: string) => AudioLoopHandle
-  /** Fire-and-forget clip at a fixed volume (UI / inventory / quest thank-you). */
-  playOnce: (url: string, volume?: number) => void
+   *  it in/out via setTargetGain() + update(). Defaults to the ambient bus. */
+  createLoop: (url: string, bus?: AudioBusId) => AudioLoopHandle
+  /** Fire-and-forget clip at a fixed volume (UI / inventory / quest thank-you).
+   *  Defaults to the sfx bus. */
+  playOnce: (url: string, volume?: number, bus?: AudioBusId) => void
   /** Fire-and-forget clip with distance gain from listener → `position`. */
   playAt: PlayAt
+  /** Player mix (master / ambient / sfx). Live — buses ramp even while paused. */
+  setVolumes: (volumes: AudioVolumes) => void
+  getVolumes: () => AudioVolumes
   /** Advances all active loop gains toward their targets — call once per frame. */
   update: (dt: number) => void
   dispose: () => void
@@ -38,6 +53,8 @@ export const DISTANCE_GAIN_EPS = 0.02
 /** Gain change per second when a loop's target moves — fast enough to feel
  *  responsive, slow enough to avoid audible clicks/pops on crossfade. */
 const GAIN_LERP_SPEED = 1.5
+/** Same time-constant as Three.js `AudioListener.setMasterVolume`. */
+const BUS_RAMP = 0.01
 
 const audioLoader = new AudioLoader()
 const bufferCache = new Map<string, Promise<AudioBuffer>>()
@@ -74,6 +91,38 @@ export function createWorldAudio(camera: Camera): WorldAudio {
   camera.add(listener)
   const listenerPos = new Vector3()
 
+  const ambientBus = listener.context.createGain()
+  const sfxBus = listener.context.createGain()
+  ambientBus.connect(listener.getInput())
+  sfxBus.connect(listener.getInput())
+
+  const volumes: AudioVolumes = loadAudioVolumes()
+
+  function busNode(bus: AudioBusId): GainNode {
+    return bus === 'ambient' ? ambientBus : sfxBus
+  }
+
+  function attachToBus(sound: Audio, bus: AudioBusId): void {
+    sound.gain.disconnect()
+    sound.gain.connect(busNode(bus))
+  }
+
+  function setVolumes(next: AudioVolumes): void {
+    volumes.master = clamp01(next.master)
+    volumes.ambient = clamp01(next.ambient)
+    volumes.sfx = clamp01(next.sfx)
+    listener.setMasterVolume(volumes.master)
+    const t = listener.context.currentTime
+    ambientBus.gain.setTargetAtTime(volumes.ambient, t, BUS_RAMP)
+    sfxBus.gain.setTargetAtTime(volumes.sfx, t, BUS_RAMP)
+  }
+
+  function getVolumes(): AudioVolumes {
+    return { master: volumes.master, ambient: volumes.ambient, sfx: volumes.sfx }
+  }
+
+  setVolumes(volumes)
+
   // Browsers start the AudioContext suspended until a user gesture; the game's
   // own pointer-lock click is the first guaranteed one, so piggyback on it
   // instead of adding a dedicated "click to enable audio" prompt.
@@ -85,8 +134,9 @@ export function createWorldAudio(camera: Camera): WorldAudio {
 
   const activeLoops = new Set<{ sound: Audio; target: number }>()
 
-  function createLoop(url: string): AudioLoopHandle {
+  function createLoop(url: string, bus: AudioBusId = 'ambient'): AudioLoopHandle {
     const sound = new Audio(listener)
+    attachToBus(sound, bus)
     const entry = { sound, target: 0 }
     activeLoops.add(entry)
 
@@ -114,8 +164,9 @@ export function createWorldAudio(camera: Camera): WorldAudio {
     }
   }
 
-  function playOnce(url: string, volume = 1): void {
+  function playOnce(url: string, volume = 1, bus: AudioBusId = 'sfx'): void {
     const sound = new Audio(listener)
+    attachToBus(sound, bus)
     loadBuffer(url)
       .then((buffer) => {
         sound.setBuffer(buffer)
@@ -129,7 +180,12 @@ export function createWorldAudio(camera: Camera): WorldAudio {
       })
   }
 
-  function playAt(url: string, position: WorldSoundPosition, volume = 1): void {
+  function playAt(
+    url: string,
+    position: WorldSoundPosition,
+    volume = 1,
+    bus: AudioBusId = 'sfx',
+  ): void {
     listener.getWorldPosition(listenerPos)
     const y = position.y ?? listenerPos.y
     const distance = Math.hypot(
@@ -139,7 +195,7 @@ export function createWorldAudio(camera: Camera): WorldAudio {
     )
     const gain = clamp01(volume) * distanceGain(distance)
     if (gain < DISTANCE_GAIN_EPS) return
-    playOnce(url, gain)
+    playOnce(url, gain, bus)
   }
 
   function update(dt: number): void {
@@ -160,8 +216,10 @@ export function createWorldAudio(camera: Camera): WorldAudio {
       entry.sound.disconnect()
     }
     activeLoops.clear()
+    ambientBus.disconnect()
+    sfxBus.disconnect()
     camera.remove(listener)
   }
 
-  return { listener, createLoop, playOnce, playAt, update, dispose }
+  return { listener, createLoop, playOnce, playAt, setVolumes, getVolumes, update, dispose }
 }

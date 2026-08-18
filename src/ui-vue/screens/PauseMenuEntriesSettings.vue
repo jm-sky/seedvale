@@ -2,10 +2,12 @@
 import { ref, watch } from 'vue'
 import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
+import type { AudioVolumeKey } from '../../audio/audioSettings'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
-import { closePauseMenu, isPauseMenuOpen, openNotes, openWorldConfigScreen, setPausePlayerName, toggleHudFpsVisible, ui } from '../store'
+import { closePauseMenu, isPauseMenuOpen, openNotes, openWorldConfigScreen, setAudioVolume, setPausePlayerName, toggleHudFpsVisible, ui } from '../store'
 
 const name = ref(ui.pauseMenu.playerName)
+const volumes = ui.audio.volumes
 
 const emit = defineEmits<{
   (e: 'close-settings'): void
@@ -22,6 +24,12 @@ function openVillagers(): void { closePauseMenu(); ui.pauseMenu.onVillagers?.() 
 // state, just the store's own open flag.
 function openWorldConfig(): void { closePauseMenu(); openWorldConfigScreen() }
 function openNotesScreen(): void { closePauseMenu(); openNotes() }
+function onVolumeInput(key: AudioVolumeKey, event: Event): void {
+  setAudioVolume(key, Number((event.target as HTMLInputElement).value))
+}
+function volumePercent(key: AudioVolumeKey): number {
+  return Math.round(volumes[key] * 100)
+}
 </script>
 
 <template>
@@ -76,6 +84,53 @@ function openNotesScreen(): void { closePauseMenu(); openNotes() }
     >
       Panel debug
     </UiButton>
+    <div class="mb-5 text-left">
+      <h2 class="mb-2 text-xs font-semibold uppercase tracking-widest opacity-60">
+        Dźwięk
+      </h2>
+      <label
+        class="mb-1 block text-xs opacity-75"
+        for="seedvale-volume-master"
+      >Wszystko ({{ volumePercent('master') }}%)</label>
+      <input
+        id="seedvale-volume-master"
+        :value="volumes.master"
+        class="mb-3 w-full"
+        max="1"
+        min="0"
+        step="0.01"
+        type="range"
+        @input="onVolumeInput('master', $event)"
+      >
+      <label
+        class="mb-1 block text-xs opacity-75"
+        for="seedvale-volume-ambient"
+      >Otoczenie ({{ volumePercent('ambient') }}%)</label>
+      <input
+        id="seedvale-volume-ambient"
+        :value="volumes.ambient"
+        class="mb-3 w-full"
+        max="1"
+        min="0"
+        step="0.01"
+        type="range"
+        @input="onVolumeInput('ambient', $event)"
+      >
+      <label
+        class="mb-1 block text-xs opacity-75"
+        for="seedvale-volume-sfx"
+      >Efekty ({{ volumePercent('sfx') }}%)</label>
+      <input
+        id="seedvale-volume-sfx"
+        :value="volumes.sfx"
+        class="mb-2 w-full"
+        max="1"
+        min="0"
+        step="0.01"
+        type="range"
+        @input="onVolumeInput('sfx', $event)"
+      >
+    </div>
     <UiButton
       class="mb-2 w-full"
       @click="toggleHudFpsVisible"

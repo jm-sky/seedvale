@@ -105,6 +105,7 @@ Completed plans **in this folder**. After the 2026-08-14 archive freeze new `don
 
 | File | Summary |
 |------|---------|
+| `2026-08-18--154--audio-volume-controls.md` | Suwaki głośności (Wszystko / Otoczenie / Efekty) w Pauza → Ustawienia. |
 | `2026-08-17--143--cross-chunk-vegetation-batching.md` | Region 3×3 vegetation batching. |
 | `2026-08-17--144--water-reflection-gpu-optimization.md` | Mirror outer-ring cull (Stage S). |
 | `2026-08-17--148--grass-gpu-performance.md` | Grass geometry LOD (S). |
@@ -155,7 +156,7 @@ Implementation complete before the 2026-08-14 freeze; files are in [archive/](./
 
 **Fizyka** — `097` opadanie przedmiotów, kolizje gracz/NPC/fauna, skok (3 fazy zaimplementowane)
 
-**UI / audio / rest** — `059` SFX pick/drop · `075` time-skip catch-up NPC · `078` `playAt` falloff · `084` obóz + town rest · `088` asset alignment browser · `089` minimapa + mapa świata / FoW · `090` miecz/kupiec/namiot/jaskinie/kilof · `102` frame-yield budowy osady (issue 027)
+**UI / audio / rest** — `059` SFX pick/drop · `075` time-skip catch-up NPC · `078` `playAt` falloff · `084` obóz + town rest · `088` asset alignment browser · `089` minimapa + mapa świata / FoW · `090` miecz/kupiec/namiot/jaskinie/kilof · `102` frame-yield budowy osady (issue 027) · `154` suwaki głośności (master / otoczenie / efekty)
 
 **NPC** — `060` wykonywalny grafik (`eat`/`home`/`wake`) + overlay traits (`night_owl` / `fast_worker` / `sociable`) · `092` stamina (burst) + dzienny wigor / zasypianie w pracy
 
