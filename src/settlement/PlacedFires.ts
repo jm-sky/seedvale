@@ -3,6 +3,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { HeightSampler } from '../player/PlayerController'
 import { disposeObject3D } from '../assets/loadGltf'
 import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
+import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { createLitCampfireVisual, placeOnGround, preloadCampfireTemplates } from './props'
 import { createVillageFire, type VillageFire } from './VillageFire'
 
@@ -94,6 +95,10 @@ export function createPlacedFires(
   sampleHeight: HeightSampler,
   initial: readonly PlacedFire[] = [],
   playAt?: PlayAt,
+  /** Plan 157 — registers each fire's flame light so production
+   *  `NUM_POINT_LIGHTS` stabilization (`src/world/pointLightBudget.ts`) sees
+   *  it for as long as this fire exists. Defaults to a no-op. */
+  pointLightBudget: PointLightBudget = createNullPointLightBudget(),
 ): PlacedFires {
   const fires: PlacedFireEntry[] = []
   const meshes = new Map<string, Object3D>()
@@ -105,6 +110,7 @@ export function createPlacedFires(
     placeOnGround(group, pf.x, pf.z, sampleHeight)
     scene.add(group)
     meshes.set(pf.id, group)
+    pointLightBudget.registerSubtree(group)
     const fuelPerBranch = pf.kind === 'simple' ? SIMPLE_FIRE_FUEL_PER_BRANCH : undefined
     fires.push({
       ...pf,
@@ -128,6 +134,7 @@ export function createPlacedFires(
   const despawn = (id: string): void => {
     const mesh = meshes.get(id)
     if (mesh) {
+      pointLightBudget.unregisterSubtree(mesh)
       mesh.removeFromParent()
       disposeObject3D(mesh)
       meshes.delete(id)
@@ -177,6 +184,7 @@ export function createPlacedFires(
     },
     dispose() {
       for (const mesh of meshes.values()) {
+        pointLightBudget.unregisterSubtree(mesh)
         mesh.removeFromParent()
         disposeObject3D(mesh)
       }

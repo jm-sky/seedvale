@@ -123,6 +123,10 @@ export function createHouseLight(
       const clamped = Math.max(0, Math.min(1, t))
       if (lampMat) lampMat.color.lerpColors(HOUSE_LAMP_OFF_COLOR, HOUSE_LAMP_ON_COLOR, clamped)
       light.intensity = clamped * (style === 'wall' ? 0.85 : 1)
+      // Plan 157 §3.2 — Three's WebGLLights only collects visible lights, so
+      // an off lamp that stays `visible = true` still costs a
+      // NUM_POINT_LIGHTS slot / program cache variant for nothing.
+      light.visible = clamped > 0
     },
   }
 }
@@ -180,6 +184,9 @@ export function createVillageTorchLight(
       lit = on
       flameObj.visible = on
       light.intensity = on ? 3.2 : 0
+      // Plan 157 §3.2 — same visibility fix as `createHouseLight` above; an
+      // extinguished torch's light previously stayed `visible = true`.
+      light.visible = on
     },
     update(dt) {
       if (lit) flameUpdate?.(dt)

@@ -197,7 +197,11 @@ export type CampfireFlame = {
 function muteObjectLights(root: THREE.Object3D): void {
   root.traverse((obj) => {
     if ('isLight' in obj && (obj as { isLight?: boolean }).isLight) {
-      ;(obj as THREE.PointLight).intensity = 0
+      const light = obj as THREE.PointLight
+      light.intensity = 0
+      // Plan 157 §3.2 — a permanently-muted embedded light (e.g. one authored
+      // into a GLB flame model) should never count toward NUM_POINT_LIGHTS.
+      light.visible = false
     }
   })
 }

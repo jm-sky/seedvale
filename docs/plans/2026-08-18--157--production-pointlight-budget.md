@@ -1,7 +1,7 @@
 # Plan: Production PointLight Budget
 
 **Created:** 2026-08-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — registry + visibility fix + padded/overflow-cull mechanism implemented and unit-tested (§12); production budget number is still **TBD**, pending the real-GPU Cursor benchmark in §10. Not yet browser/manual verified.
 **Priority:** high
 **Effort:** M
 **Depends on:** none (splits off [149](./2026-08-17--149--shader-program-first-use-hitch.md) Phase 1 B; 149 Phase 1 A is blocked on this plan, see §9)
@@ -33,7 +33,7 @@ This plan defines the **production** replacement: a stable `NUM_POINT_LIGHTS` wi
 |---|---|---|
 | House lamp | `createHouseLight()` — `src/settlement/houseLighting.ts:116` | Built inside `buildSettlementProps()`, returned in `houseLights[]`, held by `Settlement` (`src/settlement/createSettlement.ts`). `setNightIntensity(t)` toggles `light.intensity` only — **`light.visible` stays `true` at all times**, including full daylight (`intensity = 0`). |
 | Village torch | `createVillageTorchLight()` — `src/settlement/houseLighting.ts:172` | Same as above, `villageTorches[]`. `setLit(on)` toggles `light.intensity` between `0` and `3.2` — **`light.visible` never changes**. |
-| Settlement/placed campfire | `createCampfireFlame()` — `src/settlement/campfireProps.ts:272`, used by `createLitCampfireVisual()` | Two owners: (a) settlement's own fixed campfire, built inside `buildSettlementProps()` (MD+ villages), part of the settlement's `group`; (b) player-built fires via `src/settlement/PlacedFires.ts`'s `spawn()`/`despawn()` (freeform, not settlement-owned, saved/loaded independently, **not distance-streamed** — persists as long as the fire exists in the save). `light.intensity` is driven by size/ignite ramp; the light itself has no separate visibility toggle beyond its parent `flame` group's `visible` (only `false` before first ignite). |
+| Settlement/placed campfire | `createCampfireFlame()` — `src/settlement/campfireProps.ts:272`, used by `createLitCampfireVisual()` | Two owners: (a) settlement's own fixed campfire, built inside `buildSettlementProps()` (MD+ villages), part of the settlement's `group`; (b) player-built fires via `src/settlement/PlacedFires.ts`'s `spawn()`/`despawn()` (freeform, not settlement-owned, saved/loaded independently, **not distance-streamed** — persists as long as the fire exists in the save). `light.intensity` is driven by size/ignite ramp. **Correction from an earlier draft:** unlike house lamps/torches below, this light is *not* part of the "always visible" bug — `VillageFire.ts` already toggles the whole `flame.object.visible` true/false on light/extinguish, and that group contains the `PointLight`, so an unlit campfire already costs zero `NUM_POINT_LIGHTS` slots. No fix needed here. |
 | Player torch | `new PointLight(...)` — `src/player/PlayerTorch.ts:221` | Built directly by `PlayerTorch.light()`, torn down by `clearMount()`/`dispose()`. Exactly 0 or 1 at a time. |
 | **Hidden 5th contributor** | `makeFlameVisual()` — `src/player/PlayerTorch.ts:138` → `createCampfireFlame()` → `muteInternalLights()` (`PlayerTorch.ts:126`) | The player's *hand-flame decorative visual* also builds a `createCampfireFlame()`, whose internal `PointLight` is force-set to `intensity = 0` but **not** `visible = false`. While the player is holding a lit branch, this is a second always-visible, always-zero-intensity `PointLight` riding along with the real torch light — currently invisible in the `houseLights`/`villageTorches`/campfire accounting because it's buried inside a decorative helper. |
 
@@ -41,7 +41,7 @@ This plan defines the **production** replacement: a stable `NUM_POINT_LIGHTS` wi
 
 ### 2.2 Lifecycle / ownership already exists — no new manager needed
 
-- **Settlement scope.** `SettlementsManager` (`src/settlement/SettlementsManager.ts`) already streams `Settlement` instances in/out by distance: home settlement always loaded, `EAGER_NEIGHBOR_COUNT = 2` neighbors loaded immediately at startup, further settlements loaded via `recheck()` when within `loadRadius`, unloaded when beyond `unloadRadius` (hysteresis ring). These radii come from `config.terrain.loadRadius`/`unloadRadius` (default chunks `3`/`4`, converted to world units in `src/app/worldBundle.ts`) — **the same radii terrain streaming uses**, not an independent setting.
+- **Settlement scope.** `SettlementsManager` (`src/settlement/SettlementsManager.ts`) already streams `Settlement` instances in/out by distance: home settlement always loaded, `EAGER_NEIGHBOR_COUNT = 2` neighbors loaded immediately at startup, further settlements loaded via `recheck()` when within `loadRadius`, unloaded when beyond `unloadRadius` (hysteresis ring). **Correction from an earlier draft of this plan:** these are their own fixed world-unit constants — `SETTLEMENT_LOAD_RADIUS = 300` / `SETTLEMENT_UNLOAD_RADIUS = 420` in `src/app/worldBundle.ts` — deliberately **independent** of terrain's own `config.terrain.loadRadius`/`unloadRadius` (chunks `3`/`4`, converted to world units by `chunkManager`). Do not conflate the two when reasoning about how many settlements can be loaded at once.
 - **`Settlement.dispose()`** (`src/settlement/createSettlement.ts:680`) already calls `disposeSettlementGroup(group)` + `group.removeFromParent()`, which removes the whole settlement subtree — house lamps, village torches, settlement campfire — from the scene graph in one call. There is currently **no explicit per-light teardown**; removal is implicit via the group leaving the scene.
 - **`PlacedFires`** owns its own `spawn()`/`despawn()` pair per fire, independent of settlement streaming.
 - **`PlayerTorch`** owns its own `light()`/`clearMount()` pair.
@@ -58,56 +58,63 @@ House lamps and village torches are **visible even when off** (§2.1). Review 02
 
 ### 3.1 Registry — explicit register/unregister at existing lifecycle boundaries, no monkeypatching
 
-New module `src/world/pointLightBudget.ts` (sibling to `src/world/createLights.ts`, which already owns the sun/ambient/hemi lights). Exposes:
+**Implemented as designed**, with two refinements that came out of implementation:
+
+New module `src/world/pointLightBudget.ts` (sibling to `src/world/createLights.ts`, which already owns the sun/ambient/hemi lights). `createPointLightBudget(scene, budget: number | null)` exposes:
 
 ```ts
 export type PointLightBudget = {
+  budget: number | null
   /** One-time bounded walk of `root`'s subtree at creation — not the whole
    *  scene, not per frame. Registers every real (non-pad) PointLight found. */
   registerSubtree: (root: Object3D) => void
-  /** Matching one-time walk at teardown, before/instead of relying on
-   *  `removeFromParent()` alone. */
+  /** Matching one-time walk at teardown. */
   unregisterSubtree: (root: Object3D) => void
   /** Direct register/unregister for single lights created outside a subtree
    *  walk (PlayerTorch's own light). */
   register: (light: PointLight) => void
   unregister: (light: PointLight) => void
-  /** Called once per frame from the gameLoop, same hook the diagnostic pad
-   *  already uses (`GameLoopDeps.syncPointLightBudget`). Recounts *visible*
-   *  registered lights (ancestor-visibility check only, no scene traversal),
-   *  pads/culls to budget. */
-  sync: (camera: Camera) => PointLightBudgetSnapshot
+  /** Called once per frame from the gameLoop, via `GameLoopDeps.syncPointLightBudget`.
+   *  Recounts *visible* registered lights (ancestor-visibility check only, no
+   *  scene traversal); pads/culls to `budget` only when `budget !== null`.
+   *  `camera` is optional — omitted only in tests, where overflow-cull
+   *  protection (§3.4) is then simply disabled rather than defaulted open. */
+  sync: (camera?: Camera) => PointLightBudgetSnapshot
+  snapshot: () => PointLightBudgetSnapshot
   dispose: () => void
 }
 ```
 
-- `registerSubtree`/`unregisterSubtree` walk only the object passed in (a settlement's `group`, a placed fire's `group`, a torch's `mount`) — bounded to a few dozen nodes, run once per settlement load/unload or fire spawn/despawn, never per frame and never on `scene` itself.
-- Call sites:
-  - `src/settlement/createSettlement.ts`: `budget.registerSubtree(group)` once after `buildSettlementProps()` returns; `budget.unregisterSubtree(group)` at the top of `dispose()`, before `disposeSettlementGroup(group)`.
-  - `src/settlement/PlacedFires.ts`: `budget.registerSubtree(group)` in `spawn()`; `budget.unregisterSubtree(mesh)` in `despawn()` and in `dispose()`'s loop.
-  - `src/player/PlayerTorch.ts`: `budget.register(pointLight)` in `light()` right after constructing it (and register/unregister the muted hand-flame light too, or — preferably — fix it not to need registration at all, see §3.2); `budget.unregister(...)` in `clearMount()`.
-- The budget instance is created once in `src/app/createApp.ts` (same place the diagnostic pad is wired today) and threaded to the three call sites above as a constructor parameter, the same way `playAt`, `registerColliders`, `onAnimalDeath` etc. are already threaded into `createSettlement`/`SettlementsManager`. This matches the existing pattern of passing cross-cutting hooks into settlement construction rather than inventing a new global.
+Refinements versus the original sketch:
+- **`budget: number | null`, not always-on.** The registry/census side of `sync()` always runs (cheap, needed for §10's measurement regardless of whether a number has been frozen); the pad/dummy-lights/overflow-cull side only runs when a budget is set. Production ships with the registry active and the pad **off by default** — `?pointLightBudget=N` (renamed from the diagnostic `?pinPointLights=N`) turns padding on for QA/Cursor benchmarking. This avoids shipping an unvalidated budget number as the silent default (see §12).
+- **`createNullPointLightBudget()`** — a no-op implementation used as every call site's default parameter value, so adding the parameter to `createSettlement`/`SettlementsManager`/`PlacedFires`/`createPlayerTorch` didn't require touching every existing caller/test.
+- `registerSubtree`/`unregisterSubtree` walk only the object passed in (a settlement's `group`, a placed fire's `group`) — bounded to a few dozen nodes, run once per settlement load/unload or fire spawn/despawn, never per frame and never on `scene` itself.
+- Call sites (all implemented):
+  - `src/settlement/createSettlement.ts`: `pointLightBudget.registerSubtree(group)` right after `scene.add(group)`; `pointLightBudget.unregisterSubtree(group)` at the top of `dispose()`.
+  - `src/settlement/PlacedFires.ts`: `registerSubtree(group)` in `spawn()`; `unregisterSubtree(mesh)` in `despawn()` and in `dispose()`'s loop.
+  - `src/player/PlayerTorch.ts`: `register(pointLight)` in `light()` right after constructing it; `unregister(pointLight)` in `clearMount()`. The hand-flame's muted internal light does **not** need registration at all — §3.2's visibility fix removes it from the count entirely instead.
+- The budget instance is created once in `src/app/createApp.ts` and threaded down through `createWorldBundle`/`rebuildWorldBundle` → `buildSettlementsManager`/`createPlacedFires`, and separately into `createPlayerTorch`, the same way `playAt`/`onAnimalDeath`/`isLandPlotOwned` are already threaded. It lives outside `WorldBundle` (its pad is added directly to `scene`, which survives a rebuild) — only the registrations themselves get rebuilt, since `rebuildWorldBundle` disposes the old `settlementsManager`/`placedFires` (unregistering everything) before creating fresh ones (re-registering everything), with no risk of leaks or double-registration across a rebuild.
 
 ### 3.2 Fix the "always visible" lamp/torch bug first — separate from padding
 
-Change `setNightIntensity`/`setLit` (`houseLighting.ts`) to also toggle `light.visible = intensity > 0` (some small epsilon), not just `.intensity`. This is a correctness fix, not a hack: Three's own `projectObject` already skips invisible objects when collecting lights, so an off lamp costs **nothing** — no `NUM_POINT_LIGHTS` slot, no shader loop iteration — once this lands. Do the same for the `PlayerTorch` hand-flame's muted internal light in `muteInternalLights()` — set `visible = false` there instead of (or in addition to) `intensity = 0`, removing the "hidden 5th contributor" from §2.1 entirely without needing to register it.
+Change `setNightIntensity`/`setLit` (`houseLighting.ts`) to also toggle `light.visible` (`clamped > 0` / `on`), not just `.intensity`. This is a correctness fix, not a hack: Three's own `projectObject` already skips invisible objects when collecting lights, so an off lamp costs **nothing** — no `NUM_POINT_LIGHTS` slot, no shader loop iteration — once this lands. Do the same for the `PlayerTorch` hand-flame's muted internal light in `muteInternalLights()` — set `visible = false` there instead of (or in addition to) `intensity = 0`, removing the "hidden 5th contributor" from §2.1 entirely without needing to register it. As a small defensive extension of the same fix, `campfireProps.ts`'s sibling `muteObjectLights()` (mutes any light embedded in the GLB flame template, if the asset ever has one) gets the same `visible = false` addition — settlement/placed campfires themselves don't need this (see the §2.1 correction above), but a muted embedded light shouldn't cost a slot either if one is ever authored into that asset.
 
-This must land and be measured **before** picking a budget number (§6, §10) — it changes what "real concurrent count" even means.
+This must land and be measured **before** picking a budget number (§6, §10) — it changes what "real concurrent count" even means. **Implemented** — see §12.
 
 ### 3.3 Padding — keep the validated mechanism, drop the traversal
 
-Keep the intensity-0 dummy-light pad technique from `src/perf/pointLightBudget.ts` (`distance = 1`, parked at `(0, -100_000, 0)`, `matrixAutoUpdate = false`) — review 023/024 confirmed it's visually inert and does stabilize `NUM_POINT_LIGHTS`. Construct the pad's dummy group once at world-build time in `createApp.ts`, sized to the chosen budget (§6), added directly to `scene` (not per-settlement).
+**Implemented.** Kept the intensity-0 dummy-light pad technique from `src/perf/pointLightBudget.ts` (`distance = 1`, parked at `(0, -100_000, 0)`, `matrixAutoUpdate = false`) — review 023/024 confirmed it's visually inert and does stabilize `NUM_POINT_LIGHTS`. The pad's dummy group is constructed once inside `createPointLightBudget(scene, budget)` (only when `budget !== null`), added directly to `scene`.
 
-`sync(camera)` each frame:
-1. Walk the registry (bounded to registered lights only — dozens, not thousands) and check `light.visible` + ancestor visibility (reuse `isWorldVisibleUnderScene` from the experimental file, §8) to get `realCount`.
-2. Show `max(0, budget - realCount)` dummies, hide the rest.
-3. If `realCount > budget` (overflow — see §3.4), cull.
+`sync(camera?)` each frame:
+1. Walk the registry (bounded to registered lights only — dozens, not thousands) and check `light.visible` + ancestor visibility (`isWorldVisibleUnderScene`, ported from the deleted experimental file) to get `realCount`.
+2. If `budget !== null`: show `max(0, budget - kept)` dummies, hide the rest.
+3. If `realCount > budget` (overflow — see §3.4), cull first, then pad with whatever's left.
 
 This keeps the review 024 "cheap counter" property (`syncMs` 0.0–0.2 ms) without the `Object3D.prototype` patch: the registry is populated by explicit calls, so `sync()` never needs to discover membership by walking anything bigger than the registry itself.
 
 ### 3.4 Overflow handling — protect near-camera lights, don't blanket-cull by intensity/distance alone
 
-Review 023/024's cull sort (dimmest first, then furthest) is a reasonable base but has no floor: it will cull a lamp two houses from the player just as readily as one across the map, as long as it happens to be dimmer or slightly further at that instant. Add a "protection radius" (tunable, start around the settlement's own `houseSpacing`-scale, e.g. ~30 units — the visible-fidelity-critical range around the camera) that overflow-cull never touches; only lights outside that radius are eligible for cull, still sorted dimmest-then-furthest within that eligible set. If overflow can't be resolved without culling inside the protected radius (all real lights are close to the player), that is a signal the budget itself is too low for that scene, not a case to force through — log it (dev-only) rather than degrade visibly.
+**Implemented.** Review 023/024's cull sort (dimmest first, then furthest) is a reasonable base but has no floor: it will cull a lamp two houses from the player just as readily as one across the map, as long as it happens to be dimmer or slightly further at that instant. Added `POINT_LIGHT_PROTECT_RADIUS = 30` (tunable, order-of-magnitude from `VILLAGE_SIZE_CONFIG`'s `houseSpacing`) that overflow-cull never touches when a camera is supplied; only lights outside that radius are eligible for cull, still sorted dimmest-then-furthest within that eligible set. If overflow can't be resolved without culling inside the protected radius, `sync()` does **not** cull into it — the snapshot's `budgetTooLowForScene` flag is set instead, `NUM_POINT_LIGHTS` is allowed to exceed `budget` for that frame, and a dev-only `console.warn` fires (throttled by nothing yet — see §12 note on a possible follow-up if this turns out to spam). Unit-tested in `pointLightBudget.test.ts` (`protects lights within POINT_LIGHT_PROTECT_RADIUS...` / `does not cull into the protected radius...`).
 
 ### 3.5 What NOT to build
 
@@ -121,16 +128,21 @@ Review 023/024's cull sort (dimmest first, then furthest) is a reasonable base b
 
 ## 4. Files / systems touched
 
-- **New:** `src/world/pointLightBudget.ts` — production registry + pad + sync (adapted from `src/perf/pointLightBudget.ts`, see §8).
-- `src/settlement/createSettlement.ts` — `registerSubtree`/`unregisterSubtree` calls around build/`dispose()`; thread the budget instance through the constructor the same way other cross-cutting hooks arrive.
-- `src/settlement/SettlementsManager.ts` — thread the budget instance parameter down to each `createSettlement()` call (mirrors how `onAnimalDeath`/`mining`/`isLandPlotOwned` are already threaded).
+All implemented:
+
+- **New:** `src/world/pointLightBudget.ts` + `pointLightBudget.test.ts` (16 unit tests) — production registry + pad + sync (adapted from the deleted `src/perf/pointLightBudget.ts`, see §12).
+- `src/settlement/createSettlement.ts` — `pointLightBudget` param (default `createNullPointLightBudget()`); `registerSubtree(group)` after `scene.add(group)`; `unregisterSubtree(group)` at the top of `dispose()`.
+- `src/settlement/SettlementsManager.ts` — `pointLightBudget` param forwarded to both `createSettlement()` call sites (home settlement + `ensureLoaded`'s streamed-in build).
 - `src/settlement/houseLighting.ts` — `setNightIntensity`/`setLit` also toggle `light.visible` (§3.2).
-- `src/settlement/PlacedFires.ts` — `registerSubtree`/`unregisterSubtree` in `spawn()`/`despawn()`/`dispose()`.
-- `src/player/PlayerTorch.ts` — `register`/`unregister` for the real torch light; fix `muteInternalLights()` to also hide (§3.2).
-- `src/app/createApp.ts` — construct the budget service once (replacing the `?pinPointLights` wiring), pass it into `createSettlementsManager`/`createPlacedFires`/`createPlayerTorch`.
-- `src/app/gameLoop.ts` — keep the existing `syncPointLightBudget?: () => void` hook (already added in the current dirty tree), now backed by the production `sync()`.
-- `src/perf/flags.ts` — replace `?pinPointLights` (diagnostic-only naming) with a production debug override flag, e.g. `?pointLightBudget=N`, for QA/support use; keep `DEFAULT_POINT_LIGHT_BUDGET` only if a fallback default independent of the measured value (§6) is still useful.
-- Delete or fold `src/perf/pointLightBudget.ts` / `.test.ts` once the production module supersedes it (§8) — do not ship both.
+- `src/settlement/campfireProps.ts` — `muteObjectLights()` also sets `visible = false` (§3.2 defensive extension).
+- `src/settlement/PlacedFires.ts` — `pointLightBudget` param; `registerSubtree`/`unregisterSubtree` in `spawn()`/`despawn()`/`dispose()`.
+- `src/player/PlayerTorch.ts` — `pointLightBudget` param on `createPlayerTorch`; `register`/`unregister` for the real torch light; `muteInternalLights()` also sets `visible = false` (§3.2).
+- `src/app/worldBundle.ts` — `pointLightBudget` param threaded through `createWorldBundle`/`rebuildWorldBundle`/`buildSettlementsManager` into `createSettlementsManager`/`createPlacedFires`.
+- `src/app/createApp.ts` — constructs `createPointLightBudget(scene, pointLightBudgetFromUrl())` once (replacing the `?pinPointLights` diagnostic wiring), passes it into `createWorldBundle`/`rebuildWorldBundle`/`createPlayerTorch`; wires `syncPointLightBudget` unconditionally; disposes it (after `playerTorch.dispose()`) on app teardown.
+- `src/app/gameLoop.ts` — `syncPointLightBudget?: () => void` hook doc comment updated to point at this plan/module; behavior unchanged (called once per frame, before `renderer.info.reset()`).
+- `src/perf/flags.ts` — `pinPointLights` → `pointLightBudget` URL param (same bare/`true`/`yes`/`0`/`false`/`no`/integer semantics); `DEFAULT_POINT_LIGHT_BUDGET` kept as the bare-flag fallback, explicitly documented as provisional pending §10.
+- `src/perf/index.ts` — dropped the re-export of the deleted `src/perf/pointLightBudget.ts`.
+- **Deleted:** `src/perf/pointLightBudget.ts` / `.test.ts` — superseded by `src/world/pointLightBudget.ts`; the experiment's findings remain in reviews [023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md)/[024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md) and §12 below, not lost.
 
 ---
 

@@ -15,6 +15,7 @@ import { disposeObject3D } from '../assets/loadGltf'
 import { createEconomyRegistry } from '../economy'
 import { type ChunkCoord, worldToChunk } from '../terrain/chunkGrid'
 import { labelOpacityForDistance } from '../ui/labelDistance'
+import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { createSettlement, type Settlement } from './createSettlement'
 import { createHouseholdRegistry } from './household'
 import { createSignpost, placeOnGround } from './props'
@@ -144,6 +145,9 @@ export async function createSettlementsManager(
   /** Persistent land-plot ownership query (plan 129) — forwarded into every
    *  `createSettlement` call the same way as `mining` above. */
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
+  /** Plan 157 — forwarded into every `createSettlement` call, home and
+   *  streamed-in alike, the same way `mining`/`isLandPlotOwned` are above. */
+  pointLightBudget: PointLightBudget = createNullPointLightBudget(),
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -208,6 +212,7 @@ export async function createSettlementsManager(
     getPlayerSocial,
     mining,
     isLandPlotOwned,
+    pointLightBudget,
   )
 
   const entries = new Map<string, Entry>()
@@ -321,6 +326,7 @@ export async function createSettlementsManager(
         getPlayerSocial,
         mining,
         isLandPlotOwned,
+        pointLightBudget,
       ))
       .then((settlement) => {
         const cur = entries.get(def.id)

@@ -6,6 +6,7 @@ import type { Settlement } from '../settlement/createSettlement'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { PlacedTrapRecord } from '../world/animalTraps'
 import type { DayNightState } from '../world/dayNight'
+import type { PointLightBudget } from '../world/pointLightBudget'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
@@ -147,6 +148,7 @@ function buildSettlementsManager(
   onAnimalDeath?: (animalId: string) => void,
   getPlayerSocial?: PlayerSocialLookup,
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
+  pointLightBudget?: PointLightBudget,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -172,6 +174,7 @@ function buildSettlementsManager(
     getPlayerSocial,
     mining,
     isLandPlotOwned,
+    pointLightBudget,
   )
 }
 
@@ -293,6 +296,11 @@ export async function createWorldBundle(
   /** Saved spawn-point lifecycle (plan 125 persistence follow-up), keyed by
    *  `PreySpawner.id` — see `createFauna`'s `initialSpawnerState` doc. */
   initialSpawnerState?: ReadonlyMap<string, SavedSpawnPointState>,
+  /** Plan 157 — production `NUM_POINT_LIGHTS` stabilization, created once in
+   *  `createApp.ts` (tied to `scene`'s lifetime, not the bundle's) and
+   *  threaded down into `createSettlementsManager`/`createPlacedFires` the
+   *  same way `playAt` is above. */
+  pointLightBudget?: PointLightBudget,
 ): Promise<WorldBundle> {
   const waterMirror = createWaterMirror({
     waterLevel: config.terrain.waterLevel,
@@ -311,13 +319,13 @@ export async function createWorldBundle(
   const ocean = buildOcean(scene, config, waterMirror)
   const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
   const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
-  const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt)
+  const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt, pointLightBudget)
   const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
   const placedTraps = createPlacedTraps(
     scene,
@@ -363,6 +371,11 @@ export async function rebuildWorldBundle(
   getPlayerSocial?: PlayerSocialLookup,
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
   onTrapCapture?: PlacedTrapsHooks['onCapture'],
+  /** Plan 157 — same instance passed to `createWorldBundle`; a rebuild
+   *  disposes/recreates `settlementsManager`/`placedFires` but the budget
+   *  itself (and its pad, added directly to `scene`) survives, matching
+   *  `scene`'s own lifetime rather than the bundle's. */
+  pointLightBudget?: PointLightBudget,
 ): Promise<void> {
   // Snapshot before dispose() — a same-session rebuild (config change, not a
   // new seed) recreates `Fauna` from scratch just like every other bundle
@@ -420,13 +433,13 @@ export async function rebuildWorldBundle(
     queryNearest: bundle.resourceDeposits.queryNearest,
     mine: bundle.resourceDeposits.mine,
   }
-  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned)
+  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, carriedSpawnerState)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
   bundle.droppedItems = createDroppedItems(scene, bundle.chunkManager.sampleHeight, carriedDrops)
-  bundle.placedFires = createPlacedFires(scene, bundle.chunkManager.sampleHeight, carriedFires, playAt)
+  bundle.placedFires = createPlacedFires(scene, bundle.chunkManager.sampleHeight, carriedFires, playAt, pointLightBudget)
   bundle.placedTents = createPlacedTents(scene, bundle.chunkManager.sampleHeight, carriedTents)
   bundle.placedTraps = createPlacedTraps(
     scene,

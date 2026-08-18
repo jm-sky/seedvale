@@ -240,6 +240,10 @@ export type GameLoopDeps = {
   /** Reports this frame's simulate/render split (ms) to the debug GUI's
    *  Performance folder (perf review M1). */
   setFrameTiming: (simulateMs: number, renderMs: number) => void
+  /** Plan 157 — recounts real registered `PointLight`s (and, if
+   *  `?pointLightBudget=N` is set, pads/culls to a constant) before any
+   *  render pass. See `src/world/pointLightBudget.ts`. */
+  syncPointLightBudget?: () => void
 }
 
 export type GameLoop = {
@@ -278,7 +282,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
-    onSleepFinished, onInventoryChanged, setFrameTiming,
+    onSleepFinished, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
   renderer.shadowMap.autoUpdate = false
@@ -1134,6 +1138,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       }
     }
 
+    syncPointLightBudget?.()
     const renderStart = performance.now()
     renderer.info.reset()
     postProcessing.applyFrameBudget(lastRenderMs)

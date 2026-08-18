@@ -5,6 +5,7 @@ import { BRANCH_HELD_ATTACH, HELD_ATTACH, mountAttachOnSocket } from '../items/h
 import { createItemMesh } from '../items/items'
 import { createCampfireFlame } from '../settlement/props'
 import { createSparks } from '../shared/getFireParticles'
+import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import {
   BRANCH_HELD_MAX,
   BRANCH_URL,
@@ -126,7 +127,13 @@ function softenMaterials(root: Object3D, opacity: number): void {
 function muteInternalLights(root: Object3D): void {
   root.traverse((obj) => {
     if ('isLight' in obj && (obj as { isLight?: boolean }).isLight) {
-      ;(obj as PointLight).intensity = 0
+      const light = obj as PointLight
+      light.intensity = 0
+      // Plan 157 §3.2 — the hand-flame visual's own light is permanently
+      // muted (the real torch light, below, is the one that actually lights
+      // anything); staying `visible = true` cost a NUM_POINT_LIGHTS slot for
+      // nothing every time the player held a lit branch.
+      light.visible = false
     }
   })
 }
@@ -168,7 +175,13 @@ function makeFlameVisual(scale: number): FlameVisual {
  * Portable hand light — lit branch (consumes branch) or wooden torch item.
  * Mounts on the right wrist; replaces the old body-offset procedural flame.
  */
-export function createPlayerTorch(hand: HandAccess): PlayerTorch {
+export function createPlayerTorch(
+  hand: HandAccess,
+  /** Plan 157 — registers the real torch light so production
+   *  `NUM_POINT_LIGHTS` stabilization (`src/world/pointLightBudget.ts`) knows
+   *  it exists while lit. Defaults to a no-op for callers that don't wire one. */
+  pointLightBudget: PointLightBudget = createNullPointLightBudget(),
+): PlayerTorch {
   let lit = false
   let current: TorchSource | null = null
   let fuelRemaining = 0
@@ -186,6 +199,7 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
       disposeObject3D(mount)
       mount = null
     }
+    if (pointLight) pointLightBudget.unregister(pointLight)
     flameUpdate = null
     flameSetSize = null
     pointLight = null
@@ -226,6 +240,7 @@ export function createPlayerTorch(hand: HandAccess): PlayerTorch {
       )
       const tipOffset = source === 'wooden_torch' ? TORCH_TIP_OFFSET_WOODEN : TORCH_TIP_OFFSET_BRANCH
       pointLight.position.set(tipOffset[0], tipOffset[1], tipOffset[2])
+      pointLightBudget.register(pointLight)
 
       let flameObject: Object3D | null = null
       if (SHOW_HAND_FLAME_VISUAL && source === 'branch') {

@@ -56,6 +56,7 @@ import {
   createProgramCensus,
   isPerfUrlEnabled,
   isProgramCensusUrlEnabled,
+  pointLightBudgetFromUrl,
   setActiveMonitor,
   setActiveProgramCensus,
 } from '../perf'
@@ -123,6 +124,7 @@ import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
 import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
+import { createPointLightBudget } from '../world/pointLightBudget'
 import { createTimeSkip } from '../world/timeSkip'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
 import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChopStage } from '../world/treeLifecycle'
@@ -279,6 +281,21 @@ export async function createApp(
   const lights = createLights(config.postProcessing.shadowMapSize)
   lights.addTo(scene)
 
+  // Plan 157 — production NUM_POINT_LIGHTS stabilization. The registry is
+  // always active (cheap: bounded to real lights actually registered by
+  // `createSettlement`/`PlacedFires`/`PlayerTorch`, never a scene traversal)
+  // so it always reports real-light census data; the pad/overflow-cull only
+  // runs when `?pointLightBudget=N` is set, since the production budget
+  // number is not frozen yet (plan 157 §10 — needs a real-GPU benchmark).
+  // Lives here (not inside `WorldBundle`) because its pad is added directly
+  // to `scene`, which survives `rebuildWorldBundle()` — only the settlement/
+  // placed-fire *registrations* are rebuilt, via the same instance threaded
+  // through below.
+  const pointLightBudget = createPointLightBudget(scene, pointLightBudgetFromUrl())
+  if (typeof window !== 'undefined') {
+    window.__seedvalePointLightBudget = pointLightBudget
+  }
+
   const sky = createSky(config.sky)
   sky.addTo(scene)
   sky.applySun(lights.sun)
@@ -323,6 +340,7 @@ export async function createApp(
     landOwnership.isOwned,
     onTrapCapture,
     new Map((initialSave?.spawnPoints ?? []).map((s) => [s.id, s])),
+    pointLightBudget,
   )
 
   // Indirection (not a direct destructure) so this keeps sampling whichever
@@ -415,7 +433,7 @@ export async function createApp(
     onChange: () => syncHeldHud(),
     onIgnite: () => playActionFireIgnite(worldAudio.playAt, player.mesh.position),
     onExtinguish: () => playActionFireExtinguish(worldAudio.playAt, player.mesh.position),
-  })
+  }, pointLightBudget)
 
   syncHeldHud = (): void => {
     if (playerTorch.isLit() && playerTorch.source() === 'branch') {
@@ -631,6 +649,7 @@ export async function createApp(
         getPlayerSocial,
         landOwnership.isOwned,
         onTrapCapture,
+        pointLightBudget,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
 
@@ -1796,6 +1815,7 @@ export async function createApp(
     onSleepFinished,
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,
+    syncPointLightBudget: () => { pointLightBudget.sync(camera) },
   })
   gameLoop.resyncDayNight()
 
@@ -1998,6 +2018,8 @@ export async function createApp(
     setActiveProgramCensus(null)
     if (typeof window !== 'undefined') window.__seedvaleProgramCensus = undefined
     playerTorch.dispose()
+    pointLightBudget.dispose()
+    if (typeof window !== 'undefined') window.__seedvalePointLightBudget = undefined
     player.dispose()
     disposeChunkWorkerPool()
     postProcessing.dispose()

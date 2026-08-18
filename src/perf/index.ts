@@ -3,7 +3,13 @@ export { createBenchmarkRunner } from './benchmark'
 export type { BenchmarkRunner } from './benchmark'
 export type { BenchmarkScenarioId } from './benchmarkScenarios'
 export { BENCHMARK_SCENARIO_IDS } from './benchmarkScenarios'
-export { benchmarkScenarioFromUrl, isPerfUrlEnabled, isProgramCensusUrlEnabled } from './flags'
+export {
+  benchmarkScenarioFromUrl,
+  DEFAULT_POINT_LIGHT_BUDGET,
+  isPerfUrlEnabled,
+  isProgramCensusUrlEnabled,
+  pointLightBudgetFromUrl,
+} from './flags'
 export { createPerfMonitor, withCategory } from './monitor'
 export {
   createProgramCensus,

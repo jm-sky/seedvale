@@ -28,6 +28,7 @@ import {
 } from '../simulation'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
+import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { applyTreeStageVisual } from '../world/treeVisuals'
 import { buildAssemblyCollidersWorld, type HouseAssembly } from './houseBuilder'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
@@ -209,6 +210,11 @@ export async function createSettlement(
    *  purchase made later while the settlement stays loaded is picked up live
    *  by `update()` below instead, same pattern as `placeWoodshedIfComplete`. */
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
+  /** Plan 157 — registers this settlement's house lamps/village torches/
+   *  campfire (`group`, once built) so production `NUM_POINT_LIGHTS`
+   *  stabilization (`src/world/pointLightBudget.ts`) sees them for as long
+   *  as the settlement stays loaded. Defaults to a no-op. */
+  pointLightBudget: PointLightBudget = createNullPointLightBudget(),
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
@@ -245,6 +251,11 @@ export async function createSettlement(
       : { sampleHeight, waterLevel },
   )
   scene.add(group)
+  // Plan 157 — one bounded walk of this settlement's own root, not the whole
+  // scene: captures every house lamp, village torch, and the settlement's
+  // own campfire (all attached under `group` by `buildSettlementProps`) in a
+  // single call, mirrored by `unregisterSubtree(group)` in `dispose()` below.
+  pointLightBudget.registerSubtree(group)
 
   const registerSettlementColliders = (): void => {
     registerColliders(def.id, [
@@ -678,6 +689,7 @@ export async function createSettlement(
       for (const light of houseLights) light.setNightIntensity(t)
     },
     dispose() {
+      pointLightBudget.unregisterSubtree(group)
       clearColliders(def.id)
       if (forest) {
         for (const tree of landmarks.trees) forest.lifecycle.unregisterPresence(tree.id)
