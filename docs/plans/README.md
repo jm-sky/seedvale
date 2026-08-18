@@ -65,7 +65,7 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-18--152--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried `NpcAgent.inventory` (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu), decyzja z relacji + openness/traits + istniejący `getPlayerStanding()`/`reactionChance`, nowa opcja w dialogu NPC v2 (`request_food`/`request_water`); wstępny, do implementacji | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ |
 | `2026-08-18--150--combat-mode-defense-and-downed-state.md` | Combat mode + soft lock (`Tab` living / `Shift+Tab` world), obrona z skillu bojowego, stan `downed`; bez regeneracji HP/apteczek; wstępny | 🔴 | L | ~~123~~ ~~124b~~ |
 | `2026-08-18--153--mobile-playtest-fixes.md` | Mobile playtest: NPC przy studni, interakcje/harvest, health, quest „Wypatrz jelenia”, skill HUD, cycling kandydatów, inventory sort; combat poza zakresem | 🟡 | M | — |
-
+| `2026-08-18--155--inventory-item-instances-and-trap-lifecycle.md` | Generyczny mechanizm `ItemInstance`, price algo | 🟡 | L | ~~141~~ |
 
 ---
 
@@ -85,14 +85,9 @@ Implementation complete; needs play/browser check. This section lists **plans in
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
 | `2026-08-14--105--ui-ux-review.md` | Audyt UI/UX ✅ ([review 007](../reviews/2026-08-14--007--ui-ux.md)); H1–H3 + Character + handel 2-kolumnowy + przycisk Umiejętności `[U]` zaimplementowane, bez weryfikacji w przeglądarce (§11–§12); H4 poza handlem otwarte | 🟡 | L | ~~046~~ ~~005~~ ~~023~~ |
-| `2026-08-17--145--shadow-budget-optimization.md` | Shadow rendering: R1 pull-based fail-open dirty/budget shadow map update (`renderer.shadowMap.needsUpdate` był bezwarunkowy co klatkę, `gameLoop.ts`; nowy `render/shadowBudget.ts` reużywa `NPC_SHADOW_DISTANCE`/`FAUNA_SHADOW_DISTANCE`, zweryfikowane że `WebGLShadowMap` bezpiecznie no-opuje pominiętą klatkę) + R2 próg rozmiaru dla proceduralnych item fallbacków (`items.ts`'s `createItemMesh`, reużywa wyeksportowany `SMALL_MESH_SHADOW_THRESHOLD` z `loadGltf.ts`); analiza potwierdziła że NPC/fauna distance-based shadow filtering i terrain frustum culling już istniały (nic do zrobienia tam). Techniczna weryfikacja zielona (tsc/lint/build/test, 997 testów, +10 nowych); brak testu w przeglądarce i brak benchmarku — [implementation notes](./2026-08-17--145--shadow-budget-optimization-implementation-notes.md) | 🟡 | M | — |
 | `2026-08-17--141--animal-traps.md` | Pułapki: placed world object (`PlacedTents`/`PlacedFires`), 2 rodzaje, stany `placed → active → placed/broken`, skill `traps`, save v16. Playtest 2026-08-18: **brak `Zastaw` na Inventory (Vue)** — tylko Quick Actions. Zostaje 🔍 — [implementation notes](./2026-08-17--141--animal-traps-implementation-notes.md) | 🟡 | M | ~~128~~ |
 | `2026-08-15--121--footstep-sound-refresh.md` | Kroki: Anton Z default (sand/grass/stone). Playtest 2026-08-18: **sprint po trawie jak kamienny korytarz** (za głośno). Zostaje 🔍 | 🟡 | S | — |
-| `2026-08-15--119--chunk-streaming-performance.md` | Hitchy chunk streaming: preload GLB + kolejka mesh/content (1 etap/klatkę, priorytet mesh); stampede po `await` szablonów usunięty; techniczna weryfikacja zielona, brak `?benchmark=*` vs review 015 / capture planu | 🔴 | M | ~~112~~ |
-| `2026-08-14--113--rendering-performance-gpu-scaling.md` | P0/P1 (+ tani P2 LOD/cienie): tańsze N8AO na High, cień raz/klatkę, instancing palisady/krzaków, lustro 30 Hz bez NPC, agresywniejszy grass LOD; P3/P4 i merge vegetation odłożone; techniczna weryfikacja zielona, brak `?benchmark=*` vs review 012 | 🔴 | L | ~~112~~ |
-| `2026-08-14--112--chunk-streaming-hitch-optimization.md` | Rozłożenie `buildAndAttachMesh` na 1/klatkę przez istniejącą kolejkę `ChunkManager`; hitch `chunk mesh` w `?benchmark=stream` do porównania z review 012; techniczna weryfikacja zielona, brak testu w przeglądarce | 🔴 | M | — |
 | `2026-08-14--111--house-construction.md` | House Builder (MegaKit). Playtest 2026-08-18: **niektóre domki źle złożone** — zostaje 🔍 — [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md) | 🔴 | XL | ~~109~~ |
-| `2026-08-13--103--performance-diagnostics-benchmark.md` | Diagnostyka wydajności, benchmarki, profile jakości (etapy 1–4; Adaptive = później) | 🔴 | XL | — |
 | `2026-08-14--110--quests-v3-closure-world-identity-and-lifecycle.md` | Domknięcie planu 093: lifecycle `failed`/`invalidated`, predator `onDeath`, groźny wilk, failure owcy, `landmarkId` / rebind po save. Playtest 2026-08-18 **odłożony** — zostaje 🔍 | 🔴 | L | ~~093~~ |
 
 Historical playtest queue (files in archive): [below](#playtest-queue-archived-batch).
@@ -130,9 +125,12 @@ Completed plans **in this folder**. After the 2026-08-14 archive freeze new `don
 | `2026-08-17--139--fauna-day-scale-respawn.md` | Respawn cave/thicket w dniach świata (jeleń 1/dzień, stag 1/2 dni), catch-up przy skipie. |
 | `2026-08-14--109--megakit-construction-catalog.md` | Audyt 176 MegaKit GLB + `ConstructionCatalog` (review [009](../reviews/2026-08-14--009--megakit-construction-audit.md)); weryfikacja w przeglądarce [011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md); guardrails wydajnościowe dla przyszłego `HouseBuilder` (review [012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md)) |
 | `2026-08-09--049--procedural-world-landmarks.md` | Landmarki v1: monolith / stoneCircle / smallRuins / cemetery + bias terenu |
+| `2026-08-13--103--performance-diagnostics-benchmark.md` | Diagnostyka wydajności, benchmarki, profile jakości (etapy 1–4; Adaptive = później) |
 | `2026-08-14--114--npc-critical-need-vigor-interrupt.md` | Krytyczna potrzeba / kolaps wigoru przerywa akcję NPC już w locie (`goTo`/`execute`); nowa opcja `critical` w `pickNeed()`, throttled check w `NpcAgent.update()`; zwykła zmiana godziny nadal nie przerywa (plan 060 dalej obowiązuje); techniczna weryfikacja zielona, bez formalnego testu w przeglądarce |
-
-Older completed work: [archive/README.md](./archive/README.md).
+| `2026-08-14--112--chunk-streaming-hitch-optimization.md` | Rozłożenie `buildAndAttachMesh` na 1/klatkę przez istniejącą kolejkę `ChunkManager`; hitch `chunk mesh` w `?benchmark=stream` do porównania z review 012; techniczna weryfikacja zielona, brak testu w przeglądarce |
+| `2026-08-14--113--rendering-performance-gpu-scaling.md` | P0/P1 (+ tani P2 LOD/cienie): tańsze N8AO na High, cień raz/klatkę, instancing palisady/krzaków, lustro 30 Hz bez NPC, agresywniejszy grass LOD; P3/P4 i merge vegetation odłożone |
+| `2026-08-15--119--chunk-streaming-performance.md` | Hitchy chunk streaming: preload GLB + kolejka mesh/content (1 etap/klatkę, priorytet mesh); stampede po `await` szablonów usunięty |
+| `2026-08-17--145--shadow-budget-optimization.md` | Shadow rendering: R1 pull-based fail-open dirty/budget shadow map update (`renderer.shadowMap.needsUpdate` był bezwarunkowy co klatkę, `gameLoop.ts`; nowy `render/shadowBudget.ts` reużywa `NPC_SHADOW_DISTANCE`/`FAUNA_SHADOW_DISTANCE`, zweryfikowane że `WebGLShadowMap` bezpiecznie no-opuje pominiętą klatkę) + R2 próg rozmiaru dla proceduralnych item fallbacków (`items.ts`'s `createItemMesh`, reużywa wyeksportowany `SMALL_MESH_SHADOW_THRESHOLD` z `loadGltf.ts`); analiza potwierdziła że NPC/fauna distance-based shadow filtering i terrain frustum culling już istniały (nic do zrobienia tam). |
 
 What already landed in that period (snapshot, not a status tracker):
 
