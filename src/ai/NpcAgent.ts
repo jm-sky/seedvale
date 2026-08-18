@@ -69,6 +69,7 @@ import {
   type NeedState,
   pickNeed,
   type PickNeedOptions,
+  SLEEP_HUNGER_THIRST_RATE,
   tickNeeds,
 } from './Needs'
 import {
@@ -1033,7 +1034,9 @@ export class NpcAgent {
     timeOfDay: number,
     nearbyNpcCount: number,
   ): void {
-    tickNeeds(this.needs, dt)
+    tickNeeds(this.needs, dt, {
+      hungerThirstRate: this.phase === 'sleep' ? SLEEP_HUNGER_THIRST_RATE : 1,
+    })
     this.moving = false
     const scheduledActivity = this.getScheduledActivity(timeOfDay)
 
@@ -1351,7 +1354,10 @@ export class NpcAgent {
       // `tickDayNight` uses in reverse (`dayLengthSec` real seconds / 24 per
       // game hour) — so needs/stamina/vigor accrue at their usual rate.
       const stepDt = (step * dayLengthSec) / 24
-      tickNeeds(this.needs, stepDt)
+      const sleeping = activity === 'sleep' || napping || shouldCollapseSleep(this.vigor)
+      tickNeeds(this.needs, stepDt, {
+        hungerThirstRate: sleeping ? SLEEP_HUNGER_THIRST_RATE : 1,
+      })
       const vigorStep = tickVigorForSimulatedStep(this.vigor, activity, stepDt, napping)
       napping = vigorStep.napping
       if (activity === 'sleep' || vigorStep.slept) {

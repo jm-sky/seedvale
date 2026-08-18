@@ -21,12 +21,22 @@ export function createNeedState(offset = 0): NeedState {
   }
 }
 
+/** Hunger/thirst decay multiplier while an agent is asleep (NPC `sleep` phase;
+ *  fauna uses the same rate at night when not sprinting). */
+export const SLEEP_HUNGER_THIRST_RATE = 0.5
+
+export type TickNeedsOptions = {
+  /** Multiplier on hunger/thirst rise only — wood/water duties are unchanged. */
+  hungerThirstRate?: number
+}
+
 /** Tick needs upward over time (0–1). */
-export function tickNeeds(needs: NeedState, dt: number): void {
-  needs.thirst = Math.min(1, needs.thirst + dt * 0.04)
+export function tickNeeds(needs: NeedState, dt: number, options: TickNeedsOptions = {}): void {
+  const hungerThirstRate = options.hungerThirstRate ?? 1
+  needs.thirst = Math.min(1, needs.thirst + dt * 0.04 * hungerThirstRate)
   needs.woodDuty = Math.min(1, needs.woodDuty + dt * 0.028)
   needs.waterDuty = Math.min(1, needs.waterDuty + dt * 0.028)
-  needs.hunger = Math.min(1, needs.hunger + dt * 0.035)
+  needs.hunger = Math.min(1, needs.hunger + dt * 0.035 * hungerThirstRate)
 }
 
 export type PickNeedOptions = {

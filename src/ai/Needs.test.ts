@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createNeedState, pickNeed, tickNeeds } from './Needs'
+import { createNeedState, pickNeed, SLEEP_HUNGER_THIRST_RATE, tickNeeds } from './Needs'
 
 describe('pickNeed', () => {
   it('defaults to idle when nothing crosses its threshold', () => {
@@ -97,5 +97,18 @@ describe('tickNeeds', () => {
     expect(needs.woodDuty).toBe(1)
     expect(needs.waterDuty).toBe(1)
     expect(needs.hunger).toBe(1)
+  })
+
+  it('slows only hunger/thirst when hungerThirstRate is reduced (e.g. sleep)', () => {
+    const awake = { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 }
+    const asleep = { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 }
+    tickNeeds(awake, 10)
+    tickNeeds(asleep, 10, { hungerThirstRate: SLEEP_HUNGER_THIRST_RATE })
+    expect(asleep.thirst).toBeCloseTo(10 * 0.04 * SLEEP_HUNGER_THIRST_RATE)
+    expect(asleep.hunger).toBeCloseTo(10 * 0.035 * SLEEP_HUNGER_THIRST_RATE)
+    expect(asleep.woodDuty).toBeCloseTo(awake.woodDuty)
+    expect(asleep.waterDuty).toBeCloseTo(awake.waterDuty)
+    expect(asleep.thirst).toBeLessThan(awake.thirst)
+    expect(asleep.hunger).toBeLessThan(awake.hunger)
   })
 })

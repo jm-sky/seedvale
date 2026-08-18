@@ -1,9 +1,12 @@
+import { SLEEP_HUNGER_THIRST_RATE, type TickNeedsOptions } from '../ai/Needs'
 import {
   createStaminaState,
   drainStamina,
   restoreStamina,
   type StaminaState,
 } from '../shared/StaminaState'
+
+export { SLEEP_HUNGER_THIRST_RATE }
 
 /** Units/sec — same order of magnitude as NPC `Needs.ts` (0.028–0.04/sec). */
 const HUNGER_RATE = 0.03
@@ -47,9 +50,15 @@ export function createAnimalLifeState(offset = 0): AnimalLifeState {
   }
 }
 
-export function tickAnimalLife(life: AnimalLifeState, dt: number, sprinting: boolean): void {
-  life.hunger = Math.min(1, life.hunger + dt * HUNGER_RATE)
-  life.thirst = Math.min(1, life.thirst + dt * THIRST_RATE)
+export function tickAnimalLife(
+  life: AnimalLifeState,
+  dt: number,
+  sprinting: boolean,
+  options: TickNeedsOptions = {},
+): void {
+  const hungerThirstRate = options.hungerThirstRate ?? 1
+  life.hunger = Math.min(1, life.hunger + dt * HUNGER_RATE * hungerThirstRate)
+  life.thirst = Math.min(1, life.thirst + dt * THIRST_RATE * hungerThirstRate)
   if (sprinting) {
     drainStamina(life.stamina, dt * STAMINA_DRAIN_RATE)
   } else {

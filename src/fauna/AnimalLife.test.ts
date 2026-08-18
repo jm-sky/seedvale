@@ -7,6 +7,7 @@ import {
   drinkWater,
   FOOD_RELIEF,
   NEED_ELEVATED_THRESHOLD,
+  SLEEP_HUNGER_THIRST_RATE,
   tickAnimalLife,
   WATER_RELIEF,
 } from './AnimalLife'
@@ -26,6 +27,21 @@ describe('AnimalLife', () => {
     tickAnimalLife(life, 1000, false)
     expect(life.hunger).toBe(1)
     expect(life.thirst).toBe(1)
+  })
+
+  it('slows hunger/thirst rise when hungerThirstRate is reduced (e.g. sleep)', () => {
+    const awake = createAnimalLifeState(0)
+    const asleep = createAnimalLifeState(0)
+    awake.hunger = 0
+    awake.thirst = 0
+    asleep.hunger = 0
+    asleep.thirst = 0
+    tickAnimalLife(awake, 10, false)
+    tickAnimalLife(asleep, 10, false, { hungerThirstRate: SLEEP_HUNGER_THIRST_RATE })
+    expect(asleep.hunger).toBeCloseTo(10 * 0.03 * SLEEP_HUNGER_THIRST_RATE)
+    expect(asleep.thirst).toBeCloseTo(10 * 0.032 * SLEEP_HUNGER_THIRST_RATE)
+    expect(asleep.hunger).toBeLessThan(awake.hunger)
+    expect(asleep.thirst).toBeLessThan(awake.thirst)
   })
 
   it('stamina drains while sprinting and regenerates while not', () => {

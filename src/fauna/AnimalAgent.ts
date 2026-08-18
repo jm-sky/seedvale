@@ -22,6 +22,7 @@ import {
   createAnimalLifeState,
   drinkWater,
   NEED_ELEVATED_THRESHOLD,
+  SLEEP_HUNGER_THIRST_RATE,
   STAMINA_REST_THRESHOLD,
   tickAnimalLife,
 } from './AnimalLife'
@@ -1073,7 +1074,9 @@ export class AnimalAgent {
     this.clampBounds()
     this.snapY()
     this.updateAnim()
-    tickAnimalLife(this.life, dt, this.sprinting)
+    tickAnimalLife(this.life, dt, this.sprinting, {
+      hungerThirstRate: this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
+    })
     // Compared/stored as the same rounded percent that's actually written to
     // the DOM — the raw ratio drifts by a hair every frame during
     // regen/drain, which would defeat a guard keyed on the raw value.
