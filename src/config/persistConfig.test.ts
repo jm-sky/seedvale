@@ -136,7 +136,7 @@ function minimalConfig(): WorldConfig {
       shadowMapSize: 1024,
     },
     quality: { preset: 'High', lodScale: 1, adaptiveEnabled: false },
-    showGui: true,
+    showGui: false,
     player: { name: 'Ja' },
     settlements: { homeSize: 'auto' },
   }

@@ -89,6 +89,7 @@ type MerchantState = {
   counts: Partial<Record<ItemKind, number>>
   onBuyShells: ((kind: ItemKind) => TradeResult) | null
   onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>) => TradeResult) | null
+  onSellShells: ((kind: ItemKind) => TradeResult) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number }
 type BusyState = { visible: boolean; label: string; blurred: boolean; progress: number | null }
@@ -229,7 +230,7 @@ export const ui = reactive({
     onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
-  merchant: { open: false, npc: null, counts: {}, onBuyShells: null, onBuyBarter: null } as MerchantState,
+  merchant: { open: false, npc: null, counts: {}, onBuyShells: null, onBuyBarter: null, onSellShells: null } as MerchantState,
   busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
@@ -378,7 +379,7 @@ export function closeInventory(): void {
 }
 export function isInventoryOpen(): boolean { return ui.inventory.open }
 
-export function configureMerchant(handlers: Pick<MerchantState, 'onBuyShells' | 'onBuyBarter'>): void {
+export function configureMerchant(handlers: Pick<MerchantState, 'onBuyShells' | 'onBuyBarter' | 'onSellShells'>): void {
   Object.assign(ui.merchant, handlers)
 }
 export function openMerchant(counts: Partial<Record<ItemKind, number>>, npc: NpcAgent | null = null): void {
@@ -552,6 +553,10 @@ export function setCharacterStats(stats: CharacterStats): void {
 export function openSkillsScreen(): void { ui.skillsScreen.open = true; emitUiOpen() }
 export function closeSkillsScreen(): void { ui.skillsScreen.open = false }
 export function isSkillsScreenOpen(): boolean { return ui.skillsScreen.open }
+export function toggleSkillsScreen(): void {
+  if (ui.skillsScreen.open) closeSkillsScreen()
+  else openSkillsScreen()
+}
 export function configureSkillsScreen(handlers: { onToggleSneak: () => void }): void {
   ui.skillsScreen.onToggleSneak = handlers.onToggleSneak
 }

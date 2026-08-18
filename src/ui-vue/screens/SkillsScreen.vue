@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
+import UiPanel from '@/components/UiPanel.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
-import { useTouchScroll } from '../composables/useTouchScroll'
 import { closeSkillsScreen, emitUiClick, isSkillsScreenOpen, ui } from '../store'
 
-const panel = ref<HTMLElement | null>(null)
 useOverlayScreen('skills', isSkillsScreenOpen, closeSkillsScreen)
-useTouchScroll(panel)
 
 function toggleSneak(): void {
   emitUiClick()
@@ -25,11 +23,7 @@ const trapsLevel = computed(() => percent(ui.skillsScreen.trapsValue))
     class="pointer-events-auto fixed inset-0 z-10 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
     @click.self="closeSkillsScreen"
   >
-    <div
-      ref="panel"
-      class="max-h-[calc(100dvh-32px)] w-full max-w-md overflow-y-auto rounded-[10px] bg-panel p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
-      style="touch-action: pan-y"
-    >
+    <UiPanel>
       <h1 class="mb-4 text-lg font-semibold tracking-wide">
         Umiejętności
       </h1>
@@ -114,6 +108,6 @@ const trapsLevel = computed(() => percent(ui.skillsScreen.trapsValue))
       <div class="mt-4 text-[11px] opacity-60">
         Esc — zamknij
       </div>
-    </div>
+    </UiPanel>
   </div>
 </template>

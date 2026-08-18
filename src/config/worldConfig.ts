@@ -1,6 +1,7 @@
 import type { RolledVillageSize } from '../settlement/families'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { FbmParams } from '../terrain/fbm'
+import { isDebugMode } from '../debug/debugMode'
 import { parseSeedFromUrl } from '../world/parseSeed'
 import { loadDomainConfigs } from './persistConfig'
 import { applyQualityPreset, isQualityPreset, knobsFromConfig, matchQualityPreset, type QualityPreset } from './qualityProfiles'
@@ -128,7 +129,8 @@ export type WorldConfig = {
     /** Adaptive Quality (plan 103 etap 5) — stored, ignored until implemented. */
     adaptiveEnabled: boolean
   }
-  /** Show lil-gui panel (`?gui=0` to hide). */
+  /** Show lil-gui panel. Hidden by default; `?debug=1` or `?gui=1` reveals it,
+   *  `?gui=0` forces it hidden (review 007 C11). */
   showGui: boolean
   player: {
     name: string
@@ -301,7 +303,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       lodScale: 1,
       adaptiveEnabled: false,
     },
-    showGui: true,
+    showGui: false,
     player: {
       name: DEFAULT_PLAYER_NAME,
     },
@@ -503,7 +505,9 @@ export function createWorldConfig(): WorldConfig {
 
   applyStoredPlayer(config.player, stored?.player)
 
-  config.showGui = params.get('gui') !== '0'
+  const guiParam = params.get('gui')
+  // Explicit `?gui=0` wins over `?debug=1`. `?gui=1` or debug mode reveals it.
+  config.showGui = guiParam === '1' || (guiParam !== '0' && isDebugMode())
   return config
 }
 

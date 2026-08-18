@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from './Inventory'
-import { buyWithBarter, buyWithShells } from './trade'
-import { MERCHANT_STOCK, merchantPrice, offerValue, tradeValue } from './tradeCatalog'
+import { buyWithBarter, buyWithShells, sellForShells } from './trade'
+import { MERCHANT_STOCK, merchantPrice, offerValue, sellPrice, tradeValue } from './tradeCatalog'
 
 describe('tradeCatalog (plan 090)', () => {
   it('lists every stocked item with a positive shell price', () => {
@@ -28,6 +28,19 @@ describe('tradeCatalog (plan 090)', () => {
 
   it('gives shells a barter value of 1', () => {
     expect(tradeValue('shell')).toBe(1)
+  })
+})
+
+describe('sellPrice', () => {
+  it('is half the trade value, floored, at least 1', () => {
+    expect(sellPrice('knife')).toBe(6)
+    expect(sellPrice('long_sword')).toBe(25)
+    expect(sellPrice('stone')).toBe(1)
+  })
+
+  it('refuses shell and coin', () => {
+    expect(sellPrice('shell')).toBeNull()
+    expect(sellPrice('coin')).toBeNull()
   })
 })
 
@@ -74,5 +87,43 @@ describe('buyWithBarter', () => {
     const inv = new Inventory({ knife: 1 })
     expect(buyWithBarter(inv, 'blanket', { knife: 2 })).toBe('invalid_offer')
     expect(inv.count('knife')).toBe(1)
+  })
+})
+
+describe('sellForShells', () => {
+  it('is atomic: item out, shells in at the sell spread', () => {
+    const inv = new Inventory({ knife: 1, shell: 0 })
+    expect(sellForShells(inv, 'knife')).toBe('ok')
+    expect(inv.count('knife')).toBe(0)
+    expect(inv.count('shell')).toBe(6)
+  })
+
+  it('does not profit from buying and immediately selling', () => {
+    const inv = new Inventory({ shell: 12 })
+    expect(buyWithShells(inv, 'knife')).toBe('ok')
+    expect(sellForShells(inv, 'knife')).toBe('ok')
+    expect(inv.count('knife')).toBe(0)
+    expect(inv.count('shell')).toBe(6)
+  })
+
+  it('refuses shell and coin without mutating inventory', () => {
+    const inv = new Inventory({ shell: 10, coin: 4 })
+    expect(sellForShells(inv, 'shell')).toBe('not_sold')
+    expect(sellForShells(inv, 'coin')).toBe('not_sold')
+    expect(inv.count('shell')).toBe(10)
+    expect(inv.count('coin')).toBe(4)
+  })
+
+  it('refuses an item the player does not hold', () => {
+    const inv = new Inventory({ shell: 0 })
+    expect(sellForShells(inv, 'axe')).toBe('invalid_offer')
+    expect(inv.count('shell')).toBe(0)
+  })
+
+  it('reduces carried weight', () => {
+    const inv = new Inventory({ axe: 1 })
+    const before = inv.totalWeight()
+    expect(sellForShells(inv, 'axe')).toBe('ok')
+    expect(inv.totalWeight()).toBeLessThan(before)
   })
 })

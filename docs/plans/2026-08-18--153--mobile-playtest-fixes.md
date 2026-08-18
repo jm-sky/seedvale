@@ -149,6 +149,8 @@ Badge powinien:
 
 Wykorzystać istniejący stan aktywnej umiejętności.
 
+**Reuse (plan 105, 2026-08-18):** przycisk HUD Umiejętności (`SkillsHudButton`, emerald gdy sneak aktywny) już pokazuje aktywną umiejętność i otwiera ekran. Nie dodawać drugiego badge’a — najwyżej reuse tego przycisku.
+
 ## 7. Cycling między kandydatami interakcji
 
 ### Problem

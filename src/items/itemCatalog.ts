@@ -5,7 +5,7 @@
  * Source of truth for *labels/weights* remains `ITEM_DEFS` in `items.ts`.
  * This file adds gameplay/AI-facing flags (hold, melee, spawn, assets, roadmap).
  */
-import type { ItemKind } from './items'
+import type { ItemCategory, ItemKind } from './items'
 
 export type ItemSpawnKind =
   | 'none'
@@ -37,7 +37,7 @@ export type ItemCatalogEntry = {
   kind: ItemKind
   /** Polish label — mirrors ITEM_DEFS. */
   label: string
-  category: 'resource' | 'tool' | 'utility'
+  category: ItemCategory
   /** Can occupy HeldTool slot + Weź in inventory. */
   holdable: boolean
   /** Player melee vs animals while held (plan 123 — `player/playerMelee.ts`). */
@@ -307,7 +307,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   tomato: {
     kind: 'tomato',
     label: 'pomidor',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'village_renewable',
@@ -318,7 +318,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   raw_meat: {
     kind: 'raw_meat',
     label: 'surowe mięso',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -329,7 +329,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   roasted_meat: {
     kind: 'roasted_meat',
     label: 'pieczone mięso',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -340,7 +340,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   bread: {
     kind: 'bread',
     label: 'chleb',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -372,7 +372,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   deer_meat: {
     kind: 'deer_meat',
     label: 'mięso sarny',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -383,7 +383,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   wolf_meat: {
     kind: 'wolf_meat',
     label: 'mięso wilka',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -394,7 +394,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   boar_meat: {
     kind: 'boar_meat',
     label: 'mięso dzika',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -405,7 +405,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   rabbit_meat: {
     kind: 'rabbit_meat',
     label: 'mięso królika',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -416,7 +416,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   beef: {
     kind: 'beef',
     label: 'wołowina',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -437,7 +437,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   cheese: {
     kind: 'cheese',
     label: 'ser',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -448,7 +448,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   dried_meat: {
     kind: 'dried_meat',
     label: 'suszone mięso',
-    category: 'resource',
+    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',

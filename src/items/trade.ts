@@ -1,6 +1,6 @@
 import type { Inventory } from './Inventory'
 import { ITEM_DEFS, type ItemKind } from './items'
-import { merchantPrice, offerValue } from './tradeCatalog'
+import { merchantPrice, offerValue, sellPrice } from './tradeCatalog'
 
 export type TradeResult = 'ok' | 'cannot_afford' | 'full' | 'not_sold' | 'invalid_offer'
 
@@ -66,5 +66,17 @@ export function buyWithBarter(
     if (count > 0) inventory.remove(offerKind, count)
   }
   inventory.add(kind, 1)
+  return 'ok'
+}
+
+/** Sell one `kind` to the merchant for `sellPrice` shells. Atomic. */
+export function sellForShells(inventory: Inventory, kind: ItemKind): TradeResult {
+  const price = sellPrice(kind)
+  if (price == null) return 'not_sold'
+  if (!inventory.has(kind, 1)) return 'invalid_offer'
+  const removeWeight = ITEM_DEFS[kind].weight
+  if (!wouldFitAfter(inventory, removeWeight, 'shell', price)) return 'full'
+  inventory.remove(kind, 1)
+  inventory.add('shell', price)
   return 'ok'
 }

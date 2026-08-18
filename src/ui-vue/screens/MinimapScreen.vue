@@ -20,24 +20,30 @@ const size = minimapSize(touch)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
 
-const shellClass = computed(() =>
-  touch
-    ? 'pointer-events-none fixed z-[8] flex flex-col items-end gap-1'
-    : 'pointer-events-none fixed z-[8] flex flex-col-reverse items-start gap-1',
-)
+const props = defineProps<{
+  /** Parent (HudRightColumn) owns position — drop independent `fixed` offsets. */
+  embedded?: boolean
+}>()
 
-const shellStyle = computed(() =>
-  touch
-    ? {
-        // Below TouchChrome pause (44px) + 8px gap; matches former top-right cluster.
-        top: 'max(68px, calc(env(safe-area-inset-top) + 52px))',
-        right: 'max(16px, env(safe-area-inset-right))',
-      }
-    : {
-        bottom: '10px',
-        left: '10px',
-      },
-)
+const shellClass = computed(() => {
+  if (props.embedded) return 'pointer-events-none relative z-[8] flex flex-col items-end gap-1'
+  if (touch) return 'pointer-events-none fixed z-[8] flex flex-col items-end gap-1'
+  return 'pointer-events-none fixed z-[8] flex flex-col-reverse items-start gap-1'
+})
+
+const shellStyle = computed(() => {
+  if (props.embedded) return undefined
+  if (touch) {
+    return {
+      top: 'max(68px, calc(env(safe-area-inset-top) + 52px))',
+      right: 'max(16px, env(safe-area-inset-right))',
+    }
+  }
+  return {
+    bottom: '10px',
+    left: '10px',
+  }
+})
 
 function setupCanvas(canvas: HTMLCanvasElement): void {
   const dpr = window.devicePixelRatio || 1
@@ -119,9 +125,10 @@ watch(canvasRef, (canvas) => {
     :class="shellClass"
     :style="shellStyle"
   >
-    <!-- On touch, pause sits above the minimap in TouchChrome; here only the
-         map + toggle. Absolute canvas when expanded so layout doesn't shove
-         into the bottom-right action cluster. -->
+    <!-- Toggle stays in-flow. Expanded canvas is absolute on the free-floating
+         touch shell so it doesn't shove the bottom-right action cluster; when
+         `embedded` in HudRightColumn the canvas is in-flow so the QA slot
+         shrinks instead. -->
     <button
       type="button"
       class="pointer-events-auto flex min-h-8 min-w-8 cursor-pointer items-center justify-center rounded border border-white/25 bg-[rgba(20,24,28,0.72)] px-2 py-0.5 text-ink hover:bg-[rgba(20,24,28,0.9)]"
@@ -141,7 +148,7 @@ watch(canvasRef, (canvas) => {
       v-show="!ui.minimap.collapsed"
       ref="canvasRef"
       class="pointer-events-auto block cursor-pointer rounded-md border border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.35)]"
-      :class="touch ? 'absolute top-full right-0 mt-1' : ''"
+      :class="touch && !embedded ? 'absolute top-full right-0 mt-1' : ''"
       @click="onCanvasClick"
       @wheel.prevent="onCanvasWheel"
       @pointerdown="onCanvasPointerDown"

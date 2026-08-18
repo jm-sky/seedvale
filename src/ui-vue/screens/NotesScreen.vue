@@ -34,8 +34,8 @@ const NOTES: readonly NoteEntry[] = [
 const CONTROLS: NoteEntry = {
   title: 'Sterowanie',
   body: isTouchDevice()
-    ? 'Joystick — ruch · przeciągnij ekran — rozglądanie · E — interakcja · L — zadania · I — ekwipunek · minimapa — mapa świata · przycisk ⚡ — szybkie akcje · dotknij poza oknem — zamknij'
-    : 'WASD / strzałki — ruch · Shift — bieg · mysz (klik) — rozglądanie · Spacja — skok · E — interakcja · L — zadania · I — ekwipunek · G — upuść · Q — szybkie akcje · M — mapa · Esc — pauza',
+    ? 'Joystick — ruch · przeciągnij ekran — rozglądanie · E — interakcja · L — zadania · I — ekwipunek · U — umiejętności · minimapa — mapa świata · przycisk ⚡ — szybkie akcje · odciski — umiejętności · dotknij poza oknem — zamknij'
+    : 'WASD / strzałki — ruch · Shift — bieg · mysz (klik) — rozglądanie · Spacja — skok · E — interakcja · L — zadania · I — ekwipunek · U — umiejętności · G — upuść · Q — szybkie akcje · M — mapa · Esc — pauza',
 }
 </script>
 

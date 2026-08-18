@@ -42,7 +42,8 @@ import { ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
 import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
-import { buyWithBarter, buyWithShells } from '../items/trade'
+import { buyWithBarter, buyWithShells, sellForShells } from '../items/trade'
+import { sellPrice } from '../items/tradeCatalog'
 import {
   benchmarkScenarioFromUrl,
   createBenchmarkRunner,
@@ -552,6 +553,18 @@ export async function createApp(
       }
       return result
     },
+    onSellShells: (kind) => {
+      const result = sellForShells(inventory, kind)
+      if (result === 'ok') {
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        heldTool.syncWithInventory()
+        syncHeldHud()
+        syncQuickActionAvailability()
+        vueUi.refreshMerchant(inventory.toJSON())
+        toast.show(`+${sellPrice(kind)} muszli`, 'pickup')
+      }
+      return result
+    },
   })
   vueUi.configureNpcDialogueMenu({
     onAskSword: () => {
@@ -847,7 +860,7 @@ export async function createApp(
     onPerfTimingsToggle: (enabled) => { perfMonitor.setSource('gui', enabled) },
     onRunBenchmark: (id) => { void benchmark.run(id) },
   })
-  if (!config.showGui) gui.toggle()
+  if (config.showGui) gui.toggle()
   vueUi.configureWorldConfigScreen(config, dayNight, {
     onTerrainChange,
     onDayNightChange,
@@ -1628,6 +1641,10 @@ export async function createApp(
     inventoryScreen.open()
     inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
   }
+  const openSkills = () => {
+    exitGamePointerLock(renderer.domElement)
+    vueUi.openSkillsScreen()
+  }
 
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
     onPause: () => {
@@ -1733,7 +1750,7 @@ export async function createApp(
     climate, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
-    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
+    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills,
     startGroundWork: (mode, x, z) => {
       if (heldTool.held() === 'pickaxe') {
         if (mode === 'level') startPickaxeLevelAt(x, z)

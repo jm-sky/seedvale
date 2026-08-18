@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-17
+**Last updated:** 2026-08-18
 
 ## Quick rules
 
@@ -18,12 +18,13 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Melee vs animals | `ITEM_CATALOG[kind].melee` (plan 123, `itemCatalog.ts`) — single source of truth for damage/range/arcDot/windUp/hitWindow/recovery/staminaCost; `player/playerMelee.ts` runs the windUp→hitWindow→recovery lifecycle + range/facing-arc hit test. `faunaCombat.ts`'s `isMeleeTool()` just reads this. Damage: sword 28, axe 20, spear 20, short_sword 18, pitchfork 14, knife/sickle 12, shovel 8 |
 | Village one-time tools | `createItemSpawners.ts` |
 | Portable light | `PlayerTorch` — lit branch (90s) or held wooden_torch (240s); exclusive right hand |
+| Inventory category | `ITEM_DEFS.category` — `resource` / `tool` / `utility` / `food` (`Jedzenie`); hunger consumables are `food`, waterskins stay `utility` |
 | Consumable (Zjedz/Wypij) | `ITEM_CATALOG[kind].consumable` (plan 106) — `{ need: 'hunger'\|'thirst', relief, resultKind? }`; driven from inventory screen (`InventoryScreenItemDetails.vue`) or world drink/cook actions |
 | Player needs | `player/PlayerNeeds.ts` — stamina/vigor/hunger/thirst pools on `PlayerController.needs`; HUD bars in `HudScreen.vue` |
 | Water source (well/lake) | `world/WaterSource.ts` — `[E]` drink, `[R]` fill waterskin; lake is a synthetic per-frame target (`interactables.ts`'s `isNearLakeShore`), not a discrete world object |
 | Cooking (campfire) | `items/campfireCooking.ts` — `raw_meat → roasted_meat` at a lit campfire, `[R]`; plan 134 adds `deer_meat`/`wolf_meat`/`boar_meat`/`rabbit_meat`/`beef` as further inputs to the same `roasted_meat` output |
 | Species meat + hide (plan 134) | `createApp.ts`'s `startHarvestMeat` maps `AnimalAgent.def.kind` → item kind (`deer`→`deer_meat`, `wolf`→`wolf_meat`, `boar`→`boar_meat`, `rabbit`→`rabbit_meat`, `cow`→`beef`; other species keep the generic `raw_meat`) and always tries to add 1 `hide` alongside the meat |
-| Merchant price / trade value | `items/tradeCatalog.ts` — `MERCHANT_PRICES`/`MERCHANT_STOCK` (buy from Kupiec) and `tradeValue()` (barter fallback, shown as "Wartość" in `InventoryScreenItemDetails.vue`, plan 134) |
+| Merchant price / trade value | `items/tradeCatalog.ts` — `MERCHANT_PRICES`/`MERCHANT_STOCK` (buy from Kupiec), `sellPrice()` = half `tradeValue` (player → Kupiec; not `shell`/`coin`), and `tradeValue()` (barter fallback, shown as "Wartość" in `InventoryScreenItemDetails.vue`, plan 134) |
 
 ## Items
 
@@ -64,7 +65,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | boar_meat | mięso dzika | — | — | corpse harvest (knife, dzik) | procedural | plan 134; Zjedz (+17 hunger); cooks to roasted_meat |
 | rabbit_meat | mięso królika | — | — | corpse harvest (knife, królik) | procedural | plan 134; Zjedz (+10 hunger); cooks to roasted_meat |
 | beef | wołowina | — | — | corpse harvest (knife, krowa) | procedural | plan 134; Zjedz (+20 hunger); cooks to roasted_meat |
-| hide | skóra | — | — | corpse harvest byproduct (any species) | procedural | plan 134; sellable via barter (`tradeValue`) |
+| hide | skóra | — | — | corpse harvest byproduct (any species) | procedural | plan 134; sellable via barter or to Kupiec at `sellPrice` (`tradeValue` / 2) |
 | cheese | ser | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+20 hunger) |
 | dried_meat | suszone mięso | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+25 hunger); light, long-lasting |
 | coin | moneta | — | — | none (quest reward) | procedural | plan 129; near-zero weight (0.001 kg); quest reward + land-plot purchase price; separate from the shell/barter merchant economy |

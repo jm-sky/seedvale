@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Package, Sword, Wheat } from 'lucide-vue-next'
+import { Apple, Package, Sword, Wheat } from 'lucide-vue-next'
 import { type Component, computed, ref } from 'vue'
 import InventoryScreenSection from '@/components/InventoryScreenSection.vue'
 import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
@@ -29,6 +29,7 @@ const CATEGORY_ICON: Record<ItemCategory, Component> = {
   tool: Sword,
   resource: Wheat,
   utility: Package,
+  food: Apple,
 }
 
 const item = computed<ItemDef | null>(() => props.selectedItem ? ITEM_DEFS[props.selectedItem] : null)

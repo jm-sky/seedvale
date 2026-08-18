@@ -2,7 +2,7 @@
 
 **Purpose:** factual snapshot of the implemented codebase. This document describes what exists now, not the desired future state.
 
-**Last verified:** 2026-08-17
+**Last verified:** 2026-08-18
 
 ## Read this first
 
@@ -90,10 +90,12 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 ### UI / input
 
 - Keyboard/mouse plus mobile touch (joystick + look-drag stay vanilla in `createTouchControls.ts`).
-- Vue 3 + Tailwind v4 + `lucide-vue-next` mounts under `#vue-ui`. Migration is incremental: pause, quest log, inventory, quick actions, time-skip, busy overlay, world config, notes, HUD, minimap, world map, toast and touch chrome are Vue; `src/ui/create*.ts` for these are facades.
+- Vue 3 + Tailwind v4 + `lucide-vue-next` mounts under `#vue-ui`. Migration is incremental: pause, quest log, inventory, quick actions, time-skip, busy overlay, world config, notes, HUD, minimap, world map, toast, merchant, skills and touch chrome are Vue; `src/ui/create*.ts` for these are facades.
+- Touch HUD chrome shares `HudRightColumn` (pause + skills + minimap); Quick Actions is a fixed overlay (`Teleport` to `body`) with wrap/grid rows, not a slot in the column. The E/Zap/R cluster stays in `TouchChrome` so it paints above flavor/NPC dialogue. Desktop: skills button stacked above the QA FAB; `U` toggles Umiejętności.
 - Minimap is heading-up with a rim `N` marker; `M` opens the north-up world map. Discovery is permanent (radius 48, `SaveData.map`, schema v11) and does not load chunks.
-- lil-gui remains the full debug UI; pause → Świat exposes the player-facing subset of the same `WorldConfig`.
-- Vue Fazy 0–4 are implemented; desktop + touch browser verification is still open (plan 046). Plan 105 UI/UX audit is done ([review 007](./reviews/2026-08-14--007--ui-ux.md)); implementation phases live in plan 105 §8.
+- Home-trader `MerchantScreen` is two columns (stock | player bag) with category (`Jedzenie` = `ItemCategory food`) / price / sort filters; buy with shells (Kup ghost, disabled when unaffordable), sell at half `tradeValue`, barter still covers list price. `coin` stays out of the merchant. Toasts sit at `z-20` above the modal.
+- lil-gui is hidden by default; Ustawienia → Panel debug, `?debug=1` or `?gui=1` reveal it (`?gui=0` forces hide). Pause → Świat exposes the player-facing subset of the same `WorldConfig`.
+- Vue Fazy 0–4 are implemented; desktop + touch browser verification is still open (plan 046). Plan 105 UI/UX audit is done ([review 007](./reviews/2026-08-14--007--ui-ux.md)); H1–H3 + trade/skills HUD are implemented, pending browser check.
 
 ## Important shared concepts
 

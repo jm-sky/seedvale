@@ -12,10 +12,9 @@
  * unrelated full page reload. Excluded, not the content itself. */
 @source not "../../docs";
 
-/* Design tokens land here as real screens migrate (plan 046) — matches the
- * shared dark/translucent look already repeated across `.seedvale-*__panel`
- * classes in index.html's \3c style> block (e.g. `.seedvale-npc-dialog__panel`),
- * so new Vue components don't re-guess the colors. */
+/* Design tokens (plan 046 / review 007 C9) — dark game shell is the source of
+ * truth. shadcn `:root` aliases map onto the same panel/ink values so leftover
+ * `bg-background` / `text-foreground` on `body` cannot flash a light page. */
 @theme {
   --color-panel: rgba(20, 24, 28, 0.92);
   --color-panel-backdrop: rgba(10, 14, 18, 0.55);
@@ -27,12 +26,16 @@
 :root {
   --min-screen-width: 800;
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: #14181c;
+  --foreground: #f2f6fa;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: rgba(255, 255, 255, 0.15);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: oklch(69.6% 0.17 162.48);
+  --popover: rgba(20, 24, 28, 0.92);
+  --popover-foreground: #f2f6fa;
+  --card: rgba(20, 24, 28, 0.92);
+  --card-foreground: #f2f6fa;
 }
 
 @theme inline {

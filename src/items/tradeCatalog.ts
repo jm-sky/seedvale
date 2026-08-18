@@ -80,6 +80,17 @@ export function tradeValue(kind: ItemKind): number {
   return Math.max(1, Math.round(ITEM_DEFS[kind].weight * 4))
 }
 
+/** Player → merchant sell price in shells. Half of `tradeValue`, at least 1.
+ *  `shell` and `coin` cannot be sold (review 105 trade). */
+export function canSell(kind: ItemKind): boolean {
+  return kind !== 'shell' && kind !== 'coin'
+}
+
+export function sellPrice(kind: ItemKind): number | null {
+  if (!canSell(kind)) return null
+  return Math.max(1, Math.floor(tradeValue(kind) * 0.5))
+}
+
 export function offerValue(offer: Partial<Record<ItemKind, number>>): number {
   let total = 0
   for (const [kind, count] of Object.entries(offer) as [ItemKind, number][]) {

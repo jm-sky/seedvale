@@ -12,9 +12,9 @@ import type { WorldBundle } from './worldBundle'
  *  cold, then lit later via the existing `[E]` campfire interaction (longer
  *  burn). Both, like the `[E]` interaction, require a firestarter in
  *  inventory to actually strike a flame (not consumed). */
-const SIMPLE_FIRE_BRANCH_COST = 2
-const FIRE_PIT_STONE_COST = 4
-const TORCH_BRANCH_COST = 1
+export const SIMPLE_FIRE_BRANCH_COST = 2
+export const FIRE_PIT_STONE_COST = 4
+export const TORCH_BRANCH_COST = 1
 
 export type LightActionResult = 'ok' | 'already-lit' | 'missing' | 'need-hold'
 

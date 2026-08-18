@@ -43,7 +43,7 @@ export type ItemKind =
   | 'dried_meat'
   | 'coin'
 
-export type ItemCategory = 'resource' | 'tool' | 'utility'
+export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food'
 
 export type ItemDef = {
   label: string
@@ -251,7 +251,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   tomato: {
     kind: 'tomato',
     label: 'pomidor',
-    category: 'resource',
+    category: 'food',
     weight: 0.15,
     color: 0xc0392b,
     description: 'Dojrzały pomidor zerwany z przydomowego ogródka. Zaspokaja głód.'
@@ -259,7 +259,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   raw_meat: {
     kind: 'raw_meat',
     label: 'surowe mięso',
-    category: 'resource',
+    category: 'food',
     weight: 0.8,
     color: 0xa5453f,
     description: 'Świeżo pozyskane mięso. Lepiej upiec je przy ognisku, zanim się je zje.'
@@ -267,7 +267,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   roasted_meat: {
     kind: 'roasted_meat',
     label: 'pieczone mięso',
-    category: 'resource',
+    category: 'food',
     weight: 0.7,
     color: 0x8a5a3a,
     description: 'Mięso upieczone przy ognisku. Sycący posiłek.'
@@ -275,7 +275,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   bread: {
     kind: 'bread',
     label: 'chleb',
-    category: 'resource',
+    category: 'food',
     weight: 0.5,
     color: 0xc99a52,
     description: 'Bochenek chleba. Dobrze się przechowuje — przydatny na czarną godzinę.'
@@ -299,7 +299,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   deer_meat: {
     kind: 'deer_meat',
     label: 'mięso sarny',
-    category: 'resource',
+    category: 'food',
     weight: 0.9,
     color: 0xa5453f,
     description: 'Surowe mięso sarny, pozyskane z upolowanej zwierzyny. Lepiej upiec je przy ognisku.'
@@ -307,7 +307,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   wolf_meat: {
     kind: 'wolf_meat',
     label: 'mięso wilka',
-    category: 'resource',
+    category: 'food',
     weight: 0.75,
     color: 0x8f4a44,
     description: 'Chude, twarde mięso wilka. Jadalne, choć niezbyt sycące na surowo.'
@@ -315,7 +315,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   boar_meat: {
     kind: 'boar_meat',
     label: 'mięso dzika',
-    category: 'resource',
+    category: 'food',
     weight: 0.95,
     color: 0x9c4b3f,
     description: 'Tłuste mięso dzika. Sycące, zwłaszcza po upieczeniu.'
@@ -323,7 +323,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   rabbit_meat: {
     kind: 'rabbit_meat',
     label: 'mięso królika',
-    category: 'resource',
+    category: 'food',
     weight: 0.4,
     color: 0xb56a5a,
     description: 'Niewielka porcja mięsa królika. Niewiele go, ale łatwo o kolejnego.'
@@ -331,7 +331,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   beef: {
     kind: 'beef',
     label: 'wołowina',
-    category: 'resource',
+    category: 'food',
     weight: 1.2,
     color: 0xa14840,
     description: 'Kawał wołowiny z krowy. Najbardziej sycąca z surowych mięs.'
@@ -347,7 +347,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   cheese: {
     kind: 'cheese',
     label: 'ser',
-    category: 'resource',
+    category: 'food',
     weight: 0.4,
     color: 0xe8c96a,
     description: 'Krąg twardego sera. Dobrze się przechowuje i dobrze syci.'
@@ -355,7 +355,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   dried_meat: {
     kind: 'dried_meat',
     label: 'suszone mięso',
-    category: 'resource',
+    category: 'food',
     weight: 0.35,
     color: 0x6b3a2e,
     description: 'Paski suszonego mięsa. Lekkie, sycące i długo się nie psują — dobre na dłuższą wyprawę.'

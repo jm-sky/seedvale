@@ -201,6 +201,7 @@ export type GameLoopDeps = {
   mapDiscovery: MapDiscovery
   openQuestLog: () => void
   openInventory: () => void
+  openSkills: () => void
   startGroundWork: (mode: 'dig' | 'level', x: number, z: number) => void
   /** Start the axe chop channel for a gaze-selected tree (plan 057). */
   startTreeChop: (treeId: string, x: number, z: number) => void
@@ -269,7 +270,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     climate, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
-    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory,
+    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
@@ -453,6 +454,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const inventoryConsumed = keyboard.consumeInventory()
       const quickActionsConsumed = keyboard.consumeQuickActions()
       const minimapConsumed = keyboard.consumeMinimap()
+      const skillsConsumed = keyboard.consumeSkills()
       setHighlight(null)
       // Modal safety (plan 123): cancel any in-flight attack rather than let
       // it keep timing out/resolving while input is blocked.
@@ -488,6 +490,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           break
         case 'quickActions':
           if (quickActionsConsumed) quickActions.close()
+          break
+        case 'skills':
+          if (skillsConsumed) vueUi.closeSkillsScreen()
           break
         case 'worldMap':
           if (minimapConsumed) vueUi.closeWorldMap()
@@ -811,6 +816,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       }
       if (keyboard.consumeQuestLog()) openQuestLog()
       if (keyboard.consumeInventory()) openInventory()
+      if (keyboard.consumeSkills()) openSkills()
       if (keyboard.consumeQuickActions()) quickActions.toggle()
       if (keyboard.consumeMinimap()) {
         vueUi.toggleWorldMap(player.mesh.position.x, player.mesh.position.z)

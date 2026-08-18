@@ -12,7 +12,6 @@ import {
 } from '../audio/playerMoveSounds'
 import { QUALITY_PRESET_IDS } from '../config/qualityProfiles'
 import { triangleCount } from '../config/worldConfig'
-import { isTouchDevice } from '../input/isTouchDevice'
 import { getMonitor } from '../perf/active'
 import { BENCHMARK_SCENARIO_IDS, type BenchmarkScenarioId } from '../perf/benchmarkScenarios'
 import { SEASON_LABELS, WEATHER_LABELS } from '../world/weather'
@@ -61,9 +60,10 @@ export function createDebugGui(
 ): DebugGuiHandle {
   const gui = new GUI({ title: 'Seedvale' })
   gui.close()
-  // lil-gui is a dev/debug panel, not part of the mobile UI — hidden by default
-  // on touch, reachable via the pause menu's "Toggle debug panel" button.
-  if (isTouchDevice()) gui.hide()
+  // Hidden by default on every device (review 007 C11). `createApp` shows it
+  // when `config.showGui` is true (`?debug=1` / `?gui=1`); Settings → "Panel
+  // debug" toggles it either way.
+  gui.hide()
 
   const info = {
     get triangles() {

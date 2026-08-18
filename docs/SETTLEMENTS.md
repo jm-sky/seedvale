@@ -77,7 +77,7 @@ Multiplayer nie jest planowany teraz i nie projektujemy go tutaj. Ale S3/S7 poka
 - Stamina: chodzenie (`goTo`) drenuje mało, lekka `execute` (drink/eat/deposit) prawie nic, ciężka `execute` (chop/work) drenuje pełną stawką. Wyczerpanie w trakcie ruchu/pracy → faza `exhausted` (bez utraty `pendingAction`), wznowienie po odzyskaniu progu staminy.
 - Watchdog utknięcia obserwuje `goTo`/`followPath`/`wander`/`goSleep`; brak realnego postępu pozycji eskaluje rescue (repath → local escape → abandon), emergency teleport tylko przy powtarzającym się utknięciu (`src/ai/npcMovementWatchdog.ts`). Cel w rdzeniu obcego dysku (dom / studnia) leży na obręczy od zewnątrz (`src/ai/npcColliderRim.ts`, plan [108](./plans/2026-08-14--108--npc-stuck-at-house-locomotion.md)); probe rescue nie akceptuje wnętrza zajętego collidera; `moving` tylko przy realnym przesunięciu x/z. Playtest w przeglądarce — `verification needed`.
 - `?debug=1` dorzuca do etykiety NPC linię diagnostyczną (faza, akcja, dystans, stamina, stan watchdoga).
-- Dialog v2 = ekran Vue. W osadzie domowej: handel u kupca; strażnik może oddać miecz.
+- Dialog v2 = ekran Vue. W osadzie domowej: handel u kupca (dwie kolumny, kupno/sprzedaż/barter); strażnik może oddać miecz.
 
 ### Świadomie nie ma
 

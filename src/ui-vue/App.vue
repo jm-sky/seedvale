@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
+import { isTouchDevice } from '../input/isTouchDevice'
 import NpcDialogueMenu from './NpcDialogueMenu.vue'
 import BusyOverlay from './screens/BusyOverlay.vue'
 import CharacterScreen from './screens/CharacterScreen.vue'
 import FlavorDialog from './screens/FlavorDialog.vue'
+import HudRightColumn from './screens/HudRightColumn.vue'
 import HudScreen from './screens/HudScreen.vue'
 import InventoryScreen from './screens/InventoryScreen.vue'
 import MerchantScreen from './screens/MerchantScreen.vue'
@@ -20,6 +22,8 @@ import VillagersScreen from './screens/VillagersScreen.vue'
 import WorldConfigScreen from './screens/WorldConfigScreen.vue'
 import WorldMapScreen from './screens/WorldMapScreen.vue'
 import { abortBusy, abortRest, closeTopOverlay, togglePause, ui } from './store'
+
+const touchDevice = isTouchDevice()
 
 function onKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
@@ -38,7 +42,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <!-- Always-visible chrome (under modal screens). -->
     <HudScreen />
     <ToastStack />
-    <MinimapScreen />
+    <HudRightColumn />
+    <MinimapScreen v-if="!touchDevice" />
     <PauseMenu />
     <QuestLogScreen />
     <VillagersScreen />
