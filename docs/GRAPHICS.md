@@ -37,6 +37,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G10 | Asset alignment browser **Game-like** mode reuses `createRenderer` / `createLights` / `createSky` / `skyParamsFromTime` — no parallel preview rig. Post-processing composer runs in **single-view only** (not 4-up). | `src/tools/assetBrowser/`, plan [088](./plans/archive/2026-08-12--088--asset-alignment-browser.md) |
 | G11 | Profile jakości Low/Medium/High/Custom sterują **tylko gałkami live** (pixel ratio, AO/bloom/god rays, odbicia, shadow map, LOD scale). Nie zastępują optymalizacji architektury i nie rebuildują świata. | `src/config/qualityProfiles.ts`, plan [103](./plans/2026-08-13--103--performance-diagnostics-benchmark.md) |
 | G12 | Third-person kamera zostaje **poza heightfieldem i dużymi colliderami** (domy): boom jest skracany wzdłuż odcinka look-at → desired, bez teleportu gracza i bez osobnego raycastu sceny. | `src/player/cameraBoom.ts`, issue [032](./issues/2026-08-15--032--mobile-black-world-screen.md) |
+| G13 | Deszcz = **wąska pionowa kreska** (`uWidthFrac = 0.35` w `gl_PointCoord.x`); śnieg = **pełny kwadrat sprite'a** (`uWidthFrac = 1`). Wysokość/długość zostaje `gl_PointSize` — nie zwężać deszczu przez `RAIN_SIZE`. Wspólny shader rain/snow. | `src/world/weatherParticles.ts` |
 
 ---
 
@@ -52,11 +53,17 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | GLB load / shared mats | `src/assets/loadGltf.ts` |
 | Niebo / światło / dzień-noc | `src/world/createSky.ts`, `createLights.ts`, `dayNight.ts` |
 | Teren / trawa / drogi (tint) | `src/terrain/buildChunkGeometry.ts`, `grass.ts`, `chunkHeightmap.ts`, `biomeColors.ts` |
+| Deszcz / śnieg (GPU points) | `src/world/weatherParticles.ts` |
 | Modele / kredyty | [assets/](./assets/README.md) |
 
 ---
 
 ## Log
+
+### 2026-08-18 — Rain drops are thin streaks, not squares 🔧
+
+- Shared rain/snow `THREE.Points` fragment shader used to fill the whole sprite, so rain read as large flakes (easy to confuse with snow). Height/`gl_PointSize`/`RAIN_SIZE` unchanged.
+- New `uWidthFrac`: rain **0.35** (soft `gl_PointCoord.x` mask), snow **1** (mask skipped — full square as before). G13.
 
 ### 2026-08-18 — N8AO auto-budget no longer hard-toggles the pass 🔧
 

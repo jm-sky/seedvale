@@ -26,6 +26,11 @@ const RAIN_DRIFT = 0.6
 const SNOW_DRIFT = 0.4
 const RAIN_SIZE = 0.16
 const SNOW_SIZE = 0.24
+/** Visible sprite width vs gl_PointSize. Rain is a thin streak; snow stays a
+ *  full square (GRAPHICS G13). Height is gl_PointSize — do not shrink RAIN_SIZE
+ *  to make rain narrower, that would shorten the drop too. */
+const RAIN_WIDTH_FRAC = 0.35
+const SNOW_WIDTH_FRAC = 1
 const RAIN_MAX_OPACITY = 0.5
 const SNOW_MAX_OPACITY = 0.85
 
@@ -82,9 +87,17 @@ const FRAGMENT_SHADER = /* glsl */ `
 
   uniform vec3 uColor;
   uniform float uOpacity;
+  uniform float uWidthFrac;
 
   void main() {
-    gl_FragColor = vec4(uColor, uOpacity);
+    float streak = 1.0;
+    // Snow keeps uWidthFrac = 1 and skips the mask so flakes stay full squares.
+    if (uWidthFrac < 0.999) {
+      float halfW = uWidthFrac * 0.5;
+      streak = 1.0 - smoothstep(halfW * 0.55, halfW, abs(gl_PointCoord.x - 0.5));
+      if (streak <= 0.001) discard;
+    }
+    gl_FragColor = vec4(uColor, uOpacity * streak);
     #include <fog_fragment>
   }
 `
@@ -106,6 +119,7 @@ type EmitterConfig = {
   fallSpeed: number
   drift: number
   maxOpacity: number
+  widthFrac: number
 }
 
 function createEmitter(cfg: EmitterConfig): Emitter {
@@ -137,6 +151,7 @@ function createEmitter(cfg: EmitterConfig): Emitter {
       uColor: { value: new THREE.Color(cfg.color) },
       uOpacity: { value: 0 },
       uVisibleFraction: { value: 0 },
+      uWidthFrac: { value: cfg.widthFrac },
     },
   ])
 
@@ -211,6 +226,7 @@ export function createWeatherParticles(opts: WeatherParticlesOptions): WeatherPa
     fallSpeed: RAIN_FALL_SPEED,
     drift: RAIN_DRIFT,
     maxOpacity: RAIN_MAX_OPACITY,
+    widthFrac: RAIN_WIDTH_FRAC,
   })
   const snow = createEmitter({
     maxCount: SNOW_MAX_COUNT,
@@ -219,6 +235,7 @@ export function createWeatherParticles(opts: WeatherParticlesOptions): WeatherPa
     fallSpeed: SNOW_FALL_SPEED,
     drift: SNOW_DRIFT,
     maxOpacity: SNOW_MAX_OPACITY,
+    widthFrac: SNOW_WIDTH_FRAC,
   })
 
   function update(
