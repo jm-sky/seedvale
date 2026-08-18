@@ -4,12 +4,9 @@
 
 ## Note on this file
 
-This file did not exist before this implementation session — the task that requested this
-work pointed at it, but only the plan itself (`2026-08-17--144--water-reflection-gpu-optimization.md`)
-was present on disk. The plan ID `144` also collides with an unrelated plan,
-`2026-08-17--144--npc-player-food-drink-help.md` (see [duplicate plan IDs](../plans/README.md) — a
-recurring issue in this repo, not specific to this plan). Implementation below is based on the plan
-file and the current codebase only.
+This file was written during the Stage S implementation session; only the plan itself
+(`2026-08-17--144--water-reflection-gpu-optimization.md`) existed on disk beforehand.
+Implementation below is based on the plan file and the current codebase only.
 
 ## What was implemented — Stage S (reflection visibility budget)
 

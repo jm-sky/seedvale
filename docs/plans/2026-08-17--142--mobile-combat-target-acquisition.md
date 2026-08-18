@@ -3,7 +3,7 @@
 **Created:** 2026-08-17
 **Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S
-**Depends on:** ~~123~~ ~~124~~
+**Depends on:** ~~123~~ ~~124b~~
 
 domain: `ui-input`
 tags: [items-player, fauna]

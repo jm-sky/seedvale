@@ -5,7 +5,7 @@ domain: fauna
 # Plan: Fauna — respawn siedliska w skali dnia świata
 
 **Created:** 2026-08-17  
-**Status:** `verification needed` 🔍  
+**Status:** `done` ✅  
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~125~~
 
@@ -89,5 +89,5 @@ Extended `PreySpawner` / `updateSpawners` / `createFauna` — no new manager.
 
 - **Implemented** — all of the above.
 - **Technically verified** — `npx tsc --noEmit` clean; `npm run test` 910/910; `npm run build` clean. `npm run lint` — 1 pre-existing `prefer-const` in `settlement/props.ts`, unrelated.
-- **Browser/manual verified** — **not done**. Needs: new world shows 3 deer at the cave and 2 stags at the thicket; kill 1, wait or skip ~1 day, exactly one replacement (not a burst); full habitat adds none; `wolfDen` pack still one-shot.
+- **Browser/manual verified** — accepted 2026-08-18 (playtest).
 

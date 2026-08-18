@@ -6,7 +6,7 @@ tags: [items-player, world-terrain]
 # Plan: Fauna — wizualny feedback zniszczenia siedliska i oprawionych zwłok
 
 **Created:** 2026-08-17  
-**Status:** `verification needed` 🔍  
+**Status:** `done` ✅  
 **Priority:** medium · **Effort:** L  
 **Depends on:** ~~125~~
 
@@ -145,5 +145,5 @@ Implemented as an extension of plan 125 spawn-point destroy and plan 106 `meatHa
 
 - **Implemented** — all of the above.
 - **Technically verified** — `npx tsc --noEmit` clean; `npm run test` 901/901; `npm run build` clean. `npm run lint` — 1 pre-existing `prefer-const` in `settlement/props.ts`, unrelated.
-- **Browser/manual verified** — **not done**. Needs: deplete cave/thicket, `[E] Zniszcz` bar + Esc-cancel + complete; burned cave stays, black ground, fire ~5 min; harvest meat → bones/scraps, gone after ~90 s or bury.
+- **Browser/manual verified** — accepted 2026-08-18 (playtest).
 

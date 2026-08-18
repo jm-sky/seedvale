@@ -1,19 +1,19 @@
 # Plan: NPC pomoc graczowi w jedzeniu i piciu — implementation notes
 
-**Created:** 2026-08-17
+**Created:** 2026-08-18
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~106~~ ~~069~~ ~~122~~
 
 ## Review summary
 
-Plan 144 jest dobrze dopasowany do obecnej architektury i nie wymaga nowego systemu interakcji, inventory ani relacji. Najważniejsze rzeczy do doprecyzowania przed implementacją wynikają z faktycznego codebase:
+Plan 152 jest dobrze dopasowany do obecnej architektury i nie wymaga nowego systemu interakcji, inventory ani relacji. Najważniejsze rzeczy do doprecyzowania przed implementacją wynikają z faktycznego codebase:
 
 1. NPC dialogue v2 już ma istniejący temat `help` oraz `QuestDialogOverride`; nie należy tworzyć drugiego mechanizmu ofert. `NpcDialogueMenu.vue` jest właściwym punktem UI.
 2. `NpcDialogueMenu` już obsługuje `accept/decline`, a `store.ts` pobiera `QuestManager.onInteract()` przy otwieraniu dialogu. Pomoc żywnościowa nie powinna być wciskana do questowego `QuestDialogOverride`, jeśli nie jest questem. Lepiej rozszerzyć istniejący flow o osobny wynik/handler dla assistance.
 3. `Inventory` ma już dokładnie potrzebne operacje `count()`, `has()`, `add()` i `remove()`. Nie dodawać osobnego API transferu, dopóki prosty atomowy resolver nie jest potrzebny.
 4. `PlayerNeeds.eatFood()` i `drinkWater()` są właściwymi operacjami końcowymi. Nie modyfikować bezpośrednio `needs.hunger.current` / `needs.thirst.current`.
-5. Istniejący `reactionChance.ts` jest **probabilistyczny**, bo finalny roll wykonuje caller przez `Math.random()`. Plan 144 mówi o deterministycznej decyzji. Nie kopiować bezrefleksyjnie `computeReactionChance()` z losowym roll'em. Jeśli deterministyczność jest wymagana, rozszerzyć istniejący model o czystą funkcję willingness/score i użyć stabilnego wejścia/rolla zgodnego z istniejącym RNG/deterministic simulation. Nie tworzyć osobnego utility-AI.
+5. Istniejący `reactionChance.ts` jest **probabilistyczny**, bo finalny roll wykonuje caller przez `Math.random()`. Plan 152 mówi o deterministycznej decyzji. Nie kopiować bezrefleksyjnie `computeReactionChance()` z losowym roll'em. Jeśli deterministyczność jest wymagana, rozszerzyć istniejący model o czystą funkcję willingness/score i użyć stabilnego wejścia/rolla zgodnego z istniejącym RNG/deterministic simulation. Nie tworzyć osobnego utility-AI.
 6. Największa rzecz do sprawdzenia podczas implementacji: aktualne `NpcAgent.inventory` jest generycznym carried inventory używanym przede wszystkim przez istniejące zachowania transportowe. Sam fakt istnienia inventory nie oznacza, że zwykli NPC faktycznie noszą `tomato`, `bread`, `raw_meat`, `roasted_meat` albo `waterskin_full`. V1 nie może udawać, że te itemy istnieją przy NPC. Najpierw sprawdzić realne źródła zapisów do NPC inventory. Jeśli zwykli NPC nie dostają consumables, plan powinien w implementacji ograniczyć pomoc do faktycznie dostępnych carried items albo zatrzymać się przed dodawaniem nowego mechanizmu zaopatrzenia NPC.
 7. Woda ma dodatkową niejednoznaczność: `waterskin_full` jest itemem typu container-swap. Trzeba zachować istniejącą semantykę `full → empty` i nie tworzyć specjalnego `Household.water → Player` transferu.
 
@@ -168,7 +168,7 @@ Jeśli zamiast tego chcemy dosłownie „dać item do inventory gracza”, trzeb
 
 To jest najważniejsza korekta względem obecnego planu.
 
-`computeReactionChance()` ma charakter probabilistyczny i jest używany do reakcji na gracza. Plan 144 wymaga decyzji wynikającej ze stanu NPC, ale jednocześnie mówi o deterministyczności.
+`computeReactionChance()` ma charakter probabilistyczny i jest używany do reakcji na gracza. Plan 152 wymaga decyzji wynikającej ze stanu NPC, ale jednocześnie mówi o deterministyczności.
 
 Preferowany kierunek:
 
@@ -207,7 +207,7 @@ Nie dodawać nowego save state.
 
 Jednocześnie trzeba sprawdzić rzeczywisty status NPC inventory w persistence. `Inventory.toJSON()` istnieje, ale nie oznacza automatycznie, że NPC inventory jest obecnie zapisywane/odtwarzane jako część NPC save.
 
-Jeśli NPC inventory jest runtime-only, przekazanie itemu powinno być traktowane jako runtime consequence zgodnie z istniejącą polityką NPC. Nie tworzyć osobnej persystencji dla planu 144.
+Jeśli NPC inventory jest runtime-only, przekazanie itemu powinno być traktowane jako runtime consequence zgodnie z istniejącą polityką NPC. Nie tworzyć osobnej persystencji dla planu 152.
 
 ## Testy
 

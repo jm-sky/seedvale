@@ -1,10 +1,8 @@
 # Implementation notes: Player Skills — Sneak (plan 124)
 
-> **Note on plan ID collision:** this repo already has a different plan filed as
-> `2026-08-15--124--forgiving-melee-targeting-gap-close.md` (implemented in a
-> prior session, see `git log`). This Sneak plan's filename also uses `124`.
-> Left as-is rather than renumbering existing history; flagging here so the
-> duplicate ID doesn't cause confusion later.
+> **Note on plan ID:** forgiving melee targeting is
+> `2026-08-15--124b--forgiving-melee-targeting-gap-close.md` (resolved as `124b`).
+> This Sneak plan keeps `124`.
 
 ## Discrepancy vs. the plan text
 

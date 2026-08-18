@@ -1,6 +1,6 @@
 Plan: Fauna — stada i młode
 
-Status: `done` (technical verification green; no browser/play check yet)
+Status: `done` ✅ — playtest accepted 2026-08-18
 Created: 2026-08-14
 Priority: 🟡 medium · Effort: M
 Depends on: /094/
@@ -283,4 +283,4 @@ Ważne: v1 ma przede wszystkim sprawić, żeby fauna wyglądała na bardziej ży
 ## Verification
 
 - `npx tsc --noEmit`, `npm run lint` (clean on changed/new files — pre-existing unrelated errors in `_temp/asset-audit/inspect.mjs` only), `npm run build`, `npm run test` (94/94 files, 719/719 tests, including new `herdCohesion.test.ts`) — all green.
-- **Not yet done:** browser/play check — load a settlement and confirm deer/stag/boar clusters visibly move together (rabbit groups visibly looser), a juvenile (visibly smaller) stays near and follows an adult, flee/chase still works normally for herd/juvenile animals, killing a herd leader or a mother produces no errors and the group/juvenile continues, and (optionally, given the 600s timer) a juvenile eventually grows back to adult size and stops following its mother.
+- **Browser/manual verified** — accepted 2026-08-18 (playtest).

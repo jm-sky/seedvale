@@ -1,6 +1,6 @@
 # Plan: Social Places and Social Behaviour
 
-**Created:** 2026-08-17  
+**Created:** 2026-08-18  
 **Status:** `planned` 📋  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~020~~

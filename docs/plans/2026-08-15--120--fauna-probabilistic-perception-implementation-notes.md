@@ -44,7 +44,7 @@ Brak `Math.random()`. `detectionRoll(animalId, tick)` = FNV-1a hash `animalId` (
 
 ## Browser / gameplay verification
 
-Nie wykonano — środowisko browser verification nie było dostępne w tej sesji. Zgodnie z `CLAUDE.md` pozostaje otwarte; scenariusze z sekcji „Browser / gameplay verification" planu (tył/przód z daleka/bliska/bok, brak wzrostu CPU) czekają na test w przeglądarce.
+Accepted 2026-08-18 (playtest).
 
 ## Potwierdzenie zachowania istniejącego flee/react
 

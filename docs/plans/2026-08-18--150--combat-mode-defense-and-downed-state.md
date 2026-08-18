@@ -8,7 +8,7 @@ tags: [fauna, ui-input]
 **Created:** 2026-08-18
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** L
-**Depends on:** ~~123~~ ~~124~~
+**Depends on:** ~~123~~ ~~124b~~
 
 ## Cel
 
@@ -30,10 +30,10 @@ Plan rozszerza istniejący combat, zamiast tworzyć drugi system:
 
 - `src/player/playerMelee.ts` zawiera już wspólny melee state machine, target acquisition, pamięć ostatnich trafionych celów, hit detection i gap-close; istnieje `pickCombatTarget()` oraz `yawToward()`. cite nie dotyczy repo — patrz aktualny kod
 - plan 123 wprowadził wspólną akcję melee i `HealthState` jako źródło HP/damage;
-- plan 124 dodał forgiving target acquisition i gap-close;
+- plan 124b dodał forgiving target acquisition i gap-close;
 - plan 142 dotyczy mobile target acquisition/auto-facing i powinien nadal korzystać ze wspólnego targetowania, bez tworzenia drugiego systemu.
 
-Przed implementacją ponownie sprawdzić aktualny kod, ponieważ plany 123/124/142 mogą być już częściowo lub całkowicie zaimplementowane.
+Przed implementacją ponownie sprawdzić aktualny kod, ponieważ plany 123/124b/142 mogą być już częściowo lub całkowicie zaimplementowane.
 
 ## 1. Combat mode
 

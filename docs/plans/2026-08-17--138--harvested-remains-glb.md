@@ -5,7 +5,7 @@ domain: fauna
 # Plan: GLB pozostałości po oprawieniu
 
 **Created:** 2026-08-17  
-**Status:** `verification needed` 🔍  
+**Status:** `done` ✅  
 **Priority:** medium · **Effort:** S/M  
 **Depends on:** ~~137~~
 
@@ -86,4 +86,4 @@ Browser/play:
 
 - **Implemented** — all of the above.
 - **Technically verified** — `npx tsc --noEmit` clean; `npm run test` 903/903; `npm run build` clean. Changed-file lint clean (`harvestedRemains.ts` / `AnimalAgent.ts`). Full `npm run lint` still has 1 pre-existing `prefer-const` in `settlement/props.ts`, unrelated.
-- **Browser/manual verified** — **not done**. Needs: kill an animal, harvest meat, confirm bone pile + large bone(s) + hide beside it + red scraps; gone after ~90 s.
+- **Browser/manual verified** — accepted 2026-08-18 (playtest).

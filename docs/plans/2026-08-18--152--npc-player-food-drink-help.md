@@ -1,6 +1,6 @@
 # Plan: NPC pomoc graczowi w jedzeniu i piciu
 
-**Created:** 2026-08-17  
+**Created:** 2026-08-18  
 **Status:** `planned` 📋  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~106~~ ~~069~~ ~~122~~
