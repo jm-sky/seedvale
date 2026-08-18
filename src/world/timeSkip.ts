@@ -34,6 +34,8 @@ export type TimeSkip = {
   /** Overlay intensity of the in-flight skip, or `null` when idle. Rest
    *  uses `1`; wait uses `0.5`. */
   fadeStrength: () => TimeSkipFadeStrength | null
+  /** Elapsed fraction of the in-flight skip (`0`–`1`), or `null` when idle. */
+  progress: () => number | null
   /** Restores `timeMultiplier` immediately without finishing normally — for
    *  app teardown mid-skip. */
   cancel: () => void
@@ -69,6 +71,12 @@ export function createTimeSkip(dayNight: DayNightState): TimeSkip {
   return {
     isActive: () => active !== null,
     fadeStrength: () => active?.fadeStrength ?? null,
+    progress: () => {
+      if (!active) return null
+      const total = active.hours * SECONDS_PER_SKIPPED_HOUR
+      if (total <= 0) return null
+      return 1 - active.remainingSec / total
+    },
     start(hours, opts) {
       if (active) return
       active = {

@@ -3,8 +3,8 @@ import { computed, ref, watch } from 'vue'
 import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
-import { ITEM_DEFS, type ItemCategory, type ItemKind } from '../../items/items'
 import { isInstanceBackedKind } from '../../items/itemInstances'
+import { hasItemKindCategory, ITEM_DEFS, type ItemCategory, type ItemKind } from '../../items/items'
 import { MERCHANT_STOCK, merchantPrice, offerValue, sellPrice } from '../../items/tradeCatalog'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -41,6 +41,7 @@ const shells = computed(() => ui.merchant.counts.shell ?? 0)
 
 const categoryChips: { id: CategoryFilter; label: string }[] = [
   { id: 'all', label: 'Wszystkie' },
+  { id: 'weapon', label: categoryLabel.weapon },
   { id: 'resource', label: categoryLabel.resource },
   { id: 'tool', label: categoryLabel.tool },
   { id: 'utility', label: categoryLabel.utility },
@@ -60,7 +61,7 @@ const sortChips: { id: SortMode; label: string }[] = [
 
 function matchesCategory(kind: ItemKind): boolean {
   if (categoryFilter.value === 'all') return true
-  return ITEM_DEFS[kind].category === categoryFilter.value
+  return hasItemKindCategory(kind, categoryFilter.value)
 }
 
 function matchesPrice(price: number): boolean {
@@ -181,7 +182,7 @@ function chipClass(active: boolean): string {
     @click.self="closeMerchant"
   >
     <UiPanel class="flex h-[min(720px,calc(100dvh-32px))] w-[min(920px,calc(100vw-32px))] max-w-4xl flex-col overflow-hidden">
-      <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+      <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <h2 class="text-base font-semibold tracking-wide">
           Kupiec
         </h2>
@@ -211,8 +212,8 @@ function chipClass(active: boolean): string {
           {{ chip.label }}
         </button>
       </div>
-      <div class="flex flex-col lg:flex-row items-center gap-1 lg:gap-4">
-        <div class="mb-2 flex flex-wrap items-center gap-1">
+      <div class="flex flex-col gap-1 md:flex-row md:items-center md:gap-4">
+        <div class="flex flex-wrap items-center gap-1">
           <button
             v-for="chip in priceChips"
             :key="chip.id"
@@ -224,7 +225,7 @@ function chipClass(active: boolean): string {
             {{ chip.label }}
           </button>
         </div>
-        <div class="mb-3 flex flex-wrap items-center gap-1">
+        <div class="flex flex-wrap items-center gap-1">
           <button
             v-for="chip in sortChips"
             :key="chip.id"
@@ -238,8 +239,8 @@ function chipClass(active: boolean): string {
         </div>
       </div>
 
-      <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-2">
-        <section class="flex min-h-0 min-w-0 flex-col">
+      <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden md:grid-cols-2 md:gap-4">
+        <section class="flex min-h-0 min-w-0 flex-col max-md:max-h-[min(280px,38dvh)]">
           <h3 class="mb-1 text-[12px] font-semibold uppercase tracking-wide opacity-70">
             Sprzedawca
           </h3>
@@ -282,7 +283,7 @@ function chipClass(active: boolean): string {
           </div>
         </section>
 
-        <section class="flex min-h-0 min-w-0 flex-col">
+        <section class="flex min-h-0 min-w-0 flex-col max-md:max-h-[min(280px,38dvh)]">
           <h3 class="mb-1 text-[12px] font-semibold uppercase tracking-wide opacity-70">
             Kupujący
           </h3>

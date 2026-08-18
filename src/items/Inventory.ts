@@ -1,5 +1,5 @@
-import { ITEM_DEFS, type ItemKind } from './items'
 import { cloneItemInstance, isTrapItemInstance, type ItemInstance, type TrapItemInstance } from './itemInstances'
+import { ITEM_DEFS, type ItemKind } from './items'
 
 /** Default carry limit (kg) — see plan `2026-08-08--043`. Not persisted (the
  *  plan keeps weight/limit derived from config/definitions, not save data);

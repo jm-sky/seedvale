@@ -5,6 +5,7 @@ export const useItemCategoryLabels = () => {
       tool: 'Narzędzie',
       utility: 'Użytkowe',
       food: 'Jedzenie',
+      weapon: 'Broń',
     },
   }
 }

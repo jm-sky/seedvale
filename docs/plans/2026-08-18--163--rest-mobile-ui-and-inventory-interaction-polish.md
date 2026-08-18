@@ -6,7 +6,7 @@ tags: [items-player]
 # Plan: Rest, Mobile UI and Inventory Interaction Polish
 
 **Created:** 2026-08-18
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Priority:** 🟡 medium · **Effort:** S
 **Depends on:** none
 

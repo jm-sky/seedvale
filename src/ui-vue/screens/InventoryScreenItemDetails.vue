@@ -8,7 +8,7 @@ import { firstUpperCase } from '@/lib/firstUpperCase'
 import { isToolKind } from '../../items/HeldTool'
 import { consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
 import { isInstanceBackedKind } from '../../items/itemInstances'
-import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind } from '../../items/items'
+import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind, primaryItemCategory } from '../../items/items'
 import { tradeValue } from '../../items/tradeCatalog'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { showToast, ui } from '../store'
@@ -25,6 +25,7 @@ const panel = ref<HTMLElement | null>(null)
 const { categoryLabel } = useItemCategoryLabels()
 
 const CATEGORY_ICON: Record<ItemCategory, Component> = {
+  weapon: Sword,
   tool: Sword,
   resource: Wheat,
   utility: Package,
@@ -49,6 +50,8 @@ const meleeSpeed = computed<string | null>(() => {
 const consumable = computed(() => catalogEntry.value?.consumable ?? null)
 const consumeLabel = computed(() => consumable.value ? consumeVerbLabel(consumable.value.need) : 'Zjedz')
 const itemValue = computed<number>(() => item.value ? tradeValue(item.value.kind) : 0)
+const itemCategoryText = computed(() => item.value ? item.value.categories.map((cat) => categoryLabel[cat]).join(' · ') : '')
+const itemCategoryIcon = computed(() => item.value ? CATEGORY_ICON[primaryItemCategory(item.value)] : Sword)
 const imageUrl = computed<string | null>(() => null)
 
 const instanceRows = computed(() => {
@@ -117,7 +120,7 @@ function sellInstance(id: string): void {
         class="h-full w-full rounded-md object-cover"
       >
       <component
-        :is="CATEGORY_ICON[item.category]"
+        :is="itemCategoryIcon"
         v-else
         :size="40"
         class="opacity-40"
@@ -133,7 +136,7 @@ function sellInstance(id: string): void {
     <div class="grid grid-cols-2 gap-2 my-2">
       <InventoryScreenSection
         label="Kategoria"
-        :value="categoryLabel[item.category]"
+        :value="itemCategoryText"
       />
 
       <InventoryScreenSection

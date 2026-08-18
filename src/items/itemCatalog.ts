@@ -5,7 +5,7 @@
  * Source of truth for *labels/weights* remains `ITEM_DEFS` in `items.ts`.
  * This file adds gameplay/AI-facing flags (hold, melee, spawn, assets, roadmap).
  */
-import type { ItemCategory, ItemKind } from './items'
+import type { ItemKind } from './items'
 
 export type ItemSpawnKind =
   | 'none'
@@ -51,7 +51,6 @@ export type ItemCatalogEntry = {
   kind: ItemKind
   /** Polish label — mirrors ITEM_DEFS. */
   label: string
-  category: ItemCategory
   /** Can occupy HeldTool slot + Weź in inventory. */
   holdable: boolean
   /** Player melee vs animals while held (plan 123 — `player/playerMelee.ts`). */
@@ -95,7 +94,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   shell: {
     kind: 'shell',
     label: 'muszla',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'village_renewable',
@@ -105,7 +103,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   stone: {
     kind: 'stone',
     label: 'kamień',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'village_renewable',
@@ -115,7 +112,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   branch: {
     kind: 'branch',
     label: 'gałąź',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'village_renewable',
@@ -127,7 +123,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   mushroom: {
     kind: 'mushroom',
     label: 'grzyb',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'world_chunk',
@@ -137,7 +132,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   flower: {
     kind: 'flower',
     label: 'kwiat',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'world_chunk',
@@ -147,7 +141,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   cone: {
     kind: 'cone',
     label: 'szyszka',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'world_chunk',
@@ -157,7 +150,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   knife: {
     kind: 'knife',
     label: 'nóż',
-    category: 'tool',
     holdable: true,
     melee: { damage: 12, range: 1.6, arcDot: 0.6, windUp: 0.12, hitWindow: 0.08, recovery: 0.18, staminaCost: 4 },
     defense: { canBlock: true, baseBlockChance: 0.12, partialReduction: 0.35 },
@@ -169,7 +161,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   long_sword: {
     kind: 'long_sword',
     label: 'miecz',
-    category: 'tool',
     holdable: true,
     melee: { damage: 28, range: 2.6, arcDot: 0.35, windUp: 0.28, hitWindow: 0.12, recovery: 0.38, staminaCost: 12 },
     defense: { canBlock: true, baseBlockChance: 0.28, partialReduction: 0.55 },
@@ -180,7 +171,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   spear: {
     kind: 'spear',
     label: 'dzida',
-    category: 'tool',
     holdable: true,
     melee: { damage: 20, range: 3.0, arcDot: 0.6, windUp: 0.24, hitWindow: 0.1, recovery: 0.3, staminaCost: 9 },
     defense: { canBlock: true, baseBlockChance: 0.18, partialReduction: 0.4 },
@@ -191,7 +181,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   short_sword: {
     kind: 'short_sword',
     label: 'krótki miecz',
-    category: 'tool',
     holdable: true,
     melee: { damage: 18, range: 2.1, arcDot: 0.5, windUp: 0.18, hitWindow: 0.1, recovery: 0.26, staminaCost: 7 },
     defense: { canBlock: true, baseBlockChance: 0.22, partialReduction: 0.45 },
@@ -202,7 +191,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   firestarter: {
     kind: 'firestarter',
     label: 'krzesiwo',
-    category: 'tool',
     holdable: true,
     melee: null,
     spawn: 'starting',
@@ -212,7 +200,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   blanket: {
     kind: 'blanket',
     label: 'koc',
-    category: 'utility',
     holdable: false,
     melee: null,
     spawn: 'starting',
@@ -222,7 +209,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   shovel: {
     kind: 'shovel',
     label: 'łopata',
-    category: 'tool',
     holdable: true,
     melee: { damage: 8, range: 2.0, arcDot: 0.45, windUp: 0.25, hitWindow: 0.1, recovery: 0.35, staminaCost: 8 },
     defense: { canBlock: true, baseBlockChance: 0.1, partialReduction: 0.25 },
@@ -233,7 +219,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   axe: {
     kind: 'axe',
     label: 'siekiera',
-    category: 'tool',
     holdable: true,
     melee: { damage: 20, range: 2.0, arcDot: 0.4, windUp: 0.3, hitWindow: 0.12, recovery: 0.4, staminaCost: 10 },
     defense: { canBlock: true, baseBlockChance: 0.2, partialReduction: 0.45 },
@@ -244,7 +229,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   pitchfork: {
     kind: 'pitchfork',
     label: 'widły',
-    category: 'tool',
     holdable: true,
     melee: { damage: 14, range: 2.4, arcDot: 0.5, windUp: 0.2, hitWindow: 0.12, recovery: 0.28, staminaCost: 7 },
     defense: { canBlock: true, baseBlockChance: 0.22, partialReduction: 0.5 },
@@ -256,7 +240,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   sickle: {
     kind: 'sickle',
     label: 'sierp',
-    category: 'tool',
     holdable: true,
     melee: { damage: 12, range: 1.8, arcDot: 0.55, windUp: 0.15, hitWindow: 0.1, recovery: 0.2, staminaCost: 5 },
     defense: { canBlock: true, baseBlockChance: 0.14, partialReduction: 0.32 },
@@ -268,7 +251,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   wooden_torch: {
     kind: 'wooden_torch',
     label: 'pochodnia',
-    category: 'tool',
     holdable: true,
     melee: null,
     spawn: 'starting',
@@ -279,7 +261,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   pickaxe: {
     kind: 'pickaxe',
     label: 'kilof',
-    category: 'tool',
     holdable: true,
     melee: null,
     spawn: 'village_onetime',
@@ -289,7 +270,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   tent: {
     kind: 'tent',
     label: 'namiot',
-    category: 'utility',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -299,7 +279,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   trap_simple: {
     kind: 'trap_simple',
     label: 'prosta pułapka',
-    category: 'utility',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -310,7 +289,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   trap_good: {
     kind: 'trap_good',
     label: 'dobra pułapka',
-    category: 'utility',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -321,7 +299,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   coal: {
     kind: 'coal',
     label: 'węgiel',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -331,7 +308,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   iron: {
     kind: 'iron',
     label: 'żelazo',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -341,7 +317,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   gold: {
     kind: 'gold',
     label: 'złoto',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -351,7 +326,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   tomato: {
     kind: 'tomato',
     label: 'pomidor',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'village_renewable',
@@ -362,7 +336,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   raw_meat: {
     kind: 'raw_meat',
     label: 'surowe mięso',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -373,7 +346,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   roasted_meat: {
     kind: 'roasted_meat',
     label: 'pieczone mięso',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -384,7 +356,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   bread: {
     kind: 'bread',
     label: 'chleb',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -395,7 +366,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   waterskin_empty: {
     kind: 'waterskin_empty',
     label: 'bukłak (pusty)',
-    category: 'utility',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -405,7 +375,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   waterskin_full: {
     kind: 'waterskin_full',
     label: 'bukłak (pełny)',
-    category: 'utility',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -416,7 +385,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   deer_meat: {
     kind: 'deer_meat',
     label: 'mięso sarny',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -427,7 +395,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   wolf_meat: {
     kind: 'wolf_meat',
     label: 'mięso wilka',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -438,7 +405,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   boar_meat: {
     kind: 'boar_meat',
     label: 'mięso dzika',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -449,7 +415,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   rabbit_meat: {
     kind: 'rabbit_meat',
     label: 'mięso królika',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -460,7 +425,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   beef: {
     kind: 'beef',
     label: 'wołowina',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -471,7 +435,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   hide: {
     kind: 'hide',
     label: 'skóra',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -481,7 +444,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   cheese: {
     kind: 'cheese',
     label: 'ser',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -492,7 +454,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   dried_meat: {
     kind: 'dried_meat',
     label: 'suszone mięso',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -503,7 +464,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   coin: {
     kind: 'coin',
     label: 'moneta',
-    category: 'resource',
     holdable: false,
     melee: null,
     spawn: 'none',
@@ -513,7 +473,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   herb: {
     kind: 'herb',
     label: 'zioło lecznicze',
-    category: 'food',
     holdable: false,
     melee: null,
     spawn: 'world_chunk',
@@ -524,7 +483,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   bandage: {
     kind: 'bandage',
     label: 'opatrunek',
-    category: 'utility',
     holdable: false,
     melee: null,
     spawn: 'none',

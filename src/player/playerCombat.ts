@@ -1,9 +1,9 @@
-import type { Interactable } from '../interaction/Interactable'
 import type { Fauna } from '../fauna/createFauna'
+import type { Interactable } from '../interaction/Interactable'
 import type { Settlement } from '../settlement/createSettlement'
-import type { Vector3 } from 'three'
-import { type MeleeHitCandidate, rankCombatTargets } from './playerMelee'
 import { COMBAT_TARGET_CONE_DOT, COMBAT_TARGET_RANGE, type CombatAimMode } from '../app/interactables'
+import { type MeleeHitCandidate, rankCombatTargets } from './playerMelee'
+import type { Vector3 } from 'three'
 
 /** Seconds without combat activity before combat mode ends (plan 150 §1). */
 export const COMBAT_MODE_TIMEOUT_SEC = 8

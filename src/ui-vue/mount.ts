@@ -14,7 +14,7 @@ const FORWARDED_FNS = [
   'configureQuickActions', 'setQuickActionsHasShovel', 'setQuickActionsHasTent', 'setQuickActionsNearTown', 'setQuickActionsTraps', 'setQuickActionsFireAvailability', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
   'configureAbortRest', 'abortRest',
   'configureAbortBusy', 'abortBusy',
-  'showTimeSkip', 'hideTimeSkip',
+  'showTimeSkip', 'hideTimeSkip', 'updateTimeSkipRestUi',
   'showBusy', 'hideBusy',
   'configureWorldConfigScreen', 'openWorldConfigScreen', 'closeWorldConfigScreen', 'isWorldConfigScreenOpen',
   'openNotes', 'closeNotes', 'isNotesOpen',
@@ -24,7 +24,7 @@ const FORWARDED_FNS = [
   'configureSkillsScreen', 'setSkillsState', 'openSkillsScreen', 'closeSkillsScreen', 'isSkillsScreenOpen', 'toggleSkillsScreen',
   'toggleMinimap', 'setMinimapCollapsed', 'isMinimapCollapsed',
   'showToast', 'clearToasts',
-  'configureTouchChrome', 'setTouchInputEnabled', 'clearTouchChrome',
+  'configureTouchChrome', 'setTouchInputEnabled', 'setCycleTargetAvailable', 'clearTouchChrome',
 ] as const
 
 export type VueUi = Pick<StoreModule, typeof FORWARDED_FNS[number]> & { dispose: () => void }

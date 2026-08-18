@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
 import { Vector3 } from 'three'
+import { describe, expect, it } from 'vitest'
 import { COMBAT_TARGET_RANGE } from '../app/interactables'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import {
@@ -8,7 +8,7 @@ import {
   filterWorldCycleTargets,
   livingTargetIdForAnimal,
 } from './playerCombat'
-import { rankCombatTargets, type MeleeHitCandidate } from './playerMelee'
+import { type MeleeHitCandidate, rankCombatTargets } from './playerMelee'
 import { createPlayerMelee } from './playerMelee'
 
 describe('createPlayerCombat', () => {

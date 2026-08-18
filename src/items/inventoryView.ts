@@ -1,5 +1,5 @@
-import type { ItemKind } from './items'
 import type { Inventory } from './Inventory'
+import type { ItemKind } from './items'
 import {
   INSTANCE_BACKED_KINDS,
   isTrapItemInstance,

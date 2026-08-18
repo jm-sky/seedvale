@@ -1,13 +1,13 @@
 import type { Inventory } from './Inventory'
-import { ITEM_DEFS, type ItemKind } from './items'
 import { isInstanceBackedKind, isTrapItemInstance, type ItemInstance, type TrapItemInstance } from './itemInstances'
-import { createTrapInstance, trapConditionRatio } from './trapItemInstances'
+import { ITEM_DEFS, type ItemKind } from './items'
 import {
   merchantPrice,
   offerValue,
   resolveInstanceSellPrice,
   sellPrice,
 } from './tradeCatalog'
+import { createTrapInstance, trapConditionRatio } from './trapItemInstances'
 
 export type TradeResult = 'ok' | 'cannot_afford' | 'full' | 'not_sold' | 'invalid_offer'
 

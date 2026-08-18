@@ -20,8 +20,8 @@ export function createItemInstanceId(): string {
 }
 
 export const INSTANCE_BACKED_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
-  'trap_simple',
   'trap_good',
+  'trap_simple',
 ])
 
 export function isInstanceBackedKind(kind: ItemKind): boolean {

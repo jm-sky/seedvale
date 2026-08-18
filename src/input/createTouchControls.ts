@@ -192,6 +192,7 @@ export function createTouchControls(
     onQuickActions: () => handlers.onQuickActions?.(),
     onInteract: () => { keys.interact = true },
     onAltInteract: () => { keys.altInteract = true },
+    onCycleTarget: () => { keys.cycleTarget = true },
   })
 
   let inputEnabled = true

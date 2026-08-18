@@ -1,16 +1,16 @@
 import type { ToolKind } from '../items/HeldTool'
-import { ITEM_CATALOG } from '../items/itemCatalog'
+import type { PlayerController } from './PlayerController'
+import type { PlayerNeeds } from './PlayerNeeds'
 import {
   defenseBlockRoll,
+  type DefenseOutcome,
   isAttackFromDefensibleDirection,
   resolveDefense,
-  type DefenseOutcome,
 } from '../combat/defenseResolver'
-import type { PlayerController } from './PlayerController'
-import { awardSkillXp, SKILL_XP_AWARD } from './PlayerSkills'
-import type { PlayerNeeds } from './PlayerNeeds'
+import { ITEM_CATALOG } from '../items/itemCatalog'
 import { isStarving } from '../shared/HungerState'
 import { isDehydrated } from '../shared/ThirstState'
+import { awardSkillXp, SKILL_XP_AWARD } from './PlayerSkills'
 
 export const DOWNED_DURATION_SEC = 5
 

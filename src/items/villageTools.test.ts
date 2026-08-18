@@ -11,8 +11,8 @@ function rollVillageToolCount(random: () => number): number {
 
 describe('village farm tools (plan 082)', () => {
   it('defines pitchfork and sickle as tools', () => {
-    expect(ITEM_DEFS.pitchfork.category).toBe('tool')
-    expect(ITEM_DEFS.sickle.category).toBe('tool')
+    expect(ITEM_DEFS.pitchfork.categories).toEqual(['tool'])
+    expect(ITEM_DEFS.sickle.categories).toEqual(['tool'])
     expect(ITEM_DEFS.pitchfork.label).toBe('widły')
     expect(ITEM_DEFS.sickle.label).toBe('sierp')
   })

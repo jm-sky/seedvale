@@ -1,5 +1,5 @@
-import { ITEM_DEFS, type ItemKind } from './items'
 import { isTrapItemInstance, type ItemInstance } from './itemInstances'
+import { ITEM_DEFS, type ItemKind } from './items'
 import { trapConditionRatio } from './trapItemInstances'
 
 /**
@@ -111,9 +111,7 @@ export const USAGE_DISCOUNT_RANGE = 0.15
 /** Broken trap sell multiplier vs `tradeValue` (plan 155). */
 export const BROKEN_SELL_MULTIPLIER = 0.05
 
-export type SellPriceContext = {
-  // Future: vendor relationship, season, demand, vendor state, …
-}
+export type SellPriceContext = Record<string, never>
 
 /** Merchant buyback for a concrete item instance — price is derived, never stored. */
 export function resolveInstanceSellPrice(

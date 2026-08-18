@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Zap } from 'lucide-vue-next'
+import { Crosshair, Zap } from 'lucide-vue-next'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { ui } from '../store'
 
@@ -26,6 +26,16 @@ const touch = isTouchDevice()
         <Zap :size="22" />
       </button>
       <div class="relative">
+        <button
+          v-if="ui.touch.cycleTargetAvailable"
+          type="button"
+          class="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 pointer-events-auto flex size-13 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(255,196,92,0.35)] text-xs font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
+          :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
+          aria-label="Następny cel"
+          @click="ui.touch.onCycleTarget?.()"
+        >
+          <Crosshair :size="20" />
+        </button>
         <button
           type="button"
           class="pointer-events-auto flex size-17 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(61,123,209,0.75)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"

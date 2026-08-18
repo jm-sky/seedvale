@@ -10,6 +10,7 @@ import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { PreySpawner } from '../fauna/AnimalSpawner'
 import type { TouchControls } from '../input/createTouchControls'
 import type { createKeyboard } from '../input/Keyboard'
+import type { Interactable } from '../interaction/Interactable'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
 import type { PlayerController } from '../player/PlayerController'
@@ -55,7 +56,7 @@ import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { ITEM_CATALOG } from '../items/itemCatalog'
-import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
 import { getMonitor, getProgramCensus, withCategory, withProgramCensusStage } from '../perf'
 import {
   collectLivingCombatTargets,
@@ -66,16 +67,16 @@ import {
   resolveLivingInteractable,
 } from '../player/playerCombat'
 import {
+  applyPlayerDamage,
+  tickPlayerStarvationDamage,
+} from '../player/playerDamage'
+import {
   createPlayerMelee,
   type MeleeHitCandidate,
   meleeSwingAngle,
   resolveMeleeHits,
   yawToward,
 } from '../player/playerMelee'
-import {
-  applyPlayerDamage,
-  tickPlayerStarvationDamage,
-} from '../player/playerDamage'
 import {
   tickHealthRegen,
   tickPlayerNeeds,
@@ -113,6 +114,13 @@ import { activeModal } from './modalState'
 import type { Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
 
 type Highlightable = NpcAgent | AnimalAgent
+
+function interactableAgent(target: Interactable | null): Highlightable | null {
+  if (!target) return null
+  if (target.kind === 'npc') return target.npc
+  if (target.kind === 'animal' || target.kind === 'corpse') return target.animal
+  return null
+}
 
 /** Smallest `timeOfDay` change (fraction of a day) worth reapplying sky/light/fog/water
  *  uniforms for — below this the visual change is sub-pixel at any `dayLengthSec`
@@ -410,6 +418,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     const skip = timeSkip.tick(dt)
     if (skip) {
       timeSkipOverlay.show(skip.label, skip.fadeStrength)
+      if (skip.fadeStrength === 1) {
+        const progress = timeSkip.progress()
+        vueUi.updateTimeSkipRestUi(progress, canCancelRestProgress(progress))
+      } else {
+        vueUi.updateTimeSkipRestUi(null, false)
+      }
       if (skip.justFinished) {
         timeSkipOverlay.hide()
         if (restCamp.isActive()) {
@@ -485,6 +499,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const minimapConsumed = keyboard.consumeMinimap()
       const skillsConsumed = keyboard.consumeSkills()
       setHighlight(null)
+      vueUi.setCycleTargetAvailable(false)
       // Modal safety (plan 123): cancel any in-flight attack rather than let
       // it keep timing out/resolving while input is blocked.
       if (playerMelee.isAttacking()) {
@@ -751,7 +766,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const cycleHint = playerCombat.isActive()
         ? (livingTargets.length > 1 ? ' · [Tab] Cel · [Shift+Tab] Świat' : ' · [Shift+Tab] Świat')
         : (target && cycleCandidates.length > 1 ? ` · [Tab] Dalej (${cycleIndex + 1}/${cycleCandidates.length})` : '')
-      npcDialog.setPrompt(target ? `${target.promptLabel}${cycleHint}` : null)
+      const promptHighlighted = Boolean(
+        target && (
+          cycleActive
+          || (playerCombat.isActive() && (playerCombat.softLockId() != null || playerCombat.worldCycleActive()))
+        ),
+      )
+      npcDialog.setPrompt(target ? `${target.promptLabel}${cycleHint}` : null, promptHighlighted)
+      vueUi.setCycleTargetAvailable(
+        playerCombat.isActive()
+          ? livingTargets.length > 1
+          : cycleCandidates.length > 1,
+      )
 
       if (isDebugMode()) {
         if (target?.kind === 'house') {
@@ -793,7 +819,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         GAZE_RANGE,
         INTERACT_MIN_DOT,
       )
-      setHighlight(gazed?.agent ?? null)
+      setHighlight(interactableAgent(target) ?? gazed?.agent ?? null)
       const interactPressed = keyboard.consumeInteract()
       const altInteractPressed = keyboard.consumeAltInteract()
       if (target?.kind === 'dig') {

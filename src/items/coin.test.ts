@@ -6,7 +6,7 @@ import { ITEM_DEFS } from './items'
 describe('coin (plan 129)', () => {
   it('exists in the item catalog as a normal, non-spawned, non-holdable resource', () => {
     expect(ITEM_DEFS.coin).toBeDefined()
-    expect(ITEM_DEFS.coin.category).toBe('resource')
+    expect(ITEM_DEFS.coin.categories).toEqual(['resource'])
     expect(ITEM_CATALOG.coin.spawn).toBe('none')
     expect(ITEM_CATALOG.coin.holdable).toBe(false)
     expect(ITEM_CATALOG.coin.melee).toBeNull()

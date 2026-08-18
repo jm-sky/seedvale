@@ -1,12 +1,12 @@
 import type { WorldConfig } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
+import type { SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import { isToolKind } from '../items/HeldTool'
-import type { SaveItemInstance } from '../items/Inventory'
 import { type ItemKind } from '../items/items'
 import { SNEAK_LEGACY_XP } from '../player/PlayerSkills'
 

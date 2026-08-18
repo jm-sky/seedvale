@@ -5,7 +5,7 @@ import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { isToolKind } from '../../items/HeldTool'
 import { type ConsumableNeed, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
 import { isInstanceBackedKind } from '../../items/itemInstances'
-import { ITEM_DEFS, type ItemCategory, type ItemKind } from '../../items/items'
+import { hasItemCategory, ITEM_DEFS, type ItemCategory, type ItemKind, primaryItemCategory } from '../../items/items'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { ui } from '../store'
 
@@ -16,7 +16,7 @@ const { categoryLabel } = useItemCategoryLabels()
 type CategoryFilter = 'all' | ItemCategory
 type SortMode = 'category' | 'name' | 'qty'
 
-const CATEGORY_ORDER: readonly ItemCategory[] = ['tool', 'food', 'utility', 'resource']
+const CATEGORY_ORDER: readonly ItemCategory[] = ['weapon', 'tool', 'food', 'utility', 'resource']
 const SORT_LABEL: Record<SortMode, string> = { category: 'Kategoria', name: 'Nazwa', qty: 'Ilość' }
 
 const filter = ref<CategoryFilter>('all')
@@ -31,16 +31,22 @@ const allItems = computed(() => ui.inventory.groups.map((group) => ({
   consumable: ITEM_CATALOG[group.kind].consumable ?? null,
 })))
 
-const availableCategories = computed(() => CATEGORY_ORDER.filter((cat) => allItems.value.some((item) => item.def.category === cat)))
+const availableCategories = computed(() => CATEGORY_ORDER.filter((cat) => allItems.value.some((item) => hasItemCategory(item.def, cat))))
 
 const items = computed(() => {
-  const filtered = filter.value === 'all' ? allItems.value : allItems.value.filter((item) => item.def.category === filter.value)
+  const filtered = filter.value === 'all'
+    ? allItems.value
+    : allItems.value.filter((item) => hasItemCategory(item.def, filter.value as ItemCategory))
   const sorted = [...filtered]
   if (sortMode.value === 'name') sorted.sort((a, b) => a.def.label.localeCompare(b.def.label, 'pl'))
   else if (sortMode.value === 'qty') sorted.sort((a, b) => b.count - a.count)
-  else sorted.sort((a, b) => CATEGORY_ORDER.indexOf(a.def.category) - CATEGORY_ORDER.indexOf(b.def.category) || a.def.label.localeCompare(b.def.label, 'pl'))
+  else sorted.sort((a, b) => CATEGORY_ORDER.indexOf(primaryItemCategory(a.def)) - CATEGORY_ORDER.indexOf(primaryItemCategory(b.def)) || a.def.label.localeCompare(b.def.label, 'pl'))
   return sorted
 })
+
+function categoryLabels(def: (typeof allItems.value)[number]['def']): string {
+  return def.categories.map((cat) => categoryLabel[cat]).join(' · ')
+}
 
 function conditionLabel(item: (typeof allItems.value)[number]): string | null {
   if (item.condition === 'mixed') return '[mixed usage]'
@@ -145,7 +151,7 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
             >{{ conditionLabel(item) }}</span>
           </span>
           <span class="text-[11px] uppercase tracking-wide opacity-60">
-            {{ categoryLabel[item.def.category] }}
+            {{ categoryLabels(item.def) }}
           </span>
         </button>
         <div class="text-xs opacity-70">

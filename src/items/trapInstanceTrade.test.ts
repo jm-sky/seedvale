@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from './Inventory'
+import { isTrapItemInstance } from './itemInstances'
 import {
   buyWithShells,
   selectInstancesToSell,
   sellForShells,
   sellInstancesForShells,
 } from './trade'
-import { isTrapItemInstance } from './itemInstances'
 import { BROKEN_SELL_MULTIPLIER, resolveInstanceSellPrice, tradeValue } from './tradeCatalog'
 import { createTrapInstance } from './trapItemInstances'
 

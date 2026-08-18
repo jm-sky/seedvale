@@ -44,12 +44,12 @@ import { askGuardForSword, shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { Inventory } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
-import { isInstanceBackedKind, isTrapItemInstance } from '../items/itemInstances'
 import { ITEM_CATALOG } from '../items/itemCatalog'
-import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { isInstanceBackedKind, isTrapItemInstance } from '../items/itemInstances'
+import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
 import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
-import { buyWithBarter, buyWithShells, sellForShells, sellInstancesForShells, selectInstanceToPlace, selectInstancesToSell } from '../items/trade'
+import { buyWithBarter, buyWithShells, selectInstancesToSell, selectInstanceToPlace, sellForShells, sellInstancesForShells } from '../items/trade'
 import { resolveInstanceSellPrice, sellPrice } from '../items/tradeCatalog'
 import { trapInstanceFromWorld } from '../items/trapItemInstances'
 import {
@@ -1267,6 +1267,8 @@ export async function createApp(
   const abortRest = (): boolean => {
     const resting = restCamp.isActive() || timeSkip.fadeStrength() === 1
     if (!resting) return false
+    if (timeSkip.fadeStrength() === 1 && !canCancelRestProgress(timeSkip.progress())) return false
+    if (restCamp.isActive() && !timeSkip.isActive()) return false
     // Aborted rest earns nothing and resolves no quality (plan 128 edge cases).
     pendingRest = null
     timeSkip.cancel()

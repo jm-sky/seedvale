@@ -1,8 +1,8 @@
 import { type Object3D, type Scene } from 'three'
 import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
+import type { TrapItemInstance } from '../items/itemInstances'
 import type { HeightSampler } from '../player/PlayerController'
 import { placeOnGround } from '../settlement/props'
-import type { TrapItemInstance } from '../items/itemInstances'
 import {
   accumulateTrapWeatherWear,
   isTrapCooldownActive,

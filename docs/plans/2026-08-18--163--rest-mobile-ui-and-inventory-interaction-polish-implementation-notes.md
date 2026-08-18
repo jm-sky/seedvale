@@ -2,7 +2,7 @@
 
 **Plan:** `2026-08-18--163--rest-mobile-ui-and-inventory-interaction-polish.md`
 **Reviewed:** 2026-08-18
-**Status:** `planned` 📋
+**Status:** `done` ✅
 
 ## Review summary
 

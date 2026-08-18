@@ -4,8 +4,8 @@ import type { LightActionResult } from '../app/userActions'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
-import type { ItemKind } from '../items/items'
 import type { InventoryGroupView } from '../items/inventoryView'
+import type { ItemKind } from '../items/items'
 import type { TradeResult } from '../items/trade'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
@@ -63,7 +63,7 @@ type PauseMenuState = {
   saveStatus: string
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
-type FlavorDialogState = { open: boolean; prompt: string | null; name: string; line: string }
+type FlavorDialogState = { open: boolean; prompt: string | null; promptHighlighted: boolean; name: string; line: string }
 /** Whether each fire action's resource/state guard currently passes (review
  *  007 C4) — kept live by `createApp.ts`'s `syncQuickActionAvailability`, not
  *  recomputed here (Quick Actions / Pause→Akcje are presentation only). */
@@ -103,7 +103,7 @@ type MerchantState = {
   onSellShells: ((kind: ItemKind) => TradeResult) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
 }
-type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number }
+type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number; progress: number; canCancelRest: boolean }
 type BusyState = { visible: boolean; label: string; blurred: boolean; progress: number | null }
 /** `config`/`dayNight` are the *same* mutable objects `createApp.ts` already
  *  holds (see plan 005 — "Nie duplikować stanu"), assigned once via
@@ -182,10 +182,12 @@ type ToastState = { items: ToastItem[] }
 type TouchChromeState = {
   visible: boolean
   inputEnabled: boolean
+  cycleTargetAvailable: boolean
   onPause: (() => void) | null
   onQuickActions: (() => void) | null
   onInteract: (() => void) | null
   onAltInteract: (() => void) | null
+  onCycleTarget: (() => void) | null
 }
 
 type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus'>>
@@ -236,7 +238,7 @@ export const ui = reactive({
     saveStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
-  flavorDialog: { open: false, prompt: null, name: '', line: '' } as FlavorDialogState,
+  flavorDialog: { open: false, prompt: null, promptHighlighted: false, name: '', line: '' } as FlavorDialogState,
   quickActions: {
     open: false, hasShovel: false, nearTown: false, hasTent: false,
     traps: { simple: false, good: false },
@@ -244,7 +246,7 @@ export const ui = reactive({
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
   } as QuickActionsState,
-  timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
+  timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false } as TimeSkipState,
   merchant: { open: false, npc: null, counts: {}, groups: [], onBuyShells: null, onBuyBarter: null, onSellShells: null, onSellInstances: null } as MerchantState,
   busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
@@ -288,10 +290,12 @@ export const ui = reactive({
   touch: {
     visible: false,
     inputEnabled: true,
+    cycleTargetAvailable: false,
     onPause: null,
     onQuickActions: null,
     onInteract: null,
     onAltInteract: null,
+    onCycleTarget: null,
   } as TouchChromeState,
   openStack: [] as string[],
 })
@@ -339,7 +343,12 @@ export function closeQuestLog(): void { ui.questLog.open = false }
 export function isQuestLogOpen(): boolean { return ui.questLog.open }
 
 export function openFlavorDialog(name: string, line: string): void { ui.flavorDialog.prompt = null; ui.flavorDialog.name = name; ui.flavorDialog.line = line; ui.flavorDialog.open = true; emitUiOpen() }
-export function setFlavorPrompt(text: string | null): void { if (!ui.flavorDialog.open) ui.flavorDialog.prompt = text }
+export function setFlavorPrompt(text: string | null, highlighted = false): void {
+  if (!ui.flavorDialog.open) {
+    ui.flavorDialog.prompt = text
+    ui.flavorDialog.promptHighlighted = highlighted
+  }
+}
 export function closeFlavorDialog(): void { ui.flavorDialog.open = false }
 export function isFlavorDialogOpen(): boolean { return ui.flavorDialog.open }
 
@@ -501,13 +510,14 @@ export function showTimeSkip(label: string, fadeStrength: number): void {
   ui.timeSkip.fadeStrength = fadeStrength
   if (fadeStrength > 0) ui.timeSkip.fadeVisible = true
 }
-/** If a fade is currently showing, only *starts* the fade-out — the panel
- *  stays mounted until `TimeSkipOverlay.vue`'s `transitionend` handler calls
- *  `finishTimeSkipHide()`, so the opacity transition is visible instead of
- *  the filter vanishing instantly. Without an active fade there's nothing to
- *  animate, so hide immediately. */
+export function updateTimeSkipRestUi(progress: number | null, canCancelRest: boolean): void {
+  ui.timeSkip.progress = progress ?? 0
+  ui.timeSkip.canCancelRest = canCancelRest
+}
 export function hideTimeSkip(): void {
   if (!ui.timeSkip.visible) return
+  ui.timeSkip.progress = 0
+  ui.timeSkip.canCancelRest = false
   if (!ui.timeSkip.fadeVisible || ui.timeSkip.fadeStrength <= 0) {
     ui.timeSkip.visible = false
     ui.timeSkip.fadeStrength = 0
@@ -519,6 +529,8 @@ export function finishTimeSkipHide(): void {
   if (!ui.timeSkip.fadeVisible) {
     ui.timeSkip.visible = false
     ui.timeSkip.fadeStrength = 0
+    ui.timeSkip.progress = 0
+    ui.timeSkip.canCancelRest = false
   }
 }
 
@@ -711,10 +723,14 @@ export function clearToasts(): void {
   ui.toast.items = []
 }
 
-type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract' | 'onAltInteract'>>
+type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract' | 'onAltInteract' | 'onCycleTarget'>>
 export function configureTouchChrome(handlers: TouchChromeHandlers): void {
   ui.touch.visible = true
   Object.assign(ui.touch, handlers)
+}
+export function setCycleTargetAvailable(available: boolean): void {
+  if (ui.touch.cycleTargetAvailable === available) return
+  ui.touch.cycleTargetAvailable = available
 }
 export function setTouchInputEnabled(enabled: boolean): void {
   if (ui.touch.inputEnabled === enabled) return
@@ -723,8 +739,10 @@ export function setTouchInputEnabled(enabled: boolean): void {
 export function clearTouchChrome(): void {
   ui.touch.visible = false
   ui.touch.inputEnabled = true
+  ui.touch.cycleTargetAvailable = false
   ui.touch.onPause = null
   ui.touch.onQuickActions = null
   ui.touch.onInteract = null
   ui.touch.onAltInteract = null
+  ui.touch.onCycleTarget = null
 }

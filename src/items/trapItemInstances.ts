@@ -1,4 +1,4 @@
-import { TRAP_DEFS, trapKindForItem, type TrapKind } from '../world/animalTraps'
+import { TRAP_DEFS, type TrapKind, trapKindForItem } from '../world/animalTraps'
 import { createItemInstanceId, type TrapItemInstance } from './itemInstances'
 
 export type { TrapItemInstance } from './itemInstances'

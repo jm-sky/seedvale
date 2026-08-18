@@ -3,7 +3,7 @@ import { getMountedVueUi } from '../ui-vue/mount'
 export type NpcDialogHandlers = { onClose?: () => void }
 export type NpcDialogOffer = { onAccept: () => void; onDecline: () => void }
 export type NpcDialog = {
-  setPrompt: (text: string | null) => void
+  setPrompt: (text: string | null, highlighted?: boolean) => void
   open: (name: string, line: string, offer?: NpcDialogOffer) => void
   isOffer: () => boolean
   accept: () => void
@@ -27,7 +27,7 @@ export function createNpcDialog(_parent: HTMLElement, handlers: NpcDialogHandler
     handlers.onClose?.()
   }
   return {
-    setPrompt: (text) => { if (!disposed) getUi()?.setFlavorPrompt(text) },
+    setPrompt: (text, highlighted) => { if (!disposed) getUi()?.setFlavorPrompt(text, highlighted) },
     open: (name, line, offer) => { if (!disposed) { currentOffer = offer ?? null; getUi()?.openFlavorDialog(name, line) } },
     isOffer: () => !disposed && currentOffer !== null && (getUi()?.isFlavorDialogOpen() ?? false),
     accept: () => { if (!disposed && currentOffer) { const offer = currentOffer; currentOffer = null; getUi()?.closeFlavorDialog(); offer.onAccept(); handlers.onClose?.() } },

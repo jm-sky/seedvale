@@ -18,7 +18,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Melee vs animals | `ITEM_CATALOG[kind].melee` (plan 123, `itemCatalog.ts`) — single source of truth for damage/range/arcDot/windUp/hitWindow/recovery/staminaCost; `player/playerMelee.ts` runs the windUp→hitWindow→recovery lifecycle + range/facing-arc hit test. `faunaCombat.ts`'s `isMeleeTool()` just reads this. Damage: sword 28, axe 20, spear 20, short_sword 18, pitchfork 14, knife/sickle 12, shovel 8 |
 | Village one-time tools | `createItemSpawners.ts` |
 | Portable light | `PlayerTorch` — lit branch (90s) or held wooden_torch (240s); exclusive right hand |
-| Inventory category | `ITEM_DEFS.category` — `resource` / `tool` / `utility` / `food` (`Jedzenie`); hunger consumables are `food`, waterskins stay `utility` |
+| Inventory category | `ITEM_DEFS.categories` — `resource` / `tool` / `utility` / `food` / `weapon` (multi-category, e.g. axe = tool + weapon); hunger consumables are `food`, waterskins stay `utility` |
 | Consumable (Zjedz/Wypij/Opatrz) | `ITEM_CATALOG[kind].consumable` (plan 106, 153) — `{ need: 'hunger'\|'thirst'\|'health', relief, resultKind? }`; driven from inventory screen (`InventoryScreenItemDetails.vue`), world drink/cook actions, or the world `[R]` quick-action on a pickupable item (`interactables.ts`'s `itemPromptLabel`) |
 | Player needs | `player/PlayerNeeds.ts` — stamina/vigor/hunger/thirst pools on `PlayerController.needs`; HUD bars in `HudScreen.vue` |
 | Passive HP regen | `player/PlayerNeeds.ts`'s `tickHealthRegen` (plan 153) — slow, suppressed while starving/dehydrated; herb/bandage heal faster |

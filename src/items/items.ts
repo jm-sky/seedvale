@@ -45,23 +45,50 @@ export type ItemKind =
   | 'herb'
   | 'bandage'
 
-export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food'
+export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
 
 export type ItemDef = {
   label: string
   kind: ItemKind
-  category: ItemCategory
+  categories: readonly ItemCategory[]
   description?: string | null | undefined
   /** Kilograms — see `Inventory.ts`'s `totalWeight()`/`canAdd()`. */
   weight: number
   color: number
 }
 
+
+
+export function hasItemCategory(def: Pick<ItemDef, 'categories'>, category: ItemCategory): boolean {
+  return def.categories.includes(category)
+}
+
+export function hasItemKindCategory(kind: ItemKind, category: ItemCategory): boolean {
+  return hasItemCategory(ITEM_DEFS[kind], category)
+}
+
+const CATEGORY_SORT_ORDER: readonly ItemCategory[] = ['weapon', 'tool', 'food', 'utility', 'resource']
+
+/** Deterministic primary category for sorting — first match in CATEGORY_SORT_ORDER. */
+export function primaryItemCategory(def: Pick<ItemDef, 'categories'>): ItemCategory {
+  for (const cat of CATEGORY_SORT_ORDER) {
+    if (def.categories.includes(cat)) return cat
+  }
+  return def.categories[0]!
+}
+
+/** Rest cancel becomes available strictly after this fraction of the sleep skip. */
+export const REST_CANCEL_PROGRESS_THRESHOLD = 0.85
+
+export function canCancelRestProgress(progress: number | null): boolean {
+  return progress != null && progress > REST_CANCEL_PROGRESS_THRESHOLD
+}
+
 export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   shell: {
     kind: 'shell',
     label: 'muszla',
-    category: 'resource',
+    categories: ['resource'],
     weight: 0.05,
     color: 0xf2e4c9,
     description: 'Lekka muszla znaleziona na brzegu. Podstawowa waluta tego świata.'
@@ -69,7 +96,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   stone: {
     kind: 'stone',
     label: 'kamień',
-    category: 'resource',
+    categories: ['resource'],
     weight: 1,
     color: 0x8c8c8c,
     description: 'Zwykły, solidny kamień. Przydatny w budowie i rzemiośle.'
@@ -77,7 +104,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   branch: {
     kind: 'branch',
     label: 'gałąź',
-    category: 'resource',
+    categories: ['resource'],
     weight: 0.5,
     color: 0x6b4a2f,
     description: 'Sucha gałąź zebrana w lesie. Łatwo ją wykorzystać jako opał lub materiał do prostych przedmiotów lub pochodnię.'
@@ -85,7 +112,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   mushroom: {
     kind: 'mushroom',
     label: 'grzyb',
-    category: 'resource',
+    categories: ['resource'],
     weight: 0.1,
     color: 0xc0453c,
     description: 'Leśny grzyb rosnący w cieniu drzew. Niektóre gatunki nadają się do jedzenia.'
@@ -93,7 +120,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   flower: {
     kind: 'flower',
     label: 'kwiat',
-    category: 'resource',
+    categories: ['resource'],
     weight: 0.05,
     color: 0xdb6fa3,
     description: 'Delikatny kwiat zerwany z łąki. Może ozdobić dom lub posłużyć do prostych wyrobów.'
@@ -101,7 +128,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   cone: {
     kind: 'cone',
     label: 'szyszka',
-    category: 'resource',
+    categories: ['resource'],
     weight: 0.1,
     color: 0x7a5230,
     description: 'Drobna szyszka sosnowa. Sucha i łatwopalna, doskonała do rozpalania ognia.'
@@ -109,7 +136,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   knife: {
     kind: 'knife',
     label: 'nóż',
-    category: 'tool',
+    categories: ['tool'],
     weight: 0.4,
     color: 0xb7bfc7,
     description: 'Niewielkie, poręczne ostrze przydatne podczas pracy, polowania i przygotowywania żywności.'
@@ -117,7 +144,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   firestarter: {
     kind: 'firestarter',
     label: 'krzesiwo',
-    category: 'tool',
+    categories: ['tool'],
     weight: 0.2,
     color: 0x54504a,
     description: 'Proste krzesiwo pozwalające wzniecić ogień przy pomocy suchego drewna - ognisko, pochodnia itp.'
@@ -125,7 +152,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   blanket: {
     kind: 'blanket',
     label: 'koc',
-    category: 'utility',
+    categories: ['utility'],
     weight: 1.5,
     color: 0x8a4b3a,
     description: 'Ciepły, wełniany koc. Chroni przed chłodem podczas odpoczynku i snu.'
@@ -133,7 +160,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   shovel: {
     kind: 'shovel',
     label: 'łopata',
-    category: 'tool',
+    categories: ['tool'],
     weight: 2,
     color: 0x6b4a32,
     description: 'Solidna łopata do kopania ziemi, przygotowywania grządek i wyrównywania terenu.'
@@ -141,7 +168,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   axe: {
     kind: 'axe',
     label: 'siekiera',
-    category: 'tool',
+    categories: ['tool', 'weapon'],
     weight: 2.5,
     color: 0x7a7e86,
     description: 'Ciężka siekiera z ostrym stalowym ostrzem. Niezastąpiona przy ścinaniu drzew i rąbaniu drewna.'
@@ -149,7 +176,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   long_sword: {
     kind: 'long_sword',
     label: 'miecz',
-    category: 'tool',
+    categories: ['weapon'],
     weight: 2.5,
     color: 0x7a7e86,
     description: 'Długi, stalowy miecz. Ostry, wytrzymały i przeznaczony do walki.'
@@ -157,7 +184,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   spear: {
     kind: 'spear',
     label: 'dzida',
-    category: 'tool',
+    categories: ['weapon'],
     weight: 1.8,
     color: 0x8a7a5a,
     description: 'Prosta dzida z drewnianym drzewcem i metalowym grotem. Długi zasięg przydaje się do walki i polowania.'
@@ -165,7 +192,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   short_sword: {
     kind: 'short_sword',
     label: 'krótki miecz',
-    category: 'tool',
+    categories: ['weapon'],
     weight: 1.6,
     color: 0x9aa0a8,
     description: 'Krótki, poręczny miecz. Lżejszy i szybszy od miecza długiego, choć zadaje mniejsze obrażenia.'
@@ -173,7 +200,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   pitchfork: {
     kind: 'pitchfork',
     label: 'widły',
-    category: 'tool',
+    categories: ['tool'],
     weight: 1.8,
     color: 0x6b5a3a,
     description: 'Proste, mocne widły używane przy pracy w gospodarstwie i przenoszeniu siana.'
@@ -181,7 +208,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   sickle: {
     kind: 'sickle',
     label: 'sierp',
-    category: 'tool',
+    categories: ['tool'],
     weight: 0.7,
     color: 0x8a9098,
     description: 'Małe zakrzywione ostrze przeznaczone do ścinania trawy, zbóż i innych roślin.'
@@ -189,7 +216,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   wooden_torch: {
     kind: 'wooden_torch',
     label: 'pochodnia',
-    category: 'tool',
+    categories: ['tool'],
     weight: 1.2,
     color: 0x7a5230,
     description: 'Drewniana pochodnia dająca światło po zmroku i pomagająca rozświetlić ciemne miejsca.'
@@ -197,7 +224,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   pickaxe: {
     kind: 'pickaxe',
     label: 'kilof',
-    category: 'tool',
+    categories: ['tool'],
     weight: 2.5,
     color: 0x7a7e86,
     description: 'Ciężki kilof do rozbijania skał i wydobywania rud ukrytych w ziemi.'
@@ -205,7 +232,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   tent: {
     kind: 'tent',
     label: 'namiot',
-    category: 'utility',
+    categories: ['utility'],
     weight: 3,
     color: 0x8a6a3a,
     description: 'Lekki namiot zapewniający schronienie i miejsce do spania poza osadą.'
@@ -213,7 +240,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   trap_simple: {
     kind: 'trap_simple',
     label: 'prosta pułapka',
-    category: 'utility',
+    categories: ['utility'],
     weight: 2,
     color: 0x6f6a60,
     description: 'Prosta pułapka na drobną zwierzynę. Tania i lekka, ale szybko psuje się na deszczu i łatwiej ją wypatrzyć.'
@@ -221,7 +248,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   trap_good: {
     kind: 'trap_good',
     label: 'dobra pułapka',
-    category: 'utility',
+    categories: ['utility'],
     weight: 3.2,
     color: 0x9aa0a8,
     description: 'Solidna, kuta pułapka. Droższa, ale wytrzymuje niepogodę i trudniej ją zauważyć.'
@@ -229,7 +256,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   coal: {
     kind: 'coal',
     label: 'węgiel',
-    category: 'resource',
+    categories: ['resource'],
     weight: 1,
     color: 0x1c1c1c,
     description: 'Czarny, łatwopalny surowiec wydobywany spod ziemi. Doskonałe źródło opału i paliwo do wytopu.'
@@ -237,7 +264,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   iron: {
     kind: 'iron',
     label: 'żelazo',
-    category: 'resource',
+    categories: ['resource'],
     weight: 1.5,
     color: 0x8a4a30,
     description: 'Ciężka ruda o rdzawym kolorze. Jeden z najważniejszych surowców do wytwarzania narzędzi i broni.'
@@ -245,7 +272,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   gold: {
     kind: 'gold',
     label: 'złoto',
-    category: 'resource',
+    categories: ['resource'],
     weight: 0.4,
     color: 0xd4af37,
     description: 'Rzadka i cenna ruda o charakterystycznym złotym połysku. Ceniona za swoją wartość i piękno.'
@@ -253,7 +280,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   tomato: {
     kind: 'tomato',
     label: 'pomidor',
-    category: 'food',
+    categories: ['food'],
     weight: 0.15,
     color: 0xc0392b,
     description: 'Dojrzały pomidor zerwany z przydomowego ogródka. Zaspokaja głód.'
@@ -261,7 +288,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   raw_meat: {
     kind: 'raw_meat',
     label: 'surowe mięso',
-    category: 'food',
+    categories: ['food'],
     weight: 0.8,
     color: 0xa5453f,
     description: 'Świeżo pozyskane mięso. Lepiej upiec je przy ognisku, zanim się je zje.'
@@ -269,7 +296,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   roasted_meat: {
     kind: 'roasted_meat',
     label: 'pieczone mięso',
-    category: 'food',
+    categories: ['food'],
     weight: 0.7,
     color: 0x8a5a3a,
     description: 'Mięso upieczone przy ognisku. Sycący posiłek.'
@@ -277,7 +304,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   bread: {
     kind: 'bread',
     label: 'chleb',
-    category: 'food',
+    categories: ['food'],
     weight: 0.5,
     color: 0xc99a52,
     description: 'Bochenek chleba. Dobrze się przechowuje — przydatny na czarną godzinę.'
@@ -285,7 +312,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   waterskin_empty: {
     kind: 'waterskin_empty',
     label: 'bukłak (pusty)',
-    category: 'utility',
+    categories: ['utility'],
     weight: 0.3,
     color: 0x6b5a3a,
     description: 'Skórzany bukłak na wodę. Pusty — napełnij go przy studni lub jeziorze.'
@@ -293,7 +320,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   waterskin_full: {
     kind: 'waterskin_full',
     label: 'bukłak (pełny)',
-    category: 'utility',
+    categories: ['utility'],
     weight: 1.3,
     color: 0x4a9fd8,
     description: 'Skórzany bukłak pełen wody. Ugasi pragnienie.'
@@ -301,7 +328,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   deer_meat: {
     kind: 'deer_meat',
     label: 'mięso sarny',
-    category: 'food',
+    categories: ['food'],
     weight: 0.9,
     color: 0xa5453f,
     description: 'Surowe mięso sarny, pozyskane z upolowanej zwierzyny. Lepiej upiec je przy ognisku.'
@@ -309,7 +336,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   wolf_meat: {
     kind: 'wolf_meat',
     label: 'mięso wilka',
-    category: 'food',
+    categories: ['food'],
     weight: 0.75,
     color: 0x8f4a44,
     description: 'Chude, twarde mięso wilka. Jadalne, choć niezbyt sycące na surowo.'
@@ -317,7 +344,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   boar_meat: {
     kind: 'boar_meat',
     label: 'mięso dzika',
-    category: 'food',
+    categories: ['food'],
     weight: 0.95,
     color: 0x9c4b3f,
     description: 'Tłuste mięso dzika. Sycące, zwłaszcza po upieczeniu.'
@@ -325,7 +352,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   rabbit_meat: {
     kind: 'rabbit_meat',
     label: 'mięso królika',
-    category: 'food',
+    categories: ['food'],
     weight: 0.4,
     color: 0xb56a5a,
     description: 'Niewielka porcja mięsa królika. Niewiele go, ale łatwo o kolejnego.'
@@ -333,7 +360,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   beef: {
     kind: 'beef',
     label: 'wołowina',
-    category: 'food',
+    categories: ['food'],
     weight: 1.2,
     color: 0xa14840,
     description: 'Kawał wołowiny z krowy. Najbardziej sycąca z surowych mięs.'
@@ -341,7 +368,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   hide: {
     kind: 'hide',
     label: 'skóra',
-    category: 'resource',
+    categories: ['resource'],
     weight: 0.6,
     color: 0x7a5a3f,
     description: 'Skóra zdjęta ze zwierzęcia przy oprawianiu tuszy. Przydatna do wyrobu i handlu.'
@@ -349,7 +376,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   cheese: {
     kind: 'cheese',
     label: 'ser',
-    category: 'food',
+    categories: ['food'],
     weight: 0.4,
     color: 0xe8c96a,
     description: 'Krąg twardego sera. Dobrze się przechowuje i dobrze syci.'
@@ -357,7 +384,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   dried_meat: {
     kind: 'dried_meat',
     label: 'suszone mięso',
-    category: 'food',
+    categories: ['food'],
     weight: 0.35,
     color: 0x6b3a2e,
     description: 'Paski suszonego mięsa. Lekkie, sycące i długo się nie psują — dobre na dłuższą wyprawę.'
@@ -365,7 +392,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   coin: {
     kind: 'coin',
     label: 'moneta',
-    category: 'resource',
+    categories: ['resource'],
     weight: 0.001,
     color: 0xc9a227,
     description: 'Bity krążek metalu. Przyjmowany za większe transakcje — nagrody za trudniejsze przysługi, działki na sprzedaż.'
@@ -373,7 +400,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   herb: {
     kind: 'herb',
     label: 'zioło lecznicze',
-    category: 'food',
+    categories: ['food'],
     weight: 0.05,
     color: 0x5a8a4a,
     description: 'Pęczek leczniczych ziół znalezionych w lesie. Łagodzi rany, gdy się je zje.'
@@ -381,7 +408,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   bandage: {
     kind: 'bandage',
     label: 'opatrunek',
-    category: 'utility',
+    categories: ['utility'],
     weight: 0.2,
     color: 0xe8e0d0,
     description: 'Czysty opatrunek z apteczki. Szybko tamuje krwawienie i leczy rany.'
