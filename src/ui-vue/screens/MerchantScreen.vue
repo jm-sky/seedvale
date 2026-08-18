@@ -17,8 +17,11 @@ type PriceFilter = 'all' | 'low' | 'mid' | 'high'
 type SortMode = 'name' | 'price-asc' | 'price-desc'
 
 const { categoryLabel } = useItemCategoryLabels()
+const merchantBody = ref<HTMLElement | null>(null)
 const sellerPanel = ref<HTMLElement | null>(null)
 const buyerPanel = ref<HTMLElement | null>(null)
+const filtersOpen = ref(false)
+useTouchScroll(merchantBody)
 useTouchScroll(sellerPanel)
 useTouchScroll(buyerPanel)
 
@@ -35,6 +38,7 @@ watch(() => ui.merchant.open, (open) => {
   categoryFilter.value = 'all'
   priceFilter.value = 'all'
   sortMode.value = 'name'
+  filtersOpen.value = false
 })
 
 const shells = computed(() => ui.merchant.counts.shell ?? 0)
@@ -58,6 +62,23 @@ const sortChips: { id: SortMode; label: string }[] = [
   { id: 'price-asc', label: 'Cena ↑' },
   { id: 'price-desc', label: 'Cena ↓' },
 ]
+
+const activeFilterSummary = computed(() => {
+  const parts: string[] = []
+  const cat = categoryChips.find((c) => c.id === categoryFilter.value)?.label
+  if (cat) parts.push(cat)
+  const price = priceChips.find((c) => c.id === priceFilter.value)?.label
+  if (price) parts.push(price)
+  const sort = sortChips.find((c) => c.id === sortMode.value)?.label
+  if (sort) parts.push(sort)
+  return parts.join(' · ')
+})
+
+const buyerSubtitle = computed(() => (
+  barterKind.value
+    ? `Wymiana na: ${ITEM_DEFS[barterKind.value].label} (${neededValue.value} · oferujesz ${offeredValue.value})`
+    : 'Sprzedaj za muszle albo wybierz towar z lewej, by wymienić.'
+))
 
 function matchesCategory(kind: ItemKind): boolean {
   if (categoryFilter.value === 'all') return true
@@ -178,21 +199,23 @@ function chipClass(active: boolean): string {
 <template>
   <div
     v-if="ui.merchant.open"
-    class="pointer-events-auto fixed inset-0 z-10 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
+    class="pointer-events-auto fixed inset-0 z-10 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px] max-md:items-stretch max-md:p-2"
     @click.self="closeMerchant"
   >
-    <UiPanel class="flex h-[min(720px,calc(100dvh-32px))] w-[min(920px,calc(100vw-32px))] max-w-4xl flex-col overflow-hidden">
-      <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 class="text-base font-semibold tracking-wide">
+    <UiPanel
+      class="flex h-[min(720px,calc(100dvh-32px))] w-[min(920px,calc(100vw-32px))] max-w-4xl flex-col !overflow-hidden !p-5 max-md:h-[calc(100dvh-16px)] max-md:max-h-none max-md:w-full max-md:!p-3"
+    >
+      <div class="mb-2 flex shrink-0 flex-wrap items-baseline justify-between gap-2 max-md:mb-1.5">
+        <h2 class="text-base font-semibold tracking-wide max-md:text-sm">
           Kupiec
         </h2>
-        <div class="flex flex-row gap-4 items-center">
-          <p class="text-[13px] opacity-75">
+        <div class="flex flex-row items-center gap-3 max-md:gap-2">
+          <p class="text-[13px] opacity-75 max-md:text-xs">
             Muszle: {{ shells }}
           </p>
           <button
             type="button"
-            class="text-[12px] opacity-75 rounded-md px-2 py-1 border border-white/10"
+            class="text-[12px] opacity-75 rounded-md px-2 py-1 border border-white/10 max-md:px-1.5 max-md:py-0.5 max-md:text-[11px]"
             @click="closeMerchant"
           >
             Zamknij
@@ -200,159 +223,184 @@ function chipClass(active: boolean): string {
         </div>
       </div>
 
-      <div class="mb-2 flex flex-wrap gap-1">
+      <div class="shrink-0">
         <button
-          v-for="chip in categoryChips"
-          :key="chip.id"
           type="button"
-          class="cursor-pointer rounded-md px-2 py-1 text-xs"
-          :class="chipClass(categoryFilter === chip.id)"
-          @click="categoryFilter = chip.id"
+          class="mb-1.5 flex w-full items-center justify-between gap-2 rounded-md bg-white/5 px-2 py-1.5 text-left text-xs md:hidden"
+          @click="filtersOpen = !filtersOpen"
         >
-          {{ chip.label }}
+          <span class="font-medium">Filtry</span>
+          <span class="min-w-0 truncate opacity-60">{{ activeFilterSummary }}</span>
+          <span class="shrink-0 opacity-60">{{ filtersOpen ? '▲' : '▼' }}</span>
         </button>
-      </div>
-      <div class="flex flex-col gap-1 md:flex-row md:items-center md:gap-4">
-        <div class="flex flex-wrap items-center gap-1">
-          <button
-            v-for="chip in priceChips"
-            :key="chip.id"
-            type="button"
-            class="cursor-pointer rounded-md px-2 py-1 text-xs"
-            :class="chipClass(priceFilter === chip.id)"
-            @click="priceFilter = chip.id"
-          >
-            {{ chip.label }}
-          </button>
-        </div>
-        <div class="flex flex-wrap items-center gap-1">
-          <button
-            v-for="chip in sortChips"
-            :key="chip.id"
-            type="button"
-            class="cursor-pointer rounded-md px-2 py-1 text-xs"
-            :class="chipClass(sortMode === chip.id)"
-            @click="sortMode = chip.id"
-          >
-            {{ chip.label }}
-          </button>
-        </div>
-      </div>
-
-      <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden md:grid-cols-2 md:gap-4">
-        <section class="flex min-h-0 min-w-0 flex-col max-md:max-h-[min(280px,38dvh)]">
-          <h3 class="mb-1 text-[12px] font-semibold uppercase tracking-wide opacity-70">
-            Sprzedawca
-          </h3>
-          <p class="mb-2 text-[12px] opacity-70">
-            Tu możesz kupić towary od sprzedawcy.
-          </p>
-          <div
-            ref="sellerPanel"
-            class="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto"
-            style="touch-action: pan-y"
-          >
-            <div
-              v-if="stock.length === 0"
-              class="text-[12px] opacity-60"
+        <div
+          class="mb-2 space-y-1.5 max-md:mb-1.5"
+          :class="filtersOpen ? '' : 'max-md:hidden'"
+        >
+          <div class="flex flex-wrap gap-1">
+            <button
+              v-for="chip in categoryChips"
+              :key="chip.id"
+              type="button"
+              class="cursor-pointer rounded-md px-2 py-1 text-xs max-md:px-1.5 max-md:py-0.5 max-md:text-[11px]"
+              :class="chipClass(categoryFilter === chip.id)"
+              @click="categoryFilter = chip.id"
             >
-              Brak towarów w tej kategorii.
-            </div>
-            <div
-              v-for="item in stock"
-              :key="item.kind"
-              class="flex items-center gap-2 rounded-md border border-transparent bg-white/5 px-3 py-2 hover:border-white/30"
-              :class="barterKind === item.kind ? 'ring-1 ring-white/30' : ''"
-            >
-              <button
-                type="button"
-                class="min-w-0 flex-1 cursor-pointer text-left text-sm hover:opacity-90"
-                @click="selectBarter(item.kind)"
-              >
-                <span class="font-medium capitalize">{{ item.label }}</span>
-                <span class="ml-2 text-[12px] opacity-70">{{ item.price }} muszli</span>
-              </button>
-              <UiButton
-                class="min-h-11 shrink-0 px-2.5 py-1 text-xs"
-                :disabled="item.price > shells"
-                @click="buy(item.kind)"
-              >
-                Kup
-              </UiButton>
-            </div>
+              {{ chip.label }}
+            </button>
           </div>
-        </section>
-
-        <section class="flex min-h-0 min-w-0 flex-col max-md:max-h-[min(280px,38dvh)]">
-          <h3 class="mb-1 text-[12px] font-semibold uppercase tracking-wide opacity-70">
-            Kupujący
-          </h3>
-          <p class="mb-2 text-[12px] opacity-70">
-            {{ barterKind
-              ? `Wymiana na: ${ITEM_DEFS[barterKind].label} (${neededValue} · oferujesz ${offeredValue})`
-              : 'Sprzedaj za muszle albo wybierz towar z lewej, by wymienić.' }}
-          </p>
-          <div
-            ref="buyerPanel"
-            class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto"
-            style="touch-action: pan-y"
-          >
-            <div
-              v-if="offerKinds.length === 0"
-              class="text-[12px] opacity-60"
+          <div class="flex flex-wrap items-center gap-1">
+            <button
+              v-for="chip in priceChips"
+              :key="chip.id"
+              type="button"
+              class="cursor-pointer rounded-md px-2 py-1 text-xs max-md:px-1.5 max-md:py-0.5 max-md:text-[11px]"
+              :class="chipClass(priceFilter === chip.id)"
+              @click="priceFilter = chip.id"
             >
-              {{ (Object.keys(ITEM_DEFS) as ItemKind[]).some((k) => k !== 'shell' && k !== 'coin' && (ui.merchant.counts[k] ?? 0) > 0)
-                ? 'Brak towarów w tej kategorii.'
-                : 'Ekwipunek jest pusty.' }}
+              {{ chip.label }}
+            </button>
+            <span class="mx-0.5 hidden opacity-30 md:inline">|</span>
+            <button
+              v-for="chip in sortChips"
+              :key="chip.id"
+              type="button"
+              class="cursor-pointer rounded-md px-2 py-1 text-xs max-md:px-1.5 max-md:py-0.5 max-md:text-[11px]"
+              :class="chipClass(sortMode === chip.id)"
+              @click="sortMode = chip.id"
+            >
+              {{ chip.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        ref="merchantBody"
+        class="min-h-0 flex-1 max-md:overflow-y-auto md:flex md:flex-col md:overflow-hidden"
+        style="touch-action: pan-y"
+      >
+        <div class="grid grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:grid-cols-2 md:gap-4 md:overflow-hidden">
+          <section class="flex min-w-0 flex-col md:min-h-0">
+            <div class="mb-2 flex items-baseline gap-2 max-md:mb-1.5">
+              <h3 class="shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
+                Sprzedawca
+              </h3>
+              <p class="min-w-0 flex-1 truncate text-right text-[12px] opacity-60 max-md:text-[11px]">
+                Tu możesz kupić towary od sprzedawcy.
+              </p>
             </div>
             <div
-              v-for="item in offerKinds"
-              :key="item.kind"
-              class="flex items-center justify-between gap-2 rounded-md bg-white/5 px-3 py-1.5 text-sm"
+              ref="sellerPanel"
+              class="flex flex-col gap-1.5 max-md:overflow-visible md:min-h-0 md:flex-1 md:overflow-y-auto"
+              style="touch-action: pan-y"
             >
-              <span class="min-w-0">
-                {{ item.label }} ×{{ item.count }}
-                <span class="opacity-60">({{ item.price }})</span>
-              </span>
-              <div class="flex shrink-0 items-center gap-1">
-                <template v-if="barterKind">
-                  <button
-                    type="button"
-                    class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
-                    @click="setOfferCount(item.kind, (offer[item.kind] ?? 0) - 1)"
-                  >
-                    −
-                  </button>
-                  <span class="w-6 text-center text-xs">{{ offer[item.kind] ?? 0 }}</span>
-                  <button
-                    type="button"
-                    class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
-                    @click="setOfferCount(item.kind, (offer[item.kind] ?? 0) + 1)"
-                  >
-                    +
-                  </button>
-                </template>
-                <UiButton
-                  class="min-h-11 px-2.5 py-1 text-xs"
-                  @click="sell(item.kind)"
+              <div
+                v-if="stock.length === 0"
+                class="text-[12px] opacity-60 max-md:text-[11px]"
+              >
+                Brak towarów w tej kategorii.
+              </div>
+              <div
+                v-for="item in stock"
+                :key="item.kind"
+                class="flex items-center gap-2 rounded-md border border-transparent bg-white/5 px-3 py-2 hover:border-white/30 max-md:px-2 max-md:py-1.5"
+                :class="barterKind === item.kind ? 'ring-1 ring-white/30' : ''"
+              >
+                <button
+                  type="button"
+                  class="min-w-0 flex-1 cursor-pointer text-left text-sm hover:opacity-90 max-md:text-[13px]"
+                  @click="selectBarter(item.kind)"
                 >
-                  Sprzedaj
+                  <span class="font-medium capitalize">{{ item.label }}</span>
+                  <span class="ml-2 text-[12px] opacity-70 max-md:text-[11px]">{{ item.price }} muszli</span>
+                </button>
+                <UiButton
+                  class="min-h-11 shrink-0 px-2.5 py-1 text-xs max-md:min-h-9"
+                  :disabled="item.price > shells"
+                  @click="buy(item.kind)"
+                >
+                  Kup
                 </UiButton>
               </div>
             </div>
-          </div>
-          <UiButton
-            class="mt-3 w-full"
-            :disabled="!canBarter"
-            :class="canBarter ? '' : 'opacity-50'"
-            @click="barter"
-          >
-            Wymień
-          </UiButton>
-        </section>
+          </section>
+
+          <section class="flex min-w-0 flex-col md:min-h-0">
+            <div class="mb-2 flex items-baseline gap-2 max-md:mb-1.5">
+              <h3 class="shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
+                Kupujący
+              </h3>
+              <p class="min-w-0 flex-1 truncate text-right text-[12px] opacity-60 max-md:text-[11px]">
+                {{ buyerSubtitle }}
+              </p>
+            </div>
+            <div
+              ref="buyerPanel"
+              class="flex flex-col gap-1 max-md:overflow-visible md:min-h-0 md:flex-1 md:overflow-y-auto"
+              style="touch-action: pan-y"
+            >
+              <div
+                v-if="offerKinds.length === 0"
+                class="text-[12px] opacity-60 max-md:text-[11px]"
+              >
+                {{ (Object.keys(ITEM_DEFS) as ItemKind[]).some((k) => k !== 'shell' && k !== 'coin' && (ui.merchant.counts[k] ?? 0) > 0)
+                  ? 'Brak towarów w tej kategorii.'
+                  : 'Ekwipunek jest pusty.' }}
+              </div>
+              <div
+                v-for="item in offerKinds"
+                :key="item.kind"
+                class="flex items-center justify-between gap-2 rounded-md bg-white/5 px-3 py-1.5 text-sm max-md:px-2 max-md:py-1"
+              >
+                <span class="min-w-0 truncate">
+                  {{ item.label }} ×{{ item.count }}
+                  <span class="opacity-60">({{ item.price }})</span>
+                </span>
+                <div class="flex shrink-0 items-center gap-1">
+                  <template v-if="barterKind">
+                    <button
+                      type="button"
+                      class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
+                      @click="setOfferCount(item.kind, (offer[item.kind] ?? 0) - 1)"
+                    >
+                      −
+                    </button>
+                    <span class="w-6 text-center text-xs">{{ offer[item.kind] ?? 0 }}</span>
+                    <button
+                      type="button"
+                      class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
+                      @click="setOfferCount(item.kind, (offer[item.kind] ?? 0) + 1)"
+                    >
+                      +
+                    </button>
+                  </template>
+                  <UiButton
+                    class="min-h-11 px-2.5 py-1 text-xs max-md:min-h-9"
+                    @click="sell(item.kind)"
+                  >
+                    Sprzedaj
+                  </UiButton>
+                </div>
+              </div>
+            </div>
+            <UiButton
+              class="mt-3 w-full max-md:mt-2"
+              :disabled="!canBarter"
+              :class="canBarter ? '' : 'opacity-50'"
+              @click="barter"
+            >
+              Wymień
+            </UiButton>
+          </section>
+        </div>
+
+        <div class="mt-3 text-[11px] opacity-60 max-md:mt-2 max-md:text-[10px] md:hidden">
+          Esc — zamknij
+        </div>
       </div>
 
-      <div class="mt-3 text-[11px] opacity-60">
+      <div class="mt-3 hidden shrink-0 text-[11px] opacity-60 md:block">
         Esc — zamknij
       </div>
     </UiPanel>
