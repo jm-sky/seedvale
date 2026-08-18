@@ -61,7 +61,7 @@ Cursor IDE browser, Intel Arc 140V (hardware ANGLE/D3D11), 1068×906 dpr 1, seed
 | `current` | 8 537 018 → 4 529 954 (−47.0%) | 58.9 → 58.2 | 12.7 → 12.9 |
 | `water` | 1 358 196 → 579 618 (−57.3%) | 116.5 → 116.0 | 5.7 → 5.6 |
 
-Same mechanical result as the headless run: triangle win, instance/draw-call count unchanged, **no FPS/RENDER win on real GPU**. The SwiftShader caveat from the first pair is closed. M (density / far shader) stays gated off.
+Same mechanical result as the headless run: triangle win, instance/draw-call count unchanged, **no FPS/RENDER win on real GPU**. The SwiftShader caveat from the first pair is closed. A second Cursor-browser pass (review 020 run 2) repeated the census bit-identically; run 2 FPS drifted with host load and is not used for ranking. M (density / far shader) stays gated off.
 
 ## Not yet done
 

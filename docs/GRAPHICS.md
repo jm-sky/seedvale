@@ -60,9 +60,9 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 ### 2026-08-18 — Real-GPU bench: grass LOD −47% tris, no FPS; water S mirror −4% draws 🔧
 
-- Cursor browser, Intel Arc 140V, 1068×906 dpr 1, seed 42 / res 193 / High. Baseline `cfdb83a` → 148 S `68e1bf4` → 144 S `c834210`.
-- `current`: grass census 8.54 M → 4.53 M triangles, FPS 58.9 → 58.2 → 58.7, RENDER ~13 ms. Mirror draw calls 207 → 206 → 197. WATER stays ~2 ms.
-- Grass vertex count is not the spawn-scene bottleneck; 144 S is a small mirror cull with no frame-time win. No visual check. [Review 020](./reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
+- Cursor browser, Intel Arc 140V, 1068×906 dpr 1, seed 42 / res 193 / High. Baseline `cfdb83a` → 148 S `68e1bf4` → 144 S `c834210`. **Two runs** (`current`/`water`; `stream` only in run 1).
+- Grass census identical both runs: `current` 8.54 M → 4.53 M (−47%), `water` 1.36 M → 0.58 M. FPS/RENDER not improved on the quiet run; run 2 FPS drifted with host load.
+- 144 S mirror draws on `current` 206→197 in run 1, **no drop in run 2**. Lake `water` 30→25 / 30→23. No visual check. [Review 020](./reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
 
 ### 2026-08-17 — Habitat-destroy fire is spectacle, not a palenisko 🔧
 
