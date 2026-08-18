@@ -106,6 +106,11 @@ export class PlayerController {
    *  character instead of tipping over with the body. */
   private readonly modelRoot: THREE.Object3D
   private pose: PlayerPose = 'stand'
+  /** Plan 150 — temporary incapacitation at 0 HP; distinct from `health.dead`. */
+  private downed = false
+  private downedTimer = 0
+  /** Feeds deterministic defense rolls (`combat/defenseResolver.ts`). */
+  private defenseAttempt = 0
   /** Vertical speed (m/s), +up. Zeroed/`grounded=true` on teleport (`snapToGround`)
    *  and while underwater — jumping/falling only apply on dry land (plan 097 §2.3). */
   private verticalVelocity = 0
@@ -497,20 +502,56 @@ export class PlayerController {
 
   /** No-op if already standing. Clears crouch or lie visuals. */
   standUp(): void {
-    if (this.pose === 'stand') return
+    if (this.pose === 'stand' && !this.downed) return
     this.clearPoseVisual()
     this.pose = 'stand'
     this.playAction(this.idleAction)
   }
 
+  isDowned(): boolean {
+    return this.downed
+  }
+
+  /** HP reached 0 — lie down for `durationSec`, then `tickDowned` stands up. */
+  enterDowned(durationSec: number): void {
+    if (this.downed) return
+    this.downed = true
+    this.downedTimer = durationSec
+    this.meleeAttacking = false
+    this.lieDown()
+  }
+
+  /** Advances the downed timer; returns true when the player just stood up. */
+  tickDowned(dt: number): boolean {
+    if (!this.downed) return false
+    this.downedTimer -= dt
+    if (this.downedTimer > 0) return false
+    this.downed = false
+    this.downedTimer = 0
+    this.standUp()
+    return true
+  }
+
+  nextDefenseAttempt(): number {
+    this.defenseAttempt += 1
+    return this.defenseAttempt
+  }
+
   /** Edge-triggered request, consumed on the next `updateVerticalMotion` —
    *  no-op while airborne (no double jump), underwater, or crouched/lying. */
   jump(): void {
-    if (this.pose !== 'stand') return
+    if (this.pose !== 'stand' || this.downed) return
     this.jumpRequested = true
   }
 
   update(dt: number): void {
+    if (this.downed) {
+      tickPlayerStamina(this.needs.stamina, dt, false)
+      this.syncCamera()
+      this.syncHpBar()
+      this.mixer?.update(dt)
+      return
+    }
     if (this.pose !== 'stand') {
       tickPlayerStamina(this.needs.stamina, dt, false)
       this.syncCamera()

@@ -687,7 +687,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 17,
+    version: 18,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -735,6 +735,7 @@ export async function createApp(
       sneak: { xp: player.skills.sneak.xp },
       survival: { xp: player.skills.survival.xp },
       traps: { xp: player.skills.traps.xp },
+      defense: { xp: player.skills.defense.xp },
     },
     spawnPoints: bundle.fauna.getSpawners().map((s) => ({ id: s.id, ...snapshotSpawnPointState(s) })),
   })

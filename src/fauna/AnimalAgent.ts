@@ -1009,7 +1009,7 @@ export class AnimalAgent {
     villages: readonly VillageInfo[] = [],
     nearbyHumanCount = 1,
     /** Optional fauna→human damage seam (plan 056). Absent → chase only. */
-    onHumanHit?: (damage: number) => void,
+    onHumanHit?: (damage: number, attackerX: number, attackerZ: number) => void,
     /** Sneak/movement stealth inputs (plan 124 §4). Defaults to "no effect"
      *  so existing callers/tests that don't pass it keep prior behaviour. */
     playerStealth: PlayerStealthState = { sneakValue: 0, sneakActive: false, movement: 'stationary' },
@@ -1184,7 +1184,7 @@ export class AnimalAgent {
   private chaseHuman(
     observerPos: THREE.Vector3,
     dt: number,
-    onHumanHit?: (damage: number) => void,
+    onHumanHit?: (damage: number, attackerX: number, attackerZ: number) => void,
   ): void {
     if (isExhausted(this.life.stamina)) {
       this.setIntent('wander')
@@ -1203,12 +1203,17 @@ export class AnimalAgent {
     this.steerToward(observerPos, this.sprintSpeedNow(), dt)
   }
 
-  private attackHuman(onHumanHit: (damage: number) => void): void {
+  private attackHuman(onHumanHit: (damage: number, attackerX: number, attackerZ: number) => void): void {
     if (this.attackCooldown > 0) return
     if (isExhausted(this.life.stamina)) return
     this.attackCooldown = ATTACK_COOLDOWN
     drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
-    onHumanHit(damageVsHuman(this.def.kind) * (this.dangerous ? DANGEROUS_DAMAGE_MULTIPLIER : 1))
+    const { x, z } = this.mesh.position
+    onHumanHit(
+      damageVsHuman(this.def.kind) * (this.dangerous ? DANGEROUS_DAMAGE_MULTIPLIER : 1),
+      x,
+      z,
+    )
   }
 
   /**

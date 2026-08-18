@@ -6,7 +6,7 @@ tags: [fauna, ui-input]
 # Plan: Combat Mode, Target Lock, Defense and Downed State
 
 **Created:** 2026-08-18
-**Status:** `planned` 📋
+**Status:** `done` ✅ — type-check/build/test zielone 2026-08-18; browser verification pending
 **Priority:** high · **Effort:** L
 **Depends on:** ~~123~~ ~~124b~~
 

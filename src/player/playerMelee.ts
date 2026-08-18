@@ -254,6 +254,39 @@ export function pickCombatTarget(
   return scored[0].id
 }
 
+/** Same ranking as `pickCombatTarget`, but returns every in-cone candidate in
+ *  priority order — used by `Tab` living-target cycling (plan 150 §2). */
+export function rankCombatTargets(
+  candidates: readonly MeleeHitCandidate[],
+  playerX: number,
+  playerZ: number,
+  playerYaw: number,
+  range: number,
+  minDot: number,
+  recentTargetIds: readonly string[],
+): string[] {
+  const forwardX = -Math.sin(playerYaw)
+  const forwardZ = -Math.cos(playerYaw)
+  const scored: { id: string, dot: number, dist: number, memoryRank: number }[] = []
+  for (const candidate of candidates) {
+    if (!candidate.alive) continue
+    const dx = candidate.x - playerX
+    const dz = candidate.z - playerZ
+    const dist = Math.hypot(dx, dz)
+    if (dist < 1e-4 || dist > range) continue
+    const dot = (dx / dist) * forwardX + (dz / dist) * forwardZ
+    if (dot < minDot) continue
+    const memoryIdx = recentTargetIds.indexOf(candidate.id)
+    scored.push({ id: candidate.id, dot, dist, memoryRank: memoryIdx === -1 ? recentTargetIds.length : memoryIdx })
+  }
+  scored.sort((a, b) => {
+    if (Math.abs(a.dot - b.dot) > TARGET_DOT_TOLERANCE) return b.dot - a.dot
+    if (Math.abs(a.dist - b.dist) > TARGET_DIST_TOLERANCE) return a.dist - b.dist
+    return a.memoryRank - b.memoryRank
+  })
+  return scored.map((s) => s.id)
+}
+
 /** Camera/aim yaw (plan 142 §2) that points from `(playerX, playerZ)` straight
  *  at `(targetX, targetZ)`, in the same convention `resolveMeleeHits` and
  *  `pickCombatTarget` use for the forward vector (`-sin(yaw)`, `-cos(yaw)`).

@@ -33,6 +33,16 @@ export type MeleeConfig = {
   staminaCost: number
 }
 
+/** Held-item defense tuning (plan 150). Only items that can block need an
+ *  entry — `resolveDefense` treats missing/`canBlock: false` as no defense. */
+export type DefenseConfig = {
+  canBlock: boolean
+  /** Base probability of a full block before skill bonus. */
+  baseBlockChance: number
+  /** Fraction of incoming damage removed on a partial block. */
+  partialReduction: number
+}
+
 /** What a `consumable` item restores — `hunger`/`thirst` map to a
  *  `PlayerNeeds` pool, `health` heals `HealthState` directly (plan 153). */
 export type ConsumableNeed = 'hunger' | 'thirst' | 'health'
@@ -46,6 +56,8 @@ export type ItemCatalogEntry = {
   holdable: boolean
   /** Player melee vs animals while held (plan 123 — `player/playerMelee.ts`). */
   melee: MeleeConfig | null
+  /** Optional block parameters while held (plan 150 — `combat/defenseResolver.ts`). */
+  defense?: DefenseConfig | null
   spawn: ItemSpawnKind
   /** Runtime GLB under public/ when present. */
   modelUrl: string | null
@@ -148,6 +160,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     category: 'tool',
     holdable: true,
     melee: { damage: 12, range: 1.6, arcDot: 0.6, windUp: 0.12, hitWindow: 0.08, recovery: 0.18, staminaCost: 4 },
+    defense: { canBlock: true, baseBlockChance: 0.12, partialReduction: 0.35 },
     spawn: 'starting',
     modelUrl: '/models/items/knife.glb',
     notes: 'Starting loadout; held visual on Wrist.R; melee on animals. Fast/narrow (plan 123).',
@@ -159,6 +172,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     category: 'tool',
     holdable: true,
     melee: { damage: 28, range: 2.6, arcDot: 0.35, windUp: 0.28, hitWindow: 0.12, recovery: 0.38, staminaCost: 12 },
+    defense: { canBlock: true, baseBlockChance: 0.28, partialReduction: 0.55 },
     spawn: 'none',
     modelUrl: '/models/items/long_sword.glb',
     notes: 'Held melee (plan 090). Acquire via Strażnik/Kupiec — not a world spawn. Longest range, medium/slow, highest damage (plan 123).',
@@ -169,6 +183,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     category: 'tool',
     holdable: true,
     melee: { damage: 20, range: 3.0, arcDot: 0.6, windUp: 0.24, hitWindow: 0.1, recovery: 0.3, staminaCost: 9 },
+    defense: { canBlock: true, baseBlockChance: 0.18, partialReduction: 0.4 },
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan 134 — Kupiec stock. No GLB yet; procedural held/drop mesh. Longest range, narrow thrust arc.',
@@ -179,6 +194,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     category: 'tool',
     holdable: true,
     melee: { damage: 18, range: 2.1, arcDot: 0.5, windUp: 0.18, hitWindow: 0.1, recovery: 0.26, staminaCost: 7 },
+    defense: { canBlock: true, baseBlockChance: 0.22, partialReduction: 0.45 },
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan 134 — Kupiec stock. No GLB yet; procedural held/drop mesh. Lighter/faster than long_sword.',
@@ -209,6 +225,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     category: 'tool',
     holdable: true,
     melee: { damage: 8, range: 2.0, arcDot: 0.45, windUp: 0.25, hitWindow: 0.1, recovery: 0.35, staminaCost: 8 },
+    defense: { canBlock: true, baseBlockChance: 0.1, partialReduction: 0.25 },
     spawn: 'village_onetime',
     modelUrl: '/models/items/shovel.glb',
     notes: 'One-time near campfire/garden; dig + level; melee; held GLB. Slow (plan 123).',
@@ -219,6 +236,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     category: 'tool',
     holdable: true,
     melee: { damage: 20, range: 2.0, arcDot: 0.4, windUp: 0.3, hitWindow: 0.12, recovery: 0.4, staminaCost: 10 },
+    defense: { canBlock: true, baseBlockChance: 0.2, partialReduction: 0.45 },
     spawn: 'village_onetime',
     modelUrl: '/models/items/axe.glb',
     notes: 'One-time near settlement tree; chop trees; melee; held GLB. Slow/heavy (plan 123).',
@@ -229,6 +247,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     category: 'tool',
     holdable: true,
     melee: { damage: 14, range: 2.4, arcDot: 0.5, windUp: 0.2, hitWindow: 0.12, recovery: 0.28, staminaCost: 7 },
+    defense: { canBlock: true, baseBlockChance: 0.22, partialReduction: 0.5 },
     spawn: 'village_onetime',
     modelUrl: '/models/items/pitchfork.glb',
     notes: '1–3 with sickle near gardens (plan 082). Holdable melee, longer range/medium speed (plan 096/123).',
@@ -240,6 +259,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     category: 'tool',
     holdable: true,
     melee: { damage: 12, range: 1.8, arcDot: 0.55, windUp: 0.15, hitWindow: 0.1, recovery: 0.2, staminaCost: 5 },
+    defense: { canBlock: true, baseBlockChance: 0.14, partialReduction: 0.32 },
     spawn: 'village_onetime',
     modelUrl: '/models/items/sickle.glb',
     notes: '1–3 with pitchfork near gardens (plan 082). Holdable melee, medium speed (plan 096/123).',

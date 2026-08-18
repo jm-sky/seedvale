@@ -62,7 +62,7 @@ export type Fauna = {
     /** Player + nearby NPCs for predator crowd fear (plan 056). Default 1. */
     nearbyHumanCount?: number,
     /** Fauna→player damage callback when a predator bites in contact range. */
-    onHumanHit?: (damage: number) => void,
+    onHumanHit?: (damage: number, attackerX: number, attackerZ: number) => void,
     /** Sneak/movement stealth inputs (plan 124 §4). Defaults to "no effect"
      *  (see `AnimalAgent.update`'s own default) when omitted. */
     playerStealth?: PlayerStealthState,

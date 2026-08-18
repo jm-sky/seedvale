@@ -152,6 +152,8 @@ type SkillsScreenState = {
   survivalXp: number
   trapsValue: number
   trapsXp: number
+  defenseValue: number
+  defenseXp: number
   onToggleSneak: (() => void) | null
 }
 type HudState = {
@@ -260,6 +262,8 @@ export const ui = reactive({
     survivalXp: 0,
     trapsValue: 0,
     trapsXp: 0,
+    defenseValue: 0,
+    defenseXp: 0,
     onToggleSneak: null,
   } as SkillsScreenState,
   hud: {
@@ -601,12 +605,15 @@ export function setSkillsState(
   survivalXp: number,
   trapsValue: number,
   trapsXp: number,
+  defenseValue: number,
+  defenseXp: number,
 ): void {
   const s = ui.skillsScreen
   if (
     s.sneakValue === sneakValue && s.sneakActive === sneakActive && s.sneakXp === sneakXp &&
     s.survivalValue === survivalValue && s.survivalXp === survivalXp &&
-    s.trapsValue === trapsValue && s.trapsXp === trapsXp
+    s.trapsValue === trapsValue && s.trapsXp === trapsXp &&
+    s.defenseValue === defenseValue && s.defenseXp === defenseXp
   ) return
   s.sneakValue = sneakValue
   s.sneakActive = sneakActive
@@ -615,6 +622,8 @@ export function setSkillsState(
   s.survivalXp = survivalXp
   s.trapsValue = trapsValue
   s.trapsXp = trapsXp
+  s.defenseValue = defenseValue
+  s.defenseXp = defenseXp
 }
 
 export function setHudFps(fps: number): void {

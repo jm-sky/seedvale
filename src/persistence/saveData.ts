@@ -287,8 +287,12 @@ export type SaveDataV17 = Omit<SaveDataV16, 'version'> & {
   spawnPoints: SaveSpawnPoint[]
 }
 
-/** Canonical save shape — always v17. `loadSaveData` migrates older saves up. */
-export type SaveData = SaveDataV17
+export type SaveDataV18 = Omit<SaveDataV17, 'version'> & {
+  version: 18
+}
+
+/** Canonical save shape — always v18. `loadSaveData` migrates older saves up. */
+export type SaveData = SaveDataV18
 
 function isSaveConfig(value: unknown): value is SaveConfig {
   if (!value || typeof value !== 'object') return false
@@ -716,12 +720,20 @@ function isSpawnPointsField(value: unknown): value is SaveSpawnPoint[] {
   })
 }
 
-export function isSaveDataV17(value: unknown): value is SaveData {
+export function isSaveDataV17(value: unknown): value is SaveDataV17 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 17) return false
   if (!isSaveDataV16({ ...v, version: 16 })) return false
   if (!isSpawnPointsField(v.spawnPoints)) return false
+  return true
+}
+
+export function isSaveDataV18(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 18) return false
+  if (!isSaveDataV17({ ...v, version: 17 })) return false
   return true
 }
 
@@ -822,6 +834,7 @@ const DEFAULT_SAVE_SKILLS: SaveSkills = {
   sneak: { xp: SNEAK_LEGACY_XP },
   survival: { xp: 0 },
   traps: { xp: 0 },
+  defense: { xp: 0 },
 }
 
 function toV15(v14: SaveDataV14): SaveDataV15 {
@@ -833,6 +846,7 @@ function toV15(v14: SaveDataV14): SaveDataV15 {
       sneak: { ...DEFAULT_SAVE_SKILLS.sneak },
       survival: { ...DEFAULT_SAVE_SKILLS.survival },
       traps: { ...DEFAULT_SAVE_SKILLS.traps },
+      defense: { ...DEFAULT_SAVE_SKILLS.defense },
     },
   }
 }
@@ -849,6 +863,7 @@ function toV16(v15: SaveDataV15): SaveDataV16 {
       sneak: { xp: skills.sneak?.xp ?? 0 },
       survival: { xp: skills.survival?.xp ?? 0 },
       traps: { xp: skills.traps?.xp ?? 0 },
+      defense: { xp: 0 },
     },
     placedTraps: [],
   }
@@ -857,7 +872,7 @@ function toV16(v15: SaveDataV15): SaveDataV16 {
 /** Plan 125 persistence follow-up — pre-v17 saves predate spawn-point
  *  lifecycle entirely, so they restore with no entries (every spawn point
  *  behaves as a fresh `active` one, same as before this save field existed). */
-function toV17(v16: SaveDataV16): SaveData {
+function toV17(v16: SaveDataV16): SaveDataV17 {
   const { version: _version, ...rest } = v16
   return {
     ...rest,
@@ -866,19 +881,39 @@ function toV17(v16: SaveDataV16): SaveData {
   }
 }
 
-/** Accepts a stored v1–v17 save and always returns the canonical v17 shape. */
+function toV18(v17: SaveDataV17): SaveData {
+  const { version: _version, skills, ...rest } = v17
+  return {
+    ...rest,
+    version: 18,
+    skills: {
+      sneak: { xp: skills.sneak?.xp ?? 0 },
+      survival: { xp: skills.survival?.xp ?? 0 },
+      traps: { xp: skills.traps?.xp ?? 0 },
+      defense: { xp: skills.defense?.xp ?? 0 },
+    },
+  }
+}
+
+/** Migrates any post-v16 save payload to the canonical v18 shape. */
+function upToCurrent(v16: SaveDataV16): SaveData {
+  return toV18(toV17(v16))
+}
+
+/** Accepts a stored v1–v18 save and always returns the canonical v18 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV17(value)) return value
-    if (isSaveDataV16(value)) return toV17(value)
-    if (isSaveDataV15(value)) return toV17(toV16(value))
-    if (isSaveDataV14(value)) return toV17(toV16(toV15(value)))
-    if (isSaveDataV13(value)) return toV17(toV16(toV15(toV14(value))))
-    if (isSaveDataV12(value)) return toV17(toV16(toV15(toV14(toV13(value)))))
-    if (isSaveDataV11(value)) return toV17(toV16(toV15(toV14(toV13(toV12(value))))))
-    if (isSaveDataV10(value)) return toV17(toV16(toV15(toV14(toV13(toV12(toV11(value)))))))
+    if (isSaveDataV18(value)) return value
+    if (isSaveDataV17(value)) return toV18(value)
+    if (isSaveDataV16(value)) return upToCurrent(value)
+    if (isSaveDataV15(value)) return upToCurrent(toV16(value))
+    if (isSaveDataV14(value)) return upToCurrent(toV16(toV15(value)))
+    if (isSaveDataV13(value)) return upToCurrent(toV16(toV15(toV14(value))))
+    if (isSaveDataV12(value)) return upToCurrent(toV16(toV15(toV14(toV13(value)))))
+    if (isSaveDataV11(value)) return upToCurrent(toV16(toV15(toV14(toV13(toV12(value))))))
+    if (isSaveDataV10(value)) return upToCurrent(toV16(toV15(toV14(toV13(toV12(toV11(value)))))))
     if (isSaveDataV9(value)) {
-      return toV17(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
+      return upToCurrent(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -895,7 +930,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       }))))))))
     }
     if (isSaveDataV8(value)) {
-      return toV17(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
+      return upToCurrent(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -912,7 +947,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       }))))))))
     }
     if (isSaveDataV7(value)) {
-      return toV17(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
+      return upToCurrent(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -926,7 +961,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       }))))))))
     }
     if (isSaveDataV6(value)) {
-      return toV17(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
+      return upToCurrent(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -940,7 +975,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       }))))))))
     }
     if (isSaveDataV5(value)) {
-      return toV17(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
+      return upToCurrent(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -954,7 +989,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       }))))))))
     }
     if (isSaveDataV4(value)) {
-      return toV17(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
+      return upToCurrent(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -968,7 +1003,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       }))))))))
     }
     if (isSaveDataV3(value)) {
-      return toV17(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
+      return upToCurrent(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -982,7 +1017,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       }))))))))
     }
     if (isSaveDataV2(value)) {
-      return toV17(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
+      return upToCurrent(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,
@@ -996,7 +1031,7 @@ export function loadSaveData(value: unknown): SaveData | null {
       }))))))))
     }
     if (isSaveDataV1(value)) {
-      return toV17(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
+      return upToCurrent(toV16(toV15(toV14(toV13(toV12(toV11(toV10({
         config: value.config,
         player: value.player,
         savedAt: value.savedAt,

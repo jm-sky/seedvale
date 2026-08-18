@@ -5,7 +5,7 @@
  * state (the only thing persisted); `value` is always derived from it through
  * `xpToSkillValue` so the two can never drift apart.
  */
-export type SkillId = 'sneak' | 'survival' | 'traps'
+export type SkillId = 'sneak' | 'survival' | 'traps' | 'defense'
 
 export type SkillState = {
   /** [0,1] — derived from `xp`, never assigned independently. */
@@ -59,7 +59,12 @@ function createSkillState(xp = 0): SkillState {
 }
 
 export function createPlayerSkills(): PlayerSkills {
-  return { sneak: createSkillState(), survival: createSkillState(), traps: createSkillState() }
+  return {
+    sneak: createSkillState(),
+    survival: createSkillState(),
+    traps: createSkillState(),
+    defense: createSkillState(),
+  }
 }
 
 /**
@@ -107,6 +112,8 @@ export const SKILL_XP_AWARD = {
    *  placing, arming, disarming or an animal evading the trap. Single award
    *  site: `world/createPlacedTraps.ts`'s capture path via `onCapture`. */
   captureTrap: 14,
+  /** Plan 150 — awarded on a successful full or partial block. */
+  defenseBlock: 8,
 } as const
 
 /** Metres of real sneaking movement per XP award — the "significant completed

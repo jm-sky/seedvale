@@ -58,6 +58,14 @@ import { ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { getMonitor, getProgramCensus, withCategory, withProgramCensusStage } from '../perf'
 import {
+  collectLivingCombatTargets,
+  createPlayerCombat,
+  filterWorldCycleTargets,
+  findLivingTargetById,
+  livingTargetIdForAnimal,
+  resolveLivingInteractable,
+} from '../player/playerCombat'
+import {
   createPlayerMelee,
   type MeleeHitCandidate,
   meleeSwingAngle,
@@ -65,7 +73,10 @@ import {
   yawToward,
 } from '../player/playerMelee'
 import {
-  applyStarvationDamage,
+  applyPlayerDamage,
+  tickPlayerStarvationDamage,
+} from '../player/playerDamage'
+import {
   tickHealthRegen,
   tickPlayerNeeds,
 } from '../player/PlayerNeeds'
@@ -77,7 +88,6 @@ import {
 } from '../render/shadowBudget'
 import { villageSizeConfig } from '../settlement/families'
 import { purchaseLandPlot } from '../settlement/landPurchase'
-import { damageHealth } from '../shared/HealthState'
 import { getHungerRatio } from '../shared/HungerState'
 import { getStaminaRatio } from '../shared/StaminaState'
 import { getThirstRatio } from '../shared/ThirstState'
@@ -333,6 +343,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
    *  timing shared by every melee tool; `ITEM_CATALOG[kind].melee` supplies
    *  the per-weapon config. */
   const playerMelee = createPlayerMelee()
+  const playerCombat = createPlayerCombat()
 
   /** Touch rigs aim with the same finger that moves and attacks, so combat
    *  acquisition/facing is loosened for them (plan 142). Derived from the
@@ -549,7 +560,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         meleeAnimalById.set(item.animal.animalId, item.animal)
       }
       const meleeTick = playerMelee.update(dt)
-      if (!playerMelee.isAttacking()) {
+      if (player.isDowned()) {
+        playerMelee.reset()
+        player.endMeleeAttack()
+        player.setMeleeSwing(null)
+        attackYaw = null
+      } else if (!playerMelee.isAttacking()) {
         player.endMeleeAttack()
         player.setMeleeSwing(null)
       } else if (!player.hasMeleeAttackClip()) {
@@ -573,6 +589,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           const animal = meleeAnimalById.get(id)
           if (!animal || animal.isDead()) continue
           playerMelee.rememberHit(id)
+          playerCombat.enter()
+          playerCombat.noteActivity()
+          playerCombat.setSoftLock(livingTargetIdForAnimal(id))
           animal.takeDamage(meleeTick.config.damage, 'player')
           const killed = animal.isDead()
           if (killed) playActionMeleeKill(worldAudio.playAt, animal.mesh.position)
@@ -596,18 +615,79 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         attackYaw = null
       }
 
-      // Interaction cycling (plan 153) — every interactable within plain
-      // interact range, not just whoever the gaze cone currently prefers,
-      // so `Tab` can step past a crowd (e.g. NPCs stacked in front of the
-      // well) to a candidate the facing check alone would never surface.
+      playerCombat.update(dt)
+
+      const livingTargets = collectLivingCombatTargets(
+        bundle.settlementsManager.getLoaded(),
+        bundle.fauna,
+        player.mesh.position,
+        mouseLook.state.yaw,
+        aimMode,
+        playerMelee.recentTargetIds(),
+      )
+      if (playerCombat.softLockId() && !findLivingTargetById(livingTargets, playerCombat.softLockId())) {
+        playerCombat.setSoftLock(null)
+      }
+
       const cycleRangeSq = INTERACT_RANGE * INTERACT_RANGE
       const cycleCandidates = interactables.filter((c) => {
         const dx = c.position.x - player.mesh.position.x
         const dz = c.position.z - player.mesh.position.z
         return dx * dx + dz * dz <= cycleRangeSq
       })
+      const worldCycleCandidates = filterWorldCycleTargets(cycleCandidates)
       const cycleTargetPressed = keyboard.consumeCycleTarget()
-      if (cycleCandidates.length <= 1) {
+      const shiftHeld = keyboard.state.sprint
+
+      if (playerCombat.isActive()) {
+        if (cycleTargetPressed && !shiftHeld && livingTargets.length > 0) {
+          let next: number
+          const lockId = playerCombat.softLockId()
+          if (lockId) {
+            const cur = livingTargets.findIndex((t) => t.id === lockId)
+            next = cur >= 0 ? (cur + 1) % livingTargets.length : 0
+          } else {
+            next = playerCombat.livingCycleIndex()
+          }
+          playerCombat.setLivingCycleIndex(next)
+          playerCombat.setWorldCycleActive(false)
+          playerCombat.setSoftLock(livingTargets[next]!.id)
+          playerCombat.enter()
+          playerCombat.noteActivity()
+          cycleActive = false
+          cycleIndex = 0
+        } else if (cycleTargetPressed && shiftHeld) {
+          if (worldCycleCandidates.length <= 1) {
+            playerCombat.setWorldCycleIndex(0)
+            playerCombat.setWorldCycleActive(worldCycleCandidates.length === 1)
+          } else {
+            const next = playerCombat.worldCycleActive()
+              ? (playerCombat.worldCycleIndex() + 1) % worldCycleCandidates.length
+              : 0
+            playerCombat.setWorldCycleIndex(next)
+            playerCombat.setWorldCycleActive(true)
+          }
+          playerCombat.setSoftLock(null)
+          playerCombat.enter()
+          playerCombat.noteActivity()
+        }
+      } else if (cycleTargetPressed && !shiftHeld && livingTargets.length > 0) {
+        playerCombat.setLivingCycleIndex(0)
+        playerCombat.setSoftLock(livingTargets[0]!.id)
+        playerCombat.setWorldCycleActive(false)
+        playerCombat.enter()
+        playerCombat.noteActivity()
+        cycleActive = false
+        cycleIndex = 0
+      } else if (cycleTargetPressed && shiftHeld && worldCycleCandidates.length > 0) {
+        playerCombat.setWorldCycleIndex(0)
+        playerCombat.setWorldCycleActive(true)
+        playerCombat.setSoftLock(null)
+        playerCombat.enter()
+        playerCombat.noteActivity()
+        cycleActive = false
+        cycleIndex = 0
+      } else if (cycleCandidates.length <= 1) {
         cycleActive = false
         cycleIndex = 0
       } else if (cycleTargetPressed) {
@@ -617,29 +697,60 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         cycleIndex = 0
       }
 
-      // Ground-work (shovel soil / pickaxe rock) is a fallback, not a competing
-      // candidate — only synthesized when nothing else is being gazed at.
-      const target = (cycleActive ? cycleCandidates[cycleIndex]! : null) ?? pickInGaze(
-        interactables,
-        player.mesh.position,
-        mouseLook.state.yaw,
-        INTERACT_RANGE,
-        INTERACT_MIN_DOT,
-      ) ?? buildDigTarget(
-        player.mesh.position,
-        mouseLook.state.yaw,
-        held,
-        bundle.chunkManager,
-      ) ?? buildCombatTarget(
-        bundle.settlementsManager.getLoaded(),
-        bundle.fauna,
-        player.mesh.position,
-        mouseLook.state.yaw,
-        held,
-        playerMelee.recentTargetIds(),
-        aimMode,
-      )
-      const cycleHint = target && cycleCandidates.length > 1 ? ` · [Tab] Dalej (${cycleIndex + 1}/${cycleCandidates.length})` : ''
+      let target: (typeof interactables)[number] | null = null
+      if (playerCombat.isActive()) {
+        if (playerCombat.worldCycleActive() && worldCycleCandidates.length > 0) {
+          target = worldCycleCandidates[playerCombat.worldCycleIndex() % worldCycleCandidates.length] ?? null
+        } else {
+          target = resolveLivingInteractable(playerCombat.softLockId(), interactables)
+            ?? (livingTargets.length > 0
+              ? resolveLivingInteractable(
+                  livingTargets[playerCombat.livingCycleIndex() % livingTargets.length]!.id,
+                  interactables,
+                )
+              : null)
+            ?? buildCombatTarget(
+              bundle.settlementsManager.getLoaded(),
+              bundle.fauna,
+              player.mesh.position,
+              mouseLook.state.yaw,
+              held,
+              playerMelee.recentTargetIds(),
+              aimMode,
+            )
+            ?? buildDigTarget(
+              player.mesh.position,
+              mouseLook.state.yaw,
+              held,
+              bundle.chunkManager,
+            )
+        }
+      } else {
+        target = (cycleActive ? cycleCandidates[cycleIndex]! : null) ?? pickInGaze(
+          interactables,
+          player.mesh.position,
+          mouseLook.state.yaw,
+          INTERACT_RANGE,
+          INTERACT_MIN_DOT,
+        ) ?? buildDigTarget(
+          player.mesh.position,
+          mouseLook.state.yaw,
+          held,
+          bundle.chunkManager,
+        ) ?? buildCombatTarget(
+          bundle.settlementsManager.getLoaded(),
+          bundle.fauna,
+          player.mesh.position,
+          mouseLook.state.yaw,
+          held,
+          playerMelee.recentTargetIds(),
+          aimMode,
+        )
+      }
+
+      const cycleHint = playerCombat.isActive()
+        ? (livingTargets.length > 1 ? ' · [Tab] Cel · [Shift+Tab] Świat' : ' · [Shift+Tab] Świat')
+        : (target && cycleCandidates.length > 1 ? ` · [Tab] Dalej (${cycleIndex + 1}/${cycleCandidates.length})` : '')
       npcDialog.setPrompt(target ? `${target.promptLabel}${cycleHint}` : null)
 
       if (isDebugMode()) {
@@ -785,7 +896,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           exitGamePointerLock(renderer.domElement)
           vueUi.openNpcDialogueMenu(target.npc, target.settlement, questManager, dayNight.timeOfDay)
         } else if (target.kind === 'animal') {
-          if (isMeleeTool(held)) {
+          if (isMeleeTool(held) && !player.isDowned()) {
             // `[E]` over a gazed live animal is the attack *trigger* (keeps
             // the existing "Atakuj: X" prompt UX) — the actual hit/damage is
             // resolved geometrically above, independent of this single
@@ -804,6 +915,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                   target.position.z,
                 )
                 if (result.started) {
+                  playerCombat.enter()
+                  playerCombat.noteActivity()
+                  playerCombat.setSoftLock(livingTargetIdForAnimal(target.animal.animalId))
                   player.beginMeleeAttack(config.windUp + config.hitWindow + config.recovery)
                   player.faceToward(target.position.x, target.position.z)
                   if (result.moveX !== 0 || result.moveZ !== 0) {
@@ -971,8 +1085,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // caught up in one lump above on `skip.justFinished`) — stamina keeps
       // ticking inside `player.update(dt)` on raw `dt` (tied to sprint).
       tickPlayerNeeds(player.needs, worldDt)
-      applyStarvationDamage(player.needs, player.health, worldDt)
-      tickHealthRegen(player.needs, player.health, worldDt)
+      if (!player.isDowned()) {
+        tickPlayerStarvationDamage(player, player.needs, worldDt, heldTool.held(), mouseLook.state.yaw)
+        tickHealthRegen(player.needs, player.health, worldDt)
+      }
+      player.tickDowned(worldDt)
       hud.setPlayerNeeds({
         stamina: getStaminaRatio(player.needs.stamina),
         vigor: getVigorRatio(player.needs.vigor),
@@ -998,6 +1115,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.skills.survival.xp,
         player.skills.traps.value,
         player.skills.traps.xp,
+        player.skills.defense.value,
+        player.skills.defense.xp,
       )
       houseDoors.update(
         player.mesh.position.x,
@@ -1071,7 +1190,28 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           litFires,
           villages,
           nearbyHumanCount,
-          (amount) => damageHealth(player.health, amount),
+          (amount, attackerX, attackerZ) => {
+            const dmg = applyPlayerDamage({
+              player,
+              amount,
+              attackerX,
+              attackerZ,
+              attackerKey: 'fauna',
+              heldTool: heldTool.held(),
+              defenseSkillValue: player.skills.defense.value,
+              playerYaw: mouseLook.state.yaw,
+              onCombatHit: () => {
+                playerCombat.enter()
+                playerCombat.noteActivity()
+              },
+            })
+            if (dmg.enteredDowned) {
+              playerMelee.reset()
+              player.endMeleeAttack()
+              player.setMeleeSwing(null)
+              attackYaw = null
+            }
+          },
           {
             sneakValue: player.skills.sneak.value,
             sneakActive: player.skills.sneak.active,
