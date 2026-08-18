@@ -40,6 +40,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | Streaming hitch trace analysis | Perfetto/PerfettoSQL analiza `stream` hitcha (Chrome trace) — main thread idle podczas `water-mirror`/`postprocessing`, korelacja z `chunk-finalize`, prawdopodobny synchroniczny shader compile/link | `verification needed` | [2026-08-16--019--streaming-hitch-trace-analysis.md](./2026-08-16--019--streaming-hitch-trace-analysis.md) |
 | Water × grass GPU benchmark | Cursor-browser real GPU (Intel Arc 140V): baseline `cfdb83a` vs grass LOD `68e1bf4` vs grass+water S `c834210` — `current`/`water`/`stream` | `done` | [2026-08-18--020--water-grass-gpu-benchmark.md](./2026-08-18--020--water-grass-gpu-benchmark.md) |
 | Plan 149 Phase 0 real GPU | Cold `?benchmark=stream` ×3 on Intel Arc 140V + program census — first-use hitch confirmed; recommend loading-time prewarm (A) | `done` | [2026-08-18--021--plan-149-phase-0-real-gpu.md](./2026-08-18--021--plan-149-phase-0-real-gpu.md) |
+| Plan 149 program family dump | Real-GPU `cacheKey`/`name` dump ×3 — ~210 unique keys, ~25 names; streaming variants are `numPointLights` × instancing, not new GLTF families. Recommend B (pin lights) before A | `done` | [2026-08-18--022--plan-149-program-family-dump.md](./2026-08-18--022--plan-149-program-family-dump.md) |
 
 ## After each run
 
