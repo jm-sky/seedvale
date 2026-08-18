@@ -5,7 +5,7 @@
 **Runs:** **3** cold baseline + **3** cold `?pinPointLights=8` + **3** cold `12` + **3** cold `16` (`?benchmark=stream`, fresh page load each time)
 **Scope:** diagnostic budget-curve experiment only. Opt-in dummy pad + overflow cull, URL-gated. No `compileAsync()`, no prewarm, no shader / material / ChunkManager / water / postprocess change. **No commit.**
 
-Follows [review 023](./2026-08-18--023--plan-149-pointlight-variant-axis.md). Plan: [149](../plans/2026-08-18--157--shader-program-first-use-hitch.md).
+Follows [review 023](./2026-08-18--023--plan-149-pointlight-variant-axis.md). Plan: [149](../plans/2026-08-17--149--shader-program-first-use-hitch.md).
 
 ## Environment
 
