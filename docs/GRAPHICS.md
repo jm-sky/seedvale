@@ -4,7 +4,7 @@
 
 **Nie jest:** listą assetów ([assets/](./assets/README.md)), stanem implementacji ([STATE.md](./STATE.md)), domeną wody ([WATER.md](./WATER.md)), ani planem ([plans/](./plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
 
-**Last updated:** 2026-08-17
+**Last updated:** 2026-08-18
 
 Domena wody (stan, historia, kolejność poprawek): [WATER.md](./WATER.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
 
@@ -57,6 +57,12 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-08-18 — Real-GPU bench: grass LOD −47% tris, no FPS; water S mirror −4% draws 🔧
+
+- Cursor browser, Intel Arc 140V, 1068×906 dpr 1, seed 42 / res 193 / High. Baseline `cfdb83a` → 148 S `68e1bf4` → 144 S `c834210`.
+- `current`: grass census 8.54 M → 4.53 M triangles, FPS 58.9 → 58.2 → 58.7, RENDER ~13 ms. Mirror draw calls 207 → 206 → 197. WATER stays ~2 ms.
+- Grass vertex count is not the spawn-scene bottleneck; 144 S is a small mirror cull with no frame-time win. No visual check. [Review 020](./reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
 
 ### 2026-08-17 — Habitat-destroy fire is spectacle, not a palenisko 🔧
 

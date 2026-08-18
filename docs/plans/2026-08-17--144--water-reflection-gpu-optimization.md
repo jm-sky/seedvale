@@ -1,7 +1,7 @@
 # Plan: Water Reflection GPU Optimization
 
 **Created:** 2026-08-17
-**Status:** `verification needed` 🔍 — Stage S (reflection visibility budget) implemented, technically verified; no browser benchmark yet, so S's own go/no-go gate (§3 "Decyzja") is unconfirmed and M/L are not started (see [implementation notes](./2026-08-17--144--water-reflection-gpu-optimization-implementation-notes.md)). Note: this plan's ID (144) collides with `2026-08-17--144--npc-player-food-drink-help.md` — unrelated plan, different file.
+**Status:** `verification needed` 🔍 — Stage S (reflection visibility budget) implemented, technically verified, and measured on real GPU ([review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md)): matched `current` mirror draw calls 206→197 (−4%), WATER/FPS flat; matched `water` mirror 30→25, scenario GPU-light. Visual hard-cutoff still unchecked; M/L not started. Note: this plan's ID (144) collides with `2026-08-17--144--npc-player-food-drink-help.md` — unrelated plan, different file.
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~143~~
 

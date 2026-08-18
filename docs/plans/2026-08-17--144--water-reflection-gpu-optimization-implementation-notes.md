@@ -73,10 +73,18 @@ out of scope until S's benchmark (see plan §3 S "Benchmark") is run.
 - `git diff` reviewed — 5 files touched: `src/world/waterMirror.ts`, `src/app/createApp.ts`,
   `src/world/createLights.ts`, `src/terrain/chunkManager.ts`, `src/terrain/vegetationRegionBatcher.ts`.
 
+## Browser benchmark (2026-08-18, review 020)
+
+Cursor IDE browser, Intel Arc 140V (hardware ANGLE/D3D11, not SwiftShader), 1068×906 dpr 1, seed 42, res 193, High, 30 s. Compared grass-only `68e1bf4` vs grass+144 S `c834210`. Full tables: [review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
+
+- **`current`** (matched spawn, 61 chunks): mirror draw calls 206→197 (−4.4%), WATER 2.2→2.1 ms, FPS 58.2→58.7, RENDER 12.9 ms both. Scene grass/terrain/vegetation census identical.
+- **`water`** (matched lake, 62 chunks): mirror draw calls 30→25 (−17%), WATER 1.1 ms, FPS 116→123. Scenario is GPU-light — not a WATER stress test.
+- **`stream`**: hitch-dominated (max frame 1.7–6.2 s shader compile); end census drifted (69 vs 77 chunks). Not used as a 144 S FPS verdict.
+
+S's draw-call gate is weakly met on `current` (low end of the predicted 5–15% mirror-cost band) and does **not** move FPS/WATER, where WATER is already ~2 ms vs RENDER ~13 ms. M/L stay out of scope.
+
 ## Not verified
 
-- No browser benchmark run (`?benchmark=water`, `?benchmark=stream` per plan §3 S). Mirror draw
-  calls/triangles before/after are not measured, so stage S's own acceptance gate is open.
 - No manual visual check (shoreline, distant village/forest silhouette in the reflection) for a hard
   cutoff at the new outer-ring boundary.
 - Checked (by reading, not by rendering) that objects moved to `REFLECTION_DISTANT_LAYER` still cast

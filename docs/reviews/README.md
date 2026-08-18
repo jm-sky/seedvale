@@ -38,6 +38,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | GPU-fix runtime verification | Czy N8AO/cienie/lustro/instancing osady z `c4c8c9d`/`94874a5`/`080fd3f` są aktywne w `?benchmark=*` — preambuła planu [119](../plans/2026-08-15--119--chunk-streaming-performance.md) | `done` | [2026-08-15--016--gpu-fix-runtime-verification.md](./2026-08-15--016--gpu-fix-runtime-verification.md) |
 | Rendering regression audit | Black frames (mobile) / grass flicker (desktop) po `0c318b0`/`e25cce9`/`080fd3f`/`14ee5c7`/`7a90408` — static analysis, brak fixu, 2 hipotezy do potwierdzenia w przeglądarce | `verification needed` | [2026-08-15--017--rendering-regression-audit.md](./2026-08-15--017--rendering-regression-audit.md) |
 | Streaming hitch trace analysis | Perfetto/PerfettoSQL analiza `stream` hitcha (Chrome trace) — main thread idle podczas `water-mirror`/`postprocessing`, korelacja z `chunk-finalize`, prawdopodobny synchroniczny shader compile/link | `verification needed` | [2026-08-16--019--streaming-hitch-trace-analysis.md](./2026-08-16--019--streaming-hitch-trace-analysis.md) |
+| Water × grass GPU benchmark | Cursor-browser real GPU (Intel Arc 140V): baseline `cfdb83a` vs grass LOD `68e1bf4` vs grass+water S `c834210` — `current`/`water`/`stream` | `done` | [2026-08-18--020--water-grass-gpu-benchmark.md](./2026-08-18--020--water-grass-gpu-benchmark.md) |
 
 ## After each run
 

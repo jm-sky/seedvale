@@ -52,12 +52,22 @@ Run via `agent-browser` against two `vite` dev servers, one browser tab at a tim
 - **Caveats that keep this from being a confident verdict either way:** single run per state (no repeats to separate signal from run-to-run noise), headless Chrome + SwiftShader **software** rendering (no real GPU — vertex throughput and fragment/fill costs scale very differently than on real hardware, so a triangle-count win that would show up on a real GPU may simply not register here), and the host had just recovered from a period of heavy resource contention earlier in the same session (three orphaned Chrome processes, load average >6, <250 MB free RAM) — fully resolved before this pair of runs (confirmed via `free`/`uptime`/process list immediately before), but still worth flagging as a reason to treat a single pair of numbers cautiously rather than as ground truth.
 - **Recommendation:** don't treat this as either "S succeeded" or "S failed" on FPS grounds alone. The mechanical result (triangles down 47% in the targeted bucket, nothing else regressed structurally) is solid and worth keeping. Whether it's worth pursuing M (density LOD tuning) or M (far shader simplification) next should wait on either (a) a real-GPU browser benchmark (not headless SwiftShader) or (b) a few repeat runs of this same headless comparison to see if the FPS/frame-time delta is consistent or just noise — per the plan's own gate, M is explicitly "only if S doesn't give a sufficient result," and this single run doesn't cleanly establish that either way.
 
+## Real-GPU follow-up (2026-08-18, review 020)
+
+Cursor IDE browser, Intel Arc 140V (hardware ANGLE/D3D11), 1068×906 dpr 1, seed 42, res 193, High, 30 s. Baseline `cfdb83a` vs 148 S `68e1bf4` (HEAD `c834210` adds 144 S on top — grass census identical). Full tables: [review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
+
+| Scenario | Grass tris before → after | FPS avg | RENDER |
+|---|---|---:|---:|
+| `current` | 8 537 018 → 4 529 954 (−47.0%) | 58.9 → 58.2 | 12.7 → 12.9 |
+| `water` | 1 358 196 → 579 618 (−57.3%) | 116.5 → 116.0 | 5.7 → 5.6 |
+
+Same mechanical result as the headless run: triangle win, instance/draw-call count unchanged, **no FPS/RENDER win on real GPU**. The SwiftShader caveat from the first pair is closed. M (density / far shader) stays gated off.
+
 ## Not yet done
 
-- **Repeat runs** to separate the FPS/frame-time delta above from run-to-run noise — only one run per state was captured.
-- **Real-GPU verification.** This benchmark ran headless (SwiftShader software rendering) end-to-end — see the caveats above. A browser benchmark on real hardware would be more representative of the plan's actual target environment.
-- **`forest`/`stress`/`water` scenarios** from the plan's own benchmark protocol — only `current` was run.
+- **Repeat runs** to separate the FPS/frame-time delta above from run-to-run noise — only one run per state was captured (headless and real-GPU each).
+- **`forest`/`stress` scenarios** from the plan's own benchmark protocol — `current` and `water` are now measured on real GPU; `stream` was run but hitch-dominated.
 - **No visual regression test.** The plan's "Visual test" scenarios (dense meadow, forest, open terrain, 360° camera rotation, distant flat viewing, top-down, sprint-through, Near→Mid→Far transitions) are unverified — LOD popping risk (flagged by the plan itself) is unconfirmed either way.
-- **M (Density LOD tuning) and M (Far shader simplification) not started** — both are explicitly gated in the plan on S's benchmark result ("Wykonać dopiero po S i tylko jeśli...", "Wykonać tylko jeśli pomiary/profilowanie pokażą..."). S now has one benchmark run (see above); it shows a real triangle win but no RENDER/FPS win, which per the plan's own text is a reason to *pause and diagnose*, not a green light to add M in the dark. See "Recommendation" above.
+- **M (Density LOD tuning) and M (Far shader simplification) not started** — both stay gated off. Headless and real-GPU `current` agree: triangle win, no RENDER/FPS win.
 - **L (Billboard/impostor) not started**, per the plan's own explicit deferral ("Nie implementować w pierwszym podejściu").
-- The plan's success criterion ("30%+ redukcji grass triangles... mierzalna poprawa RENDER/FPS") is **partially met**: grass triangles −47% (target 30%+, met) but RENDER/FPS did not measurably improve (target: "mierzalna poprawa", not met in this single headless run). Per repeat-run/real-GPU caveats above, this isn't a final verdict.
+- The plan's success criterion is **partially met**: grass triangles −47% (target 30%+) but RENDER/FPS did not improve on real GPU either.
