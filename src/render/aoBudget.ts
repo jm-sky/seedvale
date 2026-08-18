@@ -1,6 +1,8 @@
-/** Hysteresis for N8AO auto-budget (plan 113 P0).
- *  Heavy frames (settlement / night in review 012) suppress AO; light frames
- *  restore it. The gap avoids flicker around the threshold. */
+/** Hysteresis for the retired N8AO hard auto-budget (plan 113 P0).
+ *  Kept for existing unit tests. The live composer must not toggle
+ *  `aoPass.enabled` from frame time: AO-off frames measure cheaper than
+ *  AO-on frames by more than this gap, so the switch oscillates (review 017
+ *  grass flicker). See `createPostProcessing.ts` `applyFrameBudget`. */
 export const AO_SUPPRESS_MS = 15
 export const AO_RESTORE_MS = 10
 // Toggling the AO pass itself changes render cost by more than the 5ms

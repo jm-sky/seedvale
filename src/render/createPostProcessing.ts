@@ -8,7 +8,6 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import type { WorldConfig } from '../config/worldConfig'
 import { isRenderStateDebugMode } from '../debug/debugMode'
 import { sampleRenderState } from '../debug/renderStateDebug'
-import { shouldSuppressAo } from './aoBudget'
 import { GodRaysShader } from './godRaysShader'
 import { createGradedOutputPass } from './gradedOutputPass'
 import type { Camera, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
@@ -23,8 +22,8 @@ export type PostProcessing = {
    *  drawing buffer (perf review A3.2). */
   setPixelRatio: (pixelRatio: number) => void
   applyConfig: (config: WorldConfig['postProcessing']) => void
-  /** Auto-budget N8AO from last frame's Render ms (plan 113 P0). No-op when
-   *  the user already has AO off. */
+  /** Kept so `gameLoop` still has a per-frame hook. Hard on/off auto-budget
+   *  was retired (grass flicker): this is a no-op. */
   applyFrameBudget: (renderMs: number) => void
   /** Isolation-probe toggle. `applyConfig` restores the user/preset state. */
   setPassEnabled: (pass: PostPassId, enabled: boolean) => void
@@ -117,21 +116,14 @@ export function createPostProcessing(
   // copy its input — byte-identical output, one less full-screen pass.
   let godRaysWanted = config.godRaysEnabled
   let aoWanted = config.aoEnabled
-  let aoSuppressed = false
-  // 0 reads as "unbounded time since last change," so the first real check
-  // in applyFrameBudget is never held back by the min-stable-time floor.
-  let aoSuppressedChangedAt = 0
 
   function syncAoPass(): void {
-    const aoOn = aoWanted && !aoSuppressed
-    aoPass.enabled = aoOn
-    renderPass.enabled = !aoOn
+    aoPass.enabled = aoWanted
+    renderPass.enabled = !aoWanted
   }
 
   function applyConfig(next: WorldConfig['postProcessing']): void {
     aoWanted = next.aoEnabled
-    aoSuppressed = false
-    aoSuppressedChangedAt = 0
     syncAoPass()
     aoPass.setQualityMode(next.aoQuality)
     aoPass.configuration.aoRadius = next.aoRadius
@@ -155,34 +147,18 @@ export function createPostProcessing(
   }
   applyConfig(config)
 
-  function applyFrameBudget(renderMs: number): void {
-    // Every `syncAoPass()` below is gated on an actual state change. Writing
-    // `aoPass.enabled` unconditionally every frame was the candidate cause of
-    // the ~20 Hz tremble this function was temporarily disabled to diagnose;
-    // the hysteresis in `shouldSuppressAo` already prevents rapid flipping, so
-    // the per-frame assignment bought nothing.
-    if (!aoWanted) {
-      if (aoSuppressed) {
-        aoSuppressed = false
-        syncAoPass()
-      }
-      return
-    }
-    const now = performance.now()
-    const next = shouldSuppressAo(aoSuppressed, renderMs, now - aoSuppressedChangedAt)
-    if (next !== aoSuppressed) {
-      aoSuppressedChangedAt = now
-      aoSuppressed = next
-      syncAoPass()
-    }
+  function applyFrameBudget(_renderMs: number): void {
+    // Intentionally empty. Plan 113 P0 hard-toggled `aoPass.enabled` from last
+    // frame's Render ms (suppress ≥15, restore ≤10). Turning AO off drops the
+    // measured cost below the restore line, so the pass oscillated — review
+    // 017's grass flicker, later ~1 Hz after AO_MIN_STABLE_MS. Intensity fade
+    // would be a later budget; do not restore the on/off switch.
   }
 
   function setPassEnabled(pass: PostPassId, enabled: boolean): void {
     switch (pass) {
       case 'ao':
         aoWanted = enabled
-        aoSuppressed = false
-        aoSuppressedChangedAt = 0
         syncAoPass()
         break
       case 'bloom':

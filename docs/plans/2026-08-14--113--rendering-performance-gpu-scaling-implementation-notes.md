@@ -13,7 +13,7 @@ Chunk-mesh hitch stays in [plan 112](./2026-08-14--112--chunk-streaming-hitch-op
 ### P0 — N8AO / post-process budget
 
 - High preset: AO **on**, quality **Performance**, still half-res (was blunt `aoEnabled: false` after review 012, which made High look worse than Medium).
-- Auto-budget: suppress AO when last-frame Render ms ≥ 15, restore ≤ 10 (`src/render/aoBudget.ts`). Hysteresis avoids flicker.
+- Auto-budget: **retired 2026-08-18**. Hard on/off from last-frame Render ms (suppress ≥15 / restore ≤10) oscillated — AO-off frames measure cheaper than AO-on by more than the gap, so grass went light/dark (review 017). `applyFrameBudget` is now a no-op; AO follows the preset/GUI. `aoBudget.ts` remains for existing unit tests only.
 - Isolation probes now also toggle bloom / SMAA / god rays / film grade (`no-bloom`, `no-smaa`, `no-god-rays`, `no-film-grade`).
 
 ### P1 — Shadow once per frame
@@ -69,5 +69,5 @@ House static parts were already batched (plan 111).
 2. Walk a village plaza: palisade / barrels / hay / bushes should look identical; doors and house lights still individual.
 3. Look at water: reflections update a bit less often; NPCs/animals should **not** appear in the reflection; terrain/trees/houses should.
 4. Distant NPCs: still visible, but their shadows can drop off around ~36 units.
-5. Heavy night village: AO may briefly drop (auto-budget) then return in lighter views — no flicker on a still camera.
+5. Heavy night village: AO stays at the quality preset (auto-budget no longer hard-toggles). Grass should not pulse light/dark on a still camera.
 6. If a dedicated benchmark tab is available: `?benchmark=settlement` then `water`, compare JSON to review 012.
