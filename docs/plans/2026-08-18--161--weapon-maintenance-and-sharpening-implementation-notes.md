@@ -500,3 +500,22 @@ Before marking plan 161 complete, specifically verify:
 - [ ] Save/load uses the existing generic inventory-instance persistence.
 - [ ] Old count-based weapon saves are migrated deterministically to full-condition instances.
 - [ ] No new weapon/equipment/material manager was introduced.
+
+---
+
+> **Decyzja: brak migracji starych save'ów**
+>
+> Nie implementować migracji istniejących save'ów do nowego modelu weapon `ItemInstance`.
+>
+> Po wdrożeniu planu 161 stare save'y mogą być traktowane jako niekompatybilne z nowym modelem broni. Nie dodawać:
+>
+> - migracji `ItemKind → ItemInstance`;
+> - generowania sztucznych `instance.id` dla starych broni;
+> - heurystyk odtwarzających durability/sharpness;
+> - compatibility layer tylko dla weapon instances.
+>
+> Jeśli obecny persistence system wymaga obsługi brakującego pola `inventoryInstances`, można zastosować zwykły bezpieczny default (`[]`), ale **nie rekonstruować z niego stanu broni**.
+>
+> Nowy model `ItemInstance` obowiązuje dla save'ów zapisanych przez wersję implementującą plan 161.
+>
+> Priorytetem jest prosty, jednoznaczny model runtime/save-data, a nie backward compatibility.
