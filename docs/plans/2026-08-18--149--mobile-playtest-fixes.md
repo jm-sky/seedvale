@@ -1,8 +1,8 @@
 # Plan: Mobile playtest fixes — interactions, quests, health and UI
 
-**Created:** 2026-08-18  
-**Status:** `planned` 📋  
-**Priority:** medium · **Effort:** M  
+**Created:** 2026-08-18
+**Status:** `planned` 📋
+**Priority:** medium · **Effort:** M
 **Depends on:** none
 
 domain: ui-input
@@ -283,6 +283,13 @@ Osobne zadanie zostanie poświęcone:
 Cycling jest częścią tego planu.
 
 Nie projektujemy tutaj pełnego redesignu targetowania NPC/OBJECT. Jeżeli implementacja pokaże, że obecny model kandydatów wymaga większej przebudowy, zatrzymać się i wydzielić osobny temat.
+
+#### New suggestion
+
+Klauwisz `Tab` działa tylko na NCP/animals. Nie działa na non-living targets (drzewa, przedmioty).
+Kombinacja `Tab+Shift` działa na non-living targets.
+To będzie użyte w następnym planie `2026-08-18--150--combat-mode-defense-and-downed-state.md` w ramach combat mode. Nie musimy od razu implementować animal target cycling - na początek możemy zrobić to tylko dla NPC. Ale decyzję pozostawiam agentowi, aby zrobił tak jak będzie lepiej.
+
 
 ## Kolejność implementacji
 
