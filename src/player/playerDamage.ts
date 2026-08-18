@@ -8,11 +8,26 @@ import {
   resolveDefense,
 } from '../combat/defenseResolver'
 import { ITEM_CATALOG } from '../items/itemCatalog'
+import { healHealth, type HealthState } from '../shared/HealthState'
 import { isStarving } from '../shared/HungerState'
 import { isDehydrated } from '../shared/ThirstState'
 import { awardSkillXp, SKILL_XP_AWARD } from './PlayerSkills'
 
 export const DOWNED_DURATION_SEC = 5
+export const DOWNED_RECOVERY_HP_MIN = 1
+export const DOWNED_RECOVERY_HP_MAX = 5
+
+export function rollDownedRecoveryHp(): number {
+  const span = DOWNED_RECOVERY_HP_MAX - DOWNED_RECOVERY_HP_MIN + 1
+  return DOWNED_RECOVERY_HP_MIN + Math.floor(Math.random() * span)
+}
+
+/** Restores a small HP buffer when a downed player stands back up (plan 150). */
+export function applyDownedRecovery(health: HealthState): number {
+  const amount = rollDownedRecoveryHp()
+  healHealth(health, amount)
+  return amount
+}
 
 export type PlayerDamageResult = {
   finalDamage: number

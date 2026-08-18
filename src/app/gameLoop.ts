@@ -67,6 +67,7 @@ import {
   resolveLivingInteractable,
 } from '../player/playerCombat'
 import {
+  applyDownedRecovery,
   applyPlayerDamage,
   tickPlayerStarvationDamage,
 } from '../player/playerDamage'
@@ -1115,7 +1116,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         tickPlayerStarvationDamage(player, player.needs, worldDt, heldTool.held(), mouseLook.state.yaw)
         tickHealthRegen(player.needs, player.health, worldDt)
       }
-      player.tickDowned(worldDt)
+      if (player.tickDowned(worldDt)) {
+        applyDownedRecovery(player.health)
+      }
       hud.setPlayerNeeds({
         stamina: getStaminaRatio(player.needs.stamina),
         vigor: getVigorRatio(player.needs.vigor),
