@@ -1,4 +1,6 @@
 import { ITEM_DEFS, type ItemKind } from './items'
+import { isTrapItemInstance, type ItemInstance } from './itemInstances'
+import { trapConditionRatio } from './trapItemInstances'
 
 /**
  * Central merchant price list (plan 090) — shell cost to buy each stocked
@@ -100,4 +102,34 @@ export function offerValue(offer: Partial<Record<ItemKind, number>>): number {
     if (count > 0) total += tradeValue(kind) * count
   }
   return total
+}
+
+/** Central condition discount range (plan 155) — 10–25% off base value. */
+export const USAGE_DISCOUNT_MIN = 0.10
+export const USAGE_DISCOUNT_RANGE = 0.15
+
+/** Broken trap sell multiplier vs `tradeValue` (plan 155). */
+export const BROKEN_SELL_MULTIPLIER = 0.05
+
+export type SellPriceContext = {
+  // Future: vendor relationship, season, demand, vendor state, …
+}
+
+/** Merchant buyback for a concrete item instance — price is derived, never stored. */
+export function resolveInstanceSellPrice(
+  instance: ItemInstance,
+  _context?: SellPriceContext,
+): number | null {
+  if (!canSell(instance.kind)) return null
+  const base = tradeValue(instance.kind)
+  if (!isTrapItemInstance(instance)) {
+    return sellPrice(instance.kind)
+  }
+  if (instance.durability <= 0) {
+    return Math.max(1, Math.floor(base * BROKEN_SELL_MULTIPLIER))
+  }
+  const condition = trapConditionRatio(instance)
+  const usageDiscount = USAGE_DISCOUNT_MIN + USAGE_DISCOUNT_RANGE * (1 - condition)
+  const adjusted = base * (1 - usageDiscount)
+  return Math.max(1, Math.floor(adjusted * 0.5))
 }

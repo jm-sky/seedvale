@@ -43,12 +43,15 @@ import { COOK_DURATION_SEC, findCookingRecipe } from '../items/campfireCooking'
 import { askGuardForSword, shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { Inventory } from '../items/Inventory'
+import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
+import { isInstanceBackedKind, isTrapItemInstance } from '../items/itemInstances'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
 import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
-import { buyWithBarter, buyWithShells, sellForShells } from '../items/trade'
-import { sellPrice } from '../items/tradeCatalog'
+import { buyWithBarter, buyWithShells, sellForShells, sellInstancesForShells, selectInstanceToPlace, selectInstancesToSell } from '../items/trade'
+import { resolveInstanceSellPrice, sellPrice } from '../items/tradeCatalog'
+import { trapInstanceFromWorld } from '../items/trapItemInstances'
 import {
   benchmarkScenarioFromUrl,
   createBenchmarkRunner,
@@ -370,7 +373,11 @@ export async function createApp(
   })
   setActiveMapData(mapData)
 
-  const inventory = new Inventory(initialSave?.inventory)
+  const inventory = new Inventory(
+    initialSave?.inventory,
+    undefined,
+    initialSave ? Inventory.instancesFromJSON(initialSave.inventoryInstances ?? []) : undefined,
+  )
   grantStartingLoadout(inventory)
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
   // Renamed from `syncShovelQuickActions` — now the single post-inventory-
@@ -384,8 +391,8 @@ export async function createApp(
     vueUi.setQuickActionsHasShovel(inventory.has('shovel', 1))
     vueUi.setQuickActionsHasTent(inventory.has('tent', 1))
     vueUi.setQuickActionsTraps({
-      simple: inventory.has(TRAP_DEFS.simple.itemKind, 1),
-      good: inventory.has(TRAP_DEFS.good.itemKind, 1),
+      simple: inventory.countInstances(TRAP_DEFS.simple.itemKind) > 0,
+      good: inventory.countInstances(TRAP_DEFS.good.itemKind) > 0,
     })
     vueUi.setQuickActionsFireAvailability({
       buildSimpleFire: canBuildSimpleFire(),
@@ -552,8 +559,33 @@ export async function createApp(
   hud.setExp(questManager.getExp())
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
 
+  let refreshInventoryScreen: () => void = () => {}
+
+  const merchantInventoryView = () => ({
+    counts: inventoryCountsForUi(inventory),
+    groups: buildInventoryGroups(inventory),
+  })
+
   const syncMerchantIfOpen = (): void => {
-    if (vueUi.isMerchantOpen()) vueUi.refreshMerchant(inventory.toJSON())
+    if (vueUi.isMerchantOpen()) {
+      const view = merchantInventoryView()
+      vueUi.refreshMerchant(view.counts, view.groups)
+    }
+  }
+
+  const sellInventoryInstances = (instanceIds: readonly string[]) => {
+    const result = sellInstancesForShells(inventory, instanceIds)
+    if (result.result === 'ok') {
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      heldTool.syncWithInventory()
+      syncHeldHud()
+      syncQuickActionAvailability()
+      syncMerchantIfOpen()
+      refreshInventoryScreen()
+      toast.show(`+${result.totalShells} muszli`, 'pickup')
+      return 'ok' as const
+    }
+    return result.result
   }
 
   vueUi.configureMerchant({
@@ -564,7 +596,8 @@ export async function createApp(
         heldTool.syncWithInventory()
         syncHeldHud()
         syncQuickActionAvailability()
-        vueUi.refreshMerchant(inventory.toJSON())
+        const view = merchantInventoryView()
+        vueUi.refreshMerchant(view.counts, view.groups)
         toast.show(`+1 ${ITEM_DEFS[kind].label}`, 'pickup')
       }
       return result
@@ -576,23 +609,33 @@ export async function createApp(
         heldTool.syncWithInventory()
         syncHeldHud()
         syncQuickActionAvailability()
-        vueUi.refreshMerchant(inventory.toJSON())
+        const view = merchantInventoryView()
+        vueUi.refreshMerchant(view.counts, view.groups)
         toast.show(`+1 ${ITEM_DEFS[kind].label}`, 'pickup')
       }
       return result
     },
     onSellShells: (kind) => {
+      const expectedShells = isInstanceBackedKind(kind)
+        ? (() => {
+            const ids = selectInstancesToSell(inventory.getInstances(kind), 1)
+            const inst = ids[0] ? inventory.getInstance(ids[0]) : null
+            return inst ? resolveInstanceSellPrice(inst) : null
+          })()
+        : sellPrice(kind)
       const result = sellForShells(inventory, kind)
       if (result === 'ok') {
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         heldTool.syncWithInventory()
         syncHeldHud()
         syncQuickActionAvailability()
-        vueUi.refreshMerchant(inventory.toJSON())
-        toast.show(`+${sellPrice(kind)} muszli`, 'pickup')
+        const view = merchantInventoryView()
+        vueUi.refreshMerchant(view.counts, view.groups)
+        toast.show(`+${expectedShells ?? sellPrice(kind)} muszli`, 'pickup')
       }
       return result
     },
+    onSellInstances: sellInventoryInstances,
   })
   vueUi.configureNpcDialogueMenu({
     onAskSword: () => {
@@ -610,7 +653,8 @@ export async function createApp(
       return result.line
     },
     onOpenTrade: () => {
-      vueUi.openMerchantFromDialogue(inventory.toJSON())
+      const view = merchantInventoryView()
+      vueUi.openMerchantFromDialogue(view.counts, view.groups)
     },
   })
 
@@ -687,7 +731,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 18,
+    version: 19,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -708,6 +752,7 @@ export async function createApp(
       relations: questManager.exportRelations(),
     },
     inventory: inventory.toJSON(),
+    inventoryInstances: inventory.instancesToJSON(),
     collectedItemIds: [...collectedItemIds],
     droppedItems: bundle.droppedItems.nodes().map((item) => ({ ...item })),
     placedFires: bundle.placedFires.nodes().map((fire) => ({ ...fire })),
@@ -914,6 +959,7 @@ export async function createApp(
    *  immediately since world simulation is frozen while it's open (see the
    *  tick loop's modal-gating below) — nothing else will update it. */
   const dropItemStack = (kind: ItemKind): void => {
+    if (isInstanceBackedKind(kind)) return
     const count = inventory.count(kind)
     if (count <= 0) return
     inventory.remove(kind, count)
@@ -933,20 +979,20 @@ export async function createApp(
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     syncHeldHud()
     syncQuickActionAvailability()
-    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
+    inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
   }
 
   const equipTool = (kind: ItemKind): void => {
     if (playerTorch.isLit()) playerTorch.extinguish()
     if (!heldTool.equip(kind)) return
     syncHeldHud()
-    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
+    inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
   }
   const unequipTool = (): void => {
     if (playerTorch.isLit()) playerTorch.extinguish()
     heldTool.unequip()
     syncHeldHud()
-    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
+    inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
   }
 
   const inventoryScreen = createInventoryScreen(container, {
@@ -954,7 +1000,18 @@ export async function createApp(
     onEquip: equipTool,
     onUnequip: unequipTool,
     onConsume: (kind) => consumeItem(kind),
+    onSellInstances: sellInventoryInstances,
   })
+
+  refreshInventoryScreen = () => {
+    inventoryScreen.refresh(
+      inventoryCountsForUi(inventory),
+      inventory.totalWeight(),
+      inventory.maxWeight,
+      heldTool.held(),
+      buildInventoryGroups(inventory),
+    )
+  }
 
   const {
     buildSimpleFire, buildFirePit, lightBranch, lightWoodenTorch,
@@ -1052,7 +1109,10 @@ export async function createApp(
    *  the trap's own footprint. */
   const placeTrapAtAim = (kind: TrapKind): void => {
     const def = TRAP_DEFS[kind]
-    if (!inventory.has(def.itemKind, 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const candidates = inventory.getInstances(def.itemKind).filter(isTrapItemInstance)
+    const selected = selectInstanceToPlace(candidates)
+    if (!selected || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const instanceId = selected.id
     const yaw = mouseLook.state.yaw
     const x = player.mesh.position.x - Math.sin(yaw) * TRAP_PLACE_REACH
     const z = player.mesh.position.z - Math.cos(yaw) * TRAP_PLACE_REACH
@@ -1072,8 +1132,10 @@ export async function createApp(
       return
     }
     busy.start(TRAP_SETUP_DURATION_SEC, 'Zastawianie pułapki…', () => {
-      if (!inventory.remove(def.itemKind, 1)) return
-      bundle.placedTraps.place(kind, x, z, yaw)
+      const instance = inventory.getInstance(instanceId)
+      if (!instance || !isTrapItemInstance(instance) || instance.durability <= 0) return
+      if (!inventory.removeInstance(instanceId)) return
+      bundle.placedTraps.place(instance, x, z, yaw)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       onInventoryChanged()
       toast.show(`Zastawiono: ${def.label}.`)
@@ -1099,19 +1161,18 @@ export async function createApp(
     if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
     const trap = bundle.placedTraps.list().find((entry) => entry.id === id)
     if (!trap || trap.state === 'active') return
-    const def = TRAP_DEFS[trap.kind]
-    // A broken trap is scrap — it's cleared away, not carried back.
-    if (trap.state !== 'broken' && !inventory.canAdd(def.itemKind)) {
+    const instance = trapInstanceFromWorld(trap.id, trap.kind, trap.durability)
+    if (!inventory.canAddInstance(instance)) {
       toast.show('Ekwipunek jest za ciężki.', 'error')
       return
     }
     const removed = bundle.placedTraps.collect(id)
     if (!removed) return
+    inventory.addInstance(trapInstanceFromWorld(removed.id, removed.kind, removed.durability))
     if (removed.state === 'broken') {
-      toast.show('Zniszczona pułapka nadaje się już tylko na złom.')
+      toast.show('Zabrano zniszczoną pułapkę.')
     } else {
-      inventory.add(def.itemKind, 1)
-      toast.show(`Zabrano: ${def.label}.`)
+      toast.show(`Zabrano: ${TRAP_DEFS[removed.kind].label}.`)
     }
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     onInventoryChanged()
@@ -1493,7 +1554,7 @@ export async function createApp(
     else healHealth(player.health, relief)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     onInventoryChanged()
-    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
+    inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
     toast.show(entry.need === 'hunger' ? 'Zjedzono.' : entry.need === 'thirst' ? 'Wypito.' : 'Opatrzono rany.', 'pickup')
   }
 
@@ -1679,7 +1740,7 @@ export async function createApp(
   const openInventory = () => {
     exitGamePointerLock(renderer.domElement)
     inventoryScreen.open()
-    inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
+    inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
   }
   const openSkills = () => {
     exitGamePointerLock(renderer.domElement)

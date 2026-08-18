@@ -2,6 +2,7 @@ import { type Object3D, type Scene } from 'three'
 import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
 import type { HeightSampler } from '../player/PlayerController'
 import { placeOnGround } from '../settlement/props'
+import type { TrapItemInstance } from '../items/itemInstances'
 import {
   accumulateTrapWeatherWear,
   isTrapCooldownActive,
@@ -41,7 +42,12 @@ export type PlacedTrapsHooks = {
 export type PlacedTraps = {
   list: () => readonly PlacedTrapEntry[]
   nodes: () => readonly PlacedTrapRecord[]
-  place: (kind: TrapKind, x: number, z: number, yaw: number) => PlacedTrapRecord
+  place: (
+    source: TrapItemInstance,
+    x: number,
+    z: number,
+    yaw: number,
+  ) => PlacedTrapRecord
   /** Arms a `placed` trap, snapshotting the player's Traps value. Returns
    *  false if it isn't armable (already armed, or broken). */
   activate: (id: string, skillValue: number, nowDays: number) => boolean
@@ -56,8 +62,6 @@ export type PlacedTraps = {
   update: (dt: number, nowDays: number, animals: readonly AnimalAgent[]) => void
   dispose: () => void
 }
-
-let nextTrapId = 0
 
 /**
  * Player-placed animal traps (plan 141) — the same "player chose the spot, so
@@ -181,15 +185,16 @@ export function createPlacedTraps(
   return {
     list: () => traps,
     nodes: () => traps.map(toRecord),
-    place(kind, x, z, yaw) {
+    place(source, x, z, yaw) {
+      const trapKind = source.kind === 'trap_good' ? 'good' : 'simple'
       const record: PlacedTrapRecord = {
-        id: `trap:${Date.now()}:${nextTrapId++}`,
-        kind,
+        id: source.id,
+        kind: trapKind,
         x,
         z,
         yaw,
-        state: 'placed',
-        durability: TRAP_DEFS[kind].maxDurability,
+        state: source.durability > 0 ? 'placed' : 'broken',
+        durability: source.durability,
         skillAtActivation: 0,
         weatherCheckedAtDay: 0,
       }

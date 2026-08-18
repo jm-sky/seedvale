@@ -1,4 +1,6 @@
+import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
+import type { TradeResult } from '../items/trade'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type InventoryScreenHandlers = {
@@ -7,6 +9,7 @@ export type InventoryScreenHandlers = {
   onUnequip?: () => void
   /** "Zjedz"/"Wypij" (plan 106) — only offered for consumable items. */
   onConsume?: (kind: ItemKind) => void
+  onSellInstances?: (instanceIds: readonly string[]) => TradeResult
   onClose?: () => void
 }
 
@@ -20,6 +23,7 @@ export type InventoryScreen = {
     totalWeight: number,
     maxWeight: number,
     heldTool: ItemKind | null,
+    groups: readonly InventoryGroupView[],
   ) => void
   dispose: () => void
 }
@@ -31,6 +35,7 @@ export function createInventoryScreen(
 ): InventoryScreen {
   let disposed = false
   let counts: Partial<Record<ItemKind, number>> = {}
+  let groups: readonly InventoryGroupView[] = []
   let totalWeight = 0
   let maxWeight = 0
   let heldTool: ItemKind | null = null
@@ -45,10 +50,12 @@ export function createInventoryScreen(
       totalWeight,
       maxWeight,
       heldTool,
+      groups,
       (kind) => handlers.onDrop?.(kind),
       (kind) => handlers.onEquip?.(kind),
       () => handlers.onUnequip?.(),
       (kind) => handlers.onConsume?.(kind),
+      (ids) => handlers.onSellInstances?.(ids) ?? 'invalid_offer',
     )
   }
 
@@ -66,14 +73,15 @@ export function createInventoryScreen(
       if (isOpen()) close()
       else open()
     },
-    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextHeldTool) {
+    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextHeldTool, nextGroups) {
       if (disposed) return
       counts = { ...nextCounts }
+      groups = nextGroups
       totalWeight = nextTotalWeight
       maxWeight = nextMaxWeight
       heldTool = nextHeldTool
       if (isOpen()) {
-        getUi()?.refreshInventory(counts, totalWeight, maxWeight, heldTool)
+        getUi()?.refreshInventory(counts, totalWeight, maxWeight, heldTool, groups)
       }
     },
     dispose() {

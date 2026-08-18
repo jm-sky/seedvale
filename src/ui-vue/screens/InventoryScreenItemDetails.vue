@@ -7,10 +7,11 @@ import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
 import { isToolKind } from '../../items/HeldTool'
 import { consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
+import { isInstanceBackedKind } from '../../items/itemInstances'
 import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind } from '../../items/items'
 import { tradeValue } from '../../items/tradeCatalog'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { ui } from '../store'
+import { showToast, ui } from '../store'
 
 const props = defineProps<{
   selectedItem: ItemKind | null
@@ -23,8 +24,6 @@ const emit = defineEmits<{
 const panel = ref<HTMLElement | null>(null)
 const { categoryLabel } = useItemCategoryLabels()
 
-/** Fallback icon by category — no per-item art yet (plan 134 §6). Swap for a
- *  real `imageUrl`/render source later without touching the surrounding markup. */
 const CATEGORY_ICON: Record<ItemCategory, Component> = {
   tool: Sword,
   resource: Wheat,
@@ -33,7 +32,10 @@ const CATEGORY_ICON: Record<ItemCategory, Component> = {
 }
 
 const item = computed<ItemDef | null>(() => props.selectedItem ? ITEM_DEFS[props.selectedItem] : null)
-const itemCount = computed<number>(() => ui.inventory.counts[props.selectedItem as ItemKind ?? ''] ?? 0)
+const group = computed(() => props.selectedItem
+  ? ui.inventory.groups.find((entry) => entry.kind === props.selectedItem) ?? null
+  : null)
+const itemCount = computed<number>(() => group.value?.count ?? ui.inventory.counts[props.selectedItem as ItemKind ?? ''] ?? 0)
 const catalogEntry = computed(() => props.selectedItem ? ITEM_CATALOG[props.selectedItem] : null)
 const melee = computed(() => catalogEntry.value?.melee ?? null)
 const meleeSpeed = computed<string | null>(() => {
@@ -47,9 +49,26 @@ const meleeSpeed = computed<string | null>(() => {
 const consumable = computed(() => catalogEntry.value?.consumable ?? null)
 const consumeLabel = computed(() => consumable.value ? consumeVerbLabel(consumable.value.need) : 'Zjedz')
 const itemValue = computed<number>(() => item.value ? tradeValue(item.value.kind) : 0)
-/** Future per-item render/photo — no seam data yet, always falls back to the
- *  category icon (see `CATEGORY_ICON`). */
 const imageUrl = computed<string | null>(() => null)
+
+const instanceRows = computed(() => {
+  if (!group.value || group.value.instances.length === 0) return []
+  const buckets = new Map<number, { count: number, ids: string[], sellPrice: number }>()
+  for (const row of group.value.instances) {
+    const existing = buckets.get(row.conditionPercent)
+    if (existing) {
+      existing.count++
+      existing.ids.push(row.id)
+    } else {
+      buckets.set(row.conditionPercent, { count: 1, ids: [row.id], sellPrice: row.sellPrice })
+    }
+  }
+  return [...buckets.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([conditionPercent, data]) => ({ conditionPercent, ...data }))
+})
+
+const merchantOpen = computed(() => ui.merchant.open)
 
 useTouchScroll(panel)
 
@@ -58,6 +77,14 @@ function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
 function onEquip(kind: ItemKind): void { ui.inventory.onEquip?.(kind) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
 function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
+
+function sellInstance(id: string): void {
+  const result = ui.inventory.onSellInstances?.([id]) ?? 'invalid_offer'
+  if (result === 'ok') return
+  if (result === 'invalid_offer') showToast('Nie masz tego przedmiotu.', 'error')
+  else if (result === 'full') showToast('Ekwipunek jest za ciężki.', 'error')
+  else if (result === 'not_sold') showToast('Kupiec tego nie kupi.', 'error')
+}
 </script>
 
 <template>
@@ -111,7 +138,7 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
 
       <InventoryScreenSection
         label="Ilość"
-        :value="`${itemCount} × ${item.label}`"
+        :value="`×${itemCount}`"
       />
 
       <InventoryScreenSection
@@ -149,6 +176,36 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
       />
     </div>
 
+    <div
+      v-if="instanceRows.length > 0"
+      class="my-4"
+    >
+      <div class="mb-2 text-sm font-semibold">
+        Lista
+      </div>
+      <div class="flex flex-col gap-2">
+        <div
+          v-for="row in instanceRows"
+          :key="row.conditionPercent"
+          class="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/5 px-3 py-2 text-sm"
+        >
+          <span>{{ row.count }}× Pułapka {{ row.conditionPercent }}%</span>
+          <div
+            v-if="merchantOpen"
+            class="flex flex-wrap gap-2"
+          >
+            <ItemsScreenItemButton
+              v-for="id in row.ids"
+              :key="id"
+              class="min-h-0 py-1"
+              :label="`Sprzedaj (${row.sellPrice})`"
+              @click="sellInstance(id)"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="my-4 h-px border-white/20 border-b" />
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mx-auto max-w-md">
@@ -168,6 +225,7 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
         @click="onUnequip"
       />
       <ItemsScreenItemButton
+        v-if="!isInstanceBackedKind(item.kind)"
         label="Wyrzuć"
         destructive
         @click="onDrop(item.kind)"

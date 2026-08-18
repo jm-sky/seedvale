@@ -4,6 +4,7 @@ import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { isToolKind } from '../../items/HeldTool'
 import { type ConsumableNeed, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
+import { isInstanceBackedKind } from '../../items/itemInstances'
 import { ITEM_DEFS, type ItemCategory, type ItemKind } from '../../items/items'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { ui } from '../store'
@@ -15,20 +16,21 @@ const { categoryLabel } = useItemCategoryLabels()
 type CategoryFilter = 'all' | ItemCategory
 type SortMode = 'category' | 'name' | 'qty'
 
-/** Tools first (what a mobile player reaches for mid-action), then food —
- *  the two most time-pressured lookups — utility and raw resources last
- *  (plan 153's "most-used easy to find" default). */
 const CATEGORY_ORDER: readonly ItemCategory[] = ['tool', 'food', 'utility', 'resource']
 const SORT_LABEL: Record<SortMode, string> = { category: 'Kategoria', name: 'Nazwa', qty: 'Ilość' }
 
 const filter = ref<CategoryFilter>('all')
 const sortMode = ref<SortMode>('category')
 
-const allItems = computed(() => (Object.keys(ITEM_DEFS) as ItemKind[]).filter((kind) => (ui.inventory.counts[kind] ?? 0) > 0).map((kind) => ({ kind, def: ITEM_DEFS[kind], count: ui.inventory.counts[kind] ?? 0, consumable: ITEM_CATALOG[kind].consumable ?? null })))
+const allItems = computed(() => ui.inventory.groups.map((group) => ({
+  kind: group.kind,
+  def: ITEM_DEFS[group.kind],
+  count: group.count,
+  condition: group.condition,
+  uniformConditionPercent: group.uniformConditionPercent,
+  consumable: ITEM_CATALOG[group.kind].consumable ?? null,
+})))
 
-/** Categories derived straight from `ITEM_DEFS` — no second, hand-maintained
- *  filter-tab list (plan 153). Only shows a tab for a category the player
- *  actually holds something in. */
 const availableCategories = computed(() => CATEGORY_ORDER.filter((cat) => allItems.value.some((item) => item.def.category === cat)))
 
 const items = computed(() => {
@@ -39,6 +41,14 @@ const items = computed(() => {
   else sorted.sort((a, b) => CATEGORY_ORDER.indexOf(a.def.category) - CATEGORY_ORDER.indexOf(b.def.category) || a.def.label.localeCompare(b.def.label, 'pl'))
   return sorted
 })
+
+function conditionLabel(item: (typeof allItems.value)[number]): string | null {
+  if (item.condition === 'mixed') return '[mixed usage]'
+  if (item.condition === 'uniform' && item.uniformConditionPercent != null) {
+    return `[${item.uniformConditionPercent}%]`
+  }
+  return null
+}
 
 const emit = defineEmits<{
   'select-item': [item: ItemKind],
@@ -129,6 +139,10 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
         >
           <span class="text-sm font-semibold">
             {{ item.count }} × {{ item.def.label }}
+            <span
+              v-if="conditionLabel(item)"
+              class="ml-1 text-[11px] font-normal opacity-70"
+            >{{ conditionLabel(item) }}</span>
           </span>
           <span class="text-[11px] uppercase tracking-wide opacity-60">
             {{ categoryLabel[item.def.category] }}
@@ -160,6 +174,7 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
           </div>
           <div class="flex items-center justify-end gap-2">
             <ItemsScreenItemButton
+              v-if="!isInstanceBackedKind(item.kind)"
               class="min-h-0 py-1"
               label="Wyrzuć"
               destructive

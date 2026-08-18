@@ -1,7 +1,7 @@
 # Plan: Inventory item instances i lifecycle pułapek
 
 **Created:** 2026-08-18  
-**Status:** `planned` 📋  
+**Status:** `done` ✅  
 **Priority:** medium · **Effort:** L  
 **Depends on:** 141
 
@@ -518,27 +518,27 @@ Trade price calculation i auto-sell wykonują się tylko podczas interakcji hand
 
 ## Kryteria akceptacji
 
-- [ ] Nowo kupiona pułapka jest konkretną instance z własnym ID i pełną durability.
-- [ ] Trzy kupione pułapki są trzema różnymi instances.
-- [ ] Inventory może grupować trzy instances jako `Pułapka prosta ×3`.
-- [ ] Mixed condition jest pokazywany jako `[mixed usage]`.
-- [ ] `ItemDetailsScreen` pokazuje rozbicie np. `2×100%`, `1×50%`.
-- [ ] Place nie resetuje durability.
-- [ ] Collect zachowuje durability i instance ID.
-- [ ] Lifecycle używa `placed / active / broken`, bez `used` jako ItemKind.
-- [ ] Broken może zostać zebrana i przechowywana jako instance.
-- [ ] Broken można sprzedać za bardzo niską cenę.
-- [ ] Cena używanego itemu uwzględnia condition i centralny zakres 10–25% discount.
-- [ ] Cena nie jest zapisana jako trwały stan instance.
-- [ ] Architektura ceny pozwala później dodać relationship, season, demand i inne modifiers.
-- [ ] Manual sell może wybrać konkretną instance.
-- [ ] Auto-sell sprzedaje najpierw najgorsze instances.
-- [ ] Multi-sell liczy cenę każdej instance przed mutacją i działa atomowo.
-- [ ] Save/load zachowuje inventory instances, durability i ID.
-- [ ] Stare count-based itemy nadal działają bez migracji do instances.
-- [ ] Nie powstaje specjalny system inventory tylko dla pułapek.
-- [ ] Nie powstają nowe ItemKind dla `used`, `active` ani `broken`.
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build` oraz istniejące testy przechodzą.
+- [x] Nowo kupiona pułapka jest konkretną instance z własnym ID i pełną durability.
+- [x] Trzy kupione pułapki są trzema różnymi instances.
+- [x] Inventory może grupować trzy instances jako `Pułapka prosta ×3`.
+- [x] Mixed condition jest pokazywany jako `[mixed usage]`.
+- [x] `ItemDetailsScreen` pokazuje rozbicie np. `2×100%`, `1×50%`.
+- [x] Place nie resetuje durability.
+- [x] Collect zachowuje durability i instance ID.
+- [x] Lifecycle używa `placed / active / broken`, bez `used` jako ItemKind.
+- [x] Broken może zostać zebrana i przechowywana jako instance.
+- [x] Broken można sprzedać za bardzo niską cenę.
+- [x] Cena używanego itemu uwzględnia condition i centralny zakres 10–25% discount.
+- [x] Cena nie jest zapisana jako trwały stan instance.
+- [x] Architektura ceny pozwala później dodać relationship, season, demand i inne modifiers.
+- [x] Manual sell może wybrać konkretną instance.
+- [x] Auto-sell sprzedaje najpierw najgorsze instances.
+- [x] Multi-sell liczy cenę każdej instance przed mutacją i działa atomowo.
+- [x] Save/load zachowuje inventory instances, durability i ID.
+- [x] Stare count-based itemy nadal działają bez migracji do instances.
+- [x] Nie powstaje specjalny system inventory tylko dla pułapek.
+- [x] Nie powstają nowe ItemKind dla `used`, `active` ani `broken`.
+- [x] `npx tsc --noEmit`, `npm run build` oraz istniejące testy przechodzą.
 - [ ] Browser/manual verification sprawdza pełny lifecycle pułapki oraz manual/auto sell.
 
 ## Nie w zakresie

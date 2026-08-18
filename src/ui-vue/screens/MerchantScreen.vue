@@ -4,6 +4,7 @@ import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { ITEM_DEFS, type ItemCategory, type ItemKind } from '../../items/items'
+import { isInstanceBackedKind } from '../../items/itemInstances'
 import { MERCHANT_STOCK, merchantPrice, offerValue, sellPrice } from '../../items/tradeCatalog'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -90,17 +91,27 @@ const stock = computed(() => {
   return sortRows(rows)
 })
 
+function autoSellDisplayPrice(kind: ItemKind): number {
+  if (!isInstanceBackedKind(kind)) return sellPrice(kind) ?? 0
+  const group = ui.merchant.groups.find((entry) => entry.kind === kind)
+  if (!group || group.instances.length === 0) return sellPrice(kind) ?? 0
+  const sorted = [...group.instances].sort(
+    (a, b) => a.conditionPercent - b.conditionPercent || a.id.localeCompare(b.id),
+  )
+  return sorted[0]?.sellPrice ?? 0
+}
+
 const offerKinds = computed(() => {
   const kinds = (Object.keys(ITEM_DEFS) as ItemKind[]).filter((kind) => {
     if (kind === 'shell' || kind === 'coin') return false
     if ((ui.merchant.counts[kind] ?? 0) <= 0) return false
-    const price = sellPrice(kind) ?? 0
+    const price = autoSellDisplayPrice(kind)
     return matchesCategory(kind) && matchesPrice(price)
   })
   const rows = kinds.map((kind) => ({
     kind,
     label: ITEM_DEFS[kind].label,
-    price: sellPrice(kind) ?? 0,
+    price: autoSellDisplayPrice(kind),
     count: ui.merchant.counts[kind] ?? 0,
   }))
   return sortRows(rows)

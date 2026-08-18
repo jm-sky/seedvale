@@ -5,6 +5,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
 import type { ItemKind } from '../items/items'
+import type { InventoryGroupView } from '../items/inventoryView'
 import type { TradeResult } from '../items/trade'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
@@ -40,6 +41,7 @@ type NpcDialogueMenuState = {
 type InventoryState = {
   open: boolean
   counts: Partial<Record<ItemKind, number>>
+  groups: readonly InventoryGroupView[]
   totalWeight: number
   maxWeight: number
   heldTool: ItemKind | null
@@ -48,6 +50,7 @@ type InventoryState = {
   onUnequip: (() => void) | null
   /** "Zjedz"/"Wypij" (plan 106) — only offered for `ITEM_CATALOG[kind].consumable` items. */
   onConsume: ((kind: ItemKind) => void) | null
+  onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
 }
 type PauseMenuState = {
   open: boolean; seed: number; playerName: string
@@ -94,9 +97,11 @@ type MerchantState = {
   open: boolean
   npc: NpcAgent | null
   counts: Partial<Record<ItemKind, number>>
+  groups: readonly InventoryGroupView[]
   onBuyShells: ((kind: ItemKind) => TradeResult) | null
   onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>) => TradeResult) | null
   onSellShells: ((kind: ItemKind) => TradeResult) | null
+  onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number }
 type BusyState = { visible: boolean; label: string; blurred: boolean; progress: number | null }
@@ -222,7 +227,7 @@ export function emitUiClick(): void {
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, onAskSword: null, onOpenTrade: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
-  inventory: { open: false, counts: {}, totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null } as InventoryState,
+  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onSellInstances: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onRefresh: null,
@@ -240,7 +245,7 @@ export const ui = reactive({
     onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0 } as TimeSkipState,
-  merchant: { open: false, npc: null, counts: {}, onBuyShells: null, onBuyBarter: null, onSellShells: null } as MerchantState,
+  merchant: { open: false, npc: null, counts: {}, groups: [], onBuyShells: null, onBuyBarter: null, onSellShells: null, onSellInstances: null } as MerchantState,
   busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
@@ -379,12 +384,15 @@ export function openInventory(
   totalWeight: number,
   maxWeight: number,
   heldTool: ItemKind | null,
+  groups: readonly InventoryGroupView[],
   onDrop: (kind: ItemKind) => void,
   onEquip: (kind: ItemKind) => void,
   onUnequip: () => void,
   onConsume: (kind: ItemKind) => void,
+  onSellInstances: (instanceIds: readonly string[]) => TradeResult,
 ): void {
   ui.inventory.counts = { ...counts }
+  ui.inventory.groups = groups
   ui.inventory.totalWeight = totalWeight
   ui.inventory.maxWeight = maxWeight
   ui.inventory.heldTool = heldTool
@@ -392,6 +400,7 @@ export function openInventory(
   ui.inventory.onEquip = onEquip
   ui.inventory.onUnequip = onUnequip
   ui.inventory.onConsume = onConsume
+  ui.inventory.onSellInstances = onSellInstances
   ui.inventory.open = true
   emitUiOpen()
 }
@@ -400,8 +409,10 @@ export function refreshInventory(
   totalWeight: number,
   maxWeight: number,
   heldTool: ItemKind | null,
+  groups: readonly InventoryGroupView[],
 ): void {
   ui.inventory.counts = { ...counts }
+  ui.inventory.groups = groups
   ui.inventory.totalWeight = totalWeight
   ui.inventory.maxWeight = maxWeight
   ui.inventory.heldTool = heldTool
@@ -411,25 +422,38 @@ export function closeInventory(): void {
   ui.inventory.onDrop = null
   ui.inventory.onEquip = null
   ui.inventory.onUnequip = null
+  ui.inventory.onSellInstances = null
 }
 export function isInventoryOpen(): boolean { return ui.inventory.open }
 
-export function configureMerchant(handlers: Pick<MerchantState, 'onBuyShells' | 'onBuyBarter' | 'onSellShells'>): void {
+export function configureMerchant(handlers: Pick<MerchantState, 'onBuyShells' | 'onBuyBarter' | 'onSellShells' | 'onSellInstances'>): void {
   Object.assign(ui.merchant, handlers)
 }
-export function openMerchant(counts: Partial<Record<ItemKind, number>>, npc: NpcAgent | null = null): void {
+export function openMerchant(
+  counts: Partial<Record<ItemKind, number>>,
+  groups: readonly InventoryGroupView[],
+  npc: NpcAgent | null = null,
+): void {
   ui.merchant.counts = { ...counts }
+  ui.merchant.groups = groups
   ui.merchant.npc = npc ? markRaw(npc) : null
   ui.merchant.open = true
 }
 /** Close dialogue first, then open trade — capture the NPC before reset. */
-export function openMerchantFromDialogue(counts: Partial<Record<ItemKind, number>>): void {
+export function openMerchantFromDialogue(
+  counts: Partial<Record<ItemKind, number>>,
+  groups: readonly InventoryGroupView[],
+): void {
   const npc = ui.npcDialogueMenu.npc as NpcAgent | null
   closeNpcDialogueMenu({ decline: false })
-  openMerchant(counts, npc)
+  openMerchant(counts, groups, npc)
 }
-export function refreshMerchant(counts: Partial<Record<ItemKind, number>>): void {
+export function refreshMerchant(
+  counts: Partial<Record<ItemKind, number>>,
+  groups: readonly InventoryGroupView[],
+): void {
   ui.merchant.counts = { ...counts }
+  ui.merchant.groups = groups
 }
 export function closeMerchant(): void {
   ui.merchant.open = false

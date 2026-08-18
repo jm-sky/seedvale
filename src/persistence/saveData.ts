@@ -6,6 +6,7 @@ import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import { isToolKind } from '../items/HeldTool'
+import type { SaveItemInstance } from '../items/Inventory'
 import { type ItemKind } from '../items/items'
 import { SNEAK_LEGACY_XP } from '../player/PlayerSkills'
 
@@ -291,8 +292,13 @@ export type SaveDataV18 = Omit<SaveDataV17, 'version'> & {
   version: 18
 }
 
-/** Canonical save shape — always v18. `loadSaveData` migrates older saves up. */
-export type SaveData = SaveDataV18
+export type SaveDataV19 = Omit<SaveDataV18, 'version'> & {
+  version: 19
+  inventoryInstances: SaveItemInstance[]
+}
+
+/** Canonical save shape — always v19. `loadSaveData` migrates older saves up. */
+export type SaveData = SaveDataV19
 
 function isSaveConfig(value: unknown): value is SaveConfig {
   if (!value || typeof value !== 'object') return false
@@ -729,12 +735,40 @@ export function isSaveDataV17(value: unknown): value is SaveDataV17 {
   return true
 }
 
-export function isSaveDataV18(value: unknown): value is SaveData {
+export function isSaveDataV18(value: unknown): value is SaveDataV18 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 18) return false
   if (!isSaveDataV17({ ...v, version: 17 })) return false
   return true
+}
+
+function isInventoryInstancesField(value: unknown): value is SaveItemInstance[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const row = entry as Record<string, unknown>
+    if (typeof row.id !== 'string' || typeof row.kind !== 'string') return false
+    if (row.kind === 'trap_simple' || row.kind === 'trap_good') {
+      return typeof row.durability === 'number' && Number.isFinite(row.durability)
+    }
+    if (row.durability !== undefined && typeof row.durability !== 'number') return false
+    return true
+  })
+}
+
+export function isSaveDataV19(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 19) return false
+  if (!isSaveDataV18({ ...v, version: 18 })) return false
+  if (!isInventoryInstancesField(v.inventoryInstances)) return false
+  return true
+}
+
+/** @deprecated Prefer `isSaveDataV19` — kept for migration tests. */
+export function isSaveDataV18Canonical(value: unknown): value is SaveDataV18 {
+  return isSaveDataV18(value)
 }
 
 export function isSaveDataV9(value: unknown): value is SaveDataV9 {
@@ -881,7 +915,7 @@ function toV17(v16: SaveDataV16): SaveDataV17 {
   }
 }
 
-function toV18(v17: SaveDataV17): SaveData {
+function toV18(v17: SaveDataV17): SaveDataV18 {
   const { version: _version, skills, ...rest } = v17
   return {
     ...rest,
@@ -895,16 +929,26 @@ function toV18(v17: SaveDataV17): SaveData {
   }
 }
 
-/** Migrates any post-v16 save payload to the canonical v18 shape. */
-function upToCurrent(v16: SaveDataV16): SaveData {
-  return toV18(toV17(v16))
+function toV19(v18: SaveDataV18): SaveData {
+  const { version: _version, ...rest } = v18
+  return {
+    ...rest,
+    version: 19,
+    inventoryInstances: [],
+  }
 }
 
-/** Accepts a stored v1–v18 save and always returns the canonical v18 shape. */
+/** Migrates any post-v16 save payload to the canonical v19 shape. */
+function upToCurrent(v16: SaveDataV16): SaveData {
+  return toV19(toV18(toV17(v16)))
+}
+
+/** Accepts a stored v1–v19 save and always returns the canonical v19 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV18(value)) return value
-    if (isSaveDataV17(value)) return toV18(value)
+    if (isSaveDataV19(value)) return value
+    if (isSaveDataV18(value)) return toV19(value)
+    if (isSaveDataV17(value)) return toV19(toV18(value))
     if (isSaveDataV16(value)) return upToCurrent(value)
     if (isSaveDataV15(value)) return upToCurrent(toV16(value))
     if (isSaveDataV14(value)) return upToCurrent(toV16(toV15(value)))
