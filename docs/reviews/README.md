@@ -41,6 +41,8 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | Water × grass GPU benchmark | Cursor-browser real GPU (Intel Arc 140V): baseline `cfdb83a` vs grass LOD `68e1bf4` vs grass+water S `c834210` — `current`/`water`/`stream` | `done` | [2026-08-18--020--water-grass-gpu-benchmark.md](./2026-08-18--020--water-grass-gpu-benchmark.md) |
 | Plan 149 Phase 0 real GPU | Cold `?benchmark=stream` ×3 on Intel Arc 140V + program census — first-use hitch confirmed; recommend loading-time prewarm (A) | `done` | [2026-08-18--021--plan-149-phase-0-real-gpu.md](./2026-08-18--021--plan-149-phase-0-real-gpu.md) |
 | Plan 149 program family dump | Real-GPU `cacheKey`/`name` dump ×3 — ~210 unique keys, ~25 names; streaming variants are `numPointLights` × instancing, not new GLTF families. Recommend B (pin lights) before A | `done` | [2026-08-18--022--plan-149-program-family-dump.md](./2026-08-18--022--plan-149-program-family-dump.md) |
+| Plan 149 PointLight variant axis | Diagnostic pin/pad `NUM_POINT_LIGHTS=16` vs baseline, real GPU ×3+3 — unique keys 210→62, streaming hitch bursts gone; RENDER/p95 worse. Hypothesis **PASS**, pad is not the shippable fix | `done` | [2026-08-18--023--plan-149-pointlight-variant-axis.md](./2026-08-18--023--plan-149-pointlight-variant-axis.md) |
+| Plan 149 PointLight budget 8/12/16 | Cheap pin (no `traverseVisible`) ×3+3+3+3 on Intel Arc 140V — 8/12/16 all collapse to 62 programs; 8/12 cull lights; 16 is the only visual-safe budget; traverse was most of the 023 RENDER tax. **C for next plan, D for shipping today** | `done` | [2026-08-18--024--plan-149-pointlight-budget-curve.md](./2026-08-18--024--plan-149-pointlight-budget-curve.md) |
 
 ## After each run
 

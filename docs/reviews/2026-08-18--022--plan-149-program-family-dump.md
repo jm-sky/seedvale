@@ -5,7 +5,7 @@
 **Runs:** **3** cold `?benchmark=stream` (fresh page load each time)
 **Scope:** measurement only. No `compileAsync()`, no prewarm, no shader/material/ChunkManager/render-pipeline/`checkShaderErrors` change. Instrumentation was already on `main` (`dumpProgramFirstUse()` / `summarize().programFamilies` from `6001579`).
 
-Follows [review 021](./2026-08-18--021--plan-149-phase-0-real-gpu.md) (Phase 0 hitch + program-count census) with the missing **cacheKey/name** dump required before Phase 1. Plan: [149](../plans/2026-08-17--149--shader-program-first-use-hitch.md).
+Follows [review 021](./2026-08-18--021--plan-149-phase-0-real-gpu.md) (Phase 0 hitch + program-count census) with the missing **cacheKey/name** dump required before Phase 1. Plan: [149](../plans/2026-08-18--157--shader-program-first-use-hitch.md).
 
 ## Environment
 

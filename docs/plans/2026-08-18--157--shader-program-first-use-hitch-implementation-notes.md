@@ -1,6 +1,6 @@
-# Plan 149 — Phase 0 implementation notes
+# Plan 149 — implementation notes
 
-**Scope:** Phase 0 only (instrumentation/proof). No renderer/streaming behaviour change. Phase 1/2 not started.
+**Scope:** Phase 0 instrumentation (no renderer change) plus Phase 1 B **diagnostic** PointLight pad (`?pinPointLights`, default off). Phase 1 production fix / Phase 1 A `compileAsync` **not** started.
 
 ## 1. What was added
 
@@ -101,7 +101,19 @@ Done in [review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md) (
 
 ## 7. Recommendation for next step
 
-**Phase 0 closed** — hitch proof [review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md), family dump [review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md). Next: Phase 1 **B** experiment — pin/pad visible `PointLight` count so `numPointLights` in the program cache key cannot change during streaming; re-measure unique `cacheKey` count and first-use hitches. Do **not** start loading-window `compileAsync()` (A) until that axis is collapsed. Do not revive per-chunk/per-tick/full-scene `compileAsync()`. Instantiation (instanced vs non-instanced copies of the same GLTF name) is a smaller leftover B after lights.
+**Phase 0 closed** — hitch proof [review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md), family dump [review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md).
+
+**Phase 1 B diagnostic done** — [review 023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md). `?pinPointLights=16` (intensity-0 dummy pad, URL-gated) collapsed unique `cacheKey` **~210 → 62** and removed streaming first-use bursts (`numPointLights` locked to 16). Hypothesis **PASS**. The dummy pad is **not** the production fix: median RENDER 18→33 ms, frame p95 61→92 ms (16-light shader loop + per-frame `traverseVisible`). Frame 0 hitch remains.
+
+**Budget curve 8/12/16 done** — [review 024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md). Cheap add/remove registry (`syncMs` 0.0–0.2 ms, no per-frame `traverseVisible`). All three budgets collapse to **62** programs. 8/12 always overflow-cull (real counts 15–21) and do not buy RENDER vs 16. 16 covers the morning `stream` set without cull; later-day counts can exceed 16. Most of the 023 RENDER tax was the traverse. Next: a **separate implementation plan** for a cheap budget-16 pin, then leftover instancing, then A. Do **not** start loading-window `compileAsync()`. Do not revive per-chunk/per-tick/full-scene `compileAsync()`.
+
+## 7.1 Phase 1 B pad (diagnostic, opt-in)
+
+- `src/perf/pointLightBudget.ts` + `?pinPointLights=8|12|16` (`src/perf/flags.ts`). Default **off**.
+- Dummy `PointLight` intensity 0, no shadow, no mesh. Overflow culls dimmest/furthest real lights so the count cannot rise. `sync(camera)` before mirror/shadow/beauty in `gameLoop.ts`.
+- Tracking is an add/remove registry for the pad's lifetime (not a lighting manager).
+- Unit tests: `src/perf/pointLightBudget.test.ts` (9).
+- Leave in place as an opt-in probe until the real plan replaces it; do not enable on `?benchmark=stream` by default.
 
 ## 8. Verification
 
@@ -109,6 +121,9 @@ Done in [review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md) (
 - `npm run lint` — clean.
 - `npm run build` — clean (`vue-tsc --noEmit && vite build`, existing >500kB chunk warning unrelated/pre-existing).
 - `npm run test` — 1007/1007 passing (1000 pre-existing + 7 new in `programCensus.test.ts`).
+- Phase 1 B pad tests: `src/perf/pointLightBudget.test.ts` (9) — `npx vitest run src/perf/pointLightBudget.test.ts` passing; `tsc --noEmit` + eslint on the pad files clean.
+- Real-GPU pin experiment — **done**, [review 023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md) (3+3 cold `stream` runs, Intel Arc 140V). Hypothesis PASS; dummy pad not shippable.
+- Real-GPU budget curve 8/12/16 — **done**, [review 024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md) (3+3+3+3 cold `stream` runs, Intel Arc 140V). Cheap counter; 16 is the only visual-safe budget; not shipped.
 - Technical/functional agent-browser smoke test — done (§3): confirmed `window.__seedvaleProgramCensus` activates both via `?benchmark=stream` and `?programCensus=1`, records all four event kinds with the expected shape, and cleanly shows zero events when disabled (implied by the module's `NOOP_CENSUS` branch, also covered by the disabled-mode unit test).
 - Real-GPU benchmark — **done**, [review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md) (3 cold `stream` runs, Intel Arc 140V).
 - Browser/manual visual verification — review 021 screenshots: terrain/grass/vegetation/settlement/water-reflection/postprocess present; no black materials or flicker in captured frames. `gl.getError()` 1282 noted, not attributed.

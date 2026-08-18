@@ -1,7 +1,7 @@
 # Plan: Shader/Program First-Use Hitch
 
 **Created:** 2026-08-17
-**Status:** `in progress` 🔄 — Phase 0 closed (instrumentation + real-GPU census: [review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md)). Real-GPU `cacheKey`/`name` dump done ([review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md)): ~210 unique keys / ~25 names; streaming growth is `numPointLights` × instancing variants of already-seen families. Phase 1 A (loading-time prewarm) **not** started — 022 redirects the next experiment to **B (pin/pad point-light count)** before any `compileAsync()`.
+**Status:** `in progress` 🔄 — Phase 0 closed ([review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md), [review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md)). Phase 1 B diagnostic pin **PASS** ([review 023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md)). Budget curve 8/12/16 with a cheap counter ([review 024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md)): all three collapse to 62 programs; **16** is the only visual-safe budget on `stream`; 8/12 cull lights and do not buy RENDER. Phase 1 A (`compileAsync` prewarm) still **not** started. Next: a separate implementation plan for a cheap budget-16 pin, then leftover instancing.
 **Priority:** high · **Effort:** M/L
 **Depends on:** none
 **domain:** `world-terrain`

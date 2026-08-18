@@ -5,7 +5,7 @@
 **Runs:** **3** cold `?benchmark=stream` (fresh page load each time)
 **Scope:** measurement only. No `compileAsync()`, no `checkShaderErrors` change, no material consolidation, no ChunkManager / render-pipeline change.
 
-Cursor embedded browser + CDP, hardware WebGL (not agent-browser / SwiftShader). Confirms the Phase 0 instrumentation in `src/perf/programCensus.ts` against [plan 149](../plans/2026-08-17--149--shader-program-first-use-hitch.md).
+Cursor embedded browser + CDP, hardware WebGL (not agent-browser / SwiftShader). Confirms the Phase 0 instrumentation in `src/perf/programCensus.ts` against [plan 149](../plans/2026-08-18--157--shader-program-first-use-hitch.md).
 
 ## Environment
 
