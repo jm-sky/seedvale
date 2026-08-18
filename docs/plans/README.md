@@ -80,6 +80,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 | `2026-08-15--121--footstep-sound-refresh.md` | Kroki: Anton Z default (sand/grass/stone). Playtest 2026-08-18: **sprint po trawie jak kamienny korytarz** (za głośno). Zostaje 🔍 | 🟡 | S | — |
 | `2026-08-14--111--house-construction.md` | House Builder (MegaKit). Playtest 2026-08-18: **niektóre domki źle złożone** — zostaje 🔍 — [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md) | 🔴 | XL | ~~109~~ |
 | `2026-08-14--110--quests-v3-closure-world-identity-and-lifecycle.md` | Domknięcie planu 093: lifecycle `failed`/`invalidated`, predator `onDeath`, groźny wilk, failure owcy, `landmarkId` / rebind po save. Playtest 2026-08-18 **odłożony** — zostaje 🔍 | 🔴 | L | ~~093~~ |
+| `docs/plans/2026-08-18--157--production-pointlight-budget.md` | Optymalizacja | 🔴 | M | - |
 
 Historical playtest queue (files in archive): [below](#playtest-queue-archived-batch).
 
