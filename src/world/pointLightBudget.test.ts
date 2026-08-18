@@ -268,6 +268,53 @@ describe('createPointLightBudget — padded mode', () => {
     expect(snap).toMatchObject({ realCount: 1, culled: 0 })
   })
 
+  it('does not restore a culled light after lifecycle has turned it off', () => {
+    const scene = new Scene()
+    const budget = makeBudget(scene, 1)
+    const group = new Group()
+    const a = realPointLight(1)
+    const b = realPointLight(1)
+    group.add(a, b)
+    scene.add(group)
+    budget.registerSubtree(group)
+    budget.sync()
+    const culled = a.visible ? b : a
+    const kept = a.visible ? a : b
+    expect(culled.visible).toBe(false)
+    expect(culled.userData[POINT_LIGHT_CULL_USERDATA]).toBe(true)
+
+    // Mimic setNightIntensity(0) / setLit(false) while the budget still has
+    // this light hidden: owner sets intensity 0 and visible false.
+    culled.intensity = 0
+    culled.visible = false
+
+    const snap = budget.sync()
+    expect(culled.visible).toBe(false)
+    expect(culled.userData[POINT_LIGHT_CULL_USERDATA]).toBeUndefined()
+    expect(kept.visible).toBe(true)
+    expect(snap).toMatchObject({ realCount: 1, culled: 0, totalVisible: 1, padVisible: 0 })
+    expect(countVisibleRealPointLights(scene)).toBe(1)
+  })
+
+  it('still restores a culled dim light that the owner never turned off', () => {
+    const scene = new Scene()
+    const budget = makeBudget(scene, 1)
+    const group = new Group()
+    const dim = realPointLight(0)
+    const bright = realPointLight(4)
+    group.add(dim, bright)
+    scene.add(group)
+    budget.registerSubtree(group)
+    budget.sync()
+    expect(dim.visible).toBe(false)
+    expect(dim.userData[POINT_LIGHT_CULL_USERDATA]).toBe(true)
+    bright.removeFromParent()
+    budget.unregister(bright)
+    const snap = budget.sync()
+    expect(dim.visible).toBe(true)
+    expect(snap).toMatchObject({ realCount: 1, culled: 0 })
+  })
+
   it('unregisterSubtree drops a culled light from bookkeeping instead of leaking it', () => {
     const scene = new Scene()
     const budget = makeBudget(scene, 1)

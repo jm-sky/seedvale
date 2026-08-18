@@ -183,15 +183,26 @@ export function createPointLightBudget(scene: THREE.Scene, budget: number | null
   }
 
   let overflowMax = 0
-  const culledLights: THREE.PointLight[] = []
+  const culledLights: { light: THREE.PointLight, intensityWhenCulled: number }[] = []
   let last: PointLightBudgetSnapshot = { ...EMPTY_SNAPSHOT, budget }
 
+  function dropCulled(light: THREE.PointLight): void {
+    const idx = culledLights.findIndex((entry) => entry.light === light)
+    if (idx >= 0) culledLights.splice(idx, 1)
+  }
+
+  /** Undo overflow-cull hiding without fighting the light's owner.
+   *  `setNightIntensity(0)` / `setLit(false)` set `visible = false` and
+   *  `intensity = 0` while the light may already be hidden by the budget;
+   *  blindly flipping `visible` back on would relight an off lamp. A light
+   *  that was already at intensity 0 when culled (dim-but-still-on) is
+   *  restored, because the owner never turned it off. */
   function restoreCulled(): void {
-    for (const light of culledLights) {
-      if (light.userData[POINT_LIGHT_CULL_USERDATA] === true) {
-        light.visible = true
-        delete light.userData[POINT_LIGHT_CULL_USERDATA]
-      }
+    for (const { light, intensityWhenCulled } of culledLights) {
+      if (light.userData[POINT_LIGHT_CULL_USERDATA] !== true) continue
+      delete light.userData[POINT_LIGHT_CULL_USERDATA]
+      const ownerTurnedOff = intensityWhenCulled > 0 && light.intensity <= 0
+      if (!ownerTurnedOff) light.visible = true
     }
     culledLights.length = 0
   }
@@ -232,7 +243,7 @@ export function createPointLightBudget(scene: THREE.Scene, budget: number | null
         const light = eligible[i]!
         light.userData[POINT_LIGHT_CULL_USERDATA] = true
         light.visible = false
-        culledLights.push(light)
+        culledLights.push({ light, intensityWhenCulled: light.intensity })
       }
       culled = hideCount
       if (budgetTooLowForScene && import.meta.env.DEV) {
@@ -290,8 +301,7 @@ export function createPointLightBudget(scene: THREE.Scene, budget: number | null
     unregisterSubtree(root) {
       walkPointLights(root, (light) => {
         registry.delete(light)
-        const idx = culledLights.indexOf(light)
-        if (idx >= 0) culledLights.splice(idx, 1)
+        dropCulled(light)
       })
     },
     register(light) {
@@ -299,8 +309,7 @@ export function createPointLightBudget(scene: THREE.Scene, budget: number | null
     },
     unregister(light) {
       registry.delete(light)
-      const idx = culledLights.indexOf(light)
-      if (idx >= 0) culledLights.splice(idx, 1)
+      dropCulled(light)
     },
     sync,
     snapshot: () => last,
