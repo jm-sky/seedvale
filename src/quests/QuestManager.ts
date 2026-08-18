@@ -15,6 +15,15 @@ import {
   relationToLevel,
 } from './quests'
 
+/** `labelMarker`'s glyphs (plan 153) — distinct per state, not color-only,
+ *  so a floating NPC label reads correctly even without the CSS color that
+ *  usually accompanies it. `TALK_TARGET` is a separate case (a non-giver NPC
+ *  named by an active `talk_to_npc` objective) from the giver's own 3 states. */
+export const QUEST_MARKER_AVAILABLE = '!'
+export const QUEST_MARKER_IN_PROGRESS = '…'
+export const QUEST_MARKER_READY = '✓'
+export const QUEST_MARKER_TALK_TARGET = '?'
+
 export type QuestDialogOverride = {
   line: string
   /** Present only when the dialog should present an accept/decline choice. */
@@ -205,6 +214,22 @@ export class QuestManager {
     return def.stages[stageIndex]
   }
 
+  /** Interact-range override for an active `spot_animal` stage targeting
+   *  `kind`, if any (plan 153) — lets a skittish species' quest objective be
+   *  reachable without touching the global `INTERACT_RANGE`/`GAZE_RANGE` or
+   *  the animal's own AI. `null` when nothing active needs a wider range. */
+  activeSpotAnimalRange(kind: AnimalKind): number | null {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      const objective = this.currentStage(def, s.stageIndex)?.objective
+      if (objective?.type === 'spot_animal' && objective.kind === kind && objective.range) {
+        return objective.range
+      }
+    }
+    return null
+  }
+
   getState(id: string): QuestState {
     return this.stateOf(id).state
   }
@@ -390,14 +415,23 @@ export class QuestManager {
   }
 
   /** Quest-driven line/offer for talking to `npcName` right now, or null if
-   *  this NPC has nothing quest-related to say (caller falls back to normal dialogue). */
+   *  this NPC has nothing quest-related to say (caller falls back to normal
+   *  dialogue). `completedFallback` (plan 153) — an already-turned-in
+   *  quest's `reportLine`, used only if nothing else this giver offers
+   *  (a new quest, a reminder, a report) takes priority; a giver of several
+   *  quests (Anna, Piotr) must still offer their next quest normally once
+   *  it becomes available, not get stuck repeating an old completion line. */
   onInteract(npcName: string): QuestDialogOverride | null {
+    let completedFallback: QuestDialogOverride | null = null
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
 
       if (npcName === def.giverName) {
         const result = this.handleGiverInteract(def, s)
         if (result) return result
+        if (s.state === 'complete' && !completedFallback) {
+          completedFallback = { line: def.reportLine }
+        }
       }
 
       if (s.state === 'active' && npcName !== def.giverName) {
@@ -408,7 +442,7 @@ export class QuestManager {
         }
       }
     }
-    return null
+    return completedFallback
   }
 
   /** Quest-driven line for interacting with a non-NPC world object (well/tree/
@@ -433,18 +467,22 @@ export class QuestManager {
     return null
   }
 
-  /** Label suffix for `npcName`, or null when no quest wants to flag them. */
+  /** Label suffix for `npcName`, or null when no quest wants to flag them.
+   *  Three visually distinct giver states (plan 153) — available/in-progress
+   *  used to share `'!'`, making a quest already accepted indistinguishable
+   *  from one not yet offered at a glance. */
   labelMarker(npcName: string): string | null {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (npcName === def.giverName) {
-        if (s.state === 'ready_to_report') return '?'
-        if (s.state === 'offered' || s.state === 'active') return '!'
-        if (s.state === 'not_offered' && this.meetsAvailability(def)) return '!'
+        if (s.state === 'ready_to_report') return QUEST_MARKER_READY
+        if (s.state === 'active') return QUEST_MARKER_IN_PROGRESS
+        if (s.state === 'offered') return QUEST_MARKER_AVAILABLE
+        if (s.state === 'not_offered' && this.meetsAvailability(def)) return QUEST_MARKER_AVAILABLE
       }
       if (s.state === 'active') {
         const stage = this.currentStage(def, s.stageIndex)
-        if (stage?.objective.type === 'talk_to_npc' && stage.objective.npcName === npcName) return '?'
+        if (stage?.objective.type === 'talk_to_npc' && stage.objective.npcName === npcName) return QUEST_MARKER_TALK_TARGET
       }
     }
     return null

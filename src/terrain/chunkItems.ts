@@ -38,7 +38,7 @@ const SHELL_MAX_HEIGHT_ABOVE_WATER = 3
  *  finds, not litter. */
 const KEEP_CHANCE = 0.3
 
-/** Second, independent candidate pool for branch/mushroom/flower/cone — own
+/** Second, independent candidate pool for branch/mushroom/flower/cone/herb — own
  *  RNG stream (different salt) and id prefix (`f<i>`) so it doesn't disturb
  *  the shell/stone placement above or collide with its ids in
  *  `collectedItemIds` (`chunkManager.ts`). */
@@ -86,7 +86,7 @@ function hashChunk(cx: number, cz: number): number {
  * by `chunkManager.ts`). Shells land in the coastal band (continentalness
  * between `oceanThreshold`/`coastThreshold` *and* close to `waterLevel` in
  * local height, where waves would actually wash them up); stones land on
- * strong mountain-ridge terrain; branch/mushroom/flower/cone land per
+ * strong mountain-ridge terrain; branch/mushroom/flower/cone/herb land per
  * `biomeWeightsAt`/tree-proximity preference (see `FLORA_*` constants above).
  * Finite — no respawn — the caller filters out ids already recorded as
  * collected. `vegetation` is this chunk's own `computeChunkVegetation` result
@@ -179,8 +179,12 @@ export function computeChunkItems(
     const flowerWeight = (1 - biome.desert) * (1 - biome.swamp) * (1 - ridge) * (altitude < 0.45 ? 1 : 0.3)
     const branchWeight = treeClose ? 0.9 : biome.forest * 0.25
     const coneWeight = treeClose ? biome.forest * 0.85 : 0
+    // Herb (plan 153) — forest-floor medicinal plant, deliberately scarcer
+    // than mushroom (half its weight) so it stays a "found" healing source
+    // rather than a reliable food-equivalent supply.
+    const herbWeight = (biome.forest * 0.4 + biome.swamp * 0.2) * (treeClose ? 1.1 : 0.7)
 
-    const total = mushroomWeight + flowerWeight + branchWeight + coneWeight
+    const total = mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight
     if (total <= 0) continue
     if (floraRandom() > Math.min(1, total) * FLORA_KEEP_SCALE) continue
 
@@ -189,7 +193,8 @@ export function computeChunkItems(
     if (roll < mushroomWeight) kind = 'mushroom'
     else if (roll < mushroomWeight + flowerWeight) kind = 'flower'
     else if (roll < mushroomWeight + flowerWeight + branchWeight) kind = 'branch'
-    else kind = 'cone'
+    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight) kind = 'cone'
+    else kind = 'herb'
 
     placements.push({ id: `${coord.cx}:${coord.cz}:f${i}`, x: wx, z: wz, kind })
   }

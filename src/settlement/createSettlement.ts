@@ -91,6 +91,13 @@ const NIGHT_FIRE_IGNITE_CHANCE: Record<VillageSize, number> = {
  *  `nearbyNpcCount` for `NpcAgent`'s group reaction-chance dampening (issue
  *  010). */
 const GROUP_REACTION_RADIUS = 6
+/** Below this center-to-center distance, two NPCs push apart (plan 153) —
+ *  roughly two adult body widths, small enough to never fight a real
+ *  destination (well serving stand, queue slot) but large enough that a
+ *  crowd converging on one point visibly spreads out instead of stacking. */
+const NPC_SEPARATION_RADIUS = 0.5
+/** Push speed (m/s per meter of overlap) applied by `applySeparation`. */
+const NPC_SEPARATION_SPEED = 1.5
 /** How close the observer must be to a house entrance before the door swings open. */
 const HOUSE_DOOR_OPEN_DISTANCE = 2.6
 const HOUSE_DOOR_CLOSE_DISTANCE = 3.4
@@ -538,14 +545,36 @@ export async function createSettlement(
     households,
     fire,
     update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages) {
+      const nearbyNpcCounts = new Array<number>(agents.length).fill(0)
+      const pushX = new Array<number>(agents.length).fill(0)
+      const pushZ = new Array<number>(agents.length).fill(0)
+      for (let i = 0; i < agents.length; i++) {
+        const ai = agents[i]!
+        for (let j = i + 1; j < agents.length; j++) {
+          const aj = agents[j]!
+          const dx = ai.mesh.position.x - aj.mesh.position.x
+          const dz = ai.mesh.position.z - aj.mesh.position.z
+          const dist = Math.hypot(dx, dz)
+          if (dist <= GROUP_REACTION_RADIUS) {
+            nearbyNpcCounts[i]!++
+            nearbyNpcCounts[j]!++
+          }
+          if (dist < NPC_SEPARATION_RADIUS) {
+            const overlap = NPC_SEPARATION_RADIUS - dist
+            const nx = dist > 1e-4 ? dx / dist : 1
+            const nz = dist > 1e-4 ? dz / dist : 0
+            const push = overlap * NPC_SEPARATION_SPEED * dt
+            pushX[i]! += nx * push
+            pushZ[i]! += nz * push
+            pushX[j]! -= nx * push
+            pushZ[j]! -= nz * push
+          }
+        }
+      }
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i]!
-        let nearbyNpcCount = 0
-        for (let j = 0; j < agents.length; j++) {
-          if (i === j) continue
-          if (agent.mesh.position.distanceTo(agents[j]!.mesh.position) <= GROUP_REACTION_RADIUS) nearbyNpcCount++
-        }
-        agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCount)
+        agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCounts[i]!)
+        if (pushX[i] !== 0 || pushZ[i] !== 0) agent.applySeparation(pushX[i]!, pushZ[i]!)
       }
       // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef`
       // has `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-

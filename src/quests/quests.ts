@@ -61,7 +61,13 @@ export type QuestObjective =
   | { type: 'interact_well' }
   | { type: 'interact_tree' }
   | { type: 'interact_spawner', spawnerType: SpawnerType }
-  | { type: 'spot_animal', kind: AnimalKind }
+  /** `range` (plan 153) overrides the flat `INTERACT_RANGE`/`GAZE_RANGE` for
+   *  this one objective's target — needed for skittish species (e.g. the
+   *  stag's `fleeRange: 15`, `fauna/AnimalAgent.ts`) that would otherwise
+   *  flee before the player can ever get within normal interact range.
+   *  Threaded through `buildInteractables`/`pickInGaze`, not a change to the
+   *  global constants or the animal's own AI. */
+  | { type: 'spot_animal', kind: AnimalKind, range?: number }
   | { type: 'gather_item', kind: ItemKind, count: number }
   /** "A dangerous wolf" (plan 093 Etap D) — defined by kind, but
    *  `QuestManager` binds it to one concrete `AnimalAgent.animalId` the
@@ -196,7 +202,11 @@ export const QUESTS: readonly QuestDef[] = [
         progressLine: 'Ślady sarn świeże, wszystko w porządku. Teraz wypatrz jelenia.',
       },
       {
-        objective: { type: 'spot_animal', kind: 'stag' },
+        // range 16 > stag's fleeRange (15, `fauna/AnimalAgent.ts`) — the
+        // player can trigger "spot" from just outside the distance that
+        // would make the stag flee, instead of needing to close in past its
+        // own alert radius (plan 153).
+        objective: { type: 'spot_animal', kind: 'stag', range: 16 },
         description: 'Wypatrz jelenia w terenie.',
         reminderLine: 'Widziałeś już jelenia?',
         progressLine: 'Jeleń zauważony. Teraz kamienie z gór.',

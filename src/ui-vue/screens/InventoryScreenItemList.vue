@@ -3,8 +3,8 @@ import { computed, ref } from 'vue'
 import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { isToolKind } from '../../items/HeldTool'
-import { ITEM_CATALOG } from '../../items/itemCatalog'
-import { ITEM_DEFS, type ItemKind } from '../../items/items'
+import { type ConsumableNeed, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
+import { ITEM_DEFS, type ItemCategory, type ItemKind } from '../../items/items'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { ui } from '../store'
 
@@ -12,7 +12,33 @@ const panel = ref<HTMLElement | null>(null)
 
 const { categoryLabel } = useItemCategoryLabels()
 
-const items = computed(() => (Object.keys(ITEM_DEFS) as ItemKind[]).filter((kind) => (ui.inventory.counts[kind] ?? 0) > 0).map((kind) => ({ kind, def: ITEM_DEFS[kind], count: ui.inventory.counts[kind] ?? 0, consumable: ITEM_CATALOG[kind].consumable ?? null })))
+type CategoryFilter = 'all' | ItemCategory
+type SortMode = 'category' | 'name' | 'qty'
+
+/** Tools first (what a mobile player reaches for mid-action), then food —
+ *  the two most time-pressured lookups — utility and raw resources last
+ *  (plan 153's "most-used easy to find" default). */
+const CATEGORY_ORDER: readonly ItemCategory[] = ['tool', 'food', 'utility', 'resource']
+const SORT_LABEL: Record<SortMode, string> = { category: 'Kategoria', name: 'Nazwa', qty: 'Ilość' }
+
+const filter = ref<CategoryFilter>('all')
+const sortMode = ref<SortMode>('category')
+
+const allItems = computed(() => (Object.keys(ITEM_DEFS) as ItemKind[]).filter((kind) => (ui.inventory.counts[kind] ?? 0) > 0).map((kind) => ({ kind, def: ITEM_DEFS[kind], count: ui.inventory.counts[kind] ?? 0, consumable: ITEM_CATALOG[kind].consumable ?? null })))
+
+/** Categories derived straight from `ITEM_DEFS` — no second, hand-maintained
+ *  filter-tab list (plan 153). Only shows a tab for a category the player
+ *  actually holds something in. */
+const availableCategories = computed(() => CATEGORY_ORDER.filter((cat) => allItems.value.some((item) => item.def.category === cat)))
+
+const items = computed(() => {
+  const filtered = filter.value === 'all' ? allItems.value : allItems.value.filter((item) => item.def.category === filter.value)
+  const sorted = [...filtered]
+  if (sortMode.value === 'name') sorted.sort((a, b) => a.def.label.localeCompare(b.def.label, 'pl'))
+  else if (sortMode.value === 'qty') sorted.sort((a, b) => b.count - a.count)
+  else sorted.sort((a, b) => CATEGORY_ORDER.indexOf(a.def.category) - CATEGORY_ORDER.indexOf(b.def.category) || a.def.label.localeCompare(b.def.label, 'pl'))
+  return sorted
+})
 
 const emit = defineEmits<{
   'select-item': [item: ItemKind],
@@ -21,7 +47,7 @@ const emit = defineEmits<{
 useTouchScroll(panel)
 
 function formatWeight(kg: number): string { return `${kg.toFixed(1)} kg` }
-function consumeLabel(need: 'hunger' | 'thirst'): string { return need === 'thirst' ? 'Wypij' : 'Zjedz' }
+function consumeLabel(need: ConsumableNeed): string { return consumeVerbLabel(need) }
 function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
 function onEquip(kind: ItemKind): void { ui.inventory.onEquip?.(kind) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
@@ -37,7 +63,7 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
     <h1 class="mb-2 text-lg font-semibold tracking-wide">
       Ekwipunek
     </h1>
-    <div class="mb-4 text-[13px] opacity-75">
+    <div class="mb-3 text-[13px] opacity-75">
       Waga: {{ formatWeight(ui.inventory.totalWeight) }} / {{ formatWeight(ui.inventory.maxWeight) }}
       <span
         v-if="ui.inventory.heldTool"
@@ -46,12 +72,49 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
         · w ręce: {{ ITEM_DEFS[ui.inventory.heldTool].label }}
       </span>
     </div>
+    <div
+      v-if="availableCategories.length > 1"
+      class="mb-3 flex items-center gap-2"
+    >
+      <div class="flex flex-1 min-w-0 gap-1 overflow-x-auto">
+        <button
+          type="button"
+          class="shrink-0 rounded-full px-2.5 py-1 text-[11px] uppercase tracking-wide cursor-pointer"
+          :class="filter === 'all' ? 'bg-primary/40 text-ink' : 'bg-white/5 opacity-70 hover:opacity-100'"
+          @click="filter = 'all'"
+        >
+          Wszystko
+        </button>
+        <button
+          v-for="cat in availableCategories"
+          :key="cat"
+          type="button"
+          class="shrink-0 rounded-full px-2.5 py-1 text-[11px] uppercase tracking-wide cursor-pointer"
+          :class="filter === cat ? 'bg-primary/40 text-ink' : 'bg-white/5 opacity-70 hover:opacity-100'"
+          @click="filter = cat"
+        >
+          {{ categoryLabel[cat] }}
+        </button>
+      </div>
+      <select
+        v-model="sortMode"
+        class="shrink-0 rounded-md bg-white/5 px-2 py-1 text-[11px] uppercase tracking-wide"
+      >
+        <option
+          v-for="(label, mode) in SORT_LABEL"
+          :key="mode"
+          :value="mode"
+        >
+          {{ label }}
+        </option>
+      </select>
+    </div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
       <div
         v-if="items.length === 0"
         class="text-[13px] opacity-60"
       >
-        Ekwipunek jest pusty.
+        {{ allItems.length === 0 ? 'Ekwipunek jest pusty.' : 'Brak przedmiotów w tej kategorii.' }}
       </div>
       <div
         v-for="item in items"

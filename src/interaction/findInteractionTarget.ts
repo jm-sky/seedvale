@@ -3,7 +3,7 @@
  *  actually looking at. Extracted from `app/createApp.ts`'s original NPC-only
  *  `findInteractionTarget` so NPCs, animals, landmarks, spawners, and items can
  *  all share one picker via `Interactable`. */
-export function pickInGaze<T extends { position: { x: number, z: number } }>(
+export function pickInGaze<T extends { position: { x: number, z: number }, interactRange?: number }>(
   candidates: readonly T[],
   playerPos: { x: number, z: number },
   playerYaw: number,
@@ -18,7 +18,9 @@ export function pickInGaze<T extends { position: { x: number, z: number } }>(
     const dx = candidate.position.x - playerPos.x
     const dz = candidate.position.z - playerPos.z
     const dist = Math.hypot(dx, dz)
-    if (dist < 1e-4 || dist > range) continue
+    // `interactRange` (plan 153) lets one candidate (a quest-critical animal
+    // spot) override the flat `range` every other candidate shares.
+    if (dist < 1e-4 || dist > (candidate.interactRange ?? range)) continue
     const dot = (dx / dist) * forwardX + (dz / dist) * forwardZ
     if (dot > bestDot) {
       bestDot = dot

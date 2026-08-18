@@ -33,6 +33,10 @@ export type MeleeConfig = {
   staminaCost: number
 }
 
+/** What a `consumable` item restores — `hunger`/`thirst` map to a
+ *  `PlayerNeeds` pool, `health` heals `HealthState` directly (plan 153). */
+export type ConsumableNeed = 'hunger' | 'thirst' | 'health'
+
 export type ItemCatalogEntry = {
   kind: ItemKind
   /** Polish label — mirrors ITEM_DEFS. */
@@ -48,11 +52,31 @@ export type ItemCatalogEntry = {
   notes: string
   /** Planned work — not implemented. */
   roadmap?: string
-  /** Inventory-screen "Zjedz"/"Wypij" action (plan 106) — `need` is the
-   *  `PlayerNeeds` pool restored, `relief` the flat amount. `resultKind` is
+  /** Inventory-screen "Zjedz"/"Wypij"/"Opatrz" action (plan 106, 153) —
+   *  `need` is the pool restored (`PlayerNeeds` for hunger/thirst,
+   *  `HealthState` for health), `relief` the flat amount. `resultKind` is
    *  set only for a container swap (full waterskin → empty), not for food,
    *  which is simply consumed. */
-  consumable?: { need: 'hunger' | 'thirst', relief: number, resultKind?: ItemKind }
+  consumable?: { need: ConsumableNeed, relief: number, resultKind?: ItemKind }
+}
+
+/** Single source of truth for the inventory/world-prompt action verb per
+ *  `consumable.need` — avoids a second manual mapping per screen (plan 153). */
+export function consumeVerbLabel(need: ConsumableNeed): string {
+  switch (need) {
+    case 'health': return 'Opatrz'
+    case 'thirst': return 'Wypij'
+    default: return 'Zjedz'
+  }
+}
+
+/** Polish noun for "+N ___" effect summaries — pairs with `consumeVerbLabel`. */
+export function consumeNeedNoun(need: ConsumableNeed): string {
+  switch (need) {
+    case 'health': return 'zdrowia'
+    case 'thirst': return 'pragnienia'
+    default: return 'głodu'
+  }
 }
 
 export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
@@ -465,6 +489,28 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan 129 — first physical currency: quest reward item + price paid for a settlement sale plot (`settlement/landPurchase.ts`). Stacks like any other item; near-zero weight so a land-plot price does not blow the carry limit. Not sold/bought by the merchant (separate from the shell/barter trade economy).',
+  },
+  herb: {
+    kind: 'herb',
+    label: 'zioło lecznicze',
+    category: 'food',
+    holdable: false,
+    melee: null,
+    spawn: 'world_chunk',
+    modelUrl: null,
+    notes: 'Plan 153 — world chunk collectible (same flora pool as mushroom/flower, `terrain/chunkItems.ts`). Small, free healing source.',
+    consumable: { need: 'health', relief: 8 },
+  },
+  bandage: {
+    kind: 'bandage',
+    label: 'opatrunek',
+    category: 'utility',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 153 — Kupiec stock. Reliable, purchasable healing; stronger than a herb.',
+    consumable: { need: 'health', relief: 35 },
   },
 }
 

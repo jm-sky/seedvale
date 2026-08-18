@@ -19,8 +19,9 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Village one-time tools | `createItemSpawners.ts` |
 | Portable light | `PlayerTorch` — lit branch (90s) or held wooden_torch (240s); exclusive right hand |
 | Inventory category | `ITEM_DEFS.category` — `resource` / `tool` / `utility` / `food` (`Jedzenie`); hunger consumables are `food`, waterskins stay `utility` |
-| Consumable (Zjedz/Wypij) | `ITEM_CATALOG[kind].consumable` (plan 106) — `{ need: 'hunger'\|'thirst', relief, resultKind? }`; driven from inventory screen (`InventoryScreenItemDetails.vue`) or world drink/cook actions |
+| Consumable (Zjedz/Wypij/Opatrz) | `ITEM_CATALOG[kind].consumable` (plan 106, 153) — `{ need: 'hunger'\|'thirst'\|'health', relief, resultKind? }`; driven from inventory screen (`InventoryScreenItemDetails.vue`), world drink/cook actions, or the world `[R]` quick-action on a pickupable item (`interactables.ts`'s `itemPromptLabel`) |
 | Player needs | `player/PlayerNeeds.ts` — stamina/vigor/hunger/thirst pools on `PlayerController.needs`; HUD bars in `HudScreen.vue` |
+| Passive HP regen | `player/PlayerNeeds.ts`'s `tickHealthRegen` (plan 153) — slow, suppressed while starving/dehydrated; herb/bandage heal faster |
 | Water source (well/lake) | `world/WaterSource.ts` — `[E]` drink, `[R]` fill waterskin; lake is a synthetic per-frame target (`interactables.ts`'s `isNearLakeShore`), not a discrete world object |
 | Cooking (campfire) | `items/campfireCooking.ts` — `raw_meat → roasted_meat` at a lit campfire, `[R]`; plan 134 adds `deer_meat`/`wolf_meat`/`boar_meat`/`rabbit_meat`/`beef` as further inputs to the same `roasted_meat` output |
 | Species meat + hide (plan 134) | `createApp.ts`'s `startHarvestMeat` maps `AnimalAgent.def.kind` → item kind (`deer`→`deer_meat`, `wolf`→`wolf_meat`, `boar`→`boar_meat`, `rabbit`→`rabbit_meat`, `cow`→`beef`; other species keep the generic `raw_meat`) and always tries to add 1 `hide` alongside the meat |
@@ -69,6 +70,8 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | cheese | ser | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+20 hunger) |
 | dried_meat | suszone mięso | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+25 hunger); light, long-lasting |
 | coin | moneta | — | — | none (quest reward) | procedural | plan 129; near-zero weight (0.001 kg); quest reward + land-plot purchase price; separate from the shell/barter merchant economy |
+| herb | zioło lecznicze | — | — | world chunk (flora pool) | procedural | plan 153; Opatrz (+8 health) — free but scarce (half mushroom's weight) |
+| bandage | opatrunek | — | — | none (Kupiec) | procedural | plan 153; Opatrz (+35 health) — reliable, purchasable healing |
 
 ## Roadmap (not done)
 

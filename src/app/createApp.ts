@@ -87,6 +87,7 @@ import { createScene } from '../scene/createScene'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { IGNITE_DURATION_SEC, type VillageFire } from '../settlement/VillageFire'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
+import { healHealth } from '../shared/HealthState'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { MINE_DURATION_SEC, yieldForOre } from '../terrain/depositMining'
 import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
@@ -1295,7 +1296,15 @@ export async function createApp(
    *  hide byproduct added in plan 134) — same shape as `startBuryCorpse`,
    *  just knife-gated and yielding item(s) instead of disposing the corpse. */
   const startHarvestMeat = (animal: AnimalAgent): void => {
-    if (heldTool.held() !== 'knife' || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (heldTool.held() !== 'knife') {
+      // Auto-equip from inventory (plan 153) — same pattern as
+      // `lightWoodenTorch` in `userActions.ts`: only when the hand is free,
+      // never displacing another held tool.
+      if (heldTool.held() !== null) return
+      if (!heldTool.equip('knife')) return
+      syncHeldHud()
+    }
     if (!animal.canHarvestMeat()) return
     const meatKind = meatKindForAnimal(animal.def.kind)
     if (!inventory.canAdd(meatKind, 1)) {
@@ -1460,11 +1469,12 @@ export async function createApp(
       ? entry.relief * survivalFoodMultiplier(player.skills.survival.value)
       : entry.relief
     if (entry.need === 'hunger') eatFood(player.needs, relief)
-    else drinkWaterNeeds(player.needs, relief)
+    else if (entry.need === 'thirst') drinkWaterNeeds(player.needs, relief)
+    else healHealth(player.health, relief)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     onInventoryChanged()
     inventoryScreen.refresh(inventory.toJSON(), inventory.totalWeight(), inventory.maxWeight, heldTool.held())
-    toast.show(entry.need === 'hunger' ? 'Zjedzono.' : 'Wypito.', 'pickup')
+    toast.show(entry.need === 'hunger' ? 'Zjedzono.' : entry.need === 'thirst' ? 'Wypito.' : 'Opatrzono rany.', 'pickup')
   }
 
   const startTreeChop = (treeId: string, x: number, z: number): void => {
@@ -1777,6 +1787,7 @@ export async function createApp(
     startDestroySpawner,
     drinkFromWaterSource,
     fillWaterskin,
+    consumeItem,
     startTentRest,
     packTent,
     armTrap,

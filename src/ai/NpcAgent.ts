@@ -2007,6 +2007,26 @@ export class NpcAgent {
     return false
   }
 
+  /** Local NPC-NPC separation nudge (plan 153) — settlements call this each
+   *  frame for agents standing too close (e.g. several converging on the
+   *  well queue) so a crowd spreads out instead of overlapping/visually
+   *  jamming at one point; there is otherwise no NPC-NPC avoidance at all
+   *  (only static-collider avoidance via `isWalkable`/`resolveSteerTarget`).
+   *  Falls back to an axis-only nudge or a no-op rather than ever stepping
+   *  into water or a static collider — mirrors `steerTo`'s own fallback. */
+  applySeparation(dx: number, dz: number): void {
+    const x = this.mesh.position.x
+    const z = this.mesh.position.z
+    if (this.isWalkableExterior(x + dx, z + dz)) {
+      this.mesh.position.x += dx
+      this.mesh.position.z += dz
+    } else if (this.isWalkableExterior(x + dx, z)) {
+      this.mesh.position.x += dx
+    } else if (this.isWalkableExterior(x, z + dz)) {
+      this.mesh.position.z += dz
+    }
+  }
+
   /** `steerTo` wrapper that detours through a one-shot `repathTarget` (set by
    *  `attemptRepath`) before resuming the phase's real `dest` — the stuck
    *  rescue's Level 1. Returns `false` (never "arrived at `dest`") for every

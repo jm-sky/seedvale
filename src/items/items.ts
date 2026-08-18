@@ -42,6 +42,8 @@ export type ItemKind =
   | 'cheese'
   | 'dried_meat'
   | 'coin'
+  | 'herb'
+  | 'bandage'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food'
 
@@ -368,6 +370,22 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0xc9a227,
     description: 'Bity krążek metalu. Przyjmowany za większe transakcje — nagrody za trudniejsze przysługi, działki na sprzedaż.'
   },
+  herb: {
+    kind: 'herb',
+    label: 'zioło lecznicze',
+    category: 'food',
+    weight: 0.05,
+    color: 0x5a8a4a,
+    description: 'Pęczek leczniczych ziół znalezionych w lesie. Łagodzi rany, gdy się je zje.'
+  },
+  bandage: {
+    kind: 'bandage',
+    label: 'opatrunek',
+    category: 'utility',
+    weight: 0.2,
+    color: 0xe8e0d0,
+    description: 'Czysty opatrunek z apteczki. Szybko tamuje krwawienie i leczy rany.'
+  },
 }
 
 const _itemShadowBox = new THREE.Box3()
@@ -464,6 +482,30 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     bloom.castShadow = true
     group.add(bloom)
     return group
+  }
+  if (kind === 'herb') {
+    const group = new THREE.Group()
+    for (let i = -1; i <= 1; i++) {
+      const blade = new THREE.Mesh(
+        new THREE.ConeGeometry(0.015, 0.16, 4),
+        new THREE.MeshStandardMaterial({ color: ITEM_DEFS.herb.color, flatShading: true }),
+      )
+      blade.position.set(i * 0.035, 0.08, 0)
+      blade.rotation.z = i * 0.25
+      blade.castShadow = true
+      group.add(blade)
+    }
+    return group
+  }
+  if (kind === 'bandage') {
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.05, 0.16, 10),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.bandage.color, flatShading: true }),
+    )
+    mesh.rotation.z = Math.PI / 2
+    mesh.position.y = 0.05
+    mesh.castShadow = true
+    return mesh
   }
   if (kind === 'cone') {
     const mesh = new THREE.Mesh(

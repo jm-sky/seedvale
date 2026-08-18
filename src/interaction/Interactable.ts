@@ -23,7 +23,11 @@ export type WorldItemRef = {
  *  persisted or owns lifetime. */
 export type Interactable =
   | { kind: 'npc', position: { x: number, z: number }, promptLabel: string, npc: NpcAgent, settlement: Settlement }
-  | { kind: 'animal', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent }
+  /** `interactRange` (plan 153) overrides `pickInGaze`'s flat range for this
+   *  one candidate — set only when an active quest's `spot_animal` objective
+   *  needs a wider reach than a skittish species' normal interact distance
+   *  (see `QuestManager.activeSpotAnimalRange`). */
+  | { kind: 'animal', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent, interactRange?: number }
   /** Dead animal corpse — shovel `bury` (only offered while shovel is held)
    *  or knife `harvest` for raw_meat (plan 106, only while knife is held and
    *  not yet harvested). The single `HeldTool` slot means these two never

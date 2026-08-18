@@ -13,6 +13,7 @@ import type { PlacedTraps } from '../world/createPlacedTraps'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
+import { consumeVerbLabel, ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
 import { isPlayerPlacedFire, type PlacedFires } from '../settlement/PlacedFires'
@@ -117,11 +118,14 @@ function trapPromptLabel(kind: TrapKind, state: TrapState): string {
 }
 
 /** `bury` (shovel) and `harvest` (knife, plan 106) never overlap on the same
- *  corpse — the single `HeldTool` slot means only one tool is held at once. */
+ *  corpse — the single `HeldTool` slot means only one tool is held at once.
+ *  `knifeAvailable` covers both "knife already held" and "knife in inventory,
+ *  hand free" (plan 153) — `startHarvestMeat` auto-equips it either way, so
+ *  the prompt should appear whenever the action would actually succeed. */
 function corpseCandidate(
   animal: AnimalAgent,
   shovelHeld: boolean,
-  knifeHeld: boolean,
+  knifeAvailable: boolean,
 ): Interactable | null {
   const label = ANIMAL_LABELS[animal.def.kind]
   if (shovelHeld && !animal.readyToRemove()) {
@@ -133,7 +137,7 @@ function corpseCandidate(
       action: 'bury',
     }
   }
-  if (knifeHeld && animal.canHarvestMeat()) {
+  if (knifeAvailable && animal.canHarvestMeat()) {
     return {
       kind: 'corpse',
       position: animal.mesh.position,
@@ -143,6 +147,18 @@ function corpseCandidate(
     }
   }
   return null
+}
+
+/** World pickup prompt (plan 153) — adds a `[R] Zjedz`/`Wypij`/`Opatrz`
+ *  quick-action for items immediately usable straight out of inventory
+ *  (gated on `ITEM_CATALOG[kind].consumable`, the same flag the inventory
+ *  screen's consume button uses — no separate quick-use item list). Plain
+ *  pickup keeps the auto-`[E]`-prefixed short form used everywhere else. */
+function itemPromptLabel(kind: ItemKind): string {
+  const label = ITEM_DEFS[kind].label
+  const consumable = ITEM_CATALOG[kind].consumable
+  if (!consumable) return `Podnieś: ${label}`
+  return `[E] Podnieś: ${label} · [R] ${consumeVerbLabel(consumable.need)}`
 }
 
 /** True if `(x, z)` is within `range` of `playerPos` (XZ plane, squared distance). */
@@ -198,12 +214,24 @@ export function buildInteractables(
    *  no candidate at all (no sign, no purchase prompt). Optional so existing
    *  callers/tests that never touch land plots don't need one. */
   landOwnership?: LandOwnershipRegistry,
+  /** Knife sitting in inventory with the hand free — `startHarvestMeat`
+   *  auto-equips it, so this counts toward the harvest prompt the same as
+   *  already holding it (plan 153). Defaults to false for existing
+   *  callers/tests that don't model inventory contents. */
+  inventoryHasFreeKnife = false,
+  /** Per-`AnimalKind` interact-range override, from `QuestManager
+   *  .activeSpotAnimalRange` (plan 153) — passed as a resolver rather than
+   *  the manager itself so this module stays quest-agnostic (same
+   *  convention as `heldTool`/`landOwnership` above). `null`/undefined
+   *  result means "no override, use the normal range". */
+  activeSpotAnimalRange?: (kind: AnimalKind) => number | null,
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = heldTool === 'axe'
   const shovelHeld = heldTool === 'shovel'
   const pickaxeHeld = heldTool === 'pickaxe'
   const knifeHeld = heldTool === 'knife'
+  const knifeAvailable = knifeHeld || (heldTool === null && inventoryHasFreeKnife)
 
   for (const pf of placedFires.list()) {
     if (!isPlayerPlacedFire(pf)) continue
@@ -253,9 +281,10 @@ export function buildInteractables(
     }
 
     for (const animal of settlement.livestock) {
-      if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, GAZE_RANGE)) continue
+      const rangeOverride = activeSpotAnimalRange?.(animal.def.kind) ?? null
+      if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, Math.max(GAZE_RANGE, rangeOverride ?? 0))) continue
       if (animal.isDead()) {
-        const corpse = corpseCandidate(animal, shovelHeld, knifeHeld)
+        const corpse = corpseCandidate(animal, shovelHeld, knifeAvailable)
         if (corpse) list.push(corpse)
         continue
       }
@@ -264,6 +293,7 @@ export function buildInteractables(
         position: animal.mesh.position,
         promptLabel: animalPromptLabel(animal.def.kind, heldTool),
         animal,
+        interactRange: rangeOverride ?? undefined,
       })
     }
 
@@ -341,9 +371,10 @@ export function buildInteractables(
   }
 
   for (const animal of fauna.getAgents()) {
-    if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, GAZE_RANGE)) continue
+    const rangeOverride = activeSpotAnimalRange?.(animal.def.kind) ?? null
+    if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, Math.max(GAZE_RANGE, rangeOverride ?? 0))) continue
     if (animal.isDead()) {
-      const corpse = corpseCandidate(animal, shovelHeld, knifeHeld)
+      const corpse = corpseCandidate(animal, shovelHeld, knifeAvailable)
       if (corpse) list.push(corpse)
       continue
     }
@@ -352,6 +383,7 @@ export function buildInteractables(
       position: animal.mesh.position,
       promptLabel: animalPromptLabel(animal.def.kind, heldTool),
       animal,
+      interactRange: rangeOverride ?? undefined,
     })
   }
 
@@ -379,7 +411,7 @@ export function buildInteractables(
     list.push({
       kind: 'item',
       position: { x: item.x, z: item.z },
-      promptLabel: `Podnieś: ${ITEM_DEFS[item.kind].label}`,
+      promptLabel: itemPromptLabel(item.kind),
       item: { id: item.id, kind: item.kind, source: 'world' },
     })
   }
@@ -389,7 +421,7 @@ export function buildInteractables(
     list.push({
       kind: 'item',
       position: { x: node.x, z: node.z },
-      promptLabel: `Podnieś: ${ITEM_DEFS[node.kind].label}`,
+      promptLabel: itemPromptLabel(node.kind),
       item: { id: node.id, kind: node.kind, source: 'spawner' },
     })
   }
@@ -398,7 +430,7 @@ export function buildInteractables(
     list.push({
       kind: 'item',
       position: { x: item.x, z: item.z },
-      promptLabel: `Podnieś: ${ITEM_DEFS[item.kind].label}`,
+      promptLabel: itemPromptLabel(item.kind),
       item: { id: item.id, kind: item.kind, source: 'dropped' },
     })
   }

@@ -25,6 +25,7 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   bread: 6,
   cheese: 8,
   dried_meat: 10,
+  bandage: 10,
 }
 
 /** Display order for the trade screen — matches the plan 090 mockup. */
@@ -48,6 +49,7 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'bread',
   'cheese',
   'dried_meat',
+  'bandage',
 ]
 
 /** Fallback shell-equivalent for items the merchant does not stock. */
@@ -58,6 +60,7 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   cone: 1,
   mushroom: 2,
   flower: 2,
+  herb: 3,
   coal: 4,
   iron: 6,
   gold: 20,

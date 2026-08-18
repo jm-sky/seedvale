@@ -6,7 +6,7 @@ import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
 import { isToolKind } from '../../items/HeldTool'
-import { ITEM_CATALOG } from '../../items/itemCatalog'
+import { consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
 import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind } from '../../items/items'
 import { tradeValue } from '../../items/tradeCatalog'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -45,7 +45,7 @@ const meleeSpeed = computed<string | null>(() => {
   return 'wolny'
 })
 const consumable = computed(() => catalogEntry.value?.consumable ?? null)
-const consumeLabel = computed(() => consumable.value?.need === 'thirst' ? 'Wypij' : 'Zjedz')
+const consumeLabel = computed(() => consumable.value ? consumeVerbLabel(consumable.value.need) : 'Zjedz')
 const itemValue = computed<number>(() => item.value ? tradeValue(item.value.kind) : 0)
 /** Future per-item render/photo — no seam data yet, always falls back to the
  *  category icon (see `CATEGORY_ICON`). */
@@ -145,7 +145,7 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
       <InventoryScreenSection
         v-if="consumable"
         label="Efekt"
-        :value="`+${consumable.relief} ${consumable.need === 'thirst' ? 'pragnienia' : 'głodu'}`"
+        :value="`+${consumable.relief} ${consumeNeedNoun(consumable.need)}`"
       />
     </div>
 

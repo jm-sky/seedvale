@@ -1,4 +1,4 @@
-import { damageHealth, type HealthState } from '../shared/HealthState'
+import { damageHealth, healHealth, type HealthState } from '../shared/HealthState'
 import { createHungerState, drainHunger, type HungerState, isStarving, restoreHunger } from '../shared/HungerState'
 import { createStaminaState, drainStamina, restoreStamina, type StaminaState } from '../shared/StaminaState'
 import { createThirstState, drainThirst, isDehydrated, restoreThirst, type ThirstState } from '../shared/ThirstState'
@@ -43,6 +43,13 @@ const STAMINA_REGEN_PER_SEC = 12
  *  damage with no new death/UI system. */
 const STARVATION_HP_PER_SEC = 0.5
 const DEHYDRATION_HP_PER_SEC = 0.5
+
+/** Light passive HP regen (plan 153 — mobile playtest found no way to
+ *  recover HP at all short of a full sleep skip). Slow on purpose: a full
+ *  heal takes minutes, not seconds, so healing items/herbs stay meaningfully
+ *  faster. Suppressed while starving/dehydrated so it never partially cancels
+ *  `applyStarvationDamage` in the same tick. */
+const HP_REGEN_PER_SEC = 0.3
 
 export function createPlayerNeeds(): PlayerNeeds {
   return {
@@ -123,4 +130,13 @@ export function applyStarvationDamage(needs: PlayerNeeds, health: HealthState, d
   if (isStarving(needs.hunger)) perSec += STARVATION_HP_PER_SEC
   if (isDehydrated(needs.thirst)) perSec += DEHYDRATION_HP_PER_SEC
   if (perSec > 0) damageHealth(health, perSec * dt)
+}
+
+/** Passive HP regen (plan 153) — mirrors `tickPlayerStamina`'s "cheap
+ *  per-tick pool nudge" shape. No-ops while starving/dehydrated (those ticks
+ *  already take starvation damage the same frame) or once already full. */
+export function tickHealthRegen(needs: PlayerNeeds, health: HealthState, dt: number): void {
+  if (dt <= 0) return
+  if (isStarving(needs.hunger) || isDehydrated(needs.thirst)) return
+  healHealth(health, HP_REGEN_PER_SEC * dt)
 }

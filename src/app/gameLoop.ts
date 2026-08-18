@@ -66,6 +66,7 @@ import {
 } from '../player/playerMelee'
 import {
   applyStarvationDamage,
+  tickHealthRegen,
   tickPlayerNeeds,
 } from '../player/PlayerNeeds'
 import {
@@ -222,6 +223,9 @@ export type GameLoopDeps = {
   drinkFromWaterSource?: (source: WaterSource) => void
   /** Instant fill of a carried empty waterskin at a well/lake (plan 106 §4). */
   fillWaterskin?: () => void
+  /** Consumes an item already in inventory (eat/drink/use) — reused by the
+   *  world `[R]` quick-action so pickup+use is one keypress (plan 153). */
+  consumeItem?: (kind: ItemKind) => void
   startTentRest: (id: string) => void
   packTent: (id: string) => void
   /** Arm / disarm / pick up a placed animal trap (plan 141 §9). */
@@ -273,7 +277,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
-    drinkFromWaterSource, fillWaterskin, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
+    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
     onSleepFinished, onInventoryChanged, setFrameTiming,
   } = deps
 
@@ -343,6 +347,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   let highlightedTarget: Highlightable | null = null
   /** Dedupes `?debug=1` house console spam while gazing at the same building. */
   let lastDebugHouseId: string | null = null
+  /** Interaction-cycling state (plan 153) — `Tab` steps through
+   *  `cycleCandidates` (every interactable within `INTERACT_RANGE`, not just
+   *  the gaze winner) so a crowded spot (NPCs stacked in front of the well)
+   *  can still target something other than whichever candidate the facing
+   *  cone happens to prefer. `cycleActive` clears itself once the candidate
+   *  list shrinks back to trivial (moved away / crowd thinned) so gaze
+   *  picking silently resumes — no separate targeting system, just an
+   *  alternate source for the same `target` variable. */
+  let cycleActive = false
+  let cycleIndex = 0
   const setHighlight = (next: Highlightable | null): void => {
     if (highlightedTarget === next) return
     highlightedTarget?.setHighlighted(false)
@@ -513,6 +527,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.mesh.position,
         held,
         landOwnership,
+        inventory.has('knife', 1),
+        (kind) => questManager.activeSpotAnimalRange(kind),
       )
 
       // Universal melee tick (plan 123) — runs every frame regardless of
@@ -576,9 +592,30 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         attackYaw = null
       }
 
+      // Interaction cycling (plan 153) — every interactable within plain
+      // interact range, not just whoever the gaze cone currently prefers,
+      // so `Tab` can step past a crowd (e.g. NPCs stacked in front of the
+      // well) to a candidate the facing check alone would never surface.
+      const cycleRangeSq = INTERACT_RANGE * INTERACT_RANGE
+      const cycleCandidates = interactables.filter((c) => {
+        const dx = c.position.x - player.mesh.position.x
+        const dz = c.position.z - player.mesh.position.z
+        return dx * dx + dz * dz <= cycleRangeSq
+      })
+      const cycleTargetPressed = keyboard.consumeCycleTarget()
+      if (cycleCandidates.length <= 1) {
+        cycleActive = false
+        cycleIndex = 0
+      } else if (cycleTargetPressed) {
+        cycleIndex = cycleActive ? (cycleIndex + 1) % cycleCandidates.length : 0
+        cycleActive = true
+      } else if (cycleIndex >= cycleCandidates.length) {
+        cycleIndex = 0
+      }
+
       // Ground-work (shovel soil / pickaxe rock) is a fallback, not a competing
       // candidate — only synthesized when nothing else is being gazed at.
-      const target = pickInGaze(
+      const target = (cycleActive ? cycleCandidates[cycleIndex]! : null) ?? pickInGaze(
         interactables,
         player.mesh.position,
         mouseLook.state.yaw,
@@ -598,7 +635,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         playerMelee.recentTargetIds(),
         aimMode,
       )
-      npcDialog.setPrompt(target ? target.promptLabel : null)
+      const cycleHint = target && cycleCandidates.length > 1 ? ` · [Tab] Dalej (${cycleIndex + 1}/${cycleCandidates.length})` : ''
+      npcDialog.setPrompt(target ? `${target.promptLabel}${cycleHint}` : null)
 
       if (isDebugMode()) {
         if (target?.kind === 'house') {
@@ -692,8 +730,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'waterEdge') {
         if (interactPressed) drinkFromWaterSource?.(target.source)
         if (altInteractPressed) fillWaterskin?.()
-      } else if (target && interactPressed) {
-        if (target.kind === 'item') {
+      } else if (target?.kind === 'item') {
+        if (interactPressed || altInteractPressed) {
           if (!inventory.canAdd(target.item.kind)) {
             toast.show('Ekwipunek jest za ciężki.', 'error')
           } else {
@@ -703,9 +741,19 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               playInventoryPickUp(worldAudio.playOnce)
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
               onInventoryChanged()
+              // `[R]` quick-action (plan 153): pickup → inventory → use in one
+              // keypress, reusing the same `consumeItem` flow the inventory
+              // screen's "Zjedz"/"Wypij" button calls — no separate quick-use
+              // system. Silently falls back to a plain pickup if the item
+              // isn't consumable (the `[R]` hint never showed for it).
+              if (altInteractPressed && ITEM_CATALOG[collected.kind].consumable) {
+                consumeItem?.(collected.kind)
+              }
             }
           }
-        } else if (target.kind === 'tree') {
+        }
+      } else if (target && interactPressed) {
+        if (target.kind === 'tree') {
           if (target.canHarvest) {
             startTreeChop(target.id, target.position.x, target.position.z)
           } else {
@@ -920,6 +968,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // ticking inside `player.update(dt)` on raw `dt` (tied to sprint).
       tickPlayerNeeds(player.needs, worldDt)
       applyStarvationDamage(player.needs, player.health, worldDt)
+      tickHealthRegen(player.needs, player.health, worldDt)
       hud.setPlayerNeeds({
         stamina: getStaminaRatio(player.needs.stamina),
         vigor: getVigorRatio(player.needs.vigor),
