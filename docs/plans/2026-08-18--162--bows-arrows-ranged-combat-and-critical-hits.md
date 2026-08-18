@@ -10,6 +10,8 @@ tags: [fauna, quests-progression]
 **Priority:** 🟡 medium · **Effort:** L
 **Depends on:** ~~150~~ ~~155~~
 
+> Check: `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits-implementation-notes.md`
+
 ## Cel
 
 Rozszerzyć istniejący combat o wspólny mechanizm ataków dystansowych oraz pierwszą jego implementację w postaci łuków i strzał. W ramach tego samego rozszerzenia dodać trafienia krytyczne jako część wspólnego damage pipeline.
