@@ -40,8 +40,8 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08; nie mylić z SFX 059); Etap A–G (relation levels, availability, effects, `animalId`, questy "groźny wilk" + "wilcza jama" + "zagubiona owca" + "drewno na naprawę" end-to-end, livestock `ownerHouseId`) zaimplementowane i przetestowane; lifecycle/identity gaps (event śmierci, `failed`/`invalidated`, dangerous wolf, `landmarkId`) domknięte przez plan 110; bez weryfikacji w przeglądarce; Etap H (drzewa/kopanie) i bandyci otwarte | 🔴 | XL | ~~015~~ ~~018~~ |
-| `2026-08-17--149--shader-program-first-use-hitch.md` | First-use shader/program hitch przy streamingu chunków (frame max / liczba hitchy, nie średni FPS); Phase 0 zamknięte — instrumentacja + real-GPU census ×3 ([review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md)) oraz dump `cacheKey`/`name` ×3 ([review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md)): ~210 unikalnych kluczy / ~25 nazw, warianty streamingowe to `numPointLights` × instancing; Phase 1 A wstrzymane, następny krok B (pin świateł), bez `compileAsync()` (patrz [implementation notes](./2026-08-17--149--shader-program-first-use-hitch-implementation-notes.md)) | 🔴 | M/L | — |
+| `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08); Etap A–G (relation levels, availability, effects, `animalId`, questy "groźny wilk" + "wilcza jama" + "zagubiona owca" + "drewno na naprawę" end-to-end, livestock `ownerHouseId`) zaimplementowane; lifecycle/identity gaps (event śmierci, `failed`/`invalidated`, dangerous wolf, `landmarkId`) domknięte przez plan 110; Etap H (drzewa/kopanie) i bandyci otwarte | 🔴 | XL | ~~015~~ ~~018~~ |
+| `2026-08-17--149--shader-program-first-use-hitch.md` | Phase 0 closed; Phase 1 B confirmed and moved to plan 157 for production PointLight budget. Phase 1 A (`compileAsync` prewarm) remains unstarted and should be reassessed after 157 verification. | 🔴 | M/L | — |
 
 ---
 
@@ -53,7 +53,6 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-16--126--seed-planting.md` | Sadzenie nasion drzew (rozszerza istniejący `TreeLifecycle`) i cropów (nowy prosty `CropLifecycle`) przez gracza, integracja z inventory/garden gather/persistence; wstępny | 🟡 | L | ~~106~~ ~~122~~ |
 | `2026-08-16--127--player-built-well.md` | Fizyczna studnia budowana przez gracza; wstępny | 🟡 | M | ~~122~~ |
 | `2026-08-18--151--social-places-and-social-behaviour.md` | Social Places v1: istniejący settlement campfire jako `PlaceType: 'social'`, NPC↔NPC `conversation` (2–5 min czasu świata) przez istniejący Schedule/FSM (activity `social`), partner tylko spośród NPC przy tym samym ognisku, symetryczna zmiana relacji NPC↔NPC; bez nowego social managera/schedulera; wstępny, do implementacji | 🟡 | M | ~~020~~ |
-| `2026-08-18--155--inventory-item-instances-and-trap-lifecycle.md` | Generyczny mechanizm `ItemInstance`, price algo | ✅ | L | ~~141~~ |
 | `2026-08-18--152--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried `NpcAgent.inventory` (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu), decyzja z relacji + openness/traits + istniejący `getPlayerStanding()`/`reactionChance`, nowa opcja w dialogu NPC v2 (`request_food`/`request_water`); wstępny, do implementacji | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ ~~156~~ |
 
 ### Fresh new 
@@ -86,6 +85,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 | `2026-08-14--111--house-construction.md` | House Builder (MegaKit). Playtest 2026-08-18: **niektóre domki źle złożone** — zostaje 🔍 — [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md) | 🔴 | XL | ~~109~~ |
 | `2026-08-14--110--quests-v3-closure-world-identity-and-lifecycle.md` | Domknięcie planu 093: lifecycle `failed`/`invalidated`, predator `onDeath`, groźny wilk, failure owcy, `landmarkId` / rebind po save. Playtest 2026-08-18 **odłożony** — zostaje 🔍 | 🔴 | L | ~~093~~ |
 | `docs/plans/2026-08-18--157--production-pointlight-budget.md` | Optymalizacja | 🔴 | M | - |
+| `2026-08-18--155--inventory-item-instances-and-trap-lifecycle.md` | Generyczny mechanizm `ItemInstance`, price algo | ✅ | L | ~~141~~ | 
 
 Historical playtest queue (files in archive): [below](#playtest-queue-archived-batch).
 
