@@ -4,6 +4,7 @@ import {
   FOOTSTEP_PACK_IDS,
   footstepUrlsFor,
   getFootstepPack,
+  playJumpLand,
   setFootstepPack,
 } from './playerMoveSounds'
 
@@ -46,5 +47,21 @@ describe('footstep packs', () => {
     expect(applyFootstepPackFromUrl('?footsteps=nope')).toBe('legacy')
     expect(applyFootstepPackFromUrl('?footsteps=mayra')).toBe('mayra')
     expect(FOOTSTEP_PACK_IDS).toContain(getFootstepPack())
+  })
+
+  it('plays a terrain-pack clip on land, not Kenney generic footsteps', () => {
+    const played: string[] = []
+    const playAt = (url: string) => {
+      played.push(url)
+    }
+    for (let i = 0; i < 20; i++) {
+      playJumpLand(playAt, { x: 0, z: 0 }, 'grass')
+    }
+    expect(played).toHaveLength(20)
+    const grass = footstepUrlsFor('grass')
+    for (const url of played) {
+      expect(grass).toContain(url)
+      expect(url).not.toMatch(/\/footstep-0\d\.ogg$/)
+    }
   })
 })

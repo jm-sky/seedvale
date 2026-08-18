@@ -41,7 +41,7 @@ Poza zakresem: warstwa Clothes, kroki NPC, śnieg/błoto jako osobna powierzchni
 
 ## Weryfikacja w przeglądarce (otwarte)
 
-Playtest 2026-08-18: **sprint po trawie brzmi jak kamienny korytarz** — za głośno, nie pasuje (pkt 3 / 6). Pack Anton Z zostaje defaultem; gain/klasyfikacja grass vs stone przy sprincie do poprawy.
+Playtest 2026-08-18: **sprint po trawie brzmi jak kamienny korytarz** — za głośno, nie pasuje (pkt 3 / 6). Prawdopodobna przyczyna: fałszywe `playJumpLand` na stokach (Kenney `footstep-01…04` przy 3× głośności kroku) — plan [158](./2026-08-18--158--false-jump-land-sfx.md). Pack Anton Z zostaje defaultem; po 158 ponowić playtest trawy/sprintu zanim ruszać gain/klasyfikację grass vs stone.
 
 Dev server `:5577`. Domyślnie pack `anton`. Porównać `?footsteps=legacy` i `?footsteps=mayra` (albo lil-gui → Audio → Footstep pack).
 

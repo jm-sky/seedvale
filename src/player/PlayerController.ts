@@ -27,6 +27,7 @@ import { type Collider, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
+import { integrateVerticalMotion } from './verticalMotion'
 
 /** Stationary/moving/sprinting classification of the player's current
  *  movement, derived from the same `moving`/`sprinting` flags `update()`
@@ -39,11 +40,6 @@ const MOVE_SPEED = 8
  *  the GLB model has no measured collision shape, so this stands in for both. */
 const PLAYER_COLLISION_RADIUS = 0.35
 const SPRINT_MULTIPLIER = 1.8
-/** Plan 097 §2.3 — stronger than real gravity (9.81) for a short, readable
- *  arc, matching `items/createDroppedItems.ts`'s falling-item gravity. */
-const GRAVITY = 20
-/** `sqrt(2 * GRAVITY * targetHeight)` for a ~0.6m jump apex (plan 097 §2.3). */
-const JUMP_SPEED = Math.sqrt(2 * GRAVITY * 0.6)
 /** Airborne lean (radians) — no jump clip on the rig (plan 097 §4 pyt. 5), so
  *  this reuses the `crouch()`/`lieDown()` trick of rotating `modelRoot` only. */
 const JUMP_TILT_MAX = 0.25
@@ -645,8 +641,8 @@ export class PlayerController {
     this.modelRoot.rotation.x = 0
   }
 
-  /** Per-frame gravity/jump integration (plan 097 §2.3). Underwater keeps the
-   *  existing swim behaviour and blocks jumping/falling. */
+  /** Per-frame gravity/jump (plan 097 §2.3 + 158 slope-stick). Underwater
+   *  keeps the existing swim behaviour and blocks jumping/falling. */
   private updateVerticalMotion(dt: number): void {
     const { x, z } = this.mesh.position
     const groundY = this.sampleHeight(x, z)
@@ -666,27 +662,31 @@ export class PlayerController {
     }
     this.wasInWater = false
 
-    if (this.grounded && this.jumpRequested) {
-      this.verticalVelocity = JUMP_SPEED
-      this.grounded = false
-      if (this.playAt) playJumpTakeoff(this.playAt, { x, y: this.mesh.position.y, z })
-    }
+    const next = integrateVerticalMotion({
+      y: this.mesh.position.y,
+      verticalVelocity: this.verticalVelocity,
+      grounded: this.grounded,
+      groundY,
+      dt,
+      jumpRequested: this.jumpRequested,
+    })
     this.jumpRequested = false
+    this.mesh.position.y = next.y
+    this.verticalVelocity = next.verticalVelocity
+    this.grounded = next.grounded
 
-    this.verticalVelocity -= GRAVITY * dt
-    const candidateY = this.mesh.position.y + this.verticalVelocity * dt
-    if (candidateY <= groundY) {
-      const wasAirborne = !this.grounded
-      this.mesh.position.y = groundY
-      this.verticalVelocity = 0
-      this.grounded = true
-      if (wasAirborne) {
-        if (this.playAt) playJumpLand(this.playAt, { x, y: groundY, z })
-        this.footstepAccum = 0
+    if (next.tookOff && this.playAt) {
+      playJumpTakeoff(this.playAt, { x, y: next.y, z })
+    }
+    if (next.landed) {
+      if (this.playAt) {
+        playJumpLand(
+          this.playAt,
+          { x, y: next.y, z },
+          this.sampleFootstepSurface(x, z),
+        )
       }
-    } else {
-      this.mesh.position.y = candidateY
-      this.grounded = false
+      this.footstepAccum = 0
     }
 
     this.modelRoot.rotation.x = this.grounded

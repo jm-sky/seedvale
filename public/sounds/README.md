@@ -93,7 +93,7 @@ Christian). `NN` is our curated sequence, not the pack's original line number
 
 | filename | oryginal filename | source url | notes |
 |----------|-------------------|------------|-------|
-| footstep-01…04.ogg | footstep00…03.ogg | Kenney RPG sounds (CC0) — https://kenney.nl | S01; generic hard surface — not grass/dirt variants yet |
+| footstep-01…04.ogg | footstep00…03.ogg | Kenney RPG sounds (CC0) — https://kenney.nl | **not wired** (plan 158); was jump-land thud |
 | door-open-01.ogg | doorOpen_1.ogg | Kenney RPG sounds (CC0) | S09 |
 | door-close-01.ogg | doorClose_1.ogg | Kenney RPG sounds (CC0) | S09 |
 | door-creak-01.ogg | creak1.ogg | Kenney RPG sounds (CC0) | S09 / S14 gate |
@@ -105,8 +105,8 @@ Christian). `NN` is our curated sequence, not the pack's original line number
 ## Footsteps (terrain)
 
 Per-surface player footstep variants (S01), replacing the single generic
-`footstep-01…04.ogg` set above for walking/sprinting — that set stays in the
-tree, now reused only for the jump-land thud. Terrain classification and
+`footstep-01…04.ogg` set above for walking/sprinting **and** jump-land (plan
+158). That Kenney set stays in the tree unwired. Terrain classification and
 wiring: `src/terrain/footstepSurface.ts`, `src/audio/playerMoveSounds.ts`.
 
 **Default pack (`anton`, plan 121):** Anton Z Walk one-shots, peak-normalized

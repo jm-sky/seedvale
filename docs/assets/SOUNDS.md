@@ -4,7 +4,7 @@ Living backlog of sound effects Seedvale still needs (or has but must wire).
 
 Inventory of files already in the repo: [`public/sounds/README.md`](../../public/sounds/README.md). One-shot research snapshot that seeded this list: [research 007](../research/2026-08-11--007--sound-needs.md).
 
-**Last updated:** 2026-08-15
+**Last updated:** 2026-08-18
 
 ## How to use
 
@@ -34,7 +34,7 @@ If the feature needs no new sound, do nothing to this file.
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
 | UI | `ui-click-01` | Inventory / pause / dialog (open + click) |
 | Actions | dig ×4, wood-chop ×1, melee hit/kill, well ×1, fire ignite/extinguish | Shovel / axe / melee / well / campfire |
-| Player move | footsteps × terrain sets (grass/sand/stone/road; dirt aliases sand), jump cloth, water-lap, door open/close/latch/creak | Walk/sprint terrain-classified (Anton Z default, plan 121); jump stand-in, enter water, house threshold |
+| Player move | footsteps × terrain sets (grass/sand/stone/road; dirt aliases sand), jump cloth, land = louder surface footstep, water-lap, door open/close/latch/creak | Walk/sprint/land terrain-classified (Anton Z default, plans 121/158); jump stand-in, enter water, house threshold |
 
 ## Backlog
 
@@ -42,7 +42,7 @@ If the feature needs no new sound, do nothing to this file.
 
 | ID | Sound | Context | Status | Related |
 |----|-------|---------|--------|---------|
-| S01 | Footsteps (grass / dirt / sand / stone / road) | Player move; terrain-classified via `src/terrain/footstepSurface.ts`, sprint variant | `wired` | Default pack Anton Z `footstep-{grass,sand,stone}-01…07` + existing road gravel (plan 121). Beach **and** desert biome play sand. A/B: `?footsteps=legacy\|mayra`. Old Kenney `footstep-01…04` still jump-land only. Swamp/mud still open (falls back to grass). Snow clip in repo as `footstep-snow-alt-mayra-01` — not wired (no snow surface yet). |
+| S01 | Footsteps (grass / dirt / sand / stone / road) | Player move; terrain-classified via `src/terrain/footstepSurface.ts`, sprint variant | `wired` | Default pack Anton Z `footstep-{grass,sand,stone}-01…07` + existing road gravel (plan 121). Beach **and** desert biome play sand. A/B: `?footsteps=legacy\|mayra`. Jump-land uses the same pack (plan 158); Kenney `footstep-01…04` unwired. Swamp/mud still open (falls back to grass). Snow clip in repo as `footstep-snow-alt-mayra-01` — not wired (no snow surface yet). |
 | S02 | Splash / wade | Enter water / swim | `wired` | `water-lap-01` candidate only — true splash/wade still open. Anton Z `footstep-water-01…06` in repo, not wired. |
 | S03 | Fire (loop + ignite) | Campfire / torch / fire pit | `wired` | `ambient-fire-loop-01` + `action-fire-ignite-01` / `action-fire-extinguish-01` |
 | S04 | Melee hit (knife/axe) | Player → animal melee | `wired` | `action-melee-hit-01` / `action-melee-kill-01` |
@@ -68,7 +68,7 @@ If the feature needs no new sound, do nothing to this file.
 | S14 | Gate / creak | Palisade / future fortifications | `wired` | `door-creak-01…02` / `door-latch-01` (with S09 house threshold) |
 | S15 | Stone find (distinct from dig) | Dig notice — today reuses dig SFX | `needed` | — |
 | S16 | Pickaxe / ore strike | Mine channel — today reuses dig clips via `playActionMine` | `needed` | [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
-| S17 | Jump / land (player) | New jump mechanic — takeoff + landing thud | `wired` | Stand-in: Kenney `cloth1` (`action-jump-cloth-01`) + louder footstep land — dedicated jump clip still open |
+| S17 | Jump / land (player) | New jump mechanic — takeoff + landing thud | `wired` | Stand-in: Kenney `cloth1` (`action-jump-cloth-01`) + louder **terrain-pack** footstep land (plan 158; Kenney `footstep-01…04` unwired). Dedicated jump/land clip still open |
 | S18 | Eat (bite/chew) | Consume food item (inventory Zjedz) | `needed` | plan 106 — currently silent |
 | S19 | Drink / gulp | Consume waterskin, well/lake `[E]` | `needed` | plan 106 — currently reuses `action-well-01` (S08) |
 | S20 | Sizzle / cook | `[R]` cooking raw_meat at a lit campfire | `needed` | plan 106 — currently silent |

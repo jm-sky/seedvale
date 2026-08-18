@@ -1,11 +1,17 @@
 # Plan: Production PointLight Budget
 
 **Created:** 2026-08-18
+
 **Status:** `verification needed` 🔍 — registry + visibility fix + padded/overflow-cull mechanism implemented and unit-tested (§12); production budget number is still **TBD**, pending the real-GPU Cursor benchmark in §10. Not yet browser/manual verified.
+
 **Priority:** high
+
 **Effort:** M
+
 **Depends on:** none (splits off [149](./2026-08-17--149--shader-program-first-use-hitch.md) Phase 1 B; 149 Phase 1 A is blocked on this plan, see §9)
+
 **domain:** `world-terrain`
+
 **tags:** `settlements-npcs`, `performance`, `rendering`, `streaming`
 
 ---

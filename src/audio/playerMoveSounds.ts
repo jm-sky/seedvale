@@ -3,15 +3,6 @@
 import type { FootstepSurface } from '../terrain/footstepSurface'
 import type { PlayAt, WorldSoundPosition } from './createWorldAudio'
 
-/** Generic hard-surface set (Kenney) — kept only for the jump-land thud;
- *  walking/sprinting footsteps use the terrain-classified sets below. */
-export const FOOTSTEP_SOUND_URLS = [
-  '/sounds/footstep-01.ogg',
-  '/sounds/footstep-02.ogg',
-  '/sounds/footstep-03.ogg',
-  '/sounds/footstep-04.ogg',
-] as const
-
 export const FOOTSTEP_PACK_IDS = ['anton', 'legacy', 'mayra'] as const
 export type FootstepPackId = (typeof FOOTSTEP_PACK_IDS)[number]
 
@@ -110,10 +101,6 @@ const SURFACE_VOLUME: Record<FootstepSurface, number> = {
   stone: 0.9,
 }
 
-function randomFootstepUrl(): string {
-  return FOOTSTEP_SOUND_URLS[Math.floor(Math.random() * FOOTSTEP_SOUND_URLS.length)]!
-}
-
 function randomSurfaceFootstepUrl(surface: FootstepSurface): string {
   const urls = footstepUrlsFor(surface)
   const selected = urls[Math.floor(Math.random() * urls.length)]!
@@ -131,10 +118,15 @@ export function playJumpTakeoff(playAt: PlayAt, position: WorldSoundPosition): v
   playAt(JUMP_CLOTH_SOUND_URL, position, JUMP_VOLUME)
 }
 
-/** Louder footstep thud — no dedicated land clip in staging. */
-export function playJumpLand(playAt: PlayAt, position: WorldSoundPosition): void {
-  const url = randomFootstepUrl()
-  playAt(url, position, LAND_VOLUME)
+/** Louder surface footstep — no dedicated land clip in staging (S17). */
+export function playJumpLand(
+  playAt: PlayAt,
+  position: WorldSoundPosition,
+  surface: FootstepSurface,
+): void {
+  lastSurface = surface
+  const url = randomSurfaceFootstepUrl(surface)
+  playAt(url, position, LAND_VOLUME * SURFACE_VOLUME[surface])
 }
 
 export function playWaterLap(playAt: PlayAt, position: WorldSoundPosition): void {
