@@ -63,6 +63,8 @@ CI (`.github/workflows/ci.yml`) runs `type-check`, `lint`, `build` and `test` on
 
 Do **not** launch headless Chrome/Playwright yourself as the default way to test visual/gameplay changes. First run technical checks. If manual browser verification is needed, ask the user to test the already-running dev server and provide concrete steps and expected results.
 
+In case of running benchmarks in browser - check `docs/performance/agent-browser-benchmarking.md`
+
 ## Documentation workflow
 
 | Area | Source |
