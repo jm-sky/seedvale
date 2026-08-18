@@ -1,7 +1,7 @@
 # Plan: 129 — Monety i sprzedaż działek
 
 **Created:** 2026-08-16  
-**Status:** `in progress` 🔄 — implemented + technically verified (type-check/test/build green); no browser/manual verification yet. See "Implementation summary" near the end of this file.  
+**Status:** `verification needed` 🔍 — implemented + technically verified (type-check/test/build green); no browser/manual verification yet. See "Implementation summary" near the end of this file.  
 **Priority:** 🔴 high · **Effort:** L  
 **Depends on:** ~~093~~  
 **Domain:** `items-player`  

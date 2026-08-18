@@ -1,7 +1,7 @@
 # Plan: Pory roku i pogoda
 
 **Created:** 2026-08-15  
-**Status:** `in progress` 🔄 — Etap 1 done, Etap 2 (day/night integration) done, Etap 3 (GPU weather rendering) done 2026-08-15 — closes the earlier CPU-particle deviation, no browser/perf verification yet, Etap 4 (debug/save) partial, Etap 5 (perf verification) open. See [implementation notes](./2026-08-08--040--seasons-weather-implementation-notes.md).  
+**Status:** `verification needed` 🔍 — Etap 1–3 done (GPU weather 2026-08-15); Etap 4 (debug/save) partial; Etap 5 (browser/perf) open. See [implementation notes](./2026-08-08--040--seasons-weather-implementation-notes.md).  
 **Priority:** medium 🟡 · **Effort:** L  
 **Depends on:** ~~003~~ ~~028~~
 
