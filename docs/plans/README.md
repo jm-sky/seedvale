@@ -57,7 +57,6 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-17--140--landscape-flora-and-village-cobble.md` | Sosny textured (3× `PineTree_*` FBX), paproć/grzyb w wilgotnym lesie, trzcina przy brzegu, pień po harvestcie, oszczędny bruk MD+; wierzba jeśli będzie textured GLB | 🟡 | L | ~~024~~ ~~073~~ ~~101~~ |
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🔴 | XL | ~~097~~ |
 | `2026-08-16--126--seed-planting.md` | Sadzenie nasion drzew (rozszerza istniejący `TreeLifecycle`) i cropów (nowy prosty `CropLifecycle`) przez gracza, integracja z inventory/garden gather/persistence; wstępny | 🟡 | L | ~~106~~ ~~122~~ |
 | `2026-08-16--127--player-built-well.md` | Fizyczna studnia budowana przez gracza; wstępny | 🟡 | M | ~~122~~ |
@@ -85,6 +84,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-17--140--landscape-flora-and-village-cobble.md` | Sosny textured (`pine_1/3/5`), paproć `fern`, grzyb GLB, trzcina przy brzegu, pień harvestu, bruk MD+; wierzba `needed` (M43). Zaimplementowane w `4d2a9b58`, bez weryfikacji w przeglądarce | 🟡 | L | ~~024~~ ~~073~~ ~~101~~ |
 | `2026-08-14--105--ui-ux-review.md` | Audyt UI/UX ✅ ([review 007](../reviews/2026-08-14--007--ui-ux.md)); H1–H3 + Character + handel 2-kolumnowy + przycisk Umiejętności `[U]` zaimplementowane, bez weryfikacji w przeglądarce (§11–§12); H4 poza handlem otwarte | 🟡 | L | ~~046~~ ~~005~~ ~~023~~ |
 | `2026-08-17--141--animal-traps.md` | Pułapki: placed world object (`PlacedTents`/`PlacedFires`), 2 rodzaje, stany `placed → active → placed/broken`, skill `traps`, save v16. Playtest 2026-08-18: **brak `Zastaw` na Inventory (Vue)** — tylko Quick Actions. Zostaje 🔍 — [implementation notes](./2026-08-17--141--animal-traps-implementation-notes.md) | 🟡 | M | ~~128~~ |
 | `2026-08-15--121--footstep-sound-refresh.md` | Kroki: Anton Z default (sand/grass/stone). Playtest 2026-08-18: **sprint po trawie jak kamienny korytarz** (za głośno). Zostaje 🔍 | 🟡 | S | — |

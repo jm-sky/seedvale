@@ -6,9 +6,11 @@ tags: [settlements-npcs]
 # Plan: Krajobraz — sosna, poszycie, trzcina, pień, bruk
 
 **Created:** 2026-08-17  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** L  
 **Depends on:** ~~024~~ ~~073~~ ~~065~~ ~~082~~ ~~101~~
+
+Zaimplementowane w `4d2a9b5865c9ef5e385ed5e5b4c8f21473a268ff` (2026-08-18). Wierzba świadomie `needed` ([MODELS.md](../assets/MODELS.md) M43). Browser: do potwierdzenia.
 
 ## Cel
 
@@ -149,12 +151,12 @@ Odrzut: korytarze `pathCorridors`, woda, nachodzenie na studnię/ognisko. Żadne
 
 ## Kryteria ukończenia
 
-- [ ] 3 warianty sosny (`pine_1/3/5`) w `TREE_SPECS` i CREDITS; spawn bias na highland/ridge.
-- [ ] Paproć jako `VegetationKind: 'fern'` w lesie / przy iglakach / wilgoci, nie na pustyni.
-- [ ] Pickup `mushroom` używa `mushroom_a.glb` (proceduralny fallback).
-- [ ] Trzcina na mokrym brzegu poza samym swamp gate.
-- [ ] Harvest `harvested` → pień GLB lub dotychczasowy proceduralny fallback.
-- [ ] Bruk: 0 na SM/OUTPOST; 2–8 płyt na MD–XL przy placu, nie na drogach świata.
-- [ ] Wierzba wired **albo** jawny `needed` w MODELS.md.
-- [ ] `tsc` / lint / build / test zielone.
+- [x] 3 warianty sosny (`pine_1/3/5`) w `TREE_SPECS` i CREDITS; spawn bias na highland/ridge.
+- [x] Paproć jako `VegetationKind: 'fern'` w lesie / przy iglakach / wilgoci, nie na pustyni.
+- [x] Pickup `mushroom` używa `mushroom_a.glb` (proceduralny fallback).
+- [x] Trzcina na mokrym brzegu poza samym swamp gate.
+- [x] Harvest `harvested` → pień GLB lub dotychczasowy proceduralny fallback.
+- [x] Bruk: 0 na SM/OUTPOST; 2–8 płyt na MD–XL przy placu, nie na drogach świata.
+- [x] Wierzba wired **albo** jawny `needed` w MODELS.md.
+- [x] `tsc` / lint / build / test zielone.
 - [ ] Browser: do potwierdzenia (osobno od technicznej weryfikacji).
