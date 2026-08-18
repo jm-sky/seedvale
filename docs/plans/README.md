@@ -56,6 +56,12 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-18--155--inventory-item-instances-and-trap-lifecycle.md` | Generyczny mechanizm `ItemInstance`, price algo | ✅ | L | ~~141~~ |
 | `2026-08-18--152--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried `NpcAgent.inventory` (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu), decyzja z relacji + openness/traits + istniejący `getPlayerStanding()`/`reactionChance`, nowa opcja w dialogu NPC v2 (`request_food`/`request_water`); wstępny, do implementacji | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ ~~156~~ |
 
+### Fresh new 
+
+- `2026-08-18--160--high-quality-melee-weapons.md`
+- `2026-08-18--161--weapon-maintenance-and-sharpening.md`
+- `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits.md`
+
 ---
 
 ## Todo
