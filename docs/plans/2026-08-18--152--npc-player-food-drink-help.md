@@ -1,12 +1,17 @@
 # Plan: NPC pomoc graczowi w jedzeniu i piciu
 
-**Created:** 2026-08-18  
-**Status:** `planned` 📋  
-**Priority:** medium · **Effort:** M  
-**Depends on:** ~~106~~ ~~069~~ ~~122~~
+**Created:** 2026-08-18
 
-domain: settlements-npcs
-tags: [items-player, quests-progression]
+**Status:** `planned` 📋
+
+**Priority:** medium · **Effort:** M
+
+**Depends on:** ~~106~~ ~~069~~ ~~122~~ 156
+
+**domain:** settlements-npcs
+
+**tags:** [items-player, quests-progression]
+
 
 ## Cel
 

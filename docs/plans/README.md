@@ -61,11 +61,11 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-16--126--seed-planting.md` | Sadzenie nasion drzew (rozszerza istniejący `TreeLifecycle`) i cropów (nowy prosty `CropLifecycle`) przez gracza, integracja z inventory/garden gather/persistence; wstępny | 🟡 | L | ~~106~~ ~~122~~ |
 | `2026-08-16--127--player-built-well.md` | Fizyczna studnia budowana przez gracza; wstępny | 🟡 | M | ~~122~~ |
 | `2026-08-18--151--social-places-and-social-behaviour.md` | Social Places v1: istniejący settlement campfire jako `PlaceType: 'social'`, NPC↔NPC `conversation` (2–5 min czasu świata) przez istniejący Schedule/FSM (activity `social`), partner tylko spośród NPC przy tym samym ognisku, symetryczna zmiana relacji NPC↔NPC; bez nowego social managera/schedulera; wstępny, do implementacji | 🟡 | M | ~~020~~ |
-| `2026-08-18--152--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried `NpcAgent.inventory` (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu), decyzja z relacji + openness/traits + istniejący `getPlayerStanding()`/`reactionChance`, nowa opcja w dialogu NPC v2 (`request_food`/`request_water`); wstępny, do implementacji | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ |
 | `2026-08-18--150--combat-mode-defense-and-downed-state.md` | Combat mode + soft lock (`Tab` living / `Shift+Tab` world), obrona z skillu bojowego, stan `downed`; bez regeneracji HP/apteczek; wstępny | 🔴 | L | ~~123~~ ~~124b~~ |
 | `2026-08-18--153--mobile-playtest-fixes.md` | Mobile playtest: NPC przy studni, interakcje/harvest, health, quest „Wypatrz jelenia”, skill HUD, cycling kandydatów, inventory sort; combat poza zakresem | 🟡 | M | — |
 | `2026-08-18--155--inventory-item-instances-and-trap-lifecycle.md` | Generyczny mechanizm `ItemInstance`, price algo | 🟡 | L | ~~141~~ |
 | `2026-08-18--156--npc-household-and-settlement-storage-logistics.md` | Mechanizm NPC/household/settlement storage | 🟡 | L | ~~069~~ ~~122~~ ~~131~~ |
+| `2026-08-18--152--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried `NpcAgent.inventory` (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu), decyzja z relacji + openness/traits + istniejący `getPlayerStanding()`/`reactionChance`, nowa opcja w dialogu NPC v2 (`request_food`/`request_water`); wstępny, do implementacji | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ 156 |
 
 ---
 
