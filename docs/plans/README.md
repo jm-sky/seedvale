@@ -54,6 +54,7 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-16--127--player-built-well.md` | Fizyczna studnia budowana przez gracza; wstępny | 🟡 | M | ~~122~~ |
 | `2026-08-18--151--social-places-and-social-behaviour.md` | Social Places v1: istniejący settlement campfire jako `PlaceType: 'social'`, NPC↔NPC `conversation` (2–5 min czasu świata) przez istniejący Schedule/FSM (activity `social`), partner tylko spośród NPC przy tym samym ognisku, symetryczna zmiana relacji NPC↔NPC; bez nowego social managera/schedulera; wstępny, do implementacji | 🟡 | M | ~~020~~ |
 | `2026-08-18--152--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried `NpcAgent.inventory` (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu), decyzja z relacji + openness/traits + istniejący `getPlayerStanding()`/`reactionChance`, nowa opcja w dialogu NPC v2 (`request_food`/`request_water`); wstępny, do implementacji | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ ~~156~~ |
+| `2026-08-18--163--rest-mobile-ui-and-inventory-interaction-polish.md` | Odpoczynek: ekranowy `Esc` po >85% i auto-wybudzenie przy ~100%; responsywny Merchant Screen na mobile; ekranowy `Tab` do cycle target; Inventory z kategorią `Weapon` i wieloma kategoriami itemów | 🟡 | S | — |
 
 ### Fresh new 
 
@@ -127,7 +128,7 @@ Completed plans **in this folder**. After the 2026-08-14 archive freeze new `don
 | `2026-08-15--123--universal-melee-combat.md` | Uniwersalny melee: `ITEM_CATALOG[].melee` + `playerMelee.ts` windUp→hit→recovery. |
 | `2026-08-15--124b--forgiving-melee-targeting-gap-close.md` | Target acquisition + gap-close (lunge ≤3 m). |
 | `2026-08-17--142--mobile-combat-target-acquisition.md` | Touch: szerszy stożek + commit yaw na cel; desktop bez zmian. |
-| `2026-08-14--118--fauna-stada-i-mlode.md` | Stada deer/stag/boar + luźne króliki; młode pomniejszone, follow matki, dorastanie 600 s. |
+| `2026-08-14--118--fauna-stada-i-młode.md` | Stada deer/stag/boar + luźne króliki; młode pomniejszone, follow matki, dorastanie 600 s. |
 | `2026-08-15--120--fauna-probabilistic-perception.md` | Percepcja: falloff dystansu × facing × dzień/noc/las, deterministyczny roll. |
 | `2026-08-17--137--animal-habitat-and-carcass-visuals.md` | `[E] Zniszcz` kanał 5 s, spalony cave/thicket, czarna ziemia, ogień ~5 min; po harvestcie pozostałości ~90 s. |
 | `2026-08-17--138--harvested-remains-glb.md` | Po harvestcie GLB `bones_pile` + kości + skóra + skrawki mięsa. |
@@ -176,24 +177,3 @@ Every `docs/plans/YYYY-MM-DD--NNN--*.md` in **this folder** (except `*-implement
 New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), a `domain:`/optional `tags:` per [Plan domains](#plan-domains) above, then a row in the matching section. Do not move completed plans into `archive/`.
 
 ---
-
-## Quick notes / bugs
-
-- **Czarny świat 3D na telefonie** — issue [032](../issues/2026-08-15--032--mobile-black-world-screen.md): boom kamery w terenie/domu + 0-size composer. Fix w kodzie; playtest: wioska, look-up, orbit przy dachach, obrót telefonu, `?camdebug=1`.
-- **NPC utyka w/przy domku** — P0+P1 planu [108](./2026-08-14--108--npc-stuck-at-house-locomotion.md) w kodzie; playtest w `?debug=1` otwarty.
-- **Światło w domach** — `findWallMount` raycastuje bryłę; 2026-08-11: nadal nierówne, potrzeba mapowania per model.
-- **Latające obiekty** — `waitForChunks` przed propsami osady; 2026-08-11: nadal nieidealne.
-- **Morze (telefon)** — artefakty krawędzi, plamy; spróbować bardziej przezroczystej wody.
-- **Woda** — plan [098](./archive/2026-08-13--098--water-unified-shader-shore-reflections.md) `done` (2026-08-13). Telefon: off odbić jako ucieczka od artefaktów krawędzi (notatka wyżej).
-
-## Audits (not implementation plans)
-
-| File | Summary | Date |
-|------|---------|------|
-| `2026-08-14--asset-audit-3d-models.md` | Możliwości GLB/GLTF (drzwi, szkielety, klipy, packi Quaternius) + rekomendacja pipeline’u | 2026-08-14 |
-
-Related review (tool, not GLB capability): [008 — Asset Browser × modular cottage](../reviews/2026-08-14--008--asset-browser-modular-cottage.md); implementation: [107](./2026-08-14--107--asset-browser-agent-discovery.md).
-
-## Related
-
-`docs/research/README.md` · `docs/reviews/README.md` · `docs/issues/README.md` · [archive/README.md](./archive/README.md)
