@@ -9,18 +9,13 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - name: Install pnpm and Node.js
+        uses: pnpm/setup@v2
         with:
-          version: 11.20.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
+          runtime: node@22
+          cache: true
 
       - name: Type check
         run: pnpm run type-check
