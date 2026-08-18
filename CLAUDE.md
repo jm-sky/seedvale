@@ -55,6 +55,8 @@ npm run test
 
 For `.vue` files, `npm run build` uses `vue-tsc`. Unit tests use Vitest (`*.test.ts`). Current unit coverage is primarily pure logic rather than Three.js/DOM/`.vue` integration.
 
+Don't lint/test/build changes made only to .md files in docs/ folder.
+
 CI (`.github/workflows/ci.yml`) runs `type-check`, `lint`, `build` and `test` on every PR and on push to `main` as a verification gate — it does not replace running these locally before committing.
 
 ### Browser verification
