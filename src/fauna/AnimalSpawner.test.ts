@@ -6,7 +6,9 @@ import {
   type PreySpawner,
   RECOVERY_DAYS,
   respawnIntervalDaysFor,
+  restoreSpawnPointState,
   shouldDeplete,
+  snapshotSpawnPointState,
   tickSpawnPointRecovery,
   updateSpawners,
 } from './AnimalSpawner'
@@ -139,5 +141,38 @@ describe('tickSpawnPointRecovery', () => {
     const depleted = spawner({ state: 'depleted', deathsThisCycle: 2 })
     tickSpawnPointRecovery(depleted, 1_000_000, 99)
     expect(depleted.state).toBe('depleted')
+  })
+})
+
+describe('snapshotSpawnPointState / restoreSpawnPointState (persistence follow-up)', () => {
+  it('snapshots only the minimal lifecycle fields', () => {
+    const s = spawner({ state: 'disabled', deathsThisCycle: 2, disabledAtDay: 12.5 })
+    expect(snapshotSpawnPointState(s)).toEqual({
+      state: 'disabled',
+      deathsThisCycle: 2,
+      disabledAtDay: 12.5,
+    })
+  })
+
+  it('is a no-op when nothing was saved for this spawn point', () => {
+    const s = spawner({ state: 'active', deathsThisCycle: 0, disabledAtDay: null })
+    restoreSpawnPointState(s, undefined)
+    expect(s.state).toBe('active')
+    expect(s.deathsThisCycle).toBe(0)
+    expect(s.disabledAtDay).toBeNull()
+  })
+
+  it('round-trips active/depleted/disabled/recovering through snapshot + restore', () => {
+    for (const state of ['active', 'depleted', 'disabled', 'recovering'] as const) {
+      const original = spawner({ state, deathsThisCycle: 2, disabledAtDay: state === 'active' ? null : 5 })
+      const saved = snapshotSpawnPointState(original)
+      // Fresh spawner as `createFauna()` would construct it on rebuild — always
+      // starts `active`/0/null before the saved snapshot is applied.
+      const restored = spawner({ state: 'active', deathsThisCycle: 0, disabledAtDay: null })
+      restoreSpawnPointState(restored, saved)
+      expect(restored.state).toBe(state)
+      expect(restored.deathsThisCycle).toBe(2)
+      expect(restored.disabledAtDay).toBe(state === 'active' ? null : 5)
+    }
   })
 })

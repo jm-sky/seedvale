@@ -29,7 +29,12 @@ import { isCameraDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode, isSyst
 import { getRenderStateDebugText } from '../debug/renderStateDebug'
 import { ANIMAL_LABELS, type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
 import { meatKindForAnimal } from '../fauna/animalMeat'
-import { DESTROY_SPAWNER_DURATION_SEC, type PreySpawner, SPAWNER_DESTROY_BRANCH_COST } from '../fauna/AnimalSpawner'
+import {
+  DESTROY_SPAWNER_DURATION_SEC,
+  type PreySpawner,
+  snapshotSpawnPointState,
+  SPAWNER_DESTROY_BRANCH_COST,
+} from '../fauna/AnimalSpawner'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
@@ -316,6 +321,7 @@ export async function createApp(
     getPlayerSocial,
     landOwnership.isOwned,
     onTrapCapture,
+    new Map((initialSave?.spawnPoints ?? []).map((s) => [s.id, s])),
   )
 
   // Indirection (not a direct destructure) so this keeps sampling whichever
@@ -661,7 +667,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 16,
+    version: 17,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -710,6 +716,7 @@ export async function createApp(
       survival: { xp: player.skills.survival.xp },
       traps: { xp: player.skills.traps.xp },
     },
+    spawnPoints: bundle.fauna.getSpawners().map((s) => ({ id: s.id, ...snapshotSpawnPointState(s) })),
   })
 
   const saveNow = (): void => {

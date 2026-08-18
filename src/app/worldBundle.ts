@@ -8,6 +8,7 @@ import type { PlacedTrapRecord } from '../world/animalTraps'
 import type { DayNightState } from '../world/dayNight'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TreeLifecycle } from '../world/treeLifecycle'
+import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
@@ -181,6 +182,9 @@ function buildFauna(
   seed: number,
   coastThreshold: number,
   onAnimalDeath?: (animalId: string) => void,
+  /** Saved spawn-point lifecycle (plan 125 persistence follow-up) — see
+   *  `createFauna`'s `initialSpawnerState` doc. */
+  initialSpawnerState?: ReadonlyMap<string, SavedSpawnPointState>,
 ): Promise<Fauna> {
   const footprintRadius = villageSizeConfig(settlement.size).footprintRadius
   // Spawner ring now reaches `footprintRadius + SPAWNER_RING_OFFSET[1]` (plan
@@ -215,6 +219,7 @@ function buildFauna(
       sampleMountainRidge: chunkManager.sampleMountainRidge,
     },
     onAnimalDeath,
+    initialSpawnerState,
   )
 }
 
@@ -285,6 +290,9 @@ export async function createWorldBundle(
   /** Reports a completed trap catch (plan 141) — the single place Traps XP is
    *  awarded and the catch is announced, owned by `createApp.ts`. */
   onTrapCapture?: PlacedTrapsHooks['onCapture'],
+  /** Saved spawn-point lifecycle (plan 125 persistence follow-up), keyed by
+   *  `PreySpawner.id` — see `createFauna`'s `initialSpawnerState` doc. */
+  initialSpawnerState?: ReadonlyMap<string, SavedSpawnPointState>,
 ): Promise<WorldBundle> {
   const waterMirror = createWaterMirror({
     waterLevel: config.terrain.waterLevel,
@@ -304,7 +312,7 @@ export async function createWorldBundle(
   const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
   const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
   const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned)
-  const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath)
+  const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
@@ -356,6 +364,13 @@ export async function rebuildWorldBundle(
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
   onTrapCapture?: PlacedTrapsHooks['onCapture'],
 ): Promise<void> {
+  // Snapshot before dispose() — a same-session rebuild (config change, not a
+  // new seed) recreates `Fauna` from scratch just like every other bundle
+  // member; spawn-point lifecycle would otherwise silently reset to `active`
+  // mid-session too (not just across a real save/load).
+  const carriedSpawnerState = resetCollectedItems
+    ? undefined
+    : new Map(bundle.fauna.getSpawners().map((s) => [s.id, snapshotSpawnPointState(s)]))
   bundle.fauna.dispose()
   bundle.itemSpawners.dispose()
   // Copy before dispose() — nodes() returns a live reference to the internal
@@ -406,7 +421,7 @@ export async function rebuildWorldBundle(
     mine: bundle.resourceDeposits.mine,
   }
   bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned)
-  bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath)
+  bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, carriedSpawnerState)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)

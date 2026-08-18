@@ -19,6 +19,8 @@ import { createSeededRandom } from '../world/parseSeed'
 import { ANIMAL_DEFS, AnimalAgent, type AnimalKind, type AnimalLifeStage, type VillageInfo } from './AnimalAgent'
 import {
   type PreySpawner,
+  restoreSpawnPointState,
+  type SavedSpawnPointState,
   shouldDeplete,
   SPAWNER_RADIUS,
   tickSpawnPointRecovery,
@@ -317,6 +319,13 @@ export async function createFauna(
   /** Reports any wild-fauna death (any cause) by `animalId` — forwarded into
    *  every `AnimalAgent` this factory spawns (plan 110). */
   onAnimalDeath?: (animalId: string) => void,
+  /** Saved spawn-point lifecycle (plan 125 persistence follow-up), keyed by
+   *  the same deterministic `PreySpawner.id` this factory derives below —
+   *  applied right after each managed spawn point is (re)created, both on a
+   *  real save/load and on an in-session `rebuildWorldBundle()` (config
+   *  change, not a new seed). Absent/missing entries mean "fresh spawn
+   *  point" (defaults already set by the constructor below). */
+  initialSpawnerState?: ReadonlyMap<string, SavedSpawnPointState>,
 ): Promise<Fauna> {
   const random = createSeededRandom(seed ^ 0xfa11)
   let agents: AnimalAgent[] = []
@@ -619,6 +628,7 @@ export async function createFauna(
       deathsThisCycle: 0,
       disabledAtDay: null,
     }
+    restoreSpawnPointState(spawner, initialSpawnerState?.get(spawner.id))
     spawners.push(spawner)
     spawnerById.set(spawner.id, spawner)
 
@@ -672,13 +682,33 @@ export async function createFauna(
 
     // Cave/thicket start inhabited (plan 139) — slow day-scale respawn only
     // replaces losses. Tagged with `spawnPointId` so deaths count toward
-    // depletion; wolfDen's pack above is deliberately untagged.
-    if (spec.type === 'cave' || spec.type === 'thicket') {
+    // depletion; wolfDen's pack above is deliberately untagged. Only for a
+    // spawn point that's actually `active` — a restored `depleted`/
+    // `disabled`/`recovering` point must not come back with a full fresh
+    // population just because it was saved/reloaded (persistence follow-up,
+    // `docs/plans/LOOSE-ENDS.md` 2026-08-16); it stays empty until it
+    // recovers through the normal `tickSpawnPointRecovery` path.
+    if ((spec.type === 'cave' || spec.type === 'thicket') && spawner.state === 'active') {
       for (let i = 0; i < spec.maxPreyCount; i++) {
         const spot = findWalkableNear(pos.x, pos.z, 0, 4) ?? pos
         const agent = spawnAgent(spec.kind, spot.x, spot.z, undefined, undefined, undefined, spawner.id)
         scene.add(agent.mesh)
         agents.push(agent)
+      }
+    }
+    // A restored `disabled`/`recovering` point looks freshly-burned again on
+    // reload/rebuild instead of a mismatched pristine prop — same visual as
+    // `destroySpawner()` below, reapplied rather than duplicated.
+    if (
+      (spec.type === 'cave' || spec.type === 'thicket')
+      && (spawner.state === 'disabled' || spawner.state === 'recovering')
+    ) {
+      const mesh = spawnerMeshById.get(spawner.id)
+      if (mesh) tintPropMaterials(mesh, BURNED_SPAWNER_TINT_HEX)
+      if (terrainCarving?.scorchTerrain) {
+        terrainCarving.scorchTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH)
+      } else {
+        terrainCarving?.modifyTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH)
       }
     }
 

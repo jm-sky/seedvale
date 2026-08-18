@@ -300,7 +300,7 @@ type Phase =
   | 'sleep'
   | 'wander'
 
-type ActionId = 'chop' | 'deposit' | 'drink' | 'eat' | 'mine' | 'work'
+export type ActionId = 'chop' | 'deposit' | 'drink' | 'eat' | 'mine' | 'work'
 
 /**
  * NPC adapter over the shared `PlannedAction` contract: destination and
@@ -316,6 +316,13 @@ type NpcPlannedAction = PlannedAction<ActionId> & {
   next?: NpcPlannedAction
   /** When set, this step uses a settlement `InteractionQueue` (FIFO slots). */
   queueId?: string
+  /** Carried across a `next` promotion (see the `execute` phase transition)
+   *  so a chained leg — e.g. ore-gathering's `deposit` after `mine` — still
+   *  reports the chain's own kind (`mine`) to `getCurrentActivity()` instead
+   *  of `deposit`'s own, ambiguous kind (`docs/plans/LOOSE-ENDS.md`
+   *  2026-08-16). Set automatically at promotion time; never assigned when
+   *  an action starts. */
+  chainKind?: ActionId
 }
 
 /** Public, dialogue-facing summary of what an NPC is doing right now — a
@@ -333,6 +340,31 @@ export type CurrentActivity = {
    *  mentioning — e.g. `sleep`/`work` "...until HH:MM". Absent when there's
    *  nothing schedule-relevant about the current activity (e.g. `wander`). */
   endHour?: number
+}
+
+/** Carries a chained action's classification forward onto its `next` leg
+ *  (see `NpcPlannedAction.chainKind`) — a chained leg like ore-gathering's
+ *  `deposit` should still be recognised as `mine`'s chain, not read as its
+ *  own, ambiguous `deposit` kind. Exported/pure so the ore-deliver
+ *  regression (`docs/plans/LOOSE-ENDS.md` 2026-08-16) can be unit tested
+ *  without constructing a full `NpcAgent`. */
+export function promoteChainKind(parent: { kind: ActionId; chainKind?: ActionId }): ActionId {
+  return parent.chainKind ?? parent.kind
+}
+
+/** `getCurrentActivity()`'s `execute`/`goTo`/`exhausted` classification,
+ *  pulled out as a pure function for the same testability reason as
+ *  `promoteChainKind`. `pending` is `undefined` when there is no in-flight
+ *  action (idle). */
+export function classifyPendingActivity(
+  pending: { kind: ActionId; chainKind?: ActionId } | undefined,
+  activeNeed: NeedId,
+): CurrentActivityKind {
+  if (!pending) return 'idle'
+  const chainKind = pending.chainKind ?? pending.kind
+  if (chainKind === 'work' || chainKind === 'mine') return 'work'
+  if (pending.kind === 'eat' && activeNeed === 'idle') return 'eat'
+  return 'need'
 }
 
 /** Phases the player's approach may interrupt to trigger a lookAtPlayer pause. */
@@ -945,13 +977,12 @@ export class NpcAgent {
         return { kind: 'idle' }
       case 'execute':
       case 'exhausted':
-      case 'goTo':
-        if (this.pendingAction?.kind === 'work' || this.pendingAction?.kind === 'mine') return { kind: 'work', endHour }
-        if (this.pendingAction?.kind === 'eat' && this.activeNeed === 'idle') {
-          return { kind: 'eat', endHour }
-        }
-        if (this.pendingAction) return { kind: 'need', need: this.activeNeed }
+      case 'goTo': {
+        const kind = classifyPendingActivity(this.pendingAction ?? undefined, this.activeNeed)
+        if (kind === 'work' || kind === 'eat') return { kind, endHour }
+        if (kind === 'need') return { kind, need: this.activeNeed }
         return { kind: 'idle' }
+      }
       case 'followPath':
       case 'wander':
         return { kind: 'wander' }
@@ -1109,6 +1140,7 @@ export class NpcAgent {
           action?.onComplete()
           if (action?.next) {
             this.pendingAction = action.next
+            this.pendingAction.chainKind = promoteChainKind(action)
             this.applyRimDestination(action.next.destination)
             // Chained step stays `active` — do not complete between links.
             this.phase = 'goTo'

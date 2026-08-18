@@ -169,3 +169,34 @@ export function tickSpawnPointRecovery(
   spawner.deathsThisCycle = 0
   spawner.disabledAtDay = null
 }
+
+/** Minimal spawn-point lifecycle fields that need to survive a save/reload
+ *  (`docs/plans/LOOSE-ENDS.md` 2026-08-16) — deliberately excludes
+ *  position/type/kind (deterministic from the seed/settlement) and
+ *  `daysSinceLastRespawn` (a short-lived timer that's fine to reset; a
+ *  restored `active` point simply starts its respawn count from 0 again). */
+export type SavedSpawnPointState = {
+  state: SpawnPointState
+  deathsThisCycle: number
+  disabledAtDay: number | null
+}
+
+/** Pure snapshot for `SaveData` — pairs with `restoreSpawnPointState`. */
+export function snapshotSpawnPointState(spawner: PreySpawner): SavedSpawnPointState {
+  return {
+    state: spawner.state,
+    deathsThisCycle: spawner.deathsThisCycle,
+    disabledAtDay: spawner.disabledAtDay,
+  }
+}
+
+/** Applies a saved snapshot onto a freshly constructed `PreySpawner` (same
+ *  deterministic `id`, position, type, kind as before) — a no-op when there
+ *  is nothing saved for this spawn point (fresh world, or a spawn point that
+ *  didn't exist in an older save). */
+export function restoreSpawnPointState(spawner: PreySpawner, saved: SavedSpawnPointState | undefined): void {
+  if (!saved) return
+  spawner.state = saved.state
+  spawner.deathsThisCycle = saved.deathsThisCycle
+  spawner.disabledAtDay = saved.disabledAtDay
+}
