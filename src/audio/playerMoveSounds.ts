@@ -116,13 +116,15 @@ function randomFootstepUrl(): string {
 
 function randomSurfaceFootstepUrl(surface: FootstepSurface): string {
   const urls = footstepUrlsFor(surface)
-  return urls[Math.floor(Math.random() * urls.length)]!
+  const selected = urls[Math.floor(Math.random() * urls.length)]!
+  return selected
 }
 
 export function playFootstep(playAt: PlayAt, position: WorldSoundPosition, sprinting: boolean, surface: FootstepSurface): void {
   lastSurface = surface
   const base = sprinting ? FOOTSTEP_SPRINT_VOLUME : FOOTSTEP_VOLUME
-  playAt(randomSurfaceFootstepUrl(surface), position, base * SURFACE_VOLUME[surface])
+  const url = randomSurfaceFootstepUrl(surface)
+  playAt(url, position, base * SURFACE_VOLUME[surface])
 }
 
 export function playJumpTakeoff(playAt: PlayAt, position: WorldSoundPosition): void {
@@ -131,7 +133,8 @@ export function playJumpTakeoff(playAt: PlayAt, position: WorldSoundPosition): v
 
 /** Louder footstep thud — no dedicated land clip in staging. */
 export function playJumpLand(playAt: PlayAt, position: WorldSoundPosition): void {
-  playAt(randomFootstepUrl(), position, LAND_VOLUME)
+  const url = randomFootstepUrl()
+  playAt(url, position, LAND_VOLUME)
 }
 
 export function playWaterLap(playAt: PlayAt, position: WorldSoundPosition): void {
