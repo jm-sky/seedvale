@@ -152,6 +152,10 @@ export type Settlement = {
   economy: SettlementEconomy
   /** One household per family, index-aligned with `def.families` (plan 069). */
   households: readonly Household[]
+  /** Physical household storage containers (plan 156) — one per household,
+   *  paired with its own world position. Presentation only; `household`
+   *  remains the sole owner of the quantity (`Household.stock`/`.water`). */
+  householdStorages: readonly { household: Household, position: Vector3 }[]
   /** Only present for MD/LG villages, see `props.ts`'s `buildSettlementProps`. */
   fire?: VillageFire
   update: (
@@ -297,6 +301,19 @@ export async function createSettlement(
     const home = homePlaces[familyIndex % homePlaces.length]!
     return householdRegistry.getOrCreate(householdIdFor(def.id, familyIndex), def.id, home.id)
   })
+  // Household storage container binding (plan 156) — same
+  // `familyIndex % homePlaces.length` indexing as `households` above so a
+  // household's container sits at its own home's yard, not a mismatched one.
+  const householdStorages: readonly { household: Household, position: Vector3 }[] =
+    landmarks.householdStorages.length > 0
+      ? households.map((household, familyIndex) => ({
+          household,
+          position: landmarks.householdStorages[familyIndex % landmarks.householdStorages.length]!,
+        }))
+      : households.map((household, familyIndex) => ({
+          household,
+          position: homePlaces[familyIndex % homePlaces.length]!.position,
+        }))
   // `homeId -> Household` (plan 122) so `spawnLivestock` can hand each
   // house-anchored animal its owning household's water reserve — keyed the
   // same way `ownerHouseId` already is (`homePlaceId(def.id, i)`).
@@ -543,6 +560,7 @@ export async function createSettlement(
     landmarks,
     economy,
     households,
+    householdStorages,
     fire,
     update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages) {
       const nearbyNpcCounts = new Array<number>(agents.length).fill(0)

@@ -332,6 +332,30 @@ export function buildInteractables(
       })
     }
 
+    for (const hs of settlement.householdStorages) {
+      if (!withinRange(hs.position.x, hs.position.z, playerPos, GAZE_RANGE)) continue
+      list.push({
+        kind: 'householdStorage',
+        position: { x: hs.position.x, z: hs.position.z },
+        promptLabel: 'Zbadaj: Magazyn domowy',
+        household: hs.household,
+      })
+    }
+
+    if (withinRange(
+      settlement.landmarks.settlementStorage.x,
+      settlement.landmarks.settlementStorage.z,
+      playerPos,
+      GAZE_RANGE,
+    )) {
+      list.push({
+        kind: 'settlementStorage',
+        position: { x: settlement.landmarks.settlementStorage.x, z: settlement.landmarks.settlementStorage.z },
+        promptLabel: 'Zbadaj: Magazyn osady',
+        economy: settlement.economy,
+      })
+    }
+
     for (const plot of settlement.landmarks.landPlots) {
       if (!withinRange(plot.position.x, plot.position.z, playerPos, GAZE_RANGE)) continue
       if (landOwnership?.isOwned(settlement.id, plot.plotId)) continue

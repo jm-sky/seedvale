@@ -1,8 +1,10 @@
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { PreySpawner } from '../fauna/AnimalSpawner'
 import type { ItemKind } from '../items/items'
 import type { Settlement } from '../settlement/createSettlement'
+import type { Household } from '../settlement/household'
 import type { VillageFire } from '../settlement/VillageFire'
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { DigProfile } from '../terrain/dig'
@@ -83,3 +85,11 @@ export type Interactable =
    *  fresh every frame in `buildInteractables` (never a stale snapshot), and
    *  again by the purchase domain operation itself at interact time. */
   | { kind: 'landPlot', position: { x: number, z: number }, promptLabel: string, settlementId: string, plotId: string }
+  /** Household storage container (plan 156) — read-only stock view; the
+   *  prop is presentation only, `household` is the live simulation owner
+   *  queried fresh at interact time (never a cached snapshot). */
+  | { kind: 'householdStorage', position: { x: number, z: number }, promptLabel: string, household: Household }
+  /** Settlement storage container (plan 156) — read-only stock view over
+   *  `SettlementEconomy`, same "presentation, not owner" contract as
+   *  `householdStorage`. */
+  | { kind: 'settlementStorage', position: { x: number, z: number }, promptLabel: string, economy: SettlementEconomy }

@@ -28,6 +28,8 @@ function makeLandmarks(overrides: Partial<SettlementLandmarks> = {}): Settlement
     trees: [],
     dockRoute: [],
     landPlots: [],
+    householdStorages: [],
+    settlementStorage: new Vector3(5, 0, 5),
     ...overrides,
   }
 }

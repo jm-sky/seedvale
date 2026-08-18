@@ -143,6 +143,14 @@ export type SettlementLandmarks = {
    *  `VillagePlan.plots` (`role === 'sale'`). Ownership is separate
    *  persistent world state, never stored here — see `landOwnership.ts`. */
   landPlots: SettlementLandPlot[]
+  /** Household storage container positions (plan 156), same order as
+   *  `homes`/`houses` — `createSettlement.ts` zips this with `households` to
+   *  build each `Interactable`. Presentation only; the prop never owns the
+   *  quantity, `Household.stock`/`.water` does. */
+  householdStorages: THREE.Vector3[]
+  /** One settlement-wide storage container position (plan 156), next to the
+   *  wood stockpile. Presentation only — `SettlementEconomy` owns the stock. */
+  settlementStorage: THREE.Vector3
 }
 
 /** One settlement sale plot's materialized (non-persistent) data — plan 129. */
@@ -594,6 +602,8 @@ export async function buildSettlementProps(
       rotation: p.rotation,
       price: p.price ?? 0,
     })),
+    householdStorages: [],
+    settlementStorage: new THREE.Vector3(),
   }
 
   const coreRandom = createSeededRandom(seed ^ 0x5a17e)
@@ -622,6 +632,24 @@ export async function buildSettlementProps(
   placeOnGround(stockpile, stockX, stockZ, sampleHeight)
   group.add(stockpile)
   landmarks.stockpile.set(stockX, sampleHeight(stockX, stockZ), stockZ)
+
+  // Settlement storage container (plan 156) — physical representation of
+  // `SettlementEconomy`, one per settlement, next to the wood stockpile
+  // (opposite side from `createSettlement.ts`'s woodshed-complete pile so
+  // the two never overlap). Presentation only, larger than the household
+  // crates below so it reads as the shared depot.
+  const settlementStorageX = stockX + 1.8
+  const settlementStorageZ = stockZ + 1.1
+  const settlementStorageProp = await loadPropOrFallback(
+    '/models/settlement/crate.glb', 1.0, () => createCrate(1.8),
+  )
+  placeOnGround(settlementStorageProp, settlementStorageX, settlementStorageZ, sampleHeight)
+  group.add(settlementStorageProp)
+  landmarks.settlementStorage.set(
+    settlementStorageX,
+    sampleHeight(settlementStorageX, settlementStorageZ),
+    settlementStorageZ,
+  )
 
   const gardenLms = (plan?.landmarks.filter((l) => l.kind === 'garden') ?? [])
     .slice()
@@ -929,6 +957,26 @@ export async function buildSettlementProps(
     'settlement-household-troughs',
   )
   if (troughInstances) group.add(troughInstances.group)
+
+  // Household storage container (plan 156) — physical representation of
+  // `Household.stock`/`.water`, one per house yard. Presentation only; the
+  // authoritative quantity stays on `Household` (`settlement/household.ts`).
+  // `landmarks.householdStorages` is same-order as `homes`/`houses` so
+  // `createSettlement.ts` can zip it with `households` by index.
+  const householdStorageTemplates = await loadPropTemplates(
+    [{ url: '/models/settlement/crate.glb', height: 0.6 }],
+    () => createCrate(1),
+  )
+  const householdStoragePlacements = houseYardPlacements(1.9, 0.9)
+  landmarks.householdStorages = householdStoragePlacements.map(
+    (p) => new THREE.Vector3(p.x, p.groundY, p.z),
+  )
+  const householdStorageInstances = buildInstancedProps(
+    householdStorageTemplates,
+    householdStoragePlacements,
+    'settlement-household-storage',
+  )
+  if (householdStorageInstances) group.add(householdStorageInstances.group)
 
   // Hay stacks near garden pads (plan 082 B / 095). Pickaxe is a one-time
   // stockpile pickup via item spawners (plan 090), not a decorative prop.

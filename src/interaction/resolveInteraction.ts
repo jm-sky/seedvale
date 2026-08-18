@@ -1,4 +1,6 @@
+import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { QuestDialogOverride, QuestManager } from '../quests/QuestManager'
+import type { Household } from '../settlement/household'
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { Interactable } from './Interactable'
 import { isDebugMode } from '../debug/debugMode'
@@ -34,6 +36,29 @@ const LANDMARK_FLAVOR_LINES: Record<LandmarkKind, readonly string[]> = {
 
 function pickFrom(pool: readonly string[]): string {
   return pool[Math.floor(Math.random() * pool.length)]!
+}
+
+/** Read-only stock lines (plan 156) — queried live from the simulation owner
+ *  every time the dialog opens, never cached on the prop. */
+function formatHouseholdStorage(household: Household): string {
+  return [
+    `Drewno: ${household.stock.query('wood')}`,
+    `Jedzenie: ${household.stock.query('food')}`,
+    `Woda: ${household.water.current}`,
+  ].join('\n')
+}
+
+/** Excludes `water` — `SettlementEconomy`'s `water` stock is unused seed
+ *  data (`economy/initial.ts`), the real reserve lives on `Household.water`
+ *  (plan 122) and stays out of the settlement-wide container. */
+function formatSettlementStorage(economy: SettlementEconomy): string {
+  return [
+    `Jedzenie: ${economy.query('food')}`,
+    `Drewno: ${economy.query('wood')}`,
+    `Żelazo: ${economy.query('iron')}`,
+    `Węgiel: ${economy.query('coal')}`,
+    `Złoto: ${economy.query('gold')}`,
+  ].join('\n')
 }
 
 function capitalize(text: string): string {
@@ -91,6 +116,8 @@ export function resolveInteraction(
       }
       return { speakerName: target.label, line }
     }
+    case 'householdStorage':
+      return { speakerName: 'Magazyn domowy', line: formatHouseholdStorage(target.household) }
     case 'landmark': {
       const override = questManager.onInteractObjective({
         type: 'interact_landmark',
@@ -101,6 +128,8 @@ export function resolveInteraction(
         line: override?.line ?? pickFrom(LANDMARK_FLAVOR_LINES[target.envKind]),
       }
     }
+    case 'settlementStorage':
+      return { speakerName: 'Magazyn osady', line: formatSettlementStorage(target.economy) }
     case 'spawner': {
       const override = questManager.onInteractObjective({
         type: 'interact_spawner',

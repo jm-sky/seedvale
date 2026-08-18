@@ -55,8 +55,7 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-18--151--social-places-and-social-behaviour.md` | Social Places v1: istniejący settlement campfire jako `PlaceType: 'social'`, NPC↔NPC `conversation` (2–5 min czasu świata) przez istniejący Schedule/FSM (activity `social`), partner tylko spośród NPC przy tym samym ognisku, symetryczna zmiana relacji NPC↔NPC; bez nowego social managera/schedulera; wstępny, do implementacji | 🟡 | M | ~~020~~ |
 | `2026-08-18--150--combat-mode-defense-and-downed-state.md` | Combat mode + soft lock (`Tab` living / `Shift+Tab` world), obrona z skillu bojowego, stan `downed`; bez regeneracji HP/apteczek; wstępny | 🔴 | L | ~~123~~ ~~124b~~ |
 | `2026-08-18--155--inventory-item-instances-and-trap-lifecycle.md` | Generyczny mechanizm `ItemInstance`, price algo | 🟡 | L | ~~141~~ |
-| `2026-08-18--156--npc-household-and-settlement-storage-logistics.md` | Mechanizm NPC/household/settlement storage | 🟡 | L | ~~069~~ ~~122~~ ~~131~~ |
-| `2026-08-18--152--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried `NpcAgent.inventory` (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu), decyzja z relacji + openness/traits + istniejący `getPlayerStanding()`/`reactionChance`, nowa opcja w dialogu NPC v2 (`request_food`/`request_water`); wstępny, do implementacji | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ 156 |
+| `2026-08-18--152--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried `NpcAgent.inventory` (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu), decyzja z relacji + openness/traits + istniejący `getPlayerStanding()`/`reactionChance`, nowa opcja w dialogu NPC v2 (`request_food`/`request_water`); wstępny, do implementacji | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ ~~156~~ |
 
 ---
 
@@ -89,6 +88,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 | `2026-08-15--121--footstep-sound-refresh.md` | Kroki: Anton Z default (sand/grass/stone). Playtest 2026-08-18: **sprint po trawie jak kamienny korytarz** (za głośno). Zostaje 🔍 | 🟡 | S | — |
 | `2026-08-14--111--house-construction.md` | House Builder (MegaKit). Playtest 2026-08-18: **niektóre domki źle złożone** — zostaje 🔍 — [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md) | 🔴 | XL | ~~109~~ |
 | `2026-08-14--110--quests-v3-closure-world-identity-and-lifecycle.md` | Domknięcie planu 093: lifecycle `failed`/`invalidated`, predator `onDeath`, groźny wilk, failure owcy, `landmarkId` / rebind po save. Playtest 2026-08-18 **odłożony** — zostaje 🔍 | 🔴 | L | ~~093~~ |
+| `2026-08-18--156--npc-household-and-settlement-storage-logistics.md` | Fizyczny household storage (crate w podwórku, `landmarks.householdStorages`) + settlement storage (crate przy stogu drewna, `landmarks.settlementStorage`) jako nowe `Interactable` (`householdStorage`/`settlementStorage`), `[E]` pokazuje realny stock (`Household.stock`/`.water`, `SettlementEconomy.query`) przez `resolveInteraction.ts`; audyt potwierdził że generyczny transport (wood/water/ore chop-mine-fetch → `next: deposit`, food → household) już istniał (plan 069/122/131) i nie wymagał zmian — patrz [implementation notes](./2026-08-18--156--npc-household-and-settlement-storage-logistics-implementation-notes.md); techniczna weryfikacja zielona (tsc/lint/build/test, 1045 testów), bez testu w przeglądarce | 🟡 | L | ~~069~~ ~~122~~ ~~131~~ |
 | `2026-08-18--153--mobile-playtest-fixes.md` | Mobile playtest fixes: NPC-NPC separation nudge (well queue crowding), `[R]` quick-use item prompt, knife auto-equip na harvest, pasywna regeneracja HP + `herb`/`bandage`, zasięg questa „Wypatrz jelenia” (per-objective override), 3 różne ikony quest labeli, dialog NPC po `complete`, kategorie + sortowanie inventory, `Tab` cycling kandydatów interakcji (well wśród NPC); active skill badge już istniał (plan 105, reuse); combat poza zakresem; techniczna weryfikacja zielona (tsc/lint/build/test, 1045 testów), bez testu w przeglądarce (patrz [implementation notes](./2026-08-18--153--mobile-playtest-fixes-implementation-notes.md)) | 🟡 | M | — |
 
 Historical playtest queue (files in archive): [below](#playtest-queue-archived-batch).
@@ -108,9 +108,9 @@ Completed plans **in this folder**. After the 2026-08-14 archive freeze new `don
 | `2026-08-14--107--asset-browser-agent-discovery.md` | Asset Browser: search + parked MegaKit + authored scale. |
 | `2026-08-14--108--npc-stuck-at-house-locomotion.md` | NPC nie utyka w/przy chatce (rim + rescue, bez moonwalku). |
 | `2026-08-14--116--super-dialogue-audio-pack.md` | Dialog NPC: hello/bye/confirm, głos per NPC (5 aktorów). |
-| `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów. (limited observability) |
+| `2026-08-11--069--npc-household-resources.md` | Gospodarstwa NPC + przepływ zasobów. Physical/interactive storage: plan 156. |
 | `2026-08-14--117--npc-reaction-to-player.md` | Reakcje NPC: nie każdy auto-greet; osobowość/relacja/reputacja. |
-| `2026-08-15--122--natural-resource-gathering-and-water-distribution.md` | Water: studnia → NPC → household barrel/trough. (limited observability) |
+| `2026-08-15--122--natural-resource-gathering-and-water-distribution.md` | Water: studnia → NPC → household barrel/trough. Physical/interactive storage: plan 156. |
 | `2026-08-16--130--fire-lighting-polish.md` | Zapalanie z kanałem, burst/SFX tylko od gracza, iskry+żar. |
 | `2026-08-16--135--campfire-glb-body.md` | Ciało ogniska `campfire_unlit.glb` + `fx/fire.glb`. |
 | `2026-08-14--106--player-needs-food-and-cooking.md` | Głód/pragnienie/stamina/vigor + jedzenie/woda/gotowanie. |
