@@ -8,6 +8,8 @@
 domain: items-player
 tags: [settlements-npcs, quests-progression]
 
+> Check: `2026-08-18--161--weapon-maintenance-and-sharpening-implementation-notes.md`
+
 ## Cel
 
 Dodać mały, generyczny system konserwacji broni białej oparty na dwóch niezależnych stanach konkretnego egzemplarza:
