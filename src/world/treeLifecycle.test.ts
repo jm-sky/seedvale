@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { TREE_SPECS } from '../settlement/propSpecs'
 import {
   advanceStage,
   canopyGrowthFactor,
   canReachOld,
   CHOP_YIELDS,
+  coastalFactor,
   createTreeLifecycle,
   envGrowthFactor,
   HEIGHT_RANGE_M,
@@ -12,9 +14,12 @@ import {
   livingHeightM,
   makeTreeId,
   parseTreeOverrides,
+  PINE_SPECIES_INDICES,
   rollLivingAge,
   rollSizeClass,
   STAGE_DURATION_DAYS,
+  TREE_SPECIES_PREFS,
+  TREE_TEMPLATE_HEIGHT_M,
   type TreeEnvSample,
   type TreePresence,
   visualScaleForTree,
@@ -56,16 +61,56 @@ describe('makeTreeId', () => {
 
 describe('envGrowthFactor', () => {
   it('grows faster in forest than desert for forest-loving species', () => {
-    const prefs = { desert: 0.2, swamp: 0.5, forest: 1, mountain: 0.3 }
+    const prefs = { desert: 0.2, swamp: 0.5, forest: 1, mountain: 0.3, coast: 0.2 }
     expect(envGrowthFactor(goodEnv, prefs)).toBeGreaterThan(envGrowthFactor(desertEnv, prefs))
   })
 
   it('accepts optional season/groundwater hooks without requiring them', () => {
-    const prefs = { desert: 0.2, swamp: 0.5, forest: 1, mountain: 0.3 }
+    const prefs = { desert: 0.2, swamp: 0.5, forest: 1, mountain: 0.3, coast: 0.2 }
     const withSeason = envGrowthFactor({ ...goodEnv, season: 1 }, prefs)
     const withWater = envGrowthFactor({ ...goodEnv, groundwater: 1 }, prefs)
     expect(withSeason).toBeGreaterThan(0)
     expect(withWater).toBeGreaterThan(0)
+  })
+
+  it('gives a coastal-hinterland species a growth edge in the coastal band over deep inland', () => {
+    const pinePrefs = { desert: 0.2, swamp: 0.15, forest: 0.75, mountain: 0.95, coast: 0.55 }
+    const coastThreshold = 0.45
+    const coastalEnv: TreeEnvSample = {
+      ...goodEnv,
+      coastal: coastalFactor(coastThreshold + 0.08, coastThreshold),
+    }
+    const inlandEnv: TreeEnvSample = { ...goodEnv, coastal: coastalFactor(0.9, coastThreshold) }
+    expect(envGrowthFactor(coastalEnv, pinePrefs)).toBeGreaterThan(envGrowthFactor(inlandEnv, pinePrefs))
+  })
+})
+
+describe('coastalFactor', () => {
+  it('peaks inland of the coastline and fades toward 0 further out', () => {
+    const coastThreshold = 0.45
+    const atShore = coastalFactor(coastThreshold, coastThreshold)
+    const justInland = coastalFactor(coastThreshold + 0.08, coastThreshold)
+    const deepInland = coastalFactor(coastThreshold + 0.6, coastThreshold)
+    const ocean = coastalFactor(coastThreshold - 0.3, coastThreshold)
+    expect(justInland).toBeGreaterThan(atShore)
+    expect(justInland).toBeGreaterThan(deepInland)
+    expect(deepInland).toBe(0)
+    expect(ocean).toBe(0)
+  })
+})
+
+describe('TREE_SPECIES_PREFS / TREE_TEMPLATE_HEIGHT_M', () => {
+  it('stay aligned with TREE_SPECS (one entry per species, in the same order)', () => {
+    expect(TREE_SPECIES_PREFS.length).toBe(TREE_SPECS.length)
+    expect(TREE_TEMPLATE_HEIGHT_M.length).toBe(TREE_SPECS.length)
+  })
+
+  it('PINE_SPECIES_INDICES point at valid, distinct TREE_SPECS entries', () => {
+    for (const idx of PINE_SPECIES_INDICES) {
+      expect(idx).toBeGreaterThanOrEqual(0)
+      expect(idx).toBeLessThan(TREE_SPECS.length)
+    }
+    expect(new Set(PINE_SPECIES_INDICES).size).toBe(PINE_SPECIES_INDICES.length)
   })
 })
 

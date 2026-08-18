@@ -7,7 +7,7 @@ import { fbm01, type FbmParams } from './fbm'
 import { computeBodyScale, detectWaterBodies } from './waterBodies'
 import { worleyRidge } from './worleyNoise'
 
-export type VegetationKind = 'tree' | 'bush' | 'cactus' | 'reed'
+export type VegetationKind = 'tree' | 'bush' | 'cactus' | 'reed' | 'fern'
 
 export type RegionParams = {
   /** Very-low-frequency noise scale (world units) classifying ocean → coast →

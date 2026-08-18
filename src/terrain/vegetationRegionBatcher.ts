@@ -11,6 +11,7 @@ export type VegetationKind =
   | 'bush'
   | 'cactus'
   | 'reed'
+  | 'fern'
   | 'largeRock'
   | 'rockCluster'
   | 'fallenLog'
@@ -20,12 +21,13 @@ const ALL_KINDS: readonly VegetationKind[] = [
   'bush',
   'cactus',
   'reed',
+  'fern',
   'largeRock',
   'rockCluster',
   'fallenLog',
 ]
 
-const VEGETATION_KINDS = new Set<VegetationKind>(['bush', 'cactus', 'reed', 'tree-living'])
+const VEGETATION_KINDS = new Set<VegetationKind>(['bush', 'cactus', 'fern', 'reed', 'tree-living'])
 
 /** `sceneCensus.ts`'s `classifyObject` buckets purely by `Object3D.name`
  *  prefix (`chunk-vegetation`/`chunk-environment`) — keep that working for

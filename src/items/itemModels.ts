@@ -46,6 +46,7 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
     maxSize: 1.15,
     groundRotation: [0, 0, Math.PI / 2.4],
   },
+  mushroom: { url: '/models/nature/mushroom_a.glb', maxSize: 0.3 },
 }
 
 const prepared = new Map<ItemKind, Group>()

@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-08-17
+**Last updated:** 2026-08-18
 
 ## How to use
 
@@ -33,13 +33,13 @@ If the feature needs no new model, do nothing to this file.
 | M03 | Settlement clutter (wagon, chimney, vines…) | Optional village density props. Home Kupiec wagon uses MegaKit `wagon.glb` | `wired` (merchant wagon) | MegaKit parked set, [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 | M04 | Economy / outpost buildings | Market, windmill, towncenter, watchtower, barracks, temple, port. `farm.glb` wired as village wheat field | `wired` (farm) / `in repo` (rest) | [CREDITS](./CREDITS.md), [plan 099](../plans/archive/2026-08-13--099--wheat-field-glb.md), plan 071 |
 | M05 | Background mountains | Distant silhouette meshes | `in repo` | [plan 024](../plans/2026-08-07--024--world-visual-overhaul.md) (`mountain_a/b/c`) |
-| M06 | Extra flora variants | `bush_flowers_1`, `flower_clump_2` (and further variety as needed) | `in repo` | nature reserve in CREDITS |
+| M06 | Extra flora variants | `bush_flowers_1`, `flower_clump_2` — flower-only subset of `BUSH_SPECS`, drawn by `flowerMeadowPatches` | `wired` | nature reserve in CREDITS |
 | M07 | Farm animals (chicken / cow / sheep / horse / donkey) | Village livestock GLB; home Kupiec decorative horse | `wired` | [SOUNDS](./SOUNDS.md), [plan 096](../plans/archive/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md) |
 | M08 | Village pitchfork | Garden pickup + holdable melee | `wired` | [plan 082](../plans/archive/2026-08-12--082--village-tool-props-and-temp-assets.md), [plan 096](../plans/archive/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md), [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md) |
 | M09 | Village sickle | Garden pickup + holdable melee | `wired` | plan 082, plan 096, issue 025 |
 | M10 | Hay bale clutter | Decorative hay near gardens | `wired` | plan 082 |
 | M11 | Pickaxe (mining gameplay) | Held tool; one-time stockpile pickup; mines ore deposits | `wired` | [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
-| M12 | Pine tree variant | `pine_trees.glb` parked under nature | `in repo` | plan 082 / 073 |
+| M12 | Pine tree variant | `pine_trees.glb` (multi-tree clump) — stays **parked** under nature, Asset Browser candidate only. Single-tree pines are wired separately as M41 | `in repo` | plan 082 / 073 |
 | M13 | Grass clump GLB | Optional complement to instanced grass | `in repo` | plan 082 |
 | M14 | Long sword | Held melee; Strażnik quest/dialog + Kupiec | `wired` | [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 | M15 | Fishing rod | `_temp` FBX parked; license ❓ + convert to GLB | `needed` | `public/models/parked/FishingRod_Lvl2.fbx` |
@@ -52,9 +52,9 @@ If the feature needs no new model, do nothing to this file.
 | M22 | Fire tip FX | Handheld + village torch flame | `wired` | plan 085 (`fx/fire.glb`, CC-BY) |
 | M23 | House lantern GLB | Replaces procedural lamp body | `wired` | plan 085 |
 | M25 | Garden crop beds | Vegetable plots (tomato/pumpkin/lettuce) for all village gardens | `wired` | [plan 099](../plans/archive/2026-08-13--099--wheat-field-glb.md) (`settlement/crops.glb`) |
-| M26 | Mushroom | Forest-floor clutter | `in repo` | [plan 101](../plans/archive/2026-08-13--101--cactus-reed-well-woodpile.md) (`nature/mushroom_a.glb`) |
-| M27 | Fern | Forest undergrowth | `in repo` | plan 101 (`nature/fern_a.glb`) |
-| M28 | Rock path (round wide) | Candidate cobble for village/path tiles (roads are terrain tint today) | `in repo` | plan 101 (`nature/rock_path_round_wide.glb`) |
+| M26 | Mushroom | Forest-floor pickup mesh (`ITEM_GLB_SPECS.mushroom`); procedural fallback kept | `wired` | [plan 101](../plans/archive/2026-08-13--101--cactus-reed-well-woodpile.md) (`nature/mushroom_a.glb`), plan 140 |
+| M27 | Fern | Forest undergrowth — new `VegetationKind: 'fern'`, `FERN_SPECS`; procedural fallback `createFern` | `wired` | plan 101 (`nature/fern_a.glb`), plan 140 |
+| M28 | Rock path (round wide) | Sparse plaza cobble clutter near the well (MD+ villages), not a road mesh; procedural fallback `createCobblePlate` | `wired` | plan 101 (`nature/rock_path_round_wide.glb`), plan 140 |
 | M29 | Campfire unlit body | Stones + stacked wood, no baked flame — `VillageFire` / `PlacedFires` / world remains; `simple` hides stone materials | `wired` | plan 101 parked, plan 135 (`settlement/campfire_unlit.glb`) |
 | M30 | Campfire burning (Quaternius) | Baked flame in mesh — not usable with fuel toggle | `in repo` | plan 101 (`campfire_burning_q.glb`) |
 | M31 | Campfire burning (Poly) | Higher-quality baked flame; CC-BY | `in repo` | plan 101 (`campfire_burning_poly.glb`) |
@@ -67,6 +67,9 @@ If the feature needs no new model, do nothing to this file.
 | M38 | Spear / short sword | Held melee weapons (Kupiec stock); procedural fallback + generic held-tool grip in place and functional, no GLB yet | `needed` | plan 134 (`items/items.ts`'s `createItemMesh`, `items/heldToolVisual.ts`'s `HELD_ATTACH`) |
 | M39 | Harvested animal remains (bones / hide) | After knife harvest: `bones_pile` + 1–2 `large_bone` + `animal_hide` + 2–4 procedural meat scraps (`fauna/harvestedRemains.ts`). Procedural cylinder+hide fallback if GLB fails. Per-species carcass GLB still out of scope | `wired` | plan 137, plan 138 (`fx/bones_pile.glb`, `fx/large_bone.glb`, `fx/animal_hide.glb`) |
 | M40 | Animal traps (`simple` / `good`) | Placed trap prop, two visually distinct tiers, jaws readable as armed / disarmed / broken. Procedural fallback in place and functional (`world/trapProp.ts`); `TrapDef.modelUrl` is the single wiring point | `needed` | plan 141 (`world/animalTraps.ts`) |
+| M41 | Pine tree variants (`pine_1`/`pine_3`/`pine_5`) | Textured single-tree conifers for `TREE_SPECS` — no glTF pine ships in Ultimate Stylized Nature, so `PineTree_1/3/5.fbx` + `PineTree_Bark`/`PineTree_Leaves` textures converted `FBX2glTF` → `gltf-transform` (attach textures) → `gltfpack -cc -tw -tl 512` | `wired` | plan 140 (`nature/pine_1.glb`, `pine_3.glb`, `pine_5.glb`) |
+| M42 | Tree stump (harvest remnant) | Small vertex-color stump swapped in on the final chop stage (`treeVisuals.ts`'s `createTreeStageMesh`); procedural `createTreeStump` fallback mandatory — revert to it if the GLB reads oddly next to textured living trees in browser | `wired` | plan 140 (`nature/tree_stump.glb`, source: Quaternius Ultimate Nature Pack `TreeStump.fbx`) |
+| M43 | Willow (textured) | Same style constraint as pine — the only source found (Quaternius Ultimate Nature Pack) is vertex-color, rejected. A textured willow (Nature MegaKit / Poly Pizza) is still wanted but not required to unblock the rest of this plan | `needed` | plan 140 |
 
 ## Wired (reference — do not treat as open work)
 
@@ -76,8 +79,8 @@ Keep this section short. Prefer CREDITS for the full credited set.
 |------|----------|
 | Characters | Modular men/women NPCs, Adventurer player |
 | Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
-| Nature (active) | trees/bushes, cactus/reed, rock/log, ore piles, cemetery / gravestones |
-| Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB |
+| Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed, rock/log, ore piles, cemetery / gravestones |
+| Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+) |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
 | FX | fire tip (handheld, village torch, campfire flame); blood splat (animal death); harvested remains (pile / large bone / hide) |

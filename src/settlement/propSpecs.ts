@@ -1,5 +1,7 @@
 /** Leaf URL/size constants shared by settlement props and the asset index. */
 
+/** Indices 6-8 are the pine variants (`PINE_SPECIES_INDICES`, `chunkVegetation.ts`)
+ *  — appended, not interleaved, so existing `speciesIndex` values stay stable. */
 export const TREE_SPECS = [
   { url: '/models/nature/tree_a.glb', height: 4.2 },
   { url: '/models/nature/tree_b.glb', height: 3.8 },
@@ -7,6 +9,9 @@ export const TREE_SPECS = [
   { url: '/models/nature/birch_1.glb', height: 4.4 },
   { url: '/models/nature/maple_1.glb', height: 4.8 },
   { url: '/models/nature/deadtree_1.glb', height: 3.6 },
+  { url: '/models/nature/pine_1.glb', height: 4.6 },
+  { url: '/models/nature/pine_3.glb', height: 5.2 },
+  { url: '/models/nature/pine_5.glb', height: 4.0 },
 ] as const
 
 export const BUSH_SPECS = [
@@ -15,6 +20,12 @@ export const BUSH_SPECS = [
   { url: '/models/nature/flower_clump_1.glb', height: 0.4 },
   { url: '/models/nature/flower_clump_2.glb', height: 0.4 },
   { url: '/models/nature/bush_flowers_1.glb', height: 0.6 },
+] as const
+
+/** Forest-floor undergrowth (plan 140) — its own `VegetationKind`, not folded
+ *  into `BUSH_SPECS` (which also seeds desert flower clumps). */
+export const FERN_SPECS = [
+  { url: '/models/nature/fern_a.glb', height: 0.4 },
 ] as const
 
 export const CACTUS_SPECS = [
@@ -84,6 +95,16 @@ export const CAMPFIRE_FIT_MAX = 1.2
 export const CAMPFIRE_FLAME_FIT_MAX = 0.179
 /** Local Y of the flame mesh above the unlit body origin (meters at scale 1). */
 export const CAMPFIRE_FLAME_Y = 0.04
+
+export const COBBLE_URL = '/models/nature/rock_path_round_wide.glb'
+/** Longest-axis fit for one plaza cobble plate (plan 140) — a loose patch of
+ *  utrwardzone ground near the well, not a road tile. */
+export const COBBLE_FIT_MAX = 1.5
+
+export const TREE_STUMP_URL = '/models/nature/tree_stump.glb'
+/** Fit height matches procedural `createTreeStump` at scale 1 (trunk 0.45 +
+ *  top disc 0.06, feet-to-crown ≈ 0.5). */
+export const TREE_STUMP_HEIGHT = 0.5
 
 export const WALL_URL = '/models/settlement/wall.glb'
 export const LANTERN_URL = '/models/settlement/lantern.glb'

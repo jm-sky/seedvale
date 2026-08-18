@@ -38,6 +38,11 @@ export type TreeEnvSample = {
   altitude01: number
   /** Mountain ridge strength, 0..1. */
   mountainRidge: number
+  /** Coastal-hinterland suitability, 0..1 — peaks just inland of the shoreline
+   *  (`coastalFactor`), independent of `biome` (a moisture-region axis) since
+   *  continentalness is its own noise axis (plan 140). Defaults to 0 for call
+   *  sites that don't resolve it (no coastal bonus, not a rejection). */
+  coastal?: number
   /** Reserved for plan 040 — ignored in v1 when undefined. */
   season?: number
   /** Reserved for future groundwater — ignored in v1 when undefined. */
@@ -51,6 +56,8 @@ export type TreeSpeciesPrefs = {
   forest: number
   /** How well the species tolerates ridge/highland (1 = fine, 0 = hates it). */
   mountain: number
+  /** Coastal-hinterland affinity — multiplies `TreeEnvSample.coastal` (plan 140). */
+  coast: number
 }
 
 /** Stages that advance via world-time growth (not chop progress). */
@@ -98,7 +105,11 @@ export const OLD_SPAWN_CHANCE = 0.5
  * Template heights after `prepareProp` — must stay aligned with `TREE_SPECS`
  * index order in `settlement/props.ts`.
  */
-export const TREE_TEMPLATE_HEIGHT_M: readonly number[] = [4.2, 3.8, 4.6, 4.4, 4.8, 3.6]
+export const TREE_TEMPLATE_HEIGHT_M: readonly number[] = [4.2, 3.8, 4.6, 4.4, 4.8, 3.6, 4.6, 5.2, 4.0]
+
+/** Indices into `TREE_SPECS`/`TREE_SPECIES_PREFS` for the pine variants (plan
+ *  140) — used by fern/mushroom placement's "conifer nearby" bonus. */
+export const PINE_SPECIES_INDICES: readonly number[] = [6, 7, 8]
 
 /** Chop remnant scale relative to the tree's mature living height. */
 export const CHOP_SCALE_MULT: Record<'limbed' | 'felled' | 'harvested', number> = {
@@ -158,14 +169,22 @@ export function treeVisualKind(stage: TreeGrowthStage): TreeVisualKind {
   return 'living'
 }
 
-/** Default prefs per `TREE_SPECS` index (6 entries). */
+/** Default prefs per `TREE_SPECS` index (9 entries — indices 6-8 are the pine
+ *  variants, `PINE_SPECIES_INDICES`). Broadleaf entries keep a modest, mostly
+ *  uniform `coast` value (generalists, not coastal specialists); pines get a
+ *  real bias per plan 140's implementation notes: high mountain/highland,
+ *  medium-high forest, medium coast (drier/sandier ground behind the direct
+ *  beach zone — not "coast = pine"), low swamp. */
 export const TREE_SPECIES_PREFS: readonly TreeSpeciesPrefs[] = [
-  { desert: 0.25, swamp: 0.55, forest: 1.0, mountain: 0.35 },
-  { desert: 0.2, swamp: 0.5, forest: 1.0, mountain: 0.3 },
-  { desert: 0.15, swamp: 0.45, forest: 1.0, mountain: 0.25 },
-  { desert: 0.2, swamp: 0.4, forest: 0.95, mountain: 0.4 },
-  { desert: 0.15, swamp: 0.5, forest: 1.0, mountain: 0.3 },
-  { desert: 0.35, swamp: 0.3, forest: 0.65, mountain: 0.45 },
+  { desert: 0.25, swamp: 0.55, forest: 1.0, mountain: 0.35, coast: 0.25 },
+  { desert: 0.2, swamp: 0.5, forest: 1.0, mountain: 0.3, coast: 0.25 },
+  { desert: 0.15, swamp: 0.45, forest: 1.0, mountain: 0.25, coast: 0.2 },
+  { desert: 0.2, swamp: 0.4, forest: 0.95, mountain: 0.4, coast: 0.2 },
+  { desert: 0.15, swamp: 0.5, forest: 1.0, mountain: 0.3, coast: 0.2 },
+  { desert: 0.35, swamp: 0.3, forest: 0.65, mountain: 0.45, coast: 0.3 },
+  { desert: 0.2, swamp: 0.15, forest: 0.75, mountain: 0.95, coast: 0.55 },
+  { desert: 0.2, swamp: 0.15, forest: 0.8, mountain: 0.9, coast: 0.5 },
+  { desert: 0.15, swamp: 0.1, forest: 0.7, mountain: 1.0, coast: 0.45 },
 ]
 
 export type TreePresence = {
@@ -269,6 +288,20 @@ export function speciesPrefs(speciesIndex: number): TreeSpeciesPrefs {
   return TREE_SPECIES_PREFS[speciesIndex] ?? TREE_SPECIES_PREFS[0]!
 }
 
+/** Width (continentalness units) of the coastal-hinterland band. Peaks a half
+ *  band-width inland of `coastThreshold` (the immediate shoreline/beach
+ *  itself scores low — plan 140's "za bezpośrednią strefą plaży"), fades to 0
+ *  on both sides. Pure function of the two thresholds so callers building a
+ *  `TreeEnvSample` (main-thread `chunkManager.ts`, worker-safe
+ *  `chunkVegetation.ts`) share one definition instead of re-deriving it. */
+const COASTAL_BAND_WIDTH = 0.16
+
+export function coastalFactor(continentalness: number, coastThreshold: number): number {
+  const center = coastThreshold + COASTAL_BAND_WIDTH * 0.5
+  const raw = 1 - Math.abs(continentalness - center) / (COASTAL_BAND_WIDTH * 0.5)
+  return clamp01(raw)
+}
+
 /**
  * Environment multiplies growth rate (does not only gate grow/don't grow).
  * Optional `season` / `groundwater` hooks are reserved for later plans.
@@ -277,7 +310,8 @@ export function envGrowthFactor(env: TreeEnvSample, prefs: TreeSpeciesPrefs): nu
   const biomeFactor =
     env.biome.desert * prefs.desert +
     env.biome.swamp * prefs.swamp +
-    env.biome.forest * prefs.forest
+    env.biome.forest * prefs.forest +
+    (env.coastal ?? 0) * prefs.coast
 
   const moistureFactor = 0.55 + Math.max(0, Math.min(1, env.moisture)) * 0.45
 

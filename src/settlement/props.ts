@@ -15,8 +15,8 @@ import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacem
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { type CampfireFlame, createLitCampfireVisual, preloadCampfireTemplates } from './campfireProps'
-import { createBush, createTree } from './decorProps'
-import { type VillageSize, villageSizeConfig } from './families'
+import { createBush, createCobblePlate, createTree } from './decorProps'
+import { cobbleCountForSize, type VillageSize, villageSizeConfig } from './families'
 import { createPropYieldGate } from './frameYield'
 import {
   gardenBedCount,
@@ -45,6 +45,8 @@ import {
 import { pickMerchantWagonPose } from './merchantWagon'
 import {
   BUSH_SPECS,
+  COBBLE_FIT_MAX,
+  COBBLE_URL,
   CROPS_FIT_MAX,
   CROPS_URL,
   FARM_HEIGHT,
@@ -180,8 +182,10 @@ export {
   createCaveMouth,
   createCemetery,
   createCemeteryPlot,
+  createCobblePlate,
   createFallenLog,
   createFelledTree,
+  createFern,
   createGraveStone,
   createLargeRock,
   createLimbedTree,
@@ -206,12 +210,15 @@ export {
   BUSH_SPECS,
   CACTUS_SPECS,
   CEMETERY_SPECS,
+  COBBLE_FIT_MAX,
+  COBBLE_URL,
   CROPS_FIT_MAX,
   CROPS_URL,
   DOCK_SPECS,
   FALLEN_LOG_SPECS,
   FARM_HEIGHT,
   FARM_URL,
+  FERN_SPECS,
   FIRE_FX_URL,
   GRAVE_SPECS,
   LANTERN_FLOOR_MAX,
@@ -223,6 +230,8 @@ export {
   ROCK_CLUSTER_SPECS,
   ROCK_SPECS,
   TREE_SPECS,
+  TREE_STUMP_HEIGHT,
+  TREE_STUMP_URL,
   VILLAGE_TORCH_HEIGHT,
   VILLAGE_TORCH_URL,
   WALL_URL,
@@ -1138,6 +1147,44 @@ export async function buildSettlementProps(
             await yieldProp()
           }
         }
+      }
+    }
+  }
+
+  // Sparse plaza cobble near the well (plan 140) — same MD+ gate as the
+  // campfire/torch ring above; OUTPOST/SM stay bare dirt. Decorative clutter
+  // only, not a second road system: never touches `pathCorridors`.
+  {
+    const infra = villageSizeConfig(size).infrastructure
+    if (infra.campfires > 0) {
+      let cobbleTemplate: THREE.Object3D | null = null
+      try {
+        const cobble = await loadGltf(COBBLE_URL)
+        preparePropFitMax(cobble, COBBLE_FIT_MAX)
+        cobbleTemplate = cobble
+      } catch (err) {
+        console.warn('[settlement] rock_path_round_wide.glb unavailable — procedural cobble', err)
+      }
+      const cobbleCount = cobbleCountForSize(size, seed)
+      const cobbleR = Math.max(2.2, clearings.core.radius * 0.55)
+      for (let i = 0; i < cobbleCount; i++) {
+        const ang = coreRandom() * Math.PI * 2
+        const dist = cobbleR * (0.5 + coreRandom() * 0.6)
+        const cx = wellX + Math.cos(ang) * dist
+        const cz = wellZ + Math.sin(ang) * dist
+        if (Math.hypot(cx - wellX, cz - wellZ) < 1.6) continue
+        if (landmarks.campfire) {
+          const c = landmarks.campfire.position
+          if (Math.hypot(cx - c.x, cz - c.z) < 1.6) continue
+        }
+        if (pointHitsCorridor(cx, cz, pathCorridors, 0.6)) continue
+        if (sampleHeight(cx, cz) <= waterLevel + 0.4) continue
+        const plate = cobbleTemplate ? cobbleTemplate.clone(true) : createCobblePlate(1)
+        plate.scale.multiplyScalar(0.85 + coreRandom() * 0.3)
+        plate.rotation.y = coreRandom() * Math.PI * 2
+        placeOnGround(plate, cx, cz, sampleHeight)
+        group.add(plate)
+        await yieldProp()
       }
     }
   }

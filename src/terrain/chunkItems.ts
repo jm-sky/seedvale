@@ -2,6 +2,7 @@ import type { ItemKind } from '../items/items'
 import type { ChunkCoord } from './chunkGrid'
 import type { VegetationPlacement } from './chunkVegetation'
 import { createSeededRandom } from '../world/parseSeed'
+import { PINE_SPECIES_INDICES } from '../world/treeLifecycle'
 import { biomeWeightsAt } from './biomeRegions'
 import {
   apronOriginWorld,
@@ -54,6 +55,21 @@ const FLORA_KEEP_SCALE = 0.5
 function nearTree(vegetation: readonly VegetationPlacement[], x: number, z: number): boolean {
   for (const v of vegetation) {
     if (v.kind === 'tree' && Math.hypot(v.x - x, v.z - z) <= FLORA_TREE_PROXIMITY) return true
+  }
+  return false
+}
+
+/** Small mushroom-weight bonus near a pine (plan 140) — reuses the same
+ *  chunk-local `vegetation` array `nearTree` already checks, no extra pass. */
+function nearPine(vegetation: readonly VegetationPlacement[], x: number, z: number): boolean {
+  for (const v of vegetation) {
+    if (
+      v.kind === 'tree' &&
+      PINE_SPECIES_INDICES.includes(v.speciesIndex) &&
+      Math.hypot(v.x - x, v.z - z) <= FLORA_TREE_PROXIMITY
+    ) {
+      return true
+    }
   }
   return false
 }
@@ -151,11 +167,15 @@ export function computeChunkItems(
     const biome = biomeWeightsAt(moistureRegion, altitude, region)
     const ridge = sample(tile.mountainRidge, wx, wz)
     const treeClose = nearTree(vegetation, wx, wz)
+    const pineClose = nearPine(vegetation, wx, wz)
 
     // Preference weights, not hard gates — a flower can still turn up on a
     // rocky slope, just rarely; a mushroom is common in a swamp/forest, rare
-    // on open dry ground.
-    const mushroomWeight = (biome.swamp * 0.7 + biome.forest * 0.35 + moistureRegion * 0.15) * (treeClose ? 1.3 : 0.8)
+    // on open dry ground. A nearby pine adds a small extra bonus on top.
+    const mushroomWeight =
+      (biome.swamp * 0.7 + biome.forest * 0.35 + moistureRegion * 0.15) *
+      (treeClose ? 1.3 : 0.8) *
+      (pineClose ? 1.15 : 1)
     const flowerWeight = (1 - biome.desert) * (1 - biome.swamp) * (1 - ridge) * (altitude < 0.45 ? 1 : 0.3)
     const branchWeight = treeClose ? 0.9 : biome.forest * 0.25
     const coneWeight = treeClose ? biome.forest * 0.85 : 0

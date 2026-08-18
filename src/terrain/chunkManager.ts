@@ -20,6 +20,7 @@ import {
   createCemetery,
   createCemeteryPlot,
   createFallenLog,
+  createFern,
   createGraveStone,
   createLargeRock,
   createMonolith,
@@ -29,6 +30,7 @@ import {
   createStoneCircle,
   createTree,
   FALLEN_LOG_SPECS,
+  FERN_SPECS,
   GRAVE_SPECS,
   loadPropTemplates,
   placeOnGround,
@@ -41,7 +43,8 @@ import {
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { type Collider, createColliderRegistry } from '../world/collision'
 import { createChunkWater, type WorldWater } from '../world/createWater'
-import { createTreeStageMesh, tagTreeMesh } from '../world/treeVisuals'
+import { coastalFactor } from '../world/treeLifecycle'
+import { createTreeStageMesh, preloadTreeStumpTemplate, tagTreeMesh } from '../world/treeVisuals'
 import { assignRenderLayer, REFLECTION_DISTANT_LAYER, REFLECTION_SKIPPED_LAYER, type WaterMirror } from '../world/waterMirror'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import { buildChunkGeometry, createTerrainMaterial } from './buildChunkGeometry'
@@ -117,6 +120,7 @@ const getTreeTemplates = memoTemplates(TREE_SPECS, () => createTree(1))
 const getBushTemplates = memoTemplates(BUSH_SPECS, () => createBush(1))
 const getCactusTemplates = memoTemplates(CACTUS_SPECS, () => createCactus(1))
 const getReedTemplates = memoTemplates(REED_SPECS, () => createReed(1))
+const getFernTemplates = memoTemplates(FERN_SPECS, () => createFern(1))
 const getRockTemplates = memoTemplates(ROCK_SPECS, () => createLargeRock(1))
 const getRockClusterTemplates = memoTemplates(ROCK_CLUSTER_SPECS, () => createRockCluster(1))
 const getFallenLogTemplates = memoTemplates(FALLEN_LOG_SPECS, () => createFallenLog(1))
@@ -128,12 +132,14 @@ function preloadPropTemplates(): void {
   void getBushTemplates.start()
   void getCactusTemplates.start()
   void getReedTemplates.start()
+  void getFernTemplates.start()
   void getRockTemplates.start()
   void getRockClusterTemplates.start()
   void getFallenLogTemplates.start()
   void getCemeteryTemplates.start()
   void getGraveTemplates.start()
   void preloadCampfireTemplates()
+  preloadTreeStumpTemplate()
 }
 
 const GLB_ENV_KINDS = new Set<EnvironmentKind>(['fallenLog', 'largeRock', 'rockCluster'])
@@ -684,6 +690,7 @@ export function createChunkManager(
         bush: BUSH_SPECS.length,
         cactus: CACTUS_SPECS.length,
         reed: REED_SPECS.length,
+        fern: FERN_SPECS.length,
       },
       roadSegments: [...segmentsNear(x, z, config.chunkSize, roadCtx), ...village.paths],
       clearings: village.clearings,
@@ -901,6 +908,7 @@ export function createChunkManager(
         || !getBushTemplates.peek()
         || !getCactusTemplates.peek()
         || !getReedTemplates.peek()
+        || !getFernTemplates.peek()
       ) {
         return false
       }
@@ -1080,6 +1088,7 @@ export function createChunkManager(
       const bushTemplates = getBushTemplates.peek() ?? []
       const cactusTemplates = getCactusTemplates.peek() ?? []
       const reedTemplates = getReedTemplates.peek() ?? []
+      const fernTemplates = getFernTemplates.peek() ?? []
 
       const vegT0 = performance.now()
       const treeIds: string[] = []
@@ -1145,8 +1154,9 @@ export function createChunkManager(
         bush: bushTemplates,
         cactus: cactusTemplates,
         reed: reedTemplates,
+        fern: fernTemplates,
       }
-      for (const kind of ['bush', 'cactus', 'reed'] as const) {
+      for (const kind of ['bush', 'cactus', 'reed', 'fern'] as const) {
         const placements = tile.vegetation.filter((p) => p.kind === kind)
         if (placements.length === 0) continue
         const propPlacements: PropPlacement[] = placements.map((p) => ({
@@ -1347,6 +1357,7 @@ export function createChunkManager(
       moisture: sample(tile.biomes),
       altitude01,
       mountainRidge: sample(tile.mountainRidge),
+      coastal: coastalFactor(sample(tile.continentalness), config.region.coastThreshold),
     }
   }
 
@@ -1367,6 +1378,7 @@ export function createChunkManager(
       moisture: readField('biomes', x, z),
       altitude01,
       mountainRidge: readField('mountainRidge', x, z),
+      coastal: coastalFactor(readField('continentalness', x, z), config.region.coastThreshold),
     }
   }
 

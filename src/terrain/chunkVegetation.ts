@@ -2,8 +2,14 @@ import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
 import type { ChunkCoord } from './chunkGrid'
 import { createSeededRandom } from '../world/parseSeed'
 import {
+  coastalFactor,
+  envGrowthFactor,
+  PINE_SPECIES_INDICES,
   rollLivingAge,
   rollSizeClass,
+  speciesPrefs,
+  TREE_SPECIES_PREFS,
+  type TreeEnvSample,
   type TreeLivingAge,
   type TreeSizeClass,
 } from '../world/treeLifecycle'
@@ -53,6 +59,9 @@ const MOUNTAIN_RIDGE_REJECT = 0.35
 const ROAD_TINT_REJECT = 0.15
 /** Outside strong forest, retain a small chance of isolated trees. */
 const OPEN_TREE_BASELINE = 0.10
+/** Altitude band (fraction of `heightScale` above `waterLevel`) treated as
+ *  "wet shoreline" for reed placement near any lake, not only swamp biome. */
+const WATERLINE_ALTITUDE_BAND = 0.06
 
 /** Per-chunk hash so nearby chunks don't get correlated candidate layouts. */
 function hashChunk(cx: number, cz: number): number {
@@ -85,19 +94,36 @@ function fieldAt(noise: NoiseFunction2D, x: number, z: number, freq: number): nu
   return noise(x * freq, z * freq) * 0.5 + 0.5
 }
 
-/** Index into `TREE_SPECS` (`props.ts`) — species-cluster bias groups the
- *  6 tree specs into 3 neighboring pairs (conifer-ish/broadleaf/dead-sparse
- *  by list order) so a stand tends to repeat one pair rather than mixing all
- *  6 uniformly at random. Falls back to a flat random pick outside [0,1)
- *  clump bands (shouldn't happen, but keeps this decoupled from exact bucket
- *  math if tuned later). */
-function clusteredTreeSpecies(clumpValue: number, speciesCount: number, random: () => number): number {
-  if (speciesCount <= 1) return 0
-  const bandCount = Math.min(3, speciesCount)
-  const band = Math.min(bandCount - 1, Math.floor(clumpValue * bandCount))
-  const perBand = speciesCount / bandCount
-  const within = Math.floor(random() * perBand)
-  return Math.min(speciesCount - 1, Math.floor(band * perBand) + within)
+/** Weighted species pick from `TREE_SPECIES_PREFS` habitat suitability
+ *  (`envGrowthFactor` — the same function that governs growth rate, so
+ *  "likely to be found here" and "grows well here" stay one definition, not
+ *  two that can drift apart). `clumpValue` (a low-frequency field shared by
+ *  nearby candidates, even across chunk borders) dominates the roll so a
+ *  stand tends to repeat one species; per-candidate `random()` keeps some
+ *  variety at a stand's edges instead of a hard-edged species band. */
+function pickTreeSpecies(
+  env: TreeEnvSample,
+  speciesCount: number,
+  clumpValue: number,
+  random: () => number,
+): number {
+  const count = Math.max(1, Math.min(speciesCount, TREE_SPECIES_PREFS.length))
+  if (count <= 1) return 0
+  let total = 0
+  const weights: number[] = new Array<number>(count)
+  for (let i = 0; i < count; i++) {
+    const w = envGrowthFactor(env, speciesPrefs(i))
+    weights[i] = w
+    total += w
+  }
+  if (total <= 0) return Math.floor(random() * count)
+  const roll = (clumpValue * 0.65 + random() * 0.35) * total
+  let acc = 0
+  for (let i = 0; i < count; i++) {
+    acc += weights[i]!
+    if (roll <= acc) return i
+  }
+  return count - 1
 }
 
 /**
@@ -165,8 +191,10 @@ export function computeChunkVegetation(
     )
 
     // Reeds tolerate growing right at the waterline; everything else needs
-    // to clear the shore like today.
-    const waterClearance = biome.swamp > 0.4 ? 0.05 : 0.5
+    // to clear the shore. Non-swamp clearance is looser than before (was
+    // 0.5) so lake-edge candidates survive to reach the `nearWaterline` reed
+    // branch below instead of being rejected before `kind` is even decided.
+    const waterClearance = biome.swamp > 0.4 ? 0.05 : 0.3
     if (h <= waterLevel + waterClearance) continue // underwater/shoreline
 
     const d = SLOPE_SAMPLE_STEP
@@ -197,11 +225,19 @@ export function computeChunkVegetation(
       (0.85 + moisture * 0.15)
     if (random() > Math.min(1, density)) continue
 
+    // Wet shoreline band just above the underwater/shore cutoff — any lake
+    // edge, not only swamp biome (plan 140). Gated on moisture so it doesn't
+    // spill onto a dry, sandy ocean beach that happens to sit this close to
+    // water (implementation notes: "nie kłaść cattaili na suchym piasku").
+    const nearWaterline = altitude < WATERLINE_ALTITUDE_BAND
+
     let kind: VegetationPlacement['kind']
     if (biome.desert > 0.5 && random() < biome.desert) {
       kind = random() < 0.75 ? 'cactus' : 'bush'
     } else if (biome.swamp > 0.5 && random() < biome.swamp) {
       kind = random() < 0.8 ? 'reed' : 'tree'
+    } else if (nearWaterline && biome.desert < 0.35 && moisture > 0.35 && random() < 0.55) {
+      kind = 'reed'
     } else {
       // Deep forest prefers trees; open temperate keeps more bushes.
       const bushChance = (0.15 + (1 - moisture) * 0.35) * (1 - forestDensity * 0.85)
@@ -211,7 +247,12 @@ export function computeChunkVegetation(
     const speciesCount = params.vegetationSpeciesCount[kind]
     const speciesIndex =
       kind === 'tree'
-        ? clusteredTreeSpecies(clumpValue, Math.max(1, speciesCount), random)
+        ? pickTreeSpecies(
+            { biome, moisture, altitude01: altitude, mountainRidge: ridge, coastal: coastalFactor(continentalness, region.coastThreshold) },
+            Math.max(1, speciesCount),
+            clumpValue,
+            random,
+          )
         : Math.floor(random() * Math.max(1, speciesCount))
     // Trees: sizeClass + living age (plan 073). Height comes from meter ranges
     // at render time — no TreeState ownership here (058 / 063).
@@ -253,6 +294,9 @@ export function computeChunkVegetation(
   }
 
   placements.push(...flowerMeadowPatches(coord, tile, params, sample, meadowNoise))
+  placements.push(
+    ...fernPatches(coord, tile, params, sample, placements.filter((p) => p.kind === 'tree')),
+  )
 
   return placements
 }
@@ -339,6 +383,103 @@ function flowerMeadowPatches(
         speciesIndex: FLOWER_BUSH_SPECIES_INDICES[Math.floor(patchRandom() * FLOWER_BUSH_SPECIES_INDICES.length)]!,
         scale: 0.5 + patchRandom() * 0.7,
         rotationY: patchRandom() * Math.PI * 2,
+      })
+    }
+  }
+
+  return out
+}
+
+const FERN_CANDIDATES_PER_CHUNK = 3
+const FERN_CLUSTER_MIN_COUNT = 2
+const FERN_CLUSTER_MAX_EXTRA = 4
+const FERN_CLUSTER_RADIUS = 1.8
+/** Same-chunk-only proximity check (mirrors `chunkItems.ts`'s `nearTree` —
+ *  no cross-chunk lookups here either). */
+const FERN_PINE_RADIUS = 8
+/** Minimum combined forest/swamp habitat before a fern candidate is even
+ *  considered — keeps ferns out of thin, marginal habitat. */
+const FERN_HABITAT_MIN = 0.15
+/** How much a nearby pine (`PINE_SPECIES_INDICES`) nudges habitat up — a
+ *  bonus, not a requirement (implementation notes: ferns belong under
+ *  broadleaf forest too, not only beside conifers). */
+const FERN_PINE_BONUS = 0.25
+
+/**
+ * Forest-floor undergrowth (`VegetationKind: 'fern'`, plan 140) — a second,
+ * low-candidate pass (poszycie, not a carpet) seeding small loose clusters
+ * where `forestDensity` or swamp/wet ground is high. Mirrors
+ * `flowerMeadowPatches`'s patch-center-then-scatter shape, but gated on
+ * habitat suitability instead of a meadow noise threshold, and rejecting
+ * desert/road/treeline/steep-slope like the main tree/bush pass.
+ */
+function fernPatches(
+  coord: ChunkCoord,
+  tile: ChunkTileData,
+  params: ChunkTileParams,
+  sample: (grid: Float32Array, x: number, z: number) => number,
+  treePlacements: readonly VegetationPlacement[],
+): VegetationPlacement[] {
+  const { chunkSize, waterLevel, heightScale, region } = params
+  const half = chunkSize / 2
+  const fernRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz) ^ 0x2b7f19)
+  const fernSpeciesCount = Math.max(1, params.vegetationSpeciesCount.fern)
+  const out: VegetationPlacement[] = []
+
+  const pineNear = (x: number, z: number): boolean =>
+    treePlacements.some(
+      (t) => PINE_SPECIES_INDICES.includes(t.speciesIndex) && Math.hypot(t.x - x, t.z - z) <= FERN_PINE_RADIUS,
+    )
+
+  for (let i = 0; i < FERN_CANDIDATES_PER_CHUNK; i++) {
+    const cx = coord.cx * chunkSize + (fernRandom() * 2 - 1) * half
+    const cz = coord.cz * chunkSize + (fernRandom() * 2 - 1) * half
+
+    const h = sample(tile.heights, cx, cz)
+    if (h <= waterLevel + 0.3) continue // underwater/shoreline
+    const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
+    if (altitude > TREELINE_ALTITUDE) continue // above treeline
+
+    const d = SLOPE_SAMPLE_STEP
+    const slope =
+      (Math.abs(sample(tile.heights, cx + d, cz) - sample(tile.heights, cx - d, cz)) +
+        Math.abs(sample(tile.heights, cx, cz + d) - sample(tile.heights, cx, cz - d))) /
+      (2 * d)
+    if (slope > SLOPE_REJECT) continue // steep slope
+    if (sample(tile.roadTint, cx, cz) > ROAD_TINT_REJECT) continue // road/path corridor
+
+    const moistureRegion = sample(tile.moistureRegion, cx, cz)
+    const biome = biomeWeightsAt(moistureRegion, altitude, region)
+    if (biome.desert > 0.25) continue // no ferns on dry ground
+
+    const continentalness = sample(tile.continentalness, cx, cz)
+    const ridge = sample(tile.mountainRidge, cx, cz)
+    const forestDensity = forestDensityAt(moistureRegion, altitude, continentalness, ridge, region)
+
+    // Base habitat: dense forest (broadleaf or conifer) or swamp/wet ground.
+    // A nearby pine only nudges this up — never the sole qualifier.
+    let habitat = Math.max(forestDensity, biome.swamp)
+    if (pineNear(cx, cz)) habitat = Math.min(1, habitat + FERN_PINE_BONUS)
+    if (habitat < FERN_HABITAT_MIN) continue
+    if (fernRandom() > habitat) continue
+
+    const count = FERN_CLUSTER_MIN_COUNT + Math.floor(fernRandom() * FERN_CLUSTER_MAX_EXTRA)
+    for (let j = 0; j < count; j++) {
+      const a = fernRandom() * Math.PI * 2
+      const r = Math.sqrt(fernRandom()) * FERN_CLUSTER_RADIUS
+      const fx = cx + Math.cos(a) * r
+      const fz = cz + Math.sin(a) * r
+      const fh = sample(tile.heights, fx, fz)
+      if (fh <= waterLevel + 0.2) continue
+      if (sample(tile.roadTint, fx, fz) > ROAD_TINT_REJECT) continue
+
+      out.push({
+        x: fx,
+        z: fz,
+        kind: 'fern',
+        speciesIndex: Math.floor(fernRandom() * fernSpeciesCount),
+        scale: 0.6 + fernRandom() * 0.5,
+        rotationY: fernRandom() * Math.PI * 2,
       })
     }
   }

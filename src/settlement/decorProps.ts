@@ -145,6 +145,35 @@ export function createCactus(scale = 1): THREE.Group {
   return cactus
 }
 
+/** Forest-floor undergrowth fallback — a squashed, low bush (plan 140). */
+export function createFern(scale = 1): THREE.Group {
+  const fern = new THREE.Group()
+  const body = new THREE.Mesh(
+    new THREE.SphereGeometry(0.4 * scale, 6, 4),
+    new THREE.MeshStandardMaterial({ color: 0x4a7d3f, flatShading: true }),
+  )
+  body.scale.set(1.2, 0.35, 1.2)
+  body.position.y = 0.14 * scale
+  body.castShadow = false
+  patchProceduralFoliageMaterial(body.material as THREE.MeshStandardMaterial)
+  fern.add(body)
+  return fern
+}
+
+/** Plaza cobble plate fallback — a low, wide stone disc (plan 140). */
+export function createCobblePlate(scale = 1): THREE.Group {
+  const plate = new THREE.Group()
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.72 * scale, 0.78 * scale, 0.06 * scale, 6),
+    new THREE.MeshStandardMaterial({ color: 0x8a8a86, flatShading: true }),
+  )
+  mesh.position.y = 0.03 * scale
+  mesh.castShadow = false
+  mesh.receiveShadow = true
+  plate.add(mesh)
+  return plate
+}
+
 export function createReed(scale = 1): THREE.Group {
   const reed = new THREE.Group()
   const mat = new THREE.MeshStandardMaterial({ color: 0x6f8a4a, flatShading: true })

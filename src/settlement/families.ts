@@ -118,6 +118,24 @@ export function villageSizeConfig(size: VillageSize): VillageSizeConfig {
   return VILLAGE_SIZE_CONFIG[size]
 }
 
+/** Plaza cobble plate count range per size (plan 140) — OUTPOST/SM stay bare
+ *  (no campfire/plaza focal point yet); MD-XL get a modest, size-scaled
+ *  handful near the well, not a paved road. */
+const COBBLE_COUNT_RANGE: Record<VillageSize, readonly [number, number]> = {
+  OUTPOST: [0, 0],
+  SM: [0, 0],
+  MD: [2, 4],
+  LG: [4, 6],
+  XL: [6, 8],
+}
+
+export function cobbleCountForSize(size: VillageSize, seed: number): number {
+  const [min, max] = COBBLE_COUNT_RANGE[size]
+  if (max <= min) return min
+  const random = createSeededRandom(seed ^ 0xc0bb1e)
+  return min + Math.floor(random() * (max - min + 1))
+}
+
 /** `single` isn't in the original draft's husband/wife/child trio, but a
  *  family of 1 (explicitly allowed — "1–3 osób") needs *some* relation, and
  *  reusing `husband`/`wife` for a lone resident would misrepresent a

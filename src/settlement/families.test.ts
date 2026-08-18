@@ -1,12 +1,42 @@
 import { describe, expect, it } from 'vitest'
 import type { NaturalResource } from '../terrain/naturalResources'
 import {
+  cobbleCountForSize,
   generateFamilies,
   rollVillageSize,
   VILLAGE_SIZE_CONFIG,
   type VillageSize,
   villageSizeConfig,
 } from './families'
+
+describe('cobbleCountForSize', () => {
+  it('is 0 for OUTPOST/SM (no plaza focal point)', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      expect(cobbleCountForSize('OUTPOST', seed)).toBe(0)
+      expect(cobbleCountForSize('SM', seed)).toBe(0)
+    }
+  })
+
+  it('stays within the documented per-size range for MD/LG/XL', () => {
+    const ranges: Record<'MD' | 'LG' | 'XL', [number, number]> = {
+      MD: [2, 4],
+      LG: [4, 6],
+      XL: [6, 8],
+    }
+    for (const size of ['MD', 'LG', 'XL'] as const) {
+      const [min, max] = ranges[size]
+      for (let seed = 0; seed < 40; seed++) {
+        const n = cobbleCountForSize(size, seed)
+        expect(n).toBeGreaterThanOrEqual(min)
+        expect(n).toBeLessThanOrEqual(max)
+      }
+    }
+  })
+
+  it('is deterministic for the same size/seed', () => {
+    expect(cobbleCountForSize('XL', 777)).toBe(cobbleCountForSize('XL', 777))
+  })
+})
 
 describe('rollVillageSize', () => {
   it('is deterministic for the same terrain/seed', () => {

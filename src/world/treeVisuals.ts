@@ -5,12 +5,14 @@ import type {
   TreeSizeClass,
   TreeVisualKind,
 } from './treeLifecycle'
-import { disposeObject3D } from '../assets/loadGltf'
+import { disposeObject3D, loadGltf, prepareProp } from '../assets/loadGltf'
 import {
   createFelledTree,
   createLimbedTree,
   createTree,
   createTreeStump,
+  TREE_STUMP_HEIGHT,
+  TREE_STUMP_URL,
 } from '../settlement/props'
 import { treeVisualKind, visualScaleForTree } from './treeLifecycle'
 
@@ -19,6 +21,38 @@ export function felledYawFromTreeId(treeId: string): number {
   let h = 0
   for (let i = 0; i < treeId.length; i++) h = (h * 31 + treeId.charCodeAt(i)) | 0
   return ((h >>> 0) % 360) * (Math.PI / 180)
+}
+
+// Harvest remnant stump (plan 140) — loaded once, cloned synchronously
+// thereafter so a mid-game chop can swap the visual without an `await`.
+// Falls back to the procedural `createTreeStump` (kept mandatory per plan)
+// if the GLB is missing or fails to load.
+let stumpTemplate: THREE.Object3D | null = null
+let stumpLoadStarted = false
+
+/** Call once at world-bundle startup, alongside the other template preloads
+ *  (`chunkManager.ts`'s `preloadPropTemplates`). Fire-and-forget — never
+ *  blocks; the procedural fallback covers every call until this resolves. */
+export function preloadTreeStumpTemplate(): void {
+  if (stumpLoadStarted) return
+  stumpLoadStarted = true
+  void loadGltf(TREE_STUMP_URL)
+    .then((model) => {
+      prepareProp(model, TREE_STUMP_HEIGHT)
+      stumpTemplate = model
+    })
+    .catch((err: unknown) => {
+      console.warn('[treeVisuals] tree_stump.glb unavailable — procedural fallback', err)
+    })
+}
+
+function createStumpMesh(scale: number): THREE.Object3D {
+  if (stumpTemplate) {
+    const clone = stumpTemplate.clone(true)
+    clone.scale.multiplyScalar(scale)
+    return clone
+  }
+  return createTreeStump(scale)
 }
 
 /** Build the mesh for a resolved chop/growth visual (no living GLB templates). */
@@ -35,7 +69,7 @@ export function createTreeStageMesh(
     case 'living':
       return createTree(scale)
     case 'stump':
-      return createTreeStump(scale)
+      return createStumpMesh(scale)
     default:
       return createTree(scale)
   }
