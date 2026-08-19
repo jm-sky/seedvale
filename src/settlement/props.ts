@@ -870,6 +870,13 @@ export async function buildSettlementProps(
       lanternTpl,
       lampMount.yaw,
     )
+    // Lantern metres are world-sized (`LANTERN_*_MAX`). Scale each fixture
+    // child (not the group) so hut.scale does not shrink/grow the mesh —
+    // group scale would also move the mount, which is already hut-local.
+    const invHouseScale = 1 / Math.max(Math.abs(hut.scale.x), 1e-6)
+    for (const child of houseLight.object.children) {
+      child.scale.multiplyScalar(invHouseScale)
+    }
     hut.add(houseLight.object)
     houseLights.push(houseLight)
 

@@ -10,29 +10,15 @@ import {
   type HouseLampMount,
   type HouseLampStyle,
 } from './houseCatalog'
+import { LANTERN_FLOOR_MAX, LANTERN_WALL_MAX } from './propSpecs'
 
 const HOUSE_LAMP_OFF_COLOR = new THREE.Color(0x3a2c22)
 const HOUSE_LAMP_ON_COLOR = new THREE.Color(0xffb35c)
+/** Original procedural box height (metres) used as the scale reference. */
+const PROCEDURAL_LANTERN_REF_MAX = 0.16
 
-/** Small lamp mounted on a house wall — a lantern-sized cube rather than a
- *  window-sized pane, toggled continuously via `setNightIntensity(t)`
- *  (0 = daylight, dark/unlit fixture; 1 = full night glow), see
- *  `settlement/createSettlement.ts`'s day/night wiring. `MeshBasicMaterial`
- *  (unlit) so it doesn't pick up ordinary scene shading and read as a plain
- *  lit card during the day — previously a `MeshStandardMaterial` plane, which
- *  stayed visibly bright under daylight even at `emissiveIntensity: 0` (see
- *  plan `2026-08-08--044` §1.1's "hanging square" report; the wall-mount fix
- *  there addressed positioning, not this). Kept as one cheap unlit cube + one
- *  short-falloff, unshadowed point light per house rather than anything more
- *  elaborate — a handful of these per loaded settlement is the same order of
- *  magnitude as the existing campfire flame light.
- *
- *  `mountHeight`/`mountZ` place the lamp against an actual wall — derived by
- *  the caller from the specific hut's own bounding box (`buildSettlementProps`),
- *  since catalog hut variants (`houseCatalog.ts`) don't share the fallback
- *  `createHut()` box's proportions. `mountZ` is pulled in slightly from the
- *  raw bounding-box edge since that edge is often the roof eave, not the
- *  wall face, on the GLB hut models. */
+/** House night lamp: GLB body (or procedural boxes) + one unshadowed PointLight.
+ *  `setNightIntensity(t)` is 0 = daylight / unlit, 1 = full night glow. */
 export type HouseLight = {
   readonly object: THREE.Object3D
   setNightIntensity: (t: number) => void
@@ -45,15 +31,109 @@ export type VillageTorch = {
   update: (dt: number) => void
 }
 
-/** `createHouseLight`'s mount point is now a real point on the hut's exterior
- *  surface (`findWallMount` below), not an assumed Z-facing wall — `mountX`/
- *  `mountZ` place the lamp there, offset a little in/out along that surface's
- *  outward normal (approximated as the direction from the vertical axis to
- *  the point, accurate enough for the roughly-boxy catalog hut shapes), and
- *  the lamp geometry is rotated to sit flush against it from any angle.
- *
- *  Wall fixtures are half the reference lantern size; floor-center keeps full
- *  size. Prefer `lanternBody` GLB (plan 085); procedural box body is fallback.
+type LampMountPose = {
+  nx: number
+  nz: number
+  yaw: number
+  cx: number
+  cy: number
+  cz: number
+  visualSize: number
+}
+
+function lampVisualSize(style: HouseLampStyle): number {
+  return style === 'wall' ? LANTERN_WALL_MAX : LANTERN_FLOOR_MAX
+}
+
+/** Outward normal from the hut origin through the mount, plus a small wall stick-out. */
+function lampMountPose(
+  mountX: number,
+  mountZ: number,
+  mountHeight: number,
+  style: HouseLampStyle,
+  explicitYaw?: number,
+): LampMountPose {
+  const visualSize = lampVisualSize(style)
+  const outwardLen = Math.hypot(mountX, mountZ) || 1
+  const nx = mountX / outwardLen
+  const nz = mountZ / outwardLen
+  const yaw = explicitYaw ?? Math.atan2(nx, nz)
+  const stickOut = style === 'wall' ? visualSize * 0.18 : 0
+  return {
+    nx,
+    nz,
+    yaw,
+    cx: mountX + nx * stickOut,
+    cy: mountHeight,
+    cz: mountZ + nz * stickOut,
+    visualSize,
+  }
+}
+
+function attachLanternGlb(
+  group: THREE.Group,
+  lanternBody: THREE.Object3D,
+  pose: LampMountPose,
+): void {
+  const body = lanternBody.clone(true)
+  body.position.set(pose.cx, pose.cy, pose.cz)
+  body.rotation.y = pose.yaw
+  group.add(body)
+}
+
+/** Box lantern sized to the same longest-axis as `LANTERN_*_MAX` (GLB fit). */
+function attachProceduralLantern(
+  group: THREE.Group,
+  pose: LampMountPose,
+): THREE.MeshBasicMaterial {
+  const k = pose.visualSize / PROCEDURAL_LANTERN_REF_MAX
+  const bodyW = 0.12 * k
+  const bodyH = 0.16 * k
+  const bodyD = 0.08 * k
+  const plateW = 0.14 * k
+  const plateH = 0.04 * k
+  const plateD = 0.14 * k
+  const halfBody = bodyH * 0.5
+  const halfPlate = plateH * 0.5
+
+  const baseMat = new THREE.MeshBasicMaterial({ color: 0x6b4226 })
+  const lampMat = new THREE.MeshBasicMaterial({ color: HOUSE_LAMP_OFF_COLOR })
+
+  const top = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMat)
+  top.position.set(pose.cx, pose.cy + halfBody + halfPlate, pose.cz)
+  top.rotation.y = pose.yaw
+  group.add(top)
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMat)
+  base.position.set(pose.cx, pose.cy - halfBody - halfPlate, pose.cz)
+  base.rotation.y = pose.yaw
+  group.add(base)
+
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(bodyW, bodyH, bodyD), lampMat)
+  lamp.position.set(pose.cx, pose.cy, pose.cz)
+  lamp.rotation.y = pose.yaw
+  group.add(lamp)
+
+  return lampMat
+}
+
+function attachHousePointLight(
+  group: THREE.Group,
+  pose: LampMountPose,
+  style: HouseLampStyle,
+): THREE.PointLight {
+  const light = new THREE.PointLight(0xffb35c, 0, style === 'wall' ? 15 : 30, 2)
+  const inset = pose.visualSize * 0.18
+  light.position.set(pose.cx - pose.nx * inset, pose.cy, pose.cz - pose.nz * inset)
+  group.add(light)
+  return light
+}
+
+/**
+ * Mount a night lamp at a point on the hut's exterior (local frame).
+ * GLB size comes from `LANTERN_WALL_MAX` / `LANTERN_FLOOR_MAX` in `propSpecs.ts`
+ * (`preparePropFitMax` in `buildSettlementProps`) — wall style does not apply
+ * an extra 0.5 scale to the GLB. Procedural boxes match those same metres.
  */
 export function createHouseLight(
   mountHeight: number,
@@ -64,65 +144,20 @@ export function createHouseLight(
   explicitYaw?: number,
 ): HouseLight {
   const group = new THREE.Group()
-  const scale = style === 'wall' ? 0.5 : 1
-
-  const outwardLen = Math.hypot(mountX, mountZ) || 1
-  const nx = mountX / outwardLen
-  const nz = mountZ / outwardLen
-  const yaw = explicitYaw ?? Math.atan2(nx, nz)
-
-  const stickOut = style === 'wall' ? 0.04 * scale : 0
-  const cx = mountX + nx * stickOut
-  const cy = mountHeight
-  const cz = mountZ + nz * stickOut
+  const pose = lampMountPose(mountX, mountZ, mountHeight, style, explicitYaw)
 
   let lampMat: THREE.MeshBasicMaterial | null = null
+  if (lanternBody) attachLanternGlb(group, lanternBody, pose)
+  else lampMat = attachProceduralLantern(group, pose)
 
-  if (lanternBody) {
-    const body = lanternBody.clone(true)
-    body.position.set(cx, cy, cz)
-    body.rotation.y = yaw
-    group.add(body)
-  } else {
-    // Reference lantern (scale=1); wall uses 50%.
-    const bodyW = 0.12 * scale
-    const bodyH = 0.16 * scale
-    const bodyD = 0.08 * scale
-    const plateW = 0.14 * scale
-    const plateH = 0.04 * scale
-    const plateD = 0.14 * scale
-    const halfBody = bodyH * 0.5
-    const halfPlate = plateH * 0.5
-
-    const baseMat = new THREE.MeshBasicMaterial({ color: 0x6b4226 })
-    lampMat = new THREE.MeshBasicMaterial({ color: HOUSE_LAMP_OFF_COLOR })
-
-    const top = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMat)
-    top.position.set(cx, cy + halfBody + halfPlate, cz)
-    top.rotation.y = yaw
-    group.add(top)
-
-    const base = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMat)
-    base.position.set(cx, cy - halfBody - halfPlate, cz)
-    base.rotation.y = yaw
-    group.add(base)
-
-    const lamp = new THREE.Mesh(new THREE.BoxGeometry(bodyW, bodyH, bodyD), lampMat)
-    lamp.position.set(cx, cy, cz)
-    lamp.rotation.y = yaw
-    group.add(lamp)
-  }
-
-  const light = new THREE.PointLight(0xffb35c, 0, 10 * scale, 2)
-  light.position.set(cx - nx * 0.08 * scale, cy, cz - nz * 0.08 * scale)
-  group.add(light)
+  const light = attachHousePointLight(group, pose, style)
 
   return {
     object: group,
     setNightIntensity(t) {
       const clamped = Math.max(0, Math.min(1, t))
       if (lampMat) lampMat.color.lerpColors(HOUSE_LAMP_OFF_COLOR, HOUSE_LAMP_ON_COLOR, clamped)
-      light.intensity = clamped * (style === 'wall' ? 1.6 : 2)
+      light.intensity = clamped * (style === 'wall' ? 3 : 6)
       // Plan 157 §3.2 — Three's WebGLLights only collects visible lights, so
       // an off lamp that stays `visible = true` still costs a
       // NUM_POINT_LIGHTS slot / program cache variant for nothing.

@@ -111,5 +111,6 @@ export const LANTERN_URL = '/models/settlement/lantern.glb'
 export const VILLAGE_TORCH_URL = '/models/settlement/torch.glb'
 export const FIRE_FX_URL = '/models/fx/fire.glb'
 export const LANTERN_FLOOR_MAX = 0.28
-export const LANTERN_WALL_MAX = 0.16
+/** Longest-axis fit for a wall-mounted house lantern (world metres). */
+export const LANTERN_WALL_MAX = 0.45
 export const VILLAGE_TORCH_HEIGHT = 1.55
