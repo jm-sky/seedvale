@@ -12,323 +12,366 @@ tags: [settlements-npcs, quests-progression]
 
 ## Cel
 
-Dodać mały, generyczny system konserwacji broni białej oparty na dwóch niezależnych stanach konkretnego egzemplarza:
+Dodać konserwację wybranych broni białych przez rozszerzenie istniejącego `ItemInstance` z planu 155.
+
+Architektura pozostaje:
 
 ```text
-ItemInstance
-├── durability  → stan fizyczny
-└── sharpness   → ostrość ostrza
+ItemInstance → Inventory → HeldTool(instanceId) → ITEM_CATALOG[kind].melee → existing melee hit-resolution edge
 ```
 
-Ostrzenie nie naprawia uszkodzeń. Naprawa durability pozostaje osobnym przyszłym mechanizmem.
+`ItemInstance` przechowuje indywidualne `durability` i `sharpness`. Nie tworzyć równoległego systemu broni, equipment, storage ani persistence.
 
-## Stan obecny
+## Zależności i stan obecny
 
-`ItemInstance` jest już generycznym mechanizmem przechowywania indywidualnego stanu, a `TrapItemInstance` posiada `durability`. Inventory obsługuje instances oraz ich persistence. Nie istnieje jeszcze instance-backed broń ani sharpness. citeturn11file0turn20file0
+### Plan 155
 
-Istniejące bronie korzystają ze wspólnego `MeleeConfig` i obecnego melee/defense pipeline. Plan 160 dodaje wysokiej jakości warianty broni i celowo pozostawia durability/sharpening poza swoim zakresem. citeturn19file0turn21file0
+Plan 155 jest `done` i jest bazą: `Inventory` posiada `counts` oraz `instances`, `ItemInstance` jest generyczną tożsamością, `TrapItemInstance` rozszerza ją o stan, gettery zwracają klony, a persistence używa istniejącego `SaveItemInstance[]`.
 
-Źródłem prawdy podczas implementacji są aktualne pliki i testy.
+Nie migrować całego inventory na instances.
 
-## Zakres broni
+### Plan 160
 
-Instance-backed mają zostać bronie białe, które posiadają ostrze i są używane w melee:
+Plan 160 jest `done` i źródłem aktualnych weapon variants:
 
-- `knife`
-- `short_sword`
-- `long_sword`
-- `spear` — tylko jeśli aktualny model gameplayowy traktuje grot jako ostrze wymagające ostrzenia;
-- `axe`
-- `sickle`
-- `pitchfork` — tylko jeśli analiza aktualnego harvest/combat flow uzasadni sharpness;
-- nowe bronie z planu 160: Damascus, obsydian, battle axe, masterwork.
+- `damascus_knife`
+- `damascus_short_sword`
+- `damascus_long_sword`
+- `obsidian_sword`
+- `battle_axe`
+- `masterwork_sword`
 
-Nie migrować automatycznie wszystkich `ItemKind` do instances. Podczas implementacji ustalić minimalny zbiór itemów, dla których durability/sharpness ma znaczenie.
+Pozostają one w istniejącym `ItemKind` + `ITEM_CATALOG` + melee/defense pipeline. Nie kopiować ich bazowych statystyk do instance.
+
+### Plan 150
+
+`2026-08-18--150--combat-mode-defense-and-downed-state.md` jest istniejącą bazą combat (`done`), ale nie jest formalną zależnością metadata tego planu. Plan 161 integruje się z obecnym melee flow i jego pojedynczym edge `hitReady`/`resolveMeleeHits()`. Nie tworzyć nieistniejącego `150--weapon-system.md`.
+
+## Zakres weapons
+
+Centralny maintenance set:
+
+```text
+knife
+short_sword
+long_sword
+spear
+axe
+pitchfork
+sickle
+damascus_knife
+damascus_short_sword
+damascus_long_sword
+obsidian_sword
+battle_axe
+masterwork_sword
+```
+
+`shovel` pozostaje poza zakresem mimo melee damage. `pickaxe` pozostaje poza zakresem, ponieważ obecnie nie ma melee config.
+
+Nie wyprowadzać listy automatycznie z `ITEM_CATALOG[kind].melee`; jedna centralna klasyfikacja ma być źródłem informacji, które przedmioty mają maintenance state.
 
 ## Model danych
 
-Rozszerzyć istniejący model bez tworzenia osobnego systemu equipment:
+Rozszerzyć istniejący generyczny model, zgodnie z patternem planu 155:
 
-```text
-WeaponItemInstance {
-    id
-    kind
-    durability
-    sharpness
+```ts
+export type WeaponItemInstance = ItemInstance & {
+  kind: WeaponMaintenanceKind
+  durability: number
+  sharpness: number
 }
 ```
 
-Zakres wartości:
+Nazwa typu może zostać dopasowana do konwencji kodu. Istotne jest, że nie powstaje osobna hierarchia equipment.
 
 ```text
 durability: 0..1
 sharpness: 0..1
+new instance: 1 / 1
 ```
 
-Oba pola są stanem konkretnego egzemplarza i muszą przetrwać:
+Nie tworzyć `sharp_*`, `dull_*`, `broken_*` jako `ItemKind`.
+
+## Inventory ownership i mutation
+
+`Inventory` pozostaje jedynym właścicielem mutable instance state. Ponieważ `getInstance()`/`getInstances()` zwracają klony, dodać minimalne kontrolowane API, np. `updateInstance(id, updater)` lub równoważne węższe API.
+
+Nie udostępniać wewnętrznego `Map`. To rozszerzenie istniejącego Inventory, nie `MaintenanceManager`.
+
+## HeldTool bridge
+
+Obecny `HeldTool` przechowuje tylko `ToolKind`. Dla instance-backed weapons musi zachować referencję:
 
 ```text
-inventory
-→ held
-→ combat
-→ inventory
-→ save/load
+HeldTool
+├── kind
+└── instanceId?
 ```
 
-Nie tworzyć `sharp_knife`, `dull_sword`, `broken_sword` itd. jako `ItemKind`.
+`instanceId` jest wymagane dla supported weapon instances, ale opcjonalne dla dotychczasowych count-based tools.
 
-## Durability
+`HeldTool` nie przechowuje `durability` ani `sharpness`.
 
-Ten plan wprowadza **durability dla broni**, ponieważ obecnie nie istnieje ona dla weapon instances.
-
-Durability ma być niezależna od sharpness.
-
-Przykład:
+Equip/select:
 
 ```text
-miecz
-condition: 95%
-sharpness: 35%
+Inventory instance → HeldTool.instanceId
 ```
 
-Ostrzenie przywraca sharpness, ale pozostawia condition 95%.
-
-W tym planie nie implementować pełnego systemu naprawy durability. Można jednak dodać minimalne zużywanie durability w combat, jeśli aktualny melee resolver nie posiada jeszcze takiego mechanizmu i jest to potrzebne do sensownego rozdzielenia obu stanów.
-
-## Sharpness
-
-Sharpness wpływa na skuteczność ofensywną istniejącego melee resolvera.
-
-Preferowany pierwszy model:
+Combat:
 
 ```text
-effectiveDamage = baseDamage × sharpnessModifier
+HeldTool.instanceId → Inventory.getInstance(id) → current state
 ```
 
-Zachować łagodny efekt, np.:
+## Acquisition i migration count → instances
+
+Każde pozyskanie supported weapon musi tworzyć instance:
 
 ```text
-100% sharpness → 100% damage
-75%            → ~94%
-50%            → ~85%
-25%            → ~72%
-0%             → ~55%
+acquire → createItemInstance() → Inventory.addInstance()
 ```
 
-Dokładna krzywa ma być centralnym parametrem/resolverem, a nie logiką UI.
+Audytować co najmniej starting `knife`, merchant purchases/stock, quest/event rewards, world pickups/drops oraz wszystkie acquisition paths planu 160.
 
-Broń tępa nadal może być używana. Nie zamieniać automatycznie `sharpness = 0` w broken.
+Nie zostawiać ścieżki `inventory.add(weaponKind, 1)` dla supported weapons.
 
-## Zużywanie ostrości
+### Stare save'y
 
-Każde skuteczne użycie broni może zmniejszać sharpness.
-
-W pierwszej wersji:
-
-- udane trafienie → mały spadek sharpness;
-- pudło nie musi zużywać ostrza;
-- ciężkie/odporne cele mogą zużywać ostrze bardziej;
-- parametry zależą od typu/materialu broni;
-- nie wykonywać ticka per-frame.
-
-Zużycie powinno być rozwiązywane podczas konkretnej akcji melee.
-
-## Materiały / typy ostrzy
-
-Nie tworzyć pełnego systemu materiałów.
-
-Istniejący `ItemKind` może określać profil ostrza przez centralną konfigurację, np. logicznie:
+Stary count-based weapon nie ma możliwego do odzyskania condition, więc migracja jest deterministyczna:
 
 ```text
-blade profile
-├── max sharpness
-├── sharpness loss
-├── sharpening efficiency
-└── durability wear
+count N → N instances { durability: 1, sharpness: 1 } → remove migrated count
 ```
 
-Dzięki temu:
-
-- zwykła stal zużywa się normalnie;
-- Damascus długo zachowuje ostrość;
-- masterwork jest trwały i dobrze trzyma ostrość;
-- obsydian ma bardzo wysoką ostrość/obrażenia, ale może mieć specyficzną kruchość i większą podatność na durability wear.
-
-Nie dodawać osobnego resolvera combat dla każdego materiału.
-
-## Osełka
-
-Dodać nowy stackable item, np. `whetstone` / `sharpening_stone`.
-
-Osełka:
-
-- jest normalnym itemem inventory;
-- zużywa określoną liczbę użyć albo jest konsumowana przy ostrzeniu;
-- zwiększa sharpness konkretnej weapon instance;
-- nie zmienia durability;
-- działa bez specjalnego sprzętu świata.
-
-Preferowane UX:
-
-```text
-Inventory
-→ wybierz broń
-→ Ostrz
-→ wybierz osełkę
-→ sharpness +N
-```
-
-Nie tworzyć osobnego weapon inventory.
-
-## Ostrzenie przy kole
-
-Dodać możliwość ostrzenia przy istniejącym lub przyszłym miejscu typu grindstone/workshop, ale bez tworzenia dużego crafting systemu.
-
-Koło szlifierskie powinno:
-
-- działać szybciej lub skuteczniej niż osełka;
-- nie wymagać zużywania osobnej osełki, jeśli korzysta z istniejącej infrastruktury;
-- mieć prostą akcję/interakcję;
-- modyfikować sharpness tej samej ItemInstance.
-
-Jeżeli w codebase nie istnieje jeszcze odpowiedni world place, pierwsza implementacja może ograniczyć się do osełki i zostawić grindstone jako rozszerzenie tego samego planu tylko wtedy, gdy nie wymaga nowego dużego systemu places.
-
-## Skill
-
-Nie dodawać osobnego skilla tylko dla ostrzenia w pierwszej wersji.
-
-Jeżeli istnieje odpowiedni skill kowalski/craftingowy, można go wykorzystać jako modyfikator skuteczności. W przeciwnym razie sharpening ma być deterministyczne.
-
-Nie tworzyć nowego skill system tylko dla tego mechanizmu.
-
-## NPC / gospodarka
-
-Konserwacja powinna być możliwa do wykorzystania przez NPC w przyszłości.
-
-Nie implementować pełnego NPC blacksmith behaviour w tym planie, ale API powinno pozwalać na:
-
-```text
-NPC weapon
-→ sharpening action
-→ same WeaponItemInstance
-```
-
-Przyszły kowal może świadczyć usługę ostrzenia, co może wejść do ekonomii osad bez tworzenia równoległego systemu broni.
+Migracja dotyczy wyłącznie centralnego maintenance setu. Nie migrować zwykłych stackable items.
 
 ## Persistence
 
-Rozszerzyć istniejący `SaveItemInstance` / persistence o pola wymagane dla weapon instances:
+Rozszerzyć istniejący `SaveItemInstance`:
 
-```text
-{
-    id,
-    kind,
-    durability,
-    sharpness
-}
+```ts
+{ id, kind, durability?, sharpness? }
 ```
 
-Stare save'y bez tych pól muszą działać.
+`Inventory.instancesToJSON()` / `instancesFromJSON()` pozostają jedynym mechanizmem zapisu instances.
 
-Dla nowych weapon instances brak pól powinien zostać zinterpretowany przez centralny initializer jako pełna durability i pełna sharpness.
+Nie tworzyć `weaponInstances`, osobnej sekcji save ani osobnego persistence managera.
 
-Nie zmieniać persistence stackable items.
+Kompatybilność:
+
+- trap instances pozostają bez zmian;
+- brak `sharpness` → `1`;
+- brak `durability` dla weapon instance → `1`;
+- nie-finite → bezpieczny default/reject zgodnie z istniejącym restore pattern;
+- wartości poza `[0,1]` → clamp;
+- stare count-based weapons → migracja powyżej.
+
+## Durability
+
+Wprowadzić durability jako stan weapon instance, ale bez pełnego repair systemu.
+
+Minimalnie:
+
+- initialize `1`;
+- persist;
+- zachować przez inventory → held → combat → inventory;
+- ewentualny mały wear na successful hit tylko jeśli istniejący hit edge daje naturalne miejsce.
+
+Nie implementować repair, broken lifecycle, osobnego durability resolvera ani blokowania użycia tylko dlatego, że durability spadło.
+
+`sharpness = 0` nie oznacza `durability = 0`.
+
+## Sharpness i damage
+
+Bazą pozostaje `ITEM_CATALOG[kind].melee.damage`:
+
+```text
+catalog melee damage → sharpness modifier → final damage
+```
+
+Preferowany łagodny zakres:
+
+```text
+100% → 100%
+75%  → ~94%
+50%  → ~85%
+25%  → ~72%
+0%   → ~55%
+```
+
+Dokładna krzywa jest centralnym, deterministycznym resolverem/configiem. Sharpness nie zmienia w tym planie range, stamina, timing ani defense.
+
+## Sharpness wear i istniejący melee edge
+
+Podłączyć maintenance do istniejącego punktu rozstrzygnięcia:
+
+```text
+attack
+→ current HeldTool.instanceId
+→ current ItemInstance
+→ existing resolveMeleeHits()
+→ damage using current sharpness
+→ sharpness wear exactly once
+→ optional durability wear
+```
+
+Aktualny `playerMelee.update()` wystawia `hitReady` raz przy otwarciu hit window, a `resolveMeleeHits()` jest wykonywane na tym edge. Nie tworzyć nowego combat resolvera ani per-frame weapon tick.
+
+Nie zużywać sharpness przy samym rozpoczęciu ataku. Miss nie zużywa sharpness w v1.
+
+## Maintenance profile
+
+Dodać małą centralną konfigurację domenową, logicznie:
+
+```ts
+getWeaponMaintenanceProfile(kind)
+getSharpnessDamageModifier(sharpness)
+applySharpnessWear(...)
+sharpenWeapon(instanceId, source)
+```
+
+Profil zawiera wyłącznie maintenance values, np. `sharpnessLossPerHit`, `sharpeningAmount` i opcjonalnie `durabilityWearPerHit`.
+
+Nie tworzyć general material system ani drugiego `WeaponConfig`. Quality/material z planu 160 może wpływać na maintenance przez profil przypisany do istniejącego `ItemKind`.
+
+## Whetstone
+
+Dodać `whetstone` jako zwykły stackable `ItemKind`:
+
+```text
+whetstone → count
+```
+
+Nie tworzyć instance osełki.
+
+Sharpening:
+
+```text
+instanceId + source
+→ validate supported weapon
+→ calculate new sharpness
+→ mutate same instance
+→ consume whetstone atomically
+```
+
+Failed sharpening nie konsumuje osełki. UI wybiera `instanceId` i źródło, ale nie liczy ani nie przechowuje sharpness jako source of truth.
+
+Nie dodawać crafting recipe bez oczywistego istniejącego insertion point.
+
+## Grindstone
+
+Opcjonalny. W v1 wystarczy osełka.
+
+Dodać grindstone/workshop tylko jeśli istniejąca infrastruktura places/interactables pozwala na to bez nowego subsystemu. Musi korzystać z tego samego `sharpenWeapon()`.
+
+Nie tworzyć `GrindstoneManager`.
 
 ## Inventory / UI
 
-Lista inventory nadal grupuje itemy według `ItemKind`.
-
-Dla instance-backed weapon:
+Główne inventory nadal grupuje po `ItemKind`. Szczegóły supported weapon muszą rozróżniać konkretne instances:
 
 ```text
 Miecz ×2
-
-1× 100% condition / 92% sharpness
-1× 78% condition / 41% sharpness
+1× 100% / 92%
+1× 78% / 41%
 ```
 
-Szczegóły itemu powinny umożliwiać wybranie konkretnego `instance.id` do ostrzenia.
+Operacje muszą przenosić `instance.id`. UI nie jest source of truth; po mutation odczytuje stan z Inventory.
 
-Stan nie może być kopiowany do komponentów UI jako drugi source of truth.
+Nie tworzyć weapon inventory.
 
-## Combat integration
+## Trading / NPC
 
-Docelowy flow:
+Nie implementować weapon-specific dynamic pricing. Plan 155 już ustanowił instance-aware trade architecture; plan 161 ma jej nie blokować, ale nie dublować price resolvera.
 
-```text
-held WeaponItemInstance
-        ↓
-existing melee config
-        ↓
-sharpness modifier
-        ↓
-hit / damage
-        ↓
-sharpness wear
-        ↓
-durability wear (jeżeli przewidziane dla danego trafienia)
-```
+Nie implementować NPC blacksmith, nowych NPC schedules ani behaviour. Udostępniona operacja `sharpenWeapon(instanceId, source)` ma być przyszłościowo wywoływalna przez NPC.
 
-Nie tworzyć nowego weapon combat system.
+## Poza zakresem
 
-Istniejący `MeleeConfig` pozostaje bazową definicją broni, a stan instance jest nakładany w centralnym resolverze.
+- ranged combat / bows / arrows / projectiles / critical hits;
+- NPC blacksmith;
+- pełny repair/broken weapon system;
+- general material system;
+- WeaponManager;
+- EquipmentManager;
+- MaintenanceManager;
+- osobny weapon storage;
+- osobna persistence sekcja;
+- osobny weapon combat resolver;
+- weapon browser implementation;
+- 3D weapon preview.
 
-## Trading
+## Konkretne miejsca do sprawdzenia/zmiany
 
-Sprzedaż konkretnej weapon instance powinna w przyszłości uwzględniać durability i sharpness.
+- `src/items/itemInstances.ts`
+- `src/items/Inventory.ts`
+- `src/items/items.ts`
+- `src/items/itemCatalog.ts`
+- `src/items/HeldTool.ts`
+- `src/player/PlayerController.ts`
+- `src/player/playerMelee.ts`
+- `src/app/gameLoop.ts`
+- persistence / `SaveData`
+- merchant/quest/drop acquisition paths
+- inventory item-details UI
+- focused inventory/instance/combat/persistence tests
 
-Jeżeli obecny trade resolver zostanie rozszerzony w tym planie, cena powinna być liczona centralnie:
-
-```text
-base item price
-→ condition modifier
-→ sharpness modifier
-→ final price
-```
-
-Nie przechowywać ceny w instance.
+Nie wykonywać niezwiązanych refaktorów.
 
 ## Performance
 
 - brak globalnego weapon tick;
-- sharpness/durability zmieniane wyłącznie przy akcjach;
-- brak per-frame skanowania inventory instances;
-- sharpening UI i price calculation tylko podczas interakcji;
-- nie tworzyć managera broni.
+- brak per-frame scans inventory instances;
+- state changes wyłącznie przy domenowych akcjach;
+- maintenance profiles są statyczne;
+- brak managera broni.
 
-## Konkretne miejsca do sprawdzenia/zmiany
+## Kolejność implementacji
 
-- `src/items/itemInstances.ts` — WeaponItemInstance i profile ostrzy;
-- `src/items/Inventory.ts` — instance storage/persistence;
-- `src/items/items.ts` — ewentualny `whetstone` i nowe item definitions;
-- `src/items/itemCatalog.ts` — weapon/melee metadata;
-- player held-item/equipment flow;
-- player melee resolver;
-- durability/trap instance patterns jako istniejący wzorzec persistence;
-- trade resolver/catalog;
-- inventory/item details UI;
-- ewentualny place/workshop/grindstone flow;
-- testy inventory, instances, combat, persistence i trade.
+1. Centralny maintenance target set/predicate dla 13 supported kinds.
+2. `ItemInstance` extension, clone/type guards i centralna klasyfikacja.
+3. `SaveItemInstance` + serialization/defaulting.
+4. Controlled `Inventory` mutation API.
+5. Maintenance profile + pure sharpness/wear/sharpen functions.
+6. Acquisition migration + old count-based save migration.
+7. `HeldTool.instanceId`.
+8. Current instance → existing melee hit edge; damage + wear exactly once.
+9. `whetstone` + sharpening action.
+10. Item details UI dla konkretnych instances.
+11. Focused tests, szczególnie held-instance → melee regression.
+12. Type-check/test/build.
+13. Narrow browser verification.
 
-Nie tworzyć nowych managerów bez potwierdzonej potrzeby.
+Nie zaczynać od UI. Najbardziej ryzykowne są bridge `Inventory → HeldTool.instanceId → melee` oraz migracja count → instances.
 
 ## Kryteria akceptacji
 
-- [ ] Wybrane bronie są przechowywane jako indywidualne `WeaponItemInstance`.
-- [ ] Każda weapon instance ma stabilne `id`, `durability` i `sharpness`.
-- [ ] Nowa broń zaczyna z pełną durability i sharpness.
-- [ ] Sharpness i durability są niezależne.
-- [ ] Combat zmniejsza sharpness zgodnie z centralnym profilem broni.
-- [ ] Sharpness wpływa na damage bez tworzenia osobnego combat system.
-- [ ] Osełka pozwala zwiększyć sharpness konkretnego egzemplarza.
-- [ ] Ostrzenie nie regeneruje durability.
-- [ ] Osełka jest normalnym itemem inventory.
-- [ ] Jeśli grindstone zostanie włączony do implementacji, działa przez ten sam sharpening resolver.
-- [ ] Save/load zachowuje durability i sharpness.
-- [ ] Stare save'y bez weapon instance fields pozostają kompatybilne.
-- [ ] Inventory/UI rozróżnia konkretne instances, gdy ich stan się różni.
-- [ ] Testy pokrywają initializer, sharpening, sharpness wear, damage modifier i persistence.
-- [ ] Build/type-check/test przechodzą.
-- [ ] Browser/manual check potwierdza ostrzenie i zmianę skuteczności broni w walce.
+- [ ] 13 supported weapon kinds jest zdefiniowanych centralnie.
+- [ ] `shovel` jest jawnie poza zakresem; `pickaxe` pozostaje poza zakresem.
+- [ ] Supported weapons są indywidualnymi instances z `id`, `durability`, `sharpness`.
+- [ ] Nowa instance startuje `1/1`.
+- [ ] `Inventory` jest jedynym właścicielem mutable instance state.
+- [ ] `HeldTool` przechowuje `instanceId`, bez kopiowania condition.
+- [ ] `ITEM_CATALOG[kind].melee` pozostaje bazą statystyk.
+- [ ] Existing `resolveMeleeHits()` / `hitReady` pozostaje edge trafienia.
+- [ ] Sharpness modyfikuje damage centralnym resolverem.
+- [ ] Sharpness wear występuje dokładnie raz na successful resolved hit.
+- [ ] Miss nie zużywa sharpness w v1.
+- [ ] Wszystkie acquisition paths tworzą instances.
+- [ ] Stare count-based weapons są migrowane do full-condition instances.
+- [ ] Persistence używa istniejącego `SaveItemInstance[]`.
+- [ ] Stare save'y bez maintenance fields pozostają kompatybilne.
+- [ ] Plan 160's six variants jest objęty centralną klasyfikacją.
+- [ ] `whetstone` jest normalnym stackable itemem.
+- [ ] Sharpening zwiększa sharpness konkretnej instance i nie zmienia durability.
+- [ ] Failed sharpening nie konsumuje osełki.
+- [ ] UI wybiera konkretne `instance.id`.
+- [ ] Nie powstaje WeaponManager, EquipmentManager, MaintenanceManager, weapon storage ani osobna persistence.
+- [ ] Nie implementuje się ranged combat, NPC blacksmith ani pełnego repair systemu.
+- [ ] Testy pokrywają migration, persistence, mutation, sharpening, wear i held-instance → melee bridge.
+- [ ] Type-check/test/build przechodzą.
+- [ ] Browser/manual check potwierdza obtain/equip → hit/wear → sharpen → save/load.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
