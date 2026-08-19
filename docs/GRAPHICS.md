@@ -4,7 +4,7 @@
 
 **Nie jest:** listą assetów ([assets/](./assets/README.md)), stanem implementacji ([STATE.md](./STATE.md)), domeną wody ([WATER.md](./WATER.md)), ani planem ([plans/](./plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
 
-**Last updated:** 2026-08-18
+**Last updated:** 2026-08-19
 
 Domena wody (stan, historia, kolejność poprawek): [WATER.md](./WATER.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
 
@@ -38,6 +38,9 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G11 | Profile jakości Low/Medium/High/Custom sterują **tylko gałkami live** (pixel ratio, AO/bloom/god rays, odbicia, shadow map, LOD scale). Nie zastępują optymalizacji architektury i nie rebuildują świata. | `src/config/qualityProfiles.ts`, plan [103](./plans/archive/2026-08-13--103--performance-diagnostics-benchmark.md) |
 | G12 | Third-person kamera zostaje **poza heightfieldem i dużymi colliderami** (domy): boom jest skracany wzdłuż odcinka look-at → desired, bez teleportu gracza i bez osobnego raycastu sceny. | `src/player/cameraBoom.ts`, issue [032](./issues/2026-08-15--032--mobile-black-world-screen.md) |
 | G13 | Deszcz = **wąska pionowa kreska** (`uWidthFrac = 0.35` w `gl_PointCoord.x`); śnieg = **pełny kwadrat sprite'a** (`uWidthFrac = 1`). Wysokość/długość zostaje `gl_PointSize` — nie zwężać deszczu przez `RAIN_SIZE`. Wspólny shader rain/snow. | `src/world/weatherParticles.ts` |
+| G14 | `PointLight`'s `distance` (3. arg konstruktora) to **tylko hard cutoff**, nie dźwignia zasięgu. Przy `decay: 2` (fizyczny inverse-square — używany wszędzie w projekcie) jasność w danym punkcie to już ~`intensity / distance²` na długo przed cutoffem. Podbicie `distance` bez podbicia `intensity` **nie zmienia nic widocznego**. Dźwignia "świeci dalej" = **intensity**. | `src/settlement/houseLighting.ts`, `src/player/torchLightPresets.ts`, `src/settlement/campfireProps.ts` |
+| G15 | Materiał GLB z `loadGltf.ts` cache'u jest **jeden obiekt na URL, dzielony przez referencję** między wszystkimi klonami (`sharedGpu`). JS-side override (`material.transparent = true` itp.) w runtime realnie działa, ale subtelna wartość (np. `opacity: 0.7` na jasnym emissive materiale, na tle nocnego nieba) potrafi wizualnie nie różnić się od opaque. Dla efektu, który ma być **jednolity na każdym klonie danego assetu**, wypiecz zmianę w samym GLB (`alphaMode: BLEND`, `baseColorFactor` alpha, `emissiveFactor`) zamiast patchować w JS — patrz log 2026-08-19 po recepturę edycji binarnej bez zewnętrznych narzędzi. | `public/models/settlement/torch.glb`, `src/settlement/houseLighting.ts` |
+| G16 | `shared/getFireParticles.ts`'s trzy presety (`createSparks`/`createEmbers`/`createIgniteBurst`) są tuningowane pod **ognisko na ziemi** — jeden argument `scale` skaluje `size`/`upSpeed`/`spawnRadius` razem, więc "ekonomiczny" mały `scale` (np. 0.35) dla efektu w innym kontekście (np. pochodnia na słupie) robi cząstki jednocześnie mniejsze *i* wolniejsze/niżej latające. Dla nowego kontekstu dodaj **osobny preset** (patrz `createTorchSparks`) zamiast przeskalowywać istniejący w dół. | `src/shared/getFireParticles.ts` |
 
 ---
 
@@ -59,6 +62,18 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-08-19 — Village torch fire/light rework: three reusable lessons 🔧
+
+Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight` (`src/settlement/houseLighting.ts`) — no plan/issue behind it, captured here since the findings generalize past this one prop.
+
+- **Identifying multi-primitive GLB parts by material name, not mesh name.** `torch.glb` is one glTF node (`Torch`) with 2 primitives (`DarkMetal`, `Fire`). `GLTFLoader` splits a multi-primitive mesh into separate `THREE.Mesh` children, and *reserves the node's own name first* (`GLTFParser._loadNodeShallow`'s "reserve node's name before its dependencies" comment), so the primitive meshes end up named `Torch_1`/`Torch_2` — a side effect of `createUniqueName`'s collision counter, not something authored in the asset. Match by **`child.material.name`** (stable, authored) instead of the mesh name (an accident of load order).
+- **`PointLight.distance` vs `intensity` — see G14.** Burned real time here: raised `distance` 14 → 120 → 500 with only a small `intensity` bump and saw *zero* visible change each time. With `decay: 2`, `distance` is a hard cutoff; brightness has already decayed to ~nothing (`intensity / distance²`) long before a cutoff that large matters. The actual "shines further" lever is `intensity`.
+- **Bake shared-material transparency into the GLB instead of patching at runtime — see G15.** Set `transparent`/`opacity: 0.7` in JS on the `Fire` primitive; visually read as still-opaque against a dark night background (alpha-blending a bright color over near-black barely dims it — there's nothing complex behind it to reveal). Fix: edited `torch.glb`'s `Fire` material directly (`alphaMode: BLEND`, `baseColorFactor` alpha down to 0.22, `emissiveFactor`, `doubleSided: true`) and dropped the JS override entirely.
+  - Binary edit recipe used (no `gltf-transform`/external deps, plain Node): read the file, walk chunks from offset 12 (`chunkLength`/`chunkType` `uint32LE` pairs — JSON chunk type `0x4E4F534A`, BIN chunk type `0x004E4942`), `JSON.parse` the JSON chunk, mutate `materials[i]`, `JSON.stringify` and pad with trailing spaces to a multiple of 4 bytes (glTF chunk alignment requirement), rebuild the 12-byte header (magic `0x46546C67`, version 2, total length) + JSON chunk header/data + **unchanged** BIN chunk header/data, write back. Verified by loading the edited file through `GLTFLoader.parse()` in a plain Node script (`global.self = global`, `MeshoptDecoder` wired up same as `loadGltf.ts` — no WebGL/DOM needed to confirm parse + material properties).
+- **`getFireParticles.ts` presets are ground-campfire-tuned — see G16.** Reused `createEmbers(0.35)` (small `scale` "for GPU economy") for a post-mounted torch; came out both too small *and* barely rising, because `scale` multiplies `size` and `upSpeed` together — shrinking one for size shrinks the other for motion too. Added `createTorchSparks` (own tuning: 4 points, bigger, faster-rising, shorter-lived) instead of stretching the shared preset outside the context it was tuned for.
+- Also fixed in the same pass, narrower/one-off (not durable rules, no G-row): a landmark-adjacent decoration (torch beside the well) needs to skip `placeTorchAt`'s `pointHitsCorridor` road-avoidance — the well sits *on* the plaza path by design, so every candidate point near it was getting silently rejected by a check meant for the freely-roaming plaza-ring/gate posts.
+- Not verified by me in-browser (the user iterated live and drove each fix); last state per the user: opacity/particle size/well-torch placement all confirmed good.
 
 ### 2026-08-18 — Rain drops are thin streaks, not squares 🔧
 
