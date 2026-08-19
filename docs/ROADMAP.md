@@ -74,7 +74,7 @@ Direction:
 - families and roles tied to what a settlement actually has access to,
 - eventually multiple settlements connected through movement, resources and quests.
 
-Relevant plans include [047](./plans/archive/2026-08-09--047--village-generation-overhaul.md), [032](./plans/archive/2026-08-08--032--natural-resources-economy.md) and [049](./plans/2026-08-09--049--procedural-world-landmarks.md).
+Relevant plans include [047](./plans/archive/2026-08-09--047--village-generation-overhaul.md), [032](./plans/archive/2026-08-08--032--natural-resources-economy.md) and [049](./plans/archive/2026-08-09--049--procedural-world-landmarks.md).
 
 ### 3. Deepen NPC life
 

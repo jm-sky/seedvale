@@ -16,7 +16,7 @@ Dwa `performance.now()` na klatkę (simulate / render) zostają — były już w
 
 CPU timer mierzy CPU. Cienie i post-process siedzą w jednym `postProcessing.render()` — kategorie `SHADOWS` / `POSTPROCESS` zostają puste, zamiast zgadywać GPU. Koszt GPU zgłasza się jako `RENDER`.
 
-Hitch streamingu: `recordHitch` wokół `buildAndAttachMesh` (`STREAMING` / `chunk mesh`), `createChunkWater`, vegetation/environment/items, unload oraz `buildGrassChunkMeshes` (`GRASS`). Próg 8 ms. 2026-08-14: `renderer.info.autoReset = false` — poprzedni odczyt po EffectComposerze pokazywał `calls = 1`. GUI i raport biorą snapshot z `endFrame`. Census sceny + isolation probes + scenariusz `stream` opisane w [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md).
+Hitch streamingu: `recordHitch` wokół `buildAndAttachMesh` (`STREAMING` / `chunk mesh`), `createChunkWater`, vegetation/environment/items, unload oraz `buildGrassChunkMeshes` (`GRASS`). Próg 8 ms. 2026-08-14: `renderer.info.autoReset = false` — poprzedni odczyt po EffectComposerze pokazywał `calls = 1`. GUI i raport biorą snapshot z `endFrame`. Census sceny + isolation probes + scenariusz `stream` opisane w [review 012](../../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md).
 
 ## Profile jakości
 

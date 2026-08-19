@@ -1,7 +1,7 @@
 Zbadaj WYŁĄCZNIE problem chunk-streaming hitchy w Seedvale i przygotuj plan poprawy.
 
 **Status:** `done`
-**Pla:**: `docs/plans/2026-08-15--119--chunk-streaming-performance.md`
+**Pla:**: `docs/plans/archive/2026-08-15--119--chunk-streaming-performance.md`
 
 ## Cel
 

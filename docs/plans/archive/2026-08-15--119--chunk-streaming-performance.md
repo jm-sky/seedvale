@@ -1,12 +1,12 @@
 # Plan: Chunk Streaming Performance
 
 **Created:** 2026-08-15
-**Status:** `verification needed` 🔍 — zaimplementowane, techniczna weryfikacja zielona; brak testu w przeglądarce (zob. [implementation notes](./2026-08-15--119--chunk-streaming-performance-implementation-notes.md))
+**Status:** `done` ✅ — browser verified 2026-08-19 (zob. [implementation notes](./2026-08-15--119--chunk-streaming-performance-implementation-notes.md))
 **Priority:** high · **Effort:** M
 **Depends on:** ~~112~~
 **domain:** `world-terrain`
 
-Related: [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md), [review 015](../reviews/2026-08-15--015--browser-performance-benchmark.md), [review 013](../reviews/2026-08-15--013--architecture-and-performance-audit.md), [review 016](../reviews/2026-08-15--016--gpu-fix-runtime-verification.md), [plan 112](./2026-08-14--112--chunk-streaming-hitch-optimization.md).
+Related: [review 012](../../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md), [review 015](../../reviews/2026-08-15--015--browser-performance-benchmark.md), [review 013](../../reviews/2026-08-15--013--architecture-and-performance-audit.md), [review 016](../../reviews/2026-08-15--016--gpu-fix-runtime-verification.md), [plan 112](./2026-08-14--112--chunk-streaming-hitch-optimization.md).
 
 ---
 

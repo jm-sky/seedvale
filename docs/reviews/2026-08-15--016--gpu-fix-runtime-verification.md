@@ -91,4 +91,4 @@ Wysoki draw count osad **jest oczekiwany** przy obecnym pipeline House Buildera 
 2. Cień raz/klatkę i lustro 128² / 30 Hz / bez agentów są w ścieżce renderu benchmarku.
 3. Instancing osady działa; 458 settlement draws vs 567–780 w 012.
 
-Streaming hitchy: osobno w [plan 119](../plans/2026-08-15--119--chunk-streaming-performance.md).
+Streaming hitchy: osobno w [plan 119](../plans/archive/2026-08-15--119--chunk-streaming-performance.md).

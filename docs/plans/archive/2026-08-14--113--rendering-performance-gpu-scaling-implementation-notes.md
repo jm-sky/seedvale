@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-15  
 **Plan:** [2026-08-14--113--rendering-performance-gpu-scaling.md](./2026-08-14--113--rendering-performance-gpu-scaling.md)  
-**Review:** [012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md)
+**Review:** [012](../../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md)
 
 Plan §17: do not run every stage automatically. This session implemented **P0 + P1** and the cheap **P2** extensions of existing LOD/shadow knobs. P3/P4 and cross-chunk vegetation merging stay out until a post-change benchmark says they are still needed.
 

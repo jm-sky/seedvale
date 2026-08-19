@@ -8,7 +8,7 @@
 
 **Effort:** M
 
-**Depends on:** none (splits off [149](./2026-08-17--149--shader-program-first-use-hitch.md) Phase 1 B; 149 Phase 1 A is blocked on this plan, see §9)
+**Depends on:** none (splits off [149](../2026-08-17--149--shader-program-first-use-hitch.md) Phase 1 B; 149 Phase 1 A is blocked on this plan, see §9)
 
 **domain:** `world-terrain`
 
@@ -18,7 +18,7 @@
 
 ## 1. Problem
 
-[Plan 149](./2026-08-17--149--shader-program-first-use-hitch.md) is investigating a multi-hundred-ms first-use shader/program hitch during chunk streaming. [Review 023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md) and [review 024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md) confirmed the dominant axis: Three.js keys its `WebGLProgram` cache in part on `NUM_POINT_LIGHTS` (the count of currently-visible `PointLight`s collected by `WebGLLights.setup`). As settlements stream in/out, that count changes (values `2..21` observed across sessions), so almost every `MeshStandardMaterial` gets **re-first-used** at each new count — this is the majority of the ~150–250 extra program/cacheKey variants seen in the `stream` benchmark (baseline 205–294 → 62 once the count is pinned).
+[Plan 149](../2026-08-17--149--shader-program-first-use-hitch.md) is investigating a multi-hundred-ms first-use shader/program hitch during chunk streaming. [Review 023](../../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md) and [review 024](../../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md) confirmed the dominant axis: Three.js keys its `WebGLProgram` cache in part on `NUM_POINT_LIGHTS` (the count of currently-visible `PointLight`s collected by `WebGLLights.setup`). As settlements stream in/out, that count changes (values `2..21` observed across sessions), so almost every `MeshStandardMaterial` gets **re-first-used** at each new count — this is the majority of the ~150–250 extra program/cacheKey variants seen in the `stream` benchmark (baseline 205–294 → 62 once the count is pinned).
 
 Both reviews used a **diagnostic-only** pad: `src/perf/pointLightBudget.ts`, gated behind `?pinPointLights=N`, wired into `src/app/createApp.ts` / `src/app/gameLoop.ts` (current dirty working tree). It proved the hypothesis but is explicitly not shippable:
 
@@ -148,7 +148,7 @@ All implemented:
 - `src/app/gameLoop.ts` — `syncPointLightBudget?: () => void` hook doc comment updated to point at this plan/module; behavior unchanged (called once per frame, before `renderer.info.reset()`).
 - `src/perf/flags.ts` — `pinPointLights` → `pointLightBudget` URL param (same bare/`true`/`yes`/`0`/`false`/`no`/integer semantics); `DEFAULT_POINT_LIGHT_BUDGET` kept as the bare-flag fallback, explicitly documented as provisional pending §10.
 - `src/perf/index.ts` — dropped the re-export of the deleted `src/perf/pointLightBudget.ts`.
-- **Deleted:** `src/perf/pointLightBudget.ts` / `.test.ts` — superseded by `src/world/pointLightBudget.ts`; the experiment's findings remain in reviews [023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md)/[024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md) and §12 below, not lost.
+- **Deleted:** `src/perf/pointLightBudget.ts` / `.test.ts` — superseded by `src/world/pointLightBudget.ts`; the experiment's findings remain in reviews [023](../../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md)/[024](../../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md) and §12 below, not lost.
 
 ---
 

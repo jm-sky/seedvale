@@ -489,8 +489,8 @@ The renderer should remain understandable, scalable and compatible with the game
 ### Core
 
 - [`docs/STATE.md`](../STATE.md)
-- [`Plan 113 — Rendering Performance & GPU Scaling`](../plans/2026-08-14--113--rendering-performance-gpu-scaling.md)
-- [`Plan 145 — Shadow Budget Optimization`](../plans/2026-08-17--145--shadow-budget-optimization.md)
+- [`Plan 113 — Rendering Performance & GPU Scaling`](../plans/archive/2026-08-14--113--rendering-performance-gpu-scaling.md)
+- [`Plan 145 — Shadow Budget Optimization`](../plans/archive/2026-08-17--145--shadow-budget-optimization.md)
 
 ### Performance reviews
 
@@ -508,7 +508,7 @@ The renderer should remain understandable, scalable and compatible with the game
 
 ### Streaming
 
-- [`Plan 119 — Chunk streaming performance`](../plans/2026-08-15--119--chunk-streaming-performance.md)
+- [`Plan 119 — Chunk streaming performance`](../plans/archive/2026-08-15--119--chunk-streaming-performance.md)
 - [`Research 011 — Streaming hitch investigation`](../research/2026-08-16--011--streaming-hitch-investigation.md)
 - [`Research 012 — LinkProgram / getProgramInfoLog wait`](../research/2026-08-16--012--streaming-hitch-trace-v2-linkprogram-wait.md)
 - [`Research 018 — Stream isolation probes`](../research/2026-08-17--018--stream-isolation-probes.md)

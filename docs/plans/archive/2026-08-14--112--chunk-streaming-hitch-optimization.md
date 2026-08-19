@@ -1,11 +1,11 @@
 # Plan 112: Chunk Streaming Hitch Optimization
 
-**Status:** `verification needed` 🔍  
+**Status:** `done` ✅ — browser verified 2026-08-19  
 **Created:** 2026-08-14  
 **Priority:** 🔴 high  
 **Effort:** `M`  
 **Depends on:** —  
-**Related:** [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md), [issue 030](../issues/2026-08-14--030--perf-render-bottlenecks.md), [plan 103](./2026-08-13--103--performance-diagnostics-benchmark.md)
+**Related:** [review 012](../../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md), [issue 030](../../issues/2026-08-14--030--perf-render-bottlenecks.md), [plan 103](./2026-08-13--103--performance-diagnostics-benchmark.md)
 
 ## Cel
 

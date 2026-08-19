@@ -1,7 +1,7 @@
 # Plan: Shader/Program First-Use Hitch
 
 **Created:** 2026-08-17
-**Status:** `in progress` 🔄 — Phase 0 closed ([review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md), [review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md)). Phase 1 B diagnostic pin **PASS** ([review 023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md), [review 024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md)). Production PointLight budget **16** landed in [plan 157](./2026-08-18--157--production-pointlight-budget.md) (do not rewrite §12). Phase 1 A (`compileAsync` loading-window prewarm) **implemented + technically verified + browser verified** ([review 025](../reviews/2026-08-19--025--plan-149-phase-1a-compileasync-prewarm.md), §19). Leftover instancing/mask (`Green`/`Wood`/`MI_WindowGlass`) is Phase C. Whole plan is **not** `done`.
+**Status:** `in progress` 🔄 — Phase 0 closed ([review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md), [review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md)). Phase 1 B diagnostic pin **PASS** ([review 023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md), [review 024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md)). Production PointLight budget **16** landed in [plan 157](./archive/2026-08-18--157--production-pointlight-budget.md) (do not rewrite §12). Phase 1 A (`compileAsync` loading-window prewarm) **implemented + technically verified + browser verified** ([review 025](../reviews/2026-08-19--025--plan-149-phase-1a-compileasync-prewarm.md), §19). Leftover instancing/mask (`Green`/`Wood`/`MI_WindowGlass`) is Phase C. Whole plan is **not** `done`.
 **Priority:** high · **Effort:** M/L
 **Depends on:** none
 **domain:** `world-terrain`
@@ -629,7 +629,7 @@ Przeczytane i wykorzystane:
 
 - `docs/performance/README.md`
 - `docs/STATE.md`
-- `docs/plans/2026-08-15--119--chunk-streaming-performance.md`
+- `docs/plans/archive/2026-08-15--119--chunk-streaming-performance.md`
 - `docs/research/2026-08-16--011--streaming-hitch-investigation.md`
 - `docs/research/2026-08-16--012--streaming-hitch-trace-v2-linkprogram-wait.md`
 - `docs/research/2026-08-17--018--stream-isolation-probes.md`

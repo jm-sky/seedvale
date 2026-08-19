@@ -1,7 +1,7 @@
 # Plan: Shadow Budget Optimization
 
 **Created:** 2026-08-17
-**Status:** `verification needed` 🔍 — R1+R2 zaimplementowane, technicznie zweryfikowane (tsc/lint/build/test zielone); brak testu wizualnego w przeglądarce i brak benchmarku (patrz [implementation notes](./2026-08-17--145--shadow-budget-optimization-implementation-notes.md))
+**Status:** `done` ✅ — browser verified 2026-08-19 (patrz [implementation notes](./2026-08-17--145--shadow-budget-optimization-implementation-notes.md))
 **Priority:** 🟡 medium · **Effort:** M
 **Depends on:** —
 
@@ -14,11 +14,11 @@ Zmniejszyć koszt CPU/GPU shadow renderingu (jeden directional light, 1024² map
 
 Ten plan **nie powtarza** ustaleń źródłowych dokumentów — czytać w całości przed implementacją:
 
-- [`docs/performance/README.md`](../performance/README.md) §4.3, §6, §8
-- [`docs/reviews/2026-08-12--005--performance-architecture-and-assets.md`](../reviews/2026-08-12--005--performance-architecture-and-assets.md) — A2 (pochodzenie `SMALL_MESH_SHADOW_THRESHOLD` i terrain-self-shadow toggle)
-- [`docs/reviews/2026-08-15--013--architecture-and-performance-audit.md`](../reviews/2026-08-15--013--architecture-and-performance-audit.md)
-- [`docs/reviews/2026-08-15--015--browser-performance-benchmark.md`](../reviews/2026-08-15--015--browser-performance-benchmark.md) — baseline liczby
-- [`docs/research/2026-08-17--019--rendering-optimizations.md`](../research/2026-08-17--019--rendering-optimizations.md) §4.4 — punkt wyjścia tego planu ("Shadow map re-renders every frame ... Deliberately not stacked here")
+- [`docs/performance/README.md`](../../performance/README.md) §4.3, §6, §8
+- [`docs/reviews/2026-08-12--005--performance-architecture-and-assets.md`](../../reviews/2026-08-12--005--performance-architecture-and-assets.md) — A2 (pochodzenie `SMALL_MESH_SHADOW_THRESHOLD` i terrain-self-shadow toggle)
+- [`docs/reviews/2026-08-15--013--architecture-and-performance-audit.md`](../../reviews/2026-08-15--013--architecture-and-performance-audit.md)
+- [`docs/reviews/2026-08-15--015--browser-performance-benchmark.md`](../../reviews/2026-08-15--015--browser-performance-benchmark.md) — baseline liczby
+- [`docs/research/2026-08-17--019--rendering-optimizations.md`](../../research/2026-08-17--019--rendering-optimizations.md) §4.4 — punkt wyjścia tego planu ("Shadow map re-renders every frame ... Deliberately not stacked here")
 
 ## Metoda tej analizy
 

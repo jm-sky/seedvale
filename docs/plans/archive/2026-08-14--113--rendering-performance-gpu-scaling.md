@@ -1,6 +1,6 @@
 # Seedvale — Rendering Performance & GPU Scaling
 
-**Status:** verification needed
+**Status:** `done` ✅ — browser verified 2026-08-19
 **Priority:** 🔴 high
 **Cel:** zwiększyć skalę świata, osad, NPC i vegetation bez proporcjonalnego wzrostu kosztu renderingu, zachowując obecny styl wizualny Seedvale.
 

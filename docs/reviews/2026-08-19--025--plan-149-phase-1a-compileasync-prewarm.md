@@ -5,7 +5,7 @@
 **Runs:** **3** cold `?benchmark=stream` (fresh page load each time)
 **Scope:** verify the Phase 1 A loading-window prewarm (`src/render/programPrewarm.ts`) on real GPU. No PointLight budget change, no ChunkManager / worker / mirror / postprocess / material-merge work.
 
-Follows [plan 157](../plans/2026-08-18--157--production-pointlight-budget.md) §12 (production `NUM_POINT_LIGHTS=16`) and [plan 149](../plans/2026-08-17--149--shader-program-first-use-hitch.md) §19.
+Follows [plan 157](../plans/archive/2026-08-18--157--production-pointlight-budget.md) §12 (production `NUM_POINT_LIGHTS=16`) and [plan 149](../plans/2026-08-17--149--shader-program-first-use-hitch.md) §19.
 
 ## Environment
 

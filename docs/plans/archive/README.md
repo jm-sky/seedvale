@@ -183,15 +183,17 @@ Implemented; still waiting on browser/play check.
 
 ## Snapshot 2 — 2026-08-14 – 2026-08-19
 
-**Data:** 2026-08-19. **Zakres:** plany 103–165 (drugi okres pracy, od zamrożenia Snapshot 1 do dziś).
+**Data:** 2026-08-19 (rozszerzone tego samego dnia, patrz amendment niżej). **Zakres:** plany 040–165 (drugi okres pracy, od zamrożenia Snapshot 1 do dziś).
 
-**Co zostało zamknięte:** 35 planów + 1 nieindeksowany dokument audytowy (`asset-audit-3d-models`, referencje z `docs/prompts`/`docs/reviews` zaktualizowane), wszystkie potwierdzone jako `done` (playtest accepted albo — dla kilku małych/wewnętrznych planów — implementacja + techniczna weryfikacja bez dedykowanego playtestu) we własnym nagłówku `Status:` planu, bez formalnej `Depends on` referencji z żadnego obecnie aktywnego/planned/todo/verification planu. Zgrupowane niżej wg tematu.
+**Co zostało zamknięte:** 42 plany + 1 nieindeksowany dokument audytowy (`asset-audit-3d-models`, referencje z `docs/prompts`/`docs/reviews` zaktualizowane), wszystkie potwierdzone jako `done` (playtest accepted albo — dla kilku małych/wewnętrznych planów — implementacja + techniczna weryfikacja bez dedykowanego playtestu) we własnym nagłówku `Status:` planu, bez formalnej `Depends on` referencji z żadnego obecnie aktywnego/planned/todo/verification planu. Zgrupowane niżej wg tematu.
 
-**Korekta statusu przy okazji tego snapshotu:** pięć planów (`103`, `112`, `113`, `119`, `145`) siedziało w tabeli „Done” poprzedniego README, mimo że ich własny nagłówek `Status:` mówi `verification needed` — przeniesione do `## Verification needed` w [live README](../README.md), **nie** zarchiwizowane. Plan `111` (house-construction) miał ten sam problem (siedział w `## Todo`, własny status `verification needed` po playtest 2026-08-18 wykrywającym błędy składania domków) — również przeniesiony do `## Verification needed`. Żaden z tych sześciu nie jest w tym snapshocie.
+**Korekta statusu przy okazji tego snapshotu:** sześć planów (`103`, `111`, `112`, `113`, `119`, `145`) siedziało w tabeli „Done”/„Todo” poprzedniego README, mimo że ich własny nagłówek `Status:` mówi `verification needed` — najpierw przeniesione do `## Verification needed` w [live README](../README.md), **nie** zarchiwizowane od razu.
 
-**Jakie plany pozostały aktywne:** pełna, aktualna mapa jest w [live README](../README.md) — `in progress` (093, 149), `planned` (104, 126, 127, 151, 152, 159, 161, 162, 164), `todo` (037, 070) i `verification needed` (111, 119, 129, 132, 103, 112, 113, 145).
+**Amendment (2026-08-19, tego samego dnia):** po browser/playtest verification pięciu z tych planów — `103`, `112`, `113`, `119`, `145` — ich `Status:` zaktualizowany na `done` ✅ ("browser verified 2026-08-19") i przeniesione do tego snapshotu razem z `049` (procedural-world-landmarks, było już `done`, brakowało formalnej `Depends on` referencji więc kwalifikowało się do archiwizacji) i `157` (production-pointlight-budget, `done`, było w Recent context jako bezpośredni poprzednik `149` — usunięte stamtąd po archiwizacji). Plan `111` (house-construction) **nie** jest w tym snapshocie — playtest 2026-08-18 wykrył realny błąd składania domków, więc zostaje `verification needed` w live README do czasu poprawki.
 
-**Najważniejsze zależności zachowane jako "Recent context" (nie zarchiwizowane — patrz live README):** `106` player-needs-food-and-cooking, `122` natural-resource-gathering-and-water-distribution, `069` npc-household-resources, `156` npc-household-and-settlement-storage-logistics — fundament, na którym stoją `126`/`127`/`152`/`159`/`070`; `155` inventory-item-instances-and-trap-lifecycle i `160` high-quality-melee-weapons — dependency `161`/`162`; `150` combat-mode-defense-and-downed-state — dependency `162`; `049` procedural-world-landmarks i `110` quests-v3-closure — dependency `132`; `109` megakit-construction-catalog — dependency `111`; `157` production-pointlight-budget — bezpośredni poprzednik aktywnego `149`.
+**Jakie plany pozostały aktywne:** pełna, aktualna mapa jest w [live README](../README.md) — `in progress` (093, 149), `planned` (104, 126, 127, 151, 152, 159, 161, 162, 164), `todo` (037, 070) i `verification needed` (111, 129, 132).
+
+**Najważniejsze zależności zachowane jako "Recent context" (nie zarchiwizowane — patrz live README):** `106` player-needs-food-and-cooking, `122` natural-resource-gathering-and-water-distribution, `069` npc-household-resources, `156` npc-household-and-settlement-storage-logistics — fundament, na którym stoją `126`/`127`/`152`/`159`/`070`; `155` inventory-item-instances-and-trap-lifecycle i `160` high-quality-melee-weapons — dependency `161`/`162`; `150` combat-mode-defense-and-downed-state — dependency `162`; `110` quests-v3-closure — dependency `132`, narrative closure dla `093`; `109` megakit-construction-catalog — dependency `111`. (`049` i `157` były tu wcześniej — teraz archived, patrz amendment powyżej; ich rolę jako dependency dokumentuje `Depends on` w live README, np. `132`'s `~~049~~`.)
 
 **Najważniejsze świeże zmiany domknięte w tym snapshocie:** universal melee combat + gap-close + mobile target acquisition (123/124b/142) jako fundament pod combat mode (150, recent context); player skills sneak/survival (124/128); fire lighting + campfire GLB (130/135); item expansion (134); weather surface effects (133) i seasons/weather core (040); cross-chunk vegetation batching, water reflection GPU i grass GPU LOD (143/144/148) jako zamknięty etap S rendering-performance przed obecnym `149`; three.js 0.180→0.185 upgrade (136); fauna herds/juveniles, probabilistic perception, spawn-point limits, habitat/carcass visuals, harvested remains, day-scale respawn (118/120/125/137/138/139); NPC critical-need interrupt (114), reaction-to-player (117), stuck-at-house locomotion (108) + audyt assetów 3D; UI/audio polish (105 UI/UX audit, 107 asset browser, 116 dialogue audio, 121 footstep refresh, 153 mobile playtest fixes, 154 volume controls, 158 jump/land SFX, 163 rest/mobile UI/inventory polish, 165 reset graphics/audio settings); animal traps (141).
 
@@ -199,16 +201,23 @@ Implemented; still waiting on browser/play check.
 
 | ID | File | Outcome |
 |----|------|---------|
+| 103 | [performance-diagnostics-benchmark](./2026-08-13--103--performance-diagnostics-benchmark.md) | Diagnostyka wydajności, benchmarki, profile jakości (etapy 1–4; Adaptive = później); browser verified 2026-08-19 |
+| 112 | [chunk-streaming-hitch-optimization](./2026-08-14--112--chunk-streaming-hitch-optimization.md) | Rozłożenie `buildAndAttachMesh` na 1/klatkę przez `ChunkManager`; browser verified 2026-08-19 |
+| 113 | [rendering-performance-gpu-scaling](./2026-08-14--113--rendering-performance-gpu-scaling.md) | P0/P1 (+ tani P2 LOD/cienie): tańsze N8AO, cień raz/klatkę, instancing, lustro 30 Hz, grass LOD; browser verified 2026-08-19 |
+| 119 | [chunk-streaming-performance](./2026-08-15--119--chunk-streaming-performance.md) | Hitchy chunk streaming: preload GLB + kolejka mesh/content; stampede po `await` szablonów usunięty; browser verified 2026-08-19 |
 | 136 | [threejs-180-to-185-upgrade](./2026-08-16--136--threejs-180-to-185-upgrade.md) | Upgrade `three` `0.180.0`→`0.185.1` (`PCFShadowMap`, `Clock`→`Timer`) |
 | 143 | [cross-chunk-vegetation-batching](./2026-08-17--143--cross-chunk-vegetation-batching.md) | Region 3×3 vegetation batching |
 | 144 | [water-reflection-gpu-optimization](./2026-08-17--144--water-reflection-gpu-optimization.md) | Mirror outer-ring cull (Stage S) |
+| 145 | [shadow-budget-optimization](./2026-08-17--145--shadow-budget-optimization.md) | R1 pull-based dirty/budget shadow map update + R2 size threshold dla item fallbacków; browser verified 2026-08-19 |
 | 148 | [grass-gpu-performance](./2026-08-17--148--grass-gpu-performance.md) | Grass geometry LOD (S) |
+| 157 | [production-pointlight-budget](./2026-08-18--157--production-pointlight-budget.md) | Production `NUM_POINT_LIGHTS` budget **16**; real-GPU stream/night verified; direct predecessor of `149` |
 
 ### World / terrain / climate
 
 | ID | File | Outcome |
 |----|------|---------|
 | 040 | [seasons-weather](./2026-08-08--040--seasons-weather.md) | Deterministyczny sezon/pogoda `(seed, elapsedDays)`, fog + GPU particles + rain SFX |
+| 049 | [procedural-world-landmarks](./2026-08-09--049--procedural-world-landmarks.md) | Landmarki v1: monolith / stoneCircle / smallRuins / cemetery + bias terenu; dependency of `132` |
 | 133 | [weather-surface-effects](./2026-08-16--133--weather-surface-effects.md) | Mokry teren / kałuże / śnieg na shaderze chunka (`uWetness`/`uSnowAmount`) |
 | 140 | [landscape-flora-and-village-cobble](./2026-08-17--140--landscape-flora-and-village-cobble.md) | Sosny textured, paproć, grzyb GLB, trzcina, pień harvestu, bruk MD+ |
 

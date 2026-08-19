@@ -187,7 +187,7 @@ L2 dokłada: generator grafu, sala (większa rozpiętość dachu), 2+ wejścia, 
 1. Ten brief.
 2. [docs/STATE.md](docs/STATE.md) — LargeCaves, fauna cave, WorldBundle, dig.
 3. [docs/VISION.md](docs/VISION.md) + [docs/architecture/performance-and-workers.md](docs/architecture/performance-and-workers.md).
-4. Plany: [064](docs/plans/archive/2026-08-11--064--cave-spawner-road-avoidance-and-visual.md), [083](docs/plans/archive/2026-08-12--083--cave-mouth-terrain-depression.md), [090](docs/plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) §4, [049](docs/plans/2026-08-09--049--procedural-world-landmarks.md).
+4. Plany: [064](docs/plans/archive/2026-08-11--064--cave-spawner-road-avoidance-and-visual.md), [083](docs/plans/archive/2026-08-12--083--cave-mouth-terrain-depression.md), [090](docs/plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) §4, [049](docs/plans/archive/2026-08-09--049--procedural-world-landmarks.md).
 5. Kod: `src/world/createLargeCaves.ts`, `largeCaveVisual.ts`, `largeCaves.ts`; `ChunkManager.modifyTerrain`; `PlayerController.snapToGround`; `src/terrain/buildChunkGeometry.ts`; grass path.
 6. Issue [026](docs/issues/2026-08-12--026--cave-mouth-flat-prop-not-a-hole.md) — świadomy scope-out interiors.
 
