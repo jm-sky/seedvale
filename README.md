@@ -9,17 +9,17 @@ The project is well past the original terrain-and-walking spike. Implemented tod
 ## Running it
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 Dev server runs on port `5577` (`vite.config.ts`, `strictPort`).
 
 ```bash
-npm run build      # type-check (vue-tsc) + production build
-npm run preview    # preview a production build
-npm run test       # unit tests (Vitest)
-npm run lint       # ESLint
+pnpm run build      # type-check (vue-tsc) + production build
+pnpm run preview    # preview a production build
+pnpm run test       # unit tests (Vitest)
+pnpm run lint:fix   # ESLint
 ```
 
 ## Where to look next

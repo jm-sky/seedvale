@@ -102,6 +102,7 @@ Completed plans **in this folder**. After the 2026-08-14 archive freeze new `don
 
 | File | Summary |
 |------|---------|
+| `2026-08-19--165--reset-graphics-and-audio-settings.md` | Pauza → Ustawienia: Resetuj ustawienia (dźwięk 100% + preset grafiki High). |
 | `2026-08-18--158--false-jump-land-sfx.md` | Slope-stick + próg land SFX; jump-land z packa terenu zamiast Kenney `footstep-01…04`. |
 | `2026-08-18--150--combat-mode-defense-and-downed-state.md` | Combat mode + soft lock (`Tab` living / `Shift+Tab` world), defense resolver + skill, player `downed`; save v18 (`defense` skill); type-check/build/test zielone, browser pending. |
 | `2026-08-18--156--npc-household-and-settlement-storage-logistics.md` | Fizyczny household/settlement crate + `[E]` stock (`Household` / `SettlementEconomy`); transport NPC już był (069/122/131). |

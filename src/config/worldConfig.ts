@@ -4,7 +4,7 @@ import type { FbmParams } from '../terrain/fbm'
 import { isDebugMode } from '../debug/debugMode'
 import { parseSeedFromUrl } from '../world/parseSeed'
 import { loadDomainConfigs } from './persistConfig'
-import { applyQualityPreset, isQualityPreset, knobsFromConfig, matchQualityPreset, type QualityPreset } from './qualityProfiles'
+import { applyQualityPreset, DEFAULT_QUALITY_PRESET, isQualityPreset, knobsFromConfig, matchQualityPreset, type QualityPreset } from './qualityProfiles'
 
 /** Player override for the home settlement size — `auto` keeps terrain-weighted roll. */
 export type HomeVillageSize = 'auto' | RolledVillageSize
@@ -299,7 +299,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       shadowMapSize: 1024,
     },
     quality: {
-      preset: 'High',
+      preset: DEFAULT_QUALITY_PRESET,
       lodScale: 1,
       adaptiveEnabled: false,
     },

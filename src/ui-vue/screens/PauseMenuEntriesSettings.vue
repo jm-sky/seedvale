@@ -4,7 +4,7 @@ import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
 import type { AudioVolumeKey } from '../../audio/audioSettings'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
-import { closePauseMenu, isPauseMenuOpen, openNotes, openWorldConfigScreen, setAudioVolume, setPausePlayerName, toggleHudFpsVisible, ui } from '../store'
+import { closePauseMenu, isPauseMenuOpen, openNotes, openWorldConfigScreen, resetAudioSettings, resetGraphicsQuality, setAudioVolume, setPausePlayerName, toggleHudFpsVisible, ui } from '../store'
 
 const name = ref(ui.pauseMenu.playerName)
 const volumes = ui.audio.volumes
@@ -29,6 +29,10 @@ function onVolumeInput(key: AudioVolumeKey, event: Event): void {
 }
 function volumePercent(key: AudioVolumeKey): number {
   return Math.round(volumes[key] * 100)
+}
+function resetSettings(): void {
+  resetAudioSettings()
+  resetGraphicsQuality()
 }
 </script>
 
@@ -136,6 +140,12 @@ function volumePercent(key: AudioVolumeKey): number {
       @click="toggleHudFpsVisible"
     >
       FPS w HUD<span class="ml-2 text-xs opacity-75">{{ ui.hud.showFps ? 'włączone' : 'wyłączone' }}</span>
+    </UiButton>
+    <UiButton
+      class="mb-2 w-full"
+      @click="resetSettings"
+    >
+      Resetuj ustawienia
     </UiButton>
   </UiPanel>
 </template>

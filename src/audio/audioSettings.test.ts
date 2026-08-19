@@ -90,4 +90,10 @@ describe('audioSettings localStorage', () => {
     localStorage.setItem(AUDIO_STORAGE_KEY, '{not-json')
     expect(loadAudioVolumes()).toEqual(DEFAULT_AUDIO_VOLUMES)
   })
+
+  it('writing defaults over a saved mix round-trips back to 1', () => {
+    saveAudioVolumes({ master: 0.2, ambient: 0.4, sfx: 0.6 })
+    saveAudioVolumes(DEFAULT_AUDIO_VOLUMES)
+    expect(loadAudioVolumes()).toEqual(DEFAULT_AUDIO_VOLUMES)
+  })
 })

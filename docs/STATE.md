@@ -95,7 +95,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 - Touch HUD chrome shares `HudRightColumn` (pause + skills + minimap); Quick Actions is a fixed overlay (`Teleport` to `body`) with wrap/grid rows, not a slot in the column. The E/Zap/R cluster stays in `TouchChrome` so it paints above flavor/NPC dialogue. Desktop: skills button stacked above the QA FAB; `U` toggles Umiejętności.
 - Minimap is heading-up with a rim `N` marker; `M` opens the north-up world map. Discovery is permanent (radius 48, `SaveData.map`, schema v11) and does not load chunks.
 - Home-trader `MerchantScreen` is two columns (stock | player bag) with category (`Jedzenie` = `ItemCategory food`) / price / sort filters; buy with shells (Kup ghost, disabled when unaffordable), sell at half `tradeValue`, barter still covers list price. `coin` stays out of the merchant. Toasts sit at `z-20` above the modal.
-- lil-gui is hidden by default; Ustawienia → Panel debug, `?debug=1` or `?gui=1` reveal it (`?gui=0` forces hide). Pause → Świat exposes the player-facing subset of the same `WorldConfig`. Pause → Ustawienia → Dźwięk has master / ambient / SFX sliders (`createWorldAudio` GainNode buses; `seedvale:audio:v1` localStorage, not SaveData — plan 154).
+- lil-gui is hidden by default; Ustawienia → Panel debug, `?debug=1` or `?gui=1` reveal it (`?gui=0` forces hide). Pause → Świat exposes the player-facing subset of the same `WorldConfig`. Pause → Ustawienia → Dźwięk has master / ambient / SFX sliders (`createWorldAudio` GainNode buses; `seedvale:audio:v1` localStorage, not SaveData — plan 154). **Resetuj ustawienia** restores those sliders to 100% and the graphics quality preset to High through the same live handlers (plan 165) — not seed, terrain, name, day/night, or HUD FPS.
 - Vue Fazy 0–4 are implemented; desktop + touch browser verification is still open (plan 046). Plan 105 UI/UX audit is done ([review 007](./reviews/2026-08-14--007--ui-ux.md)); H1–H3 + trade/skills HUD are implemented, pending browser check.
 
 ## Important shared concepts
@@ -184,7 +184,7 @@ src/ui-vue/
 
 ## Verification state
 
-Technical checks: `npx tsc --noEmit` · `npm run lint` · `npm run build` · `npm run test`.
+Technical checks: `npx tsc --noEmit` · `pnpm run lint:fix` · `pnpm run build` · `pnpm run test`.
 
 Do not treat a passing build as proof that a visual Three.js feature is correct. For browser-only verification, provide concrete manual steps for the user.
 

@@ -58,6 +58,9 @@ export const QUALITY_PRESETS: Record<Exclude<QualityPreset, 'Custom'>, QualityKn
 
 export const QUALITY_PRESET_IDS: readonly QualityPreset[] = ['Low', 'Medium', 'High', 'Custom']
 
+/** Factory default — `baseConfig` and Pauza → Ustawienia reset both use this. */
+export const DEFAULT_QUALITY_PRESET: Exclude<QualityPreset, 'Custom'> = 'High'
+
 export function isQualityPreset(value: unknown): value is QualityPreset {
   return typeof value === 'string' && (QUALITY_PRESET_IDS as readonly string[]).includes(value)
 }

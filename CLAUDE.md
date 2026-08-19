@@ -48,9 +48,9 @@ Technical verification normally includes:
 
 ```text
 npx tsc --noEmit
-npm run lint
-npm run build
-npm run test
+pnpm run lint:fix
+pnpm run build
+pnpm run test
 ```
 
 For `.vue` files, `npm run build` uses `vue-tsc`. Unit tests use Vitest (`*.test.ts`). Current unit coverage is primarily pure logic rather than Three.js/DOM/`.vue` integration.

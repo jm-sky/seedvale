@@ -22,6 +22,7 @@ import {
   saveAudioVolumes,
 } from '../audio/audioSettings'
 import { playUiClick, playUiOpen } from '../audio/uiSounds'
+import { DEFAULT_QUALITY_PRESET } from '../config/qualityProfiles'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { type DayNightState, formatClock, phaseName } from '../world/dayNight'
 
@@ -332,6 +333,21 @@ export function setAudioVolume(key: AudioVolumeKey, value: number): void {
   ui.audio.volumes.sfx = next.sfx
   saveAudioVolumes(next)
   audioVolumesOnChange?.(next)
+}
+
+/** Restore mixer defaults (100%) and persist — same path as the volume sliders. */
+export function resetAudioSettings(): void {
+  const next = { ...DEFAULT_AUDIO_VOLUMES }
+  ui.audio.volumes.master = next.master
+  ui.audio.volumes.ambient = next.ambient
+  ui.audio.volumes.sfx = next.sfx
+  saveAudioVolumes(next)
+  audioVolumesOnChange?.(next)
+}
+
+/** Restore the factory quality preset through the live World Config handler. */
+export function resetGraphicsQuality(): void {
+  ui.worldConfigScreen.onQualityPresetChange?.(DEFAULT_QUALITY_PRESET)
 }
 export function setPauseSeed(seed: number): void { ui.pauseMenu.seed = seed }
 export function setPausePlayerName(name: string): void { ui.pauseMenu.playerName = name }
