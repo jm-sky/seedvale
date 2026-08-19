@@ -13,7 +13,7 @@ import type { PlacedTraps } from '../world/createPlacedTraps'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
-import { consumeVerbLabel, ITEM_CATALOG } from '../items/itemCatalog'
+import { consumeVerbLabel, isChopTool, isHarvestKnife, ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
 import { isPlayerPlacedFire, type PlacedFires } from '../settlement/PlacedFires'
@@ -119,9 +119,10 @@ function trapPromptLabel(kind: TrapKind, state: TrapState): string {
 
 /** `bury` (shovel) and `harvest` (knife, plan 106) never overlap on the same
  *  corpse — the single `HeldTool` slot means only one tool is held at once.
- *  `knifeAvailable` covers both "knife already held" and "knife in inventory,
- *  hand free" (plan 153) — `startHarvestMeat` auto-equips it either way, so
- *  the prompt should appear whenever the action would actually succeed. */
+ *  `knifeAvailable` covers both "harvest knife already held" and "harvest
+ *  knife in inventory, hand free" (plan 153, plan 160 damascus_knife) —
+ *  `startHarvestMeat` auto-equips it either way, so the prompt should appear
+ *  whenever the action would actually succeed. */
 function corpseCandidate(
   animal: AnimalAgent,
   shovelHeld: boolean,
@@ -216,8 +217,9 @@ export function buildInteractables(
   landOwnership?: LandOwnershipRegistry,
   /** Knife sitting in inventory with the hand free — `startHarvestMeat`
    *  auto-equips it, so this counts toward the harvest prompt the same as
-   *  already holding it (plan 153). Defaults to false for existing
-   *  callers/tests that don't model inventory contents. */
+   *  already holding it (plan 153). Includes damascus_knife (plan 160).
+   *  Defaults to false for existing callers/tests that don't model inventory
+   *  contents. */
   inventoryHasFreeKnife = false,
   /** Per-`AnimalKind` interact-range override, from `QuestManager
    *  .activeSpotAnimalRange` (plan 153) — passed as a resolver rather than
@@ -227,10 +229,10 @@ export function buildInteractables(
   activeSpotAnimalRange?: (kind: AnimalKind) => number | null,
 ): Interactable[] {
   const list: Interactable[] = []
-  const axeHeld = heldTool === 'axe'
+  const axeHeld = isChopTool(heldTool)
   const shovelHeld = heldTool === 'shovel'
   const pickaxeHeld = heldTool === 'pickaxe'
-  const knifeHeld = heldTool === 'knife'
+  const knifeHeld = isHarvestKnife(heldTool)
   const knifeAvailable = knifeHeld || (heldTool === null && inventoryHasFreeKnife)
 
   for (const pf of placedFires.list()) {

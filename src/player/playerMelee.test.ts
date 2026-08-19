@@ -43,6 +43,15 @@ describe('itemCatalog melee config (plan 123 — single source of truth)', () =>
     expect(SHOVEL.damage).toBe(8)
   })
 
+  it('plan 160 high-quality weapons sit above their base counterparts', () => {
+    expect(ITEM_CATALOG.damascus_knife.melee!.damage).toBeGreaterThan(KNIFE.damage)
+    expect(ITEM_CATALOG.damascus_short_sword.melee!.damage).toBeGreaterThan(ITEM_CATALOG.short_sword.melee!.damage)
+    expect(ITEM_CATALOG.masterwork_sword.melee!.damage).toBeGreaterThan(SWORD.damage)
+    expect(ITEM_CATALOG.damascus_long_sword.melee!.damage).toBeGreaterThan(ITEM_CATALOG.masterwork_sword.melee!.damage)
+    expect(ITEM_CATALOG.battle_axe.melee!.damage).toBeGreaterThan(AXE.damage)
+    expect(ITEM_CATALOG.obsidian_sword.melee!.damage).toBeGreaterThan(ITEM_CATALOG.damascus_long_sword.melee!.damage)
+  })
+
   it('different weapons have different attack timing', () => {
     const totalDuration = (c: typeof KNIFE) => c.windUp + c.hitWindow + c.recovery
     expect(totalDuration(KNIFE)).toBeLessThan(totalDuration(SWORD))

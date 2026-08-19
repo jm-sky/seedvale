@@ -5,17 +5,17 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-18
+**Last updated:** 2026-08-19
 
 ## Quick rules
 
 | Concern | Where |
 |---------|--------|
 | Inventory weight / label | `ITEM_DEFS` |
-| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, spear, short_sword, pitchfork, sickle |
+| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, spear, short_sword, pitchfork, sickle, damascus_knife, damascus_short_sword, damascus_long_sword, obsidian_sword, battle_axe, masterwork_sword |
 | Held 3D attach | `heldToolVisual.ts` → `WristR` + `HELD_ATTACH` (Phase 6: migrate per-tool numbers to `grip` anchors via alignment browser) |
 | Ground GLB scale | `itemModels.ts` → `preparePropFitMax` (not height-only) |
-| Melee vs animals | `ITEM_CATALOG[kind].melee` (plan 123, `itemCatalog.ts`) — single source of truth for damage/range/arcDot/windUp/hitWindow/recovery/staminaCost; `player/playerMelee.ts` runs the windUp→hitWindow→recovery lifecycle + range/facing-arc hit test. `faunaCombat.ts`'s `isMeleeTool()` just reads this. Damage: sword 28, axe 20, spear 20, short_sword 18, pitchfork 14, knife/sickle 12, shovel 8 |
+| Melee vs animals | `ITEM_CATALOG[kind].melee` (plan 123, `itemCatalog.ts`) — single source of truth for damage/range/arcDot/windUp/hitWindow/recovery/staminaCost; `player/playerMelee.ts` runs the windUp→hitWindow→recovery lifecycle + range/facing-arc hit test. `faunaCombat.ts`'s `isMeleeTool()` just reads this. Damage: obsidian_sword 46, damascus_long_sword 40, masterwork_sword 34, long_sword/battle_axe 28, damascus_short_sword 24, spear/axe 20, short_sword 18, damascus_knife 16, pitchfork 14, knife/sickle 12, shovel 8 |
 | Village one-time tools | `createItemSpawners.ts` |
 | Portable light | `PlayerTorch` — lit branch (90s) or held wooden_torch (240s); exclusive right hand |
 | Inventory category | `ITEM_DEFS.categories` — `resource` / `tool` / `utility` / `food` / `weapon` (multi-category, e.g. axe = tool + weapon); hunger consumables are `food`, waterskins stay `utility` |
@@ -72,6 +72,12 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | coin | moneta | — | — | none (quest reward) | procedural | plan 129; near-zero weight (0.001 kg); quest reward + land-plot purchase price; separate from the shell/barter merchant economy |
 | herb | zioło lecznicze | — | — | world chunk (flora pool) | procedural | plan 153; Opatrz (+8 health) — free but scarce (half mushroom's weight) |
 | bandage | opatrunek | — | — | none (Kupiec) | procedural | plan 153; Opatrz (+35 health) — reliable, purchasable healing |
+| damascus_knife | nóż damasceński | yes | 16 | none (Kupiec) | procedural (M44) | plan 160; harvests corpses like knife |
+| damascus_short_sword | krótki miecz damasceński | yes | 24 | none (Kupiec) | procedural (M45) | plan 160 |
+| damascus_long_sword | długi miecz damasceński | yes | 40 | none (quest grozny-wilk) | procedural (M46) | plan 160; not Kupiec stock |
+| obsidian_sword | obsydianowy miecz | yes | 46 | none (quest wilcza-jama) | procedural (M47) | plan 160; volcanic glass; not Kupiec stock |
+| battle_axe | topór bojowy | yes | 28 | none (Kupiec) | procedural (M48) | plan 160; chops trees like axe (`isChopTool`) |
+| masterwork_sword | mistrzowski miecz | yes | 34 | none (Kupiec) | procedural (M49) | plan 160; elite steel, cheaper than damascus long |
 
 ## Roadmap (not done)
 

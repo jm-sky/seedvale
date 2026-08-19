@@ -23,6 +23,10 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   long_sword: 50,
   spear: 32,
   short_sword: 40,
+  damascus_knife: 90,
+  damascus_short_sword: 140,
+  masterwork_sword: 160,
+  battle_axe: 110,
   waterskin_empty: 10,
   bread: 6,
   cheese: 8,
@@ -47,6 +51,10 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'long_sword',
   'spear',
   'short_sword',
+  'damascus_knife',
+  'damascus_short_sword',
+  'masterwork_sword',
+  'battle_axe',
   'waterskin_empty',
   'bread',
   'cheese',
@@ -66,6 +74,8 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   coal: 4,
   iron: 6,
   gold: 20,
+  damascus_long_sword: 240,
+  obsidian_sword: 320,
 }
 
 export function merchantPrice(kind: ItemKind): number | null {

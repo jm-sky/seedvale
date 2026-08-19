@@ -108,6 +108,47 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     rotation: [Math.PI, 0, Math.PI / 2],
     scale: 1.15,
   },
+  // No GLB yet (plan 160) — knife family.
+  damascus_knife: {
+    position: [0, 0.12, -0.01],
+    rotation: [Math.PI, 0, Math.PI / 2],
+    scale: 1.25,
+  },
+  // No GLB yet (plan 160) — short_sword family.
+  damascus_short_sword: {
+    position: [-0.22, 0.12, -0.02],
+    rotation: [0, 0, Math.PI / 2],
+    scale: 0.85,
+    gripLocalOffset: [0, -0.18, 0],
+  },
+  // No GLB yet (plan 160) — long_sword family.
+  damascus_long_sword: {
+    position: [-0.3, 0.12, -0.02],
+    rotation: [0, 0, Math.PI / 2],
+    scale: 1,
+    gripLocalOffset: [0, -0.25, 0],
+  },
+  // No GLB yet (plan 160) — long_sword family.
+  obsidian_sword: {
+    position: [-0.3, 0.12, -0.02],
+    rotation: [0, 0, Math.PI / 2],
+    scale: 1,
+    gripLocalOffset: [0, -0.25, 0],
+  },
+  // No GLB yet (plan 160) — axe family, slightly larger.
+  battle_axe: {
+    position: [0.02, 0.13, -0.02],
+    rotation: [Math.PI / 2, Math.PI / 2, 0],
+    scale: 1.4,
+    gripLocalOffset: [0, 0, -0.32],
+  },
+  // No GLB yet (plan 160) — long_sword family.
+  masterwork_sword: {
+    position: [-0.3, 0.12, -0.02],
+    rotation: [0, 0, Math.PI / 2],
+    scale: 1,
+    gripLocalOffset: [0, -0.25, 0],
+  },
 }
 
 /**
@@ -197,7 +238,7 @@ export async function createHeldToolObject(kind: ToolKind): Promise<Object3D> {
   }
 
   const mesh = createItemMesh(kind)
-  mesh.scale.setScalar(kind === 'knife' ? 0.95 : 0.85)
+  mesh.scale.setScalar(kind === 'knife' || kind === 'damascus_knife' ? 0.95 : 0.85)
   return mesh
 }
 

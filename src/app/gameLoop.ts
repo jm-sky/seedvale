@@ -558,7 +558,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.mesh.position,
         held,
         landOwnership,
-        inventory.has('knife', 1),
+        inventory.has('knife', 1) || inventory.has('damascus_knife', 1),
         (kind) => questManager.activeSpotAnimalRange(kind),
       )
 
@@ -901,7 +901,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           } else {
             const outcome = resolveInteraction(target, questManager)
             if (treeInspectionCanYieldBranch(target.stage)) {
-              const branchChance = TREE_BRANCH_CHANCE + (inventory.has('knife', 1) ? KNIFE_BRANCH_BONUS : 0)
+              const branchChance = TREE_BRANCH_CHANCE + (inventory.has('knife', 1) || inventory.has('damascus_knife', 1) ? KNIFE_BRANCH_BONUS : 0)
               if (Math.random() < branchChance && inventory.canAdd('branch')) {
                 inventory.add('branch')
                 playInventoryPickUp(worldAudio.playOnce)

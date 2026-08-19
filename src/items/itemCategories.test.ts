@@ -19,6 +19,11 @@ describe('item categories', () => {
     expect(hasItemKindCategory('long_sword', 'tool')).toBe(false)
   })
 
+  it('battle_axe matches tool and weapon (plan 160)', () => {
+    expect(hasItemKindCategory('battle_axe', 'tool')).toBe(true)
+    expect(hasItemKindCategory('battle_axe', 'weapon')).toBe(true)
+  })
+
   it('membership helper works on defs', () => {
     expect(hasItemCategory(ITEM_DEFS.axe, 'weapon')).toBe(true)
     expect(hasItemCategory(ITEM_DEFS.bread, 'food')).toBe(true)

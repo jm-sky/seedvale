@@ -263,10 +263,10 @@ export const QUESTS: readonly QuestDef[] = [
         progressLine: 'Wilk pokonany. Wróć do Anny.',
       },
     ],
-    reportLine: 'Dzięki Tobie znowu można spokojnie wychodzić poza osadę.',
+    reportLine: 'Dzięki Tobie znowu można spokojnie wychodzić poza osadę. Weź ten damasceński miecz — zasłużyłeś.',
     availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
     effects: { relation: 2, exp: 20 },
-    reward: { kind: 'coin', count: 50 },
+    reward: { kind: 'damascus_long_sword', count: 1 },
   },
   {
     id: 'wilcza-jama',
@@ -281,10 +281,10 @@ export const QUESTS: readonly QuestDef[] = [
         progressLine: 'Jama opustoszała. Wróć do Anny.',
       },
     ],
-    reportLine: 'Teraz w okolicy będzie spokojniej. Dziękuję.',
+    reportLine: 'Teraz w okolicy będzie spokojniej. Weź ten obsydianowy miecz z wulkanicznego szkła.',
     availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
     effects: { relation: 3, exp: 30 },
-    reward: { kind: 'coin', count: 40 },
+    reward: { kind: 'obsidian_sword', count: 1 },
   },
 ]
 

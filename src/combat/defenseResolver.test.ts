@@ -68,15 +68,17 @@ describe('resolveDefense', () => {
 
 describe('defense catalog coverage', () => {
   it('melee tools that can block expose defense config', () => {
-    for (const kind of ['knife', 'long_sword', 'axe', 'pitchfork', 'sickle', 'shovel'] as const) {
-      expect(ITEM_CATALOG[kind].defense?.canBlock).toBe(true)
+    for (const entry of Object.values(ITEM_CATALOG)) {
+      if (entry.melee == null) continue
+      expect(entry.defense?.canBlock, entry.kind).toBe(true)
     }
   })
 
   it('target detection range exceeds every melee weapon range', () => {
     const detection = 7
-    for (const kind of ['knife', 'long_sword', 'axe', 'pitchfork', 'sickle', 'shovel'] as const) {
-      expect(detection).toBeGreaterThan(ITEM_CATALOG[kind].melee!.range)
+    for (const entry of Object.values(ITEM_CATALOG)) {
+      if (entry.melee == null) continue
+      expect(detection).toBeGreaterThan(entry.melee.range)
     }
   })
 })

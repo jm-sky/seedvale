@@ -19,6 +19,14 @@ describe('tradeCatalog (plan 090)', () => {
     expect(merchantPrice('tent')).toBe(30)
   })
 
+  it('stocks plan-160 merchant weapons and leaves the rarest quest-only', () => {
+    expect(merchantPrice('damascus_knife')).toBe(90)
+    expect(merchantPrice('battle_axe')).toBe(110)
+    expect(merchantPrice('damascus_long_sword')).toBeNull()
+    expect(merchantPrice('obsidian_sword')).toBeNull()
+    expect(tradeValue('obsidian_sword')).toBe(320)
+  })
+
   it('does not sell raw materials', () => {
     expect(merchantPrice('stone')).toBeNull()
     expect(merchantPrice('branch')).toBeNull()

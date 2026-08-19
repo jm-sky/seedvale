@@ -44,6 +44,12 @@ export type ItemKind =
   | 'coin'
   | 'herb'
   | 'bandage'
+  | 'damascus_knife'
+  | 'damascus_short_sword'
+  | 'damascus_long_sword'
+  | 'obsidian_sword'
+  | 'battle_axe'
+  | 'masterwork_sword'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
 
@@ -413,6 +419,54 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0xe8e0d0,
     description: 'Czysty opatrunek z apteczki. Szybko tamuje krwawienie i leczy rany.'
   },
+  damascus_knife: {
+    kind: 'damascus_knife',
+    label: 'nóż damasceński',
+    categories: ['tool', 'weapon'],
+    weight: 0.35,
+    color: 0x5a6570,
+    description: 'Krótki nóż z falistym damasceńskim ostrzem. Lżejszy i ostrzejszy od zwykłego noża — nadal nadaje się do pracy przy zwłokach.'
+  },
+  damascus_short_sword: {
+    kind: 'damascus_short_sword',
+    label: 'krótki miecz damasceński',
+    categories: ['weapon'],
+    weight: 1.5,
+    color: 0x5a6570,
+    description: 'Krótki miecz z damasceńskiej stali. Szybki, ostry i lepiej wyważony niż zwykły krótki miecz.'
+  },
+  damascus_long_sword: {
+    kind: 'damascus_long_sword',
+    label: 'długi miecz damasceński',
+    categories: ['weapon'],
+    weight: 2.7,
+    color: 0x4a5560,
+    description: 'Elitarny długi miecz z damasceńskiej stali. Cięższy i wyraźnie groźniejszy od zwykłego miecza.'
+  },
+  obsidian_sword: {
+    kind: 'obsidian_sword',
+    label: 'obsydianowy miecz',
+    categories: ['weapon'],
+    weight: 2.0,
+    color: 0x1a1420,
+    description: 'Rzadki miecz z wulkanicznego szkła. Ostrze tnie wyjątkowo ostro, ale nie jest to niezniszczalna broń.'
+  },
+  battle_axe: {
+    kind: 'battle_axe',
+    label: 'topór bojowy',
+    categories: ['tool', 'weapon'],
+    weight: 3.8,
+    color: 0x4a4e54,
+    description: 'Ciężki topór bojowy. Zadaje większe obrażenia niż zwykła siekiera i nadal nadaje się do ścinania drzew.'
+  },
+  masterwork_sword: {
+    kind: 'masterwork_sword',
+    label: 'mistrzowski miecz',
+    categories: ['weapon'],
+    weight: 2.4,
+    color: 0xc0c8d0,
+    description: 'Wysokiej jakości stalowy miecz kowalski. Lepszy od zwykłego miecza, mniej egzotyczny niż damasceńskie ostrza.'
+  },
 }
 
 const _itemShadowBox = new THREE.Box3()
@@ -543,11 +597,11 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.castShadow = true
     return mesh
   }
-  if (kind === 'knife') {
+  if (kind === 'knife' || kind === 'damascus_knife') {
     const group = new THREE.Group()
     const blade = new THREE.Mesh(
       new THREE.ConeGeometry(0.035, 0.22, 4),
-      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.knife.color, flatShading: true, metalness: 0.4 }),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true, metalness: 0.4 }),
     )
     blade.rotation.x = Math.PI / 2
     blade.position.set(0, 0.05, 0.11)
@@ -563,11 +617,18 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     group.add(handle)
     return group
   }
-  if (kind === 'long_sword') {
+  if (
+    kind === 'long_sword' || kind === 'damascus_long_sword' ||
+    kind === 'masterwork_sword' || kind === 'obsidian_sword'
+  ) {
     const group = new THREE.Group()
     const blade = new THREE.Mesh(
       new THREE.ConeGeometry(0.035, 0.22, 4),
-      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.long_sword.color, flatShading: true, metalness: 0.4 }),
+      new THREE.MeshStandardMaterial({
+        color: ITEM_DEFS[kind].color,
+        flatShading: true,
+        metalness: kind === 'obsidian_sword' ? 0.15 : 0.4,
+      }),
     )
     blade.rotation.x = Math.PI / 2
     blade.position.set(0, 0.05, 0.11)
@@ -575,11 +636,11 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     group.add(blade)
     return group
   }
-  if (kind === 'short_sword') {
+  if (kind === 'short_sword' || kind === 'damascus_short_sword') {
     const group = new THREE.Group()
     const blade = new THREE.Mesh(
       new THREE.ConeGeometry(0.03, 0.16, 4),
-      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.short_sword.color, flatShading: true, metalness: 0.4 }),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true, metalness: 0.4 }),
     )
     blade.rotation.x = Math.PI / 2
     blade.position.set(0, 0.05, 0.09)
@@ -646,10 +707,11 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     group.add(blade)
     return group
   }
-  if (kind === 'axe') {
+  if (kind === 'axe' || kind === 'battle_axe') {
     const group = new THREE.Group()
+    const heavy = kind === 'battle_axe'
     const handle = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.02, 0.02, 0.42, 6),
+      new THREE.CylinderGeometry(heavy ? 0.024 : 0.02, heavy ? 0.024 : 0.02, heavy ? 0.48 : 0.42, 6),
       new THREE.MeshStandardMaterial({ color: 0x5a3a22, flatShading: true }),
     )
     handle.rotation.x = Math.PI / 2.2
@@ -657,8 +719,8 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     handle.castShadow = true
     group.add(handle)
     const head = new THREE.Mesh(
-      new THREE.BoxGeometry(0.16, 0.08, 0.05),
-      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.axe.color, flatShading: true, metalness: 0.45 }),
+      new THREE.BoxGeometry(heavy ? 0.22 : 0.16, heavy ? 0.11 : 0.08, heavy ? 0.06 : 0.05),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true, metalness: 0.45 }),
     )
     head.position.set(0.02, 0.18, 0.14)
     head.castShadow = true

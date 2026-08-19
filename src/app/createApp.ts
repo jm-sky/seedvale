@@ -44,7 +44,7 @@ import { askGuardForSword, shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { Inventory } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
-import { ITEM_CATALOG } from '../items/itemCatalog'
+import { isChopTool, isHarvestKnife, ITEM_CATALOG } from '../items/itemCatalog'
 import { isInstanceBackedKind, isTrapItemInstance } from '../items/itemInstances'
 import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
@@ -1380,12 +1380,18 @@ export async function createApp(
    *  just knife-gated and yielding item(s) instead of disposing the corpse. */
   const startHarvestMeat = (animal: AnimalAgent): void => {
     if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (heldTool.held() !== 'knife') {
+    if (!isHarvestKnife(heldTool.held())) {
       // Auto-equip from inventory (plan 153) — same pattern as
       // `lightWoodenTorch` in `userActions.ts`: only when the hand is free,
-      // never displacing another held tool.
+      // never displacing another held tool. Prefer damascus_knife when both
+      // harvest knives are present (plan 160).
       if (heldTool.held() !== null) return
-      if (!heldTool.equip('knife')) return
+      const knifeKind = inventory.has('damascus_knife', 1)
+        ? 'damascus_knife'
+        : inventory.has('knife', 1)
+          ? 'knife'
+          : null
+      if (!knifeKind || !heldTool.equip(knifeKind)) return
       syncHeldHud()
     }
     if (!animal.canHarvestMeat()) return
@@ -1561,7 +1567,7 @@ export async function createApp(
   }
 
   const startTreeChop = (treeId: string, x: number, z: number): void => {
-    if (heldTool.held() !== 'axe' || busy.isActive() || timeSkip.isActive()) return
+    if (!isChopTool(heldTool.held()) || busy.isActive() || timeSkip.isActive()) return
     // Pre-check choppability without mutating — advanceHarvest is the authority.
     const nearby = bundle.chunkManager.getNearbyTrees({ x, z }, 0.5)
     const target = nearby.find((t) => t.id === treeId)

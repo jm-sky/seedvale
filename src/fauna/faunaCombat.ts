@@ -40,7 +40,20 @@ const HUMAN_DAMAGE: Partial<Record<AnimalKind, number>> = {
  *  `docs/items/CATALOG.md` / `items/itemCatalog.ts` (`ITEM_SYSTEM_ROADMAP`). */
 export type MeleeToolKind = Extract<
   ToolKind,
-  'long_sword' | 'spear' | 'short_sword' | 'axe' | 'pitchfork' | 'knife' | 'sickle' | 'shovel'
+  | 'long_sword'
+  | 'spear'
+  | 'short_sword'
+  | 'axe'
+  | 'pitchfork'
+  | 'knife'
+  | 'sickle'
+  | 'shovel'
+  | 'damascus_knife'
+  | 'damascus_short_sword'
+  | 'damascus_long_sword'
+  | 'obsidian_sword'
+  | 'battle_axe'
+  | 'masterwork_sword'
 >
 
 /** `ITEM_CATALOG[kind].melee` is the single source of truth for which tools

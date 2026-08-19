@@ -43,6 +43,15 @@ describe('createHeldTool', () => {
     expect(held.held()).toBe('sickle')
   })
 
+  it('equips plan-160 high-quality weapons from inventory', () => {
+    const inventory = new Inventory({ damascus_knife: 1, masterwork_sword: 1 })
+    const held = createHeldTool(inventory)
+    expect(held.equip('damascus_knife')).toBe(true)
+    expect(held.held()).toBe('damascus_knife')
+    expect(held.equip('masterwork_sword')).toBe(true)
+    expect(held.held()).toBe('masterwork_sword')
+  })
+
   it('clears the slot when the tool leaves inventory', () => {
     const inventory = new Inventory({ shovel: 1 })
     const held = createHeldTool(inventory, 'shovel')

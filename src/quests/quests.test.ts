@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildLandmarkQuests } from './quests'
+import { buildLandmarkQuests, QUESTS } from './quests'
 
 describe('buildLandmarkQuests', () => {
   it('omits a landmark kind the resolver has no candidate for', () => {
@@ -33,5 +33,16 @@ describe('buildLandmarkQuests', () => {
     const ids = quests.map((q) => q.id)
     expect(new Set(ids).size).toBe(ids.length)
     expect(quests.every((q) => Boolean(q.giverName))).toBe(true)
+  })
+})
+
+describe('QUESTS rewards (plan 160)', () => {
+  it('grants the rarest high-quality swords from existing world-problem quests', () => {
+    const wolf = QUESTS.find((q) => q.id === 'grozny-wilk')
+    const den = QUESTS.find((q) => q.id === 'wilcza-jama')
+    const well = QUESTS.find((q) => q.id === 'woda-dla-marka')
+    expect(wolf?.reward).toEqual({ kind: 'damascus_long_sword', count: 1 })
+    expect(den?.reward).toEqual({ kind: 'obsidian_sword', count: 1 })
+    expect(well?.reward).toEqual({ kind: 'long_sword', count: 1 })
   })
 })

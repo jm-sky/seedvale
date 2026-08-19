@@ -1,7 +1,7 @@
 # Plan: High-quality melee weapons
 
 **Created:** 2026-08-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — type-check/lint/build/test zielone 2026-08-19; browser pending; no HQ GLBs in repo
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~134~~ ~~150~~
 
@@ -237,18 +237,22 @@ Nie dodawać managera broni ani globalnego ticka weapon system.
 
 ## Kryteria akceptacji
 
-- [ ] Sześć nowych `ItemKind` jest zarejestrowanych w `items.ts` i `itemCatalog.ts`.
-- [ ] Każdy nowy item ma poprawną kategorię, wagę, opis, cenę/źródło pozyskania i konfigurację melee.
-- [ ] Każdy nowy item może zostać przeniesiony przez istniejący inventory/merchant flow.
-- [ ] Damascus knife, short sword i long sword mają wyraźnie lepszy profil niż odpowiedniki podstawowe.
-- [ ] Obsidian sword ma bardzo wysoką ofensywę i wysoką rzadkość bez tworzenia specjalnego combat resolvera.
-- [ ] Battle axe działa w walce i nadal może być używany jako siekiera w istniejącym harvest flow.
-- [ ] Masterwork sword stanowi wysokiej jakości stalową alternatywę dla Damascus.
-- [ ] Nowe bronie korzystają wyłącznie z istniejącego melee/defense pipeline.
-- [ ] Dostępne assety są poprawnie podłączone i wyświetlają się w dłoni.
-- [ ] Brak assetu nie blokuje definicji itemu, jeżeli repozytorium nie posiada odpowiedniego modelu.
-- [ ] Testy jednostkowe pokrywają rejestrację itemów, statystyki i battle axe jako narzędzie + broń.
-- [ ] Build/type-check/test przechodzą.
+- [x] Sześć nowych `ItemKind` jest zarejestrowanych w `items.ts` i `itemCatalog.ts`.
+- [x] Każdy nowy item ma poprawną kategorię, wagę, opis, cenę/źródło pozyskania i konfigurację melee.
+- [x] Każdy nowy item może zostać przeniesiony przez istniejący inventory/merchant flow.
+- [x] Damascus knife, short sword i long sword mają wyraźnie lepszy profil niż odpowiedniki podstawowe.
+- [x] Obsidian sword ma bardzo wysoką ofensywę i wysoką rzadkość bez tworzenia specjalnego combat resolvera.
+- [x] Battle axe działa w walce i nadal może być używany jako siekiera w istniejącym harvest flow.
+- [x] Masterwork sword stanowi wysokiej jakości stalową alternatywę dla Damascus.
+- [x] Nowe bronie korzystają wyłącznie z istniejącego melee/defense pipeline.
+- [ ] Dostępne assety są poprawnie podłączone i wyświetlają się w dłoni. — brak GLB w repo; proceduralny fallback. Ścieżki: `public/models/items/{damascus_knife,damascus_short_sword,damascus_long_sword,obsidian_sword,battle_axe,masterwork_sword}.glb`
+- [x] Brak assetu nie blokuje definicji itemu, jeżeli repozytorium nie posiada odpowiedniego modelu.
+- [x] Testy jednostkowe pokrywają rejestrację itemów, statystyki i battle axe jako narzędzie + broń.
+- [x] Build/type-check/test przechodzą.
 - [ ] Browser/manual check potwierdza held models, combat i ścinanie drzewa battle axe.
+
+## Implementation summary
+
+Zaimplementowane 2026-08-19. Sześć `ItemKind` w katalogu + hold/melee/defense. Kupiec: `damascus_knife` 90 / `damascus_short_sword` 140 / `masterwork_sword` 160 / `battle_axe` 110. Quest-only: `grozny-wilk` → `damascus_long_sword`, `wilcza-jama` → `obsidian_sword` (`RESOURCE_TRADE_VALUE` 240 / 320). `isChopTool` / `isHarvestKnife` rozszerzają istniejące bramki siekiery/noża. Modele: `modelUrl: null` (M44–M49 `needed`). Durability/ostrzenie poza zakresem (plan 161).
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

@@ -13,12 +13,24 @@ export type ToolKind = 'knife'
 | 'pickaxe'
 | 'pitchfork'
 | 'sickle'
+| 'damascus_knife'
+| 'damascus_short_sword'
+| 'damascus_long_sword'
+| 'obsidian_sword'
+| 'battle_axe'
+| 'masterwork_sword'
 
 const HELD_TOOL_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
   'axe',
+  'battle_axe',
+  'damascus_knife',
+  'damascus_long_sword',
+  'damascus_short_sword',
   'firestarter',
   'knife',
   'long_sword',
+  'masterwork_sword',
+  'obsidian_sword',
   'pickaxe',
   'pitchfork',
   'short_sword',
