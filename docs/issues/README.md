@@ -51,7 +51,9 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 033 | [2026-08-17--033--bloom-whiteout-threejs-185-upgrade.md](./2026-08-17--033--bloom-whiteout-threejs-185-upgrade.md) | Patrząc w słońce cały ekran biały — `UnrealBloomPass` composite shader zmieniony w three r18x (upstream PR #31528, 3× RGB + alpha skalująca się z jasnością zamiast stałej); `bloomStrength` obniżony 0.28→0.09 jako kompensacja | `verification needed` |
 | 034 | [2026-08-19--034--hud-player-health-bar.md](./2026-08-19--034--hud-player-health-bar.md) | HUD pod zegarem: brak paska HP — dodać Zdrowie nad kondycją | `done` |
 | 035 | [2026-08-19--035--playtest-coins-placement-inventory.md](./2026-08-19--035--playtest-coins-placement-inventory.md) | Playtest: Kupiec w monetach + rzadki spawn, ukrycie „Poproś o miecz”, namiot/pułapka na drodze, Zastaw z ekwipunku | `done` |
+| 036 | [2026-08-19--036--settlement-prop-colliders.md](./2026-08-19--036--settlement-prop-colliders.md) | Koń kupca, wóz i sterta drewna bez kolizji — dyski w `ColliderRegistry` | `verification needed` |
+| 037 | [2026-08-19--037--village-campfire-flat-pad.md](./2026-08-19--037--village-campfire-flat-pad.md) | Ognisko wioskowe bez równego kawałka terenu | `todo` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `036`
+**Next ID:** `038`

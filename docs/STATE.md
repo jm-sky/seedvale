@@ -45,7 +45,7 @@ Rebuild/lifetime invariant (keep the bundle reference, don't capture a replaceab
 
 ### Settlements / NPCs
 
-Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, NPC needs/FSM/schedule, settlement bulk economy, dialogue v2 and home-trader screen.
+Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, NPC needs/FSM/schedule, settlement bulk economy, dialogue v2 and home-trader screen. Static colliders (plan 097, issue [036](./issues/2026-08-19--036--settlement-prop-colliders.md)): well, house walls/doors, wood piles, Kupiec wagon/horse, village campfire — same `ColliderRegistry` as rocks/trees.
 
 Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 

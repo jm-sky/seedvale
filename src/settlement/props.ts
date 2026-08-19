@@ -109,6 +109,12 @@ export type SettlementLandmarks = {
   /** Well mesh (GLB or procedural fallback) — drink-queue anchors (Phase 6). */
   wellProp?: THREE.Object3D
   stockpile: THREE.Vector3
+  /** Second wood pile when `infrastructure.stockpiles > 1` (LG/XL). */
+  stockpileSecondary?: THREE.Vector3
+  /** Kupiec wagon (home forest villages only) — set only if the GLB loaded. */
+  merchantWagon?: THREE.Vector3
+  /** Decorative horse at the wagon hitch — GLB or procedural stand-in. */
+  merchantHorse?: THREE.Vector3
   garden: THREE.Vector3
   /** All garden pads (plan 077); `garden` mirrors the primary (index 0). */
   gardens: THREE.Vector3[]
@@ -1062,6 +1068,11 @@ export async function buildSettlementProps(
     )
     placeOnGround(stockpile2, stock2X, stock2Z, sampleHeight)
     group.add(stockpile2)
+    landmarks.stockpileSecondary = new THREE.Vector3(
+      stock2X,
+      sampleHeight(stock2X, stock2Z),
+      stock2Z,
+    )
   }
 
   if (plantForest) {
@@ -1094,6 +1105,11 @@ export async function buildSettlementProps(
       placeOnGround(wagon, pose.wagonX, pose.wagonZ, sampleHeight)
       wagon.rotation.y = pose.yaw
       group.add(wagon)
+      landmarks.merchantWagon = new THREE.Vector3(
+        pose.wagonX,
+        sampleHeight(pose.wagonX, pose.wagonZ),
+        pose.wagonZ,
+      )
     } catch (err) {
       console.warn('[settlement] wagon.glb unavailable', err)
     }
@@ -1110,6 +1126,11 @@ export async function buildSettlementProps(
       horse.rotation.y = pose.yaw
       group.add(horse)
     }
+    landmarks.merchantHorse = new THREE.Vector3(
+      pose.horseX,
+      sampleHeight(pose.horseX, pose.horseZ),
+      pose.horseZ,
+    )
   }
 
   await plantEntrancePalisade(group, site, size, sampleHeight, waterLevel, plan, coast, pathCorridors)

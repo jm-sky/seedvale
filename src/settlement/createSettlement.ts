@@ -56,6 +56,7 @@ import {
   signpostsForSettlement,
 } from './roadNetwork'
 import { cellSeed } from './settlementGenerator'
+import { settlementPropColliders } from './settlementPropColliders'
 import { createVillageFire, FUEL_PER_BRANCH, type VillageFire } from './VillageFire'
 import {
   buildWellInteractionQueueConfig,
@@ -189,8 +190,10 @@ export async function createSettlement(
   economy: SettlementEconomy,
   householdRegistry: HouseholdRegistry,
   collidersNear: ColliderSource,
-  /** Registers this settlement's static colliders (well + houses) under
-   *  `def.id` — plan 097 §2.2. Cleared again in `dispose()` below. */
+  /** Registers this settlement's static colliders (well + houses +
+   *  stockpile/wagon/horse/village fire) under `def.id` so they participate
+   *  in the shared `ColliderRegistry` (plan 097 §2.2, issue 036). Cleared
+   *  again in `dispose()` below. */
   registerColliders: (ownerKey: string, colliders: readonly Collider[]) => void,
   clearColliders: (ownerKey: string) => void,
   playAt: PlayAt = () => {},
@@ -261,6 +264,7 @@ export async function createSettlement(
     registerColliders(def.id, [
       { x: landmarks.well.x, z: landmarks.well.z, radius: WELL_COLLISION_RADIUS },
       ...settlementHouseColliders(landmarks.houses, houseAssemblies),
+      ...settlementPropColliders(landmarks),
     ])
   }
   registerSettlementColliders()
