@@ -1,7 +1,7 @@
 # Plan: Shader/Program First-Use Hitch
 
 **Created:** 2026-08-17
-**Status:** `in progress` 🔄 — Phase 0 closed ([review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md), [review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md)). Phase 1 B diagnostic pin **PASS** ([review 023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md), [review 024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md)). Production PointLight budget **16** landed in [plan 157](./2026-08-18--157--production-pointlight-budget.md) (stream unique keys 65–66, `npl=16` only). Phase 1 A (`compileAsync` prewarm) still **not** started — next once this stable set is confirmed. Leftover instancing/mask (`Green`/`Wood`/`MI_WindowGlass`) is Phase C.
+**Status:** `in progress` 🔄 — Phase 0 closed ([review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md), [review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md)). Phase 1 B diagnostic pin **PASS** ([review 023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md), [review 024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md)). Production PointLight budget **16** landed in [plan 157](./2026-08-18--157--production-pointlight-budget.md) (do not rewrite §12). Phase 1 A (`compileAsync` loading-window prewarm) **implemented + technically verified + browser verified** ([review 025](../reviews/2026-08-19--025--plan-149-phase-1a-compileasync-prewarm.md), §19). Leftover instancing/mask (`Green`/`Wood`/`MI_WindowGlass`) is Phase C. Whole plan is **not** `done`.
 **Priority:** high · **Effort:** M/L
 **Depends on:** none
 **domain:** `world-terrain`
@@ -656,15 +656,7 @@ Aktualny `package.json` wskazuje `three: ^0.185.1`, a repozytorium ma kod zgodny
 
 ## 17. Final recommendation
 
-Nie implementować jeszcze żadnego fixu renderera.
-
-Najpierw wykonać **Phase 0** i uzyskać aktualny census program/material first-use.
-
-Jeżeli okaże się, że chunk streaming wprowadza tylko ograniczony, stabilny zestaw shared material/program families, zastosować **loading-time prewarm** jako najmniejszą zmianę o najmniejszym wpływie na runtime streaming.
-
-Jeżeli census pokaże proliferację variants, najpierw konsolidować konkretne variants.
-
-Jeżeli nie da się bezpiecznie odwzorować program variants poza realnym renderem, zatrzymać się i wykonać mały isolated repro zamiast eksperymentować dalej na pełnym `stream` benchmarku.
+Phase 0 + PointLight pin (plan 157) + Phase 1 A loading-window `compileAsync` are landed. Streaming first-use bursts on the light-count axis are gone; remaining named copies (`Green` / `MI_WindowGlass` / `Wood`) are Phase C. Do not revive per-chunk / per-tick / full-scene `compileAsync`.
 
 ## 18. Verification ownership
 
@@ -686,5 +678,65 @@ Real-GPU benchmark i visual verification muszą być wykonane w Cursor embedded 
 Przed benchmarkiem potwierdzić `WEBGL_debug_renderer_info` i zapisać renderer string.
 
 Claude Code nie powinien uznawać 149 za `done` na podstawie benchmarku wykonanego wyłącznie przez `agent-browser`.
+
+---
+
+## 19. Phase 1 A — loading-window `compileAsync` (2026-08-19)
+
+**Status:** implemented + technically verified + real-GPU/browser verified. Plan 149 stays `in progress` (Phase C / Phase 2 open).
+
+### What landed
+
+- New `src/render/programPrewarm.ts`: one-shot staging set from the already-built live scene (home chunks + settlement + fauna + ocean/sky), **one clone per `(material.uuid × object flags)`**, sharing geometry/material by reference.
+- `renderer.compileAsync(staging, camera, liveScene)` runs in the loading window in `createApp.ts` **after** `gameLoop.resyncDayNight()` + `pointLightBudget.sync(camera)`, **before** the rAF loop and `loadingScreen.hide()`. Same call after `rebuildWorldBundle`.
+- A 1×1 throwaway `WebGLRenderTarget` is bound only for that call so program keys match gameplay (`toneMapping = NoToneMapping`, `outputColorSpace = workingColorSpace` — Three.js 0.185.1 `WebGLPrograms.getParameters` when `getRenderTarget() !== null`). Default-framebuffer compile would create unused ACES/sRGB variants. Mirror and postprocess modules are not modified.
+- Staging clones are never added to the scene graph and are dropped without disposing shared GPU resources.
+- Not in `ChunkManager`, not per chunk / per tick / per root, not a full-live-scene `compileAsync(scene, camera)` shortcut, no PointLight budget change.
+
+Diagnostics (dev side-channel, no gameplay cost): `window.__seedvaleProgramPrewarm` — staging roots/materials, program count before/after, `compileAsync` ms, `glError`, KHR flag.
+
+### Staging set (measured)
+
+Home-scene walk after `waitForChunks(home)` + settlement/fauna build. Unique program families after compile: **30–33**. Staging root count is high (**459–558** / **454–544** materials) because house-builder/GLTF clones still have distinct material UUIDs; they collapse to those ~33 cache keys. That is a loading-time traverse, not extra live programs.
+
+First `gameLoop.tick()` still runs synchronously before `loadingScreen.hide()`, so remaining frame-0 first-use (shadow depth + EffectComposer, plus `onFirstUse`/`ACTIVE_UNIFORMS` of the already-linked 30–33) stays behind the loading overlay.
+
+### Limitations (not this phase)
+
+- `compileAsync` links programs; it does **not** call `getUniforms()` / `onFirstUse`. First draw of the prewarmed set can still cost ~180–420 ms on frame-0 **mirror with `programDelta = 0`**, behind the overlay.
+- ~26–27 frame-0 programs are MeshDepthMaterial / composer ShaderMaterials — not in the scene-graph staging set.
+- Instancing/mask copies `Green` 5 / `MI_WindowGlass` 4 / `Wood` 2 remain (Phase C). Do not merge them here.
+
+### Technical checks
+
+`npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, `pnpm run test` (1143 tests, +7 in `programPrewarm.test.ts`) — green.
+
+### Real-GPU verification
+
+Cursor IDE browser + CDP, hardware WebGL. GPU: `ANGLE (Intel, Intel(R) Arc(TM) 140V GPU (16GB) (0x000064A0) Direct3D11 vs_5_0 ps_5_0, D3D11)` via `WEBGL_debug_renderer_info` — **not** SwiftShader. `KHR_parallel_shader_compile`: available. Viewport `1068×906`, `deviceScaleFactor=1`, reports `pixelRatio=1`, `quality: High`, `seed=42`, `res=193`. Fresh origin `:5610`. Three cold reloads. Do **not** rank mean FPS. Run 3 was hitch-starved (tab `document.hidden`, 75 census frames) — keep it for the hitch axis, do not median into RENDER/p95. Full table: [review 025](../reviews/2026-08-19--025--plan-149-phase-1a-compileasync-prewarm.md).
+
+Before = plan 157 §12 production budget 16, no prewarm (hitch-starved stream runs; use for program-axis / first-use hitch, not as a healthy RENDER sample).
+
+| Metric | Before (157 R1–R3) | After R1 | After R2 | After R3 (starved) |
+|---|---|---:|---:|---:|
+| unique cacheKeys | 65–66 | 68 | 67 | 65 |
+| `npl` on physical | 16 only | 16 only | 16 only | 16 only |
+| `compileAsync` | unused | 223 ms, 33 programs | 206 ms, 30 | 135 ms, 33 |
+| `glError` | — | 0 | 0 | 0 |
+| max first-use hitch (`Δ>0`) | 726 / 320 / 382 ms | **407 ms** (frame 0 post) | **206 ms** | **299 ms** |
+| max hitch after frame 0 (`Δ>0`) | 353 / 316 / 382 ms | **65 ms** | **99.5 ms** | **69.5 ms** |
+| hitch ≥100 / ≥500 (`Δ>0`) | 5/2 · 5/0 · 6/0 | **1 / 0** | **1 / 0** | **1 / 0** |
+| frame max (report) | — (starved) | 199.9 | 111.8 | 143.1 |
+| frame p95 | 200.8 / 150.9 / 167.2 (starved) | 93.6 | **49.5** | 124.2 |
+| RENDER / WATER | 36–39 / — | 33.7 / 4.5 | **14.5 / 2.3** | 35 / 5 |
+| draw calls avg | — | 681 | 623 | 573 |
+| triangles avg | — | 9.34M | 8.60M | 7.53M |
+| `Green` / glass / `Wood` | 5 / 4 / 1 | 5 / 4 / 2 | 5 / 4 / 2 | 5 / 4 / 2 |
+
+Visual (runs 1 and 3): morning/late-morning home settlement (`Osada Brzozowa`), terrain, mixed foliage, shadows, labels, no black materials, no missing vegetation.
+
+### Decision
+
+Keep Phase 1 A. Streaming first-use hitch dropped from multi-hundred ms after frame 0 to **<100 ms**. Residual frame-0 cost is controlled loading-time (overlay still up). Program count did not grow. No GL errors. Next: Phase C (instancing/mask families), not another `compileAsync` layer.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

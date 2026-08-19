@@ -86,6 +86,7 @@ import { QuestManager } from '../quests/QuestManager'
 import { buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
+import { prewarmRenderPrograms } from '../render/programPrewarm'
 import { MIN_RENDERER_SIZE, shouldApplyRendererResize } from '../render/rendererResize'
 import { createCamera } from '../scene/createCamera'
 import { createScene } from '../scene/createScene'
@@ -712,6 +713,9 @@ export async function createApp(
       // resync immediately rather than waiting for the tick loop's throttled
       // apply to notice a large-enough timeOfDay delta.
       if (dayNight.enabled) gameLoop.resyncDayNight()
+      pointLightBudget.sync(camera)
+      const rebuiltPrewarm = await prewarmRenderPrograms(renderer, scene, camera)
+      if (typeof window !== 'undefined') window.__seedvaleProgramPrewarm = rebuiltPrewarm
       player.setGround(
         bundle.chunkManager.sampleHeight,
         bundle.chunkManager.sampleFloor,
@@ -1885,6 +1889,12 @@ export async function createApp(
     syncPointLightBudget: () => { pointLightBudget.sync(camera) },
   })
   gameLoop.resyncDayNight()
+  // Plan 149 Phase 1 A — compile the already-built home-scene program
+  // families before gameplay streaming starts. `tick()` has not run yet, so
+  // this stays inside the loading overlay and never blocks chunk attach.
+  pointLightBudget.sync(camera)
+  const programPrewarm = await prewarmRenderPrograms(renderer, scene, camera)
+  if (typeof window !== 'undefined') window.__seedvaleProgramPrewarm = programPrewarm
 
   let frameId = 0
   let lastViewportWidth = -1
@@ -2087,6 +2097,7 @@ export async function createApp(
     playerTorch.dispose()
     pointLightBudget.dispose()
     if (typeof window !== 'undefined') window.__seedvalePointLightBudget = undefined
+    if (typeof window !== 'undefined') window.__seedvaleProgramPrewarm = undefined
     player.dispose()
     disposeChunkWorkerPool()
     postProcessing.dispose()
