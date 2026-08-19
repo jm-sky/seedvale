@@ -3,10 +3,12 @@ import type { AnimalKind } from './AnimalAgent'
 /** `wolfDen` (plan 093 Etap E) reuses this same spawner shape — a fixed
  *  `respawnIntervalDays: Infinity` opts it out of `updateSpawners`' respawn
  *  loop below, since a den's pack is a one-time discovered threat, not an
- *  ongoing population like `cave`/`thicket` prey. If plan 104 (real
- *  underground caves) later lands, the den's position/label can be
- *  re-anchored to an actual cave volume without touching the quest-facing
- *  `WOLF_DEN_ID`/`clear_wolf_den` contract in `quests.ts`/`QuestManager.ts`. */
+ *  ongoing population like `cave`/`thicket`. It still participates in the
+ *  plan-125 depletion/`Zniszcz` lifecycle: pack deaths count, and a cleared
+ *  den can be burned. If plan 104 (real underground caves) later lands, the
+ *  den's position/label can be re-anchored to an actual cave volume without
+ *  touching the quest-facing `WOLF_DEN_ID`/`clear_wolf_den` contract in
+ *  `quests.ts`/`QuestManager.ts`. */
 export type SpawnerType = 'cave' | 'thicket' | 'grove' | 'wolfDen'
 
 /** Single wolf den's stable identity — one per settlement today (mirrors
@@ -25,10 +27,10 @@ export const WOLF_DEN_ID = 'wolf-den'
  *         → (>=MIN_RECOVERY_POPULATION of the same kind nearby) → active
  *  ```
  *
- *  `wolfDen` never receives a `spawnPointId`-tagged animal (see
- *  `createFauna.ts`), so it never accumulates `deathsThisCycle` and stays
- *  `active` forever — its one-time pack lifecycle is owned by
- *  `WOLF_DEN_ID`/`isWolfDenCleared()` instead. */
+ *  `wolfDen` still never respawns (`Infinity` interval) so the quest pack
+ *  stays one-shot; its pack *is* `spawnPointId`-tagged, so killing it can
+ *  deplete the den and offer `[E] Zniszcz`. Quest completion stays on
+ *  `WOLF_DEN_ID`/`isWolfDenCleared()`, independent of the burn. */
 export type SpawnPointState = 'active' | 'depleted' | 'disabled' | 'recovering'
 
 /** In-game days a `disabled` spawn point waits before it's even eligible to
@@ -80,8 +82,8 @@ export type PreySpawner = {
   disabledAtDay: number | null
 }
 
-/** Prey within this radius of a spawner count toward its `maxPreyCount` cap
- *  (respawn) and the recovery population check. */
+/** Animals of the spawner's `kind` within this radius count toward its
+ *  `maxPreyCount` cap (respawn) and the recovery population check. */
 export const SPAWNER_RADIUS = 12
 
 /** `>50%` of `maxPreyCount` deaths this cycle, expressed as an integer death
@@ -106,16 +108,18 @@ export function respawnIntervalDaysFor(intervalDays: number, nearbyCount: number
 
 /**
  * Ticks respawn timers in **game-days** and calls `onRespawn` for each
- * `active` spawner that's ready (timer elapsed, below its live-prey cap).
- * A large `dayDelta` (time-skip) may spawn more than once, always capped
- * at `maxPreyCount`. Pure timer/count bookkeeping — actual agent creation
- * is the caller's job. `depleted`/`disabled`/`recovering` spawners never
- * respawn (plan 125 §2/§3); `Infinity` intervals are skipped (plan 139).
+ * `active` spawner that's ready (timer elapsed, below its live same-kind
+ * cap). A large `dayDelta` (time-skip) may spawn more than once, always
+ * capped at `maxPreyCount`. Pure timer/count bookkeeping — actual agent
+ * creation is the caller's job. `depleted`/`disabled`/`recovering` spawners
+ * never respawn (plan 125 §2/§3); `Infinity` intervals are skipped (plan
+ * 139). Nearby count is by `kind` (prey *or* predator) so a wolf cave is
+ * capped by living wolves, not an empty prey filter.
  */
 export function updateSpawners(
   spawners: PreySpawner[],
   dayDelta: number,
-  preyPositions: { kind: AnimalKind; x: number; z: number }[],
+  animalPositions: { kind: AnimalKind; x: number; z: number }[],
   onRespawn: (spawner: PreySpawner) => void,
 ): void {
   if (dayDelta <= 0) return
@@ -124,7 +128,7 @@ export function updateSpawners(
     if (!Number.isFinite(spawner.respawnIntervalDays) || spawner.respawnIntervalDays <= 0) continue
     spawner.daysSinceLastRespawn += dayDelta
 
-    let nearby = preyPositions.filter(
+    let nearby = animalPositions.filter(
       (p) =>
         p.kind === spawner.kind &&
         Math.hypot(p.x - spawner.x, p.z - spawner.z) < SPAWNER_RADIUS,
@@ -152,7 +156,9 @@ export function updateSpawners(
  * `recovering` and waits there until at least `MIN_RECOVERY_POPULATION`
  * live same-kind animals are within `SPAWNER_RADIUS`, then becomes `active`
  * again with its cycle counters reset. No-op for any other state (including
- * `active`/`depleted`, and effectively `wolfDen`, which never leaves `active`).
+ * `active`/`depleted`). `wolfDen` can sit in `disabled`/`recovering` after
+ * a burn; it still will not respawn (`Infinity` interval) if it returns
+ * to `active`.
  */
 export function tickSpawnPointRecovery(
   spawner: PreySpawner,

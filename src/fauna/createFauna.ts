@@ -79,10 +79,11 @@ export type Fauna = {
   setSpawnerMarker: (type: PreySpawner['type'], marker: string | null) => void
   /** Player "Zniszcz" on a `depleted` spawn point (plan 125 §6 / plan 137) —
    *  moves it to `disabled`, burns its prop dark and carves a charcoal scorch
-   *  patch. Caller (`createApp.ts`) is responsible for the busy channel, the
-   *  4 branches and lighting the fire; returns `false` (no state change, no
-   *  branches should be spent) if `spawnerId` isn't found or isn't currently
-   *  `depleted`. */
+   *  patch. Applies to cave/thicket **and** `wolfDen` (a cleared den is
+   *  burnable; it still never respawns). Caller (`createApp.ts`) is
+   *  responsible for the busy channel, the 4 branches and lighting the fire;
+   *  returns `false` (no state change, no branches should be spent) if
+   *  `spawnerId` isn't found or isn't currently `depleted`. */
   destroySpawner: (spawnerId: string, nowDays: number) => boolean
 }
 
@@ -124,7 +125,7 @@ const SPAWN_RING_OFFSET: Record<SpawnProfile, [number, number]> = {
 }
 
 /** [minOffset, maxOffset] past the settlement's real footprint radius for
- *  cave/thicket prey spawners (plan 080) — same reasoning as
+ *  cave/thicket/wolfDen habitat spawners (plan 080) — same reasoning as
  *  `SPAWN_RING_OFFSET`, widths matching the original flat 45–65 band.
  *  Exported so `worldBundle.ts`'s `buildFauna` can size its
  *  `roadCorridorsNear` query to actually cover the (now size-dependent)
@@ -141,7 +142,7 @@ export const SPAWNER_RING_OFFSET: [number, number] = [25, 45]
 const MIN_SPAWN_SEPARATION = 10
 
 /** "Zniszcz" burn-site (plan 125 §7, enlarged in plan 137) — a wide, shallow
- *  charcoal patch around the cave/thicket, not a second walk-in pit. The
+ *  charcoal patch around the habitat prop, not a second walk-in pit. The
  *  lit fire + darkened prop + vertex-color scorch are the burnt-site read. */
 const BURN_PATCH_RADIUS = 7
 const BURN_PATCH_DEPTH = 0.15
@@ -197,20 +198,21 @@ export function measureSlope(
   return { yaw: bestYaw, drop: bestDrop }
 }
 
-/** Hardcoded prey spawners (cave / thicket) — see docs/plans/archive/2026-08-07--predator-prey-system.md.
- *  `wolfDen` (plan 093 Etap E) piggybacks on the same list/shape purely to
- *  get a placed prop + labeled marker for free — `respawnIntervalDays: Infinity`
+/** Habitat spawners — see docs/plans/archive/2026-08-07--predator-prey-system.md.
+ *  Caves are predator dens (wolf now; bear when that species exists);
+ *  thickets are deer cover. `wolfDen` (plan 093 Etap E) piggybacks on the
+ *  same list/shape for a labeled quest den — `respawnIntervalDays: Infinity`
  *  keeps `updateSpawners` from ever repopulating it; its initial pack is
- *  spawned once, directly, in the placement loop below.
- *  Cave/thicket intervals are game-days (plan 139), not real-time seconds. */
+ *  spawned once, tagged with `spawnPointId` so a cleared den can deplete
+ *  and be burned. Cave/thicket intervals are game-days (plan 139). */
 const SPAWNER_SPECS: {
   type: PreySpawner['type']
   kind: AnimalKind
   respawnIntervalDays: number
   maxPreyCount: number
 }[] = [
-  { type: 'cave', kind: 'deer', respawnIntervalDays: 1, maxPreyCount: 3 },
-  { type: 'thicket', kind: 'stag', respawnIntervalDays: 2, maxPreyCount: 2 },
+  { type: 'cave', kind: 'wolf', respawnIntervalDays: 2, maxPreyCount: 2 },
+  { type: 'thicket', kind: 'deer', respawnIntervalDays: 1, maxPreyCount: 3 },
   { type: 'wolfDen', kind: 'wolf', respawnIntervalDays: Infinity, maxPreyCount: 2 },
 ]
 
@@ -410,7 +412,7 @@ export async function createFauna(
   }
 
   /** Wild-fauna spawn points placed so far this build (ring spawns + cave/
-   *  thicket spawners) — `MIN_SPAWN_SEPARATION` rejection reads this, both
+   *  thicket/wolfDen spawners) — `MIN_SPAWN_SEPARATION` rejection reads this, both
    *  loops below push into it (plan 080). */
   const placedSpawnPoints: { x: number, z: number }[] = []
   const farFromOtherSpawns = (x: number, z: number): boolean =>
@@ -457,7 +459,7 @@ export async function createFauna(
     motherId?: string,
     /** Managed spawn point this animal belongs to (plan 125 §5) — only
      *  passed by spawner-driven creation (initial placement + respawn) below,
-     *  never by ring spawns/livestock/the one-time `wolfDen` pack. */
+     *  never by ring spawns/livestock. */
     spawnPointId?: string,
   ): AnimalAgent => {
     const tpl = templates[kind]
@@ -570,7 +572,7 @@ export async function createFauna(
     lastOpacity: number
   }[] = []
   const offRoad = (x: number, z: number) => !onRoad(x, z)
-  /** Prey spawners (esp. thicket) stay inland — not on beach / coastal band. */
+  /** Habitat spawners (esp. thicket) stay inland — not on beach / coastal band. */
   const spawnerSiteOk = (x: number, z: number): boolean => {
     if (!offRoad(x, z)) return false
     return !isCoastalPlacement(x, z, {
@@ -581,7 +583,7 @@ export async function createFauna(
     })
   }
   const [spawnerMinOffset, spawnerMaxOffset] = SPAWNER_RING_OFFSET
-  // `animals` also gates prey spawners (cave/thicket/wolfDen) — when off, no
+  // `animals` also gates habitat spawners (cave/thicket/wolfDen) — when off, no
   // respawn/replenishment can occur either.
   for (const spec of isSystemEnabled('animals') ? SPAWNER_SPECS : []) {
     // Thicket also prefers some forest cover so it doesn't land on open sand/meadow shore.
@@ -668,41 +670,30 @@ export async function createFauna(
       mouth.rotation.y = facingVillage
       scene.add(mouth)
       spawnerMeshes.push(mouth)
-
-      // Initial pack, spawned once — see `SPAWNER_SPECS`' comment for why
-      // `updateSpawners` never repopulates this spawner.
-      for (let i = 0; i < spec.maxPreyCount; i++) {
-        const spot = findWalkableNear(pos.x, pos.z, 0, 4) ?? pos
-        const wolf = spawnAgent('wolf', spot.x, spot.z)
-        scene.add(wolf.mesh)
-        agents.push(wolf)
-        denWolfAnimalIds.add(wolf.animalId)
-      }
+      spawnerMeshById.set(spawner.id, mouth)
     }
 
-    // Cave/thicket start inhabited (plan 139) — slow day-scale respawn only
-    // replaces losses. Tagged with `spawnPointId` so deaths count toward
-    // depletion; wolfDen's pack above is deliberately untagged. Only for a
-    // spawn point that's actually `active` — a restored `depleted`/
-    // `disabled`/`recovering` point must not come back with a full fresh
-    // population just because it was saved/reloaded (persistence follow-up,
-    // `docs/plans/LOOSE-ENDS.md` 2026-08-16); it stays empty until it
-    // recovers through the normal `tickSpawnPointRecovery` path.
-    if ((spec.type === 'cave' || spec.type === 'thicket') && spawner.state === 'active') {
+    // Cave/thicket/wolfDen start inhabited (plan 139) — slow day-scale
+    // respawn only replaces losses on finite-interval habitats. Tagged with
+    // `spawnPointId` so deaths count toward depletion (including the one-shot
+    // wolfDen pack, so a cleared den can be burned). Only for a spawn point
+    // that's actually `active` — a restored `depleted`/`disabled`/`recovering`
+    // point must not come back with a full fresh population just because it
+    // was saved/reloaded; it stays empty until it recovers through the
+    // normal `tickSpawnPointRecovery` path.
+    if (spawner.state === 'active') {
       for (let i = 0; i < spec.maxPreyCount; i++) {
         const spot = findWalkableNear(pos.x, pos.z, 0, 4) ?? pos
         const agent = spawnAgent(spec.kind, spot.x, spot.z, undefined, undefined, undefined, spawner.id)
         scene.add(agent.mesh)
         agents.push(agent)
+        if (spec.type === 'wolfDen') denWolfAnimalIds.add(agent.animalId)
       }
     }
     // A restored `disabled`/`recovering` point looks freshly-burned again on
     // reload/rebuild instead of a mismatched pristine prop — same visual as
     // `destroySpawner()` below, reapplied rather than duplicated.
-    if (
-      (spec.type === 'cave' || spec.type === 'thicket')
-      && (spawner.state === 'disabled' || spawner.state === 'recovering')
-    ) {
+    if (spawner.state === 'disabled' || spawner.state === 'recovering') {
       const mesh = spawnerMeshById.get(spawner.id)
       if (mesh) tintPropMaterials(mesh, BURNED_SPAWNER_TINT_HEX)
       if (terrainCarving?.scorchTerrain) {
@@ -771,7 +762,7 @@ export async function createFauna(
         spawners,
         dayDelta,
         agents
-          .filter((a) => a.def.role === 'prey' && !a.isDead())
+          .filter((a) => !a.isDead())
           .map((a) => ({ kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z })),
         (spawner) => {
           const pos = findWalkableNear(spawner.x, spawner.z, 0, 4) ?? spawner

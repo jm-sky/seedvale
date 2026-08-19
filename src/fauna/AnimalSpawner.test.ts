@@ -110,6 +110,21 @@ describe('updateSpawners', () => {
     updateSpawners([s], 10, [], () => { respawned++ })
     expect(respawned).toBe(0)
   })
+
+  it('caps by same-kind animals regardless of prey/predator role', () => {
+    const s = spawner({ kind: 'wolf', maxPreyCount: 1 })
+    let respawned = 0
+    updateSpawners([s], 10, [{ kind: 'wolf', x: 1, z: 1 }], () => { respawned++ })
+    expect(respawned).toBe(0)
+    expect(s.daysSinceLastRespawn).toBe(0)
+  })
+
+  it('ignores other kinds when counting the live cap', () => {
+    const s = spawner({ kind: 'wolf', maxPreyCount: 1 })
+    let respawned = 0
+    updateSpawners([s], 2, [{ kind: 'deer', x: 1, z: 1 }], () => { respawned++ })
+    expect(respawned).toBe(1)
+  })
 })
 
 describe('tickSpawnPointRecovery', () => {

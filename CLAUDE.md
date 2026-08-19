@@ -85,6 +85,7 @@ In case of running benchmarks in browser - check `docs/performance/agent-browser
 | Research | [docs/research/README.md](docs/research/README.md) |
 | Required models / sounds | [docs/assets/MODELS.md](docs/assets/MODELS.md), [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) |
 | Item catalog (hold/melee/spawn) | [docs/items/CATALOG.md](docs/items/CATALOG.md) |
+| Weapon stats / prices | [docs/items/WEAPONS.md](docs/items/WEAPONS.md) |
 
 Statuses are: `todo` · `planned` · `in progress` · `done` · `verification needed`.
 

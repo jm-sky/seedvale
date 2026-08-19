@@ -344,6 +344,11 @@ Browser/play:
 
 Nie uznawać planu za zweryfikowany wyłącznie na podstawie testów TypeScript/build — wizualne spalenie i zachowanie spawn pointu wymagają browser/play check.
 
+### Playtest follow-up (2026-08-19)
+
+- **`wolfDen` is now depletable / burnable.** Pack wolves carry `spawnPointId`; killing the pack (`maxPreyCount` 2 → threshold 2) moves the den to `depleted` and `[E] Zniszcz` works like cave/thicket. The den prop is registered in `spawnerMeshById` so the burn tint lands. `respawnIntervalDays: Infinity` and `isWolfDenCleared()` / `clear_wolf_den` are unchanged (quest still completes on pack death, independently of the burn).
+- **Habitat remap:** `cave` → `wolf` (2, restock 2 days); `thicket` → `deer` (3, restock 1 day). Stag stays ring-only. `updateSpawners` counts same-`kind` living animals, not only `role === 'prey'`, so a wolf cave is actually capped.
+
 **Zrób git commit i push do main, rebase jeżeli trzeba**
 
 ## Implementation summary (2026-08-16)
