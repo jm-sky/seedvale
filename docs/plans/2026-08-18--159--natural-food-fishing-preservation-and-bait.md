@@ -3,258 +3,380 @@
 **Created:** 2026-08-18  
 **Status:** `planned` 📋  
 **Priority:** medium · **Effort:** L  
-**Depends on:** ~~155~~ ~~156~~ ~~106~~
+**Depends on:** ~~155~~ ~~156~~ ~~106~~ ~~141~~
 
 domain: `items-player`
 tags: [`fauna`, `settlements-npcs`]
 
 ## Cel
 
-Rozbudować istniejące systemy o spójny ekosystem żywności: naturalną żywność, uprawy, pszczoły i miód, wędkarstwo, zanętę, świeżość i psucie, suszenie/konserwowanie oraz przynęty do istniejących pułapek. Dodać generyczne procesy czasowe, które działają w tle i nie blokują gracza.
+Rozbudować istniejące systemy o spójny ekosystem żywności: naturalną żywność, uprawy, pszczoły i miód, wędkarstwo, zanętę, świeżość i psucie, suszenie/konserwowanie oraz przynęty do istniejących pułapek.
 
-Nie tworzyć osobnych systemów dla poszczególnych rodzajów żywności.
+Plan rozszerza istniejące mechanizmy `ItemKind`/item catalog, stackable inventory, consumables, household/settlement storage, resource/source lifecycles, fauna, interaction, world time i persistence. Nie tworzy równoległych systemów food, inventory, storage, resource, fishing ani trap.
 
-## 1. Żywność
+155, 156, 106 i 141 są już ukończone. Ich istniejące ownership boundaries są częścią kontraktu tego planu.
 
-### Naturalna
+## 1. Zasady architektoniczne
 
-- Jagody
-- Jabłka
-- Grzyby
-- Orzechy
-- Miód
+- Żywność pozostaje **stackable**. `ItemInstance` z 155 jest dla indywidualnie stanowych przedmiotów, np. pułapek; nie tworzyć jednej instancji na każdą sztukę jedzenia.
+- Freshness jest stanem stacka, najlepiej reprezentowanym przez timestamp/deadline i wyliczany na podstawie `ItemCatalogEntry + world time`.
+- Nie tworzyć `FoodManager`, `FreshnessManager`, `FishingManager`, `CropManager`, `DryingManager`, `LogisticsManager` ani drugiego inventory/storage systemu.
+- Food metadata rozszerza istniejący `ItemCatalogEntry`; nie tworzyć osobnego katalogu żywności.
+- Player food consumption nadal należy do istniejącego modelu z 106 i istniejącego `consumable`/`eatFood()`.
+- NPC food logistics korzysta z istniejącego `Household.stock` / `SettlementEconomy` i transportu z 156.
+- Natural food i crops rozszerzają istniejące source/spawner/resource lifecycles.
+- Trap bait rozszerza istniejący `PlacedTrapRecord` / `animalTraps.ts`.
+- Simulation state nie może być własnością Three.js `Object3D`.
 
-### Uprawy
+## 2. Żywność i item definitions
 
-- Marchew
-- Ziemniaki
-- Kapusta
+Reuse before adding. Istniejące produkty obejmują m.in.:
 
-### Pozyskiwana
+- `mushroom`
+- `tomato`
+- `raw_meat`
+- species meat: `deer_meat`, `wolf_meat`, `boar_meat`, `rabbit_meat`, `beef`
+- `roasted_meat`
+- `cheese`
+- `dried_meat`
 
-- Ryby
-- Mięso
-- Jajka i kolejne istniejące/przyszłe źródła
+Nowe `ItemKind` tylko dla faktycznie brakujących produktów:
 
-Najpierw sprawdzić istniejące itemy i modele 3D. Brakujące modele dobrać lub pobrać tak, aby pasowały stylistycznie do Seedvale.
+- berries
+- apple
+- nuts
+- honey
+- carrot
+- potato
+- cabbage
+- fish
+- dried fish
 
-Żywność ma korzystać z istniejących `ItemKind`, `Inventory`, household/settlement storage, potrzeb oraz przepływu transportu NPC.
+Nie dodawać `fresh_*`, `spoiled_*`, `*_bait` jako osobnych `ItemKind`.
 
-## 2. Świeżość żywności
+Food metadata ma rozszerzać centralny item catalog, np. o food value, freshness parameters i opcjonalną kategorię bait.
+
+## 3. Freshness
 
 Wprowadzić wspólny mechanizm:
 
 `Fresh → Medium → Spoiled`
 
-Dotyczy m.in. mięsa, ryb, mleka, jaj, jagód, jabłek, grzybów i warzyw. Każdy produkt definiuje własne tempo psucia.
+Stan powinien być oparty o authoritative `acquiredAtDays` albo równoważny spoilage deadline. Stage jest wyliczany, nie musi być osobnym mutowanym timerem.
 
-Miód jest wyjątkiem — praktycznie się nie psuje.
+Dla dwóch stacków tego samego `ItemKind`:
 
-Świeżość musi być częścią stanu symulacji/inventory i zachowywać się poprawnie po save/load.
+```text
+compatible age/deadline → mogą się łączyć
+incompatible age/deadline → pozostają osobnymi stackami
+```
 
-Plan 155 jest istotny dla reprezentacji stanu itemów. Przed implementacją rozstrzygnąć, czy freshness wymaga `ItemInstance`, czy można zachować wydajne stackowanie produktów o identycznym stanie świeżości.
+Nie rozbijać jedzenia na `ItemInstance`.
 
-## 3. Gotowanie
+Freshness musi zachować się poprawnie podczas:
 
-Gotowanie tworzy osobne produkty, np.:
+- add/remove/split/merge inventory;
+- przenoszenia do household/settlement storage;
+- NPC transportu;
+- konsumpcji przez gracza i NPC;
+- save/load;
+- time-skipu.
 
-`Fresh Fish → Baked Fish`
+Storage nie może odświeżać żywności.
 
-Produkty gotowane/pieczone również mogą się psuć:
+Spoiled food nie może po prostu działać jak świeże jedzenie. W tym planie nie tworzyć systemu chorób; można przyjąć non-consumable albo jasno zdefiniowaną wartość `0`/reduced value.
 
-`Baked Fish → Medium → Spoiled`
+## 4. Natural food i crops
 
-## 4. Generyczne procesy czasowe
+Rozszerzyć istniejące mechanizmy źródeł i item spawnerów.
 
-Wprowadzić wspólny mechanizm `TimedProcess`.
+- mushroom pozostaje w obecnym chunk-item lifecycle;
+- berries/nuts mogą używać istniejącego deterministic world/chunk placement;
+- apples powinny korzystać z istniejącego lifecycle drzew, jeśli zapewnia właściwe ownership;
+- crops korzystają z istniejących garden anchors, tak jak `tomato`.
 
-Proces:
+Nie tworzyć osobnych managerów zasobów. Pozyskanie zawsze daje normalny item, dzięki czemu player i NPC korzystają z tych samych mechanizmów.
 
-- rozpoczyna się po interakcji,
-- trwa określony czas świata,
-- nie blokuje gracza,
-- działa w tle,
-- ma stan postępu,
-- może być zapisany i odtworzony po reloadzie,
-- kończy się poprawnie po time-skipie.
+## 5. Player needs i consumables
 
-Minimalny stan:
+Plan 106 pozostaje ownership boundary dla `hunger`, `thirst`, `vigor` i `stamina` oraz konsumpcji.
 
-- input items,
-- `startedAt`,
-- duration,
-- `completedAt`,
-- output.
+Nowe jedzenie rozszerza istniejące consumable definitions i istniejące `eatFood()` zamiast tworzyć food-needs layer.
 
-UI może pokazywać pasek postępu i pozostały czas.
+Późniejsze strojenie potrzeb (np. Plan 165) nie jest nową zależnością; 159 ma pozostać kompatybilny z istniejącym API konsumpcji.
 
-Mechanizm ma być generyczny i możliwy do wykorzystania później przez suszenie, wędzenie, gotowanie, fermentację i inne procesy produkcyjne.
+## 6. Cooking
 
-## 5. Suszenie / konserwowanie
+Rozszerzyć istniejącą tabelę receptur `src/items/campfireCooking.ts`.
 
-Potwierdzić istniejący `dried_meat` i wykorzystać go zamiast tworzyć duplikat.
+Istniejący schemat:
+
+```text
+raw/species meat → roasted_meat
+```
+
+rozszerzyć o ryby i kolejne produkty tylko w ramach tego samego mechanizmu.
+
+Gotowanie tworzy nowy stack z nowym timestampem produkcji. Nie przenosi starego spoilage deadline surowca.
+
+Istniejący busy-channel cooking pozostaje osobnym mechanizmem od background `TimedProcess`.
+
+## 7. Generyczne procesy czasowe
+
+Wprowadzić mały generyczny model procesu dla procesów działających w tle, np. suszenia. Nie tworzyć globalnego managera ani per-frame tickera.
+
+Minimalnie:
+
+```ts
+TimedProcess {
+  id: string
+  kind: TimedProcessKind
+  startedAtDays: number
+  durationDays: number
+  input: ItemStackInput[]
+  output: ItemStackOutput[]
+}
+```
+
+`completedAtDays` i progress powinny być wyliczalne z `startedAtDays + durationDays`.
+
+Proces należy do authoritative state właściwego obiektu/systemu i musi:
+
+- działać podczas nieobserwowania obiektu;
+- poprawnie nadrobić completion po reload/time-skip;
+- być zapisywalny;
+- udostępniać progress UI bez przenoszenia state do UI/Object3D.
+
+## 8. Suszenie / konserwowanie
+
+Wykorzystać istniejący `dried_meat`; nie tworzyć duplikatu.
 
 Dodać `dried_fish`.
 
-Dodać fizyczny obiekt **suszarni / suszarki**.
+Dodać fizyczny drying rack jako persistent world record + presentation object, analogicznie do istniejących persistent world objects.
 
 Przykładowe procesy:
 
-`Fresh Meat → Drying Rack → Dried Meat`
+```text
+Fresh Meat → Drying Rack → Dried Meat
+Fresh Fish → Drying Rack → Dried Fish
+```
 
-`Fresh Fish → Drying Rack → Dried Fish`
+Suszone produkty również korzystają z tego samego freshness resolvera, ale mają odpowiednio dłuższy czas trwałości.
 
-Proces trwa np. 3–6 godzin czasu świata i używa `TimedProcess`.
+## 9. Wędkarstwo
 
-Suszone produkty nadal korzystają z freshness, ale mają znacznie dłuższy czas psucia.
+Dodać minimalne wędkarstwo bez symulacji populacji ryb:
 
-Nie tworzyć osobnego `DryingSystem`.
+- wędka jako normalny item/tool;
+- miejsca połowu wyprowadzane z istniejącej geometrii/water detection, o ile nie trzeba persystować każdego spotu;
+- fishing action korzystający z istniejącego interaction/action framework;
+- deterministyczny catch roll;
+- wynik jako normalny `fish` item.
 
-## 6. Pszczoły i miód
+Schemat:
 
-Dodać ule i pszczoły jako powiązany system świata.
+```text
+fishing action
+→ deterministic catch roll
+→ fish / no catch
+→ normal inventory stack
+```
 
-- Ul produkuje miód.
-- Bez pochodni próba zebrania miodu powoduje atak pszczół i niewielkie obrażenia.
-- Pochodnia w ręce odstrasza pszczoły i mocno ogranicza lub eliminuje obrażenia.
-- Pochodnią można również spalić ul.
-- Spalony ul zostaje zniszczony, pszczoły znikają, produkcja miodu się kończy, a gracz otrzymuje jednorazowy miód.
+Nie tworzyć fish agents, fish population, migration ani fishing manager.
 
-Wykorzystać istniejące interakcje, zdrowie i system ognia zamiast tworzyć równoległe mechanizmy.
+## 10. Zanęta na ryby
 
-## 7. Wędkarstwo
+Zanęta jest zwykłym itemem spożywczym oznaczonym w centralnej definicji jako odpowiednia bait capability. Nie tworzyć osobnego item kind.
 
-Dodać:
+Efekt zanęty należy do persistent simulation state fishing spotu, nie do `Object3D`.
 
-- wędkę,
-- odpowiednie miejsca połowu,
-- rzucanie i animację,
-- ryby jako normalne itemy.
+Minimalny stan:
 
-Na tym etapie bez pełnej symulacji populacji i migracji ryb.
+```ts
+FishingBaitState {
+  kind: ItemKind
+  appliedAtDays: number
+  expiresAtDays: number
+  strength: number
+}
+```
 
-## 8. Zanęta na ryby
+Efekt:
 
-Zanęta jest osobnym mechanizmem od przynęty do pułapek.
+- lokalny bonus aktywności przez kilka dni;
+- kolejne użycie może odświeżyć lub wzmocnić efekt według centralnej reguły;
+- catch roll uwzględnia aktywną zanętę.
 
-Użycie zanęty w konkretnym miejscu połowu daje lokalny bonus aktywności ryb przez kilka dni i zwiększa szansę złowienia ryby. Kolejne użycie może odświeżać lub wzmacniać efekt.
+Efekty wizualne są presentation-only i nie są zapisywane:
 
-### Efekt wizualny
+- throw animation;
+- particles;
+- lokalny water effect;
+- fade-out po wygaśnięciu.
 
-- animacja rzucania zanęty,
-- particles przy tafli,
-- lokalny efekt w wodzie,
-- subtelna zmiana koloru wody w obszarze działania,
-- efekt utrzymuje się przez czas działania i następnie zanika.
+Spot pozostający poza streamingiem nadal zachowuje bonus.
 
-Stan zanęcenia należy do symulacji świata, nie do `Object3D`.
+## 11. Pszczoły i miód
 
-## 9. Przynęta do pułapek
+Dodać minimalny persistent hive state.
 
-Rozszerzyć istniejący system pułapek, wykorzystując istniejące itemy żywności zamiast tworzyć osobne `MeatBait` / `PlantBait`.
+Wykorzystać istniejące:
 
-### Mięsna
+- interaction;
+- health/damage;
+- torch/fire;
+- normal item spawning/inventory.
 
-Dla mięsożerców, drapieżników i odpowiednich wszystkożerców. Przykłady: mięso, ryba.
+Produkcja miodu ma być oparta o world time, a nie o per-frame symulację pszczół.
 
-### Roślinna
+Spalenie ula musi mieć persistent state uniemożliwiający wielokrotną nagrodę po stream/reload.
 
-Dla roślinożerców i odpowiednich wszystkożerców. Przykłady: marchew, jagody, jabłko.
+Pszczoły mogą być wizualnymi agentami/efektami, ale nie mogą być właścicielem produkcji ani obrażeń.
 
-Właściwa przynęta zwiększa zainteresowanie pułapką; niewłaściwa nie daje bonusu. Przynęta jest zużywana.
+Nie tworzyć `BeeCombatSystem` ani bee managera.
 
-## 10. NPC i storage
+## 12. Przynęta do pułapek
+
+Rozszerzyć istniejący system pułapek z 141/155.
+
+Przynęta pozostaje istniejącym food itemem, np. meat/fish/berry/carrot, a kategoria bait znajduje się w centralnej definicji itemu.
+
+`PlacedTrapRecord` może otrzymać minimalny stan:
+
+```ts
+baitKind: ItemKind | null
+```
+
+Ładowanie bait:
+
+```text
+validate item
+→ remove one item atomically
+→ store ItemKind on trap
+→ existing trap rule gets bait bonus
+```
+
+Reguły detection/capture pozostają w `src/world/animalTraps.ts`, runtime w `createPlacedTraps.ts`.
+
+Preferowana reguła lifecycle: bait wraca przy disarm/collect przed capture; jest zużywany przy udanym capture, chyba że istniejący lifecycle wymaga innej semantyki.
+
+Nie tworzyć `MeatBait`, `PlantBait` ani bait managera.
+
+## 13. NPC i storage
+
+Plan 156 jest ukończony i pozostaje ownership boundary.
 
 Nowa żywność korzysta z istniejącego przepływu:
 
-`source → NPC gathers → carrying → Household storage → consumption`
+```text
+source
+→ existing NPC gather/carry/deposit
+→ Household.stock / SettlementEconomy
+→ existing NPC consumption
+```
 
-Wykorzystać mechanizmy z planu 156. Nie tworzyć osobnego systemu logistyki żywności.
+Nie tworzyć `HouseholdFoodInventory`, food logistics ani nowego transportu.
 
-## 11. Player
+Jedynym wymaganym rozszerzeniem storage jest zachowanie freshness metadata dla perishable food. Jeśli `Household.stock` / settlement stock wymaga rozszerzenia o stateful stacks, jest to rozszerzenie istniejącego modelu, nie nowy storage system.
 
-Gracz korzysta z tych samych itemów i mechanizmów co NPC: zbieranie, inventory, jedzenie, przetwarzanie, przechowywanie i użycie jako przynęty.
+Późniejsze plany 164/167 nie są zależnościami 159 i nie powinny być wciągane do jego zakresu.
 
-## 12. Kolejność implementacji
+## 14. Persistence
+
+Aktualny baseline po 155 to **SaveData v19** z `inventoryInstances`.
+
+Plan 159 musi zaplanować kolejną wersję schema dla własnego authoritative state, zależnie od finalnej implementacji, w szczególności:
+
+- stateful food stack timestamps/deadlines;
+- active drying racks/processes;
+- fishing bait state;
+- hive production/burn state;
+- trap bait state, jeśli nie jest objęty istniejącym trap persistence.
+
+Nie zapisywać derived freshness stages, progress UI ani Three.js objects.
+
+Migracja musi zachować istniejące v19 `inventoryInstances` oraz stare stackable inventory.
+
+## 15. Kolejność implementacji
 
 ### A — Audit
 
-Sprawdzić aktualne `ItemKind`, food items, czy istnieje `dried_meat`, modele 3D, Inventory/ItemInstance z planu 155, food/needs, existing resource sources, traps, storage, persistence i interaction system.
+Zweryfikować aktualne `ItemKind`, `ItemCatalogEntry`, `Inventory`, `ItemInstance`, consumables, `Household.stock`, `SettlementEconomy`, resource/source lifecycles, fauna harvest, traps, interaction, world time i SaveData v19.
 
-### B — Food definitions
+### B — Shared item/food metadata
 
-Dodać produkty oraz parametry: food value, freshness, cooking, preservation i bait category.
+Rozszerzyć istniejący item catalog i dodać brakujące produkty. Nie tworzyć drugiego katalogu food.
 
-### C — TimedProcess
+### C — Stateful food stacks / freshness
 
-Najpierw generyczny mechanizm procesów czasowych.
+Najpierw ustalić minimalne rozszerzenie stackable inventory i storage, resolver freshness, merge/split oraz persistence.
 
-### D — Freshness
+### D — Natural food / crops
 
-Wspólny system świeżości i psucia.
+Podłączyć nowe źródła do istniejących spawner/resource/garden mechanisms.
 
-### E — Natural food
+### E — Cooking integration
 
-Jagody, jabłka, grzyby, orzechy, marchew, ziemniaki, kapusta.
+Rozszerzyć istniejącą tabelę campfire cooking o fish i nowe produkty wymagane przez scope.
 
-### F — Preservation
+### F — TimedProcess + preservation
 
-Suszarnia + suszone mięso + suszona ryba.
+Wprowadzić generyczny persistent process value i wykorzystać go dla drying rack.
 
-### G — Fishing
+### G — Fishing + bait
 
-Wędka + miejsca połowu + ryby.
+Wędka, fishing action, deterministic catch, persistent bait state i presentation effects.
 
-### H — Fishing bait
+### H — Bees/honey
 
-Zanęta + kilkudniowy lokalny bonus + efekty wizualne.
+Minimalny hive lifecycle, time-based production, torch/fire interaction i persistent burned/reward state.
 
-### I — Bees
+### I — Trap bait
 
-Ule + pszczoły + miód + pochodnia + spalanie.
+Rozszerzyć `PlacedTrapRecord` i istniejące trap rules o bait capability istniejących food items.
 
-### J — Trap bait
+### J — NPC integration
 
-Integracja istniejących food items z pułapkami.
+Zweryfikować, że nowe produkty przechodzą przez istniejące gather/storage/consumption bez równoległej logistyki.
 
-### K — NPC integration
-
-Sprawdzenie transportu, storage i konsumpcji nowych produktów.
-
-## 13. Poza zakresem
+## 16. Poza zakresem
 
 Na razie nie implementować:
 
-- pełnej ekologii populacji ryb,
-- migracji ryb,
-- zaawansowanej hodowli pszczół,
-- uli hodowlanych,
-- lodówek,
-- fermentacji,
-- rozbudowanego gotowania,
-- chorób od zepsutego jedzenia,
-- systemu cen żywności.
+- pełnej ekologii populacji ryb;
+- migracji ryb;
+- zaawansowanej hodowli pszczół;
+- uli hodowlanych;
+- lodówek;
+- fermentacji;
+- systemu chorób od zepsutego jedzenia;
+- rozbudowanego gotowania jako osobnego systemu;
+- systemu cen żywności;
+- player storage/container redesign z 164;
+- NPC helper delivery z 167;
+- późniejszego redesignu hunger/thirst z 165.
 
-Architektura powinna pozwolić dodać je później.
-
-## 14. Weryfikacja
+## 17. Weryfikacja
 
 Sprawdzić end-to-end:
 
-- wszystkie nowe produkty można pozyskać,
-- NPC może je transportować i przechowywać,
-- gracz może je wykorzystać,
-- freshness działa po czasie i po save/load,
-- suszenie działa w tle i ma pasek postępu,
-- timed process poprawnie działa po reloadzie i time-skipie,
-- łowienie działa,
-- zanęta daje lokalny bonus przez kilka dni,
-- efekt wizualny zanęty pojawia się i znika,
-- ul produkuje miód,
-- pszczoły atakują, a pochodnia chroni,
-- spalony ul przestaje produkować,
-- pułapki rozpoznają właściwy typ przynęty,
-- przynęta jest zużywana,
-- streaming nie duplikuje ani nie gubi itemów.
+- istniejące i nowe food items używają jednego item/consumable modelu;
+- freshness jest deterministyczne i zachowuje się poprawnie po save/load/time-skip;
+- różne age/deadline stacki nie są błędnie scalane;
+- storage nie odświeża jedzenia;
+- NPC transportuje i konsumuje nowe food przez istniejący flow;
+- natural food/crops korzystają z istniejących source/spawner systems;
+- cooking używa istniejącego recipe mechanism;
+- drying działa w tle, po reloadzie i time-skipie;
+- fishing działa bez fish population system;
+- zanęta daje lokalny bonus przez kilka dni także po stream-out/in;
+- efekty zanęty pojawiają się i znikają bez persistence presentation state;
+- hive produkuje honey bez per-frame bee simulation;
+- torch/fire i hive burn używają istniejących interaction/damage paths;
+- spalony hive nie daje wielokrotnej nagrody po reload/streaming;
+- trap bait używa istniejących trap rules i nie tworzy nowego bait systemu;
+- bait jest poprawnie zużywany/zwracany zgodnie z lifecycle;
+- streaming nie duplikuje ani nie gubi itemów lub persistent process state.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
