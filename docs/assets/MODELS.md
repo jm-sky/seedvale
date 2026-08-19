@@ -64,7 +64,7 @@ If the feature needs no new model, do nothing to this file.
 | M35 | Cemetery / gravestones | Village-fringe landmark (`cemetery`); Poly plot + extra stones | `wired` | plan 049 (`nature/cemetery.glb`, `nature/grave_a.glb`) |
 | M36 | Food items (tomato/raw_meat/roasted_meat/bread + plan 134 species meats/hide/cheese/dried_meat) + waterskin | Pickup/inventory meshes; procedural fallback in place and functional | `needed` | plan 106, plan 134 (`items/items.ts`'s `createItemMesh`) |
 | M37 | Animal trough | Household `AnimalTrough` prop; procedural-only fallback in place and functional (`props.ts`'s `createTrough`), no GLB yet | `needed` | plan 122 |
-| M38 | Spear / short sword | Held melee weapons (Kupiec stock); procedural fallback + generic held-tool grip in place and functional, no GLB yet | `needed` | plan 134 (`items/items.ts`'s `createItemMesh`, `items/heldToolVisual.ts`'s `HELD_ATTACH`) |
+| M38 | Spear / short sword | Held melee weapons (Kupiec stock). Quaternius Medieval Weapons `Spear` + `Sword` (plain steel) | `wired` | plan 134 (`items/spear.glb`, `items/short_sword.glb`) |
 | M39 | Harvested animal remains (bones / hide) | After knife harvest: `bones_pile` + 1–2 `large_bone` + `animal_hide` + 2–4 procedural meat scraps (`fauna/harvestedRemains.ts`). Procedural cylinder+hide fallback if GLB fails. Per-species carcass GLB still out of scope | `wired` | plan 137, plan 138 (`fx/bones_pile.glb`, `fx/large_bone.glb`, `fx/animal_hide.glb`) |
 | M40 | Animal traps (`simple` / `good`) | Placed trap prop, two visually distinct tiers, jaws readable as armed / disarmed / broken. Procedural fallback in place and functional (`world/trapProp.ts`); `TrapDef.modelUrl` is the single wiring point | `needed` | plan 141 (`world/animalTraps.ts`) |
 | M41 | Pine tree variants (`pine_1`/`pine_3`/`pine_5`) | Textured single-tree conifers for `TREE_SPECS` — no glTF pine ships in Ultimate Stylized Nature, so `PineTree_1/3/5.fbx` + `PineTree_Bark`/`PineTree_Leaves` textures converted `FBX2glTF` → `gltf-transform` (attach textures) → `gltfpack -cc -tw -tl 512` | `wired` | plan 140 (`nature/pine_1.glb`, `pine_3.glb`, `pine_5.glb`) |
@@ -87,7 +87,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
 | Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed, rock/log, ore piles, cemetery / gravestones |
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+) |
-| Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork) |
+| Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; spear; short sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork) |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
 | FX | fire tip (handheld, village torch, campfire flame); blood splat (animal death); harvested remains (pile / large bone / hide) |
 

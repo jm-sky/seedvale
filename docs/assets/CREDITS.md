@@ -49,6 +49,8 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/items/obsidian_sword.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Claymore` — original red reminted to volcanic-glass purple/black, not gray (plan 160) |
 | `public/models/items/masterwork_sword.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Sword_Golden` — gold blade (plan 160) |
 | `public/models/items/battle_axe.glb` | Quaternius | [poly.pizza/m/uHXdfMmO8g](https://poly.pizza/m/uHXdfMmO8g) | CC0 1.0 | `Axe Double` — drop + held; also in Medieval Weapons Pack as `Axe_Double` (plan 160) |
+| `public/models/items/spear.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Spear` — OBJ→GLB (`obj2gltf`) + `gltf-transform` meshopt (plan 134 / M38) |
+| `public/models/items/short_sword.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Sword` — same conversion; plain steel short sword (plan 134 / M38) |
 | `public/models/items/axe.glb` | CreativeTrio | [poly.pizza/m/OhZDdlrx29](https://poly.pizza/m/OhZDdlrx29) | CC0 1.0 | `Axe` — drop + held |
 | `public/models/settlement/hay.glb` | Quaternius | [poly.pizza/m/Yu8TOERkpw](https://poly.pizza/m/Yu8TOERkpw) | CC0 1.0 | `Hay` — clutter przy ogrodach (plan 082) |
 | `public/models/items/pickaxe.glb` | CreativeTrio | [poly.pizza/m/cJp88qPPLc](https://poly.pizza/m/cJp88qPPLc) | CC0 1.0 | `Pickaxe` — dekor przy stockpile; gameplay mining later (plan 082) |

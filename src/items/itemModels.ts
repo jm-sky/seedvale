@@ -46,6 +46,16 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
     maxSize: 1.15,
     groundRotation: [0, 0, Math.PI / 2.4],
   },
+  spear: {
+    url: '/models/items/spear.glb',
+    maxSize: 1.35,
+    groundRotation: [0, 0, Math.PI / 2.2],
+  },
+  short_sword: {
+    url: '/models/items/short_sword.glb',
+    maxSize: 0.85,
+    groundRotation: [0, 0, Math.PI / 2.4],
+  },
   damascus_knife: { url: '/models/items/damascus_knife.glb', maxSize: 0.35 },
   damascus_short_sword: {
     url: '/models/items/damascus_short_sword.glb',

@@ -60,8 +60,8 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | bread | chleb | — | — | none (Kupiec) | procedural | plan 106; Zjedz (+30 hunger) |
 | waterskin_empty | bukłak (pusty) | — | — | none (Kupiec) | procedural | plan 106; `[R]` fill at well/lake → waterskin_full |
 | waterskin_full | bukłak (pełny) | — | — | well/lake fill | procedural | plan 106; Wypij (+45 thirst) → back to waterskin_empty |
-| spear | dzida | yes | 20 | none (Kupiec) | procedural (M38) | plan 134; longest range, narrow thrust arc |
-| short_sword | krótki miecz | yes | 18 | none (Kupiec) | procedural (M38) | plan 134; lighter/faster than long_sword |
+| spear | dzida | yes | 20 | none (Kupiec) | `items/spear.glb` (M38) | plan 134; longest range, narrow thrust arc |
+| short_sword | krótki miecz | yes | 18 | none (Kupiec) | `items/short_sword.glb` (M38) | plan 134; lighter/faster than long_sword |
 | deer_meat | mięso sarny | — | — | corpse harvest (knife, sarna) | procedural | plan 134; Zjedz (+16 hunger); cooks to roasted_meat |
 | wolf_meat | mięso wilka | — | — | corpse harvest (knife, wilk) | procedural | plan 134; Zjedz (+12 hunger); cooks to roasted_meat |
 | boar_meat | mięso dzika | — | — | corpse harvest (knife, dzik) | procedural | plan 134; Zjedz (+17 hunger); cooks to roasted_meat |

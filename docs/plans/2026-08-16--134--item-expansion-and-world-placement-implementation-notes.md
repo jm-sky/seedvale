@@ -319,3 +319,7 @@ If implementation starts requiring a large refactor of `Inventory`, persistence,
 - **Item Details UI:** `InventoryScreenItemDetails.vue` now shows a "Wartość" (trade value) stat for every item, and conditionally shows Obrażenia/Zasięg/"Szybkość ataku" (derived bucket: szybki/średni/wolny from windUp+hitWindow+recovery, not raw internal fields) for melee items and "Efekt" for consumables — the old always-visible "Obrażenia: Nie dotyczy" row is gone. Added an image-area seam (`imageUrl` computed, currently always `null`) that falls back to a category icon from `lucide-vue-next` (already a project dependency) — no new icon/asset registry.
 
 **Verification:** `npx tsc --noEmit` ✅, `npm run test` ✅ (852 tests, no regressions), `npm run build` ✅ (`vue-tsc` + `vite build`). No browser/gameplay verification performed, per this session's instructions — left to manual playtest.
+
+## 17. Models wired (2026-08-19)
+
+M38: `spear.glb` / `short_sword.glb` from Quaternius Medieval Weapons Pack (`Spear`, `Sword`). OBJ→GLB + meshopt. Grip still uses pitchfork / short-sword family attach — not browser-verified.

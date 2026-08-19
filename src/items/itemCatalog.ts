@@ -175,8 +175,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: { damage: 20, range: 3.0, arcDot: 0.6, windUp: 0.24, hitWindow: 0.1, recovery: 0.3, staminaCost: 9 },
     defense: { canBlock: true, baseBlockChance: 0.18, partialReduction: 0.4 },
     spawn: 'none',
-    modelUrl: null,
-    notes: 'Plan 134 — Kupiec stock. No GLB yet; procedural held/drop mesh. Longest range, narrow thrust arc.',
+    modelUrl: '/models/items/spear.glb',
+    notes: 'Plan 134 — Kupiec stock. Quaternius Medieval Weapons `Spear`. Longest range, narrow thrust arc.',
   },
   short_sword: {
     kind: 'short_sword',
@@ -185,8 +185,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: { damage: 18, range: 2.1, arcDot: 0.5, windUp: 0.18, hitWindow: 0.1, recovery: 0.26, staminaCost: 7 },
     defense: { canBlock: true, baseBlockChance: 0.22, partialReduction: 0.45 },
     spawn: 'none',
-    modelUrl: null,
-    notes: 'Plan 134 — Kupiec stock. No GLB yet; procedural held/drop mesh. Lighter/faster than long_sword.',
+    modelUrl: '/models/items/short_sword.glb',
+    notes: 'Plan 134 — Kupiec stock. Quaternius Medieval Weapons `Sword` (plain steel). Lighter/faster than long_sword.',
   },
   firestarter: {
     kind: 'firestarter',

@@ -48,6 +48,8 @@ describe('assetIndex', () => {
       'held:long_sword',
       'held:pitchfork',
       'held:sickle',
+      'held:spear',
+      'held:short_sword',
       'held:damascus_knife',
       'held:damascus_short_sword',
       'held:damascus_long_sword',
