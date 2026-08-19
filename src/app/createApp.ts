@@ -455,6 +455,7 @@ export async function createApp(
   let syncHeldHud = (): void => {}
   const playerTorch = createPlayerTorch({
     handSocket: () => player.handSocket(),
+    heldToolObject: () => player.getHeldToolObject(),
     onChange: () => syncHeldHud(),
     onIgnite: () => playActionFireIgnite(worldAudio.playAt, player.mesh.position),
     onExtinguish: () => playActionFireExtinguish(worldAudio.playAt, player.mesh.position),

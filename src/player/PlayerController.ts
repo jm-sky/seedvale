@@ -343,6 +343,12 @@ export class PlayerController {
     return this.rightWrist ?? this.modelRoot
   }
 
+  /** Currently-mounted held-tool mesh (visual only), or `null` while
+   *  unarmed/still loading. */
+  getHeldToolObject(): THREE.Object3D | null {
+    return this.heldToolObject
+  }
+
   setHeldTool(kind: ToolKind | null): void {
     if (kind === this.heldToolKind) return
     this.heldToolKind = kind

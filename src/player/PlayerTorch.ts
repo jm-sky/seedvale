@@ -47,6 +47,12 @@ export type PlayerTorch = {
 type HandAccess = {
   /** Right wrist (or model root fallback). */
   handSocket: () => Object3D
+  /** Currently-equipped held-tool mesh (`PlayerController.getHeldToolObject`).
+   *  Not the same object as this module's own `mount` (sparks/light
+   *  overlay); the visible tool mesh lives in `heldToolVisual.ts`/
+   *  `PlayerController`. Not read by this module yet — wired through for a
+   *  future feature that needs to reach the equipped mesh from here. */
+  heldToolObject?: () => Object3D | null
   /** Fired when lit state / source changes (HUD sync). */
   onChange?: () => void
   onIgnite?: () => void
