@@ -75,10 +75,12 @@ function attachLanternGlb(
   lanternBody: THREE.Object3D,
   pose: LampMountPose,
 ): void {
-  const body = lanternBody.clone(true)
-  body.position.set(pose.cx, pose.cy, pose.cz)
-  body.rotation.y = pose.yaw
-  group.add(body)
+  const pivot = new THREE.Group()
+  pivot.position.set(pose.cx, pose.cy, pose.cz)
+  pivot.rotation.y = pose.yaw
+  // Preserve `preparePropFitMax` translation (see `createHouseLight` WIP notes).
+  pivot.add(lanternBody.clone(true))
+  group.add(pivot)
 }
 
 /** Box lantern sized to the same longest-axis as `LANTERN_*_MAX` (GLB fit). */
@@ -122,18 +124,45 @@ function attachHousePointLight(
   pose: LampMountPose,
   style: HouseLampStyle,
 ): THREE.PointLight {
-  const light = new THREE.PointLight(0xffb35c, 0, style === 'wall' ? 15 : 30, 2)
+  const light = new THREE.PointLight(0xffb35c, 0, style === 'wall' ? 10 : 20, 2)
   const inset = pose.visualSize * 0.18
   light.position.set(pose.cx - pose.nx * inset, pose.cy, pose.cz - pose.nz * inset)
   group.add(light)
   return light
 }
 
+/** Interior fill only (no mesh). WIP: Y / intensity / distance not tuned;
+ *  doubles the per-house PointLight count (plan 157 budget). */
+function attachHouseInnerLight(group: THREE.Group): THREE.PointLight {
+  const light = new THREE.PointLight(0xffb35c, 0, 12, 2)
+  light.position.set(0, 1.5, 0)
+  light.visible = false
+  group.add(light)
+  return light
+}
+
 /**
- * Mount a night lamp at a point on the hut's exterior (local frame).
- * GLB size comes from `LANTERN_WALL_MAX` / `LANTERN_FLOOR_MAX` in `propSpecs.ts`
- * (`preparePropFitMax` in `buildSettlementProps`) — wall style does not apply
- * an extra 0.5 scale to the GLB. Procedural boxes match those same metres.
+ * House night lamp (wall GLB or procedural) + exterior PointLight + interior fill.
+ *
+ * WIP / unfinished (2026-08-19): wall lantern still looks too small in-game.
+ * Do not treat `LANTERN_WALL_MAX = 0.45` as a verified visual size.
+ *
+ * Discoveries so far:
+ * - `style === 'wall' ? 0.5 : 1` never scaled the GLB. Village path uses
+ *   `lantern.glb` via `preparePropFitMax(LANTERN_WALL_MAX)` in `props.ts`.
+ *   Old 0.16 m longest-axis was a fist-sized fixture on a ~3.4 m MegaKit wall.
+ * - `lantern.glb` is obj2gltf (Tomáš Bayer / ElwFor_Lantern). Vertex units
+ *   ~85 × 180 × 25, origin at the OBJ corner — not metres, not centered.
+ *   Longest axis is the tall wooden body; the cage/glass is a small slice of
+ *   that bbox, so FitMax-to-0.45 m can still look like a tiny lamp head.
+ * - Overwriting the clone's `position` with the mount dropped the FitMax
+ *   foot/center offset. Most of the mesh sat inside the wall (sliver outside).
+ *   Pivot at the mount + keep FitMax translation on the clone.
+ * - `hut.add(lamp)` inherits `hut.scale` (MegaKit `HOUSE_ASSEMBLY_SCALE` 1.1;
+ *   catalog GLB `prepareProp` can be ~0.1). Compensating the whole lamp group
+ *   also moves the mount (hut-local metres). `props.ts` scales each child
+ *   instead. Inner fill at (0, 1.5, 0) is hut-local because the lamp group
+ *   sits at the hut origin.
  */
 export function createHouseLight(
   mountHeight: number,
@@ -151,17 +180,21 @@ export function createHouseLight(
   else lampMat = attachProceduralLantern(group, pose)
 
   const light = attachHousePointLight(group, pose, style)
+  const innerLight = attachHouseInnerLight(group)
 
   return {
     object: group,
     setNightIntensity(t) {
       const clamped = Math.max(0, Math.min(1, t))
       if (lampMat) lampMat.color.lerpColors(HOUSE_LAMP_OFF_COLOR, HOUSE_LAMP_ON_COLOR, clamped)
-      light.intensity = clamped * (style === 'wall' ? 3 : 6)
+      light.intensity = clamped * (style === 'wall' ? 2.5 : 5)
+      innerLight.intensity = clamped * 2
       // Plan 157 §3.2 — Three's WebGLLights only collects visible lights, so
       // an off lamp that stays `visible = true` still costs a
       // NUM_POINT_LIGHTS slot / program cache variant for nothing.
-      light.visible = clamped > 0
+      const on = clamped > 0
+      light.visible = on
+      innerLight.visible = on
     },
   }
 }
