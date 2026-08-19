@@ -1,187 +1,149 @@
 # Plan 162 — Implementation Notes
 
-**Reviewed:** 2026-08-18
+**Reviewed:** 2026-08-19
 **Plan:** `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits.md`
 **Status:** implementation notes
 **Source of truth:** current code + tests + build configuration; `docs/STATE.md` is the current-state reference.
 
 ## 1. Review verdict
 
-Plan 162 has the right architectural direction, but several statements describe a target architecture rather than the current code.
+Plan 162 remains an extension of existing combat, not a new combat architecture.
 
-The most important correction is: **there is currently no generic damage pipeline/resolver for melee damage**. `playerMelee.ts` owns timing/hit detection, while `gameLoop.ts` owns candidate gathering and damage application. `defenseResolver.ts` is already a pure shared resolver, but it is for incoming player defense, not outgoing damage. Do not invent a `CombatManager` while trying to fix this.
+The current code makes these ownership boundaries important:
 
-Implement the smallest shared primitives needed by ranged combat:
+- `PlayerCombat` owns combat mode and soft-lock state.
+- Existing target collection/ranking provides stable animal/NPC identities.
+- `playerMelee.ts` owns melee timing/hit-resolution primitives; `gameLoop.ts` owns world-side consequences.
+- `HealthState` is the shared HP primitive.
+- `defenseResolver.ts` is an existing pure incoming-defense resolver; it is not a generic outgoing damage resolver.
+- `AnimalAgent` / fauna combat owns animal-specific death/collapse consequences.
+- `Inventory` already supports both stackable counts and instance-backed items, but arrows do **not** need instances in V1.
+- `ITEM_CATALOG` / `ItemKind` are the existing item-definition pattern.
+- `PlayerSkills` is a closed skill union, so `archery` is a small extension, not a subsystem.
 
-- a small outgoing attack/damage result/resolver only if it removes real duplication;
-- ranged attack state separate from melee timing, but reusing existing target/health ownership;
-- projectile simulation as a small data-oriented world/app concern;
-- item catalog metadata for bows/arrows;
-- explicit ammo instances, extending the existing instance collection;
-- `archery` added to the existing `PlayerSkills` union and XP mechanism.
+Do not introduce a `CombatManager`, `BowSystem`, `ArrowSystem`, `RangedCombatManager`, `TargetManager`, `ArcherAI`, ranged `HealthState`, ranged defense system or quiver inventory.
 
-Do not rewrite existing melee into a large new combat framework merely to make the plan's diagram look cleaner.
+## 2. Current melee pattern to extend
 
-## 2. Important current-code facts
-
-### Melee
-
-`src/player/playerMelee.ts` is a pure lifecycle/state machine:
+`playerMelee.ts` is a small lifecycle/state machine:
 
 ```text
 idle → windUp → hitWindow → recovery
 ```
 
-`update()` emits exactly one `hitReady` edge. `resolveMeleeHits()` performs deterministic XZ range + facing-arc tests. `gameLoop.ts` is the caller that gathers world targets and applies consequences.
+`update()` produces the `hitReady` edge. `resolveMeleeHits()` performs deterministic range/facing tests. The caller gathers world targets and applies consequences.
 
-This is the best pattern to copy for ranged combat: keep timing/resolution pure and keep world-side effects in the existing composition layer.
-
-Do not put scene access, `AnimalAgent`, inventory, quest, audio or Vue dependencies into the new ranged resolver.
-
-### Targeting
-
-Existing combat targeting is already based on `playerMelee.ts`/`playerCombat.ts` and `buildCombatTarget()` in `app/interactables.ts`.
-
-Do not create a second target manager. Ranged targeting may need a different range/aim rule, but should reuse the existing candidate/target identity concepts.
-
-Important distinction:
+Ranged combat should follow the same ownership principle:
 
 ```text
-melee target acquisition
-≠
-ranged projectile hit resolution
+ranged attack lifecycle
+→ projectile/outcome resolver
+→ existing target consequence layer
+→ HealthState / AnimalAgent / existing lifecycle
 ```
 
-A selected ranged target should not imply a hit.
+Do not move scene access, inventory mutation, quests or animal lifecycle into a pure ranged resolver.
 
-### Defense
+## 3. Target acquisition
 
-`src/combat/defenseResolver.ts` is already a pure deterministic resolver. It handles incoming damage to the player and applies held-item defense + `defense` skill.
+Reuse the existing target identity/ranking mechanism.
 
-For ranged attacks against a defending player/NPC, reuse this resolver when the target already has the required defense inputs. Do not bypass it.
+`PlayerCombat` owns the selected soft-lock target. The existing living-target collection normalizes animals/NPCs into stable identities. Ranged combat must consume that identity instead of creating a second target list.
 
-Critical damage should modify the **incoming damage amount before `resolveDefense()`**, not after defense and not by directly changing HP.
+The current combat acquisition range is 7 units. This is an acquisition range, not weapon range.
 
-Recommended ordering:
+If a bow needs acquisition beyond 7 units, parameterize/extend the existing collection/ranking query. Do not create `RangedTargetManager` or duplicate target identity.
+
+Keep this distinction explicit:
 
 ```text
-attack outcome
-→ base damage
+acquisition range
+→ selected target identity
+→ ranged attack
+→ projectile hit test
+```
+
+Selecting a target never guarantees a hit.
+
+## 4. Damage and defense
+
+There is currently no generic outgoing damage resolver equivalent to `resolveDefense()`.
+
+Do not create a large generic combat framework merely to support ranged damage.
+
+If actual duplication justifies it, extract only a small pure result/modifier layer:
+
+```text
+base damage
 → critical modifier
-→ target defense resolver
-→ HealthState damage
-→ death/downed consequences
+→ existing target defense, where applicable
+→ final damage
+→ existing HealthState/consequence
 ```
 
-For targets that do not currently expose defense, preserve the existing no-defense path rather than inventing armor/defense data.
+`resolveDefense()` should be reused only where the target already exposes the inputs it expects. Do not invent NPC/animal armor or a ranged-specific defense model.
 
-### Health ownership
+Critical must not directly mutate HP and must not bypass defense.
 
-`HealthState` remains the health primitive. Animal death/collapse and quest hooks already depend on the existing `AnimalAgent` lifecycle.
+For animals, the ranged attack is only an incoming cause. The existing `AnimalAgent`/fauna lifecycle remains the owner of death/collapse consequences. Do not refactor predator bites into this pipeline.
 
-Do not create ranged-specific HP or death handling.
+## 5. Ammo decision — V1 is stackable
 
-## 3. ItemInstance reality / plan 155 dependency
+This is the deliberate scope decision for the updated plan:
 
-The current `src/items/itemInstances.ts` model is intentionally small:
+**Arrows are ordinary stackable `ItemKind` counts in `Inventory`. They are not `ItemInstance`s in Plan 162 V1.**
 
-```ts
-ItemInstance { id, kind }
-TrapItemInstance extends ItemInstance { durability }
-```
-
-The current instance-backed kinds are traps. Plan 155's implementation notes explicitly establish the pattern of extending `Inventory` with an instance collection rather than replacing count-based inventory.
-
-Therefore arrows should follow that same pattern, but **do not turn every item into an instance**.
-
-Recommended:
+Launch lifecycle:
 
 ```text
-ItemInstance
-  id
-  kind
-
-ArrowItemInstance
-  id
-  kind: arrow kinds
+compatible arrow kind
+→ Inventory.remove(kind, 1)
+→ projectile runtime record
+→ hit / miss / expiry
 ```
 
-No per-arrow state is needed in this plan unless the implementation proves a real requirement. Do not add durability, quality, condition or ownership fields to arrows prematurely.
+No arrow instance ID is required in the projectile.
 
-`ItemInstance` IDs are physical-item identity. Every fired arrow instance must have a clear lifecycle:
+Do not create:
 
-```text
-inventory → projectile →
-  hit / miss / despawn
-→ consumed or recovered
-```
+- `ArrowItemInstance`;
+- per-arrow persistence;
+- quiver inventory;
+- arrow recovery manager.
 
-Do not silently create a new instance when firing.
+If later design introduces meaningful per-arrow state or recovery, that should extend the existing Plan 155 instance model in a separate scope. This keeps Plan 162 small and avoids persistence/trade/UI complexity without a gameplay requirement.
 
-### Important persistence decision
+Plan 155 remains relevant as architectural context because `Inventory` is already the hybrid count/instance owner, but it is not a hard implementation dependency for stackable arrows.
 
-If arrows are truly instance-backed, save/load must preserve them. Do not add an in-memory-only arrow list.
+## 6. Item Catalog
 
-However, if all arrows have identical state and the existing item-instance abstraction does not provide a gameplay benefit for them, consider keeping arrows stackable and using an instance only when an actual persistent per-arrow state is introduced. The plan currently says "concrete instance per shot"; if that remains a hard requirement, implement it consistently in inventory/persistence.
+Follow the existing `ItemKind` + `ITEM_CATALOG` pattern established by current weapon variants and Plan 160.
 
-This is a place where the plan should be explicit before coding because it affects save format and trade APIs.
-
-## 4. Do not conflate plan 161
-
-Plan 161 introduces `WeaponItemInstance` durability/sharpness for melee weapons. It is currently planned, not implemented as weapon instances.
-
-Plan 162 should **not** implement weapon maintenance/sharpness as part of bow work.
-
-For bows in this plan:
-
-- use existing `MeleeConfig` only for melee weapons;
-- add ranged-specific config instead of abusing `MeleeConfig` fields;
-- do not introduce bow durability unless required by a later plan;
-- leave plan 161's weapon-instance architecture to that plan.
-
-If a future ranged-weapon maintenance system needs bow durability, it should extend the same `ItemInstance` mechanism later.
-
-## 5. Item catalog integration
-
-`src/items/itemCatalog.ts` is already the correct central configuration point for item gameplay metadata. `MeleeConfig` is the existing pattern: stats are not scattered through combat code.
-
-Add a separate optional ranged config, conceptually:
+Add a separate ranged configuration rather than abusing `MeleeConfig`, conceptually:
 
 ```ts
-export type RangedConfig = {
-  damage: number
-  range: number
-  projectileSpeed: number
-  drawTime: number
-  accuracy: number
-  ammoKinds: readonly ItemKind[]
-  criticalChance?: number
+RangedConfig {
+  damage
+  range
+  projectileSpeed
+  drawTime
+  accuracy
+  ammoKinds
+  criticalChance?
 }
 ```
 
-Do not copy melee fields into a generic `WeaponConfig` unless current code clearly benefits from it.
+The exact type/field names must follow the current repository conventions.
 
-Keep balance numbers in the catalog/config. The resolver should consume config, not know that `long_bow` exists.
+Combat code consumes configuration; it must not contain hard-coded knowledge such as `if (kind === 'long_bow')` scattered across resolvers.
 
-The plan's examples should become concrete only after checking the existing `ItemKind` union and item definitions. Do not invent IDs without adding them consistently to `items.ts`, catalog, trade and any required assets.
+Do not make Plan 161 a dependency. Its future `WeaponItemInstance`/maintenance layer may later adopt bows, but Plan 162 must not add durability or sharpness.
 
-## 6. Ranged attack lifecycle
+## 7. Projectile
 
-Use a small pure state machine analogous to `PlayerMelee`:
+Projectile is lightweight runtime simulation data, not an inventory object and not an `Object3D` source of truth.
 
-```text
-idle
-  ↓ requestAttack
-windUp / draw
-  ↓ release
-projectile spawned
-  ↓ simulation
-hit / miss / expired
-```
-
-Do not keep the projectile inside the player's attack state after release.
-
-The projectile should be a plain runtime record, not an `Object3D`:
+Conceptually:
 
 ```ts
 {
@@ -192,294 +154,162 @@ The projectile should be a plain runtime record, not an `Object3D`:
   maxDistance,
   travelledDistance,
   damage,
-  criticalSeed / attackKey,
-  ammoInstanceId,
+  attackKey,
   targetId?
 }
 ```
 
-Only add fields actually required by the resolver. Avoid a generic ECS/projectile framework for one projectile type.
+Only fields actually required by the implementation should survive the audit.
 
-## 7. Projectile collision
+Use swept segment/distance collision rather than allocating a Three.js `Raycaster` per arrow.
 
-Do not use Three.js raycasting per projectile as the default implementation.
+Observed combat may render a visual arrow, but remote/off-screen simulation should resolve the same meaningful outcome without rendering every projectile.
 
-For the first version, use deterministic segment/swept-distance collision against the same living combat target candidates already available to the game/simulation.
+## 8. Player flow
 
-Conceptually per simulation step:
+The player continues using the existing held-item/equipment mechanism.
 
-```text
-oldPosition → newPosition
-      ↓
-segment crosses target radius?
-      ↓
-hit
-```
+Do not create another equipment slot or quiver inventory.
 
-This avoids tunnelling at higher projectile speeds and does not require per-frame raycaster allocations.
-
-The projectile resolver should return data such as:
-
-```ts
-{ outcome: 'hit' | 'miss' | 'expired', targetId?, damage, critical }
-```
-
-The caller owns applying damage and death/quest side effects.
-
-## 8. Player vs off-screen simulation
-
-Do not force every NPC shot through a rendered projectile.
-
-Use two execution paths over the same outcome logic:
-
-```text
-observed/near combat
-→ projectile runtime + visual
-
-remote/low-fidelity combat
-→ deterministic ranged resolution
-```
-
-The important invariant is that both paths produce the same meaningful result fields:
-
-```text
-source, target, ammo, hit/miss, critical, damage, time/consequence
-```
-
-Do not add a worker. The expected projectile count is not sufficient justification for worker communication.
-
-## 9. Critical hits — recommended implementation
-
-Critical should be a small pure modifier, not a ranged subsystem.
-
-Recommended API shape:
-
-```ts
-resolveCritical(baseDamage, chance, multiplier, roll): {
-  critical: boolean
-  damage: number
-}
-```
-
-Use the existing deterministic RNG conventions used elsewhere in combat/world systems. The roll must be derived from stable attack identity + attempt/seed, not `Math.random()` if the outcome is part of deterministic simulation.
-
-Do not cache a critical result globally or per frame.
-
-The critical modifier should run only after a successful hit and before target defense.
-
-Do not award an XP/skill bonus merely because an attack was critical unless the skill design explicitly requires it.
-
-## 10. Damage result: avoid over-abstraction
-
-The plan currently suggests creating a shared `damage result` if needed. Treat this as optional.
-
-First inspect the actual melee damage application in `gameLoop.ts` and fauna combat. If there is one small repeated operation, extract a pure function. If there are materially different target-specific consequences, keep those consequences at the caller and only share:
-
-```text
-base damage → critical → defense → final damage
-```
-
-Do not create:
-
-- `CombatManager`;
-- `DamageManager`;
-- `WeaponSystem`;
-- `RangedCombatSystem` containing all player/NPC/world state;
-- generic event bus just for combat.
-
-## 11. Archery skill
-
-Current `PlayerSkills` is a closed union:
-
-```ts
-'sneak' | 'survival' | 'traps' | 'defense'
-```
-
-`PlayerSkills` is not a registry/framework. Adding `archery` means updating the union, `createPlayerSkills()`, persistence restore, tests and any UI iteration that assumes the current four skills.
-
-Reuse:
-
-```ts
-awardSkillXp(skills, 'archery', amount)
-```
-
-and the existing shared XP curve.
-
-Add one or two explicit XP award constants, e.g. successful ranged hit / completed shot, but never award XP every projectile frame.
-
-Prefer skill influence on accuracy/draw stability over raw damage, matching the plan's intent.
-
-Do not add levels, perks, points or a second progression mechanism.
-
-## 12. NPC integration
-
-Do not create `ArcherAI`.
-
-First locate the existing NPC combat decision/action flow in `NpcAgent.ts` and extend the existing attack strategy with a ranged option.
-
-The decision should answer:
-
-```text
-Can I ranged-attack?
-  - bow equipped?
-  - compatible ammo available?
-  - target in useful range?
-  - combat strategy permits ranged attack?
-```
-
-Then call the same ranged attack API used by the player.
-
-The NPC should not need player-only camera/aim objects.
-
-For off-screen NPCs, use the same deterministic ranged resolver without creating scene projectile meshes.
-
-## 13. Ammo lifecycle
-
-Keep the physical arrow identity clear.
-
-Recommended launch boundary:
-
-```text
-select compatible arrow instance
-→ remove exact instance from inventory
-→ create projectile carrying that instance id
-```
-
-At resolution:
-
-- hit/miss consumes the arrow unless recovery is explicitly supported;
-- recovery should reuse existing world-item/drop infrastructure if it already supports item instances;
-- do not create a dedicated arrow-recovery manager.
-
-If recovery cannot be integrated cheaply, make arrows consumed on resolution and keep recovery explicitly out of this implementation. Do not create a parallel world-item system.
-
-## 14. Player input / UI
-
-The current player has one `HeldTool` slot. Do not create a second equipment system.
-
-The bow should occupy the same held-item slot. Ammo selection should be a small query against inventory, not a new quiver/inventory.
-
-Prefer:
+The minimal flow is:
 
 ```text
 held bow
-→ find first compatible arrow instance
-→ draw
-→ release
+→ find compatible arrow count
+→ draw/release
+→ remove 1 arrow
+→ projectile
+→ hit/miss
 ```
 
-For multiple arrow types, selection can initially be deterministic (e.g. first compatible kind) unless the existing UI already has a suitable item-selection affordance. Do not build a dedicated quiver UI for this plan.
+Initial ammo selection may be deterministic (for example first compatible arrow kind). A dedicated ammo UI is not required for V1.
 
-## 15. Recommended implementation order
+## 9. NPC flow
 
-### Phase 1 — audit and tests
+Do not create `ArcherAI`.
 
-Before editing, inspect:
+Extend the existing NPC combat decision/action flow with the minimum ranged choice:
 
-- `src/player/playerMelee.ts`
-- `src/player/playerCombat.ts`
-- `src/app/interactables.ts`
-- `src/app/gameLoop.ts`
-- `src/combat/defenseResolver.ts`
-- `src/items/itemCatalog.ts`
-- `src/items/items.ts`
-- `src/items/itemInstances.ts`
-- `src/items/Inventory.ts`
-- `src/player/PlayerSkills.ts`
-- `src/ai/NpcAgent.ts`
-- `src/fauna/AnimalAgent.ts`
-- `src/fauna/faunaCombat.ts`
-- persistence save/load code
+```text
+bow equipped?
+compatible ammo available?
+target in useful range?
+strategy permits ranged attack?
+        ↓
+existing ranged attack mechanism
+```
 
-Then write focused pure tests before the browser pass.
+The same resolver is used by player and NPC. Off-screen NPC combat may use deterministic low-fidelity resolution without projectile meshes.
 
-### Phase 2 — critical + outgoing damage primitive
+## 10. Archery skill
 
-Implement only the minimal shared critical/damage calculation needed by both melee and ranged. Preserve existing melee results when critical is disabled/defaulted.
+Current `PlayerSkills` is a closed union (`sneak | survival | traps | defense`). Extend it with `archery` and reuse the existing creation, persistence, XP and UI mechanisms.
 
-Do not refactor unrelated combat code.
+Do not create a skill registry or archery progression subsystem.
 
-### Phase 3 — ranged config + player attack
+Award XP on meaningful completed actions, not per projectile update. Prefer effects such as accuracy/stability/draw performance rather than a generic damage multiplier.
 
-Add bow/arrow catalog entries and a player ranged attack lifecycle. Make a player arrow travel, hit/miss and damage one animal.
+Any persistence migration must follow the existing `PlayerSkills` save/restore pattern.
 
-### Phase 4 — ammo instances/persistence
+## 11. Critical hits
 
-If the instance-per-arrow decision remains, extend `Inventory` and persistence using the plan 155 instance pattern. Keep count inventory compatibility intact.
+Critical is an opt-in shared modifier, not a bow-only feature.
 
-### Phase 5 — archery
+A small pure API is sufficient if the current code needs one, e.g.:
 
-Add the fifth skill and connect it to the ranged outcome. Update save migration/tests/UI only where current skill persistence requires it.
+```ts
+resolveCritical(baseDamage, chance, multiplier, roll)
+```
 
-### Phase 6 — NPC
+Use the existing deterministic RNG conventions. Do not use uncontrolled `Math.random()` for a result that must remain deterministic in simulation.
 
-Extend existing NPC combat decision/action flow. Use the same ranged resolver. Add low-fidelity/off-screen resolution without projectile rendering.
+Critical is evaluated only after a successful hit and before applicable target defense.
 
-### Phase 7 — feedback and browser verification
+Do not rewrite all melee combat into a generic framework. Preserve existing melee behavior when critical is not enabled for it.
 
-Add minimal hit/miss/critical feedback and verify player + NPC combat.
+## 12. Arrow recovery
 
-## 16. Tests that give maximum value per token
+Recovery is explicitly out of scope for V1.
 
-Prioritize pure tests over broad integration tests:
+The consumed arrow is not restored on hit, miss or expiry. Do not create `ArrowRecoveryManager` or a second world-item lifecycle.
 
-1. critical roll determinism and boundary cases;
-2. critical damage multiplier;
-3. projectile segment collision / no tunnelling;
-4. projectile max range/lifetime;
-5. hit/miss outcome;
-6. ammo selection/removal of exact instance;
-7. archery XP award and skill-value effect;
-8. save/load of arrow instances if instance-backed;
-9. NPC ranged decision when ammo exists / absent;
-10. existing melee regression with critical disabled/default.
+If later recovery is required, first check whether an existing generic item/world-item mechanism can own it; otherwise create a separate plan.
 
-Do not write dozens of near-identical item-stat tests. Table-driven tests are preferable for bow/arrow variants.
+## 13. Plan 161 boundary
 
-## 17. Performance constraints
+Plan 161 is still `planned` and concerns maintenance/sharpness/durability for weapon instances.
+
+Plan 162 must not:
+
+- add bow durability;
+- add bow sharpness;
+- create `WeaponItemInstance` for bows;
+- depend on Plan 161;
+- add maintenance UI or persistence.
+
+The only requirement is architectural compatibility: future weapon-instance work should be able to wrap ranged weapon definitions without forcing a second ranged combat architecture.
+
+## 14. Recommended implementation order
+
+1. Audit actual `PlayerCombat`, `playerMelee`, target acquisition, `HealthState`, defense, fauna, item catalog, inventory and skills.
+2. Add the minimum critical/damage primitive only if real duplication exists.
+3. Add ranged config and player ranged lifecycle.
+4. Add lightweight projectile and hit/miss resolution.
+5. Add stackable bow/arrow catalog definitions and ammo consumption.
+6. Add `archery` to existing skills/persistence/UI assumptions.
+7. Extend existing NPC combat decision/action flow.
+8. Add minimal feedback and balancing.
+9. Run focused tests, type-check/build and browser verification.
+
+Do not begin with a generic projectile engine or new combat manager.
+
+## 15. High-value tests
+
+Prioritize:
+
+- critical determinism and boundary cases;
+- critical multiplier;
+- projectile swept collision/no tunnelling;
+- max range/lifetime;
+- hit/miss;
+- stackable ammo consumption and insufficient-ammo path;
+- archery XP and skill effect;
+- NPC ranged decision with/without ammo;
+- existing melee regression;
+- existing animal death/collapse regression.
+
+Use table-driven tests for bow/arrow catalog variants rather than many repetitive tests.
+
+## 16. Performance constraints
 
 Avoid:
 
 - `Raycaster` allocation per arrow;
-- `Object3D` creation for off-screen projectiles;
+- `Object3D` creation for remote projectiles;
 - per-frame inventory scans for every NPC;
-- projectile arrays duplicated in player/NPC/world systems;
 - per-frame XP updates;
-- a global combat tick manager.
+- global combat/projectile manager;
+- unnecessary worker communication.
 
-Use the existing game-loop update cadence and simple arrays/records. Remove expired projectiles without generating garbage-heavy temporary objects every frame.
+Use the existing simulation cadence and lightweight arrays/records. Keep projectile cleanup allocation-conscious.
 
-## 18. Documentation corrections to apply while implementing
+## 17. Final rule
 
-The main plan should be updated if implementation decisions differ from its current wording, especially:
-
-- clarify that current melee damage is not yet a generic resolver;
-- clarify whether arrows are truly `ItemInstance` per shot or remain stackable;
-- define whether arrow recovery is in scope or explicitly excluded;
-- define the deterministic critical-roll source;
-- define whether ranged defense uses the existing `resolveDefense()` inputs for NPCs or only players in this iteration;
-- avoid implying a fully general projectile engine is required.
-
-The implementation notes should remain the tactical guide; the plan should remain the concise scope/acceptance contract.
-
-## 19. Final implementation rule
-
-When a proposed change can be expressed as an extension of an existing mechanism, extend it.
-
-In particular:
+When a ranged requirement can be expressed as an extension of an existing mechanism, extend it.
 
 ```text
-existing melee lifecycle     → reference for ranged lifecycle
-existing target candidates   → ranged target acquisition
-existing HealthState         → ranged damage consequence
-existing defenseResolver     → target defense
-existing ItemInstance        → arrow identity
-existing Inventory           → ammo storage
-existing PlayerSkills        → archery
-existing NPC combat flow     → ranged NPC attack
-existing world-item flow     → optional arrow recovery
+existing PlayerCombat      → soft-lock ownership
+existing target ranking    → ranged acquisition
+existing melee lifecycle   → lifecycle reference
+existing HealthState       → HP
+existing defenseResolver  → defense where applicable
+existing AnimalAgent       → animal consequences
+existing ITEM_CATALOG      → ranged definitions
+existing Inventory         → stackable ammo
+existing PlayerSkills      → archery
+existing NPC combat flow  → NPC ranged attack
 ```
 
-Do not introduce parallel systems for any of the above.
+No parallel system should be introduced merely because the attack happens at range.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
