@@ -11,7 +11,7 @@ import type { ChunkManager } from '../terrain/chunkManager'
 import type { ResourceDeposits } from '../terrain/resourceDeposits'
 import type { PlacedTraps } from '../world/createPlacedTraps'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
-import { SPAWNER_LABELS } from '../fauna/createFauna'
+import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { consumeVerbLabel, isChopTool, isHarvestKnife, ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
@@ -92,7 +92,7 @@ function spawnerPromptLabel(spawner: PreySpawner): string {
   const label = SPAWNER_LABELS[spawner.type]
   switch (spawner.state) {
     case 'depleted':
-      return `[E] Zniszcz: ${label}`
+      return spawnerDestroyPromptLabel(spawner.type)
     case 'disabled':
       return `Zbadaj: ${label} (wypalone)`
     case 'recovering':

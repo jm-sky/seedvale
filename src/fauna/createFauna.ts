@@ -223,6 +223,30 @@ export const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
   wolfDen: 'wilcza jama',
 }
 
+/** Accusative object of `[E] Zniszcz …` on a `depleted` spawn point. */
+export const SPAWNER_DESTROY_ACCUSATIVE: Record<PreySpawner['type'], string> = {
+  cave: 'jaskinię',
+  thicket: 'zagajnik',
+  grove: 'gaj',
+  wolfDen: 'wilczą jamę',
+}
+
+/** Genitive object of the busy-channel title `Niszczenie …`. */
+export const SPAWNER_DESTROYING_GENITIVE: Record<PreySpawner['type'], string> = {
+  cave: 'jaskini',
+  thicket: 'zagajnika',
+  grove: 'gaju',
+  wolfDen: 'wilczej jamy',
+}
+
+export function spawnerDestroyPromptLabel(type: PreySpawner['type']): string {
+  return `[E] Zniszcz ${SPAWNER_DESTROY_ACCUSATIVE[type]}`
+}
+
+export function spawnerDestroyBusyLabel(type: PreySpawner['type']): string {
+  return `Niszczenie ${SPAWNER_DESTROYING_GENITIVE[type]}…`
+}
+
 /** Wild fauna GLBs (Quaternius pack). Livestock GLBs live in `livestock.ts`. */
 export const FAUNA_URLS: Partial<Record<AnimalKind, string>> = {
   wolf: '/models/fauna/wolf.glb',

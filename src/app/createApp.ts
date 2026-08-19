@@ -35,6 +35,7 @@ import {
   snapshotSpawnPointState,
   SPAWNER_DESTROY_BRANCH_COST,
 } from '../fauna/AnimalSpawner'
+import { spawnerDestroyBusyLabel } from '../fauna/createFauna'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
@@ -1452,7 +1453,7 @@ export async function createApp(
       toast.show('Potrzebujesz 4 gałęzi.', 'error')
       return
     }
-    busy.start(DESTROY_SPAWNER_DURATION_SEC, 'Podpalanie siedliska…', () => {
+    busy.start(DESTROY_SPAWNER_DURATION_SEC, spawnerDestroyBusyLabel(spawner.type), () => {
       if (spawner.state !== 'depleted') {
         toast.show('Nie można już tego zniszczyć.', 'error')
         return
