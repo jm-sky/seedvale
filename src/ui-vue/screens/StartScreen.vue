@@ -89,7 +89,7 @@ function submitNew(): void {
         >
           <button
             type="button"
-            class="min-w-0 flex-1 px-3 py-2.5 text-left text-sm hover:bg-white/10"
+            class="cursor-pointer min-w-0 flex-1 px-3 py-2.5 text-left text-sm hover:bg-white/10"
             @click="loadSlot(slot.id)"
           >
             <span class="block font-semibold">{{ slot.name }}</span>
@@ -97,7 +97,7 @@ function submitNew(): void {
           </button>
           <button
             type="button"
-            class="w-11 shrink-0 border-l border-white/12 text-xs text-red-300 hover:bg-red-400/10"
+            class="cursor-pointer w-11 shrink-0 border-l border-white/12 text-xs text-red-300 hover:bg-red-400/10"
             @click="removeSlot(slot)"
           >
             Usuń
