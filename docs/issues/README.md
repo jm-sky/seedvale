@@ -49,7 +49,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 031 | [2026-08-15--031--unbounded-proximity-scans-fauna-settlement.md](./2026-08-15--031--unbounded-proximity-scans-fauna-settlement.md) | Audyt 013: O(N²) proximity scany bez spatial index — `AnimalAgent.nearest()` i `createSettlement.ts` `nearbyNpcCount` (drugi bez gatingu w ogóle) | `todo` |
 | 032 | [2026-08-15--032--mobile-black-world-screen.md](./2026-08-15--032--mobile-black-world-screen.md) | Telefon: sporadyczny czarny świat 3D przy działającym UI/HUD — kamera w terenie/domu + 0-size composer resize | `verification needed` |
 | 033 | [2026-08-17--033--bloom-whiteout-threejs-185-upgrade.md](./2026-08-17--033--bloom-whiteout-threejs-185-upgrade.md) | Patrząc w słońce cały ekran biały — `UnrealBloomPass` composite shader zmieniony w three r18x (upstream PR #31528, 3× RGB + alpha skalująca się z jasnością zamiast stałej); `bloomStrength` obniżony 0.28→0.09 jako kompensacja | `verification needed` |
+| 034 | [2026-08-19--034--hud-player-health-bar.md](./2026-08-19--034--hud-player-health-bar.md) | HUD pod zegarem: brak paska HP — dodać Zdrowie nad kondycją | `done` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `034`
+**Next ID:** `035`

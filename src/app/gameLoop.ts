@@ -1120,6 +1120,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         applyDownedRecovery(player.health)
       }
       hud.setPlayerNeeds({
+        hp: player.health.maxHp > 0 ? player.health.currentHp / player.health.maxHp : 0,
         stamina: getStaminaRatio(player.needs.stamina),
         vigor: getVigorRatio(player.needs.vigor),
         hunger: getHungerRatio(player.needs.hunger),

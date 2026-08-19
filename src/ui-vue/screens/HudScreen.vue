@@ -5,10 +5,11 @@ import { ui } from '../store'
 
 const touchDevice = isTouchDevice()
 
-/** Plan 106 — colors match the existing NPC/animal label bars
- *  (`.npc-label__bar--{stamina,vigor,satiety,hydration}`, index.html) so the
+/** Plan 106 + issue 034 — colors match the existing NPC/animal label bars
+ *  (`.npc-label__bar--{hp,stamina,vigor,satiety,hydration}`, index.html) so the
  *  player's own bars read as the same visual language. */
 const needBars = computed(() => [
+  { key: 'hp', label: 'Zdrowie', value: ui.hud.playerNeeds.hp, color: '#e05555' },
   { key: 'stamina', label: 'Kondycja', value: ui.hud.playerNeeds.stamina, color: '#e0c040' },
   { key: 'vigor', label: 'Wigor', value: ui.hud.playerNeeds.vigor, color: '#5cbfa8' },
   { key: 'hunger', label: 'Głód', value: ui.hud.playerNeeds.hunger, color: '#d4893a' },

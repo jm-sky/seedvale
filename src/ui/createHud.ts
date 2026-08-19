@@ -11,8 +11,8 @@ export type Hud = {
   setInventoryWeight: (current: number, max: number) => void
   /** Label for the held tool slot — empty string hides it. */
   setHeldTool: (label: string) => void
-  /** Ratios (0-1) for the four player-needs bars (plan 106). */
-  setPlayerNeeds: (needs: { stamina: number, vigor: number, hunger: number, thirst: number }) => void
+  /** Ratios (0-1) for the HUD bars (plan 106 + issue 034). `hp` is HealthState. */
+  setPlayerNeeds: (needs: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }) => void
   /** Raw current/max for the Character screen (plan 105) — the HUD bars above
    *  only need ratios, but the Character screen also shows absolute values. */
   setCharacterStats: (stats: CharacterStats) => void

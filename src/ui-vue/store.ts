@@ -173,8 +173,10 @@ type HudState = {
   weight: string
   held: string
   hint: string
-  /** Ratios (0-1) for the four player-needs bars (plan 106). */
-  playerNeeds: { stamina: number, vigor: number, hunger: number, thirst: number }
+  /** Ratios (0-1) for the HUD bars under the clock (plan 106 + issue 034).
+   *  `hp` is `HealthState`, not a `PlayerNeeds` pool — same blob so the HUD
+   *  has one per-frame push. */
+  playerNeeds: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }
 }
 type AudioSettingsState = { volumes: AudioVolumes }
 type MinimapState = { collapsed: boolean }
@@ -283,7 +285,7 @@ export const ui = reactive({
     weight: '',
     held: '',
     hint: isTouchDevice() ? HUD_HINT_TOUCH : HUD_HINT_DESKTOP,
-    playerNeeds: { stamina: 1, vigor: 1, hunger: 1, thirst: 1 },
+    playerNeeds: { hp: 1, stamina: 1, vigor: 1, hunger: 1, thirst: 1 },
   } as HudState,
   audio: { volumes: { ...DEFAULT_AUDIO_VOLUMES } } as AudioSettingsState,
   minimap: { collapsed: false } as MinimapState,
@@ -705,9 +707,15 @@ export function setHudHeldTool(label: string): void {
   if (ui.hud.held === text) return
   ui.hud.held = text
 }
-export function setHudPlayerNeeds(needs: { stamina: number, vigor: number, hunger: number, thirst: number }): void {
+export function setHudPlayerNeeds(needs: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }): void {
   const p = ui.hud.playerNeeds
-  if (p.stamina === needs.stamina && p.vigor === needs.vigor && p.hunger === needs.hunger && p.thirst === needs.thirst) return
+  if (
+    p.hp === needs.hp &&
+    p.stamina === needs.stamina &&
+    p.vigor === needs.vigor &&
+    p.hunger === needs.hunger &&
+    p.thirst === needs.thirst
+  ) return
   ui.hud.playerNeeds = needs
 }
 
