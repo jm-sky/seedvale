@@ -54,11 +54,13 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-16--127--player-built-well.md` | Fizyczna studnia budowana przez gracza; wstępny | 🟡 | M | ~~122~~ |
 | `2026-08-18--151--social-places-and-social-behaviour.md` | Social Places v1: istniejący settlement campfire jako `PlaceType: 'social'`, NPC↔NPC `conversation` (2–5 min czasu świata) przez istniejący Schedule/FSM (activity `social`), partner tylko spośród NPC przy tym samym ognisku, symetryczna zmiana relacji NPC↔NPC; bez nowego social managera/schedulera; wstępny, do implementacji | 🟡 | M | ~~020~~ |
 | `2026-08-18--152--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried `NpcAgent.inventory` (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu), decyzja z relacji + openness/traits + istniejący `getPlayerStanding()`/`reactionChance`, nowa opcja w dialogu NPC v2 (`request_food`/`request_water`); wstępny, do implementacji | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ ~~156~~ |
-| `2026-08-18--163--rest-mobile-ui-and-inventory-interaction-polish.md` | Odpoczynek: ekranowy `Esc` po >85% i auto-wybudzenie przy ~100%; responsywny Merchant Screen na mobile; ekranowy `Tab` do cycle target; Inventory z kategorią `Weapon` i wieloma kategoriami itemów | ✅ | S | — |
+| `2026-08-18--159--natural-food-fishing-preservation-and-bait.md` | Żywność naturalna, wędkowanie, zanęta, przynęta do pułapek | 🟡 | L | ~~155~~ ~~156~~ ~~106~~ |
 | `2026-08-18--160--high-quality-melee-weapons.md` | New player items | 🟡 | M | ~~134~~ ~~150~~ |
+| `2026-08-18--163--rest-mobile-ui-and-inventory-interaction-polish.md` | Odpoczynek: ekranowy `Esc` po >85% i auto-wybudzenie przy ~100%; responsywny Merchant Screen na mobile; ekranowy `Tab` do cycle target; Inventory z kategorią `Weapon` i wieloma kategoriami itemów | ✅ | S | — |
 | `2026-08-18--161--weapon-maintenance-and-sharpening.md` | Weapon sharpness & flint stones | 🟡 | M | ~~155~~ ~~160~~ |
 | `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits.md` | Bows and critial hits | 🟡 | L | ~~150~~ ~~155~~ |
 | `2026-08-19--164--player-storage-and-container-system.md` | Players box for future companions | 🔴 | M | - |
+
 
 ### Fresh new
 
