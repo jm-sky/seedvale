@@ -47,11 +47,11 @@ Sorted by damage, then cycle (faster first).
 | masterwork_sword | mistrzowski miecz | 34 | 2.60 | 0.35 | 0.26 | 0.12 | 0.34 | 0.72 | 12 |
 | long_sword | miecz | 28 | 2.60 | 0.35 | 0.28 | 0.12 | 0.38 | 0.78 | 12 |
 | battle_axe | topór bojowy | 28 | 2.15 | 0.28 | 0.38 | 0.14 | 0.50 | 1.02 | 14 |
-| damascus_short_sword | krótki miecz damasceński | 24 | 2.15 | 0.50 | 0.16 | 0.10 | 0.22 | 0.48 | 7 |
-| spear | dzida | 20 | 3.00 | 0.60 | 0.24 | 0.10 | 0.30 | 0.64 | 9 |
 | axe | siekiera | 20 | 2.00 | 0.40 | 0.30 | 0.12 | 0.40 | 0.82 | 10 |
 | short_sword | krótki miecz | 18 | 2.10 | 0.50 | 0.18 | 0.10 | 0.26 | 0.54 | 7 |
+| damascus_short_sword | krótki miecz damasceński | 24 | 2.15 | 0.50 | 0.16 | 0.10 | 0.22 | 0.48 | 7 |
 | damascus_knife | nóż damasceński | 16 | 1.60 | 0.60 | 0.11 | 0.08 | 0.16 | 0.35 | 4 |
+| spear | dzida | 20 | 3.00 | 0.60 | 0.24 | 0.10 | 0.30 | 0.64 | 9 |
 | pitchfork | widły | 14 | 2.40 | 0.50 | 0.20 | 0.12 | 0.28 | 0.60 | 7 |
 | knife | nóż | 12 | 1.60 | 0.60 | 0.12 | 0.08 | 0.18 | 0.38 | 4 |
 | sickle | sierp | 12 | 1.80 | 0.55 | 0.15 | 0.10 | 0.20 | 0.45 | 5 |
