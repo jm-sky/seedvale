@@ -53,8 +53,10 @@ World-driven quests
 Rendering performance
   (157 PointLight budget 16, archived) → 149 shader program first-use hitch [in progress]
 
-Construction
+Construction & lodging
   (109 megakit catalog) → 111 house construction [verification needed — assembly bug from playtest]
+      → 169 house interior furniture/bed anchors
+  165 vigor/hunger/thirst/rest → 168 settlement lodging/sleep → 169 house interior furniture/bed anchors
 ```
 
 ---
@@ -81,8 +83,10 @@ Construction
 | `2026-08-18--161--weapon-maintenance-and-sharpening.md` | Weapon sharpness & flint stones | 🟡 | M | ~~155~~ ~~160~~ |
 | `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits.md` | Bows and critial hits | 🟡 | L | ~~150~~ ~~155~~ |
 | `2026-08-19--164--player-storage-and-container-system.md` | Players box for future companions | 🔴 | M | - |
-| `2026-08-19--165--vigor-hunger-thirst-and-rest.md`| Urealnić zachowanie Vigor, Hunger i Thirst | 🟡 | M | - |
+| `2026-08-19--165--vigor-hunger-thirst-and-rest.md` | Urealnić zachowanie Vigor, Hunger i Thirst | 🟡 | M | - |
 | `2026-08-19--167--npc-helper-resource-delivery.md` | NPC who gathers food for player | 🟡 | M | 164 |
+| `2026-08-19--168--settlement-lodging-and-sleep.md` | Nocowanie w osadzie: wybór łóżka, przyjaciela, płatnego noclegu lub siana; „Nocuj w mieście” prowadzi gracza do miejsca i dopiero wtedy uruchamia sen | 🔴 | L | ~~165~~ |
+| `2026-08-19--169--house-interior-furniture-and-bed-anchors.md` | Wyposażenie domów w łóżko, stół, lampę i skrzynię z authorowaniem placementu przez Asset Alignment Browser; łóżko dostarcza miejsce noclegu dla planu 168 | 🟡 | L | ~~168~~ ~~111~~ |
 
 ### Fresh new
 
