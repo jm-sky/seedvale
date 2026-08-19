@@ -57,6 +57,9 @@ Construction & lodging
   (109 megakit catalog) → 111 house construction [verification needed — assembly bug from playtest]
       → 169 house interior furniture/bed anchors
   165 vigor/hunger/thirst/rest → 168 settlement lodging/sleep → 169 house interior furniture/bed anchors
+
+NPC diagnostics
+  170 NPC simulation inspector/trace observes needs + decisions + actions + interaction queues across the existing NPC systems
 ```
 
 ---
@@ -87,6 +90,7 @@ Construction & lodging
 | `2026-08-19--167--npc-helper-resource-delivery.md` | NPC who gathers food for player | 🟡 | M | 164 |
 | `2026-08-19--168--settlement-lodging-and-sleep.md` | Nocowanie w osadzie: wybór łóżka, przyjaciela, płatnego noclegu lub siana; „Nocuj w mieście” prowadzi gracza do miejsca i dopiero wtedy uruchamia sen | 🔴 | L | ~~165~~ |
 | `2026-08-19--169--house-interior-furniture-and-bed-anchors.md` | Wyposażenie domów w łóżko, stół, lampę i skrzynię z authorowaniem placementu przez Asset Alignment Browser; łóżko dostarcza miejsce noclegu dla planu 168 | 🟡 | L | ~~168~~ ~~111~~ |
+| `2026-08-19--170--npc-simulation-inspector-and-trace.md` | Inspector symulacji NPC: bounded history stanów/akcji, `why()`/causal trace, Ctrl+click modal, console/AI API i bezpieczne debug controls | 🔴 | L | - |
 
 ### Fresh new
 
