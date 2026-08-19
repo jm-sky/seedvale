@@ -2,7 +2,7 @@
 
 **Plan:** [160 — High-quality melee weapons](./2026-08-18--160--high-quality-melee-weapons.md)
 **Created:** 2026-08-19
-**Status:** `verification needed` 🔍
+**Status:** `done` ✅
 
 ## Stan implementacji
 

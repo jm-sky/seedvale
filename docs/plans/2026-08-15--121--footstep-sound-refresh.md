@@ -5,7 +5,7 @@ domain: items-player
 # Plan: lepsze dźwięki kroków (piasek nie brzmi jak podłoga)
 
 **Created:** 2026-08-15  
-**Status:** `verification needed` 🔍 — playtest 2026-08-18: sprint po trawie brzmi jak kamienny korytarz (za głośno, zły charakter)  
+**Status:** `done` ✅  
 **Priority:** medium · **Effort:** S  
 **Depends on:** none
 

@@ -2,7 +2,7 @@
 
 **Plan:** [141 — Pułapki na zwierzęta](./2026-08-17--141--animal-traps.md)
 **Created:** 2026-08-17
-**Status:** `verification needed` 🔍 — zrealizowane; rozstrzygnięcia i odstępstwa opisane w sekcji „Stan implementacji” planu
+**Status:** `done` ✅ — zrealizowane; rozstrzygnięcia i odstępstwa opisane w sekcji „Stan implementacji” planu
 
 ## Review summary
 

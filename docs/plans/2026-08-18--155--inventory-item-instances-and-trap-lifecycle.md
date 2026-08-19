@@ -3,7 +3,7 @@
 **Created:** 2026-08-18  
 **Status:** `done` ✅  
 **Priority:** medium · **Effort:** L  
-**Depends on:** 141
+**Depends on:** ~~141~~
 
 domain: items-player
 tags: [persistence, ui-input]

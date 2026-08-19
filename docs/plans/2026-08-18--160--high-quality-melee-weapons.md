@@ -1,7 +1,7 @@
 # Plan: High-quality melee weapons
 
 **Created:** 2026-08-18
-**Status:** `verification needed` 🔍 — type-check/lint/build/test zielone 2026-08-19; GLB wired (damascus teal/navy, obsidian volcanic glass); browser pending (grip + look)
+**Status:** `done` ✅
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~134~~ ~~150~~
 

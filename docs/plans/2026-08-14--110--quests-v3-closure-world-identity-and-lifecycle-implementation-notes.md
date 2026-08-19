@@ -1,7 +1,7 @@
 # Implementation notes: Quest v3 closure (plan 110)
 
 **Date:** 2026-08-14
-**Status:** Implemented + technically verified. Browser verification **not** performed — see §5.
+**Status:** `done` ✅ — implemented + technically verified. Browser verification was not performed — see §5.
 
 ## 1. Zaimplementowane
 

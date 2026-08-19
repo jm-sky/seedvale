@@ -1,6 +1,6 @@
 # Plan: Quest v3 — domknięcie lifecycle, identity i world problems
 
-**Status:** `verification needed` 🔍 (playtest 2026-08-18 deferred — still needs browser check of wolf/sheep/predator/save-load)
+**Status:** `done` ✅
 **Created:** 2026-08-14
 **Priority:** 🔴 `high`
 **Effort:** L
