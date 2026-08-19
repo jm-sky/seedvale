@@ -1,135 +1,149 @@
 # Plan 152 — NPC pomoc graczowi w jedzeniu i piciu — implementation notes
 
-**Created:** 2026-08-18
-**Status:** `planned` 📋
-**Priority:** medium · **Effort:** M
-**Depends on:** ~~106~~ ~~069~~ ~~122~~ ~~156~~
+**Created:** 2026-08-18  
+**Updated:** 2026-08-19  
+**Status:** `planned` 📋  
+**Priority:** medium · **Effort:** S  
+**Depends on:** ~~069~~ ~~122~~ ~~156~~  
+**Related:** 165, 167
 
-> Review against the current Seedvale codebase. This file refines implementation details for an AI agent; the plan `2026-08-18--152--npc-player-food-drink-help.md` remains unchanged.
+> Review against the current Seedvale codebase. This file refines implementation details for an AI agent; the plan remains `planned`.
+>
+> **Sprawdź też opcjonalny plik z suffix `--updated-review.md`, gdzie jest nowsza wersja review planu.**
 
 ## 1. Review verdict
 
-Plan 152 fits the existing architecture. The implementation should be a small extension of existing NPC dialogue, `Inventory`, `PlayerNeeds`, relations and social reaction data.
+Plan 152 powinien pozostać małym rozszerzeniem istniejącego NPC dialogue/interactions, `Inventory`, `PlayerNeeds` oraz social lookup.
 
-The key rule is:
+Najważniejsza granica:
 
 ```text
-existing NPC dialogue v2
+152 — player requests help
         ↓
-request food / request water
+NPC social decision
         ↓
-small synchronous resolution
+existing carried consumable
         ↓
-existing NPC Inventory
-        ↓
-existing player Inventory / PlayerNeeds
+immediate transfer/effect
 ```
 
-Do **not** create `NpcHelpManager`, `PlayerAssistanceManager`, a second inventory, a second reputation/relationship store, a second interaction system or a player-only survival subsystem.
-
-The plan's V1 boundary is important: a request may only use a resource that the NPC actually carries. `Household.stock` and `Household.water` are not a conversation-time fallback. Plans 069 and 156 should inform the existing household/storage ownership, not become a shortcut around NPC carried inventory.
-
-## 2. Current code anchors
-
-Start implementation by tracing these exact boundaries rather than designing new abstractions:
-
-- `src/player/PlayerNeeds.ts` — `eatFood()` and `drinkWater()` are the existing domain operations for restoring the player's hunger/thirst. Do not mutate `needs.hunger.current` or `needs.thirst.current` directly. fileciteturn2file0L2-L2
-- `src/items/Inventory.ts` — generic carried inventory. It already provides `count()`, `has()`, `add()`, `remove()`, weight checks and serialization. Use those methods; do not access `counts` or create a second transfer API. fileciteturn5file0L2-L2
-- `src/items/itemCatalog.ts` — `ITEM_CATALOG` is the gameplay-facing source for `consumable.need`, `relief` and optional `resultKind`. Do not duplicate food/water relief tables. fileciteturn15file0L2-L2
-- `src/ai/NpcAgent.ts` — existing NPC inventory/social wiring. Keep `NpcAgent` independent of `QuestManager`; pass social data through the existing lookup/hook pattern.
-- `src/ai/reactionChance.ts` — existing `PlayerSocialLookup` and reaction model. `relationLevel` and `standing` already arrive together, and `computeReactionChance()` uses personality/traits/relation/standing. fileciteturn7file0L2-L2
-- `src/quests/QuestManager.ts` / quest relation state — existing owner of per-NPC relation and `getPlayerStanding()`. Do not cache a second relation or standing value in dialogue/assistance state.
-- `src/ui-vue/NpcDialogueMenu.vue` and `src/ui-vue/store.ts` — dialogue v2 is the UI/interaction entry point. The existing quest `help` / `QuestDialogOverride` flow should not be repurposed as a quest object merely to implement food/water assistance.
-- `src/app/interactables.ts` and the existing `[E]` NPC interaction path — keep the current interaction system; do not add a second NPC interaction registration.
-
-## 3. Dependencies: what to reuse
-
-### Plan 106 — player needs / food
-
-Treat the player's hunger/thirst pools and consumable semantics as already established. The assistance feature should call the same `PlayerNeeds` operations used by normal player consumption rather than introducing new relief logic. `ITEM_CATALOG` remains the source of `need`, `relief` and container `resultKind`. fileciteturn2file0L2-L2
-
-### Plan 069 — household resources
-
-`Household` remains authoritative for household food/water reserves. Those reserves must not be read and converted directly into a player gift during the V1 conversation. The only V1 source is the NPC's carried `Inventory`.
-
-### Plan 122 — dialogue/social integration
-
-Use the existing dialogue-v2 extension point and existing social lookup. Do not add another dialogue screen, interaction menu or NPC-specific social state.
-
-### Plan 156 — household/settlement storage logistics
-
-156 may change how resources reach households and NPC carried inventory over time. Plan 152 should consume whatever carried inventory exists at the moment of the request; it must not implement its own household-to-NPC provisioning path. If 156 later makes consumables naturally available in NPC inventory, 152 should benefit automatically.
-
-## 4. Dialogue v2 integration
-
-The important distinction is between the existing quest `help` topic and this new survival assistance request.
-
-Do not put `food` / `water` fields into `QuestDialogOverride` simply because the UI already has a `helpResult`. That would couple a non-quest interaction to quest state.
-
-Preferred shape:
+versus:
 
 ```text
-NpcDialogueMenu
-  ├─ existing topics / quest help
-  └─ request food
-  └─ request water
-          ↓
-      local assistance callback/resolver
-          ↓
-      result: success / no_item / unwilling / invalid_state
+167 — autonomous delivery
+        ↓
+NPC goal/pressure
+        ↓
+resource acquisition
+        ↓
+transport
+        ↓
+player Container
 ```
 
-The resolver may be a small domain function or a small callback supplied by the existing dialog-opening flow. It does not need a global manager.
+Nie tworzyć wspólnego `HelperManager`, assignment systemu ani drugiego transport flow.
 
-`src/ui/createNpcDialog.ts` is only a compatibility facade; do not move the feature into the old dialog implementation when the actual UI is already Vue-based.
+## 2. Ownership
 
-## 5. Visibility versus authoritative validation
+### PlayerNeeds
 
-The UI may hide a request when it clearly cannot make sense, for example when the player is already full for that need. However, UI visibility is never authoritative.
+`PlayerNeeds` jest właścicielem hunger/thirst oraz istniejących `eatFood()` / `drinkWater()`.
 
-On click, the resolver must re-check:
+152 korzysta z istniejącego API i nie mutuje bezpośrednio `needs.hunger.current` ani `needs.thirst.current`.
 
-1. current player hunger/thirst;
-2. current NPC carried inventory;
-3. current social state (`relationLevel`, `standing`, personality/traits as available);
-4. NPC own-needs guard;
-5. player inventory capacity when the result is an item transfer.
+Plan 165 jest powiązany z modelem potrzeb, ale nie jest techniczną zależnością 152. 152 ma działać na aktualnym API i nie implementuje `StarvationDuration` / `DehydrationDuration`.
 
-This prevents stale UI state from consuming or transferring an item incorrectly.
+### Inventory
 
-Do not make the button disappear solely because the NPC currently has no item if the intended UX is to allow a natural refusal. In that case `no_item` is a normal result.
+`Inventory` jest właścicielem carried items.
 
-## 6. Consumable selection
-
-Do not hardcode a long `if tomato ... else bread ...` chain in the UI or resolver.
-
-Use `ITEM_CATALOG[kind].consumable` as the source of truth:
+Używać istniejących:
 
 ```text
-candidate kind
-  → ITEM_CATALOG[kind].consumable
-  → need === 'hunger' | 'thirst'
-  → use catalog relief/resultKind
+has()
+count()
+canAdd()
+add()
+remove()
 ```
 
-The resolver may use a small central preference rule when several carried food items are available, but the relief values must always come from the catalog.
+Nie dotykać prywatnych count maps i nie tworzyć drugiego transfer API.
 
-Important: `Inventory` stores item counts by `ItemKind`, so selecting a candidate must operate on `npc.inventory.count(kind)` / `has(kind, 1)` rather than assuming item instances.
+### NpcAgent.inventory
 
-## 7. Food transfer semantics
+`NpcAgent.inventory` jest tymczasowym carrierem, nie osobistym magazynem NPC.
 
-Follow the plan's acceptance criteria literally: successful food assistance **transfers the food item from NPC carried inventory to the player's inventory**.
+152 może użyć wyłącznie zasobu faktycznie znajdującego się tam w momencie prośby.
 
-Do not silently change this into “NPC feeds the player and the food disappears”. The plan says the player receives the resource; acceptance explicitly requires the NPC inventory item to be removed and the player to receive it.
+Nie dodawać provisioning path tylko dlatego, że 152 potrzebuje carried food/water.
 
-Safe order:
+### Household
+
+`Household.stock` i `Household.water` pozostają właścicielami zapasów gospodarstwa.
+
+152 nie wykonuje:
 
 ```text
-find food kind
+Household.stock → Player
+Household.water → PlayerNeeds
+```
+
+podczas rozmowy.
+
+Nie dodawać `goHomeAndFetchFoodForPlayer()` ani teleportu.
+
+### Relations / standing
+
+Istniejący relation state i player standing pozostają właścicielami danych.
+
+152 tylko odczytuje je przez istniejący lookup/hook.
+
+Nie tworzyć drugiego relation/reputation store.
+
+### Dialogue
+
+`NpcDialogueMenu.vue` i istniejący dialogue/interactions flow pozostają właścicielami UI i wejścia.
+
+Nie repurposować `QuestDialogOverride` tylko dlatego, że UI ma obecny topic `help`.
+
+## 3. Aktualne code anchors
+
+Przed implementacją ponownie prześledzić:
+
+- `src/player/PlayerNeeds.ts` — istniejące operacje potrzeb;
+- `src/items/Inventory.ts` — carried inventory i capacity;
+- `src/items/itemCatalog.ts` — `consumable.need`, `relief`, `resultKind`;
+- `src/ai/NpcAgent.ts` — NPC inventory i social wiring;
+- `src/ai/reactionChance.ts` — istniejący social input/model;
+- `src/quests/QuestManager.ts` / relation state — relation i standing;
+- `src/ui-vue/NpcDialogueMenu.vue` / `src/ui-vue/store.ts` — aktualny dialogue v2;
+- `src/app/interactables.ts` — istniejący NPC interaction path;
+- aktualny player consume path — szczególnie lifecycle `resultKind` dla portable water.
+
+Nie zakładać, że symbole lub wcześniejsze notes są aktualne bez sprawdzenia codebase.
+
+## 4. Food assistance
+
+Food assistance jest transferem carried itemu, nie natychmiastowym „nakarmieniem” gracza.
+
+```text
+NPC inventory
     ↓
-check npc.inventory.has(kind, 1)
+food consumable
     ↓
-check player.inventory.canAdd(kind, 1)
+social decision
+    ↓
+player inventory
+```
+
+Bezpieczna kolejność:
+
+```text
+find candidate
+    ↓
+npc.inventory.has(kind, 1)
+    ↓
+player.inventory.canAdd(kind, 1)
     ↓
 resolve willingness
     ↓
@@ -138,33 +152,104 @@ npc.inventory.remove(kind, 1)
 player.inventory.add(kind, 1)
 ```
 
-Because `Inventory.add()` can fail due to weight, do the `canAdd()` check before removing from the NPC. If a later operation can still fail, make the mutation path rollback-safe rather than leaving the item lost.
+Nie wywoływać `eatFood()` przy samym przekazaniu. Gracz otrzymuje consumable i korzysta z normalnego player consume path.
 
-The food transfer itself must not call `eatFood()`; the player receives the consumable and can use the normal existing consumption path.
+Jeżeli normalni NPC nie posiadają food w carried inventory, nie dodawać specjalnego systemu wyposażania NPC. V1 może być ograniczone do NPC, którzy faktycznie posiadają taki item.
 
-## 8. Water assistance semantics
+## 5. Water assistance
 
-Water is different because the current model represents household water as `Household.water`, while portable water is an item such as `waterskin_full`.
+Woda wymaga szczególnej ostrożności, ponieważ `Household.water` jest osobnym modelem water reserve.
 
-V1 must only use the carried portable item. Never do:
+152 nie tworzy nowego przepływu:
 
 ```text
 Household.water → PlayerNeeds.thirst
 ```
 
-inside this feature.
+Najpierw potwierdzić, że aktualny codebase posiada portable water item, który NPC może faktycznie mieć w `NpcAgent.inventory`.
 
-For a carried water item, follow the existing consumable semantics from `ITEM_CATALOG`: `need === 'thirst'`, `relief` from the catalog, and `resultKind` when the item is a container swap. `waterskin_full → waterskin_empty` must use the same semantics as normal player drinking rather than a second implementation of the swap. fileciteturn15file0L2-L2
+Jeżeli nie ma takiego istniejącego przepływu, nie tworzyć nowego `ItemKind`, nowego container lifecycle ani nowego storage tylko dla 152. Pomoc w piciu pozostaje poza V1 do czasu, aż istniejący system dostarczy odpowiedni carried item.
 
-The plan's acceptance criteria require the water request to remove the carried water item from the NPC and apply the existing hydration effect to the player. Therefore do not merely add `waterskin_full` to the player inventory and stop there.
+Jeżeli portable water istnieje, wykorzystać jego istniejącą semantykę:
 
-Before coding, trace the existing player consume handler in `createApp.ts` / inventory interaction flow and reuse or extract the smallest common operation if necessary. Do not duplicate the `resultKind` swap logic.
+```text
+need
+relief
+resultKind
+```
 
-## 9. Assistance resolver
+Nie implementować drugiego `waterskin_full → waterskin_empty` lifecycle.
 
-Keep the resolver synchronous and event-driven. It runs only after the player selects the request.
+Przed kodowaniem prześledzić istniejący player consume handler i użyć lub minimalnie rozszerzyć wspólną operację, zamiast kopiować logikę.
 
-Suggested result shape:
+## 6. Consumable selection
+
+Nie hardcodować listy food/water w UI.
+
+Źródłem prawdy jest:
+
+```text
+ITEM_CATALOG[kind].consumable
+```
+
+Kandydat musi odpowiadać żądanej potrzebie:
+
+```text
+need === 'hunger'
+```
+
+lub:
+
+```text
+need === 'thirst'
+```
+
+Jeżeli istnieje wiele kandydatów, użyć małej centralnej reguły wyboru. Relief i result lifecycle zawsze pochodzą z katalogu.
+
+`Inventory` jest count-based, więc nie zakładać item instances.
+
+## 7. Social willingness
+
+Istniejący `reactionChance.ts` dostarcza właściwe źródła danych:
+
+```text
+relationLevel
+standing
+personality/openness
+relevant traits
+```
+
+Nie kopiować tych wartości do assistance state.
+
+`computeReactionChance()` jest modelem probabilistycznym, więc nie należy ślepo traktować go jako deterministycznego yes/no.
+
+Preferowana implementacja:
+
+1. wykorzystać te same social inputs;
+2. dać osobistej relacji największy wpływ;
+3. standing traktować jako sygnał globalny;
+4. użyć istniejących cech osobowości jako modifierów;
+5. zasób i własne potrzeby NPC sprawdzać poza social score;
+6. jeśli potrzebny jest RNG, użyć istniejącej konwencji projektu;
+7. nie dodawać `Math.random()` tylko dla 152.
+
+Nie tworzyć LLM decision, utility-AI ani nowego reputation system.
+
+## 8. NPC own-needs guard
+
+Nie tworzyć osobnego reservation/ledger system.
+
+Jeżeli istniejący stan NPC wiarygodnie wskazuje, że oddanie konkretnego carried consumable zostawiłoby NPC bez krytycznie potrzebnego zasobu, NPC nie powinien go oddać.
+
+Jeżeli obecny model nie pozwala tego wiarygodnie określić, zastosować prostą konserwatywną regułę opartą o istniejący stan.
+
+Nie budować nowego NPC survival subsystem w ramach 152.
+
+## 9. Resolver
+
+Resolver powinien być synchroniczny i wywoływany wyłącznie po akcji gracza.
+
+Koncepcyjny wynik:
 
 ```ts
 type NpcAssistanceResult = {
@@ -174,9 +259,9 @@ type NpcAssistanceResult = {
 }
 ```
 
-The exact type/name should follow existing local conventions; this is guidance, not a required new public API.
+To guidance, nie wymagany publiczny typ. Nazwa i struktura powinny pasować do istniejących lokalnych konwencji.
 
-Recommended order:
+Kolejność:
 
 ```text
 request
@@ -187,182 +272,155 @@ find carried candidate
   ↓
 resolve social willingness
   ↓
-validate own-needs guard
+apply existing own-needs guard
   ↓
-validate player inventory capacity if applicable
+validate player-side capacity/consume preconditions
   ↓
-perform existing inventory/needs mutation
+perform existing mutation
   ↓
-return result for dialogue feedback
+return dialogue result
 ```
 
-Never remove the NPC item before willingness and all transfer preconditions have succeeded.
+Nie usuwać itemu NPC przed zakończeniem wszystkich warunków transferu.
 
-No per-frame state is required.
+## 10. Dialogue integration
 
-## 10. Willingness: reuse relation, standing and reaction model carefully
-
-This is the most important architectural point.
-
-`reactionChance.ts` already combines:
-
-- personal `relationLevel`;
-- player standing from `QuestManager.getPlayerStanding()`;
-- personality openness/extraversion;
-- `curious` trait.
-
-`PlayerSocialLookup` already exposes `{ relationLevel, standing }`, so do not make `NpcAgent` import `QuestManager`. fileciteturn7file0L2-L2
-
-However, `computeReactionChance()` is a **probability**, not a deterministic willingness result. Its caller performs the random roll. Do not blindly call it and claim that the assistance decision is deterministic.
-
-Preferred implementation:
-
-1. reuse the same social inputs and weighting philosophy as `reactionChance.ts`;
-2. give the concrete personal relation the strongest influence;
-3. use standing as a secondary/global social signal;
-4. use openness/extraversion and relevant traits as modifiers;
-5. keep own-needs/carried-resource constraints outside the social score;
-6. if a random roll is used, use the project's existing deterministic/randomness convention rather than introducing an ad-hoc RNG;
-7. if the existing reaction model has a clean pure score helper, reuse/extend that helper instead of duplicating the formula.
-
-Do not create a second reputation system, a second relation lookup, LLM decision making or a new utility-AI just for this interaction.
-
-If the implementation requires a genuinely deterministic yes/no decision, derive it from a pure score/threshold or the existing deterministic event/RNG mechanism. Do not use `Math.random()` directly in the new resolver merely because `reactionChance.ts` has probabilistic callers.
-
-## 11. NPC own-needs guard
-
-The plan includes NPC own needs. Give this a narrow V1 meaning; do not build a new NPC survival system.
-
-At minimum, an NPC should not casually give away a carried consumable when doing so would leave the NPC without an immediately needed resource and the existing NPC state says that need is critical.
-
-Use existing NPC needs/state if already available. Do not infer household stock by teleporting or magically consulting the household as a replacement for the NPC's carried item.
-
-If current NPC needs do not distinguish whether a particular carried item is reserved for the NPC, keep the guard conservative and simple. Do not invent a reservation ledger for plan 152.
-
-## 12. Relations and standing must remain read-only here
-
-The request itself should not create a new relation record or reputation manager.
-
-A successful help interaction may be represented in dialogue feedback, but unless the existing relations API already defines a suitable relationship consequence, do not invent a new “helped player” relation mutation as part of this plan.
-
-The decision reads:
+Najmniejszy punkt rozszerzenia powinien znajdować się w aktualnym dialogue v2.
 
 ```text
-QuestManager relation state
-        +
-QuestManager.getPlayerStanding()
-        +
-existing NPC personality/traits
+NpcDialogueMenu
+  ├── existing topics
+  ├── request food
+  └── request water
+          ↓
+      local resolver/callback
+          ↓
+      result
 ```
 
-It does not write a parallel copy of any of those values.
+Nie tworzyć drugiego dialog managera.
 
-## 13. Inventory atomicity and capacity
+Nie wkładać food/water state do `QuestDialogOverride` tylko dlatego, że istnieje `helpResult`.
 
-`Inventory.add()` enforces the weight limit and returns `false` on failure. This matters for food transfer because the player's inventory may be full.
+UI może ukryć akcję, gdy ewidentnie nie ma sensu, ale resolver zawsze wykonuje authoritative validation po kliknięciu.
 
-Use the existing API:
+`no_item` jest normalnym wynikiem, a nie błędem systemu.
+
+## 11. Boundary z Planem 167
+
+Plan 167 jest autonomicznym resource delivery flow i ma własne decyzje/assignmenty/action pipeline.
+
+152 nie:
+
+- uruchamia Helper/Supplier assignment;
+- tworzy goal/pressure delivery;
+- wyszukuje resource source;
+- uruchamia gather action;
+- transportuje do player `Container`;
+- czeka na autonomiczny delivery cycle.
+
+167 również nie powinien być używany jako implementacja kliknięcia „Poproś o jedzenie/picie”.
+
+Wspólne są wyłącznie istniejące domeny, np. `Inventory`, item catalog, player needs i social data.
+
+Kluczowa różnica:
 
 ```text
-npc.inventory.has(kind, 1)
-player.inventory.canAdd(kind, 1)
-...
-npc.inventory.remove(kind, 1)
-player.inventory.add(kind, 1)
+152: "daj mi coś teraz"
+167: "NPC autonomicznie postanawia coś dostarczyć"
 ```
 
-Do not bypass `canAdd()` or mutate private maps.
+## 12. Boundary z Planami 069, 122, 156 i 165
 
-For water, account for the existing `resultKind` semantics and player inventory capacity according to the normal consume path. If the existing consume path needs the empty waterskin to remain with the player, use that same capacity validation before removing the NPC's full waterskin.
+### 069
 
-## 14. NPC carried consumables: verify before adding any new source
+Zapasy gospodarstwa pozostają autorytatywne. Nie są shortcutem do player assistance.
 
-Do not assume that because `NpcAgent.inventory` exists, ordinary NPCs already carry food and water.
+### 122
 
-`Inventory` was introduced as a generic carried container and is already used by NPC resource/transport behaviour. fileciteturn5file0L2-L2
+Woda domowa i istniejące water containers pozostają częścią istniejącego water/resource modelu. Nie tworzyć równoległego water systemu dla 152.
 
-Before implementation, trace all existing writes to `NpcAgent.inventory` and determine whether normal NPCs can actually acquire:
+### 156
 
-- food consumables such as `tomato`, `raw_meat`, `roasted_meat`, `bread`;
-- portable water such as `waterskin_full`.
+Logistyka może sprawić, że NPC naturalnie będzie miał carried resources. 152 korzysta z tego stanu, ale nie implementuje własnego household-to-NPC provisioning.
 
-If they can, use those real paths.
+### 165
 
-If they cannot, do **not** add a player-centric “give NPC food for plan 152” mechanism. The correct V1 runtime result may be that only specially equipped/test NPCs can provide assistance until an existing logistics/work system supplies such items naturally. Plan 156 should eventually improve that situation through the normal logistics chain.
+165 rozszerza model potrzeb NPC/player. 152 nie powinien kopiować ani antycypować jego starvation/dehydration mechanics. Korzysta z aktualnego `PlayerNeeds` API.
 
-## 15. Persistence
+## 13. Persistence
 
-Do not add a new save format for assistance.
+Nie dodawać nowego save state.
 
-`Inventory` already has serialization support, but that does not prove that every NPC inventory is currently persisted. Verify the actual NPC save/load path before making claims about persistence.
+`Inventory` może mieć serialization, ale należy sprawdzić faktyczny NPC save/load path przed twierdzeniem, że carried inventory jest trwale persystowane.
 
-If NPC carried inventory is runtime-only under the current policy, the assistance consequence is runtime-only as well. Do not introduce hidden persistence solely to preserve this feature.
+Jeżeli NPC inventory jest runtime-only, 152 nie dodaje ukrytej persystencji tylko dla tej funkcji.
 
-Player inventory/needs should continue using their existing persistence path.
+## 14. Performance
 
-## 16. Performance
+Pomoc jest niskoczęstotliwościową interakcją.
 
-This is a low-frequency interaction.
+Nie dodawać:
 
-Do not add:
+- per-frame inventory scans;
+- per-frame player need checks wykonywanych przez NPC;
+- globalnego wyszukiwania pomocnego NPC;
+- background willingness updates;
+- helper delivery loop.
 
-- per-frame scans of NPC inventories;
-- per-frame checks of player hunger for every NPC;
-- global scans to find a helpful NPC;
-- background willingness updates.
+Resolver działa tylko podczas dialogu/prośby.
 
-All candidate lookup and social resolution should happen when the player opens/uses the dialogue or selects the request. Keep the computation O(1) or proportional only to the small carried inventory being inspected.
+## 15. Testy
 
-## 17. Tests
+Minimum:
 
-Prefer tests around the pure resolver and existing state operations over UI-only tests.
+- carried food + willing → success; NPC count maleje, player count rośnie;
+- food absent → `no_item`, brak mutacji;
+- player inventory full → brak mutacji;
+- water carried + willing → istniejący thirst effect/lifecycle działa poprawnie;
+- water absent → `no_item`, brak mutacji;
+- unwilling → brak mutacji inventory/needs;
+- social result korzysta z istniejącej relacji;
+- standing pochodzi z istniejącego lookup;
+- portable water zachowuje istniejący `resultKind` lifecycle;
+- own-needs guard nie oddaje krytycznego ostatniego carried resource, jeżeli istniejący stan pozwala to ustalić;
+- ponowna prośba po sukcesie nie daje tego samego itemu drugi raz;
+- brak wywołania autonomicznego delivery z 167.
 
-Minimum useful cases:
+## 16. Browser/manual verification
 
-- food carried + willing → success; NPC count decreases, player count increases;
-- food absent → `no_item`, no inventory mutation;
-- player cannot carry food → no mutation;
-- water carried + willing → NPC water item decreases and existing thirst effect is applied;
-- water absent → `no_item`, no mutation;
-- unwilling → no inventory/need mutation;
-- social result changes with relation level;
-- standing is read through the existing social lookup rather than a second reputation source;
-- `waterskin_full` preserves existing `resultKind` / empty-container behaviour;
-- own-needs guard prevents giving a critical last carried resource when the existing NPC state supports that determination;
-- repeated request after a successful transfer sees the changed inventory and does not give the same item twice.
+Testować na NPC, który rzeczywiście ma odpowiedni carried item. Nie dodawać production-only provisioning path tylko po to, żeby test był możliwy.
 
-## 18. Browser/manual verification
+```text
+1. NPC z carried food + korzystna relacja
+   → request food
+   → sukces
+   → NPC inventory -1
+   → player inventory +1
 
-Use an NPC that **actually has** the relevant carried item. Do not add a production-only debug provisioning path just to make the test pass.
+2. NPC bez carried food
+   → request food
+   → normalna odmowa
+   → brak mutacji
 
-Check at minimum:
+3. Jeśli istnieje portable water flow:
+   NPC z carried water
+   → request drink
+   → istniejący PlayerNeeds/consume lifecycle
+   → poprawny stan NPC/player
 
-1. NPC with carried food + favourable relationship → request food → help succeeds → NPC inventory decreases and player inventory increases.
-2. NPC without carried food → request food → normal refusal → no inventory mutation.
-3. NPC with carried portable water → request drink → NPC carried water decreases and player's existing thirst state changes correctly.
-4. NPC without carried water → request drink → normal refusal.
-5. NPC with poor relation / low willingness → refusal is possible and does not consume the item.
-6. Repeat after a successful transfer → the same carried item cannot be given twice.
-7. Verify no extra per-frame behaviour appears while merely standing near an NPC.
+4. NPC bez carried water
+   → normalna odmowa
 
-## 19. Implementation traps to avoid
+5. Niekorzystna relacja
+   → pomoc nie jest gwarantowana
 
-- Do not turn the quest `helpResult` into a generic bag of unrelated interaction types.
-- Do not import `QuestManager` into `NpcAgent` just to obtain relation/standing.
-- Do not create `NpcHelpManager`, `ReputationManager`, `AssistanceManager` or another global service.
-- Do not create `NpcInventory` alongside the existing `Inventory`.
-- Do not read `Household.stock` / `Household.water` during the V1 request as a fallback.
-- Do not teleport NPCs home or create `goHomeAndFetchFoodForPlayer()`.
-- Do not add a new per-frame NPC scan.
-- Do not duplicate `ITEM_CATALOG` consumable relief values.
-- Do not mutate `PlayerNeeds` fields directly.
-- Do not use `Math.random()` ad hoc if deterministic simulation is required.
-- Do not silently convert food assistance into immediate consumption; the plan's food acceptance criterion is an item transfer to the player.
-- Do not introduce new persistence solely for this feature.
+6. W żadnym przypadku request nie uruchamia gather/delivery z 167.
+```
 
-## 20. Verification commands
+## 17. Verification
 
-Run the repository's normal checks after implementation:
+Techniczna:
 
 ```text
 npx tsc --noEmit
@@ -371,8 +429,6 @@ npm run build
 npm test
 ```
 
-Then perform browser/manual verification because the feature crosses Vue dialogue, runtime inventory and player needs.
+Browser/manual jest wymagany dla poprawności UI i rzeczywistego transferu itemów.
 
-The plan itself remains unchanged; this file is implementation guidance only.
-
-> Zrób git commit i push do main, rebase jeżeli trzeba
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
