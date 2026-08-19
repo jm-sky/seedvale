@@ -52,6 +52,11 @@ const FLORA_TREE_PROXIMITY = 7
  *  a scattered find, not a carpet, even where every weight is high. */
 const FLORA_KEEP_SCALE = 0.5
 
+/** Third independent pool (issue 035) — rare lost coins. Own RNG salt and
+ *  `c<i>` ids so existing shell/stone/flora collectedItemIds stay stable. */
+const COIN_CANDIDATES_PER_CHUNK = 1
+const COIN_KEEP_CHANCE = 0.06
+
 function nearTree(vegetation: readonly VegetationPlacement[], x: number, z: number): boolean {
   for (const v of vegetation) {
     if (v.kind === 'tree' && Math.hypot(v.x - x, v.z - z) <= FLORA_TREE_PROXIMITY) return true
@@ -87,10 +92,13 @@ function hashChunk(cx: number, cz: number): number {
  * between `oceanThreshold`/`coastThreshold` *and* close to `waterLevel` in
  * local height, where waves would actually wash them up); stones land on
  * strong mountain-ridge terrain; branch/mushroom/flower/cone/herb land per
- * `biomeWeightsAt`/tree-proximity preference (see `FLORA_*` constants above).
- * Finite — no respawn — the caller filters out ids already recorded as
- * collected. `vegetation` is this chunk's own `computeChunkVegetation` result
- * (worker.ts computes it first), used only for the flora tree-proximity check.
+ * `biomeWeightsAt`/tree-proximity preference (see `FLORA_*` constants above);
+ * coins (issue 035) are a third independent pool — rare dry-land finds with
+ * their own salt and `c<i>` id prefix so they never collide with existing
+ * collected ids. Finite — no respawn — the caller filters out ids already
+ * recorded as collected. `vegetation` is this chunk's own
+ * `computeChunkVegetation` result (worker.ts computes it first), used only
+ * for the flora tree-proximity check.
  */
 export function computeChunkItems(
   coord: ChunkCoord,
@@ -197,6 +205,27 @@ export function computeChunkItems(
     else kind = 'herb'
 
     placements.push({ id: `${coord.cx}:${coord.cz}:f${i}`, x: wx, z: wz, kind })
+  }
+
+  const coinRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz) ^ 0x9c31a)
+  for (let i = 0; i < COIN_CANDIDATES_PER_CHUNK; i++) {
+    const localX = (coinRandom() * 2 - 1) * half
+    const localZ = (coinRandom() * 2 - 1) * half
+    const wx = coord.cx * chunkSize + localX
+    const wz = coord.cz * chunkSize + localZ
+
+    const h = sample(tile.heights, wx, wz)
+    if (h <= waterLevel + 0.5) continue
+
+    const d = SLOPE_SAMPLE_STEP
+    const slope =
+      (Math.abs(sample(tile.heights, wx + d, wz) - sample(tile.heights, wx - d, wz)) +
+        Math.abs(sample(tile.heights, wx, wz + d) - sample(tile.heights, wx, wz - d))) /
+      (2 * d)
+    if (slope > SLOPE_REJECT) continue
+    if (coinRandom() > COIN_KEEP_CHANCE) continue
+
+    placements.push({ id: `${coord.cx}:${coord.cz}:c${i}`, x: wx, z: wz, kind: 'coin' })
   }
 
   return placements

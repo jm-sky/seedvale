@@ -98,7 +98,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'village_renewable',
     modelUrl: null,
-    notes: 'Procedural mesh; renewable near settlement.',
+    notes: 'Procedural mesh; renewable near settlement. Barter token (issue 035) — Kupiec does not buy or sell shells for coins.',
   },
   stone: {
     kind: 'stone',
@@ -283,7 +283,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'none',
     modelUrl: null,
-    notes: 'Plan 141 — buy from Kupiec; set down via Quick Actions ("Zastaw pułapkę"), then `[E]` to arm. Placed world object (`world/createPlacedTraps.ts`), not a `HeldTool`. Low durability, high detection chance, poor weather resistance.',
+    notes: 'Plan 141 / issue 035 — buy from Kupiec; set down from Inventory ("Zastaw") or Quick Actions, then `[E]` to arm. Placed world object (`world/createPlacedTraps.ts`), not a `HeldTool`. Low durability, high detection chance, poor weather resistance.',
     roadmap: 'Dedicated trap GLB (MODELS.md M40); bait, crafting and repair are explicitly out of plan 141.',
   },
   trap_good: {
@@ -466,9 +466,9 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     label: 'moneta',
     holdable: false,
     melee: null,
-    spawn: 'none',
+    spawn: 'world_chunk',
     modelUrl: null,
-    notes: 'Plan 129 — first physical currency: quest reward item + price paid for a settlement sale plot (`settlement/landPurchase.ts`). Stacks like any other item; near-zero weight so a land-plot price does not blow the carry limit. Not sold/bought by the merchant (separate from the shell/barter trade economy).',
+    notes: 'Plan 129 / issue 035 — physical currency: Kupiec buy/sell, rare world_chunk pickup, quest reward, land-plot price (`settlement/landPurchase.ts`). Stacks like any other item; near-zero weight so a land-plot price does not blow the carry limit. Shells stay barter-only.',
   },
   herb: {
     kind: 'herb',

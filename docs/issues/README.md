@@ -50,7 +50,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 032 | [2026-08-15--032--mobile-black-world-screen.md](./2026-08-15--032--mobile-black-world-screen.md) | Telefon: sporadyczny czarny świat 3D przy działającym UI/HUD — kamera w terenie/domu + 0-size composer resize | `verification needed` |
 | 033 | [2026-08-17--033--bloom-whiteout-threejs-185-upgrade.md](./2026-08-17--033--bloom-whiteout-threejs-185-upgrade.md) | Patrząc w słońce cały ekran biały — `UnrealBloomPass` composite shader zmieniony w three r18x (upstream PR #31528, 3× RGB + alpha skalująca się z jasnością zamiast stałej); `bloomStrength` obniżony 0.28→0.09 jako kompensacja | `verification needed` |
 | 034 | [2026-08-19--034--hud-player-health-bar.md](./2026-08-19--034--hud-player-health-bar.md) | HUD pod zegarem: brak paska HP — dodać Zdrowie nad kondycją | `done` |
+| 035 | [2026-08-19--035--playtest-coins-placement-inventory.md](./2026-08-19--035--playtest-coins-placement-inventory.md) | Playtest: Kupiec w monetach + rzadki spawn, ukrycie „Poproś o miecz”, namiot/pułapka na drodze, Zastaw z ekwipunku | `done` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `035`
+**Next ID:** `036`

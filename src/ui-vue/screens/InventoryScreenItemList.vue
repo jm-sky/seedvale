@@ -6,6 +6,7 @@ import { isToolKind } from '../../items/HeldTool'
 import { type ConsumableNeed, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
 import { isInstanceBackedKind } from '../../items/itemInstances'
 import { hasItemCategory, ITEM_DEFS, type ItemCategory, type ItemKind, primaryItemCategory } from '../../items/items'
+import { trapKindForItem } from '../../world/animalTraps'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { ui } from '../store'
 
@@ -68,6 +69,10 @@ function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
 function onEquip(kind: ItemKind): void { ui.inventory.onEquip?.(kind) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
 function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
+function onPlaceTrap(kind: ItemKind): void {
+  const trapKind = trapKindForItem(kind)
+  if (trapKind) ui.inventory.onPlaceTrap?.(trapKind)
+}
 </script>
 
 <template>
@@ -164,6 +169,12 @@ function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
               class="min-h-0 py-1"
               :label="consumeLabel(item.consumable.need)"
               @click="onConsume(item.kind)"
+            />
+            <ItemsScreenItemButton
+              v-if="trapKindForItem(item.kind)"
+              class="min-h-0 py-1"
+              label="Zastaw"
+              @click="onPlaceTrap(item.kind)"
             />
             <ItemsScreenItemButton
               v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"

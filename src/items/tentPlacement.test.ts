@@ -9,7 +9,6 @@ describe('evaluateTentPlacement (plan 090)', () => {
     z: 0,
     sampleHeight: flat,
     waterLevel: 0,
-    roads: [] as const,
     blockers: [] as const,
     otherTents: [] as const,
   }
@@ -27,11 +26,8 @@ describe('evaluateTentPlacement (plan 090)', () => {
     expect(evaluateTentPlacement({ ...base, sampleHeight: slope })).toBe('slope')
   })
 
-  it('rejects a road corridor', () => {
-    expect(evaluateTentPlacement({
-      ...base,
-      roads: [{ ax: -4, az: 0, ah: 4, bx: 4, bz: 0, bh: 4, halfWidth: 1.5, heightStrength: 1, tintStrength: 1 }],
-    })).toBe('road')
+  it('accepts a site that would sit on a road corridor (issue 035)', () => {
+    expect(evaluateTentPlacement(base)).toBe('ok')
   })
 
   it('rejects overlap with another tent or a nearby object', () => {

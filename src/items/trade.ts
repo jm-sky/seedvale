@@ -12,7 +12,7 @@ import { createTrapInstance, trapConditionRatio } from './trapItemInstances'
 export type TradeResult = 'ok' | 'cannot_afford' | 'full' | 'not_sold' | 'invalid_offer'
 
 export type InstanceSellResult =
-  | { result: 'ok', totalShells: number, soldIds: readonly string[] }
+  | { result: 'ok', totalCoins: number, soldIds: readonly string[] }
   | { result: Exclude<TradeResult, 'ok'> }
 
 function wouldFitAfter(
@@ -88,21 +88,21 @@ export function selectInstanceToPlace(instances: readonly TrapItemInstance[]): T
   return sorted[0] ?? null
 }
 
-/** Pay `price` shells for one `kind`. Atomic: verify, then remove+add. */
-export function buyWithShells(inventory: Inventory, kind: ItemKind): TradeResult {
+/** Pay `price` coins for one `kind`. Atomic: verify, then remove+add. */
+export function buyWithCoins(inventory: Inventory, kind: ItemKind): TradeResult {
   const price = merchantPrice(kind)
   if (price == null) return 'not_sold'
-  if (!inventory.has('shell', price)) return 'cannot_afford'
-  const paymentWeight = ITEM_DEFS.shell.weight * price
+  if (!inventory.has('coin', price)) return 'cannot_afford'
+  const paymentWeight = ITEM_DEFS.coin.weight * price
   const purchased = createPurchasedInstance(kind)
   if (purchased) {
     if (!wouldFitAfterInstance(inventory, paymentWeight, purchased)) return 'full'
-    inventory.remove('shell', price)
+    inventory.remove('coin', price)
     if (!inventory.addInstance(purchased)) return 'full'
     return 'ok'
   }
   if (!wouldFitAfter(inventory, paymentWeight, kind)) return 'full'
-  inventory.remove('shell', price)
+  inventory.remove('coin', price)
   inventory.add(kind, 1)
   return 'ok'
 }
@@ -137,32 +137,32 @@ export function buyWithBarter(
   return 'ok'
 }
 
-/** Sell one `kind` to the merchant for `sellPrice` shells. Atomic. */
-export function sellForShells(inventory: Inventory, kind: ItemKind): TradeResult {
+/** Sell one `kind` to the merchant for `sellPrice` coins. Atomic. */
+export function sellForCoins(inventory: Inventory, kind: ItemKind): TradeResult {
   if (isInstanceBackedKind(kind)) {
     const ids = selectInstancesToSell(inventory.getInstances(kind), 1)
     if (ids.length === 0) return 'invalid_offer'
-    return sellInstancesForShells(inventory, ids).result
+    return sellInstancesForCoins(inventory, ids).result
   }
   const price = sellPrice(kind)
   if (price == null) return 'not_sold'
   if (!inventory.has(kind, 1)) return 'invalid_offer'
   const removeWeight = ITEM_DEFS[kind].weight
-  if (!wouldFitAfter(inventory, removeWeight, 'shell', price)) return 'full'
+  if (!wouldFitAfter(inventory, removeWeight, 'coin', price)) return 'full'
   inventory.remove(kind, 1)
-  inventory.add('shell', price)
+  inventory.add('coin', price)
   return 'ok'
 }
 
 /** Sell concrete instances by id. Validates and prices before any mutation. */
-export function sellInstancesForShells(
+export function sellInstancesForCoins(
   inventory: Inventory,
   instanceIds: readonly string[],
 ): InstanceSellResult {
   if (instanceIds.length === 0) return { result: 'invalid_offer' }
   const unique = [...new Set(instanceIds)]
   const instances: ItemInstance[] = []
-  let totalShells = 0
+  let totalCoins = 0
   let removeWeight = 0
   for (const id of unique) {
     const instance = inventory.getInstance(id)
@@ -170,15 +170,15 @@ export function sellInstancesForShells(
     const price = resolveInstanceSellPrice(instance)
     if (price == null) return { result: 'not_sold' }
     instances.push(instance)
-    totalShells += price
+    totalCoins += price
     removeWeight += ITEM_DEFS[instance.kind].weight
   }
-  if (!wouldFitAfter(inventory, removeWeight, 'shell', totalShells)) {
+  if (!wouldFitAfter(inventory, removeWeight, 'coin', totalCoins)) {
     return { result: 'full' }
   }
   for (const id of unique) {
     if (!inventory.removeInstance(id)) return { result: 'invalid_offer' }
   }
-  inventory.add('shell', totalShells)
-  return { result: 'ok', totalShells, soldIds: unique }
+  inventory.add('coin', totalCoins)
+  return { result: 'ok', totalCoins, soldIds: unique }
 }

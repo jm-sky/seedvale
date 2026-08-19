@@ -41,7 +41,7 @@ watch(() => ui.merchant.open, (open) => {
   filtersOpen.value = false
 })
 
-const shells = computed(() => ui.merchant.counts.shell ?? 0)
+const coins = computed(() => ui.merchant.counts.coin ?? 0)
 
 const categoryChips: { id: CategoryFilter; label: string }[] = [
   { id: 'all', label: 'Wszystkie' },
@@ -77,7 +77,7 @@ const activeFilterSummary = computed(() => {
 const buyerSubtitle = computed(() => (
   barterKind.value
     ? `Wymiana na: ${ITEM_DEFS[barterKind.value].label} (${neededValue.value} · oferujesz ${offeredValue.value})`
-    : 'Sprzedaj za muszle albo wybierz towar z lewej, by wymienić.'
+    : 'Sprzedaj za monety albo wybierz towar z lewej, by wymienić.'
 ))
 
 function matchesCategory(kind: ItemKind): boolean {
@@ -144,15 +144,15 @@ const neededValue = computed(() => (barterKind.value ? merchantPrice(barterKind.
 const canBarter = computed(() => barterKind.value != null && offeredValue.value >= neededValue.value)
 
 function buy(kind: ItemKind): void {
-  const result = ui.merchant.onBuyShells?.(kind) ?? 'not_sold'
+  const result = ui.merchant.onBuyCoins?.(kind) ?? 'not_sold'
   if (result === 'ok') return
-  if (result === 'cannot_afford') showToast('Za mało muszli.', 'error')
+  if (result === 'cannot_afford') showToast('Za mało monet.', 'error')
   else if (result === 'full') showToast('Ekwipunek jest za ciężki.', 'error')
   else showToast('Nie da się tego kupić.', 'error')
 }
 
 function sell(kind: ItemKind): void {
-  const result = ui.merchant.onSellShells?.(kind) ?? 'not_sold'
+  const result = ui.merchant.onSellCoins?.(kind) ?? 'not_sold'
   if (result === 'ok') {
     const next = { ...offer.value }
     const owned = (ui.merchant.counts[kind] ?? 1) - 1
@@ -211,7 +211,7 @@ function chipClass(active: boolean): string {
         </h2>
         <div class="flex flex-row items-center gap-3 max-md:gap-2">
           <p class="text-[13px] opacity-75 max-md:text-xs">
-            Muszle: {{ shells }}
+            Monety: {{ coins }}
           </p>
           <button
             type="button"
@@ -313,11 +313,11 @@ function chipClass(active: boolean): string {
                   @click="selectBarter(item.kind)"
                 >
                   <span class="font-medium capitalize">{{ item.label }}</span>
-                  <span class="ml-2 text-[12px] opacity-70 max-md:text-[11px]">{{ item.price }} muszli</span>
+                  <span class="ml-2 text-[12px] opacity-70 max-md:text-[11px]">{{ item.price }} monet</span>
                 </button>
                 <UiButton
                   class="min-h-11 shrink-0 px-2.5 py-1 text-xs max-md:min-h-9"
-                  :disabled="item.price > shells"
+                  :disabled="item.price > coins"
                   @click="buy(item.kind)"
                 >
                   Kup

@@ -1,6 +1,7 @@
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
 import type { TradeResult } from '../items/trade'
+import type { TrapKind } from '../world/animalTraps'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type InventoryScreenHandlers = {
@@ -9,6 +10,7 @@ export type InventoryScreenHandlers = {
   onUnequip?: () => void
   /** "Zjedz"/"Wypij" (plan 106) — only offered for consumable items. */
   onConsume?: (kind: ItemKind) => void
+  onPlaceTrap?: (kind: TrapKind) => void
   onSellInstances?: (instanceIds: readonly string[]) => TradeResult
   onClose?: () => void
 }
@@ -55,6 +57,7 @@ export function createInventoryScreen(
       (kind) => handlers.onEquip?.(kind),
       () => handlers.onUnequip?.(),
       (kind) => handlers.onConsume?.(kind),
+      (kind) => handlers.onPlaceTrap?.(kind),
       (ids) => handlers.onSellInstances?.(ids) ?? 'invalid_offer',
     )
   }

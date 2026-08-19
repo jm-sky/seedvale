@@ -3,9 +3,10 @@ import { ITEM_DEFS, type ItemKind } from './items'
 import { trapConditionRatio } from './trapItemInstances'
 
 /**
- * Central merchant price list (plan 090) — shell cost to buy each stocked
- * item. Also used as that item's `tradeValue` for barter. Not sold: raw
- * materials (stone, branches, ores, forage).
+ * Central merchant price list (plan 090, unit = `coin` since issue 035) —
+ * coin cost to buy each stocked item. Also used as that item's `tradeValue`
+ * for barter. Not sold: raw materials (stone, branches, ores, forage).
+ * Shells stay barter-only (`canSell('shell')` is false).
  */
 export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   firestarter: 8,
@@ -62,7 +63,7 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'bandage',
 ]
 
-/** Fallback shell-equivalent for items the merchant does not stock. */
+/** Fallback coin-equivalent for items the merchant does not stock. */
 const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   shell: 1,
   stone: 1,
@@ -86,7 +87,7 @@ export function isMerchantStock(kind: ItemKind): boolean {
   return merchantPrice(kind) != null
 }
 
-/** Shared barter value in shells. Stocked goods use their list price. */
+/** Shared barter value in coins. Stocked goods use their list price. */
 export function tradeValue(kind: ItemKind): number {
   const listed = MERCHANT_PRICES[kind]
   if (listed != null) return listed
@@ -95,8 +96,9 @@ export function tradeValue(kind: ItemKind): number {
   return Math.max(1, Math.round(ITEM_DEFS[kind].weight * 4))
 }
 
-/** Player → merchant sell price in shells. Half of `tradeValue`, at least 1.
- *  `shell` and `coin` cannot be sold (review 105 trade). */
+/** Player → merchant sell price in coins. Half of `tradeValue`, at least 1.
+ *  `shell` and `coin` cannot be sold (review 105 trade; issue 035 keeps shells
+ *  as barter-only so they do not convert 1:1 into coins). */
 export function canSell(kind: ItemKind): boolean {
   return kind !== 'shell' && kind !== 'coin'
 }

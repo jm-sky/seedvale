@@ -2,18 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { Inventory } from './Inventory'
 import { isTrapItemInstance } from './itemInstances'
 import {
-  buyWithShells,
+  buyWithCoins,
   selectInstancesToSell,
-  sellForShells,
-  sellInstancesForShells,
+  sellForCoins,
+  sellInstancesForCoins,
 } from './trade'
 import { BROKEN_SELL_MULTIPLIER, resolveInstanceSellPrice, tradeValue } from './tradeCatalog'
 import { createTrapInstance } from './trapItemInstances'
 
 describe('trap instance trade (plan 155)', () => {
   it('buying trap_simple creates one instance with max durability', () => {
-    const inv = new Inventory({ shell: 100 })
-    expect(buyWithShells(inv, 'trap_simple')).toBe('ok')
+    const inv = new Inventory({ coin: 100 })
+    expect(buyWithCoins(inv, 'trap_simple')).toBe('ok')
     expect(inv.count('trap_simple')).toBe(0)
     const instances = inv.getInstances('trap_simple')
     expect(instances).toHaveLength(1)
@@ -25,10 +25,10 @@ describe('trap instance trade (plan 155)', () => {
   })
 
   it('buying three traps creates three distinct ids', () => {
-    const inv = new Inventory({ shell: 100 })
-    expect(buyWithShells(inv, 'trap_simple')).toBe('ok')
-    expect(buyWithShells(inv, 'trap_simple')).toBe('ok')
-    expect(buyWithShells(inv, 'trap_simple')).toBe('ok')
+    const inv = new Inventory({ coin: 100 })
+    expect(buyWithCoins(inv, 'trap_simple')).toBe('ok')
+    expect(buyWithCoins(inv, 'trap_simple')).toBe('ok')
+    expect(buyWithCoins(inv, 'trap_simple')).toBe('ok')
     const ids = inv.getInstances('trap_simple').map((inst) => inst.id)
     expect(new Set(ids).size).toBe(3)
   })
@@ -72,19 +72,19 @@ describe('trap instance trade (plan 155)', () => {
     const b = createTrapInstance('trap_simple')
     inv.addInstance(a)
     inv.addInstance(b)
-    const sold = sellInstancesForShells(inv, [a.id, 'missing'])
+    const sold = sellInstancesForCoins(inv, [a.id, 'missing'])
     expect(sold.result).toBe('invalid_offer')
     expect(inv.countInstances('trap_simple')).toBe(2)
   })
 
-  it('sellForShells removes a concrete instance for trap kinds', () => {
-    const inv = new Inventory({ shell: 0 })
+  it('sellForCoins removes a concrete instance for trap kinds', () => {
+    const inv = new Inventory({ coin: 0 })
     const a = createTrapInstance('trap_simple')
     const b = createTrapInstance('trap_simple')
     b.durability = 1
     inv.addInstance(a)
     inv.addInstance(b)
-    expect(sellForShells(inv, 'trap_simple')).toBe('ok')
+    expect(sellForCoins(inv, 'trap_simple')).toBe('ok')
     expect(inv.getInstance(b.id)).toBeNull()
     expect(inv.getInstance(a.id)).not.toBeNull()
   })

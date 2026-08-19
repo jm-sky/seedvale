@@ -354,4 +354,8 @@ The desired final architecture is:
 
 This preserves the project's core rule that generated world structure is deterministic while mutable consequences are stored as sparse persistent state.
 
+## Playtest correction (issue [035](../issues/2026-08-19--035--playtest-coins-placement-inventory.md), 2026-08-19)
+
+Plan 129 isolated `coin` from the merchant (`spawn: 'none'`, Kupiec paid in `shell`). Playtest showed sale plots with no reachable coin supply (quest coins were also cut by plan 160). Issue 035 switches Kupiec buy/sell to `coin`, adds a rare independent `world_chunk` coin pool (`cx:cz:c${i}`), and keeps `shell` as barter-only so muszle do not convert 1:1 into coins.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

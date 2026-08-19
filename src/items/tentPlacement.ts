@@ -1,26 +1,22 @@
-import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
-import { distanceToSegment } from '../math/segment'
 import { TENT_FOOTPRINT_RADIUS } from './tentProp'
 
 export type TentPlacementReason =
   | 'ok'
   | 'water'
   | 'slope'
-  | 'road'
   | 'object'
   | 'tent'
 
 /** Shared reason set for "can I put this object down here" checks. `occupied`
  *  means another object of the same family (tent, trap…) already stands
  *  there; each caller renames it in its own message table. */
-export type GroundPlacementReason = 'ok' | 'water' | 'slope' | 'road' | 'object' | 'occupied'
+export type GroundPlacementReason = 'ok' | 'water' | 'slope' | 'object' | 'occupied'
 
 export type GroundPlacementInput = {
   x: number
   z: number
   sampleHeight: (x: number, z: number) => number
   waterLevel: number
-  roads: readonly RoadCorridorSegment[]
   /** Nearby blocking points (trees, houses, wells, other placed objects). */
   blockers: readonly { x: number, z: number, radius: number }[]
   /** Already-placed objects of the same family — rejected via `separation`. */
@@ -41,7 +37,6 @@ export type TentPlacementInput = Omit<
 const WATER_MARGIN = 0.8
 const SLOPE_SAMPLE = 1.6
 const SLOPE_MAX_DELTA = 0.45
-const ROAD_CLEARANCE = 1.2
 const TENT_SEPARATION = TENT_FOOTPRINT_RADIUS * 2.2
 
 function maxSlopeDelta(
@@ -59,23 +54,13 @@ function maxSlopeDelta(
   )
 }
 
-function onRoad(x: number, z: number, roads: readonly RoadCorridorSegment[]): boolean {
-  for (const road of roads) {
-    const dist = distanceToSegment(x, z, road.ax, road.az, road.bx, road.bz)
-    if (dist < road.halfWidth + ROAD_CLEARANCE) return true
-  }
-  return false
-}
-
 /** Suitability for setting a ground object down at (x, z). Pure — no Three.js.
- *  Shared by tents and animal traps (plan 141 §3): the rules (dry, flat
- *  enough, off the road, clear of props and of its own kind) are identical,
- *  only the footprint/separation differ. */
+ *  Shared by tents and animal traps (plan 141 §3 / issue 035): dry, flat enough,
+ *  clear of props and of its own kind. Roads are allowed. */
 export function evaluateGroundPlacement(input: GroundPlacementInput): GroundPlacementReason {
   const { x, z, sampleHeight, waterLevel } = input
   if (sampleHeight(x, z) <= waterLevel + WATER_MARGIN) return 'water'
   if (maxSlopeDelta(x, z, sampleHeight) > SLOPE_MAX_DELTA) return 'slope'
-  if (onRoad(x, z, input.roads)) return 'road'
   for (const peer of input.peers) {
     if (Math.hypot(peer.x - x, peer.z - z) < input.separation) return 'occupied'
   }
@@ -108,7 +93,6 @@ export const TENT_SETUP_DURATION_SEC = 4
 export const TENT_PLACEMENT_MESSAGE: Record<Exclude<TentPlacementReason, 'ok'>, string> = {
   water: 'Tu jest za mokro na namiot.',
   slope: 'Teren jest zbyt stromy.',
-  road: 'Nie rozstawiaj namiotu na drodze.',
   object: 'Za mało miejsca — coś stoi w pobliżu.',
   tent: 'Tu już stoi namiot.',
 }

@@ -1,7 +1,7 @@
 # Weapons — Seedvale
 
 **Purpose:** one table of implemented melee weapons (and tools that share the
-same combat stats) with combat numbers, block, weight and shell prices.
+same combat stats) with combat numbers, block, weight and coin prices.
 
 **Last updated:** 2026-08-19
 
@@ -16,7 +16,7 @@ Sources of truth (code, not this file):
 | Quest-only trade value | `src/items/tradeCatalog.ts` (`RESOURCE_TRADE_VALUE`) |
 | Player → Kupiec sell | `sellPrice()` = `floor(tradeValue × 0.5)`, min 1 |
 
-Prices are in **muszle**. Kupiec does not stock `damascus_long_sword` or
+Prices are in **monety**. Kupiec does not stock `damascus_long_sword` or
 `obsidian_sword`; those rows use barter `tradeValue` only. `branch` has no
 melee yet (roadmap in `itemCatalog.ts`).
 

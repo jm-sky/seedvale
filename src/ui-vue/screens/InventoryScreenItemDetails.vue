@@ -10,6 +10,7 @@ import { consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/ite
 import { isInstanceBackedKind } from '../../items/itemInstances'
 import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind, primaryItemCategory } from '../../items/items'
 import { tradeValue } from '../../items/tradeCatalog'
+import { trapKindForItem } from '../../world/animalTraps'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { showToast, ui } from '../store'
 
@@ -80,6 +81,10 @@ function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
 function onEquip(kind: ItemKind): void { ui.inventory.onEquip?.(kind) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
 function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
+function onPlaceTrap(kind: ItemKind): void {
+  const trapKind = trapKindForItem(kind)
+  if (trapKind) ui.inventory.onPlaceTrap?.(trapKind)
+}
 
 function sellInstance(id: string): void {
   const result = ui.inventory.onSellInstances?.([id]) ?? 'invalid_offer'
@@ -151,7 +156,7 @@ function sellInstance(id: string): void {
 
       <InventoryScreenSection
         label="Wartość"
-        :value="`${itemValue} muszli`"
+        :value="`${itemValue} monet`"
       />
 
       <InventoryScreenSection
@@ -216,6 +221,11 @@ function sellInstance(id: string): void {
         v-if="consumable"
         :label="consumeLabel"
         @click="onConsume(item.kind)"
+      />
+      <ItemsScreenItemButton
+        v-if="trapKindForItem(item.kind)"
+        label="Zastaw"
+        @click="onPlaceTrap(item.kind)"
       />
       <ItemsScreenItemButton
         v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"

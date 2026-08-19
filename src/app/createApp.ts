@@ -50,7 +50,7 @@ import { isInstanceBackedKind, isTrapItemInstance } from '../items/itemInstances
 import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
 import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
-import { buyWithBarter, buyWithShells, selectInstancesToSell, selectInstanceToPlace, sellForShells, sellInstancesForShells } from '../items/trade'
+import { buyWithBarter, buyWithCoins, selectInstancesToSell, selectInstanceToPlace, sellForCoins, sellInstancesForCoins } from '../items/trade'
 import { resolveInstanceSellPrice, sellPrice } from '../items/tradeCatalog'
 import { trapInstanceFromWorld } from '../items/trapItemInstances'
 import {
@@ -104,7 +104,7 @@ import { configureAudioVolumes, configureNpcVoiceSounds, configureUiSounds } fro
 import { createBusyOverlay } from '../ui/createBusyOverlay'
 import { createDebugGui } from '../ui/createDebugGui'
 import { createHud } from '../ui/createHud'
-import { createInventoryScreen } from '../ui/createInventoryScreen'
+import { createInventoryScreen, type InventoryScreenHandlers } from '../ui/createInventoryScreen'
 import { createLoadingScreen } from '../ui/createLoadingScreen'
 import { createMinimap } from '../ui/createMinimap'
 import { createNpcDialog } from '../ui/createNpcDialog'
@@ -572,7 +572,7 @@ export async function createApp(
   }
 
   const sellInventoryInstances = (instanceIds: readonly string[]) => {
-    const result = sellInstancesForShells(inventory, instanceIds)
+    const result = sellInstancesForCoins(inventory, instanceIds)
     if (result.result === 'ok') {
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       heldTool.syncWithInventory()
@@ -580,15 +580,15 @@ export async function createApp(
       syncQuickActionAvailability()
       syncMerchantIfOpen()
       refreshInventoryScreen()
-      toast.show(`+${result.totalShells} muszli`, 'pickup')
+      toast.show(`+${result.totalCoins} monet`, 'pickup')
       return 'ok' as const
     }
     return result.result
   }
 
   vueUi.configureMerchant({
-    onBuyShells: (kind) => {
-      const result = buyWithShells(inventory, kind)
+    onBuyCoins: (kind) => {
+      const result = buyWithCoins(inventory, kind)
       if (result === 'ok') {
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         heldTool.syncWithInventory()
@@ -613,15 +613,15 @@ export async function createApp(
       }
       return result
     },
-    onSellShells: (kind) => {
-      const expectedShells = isInstanceBackedKind(kind)
+    onSellCoins: (kind) => {
+      const expectedCoins = isInstanceBackedKind(kind)
         ? (() => {
             const ids = selectInstancesToSell(inventory.getInstances(kind), 1)
             const inst = ids[0] ? inventory.getInstance(ids[0]) : null
             return inst ? resolveInstanceSellPrice(inst) : null
           })()
         : sellPrice(kind)
-      const result = sellForShells(inventory, kind)
+      const result = sellForCoins(inventory, kind)
       if (result === 'ok') {
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         heldTool.syncWithInventory()
@@ -629,7 +629,7 @@ export async function createApp(
         syncQuickActionAvailability()
         const view = merchantInventoryView()
         vueUi.refreshMerchant(view.counts, view.groups)
-        toast.show(`+${expectedShells ?? sellPrice(kind)} muszli`, 'pickup')
+        toast.show(`+${expectedCoins ?? sellPrice(kind)} monet`, 'pickup')
       }
       return result
     },
@@ -650,6 +650,7 @@ export async function createApp(
       }
       return result.line
     },
+    getCanAskSword: () => !worldFlags.guardSwordGifted,
     onOpenTrade: () => {
       const view = merchantInventoryView()
       vueUi.openMerchantFromDialogue(view.counts, view.groups)
@@ -996,13 +997,14 @@ export async function createApp(
     inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
   }
 
-  const inventoryScreen = createInventoryScreen(container, {
+  const inventoryScreenHandlers: InventoryScreenHandlers = {
     onDrop: dropItemStack,
     onEquip: equipTool,
     onUnequip: unequipTool,
     onConsume: (kind) => consumeItem(kind),
     onSellInstances: sellInventoryInstances,
-  })
+  }
+  const inventoryScreen = createInventoryScreen(container, inventoryScreenHandlers)
 
   refreshInventoryScreen = () => {
     inventoryScreen.refresh(
@@ -1079,7 +1081,6 @@ export async function createApp(
       z: aim.z,
       sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
       waterLevel: bundle.chunkManager.waterLevel,
-      roads: bundle.chunkManager.roadCorridorsNear(aim.x, aim.z, 10),
       blockers: tentBlockers(aim.x, aim.z),
       otherTents: bundle.placedTents.nodes(),
     })
@@ -1122,7 +1123,6 @@ export async function createApp(
       z,
       sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
       waterLevel: bundle.chunkManager.waterLevel,
-      roads: bundle.chunkManager.roadCorridorsNear(x, z, 10),
       blockers: tentBlockers(x, z),
       peers: [...bundle.placedTraps.nodes(), ...bundle.placedTents.nodes()],
       footprintRadius: TRAP_FOOTPRINT_RADIUS,
@@ -1141,6 +1141,11 @@ export async function createApp(
       onInventoryChanged()
       toast.show(`Zastawiono: ${def.label}.`)
     })
+  }
+
+  inventoryScreenHandlers.onPlaceTrap = (kind) => {
+    inventoryScreen.close()
+    placeTrapAtAim(kind)
   }
 
   const armTrap = (id: string): void => {

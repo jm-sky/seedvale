@@ -25,14 +25,14 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Water source (well/lake) | `world/WaterSource.ts` — `[E]` drink, `[R]` fill waterskin; lake is a synthetic per-frame target (`interactables.ts`'s `isNearLakeShore`), not a discrete world object |
 | Cooking (campfire) | `items/campfireCooking.ts` — `raw_meat → roasted_meat` at a lit campfire, `[R]`; plan 134 adds `deer_meat`/`wolf_meat`/`boar_meat`/`rabbit_meat`/`beef` as further inputs to the same `roasted_meat` output |
 | Species meat + hide (plan 134) | `createApp.ts`'s `startHarvestMeat` maps `AnimalAgent.def.kind` → item kind (`deer`→`deer_meat`, `wolf`→`wolf_meat`, `boar`→`boar_meat`, `rabbit`→`rabbit_meat`, `cow`→`beef`; other species keep the generic `raw_meat`) and always tries to add 1 `hide` alongside the meat |
-| Merchant price / trade value | `items/tradeCatalog.ts` — `MERCHANT_PRICES`/`MERCHANT_STOCK` (buy from Kupiec), `sellPrice()` = half `tradeValue` (player → Kupiec; not `shell`/`coin`), and `tradeValue()` (barter fallback, shown as "Wartość" in `InventoryScreenItemDetails.vue`, plan 134) |
+| Merchant price / trade value | `items/tradeCatalog.ts` — `MERCHANT_PRICES`/`MERCHANT_STOCK` (buy from Kupiec in `coin`, issue [035](../issues/2026-08-19--035--playtest-coins-placement-inventory.md)), `sellPrice()` = half `tradeValue` (player → Kupiec; not `shell`/`coin`), and `tradeValue()` (barter fallback, shown as "Wartość" in `InventoryScreenItemDetails.vue`, plan 134). Shells remain barter-only. |
 | Weapon combat + prices | [WEAPONS.md](./WEAPONS.md) — melee timings, block, weight, Kupiec/sell/quest value |
 
 ## Items
 
 | Kind | Label | Hold | Melee | Spawn | Model | Notes |
 |------|-------|------|-------|-------|-------|-------|
-| shell | muszla | — | — | renewable village | procedural | |
+| shell | muszla | — | — | renewable village | procedural | barter token (Kupiec will not buy/sell shells) |
 | stone | kamień | — | — | renewable + dig | procedural | |
 | branch | gałąź | lit only | — | renewable trees | `items/branch.glb` | Zapal gałąź → hand mesh + fire; **melee later** |
 | mushroom | grzyb | — | — | world chunk | procedural | |
@@ -47,9 +47,9 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | sickle | sierp | yes | 12 | village 1–3 | `items/sickle.glb` | plan 082 pickup; hold+melee (plan 096); grip TBD |
 | wooden_torch | pochodnia | yes | — | starting (+ village 1×) | `items/wooden_torch.glb` | plan 085; longer/brighter than lit branch |
 | pickaxe | kilof | yes | — | village 1× + Kupiec | `items/pickaxe.glb` | ore deposits + mountain-rock dig/level (plan 090) |
-| tent | namiot | — | — | none (Kupiec) | procedural | place / rest / pack (plan 090) |
-| trap_simple | prosta pułapka | — | — | none (Kupiec) | procedural | plan 141; Quick Actions „Zastaw…” → `[E]` uzbrój / rozbrój, `[R]` zabierz. 2 użycia, detekcja 0.5, pełne zużycie pogodowe |
-| trap_good | dobra pułapka | — | — | none (Kupiec) | procedural | plan 141; jak wyżej, ale 5 użyć, detekcja 0.3 i ¼ zużycia pogodowego |
+| tent | namiot | — | — | none (Kupiec) | procedural | place / rest / pack (plan 090); roads allowed (issue 035) |
+| trap_simple | prosta pułapka | — | — | none (Kupiec) | procedural | plan 141 / issue 035; Inventory „Zastaw” or Quick Actions → `[E]` uzbrój / rozbrój, `[R]` zabierz. 2 użycia, detekcja 0.5, pełne zużycie pogodowe |
+| trap_good | dobra pułapka | — | — | none (Kupiec) | procedural | plan 141 / issue 035; jak wyżej, ale 5 użyć, detekcja 0.3 i ¼ zużycia pogodowego |
 | long_sword | miecz | yes | 28 | none (Strażnik/Kupiec) | `items/long_sword.glb` | hold+melee; Strażnik quest/dialog + Kupiec |
 | coal | węgiel | — | — | pickaxe yield | procedural | plan 090 |
 | iron | żelazo | — | — | pickaxe yield | procedural | plan 090 |
@@ -70,7 +70,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | hide | skóra | — | — | corpse harvest byproduct (any species) | procedural | plan 134; sellable via barter or to Kupiec at `sellPrice` (`tradeValue` / 2) |
 | cheese | ser | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+20 hunger) |
 | dried_meat | suszone mięso | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+25 hunger); light, long-lasting |
-| coin | moneta | — | — | none (quest reward) | procedural | plan 129; near-zero weight (0.001 kg); quest reward + land-plot purchase price; separate from the shell/barter merchant economy |
+| coin | moneta | — | — | world chunk (rare) | procedural | plan 129 / issue 035; near-zero weight (0.001 kg); Kupiec buy/sell currency + quest reward + land-plot price; shells stay barter-only |
 | herb | zioło lecznicze | — | — | world chunk (flora pool) | procedural | plan 153; Opatrz (+8 health) — free but scarce (half mushroom's weight) |
 | bandage | opatrunek | — | — | none (Kupiec) | procedural | plan 153; Opatrz (+35 health) — reliable, purchasable healing |
 | damascus_knife | nóż damasceński | yes | 16 | none (Kupiec) | `items/damascus_knife.glb` (M44) | plan 160; teal/silver damascus, not gray; harvests corpses like knife |

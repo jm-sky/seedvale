@@ -257,12 +257,11 @@ export type PlacedTrapRecord = {
   weatherCheckedAtDay: number
 }
 
-export type TrapPlacementReason = 'ok' | 'water' | 'slope' | 'road' | 'object' | 'trap'
+export type TrapPlacementReason = 'ok' | 'water' | 'slope' | 'object' | 'trap'
 
 export const TRAP_PLACEMENT_MESSAGE: Record<Exclude<TrapPlacementReason, 'ok'>, string> = {
   water: 'Tu jest za mokro na pułapkę.',
   slope: 'Teren jest zbyt stromy.',
-  road: 'Nie zastawiaj pułapki na drodze.',
   object: 'Za mało miejsca — coś stoi w pobliżu.',
   trap: 'Tu już stoi pułapka.',
 }

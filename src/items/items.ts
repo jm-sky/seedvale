@@ -97,7 +97,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     categories: ['resource'],
     weight: 0.05,
     color: 0xf2e4c9,
-    description: 'Lekka muszla znaleziona na brzegu. Podstawowa waluta tego świata.'
+    description: 'Lekka muszla znaleziona na brzegu. Przyda się do wymiany z Kupcem, gdy brakuje monet.'
   },
   stone: {
     kind: 'stone',
@@ -401,7 +401,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     categories: ['resource'],
     weight: 0.001,
     color: 0xc9a227,
-    description: 'Bity krążek metalu. Przyjmowany za większe transakcje — nagrody za trudniejsze przysługi, działki na sprzedaż.'
+    description: 'Bity krążek metalu. Kupiec płaci nim za towar i przyjmuje go za zakupy — także za działki na sprzedaż.'
   },
   herb: {
     kind: 'herb',

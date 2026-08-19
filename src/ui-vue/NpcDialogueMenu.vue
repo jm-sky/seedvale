@@ -33,6 +33,7 @@ function askSword(): void {
   emitUiClick()
   swordLine.value = state.onAskSword?.() ?? ''
   topic.value = 'askSword'
+  state.canAskSword = state.getCanAskSword?.() ?? false
 }
 function openTrade(): void {
   emitUiClick()
@@ -69,7 +70,7 @@ watch(() => state.open, (open) => { if (open) resetMenu() })
           Handel
         </button>
         <button
-          v-if="isHomeGuard"
+          v-if="isHomeGuard && state.canAskSword"
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
           @click="askSword"

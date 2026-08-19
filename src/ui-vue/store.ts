@@ -36,6 +36,8 @@ type NpcDialogueMenuState = {
   settlement: Settlement | null
   timeOfDay: number
   helpResult: QuestDialogOverride | null
+  canAskSword: boolean
+  getCanAskSword: (() => boolean) | null
   onAskSword: (() => string) | null
   onOpenTrade: (() => void) | null
 }
@@ -51,6 +53,7 @@ type InventoryState = {
   onUnequip: (() => void) | null
   /** "Zjedz"/"Wypij" (plan 106) — only offered for `ITEM_CATALOG[kind].consumable` items. */
   onConsume: ((kind: ItemKind) => void) | null
+  onPlaceTrap: ((kind: TrapKind) => void) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
 }
 type PauseMenuState = {
@@ -99,9 +102,9 @@ type MerchantState = {
   npc: NpcAgent | null
   counts: Partial<Record<ItemKind, number>>
   groups: readonly InventoryGroupView[]
-  onBuyShells: ((kind: ItemKind) => TradeResult) | null
+  onBuyCoins: ((kind: ItemKind) => TradeResult) | null
   onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>) => TradeResult) | null
-  onSellShells: ((kind: ItemKind) => TradeResult) | null
+  onSellCoins: ((kind: ItemKind) => TradeResult) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number; progress: number; canCancelRest: boolean }
@@ -230,9 +233,9 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, onAskSword: null, onOpenTrade: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
-  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onSellInstances: null } as InventoryState,
+  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onRefresh: null,
@@ -250,7 +253,7 @@ export const ui = reactive({
     onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false } as TimeSkipState,
-  merchant: { open: false, npc: null, counts: {}, groups: [], onBuyShells: null, onBuyBarter: null, onSellShells: null, onSellInstances: null } as MerchantState,
+  merchant: { open: false, npc: null, counts: {}, groups: [], onBuyCoins: null, onBuyBarter: null, onSellCoins: null, onSellInstances: null } as MerchantState,
   busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
@@ -377,7 +380,18 @@ export function refreshVillagers(entries: readonly VillagerRefreshEntry[]): void
 export function isVillagersOpen(): boolean { return ui.villagers.open }
 export function setVillagersPage(page: number): void { ui.villagers.page = page }
 
-export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void { const state = ui.npcDialogueMenu; const override = questManager.onInteract(npc.name); state.npc = markRaw(npc); state.settlement = settlement; state.timeOfDay = timeOfDay; state.helpResult = override ?? { line: npc.getDialogueLine() }; state.open = true; emitUiOpen(); playNpcVoice(npc, pickNpcGreetingSound(npc.voiceActor)) }
+export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void {
+  const state = ui.npcDialogueMenu
+  const override = questManager.onInteract(npc.name)
+  state.npc = markRaw(npc)
+  state.settlement = settlement
+  state.timeOfDay = timeOfDay
+  state.helpResult = override ?? { line: npc.getDialogueLine() }
+  state.canAskSword = state.getCanAskSword?.() ?? false
+  state.open = true
+  emitUiOpen()
+  playNpcVoice(npc, pickNpcGreetingSound(npc.voiceActor))
+}
 function resetNpcDialogueMenu(): void { const state = ui.npcDialogueMenu; state.open = false; state.npc = null; state.settlement = null; state.helpResult = null }
 /** `decline: false` means this close is a transition (e.g. into trade — see
  *  `openMerchantFromDialogue`), not the player actually leaving/declining — skip
@@ -401,9 +415,14 @@ export function acceptNpcDialogueOffer(): void {
   resetNpcDialogueMenu()
 }
 export function isNpcDialogueMenuOpen(): boolean { return ui.npcDialogueMenu.open }
-export function configureNpcDialogueMenu(handlers: { onAskSword: () => string, onOpenTrade: () => void }): void {
+export function configureNpcDialogueMenu(handlers: {
+  onAskSword: () => string
+  onOpenTrade: () => void
+  getCanAskSword: () => boolean
+}): void {
   ui.npcDialogueMenu.onAskSword = handlers.onAskSword
   ui.npcDialogueMenu.onOpenTrade = handlers.onOpenTrade
+  ui.npcDialogueMenu.getCanAskSword = handlers.getCanAskSword
 }
 
 export function openInventory(
@@ -416,6 +435,7 @@ export function openInventory(
   onEquip: (kind: ItemKind) => void,
   onUnequip: () => void,
   onConsume: (kind: ItemKind) => void,
+  onPlaceTrap: (kind: TrapKind) => void,
   onSellInstances: (instanceIds: readonly string[]) => TradeResult,
 ): void {
   ui.inventory.counts = { ...counts }
@@ -427,6 +447,7 @@ export function openInventory(
   ui.inventory.onEquip = onEquip
   ui.inventory.onUnequip = onUnequip
   ui.inventory.onConsume = onConsume
+  ui.inventory.onPlaceTrap = onPlaceTrap
   ui.inventory.onSellInstances = onSellInstances
   ui.inventory.open = true
   emitUiOpen()
@@ -453,7 +474,7 @@ export function closeInventory(): void {
 }
 export function isInventoryOpen(): boolean { return ui.inventory.open }
 
-export function configureMerchant(handlers: Pick<MerchantState, 'onBuyShells' | 'onBuyBarter' | 'onSellShells' | 'onSellInstances'>): void {
+export function configureMerchant(handlers: Pick<MerchantState, 'onBuyCoins' | 'onBuyBarter' | 'onSellCoins' | 'onSellInstances'>): void {
   Object.assign(ui.merchant, handlers)
 }
 export function openMerchant(
