@@ -2,7 +2,7 @@
 
 **Status:** `verification needed`  
 **Created:** 2026-08-14  
-**Plan (wiążący):** [docs/plans/2026-08-14--108--npc-stuck-at-house-locomotion.md](../plans/2026-08-14--108--npc-stuck-at-house-locomotion.md)
+**Plan (wiążący):** [docs/plans/archive/2026-08-14--108--npc-stuck-at-house-locomotion.md](../plans/archive/2026-08-14--108--npc-stuck-at-house-locomotion.md)
 
 ## Cel
 
@@ -14,7 +14,7 @@ To jest **locomotion**, nie stamina. Watchdog (S8) już jest — nie pisz drugie
 
 1. `CLAUDE.md`
 2. `docs/STATE.md`
-3. **Cały** `docs/plans/2026-08-14--108--npc-stuck-at-house-locomotion.md` — findings F1–F7 i P0/P1 są kontraktem, nie tłem.
+3. **Cały** `docs/plans/archive/2026-08-14--108--npc-stuck-at-house-locomotion.md` — findings F1–F7 i P0/P1 są kontraktem, nie tłem.
 4. `docs/SETTLEMENTS.md` — S8 (już wskazuje 108).
 5. Kod: `src/ai/NpcAgent.ts` (`isWalkable`, `steerTo`, `steerWithRescue`, `resolveSteerTarget`, `attemptRepath`, `attemptLocalEscape`, `abandonStuckAction`, `emergencyTeleport`, `beginNeed`, `goSleep`, `wanderNear`), `src/ai/npcMovementWatchdog.ts` + test, `src/world/collision.ts`, `src/settlement/createSettlement.ts` (rejestr colliderów domów).
 

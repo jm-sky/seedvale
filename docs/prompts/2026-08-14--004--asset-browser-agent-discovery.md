@@ -2,7 +2,7 @@
 
 **Status:** `verification needed`
 **Created:** 2026-08-14
-**Plan:** [docs/plans/2026-08-14--107--asset-browser-agent-discovery.md](../plans/2026-08-14--107--asset-browser-agent-discovery.md)
+**Plan:** [docs/plans/archive/2026-08-14--107--asset-browser-agent-discovery.md](../plans/archive/2026-08-14--107--asset-browser-agent-discovery.md)
 **Review (źródło tarcia):** [docs/reviews/2026-08-14--008--asset-browser-modular-cottage.md](../reviews/2026-08-14--008--asset-browser-modular-cottage.md)
 
 ## Cel
@@ -16,7 +16,7 @@ Nie buduj systemu modularnych domów, collidera z otworem, entrance, ani nie pod
 1. `CLAUDE.md`
 2. `docs/STATE.md`
 3. `docs/reviews/2026-08-14--008--asset-browser-modular-cottage.md` — **cały**, w tym §11 (kontynuacja po kopii 176 GLB)
-4. `docs/plans/2026-08-14--107--asset-browser-agent-discovery.md`
+4. `docs/plans/archive/2026-08-14--107--asset-browser-agent-discovery.md`
 5. `docs/assets/ANCHORS.md`
 6. `public/models/settlement/megakit/README.md`
 7. Kod: `src/assets/assetIndex.ts`, `src/tools/assetBrowser/` (szczególnie `ui/AssetBrowser.vue`, `viewer/createAssetSlot.ts`, `viewer/reportFromScene.ts`, `viewer/createViewer.ts`), `vite-plugin-asset-browser.ts`

@@ -2,7 +2,7 @@
 
 **Status:** `done` (dokument; bez zmian gameplayu)
 **Created:** 2026-08-14
-**Prompt:** [docs/prompts/2026-08-14--001--3d-assets-audit-models-and-animations.md](../prompts/2026-08-14--001--3d-assets-audit-models-and-animations.md)
+**Prompt:** [docs/prompts/2026-08-14--001--3d-assets-audit-models-and-animations.md](../../prompts/2026-08-14--001--3d-assets-audit-models-and-animations.md)
 **Repo source of truth:** kod + pliki GLB/GLTF/FBX, nie same nazwy packów.
 
 Ten dokument **nie implementuje** migracji, physics, NPC AI ani loaderów. Opisuje, co assety naprawdę zawierają, i rekomenduje docelowy pipeline.
@@ -143,7 +143,7 @@ To **dwa statyczne warianty**, nie clip open/close i nie bone.
 
 ### MegaKit (jedyne A-capable pieces)
 
-Pełny kit: ściany z otworem, framugi, skrzydła drzwi, okiennice open/closed. Parked w repo: m.in. `wall_plaster_door.glb`, `wall_brick_door.glb`, `wall_arch.glb` ([megakit/README.md](../../public/models/settlement/megakit/README.md)).
+Pełny kit: ściany z otworem, framugi, skrzydła drzwi, okiennice open/closed. Parked w repo: m.in. `wall_plaster_door.glb`, `wall_brick_door.glb`, `wall_arch.glb` ([megakit/README.md](../../../public/models/settlement/megakit/README.md)).
 
 | Asset | Node | Otwór | Pivot/bone/anim | Rola |
 |---|---|---|---|---|

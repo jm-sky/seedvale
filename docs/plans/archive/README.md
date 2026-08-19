@@ -1,18 +1,22 @@
 # Archived plans
 
-**Jednorazowe archiwum** planów z pierwszego okresu projektu (~2026-08-07–2026-08-14), przeniesionych gdy osiągnęły `done` albo `verification needed`.
+Historia planowania Seedvale, przeniesiona z [docs/plans/](../README.md) w dwóch snapshotach, gdy plany osiągnęły `done` albo `verification needed` i przestały być potrzebne w bieżącej mapie planowania. Zobacz [Snapshot 1](#snapshot-1--2026-08-07--2026-08-14) i [Snapshot 2](#snapshot-2--2026-08-14--2026-08-19) niżej.
 
 **Nie** source of truth dla „jak jest teraz”. Trwałe reguły: [STATE.md](../../STATE.md), [SETTLEMENTS.md](../../SETTLEMENTS.md), [WATER.md](../../WATER.md), [GRAPHICS.md](../../GRAPHICS.md), [ARCHITECTURE.md](../../ARCHITECTURE.md).
 
-Nowych planów tu **nie przenosimy**. Kolejne plany zostają w [docs/plans/](../README.md) niezależnie od statusu.
+Nowych planów tu **nie przenosimy** ręcznie przy każdym `done`. Plany zostają w [docs/plans/](../README.md) niezależnie od statusu, dopóki kolejny snapshot nie przeniesie tych, które przestały być potrzebne jako current context — zobacz "Recent context vs archive" w [docs/plans/README.md](../README.md).
 
 **Jak używać:** otwórz plan + `*-implementation-notes.md`, gdy dokument domenowy nie wystarcza (dlaczego tak zrobiono, ograniczenia, kroki playtestu). Notes/review leżą obok planu i nie są indeksowane osobno.
 
 ---
 
+## Snapshot 1 — 2026-08-07 – 2026-08-14
+
+Pierwsze jednorazowe archiwum: plany z pierwszego okresu projektu, przeniesione gdy osiągnęły `done` albo `verification needed`.
+
 ## Verification needed
 
-Implemented; still waiting on browser/play check. Compact queue also in the [live README](../README.md#playtest-queue-archived-batch).
+Implemented; still waiting on browser/play check.
 
 ### Osady / wioski
 
@@ -174,6 +178,88 @@ Implemented; still waiting on browser/play check. Compact queue also in the [liv
 | 019 | [npc-1-identity](./2026-08-07--019--npc-1-identity.md) | Wchłonięte przez 022 |
 | 032 | [natural-resources-economy](./2026-08-08--032--natural-resources-economy.md) | Kierunek; gospodarka lokalna = 071 |
 | 039 | [road-signposts](./2026-08-08--039--road-signposts.md) | Drogowskazy między osadami |
+
+---
+
+## Snapshot 2 — 2026-08-14 – 2026-08-19
+
+**Data:** 2026-08-19. **Zakres:** plany 103–165 (drugi okres pracy, od zamrożenia Snapshot 1 do dziś).
+
+**Co zostało zamknięte:** 35 planów + 1 nieindeksowany dokument audytowy (`asset-audit-3d-models`, referencje z `docs/prompts`/`docs/reviews` zaktualizowane), wszystkie potwierdzone jako `done` (playtest accepted albo — dla kilku małych/wewnętrznych planów — implementacja + techniczna weryfikacja bez dedykowanego playtestu) we własnym nagłówku `Status:` planu, bez formalnej `Depends on` referencji z żadnego obecnie aktywnego/planned/todo/verification planu. Zgrupowane niżej wg tematu.
+
+**Korekta statusu przy okazji tego snapshotu:** pięć planów (`103`, `112`, `113`, `119`, `145`) siedziało w tabeli „Done” poprzedniego README, mimo że ich własny nagłówek `Status:` mówi `verification needed` — przeniesione do `## Verification needed` w [live README](../README.md), **nie** zarchiwizowane. Plan `111` (house-construction) miał ten sam problem (siedział w `## Todo`, własny status `verification needed` po playtest 2026-08-18 wykrywającym błędy składania domków) — również przeniesiony do `## Verification needed`. Żaden z tych sześciu nie jest w tym snapshocie.
+
+**Jakie plany pozostały aktywne:** pełna, aktualna mapa jest w [live README](../README.md) — `in progress` (093, 149), `planned` (104, 126, 127, 151, 152, 159, 161, 162, 164), `todo` (037, 070) i `verification needed` (111, 119, 129, 132, 103, 112, 113, 145).
+
+**Najważniejsze zależności zachowane jako "Recent context" (nie zarchiwizowane — patrz live README):** `106` player-needs-food-and-cooking, `122` natural-resource-gathering-and-water-distribution, `069` npc-household-resources, `156` npc-household-and-settlement-storage-logistics — fundament, na którym stoją `126`/`127`/`152`/`159`/`070`; `155` inventory-item-instances-and-trap-lifecycle i `160` high-quality-melee-weapons — dependency `161`/`162`; `150` combat-mode-defense-and-downed-state — dependency `162`; `049` procedural-world-landmarks i `110` quests-v3-closure — dependency `132`; `109` megakit-construction-catalog — dependency `111`; `157` production-pointlight-budget — bezpośredni poprzednik aktywnego `149`.
+
+**Najważniejsze świeże zmiany domknięte w tym snapshocie:** universal melee combat + gap-close + mobile target acquisition (123/124b/142) jako fundament pod combat mode (150, recent context); player skills sneak/survival (124/128); fire lighting + campfire GLB (130/135); item expansion (134); weather surface effects (133) i seasons/weather core (040); cross-chunk vegetation batching, water reflection GPU i grass GPU LOD (143/144/148) jako zamknięty etap S rendering-performance przed obecnym `149`; three.js 0.180→0.185 upgrade (136); fauna herds/juveniles, probabilistic perception, spawn-point limits, habitat/carcass visuals, harvested remains, day-scale respawn (118/120/125/137/138/139); NPC critical-need interrupt (114), reaction-to-player (117), stuck-at-house locomotion (108) + audyt assetów 3D; UI/audio polish (105 UI/UX audit, 107 asset browser, 116 dialogue audio, 121 footstep refresh, 153 mobile playtest fixes, 154 volume controls, 158 jump/land SFX, 163 rest/mobile UI/inventory polish, 165 reset graphics/audio settings); animal traps (141).
+
+### Rendering / performance
+
+| ID | File | Outcome |
+|----|------|---------|
+| 136 | [threejs-180-to-185-upgrade](./2026-08-16--136--threejs-180-to-185-upgrade.md) | Upgrade `three` `0.180.0`→`0.185.1` (`PCFShadowMap`, `Clock`→`Timer`) |
+| 143 | [cross-chunk-vegetation-batching](./2026-08-17--143--cross-chunk-vegetation-batching.md) | Region 3×3 vegetation batching |
+| 144 | [water-reflection-gpu-optimization](./2026-08-17--144--water-reflection-gpu-optimization.md) | Mirror outer-ring cull (Stage S) |
+| 148 | [grass-gpu-performance](./2026-08-17--148--grass-gpu-performance.md) | Grass geometry LOD (S) |
+
+### World / terrain / climate
+
+| ID | File | Outcome |
+|----|------|---------|
+| 040 | [seasons-weather](./2026-08-08--040--seasons-weather.md) | Deterministyczny sezon/pogoda `(seed, elapsedDays)`, fog + GPU particles + rain SFX |
+| 133 | [weather-surface-effects](./2026-08-16--133--weather-surface-effects.md) | Mokry teren / kałuże / śnieg na shaderze chunka (`uWetness`/`uSnowAmount`) |
+| 140 | [landscape-flora-and-village-cobble](./2026-08-17--140--landscape-flora-and-village-cobble.md) | Sosny textured, paproć, grzyb GLB, trzcina, pień harvestu, bruk MD+ |
+
+### Settlements / NPC
+
+| ID | File | Outcome |
+|----|------|---------|
+| 105 | [ui-ux-review](./2026-08-14--105--ui-ux-review.md) | Audyt UI/UX + H1–H3 / Character / handel / `[U]`; H4 poza handlem otwarte |
+| 107 | [asset-browser-agent-discovery](./2026-08-14--107--asset-browser-agent-discovery.md) | Asset Browser: search + parked MegaKit + authored scale |
+| 108 | [npc-stuck-at-house-locomotion](./2026-08-14--108--npc-stuck-at-house-locomotion.md) | NPC nie utyka w/przy chatce (rim + rescue) |
+| 114 | [npc-critical-need-vigor-interrupt](./2026-08-14--114--npc-critical-need-vigor-interrupt.md) | Krytyczna potrzeba przerywa akcję NPC już w locie |
+| 116 | [super-dialogue-audio-pack](./2026-08-14--116--super-dialogue-audio-pack.md) | Dialog NPC: hello/bye/confirm, głos per NPC (5 aktorów) |
+| 117 | [npc-reaction-to-player](./2026-08-14--117--npc-reaction-to-player.md) | Reakcje NPC: nie każdy auto-greet; osobowość/relacja/reputacja |
+| — | [asset-audit-3d-models](./2026-08-14--asset-audit-3d-models.md) | Audyt assetów 3D (dlaczego NPC utykają w domach) — nieindeksowany dokument, bez `NNN`; przeniesiony razem z 108 |
+
+### Fauna
+
+| ID | File | Outcome |
+|----|------|---------|
+| 118 | [fauna-stada-i-mlode](./2026-08-14--118--fauna-stada-i-mlode.md) | Stada deer/stag/boar + luźne króliki; młode |
+| 120 | [fauna-probabilistic-perception](./2026-08-15--120--fauna-probabilistic-perception.md) | Percepcja: falloff dystansu × facing × dzień/noc/las |
+| 125 | [fauna-spawn-point-population-limits](./2026-08-16--125--fauna-spawn-point-population-limits.md) | Lifecycle spawn pointów fauny + `SaveData` v17 |
+| 137 | [animal-habitat-and-carcass-visuals](./2026-08-17--137--animal-habitat-and-carcass-visuals.md) | `[E] Zniszcz` kanał, spalony cave/thicket, pozostałości po harvestcie |
+| 138 | [harvested-remains-glb](./2026-08-17--138--harvested-remains-glb.md) | Po harvestcie GLB `bones_pile` + kości + skóra + skrawki mięsa |
+| 139 | [fauna-day-scale-respawn](./2026-08-17--139--fauna-day-scale-respawn.md) | Respawn cave/thicket w dniach świata, catch-up przy skipie |
+
+### Items / player / combat
+
+| ID | File | Outcome |
+|----|------|---------|
+| 123 | [universal-melee-combat](./2026-08-15--123--universal-melee-combat.md) | Uniwersalny melee: `ITEM_CATALOG[].melee` + `playerMelee.ts` |
+| 124 | [player-skills-sneak](./2026-08-15--124--player-skills-sneak.md) | Skills foundation + Sneak |
+| 124b | [forgiving-melee-targeting-gap-close](./2026-08-15--124b--forgiving-melee-targeting-gap-close.md) | Target acquisition + gap-close (lunge ≤3 m) |
+| 128 | [player-skills-survival-and-camp](./2026-08-16--128--player-skills-survival-and-camp.md) | Skills v2: XP krzywa, Survival, camp rest quality |
+| 130 | [fire-lighting-polish](./2026-08-16--130--fire-lighting-polish.md) | Zapalanie z kanałem, burst/SFX tylko od gracza, iskry+żar |
+| 131 | [natural-resource-gathering](./2026-08-16--131--natural-resource-gathering.md) | Wood deposit tylko po udanym harvestcie; NPC ore → `SettlementEconomy` |
+| 134 | [item-expansion-and-world-placement](./2026-08-16--134--item-expansion-and-world-placement.md) | Dzida/krótki miecz, mięso per gatunek, `hide`, `cheese`/`dried_meat` |
+| 135 | [campfire-glb-body](./2026-08-16--135--campfire-glb-body.md) | Ciało ogniska `campfire_unlit.glb` + `fx/fire.glb` |
+| 141 | [animal-traps](./2026-08-17--141--animal-traps.md) | Pułapki: `placed → active → placed/broken`, skill `traps`, save v16 |
+| 142 | [mobile-combat-target-acquisition](./2026-08-17--142--mobile-combat-target-acquisition.md) | Touch: szerszy stożek + commit yaw na cel |
+
+### UI / audio / rest
+
+| ID | File | Outcome |
+|----|------|---------|
+| 121 | [footstep-sound-refresh](./2026-08-15--121--footstep-sound-refresh.md) | Kroki: Anton Z default (sand/grass/stone) |
+| 153 | [mobile-playtest-fixes](./2026-08-18--153--mobile-playtest-fixes.md) | Mobile: well crowding, `[R]` quick-use, harvest knife, HP regen, quest icons |
+| 154 | [audio-volume-controls](./2026-08-18--154--audio-volume-controls.md) | Suwaki głośności (Wszystko / Otoczenie / Efekty) |
+| 158 | [false-jump-land-sfx](./2026-08-18--158--false-jump-land-sfx.md) | Slope-stick + próg land SFX |
+| 163 | [rest-mobile-ui-and-inventory-interaction-polish](./2026-08-18--163--rest-mobile-ui-and-inventory-interaction-polish.md) | Odpoczynek Esc/auto-wybudzenie, Merchant Screen mobile, `[Tab]` cycle, kategorie Inventory |
+| 165 | [reset-graphics-and-audio-settings](./2026-08-19--165--reset-graphics-and-audio-settings.md) | Pauza → Ustawienia: Resetuj ustawienia |
 
 ---
 

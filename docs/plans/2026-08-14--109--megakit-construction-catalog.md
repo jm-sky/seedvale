@@ -5,7 +5,7 @@
 **Priority:** 🟡 medium
 **Effort:** `L`
 **Depends on:** ~~—~~ (107 landed mid-session; `constructionCatalog.ts` reuses its `status`/`pack`/`kind`/`mergeParkedManifest`)
-**Related:** [review 008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md), [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md), [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md), [plan 107](./2026-08-14--107--asset-browser-agent-discovery.md), [megakit README](../../public/models/settlement/megakit/README.md)
+**Related:** [review 008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md), [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md), [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md), [plan 107](./archive/2026-08-14--107--asset-browser-agent-discovery.md), [megakit README](../../public/models/settlement/megakit/README.md)
 
 ## Po co
 

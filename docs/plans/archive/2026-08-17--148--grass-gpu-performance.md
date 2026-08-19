@@ -6,7 +6,7 @@ tags: [performance]
 # Plan: Grass GPU performance and geometry LOD
 
 **Created:** 2026-08-17  
-**Status:** `done` ✅ — playtest accepted 2026-08-18 (visual LOD). Etap S; M/L nierozpoczęte. Headless + real-GPU [review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md). Patrz [implementation notes](./2026-08-17--148--grass-gpu-performance-implementation-notes.md).  
+**Status:** `done` ✅ — playtest accepted 2026-08-18 (visual LOD). Etap S; M/L nierozpoczęte. Headless + real-GPU [review 020](../../reviews/2026-08-18--020--water-grass-gpu-benchmark.md). Patrz [implementation notes](./2026-08-17--148--grass-gpu-performance-implementation-notes.md).  
 **Priority:** medium · **Effort:** L  
 **Depends on:** none
 

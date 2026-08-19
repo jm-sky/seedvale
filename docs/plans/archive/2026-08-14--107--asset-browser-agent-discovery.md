@@ -5,7 +5,7 @@
 **Priority:** 🟡 medium  
 **Effort:** `M`  
 **Depends on:** ~~088~~  
-**Review:** [008](../reviews/2026-08-14--008--asset-browser-modular-cottage.md)
+**Review:** [008](../../reviews/2026-08-14--008--asset-browser-modular-cottage.md)
 
 ## Po co
 

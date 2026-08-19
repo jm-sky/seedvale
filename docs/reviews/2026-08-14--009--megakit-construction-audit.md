@@ -4,7 +4,7 @@
 **Date:** 2026-08-14
 **Scope:** audit all 176 GLB in `public/models/settlement/megakit/` and design/implement a `ConstructionCatalog` layer over `AssetIndex` (plan [109](../plans/2026-08-14--109--megakit-construction-catalog.md)).
 **Not in scope:** `HouseBuilder`, settlement wiring, colliders, entrance system.
-**Related:** [review 008](./2026-08-14--008--asset-browser-modular-cottage.md), [plan 107](../plans/2026-08-14--107--asset-browser-agent-discovery.md) (landed during this session — `AssetIndexEntry.status/pack/kind`, `mergeParkedManifest`), [review 011](./2026-08-14--011--megakit-construction-browser-verification.md) (browser pass), [megakit README](../../public/models/settlement/megakit/README.md)
+**Related:** [review 008](./2026-08-14--008--asset-browser-modular-cottage.md), [plan 107](../plans/archive/2026-08-14--107--asset-browser-agent-discovery.md) (landed during this session — `AssetIndexEntry.status/pack/kind`, `mergeParkedManifest`), [review 011](./2026-08-14--011--megakit-construction-browser-verification.md) (browser pass), [megakit README](../../public/models/settlement/megakit/README.md)
 
 ## Method — no browser this session
 

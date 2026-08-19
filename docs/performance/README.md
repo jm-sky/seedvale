@@ -516,8 +516,8 @@ The renderer should remain understandable, scalable and compatible with the game
 ### Vegetation
 
 - [`Research 004 — Grass generation`](../research/2026-08-07--004--grass-generation.md)
-- [`Plan 143 — Cross-chunk vegetation batching`](../plans/2026-08-17--143--cross-chunk-vegetation-batching.md)
+- [`Plan 143 — Cross-chunk vegetation batching`](../plans/archive/2026-08-17--143--cross-chunk-vegetation-batching.md)
 
 ### Related
 
-- [`Plan 136 — Three.js 0.180 → 0.185 upgrade`](../plans/2026-08-16--136--threejs-180-to-185-upgrade.md)
+- [`Plan 136 — Three.js 0.180 → 0.185 upgrade`](../plans/archive/2026-08-16--136--threejs-180-to-185-upgrade.md)

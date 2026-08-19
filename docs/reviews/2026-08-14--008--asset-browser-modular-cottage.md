@@ -4,8 +4,8 @@
 **Date:** 2026-08-14  
 **Scope:** czy obecny Asset Browser (`/asset-browser.html`, `src/tools/assetBrowser/`, `src/assets/assetIndex.ts`) pozwala kolejnemu agentowi **znaleźć, ocenić i dobrać** części do jednego prostego domku z modularnych elementów.  
 **Nie w zakresie:** system modularnych budynków, zmiana settlement generation, produkcja nowych GLB, migracja MegaKit do runtime.  
-**Powiązane:** [audyt możliwości assetów](../plans/2026-08-14--asset-audit-3d-models.md), [plan 088](../plans/archive/2026-08-12--088--asset-alignment-browser.md), [ANCHORS](../assets/ANCHORS.md), [megakit/README](../../public/models/settlement/megakit/README.md)  
-**Follow-up implementacyjny:** [plan 107](../plans/2026-08-14--107--asset-browser-agent-discovery.md) (nie zrobiony w tej sesji)
+**Powiązane:** [audyt możliwości assetów](../plans/archive/2026-08-14--asset-audit-3d-models.md), [plan 088](../plans/archive/2026-08-12--088--asset-alignment-browser.md), [ANCHORS](../assets/ANCHORS.md), [megakit/README](../../public/models/settlement/megakit/README.md)  
+**Follow-up implementacyjny:** [plan 107](../plans/archive/2026-08-14--107--asset-browser-agent-discovery.md) (nie zrobiony w tej sesji)
 
 **Metoda:** praca jak kolejny agent Seedvale — bez zgadywania nazw plików z pamięci. Kolejność: dokumenty → registry `buildAssetIndex()` → UI browsera → manifest `/asset-browser-models.json` → Free URL → pomiar natywnego AABB/materiałów/tris z GLB (Three.js + Meshopt w stronie) → próba porównania wariantów w UI.
 
@@ -318,7 +318,7 @@ Biblioteka nie jest już blokerem kompletnego *zestawu plików*. Browser nadal n
 
 ## 10. Rekomendacja
 
-**Fix first** — plan [107](../plans/2026-08-14--107--asset-browser-agent-discovery.md).
+**Fix first** — plan [107](../plans/archive/2026-08-14--107--asset-browser-agent-discovery.md).
 
 Nie „good enough”: agent, który dziś dostanie zadanie „dobierz części do plaster cottage”, albo (a) weźmie palisadę RTS jako ścianę, albo (b) znajdzie MegaKit po znajomości repo i porówna je w fałszywej skali 1 m, albo (c) wyjdzie z narzędzia do `ls` + README — czyli browser nie wykonał roboty.
 

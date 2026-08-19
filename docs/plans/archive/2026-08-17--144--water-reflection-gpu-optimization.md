@@ -1,7 +1,7 @@
 # Plan: Water Reflection GPU Optimization
 
 **Created:** 2026-08-17
-**Status:** `done` ✅ — Stage S playtest accepted 2026-08-18 (visual cutoff). Real-GPU [review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md). M/L not started.
+**Status:** `done` ✅ — Stage S playtest accepted 2026-08-18 (visual cutoff). Real-GPU [review 020](../../reviews/2026-08-18--020--water-grass-gpu-benchmark.md). M/L not started.
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~143~~
 

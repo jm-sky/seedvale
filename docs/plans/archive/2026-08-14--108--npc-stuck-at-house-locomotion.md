@@ -5,7 +5,7 @@
 **Priority:** 🔴 high  
 **Effort:** `M`  
 **Depends on:** ~~097~~ (kolizje + łatka wyjścia z domu)  
-**Prompt:** [docs/prompts/2026-08-14--005--npc-stuck-at-house-locomotion.md](../prompts/2026-08-14--005--npc-stuck-at-house-locomotion.md)
+**Prompt:** [docs/prompts/2026-08-14--005--npc-stuck-at-house-locomotion.md](../../prompts/2026-08-14--005--npc-stuck-at-house-locomotion.md)
 
 Playtest po watchdogu (S8 / commit `b99b248`) i gospodarstwach (069 / `d50a3fd`). Nie kodować z samego tytułu — ten dokument jest review + kontraktem naprawy.
 
@@ -30,7 +30,7 @@ Mapowanie dialogu: `currentActivityLine` / `NEED_ACTIVITY_LABEL` (`src/ai/dialog
 | `b99b248` (S8, bez numerowanego planu) | Watchdog `repath → escape → abandon → teleport`; stamina walk vs work; `?debug=1` | Symptom manager na złym kontrakcie locomotion. Testy pokrywają czysty FSM, nie `isWalkable` / `steerTo`. |
 | `d50a3fd` (069) | Jedzenie z zapasu gospodarstwa **w domu** (`destination = home`) | Więcej celów w środku collidera. Woda w domu (`HOME_WATER_CHANCE = 0.45`) była już wcześniej. Drewno nadal: drzewo → stos. |
 
-S8 w [SETTLEMENTS.md](../SETTLEMENTS.md) opisuje watchdog jako rozwiązanie utknięcia. Playtest pokazuje, że **nie uwalnia** NPC przy dysku domu.
+S8 w [SETTLEMENTS.md](../../SETTLEMENTS.md) opisuje watchdog jako rozwiązanie utknięcia. Playtest pokazuje, że **nie uwalnia** NPC przy dysku domu.
 
 ---
 
@@ -92,7 +92,7 @@ Fallback „żaden kandydat nie przeszedł” też twardo stawia na `home`.
 
 ### F7 — `footprintRadius` to ręczny szacunek (097 §4.5)
 
-Dysk ≠ mesh. Jeśli mesh > dysk, NPC wygląda „w domu”, a liczbowo jest na zewnątrz — łatka wyjścia nie działa, wejście w dysk zablokowane (pierścień między ścianą GLB a colliderem). Jeśli dysk > mesh, NPC „obok chatki” nadal jest w colliderze. Issue [018](../issues/2026-08-12--018--house-scale-vs-npc.md) (domki za małe vs NPC) pogarsza odczyt wizualny.
+Dysk ≠ mesh. Jeśli mesh > dysk, NPC wygląda „w domu”, a liczbowo jest na zewnątrz — łatka wyjścia nie działa, wejście w dysk zablokowane (pierścień między ścianą GLB a colliderem). Jeśli dysk > mesh, NPC „obok chatki” nadal jest w colliderze. Issue [018](../../issues/2026-08-12--018--house-scale-vs-npc.md) (domki za małe vs NPC) pogarsza odczyt wizualny.
 
 ---
 

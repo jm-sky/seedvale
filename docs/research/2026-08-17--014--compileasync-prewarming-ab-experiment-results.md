@@ -8,7 +8,7 @@
 
 Continues [research 011](2026-08-16--011--streaming-hitch-investigation.md) → [review 019](../reviews/2026-08-16--019--streaming-hitch-trace-analysis.md) → [research 012](2026-08-16--012--streaming-hitch-trace-v2-linkprogram-wait.md) (names `gl.getProgramInfoLog()` as the ~545ms blocking call in the water-mirror render path) → [research 013](2026-08-16--013--compileasync-prewarming-plan.md) (plans this experiment, flags that `checkShaderErrors=false`, commit `aaeee34`, was already silently masking the hitch on `main`).
 
-Before this experiment, `three` was upgraded `0.180.0` → `0.185.1` (plan [136](../plans/2026-08-16--136--threejs-180-to-185-upgrade.md)). Re-read of `compileAsync()`/`WebGLProgram.js`/`WebGLPrograms.js` in the installed `0.185.1` source confirmed the mechanics research 013 documented for `0.180.0` are unchanged line-for-line: `onFirstUse()` still gates `getProgramInfoLog()`/`getShaderInfoLog()` behind `renderer.debug.checkShaderErrors`, `compile()` never calls `getUniforms()`/`getAttributes()` itself, and the program cache key still reads `renderer.getRenderTarget()` live at call time.
+Before this experiment, `three` was upgraded `0.180.0` → `0.185.1` (plan [136](../plans/archive/2026-08-16--136--threejs-180-to-185-upgrade.md)). Re-read of `compileAsync()`/`WebGLProgram.js`/`WebGLPrograms.js` in the installed `0.185.1` source confirmed the mechanics research 013 documented for `0.180.0` are unchanged line-for-line: `onFirstUse()` still gates `getProgramInfoLog()`/`getShaderInfoLog()` behind `renderer.debug.checkShaderErrors`, `compile()` never calls `getUniforms()`/`getAttributes()` itself, and the program cache key still reads `renderer.getRenderTarget()` live at call time.
 
 ## Precondition: `checkShaderErrors` restored to `true`
 
@@ -116,4 +116,4 @@ All diagnostic changes (`createRenderer.ts`, `waterMirror.ts`, `createOcean.ts`,
 ## Related
 
 - [Research 011](2026-08-16--011--streaming-hitch-investigation.md) · [Review 019](../reviews/2026-08-16--019--streaming-hitch-trace-analysis.md) · [Research 012](2026-08-16--012--streaming-hitch-trace-v2-linkprogram-wait.md) · [Research 013](2026-08-16--013--compileasync-prewarming-plan.md) (the plan this experiment executed)
-- [Plan 136: three.js 0.180→0.185 upgrade](../plans/2026-08-16--136--threejs-180-to-185-upgrade.md) — the `stream` benchmark's documented run-to-run variance
+- [Plan 136: three.js 0.180→0.185 upgrade](../plans/archive/2026-08-16--136--threejs-180-to-185-upgrade.md) — the `stream` benchmark's documented run-to-run variance

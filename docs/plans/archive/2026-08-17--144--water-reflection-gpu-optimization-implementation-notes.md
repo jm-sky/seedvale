@@ -72,7 +72,7 @@ out of scope until S's benchmark (see plan §3 S "Benchmark") is run.
 
 ## Browser benchmark (2026-08-18, review 020)
 
-Cursor IDE browser, Intel Arc 140V (hardware ANGLE/D3D11, not SwiftShader), 1068×906 dpr 1, seed 42, res 193, High, 30 s. Compared grass-only `68e1bf4` vs grass+144 S `c834210`. Full tables: [review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
+Cursor IDE browser, Intel Arc 140V (hardware ANGLE/D3D11, not SwiftShader), 1068×906 dpr 1, seed 42, res 193, High, 30 s. Compared grass-only `68e1bf4` vs grass+144 S `c834210`. Full tables: [review 020](../../reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
 
 - **`current`** (matched spawn, 61 chunks): run 1 mirror draw calls 206→197 (−4.4%), WATER 2.2→2.1 ms, FPS 58.2→58.7, RENDER 12.9 ms both. Run 2 census identical; mirror 197→204 (no drop); FPS unusable (host load). Scene grass/terrain/vegetation census identical both runs.
 - **`water`** (matched lake, 62 chunks): run 1 mirror 30→25, run 2 30→23. WATER ~1.1 ms in the quiet run. Scenario is GPU-light.

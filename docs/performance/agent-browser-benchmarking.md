@@ -4,7 +4,7 @@
 
 Pitfalls **1–5** are `agent-browser` / headless-Chrome specific. Pitfalls **6–8** are **harness-level** (IndexedDB save, in-game clock, `stream` hitch) and apply equally to the Cursor IDE browser used for real-GPU reviews (021–024).
 
-See also: `src/perf/benchmark.ts` / `benchmarkScenarios.ts` / `types.ts` (the harness itself) and plan 143's implementation notes (`docs/plans/2026-08-17--143--cross-chunk-vegetation-batching-implementation-notes.md`, "Benchmark:" section) for a worked before/after example with a results table.
+See also: `src/perf/benchmark.ts` / `benchmarkScenarios.ts` / `types.ts` (the harness itself) and plan 143's implementation notes (`docs/plans/archive/2026-08-17--143--cross-chunk-vegetation-batching-implementation-notes.md`, "Benchmark:" section) for a worked before/after example with a results table.
 
 ## Load the skill first
 

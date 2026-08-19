@@ -1213,7 +1213,7 @@ Immediate next step:
 
 Utwórz:
 
-`docs/plans/2026-08-14--asset-audit-3d-models.md`
+`docs/plans/archive/2026-08-14--asset-audit-3d-models.md`
 
 Dokument ma być samodzielnym artefaktem projektowym.
 

@@ -32,7 +32,7 @@ ESLint intentionally not run (out of scope for this session per instructions).
 
 ## Benchmark: `?benchmark=current`, seed 42, res 193, quality High, single run each
 
-Run via `agent-browser` against two `vite` dev servers, one browser tab at a time (never concurrently — see [agent-browser-benchmarking.md](../performance/agent-browser-benchmarking.md), which also documents the pitfalls hit getting to a clean run: headless start-menu hang on a reused profile, `eval`'s CDP timeout on a direct `await` of the 30s+ benchmark call, benchmark-runner reentrancy, and — the one that actually cost the most time — three orphaned full Chrome processes from earlier `--session` churn left running and starving the host of CPU/RAM, which is what made an early attempt take literally 4 minutes for a 30s benchmark). Before = `main`@`cfdb83a` (the commit immediately prior to this plan's geometry-LOD commit) in a throwaway `git worktree` + `PORT=5578` dev server, `node_modules` symlinked (safe — lockfile unchanged between the two commits). After = this change, the already-running dev server. Both worktree and extra dev server were torn down after the run.
+Run via `agent-browser` against two `vite` dev servers, one browser tab at a time (never concurrently — see [agent-browser-benchmarking.md](../../performance/agent-browser-benchmarking.md), which also documents the pitfalls hit getting to a clean run: headless start-menu hang on a reused profile, `eval`'s CDP timeout on a direct `await` of the 30s+ benchmark call, benchmark-runner reentrancy, and — the one that actually cost the most time — three orphaned full Chrome processes from earlier `--session` churn left running and starving the host of CPU/RAM, which is what made an early attempt take literally 4 minutes for a 30s benchmark). Before = `main`@`cfdb83a` (the commit immediately prior to this plan's geometry-LOD commit) in a throwaway `git worktree` + `PORT=5578` dev server, `node_modules` symlinked (safe — lockfile unchanged between the two commits). After = this change, the already-running dev server. Both worktree and extra dev server were torn down after the run.
 
 | Metric | Before (`cfdb83a`) | After (`68e1bf4`) | Δ |
 |---|---:|---:|---:|
@@ -54,7 +54,7 @@ Run via `agent-browser` against two `vite` dev servers, one browser tab at a tim
 
 ## Real-GPU follow-up (2026-08-18, review 020)
 
-Cursor IDE browser, Intel Arc 140V (hardware ANGLE/D3D11), 1068×906 dpr 1, seed 42, res 193, High, 30 s. Baseline `cfdb83a` vs 148 S `68e1bf4` (HEAD `c834210` adds 144 S on top — grass census identical). Full tables: [review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
+Cursor IDE browser, Intel Arc 140V (hardware ANGLE/D3D11), 1068×906 dpr 1, seed 42, res 193, High, 30 s. Baseline `cfdb83a` vs 148 S `68e1bf4` (HEAD `c834210` adds 144 S on top — grass census identical). Full tables: [review 020](../../reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
 
 | Scenario | Grass tris before → after | FPS avg | RENDER |
 |---|---|---:|---:|

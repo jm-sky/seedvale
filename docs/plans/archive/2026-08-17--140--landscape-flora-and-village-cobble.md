@@ -10,7 +10,7 @@ tags: [settlements-npcs]
 **Priority:** medium · **Effort:** L  
 **Depends on:** ~~024~~ ~~073~~ ~~065~~ ~~082~~ ~~101~~
 
-Zaimplementowane w `4d2a9b5865c9ef5e385ed5e5b4c8f21473a268ff` (2026-08-18). Wierzba świadomie `needed` ([MODELS.md](../assets/MODELS.md) M43). Browser: do potwierdzenia.
+Zaimplementowane w `4d2a9b5865c9ef5e385ed5e5b4c8f21473a268ff` (2026-08-18). Wierzba świadomie `needed` ([MODELS.md](../../assets/MODELS.md) M43). Browser: do potwierdzenia.
 
 ## Cel
 
@@ -50,7 +50,7 @@ Parked [`pine_trees.glb`](../../public/models/nature/pine_trees.glb): Asset Brow
 
 **Paproć / grzyb / bruk / trzcina:** już w `public/models/nature/` (`fern_a`, `mushroom_a`, `rock_path_round_wide`, `reed_a`).
 
-**Wierzba:** tego packa nie ma. Vertex-color Nature Pack odrzucony. 1–2 textured z Nature MegaKit / Poly Pizza; **brak pliku nie blokuje reszty** — wtedy nowy wiersz w [MODELS.md](../assets/MODELS.md) zostaje `needed`.
+**Wierzba:** tego packa nie ma. Vertex-color Nature Pack odrzucony. 1–2 textured z Nature MegaKit / Poly Pizza; **brak pliku nie blokuje reszty** — wtedy nowy wiersz w [MODELS.md](../../assets/MODELS.md) zostaje `needed`.
 
 **Pień:** brak textured stump w Stylized Nature. Nature Pack `TreeStump` (vertex-color) wyłącznie jako remnant harvestu (mały, brązowy, nie korona lasu), z proceduralnym [`createTreeStump`](../../src/settlement/props.ts) jako fallback. Jeśli w przeglądarce gryzie się z textured pniem — wrócić do proceduralnego.
 
@@ -78,7 +78,7 @@ Istniejące sprzężenia: [`TREE_SPECS`](../../src/settlement/propSpecs.ts), [`T
 - `PineTree_1/3/5.fbx` z [`_temp/Models/Ultimate Stylized Nature/FBX/`](../../_temp/Models/Ultimate%20Stylized%20Nature/FBX/) + tekstury `PineTree_*` → `public/models/nature/pine_1.glb` itd.
 - Werdykt parked `pine_trees.glb` w Asset Browserze.
 - Wierzba jeśli plik textured jest; pień `TreeStump` → `nature/tree_stump.glb`.
-- Wiersze w [CREDITS.md](../assets/CREDITS.md) + [MODELS.md](../assets/MODELS.md).
+- Wiersze w [CREDITS.md](../../assets/CREDITS.md) + [MODELS.md](../../assets/MODELS.md).
 
 ### 2. Gatunki drzew i spawn
 
@@ -139,8 +139,8 @@ Odrzut: korytarze `pathCorridors`, woda, nachodzenie na studnię/ognisko. Żadne
 
 ### 8. Docs i weryfikacja
 
-- [MODELS.md](../assets/MODELS.md): M12/M26/M27/M28; M06 kwiaty oznaczyć `wired` (już w `BUSH_SPECS`); M05 góry zostają parked.
-- [CREDITS.md](../assets/CREDITS.md), [parked/README.md](../../public/models/parked/README.md), krótki akapit w [STATE.md](../STATE.md) (wegetacja).
+- [MODELS.md](../../assets/MODELS.md): M12/M26/M27/M28; M06 kwiaty oznaczyć `wired` (już w `BUSH_SPECS`); M05 góry zostają parked.
+- [CREDITS.md](../../assets/CREDITS.md), [parked/README.md](../../../public/models/parked/README.md), krótki akapit w [STATE.md](../../STATE.md) (wegetacja).
 - Testy: prefs length vs `TREE_SPECS`; fern gates; cobble count po `VillageSize` (jeśli da się wyciągnąć czystą funkcję `cobbleCountForSize`).
 - Tech: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test`.
 - Browser (user): las iglasty na stokach; paprocie w wilgotnym lesie nie na pustyni; grzyb GLB; trzcina przy jeziorze; pień po `[E]` siekierą; MD+ kilka płyt przy studni, SM/OUTPOST bez bruku.

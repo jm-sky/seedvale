@@ -3,7 +3,7 @@
 **Status:** `planned` (analysis only — no code changed)
 **Date:** 2026-08-17
 **Context:** [019 §4.3](2026-08-17--019--rendering-optimizations.md) (identifies the bottleneck, flags it out of scope) · [017](2026-08-17--017--threejs-rendering-audit.md) · [018](2026-08-17--018--stream-isolation-probes.md)
-**Follow-up plan:** [143](../plans/2026-08-17--143--cross-chunk-vegetation-batching.md)
+**Follow-up plan:** [143](../plans/archive/2026-08-17--143--cross-chunk-vegetation-batching.md)
 
 Research-only per user request — no implementation in this pass. Answers the
 architectural question research 019 §4.3 raised and left open: whether

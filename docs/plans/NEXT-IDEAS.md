@@ -25,7 +25,7 @@ Nie jest to roadmapa produktu. Jest to **proponowana kolejność wdrażania istn
 
 ### 0. GPU Weather Renderer — ✅ zaimplementowane 2026-08-15
 
-**Źródłowy plan:** 040 — Seasons & Weather (Etap 3, [implementation notes](./2026-08-08--040--seasons-weather-implementation-notes.md))  
+**Źródłowy plan:** 040 — Seasons & Weather (Etap 3, [implementation notes](./archive/2026-08-08--040--seasons-weather-implementation-notes.md))  
 **Effort:** M/L  
 **Charakter:** rendering / performance
 

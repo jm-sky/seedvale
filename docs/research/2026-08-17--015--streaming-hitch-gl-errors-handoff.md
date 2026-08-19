@@ -193,5 +193,5 @@ Commit `f86a1f3` (`feat(render): add diagnostic logging for ambient occlusion au
 - [Research 012](2026-08-16--012--streaming-hitch-trace-v2-linkprogram-wait.md) — named the exact blocking call, controlled A/B
 - [Research 013](2026-08-16--013--compileasync-prewarming-plan.md) — prewarm experiment plan
 - [Research 014](2026-08-17--014--compileasync-prewarming-ab-experiment-results.md) — 4-variant experiment results (detailed per-variant diagnosis, more than the summary table in §2 above)
-- [Plan 136: three.js 0.180→0.185 upgrade](../plans/2026-08-16--136--threejs-180-to-185-upgrade.md) + [implementation notes](../plans/2026-08-16--136--threejs-180-to-185-upgrade-implementation-notes.md) — the upgrade that's implicated in both threads
+- [Plan 136: three.js 0.180→0.185 upgrade](../plans/archive/2026-08-16--136--threejs-180-to-185-upgrade.md) + [implementation notes](../plans/archive/2026-08-16--136--threejs-180-to-185-upgrade-implementation-notes.md) — the upgrade that's implicated in both threads
 - [Issue 033: bloom whiteout after three.js 185 upgrade](../issues/2026-08-17--033--bloom-whiteout-threejs-185-upgrade.md) — separate, already-diagnosed issue from the same upgrade (Sky sun-disc brightness × bloom composite formula) — mentioned here only as evidence this upgrade broke more than one thing, not directly related to §1 or §6

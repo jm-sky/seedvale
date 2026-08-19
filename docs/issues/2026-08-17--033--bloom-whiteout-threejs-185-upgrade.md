@@ -2,7 +2,7 @@
 
 **Status:** `verification needed` (fix #3 applied, bloom confirmed the sole cause via user isolation testing; awaiting final browser confirmation)
 **Created:** 2026-08-17
-**Źródło:** User report po planie [136](../plans/2026-08-16--136--threejs-180-to-185-upgrade.md) (three.js 0.180→0.185)
+**Źródło:** User report po planie [136](../plans/archive/2026-08-16--136--threejs-180-to-185-upgrade.md) (three.js 0.180→0.185)
 **Powiązane:** issue [016](./2026-08-11--016--god-rays-mountain-whiteout.md) (poprzedni, innej przyczyny, whiteout od god rays), `src/render/createPostProcessing.ts`, `src/config/worldConfig.ts`, `src/world/createSky.ts`
 
 ## Update (2026-08-17, po pierwszym fixie)
