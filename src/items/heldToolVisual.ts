@@ -108,41 +108,41 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     rotation: [Math.PI, 0, Math.PI / 2],
     scale: 1.15,
   },
-  // No GLB yet (plan 160) — knife family.
+  // Quaternius Dagger_2 — knife family.
   damascus_knife: {
     position: [0, 0.12, -0.01],
     rotation: [Math.PI, 0, Math.PI / 2],
     scale: 1.25,
   },
-  // No GLB yet (plan 160) — short_sword family.
+  // Quaternius Sword_2 (falchion) — short_sword family.
   damascus_short_sword: {
     position: [-0.22, 0.12, -0.02],
     rotation: [0, 0, Math.PI / 2],
     scale: 0.85,
     gripLocalOffset: [0, -0.18, 0],
   },
-  // No GLB yet (plan 160) — long_sword family.
+  // Quaternius Sword_Big — long_sword family.
   damascus_long_sword: {
     position: [-0.3, 0.12, -0.02],
     rotation: [0, 0, Math.PI / 2],
     scale: 1,
     gripLocalOffset: [0, -0.25, 0],
   },
-  // No GLB yet (plan 160) — long_sword family.
+  // Quaternius Claymore reminted to volcanic glass — long_sword family.
   obsidian_sword: {
     position: [-0.3, 0.12, -0.02],
     rotation: [0, 0, Math.PI / 2],
     scale: 1,
     gripLocalOffset: [0, -0.25, 0],
   },
-  // No GLB yet (plan 160) — axe family, slightly larger.
+  // Quaternius Axe Double — axe family, slightly larger.
   battle_axe: {
     position: [0.02, 0.13, -0.02],
     rotation: [Math.PI / 2, Math.PI / 2, 0],
-    scale: 1.4,
+    scale: 1.3,
     gripLocalOffset: [0, 0, -0.32],
   },
-  // No GLB yet (plan 160) — long_sword family.
+  // Quaternius Sword_Golden — long_sword family.
   masterwork_sword: {
     position: [-0.3, 0.12, -0.02],
     rotation: [0, 0, Math.PI / 2],
@@ -174,6 +174,12 @@ export const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }
   long_sword: { url: '/models/items/long_sword.glb', maxSize: 0.95 },
   pitchfork: { url: '/models/items/pitchfork.glb', maxSize: 0.81 },
   sickle: { url: '/models/items/sickle.glb', maxSize: 0.36 },
+  damascus_knife: { url: '/models/items/damascus_knife.glb', maxSize: 0.28 },
+  damascus_short_sword: { url: '/models/items/damascus_short_sword.glb', maxSize: 0.75 },
+  damascus_long_sword: { url: '/models/items/damascus_long_sword.glb', maxSize: 0.98 },
+  obsidian_sword: { url: '/models/items/obsidian_sword.glb', maxSize: 1.05 },
+  battle_axe: { url: '/models/items/battle_axe.glb', maxSize: 0.65 },
+  masterwork_sword: { url: '/models/items/masterwork_sword.glb', maxSize: 0.95 },
 }
 
 const HELD_ASSET_ID: Partial<Record<ToolKind, string>> = {
@@ -185,6 +191,12 @@ const HELD_ASSET_ID: Partial<Record<ToolKind, string>> = {
   long_sword: 'held:long_sword',
   pitchfork: 'held:pitchfork',
   sickle: 'held:sickle',
+  damascus_knife: 'held:damascus_knife',
+  damascus_short_sword: 'held:damascus_short_sword',
+  damascus_long_sword: 'held:damascus_long_sword',
+  obsidian_sword: 'held:obsidian_sword',
+  battle_axe: 'held:battle_axe',
+  masterwork_sword: 'held:masterwork_sword',
 }
 
 export type HeldMountContext = {

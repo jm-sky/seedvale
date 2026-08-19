@@ -424,7 +424,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'nóż damasceński',
     categories: ['tool', 'weapon'],
     weight: 0.35,
-    color: 0x5a6570,
+    color: 0x6fa5b8,
     description: 'Krótki nóż z falistym damasceńskim ostrzem. Lżejszy i ostrzejszy od zwykłego noża — nadal nadaje się do pracy przy zwłokach.'
   },
   damascus_short_sword: {
@@ -432,7 +432,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'krótki miecz damasceński',
     categories: ['weapon'],
     weight: 1.5,
-    color: 0x5a6570,
+    color: 0x6fa5b8,
     description: 'Krótki miecz z damasceńskiej stali. Szybki, ostry i lepiej wyważony niż zwykły krótki miecz.'
   },
   damascus_long_sword: {
@@ -440,7 +440,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'długi miecz damasceński',
     categories: ['weapon'],
     weight: 2.7,
-    color: 0x4a5560,
+    color: 0x3f5975,
     description: 'Elitarny długi miecz z damasceńskiej stali. Cięższy i wyraźnie groźniejszy od zwykłego miecza.'
   },
   obsidian_sword: {
@@ -448,7 +448,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'obsydianowy miecz',
     categories: ['weapon'],
     weight: 2.0,
-    color: 0x1a1420,
+    color: 0x4a3068,
     description: 'Rzadki miecz z wulkanicznego szkła. Ostrze tnie wyjątkowo ostro, ale nie jest to niezniszczalna broń.'
   },
   battle_axe: {
@@ -464,7 +464,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'mistrzowski miecz',
     categories: ['weapon'],
     weight: 2.4,
-    color: 0xc0c8d0,
+    color: 0xe4ce75,
     description: 'Wysokiej jakości stalowy miecz kowalski. Lepszy od zwykłego miecza, mniej egzotyczny niż damasceńskie ostrza.'
   },
 }

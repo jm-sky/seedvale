@@ -48,6 +48,12 @@ describe('assetIndex', () => {
       'held:long_sword',
       'held:pitchfork',
       'held:sickle',
+      'held:damascus_knife',
+      'held:damascus_short_sword',
+      'held:damascus_long_sword',
+      'held:obsidian_sword',
+      'held:battle_axe',
+      'held:masterwork_sword',
     ]) {
       expect(ids.has(id), id).toBe(true)
     }

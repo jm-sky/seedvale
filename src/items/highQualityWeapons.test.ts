@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { createHeldTool, isToolKind } from './HeldTool'
+import { HELD_GLB } from './heldToolVisual'
 import { Inventory } from './Inventory'
 import { isChopTool, isHarvestKnife, ITEM_CATALOG } from './itemCatalog'
+import { ITEM_GLB_SPECS } from './itemModels'
 import { hasItemKindCategory, ITEM_DEFS } from './items'
 import { isMerchantStock, merchantPrice, tradeValue } from './tradeCatalog'
 
@@ -23,7 +25,9 @@ describe('high-quality melee weapons (plan 160)', () => {
       expect(ITEM_CATALOG[kind].melee).not.toBeNull()
       expect(ITEM_CATALOG[kind].defense?.canBlock).toBe(true)
       expect(ITEM_CATALOG[kind].spawn).toBe('none')
-      expect(ITEM_CATALOG[kind].modelUrl).toBeNull()
+      expect(ITEM_CATALOG[kind].modelUrl).toBe(`/models/items/${kind}.glb`)
+      expect(ITEM_GLB_SPECS[kind]?.url).toBe(`/models/items/${kind}.glb`)
+      expect(HELD_GLB[kind]?.url).toBe(`/models/items/${kind}.glb`)
       expect(isToolKind(kind)).toBe(true)
       expect(isMeleeTool(kind)).toBe(true)
     }

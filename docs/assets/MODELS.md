@@ -70,12 +70,12 @@ If the feature needs no new model, do nothing to this file.
 | M41 | Pine tree variants (`pine_1`/`pine_3`/`pine_5`) | Textured single-tree conifers for `TREE_SPECS` — no glTF pine ships in Ultimate Stylized Nature, so `PineTree_1/3/5.fbx` + `PineTree_Bark`/`PineTree_Leaves` textures converted `FBX2glTF` → `gltf-transform` (attach textures) → `gltfpack -cc -tw -tl 512` | `wired` | plan 140 (`nature/pine_1.glb`, `pine_3.glb`, `pine_5.glb`) |
 | M42 | Tree stump (harvest remnant) | Small vertex-color stump swapped in on the final chop stage (`treeVisuals.ts`'s `createTreeStageMesh`); procedural `createTreeStump` fallback mandatory — revert to it if the GLB reads oddly next to textured living trees in browser | `wired` | plan 140 (`nature/tree_stump.glb`, source: Quaternius Ultimate Nature Pack `TreeStump.fbx`) |
 | M43 | Willow (textured) | Same style constraint as pine — the only source found (Quaternius Ultimate Nature Pack) is vertex-color, rejected. A textured willow (Nature MegaKit / Poly Pizza) is still wanted but not required to unblock the rest of this plan | `needed` | plan 140 |
-| M44 | Damascus knife | Held melee + corpse harvest; Kupiec stock | `needed` | plan 160 (`items/damascus_knife.glb`) |
-| M45 | Damascus short sword | Held melee; Kupiec stock | `needed` | plan 160 (`items/damascus_short_sword.glb`) |
-| M46 | Damascus long sword | Held melee; quest `grozny-wilk` reward | `needed` | plan 160 (`items/damascus_long_sword.glb`) |
-| M47 | Obsidian sword | Held melee; volcanic-glass blade; quest `wilcza-jama` reward | `needed` | plan 160 (`items/obsidian_sword.glb`) |
-| M48 | Battle axe | Held melee + tree chop; Kupiec stock | `needed` | plan 160 (`items/battle_axe.glb`) |
-| M49 | Masterwork sword | Held melee; high-quality steel; Kupiec stock | `needed` | plan 160 (`items/masterwork_sword.glb`) |
+| M44 | Damascus knife | Held melee + corpse harvest; Kupiec stock. Quaternius `Dagger_2` with baked teal/silver damascus steel (not gray) | `wired` | plan 160 (`items/damascus_knife.glb`) |
+| M45 | Damascus short sword | Held melee; Kupiec stock. Quaternius `Sword_2` (falchion) with baked teal/navy damascus | `wired` | plan 160 (`items/damascus_short_sword.glb`) |
+| M46 | Damascus long sword | Held melee; quest `grozny-wilk` reward. Quaternius `Sword_Big` with baked teal/navy damascus | `wired` | plan 160 (`items/damascus_long_sword.glb`) |
+| M47 | Obsidian sword | Held melee; volcanic-glass purple/black (Claymore remint, not gray/red); quest `wilcza-jama` reward | `wired` | plan 160 (`items/obsidian_sword.glb`) |
+| M48 | Battle axe | Held melee + tree chop; Kupiec stock. Quaternius Axe Double | `wired` | plan 160 (`items/battle_axe.glb`) |
+| M49 | Masterwork sword | Held melee; Kupiec stock. Quaternius `Sword_Golden` | `wired` | plan 160 (`items/masterwork_sword.glb`) |
 
 ## Wired (reference — do not treat as open work)
 
@@ -87,7 +87,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
 | Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed, rock/log, ore piles, cemetery / gravestones |
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+) |
-| Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword |
+| Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork) |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
 | FX | fire tip (handheld, village torch, campfire flame); blood splat (animal death); harvested remains (pile / large bone / hide) |
 

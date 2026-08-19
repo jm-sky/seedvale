@@ -497,8 +497,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: { damage: 16, range: 1.6, arcDot: 0.6, windUp: 0.11, hitWindow: 0.08, recovery: 0.16, staminaCost: 4 },
     defense: { canBlock: true, baseBlockChance: 0.16, partialReduction: 0.4 },
     spawn: 'none',
-    modelUrl: null,
-    notes: 'Plan 160 — Kupiec stock. Better knife; still harvests corpses. No GLB yet; procedural held/drop mesh.',
+    modelUrl: '/models/items/damascus_knife.glb',
+    notes: 'Plan 160 — Kupiec stock. Better knife; still harvests corpses. Quaternius Dagger_2 with damascus two-tone steel (teal/pale silver), not gray.',
   },
   damascus_short_sword: {
     kind: 'damascus_short_sword',
@@ -507,8 +507,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: { damage: 24, range: 2.15, arcDot: 0.5, windUp: 0.16, hitWindow: 0.1, recovery: 0.22, staminaCost: 7 },
     defense: { canBlock: true, baseBlockChance: 0.26, partialReduction: 0.5 },
     spawn: 'none',
-    modelUrl: null,
-    notes: 'Plan 160 — Kupiec stock. Faster/stronger short sword. No GLB yet; procedural held/drop mesh.',
+    modelUrl: '/models/items/damascus_short_sword.glb',
+    notes: 'Plan 160 — Kupiec stock. Faster/stronger short sword. Quaternius Sword_2 (falchion) with damascus two-tone steel.',
   },
   damascus_long_sword: {
     kind: 'damascus_long_sword',
@@ -517,8 +517,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: { damage: 40, range: 2.65, arcDot: 0.35, windUp: 0.27, hitWindow: 0.12, recovery: 0.36, staminaCost: 13 },
     defense: { canBlock: true, baseBlockChance: 0.34, partialReduction: 0.6 },
     spawn: 'none',
-    modelUrl: null,
-    notes: 'Plan 160 — quest reward (grozny-wilk), not Kupiec stock. Elite long sword. No GLB yet; procedural held/drop mesh.',
+    modelUrl: '/models/items/damascus_long_sword.glb',
+    notes: 'Plan 160 — quest reward (grozny-wilk), not Kupiec stock. Quaternius Sword_Big with damascus two-tone steel.',
   },
   obsidian_sword: {
     kind: 'obsidian_sword',
@@ -527,8 +527,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: { damage: 46, range: 2.5, arcDot: 0.38, windUp: 0.24, hitWindow: 0.11, recovery: 0.32, staminaCost: 11 },
     defense: { canBlock: true, baseBlockChance: 0.22, partialReduction: 0.45 },
     spawn: 'none',
-    modelUrl: null,
-    notes: 'Plan 160 — quest reward (wilcza-jama), not Kupiec stock. Volcanic-glass blade, highest offense, weaker block. No GLB yet; procedural held/drop mesh. Durability is plan 161.',
+    modelUrl: '/models/items/obsidian_sword.glb',
+    notes: 'Plan 160 — quest reward (wilcza-jama), not Kupiec stock. Quaternius Claymore reminted to volcanic-glass purple/black, not gray steel. Durability is plan 161.',
   },
   battle_axe: {
     kind: 'battle_axe',
@@ -537,8 +537,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: { damage: 28, range: 2.15, arcDot: 0.28, windUp: 0.38, hitWindow: 0.14, recovery: 0.5, staminaCost: 14 },
     defense: { canBlock: true, baseBlockChance: 0.24, partialReduction: 0.5 },
     spawn: 'none',
-    modelUrl: null,
-    notes: 'Plan 160 — Kupiec stock. Heavier axe that still chops trees (`isChopTool`). No GLB yet; procedural held/drop mesh.',
+    modelUrl: '/models/items/battle_axe.glb',
+    notes: 'Plan 160 — Kupiec stock. Heavier axe that still chops trees (`isChopTool`). Quaternius Axe Double.',
   },
   masterwork_sword: {
     kind: 'masterwork_sword',
@@ -547,8 +547,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: { damage: 34, range: 2.6, arcDot: 0.35, windUp: 0.26, hitWindow: 0.12, recovery: 0.34, staminaCost: 12 },
     defense: { canBlock: true, baseBlockChance: 0.32, partialReduction: 0.58 },
     spawn: 'none',
-    modelUrl: null,
-    notes: 'Plan 160 — Kupiec stock. High-quality steel long sword, cheaper than damascus long. No GLB yet; procedural held/drop mesh.',
+    modelUrl: '/models/items/masterwork_sword.glb',
+    notes: 'Plan 160 — Kupiec stock. Quaternius Sword_Golden — gold blade, not damascus.',
   },
 }
 

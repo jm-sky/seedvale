@@ -43,6 +43,12 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/items/sickle.glb` | J-Toastie | [poly.pizza/m/InQGR6t3yY](https://poly.pizza/m/InQGR6t3yY) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Sickle` — pickup wioski (plan 082); wymagana atrybucja |
 | `public/models/items/shovel.glb` | Quaternius | [poly.pizza/m/oNBQSf87ZJ](https://poly.pizza/m/oNBQSf87ZJ) | CC0 1.0 | `Shovel` — drop + held (plan 082 / held visual) |
 | `public/models/items/knife.glb` | Quaternius | [poly.pizza/m/N9bfPFP1hr](https://poly.pizza/m/N9bfPFP1hr) | CC0 1.0 | `Knife` — drop + held |
+| `public/models/items/damascus_knife.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Dagger_2` — OBJ→GLB (`obj2gltf`) + baked teal/silver damascus remap (not gray steel) + `gltf-transform` meshopt (plan 160) |
+| `public/models/items/damascus_short_sword.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Sword_2` (falchion) — same conversion; baked teal/navy damascus (plan 160) |
+| `public/models/items/damascus_long_sword.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Sword_Big` — same conversion; baked teal/navy damascus (plan 160) |
+| `public/models/items/obsidian_sword.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Claymore` — original red reminted to volcanic-glass purple/black, not gray (plan 160) |
+| `public/models/items/masterwork_sword.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Sword_Golden` — gold blade (plan 160) |
+| `public/models/items/battle_axe.glb` | Quaternius | [poly.pizza/m/uHXdfMmO8g](https://poly.pizza/m/uHXdfMmO8g) | CC0 1.0 | `Axe Double` — drop + held; also in Medieval Weapons Pack as `Axe_Double` (plan 160) |
 | `public/models/items/axe.glb` | CreativeTrio | [poly.pizza/m/OhZDdlrx29](https://poly.pizza/m/OhZDdlrx29) | CC0 1.0 | `Axe` — drop + held |
 | `public/models/settlement/hay.glb` | Quaternius | [poly.pizza/m/Yu8TOERkpw](https://poly.pizza/m/Yu8TOERkpw) | CC0 1.0 | `Hay` — clutter przy ogrodach (plan 082) |
 | `public/models/items/pickaxe.glb` | CreativeTrio | [poly.pizza/m/cJp88qPPLc](https://poly.pizza/m/cJp88qPPLc) | CC0 1.0 | `Pickaxe` — dekor przy stockpile; gameplay mining later (plan 082) |

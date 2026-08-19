@@ -72,12 +72,12 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | coin | moneta | — | — | none (quest reward) | procedural | plan 129; near-zero weight (0.001 kg); quest reward + land-plot purchase price; separate from the shell/barter merchant economy |
 | herb | zioło lecznicze | — | — | world chunk (flora pool) | procedural | plan 153; Opatrz (+8 health) — free but scarce (half mushroom's weight) |
 | bandage | opatrunek | — | — | none (Kupiec) | procedural | plan 153; Opatrz (+35 health) — reliable, purchasable healing |
-| damascus_knife | nóż damasceński | yes | 16 | none (Kupiec) | procedural (M44) | plan 160; harvests corpses like knife |
-| damascus_short_sword | krótki miecz damasceński | yes | 24 | none (Kupiec) | procedural (M45) | plan 160 |
-| damascus_long_sword | długi miecz damasceński | yes | 40 | none (quest grozny-wilk) | procedural (M46) | plan 160; not Kupiec stock |
-| obsidian_sword | obsydianowy miecz | yes | 46 | none (quest wilcza-jama) | procedural (M47) | plan 160; volcanic glass; not Kupiec stock |
-| battle_axe | topór bojowy | yes | 28 | none (Kupiec) | procedural (M48) | plan 160; chops trees like axe (`isChopTool`) |
-| masterwork_sword | mistrzowski miecz | yes | 34 | none (Kupiec) | procedural (M49) | plan 160; elite steel, cheaper than damascus long |
+| damascus_knife | nóż damasceński | yes | 16 | none (Kupiec) | `items/damascus_knife.glb` (M44) | plan 160; teal/silver damascus, not gray; harvests corpses like knife |
+| damascus_short_sword | krótki miecz damasceński | yes | 24 | none (Kupiec) | `items/damascus_short_sword.glb` (M45) | plan 160; teal/navy damascus, not gray |
+| damascus_long_sword | długi miecz damasceński | yes | 40 | none (quest grozny-wilk) | `items/damascus_long_sword.glb` (M46) | plan 160; teal/navy damascus; not Kupiec stock |
+| obsidian_sword | obsydianowy miecz | yes | 46 | none (quest wilcza-jama) | `items/obsidian_sword.glb` (M47) | plan 160; volcanic-glass purple/black, not gray steel; not Kupiec stock |
+| battle_axe | topór bojowy | yes | 28 | none (Kupiec) | `items/battle_axe.glb` (M48) | plan 160; chops trees like axe (`isChopTool`) |
+| masterwork_sword | mistrzowski miecz | yes | 34 | none (Kupiec) | `items/masterwork_sword.glb` (M49) | plan 160; gold Quaternius Sword_Golden, cheaper than damascus long |
 
 ## Roadmap (not done)
 

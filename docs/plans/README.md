@@ -89,7 +89,7 @@ Implementation complete; needs play/browser check. This section lists **plans in
 | `2026-08-14--111--house-construction.md` | House Builder (MegaKit). Playtest 2026-08-18: **niektóre domki źle złożone** — zostaje 🔍 — [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md) | 🔴 | XL | ~~109~~ |
 | `2026-08-14--110--quests-v3-closure-world-identity-and-lifecycle.md` | Domknięcie planu 093: lifecycle `failed`/`invalidated`, predator `onDeath`, groźny wilk, failure owcy, `landmarkId` / rebind po save. Playtest 2026-08-18 **odłożony** — zostaje 🔍 | 🔴 | L | ~~093~~ |
 | `2026-08-18--155--inventory-item-instances-and-trap-lifecycle.md` | Generyczny mechanizm `ItemInstance`, price algo | ✅ | L | ~~141~~ |
-| `2026-08-18--160--high-quality-melee-weapons.md` | Sześć HQ broni białych (`damascus_*` / `obsidian_sword` / `battle_axe` / `masterwork_sword`) w istniejącym katalogu/melee/defense; battle axe ścina drzewa; damascus knife harvestuje zwłoki; Kupiec 4 sztuki + 2 quest-only; brak GLB (M44–M49). Techniczna weryfikacja zielona (tsc/lint/build/test, 1130 testów); browser pending | 🟡 | M | ~~134~~ ~~150~~ |
+| `2026-08-18--160--high-quality-melee-weapons.md` | Sześć HQ broni białych (`damascus_*` / `obsidian_sword` / `battle_axe` / `masterwork_sword`) w istniejącym katalogu/melee/defense; battle axe ścina drzewa; damascus knife harvestuje zwłoki; Kupiec 4 sztuki + 2 quest-only; GLB wired (M44–M49; damascus teal/navy, obsidian volcanic glass). Techniczna weryfikacja zielona; browser pending (grip + look) | 🟡 | M | ~~134~~ ~~150~~ |
 
 Historical playtest queue (files in archive): [below](#playtest-queue-archived-batch).
 

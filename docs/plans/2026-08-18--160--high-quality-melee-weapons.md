@@ -1,7 +1,7 @@
 # Plan: High-quality melee weapons
 
 **Created:** 2026-08-18
-**Status:** `verification needed` 🔍 — type-check/lint/build/test zielone 2026-08-19; browser pending; no HQ GLBs in repo
+**Status:** `verification needed` 🔍 — type-check/lint/build/test zielone 2026-08-19; GLB wired (damascus teal/navy, obsidian volcanic glass); browser pending (grip + look)
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~134~~ ~~150~~
 
@@ -245,7 +245,7 @@ Nie dodawać managera broni ani globalnego ticka weapon system.
 - [x] Battle axe działa w walce i nadal może być używany jako siekiera w istniejącym harvest flow.
 - [x] Masterwork sword stanowi wysokiej jakości stalową alternatywę dla Damascus.
 - [x] Nowe bronie korzystają wyłącznie z istniejącego melee/defense pipeline.
-- [ ] Dostępne assety są poprawnie podłączone i wyświetlają się w dłoni. — brak GLB w repo; proceduralny fallback. Ścieżki: `public/models/items/{damascus_knife,damascus_short_sword,damascus_long_sword,obsidian_sword,battle_axe,masterwork_sword}.glb`
+- [x] Dostępne assety są poprawnie podłączone i wyświetlają się w dłoni. — GLB w `public/models/items/` (Quaternius Medieval Weapons Pack + Axe Double). Damascus: baked teal/navy/pale silver, not gray. Obsidian: Claymore reminted to volcanic purple/black glass. Masterwork: `Sword_Golden`. Battle axe: Axe Double. Grip orientation not browser-verified.
 - [x] Brak assetu nie blokuje definicji itemu, jeżeli repozytorium nie posiada odpowiedniego modelu.
 - [x] Testy jednostkowe pokrywają rejestrację itemów, statystyki i battle axe jako narzędzie + broń.
 - [x] Build/type-check/test przechodzą.
@@ -253,6 +253,6 @@ Nie dodawać managera broni ani globalnego ticka weapon system.
 
 ## Implementation summary
 
-Zaimplementowane 2026-08-19. Sześć `ItemKind` w katalogu + hold/melee/defense. Kupiec: `damascus_knife` 90 / `damascus_short_sword` 140 / `masterwork_sword` 160 / `battle_axe` 110. Quest-only: `grozny-wilk` → `damascus_long_sword`, `wilcza-jama` → `obsidian_sword` (`RESOURCE_TRADE_VALUE` 240 / 320). `isChopTool` / `isHarvestKnife` rozszerzają istniejące bramki siekiery/noża. Modele: `modelUrl: null` (M44–M49 `needed`). Durability/ostrzenie poza zakresem (plan 161).
+Zaimplementowane 2026-08-19. Sześć `ItemKind` w katalogu + hold/melee/defense. Kupiec: `damascus_knife` 90 / `damascus_short_sword` 140 / `masterwork_sword` 160 / `battle_axe` 110. Quest-only: `grozny-wilk` → `damascus_long_sword`, `wilcza-jama` → `obsidian_sword` (`RESOURCE_TRADE_VALUE` 240 / 320). `isChopTool` / `isHarvestKnife` rozszerzają istniejące bramki siekiery/noża. Modele: `modelUrl` + `ITEM_GLB_SPECS` + `HELD_GLB` (M44–M49 `wired`). Damascus/obsidian mają baked characteristic materials (teal banded steel / volcanic glass), nie szary miecz. Durability/ostrzenie poza zakresem (plan 161).
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

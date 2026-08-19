@@ -20,8 +20,17 @@ Pozyskanie:
 - Quest `wilcza-jama` → `obsidian_sword` (zamiast 40 monet)
 - Quest-only mają `RESOURCE_TRADE_VALUE` 240 / 320, bo wpis w `MERCHANT_PRICES` zrobiłby je kupowalnymi
 
-Modele: wszystkie `modelUrl: null`. Proceduralny fallback z rodziny (nóż / krótki miecz / długi miecz / siekiera). Ścieżki pod przyszłe GLB w MODELS.md M44–M49. Nie podpinano `axe.glb` jako battle axe.
+Modele (2026-08-19): `modelUrl` + `ITEM_GLB_SPECS` + `HELD_GLB` dla wszystkich sześciu. Źródło: Quaternius Medieval Weapons Pack (OBJ→GLB `obj2gltf`, meshopt) + Poly Pizza `Axe Double`. Native pack blades are gray vertex-color steel — **not used as-is for damascus/obsidian**.
+
+Characteristic remint (baked into the GLB palette, not a runtime tint):
+
+- damascus (`Dagger_2` / `Sword_2` falchion / `Sword_Big`): LightSteel pale silver, Steel teal, DarkSteel navy; wood/gold kept. Must not read as a gray sword.
+- obsidian (`Claymore`): original red → volcanic purple/black glass. Must not read as gray or leftover red.
+- masterwork (`Sword_Golden`): gold blade.
+- battle_axe: Axe Double, ordinary steel/wood is OK.
+
+Procedural fallback still uses `ITEM_DEFS.color` (teal / violet / gold) if a GLB fails. Grip orientation (especially falchion and claymore) is **not browser-verified**.
 
 Poza zakresem: durability, ostrzenie, condition (plan 161). `ItemInstance` nie jest używane.
 
-Browser: held/combat/chop battle axe i harvest damascus knife do ręcznego sprawdzenia na `npm run dev` (port 5577).
+Browser: held/combat/chop battle axe, harvest damascus knife, and that damascus reads teal-banded (not gray) and obsidian reads volcanic glass (not gray/red) — `npm run dev` port 5577.

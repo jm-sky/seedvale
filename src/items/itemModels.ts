@@ -46,6 +46,28 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
     maxSize: 1.15,
     groundRotation: [0, 0, Math.PI / 2.4],
   },
+  damascus_knife: { url: '/models/items/damascus_knife.glb', maxSize: 0.35 },
+  damascus_short_sword: {
+    url: '/models/items/damascus_short_sword.glb',
+    maxSize: 0.9,
+    groundRotation: [0, 0, Math.PI / 2.4],
+  },
+  damascus_long_sword: {
+    url: '/models/items/damascus_long_sword.glb',
+    maxSize: 1.2,
+    groundRotation: [0, 0, Math.PI / 2.4],
+  },
+  obsidian_sword: {
+    url: '/models/items/obsidian_sword.glb',
+    maxSize: 1.25,
+    groundRotation: [0, 0, Math.PI / 2.4],
+  },
+  battle_axe: { url: '/models/items/battle_axe.glb', maxSize: 0.95 },
+  masterwork_sword: {
+    url: '/models/items/masterwork_sword.glb',
+    maxSize: 1.15,
+    groundRotation: [0, 0, Math.PI / 2.4],
+  },
   mushroom: { url: '/models/nature/mushroom_a.glb', maxSize: 0.3 },
 }
 
