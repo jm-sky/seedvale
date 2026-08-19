@@ -7,6 +7,7 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
 import type { TradeResult } from '../items/trade'
+import type { CreateSaveResult, SaveSlotInfo } from '../persistence/saveDb'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
@@ -57,13 +58,15 @@ type InventoryState = {
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
 }
 type PauseMenuState = {
-  open: boolean; seed: number; playerName: string
+  open: boolean; seed: number; playerName: string; activeSaveName: string
   onPause: (() => void) | null; onResume: (() => void) | null; onToggleGui: (() => void) | null
   onNameChange: ((name: string) => void) | null; onNameCommit: ((name: string) => void) | null
-  onSave: (() => void) | null; onRefresh: (() => void) | null
+  onSave: (() => void) | null; onSaveAs: ((name: string) => Promise<CreateSaveResult>) | null
+  onLoadSave: ((id: string) => void) | null; onListSaves: (() => Promise<SaveSlotInfo[]>) | null
+  onRefresh: (() => void) | null
   onBuildSimpleFire: (() => boolean) | null; onBuildFirePit: (() => boolean) | null
   onLightBranch: (() => LightActionResult) | null; onLightWoodenTorch: (() => LightActionResult) | null
-  onNewGame: (() => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
+  onNewGame: ((name: string) => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
   saveStatus: string
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
@@ -196,7 +199,7 @@ type TouchChromeState = {
   onCycleTarget: (() => void) | null
 }
 
-type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus'>>
+type PauseHandlers = Partial<Omit<PauseMenuState, 'open' | 'seed' | 'playerName' | 'saveStatus' | 'activeSaveName'>>
 
 const HUD_HINT_TOUCH = 'Joystick = ruch · przeciągnij = kamera · E = interakcja'
 /** Shortened (review 007 C6) — Notatki (Ustawienia) is now canon for the full
@@ -237,8 +240,8 @@ export const ui = reactive({
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null } as InventoryState,
   pauseMenu: {
-    open: false, seed: 0, playerName: '', onPause: null, onResume: null, onToggleGui: null,
-    onNameChange: null, onNameCommit: null, onSave: null, onRefresh: null,
+    open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
+    onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null, onRefresh: null,
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
     onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null,
     saveStatus: '',
@@ -357,6 +360,7 @@ export function resetGraphicsQuality(): void {
 export function setPauseSeed(seed: number): void { ui.pauseMenu.seed = seed }
 export function setPausePlayerName(name: string): void { ui.pauseMenu.playerName = name }
 export function setPauseSaveStatus(status: string): void { ui.pauseMenu.saveStatus = status }
+export function setPauseActiveSaveName(name: string): void { ui.pauseMenu.activeSaveName = name }
 
 export function openQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation; ui.questLog.open = true; emitUiOpen() }
 export function refreshQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation }
@@ -641,6 +645,10 @@ export function toggleWorldMap(playerX: number, playerZ: number): void {
 export function openCharacterScreen(): void { ui.characterScreen.open = true; emitUiOpen() }
 export function closeCharacterScreen(): void { ui.characterScreen.open = false }
 export function isCharacterScreenOpen(): boolean { return ui.characterScreen.open }
+export function toggleCharacterScreen(): void {
+  if (ui.characterScreen.open) closeCharacterScreen()
+  else openCharacterScreen()
+}
 /** Pushed once/frame by `gameLoop.ts` regardless of whether the screen is
  *  open — same convention as `setHudPlayerNeeds` — with a cheap bail so an
  *  unchanged frame doesn't touch the reactive object. */

@@ -64,7 +64,15 @@ import {
   setActiveMonitor,
   setActiveProgramCensus,
 } from '../perf'
-import { clearSave, writeSave } from '../persistence/saveDb'
+import {
+  beginNewSave,
+  createSave,
+  getActiveSaveId,
+  listSaves,
+  setActiveSaveId,
+  writeSave,
+} from '../persistence/saveDb'
+import { pickActiveSaveId } from '../persistence/saveSlots'
 import { PlayerController } from '../player/PlayerController'
 import {
   drinkWater as drinkWaterNeeds,
@@ -124,11 +132,11 @@ import {
 } from '../world/animalTraps'
 import { createLights } from '../world/createLights'
 import { createSky } from '../world/createSky'
-import { createDayNightState } from '../world/dayNight'
+import { createDayNightState, parseTimeOfDayFromUrl } from '../world/dayNight'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
-import { randomSeed, syncSeedInUrl } from '../world/parseSeed'
+import { randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
 import { createPointLightBudget } from '../world/pointLightBudget'
 import { createTimeSkip } from '../world/timeSkip'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
@@ -184,6 +192,7 @@ function grantStartingLoadout(inventory: Inventory): void {
 export async function createApp(
   container: HTMLElement,
   initialSave?: SaveData | null,
+  options?: { newGame?: boolean },
 ): Promise<() => void> {
   // NB: must NOT be `seedvale-touch` — that's the touch-overlay component's own
   // block class (`.seedvale-touch { position:absolute; inset:0; z-index:7;
@@ -201,6 +210,10 @@ export async function createApp(
   const perfMonitor = createPerfMonitor()
   setActiveMonitor(perfMonitor)
   if (isPerfUrlEnabled()) perfMonitor.setSource('url', true)
+  if (!initialSave && options?.newGame) {
+    config.seed = randomSeed()
+    syncSeedInUrl(config.seed)
+  }
   if (initialSave) {
     config.seed = initialSave.config.seed
     // Merge field-by-field rather than replacing `config.terrain` wholesale —
@@ -218,10 +231,17 @@ export async function createApp(
   }
   saveAllDomains(config)
 
+  const timeOverride = parseTimeOfDayFromUrl()
   const dayNight = createDayNightState(
     initialSave
-      ? { timeOfDay: initialSave.timeOfDay, elapsedDays: initialSave.elapsedDays }
-      : undefined,
+      ? {
+          timeOfDay: timeOverride ?? initialSave.timeOfDay,
+          elapsedDays: initialSave.elapsedDays,
+          ...(timeOverride != null ? { enabled: false } : {}),
+        }
+      : timeOverride != null
+        ? { timeOfDay: timeOverride, enabled: false }
+        : undefined,
   )
   // Climate (season + weather) is a pure function of (seed, elapsedDays) —
   // no save field, "restored" for free by re-deriving from the values above
@@ -787,8 +807,13 @@ export async function createApp(
     spawnPoints: bundle.fauna.getSpawners().map((s) => ({ id: s.id, ...snapshotSpawnPointState(s) })),
   })
 
-  const saveNow = (): void => {
-    void writeSave(buildSaveData())
+  const saveNow = (): Promise<void> => writeSave(buildSaveData())
+
+  const refreshActiveSaveName = async (): Promise<void> => {
+    const slots = await listSaves()
+    const id = pickActiveSaveId(getActiveSaveId(), slots)
+    const active = slots.find((slot) => slot.id === id)
+    vueUi.setPauseActiveSaveName(active?.name ?? '')
   }
 
   const updateSkyFromGui = () => {
@@ -1760,6 +1785,10 @@ export async function createApp(
     exitGamePointerLock(renderer.domElement)
     vueUi.openSkillsScreen()
   }
+  const openCharacter = () => {
+    exitGamePointerLock(renderer.domElement)
+    vueUi.openCharacterScreen()
+  }
 
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
     onPause: () => {
@@ -1772,25 +1801,47 @@ export async function createApp(
     onWorldMap: () => {
       vueUi.openWorldMap(player.mesh.position.x, player.mesh.position.z)
     },
-    onToggleGui: () => gui.toggle(),
+    onToggleGui: () => {
+      const visible = gui.toggle()
+      setUrlSearchParam('gui', visible ? '1' : '0')
+    },
     onNameChange: (name) => player.setName(name),
     onNameCommit: (name) => {
       config.player.name = name
       savePlayer(config)
     },
     onSave: saveNow,
+    onSaveAs: async (name) => {
+      await saveNow()
+      const result = await createSave(name, buildSaveData())
+      if (result.ok) vueUi.setPauseActiveSaveName(result.name)
+      return result
+    },
+    onLoadSave: (id) => {
+      void (async () => {
+        await saveNow()
+        setActiveSaveId(id)
+        window.location.reload()
+      })()
+    },
+    onListSaves: () => listSaves(),
     onRefresh: () => window.location.reload(),
     onBuildSimpleFire: buildSimpleFire,
     onBuildFirePit: buildFirePit,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,
-    onNewGame: () => {
-      if (!window.confirm('Rozpocząć nową grę? Zapisany postęp zostanie usunięty.')) return
-      void clearSave()
-      config.seed = randomSeed()
-      void rebuildWorld(true)
+    onNewGame: (name) => {
+      void (async () => {
+        await saveNow()
+        beginNewSave(name)
+        config.seed = randomSeed()
+        await rebuildWorld(true)
+        await saveNow()
+        await refreshActiveSaveName()
+      })()
     },
   }, () => vueUi.isNpcDialogueMenuOpen())
+  void refreshActiveSaveName()
 
   touchControls = isTouchDevice()
     ? createTouchControls(container, keyboard.state, mouseLook.state, {
@@ -1865,7 +1916,7 @@ export async function createApp(
     climate, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
-    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills,
+    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork: (mode, x, z) => {
       if (heldTool.held() === 'pickaxe') {
         if (mode === 'level') startPickaxeLevelAt(x, z)

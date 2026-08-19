@@ -26,9 +26,14 @@ export function randomSeed(): number {
   return Math.floor(Math.random() * 0xffffffff)
 }
 
+/** Set or replace a query param without reload. */
+export function setUrlSearchParam(key: string, value: string): void {
+  const url = new URL(window.location.href)
+  url.searchParams.set(key, value)
+  window.history.replaceState({}, '', url)
+}
+
 /** Keep `?seed=` in the address bar without reload. */
 export function syncSeedInUrl(seed: number): void {
-  const url = new URL(window.location.href)
-  url.searchParams.set('seed', String(seed))
-  window.history.replaceState({}, '', url)
+  setUrlSearchParam('seed', String(seed))
 }

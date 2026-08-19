@@ -1,4 +1,5 @@
 import type { LightActionResult } from '../app/userActions'
+import type { CreateSaveResult, SaveSlotInfo } from '../persistence/saveDb'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type PauseMenuHandlers = {
@@ -8,12 +9,15 @@ export type PauseMenuHandlers = {
   onNameChange?: (name: string) => void
   onNameCommit?: (name: string) => void
   onSave?: () => void
+  onSaveAs?: (name: string) => Promise<CreateSaveResult>
+  onLoadSave?: (id: string) => void
+  onListSaves?: () => Promise<SaveSlotInfo[]>
   onRefresh?: () => void
   onBuildSimpleFire?: () => boolean
   onBuildFirePit?: () => boolean
   onLightBranch?: () => LightActionResult
   onLightWoodenTorch?: () => LightActionResult
-  onNewGame?: () => void
+  onNewGame?: (name: string) => void
   onQuestLog?: () => void
   onVillagers?: () => void
   onInventory?: () => void

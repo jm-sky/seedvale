@@ -222,6 +222,7 @@ export type GameLoopDeps = {
   openQuestLog: () => void
   openInventory: () => void
   openSkills: () => void
+  openCharacter: () => void
   startGroundWork: (mode: 'dig' | 'level', x: number, z: number) => void
   /** Start the axe chop channel for a gaze-selected tree (plan 057). */
   startTreeChop: (treeId: string, x: number, z: number) => void
@@ -297,7 +298,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     climate, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
-    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills,
+    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
@@ -499,6 +500,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const quickActionsConsumed = keyboard.consumeQuickActions()
       const minimapConsumed = keyboard.consumeMinimap()
       const skillsConsumed = keyboard.consumeSkills()
+      const characterConsumed = keyboard.consumeCharacter()
       setHighlight(null)
       vueUi.setCycleTargetAvailable(false)
       // Modal safety (plan 123): cancel any in-flight attack rather than let
@@ -519,6 +521,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         case 'timeSkip':
         case 'villagers':
         case 'worldConfig':
+          break
+        case 'character':
+          if (characterConsumed) vueUi.closeCharacterScreen()
           break
         case 'inventory':
           if (inventoryConsumed) inventoryScreen.close()
@@ -1010,6 +1015,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       if (keyboard.consumeQuestLog()) openQuestLog()
       if (keyboard.consumeInventory()) openInventory()
       if (keyboard.consumeSkills()) openSkills()
+      if (keyboard.consumeCharacter()) openCharacter()
       if (keyboard.consumeQuickActions()) quickActions.toggle()
       if (keyboard.consumeMinimap()) {
         vueUi.toggleWorldMap(player.mesh.position.x, player.mesh.position.z)

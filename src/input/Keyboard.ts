@@ -20,6 +20,8 @@ export type KeyState = {
   minimap: boolean
   /** Edge-triggered: set true on KeyU keydown, cleared by consumeSkills(). */
   skills: boolean
+  /** Edge-triggered: set true on KeyC keydown, cleared by consumeCharacter(). */
+  character: boolean
   /** Edge-triggered: set true on Space keydown, cleared by consumeJump(). */
   jump: boolean
   /** Edge-triggered: set true on Tab keydown, cleared by consumeCycleTarget()
@@ -46,13 +48,14 @@ const KEY_MAP: Record<string, keyof KeyState> = {
   KeyQ: 'quickActions',
   KeyM: 'minimap',
   KeyU: 'skills',
+  KeyC: 'character',
   Space: 'jump',
   Tab: 'cycleTarget',
 }
 
 /** Actions that latch true on keydown and are cleared by the consumer, not by keyup —
  *  so a tap registers exactly once regardless of how long the key stays down. */
-const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'cycleTarget', 'drop', 'interact', 'inventory', 'jump', 'minimap', 'questLog', 'quickActions', 'skills'])
+const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'character', 'cycleTarget', 'drop', 'interact', 'inventory', 'jump', 'minimap', 'questLog', 'quickActions', 'skills'])
 
 /** True while the event is headed for a text field — the pause menu's Character
  *  name input is the live case. Without this, `KEY_MAP` letters (w/a/s/d/e/l/g)
@@ -86,6 +89,8 @@ export function createKeyboard(): {
   consumeMinimap: () => boolean
   /** Reads and clears the pending skills-screen toggle press (`U`). */
   consumeSkills: () => boolean
+  /** Reads and clears the pending character-screen toggle press (`C`). */
+  consumeCharacter: () => boolean
   /** Reads and clears the pending jump press (`Space`). */
   consumeJump: () => boolean
   /** Reads and clears the pending interaction-cycle press (`Tab`, plan 153). */
@@ -106,6 +111,7 @@ export function createKeyboard(): {
     quickActions: false,
     minimap: false,
     skills: false,
+    character: false,
     jump: false,
     cycleTarget: false,
   }
@@ -133,7 +139,7 @@ export function createKeyboard(): {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
 
-  const consume = (key: 'interact' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'jump' | 'cycleTarget'): boolean => {
+  const consume = (key: 'interact' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'jump' | 'cycleTarget'): boolean => {
     if (!state[key]) return false
     state[key] = false
     return true
@@ -149,6 +155,7 @@ export function createKeyboard(): {
     consumeQuickActions: () => consume('quickActions'),
     consumeMinimap: () => consume('minimap'),
     consumeSkills: () => consume('skills'),
+    consumeCharacter: () => consume('character'),
     consumeJump: () => consume('jump'),
     consumeCycleTarget: () => consume('cycleTarget'),
     dispose: () => {

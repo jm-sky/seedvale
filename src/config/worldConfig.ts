@@ -130,7 +130,8 @@ export type WorldConfig = {
     adaptiveEnabled: boolean
   }
   /** Show lil-gui panel. Hidden by default; `?debug=1` or `?gui=1` reveals it,
-   *  `?gui=0` forces it hidden (review 007 C11). */
+   *  `?gui=0` forces it hidden (review 007 C11). Settings → Panel debug writes
+   *  `gui=1` / `gui=0` into the URL. */
   showGui: boolean
   player: {
     name: string

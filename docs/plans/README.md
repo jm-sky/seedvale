@@ -82,6 +82,7 @@ Construction
 | `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits.md` | Bows and critial hits | 🟡 | L | ~~150~~ ~~155~~ |
 | `2026-08-19--164--player-storage-and-container-system.md` | Players box for future companions | 🔴 | M | - |
 | `2026-08-19--165--vigor-hunger-thirst-and-rest.md`| Urealnić zachowanie Vigor, Hunger i Thirst | 🟡 | M | - |
+| `2026-08-19--167--npc-helper-resource-delivery.md` | NPC who gathers food for player | 🟡 | M | 164 |
 
 ### Fresh new
 
@@ -131,6 +132,7 @@ Done plans kept visible here (not archived) because a current plan above still d
 | `2026-08-18--155--inventory-item-instances-and-trap-lifecycle.md` | Generyczny `ItemInstance` + lifecycle pułapek — dependency of `159`, `161`, `162` |
 | `2026-08-18--156--npc-household-and-settlement-storage-logistics.md` | Fizyczny household/settlement crate + `[E]` stock — dependency of `152`, `159` |
 | `2026-08-18--160--high-quality-melee-weapons.md` | Sześć HQ broni białych, Kupiec + quest rewards — dependency of `161` |
+| `2026-08-19--166--named-save-slots.md` | Nazwane sloty IndexedDB; browser verified 2026-08-19 — kept until the next archive snapshot |
 
 ---
 

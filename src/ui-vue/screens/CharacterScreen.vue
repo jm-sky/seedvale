@@ -76,7 +76,7 @@ function isCritical(row: StatRow): boolean { return ratio(row) <= CRITICAL_RATIO
       </div>
 
       <div class="mt-4 text-[11px] opacity-60">
-        Esc — zamknij
+        C / Esc — zamknij
       </div>
     </div>
   </div>

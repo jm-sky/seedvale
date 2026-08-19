@@ -163,6 +163,105 @@
         font-family: monospace;
         opacity: 0.4;
       }
+      .seedvale-pause__saves {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 14px;
+        text-align: left;
+      }
+      .seedvale-pause__save {
+        display: flex;
+        align-items: stretch;
+        gap: 8px;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        font: inherit;
+        text-align: left;
+      }
+      .seedvale-pause__save.is-active {
+        border-color: rgba(61, 123, 209, 0.8);
+        background: rgba(61, 123, 209, 0.18);
+      }
+      .seedvale-pause__save-main {
+        flex: 1;
+        min-width: 0;
+        padding: 10px 12px;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .seedvale-pause__save-main:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .seedvale-pause__save-title {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .seedvale-pause__save-meta {
+        display: block;
+        margin-top: 2px;
+        font-size: 11px;
+        opacity: 0.7;
+      }
+      .seedvale-pause__save-delete {
+        flex: none;
+        width: 44px;
+        border: 0;
+        border-left: 1px solid rgba(255, 255, 255, 0.12);
+        background: transparent;
+        color: #f0a8a8;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .seedvale-pause__save-delete:hover {
+        background: rgba(248, 113, 113, 0.12);
+      }
+      .seedvale-pause__label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 12px;
+        opacity: 0.75;
+        text-align: left;
+      }
+      .seedvale-pause__input {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 10px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        color: #f2f6fa;
+        font: inherit;
+        font-size: 14px;
+      }
+      .seedvale-pause__error {
+        min-height: 1.2em;
+        margin: 0 0 10px;
+        font-size: 12px;
+        color: #f0a8a8;
+        text-align: left;
+      }
+      .seedvale-pause__button--danger {
+        background: transparent;
+        border-color: rgba(248, 113, 113, 0.4);
+        color: #f0a8a8;
+      }
+      .seedvale-pause__button--danger:hover {
+        background: rgba(248, 113, 113, 0.1);
+      }
       .seedvale-loading {
         position: absolute;
         inset: 0;

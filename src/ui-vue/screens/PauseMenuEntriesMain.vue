@@ -15,12 +15,22 @@ const buildDate = __BUILD_DATE__
 const emit = defineEmits<{
   'open-actions': []
   'open-settings': []
+  'open-save-as': []
+  'open-load': []
+  'open-new-game': []
 }>()
 
 useOverlayScreen('pause-menu', isPauseMenuOpen, closePauseMenu)
 watch(() => ui.pauseMenu.playerName, (value) => { name.value = value })
 
-function save(): void { emitUiClick(); ui.pauseMenu.onSave?.(); setPauseSaveStatus('Zapisano'); if (saveTimer.value !== null) window.clearTimeout(saveTimer.value); saveTimer.value = window.setTimeout(() => setPauseSaveStatus(''), 1500) }
+function save(): void {
+  emitUiClick()
+  ui.pauseMenu.onSave?.()
+  const label = ui.pauseMenu.activeSaveName ? `Zapisano · ${ui.pauseMenu.activeSaveName}` : 'Zapisano'
+  setPauseSaveStatus(label)
+  if (saveTimer.value !== null) window.clearTimeout(saveTimer.value)
+  saveTimer.value = window.setTimeout(() => setPauseSaveStatus(''), 1500)
+}
 function openQuestLog(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onQuestLog?.() }
 function openInventory(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onInventory?.() }
 function openCharacter(): void { emitUiClick(); closePauseMenu(); openCharacterScreen() }
@@ -47,7 +57,7 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
       class="mb-2 w-full"
       @click="openCharacter"
     >
-      Postać
+      Postać [C]
     </UiButton>
     <UiButton
       class="mb-2 w-full"
@@ -90,7 +100,19 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
       class="mb-2 w-full"
       @click="save"
     >
-      Zapisz<span class="ml-2 text-xs opacity-75">{{ ui.pauseMenu.saveStatus }}</span>
+      Zapisz<span class="ml-2 text-xs opacity-75">{{ ui.pauseMenu.saveStatus || ui.pauseMenu.activeSaveName }}</span>
+    </UiButton>
+    <UiButton
+      class="mb-2 w-full"
+      @click="emitUiClick(); emit('open-save-as')"
+    >
+      Zapisz jako
+    </UiButton>
+    <UiButton
+      class="mb-2 w-full"
+      @click="emitUiClick(); emit('open-load')"
+    >
+      Wczytaj
     </UiButton>
     <UiButton
       class="mb-2 w-full"
@@ -101,7 +123,7 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
     <UiButton
       variant="danger"
       class="mb-2 w-full"
-      @click="emitUiClick(); ui.pauseMenu.onNewGame?.()"
+      @click="emitUiClick(); emit('open-new-game')"
     >
       Nowa gra
     </UiButton>

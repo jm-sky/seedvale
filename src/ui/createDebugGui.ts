@@ -41,7 +41,8 @@ export type DebugGuiHandlers = {
 
 export type DebugGuiHandle = {
   dispose: () => void
-  toggle: () => void
+  /** Returns whether the panel is visible after the toggle. */
+  toggle: () => boolean
   setBusy: (busy: boolean) => void
   /** Pushes this frame's simulate/render split (ms) into the Performance
    *  folder — `renderer.info` is read live via `.listen()` getters below, but
@@ -718,7 +719,10 @@ export function createDebugGui(
 
   return {
     dispose: () => gui.destroy(),
-    toggle: () => gui.show(gui._hidden),
+    toggle: () => {
+      gui.show(gui._hidden)
+      return !gui._hidden
+    },
     setBusy,
     setFrameTiming,
   }
