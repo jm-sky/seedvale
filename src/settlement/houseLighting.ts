@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { discoverGlbAnchors, resolveAssetAnchors } from '../assets/anchorResolve'
 import { anchorsForAsset } from '../assets/assetAnchorData'
 import { mergeAnchorDefs } from '../assets/assetAnchors'
-import { createCampfireFlame } from './campfireProps'
+import { createTorchSparks } from '../shared/getFireParticles'
 import {
   HOUSE_FLOOR_LAMP_Y,
   HOUSE_LAMP_MAX_LOCAL_Y,
@@ -113,7 +113,7 @@ export function createHouseLight(
     group.add(lamp)
   }
 
-  const light = new THREE.PointLight(0xffb35c, 0, 4.5 * scale, 2)
+  const light = new THREE.PointLight(0xffb35c, 0, 10 * scale, 2)
   light.position.set(cx - nx * 0.08 * scale, cy, cz - nz * 0.08 * scale)
   group.add(light)
 
@@ -122,7 +122,7 @@ export function createHouseLight(
     setNightIntensity(t) {
       const clamped = Math.max(0, Math.min(1, t))
       if (lampMat) lampMat.color.lerpColors(HOUSE_LAMP_OFF_COLOR, HOUSE_LAMP_ON_COLOR, clamped)
-      light.intensity = clamped * (style === 'wall' ? 0.85 : 1)
+      light.intensity = clamped * (style === 'wall' ? 1.6 : 2)
       // Plan 157 §3.2 — Three's WebGLLights only collects visible lights, so
       // an off lamp that stays `visible = true` still costs a
       // NUM_POINT_LIGHTS slot / program cache variant for nothing.
@@ -150,46 +150,78 @@ export function createProceduralTorchPost(): THREE.Object3D {
   return group
 }
 
-/** Freestanding village torch — GLB post + tip flame, toggled at dusk/dawn. */
+/** Freestanding village torch — GLB post with its own `Fire` mesh + a small
+ *  ember particle pool, toggled at dusk/dawn. */
 export function createVillageTorchLight(
   post: THREE.Object3D,
-  flameTip: THREE.Object3D | null,
 ): VillageTorch {
   const group = new THREE.Group()
   group.add(post)
 
-  let flameUpdate: ((dt: number) => void) | null = null
-  let flameObj: THREE.Object3D
-  if (flameTip) {
-    flameObj = flameTip
-    flameObj.position.set(0, 1.45, 0)
-    flameObj.visible = false
-    group.add(flameObj)
-  } else {
-    const flame = createCampfireFlame(0.35)
-    flameObj = flame.object
-    flameObj.position.set(0, 1.4, 0)
-    flameUpdate = flame.update
-    group.add(flameObj)
-  }
+  // torch.glb ships two primitives on one `Torch` node — `DarkMetal`
+  // (Torch_1, the fixture itself) and `Fire` (Torch_2, the model's own
+  // flame mesh, roughly local Y 0.86–1.55 on the fitted 1.55m-tall post).
+  // The Fire material is authored (in the GLB itself, not patched here at
+  // runtime) as `alphaMode: BLEND`, `baseColorFactor` alpha 0.4, and an
+  // `emissiveFactor` glow, double-sided — a same-value JS-side `transparent`/
+  // `opacity` override here previously read as visually indistinguishable
+  // from opaque against a dark night background; baking it into the asset
+  // is the reliable fix. Only DarkMetal keeps its normal opaque shading/shadow.
+  let fireMesh: THREE.Mesh | null = null
+  post.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    if (!(child.material instanceof THREE.MeshStandardMaterial)) return
+    if (child.material.name !== 'Fire') return
 
-  const light = new THREE.PointLight(0xff8a3c, 0, 14, 2)
-  light.position.set(0, 1.5, 0)
+    child.castShadow = false
+    fireMesh = child
+    // Unlit by default — `setLit` drives visibility from here on.
+    child.visible = false
+  })
+
+  // A handful of larger, faster-rising sparks instead of the full campfire
+  // particle rig (cone + 8 sparks + 5 embers + 10-point ignite burst = 4
+  // draw calls) — one cheap `THREE.Points` pool (4 points) is plenty for a
+  // wall/post torch seen from a few meters away. `createEmbers`'s tuning
+  // (built for a ground-level campfire base) read as too small/too slow up
+  // here — `createTorchSparks` is sized and paced for this instead. Anchored
+  // near the top of the Fire mesh (~y 1.3, not the post's base) so they
+  // visibly climb up off the flame instead of floating in empty air below it.
+  const sparks = createTorchSparks(1)
+  const flameObj: THREE.Object3D = sparks.points
+  const flameUpdate = sparks.update
+  flameObj.position.set(0, 1.3, 0)
+  // Unlit by default, same as `fireMesh` above — `setLit` turns it on.
+  flameObj.visible = false
+  group.add(flameObj)
+
+  // `distance` (the 3rd ctor arg) is only a hard falloff cutoff — with
+  // `decay: 2` (physically-based inverse-square, matches every other point
+  // light in this file/`campfireProps.ts`/`PlayerTorch.ts`) brightness at a
+  // given point is already ~`intensity / distance²` well before that cutoff
+  // is reached, so raising it past the point light's real (intensity-bound)
+  // falloff range is invisible — pushing `distance` to 500 with intensity
+  // still single-digit changed nothing on screen for exactly this reason.
+  // `intensity` is the actual lever for "shines further".
+  const light = new THREE.PointLight(0xff8a3c, 0, 25, 2)
+  light.position.set(0, 1.3, 0)
   group.add(light)
 
   let lit = false
+
   return {
     object: group,
     setLit(on) {
       lit = on
       flameObj.visible = on
-      light.intensity = on ? 3.2 : 0
+      if (fireMesh) fireMesh.visible = on
+      light.intensity = on ? 6 : 0
       // Plan 157 §3.2 — same visibility fix as `createHouseLight` above; an
       // extinguished torch's light previously stayed `visible = true`.
       light.visible = on
     },
     update(dt) {
-      if (lit) flameUpdate?.(dt)
+      if (lit) flameUpdate(dt)
     },
   }
 }

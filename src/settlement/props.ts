@@ -51,7 +51,6 @@ import {
   CROPS_URL,
   FARM_HEIGHT,
   FARM_URL,
-  FIRE_FX_URL,
   LANTERN_FLOOR_MAX,
   LANTERN_URL,
   LANTERN_WALL_MAX,
@@ -743,7 +742,6 @@ export async function buildSettlementProps(
   }
 
   let torchPostTemplate: THREE.Object3D = createProceduralTorchPost()
-  let fireTipTemplate: THREE.Object3D | null = null
   try {
     torchPostTemplate = await loadPropOrFallback(
       VILLAGE_TORCH_URL,
@@ -752,12 +750,6 @@ export async function buildSettlementProps(
     )
   } catch {
     /* keep procedural */
-  }
-  try {
-    const fire = await loadGltf(FIRE_FX_URL)
-    fireTipTemplate = preparePropFitMax(fire, 0.28)
-  } catch {
-    fireTipTemplate = null
   }
   const housePlots = (plan?.plots.filter((p) => p.role === 'house') ?? [])
     .slice()
@@ -1126,12 +1118,39 @@ export async function buildSettlementProps(
       if (sampleHeight(x, z) <= waterLevel + 0.55) return false
       const post = postTpl.clone(true)
       post.rotation.y = yaw
-      const tip = fireTipTemplate ? fireTipTemplate.clone(true) : null
-      const torch = createVillageTorchLight(post, tip)
+      const torch = createVillageTorchLight(post)
       placeOnGround(torch.object, x, z, sampleHeight)
       group.add(torch.object)
       villageTorches.push(torch)
       return true
+    }
+
+    // Well-side torch — always present (independent of the plaza ring's
+    // size/infra gate below) so the well stays visibly lit at night in
+    // every settlement size, not just MD+. Placed directly, not through
+    // `placeTorchAt`: the well sits right on/next to the plaza path by
+    // design, so `pointHitsCorridor`'s road-avoidance (meant for the
+    // freely-roaming plaza-ring/gate posts below) rejected every candidate
+    // around it and silently placed nothing.
+    {
+      // well.glb's fitted footprint (WELL_HEIGHT) is ~0.53 half-extent on X,
+      // ~0.80 on Z; the torch post's is ~0.2–0.3. 0.75 tucks it right up
+      // against the well.
+      const ang = Math.atan2(wellZ - clearings.core.z, wellX - clearings.core.x)
+      const tx = wellX + Math.cos(ang) * 0.75
+      const tz = wellZ + Math.sin(ang) * 0.75
+      if (sampleHeight(tx, tz) > waterLevel + 0.55) {
+        const post = postTpl.clone(true)
+        // torch.glb's holder brackets face the model's local +Z, not the
+        // "away from well" direction `placeTorchAt`'s `ang + Math.PI`
+        // convention assumes elsewhere — −π/2 turns them to face the well.
+        post.rotation.y = ang + Math.PI - Math.PI / 2
+        const torch = createVillageTorchLight(post)
+        placeOnGround(torch.object, tx, tz, sampleHeight)
+        group.add(torch.object)
+        villageTorches.push(torch)
+      }
+      await yieldProp()
     }
 
     const infra = villageSizeConfig(size).infrastructure

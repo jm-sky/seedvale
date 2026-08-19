@@ -161,6 +161,27 @@ export function createEmbers(scale: number): ParticlePool {
   return { points: pool.points, geometry: pool.geometry, material: pool.material, update: pool.update }
 }
 
+const TORCH_SPARK_TUNING: PoolTuning = {
+  count: 4,
+  color: 0xffb347,
+  size: 0.09,
+  spawnRadius: 0.09,
+  upSpeed: [0.55, 1.0],
+  lateralSpeed: 0.22,
+  gravity: 0.2,
+  drag: 0.1,
+  lifetime: [0.9, 1.6],
+}
+
+/** A handful of larger, faster-rising sparks for a post-mounted torch, seen
+ *  from a few meters away — unlike `createEmbers`' subtle near-ground drift
+ *  (tuned for a campfire's base), these visibly climb a meter-plus above
+ *  the flame before fading. */
+export function createTorchSparks(scale: number): ParticlePool {
+  const pool = createParticlePool(TORCH_SPARK_TUNING, scale, { continuous: true })
+  return { points: pool.points, geometry: pool.geometry, material: pool.material, update: pool.update }
+}
+
 const IGNITE_BURST_TUNING: PoolTuning = {
   count: 10,
   color: 0xffffff,
