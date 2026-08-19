@@ -1,270 +1,366 @@
 # Plan: NPC pomoc graczowi w jedzeniu i piciu
 
-**Created:** 2026-08-18
-
-**Status:** `planned` 📋
-
-**Priority:** medium · **Effort:** M
-
-**Depends on:** ~~106~~ ~~069~~ ~~122~~ 156
+**Created:** 2026-08-18  
+**Updated:** 2026-08-19  
+**Status:** `planned` 📋  
+**Priority:** medium · **Effort:** S  
+**Depends on:** ~~069~~ ~~122~~ ~~156~~  
+**Related:** 165, 167
 
 **domain:** settlements-npcs
 
 **tags:** [items-player, quests-progression]
 
-
 ## Cel
 
-Rozszerzyć istniejące interakcje gracz↔NPC o sytuację, w której NPC może dobrowolnie pomóc graczowi z głodem lub pragnieniem.
+Rozszerzyć istniejące interakcje gracz↔NPC o synchroniczną, konwersacyjną pomoc NPC w jedzeniu lub piciu.
 
-Gracz nadal sam odpowiada za zdobywanie jedzenia i wody. Pomoc NPC jest wyjątkiem wynikającym ze stanu świata i relacji, a nie darmowym sklepem ani player-only mechaniką.
+Gracz prosi NPC podczas rozmowy, NPC podejmuje lokalną decyzję społeczną i — jeżeli faktycznie posiada odpowiedni carried consumable — przekazuje go graczowi albo stosuje istniejący efekt picia.
 
-**V1 celowo ogranicza pomoc do zapasów, które NPC ma przy sobie.** NPC nie teleportuje się do domu i nie pobiera magicznie `Household.stock` podczas rozmowy.
+Plan nie implementuje autonomicznego dostarczania zasobów do player storage. To jest zakres Planu 167.
 
 ```text
 Player hunger/thirst
         ↓
-prośba do NPC
+prośba w istniejącym dialogu NPC
         ↓
-NPC social state + relation + openness/traits
+social decision
         ↓
-czy NPC chce pomóc?
+NPC carried Inventory
         ↓
-sprawdzenie carried Inventory NPC
+food / portable water
         ↓
-food / water item
-        ↓
-pomoc NPC
-        ↓
-zapas NPC maleje + gracz otrzymuje zasób
+natychmiastowa pomoc
 ```
 
-## Stan obecny, na którym plan ma się oprzeć
+## Granica z Planem 167
 
-`docs/STATE.md` zweryfikowany 2026-08-17 opisuje już:
+### Plan 152
 
-- `PlayerController.needs` z `hunger` i `thirst` w `src/player/PlayerNeeds.ts`;
-- realne consumables w `ITEM_CATALOG[].consumable`, z `eatFood()` / `drinkWater()` jako istniejącymi operacjami potrzeb gracza;
-- NPC posiadają generyczny `Inventory` (`NpcAgent`), obecnie wykorzystywany m.in. przez górników do noszenia rudy;
-- gospodarstwo ma autorytatywny `food` stock oraz osobny `household.water` `WaterReserve`;
-- NPC już zaspokajają własny głód z `household.stock` i pragnienie z `household.water`;
-- relacja z NPC jest przechowywana w istniejącym `QuestManager`, z poziomami `stranger / acquainted / friendly / trusted`;
-- `QuestManager.getPlayerStanding()` jest istniejącą, pochodną reputacją globalną opartą o te same relacje;
-- `reactionChance.ts` już łączy relation, standing, openness/extraversion i trait `curious` w istniejący model reakcji NPC;
-- dialog NPC v2 już jest istniejącym punktem interakcji gracz↔NPC.
+```text
+player prosi
+    ↓
+NPC decyduje
+    ↓
+NPC ma carried consumable
+    ↓
+natychmiastowy transfer/efekt
+```
 
-Nie tworzyć równoległych magazynów, reputacji, relacji ani systemu interakcji.
+### Plan 167
 
-## Zakres
+```text
+NPC ma goal / pressure
+    ↓
+pozyskuje zasób
+    ↓
+transportuje
+    ↓
+player Container
+    ↓
+wraca do normalnego życia
+```
 
-### 1. Prośba gracza
+Nie scalać tych mechanizmów.
 
-Dodać do istniejącego dialogu NPC opcjonalne akcje:
+Plan 152 nie używa assignmentu Helper, player `Container`, autonomicznego gatheringu, transport chain ani helper decision cycle z 167.
 
-- poproś o jedzenie;
-- poproś o picie.
+Plan 167 nie zastępuje dialogowej prośby o natychmiastową pomoc.
 
-Opcje powinny pojawiać się tylko wtedy, gdy prośba ma sens dla aktualnego stanu gracza/NPC. Nie tworzyć osobnego ekranu pomocy.
+Wspólne pozostają istniejące domeny: `Inventory`, `PlayerNeeds`, `ITEM_CATALOG`, relacje oraz NPC dialogue/interactions.
 
-### 2. Decyzja NPC
+## Ownership
 
-Decyzja powinna być deterministyczna i oparta na istniejącym stanie NPC.
+### PlayerNeeds
 
-Minimalny model:
+`PlayerNeeds` pozostaje właścicielem:
+
+- hunger;
+- thirst;
+- `eatFood()`;
+- `drinkWater()`;
+- przyszłych konsekwencji głodu/pragnienia z Planu 165.
+
+152 korzysta z istniejącego API i nie mutuje bezpośrednio pól potrzeb ani nie implementuje własnego modelu starvation/dehydration.
+
+Plan 165 jest powiązany, ale nie jest zależnością runtime.
+
+### Player Inventory
+
+`Inventory` pozostaje właścicielem carried items gracza. Używać istniejących `has()`, `count()`, `canAdd()`, `add()` i `remove()`.
+
+### NpcAgent.inventory
+
+`NpcAgent.inventory` jest tymczasowym carrierem zasobów, nie osobistym magazynem NPC.
+
+Pomoc V1 jest możliwa wyłącznie dla zasobu, który NPC faktycznie posiada przy sobie w momencie prośby.
+
+Nie tworzyć mechanizmu wyposażania NPC w jedzenie/wodę tylko na potrzeby 152.
+
+### Household
+
+`Household.stock` i `Household.water` pozostają właścicielami rodzinnych zapasów.
+
+152 nie wykonuje:
+
+```text
+Household.stock → Player
+Household.water → PlayerNeeds
+```
+
+podczas rozmowy.
+
+Nie ma teleportowania NPC do domu po zasób.
+
+### Relations / standing
+
+Istniejący mechanizm relacji i standing pozostaje właścicielem tych danych. 152 tylko je odczytuje przez istniejący lookup/hook.
+
+Nie tworzyć drugiego relation/reputation store.
+
+### Dialogue / interactions
+
+Istniejący NPC dialogue v2 i NPC interaction flow pozostają właścicielami wejścia interakcji.
+
+Nie tworzyć drugiego menu ani systemu NPC interaction.
+
+## Zakres V1
+
+### 1. Prośba o jedzenie
+
+W istniejącym dialogu NPC dodać opcjonalną akcję „Poproś o jedzenie”.
+
+Po wybraniu:
+
+```text
+NPC carried Inventory
+    ↓
+food consumable
+    ↓
+social decision
+    ↓
+transfer itemu
+```
+
+NPC nie pobiera food z `Household.stock`.
+
+Jeżeli NPC nie posiada carried food, wynik jest normalną odmową.
+
+### 2. Prośba o picie
+
+W istniejącym dialogu NPC dodać „Poproś o picie”, ale tylko w zakresie istniejącego modelu przenośnej wody.
+
+Przed implementacją należy potwierdzić, że aktualny codebase posiada portable water item, który NPC może faktycznie posiadać w `NpcAgent.inventory`.
+
+Jeżeli nie istnieje taki przepływ, Plan 152 nie tworzy nowego itemu ani nowego water lifecycle tylko dla tej funkcji; pomoc w piciu pozostaje niedostępna w V1.
+
+Nie tworzyć:
+
+```text
+Household.water → PlayerNeeds.thirst
+```
+
+### 3. Food transfer
+
+Udana pomoc w jedzeniu:
+
+```text
+NPC inventory
+    ↓ remove 1
+Player inventory
+    ↓ add 1
+```
+
+Gracz otrzymuje consumable i może użyć istniejącego mechanizmu jedzenia.
+
+152 nie wywołuje `eatFood()` przy samym przekazaniu jedzenia.
+
+### 4. Water assistance
+
+Jeżeli istniejący portable water item obsługuje picie, należy wykorzystać istniejącą semantykę `ITEM_CATALOG`, w tym `need`, `relief` i `resultKind`.
+
+Nie implementować drugiego waterskin/container lifecycle.
+
+### 5. Ilość pomocy
+
+V1:
+
+- jedna sensowna jednostka consumable na udaną pomoc;
+- brak uzupełniania całego paska;
+- brak ceny;
+- brak barteru;
+- brak długu;
+- brak automatycznych kolejnych dostaw.
+
+## Decyzja społeczna
+
+Decyzja korzysta z istniejących danych:
 
 ```text
 relationLevel
++ standing
 + personality/openness
 + relevant traits
-+ player standing
-+ own needs
-+ carried supplies
-→ willingness to help
 ```
 
-Relacja osobista powinna mieć największe znaczenie. `standing` może być dodatkowym sygnałem społecznym, zgodnie z istniejącym `reactionChance`.
+Osobista relacja powinna mieć największe znaczenie.
 
-Nie tworzyć LLM/AI decyzji ani osobnego utility-AI tylko dla tej funkcji.
+Istniejący `reactionChance.ts` może dostarczyć wspólnego modelu danych/filozofii, ale nie należy bezpośrednio traktować probabilistycznego `computeReactionChance()` jako gotowego deterministycznego yes/no.
 
-### 3. Zapasy NPC — V1
+Jeżeli potrzebny jest RNG, użyć istniejącej konwencji projektu zamiast `Math.random()` dodanego tylko dla tej funkcji.
 
-Pomoc musi konsumować rzeczywisty stan **carried `NpcAgent.inventory`**.
+Nie tworzyć nowego utility AI, LLM decision, relation store ani reputation system.
 
-1. NPC sprawdza, czy ma odpowiedni consumable przy sobie.
-2. Jeśli ma — może go przekazać, o ile decyzja społeczna jest pozytywna.
-3. Jeśli nie ma — odmawia z powodu braku zasobu.
+### NPC own-needs guard
 
-Nie pobierać w V1 jedzenia ani wody bezpośrednio z `Household.stock` / `Household.water`.
+Nie tworzyć osobnego systemu reservation/ledger.
 
-Nie wykonywać teleportu NPC do domu.
+Jeżeli istniejący stan NPC wiarygodnie wskazuje, że oddanie konkretnego carried consumable naruszyłoby krytyczną własną potrzebę, NPC nie powinien go oddać.
 
-### 4. Przyszłe pobieranie z domu
+Jeżeli obecny model nie pozwala wiarygodnie określić takiej sytuacji, zastosować konserwatywną regułę opartą wyłącznie na istniejącym stanie zamiast budować nowy subsystem.
 
-Pobieranie zapasu z domu jest **poza zakresem planu 144**.
+## Dialogue integration
 
-Docelowo powinno być rozwiązane przez istniejące mechanizmy `Places` / schedule / locomotion i przyszłe `Social Behaviour`, np.:
+Rozszerzenie powinno zostać wykonane w istniejącym `NpcDialogueMenu.vue` / istniejącym dialogue state.
 
-```text
-Player prosi
-    ↓
-NPC chce pomóc
-    ↓
-NPC nie ma zasobu przy sobie
-    ↓
-NPC wie, że zasób jest w domu
-    ↓
-normalna decyzja/akcja NPC: wrócić do domu
-    ↓
-pobrać realny zapas
-    ↓
-wrócić do gracza
-    ↓
-przekazać zasób
-```
-
-Nie tworzyć dla tego osobnego `goHomeAndFetchFoodForPlayer()` ani player-centric teleportu. Jeżeli mechanizm okaże się potrzebny, powinien zostać zaplanowany jako rozszerzenie Social Behaviour / Social Places.
-
-### 5. Woda — V1
-
-Woda ma obecnie autorytatywny `Household.water`, a nie itemowy magazyn gospodarstwa.
-
-Dlatego w V1 pomoc w piciu jest możliwa tylko wtedy, gdy NPC ma faktyczny przenośny item w swoim `Inventory` (np. istniejący/przewidziany `waterskin`). Jeśli nie ma takiego itemu przy sobie, NPC odmawia.
-
-Nie tworzyć specjalnego transferu `Household.water → Player` tylko dla tej funkcji.
-
-Po udzieleniu pomocy ilość przekazanego carried zasobu musi faktycznie zmniejszyć inventory NPC i zwiększyć stan gracza przez istniejący mechanizm.
-
-### 6. Ilość pomocy
-
-Pierwsza wersja powinna być mała i konfigurowalna:
-
-- pomoc jednorazowa daje jeden sensowny consumable;
-- nie próbować uzupełniać całego paska gracza;
-- nie wprowadzać cen, barteru ani długu.
-
-Dokładne wartości należy scentralizować w jednym miejscu.
-
-### 7. Odmowa
-
-Odmowa jest normalnym wynikiem decyzji, nie błędem.
-
-Przykładowe przyczyny:
-
-- NPC nie ma odpowiedniego itemu przy sobie;
-- NPC nie chce pomóc z powodu relacji/cech/standing;
-- NPC ma zasób, ale nie jest skłonny go oddać.
-
-Wykorzystać istniejący mechanizm dialogu/feedbacku zamiast tworzyć nowy system komunikatów.
-
-## Architektura
-
-Preferowany kierunek:
+Preferowany przepływ:
 
 ```text
 NpcDialogueMenu
-      ↓
-existing NPC interaction/dialogue flow
-      ↓
-small assistance decision/resolution
-      ↓
-NpcAgent.inventory
-      ↓
-PlayerNeeds + Player Inventory
+  ├── existing topics
+  ├── request food
+  └── request water
+          ↓
+      small assistance resolver
+          ↓
+      result
 ```
 
-Ważne zasady ownership:
+Nie umieszczać food/water assistance w `QuestDialogOverride` tylko dlatego, że istnieje obecny `helpResult`.
 
-- `PlayerNeeds` pozostaje właścicielem potrzeb gracza;
-- `Inventory` pozostaje właścicielem carried items;
-- `Household` pozostaje właścicielem rodzinnego zapasu food/water — nie jest bezpośrednim źródłem pomocy w V1;
-- `QuestManager` pozostaje właścicielem relacji/reputacji;
-- `NpcAgent` nie powinien importować `QuestManager` tylko po to, aby rozstrzygać pomoc — tak jak w `reactionChance.ts`, relacja/standing powinny być dostarczone przez istniejący lookup/hook;
-- nie tworzyć `NpcHelpManager`, `PlayerAssistanceManager`, `ReputationManager` ani osobnego inventory gospodarstwa.
+Nie tworzyć nowego dialog managera.
 
-## Konkretne miejsca do sprawdzenia/zmiany
+## Inventory atomicity
 
-Implementacja powinna zacząć się od dokładnego prześledzenia:
+Przed mutacją:
 
-- `src/player/PlayerNeeds.ts` — użycie `eatFood()` / `drinkWater()`;
-- `src/items/itemCatalog.ts` — rozpoznawanie consumables i ich `need/relief`;
-- `src/items/Inventory.ts` — transfer/usuwanie/dodawanie itemów bez tworzenia nowego API równoległego;
-- `src/ai/NpcAgent.ts` — istniejący `Inventory` i dostęp do social lookup;
-- `src/quests/QuestManager.ts` / `src/quests/quests.ts` — istniejące relation levels i relation state;
-- `src/ai/reactionChance.ts` — istniejący model openness/traits/relation/standing;
-- `src/app/interactables.ts` i istniejący flow `[E]` — bez tworzenia drugiego systemu interakcji;
-- istniejący komponent/menu dialogu NPC v2 — akcje prośby powinny być kolejnym typem istniejącej opcji dialogowej.
+```text
+NPC has item
+    ↓
+social decision succeeds
+    ↓
+player-side preconditions valid
+    ↓
+mutation
+```
 
-Dokładne symbole i przepływ danych należy potwierdzić przed implementacją. Plan nie zakłada nowych plików bez potrzeby.
+Dla food:
 
-## Social behaviour
+```text
+npc.inventory.has(kind, 1)
+player.inventory.canAdd(kind, 1)
+npc.inventory.remove(kind, 1)
+player.inventory.add(kind, 1)
+```
 
-Ta mechanika powinna być pierwszym konkretnym konsumentem istniejących relacji/openness w interakcji innej niż zwykła reakcja/dialog.
+Nie usuwać itemu NPC przed sprawdzeniem możliwości zakończenia transferu.
 
-Nie należy jednak implementować pełnego `Social Places / Social Behaviour` w ramach tego planu.
+Dla water zachować istniejącą semantykę consumable i `resultKind`.
 
-Pomoc w V1 jest pojedynczą, lokalną decyzją NPC wynikającą z aktualnego stanu. Nie wymaga harmonogramu, social place ani autonomicznego zadania NPC.
+## Consumable selection
 
-Przyszłe „pójdę do domu po jedzenie” powinno natomiast zostać naturalnie włączone w Social Behaviour/Places, zamiast otrzymać osobny player-centric mechanizm.
+Nie hardcodować listy food/water w UI.
 
-## Nie w zakresie
+`ITEM_CATALOG[kind].consumable` pozostaje źródłem prawdy dla `need`, `relief` i `resultKind`.
 
-- pobieranie jedzenia/wody z `Household` podczas prośby gracza;
-- teleport NPC do domu i z powrotem;
-- autonomiczne chodzenie NPC do gracza tylko po to, aby go nakarmić;
-- handel lub sprzedaż jedzenia/wody;
-- ceny, pieniądze, barter;
-- pożyczki/długi;
-- globalna reputacja ponad istniejący `getPlayerStanding()`;
-- nowe frakcje;
-- LLM-generated decisions/dialogue;
-- pełny Social Behaviour / Social Places;
-- tworzenie nowych zapasów jedzenia/wody;
-- automatyczne uzupełnianie potrzeb gracza bez jego prośby;
-- multiplayer/network synchronization.
+Ponieważ `Inventory` przechowuje count per `ItemKind`, wybór kandydata musi korzystać z istniejącego inventory API, a nie zakładać item instances.
 
-## Persystencja
+## Przyszłe pobieranie zasobu
+
+Poza zakresem 152:
+
+```text
+player prosi
+    ↓
+NPC nie ma itemu
+    ↓
+NPC idzie po zasób
+    ↓
+wraca
+```
+
+Nie implementować tego jako player-centric action.
+
+Jeżeli kiedyś będzie potrzebny taki przepływ, powinien zostać rozwiązany przez istniejący model NPC actions / Social Behaviour / Places, bez tworzenia osobnego systemu tylko dla 152.
+
+Nie przenosić tej odpowiedzialności do 167 automatycznie — 167 dotyczy autonomicznej dostawy zasobów do player `Container`.
+
+## Persistence
 
 Nie dodawać nowej persystencji.
 
-Jeżeli przekazany item zmienia istniejący `Inventory`, a stan gracza/NPC ma już istniejącą politykę save/runtime, użyć jej bez tworzenia nowego formatu save.
+152 nie tworzy helper assignment, player storage target, nowej relacji, nowego inventory ani nowego save state.
 
-Jeżeli NPC-owy inventory jest runtime-only i transfer nie może być poprawnie odtworzony po save/load, udokumentować to jako decyzję implementacyjną przed kodowaniem zamiast dorabiać ukrytą persystencję.
+Jeżeli NPC carried inventory jest runtime-only, 152 nie dorabia persystencji tylko dla tej funkcji.
 
-## Wydajność
+## Performance
 
-Pomoc jest interakcją niskiej częstotliwości.
+Pomoc jest operacją niskiej częstotliwości.
 
-Nie wykonywać żadnych dodatkowych per-frame scanów NPC ani inventory.
+Nie dodawać:
 
-Decyzja i resolver carried itemu mają być wywoływane wyłącznie przy wybraniu prośby.
+- per-frame scanów NPC inventory;
+- globalnego wyszukiwania pomocnego NPC;
+- background willingness updates;
+- helper action cycle.
+
+Resolver działa wyłącznie przy interakcji/prośbie.
+
+## Nie w zakresie
+
+- autonomiczna dostawa do player `Container`;
+- Plan 167 Helper/Supplier;
+- gather → carry → deliver dla gracza;
+- player storage;
+- pobieranie z `Household.stock` podczas rozmowy;
+- pobieranie z `Household.water` podczas rozmowy;
+- nowy portable-water item lub lifecycle tylko dla 152;
+- teleport NPC;
+- handel;
+- ceny;
+- barter;
+- długi;
+- nowy inventory;
+- nowa reputacja;
+- nowy dialogue system;
+- LLM decisions;
+- pełny Social Behaviour / Social Places;
+- nowy NPC survival system;
+- `StarvationDuration` / `DehydrationDuration` z Planu 165;
+- multiplayer.
 
 ## Kryteria akceptacji
 
-- [ ] Gracz może poprosić istniejącego NPC o jedzenie.
-- [ ] Gracz może poprosić istniejącego NPC o picie, jeśli NPC ma odpowiedni carried item.
-- [ ] Opcje korzystają z istniejącego dialogu/interakcji NPC.
-- [ ] Decyzja uwzględnia istniejącą relację z konkretnym NPC.
-- [ ] Decyzja może uwzględniać openness/traits i istniejący player standing.
-- [ ] NPC odmawia, gdy nie ma odpowiedniego carried itemu.
-- [ ] Przekazanie jedzenia faktycznie usuwa item z inventory NPC i daje go graczowi.
-- [ ] Przekazanie wody faktycznie usuwa carried water item z inventory NPC i stosuje istniejący efekt nawodnienia gracza.
-- [ ] Nie powstaje drugi system inventory, relacji, reputacji ani interakcji.
-- [ ] Pomoc nie jest automatyczna — wymaga prośby gracza.
+- [ ] Gracz może poprosić NPC o jedzenie w istniejącym dialogu.
+- [ ] Gracz może poprosić NPC o picie, jeśli aktualny codebase posiada odpowiedni carried water item i NPC faktycznie go ma.
+- [ ] Pomoc wymaga aktualnej decyzji NPC.
+- [ ] Food może zostać przekazane tylko z rzeczywistego carried `NpcAgent.inventory`.
+- [ ] Pomoc w piciu korzysta wyłącznie z istniejącego modelu przenośnej wody; Plan 152 nie wprowadza nowego modelu wody ani lifecycle.
+- [ ] NPC bez odpowiedniego carried itemu odmawia.
+- [ ] Food transfer faktycznie zmniejsza NPC inventory i zwiększa player inventory.
+- [ ] Water assistance, jeśli wspierana przez istniejący portable item, korzysta z istniejącego player consume/needs lifecycle.
+- [ ] `PlayerNeeds` pozostaje właścicielem hunger/thirst.
+- [ ] `Household.stock` / `Household.water` nie są bezpośrednim źródłem pomocy.
+- [ ] Relacja i standing są odczytywane z istniejącego mechanizmu.
+- [ ] Nie powstaje drugi inventory, relation, reputation ani interaction system.
+- [ ] Plan 152 nie uruchamia autonomicznej dostawy z Planu 167.
 - [ ] Brak dodatkowej pracy per frame.
 - [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build` oraz istniejące testy przechodzą.
-- [ ] Browser/manual verification sprawdza co najmniej: przyjazny NPC z carried consumable pomaga; NPC bez carried consumable odmawia; transfer faktycznie zmienia oba stany.
-
-## Decyzje przed implementacją
-
-Przed kodowaniem trzeba potwierdzić tylko jeden szczegół wynikający z obecnego modelu danych:
-
-1. Jaki istniejący mechanizm dialogu v2 jest najmniejszym punktem rozszerzenia dla akcji typu `request_food` / `request_water`.
-
-Kwestia pobierania z domu nie jest decyzją dla planu 144 — jest świadomie odłożona do Social Behaviour / Social Places.
+- [ ] Browser/manual verification sprawdza sukces z rzeczywistym carried consumable oraz odmowę bez niego.
 
 ## Weryfikacja
 
-Techniczna:
+### Techniczna
 
 ```text
 npx tsc --noEmit
@@ -273,14 +369,17 @@ npm run build
 npm test
 ```
 
-Manual/browser:
+### Browser/manual
 
 ```text
-1. Znajdź NPC z dobrą relacją i carried consumable.
-2. Poproś o jedzenie → NPC pomaga → inventory/needs zmieniają się poprawnie.
-3. Znajdź NPC z carried water item → poproś o picie → transfer i thirst zmieniają się poprawnie.
-4. Powtórz przy braku odpowiedniego carried itemu → odmowa.
-5. Sprawdź NPC o słabej relacji → pomoc nie jest gwarantowana.
+1. Znajdź NPC posiadającego carried food.
+2. Poproś o jedzenie.
+3. Sprawdź NPC inventory i player inventory.
+4. Jeśli istnieje aktualny portable water flow, znajdź NPC posiadającego carried water.
+5. Poproś o picie i sprawdź istniejący consume/needs lifecycle.
+6. Powtórz przy braku odpowiedniego itemu.
+7. Sprawdź NPC z mniej korzystną relacją.
+8. Sprawdź, że żadna akcja nie uruchamia autonomicznego gather/delivery.
 ```
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
