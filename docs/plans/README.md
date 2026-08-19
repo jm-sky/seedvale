@@ -81,6 +81,7 @@ Construction
 | `2026-08-18--161--weapon-maintenance-and-sharpening.md` | Weapon sharpness & flint stones | 🟡 | M | ~~155~~ ~~160~~ |
 | `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits.md` | Bows and critial hits | 🟡 | L | ~~150~~ ~~155~~ |
 | `2026-08-19--164--player-storage-and-container-system.md` | Players box for future companions | 🔴 | M | - |
+| `2026-08-19--165--vigor-hunger-thirst-and-rest.md`| Urealnić zachowanie Vigor, Hunger i Thirst | 🟡 | M | - |
 
 ### Fresh new
 
