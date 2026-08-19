@@ -74,6 +74,13 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | `2026-08-11--070--world-observatory.md` | Panel obserwacji życia świata | ⚪ | XL | 071, ~~069~~ |
 | `2026-08-08--037--npc-genealogy-lineages.md` | Rody NPC (kompas N → ~~067~~) | ⚪ | L | ~~022~~ ~~031~~ |
 
+
+### Issues without plans:
+
+- Merchant UX / Hanel:
+  - Podczas handlu brakuje podglądu kupowanego przedmiotu. Nie wiemy, co kupujemy, jakie ma obrażenia, wagę itp.
+  - Pewnie można dodać inne poprawki UX, szczególnie pod mobile.
+
 ---
 
 ## Verification needed
