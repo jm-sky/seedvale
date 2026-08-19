@@ -2,7 +2,7 @@
 
 **Created:** 2026-08-18
 
-**Status:** `verification needed` 🔍 — registry + visibility fix + padded/overflow-cull mechanism implemented and unit-tested (§12); production budget number is still **TBD**, pending the real-GPU Cursor benchmark in §10. Not yet browser/manual verified.
+**Status:** `done` ✅ — production budget **16** is the default (`src/perf/flags.ts`). Registry + visibility fix + pad/overflow-cull were already implemented; this close-out turns the URL-gated pad on by default and verifies it on real GPU (§12). 8/12 stay rejected. Plan 149 Phase 1 A (`compileAsync` prewarm) is **not** part of this plan.
 
 **Priority:** high
 
@@ -92,7 +92,7 @@ export type PointLightBudget = {
 ```
 
 Refinements versus the original sketch:
-- **`budget: number | null`, not always-on.** The registry/census side of `sync()` always runs (cheap, needed for §10's measurement regardless of whether a number has been frozen); the pad/dummy-lights/overflow-cull side only runs when a budget is set. Production ships with the registry active and the pad **off by default** — `?pointLightBudget=N` (renamed from the diagnostic `?pinPointLights=N`) turns padding on for QA/Cursor benchmarking. This avoids shipping an unvalidated budget number as the silent default (see §12).
+- **`budget: number | null`, still overridable.** The registry/census side of `sync()` always runs (cheap). Production pads/culls at **16** by default (`DEFAULT_POINT_LIGHT_BUDGET`). `?pointLightBudget=N` overrides the cap; `?pointLightBudget=off` (also `0`/`false`/`no`) disables pad/cull for QA/rollback without tearing down registration.
 - **`createNullPointLightBudget()`** — a no-op implementation used as every call site's default parameter value, so adding the parameter to `createSettlement`/`SettlementsManager`/`PlacedFires`/`createPlayerTorch` didn't require touching every existing caller/test.
 - `registerSubtree`/`unregisterSubtree` walk only the object passed in (a settlement's `group`, a placed fire's `group`) — bounded to a few dozen nodes, run once per settlement load/unload or fire spawn/despawn, never per frame and never on `scene` itself.
 - Call sites (all implemented):
@@ -217,3 +217,62 @@ If (1)–(3) show the true concurrent-ON max is small and stable (e.g. consisten
 - Settlement load/unload and `PlacedFires` spawn/despawn behave identically to `main` from the player's perspective — the registry is purely additive bookkeeping on existing lifecycle calls.
 - `src/perf/pointLightBudget.ts`'s diagnostic pad and its `Object3D.prototype` patch are gone from any code path that runs by default (either deleted or explicitly superseded by the production module, §4).
 - Program census (plan 149 Phase B) re-confirms the ~62-program plateau on the production path, not just the diagnostic pin.
+
+---
+
+## 12. Implementation summary / verification (2026-08-19)
+
+**Production budget: 16.** Kept after real-GPU verification. 8 and 12 remain rejected (review 024). Overflow priority was **not** retuned — cull never fired.
+
+### What this close-out changed
+
+The registry, visibility fix (`light.visible` tracks intensity), dummy pad, and near-camera overflow protection were already in `src/world/pointLightBudget.ts` and call sites. This session only:
+
+- Defaulted `pointLightBudgetFromUrl()` to **16** instead of `null` (pad was URL-gated / diagnostic).
+- Kept QA/rollback: `?pointLightBudget=N` override, `?pointLightBudget=off` (also `0`/`false`/`no`) disables pad/cull.
+- Did **not** redesign the mechanism, reintroduce `scene.traverseVisible()`, add `compileAsync`/prewarm, merge GLTF materials, or touch the instancing/mask axis.
+
+Technical checks: `tsc --noEmit`, `npm run lint`, `npm run build`, `npm run test` (1124 tests) — all green.
+
+### Real-GPU verification
+
+Cursor IDE browser + CDP, hardware WebGL. GPU: `ANGLE (Intel, Intel(R) Arc(TM) 140V GPU (16GB) (0x000064A0) Direct3D11 vs_5_0 ps_5_0, D3D11)` via `WEBGL_debug_renderer_info` — **not** SwiftShader. `KHR_parallel_shader_compile`: available. Viewport `1068×906`, `deviceScaleFactor=1`, reports `pixelRatio=1`, `quality: High`, `seed=42`, `res=193`.
+
+Fresh origin `:5600` for `?benchmark=stream` (3 cold reloads). Fresh origin `:5601` for night / dusk / player torch (avoids `:5600` clock drift).
+
+Do **not** rank mean FPS. Stream runs 1–3 were hitch-starved (FPS avg 10.8 / 11.7 / 11.1, census frames 90 / 65 / 57) — same class as review 021 run 1. Use them for the **program-axis** story, not as RENDER/p95 cost samples. Night on `:5600` after continue was a healthier runtime sample (FPS avg 32.8, RENDER 23, frame p95 48.6).
+
+| Metric | Stream run 1 | Stream run 2 | Stream run 3 | Night (`:5600` continue) |
+|---|---:|---:|---:|---:|
+| unique cacheKeys / programs | 66 / 66 | 66 / 66 | 65 / 65 | 94 / — |
+| first-use events | 66 | 66 | 65 | — |
+| `npl` on `physical` keys | **16 only** | **16 only** | **16 only** | **16 only** |
+| `Green` / `MI_WindowGlass` / `Wood` | 5 / 4 / 1 | 5 / 4 / 1 | 5 / 4 / 1 | — |
+| frame-0 first-use | 54 | 53 | 52 | — |
+| max first-use hitch (ms) | 726 | 320 | 382 | — |
+| max hitch after frame 0 (ms) | 353 | 316 | 382 | — |
+| hitch ≥100 ms / ≥500 ms | 5 / 2 | 5 / 0 | 6 / 0 | — |
+| RENDER (ms) | 36 | 35.9 | 39 | **23** |
+| frame p95 (ms) | 200.8 | 150.9 | 167.2 | **48.6** |
+| budget `overflowMax` / culled | 16 / **0** | 16 / **0** | 10 / **0** | 11 / **0** |
+| `syncMs` | 0.0 | 0.0 | 0.0 | 0.0 |
+
+After the §3.2 visibility fix, daytime `realCount` starts at **2** (off house lamps no longer occupy slots). Stream later reached **16** concurrent visible lights (`overflowMax` 16, still `culled: 0`). Night/dusk at home (`:5601`): `realCount` 11–12, `culled: 0`, `budgetTooLowForScene: false`. Lighting a player torch (`Zapal pochodnię`) grew the registry **11 → 12**. `syncMs` 0.0–0.1 ms.
+
+Physical `numPointLights` never took a value other than **16** once the pad was on. Unique keys on the production `stream` path sit at **65–66** (review 023/024 diagnostic pin was 62). Residual copies are the leftover instancing/mask axis (`Green` 5 / glass 4 / wood 1), not a light-count split. The 94-key night continue on `:5600` was a different camera path with more named families; `npl` was still 16-only.
+
+### Visual
+
+- Fresh load / morning stream (`07:44 dzień`): terrain, grass, foliage, directional light present; no black materials.
+- Night (`01:12–01:18 noc`) and dusk (`20:18 zmierzch`, torch in hand): scene is dark as expected when the camera faces the forest edge of home. Distant settlement lamps were visible as point specks. Overflow cull did **not** fire, so this is not the review-024 budget-8 “village went dark” failure.
+- Plaza-interior close-up was not captured (spawn facing trees; look-drag needs pointer lock). Quantitative overflow (`culled: 0` at 11–16 real lights) is the evidence that 16 does not routinely hide settlement lamps.
+
+### Decision
+
+**Keep 16.** It removes the PointLight program-count axis, stays within the observed concurrent-ON max after the visibility fix, and does not need overflow-priority changes.
+
+### Follow-ups (not this plan)
+
+- Plan 149 Phase 1 A: loading-window `compileAsync` prewarm of the now-stable ~52 frame-0 programs. Frame-0 hitch remains (0.3–0.7 s typical on these runs).
+- Instancing/mask leftover (`Green` / `MI_WindowGlass` / `Wood` duplicate cacheKeys) — plan 149 Phase C.
+- Optional: plaza-interior night screenshot if a later playtest wants a camera-facing visual of house lamps.

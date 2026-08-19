@@ -8,6 +8,7 @@ export {
   DEFAULT_POINT_LIGHT_BUDGET,
   isPerfUrlEnabled,
   isProgramCensusUrlEnabled,
+  parsePointLightBudgetFlag,
   pointLightBudgetFromUrl,
 } from './flags'
 export { createPerfMonitor, withCategory } from './monitor'

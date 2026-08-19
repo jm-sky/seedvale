@@ -41,7 +41,7 @@ Next ideas backlog is in `docs/plans/NEXT-IDEAS.md`
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08); Etap A–G (relation levels, availability, effects, `animalId`, questy "groźny wilk" + "wilcza jama" + "zagubiona owca" + "drewno na naprawę" end-to-end, livestock `ownerHouseId`) zaimplementowane; lifecycle/identity gaps (event śmierci, `failed`/`invalidated`, dangerous wolf, `landmarkId`) domknięte przez plan 110; Etap H (drzewa/kopanie) i bandyci otwarte | 🔴 | XL | ~~015~~ ~~018~~ |
-| `2026-08-17--149--shader-program-first-use-hitch.md` | Phase 0 closed; Phase 1 B confirmed and moved to plan 157 for production PointLight budget. Phase 1 A (`compileAsync` prewarm) remains unstarted and should be reassessed after 157 verification. | 🔴 | M/L | — |
+| `2026-08-17--149--shader-program-first-use-hitch.md` | Phase 0 closed; Phase 1 B production PointLight budget **16** landed in ~~157~~. Phase 1 A (`compileAsync` prewarm) remains unstarted — reassess now that the light axis is stable. | 🔴 | M/L | — |
 
 ---
 
@@ -88,7 +88,6 @@ Implementation complete; needs play/browser check. This section lists **plans in
 | `2026-08-15--121--footstep-sound-refresh.md` | Kroki: Anton Z default (sand/grass/stone). Playtest 2026-08-18: **sprint po trawie jak kamienny korytarz** (za głośno) — prawdopodobnie fałszywe land SFX (plan 158); po 158 playtest trawy/sprintu ma sens. Zostaje 🔍 | 🟡 | S | — |
 | `2026-08-14--111--house-construction.md` | House Builder (MegaKit). Playtest 2026-08-18: **niektóre domki źle złożone** — zostaje 🔍 — [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md) | 🔴 | XL | ~~109~~ |
 | `2026-08-14--110--quests-v3-closure-world-identity-and-lifecycle.md` | Domknięcie planu 093: lifecycle `failed`/`invalidated`, predator `onDeath`, groźny wilk, failure owcy, `landmarkId` / rebind po save. Playtest 2026-08-18 **odłożony** — zostaje 🔍 | 🔴 | L | ~~093~~ |
-| `docs/plans/2026-08-18--157--production-pointlight-budget.md` | Optymalizacja | 🔴 | M | - |
 | `2026-08-18--155--inventory-item-instances-and-trap-lifecycle.md` | Generyczny mechanizm `ItemInstance`, price algo | ✅ | L | ~~141~~ |
 | `2026-08-18--160--high-quality-melee-weapons.md` | Sześć HQ broni białych (`damascus_*` / `obsidian_sword` / `battle_axe` / `masterwork_sword`) w istniejącym katalogu/melee/defense; battle axe ścina drzewa; damascus knife harvestuje zwłoki; Kupiec 4 sztuki + 2 quest-only; brak GLB (M44–M49). Techniczna weryfikacja zielona (tsc/lint/build/test, 1130 testów); browser pending | 🟡 | M | ~~134~~ ~~150~~ |
 
@@ -103,6 +102,7 @@ Completed plans **in this folder**. After the 2026-08-14 archive freeze new `don
 | File | Summary |
 |------|---------|
 | `2026-08-19--165--reset-graphics-and-audio-settings.md` | Pauza → Ustawienia: Resetuj ustawienia (dźwięk 100% + preset grafiki High). |
+| `2026-08-18--157--production-pointlight-budget.md` | Production `NUM_POINT_LIGHTS` budget **16** (registry + pad, no `traverseVisible`); real-GPU stream/night verified, overflow never culled. |
 | `2026-08-18--158--false-jump-land-sfx.md` | Slope-stick + próg land SFX; jump-land z packa terenu zamiast Kenney `footstep-01…04`. |
 | `2026-08-18--150--combat-mode-defense-and-downed-state.md` | Combat mode + soft lock (`Tab` living / `Shift+Tab` world), defense resolver + skill, player `downed`; save v18 (`defense` skill); type-check/build/test zielone, browser pending. |
 | `2026-08-18--156--npc-household-and-settlement-storage-logistics.md` | Fizyczny household/settlement crate + `[E]` stock (`Household` / `SettlementEconomy`); transport NPC już był (069/122/131). |

@@ -1,7 +1,7 @@
 # Plan: Shader/Program First-Use Hitch
 
 **Created:** 2026-08-17
-**Status:** `in progress` 🔄 — Phase 0 closed ([review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md), [review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md)). Phase 1 B diagnostic pin **PASS** ([review 023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md)). Budget curve 8/12/16 with a cheap counter ([review 024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md)): all three collapse to 62 programs; **16** is the only visual-safe budget on `stream`; 8/12 cull lights and do not buy RENDER. Phase 1 A (`compileAsync` prewarm) still **not** started. Next: a separate implementation plan for a cheap budget-16 pin, then leftover instancing.
+**Status:** `in progress` 🔄 — Phase 0 closed ([review 021](../reviews/2026-08-18--021--plan-149-phase-0-real-gpu.md), [review 022](../reviews/2026-08-18--022--plan-149-program-family-dump.md)). Phase 1 B diagnostic pin **PASS** ([review 023](../reviews/2026-08-18--023--plan-149-pointlight-variant-axis.md), [review 024](../reviews/2026-08-18--024--plan-149-pointlight-budget-curve.md)). Production PointLight budget **16** landed in [plan 157](./2026-08-18--157--production-pointlight-budget.md) (stream unique keys 65–66, `npl=16` only). Phase 1 A (`compileAsync` prewarm) still **not** started — next once this stable set is confirmed. Leftover instancing/mask (`Green`/`Wood`/`MI_WindowGlass`) is Phase C.
 **Priority:** high · **Effort:** M/L
 **Depends on:** none
 **domain:** `world-terrain`

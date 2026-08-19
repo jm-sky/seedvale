@@ -284,16 +284,12 @@ export async function createApp(
   const lights = createLights(config.postProcessing.shadowMapSize)
   lights.addTo(scene)
 
-  // Plan 157 — production NUM_POINT_LIGHTS stabilization. The registry is
-  // always active (cheap: bounded to real lights actually registered by
-  // `createSettlement`/`PlacedFires`/`PlayerTorch`, never a scene traversal)
-  // so it always reports real-light census data; the pad/overflow-cull only
-  // runs when `?pointLightBudget=N` is set, since the production budget
-  // number is not frozen yet (plan 157 §10 — needs a real-GPU benchmark).
-  // Lives here (not inside `WorldBundle`) because its pad is added directly
-  // to `scene`, which survives `rebuildWorldBundle()` — only the settlement/
-  // placed-fire *registrations* are rebuilt, via the same instance threaded
-  // through below.
+  // Plan 157 — production NUM_POINT_LIGHTS stabilization. Registry + pad/cull
+  // at budget 16 by default (`src/perf/flags.ts`); `?pointLightBudget=off`
+  // disables the pad without tearing down registration. Lives here (not
+  // inside `WorldBundle`) because its pad is added directly to `scene`,
+  // which survives `rebuildWorldBundle()` — only the settlement/placed-fire
+  // *registrations* are rebuilt, via the same instance threaded through below.
   const pointLightBudget = createPointLightBudget(scene, pointLightBudgetFromUrl())
   if (typeof window !== 'undefined') {
     window.__seedvalePointLightBudget = pointLightBudget

@@ -42,8 +42,9 @@ export const POINT_LIGHT_CULL_USERDATA = 'seedvalePointLightBudgetCull'
 export const POINT_LIGHT_PROTECT_RADIUS = 30
 
 export type PointLightBudgetSnapshot = {
-  /** `null` when no `?pointLightBudget` override is active — the registry
-   *  still tracks real lights (for census/diagnostics) but no pad/cull runs. */
+  /** `null` when pad/cull is disabled (`?pointLightBudget=off`) — the
+   *  registry still tracks real lights but no dummy pad or overflow-cull
+   *  runs. Production default is 16. */
   budget: number | null
   realCount: number
   padVisible: number
@@ -85,7 +86,7 @@ export type PointLightBudget = {
   /** Recount visible registered lights and, if `budget` is set, pad/cull to
    *  it. Call once per frame, before any render pass. Pass the beauty camera
    *  so overflow-cull can protect near-camera lights (plan 157 §3.4) — omit
-   *  it (tests) to disable that protection. */
+   *  it (tests) to disable that protection. Production default budget is 16. */
   sync: (camera?: THREE.Camera) => PointLightBudgetSnapshot
   snapshot: () => PointLightBudgetSnapshot
   dispose: () => void

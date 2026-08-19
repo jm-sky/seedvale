@@ -259,8 +259,8 @@ export type GameLoopDeps = {
   /** Reports this frame's simulate/render split (ms) to the debug GUI's
    *  Performance folder (perf review M1). */
   setFrameTiming: (simulateMs: number, renderMs: number) => void
-  /** Plan 157 — recounts real registered `PointLight`s (and, if
-   *  `?pointLightBudget=N` is set, pads/culls to a constant) before any
+  /** Plan 157 — recounts real registered `PointLight`s and pads/culls to the
+   *  production budget (16, unless `?pointLightBudget` overrides) before any
    *  render pass. See `src/world/pointLightBudget.ts`. */
   syncPointLightBudget?: () => void
 }
