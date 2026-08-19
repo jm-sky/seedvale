@@ -164,7 +164,7 @@ export function createEmbers(scale: number): ParticlePool {
 const TORCH_SPARK_TUNING: PoolTuning = {
   count: 4,
   color: 0xffb347,
-  size: 0.09,
+  size: 0.045,
   spawnRadius: 0.09,
   upSpeed: [0.55, 1.0],
   lateralSpeed: 0.22,
