@@ -1,8 +1,8 @@
 # Research: Three.js + procedural terrain + character AI
 
-**Status:** `done`  
-**Created:** 2026-08-06  
-**Updated:** 2026-08-06  
+**Status:** `done`
+**Created:** 2026-08-06
+**Updated:** 2026-08-06
 
 ## Question
 
@@ -90,11 +90,11 @@ Najlepszy stosunek efekt/koszt: zwykle **B** lub **C**, nie pełne MMO.
 
 ### Proponowane spike’i (po PR)
 
-1. Vite + Three + kamera 3rd person + flat ground  
-2. Chunked FBM terrain + collision (Rapier heightfield lub raycast)  
-3. 1 agent: navmesh bake + patrol  
-4. Utility AI (2–3 potrzeby) lub BT hunt/flee  
-5. Biomy + scenery + (opcjonalnie) grass  
+1. Vite + Three + kamera 3rd person + flat ground
+2. Chunked FBM terrain + collision (Rapier heightfield lub raycast)
+3. 1 agent: navmesh bake + patrol
+4. Utility AI (2–3 potrzeby) lub BT hunt/flee
+5. Biomy + scenery + (opcjonalnie) grass
 
 ## Conclusion
 
@@ -110,5 +110,4 @@ Najlepszy stosunek efekt/koszt: zwykle **B** lub **C**, nie pełne MMO.
 
 - [x] [ROADMAP.md](../ROADMAP.md) — szkic PR
 - [ ] `docs/plans/` — plan implementacji v0.1
-- [ ] `docs/features/` — FEATURE-001+ po scope
 - [ ] Art direction (otwarte)

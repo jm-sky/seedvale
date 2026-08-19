@@ -48,7 +48,7 @@ No prior audit of AI-agent workflow / context optimization exists in this repo. 
 
 ### 🟢 Low
 
-11. **`docs/features/`, `docs/examples/`, `docs/testing/` are empty stub directories** with template tables and no real entries. `docs/README.md` already self-flags `features/` as "Nieużywane" (unused) — correct self-awareness — but the directory still exists and its `FEATURE-NNN-slug.md` naming convention was never actually adopted anywhere, making it a second, contradicting, unused convention next to the real one.
+11. ~~**`docs/features/`, `docs/examples/`, `docs/testing/` are empty stub directories** with template tables and no real entries. `docs/README.md` already self-flags `features/` as "Nieużywane" (unused) — correct self-awareness — but the directory still exists and its `FEATURE-NNN-slug.md` naming convention was never actually adopted anywhere, making it a second, contradicting, unused convention next to the real one.~~
 12. **`docs/architecture/` (a subdirectory, currently one file: `performance-and-workers.md`) sits next to `docs/ARCHITECTURE.md`** (near-identical name, different path/casing). Not confusing today with only one file present, but it's the same naming shape that produced the `ROADMAP.md`/`roadmap/` collision in #4, and would repeat it if a second file lands there carelessly.
 
 ---
@@ -169,7 +169,7 @@ This is already what `CLAUDE.md` prescribes for reading and verification. The on
 
 **🟢 Later / optional**
 
-11. Delete `docs/features/`/`docs/examples/`/`docs/testing/` if still empty after several more months — low cost either way today.
+11. ~~Delete `docs/features/`/`docs/examples/`/`docs/testing/` if still empty after several more months — low cost either way today.~~
 12. Revisit agent-browser + browser MCP once the "don't launch browser yourself" policy in `CLAUDE.md` is deliberately revisited.
 13. Build the `implement-plan`/`architecture-review` skills (§F) only after the doc cleanup in items 1–4 lands — a skill referencing a still-duplicated/orphaned doc set launders the problem instead of fixing it.
 

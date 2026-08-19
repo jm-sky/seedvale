@@ -20,6 +20,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 | [issues/](./issues/README.md) | Błędy, usprawnienia, dług techniczny |
 | [reviews/](./reviews/README.md) | Sesje przeglądu |
 | [research/](./research/README.md) | Analizy, spike'i, porównania przed decyzją |
+| [feature-roadmaps/](./feature-roadmaps/README.md) | Roadmapy większych, wieloetapowych feature'ów |
 | [plans/](./plans/README.md) | Plany implementacji (wszystkie statusy) |
 | [plans/archive/](./plans/archive/README.md) | Jednorazowo zamrożony batch planów z 2026-08-07–2026-08-14 |
 | [roadmap/](./roadmap/README.md) | Zamrożony log sesji projektowania docelowej architektury (2026-08-12–14), wnioski zsyntetyzowane w [review 006](./reviews/2026-08-14--006--architecture-alignment.md). Nie jest to roadmapa produktu — tą jest [ROADMAP.md](./ROADMAP.md) |
@@ -44,20 +45,19 @@ Analizy i porównania — indeks w [research/README.md](./research/README.md).
 ### `reviews/`
 Sesje przeglądu — indeks w [reviews/README.md](./reviews/README.md).
 
-### `features/`
-Nieużywane. Plany żyją w `plans/`, nie tutaj.
+### `feature-roadmaps/`
 
-### `examples/`
-Przykładowe pliki, snippety, referencje zewnętrzne.
+Roadmapy większych feature'ów rozwijanych etapami. Opisują kierunek rozwoju feature'u i zależności między etapami.
+
+Nie są źródłem prawdy o implementacji i nie zastępują `plans/`.
+
+Każdy konkretny etap implementacyjny powinien mieć odpowiedni plan w `plans/`.
 
 ### `archive/`
 Przestarzałe dokumenty top-level (nie plany). Osobne od `plans/archive/`.
 
 ### `deployment/`
 Deploy / hosting (gdy będzie potrzebny).
-
-### `testing/`
-Notatki i raporty testowe.
 
 ### `prompts/`
 Meta-prompty do powtarzalnych zadań (struktura docs, review, itd.).
