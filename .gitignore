@@ -7,3 +7,4 @@ CLAUDE.local.md
 _temp/
 docs/refs/
 trace_processor
+__pycache__/
