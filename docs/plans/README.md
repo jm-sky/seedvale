@@ -96,6 +96,8 @@ Natural vegetation
 
 > Place for plans links
 
+- | `docs/plans/2026-08-20--175--cooking-vessels-grates-and-iron-rods.md` | M | M | ~106~ |
+
 ---
 
 ## Todo
