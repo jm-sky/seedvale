@@ -1465,14 +1465,10 @@ def main() -> None:
     emit("-" * 72)
     emit(md_header("TRACE ANALYSIS"))
     emit("-" * 72, True)
-    emit(
-        f"Events: {len(raw_events):,}"
-    )
+    emit(f"Events: {len(raw_events):,}")
 
     emit()
-    emit(
-        "Building X + B/E call tree..."
-    )
+    emit("Building X + B/E call tree...", True)
 
     x_events = parse_timed_events(
         raw_events
@@ -1492,9 +1488,7 @@ def main() -> None:
     )
 
     emit()
-    emit(
-        "Calculating call tree..."
-    )
+    emit("Calculating call tree...", True)
 
     roots = build_call_tree(
         timed_events
