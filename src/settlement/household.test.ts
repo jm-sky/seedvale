@@ -8,8 +8,9 @@ describe('createHousehold', () => {
     const again = createHousehold(householdIdFor('0_0', 0), '0_0', '0_0:home:0')
     expect(a.stock.query('food')).toEqual(again.stock.query('food'))
     expect(a.stock.query('food')).toBeGreaterThan(0)
-    expect(a.stock.query('food')).toBeLessThan(5)
+    expect(a.stock.query('food')).toBeLessThan(7)
     expect(a.stock.query('wood')).toBeGreaterThan(0)
+    expect(a.stock.query('wood')).toBeLessThan(5)
   })
 
   it('reports shortage/shouldAcquire relative to policy, not raw amounts', () => {

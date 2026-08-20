@@ -171,6 +171,7 @@ export type Settlement = {
     dayFactor: number,
     litFires: readonly { x: number, z: number }[],
     villages: readonly VillageInfo[],
+    dayLengthSec: number,
   ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
@@ -577,7 +578,7 @@ export async function createSettlement(
     households,
     householdStorages,
     fire,
-    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages) {
+    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec) {
       const nearbyNpcCounts = new Array<number>(agents.length).fill(0)
       const pushX = new Array<number>(agents.length).fill(0)
       const pushZ = new Array<number>(agents.length).fill(0)
@@ -606,7 +607,7 @@ export async function createSettlement(
       }
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i]!
-        agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCounts[i]!)
+        agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCounts[i]!, dayLengthSec)
         if (pushX[i] !== 0 || pushZ[i] !== 0) agent.applySeparation(pushX[i]!, pushZ[i]!)
       }
       // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef`

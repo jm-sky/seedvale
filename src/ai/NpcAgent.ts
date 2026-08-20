@@ -1206,11 +1206,12 @@ export class NpcAgent {
     observerYaw: number,
     timeOfDay: number,
     nearbyNpcCount: number,
+    dayLengthSec: number,
   ): void {
     this.simClock += dt
     if (this.frozen) return
     const prevPhase = this.phase
-    tickNeeds(this.needs, dt, {
+    tickNeeds(this.needs, dt, dayLengthSec, {
       hungerThirstRate: this.phase === 'sleep' ? SLEEP_HUNGER_THIRST_RATE : 1,
     })
     this.moving = false
@@ -1548,7 +1549,7 @@ export class NpcAgent {
       // game hour) — so needs/stamina/vigor accrue at their usual rate.
       const stepDt = (step * dayLengthSec) / 24
       const sleeping = activity === 'sleep' || napping || shouldCollapseSleep(this.vigor)
-      tickNeeds(this.needs, stepDt, {
+      tickNeeds(this.needs, stepDt, dayLengthSec, {
         hungerThirstRate: sleeping ? SLEEP_HUNGER_THIRST_RATE : 1,
       })
       const vigorStep = tickVigorForSimulatedStep(this.vigor, activity, stepDt, napping)

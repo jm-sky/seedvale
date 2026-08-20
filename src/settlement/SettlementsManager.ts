@@ -86,6 +86,7 @@ export type SettlementsManager = {
     dayFactor: number,
     litFires: readonly { x: number, z: number }[],
     villages: readonly VillageInfo[],
+    dayLengthSec: number,
   ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the
@@ -391,12 +392,12 @@ export async function createSettlementsManager(
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
     },
-    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages) {
+    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)
       }
       for (const entry of entries.values()) {
-        entry.settlement?.update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages)
+        entry.settlement?.update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec)
       }
       for (const instances of midpoints.values()) {
         for (const inst of instances) {

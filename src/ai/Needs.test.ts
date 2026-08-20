@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createNeedState, pickNeed, SLEEP_HUNGER_THIRST_RATE, tickNeeds } from './Needs'
 
+const DAY_LENGTH_SEC = 480
+
 describe('pickNeed', () => {
   it('defaults to idle when nothing crosses its threshold', () => {
     expect(pickNeed({ thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 })).toBe('idle')
@@ -89,10 +91,10 @@ describe('pickNeed critical mode', () => {
 describe('tickNeeds', () => {
   it('increases every need over time and clamps at 1', () => {
     const needs = createNeedState(0)
-    tickNeeds(needs, 5)
-    expect(needs.thirst).toBeGreaterThan(0.25)
+    tickNeeds(needs, 5, DAY_LENGTH_SEC)
+    expect(needs.thirst).toBeGreaterThan(0.05)
 
-    tickNeeds(needs, 1000)
+    tickNeeds(needs, 1000, DAY_LENGTH_SEC)
     expect(needs.thirst).toBe(1)
     expect(needs.woodDuty).toBe(1)
     expect(needs.waterDuty).toBe(1)
@@ -102,10 +104,11 @@ describe('tickNeeds', () => {
   it('slows only hunger/thirst when hungerThirstRate is reduced (e.g. sleep)', () => {
     const awake = { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 }
     const asleep = { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 }
-    tickNeeds(awake, 10)
-    tickNeeds(asleep, 10, { hungerThirstRate: SLEEP_HUNGER_THIRST_RATE })
-    expect(asleep.thirst).toBeCloseTo(10 * 0.04 * SLEEP_HUNGER_THIRST_RATE)
-    expect(asleep.hunger).toBeCloseTo(10 * 0.035 * SLEEP_HUNGER_THIRST_RATE)
+    tickNeeds(awake, 10, DAY_LENGTH_SEC)
+    tickNeeds(asleep, 10, DAY_LENGTH_SEC, { hungerThirstRate: SLEEP_HUNGER_THIRST_RATE })
+    const hoursPerRealSecond = 24 / DAY_LENGTH_SEC
+    expect(asleep.thirst).toBeCloseTo(10 * hoursPerRealSecond / 8 * SLEEP_HUNGER_THIRST_RATE)
+    expect(asleep.hunger).toBeCloseTo(10 * hoursPerRealSecond / 10 * SLEEP_HUNGER_THIRST_RATE)
     expect(asleep.woodDuty).toBeCloseTo(awake.woodDuty)
     expect(asleep.waterDuty).toBeCloseTo(awake.waterDuty)
     expect(asleep.thirst).toBeLessThan(awake.thirst)

@@ -14,10 +14,10 @@ export type NeedState = {
 
 export function createNeedState(offset = 0): NeedState {
   return {
-    thirst: 0.25 + offset * 0.2,
-    woodDuty: 0.2 + (1 - offset) * 0.2,
-    waterDuty: 0.2 + (offset * 0.3),
-    hunger: 0.15 + ((offset + 0.3) % 1) * 0.25,
+    thirst: 0.05 + offset * 0.1,
+    woodDuty: 0.1 + (1 - offset) * 0.1,
+    waterDuty: 0.1 + (offset * 0.2),
+    hunger: 0.05 + ((offset + 0.3) % 1) * 0.15,
   }
 }
 
@@ -25,18 +25,27 @@ export function createNeedState(offset = 0): NeedState {
  *  fauna uses the same rate at night when not sprinting). */
 export const SLEEP_HUNGER_THIRST_RATE = 0.5
 
+const NEED_FULL_HOURS = {
+  thirst: 8,
+  hunger: 10,
+  woodDuty: 12,
+  waterDuty: 12,
+}
+
 export type TickNeedsOptions = {
   /** Multiplier on hunger/thirst rise only — wood/water duties are unchanged. */
   hungerThirstRate?: number
 }
 
 /** Tick needs upward over time (0–1). */
-export function tickNeeds(needs: NeedState, dt: number, options: TickNeedsOptions = {}): void {
+export function tickNeeds(needs: NeedState, dt: number, dayLengthSec: number, options: TickNeedsOptions = {}): void {
   const hungerThirstRate = options.hungerThirstRate ?? 1
-  needs.thirst = Math.min(1, needs.thirst + dt * 0.04 * hungerThirstRate)
-  needs.woodDuty = Math.min(1, needs.woodDuty + dt * 0.028)
-  needs.waterDuty = Math.min(1, needs.waterDuty + dt * 0.028)
-  needs.hunger = Math.min(1, needs.hunger + dt * 0.035 * hungerThirstRate)
+  const hoursPerRealSecond = 24 / dayLengthSec
+
+  needs.thirst = Math.min(1, needs.thirst + dt * hoursPerRealSecond / NEED_FULL_HOURS.thirst * hungerThirstRate)
+  needs.woodDuty = Math.min(1, needs.woodDuty + dt * hoursPerRealSecond / NEED_FULL_HOURS.woodDuty)
+  needs.waterDuty = Math.min(1, needs.waterDuty + dt * hoursPerRealSecond / NEED_FULL_HOURS.waterDuty)
+  needs.hunger = Math.min(1, needs.hunger + dt * hoursPerRealSecond / NEED_FULL_HOURS.hunger * hungerThirstRate)
 }
 
 export type PickNeedOptions = {

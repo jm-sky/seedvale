@@ -1248,6 +1248,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           dayFactor,
           litFires,
           villages,
+          dayNight.dayLengthSec,
         )
       })
       bundle.resourceDeposits.update(

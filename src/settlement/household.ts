@@ -17,6 +17,18 @@ export type HouseholdId = string
  *  become household-storable just because they're `EconomicKind`s. */
 export type HouseholdResourceKind = 'food' | 'wood'
 
+const INITIAL_HOUSEHOLD_STOCK: Record<string, number> = {
+  water: 4,
+  food: 3,
+  wood: 2,
+}
+
+const INITIAL_HOUSEHOLD_RANDOM_OFFSET: Record<string, number> = {
+  water: 3,
+  food: 3,
+  wood: 2,
+}
+
 const HOUSEHOLD_KINDS: readonly HouseholdResourceKind[] = ['food', 'wood']
 
 type HouseholdPolicy = {
@@ -34,7 +46,7 @@ type HouseholdPolicy = {
  *  intentionally small so a household reads as a real family pantry, not a
  *  depot. */
 const HOUSEHOLD_POLICY: Record<HouseholdResourceKind, HouseholdPolicy> = {
-  food: { minimum: 1, target: 3, capacity: 5 },
+  food: { minimum: 1, target: 3, capacity: 7 },
   wood: { minimum: 1, target: 3, capacity: 5 },
 }
 
@@ -46,7 +58,7 @@ const HOUSEHOLD_POLICY: Record<HouseholdResourceKind, HouseholdPolicy> = {
  *  reserve backs both the `WaterBarrel` (NPC) and `AnimalTrough` (livestock)
  *  presentation props — implementation notes §5: one authoritative owner,
  *  not duplicated quantities. */
-const WATER_POLICY: HouseholdPolicy = { minimum: 1, target: 3, capacity: 5 }
+const WATER_POLICY: HouseholdPolicy = { minimum: 1, target: 3, capacity: 7 }
 
 export type WaterReserve = {
   readonly current: number
@@ -121,14 +133,14 @@ function hashString(value: string): number {
 function initialHouseholdStock(id: HouseholdId): Partial<Record<HouseholdResourceKind, number>> {
   const out: Partial<Record<HouseholdResourceKind, number>> = {}
   for (const kind of HOUSEHOLD_KINDS) {
-    out[kind] = 1 + (hashString(`${id}:${kind}`) % 2)
+    out[kind] = INITIAL_HOUSEHOLD_STOCK[kind] + (hashString(`${id}:${kind}`) % INITIAL_HOUSEHOLD_RANDOM_OFFSET[kind])
   }
   return out
 }
 
 export function createHousehold(id: HouseholdId, settlementId: string, homeId: string): Household {
   const stock = new EconomicStock(initialHouseholdStock(id))
-  const water = createWaterReserve(1 + (hashString(`${id}:water`) % 2))
+  const water = createWaterReserve(INITIAL_HOUSEHOLD_STOCK.water + (hashString(`${id}:water`) % INITIAL_HOUSEHOLD_RANDOM_OFFSET.water))
   return {
     id,
     settlementId,
