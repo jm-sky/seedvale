@@ -53,6 +53,7 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 035 | [2026-08-19--035--playtest-coins-placement-inventory.md](./2026-08-19--035--playtest-coins-placement-inventory.md) | Playtest: Kupiec w monetach + rzadki spawn, ukrycie „Poproś o miecz”, namiot/pułapka na drodze, Zastaw z ekwipunku | `done` |
 | 036 | [2026-08-19--036--settlement-prop-colliders.md](./2026-08-19--036--settlement-prop-colliders.md) | Koń kupca, wóz i sterta drewna bez kolizji — dyski w `ColliderRegistry` | `verification needed` |
 | 037 | [2026-08-19--037--village-campfire-flat-pad.md](./2026-08-19--037--village-campfire-flat-pad.md) | Ognisko wioskowe bez równego kawałka terenu | `todo` |
+| 038 | `2026-08-20--038--npc-labels-and-sound-query-param.md` | Ukryć dalsze NPC labels; dodać `noSound=true` query param | `todo` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
