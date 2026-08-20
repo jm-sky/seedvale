@@ -33,6 +33,7 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   cheese: 8,
   dried_meat: 10,
   bandage: 10,
+  fishing_rod: 18,
 }
 
 /** Display order for the trade screen — matches the plan 090 mockup. */
@@ -61,6 +62,7 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'cheese',
   'dried_meat',
   'bandage',
+  'fishing_rod',
 ]
 
 /** Fallback coin-equivalent for items the merchant does not stock. */

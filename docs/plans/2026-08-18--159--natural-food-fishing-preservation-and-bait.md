@@ -1,7 +1,7 @@
 # Plan: Natural Food, Fishing, Preservation and Bait
 
 **Created:** 2026-08-18  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented 2026-08-20. Technical verification green (`tsc`/lint/build/test, 1217 tests); no browser/gameplay verification yet. See "Implementation summary" (§18) and the [implementation notes](./2026-08-18--159--natural-food-fishing-preservation-and-bait-implementation-notes.md) for scope adaptations made against the real codebase.  
 **Priority:** medium · **Effort:** L  
 **Depends on:** ~~155~~ ~~156~~ ~~106~~ ~~141~~
 
@@ -378,5 +378,23 @@ Sprawdzić end-to-end:
 - trap bait używa istniejących trap rules i nie tworzy nowego bait systemu;
 - bait jest poprawnie zużywany/zwracany zgodnie z lifecycle;
 - streaming nie duplikuje ani nie gubi itemów lub persistent process state.
+
+## 18. Implementation summary (2026-08-20)
+
+Implemented end-to-end against the real codebase, with deviations where the plan's assumptions didn't match what's actually there — see the implementation notes for the full audit. Key points:
+
+- **Items/food metadata**: new `ItemKind`s `berries`, `apple`, `nuts`, `honey`, `carrot`, `potato`, `cabbage`, `fish`, `dried_fish`, `fishing_rod` (`items/items.ts`). `ItemCatalogEntry` gained an optional `food?: { freshness?, bait? }` block (`itemCatalog.ts`) — `foodValue` was deliberately **not** added as a separate field since `consumable.relief` already is the food value; a duplicate would risk drift. `mushroom` (previously `resource`-only, no `consumable`) is now also `food`-categorized and consumable, matching the plan's "mushroom is an existing food product" framing.
+- **Freshness**: `items/foodFreshness.ts` is the pure Fresh→Medium→Spoiled resolver. `Inventory` (`items/Inventory.ts`) gained a minimal `FoodBatch[]` per perishable kind, transparently threaded through the *existing* `add(kind, n, acquiredAtDays?)`/`remove(kind, n)` — every non-food call site is unaffected (3rd param optional, batches only exist for kinds with `food.freshness`). Batches merge within a small age tolerance and are consumed oldest-first. Spoiled food cannot be eaten (`consumeItem` in `createApp.ts`).
+- **Natural food/crops**: berries/nuts extend the existing world-chunk flora pool (`terrain/chunkItems.ts`); apple is tree-anchored renewable like `branch`; carrot/potato/cabbage are garden-anchored renewable like `tomato` (`items/createItemSpawners.ts`). No new resource/spawner system.
+- **Cooking**: left unchanged. There is no `roasted_fish`/roasted-vegetable item in the plan's item list, so there is nothing new for `campfireCooking.ts` to produce — fish is preserved via drying instead, not campfire cooking.
+- **TimedProcess**: `items/timedProcess.ts`, a small pure value (start+duration → derived completion/progress), used by drying.
+- **Drying rack — deviation from the plan's implied player-placement**: implemented as a **deterministic settlement landmark** (`world/dryingRacks.ts` + `world/createDryingRacks.ts`), the same "persistent record + presentation object" idea as the well/campfire, rather than a player-placed item via Quick Actions/inventory. The plan's own wording ("persistent world record + presentation object, analogously to existing persistent world objects") doesn't actually require player placement, and a full "place like a tent" flow would have needed new Quick Actions/inventory-screen UI wiring outside a reasonable scope for this pass. There is no `drying_rack` `ItemKind`.
+- **Fishing**: `fishing_rod` held tool; `[E]` at a lake shore casts (busy channel, deterministic catch roll keyed by a coarse position-grid "spot id", `world/fishing.ts`); `[R]` consumes a bait-capable food item and applies/refreshes that spot's bait. No fish population, agents or manager.
+- **Fishing bait**: persisted as a flat `spotId → FishingBaitState` map at the `createApp.ts` level (not part of `WorldBundle`, since it has no scene/mesh lifecycle) — survives stream-out/in for free because it was never tied to a chunk-loaded object.
+- **Bees/honey**: implemented as a **deterministic settlement landmark** near a tree (`world/beehives.ts` + `world/createBeehives.ts`), not a player-placed or crafted structure — matches the plan's "minimal persistent hive state" framing. `[E]` collects accrued honey (small deterministic sting chance via the existing `damageHealth`); `[R]` burns it down for a one-time reward while a lit torch/branch is held. No bee agents/combat system.
+- **Trap bait — deviation from a separate "load bait" action**: `PlacedTrapRecord.baitKind` extends plan 141's traps (`world/animalTraps.ts`/`createPlacedTraps.ts`), with a detection-chance bonus (`TRAP_BAIT_DETECTION_CUT`). Loading bait happens automatically when arming a trap (`armTrap` in `createApp.ts`), consuming the cheapest available bait-capable food item — the existing `Interactable{kind:'trap'}` already spends both `[E]`/`[R]` on arm/disarm/collect, so a genuinely separate "load bait" step would have needed a new UI surface (Quick Actions or inventory-screen action) outside scope. Bait is returned to inventory on disarm/collect before a capture, consumed on a successful capture.
+- **NPC/household integration — no change needed**: audited `Household.stock`/`SettlementEconomy` (`settlement/household.ts`, `economy/`) and confirmed `food` there is (and already was, before this plan) an **abstract aggregate quantity**, never itemized by `ItemKind` — NPCs gather/consume `food` as a plain number (`household.stock.remove('food', 1)`), not specific items. There is therefore no itemized NPC food logistics to extend for the new food kinds; they remain player-inventory items usable through the existing consumable/cooking/trade paths, exactly as the plan's own escape hatch anticipated ("if `Household.stock` needs extending... extend; do not create a parallel system" — it didn't need extending because it was never itemized to begin with).
+- **Persistence**: `SaveData` v20 (`persistence/saveData.ts`) adds `foodBatches`, `dryingRacks`, `hives`, `fishingBait`; `SavePlacedTrap` gained an optional `baitKind`. Migration preserves all v1-19 state; new fields default empty.
+- **Verification**: `npx tsc --noEmit`, `pnpm lint:fix`, `pnpm run build`, `pnpm run test` (1217 tests, incl. new coverage for `foodFreshness`, `Inventory` food batches, `fishing`, `beehives`, `dryingRacks`, `timedProcess`, and a trap-bait detection-bonus case) are all green. No browser/gameplay verification.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

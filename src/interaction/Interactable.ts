@@ -93,3 +93,10 @@ export type Interactable =
    *  `SettlementEconomy`, same "presentation, not owner" contract as
    *  `householdStorage`. */
   | { kind: 'settlementStorage', position: { x: number, z: number }, promptLabel: string, economy: SettlementEconomy }
+  /** Player-placed drying rack (plan 159 §8) — `[E]` starts a process when
+   *  idle, collects the output when complete, or shows a "still drying"
+   *  toast otherwise; single-action like `campfire`/`trap`. */
+  | { kind: 'dryingRack', position: { x: number, z: number }, promptLabel: string, id: string }
+  /** Wild beehive (plan 159 §11) — `[E]` collects accrued honey; `[R]` burns
+   *  it down (one-time reward) while a lit torch/branch is held. */
+  | { kind: 'hive', position: { x: number, z: number }, promptLabel: string, id: string, burned: boolean }

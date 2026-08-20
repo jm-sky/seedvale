@@ -9,6 +9,8 @@ import type { Settlement } from '../settlement/createSettlement'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { ResourceDeposits } from '../terrain/resourceDeposits'
+import type { Beehives } from '../world/createBeehives'
+import type { DryingRacks } from '../world/createDryingRacks'
 import type { PlacedTraps } from '../world/createPlacedTraps'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
@@ -22,6 +24,8 @@ import { ORE_YIELD_LABEL } from '../terrain/depositMining'
 import { canLevelAt, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
 import { oceanMixAt } from '../terrain/waterBodies'
 import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
+import { honeyAvailable } from '../world/beehives'
+import { isDryingComplete } from '../world/dryingRacks'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource } from '../world/WaterSource'
 import type { Vector3 } from 'three'
@@ -75,6 +79,12 @@ export const COMBAT_TARGET_CONE_DOT: Record<CombatAimMode, number> = {
  *  as `campfire`'s "Dołóż gałąź" prompt not checking for a branch first) —
  *  `gameLoop.ts` toasts an error if `[R]` is pressed without one. */
 const WATER_SOURCE_PROMPT = '[E] Napij się · [R] Napełnij bukłak'
+/** Plan 159 §9-10 — shown instead of `WATER_SOURCE_PROMPT` while a fishing
+ *  rod is held, since `[E]`/`[R]` are only two keys and fishing needs both
+ *  (cast, apply bait). Drinking is unavailable while the rod is equipped —
+ *  same "one held tool at a time" tradeoff the rest of the game already
+ *  makes. */
+const FISHING_PROMPT = '[E] Łów rybę · [R] Zanęć'
 /** Lit campfire — `[E]` adds fuel (existing), `[R]` cooks raw_meat (plan
  *  106 §6). Static regardless of inventory, same convention as
  *  `WATER_SOURCE_PROMPT`. */
@@ -208,6 +218,11 @@ export function buildInteractables(
   placedTents: PlacedTents,
   placedTraps: PlacedTraps,
   resourceDeposits: ResourceDeposits,
+  dryingRacks: DryingRacks,
+  hives: Beehives,
+  /** Current world day (plan 159) — drives drying-complete/honey-available
+   *  prompt text. */
+  nowDays: number,
   playerPos: Vector3,
   /** Currently held tool — drives axe harvest prompts and animal attack prompts. */
   heldTool: ToolKind | null = null,
@@ -267,6 +282,37 @@ export function buildInteractables(
       id: trap.id,
       trapKind: trap.kind,
       state: trap.state,
+    })
+  }
+
+  for (const rack of dryingRacks.list()) {
+    if (!withinRange(rack.x, rack.z, playerPos, GAZE_RANGE)) continue
+    const promptLabel = !rack.process
+      ? '[E] Zacznij suszenie'
+      : isDryingComplete(rack.process, nowDays)
+        ? '[E] Odbierz suszony produkt'
+        : 'Suszy się…'
+    list.push({
+      kind: 'dryingRack',
+      position: { x: rack.x, z: rack.z },
+      promptLabel,
+      id: rack.id,
+    })
+  }
+
+  for (const hive of hives.list()) {
+    if (!withinRange(hive.x, hive.z, playerPos, GAZE_RANGE)) continue
+    const promptLabel = hive.burned
+      ? 'Spalony ul'
+      : honeyAvailable(hive, nowDays) > 0
+        ? '[E] Zbierz miód · [R] Spal ul'
+        : 'Dziki ul · [R] Spal ul'
+    list.push({
+      kind: 'hive',
+      position: { x: hive.x, z: hive.z },
+      promptLabel,
+      id: hive.id,
+      burned: hive.burned,
     })
   }
 
@@ -478,7 +524,7 @@ export function buildInteractables(
     list.push({
       kind: 'waterEdge',
       position: { x: playerPos.x, z: playerPos.z },
-      promptLabel: WATER_SOURCE_PROMPT,
+      promptLabel: heldTool === 'fishing_rod' ? FISHING_PROMPT : WATER_SOURCE_PROMPT,
       source: createWaterSource('lake'),
     })
   }

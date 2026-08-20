@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SNEAK_LEGACY_XP } from '../player/PlayerSkills'
-import { isSaveDataV19, loadSaveData, type SaveConfig, type SaveDataV10, type SaveDataV11 } from './saveData'
+import { isSaveDataV20, loadSaveData, type SaveConfig, type SaveDataV10, type SaveDataV11 } from './saveData'
 
 const config = {
   seed: 1,
@@ -32,7 +32,7 @@ describe('loadSaveData v11 map discovery', () => {
   it('migrates a v10 save to empty discovery', () => {
     const loaded = loadSaveData(v10)
     expect(loaded).not.toBeNull()
-    expect(loaded?.version).toBe(19)
+    expect(loaded?.version).toBe(20)
     expect(loaded?.map.discoveredCells).toEqual([])
     expect(loaded?.player.x).toBe(3)
     expect(loaded?.elapsedDays).toBe(2)
@@ -48,7 +48,7 @@ describe('loadSaveData v11 map discovery', () => {
       map: { discoveredCells: ['0,0', '1,0'] },
     }
     const loaded = loadSaveData(v11)
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.map.discoveredCells).toEqual(['0,0', '1,0'])
     expect(loaded?.settlementEconomies).toEqual({})
   })
@@ -64,7 +64,7 @@ describe('loadSaveData v11 map discovery', () => {
       player: { x: 0, z: 0, yaw: 0, pitch: 0 },
       savedAt: 1,
     })
-    expect(loaded?.version).toBe(19)
+    expect(loaded?.version).toBe(20)
     expect(loaded?.map.discoveredCells).toEqual([])
   })
 
@@ -76,7 +76,7 @@ describe('loadSaveData v11 map discovery', () => {
       settlementEconomies: { home: { food: 3, wood: 1 } },
     }
     const loaded = loadSaveData(v12)
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.settlementEconomies).toEqual({ home: { food: 3, wood: 1 } })
     expect(loaded?.playerNeeds).toEqual({ hunger: 100, thirst: 100, vigor: 100 })
   })
@@ -92,7 +92,7 @@ describe('loadSaveData v14 land ownership (plan 129)', () => {
       playerNeeds: { hunger: 100, thirst: 100, vigor: 100 },
     }
     const loaded = loadSaveData(v13)
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.ownedLandPlots).toEqual([])
   })
 
@@ -106,7 +106,7 @@ describe('loadSaveData v14 land ownership (plan 129)', () => {
       ownedLandPlots: ['0_0:plot-sale-0'],
     }
     const loaded = loadSaveData(v14)
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.ownedLandPlots).toEqual(['0_0:plot-sale-0'])
   })
 
@@ -135,7 +135,7 @@ describe('loadSaveData v15 skills (plan 128)', () => {
 
   it('migrates a v14 save to legacy Sneak and a fresh Survival', () => {
     const loaded = loadSaveData(v14)
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.skills.sneak.xp).toBe(SNEAK_LEGACY_XP)
     expect(loaded?.skills.survival.xp).toBe(0)
   })
@@ -146,7 +146,7 @@ describe('loadSaveData v15 skills (plan 128)', () => {
       version: 15,
       skills: { sneak: { xp: 42 }, survival: { xp: 7 } },
     })
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.skills.sneak.xp).toBe(42)
     expect(loaded?.skills.survival.xp).toBe(7)
   })
@@ -170,7 +170,7 @@ describe('loadSaveData v16 animal traps (plan 141)', () => {
 
   it('migrates a v15 save to no traps and a fresh Traps skill', () => {
     const loaded = loadSaveData(v15)
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.placedTraps).toEqual([])
     expect(loaded?.skills.traps.xp).toBe(0)
     expect(loaded?.skills.sneak.xp).toBe(42)
@@ -195,7 +195,7 @@ describe('loadSaveData v16 animal traps (plan 141)', () => {
       skills: { sneak: { xp: 42 }, survival: { xp: 7 }, traps: { xp: 28 } },
       placedTraps: [trap],
     })
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.placedTraps).toEqual([trap])
     expect(loaded?.skills.traps.xp).toBe(28)
   })
@@ -221,7 +221,7 @@ describe('loadSaveData v17 fauna spawn-point lifecycle (plan 125 persistence fol
 
   it('migrates a v16 save to no spawn-point entries', () => {
     const loaded = loadSaveData(v16)
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.spawnPoints).toEqual([])
   })
 
@@ -231,7 +231,7 @@ describe('loadSaveData v17 fauna spawn-point lifecycle (plan 125 persistence fol
       { id: 'home:thicket', state: 'active' as const, deathsThisCycle: 0, disabledAtDay: null },
     ]
     const loaded = loadSaveData({ ...v16, version: 17, spawnPoints })
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.spawnPoints).toEqual(spawnPoints)
     expect(loaded?.skills.defense).toEqual({ xp: 0 })
   })
@@ -258,7 +258,7 @@ describe('loadSaveData v19 inventory instances (plan 155)', () => {
 
   it('migrates a v18 save to an empty inventoryInstances list', () => {
     const loaded = loadSaveData(v18)
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.inventoryInstances).toEqual([])
     expect(loaded?.inventory).toEqual({})
   })
@@ -269,7 +269,7 @@ describe('loadSaveData v19 inventory instances (plan 155)', () => {
       { id: 'item:2', kind: 'trap_good' as const, durability: 0 },
     ]
     const loaded = loadSaveData({ ...v18, version: 19, inventoryInstances })
-    expect(isSaveDataV19(loaded)).toBe(true)
+    expect(isSaveDataV20(loaded)).toBe(true)
     expect(loaded?.inventoryInstances).toEqual(inventoryInstances)
   })
 
@@ -277,5 +277,50 @@ describe('loadSaveData v19 inventory instances (plan 155)', () => {
     const base = { ...v18, version: 19 }
     expect(loadSaveData({ ...base, inventoryInstances: [{ id: 'x', kind: 'trap_simple' }] })).toBeNull()
     expect(loadSaveData({ ...base, inventoryInstances: 'nope' })).toBeNull()
+  })
+})
+
+describe('loadSaveData v20 natural food/fishing/preservation/bait (plan 159)', () => {
+  const v19 = {
+    ...v10,
+    version: 19,
+    map: { discoveredCells: [] },
+    settlementEconomies: {},
+    playerNeeds: { hunger: 100, thirst: 100, vigor: 100 },
+    ownedLandPlots: [],
+    skills: { sneak: { xp: 0 }, survival: { xp: 0 }, traps: { xp: 0 }, defense: { xp: 0 } },
+    placedTraps: [],
+    spawnPoints: [],
+    inventoryInstances: [],
+  }
+
+  it('migrates a v19 save to empty food/fishing/preservation state', () => {
+    const loaded = loadSaveData(v19)
+    expect(isSaveDataV20(loaded)).toBe(true)
+    expect(loaded?.foodBatches).toEqual({})
+    expect(loaded?.dryingRacks).toEqual([])
+    expect(loaded?.hives).toEqual([])
+    expect(loaded?.fishingBait).toEqual({})
+  })
+
+  it('round-trips food batches, drying racks, hives and fishing bait from a native v20 save', () => {
+    const foodBatches = { berries: [{ count: 3, acquiredAtDays: 1.5 }] }
+    const dryingRacks = [{ id: 'dryingrack:0', x: 1, z: 2, yaw: 0, process: null }]
+    const hives = [{ id: 'hive:0', x: 3, z: 4, yaw: 0, lastCollectedAtDay: 2, burned: false, burnRewardCollected: false }]
+    const fishingBait = { 'fishspot:1:2': { kind: 'berries', appliedAtDays: 1, expiresAtDays: 4, strength: 1 } }
+    const loaded = loadSaveData({ ...v19, version: 20, foodBatches, dryingRacks, hives, fishingBait })
+    expect(isSaveDataV20(loaded)).toBe(true)
+    expect(loaded?.foodBatches).toEqual(foodBatches)
+    expect(loaded?.dryingRacks).toEqual(dryingRacks)
+    expect(loaded?.hives).toEqual(hives)
+    expect(loaded?.fishingBait).toEqual(fishingBait)
+  })
+
+  it('rejects malformed v20 fields', () => {
+    const base = { ...v19, version: 20, foodBatches: {}, dryingRacks: [], hives: [], fishingBait: {} }
+    expect(loadSaveData({ ...base, foodBatches: { berries: [{ count: 'x', acquiredAtDays: 1 }] } })).toBeNull()
+    expect(loadSaveData({ ...base, dryingRacks: [{ id: 'r', x: 0, z: 0, yaw: 0, process: { kind: 'bogus' } }] })).toBeNull()
+    expect(loadSaveData({ ...base, hives: [{ id: 'h', x: 0, z: 0, yaw: 0, burned: 'nope' }] })).toBeNull()
+    expect(loadSaveData({ ...base, fishingBait: { spot: { kind: 'fish' } } })).toBeNull()
   })
 })

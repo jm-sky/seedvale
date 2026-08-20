@@ -73,6 +73,24 @@ const TOMATO_RESPAWN_TIME = 90
 const TOMATO_MIN_DIST = 0.6
 const TOMATO_MAX_DIST = 3
 
+/** Plan 159 — carrot/potato/cabbage share tomato's exact renewable garden-pad
+ *  mechanism, just as separate pickup kinds per pad so a garden offers more
+ *  than one crop. */
+const CROP_RESPAWN_TIME = 90
+const CROP_MIN_DIST = 0.6
+const CROP_MAX_DIST = 3
+const GARDEN_CROP_KINDS: readonly ItemKind[] = ['carrot', 'potato', 'cabbage']
+
+/** Plan 159 — apple anchors to settlement trees the same way `branch` does
+ *  (one pickup per handful of trees), not a discrete fruit-tree lifecycle —
+ *  `world/treeLifecycle.ts` has no fruiting stage to hook into. */
+const APPLE_RESPAWN_TIME = 100
+const APPLE_MIN_DIST = 1.2
+const APPLE_MAX_DIST = 3.5
+const APPLE_SPAWN_POINTS_MIN = 1
+const APPLE_SPAWN_POINTS_MAX = 3
+const APPLE_TREES_PER_POINT = 6
+
 /** One-time village pickaxe (plan 090) — stockpile, same Infinity-respawn as shovel. */
 const PICKAXE_RESPAWN_TIME = Infinity
 const PICKAXE_STOCK_MIN_DIST = 0.8
@@ -251,6 +269,18 @@ export function createItemSpawners(
     }
   }
 
+  {
+    // Plan 159 — one pickup of each garden crop kind per pad, same fallback
+    // as tomato above.
+    const anchors = gardens.length > 0 ? gardens : [shovelLandmarks.garden]
+    for (const anchor of anchors) {
+      for (const kind of GARDEN_CROP_KINDS) {
+        const pos = findWalkableNear(anchor.x, anchor.z, CROP_MIN_DIST, CROP_MAX_DIST)
+        if (pos) addSpawnPoint(kind, CROP_RESPAWN_TIME, pos)
+      }
+    }
+  }
+
   if (trees.length > 0) {
     const treeOrder = trees.map((_, i) => i)
     for (let i = treeOrder.length - 1; i > 0; i--) {
@@ -268,6 +298,18 @@ export function createItemSpawners(
       const pos = findWalkableNear(tree.x, tree.z, TREE_SPAWN_MIN_DIST, TREE_SPAWN_MAX_DIST)
       if (!pos) continue
       addSpawnPoint('branch', BRANCH_RESPAWN_TIME, pos)
+    }
+
+    // Plan 159 — apple, same tree-anchored renewable pool, own point count/salt.
+    const applePointCount = Math.min(
+      APPLE_SPAWN_POINTS_MAX,
+      Math.max(APPLE_SPAWN_POINTS_MIN, Math.ceil(trees.length / APPLE_TREES_PER_POINT)),
+    )
+    for (let n = 0; n < applePointCount; n++) {
+      const tree = trees[treeOrder[(n + 1) % treeOrder.length]!]!
+      const pos = findWalkableNear(tree.x, tree.z, APPLE_MIN_DIST, APPLE_MAX_DIST)
+      if (!pos) continue
+      addSpawnPoint('apple', APPLE_RESPAWN_TIME, pos)
     }
   }
 

@@ -83,6 +83,13 @@ describe('trapDetectionChance', () => {
     const good = trapDetectionChance({ baseChance: TRAP_DEFS.good.baseDetectionChance, skillValue: 0.5 })
     expect(good).toBeLessThan(simple)
   })
+
+  it('bait (plan 159) further reduces detection without going below the floor', () => {
+    const unbaited = trapDetectionChance({ baseChance: base, skillValue: 0.5 })
+    const baited = trapDetectionChance({ baseChance: base, skillValue: 0.5, hasBait: true })
+    expect(baited).toBeLessThan(unbaited)
+    expect(trapDetectionChance({ baseChance: base, skillValue: 1, hasBait: true })).toBeGreaterThanOrEqual(TRAP_MIN_DETECTION)
+  })
 })
 
 describe('rollTrapDetection', () => {

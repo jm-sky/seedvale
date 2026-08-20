@@ -191,8 +191,13 @@ export function computeChunkItems(
     // than mushroom (half its weight) so it stays a "found" healing source
     // rather than a reliable food-equivalent supply.
     const herbWeight = (biome.forest * 0.4 + biome.swamp * 0.2) * (treeClose ? 1.1 : 0.7)
+    // Natural food (plan 159) — berries favor forest undergrowth/swamp edges
+    // like mushroom; nuts favor drier forest floor near trees (a pine bonus
+    // like mushroom's, since both read as "forest floor" finds).
+    const berriesWeight = (biome.forest * 0.4 + biome.swamp * 0.3) * (treeClose ? 1.1 : 0.7)
+    const nutsWeight = biome.forest * 0.3 * (treeClose ? 1.2 : 0.5) * (pineClose ? 1.1 : 1)
 
-    const total = mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight
+    const total = mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + berriesWeight + nutsWeight
     if (total <= 0) continue
     if (floraRandom() > Math.min(1, total) * FLORA_KEEP_SCALE) continue
 
@@ -202,7 +207,9 @@ export function computeChunkItems(
     else if (roll < mushroomWeight + flowerWeight) kind = 'flower'
     else if (roll < mushroomWeight + flowerWeight + branchWeight) kind = 'branch'
     else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight) kind = 'cone'
-    else kind = 'herb'
+    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight) kind = 'herb'
+    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + berriesWeight) kind = 'berries'
+    else kind = 'nuts'
 
     placements.push({ id: `${coord.cx}:${coord.cz}:f${i}`, x: wx, z: wz, kind })
   }

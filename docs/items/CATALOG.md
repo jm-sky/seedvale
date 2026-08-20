@@ -5,14 +5,14 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-19
+**Last updated:** 2026-08-20
 
 ## Quick rules
 
 | Concern | Where |
 |---------|--------|
 | Inventory weight / label | `ITEM_DEFS` |
-| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, spear, short_sword, pitchfork, sickle, damascus_knife, damascus_short_sword, damascus_long_sword, obsidian_sword, battle_axe, masterwork_sword |
+| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, spear, short_sword, pitchfork, sickle, damascus_knife, damascus_short_sword, damascus_long_sword, obsidian_sword, battle_axe, masterwork_sword, fishing_rod |
 | Held 3D attach | `heldToolVisual.ts` → `WristR` + `HELD_ATTACH` (Phase 6: migrate per-tool numbers to `grip` anchors via alignment browser) |
 | Ground GLB scale | `itemModels.ts` → `preparePropFitMax` (not height-only) |
 | Melee vs animals | `ITEM_CATALOG[kind].melee` (plan 123, `itemCatalog.ts`) — single source of truth for damage/range/arcDot/windUp/hitWindow/recovery/staminaCost; `player/playerMelee.ts` runs the windUp→hitWindow→recovery lifecycle + range/facing-arc hit test. `faunaCombat.ts`'s `isMeleeTool()` just reads this. Damage: obsidian_sword 46, damascus_long_sword 40, masterwork_sword 34, long_sword/battle_axe 28, damascus_short_sword 24, spear/axe 20, short_sword 18, damascus_knife 16, pitchfork 14, knife/sickle 12, shovel 8 |
@@ -27,6 +27,11 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Species meat + hide (plan 134) | `createApp.ts`'s `startHarvestMeat` maps `AnimalAgent.def.kind` → item kind (`deer`→`deer_meat`, `wolf`→`wolf_meat`, `boar`→`boar_meat`, `rabbit`→`rabbit_meat`, `cow`→`beef`; other species keep the generic `raw_meat`) and always tries to add 1 `hide` alongside the meat |
 | Merchant price / trade value | `items/tradeCatalog.ts` — `MERCHANT_PRICES`/`MERCHANT_STOCK` (buy from Kupiec in `coin`, issue [035](../issues/2026-08-19--035--playtest-coins-placement-inventory.md)), `sellPrice()` = half `tradeValue` (player → Kupiec; not `shell`/`coin`), and `tradeValue()` (barter fallback, shown as "Wartość" in `InventoryScreenItemDetails.vue`, plan 134). Shells remain barter-only. |
 | Weapon combat + prices | [WEAPONS.md](./WEAPONS.md) — melee timings, block, weight, Kupiec/sell/quest value |
+| Freshness (plan 159) | `ITEM_CATALOG[kind].food.freshness` (`items/foodFreshness.ts`'s `getFreshnessStage`) — Fresh → Medium → Spoiled, derived from a stack's `acquiredAtDays` + world day; spoiled food cannot be consumed. Perishable stacks are tracked as `Inventory`'s `FoodBatch[]` (age-compatible batches merge, oldest consumed first) — kinds with no `freshness` entry (e.g. `honey`) never spoil. |
+| Bait (plan 159) | `ITEM_CATALOG[kind].food.bait` (`'meat' \| 'plant'`) — same flag feeds both fishing bait (`world/fishing.ts`) and trap bait (`world/animalTraps.ts`'s `TRAP_BAIT_DETECTION_CUT`); `items/foodFreshness.ts`'s `BAIT_ITEM_PRIORITY` picks cheapest-first when auto-baiting a trap on arm. |
+| Fishing | `fishing_rod` held at a lake shore — `[E]` casts (busy channel, deterministic catch roll), `[R]` applies bait to the cast spot. No fish population/agents — `world/fishing.ts`. |
+| Drying / preservation | Settlement-landmark drying rack (`world/dryingRacks.ts`, not a placeable item) — `[E]` starts drying raw meat/fish or collects a finished `dried_meat`/`dried_fish`; background `TimedProcess` (`items/timedProcess.ts`) resolved lazily, survives reload/time-skip. |
+| Wild hives | Deterministic settlement-landmark hive (`world/beehives.ts`) near a tree — `[E]` collects accrued `honey` (small sting chance), `[R]` burns it down (lit torch/branch required) for a one-time reward. No bee agents/manager. |
 
 ## Items
 
@@ -35,7 +40,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | shell | muszla | — | — | renewable village | procedural | barter token (Kupiec will not buy/sell shells) |
 | stone | kamień | — | — | renewable + dig | procedural | |
 | branch | gałąź | lit only | — | renewable trees | `items/branch.glb` | Zapal gałąź → hand mesh + fire; **melee later** |
-| mushroom | grzyb | — | — | world chunk | procedural | |
+| mushroom | grzyb | — | — | world chunk | procedural | plan 159; now also `food` category — Zjedz (+8 hunger); freshens 1.5 days, plant bait |
 | flower | kwiat | — | — | world chunk | procedural | |
 | cone | szyszka | — | — | world chunk | procedural | |
 | knife | nóż | yes | 12 | starting | `items/knife.glb` | |
@@ -79,6 +84,16 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | obsidian_sword | obsydianowy miecz | yes | 46 | none (quest wilcza-jama) | `items/obsidian_sword.glb` (M47) | plan 160; volcanic-glass purple/black, not gray steel; not Kupiec stock |
 | battle_axe | topór bojowy | yes | 28 | none (Kupiec) | `items/battle_axe.glb` (M48) | plan 160; chops trees like axe (`isChopTool`) |
 | masterwork_sword | mistrzowski miecz | yes | 34 | none (Kupiec) | `items/masterwork_sword.glb` (M49) | plan 160; gold Quaternius Sword_Golden, cheaper than damascus long |
+| berries | jagody | — | — | world chunk (flora pool) | procedural | plan 159; Zjedz (+8 hunger); freshens 1 day, plant bait |
+| apple | jabłko | — | — | renewable trees | procedural | plan 159; Zjedz (+10 hunger); freshens 2 days, plant bait |
+| nuts | orzechy | — | — | world chunk (flora pool) | procedural | plan 159; Zjedz (+12 hunger); freshens 5 days, plant bait |
+| honey | miód | — | — | wild hive collect/burn | procedural | plan 159; Zjedz (+18 hunger); never spoils |
+| carrot | marchew | — | — | renewable garden | procedural | plan 159; Zjedz (+10 hunger); freshens 3 days, plant bait |
+| potato | ziemniak | — | — | renewable garden | procedural | plan 159; Zjedz (+12 hunger); freshens 4 days, plant bait |
+| cabbage | kapusta | — | — | renewable garden | procedural | plan 159; Zjedz (+10 hunger); freshens 2 days |
+| fish | ryba | — | — | fishing_rod catch | procedural | plan 159; Zjedz (+12 hunger); freshens fastest (0.75 day) |
+| dried_fish | suszona ryba | — | — | drying rack (fish) | procedural | plan 159; Zjedz (+22 hunger); light, long-lasting like dried_meat |
+| fishing_rod | wędka | yes | — | none (Kupiec) | procedural | plan 159; `[E]` cast at lake shore, `[R]` apply bait |
 
 ## Roadmap (not done)
 

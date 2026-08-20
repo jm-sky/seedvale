@@ -263,6 +263,9 @@ export type SavePlacedTrap = {
   durability: number
   skillAtActivation: number
   weatherCheckedAtDay: number
+  /** Plan 159 §12 — optional so v16-19 saves (predating trap bait) parse
+   *  unchanged; absent/undefined restores as no bait. */
+  baitKind?: ItemKind | null
 }
 
 export type SaveDataV16 = Omit<SaveDataV15, 'version'> & {
@@ -297,8 +300,58 @@ export type SaveDataV19 = Omit<SaveDataV18, 'version'> & {
   inventoryInstances: SaveItemInstance[]
 }
 
-/** Canonical save shape — always v19. `loadSaveData` migrates older saves up. */
-export type SaveData = SaveDataV19
+/** Plan 159 — stack-level freshness batches for the player's perishable food
+ *  (`items/Inventory.ts`'s `FoodBatch`). Only perishable kinds ever appear
+ *  here; storage/derived freshness stages are never persisted. */
+export type SaveFoodBatch = { count: number, acquiredAtDays: number }
+
+/** Persistent drying rack (`world/dryingRacks.ts`'s `DryingRackRecord`) —
+ *  same "player chose the spot" shape as `SavePlacedTent`/`SavePlacedTrap`,
+ *  plus at most one in-flight `TimedProcess`. */
+export type SaveTimedProcess = {
+  id: string
+  kind: 'drying'
+  startedAtDays: number
+  durationDays: number
+  input: { kind: ItemKind, count: number }[]
+  output: { kind: ItemKind, count: number }[]
+}
+
+export type SaveDryingRack = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+  process: SaveTimedProcess | null
+}
+
+/** Persistent wild hive (`world/beehives.ts`'s `BeehiveRecord`). */
+export type SaveHive = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+  lastCollectedAtDay: number
+  burned: boolean
+  burnRewardCollected: boolean
+}
+
+/** Persistent per-fishing-spot bait state (`world/fishing.ts`'s
+ *  `FishingBaitState`), keyed by the deterministic `fishingSpotId()`. Not a
+ *  per-chunk/streamed structure — a flat map survives stream-out/in for
+ *  free. */
+export type SaveFishingBait = { kind: ItemKind, appliedAtDays: number, expiresAtDays: number, strength: number }
+
+export type SaveDataV20 = Omit<SaveDataV19, 'version'> & {
+  version: 20
+  foodBatches: Partial<Record<ItemKind, SaveFoodBatch[]>>
+  dryingRacks: SaveDryingRack[]
+  hives: SaveHive[]
+  fishingBait: Record<string, SaveFishingBait>
+}
+
+/** Canonical save shape — always v20. `loadSaveData` migrates older saves up. */
+export type SaveData = SaveDataV20
 
 function isSaveConfig(value: unknown): value is SaveConfig {
   if (!value || typeof value !== 'object') return false
@@ -696,7 +749,8 @@ function isPlacedTrapsField(value: unknown): value is SavePlacedTrap[] {
       typeof t.state === 'string' && TRAP_STATES.has(t.state) &&
       typeof t.durability === 'number' &&
       typeof t.skillAtActivation === 'number' &&
-      typeof t.weatherCheckedAtDay === 'number'
+      typeof t.weatherCheckedAtDay === 'number' &&
+      (t.baitKind === undefined || t.baitKind === null || typeof t.baitKind === 'string')
     )
   })
 }
@@ -757,12 +811,98 @@ function isInventoryInstancesField(value: unknown): value is SaveItemInstance[] 
   })
 }
 
-export function isSaveDataV19(value: unknown): value is SaveData {
+export function isSaveDataV19(value: unknown): value is SaveDataV19 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 19) return false
   if (!isSaveDataV18({ ...v, version: 18 })) return false
   if (!isInventoryInstancesField(v.inventoryInstances)) return false
+  return true
+}
+
+function isSaveFoodBatchArray(value: unknown): value is SaveFoodBatch[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const b = entry as Record<string, unknown>
+    return typeof b.count === 'number' && typeof b.acquiredAtDays === 'number'
+  })
+}
+
+function isFoodBatchesField(value: unknown): value is Partial<Record<ItemKind, SaveFoodBatch[]>> {
+  if (!value || typeof value !== 'object') return false
+  return Object.values(value as Record<string, unknown>).every(isSaveFoodBatchArray)
+}
+
+function isTimedProcessField(value: unknown): value is SaveTimedProcess | null {
+  if (value === null) return true
+  if (!value || typeof value !== 'object') return false
+  const p = value as Record<string, unknown>
+  return (
+    typeof p.id === 'string' &&
+    p.kind === 'drying' &&
+    typeof p.startedAtDays === 'number' &&
+    typeof p.durationDays === 'number' &&
+    Array.isArray(p.input) &&
+    Array.isArray(p.output)
+  )
+}
+
+function isDryingRacksField(value: unknown): value is SaveDryingRack[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const r = entry as Record<string, unknown>
+    return (
+      typeof r.id === 'string' &&
+      typeof r.x === 'number' &&
+      typeof r.z === 'number' &&
+      typeof r.yaw === 'number' &&
+      isTimedProcessField(r.process)
+    )
+  })
+}
+
+function isHivesField(value: unknown): value is SaveHive[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const h = entry as Record<string, unknown>
+    return (
+      typeof h.id === 'string' &&
+      typeof h.x === 'number' &&
+      typeof h.z === 'number' &&
+      typeof h.yaw === 'number' &&
+      typeof h.lastCollectedAtDay === 'number' &&
+      typeof h.burned === 'boolean' &&
+      typeof h.burnRewardCollected === 'boolean'
+    )
+  })
+}
+
+function isFishingBaitField(value: unknown): value is Record<string, SaveFishingBait> {
+  if (!value || typeof value !== 'object') return false
+  return Object.values(value as Record<string, unknown>).every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const b = entry as Record<string, unknown>
+    return (
+      typeof b.kind === 'string' &&
+      typeof b.appliedAtDays === 'number' &&
+      typeof b.expiresAtDays === 'number' &&
+      typeof b.strength === 'number'
+    )
+  })
+}
+
+export function isSaveDataV20(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 20) return false
+  if (!isSaveDataV19({ ...v, version: 19 })) return false
+  if (!isFoodBatchesField(v.foodBatches)) return false
+  if (!isDryingRacksField(v.dryingRacks)) return false
+  if (!isHivesField(v.hives)) return false
+  if (!isFishingBaitField(v.fishingBait)) return false
   return true
 }
 
@@ -929,7 +1069,7 @@ function toV18(v17: SaveDataV17): SaveDataV18 {
   }
 }
 
-function toV19(v18: SaveDataV18): SaveData {
+function toV19(v18: SaveDataV18): SaveDataV19 {
   const { version: _version, ...rest } = v18
   return {
     ...rest,
@@ -938,17 +1078,35 @@ function toV19(v18: SaveDataV18): SaveData {
   }
 }
 
-/** Migrates any post-v16 save payload to the canonical v19 shape. */
-function upToCurrent(v16: SaveDataV16): SaveData {
-  return toV19(toV18(toV17(v16)))
+/** Plan 159 — pre-v20 saves predate the whole natural-food/fishing/
+ *  preservation/bait feature set, so every new field restores empty (no
+ *  perishable batches, no drying racks, no hives, no fishing bait). Existing
+ *  `placedTraps` entries simply lack `baitKind`, already optional on the
+ *  shared `SavePlacedTrap` type — nothing to migrate there. */
+function toV20(v19: SaveDataV19): SaveData {
+  const { version: _version, ...rest } = v19
+  return {
+    ...rest,
+    version: 20,
+    foodBatches: {},
+    dryingRacks: [],
+    hives: [],
+    fishingBait: {},
+  }
 }
 
-/** Accepts a stored v1–v19 save and always returns the canonical v19 shape. */
+/** Migrates any post-v16 save payload to the canonical v20 shape. */
+function upToCurrent(v16: SaveDataV16): SaveData {
+  return toV20(toV19(toV18(toV17(v16))))
+}
+
+/** Accepts a stored v1–v20 save and always returns the canonical v20 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV19(value)) return value
-    if (isSaveDataV18(value)) return toV19(value)
-    if (isSaveDataV17(value)) return toV19(toV18(value))
+    if (isSaveDataV20(value)) return value
+    if (isSaveDataV19(value)) return toV20(value)
+    if (isSaveDataV18(value)) return toV20(toV19(value))
+    if (isSaveDataV17(value)) return toV20(toV19(toV18(value)))
     if (isSaveDataV16(value)) return upToCurrent(value)
     if (isSaveDataV15(value)) return upToCurrent(toV16(value))
     if (isSaveDataV14(value)) return upToCurrent(toV16(toV15(value)))

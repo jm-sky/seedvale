@@ -43,6 +43,7 @@ import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
 import { COOK_DURATION_SEC, findCookingRecipe } from '../items/campfireCooking'
+import { BAIT_ITEM_PRIORITY, getFreshnessStage } from '../items/foodFreshness'
 import { askGuardForSword, shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { Inventory } from '../items/Inventory'
@@ -103,7 +104,7 @@ import { createScene } from '../scene/createScene'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { IGNITE_DURATION_SEC, type VillageFire } from '../settlement/VillageFire'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
-import { healHealth } from '../shared/HealthState'
+import { damageHealth, healHealth } from '../shared/HealthState'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { MINE_DURATION_SEC, yieldForOre } from '../terrain/depositMining'
 import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
@@ -133,9 +134,19 @@ import {
   TRAP_SETUP_DURATION_SEC,
   type TrapKind,
 } from '../world/animalTraps'
+import { type BeehiveRecord, HIVE_STING_DAMAGE, honeyAvailable, rollHiveSting } from '../world/beehives'
 import { createLights } from '../world/createLights'
 import { createSky } from '../world/createSky'
 import { createDayNightState, parseTimeOfDayFromUrl } from '../world/dayNight'
+import { type DryingRackRecord, isDryingComplete, pickDryingRecipe, startDryingProcess } from '../world/dryingRacks'
+import {
+  applyFishingBait as applyFishingBaitToSpot,
+  FISHING_CAST_DURATION_SEC,
+  type FishingBaitState,
+  fishingSpotId,
+  isBaitActive,
+  rollFishingCatch,
+} from '../world/fishing'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
@@ -346,6 +357,10 @@ export async function createApp(
   // the catch needs `player`/`toast`, which only exist further down.
   let onTrapCaptureTarget: ((event: TrapCaptureEvent) => void) | null = null
   const onTrapCapture = (event: TrapCaptureEvent): void => { onTrapCaptureTarget?.(event) }
+  // Plan 159 §12 — same indirection: bait is returned to inventory, which
+  // doesn't exist until after `bundle` is built.
+  let onTrapBaitReturnedTarget: ((kind: ItemKind) => void) | null = null
+  const onTrapBaitReturned = (kind: ItemKind): void => { onTrapBaitReturnedTarget?.(kind) }
   const bundle = await createWorldBundle(
     scene,
     config,
@@ -354,18 +369,27 @@ export async function createApp(
     initialSave?.droppedItems ?? [],
     initialSave?.placedFires ?? [],
     initialSave?.placedTents ?? [],
-    initialSave?.placedTraps ?? [],
+    (initialSave?.placedTraps ?? []).map((t) => ({ ...t, baitKind: t.baitKind ?? null })),
     treeLifecycle,
     getWorldDays,
     dayNight,
+    (initialSave?.dryingRacks ?? []) as DryingRackRecord[],
+    (initialSave?.hives ?? []) as BeehiveRecord[],
     initialSave?.settlementEconomies,
     onAnimalDeath,
     getPlayerSocial,
     landOwnership.isOwned,
     onTrapCapture,
+    onTrapBaitReturned,
     new Map((initialSave?.spawnPoints ?? []).map((s) => [s.id, s])),
     pointLightBudget,
   )
+  // Plan 159 §10 — fishing bait per spot (flat map, survives stream-out/in
+  // for free) and a runtime-only per-spot cast counter feeding the
+  // deterministic catch roll (same "not persisted, wild fauna isn't either"
+  // convention as `createPlacedTraps.ts`'s `attempts`).
+  const fishingBait = new Map<string, FishingBaitState>(Object.entries(initialSave?.fishingBait ?? {}))
+  const fishingAttempts = new Map<string, number>()
 
   // Indirection (not a direct destructure) so this keeps sampling whichever
   // bundle.chunkManager/config.terrain are current across `rebuildWorld()`
@@ -398,6 +422,7 @@ export async function createApp(
     initialSave?.inventory,
     undefined,
     initialSave ? Inventory.instancesFromJSON(initialSave.inventoryInstances ?? []) : undefined,
+    initialSave?.foodBatches,
   )
   grantStartingLoadout(inventory)
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
@@ -716,6 +741,7 @@ export async function createApp(
         getPlayerSocial,
         landOwnership.isOwned,
         onTrapCapture,
+        onTrapBaitReturned,
         pointLightBudget,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
@@ -729,6 +755,8 @@ export async function createApp(
         playerTorch.extinguish()
         worldFlags.guardSwordGifted = false
         resetPlayerNeeds(player.needs)
+        fishingBait.clear()
+        fishingAttempts.clear()
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         syncHeldHud()
         hud.setExp(questManager.getExp())
@@ -757,7 +785,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 19,
+    version: 20,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -809,6 +837,13 @@ export async function createApp(
       defense: { xp: player.skills.defense.xp },
     },
     spawnPoints: bundle.fauna.getSpawners().map((s) => ({ id: s.id, ...snapshotSpawnPointState(s) })),
+    foodBatches: inventory.foodBatchesToJSON(),
+    dryingRacks: bundle.dryingRacks.nodes().map((rack) => ({
+      ...rack,
+      process: rack.process ? { ...rack.process, input: [...rack.process.input], output: [...rack.process.output] } : null,
+    })),
+    hives: bundle.hives.nodes().map((hive) => ({ ...hive })),
+    fishingBait: Object.fromEntries(fishingBait),
   })
 
   const saveNow = (): Promise<void> => writeSave(buildSaveData())
@@ -1187,6 +1222,19 @@ export async function createApp(
     // The Traps value is snapshotted here, once — the trap then works on its
     // own, with no reference back to the player (implementation notes §2).
     if (!bundle.placedTraps.activate(id, player.skills.traps.value, dayNight.elapsedDays)) return
+    // Plan 159 §12 — auto-bait from whatever bait-capable food the player
+    // already carries (cheapest first), atomically: remove one unit, then
+    // attach it. No separate "load bait" UI action in this pass.
+    const baitKind = BAIT_ITEM_PRIORITY.find((kind) => inventory.has(kind, 1))
+    if (baitKind && inventory.remove(baitKind, 1)) {
+      if (bundle.placedTraps.attachBait(id, baitKind)) {
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        onInventoryChanged()
+        toast.show(`Pułapka uzbrojona i zanęcona (${ITEM_DEFS[baitKind].label}).`)
+        return
+      }
+      inventory.add(baitKind, 1, dayNight.elapsedDays)
+    }
     toast.show('Pułapka uzbrojona.')
   }
 
@@ -1216,6 +1264,146 @@ export async function createApp(
     }
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     onInventoryChanged()
+  }
+
+  onTrapBaitReturnedTarget = (kind) => {
+    if (inventory.add(kind, 1, dayNight.elapsedDays)) {
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+    } else {
+      bundle.droppedItems.drop(kind, player.mesh.position.x, player.mesh.position.z)
+    }
+  }
+
+  /** Plan 159 §9 — cast at a lake shore with `fishing_rod` held. Deterministic
+   *  catch roll (`world/fishing.ts`), boosted by the spot's active bait. */
+  const startFishing = (x: number, z: number): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (!inventory.canAdd('fish', 1)) {
+      toast.show('Ekwipunek jest za ciężki.', 'error')
+      return
+    }
+    const spotId = fishingSpotId(x, z)
+    const attempt = (fishingAttempts.get(spotId) ?? 0) + 1
+    busy.start(FISHING_CAST_DURATION_SEC, 'Łowienie ryb…', () => {
+      fishingAttempts.set(spotId, attempt)
+      const hasBait = isBaitActive(fishingBait.get(spotId), dayNight.elapsedDays)
+      if (!rollFishingCatch(spotId, attempt, hasBait)) {
+        toast.show('Nic nie złapano.')
+        return
+      }
+      if (!inventory.canAdd('fish', 1)) {
+        toast.show('Ekwipunek jest za ciężki.', 'error')
+        return
+      }
+      inventory.add('fish', 1, dayNight.elapsedDays)
+      playInventoryPickUp(worldAudio.playOnce)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      toast.show('+1 Ryba', 'pickup')
+    })
+  }
+
+  /** Plan 159 §10 — consumes one bait-capable food item and applies/refreshes
+   *  the cast spot's bait state. */
+  const applyFishingBaitAction = (x: number, z: number): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const kind = BAIT_ITEM_PRIORITY.find((k) => inventory.has(k, 1))
+    if (!kind) {
+      toast.show('Potrzebujesz przynęty — np. jagód lub mięsa.', 'error')
+      return
+    }
+    if (!inventory.remove(kind, 1)) return
+    const spotId = fishingSpotId(x, z)
+    fishingBait.set(spotId, applyFishingBaitToSpot(fishingBait.get(spotId) ?? null, kind, dayNight.elapsedDays))
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    onInventoryChanged()
+    toast.show('Zanęcono wodę.', 'pickup')
+  }
+
+  /** Plan 159 §8 — single `[E]` action on a drying rack: idle → start a
+   *  process from whatever raw meat/fish the player carries; complete →
+   *  collect the output; still running → progress toast. */
+  const interactDryingRack = (id: string): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const rack = bundle.dryingRacks.list().find((entry) => entry.id === id)
+    if (!rack) return
+    if (rack.process) {
+      if (!isDryingComplete(rack.process, dayNight.elapsedDays)) {
+        toast.show('Suszy się…')
+        return
+      }
+      const output = rack.process.output[0]
+      if (!output || !inventory.canAdd(output.kind, output.count)) {
+        toast.show('Ekwipunek jest za ciężki.', 'error')
+        return
+      }
+      bundle.dryingRacks.clearProcess(id)
+      inventory.add(output.kind, output.count, dayNight.elapsedDays)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      toast.show(`+${output.count} ${ITEM_DEFS[output.kind].label}`, 'pickup')
+      return
+    }
+    const recipe = pickDryingRecipe((kind) => inventory.has(kind, 1))
+    if (!recipe) {
+      toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
+      return
+    }
+    if (!inventory.remove(recipe.inputKind, 1)) return
+    bundle.dryingRacks.startProcess(id, startDryingProcess(`${id}:${Math.round(dayNight.elapsedDays * 1000)}`, recipe, dayNight.elapsedDays))
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    onInventoryChanged()
+    toast.show('Rozpoczęto suszenie.')
+  }
+
+  /** Plan 159 §11 — collects accrued honey; a deterministic per-day sting
+   *  chance reuses the existing `damageHealth` path, no new damage system. */
+  const collectHiveAction = (id: string): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const hive = bundle.hives.list().find((entry) => entry.id === id)
+    if (!hive || hive.burned) {
+      toast.show('Ten ul jest spalony.', 'error')
+      return
+    }
+    if (honeyAvailable(hive, dayNight.elapsedDays) <= 0) {
+      toast.show('Ul jest jeszcze pusty.', 'error')
+      return
+    }
+    if (!inventory.canAdd('honey', 1)) {
+      toast.show('Ekwipunek jest za ciężki.', 'error')
+      return
+    }
+    const amount = bundle.hives.collect(id, dayNight.elapsedDays)
+    if (amount <= 0) return
+    inventory.add('honey', amount)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    onInventoryChanged()
+    if (rollHiveSting(id, dayNight.elapsedDays)) {
+      damageHealth(player.health, HIVE_STING_DAMAGE)
+      toast.show(`Użądlenie! +${amount} miodu`, 'error')
+    } else {
+      toast.show(`+${amount} miodu`, 'pickup')
+    }
+  }
+
+  /** Plan 159 §11 — one-time burn reward, only while a lit torch/branch is
+   *  held (reuses `PlayerTorch`, no new fire/detection system). */
+  const burnHiveAction = (id: string): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (!playerTorch.isLit()) {
+      toast.show('Potrzebujesz zapalonej pochodni.', 'error')
+      return
+    }
+    const reward = bundle.hives.burn(id)
+    if (reward <= 0) {
+      toast.show('Nie można tego spalić.', 'error')
+      return
+    }
+    inventory.add('honey', reward)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    onInventoryChanged()
+    toast.show(`Ul spłonął. +${reward} miodu`, 'pickup')
   }
 
   // The single owner of a capture's player-facing consequences (implementation
@@ -1445,7 +1633,7 @@ export async function createApp(
       try {
         if (!animal.canHarvestMeat() || !inventory.canAdd(meatKind, 1)) return
         animal.harvestMeat()
-        inventory.add(meatKind, 1)
+        inventory.add(meatKind, 1, dayNight.elapsedDays)
         let message = `+1 ${ITEM_DEFS[meatKind].label}`
         if (inventory.canAdd('hide', 1)) {
           inventory.add('hide', 1)
@@ -1548,7 +1736,7 @@ export async function createApp(
         toast.show('Ekwipunek jest za ciężki.', 'error')
         return
       }
-      inventory.add(recipe.output, recipe.count)
+      inventory.add(recipe.output, recipe.count, dayNight.elapsedDays)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       onInventoryChanged()
       awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.cookMeat)
@@ -1590,7 +1778,16 @@ export async function createApp(
    *  cooking paths' relief amounts come from. */
   const consumeItem = (kind: ItemKind): void => {
     const entry = ITEM_CATALOG[kind].consumable
-    if (!entry || !inventory.remove(kind, 1)) return
+    if (!entry || !inventory.has(kind, 1)) return
+    // Plan 159 §3/§5 — spoiled food is non-consumable rather than acting
+    // like fresh food; checked against the batch that would actually be
+    // eaten (oldest first, same order `remove()` consumes in).
+    const acquiredAtDays = inventory.oldestAcquiredAtDays(kind)
+    if (acquiredAtDays != null && getFreshnessStage(kind, acquiredAtDays, dayNight.elapsedDays) === 'spoiled') {
+      toast.show('To jedzenie się zepsuło.', 'error')
+      return
+    }
+    if (!inventory.remove(kind, 1)) return
     if (entry.resultKind) inventory.add(entry.resultKind, 1)
     // Plan 128 §4 — Survival makes the *same* `roasted_meat` more nourishing;
     // no roasted variants, no skill-dependent recipes.
@@ -1948,6 +2145,11 @@ export async function createApp(
     armTrap,
     disarmTrap,
     collectTrap,
+    startFishing,
+    applyFishingBait: applyFishingBaitAction,
+    interactDryingRack,
+    collectHive: collectHiveAction,
+    burnHive: burnHiveAction,
     onSleepFinished,
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,

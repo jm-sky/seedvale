@@ -95,6 +95,13 @@ export const TRAP_MAX_DETECTION = 0.9
 /** Fraction of the base detection chance removed at Traps value 1. */
 export const TRAP_SKILL_DETECTION_CUT = 0.6
 
+/** Plan 159 §12 — extra detection cut while the trap carries bait, on top of
+ *  the skill-driven cut above. Flat regardless of `'meat' | 'plant'` bait
+ *  category — `TRAPPABLE_SPECIES` are all herbivores/omnivores, so a
+ *  species-vs-bait-type matrix would add complexity without a real gameplay
+ *  distinction in this plan's scope. */
+export const TRAP_BAIT_DETECTION_CUT = 0.2
+
 /**
  * Probability the animal **spots** the trap (and therefore escapes) — higher
  * Traps means lower detection, clamped so it never collapses to 0 or 1.
@@ -103,9 +110,12 @@ export function trapDetectionChance(params: {
   baseChance: number
   /** `PlayerSkills['traps'].value` snapshot taken when the trap was armed. */
   skillValue: number
+  /** Whether the trap currently carries bait (plan 159 §12). */
+  hasBait?: boolean
 }): number {
   const skill = Math.max(0, Math.min(1, params.skillValue))
-  const chance = params.baseChance * (1 - TRAP_SKILL_DETECTION_CUT * skill)
+  const baitCut = params.hasBait ? TRAP_BAIT_DETECTION_CUT : 0
+  const chance = params.baseChance * (1 - TRAP_SKILL_DETECTION_CUT * skill - baitCut)
   if (!Number.isFinite(chance)) return TRAP_MAX_DETECTION
   return Math.max(TRAP_MIN_DETECTION, Math.min(TRAP_MAX_DETECTION, chance))
 }
@@ -255,6 +265,11 @@ export type PlacedTrapRecord = {
   skillAtActivation: number
   /** `elapsedDays` up to which weather wear has already been charged. */
   weatherCheckedAtDay: number
+  /** Plan 159 §12 — an existing bait-capable food item's kind, or null. Set
+   *  atomically when the trap is armed (see `createPlacedTraps.ts`'s
+   *  `attachBait`); returned to inventory on disarm/collect before a catch,
+   *  consumed on a successful capture. */
+  baitKind: ItemKind | null
 }
 
 export type TrapPlacementReason = 'ok' | 'water' | 'slope' | 'object' | 'trap'

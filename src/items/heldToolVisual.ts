@@ -96,6 +96,14 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     scale: 1,
     gripLocalOffset: [0, 0, -0.3],
   },
+  // Plan 159 — procedural mesh only (no GLB); same long-shaft family as
+  // spear/pitchfork until a real grip is authored in the alignment browser.
+  fishing_rod: {
+    position: [-0.5, 0.13, -0.02],
+    rotation: [Math.PI / 2, -Math.PI / 2, 0],
+    scale: 1,
+    gripLocalOffset: [0, 0, -0.3],
+  },
   // Quaternius Sword — short_sword family.
   short_sword: {
     position: [-0.22, 0.12, -0.02],

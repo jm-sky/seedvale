@@ -259,6 +259,19 @@ export type GameLoopDeps = {
   armTrap: (id: string) => void
   disarmTrap: (id: string) => void
   collectTrap: (id: string) => void
+  /** Cast at a lake shore with `fishing_rod` held (busy channel, plan 159 §9). */
+  startFishing?: (x: number, z: number) => void
+  /** Consumes one bait-capable food item from inventory and applies/refreshes
+   *  the current fishing spot's bait (plan 159 §10). */
+  applyFishingBait?: (x: number, z: number) => void
+  /** Start/collect a drying rack's process (plan 159 §8) — single `[E]`
+   *  action like `campfire`'s "add fuel"/ignite cycling. */
+  interactDryingRack?: (id: string) => void
+  /** Collect accrued honey from a wild hive (plan 159 §11). */
+  collectHive?: (id: string) => void
+  /** Burn a wild hive down for its one-time reward — only while a lit torch/
+   *  branch is held. */
+  burnHive?: (id: string) => void
   /** A full night's sleep (`fadeStrength === 1` skip) just finished — owner
    *  (`createApp.ts`) applies the rest outcome for whatever camp it resolved
    *  when the rest started, and awards any Survival XP (plan 128 §5-§7). */
@@ -309,6 +322,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
+    startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive,
     onSleepFinished, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
@@ -567,6 +581,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.placedTents,
         bundle.placedTraps,
         bundle.resourceDeposits,
+        bundle.dryingRacks,
+        bundle.hives,
+        dayNight.elapsedDays,
         player.mesh.position,
         held,
         landOwnership,
@@ -886,8 +903,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         }
         if (altInteractPressed) fillWaterskin?.()
       } else if (target?.kind === 'waterEdge') {
-        if (interactPressed) drinkFromWaterSource?.(target.source)
-        if (altInteractPressed) fillWaterskin?.()
+        if (heldTool.held() === 'fishing_rod') {
+          if (interactPressed) startFishing?.(target.position.x, target.position.z)
+          if (altInteractPressed) applyFishingBait?.(target.position.x, target.position.z)
+        } else {
+          if (interactPressed) drinkFromWaterSource?.(target.source)
+          if (altInteractPressed) fillWaterskin?.()
+        }
+      } else if (target?.kind === 'dryingRack') {
+        if (interactPressed) interactDryingRack?.(target.id)
+      } else if (target?.kind === 'hive') {
+        if (interactPressed) collectHive?.(target.id)
+        if (altInteractPressed) burnHive?.(target.id)
       } else if (target?.kind === 'item') {
         if (interactPressed || altInteractPressed) {
           if (!inventory.canAdd(target.item.kind)) {
@@ -895,7 +922,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           } else {
             const collected = collectItem(target.item, bundle.chunkManager, bundle.itemSpawners, bundle.droppedItems)
             if (collected) {
-              inventory.add(collected.kind)
+              inventory.add(collected.kind, 1, dayNight.elapsedDays)
               playInventoryPickUp(worldAudio.playOnce)
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
               onInventoryChanged()

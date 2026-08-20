@@ -69,6 +69,15 @@ export type ItemCatalogEntry = {
    *  set only for a container swap (full waterskin → empty), not for food,
    *  which is simply consumed. */
   consumable?: { need: ConsumableNeed, relief: number, resultKind?: ItemKind }
+  /** Plan 159 — food metadata beyond `consumable` (which already carries the
+   *  hunger/thirst/health value). `freshness` durations are in game-days;
+   *  absent means the item never spoils (e.g. `honey`). `bait` marks a food
+   *  item usable both as fishing bait and trap bait — one central flag for
+   *  both mechanics, no separate bait item kinds. */
+  food?: {
+    freshness?: { freshDurationDays: number, mediumDurationDays: number }
+    bait?: 'meat' | 'plant'
+  }
 }
 
 /** Single source of truth for the inventory/world-prompt action verb per
@@ -127,7 +136,9 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'world_chunk',
     modelUrl: null,
-    notes: 'World chunk collectible.',
+    notes: 'Plan 159 — World chunk collectible; also a natural food source and plant-category bait.',
+    consumable: { need: 'hunger', relief: 8 },
+    food: { freshness: { freshDurationDays: 1.5, mediumDurationDays: 1.5 }, bait: 'plant' },
   },
   flower: {
     kind: 'flower',
@@ -342,6 +353,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 106 — knife-harvest from a suitable animal corpse (`AnimalAgent.harvestMeat`). Edible raw at a reduced relief; better roasted.',
     consumable: { need: 'hunger', relief: 15 },
+    food: { freshness: { freshDurationDays: 1, mediumDurationDays: 1 }, bait: 'meat' },
   },
   roasted_meat: {
     kind: 'roasted_meat',
@@ -352,6 +364,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 106 — cooked from raw_meat at a lit campfire (`items/campfireCooking.ts`).',
     consumable: { need: 'hunger', relief: 35 },
+    food: { freshness: { freshDurationDays: 1.5, mediumDurationDays: 1.5 } },
   },
   bread: {
     kind: 'bread',
@@ -391,6 +404,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 134 — knife-harvest from a dead sarna (`AnimalAgent.harvestMeat`, species-mapped in `createApp.ts`). Cooks to roasted_meat like raw_meat.',
     consumable: { need: 'hunger', relief: 16 },
+    food: { freshness: { freshDurationDays: 1, mediumDurationDays: 1 }, bait: 'meat' },
   },
   wolf_meat: {
     kind: 'wolf_meat',
@@ -401,6 +415,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 134 — knife-harvest from a dead wolf. Cooks to roasted_meat like raw_meat.',
     consumable: { need: 'hunger', relief: 12 },
+    food: { freshness: { freshDurationDays: 1, mediumDurationDays: 1 }, bait: 'meat' },
   },
   boar_meat: {
     kind: 'boar_meat',
@@ -411,6 +426,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 134 — knife-harvest from a dead boar. Cooks to roasted_meat like raw_meat.',
     consumable: { need: 'hunger', relief: 17 },
+    food: { freshness: { freshDurationDays: 1, mediumDurationDays: 1 }, bait: 'meat' },
   },
   rabbit_meat: {
     kind: 'rabbit_meat',
@@ -421,6 +437,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 134 — knife-harvest from a dead rabbit; small yield matches the animal size. Cooks to roasted_meat like raw_meat.',
     consumable: { need: 'hunger', relief: 10 },
+    food: { freshness: { freshDurationDays: 1, mediumDurationDays: 1 }, bait: 'meat' },
   },
   beef: {
     kind: 'beef',
@@ -431,6 +448,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 134 — knife-harvest from a dead cow; largest single yield. Cooks to roasted_meat like raw_meat.',
     consumable: { need: 'hunger', relief: 20 },
+    food: { freshness: { freshDurationDays: 1, mediumDurationDays: 1 }, bait: 'meat' },
   },
   hide: {
     kind: 'hide',
@@ -460,6 +478,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 134 — buy from Kupiec; light, long-lasting travel food.',
     consumable: { need: 'hunger', relief: 25 },
+    food: { freshness: { freshDurationDays: 20, mediumDurationDays: 20 } },
   },
   coin: {
     kind: 'coin',
@@ -549,6 +568,113 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: '/models/items/masterwork_sword.glb',
     notes: 'Plan 160 — Kupiec stock. Quaternius Sword_Golden — gold blade, not damascus.',
+  },
+  berries: {
+    kind: 'berries',
+    label: 'jagody',
+    holdable: false,
+    melee: null,
+    spawn: 'world_chunk',
+    modelUrl: null,
+    notes: 'Plan 159 — world chunk collectible (same flora pool as mushroom/herb, `terrain/chunkItems.ts`). Perishes fast; plant-category bait.',
+    consumable: { need: 'hunger', relief: 8 },
+    food: { freshness: { freshDurationDays: 1, mediumDurationDays: 1 }, bait: 'plant' },
+  },
+  apple: {
+    kind: 'apple',
+    label: 'jabłko',
+    holdable: false,
+    melee: null,
+    spawn: 'village_renewable',
+    modelUrl: null,
+    notes: 'Plan 159 — renewable pickup anchored near settlement trees, same mechanism as `branch` (`items/createItemSpawners.ts`).',
+    consumable: { need: 'hunger', relief: 10 },
+    food: { freshness: { freshDurationDays: 2, mediumDurationDays: 2 }, bait: 'plant' },
+  },
+  nuts: {
+    kind: 'nuts',
+    label: 'orzechy',
+    holdable: false,
+    melee: null,
+    spawn: 'world_chunk',
+    modelUrl: null,
+    notes: 'Plan 159 — world chunk collectible (same flora pool as mushroom/herb). Keeps well.',
+    consumable: { need: 'hunger', relief: 12 },
+    food: { freshness: { freshDurationDays: 5, mediumDurationDays: 5 }, bait: 'plant' },
+  },
+  honey: {
+    kind: 'honey',
+    label: 'miód',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 159 — collected from a wild hive (`world/beehives.ts`), time-based production. Never spoils.',
+    consumable: { need: 'hunger', relief: 18 },
+  },
+  carrot: {
+    kind: 'carrot',
+    label: 'marchew',
+    holdable: false,
+    melee: null,
+    spawn: 'village_renewable',
+    modelUrl: null,
+    notes: 'Plan 159 — renewable garden-pad pickup, same mechanism as `tomato`.',
+    consumable: { need: 'hunger', relief: 10 },
+    food: { freshness: { freshDurationDays: 3, mediumDurationDays: 3 }, bait: 'plant' },
+  },
+  potato: {
+    kind: 'potato',
+    label: 'ziemniak',
+    holdable: false,
+    melee: null,
+    spawn: 'village_renewable',
+    modelUrl: null,
+    notes: 'Plan 159 — renewable garden-pad pickup, same mechanism as `tomato`.',
+    consumable: { need: 'hunger', relief: 12 },
+    food: { freshness: { freshDurationDays: 4, mediumDurationDays: 4 }, bait: 'plant' },
+  },
+  cabbage: {
+    kind: 'cabbage',
+    label: 'kapusta',
+    holdable: false,
+    melee: null,
+    spawn: 'village_renewable',
+    modelUrl: null,
+    notes: 'Plan 159 — renewable garden-pad pickup, same mechanism as `tomato`.',
+    consumable: { need: 'hunger', relief: 10 },
+    food: { freshness: { freshDurationDays: 2, mediumDurationDays: 2 } },
+  },
+  fish: {
+    kind: 'fish',
+    label: 'ryba',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 159 — caught with `fishing_rod` at a lake shore (`world/fishing.ts`). Perishes fastest of all food; dry it or eat it quickly.',
+    consumable: { need: 'hunger', relief: 12 },
+    food: { freshness: { freshDurationDays: 0.75, mediumDurationDays: 0.75 } },
+  },
+  dried_fish: {
+    kind: 'dried_fish',
+    label: 'suszona ryba',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 159 — dried from `fish` at a drying rack (`world/dryingRacks.ts`), mirrors `dried_meat`.',
+    consumable: { need: 'hunger', relief: 22 },
+    food: { freshness: { freshDurationDays: 20, mediumDurationDays: 20 } },
+  },
+  fishing_rod: {
+    kind: 'fishing_rod',
+    label: 'wędka',
+    holdable: true,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 159 — Kupiec stock. Held tool; `[E]` at a lake shore casts, `[R]` applies bait from inventory.',
   },
 }
 

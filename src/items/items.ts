@@ -50,6 +50,16 @@ export type ItemKind =
   | 'obsidian_sword'
   | 'battle_axe'
   | 'masterwork_sword'
+  | 'berries'
+  | 'apple'
+  | 'nuts'
+  | 'honey'
+  | 'carrot'
+  | 'potato'
+  | 'cabbage'
+  | 'fish'
+  | 'dried_fish'
+  | 'fishing_rod'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
 
@@ -118,7 +128,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   mushroom: {
     kind: 'mushroom',
     label: 'grzyb',
-    categories: ['resource'],
+    categories: ['resource', 'food'],
     weight: 0.1,
     color: 0xc0453c,
     description: 'Leśny grzyb rosnący w cieniu drzew. Niektóre gatunki nadają się do jedzenia.'
@@ -466,6 +476,86 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     weight: 2.4,
     color: 0xe4ce75,
     description: 'Wysokiej jakości stalowy miecz kowalski. Lepszy od zwykłego miecza, mniej egzotyczny niż damasceńskie ostrza.'
+  },
+  berries: {
+    kind: 'berries',
+    label: 'jagody',
+    categories: ['food'],
+    weight: 0.1,
+    color: 0x3a2a6a,
+    description: 'Garść leśnych jagód. Szybko się psują, ale są łatwe do znalezienia.'
+  },
+  apple: {
+    kind: 'apple',
+    label: 'jabłko',
+    categories: ['food'],
+    weight: 0.15,
+    color: 0xb8342a,
+    description: 'Dzikie jabłko zerwane z drzewa w pobliżu osady.'
+  },
+  nuts: {
+    kind: 'nuts',
+    label: 'orzechy',
+    categories: ['food'],
+    weight: 0.15,
+    color: 0x7a5a3a,
+    description: 'Garść leśnych orzechów. Sycące i długo się przechowują.'
+  },
+  honey: {
+    kind: 'honey',
+    label: 'miód',
+    categories: ['food'],
+    weight: 0.4,
+    color: 0xe8a825,
+    description: 'Słoik miodu z dzikiego ula. Nie psuje się.'
+  },
+  carrot: {
+    kind: 'carrot',
+    label: 'marchew',
+    categories: ['food'],
+    weight: 0.12,
+    color: 0xd9762c,
+    description: 'Marchew zerwana z przydomowego ogródka.'
+  },
+  potato: {
+    kind: 'potato',
+    label: 'ziemniak',
+    categories: ['food'],
+    weight: 0.2,
+    color: 0xc9a86a,
+    description: 'Ziemniak wykopany z przydomowej grządki. Dobrze się przechowuje.'
+  },
+  cabbage: {
+    kind: 'cabbage',
+    label: 'kapusta',
+    categories: ['food'],
+    weight: 0.5,
+    color: 0x7ba85a,
+    description: 'Główka kapusty z przydomowego ogródka.'
+  },
+  fish: {
+    kind: 'fish',
+    label: 'ryba',
+    categories: ['food'],
+    weight: 0.5,
+    color: 0x8fa8b8,
+    description: 'Świeżo złowiona ryba. Szybko się psuje — najlepiej ją wysuszyć lub od razu zjeść.'
+  },
+  dried_fish: {
+    kind: 'dried_fish',
+    label: 'suszona ryba',
+    categories: ['food'],
+    weight: 0.25,
+    color: 0x6b7a6b,
+    description: 'Ryba wysuszona na suszarce. Lekka i długo się nie psuje.'
+  },
+  fishing_rod: {
+    kind: 'fishing_rod',
+    label: 'wędka',
+    categories: ['tool'],
+    weight: 0.9,
+    color: 0x6b4a2f,
+    description: 'Prosta wędka. Pozwala łowić ryby nad brzegiem jeziora.'
   },
 }
 
@@ -942,6 +1032,94 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     wrap.scale.set(1, 1.2, 1)
     wrap.castShadow = true
     group.add(wrap)
+    return group
+  }
+  if (kind === 'berries' || kind === 'nuts') {
+    const group = new THREE.Group()
+    for (let i = 0; i < 5; i++) {
+      const berry = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.03, 0),
+        new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),
+      )
+      berry.position.set((i % 3 - 1) * 0.05, 0.03 + Math.floor(i / 3) * 0.05, (i % 2) * 0.04)
+      berry.castShadow = true
+      group.add(berry)
+    }
+    return group
+  }
+  if (kind === 'apple') {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 8, 6),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.apple.color, flatShading: true }),
+    )
+    mesh.position.y = 0.08
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'carrot') {
+    const mesh = new THREE.Mesh(
+      new THREE.ConeGeometry(0.035, 0.22, 6),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.carrot.color, flatShading: true }),
+    )
+    mesh.rotation.x = Math.PI / 2.2
+    mesh.position.y = 0.05
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'potato') {
+    const mesh = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(0.09, 0),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.potato.color, flatShading: true }),
+    )
+    mesh.scale.set(1.2, 0.8, 1)
+    mesh.position.y = 0.07
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'cabbage') {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 8, 6),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.cabbage.color, flatShading: true }),
+    )
+    mesh.position.y = 0.13
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'honey') {
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.07, 0.12, 10),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.honey.color, flatShading: true, metalness: 0.1 }),
+    )
+    mesh.position.y = 0.06
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'fish' || kind === 'dried_fish') {
+    const mesh = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.03, 0.18, 3, 5),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),
+    )
+    mesh.rotation.z = Math.PI / 2
+    mesh.position.y = 0.05
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'fishing_rod') {
+    const group = new THREE.Group()
+    const rod = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.014, 0.02, 1.1, 6),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.fishing_rod.color, flatShading: true }),
+    )
+    rod.rotation.x = Math.PI / 2.3
+    rod.position.y = 0.3
+    rod.castShadow = true
+    group.add(rod)
+    const line = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.004, 0.004, 0.5, 4),
+      new THREE.MeshStandardMaterial({ color: 0xd8d8d8, flatShading: true }),
+    )
+    line.position.set(0, 0.05, 0.5)
+    group.add(line)
     return group
   }
   // blanket

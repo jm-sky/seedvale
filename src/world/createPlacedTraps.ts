@@ -1,6 +1,7 @@
 import { type Object3D, type Scene } from 'three'
 import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
 import type { TrapItemInstance } from '../items/itemInstances'
+import type { ItemKind } from '../items/items'
 import type { HeightSampler } from '../player/PlayerController'
 import { placeOnGround } from '../settlement/props'
 import {
@@ -37,6 +38,9 @@ export type PlacedTrapsHooks = {
   /** Single owner of "a capture happened" side effects — Traps XP, toast.
    *  Called exactly once per catch (implementation notes §18). */
   onCapture?: (event: TrapCaptureEvent) => void
+  /** Plan 159 §12 — bait returned to inventory on disarm/collect before a
+   *  capture. Never called on a successful capture (bait is consumed then). */
+  onBaitReturned?: (kind: ItemKind) => void
 }
 
 export type PlacedTraps = {
@@ -57,6 +61,10 @@ export type PlacedTraps = {
    *  decides whether an item goes back into the inventory — a `broken` trap
    *  is only cleared away). */
   collect: (id: string) => PlacedTrapRecord | null
+  /** Plan 159 §12 — atomically stores `kind` as `id`'s bait. False if the
+   *  trap is unknown, already baited, or `broken`. The caller is responsible
+   *  for having already removed the item from inventory. */
+  attachBait: (id: string, kind: ItemKind) => boolean
   /** Throttled proximity + weather pass. `animals` is the fauna list the
    *  caller already iterates, not a fresh world query. */
   update: (dt: number, nowDays: number, animals: readonly AnimalAgent[]) => void
@@ -116,6 +124,7 @@ export function createPlacedTraps(
     durability: entry.durability,
     skillAtActivation: entry.skillAtActivation,
     weatherCheckedAtDay: entry.weatherCheckedAtDay,
+    baitKind: entry.baitKind,
   })
 
   /** Charges every weather cycle that finished since the last look. Only
@@ -141,6 +150,9 @@ export function createPlacedTraps(
     // it is *not* marked meat-harvested, so the player still has to walk up
     // and knife-harvest it (or shovel-bury it) exactly like any other kill.
     animal.takeDamage(animal.health.maxHp)
+
+    // Bait is consumed by a successful capture — never returned.
+    entry.baitKind = null
 
     const spent = spendTrapDurability(entry.durability, 1)
     entry.durability = spent.durability
@@ -168,6 +180,7 @@ export function createPlacedTraps(
     const chance = trapDetectionChance({
       baseChance: TRAP_DEFS[entry.kind].baseDetectionChance,
       skillValue: entry.skillAtActivation,
+      hasBait: entry.baitKind != null,
     })
     const detected = rollTrapDetection(chance, trapDetectionRoll(entry.id, animal.animalId, attempt))
     if (detected) {
@@ -197,9 +210,16 @@ export function createPlacedTraps(
         durability: source.durability,
         skillAtActivation: 0,
         weatherCheckedAtDay: 0,
+        baitKind: null,
       }
       spawn(record)
       return record
+    },
+    attachBait(id, kind) {
+      const entry = find(id)
+      if (!entry || entry.state === 'broken' || entry.baitKind != null) return false
+      entry.baitKind = kind
+      return true
     },
     activate(id, skillValue, nowDays) {
       const entry = find(id)
@@ -217,6 +237,10 @@ export function createPlacedTraps(
       entry.state = 'placed'
       setTrapPropState(entry.mesh, entry.kind, entry.state)
       cooldowns.delete(entry.id)
+      if (entry.baitKind) {
+        hooks.onBaitReturned?.(entry.baitKind)
+        entry.baitKind = null
+      }
       return true
     },
     collect(id) {
@@ -224,6 +248,10 @@ export function createPlacedTraps(
       if (index === -1) return null
       const [entry] = traps.splice(index, 1)
       if (!entry) return null
+      if (entry.baitKind) {
+        hooks.onBaitReturned?.(entry.baitKind)
+        entry.baitKind = null
+      }
       const record = toRecord(entry)
       disposeTrapProp(entry.mesh)
       cooldowns.delete(entry.id)

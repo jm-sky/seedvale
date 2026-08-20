@@ -1,7 +1,7 @@
 # Plan: Natural Food, Fishing, Preservation and Bait — implementation notes
 
 **Created:** 2026-08-18  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented 2026-08-20, see plan §18 "Implementation summary" for what actually shipped and where it deviated from these notes (drying rack and hive ended up as deterministic settlement landmarks rather than player-placed/crafted, trap bait auto-loads on arm rather than a separate action).  
 **Priority:** medium · **Effort:** L  
 **Depends on:** ~~155~~ ~~156~~ ~~106~~ ~~141~~
 

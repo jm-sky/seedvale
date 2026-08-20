@@ -5,7 +5,9 @@ import type { EconomicKind } from '../economy/kinds'
 import type { Settlement } from '../settlement/createSettlement'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { PlacedTrapRecord } from '../world/animalTraps'
+import type { BeehiveRecord } from '../world/beehives'
 import type { DayNightState } from '../world/dayNight'
+import type { DryingRackRecord } from '../world/dryingRacks'
 import type { PointLightBudget } from '../world/pointLightBudget'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TreeLifecycle } from '../world/treeLifecycle'
@@ -30,6 +32,8 @@ import {
   type ResourceDeposits,
   type SettlementMiningHooks,
 } from '../terrain/resourceDeposits'
+import { type Beehives, createBeehives } from '../world/createBeehives'
+import { createDryingRacks, type DryingRacks } from '../world/createDryingRacks'
 import { createLargeCaves, type LargeCaves } from '../world/createLargeCaves'
 import { createOcean, type WorldOcean } from '../world/createOcean'
 import { createPlacedTraps, type PlacedTraps, type PlacedTrapsHooks } from '../world/createPlacedTraps'
@@ -80,6 +84,8 @@ export type WorldBundle = {
   placedTents: PlacedTents
   placedTraps: PlacedTraps
   largeCaves: LargeCaves
+  dryingRacks: DryingRacks
+  hives: Beehives
 }
 
 function buildChunkManager(
@@ -274,6 +280,11 @@ export async function createWorldBundle(
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
   dayNight: DayNightState,
+  /** Plan 159 — persistent drying racks/hives, same "carried across rebuild,
+   *  reset only on a genuinely new world" contract as the placed-* arrays
+   *  above. */
+  initialDryingRacks: readonly DryingRackRecord[] = [],
+  initialHives: readonly BeehiveRecord[] = [],
   initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
   /** Reports any wild-fauna or livestock death (any cause) by `animalId` —
    *  threaded down into `buildFauna`/`buildSettlementsManager` so
@@ -293,6 +304,9 @@ export async function createWorldBundle(
   /** Reports a completed trap catch (plan 141) — the single place Traps XP is
    *  awarded and the catch is announced, owned by `createApp.ts`. */
   onTrapCapture?: PlacedTrapsHooks['onCapture'],
+  /** Plan 159 §12 — bait returned to inventory on disarm/collect before a
+   *  capture; same indirection as `onTrapCapture` above. */
+  onTrapBaitReturned?: PlacedTrapsHooks['onBaitReturned'],
   /** Saved spawn-point lifecycle (plan 125 persistence follow-up), keyed by
    *  `PreySpawner.id` — see `createFauna`'s `initialSpawnerState` doc. */
   initialSpawnerState?: ReadonlyMap<string, SavedSpawnPointState>,
@@ -331,7 +345,7 @@ export async function createWorldBundle(
     scene,
     chunkManager.sampleHeight,
     config.seed,
-    { onCapture: onTrapCapture },
+    { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
     initialPlacedTraps,
   )
   const largeCaves = createLargeCaves(
@@ -341,8 +355,21 @@ export async function createWorldBundle(
     villageSizeConfig(settlementsManager.home.size).footprintRadius,
     config.terrain.region.coastThreshold,
   )
+  const dryingRacks = createDryingRacks(
+    scene,
+    chunkManager.sampleHeight,
+    settlementsManager.home.landmarks.stockpile,
+    initialDryingRacks,
+  )
+  const hives = createBeehives(
+    scene,
+    chunkManager.sampleHeight,
+    settlementsManager.home.landmarks.trees.map((t) => t.position),
+    config.seed,
+    initialHives,
+  )
 
-  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, largeCaves }
+  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, largeCaves, dryingRacks, hives }
 }
 
 /** Disposes every member's current instance and mutates `bundle`'s fields in
@@ -371,6 +398,7 @@ export async function rebuildWorldBundle(
   getPlayerSocial?: PlayerSocialLookup,
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
   onTrapCapture?: PlacedTrapsHooks['onCapture'],
+  onTrapBaitReturned?: PlacedTrapsHooks['onBaitReturned'],
   /** Plan 157 — same instance passed to `createWorldBundle`; a rebuild
    *  disposes/recreates `settlementsManager`/`placedFires` but the budget
    *  itself (and its pad, added directly to `scene`) survives, matching
@@ -396,6 +424,10 @@ export async function rebuildWorldBundle(
   bundle.placedTents.dispose()
   const carriedTraps = resetCollectedItems ? [] : [...bundle.placedTraps.nodes()]
   bundle.placedTraps.dispose()
+  const carriedDryingRacks = resetCollectedItems ? [] : [...bundle.dryingRacks.nodes()]
+  bundle.dryingRacks.dispose()
+  const carriedHives = resetCollectedItems ? [] : [...bundle.hives.nodes()]
+  bundle.hives.dispose()
   const carriedEconomies = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotEconomies()
   bundle.largeCaves.dispose()
   bundle.resourceDeposits.dispose()
@@ -445,7 +477,7 @@ export async function rebuildWorldBundle(
     scene,
     bundle.chunkManager.sampleHeight,
     config.seed,
-    { onCapture: onTrapCapture },
+    { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
     carriedTraps,
   )
   bundle.largeCaves = createLargeCaves(
@@ -454,6 +486,19 @@ export async function rebuildWorldBundle(
     config.seed,
     villageSizeConfig(bundle.settlementsManager.home.size).footprintRadius,
     config.terrain.region.coastThreshold,
+  )
+  bundle.dryingRacks = createDryingRacks(
+    scene,
+    bundle.chunkManager.sampleHeight,
+    bundle.settlementsManager.home.landmarks.stockpile,
+    carriedDryingRacks,
+  )
+  bundle.hives = createBeehives(
+    scene,
+    bundle.chunkManager.sampleHeight,
+    bundle.settlementsManager.home.landmarks.trees.map((t) => t.position),
+    config.seed,
+    carriedHives,
   )
 }
 
@@ -465,6 +510,8 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.placedTents.dispose()
   bundle.placedTraps.dispose()
   bundle.largeCaves.dispose()
+  bundle.dryingRacks.dispose()
+  bundle.hives.dispose()
   bundle.resourceDeposits.dispose()
   bundle.settlementsManager.dispose()
   bundle.ocean.dispose()
