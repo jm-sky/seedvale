@@ -51,6 +51,77 @@ function injectStyles(): void {
   document.head.appendChild(style)
 }
 
+function buildInspectorText(
+  npc: NpcAgent,
+  snapshot: NpcInspectionSnapshot,
+  settlementName: string,
+  whyResult: ReturnType<NpcAgent['why']>,
+): string {
+  const lines: string[] = [`${snapshot.displayName} · ${settlementName}`, '']
+
+  lines.push('Overview')
+  lines.push(`  id: ${snapshot.id}`)
+  lines.push(`  role: ${snapshot.role}`)
+  lines.push(`  phase: ${snapshot.phase}`)
+  lines.push(`  activity: ${snapshot.activity.kind}`)
+  lines.push(`  position: ${snapshot.position.x.toFixed(1)}, ${snapshot.position.z.toFixed(1)}`)
+  lines.push(`  hp: ${snapshot.health.current.toFixed(0)}/${snapshot.health.max}`)
+  lines.push(`  stamina: ${snapshot.stamina.current.toFixed(0)}/${snapshot.stamina.max}`)
+  lines.push(`  vigor: ${snapshot.vigor.current.toFixed(0)}/${snapshot.vigor.max}`)
+  lines.push(`  rescue: ${snapshot.watchdog.rescueStage} (${snapshot.watchdog.lowProgressStrikes})`)
+  lines.push(`  frozen: ${snapshot.frozen ? 'yes' : 'no'}`)
+
+  lines.push('', 'Needs')
+  lines.push(`  active need: ${needLabel(snapshot.activeNeed)}`)
+  lines.push(`  thirst: ${snapshot.needs.thirst.toFixed(2)}`)
+  lines.push(`  hunger: ${snapshot.needs.hunger.toFixed(2)}`)
+  lines.push(`  woodDuty: ${snapshot.needs.woodDuty.toFixed(2)}`)
+  lines.push(`  waterDuty: ${snapshot.needs.waterDuty.toFixed(2)}`)
+
+  lines.push('', 'Decision / Why')
+  lines.push(`  need: ${whyResult.need.id}${whyResult.need.value !== null ? ` (${whyResult.need.value.toFixed(2)})` : ''}`)
+  lines.push(`  phase: ${whyResult.phase}`)
+  lines.push(`  action: ${whyResult.action ? `${whyResult.action.kind}${whyResult.action.target ? ` → ${whyResult.action.target}` : ''}` : '-'}`)
+  lines.push(`  blocked: ${whyResult.blocked ?? '-'}`)
+
+  lines.push('', 'Current action')
+  if (snapshot.action) {
+    lines.push(`  kind: ${snapshot.action.kind}`)
+    lines.push(`  status: ${snapshot.action.status}`)
+    lines.push(`  destination: ${snapshot.action.destination.x.toFixed(1)}, ${snapshot.action.destination.z.toFixed(1)}`)
+    lines.push(`  queueId: ${snapshot.action.queueId ?? '-'}`)
+  } else {
+    lines.push('  kind: -')
+  }
+
+  lines.push('', 'Queue')
+  if (snapshot.queue) {
+    lines.push(`  id: ${snapshot.queue.id}`)
+    lines.push(`  position: ${snapshot.queue.position}`)
+    lines.push(`  serving: ${snapshot.queue.serving ? 'yes' : 'no'}`)
+  } else {
+    lines.push('  id: -')
+  }
+
+  lines.push('', 'Household')
+  if (snapshot.household) {
+    lines.push(`  food: ${snapshot.household.food}`)
+    lines.push(`  wood: ${snapshot.household.wood}`)
+    lines.push(`  water: ${snapshot.household.water}`)
+  } else {
+    lines.push('  household: -')
+  }
+
+  lines.push('', 'History')
+  const events = npc.history()
+  const recent = events.slice(-HISTORY_RENDER_LIMIT).reverse()
+  for (const event of recent) {
+    lines.push(`  ${formatEvent(event)}`)
+  }
+
+  return lines.join('\n')
+}
+
 function formatEvent(event: NpcTraceEvent): string {
   const t = event.simTime.toFixed(1)
   switch (event.type) {
@@ -145,7 +216,10 @@ export function createNpcInspector(
   const freezeBtn = document.createElement('button')
   const reevalBtn = document.createElement('button')
   reevalBtn.textContent = 'Ponów decyzję'
-  controls.append(freezeBtn, reevalBtn)
+  const copyBtn = document.createElement('button')
+  copyBtn.textContent = 'Kopiuj'
+  controls.append(freezeBtn, reevalBtn, copyBtn)
+  let copyResetTimer: ReturnType<typeof setTimeout> | null = null
 
   let current: NpcAgent | null = null
   let currentSettlementName = ''
@@ -218,6 +292,17 @@ export function createNpcInspector(
       reevaluateNpc(bundle, snapshot.id)
       refresh()
     }
+    copyBtn.onclick = () => {
+      const text = buildInspectorText(npc, snapshot, currentSettlementName, whyResult)
+      void navigator.clipboard.writeText(text).then(() => {
+        if (copyResetTimer !== null) clearTimeout(copyResetTimer)
+        copyBtn.textContent = 'Skopiowano'
+        copyResetTimer = setTimeout(() => {
+          copyBtn.textContent = 'Kopiuj'
+          copyResetTimer = null
+        }, 1200)
+      })
+    }
 
     history.replaceChildren()
     const events = npc.history()
@@ -256,6 +341,10 @@ export function createNpcInspector(
     if (timer !== null) {
       clearInterval(timer)
       timer = null
+    }
+    if (copyResetTimer !== null) {
+      clearTimeout(copyResetTimer)
+      copyResetTimer = null
     }
   }
 
