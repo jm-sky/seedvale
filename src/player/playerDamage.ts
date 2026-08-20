@@ -1,6 +1,5 @@
 import type { ToolKind } from '../items/HeldTool'
 import type { PlayerController } from './PlayerController'
-import type { PlayerNeeds } from './PlayerNeeds'
 import {
   defenseBlockRoll,
   type DefenseOutcome,
@@ -9,8 +8,13 @@ import {
 } from '../combat/defenseResolver'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { healHealth, type HealthState } from '../shared/HealthState'
-import { isStarving } from '../shared/HungerState'
-import { isDehydrated } from '../shared/ThirstState'
+import {
+  DEHYDRATION_HP_PER_SEC,
+  HUNGER_SEVERE_DURATION_SEC,
+  type PlayerNeeds,
+  STARVATION_HP_PER_SEC,
+  THIRST_SEVERE_DURATION_SEC,
+} from './PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD } from './PlayerSkills'
 
 export const DOWNED_DURATION_SEC = 5
@@ -115,10 +119,9 @@ export function applyPlayerDamage(params: ApplyPlayerDamageParams): PlayerDamage
 /** Test helper — exposes the roll used by `resolveDefense` for assertions. */
 export { defenseBlockRoll }
 
-const STARVATION_HP_PER_SEC = 0.5
-const DEHYDRATION_HP_PER_SEC = 0.5
-
-/** Hunger/thirst depletion damage routed through the player downed lifecycle. */
+/** Sustained hunger/thirst depletion damage (plan 165 — gated on how long
+ *  each pool has stayed continuously critical, not on hitting the pool
+ *  straight away), routed through the player downed lifecycle. */
 export function tickPlayerStarvationDamage(
   player: PlayerController,
   needs: PlayerNeeds,
@@ -127,8 +130,8 @@ export function tickPlayerStarvationDamage(
   playerYaw: number,
 ): void {
   let perSec = 0
-  if (isStarving(needs.hunger)) perSec += STARVATION_HP_PER_SEC
-  if (isDehydrated(needs.thirst)) perSec += DEHYDRATION_HP_PER_SEC
+  if (needs.starvationDuration >= HUNGER_SEVERE_DURATION_SEC) perSec += STARVATION_HP_PER_SEC
+  if (needs.dehydrationDuration >= THIRST_SEVERE_DURATION_SEC) perSec += DEHYDRATION_HP_PER_SEC
   if (perSec <= 0 || dt <= 0) return
   applyPlayerDamage({
     player,

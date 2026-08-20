@@ -1,4 +1,4 @@
-import { damageHealth, healHealth, type HealthState } from '../shared/HealthState'
+import { healHealth, type HealthState } from '../shared/HealthState'
 import { createHungerState, drainHunger, type HungerState, isStarving, restoreHunger } from '../shared/HungerState'
 import { createStaminaState, drainStamina, restoreStamina, type StaminaState } from '../shared/StaminaState'
 import { createThirstState, drainThirst, isDehydrated, restoreThirst, type ThirstState } from '../shared/ThirstState'
@@ -9,12 +9,22 @@ import { createVigorState, drainVigor, type VigorState } from '../shared/VigorSt
  *  new pools of the same `{max, current}` family (see `HungerState.ts`'s doc
  *  comment for why they aren't the 0-1 "urge" shape NPC `Needs.ts`/fauna
  *  `AnimalLife.ts` use — those track *when to act*, this tracks *a bar the
- *  player watches and refills by eating/drinking real items*). */
+ *  player watches and refills by eating/drinking real items*).
+ *
+ *  `starvationDuration`/`dehydrationDuration` (plan 165) are simulation-time
+ *  counters, not UI state: how long Hunger/Thirst has continuously sat at or
+ *  below its critical threshold (`isStarving`/`isDehydrated`). They gate the
+ *  capability penalty and eventual HP loss in `tickPlayerNeeds` below and
+ *  reset to 0 the moment the pool climbs back above critical — including via
+ *  `eatFood`/`drinkWater`, since those raise `hunger.current`/`thirst.current`
+ *  directly and the very next tick observes the pool is no longer critical. */
 export type PlayerNeeds = {
   stamina: StaminaState
   vigor: VigorState
   hunger: HungerState
   thirst: ThirstState
+  starvationDuration: number
+  dehydrationDuration: number
 }
 
 export const PLAYER_MAX_STAMINA = 100
@@ -24,11 +34,23 @@ export const PLAYER_MAX_THIRST = 100
 
 /** Per-second drain while awake — tuned against the default `dayLengthSec`
  *  (480s, `world/dayNight.ts`): hunger empties over ~3 game days, thirst over
- *  ~2.5 (thirst always outpaces hunger), vigor over a single day (mirrors
- *  `ai/npcVigor.ts`'s "drains across a day of activity, restored by sleep"). */
+ *  ~2.5 (thirst always outpaces hunger). */
 const HUNGER_DRAIN_PER_SEC = 100 / (3 * 480)
 const THIRST_DRAIN_PER_SEC = 100 / (2.5 * 480)
-const VIGOR_DRAIN_PER_SEC = 100 / 480
+
+/** Vigor passive drain while idle/resting (plan 165 §1) — roughly
+ *  `-1 point / 24 game hours` at the default `dayLengthSec` (480s = 1 day),
+ *  so a standing-still PC no longer visibly loses Vigor within seconds. */
+const VIGOR_IDLE_DRAIN_PER_SEC = 1 / 480
+
+/** Extra Vigor drain on top of the idle baseline while the player is
+ *  actually moving/sprinting (`PlayerController.update`'s `tickPlayerMovementVigor`
+ *  call) — this is the old flat "drains across a day of activity" rate
+ *  (mirrors `ai/npcVigor.ts`'s framing), now correctly scoped to activity
+ *  instead of applying while standing still. Sprinting costs more than a
+ *  walk, matching "cięższe aktywności mogą mieć jeszcze większy koszt". */
+const VIGOR_WALK_EXTRA_DRAIN_PER_SEC = 100 / 480
+const VIGOR_SPRINT_EXTRA_DRAIN_PER_SEC = VIGOR_WALK_EXTRA_DRAIN_PER_SEC * 1.5
 
 /** Stamina is short-term (sprint) effort, not daily budget — fast drain, fast
  *  regen, same "twitchy" order of magnitude as fauna's 0-1-scale sprint
@@ -36,19 +58,35 @@ const VIGOR_DRAIN_PER_SEC = 100 / 480
 const STAMINA_SPRINT_DRAIN_PER_SEC = 20
 const STAMINA_REGEN_PER_SEC = 12
 
-/** HP/sec lost while a pool is fully depleted (§1: "should affect gameplay,
- *  but this plan should not introduce a broad disease/death framework") —
- *  reuses the existing combat-agnostic `damageHealth`, the same path fauna
- *  bites already use, so a starving/dehydrated player takes real but slow
- *  damage with no new death/UI system. */
-const STARVATION_HP_PER_SEC = 0.5
-const DEHYDRATION_HP_PER_SEC = 0.5
+/** How long Hunger/Thirst must stay continuously critical (plan 165 §2/§3)
+ *  before slow HP loss begins — before this, the only consequence is the
+ *  growing Vigor/Stamina penalty below. Thirst's window is deliberately
+ *  shorter than hunger's ("skala czasowa odwodnienia jest krótsza"). */
+export const HUNGER_SEVERE_DURATION_SEC = 3 * 480
+export const THIRST_SEVERE_DURATION_SEC = 1.5 * 480
+
+/** HP/sec lost once a deprivation duration has crossed its severe gate above
+ *  — applied by `player/playerDamage.ts`'s `tickPlayerStarvationDamage`
+ *  (routed through the player defense/downed lifecycle, unlike the plain
+ *  `damageHealth` fauna bites use), so sustained starvation/dehydration deals
+ *  real but slow damage with no new death/UI system. */
+export const STARVATION_HP_PER_SEC = 0.5
+export const DEHYDRATION_HP_PER_SEC = 0.5
+
+/** Extra Vigor/Stamina drain at full deprivation severity (duration at or
+ *  past its `*_SEVERE_DURATION_SEC` gate), ramped linearly from 0 as
+ *  `starvationDuration`/`dehydrationDuration` grow — a capability penalty
+ *  ("spadek wydolności") rather than a permanent max reduction, so eating/
+ *  drinking (which resets duration to 0) immediately restores normal
+ *  capability. `deprivationSeverity` below derives the [0,1] ramp. */
+const DEPRIVATION_VIGOR_PENALTY_PER_SEC = 100 / 480
+const DEPRIVATION_STAMINA_PENALTY_PER_SEC = 8
 
 /** Light passive HP regen (plan 153 — mobile playtest found no way to
  *  recover HP at all short of a full sleep skip). Slow on purpose: a full
  *  heal takes minutes, not seconds, so healing items/herbs stay meaningfully
- *  faster. Suppressed while starving/dehydrated so it never partially cancels
- *  `applyStarvationDamage` in the same tick. */
+ *  faster. Suppressed once starvation/dehydration HP loss is active so it
+ *  never partially cancels that same-tick damage. */
 const HP_REGEN_PER_SEC = 0.3
 
 export function createPlayerNeeds(): PlayerNeeds {
@@ -57,6 +95,8 @@ export function createPlayerNeeds(): PlayerNeeds {
     vigor: createVigorState(PLAYER_MAX_VIGOR),
     hunger: createHungerState(PLAYER_MAX_HUNGER),
     thirst: createThirstState(PLAYER_MAX_THIRST),
+    starvationDuration: 0,
+    dehydrationDuration: 0,
   }
 }
 
@@ -66,6 +106,16 @@ export function resetPlayerNeeds(needs: PlayerNeeds): void {
   needs.vigor.current = needs.vigor.max
   needs.hunger.current = needs.hunger.max
   needs.thirst.current = needs.thirst.max
+  needs.starvationDuration = 0
+  needs.dehydrationDuration = 0
+}
+
+/** [0,1] ramp of how severe a continuous deprivation duration is — 0 the
+ *  instant a pool turns critical, 1 once it reaches its `*_SEVERE_DURATION_SEC`
+ *  gate (where HP loss starts). Drives the Vigor/Stamina penalty below. */
+function deprivationSeverity(duration: number, severeDurationSec: number): number {
+  if (severeDurationSec <= 0) return duration > 0 ? 1 : 0
+  return Math.max(0, Math.min(1, duration / severeDurationSec))
 }
 
 /** Restores a save's persisted hunger/thirst/vigor onto a fresh pool (stamina
@@ -80,21 +130,49 @@ export function restorePersistedNeeds(
   needs.vigor.current = Math.max(0, Math.min(needs.vigor.max, saved.vigor))
 }
 
-/** Coarse per-tick drain — called every frame with `worldDt` (frozen during
- *  an active time-skip, same convention as fauna/settlements) and once more
- *  with the skipped duration when a skip finishes (`gameLoop.ts`), matching
- *  the existing NPC/fauna "freeze then catch up in one lump" pattern instead
- *  of paying per-frame cost while the skip overlay is up. */
+/** Coarse per-tick drain — called every frame with `worldDt` (`gameLoop.ts`
+ *  scales `dt` by `dayNight.timeMultiplier` during an active time-skip
+ *  instead of freezing it, so Hunger/Thirst/Vigor and their consequences
+ *  keep progressing — and the HUD keeps reflecting them — through a rest/
+ *  sleep skip rather than jumping only once it finishes).
+ *
+ *  Tick order (plan 165): advance the pools, derive whether each is
+ *  currently critical, advance/reset the matching deprivation duration,
+ *  then apply the duration-derived Vigor/Stamina penalty. `eatFood`/
+ *  `drinkWater` don't need to touch duration themselves — raising a pool
+ *  back above critical means the very next tick here resets it to 0. */
 export function tickPlayerNeeds(needs: PlayerNeeds, dt: number): void {
   if (dt <= 0) return
   drainHunger(needs.hunger, HUNGER_DRAIN_PER_SEC * dt)
   drainThirst(needs.thirst, THIRST_DRAIN_PER_SEC * dt)
-  drainVigor(needs.vigor, VIGOR_DRAIN_PER_SEC * dt)
+
+  needs.starvationDuration = isStarving(needs.hunger) ? needs.starvationDuration + dt : 0
+  needs.dehydrationDuration = isDehydrated(needs.thirst) ? needs.dehydrationDuration + dt : 0
+
+  drainVigor(needs.vigor, VIGOR_IDLE_DRAIN_PER_SEC * dt)
+
+  const severity = Math.max(
+    deprivationSeverity(needs.starvationDuration, HUNGER_SEVERE_DURATION_SEC),
+    deprivationSeverity(needs.dehydrationDuration, THIRST_SEVERE_DURATION_SEC),
+  )
+  if (severity > 0) {
+    drainVigor(needs.vigor, severity * DEPRIVATION_VIGOR_PENALTY_PER_SEC * dt)
+    drainStamina(needs.stamina, severity * DEPRIVATION_STAMINA_PENALTY_PER_SEC * dt)
+  }
 }
 
 export function tickPlayerStamina(stamina: StaminaState, dt: number, sprinting: boolean): void {
   if (sprinting) drainStamina(stamina, STAMINA_SPRINT_DRAIN_PER_SEC * dt)
   else restoreStamina(stamina, STAMINA_REGEN_PER_SEC * dt)
+}
+
+/** Extra Vigor cost for actually moving, on top of the idle baseline
+ *  `tickPlayerNeeds` already applies every tick — called from
+ *  `PlayerController.update` only while `moving` is true, with the same
+ *  per-frame `dt` used for movement/stamina that frame (plan 165 §1). */
+export function tickPlayerMovementVigor(vigor: VigorState, dt: number, sprinting: boolean): void {
+  if (dt <= 0) return
+  drainVigor(vigor, (sprinting ? VIGOR_SPRINT_EXTRA_DRAIN_PER_SEC : VIGOR_WALK_EXTRA_DRAIN_PER_SEC) * dt)
 }
 
 /** Full night's sleep (tent/camp/town rest quick actions, all 8h skips) —
@@ -121,22 +199,20 @@ export function drinkWater(needs: PlayerNeeds, thirstRelief: number): void {
   restoreThirst(needs.thirst, thirstRelief)
 }
 
-/** Applies §1's HP consequence for a fully-depleted pool. Cheap no-op the
- *  vast majority of frames (both checks are simple comparisons), so this is
- *  safe to call unconditionally every tick rather than gating it behind a
- *  coarser schedule. */
-export function applyStarvationDamage(needs: PlayerNeeds, health: HealthState, dt: number): void {
-  let perSec = 0
-  if (isStarving(needs.hunger)) perSec += STARVATION_HP_PER_SEC
-  if (isDehydrated(needs.thirst)) perSec += DEHYDRATION_HP_PER_SEC
-  if (perSec > 0) damageHealth(health, perSec * dt)
+/** True once a deprivation duration has crossed its severe gate — the point
+ *  `player/playerDamage.ts`'s `tickPlayerStarvationDamage` starts dealing HP
+ *  loss (plan 165 §2/§3). Exported so that live path and `tickHealthRegen`'s
+ *  suppression below share one definition of "currently taking damage". */
+export function isTakingDeprivationDamage(needs: PlayerNeeds): boolean {
+  return needs.starvationDuration >= HUNGER_SEVERE_DURATION_SEC || needs.dehydrationDuration >= THIRST_SEVERE_DURATION_SEC
 }
 
 /** Passive HP regen (plan 153) — mirrors `tickPlayerStamina`'s "cheap
- *  per-tick pool nudge" shape. No-ops while starving/dehydrated (those ticks
- *  already take starvation damage the same frame) or once already full. */
+ *  per-tick pool nudge" shape. No-ops while deprivation HP loss is active
+ *  (that tick already takes starvation/dehydration damage) or once already
+ *  full. */
 export function tickHealthRegen(needs: PlayerNeeds, health: HealthState, dt: number): void {
   if (dt <= 0) return
-  if (isStarving(needs.hunger) || isDehydrated(needs.thirst)) return
+  if (isTakingDeprivationDamage(needs)) return
   healHealth(health, HP_REGEN_PER_SEC * dt)
 }

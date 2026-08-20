@@ -5,9 +5,12 @@ export type ThirstState = {
   current: number
 }
 
-/** Below this remaining hydration, thirst starts costing the player HP
- *  (`player/PlayerNeeds.ts`'s `tickPlayerNeeds`). */
-export const THIRST_DEHYDRATED_THRESHOLD = 0
+/** Remaining hydration at/below this level is "significant" thirst — the
+ *  point where `player/PlayerNeeds.ts`'s `tickPlayerNeeds` starts
+ *  accumulating `dehydrationDuration` (plan 165). Moderate thirst above this
+ *  threshold carries no penalty; HP loss only follows after `dehydrationDuration`
+ *  itself has stayed critical long enough. */
+export const THIRST_DEHYDRATED_THRESHOLD = 20
 
 export function createThirstState(max: number): ThirstState {
   return { max, current: max }

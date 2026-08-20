@@ -25,7 +25,7 @@ import { createHealthState, type HealthState } from '../shared/HealthState'
 import { isExhausted } from '../shared/StaminaState'
 import { type Collider, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
-import { createPlayerNeeds, type PlayerNeeds, tickPlayerStamina } from './PlayerNeeds'
+import { createPlayerNeeds, type PlayerNeeds, tickPlayerMovementVigor, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
 import { integrateVerticalMotion } from './verticalMotion'
 
@@ -578,6 +578,7 @@ export class PlayerController {
     this.moving = this.wish.lengthSq() > 0
     this.sprinting = this.moving && this.keys.sprint && !isExhausted(this.needs.stamina)
     tickPlayerStamina(this.needs.stamina, dt, this.sprinting)
+    if (this.moving) tickPlayerMovementVigor(this.needs.vigor, dt, this.sprinting)
     if (!this.skills.sneak.active) this.sneakUseDistance = 0
     if (this.moving) {
       const baseSpeed = this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED

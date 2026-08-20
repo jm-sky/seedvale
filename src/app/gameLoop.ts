@@ -499,13 +499,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           player.standUp()
         }
         bundle.settlementsManager.resolveTimeSkip(skip.startTimeOfDay, skip.hours, dayNight.dayLengthSec)
-        // Player needs freeze (worldDt=0 below) while a skip is in flight,
-        // same convention as fauna/settlements — catch up in one lump here.
-        // `fadeStrength === 1` is rest/sleep (`world/timeSkip.ts`'s doc
-        // comment): a full night restores vigor/stamina on top of the drain
-        // the skipped hours would otherwise apply — how much depends on the
-        // camp, which `onSleepFinished` owns.
-        tickPlayerNeeds(player.needs, skip.hours * 3600)
+        // Player needs already progressed through the skip via `worldDt`
+        // below (plan 165 — scaled by `dayNight.timeMultiplier` instead of
+        // frozen, so no separate lump catch-up is needed here). `fadeStrength
+        // === 1` is rest/sleep (`world/timeSkip.ts`'s doc comment): a full
+        // night restores vigor/stamina on top of the drain the skipped hours
+        // already applied — how much depends on the camp, which
+        // `onSleepFinished` owns.
         if (skip.fadeStrength === 1) onSleepFinished()
       }
       keyboard.state.forward = false
@@ -1296,7 +1296,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // catches them up to the new schedule/needs/position in one shot, so
       // nothing is lost by not ticking them meanwhile. `dt` below (for the
       // clock itself) stays real — the sky/clock still has to race ahead.
-      const worldDt = timeSkip.isActive() ? 0 : dt
+      // Player needs (`worldDt`) instead keep ticking through the skip,
+      // scaled by the same `dayNight.timeMultiplier` the clock itself races
+      // ahead by, so Hunger/Thirst/Vigor — and the HUD bars reflecting them —
+      // progress visibly across a rest/sleep skip instead of jumping only
+      // once it finishes (plan 165 §5).
+      const worldDt = timeSkip.isActive() ? dt * dayNight.timeMultiplier : dt
       tickDayNight(dayNight, dt)
       // Cheap: `tickClimate` only recomputes `weather` from the deterministic
       // hash when `elapsedDays` crosses into a new weather cycle (plan §17);
@@ -1338,9 +1343,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       hud.setTime(dayNight.timeOfDay)
       hud.setExp(questManager.getExp())
       withCategory(monitor, 'PHYSICS', () => { player.update(dt) })
-      // Hunger/thirst/vigor freeze during an active time-skip (worldDt=0,
-      // caught up in one lump above on `skip.justFinished`) — stamina keeps
-      // ticking inside `player.update(dt)` on raw `dt` (tied to sprint).
+      // Hunger/thirst/vigor progress on `worldDt` (scaled during a time-skip,
+      // see above) — stamina keeps ticking inside `player.update(dt)` on raw
+      // `dt` (tied to sprint) regardless of any skip.
       tickPlayerNeeds(player.needs, worldDt)
       if (!player.isDowned()) {
         tickPlayerStarvationDamage(player, player.needs, worldDt, heldTool.held(), mouseLook.state.yaw)

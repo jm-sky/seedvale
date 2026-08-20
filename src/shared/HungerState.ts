@@ -6,9 +6,12 @@ export type HungerState = {
   current: number
 }
 
-/** Below this remaining satiation, hunger starts costing the player HP
- *  (`player/PlayerNeeds.ts`'s `tickPlayerNeeds`). */
-export const HUNGER_STARVING_THRESHOLD = 0
+/** Remaining satiation at/below this level is "significant" hunger — the
+ *  point where `player/PlayerNeeds.ts`'s `tickPlayerNeeds` starts
+ *  accumulating `starvationDuration` (plan 165). Moderate hunger above this
+ *  threshold carries no penalty; HP loss only follows after `starvationDuration`
+ *  itself has stayed critical long enough. */
+export const HUNGER_STARVING_THRESHOLD = 20
 
 export function createHungerState(max: number): HungerState {
   return { max, current: max }
