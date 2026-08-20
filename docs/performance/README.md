@@ -1,7 +1,7 @@
 # Seedvale — Performance & Rendering Strategy
 
-**Updated:** 2026-08-17  
-**Status:** active  
+**Updated:** 2026-08-120
+**Status:** active
 **Scope:** CPU · GPU · memory · rendering · chunk streaming · scalability
 
 ---
@@ -521,3 +521,14 @@ The renderer should remain understandable, scalable and compatible with the game
 ### Related
 
 - [`Plan 136 — Three.js 0.180 → 0.185 upgrade`](../plans/archive/2026-08-16--136--threejs-180-to-185-upgrade.md)
+
+
+## Trace analysis results
+
+Historical Chrome Trace Analyzer results are stored in:
+
+`docs/performance/trace-results/`
+
+Each result should correspond to a captured performance trace and be kept as a historical record for comparing performance changes over time.
+
+> Those are results of `./scripts/analyze_trace.sh _temp/Performance/Trace-20260820T085349.json`
