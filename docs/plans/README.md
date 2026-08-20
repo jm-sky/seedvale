@@ -60,6 +60,9 @@ Construction & lodging
 
 NPC diagnostics
   170 NPC simulation inspector/trace observes needs + decisions + actions + interaction queues across the existing NPC systems
+
+Natural vegetation
+  (140 landscape flora) → 171 natural crop lifecycle → 126 seed planting
 ```
 
 ---
@@ -77,6 +80,7 @@ NPC diagnostics
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-20--171--natural-crop-lifecycle.md` | Naturalne cropy bez „magic spawn”: wspólny lifecycle `young → mature → spoiled`, data-driven definicje, naturalny spawn, wizualizacja, harvest i lazy lifecycle; prerequisit dla późniejszego sadzenia cropów w planie `126` | 🟡 | M | ~~140~~ |
 | `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits.md` | Bows and critial hits | 🟡 | L | ~~150~~ ~~155~~ |
 | `2026-08-19--165--vigor-hunger-thirst-and-rest.md` | Urealnić zachowanie Vigor, Hunger i Thirst | 🟡 | M | - |
 | `2026-08-19--164--player-storage-and-container-system.md` | Players box for future companions | 🔴 | M | - |
@@ -148,6 +152,6 @@ Done plans kept visible here (not archived) because a current plan above still d
 
 Every `docs/plans/YYYY-MM-DD--NNN--*.md` in **this folder** (except `*-implementation-notes.md`, `*-review.md`, `README.md`, `NEXT-IDEAS.md`, `LOOSE-ENDS.md`, `archive/`) belongs in exactly one section above (`In progress` / `Planned` / `Todo` / `Verification needed` / `Recent context`), regardless of status.
 
-New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), a `domain:`/optional `tags:` per [Plan domains](#plan-domains) above, then a row in the matching section. When a plan reaches `done` and nothing above still depends on it, it stays here until the next archive snapshot — do not move it to `archive/` yourself; that only happens as a deliberate periodic snapshot (see [archive/README.md](./archive/README.md)).
+New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), a `domain:`/optional `tags` per [Plan domains](#plan-domains) above, then a row in the matching section. When a plan reaches `done` and nothing above still depends on it, it stays here until the next archive snapshot — do not move it to `archive/` yourself; that only happens as a deliberate periodic snapshot (see [archive/README.md](./archive/README.md)).
 
 ---
