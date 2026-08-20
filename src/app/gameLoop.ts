@@ -47,6 +47,9 @@ import { NPC_SHADOW_DISTANCE } from '../ai/NpcAgent'
 import { playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audio/actionSounds'
 import { playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
+import { MELEE_CRITICAL_CHANCE, MELEE_CRITICAL_MULTIPLIER, resolveCriticalHit } from '../combat/criticalHit'
+import { advanceProjectile, type Projectile, sweptProjectileHit } from '../combat/projectile'
+import { rangedAccuracy, rangedDeviationRoll, resolveRangedDirection } from '../combat/rangedAttack'
 import { isCameraMeshDebugMode, isDebugMode } from '../debug/debugMode'
 import { setCameraMeshHit } from '../debug/renderStateDebug'
 import { ANIMAL_LABELS, FAUNA_SHADOW_DISTANCE } from '../fauna/AnimalAgent'
@@ -57,11 +60,15 @@ import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
-import { ITEM_CATALOG } from '../items/itemCatalog'
+import { ARROW_DAMAGE_BONUS, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
+import { isWeaponItemInstance } from '../items/itemInstances'
 import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
+import { createAcquiredInstance } from '../items/trade'
+import { applySharpnessWear, getSharpnessDamageModifier, getWeaponMaintenanceProfile } from '../items/weaponMaintenance'
 import { getMonitor, getProgramCensus, withCategory, withProgramCensusStage } from '../perf'
 import {
   collectLivingCombatTargets,
+  collectRangedAnimalCandidates,
   createPlayerCombat,
   filterWorldCycleTargets,
   findLivingTargetById,
@@ -84,6 +91,8 @@ import {
   tickHealthRegen,
   tickPlayerNeeds,
 } from '../player/PlayerNeeds'
+import { createPlayerRanged } from '../player/playerRanged'
+import { awardSkillXp, SKILL_XP_AWARD } from '../player/PlayerSkills'
 import {
   anyWithinRadius,
   createShadowBudgetState,
@@ -115,6 +124,12 @@ import {
 } from './interactables'
 import { activeModal } from './modalState'
 import type { Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
+
+/** Candidate-gathering radius for ranged projectile collision (plan 162) —
+ *  a fixed generous bound covering `long_bow`'s 20-unit range plus margin,
+ *  independent of `GAZE_RANGE`/`COMBAT_TARGET_RANGE` (both far shorter and
+ *  scoped to gaze/soft-lock acquisition, not projectile flight). */
+const RANGED_CANDIDATE_RANGE = 26
 
 type Highlightable = NpcAgent | AnimalAgent
 
@@ -388,6 +403,35 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
    *  the camera happened to drift during wind-up. */
   let attackYaw: number | null = null
 
+  /** Ranged attack lifecycle (plan 162) — same draw/release/recovery shape
+   *  as `playerMelee`, `ITEM_CATALOG[kind].ranged` supplies the per-bow
+   *  config. */
+  const playerRanged = createPlayerRanged()
+  /** Live in-flight arrows — ticked every unpaused frame regardless of the
+   *  currently held tool, so switching weapons mid-flight doesn't freeze or
+   *  drop an already-fired shot. */
+  let activeProjectiles: Projectile[] = []
+  /** Soft-locked living-target id the current draw is aimed at, resolved to
+   *  a live position again at fire time (the target may have moved) —
+   *  `null` fires straight along the live aim yaw instead. */
+  let rangedTargetId: string | null = null
+  /** Monotonic counter feeding every deterministic combat roll (critical hit,
+   *  ranged aim deviation) this frame loop makes — never resets, so the same
+   *  attempt index is never reused for two different shots/swings. */
+  let attackAttemptCounter = 0
+
+  /** Shared kill-consequence line for both melee and ranged (plan 162 §"Do
+   *  not duplicate melee damage/kill logic") — quest hook + wolf-den check,
+   *  same as the original melee-only inline version. */
+  function animalDeathToastLine(animal: AnimalAgent): string {
+    const label = ANIMAL_LABELS[animal.def.kind]
+    const override = questManager.onInteractObjective({ type: 'animal_died', animalId: animal.animalId })
+    const denOverride = bundle.fauna.isWolfDenCleared()
+      ? questManager.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })
+      : null
+    return denOverride?.line ?? override?.line ?? `${label} pada.`
+  }
+
   /** Currently gaze-highlighted NPC/animal, if any — tracked so we only toggle
    *  the CSS class on change instead of writing every frame. */
   let highlightedTarget: Highlightable | null = null
@@ -532,6 +576,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.setMeleeSwing(null)
         attackYaw = null
       }
+      if (playerRanged.isDrawing()) {
+        playerRanged.reset()
+        rangedTargetId = null
+      }
 
       switch (modal) {
         case 'busy':
@@ -587,7 +635,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.mesh.position,
         held,
         landOwnership,
-        inventory.has('knife', 1) || inventory.has('damascus_knife', 1),
+        inventory.holdsAny('knife') || inventory.holdsAny('damascus_knife'),
         (kind) => questManager.activeSpotAnimalRange(kind),
       )
 
@@ -630,6 +678,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           meleeTick.config,
           meleeCandidates,
         )
+        // Plan 161 — current held instance's sharpness (if any) modifies this
+        // swing's damage; wear is applied once per resolved hit below, never
+        // on a miss (no `hitIds`) and never more than once per target.
+        const heldInstanceId = heldTool.heldInstanceId()
+        const heldInstance = heldInstanceId ? inventory.getInstance(heldInstanceId) : null
+        const weaponInstance = heldInstance && isWeaponItemInstance(heldInstance) ? heldInstance : null
+        const sharpnessModifier = weaponInstance ? getSharpnessDamageModifier(weaponInstance.sharpness) : 1
         for (const id of hitIds) {
           const animal = meleeAnimalById.get(id)
           if (!animal || animal.isDead()) continue
@@ -637,27 +692,137 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           playerCombat.enter()
           playerCombat.noteActivity()
           playerCombat.setSoftLock(livingTargetIdForAnimal(id))
-          animal.takeDamage(meleeTick.config.damage, 'player')
+          attackAttemptCounter++
+          // Plan 162 — critical is a shared modifier, not ranged-only; melee
+          // opts into the flat baseline chance instead of a per-weapon knob.
+          const critResult = resolveCriticalHit(
+            meleeTick.config.damage * sharpnessModifier,
+            MELEE_CRITICAL_CHANCE,
+            MELEE_CRITICAL_MULTIPLIER,
+            'player',
+            `melee:${id}`,
+            attackAttemptCounter,
+          )
+          animal.takeDamage(critResult.damage, 'player')
+          if (weaponInstance) {
+            const profile = getWeaponMaintenanceProfile(weaponInstance.kind)
+            inventory.updateInstance(weaponInstance.id, (inst) => (
+              isWeaponItemInstance(inst) ? applySharpnessWear(inst, profile) : inst
+            ))
+          }
           const killed = animal.isDead()
           if (killed) playActionMeleeKill(worldAudio.playAt, animal.mesh.position)
           else playActionMeleeHit(worldAudio.playAt, animal.mesh.position)
           const label = ANIMAL_LABELS[animal.def.kind]
           if (killed) {
-            const override = questManager.onInteractObjective({
-              type: 'animal_died',
-              animalId: animal.animalId,
-            })
-            const denOverride = bundle.fauna.isWolfDenCleared()
-              ? questManager.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })
-              : null
-            toast.show(denOverride?.line ?? override?.line ?? `${label} pada.`)
+            toast.show(animalDeathToastLine(animal))
           } else {
-            toast.show(`Trafiono: ${label}`)
+            toast.show(critResult.critical ? `Trafienie krytyczne: ${label}!` : `Trafiono: ${label}`)
           }
         }
         // One attack commits to one yaw; the rest of the swing (and the next
         // request) is free to use live camera yaw again.
         attackYaw = null
+      }
+
+      // Ranged attack tick (plan 162) — same shape as the melee tick above:
+      // lifecycle advance, then a single `fireReady` edge that spawns a
+      // projectile. Candidate gathering is gated behind an actual reason to
+      // pay for it (bow currently held, or an arrow already in flight after
+      // a weapon switch) — see `collectRangedAnimalCandidates`'s own doc for
+      // why it can't reuse `meleeCandidates` (`GAZE_RANGE` is far shorter
+      // than any bow's range).
+      const rangedTick = playerRanged.update(dt)
+      if (player.isDowned()) {
+        playerRanged.reset()
+        rangedTargetId = null
+      }
+      if (rangedTick.fireReady && rangedTick.config) {
+        const config = rangedTick.config
+        const ammoKind = config.ammoKinds.find((k) => inventory.has(k, 1)) ?? null
+        if (ammoKind) {
+          const rangedCandidatesForFire = collectRangedAnimalCandidates(
+            bundle.settlementsManager.getLoaded(),
+            bundle.fauna,
+            player.mesh.position,
+            RANGED_CANDIDATE_RANGE,
+          )
+          const lockedTarget = rangedTargetId
+            ? rangedCandidatesForFire.find((c) => c.id === rangedTargetId)
+            : undefined
+          const aimYaw = lockedTarget
+            ? yawToward(player.mesh.position.x, player.mesh.position.z, lockedTarget.x, lockedTarget.z) ?? mouseLook.state.yaw
+            : mouseLook.state.yaw
+          inventory.remove(ammoKind, 1)
+          hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+          attackAttemptCounter++
+          const archeryValue = player.skills.archery.value
+          const accuracy = rangedAccuracy(config, archeryValue)
+          const deviationRoll = rangedDeviationRoll('player', attackAttemptCounter)
+          const { dirX, dirZ } = resolveRangedDirection(aimYaw, accuracy, deviationRoll)
+          activeProjectiles.push({
+            id: `proj:${attackAttemptCounter}`,
+            sourceId: 'player',
+            x: player.mesh.position.x,
+            z: player.mesh.position.z,
+            dirX,
+            dirZ,
+            speed: config.projectileSpeed,
+            maxDistance: config.range,
+            travelled: 0,
+            damage: config.damage + (ARROW_DAMAGE_BONUS[ammoKind] ?? 0),
+            criticalChance: config.criticalChance ?? 0,
+            criticalMultiplier: config.criticalMultiplier ?? MELEE_CRITICAL_MULTIPLIER,
+            attackKey: `ranged:${ammoKind}`,
+            attempt: attackAttemptCounter,
+          })
+        }
+        rangedTargetId = null
+      }
+      if (activeProjectiles.length > 0) {
+        const rangedCandidatesForTick = collectRangedAnimalCandidates(
+          bundle.settlementsManager.getLoaded(),
+          bundle.fauna,
+          player.mesh.position,
+          RANGED_CANDIDATE_RANGE,
+        )
+        const nextProjectiles: Projectile[] = []
+        for (const projectile of activeProjectiles) {
+          const prevX = projectile.x
+          const prevZ = projectile.z
+          const expired = advanceProjectile(projectile, dt)
+          const hitId = sweptProjectileHit(
+            prevX, prevZ, projectile.x, projectile.z,
+            rangedCandidatesForTick.map((c) => ({ id: c.id, x: c.x, z: c.z, alive: true })),
+          )
+          const hitCandidate = hitId ? rangedCandidatesForTick.find((c) => c.id === hitId) : undefined
+          if (hitCandidate && !hitCandidate.animal.isDead()) {
+            const animal = hitCandidate.animal
+            const critResult = resolveCriticalHit(
+              projectile.damage,
+              projectile.criticalChance,
+              projectile.criticalMultiplier,
+              projectile.sourceId,
+              projectile.attackKey,
+              projectile.attempt,
+            )
+            animal.takeDamage(critResult.damage, 'player')
+            awardSkillXp(player.skills, 'archery', SKILL_XP_AWARD.rangedHit)
+            playerCombat.enter()
+            playerCombat.noteActivity()
+            playerCombat.setSoftLock(livingTargetIdForAnimal(animal.animalId))
+            const killed = animal.isDead()
+            if (killed) playActionMeleeKill(worldAudio.playAt, animal.mesh.position)
+            else playActionMeleeHit(worldAudio.playAt, animal.mesh.position)
+            const label = ANIMAL_LABELS[animal.def.kind]
+            toast.show(killed
+              ? animalDeathToastLine(animal)
+              : critResult.critical ? `Trafienie krytyczne: ${label}!` : `Trafiono: ${label}`)
+            continue
+          }
+          if (!expired) nextProjectiles.push(projectile)
+        }
+        activeProjectiles = nextProjectiles
       }
 
       playerCombat.update(dt)
@@ -922,7 +1087,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           } else {
             const collected = collectItem(target.item, bundle.chunkManager, bundle.itemSpawners, bundle.droppedItems)
             if (collected) {
-              inventory.add(collected.kind, 1, dayNight.elapsedDays)
+              const acquiredInstance = createAcquiredInstance(collected.kind)
+              if (acquiredInstance) inventory.addInstance(acquiredInstance)
+              else inventory.add(collected.kind, 1, dayNight.elapsedDays)
               playInventoryPickUp(worldAudio.playOnce)
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
               onInventoryChanged()
@@ -944,7 +1111,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           } else {
             const outcome = resolveInteraction(target, questManager)
             if (treeInspectionCanYieldBranch(target.stage)) {
-              const branchChance = TREE_BRANCH_CHANCE + (inventory.has('knife', 1) || inventory.has('damascus_knife', 1) ? KNIFE_BRANCH_BONUS : 0)
+              const branchChance = TREE_BRANCH_CHANCE + (inventory.holdsAny('knife') || inventory.holdsAny('damascus_knife') ? KNIFE_BRANCH_BONUS : 0)
               if (Math.random() < branchChance && inventory.canAdd('branch')) {
                 inventory.add('branch')
                 playInventoryPickUp(worldAudio.playOnce)
@@ -1009,6 +1176,25 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                       )
                     : null
                 }
+              }
+            }
+          } else if (isRangedTool(held) && !player.isDowned()) {
+            // Same trigger UX as melee above: `[E]` over a gazed live animal
+            // starts the draw; the actual hit/miss is resolved by the
+            // in-flight projectile, independent of this gazed target.
+            const config = ITEM_CATALOG[held].ranged
+            if (config && !playerRanged.isDrawing()) {
+              const hasAmmo = config.ammoKinds.some((k) => inventory.has(k, 1))
+              if (!hasAmmo) {
+                toast.show('Brak strzał.', 'error')
+              } else if (player.needs.stamina.current < config.staminaCost) {
+                toast.show('Brak siły na strzał.', 'error')
+              } else if (playerRanged.requestDraw(config, player.needs.stamina)) {
+                playerCombat.enter()
+                playerCombat.noteActivity()
+                playerCombat.setSoftLock(livingTargetIdForAnimal(target.animal.animalId))
+                rangedTargetId = livingTargetIdForAnimal(target.animal.animalId)
+                player.faceToward(target.position.x, target.position.z)
               }
             }
           } else {
@@ -1191,6 +1377,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.skills.traps.xp,
         player.skills.defense.value,
         player.skills.defense.xp,
+        player.skills.archery.value,
+        player.skills.archery.xp,
       )
       houseDoors.update(
         player.mesh.position.x,
@@ -1285,6 +1473,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               player.endMeleeAttack()
               player.setMeleeSwing(null)
               attackYaw = null
+              playerRanged.reset()
+              rangedTargetId = null
             }
           },
           {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Inventory } from './Inventory'
 import { buyWithBarter, buyWithCoins, sellForCoins } from './trade'
 import { MERCHANT_STOCK, merchantPrice, offerValue, sellPrice, tradeValue } from './tradeCatalog'
+import { createWeaponInstance } from './weaponMaintenance'
 
 describe('tradeCatalog (plan 090)', () => {
   it('lists every stocked item with a positive coin price', () => {
@@ -57,7 +58,7 @@ describe('buyWithCoins', () => {
     const inv = new Inventory({ coin: 50, knife: 0 })
     expect(buyWithCoins(inv, 'knife')).toBe('ok')
     expect(inv.count('coin')).toBe(38)
-    expect(inv.count('knife')).toBe(1)
+    expect(inv.countInstances('knife')).toBe(1)
   })
 
   it('refuses when the player cannot afford it, without mutating inventory', () => {
@@ -80,7 +81,7 @@ describe('buyWithBarter', () => {
     expect(offerValue({ axe: 2 })).toBe(50)
     expect(buyWithBarter(inv, 'long_sword', { axe: 2 })).toBe('ok')
     expect(inv.count('axe')).toBe(0)
-    expect(inv.count('long_sword')).toBe(1)
+    expect(inv.countInstances('long_sword')).toBe(1)
   })
 
   it('rejects an under-valued offer without taking items', () => {
@@ -100,9 +101,9 @@ describe('buyWithBarter', () => {
 
 describe('sellForCoins', () => {
   it('is atomic: item out, coins in at the sell spread', () => {
-    const inv = new Inventory({ knife: 1, coin: 0 })
+    const inv = new Inventory({ coin: 0 }, undefined, [createWeaponInstance('knife')])
     expect(sellForCoins(inv, 'knife')).toBe('ok')
-    expect(inv.count('knife')).toBe(0)
+    expect(inv.countInstances('knife')).toBe(0)
     expect(inv.count('coin')).toBe(6)
   })
 
@@ -129,7 +130,7 @@ describe('sellForCoins', () => {
   })
 
   it('reduces carried weight', () => {
-    const inv = new Inventory({ axe: 1 })
+    const inv = new Inventory({}, undefined, [createWeaponInstance('axe')])
     const before = inv.totalWeight()
     expect(sellForCoins(inv, 'axe')).toBe('ok')
     expect(inv.totalWeight()).toBeLessThan(before)

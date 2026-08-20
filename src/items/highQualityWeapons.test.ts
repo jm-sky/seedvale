@@ -7,6 +7,7 @@ import { isChopTool, isHarvestKnife, ITEM_CATALOG } from './itemCatalog'
 import { ITEM_GLB_SPECS } from './itemModels'
 import { hasItemKindCategory, ITEM_DEFS } from './items'
 import { isMerchantStock, merchantPrice, tradeValue } from './tradeCatalog'
+import { createWeaponInstance } from './weaponMaintenance'
 
 const HQ_KINDS = [
   'damascus_knife',
@@ -70,7 +71,7 @@ describe('high-quality melee weapons (plan 160)', () => {
   })
 
   it('equips the new weapons from inventory', () => {
-    const inventory = new Inventory({ battle_axe: 1, obsidian_sword: 1 })
+    const inventory = new Inventory({}, undefined, [createWeaponInstance('battle_axe'), createWeaponInstance('obsidian_sword')])
     const held = createHeldTool(inventory)
     expect(held.equip('battle_axe')).toBe(true)
     expect(held.held()).toBe('battle_axe')

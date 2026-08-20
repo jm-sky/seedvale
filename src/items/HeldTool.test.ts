@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createHeldTool } from './HeldTool'
 import { Inventory } from './Inventory'
+import { createWeaponInstance } from './weaponMaintenance'
 
 describe('createHeldTool', () => {
   it('equips a tool that is in inventory', () => {
@@ -11,14 +12,15 @@ describe('createHeldTool', () => {
   })
 
   it('equips an axe from inventory', () => {
-    const inventory = new Inventory({ axe: 1 })
+    const inventory = new Inventory({}, undefined, [createWeaponInstance('axe')])
     const held = createHeldTool(inventory)
     expect(held.equip('axe')).toBe(true)
     expect(held.held()).toBe('axe')
+    expect(held.heldInstanceId()).not.toBeNull()
   })
 
   it('equips pickaxe and long_sword from inventory (plan 090)', () => {
-    const inventory = new Inventory({ pickaxe: 1, long_sword: 1 })
+    const inventory = new Inventory({ pickaxe: 1 }, undefined, [createWeaponInstance('long_sword')])
     const held = createHeldTool(inventory)
     expect(held.equip('pickaxe')).toBe(true)
     expect(held.held()).toBe('pickaxe')
@@ -35,7 +37,7 @@ describe('createHeldTool', () => {
   })
 
   it('equips pitchfork and sickle from inventory (plan 096)', () => {
-    const inventory = new Inventory({ pitchfork: 1, sickle: 1 })
+    const inventory = new Inventory({}, undefined, [createWeaponInstance('pitchfork'), createWeaponInstance('sickle')])
     const held = createHeldTool(inventory)
     expect(held.equip('pitchfork')).toBe(true)
     expect(held.held()).toBe('pitchfork')
@@ -44,7 +46,7 @@ describe('createHeldTool', () => {
   })
 
   it('equips plan-160 high-quality weapons from inventory', () => {
-    const inventory = new Inventory({ damascus_knife: 1, masterwork_sword: 1 })
+    const inventory = new Inventory({}, undefined, [createWeaponInstance('damascus_knife'), createWeaponInstance('masterwork_sword')])
     const held = createHeldTool(inventory)
     expect(held.equip('damascus_knife')).toBe(true)
     expect(held.held()).toBe('damascus_knife')
@@ -59,5 +61,18 @@ describe('createHeldTool', () => {
     inventory.remove('shovel', 1)
     held.syncWithInventory()
     expect(held.held()).toBeNull()
+  })
+
+  it('binds a specific weapon instance and re-resolves it after removal (plan 161)', () => {
+    const a = createWeaponInstance('knife')
+    const b = createWeaponInstance('knife')
+    const inventory = new Inventory({}, undefined, [a, b])
+    const held = createHeldTool(inventory)
+    expect(held.equip('knife', a.id)).toBe(true)
+    expect(held.heldInstanceId()).toBe(a.id)
+    inventory.removeInstance(a.id)
+    held.syncWithInventory()
+    expect(held.held()).toBe('knife')
+    expect(held.heldInstanceId()).toBe(b.id)
   })
 })

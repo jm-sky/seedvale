@@ -1,5 +1,12 @@
 import type { Inventory } from './Inventory'
-import { isInstanceBackedKind, isTrapItemInstance, type ItemInstance, type TrapItemInstance } from './itemInstances'
+import {
+  isInstanceBackedKind,
+  isTrapItemInstance,
+  isWeaponItemInstance,
+  isWeaponMaintenanceKind,
+  type ItemInstance,
+  type TrapItemInstance,
+} from './itemInstances'
 import { ITEM_DEFS, type ItemKind } from './items'
 import {
   merchantPrice,
@@ -8,6 +15,7 @@ import {
   sellPrice,
 } from './tradeCatalog'
 import { createTrapInstance, trapConditionRatio } from './trapItemInstances'
+import { createWeaponInstance } from './weaponMaintenance'
 
 export type TradeResult = 'ok' | 'cannot_afford' | 'full' | 'not_sold' | 'invalid_offer'
 
@@ -56,9 +64,22 @@ function isValidOffer(
   return any
 }
 
-function createPurchasedInstance(kind: ItemKind): ItemInstance | null {
+/** Single dispatch point from an `ItemKind` to the instance it should become
+ *  on acquisition — reused by merchant purchase (below), quest rewards and
+ *  world pickups (`app/createApp.ts`'s `grantItem`, `app/gameLoop.ts`'s item
+ *  pickup) so no call site hard-codes which kinds are instance-backed. */
+export function createAcquiredInstance(kind: ItemKind): ItemInstance | null {
   if (kind === 'trap_simple' || kind === 'trap_good') return createTrapInstance(kind)
+  if (isWeaponMaintenanceKind(kind)) return createWeaponInstance(kind)
   return null
+}
+
+/** Overall `[0,1]` condition used only to order which instance sells/drops
+ *  first — not a price input (`resolveInstanceSellPrice` decides that). */
+function conditionRatio(instance: ItemInstance): number {
+  if (isTrapItemInstance(instance)) return trapConditionRatio(instance)
+  if (isWeaponItemInstance(instance)) return (instance.durability + instance.sharpness) / 2
+  return 1
 }
 
 /** Ascending condition — worst first; tie-break on stable id. */
@@ -68,8 +89,8 @@ export function selectInstancesToSell(
 ): string[] {
   if (count <= 0) return []
   const sorted = [...instances].sort((a, b) => {
-    const ca = isTrapItemInstance(a) ? trapConditionRatio(a) : 1
-    const cb = isTrapItemInstance(b) ? trapConditionRatio(b) : 1
+    const ca = conditionRatio(a)
+    const cb = conditionRatio(b)
     if (ca !== cb) return ca - cb
     return a.id.localeCompare(b.id)
   })
@@ -94,7 +115,7 @@ export function buyWithCoins(inventory: Inventory, kind: ItemKind): TradeResult 
   if (price == null) return 'not_sold'
   if (!inventory.has('coin', price)) return 'cannot_afford'
   const paymentWeight = ITEM_DEFS.coin.weight * price
-  const purchased = createPurchasedInstance(kind)
+  const purchased = createAcquiredInstance(kind)
   if (purchased) {
     if (!wouldFitAfterInstance(inventory, paymentWeight, purchased)) return 'full'
     inventory.remove('coin', price)
@@ -120,7 +141,7 @@ export function buyWithBarter(
   if (price == null) return 'not_sold'
   if (!isValidOffer(inventory, offer)) return 'invalid_offer'
   if (offerValue(offer) < price) return 'cannot_afford'
-  const purchased = createPurchasedInstance(kind)
+  const purchased = createAcquiredInstance(kind)
   if (purchased) {
     if (!wouldFitAfterInstance(inventory, offerWeight(offer), purchased)) return 'full'
     for (const [offerKind, count] of Object.entries(offer) as [ItemKind, number][]) {

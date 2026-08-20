@@ -49,13 +49,14 @@ import { createHeldTool } from '../items/HeldTool'
 import { Inventory } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
 import { isChopTool, isHarvestKnife, ITEM_CATALOG } from '../items/itemCatalog'
-import { isInstanceBackedKind, isTrapItemInstance } from '../items/itemInstances'
+import { isInstanceBackedKind, isTrapItemInstance, isWeaponMaintenanceKind } from '../items/itemInstances'
 import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
 import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
-import { buyWithBarter, buyWithCoins, selectInstancesToSell, selectInstanceToPlace, sellForCoins, sellInstancesForCoins } from '../items/trade'
+import { buyWithBarter, buyWithCoins, createAcquiredInstance, selectInstancesToSell, selectInstanceToPlace, sellForCoins, sellInstancesForCoins } from '../items/trade'
 import { resolveInstanceSellPrice, sellPrice } from '../items/tradeCatalog'
 import { trapInstanceFromWorld } from '../items/trapItemInstances'
+import { createWeaponInstance, migrateWeaponCountsToInstances, type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 import {
   benchmarkScenarioFromUrl,
   createBenchmarkRunner,
@@ -199,7 +200,13 @@ let touchControls: TouchControls | null = null
  *  Game), so the player is never left without knife/firestarter/blanket/torch. */
 function grantStartingLoadout(inventory: Inventory): void {
   for (const [kind, count] of Object.entries(STARTING_LOADOUT) as [ItemKind, number][]) {
-    if (inventory.count(kind) <= 0) inventory.add(kind, count)
+    const has = inventory.count(kind) + inventory.countInstances(kind)
+    if (has > 0) continue
+    if (isWeaponMaintenanceKind(kind)) {
+      for (let i = 0; i < count; i++) inventory.addInstance(createWeaponInstance(kind))
+    } else {
+      inventory.add(kind, count)
+    }
   }
 }
 
@@ -424,6 +431,10 @@ export async function createApp(
     initialSave ? Inventory.instancesFromJSON(initialSave.inventoryInstances ?? []) : undefined,
     initialSave?.foodBatches,
   )
+  // Plan 161 — pre-existing count-based weapons (starting knife, older saves)
+  // have no recoverable condition; every unit becomes a fresh full-condition
+  // instance. Idempotent, so safe to run unconditionally on every load.
+  migrateWeaponCountsToInstances(inventory)
   grantStartingLoadout(inventory)
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
   // Renamed from `syncShovelQuickActions` — now the single post-inventory-
@@ -535,7 +546,9 @@ export async function createApp(
 
   const grantItem = (kind: ItemKind, count: number): void => {
     for (let i = 0; i < count; i++) {
-      if (!inventory.add(kind)) {
+      const instance = createAcquiredInstance(kind)
+      const added = instance ? inventory.addInstance(instance) : inventory.add(kind)
+      if (!added) {
         bundle.droppedItems.drop(kind, player.mesh.position.x, player.mesh.position.z)
       }
     }
@@ -565,7 +578,7 @@ export async function createApp(
     initialSave?.quests,
     (kind, count) => {
       if (kind === 'long_sword') {
-        if (!shouldGrantQuestSword(kind, worldFlags.guardSwordGifted, inventory.has('long_sword', 1))) return
+        if (!shouldGrantQuestSword(kind, worldFlags.guardSwordGifted, inventory.holdsAny('long_sword'))) return
         worldFlags.guardSwordGifted = true
       }
       grantItem(kind, count)
@@ -635,6 +648,16 @@ export async function createApp(
     return result.result
   }
 
+  const sharpenInventoryWeapon = (instanceId: string): SharpenResult => {
+    const result = sharpenWeapon(inventory, instanceId, 'whetstone')
+    if (result === 'ok') {
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      refreshInventoryScreen()
+      toast.show('Naostrzono broń.', 'pickup')
+    }
+    return result
+  }
+
   vueUi.configureMerchant({
     onBuyCoins: (kind) => {
       const result = buyWithCoins(inventory, kind)
@@ -690,7 +713,7 @@ export async function createApp(
         alreadyGifted: worldFlags.guardSwordGifted,
         guardQuestComplete: questManager.getState('woda-dla-marka') === 'complete',
         relation: questManager.getRelation('Marek'),
-        alreadyHasSword: inventory.has('long_sword', 1),
+        alreadyHasSword: inventory.holdsAny('long_sword'),
       })
       if (result.grant) {
         worldFlags.guardSwordGifted = true
@@ -835,6 +858,7 @@ export async function createApp(
       survival: { xp: player.skills.survival.xp },
       traps: { xp: player.skills.traps.xp },
       defense: { xp: player.skills.defense.xp },
+      archery: { xp: player.skills.archery.xp },
     },
     spawnPoints: bundle.fauna.getSpawners().map((s) => ({ id: s.id, ...snapshotSpawnPointState(s) })),
     foodBatches: inventory.foodBatchesToJSON(),
@@ -1072,6 +1096,7 @@ export async function createApp(
     onUnequip: unequipTool,
     onConsume: (kind) => consumeItem(kind),
     onSellInstances: sellInventoryInstances,
+    onSharpen: sharpenInventoryWeapon,
   }
   const inventoryScreen = createInventoryScreen(container, inventoryScreenHandlers)
 
@@ -1614,9 +1639,9 @@ export async function createApp(
       // never displacing another held tool. Prefer damascus_knife when both
       // harvest knives are present (plan 160).
       if (heldTool.held() !== null) return
-      const knifeKind = inventory.has('damascus_knife', 1)
+      const knifeKind = inventory.holdsAny('damascus_knife')
         ? 'damascus_knife'
-        : inventory.has('knife', 1)
+        : inventory.holdsAny('knife')
           ? 'knife'
           : null
       if (!knifeKind || !heldTool.equip(knifeKind)) return

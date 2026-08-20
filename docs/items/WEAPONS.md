@@ -94,4 +94,30 @@ Not a second stat table — just how the numbers cluster:
 | Ciężkie | `axe`, `battle_axe` | wolny cykl, siekiera/topór tną drzewa |
 | Narzędzia | `sickle`, `pitchfork`, `shovel` | niski dmg; widły mają przyzwoity zasięg i blok |
 
+## Weapon maintenance (plan 161)
+
+Every kind in this file's Combat table except `shovel` (and `pickaxe`, not in
+the table at all) is instance-backed with `durability`/`sharpness` in `[0,1]`
+(new = 1/1) — see `src/items/itemInstances.ts`'s `WEAPON_MAINTENANCE_KINDS`
+and `src/items/weaponMaintenance.ts`. Sharpness modifies the damage numbers
+above (100%→100% … 0%→55%, `getSharpnessDamageModifier`); durability is
+tracked but has no repair/broken lifecycle in v1. `whetstone` (Kupiec, 6
+monet) restores sharpness only via `sharpenWeapon()`.
+
+## Ranged weapons (plan 162)
+
+| Kind | Label | Dmg | Zasięg | Prędkość pocisku | Draw | Rec | Stam | Trafność | Krytyk | Kupiec |
+|------|-------|----:|-------:|------------------:|-----:|----:|-----:|---------:|-------:|-------:|
+| short_bow | krótki łuk | 14 | 11 | 26 | 0.32 | 0.22 | 6 | 0.72 | — | 45 |
+| hunting_bow | łuk myśliwski | 20 | 15 | 30 | 0.45 | 0.30 | 8 | 0.78 | 0.05 | 75 |
+| long_bow | długi łuk | 28 | 20 | 34 | 0.65 | 0.40 | 11 | 0.70 | 0.08 | 120 |
+
+Ammo (`arrow` +0 / `broadhead_arrow` +4 / `war_arrow` +8 damage) is ordinary
+stackable count — no per-arrow instance or recovery. `archery` skill raises
+effective accuracy (narrower aim-deviation cone), not a flat damage bonus.
+Critical hits (`combat/criticalHit.ts`) are a shared modifier also usable by
+melee (flat baseline, not in the table above). No bow durability/sharpness —
+out of plan 162's scope. See `src/items/itemCatalog.ts`'s `RangedConfig` for
+the source of truth.
+
 See also [CATALOG.md](./CATALOG.md) for hold/spawn/models of every item.

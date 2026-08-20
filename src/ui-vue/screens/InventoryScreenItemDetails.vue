@@ -48,6 +48,7 @@ const meleeSpeed = computed<string | null>(() => {
   if (cycle < 0.55) return 'średni'
   return 'wolny'
 })
+const ranged = computed(() => catalogEntry.value?.ranged ?? null)
 const consumable = computed(() => catalogEntry.value?.consumable ?? null)
 const consumeLabel = computed(() => consumable.value ? consumeVerbLabel(consumable.value.need) : 'Zjedz')
 const itemValue = computed<number>(() => item.value ? tradeValue(item.value.kind) : 0)
@@ -57,21 +58,27 @@ const imageUrl = computed<string | null>(() => null)
 
 const instanceRows = computed(() => {
   if (!group.value || group.value.instances.length === 0) return []
-  const buckets = new Map<number, { count: number, ids: string[], sellPrice: number }>()
+  const buckets = new Map<string, { count: number, ids: string[], sellPrice: number, conditionPercent: number, sharpnessPercent: number | null }>()
   for (const row of group.value.instances) {
-    const existing = buckets.get(row.conditionPercent)
+    const key = `${row.conditionPercent}:${row.sharpnessPercent ?? ''}`
+    const existing = buckets.get(key)
     if (existing) {
       existing.count++
       existing.ids.push(row.id)
     } else {
-      buckets.set(row.conditionPercent, { count: 1, ids: [row.id], sellPrice: row.sellPrice })
+      buckets.set(key, {
+        count: 1,
+        ids: [row.id],
+        sellPrice: row.sellPrice,
+        conditionPercent: row.conditionPercent,
+        sharpnessPercent: row.sharpnessPercent,
+      })
     }
   }
-  return [...buckets.entries()]
-    .sort((a, b) => b[0] - a[0])
-    .map(([conditionPercent, data]) => ({ conditionPercent, ...data }))
+  return [...buckets.values()].sort((a, b) => b.conditionPercent - a.conditionPercent)
 })
 
+const whetstoneCount = computed<number>(() => ui.inventory.counts.whetstone ?? 0)
 const merchantOpen = computed(() => ui.merchant.open)
 
 useTouchScroll(panel)
@@ -92,6 +99,14 @@ function sellInstance(id: string): void {
   if (result === 'invalid_offer') showToast('Nie masz tego przedmiotu.', 'error')
   else if (result === 'full') showToast('Ekwipunek jest za ciężki.', 'error')
   else if (result === 'not_sold') showToast('Kupiec tego nie kupi.', 'error')
+}
+
+function sharpenInstance(id: string): void {
+  const result = ui.inventory.onSharpen?.(id) ?? 'invalid'
+  if (result === 'ok') return
+  if (result === 'no_whetstone') showToast('Brak osełki.', 'error')
+  else if (result === 'already_max') showToast('Ostrość jest już maksymalna.', 'error')
+  else showToast('Nie można naostrzyć tej broni.', 'error')
 }
 </script>
 
@@ -178,6 +193,18 @@ function sellInstance(id: string): void {
       />
 
       <InventoryScreenSection
+        v-if="ranged"
+        label="Obrażenia"
+        :value="ranged.damage.toString()"
+      />
+
+      <InventoryScreenSection
+        v-if="ranged"
+        label="Zasięg"
+        :value="`${ranged.range.toFixed(1)} m`"
+      />
+
+      <InventoryScreenSection
         v-if="consumable"
         label="Efekt"
         :value="`+${consumable.relief} ${consumeNeedNoun(consumable.need)}`"
@@ -194,21 +221,32 @@ function sellInstance(id: string): void {
       <div class="flex flex-col gap-2">
         <div
           v-for="row in instanceRows"
-          :key="row.conditionPercent"
+          :key="`${row.conditionPercent}:${row.sharpnessPercent}`"
           class="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/5 px-3 py-2 text-sm"
         >
-          <span>{{ row.count }}× Pułapka {{ row.conditionPercent }}%</span>
-          <div
-            v-if="merchantOpen"
-            class="flex flex-wrap gap-2"
-          >
-            <ItemsScreenItemButton
-              v-for="id in row.ids"
-              :key="id"
-              class="min-h-0 py-1"
-              :label="`Sprzedaj (${row.sellPrice})`"
-              @click="sellInstance(id)"
-            />
+          <span v-if="row.sharpnessPercent !== null">
+            {{ row.count }}× stan {{ row.conditionPercent }}% / ostrość {{ row.sharpnessPercent }}%
+          </span>
+          <span v-else>{{ row.count }}× {{ firstUpperCase(item.label) }} {{ row.conditionPercent }}%</span>
+          <div class="flex flex-wrap gap-2">
+            <template v-if="row.sharpnessPercent !== null && row.sharpnessPercent < 100">
+              <ItemsScreenItemButton
+                v-for="id in row.ids"
+                :key="`sharpen-${id}`"
+                class="min-h-0 py-1"
+                :label="`Naostrz (${whetstoneCount})`"
+                @click="sharpenInstance(id)"
+              />
+            </template>
+            <template v-if="merchantOpen">
+              <ItemsScreenItemButton
+                v-for="id in row.ids"
+                :key="`sell-${id}`"
+                class="min-h-0 py-1"
+                :label="`Sprzedaj (${row.sellPrice})`"
+                @click="sellInstance(id)"
+              />
+            </template>
           </div>
         </div>
       </div>

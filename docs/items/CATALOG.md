@@ -12,7 +12,10 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Concern | Where |
 |---------|--------|
 | Inventory weight / label | `ITEM_DEFS` |
-| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, spear, short_sword, pitchfork, sickle, damascus_knife, damascus_short_sword, damascus_long_sword, obsidian_sword, battle_axe, masterwork_sword, fishing_rod |
+| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, spear, short_sword, pitchfork, sickle, damascus_knife, damascus_short_sword, damascus_long_sword, obsidian_sword, battle_axe, masterwork_sword, fishing_rod, short_bow, hunting_bow, long_bow |
+| Weapon maintenance (plan 161) | `items/itemInstances.ts`'s `WEAPON_MAINTENANCE_KINDS` (13 kinds: knife, short_sword, long_sword, spear, axe, pitchfork, sickle + the six plan-160 variants) are `ItemInstance`-backed with `durability`/`sharpness` (`[0,1]`, new = 1/1); `shovel`/`pickaxe` are explicitly excluded. `HeldTool.heldInstanceId()` tracks which concrete instance is in hand. `items/weaponMaintenance.ts` — `getSharpnessDamageModifier()` (100%→100%…0%→55%) feeds melee damage before the critical roll; sharpness/durability wear applies once per resolved hit via `Inventory.updateInstance()`. `whetstone` (stackable) + `sharpenWeapon()` restore sharpness only, never durability; no repair/broken lifecycle in v1. |
+| Ranged combat (plan 162) | `ITEM_CATALOG[kind].ranged` (`RangedConfig`) on `short_bow`/`hunting_bow`/`long_bow` — `player/playerRanged.ts` runs the draw→release→recovery lifecycle (same shape as melee); `combat/projectile.ts` is the lightweight swept-segment flight/collision model (no visual arrow mesh in v1); `combat/rangedAttack.ts` turns bow accuracy + `archery` skill into aim deviation, not a separate hit-roll. Ammo (`arrow`/`broadhead_arrow`/`war_arrow`) is ordinary stackable count, 1 consumed per shot, no per-arrow instance/recovery. |
+| Critical hits (plan 162) | `combat/criticalHit.ts`'s `resolveCriticalHit()` — shared deterministic modifier used by both ranged (`RangedConfig.criticalChance`/`criticalMultiplier`) and melee (flat `MELEE_CRITICAL_CHANCE`/`MELEE_CRITICAL_MULTIPLIER` baseline); evaluated after hit, before defense. |
 | Held 3D attach | `heldToolVisual.ts` → `WristR` + `HELD_ATTACH` (Phase 6: migrate per-tool numbers to `grip` anchors via alignment browser) |
 | Ground GLB scale | `itemModels.ts` → `preparePropFitMax` (not height-only) |
 | Melee vs animals | `ITEM_CATALOG[kind].melee` (plan 123, `itemCatalog.ts`) — single source of truth for damage/range/arcDot/windUp/hitWindow/recovery/staminaCost; `player/playerMelee.ts` runs the windUp→hitWindow→recovery lifecycle + range/facing-arc hit test. `faunaCombat.ts`'s `isMeleeTool()` just reads this. Damage: obsidian_sword 46, damascus_long_sword 40, masterwork_sword 34, long_sword/battle_axe 28, damascus_short_sword 24, spear/axe 20, short_sword 18, damascus_knife 16, pitchfork 14, knife/sickle 12, shovel 8 |
@@ -94,16 +97,29 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | fish | ryba | — | — | fishing_rod catch | procedural | plan 159; Zjedz (+12 hunger); freshens fastest (0.75 day) |
 | dried_fish | suszona ryba | — | — | drying rack (fish) | procedural | plan 159; Zjedz (+22 hunger); light, long-lasting like dried_meat |
 | fishing_rod | wędka | yes | — | none (Kupiec) | procedural | plan 159; `[E]` cast at lake shore, `[R]` apply bait |
+| whetstone | osełka | — | — | none (Kupiec) | procedural (M52 needed) | plan 161; stackable, consumed 1:1 by `sharpenWeapon()` |
+| short_bow | krótki łuk | yes | ranged 14 | none (Kupiec) | procedural (M50 needed) | plan 162; fastest draw, shortest range of the three bows |
+| hunting_bow | łuk myśliwski | yes | ranged 20 | none (Kupiec) | procedural (M50 needed) | plan 162; balanced range/damage/draw; small critical chance |
+| long_bow | długi łuk | yes | ranged 28 | none (Kupiec) | procedural (M50 needed) | plan 162; longest range/highest damage, slowest draw |
+| arrow | strzała | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; base ammo for every bow |
+| broadhead_arrow | strzała łowiecka | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +4 damage over `arrow` |
+| war_arrow | strzała bojowa | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +8 damage over `arrow`, heaviest |
 
 ## Roadmap (not done)
 
-1. **branch as improvised melee** — holdable stick, low damage (~4–8); good
-   durability-wear guinea pig.
-2. **Item durability / HP** — tools (and combat props) have condition that
-   decreases with use (fight, chop, dig); at 0 → break or force repair. Not in
-   save schema yet.
+1. **branch as improvised melee** — holdable stick, low damage (~4–8); not part
+   of plan 161's maintenance set.
+2. ~~Item durability / HP~~ — implemented for the 13-kind weapon-maintenance
+   set (plan 161, see "Weapon maintenance" quick rule above); repair/broken
+   lifecycle, general tool durability (shovel/pickaxe) and bow durability
+   remain out of scope.
 3. **NPC protest** when picking village pitchfork/sickle — [issue 025](../issues/2026-08-12--025--npc-react-to-stolen-village-tools.md).
 4. **Left-hand dual wield** — currently right hand exclusive (tool vs lit light).
+5. **Arrow recovery** — consumed arrows are never restored on hit/miss/expiry
+   (plan 162, deliberate v1 scope cut).
+6. **NPC ranged/archer combat** — no existing NPC attack-decision framework to
+   extend (only fauna predator AI); deferred rather than building a new one
+   for a currently hostile-NPC-less game (plan 162 implementation notes).
 
 ## Related non-item props
 

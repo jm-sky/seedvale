@@ -34,6 +34,13 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   dried_meat: 10,
   bandage: 10,
   fishing_rod: 18,
+  whetstone: 6,
+  short_bow: 45,
+  hunting_bow: 75,
+  long_bow: 120,
+  arrow: 1,
+  broadhead_arrow: 2,
+  war_arrow: 3,
 }
 
 /** Display order for the trade screen — matches the plan 090 mockup. */
@@ -63,6 +70,13 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'dried_meat',
   'bandage',
   'fishing_rod',
+  'whetstone',
+  'short_bow',
+  'hunting_bow',
+  'long_bow',
+  'arrow',
+  'broadhead_arrow',
+  'war_arrow',
 ]
 
 /** Fallback coin-equivalent for items the merchant does not stock. */

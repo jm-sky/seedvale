@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from './Inventory'
+import { isWeaponItemInstance } from './itemInstances'
 import { createTrapInstance } from './trapItemInstances'
+import { createWeaponInstance } from './weaponMaintenance'
 
 describe('Inventory instances (plan 155)', () => {
   it('adds, gets and removes an instance by id', () => {
@@ -53,6 +55,70 @@ describe('Inventory instances (plan 155)', () => {
     const json = inv.instancesToJSON()
     const restored = Inventory.instancesFromJSON(json)
     expect(restored).toEqual([{ id: trap.id, kind: 'trap_simple', durability: 1 }])
+  })
+})
+
+describe('Inventory weapon instances (plan 161)', () => {
+  it('creates a new weapon instance at durability=1, sharpness=1', () => {
+    const inv = new Inventory()
+    const knife = createWeaponInstance('knife')
+    inv.addInstance(knife)
+    const stored = inv.getInstance(knife.id)
+    expect(stored && isWeaponItemInstance(stored) ? stored.durability : null).toBe(1)
+    expect(stored && isWeaponItemInstance(stored) ? stored.sharpness : null).toBe(1)
+  })
+
+  it('getInstance returns a clone — mutating it does not affect storage', () => {
+    const inv = new Inventory()
+    const knife = createWeaponInstance('knife')
+    inv.addInstance(knife)
+    const clone = inv.getInstance(knife.id)
+    if (clone && isWeaponItemInstance(clone)) clone.sharpness = 0
+    const stillStored = inv.getInstance(knife.id)
+    expect(stillStored && isWeaponItemInstance(stillStored) ? stillStored.sharpness : null).toBe(1)
+  })
+
+  it('updateInstance mutates the stored state', () => {
+    const inv = new Inventory()
+    const knife = createWeaponInstance('knife')
+    inv.addInstance(knife)
+    const applied = inv.updateInstance(knife.id, (current) => (
+      isWeaponItemInstance(current) ? { ...current, sharpness: 0.5 } : current
+    ))
+    expect(applied).toBe(true)
+    const stored = inv.getInstance(knife.id)
+    expect(stored && isWeaponItemInstance(stored) ? stored.sharpness : null).toBe(0.5)
+  })
+
+  it('updateInstance is a no-op for a missing id', () => {
+    const inv = new Inventory()
+    expect(inv.updateInstance('missing', (c) => c)).toBe(false)
+  })
+
+  it('round-trips durability and sharpness through the save JSON helpers', () => {
+    const inv = new Inventory()
+    const knife = createWeaponInstance('knife')
+    inv.addInstance(knife)
+    inv.updateInstance(knife.id, (c) => (isWeaponItemInstance(c) ? { ...c, durability: 0.8, sharpness: 0.3 } : c))
+    const json = inv.instancesToJSON()
+    const restored = Inventory.instancesFromJSON(json)
+    expect(restored).toEqual([{ id: knife.id, kind: 'knife', durability: 0.8, sharpness: 0.3 }])
+  })
+
+  it('defaults a pre-plan-161 save row (no sharpness/durability) to full condition', () => {
+    const restored = Inventory.instancesFromJSON([{ id: 'x', kind: 'knife' }])
+    expect(restored).toEqual([{ id: 'x', kind: 'knife', durability: 1, sharpness: 1 }])
+  })
+
+  it('clamps out-of-range restored values', () => {
+    const restored = Inventory.instancesFromJSON([{ id: 'x', kind: 'knife', durability: 5, sharpness: -2 }])
+    expect(restored).toEqual([{ id: 'x', kind: 'knife', durability: 1, sharpness: 0 }])
+  })
+
+  it('leaves trap instance persistence unchanged', () => {
+    const trap = createTrapInstance('trap_simple')
+    const restored = Inventory.instancesFromJSON([{ id: trap.id, kind: 'trap_simple', durability: trap.durability }])
+    expect(restored).toEqual([{ id: trap.id, kind: 'trap_simple', durability: trap.durability }])
   })
 })
 

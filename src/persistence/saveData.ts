@@ -807,6 +807,7 @@ function isInventoryInstancesField(value: unknown): value is SaveItemInstance[] 
       return typeof row.durability === 'number' && Number.isFinite(row.durability)
     }
     if (row.durability !== undefined && typeof row.durability !== 'number') return false
+    if (row.sharpness !== undefined && typeof row.sharpness !== 'number') return false
     return true
   })
 }
@@ -1009,6 +1010,7 @@ const DEFAULT_SAVE_SKILLS: SaveSkills = {
   survival: { xp: 0 },
   traps: { xp: 0 },
   defense: { xp: 0 },
+  archery: { xp: 0 },
 }
 
 function toV15(v14: SaveDataV14): SaveDataV15 {
@@ -1021,6 +1023,7 @@ function toV15(v14: SaveDataV14): SaveDataV15 {
       survival: { ...DEFAULT_SAVE_SKILLS.survival },
       traps: { ...DEFAULT_SAVE_SKILLS.traps },
       defense: { ...DEFAULT_SAVE_SKILLS.defense },
+      archery: { ...DEFAULT_SAVE_SKILLS.archery },
     },
   }
 }
@@ -1038,6 +1041,7 @@ function toV16(v15: SaveDataV15): SaveDataV16 {
       survival: { xp: skills.survival?.xp ?? 0 },
       traps: { xp: skills.traps?.xp ?? 0 },
       defense: { xp: 0 },
+      archery: { xp: 0 },
     },
     placedTraps: [],
   }
@@ -1065,6 +1069,7 @@ function toV18(v17: SaveDataV17): SaveDataV18 {
       survival: { xp: skills.survival?.xp ?? 0 },
       traps: { xp: skills.traps?.xp ?? 0 },
       defense: { xp: skills.defense?.xp ?? 0 },
+      archery: { xp: 0 },
     },
   }
 }

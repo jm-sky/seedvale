@@ -1,3 +1,4 @@
+import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { Fauna } from '../fauna/createFauna'
 import type { Interactable } from '../interaction/Interactable'
 import type { Settlement } from '../settlement/createSettlement'
@@ -117,6 +118,36 @@ export function collectLivingCombatTargets(
     memoryIds,
   )
   return rankedIds.map((id) => byId.get(id)!).filter(Boolean)
+}
+
+export type RangedAnimalCandidate = { id: string, x: number, z: number, animal: AnimalAgent }
+
+/** Live animal candidates for ranged projectile collision (plan 162) —
+ *  deliberately not derived from `interactables`'s gaze-scoped `animal`
+ *  entries (`GAZE_RANGE` is far shorter than any bow's range): same
+ *  settlement-livestock + wild-fauna sources as `collectLivingCombatTargets`,
+ *  but returning the raw `AnimalAgent` a projectile hit needs to apply
+ *  damage to, over a range wide enough to cover every bow. */
+export function collectRangedAnimalCandidates(
+  settlements: readonly Settlement[],
+  fauna: Fauna,
+  playerPos: Vector3,
+  range: number,
+): RangedAnimalCandidate[] {
+  const out: RangedAnimalCandidate[] = []
+  const seen = new Set<string>()
+  const add = (animal: AnimalAgent): void => {
+    if (animal.isDead() || seen.has(animal.animalId)) return
+    const { x, z } = animal.mesh.position
+    if (!withinRange(x, z, playerPos, range)) return
+    seen.add(animal.animalId)
+    out.push({ id: livingTargetIdForAnimal(animal.animalId), x, z, animal })
+  }
+  for (const settlement of settlements) {
+    for (const animal of settlement.livestock) add(animal)
+  }
+  for (const animal of fauna.getAgents()) add(animal)
+  return out
 }
 
 /** Non-living interactables eligible for `Shift+Tab` (plan 150 §2). */

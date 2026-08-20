@@ -43,6 +43,32 @@ export type DefenseConfig = {
   partialReduction: number
 }
 
+/** Ranged attack tuning for a held bow (plan 162) — the ranged counterpart of
+ *  `MeleeConfig`, read directly by `player/playerRanged.ts` and the shared
+ *  projectile resolver instead of a parallel "bow system". */
+export type RangedConfig = {
+  damage: number
+  /** Max projectile travel distance (world units). */
+  range: number
+  /** World units/second the projectile travels. */
+  projectileSpeed: number
+  /** Seconds from draw request until release. */
+  drawTime: number
+  /** Seconds after release before another shot can be requested. */
+  recovery: number
+  staminaCost: number
+  /** Base `[0,1]` accuracy before the `archery` skill bonus — see
+   *  `combat/rangedAttack.ts`'s `rangedAccuracy`. Lower values widen the
+   *  aim-deviation cone the projectile is actually fired into. */
+  accuracy: number
+  /** Compatible ammo, tried in order — the first kind the shooter is
+   *  carrying is consumed. */
+  ammoKinds: readonly ItemKind[]
+  /** Optional flat addition to the shared critical-hit chance. */
+  criticalChance?: number
+  criticalMultiplier?: number
+}
+
 /** What a `consumable` item restores — `hunger`/`thirst` map to a
  *  `PlayerNeeds` pool, `health` heals `HealthState` directly (plan 153). */
 export type ConsumableNeed = 'hunger' | 'thirst' | 'health'
@@ -57,6 +83,8 @@ export type ItemCatalogEntry = {
   melee: MeleeConfig | null
   /** Optional block parameters while held (plan 150 — `combat/defenseResolver.ts`). */
   defense?: DefenseConfig | null
+  /** Ranged attack vs animals while held (plan 162 — `player/playerRanged.ts`). */
+  ranged?: RangedConfig | null
   spawn: ItemSpawnKind
   /** Runtime GLB under public/ when present. */
   modelUrl: string | null
@@ -676,6 +704,86 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 159 — Kupiec stock. Held tool; `[E]` at a lake shore casts, `[R]` applies bait from inventory.',
   },
+  whetstone: {
+    kind: 'whetstone',
+    label: 'osełka',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 161 — Kupiec stock. Stackable; consumed one at a time by `sharpenWeapon()` on a supported weapon instance.',
+  },
+  short_bow: {
+    kind: 'short_bow',
+    label: 'krótki łuk',
+    holdable: true,
+    melee: null,
+    ranged: { damage: 14, range: 11, projectileSpeed: 26, drawTime: 0.32, recovery: 0.22, staminaCost: 6, accuracy: 0.72, ammoKinds: ['arrow', 'broadhead_arrow', 'war_arrow'] },
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 162 — Kupiec stock. Fast draw, short range, lowest damage of the three bows.',
+  },
+  hunting_bow: {
+    kind: 'hunting_bow',
+    label: 'łuk myśliwski',
+    holdable: true,
+    melee: null,
+    ranged: { damage: 20, range: 15, projectileSpeed: 30, drawTime: 0.45, recovery: 0.3, staminaCost: 8, accuracy: 0.78, ammoKinds: ['arrow', 'broadhead_arrow', 'war_arrow'], criticalChance: 0.05 },
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 162 — Kupiec stock. Balanced range/damage/draw speed.',
+  },
+  long_bow: {
+    kind: 'long_bow',
+    label: 'długi łuk',
+    holdable: true,
+    melee: null,
+    ranged: { damage: 28, range: 20, projectileSpeed: 34, drawTime: 0.65, recovery: 0.4, staminaCost: 11, accuracy: 0.7, ammoKinds: ['arrow', 'broadhead_arrow', 'war_arrow'], criticalChance: 0.08 },
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 162 — Kupiec stock. Longest range/highest damage, slowest draw.',
+  },
+  arrow: {
+    kind: 'arrow',
+    label: 'strzała',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 162 — Kupiec stock. Base ammo for every bow; ordinary stackable count, no per-arrow instance/recovery.',
+  },
+  broadhead_arrow: {
+    kind: 'broadhead_arrow',
+    label: 'strzała łowiecka',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 162 — Kupiec stock. +damage ammo variant, same consumption/acquisition path as `arrow`.',
+  },
+  war_arrow: {
+    kind: 'war_arrow',
+    label: 'strzała bojowa',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 162 — Kupiec stock. Heaviest, highest-damage ammo variant.',
+  },
+}
+
+/** Flat per-arrow-kind damage delta applied on top of the bow's own
+ *  `RangedConfig.damage` (plan 162) — keeps arrow variance out of the bow
+ *  catalog entries and out of the projectile resolver's hard-coded logic. */
+export const ARROW_DAMAGE_BONUS: Partial<Record<ItemKind, number>> = {
+  broadhead_arrow: 4,
+  war_arrow: 8,
+}
+
+/** Ranged-capable held tools — mirrors `isMeleeTool` (`fauna/faunaCombat.ts`),
+ *  a type predicate so callers narrow `held` before indexing `ITEM_CATALOG`. */
+export function isRangedTool<K extends ItemKind | null | undefined>(kind: K): kind is Extract<K, ItemKind> {
+  return kind != null && ITEM_CATALOG[kind]?.ranged != null
 }
 
 /** Tree-chop tools (plan 160) — battle_axe reuses the existing axe harvest flow. */

@@ -1,6 +1,7 @@
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
 import type { TradeResult } from '../items/trade'
+import type { SharpenResult } from '../items/weaponMaintenance'
 import type { TrapKind } from '../world/animalTraps'
 import { getMountedVueUi } from '../ui-vue/mount'
 
@@ -12,6 +13,8 @@ export type InventoryScreenHandlers = {
   onConsume?: (kind: ItemKind) => void
   onPlaceTrap?: (kind: TrapKind) => void
   onSellInstances?: (instanceIds: readonly string[]) => TradeResult
+  /** Sharpen one weapon instance with a `whetstone` from inventory (plan 161). */
+  onSharpen?: (instanceId: string) => SharpenResult
   onClose?: () => void
 }
 
@@ -59,6 +62,7 @@ export function createInventoryScreen(
       (kind) => handlers.onConsume?.(kind),
       (kind) => handlers.onPlaceTrap?.(kind),
       (ids) => handlers.onSellInstances?.(ids) ?? 'invalid_offer',
+      (id) => handlers.onSharpen?.(id) ?? 'invalid',
     )
   }
 

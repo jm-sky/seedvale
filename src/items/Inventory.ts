@@ -1,5 +1,14 @@
 import { canMergeFoodBatches, isFoodPerishable } from './foodFreshness'
-import { cloneItemInstance, isTrapItemInstance, type ItemInstance, type TrapItemInstance } from './itemInstances'
+import {
+  clamp01,
+  cloneItemInstance,
+  isTrapItemInstance,
+  isWeaponItemInstance,
+  isWeaponMaintenanceKind,
+  type ItemInstance,
+  type TrapItemInstance,
+  type WeaponItemInstance,
+} from './itemInstances'
 import { ITEM_DEFS, type ItemKind } from './items'
 
 /** Default carry limit (kg) — see plan `2026-08-08--043`. Not persisted (the
@@ -13,6 +22,8 @@ export type SaveItemInstance = {
   id: string
   kind: ItemKind
   durability?: number
+  /** Plan 161 — weapon-maintenance kinds only; absent/invalid → `1`. */
+  sharpness?: number
 }
 
 /** Plan 159 — a stack-level freshness batch for one perishable `ItemKind`.
@@ -177,9 +188,32 @@ export class Inventory {
     return this.count(kind) >= n
   }
 
+  /** True when the player holds at least one unit of `kind`, whether it's a
+   *  plain stackable count or an instance-backed kind (plan 161) — callers
+   *  that only care about presence (gating a tool-availability check, a
+   *  branch-yield bonus) don't need to know which storage a kind uses. */
+  holdsAny(kind: ItemKind): boolean {
+    return this.count(kind) > 0 || this.countInstances(kind) > 0
+  }
+
   getInstance(id: string): ItemInstance | null {
     const instance = this.instances.get(id)
     return instance ? cloneItemInstance(instance) : null
+  }
+
+  /** Controlled mutation for callers that need to change one instance's own
+   *  state (durability/sharpness wear, sharpening) without exposing the
+   *  backing `Map` (plan 161 — `getInstance`/`getInstances` only ever return
+   *  clones). `updater` receives a clone and returns the next state; the
+   *  returned object is stored as-is, so callers own their own clamping.
+   *  Returns false (no-op) when `id` isn't held. */
+  updateInstance(id: string, updater: (current: ItemInstance) => ItemInstance): boolean {
+    const instance = this.instances.get(id)
+    if (!instance) return false
+    const next = updater(cloneItemInstance(instance))
+    if (next.id !== id) return false
+    this.instances.set(id, cloneItemInstance(next))
+    return true
   }
 
   getInstances(kind: ItemKind): readonly ItemInstance[] {
@@ -237,6 +271,10 @@ export class Inventory {
     for (const instance of this.instances.values()) {
       const row: SaveItemInstance = { id: instance.id, kind: instance.kind }
       if (isTrapItemInstance(instance)) row.durability = instance.durability
+      if (isWeaponItemInstance(instance)) {
+        row.durability = instance.durability
+        row.sharpness = instance.sharpness
+      }
       out.push(row)
     }
     return out
@@ -254,6 +292,16 @@ export class Inventory {
           durability: Math.max(0, row.durability),
         }
         out.push(trap)
+        continue
+      }
+      if (isWeaponMaintenanceKind(row.kind)) {
+        const weapon: WeaponItemInstance = {
+          id: row.id,
+          kind: row.kind,
+          durability: typeof row.durability === 'number' ? clamp01(row.durability) : 1,
+          sharpness: typeof row.sharpness === 'number' ? clamp01(row.sharpness) : 1,
+        }
+        out.push(weapon)
         continue
       }
       out.push({ id: row.id, kind: row.kind })

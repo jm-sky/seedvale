@@ -1,7 +1,7 @@
 # Plan: Weapon maintenance and sharpening
 
 **Created:** 2026-08-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented 2026-08-20. Technical verification green (`tsc`/lint/build/test, 1283 tests); no browser/gameplay verification yet. See "Implementation summary" (bottom of this file) and the [implementation notes](./2026-08-18--161--weapon-maintenance-and-sharpening-implementation-notes.md).
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~155~~ ~~160~~
 
@@ -348,30 +348,47 @@ Nie zaczynać od UI. Najbardziej ryzykowne są bridge `Inventory → HeldTool.in
 
 ## Kryteria akceptacji
 
-- [ ] 13 supported weapon kinds jest zdefiniowanych centralnie.
-- [ ] `shovel` jest jawnie poza zakresem; `pickaxe` pozostaje poza zakresem.
-- [ ] Supported weapons są indywidualnymi instances z `id`, `durability`, `sharpness`.
-- [ ] Nowa instance startuje `1/1`.
-- [ ] `Inventory` jest jedynym właścicielem mutable instance state.
-- [ ] `HeldTool` przechowuje `instanceId`, bez kopiowania condition.
-- [ ] `ITEM_CATALOG[kind].melee` pozostaje bazą statystyk.
-- [ ] Existing `resolveMeleeHits()` / `hitReady` pozostaje edge trafienia.
-- [ ] Sharpness modyfikuje damage centralnym resolverem.
-- [ ] Sharpness wear występuje dokładnie raz na successful resolved hit.
-- [ ] Miss nie zużywa sharpness w v1.
-- [ ] Wszystkie acquisition paths tworzą instances.
-- [ ] Stare count-based weapons są migrowane do full-condition instances.
-- [ ] Persistence używa istniejącego `SaveItemInstance[]`.
-- [ ] Stare save'y bez maintenance fields pozostają kompatybilne.
-- [ ] Plan 160's six variants jest objęty centralną klasyfikacją.
-- [ ] `whetstone` jest normalnym stackable itemem.
-- [ ] Sharpening zwiększa sharpness konkretnej instance i nie zmienia durability.
-- [ ] Failed sharpening nie konsumuje osełki.
-- [ ] UI wybiera konkretne `instance.id`.
-- [ ] Nie powstaje WeaponManager, EquipmentManager, MaintenanceManager, weapon storage ani osobna persistence.
-- [ ] Nie implementuje się ranged combat, NPC blacksmith ani pełnego repair systemu.
-- [ ] Testy pokrywają migration, persistence, mutation, sharpening, wear i held-instance → melee bridge.
-- [ ] Type-check/test/build przechodzą.
-- [ ] Browser/manual check potwierdza obtain/equip → hit/wear → sharpen → save/load.
+- [x] 13 supported weapon kinds jest zdefiniowanych centralnie.
+- [x] `shovel` jest jawnie poza zakresem; `pickaxe` pozostaje poza zakresem.
+- [x] Supported weapons są indywidualnymi instances z `id`, `durability`, `sharpness`.
+- [x] Nowa instance startuje `1/1`.
+- [x] `Inventory` jest jedynym właścicielem mutable instance state.
+- [x] `HeldTool` przechowuje `instanceId`, bez kopiowania condition.
+- [x] `ITEM_CATALOG[kind].melee` pozostaje bazą statystyk.
+- [x] Existing `resolveMeleeHits()` / `hitReady` pozostaje edge trafienia.
+- [x] Sharpness modyfikuje damage centralnym resolverem.
+- [x] Sharpness wear występuje dokładnie raz na successful resolved hit (per trafioną instancję docelową, przy pojedynczym trafieniu na atak — patrz implementation summary).
+- [x] Miss nie zużywa sharpness w v1.
+- [x] Wszystkie acquisition paths tworzą instances.
+- [x] Stare count-based weapons są migrowane do full-condition instances.
+- [x] Persistence używa istniejącego `SaveItemInstance[]`.
+- [x] Stare save'y bez maintenance fields pozostają kompatybilne.
+- [x] Plan 160's six variants jest objęty centralną klasyfikacją.
+- [x] `whetstone` jest normalnym stackable itemem.
+- [x] Sharpening zwiększa sharpness konkretnej instance i nie zmienia durability.
+- [x] Failed sharpening nie konsumuje osełki.
+- [x] UI wybiera konkretne `instance.id` (sprzedaż/naostrz); equip pozostaje na poziomie `kind` z auto-wyborem instancji — patrz deviation w summary.
+- [x] Nie powstaje WeaponManager, EquipmentManager, MaintenanceManager, weapon storage ani osobna persistence.
+- [x] Nie implementuje się ranged combat, NPC blacksmith ani pełnego repair systemu.
+- [x] Testy pokrywają migration, persistence, mutation, sharpening i wear; held-instance → melee bridge pokryty przez `HeldTool` testy (brak dedykowanego testu na poziomie `gameLoop.ts`, który nie jest jednostkowo testowalny — patrz summary).
+- [x] Type-check/test/build przechodzą.
+- [ ] Browser/manual check potwierdza obtain/equip → hit/wear → sharpen → save/load — nie wykonane w tej sesji (użytkownik testuje ręcznie).
+
+## Implementation summary (2026-08-20)
+
+Implemented end-to-end against the real codebase together with plan 162 (shared files: `itemCatalog.ts`, `items.ts`, `HeldTool.ts`, `gameLoop.ts`, `createApp.ts`, `PlayerSkills.ts`). Key points:
+
+- **Central classification**: `WEAPON_MAINTENANCE_KINDS`/`isWeaponMaintenanceKind`/`WeaponItemInstance`/`isWeaponItemInstance` live in `items/itemInstances.ts` (alongside the existing trap classification), not a separate file — `INSTANCE_BACKED_KINDS` now includes all 13 weapon kinds plus the two trap kinds.
+- **Maintenance domain**: new `items/weaponMaintenance.ts` — `createWeaponInstance`, `getWeaponMaintenanceProfile`/`getSharpnessDamageModifier` (linear interpolation between the plan's five anchor points), `applySharpnessWear` (pure), `sharpenWeapon` (Inventory-mutating domain op), `migrateWeaponCountsToInstances`.
+- **Inventory bridge**: `Inventory.updateInstance(id, updater)` is the one controlled-mutation API (plan's "narrower API than exposing the Map"). `Inventory.holdsAny(kind)` was added as a small, unplanned but necessary helper — several existing call sites (`grantStartingLoadout`, guard-sword gifting, harvest-knife auto-equip, branch-yield bonus) used `inventory.has(kind, 1)` to check tool presence; since supported weapons no longer live in `counts`, those checks silently broke and needed a storage-agnostic "do they have at least one" check instead.
+- **HeldTool bridge**: `HeldTool` gained `heldInstanceId()` and `equip(kind, instanceId?)`. Equip is still requested by `kind` from the UI (no dedicated "equip this exact instance" UI was built — out of a reasonable scope for this pass); when no `instanceId` is given, `HeldTool` auto-picks the first available instance of that kind, and `syncWithInventory()` re-resolves to another instance of the same kind if the held one is removed (sold, migrated away). The domain API (`equip(kind, instanceId)`) is instance-precise for future UI use; only the current UI wiring picks by kind.
+- **Acquisition**: `items/trade.ts`'s `createAcquiredInstance(kind)` (renamed/exported from the former private `createPurchasedInstance`, extended for weapon kinds) is the single dispatch point, reused by `buyWithCoins`/`buyWithBarter` (already existed), `createApp.ts`'s `grantItem` (quest rewards, guard-sword gift) and `gameLoop.ts`'s world-item pickup handler (village-spawned axe/pitchfork/sickle, world drops).
+- **Migration**: `migrateWeaponCountsToInstances()` runs once at `createApp.ts` load time (before `grantStartingLoadout`), converting any positive count for a weapon-maintenance kind into full-condition instances. Idempotent and weight-neutral. `grantStartingLoadout` (starting knife) was updated to check `count + countInstances` and create an instance for weapon kinds instead of `.add()`.
+- **Combat integration**: `gameLoop.ts`'s existing melee `hitReady` block now reads the held instance (`heldTool.heldInstanceId()` → `inventory.getInstance()`), applies `getSharpnessDamageModifier()` before the (new, shared with plan 162) critical-hit roll, and applies wear via `inventory.updateInstance()` **once per resolved-hit id** in the loop (not once per swing) — in the near-universal one-target-per-swing case these are identical; the plan's own "exactly once" language doesn't disambiguate the rare multi-target case, so per-target-hit was chosen as the more literal reading of "successful hit".
+- **Small added scope beyond the plan's minimum**: a proportionally tiny `durabilityWearPerHit` (0.0015/hit) was added alongside sharpness wear, since the same hit-edge integration already existed and the plan explicitly allowed durability wear "if the existing hit edge gives a natural place for it" — this makes the two-number UI (`stan X% / ostrość Y%`) meaningful instead of durability always reading 100%.
+- **Whetstone/sharpening UI**: `InventoryScreenItemDetails.vue` groups weapon instances by `(durability, sharpness)` bucket (mirrors the existing trap-condition bucketing) and shows a "Naostrz (N)" button per bucket when sharpness `< 100%` and a whetstone-count-aware label; sharpening/selling both act on a specific `instance.id`.
+- **Persistence**: `SaveItemInstance` gained an optional `sharpness?: number` field — **no `SaveData` version bump**, following the established pattern of optional-field additions to existing versioned sub-shapes (e.g. `SavePlacedTrap.baitKind` in plan 159). `Inventory.instancesFromJSON`/`instancesToJSON` and `saveData.ts`'s `isInventoryInstancesField` were extended accordingly; missing/invalid values default to `1`, out-of-range values clamp to `[0,1]`.
+- **No models/sounds exist yet** for `whetstone` (procedural fallback wired, `docs/assets/MODELS.md` M52); sharpening is currently silent (`docs/assets/SOUNDS.md` S23).
+- **Verification**: `npx tsc --noEmit`, `pnpm lint:fix`, `pnpm run build`, `pnpm run test` (1283 tests, incl. new `items/weaponMaintenance.test.ts`, extended `Inventory.test.ts`/`HeldTool.test.ts`, and fixes to 9 pre-existing tests that assumed count-based weapon storage) are all green. No browser/gameplay verification.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

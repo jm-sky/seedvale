@@ -73,6 +73,8 @@ If the feature needs no new sound, do nothing to this file.
 | S19 | Drink / gulp | Consume waterskin, well/lake `[E]` | `needed` | plan 106 — currently reuses `action-well-01` (S08) |
 | S20 | Sizzle / cook | `[R]` cooking raw_meat at a lit campfire | `needed` | plan 106 — currently silent |
 | S21 | Snow ambience (wind flurry) | Weather = `snow` (plan 040 Etap 1) | `needed` | No asset yet — snow stays visual-only (`world/weatherParticles.ts`) until acquired |
+| S22 | Bow draw / release (twang) | Ranged attack draw start / arrow release (plan 162) | `needed` | Currently silent on draw; arrow hit/kill reuses `playActionMeleeHit`/`playActionMeleeKill` (S-none — no dedicated arrow-impact clip) |
+| S23 | Whetstone sharpening (scrape) | Inventory "Naostrz" action (plan 161) | `needed` | Currently silent |
 
 ## Acquisition rules
 

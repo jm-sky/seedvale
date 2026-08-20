@@ -7,6 +7,7 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
 import type { TradeResult } from '../items/trade'
+import type { SharpenResult } from '../items/weaponMaintenance'
 import type { CreateSaveResult, SaveSlotInfo } from '../persistence/saveDb'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
@@ -56,6 +57,7 @@ type InventoryState = {
   onConsume: ((kind: ItemKind) => void) | null
   onPlaceTrap: ((kind: TrapKind) => void) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
+  onSharpen: ((instanceId: string) => SharpenResult) | null
 }
 type PauseMenuState = {
   open: boolean; seed: number; playerName: string; activeSaveName: string
@@ -166,6 +168,8 @@ type SkillsScreenState = {
   trapsXp: number
   defenseValue: number
   defenseXp: number
+  archeryValue: number
+  archeryXp: number
   onToggleSneak: (() => void) | null
 }
 type HudState = {
@@ -238,7 +242,7 @@ export function emitUiClick(): void {
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
-  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null } as InventoryState,
+  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null, onRefresh: null,
@@ -280,6 +284,8 @@ export const ui = reactive({
     trapsXp: 0,
     defenseValue: 0,
     defenseXp: 0,
+    archeryValue: 0,
+    archeryXp: 0,
     onToggleSneak: null,
   } as SkillsScreenState,
   hud: {
@@ -441,6 +447,7 @@ export function openInventory(
   onConsume: (kind: ItemKind) => void,
   onPlaceTrap: (kind: TrapKind) => void,
   onSellInstances: (instanceIds: readonly string[]) => TradeResult,
+  onSharpen: (instanceId: string) => SharpenResult,
 ): void {
   ui.inventory.counts = { ...counts }
   ui.inventory.groups = groups
@@ -453,6 +460,7 @@ export function openInventory(
   ui.inventory.onConsume = onConsume
   ui.inventory.onPlaceTrap = onPlaceTrap
   ui.inventory.onSellInstances = onSellInstances
+  ui.inventory.onSharpen = onSharpen
   ui.inventory.open = true
   emitUiOpen()
 }
@@ -690,13 +698,16 @@ export function setSkillsState(
   trapsXp: number,
   defenseValue: number,
   defenseXp: number,
+  archeryValue: number,
+  archeryXp: number,
 ): void {
   const s = ui.skillsScreen
   if (
     s.sneakValue === sneakValue && s.sneakActive === sneakActive && s.sneakXp === sneakXp &&
     s.survivalValue === survivalValue && s.survivalXp === survivalXp &&
     s.trapsValue === trapsValue && s.trapsXp === trapsXp &&
-    s.defenseValue === defenseValue && s.defenseXp === defenseXp
+    s.defenseValue === defenseValue && s.defenseXp === defenseXp &&
+    s.archeryValue === archeryValue && s.archeryXp === archeryXp
   ) return
   s.sneakValue = sneakValue
   s.sneakActive = sneakActive
@@ -707,6 +718,8 @@ export function setSkillsState(
   s.trapsXp = trapsXp
   s.defenseValue = defenseValue
   s.defenseXp = defenseXp
+  s.archeryValue = archeryValue
+  s.archeryXp = archeryXp
 }
 
 export function setHudFps(fps: number): void {

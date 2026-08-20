@@ -60,6 +60,13 @@ export type ItemKind =
   | 'fish'
   | 'dried_fish'
   | 'fishing_rod'
+  | 'whetstone'
+  | 'short_bow'
+  | 'hunting_bow'
+  | 'long_bow'
+  | 'arrow'
+  | 'broadhead_arrow'
+  | 'war_arrow'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
 
@@ -556,6 +563,62 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     weight: 0.9,
     color: 0x6b4a2f,
     description: 'Prosta wędka. Pozwala łowić ryby nad brzegiem jeziora.'
+  },
+  whetstone: {
+    kind: 'whetstone',
+    label: 'osełka',
+    categories: ['utility'],
+    weight: 0.3,
+    color: 0x8a8a90,
+    description: 'Kamień szlifierski. Przywraca ostrość zużytej broni białej.'
+  },
+  short_bow: {
+    kind: 'short_bow',
+    label: 'krótki łuk',
+    categories: ['weapon'],
+    weight: 1.0,
+    color: 0x7a5a3a,
+    description: 'Lekki, szybki łuk o niewielkim zasięgu. Łatwo go naciągnąć, ale zadaje mniejsze obrażenia.'
+  },
+  hunting_bow: {
+    kind: 'hunting_bow',
+    label: 'łuk myśliwski',
+    categories: ['weapon'],
+    weight: 1.4,
+    color: 0x6b4a2f,
+    description: 'Uniwersalny łuk myśliwski. Dobry kompromis między zasięgiem, siłą i szybkością strzału.'
+  },
+  long_bow: {
+    kind: 'long_bow',
+    label: 'długi łuk',
+    categories: ['weapon'],
+    weight: 1.9,
+    color: 0x5a3a22,
+    description: 'Długi, potężny łuk. Największy zasięg i obrażenia, ale wolniejsze naciąganie.'
+  },
+  arrow: {
+    kind: 'arrow',
+    label: 'strzała',
+    categories: ['resource'],
+    weight: 0.05,
+    color: 0x8a7a5a,
+    description: 'Zwykła drewniana strzała z metalowym grotem.'
+  },
+  broadhead_arrow: {
+    kind: 'broadhead_arrow',
+    label: 'strzała łowiecka',
+    categories: ['resource'],
+    weight: 0.06,
+    color: 0xb5a06a,
+    description: 'Strzała z szerokim grotem — zadaje większe obrażenia zwierzynie.'
+  },
+  war_arrow: {
+    kind: 'war_arrow',
+    label: 'strzała bojowa',
+    categories: ['resource'],
+    weight: 0.08,
+    color: 0x5a5a5a,
+    description: 'Cięższa, wzmocniona strzała bojowa. Zadaje największe obrażenia.'
   },
 }
 
@@ -1121,6 +1184,55 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     line.position.set(0, 0.05, 0.5)
     group.add(line)
     return group
+  }
+  if (kind === 'short_bow' || kind === 'hunting_bow' || kind === 'long_bow') {
+    const group = new THREE.Group()
+    const height = kind === 'short_bow' ? 0.5 : kind === 'hunting_bow' ? 0.68 : 0.85
+    const limb = new THREE.Mesh(
+      new THREE.TorusGeometry(height / 2, 0.014, 4, 10, Math.PI * 0.92),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),
+    )
+    limb.rotation.set(0, Math.PI / 2, Math.PI / 2)
+    limb.position.y = height / 2
+    limb.castShadow = true
+    group.add(limb)
+    const string = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.004, 0.004, height * 0.92, 3),
+      new THREE.MeshStandardMaterial({ color: 0xd8d0c0, flatShading: true }),
+    )
+    string.position.set(0.06, height / 2, 0)
+    string.castShadow = true
+    group.add(string)
+    return group
+  }
+  if (kind === 'arrow' || kind === 'broadhead_arrow' || kind === 'war_arrow') {
+    const group = new THREE.Group()
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.008, 0.008, 0.55, 5),
+      new THREE.MeshStandardMaterial({ color: 0x8a7a5a, flatShading: true }),
+    )
+    shaft.rotation.x = Math.PI / 2
+    shaft.position.y = 0.03
+    shaft.castShadow = true
+    group.add(shaft)
+    const head = new THREE.Mesh(
+      new THREE.ConeGeometry(0.02, 0.06, 4),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true, metalness: 0.4 }),
+    )
+    head.rotation.x = Math.PI / 2
+    head.position.set(0, 0.03, 0.3)
+    head.castShadow = true
+    group.add(head)
+    return group
+  }
+  if (kind === 'whetstone') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.16, 0.035, 0.05),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.whetstone.color, flatShading: true }),
+    )
+    mesh.position.y = 0.02
+    mesh.castShadow = true
+    return mesh
   }
   // blanket
   const mesh = new THREE.Mesh(

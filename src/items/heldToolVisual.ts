@@ -157,6 +157,27 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     scale: 1,
     gripLocalOffset: [0, -0.25, 0],
   },
+  // Plan 162 — procedural mesh only (no GLB yet, see docs/assets/MODELS.md);
+  // same long-shaft family as fishing_rod/spear until a real grip is
+  // authored in the alignment browser.
+  short_bow: {
+    position: [-0.35, 0.13, -0.02],
+    rotation: [Math.PI / 2, -Math.PI / 2, 0],
+    scale: 0.9,
+    gripLocalOffset: [0, 0, -0.25],
+  },
+  hunting_bow: {
+    position: [-0.45, 0.13, -0.02],
+    rotation: [Math.PI / 2, -Math.PI / 2, 0],
+    scale: 1,
+    gripLocalOffset: [0, 0, -0.3],
+  },
+  long_bow: {
+    position: [-0.55, 0.13, -0.02],
+    rotation: [Math.PI / 2, -Math.PI / 2, 0],
+    scale: 1.05,
+    gripLocalOffset: [0, 0, -0.35],
+  },
 }
 
 /**

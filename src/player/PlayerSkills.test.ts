@@ -26,6 +26,13 @@ describe('createPlayerSkills', () => {
       expect(state.active).toBe(false)
     }
   })
+
+  it('includes archery (plan 162)', () => {
+    const skills = createPlayerSkills()
+    expect(skills.archery.xp).toBe(0)
+    expect(skills.archery.value).toBe(SKILL_MIN_VALUE)
+    expect(skills.archery.active).toBe(false)
+  })
 })
 
 describe('xpToSkillValue', () => {
@@ -97,6 +104,13 @@ describe('restorePersistedSkills', () => {
     skills.sneak.active = true
     restorePersistedSkills(skills, { sneak: { xp: 10 }, survival: { xp: 10 } })
     expect(skills.sneak.active).toBe(false)
+  })
+
+  it('restores a fresh archery skill when the saved payload predates it', () => {
+    const skills = createPlayerSkills()
+    restorePersistedSkills(skills, { sneak: { xp: 10 }, survival: { xp: 10 } })
+    expect(skills.archery.xp).toBe(0)
+    expect(skills.archery.value).toBe(SKILL_MIN_VALUE)
   })
 })
 

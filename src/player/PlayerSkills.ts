@@ -5,7 +5,7 @@
  * state (the only thing persisted); `value` is always derived from it through
  * `xpToSkillValue` so the two can never drift apart.
  */
-export type SkillId = 'sneak' | 'survival' | 'traps' | 'defense'
+export type SkillId = 'sneak' | 'survival' | 'traps' | 'defense' | 'archery'
 
 export type SkillState = {
   /** [0,1] — derived from `xp`, never assigned independently. */
@@ -64,6 +64,7 @@ export function createPlayerSkills(): PlayerSkills {
     survival: createSkillState(),
     traps: createSkillState(),
     defense: createSkillState(),
+    archery: createSkillState(),
   }
 }
 
@@ -114,6 +115,9 @@ export const SKILL_XP_AWARD = {
   captureTrap: 14,
   /** Plan 150 — awarded on a successful full or partial block. */
   defenseBlock: 8,
+  /** Plan 162 — awarded once per arrow that actually hits a target, never
+   *  per shot fired (a clean miss teaches nothing). */
+  rangedHit: 6,
 } as const
 
 /** Metres of real sneaking movement per XP award — the "significant completed
