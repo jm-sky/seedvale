@@ -1,6 +1,6 @@
 # Seedvale — Performance & Rendering Strategy
 
-**Updated:** 2026-08-120
+**Updated:** 2026-08-20
 **Status:** active
 **Scope:** CPU · GPU · memory · rendering · chunk streaming · scalability
 
