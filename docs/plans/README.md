@@ -80,7 +80,7 @@ Natural vegetation
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-20--171--natural-crop-lifecycle.md` | Naturalne cropy bez „magic spawn”: wspólny lifecycle `young → mature → spoiled`, data-driven definicje, naturalny spawn, wizualizacja, harvest i lazy lifecycle; prerequisit dla późniejszego sadzenia cropów w planie `126` | 🟡 | M | ~~140~~ |
+| `2026-08-20--172--natural-crop-lifecycle.md` | Naturalne cropy bez „magic spawn”: wspólny lifecycle `young → mature → spoiled`, data-driven definicje, naturalny spawn, wizualizacja, harvest i lazy lifecycle; prerequisit dla późniejszego sadzenia cropów w planie `126` | 🟡 | M | ~~140~~ |
 | `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits.md` | Bows and critial hits | 🟡 | L | ~~150~~ ~~155~~ |
 | `2026-08-19--165--vigor-hunger-thirst-and-rest.md` | Urealnić zachowanie Vigor, Hunger i Thirst | 🟡 | M | - |
 | `2026-08-19--164--player-storage-and-container-system.md` | Players box for future companions | 🔴 | M | - |
@@ -97,7 +97,8 @@ Natural vegetation
 ### Fresh new
 
 > Place for plans links
-
+- `2026-08-20--173--terrain-aware-procedural-placement.md`
+- 
 ---
 
 ## Todo
