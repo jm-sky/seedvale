@@ -1,3 +1,4 @@
+import type { CropPlacement } from '../world/cropLifecycle'
 import type { EnvironmentPlacement } from './chunkEnvironment'
 import type { ChunkTileData, ChunkTileParams } from './chunkHeightmap'
 import type { ItemPlacement } from './chunkItems'
@@ -11,6 +12,9 @@ export type ChunkTileResult = ChunkTileData & {
   vegetation: VegetationPlacement[]
   items: ItemPlacement[]
   environment: EnvironmentPlacement[]
+  /** Deterministic wild-crop placements (plan 172, `chunkCrops.ts`) — same
+   *  worker-computed, main-thread-instantiated contract as `items`. */
+  crops: CropPlacement[]
 }
 
 /** Grass placement request (plan 086) — the tile grids ride along as

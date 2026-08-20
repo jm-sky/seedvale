@@ -1,7 +1,7 @@
 # Plan: Natural Crop Lifecycle — Implementation Notes
 
 **Created:** 2026-08-20  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented 2026-08-20, see plan §11 "Implementation summary" for what actually shipped and where it deviated from these notes (natural crop cycle is periodic rather than one-shot, see plan §11 for why).  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~140~~ ~~126~~  
 

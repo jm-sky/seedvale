@@ -25,6 +25,7 @@ import { canLevelAt, getDigProfileAt, getRockDigProfileAt, isRockGround } from '
 import { oceanMixAt } from '../terrain/waterBodies'
 import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
 import { honeyAvailable } from '../world/beehives'
+import { CROP_DEFS, type CropGrowthStage, type CropId } from '../world/cropLifecycle'
 import { isDryingComplete } from '../world/dryingRacks'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource } from '../world/WaterSource'
@@ -93,6 +94,18 @@ const CAMPFIRE_LIT_PROMPT = '[E] Dołóż gałąź · [R] Upiecz mięso'
 function animalPromptLabel(kind: AnimalKind, heldTool: ToolKind | null): string {
   const label = ANIMAL_LABELS[kind]
   return isMeleeTool(heldTool) ? `Atakuj: ${label}` : `Obserwuj: ${label}`
+}
+
+/** Plan 172 — natural crop lifecycle prompt. `young` and a `spoiled` crop
+ *  with no `spoiledItem` still show (flavor/inspection), just without
+ *  `[E] Zbierz`; the actual yield decision is re-validated at harvest time
+ *  (`ChunkManager.harvestCrop`), never trusted from this per-frame label. */
+function cropPromptLabel(cropId: CropId, stage: CropGrowthStage): string {
+  const label = ITEM_DEFS[CROP_DEFS[cropId].harvestItem].label
+  if (stage === 'mature') return `[E] Zbierz: ${label}`
+  if (stage === 'young') return `Młoda roślina: ${label}`
+  const def = CROP_DEFS[cropId]
+  return def.spoiledItem ? `[E] Zbierz: ${label} (przejrzałe)` : `Przejrzała roślina: ${label}`
 }
 
 /** Spawn-point prompt (plan 125 §6) — only `depleted` offers the destructive
@@ -439,6 +452,17 @@ export function buildInteractables(
       stage: tree.stage,
       sizeClass: tree.sizeClass,
       canHarvest,
+    })
+  }
+
+  for (const crop of chunkManager.getNearbyCrops(playerPos, GAZE_RANGE)) {
+    list.push({
+      kind: 'crop',
+      position: { x: crop.x, z: crop.z },
+      promptLabel: cropPromptLabel(crop.cropId, crop.stage),
+      id: crop.id,
+      cropId: crop.cropId,
+      stage: crop.stage,
     })
   }
 

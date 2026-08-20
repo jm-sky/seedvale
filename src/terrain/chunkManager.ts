@@ -43,6 +43,14 @@ import {
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { type Collider, createColliderRegistry } from '../world/collision'
 import { createChunkWater, type WorldWater } from '../world/createWater'
+import {
+  CROP_DEFS,
+  type CropGrowthStage,
+  type CropId,
+  resolveCropHarvest,
+  resolveCropStage,
+} from '../world/cropLifecycle'
+import { createCropStageMesh } from '../world/cropVisuals'
 import { coastalFactor } from '../world/treeLifecycle'
 import { createTreeStageMesh, preloadTreeStumpTemplate, tagTreeMesh } from '../world/treeVisuals'
 import { assignRenderLayer, REFLECTION_DISTANT_LAYER, REFLECTION_SKIPPED_LAYER, type WaterMirror } from '../world/waterMirror'
@@ -242,6 +250,11 @@ export type ChunkManagerConfig = {
    *  placements the player already picked up. Reset only on a genuinely new
    *  world (new seed), not on unrelated terrain-param rebuilds. */
   collectedItemIds: Set<string>
+  /** Ids of naturally-generated crops (`terrain/chunkCrops.ts`) already
+   *  harvested/removed (plan 172) — same "shared/mutated in place, survives
+   *  chunk unload/reload" contract as `collectedItemIds`, kept as a separate
+   *  set since a harvested crop is a removal, not a collected pickup. */
+  removedCropIds: Set<string>
   grass: {
     enabled: boolean
     /** Chunks (Chebyshev distance) that get grass — deliberately smaller than
@@ -292,6 +305,10 @@ type ChunkRecord = {
    *  `refreshTreeVisual` to re-place a tree it no longer has a mesh for. */
   treeYaw?: Map<string, number>
   items?: THREE.Group
+  /** Naturally-generated crop meshes (plan 172) — same per-placement `Object3D`
+   *  group as `items`, not instanced (crop density per chunk is small, same
+   *  order of magnitude as flora pickups). */
+  crops?: THREE.Group
   /** Procedural-only landmark kinds (campfire/monolith/stoneCircle/smallRuins/
    *  cemetery) — geometry is built per placement, not from a shared template, so these
    *  stay unbatched (plan 087 §2.5). Cemetery clones GLB graves into one Group. */
@@ -346,6 +363,19 @@ export type ChunkManager = {
    *  its id as collected so it won't reappear on chunk reload. Null if `id`
    *  isn't currently instantiated. */
   collectItem: (id: string) => { kind: ItemKind, x: number, z: number } | null
+  /** Naturally-generated crops (`terrain/chunkCrops.ts`) within `radius` of
+   *  `pos` among currently loaded chunks (plan 172) — same "loaded chunks
+   *  only" contract as `getNearbyItems`, with lifecycle stage already
+   *  resolved for the current world day. */
+  getNearbyCrops: (
+    pos: { x: number, z: number },
+    radius: number,
+  ) => { id: string, cropId: CropId, x: number, z: number, stage: CropGrowthStage }[]
+  /** Resolves `id`'s current stage and, if harvestable, removes its mesh and
+   *  records it as removed so it won't reappear on chunk reload. A `'no-yield'`
+   *  outcome (e.g. `young`, or `spoiled` with no `spoiledItem`) leaves the
+   *  crop in place — the player can come back once it matures. */
+  harvestCrop: (id: string) => CropHarvestOutcome
   /** Procedural landmarks (`monolith`/`stoneCircle`/`smallRuins`/`cemetery`)
    *  within `radius` of `pos` among currently loaded chunks — same "loaded
    *  chunks only" contract as `getNearbyItems` (plan 132), used for `[E]`
@@ -558,6 +588,13 @@ export function drainByBudget(step: () => boolean, budgetMs: number, now: () => 
     if (!step()) return
   } while (now() - start < budgetMs)
 }
+
+/** Plan 172 — `harvestCrop`'s result. `'no-yield'` covers both an unripe
+ *  (`young`) crop and a `spoiled` one with no `spoiledItem`; either way the
+ *  crop is left in place rather than removed. */
+export type CropHarvestOutcome =
+  | { ok: true, yield: { kind: ItemKind, count: number } }
+  | { ok: false, reason: 'unknown-crop' | 'no-yield' }
 
 export function createChunkManager(
   scene: THREE.Scene,
@@ -1189,6 +1226,22 @@ export function createChunkManager(
     if (rec.items) assignRenderLayer(rec.items, REFLECTION_SKIPPED_LAYER)
     getMonitor().recordHitch('PROPS', performance.now() - itemsT0, 'chunk items')
 
+    const cropsT0 = performance.now()
+    const worldDaysForCrops = config.getWorldDays()
+    rec.crops = buildPlacementGroup('chunk-crops', tile.crops, (placement) => {
+      if (config.removedCropIds.has(placement.id)) return null
+      const def = CROP_DEFS[placement.cropId]
+      const stage = resolveCropStage(def, placement.stageStartedAt, worldDaysForCrops)
+      const cropMesh = createCropStageMesh(def.harvestItem, stage)
+      cropMesh.userData.cropId = placement.id
+      cropMesh.userData.cropDefId = placement.cropId
+      cropMesh.userData.cropStage = stage
+      placeOnGround(cropMesh, placement.x, placement.z, sampleTileHeight)
+      return cropMesh
+    })
+    if (rec.crops) assignRenderLayer(rec.crops, REFLECTION_SKIPPED_LAYER)
+    getMonitor().recordHitch('PROPS', performance.now() - cropsT0, 'chunk crops')
+
     const rockTemplates = getRockTemplates.peek()
     const rockClusterTemplates = getRockClusterTemplates.peek()
     const fallenLogTemplates = getFallenLogTemplates.peek()
@@ -1234,6 +1287,7 @@ export function createChunkManager(
     getProgramCensus().recordChunkAttach('chunk-content-attach', rec.key, [
       rec.vegetationExtras,
       rec.items,
+      rec.crops,
       rec.environment,
     ])
     rebuildColliders(rec)
@@ -1331,6 +1385,10 @@ export function createChunkManager(
     if (record.items) {
       disposeObject3D(record.items)
       record.items.removeFromParent()
+    }
+    if (record.crops) {
+      disposeObject3D(record.crops)
+      record.crops.removeFromParent()
     }
     if (record.environment) {
       disposeObject3D(record.environment)
@@ -1607,6 +1665,33 @@ export function createChunkManager(
       }
       return out
     },
+    getNearbyCrops(pos, radius) {
+      // Resolves stage fresh from the placement's `stageStartedAt` (same
+      // "presence data is always fresh, only the mesh visual lags until
+      // reload" contract as `getNearbyTrees`) rather than the mesh's cached
+      // `userData.cropStage` — interaction/prompt logic must never trust a
+      // stale attach-time snapshot.
+      const out: { id: string, cropId: CropId, x: number, z: number, stage: CropGrowthStage }[] = []
+      const worldDays = config.getWorldDays()
+      for (const rec of chunks.values()) {
+        if (!rec.tile) continue
+        for (const p of rec.tile.crops) {
+          if (config.removedCropIds.has(p.id)) continue
+          const dx = p.x - pos.x
+          const dz = p.z - pos.z
+          if (Math.hypot(dx, dz) > radius) continue
+          const def = CROP_DEFS[p.cropId]
+          out.push({
+            id: p.id,
+            cropId: p.cropId,
+            x: p.x,
+            z: p.z,
+            stage: resolveCropStage(def, p.stageStartedAt, worldDays),
+          })
+        }
+      }
+      return out
+    },
     getNearbyLandmarks(pos, radius) {
       const out: { id: string, kind: LandmarkKind, x: number, z: number }[] = []
       for (const rec of chunks.values()) {
@@ -1653,6 +1738,24 @@ export function createChunkManager(
         return result
       }
       return null
+    },
+    harvestCrop(id) {
+      for (const rec of chunks.values()) {
+        if (!rec.crops || !rec.tile) continue
+        const mesh = rec.crops.children.find((c) => c.userData.cropId === id)
+        if (!mesh) continue
+        const placement = rec.tile.crops.find((p) => p.id === id)
+        if (!placement) return { ok: false, reason: 'unknown-crop' }
+        const def = CROP_DEFS[placement.cropId]
+        const stage = resolveCropStage(def, placement.stageStartedAt, config.getWorldDays())
+        const harvestYield = resolveCropHarvest(def, stage)
+        if (!harvestYield) return { ok: false, reason: 'no-yield' }
+        mesh.removeFromParent()
+        disposeObject3D(mesh)
+        config.removedCropIds.add(id)
+        return { ok: true, yield: harvestYield }
+      }
+      return { ok: false, reason: 'unknown-crop' }
     },
     modifyTerrain(x, z, radius, depth) {
       const mod: TerrainModification = { x, z, radius, depth, mode: 'dig' }

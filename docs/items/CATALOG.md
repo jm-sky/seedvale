@@ -91,9 +91,9 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | apple | jabłko | — | — | renewable trees | procedural | plan 159; Zjedz (+10 hunger); freshens 2 days, plant bait |
 | nuts | orzechy | — | — | world chunk (flora pool) | procedural | plan 159; Zjedz (+12 hunger); freshens 5 days, plant bait |
 | honey | miód | — | — | wild hive collect/burn | procedural | plan 159; Zjedz (+18 hunger); never spoils |
-| carrot | marchew | — | — | renewable garden | procedural | plan 159; Zjedz (+10 hunger); freshens 3 days, plant bait |
-| potato | ziemniak | — | — | renewable garden | procedural | plan 159; Zjedz (+12 hunger); freshens 4 days, plant bait |
-| cabbage | kapusta | — | — | renewable garden | procedural | plan 159; Zjedz (+10 hunger); freshens 2 days |
+| carrot | marchew | — | — | renewable garden + wild natural crop | procedural | plan 159; Zjedz (+10 hunger); freshens 3 days, plant bait. Plan 172: also a wild natural crop (`terrain/chunkCrops.ts`), young/mature/spoiled lifecycle |
+| potato | ziemniak | — | — | renewable garden + wild natural crop | procedural | plan 159; Zjedz (+12 hunger); freshens 4 days, plant bait. Plan 172: also a wild natural crop (`terrain/chunkCrops.ts`), young/mature/spoiled lifecycle |
+| cabbage | kapusta | — | — | renewable garden + wild natural crop | procedural | plan 159; Zjedz (+10 hunger); freshens 2 days. Plan 172: also a wild natural crop (`terrain/chunkCrops.ts`), young/mature/spoiled lifecycle |
 | fish | ryba | — | — | fishing_rod catch | procedural | plan 159; Zjedz (+12 hunger); freshens fastest (0.75 day) |
 | dried_fish | suszona ryba | — | — | drying rack (fish) | procedural | plan 159; Zjedz (+22 hunger); light, long-lasting like dried_meat |
 | fishing_rod | wędka | yes | — | none (Kupiec) | procedural | plan 159; `[E]` cast at lake shore, `[R]` apply bait |

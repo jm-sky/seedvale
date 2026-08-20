@@ -9,6 +9,7 @@ import type { VillageFire } from '../settlement/VillageFire'
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { DigProfile } from '../terrain/dig'
 import type { TrapKind, TrapState } from '../world/animalTraps'
+import type { CropGrowthStage, CropId } from '../world/cropLifecycle'
 import type { TreeGrowthStage, TreeSizeClass } from '../world/treeLifecycle'
 import type { WaterSource } from '../world/WaterSource'
 
@@ -100,3 +101,7 @@ export type Interactable =
   /** Wild beehive (plan 159 §11) — `[E]` collects accrued honey; `[R]` burns
    *  it down (one-time reward) while a lit torch/branch is held. */
   | { kind: 'hive', position: { x: number, z: number }, promptLabel: string, id: string, burned: boolean }
+  /** Naturally-generated wild crop (plan 172) — `[E]` harvests a `mature`
+   *  (or `spoiled` with a `spoiledItem`) crop; `young`/no-yield `spoiled`
+   *  crops still show for flavor but yield nothing. */
+  | { kind: 'crop', position: { x: number, z: number }, promptLabel: string, id: string, cropId: CropId, stage: CropGrowthStage }

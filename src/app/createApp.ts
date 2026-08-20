@@ -138,6 +138,7 @@ import {
 import { type BeehiveRecord, HIVE_STING_DAMAGE, honeyAvailable, rollHiveSting } from '../world/beehives'
 import { createLights } from '../world/createLights'
 import { createSky } from '../world/createSky'
+import { CROP_DEFS, type CropGrowthStage, type CropId, resolveCropHarvest } from '../world/cropLifecycle'
 import { createDayNightState, parseTimeOfDayFromUrl } from '../world/dayNight'
 import { type DryingRackRecord, isDryingComplete, pickDryingRecipe, startDryingProcess } from '../world/dryingRacks'
 import {
@@ -343,6 +344,10 @@ export async function createApp(
   sky.applySun(lights.sun)
 
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
+  // Plan 172 — natural crop lifecycle: harvested/removed wild crops, same
+  // "shared/mutated in place, reset only on a genuinely new world" contract
+  // as `collectedItemIds` above.
+  let removedCropIds = new Set<string>(initialSave?.harvestedCropIds ?? [])
   // Persistent player land ownership (plan 129) — sparse, doesn't need the
   // `bundle`-rebuild indirection `onAnimalDeath`/`getPlayerSocial` use below
   // (it never depends on `questManager`), so it's threaded straight through.
@@ -372,6 +377,7 @@ export async function createApp(
     scene,
     config,
     collectedItemIds,
+    removedCropIds,
     worldAudio.playAt,
     initialSave?.droppedItems ?? [],
     initialSave?.placedFires ?? [],
@@ -745,6 +751,7 @@ export async function createApp(
       gameLoop.forgetHighlight()
       if (resetCollectedItems) {
         collectedItemIds = new Set()
+        removedCropIds = new Set()
         dayNight.elapsedDays = 0
         treeLifecycle = createTreeLifecycle(config.seed, {})
         landOwnership.clear()
@@ -756,6 +763,7 @@ export async function createApp(
         config,
         resetCollectedItems,
         collectedItemIds,
+        removedCropIds,
         worldAudio.playAt,
         treeLifecycle,
         getWorldDays,
@@ -808,7 +816,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 20,
+    version: 21,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -868,6 +876,7 @@ export async function createApp(
     })),
     hives: bundle.hives.nodes().map((hive) => ({ ...hive })),
     fishingBait: Object.fromEntries(fishingBait),
+    harvestedCropIds: [...removedCropIds],
   })
 
   const saveNow = (): Promise<void> => writeSave(buildSaveData())
@@ -1429,6 +1438,36 @@ export async function createApp(
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     onInventoryChanged()
     toast.show(`Ul spłonął. +${reward} miodu`, 'pickup')
+  }
+
+  /** Plan 172 — single `[E]` harvest action for a naturally-generated wild
+   *  crop, reusing the existing gather/inventory flow. Mirrors the `item`
+   *  branch's mutation order (`gameLoop.ts`): the capacity check happens
+   *  *before* `ChunkManager.harvestCrop` removes anything from the world, so
+   *  a full inventory never destroys a crop for nothing. `cropId`/`stage`
+   *  come from the same-frame `Interactable` snapshot; `harvestCrop` still
+   *  re-validates the authoritative current stage itself. */
+  const harvestCropAction = (id: string, cropId: CropId, stage: CropGrowthStage): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const expectedYield = resolveCropHarvest(CROP_DEFS[cropId], stage)
+    if (!expectedYield) {
+      toast.show('Nie ma tu jeszcze nic do zebrania.', 'error')
+      return
+    }
+    if (!inventory.canAdd(expectedYield.kind, expectedYield.count)) {
+      toast.show('Ekwipunek jest za ciężki.', 'error')
+      return
+    }
+    const outcome = bundle.chunkManager.harvestCrop(id)
+    if (!outcome.ok) {
+      toast.show('Ta roślina już zniknęła.', 'error')
+      return
+    }
+    inventory.add(outcome.yield.kind, outcome.yield.count, dayNight.elapsedDays)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    onInventoryChanged()
+    playInventoryPickUp(worldAudio.playOnce)
+    toast.show(`+${outcome.yield.count} ${ITEM_DEFS[outcome.yield.kind].label}`, 'pickup')
   }
 
   // The single owner of a capture's player-facing consequences (implementation
@@ -2175,6 +2214,7 @@ export async function createApp(
     interactDryingRack,
     collectHive: collectHiveAction,
     burnHive: burnHiveAction,
+    harvestCrop: harvestCropAction,
     onSleepFinished,
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,

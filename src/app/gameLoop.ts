@@ -34,6 +34,7 @@ import type { TimeSkipOverlay } from '../ui/createTimeSkipOverlay'
 import type { Toast } from '../ui/createToast'
 import type { WorldLights } from '../world/createLights'
 import type { WorldSky } from '../world/createSky'
+import type { CropGrowthStage, CropId } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
 import type { TimeSkip } from '../world/timeSkip'
@@ -287,6 +288,11 @@ export type GameLoopDeps = {
   /** Burn a wild hive down for its one-time reward — only while a lit torch/
    *  branch is held. */
   burnHive?: (id: string) => void
+  /** Harvest a naturally-generated wild crop (plan 172). `cropId`/`stage` come
+   *  straight from the `Interactable` snapshot so the capacity check can
+   *  happen before any world mutation, same "check before you cut" order as
+   *  the `item` branch below. */
+  harvestCrop?: (id: string, cropId: CropId, stage: CropGrowthStage) => void
   /** A full night's sleep (`fadeStrength === 1` skip) just finished — owner
    *  (`createApp.ts`) applies the rest outcome for whatever camp it resolved
    *  when the rest started, and awards any Survival XP (plan 128 §5-§7). */
@@ -337,7 +343,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
-    startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive,
+    startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop,
     onSleepFinished, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
@@ -1080,6 +1086,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'hive') {
         if (interactPressed) collectHive?.(target.id)
         if (altInteractPressed) burnHive?.(target.id)
+      } else if (target?.kind === 'crop') {
+        if (interactPressed) harvestCrop?.(target.id, target.cropId, target.stage)
       } else if (target?.kind === 'item') {
         if (interactPressed || altInteractPressed) {
           if (!inventory.canAdd(target.item.kind)) {

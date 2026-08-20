@@ -92,6 +92,7 @@ function buildChunkManager(
   scene: Scene,
   config: WorldConfig,
   collectedItemIds: Set<string>,
+  removedCropIds: Set<string>,
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
   waterMirror: WaterMirror,
@@ -116,6 +117,7 @@ function buildChunkManager(
     settlementSearchRadius: HOME_RADIUS,
     flatShading: config.terrain.flatShading,
     collectedItemIds,
+    removedCropIds,
     grass: config.terrain.grass,
     detailNormal: config.terrain.detailNormal,
     terrainCastsShadow: config.postProcessing.terrainCastsShadow,
@@ -272,6 +274,10 @@ export async function createWorldBundle(
   scene: Scene,
   config: WorldConfig,
   collectedItemIds: Set<string>,
+  /** Ids of naturally-generated crops already harvested (plan 172) — same
+   *  "carried across rebuild, reset only on a genuinely new world" contract
+   *  as `collectedItemIds`. */
+  removedCropIds: Set<string>,
   playAt: PlayAt,
   initialDroppedItems: readonly DroppedItem[],
   initialPlacedFires: readonly PlacedFire[],
@@ -320,7 +326,7 @@ export async function createWorldBundle(
     waterLevel: config.terrain.waterLevel,
     enabled: config.postProcessing.waterReflections,
   })
-  const chunkManager = buildChunkManager(scene, config, collectedItemIds, treeLifecycle, getWorldDays, waterMirror)
+  const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, treeLifecycle, getWorldDays, waterMirror)
   chunkManager.update(0, 0)
   await chunkManager.waitForChunks(homeChunks())
 
@@ -390,6 +396,9 @@ export async function rebuildWorldBundle(
   config: WorldConfig,
   resetCollectedItems: boolean,
   collectedItemIds: Set<string>,
+  /** Same reset contract as `collectedItemIds` — `resetCollectedItems`
+   *  governs both. */
+  removedCropIds: Set<string>,
   playAt: PlayAt,
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
@@ -449,7 +458,7 @@ export async function rebuildWorldBundle(
     waterLevel: config.terrain.waterLevel,
     enabled: config.postProcessing.waterReflections,
   })
-  bundle.chunkManager = buildChunkManager(scene, config, collectedItemIds, treeLifecycle, getWorldDays, waterMirror)
+  bundle.chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, treeLifecycle, getWorldDays, waterMirror)
   bundle.chunkManager.update(0, 0)
   await bundle.chunkManager.waitForChunks(homeChunks())
 

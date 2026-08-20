@@ -62,7 +62,7 @@ NPC diagnostics
   170 NPC simulation inspector/trace observes needs + decisions + actions + interaction queues across the existing NPC systems
 
 Natural vegetation
-  (140 landscape flora) → 171 natural crop lifecycle → 126 seed planting
+  (140 landscape flora) → (172 natural crop lifecycle, verification needed) → 126 seed planting
 ```
 
 ---
@@ -80,7 +80,6 @@ Natural vegetation
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-20--172--natural-crop-lifecycle.md` | Naturalne cropy bez „magic spawn”: wspólny lifecycle `young → mature → spoiled`, data-driven definicje, naturalny spawn, wizualizacja, harvest i lazy lifecycle; prerequisit dla późniejszego sadzenia cropów w planie `126` | 🟡 | M | ~~140~~ |
 | `2026-08-19--164--player-storage-and-container-system.md` | Players box for future companions | 🔴 | M | - |
 | `2026-08-19--168--settlement-lodging-and-sleep.md` | Nocowanie w osadzie: wybór łóżka, przyjaciela, płatnego noclegu lub siana; „Nocuj w mieście” prowadzi gracza do miejsca i dopiero wtedy uruchamia sen | 🔴 | L | ~~165~~ |
 | `2026-08-19--169--house-interior-furniture-and-bed-anchors.md` | Wyposażenie domów w łóżko, stół, lampę i skrzynię z authorowaniem placementu przez Asset Alignment Browser; łóżko dostarcza miejsce noclegu dla planu 168 | 🟡 | L | ~~168~~ ~~111~~ |
@@ -127,6 +126,7 @@ Implementation complete; needs play/browser check. Do not treat as normal backlo
 | `2026-08-18--161--weapon-maintenance-and-sharpening.md` | 13 melee kinds (base + plan-160 HQ set, `shovel`/`pickaxe` excluded) extend the plan-155 `ItemInstance` model with `durability`/`sharpness` (`items/weaponMaintenance.ts`); `HeldTool.heldInstanceId()` bridges the exact equipped instance into the existing melee hit edge; sharpness modifies damage before the (new, shared with 162) critical roll, wear applies once per resolved hit; `whetstone` + `sharpenWeapon()`; old count-based weapons migrate to full-condition instances at load; no `SaveData` version bump (optional `SaveItemInstance.sharpness`) — see plan's "Implementation summary"; techniczna weryfikacja zielona (tsc/lint/build/test, 1283 testów), bez testu w przeglądarce | 🟡 | M | ~~155~~ ~~160~~ |
 | `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits.md` | 3 bows (`RangedConfig`) + 3 stackable arrow kinds; `player/playerRanged.ts` draw→release→recovery lifecycle (mirrors `playerMelee.ts`'s shape); `combat/projectile.ts` swept-segment flight/collision (no visual arrow, no `Raycaster`); `combat/rangedAttack.ts` turns bow accuracy + new `archery` skill into aim deviation (that **is** the hit/miss mechanism); `combat/criticalHit.ts` shared critical resolver used by both ranged and melee; player-only — **NPC ranged combat not implemented** (no existing NPC attack-decision flow to extend; would be the forbidden `ArcherAI` for a currently-consumerless feature) — see plan's "Implementation summary"; techniczna weryfikacja zielona (tsc/lint/build/test, 1283 testów), bez testu w przeglądarce | 🟡 | L | ~~150~~ ~~155~~ |
 | `2026-08-19--165--vigor-hunger-thirst-and-rest.md` | Vigor passive idle drain cut to `-1/24h` (`PlayerNeeds.ts`), extra drain while moving/sprinting added (`tickPlayerMovementVigor`, `PlayerController.update`); Hunger/Thirst below a 20%-of-pool critical threshold now accrue `starvationDuration`/`dehydrationDuration` (transient, not persisted — see "Implementation summary") that first drains Vigor/Stamina and only causes slow HP loss after a multi-day severe gate, instead of instant HP loss at pool `0`; fixed a real pre-existing rest/time-skip bug (`gameLoop.ts` was applying ~180× too much hunger/thirst/vigor drain on every sleep) by scaling `worldDt` with `dayNight.timeMultiplier` during a skip instead of freezing it, which also makes the HUD bars progress visibly through rest/sleep instead of jumping at the end — see plan's "Implementation summary"; techniczna weryfikacja zielona (tsc/lint/build/test, 1299 testów), bez testu w przeglądarce | 🟡 | M | - |
+| `2026-08-20--172--natural-crop-lifecycle.md` | Wild natural-crop lifecycle (`world/cropLifecycle.ts`, pure `young→mature→spoiled` resolver + data-driven `CROP_DEFS` for carrot/potato/cabbage) + deterministic terrain placement (`terrain/chunkCrops.ts`, own flora-pool-style RNG stream) — a **second, independent source** of the same items alongside the existing garden-renewable pickups (plan 159), which stay untouched; unharvested crops cycle periodically (pure fn of seed+worldDays, like `world/weather.ts`) rather than a one-shot day-0 anchor, so late-explored chunks aren't permanently spoiled — see plan's "Implementation summary"; harvest reuses the item/inventory flow (`Interactable{kind:'crop'}`, capacity-checked before mutation); `SaveData` v21 (`harvestedCropIds`); techniczna weryfikacja zielona (tsc/lint/build/test, 1314 testów), bez testu w przeglądarce | 🟡 | M | ~~140~~ |
 
 ---
 

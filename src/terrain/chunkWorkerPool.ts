@@ -146,6 +146,7 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
               vegetation: msg.vegetation,
               items: msg.items,
               environment: msg.environment,
+              crops: msg.crops,
             })
           } else if (job.kind === 'grass' && msg.kind === 'grass') {
             job.resolve(msg.grass)

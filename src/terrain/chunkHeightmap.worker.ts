@@ -2,6 +2,7 @@ import type {
   ChunkWorkerRequest,
   ChunkWorkerResponse,
 } from './chunkHeightmapProtocol'
+import { computeChunkCrops } from './chunkCrops'
 import { computeChunkEnvironment } from './chunkEnvironment'
 import { computeChunkTile } from './chunkHeightmap'
 import { computeChunkItems } from './chunkItems'
@@ -54,6 +55,7 @@ ctx.onmessage = ({ data }) => {
       const vegetation = computeChunkVegetation({ cx: params.cx, cz: params.cz }, tile, params)
       const items = computeChunkItems({ cx: params.cx, cz: params.cz }, tile, params, vegetation)
       const environment = computeChunkEnvironment({ cx: params.cx, cz: params.cz }, tile, params, vegetation)
+      const crops = computeChunkCrops({ cx: params.cx, cz: params.cz }, tile, params)
       ctx.postMessage(
         {
           kind: 'tile',
@@ -70,6 +72,7 @@ ctx.onmessage = ({ data }) => {
           vegetation,
           items,
           environment,
+          crops,
         },
         [
           heights.buffer,

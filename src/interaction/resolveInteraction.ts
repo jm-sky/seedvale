@@ -81,7 +81,7 @@ function capitalize(text: string): string {
  *  `gameLoop.ts` additionally handles its own drink/fill mechanics (plan 106)
  *  alongside the call. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

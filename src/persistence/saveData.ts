@@ -350,8 +350,18 @@ export type SaveDataV20 = Omit<SaveDataV19, 'version'> & {
   fishingBait: Record<string, SaveFishingBait>
 }
 
-/** Canonical save shape — always v20. `loadSaveData` migrates older saves up. */
-export type SaveData = SaveDataV20
+/** Plan 172 — naturally-generated wild crops already harvested/removed
+ *  (`terrain/chunkCrops.ts`'s deterministic placements), same sparse
+ *  "id already collected" contract as `collectedItemIds`. Kept as its own
+ *  field since a harvested crop is a removal, not a collected pickup, and
+ *  the two id namespaces are intentionally distinct. */
+export type SaveDataV21 = Omit<SaveDataV20, 'version'> & {
+  version: 21
+  harvestedCropIds: string[]
+}
+
+/** Canonical save shape — always v21. `loadSaveData` migrates older saves up. */
+export type SaveData = SaveDataV21
 
 function isSaveConfig(value: unknown): value is SaveConfig {
   if (!value || typeof value !== 'object') return false
@@ -895,7 +905,7 @@ function isFishingBaitField(value: unknown): value is Record<string, SaveFishing
   })
 }
 
-export function isSaveDataV20(value: unknown): value is SaveData {
+export function isSaveDataV20(value: unknown): value is SaveDataV20 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 20) return false
@@ -904,6 +914,19 @@ export function isSaveDataV20(value: unknown): value is SaveData {
   if (!isDryingRacksField(v.dryingRacks)) return false
   if (!isHivesField(v.hives)) return false
   if (!isFishingBaitField(v.fishingBait)) return false
+  return true
+}
+
+function isHarvestedCropIdsField(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((id) => typeof id === 'string')
+}
+
+export function isSaveDataV21(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 21) return false
+  if (!isSaveDataV20({ ...v, version: 20 })) return false
+  if (!isHarvestedCropIdsField(v.harvestedCropIds)) return false
   return true
 }
 
@@ -1088,7 +1111,7 @@ function toV19(v18: SaveDataV18): SaveDataV19 {
  *  perishable batches, no drying racks, no hives, no fishing bait). Existing
  *  `placedTraps` entries simply lack `baitKind`, already optional on the
  *  shared `SavePlacedTrap` type — nothing to migrate there. */
-function toV20(v19: SaveDataV19): SaveData {
+function toV20(v19: SaveDataV19): SaveDataV20 {
   const { version: _version, ...rest } = v19
   return {
     ...rest,
@@ -1100,18 +1123,30 @@ function toV20(v19: SaveDataV19): SaveData {
   }
 }
 
-/** Migrates any post-v16 save payload to the canonical v20 shape. */
-function upToCurrent(v16: SaveDataV16): SaveData {
-  return toV20(toV19(toV18(toV17(v16))))
+/** Plan 172 — pre-v21 saves predate the natural crop lifecycle entirely, so
+ *  every wild crop restores unharvested (no ids to migrate). */
+function toV21(v20: SaveDataV20): SaveData {
+  const { version: _version, ...rest } = v20
+  return {
+    ...rest,
+    version: 21,
+    harvestedCropIds: [],
+  }
 }
 
-/** Accepts a stored v1–v20 save and always returns the canonical v20 shape. */
+/** Migrates any post-v16 save payload to the canonical v21 shape. */
+function upToCurrent(v16: SaveDataV16): SaveData {
+  return toV21(toV20(toV19(toV18(toV17(v16)))))
+}
+
+/** Accepts a stored v1–v21 save and always returns the canonical v21 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV20(value)) return value
-    if (isSaveDataV19(value)) return toV20(value)
-    if (isSaveDataV18(value)) return toV20(toV19(value))
-    if (isSaveDataV17(value)) return toV20(toV19(toV18(value)))
+    if (isSaveDataV21(value)) return value
+    if (isSaveDataV20(value)) return toV21(value)
+    if (isSaveDataV19(value)) return toV21(toV20(value))
+    if (isSaveDataV18(value)) return toV21(toV20(toV19(value)))
+    if (isSaveDataV17(value)) return toV21(toV20(toV19(toV18(value))))
     if (isSaveDataV16(value)) return upToCurrent(value)
     if (isSaveDataV15(value)) return upToCurrent(toV16(value))
     if (isSaveDataV14(value)) return upToCurrent(toV16(toV15(value)))

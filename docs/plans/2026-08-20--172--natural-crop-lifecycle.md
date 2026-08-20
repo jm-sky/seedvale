@@ -1,7 +1,7 @@
 # Plan: Natural Crop Lifecycle
 
 **Created:** 2026-08-20  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented 2026-08-20. Technical verification green (`tsc`/lint/build/test, 1314 tests); no browser/gameplay verification yet. See "Implementation summary" (§11) and the [implementation notes](./2026-08-20--172--natural-crop-lifecycle-implementation-notes.md) for scope adaptations made against the real codebase.  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~140~~  
 **domain:** `world-terrain`  
@@ -194,5 +194,20 @@ Nie implementować:
 - farm plots,
 - zaawansowanej ekonomii nasion,
 - pełnego systemu regeneracji naturalnej roślinności.
+
+## 11. Implementation summary (2026-08-20)
+
+Implemented end-to-end against the real codebase, following the implementation notes' §1 scope clarification (see that file for the full audit). Key points:
+
+- **Scope resolution**: the plan's examples (carrot/potato/cabbage) were, per the notes, already garden-anchored renewable pickups (`items/createItemSpawners.ts`, plan 159) — not natural terrain spawns. This plan adds a **second, independent** wild-terrain source for the same items (`terrain/chunkCrops.ts`), leaving the garden renewable-pickup mechanism untouched, per notes §1/§10.
+- **Lifecycle module**: `src/world/cropLifecycle.ts` — `CropGrowthStage` (`young`/`mature`/`spoiled`), a dedicated `CropId` union (`carrot`/`potato`/`cabbage`), data-only `CropDefinition`/`CROP_DEFS`, and a pure `resolveCropStage(def, stageStartedAt, worldDays)`. Deliberately not modeled on `TreeLifecycle`'s class-shaped API (no manager, no registry) — crops don't need canopy competition or chop stages, so the whole module is pure functions + data, per notes §2/§10/§18.
+- **Deviation — periodic (not one-shot) natural lifecycle**: `resolveCropStage` treats the young→mature→spoiled sequence as a *repeating* cycle (`cropCycleLengthDays`), a pure function of `(seed, worldDays)` like `world/weather.ts`'s cycling, rather than a one-shot terminal anchored at world day 0. A literal day-0 anchor would mean every wild crop in a chunk generated late into a long-running world is permanently `spoiled` (`elapsed ≫ cycleLength`), contradicting "world that lives independently of the player" (`CLAUDE.md`) and notes §5's explicit warning against exactly this. Harvesting still permanently removes a crop (sparse `removedCropIds`, never resurrected by the cycle) — only *unharvested* wild crops cycle.
+- **Natural placement**: `src/terrain/chunkCrops.ts`'s `computeChunkCrops()` mirrors `chunkItems.ts`'s flora-pool pattern (own RNG salt, own `crop<i>` id namespace, worker-safe/deterministic), favoring open/temperate ground (not desert, swamp, deep forest, ridge or high altitude). Wired into the existing worker pipeline (`chunkHeightmap.worker.ts` → `ChunkTileResult.crops` → `chunkWorkerPool.ts`), not a parallel generation path.
+- **Rendering**: `src/world/cropVisuals.ts`'s `createCropStageMesh()` reuses each crop's existing pickup mesh (`items.ts`'s `createItemMesh`) scaled/tinted per stage — no new GLBs. Individually meshed (`chunkManager.ts`'s new `chunk-crops` group), not instanced: natural crop density per chunk (`CROP_CANDIDATES_PER_CHUNK = 2`) is the same order of magnitude as the existing individually-meshed flora pickups, so this follows that established precedent rather than the plan's general "use instancing where possible" guidance.
+- **Lazy resolution**: stage is resolved when a chunk attaches content (load/reload) and fresh on every `getNearbyCrops`/`harvestCrop` call (from the placement's `stageStartedAt`, not a cached mesh attribute) — no per-frame ticking, no periodic "next transition" scheduler. Matches `TreeLifecycle`'s existing precedent: natural growth doesn't visually refresh a loaded chunk either, only presence-data queries (`getNearbyTrees`) are always fresh.
+- **Harvest**: new `Interactable{kind:'crop'}` + `ChunkManager.getNearbyCrops`/`harvestCrop` (mirrors `getNearbyItems`/`collectItem`). `createApp.ts`'s `harvestCropAction` checks inventory capacity *before* calling `harvestCrop` (mirrors the existing `item` branch's mutation order in `gameLoop.ts`) so a full inventory never destroys a crop for nothing. `young` and a `spoiled` crop with no `spoiledItem` yield nothing and are left in place. No `spoiledItem` defined for v1 (carrot/potato/cabbage) per notes §12.
+- **Persistence**: `SaveData` v21 (`persistence/saveData.ts`) adds `harvestedCropIds: string[]` — a sparse removal set, same contract as `collectedItemIds`, not a per-crop `stageStartedAt`/override (notes §6/§7/§24: unharvested natural crops need no save entry at all, since their state is fully time-derived).
+- **Plan 126 contract**: `resolveCropStage`/`CropDefinition`/`resolveCropHarvest` are already the small, reusable, presence-agnostic API a later planted-crop source can call with its own placement/anchor — no planting/seeds/inventory-consumption work was pulled into this plan.
+- **Verification**: `npx tsc --noEmit`, `pnpm lint:fix`, `pnpm run build`, `pnpm run test` (1314 tests, incl. new `world/cropLifecycle.test.ts` coverage for stage boundaries, cycling, and harvest yield rules) are all green. No browser/gameplay verification.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
