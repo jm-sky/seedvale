@@ -11,7 +11,8 @@
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "test": "vitest run",
-    "assets:report": "tsx scripts/generate-local-assets-report.ts"
+    "assets:report": "tsx scripts/generate-local-assets-report.ts",
+    "trace:analyze": "./scripts/analyze_trace.sh"
   },
   "dependencies": {
     "@lucide/vue": "^1.31.0",

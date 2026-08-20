@@ -23,6 +23,7 @@ Usage:
 
 from __future__ import annotations
 
+from datetime import datetime
 import json
 import sys
 from collections import defaultdict
@@ -121,7 +122,7 @@ config: dict = {
 lines: list[str] = []
 
 
-def emit(line: str = "", stdout_only: bool = True) -> None:
+def emit(line: str = "", stdout_only: bool = False) -> None:
     """
     Saves a line of text to the output buffer.
     """
@@ -146,6 +147,25 @@ def output(path: Path) -> None:
         print(f'Saving to "{output_path}')
         print('------------------------------')
         output_path.write_text(text + "\n", encoding="utf-8")
+
+
+def get_trace_date_time(path: Path) -> str:
+    """
+    Returns the date and time of the trace file.
+    """
+    parts = path.stem.split("-")
+    timestamp = ''
+    for part in parts:
+        if part.split('T')[0].isdigit():
+            timestamp = part
+            break
+
+    date = datetime.strptime(timestamp, "%Y%m%dT%H%M%S") if timestamp else None
+
+    if not timestamp:
+        return ''
+
+    return f'Trace date/time: {date.strftime("%Y-%m-%d %H:%M:%S")}'
 
 
 def md_title(text: str) -> str:
@@ -1436,9 +1456,8 @@ def main() -> None:
     )
     emit()
 
-    emit(
-        f"Reading: {path}"
-    )
+    emit(f"Reading: {path}")
+    emit(get_trace_date_time(path))
     emit()
 
     raw_events = load_trace(path)
