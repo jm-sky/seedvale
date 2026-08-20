@@ -105,3 +105,8 @@ export type Interactable =
    *  (or `spoiled` with a `spoiledItem`) crop; `young`/no-yield `spoiled`
    *  crops still show for flavor but yield nothing. */
   | { kind: 'crop', position: { x: number, z: number }, promptLabel: string, id: string, cropId: CropId, stage: CropGrowthStage }
+  /** Player-placed storage container (plan 164) — `[E]` opens the generic
+   *  transfer screen, `[R]` picks it up (with contents). Only stable
+   *  references; current contents are resolved fresh from `PlacedContainers`
+   *  at interact time, never a cached snapshot. */
+  | { kind: 'container', position: { x: number, z: number }, promptLabel: string, id: string }

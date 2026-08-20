@@ -11,6 +11,7 @@ import type { ChunkManager } from '../terrain/chunkManager'
 import type { ResourceDeposits } from '../terrain/resourceDeposits'
 import type { Beehives } from '../world/createBeehives'
 import type { DryingRacks } from '../world/createDryingRacks'
+import type { PlacedContainers } from '../world/createPlacedContainers'
 import type { PlacedTraps } from '../world/createPlacedTraps'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
@@ -230,6 +231,7 @@ export function buildInteractables(
   placedFires: PlacedFires,
   placedTents: PlacedTents,
   placedTraps: PlacedTraps,
+  placedContainers: PlacedContainers,
   resourceDeposits: ResourceDeposits,
   dryingRacks: DryingRacks,
   hives: Beehives,
@@ -295,6 +297,16 @@ export function buildInteractables(
       id: trap.id,
       trapKind: trap.kind,
       state: trap.state,
+    })
+  }
+
+  for (const container of placedContainers.list()) {
+    if (!withinRange(container.x, container.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'container',
+      position: { x: container.x, z: container.z },
+      promptLabel: '[E] Otwórz skrzynię · [R] Podnieś skrzynię',
+      id: container.id,
     })
   }
 

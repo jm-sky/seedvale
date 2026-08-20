@@ -293,6 +293,12 @@ export type GameLoopDeps = {
    *  happen before any world mutation, same "check before you cut" order as
    *  the `item` branch below. */
   harvestCrop?: (id: string, cropId: CropId, stage: CropGrowthStage) => void
+  /** Opens the generic container transfer screen for a placed `chest`
+   *  (plan 164 §7). */
+  openContainer?: (id: string) => void
+  /** Picks a placed container up (with contents) — carried state (plan 164
+   *  §8/§15), not an inventory item. */
+  pickUpContainer?: (id: string) => void
   /** A full night's sleep (`fadeStrength === 1` skip) just finished — owner
    *  (`createApp.ts`) applies the rest outcome for whatever camp it resolved
    *  when the rest started, and awards any Survival XP (plan 128 §5-§7). */
@@ -344,6 +350,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop,
+    openContainer, pickUpContainer,
     onSleepFinished, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
@@ -634,6 +641,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.placedFires,
         bundle.placedTents,
         bundle.placedTraps,
+        bundle.placedContainers,
         bundle.resourceDeposits,
         bundle.dryingRacks,
         bundle.hives,
@@ -1088,6 +1096,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (altInteractPressed) burnHive?.(target.id)
       } else if (target?.kind === 'crop') {
         if (interactPressed) harvestCrop?.(target.id, target.cropId, target.stage)
+      } else if (target?.kind === 'container') {
+        if (interactPressed) openContainer?.(target.id)
+        if (altInteractPressed) pickUpContainer?.(target.id)
       } else if (target?.kind === 'item') {
         if (interactPressed || altInteractPressed) {
           if (!inventory.canAdd(target.item.kind)) {
@@ -1350,6 +1361,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       )
       hud.setTime(dayNight.timeOfDay)
       hud.setExp(questManager.getExp())
+      // Plan 164 §9 — one authoritative load calc, recomputed every frame
+      // (cheap: `totalWeight()`/`carriedWeightKg()` are small-map sums, same
+      // order of cost as the HUD weight readout already updated on every
+      // inventory mutation) rather than threaded through every mutation site.
+      player.setEncumbrance(inventory.totalWeight() + bundle.placedContainers.carriedWeightKg(), inventory.maxWeight)
       withCategory(monitor, 'PHYSICS', () => { player.update(dt) })
       // Hunger/thirst/vigor progress on `worldDt` (scaled during a time-skip,
       // see above) — stamina keeps ticking inside `player.update(dt)` on raw

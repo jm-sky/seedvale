@@ -15,6 +15,8 @@ export type InventoryScreenHandlers = {
   onSellInstances?: (instanceIds: readonly string[]) => TradeResult
   /** Sharpen one weapon instance with a `whetstone` from inventory (plan 161). */
   onSharpen?: (instanceId: string) => SharpenResult
+  /** "Postaw" (plan 164) — places a purchased `chest` in the world. */
+  onPlaceContainer?: () => void
   onClose?: () => void
 }
 
@@ -63,6 +65,7 @@ export function createInventoryScreen(
       (kind) => handlers.onPlaceTrap?.(kind),
       (ids) => handlers.onSellInstances?.(ids) ?? 'invalid_offer',
       (id) => handlers.onSharpen?.(id) ?? 'invalid',
+      () => handlers.onPlaceContainer?.(),
     )
   }
 

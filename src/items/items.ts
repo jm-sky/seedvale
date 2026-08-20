@@ -67,8 +67,28 @@ export type ItemKind =
   | 'arrow'
   | 'broadhead_arrow'
   | 'war_arrow'
+  | 'chest'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
+
+/** Item gabarite (plan 164) — deliberately independent of `weight`. Governs
+ *  container/inventory *size* capacity only; a small heavy item and a large
+ *  light item fail different checks (`Inventory.ts`'s `canAdd`). */
+export type ItemSize = 'XS' | 'SM' | 'MD' | 'LG' | 'XL'
+
+/** Abstract capacity units per `ItemSize` — not physical dimensions, just a
+ *  scalar "how much room" answer (plan 164 §9: no Tetris packing). */
+export const ITEM_SIZE_UNITS: Record<ItemSize, number> = {
+  XS: 1,
+  SM: 2,
+  MD: 3,
+  LG: 4,
+  XL: 6,
+}
+
+export function itemSizeUnits(kind: ItemKind): number {
+  return ITEM_SIZE_UNITS[ITEM_DEFS[kind].size]
+}
 
 export type ItemDef = {
   label: string
@@ -77,6 +97,8 @@ export type ItemDef = {
   description?: string | null | undefined
   /** Kilograms — see `Inventory.ts`'s `totalWeight()`/`canAdd()`. */
   weight: number
+  /** Gabarite (plan 164) — see `ItemSize`. */
+  size: ItemSize
   color: number
 }
 
@@ -113,6 +135,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'muszla',
     categories: ['resource'],
     weight: 0.05,
+    size: 'XS',
     color: 0xf2e4c9,
     description: 'Lekka muszla znaleziona na brzegu. Przyda się do wymiany z Kupcem, gdy brakuje monet.'
   },
@@ -121,6 +144,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'kamień',
     categories: ['resource'],
     weight: 1,
+    size: 'SM',
     color: 0x8c8c8c,
     description: 'Zwykły, solidny kamień. Przydatny w budowie i rzemiośle.'
   },
@@ -129,6 +153,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'gałąź',
     categories: ['resource'],
     weight: 0.5,
+    size: 'SM',
     color: 0x6b4a2f,
     description: 'Sucha gałąź zebrana w lesie. Łatwo ją wykorzystać jako opał lub materiał do prostych przedmiotów lub pochodnię.'
   },
@@ -137,6 +162,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'grzyb',
     categories: ['resource', 'food'],
     weight: 0.1,
+    size: 'XS',
     color: 0xc0453c,
     description: 'Leśny grzyb rosnący w cieniu drzew. Niektóre gatunki nadają się do jedzenia.'
   },
@@ -145,6 +171,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'kwiat',
     categories: ['resource'],
     weight: 0.05,
+    size: 'XS',
     color: 0xdb6fa3,
     description: 'Delikatny kwiat zerwany z łąki. Może ozdobić dom lub posłużyć do prostych wyrobów.'
   },
@@ -153,6 +180,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'szyszka',
     categories: ['resource'],
     weight: 0.1,
+    size: 'XS',
     color: 0x7a5230,
     description: 'Drobna szyszka sosnowa. Sucha i łatwopalna, doskonała do rozpalania ognia.'
   },
@@ -161,6 +189,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'nóż',
     categories: ['tool'],
     weight: 0.4,
+    size: 'SM',
     color: 0xb7bfc7,
     description: 'Niewielkie, poręczne ostrze przydatne podczas pracy, polowania i przygotowywania żywności.'
   },
@@ -169,6 +198,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'krzesiwo',
     categories: ['tool'],
     weight: 0.2,
+    size: 'XS',
     color: 0x54504a,
     description: 'Proste krzesiwo pozwalające wzniecić ogień przy pomocy suchego drewna - ognisko, pochodnia itp.'
   },
@@ -177,6 +207,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'koc',
     categories: ['utility'],
     weight: 1.5,
+    size: 'LG',
     color: 0x8a4b3a,
     description: 'Ciepły, wełniany koc. Chroni przed chłodem podczas odpoczynku i snu.'
   },
@@ -185,6 +216,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'łopata',
     categories: ['tool'],
     weight: 2,
+    size: 'LG',
     color: 0x6b4a32,
     description: 'Solidna łopata do kopania ziemi, przygotowywania grządek i wyrównywania terenu.'
   },
@@ -193,6 +225,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'siekiera',
     categories: ['tool', 'weapon'],
     weight: 2.5,
+    size: 'MD',
     color: 0x7a7e86,
     description: 'Ciężka siekiera z ostrym stalowym ostrzem. Niezastąpiona przy ścinaniu drzew i rąbaniu drewna.'
   },
@@ -201,6 +234,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'miecz',
     categories: ['weapon'],
     weight: 2.5,
+    size: 'LG',
     color: 0x7a7e86,
     description: 'Długi, stalowy miecz. Ostry, wytrzymały i przeznaczony do walki.'
   },
@@ -209,6 +243,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'dzida',
     categories: ['weapon'],
     weight: 1.8,
+    size: 'LG',
     color: 0x8a7a5a,
     description: 'Prosta dzida z drewnianym drzewcem i metalowym grotem. Długi zasięg przydaje się do walki i polowania.'
   },
@@ -217,6 +252,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'krótki miecz',
     categories: ['weapon'],
     weight: 1.6,
+    size: 'MD',
     color: 0x9aa0a8,
     description: 'Krótki, poręczny miecz. Lżejszy i szybszy od miecza długiego, choć zadaje mniejsze obrażenia.'
   },
@@ -225,6 +261,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'widły',
     categories: ['tool'],
     weight: 1.8,
+    size: 'LG',
     color: 0x6b5a3a,
     description: 'Proste, mocne widły używane przy pracy w gospodarstwie i przenoszeniu siana.'
   },
@@ -233,6 +270,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'sierp',
     categories: ['tool'],
     weight: 0.7,
+    size: 'SM',
     color: 0x8a9098,
     description: 'Małe zakrzywione ostrze przeznaczone do ścinania trawy, zbóż i innych roślin.'
   },
@@ -241,6 +279,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'pochodnia',
     categories: ['tool'],
     weight: 1.2,
+    size: 'SM',
     color: 0x7a5230,
     description: 'Drewniana pochodnia dająca światło po zmroku i pomagająca rozświetlić ciemne miejsca.'
   },
@@ -249,6 +288,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'kilof',
     categories: ['tool'],
     weight: 2.5,
+    size: 'LG',
     color: 0x7a7e86,
     description: 'Ciężki kilof do rozbijania skał i wydobywania rud ukrytych w ziemi.'
   },
@@ -257,6 +297,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'namiot',
     categories: ['utility'],
     weight: 3,
+    size: 'XL',
     color: 0x8a6a3a,
     description: 'Lekki namiot zapewniający schronienie i miejsce do spania poza osadą.'
   },
@@ -265,6 +306,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'prosta pułapka',
     categories: ['utility'],
     weight: 2,
+    size: 'MD',
     color: 0x6f6a60,
     description: 'Prosta pułapka na drobną zwierzynę. Tania i lekka, ale szybko psuje się na deszczu i łatwiej ją wypatrzyć.'
   },
@@ -273,6 +315,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'dobra pułapka',
     categories: ['utility'],
     weight: 3.2,
+    size: 'MD',
     color: 0x9aa0a8,
     description: 'Solidna, kuta pułapka. Droższa, ale wytrzymuje niepogodę i trudniej ją zauważyć.'
   },
@@ -281,6 +324,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'węgiel',
     categories: ['resource'],
     weight: 1,
+    size: 'XS',
     color: 0x1c1c1c,
     description: 'Czarny, łatwopalny surowiec wydobywany spod ziemi. Doskonałe źródło opału i paliwo do wytopu.'
   },
@@ -289,6 +333,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'żelazo',
     categories: ['resource'],
     weight: 1.5,
+    size: 'SM',
     color: 0x8a4a30,
     description: 'Ciężka ruda o rdzawym kolorze. Jeden z najważniejszych surowców do wytwarzania narzędzi i broni.'
   },
@@ -297,6 +342,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'złoto',
     categories: ['resource'],
     weight: 0.4,
+    size: 'XS',
     color: 0xd4af37,
     description: 'Rzadka i cenna ruda o charakterystycznym złotym połysku. Ceniona za swoją wartość i piękno.'
   },
@@ -305,6 +351,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'pomidor',
     categories: ['food'],
     weight: 0.15,
+    size: 'XS',
     color: 0xc0392b,
     description: 'Dojrzały pomidor zerwany z przydomowego ogródka. Zaspokaja głód.'
   },
@@ -313,6 +360,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'surowe mięso',
     categories: ['food'],
     weight: 0.8,
+    size: 'SM',
     color: 0xa5453f,
     description: 'Świeżo pozyskane mięso. Lepiej upiec je przy ognisku, zanim się je zje.'
   },
@@ -321,6 +369,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'pieczone mięso',
     categories: ['food'],
     weight: 0.7,
+    size: 'SM',
     color: 0x8a5a3a,
     description: 'Mięso upieczone przy ognisku. Sycący posiłek.'
   },
@@ -329,6 +378,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'chleb',
     categories: ['food'],
     weight: 0.5,
+    size: 'SM',
     color: 0xc99a52,
     description: 'Bochenek chleba. Dobrze się przechowuje — przydatny na czarną godzinę.'
   },
@@ -337,6 +387,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'bukłak (pusty)',
     categories: ['utility'],
     weight: 0.3,
+    size: 'SM',
     color: 0x6b5a3a,
     description: 'Skórzany bukłak na wodę. Pusty — napełnij go przy studni lub jeziorze.'
   },
@@ -345,6 +396,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'bukłak (pełny)',
     categories: ['utility'],
     weight: 1.3,
+    size: 'SM',
     color: 0x4a9fd8,
     description: 'Skórzany bukłak pełen wody. Ugasi pragnienie.'
   },
@@ -353,6 +405,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'mięso sarny',
     categories: ['food'],
     weight: 0.9,
+    size: 'SM',
     color: 0xa5453f,
     description: 'Surowe mięso sarny, pozyskane z upolowanej zwierzyny. Lepiej upiec je przy ognisku.'
   },
@@ -361,6 +414,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'mięso wilka',
     categories: ['food'],
     weight: 0.75,
+    size: 'SM',
     color: 0x8f4a44,
     description: 'Chude, twarde mięso wilka. Jadalne, choć niezbyt sycące na surowo.'
   },
@@ -369,6 +423,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'mięso dzika',
     categories: ['food'],
     weight: 0.95,
+    size: 'SM',
     color: 0x9c4b3f,
     description: 'Tłuste mięso dzika. Sycące, zwłaszcza po upieczeniu.'
   },
@@ -377,6 +432,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'mięso królika',
     categories: ['food'],
     weight: 0.4,
+    size: 'SM',
     color: 0xb56a5a,
     description: 'Niewielka porcja mięsa królika. Niewiele go, ale łatwo o kolejnego.'
   },
@@ -385,6 +441,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'wołowina',
     categories: ['food'],
     weight: 1.2,
+    size: 'SM',
     color: 0xa14840,
     description: 'Kawał wołowiny z krowy. Najbardziej sycąca z surowych mięs.'
   },
@@ -393,6 +450,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'skóra',
     categories: ['resource'],
     weight: 0.6,
+    size: 'MD',
     color: 0x7a5a3f,
     description: 'Skóra zdjęta ze zwierzęcia przy oprawianiu tuszy. Przydatna do wyrobu i handlu.'
   },
@@ -401,6 +459,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'ser',
     categories: ['food'],
     weight: 0.4,
+    size: 'XS',
     color: 0xe8c96a,
     description: 'Krąg twardego sera. Dobrze się przechowuje i dobrze syci.'
   },
@@ -409,6 +468,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'suszone mięso',
     categories: ['food'],
     weight: 0.35,
+    size: 'XS',
     color: 0x6b3a2e,
     description: 'Paski suszonego mięsa. Lekkie, sycące i długo się nie psują — dobre na dłuższą wyprawę.'
   },
@@ -417,6 +477,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'moneta',
     categories: ['resource'],
     weight: 0.001,
+    size: 'XS',
     color: 0xc9a227,
     description: 'Bity krążek metalu. Kupiec płaci nim za towar i przyjmuje go za zakupy — także za działki na sprzedaż.'
   },
@@ -425,6 +486,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'zioło lecznicze',
     categories: ['food'],
     weight: 0.05,
+    size: 'XS',
     color: 0x5a8a4a,
     description: 'Pęczek leczniczych ziół znalezionych w lesie. Łagodzi rany, gdy się je zje.'
   },
@@ -433,6 +495,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'opatrunek',
     categories: ['utility'],
     weight: 0.2,
+    size: 'XS',
     color: 0xe8e0d0,
     description: 'Czysty opatrunek z apteczki. Szybko tamuje krwawienie i leczy rany.'
   },
@@ -441,6 +504,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'nóż damasceński',
     categories: ['tool', 'weapon'],
     weight: 0.35,
+    size: 'SM',
     color: 0x6fa5b8,
     description: 'Krótki nóż z falistym damasceńskim ostrzem. Lżejszy i ostrzejszy od zwykłego noża — nadal nadaje się do pracy przy zwłokach.'
   },
@@ -449,6 +513,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'krótki miecz damasceński',
     categories: ['weapon'],
     weight: 1.5,
+    size: 'MD',
     color: 0x6fa5b8,
     description: 'Krótki miecz z damasceńskiej stali. Szybki, ostry i lepiej wyważony niż zwykły krótki miecz.'
   },
@@ -457,6 +522,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'długi miecz damasceński',
     categories: ['weapon'],
     weight: 2.7,
+    size: 'LG',
     color: 0x3f5975,
     description: 'Elitarny długi miecz z damasceńskiej stali. Cięższy i wyraźnie groźniejszy od zwykłego miecza.'
   },
@@ -465,6 +531,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'obsydianowy miecz',
     categories: ['weapon'],
     weight: 2.0,
+    size: 'MD',
     color: 0x4a3068,
     description: 'Rzadki miecz z wulkanicznego szkła. Ostrze tnie wyjątkowo ostro, ale nie jest to niezniszczalna broń.'
   },
@@ -473,6 +540,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'topór bojowy',
     categories: ['tool', 'weapon'],
     weight: 3.8,
+    size: 'LG',
     color: 0x4a4e54,
     description: 'Ciężki topór bojowy. Zadaje większe obrażenia niż zwykła siekiera i nadal nadaje się do ścinania drzew.'
   },
@@ -481,6 +549,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'mistrzowski miecz',
     categories: ['weapon'],
     weight: 2.4,
+    size: 'LG',
     color: 0xe4ce75,
     description: 'Wysokiej jakości stalowy miecz kowalski. Lepszy od zwykłego miecza, mniej egzotyczny niż damasceńskie ostrza.'
   },
@@ -489,6 +558,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'jagody',
     categories: ['food'],
     weight: 0.1,
+    size: 'XS',
     color: 0x3a2a6a,
     description: 'Garść leśnych jagód. Szybko się psują, ale są łatwe do znalezienia.'
   },
@@ -497,6 +567,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'jabłko',
     categories: ['food'],
     weight: 0.15,
+    size: 'XS',
     color: 0xb8342a,
     description: 'Dzikie jabłko zerwane z drzewa w pobliżu osady.'
   },
@@ -505,6 +576,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'orzechy',
     categories: ['food'],
     weight: 0.15,
+    size: 'XS',
     color: 0x7a5a3a,
     description: 'Garść leśnych orzechów. Sycące i długo się przechowują.'
   },
@@ -513,6 +585,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'miód',
     categories: ['food'],
     weight: 0.4,
+    size: 'XS',
     color: 0xe8a825,
     description: 'Słoik miodu z dzikiego ula. Nie psuje się.'
   },
@@ -521,6 +594,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'marchew',
     categories: ['food'],
     weight: 0.12,
+    size: 'XS',
     color: 0xd9762c,
     description: 'Marchew zerwana z przydomowego ogródka.'
   },
@@ -529,6 +603,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'ziemniak',
     categories: ['food'],
     weight: 0.2,
+    size: 'XS',
     color: 0xc9a86a,
     description: 'Ziemniak wykopany z przydomowej grządki. Dobrze się przechowuje.'
   },
@@ -537,6 +612,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'kapusta',
     categories: ['food'],
     weight: 0.5,
+    size: 'SM',
     color: 0x7ba85a,
     description: 'Główka kapusty z przydomowego ogródka.'
   },
@@ -545,6 +621,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'ryba',
     categories: ['food'],
     weight: 0.5,
+    size: 'SM',
     color: 0x8fa8b8,
     description: 'Świeżo złowiona ryba. Szybko się psuje — najlepiej ją wysuszyć lub od razu zjeść.'
   },
@@ -553,6 +630,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'suszona ryba',
     categories: ['food'],
     weight: 0.25,
+    size: 'XS',
     color: 0x6b7a6b,
     description: 'Ryba wysuszona na suszarce. Lekka i długo się nie psuje.'
   },
@@ -561,6 +639,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'wędka',
     categories: ['tool'],
     weight: 0.9,
+    size: 'LG',
     color: 0x6b4a2f,
     description: 'Prosta wędka. Pozwala łowić ryby nad brzegiem jeziora.'
   },
@@ -569,6 +648,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'osełka',
     categories: ['utility'],
     weight: 0.3,
+    size: 'XS',
     color: 0x8a8a90,
     description: 'Kamień szlifierski. Przywraca ostrość zużytej broni białej.'
   },
@@ -577,6 +657,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'krótki łuk',
     categories: ['weapon'],
     weight: 1.0,
+    size: 'MD',
     color: 0x7a5a3a,
     description: 'Lekki, szybki łuk o niewielkim zasięgu. Łatwo go naciągnąć, ale zadaje mniejsze obrażenia.'
   },
@@ -585,6 +666,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'łuk myśliwski',
     categories: ['weapon'],
     weight: 1.4,
+    size: 'MD',
     color: 0x6b4a2f,
     description: 'Uniwersalny łuk myśliwski. Dobry kompromis między zasięgiem, siłą i szybkością strzału.'
   },
@@ -593,6 +675,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'długi łuk',
     categories: ['weapon'],
     weight: 1.9,
+    size: 'LG',
     color: 0x5a3a22,
     description: 'Długi, potężny łuk. Największy zasięg i obrażenia, ale wolniejsze naciąganie.'
   },
@@ -601,6 +684,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'strzała',
     categories: ['resource'],
     weight: 0.05,
+    size: 'XS',
     color: 0x8a7a5a,
     description: 'Zwykła drewniana strzała z metalowym grotem.'
   },
@@ -609,6 +693,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'strzała łowiecka',
     categories: ['resource'],
     weight: 0.06,
+    size: 'XS',
     color: 0xb5a06a,
     description: 'Strzała z szerokim grotem — zadaje większe obrażenia zwierzynie.'
   },
@@ -617,8 +702,18 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'strzała bojowa',
     categories: ['resource'],
     weight: 0.08,
+    size: 'XS',
     color: 0x5a5a5a,
     description: 'Cięższa, wzmocniona strzała bojowa. Zadaje największe obrażenia.'
+  },
+  chest: {
+    kind: 'chest',
+    label: 'skrzynia',
+    categories: ['utility'],
+    weight: 4,
+    size: 'XL',
+    color: 0x6b4a2f,
+    description: 'Solidna drewniana skrzynia. Postaw ją w świecie, by przechowywać przedmioty.'
   },
 }
 

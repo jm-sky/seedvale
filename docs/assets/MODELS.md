@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-08-19
+**Last updated:** 2026-08-20
 
 ## How to use
 
@@ -58,6 +58,7 @@ If the feature needs no new model, do nothing to this file.
 | M29 | Campfire unlit body | Stones + stacked wood, no baked flame — `VillageFire` / `PlacedFires` / world remains; `simple` hides stone materials | `wired` | plan 101 parked, plan 135 (`settlement/campfire_unlit.glb`) |
 | M30 | Campfire burning (Quaternius) | Baked flame in mesh — not usable with fuel toggle | `in repo` | plan 101 (`campfire_burning_q.glb`) |
 | M31 | Campfire burning (Poly) | Higher-quality baked flame; CC-BY | `in repo` | plan 101 (`campfire_burning_poly.glb`) |
+| M53 | Storage chest | Player-placed container (`items.chest`); procedural box+lid fallback (`world/containerProp.ts`) wired now | `wired` (procedural) | [plan 164](../plans/2026-08-19--164--player-storage-and-container-system.md) |
 | M32 | Village well GLB | Replaces procedural `createWell` (fallback kept) | `wired` | plan 101 (`settlement/well.glb`) |
 | M33 | Wood pile stockpile | Stacked beams; replaces wired `logs.glb` | `wired` | plan 101 (`settlement/wood_pile.glb`, CC-BY) |
 | M34 | Fantasy RTS logs | Former stockpile mesh | `in repo` | `settlement/logs.glb` |

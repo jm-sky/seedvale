@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from './Inventory'
 import { isWeaponItemInstance } from './itemInstances'
+import { itemSizeUnits } from './items'
 import { createTrapInstance } from './trapItemInstances'
 import { createWeaponInstance } from './weaponMaintenance'
 
@@ -178,5 +179,49 @@ describe('Inventory food batches (plan 159)', () => {
     inv.add('berries', 1, 0)
     inv.clear()
     expect(inv.getFoodBatches('berries')).toEqual([])
+  })
+})
+
+describe('Inventory gabarite capacity (plan 164)', () => {
+  it('defaults maxSize to Infinity — no size gate unless a caller opts in', () => {
+    const inv = new Inventory({}, 1000)
+    expect(inv.maxSize).toBe(Infinity)
+    expect(inv.canAdd('stone', 500)).toBe(true)
+  })
+
+  it('gates additions on size independently of weight', () => {
+    // `stone` = 1 kg, size SM (2 units) — maxWeight is generous so only the
+    // 5-unit size cap can ever reject.
+    const inv = new Inventory({}, 1000, undefined, undefined, 5)
+    expect(itemSizeUnits('stone')).toBe(2)
+    expect(inv.canAdd('stone', 2)).toBe(true)
+    expect(inv.add('stone', 2)).toBe(true)
+    expect(inv.totalSize()).toBe(4)
+    expect(inv.canAdd('stone', 1)).toBe(false)
+    expect(inv.add('stone', 1)).toBe(false)
+    expect(inv.count('stone')).toBe(2)
+  })
+
+  it('gates additions on weight independently of size', () => {
+    // maxSize is generous here so only the 2 kg weight cap can reject.
+    const inv = new Inventory({}, 2, undefined, undefined, 1000)
+    expect(inv.canAdd('stone', 2)).toBe(true)
+    expect(inv.add('stone', 2)).toBe(true)
+    expect(inv.canAdd('stone', 1)).toBe(false)
+  })
+
+  it('counts one instance-backed item as one physical item toward totalSize', () => {
+    const inv = new Inventory({}, 1000, undefined, undefined, 1000)
+    inv.add('stone', 3)
+    inv.addInstance(createTrapInstance('trap_simple'))
+    expect(inv.totalSize()).toBe(itemSizeUnits('stone') * 3 + itemSizeUnits('trap_simple'))
+  })
+
+  it('canAddInstance respects maxSize the same way canAdd does', () => {
+    const inv = new Inventory({}, 1000, undefined, undefined, 2)
+    const trap = createTrapInstance('trap_simple')
+    expect(itemSizeUnits('trap_simple')).toBeGreaterThan(2)
+    expect(inv.canAddInstance(trap)).toBe(false)
+    expect(inv.addInstance(trap)).toBe(false)
   })
 })

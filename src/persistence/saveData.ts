@@ -1,6 +1,7 @@
 import type { WorldConfig } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
+import type { ContainerKind } from '../items/container'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { QuestState } from '../quests/quests'
@@ -360,8 +361,37 @@ export type SaveDataV21 = Omit<SaveDataV20, 'version'> & {
   harvestedCropIds: string[]
 }
 
-/** Canonical save shape — always v21. `loadSaveData` migrates older saves up. */
-export type SaveData = SaveDataV21
+/** Persistent player-placed storage container (plan 164) — mirrors
+ *  `world/createPlacedContainers.ts`'s `PlacedContainerRecord`: only what
+ *  can't be re-derived from `CONTAINER_DEFS` (capacity/base weight stay in
+ *  the def, never duplicated here). */
+export type SavePlacedContainer = {
+  id: string
+  kind: ContainerKind
+  x: number
+  z: number
+  yaw: number
+  counts: Partial<Record<ItemKind, number>>
+  instances: SaveItemInstance[]
+}
+
+/** The container currently in the player's hands (plan 164 §8/§15) — same
+ *  contents shape, no position/yaw since it has none while carried. */
+export type SaveCarriedContainer = {
+  id: string
+  kind: ContainerKind
+  counts: Partial<Record<ItemKind, number>>
+  instances: SaveItemInstance[]
+}
+
+export type SaveDataV22 = Omit<SaveDataV21, 'version'> & {
+  version: 22
+  placedContainers: SavePlacedContainer[]
+  carriedContainer: SaveCarriedContainer | null
+}
+
+/** Canonical save shape — always v22. `loadSaveData` migrates older saves up. */
+export type SaveData = SaveDataV22
 
 function isSaveConfig(value: unknown): value is SaveConfig {
   if (!value || typeof value !== 'object') return false
@@ -921,12 +951,57 @@ function isHarvestedCropIdsField(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((id) => typeof id === 'string')
 }
 
-export function isSaveDataV21(value: unknown): value is SaveData {
+export function isSaveDataV21(value: unknown): value is SaveDataV21 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 21) return false
   if (!isSaveDataV20({ ...v, version: 20 })) return false
   if (!isHarvestedCropIdsField(v.harvestedCropIds)) return false
+  return true
+}
+
+const CONTAINER_KINDS: ReadonlySet<string> = new Set<ContainerKind>(['chest'])
+
+function isSaveItemInstancesField(value: unknown): value is SaveItemInstance[] {
+  return isInventoryInstancesField(value)
+}
+
+function isPlacedContainersField(value: unknown): value is SavePlacedContainer[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const c = entry as Record<string, unknown>
+    return (
+      typeof c.id === 'string' &&
+      typeof c.kind === 'string' && CONTAINER_KINDS.has(c.kind) &&
+      typeof c.x === 'number' &&
+      typeof c.z === 'number' &&
+      typeof c.yaw === 'number' &&
+      !!c.counts && typeof c.counts === 'object' &&
+      isSaveItemInstancesField(c.instances)
+    )
+  })
+}
+
+function isCarriedContainerField(value: unknown): value is SaveCarriedContainer | null {
+  if (value === null) return true
+  if (!value || typeof value !== 'object') return false
+  const c = value as Record<string, unknown>
+  return (
+    typeof c.id === 'string' &&
+    typeof c.kind === 'string' && CONTAINER_KINDS.has(c.kind) &&
+    !!c.counts && typeof c.counts === 'object' &&
+    isSaveItemInstancesField(c.instances)
+  )
+}
+
+export function isSaveDataV22(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 22) return false
+  if (!isSaveDataV21({ ...v, version: 21 })) return false
+  if (!isPlacedContainersField(v.placedContainers)) return false
+  if (!isCarriedContainerField(v.carriedContainer)) return false
   return true
 }
 
@@ -1125,7 +1200,7 @@ function toV20(v19: SaveDataV19): SaveDataV20 {
 
 /** Plan 172 — pre-v21 saves predate the natural crop lifecycle entirely, so
  *  every wild crop restores unharvested (no ids to migrate). */
-function toV21(v20: SaveDataV20): SaveData {
+function toV21(v20: SaveDataV20): SaveDataV21 {
   const { version: _version, ...rest } = v20
   return {
     ...rest,
@@ -1134,19 +1209,32 @@ function toV21(v20: SaveDataV20): SaveData {
   }
 }
 
-/** Migrates any post-v16 save payload to the canonical v21 shape. */
-function upToCurrent(v16: SaveDataV16): SaveData {
-  return toV21(toV20(toV19(toV18(toV17(v16)))))
+/** Plan 164 — pre-v22 saves predate player storage entirely, so no container
+ *  has ever been placed or carried. */
+function toV22(v21: SaveDataV21): SaveData {
+  const { version: _version, ...rest } = v21
+  return {
+    ...rest,
+    version: 22,
+    placedContainers: [],
+    carriedContainer: null,
+  }
 }
 
-/** Accepts a stored v1–v21 save and always returns the canonical v21 shape. */
+/** Migrates any post-v16 save payload to the canonical v22 shape. */
+function upToCurrent(v16: SaveDataV16): SaveData {
+  return toV22(toV21(toV20(toV19(toV18(toV17(v16))))))
+}
+
+/** Accepts a stored v1–v22 save and always returns the canonical v22 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV21(value)) return value
-    if (isSaveDataV20(value)) return toV21(value)
-    if (isSaveDataV19(value)) return toV21(toV20(value))
-    if (isSaveDataV18(value)) return toV21(toV20(toV19(value)))
-    if (isSaveDataV17(value)) return toV21(toV20(toV19(toV18(value))))
+    if (isSaveDataV22(value)) return value
+    if (isSaveDataV21(value)) return toV22(value)
+    if (isSaveDataV20(value)) return toV22(toV21(value))
+    if (isSaveDataV19(value)) return toV22(toV21(toV20(value)))
+    if (isSaveDataV18(value)) return toV22(toV21(toV20(toV19(value))))
+    if (isSaveDataV17(value)) return toV22(toV21(toV20(toV19(toV18(value)))))
     if (isSaveDataV16(value)) return upToCurrent(value)
     if (isSaveDataV15(value)) return upToCurrent(toV16(value))
     if (isSaveDataV14(value)) return upToCurrent(toV16(toV15(value)))

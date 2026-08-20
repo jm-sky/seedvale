@@ -770,6 +770,15 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 162 — Kupiec stock. Heaviest, highest-damage ammo variant.',
   },
+  chest: {
+    kind: 'chest',
+    label: 'skrzynia',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 164 — Kupiec stock. Placed world container (`world/createPlacedContainers.ts`), not a `HeldTool`. Bought empty; place with Quick Actions, `[E]` opens the transfer screen, `[R]` picks it back up (with contents).',
+  },
 }
 
 /** Flat per-arrow-kind damage delta applied on top of the bow's own

@@ -25,6 +25,7 @@ import { createHealthState, type HealthState } from '../shared/HealthState'
 import { isExhausted } from '../shared/StaminaState'
 import { type Collider, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
+import { computeEncumbrance } from './playerEncumbrance'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerMovementVigor, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
 import { integrateVerticalMotion } from './verticalMotion'
@@ -128,6 +129,10 @@ export class PlayerController {
   private meleeAttacking = false
   private moving = false
   private sprinting = false
+  /** Set once per frame by `setEncumbrance()` (plan 164 §9) — `app/gameLoop.ts`
+   *  is the sole caller, right before `update()`. */
+  private encumbranceSpeedMultiplier = 1
+  private encumbranceBlocked = false
   /** Metres travelled while sneaking since the last Sneak XP award (plan 128
    *  §1). Runtime-only and reset whenever Sneak switches off — standing still
    *  with the toggle on earns nothing. */
@@ -434,6 +439,17 @@ export class PlayerController {
     return this.sprinting ? 'sprinting' : 'moving'
   }
 
+  /** Recomputes movement-speed overload from this frame's carried load (plan
+   *  164 §9) — `app/gameLoop.ts` is the sole caller, once per frame, right
+   *  before `update()`. Kept as an explicit setter (not inventory access on
+   *  `this`) so `PlayerController` stays free of `Inventory`/container
+   *  coupling — see `player/playerEncumbrance.ts`'s single authoritative calc. */
+  setEncumbrance(loadKg: number, capacityKg: number): void {
+    const result = computeEncumbrance(loadKg, capacityKg)
+    this.encumbranceSpeedMultiplier = result.speedMultiplier
+    this.encumbranceBlocked = result.blocked
+  }
+
   setPosition(x: number, z: number): void {
     this.mesh.position.x = x
     this.mesh.position.z = z
@@ -575,13 +591,14 @@ export class PlayerController {
     if (this.keys.left) this.wish.sub(this.right)
     if (this.keys.right) this.wish.add(this.right)
 
+    if (this.encumbranceBlocked) this.wish.set(0, 0, 0)
     this.moving = this.wish.lengthSq() > 0
     this.sprinting = this.moving && this.keys.sprint && !isExhausted(this.needs.stamina)
     tickPlayerStamina(this.needs.stamina, dt, this.sprinting)
     if (this.moving) tickPlayerMovementVigor(this.needs.vigor, dt, this.sprinting)
     if (!this.skills.sneak.active) this.sneakUseDistance = 0
     if (this.moving) {
-      const baseSpeed = this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED
+      const baseSpeed = (this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED) * this.encumbranceSpeedMultiplier
       const speed = applySneakSpeedModifier(baseSpeed, this.skills.sneak.active)
       this.wish.normalize().multiplyScalar(speed * dt)
       // Sneak progresses from distance actually sneaked, not from frames with

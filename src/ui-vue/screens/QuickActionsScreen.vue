@@ -54,6 +54,11 @@ function placeTrap(kind: TrapKind): void {
   ui.quickActions.onPlaceTrap?.(kind)
 }
 
+function putDownContainer(): void {
+  closeQuickActions()
+  ui.quickActions.onPutDownContainer?.()
+}
+
 function dig(): void {
   closeQuickActions()
   ui.quickActions.onDig?.()
@@ -181,6 +186,15 @@ const shovelActions: Action[] = [
           :key="hours"
           :label="`${hours}h`"
           @click="wait(hours)"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.hasCarriedContainer"
+        label="Skrzynia"
+      >
+        <QuickActionsButton
+          label="Odłóż skrzynię"
+          @click="putDownContainer"
         />
       </QuickActionsGroup>
       <QuickActionsGroup label="Odpoczynek">

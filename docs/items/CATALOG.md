@@ -12,6 +12,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Concern | Where |
 |---------|--------|
 | Inventory weight / label | `ITEM_DEFS` |
+| Gabarite / size (plan 164) | `ITEM_DEFS[kind].size` (`ItemSize`: `XS`\|`SM`\|`MD`\|`LG`\|`XL`) — independent of `weight`; `items/items.ts`'s `ITEM_SIZE_UNITS`/`itemSizeUnits()` convert to abstract capacity units checked by `Inventory.maxSize`/`totalSize()`/`canAdd()` and by container capacity (`items/container.ts`) |
 | Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, spear, short_sword, pitchfork, sickle, damascus_knife, damascus_short_sword, damascus_long_sword, obsidian_sword, battle_axe, masterwork_sword, fishing_rod, short_bow, hunting_bow, long_bow |
 | Weapon maintenance (plan 161) | `items/itemInstances.ts`'s `WEAPON_MAINTENANCE_KINDS` (13 kinds: knife, short_sword, long_sword, spear, axe, pitchfork, sickle + the six plan-160 variants) are `ItemInstance`-backed with `durability`/`sharpness` (`[0,1]`, new = 1/1); `shovel`/`pickaxe` are explicitly excluded. `HeldTool.heldInstanceId()` tracks which concrete instance is in hand. `items/weaponMaintenance.ts` — `getSharpnessDamageModifier()` (100%→100%…0%→55%) feeds melee damage before the critical roll; sharpness/durability wear applies once per resolved hit via `Inventory.updateInstance()`. `whetstone` (stackable) + `sharpenWeapon()` restore sharpness only, never durability; no repair/broken lifecycle in v1. |
 | Ranged combat (plan 162) | `ITEM_CATALOG[kind].ranged` (`RangedConfig`) on `short_bow`/`hunting_bow`/`long_bow` — `player/playerRanged.ts` runs the draw→release→recovery lifecycle (same shape as melee); `combat/projectile.ts` is the lightweight swept-segment flight/collision model (no visual arrow mesh in v1); `combat/rangedAttack.ts` turns bow accuracy + `archery` skill into aim deviation, not a separate hit-roll. Ammo (`arrow`/`broadhead_arrow`/`war_arrow`) is ordinary stackable count, 1 consumed per shot, no per-arrow instance/recovery. |
@@ -104,6 +105,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | arrow | strzała | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; base ammo for every bow |
 | broadhead_arrow | strzała łowiecka | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +4 damage over `arrow` |
 | war_arrow | strzała bojowa | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +8 damage over `arrow`, heaviest |
+| chest | skrzynia | — | — | none (Kupiec) | procedural (M53 needed) | plan 164; generic player storage container — place with Inventory „Postaw”, `[E]` open transfer screen / `[R]` pick up (with contents) on the world prop, Quick Actions → „Odłóż skrzynię” while carrying |
 
 ## Roadmap (not done)
 

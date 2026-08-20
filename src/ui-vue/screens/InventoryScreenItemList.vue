@@ -73,6 +73,7 @@ function onPlaceTrap(kind: ItemKind): void {
   const trapKind = trapKindForItem(kind)
   if (trapKind) ui.inventory.onPlaceTrap?.(trapKind)
 }
+function onPlaceContainer(): void { ui.inventory.onPlaceContainer?.() }
 </script>
 
 <template>
@@ -175,6 +176,12 @@ function onPlaceTrap(kind: ItemKind): void {
               class="min-h-0 py-1"
               label="Zastaw"
               @click="onPlaceTrap(item.kind)"
+            />
+            <ItemsScreenItemButton
+              v-if="item.kind === 'chest'"
+              class="min-h-0 py-1"
+              label="Postaw"
+              @click="onPlaceContainer"
             />
             <ItemsScreenItemButton
               v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"

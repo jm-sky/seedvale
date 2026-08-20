@@ -43,10 +43,17 @@ import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
 import { COOK_DURATION_SEC, findCookingRecipe } from '../items/campfireCooking'
+import {
+  CONTAINER_DEFS,
+  CONTAINER_PLACE_REACH,
+  CONTAINER_PLACEMENT_MESSAGE,
+  CONTAINER_SETUP_DURATION_SEC,
+  containerTotalWeight,
+} from '../items/container'
 import { BAIT_ITEM_PRIORITY, getFreshnessStage } from '../items/foodFreshness'
 import { askGuardForSword, shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
-import { Inventory } from '../items/Inventory'
+import { DEFAULT_MAX_SIZE, Inventory } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
 import { isChopTool, isHarvestKnife, ITEM_CATALOG } from '../items/itemCatalog'
 import { isInstanceBackedKind, isTrapItemInstance, isWeaponMaintenanceKind } from '../items/itemInstances'
@@ -383,6 +390,8 @@ export async function createApp(
     initialSave?.placedFires ?? [],
     initialSave?.placedTents ?? [],
     (initialSave?.placedTraps ?? []).map((t) => ({ ...t, baitKind: t.baitKind ?? null })),
+    initialSave?.placedContainers ?? [],
+    initialSave?.carriedContainer ?? null,
     treeLifecycle,
     getWorldDays,
     dayNight,
@@ -436,6 +445,7 @@ export async function createApp(
     undefined,
     initialSave ? Inventory.instancesFromJSON(initialSave.inventoryInstances ?? []) : undefined,
     initialSave?.foodBatches,
+    DEFAULT_MAX_SIZE,
   )
   // Plan 161 — pre-existing count-based weapons (starting knife, older saves)
   // have no recoverable condition; every unit becomes a fresh full-condition
@@ -463,6 +473,7 @@ export async function createApp(
       lightBranch: canLightBranch(),
       lightWoodenTorch: canLightWoodenTorch(),
     })
+    vueUi.setQuickActionsHasCarriedContainer(bundle.placedContainers.hasCarried())
   }
 
   const keyboard = createKeyboard()
@@ -816,7 +827,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 21,
+    version: 22,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -877,6 +888,8 @@ export async function createApp(
     hives: bundle.hives.nodes().map((hive) => ({ ...hive })),
     fishingBait: Object.fromEntries(fishingBait),
     harvestedCropIds: [...removedCropIds],
+    placedContainers: bundle.placedContainers.nodes().map((c) => ({ ...c })),
+    carriedContainer: bundle.placedContainers.carriedNode(),
   })
 
   const saveNow = (): Promise<void> => writeSave(buildSaveData())
@@ -1250,6 +1263,190 @@ export async function createApp(
     inventoryScreen.close()
     placeTrapAtAim(kind)
   }
+
+  /** Sets a purchased, empty `chest` down in front of the player (plan 164
+   *  §4) — same busy-channel shape as pitching a tent/setting a trap: the
+   *  inventory item is only spent when the channel completes. `peers` is
+   *  containers only (not tents/traps) — `CONTAINER_PLACEMENT_MESSAGE`'s
+   *  `container` reason is specifically "another chest already stands here". */
+  const placeContainerAtAim = (): void => {
+    if (!inventory.has('chest', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const def = CONTAINER_DEFS.chest
+    const yaw = mouseLook.state.yaw
+    const x = player.mesh.position.x - Math.sin(yaw) * CONTAINER_PLACE_REACH
+    const z = player.mesh.position.z - Math.cos(yaw) * CONTAINER_PLACE_REACH
+    const reason = evaluateGroundPlacement({
+      x,
+      z,
+      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+      waterLevel: bundle.chunkManager.waterLevel,
+      blockers: tentBlockers(x, z),
+      peers: bundle.placedContainers.nodes(),
+      footprintRadius: def.footprintRadius,
+      separation: def.separation,
+    })
+    if (reason !== 'ok') {
+      toast.show(CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason], 'error')
+      return
+    }
+    busy.start(CONTAINER_SETUP_DURATION_SEC, 'Stawianie skrzyni…', () => {
+      if (!inventory.remove('chest', 1)) return
+      bundle.placedContainers.place('chest', x, z, yaw)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      toast.show('Postawiono skrzynię.')
+    })
+  }
+
+  inventoryScreenHandlers.onPlaceContainer = () => {
+    inventoryScreen.close()
+    placeContainerAtAim()
+  }
+
+  /** Sets the carried container back down in front of the player (plan 164
+   *  §8/§15) — the put-down counterpart of `placeContainerAtAim`; contents
+   *  travel with the same `PlacedContainerEntry`, never touching player
+   *  `Inventory`. Quick Actions' "Odłóż skrzynię" (only shown while
+   *  carrying) is the sole caller. */
+  const putDownContainerAtAim = (): void => {
+    const kind = bundle.placedContainers.carriedKind()
+    if (!kind || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const def = CONTAINER_DEFS[kind]
+    const yaw = mouseLook.state.yaw
+    const x = player.mesh.position.x - Math.sin(yaw) * CONTAINER_PLACE_REACH
+    const z = player.mesh.position.z - Math.cos(yaw) * CONTAINER_PLACE_REACH
+    const reason = evaluateGroundPlacement({
+      x,
+      z,
+      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+      waterLevel: bundle.chunkManager.waterLevel,
+      blockers: tentBlockers(x, z),
+      peers: bundle.placedContainers.nodes(),
+      footprintRadius: def.footprintRadius,
+      separation: def.separation,
+    })
+    if (reason !== 'ok') {
+      toast.show(CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason], 'error')
+      return
+    }
+    busy.start(CONTAINER_SETUP_DURATION_SEC, 'Stawianie skrzyni…', () => {
+      if (!bundle.placedContainers.putDownCarried(x, z, yaw)) return
+      syncQuickActionAvailability()
+      toast.show('Odłożono skrzynię.')
+    })
+  }
+
+  const openContainer = (id: string): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const entry = bundle.placedContainers.find(id)
+    if (!entry) return
+    openContainerId = id
+    const def = CONTAINER_DEFS[entry.kind]
+    vueUi.openContainerScreen(
+      def.label,
+      entry.contents.toJSON(),
+      buildInventoryGroups(entry.contents),
+      containerTotalWeight(def, entry.contents.totalWeight()),
+      def.capacityUnits,
+      inventoryCountsForUi(inventory),
+      buildInventoryGroups(inventory),
+      inventory.totalWeight(),
+      inventory.maxWeight,
+    )
+  }
+
+  const refreshContainerScreenFor = (id: string): void => {
+    const entry = bundle.placedContainers.find(id)
+    if (!entry || !vueUi.isContainerScreenOpen()) return
+    const def = CONTAINER_DEFS[entry.kind]
+    vueUi.refreshContainerScreen(
+      entry.contents.toJSON(),
+      buildInventoryGroups(entry.contents),
+      containerTotalWeight(def, entry.contents.totalWeight()),
+      def.capacityUnits,
+      inventoryCountsForUi(inventory),
+      buildInventoryGroups(inventory),
+      inventory.totalWeight(),
+      inventory.maxWeight,
+    )
+  }
+
+  /** The container currently shown by the transfer screen — set on open,
+   *  cleared when that same container is picked up, so `configureContainerScreen`'s
+   *  handlers (registered once, below) always act on the right
+   *  `PlacedContainerEntry` without the screen itself knowing container ids.
+   *  Opening a different container overwrites it; a stale id left behind by
+   *  an Esc/backdrop close is harmless since the transfer buttons are only
+   *  rendered while `ui.containerScreen.open` is true. */
+  let openContainerId: string | null = null
+
+  const pickUpContainer = (id: string): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    if (!bundle.placedContainers.pickUp(id)) return
+    if (openContainerId === id) {
+      vueUi.closeContainerScreen()
+      openContainerId = null
+    }
+    syncQuickActionAvailability()
+    toast.show('Podniesiono skrzynię.')
+  }
+
+  vueUi.configureContainerScreen({
+    onDeposit: (kind, amount) => {
+      if (!openContainerId) return
+      const accepted = bundle.placedContainers.deposit(openContainerId, kind, amount, inventory.oldestAcquiredAtDays(kind) ?? undefined)
+      if (accepted <= 0) {
+        toast.show('Brak miejsca w skrzyni.', 'error')
+        return
+      }
+      if (!inventory.remove(kind, accepted)) return
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      refreshContainerScreenFor(openContainerId)
+    },
+    onWithdraw: (kind, amount) => {
+      if (!openContainerId) return
+      if (!inventory.canAdd(kind, amount)) {
+        toast.show('Ekwipunek jest za ciężki albo za mały.', 'error')
+        return
+      }
+      const entry = bundle.placedContainers.find(openContainerId)
+      const acquiredAtDays = entry?.contents.oldestAcquiredAtDays(kind) ?? undefined
+      const removed = bundle.placedContainers.withdraw(openContainerId, kind, amount)
+      if (removed <= 0) return
+      inventory.add(kind, removed, acquiredAtDays)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      refreshContainerScreenFor(openContainerId)
+    },
+    onDepositInstance: (instanceId) => {
+      if (!openContainerId) return
+      const instance = inventory.getInstance(instanceId)
+      if (!instance) return
+      if (!bundle.placedContainers.depositInstance(openContainerId, instance)) {
+        toast.show('Brak miejsca w skrzyni.', 'error')
+        return
+      }
+      if (!inventory.removeInstance(instanceId)) return
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      refreshContainerScreenFor(openContainerId)
+    },
+    onWithdrawInstance: (instanceId) => {
+      if (!openContainerId) return
+      const instance = bundle.placedContainers.find(openContainerId)?.contents.getInstance(instanceId)
+      if (!instance || !inventory.canAddInstance(instance)) {
+        toast.show('Ekwipunek jest za ciężki albo za mały.', 'error')
+        return
+      }
+      const withdrawn = bundle.placedContainers.withdrawInstance(openContainerId, instanceId)
+      if (!withdrawn) return
+      if (!inventory.addInstance(withdrawn)) return
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+      refreshContainerScreenFor(openContainerId)
+    },
+  })
 
   const armTrap = (id: string): void => {
     if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
@@ -1963,6 +2160,7 @@ export async function createApp(
   const quickActions = createQuickActions(container, {
     hasShovel: inventory.has('shovel', 1),
     hasTent: inventory.has('tent', 1),
+    hasCarriedContainer: bundle.placedContainers.hasCarried(),
     nearTown: isNearTown(),
     onOpen: () => {
       restorePointerLockAfterQuickActions = exitGamePointerLock(renderer.domElement)
@@ -2017,6 +2215,7 @@ export async function createApp(
     },
     onPlaceTent: placeTentAtAim,
     onPlaceTrap: placeTrapAtAim,
+    onPutDownContainer: putDownContainerAtAim,
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()
@@ -2215,6 +2414,8 @@ export async function createApp(
     collectHive: collectHiveAction,
     burnHive: burnHiveAction,
     harvestCrop: harvestCropAction,
+    openContainer,
+    pickUpContainer,
     onSleepFinished,
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,

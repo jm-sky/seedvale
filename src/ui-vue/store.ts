@@ -58,6 +58,9 @@ type InventoryState = {
   onPlaceTrap: ((kind: TrapKind) => void) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
   onSharpen: ((instanceId: string) => SharpenResult) | null
+  /** "Postaw" (plan 164) — places a purchased `chest` in the world ahead of
+   *  the player, same ground-suitability flow as `onPlaceTent`. */
+  onPlaceContainer: (() => void) | null
 }
 type PauseMenuState = {
   open: boolean; seed: number; playerName: string; activeSaveName: string
@@ -99,6 +102,11 @@ type QuickActionsState = {
   onPlaceTrap: ((kind: TrapKind) => void) | null
   hasTent: boolean
   traps: QuickActionsTraps
+  /** True while the player is carrying a placed container (plan 164 §8) —
+   *  drives the "Odłóż skrzynię" action, the put-down counterpart of
+   *  `onPlaceTent`/inventory's `onPlaceContainer`. */
+  hasCarriedContainer: boolean
+  onPutDownContainer: (() => void) | null
   onOpen: (() => void) | null
   onClose: (() => void) | null
 }
@@ -111,6 +119,30 @@ type MerchantState = {
   onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>) => TradeResult) | null
   onSellCoins: ((kind: ItemKind) => TradeResult) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
+}
+/** Generic container transfer screen (plan 164 §7) — same "seller/buyer
+ *  two-column, visually/interaction-wise based on the merchant screen" shape
+ *  the plan asks for, minus prices: `container*` mirrors `merchant`'s stock
+ *  column, `player*` mirrors the player's own inventory. Kind-agnostic (any
+ *  `ContainerKind`) — `label` is the only per-container-instance text. */
+type ContainerScreenState = {
+  open: boolean
+  label: string
+  containerCounts: Partial<Record<ItemKind, number>>
+  containerGroups: readonly InventoryGroupView[]
+  containerWeightKg: number
+  containerMaxSizeUnits: number
+  playerCounts: Partial<Record<ItemKind, number>>
+  playerGroups: readonly InventoryGroupView[]
+  playerTotalWeight: number
+  playerMaxWeight: number
+  /** Player → container. `amount` lets the row's +/- stepper move more than
+   *  one unit per click, same UX as merchant's barter offer stepper. */
+  onDeposit: ((kind: ItemKind, amount: number) => void) | null
+  /** Container → player. */
+  onWithdraw: ((kind: ItemKind, amount: number) => void) | null
+  onDepositInstance: ((instanceId: string) => void) | null
+  onWithdrawInstance: ((instanceId: string) => void) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number; progress: number; canCancelRest: boolean }
 type BusyState = { visible: boolean; label: string; blurred: boolean; progress: number | null }
@@ -242,7 +274,7 @@ export function emitUiClick(): void {
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
-  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null } as InventoryState,
+  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null, onRefresh: null,
@@ -258,9 +290,15 @@ export const ui = reactive({
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, lightBranch: false, lightWoodenTorch: false },
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
+    hasCarriedContainer: false, onPutDownContainer: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false } as TimeSkipState,
   merchant: { open: false, npc: null, counts: {}, groups: [], onBuyCoins: null, onBuyBarter: null, onSellCoins: null, onSellInstances: null } as MerchantState,
+  containerScreen: {
+    open: false, label: '', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
+    playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0,
+    onDeposit: null, onWithdraw: null, onDepositInstance: null, onWithdrawInstance: null,
+  } as ContainerScreenState,
   busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
@@ -448,6 +486,7 @@ export function openInventory(
   onPlaceTrap: (kind: TrapKind) => void,
   onSellInstances: (instanceIds: readonly string[]) => TradeResult,
   onSharpen: (instanceId: string) => SharpenResult,
+  onPlaceContainer: () => void,
 ): void {
   ui.inventory.counts = { ...counts }
   ui.inventory.groups = groups
@@ -461,6 +500,7 @@ export function openInventory(
   ui.inventory.onPlaceTrap = onPlaceTrap
   ui.inventory.onSellInstances = onSellInstances
   ui.inventory.onSharpen = onSharpen
+  ui.inventory.onPlaceContainer = onPlaceContainer
   ui.inventory.open = true
   emitUiOpen()
 }
@@ -521,9 +561,59 @@ export function closeMerchant(): void {
 }
 export function isMerchantOpen(): boolean { return ui.merchant.open }
 
+export function configureContainerScreen(handlers: Pick<ContainerScreenState, 'onDeposit' | 'onWithdraw' | 'onDepositInstance' | 'onWithdrawInstance'>): void {
+  Object.assign(ui.containerScreen, handlers)
+}
+export function openContainerScreen(
+  label: string,
+  containerCounts: Partial<Record<ItemKind, number>>,
+  containerGroups: readonly InventoryGroupView[],
+  containerWeightKg: number,
+  containerMaxSizeUnits: number,
+  playerCounts: Partial<Record<ItemKind, number>>,
+  playerGroups: readonly InventoryGroupView[],
+  playerTotalWeight: number,
+  playerMaxWeight: number,
+): void {
+  ui.containerScreen.label = label
+  ui.containerScreen.containerCounts = { ...containerCounts }
+  ui.containerScreen.containerGroups = containerGroups
+  ui.containerScreen.containerWeightKg = containerWeightKg
+  ui.containerScreen.containerMaxSizeUnits = containerMaxSizeUnits
+  ui.containerScreen.playerCounts = { ...playerCounts }
+  ui.containerScreen.playerGroups = playerGroups
+  ui.containerScreen.playerTotalWeight = playerTotalWeight
+  ui.containerScreen.playerMaxWeight = playerMaxWeight
+  ui.containerScreen.open = true
+  emitUiOpen()
+}
+export function refreshContainerScreen(
+  containerCounts: Partial<Record<ItemKind, number>>,
+  containerGroups: readonly InventoryGroupView[],
+  containerWeightKg: number,
+  containerMaxSizeUnits: number,
+  playerCounts: Partial<Record<ItemKind, number>>,
+  playerGroups: readonly InventoryGroupView[],
+  playerTotalWeight: number,
+  playerMaxWeight: number,
+): void {
+  if (!ui.containerScreen.open) return
+  ui.containerScreen.containerCounts = { ...containerCounts }
+  ui.containerScreen.containerGroups = containerGroups
+  ui.containerScreen.containerWeightKg = containerWeightKg
+  ui.containerScreen.containerMaxSizeUnits = containerMaxSizeUnits
+  ui.containerScreen.playerCounts = { ...playerCounts }
+  ui.containerScreen.playerGroups = playerGroups
+  ui.containerScreen.playerTotalWeight = playerTotalWeight
+  ui.containerScreen.playerMaxWeight = playerMaxWeight
+}
+export function closeContainerScreen(): void { ui.containerScreen.open = false }
+export function isContainerScreenOpen(): boolean { return ui.containerScreen.open }
+
 export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 'open'>>): void { Object.assign(ui.quickActions, handlers) }
 export function setQuickActionsHasShovel(hasShovel: boolean): void { ui.quickActions.hasShovel = hasShovel }
 export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions.hasTent = hasTent }
+export function setQuickActionsHasCarriedContainer(hasCarriedContainer: boolean): void { ui.quickActions.hasCarriedContainer = hasCarriedContainer }
 export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }
 export function setQuickActionsTraps(traps: QuickActionsTraps): void {
   const current = ui.quickActions.traps

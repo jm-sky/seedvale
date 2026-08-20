@@ -36,6 +36,12 @@ import { type Beehives, createBeehives } from '../world/createBeehives'
 import { createDryingRacks, type DryingRacks } from '../world/createDryingRacks'
 import { createLargeCaves, type LargeCaves } from '../world/createLargeCaves'
 import { createOcean, type WorldOcean } from '../world/createOcean'
+import {
+  createPlacedContainers,
+  type PlacedContainerRecord,
+  type PlacedContainers,
+  type SaveCarriedContainer,
+} from '../world/createPlacedContainers'
 import { createPlacedTraps, type PlacedTraps, type PlacedTrapsHooks } from '../world/createPlacedTraps'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
@@ -83,6 +89,7 @@ export type WorldBundle = {
   placedFires: PlacedFires
   placedTents: PlacedTents
   placedTraps: PlacedTraps
+  placedContainers: PlacedContainers
   largeCaves: LargeCaves
   dryingRacks: DryingRacks
   hives: Beehives
@@ -283,6 +290,13 @@ export async function createWorldBundle(
   initialPlacedFires: readonly PlacedFire[],
   initialPlacedTents: readonly PlacedTent[],
   initialPlacedTraps: readonly PlacedTrapRecord[],
+  /** Plan 164 — persistent player-placed storage containers, same "carried
+   *  across rebuild, reset only on a genuinely new world" contract as
+   *  `initialPlacedTents`/`initialPlacedTraps`. */
+  initialPlacedContainers: readonly PlacedContainerRecord[],
+  /** Plan 164 — the container currently in the player's hands (if any),
+   *  same reset contract. */
+  initialCarriedContainer: SaveCarriedContainer | null,
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
   dayNight: DayNightState,
@@ -354,6 +368,12 @@ export async function createWorldBundle(
     { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
     initialPlacedTraps,
   )
+  const placedContainers = createPlacedContainers(
+    scene,
+    chunkManager.sampleHeight,
+    initialPlacedContainers,
+    initialCarriedContainer,
+  )
   const largeCaves = createLargeCaves(
     scene,
     chunkManager,
@@ -375,7 +395,7 @@ export async function createWorldBundle(
     initialHives,
   )
 
-  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, largeCaves, dryingRacks, hives }
+  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, placedContainers, largeCaves, dryingRacks, hives }
 }
 
 /** Disposes every member's current instance and mutates `bundle`'s fields in
@@ -433,6 +453,9 @@ export async function rebuildWorldBundle(
   bundle.placedTents.dispose()
   const carriedTraps = resetCollectedItems ? [] : [...bundle.placedTraps.nodes()]
   bundle.placedTraps.dispose()
+  const carriedContainerNodes = resetCollectedItems ? [] : [...bundle.placedContainers.nodes()]
+  const carriedContainerHeld = resetCollectedItems ? null : bundle.placedContainers.carriedNode()
+  bundle.placedContainers.dispose()
   const carriedDryingRacks = resetCollectedItems ? [] : [...bundle.dryingRacks.nodes()]
   bundle.dryingRacks.dispose()
   const carriedHives = resetCollectedItems ? [] : [...bundle.hives.nodes()]
@@ -489,6 +512,12 @@ export async function rebuildWorldBundle(
     { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
     carriedTraps,
   )
+  bundle.placedContainers = createPlacedContainers(
+    scene,
+    bundle.chunkManager.sampleHeight,
+    carriedContainerNodes,
+    carriedContainerHeld,
+  )
   bundle.largeCaves = createLargeCaves(
     scene,
     bundle.chunkManager,
@@ -518,6 +547,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.placedFires.dispose()
   bundle.placedTents.dispose()
   bundle.placedTraps.dispose()
+  bundle.placedContainers.dispose()
   bundle.largeCaves.dispose()
   bundle.dryingRacks.dispose()
   bundle.hives.dispose()

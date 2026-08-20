@@ -9,7 +9,7 @@ import {
   type TrapItemInstance,
   type WeaponItemInstance,
 } from './itemInstances'
-import { ITEM_DEFS, type ItemKind } from './items'
+import { ITEM_DEFS, type ItemKind, itemSizeUnits } from './items'
 
 /** Default carry limit (kg) — see plan `2026-08-08--043`. Not persisted (the
  *  plan keeps weight/limit derived from config/definitions, not save data);
@@ -17,6 +17,13 @@ import { ITEM_DEFS, type ItemKind } from './items'
  *  Callers other than the player pass their own `maxWeight` (see `NpcAgent`'s
  *  small carry cap, plan 131). */
 const DEFAULT_MAX_WEIGHT = 20
+
+/** Default gabarite capacity (plan 164), independent of `maxWeight` — see
+ *  `ItemSize`. Only the player's own inventory uses this default (passed
+ *  explicitly by `createApp.ts`, since the constructor's own default stays
+ *  `Infinity` for every other caller — NPC carrying, container contents,
+ *  pre-164 tests). */
+export const DEFAULT_MAX_SIZE = 40
 
 export type SaveItemInstance = {
   id: string
@@ -48,14 +55,21 @@ export class Inventory {
    *  `isFoodPerishable()`. Every entry's batches always sum to `counts.get(kind)`. */
   private readonly foodBatches = new Map<ItemKind, FoodBatch[]>()
   readonly maxWeight: number
+  /** Gabarite capacity (plan 164), independent of `maxWeight` — see
+   *  `ItemSize`/`itemSizeUnits`. `Infinity` (the default for every caller
+   *  that doesn't pass one — NPC temporary carrying, pre-164 tests) means
+   *  "no size gate", matching pre-existing behaviour exactly. */
+  readonly maxSize: number
 
   constructor(
     initial?: Partial<Record<ItemKind, number>>,
     maxWeight = DEFAULT_MAX_WEIGHT,
     initialInstances?: readonly ItemInstance[],
     initialFoodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>,
+    maxSize = Infinity,
   ) {
     this.maxWeight = maxWeight
+    this.maxSize = maxSize
     if (initial) {
       for (const [kind, count] of Object.entries(initial) as [ItemKind, number][]) {
         if (count > 0) this.counts.set(kind, count)
@@ -143,13 +157,28 @@ export class Inventory {
     return total
   }
 
-  /** Whether `n` more of `kind` would still fit under `maxWeight`. */
+  /** Gabarite occupied right now (plan 164) — `weight`'s independent
+   *  counterpart. A stack occupies `count × itemSizeUnits(kind)` (one
+   *  physical item's size per unit, implementation notes §11 — never
+   *  "a stack is one slot"). */
+  totalSize(): number {
+    let total = 0
+    for (const [kind, n] of this.counts) total += itemSizeUnits(kind) * n
+    for (const instance of this.instances.values()) total += itemSizeUnits(instance.kind)
+    return total
+  }
+
+  /** Whether `n` more of `kind` would still fit under both `maxWeight` and
+   *  `maxSize` — independent constraints (plan 164 §10): a small heavy item
+   *  can fail only the weight check, a large light one only the size check. */
   canAdd(kind: ItemKind, n = 1): boolean {
-    return this.totalWeight() + ITEM_DEFS[kind].weight * n <= this.maxWeight + 1e-9
+    if (this.totalWeight() + ITEM_DEFS[kind].weight * n > this.maxWeight + 1e-9) return false
+    return this.totalSize() + itemSizeUnits(kind) * n <= this.maxSize + 1e-9
   }
 
   canAddInstance(instance: ItemInstance): boolean {
-    return this.totalWeight() + ITEM_DEFS[instance.kind].weight <= this.maxWeight + 1e-9
+    if (this.totalWeight() + ITEM_DEFS[instance.kind].weight > this.maxWeight + 1e-9) return false
+    return this.totalSize() + itemSizeUnits(instance.kind) <= this.maxSize + 1e-9
   }
 
   /** Adds `n` of `kind` if it fits under `maxWeight`; a no-op (returns false)

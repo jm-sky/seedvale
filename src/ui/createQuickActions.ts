@@ -34,10 +34,15 @@ export type QuickActionsHandlers = {
   /** Sets an animal trap down in front of the player (plan 141) — the same
    *  inventory → world placement shape as `onPlaceTent`. */
   onPlaceTrap?: (kind: TrapKind) => void
+  /** Puts the carried container back down (plan 164 §8) — shown only while
+   *  `hasCarriedContainer` is true. */
+  onPutDownContainer?: () => void
   /** Initial shovel ownership for showing dig/level buttons. */
   hasShovel?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */
   hasTent?: boolean
+  /** Initial carried-container flag for showing "Odłóż skrzynię". */
+  hasCarriedContainer?: boolean
   /** Which trap kinds the player currently carries (plan 141). */
   traps?: QuickActionsTraps
   /** Initial near-settlement flag for showing "Odpocznij w mieście". */
@@ -69,6 +74,9 @@ export function createQuickActions(
   }
   if (typeof handlers.hasTent === 'boolean') {
     getUi()?.setQuickActionsHasTent(handlers.hasTent)
+  }
+  if (typeof handlers.hasCarriedContainer === 'boolean') {
+    getUi()?.setQuickActionsHasCarriedContainer(handlers.hasCarriedContainer)
   }
   if (typeof handlers.nearTown === 'boolean') {
     getUi()?.setQuickActionsNearTown(handlers.nearTown)

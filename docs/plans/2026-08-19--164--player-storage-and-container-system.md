@@ -1,7 +1,7 @@
 # Plan: Player Storage & Container System
 
 **Created:** 2026-08-19
-**Status:** `planned` 📋
+**Status:** `done` — implemented + technically verified (`tsc`/lint/build/test all green, save schema bumped to v22). Browser/manual verification not performed — see implementation notes below.
 **Priority:** high · **Effort:** M
 **Depends on:** none
 
@@ -382,5 +382,33 @@ Gracz może:
 8. zapisać i odtworzyć jej stan.
 
 Jednocześnie system jest gotowy do wykorzystania przez przyszłe NPC storage i logistics.
+
+## 17. Implementation notes (2026-08-20)
+
+**Implemented:**
+
+- `ItemSize`/`ITEM_SIZE_UNITS`/`itemSizeUnits()` (`items/items.ts`) — every `ItemKind` has a `size`, independent of `weight`.
+- `Inventory.maxSize`/`totalSize()`/`canAdd()`/`canAddInstance()` (`items/Inventory.ts`) — gabarite gate independent of weight; player's own inventory uses `DEFAULT_MAX_SIZE = 40` (`createApp.ts`), every other caller (NPC, container contents, older tests) keeps the pre-164 `Infinity` default.
+- Generic `Container`/`ContainerDef`/`CONTAINER_DEFS` (`items/container.ts`) — reuses `Inventory` directly as contents (no second stored-item model); `chest` is the only concrete kind so far, per §12/§14.
+- World lifecycle: `world/createPlacedContainers.ts` (place/pick up/put down/deposit/withdraw, mirrors `PlacedTents`/`PlacedTraps`) + `world/containerProp.ts` (procedural box+lid, no GLB yet — `docs/assets/MODELS.md` M53).
+- Player encumbrance: `player/playerEncumbrance.ts`'s `computeEncumbrance()` (smoothstep-interpolated 10%→30% band, matches §9's thresholds) — `PlayerController.setEncumbrance()`, called once/frame from `gameLoop.ts` with `inventory.totalWeight() + bundle.placedContainers.carriedWeightKg()`.
+- Interaction: `[E]` opens the generic transfer screen (`ContainerScreen.vue`, modeled on `MerchantScreen.vue` per §7 — two columns, no prices), `[R]` picks the container up with contents (`interactables.ts`/`gameLoop.ts`/`createApp.ts`'s `openContainer`/`pickUpContainer`). Inventory's "Postaw" places a purchased chest (`placeContainerAtAim`); Quick Actions' "Odłóż skrzynię" puts a carried one back down (`putDownContainerAtAim`), shown only while `hasCarriedContainer`.
+- Persistence: `SaveDataV22` (`placedContainers`/`carriedContainer`), full migration chain from every older version, restores as empty/null on pre-v22 saves.
+- `items/tradeCatalog.ts`/`itemCatalog.ts` — `chest` is Kupiec-only stock (25 coin), matches §4.
+
+**Technically verified:** `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, `pnpm run test` all pass, including new unit coverage (`items/Inventory.test.ts`'s gabarite-capacity block, `player/playerEncumbrance.test.ts`, `items/container.test.ts`, `persistence/saveData.test.ts`'s v22 block).
+
+**Not done / deliberately deferred (matches §12/§14):**
+
+- Only `chest` exists; Small/Medium/Large/Barrel/Crate/Sack and material variants are future work.
+- No GLB for the chest yet — procedural box+lid prop.
+
+**Browser/manual verification — not performed** (per repo convention, TS/lint/build/test passing is not proof of correct visual/gameplay behavior). Needs a manual pass in the running dev server:
+
+- Buy a chest from Kupiec, place it (Inventory "Postaw"), confirm ground-placement rejection messages (water/slope/object/another chest).
+- `[E]` open the transfer screen, move items both directions (stackable + at least one instance-backed kind, e.g. a trap), confirm capacity/weight rejection toasts.
+- `[R]` pick the chest up (with contents), confirm Quick Actions shows "Odłóż skrzynię" and puts it back down correctly.
+- Overload the player past 10%/30% thresholds (carry a full chest + inventory) and confirm the speed reduction/movement block feels smooth, not a hard pop.
+- Save, reload, and rebuild the world (walk far away and back) — confirm the chest's position/contents/carried state all survive.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
