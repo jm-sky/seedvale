@@ -100,6 +100,7 @@ Natural vegetation
 ### Fresh new
 
 > Place for plans links
+- `2026-08-20--179--animal-attack-and-npc-defense.md`
 
 ---
 
