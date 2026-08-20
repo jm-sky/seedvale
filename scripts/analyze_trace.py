@@ -3,448 +3,849 @@
 import json
 import sys
 from collections import defaultdict
-from pathlib import Path
+from dataclasses import dataclass, field
 
 
-WRAPPER_NAMES = {
-    "RunTask",
-    "RunMicrotasks",
-    "FunctionCall",
-    "EvaluateScript",
-    "V8.Execute",
-    "V8.RunMicrotasks",
-    "EventDispatch",
-    "AnimationFrame",
-    "TimerFire",
-    "ThreadControllerImpl::RunTask",
-}
+VERSION = "v11"
+TOP_N = 5
 
-GPU_KEYWORDS = (
-    "getProgramInfoLog",
-    "getShaderInfoLog",
+
+WEBGL_PATTERNS = (
+    "WebGL",
+    "webgl",
+    "drawElements",
+    "drawArrays",
+    "drawElementsInstanced",
+    "drawArraysInstanced",
+    "uniform",
+    "bindTexture",
+    "texImage",
+    "texSubImage",
+    "createBuffer",
+    "deleteBuffer",
+    "bindBuffer",
+    "bufferData",
+    "bufferSubData",
+    "createTexture",
+    "deleteTexture",
+    "createFramebuffer",
+    "bindFramebuffer",
+    "createRenderbuffer",
+    "bindRenderbuffer",
+    "viewport",
+    "scissor",
+    "clear",
+)
+
+SHADER_PATTERNS = (
     "compileShader",
     "linkProgram",
+    "getShaderInfoLog",
+    "getProgramInfoLog",
+    "shaderSource",
+    "attachShader",
+    "detachShader",
+    "validateProgram",
     "createShader",
     "createProgram",
-    "deleteShader",
-    "deleteProgram",
-    "shaderSource",
-    "drawArrays",
-    "drawElements",
-    "drawArraysInstanced",
-    "drawElementsInstanced",
-    "WebGL",
-    "Shader",
-    "GPU",
+    "WebGLProgram",
+    "WebGLShader",
 )
 
-CPU_RENDER_KEYWORDS = (
-    "render",
-    "Render",
-    "Renderer",
-    "EffectComposer",
-    "WebGLRenderer",
-)
-
-MAX_PATH_DEPTH = 12
+GPU_NAMES = {
+    "GPUTask",
+}
 
 
-def duration_us(event):
-    value = event.get("dur")
-    return value if isinstance(value, (int, float)) and value > 0 else 0
+@dataclass
+class Node:
+    event: dict
+    parent: "Node | None" = None
+    children: list["Node"] = field(default_factory=list)
+
+    @property
+    def name(self):
+        return self.event.get("name", "(anonymous)")
+
+    @property
+    def ts(self):
+        return self.event.get("ts", 0)
+
+    @property
+    def dur(self):
+        return self.event.get("dur", 0) or 0
+
+    @property
+    def end(self):
+        return self.ts + self.dur
 
 
-def duration_ms(us):
+@dataclass
+class Operation:
+    name: str
+    total_us: float = 0
+    self_us: float = 0
+    calls: int = 0
+    samples: int = 0
+    locations: set = field(default_factory=set)
+
+
+def ms(us):
     return us / 1000.0
 
 
-def name(event):
-    return str(event.get("name", "<unknown>"))
+def fmt_ms(us):
+    return f"{ms(us):,.1f} ms"
 
 
-def category(event):
-    n = name(event)
+def event_location(event):
+    args = event.get("args", {})
+    data = args.get("data", {}) if isinstance(args, dict) else {}
 
-    if any(keyword in n for keyword in GPU_KEYWORDS):
-        return "GPU / WebGL / Shader"
+    url = data.get("url")
+    line = data.get("lineNumber")
+    column = data.get("columnNumber")
 
-    if any(keyword in n for keyword in CPU_RENDER_KEYWORDS):
-        return "CPU / Rendering"
+    if not url:
+        return None
+
+    if line is not None and column is not None:
+        return f"{url}:{line}:{column}"
+
+    if line is not None:
+        return f"{url}:{line}"
+
+    return url
+
+
+def classify(name):
+    lower = name.lower()
+
+    if name in GPU_NAMES or "gpu" in lower:
+        return "GPU"
+
+    if any(p.lower() in lower for p in SHADER_PATTERNS):
+        return "WebGL / Shader"
+
+    if any(p.lower() in lower for p in WEBGL_PATTERNS):
+        return "WebGL"
 
     return "CPU"
 
 
-def is_wrapper(event):
-    return name(event) in WRAPPER_NAMES
+def is_webgl(name):
+    lower = name.lower()
 
-
-def event_location(event):
-    args = event.get("args") or {}
-    data = args.get("data") or {}
-
-    url = (
-        data.get("url")
-        or data.get("scriptName")
-        or data.get("scriptUrl")
+    return (
+        any(p.lower() in lower for p in WEBGL_PATTERNS)
+        or any(p.lower() in lower for p in SHADER_PATTERNS)
     )
 
-    function = (
-        data.get("functionName")
-        or data.get("function")
-    )
 
-    if function and url:
-        return f"{function} ({url})"
-
-    if url:
-        return str(url)
-
-    if function:
-        return str(function)
-
-    return None
+def is_shader(name):
+    lower = name.lower()
+    return any(p.lower() in lower for p in SHADER_PATTERNS)
 
 
-def format_event(event):
-    n = name(event)
-    location = event_location(event)
-
-    if location:
-        return f"{n} — {location}"
-
-    return n
-
-
-def build_children(events):
-    """
-    Build a nesting tree for duration events using timestamp ranges.
-
-    Chrome trace events are generally represented as:
-        parent [----------------]
-          child [-----]
-          child       [----]
-
-    We use a stack ordered by timestamp and duration.
-    """
-    indexed = []
+def build_intervals(events):
+    intervals = []
+    stacks = defaultdict(list)
 
     for index, event in enumerate(events):
-        dur = duration_us(event)
+        ph = event.get("ph")
 
-        if dur <= 0:
-            continue
+        if ph == "X":
+            dur = event.get("dur", 0) or 0
 
-        ts = event.get("ts")
+            if dur > 0:
+                intervals.append(
+                    {
+                        "event": event,
+                        "index": index,
+                        "start": event.get("ts", 0),
+                        "end": event.get("ts", 0) + dur,
+                    }
+                )
 
-        if not isinstance(ts, (int, float)):
-            continue
+        elif ph == "B":
+            key = (
+                event.get("pid"),
+                event.get("tid"),
+            )
 
-        indexed.append(
-            (
-                ts,
-                ts + dur,
-                index,
-                event,
+            stacks[key].append(
+                (event, index)
+            )
+
+        elif ph == "E":
+            key = (
+                event.get("pid"),
+                event.get("tid"),
+            )
+
+            stack = stacks.get(key)
+
+            if not stack:
+                continue
+
+            start_event, start_index = stack.pop()
+
+            start = start_event.get("ts", 0)
+            end = event.get("ts", start)
+
+            if end <= start:
+                continue
+
+            synthetic = dict(start_event)
+            synthetic["dur"] = end - start
+            synthetic["_begin_index"] = start_index
+            synthetic["_end_index"] = index
+
+            intervals.append(
+                {
+                    "event": synthetic,
+                    "index": start_index,
+                    "start": start,
+                    "end": end,
+                }
+            )
+
+    return intervals
+
+
+def build_call_tree(intervals):
+    by_thread = defaultdict(list)
+
+    for item in intervals:
+        event = item["event"]
+
+        key = (
+            event.get("pid"),
+            event.get("tid"),
+        )
+
+        by_thread[key].append(item)
+
+    roots = []
+
+    for items in by_thread.values():
+        items.sort(
+            key=lambda x: (
+                x["start"],
+                -x["end"],
             )
         )
 
-    indexed.sort(
-        key=lambda item: (
-            item[0],
-            -item[1],
-        )
+        stack = []
+
+        for item in items:
+            while stack and item["start"] >= stack[-1].end:
+                stack.pop()
+
+            while stack and item["end"] > stack[-1].end:
+                stack.pop()
+
+            node = Node(
+                event=item["event"]
+            )
+
+            if stack:
+                node.parent = stack[-1]
+                stack[-1].children.append(node)
+            else:
+                roots.append(node)
+
+            stack.append(node)
+
+    return roots
+
+
+def calculate_self_time(node):
+    if not node.children:
+        return node.dur
+
+    children = sorted(
+        (
+            (child.ts, child.end)
+            for child in node.children
+        ),
+        key=lambda x: x[0],
     )
 
-    children = defaultdict(list)
-    stack = []
+    covered = 0
+    current_start = None
+    current_end = None
 
-    for start, end, index, event in indexed:
-        while stack and start >= stack[-1][1]:
-            stack.pop()
-
-        if stack:
-            parent_index = stack[-1][2]
-
-            # Only create a parent-child relation when the child
-            # is completely contained in the parent.
-            if end <= stack[-1][1]:
-                children[parent_index].append(index)
-
-        stack.append((start, end, index))
-
-    return children
-
-
-def compute_self_time(events, children):
-    self_times = {}
-
-    for index, event in enumerate(events):
-        total = duration_us(event)
-
-        if total <= 0:
+    for start, end in children:
+        if current_start is None:
+            current_start = start
+            current_end = end
             continue
 
-        child_total = sum(
-            duration_us(events[child])
-            for child in children.get(index, [])
+        if start <= current_end:
+            current_end = max(
+                current_end,
+                end,
+            )
+        else:
+            covered += (
+                current_end -
+                current_start
+            )
+
+            current_start = start
+            current_end = end
+
+    if current_start is not None:
+        covered += (
+            current_end -
+            current_start
         )
 
-        self_times[index] = max(0, total - child_total)
-
-    return self_times
-
-
-def build_parent_map(children):
-    parents = {}
-
-    for parent, child_list in children.items():
-        for child in child_list:
-            parents[child] = parent
-
-    return parents
+    return max(
+        0,
+        node.dur - covered,
+    )
 
 
-def build_path(index, events, parents):
+def collect_operations(roots):
+    operations = {}
+
+    def visit(node):
+        name = node.name
+
+        operation = operations.setdefault(
+            name,
+            Operation(name=name),
+        )
+
+        operation.total_us += node.dur
+        operation.self_us += calculate_self_time(node)
+        operation.calls += 1
+
+        location = event_location(
+            node.event
+        )
+
+        if location:
+            operation.locations.add(
+                location
+            )
+
+        for child in node.children:
+            visit(child)
+
+    for root in roots:
+        visit(root)
+
+    return operations
+
+
+def find_path(node):
     path = []
-    current = index
-    seen = set()
+    current = node
 
-    while current in parents and current not in seen:
-        seen.add(current)
+    while current:
         path.append(current)
-        current = parents[current]
+        current = current.parent
 
-        if len(path) >= MAX_PATH_DEPTH:
-            break
-
-    path.reverse()
-    path.append(index)
-
-    # Remove duplicates while preserving order.
-    result = []
-    seen = set()
-
-    for item in path:
-        if item not in seen:
-            result.append(item)
-            seen.add(item)
-
-    return result
+    return list(reversed(path))
 
 
-def print_path(index, events, parents):
-    path = build_path(index, events, parents)
+def print_tree(node, max_depth=8):
+    path = find_path(node)
+
+    if len(path) > max_depth:
+        path = path[-max_depth:]
 
     for depth, item in enumerate(path):
-        event = events[item]
-
         indent = "  " * depth
-        duration = duration_ms(duration_us(event))
 
         print(
-            f"   {indent}→ {format_event(event)} "
-            f"({duration:,.1f} ms)"
+            f"{indent}→ {item.name} "
+            f"({fmt_ms(item.dur)})"
         )
 
 
-def main():
-    if len(sys.argv) != 2:
-        print(
-            f"Usage: {Path(sys.argv[0]).name} TRACE.json",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+def top_nodes(roots, predicate):
+    result = []
 
-    path = Path(sys.argv[1])
+    def visit(node):
+        if predicate(node):
+            result.append(node)
 
-    print(f"Reading: {path}")
+        for child in node.children:
+            visit(child)
 
-    with path.open("r", encoding="utf-8") as f:
-        trace = json.load(f)
+    for root in roots:
+        visit(root)
 
-    events = trace.get("traceEvents", [])
-
-    timed_count = sum(
-        1 for event in events
-        if duration_us(event) > 0
-    )
-
-    print()
-    print("TRACE ANALYSIS")
-    print("═" * 72)
-    print(f"Events:       {len(events):,}")
-    print(f"Timed events: {timed_count:,}")
-
-    print()
-    print("Building call tree...")
-
-    children = build_children(events)
-    parents = build_parent_map(children)
-    self_times = compute_self_time(events, children)
-
-    # ------------------------------------------------------------
-    # TOP INDIVIDUAL OPERATIONS
-    # ------------------------------------------------------------
-
-    candidates = []
-
-    for index, event in enumerate(events):
-        total = duration_us(event)
-
-        if total <= 0:
-            continue
-
-        n = name(event)
-
-        # Wrapper events are useful for tree reconstruction but
-        # not useful as the primary diagnostic result.
-        if is_wrapper(event):
-            continue
-
-        candidates.append(
-            (
-                total,
-                self_times.get(index, total),
-                index,
-                event,
-            )
-        )
-
-    candidates.sort(
-        key=lambda item: item[0],
+    result.sort(
+        key=lambda node: (
+            calculate_self_time(node),
+            node.dur,
+        ),
         reverse=True,
     )
 
-    print()
-    print("TOP 5 WORST OPERATIONS")
-    print("═" * 72)
+    return result[:TOP_N]
 
-    for rank, (total, self_time, index, event) in enumerate(
-        candidates[:5],
-        1,
-    ):
-        print()
+
+def print_cpu(roots):
+    print()
+    print("TOP 5 REAL CPU OPERATIONS")
+    print(
+        "════════════════════════════════════════════════════════════════════════"
+    )
+
+    nodes = top_nodes(
+        roots,
+        lambda node:
+            classify(node.name) == "CPU"
+            and node.name not in GPU_NAMES,
+    )
+
+    for index, node in enumerate(nodes, 1):
+        self_us = calculate_self_time(node)
+
         print(
-            f"{rank}. {duration_ms(total):,.1f} ms  "
-            f"{format_event(event)}"
+            f"{index}. {fmt_ms(self_us)} self  "
+            f"{node.name}"
         )
-        print(f"   {category(event)}")
+
+        print("   CPU")
+
         print(
-            f"   Total: {duration_ms(total):,.1f} ms"
-            f"   Self: {duration_ms(self_time):,.1f} ms"
+            f"   Total: {fmt_ms(node.dur)}   "
+            f"Self: {fmt_ms(self_us)}"
         )
+
+        event = node.event
+
         print(
             f"   pid={event.get('pid')} "
             f"tid={event.get('tid')} "
             f"ph={event.get('ph')}"
         )
 
-        print()
-        print("   Call tree:")
-        print_path(index, events, parents)
+        location = event_location(event)
 
-    # ------------------------------------------------------------
-    # TOP SELF TIME
-    # ------------------------------------------------------------
-
-    self_candidates = []
-
-    for index, event in enumerate(events):
-        self_time = self_times.get(index, 0)
-
-        if self_time <= 0:
-            continue
-
-        if is_wrapper(event):
-            continue
-
-        self_candidates.append(
-            (
-                self_time,
-                duration_us(event),
-                index,
-                event,
+        if location:
+            print(
+                f"   Location: {location}"
             )
-        )
 
-    self_candidates.sort(
-        key=lambda item: item[0],
-        reverse=True,
-    )
-
-    print()
-    print("TOP 5 BY SELF TIME")
-    print("═" * 72)
-
-    for rank, (self_time, total, index, event) in enumerate(
-        self_candidates[:5],
-        1,
-    ):
         print()
-        print(
-            f"{rank}. {duration_ms(self_time):,.1f} ms self  "
-            f"{format_event(event)}"
-        )
-        print(
-            f"   Total: {duration_ms(total):,.1f} ms"
-            f"   {category(event)}"
-        )
-
         print("   Call tree:")
-        print_path(index, events, parents)
 
-    # ------------------------------------------------------------
-    # AGGREGATED OPERATIONS
-    # ------------------------------------------------------------
+        print_tree(node)
 
-    aggregated = defaultdict(
-        lambda: {
-            "total": 0,
-            "self": 0,
-            "count": 0,
-            "category": "CPU",
-        }
+        print()
+
+
+def print_aggregated_cpu(operations):
+    print()
+    print(
+        "TOP 5 AGGREGATED REAL CPU OPERATIONS"
+    )
+    print(
+        "════════════════════════════════════════════════════════════════════════"
     )
 
-    for index, event in enumerate(events):
-        if is_wrapper(event):
-            continue
+    ranked = [
+        operation
+        for operation in operations.values()
+        if classify(operation.name) == "CPU"
+        and operation.name not in GPU_NAMES
+    ]
 
-        total = duration_us(event)
-
-        if total <= 0:
-            continue
-
-        key = name(event)
-
-        aggregated[key]["total"] += total
-        aggregated[key]["self"] += self_times.get(index, total)
-        aggregated[key]["count"] += 1
-        aggregated[key]["category"] = category(event)
-
-    aggregated_top = sorted(
-        aggregated.items(),
-        key=lambda item: item[1]["self"],
+    ranked.sort(
+        key=lambda operation:
+            operation.self_us,
         reverse=True,
-    )[:5]
+    )
 
-    print()
-    print("TOP 5 OPERATIONS BY AGGREGATED SELF TIME")
-    print("═" * 72)
-
-    for rank, (operation, data) in enumerate(
-        aggregated_top,
+    for index, operation in enumerate(
+        ranked[:TOP_N],
         1,
     ):
         print(
-            f"{rank}. {duration_ms(data['self']):,.1f} ms self  "
-            f"{operation}"
+            f"{index}. "
+            f"{fmt_ms(operation.self_us)} self  "
+            f"{operation.name}"
         )
+
         print(
-            f"   Total: {duration_ms(data['total']):,.1f} ms"
-            f"   Calls: {data['count']:,}"
-            f"   {data['category']}"
+            f"   Total: "
+            f"{fmt_ms(operation.total_us)}   "
+            f"Calls: {operation.calls}   CPU"
         )
+
+        if operation.locations:
+            print(
+                f"   Location: "
+                f"{sorted(operation.locations)[0]}"
+            )
+
+        print()
+
+
+def extract_cpu_profiles(events):
+    profiles = []
+
+    for event in events:
+        args = event.get("args")
+
+        if not isinstance(args, dict):
+            continue
+
+        data = args.get("data")
+
+        if not isinstance(data, dict):
+            continue
+
+        profile = data.get(
+            "cpuProfile"
+        )
+
+        if isinstance(profile, dict):
+            profiles.append(
+                {
+                    "event": event,
+                    "profile": profile,
+                }
+            )
+
+    return profiles
+
+
+def frame_name(node):
+    call_frame = node.get(
+        "callFrame",
+        {},
+    )
+
+    if not isinstance(call_frame, dict):
+        return "(anonymous)"
+
+    return (
+        call_frame.get("functionName")
+        or "(anonymous)"
+    )
+
+
+def frame_location(node):
+    call_frame = node.get(
+        "callFrame",
+        {},
+    )
+
+    if not isinstance(call_frame, dict):
+        return None
+
+    url = call_frame.get("url")
+
+    if not url:
+        return None
+
+    line = call_frame.get(
+        "lineNumber"
+    )
+
+    column = call_frame.get(
+        "columnNumber"
+    )
+
+    if line is not None and column is not None:
+        return (
+            f"{url}:"
+            f"{line + 1}:"
+            f"{column + 1}"
+        )
+
+    if line is not None:
+        return (
+            f"{url}:"
+            f"{line + 1}"
+        )
+
+    return url
+
+
+def extract_profile_operations(profiles):
+    """
+    Count WebGL/shader functions found in
+    embedded V8 CPU profile nodes.
+
+    IMPORTANT:
+    We intentionally do NOT fabricate duration here.
+
+    V8 cpuProfile nodes provide reliable function
+    identity and location, but a node's presence is
+    not itself proof of a specific elapsed duration.
+    """
+
+    operations = {}
+
+    for profile_index, profile_info in enumerate(
+        profiles
+    ):
+        profile = profile_info["profile"]
+
+        nodes = profile.get(
+            "nodes",
+            [],
+        )
+
+        if not isinstance(nodes, list):
+            continue
+
+        seen = set()
+
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+
+            name = frame_name(node)
+
+            if not is_webgl(name):
+                continue
+
+            location = frame_location(node)
+
+            key = (
+                name,
+                location,
+            )
+
+            operation = operations.setdefault(
+                key,
+                {
+                    "name": name,
+                    "location": location,
+                    "occurrences": 0,
+                    "profiles": set(),
+                },
+            )
+
+            operation["occurrences"] += 1
+            operation["profiles"].add(
+                profile_index
+            )
+
+            seen.add(key)
+
+    return operations
+
+
+def print_webgl_shader_operations(
+    profile_operations,
+):
+    print()
+    print(
+        "TOP 5 WEBGL / SHADER OPERATIONS"
+    )
+    print(
+        "════════════════════════════════════════════════════════════════════════"
+    )
+
+    ranked = sorted(
+        profile_operations.values(),
+        key=lambda operation: (
+            operation["occurrences"],
+            len(operation["profiles"]),
+        ),
+        reverse=True,
+    )
+
+    if not ranked:
+        print(
+            "No WebGL/shader functions found "
+            "in CPU profiles."
+        )
+        return
+
+    for index, operation in enumerate(
+        ranked[:TOP_N],
+        1,
+    ):
+        name = operation["name"]
+
+        category = (
+            "SHADER / PROGRAM"
+            if is_shader(name)
+            else "WebGL"
+        )
+
+        print(
+            f"{index}. {name}"
+        )
+
+        print(
+            f"   {category}   "
+            f"Occurrences: "
+            f"{operation['occurrences']}   "
+            f"Profiles: "
+            f"{len(operation['profiles'])}"
+        )
+
+        if operation["location"]:
+            print(
+                f"   Location: "
+                f"{operation['location']}"
+            )
+
+        print()
+
+
+def print_gpu_tasks(roots):
+    print()
+    print("TOP 5 GPU TASKS")
+    print(
+        "════════════════════════════════════════════════════════════════════════"
+    )
+
+    nodes = top_nodes(
+        roots,
+        lambda node:
+            node.name in GPU_NAMES,
+    )
+
+    if not nodes:
+        print("No GPU tasks found.")
+        return
+
+    for index, node in enumerate(
+        nodes,
+        1,
+    ):
+        print(
+            f"{index}. "
+            f"{fmt_ms(node.dur)}  "
+            f"{node.name}"
+        )
+
+        print("   GPU")
+
+        event = node.event
+
+        print(
+            f"   pid={event.get('pid')} "
+            f"tid={event.get('tid')} "
+            f"ph={event.get('ph')}"
+        )
+
+        print(
+            f"   Total: {fmt_ms(node.dur)}"
+        )
+
+        print()
+        print("   Call tree:")
+
+        print_tree(node)
+
+        print()
+
+
+def main():
+    if len(sys.argv) != 2:
+        print(
+            f"Usage: python {sys.argv[0]} TRACE.json",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    path = sys.argv[1]
+
+    print()
+    print("TRACE ANALYSIS")
+    print(
+        "════════════════════════════════════════════════════════════════════════"
+    )
+
+    print(
+        f"Events: ",
+        end="",
+    )
+
+    with open(
+        path,
+        "r",
+        encoding="utf-8",
+    ) as file:
+        trace = json.load(file)
+
+    events = trace.get(
+        "traceEvents",
+        [],
+    )
+
+    print(
+        f"{len(events):,}"
+    )
+
+    print()
+    print(
+        "Building X + B/E call tree..."
+    )
+
+    intervals = build_intervals(
+        events
+    )
+
+    print(
+        f"Timed intervals: "
+        f"{len(intervals):,}"
+    )
+
+    print()
+    print(
+        "Calculating call tree..."
+    )
+
+    roots = build_call_tree(
+        intervals
+    )
+
+    operations = collect_operations(
+        roots
+    )
+
+    print_cpu(roots)
+    print_aggregated_cpu(
+        operations
+    )
+
+    print()
+    print(
+        "Extracting embedded CPU profiles..."
+    )
+
+    profiles = extract_cpu_profiles(
+        events
+    )
+
+    print(
+        f"CPU profiles: "
+        f"{len(profiles):,}"
+    )
+
+    profile_operations = (
+        extract_profile_operations(
+            profiles
+        )
+    )
+
+    print_webgl_shader_operations(
+        profile_operations
+    )
+
+    print_gpu_tasks(
+        roots
+    )
+
+    print()
+    print("DONE")
 
 
 if __name__ == "__main__":
