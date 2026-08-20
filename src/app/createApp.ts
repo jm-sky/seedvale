@@ -25,7 +25,9 @@ import {
   createWorldConfig,
 } from '../config/worldConfig'
 import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
-import { isCameraDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode, isSystemEnabled } from '../debug/debugMode'
+import { isCameraDebugMode, isDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode, isSystemEnabled } from '../debug/debugMode'
+import { installNpcDebugApi } from '../debug/npcDebugApi'
+import { createNpcInspectTrigger } from '../debug/npcInspectTrigger'
 import { getRenderStateDebugText } from '../debug/renderStateDebug'
 import { ANIMAL_LABELS, type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
 import { meatKindForAnimal } from '../fauna/animalMeat'
@@ -116,6 +118,7 @@ import { createInventoryScreen, type InventoryScreenHandlers } from '../ui/creat
 import { createLoadingScreen } from '../ui/createLoadingScreen'
 import { createMinimap } from '../ui/createMinimap'
 import { createNpcDialog } from '../ui/createNpcDialog'
+import { createNpcInspector } from '../ui/createNpcInspector'
 import { createPauseMenu } from '../ui/createPauseMenu'
 import { createQuestLog } from '../ui/createQuestLog'
 import { createQuickActions } from '../ui/createQuickActions'
@@ -980,6 +983,11 @@ export async function createApp(
   // createNpcDialog's onKeyDown comment for why registration order matters here.
   const npcDialog = createNpcDialog(container)
   const questLog = createQuestLog(container)
+  // Plan 170 — NPC simulation inspector and trace. Debug-only: no modal, no
+  // Ctrl+click listener, no `window.seedvale.debug` outside `?debug`.
+  const npcInspector = isDebugMode() ? createNpcInspector(container, bundle, () => dayNight.timeOfDay) : undefined
+  const npcInspectTrigger = createNpcInspectTrigger(renderer.domElement)
+  installNpcDebugApi(bundle, () => dayNight.timeOfDay)
 
   /** Drops the whole carried stack of `kind` back into the world at the
    *  player's feet, scattered slightly — the "Wyrzuć" action in
@@ -1915,7 +1923,7 @@ export async function createApp(
   const gameLoop = createGameLoop({
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, weatherParticles, weatherAudio, getSeed: () => config.seed,
-    keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
+    keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork: (mode, x, z) => {
@@ -2126,6 +2134,8 @@ export async function createApp(
     gui.dispose()
     pauseMenu.dispose()
     npcDialog.dispose()
+    npcInspector?.dispose()
+    npcInspectTrigger.dispose()
     questLog.dispose()
     inventoryScreen.dispose()
     restorePointerLockAfterQuickActions = false

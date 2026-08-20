@@ -6,6 +6,7 @@ import type { createWorldAudio } from '../audio/createWorldAudio'
 import type { createHouseDoorTracker } from '../audio/doorSounds'
 import type { createFireAudio } from '../audio/fireSounds'
 import type { WeatherAudio } from '../audio/weatherSounds'
+import type { NpcInspectTrigger } from '../debug/npcInspectTrigger'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { PreySpawner } from '../fauna/AnimalSpawner'
 import type { TouchControls } from '../input/createTouchControls'
@@ -25,6 +26,7 @@ import type { Hud } from '../ui/createHud'
 import type { InventoryScreen } from '../ui/createInventoryScreen'
 import type { Minimap, MinimapSettlement } from '../ui/createMinimap'
 import type { NpcDialog } from '../ui/createNpcDialog'
+import type { NpcInspector } from '../ui/createNpcInspector'
 import type { PauseMenu } from '../ui/createPauseMenu'
 import type { QuestLog } from '../ui/createQuestLog'
 import type { QuickActions } from '../ui/createQuickActions'
@@ -195,6 +197,11 @@ export type GameLoopDeps = {
   touchControls: TouchControls | null
   pauseMenu: PauseMenu
   npcDialog: NpcDialog
+  /** Debug-only NPC Simulation Inspector modal + its Ctrl+click trigger
+   *  (plan 170 §5) — `undefined` outside `?debug`, so the feature has zero
+   *  runtime presence in production. */
+  npcInspector?: NpcInspector
+  npcInspectTrigger?: NpcInspectTrigger
   questLog: QuestLog
   vueUi: VueUi
   inventoryScreen: InventoryScreen
@@ -296,7 +303,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, weatherParticles, weatherAudio, getSeed,
-    keyboard, mouseLook, touchControls, pauseMenu, npcDialog, questLog, vueUi, inventoryScreen,
+    keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
@@ -826,6 +833,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         INTERACT_MIN_DOT,
       )
       setHighlight(interactableAgent(target) ?? gazed?.agent ?? null)
+      if (target?.kind === 'npc' && npcInspectTrigger?.consume()) {
+        exitGamePointerLock(renderer.domElement)
+        npcInspector?.open(target.npc, target.settlement.name)
+      }
       const interactPressed = keyboard.consumeInteract()
       const altInteractPressed = keyboard.consumeAltInteract()
       if (target?.kind === 'dig') {

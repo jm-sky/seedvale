@@ -15,6 +15,7 @@ import {
 } from '../assets/loadGltf'
 import { playActionWell } from '../audio/actionSounds'
 import { isDebugMode } from '../debug/debugMode'
+import { createNpcTraceBuffer, type NpcTraceBuffer, type NpcTraceEvent } from '../debug/npcTrace'
 import {
   commitRoleWork,
   commitWoodcutterDeposit,
@@ -35,6 +36,7 @@ import {
 import { createVigorState, type VigorState } from '../shared/VigorState'
 import {
   type ActionLifecycle,
+  type ActionLifecycleStatus,
   completeActionLifecycle,
   copyVec3,
   createActionLifecycle,
@@ -82,6 +84,7 @@ import {
   createMovementWatchdog,
   type MovementWatchdog,
   registerAbandon,
+  type RescueStage,
   resetMovementWatchdog,
   tickMovementWatchdog,
 } from './npcMovementWatchdog'
@@ -290,7 +293,7 @@ function modelUrlFor(gender: NpcGender, treeIndex: number): string {
  *  `followPath`/`goSleep`/`sleep`/`wander`/`lookAtPlayer` stay distinct —
  *  they aren't "go somewhere and perform one resource action", so folding
  *  them in would blur rather than simplify. */
-type Phase =
+export type Phase =
   | 'choose'
   | 'execute'
   | 'exhausted'
@@ -343,6 +346,56 @@ export type CurrentActivity = {
   endHour?: number
 }
 
+/** Read-only diagnostic snapshot (plan 170 — NPC simulation inspector and
+ *  trace). Plain data only, no live references into simulation state, so a
+ *  UI/console caller cannot mutate the NPC through it — see
+ *  `NpcAgent.createInspectionSnapshot()`. */
+export type NpcInspectionSnapshot = {
+  id: string
+  name: string
+  displayName: string
+  role: Role
+  position: { x: number, z: number }
+  phase: Phase
+  activity: CurrentActivity
+  needs: NeedState
+  activeNeed: NeedId
+  action: {
+    kind: ActionId
+    destination: { x: number, y: number, z: number }
+    queueId: string | null
+    status: ActionLifecycleStatus
+  } | null
+  queue: {
+    id: string
+    /** Index in the FIFO waiting line, or `-1` once promoted to `serving`. */
+    position: number
+    serving: boolean
+  } | null
+  watchdog: {
+    rescueStage: RescueStage
+    lowProgressStrikes: number
+    recentRescueCount: number
+  }
+  stamina: { current: number, max: number }
+  vigor: { current: number, max: number }
+  health: { current: number, max: number }
+  household: { food: number, wood: number, water: number } | null
+  frozen: boolean
+}
+
+/** Compact causal explanation over the same authoritative state
+ *  `createInspectionSnapshot()` reads — a projection, not a second decision
+ *  engine (plan 170 §3 / implementation notes §6). `blocked` is only ever
+ *  derived from the queue's own reported state, never guessed. */
+export type NpcWhy = {
+  need: { id: NeedId, value: number | null }
+  phase: Phase
+  action: { kind: ActionId, target: string | null } | null
+  queue: { id: string, position: number, serving: boolean } | null
+  blocked: string | null
+}
+
 /** Carries a chained action's classification forward onto its `next` leg
  *  (see `NpcPlannedAction.chainKind`) — a chained leg like ore-gathering's
  *  `deposit` should still be recognised as `mine`'s chain, not read as its
@@ -366,6 +419,21 @@ export function classifyPendingActivity(
   if (chainKind === 'work' || chainKind === 'mine') return 'work'
   if (pending.kind === 'eat' && activeNeed === 'idle') return 'eat'
   return 'need'
+}
+
+/** Pure projection behind `NpcAgent.why()` — pulled out for the same
+ *  testability reason as `classifyPendingActivity`/`promoteChainKind`
+ *  (plan 170 §3): facts only, derived from an already-built snapshot, never
+ *  a second decision engine. `blocked` is set only when the queue itself
+ *  reports this NPC is waiting, never guessed. */
+export function projectNpcWhy(snapshot: NpcInspectionSnapshot, needValue: number | null): NpcWhy {
+  return {
+    need: { id: snapshot.activeNeed, value: needValue },
+    phase: snapshot.phase,
+    action: snapshot.action ? { kind: snapshot.action.kind, target: snapshot.action.queueId } : null,
+    queue: snapshot.queue,
+    blocked: snapshot.queue && !snapshot.queue.serving ? 'waiting for queue slot' : null,
+  }
 }
 
 /** Phases the player's approach may interrupt to trigger a lookAtPlayer pause. */
@@ -654,6 +722,19 @@ export class NpcAgent {
   private readonly wellQueueId: string | null
   /** Queue this agent is currently a member of (waiting or serving). */
   private activeQueueId: string | null = null
+  /** Bounded semantic-event history (plan 170) — always recording (cheap,
+   *  structured events only, no string formatting) so a developer can add
+   *  `?debug=1` after the fact and still see recent history. Only the
+   *  inspector/console surface that reads it is debug-gated. */
+  private readonly trace: NpcTraceBuffer = createNpcTraceBuffer()
+  /** Seconds since this NPC was constructed — trace event timestamp. Not the
+   *  day/night clock: not every caller of `update()` has that handy, and a
+   *  monotonic per-agent clock is enough to order this agent's own history. */
+  private simClock = 0
+  /** Debug-only simulation pause (plan 170 §6). `update()` early-outs before
+   *  any decision/movement logic runs — the mesh keeps its last transform,
+   *  a visible confirmation the freeze took effect rather than a bug. */
+  private frozen = false
   /** Settlement-owned bulk stock (plan 071). Null only in isolated fallbacks. */
   private readonly economy: SettlementEconomy | null
   /** This NPC's family stock (plan 069). Null only in isolated fallbacks. */
@@ -956,6 +1037,98 @@ export class NpcAgent {
     return this.activeNeed
   }
 
+  /** Bounded recent semantic history (plan 170) — oldest first, capped at
+   *  `NPC_TRACE_CAPACITY`. Always recording; reading it does not require
+   *  debug mode, only the UI/console surface that calls this does. */
+  history(): readonly NpcTraceEvent[] {
+    return this.trace.history()
+  }
+
+  /** Read-only diagnostic snapshot (plan 170) — see `NpcInspectionSnapshot`. */
+  createInspectionSnapshot(timeOfDay: number): NpcInspectionSnapshot {
+    const queue = this.activeQueueId ? this.queues.get(this.activeQueueId) : undefined
+    return {
+      id: this.id,
+      name: this.name,
+      displayName: this.displayName,
+      role: this.role,
+      position: { x: this.mesh.position.x, z: this.mesh.position.z },
+      phase: this.phase,
+      activity: this.getCurrentActivity(timeOfDay),
+      needs: { ...this.needs },
+      activeNeed: this.activeNeed,
+      action: this.pendingAction
+        ? {
+            kind: this.pendingAction.kind,
+            destination: {
+              x: this.pendingAction.destination.x,
+              y: this.pendingAction.destination.y,
+              z: this.pendingAction.destination.z,
+            },
+            queueId: this.pendingAction.queueId ?? null,
+            status: this.actionLifecycle.status,
+          }
+        : null,
+      queue: this.activeQueueId && queue
+        ? { id: this.activeQueueId, position: queue.indexOf(this.id), serving: queue.isServing(this.id) }
+        : null,
+      watchdog: {
+        rescueStage: this.watchdog.rescueStage,
+        lowProgressStrikes: this.watchdog.lowProgressStrikes,
+        recentRescueCount: this.watchdog.recentRescueCount,
+      },
+      stamina: { current: this.stamina.current, max: this.stamina.max },
+      vigor: { current: this.vigor.current, max: this.vigor.max },
+      health: { current: this.health.currentHp, max: this.health.maxHp },
+      household: this.household
+        ? {
+            food: this.household.stock.query('food'),
+            wood: this.household.stock.query('wood'),
+            water: this.household.water.current,
+          }
+        : null,
+      frozen: this.frozen,
+    }
+  }
+
+  /** Causal projection over the same state `createInspectionSnapshot()`
+   *  reads — see `NpcWhy`. */
+  why(timeOfDay: number): NpcWhy {
+    const snapshot = this.createInspectionSnapshot(timeOfDay)
+    return projectNpcWhy(snapshot, this.needValueFor(snapshot.activeNeed))
+  }
+
+  private needValueFor(need: NeedId): number | null {
+    switch (need) {
+      case 'food': return this.needs.hunger
+      case 'water': return this.needs.thirst
+      case 'waterDuty': return this.needs.waterDuty
+      case 'wood': return this.needs.woodDuty
+      default: return null
+    }
+  }
+
+  /** Debug-only: pause/resume this NPC's simulation (plan 170 §6) — see the
+   *  `frozen` field doc comment for what does/doesn't keep running. */
+  setFrozen(frozen: boolean): void {
+    if (this.frozen === frozen) return
+    this.frozen = frozen
+    this.trace.record({ simTime: this.simClock, type: frozen ? 'debug.freeze' : 'debug.unfreeze' })
+  }
+
+  isFrozen(): boolean {
+    return this.frozen
+  }
+
+  /** Debug-only: cancel the in-flight action/queue membership and force a
+   *  fresh decision next tick — reuses the existing critical-interrupt
+   *  cleanup path (`interruptCurrentAction`) so it obeys the same ownership
+   *  rules as an automatic critical-need interrupt (plan 170 §6/13). */
+  requestReevaluation(): void {
+    this.interruptCurrentAction()
+    this.trace.record({ simTime: this.simClock, type: 'debug.reevaluate' })
+  }
+
   /** What this NPC's effective `schedule` says it should be doing at
    *  `timeOfDay` (`dayNight.ts` convention, 0-1) — also called internally by
    *  `update()` each frame to drive sleep / idle routing. */
@@ -1034,6 +1207,9 @@ export class NpcAgent {
     timeOfDay: number,
     nearbyNpcCount: number,
   ): void {
+    this.simClock += dt
+    if (this.frozen) return
+    const prevPhase = this.phase
     tickNeeds(this.needs, dt, {
       hungerThirstRate: this.phase === 'sleep' ? SLEEP_HUNGER_THIRST_RATE : 1,
     })
@@ -1115,6 +1291,7 @@ export class NpcAgent {
         }
         const need = pickNeed(this.needs, this.needPickOptions())
         this.activeNeed = need
+        this.trace.record({ simTime: this.simClock, type: 'need.selected', need })
         if (need !== 'idle') {
           this.beginNeed(need)
           break
@@ -1147,9 +1324,16 @@ export class NpcAgent {
             this.applyRimDestination(action.next.destination)
             // Chained step stays `active` — do not complete between links.
             this.phase = 'goTo'
+            this.trace.record({
+              simTime: this.simClock,
+              type: 'action.planned',
+              action: action.next.kind,
+              queueId: action.next.queueId ?? null,
+            })
           } else {
             completeActionLifecycle(this.actionLifecycle)
             this.leaveActiveQueue()
+            if (action) this.trace.record({ simTime: this.simClock, type: 'action.completed', action: action.kind })
             this.phase = 'choose'
           }
         }
@@ -1189,6 +1373,7 @@ export class NpcAgent {
         if (!action) {
           failActionLifecycle(this.actionLifecycle)
           this.leaveActiveQueue()
+          this.trace.record({ simTime: this.simClock, type: 'action.failed', action: null, reason: 'invalid' })
           this.phase = 'choose'
           break
         }
@@ -1208,11 +1393,15 @@ export class NpcAgent {
           if (action.queueId) {
             const queue = this.queues.get(action.queueId)
             if (queue?.isMember(this.id)) {
+              const wasServing = queue.isServing(this.id)
               if (queue.canEnterServing(this.id)) {
                 queue.claimServing(this.id)
-              } else if (!queue.isServing(this.id)) {
+              } else if (!wasServing) {
                 // Waiting slot reached — hold until promoted to serving.
                 break
+              }
+              if (!wasServing && queue.isServing(this.id)) {
+                this.trace.record({ simTime: this.simClock, type: 'queue.served', queueId: action.queueId })
               }
             }
           }
@@ -1260,6 +1449,10 @@ export class NpcAgent {
       case 'wander':
         if (this.steerWithRescue(this.target, dt)) this.phase = 'choose'
         break
+    }
+
+    if (this.phase !== prevPhase) {
+      this.trace.record({ simTime: this.simClock, type: 'phase.changed', from: prevPhase, to: this.phase })
     }
 
     this.mesh.position.y = this.sampleHeight(
@@ -1489,18 +1682,22 @@ export class NpcAgent {
       // was already joined by the caller.
       if (this.activeQueueId) this.leaveActiveQueue()
       this.activeQueueId = action.queueId
+      this.trace.record({ simTime: this.simClock, type: 'queue.joined', queueId: action.queueId })
     }
     this.pendingAction = action
     replaceActionLifecycle(this.actionLifecycle)
     this.phase = 'goTo'
     resetMovementWatchdog(this.watchdog)
     this.repathActive = false
+    this.trace.record({ simTime: this.simClock, type: 'action.planned', action: action.kind, queueId: action.queueId ?? null })
   }
 
   private leaveActiveQueue(): void {
     if (!this.activeQueueId) return
+    const queueId = this.activeQueueId
     this.queues.get(this.activeQueueId)?.leave(this.id)
     this.activeQueueId = null
+    this.trace.record({ simTime: this.simClock, type: 'queue.left', queueId })
   }
 
   /** Snapshot for the shared decision seam — not a policy framework. */
@@ -2051,6 +2248,8 @@ export class NpcAgent {
    *  `WATCHDOG_PHASES` (see `update()`). */
   private tickWatchdog(dt: number): void {
     const stage = tickMovementWatchdog(this.watchdog, dt, this.mesh.position.x, this.mesh.position.z)
+    if (stage === 'none') return
+    this.trace.record({ simTime: this.simClock, type: 'movement.rescue', stage })
     if (stage === 'repath') this.attemptRepath()
     else if (stage === 'escape') this.attemptLocalEscape()
     else if (stage === 'abandon') this.abandonStuckAction()
@@ -2087,6 +2286,7 @@ export class NpcAgent {
    *  minus the stuck-specific abandoned-destination/escalation bookkeeping,
    *  which doesn't apply to a healthy NPC that's simply needed elsewhere. */
   private interruptCurrentAction(): void {
+    const actionKind = this.pendingAction?.kind ?? null
     failActionLifecycle(this.actionLifecycle)
     this.leaveActiveQueue()
     this.pendingAction = null
@@ -2095,6 +2295,7 @@ export class NpcAgent {
     this.wait = 0
     this.repathActive = false
     this.phase = 'choose'
+    this.trace.record({ simTime: this.simClock, type: 'action.failed', action: actionKind, reason: 'interrupt' })
   }
 
   /** Rescue Level 1 — steer through a small random nearby waypoint instead
@@ -2146,6 +2347,7 @@ export class NpcAgent {
    *  safety net, not a new mechanism). Escalates to an emergency teleport
    *  when this has happened repeatedly within `RECENT_RESCUE_WINDOW_SEC`. */
   private abandonStuckAction(): void {
+    const actionKind = this.pendingAction?.kind ?? null
     const dest = this.pendingAction?.destination
     if (dest) {
       this.abandonedDestX = dest.x
@@ -2175,6 +2377,7 @@ export class NpcAgent {
     resetMovementWatchdog(this.watchdog)
     if (escalate) this.emergencyTeleport()
     this.phase = 'choose'
+    this.trace.record({ simTime: this.simClock, type: 'action.failed', action: actionKind, reason: 'abandon' })
   }
 
   /** Rescue Level 4 — last-resort safety net, expected to be rare: snap to a

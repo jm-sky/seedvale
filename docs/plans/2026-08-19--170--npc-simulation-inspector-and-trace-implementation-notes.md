@@ -2,7 +2,7 @@
 
 **Plan:** `docs/plans/2026-08-19--170--npc-simulation-inspector-and-trace.md`
 **Reviewed:** 2026-08-19
-**Status:** `planned`
+**Status:** `verification needed` — see the plan's "Implementation summary (2026-08-20)"
 
 ## Review summary
 
