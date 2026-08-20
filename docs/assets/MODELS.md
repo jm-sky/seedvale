@@ -76,6 +76,7 @@ If the feature needs no new model, do nothing to this file.
 | M47 | Obsidian sword | Held melee; volcanic-glass purple/black (Claymore remint, not gray/red); quest `wilcza-jama` reward | `wired` | plan 160 (`items/obsidian_sword.glb`) |
 | M48 | Battle axe | Held melee + tree chop; Kupiec stock. Quaternius Axe Double | `wired` | plan 160 (`items/battle_axe.glb`) |
 | M49 | Masterwork sword | Held melee; Kupiec stock. Quaternius `Sword_Golden` | `wired` | plan 160 (`items/masterwork_sword.glb`) |
+| M50 | Player character — Quaternius Universal Base Characters + Modular Character Outfits | Replaces `characters/Adventurer.glb` as the player model. Male base + Peasant outfit converted (`gltf-transform`: 1024px WebP textures only — **do not** run `gltf-transform meshopt` on these, it corrupts `inverseBindMatrices` per-mesh, see `docs/assets/CREDITS.md`) to `public/models/_main_character/optimized/{base_male,outfit_male_peasant}.glb`; animations sourced separately from Quaternius Universal Animation Library (base pack ships none) trimmed to `Idle_Loop`/`Walk_Loop`/`Sprint_Loop`/`Sword_Attack` → `animations/player_locomotion.glb` (meshopt-safe there — no skin data in an animation-only file). Female base + outfits, and the Ranger outfit (both sexes), remain as raw unconverted source files under `public/models/_main_character/{models,outfits}/` — not wired; converting them is the female-character follow-up (`characterConfig.ts`'s `CHARACTER_DEFS.female`) | `wired` (male/Peasant only) | plan 172 |
 
 ## Wired (reference — do not treat as open work)
 
@@ -83,7 +84,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 
 | Area | Examples |
 |------|----------|
-| Characters | Modular men/women NPCs, Adventurer player |
+| Characters | Modular men/women NPCs; player = Quaternius Universal Base Character (male) + Peasant outfit (plan 172, M50) |
 | Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
 | Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed, rock/log, ore piles, cemetery / gravestones |
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+) |

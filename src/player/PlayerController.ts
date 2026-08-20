@@ -4,7 +4,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { KeyState } from '../input/Keyboard'
 import type { ToolKind } from '../items/HeldTool'
 import type { FootstepSurface } from '../terrain/footstepSurface'
-import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
+import { disposeObject3D, prepareProp } from '../assets/loadGltf'
 import {
   playFootstep,
   playJumpLand,
@@ -25,6 +25,8 @@ import { createHealthState, type HealthState } from '../shared/HealthState'
 import { isExhausted } from '../shared/StaminaState'
 import { type Collider, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
+import { DEFAULT_PLAYER_CHARACTER, type PlayerCharacterConfig } from './characterConfig'
+import { loadPlayerCharacterModel } from './loadPlayerCharacter'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
 import { integrateVerticalMotion } from './verticalMotion'
@@ -70,9 +72,6 @@ const FOOTSTEP_WALK_INTERVAL = 0.45
 const FOOTSTEP_SPRINT_INTERVAL = 0.28
 
 type PlayerPose = 'stand' | 'crouch' | 'lie'
-
-/** Quaternius Ultimate Modular Men — distinct from the NPC roster. */
-export const PLAYER_MODEL_URL = '/models/characters/Adventurer.glb'
 
 export type HeightSampler = (x: number, z: number) => number
 /** `ChunkManager.collidersNear` (plan 097 §2.2) — kept as its own alias
@@ -193,10 +192,10 @@ export class PlayerController {
 
     if (animations.length > 0) {
       this.mixer = new THREE.AnimationMixer(root)
-      this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral'])
-      this.walkAction = this.findAction(animations, ['Walk', 'Run'])
-      this.runAction = this.findAction(animations, ['Run'])
-      this.attackAction = this.findAction(animations, ['Sword_Slash', 'Punch_Right', 'Punch_Left'])
+      this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral', 'Idle_Loop'])
+      this.walkAction = this.findAction(animations, ['Walk', 'Walk_Loop', 'Run'])
+      this.runAction = this.findAction(animations, ['Run', 'Sprint_Loop'])
+      this.attackAction = this.findAction(animations, ['Sword_Slash', 'Sword_Attack', 'Punch_Right', 'Punch_Left'])
       this.playAction(this.idleAction)
     } else {
       this.mixer = null
@@ -246,10 +245,10 @@ export class PlayerController {
     waterLevel: number,
     collidersNear: ColliderSource,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
-    modelUrl = PLAYER_MODEL_URL,
+    characterConfig: PlayerCharacterConfig = DEFAULT_PLAYER_CHARACTER,
   ): Promise<PlayerController> {
     try {
-      const { scene, animations } = await loadGltfAnimated(modelUrl)
+      const { scene, animations } = await loadPlayerCharacterModel(characterConfig)
       prepareProp(scene, PLAYER_HEIGHT)
       return new PlayerController(
         scene,
@@ -265,7 +264,7 @@ export class PlayerController {
         sampleFootstepSurface,
       )
     } catch (err) {
-      console.warn(`[player] failed to load ${modelUrl}, using capsule`, err)
+      console.warn(`[player] failed to load character (sex=${characterConfig.sex}, outfit=${characterConfig.outfit ?? 'none'}), using capsule`, err)
       return PlayerController.createCapsuleFallback(
         camera,
         keys,

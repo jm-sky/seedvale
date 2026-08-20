@@ -4,7 +4,8 @@ import { ANIMAL_DEFS } from '../fauna/AnimalAgent'
 import { FAUNA_URLS } from '../fauna/createFauna'
 import { HELD_GLB } from '../items/heldToolVisual'
 import { ITEM_GLB_SPECS } from '../items/itemModels'
-import { PLAYER_HEIGHT, PLAYER_MODEL_URL } from '../player/PlayerController'
+import { DEFAULT_PLAYER_CHARACTER, resolveCharacterModelUrls } from '../player/characterConfig'
+import { PLAYER_HEIGHT } from '../player/PlayerController'
 import { BRANCH_HELD_MAX, BRANCH_URL } from '../player/torchLightPresets'
 import { HOUSE_CATALOG } from '../settlement/houseCatalog'
 import { LIVESTOCK_URLS } from '../settlement/livestock'
@@ -333,8 +334,8 @@ export function buildAssetIndex(): AssetIndexEntry[] {
 
   out.push({
     id: 'character:player',
-    url: PLAYER_MODEL_URL,
-    label: 'Player (Adventurer)',
+    url: resolveCharacterModelUrls(DEFAULT_PLAYER_CHARACTER).baseModelUrl,
+    label: 'Player (base character)',
     group: 'character',
     prepare: { mode: 'height', value: PLAYER_HEIGHT },
     skinned: true,
