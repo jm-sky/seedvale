@@ -2,6 +2,8 @@ import type { NeedId } from '../ai/Needs'
 import type { NpcAgent, NpcInspectionSnapshot, NpcWhy, Phase } from '../ai/NpcAgent'
 import type { WorldBundle } from '../app/worldBundle'
 import type { NpcTraceEvent } from './npcTrace'
+import { pickNearestEligibleWolf } from '../fauna/AnimalAgent'
+import { villageSizeConfig } from '../settlement/families'
 import { isDebugMode } from './debugMode'
 
 /**
@@ -120,5 +122,33 @@ export function reevaluateNpc(bundle: WorldBundle, id: string): boolean {
   const entry = findNpcById(bundle, id)
   if (!entry) return false
   entry.npc.requestReevaluation()
+  return true
+}
+
+/** `setFrenzyWolf()` DevTools command (plan 179 §3/§4) — marks the nearest
+ *  non-frenzied living wolf frenzied and gives it the nearest loaded village
+ *  as its strategic target. Selection itself (`pickNearestEligibleWolf`) is
+ *  pure/deterministic; this is only the impure glue over the live
+ *  `WorldBundle` population, same "debug controls reject outright when
+ *  `?debug` is off" contract as `freezeNpc`/`unfreezeNpc`/`reevaluateNpc`.
+ *  Returns `false` (no mutation) when there's no eligible wolf or no loaded
+ *  village — repeated calls then pick a different wolf each time since an
+ *  already-frenzied one is excluded from the next selection. */
+export function setFrenzyWolf(bundle: WorldBundle): boolean {
+  if (!isDebugMode()) return false
+  const wolves = bundle.fauna.getAgents().filter((a) => a.def.kind === 'wolf' && !a.isDead())
+  const villages = bundle.settlementsManager.getLoaded().map((s) => ({
+    x: s.center.x,
+    z: s.center.z,
+    radius: villageSizeConfig(s.size).footprintRadius,
+  }))
+  const picked = pickNearestEligibleWolf(
+    wolves.map((w) => ({ animalId: w.animalId, x: w.mesh.position.x, z: w.mesh.position.z, frenzied: w.isFrenzied() })),
+    villages,
+  )
+  if (!picked) return false
+  const wolf = wolves.find((w) => w.animalId === picked.animalId)
+  if (!wolf) return false
+  wolf.setFrenzied(picked.village)
   return true
 }

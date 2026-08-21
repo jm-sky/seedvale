@@ -4,6 +4,7 @@ import {
   Vector3,
 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { AnimalAgent, VillageInfo } from '../fauna/AnimalAgent'
@@ -173,6 +174,9 @@ export type Settlement = {
     litFires: readonly { x: number, z: number }[],
     villages: readonly VillageInfo[],
     dayLengthSec: number,
+    /** Bounded/local currently-threatening animals (plan 179 §7/§10) —
+     *  forwarded straight to each `NpcAgent.update`. */
+    nearbyAnimalThreats?: readonly ThreateningAnimalCandidate[],
   ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
@@ -584,7 +588,7 @@ export async function createSettlement(
     households,
     householdStorages,
     fire,
-    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec) {
+    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = []) {
       const nearbyNpcCounts = new Array<number>(agents.length).fill(0)
       const pushX = new Array<number>(agents.length).fill(0)
       const pushZ = new Array<number>(agents.length).fill(0)
@@ -613,7 +617,7 @@ export async function createSettlement(
       }
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i]!
-        agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCounts[i]!, dayLengthSec)
+        agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCounts[i]!, dayLengthSec, nearbyAnimalThreats)
         if (pushX[i] !== 0 || pushZ[i] !== 0) agent.applySeparation(pushX[i]!, pushZ[i]!)
       }
       // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef`

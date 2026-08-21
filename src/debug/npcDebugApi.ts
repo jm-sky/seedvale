@@ -9,6 +9,7 @@ import {
   type NpcQueryResult,
   queryNpcs,
   reevaluateNpc,
+  setFrenzyWolf,
   unfreezeNpc,
 } from './npcInspector'
 
@@ -31,6 +32,8 @@ export type NpcDebugHandle = {
 export type SeedvaleDebugApi = {
   npc: (id: string) => NpcDebugHandle | null
   npcs: (filter?: NpcQueryFilter) => NpcQueryResult[]
+  /** `setFrenzyWolf()` (plan 179 §3) — see `npcInspector.ts`'s doc. */
+  setFrenzyWolf: () => boolean
 }
 
 declare global {
@@ -60,6 +63,7 @@ export function installNpcDebugApi(bundle: WorldBundle, getTimeOfDay: () => numb
       }
     },
     npcs: (filter) => queryNpcs(bundle, getTimeOfDay(), filter),
+    setFrenzyWolf: () => setFrenzyWolf(bundle),
   }
   window.seedvale = { ...window.seedvale, debug: api }
 }

@@ -1,7 +1,7 @@
 # Plan: Animal Attack & NPC Defense
 
 **Created:** 2026-08-20  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~177~~
 
@@ -420,5 +420,28 @@ Sprawdzić:
 - istniejące fauna/combat/HealthState tests,
 - typecheck/lint/build zgodnie z `CLAUDE.md`,
 - browser/gameplay dla pełnego scenariusza wilk → NPC → reakcja.
+
+## 17. Implementation summary (2026-08-21)
+
+Zaimplementowane zgodnie z implementation notes — bez nowego combat/threat-manager systemu, wyłącznie rozszerzenie istniejących `AnimalAgent`/`NpcAgent`.
+
+**Fauna (`src/fauna/AnimalAgent.ts`):**
+
+- `frenzied`/`strategicVillage` — runtime pola instancji (nie osobny gatunek/FSM), `setFrenzied(village)` + `isFrenzied()`. Frenzy nie ma osobnej gałęzi "reduced fear" — wpina się w istniejącą decyzję jako `provoked: provokedTimer > 0 || frenzied` (ta sama retaliation-branch co realna prowokacja gracza), więc frenzowany wilk zachowuje się jak trwale sprowokowany (mniejszy strach, chętny do ataku, wciąż ucieka przy bardzo niskim HP).
+- `moveTowardStrategicVillage()` — beeline do zapamiętanej pozycji wioski (nie żywego `Settlement`/scene ref) dopóki wilk nie wejdzie w jej footprint; `pickPointNear()` dostaje jednolinijkowy bypass (`this.frenzied ||`) omijania village-avoidance, więc frenzowany wilk może faktycznie wędrować po wiosce zamiast ją omijać.
+- Wilk → NPC targeting: `AnimalAgent.update()` dostaje opcjonalny bounded/local `nearbyNpcs: NearbyNpcCandidate[]` (id/x/z, dostarczany przez wywołującego — `Fauna`/`gameLoop.ts`, załadowane osady, nie globalny skan) — konsultowany tylko dla frenzowanego drapieżnika i tylko gdy gracz nie jest aktywnym zagrożeniem. `decideNpcResponse()` woła dokładnie ten sam `decidePredatorHumanIntent()` co ścieżka gracza, tylko z dystansem/crowd do wybranego NPC. `chaseNpc()`/`attackNpc()` są symetryczne do `chaseHuman()`/`attackHuman()`.
+- `AnimalAgent.isThreateningHuman()` — mały publiczny sygnał ("mój ostatni throttled decision to `attack`"), czytany przez `NpcAgent`'s threat perception bez importowania logiki `AnimalAgent`.
+- `pickNearestEligibleWolf()` — czysta, deterministyczna (bez `Math.random()`) selekcja za `setFrenzyWolf()`; DevTools glue w `src/debug/npcInspector.ts` (`setFrenzyWolf(bundle)`), wystawione jako `window.seedvale.debug.setFrenzyWolf()` (ten sam `?debug`-gated surface co plan 170's `npc()`/`npcs()`).
+
+**NPC (nowy `src/ai/npcAnimalThreat.ts` + `src/ai/NpcAgent.ts`):**
+
+- `senseImmediateAnimalThreat()` — czysta percepcja: najbliższy żywy `ThreateningAnimalCandidate` w promieniu `IMMEDIATE_ANIMAL_THREAT_RADIUS`. `decideAnimalThreatResponse()` — czysta `defend`/`flee` decyzja (ten sam `pickHighestScore` co `predatorHumanDecision.ts`) z carried-weapon capability + health ratio; brak broni → zawsze `flee` (nigdy combat intent, który 177 i tak odrzuci).
+- `NpcAgent.update()` liczy `currentAnimalThreat` co klatkę z bounded `nearbyAnimalThreats` (dostarczane przez `Settlement.update()`/`SettlementsManager.update()`, wypełniane w `gameLoop.ts` z `bundle.fauna.getAgents().filter(isThreateningHuman)` — zwykle puste), throttlowany re-decision (`ANIMAL_THREAT_REACTION_INTERVAL_SEC`) woła `reactToAnimalThreat()` przed przełącznikiem faz — więc NPC reaguje zanim dostanie obrażenia, wyprzedza pauzę "lookAtPlayer", nigdy nie przerywa `combat`/`sleep`.
+- `defend` → istniejący 177 `beginCombat({ target: threat.target, mode })`, gdzie `threat.target` to `fauna/faunaCombat.ts`'s `combatTargetForAnimal()` zbudowany raz w `gameLoop.ts`. `flee` → `fleeFromThreat()`, ten sam cleanup co `beginCombat`/`interruptCurrentAction`, cel poza istniejącą fazę `wander` (bez nowego `AnimalFleeSystem`).
+- Animal → NPC damage: `gameLoop.ts`'s `onNpcHit` callback szuka NPC po id w załadowanych osadach i woła istniejące `NpcAgent.applyIncomingCombatDamage()` (ten sam seam co `player → NPC`/`NPC → NPC`, plan 177 §8/§10) — brak nowego damage/health systemu.
+
+**Poza zakresem (jak w planie):** brak `AnimalThreatManager`/`NpcCombatManager`/`HumanTargetRegistry`, brak koordynacji między frenzowanymi wilkami, brak persystencji `frenzied` (runtime-only, plan 179 §3), brak nowego update loop/Web Workera.
+
+Techniczna weryfikacja zielona: `tsc --noEmit`, `lint:fix`, `build`, `test` (1443 testów, w tym nowe `src/fauna/frenzyWolf.test.ts` i `src/ai/npcAnimalThreat.test.ts`). Bez testu w przeglądarce (patrz `CLAUDE.md`) — scenariusz z §22 do ręcznej weryfikacji: `setFrenzyWolf()` → wilk idzie do wioski → atakuje/NPC broni się lub ucieka → obrażenia przez istniejący health/defense path.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

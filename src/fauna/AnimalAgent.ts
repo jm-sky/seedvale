@@ -44,6 +44,7 @@ import {
 import { detectionRoll, isPlayerNoticed, type PlayerStealthState, sneakDetectionMultiplier } from './playerAwareness'
 import {
   decidePredatorHumanIntent,
+  NEARBY_HUMAN_RADIUS,
   type PredatorHumanIntent,
   PROVOCATION_SECONDS,
 } from './predatorHumanDecision'
@@ -536,6 +537,45 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
   },
 }
 
+/** A nearby NPC candidate for predator human-targeting (plan 179 §5/§7) —
+ *  the same narrow shape as `countNearbyHumans`' NPC positions, plus a
+ *  stable `id` so a chosen target can be reported back to the caller
+ *  (`Fauna.update`'s `onNpcHit`) without `AnimalAgent` holding an `NpcAgent`
+ *  reference. Caller-supplied and bounded (loaded settlements' NPCs only) —
+ *  see `Fauna`'s own doc comment. */
+export type NearbyNpcCandidate = { id: string, x: number, z: number }
+
+/** Minimal per-wolf shape `setFrenzyWolf()` needs to pick a target (plan 179
+ *  §3/§4) — deliberately not `AnimalAgent` itself, so `pickNearestEligibleWolf`
+ *  stays pure/unit-testable without constructing real agents. */
+export type FrenzyWolfCandidate = { animalId: string, x: number, z: number, frenzied: boolean }
+
+/** Deterministic (no `Math.random()`) nearest-wolf-to-any-loaded-village
+ *  selection behind the `setFrenzyWolf()` DevTools command — picks the
+ *  non-frenzied wolf with the smallest distance to any village, pairing it
+ *  with that nearest village as its strategic target. `null` when there is
+ *  no eligible wolf or no loaded village. Ties keep the first-seen wolf
+ *  (stable candidate order), matching `pickHighestScore`'s tie-break rule
+ *  used elsewhere in this codebase. */
+export function pickNearestEligibleWolf(
+  wolves: readonly FrenzyWolfCandidate[],
+  villages: readonly VillageInfo[],
+): { animalId: string, village: VillageInfo } | null {
+  let best: { animalId: string, village: VillageInfo } | null = null
+  let bestD = Infinity
+  for (const wolf of wolves) {
+    if (wolf.frenzied) continue
+    for (const village of villages) {
+      const d = Math.hypot(wolf.x - village.x, wolf.z - village.z)
+      if (d < bestD) {
+        bestD = d
+        best = { animalId: wolf.animalId, village }
+      }
+    }
+  }
+  return best
+}
+
 export class AnimalAgent {
   /** Visual root (GLB group or capsule mesh). */
   readonly mesh: THREE.Object3D
@@ -631,6 +671,28 @@ export class AnimalAgent {
   private cachedAggressionRoll = 0
   /** Counts down after a player hit — feeds wolf retaliation (plan 056 ext). */
   private provokedTimer = 0
+  /** Runtime-only trait set by the `setFrenzyWolf()` DevTools command (plan
+   *  179 §3/§4) — not a new species/FSM, just an input to the existing
+   *  predator-human decision (see `decideHumanResponse`/`decideNpcResponse`'s
+   *  `provoked: this.provokedTimer > 0 || this.frenzied`) and to village
+   *  wander-avoidance (`pickPointNear`). Never persisted (plan 179 §3
+   *  "Persistence": wild fauna isn't a save source in V1). */
+  private frenzied = false
+  /** Strategic (not combat) target set alongside `frenzied` — the nearest
+   *  loaded village at frenzy time, a plain position/radius snapshot (plan
+   *  179 §3/§5), not a live `Settlement`/scene reference. Drives
+   *  `moveTowardStrategicVillage` until the wolf is close enough to fall
+   *  back into normal predator behaviour (which can then notice an NPC). */
+  private strategicVillage: VillageInfo | null = null
+  /** Scratch destination for `moveTowardStrategicVillage`/`chaseNpc` — kept
+   *  separate from `steerToward`'s own `this.tmp` scratch (see that method's
+   *  comment) and from `fleeTarget`/`sourceDest`. */
+  private readonly strategicDest = new THREE.Vector3()
+  /** True while this predator's latest throttled human-response decision
+   *  (player or, when frenzied, a noticed NPC) is `attack` — the small
+   *  signal `NpcAgent`'s bounded local threat perception reads to react
+   *  *before* taking damage (plan 179 §6/§10). See `isThreateningHuman()`. */
+  private threateningHuman = false
   private bloodSplat: THREE.Object3D | null = null
   private bloodSplatToken = 0
   private harvestedRemains: THREE.Object3D | null = null
@@ -871,6 +933,29 @@ export class AnimalAgent {
     this.labelNameEl.textContent = `Groźny ${ANIMAL_LABELS[this.def.kind]}`
   }
 
+  isFrenzied(): boolean {
+    return this.frenzied
+  }
+
+  /** Entry point for the `setFrenzyWolf()` DevTools command (plan 179 §3/§4)
+   *  — marks this animal frenzied and gives it `village` as a strategic
+   *  target. Idempotent: a second call just refreshes the strategic target
+   *  (`pickNearestEligibleWolf` already excludes already-frenzied wolves
+   *  from selection, so callers shouldn't normally re-target one anyway). */
+  setFrenzied(village: VillageInfo): void {
+    this.frenzied = true
+    this.strategicVillage = { ...village }
+  }
+
+  /** True while this predator's latest throttled decision is `attack`
+   *  (player or, when frenzied, a noticed NPC) — see `threateningHuman`'s
+   *  field doc. `NpcAgent`'s bounded local threat perception reads this
+   *  through a caller-built candidate list, never by importing `AnimalAgent`
+   *  logic itself. */
+  isThreateningHuman(): boolean {
+    return this.threateningHuman
+  }
+
   /** Toggles the gaze-highlight glow on this animal's label. Idempotent — no
    *  redundant DOM writes if the state doesn't actually change. */
   setHighlighted(active: boolean): void {
@@ -1018,6 +1103,15 @@ export class AnimalAgent {
     /** Sneak/movement stealth inputs (plan 124 §4). Defaults to "no effect"
      *  so existing callers/tests that don't pass it keep prior behaviour. */
     playerStealth: PlayerStealthState = { sneakValue: 0, sneakActive: false, movement: 'stationary' },
+    /** Bounded/local NPC candidates (plan 179 §5/§7) — only consulted for a
+     *  `frenzied` predator, and only once the player isn't the active
+     *  threat, so ordinary (non-frenzied) predator behaviour is unaffected.
+     *  Caller (`Fauna.update`) is responsible for keeping this small (loaded
+     *  settlements' NPCs), never a global scan. */
+    nearbyNpcs: readonly NearbyNpcCandidate[] = [],
+    /** Fauna→NPC damage seam (plan 179 §9/§11), mirrors `onHumanHit` but
+     *  keyed to the specific NPC id chosen as target. */
+    onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number) => void,
   ): void {
     if (this.health.dead) {
       if (!this.corpseHeld) this.timeSinceDeath += dt
@@ -1034,6 +1128,12 @@ export class AnimalAgent {
     this.currentOthers = others
     this.tickMaturity(dt)
     const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires, playerStealth)
+    // Only a frenzied predator considers an NPC target, and only once the
+    // player isn't the active threat (plan 179 §5/§8) — cheap bounded scan,
+    // see `NearbyNpcCandidate`'s doc.
+    const npcThreat = !sense.playerActive && this.frenzied && this.def.role === 'predator'
+      ? this.senseNpcThreat(nearbyNpcs)
+      : null
 
     if (sense.playerActive) {
       this.cancelSourceTarget()
@@ -1049,6 +1149,7 @@ export class AnimalAgent {
             this.cachedAggressionRoll,
           )
         }
+        this.threateningHuman = this.cachedHumanIntent === 'attack'
         if (this.cachedHumanIntent === 'attack') {
           this.setIntent('attack', copyVec3(observerPos))
           this.chaseHuman(observerPos, dt, onHumanHit)
@@ -1057,20 +1158,44 @@ export class AnimalAgent {
           this.fleeFrom(observerPos.x, observerPos.z, dt)
         }
       } else {
+        this.threateningHuman = false
         this.setIntent('flee', copyVec3(observerPos))
         this.fleeFrom(observerPos.x, observerPos.z, dt)
       }
+    } else if (npcThreat) {
+      this.cancelSourceTarget()
+      this.humanDecisionTimer -= dt
+      if (this.humanDecisionTimer <= 0) {
+        this.humanDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
+        this.cachedAggressionRoll = Math.random()
+        this.cachedHumanIntent = this.decideNpcResponse(npcThreat, nearbyNpcs, sense, this.cachedAggressionRoll)
+      }
+      this.threateningHuman = this.cachedHumanIntent === 'attack'
+      if (this.cachedHumanIntent === 'attack') {
+        this.setIntent('attack', { x: npcThreat.x, z: npcThreat.z })
+        this.chaseNpc(npcThreat, dt, onNpcHit)
+      } else {
+        this.setIntent('flee', { x: npcThreat.x, z: npcThreat.z })
+        this.fleeFrom(npcThreat.x, npcThreat.z, dt)
+      }
     } else if (sense.nearestFire) {
+      this.threateningHuman = false
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
       this.cancelSourceTarget()
       this.setIntent('flee', { x: sense.nearestFire.x, z: sense.nearestFire.z })
       this.fleeFrom(sense.nearestFire.x, sense.nearestFire.z, dt)
     } else if (this.def.role === 'predator') {
+      this.threateningHuman = false
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
-      this.updatePredator(dt, others)
+      if (this.frenzied && this.strategicVillage && !this.isNearVillage(this.mesh.position)) {
+        this.moveTowardStrategicVillage(dt)
+      } else {
+        this.updatePredator(dt, others)
+      }
     } else {
+      this.threateningHuman = false
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
       this.updatePrey(dt, others)
@@ -1182,9 +1307,80 @@ export class AnimalAgent {
       nearbyHumanCount: Math.max(1, ctx.nearbyHumanCount ?? nearbyHumanCount),
       kind: this.def.kind,
       selfHpRatio: hpRatio,
-      provoked: this.provokedTimer > 0,
+      // `frenzied` reuses the existing provoked/retaliation branch (plan 179
+      // §6) instead of a new "reduced fear" special case — a frenzied wolf
+      // behaves like a permanently provoked one (reduced fear, willing to
+      // attack), with the same low-HP flee floor still applying.
+      provoked: this.provokedTimer > 0 || this.frenzied,
       aggressionRoll,
     })
+  }
+
+  /** Nearest NPC candidate within `playerNoticeRange`, or `null` (plan 179
+   *  §7/§8) — deliberately no facing-cone/probability roll like the
+   *  player's `isPlayerNoticed()`: a frenzied wolf that's already committed
+   *  to reaching the settlement doesn't need stealth-grade perception of
+   *  the humans living there. `nearbyNpcs` is caller-bounded (see
+   *  `NearbyNpcCandidate`'s doc), so this stays a small local scan. */
+  private senseNpcThreat(nearbyNpcs: readonly NearbyNpcCandidate[]): NearbyNpcCandidate | null {
+    let best: NearbyNpcCandidate | null = null
+    let bestD = this.def.playerNoticeRange
+    for (const npc of nearbyNpcs) {
+      const d = Math.hypot(npc.x - this.mesh.position.x, npc.z - this.mesh.position.z)
+      if (d < bestD) {
+        bestD = d
+        best = npc
+      }
+    }
+    return best
+  }
+
+  /** Same `decidePredatorHumanIntent` scoring as `decideHumanResponse`, fed
+   *  a noticed NPC's distance instead of the player's (plan 179 §5 — "NPC
+   *  jako pełnoprawny human target obok playera", not a parallel decision
+   *  system). Crowd fear counts other candidates near `target` rather than
+   *  reusing `countNearbyHumans` (that helper always counts the player as
+   *  present, which doesn't hold when the player is the one who isn't the
+   *  active threat here). */
+  private decideNpcResponse(
+    target: NearbyNpcCandidate,
+    nearbyNpcs: readonly NearbyNpcCandidate[],
+    sense: EnvironmentSense,
+    aggressionRoll: number,
+  ): PredatorHumanIntent {
+    const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
+    let crowd = 1
+    for (const npc of nearbyNpcs) {
+      if (npc === target) continue
+      if (Math.hypot(npc.x - target.x, npc.z - target.z) <= NEARBY_HUMAN_RADIUS) crowd++
+    }
+    return decidePredatorHumanIntent({
+      hunger: this.life.hunger,
+      humanDistance: Math.hypot(target.x - this.mesh.position.x, target.z - this.mesh.position.z),
+      playerNoticeRange: this.def.playerNoticeRange,
+      playerPanicRange: this.def.playerPanicRange,
+      fireNearby: sense.fireNearby,
+      nearbyHumanCount: crowd,
+      kind: this.def.kind,
+      selfHpRatio: hpRatio,
+      provoked: this.provokedTimer > 0 || this.frenzied,
+      aggressionRoll,
+    })
+  }
+
+  /** Frenzied wolf beelines to its `strategicVillage` until it's within the
+   *  village's own footprint + avoidance margin (`isNearVillage`), then
+   *  `update()` falls back to normal `updatePredator`/wander — which, for a
+   *  frenzied wolf, is now allowed to actually wander inside the village
+   *  (see `pickPointNear`'s `this.frenzied` bypass) instead of skirting it
+   *  (plan 179 §3 — "kieruje się do wioski"). Not a new movement system —
+   *  same `steerToward` primitive every other movement branch uses. */
+  private moveTowardStrategicVillage(dt: number): void {
+    const village = this.strategicVillage
+    if (!village) return
+    this.setIntent('wander', { x: village.x, z: village.z })
+    this.strategicDest.set(village.x, 0, village.z)
+    this.steerToward(this.strategicDest, this.walkSpeedNow(), dt)
   }
 
   /** Sprint toward a human; bite via `onHumanHit` when in contact (plan 056). */
@@ -1217,6 +1413,46 @@ export class AnimalAgent {
     drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
     const { x, z } = this.mesh.position
     onHumanHit(
+      damageVsHuman(this.def.kind) * (this.dangerous ? DANGEROUS_DAMAGE_MULTIPLIER : 1),
+      x,
+      z,
+    )
+  }
+
+  /** Sprint toward a noticed NPC; bite via `onNpcHit` when in contact — same
+   *  shape as `chaseHuman`, targeting `target`'s position instead of the
+   *  player's (plan 179 §9). */
+  private chaseNpc(
+    target: NearbyNpcCandidate,
+    dt: number,
+    onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number) => void,
+  ): void {
+    if (isExhausted(this.life.stamina)) {
+      this.setIntent('wander')
+      this.wander(dt)
+      return
+    }
+    this.sprinting = true
+    const dist = Math.hypot(target.x - this.mesh.position.x, target.z - this.mesh.position.z)
+    if (dist < CONTACT_RANGE && onNpcHit) {
+      this.attackNpc(target.id, onNpcHit)
+      return
+    }
+    this.strategicDest.set(target.x, 0, target.z)
+    this.steerToward(this.strategicDest, this.sprintSpeedNow(), dt)
+  }
+
+  private attackNpc(
+    targetId: string,
+    onNpcHit: (targetId: string, damage: number, attackerX: number, attackerZ: number) => void,
+  ): void {
+    if (this.attackCooldown > 0) return
+    if (isExhausted(this.life.stamina)) return
+    this.attackCooldown = ATTACK_COOLDOWN
+    drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
+    const { x, z } = this.mesh.position
+    onNpcHit(
+      targetId,
       damageVsHuman(this.def.kind) * (this.dangerous ? DANGEROUS_DAMAGE_MULTIPLIER : 1),
       x,
       z,
@@ -1708,16 +1944,18 @@ export class AnimalAgent {
   }
 
   /** Picks a walkable point within `[minR,maxR]` of `(cx,cz)` (outside
-   *  villages for wild animals), up to 8 attempts. Sets `this.target` and
-   *  returns true on success, otherwise leaves it untouched. Shared by the
-   *  default home-anchored wander and the herd/mother follow bias. */
+   *  villages for wild animals — a frenzied one is willing to approach the
+   *  settlement, plan 179 §3/§6, so it skips this exclusion), up to 8
+   *  attempts. Sets `this.target` and returns true on success, otherwise
+   *  leaves it untouched. Shared by the default home-anchored wander and the
+   *  herd/mother follow bias. */
   private pickPointNear(cx: number, cz: number, minR: number, maxR: number): boolean {
     for (let attempt = 0; attempt < 8; attempt++) {
       const r = minR + Math.random() * (maxR - minR)
       const a = Math.random() * Math.PI * 2
       const x = cx + Math.cos(a) * r
       const z = cz + Math.sin(a) * r
-      if (this.isWalkable(x, z) && (this.def.sociability !== 'wild' || !this.isNearVillage({ x, z }))) {
+      if (this.isWalkable(x, z) && (this.def.sociability !== 'wild' || this.frenzied || !this.isNearVillage({ x, z }))) {
         this.target.set(x, 0, z)
         return true
       }

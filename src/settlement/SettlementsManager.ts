@@ -1,5 +1,6 @@
 import { type Object3D, type Scene, Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
@@ -88,6 +89,10 @@ export type SettlementsManager = {
     litFires: readonly { x: number, z: number }[],
     villages: readonly VillageInfo[],
     dayLengthSec: number,
+    /** Bounded/local currently-threatening animals (plan 179 §7/§10/§20) —
+     *  forwarded straight to each loaded `Settlement.update`/`NpcAgent.update`.
+     *  Defaults to none so existing callers/tests are unaffected. */
+    nearbyAnimalThreats?: readonly ThreateningAnimalCandidate[],
   ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the
@@ -399,12 +404,22 @@ export async function createSettlementsManager(
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
     },
-    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec) {
+    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)
       }
       for (const entry of entries.values()) {
-        entry.settlement?.update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec)
+        entry.settlement?.update(
+          dt,
+          playerPos,
+          playerYaw,
+          timeOfDay,
+          dayFactor,
+          litFires,
+          villages,
+          dayLengthSec,
+          nearbyAnimalThreats,
+        )
       }
       for (const instances of midpoints.values()) {
         for (const inst of instances) {

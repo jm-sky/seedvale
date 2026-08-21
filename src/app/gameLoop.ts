@@ -54,7 +54,7 @@ import { isCameraMeshDebugMode, isDebugMode } from '../debug/debugMode'
 import { setCameraMeshHit } from '../debug/renderStateDebug'
 import { ANIMAL_LABELS, FAUNA_SHADOW_DISTANCE } from '../fauna/AnimalAgent'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
-import { isMeleeTool } from '../fauna/faunaCombat'
+import { combatTargetForAnimal, isMeleeTool } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
@@ -1502,15 +1502,25 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         z: s.center.z,
         radius: villageSizeConfig(s.size).footprintRadius,
       }))
+      const nearbyNpcCandidates = loaded.flatMap((s) =>
+        s.npcs
+          .filter((npc) => !npc.health.dead)
+          .map((npc) => ({ id: npc.id, x: npc.mesh.position.x, z: npc.mesh.position.z })),
+      )
       const nearbyHumanCount = countNearbyHumans(
         player.mesh.position.x,
         player.mesh.position.z,
-        loaded.flatMap((s) =>
-          s.npcs
-            .filter((npc) => !npc.health.dead)
-            .map((npc) => ({ x: npc.mesh.position.x, z: npc.mesh.position.z })),
-        ),
+        nearbyNpcCandidates,
       )
+      // Bounded/local (plan 179 §7/§9/§10/§20): typically empty — only a
+      // predator whose own throttled decision is currently `attack` (see
+      // `AnimalAgent.isThreateningHuman()`) shows up here, never every
+      // loaded animal. `combatTargetForAnimal` is the same 177 target seam
+      // NPC defense uses, so a `defend` decision can hand it straight to
+      // `beginCombat()` with no second animal lookup.
+      const threateningAnimals = bundle.fauna.getAgents()
+        .filter((a) => a.isThreateningHuman())
+        .map((a) => ({ animalId: a.animalId, kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z, target: combatTargetForAnimal(a) }))
       withCategory(monitor, 'NPC', () => {
         bundle.settlementsManager.update(
           worldDt,
@@ -1521,6 +1531,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           litFires,
           villages,
           dayNight.dayLengthSec,
+          threateningAnimals,
         )
       })
       bundle.resourceDeposits.update(
@@ -1567,6 +1578,15 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             sneakValue: player.skills.sneak.value,
             sneakActive: player.skills.sneak.active,
             movement: player.movementState(),
+          },
+          nearbyNpcCandidates,
+          (targetId, amount, attackerX, attackerZ) => {
+            for (const settlement of loaded) {
+              const target = settlement.npcs.find((npc) => npc.id === targetId)
+              if (!target) continue
+              target.applyIncomingCombatDamage({ amount, attackerX, attackerZ, attackerKey: 'fauna' })
+              return
+            }
           },
         )
       })

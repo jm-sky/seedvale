@@ -93,6 +93,12 @@ import {
   tickNeeds,
 } from './Needs'
 import {
+  decideAnimalThreatResponse,
+  type ImmediateAnimalThreat,
+  senseImmediateAnimalThreat,
+  type ThreateningAnimalCandidate,
+} from './npcAnimalThreat'
+import {
   destinationOnColliderRim,
   isExteriorPoint,
   localEscapeRadii,
@@ -181,6 +187,15 @@ const GROUP_SUPPRESSION_STRENGTH = 0.6
  *  player can still eventually trigger it, just at a throttled cadence
  *  instead of re-rolling every frame. */
 const SUPPRESSED_REACTION_RETRY_COOLDOWN = 1.5
+/** Throttle for re-running `decideAnimalThreatResponse` while a threat is
+ *  still sensed (plan 179 §12/§13) — perception itself stays fresh every
+ *  frame; this only paces re-scoring/re-picking a flee point so a fleeing
+ *  NPC doesn't jitter its destination every frame. */
+const ANIMAL_THREAT_REACTION_INTERVAL_SEC = 1.5
+/** Distance (world units) the `flee` destination is placed beyond the NPC,
+ *  away from the threat — same order of magnitude as fauna's own
+ *  `FLEE_DISTANCE` (`AnimalAgent.ts`). */
+const NPC_FLEE_DISTANCE = 8
 
 export type { NpcGender }
 export { genderForName }
@@ -732,6 +747,16 @@ export class NpcAgent {
   /** Monotonic per-agent counter for `resolveDefense`'s incoming-damage roll
    *  (mirrors `PlayerController.nextDefenseAttempt`). */
   private defenseAttempt = 0
+  /** This frame's sensed `ImmediateAnimalThreat` (plan 179 §7/§10/§12), or
+   *  `null` — refreshed every `update()` call from the caller-supplied
+   *  bounded `nearbyAnimalThreats` list, a situation snapshot, not a
+   *  decision. See `reactToAnimalThreat()`. */
+  private currentAnimalThreat: ImmediateAnimalThreat | null = null
+  /** Throttles re-running `decideAnimalThreatResponse` while a threat is
+   *  still present — perception itself (`currentAnimalThreat` above) stays
+   *  fresh every frame; only the defend/flee re-scoring is throttled, same
+   *  cadence idiom as `AnimalAgent`'s `humanDecisionTimer`. */
+  private threatReactionCooldown = 0
   /** Destination for the `wander` phase only — resource/work destinations
    *  now live in `pendingAction.destination` instead. */
   private target = new THREE.Vector3()
@@ -1529,6 +1554,65 @@ export class NpcAgent {
     }
   }
 
+  /** Reacts to a sensed `ImmediateAnimalThreat` through the normal pressure
+   *  → decision flow (plan 179 §7/§8/§9/§10) — the threat is a situation;
+   *  `decideAnimalThreatResponse` (same `pickHighestScore` shape as every
+   *  other scored decision in this codebase) picks `defend` or `flee` from
+   *  this NPC's own carried-weapon capability and health, exactly like
+   *  `pickNeed` scores ordinary needs. `defend` hands off to the existing
+   *  177 `beginCombat()`; `flee` reuses the existing `wander` phase/movement
+   *  pipeline — no new combat or flee system. */
+  private reactToAnimalThreat(threat: ImmediateAnimalThreat): void {
+    const meleeWeapon = resolveNpcMeleeWeapon(this.carried)
+    const rangedWeapon = resolveNpcRangedWeapon(this.carried)
+    const hasRanged = rangedWeapon != null && resolveNpcAmmoKind(this.carried, rangedWeapon.ranged) != null
+    const decision = decideAnimalThreatResponse({
+      hasMeleeCapability: meleeWeapon != null,
+      hasRangedCapability: hasRanged,
+      healthRatio: this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0,
+    })
+    if (decision === 'defend') {
+      const mode: CombatIntent['mode'] = hasRanged ? 'ranged' : 'melee'
+      if (this.beginCombat({ target: threat.target, mode })) return
+      // Capability was just checked but `beginCombat` still rejected it
+      // (e.g. target went invalid between the check and here) — flee rather
+      // than leaving the NPC idle next to an active threat.
+    }
+    this.fleeFromThreat(threat.x, threat.z)
+  }
+
+  /** `flee` response to an animal threat (plan 179 §10) — same cleanup
+   *  `interruptCurrentAction` does for any other in-flight action, then a
+   *  destination away from the threat via the existing `wander` phase
+   *  (`steerWithRescue` in the `update()` switch walks it there and returns
+   *  to `choose` on arrival, same as any other wander). Not a new
+   *  `AnimalFleeSystem`. */
+  private fleeFromThreat(threatX: number, threatZ: number): void {
+    failActionLifecycle(this.actionLifecycle)
+    this.leaveActiveQueue()
+    this.pendingAction = null
+    this.pathWaypoints = []
+    this.pathIndex = 0
+    this.wait = 0
+    this.repathActive = false
+    this.previousPhase = null
+    this.sleepReason = null
+    resetMovementWatchdog(this.watchdog)
+
+    const dx = this.mesh.position.x - threatX
+    const dz = this.mesh.position.z - threatZ
+    const dist = Math.hypot(dx, dz)
+    const dirX = dist > 1e-4 ? dx / dist : 1
+    const dirZ = dist > 1e-4 ? dz / dist : 0
+    this.target.set(
+      this.mesh.position.x + dirX * NPC_FLEE_DISTANCE,
+      0,
+      this.mesh.position.z + dirZ * NPC_FLEE_DISTANCE,
+    )
+    this.applyRimDestination(this.target)
+    this.phase = 'wander'
+  }
+
   /** Debug/external cancel — mirrors `requestReevaluation()`'s role for
    *  `goTo`/`execute`, but for combat. A no-op outside `phase === 'combat'`. */
   cancelCombat(): void {
@@ -1594,6 +1678,11 @@ export class NpcAgent {
     timeOfDay: number,
     nearbyNpcCount: number,
     dayLengthSec: number,
+    /** Bounded/local currently-threatening animals (plan 179 §7/§10/§20) —
+     *  caller-filtered to animals whose own decision is currently `attack`
+     *  (see `AnimalAgent.isThreateningHuman()`), never a per-NPC world scan.
+     *  Defaults to none so existing callers/tests keep prior behaviour. */
+    nearbyAnimalThreats: readonly ThreateningAnimalCandidate[] = [],
   ): void {
     this.simClock += dt
     if (this.frozen) return
@@ -1632,6 +1721,7 @@ export class NpcAgent {
     }
 
     if (this.abandonCooldown > 0) this.abandonCooldown -= dt
+    if (this.threatReactionCooldown > 0) this.threatReactionCooldown -= dt
 
     if (WATCHDOG_PHASES.has(this.phase)) {
       this.tickWatchdog(dt)
@@ -1674,6 +1764,28 @@ export class NpcAgent {
           this.pauseCooldown = SUPPRESSED_REACTION_RETRY_COOLDOWN
         }
       }
+    }
+
+    // Immediate animal threat (plan 179 §7/§10/§12) — perception is a
+    // situation, refreshed every tick from the caller-bounded candidate
+    // list; the defend/flee re-scoring itself is throttled. Outranks the
+    // player look-at-me pause above (a wolf attack matters more than
+    // reacting to the Hero) but never interrupts `combat` (already reacting,
+    // 177 owns ending it) or sleep (not perceiving).
+    this.currentAnimalThreat = senseImmediateAnimalThreat(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      nearbyAnimalThreats,
+    )
+    if (
+      this.currentAnimalThreat
+      && this.phase !== 'combat'
+      && this.phase !== 'sleep'
+      && this.phase !== 'goSleep'
+      && this.threatReactionCooldown <= 0
+    ) {
+      this.threatReactionCooldown = ANIMAL_THREAT_REACTION_INTERVAL_SEC
+      this.reactToAnimalThreat(this.currentAnimalThreat)
     }
 
     switch (this.phase) {

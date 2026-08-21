@@ -16,7 +16,14 @@ import { isCoastalPlacement } from '../terrain/coastPlacement'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
-import { ANIMAL_DEFS, AnimalAgent, type AnimalKind, type AnimalLifeStage, type VillageInfo } from './AnimalAgent'
+import {
+  ANIMAL_DEFS,
+  AnimalAgent,
+  type AnimalKind,
+  type AnimalLifeStage,
+  type NearbyNpcCandidate,
+  type VillageInfo,
+} from './AnimalAgent'
 import {
   type PreySpawner,
   restoreSpawnPointState,
@@ -66,6 +73,12 @@ export type Fauna = {
     /** Sneak/movement stealth inputs (plan 124 §4). Defaults to "no effect"
      *  (see `AnimalAgent.update`'s own default) when omitted. */
     playerStealth?: PlayerStealthState,
+    /** Bounded/local NPC candidates for frenzied-predator targeting (plan
+     *  179 §5/§7) — forwarded straight to `AnimalAgent.update`, see its own
+     *  doc. Loaded settlements' NPCs, not a world scan. */
+    nearbyNpcs?: readonly NearbyNpcCandidate[],
+    /** Fauna→NPC damage callback (plan 179 §9/§11), mirrors `onHumanHit`. */
+    onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number) => void,
   ) => void
   dispose: () => void
   getAgents: () => AnimalAgent[]
@@ -752,7 +765,19 @@ export async function createFauna(
   let lastWorldDays: number | null = null
 
   return {
-    update(dt, observerPos, timeOfDay, worldDays, litFires, villages, nearbyHumanCount = 1, onHumanHit, playerStealth) {
+    update(
+      dt,
+      observerPos,
+      timeOfDay,
+      worldDays,
+      litFires,
+      villages,
+      nearbyHumanCount = 1,
+      onHumanHit,
+      playerStealth,
+      nearbyNpcs,
+      onNpcHit,
+    ) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       for (const a of agents) {
         const forestFactor = sampleForestFactor(a.mesh.position.x, a.mesh.position.z)
@@ -767,6 +792,8 @@ export async function createFauna(
           nearbyHumanCount,
           onHumanHit,
           playerStealth,
+          nearbyNpcs,
+          onNpcHit,
         )
       }
 
