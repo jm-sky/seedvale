@@ -75,6 +75,11 @@ function buildWell(): void {
   ui.quickActions.onBuildWell?.()
 }
 
+function buildGarden(): void {
+  closeQuickActions()
+  ui.quickActions.onBuildGarden?.()
+}
+
 function plantTree(): void {
   closeQuickActions()
   ui.quickActions.onPlantTree?.()
@@ -121,6 +126,7 @@ const shovelActions: Action[] = [
   { label: 'Wykop dołek', cost: 'łopata', onClick: dig },
   { label: 'Wyrównaj', cost: 'łopata', onClick: level },
   { label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell },
+  { label: 'Zbuduj grządkę', cost: 'łopata', onClick: buildGarden },
 ]
 
 const CROP_SEED_LABEL: Record<CropId, string> = {

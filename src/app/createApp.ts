@@ -319,6 +319,7 @@ export async function createApp(
     new Map((initialSave?.spawnPoints ?? []).map((s) => [s.id, s])),
     pointLightBudget,
     getNearbyPlayerWell,
+    initialSave?.playerGardens ?? [],
   )
   nearbyPlayerWellTarget = (x, z, maxDistance) => bundle.playerWells.nearestCompleted(x, z, maxDistance)
   // Plan 159 §10 — fishing bait per spot (flat map, survives stream-out/in
@@ -924,6 +925,7 @@ export async function createApp(
     onPlaceTrap: placement.placeTrapAtAim,
     onPutDownContainer: containers.putDownContainerAtAim,
     onBuildWell: placement.placeWellAtAim,
+    onBuildGarden: placement.placeGardenAtAim,
     onPlantTree: placement.plantTreeAtAim,
     onPlantCrop: placement.plantCropAtAim,
   })

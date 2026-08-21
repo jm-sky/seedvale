@@ -11,6 +11,7 @@ import type { Household } from '../settlement/household'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
+import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import {
@@ -541,6 +542,12 @@ const PLAYER_WELL_WATER_SEARCH_RADIUS = 60
 const ORE_SEARCH_RADIUS = 80
 const NPC_CARRY_MAX_WEIGHT = 5
 
+/** Real hunger-source discovery radius (plan 174) — same order of magnitude
+ *  as `ORE_SEARCH_RADIUS`/wood's 80, chosen (not derived) so a hungry NPC
+ *  checks its immediate surroundings before falling back to the abstract
+ *  settlement-garden gather. */
+const FOOD_SOURCE_SEARCH_RADIUS = 60
+
 /** Chop → deposit completion, household-aware. A household caps how much of
  *  the harvest it keeps (see `Household.deposit`); anything over that still
  *  reaches the settlement economy, so `tryAdvanceDevelopment` (woodshed)
@@ -852,6 +859,11 @@ export class NpcAgent {
    *  — an alternative water-fetch destination to `landmarks.well` when
    *  closer to this NPC's household home. See `resolveWaterWellTarget`. */
   private readonly getNearbyPlayerWell?: NearbyPlayerWellLookup
+  /** NPC hunger-source discovery hooks over natural world items + crops
+   *  (plan 174) — an alternative to the abstract settlement-garden gather
+   *  below when a real, closer food source is available. Null in isolated
+   *  fallbacks, same as `mining`. See `beginNeed`'s `'food'` branch. */
+  private readonly foodSources: SettlementFoodSourceHooks | null
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
@@ -886,6 +898,7 @@ export class NpcAgent {
     getPlayerSocial: PlayerSocialLookup,
     mining: SettlementMiningHooks | null,
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
+    foodSources?: SettlementFoodSourceHooks,
   ) {
     this.playAt = playAt
     this.forest = forest
@@ -897,6 +910,7 @@ export class NpcAgent {
     this.mining = mining
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
+    this.foodSources = foodSources ?? null
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
@@ -1027,6 +1041,7 @@ export class NpcAgent {
     getPlayerSocial: PlayerSocialLookup = () => ({ relationLevel: 'stranger', standing: 0 }),
     mining: SettlementMiningHooks | null = null,
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
+    foodSources?: SettlementFoodSourceHooks,
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -1053,6 +1068,7 @@ export class NpcAgent {
         getPlayerSocial,
         mining,
         getNearbyPlayerWell,
+        foodSources,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -1077,6 +1093,7 @@ export class NpcAgent {
         getPlayerSocial,
         mining,
         getNearbyPlayerWell,
+        foodSources,
       )
     }
   }
@@ -1102,6 +1119,7 @@ export class NpcAgent {
     getPlayerSocial: PlayerSocialLookup,
     mining: SettlementMiningHooks | null,
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
+    foodSources?: SettlementFoodSourceHooks,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -1137,6 +1155,7 @@ export class NpcAgent {
       getPlayerSocial,
       mining,
       getNearbyPlayerWell,
+      foodSources,
     )
   }
 
@@ -2411,6 +2430,13 @@ export class NpcAgent {
         })
         return
       }
+      // Plan 174 — a real, closer hunger source (natural berries/nuts/etc.,
+      // or a mature crop — wild, player-planted near a settlement garden, or
+      // on a player garden plot, all indistinguishable to this query) takes
+      // priority over the abstract settlement-garden gather below. Falls
+      // through to it when none is in range, exactly like a miner NPC with
+      // no loaded ore falls back to `beginUnscheduledIdle`.
+      if (this.beginRealFoodGathering(household)) return
       this.startAction({
         kind: 'eat',
         destination: copyVec3(this.landmarks.garden),
@@ -2524,6 +2550,44 @@ export class NpcAgent {
           this.carried.remove(itemKind, minedCount)
           economy.add(oreEconomicKind(target.type), minedCount)
         },
+      },
+    })
+    return true
+  }
+
+  /**
+   * Real, closer hunger source (plan 174) — a bounded local scan for natural
+   * world-item food (berries/nuts/etc., plan 159) or a harvestable crop
+   * (wild, or player-planted near a settlement garden or a player garden
+   * plot — indistinguishable to this query, plan 174 §7) via the injected
+   * `foodSources` hooks, so a hungry NPC prefers a real nearby resource over
+   * the abstract settlement-garden gather in `beginNeed`. Returns false when
+   * there are no hooks or nothing in range, so the caller falls back to that
+   * abstract gather (plan §5: "NPC zachowuje istniejące zachowanie dla
+   * niezaspokojonej potrzeby zamiast otrzymywać teleport lub magiczne
+   * zasoby" — this only ever redirects to a real target, never invents one).
+   */
+  private beginRealFoodGathering(household: Household | null): boolean {
+    const foodSources = this.foodSources
+    if (!foodSources) return false
+    const target = foodSources.queryNearest(this.mesh.position.x, this.mesh.position.z, FOOD_SOURCE_SEARCH_RADIUS)
+    if (!target) return false
+    this.startAction({
+      kind: 'eat',
+      destination: copyVec3({ x: target.x, y: this.sampleHeight(target.x, target.z), z: target.z }),
+      durationSec: 1.4 * this.waitMultiplier,
+      onComplete: () => {
+        // Re-validated at arrival (plan §8) — another NPC/the player may
+        // already have collected/harvested `target` while this one was
+        // travelling; a failed harvest must not still grant free hunger
+        // relief (plan §16: "source consumed by another actor before
+        // arrival causes a re-query/fallback rather than free hunger
+        // reduction" — the next `beginNeed` call re-queries from scratch).
+        const result = foodSources.harvest(target)
+        if (!result) return
+        household?.deposit('food', result.count, this.economy)
+        household?.stock.remove('food', Math.min(1, household.stock.query('food')))
+        this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
       },
     })
     return true

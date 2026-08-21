@@ -46,7 +46,13 @@ Timed player actions (dig/chop/mine/bury/harvest/ignite/cook/tent-setup/destroy-
 
 ## Seed planting & natural food (plans 126, 159)
 
-Quick Actions "Zasadź drzewo" consumes one generic `tree_seed` (species chosen by the same local-habitat-suitability signal procedural placement already uses) and enters the existing `TreeLifecycle` as a `sapling` anchored at the planting day — see [terrain-and-world-generation.md](./terrain-and-world-generation.md#trees). "Zasadź: marchew/ziemniak/kapustę" plants a crop lifecycle entity, only within reach of a settlement garden. Both reuse the shared ground-placement evaluator plus a short busy channel; the seed is spent only once the world mutation succeeds.
+Quick Actions "Zasadź drzewo" consumes one generic `tree_seed` (species chosen by the same local-habitat-suitability signal procedural placement already uses) and enters the existing `TreeLifecycle` as a `sapling` anchored at the planting day — see [terrain-and-world-generation.md](./terrain-and-world-generation.md#trees). "Zasadź: marchew/ziemniak/kapustę" plants a crop lifecycle entity, only within reach of a settlement garden or a player-built garden plot (below). Both reuse the shared ground-placement evaluator plus a short busy channel; the seed is spent only once the world mutation succeeds.
+
+## Player garden plots & NPC need sources (plan 174)
+
+`world/playerGarden.ts` + `world/createPlayerGardens.ts` are a single-stage player-built world object — Quick Actions "Zbuduj grządkę" (shovel capability, never consumed, plus a small wood/stone cost charged atomically from inventory or nearby dropped items via the plan 187 `constructionMaterials.ts` seam) places an immediately-usable plot, no multi-stage work like a well. A plot is purely a placement/anchor: it widens `plantedCrops.ts`'s `isNearAnyGarden` check (a second, tighter-radius call) so `126`'s crop planting also accepts a player plot, but owns no crop lifecycle of its own — planting/growth stay 126/172's.
+
+`world/foodSources.ts` is the generic NPC hunger-source resolver: `nearestFoodSource()` picks the nearest available natural world-item food (`consumable.need === 'hunger'`) or harvestable crop (wild, or planted near a settlement garden or a player plot — indistinguishable to the query) within a bounded radius, deterministic tie-break by id. `createFoodSourceHooks()` binds it to a live `ChunkManager`, threaded into every `NpcAgent` the same way `mining`/`forest` hooks are (`app/worldBundle.ts` → `SettlementsManager.ts` → `createSettlement.ts`). `NpcAgent.beginRealFoodGathering()` tries this real source before falling back to the pre-174 abstract settlement-garden gather; a harvest is re-validated at arrival, so a source taken by someone else mid-travel yields no free hunger relief. Personal thirst already had the equivalent mechanism before this plan — a completed player well (`PlayerWells.nearestCompleted()`) is preferred over the settlement well when closer; this plan added no second water path.
 
 Natural food, fishing and preservation (plan 159) extend the existing consumable/spawner model rather than adding a parallel one: perishable food kinds track freshness via `Inventory`'s `FoodBatch[]` (see [CATALOG.md](../items/CATALOG.md) for the freshness/bait flags); a fishing rod casts at a lake shore through a busy channel with a deterministic catch roll (no fish population/agents); a settlement-landmark drying rack and wild hive each run a generic persistent `TimedProcess` (`items/timedProcess.ts`), resolved lazily so they survive reload/time-skip without a per-frame ticker.
 
@@ -74,6 +80,9 @@ src/world/playerWell.ts
 src/world/animalTraps.ts
 src/world/plantedTrees.ts
 src/world/plantedCrops.ts
+src/world/playerGarden.ts
+src/world/createPlayerGardens.ts
+src/world/foodSources.ts
 src/world/fishing.ts
 src/world/dryingRacks.ts
 src/world/beehives.ts

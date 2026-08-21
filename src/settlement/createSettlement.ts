@@ -13,6 +13,7 @@ import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Collider } from '../world/collision'
+import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { VillageSize } from './families'
@@ -228,6 +229,10 @@ export async function createSettlement(
    *  — forwarded into every `NpcAgent.create` call below the same way
    *  `getPlayerSocial` is above. */
   getNearbyPlayerWell?: NearbyPlayerWellLookup,
+  /** NPC hunger-source discovery hooks over natural world items + crops
+   *  (plan 174) — forwarded into every `NpcAgent.create` call below the same
+   *  way `mining` is above. */
+  foodSources?: SettlementFoodSourceHooks,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
@@ -527,6 +532,7 @@ export async function createSettlement(
         getPlayerSocial,
         mining,
         getNearbyPlayerWell,
+        foodSources,
       )
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent
