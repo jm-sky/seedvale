@@ -12,9 +12,10 @@ import type { CreateSaveResult, SaveSlotInfo } from '../persistence/saveDb'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
-import type { QuickActionsTraps, RestOutcome, RestVariant } from '../ui/createQuickActions'
+import type { QuickActionsCropSeeds, QuickActionsTraps, RestOutcome, RestVariant } from '../ui/createQuickActions'
 import type { ToastVariant } from '../ui/createToast'
 import type { TrapKind } from '../world/animalTraps'
+import type { CropId } from '../world/cropLifecycle'
 import { pickNpcConfirmationSound, pickNpcFarewellSound, pickNpcGreetingSound } from '../ai/NpcAgent'
 import {
   type AudioVolumeKey,
@@ -115,6 +116,12 @@ type QuickActionsState = {
    *  alongside the other digging actions, gated by `hasDiggingTool` above (a
    *  digging tool is required to start the `pit` stage but never consumed). */
   onBuildWell: (() => void) | null
+  /** Initial tree-seed ownership for showing "Zasadź drzewo" (plan 126). */
+  hasTreeSeed: boolean
+  /** Which crop seed kinds the player currently carries (plan 126). */
+  cropSeeds: QuickActionsCropSeeds
+  onPlantTree: (() => void) | null
+  onPlantCrop: ((cropId: CropId) => void) | null
   onOpen: (() => void) | null
   onClose: (() => void) | null
 }
@@ -302,6 +309,8 @@ export const ui = reactive({
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
     hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null,
+    hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
+    onPlantTree: null, onPlantCrop: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false } as TimeSkipState,
   merchant: { open: false, npc: null, counts: {}, groups: [], onBuyCoins: null, onBuyBarter: null, onSellCoins: null, onSellInstances: null } as MerchantState,
@@ -643,6 +652,12 @@ export function setQuickActionsTraps(traps: QuickActionsTraps): void {
   ui.quickActions.traps = { ...traps }
 }
 export function setQuickActionsFireAvailability(availability: QuickActionsFireAvailability): void { ui.quickActions.fireAvailability = availability }
+export function setQuickActionsHasTreeSeed(hasTreeSeed: boolean): void { ui.quickActions.hasTreeSeed = hasTreeSeed }
+export function setQuickActionsCropSeeds(cropSeeds: QuickActionsCropSeeds): void {
+  const current = ui.quickActions.cropSeeds
+  if (current.carrot === cropSeeds.carrot && current.potato === cropSeeds.potato && current.cabbage === cropSeeds.cabbage) return
+  ui.quickActions.cropSeeds = { ...cropSeeds }
+}
 export function openQuickActions(): void {
   if (ui.quickActions.open) return
   ui.quickActions.open = true

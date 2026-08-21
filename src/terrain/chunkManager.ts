@@ -48,11 +48,14 @@ import {
   CROP_DEFS,
   type CropGrowthStage,
   type CropId,
+  type CropPlacement,
   resolveCropHarvest,
   resolveCropStage,
 } from '../world/cropLifecycle'
 import { createCropStageMesh } from '../world/cropVisuals'
-import { coastalFactor } from '../world/treeLifecycle'
+import { makePlantedCropId } from '../world/plantedCrops'
+import { makePlantedTreeId, pickPlantedTreeSpecies, type PlantedTreeRecord } from '../world/plantedTrees'
+import { coastalFactor, rollSizeClass, type TreeSizeClass } from '../world/treeLifecycle'
 import { createTreeStageMesh, preloadTreeStumpTemplate, tagTreeMesh } from '../world/treeVisuals'
 import { assignRenderLayer, REFLECTION_DISTANT_LAYER, REFLECTION_SKIPPED_LAYER, type WaterMirror } from '../world/waterMirror'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
@@ -264,6 +267,17 @@ export type ChunkManagerConfig = {
    *  chunk unload/reload" contract as `collectedItemIds`, kept as a separate
    *  set since a harvested crop is a removal, not a collected pickup. */
   removedCropIds: Set<string>
+  /** Player-planted trees (plan 126) — persistent world mutations distinct
+   *  from procedural generation; merged into each owning chunk's tree loop
+   *  alongside `tile.vegetation`'s trees whenever that chunk (re)loads.
+   *  Mutated in place by `plantTree()` — same "caller-owned `Set`/array
+   *  passed by reference" convention as `collectedItemIds`/`removedCropIds`. */
+  plantedTrees: PlantedTreeRecord[]
+  /** Player-planted crops (plan 126) — same relationship to `tile.crops` as
+   *  `plantedTrees` has to `tile.vegetation`. A harvested planted crop is
+   *  simply removed from this array (unlike a procedural crop, which needs
+   *  `removedCropIds` to stop its deterministic generator from recreating it). */
+  plantedCrops: CropPlacement[]
   grass: {
     enabled: boolean
     /** Chunks (Chebyshev distance) that get grass — deliberately smaller than
@@ -394,6 +408,19 @@ export type ChunkManager = {
    *  outcome (e.g. `young`, or `spoiled` with no `spoiledItem`) leaves the
    *  crop in place — the player can come back once it matures. */
   harvestCrop: (id: string) => CropHarvestOutcome
+  /** Plants a new tree at `(x, z)` (plan 126) — species chosen from local
+   *  habitat suitability, starts at `sapling` anchored at the current world
+   *  day. Registers into `treeLifecycle` and `config.plantedTrees`, and
+   *  renders it immediately into the owning chunk (which must already be
+   *  loaded — the player planting it is standing right there). Returns the
+   *  new tree's id, or `null` if `(x, z)`'s chunk isn't currently loaded. */
+  plantTree: (x: number, z: number, rotationY: number) => { id: string } | null
+  /** Plants a new crop at `(x, z)` (plan 126) — starts at `young`, anchored
+   *  at the current world day, using the same lazy `resolveCropStage`
+   *  wild crops use (plan 172). Registers into `config.plantedCrops` and
+   *  renders it immediately, same "chunk must already be loaded" contract as
+   *  `plantTree`. Returns the new crop's id, or `null` if not loaded. */
+  plantCrop: (x: number, z: number, cropId: CropId) => { id: string } | null
   /** Procedural landmarks (`monolith`/`stoneCircle`/`smallRuins`/`cemetery`)
    *  within `radius` of `pos` among currently loaded chunks — same "loaded
    *  chunks only" contract as `getNearbyItems` (plan 132), used for `[E]`
@@ -1179,6 +1206,24 @@ export function createChunkManager(
     getProgramCensus().recordChunkAttach('chunk-mesh-attach', rec.key, [rec.mesh])
   }
 
+  /** Player-planted trees (plan 126) whose position falls inside `coord` —
+   *  merged into that chunk's tree loop in `attachChunkContent`, same "chunk
+   *  owns whatever's inside its footprint" rule as procedural placements. */
+  function plantedTreesForChunk(coord: ChunkCoord): PlantedTreeRecord[] {
+    return config.plantedTrees.filter((r) => {
+      const c = worldToChunk(r.x, r.z, config.chunkSize)
+      return c.cx === coord.cx && c.cz === coord.cz
+    })
+  }
+
+  /** Same idea as `plantedTreesForChunk`, for planted crops. */
+  function plantedCropsForChunk(coord: ChunkCoord): CropPlacement[] {
+    return config.plantedCrops.filter((r) => {
+      const c = worldToChunk(r.x, r.z, config.chunkSize)
+      return c.cx === coord.cx && c.cz === coord.cz
+    })
+  }
+
   /** Vegetation / items / environment / colliders. Caller guarantees the
    *  needed GLB templates are already in cache (`contentTemplatesReady`). */
   function attachChunkContent(rec: ChunkRecord, tile: ChunkTileResult): void {
@@ -1187,7 +1232,8 @@ export function createChunkManager(
     const sampleTileHeight: HeightSampler = (sx, sz) =>
       sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
 
-    if (tile.vegetation.length > 0) {
+    const plantedTreesHere = plantedTreesForChunk(coord)
+    if (tile.vegetation.length > 0 || plantedTreesHere.length > 0) {
       const treeTemplates = getTreeTemplates.peek() ?? []
       const bushTemplates = getBushTemplates.peek() ?? []
       const cactusTemplates = getCactusTemplates.peek() ?? []
@@ -1197,7 +1243,26 @@ export function createChunkManager(
       const vegT0 = performance.now()
       const treeIds: string[] = []
       const treeYaw = new Map<string, number>()
-      const treePlacements = tile.vegetation.filter((p) => p.kind === 'tree')
+      // Planted trees (plan 126) are a persistent world mutation, not part of
+      // procedural generation — merged in here so a planted tree enters the
+      // exact same living-tree instancing / extras / harvest path as any
+      // procedural one (updated review §1/§2), tagged with its own stable id
+      // (`plantedId`) instead of the derived procedural `makeId`.
+      const treePlacements: (typeof tile.vegetation[number] & { plantedId?: string })[] = [
+        ...tile.vegetation.filter((p) => p.kind === 'tree'),
+        ...plantedTreesHere.map((r) => ({
+          x: r.x,
+          z: r.z,
+          kind: 'tree' as const,
+          speciesIndex: r.speciesIndex,
+          scale: r.sizeJitter,
+          rotationY: r.rotationY,
+          growthStage: 'sapling' as const,
+          sizeClass: r.sizeClass,
+          sizeJitter: r.sizeJitter,
+          plantedId: r.id,
+        })),
+      ]
       const livingTreePlacements: PropPlacement[] = []
       const extras = new THREE.Group()
       extras.name = 'chunk-vegetation-extras'
@@ -1207,7 +1272,7 @@ export function createChunkManager(
         const initialStage = placement.growthStage ?? 'mature'
         const sizeClass = placement.sizeClass ?? 'medium'
         const sizeJitter = placement.sizeJitter ?? placement.scale
-        const id = config.treeLifecycle.makeId(placement.x, placement.z, placement.speciesIndex)
+        const id = placement.plantedId ?? config.treeLifecycle.makeId(placement.x, placement.z, placement.speciesIndex)
         const presence = {
           id,
           x: placement.x,
@@ -1295,7 +1360,12 @@ export function createChunkManager(
 
     const cropsT0 = performance.now()
     const worldDaysForCrops = config.getWorldDays()
-    rec.crops = buildPlacementGroup('chunk-crops', tile.crops, (placement) => {
+    // Planted crops (plan 126) merge into the same per-chunk group as wild
+    // ones — a harvested planted crop is removed from `config.plantedCrops`
+    // outright (never `removedCropIds`, which only makes sense for a
+    // deterministic procedural generator that would otherwise recreate it).
+    const cropPlacements: CropPlacement[] = [...tile.crops, ...plantedCropsForChunk(coord)]
+    rec.crops = buildPlacementGroup('chunk-crops', cropPlacements, (placement) => {
       if (config.removedCropIds.has(placement.id)) return null
       const def = CROP_DEFS[placement.cropId]
       const stage = resolveCropStage(def, placement.stageStartedAt, worldDaysForCrops)
@@ -1751,7 +1821,7 @@ export function createChunkManager(
       const worldDays = config.getWorldDays()
       for (const rec of chunks.values()) {
         if (!rec.tile) continue
-        for (const p of rec.tile.crops) {
+        for (const p of [...rec.tile.crops, ...plantedCropsForChunk(rec.coord)]) {
           if (config.removedCropIds.has(p.id)) continue
           const dx = p.x - pos.x
           const dz = p.z - pos.z
@@ -1820,11 +1890,12 @@ export function createChunkManager(
       return null
     },
     harvestCrop(id) {
+      const plantedIndex = config.plantedCrops.findIndex((p) => p.id === id)
       for (const rec of chunks.values()) {
         if (!rec.crops || !rec.tile) continue
         const mesh = rec.crops.children.find((c) => c.userData.cropId === id)
         if (!mesh) continue
-        const placement = rec.tile.crops.find((p) => p.id === id)
+        const placement = rec.tile.crops.find((p) => p.id === id) ?? (plantedIndex >= 0 ? config.plantedCrops[plantedIndex] : undefined)
         if (!placement) return { ok: false, reason: 'unknown-crop' }
         const def = CROP_DEFS[placement.cropId]
         const stage = resolveCropStage(def, placement.stageStartedAt, config.getWorldDays())
@@ -1832,10 +1903,84 @@ export function createChunkManager(
         if (!harvestYield) return { ok: false, reason: 'no-yield' }
         mesh.removeFromParent()
         disposeObject3D(mesh)
-        config.removedCropIds.add(id)
+        // A planted crop's persistent record *is* its presence (implementation
+        // notes §6/§14) — harvest removes it outright. `removedCropIds` only
+        // makes sense for a wild crop, whose deterministic generator would
+        // otherwise recreate it on the next chunk load.
+        if (plantedIndex >= 0) config.plantedCrops.splice(plantedIndex, 1)
+        else config.removedCropIds.add(id)
         return { ok: true, yield: harvestYield }
       }
       return { ok: false, reason: 'unknown-crop' }
+    },
+    plantTree(x, z, rotationY) {
+      const coord = worldToChunk(x, z, config.chunkSize)
+      const rec = chunks.get(chunkKey(coord))
+      if (!rec || !rec.tile || rec.state !== 'ready') return null
+      const env = sampleTreeEnv(x, z)
+      const speciesIndex = pickPlantedTreeSpecies(env, Math.random())
+      const sizeClass: TreeSizeClass = rollSizeClass(Math.random())
+      const sizeJitter = Math.random()
+      const id = makePlantedTreeId(config.seed, x, z)
+      if (config.treeLifecycle.getPresence(id) || config.plantedTrees.some((r) => r.id === id)) return null
+      const record: PlantedTreeRecord = { id, x, z, speciesIndex, sizeClass, sizeJitter, rotationY }
+      config.plantedTrees.push(record)
+      const presence: TreePresence = { id, x, z, speciesIndex, initialStage: 'sapling', sizeClass, sizeJitter }
+      config.treeLifecycle.registerPresence(presence)
+      // Anchors this tree's growth clock at the moment it was planted rather
+      // than at world day 0 — the one thing `registerPresence` alone can't do
+      // (implementation notes §1/§25).
+      config.treeLifecycle.setOverride(id, { stage: 'sapling', stageStartedAt: config.getWorldDays() })
+      rec.treeIds = [...(rec.treeIds ?? []), id]
+      if (!rec.treeYaw) rec.treeYaw = new Map()
+      rec.treeYaw.set(id, rotationY)
+
+      // Renders immediately as a plain `vegetationExtras` Object3D — the same
+      // fallback `refreshTreeVisual` already uses for any tree that needs a
+      // runtime (not bulk-generation-time) visual, simpler than re-inserting
+      // into an already-built region-batcher instance buffer. It migrates
+      // into the normal batched `tree-living` path automatically the next
+      // time this chunk reloads (merged into `treePlacements` above).
+      const resolved = config.treeLifecycle.resolve(presence, env, config.getWorldDays())
+      const prop = createTreeStageMesh(resolved.visual, resolved.scale, id)
+      prop.rotation.y = rotationY
+      placeOnGround(prop, x, z, (sx, sz) => readField('heights', sx, sz))
+      tagTreeMesh(prop, resolved, sizeClass, sizeJitter, speciesIndex, 'sapling')
+      if (!rec.vegetationExtras) {
+        const extras = new THREE.Group()
+        extras.name = 'chunk-vegetation-extras'
+        scene.add(extras)
+        rec.vegetationExtras = extras
+      }
+      rec.vegetationExtras.add(prop)
+      rebuildColliders(rec)
+      return { id }
+    },
+    plantCrop(x, z, cropId) {
+      const coord = worldToChunk(x, z, config.chunkSize)
+      const rec = chunks.get(chunkKey(coord))
+      if (!rec || !rec.tile || rec.state !== 'ready') return null
+      const worldDays = config.getWorldDays()
+      const id = makePlantedCropId(config.seed, x, z)
+      if (config.plantedCrops.some((p) => p.id === id)) return null
+      const record: CropPlacement = { id, x, z, cropId, stageStartedAt: worldDays }
+      config.plantedCrops.push(record)
+
+      const def = CROP_DEFS[cropId]
+      const stage = resolveCropStage(def, record.stageStartedAt, worldDays)
+      const cropMesh = createCropStageMesh(def.harvestItem, stage)
+      cropMesh.userData.cropId = id
+      cropMesh.userData.cropDefId = cropId
+      cropMesh.userData.cropStage = stage
+      placeOnGround(cropMesh, x, z, (sx, sz) => readField('heights', sx, sz))
+      assignRenderLayer(cropMesh, REFLECTION_SKIPPED_LAYER)
+      if (!rec.crops) {
+        rec.crops = new THREE.Group()
+        rec.crops.name = 'chunk-crops'
+        scene.add(rec.crops)
+      }
+      rec.crops.add(cropMesh)
+      return { id }
     },
     modifyTerrain(x, z, radius, depth) {
       const mod: TerrainModification = { x, z, radius, depth, mode: 'dig' }

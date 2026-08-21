@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-21
+**Last updated:** 2026-08-21 (plan 126 — seed planting)
 
 ## Quick rules
 
@@ -38,6 +38,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Fishing | `fishing_rod` held at a lake shore — `[E]` casts (busy channel, deterministic catch roll), `[R]` applies bait to the cast spot. No fish population/agents — `world/fishing.ts`. |
 | Drying / preservation | Settlement-landmark drying rack (`world/dryingRacks.ts`, not a placeable item) — `[E]` starts drying raw meat/fish or collects a finished `dried_meat`/`dried_fish`; background `TimedProcess` (`items/timedProcess.ts`) resolved lazily, survives reload/time-skip. |
 | Wild hives | Deterministic settlement-landmark hive (`world/beehives.ts`) near a tree — `[E]` collects accrued `honey` (small sting chance), `[R]` burns it down (lit torch/branch required) for a one-time reward. No bee agents/manager. |
+| Seed planting (plan 126) | Quick Actions "Zasadź drzewo" (`tree_seed`, one generic seed — species chosen from local habitat suitability via `world/plantedTrees.ts`'s `pickPlantedTreeSpecies`, same signal procedural placement uses) enters the existing `TreeLifecycle` as a `sapling` anchored at planting time. "Zasadź: marchew/ziemniak/kapustę" (`seed_carrot`/`seed_potato`/`seed_cabbage`) plants a `CropLifecycle` (plan 172) entity, only within reach of a settlement garden. Both reuse `evaluateGroundPlacement` for siting and a short busy channel; the seed is spent only on success. `world/plantedTrees.ts` / `world/plantedCrops.ts`; persisted in `SaveData.plantedTrees`/`plantedCrops` (v25). |
 
 ## Items
 
@@ -109,6 +110,10 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | war_arrow | strzała bojowa | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +8 damage over `arrow`, heaviest |
 | chest | skrzynia | — | — | none (Kupiec) | procedural (M53 needed) | plan 164; generic player storage container — place with Inventory „Postaw”, `[E]` open transfer screen / `[R]` pick up (with contents) on the world prop, Quick Actions → „Odłóż skrzynię” while carrying |
 | backpack | plecak | — | — | none (Kupiec) | procedural (M55 needed) | plan 186; ordinary carried item — simply holding it in `Inventory` raises `Inventory.maxWeight` by `ITEM_CATALOG.backpack.carryCapacityBonus` (+15 kg, stacks); must fit under the pre-bonus capacity to buy/pick up; no equip/backpack-slot system |
+| tree_seed | nasiono drzewa | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź drzewo" — species picked from local habitat suitability, not a per-species item |
+| seed_carrot | nasiona marchwi | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: marchew" — plants a `carrot` `CropLifecycle` entity in a settlement garden |
+| seed_potato | sadzeniaki ziemniaka | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: ziemniak" — plants a `potato` `CropLifecycle` entity in a settlement garden |
+| seed_cabbage | nasiona kapusty | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: kapustę" — plants a `cabbage` `CropLifecycle` entity in a settlement garden |
 
 ## Roadmap (not done)
 

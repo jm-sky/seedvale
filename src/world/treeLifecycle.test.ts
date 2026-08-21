@@ -219,6 +219,24 @@ describe('createTreeLifecycle', () => {
     expect(life.getOverride(p.id)).toBeUndefined()
   })
 
+  it('setOverride anchors growth at the given day instead of day 0 (plan 126 planting)', () => {
+    const life = createTreeLifecycle(7)
+    const p = presence({
+      id: life.makeId(10, 22, 0),
+      x: 10,
+      z: 22,
+      initialStage: 'sapling',
+      sizeClass: 'medium',
+    })
+    life.registerPresence(p)
+    // Planted on day 100, not day 0 — without an anchor the procedural path
+    // (`advanceStage(initialStage, 0, ...)`) would already show it fully grown.
+    life.setOverride(p.id, { stage: 'sapling', stageStartedAt: 100 })
+    expect(life.getOverride(p.id)).toEqual({ stage: 'sapling', stageStartedAt: 100 })
+    expect(life.resolve(p, goodEnv, 100).stage).toBe('sapling')
+    expect(life.resolve(p, goodEnv, 100.6).stage).toBe('young')
+  })
+
   it('grows medium sapling to old over enough days', () => {
     const life = createTreeLifecycle(7)
     const p = presence({

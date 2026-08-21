@@ -69,6 +69,10 @@ export type ItemKind =
   | 'war_arrow'
   | 'chest'
   | 'backpack'
+  | 'tree_seed'
+  | 'seed_carrot'
+  | 'seed_potato'
+  | 'seed_cabbage'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
 
@@ -725,6 +729,42 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0x5a4632,
     description: 'Skórzany plecak. Noszony w ekwipunku zwiększa udźwig.'
   },
+  tree_seed: {
+    kind: 'tree_seed',
+    label: 'nasiono drzewa',
+    categories: ['resource'],
+    weight: 0.02,
+    size: 'XS',
+    color: 0x5a7a3a,
+    description: 'Garść nasion drzewa. Zasadzone na odpowiednim gruncie wyrośnie w prawdziwe drzewo, dobrane do miejsca.'
+  },
+  seed_carrot: {
+    kind: 'seed_carrot',
+    label: 'nasiona marchwi',
+    categories: ['resource'],
+    weight: 0.02,
+    size: 'XS',
+    color: 0xd9762c,
+    description: 'Nasiona marchwi. Zasadź je w ogródku, by po pewnym czasie zebrać plon.'
+  },
+  seed_potato: {
+    kind: 'seed_potato',
+    label: 'sadzeniaki ziemniaka',
+    categories: ['resource'],
+    weight: 0.03,
+    size: 'XS',
+    color: 0xc9a86a,
+    description: 'Bulwy ziemniaka gotowe do posadzenia w ogródku.'
+  },
+  seed_cabbage: {
+    kind: 'seed_cabbage',
+    label: 'nasiona kapusty',
+    categories: ['resource'],
+    weight: 0.02,
+    size: 'XS',
+    color: 0x7ba85a,
+    description: 'Nasiona kapusty. Zasadź je w ogródku, by po pewnym czasie zebrać plon.'
+  },
 }
 
 const _itemShadowBox = new THREE.Box3()
@@ -1329,6 +1369,18 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     head.castShadow = true
     group.add(head)
     return group
+  }
+  if (kind === 'tree_seed' || kind === 'seed_carrot' || kind === 'seed_potato' || kind === 'seed_cabbage') {
+    // Small seed pouch — a flattened dodecahedron reads as "a handful of
+    // seeds" without needing a dedicated GLB (plan 126).
+    const mesh = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(0.07, 0),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),
+    )
+    mesh.scale.set(1.2, 0.6, 1)
+    mesh.position.y = 0.045
+    mesh.castShadow = true
+    return mesh
   }
   if (kind === 'whetstone') {
     const mesh = new THREE.Mesh(

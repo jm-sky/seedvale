@@ -855,6 +855,42 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     carryCapacityBonus: BACKPACK_CAPACITY_BONUS_KG,
     notes: 'Plan 186 — Kupiec stock. Ordinary carried item, not equipment: simply holding it in `Inventory` raises `Inventory.maxWeight` by `carryCapacityBonus` (stacks if more than one is carried). Must fit under the *pre-bonus* capacity to be picked up in the first place.',
   },
+  tree_seed: {
+    kind: 'tree_seed',
+    label: 'nasiono drzewa',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 126 — Kupiec stock. Consumed by the "Zasadź drzewo" Quick Action; the planted tree\'s species is chosen from local habitat suitability (`world/plantedTrees.ts`), same signal procedural placement uses, not a per-species seed item.',
+  },
+  seed_carrot: {
+    kind: 'seed_carrot',
+    label: 'nasiona marchwi',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 126 — Kupiec stock. Consumed by "Zasadź: marchew"; plants a `carrot` `CropLifecycle` (plan 172) entity in a settlement garden.',
+  },
+  seed_potato: {
+    kind: 'seed_potato',
+    label: 'sadzeniaki ziemniaka',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 126 — Kupiec stock. Consumed by "Zasadź: ziemniak"; plants a `potato` `CropLifecycle` (plan 172) entity in a settlement garden.',
+  },
+  seed_cabbage: {
+    kind: 'seed_cabbage',
+    label: 'nasiona kapusty',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 126 — Kupiec stock. Consumed by "Zasadź: kapusta"; plants a `cabbage` `CropLifecycle` (plan 172) entity in a settlement garden.',
+  },
 }
 
 /** Flat per-arrow-kind damage delta applied on top of the bow's own

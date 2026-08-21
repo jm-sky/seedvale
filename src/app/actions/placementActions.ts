@@ -1,3 +1,4 @@
+import type { CropId } from '../../world/cropLifecycle'
 import { CAPABILITY_NEED_LABEL } from '../../items/itemCatalog'
 import { isTrapItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
@@ -14,6 +15,22 @@ import {
   TRAP_SETUP_DURATION_SEC,
   type TrapKind,
 } from '../../world/animalTraps'
+import {
+  CROP_PLANT_DURATION_SEC,
+  CROP_PLANT_FOOTPRINT_RADIUS,
+  CROP_PLANT_MESSAGE,
+  CROP_PLANT_REACH,
+  CROP_PLANT_SEPARATION,
+  CROP_SEED_ITEM,
+  isNearAnyGarden,
+} from '../../world/plantedCrops'
+import {
+  TREE_PLANT_DURATION_SEC,
+  TREE_PLANT_FOOTPRINT_RADIUS,
+  TREE_PLANT_MESSAGE,
+  TREE_PLANT_REACH,
+  TREE_PLANT_SEPARATION,
+} from '../../world/plantedTrees'
 import {
   activeWellStage,
   WELL_FOOTPRINT_RADIUS,
@@ -48,6 +65,11 @@ export type PlacementActions = {
   placeTrapAtAim: (kind: TrapKind) => void
   placeWellAtAim: () => void
   workOnWell: (id: string) => void
+  /** Plants a `tree_seed` from inventory ahead of the player (plan 126). */
+  plantTreeAtAim: () => void
+  /** Plants a crop seed of `cropId` ahead of the player — only valid near a
+   *  settlement garden (plan 126). */
+  plantCropAtAim: (cropId: CropId) => void
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
@@ -241,5 +263,99 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     busy.start(sessionSec, WELL_WORK_LABEL[stage], commitProgress, { onCancel: commitProgress })
   }
 
-  return { tentAimPoint, tentBlockers, placeTentAtAim, placeTrapAtAim, placeWellAtAim, workOnWell }
+  /** Plants a tree seed ahead of the player (plan 126 §1.2/§1.3): validates
+   *  against nearby trees (procedural + already-planted — `getNearbyTrees`
+   *  covers both, since a planted tree registers into the same
+   *  `TreeLifecycle`) and settlement blockers via the shared
+   *  `evaluateGroundPlacement`, same busy-channel shape as tent/trap/well.
+   *  The seed is only spent when the channel completes and the world
+   *  mutation actually succeeds. */
+  const plantTreeAtAim = (): void => {
+    if (!inventory.has('tree_seed', 1) || isActionBlocked(ctx)) return
+    const yaw = mouseLook.state.yaw
+    const x = player.mesh.position.x - Math.sin(yaw) * TREE_PLANT_REACH
+    const z = player.mesh.position.z - Math.cos(yaw) * TREE_PLANT_REACH
+    const peers = bundle.chunkManager.getNearbyTrees({ x, z }, TREE_PLANT_SEPARATION + 4)
+    const reason = evaluateGroundPlacement({
+      x,
+      z,
+      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+      waterLevel: bundle.chunkManager.waterLevel,
+      blockers: tentBlockers(x, z),
+      peers,
+      footprintRadius: TREE_PLANT_FOOTPRINT_RADIUS,
+      separation: TREE_PLANT_SEPARATION,
+    })
+    if (reason !== 'ok') {
+      toast.show(TREE_PLANT_MESSAGE[reason], 'error')
+      return
+    }
+    busy.start(TREE_PLANT_DURATION_SEC, 'Sadzenie drzewka…', () => {
+      if (!inventory.remove('tree_seed', 1)) return
+      const result = bundle.chunkManager.plantTree(x, z, yaw)
+      if (!result) {
+        inventory.add('tree_seed', 1)
+        toast.show('Nie udało się zasadzić drzewka.', 'error')
+        return
+      }
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show('Zasadzono drzewko.')
+    })
+  }
+
+  /** Plants a crop seed ahead of the player (plan 126 §2.3) — only within
+   *  reach of a settlement garden (implementation notes §12: keep placement
+   *  narrow/garden-based, not general farmland). Otherwise the same
+   *  validate-then-busy-channel shape as `plantTreeAtAim`. */
+  const plantCropAtAim = (cropId: CropId): void => {
+    const seedKind = CROP_SEED_ITEM[cropId]
+    if (!inventory.has(seedKind, 1) || isActionBlocked(ctx)) return
+    const yaw = mouseLook.state.yaw
+    const x = player.mesh.position.x - Math.sin(yaw) * CROP_PLANT_REACH
+    const z = player.mesh.position.z - Math.cos(yaw) * CROP_PLANT_REACH
+    const gardens = bundle.settlementsManager.getLoaded().flatMap((s) => s.landmarks.gardens)
+    if (!isNearAnyGarden(x, z, gardens)) {
+      toast.show(CROP_PLANT_MESSAGE.noGarden, 'error')
+      return
+    }
+    const peers = bundle.chunkManager.getNearbyCrops({ x, z }, CROP_PLANT_SEPARATION + 3)
+    const reason = evaluateGroundPlacement({
+      x,
+      z,
+      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+      waterLevel: bundle.chunkManager.waterLevel,
+      blockers: [],
+      peers,
+      footprintRadius: CROP_PLANT_FOOTPRINT_RADIUS,
+      separation: CROP_PLANT_SEPARATION,
+    })
+    if (reason !== 'ok') {
+      toast.show(CROP_PLANT_MESSAGE[reason], 'error')
+      return
+    }
+    busy.start(CROP_PLANT_DURATION_SEC, 'Sadzenie…', () => {
+      if (!inventory.remove(seedKind, 1)) return
+      const result = bundle.chunkManager.plantCrop(x, z, cropId)
+      if (!result) {
+        inventory.add(seedKind, 1)
+        toast.show('Nie udało się zasadzić.', 'error')
+        return
+      }
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show('Zasadzono.')
+    })
+  }
+
+  return {
+    tentAimPoint,
+    tentBlockers,
+    placeTentAtAim,
+    placeTrapAtAim,
+    placeWellAtAim,
+    workOnWell,
+    plantTreeAtAim,
+    plantCropAtAim,
+  }
 }

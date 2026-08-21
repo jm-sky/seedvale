@@ -85,6 +85,8 @@ import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
 import { randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
+import { parsePlantedCrops } from '../world/plantedCrops'
+import { parsePlantedTrees } from '../world/plantedTrees'
 import { createTimeSkip } from '../world/timeSkip'
 import { createTreeLifecycle, parseTreeOverrides } from '../world/treeLifecycle'
 import { createClimateState } from '../world/weather'
@@ -248,6 +250,12 @@ export async function createApp(
   // "shared/mutated in place, reset only on a genuinely new world" contract
   // as `collectedItemIds` above.
   let removedCropIds = new Set<string>(initialSave?.harvestedCropIds ?? [])
+  // Plan 126 — player-planted trees/crops: same "carried across rebuild,
+  // reset only on a genuinely new world" contract as the two `Set`s above,
+  // but arrays since each record needs more than an id (position/species/
+  // stage anchor for trees; position/cropId/stage anchor for crops).
+  let plantedTrees = parsePlantedTrees(initialSave?.plantedTrees)
+  let plantedCrops = parsePlantedCrops(initialSave?.plantedCrops)
   // Persistent player land ownership (plan 129) — sparse, doesn't need the
   // `bundle`-rebuild indirection `onAnimalDeath`/`getPlayerSocial` use below
   // (it never depends on `questManager`), so it's threaded straight through.
@@ -287,6 +295,8 @@ export async function createApp(
     config,
     collectedItemIds,
     removedCropIds,
+    plantedTrees,
+    plantedCrops,
     worldAudio.playAt,
     initialSave?.droppedItems ?? [],
     initialSave?.placedFires ?? [],
@@ -379,6 +389,12 @@ export async function createApp(
       lightWoodenTorch: canLightWoodenTorch(),
     })
     vueUi.setQuickActionsHasCarriedContainer(bundle.placedContainers.hasCarried())
+    vueUi.setQuickActionsHasTreeSeed(inventory.has('tree_seed', 1))
+    vueUi.setQuickActionsCropSeeds({
+      carrot: inventory.has('seed_carrot', 1),
+      potato: inventory.has('seed_potato', 1),
+      cabbage: inventory.has('seed_cabbage', 1),
+    })
   }
 
   const keyboard = createKeyboard()
@@ -628,6 +644,8 @@ export async function createApp(
     fishingBait,
     getCollectedItemIds: () => collectedItemIds,
     getRemovedCropIds: () => removedCropIds,
+    getPlantedTrees: () => plantedTrees,
+    getPlantedCrops: () => plantedCrops,
     getTreeLifecycle: () => treeLifecycle,
   })
 
@@ -648,6 +666,8 @@ export async function createApp(
       if (resetCollectedItems) {
         collectedItemIds = new Set()
         removedCropIds = new Set()
+        plantedTrees = []
+        plantedCrops = []
         dayNight.elapsedDays = 0
         treeLifecycle = createTreeLifecycle(config.seed, {})
         landOwnership.clear()
@@ -660,6 +680,8 @@ export async function createApp(
         resetCollectedItems,
         collectedItemIds,
         removedCropIds,
+        plantedTrees,
+        plantedCrops,
         worldAudio.playAt,
         treeLifecycle,
         getWorldDays,
@@ -862,6 +884,12 @@ export async function createApp(
     hasDiggingTool: inventory.hasCapability('soil_digging'),
     hasTent: inventory.has('tent', 1),
     hasCarriedContainer: bundle.placedContainers.hasCarried(),
+    hasTreeSeed: inventory.has('tree_seed', 1),
+    cropSeeds: {
+      carrot: inventory.has('seed_carrot', 1),
+      potato: inventory.has('seed_potato', 1),
+      cabbage: inventory.has('seed_cabbage', 1),
+    },
     nearTown: rest.isNearTown(),
     onOpen: () => {
       restorePointerLockAfterQuickActions = exitGamePointerLock(renderer.domElement)
@@ -890,6 +918,8 @@ export async function createApp(
     onPlaceTrap: placement.placeTrapAtAim,
     onPutDownContainer: containers.putDownContainerAtAim,
     onBuildWell: placement.placeWellAtAim,
+    onPlantTree: placement.plantTreeAtAim,
+    onPlantCrop: placement.plantCropAtAim,
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()

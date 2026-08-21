@@ -6,8 +6,10 @@ import type { Settlement } from '../settlement/createSettlement'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { PlacedTrapRecord } from '../world/animalTraps'
 import type { BeehiveRecord } from '../world/beehives'
+import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
 import type { DryingRackRecord } from '../world/dryingRacks'
+import type { PlantedTreeRecord } from '../world/plantedTrees'
 import type { NearbyPlayerWellLookup, PlayerWellRecord } from '../world/playerWell'
 import type { PointLightBudget } from '../world/pointLightBudget'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
@@ -103,6 +105,11 @@ function buildChunkManager(
   config: WorldConfig,
   collectedItemIds: Set<string>,
   removedCropIds: Set<string>,
+  /** Player-planted trees/crops (plan 126) — same "caller-owned, mutated in
+   *  place, carried across rebuild" contract as `collectedItemIds`/
+   *  `removedCropIds` above. */
+  plantedTrees: PlantedTreeRecord[],
+  plantedCrops: CropPlacement[],
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
   waterMirror: WaterMirror,
@@ -128,6 +135,8 @@ function buildChunkManager(
     flatShading: config.terrain.flatShading,
     collectedItemIds,
     removedCropIds,
+    plantedTrees,
+    plantedCrops,
     grass: config.terrain.grass,
     detailNormal: config.terrain.detailNormal,
     terrainCastsShadow: config.postProcessing.terrainCastsShadow,
@@ -293,6 +302,11 @@ export async function createWorldBundle(
    *  "carried across rebuild, reset only on a genuinely new world" contract
    *  as `collectedItemIds`. */
   removedCropIds: Set<string>,
+  /** Player-planted trees/crops (plan 126) — same "carried across rebuild,
+   *  reset only on a genuinely new world" contract as `collectedItemIds`/
+   *  `removedCropIds` above. */
+  plantedTrees: PlantedTreeRecord[],
+  plantedCrops: CropPlacement[],
   playAt: PlayAt,
   initialDroppedItems: readonly DroppedItem[],
   initialPlacedFires: readonly PlacedFire[],
@@ -356,7 +370,7 @@ export async function createWorldBundle(
     waterLevel: config.terrain.waterLevel,
     enabled: config.postProcessing.waterReflections,
   })
-  const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, treeLifecycle, getWorldDays, waterMirror)
+  const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, treeLifecycle, getWorldDays, waterMirror)
   chunkManager.update(0, 0)
   await chunkManager.waitForChunks(homeChunks())
 
@@ -442,6 +456,9 @@ export async function rebuildWorldBundle(
   /** Same reset contract as `collectedItemIds` — `resetCollectedItems`
    *  governs both. */
   removedCropIds: Set<string>,
+  /** Same reset contract as `collectedItemIds`/`removedCropIds` above (plan 126). */
+  plantedTrees: PlantedTreeRecord[],
+  plantedCrops: CropPlacement[],
   playAt: PlayAt,
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
@@ -513,7 +530,7 @@ export async function rebuildWorldBundle(
     waterLevel: config.terrain.waterLevel,
     enabled: config.postProcessing.waterReflections,
   })
-  bundle.chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, treeLifecycle, getWorldDays, waterMirror)
+  bundle.chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, treeLifecycle, getWorldDays, waterMirror)
   bundle.chunkManager.update(0, 0)
   await bundle.chunkManager.waitForChunks(homeChunks())
 

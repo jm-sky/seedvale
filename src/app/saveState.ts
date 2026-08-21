@@ -8,9 +8,11 @@ import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { VueUi } from '../ui-vue/mount'
+import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
 import type { FishingBaitState } from '../world/fishing'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
+import type { PlantedTreeRecord } from '../world/plantedTrees'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import type { WorldBundle } from './worldBundle'
 import { snapshotSpawnPointState } from '../fauna/AnimalSpawner'
@@ -20,7 +22,7 @@ import { pickActiveSaveId } from '../persistence/saveSlots'
 /** Current canonical save schema version. The field list and migration story
  *  live in `src/persistence/saveData.ts` and `docs/STATE.md` — this module
  *  only assembles the runtime state into that shape. */
-const SAVE_VERSION = 24
+const SAVE_VERSION = 25
 
 /** Assembles the live runtime state into a `SaveData` and owns *when* it gets
  *  written. The split from `src/persistence/` is unchanged by this extraction:
@@ -56,6 +58,10 @@ export type SaveStateDeps = {
    *  must not be captured by value. */
   getCollectedItemIds: () => ReadonlySet<string>
   getRemovedCropIds: () => ReadonlySet<string>
+  /** Plan 126 — player-planted trees/crops, same "live accessor, replaced on
+   *  a New Game" contract as the two above. */
+  getPlantedTrees: () => readonly PlantedTreeRecord[]
+  getPlantedCrops: () => readonly CropPlacement[]
   getTreeLifecycle: () => TreeLifecycle
 }
 
@@ -130,6 +136,8 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     placedContainers: bundle.placedContainers.nodes().map((c) => ({ ...c })),
     carriedContainer: bundle.placedContainers.carriedNode(),
     playerWells: bundle.playerWells.nodes().map((w) => ({ ...w })),
+    plantedTrees: deps.getPlantedTrees().map((t) => ({ ...t })),
+    plantedCrops: deps.getPlantedCrops().map((c) => ({ ...c })),
   })
 
   const saveNow = (): Promise<void> => writeSave(buildSaveData())

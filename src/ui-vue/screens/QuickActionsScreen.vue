@@ -4,6 +4,7 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import QuickActionsGroup from '@/components/QuickActionsGroup.vue'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import type { TrapKind } from '../../world/animalTraps'
+import type { CropId } from '../../world/cropLifecycle'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import QuickActionsButton from '../components/QuickActionsButton.vue'
 import SkillsHudButton from '../components/SkillsHudButton.vue'
@@ -74,6 +75,16 @@ function buildWell(): void {
   ui.quickActions.onBuildWell?.()
 }
 
+function plantTree(): void {
+  closeQuickActions()
+  ui.quickActions.onPlantTree?.()
+}
+
+function plantCrop(cropId: CropId): void {
+  closeQuickActions()
+  ui.quickActions.onPlantCrop?.(cropId)
+}
+
 function onDocumentClick(event: MouseEvent): void {
   if (panel.value?.contains(event.target as Node)) return
   closeQuickActions()
@@ -111,6 +122,24 @@ const shovelActions: Action[] = [
   { label: 'Wyrównaj', cost: 'łopata', onClick: level },
   { label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell },
 ]
+
+const CROP_SEED_LABEL: Record<CropId, string> = {
+  carrot: 'Zasadź: marchew',
+  potato: 'Zasadź: ziemniak',
+  cabbage: 'Zasadź: kapustę',
+}
+
+const plantActions = computed<Action[]>(() => {
+  const list: Action[] = []
+  if (ui.quickActions.hasTreeSeed) {
+    list.push({ label: 'Zasadź drzewo', cost: '1× nasiono drzewa', onClick: plantTree })
+  }
+  for (const cropId of ['carrot', 'potato', 'cabbage'] as const) {
+    if (!ui.quickActions.cropSeeds[cropId]) continue
+    list.push({ label: CROP_SEED_LABEL[cropId], cost: '1× nasiona', onClick: () => plantCrop(cropId) })
+  }
+  return list
+})
 </script>
 
 <template>
@@ -180,6 +209,18 @@ const shovelActions: Action[] = [
       >
         <QuickActionsButton
           v-for="action in trapActions"
+          :key="action.label"
+          :label="action.label"
+          :cost="action.cost"
+          @click="action.onClick"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="plantActions.length"
+        label="Sadzenie"
+      >
+        <QuickActionsButton
+          v-for="action in plantActions"
           :key="action.label"
           :label="action.label"
           :cost="action.cost"

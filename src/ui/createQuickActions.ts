@@ -1,10 +1,15 @@
 import type { LightActionResult } from '../app/userActions'
 import type { TrapKind } from '../world/animalTraps'
+import type { CropId } from '../world/cropLifecycle'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 /** Which trap kinds are currently in the inventory — one flag per
  *  `TrapKind`, kept live by `createApp.ts`'s `syncQuickActionAvailability`. */
 export type QuickActionsTraps = Record<TrapKind, boolean>
+
+/** Which crop seed kinds are currently in the inventory (plan 126) — same
+ *  live-kept-flag shape as `QuickActionsTraps`. */
+export type QuickActionsCropSeeds = Record<CropId, boolean>
 
 export type RestVariant = 'camp' | 'town'
 export type RestOutcome = 'ok' | 'too-far' | 'no-blanket'
@@ -40,6 +45,10 @@ export type QuickActionsHandlers = {
   /** Places a new player-built well ahead of the player (plan 127) — shown
    *  alongside dig/level while `hasDiggingTool` is true. */
   onBuildWell?: () => void
+  /** Plants a `tree_seed` from inventory ahead of the player (plan 126). */
+  onPlantTree?: () => void
+  /** Plants a crop seed of `cropId` ahead of the player (plan 126). */
+  onPlantCrop?: (cropId: CropId) => void
   /** Initial digging-capability ownership for showing dig/level buttons. */
   hasDiggingTool?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */
@@ -48,6 +57,10 @@ export type QuickActionsHandlers = {
   hasCarriedContainer?: boolean
   /** Which trap kinds the player currently carries (plan 141). */
   traps?: QuickActionsTraps
+  /** Initial tree-seed ownership for showing "Zasadź drzewo" (plan 126). */
+  hasTreeSeed?: boolean
+  /** Which crop seed kinds the player currently carries (plan 126). */
+  cropSeeds?: QuickActionsCropSeeds
   /** Initial near-settlement flag for showing "Odpocznij w mieście". */
   nearTown?: boolean
   /** Fired when the panel transitions from closed → open (e.g. release pointer lock). */
@@ -86,6 +99,12 @@ export function createQuickActions(
   }
   if (handlers.traps) {
     getUi()?.setQuickActionsTraps(handlers.traps)
+  }
+  if (typeof handlers.hasTreeSeed === 'boolean') {
+    getUi()?.setQuickActionsHasTreeSeed(handlers.hasTreeSeed)
+  }
+  if (handlers.cropSeeds) {
+    getUi()?.setQuickActionsCropSeeds(handlers.cropSeeds)
   }
 
   return {

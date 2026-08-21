@@ -82,6 +82,7 @@ If the feature needs no new model, do nothing to this file.
 | M51 | Arrows (`arrow`/`broadhead_arrow`/`war_arrow`) | Stackable ammo pickup/inventory mesh; not holdable. Quaternius `Arrow` (Medieval Weapons Pack), one shared GLB for all three arrow kinds (no visual damage-tier distinction in v1) | `wired` | plan 162 (`items/arrow.glb`) |
 | M52 | Whetstone | Stackable maintenance item; procedural box fallback in place and functional, no GLB yet | `needed` | plan 161 |
 | M55 | Backpack | Carried capacity item (`items.backpack`); default procedural fallback mesh (same catch-all box `chest`/`tent` already use), functional but not backpack-shaped | `needed` | plan 186 |
+| M56 | Seed pouch(es) (`tree_seed`/`seed_carrot`/`seed_potato`/`seed_cabbage`) | Small inventory pickup; procedural flattened-dodecahedron fallback in place and functional, no GLB yet | `needed` | plan 126 |
 
 ## Wired (reference — do not treat as open work)
 

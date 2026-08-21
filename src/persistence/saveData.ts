@@ -7,7 +7,9 @@ import type { SkillId } from '../player/PlayerSkills'
 import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
 import type { TrapKind, TrapState } from '../world/animalTraps'
+import type { CropId } from '../world/cropLifecycle'
 import type { WellStage } from '../world/playerWell'
+import type { TreeSizeClass } from '../world/treeLifecycle'
 import { isToolKind } from '../items/HeldTool'
 import { type ItemKind } from '../items/items'
 import { SNEAK_LEGACY_XP } from '../player/PlayerSkills'
@@ -419,8 +421,39 @@ export type SaveDataV24 = Omit<SaveDataV23, 'version' | 'playerWells'> & {
   playerWells: SavePlayerWell[]
 }
 
-/** Canonical save shape — always v24. `loadSaveData` migrates older saves up. */
-export type SaveData = SaveDataV24
+/** Persistent planted-tree record (plan 126) — mirrors `world/plantedTrees.ts`'s
+ *  `PlantedTreeRecord`. Identity/placement only; current growth stage lives in
+ *  `treeOverrides` (implementation notes §3). */
+export type SavePlantedTree = {
+  id: string
+  x: number
+  z: number
+  speciesIndex: number
+  sizeClass: TreeSizeClass
+  sizeJitter: number
+  rotationY: number
+}
+
+/** Persistent planted-crop record (plan 126) — mirrors `world/cropLifecycle.ts`'s
+ *  `CropPlacement`, reused directly for a planted crop's own presence (a
+ *  harvested planted crop is removed from this array outright, unlike a wild
+ *  crop's sparse `harvestedCropIds`). */
+export type SavePlantedCrop = {
+  id: string
+  x: number
+  z: number
+  cropId: CropId
+  stageStartedAt: number
+}
+
+export type SaveDataV25 = Omit<SaveDataV24, 'version'> & {
+  version: 25
+  plantedTrees: SavePlantedTree[]
+  plantedCrops: SavePlantedCrop[]
+}
+
+/** Canonical save shape — always v25. `loadSaveData` migrates older saves up. */
+export type SaveData = SaveDataV25
 
 function isSaveConfig(value: unknown): value is SaveConfig {
   if (!value || typeof value !== 'object') return false
@@ -1079,12 +1112,57 @@ export function isSaveDataV23(value: unknown): value is SaveDataV23 {
   return true
 }
 
-export function isSaveDataV24(value: unknown): value is SaveData {
+export function isSaveDataV24(value: unknown): value is SaveDataV24 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 24) return false
   if (!isSaveDataV22({ ...v, version: 22 })) return false
   if (!isPlayerWellsField(v.playerWells)) return false
+  return true
+}
+
+const TREE_SIZE_CLASSES: ReadonlySet<string> = new Set<TreeSizeClass>(['large', 'medium', 'small'])
+const CROP_IDS_SET: ReadonlySet<string> = new Set<CropId>(['cabbage', 'carrot', 'potato'])
+
+function isPlantedTreesField(value: unknown): value is SavePlantedTree[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const t = entry as Record<string, unknown>
+    return (
+      typeof t.id === 'string' &&
+      typeof t.x === 'number' &&
+      typeof t.z === 'number' &&
+      typeof t.speciesIndex === 'number' &&
+      typeof t.sizeClass === 'string' && TREE_SIZE_CLASSES.has(t.sizeClass) &&
+      typeof t.sizeJitter === 'number' &&
+      typeof t.rotationY === 'number'
+    )
+  })
+}
+
+function isPlantedCropsField(value: unknown): value is SavePlantedCrop[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const c = entry as Record<string, unknown>
+    return (
+      typeof c.id === 'string' &&
+      typeof c.x === 'number' &&
+      typeof c.z === 'number' &&
+      typeof c.cropId === 'string' && CROP_IDS_SET.has(c.cropId) &&
+      typeof c.stageStartedAt === 'number'
+    )
+  })
+}
+
+export function isSaveDataV25(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 25) return false
+  if (!isSaveDataV24({ ...v, version: 24 })) return false
+  if (!isPlantedTreesField(v.plantedTrees)) return false
+  if (!isPlantedCropsField(v.plantedCrops)) return false
   return true
 }
 
@@ -1321,7 +1399,7 @@ function toV23(v22: SaveDataV22): SaveDataV23 {
  *  had — a timestamp never tracked that — so every migrated well restarts
  *  its current stage's work from 0. This is the only honest migration: it
  *  neither auto-completes the stage nor fabricates progress. */
-function toV24(v23: SaveDataV23): SaveData {
+function toV24(v23: SaveDataV23): SaveDataV24 {
   const { version: _version, ...rest } = v23
   return {
     ...rest,
@@ -1337,22 +1415,35 @@ function toV24(v23: SaveDataV23): SaveData {
   }
 }
 
-/** Migrates any post-v16 save payload to the canonical v24 shape. */
-function upToCurrent(v16: SaveDataV16): SaveData {
-  return toV24(toV23(toV22(toV21(toV20(toV19(toV18(toV17(v16))))))))
+/** Plan 126 — pre-v25 saves predate player planting entirely, so none have
+ *  ever been planted. */
+function toV25(v24: SaveDataV24): SaveData {
+  const { version: _version, ...rest } = v24
+  return {
+    ...rest,
+    version: 25,
+    plantedTrees: [],
+    plantedCrops: [],
+  }
 }
 
-/** Accepts a stored v1–v24 save and always returns the canonical v24 shape. */
+/** Migrates any post-v16 save payload to the canonical v25 shape. */
+function upToCurrent(v16: SaveDataV16): SaveData {
+  return toV25(toV24(toV23(toV22(toV21(toV20(toV19(toV18(toV17(v16)))))))))
+}
+
+/** Accepts a stored v1–v25 save and always returns the canonical v25 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV24(value)) return value
-    if (isSaveDataV23(value)) return toV24(value)
-    if (isSaveDataV22(value)) return toV24(toV23(value))
-    if (isSaveDataV21(value)) return toV24(toV23(toV22(value)))
-    if (isSaveDataV20(value)) return toV24(toV23(toV22(toV21(value))))
-    if (isSaveDataV19(value)) return toV24(toV23(toV22(toV21(toV20(value)))))
-    if (isSaveDataV18(value)) return toV24(toV23(toV22(toV21(toV20(toV19(value))))))
-    if (isSaveDataV17(value)) return toV24(toV23(toV22(toV21(toV20(toV19(toV18(value)))))))
+    if (isSaveDataV25(value)) return value
+    if (isSaveDataV24(value)) return toV25(value)
+    if (isSaveDataV23(value)) return toV25(toV24(value))
+    if (isSaveDataV22(value)) return toV25(toV24(toV23(value)))
+    if (isSaveDataV21(value)) return toV25(toV24(toV23(toV22(value))))
+    if (isSaveDataV20(value)) return toV25(toV24(toV23(toV22(toV21(value)))))
+    if (isSaveDataV19(value)) return toV25(toV24(toV23(toV22(toV21(toV20(value))))))
+    if (isSaveDataV18(value)) return toV25(toV24(toV23(toV22(toV21(toV20(toV19(value)))))))
+    if (isSaveDataV17(value)) return toV25(toV24(toV23(toV22(toV21(toV20(toV19(toV18(value))))))))
     if (isSaveDataV16(value)) return upToCurrent(value)
     if (isSaveDataV15(value)) return upToCurrent(toV16(value))
     if (isSaveDataV14(value)) return upToCurrent(toV16(toV15(value)))

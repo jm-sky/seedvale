@@ -448,6 +448,11 @@ export type TreeLifecycle = {
     envAt: (x: number, z: number) => TreeEnvSample,
   ) => number
   getOverride: (id: TreeId) => TreeStateOverride | undefined
+  /** Sets a single tree's override directly — the one primitive `registerPresence`
+   *  doesn't cover: anchoring a freshly planted tree's growth clock at the
+   *  moment it was planted rather than at world day 0 (plan 126). Callers that
+   *  only need bulk restore-from-save should keep using `replaceOverrides`. */
+  setOverride: (id: TreeId, override: TreeStateOverride) => void
   serializeOverrides: () => Record<TreeId, TreeStateOverride>
   replaceOverrides: (overrides: Record<TreeId, TreeStateOverride>) => void
   clearOverrides: () => void
@@ -712,6 +717,9 @@ export function createTreeLifecycle(
     },
     getOverride(id) {
       return overrides.get(id)
+    },
+    setOverride(id, override) {
+      overrides.set(id, { stage: override.stage, stageStartedAt: override.stageStartedAt })
     },
     serializeOverrides() {
       const out: Record<TreeId, TreeStateOverride> = {}
