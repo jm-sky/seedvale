@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "assets:report": "tsx scripts/generate-local-assets-report.ts",
+    "plans:without-notes": "tsx scripts/planned-plans-without-notes.ts",
     "trace:analyze": "./scripts/analyze_trace.sh"
   },
   "dependencies": {
