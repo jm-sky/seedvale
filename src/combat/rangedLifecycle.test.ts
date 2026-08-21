@@ -60,4 +60,49 @@ describe('createRangedAttackLifecycle', () => {
     expect(lifecycle.state()).toBe('idle')
     expect(lifecycle.isDrawing()).toBe(false)
   })
+
+  describe('manualRelease (real press-to-draw/release-to-fire input)', () => {
+    it('update() never auto-fires a manualRelease draw, even held well past drawTime', () => {
+      const lifecycle = createRangedAttackLifecycle()
+      lifecycle.start(SHORT_BOW, { manualRelease: true })
+      const tick = lifecycle.update(SHORT_BOW.drawTime * 5)
+      expect(tick.fireReady).toBe(false)
+      expect(lifecycle.state()).toBe('draw')
+      expect(lifecycle.phaseProgress()).toBe(1)
+    })
+
+    it('release() before drawTime cancels back to idle with no fire', () => {
+      const lifecycle = createRangedAttackLifecycle()
+      lifecycle.start(SHORT_BOW, { manualRelease: true })
+      lifecycle.update(SHORT_BOW.drawTime * 0.5)
+      const result = lifecycle.release()
+      expect(result.fireReady).toBe(false)
+      expect(result.config).toBeNull()
+      expect(lifecycle.state()).toBe('idle')
+    })
+
+    it('release() at/after drawTime fires and enters release', () => {
+      const lifecycle = createRangedAttackLifecycle()
+      lifecycle.start(SHORT_BOW, { manualRelease: true })
+      lifecycle.update(SHORT_BOW.drawTime)
+      const result = lifecycle.release()
+      expect(result.fireReady).toBe(true)
+      expect(result.config).toBe(SHORT_BOW)
+      expect(lifecycle.state()).toBe('release')
+    })
+
+    it('release() while not drawing is a no-op', () => {
+      const lifecycle = createRangedAttackLifecycle()
+      expect(lifecycle.release()).toEqual({ fireReady: false, config: null })
+      expect(lifecycle.state()).toBe('idle')
+    })
+
+    it('start() without opts (NPC callers) keeps auto-firing on the timer, unaffected by manualRelease existing', () => {
+      const lifecycle = createRangedAttackLifecycle()
+      lifecycle.start(SHORT_BOW)
+      const tick = lifecycle.update(SHORT_BOW.drawTime + 0.01)
+      expect(tick.fireReady).toBe(true)
+      expect(lifecycle.state()).toBe('release')
+    })
+  })
 })

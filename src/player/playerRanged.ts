@@ -24,8 +24,15 @@ export type PlayerRanged = {
   /** Starts a draw if idle and stamina allows it (draining it on success).
    *  Returns false without side effects otherwise. */
   requestDraw: (config: RangedConfig, stamina: StaminaState) => boolean
-  /** Advances the lifecycle by `dt`. Call once per frame regardless of input. */
+  /** Advances the lifecycle by `dt`. Call once per frame regardless of input.
+   *  Never produces `fireReady` on its own — firing is release-gated,
+   *  see `releaseDraw()`. */
   update: (dt: number) => RangedTickResult
+  /** Resolves the release edge of a real press-to-draw/release-to-fire input
+   *  (`E`/LMB/mobile-E keyup): fires if held for at least the bow's
+   *  `drawTime`, otherwise cancels the shot (no ammo consumed, stamina
+   *  already spent is not refunded — same forfeit as `reset()`). */
+  releaseDraw: () => RangedTickResult
   /** Cancels any in-flight draw — pause/modal/rebuild/tool-switch safety. */
   reset: () => void
 }
@@ -41,9 +48,10 @@ export function createPlayerRanged(): PlayerRanged {
       if (lifecycle.state() !== 'idle') return false
       if (stamina.current < cfg.staminaCost) return false
       drainStamina(stamina, cfg.staminaCost)
-      return lifecycle.start(cfg)
+      return lifecycle.start(cfg, { manualRelease: true })
     },
     update: lifecycle.update,
+    releaseDraw: lifecycle.release,
     reset: lifecycle.reset,
   }
 }

@@ -40,7 +40,10 @@ const touch = isTouchDevice()
           type="button"
           class="pointer-events-auto flex size-17 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(61,123,209,0.75)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
           aria-label="Interakcja"
-          @click="ui.touch.onInteract?.()"
+          @pointerdown="ui.touch.onInteract?.()"
+          @pointerup="ui.touch.onInteractUp?.()"
+          @pointercancel="ui.touch.onInteractUp?.()"
+          @pointerleave="ui.touch.onInteractUp?.()"
         >
           E
         </button>

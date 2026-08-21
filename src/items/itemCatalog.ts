@@ -52,7 +52,10 @@ export type RangedConfig = {
   range: number
   /** World units/second the projectile travels. */
   projectileSpeed: number
-  /** Seconds from draw request until release. */
+  /** Seconds from draw request until release: the NPC auto-fire delay, and
+   *  for the player (real press-to-draw/release-to-fire input) the minimum
+   *  hold before an early release counts as a cancel instead of a fire —
+   *  see `combat/rangedLifecycle.ts`'s `manualRelease`. */
   drawTime: number
   /** Seconds after release before another shot can be requested. */
   recovery: number

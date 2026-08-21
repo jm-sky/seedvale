@@ -123,10 +123,21 @@ export class PlayerController {
   private readonly walkAction: THREE.AnimationAction | null
   private readonly runAction: THREE.AnimationAction | null
   private readonly attackAction: THREE.AnimationAction | null
+  /** Adventurer ships no dedicated bow clip — `Idle_Gun_Pointing`/`Gun_Shoot`
+   *  are the closest same-rig stand-ins for draw-hold/release (plan 162
+   *  follow-up, see the plan's implementation summary). `Universal Animation
+   *  Library`/Mixamo `Pro Longbow Pack` clips were checked and are not
+   *  usable: different skeletons (UE mannequin / `mixamorig:*`) than
+   *  Adventurer's own rig, and UAL doesn't ship bow-specific content anyway. */
+  private readonly aimDrawAction: THREE.AnimationAction | null
+  private readonly rangedReleaseAction: THREE.AnimationAction | null
   private currentAction: THREE.AnimationAction | null = null
   /** True while `playerMelee` is in-flight — `syncAnimation` must not
    *  overwrite `Sword_Slash` with Idle/Walk until recovery ends. */
   private meleeAttacking = false
+  /** True while a bow draw is held (`playerRanged` state `draw`) —
+   *  `syncAnimation` must not overwrite the aim pose with Idle/Walk. */
+  private rangedDrawing = false
   private moving = false
   private sprinting = false
   /** Set once per frame by `setEncumbrance()` (plan 164 §9) — `app/gameLoop.ts`
@@ -202,6 +213,8 @@ export class PlayerController {
       this.walkAction = this.findAction(animations, ['Walk', 'Run'])
       this.runAction = this.findAction(animations, ['Run'])
       this.attackAction = this.findAction(animations, ['Sword_Slash', 'Punch_Right', 'Punch_Left'])
+      this.aimDrawAction = this.findAction(animations, ['Idle_Gun_Pointing', 'Idle_Gun'])
+      this.rangedReleaseAction = this.findAction(animations, ['Gun_Shoot', 'Idle_Gun_Shoot'])
       this.playAction(this.idleAction)
     } else {
       this.mixer = null
@@ -209,6 +222,8 @@ export class PlayerController {
       this.walkAction = null
       this.runAction = null
       this.attackAction = null
+      this.aimDrawAction = null
+      this.rangedReleaseAction = null
     }
 
     this.labelEl = document.createElement('div')
@@ -432,6 +447,54 @@ export class PlayerController {
     this.meleeAttacking = false
   }
 
+  /** True when a same-rig aim/draw stand-in clip is available — no dedicated
+   *  bow animation ships with Adventurer or any checked-compatible pack
+   *  (see the `aimDrawAction` field doc). Capsule fallback has no clip. */
+  hasRangedDrawClip(): boolean {
+    return this.aimDrawAction !== null
+  }
+
+  /** Starts/holds the aim-draw pose loop — call every frame while
+   *  `playerRanged.state() === 'draw'`. No-op once already playing, and a
+   *  no-op entirely if no stand-in clip was found. */
+  beginRangedDraw(): void {
+    this.rangedDrawing = true
+    if (!this.aimDrawAction || this.currentAction === this.aimDrawAction) return
+    this.currentAction?.fadeOut(0.15)
+    this.aimDrawAction.reset()
+    this.aimDrawAction.setLoop(THREE.LoopRepeat, Infinity)
+    this.aimDrawAction.setEffectiveWeight(1)
+    this.aimDrawAction.fadeIn(0.15).play()
+    this.currentAction = this.aimDrawAction
+  }
+
+  /** Lets `syncAnimation` return to idle/walk once the draw ends (fired,
+   *  cancelled, downed, or a modal/tool-switch cancel). Safe to call when
+   *  not drawing. */
+  endRangedDraw(): void {
+    this.rangedDrawing = false
+  }
+
+  /** One-shot release snap timed to the bow's release+recovery window — the
+   *  ranged counterpart of `beginMeleeAttack`'s time-scaled clip. Call once,
+   *  on the exact frame a shot fires. No-op if no stand-in clip was found;
+   *  `rangedDrawing` stays true underneath so a subsequent `endRangedDraw()`
+   *  (once `playerRanged` actually reaches `idle`) still returns to
+   *  idle/walk rather than snapping back to the aim-hold pose. */
+  playRangedRelease(durationSec: number): void {
+    if (!this.rangedReleaseAction) return
+    const clipDuration = this.rangedReleaseAction.getClip().duration
+    const timeScale = durationSec > 1e-4 ? clipDuration / durationSec : 1
+    this.currentAction?.fadeOut(0.05)
+    this.rangedReleaseAction.reset()
+    this.rangedReleaseAction.setLoop(THREE.LoopOnce, 1)
+    this.rangedReleaseAction.clampWhenFinished = true
+    this.rangedReleaseAction.setEffectiveTimeScale(timeScale)
+    this.rangedReleaseAction.setEffectiveWeight(1)
+    this.rangedReleaseAction.fadeIn(0.05).play()
+    this.currentAction = this.rangedReleaseAction
+  }
+
   /** Current movement tier for fauna stealth calculations (plan 124 §4) —
    *  reuses `update()`'s own `moving`/`sprinting` flags. */
   movementState(): PlayerMovementState {
@@ -540,6 +603,7 @@ export class PlayerController {
     this.downed = true
     this.downedTimer = durationSec
     this.meleeAttacking = false
+    this.rangedDrawing = false
     this.lieDown()
   }
 
@@ -673,6 +737,7 @@ export class PlayerController {
 
   private syncAnimation(): void {
     if (this.meleeAttacking && this.attackAction) return
+    if (this.rangedDrawing && this.aimDrawAction) return
     if (!this.moving) {
       this.playAction(this.idleAction)
       return

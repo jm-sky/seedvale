@@ -6,6 +6,10 @@ export type KeyState = {
   sprint: boolean
   /** Edge-triggered: set true on KeyE keydown, cleared by consumeInteract(). */
   interact: boolean
+  /** Set true on KeyE keyup, cleared by consumeInteractRelease() — the release
+   *  edge of the shared primary attack/use action (mirrored by LMB and the
+   *  mobile `E` button, both writing into this same field). */
+  interactReleased: boolean
   /** Edge-triggered: set true on KeyR keydown, cleared by consumeAltInteract(). */
   altInteract: boolean
   /** Edge-triggered: set true on KeyL keydown, cleared by consumeQuestLog(). */
@@ -75,6 +79,8 @@ export function createKeyboard(): {
   state: KeyState
   /** Reads and clears the pending interact press. Returns true at most once per keydown. */
   consumeInteract: () => boolean
+  /** Reads and clears the pending interact release (`E` keyup). */
+  consumeInteractRelease: () => boolean
   /** Reads and clears the pending alt-interact press (`R`). */
   consumeAltInteract: () => boolean
   /** Reads and clears the pending quest-log press. Returns true at most once per keydown. */
@@ -104,6 +110,7 @@ export function createKeyboard(): {
     right: false,
     sprint: false,
     interact: false,
+    interactReleased: false,
     altInteract: false,
     questLog: false,
     drop: false,
@@ -133,13 +140,14 @@ export function createKeyboard(): {
     const action = KEY_MAP[event.code]
     if (!action) return
     if (!EDGE_TRIGGERED.has(action)) state[action] = false
+    if (action === 'interact') state.interactReleased = true
     event.preventDefault()
   }
 
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
 
-  const consume = (key: 'interact' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'jump' | 'cycleTarget'): boolean => {
+  const consume = (key: 'interact' | 'interactReleased' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'jump' | 'cycleTarget'): boolean => {
     if (!state[key]) return false
     state[key] = false
     return true
@@ -148,6 +156,7 @@ export function createKeyboard(): {
   return {
     state,
     consumeInteract: () => consume('interact'),
+    consumeInteractRelease: () => consume('interactReleased'),
     consumeAltInteract: () => consume('altInteract'),
     consumeQuestLog: () => consume('questLog'),
     consumeDrop: () => consume('drop'),

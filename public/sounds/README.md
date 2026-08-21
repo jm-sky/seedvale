@@ -158,6 +158,8 @@ falls back to grass. See `docs/assets/SOUNDS.md` S01.
 | action-well-01.ogg | 146947__macferret_20__uoa_120217_kcqwell.wav | https://freesound.org/people/MacFerret_20/sounds/146947/ | Stone/water in well; player `[E]` at well + NPC drink at well; converted mono 16-bit 44.1 kHz |
 | action-fire-ignite-01.ogg | 24 Campfire, Dropping Fresh Pine Branches in Fire…Close 02.wav | Sonniss GDC 2026 — Ivo Vicic Campfire Bonfire FX | S03 ignite (trimmed ~2.5 s from long take) |
 | action-fire-extinguish-01.ogg | 42 Campfire, Putting Out Fire, Water from Bottle…Close.wav | Sonniss GDC 2026 — Ivo Vicic Campfire Bonfire FX | S03 extinguish (trimmed ~2.8 s) |
+| bow-draw.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | S22 draw; play on a successful ranged `requestDraw()` |
+| bow-release.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | S22 release; play on the frame a shot actually fires |
 
 ## License notes (2026-08-12 batch)
 

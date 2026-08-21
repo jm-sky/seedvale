@@ -235,6 +235,7 @@ type TouchChromeState = {
   onPause: (() => void) | null
   onQuickActions: (() => void) | null
   onInteract: (() => void) | null
+  onInteractUp: (() => void) | null
   onAltInteract: (() => void) | null
   onCycleTarget: (() => void) | null
 }
@@ -351,6 +352,7 @@ export const ui = reactive({
     onPause: null,
     onQuickActions: null,
     onInteract: null,
+    onInteractUp: null,
     onAltInteract: null,
     onCycleTarget: null,
   } as TouchChromeState,
@@ -883,7 +885,7 @@ export function clearToasts(): void {
   ui.toast.items = []
 }
 
-type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract' | 'onAltInteract' | 'onCycleTarget'>>
+type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract' | 'onInteractUp' | 'onAltInteract' | 'onCycleTarget'>>
 export function configureTouchChrome(handlers: TouchChromeHandlers): void {
   ui.touch.visible = true
   Object.assign(ui.touch, handlers)
@@ -903,6 +905,7 @@ export function clearTouchChrome(): void {
   ui.touch.onPause = null
   ui.touch.onQuickActions = null
   ui.touch.onInteract = null
+  ui.touch.onInteractUp = null
   ui.touch.onAltInteract = null
   ui.touch.onCycleTarget = null
 }

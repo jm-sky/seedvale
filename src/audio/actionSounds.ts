@@ -13,6 +13,8 @@ export const ACTION_CHOP_SOUND_URL = '/sounds/action-wood-chop-01.ogg'
 export const ACTION_MELEE_HIT_SOUND_URL = '/sounds/action-melee-hit-01.ogg'
 export const ACTION_MELEE_KILL_SOUND_URL = '/sounds/action-melee-kill-01.ogg'
 export const ACTION_WELL_SOUND_URL = '/sounds/action-well-01.ogg'
+export const ACTION_BOW_DRAW_SOUND_URL = '/sounds/bow-draw.ogg'
+export const ACTION_BOW_RELEASE_SOUND_URL = '/sounds/bow-release.ogg'
 
 const ACTION_DIG_SFX_VOLUME = 0.45
 const ACTION_CHOP_SFX_VOLUME = 0.5
@@ -20,6 +22,8 @@ const ACTION_MELEE_HIT_SFX_VOLUME = 0.5
 const ACTION_MELEE_KILL_SFX_VOLUME = 0.55
 /** Quiet — the clip is a deep well echo and reads as “inside” if loud. */
 const ACTION_WELL_SFX_VOLUME = 0.18
+const ACTION_BOW_DRAW_SFX_VOLUME = 0.45
+const ACTION_BOW_RELEASE_SFX_VOLUME = 0.55
 
 type PlayOnce = (url: string, volume?: number) => void
 
@@ -53,4 +57,14 @@ export function playActionMeleeKill(playAt: PlayAt, position: WorldSoundPosition
 /** Well / draw-water one-shot — player interact or NPC drink at the well. */
 export function playActionWell(playAt: PlayAt, position: WorldSoundPosition): void {
   playAt(ACTION_WELL_SOUND_URL, position, ACTION_WELL_SFX_VOLUME)
+}
+
+/** Bowstring draw — play when a ranged draw actually starts (plan 162 S22). */
+export function playActionBowDraw(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_BOW_DRAW_SOUND_URL, position, ACTION_BOW_DRAW_SFX_VOLUME)
+}
+
+/** Bowstring release / shot twang — play on the frame a shot actually fires (plan 162 S22). */
+export function playActionBowRelease(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_BOW_RELEASE_SOUND_URL, position, ACTION_BOW_RELEASE_SFX_VOLUME)
 }

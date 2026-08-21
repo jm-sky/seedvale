@@ -379,7 +379,7 @@ export async function createApp(
   }
 
   const keyboard = createKeyboard()
-  const mouseLook = createMouseLook(renderer.domElement)
+  const mouseLook = createMouseLook(renderer.domElement, keyboard.state)
   const player = await PlayerController.create(
     camera,
     keyboard.state,

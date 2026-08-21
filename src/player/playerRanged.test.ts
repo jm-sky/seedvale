@@ -52,15 +52,22 @@ describe('createPlayerRanged lifecycle', () => {
     expect(ranged.requestDraw(SHORT_BOW, stamina)).toBe(false)
   })
 
-  it('fires exactly once when draw completes, then recovers to idle', () => {
+  it('update() alone never fires — firing is release-gated (press → draw, release → fire)', () => {
+    const ranged = createPlayerRanged()
+    const stamina = createStaminaState(100)
+    ranged.requestDraw(SHORT_BOW, stamina)
+    const tick = ranged.update(SHORT_BOW.drawTime * 5)
+    expect(tick.fireReady).toBe(false)
+    expect(ranged.state()).toBe('draw')
+  })
+
+  it('releaseDraw() at/after drawTime fires exactly once, then recovers to idle', () => {
     const ranged = createPlayerRanged()
     const stamina = createStaminaState(100)
     ranged.requestDraw(SHORT_BOW, stamina)
 
-    const beforeFire = ranged.update(SHORT_BOW.drawTime - 0.01)
-    expect(beforeFire.fireReady).toBe(false)
-
-    const fireTick = ranged.update(0.02)
+    ranged.update(SHORT_BOW.drawTime)
+    const fireTick = ranged.releaseDraw()
     expect(fireTick.fireReady).toBe(true)
     expect(fireTick.config).toBe(SHORT_BOW)
     expect(ranged.state()).toBe('release')
@@ -75,6 +82,22 @@ describe('createPlayerRanged lifecycle', () => {
     }
     expect(refired).toBe(false)
     expect(ranged.state()).toBe('idle')
+  })
+
+  it('releaseDraw() before drawTime cancels with no shot and no extra stamina cost', () => {
+    const ranged = createPlayerRanged()
+    const stamina = createStaminaState(100)
+    ranged.requestDraw(SHORT_BOW, stamina)
+    const afterDrawStart = stamina.current
+    expect(afterDrawStart).toBe(100 - SHORT_BOW.staminaCost)
+
+    ranged.update(SHORT_BOW.drawTime * 0.5)
+    const result = ranged.releaseDraw()
+    expect(result.fireReady).toBe(false)
+    expect(result.config).toBeNull()
+    expect(ranged.state()).toBe('idle')
+    // No refund — the drawn stamina stays spent, same as reset()'s forfeit.
+    expect(stamina.current).toBe(afterDrawStart)
   })
 
   it('reset cancels an in-flight draw', () => {

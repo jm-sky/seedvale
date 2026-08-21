@@ -45,7 +45,7 @@ import type { BusyAction } from './busyAction'
 import type { RestCampSequence } from './restCampSequence'
 import type { WorldBundle } from './worldBundle'
 import { NPC_SHADOW_DISTANCE } from '../ai/NpcAgent'
-import { playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audio/actionSounds'
+import { playActionBowDraw, playActionBowRelease, playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audio/actionSounds'
 import { playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { MELEE_CRITICAL_CHANCE, MELEE_CRITICAL_MULTIPLIER, resolveCriticalHit } from '../combat/criticalHit'
@@ -574,6 +574,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // closes, and blocks the gaze highlight — only the per-modal reaction
       // to *which* key was pressed differs, in the switch below.
       const interactConsumed = keyboard.consumeInteract()
+      keyboard.consumeInteractRelease()
       keyboard.consumeAltInteract()
       const questLogConsumed = keyboard.consumeQuestLog()
       keyboard.consumeDrop()
@@ -595,6 +596,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       }
       if (playerRanged.isDrawing()) {
         playerRanged.reset()
+        player.endRangedDraw()
         rangedTargetId = null
       }
 
@@ -751,15 +753,34 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // a weapon switch) — see `collectRangedAnimalCandidates`'s own doc for
       // why it can't reuse `meleeCandidates` (`GAZE_RANGE` is far shorter
       // than any bow's range).
-      const rangedTick = playerRanged.update(dt)
+      // Fire is release-gated (press → draw, release → fire): `update()`
+      // only ticks timers for a player draw and never itself produces
+      // `fireReady` — that edge comes from `releaseDraw()`, called on the
+      // frame `E`/LMB/mobile-E is released (shared `interactReleased` signal
+      // across all three input sources, see `Keyboard.ts`/`MouseLook.ts`/
+      // `createTouchControls.ts`).
+      const interactReleased = keyboard.consumeInteractRelease()
+      const releaseTick = interactReleased ? playerRanged.releaseDraw() : { fireReady: false, config: null }
+      playerRanged.update(dt) // ticks release/recovery timers forward — no fire edge of its own for a player draw
       if (player.isDowned()) {
         playerRanged.reset()
+        player.endRangedDraw()
         rangedTargetId = null
+      } else if (playerRanged.state() === 'draw') {
+        // Holds the aim-draw pose loop every frame while actually drawing —
+        // idempotent, mirrors the melee tick's per-frame animation sync.
+        player.beginRangedDraw()
+      } else if (playerRanged.state() === 'idle') {
+        player.endRangedDraw()
       }
-      if (rangedTick.fireReady && rangedTick.config) {
-        const config = rangedTick.config
+      if (releaseTick.fireReady && releaseTick.config) {
+        const config = releaseTick.config
         const ammoKind = config.ammoKinds.find((k) => inventory.has(k, 1)) ?? null
-        if (ammoKind) {
+        if (!ammoKind) {
+          toast.show('Brak strzał w ekwipunku.', 'error')
+        } else {
+          playActionBowRelease(worldAudio.playAt, player.mesh.position)
+          player.playRangedRelease(config.recovery)
           const rangedCandidatesForFire = collectRangedAnimalCandidates(
             bundle.settlementsManager.getLoaded(),
             bundle.fauna,
@@ -774,6 +795,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             : mouseLook.state.yaw
           inventory.remove(ammoKind, 1)
           hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+          toast.show(`Zostało ${inventory.count(ammoKind)} strzał`)
           attackAttemptCounter++
           const archeryValue = player.skills.archery.value
           const accuracy = rangedAccuracy(config, archeryValue)
@@ -1212,7 +1234,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             if (config && !playerRanged.isDrawing()) {
               const hasAmmo = config.ammoKinds.some((k) => inventory.has(k, 1))
               if (!hasAmmo) {
-                toast.show('Brak strzał.', 'error')
+                toast.show('Brak strzał w ekwipunku.', 'error')
               } else if (player.needs.stamina.current < config.staminaCost) {
                 toast.show('Brak siły na strzał.', 'error')
               } else if (playerRanged.requestDraw(config, player.needs.stamina)) {
@@ -1221,6 +1243,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 playerCombat.setSoftLock(livingTargetIdForAnimal(target.animal.animalId))
                 rangedTargetId = livingTargetIdForAnimal(target.animal.animalId)
                 player.faceToward(target.position.x, target.position.z)
+                playActionBowDraw(worldAudio.playAt, player.mesh.position)
+                player.beginRangedDraw()
               }
             }
           } else {
@@ -1510,6 +1534,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               player.setMeleeSwing(null)
               attackYaw = null
               playerRanged.reset()
+              player.endRangedDraw()
               rangedTargetId = null
             }
           },

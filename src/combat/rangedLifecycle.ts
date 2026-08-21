@@ -9,6 +9,12 @@ import type { RangedConfig } from '../items/itemCatalog'
  * attacker-specific (`player/playerRanged.ts` wraps this for the player;
  * `ai/NpcAgent.ts`'s `combat` phase does the same for NPCs). Ammo lookup/
  * consumption and projectile spawning stay with the caller, same as before.
+ *
+ * `draw → release` normally auto-fires once `config.drawTime` elapses (NPCs,
+ * and the default for `start()`). The player instead opts into
+ * `manualRelease` (`player/playerRanged.ts`) for real press-to-draw/
+ * release-to-fire input: `drawTime` becomes the *minimum* hold before
+ * `release()` counts as a fire instead of a cancel.
  */
 export type RangedState = 'idle' | 'draw' | 'release' | 'recovery'
 
@@ -25,11 +31,20 @@ export type RangedAttackLifecycle = {
   /** Progress (0..1) within the current phase — for draw-pose visuals. */
   phaseProgress: () => number
   /** Starts `draw` if currently idle. Callers gate stamina/ammo/etc. before
-   *  calling — this only enforces "not already mid-draw". */
-  start: (config: RangedConfig) => boolean
+   *  calling — this only enforces "not already mid-draw". `manualRelease`
+   *  (default false) opts into `release()`-gated firing instead of the
+   *  default auto-fire-on-timer below — NPC callers never pass it, so their
+   *  behavior is unchanged. */
+  start: (config: RangedConfig, opts?: { manualRelease?: boolean }) => boolean
   /** Advances the lifecycle by `dt`. Call once per update tick regardless of
-   *  whether a draw is in flight. */
+   *  whether a draw is in flight. For a `manualRelease` draw this only ticks
+   *  timers — it never produces the `fireReady` edge, which needs `release()`. */
   update: (dt: number) => RangedAttackTickResult
+  /** Resolves a `manualRelease` draw's release input: fires (`fireReady:
+   *  true`, transitions to `release`) if held for at least `config.drawTime`;
+   *  otherwise cancels back to `idle` with no shot. No-op if not currently in
+   *  `draw`. Irrelevant for non-manual-release draws (NPCs). */
+  release: () => RangedAttackTickResult
   /** Cancels any in-flight draw — interrupt/death/rebuild safety. */
   reset: () => void
 }
@@ -49,6 +64,7 @@ export function createRangedAttackLifecycle(): RangedAttackLifecycle {
   let state: RangedState = 'idle'
   let timer = 0
   let config: RangedConfig | null = null
+  let manualRelease = false
 
   return {
     state: () => state,
@@ -58,11 +74,12 @@ export function createRangedAttackLifecycle(): RangedAttackLifecycle {
       const duration = phaseDuration(state, config)
       return duration > 0 ? Math.min(1, timer / duration) : 1
     },
-    start(cfg) {
+    start(cfg, opts) {
       if (state !== 'idle') return false
       config = cfg
       state = 'draw'
       timer = 0
+      manualRelease = opts?.manualRelease ?? false
       return true
     },
     update(dt) {
@@ -71,6 +88,12 @@ export function createRangedAttackLifecycle(): RangedAttackLifecycle {
       let fireReady = false
       let fireConfig: RangedConfig | null = null
       for (let guard = 0; guard < 4; guard++) {
+        if (state === 'draw' && manualRelease) {
+          // Waiting on release() — hold the timer at drawTime so
+          // phaseProgress() doesn't run past 1 while fully drawn.
+          timer = Math.min(timer, config.drawTime)
+          break
+        }
         if (state === 'draw' && timer >= config.drawTime) {
           timer -= config.drawTime
           state = 'release'
@@ -93,10 +116,26 @@ export function createRangedAttackLifecycle(): RangedAttackLifecycle {
       }
       return { fireReady, config: fireReady ? fireConfig : null }
     },
+    release() {
+      if (state !== 'draw' || !config) return { fireReady: false, config: null }
+      if (timer >= config.drawTime) {
+        const firedConfig = config
+        state = 'release'
+        timer = 0
+        manualRelease = false
+        return { fireReady: true, config: firedConfig }
+      }
+      state = 'idle'
+      timer = 0
+      config = null
+      manualRelease = false
+      return { fireReady: false, config: null }
+    },
     reset() {
       state = 'idle'
       timer = 0
       config = null
+      manualRelease = false
     },
   }
 }

@@ -1,3 +1,4 @@
+import type { KeyState } from './Keyboard'
 import { isTouchDevice } from './isTouchDevice'
 
 export type LookState = {
@@ -59,7 +60,7 @@ export function requestGamePointerLock(target: HTMLElement): void {
   void target.requestPointerLock()
 }
 
-export function createMouseLook(target: HTMLElement): {
+export function createMouseLook(target: HTMLElement, keys: KeyState): {
   state: LookState
   dispose: () => void
 } {
@@ -92,12 +93,29 @@ export function createMouseLook(target: HTMLElement): {
     event.preventDefault()
   }
 
+  // LMB is the mouse producer for the shared primary attack/use action
+  // (keyboard `E` and the mobile `E` button write into the same `KeyState`
+  // fields — see `Keyboard.ts`/`createTouchControls.ts`). No pointer-lock
+  // gating here: a stray press without a gaze target is already a no-op
+  // downstream, same as a stray `E` tap.
+  const onMouseDown = (event: MouseEvent) => {
+    if (event.button === 0) keys.interact = true
+  }
+  const onMouseUp = (event: MouseEvent) => {
+    if (event.button === 0) keys.interactReleased = true
+  }
+
   // Touch devices drive yaw/pitch/distance from createTouchControls instead —
   // pointer lock needs real `mousemove` events, which touch drags never fire.
   const touch = isTouchDevice()
   if (!touch) {
     target.addEventListener('click', onClick)
     document.addEventListener('mousemove', onMouseMove)
+    target.addEventListener('mousedown', onMouseDown)
+    // `mouseup` on `window`, not `target`: a press can start on the canvas
+    // and be released after the (invisible, pointer-locked) cursor has
+    // conceptually moved off it — same asymmetry as `mousemove` above.
+    window.addEventListener('mouseup', onMouseUp)
   }
   target.addEventListener('wheel', onWheel, { passive: false })
 
@@ -107,6 +125,8 @@ export function createMouseLook(target: HTMLElement): {
       if (!touch) {
         target.removeEventListener('click', onClick)
         document.removeEventListener('mousemove', onMouseMove)
+        target.removeEventListener('mousedown', onMouseDown)
+        window.removeEventListener('mouseup', onMouseUp)
       }
       target.removeEventListener('wheel', onWheel)
       exitGamePointerLock(target)

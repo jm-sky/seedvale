@@ -191,6 +191,7 @@ export function createTouchControls(
     onPause: () => handlers.onPauseToggle(),
     onQuickActions: () => handlers.onQuickActions?.(),
     onInteract: () => { keys.interact = true },
+    onInteractUp: () => { keys.interactReleased = true },
     onAltInteract: () => { keys.altInteract = true },
     onCycleTarget: () => { keys.cycleTarget = true },
   })
