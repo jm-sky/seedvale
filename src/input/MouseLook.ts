@@ -95,11 +95,15 @@ export function createMouseLook(target: HTMLElement, keys: KeyState): {
 
   // LMB is the mouse producer for the shared primary attack/use action
   // (keyboard `E` and the mobile `E` button write into the same `KeyState`
-  // fields — see `Keyboard.ts`/`createTouchControls.ts`). No pointer-lock
-  // gating here: a stray press without a gaze target is already a no-op
-  // downstream, same as a stray `E` tap.
+  // fields — see `Keyboard.ts`/`createTouchControls.ts`). Gated on pointer
+  // lock like `onMouseMove` above: while the pointer is free (Esc/menu/
+  // dialogue open), a click is reserved for re-acquiring lock via `onClick`
+  // — otherwise that same click could both re-lock the camera and fire
+  // whatever the crosshair happened to be resting on.
   const onMouseDown = (event: MouseEvent) => {
-    if (event.button === 0) keys.interact = true
+    if (event.button === 0 && document.pointerLockElement === target) {
+      keys.interact = true
+    }
   }
   const onMouseUp = (event: MouseEvent) => {
     if (event.button === 0) keys.interactReleased = true
