@@ -50,8 +50,11 @@ describe('clipChainToRect', () => {
 
 describe('buildRiverRibbonGeometry', () => {
   it('returns null when no run has at least 2 points', () => {
-    expect(buildRiverRibbonGeometry([], 0, 0)).toBeNull()
-    expect(buildRiverRibbonGeometry([[{ x: 0, z: 0, elevation: 1, accumulation: 20 }]], 0, 0)).toBeNull()
+    const flatY = () => 0
+    expect(buildRiverRibbonGeometry([], 0, 0, flatY)).toBeNull()
+    expect(
+      buildRiverRibbonGeometry([[{ x: 0, z: 0, elevation: 1, accumulation: 20 }]], 0, 0, flatY),
+    ).toBeNull()
   })
 
   it('builds a quad strip with 2 vertices per point and 2 triangles per segment', () => {
@@ -60,7 +63,7 @@ describe('buildRiverRibbonGeometry', () => {
       { x: 8, z: 0, elevation: 0.9, accumulation: 25 },
       { x: 16, z: 0, elevation: 0.8, accumulation: 30 },
     ]
-    const geometry = buildRiverRibbonGeometry([run], 0, 0)
+    const geometry = buildRiverRibbonGeometry([run], 0, 0, () => 0)
     expect(geometry).not.toBeNull()
     expect(geometry!.getAttribute('position').count).toBe(run.length * 2)
     expect(geometry!.getIndex()!.count).toBe((run.length - 1) * 6)

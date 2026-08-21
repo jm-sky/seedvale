@@ -1127,7 +1127,16 @@ export function createChunkManager(
     }
     rec.riverTiles = overlappingRiverTiles(chunkRect)
     const riverChains = rec.riverTiles.flatMap((tile) => riverTileCache.retain(tile, fallbackParams))
-    rec.river = createChunkRiver(riverChains, chunkRect, x, z)
+    // River Y must follow this chunk's *actual* rendered terrain (tile.floorHeights,
+    // already road/clearing-modified — see computeChunkTile), not the road-agnostic
+    // elevation the hydrology tile cached at compute time. Otherwise a road/village
+    // height modifier (or any curvature between the hydrology grid's own sample
+    // points and the terrain mesh's vertex grid) can leave the terrain mesh sitting
+    // above the ribbon, making it look like the river vanishes/ends early.
+    const apron = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
+    const sampleTerrainY = (wx: number, wz: number) =>
+      sampleApronGrid(tile.floorHeights, apronRes, apron.x, apron.z, apron.step, wx, wz)
+    rec.river = createChunkRiver(riverChains, chunkRect, x, z, sampleTerrainY)
     if (rec.river) scene.add(rec.river.mesh)
     getMonitor().recordHitch('WATER', performance.now() - riverT0, 'chunk river')
 

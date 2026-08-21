@@ -107,6 +107,9 @@ export function buildRiverRibbonGeometry(
   runs: RiverPoint[][],
   chunkOriginX: number,
   chunkOriginZ: number,
+  /** Actual rendered terrain height at a world point (see `createRiverWater.ts`) —
+   *  used for Y instead of each point's cached hydrology `elevation`. */
+  sampleTerrainY: (worldX: number, worldZ: number) => number,
 ): BufferGeometry | null {
   const usableRuns = runs.filter((run) => run.length >= 2)
   if (usableRuns.length === 0) return null
@@ -127,7 +130,7 @@ export function buildRiverRibbonGeometry(
 
       const x = p.x - chunkOriginX
       const z = p.z - chunkOriginZ
-      const y = p.elevation + RIVER_SURFACE_OFFSET
+      const y = sampleTerrainY(p.x, p.z) + RIVER_SURFACE_OFFSET
 
       positions.push(x - px * halfWidth, y, z - pz * halfWidth)
       positions.push(x + px * halfWidth, y, z + pz * halfWidth)
