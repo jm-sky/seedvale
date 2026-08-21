@@ -79,6 +79,7 @@ function tileParams(
     roadSegments: [],
     clearings: [],
     regional: [],
+    riverSegments: [],
     ...overrides,
     region: { ...raw.region, ...overrides.region },
   }

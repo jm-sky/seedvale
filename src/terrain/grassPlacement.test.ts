@@ -76,6 +76,7 @@ function tileParams(overrides: Partial<ChunkTileParams> = {}): ChunkTileParams {
     roadSegments: [],
     clearings: [],
     regional: [],
+    riverSegments: [],
     ...overrides,
   }
 }

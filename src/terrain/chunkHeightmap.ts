@@ -153,6 +153,31 @@ export type ClearingSegment = {
   innerFraction?: number
 }
 
+/** A single river channel segment's terrain-carving data — the point-shaped
+ *  counterpart to `RoadCorridorSegment`, same worker-safe/plain-numeric
+ *  reasoning. Built by `riverNetwork.ts`'s `riverChannelSegmentsNear` from the
+ *  same canonical, already-meandered/smoothed chain the water ribbon clips
+ *  and renders (`riverGeometry.ts`) — terrain and water always agree on
+ *  shape/position by construction, never a second path. `aBedH`/`bBedH` are
+ *  each endpoint's own D8 chain elevation minus a flow-scaled depth
+ *  (`depthFromAccumulation`); since D8 chain elevation strictly decreases and
+ *  flow accumulation never decreases along a flow path, bed height is
+ *  guaranteed to strictly decrease downstream too — no separate monotonic-
+ *  correction pass is needed to satisfy the "continuous downhill slope"
+ *  requirement (plan 189). */
+export type RiverChannelSegment = {
+  ax: number
+  az: number
+  aBedH: number
+  aHalfWidth: number
+  aBankWidth: number
+  bx: number
+  bz: number
+  bBedH: number
+  bHalfWidth: number
+  bBankWidth: number
+}
+
 /** A whole village's gentle, wide-radius height-only smoothing pass — pulls
  *  the terrain under and around a village's clearings toward a shared
  *  average height, applied *before* (not competing with) the sharp
@@ -227,6 +252,13 @@ export type ChunkTileParams = {
    *  reasoning as `roadSegments`/`clearings`, excluded from `RawSampleParams`
    *  for the same reason. */
   regional: RegionalSmoothingSegment[]
+  /** River channel carving segments near this chunk — see
+   *  `RiverChannelSegment`. Same road-agnostic-analytic-sampler reasoning as
+   *  `roadSegments`: hydrology (`riverNetwork.ts`) itself samples the
+   *  carving-agnostic `sampleFloorAt` to find channels in the first place, so
+   *  that sampler must stay carving-agnostic to avoid a circular dependency —
+   *  excluded from `RawSampleParams` for the same reason `roadSegments` is. */
+  riverSegments: RiverChannelSegment[]
 }
 
 export type RawSampleParams = Omit<
@@ -240,6 +272,7 @@ export type RawSampleParams = Omit<
   | 'roadSegments'
   | 'clearings'
   | 'regional'
+  | 'riverSegments'
 >
 
 export type ChunkTileData = {
@@ -736,6 +769,54 @@ function applyRegionalSmoothing(
   return MathUtils.lerp(floorH, bestTargetH, bestFalloff * bestHeightStrength)
 }
 
+/** Fraction of a channel's half-width that stays flat streambed before the
+ *  bank starts rising — a much larger flat fraction than roads
+ *  (`CORRIDOR_INNER_FRACTION`) because a riverbed should read as a shallow
+ *  trough, not a capsule with hard shoulders (plan 189 "naturalny profil
+ *  poprzeczny"). */
+const RIVER_CHANNEL_INNER_FRACTION = 0.5
+
+function riverChannelCandidate(
+  wx: number,
+  wz: number,
+  seg: RiverChannelSegment,
+): { falloff: number, targetH: number } | null {
+  const { distSq, t } = projectOntoSegment(wx, wz, seg.ax, seg.az, seg.bx, seg.bz)
+  const halfWidth = MathUtils.lerp(seg.aHalfWidth, seg.bHalfWidth, t)
+  const bankWidth = MathUtils.lerp(seg.aBankWidth, seg.bBankWidth, t)
+  const reach = halfWidth + bankWidth
+  if (distSq >= reach * reach) return null
+  const dist = Math.sqrt(distSq)
+  const falloff = 1 - MathUtils.smoothstep(dist, halfWidth * RIVER_CHANNEL_INNER_FRACTION, reach)
+  return { falloff, targetH: MathUtils.lerp(seg.aBedH, seg.bBedH, t) }
+}
+
+/** Blends a texel's `floorH` toward the nearest/strongest river channel's bed
+ *  height. Carving only ever lowers terrain (`Math.min` below), never raises
+ *  it — a channel segment whose bed sits above a texel's already-lower
+ *  natural terrain (a local dip the coarse hydrology grid didn't sample at
+ *  this exact lateral offset) leaves that terrain untouched instead of
+ *  building an artificial levee. */
+function applyRiverChannel(
+  wx: number,
+  wz: number,
+  floorH: number,
+  segments: readonly RiverChannelSegment[],
+): number {
+  let bestFalloff = 0
+  let bestTargetH = 0
+  for (const seg of segments) {
+    const candidate = riverChannelCandidate(wx, wz, seg)
+    if (!candidate) continue
+    if (candidate.falloff > bestFalloff) {
+      bestFalloff = candidate.falloff
+      bestTargetH = candidate.targetH
+    }
+  }
+  if (bestFalloff <= 0) return floorH
+  return MathUtils.lerp(floorH, Math.min(bestTargetH, floorH), bestFalloff)
+}
+
 /**
  * Computes one chunk's apron-inclusive heightmap tile. Pure, environment-agnostic —
  * safe on the main thread or inside a worker. No map-edge concept (no guaranteed
@@ -790,6 +871,15 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
         )
         floorH = corridor.floorH
         tint = corridor.tint
+      }
+      // Stage 3: river channel carving (plan 189) — locally deepens terrain
+      // along the same canonical, already-meandered chain the water ribbon
+      // renders, so terrain and water agree by construction. Runs after
+      // roads/clearings per the plan's `base -> modifiers -> river channel ->
+      // final` ordering; a road crossing a river is not special-cased (rare,
+      // and the river simply wins under it, same as a real ford would dip).
+      if (params.riverSegments.length > 0) {
+        floorH = applyRiverChannel(wx, wz, floorH, params.riverSegments)
       }
 
       // Visual mesh uses `floorHeights` (bathtub). This clamp is the walk/mask lid.

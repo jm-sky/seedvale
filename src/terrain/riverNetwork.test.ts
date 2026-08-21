@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 import type { RawSampleParams } from './chunkHeightmap'
 import {
   computeRiverTile,
+  depthFromAccumulation,
   overlappingRiverTiles,
   RIVER_TILE_SIZE,
   type RiverChain,
+  riverChannelSegmentsNear,
+  type RiverPoint,
   riverTileCoordOf,
   riverTileCoreRect,
   riverTileKey,
@@ -155,5 +158,71 @@ describe('computeRiverTile', () => {
       }
     }
     expect(totalChains).toBeGreaterThan(0)
+  })
+})
+
+describe('depthFromAccumulation', () => {
+  it('is zero below the stream threshold and grows with accumulation, bounded', () => {
+    expect(depthFromAccumulation(0)).toBe(0)
+    const small = depthFromAccumulation(20)
+    const big = depthFromAccumulation(1000)
+    expect(small).toBeGreaterThan(0)
+    expect(big).toBeGreaterThan(small)
+    expect(big).toBeLessThanOrEqual(2.4)
+  })
+})
+
+function point(x: number, z: number, elevation: number, accumulation: number): RiverPoint {
+  return { x, z, elevation, accumulation }
+}
+
+describe('riverChannelSegmentsNear (plan 189)', () => {
+  it('produces no segments where accumulation never reaches the stream threshold', () => {
+    const chain: RiverChain = { points: [point(0, 0, 10, 5), point(8, 0, 9.5, 5)] }
+    expect(riverChannelSegmentsNear([chain], 4, 0, 64)).toHaveLength(0)
+  })
+
+  it('bed elevation strictly decreases downstream, always below the raw chain elevation', () => {
+    const chain: RiverChain = {
+      points: [point(0, 0, 100, 50), point(8, 0, 99, 120), point(16, 0, 98, 300)],
+    }
+    const segments = riverChannelSegmentsNear([chain], 8, 0, 64)
+    expect(segments).toHaveLength(2)
+    expect(segments[0]!.aBedH).toBeLessThan(chain.points[0]!.elevation)
+    expect(segments[0]!.bBedH).toBeLessThan(segments[0]!.aBedH)
+    // Consecutive segments share an endpoint — bed height is exactly continuous, no jump.
+    expect(segments[1]!.aBedH).toBe(segments[0]!.bBedH)
+    expect(segments[1]!.bBedH).toBeLessThan(segments[1]!.aBedH)
+  })
+
+  it('width and depth both grow with accumulation, never independently', () => {
+    const chain: RiverChain = { points: [point(0, 0, 100, 20), point(8, 0, 99, 1000)] }
+    const [seg] = riverChannelSegmentsNear([chain], 4, 0, 64)
+    expect(seg!.bHalfWidth).toBeGreaterThan(seg!.aHalfWidth)
+    expect(seg!.aBankWidth).toBeGreaterThan(0)
+    expect(seg!.bBankWidth).toBeGreaterThanOrEqual(seg!.aBankWidth)
+  })
+
+  it('is deterministic for the same chains and chunk position', () => {
+    const chain: RiverChain = { points: [point(0, 0, 100, 50), point(8, 0, 99, 120)] }
+    const a = riverChannelSegmentsNear([chain], 4, 0, 64)
+    const b = riverChannelSegmentsNear([chain], 4, 0, 64)
+    expect(a).toEqual(b)
+  })
+
+  it('includes a segment whose bank reaches into a chunk even when its points sit just outside it', () => {
+    // Wide/deep enough that half-width + bank clearly overshoots a couple world units.
+    const chain: RiverChain = { points: [point(-2, 0, 100, 2000), point(-1, 0, 99.9, 2000)] }
+    const segments = riverChannelSegmentsNear([chain], 32, 0, 64) // rect [0, 64]
+    expect(segments.length).toBeGreaterThan(0)
+  })
+
+  it('two chunks straddling the same segment see identical carving data (boundary continuity)', () => {
+    const chain: RiverChain = { points: [point(0, 0, 100, 300), point(64, 0, 90, 300)] }
+    const left = riverChannelSegmentsNear([chain], 0, 0, 64) // rect [-32, 32]
+    const right = riverChannelSegmentsNear([chain], 64, 0, 64) // rect [32, 96]
+    expect(left).toHaveLength(1)
+    expect(right).toHaveLength(1)
+    expect(left[0]).toEqual(right[0])
   })
 })

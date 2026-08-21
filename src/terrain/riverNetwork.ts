@@ -1,5 +1,5 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
-import type { RawSampleParams } from './chunkHeightmap'
+import type { RawSampleParams, RiverChannelSegment } from './chunkHeightmap'
 import { createSeededRandom } from '../world/parseSeed'
 import {
   classifyStreams,
@@ -140,6 +140,94 @@ export function widthFromAccumulation(
   if (accumulation < thresholds.stream) return 0
   const t = flowFactor(accumulation, thresholds)
   return MIN_RIVER_WIDTH + t * (MAX_RIVER_WIDTH - MIN_RIVER_WIDTH)
+}
+
+// River channel carving (plan 189) — depth/bank bounds, same eased-flow
+// reasoning as width above: never a hardcoded depth independent of flow,
+// never unbounded either.
+const MIN_CHANNEL_DEPTH = 0.15
+const MAX_CHANNEL_DEPTH = 2.4
+
+/** Bounded, smoothly-growing channel depth from flow accumulation — the same
+ *  `flowFactor` curve `widthFromAccumulation` builds on, so a bigger river is
+ *  always both wider and deeper, never independently either. */
+export function depthFromAccumulation(
+  accumulation: number,
+  thresholds: StreamThresholds = DEFAULT_RIVER_THRESHOLDS,
+): number {
+  if (accumulation < thresholds.stream) return 0
+  const t = flowFactor(accumulation, thresholds)
+  return MIN_CHANNEL_DEPTH + t * (MAX_CHANNEL_DEPTH - MIN_CHANNEL_DEPTH)
+}
+
+const CHANNEL_BANK_MIN_WIDTH = 1.5
+/** Desired max additional rise-per-run beyond the channel's half-width before
+ *  terrain returns to its natural, uncarved height — keeps a deep channel's
+ *  bank from reading as a cliff (plan 189 "łagodny profil"). */
+const CHANNEL_BANK_SLOPE = 0.45
+
+function channelBankWidth(depth: number): number {
+  return Math.max(CHANNEL_BANK_MIN_WIDTH, depth / CHANNEL_BANK_SLOPE)
+}
+
+/**
+ * Builds terrain-carving segments for a chunk from the same canonical,
+ * already-meandered/smoothed chains the water ribbon clips and renders
+ * (`riverGeometry.ts`) — carving and water shape always agree, no second
+ * path. Unlike `clipChainToRect` (which trims chain *points* to a rect for
+ * rendering), this keeps whole point-to-point segments and rejects by each
+ * segment's own carve reach (half-width + bank), so a segment whose points
+ * sit just outside the chunk but whose bank still overlaps it is not dropped
+ * — needed for carving continuity across chunk boundaries (plan 189).
+ */
+export function riverChannelSegmentsNear(
+  chains: RiverChain[],
+  worldX: number,
+  worldZ: number,
+  chunkSize: number,
+): RiverChannelSegment[] {
+  const half = chunkSize / 2
+  const minX = worldX - half
+  const maxX = worldX + half
+  const minZ = worldZ - half
+  const maxZ = worldZ + half
+
+  const segments: RiverChannelSegment[] = []
+  for (const chain of chains) {
+    const pts = chain.points
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i]!
+      const b = pts[i + 1]!
+      const aHalfWidth = widthFromAccumulation(a.accumulation) / 2
+      const bHalfWidth = widthFromAccumulation(b.accumulation) / 2
+      if (aHalfWidth <= 0 && bHalfWidth <= 0) continue
+      const aDepth = depthFromAccumulation(a.accumulation)
+      const bDepth = depthFromAccumulation(b.accumulation)
+      const aBankWidth = channelBankWidth(aDepth)
+      const bBankWidth = channelBankWidth(bDepth)
+      const reach = Math.max(aHalfWidth + aBankWidth, bHalfWidth + bBankWidth)
+
+      const segMinX = Math.min(a.x, b.x) - reach
+      const segMaxX = Math.max(a.x, b.x) + reach
+      const segMinZ = Math.min(a.z, b.z) - reach
+      const segMaxZ = Math.max(a.z, b.z) + reach
+      if (segMaxX < minX || segMinX > maxX || segMaxZ < minZ || segMinZ > maxZ) continue
+
+      segments.push({
+        ax: a.x,
+        az: a.z,
+        aBedH: a.elevation - aDepth,
+        aHalfWidth,
+        aBankWidth,
+        bx: b.x,
+        bz: b.z,
+        bBedH: b.elevation - bDepth,
+        bHalfWidth,
+        bBankWidth,
+      })
+    }
+  }
+  return segments
 }
 
 // Deterministic meandering (plan 181 Etap 7) — applied once per tile, after

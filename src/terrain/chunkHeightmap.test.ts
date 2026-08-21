@@ -4,6 +4,7 @@ import {
   computeChunkTile,
   type RawSampleParams,
   type RegionalSmoothingSegment,
+  type RiverChannelSegment,
   type RoadCorridorSegment,
   sampleContinentalnessAt,
   sampleFloorAt,
@@ -155,6 +156,7 @@ describe('chunkHeightmap seams', () => {
       roadSegments: [],
       clearings: [],
       regional: [],
+      riverSegments: [],
     })
     const right = computeChunkTile({
       ...params,
@@ -167,6 +169,7 @@ describe('chunkHeightmap seams', () => {
       roadSegments: [],
       clearings: [],
       regional: [],
+      riverSegments: [],
     })
 
     expectFiniteGrid(left.heights)
@@ -206,15 +209,16 @@ describe('chunkHeightmap seams', () => {
       roadSegments: [] as const,
       clearings: [] as const,
       regional: [] as const,
+      riverSegments: [] as const,
     }
 
     const aThenB = [
-      computeChunkTile({ ...base, cx: 2, cz: -1, roadSegments: [], clearings: [], regional: [] }),
-      computeChunkTile({ ...base, cx: 3, cz: -1, roadSegments: [], clearings: [], regional: [] }),
+      computeChunkTile({ ...base, cx: 2, cz: -1, roadSegments: [], clearings: [], regional: [], riverSegments: [] }),
+      computeChunkTile({ ...base, cx: 3, cz: -1, roadSegments: [], clearings: [], regional: [], riverSegments: [] }),
     ]
     const bThenA = [
-      computeChunkTile({ ...base, cx: 3, cz: -1, roadSegments: [], clearings: [], regional: [] }),
-      computeChunkTile({ ...base, cx: 2, cz: -1, roadSegments: [], clearings: [], regional: [] }),
+      computeChunkTile({ ...base, cx: 3, cz: -1, roadSegments: [], clearings: [], regional: [], riverSegments: [] }),
+      computeChunkTile({ ...base, cx: 2, cz: -1, roadSegments: [], clearings: [], regional: [], riverSegments: [] }),
     ]
 
     expect(aThenB[0]!.floorHeights).toEqual(bThenA[1]!.floorHeights)
@@ -251,6 +255,7 @@ describe('chunkHeightmap road irregularity', () => {
       roadSegments: [roadSeg],
       clearings: [],
       regional: [],
+      riverSegments: [],
     })
   }
 
@@ -281,6 +286,7 @@ describe('chunkHeightmap road irregularity', () => {
       roadSegments: [] as RoadCorridorSegment[],
       clearings: [clearing],
       regional: [] as RegionalSmoothingSegment[],
+      riverSegments: [],
     }
     const a = computeChunkTile(base)
     const b = computeChunkTile({
@@ -323,8 +329,115 @@ describe('chunkHeightmap road irregularity', () => {
       roadSegments: [roadSeg],
       clearings: [],
       regional: [],
+      riverSegments: [],
     })
     // With wobble, the tint footprint differs from a perfect capsule.
     expect(flat.roadTint).not.toEqual(noWobble.roadTint)
+  })
+})
+
+describe('chunkHeightmap river channel carving (plan 189)', () => {
+  const riverSeg: RiverChannelSegment = {
+    ax: -20,
+    az: 0,
+    aBedH: 1,
+    aHalfWidth: 3,
+    aBankWidth: 2,
+    bx: 20,
+    bz: 0,
+    bBedH: -2,
+    bHalfWidth: 4,
+    bBankWidth: 2.5,
+  }
+
+  function tileWithRiver(riverSegments: RiverChannelSegment[], seed = 42) {
+    const params = rawParams({ seed })
+    return computeChunkTile({
+      ...params,
+      cx: 0,
+      cz: 0,
+      chunkSize: 64,
+      resolution: 33,
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+      roadSegments: [],
+      clearings: [],
+      regional: [],
+      riverSegments,
+    })
+  }
+
+  it('carves floorHeights down toward the channel bed near the centerline', () => {
+    const withRiver = tileWithRiver([riverSeg])
+    const withoutRiver = tileWithRiver([])
+    const origin = apronOriginWorld(0, 0, 64, 33)
+    const ix = Math.round((0 - origin.x) / origin.step)
+    const iz = Math.round((0 - origin.z) / origin.step)
+    const idx = iz * origin.apronRes + ix
+    expect(withRiver.floorHeights[idx]).toBeLessThan(withoutRiver.floorHeights[idx])
+  })
+
+  it('never raises terrain above its original (uncarved) height, anywhere in the tile', () => {
+    const withRiver = tileWithRiver([riverSeg])
+    const withoutRiver = tileWithRiver([])
+    for (let i = 0; i < withRiver.floorHeights.length; i++) {
+      expect(withRiver.floorHeights[i]!).toBeLessThanOrEqual(withoutRiver.floorHeights[i]! + 1e-6)
+    }
+  })
+
+  it('leaves terrain unchanged well outside the channel half-width + bank reach', () => {
+    const withRiver = tileWithRiver([riverSeg])
+    const withoutRiver = tileWithRiver([])
+    const origin = apronOriginWorld(0, 0, 64, 33)
+    // Far corner of the chunk — well beyond the segment's ~6.5-unit max reach from z=0.
+    const idx = 0 * origin.apronRes + 0
+    expect(withRiver.floorHeights[idx]).toBeCloseTo(withoutRiver.floorHeights[idx]!, 5)
+  })
+
+  it('is deterministic for the same seed with river segments', () => {
+    const a = tileWithRiver([riverSeg])
+    const b = tileWithRiver([riverSeg])
+    expect(a.floorHeights).toEqual(b.floorHeights)
+  })
+
+  it('matches on the shared seam of adjacent chunks straddling the same river segment', () => {
+    const seg: RiverChannelSegment = {
+      ax: -50,
+      az: 0,
+      aBedH: -3,
+      aHalfWidth: 5,
+      aBankWidth: 3,
+      bx: 50,
+      bz: 0,
+      bBedH: -6,
+      bHalfWidth: 5,
+      bBankWidth: 3,
+    }
+    const params = rawParams({ seed: 5 })
+    const chunkSize = 64
+    const resolution = 33
+    const shared = {
+      ...params,
+      chunkSize,
+      resolution,
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+      roadSegments: [],
+      clearings: [],
+      regional: [],
+      riverSegments: [seg],
+    }
+    const left = computeChunkTile({ ...shared, cx: 0, cz: 0 })
+    const right = computeChunkTile({ ...shared, cx: 1, cz: 0 })
+    const leftOrigin = apronOriginWorld(0, 0, chunkSize, resolution)
+    const rightOrigin = apronOriginWorld(1, 0, chunkSize, resolution)
+    const seamX = chunkSize / 2
+    for (let iz = 0; iz < leftOrigin.apronRes; iz++) {
+      const lx = Math.round((seamX - leftOrigin.x) / leftOrigin.step)
+      const rx = Math.round((seamX - rightOrigin.x) / rightOrigin.step)
+      const li = iz * leftOrigin.apronRes + lx
+      const ri = iz * rightOrigin.apronRes + rx
+      expect(left.floorHeights[li]).toBeCloseTo(right.floorHeights[ri]!, 5)
+    }
   })
 })

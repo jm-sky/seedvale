@@ -1,7 +1,7 @@
 # Plan: River Channel Carving
 
 **Created:** 2026-08-21  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/test/build all pass); browser/manual verification still open. See [implementation notes](./2026-08-21--189--river-channel-carving-implementation-notes.md).  
 **Priority:** high · **Effort:** M  
 **Depends on:** 181
 **domain:** `world-terrain`

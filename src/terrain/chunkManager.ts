@@ -72,6 +72,7 @@ import {
   extractCoreGrid,
   type RawSampleParams,
   type RegionParams,
+  type RiverChannelSegment,
   type RoadCorridorSegment,
   sampleApronGrid,
   sampleBiomeAt,
@@ -90,7 +91,12 @@ import {
 } from './chunkWorkerPool'
 import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
 import { createGrassSystem, type WorldGrassChunk } from './grass'
-import { overlappingRiverTiles, type RiverTileCoord } from './riverNetwork'
+import {
+  overlappingRiverTiles,
+  type RiverChain,
+  riverChannelSegmentsNear,
+  type RiverTileCoord,
+} from './riverNetwork'
 import { createRiverTileCache } from './riverTileCache'
 import { createVegetationRegionBatcher } from './vegetationRegionBatcher'
 
@@ -300,6 +306,11 @@ type ChunkRecord = {
   /** River tiles this chunk retained in `riverTileCache` — released in `unload`.
    *  Empty/undefined for the common case of a chunk with no nearby river. */
   riverTiles?: RiverTileCoord[]
+  /** Chains from `riverTiles`, resolved once in `ensureLoaded` (before the
+   *  tile is requested, so river channel carving can feed into terrain
+   *  generation — plan 189) and reused by `attachChunkMesh` for the water
+   *  ribbon, instead of retaining `riverTiles` a second time. */
+  riverChains?: RiverChain[]
   /** Non-living tree stage meshes (limbed/felled/stump) — few and mutated
    *  individually, so never instanced (plan 087 §2.3/§2.5). Also receives
    *  whatever `refreshTreeVisual` swaps a tree into afterward, including a
@@ -708,7 +719,26 @@ export function createChunkManager(
     localSearchRadius: config.settlementSearchRadius,
   }
 
-  function paramsFor(coord: ChunkCoord): ChunkTileParams {
+  function chunkRectOf(coord: ChunkCoord): { minX: number, maxX: number, minZ: number, maxZ: number } {
+    const { x, z } = chunkCenter(coord, config.chunkSize)
+    const half = config.chunkSize / 2
+    return { minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half }
+  }
+
+  /** Retains this chunk's overlapping river tiles and resolves their chains —
+   *  called once from `ensureLoaded`, before the tile is even requested, so
+   *  `riverChannelSegmentsNear` can feed carving segments into terrain
+   *  generation itself (plan 189) instead of only shaping the water ribbon
+   *  after the fact. `record.riverTiles`/`riverChains` are then reused by
+   *  `attachChunkMesh` — never retained a second time. */
+  function retainRiverTilesFor(record: ChunkRecord): RiverChain[] {
+    const rect = chunkRectOf(record.coord)
+    record.riverTiles = overlappingRiverTiles(rect)
+    record.riverChains = record.riverTiles.flatMap((tile) => riverTileCache.retain(tile, fallbackParams))
+    return record.riverChains
+  }
+
+  function paramsFor(coord: ChunkCoord, riverSegments: RiverChannelSegment[]): ChunkTileParams {
     const { x, z } = chunkCenter(coord, config.chunkSize)
     const village = villageSegmentsNear(x, z, config.chunkSize, roadCtx)
     return {
@@ -743,6 +773,7 @@ export function createChunkManager(
       roadSegments: [...segmentsNear(x, z, config.chunkSize, roadCtx), ...village.paths],
       clearings: village.clearings,
       regional: village.regional,
+      riverSegments,
     }
   }
 
@@ -1125,8 +1156,11 @@ export function createChunkManager(
       minZ: z - config.chunkSize / 2,
       maxZ: z + config.chunkSize / 2,
     }
-    rec.riverTiles = overlappingRiverTiles(chunkRect)
-    const riverChains = rec.riverTiles.flatMap((tile) => riverTileCache.retain(tile, fallbackParams))
+    // Retained once already, in `ensureLoaded` (before this tile was even
+    // requested — plan 189 needs the chains to build carving segments ahead
+    // of terrain generation), and released once in `unload`. Reused here
+    // rather than retained again to keep the ref count balanced 1:1.
+    const riverChains = rec.riverChains ?? []
     // River Y must follow this chunk's *actual* rendered terrain (tile.floorHeights,
     // already road/clearing-modified — see computeChunkTile), not the road-agnostic
     // elevation the hydrology tile cached at compute time. Otherwise a road/village
@@ -1339,7 +1373,11 @@ export function createChunkManager(
     }
     chunks.set(key, record)
 
-    const promise = requestChunkTile(key, paramsFor(coord))
+    const riverChains = retainRiverTilesFor(record)
+    const { x, z } = chunkCenter(coord, config.chunkSize)
+    const riverSegments = riverChannelSegmentsNear(riverChains, x, z, config.chunkSize)
+
+    const promise = requestChunkTile(key, paramsFor(coord, riverSegments))
       .then((tile) => {
         const rec = chunks.get(key)
         if (!rec) return // unloaded while generating
@@ -1752,7 +1790,11 @@ export function createChunkManager(
         const environment = rec?.tile
           ? rec.tile.environment
           : (() => {
-              const params = paramsFor(coord)
+              // Ad-hoc/unloaded-chunk fallback, outside the normal chunk
+              // lifecycle — no river tile to retain/release here, so river
+              // channel carving is skipped (landmark placement doesn't
+              // depend on carved height accuracy).
+              const params = paramsFor(coord, [])
               return computeChunkEnvironment(coord, computeChunkTile(params), params, [])
             })()
         const found = environment.find((p) => p.kind === kind && p.id)
