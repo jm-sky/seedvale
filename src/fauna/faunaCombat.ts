@@ -1,5 +1,6 @@
+import type { CombatTargetHandle } from '../combat/combatIntent'
 import type { ToolKind } from '../items/HeldTool'
-import type { AnimalKind } from './AnimalAgent'
+import type { AnimalAgent, AnimalKind } from './AnimalAgent'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 
 export type { HealthState } from '../shared/HealthState'
@@ -69,4 +70,17 @@ export function damageFor(predator: AnimalKind, prey: AnimalKind): number {
 
 export function damageVsHuman(predator: AnimalKind): number {
   return HUMAN_DAMAGE[predator] ?? DEFAULT_DAMAGE
+}
+
+/** `CombatTargetHandle` for an `AnimalAgent` (plan 177 §5/§14) — the NPC
+ *  Combat's own target seam over the existing animal HealthState/death path,
+ *  not a second animal-combat system. `AnimalAgent.takeDamage`'s
+ *  `source: 'npc'` reuses its existing player-attack provocation reaction. */
+export function combatTargetForAnimal(animal: AnimalAgent): CombatTargetHandle {
+  return {
+    ref: { id: animal.animalId, kind: 'animal' },
+    getPosition: () => (animal.isDead() ? null : { x: animal.mesh.position.x, z: animal.mesh.position.z }),
+    isAlive: () => !animal.isDead(),
+    applyDamage: (amount) => animal.takeDamage(amount, 'npc'),
+  }
 }

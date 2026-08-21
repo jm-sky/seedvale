@@ -1,21 +1,23 @@
 import type { MeleeConfig } from '../items/itemCatalog'
+import {
+  createMeleeAttackLifecycle,
+  type MeleeAttackTickResult,
+  type MeleeHitCandidate,
+  type MeleeState,
+} from '../combat/meleeAttack'
 import { drainStamina, type StaminaState } from '../shared/StaminaState'
 
-/** Universal melee attack lifecycle (plan 123) — one small state machine
- *  shared by every melee tool, driven entirely by the equipped tool's
- *  `ITEM_CATALOG[kind].melee` config. Deliberately not `CombatManager`/
- *  `WeaponSystem`: this owns only timing + the single hit-resolution edge;
- *  `app/gameLoop.ts` owns candidate gathering, damage application and
+/** Universal melee attack lifecycle (plan 123) — driven entirely by the
+ *  equipped tool's `ITEM_CATALOG[kind].melee` config. The timer/hit-test
+ *  primitives are the neutral `combat/meleeAttack.ts` seam (plan 177); this
+ *  module layers player-only stamina gating, gap-close/lunge and target
+ *  acquisition on top. Deliberately not `CombatManager`/`WeaponSystem`:
+ *  `app/gameLoop.ts` still owns candidate gathering, damage application and
  *  quest/audio/toast side effects. */
-export type MeleeState = 'idle' | 'windUp' | 'hitWindow' | 'recovery'
+export type { MeleeHitCandidate, MeleeState } from '../combat/meleeAttack'
+export { resolveMeleeHits, yawToward } from '../combat/meleeAttack'
 
-export type MeleeTickResult = {
-  /** True on the exact frame the hit window opens — the single point at
-   *  which a caller should resolve damage for this attack. */
-  hitReady: boolean
-  /** Set only alongside `hitReady` — the config to resolve the hit with. */
-  config: MeleeConfig | null
-}
+export type MeleeTickResult = MeleeAttackTickResult
 
 /** How many of the most recently *hit* targets are remembered as an
  *  acquisition tie-break preference (plan 124 §1 — "cel trafiany w
@@ -81,31 +83,16 @@ export type PlayerMelee = {
   rememberHit: (id: string) => void
 }
 
-function phaseDuration(state: MeleeState, config: MeleeConfig): number {
-  switch (state) {
-    case 'hitWindow': return config.hitWindow
-    case 'recovery': return config.recovery
-    case 'windUp': return config.windUp
-    default: return 0
-  }
-}
-
 export function createPlayerMelee(): PlayerMelee {
-  let state: MeleeState = 'idle'
-  let timer = 0
-  let config: MeleeConfig | null = null
+  const lifecycle = createMeleeAttackLifecycle()
   let recentTargets: string[] = []
 
   return {
-    state: () => state,
-    isAttacking: () => state !== 'idle',
-    phaseProgress: () => {
-      if (!config) return 0
-      const duration = phaseDuration(state, config)
-      return duration > 0 ? Math.min(1, timer / duration) : 1
-    },
+    state: lifecycle.state,
+    isAttacking: lifecycle.isAttacking,
+    phaseProgress: lifecycle.phaseProgress,
     requestAttack(cfg, stamina, playerX, playerZ, targetX, targetZ) {
-      if (state !== 'idle') return { started: false, moveX: 0, moveZ: 0 }
+      if (lifecycle.state() !== 'idle') return { started: false, moveX: 0, moveZ: 0 }
       if (stamina.current < cfg.staminaCost) return { started: false, moveX: 0, moveZ: 0 }
       drainStamina(stamina, cfg.staminaCost)
 
@@ -130,85 +117,16 @@ export function createPlayerMelee(): PlayerMelee {
         }
       }
 
-      config = cfg
-      state = 'windUp'
-      timer = 0
+      lifecycle.start(cfg)
       return { started: true, moveX, moveZ }
     },
-    update(dt) {
-      if (state === 'idle' || !config) return { hitReady: false, config: null }
-      timer += dt
-      let hitReady = false
-      let hitConfig: MeleeConfig | null = null
-      // Loop (not a chain of `if`s) so a single large `dt` can legitimately
-      // cascade through every remaining phase in one call.
-      for (let guard = 0; guard < 4; guard++) {
-        if (state === 'windUp' && timer >= config.windUp) {
-          timer -= config.windUp
-          state = 'hitWindow'
-          hitReady = true
-          hitConfig = config
-          continue
-        }
-        if (state === 'hitWindow' && timer >= config.hitWindow) {
-          timer -= config.hitWindow
-          state = 'recovery'
-          continue
-        }
-        if (state === 'recovery' && timer >= config.recovery) {
-          timer = 0
-          state = 'idle'
-          config = null
-          break
-        }
-        break
-      }
-      return { hitReady, config: hitReady ? hitConfig : null }
-    },
-    reset() {
-      state = 'idle'
-      timer = 0
-      config = null
-    },
+    update: lifecycle.update,
+    reset: lifecycle.reset,
     recentTargetIds: () => recentTargets,
     rememberHit(id) {
       recentTargets = [id, ...recentTargets.filter((existing) => existing !== id)].slice(0, COMBAT_TARGET_MEMORY)
     },
   }
-}
-
-export type MeleeHitCandidate = {
-  id: string
-  x: number
-  z: number
-  alive: boolean
-}
-
-/** Deterministic melee hit test — XZ range + facing-arc dot product, no
- *  raycasting (plan 123 §3). Returns every candidate id inside range and
- *  arc; the caller applies damage once per id since this is only ever
- *  called at the single `hitReady` edge of one attack. */
-export function resolveMeleeHits(
-  playerX: number,
-  playerZ: number,
-  playerYaw: number,
-  config: MeleeConfig,
-  candidates: readonly MeleeHitCandidate[],
-): string[] {
-  const forwardX = -Math.sin(playerYaw)
-  const forwardZ = -Math.cos(playerYaw)
-  const hits: string[] = []
-  for (const candidate of candidates) {
-    if (!candidate.alive) continue
-    const dx = candidate.x - playerX
-    const dz = candidate.z - playerZ
-    const dist = Math.hypot(dx, dz)
-    if (dist < 1e-4 || dist > config.range) continue
-    const dot = (dx / dist) * forwardX + (dz / dist) * forwardZ
-    if (dot < config.arcDot) continue
-    hits.push(candidate.id)
-  }
-  return hits
 }
 
 /** Deterministic combat-target acquisition (plan 124 §1) — deliberately not
@@ -285,23 +203,6 @@ export function rankCombatTargets(
     return a.memoryRank - b.memoryRank
   })
   return scored.map((s) => s.id)
-}
-
-/** Camera/aim yaw (plan 142 §2) that points from `(playerX, playerZ)` straight
- *  at `(targetX, targetZ)`, in the same convention `resolveMeleeHits` and
- *  `pickCombatTarget` use for the forward vector (`-sin(yaw)`, `-cos(yaw)`).
- *  Returns `null` when the two points coincide, so callers keep their current
- *  yaw instead of snapping to an arbitrary direction. */
-export function yawToward(
-  playerX: number,
-  playerZ: number,
-  targetX: number,
-  targetZ: number,
-): number | null {
-  const dx = targetX - playerX
-  const dz = targetZ - playerZ
-  if (Math.hypot(dx, dz) < 1e-4) return null
-  return Math.atan2(-dx, -dz)
 }
 
 /** Pull-back angle (radians) at the end of wind-up. */

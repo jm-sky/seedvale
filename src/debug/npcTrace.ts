@@ -22,6 +22,12 @@ export type NpcTraceEvent =
   | { simTime: number; type: 'queue.left'; queueId: string }
   | { simTime: number; type: 'queue.served'; queueId: string }
   | { simTime: number; type: 'movement.rescue'; stage: 'abandon' | 'escape' | 'repath' }
+  /** Combat lifecycle (plan 177) — `beginCombat()`/`endCombat()`/a landed
+   *  hit/death, never per-frame combat-phase ticking. */
+  | { simTime: number; type: 'combat.started'; targetId: string }
+  | { simTime: number; type: 'combat.ended'; outcome: 'cancelled' | 'complete' | 'failed' }
+  | { simTime: number; type: 'combat.hit'; targetId: string }
+  | { simTime: number; type: 'combat.died' }
   | { simTime: number; type: 'debug.freeze' }
   | { simTime: number; type: 'debug.unfreeze' }
   | { simTime: number; type: 'debug.reevaluate' }

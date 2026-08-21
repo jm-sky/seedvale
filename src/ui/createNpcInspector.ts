@@ -128,6 +128,10 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'action.completed': return `${t}s action.completed → ${event.action}`
     case 'action.failed': return `${t}s action.failed → ${event.action ?? '-'} (${event.reason})`
     case 'action.planned': return `${t}s action.planned → ${event.action}${event.queueId ? ` @${event.queueId}` : ''}`
+    case 'combat.died': return `${t}s combat.died`
+    case 'combat.ended': return `${t}s combat.ended (${event.outcome})`
+    case 'combat.hit': return `${t}s combat.hit → ${event.targetId}`
+    case 'combat.started': return `${t}s combat.started → ${event.targetId}`
     case 'debug.freeze': return `${t}s debug.freeze`
     case 'debug.reevaluate': return `${t}s debug.reevaluate`
     case 'debug.unfreeze': return `${t}s debug.unfreeze`

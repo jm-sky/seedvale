@@ -47,6 +47,8 @@ Rebuild/lifetime invariant (keep the bundle reference, don't capture a replaceab
 
 Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, NPC needs/FSM/schedule, settlement bulk economy, dialogue v2 and home-trader screen. Static colliders (plan 097, issue [036](./issues/2026-08-19--036--settlement-prop-colliders.md)): well, house walls/doors, wood piles, Kupiec wagon/horse, village campfire — same `ColliderRegistry` as rocks/trees.
 
+NPC Combat (plan 177, melee stage): `NpcAgent` gained a `combat` `Phase` driven from its own `update()` cadence (no `NpcCombatManager`/second loop) plus `beginCombat(intent: CombatIntent)`/`cancelCombat()` — `NpcAgent` never picks its own target or reason to fight, only executes an intent a future decision system supplies. `src/combat/meleeAttack.ts` (extracted from `player/playerMelee.ts`, which now wraps it) is the neutral windUp→hitWindow→recovery timer + `resolveMeleeHits`/`yawToward` shared with the player; `src/combat/combatIntent.ts`'s `CombatTargetHandle` (`getPosition`/`isAlive`/`applyDamage`) is the small data-only target seam (`fauna/faunaCombat.ts`'s `combatTargetForAnimal()` builds one for an `AnimalAgent`); `src/ai/npcCombat.ts` resolves the attacking/defending item straight from `NpcAgent.carried` (no NPC equipment system) and applies `combat/criticalHit.ts`/`combat/defenseResolver.ts` unchanged. Incoming damage (`animal → NPC`/`NPC → NPC`/`player → NPC`, one shape) goes through `NpcAgent.applyIncomingCombatDamage()`; death (`NpcAgent`'s new private `die()`, first thing that can actually kill an NPC — `takeDamage()` had zero callers before this plan) tips the mesh/stops the mixer/hides bars, no corpse timer/revive/respawn/downed/loot. **Ranged not implemented**: plan 162's projectile pipeline is still owned end-to-end by `gameLoop.ts`'s local player state (`activeProjectiles`), no seam yet for a non-player source. **Nothing calls `beginCombat()` yet** — Hunter/animal-defense (plan 179)/bandits are the future callers; see plan 177's "Implementation summary" §20. No browser verification yet (nothing in-game triggers it).
+
 Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 
 ### Fauna
@@ -154,9 +156,11 @@ src/assets/constructionCatalog.ts
 src/assets/houseDefinitionExample.ts
 src/economy/
 src/ai/NpcAgent.ts
+src/ai/npcCombat.ts
 src/ai/Needs.ts
 src/fauna/AnimalAgent.ts
 src/fauna/AnimalLife.ts
+src/fauna/faunaCombat.ts
 src/fauna/predatorHumanDecision.ts
 src/simulation/
 src/shared/HealthState.ts
@@ -174,6 +178,8 @@ src/player/PlayerNeeds.ts
 src/player/PlayerSkills.ts
 src/player/playerMelee.ts
 src/player/playerRanged.ts
+src/combat/meleeAttack.ts
+src/combat/combatIntent.ts
 src/combat/criticalHit.ts
 src/combat/projectile.ts
 src/combat/rangedAttack.ts
@@ -215,7 +221,7 @@ Do not treat a passing build as proof that a visual Three.js feature is correct.
 - Shared Threat context type (existing fauna perception covers current consumers).
 - LLM/AI-generated quests.
 - Inter-settlement trade and player crafting.
-- Full combat system for the player; full NPC-vs-fauna combat wiring. Ranged combat (plan 162) covers player-vs-animal only — no NPC archer/ranged AI, since there is still no general NPC attack-decision framework to extend.
+- Full combat system for the player. NPC Combat (plan 177) provides the melee execution mechanism (`NpcAgent.beginCombat()`) — nothing decides to call it yet (no Hunter/animal-defense/bandit AI), so it has no live gameplay trigger. NPC ranged combat is not implemented (plan 162's projectile pipeline still has no non-player seam); player-vs-NPC melee damage is also not wired (player can already soft-lock/Tab-cycle an NPC as a combat target — `playerCombat.ts`'s `collectLivingCombatTargets` — but `gameLoop.ts`'s melee hit resolution only ever applies damage to `animal` candidates).
 - Weapon repair/broken lifecycle, general tool durability (`shovel`/`pickaxe`), bow durability/sharpness, arrow recovery, and 3D projectile visuals — all deliberately out of plan 161/162 scope.
 - Cube-sphere / fully spherical world architecture.
 - Clouds and distant background mountains.

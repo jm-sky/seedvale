@@ -1,0 +1,32 @@
+import type { SimulationEntityRef } from '../simulation'
+
+/**
+ * Small, data-only combat target seam (plan 177 §3/§5) — deliberately not a
+ * `Combatant` hierarchy. `ref` carries identity (compatible with
+ * `SimulationEntityRef`); the three functions let the combat executor
+ * re-validate the target at attack-resolution time (exists, alive, in range)
+ * without a global target registry or per-frame world scan — the caller that
+ * builds a `CombatTargetHandle` already holds the concrete entity (an
+ * `AnimalAgent`, another `NpcAgent`, the player), so this only exposes the
+ * narrow read/damage surface combat needs, never the entity itself.
+ */
+export type CombatTargetHandle = {
+  ref: SimulationEntityRef
+  /** Current XZ position, or `null` once the target is no longer resolvable
+   *  (removed from the world) — distinct from `isAlive()` being false. */
+  getPosition: () => { x: number, z: number } | null
+  isAlive: () => boolean
+  /** Applies already-resolved damage — the target owner decides its own
+   *  defense/HealthState/death consequences; combat never mutates a target
+   *  directly. */
+  applyDamage: (amount: number) => void
+}
+
+/**
+ * Combat execution intent (plan 177 §2/§3) — supplied by a caller (future
+ * Hunter/animal-defense/bandit decision systems), never produced by combat
+ * itself. `NpcAgent.beginCombat()` only executes it.
+ */
+export type CombatIntent = {
+  target: CombatTargetHandle
+}

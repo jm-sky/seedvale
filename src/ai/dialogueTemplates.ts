@@ -93,6 +93,7 @@ const ACTIVITY_LABEL: Record<Exclude<CurrentActivityKind, 'need'>, string> = {
   wander: 'przechadzam się po okolicy',
   talking: 'akurat z Tobą rozmawiam',
   idle: 'nic szczególnego nie robię',
+  combat: 'walczę',
 }
 
 const NEED_ACTIVITY_LABEL: Record<NeedId, string> = {

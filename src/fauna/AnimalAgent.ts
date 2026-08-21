@@ -959,10 +959,13 @@ export class AnimalAgent {
     this.corpseHeld = false
   }
 
-  takeDamage(damage: number, source?: 'player'): void {
+  /** `source: 'npc'` (plan 177) is another human attacker, same provocation
+   *  reaction as `'player'` — this is the existing predator-vs-human decision
+   *  reacting to being hit, not a new NPC-aware animal behaviour. */
+  takeDamage(damage: number, source?: 'npc' | 'player'): void {
     if (this.health.dead) return
     damageHealth(this.health, damage)
-    if (source === 'player') {
+    if (source === 'player' || source === 'npc') {
       this.provokedTimer = PROVOCATION_SECONDS
       // Force an immediate re-score so healthy wolves can retaliate this frame.
       this.humanDecisionTimer = 0

@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
+import type { CombatIntent } from '../combat/combatIntent'
+import type { ResolvedDefense } from '../combat/defenseResolver'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
 import type { Household } from '../settlement/household'
@@ -15,6 +17,12 @@ import {
   prepareProp,
 } from '../assets/loadGltf'
 import { playActionWell } from '../audio/actionSounds'
+import {
+  createMeleeAttackLifecycle,
+  type MeleeAttackLifecycle,
+  resolveMeleeHits,
+  yawToward,
+} from '../combat/meleeAttack'
 import { isDebugMode } from '../debug/debugMode'
 import { createNpcTraceBuffer, type NpcTraceBuffer, type NpcTraceEvent } from '../debug/npcTrace'
 import {
@@ -38,11 +46,13 @@ import { createVigorState, type VigorState } from '../shared/VigorState'
 import {
   type ActionLifecycle,
   type ActionLifecycleStatus,
+  cancelActionLifecycle,
   completeActionLifecycle,
   copyVec3,
   createActionLifecycle,
   type DecisionContext,
   failActionLifecycle,
+  finishActionLifecycle,
   type InteractionQueue,
   type PlannedAction,
   replaceActionLifecycle,
@@ -81,6 +91,12 @@ import {
   localEscapeRadii,
   pickEmergencyTeleportPoint,
 } from './npcColliderRim'
+import {
+  applyNpcMeleeHit,
+  type NpcMeleeWeapon,
+  resolveIncomingNpcDamage,
+  resolveNpcMeleeWeapon,
+} from './npcCombat'
 import {
   createMovementWatchdog,
   type MovementWatchdog,
@@ -296,6 +312,10 @@ function modelUrlFor(gender: NpcGender, treeIndex: number): string {
  *  them in would blur rather than simplify. */
 export type Phase =
   | 'choose'
+  /** Executing an externally supplied `CombatIntent` (plan 177) — see
+   *  `beginCombat()`. Not entered by any NPC decision in this plan; a future
+   *  Hunter/animal-defense/bandit decision system calls `beginCombat()`. */
+  | 'combat'
   | 'execute'
   | 'exhausted'
   | 'followPath'
@@ -334,7 +354,7 @@ type NpcPlannedAction = PlannedAction<ActionId> & {
  *  narrower, stable view over the private `phase`/`pendingAction` FSM state
  *  (`getCurrentActivity()` below), so callers outside this class never see
  *  `Phase`/`PlannedAction` themselves (`docs/plans/archive/2026-08-09--048...`). */
-export type CurrentActivityKind = 'eat' | 'idle' | 'need' | 'sleep' | 'talking' | 'wander' | 'work'
+export type CurrentActivityKind = 'combat' | 'eat' | 'idle' | 'need' | 'sleep' | 'talking' | 'wander' | 'work'
 
 export type CurrentActivity = {
   kind: CurrentActivityKind
@@ -666,9 +686,28 @@ export class NpcAgent {
    *  activity until the effective schedule moves on — avoids restarting the
    *  same meal every `choose` cycle. */
   private settledIdleActivity: ScheduleActivity | null = null
-  /** Shared action lifecycle for the in-flight `PlannedAction` only —
-   *  orthogonal to agent `Phase` (`wander`/`sleep`/…). */
+  /** Shared action lifecycle for the in-flight `PlannedAction` **or** the
+   *  in-flight `combat` intent (plan 177) — the same single field either
+   *  way, since only one of the two is ever active at once. */
   private actionLifecycle: ActionLifecycle = createActionLifecycle()
+  /** Combat intent currently being executed (plan 177), or `null` outside
+   *  `phase === 'combat'`. Never chosen by `NpcAgent` itself — see
+   *  `beginCombat()`. */
+  private combatIntent: CombatIntent | null = null
+  /** Weapon resolved from `carried` when `beginCombat()` started — cached so
+   *  a mid-combat inventory change can't silently swap the active weapon's
+   *  timing out from under an in-flight swing. */
+  private combatWeapon: NpcMeleeWeapon | null = null
+  /** Shared windUp→hitWindow→recovery timer (`combat/meleeAttack.ts`, plan
+   *  177) — the same neutral primitive `player/playerMelee.ts` wraps. */
+  private readonly combatAttack: MeleeAttackLifecycle = createMeleeAttackLifecycle()
+  /** Monotonic per-agent counter — deterministic attack identity for
+   *  `resolveCriticalHit`'s roll (plan 177 §Deterministic simulation),
+   *  never frame number/array index/object identity. */
+  private combatAttackAttempt = 0
+  /** Monotonic per-agent counter for `resolveDefense`'s incoming-damage roll
+   *  (mirrors `PlayerController.nextDefenseAttempt`). */
+  private defenseAttempt = 0
   /** Destination for the `wander` phase only — resource/work destinations
    *  now live in `pendingAction.destination` instead. */
   private target = new THREE.Vector3()
@@ -1166,6 +1205,8 @@ export class NpcAgent {
     switch (this.phase) {
       case 'choose':
         return { kind: 'idle' }
+      case 'combat':
+        return { kind: 'combat' }
       case 'execute':
       case 'exhausted':
       case 'goTo': {
@@ -1199,12 +1240,122 @@ export class NpcAgent {
 
   /**
    * NPC-specific damage: HP via shared `damageHealth`, then a lump vigor
-   * cost. `HealthState` stays combat-agnostic (plan 092).
+   * cost. `HealthState` stays combat-agnostic (plan 092). The single place
+   * that turns a death-crossing hit into this NPC's own death consequences
+   * (plan 177 §9/§13) — combat itself never handles death.
    */
   takeDamage(amount: number): void {
     if (this.health.dead) return
     damageHealth(this.health, amount)
     applyDamageVigor(this.vigor)
+    if (this.health.dead) this.die()
+  }
+
+  /** Incoming combat damage (plan 177 §8/§10 — `animal → NPC`, `NPC → NPC`,
+   *  `player → NPC` all share this one entry point): resolves this NPC's own
+   *  defense (whatever `carried` currently exposes) before the HP loss
+   *  itself goes through the same `takeDamage()` every other damage source
+   *  uses. Returns the resolved outcome so a caller (e.g. a future
+   *  animal-attack decision) can react (retaliate, flee) without
+   *  duplicating the defense roll. */
+  applyIncomingCombatDamage(params: {
+    amount: number
+    attackerX?: number
+    attackerZ?: number
+    attackerKey: string
+  }): ResolvedDefense {
+    if (this.health.dead) return { outcome: 'none', finalDamage: 0, attempted: false }
+    this.defenseAttempt += 1
+    const resolved = resolveIncomingNpcDamage({
+      amount: params.amount,
+      carried: this.carried,
+      defenderId: this.id,
+      defenderX: this.mesh.position.x,
+      defenderZ: this.mesh.position.z,
+      defenderFacingYaw: this.mesh.rotation.y,
+      attackerX: params.attackerX,
+      attackerZ: params.attackerZ,
+      attackerKey: params.attackerKey,
+      attempt: this.defenseAttempt,
+    })
+    if (resolved.finalDamage > 0) this.takeDamage(resolved.finalDamage)
+    return resolved
+  }
+
+  /** Executes an already-decided combat intent (plan 177) — `NpcAgent` never
+   *  picks its own target or reason to fight; a future Hunter/animal-defense/
+   *  bandit decision system supplies both via `intent`. Interrupts whatever
+   *  this NPC was doing (same cleanup `beginCollapseSleep`/`interruptCurrentAction`
+   *  already do for their own transitions) and replaces the shared
+   *  `actionLifecycle`. Returns `false` without any side effect — no combat
+   *  starts — when the target is already invalid or this NPC has no
+   *  melee-capable carried weapon (plan 177 §6: "no melee config → combat
+   *  attack cannot start", never a silent fallback weapon). */
+  beginCombat(intent: CombatIntent): boolean {
+    if (this.health.dead) return false
+    if (!intent.target.isAlive() || !intent.target.getPosition()) return false
+    const weapon = resolveNpcMeleeWeapon(this.carried)
+    if (!weapon) return false
+
+    this.leaveActiveQueue()
+    this.pendingAction = null
+    this.pathWaypoints = []
+    this.pathIndex = 0
+    this.wait = 0
+    this.repathActive = false
+    this.previousPhase = null
+    this.sleepReason = null
+    resetMovementWatchdog(this.watchdog)
+
+    this.combatIntent = intent
+    this.combatWeapon = weapon
+    this.combatAttack.reset()
+    replaceActionLifecycle(this.actionLifecycle)
+    this.phase = 'combat'
+    this.trace.record({ simTime: this.simClock, type: 'combat.started', targetId: intent.target.ref.id })
+    return true
+  }
+
+  /** Debug/external cancel — mirrors `requestReevaluation()`'s role for
+   *  `goTo`/`execute`, but for combat. A no-op outside `phase === 'combat'`. */
+  cancelCombat(): void {
+    if (this.phase !== 'combat') return
+    this.endCombat('cancelled')
+  }
+
+  /** Ends the current combat intent and hands control back to the normal
+   *  decision flow (plan 177 §4 — "combat ends / target invalid / NPC dies
+   *  → existing decision flow resumes"). `outcome` only classifies the
+   *  shared `actionLifecycle` transition; the next `choose` tick re-derives
+   *  what this NPC does next on its own. */
+  private endCombat(outcome: 'cancelled' | 'complete' | 'failed'): void {
+    if (outcome === 'complete') finishActionLifecycle(this.actionLifecycle)
+    else if (outcome === 'failed') failActionLifecycle(this.actionLifecycle)
+    else cancelActionLifecycle(this.actionLifecycle)
+    this.combatIntent = null
+    this.combatWeapon = null
+    this.combatAttack.reset()
+    this.trace.record({ simTime: this.simClock, type: 'combat.ended', outcome })
+    this.phase = 'choose'
+  }
+
+  /** One-time death consequence (plan 177 §9/§13) — stops the NPC in place
+   *  (mirrors `AnimalAgent.collapse()`'s tip-over) rather than a corpse/loot
+   *  system, which stays out of this plan's scope. `update()` no-ops for a
+   *  dead NPC from the next tick on. */
+  private die(): void {
+    this.leaveActiveQueue()
+    this.pendingAction = null
+    this.combatIntent = null
+    this.combatWeapon = null
+    this.combatAttack.reset()
+    if (this.actionLifecycle.status === 'active') failActionLifecycle(this.actionLifecycle)
+    this.mixer.stopAllAction()
+    this.mesh.rotation.z = Math.PI / 2
+    this.lastHpPercent = 0
+    this.hpFillEl.style.width = '0%'
+    this.labelBarsEl.style.display = 'none'
+    this.trace.record({ simTime: this.simClock, type: 'combat.died' })
   }
 
   /** `observerYaw` — player look direction (radians, same convention as
@@ -1227,6 +1378,7 @@ export class NpcAgent {
   ): void {
     this.simClock += dt
     if (this.frozen) return
+    if (this.health.dead) return
     const prevPhase = this.phase
     tickNeeds(this.needs, dt, dayLengthSec, {
       hungerThirstRate: this.phase === 'sleep' ? SLEEP_HUNGER_THIRST_RATE : 1,
@@ -1242,6 +1394,12 @@ export class NpcAgent {
       drainStamina(this.stamina, rate * this.fatigueMult * dt)
     } else if (REST_PHASES.has(this.phase)) {
       restoreStamina(this.stamina, this.restRate * dt)
+    } else if (this.phase === 'combat' && this.combatAttack.state() === 'idle') {
+      // Only regens between swings (never mid-attack) — mirrors the lump
+      // `staminaCost` spend on `combatAttack.start()` below instead of a
+      // second continuous drain rate, so a stamina-exhausted NPC eventually
+      // recovers enough to keep fighting instead of softlocking in combat.
+      restoreStamina(this.stamina, this.restRate * 0.5 * dt)
     }
     if ((this.phase === 'goTo' || this.phase === 'execute') && isExhausted(this.stamina)) {
       this.previousPhase = this.phase
@@ -1320,6 +1478,78 @@ export class NpcAgent {
           break
         }
         this.beginIdle(scheduledActivity)
+        break
+      }
+      case 'combat': {
+        // Vigor collapse outranks an in-flight combat intent the same way it
+        // outranks a schedule-driven action (`tickCriticalInterrupt`) — a
+        // physically collapsing NPC cannot keep fighting.
+        if (shouldCollapseSleep(this.vigor)) {
+          this.endCombat('cancelled')
+          break
+        }
+        const intent = this.combatIntent
+        const weapon = this.combatWeapon
+        if (!intent || !weapon) {
+          this.endCombat('failed')
+          break
+        }
+        // Target validity is re-checked every tick, not cached (plan 177 §5)
+        // — exists, alive, has a resolvable position.
+        if (!intent.target.isAlive()) {
+          this.endCombat('complete')
+          break
+        }
+        const targetPos = intent.target.getPosition()
+        if (!targetPos) {
+          this.endCombat('failed')
+          break
+        }
+
+        const dx = targetPos.x - this.mesh.position.x
+        const dz = targetPos.z - this.mesh.position.z
+        const dist = Math.hypot(dx, dz)
+        const inRange = dist <= weapon.melee.range
+        if (!inRange && this.combatAttack.state() === 'idle') {
+          this.tmp.set(targetPos.x, 0, targetPos.z)
+          this.steerTo(this.tmp, dt)
+        } else if (dist > 1e-4) {
+          this.mesh.rotation.y = Math.atan2(dx, dz)
+        }
+
+        // Hit resolution happens once, at the shared lifecycle's own
+        // `hitReady` edge — never per frame, never from render/animation
+        // state (plan 177 — deterministic simulation).
+        const tick = this.combatAttack.update(dt)
+        if (tick.hitReady && tick.config) {
+          // Attack commits to the target's position at the exact hit-window
+          // edge, same "one attack, one yaw" contract `gameLoop.ts` uses for
+          // the player's locked-target swings.
+          const attackYaw = yawToward(this.mesh.position.x, this.mesh.position.z, targetPos.x, targetPos.z)
+          if (attackYaw != null) {
+            const hits = resolveMeleeHits(
+              this.mesh.position.x,
+              this.mesh.position.z,
+              attackYaw,
+              tick.config,
+              [{ id: intent.target.ref.id, x: targetPos.x, z: targetPos.z, alive: true }],
+            )
+            if (hits.length > 0) {
+              this.combatAttackAttempt += 1
+              applyNpcMeleeHit(intent.target, tick.config, this.id, `melee:${intent.target.ref.id}`, this.combatAttackAttempt)
+              this.trace.record({ simTime: this.simClock, type: 'combat.hit', targetId: intent.target.ref.id })
+              if (!intent.target.isAlive()) {
+                this.endCombat('complete')
+                break
+              }
+            }
+          }
+        }
+
+        if (inRange && this.combatAttack.state() === 'idle' && this.stamina.current >= weapon.melee.staminaCost) {
+          drainStamina(this.stamina, weapon.melee.staminaCost)
+          this.combatAttack.start(weapon.melee)
+        }
         break
       }
       case 'execute': {
