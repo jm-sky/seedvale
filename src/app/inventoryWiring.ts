@@ -167,19 +167,19 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   }
 
   vueUi.configureMerchant({
-    onBuyCoins: (kind) => {
-      const result = buyWithCoins(inventory, kind)
+    onBuyCoins: (kind, count = 1) => {
+      const result = buyWithCoins(inventory, kind, count)
       if (result === 'ok') {
         afterTrade()
-        toast.show(`+1 ${ITEM_DEFS[kind].label}`, 'pickup')
+        toast.show(`+${count} ${ITEM_DEFS[kind].label}`, 'pickup')
       }
       return result
     },
-    onBuyBarter: (kind, offer) => {
-      const result = buyWithBarter(inventory, kind, offer)
+    onBuyBarter: (kind, offer, count = 1) => {
+      const result = buyWithBarter(inventory, kind, offer, count)
       if (result === 'ok') {
         afterTrade()
-        toast.show(`+1 ${ITEM_DEFS[kind].label}`, 'pickup')
+        toast.show(`+${count} ${ITEM_DEFS[kind].label}`, 'pickup')
       }
       return result
     },

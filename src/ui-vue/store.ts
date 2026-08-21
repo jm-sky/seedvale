@@ -119,8 +119,8 @@ type MerchantState = {
   npc: NpcAgent | null
   counts: Partial<Record<ItemKind, number>>
   groups: readonly InventoryGroupView[]
-  onBuyCoins: ((kind: ItemKind) => TradeResult) | null
-  onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>) => TradeResult) | null
+  onBuyCoins: ((kind: ItemKind, count?: number) => TradeResult) | null
+  onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>, count?: number) => TradeResult) | null
   onSellCoins: ((kind: ItemKind) => TradeResult) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
 }

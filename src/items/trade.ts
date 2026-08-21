@@ -33,21 +33,21 @@ function wouldFitAfter(
   return next <= inventory.maxWeight + 1e-9
 }
 
-function wouldFitAfterInstance(
-  inventory: Inventory,
-  removeWeight: number,
-  instance: ItemInstance,
-): boolean {
-  const next = inventory.totalWeight() - removeWeight + ITEM_DEFS[instance.kind].weight
-  return next <= inventory.maxWeight + 1e-9
-}
-
 function offerWeight(offer: Partial<Record<ItemKind, number>>): number {
   let total = 0
   for (const [kind, count] of Object.entries(offer) as [ItemKind, number][]) {
     if (count > 0) total += ITEM_DEFS[kind].weight * count
   }
   return total
+}
+
+/** `inventory.has()`'s stack-count check misses instance-backed kinds (knives,
+ *  swords, axes, traps — plan 161 moved these into `instances`), which would
+ *  otherwise make every such kind unofferable in barter despite the offer
+ *  panel listing it (`inventoryCountsForUi` merges instance counts in). */
+function offerHasEnough(inventory: Inventory, kind: ItemKind, count: number): boolean {
+  if (isInstanceBackedKind(kind)) return inventory.countInstances(kind) >= count
+  return inventory.has(kind, count)
 }
 
 function isValidOffer(
@@ -59,9 +59,25 @@ function isValidOffer(
     if (!Number.isInteger(count) || count < 0) return false
     if (count === 0) continue
     any = true
-    if (!inventory.has(kind, count)) return false
+    if (!offerHasEnough(inventory, kind, count)) return false
   }
   return any
+}
+
+/** Removes an already-validated offer from `inventory` — instance-backed
+ *  kinds give up their worst-condition units first (mirrors
+ *  `selectInstancesToSell`'s ordering for a direct coin sale). */
+function removeOffer(inventory: Inventory, offer: Partial<Record<ItemKind, number>>): void {
+  for (const [offerKind, count] of Object.entries(offer) as [ItemKind, number][]) {
+    if (count <= 0) continue
+    if (isInstanceBackedKind(offerKind)) {
+      for (const id of selectInstancesToSell(inventory.getInstances(offerKind), count)) {
+        inventory.removeInstance(id)
+      }
+    } else {
+      inventory.remove(offerKind, count)
+    }
+  }
 }
 
 /** Single dispatch point from an `ItemKind` to the instance it should become
@@ -109,52 +125,50 @@ export function selectInstanceToPlace(instances: readonly TrapItemInstance[]): T
   return sorted[0] ?? null
 }
 
-/** Pay `price` coins for one `kind`. Atomic: verify, then remove+add. */
-export function buyWithCoins(inventory: Inventory, kind: ItemKind): TradeResult {
-  const price = merchantPrice(kind)
-  if (price == null) return 'not_sold'
-  if (!inventory.has('coin', price)) return 'cannot_afford'
-  const paymentWeight = ITEM_DEFS.coin.weight * price
-  const purchased = createAcquiredInstance(kind)
-  if (purchased) {
-    if (!wouldFitAfterInstance(inventory, paymentWeight, purchased)) return 'full'
-    inventory.remove('coin', price)
-    if (!inventory.addInstance(purchased)) return 'full'
-    return 'ok'
+/** Adds `count` freshly acquired units of `kind` to `inventory` — instance-backed
+ *  kinds (weapons, traps) get `count` distinct instances, stackable kinds get
+ *  a single stack bump. Assumes payment has already been validated/removed. */
+function addPurchased(inventory: Inventory, kind: ItemKind, count: number): void {
+  if (isInstanceBackedKind(kind)) {
+    for (let i = 0; i < count; i++) {
+      const purchased = createAcquiredInstance(kind)
+      if (purchased) inventory.addInstance(purchased)
+    }
+    return
   }
-  if (!wouldFitAfter(inventory, paymentWeight, kind)) return 'full'
-  inventory.remove('coin', price)
-  inventory.add(kind, 1)
+  inventory.add(kind, count)
+}
+
+/** Pay `price × count` coins for `count` unit(s) of `kind`. Atomic: verify, then remove+add. */
+export function buyWithCoins(inventory: Inventory, kind: ItemKind, count = 1): TradeResult {
+  const unitPrice = merchantPrice(kind)
+  if (unitPrice == null) return 'not_sold'
+  const totalPrice = unitPrice * count
+  if (!inventory.has('coin', totalPrice)) return 'cannot_afford'
+  const paymentWeight = ITEM_DEFS.coin.weight * totalPrice
+  if (!wouldFitAfter(inventory, paymentWeight, kind, count)) return 'full'
+  inventory.remove('coin', totalPrice)
+  addPurchased(inventory, kind, count)
   return 'ok'
 }
 
 /**
- * Swap offered items for one `kind` when combined `tradeValue` covers the
- * list price. Atomic: verify counts + value + weight, then remove+add.
+ * Swap offered items for `count` unit(s) of `kind` when combined `tradeValue`
+ * covers `price × count`. Atomic: verify counts + value + weight, then remove+add.
  */
 export function buyWithBarter(
   inventory: Inventory,
   kind: ItemKind,
   offer: Partial<Record<ItemKind, number>>,
+  count = 1,
 ): TradeResult {
-  const price = merchantPrice(kind)
-  if (price == null) return 'not_sold'
+  const unitPrice = merchantPrice(kind)
+  if (unitPrice == null) return 'not_sold'
   if (!isValidOffer(inventory, offer)) return 'invalid_offer'
-  if (offerValue(offer) < price) return 'cannot_afford'
-  const purchased = createAcquiredInstance(kind)
-  if (purchased) {
-    if (!wouldFitAfterInstance(inventory, offerWeight(offer), purchased)) return 'full'
-    for (const [offerKind, count] of Object.entries(offer) as [ItemKind, number][]) {
-      if (count > 0) inventory.remove(offerKind, count)
-    }
-    if (!inventory.addInstance(purchased)) return 'full'
-    return 'ok'
-  }
-  if (!wouldFitAfter(inventory, offerWeight(offer), kind)) return 'full'
-  for (const [offerKind, count] of Object.entries(offer) as [ItemKind, number][]) {
-    if (count > 0) inventory.remove(offerKind, count)
-  }
-  inventory.add(kind, 1)
+  if (offerValue(offer) < unitPrice * count) return 'cannot_afford'
+  if (!wouldFitAfter(inventory, offerWeight(offer), kind, count)) return 'full'
+  removeOffer(inventory, offer)
+  addPurchased(inventory, kind, count)
   return 'ok'
 }
 

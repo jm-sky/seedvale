@@ -73,29 +73,81 @@ describe('buyWithCoins', () => {
     expect(buyWithCoins(inv, 'stone')).toBe('not_sold')
     expect(inv.count('coin')).toBe(100)
   })
+
+  it('buys multiple stackable units at once for count × price coins', () => {
+    const inv = new Inventory({ coin: 10, arrow: 0 })
+    expect(buyWithCoins(inv, 'arrow', 5)).toBe('ok')
+    expect(inv.count('coin')).toBe(5)
+    expect(inv.count('arrow')).toBe(5)
+  })
+
+  it('refuses a multi-unit buy the player cannot afford, without mutating inventory', () => {
+    const inv = new Inventory({ coin: 4, arrow: 0 })
+    expect(buyWithCoins(inv, 'arrow', 5)).toBe('cannot_afford')
+    expect(inv.count('coin')).toBe(4)
+    expect(inv.count('arrow')).toBe(0)
+  })
+
+  it('buys multiple distinct instance-backed units at once', () => {
+    const inv = new Inventory({ coin: 50 })
+    expect(buyWithCoins(inv, 'knife', 3)).toBe('ok')
+    expect(inv.countInstances('knife')).toBe(3)
+    expect(inv.count('coin')).toBe(14)
+  })
 })
 
 describe('buyWithBarter', () => {
+  // Plan 161 moved knife/axe/sword/etc. into `instances`, not `counts` — real
+  // gameplay never has these as plain stack counts
+  // (`migrateWeaponCountsToInstances` converts on load), so these build the
+  // offer inventories the way a real save actually holds them.
   it('accepts an offer whose combined value covers the price', () => {
-    const inv = new Inventory({ axe: 2 })
+    const inv = new Inventory(undefined, undefined, [
+      createWeaponInstance('axe'),
+      createWeaponInstance('axe'),
+    ])
     expect(offerValue({ axe: 2 })).toBe(50)
     expect(buyWithBarter(inv, 'long_sword', { axe: 2 })).toBe('ok')
-    expect(inv.count('axe')).toBe(0)
+    expect(inv.countInstances('axe')).toBe(0)
     expect(inv.countInstances('long_sword')).toBe(1)
   })
 
   it('rejects an under-valued offer without taking items', () => {
-    const inv = new Inventory({ knife: 1, shell: 3 })
+    const inv = new Inventory({ shell: 3 }, undefined, [createWeaponInstance('knife')])
     expect(buyWithBarter(inv, 'axe', { knife: 1, shell: 3 })).toBe('cannot_afford')
-    expect(inv.count('knife')).toBe(1)
+    expect(inv.countInstances('knife')).toBe(1)
     expect(inv.count('shell')).toBe(3)
     expect(inv.count('axe')).toBe(0)
   })
 
-  it('rejects an offer the inventory does not actually hold', () => {
-    const inv = new Inventory({ knife: 1 })
+  it('rejects an offer that names more instance-backed units than are held', () => {
+    const inv = new Inventory(undefined, undefined, [createWeaponInstance('knife')])
     expect(buyWithBarter(inv, 'blanket', { knife: 2 })).toBe('invalid_offer')
-    expect(inv.count('knife')).toBe(1)
+    expect(inv.countInstances('knife')).toBe(1)
+  })
+
+  it('scales the required offer value by count and buys that many units', () => {
+    const inv = new Inventory(undefined, undefined, [
+      createWeaponInstance('axe'),
+      createWeaponInstance('axe'),
+      createWeaponInstance('axe'),
+      createWeaponInstance('axe'),
+    ])
+    expect(offerValue({ axe: 4 })).toBe(100)
+    expect(buyWithBarter(inv, 'long_sword', { axe: 4 }, 2)).toBe('ok')
+    expect(inv.countInstances('axe')).toBe(0)
+    expect(inv.countInstances('long_sword')).toBe(2)
+  })
+
+  it('rejects an offer that covers only count-1 units, without mutating inventory', () => {
+    const inv = new Inventory(undefined, undefined, [
+      createWeaponInstance('axe'),
+      createWeaponInstance('axe'),
+      createWeaponInstance('axe'),
+    ])
+    expect(buyWithBarter(inv, 'long_sword', { axe: 3 }, 2)).toBe('cannot_afford')
+    expect(inv.countInstances('axe')).toBe(3)
+    expect(inv.countInstances('long_sword')).toBe(0)
   })
 })
 

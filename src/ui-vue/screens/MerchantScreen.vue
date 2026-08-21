@@ -27,6 +27,7 @@ useTouchScroll(buyerPanel)
 
 const barterKind = ref<ItemKind | null>(null)
 const offer = ref<Partial<Record<ItemKind, number>>>({})
+const buyCount = ref<Partial<Record<ItemKind, number>>>({})
 const categoryFilter = ref<CategoryFilter>('all')
 const priceFilter = ref<PriceFilter>('all')
 const sortMode = ref<SortMode>('name')
@@ -35,6 +36,7 @@ watch(() => ui.merchant.open, (open) => {
   if (!open) return
   barterKind.value = null
   offer.value = {}
+  buyCount.value = {}
   categoryFilter.value = 'all'
   priceFilter.value = 'all'
   sortMode.value = 'name'
@@ -140,11 +142,25 @@ const offerKinds = computed(() => {
 })
 
 const offeredValue = computed(() => offerValue(offer.value))
-const neededValue = computed(() => (barterKind.value ? merchantPrice(barterKind.value) ?? 0 : 0))
+const neededValue = computed(() => (
+  barterKind.value ? (merchantPrice(barterKind.value) ?? 0) * effectiveBuyCount(barterKind.value) : 0
+))
 const canBarter = computed(() => barterKind.value != null && offeredValue.value >= neededValue.value)
 
+function effectiveBuyCount(kind: ItemKind): number {
+  return Math.max(1, buyCount.value[kind] ?? 0)
+}
+
+function setBuyCount(kind: ItemKind, next: number): void {
+  const count = Math.max(0, Math.floor(next))
+  const copy = { ...buyCount.value }
+  if (count <= 0) delete copy[kind]
+  else copy[kind] = count
+  buyCount.value = copy
+}
+
 function buy(kind: ItemKind): void {
-  const result = ui.merchant.onBuyCoins?.(kind) ?? 'not_sold'
+  const result = ui.merchant.onBuyCoins?.(kind, effectiveBuyCount(kind)) ?? 'not_sold'
   if (result === 'ok') return
   if (result === 'cannot_afford') showToast('Za mało monet.', 'error')
   else if (result === 'full') showToast('Ekwipunek jest za ciężki.', 'error')
@@ -177,7 +193,7 @@ function setOfferCount(kind: ItemKind, next: number): void {
 
 function barter(): void {
   if (!barterKind.value) return
-  const result = ui.merchant.onBuyBarter?.(barterKind.value, { ...offer.value }) ?? 'invalid_offer'
+  const result = ui.merchant.onBuyBarter?.(barterKind.value, { ...offer.value }, effectiveBuyCount(barterKind.value)) ?? 'invalid_offer'
   if (result === 'ok') {
     offer.value = {}
     return
@@ -315,13 +331,30 @@ function chipClass(active: boolean): string {
                   <span class="font-medium capitalize">{{ item.label }}</span>
                   <span class="ml-2 text-[12px] opacity-70 max-md:text-[11px]">{{ item.price }} monet</span>
                 </button>
-                <UiButton
-                  class="min-h-11 shrink-0 px-2.5 py-1 text-xs max-md:min-h-9"
-                  :disabled="item.price > coins"
-                  @click="buy(item.kind)"
-                >
-                  Kup
-                </UiButton>
+                <div class="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
+                    @click="setBuyCount(item.kind, (buyCount[item.kind] ?? 0) - 1)"
+                  >
+                    −
+                  </button>
+                  <span class="w-6 text-center text-xs">{{ buyCount[item.kind] ?? 0 }}</span>
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
+                    @click="setBuyCount(item.kind, (buyCount[item.kind] ?? 0) + 1)"
+                  >
+                    +
+                  </button>
+                  <UiButton
+                    class="min-h-11 shrink-0 px-2.5 py-1 text-xs max-md:min-h-9"
+                    :disabled="item.price > coins"
+                    @click="buy(item.kind)"
+                  >
+                    Kup
+                  </UiButton>
+                </div>
               </div>
             </div>
           </section>
