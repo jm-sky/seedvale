@@ -1,17 +1,19 @@
-# Plan: Building Resources & Mountains
+# Plan: Building Resources
 
 **Created:** 2026-08-21
 **Status:** `planned` 📋
-**Priority:** 🔴 high · **Effort:** XL
-**Depends on:** 181 ~~184~~ ~~111~~
+**Priority:** 🔴 high · **Effort:** L
+**Depends on:** ~~184~~ ~~111~~
 **domain:** `items-player`
-**tags:** [world-terrain]
+**tags:** [settlements-npcs]
 
 ## Cel
 
-Ujednolicić podstawowy model drewna i materiałów budowlanych oraz rozszerzyć istniejącą geografię gór o większą skalę i charakterystyczne skaliste szczyty.
+Ujednolicić podstawowy model drewna i materiałów budowlanych oraz umożliwić istniejącemu systemowi budowania wykorzystanie materiałów znajdujących się bezpośrednio w świecie.
 
-Zakres ma być oparty na istniejących systemach drzew, harvestingu, `ITEM_CATALOG`/capabilities, inventory, dropped/world items, budowania oraz terrain generation. Nie tworzyć równoległego systemu drewna, materiałów budowlanych ani generatora gór.
+Zakres ma być oparty na istniejących systemach drzew, harvestingu, `ITEM_CATALOG`/capabilities, inventory, dropped/world items, budowania oraz fire/fuel. Nie tworzyć równoległego systemu drewna, materiałów budowlanych ani magazynowania konstrukcji.
+
+Góry, mountain shaping, skaliste szczyty i terrain generation są poza zakresem tego planu i zostały wydzielone do planu **191 — Mountain Peaks & Mountain Massifs**.
 
 ## Reconnaissance — aktualny stan
 
@@ -20,9 +22,8 @@ Przed implementacją potwierdzono kluczowe punkty w aktualnym codebase:
 - `ITEM_CATALOG` jest centralnym źródłem definicji itemów i od planu 184 posiada capability query model; istnieją m.in. `wood_chopping` i `branch_trimming`.
 - `branch` jest obecnym canonical itemem wynikającym z harvestingu drzew.
 - Istnieje wspólny tree lifecycle/harvest flow (`TreeLifecycle` / `treeHarvest.ts`) i wcześniejszy axe/tree-harvesting plan 057; nowa implementacja powinna rozszerzyć istniejący flow zamiast tworzyć drugi system.
-- Plan 184 jest zaimplementowany i pozostaje w `verification needed`; dlatego bonus narzędziowy powinien wykorzystać istniejące capability API.
-- Plan 181 rozszerzył istniejący terrain generator o większe masywy górskie i jest nadal `in progress`; ten plan powinien być wykonywany po jego domknięciu, aby nie prowadzić równoległych zmian w mountain shaping.
-- Istniejący system budowania i wcześniejszy plan 111 dostarczają aktualnego punktu integracji konstrukcji; nie należy tworzyć osobnego `BuildingStorage` tylko dla leżących materiałów.
+- Plan 184 jest zaimplementowany i pozostaje w `verification needed`; bonus narzędziowy powinien wykorzystać istniejące capability API.
+- Istniejący system budowania i plan 111 dostarczają aktualnego punktu integracji konstrukcji; nie należy tworzyć osobnego `BuildingStorage` tylko dla leżących materiałów.
 - Plan 175 przewiduje przyszły ruszt do pieczenia; ten plan ma zapewnić wspólny mechanizm belek, a nie implementować całe gotowanie/ruszt.
 
 ## 1. Model drewna
@@ -79,7 +80,7 @@ Ujednolicić bonus narzędziowy z `ITEM_CATALOG`/capabilities i nie tworzyć `Br
 
 ## 4. Budowanie z materiałów świata
 
-Istniejący system budowania powinien móc zużywać wymagane materiały znajdujące się na ziemi w pobliżu konstrukcji, bez konieczności przenoszenia ciężkich materiałów do inventory.
+Istniejący system budowania powinien móc zużywać wymagane materiały znajdujące się na ziemi w pobliżu konstrukcji, bez konieczności przenoszenia materiałów do inventory.
 
 Preferowany przepływ:
 
@@ -104,13 +105,16 @@ Zasady:
 - materiały mają zostać faktycznie zużyte jako world items,
 - promień ma być mały i deterministyczny,
 - nie skanować całego świata/per-frame; wykorzystać istniejący spatial/query mechanism,
-- zużycie następuje zgodnie z istniejącym modelem progresu budowy.
+- zużycie następuje zgodnie z istniejącym modelem progresu budowy,
+- mechanizm powinien być generyczny dla istniejących i przyszłych konstrukcji.
 
 ## 5. Istniejące i przyszłe konstrukcje
 
-Mechanizm ma być generyczny dla istniejących i przyszłych konstrukcji.
+Zweryfikować integrację z istniejącą budową studni, generic building flow oraz przyszłym rusztem z planu 175.
 
-Zweryfikować integrację z istniejącą budową studni, generic building flow oraz przyszłym rusztem z planu 175. Nie implementować w tym planie całego planu 175.
+Nie implementować w tym planie całego planu 175.
+
+Mechanizm pobierania materiałów z ziemi powinien być częścią istniejącego modelu construction, a nie osobnym systemem dla studni czy jednej konkretnej konstrukcji.
 
 ## 6. Ogień i paliwo
 
@@ -123,47 +127,11 @@ Ponownie użyć istniejącego fuel/fire modelu:
 
 Nie tworzyć nowego `FuelSystem`.
 
-## 7. Góry — skala
-
-Rozszerzyć istniejący generator gór po planie 181.
-
-Cel:
-
-```text
-wysokie, monumentalne góry
-        ↓
-skaliste zbocza
-        ↓
-górskie zbocza
-        ↓
-teren / roślinność
-```
-
-Góry powinny być wyraźnie wyższe względem drzew, zachowywać naturalną skalę i ciągłość masywów z planu 181. Bez sztucznych stożków/piramid i bez osobnego `MountainSystem`.
-
-## 8. Ostre skaliste szczyty
-
-Na najwyższych partiach istniejących masywów dodać/ukształtować większe, nieregularne skaliste formacje.
-
-To nie ma być scatter pojedynczych kamieni. Formacje powinny mieć różne wysokości, rozmiary i nachylenia, być nieregularne, tworzyć naturalne skupiska, koncentrować się na najwyższych partiach i przechodzić w skaliste zbocza.
-
-Preferować istniejące terrain height/biome/rock placement mechanisms. Nie tworzyć równoległego mountain-rock generatora bez konieczności.
-
-## 9. Wydajność
-
-Uwzględnić istniejące ograniczenia renderingu:
-
-- nie zwiększać gwałtownie draw calls przez pojedyncze obiekty,
-- preferować istniejące instancing/merged geometry/LOD,
-- generować formacje deterministycznie i lokalnie w chunk/worker pipeline,
-- nie tworzyć globalnej geometrii gór,
-- sprawdzić triangles, draw calls i chunk generation/streaming hitching.
-
-## 10. Kolejność implementacji
+## 7. Kolejność implementacji
 
 ### Etap A — reconnaissance implementacyjny
 
-Potwierdzić entry points dla tree harvest/yield, branch gathering, item capabilities, world/dropped items, building material requirements/consumption, well construction, fire fuel, mountain shaping, rock/formations oraz chunk/worker rendering. Ustalić yield `beam:branch` i promień pobierania materiałów.
+Potwierdzić entry points dla tree harvest/yield, branch gathering, item capabilities, world/dropped items, building material requirements/consumption, well construction i fire fuel. Ustalić yield `beam:branch` oraz promień pobierania materiałów.
 
 ### Etap B — branch / beam model
 
@@ -173,23 +141,22 @@ Dodać `beam`, zachować `branch`, rozszerzyć tree harvest o oba dropy, wykorzy
 
 Rozszerzyć istniejący building material query, umożliwić pobieranie wymaganych itemów z ziemi w pobliżu, zużywać je na istniejącej granicy progresu budowy i sprawdzić studnię oraz przygotowanie pod przyszłe konstrukcje.
 
-### Etap D — mountain scale and rocky peaks
+### Etap D — regression and performance verification
 
-Zwiększyć skalę/wysokość gór w istniejącym generatorze, zbudować większe skaliste szczyty z istniejącego terrain/rock pipeline i ocenić kilka seedów.
-
-### Etap E — performance and regression verification
-
-Build/test/lint/tsc, browser/manual verification gameplay, rendering metrics, kilka seedów i granice chunków oraz brak regresji construction/fire/tree lifecycle.
+Build/test/lint/tsc, browser/manual verification gameplay, brak regresji construction/fire/tree lifecycle oraz sprawdzenie kosztu lokalnych world-item queries. Nie dodawać per-frame/global scans.
 
 ## Poza zakresem
 
+- mountain generation,
+- mountain massifs,
+- mountain peaks,
+- rocky peak formations,
+- terrain generator overhaul,
 - nowy generalny crafting system,
 - osobny system drewna/wood manager,
 - osobny system building storage,
 - pełny overhaul tree lifecycle,
 - pełny fuel overhaul,
-- nowy globalny mountain generator,
-- pełna przebudowa hydrologii/rzek z planu 181,
 - nowe systemy ekonomii materiałów,
 - niezwiązany cleanup/refactor.
 
@@ -212,18 +179,15 @@ pnpm test
 - `beam` nie działa jako ręczna pochodnia,
 - oba materiały działają w istniejącym systemie paliwa,
 - konstrukcja może zużyć materiały leżące w ustalonym promieniu,
-- ciężkie materiały nie muszą być w inventory,
+- materiały nie muszą być wcześniej przeniesione do inventory,
 - materiały nie są zużywane przed właściwym etapem progresu,
 - studnia działa bez regresji,
 - przyszły ruszt ma jasno określony punkt integracji z `beam`,
-- góry są wyraźnie wyższe względem drzew,
-- najwyższe partie mają monumentalne, ostre i nieregularne formacje,
-- formacje tworzą naturalne skupiska i przejścia zamiast scatteru kamieni,
-- kilka seedów zachowuje deterministyczny i naturalny rezultat.
+- kilka scenariuszy world-item placement zachowuje deterministyczne zachowanie.
 
 ### Performance
 
-Sprawdzić terrain/chunk generation time, draw calls, triangles, memory/GC jeśli wzrost geometrii jest istotny oraz streaming hitching.
+Sprawdzić koszt world-item query podczas budowania, brak per-frame/global scans, memory/GC jeśli query tworzy tymczasowe kolekcje oraz brak regresji w construction/fire/tree lifecycle.
 
 Oddzielić w implementation notes: implemented, technically verified, browser/manual verified.
 
