@@ -4,8 +4,13 @@ import { widthFromAccumulation } from '../terrain/riverNetwork'
 
 /** Water surface sits slightly above the sampled river-bed elevation — same
  *  idea as `createWater.ts`'s `waterLevel + 0.07`, just relative to the
- *  per-point bed height instead of a flat water level. */
-export const RIVER_SURFACE_OFFSET = 0.06
+ *  per-point bed height instead of a flat water level. Larger than that flat
+ *  offset on purpose: `sampleTerrainY` (bilinear over the apron grid) and the
+ *  actually-rendered mesh surface (per-triangle-split, not a true bilinear
+ *  patch) can differ by a couple centimeters on rough/steep ground, so this
+ *  needs headroom beyond pure z-fighting avoidance or the ribbon can dip
+ *  under the visible terrain there. */
+export const RIVER_SURFACE_OFFSET = 0.2
 
 function lerpRiverPoint(a: RiverPoint, b: RiverPoint, t: number): RiverPoint {
   return {

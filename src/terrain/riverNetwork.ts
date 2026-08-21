@@ -25,17 +25,29 @@ import {
  */
 
 export const RIVER_TILE_SIZE = 256
-export const RIVER_TILE_HALO = 256
+// Halo > core (was equal) — each tile's own accumulation estimate near its
+// edges is only as good as how much upstream catchment its window sees. A
+// too-small halo makes two neighbouring tiles' accumulation for the "same"
+// physical drainage line diverge enough that one classifies it as a river and
+// the other doesn't, showing up as a gap right at the tile seam.
+export const RIVER_TILE_HALO = 384
 export const RIVER_CELL_STEP = 8
 
 const CORE_CELLS = RIVER_TILE_SIZE / RIVER_CELL_STEP
 const HALO_CELLS = RIVER_TILE_HALO / RIVER_CELL_STEP
 const WINDOW_CELLS = CORE_CELLS + 2 * HALO_CELLS
 
-// Calibrated empirically against real generation (768m/96²-cell tiles): lower
-// thresholds produced dozens of 1-2 cell noise blips per tile (terrain
-// wrinkles briefly crossing an accumulation threshold, not real channels).
-// These values give ~2-4 real, reasonably long chains per tile.
+// Calibrated empirically against real generation: lower thresholds produced
+// dozens of 1-2 cell noise blips per tile (terrain wrinkles briefly crossing
+// an accumulation threshold, not real channels). These values give ~2-4 real,
+// reasonably long chains per tile.
+//
+// This is also THE knob to raise river frequency/density for testing: lower
+// `stream` (and `river`/`majorRiver` proportionally) to classify more cells
+// as rivers — e.g. `{ stream: 5, river: 20, majorRiver: 80 }` gives a much
+// denser network. `MIN_CHAIN_POINTS` below (drops short noise blips) may also
+// need lowering if `stream` goes very low, or short real streams get filtered
+// out too.
 export const DEFAULT_RIVER_THRESHOLDS: StreamThresholds = {
   stream: 15,
   river: 50,

@@ -66,8 +66,12 @@ const FRAGMENT_SHADER = /* glsl */ `
     vec3 col = mix(uLakeShallow, uLakeDeep, 0.4);
     col = mix(col, uLakeFoam, edge * 0.6);
 
+    // Multiply by the (already day/night-lerped, dark at night) foam colour
+    // instead of adding a flat scalar — an unconditional additive constant here
+    // ignored ambient light entirely, so the sparkle read as a night-time glow.
     float flow = fract(vUv.y * 0.18 - uTime * 0.9);
-    col += smoothstep(0.85, 1.0, flow) * 0.25;
+    float streak = smoothstep(0.85, 1.0, flow);
+    col += uLakeFoam * streak * 0.7;
 
     float sunUp = step(0.0, uSunDirection.y);
     col += vec3(0.5, 0.65, 0.75) * fresnel * 0.25 * sunUp;

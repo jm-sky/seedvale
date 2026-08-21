@@ -194,7 +194,11 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         mountainThresholdWidth: 0.2,
         worleyCellSize: 400,
         ridgeSharpness: 1.4,
-        mountainGain: 0.88,
+        // Raised from 0.88 — user feedback after Etap 1 tuning: mountains read
+        // too low/flat. Only the ridge contribution scales (mountainRidge is
+        // still the plain 0..1 field other systems read; heightScale/hillsAmplitude
+        // untouched), so this targets mountain height specifically.
+        mountainGain: 1.8,
         oceanThreshold: 0.32,
         coastThreshold: 0.45,
         oceanDetailWeight: 0.25,
