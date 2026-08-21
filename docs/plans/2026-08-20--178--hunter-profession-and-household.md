@@ -1,9 +1,9 @@
 # Plan: Hunter Profession & Household
 
-**Created:** 2026-08-20  
-**Status:** `planned` 📋  
-**Priority:** medium · **Effort:** L  
-**Depends on:** ~~177~~ ~~162~~ ~~159~~ ~~175~~
+**Created:** 2026-08-20
+**Status:** `planned` 📋
+**Priority:** medium · **Effort:** L
+**Depends on:** ~~177~~ ~~162~~ ~~159~~ 175
 
 domain: settlements-npcs
 tags: [fauna, economy, items-player, food]
