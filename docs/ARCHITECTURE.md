@@ -155,9 +155,38 @@ Persistence is orchestrated from the app layer, but ownership is split by respon
 - `src/persistence/saveData.ts` owns the `SaveData` schema, validation/defaulting and migrations.
 - `src/persistence/saveDb.ts` owns the IndexedDB storage operations and the named save slots.
 
-The canonical save schema version and the full field list are documented in [docs/STATE.md](./STATE.md) ("Persistence") — do not restate the field list here, it drifts. NPC runtime state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
+NPC runtime state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
 
-When changing `SaveData`, preserve compatibility with older saves and use the existing migration/defaulting patterns in the config and persistence code.
+When changing `SaveData`, preserve compatibility with older saves and use the existing migration/defaulting patterns in the config and persistence code. `loadSaveData` (`src/persistence/saveData.ts`) migrates any older version up to the current one; `src/persistence/saveData.ts` is authoritative for the exact shape — this section is a summary, not a restatement of the field list.
+
+### Save schema version history
+
+Current schema version: **v25**. Versions before v14 predate this table (see the migration chain in `saveData.ts` for their exact history); each row below is a version bump, what it added, and what happens when an older save is loaded.
+
+| Version | Plan | Added | Pre-version save migrates to |
+|---|---|---|---|
+| v14 | 129 | Owned land plots | none owned |
+| v15 | 124/128 | Skill XP (`xp` only — `value` is re-derived, `active` is never restored) | Sneak at the legacy 0.5, Survival at zero |
+| v16 | 141 | Placed animal traps (id/kind/position/state/durability/`skillAtActivation`/`weatherCheckedAtDay`) | no traps, fresh `traps` skill |
+| v17 | 125 | Fauna spawn-point lifecycle (`spawnPoints`: id/state/deathsThisCycle/disabledAtDay, keyed by the deterministic `PreySpawner.id`) | no entries — every spawn point starts `active` |
+| v18 | 150 | Version bump (combat mode/downed state landed in this plan) | — |
+| v19 | 155 | `inventoryInstances` (generic `ItemInstance` model) | — |
+| v20 | 159 | `foodBatches`, `dryingRacks`, `hives`, `fishingBait`; `placedTraps` gains optional `baitKind` | all four empty/none; existing perishable stacks behave as always-fresh until removed and re-added |
+| v21 | 172 | `harvestedCropIds` (same sparse-id contract as `collectedItemIds`) | none harvested |
+| v22 | 164 | `placedContainers`/`carriedContainer` | none placed/carried |
+| v23 | 127 | `playerWells` | none built |
+| v24 | 127 (revision) | `SavePlayerWell` shape change: `stageStartedAt` (elapsed-time timestamp) → `workProgress` (hours of active work) | each well keeps its `stage` but `workProgress` resets to 0 — a timestamp can't retroactively recover "active work" |
+| v25 | 126 | `plantedTrees`/`plantedCrops` (identity/placement only — a planted tree's stage is already covered by `treeOverrides`) | both empty |
+
+Weather/seasons (plan 040) deliberately add **no** save field — `Season`/`WeatherState` are pure functions of `(seed, elapsedDays)`, both already persisted.
+
+`QuestManager`'s `questId → animalId` binding is never persisted: on restore, an active `kill_target_animal`/`find_animal` quest re-derives its binding — livestock kinds (deterministic `animalId` per settlement/house seed) rebind via the normal resolver; wild-fauna kinds (unseeded per-session `animalId` counter) become `invalidated` instead of silently retargeting a different individual, because fauna/livestock HP/death/corpse state is not persisted at all (killed animals resurrect on reload).
+
+Named save slots (plan 166): the `saves` store holds `{ name, data: SaveData }` keyed by `slot_*` ids, not a single `'current'` — up to 8 named games, active id in localStorage. A leftover raw `SaveData` under `'current'` migrates on first list/read.
+
+`localStorage` is split by domain (`src/config/persistConfig.ts`): graphics / player / world device preferences, separate from `SaveData` itself; audio mix is its own localStorage key, not a `WorldConfig` field. Graphics/audio stay per-device; seed and world state come from the chosen save slot.
+
+Map discovery cells have their own, separately-versioned sub-schema inside `SaveData.map` (currently schema v11) — bumped independently of the top-level `SaveData` version above.
 
 ## Rebuild / lifetime invariants
 

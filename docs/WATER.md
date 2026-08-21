@@ -4,7 +4,7 @@
 
 **Nie jest:** planem implementacji ([plans/](./plans/README.md)), logiem całej grafiki ([GRAPHICS.md](./GRAPHICS.md) — tam zostają kontrakty G4–G6), ani katalogiem assetów.
 
-**Last verified:** 2026-08-13 (plan 098 fazy 1–3 + wanna mesha, browser ✅)
+**Last verified:** 2026-08-21 (rzeki: plany 181/189 zaimplementowane, browser check jeszcze nie zrobiony — reszta sekcji verified 2026-08-13, plan 098 fazy 1–3 + wanna mesha, browser ✅)
 
 Gdy ten plik rozjeżdża się z kodem — **wygrywa kod**, potem aktualizujemy ten dokument.
 
@@ -38,7 +38,8 @@ Trwałe reguły. Zmiana = nowy wpis w historii + aktualizacja tej tabeli.
 | W9 | **Lustro sceny** (planar, jedna RT) na jeziorach **i** oceanie, z opcją wyłączenia w Vue (Pauza → Świat / Grafika) + `seedvale:graphics:v1`. Off → niebo + specular, **zero** extra passu. Default: włączone. | `waterMirror.ts`; faza 3 ✅ |
 | W10 | Przezroczystość **z głębokości** (`floorHeights`): przy brzegu widać piasek, w głębi gęstsza/ciemniejsza. Nie akwarium, nie prawie-opaque. | faza 2 ✅ |
 | W11 | Brzeg: miękki fade + linia piany z maski + mokry piasek na terenie. | faza 2 ✅ |
-| W12 | Ruch: jezioro = drobne zmarszczki world-space; ocean = wolniejsza, większa fala. **Bez** nurtu rzek na start. | faza 2 ✅ |
+| W12 | Ruch: jezioro = drobne zmarszczki world-space; ocean = wolniejsza, większa fala. Rzeki (od planu 181) mają **własny**, osobny lekki materiał (`riverWaterMaterial.ts`) — nie tę samą rodzinę shadera co jezioro/ocean, choć reużywa jego dzień/noc uniform-setterów bez zmian. | faza 2 ✅; rzeki: plan 181 |
+| W13 | Rzeki są **geometrią osobną od jezior/oceanu**: każdy world point należy do dokładnie jednego 256 m "river tile" (deterministyczne, seed-independent), nie do klasyfikacji `bodyScale`/`vCover`. Rzeki **nie** karmią z powrotem `sampleFloorAt`/gameplay terrain poza samym channel carving (plan 189, tylko obniża wysokość, nigdy nie podnosi). Waterfalls i pełna parytetowość shadera/renderu z jeziorem/oceanem są świadomie odłożone. | plany 181/189, [terrain-and-world-generation.md](./state/terrain-and-world-generation.md) |
 
 ---
 
@@ -134,6 +135,28 @@ src/terrain/biomeColors.ts         pas piasku / dna (smoothstep, issue 001)
 src/player/PlayerController.ts     pływanie po floorHeights
 ```
 
+### Rzeki (cieki śródlądowe, plany 181/189)
+
+Pure `src/terrain/hydrology.ts` (D8 flow direction + iterative accumulation nad ograniczoną siatką analizy, sampled z `sampleFloorAt`) karmi `src/terrain/riverNetwork.ts`: świat jest podzielony na stałe, seed-independent 256 m "river tiles" (każdy analizowany z 256 m halo wyłącznie dla dokładności akumulacji przy własnych krawędziach — nigdy po to, by rozciągnąć renderowaną geometrię na sąsiedni tile), więc dane rzeki w każdym punkcie świata należą do dokładnie jednego tile'a niezależnie od tego, który chunk go wyzwala. Sklasyfikowane komórki (po flow accumulation) tworzą połączone łańcuchy przez D8, wygładzone (Chaikin corner-cutting ×2, endpoints fixed — nie meandrowanie w sensie erozji) plus deterministyczne world-space meandrowanie (seeded `simplex-noise`, tapered do 0 w promieniu 32 jednostek od krawędzi tile'a, więc punkty nigdy nie wychodzą poza swój tile).
+
+`src/terrain/riverTileCache.ts` liczy tile raz (synchronicznie, main thread, ~18ms zmierzone) i reference-countuje go po załadowanych chunkach pokrywających go (ta sama idea co chunk-membership counting w `vegetationRegionBatcher.ts`); `ChunkManager` attach/dispose per-chunk river ribbon (`src/world/riverGeometry.ts`'s `clipChainToRect`/`buildRiverRibbonGeometry`) razem z `WorldWater`. Szerokość wstążki pochodzi z eased `flowFactor()` (0..1) z `widthFromAccumulation()`, więc małe strumienie są wizualnie subtelniejsze niż główne rzeki; per-vertex `aFlow` attribute pozwala fragment shaderowi (`riverWaterMaterial.ts`) zmiękczać alpha brzegu/foam/streak dla nisko-przepływowych wstążek.
+
+River channel carving (plan 189) dodaje trzeci `computeChunkTile` terrain-modifier stage (`chunkHeightmap.ts`'s `applyRiverChannel`, po roads/clearings) — `riverNetwork.ts`'s `riverChannelSegmentsNear` zamienia ten sam kanoniczny, już-zmeandrowany łańcuch (który renderuje wstążka wody) na `RiverChannelSegment[]` (half-width z `widthFromAccumulation`, depth z nowego bounded `depthFromAccumulation` na tej samej `flowFactor` krzywej). Channel bed height jest ściśle malejące w dół rzeki z konstrukcji (D8 elevation ściśle maleje, accumulation nigdy nie maleje — udowodnione w testach), więc nie potrzeba osobnego passu korekcji monotoniczności. Carving tylko obniża teren (`Math.min(bedH, floorH)`), nigdy nie podnosi; istniejąca wstążka już sampluje realny renderowany teren Y, więc automatycznie podąża za wyrzeźbionym kanałem — bez zmian po stronie wody.
+
+Rzeki **nie** karmią z powrotem `sampleFloorAt`/gameplay terrain poza samym carvingiem powyżej. Waterfalls, pełny shader/rendering parity z jeziorem/oceanem i worker offload są świadomie odłożone (patrz [plans/LOOSE-ENDS.md](./plans/LOOSE-ENDS.md)). Browser verification jeszcze nie zrobiony.
+
+Wejścia kodu:
+
+```text
+src/terrain/hydrology.ts
+src/terrain/riverNetwork.ts
+src/terrain/riverTileCache.ts
+src/world/riverGeometry.ts
+src/world/riverWaterMaterial.ts
+src/world/createRiverWater.ts
+src/terrain/chunkHeightmap.ts      applyRiverChannel (carving stage)
+```
+
 ### Wizualny (2026-08-13)
 
 Screen (przed fazą 1): [refs/water-2026-08-13-inland-dual-material.png](./refs/water-2026-08-13-inland-dual-material.png)
@@ -176,13 +199,17 @@ Plan: [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflecti
 
 ### P2 — później
 
-7. Nurt rzek.
+7. Nurt rzek — geometria/materiał rzeki zaimplementowane (plany 181/189, zob. §Rzeki wyżej); waterfalls i pełna shader/rendering parity z jeziorem/oceanem zostają odłożone.
 8. Mesh per basen (review 001 C) — osobna geometria jeziora. **Wanna w meshu terenu** (finding 2) jest zrobiona: `buildChunkGeometry` czyta `floorHeights`.
 9. SSR, refrakcja, caustics, mirror > 256² — **nie**.
 
 ---
 
 ## Historia poprawek
+
+### 2026-08-21 — Rzeki: hydrologia, geometria, channel carving (plany 181/189) 🔧
+
+D8 flow/accumulation → deterministyczne 256 m river tiles → per-chunk wstążka wody (osobny lekki materiał, dzień/noc reużyty z `waterMaterial.ts` bez zmian) → world-space meandrowanie + `aFlow`-driven brzeg/foam. Plan 189 dodaje channel carving (osobny terrain-modifier stage, tylko obniża teren, nigdy nie podnosi). Pełny opis: §Rzeki (Stan obecny) wyżej. Waterfalls i pełna parytetowość z jeziorem/oceanem świadomie odłożone; browser/perf verification jeszcze nie zrobiony.
 
 Najnowsze na górze.
 
@@ -288,12 +315,15 @@ Nierozwiązane z [review 001](./reviews/2026-08-07--001--water-quality.md):
 | Blotches w lustrze oceanu | `verification needed` | issue [009](./issues/2026-08-10--009--ocean-normal-map-reflection-blotches.md) — pass 256² wrócił w fazie 3; nie zagęszczać detail normals |
 | Artefakty oceanu na telefonie | notatka | [plans/README.md](./plans/README.md) Quick notes; wyłączenie odbić (W9) |
 | Fauna pije wodę (symulacja) | `todo` | plan [094](./plans/archive/2026-08-13--094--fauna-food-water-for-satiety-hydration.md) |
+| Rzeki: browser/perf verification | `verification needed` | plany [181](./plans/2026-08-21--181--natural-mountains-and-rivers.md) / [189](./plans/2026-08-21--189--river-channel-carving.md) |
+| Rzeki: waterfalls, pełna parytetowość z jeziorem/oceanem, worker offload | `todo`, świadomie odłożone | [plans/LOOSE-ENDS.md](./plans/LOOSE-ENDS.md) |
 
 ---
 
 ## Powiązane
 
 - [GRAPHICS.md](./GRAPHICS.md) — G3–G6, log 2026-08-12
+- [state/terrain-and-world-generation.md](./state/terrain-and-world-generation.md) — teren/chunki/mountains (rzeki żyją tutaj, nie tam)
 - [STATE.md](./STATE.md) — WorldBundle.ocean, skrót ocean/jeziora
 - [reviews/2026-08-07--001--water-quality.md](./reviews/2026-08-07--001--water-quality.md)
 - [architecture/performance-and-workers.md](./architecture/performance-and-workers.md)

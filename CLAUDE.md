@@ -74,7 +74,10 @@ In case of running benchmarks in browser - check `docs/performance/agent-browser
 | Where a system lives in the code | [docs/CODE_INDEX.md](docs/CODE_INDEX.md) |
 | Settlements / NPC life | [docs/SETTLEMENTS.md](docs/SETTLEMENTS.md) |
 | Graphics decisions / visual contracts | [docs/GRAPHICS.md](docs/GRAPHICS.md) |
-| Water (ocean + lakes) | [docs/WATER.md](docs/WATER.md) |
+| Water (ocean + lakes + rivers) | [docs/WATER.md](docs/WATER.md) |
+| Terrain/world generation (chunking, vegetation, mountains, weather) | [docs/state/terrain-and-world-generation.md](docs/state/terrain-and-world-generation.md) |
+| Combat (melee/ranged, NPC combat, animal defense) | [docs/state/combat.md](docs/state/combat.md) |
+| Player survival/world-object systems (needs, skills, wells, traps, planting) | [docs/state/player-systems.md](docs/state/player-systems.md) |
 | Strategic roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Plan index/status | [docs/plans/README.md](docs/plans/README.md) |
 | Loose ends found mid-plan (blockers, spun-off ideas, unfinished threads) | [docs/plans/LOOSE-ENDS.md](docs/plans/LOOSE-ENDS.md) |

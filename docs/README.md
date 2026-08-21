@@ -10,7 +10,8 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 - **[CODE_INDEX.md](./CODE_INDEX.md)** — indeks kodu: gdzie w `src/` mieszka dany system (entry pointy)
 - **[SETTLEMENTS.md](./SETTLEMENTS.md)** — osady i życie NPC (stan + standing decisions)
 - **[GRAPHICS.md](./GRAPHICS.md)** — log decyzji / kontraktów graficznych
-- **[WATER.md](./WATER.md)** — woda (ocean + jeziora: stan, decyzje, historia)
+- **[WATER.md](./WATER.md)** — woda (ocean + jeziora + rzeki: stan, decyzje, historia)
+- **[state/](./state/README.md)** — dodatkowe domain-state docs, gdy temat nie mieści się w żadnym z powyższych (terrain/world-gen, combat, player-systems)
 - **[ROADMAP.md](./ROADMAP.md)** — kierunek produktu (canonical roadmap Seedvale; `roadmap/` niżej to coś innego — zamrożony log sesji, nie roadmapa)
 - **[../CLAUDE.md](../CLAUDE.md)** — reguły dla agentów
 
