@@ -13,7 +13,7 @@ Paths below are files in this folder unless noted. Implementation notes / review
 
 ## Next plan ID
 
-`191`
+`192`
 
 ## Plan domains
 
@@ -104,6 +104,7 @@ Natural vegetation
 | `2026-08-21--187--building-resources-and-mountains.md` | Ujednolicić podstawowy model drewna i materiałów budowlanych oraz rozszerzyć istniejącą geografię gór o większą skalę i charakterystyczne skaliste szczyty. | 🔴 | XL | 181 ~~184~~ ~~111~~ |
 | `2026-08-21--188--fauna-and-dead-animal-lifecycle.md` | Rozszerzyć istniejący system fauny o wspólny lifecycle martwego zwierzęcia oraz dodać niedźwiedzia jako kolejny gatunek korzystający z istniejących mechanizmów fauny, habitatów, AI, combat i audio. | 🔴 | M | ~~138~~ ~~177~~ ~~179~~ |
 | `2026-08-21--190--plans-automation.md` | Zautomatyzować utrzymanie pomocniczych informacji w `docs/plans/README.md` oraz `PLANNED_PLANS_WITHOUT_NOTES.md`. | 🟡 | S | - |
+| `2026-08-21--191--mountain-peaks-and-massifs.md` | Stworzyć system generowania górskich masywów i charakterystycznych szczytów, który kształtuje większe fragmenty krajobrazu — tworząc pasma, doliny, przełęcze i dominanty wysokościowe — zamiast generować pojedyncze niezależne wzniesienia. | 🟡 | L | 181 |
 
 ### Fresh new
 
