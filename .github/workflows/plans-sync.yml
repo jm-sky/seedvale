@@ -1,0 +1,60 @@
+name: Plans Sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/plans/**"
+      - "scripts/plans-sync.ts"
+      - "scripts/planned-plans-without-notes.ts"
+      - ".github/workflows/plans-sync.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install pnpm and Node.js
+        uses: pnpm/setup@v2
+        with:
+          runtime: node@22
+          cache: true
+
+      - name: Sync plans README
+        run: pnpm run plans:sync
+
+      - name: Regenerate PLANNED_PLANS_WITHOUT_NOTES.md
+        run: pnpm run plans:without-notes
+
+      - name: Check for meaningful changes
+        id: diff
+        run: |
+          set +e
+          git diff --quiet -- docs/plans/README.md
+          readme_changed=$?
+          set -e
+
+          notes_diff=$(git diff -- docs/plans/PLANNED_PLANS_WITHOUT_NOTES.md \
+            | grep -E '^[+-]' \
+            | grep -v -E '^(\+\+\+|---) ' \
+            | grep -v -E '^[+-]> Date:' \
+            || true)
+
+          if [ "$readme_changed" -ne 0 ] || [ -n "$notes_diff" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/plans/README.md docs/plans/PLANNED_PLANS_WITHOUT_NOTES.md
+          git commit -m "chore(plans): sync plans README and notes index [skip ci]"
+          git push

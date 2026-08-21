@@ -1,7 +1,7 @@
 # Plan: Automatyczna synchronizacja planów
 
 **Created:** 2026-08-21  
-**Status:** `planned` 📋  
+**Status:** `done` ✅  
 **Priority:** medium · **Effort:** S  
 **Depends on:** none
 **domain:** `persistence`

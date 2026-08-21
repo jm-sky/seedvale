@@ -11,6 +11,10 @@ Verification: unless a row says otherwise, it has passed `tsc`/lint/build/test b
 
 Paths below are files in this folder unless noted. Implementation notes / reviews stay next to the plan (`*-implementation-notes.md`, `*-review.md`) and are not indexed separately.
 
+## Next plan ID
+
+`191`
+
 ## Plan domains
 
 New plans should declare a primary `domain:` in frontmatter (and, if the plan genuinely spans more than one area, optional `tags:` for the secondary domain(s)). This is **not retroactive** — existing plans (live + archived) are not being touched.
@@ -99,6 +103,10 @@ Natural vegetation
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🟡 | XL | ~~097~~ |
 | `2026-08-20--173--terrain-aware-procedural-placement.md` | Dopasowanie props do wysokości terenu (kamienne kręgi, cmentarze) | 🟡 | M | - |
 | `2026-08-19--171--weapon-browser-observatory.md` | Weapon Browser w Observatory/Admin: pokazuje wszystkie zdefiniowane bronie (nie tylko obecne w świecie) z istniejącego `ITEM_CATALOG`, bez równoległego rejestru statystyk broni; dev/debug tool, nie blokuje przyszłego katalogu dla gracza | 🟡 | M | - |
+| `2026-08-21--186--combat-and-player-interactions.md` | Domknąć kilka powiązanych problemów gracza bez tworzenia równoległych systemów: spójne celowanie z łuku, odzyskiwanie chybionych strzał, długie aktywności oraz pojemność/przeciążenie ekwipunku. | 🔴 | L | - |
+| `2026-08-21--187--building-resources-and-mountains.md` | Ujednolicić podstawowy model drewna i materiałów budowlanych oraz rozszerzyć istniejącą geografię gór o większą skalę i charakterystyczne skaliste szczyty. | 🔴 | XL | 181 ~~184~~ ~~111~~ |
+| `2026-08-21--188--fauna-and-dead-animal-lifecycle.md` | Rozszerzyć istniejący system fauny o wspólny lifecycle martwego zwierzęcia oraz dodać niedźwiedzia jako kolejny gatunek korzystający z istniejących mechanizmów fauny, habitatów, AI, combat i audio. | 🔴 | M | ~~138~~ ~~177~~ ~~179~~ |
+| `2026-08-21--190--plans-automation.md` | Zautomatyzować utrzymanie pomocniczych informacji w `docs/plans/README.md` oraz `PLANNED_PLANS_WITHOUT_NOTES.md`. | 🟡 | S | - |
 
 ### Fresh new
 
