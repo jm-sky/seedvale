@@ -113,7 +113,7 @@ import { createWorldBundle, disposeWorldBundle, rebuildWorldBundle } from './wor
  *  simply dropped one — `count` only hits 0 there if they also never picked
  *  it back up, an acceptable v1 edge case for tools that never consume. */
 const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
-  knife: 1,
+  knife: 10,
   firestarter: 1,
   blanket: 1,
   wooden_torch: 1,

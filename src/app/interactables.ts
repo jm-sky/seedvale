@@ -17,7 +17,7 @@ import type { PlayerWells } from '../world/createPlayerWells'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
-import { consumeVerbLabel, hasItemCapability, ITEM_CATALOG } from '../items/itemCatalog'
+import { consumeVerbLabel, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
 import { isPlayerPlacedFire, type PlacedFires } from '../settlement/PlacedFires'
@@ -96,7 +96,17 @@ const CAMPFIRE_LIT_PROMPT = '[E] Dołóż gałąź · [R] Upiecz mięso'
 
 function animalPromptLabel(kind: AnimalKind, heldTool: ToolKind | null): string {
   const label = ANIMAL_LABELS[kind]
-  return isMeleeTool(heldTool) ? `Atakuj: ${label}` : `Obserwuj: ${label}`
+  return isMeleeTool(heldTool) || isRangedTool(heldTool) ? `Atakuj: ${label}` : `Obserwuj: ${label}`
+}
+
+/** A held bow's own attack range, so a distant animal still enters the gaze
+ *  list (`interactRange` override) instead of being capped at melee-scale
+ *  `GAZE_RANGE` — without this a bow's target could never be acquired beyond
+ *  ~5 units, far short of any bow's actual range (plan 162 was missing this;
+ *  the ranged fire/projectile pipeline it added never widened target
+ *  acquisition, so `[E]`/LMB silently did nothing at real bow distance). */
+function rangedToolRange(heldTool: ToolKind | null): number | null {
+  return isRangedTool(heldTool) ? ITEM_CATALOG[heldTool].ranged?.range ?? null : null
 }
 
 /** Plan 172 — natural crop lifecycle prompt. `young` and a `spoiled` crop
@@ -380,7 +390,7 @@ export function buildInteractables(
     }
 
     for (const animal of settlement.livestock) {
-      const rangeOverride = activeSpotAnimalRange?.(animal.def.kind) ?? null
+      const rangeOverride = activeSpotAnimalRange?.(animal.def.kind) ?? rangedToolRange(heldTool)
       if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, Math.max(GAZE_RANGE, rangeOverride ?? 0))) continue
       if (animal.isDead()) {
         const corpse = corpseCandidate(animal, shovelHeld, knifeAvailable)
@@ -505,7 +515,7 @@ export function buildInteractables(
   }
 
   for (const animal of fauna.getAgents()) {
-    const rangeOverride = activeSpotAnimalRange?.(animal.def.kind) ?? null
+    const rangeOverride = activeSpotAnimalRange?.(animal.def.kind) ?? rangedToolRange(heldTool)
     if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, Math.max(GAZE_RANGE, rangeOverride ?? 0))) continue
     if (animal.isDead()) {
       const corpse = corpseCandidate(animal, shovelHeld, knifeAvailable)
@@ -649,13 +659,17 @@ export function buildDigTarget(
   return null
 }
 
-/** Forgiving melee-attack fallback (plan 124 §1) — same "only tried once
+/** Forgiving melee/ranged-attack fallback (plan 124 §1, widened for ranged
+ *  tools per plan 162's own "extend the existing target query parameter
+ *  instead of a second target manager" instruction) — same "only tried once
  *  nothing narrower was found" pattern as `buildDigTarget` above. Reuses the
  *  existing `kind: 'animal'` `Interactable`/`[E]` attack branch in
  *  `gameLoop.ts` unchanged: this only widens which live animal that branch
- *  sees, it is not a second targeting system. Only searches while a melee
- *  tool is held. `aim` selects the acquisition cone (plan 142 §1) — the only
- *  thing that differs between a pointer and a touch rig here. */
+ *  sees, it is not a second targeting system. Only searches while a melee or
+ *  ranged tool is held; a held bow widens the range to its own attack range
+ *  (otherwise capped at melee-scale `COMBAT_TARGET_RANGE`, far short of any
+ *  bow). `aim` selects the acquisition cone (plan 142 §1) — the only thing
+ *  that differs between a pointer and a touch rig here. */
 export function buildCombatTarget(
   settlements: readonly Settlement[],
   fauna: Fauna,
@@ -665,13 +679,14 @@ export function buildCombatTarget(
   recentTargetIds: readonly string[],
   aim: CombatAimMode,
 ): Interactable | null {
-  if (!isMeleeTool(heldTool)) return null
+  if (!isMeleeTool(heldTool) && !isRangedTool(heldTool)) return null
+  const range = Math.max(COMBAT_TARGET_RANGE, rangedToolRange(heldTool) ?? 0)
 
   const candidates: MeleeHitCandidate[] = []
   const byId = new Map<string, AnimalAgent>()
   const collect = (animal: AnimalAgent): void => {
     if (animal.isDead()) return
-    if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, COMBAT_TARGET_RANGE)) return
+    if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, range)) return
     candidates.push({ id: animal.animalId, x: animal.mesh.position.x, z: animal.mesh.position.z, alive: true })
     byId.set(animal.animalId, animal)
   }
@@ -685,7 +700,7 @@ export function buildCombatTarget(
     playerPos.x,
     playerPos.z,
     playerYaw,
-    COMBAT_TARGET_RANGE,
+    range,
     COMBAT_TARGET_CONE_DOT[aim],
     recentTargetIds,
   )

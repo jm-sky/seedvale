@@ -46,7 +46,12 @@ export function livingTargetIdForNpc(npcId: string): string {
   return `npc:${npcId}`
 }
 
-/** Living combat targets inside acquisition range/cone (plan 150 §2). */
+/** Living combat targets inside acquisition range/cone (plan 150 §2). `range`
+ *  defaults to melee-scale `COMBAT_TARGET_RANGE`; a held bow's own (larger)
+ *  attack range should be passed here too — otherwise `[Tab]` cycling and
+ *  soft-lock resolution can never reach a live animal beyond melee distance
+ *  while a ranged weapon is held (plan 162 added the ranged fire/projectile
+ *  pipeline but never widened this acquisition range). */
 export function collectLivingCombatTargets(
   settlements: readonly Settlement[],
   fauna: Fauna,
@@ -54,6 +59,7 @@ export function collectLivingCombatTargets(
   playerYaw: number,
   aim: CombatAimMode,
   recentTargetIds: readonly string[],
+  range: number = COMBAT_TARGET_RANGE,
 ): LivingCombatTarget[] {
   const candidates: MeleeHitCandidate[] = []
   const byId = new Map<string, LivingCombatTarget>()
@@ -61,7 +67,7 @@ export function collectLivingCombatTargets(
   const addAnimal = (animal: { animalId: string, mesh: { position: { x: number, z: number } }, isDead: () => boolean }, interactable: Interactable): void => {
     if (animal.isDead()) return
     const { x, z } = animal.mesh.position
-    if (!withinRange(x, z, playerPos, COMBAT_TARGET_RANGE)) return
+    if (!withinRange(x, z, playerPos, range)) return
     const id = livingTargetIdForAnimal(animal.animalId)
     candidates.push({ id, x, z, alive: true })
     byId.set(id, { id, x, z, interactable })
@@ -79,7 +85,7 @@ export function collectLivingCombatTargets(
     for (const npc of settlement.npcs) {
       if (npc.health.dead) continue
       const { x, z } = npc.mesh.position
-      if (!withinRange(x, z, playerPos, COMBAT_TARGET_RANGE)) continue
+      if (!withinRange(x, z, playerPos, range)) continue
       const id = livingTargetIdForNpc(npc.id)
       candidates.push({ id, x, z, alive: true })
       byId.set(id, {
@@ -113,7 +119,7 @@ export function collectLivingCombatTargets(
     playerPos.x,
     playerPos.z,
     playerYaw,
-    COMBAT_TARGET_RANGE,
+    range,
     COMBAT_TARGET_CONE_DOT[aim],
     memoryIds,
   )

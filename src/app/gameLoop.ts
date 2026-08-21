@@ -116,6 +116,7 @@ import {
   buildDigTarget,
   buildInteractables,
   collectItem,
+  COMBAT_TARGET_RANGE,
   type CombatAimMode,
   GAZE_RANGE,
   INTERACT_MIN_DOT,
@@ -870,6 +871,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
 
       playerCombat.update(dt)
 
+      // A held bow's own range widens `[Tab]`/soft-lock acquisition beyond
+      // melee-scale `COMBAT_TARGET_RANGE` — see `collectLivingCombatTargets`'s
+      // own doc for why this is needed.
+      const livingTargetRange = Math.max(COMBAT_TARGET_RANGE, isRangedTool(held) ? ITEM_CATALOG[held].ranged?.range ?? 0 : 0)
       const livingTargets = collectLivingCombatTargets(
         bundle.settlementsManager.getLoaded(),
         bundle.fauna,
@@ -877,6 +882,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         mouseLook.state.yaw,
         aimMode,
         playerMelee.recentTargetIds(),
+        livingTargetRange,
       )
       if (playerCombat.softLockId() && !findLivingTargetById(livingTargets, playerCombat.softLockId())) {
         playerCombat.setSoftLock(null)
