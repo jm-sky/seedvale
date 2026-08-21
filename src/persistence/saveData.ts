@@ -41,8 +41,12 @@ export type SaveDroppedItem = { id: string, kind: ItemKind, x: number, z: number
  *  longer burn) vs `'simple'` (branches only, shorter burn). Older saves
  *  (v5 and below) predate the distinction; migrated as `'pit'`, matching what
  *  the single old "Zbuduj ognisko" (2x branch + 2x stone) action always
- *  built. */
-export type SavePlacedFire = { id: string, x: number, z: number, kind: PlacedFireKind }
+ *  built.
+ *
+ *  `grate` (plan 175) is optional rather than a new versioned field — every
+ *  save before this plan simply lacks it, and `createApp.ts` treats a missing
+ *  value as `false` on load, so no migration step is needed. */
+export type SavePlacedFire = { id: string, x: number, z: number, kind: PlacedFireKind, grate?: boolean }
 
 /** Shape stored by v4/v5 saves, before `kind` existed. */
 export type LegacySavePlacedFire = { id: string, x: number, z: number }

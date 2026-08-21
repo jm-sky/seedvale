@@ -18,6 +18,10 @@ Passive HP regen (`PlayerNeeds.ts`'s `tickHealthRegen`, plan 153) is slow and su
 
 Food and water are ordinary `Inventory` items with a `consumable` catalog flag ("Zjedz"/"Wypij"). `WaterSource` (`src/world/WaterSource.ts`) is the shared well/lake drink/fill abstraction — a lake is a synthetic per-frame candidate, not a discrete world object.
 
+## Cooking & campfire capacity (plans 106, 175)
+
+`items/campfireCooking.ts` is a flat recipe table (`raw_meat`/`deer_meat`/`wolf_meat`/`boar_meat`/`rabbit_meat`/`beef` → `roasted_meat`), `[R]` at a lit campfire — one row per input, no per-batch-size recipes. `resolveCookingCapacity(fire, inventory)`/`findCookingBatch()` batch that recipe against a station capacity: 1 for a bare fire, 2 with a carried `pan` (an ordinary inventory item, not a `HeldTool`/station), 4 once *that specific* fire has a grate — the grate always wins outright, never adds to the pan (never 6). The grate is a capability on the `VillageFire` instance itself (`hasGrate()`/`setGrate()`, `settlement/VillageFire.ts`), read directly by cooking rather than inferred from `PlacedFireKind`/`firepit`, so any fire type could carry one without a cooking-system change. Only player-built fires (`settlement/PlacedFires.ts`) can get one today: a persisted `PlacedFire.grate` flag, built one-time via the "Zbuduj ruszt" Quick Action (`app/userActions.ts`'s `buildGrate`/`GRATE_COST` = 2× branch/2× stone/2× iron_rod, re-resolving the nearest qualifying fire fresh on every press/availability check) with a procedural iron-frame visual attached as a child of the fire's own group. `iron_rod` is a new processed-material `ItemKind`, deliberately separate from the raw `iron` resource, obtainable only from the home trader in this plan (no smelting/production chain).
+
 ## Player skills
 
 `PlayerController.skills` (`src/player/PlayerSkills.ts`) has five skills: sneak, survival, traps, defense, archery. There are no levels/perks/points — `SkillState { value, xp, active }`, where `xp` is the only persisted progression state and `value` is always derived through one shared curve (`xpToSkillValue()`, floor 0.2, asymptotic to 1). `awardSkillXp()` is the single mutation path; XP comes only from completed actions, never per frame (e.g. traps only on a confirmed capture, sneak per actually-sneaked metres, survival on ignite/tent-setup/cooking/camp-rest).
@@ -62,6 +66,9 @@ src/app/actions/restActions.ts
 src/app/actions/placementActions.ts
 src/app/actions/gatheringActions.ts
 src/app/actions/survivalActions.ts
+src/items/campfireCooking.ts
+src/settlement/VillageFire.ts
+src/settlement/PlacedFires.ts
 src/world/WaterSource.ts
 src/world/playerWell.ts
 src/world/animalTraps.ts

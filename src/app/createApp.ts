@@ -299,7 +299,7 @@ export async function createApp(
     plantedCrops,
     worldAudio.playAt,
     initialSave?.droppedItems ?? [],
-    initialSave?.placedFires ?? [],
+    (initialSave?.placedFires ?? []).map((f) => ({ ...f, grate: f.grate === true })),
     initialSave?.placedTents ?? [],
     (initialSave?.placedTraps ?? []).map((t) => ({ ...t, baitKind: t.baitKind ?? null })),
     initialSave?.placedContainers ?? [],
@@ -385,6 +385,7 @@ export async function createApp(
     vueUi.setQuickActionsFireAvailability({
       buildSimpleFire: canBuildSimpleFire(),
       buildFirePit: canBuildFirePit(),
+      buildGrate: canBuildGrate(),
       lightBranch: canLightBranch(),
       lightWoodenTorch: canLightWoodenTorch(),
     })
@@ -861,8 +862,8 @@ export async function createApp(
   }
 
   const {
-    buildSimpleFire, buildFirePit, lightBranch, lightWoodenTorch,
-    canBuildSimpleFire, canBuildFirePit, canLightBranch, canLightWoodenTorch,
+    buildSimpleFire, buildFirePit, buildGrate, lightBranch, lightWoodenTorch,
+    canBuildSimpleFire, canBuildFirePit, canBuildGrate, canLightBranch, canLightWoodenTorch,
   } = getUserActions(
     inventory,
     bundle,
@@ -894,6 +895,10 @@ export async function createApp(
     onOpen: () => {
       restorePointerLockAfterQuickActions = exitGamePointerLock(renderer.domElement)
       syncNearTownQuickActions()
+      // Plan 175 — `buildGrate` availability is position-dependent (nearest
+      // fire in range), same "only trustworthy resolved fresh at popup-open
+      // time" reasoning as `nearTown` above.
+      syncQuickActionAvailability()
     },
     onClose: () => {
       if (!restorePointerLockAfterQuickActions) return
@@ -902,6 +907,7 @@ export async function createApp(
     },
     onBuildSimpleFire: buildSimpleFire,
     onBuildFirePit: buildFirePit,
+    onBuildGrate: buildGrate,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,
     onWait: rest.startWait,
@@ -966,6 +972,10 @@ export async function createApp(
   const pauseMenu = createPauseMenu(container, config.seed, config.player.name, {
     onPause: () => {
       exitGamePointerLock(renderer.domElement)
+      // Plan 175 — `buildGrate`'s availability is position-dependent (nearest
+      // fire in range); refresh it whenever Pauza → Akcje can be opened, same
+      // reasoning as Quick Actions' own `onOpen`.
+      syncQuickActionAvailability()
     },
     onResume: () => {},
     onQuestLog: openQuestLog,
@@ -1001,6 +1011,7 @@ export async function createApp(
     onRefresh: () => window.location.reload(),
     onBuildSimpleFire: buildSimpleFire,
     onBuildFirePit: buildFirePit,
+    onBuildGrate: buildGrate,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,
     onNewGame: (name) => {

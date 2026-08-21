@@ -407,6 +407,15 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     notes: 'Plan 141 — same placement/arming flow as trap_simple, but more durable, harder to spot and far more weather-resistant.',
     roadmap: 'Dedicated trap GLB (MODELS.md M40).',
   },
+  pan: {
+    kind: 'pan',
+    label: 'patelnia',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 175 — Kupiec stock. An inventory capability, not a `HeldTool`/cooking station: simply carrying one raises cooking capacity to 2 (`items/campfireCooking.ts`\'s `resolveCookingCapacity`) — overridden, not stacked, by a fire\'s own grate.',
+  },
   coal: {
     kind: 'coal',
     label: 'węgiel',
@@ -424,6 +433,16 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     notes: 'Pickaxe yield from iron deposits (plan 090).',
+  },
+  iron_rod: {
+    kind: 'iron_rod',
+    label: 'żelazny pręt',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 175 — Kupiec stock. Processed construction material, deliberately separate from the raw `iron` resource — required by the grate build (`GRATE_COST`, `app/userActions.ts`). No in-world smelting/production chain exists yet; out of this plan\'s scope.',
+    roadmap: 'A future smithing/smelting system could let players produce this from `iron` instead of buying it.',
   },
   gold: {
     kind: 'gold',

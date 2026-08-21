@@ -21,6 +21,8 @@ export type QuickActionsHandlers = {
    *  lacks the resources. */
   onBuildSimpleFire?: () => boolean
   onBuildFirePit?: () => boolean
+  /** Grate upgrade for the nearest qualifying player-built fire (plan 175). */
+  onBuildGrate?: () => boolean
   onLightBranch?: () => LightActionResult
   onLightWoodenTorch?: () => LightActionResult
   /** Starts a "wait" time skip (1/3/6h, visible fast-forward) — see

@@ -340,3 +340,40 @@ export function createLitCampfireVisual(
   group.add(flame.object)
   return { group, flame }
 }
+
+/** Plan 175 — procedural grate: an iron-rod frame sitting over the fire, so it
+ *  reads as physical cooking equipment rather than a second, independent
+ *  object floating near the flame. No GLB exists yet (`docs/assets/MODELS.md`);
+ *  this is the fallback the plan explicitly allows shipping without one. Only
+ *  ever attached as a child of an existing fire's own group
+ *  (`settlement/PlacedFires.ts`) — it registers no light of its own. */
+export function createGrateVisual(scale = 1): THREE.Group {
+  const grate = new THREE.Group()
+  const ironMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, flatShading: true, metalness: 0.6, roughness: 0.5 })
+
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.6 * scale, 0.03 * scale, 6, 16), ironMat)
+  ring.rotation.x = -Math.PI / 2
+  ring.position.y = 0.32 * scale
+  ring.castShadow = true
+  grate.add(ring)
+
+  const barCount = 6
+  for (let i = 0; i < barCount; i++) {
+    const t = i / (barCount - 1) - 0.5
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.018 * scale, 0.018 * scale, 1.1 * scale, 5), ironMat)
+    bar.rotation.z = Math.PI / 2
+    bar.position.set(0, 0.32 * scale, t * 1.05 * scale)
+    bar.castShadow = true
+    grate.add(bar)
+  }
+
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 0.4
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02 * scale, 0.02 * scale, 0.32 * scale, 5), ironMat)
+    leg.position.set(Math.cos(a) * 0.55 * scale, 0.16 * scale, Math.sin(a) * 0.55 * scale)
+    leg.castShadow = true
+    grate.add(leg)
+  }
+
+  return grate
+}

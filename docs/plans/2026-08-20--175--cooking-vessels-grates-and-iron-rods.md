@@ -1,7 +1,7 @@
 # Plan: Cooking Vessels, Grates & Iron Rods
 
 **Created:** 2026-08-20  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test); no browser/gameplay verification yet. See [implementation notes](./2026-08-20--175--cooking-vessels-grates-and-iron-rods-implementation-notes.md).  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~106~~
 

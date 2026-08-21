@@ -182,6 +182,7 @@ export {
   createCampfire,
   createCampfireBody,
   createCampfireFlame,
+  createGrateVisual,
   createLitCampfireVisual,
   createSimpleFireBase,
   peekCampfireFlameTemplate,

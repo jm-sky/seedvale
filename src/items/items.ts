@@ -25,8 +25,10 @@ export type ItemKind =
   | 'tent'
   | 'trap_simple'
   | 'trap_good'
+  | 'pan'
   | 'coal'
   | 'iron'
+  | 'iron_rod'
   | 'gold'
   | 'tomato'
   | 'raw_meat'
@@ -334,6 +336,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0x9aa0a8,
     description: 'Solidna, kuta pułapka. Droższa, ale wytrzymuje niepogodę i trudniej ją zauważyć.'
   },
+  pan: {
+    kind: 'pan',
+    label: 'patelnia',
+    categories: ['utility'],
+    weight: 1,
+    size: 'SM',
+    color: 0x4a4a4a,
+    description: 'Żeliwna patelnia. Pozwala przygotować przy ognisku dwa kawałki mięsa naraz zamiast jednego.'
+  },
   coal: {
     kind: 'coal',
     label: 'węgiel',
@@ -351,6 +362,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'SM',
     color: 0x8a4a30,
     description: 'Ciężka ruda o rdzawym kolorze. Jeden z najważniejszych surowców do wytwarzania narzędzi i broni.'
+  },
+  iron_rod: {
+    kind: 'iron_rod',
+    label: 'żelazny pręt',
+    categories: ['resource'],
+    weight: 0.6,
+    size: 'SM',
+    color: 0x6a6a6e,
+    description: 'Prosty pręt kutego żelaza. Materiał konstrukcyjny — przydaje się m.in. przy budowie rusztu.'
   },
   gold: {
     kind: 'gold',
@@ -1179,6 +1199,35 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.position.y = 0.09
     mesh.castShadow = true
     return mesh
+  }
+  if (kind === 'iron_rod') {
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.02, 0.4, 6),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.iron_rod.color, flatShading: true, metalness: 0.55 }),
+    )
+    mesh.rotation.z = Math.PI / 2.3
+    mesh.position.y = 0.05
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'pan') {
+    const group = new THREE.Group()
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.14, 0.03, 12),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.pan.color, flatShading: true, metalness: 0.4 }),
+    )
+    body.position.y = 0.05
+    body.castShadow = true
+    group.add(body)
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.014, 0.016, 0.28, 6),
+      new THREE.MeshStandardMaterial({ color: 0x2a2a2a, flatShading: true }),
+    )
+    handle.rotation.z = Math.PI / 2
+    handle.position.set(0.27, 0.05, 0)
+    handle.castShadow = true
+    group.add(handle)
+    return group
   }
   if (kind === 'pickaxe') {
     const group = new THREE.Group()

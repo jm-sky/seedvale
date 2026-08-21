@@ -52,12 +52,12 @@ Predator/prey roles with chase/flee behaviour, player-awareness (probabilistic d
 
 ### Items / player
 
-`Inventory` / `ItemKind` / a single right-hand `HeldTool` slot own item ownership and equip state — `Inventory` itself is generic (player *and* NPC). `ITEM_CATALOG[kind].capabilities` (`ItemCapability`) is the single source of truth for every tool-requirement gate (chopping, mining, digging, meat harvesting, fire-starting, fishing) — there is no hand-written per-tool check left. The player has the same shared `HealthState` as NPCs/fauna, plus its own survival pools (stamina/vigor/hunger/thirst) and a five-skill progression system (sneak/survival/traps/defense/archery, XP-only, no levels). Portable light (lit branch or held torch) persists across saves.
+`Inventory` / `ItemKind` / a single right-hand `HeldTool` slot own item ownership and equip state — `Inventory` itself is generic (player *and* NPC). `ITEM_CATALOG[kind].capabilities` (`ItemCapability`) is the single source of truth for every tool-requirement gate (chopping, mining, digging, meat harvesting, fire-starting, fishing) — there is no hand-written per-tool check left. The player has the same shared `HealthState` as NPCs/fauna, plus its own survival pools (stamina/vigor/hunger/thirst) and a five-skill progression system (sneak/survival/traps/defense/archery, XP-only, no levels). Portable light (lit branch or held torch) persists across saves. Cooking (raw/species meat → `roasted_meat`) batches to a station capacity — 1 for a bare fire, 2 with a carried `pan`, 4 once a fire has a built grate (grate wins outright, never adds to the pan) — read directly off the `VillageFire` instance, not a `firepit`-only check.
 
 - Item flags, per-item stats, weapon numbers, gameplay roadmap: [items/CATALOG.md](./items/CATALOG.md), [items/WEAPONS.md](./items/WEAPONS.md)
 - Combat mechanics (melee/ranged/critical hits/NPC combat): [state/combat.md](./state/combat.md)
-- Player survival needs, skills, busy channels, camp rest, wells, traps, planting, fishing/preservation: [state/player-systems.md](./state/player-systems.md)
-- Still not implemented: player-vs-NPC melee damage, weapon repair/broken lifecycle, general tool durability (shovel/pickaxe), bow durability, arrow recovery, 3D projectile visuals, full Vue-side crafting.
+- Player survival needs, skills, busy channels, camp rest, wells, traps, planting, fishing/preservation, cooking capacity/grate: [state/player-systems.md](./state/player-systems.md)
+- Still not implemented: player-vs-NPC melee damage, weapon repair/broken lifecycle, general tool durability (shovel/pickaxe), bow durability, arrow recovery, 3D projectile visuals, full Vue-side crafting, iron_rod smelting/production.
 
 ### Quests / progression
 

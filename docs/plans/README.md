@@ -94,7 +94,6 @@ Natural vegetation
 | `2026-08-18--151--social-places-and-social-behaviour.md` | Social Places v1: istniejący settlement campfire jako `PlaceType: 'social'`, NPC↔NPC `conversation` przez istniejący Schedule/FSM, partner tylko spośród NPC przy tym samym ognisku, symetryczna zmiana relacji; bez nowego social managera/schedulera | 🟡 | M | ~~020~~ |
 | `2026-08-18--152--npc-player-food-drink-help.md` | NPC dobrowolna pomoc graczowi jedzeniem/piciem z carried inventory (V1 celowo bez `Household.stock`/`.water` i bez teleportu NPC do domu); decyzja z relacji + traits + istniejący `reactionChance`; nowa opcja dialogu NPC v2 (`request_food`/`request_water`) | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ ~~156~~ |
 | `2026-08-19--167--npc-helper-resource-delivery.md` | NPC who gathers food for player | 🟡 | M | ~~164~~ |
-| `2026-08-20--175--cooking-vessels-grates-and-iron-rods.md` | Patelnia (do 2 kawałków mięsa) i ruszt (do 4) rozszerzają istniejący system gotowania; żelazny pręt jako nowy przedmiot świata/inventory (m.in. do budowy rusztu); bez nowego craftingu ani równoległego systemu gotowania | 🟡 | M | ~~106~~ |
 | `2026-08-21--180--npc-healing.md` | NPC używa opatrunków w razie obrażeń | 🟡 | M | ~~177~~ |
 | `2026-08-20--178--hunter-profession-and-household.md` | Profesja myśliwego + gospodarstwo wyspecjalizowane w polowaniu/łukach/przetwórstwie i sprzedaży; wykorzystuje istniejące NPC combat/fauna/inventory/household/storage/economy/cooking, bez równoległych systemów | 🟡 | L | ~~177~~ ~~162~~ ~~159~~ 175 |
 | `2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul.md` | Wielki, ciemny las | 🟡 | M | ~~063~~ |
@@ -152,6 +151,7 @@ Implementation complete; needs play/browser check. Do not treat as normal backlo
 | `2026-08-21--185--npc-role-based-carried-weapons.md` | [implementation notes](./2026-08-21--185--npc-role-based-carried-weapons-implementation-notes.md) | 🔴 | S | ~~177~~ ~~179~~ ~~184~~ |
 | `2026-08-21--186--combat-and-player-interactions.md` | [implementation notes](./2026-08-21--186--combat-and-player-interactions-implementation-notes.md) | 🔴 | L | - |
 | `2026-08-21--187--building-resources-and-mountains.md` | Resources/construction scope only (mountains split to `191` before implementation) — `beam` `ItemKind` + bonus yield on the felled→harvested tree-bucking step, `beam`/`branch` as shared campfire fuel, generic world-item construction material resolver (`items/constructionMaterials.ts`) wired into the player-built well. [implementation notes](./2026-08-21--187--building-resources-and-mountains-implementation-notes.md) | 🔴 | L | 181 ~~184~~ ~~111~~ |
+| `2026-08-20--175--cooking-vessels-grates-and-iron-rods.md` | [implementation notes](./2026-08-20--175--cooking-vessels-grates-and-iron-rods-implementation-notes.md) | 🟡 | M | ~~106~~ |
 
 ---
 

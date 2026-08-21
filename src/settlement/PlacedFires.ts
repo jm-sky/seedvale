@@ -4,7 +4,7 @@ import type { HeightSampler } from '../player/PlayerController'
 import { disposeObject3D } from '../assets/loadGltf'
 import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
-import { createLitCampfireVisual, placeOnGround, preloadCampfireTemplates } from './props'
+import { createGrateVisual, createLitCampfireVisual, placeOnGround, preloadCampfireTemplates } from './props'
 import { createVillageFire, type VillageFire } from './VillageFire'
 
 /** `'pit'` — built from 4x stone (`createCampfireBody('pit')` stone ring), same
@@ -51,8 +51,14 @@ export function isPlayerPlacedFire(entry: { habitatBurn: boolean }): boolean {
  *  `items/createDroppedItems.ts`'s `DroppedItem`. Lit/fuel state is *not*
  *  persisted (consistent with settlement campfires, see plans/archive/2026-08-08--038
  *  "Poza zakresu") — every placed fire loads unlit, ready to relight, so the
- *  despawn-after-burnout countdown below (`unlitSeconds`) restarts too. */
-export type PlacedFire = { id: string, x: number, z: number, kind: PlacedFireKind }
+ *  despawn-after-burnout countdown below (`unlitSeconds`) restarts too.
+ *
+ *  `grate` (plan 175) is the one part of a fire's *cooking* capability that
+ *  does need to persist — a one-time built upgrade, not derived state. It
+ *  mirrors onto the live `VillageFire.hasGrate()`, the actual value cooking
+ *  reads (`items/campfireCooking.ts`'s `resolveCookingCapacity`), so nothing
+ *  downstream has to know this is a `PlacedFire` versus any other fire. */
+export type PlacedFire = { id: string, x: number, z: number, kind: PlacedFireKind, grate: boolean }
 
 export type PlacedFireEntry = {
   fire: VillageFire
@@ -75,6 +81,19 @@ export type PlacedFires = {
    *  cold unless the caller lights it (plan 137 habitat destroy lights a pit
    *  immediately with the 4 consumed branches as fuel). */
   place: (x: number, z: number, kind: PlacedFireKind, opts?: PlaceFireOpts) => PlacedFireEntry
+  /** Nearest player-placed fire within `range` that doesn't have a grate yet,
+   *  or null (plan 175) — the target-resolution half of the "Zbuduj ruszt"
+   *  quick action; `app/userActions.ts` re-resolves this fresh at both the
+   *  availability check and the actual build so a stale target is never
+   *  built against. */
+  nearestBuildable: (x: number, z: number, range: number) => PlacedFireEntry | null
+  /** One-time grate upgrade for the fire `id` (plan 175 §3) — false (no-op,
+   *  no visual/mesh change) when `id` doesn't exist or already has a grate,
+   *  so a repeated call never attaches a second grate mesh. Callers own the
+   *  material cost/consumption; this only flips the persisted flag, mirrors
+   *  it onto the live `VillageFire`, and attaches the grate visual as a child
+   *  of this fire's own group. */
+  buildGrate: (id: string) => boolean
   update: (dt: number) => void
   dispose: () => void
 }
@@ -107,25 +126,28 @@ export function createPlacedFires(
 
   const spawn = (pf: PlacedFire & { habitatBurn?: boolean }): void => {
     const { group, flame } = createLitCampfireVisual(pf.kind === 'simple' ? 'simple' : 'pit')
+    if (pf.grate) group.add(createGrateVisual())
     placeOnGround(group, pf.x, pf.z, sampleHeight)
     scene.add(group)
     meshes.set(pf.id, group)
     pointLightBudget.registerSubtree(group)
     const fuelPerBranch = pf.kind === 'simple' ? SIMPLE_FIRE_FUEL_PER_BRANCH : undefined
+    const fire = createVillageFire(
+      new Vector3(pf.x, sampleHeight(pf.x, pf.z), pf.z),
+      flame,
+      fuelPerBranch,
+      playAt
+        ? {
+          onLight: (pos, source) => { if (source === 'player') playActionFireIgnite(playAt, pos) },
+          onExtinguish: (pos) => playActionFireExtinguish(playAt, pos),
+        }
+        : undefined,
+    )
+    fire.setGrate(pf.grate)
     fires.push({
       ...pf,
       habitatBurn: pf.habitatBurn === true,
-      fire: createVillageFire(
-        new Vector3(pf.x, sampleHeight(pf.x, pf.z), pf.z),
-        flame,
-        fuelPerBranch,
-        playAt
-          ? {
-            onLight: (pos, source) => { if (source === 'player') playActionFireIgnite(playAt, pos) },
-            onExtinguish: (pos) => playActionFireExtinguish(playAt, pos),
-          }
-          : undefined,
-      ),
+      fire,
       everLit: false,
       unlitSeconds: 0,
     })
@@ -149,13 +171,14 @@ export function createPlacedFires(
     list: () => fires,
     nodes: () => fires
       .filter(isPlayerPlacedFire)
-      .map(({ id, x, z, kind }) => ({ id, x, z, kind })),
+      .map(({ id, x, z, kind, grate }) => ({ id, x, z, kind, grate })),
     place(x, z, kind, opts) {
       spawn({
         id: `fire:${Date.now()}:${nextFireId++}`,
         x,
         z,
         kind,
+        grate: false,
         habitatBurn: opts?.habitatBurn === true,
       })
       const entry = fires[fires.length - 1]!
@@ -166,6 +189,29 @@ export function createPlacedFires(
         entry.fire.addFuel()
       }
       return entry
+    },
+    nearestBuildable(x, z, range) {
+      let best: PlacedFireEntry | null = null
+      let bestDistSq = range * range
+      for (const entry of fires) {
+        if (!isPlayerPlacedFire(entry) || entry.grate) continue
+        const dx = entry.x - x
+        const dz = entry.z - z
+        const distSq = dx * dx + dz * dz
+        if (distSq > bestDistSq) continue
+        best = entry
+        bestDistSq = distSq
+      }
+      return best
+    },
+    buildGrate(id) {
+      const entry = fires.find((f) => f.id === id)
+      if (!entry || entry.grate) return false
+      entry.grate = true
+      entry.fire.setGrate(true)
+      const mesh = meshes.get(id)
+      mesh?.add(createGrateVisual())
+      return true
     },
     update(dt) {
       // Snapshot first — `despawn` splices `fires`, which would skip the

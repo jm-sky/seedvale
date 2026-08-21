@@ -64,6 +64,17 @@ export type VillageFire = {
   /** Extends an already-lit fire — same fuel amount as `light()`, just
    *  additive instead of resetting. */
   addFuel: () => void
+  /** Plan 175 — a grate is an optional, one-time capability of *this specific*
+   *  fire instance (player-built `PlacedFires.ts` today; settlement fires
+   *  inherit the same flag but nothing currently sets it), not a hard-coded
+   *  `firepit`/`campfire` type check. Cooking capacity is resolved from this
+   *  flag (`items/campfireCooking.ts`'s `resolveCookingCapacity`), never from
+   *  which fire *kind* this is. */
+  hasGrate: () => boolean
+  /** One-time upgrade — callers own the "already has a grate"/material-cost
+   *  guard (`settlement/PlacedFires.ts`'s `buildGrate`); this just flips the
+   *  flag. */
+  setGrate: (value: boolean) => void
   update: (dt: number) => void
 }
 
@@ -88,6 +99,7 @@ export function createVillageFire(
   let lit = false
   let fuelRemaining = 0
   let igniteRemaining = 0
+  let grate = false
 
   const applyVisual = () => {
     flame.setSize(fuelRatioToSizeFactor(fuelRemaining / fuelPerBranch))
@@ -114,6 +126,10 @@ export function createVillageFire(
     addFuel() {
       fuelRemaining += fuelPerBranch
       applyVisual()
+    },
+    hasGrate: () => grate,
+    setGrate(value) {
+      grate = value
     },
     update(dt) {
       if (!lit) return

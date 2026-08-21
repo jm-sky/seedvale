@@ -285,3 +285,34 @@ Verify the actual runtime because grate visuals and interaction ownership cannot
 Keep implementation status separate from technical verification and browser/manual verification, as required by the plan.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+## Implementation status (2026-08-21)
+
+### Implemented
+
+- `resolveCookingCapacity(fire, inventory)` / `findCookingBatch(inventory, capacity)` in `src/items/campfireCooking.ts` — capacity 1 (bare fire) / 2 (carried `pan`) / 4 (fire has a grate), grate wins outright, never adds; `COOKING_RECIPES` unchanged (still one flat row per input, no per-batch-size recipes).
+- `src/app/actions/survivalActions.ts`'s `startCookAt` now cooks `batch × recipe.count` in one busy channel, re-clamped against live inventory at completion; all six existing meat inputs still cook to `roasted_meat` unchanged.
+- `VillageFire` (`src/settlement/VillageFire.ts`) gained `hasGrate()`/`setGrate()` — a capability on the fire *instance* itself, read by cooking without knowing whether the fire is a settlement fire, `'pit'`, or `'simple'`. Default `false`; settlement fires never set it (out of scope).
+- `PlacedFire`/`PlacedFireEntry` (`src/settlement/PlacedFires.ts`) carry a persisted `grate: boolean`. New methods: `nearestBuildable(x, z, range)` (nearest player-placed, non-habitat-burn fire without a grate) and `buildGrate(id)` (one-time flip + visual attach; false/no-op if already built or fire missing).
+- Grate visual: `createGrateVisual()` in `src/settlement/campfireProps.ts` — procedural iron-frame mesh (no GLB), added as a child of the fire's own visual group (follows disposal/point-light lifecycle automatically, registers no light of its own).
+- "Zbuduj ruszt" quick action (`src/app/userActions.ts`'s `buildGrate`/`canBuildGrate`, `GRATE_COST = { branch: 2, stone: 2, iron_rod: 2 }`, `GRATE_BUILD_RANGE = 2.5`) — targets the nearest qualifying fire fresh on every press/availability check (never a captured id), wired into both Quick Actions and Pauza → Akcje (same pattern as `buildSimpleFire`/`buildFirePit`); availability refreshed on each menu open since it's position-dependent, unlike the other fire actions.
+- New items: `pan` (inventory capability item, not a `HeldTool`/station) and `iron_rod` (processed material, deliberately separate from the raw `iron` resource) — `ItemKind` + `ITEM_DEFS` (`src/items/items.ts`, incl. procedural pickup meshes) + `ITEM_CATALOG` (`src/items/itemCatalog.ts`). Both added as ordinary Kupiec stock (`src/items/tradeCatalog.ts`'s `MERCHANT_PRICES`/`MERCHANT_STOCK`) — the plan's "no metallurgy system" instruction is satisfied by not inventing an `iron → iron_rod` production chain; `iron_rod` is purchasable like any other stocked material.
+- Save/persistence: `SavePlacedFire.grate` is an **optional** field (`src/persistence/saveData.ts`) rather than a new save version — every save before this plan simply lacks it, and `createApp.ts` coerces a missing value to `false` on load (`grate: f.grate === true`), so no migration function or `SaveDataV26` was needed. Grate survives save → load and `rebuildWorldBundle()` (both read through `PlacedFires.nodes()`, which now includes `grate`).
+- Docs: `docs/items/CATALOG.md` (new cooking-capacity/grate row), `docs/assets/MODELS.md` (M57 pan / M58 grate / M59 iron rod, all `needed` — procedural fallbacks in place and functional), `docs/plans/README.md` (moved to "Verification needed").
+
+### Technically verified
+
+- `npx tsc --noEmit` — clean.
+- `pnpm lint:fix` — clean, no remaining issues.
+- `pnpm test` — 174 files / 1511 tests passed.
+- `pnpm build` — succeeds (`vue-tsc --noEmit && vite build`).
+
+### Browser/manual verified
+
+- Not yet done — pending manual playtest per the plan's own checklist (§"Manualna / browser").
+
+### Deliberate scope decisions worth flagging
+
+- No settlement-fire grate support was added (matches the plan's explicit "do not add player-save fields to static settlement definitions unless settlement grates are explicitly brought into scope" instruction) — `VillageFire.hasGrate()` exists uniformly, but only `PlacedFires` ever sets it.
+- Grate construction is instant (no busy channel), matching the existing `buildSimpleFire`/`buildFirePit` quick actions it sits alongside — the plan explicitly says a multi-stage construction channel is optional, not required.
+- `iron_rod` acquisition is Kupiec-only in this plan; no smelting/production chain exists, consistent with "poza zakresem".

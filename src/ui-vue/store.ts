@@ -72,7 +72,7 @@ type PauseMenuState = {
   onSave: (() => void) | null; onSaveAs: ((name: string) => Promise<CreateSaveResult>) | null
   onLoadSave: ((id: string) => void) | null; onListSaves: (() => Promise<SaveSlotInfo[]>) | null
   onRefresh: (() => void) | null
-  onBuildSimpleFire: (() => boolean) | null; onBuildFirePit: (() => boolean) | null
+  onBuildSimpleFire: (() => boolean) | null; onBuildFirePit: (() => boolean) | null; onBuildGrate: (() => boolean) | null
   onLightBranch: (() => LightActionResult) | null; onLightWoodenTorch: (() => LightActionResult) | null
   onNewGame: ((name: string) => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
   saveStatus: string
@@ -85,6 +85,12 @@ type FlavorDialogState = { open: boolean; prompt: string | null; promptHighlight
 export type QuickActionsFireAvailability = {
   buildSimpleFire: boolean
   buildFirePit: boolean
+  /** Plan 175 — a qualifying player-built fire is within `GRATE_BUILD_RANGE`
+   *  and the player carries the full `GRATE_COST`. Position-dependent (unlike
+   *  the other three flags here), so it's only trustworthy re-resolved at
+   *  popup-open time — see `createApp.ts`'s `onOpen`, same convention as
+   *  `nearTown` below. */
+  buildGrate: boolean
   lightBranch: boolean
   lightWoodenTorch: boolean
 }
@@ -97,6 +103,7 @@ type QuickActionsState = {
   fireAvailability: QuickActionsFireAvailability
   onBuildSimpleFire: (() => boolean) | null
   onBuildFirePit: (() => boolean) | null
+  onBuildGrate: (() => boolean) | null
   onLightBranch: (() => LightActionResult) | null
   onLightWoodenTorch: (() => LightActionResult) | null
   onWait: ((hours: number) => void) | null
@@ -296,7 +303,7 @@ export const ui = reactive({
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null, onRefresh: null,
-    onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
+    onBuildSimpleFire: null, onBuildFirePit: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null,
     saveStatus: '',
   } as PauseMenuState,
@@ -305,8 +312,8 @@ export const ui = reactive({
   quickActions: {
     open: false, hasDiggingTool: false, nearTown: false, hasTent: false,
     traps: { simple: false, good: false },
-    fireAvailability: { buildSimpleFire: false, buildFirePit: false, lightBranch: false, lightWoodenTorch: false },
-    onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
+    fireAvailability: { buildSimpleFire: false, buildFirePit: false, buildGrate: false, lightBranch: false, lightWoodenTorch: false },
+    onBuildSimpleFire: null, onBuildFirePit: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
     hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null,
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },

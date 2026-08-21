@@ -16,6 +16,18 @@ export const SIMPLE_FIRE_BRANCH_COST = 2
 export const FIRE_PIT_STONE_COST = 4
 export const TORCH_BRANCH_COST = 1
 
+/** Plan 175 §3 — one-time material cost to build a grate on an existing
+ *  nearby fire. Centralized here (single source, like `FIRE_PIT_STONE_COST`
+ *  above) so the quick-action button label, the availability check and the
+ *  actual build never drift apart. */
+export const GRATE_COST = { branch: 2, stone: 2, iron_rod: 2 } as const
+
+/** How close (world units) a player-built fire must be to qualify for
+ *  "Zbuduj ruszt" — same order of magnitude as `INTERACT_RANGE`
+ *  (`app/interactables.ts`), since this is the same "standing at the fire"
+ *  gesture, just resolved as a nearest-in-range query instead of gaze/E. */
+export const GRATE_BUILD_RANGE = 2.5
+
 export type LightActionResult = 'ok' | 'already-lit' | 'missing' | 'need-hold'
 
 const getUserActions = (
@@ -43,6 +55,31 @@ const getUserActions = (
     if (!inventory.has('stone', FIRE_PIT_STONE_COST)) return false
     inventory.remove('stone', FIRE_PIT_STONE_COST)
     bundle.placedFires.place(player.mesh.position.x, player.mesh.position.z, 'pit')
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    return true
+  }
+
+  /** Grate upgrade for the nearest qualifying player-built fire (plan 175 §3)
+   *  — re-resolves the target fresh (not a captured id) so a stale quick-
+   *  actions popup can never build against a fire that has since despawned,
+   *  moved out of range, or already been upgraded by an earlier press.
+   *  Materials are only spent once `PlacedFires.buildGrate` actually flips
+   *  the flag (it refuses a fire that already has one), so this can't be
+   *  used to pay twice for the same fire. */
+  const buildGrate = (): boolean => {
+    const target = bundle.placedFires.nearestBuildable(
+      player.mesh.position.x,
+      player.mesh.position.z,
+      GRATE_BUILD_RANGE,
+    )
+    if (!target) return false
+    if (!inventory.has('branch', GRATE_COST.branch) ||
+      !inventory.has('stone', GRATE_COST.stone) ||
+      !inventory.has('iron_rod', GRATE_COST.iron_rod)) return false
+    if (!bundle.placedFires.buildGrate(target.id)) return false
+    inventory.remove('branch', GRATE_COST.branch)
+    inventory.remove('stone', GRATE_COST.stone)
+    inventory.remove('iron_rod', GRATE_COST.iron_rod)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     return true
   }
@@ -80,6 +117,11 @@ const getUserActions = (
   const canBuildSimpleFire = (): boolean =>
     inventory.hasCapability('fire_starting') && inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)
   const canBuildFirePit = (): boolean => inventory.has('stone', FIRE_PIT_STONE_COST)
+  const canBuildGrate = (): boolean =>
+    bundle.placedFires.nearestBuildable(player.mesh.position.x, player.mesh.position.z, GRATE_BUILD_RANGE) !== null &&
+    inventory.has('branch', GRATE_COST.branch) &&
+    inventory.has('stone', GRATE_COST.stone) &&
+    inventory.has('iron_rod', GRATE_COST.iron_rod)
   const canLightBranch = (): boolean =>
     !playerTorch.isLit() && inventory.hasCapability('fire_starting') && inventory.has('branch', TORCH_BRANCH_COST)
   const canLightWoodenTorch = (): boolean => {
@@ -92,10 +134,12 @@ const getUserActions = (
   return {
     buildSimpleFire,
     buildFirePit,
+    buildGrate,
     lightBranch,
     lightWoodenTorch,
     canBuildSimpleFire,
     canBuildFirePit,
+    canBuildGrate,
     canLightBranch,
     canLightWoodenTorch,
   }

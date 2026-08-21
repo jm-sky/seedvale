@@ -12,7 +12,7 @@ import {
   SPAWNER_DESTROY_BRANCH_COST,
 } from '../../fauna/AnimalSpawner'
 import { spawnerDestroyBusyLabel } from '../../fauna/createFauna'
-import { COOK_DURATION_SEC, findCookingRecipe } from '../../items/campfireCooking'
+import { COOK_DURATION_SEC, findCookingBatch, resolveCookingCapacity } from '../../items/campfireCooking'
 import { getFreshnessStage } from '../../items/foodFreshness'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
@@ -175,37 +175,54 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     }, { blurred: true })
   }
 
-  /** Cooks the first held recipe's input at a lit campfire (plan 106 §6). */
+  /** Cooks the first held recipe's input at a lit campfire, up to the
+   *  station's capacity — 1 for a bare fire, 2 with a carried `pan`, 4 once
+   *  this fire has a grate (plan 175 §5/§6, `campfireCooking.ts`'s
+   *  `resolveCookingCapacity`/`findCookingBatch`). Still one busy channel
+   *  producing `batch × recipe.count` of the output at once, not N separate
+   *  cooking actions. */
   const startCookAt = (fire: VillageFire): void => {
     if (isActionBlocked(ctx)) return
     if (!fire.isLit()) {
       toast.show('Ognisko musi się palić.', 'error')
       return
     }
-    const recipe = findCookingRecipe(inventory)
-    if (!recipe) {
+    const capacity = resolveCookingCapacity(fire, inventory)
+    const found = findCookingBatch(inventory, capacity)
+    if (!found) {
       toast.show('Potrzebujesz surowego mięsa.', 'error')
       return
     }
-    if (!inventory.canAdd(recipe.output, recipe.count)) {
-      toast.show(inventoryFullToastText(inventory, recipe.output, recipe.count), 'error')
+    const { recipe } = found
+    const outputFor = (batch: number): number => batch * recipe.count
+    if (!inventory.canAdd(recipe.output, outputFor(found.batch))) {
+      toast.show(inventoryFullToastText(inventory, recipe.output, outputFor(found.batch)), 'error')
       return
     }
-    busy.start(COOK_DURATION_SEC, 'Pieczenie mięsa…', () => {
+    const label = found.batch > 1 ? `Pieczenie mięsa (${found.batch}×)…` : 'Pieczenie mięsa…'
+    busy.start(COOK_DURATION_SEC, label, () => {
       if (!fire.isLit()) {
         toast.show('Ogień zgasł.', 'error')
         return
       }
-      const hasRoom = inventory.canAdd(recipe.output, recipe.count)
-      if (!hasRoom || !inventory.remove(recipe.input, 1)) {
-        toast.show(hasRoom ? 'Ekwipunek jest za ciężki.' : inventoryFullToastText(inventory, recipe.output, recipe.count), 'error')
+      // Re-clamped against inventory as it stands right now — the channel may
+      // have run long enough for the carried amount to have changed.
+      const batch = Math.min(capacity, inventory.count(recipe.input))
+      if (batch <= 0) {
+        toast.show('Potrzebujesz surowego mięsa.', 'error')
         return
       }
-      inventory.add(recipe.output, recipe.count, dayNight.elapsedDays)
+      const outputCount = outputFor(batch)
+      const hasRoom = inventory.canAdd(recipe.output, outputCount)
+      if (!hasRoom || !inventory.remove(recipe.input, batch)) {
+        toast.show(hasRoom ? 'Ekwipunek jest za ciężki.' : inventoryFullToastText(inventory, recipe.output, outputCount), 'error')
+        return
+      }
+      inventory.add(recipe.output, outputCount, dayNight.elapsedDays)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.cookMeat)
-      toast.show(`+${recipe.count} ${ITEM_DEFS[recipe.output].label}`, 'pickup')
+      toast.show(`+${outputCount} ${ITEM_DEFS[recipe.output].label}`, 'pickup')
     }, { blurred: true })
   }
 

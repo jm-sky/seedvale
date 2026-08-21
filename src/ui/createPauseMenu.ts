@@ -15,6 +15,7 @@ export type PauseMenuHandlers = {
   onRefresh?: () => void
   onBuildSimpleFire?: () => boolean
   onBuildFirePit?: () => boolean
+  onBuildGrate?: () => boolean
   onLightBranch?: () => LightActionResult
   onLightWoodenTorch?: () => LightActionResult
   onNewGame?: (name: string) => void

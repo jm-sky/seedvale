@@ -1,20 +1,26 @@
 import type { QuickActionsFireAvailability } from './store'
 import {
   FIRE_PIT_STONE_COST,
+  GRATE_COST,
   type LightActionResult,
   SIMPLE_FIRE_BRANCH_COST,
   TORCH_BRANCH_COST,
 } from '../app/userActions'
 
-/** Shared fire-action catalog for Quick Actions and Pauza → Akcje (review 007 C8). */
+/** Shared fire-action catalog for Quick Actions and Pauza → Akcje (review 007 C8).
+ *  `buildGrate` (plan 175) is Quick-Actions-only, not duplicated into
+ *  Pauza → Akcje — it targets whichever fire the player is standing next to,
+ *  the same "world-context, not inventory-only" reasoning that already keeps
+ *  `onRest`'s `nearTown` out of the pause menu. */
 
-export type FireActionId = 'lightBranch' | 'lightWoodenTorch' | 'buildFirePit' | 'buildSimpleFire'
+export type FireActionId = 'lightBranch' | 'lightWoodenTorch' | 'buildFirePit' | 'buildSimpleFire' | 'buildGrate'
 
 export type FireActionHandlers = {
   onLightBranch?: (() => LightActionResult) | null
   onLightWoodenTorch?: (() => LightActionResult) | null
   onBuildFirePit?: (() => boolean) | null
   onBuildSimpleFire?: (() => boolean) | null
+  onBuildGrate?: (() => boolean) | null
 }
 
 export type VisibleFireAction = {
@@ -82,6 +88,18 @@ export const FIRE_QUICK_ACTIONS: readonly FireActionDef[] = [
       const built = handlers.onBuildSimpleFire?.() ?? false
       return built
         ? { ok: true, toast: 'Zbudowano ognisko!', kind: 'info' }
+        : { ok: false, toast: 'Brakuje surowców', kind: 'error' }
+    },
+  },
+  {
+    id: 'buildGrate',
+    label: 'Zbuduj ruszt',
+    cost: `${GRATE_COST.branch}× gałąź, ${GRATE_COST.stone}× kamień, ${GRATE_COST.iron_rod}× żelazny pręt`,
+    availableKey: 'buildGrate',
+    run: (handlers) => {
+      const built = handlers.onBuildGrate?.() ?? false
+      return built
+        ? { ok: true, toast: 'Zbudowano ruszt!', kind: 'info' }
         : { ok: false, toast: 'Brakuje surowców', kind: 'error' }
     },
   },
