@@ -18,7 +18,6 @@ import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
 import type { PostProcessing } from '../render/createPostProcessing'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
-import type { VillageFire } from '../settlement/VillageFire'
 import type { VueUi } from '../ui-vue/mount'
 import type { BusyOverlay } from '../ui/createBusyOverlay'
 import type { Hud } from '../ui/createHud'
@@ -103,6 +102,7 @@ import {
 } from '../render/shadowBudget'
 import { villageSizeConfig } from '../settlement/families'
 import { purchaseLandPlot } from '../settlement/landPurchase'
+import { FIRE_FUEL_KINDS, type VillageFire } from '../settlement/VillageFire'
 import { getHungerRatio } from '../shared/HungerState'
 import { getStaminaRatio } from '../shared/StaminaState'
 import { getThirstRatio } from '../shared/ThirstState'
@@ -1147,13 +1147,14 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'campfire') {
         if (interactPressed) {
           if (target.fire.isLit()) {
-            if (inventory.remove('branch', 1)) {
+            const fuelKind = FIRE_FUEL_KINDS.find((kind) => inventory.has(kind, 1))
+            if (fuelKind && inventory.remove(fuelKind, 1)) {
               target.fire.addFuel()
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
               onInventoryChanged()
-              toast.show('Dołożono gałąź do ogniska.')
+              toast.show(`Dołożono ${ITEM_DEFS[fuelKind].label} do ogniska.`)
             } else {
-              toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
+              toast.show('Potrzebujesz gałęzi lub belki, żeby je zapalić.', 'error')
             }
           } else {
             startIgniteFire?.(target.fire)

@@ -7,7 +7,7 @@ import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
 import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../../terrain/dig'
 import { applyDigAt, applyLevelAt } from '../../terrain/digAction'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../../world/treeHarvest'
-import { isChoppableStage, yieldForChopStage } from '../../world/treeLifecycle'
+import { bonusYieldForChopStage, isChoppableStage, yieldForChopStage } from '../../world/treeLifecycle'
 import { DIG_REACH } from '../interactables'
 import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './actionContext'
 
@@ -109,8 +109,13 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     }
     const stepYield = yieldForChopStage(target.stage)
     if (!stepYield) return
+    const bonusYield = bonusYieldForChopStage(target.stage)
     if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
       toast.show(inventoryFullToastText(inventory, stepYield.kind, stepYield.count), 'error')
+      return
+    }
+    if (bonusYield && !inventory.canAdd(bonusYield.kind, bonusYield.count)) {
+      toast.show(inventoryFullToastText(inventory, bonusYield.kind, bonusYield.count), 'error')
       return
     }
     const busyLabel =
@@ -123,6 +128,10 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     busy.start(CHOP_DURATION_SEC, busyLabel, () => {
       if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
         toast.show(inventoryFullToastText(inventory, stepYield.kind, stepYield.count), 'error')
+        return
+      }
+      if (bonusYield && !inventory.canAdd(bonusYield.kind, bonusYield.count)) {
+        toast.show(inventoryFullToastText(inventory, bonusYield.kind, bonusYield.count), 'error')
         return
       }
       const landmark = bundle.settlementsManager
@@ -148,12 +157,17 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
         return
       }
       inventory.add(result.yield.kind, result.yield.count)
+      let message = `+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`
+      if (result.bonusYield) {
+        inventory.add(result.bonusYield.kind, result.bonusYield.count)
+        message += `, +${result.bonusYield.count} ${ITEM_DEFS[result.bonusYield.kind].label}`
+      }
       playInventoryPickUp(worldAudio.playOnce)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       heldTool.syncWithInventory()
       ctx.syncHeldHud()
       ctx.syncQuickActionAvailability()
-      toast.show(`+${result.yield.count} Gałąź`, 'pickup')
+      toast.show(message, 'pickup')
     })
   }
 

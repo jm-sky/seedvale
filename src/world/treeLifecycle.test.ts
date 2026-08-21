@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { TREE_SPECS } from '../settlement/propSpecs'
 import {
   advanceStage,
+  bonusYieldForChopStage,
   canopyGrowthFactor,
   canReachOld,
   CHOP_YIELDS,
   coastalFactor,
   createTreeLifecycle,
   envGrowthFactor,
+  FELLING_BEAM_YIELD,
   HEIGHT_RANGE_M,
   isCanopyStage,
   isChoppableStage,
@@ -279,6 +281,7 @@ describe('createTreeLifecycle', () => {
     expect(step3).toEqual({
       ok: true,
       yield: CHOP_YIELDS.felled,
+      bonusYield: FELLING_BEAM_YIELD,
       stage: 'harvested',
     })
     const stump = life.resolve(p, goodEnv, 2)
@@ -310,7 +313,15 @@ describe('createTreeLifecycle', () => {
       expect(result.yield.count).toBe(
         CHOP_YIELDS.mature.count + CHOP_YIELDS.limbed.count + CHOP_YIELDS.felled.count,
       )
+      expect(result.bonusYield).toEqual(FELLING_BEAM_YIELD)
     }
+  })
+
+  it('bonusYieldForChopStage only fires beam on the felled → harvested bucking step', () => {
+    expect(bonusYieldForChopStage('mature')).toBeNull()
+    expect(bonusYieldForChopStage('old')).toBeNull()
+    expect(bonusYieldForChopStage('limbed')).toBeNull()
+    expect(bonusYieldForChopStage('felled')).toEqual(FELLING_BEAM_YIELD)
   })
 
   it('rejects advanceHarvest on sapling/young', () => {

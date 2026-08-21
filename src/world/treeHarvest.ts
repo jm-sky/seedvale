@@ -7,7 +7,14 @@ import { applyTreeStageVisual } from './treeVisuals'
 export const CHOP_DURATION_SEC = 1.5
 
 export type TreeHarvestResult =
-  | { ok: true, yield: { kind: ItemKind, count: number }, stage: TreeGrowthStage }
+  | {
+    ok: true
+    yield: { kind: ItemKind, count: number }
+    /** Extra `beam` yield from the authoritative felled→harvested bucking
+     *  step — see `treeLifecycle.ts`'s `bonusYieldForChopStage`. */
+    bonusYield?: { kind: ItemKind, count: number }
+    stage: TreeGrowthStage
+  }
   | { ok: false, reason: string }
 
 function applyHarvestVisual(

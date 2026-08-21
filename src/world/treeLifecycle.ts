@@ -136,6 +136,15 @@ export const CHOP_YIELDS: Record<ChoppableLiving | 'limbed' | 'felled', HarvestY
 /** Final-step yield (bucking) — kept for callers that check capacity for one chop. */
 export const HARVEST_YIELD: HarvestYield = CHOP_YIELDS.felled
 
+/** Bonus yield produced once, alongside `CHOP_YIELDS.felled`'s branch count,
+ *  at the authoritative final-harvest transition (felled → harvested —
+ *  "bucking" the trunk). `beam` count outweighs the branch count from the
+ *  same step (plan 187 §1: beams are the scarcer, valuable structural
+ *  material a full felling should favour). Not produced by any earlier chop
+ *  step (mature/old/limbed → next), so it can never be duplicated by
+ *  re-resolving a tree's stage. */
+export const FELLING_BEAM_YIELD: HarvestYield = { kind: 'beam', count: 4 }
+
 const CHOP_NEXT: Record<ChoppableLiving | 'limbed' | 'felled', TreeGrowthStage> = {
   mature: 'limbed',
   old: 'limbed',
@@ -160,6 +169,14 @@ export function yieldForChopStage(stage: TreeGrowthStage): HarvestYield | null {
     return { ...CHOP_YIELDS[stage] }
   }
   return null
+}
+
+/** The extra `beam` yield a chop step from `stage` will produce alongside
+ *  `yieldForChopStage`'s branch count — non-null only for `felled` (the step
+ *  that transitions the tree to `harvested`, plan 187's authoritative
+ *  bucking step). */
+export function bonusYieldForChopStage(stage: TreeGrowthStage): HarvestYield | null {
+  return stage === 'felled' ? { ...FELLING_BEAM_YIELD } : null
 }
 
 export function treeVisualKind(stage: TreeGrowthStage): TreeVisualKind {
@@ -390,7 +407,7 @@ function cellKey(x: number, z: number): string {
 }
 
 export type TreeHarvestStepResult =
-  | { ok: true, yield: HarvestYield, stage: TreeGrowthStage }
+  | { ok: true, yield: HarvestYield, bonusYield?: HarvestYield, stage: TreeGrowthStage }
   | { ok: false, reason: string }
 
 export type TreeLifecycle = {
@@ -633,8 +650,11 @@ export function createTreeLifecycle(
     const from = current.stage as ChoppableLiving | 'limbed' | 'felled'
     const next = CHOP_NEXT[from]
     const yieldAmt = CHOP_YIELDS[from]
+    const bonus = bonusYieldForChopStage(from)
     overrides.set(id, { stage: next, stageStartedAt: worldDays })
-    return { ok: true, yield: { ...yieldAmt }, stage: next }
+    return bonus
+      ? { ok: true, yield: { ...yieldAmt }, bonusYield: bonus, stage: next }
+      : { ok: true, yield: { ...yieldAmt }, stage: next }
   }
 
   function harvestFully(
@@ -643,6 +663,7 @@ export function createTreeLifecycle(
     env: TreeEnvSample,
   ): TreeHarvestStepResult {
     let total = 0
+    let bonusTotal = 0
     let lastStage: TreeGrowthStage | null = null
     for (let i = 0; i < 3; i++) {
       const step = advanceHarvest(id, worldDays, env)
@@ -651,11 +672,19 @@ export function createTreeLifecycle(
         break
       }
       total += step.yield.count
+      if (step.bonusYield) bonusTotal += step.bonusYield.count
       lastStage = step.stage
       if (step.stage === 'harvested') break
     }
     if (lastStage === null) return { ok: false, reason: 'not-choppable' }
-    return { ok: true, yield: { kind: 'branch', count: total }, stage: lastStage }
+    return bonusTotal > 0
+      ? {
+        ok: true,
+        yield: { kind: 'branch', count: total },
+        bonusYield: { kind: 'beam', count: bonusTotal },
+        stage: lastStage,
+      }
+      : { ok: true, yield: { kind: 'branch', count: total }, stage: lastStage }
   }
 
   function registerPresence(presence: TreePresence): void {

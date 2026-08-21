@@ -27,7 +27,7 @@ import {
   survivalDurationMultiplier,
   survivalFoodMultiplier,
 } from '../../player/PlayerSkills'
-import { IGNITE_DURATION_SEC } from '../../settlement/VillageFire'
+import { FIRE_FUEL_KINDS, IGNITE_DURATION_SEC } from '../../settlement/VillageFire'
 import { healHealth } from '../../shared/HealthState'
 import { DRINK_THIRST_RELIEF, UNSAFE_WATER_WARNING } from '../../world/WaterSource'
 import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './actionContext'
@@ -114,15 +114,23 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       toast.show('Potrzebujesz krzesiwa, żeby rozpalić ogień.', 'error')
       return
     }
-    if (!inventory.has('branch', 1)) {
-      toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
+    if (!FIRE_FUEL_KINDS.some((kind) => inventory.has(kind, 1))) {
+      toast.show('Potrzebujesz gałęzi lub belki, żeby je zapalić.', 'error')
       return
     }
     // Survival is read once, when the channel starts — a running channel is
     // never retimed (plan 128 §3.1).
     const duration = IGNITE_DURATION_SEC * survivalDurationMultiplier(player.skills.survival.value)
     busy.start(duration, 'Rozpalanie ogniska…', () => {
-      if (fire.isLit() || !inventory.remove('branch', 1)) return
+      if (fire.isLit()) return
+      let consumedFuel = false
+      for (const kind of FIRE_FUEL_KINDS) {
+        if (inventory.remove(kind, 1)) {
+          consumedFuel = true
+          break
+        }
+      }
+      if (!consumedFuel) return
       fire.light()
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()

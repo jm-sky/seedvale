@@ -215,6 +215,15 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     roadmap:
       'Holdable improvised melee (low damage, ~4–8). Natural candidate for item durability/HP wear.',
   },
+  beam: {
+    kind: 'beam',
+    label: 'belka',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan 187 — bucking yield alongside branch, produced once at the authoritative felled→harvested tree-harvest transition (`world/treeLifecycle.ts`\'s `advanceHarvest`/`harvestFully`). Structural construction material, resolved from inventory or nearby dropped items at the construction-material boundary (`items/constructionMaterials.ts`). Also valid campfire fuel (`settlement/VillageFire.ts`\'s `FIRE_FUEL_KINDS`) — unlike `branch`, never a hand torch (`PlayerTorch.ts`\'s `TorchSource` stays branch/wooden_torch only).',
+  },
   mushroom: {
     kind: 'mushroom',
     label: 'grzyb',

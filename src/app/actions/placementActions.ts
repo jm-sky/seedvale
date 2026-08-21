@@ -1,4 +1,5 @@
 import type { CropId } from '../../world/cropLifecycle'
+import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial, type MaterialRequirement } from '../../items/constructionMaterials'
 import { CAPABILITY_NEED_LABEL } from '../../items/itemCatalog'
 import { isTrapItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
@@ -236,16 +237,25 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     const startingNewStage = stage !== well.stage
     if (startingNewStage) {
       const cost = WELL_STAGE_COST[stage]
-      const missing: string[] = []
-      if (cost.stone > 0 && !inventory.has('stone', cost.stone)) missing.push(`${cost.stone}× ${ITEM_DEFS.stone.label}`)
-      if (cost.branch > 0 && !inventory.has('branch', cost.branch)) missing.push(`${cost.branch}× ${ITEM_DEFS.branch.label}`)
+      // Materials may be carried or lying nearby the well itself (plan 187
+      // §4/§5) — same small bounded radius, no teleport into inventory.
+      const requirements: MaterialRequirement[] = []
+      if (cost.stone > 0) requirements.push({ kind: 'stone', count: cost.stone })
+      if (cost.branch > 0) requirements.push({ kind: 'branch', count: cost.branch })
+      const missing = requirements.filter(
+        (r) => !hasMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+      )
       if (missing.length > 0) {
-        toast.show(`Potrzebujesz: ${missing.join(', ')}.`, 'error')
+        toast.show(
+          `Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+          'error',
+        )
         return
       }
-      if (cost.stone > 0) inventory.remove('stone', cost.stone)
-      if (cost.branch > 0) inventory.remove('branch', cost.branch)
-      if (cost.stone > 0 || cost.branch > 0) {
+      for (const r of requirements) {
+        consumeMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r)
+      }
+      if (requirements.length > 0) {
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         ctx.onInventoryChanged()
       }

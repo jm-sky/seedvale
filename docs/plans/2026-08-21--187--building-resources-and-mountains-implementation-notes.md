@@ -296,11 +296,18 @@ Do not write Three.js-heavy tests when a pure domain test can establish the inva
 
 ## 14. Verification status
 
-**Implemented:** none yet — this file is reconnaissance/implementation guidance only.
+**Implemented:**
 
-**Technically verified:** not applicable yet.
+- `beam` added as a normal `ItemKind` (`src/items/items.ts` — `ITEM_DEFS`, procedural pickup mesh — no GLB yet, `docs/assets/MODELS.md` M57) + `ITEM_CATALOG` entry (`src/items/itemCatalog.ts`), `holdable: false`, no capability of its own.
+- `src/world/treeLifecycle.ts`: `FELLING_BEAM_YIELD` (`beam` × 4) + `bonusYieldForChopStage(stage)` fire only on the `felled → harvested` transition (the authoritative bucking step) — `advanceHarvest`/`harvestFully` now return an optional `bonusYield` alongside the existing `yield` (branch). No new tree parameters; no duplication at any other chop step. `src/world/treeHarvest.ts`'s `TreeHarvestResult` mirrors the optional `bonusYield`.
+- `src/app/actions/groundActions.ts`'s `startTreeChop`: checks/consumes the bonus beam alongside the branch yield when felling the final step, toast shows both.
+- Campfire fuel: `src/settlement/VillageFire.ts`'s new `FIRE_FUEL_KINDS = ['branch', 'beam']` constant; `startIgniteFire` (`survivalActions.ts`) and the "dołóż" world action (`gameLoop.ts`) now try each kind in turn instead of hard-coding `branch`. `PlayerTorch.ts`'s `TorchSource` untouched — `beam` is never a hand torch. `AnimalSpawner`'s habitat-destroy fire (`SPAWNER_DESTROY_BRANCH_COST`) intentionally kept branch-only (not a player fuel choice).
+- World-item construction materials: new `src/items/constructionMaterials.ts` — `MaterialRequirement`, `CONSTRUCTION_MATERIAL_RADIUS` (3m), `hasMaterial`/`consumeMaterial` (inventory first, then nearest dropped-item stacks within radius, deterministic order, atomic — nothing consumed unless the full requirement is satisfiable). No new storage system; reads `Inventory.count`/`remove` and `DroppedItems.nodes`/`collect` directly.
+- `src/app/actions/placementActions.ts`'s `workOnWell` now resolves its per-stage `stone`/`branch` cost through `hasMaterial`/`consumeMaterial` centered on the well's own position, instead of requiring those materials in inventory only. `playerWell.ts`'s persisted record/stage rules are unchanged.
 
-**Browser/manual verified:** not applicable yet.
+**Technically verified:** `npx tsc --noEmit` clean, `pnpm run lint:fix` clean, `pnpm run test` (1520/1520 passing, including new `constructionMaterials.test.ts` and extended `treeLifecycle.test.ts` cases for the bonus beam yield), `pnpm run build` clean.
+
+**Browser/manual verified:** not yet — pending manual playtest (felling a tree for beam, well construction from ground-lying materials, campfire fuel with beam, torch-from-beam rejection).
 
 For implementation, use the repository-standard commands from `CLAUDE.md` rather than blindly copying generic plan commands. The current standard is `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, `pnpm run test`. fileciteturn14file0L2-L2
 

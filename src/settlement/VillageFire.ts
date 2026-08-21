@@ -1,5 +1,13 @@
+import type { ItemKind } from '../items/items'
 import type { CampfireFlame } from './props'
 import type * as THREE from 'three'
+
+/** Item kinds that can light or refuel a fire (plan 187) — tried in this
+ *  order by `startIgniteFire`/the "dołóż" world action, both re-resolving at
+ *  busy-channel completion. Adding a unit of either kind grants the same
+ *  `fuelPerBranch` seconds — `beam` is a structural-wood bonus fuel, not a
+ *  richer fuel value model. */
+export const FIRE_FUEL_KINDS: readonly ItemKind[] = ['branch', 'beam']
 
 /** Seconds of burn time one branch adds — light and refuel both apply this.
  *  Default for settlement fires and player-built fire pits (`kind: 'pit'`,

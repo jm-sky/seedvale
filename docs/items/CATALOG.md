@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-21 (plan 126 — seed planting)
+**Last updated:** 2026-08-21 (plan 187 — building resources: `beam`, world-item construction materials)
 
 ## Quick rules
 
@@ -23,6 +23,9 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Melee vs animals | `ITEM_CATALOG[kind].melee` (plan 123, `itemCatalog.ts`) — single source of truth for damage/range/arcDot/windUp/hitWindow/recovery/staminaCost; `player/playerMelee.ts` runs the windUp→hitWindow→recovery lifecycle + range/facing-arc hit test. `faunaCombat.ts`'s `isMeleeTool()` just reads this. Damage: obsidian_sword 46, damascus_long_sword 40, masterwork_sword 34, long_sword/battle_axe 28, damascus_short_sword 24, spear/axe 20, short_sword 18, damascus_knife 16, pitchfork 14, knife/sickle 12, shovel 8 |
 | Village one-time tools | `createItemSpawners.ts` |
 | Portable light | `PlayerTorch` — lit branch (90s) or held wooden_torch (240s); exclusive right hand |
+| Wood model (plan 187) | `branch` (hand-gathered / axe bonus, torch-capable) vs `beam` (axe-felling bonus yield only, construction + fuel, never a torch) — `world/treeLifecycle.ts`'s `bonusYieldForChopStage`/`FELLING_BEAM_YIELD` fires once, on the authoritative felled→harvested bucking step |
+| Campfire fuel (plan 187) | `settlement/VillageFire.ts`'s `FIRE_FUEL_KINDS` (`branch`, `beam`) — `startIgniteFire`/the "dołóż" world action try each kind in order; every unit grants the same `FUEL_PER_BRANCH` seconds regardless of kind |
+| Construction materials from the ground (plan 187) | `items/constructionMaterials.ts`'s `hasMaterial`/`consumeMaterial` — resolves a `{ kind, count }` requirement from `Inventory` first, then nearby `DroppedItems` within `CONSTRUCTION_MATERIAL_RADIUS` (3m), closest stack first; atomic (nothing consumed unless the total is sufficient). Wired into `app/actions/placementActions.ts`'s `workOnWell`; kind-agnostic, so a future construction can reuse it without a new storage system |
 | Inventory category | `ITEM_DEFS.categories` — `resource` / `tool` / `utility` / `food` / `weapon` (multi-category, e.g. axe = tool + weapon); hunger consumables are `food`, waterskins stay `utility` |
 | Consumable (Zjedz/Wypij/Opatrz) | `ITEM_CATALOG[kind].consumable` (plan 106, 153) — `{ need: 'hunger'\|'thirst'\|'health', relief, resultKind? }`; driven from inventory screen (`InventoryScreenItemDetails.vue`), world drink/cook actions, or the world `[R]` quick-action on a pickupable item (`interactables.ts`'s `itemPromptLabel`) |
 | Player needs | `player/PlayerNeeds.ts` — stamina/vigor/hunger/thirst pools on `PlayerController.needs`; HUD bars in `HudScreen.vue` (HP first, then the four needs — issue 034) |
@@ -47,6 +50,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | shell | muszla | — | — | renewable village | procedural | barter token (Kupiec will not buy/sell shells) |
 | stone | kamień | — | — | renewable + dig | procedural | |
 | branch | gałąź | lit only | — | renewable trees | `items/branch.glb` | Zapal gałąź → hand mesh + fire; **melee later** |
+| beam | belka | — | — | none | procedural | plan 187; bonus yield alongside branch at the felled→harvested bucking chop; construction material + campfire fuel; never a hand torch |
 | mushroom | grzyb | — | — | world chunk | procedural | plan 159; now also `food` category — Zjedz (+8 hunger); freshens 1.5 days, plant bait |
 | flower | kwiat | — | — | world chunk | procedural | |
 | cone | szyszka | — | — | world chunk | procedural | |

@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-08-21
+**Last updated:** 2026-08-21 (plan 187)
 
 ## How to use
 
@@ -83,6 +83,7 @@ If the feature needs no new model, do nothing to this file.
 | M52 | Whetstone | Stackable maintenance item; procedural box fallback in place and functional, no GLB yet | `needed` | plan 161 |
 | M55 | Backpack | Carried capacity item (`items.backpack`); default procedural fallback mesh (same catch-all box `chest`/`tent` already use), functional but not backpack-shaped | `needed` | plan 186 |
 | M56 | Seed pouch(es) (`tree_seed`/`seed_carrot`/`seed_potato`/`seed_cabbage`) | Small inventory pickup; procedural flattened-dodecahedron fallback in place and functional, no GLB yet | `needed` | plan 126 |
+| M57 | Beam (`items.beam`) | Structural-wood pickup; procedural elongated-box fallback in place and functional, no GLB yet | `needed` | plan 187 (`items/items.ts`'s `createItemMesh`) |
 
 ## Wired (reference — do not treat as open work)
 

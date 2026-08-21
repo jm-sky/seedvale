@@ -1,7 +1,7 @@
 # Plan: Building Resources
 
 **Created:** 2026-08-21
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — resources/construction scope implemented + technically verified (`tsc`/lint/build/test); browser/gameplay not yet verified. Mountain scope was split out to [plan 191](./2026-08-21--191--mountain-peaks-and-massifs.md) before implementation (see implementation notes §1) — this plan covers wood/beam + world-item construction materials only.
 **Priority:** 🔴 high · **Effort:** L
 **Depends on:** ~~184~~ ~~111~~
 **domain:** `items-player`

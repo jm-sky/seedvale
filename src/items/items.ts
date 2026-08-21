@@ -6,6 +6,7 @@ export type ItemKind =
   | 'shell'
   | 'stone'
   | 'branch'
+  | 'beam'
   | 'mushroom'
   | 'flower'
   | 'cone'
@@ -161,6 +162,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'SM',
     color: 0x6b4a2f,
     description: 'Sucha gałąź zebrana w lesie. Łatwo ją wykorzystać jako opał lub materiał do prostych przedmiotów lub pochodnię.'
+  },
+  beam: {
+    kind: 'beam',
+    label: 'belka',
+    categories: ['resource'],
+    weight: 3,
+    size: 'LG',
+    color: 0x5a3f26,
+    description: 'Solidna belka pozyskana ze ściętego drzewa. Materiał konstrukcyjny — przyda się przy budowie i jako opał.'
   },
   mushroom: {
     kind: 'mushroom',
@@ -822,6 +832,16 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     )
     mesh.rotation.z = Math.PI / 2.3
     mesh.rotation.y = 0.4
+    mesh.position.y = 0.05
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'beam') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.08, 0.55),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.beam.color, flatShading: true }),
+    )
+    mesh.rotation.y = 0.3
     mesh.position.y = 0.05
     mesh.castShadow = true
     return mesh
