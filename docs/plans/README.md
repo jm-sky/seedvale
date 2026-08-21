@@ -95,6 +95,8 @@ Natural vegetation
 | `2026-08-20--176--garden-and-field-maintenance.md` | Wspólny mechanizm utrzymania grządek/pól: stan zadbania pogarsza się z czasem, wpływa na produktywność, długotrwałe zaniedbanie usuwa grządkę/pole; wspólne dla gracza i NPC, bez `GardenManager`/`FarmManager` | 🟡 | M | ~~174~~ ~~126~~ |
 | `2026-08-20--178--hunter-profession-and-household.md` | Profesja myśliwego + gospodarstwo wyspecjalizowane w polowaniu/produkcji łuków i strzał/przetwórstwie i sprzedaży; wykorzystuje istniejące NPC combat (`177`), fauna, inventory, household, storage, economy, cooking; bez równoległych systemów | 🟡 | L | ~~177~~ ~~162~~ ~~159~~ ~~175~~ |
 | `2026-08-21--180--npc-healing.md` | NPC używa opatrunków w razie obrażeń | 🟡 |M | ~~177~~ |
+| `2026-08-21--181--natural-mountains-and-rivers.md` | Wielkie pasma górskie i rzeki | 🔴 | M | ? |
+| `2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul.md` | Wielki, ciemny las | 🟡 | M | ~~063~~ |
 
 ### Fresh new
 
