@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-08-20
+**Last updated:** 2026-08-21
 
 ## How to use
 
@@ -81,6 +81,7 @@ If the feature needs no new model, do nothing to this file.
 | M50 | Bows (`short_bow`/`hunting_bow`/`long_bow`) | Held ranged weapons; Kupiec stock. Quaternius `Bow_Wooden`/`Bow_Wooden2`/`Bow_Golden` (Medieval Weapons Pack) wired ground + held; grip TRS in `HELD_ATTACH` reused from the procedural-fallback placeholder and not yet manually verified in-hand in the browser | `wired` | plan 162 (`items/short_bow.glb`, `hunting_bow.glb`, `long_bow.glb`) |
 | M51 | Arrows (`arrow`/`broadhead_arrow`/`war_arrow`) | Stackable ammo pickup/inventory mesh; not holdable. Quaternius `Arrow` (Medieval Weapons Pack), one shared GLB for all three arrow kinds (no visual damage-tier distinction in v1) | `wired` | plan 162 (`items/arrow.glb`) |
 | M52 | Whetstone | Stackable maintenance item; procedural box fallback in place and functional, no GLB yet | `needed` | plan 161 |
+| M55 | Backpack | Carried capacity item (`items.backpack`); default procedural fallback mesh (same catch-all box `chest`/`tent` already use), functional but not backpack-shaped | `needed` | plan 186 |
 
 ## Wired (reference — do not treat as open work)
 

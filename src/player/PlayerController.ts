@@ -532,6 +532,17 @@ export class PlayerController {
     this.mesh.rotation.y = Math.atan2(dx, dz)
   }
 
+  /** Turns the character to face along `aimYaw` — the same yaw convention
+   *  `resolveRangedDirection`/`resolveMeleeHits`/`yawToward` use (`-sin(yaw)`,
+   *  `-cos(yaw)`), converted to this rig's own facing convention (`π` apart,
+   *  same relationship `faceToward`'s `atan2(dx, dz)` has to `yawToward`'s
+   *  `atan2(-dx, -dz)`). Used to keep a ranged draw's visual facing
+   *  continuously in sync with the committed aim direction fired at release
+   *  (plan 186) instead of snapping once and then drifting from the live aim. */
+  faceAimYaw(aimYaw: number): void {
+    this.mesh.rotation.y = aimYaw + Math.PI
+  }
+
   /** Collision-safe displacement toward a point — the melee gap-close/
    *  fallback hop (plan 124 §3). Never a teleport: `dx`/`dz` are already
    *  bounded by the caller (`playerMelee.requestAttack`'s `moveX`/`moveZ`).

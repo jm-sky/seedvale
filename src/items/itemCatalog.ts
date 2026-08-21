@@ -117,6 +117,11 @@ export const CAPABILITY_NEED_LABEL: Record<ItemCapability, string> = {
  *  `PlayerNeeds` pool, `health` heals `HealthState` directly (plan 153). */
 export type ConsumableNeed = 'hunger' | 'thirst' | 'health'
 
+/** `backpack`'s `carryCapacityBonus` (plan 186) — a meaningful jump over the
+ *  player's `DEFAULT_MAX_WEIGHT` (20 kg, `Inventory.ts`) without trivializing
+ *  the existing overload thresholds (`player/playerEncumbrance.ts`). */
+const BACKPACK_CAPACITY_BONUS_KG = 15
+
 export type ItemCatalogEntry = {
   kind: ItemKind
   /** Polish label — mirrors ITEM_DEFS. */
@@ -154,6 +159,11 @@ export type ItemCatalogEntry = {
     freshness?: { freshDurationDays: number, mediumDurationDays: number }
     bait?: 'meat' | 'plant'
   }
+  /** Kilograms added to `Inventory.maxWeight` per unit of this kind actually
+   *  carried (plan 186) — a backpack is an ordinary item, not a second
+   *  capacity/equipment system; `Inventory`'s `maxWeight` getter sums this
+   *  over held counts. Absent/0 for every kind that isn't a capacity item. */
+  carryCapacityBonus?: number
 }
 
 /** Single source of truth for the inventory/world-prompt action verb per
@@ -834,6 +844,16 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan 164 — Kupiec stock. Placed world container (`world/createPlacedContainers.ts`), not a `HeldTool`. Bought empty; place with Quick Actions, `[E]` opens the transfer screen, `[R]` picks it back up (with contents).',
+  },
+  backpack: {
+    kind: 'backpack',
+    label: 'plecak',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    carryCapacityBonus: BACKPACK_CAPACITY_BONUS_KG,
+    notes: 'Plan 186 — Kupiec stock. Ordinary carried item, not equipment: simply holding it in `Inventory` raises `Inventory.maxWeight` by `carryCapacityBonus` (stacks if more than one is carried). Must fit under the *pre-bonus* capacity to be picked up in the first place.',
   },
 }
 

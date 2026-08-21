@@ -1,7 +1,7 @@
 # Plan: Combat i interakcje gracza
 
 **Created:** 2026-08-21
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented 2026-08-21, see [implementation notes](./2026-08-21--186--combat-and-player-interactions-implementation-notes.md)
 **Priority:** high · **Effort:** L
 **Depends on:** none
 **domain:** `items-player`
@@ -28,37 +28,37 @@ Istniejące mechanizmy, które należy rozszerzyć:
 
 ### 1. Łuk — kierunek celowania
 
-- [ ] Podczas `draw` desktopowa mysz pozwala zmieniać kierunek celowania, zamiast jedynie obracać kamerę.
-- [ ] Wprowadzić jedno źródło `aim direction` dla gracza; rozszerzyć istniejący mechanizm `aimYaw` / `attackYaw`, zamiast dodawać `bowYaw`.
-- [ ] Kierunek wizualny postaci/łuku i kierunek użyty przez `resolveRangedDirection()` muszą pochodzić z tego samego stanu.
-- [ ] Zmiana yaw kamery podczas draw nie może zmieniać wcześniej ustalonego kierunku ataku w sposób powodujący rozjazd.
-- [ ] Zachować istniejący touch `attackYaw` i dopasować desktop do tego samego modelu.
-- [ ] Dodać istniejący HUD/UI reticle widoczny podczas celowania.
-- [ ] Zachować deterministyczne odchylenie accuracy z `rangedAttack.ts` — reticle nie zmienia mechaniki celności.
+- [x] Podczas `draw` desktopowa mysz pozwala zmieniać kierunek celowania, zamiast jedynie obracać kamerę.
+- [x] Wprowadzić jedno źródło `aim direction` dla gracza; rozszerzyć istniejący mechanizm `aimYaw` / `attackYaw`, zamiast dodawać `bowYaw` — nowy `resolveRangedAimYaw()` (`player/playerCombat.ts`) generalizuje istniejące pojęcie (soft-lock → `yawToward`, inaczej live mouse yaw), bez osobnego `bowYaw` pola.
+- [x] Kierunek wizualny postaci/łuku i kierunek użyty przez `resolveRangedDirection()` muszą pochodzić z tego samego stanu — oba czytają `resolveRangedAimYaw()` co klatkę (`PlayerController.faceAimYaw()` dla wizualnego facing).
+- [x] Zmiana yaw kamery podczas draw nie może zmieniać wcześniej ustalonego kierunku ataku w sposób powodujący rozjazd — kierunek jest liczony na bieżąco z tego samego źródła co facing, nie "późno podmieniany" przy release.
+- [x] Zachować istniejący touch `attackYaw` i dopasować desktop do tego samego modelu — touch melee `attackYaw` niezmieniony; ranged aim to osobny, już wspólny (desktop+touch przez `mouseLook.state.yaw`/soft-lock) mechanizm.
+- [x] Dodać istniejący HUD/UI reticle widoczny podczas celowania — reticle nie istniał w kodzie; dodany minimalny Vue overlay (`HudScreen.vue`, `hud.setAiming()`), widoczny tylko w `playerRanged.state() === 'draw'`.
+- [x] Zachować deterministyczne odchylenie accuracy z `rangedAttack.ts` — reticle nie zmienia mechaniki celności (nie dotknięto `rangedAccuracy`/`rangedDeviationRoll`/`resolveRangedDirection`).
 
 ### 2. Chybiona strzała
 
-- [ ] Po zakończeniu lotu poza trafieniem strzała pozostaje w świecie jako zwykły podnoszalny item.
-- [ ] Wykorzystać istniejące projectile/world-item/inventory/interactions.
-- [ ] Nie tworzyć osobnego arrow-pickup systemu.
-- [ ] Uwzględnić poprawne zakończenie lotu i cleanup projectile, aby strzała nie była symulowana bez końca.
+- [x] Po zakończeniu lotu poza trafieniem strzała pozostaje w świecie jako zwykły podnoszalny item.
+- [x] Wykorzystać istniejące projectile/world-item/inventory/interactions — `bundle.droppedItems.drop(ammoKind, x, z)`.
+- [x] Nie tworzyć osobnego arrow-pickup systemu.
+- [x] Uwzględnić poprawne zakończenie lotu i cleanup projectile, aby strzała nie była symulowana bez końca — niezmieniona istniejąca `maxDistance`/`advanceProjectile` logika, drop następuje dokładnie raz przy `expired && !hit`.
 
 ### 3. Długie aktywności
 
-- [ ] Jedna interakcja uruchamia całą wymaganą aktywność, np. 2 godziny świata, zamiast wymagać ponownego startu.
-- [ ] Oprzeć działanie na istniejącym `BusyAction`.
-- [ ] `Esc` anuluje aktywność przez istniejący mechanizm cancel.
-- [ ] Istotne warunki uniemożliwiające pracę (stamina/siła, głód, obrażenia i istniejące blokady) przerywają aktywność.
-- [ ] Zachować już wykonaną część progresu tam, gdzie obecny model progresu ją posiada; nie wprowadzać równoległego modelu progresu.
-- [ ] Nie zmieniać semantyki krótkich `BusyAction`, jeśli nie jest to konieczne dla długich aktywności.
+- [x] Jedna interakcja uruchamia całą wymaganą aktywność, np. 2 godziny świata, zamiast wymagać ponownego startu — już prawda dla istniejącego rest/wait (`TimeSkip`), zweryfikowane w kodzie, nie zmienione.
+- [x] Oprzeć działanie na istniejącym `BusyAction` — bez zmian; `busyAction.ts` pozostaje krótkim real-time kanałem, `TimeSkip` osobno dla postępu czasu świata (implementation notes §9).
+- [x] `Esc` anuluje aktywność przez istniejący mechanizm cancel — już działało (`App.vue` → `abortRest`/`abortBusy`), niezmienione.
+- [x] Istotne warunki uniemożliwiające pracę (stamina/siła, głód, obrażenia i istniejące blokady) przerywają aktywność — **rzeczywista luka znaleziona i domknięta**: obrażenia (walka ze zwierzęciem, głód/pragnienie) podczas aktywnego `rest`/`wait`/`busy` teraz przerywają go przez nowy `RestActions.interruptRestForDamage()` + istniejący `abortBusy()` (wywoływane z jedynego wspólnego punktu obrażeń gracza, `applyPlayerDamage`'s `onCombatHit`).
+- [x] Zachować już wykonaną część progresu tam, gdzie obecny model progresu ją posiada; nie wprowadzać równoległego modelu progresu — wymuszone przerwanie woła te same `TimeSkip.cancel()`/`BusyAction.cancel()`, więc np. częściowy `workProgress` studni jest zaliczany dokładnie jak przy Esc.
+- [x] Nie zmieniać semantyki krótkich `BusyAction`, jeśli nie jest to konieczne dla długich aktywności — `busyAction.ts` niezmieniony.
 
 ### 4. Plecak i przeciążenie
 
-- [ ] Plecak zwiększa istniejący `Inventory.maxWeight` gracza; bez drugiego systemu capacity.
-- [ ] Ustalić w istniejącym katalogu przedmiotów/rejestracji, jak plecak jest reprezentowany i gdzie właściciel gracza wylicza limit.
-- [ ] Sprawdzić i wykorzystać istniejące ograniczenie wagi oraz gabarite bez duplikowania `canAdd()`.
-- [ ] Jeżeli przeciążenie nie jest obecnie kompletne, rozszerzyć istniejący model tak, aby wpływało na stamina i prędkość ruchu.
-- [ ] Jeżeli którykolwiek z tych efektów już istnieje, tylko podłączyć go do wspólnego stanu przeciążenia.
+- [x] Plecak zwiększa istniejący `Inventory.maxWeight` gracza; bez drugiego systemu capacity — `maxWeight` jest teraz getterem (`baseMaxWeight` + suma `carryCapacityBonus` po trzymanych itemach).
+- [x] Ustalić w istniejącym katalogu przedmiotów/rejestracji, jak plecak jest reprezentowany i gdzie właściciel gracza wylicza limit — nowy zwykły `ItemKind: 'backpack'` (Kupiec stock), `ItemCatalogEntry.carryCapacityBonus` (+15 kg), liczony w `Inventory.maxWeight`.
+- [x] Sprawdzić i wykorzystać istniejące ograniczenie wagi oraz gabarite bez duplikowania `canAdd()` — `canAdd()`/`hasWeightRoom()` niezmienione, tylko czytają nowy `maxWeight` getter.
+- [x] Jeżeli przeciążenie nie jest obecnie kompletne, rozszerzyć istniejący model tak, aby wpływało na stamina i prędkość ruchu — **już kompletne** dla ruchu (`playerEncumbrance.ts`/`PlayerController.setEncumbrance()`, potwierdzone w kodzie, implementation notes §14); nic do dopisania.
+- [x] Jeżeli którykolwiek z tych efektów już istnieje, tylko podłączyć go do wspólnego stanu przeciążenia — nowy `maxWeight` automatycznie zasila istniejący `computeEncumbrance()` bez żadnej zmiany w `gameLoop.ts`'s wiring.
 
 ## Poza zakresem
 
@@ -80,12 +80,12 @@ Istniejące mechanizmy, które należy rozszerzyć:
 
 ## Weryfikacja
 
-- [ ] `tsc` / build / testy.
-- [ ] Combat: draw → aim → release → projectile ma spójny kierunek.
-- [ ] Desktop mouse: aim podczas draw, zmiana kamery, reticle.
-- [ ] Touch: istniejący model `attackYaw` nadal działa.
-- [ ] Chybiona strzała kończy lot i można ją podnieść przez istniejącą interakcję.
-- [ ] Długa aktywność trwa jeden ciągły okres, `Esc` ją przerywa, a istotne warunki ją anulują.
-- [ ] Plecak zwiększa limit; przeciążenie poprawnie wpływa na istniejące stamina/movement.
+- [x] `tsc` / build / testy — `npx tsc --noEmit`, `npx vue-tsc --noEmit`, `pnpm lint:fix`, `pnpm run build`, `npx vitest run` (172 files / 1488 testów) wszystkie zielone.
+- [ ] Combat: draw → aim → release → projectile ma spójny kierunek. *(browser — użytkownik testuje ręcznie)*
+- [ ] Desktop mouse: aim podczas draw, zmiana kamery, reticle. *(browser)*
+- [ ] Touch: istniejący model `attackYaw` nadal działa. *(browser)*
+- [ ] Chybiona strzała kończy lot i można ją podnieść przez istniejącą interakcję. *(browser)*
+- [ ] Długa aktywność trwa jeden ciągły okres, `Esc` ją przerywa, a istotne warunki ją anulują. *(browser)*
+- [ ] Plecak zwiększa limit; przeciążenie poprawnie wpływa na istniejące stamina/movement. *(browser)*
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

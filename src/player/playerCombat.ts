@@ -3,6 +3,7 @@ import type { Fauna } from '../fauna/createFauna'
 import type { Interactable } from '../interaction/Interactable'
 import type { Settlement } from '../settlement/createSettlement'
 import { COMBAT_TARGET_CONE_DOT, COMBAT_TARGET_RANGE, type CombatAimMode } from '../app/interactables'
+import { yawToward } from '../combat/meleeAttack'
 import { type MeleeHitCandidate, rankCombatTargets } from './playerMelee'
 import type { Vector3 } from 'three'
 
@@ -154,6 +155,27 @@ export function collectRangedAnimalCandidates(
   }
   for (const animal of fauna.getAgents()) add(animal)
   return out
+}
+
+/** Committed ranged-aim yaw for the current frame (plan 186 §1). A
+ *  soft-locked target re-aims toward its *current* position every frame (it
+ *  may be moving); otherwise falls back to the live camera/mouse yaw so
+ *  desktop mouse actually steers a free-aim draw instead of only orbiting
+ *  the camera. `app/gameLoop.ts` calls this once per frame and feeds the
+ *  same result to both `PlayerController.faceAimYaw()` (visual facing) and
+ *  `resolveRangedDirection()` (the fired direction) — sharing one source
+ *  instead of two closes the visual/fired-direction divergence
+ *  `docs/plans/LOOSE-ENDS.md` flagged for melee's `attackYaw`. */
+export function resolveRangedAimYaw(
+  targetId: string | null,
+  candidates: readonly RangedAnimalCandidate[],
+  playerX: number,
+  playerZ: number,
+  fallbackYaw: number,
+): number {
+  const locked = targetId ? candidates.find((c) => c.id === targetId) : undefined
+  if (!locked) return fallbackYaw
+  return yawToward(playerX, playerZ, locked.x, locked.z) ?? fallbackYaw
 }
 
 /** Non-living interactables eligible for `Shift+Tab` (plan 150 §2). */

@@ -59,6 +59,46 @@ describe('Inventory instances (plan 155)', () => {
   })
 })
 
+describe('Inventory backpack capacity (plan 186)', () => {
+  it('maxWeight equals the base capacity without a backpack', () => {
+    const inv = new Inventory({}, 20)
+    expect(inv.maxWeight).toBe(20)
+  })
+
+  it('a carried backpack raises maxWeight by its catalog bonus', () => {
+    const inv = new Inventory({}, 20)
+    expect(inv.add('backpack', 1)).toBe(true)
+    expect(inv.maxWeight).toBe(35)
+  })
+
+  it('stacks the bonus across more than one carried backpack', () => {
+    const inv = new Inventory({}, 20)
+    inv.add('backpack', 2)
+    expect(inv.maxWeight).toBe(50)
+  })
+
+  it('must fit under the pre-bonus capacity to be picked up at all', () => {
+    const inv = new Inventory({}, 1)
+    expect(inv.canAdd('backpack', 1)).toBe(false)
+    expect(inv.add('backpack', 1)).toBe(false)
+  })
+
+  it('canAdd uses the post-backpack effective capacity for further items', () => {
+    const inv = new Inventory({}, 3)
+    inv.add('backpack', 1) // weight 2, leaves 1kg of the base 3kg before the bonus applies
+    expect(inv.maxWeight).toBe(18)
+    expect(inv.canAdd('stone', 10)).toBe(true)
+  })
+
+  it('removing the backpack drops the bonus again', () => {
+    const inv = new Inventory({}, 20)
+    inv.add('backpack', 1)
+    expect(inv.maxWeight).toBe(35)
+    inv.remove('backpack', 1)
+    expect(inv.maxWeight).toBe(20)
+  })
+})
+
 describe('Inventory weapon instances (plan 161)', () => {
   it('creates a new weapon instance at durability=1, sharpness=1', () => {
     const inv = new Inventory()

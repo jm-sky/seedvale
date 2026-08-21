@@ -6,6 +6,7 @@
  * owns the live array, world-side consequences (damage, quests, audio) and
  * cleanup.
  */
+import type { ItemKind } from '../items/items'
 
 export type Projectile = {
   id: string
@@ -25,6 +26,10 @@ export type Projectile = {
   /** Deterministic-roll key, e.g. the ammo `ItemKind` + shot index. */
   attackKey: string
   attempt: number
+  /** The ammo unit this shot consumed — a miss/expiry (plan 186) drops
+   *  exactly this kind back into the world via `DroppedItems`, so a
+   *  broadhead/war arrow stays recoverable as itself, not a plain arrow. */
+  ammoKind: ItemKind
 }
 
 /** World-unit radius a projectile's swept path must pass within to count as

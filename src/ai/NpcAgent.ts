@@ -1512,6 +1512,7 @@ export class NpcAgent {
           damage: tick.config.damage,
           criticalChance: tick.config.criticalChance ?? 0,
           criticalMultiplier: tick.config.criticalMultiplier ?? MELEE_CRITICAL_MULTIPLIER,
+          ammoKind,
           attackKey: `ranged:${ammoKind}`,
           attempt: this.combatAttackAttempt,
         }

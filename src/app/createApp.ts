@@ -1063,6 +1063,7 @@ export async function createApp(
     pickUpContainer: containers.pickUpContainer,
     workOnWell: placement.workOnWell,
     onSleepFinished: rest.onSleepFinished,
+    interruptLongActivityOnDamage: () => rest.interruptRestForDamage() || rest.abortBusy(),
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,
     syncPointLightBudget: () => { pointLightBudget.sync(camera) },

@@ -75,6 +75,7 @@ import {
   findLivingTargetById,
   livingTargetIdForAnimal,
   resolveLivingInteractable,
+  resolveRangedAimYaw,
 } from '../player/playerCombat'
 import {
   applyDownedRecovery,
@@ -310,6 +311,13 @@ export type GameLoopDeps = {
    *  (`createApp.ts`) applies the rest outcome for whatever camp it resolved
    *  when the rest started, and awards any Survival XP (plan 128 §5-§7). */
   onSleepFinished: () => void
+  /** A long activity (rest/sleep/wait skip, or a busy channel — dig/chop/
+   *  well work bout/etc.) is still active while the player takes damage
+   *  (combat hit or starvation/dehydration) — cancels it through the same
+   *  Esc route (`RestActions.abortRest`/`abortBusy`) and reports whether
+   *  anything was actually cancelled, so the caller can toast about it
+   *  (plan 186 §3 — "obrażenia" is one of the interrupting conditions). */
+  interruptLongActivityOnDamage: () => boolean
   onInventoryChanged: () => void
   /** Reports this frame's simulate/render split (ms) to the debug GUI's
    *  Performance folder (perf review M1). */
@@ -358,7 +366,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop,
     openContainer, pickUpContainer, workOnWell,
-    onSleepFinished, onInventoryChanged, setFrameTiming, syncPointLightBudget,
+    onSleepFinished, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
   renderer.shadowMap.autoUpdate = false
@@ -441,6 +449,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   function stopBowDrawSound(): void {
     bowDrawSound?.stop()
     bowDrawSound = null
+  }
+  /** Any player HP loss (fauna hit, starvation/dehydration) interrupts a long
+   *  activity in progress (plan 186 §3) — reuses the exact same Esc route
+   *  (`RestActions.abortRest`/`abortBusy`) rather than a second cancellation
+   *  path, so partial well-work-bout progress etc. is credited exactly as an
+   *  Esc cancel would credit it. */
+  function onPlayerDamaged(): void {
+    if (interruptLongActivityOnDamage()) {
+      toast.show('Coś przerwało twoją aktywność!', 'error')
+    }
   }
   /** Monotonic counter feeding every deterministic combat roll (critical hit,
    *  ranged aim deviation) this frame loop makes — never resets, so the same
@@ -609,6 +627,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.endRangedDraw()
         rangedTargetId = null
         stopBowDrawSound()
+        hud.setAiming(false)
       }
 
       switch (modal) {
@@ -778,6 +797,29 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // letting it play out over a shot that never happened.
       if (interactReleased && wasDrawing && !releaseTick.fireReady) stopBowDrawSound()
       playerRanged.update(dt) // ticks release/recovery timers forward — no fire edge of its own for a player draw
+
+      // One candidate gather per frame, shared by draw-time facing, the fire
+      // resolve and the projectile tick below (plan 186 §1/§2) — replaces
+      // three separate `collectRangedAnimalCandidates` calls that all read
+      // the same settlements/fauna state within the same frame.
+      const rangedActive = playerRanged.state() !== 'idle' || activeProjectiles.length > 0
+      const rangedCandidates = rangedActive
+        ? collectRangedAnimalCandidates(
+            bundle.settlementsManager.getLoaded(),
+            bundle.fauna,
+            player.mesh.position,
+            RANGED_CANDIDATE_RANGE,
+          )
+        : []
+      // Committed aim direction for this frame (plan 186 §1) — see
+      // `resolveRangedAimYaw`'s own doc. Read fresh at draw-time (for visual
+      // facing) and again at fire time below, from the same live inputs, so
+      // visual facing and the fired direction can never diverge
+      // (`docs/plans/LOOSE-ENDS.md`'s melee-yaw entry called this out for
+      // melee; closed here for ranged).
+      const currentRangedAimYaw = (): number => resolveRangedAimYaw(
+        rangedTargetId, rangedCandidates, player.mesh.position.x, player.mesh.position.z, mouseLook.state.yaw,
+      )
       if (player.isDowned()) {
         playerRanged.reset()
         player.endRangedDraw()
@@ -787,9 +829,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         // Holds the aim-draw pose loop every frame while actually drawing —
         // idempotent, mirrors the melee tick's per-frame animation sync.
         player.beginRangedDraw()
+        player.faceAimYaw(currentRangedAimYaw())
       } else if (playerRanged.state() === 'idle') {
         player.endRangedDraw()
       }
+      hud.setAiming(playerRanged.state() === 'draw')
       if (releaseTick.fireReady && releaseTick.config) {
         const config = releaseTick.config
         const ammoKind = config.ammoKinds.find((k) => inventory.has(k, 1)) ?? null
@@ -799,18 +843,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           stopBowDrawSound()
           playActionBowRelease(worldAudio.playAt, player.mesh.position)
           player.playRangedRelease(config.recovery)
-          const rangedCandidatesForFire = collectRangedAnimalCandidates(
-            bundle.settlementsManager.getLoaded(),
-            bundle.fauna,
-            player.mesh.position,
-            RANGED_CANDIDATE_RANGE,
-          )
-          const lockedTarget = rangedTargetId
-            ? rangedCandidatesForFire.find((c) => c.id === rangedTargetId)
-            : undefined
-          const aimYaw = lockedTarget
-            ? yawToward(player.mesh.position.x, player.mesh.position.z, lockedTarget.x, lockedTarget.z) ?? mouseLook.state.yaw
-            : mouseLook.state.yaw
+          const aimYaw = currentRangedAimYaw()
           inventory.remove(ammoKind, 1)
           hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
           toast.show(`Zostało ${inventory.count(ammoKind)} strzał`)
@@ -834,17 +867,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             criticalMultiplier: config.criticalMultiplier ?? MELEE_CRITICAL_MULTIPLIER,
             attackKey: `ranged:${ammoKind}`,
             attempt: attackAttemptCounter,
+            ammoKind,
           })
         }
         rangedTargetId = null
       }
       if (activeProjectiles.length > 0) {
-        const rangedCandidatesForTick = collectRangedAnimalCandidates(
-          bundle.settlementsManager.getLoaded(),
-          bundle.fauna,
-          player.mesh.position,
-          RANGED_CANDIDATE_RANGE,
-        )
         const nextProjectiles: Projectile[] = []
         for (const projectile of activeProjectiles) {
           const prevX = projectile.x
@@ -852,9 +880,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           const expired = advanceProjectile(projectile, dt)
           const hitId = sweptProjectileHit(
             prevX, prevZ, projectile.x, projectile.z,
-            rangedCandidatesForTick.map((c) => ({ id: c.id, x: c.x, z: c.z, alive: true })),
+            rangedCandidates.map((c) => ({ id: c.id, x: c.x, z: c.z, alive: true })),
           )
-          const hitCandidate = hitId ? rangedCandidatesForTick.find((c) => c.id === hitId) : undefined
+          const hitCandidate = hitId ? rangedCandidates.find((c) => c.id === hitId) : undefined
           if (hitCandidate && !hitCandidate.animal.isDead()) {
             const animal = hitCandidate.animal
             const critResult = resolveCriticalHit(
@@ -879,7 +907,15 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               : critResult.critical ? `Trafienie krytyczne: ${label}!` : `Trafiono: ${label}`)
             continue
           }
-          if (!expired) nextProjectiles.push(projectile)
+          if (!expired) {
+            nextProjectiles.push(projectile)
+          } else {
+            // Miss/expiry (plan 186 §2) — lands as an ordinary world pickup
+            // through the existing `DroppedItems`/interaction path, never a
+            // second arrow-recovery system. A hit always `continue`s above
+            // before reaching here, so a shot is never both a hit and a drop.
+            bundle.droppedItems.drop(projectile.ammoKind, projectile.x, projectile.z)
+          }
         }
         activeProjectiles = nextProjectiles
       }
@@ -1427,7 +1463,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // `dt` (tied to sprint) regardless of any skip.
       tickPlayerNeeds(player.needs, worldDt)
       if (!player.isDowned()) {
-        tickPlayerStarvationDamage(player, player.needs, worldDt, heldTool.held(), mouseLook.state.yaw)
+        tickPlayerStarvationDamage(player, player.needs, worldDt, heldTool.held(), mouseLook.state.yaw, onPlayerDamaged)
         tickHealthRegen(player.needs, player.health, worldDt)
       }
       if (player.tickDowned(worldDt)) {
@@ -1561,6 +1597,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               onCombatHit: () => {
                 playerCombat.enter()
                 playerCombat.noteActivity()
+                onPlayerDamaged()
               },
             })
             if (dmg.enteredDowned) {

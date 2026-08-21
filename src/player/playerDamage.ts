@@ -128,6 +128,7 @@ export function tickPlayerStarvationDamage(
   dt: number,
   heldTool: ToolKind | null,
   playerYaw: number,
+  onCombatHit?: () => void,
 ): void {
   let perSec = 0
   if (needs.starvationDuration >= HUNGER_SEVERE_DURATION_SEC) perSec += STARVATION_HP_PER_SEC
@@ -139,5 +140,6 @@ export function tickPlayerStarvationDamage(
     heldTool,
     defenseSkillValue: player.skills.defense.value,
     playerYaw,
+    onCombatHit,
   })
 }

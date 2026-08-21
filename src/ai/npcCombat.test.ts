@@ -120,6 +120,7 @@ function fakeProjectile(overrides: Partial<Projectile> = {}): Projectile {
     criticalMultiplier: 1.6,
     attackKey: 'ranged:arrow',
     attempt: 1,
+    ammoKind: 'arrow',
     ...overrides,
   }
 }

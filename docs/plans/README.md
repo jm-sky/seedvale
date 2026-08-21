@@ -101,7 +101,6 @@ Natural vegetation
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🟡 | XL | ~~097~~ |
 | `2026-08-20--173--terrain-aware-procedural-placement.md` | Dopasowanie props do wysokości terenu (kamienne kręgi, cmentarze) | 🟡 | M | - |
 | `2026-08-19--171--weapon-browser-observatory.md` | Weapon Browser w Observatory/Admin: pokazuje wszystkie zdefiniowane bronie (nie tylko obecne w świecie) z istniejącego `ITEM_CATALOG`, bez równoległego rejestru statystyk broni; dev/debug tool, nie blokuje przyszłego katalogu dla gracza | 🟡 | M | - |
-| `2026-08-21--186--combat-and-player-interactions.md` | Domknąć kilka powiązanych problemów gracza bez tworzenia równoległych systemów: spójne celowanie z łuku, odzyskiwanie chybionych strzał, długie aktywności oraz pojemność/przeciążenie ekwipunku. | 🔴 | L | - |
 | `2026-08-21--187--building-resources-and-mountains.md` | Ujednolicić podstawowy model drewna i materiałów budowlanych oraz rozszerzyć istniejącą geografię gór o większą skalę i charakterystyczne skaliste szczyty. | 🔴 | XL | 181 ~~184~~ ~~111~~ |
 | `2026-08-21--188--fauna-and-dead-animal-lifecycle.md` | Rozszerzyć istniejący system fauny o wspólny lifecycle martwego zwierzęcia oraz dodać niedźwiedzia jako kolejny gatunek korzystający z istniejących mechanizmów fauny, habitatów, AI, combat i audio. | 🔴 | M | ~~138~~ ~~177~~ ~~179~~ |
 | `2026-08-21--190--plans-automation.md` | Zautomatyzować utrzymanie pomocniczych informacji w `docs/plans/README.md` oraz `PLANNED_PLANS_WITHOUT_NOTES.md`. | 🟡 | S | - |
@@ -151,6 +150,7 @@ Implementation complete; needs play/browser check. Do not treat as normal backlo
 | `2026-08-20--177--npc-combat.md` | | 🔴 | M | ~~150~~ ~~162~~ |
 | `2026-08-21--189--river-channel-carving.md` | [implementation notes](./2026-08-21--189--river-channel-carving-implementation-notes.md) | 🔴 | M | ~~181~~ |
 | `2026-08-21--185--npc-role-based-carried-weapons.md` | [implementation notes](./2026-08-21--185--npc-role-based-carried-weapons-implementation-notes.md) | 🔴 | S | ~~177~~ ~~179~~ ~~184~~ |
+| `2026-08-21--186--combat-and-player-interactions.md` | [implementation notes](./2026-08-21--186--combat-and-player-interactions-implementation-notes.md) | 🔴 | L | - |
 
 ---
 

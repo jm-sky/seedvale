@@ -68,6 +68,7 @@ export type ItemKind =
   | 'broadhead_arrow'
   | 'war_arrow'
   | 'chest'
+  | 'backpack'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
 
@@ -714,6 +715,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'XL',
     color: 0x6b4a2f,
     description: 'Solidna drewniana skrzynia. Postaw ją w świecie, by przechowywać przedmioty.'
+  },
+  backpack: {
+    kind: 'backpack',
+    label: 'plecak',
+    categories: ['utility'],
+    weight: 2,
+    size: 'LG',
+    color: 0x5a4632,
+    description: 'Skórzany plecak. Noszony w ekwipunku zwiększa udźwig.'
   },
 }
 

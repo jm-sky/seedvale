@@ -22,6 +22,7 @@ function makeProjectile(overrides: Partial<Projectile> = {}): Projectile {
     criticalMultiplier: 1.5,
     attackKey: 'ranged:arrow',
     attempt: 0,
+    ammoKind: 'arrow',
     ...overrides,
   }
 }

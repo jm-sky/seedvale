@@ -55,4 +55,17 @@ const needBars = computed(() => [
       {{ ui.hud.hint }}
     </div>
   </div>
+
+  <!-- Ranged-aim reticle (plan 186 §1) — visible only while drawing a bow.
+       Presentation only: never touches accuracy/deviation, which stay
+       entirely in `combat/rangedAttack.ts`. -->
+  <div
+    v-if="ui.hud.aiming"
+    class="pointer-events-none fixed inset-0 z-[5] flex items-center justify-center"
+  >
+    <div class="relative h-9 w-9">
+      <div class="absolute inset-0 rounded-full border border-ink/70" />
+      <div class="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink/90" />
+    </div>
+  </div>
 </template>

@@ -35,6 +35,10 @@ export type RestActions = {
   abortRest: () => boolean
   /** Esc during a `busy` channel — cancels without running `onComplete`. */
   abortBusy: () => boolean
+  /** Forced (non-Esc) interruption of an active rest/sleep from taking
+   *  damage (plan 186 §3) — see the implementation's own doc for how this
+   *  differs from `abortRest`. */
+  interruptRestForDamage: () => boolean
 }
 
 export type RestActionDeps = {
@@ -155,18 +159,23 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     toast.show('+1 Namiot', 'pickup')
   }
 
-  const abortRest = (): boolean => {
-    const resting = restCamp.isActive() || timeSkip.fadeStrength() === 1
-    if (!resting) return false
-    if (timeSkip.fadeStrength() === 1 && !canCancelRestProgress(timeSkip.progress())) return false
-    if (restCamp.isActive() && !timeSkip.isActive()) return false
-    // Aborted rest earns nothing and resolves no quality (plan 128 edge cases).
+  /** Shared cancel body for `abortRest`/`interruptRestForDamage` — aborted
+   *  rest earns nothing and resolves no quality (plan 128 edge cases). */
+  const cancelRest = (): void => {
     pendingRest = null
     timeSkip.cancel()
     timeSkipOverlay.hide()
     busyOverlay.hide()
     restCamp.cancel()
     player.standUp()
+  }
+
+  const abortRest = (): boolean => {
+    const resting = restCamp.isActive() || timeSkip.fadeStrength() === 1
+    if (!resting) return false
+    if (timeSkip.fadeStrength() === 1 && !canCancelRestProgress(timeSkip.progress())) return false
+    if (restCamp.isActive() && !timeSkip.isActive()) return false
+    cancelRest()
     return true
   }
 
@@ -174,6 +183,20 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     if (!busy.isActive()) return false
     busy.cancel()
     busyOverlay.hide()
+    return true
+  }
+
+  /** Forced interruption from an invalidating condition (plan 186 §3 —
+   *  damage/starvation while resting/sleeping), not a player Esc press:
+   *  unlike `abortRest`, this never gates on `canCancelRestProgress` — being
+   *  attacked should wake the player up at any point in the skip, not only
+   *  in its last 15%. Same `resting` definition as `abortRest` (a plain
+   *  "Czekaj" wait, `fadeStrength === 0.5`, is deliberately not "resting"
+   *  here either — unchanged from `abortRest`'s existing scope). */
+  const interruptRestForDamage = (): boolean => {
+    const resting = restCamp.isActive() || timeSkip.fadeStrength() === 1
+    if (!resting) return false
+    cancelRest()
     return true
   }
 
@@ -186,5 +209,6 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     onSleepFinished,
     abortRest,
     abortBusy,
+    interruptRestForDamage,
   }
 }

@@ -1,5 +1,5 @@
 import { canMergeFoodBatches, isFoodPerishable } from './foodFreshness'
-import { CAPABILITY_KINDS, type ItemCapability } from './itemCatalog'
+import { CAPABILITY_KINDS, ITEM_CATALOG, type ItemCapability } from './itemCatalog'
 import {
   clamp01,
   cloneItemInstance,
@@ -55,7 +55,7 @@ export class Inventory {
   /** Only populated for kinds with `ItemCatalogEntry.food.freshness` — see
    *  `isFoodPerishable()`. Every entry's batches always sum to `counts.get(kind)`. */
   private readonly foodBatches = new Map<ItemKind, FoodBatch[]>()
-  readonly maxWeight: number
+  private readonly baseMaxWeight: number
   /** Gabarite capacity (plan 164), independent of `maxWeight` — see
    *  `ItemSize`/`itemSizeUnits`. `Infinity` (the default for every caller
    *  that doesn't pass one — NPC temporary carrying, pre-164 tests) means
@@ -69,7 +69,7 @@ export class Inventory {
     initialFoodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>,
     maxSize = Infinity,
   ) {
-    this.maxWeight = maxWeight
+    this.baseMaxWeight = maxWeight
     this.maxSize = maxSize
     if (initial) {
       for (const [kind, count] of Object.entries(initial) as [ItemKind, number][]) {
@@ -91,6 +91,20 @@ export class Inventory {
         if (clamped.length > 0) this.foodBatches.set(kind, clamped)
       }
     }
+  }
+
+  /** Effective carry-weight limit (plan 186): the constructor's base plus
+   *  `carryCapacityBonus` summed over every currently-held unit that
+   *  declares one (backpacks) — derived, never persisted, same as the old
+   *  plain `maxWeight` field it replaces. Computed on every access rather
+   *  than cached so `add()`/`remove()` never have to remember to refresh it. */
+  get maxWeight(): number {
+    let bonus = 0
+    for (const [kind, n] of this.counts) {
+      const perUnit = ITEM_CATALOG[kind].carryCapacityBonus
+      if (perUnit) bonus += perUnit * n
+    }
+    return this.baseMaxWeight + bonus
   }
 
   private addFoodBatch(kind: ItemKind, n: number, acquiredAtDays: number): void {

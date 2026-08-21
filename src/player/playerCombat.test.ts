@@ -7,6 +7,8 @@ import {
   createPlayerCombat,
   filterWorldCycleTargets,
   livingTargetIdForAnimal,
+  type RangedAnimalCandidate,
+  resolveRangedAimYaw,
 } from './playerCombat'
 import { type MeleeHitCandidate, rankCombatTargets } from './playerMelee'
 import { createPlayerMelee } from './playerMelee'
@@ -29,6 +31,30 @@ describe('createPlayerCombat', () => {
     combat.noteActivity()
     combat.update(4)
     expect(combat.isActive()).toBe(true)
+  })
+})
+
+describe('resolveRangedAimYaw (plan 186 §1)', () => {
+  const target: RangedAnimalCandidate = { id: 'animal:deer1', x: 0, z: -5, animal: {} as never }
+
+  it('falls back to the live camera/mouse yaw when nothing is soft-locked', () => {
+    expect(resolveRangedAimYaw(null, [target], 0, 0, 1.23)).toBe(1.23)
+  })
+
+  it('aims toward the locked target instead of the fallback yaw', () => {
+    const yaw = resolveRangedAimYaw('animal:deer1', [target], 0, 0, 1.23)
+    expect(yaw).not.toBe(1.23)
+    expect(yaw).toBeCloseTo(0) // straight ahead in -Z, same convention as yawToward
+  })
+
+  it('tracks a moving locked target frame to frame', () => {
+    const moved: RangedAnimalCandidate = { id: 'animal:deer1', x: 5, z: 0, animal: {} as never }
+    const yaw = resolveRangedAimYaw('animal:deer1', [moved], 0, 0, 1.23)
+    expect(yaw).toBeCloseTo(-Math.PI / 2)
+  })
+
+  it('falls back to the live yaw when the locked id is no longer among the candidates', () => {
+    expect(resolveRangedAimYaw('animal:gone', [target], 0, 0, 1.23)).toBe(1.23)
   })
 })
 

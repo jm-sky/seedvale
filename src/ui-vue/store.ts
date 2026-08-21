@@ -227,6 +227,8 @@ type HudState = {
    *  `hp` is `HealthState`, not a `PlayerNeeds` pool — same blob so the HUD
    *  has one per-frame push. */
   playerNeeds: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }
+  /** Center-screen ranged-aim reticle visibility (plan 186 §1). */
+  aiming: boolean
 }
 type AudioSettingsState = { volumes: AudioVolumes }
 type MinimapState = { collapsed: boolean }
@@ -345,6 +347,7 @@ export const ui = reactive({
     held: '',
     hint: isTouchDevice() ? HUD_HINT_TOUCH : HUD_HINT_DESKTOP,
     playerNeeds: { hp: 1, stamina: 1, vigor: 1, hunger: 1, thirst: 1 },
+    aiming: false,
   } as HudState,
   audio: { volumes: { ...DEFAULT_AUDIO_VOLUMES } } as AudioSettingsState,
   minimap: { collapsed: false } as MinimapState,
@@ -868,6 +871,10 @@ export function setHudPlayerNeeds(needs: { hp: number, stamina: number, vigor: n
     p.thirst === needs.thirst
   ) return
   ui.hud.playerNeeds = needs
+}
+export function setHudAiming(aiming: boolean): void {
+  if (ui.hud.aiming === aiming) return
+  ui.hud.aiming = aiming
 }
 
 export function toggleMinimap(): void { ui.minimap.collapsed = !ui.minimap.collapsed }
