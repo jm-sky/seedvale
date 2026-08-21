@@ -82,6 +82,7 @@ Natural vegetation
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
+| `2026-08-21--189--river-channel-carving.md` | Naturalne koryto całej sieci rzek i strumieni: lokalne terrain carving, ciągły spadek dna, profil koryta i skala zależna od flow/accumulation; bez osobnego systemu hydrologii | 🔴 | M | ~~181~~ |
 | `2026-08-21--185--npc-role-based-carried-weapons.md` | Broń dla NPC do obrony przed wilkiem | 🔴 | S | ~~177~~ ~~179~~ ~~184~~ |
 | `2026-08-16--126--seed-planting.md` | Sadzenie nasion drzew (rozszerza istniejący `TreeLifecycle`) i cropów (nowy prosty `CropLifecycle`) przez gracza, integracja z inventory/garden gather/persistence; wstępny | 🟡 | L | ~~106~~ ~~122~~ |
 | `2026-08-20--174--player-garden-and-npc-need-sources.md` | Grządka budowana przez gracza + generyczny `NeedSource` model: NPC samodzielnie wykrywa i wybiera najbliższe dostępne źródło `hunger`/`thirst` przez istniejący needs/decision flow, bez `HelperAI`/`GardenAI`/global registry/per-frame scan | 🟡 | L | ~~159~~ ~~172~~ ~~126~~ ~~127~~ |
@@ -127,14 +128,14 @@ Natural vegetation
 Implementation complete; needs play/browser check. Do not treat as normal backlog — a plan here is not "ready to build", it is "already built, waiting on confirmation" (or, for `111`, a known bug from a playtest that already happened). Status matches each plan's own `Status:` header, not just this table — when in doubt, open the plan.
 
 | File | Notes | Pri | Effort | Depends |
-|------|---------|-----|--------|---------|
+|------|-------|-----|--------|---------|
 | `2026-08-20--179--animal-attack-and-npc-defense.md` | [implementation notes](./2026-08-20--179--animal-attack-and-npc-defense-implementation-notes.md) | 🔴 | M | ~~177~~ |
 | `2026-08-21--184--item-capability-abstraction.md` | [implementation notes](./2026-08-21--184--item-capability-abstraction-implementation-notes.md) | 🟡 | M | - |
 | `2026-08-14--111--house-construction.md` | **known bug from 2026-08-18 playtest** — [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md) | 🔴 | XL | ~~109~~ |
 | `2026-08-16--129--coins-and-land-sales.md` | | 🔴 | L | ~~093~~ |
 | `2026-08-16--132--landmark-quests.md` | | 🟡 | M | ~~049~~ ~~093~~ ~~110~~ |
 | `2026-08-19--170--npc-simulation-inspector-and-trace.md` | | 🔴 | L | - |
-| `2026-08-18--159--natural-food-fishing-preservation-and-bait.md` | | 🟡 | L | ~~155~~ ~~156~~ ~~106~~ |
+| `2026-08-18--159--natural-food-fishing-preservation-and-bait.md` | | 🟡 | M | ~~155~~ ~~156~~ ~~106~~ |
 | `2026-08-18--161--weapon-maintenance-and-sharpening.md` | | 🟡 | M | ~~155~~ ~~160~~ |
 | `2026-08-18--162--bows-arrows-ranged-combat-and-critical-hits.md` | | 🟡 | L | ~~150~~ ~~155~~ |
 | `2026-08-19--165--vigor-hunger-thirst-and-rest.md` | | 🟡 | M | - |
