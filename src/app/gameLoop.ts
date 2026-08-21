@@ -2,7 +2,7 @@ import { Fog, Raycaster, Timer, Vector3 } from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { createAmbientAudio } from '../audio/createAmbientAudio'
-import type { createWorldAudio } from '../audio/createWorldAudio'
+import type { ActiveSound, createWorldAudio } from '../audio/createWorldAudio'
 import type { createHouseDoorTracker } from '../audio/doorSounds'
 import type { createFireAudio } from '../audio/fireSounds'
 import type { WeatherAudio } from '../audio/weatherSounds'
@@ -435,6 +435,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
    *  a live position again at fire time (the target may have moved) —
    *  `null` fires straight along the live aim yaw instead. */
   let rangedTargetId: string | null = null
+  /** Handle for the currently-playing bow-draw clip, so a cancelled/
+   *  interrupted draw can cut it short instead of letting it play out. */
+  let bowDrawSound: ActiveSound | null = null
+  function stopBowDrawSound(): void {
+    bowDrawSound?.stop()
+    bowDrawSound = null
+  }
   /** Monotonic counter feeding every deterministic combat roll (critical hit,
    *  ranged aim deviation) this frame loop makes — never resets, so the same
    *  attempt index is never reused for two different shots/swings. */
@@ -601,6 +608,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         playerRanged.reset()
         player.endRangedDraw()
         rangedTargetId = null
+        stopBowDrawSound()
       }
 
       switch (modal) {
@@ -763,12 +771,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // across all three input sources, see `Keyboard.ts`/`MouseLook.ts`/
       // `createTouchControls.ts`).
       const interactReleased = keyboard.consumeInteractRelease()
+      const wasDrawing = playerRanged.state() === 'draw'
       const releaseTick = interactReleased ? playerRanged.releaseDraw() : { fireReady: false, config: null }
+      // An early release (held less than `drawTime`) cancels the shot back to
+      // `idle` with no `fireReady` edge — cut the draw clip short instead of
+      // letting it play out over a shot that never happened.
+      if (interactReleased && wasDrawing && !releaseTick.fireReady) stopBowDrawSound()
       playerRanged.update(dt) // ticks release/recovery timers forward — no fire edge of its own for a player draw
       if (player.isDowned()) {
         playerRanged.reset()
         player.endRangedDraw()
         rangedTargetId = null
+        stopBowDrawSound()
       } else if (playerRanged.state() === 'draw') {
         // Holds the aim-draw pose loop every frame while actually drawing —
         // idempotent, mirrors the melee tick's per-frame animation sync.
@@ -782,6 +796,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (!ammoKind) {
           toast.show('Brak strzał w ekwipunku.', 'error')
         } else {
+          stopBowDrawSound()
           playActionBowRelease(worldAudio.playAt, player.mesh.position)
           player.playRangedRelease(config.recovery)
           const rangedCandidatesForFire = collectRangedAnimalCandidates(
@@ -1016,7 +1031,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           || (playerCombat.isActive() && (playerCombat.softLockId() != null || playerCombat.worldCycleActive()))
         ),
       )
-      npcDialog.setPrompt(target ? `${target.promptLabel}${cycleHint}` : null, promptHighlighted)
+      const rangedDrawProgress = playerRanged.state() === 'draw' ? playerRanged.phaseProgress() : null
+      npcDialog.setPrompt(target ? `${target.promptLabel}${cycleHint}` : null, promptHighlighted, rangedDrawProgress)
       vueUi.setCycleTargetAvailable(
         playerCombat.isActive()
           ? livingTargets.length > 1
@@ -1251,7 +1267,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 playerCombat.setSoftLock(livingTargetIdForAnimal(target.animal.animalId))
                 rangedTargetId = livingTargetIdForAnimal(target.animal.animalId)
                 player.faceToward(target.position.x, target.position.z)
-                playActionBowDraw(worldAudio.playAt, player.mesh.position)
+                bowDrawSound = playActionBowDraw(worldAudio.playAtCancelable, player.mesh.position)
                 player.beginRangedDraw()
               }
             }
@@ -1544,6 +1560,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               playerRanged.reset()
               player.endRangedDraw()
               rangedTargetId = null
+              stopBowDrawSound()
             }
           },
           {

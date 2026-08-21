@@ -24,6 +24,19 @@ export type PlayAt = (
   bus?: AudioBusId,
 ) => void
 
+/** A one-shot clip's stop handle — no-op once the clip has already ended. */
+export type ActiveSound = { stop: () => void }
+
+/** Same as `PlayAt`, but returns a handle to cut the clip short — for a
+ *  one-shot whose real-world action can be interrupted before it finishes
+ *  (e.g. a bow-draw clip when the shot is cancelled). */
+export type PlayAtCancelable = (
+  url: string,
+  position: WorldSoundPosition,
+  volume?: number,
+  bus?: AudioBusId,
+) => ActiveSound
+
 export type WorldAudio = {
   listener: AudioListener
   /** Loads a clip, loops it starting at zero gain, and returns a handle to fade
@@ -34,6 +47,8 @@ export type WorldAudio = {
   playOnce: (url: string, volume?: number, bus?: AudioBusId) => void
   /** Fire-and-forget clip with distance gain from listener → `position`. */
   playAt: PlayAt
+  /** Same as `playAt`, but returns a handle to stop the clip early. */
+  playAtCancelable: PlayAtCancelable
   /** Player mix (master / ambient / sfx). Live — buses ramp even while paused. */
   setVolumes: (volumes: AudioVolumes) => void
   getVolumes: () => AudioVolumes
@@ -164,11 +179,15 @@ export function createWorldAudio(camera: Camera): WorldAudio {
     }
   }
 
-  function playOnce(url: string, volume = 1, bus: AudioBusId = 'sfx'): void {
+  const NO_OP_SOUND: ActiveSound = { stop: () => {} }
+
+  function playOnceCancelable(url: string, volume = 1, bus: AudioBusId = 'sfx'): ActiveSound {
     const sound = new Audio(listener)
     attachToBus(sound, bus)
+    let stopped = false
     loadBuffer(url)
       .then((buffer) => {
+        if (stopped) return
         sound.setBuffer(buffer)
         sound.setLoop(false)
         sound.setVolume(clamp01(volume))
@@ -178,6 +197,18 @@ export function createWorldAudio(camera: Camera): WorldAudio {
       .catch((error: unknown) => {
         console.warn(`[audio] failed to load clip "${url}"`, error)
       })
+    return {
+      stop() {
+        if (stopped) return
+        stopped = true
+        if (sound.isPlaying) sound.stop()
+        sound.disconnect()
+      },
+    }
+  }
+
+  function playOnce(url: string, volume = 1, bus: AudioBusId = 'sfx'): void {
+    playOnceCancelable(url, volume, bus)
   }
 
   function playAt(
@@ -186,6 +217,15 @@ export function createWorldAudio(camera: Camera): WorldAudio {
     volume = 1,
     bus: AudioBusId = 'sfx',
   ): void {
+    playAtCancelable(url, position, volume, bus)
+  }
+
+  function playAtCancelable(
+    url: string,
+    position: WorldSoundPosition,
+    volume = 1,
+    bus: AudioBusId = 'sfx',
+  ): ActiveSound {
     listener.getWorldPosition(listenerPos)
     const y = position.y ?? listenerPos.y
     const distance = Math.hypot(
@@ -194,8 +234,8 @@ export function createWorldAudio(camera: Camera): WorldAudio {
       position.z - listenerPos.z,
     )
     const gain = clamp01(volume) * distanceGain(distance)
-    if (gain < DISTANCE_GAIN_EPS) return
-    playOnce(url, gain, bus)
+    if (gain < DISTANCE_GAIN_EPS) return NO_OP_SOUND
+    return playOnceCancelable(url, gain, bus)
   }
 
   function update(dt: number): void {
@@ -221,5 +261,5 @@ export function createWorldAudio(camera: Camera): WorldAudio {
     camera.remove(listener)
   }
 
-  return { listener, createLoop, playOnce, playAt, setVolumes, getVolumes, update, dispose }
+  return { listener, createLoop, playOnce, playAt, playAtCancelable, setVolumes, getVolumes, update, dispose }
 }

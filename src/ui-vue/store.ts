@@ -75,7 +75,7 @@ type PauseMenuState = {
   saveStatus: string
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
-type FlavorDialogState = { open: boolean; prompt: string | null; promptHighlighted: boolean; name: string; line: string }
+type FlavorDialogState = { open: boolean; prompt: string | null; promptHighlighted: boolean; progress: number | null; name: string; line: string }
 /** Whether each fire action's resource/state guard currently passes (review
  *  007 C4) — kept live by `createApp.ts`'s `syncQuickActionAvailability`, not
  *  recomputed here (Quick Actions / Pause→Akcje are presentation only). */
@@ -290,7 +290,7 @@ export const ui = reactive({
     saveStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
-  flavorDialog: { open: false, prompt: null, promptHighlighted: false, name: '', line: '' } as FlavorDialogState,
+  flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '' } as FlavorDialogState,
   quickActions: {
     open: false, hasDiggingTool: false, nearTown: false, hasTent: false,
     traps: { simple: false, good: false },
@@ -419,11 +419,12 @@ export function refreshQuestLog(entries: readonly QuestListEntry[], exp: number,
 export function closeQuestLog(): void { ui.questLog.open = false }
 export function isQuestLogOpen(): boolean { return ui.questLog.open }
 
-export function openFlavorDialog(name: string, line: string): void { ui.flavorDialog.prompt = null; ui.flavorDialog.name = name; ui.flavorDialog.line = line; ui.flavorDialog.open = true; emitUiOpen() }
-export function setFlavorPrompt(text: string | null, highlighted = false): void {
+export function openFlavorDialog(name: string, line: string): void { ui.flavorDialog.prompt = null; ui.flavorDialog.progress = null; ui.flavorDialog.name = name; ui.flavorDialog.line = line; ui.flavorDialog.open = true; emitUiOpen() }
+export function setFlavorPrompt(text: string | null, highlighted = false, progress: number | null = null): void {
   if (!ui.flavorDialog.open) {
     ui.flavorDialog.prompt = text
     ui.flavorDialog.promptHighlighted = highlighted
+    ui.flavorDialog.progress = progress
   }
 }
 export function closeFlavorDialog(): void { ui.flavorDialog.open = false }

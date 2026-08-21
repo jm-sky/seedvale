@@ -1,6 +1,6 @@
 /** Action one-shots (shovel dig, axe chop, melee, well, etc.). Sources/licenses: public/sounds/README.md. */
 
-import type { PlayAt, WorldSoundPosition } from './createWorldAudio'
+import type { ActiveSound, PlayAt, PlayAtCancelable, WorldSoundPosition } from './createWorldAudio'
 
 export const ACTION_DIG_SOUND_URLS = [
   '/sounds/action-dig-01.ogg',
@@ -59,9 +59,11 @@ export function playActionWell(playAt: PlayAt, position: WorldSoundPosition): vo
   playAt(ACTION_WELL_SOUND_URL, position, ACTION_WELL_SFX_VOLUME)
 }
 
-/** Bowstring draw — play when a ranged draw actually starts (plan 162 S22). */
-export function playActionBowDraw(playAt: PlayAt, position: WorldSoundPosition): void {
-  playAt(ACTION_BOW_DRAW_SOUND_URL, position, ACTION_BOW_DRAW_SFX_VOLUME)
+/** Bowstring draw — play when a ranged draw actually starts (plan 162 S22).
+ *  Returns a stop handle so the caller can cut the clip short if the shot is
+ *  cancelled/interrupted before release. */
+export function playActionBowDraw(playAtCancelable: PlayAtCancelable, position: WorldSoundPosition): ActiveSound {
+  return playAtCancelable(ACTION_BOW_DRAW_SOUND_URL, position, ACTION_BOW_DRAW_SFX_VOLUME)
 }
 
 /** Bowstring release / shot twang — play on the frame a shot actually fires (plan 162 S22). */

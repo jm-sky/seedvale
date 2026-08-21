@@ -38,5 +38,14 @@ useTouchScroll(panel)
     :class="ui.flavorDialog.promptHighlighted ? 'ring-1 ring-[rgba(255,196,92,0.9)] shadow-[0_0_10px_2px_rgba(255,196,92,0.5)]' : ''"
   >
     {{ ui.flavorDialog.prompt.startsWith('[') ? ui.flavorDialog.prompt : `[E] ${ui.flavorDialog.prompt}` }}
+    <div
+      v-if="ui.flavorDialog.progress !== null"
+      class="mt-1.5 h-1 w-32 overflow-hidden rounded-full bg-white/20"
+    >
+      <div
+        class="h-full bg-[rgba(255,196,92,0.9)] transition-[width] duration-75 ease-linear"
+        :style="{ width: `${Math.round(ui.flavorDialog.progress * 100)}%` }"
+      />
+    </div>
   </div>
 </template>
