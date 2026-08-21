@@ -39,7 +39,7 @@ export type PlayerWellRecord = {
  *  values, not derived from other existing gameplay. */
 export const WELL_STAGE_WORK_HOURS: Record<WellStage, number> = {
   pit: 2,
-  well: 2,
+  well: 1,
   roof: 1,
 }
 
@@ -122,7 +122,7 @@ export const WELL_PLACE_DURATION_SEC = 3
  *  capped like every other timed player action (`busyChannelDurations.test.ts`
  *  enforces `≤ 8s` across the board — a stage's full work requirement is
  *  reached over several repeated bouts, never one long frozen channel). */
-export const WELL_WORK_SESSION_SEC = 4
+export const WELL_WORK_SESSION_SEC = 8
 
 /** `[E]` prompt to start (fresh) or resume/transition into a stage's work. */
 export const WELL_STAGE_START_PROMPT: Record<WellStage, string> = {
