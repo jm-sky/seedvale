@@ -1,7 +1,7 @@
 # Plan: Natural Mountains & Rivers
 
 **Created:** 2026-08-21
-**Status:** `in progress` 🔄 — Etap 1–6 implemented (see "Implementation summary"); Etap 7 (meanders, waterfalls, full shader/rendering polish, worker offload) not started
+**Status:** `in progress` 🔄 — Etap 1–6 implemented (see "Implementation summary"); Etap 7 rendering polish (meandering, width/flow-based shading) implemented — waterfalls, full lake/ocean shader parity, and worker offload remain open (see "Implementation summary — Etap 7")
 **Priority:** high · **Effort:** M
 **Depends on:** unknown
 
@@ -349,5 +349,66 @@ Synchronous main-thread tile computation was a deliberate choice over adding a n
 **Not implemented (Etap 7, deferred)**: meanders, waterfalls, full shader/rendering parity with lake/ocean (reflection binding, depth-based foam), LOD, worker offload, an interactive in-browser hydrology debug overlay. Tracked in [LOOSE-ENDS.md](./LOOSE-ENDS.md).
 
 **Verified**: `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, `pnpm run test` (1449 tests, up from 1434) all green — no existing test needed updating (rivers don't feed back into `sampleFloorAt`, unlike the Etap 1 mountain tuning). No browser/visual verification in this session — the user verifies actual river appearance/continuity/behavior manually.
+
+## Implementation summary — Etap 7 (2026-08-21, follow-up session)
+
+Rendering polish only — the drainage network, tile ownership, and cross-chunk
+continuity from Etap 4–6 are untouched. All changes are in `src/terrain/riverNetwork.ts`,
+`src/world/riverGeometry.ts`, and `src/world/riverWaterMaterial.ts`, following the
+required flow: `D8 drainage → classified network → smoothing → deterministic
+meandering → width from flow → geometry → water rendering`.
+
+**Deterministic meandering.** `meanderChainPoints()` runs once per tile, on the
+canonical pre-clip chain, immediately after Chaikin smoothing (now 2 passes
+instead of 1 — a single pass still left a visibly angular path at the 8m D8
+cell spacing; "zbyt kanciasty przebieg"). Each interior point is offset
+perpendicular to its local tangent by a two-octave `simplex-noise` sample
+(`createNoise2D(createSeededRandom(sampleParams.seed ^ MEANDER_NOISE_SEED_XOR))`
+— same seeding pattern as `roadNetwork.ts`'s existing `meanderRoute()`), scaled
+by a bounded amplitude derived from `widthFromAccumulation()` (bigger rivers
+meander more, small streams only subtly) and multiplied by a taper factor that
+goes to exactly 0 within `RIVER_MEANDER_TAPER_DISTANCE` (32 world units) of the
+tile's own core-rect edge. This taper is what keeps every meandered point
+strictly inside the tile core rectangle — for any point, `offset <=
+maxAmplitude * edgeDist / taperDistance`, and since `maxAmplitude (6) <
+taperDistance (32)`, that is always `< edgeDist` to the *nearest* edge, so a
+point can never cross any edge — which is also why
+`riverNetwork.test.ts`'s existing "never places a chain point outside the tile
+core rectangle" invariant needed no change. No `Math.random()`; purely a
+function of world position and seed, so identical for whichever chunk queries
+the tile.
+
+**Width/flow curve.** `widthFromAccumulation()` is now built on an exported
+`flowFactor()` (0..1, `Math.pow(t, 1.6)` — eased toward the low end so a
+barely-classified cell stays visually subtle and only accumulation well past
+the `river` threshold reads as a big channel). `MIN_RIVER_WIDTH` dropped
+`1 → 0.4`, `MAX_RIVER_WIDTH` `14 → 11` — addresses "zbyt stała i duża
+szerokość" and "zbyt duża wizualna dominacja małych cieków".
+
+**Shading.** `buildRiverRibbonGeometry()` now writes a per-vertex `aFlow`
+attribute (`flowFactor()` at that point) alongside `position`/`uv`.
+`riverWaterMaterial.ts`'s fragment shader reads it (`vFlow`) to: fade the
+ribbon's lateral alpha out well before its geometric edge for low-flow
+vertices (`bankSoftness = mix(0.55, 0.14, vFlow)`) — a soft, wispy trickle
+blending into the bank instead of a hard-edged "canal on top of the terrain";
+scale base alpha, foam-band intensity, and the flow-streak highlight down for
+small streams; and shift the base color mix slightly toward `uLakeShallow` at
+low flow. `RIVER_SURFACE_OFFSET` (terrain-vs-mesh headroom) is deliberately
+untouched — its existing rationale (rough/steep-terrain sampling discrepancy)
+doesn't shrink for a small stream.
+
+**Not changed:** hydrology (`hydrology.ts`), tile ownership/partitioning,
+`sampleFloorAt()` (no terrain deformation, per plan), the D8-derived
+`elevation`/`accumulation` values on `RiverPoint` (meander only moves `x`/`z`),
+worker offload.
+
+**Not implemented (deferred, still open per LOOSE-ENDS.md):** waterfalls, full
+lake/ocean shader parity (reflection binding, depth-based foam), LOD, worker
+offload, interactive hydrology debug overlay.
+
+**Verified:** `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`,
+`pnpm run test` (1463 tests) all green — no existing river/hydrology test
+needed changing. No browser/visual verification in this session — the user
+verifies actual river appearance across seeds/terrain types manually.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

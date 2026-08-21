@@ -1,6 +1,6 @@
 import { BufferAttribute, BufferGeometry } from 'three'
 import type { RiverChain, RiverPoint, WorldRect } from '../terrain/riverNetwork'
-import { widthFromAccumulation } from '../terrain/riverNetwork'
+import { flowFactor, widthFromAccumulation } from '../terrain/riverNetwork'
 
 /** Water surface sits slightly above the sampled river-bed elevation — same
  *  idea as `createWater.ts`'s `waterLevel + 0.07`, just relative to the
@@ -121,6 +121,7 @@ export function buildRiverRibbonGeometry(
 
   const positions: number[] = []
   const uvs: number[] = []
+  const flows: number[] = []
   const indices: number[] = []
 
   for (const run of usableRuns) {
@@ -132,6 +133,11 @@ export function buildRiverRibbonGeometry(
       const px = -tz
       const pz = tx
       const halfWidth = widthFromAccumulation(p.accumulation) / 2
+      // Normalized flow strength (0 = barely a stream, 1 = a big river) — read
+      // by the fragment shader to keep small streams visually subtle and
+      // large rivers confident (plan 181 Etap 7). Same curve `widthFromAccumulation`
+      // itself is built on, so a point's width and its shader "bigness" agree.
+      const flow = flowFactor(p.accumulation)
 
       const x = p.x - chunkOriginX
       const z = p.z - chunkOriginZ
@@ -139,6 +145,7 @@ export function buildRiverRibbonGeometry(
 
       positions.push(x - px * halfWidth, y, z - pz * halfWidth)
       positions.push(x + px * halfWidth, y, z + pz * halfWidth)
+      flows.push(flow, flow)
 
       if (i > 0) {
         const prev = run[i - 1]!
@@ -157,6 +164,7 @@ export function buildRiverRibbonGeometry(
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
   geometry.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2))
+  geometry.setAttribute('aFlow', new BufferAttribute(new Float32Array(flows), 1))
   geometry.setIndex(indices)
   return geometry
 }

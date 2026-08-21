@@ -1,4 +1,6 @@
+import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
 import type { RawSampleParams } from './chunkHeightmap'
+import { createSeededRandom } from '../world/parseSeed'
 import {
   classifyStreams,
   computeHydrologyRegion,
@@ -91,8 +93,12 @@ export function overlappingRiverTiles(rect: WorldRect): RiverTileCoord[] {
 export type RiverPoint = { x: number; z: number; elevation: number; accumulation: number }
 export type RiverChain = { points: RiverPoint[] }
 
-const MIN_RIVER_WIDTH = 1
-const MAX_RIVER_WIDTH = 14
+// A barely-classified trickle should read as a thin thread, not a 1-unit-wide
+// canal — small MIN, and `flowFactor`'s ease-in keeps most near-threshold
+// cells close to it. MAX stays well short of the old 14 so even a major river
+// doesn't dominate the frame (plan 181 Etap 7: "zbyt stała i duża szerokość").
+const MIN_RIVER_WIDTH = 0.4
+const MAX_RIVER_WIDTH = 11
 
 /** Drops short threshold-noise blips (see `buildChains`) — a rendering
  *  cutoff, not a hydrology-correctness threshold. */
@@ -102,9 +108,18 @@ function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v
 }
 
-/** Bounded, smoothly-growing channel width from flow accumulation — never a
- *  hardcoded width independent of flow, never unbounded either. */
-export function widthFromAccumulation(
+function clamp(v: number, min: number, max: number): number {
+  return v < min ? min : v > max ? max : v
+}
+
+/** Normalized 0..1 flow strength from accumulation — the single source of
+ *  truth `widthFromAccumulation` and the rendering flow attribute (see
+ *  `riverGeometry.ts`) both build on, so width and visual "bigness" always
+ *  agree. Eased toward the low end (`pow(t, 1.6)`) rather than linear/log
+ *  alone: a cell that only just crosses the `stream` threshold stays visually
+ *  subtle, and only accumulation well past `river` reads as a big, confident
+ *  channel — addresses "zbyt duża wizualna dominacja małych cieków". */
+export function flowFactor(
   accumulation: number,
   thresholds: StreamThresholds = DEFAULT_RIVER_THRESHOLDS,
 ): number {
@@ -113,10 +128,94 @@ export function widthFromAccumulation(
   const logMin = Math.log(thresholds.stream + 1)
   const logMax = Math.log(thresholds.majorRiver * 4 + 1)
   const t = clamp01((logAcc - logMin) / (logMax - logMin))
+  return Math.pow(t, 1.6)
+}
+
+/** Bounded, smoothly-growing channel width from flow accumulation — never a
+ *  hardcoded width independent of flow, never unbounded either. */
+export function widthFromAccumulation(
+  accumulation: number,
+  thresholds: StreamThresholds = DEFAULT_RIVER_THRESHOLDS,
+): number {
+  if (accumulation < thresholds.stream) return 0
+  const t = flowFactor(accumulation, thresholds)
   return MIN_RIVER_WIDTH + t * (MAX_RIVER_WIDTH - MIN_RIVER_WIDTH)
 }
 
-function buildChains(region: HydrologyRegion, classes: Uint8Array, coreMin: number, coreMax: number): RiverChain[] {
+// Deterministic meandering (plan 181 Etap 7) — applied once per tile, after
+// smoothing, to the canonical pre-clip chain (same reasoning as
+// `smoothChainPoints`: two chunks must always clip identical, already-shaped
+// data or a seam reappears at the chunk boundary). World-space noise, no
+// `Math.random()`. Amplitude tapers to exactly 0 within
+// `RIVER_MEANDER_TAPER_DISTANCE` of the tile's own core-rect edge — this is
+// what keeps every meandered point strictly inside the core rect (proof: for
+// any point, `offset <= maxAmplitude * edgeDist / taperDistance`, and since
+// `maxAmplitude < taperDistance`, that is always `< edgeDist` to the *nearest*
+// edge, so the point can never cross any edge) — and, as a side effect, ties
+// off each chain's ends smoothly instead of leaving a lateral jump right at
+// the tile seam.
+const RIVER_MEANDER_SCALE = 0.012
+const RIVER_MEANDER_DETAIL_SCALE = RIVER_MEANDER_SCALE * 2.6
+const RIVER_MEANDER_WIDTH_FACTOR = 1.1
+const RIVER_MEANDER_MIN_AMPLITUDE = 0.35
+const RIVER_MEANDER_MAX_AMPLITUDE = 6
+const RIVER_MEANDER_TAPER_DISTANCE = 32
+const MEANDER_NOISE_SEED_XOR = 0x5bd1e995
+
+function meanderTaper(p: RiverPoint, coreRect: WorldRect): number {
+  const edgeDist = Math.min(
+    p.x - coreRect.minX,
+    coreRect.maxX - p.x,
+    p.z - coreRect.minZ,
+    coreRect.maxZ - p.z,
+  )
+  return clamp01(edgeDist / RIVER_MEANDER_TAPER_DISTANCE)
+}
+
+/** Offsets each interior chain point perpendicular to its local tangent by a
+ *  bounded, flow-scaled, seed-deterministic noise sample — never overrides
+ *  the underlying D8 direction, only bends the already-correct drainage path
+ *  (Chaikin-smoothed) into something less staircase-like. Two octaves (a
+ *  slow "bend" wavelength plus a faster wiggle) keep it from reading as one
+ *  perfect sine wave. */
+function meanderChainPoints(points: RiverPoint[], coreRect: WorldRect, noise: NoiseFunction2D): RiverPoint[] {
+  if (points.length < 3) return points
+  return points.map((p, i) => {
+    if (i === 0 || i === points.length - 1) return p
+    const prev = points[i - 1]!
+    const next = points[i + 1]!
+    const tx = next.x - prev.x
+    const tz = next.z - prev.z
+    const len = Math.hypot(tx, tz) || 1
+    const nx = -tz / len
+    const nz = tx / len
+
+    const width = widthFromAccumulation(p.accumulation)
+    if (width <= 0) return p
+
+    const n1 = noise(p.x * RIVER_MEANDER_SCALE, p.z * RIVER_MEANDER_SCALE)
+    const n2 = noise(p.x * RIVER_MEANDER_DETAIL_SCALE + 91.7, p.z * RIVER_MEANDER_DETAIL_SCALE - 44.3)
+    const n = clamp(n1 * 0.7 + n2 * 0.3, -1, 1)
+
+    const baseAmplitude = clamp(
+      width * RIVER_MEANDER_WIDTH_FACTOR,
+      RIVER_MEANDER_MIN_AMPLITUDE,
+      RIVER_MEANDER_MAX_AMPLITUDE,
+    )
+    const amplitude = baseAmplitude * meanderTaper(p, coreRect)
+
+    return { ...p, x: p.x + nx * n * amplitude, z: p.z + nz * n * amplitude }
+  })
+}
+
+function buildChains(
+  region: HydrologyRegion,
+  classes: Uint8Array,
+  coreMin: number,
+  coreMax: number,
+  coreRect: WorldRect,
+  meanderNoise: NoiseFunction2D,
+): RiverChain[] {
   const { size } = region
   const hasClassifiedUpstream = new Uint8Array(size * size)
 
@@ -175,7 +274,10 @@ function buildChains(region: HydrologyRegion, classes: Uint8Array, coreMin: numb
       // (real terrain wrinkles briefly crossing the accumulation threshold).
       // Filtering short chains is a rendering-worthiness cutoff, not a
       // hydrology correctness change — it doesn't affect direction/accumulation.
-      if (points.length >= MIN_CHAIN_POINTS) chains.push({ points: smoothChainPoints(points) })
+      if (points.length >= MIN_CHAIN_POINTS) {
+        const smoothed = smoothChainPoints(points)
+        chains.push({ points: meanderChainPoints(smoothed, coreRect, meanderNoise) })
+      }
     }
   }
   return chains
@@ -190,13 +292,19 @@ function lerpPoint(a: RiverPoint, b: RiverPoint, t: number): RiverPoint {
   }
 }
 
+const CHAIKIN_PASSES = 2
+
 /**
- * One pass of Chaikin corner-cutting — smooths the D8 grid's 8-directional
- * "staircase" look without moving the chain's endpoints (topologically
- * important: the first/last point is where the chain enters/exits the tile
- * core or hits a sink, and must stay put) and without any lateral noise
- * offset. This is deliberately *not* meandering (plan 181 Etap 7) — it only
- * reshapes the existing drainage path, never overrides its direction.
+ * Chaikin corner-cutting — smooths the D8 grid's 8-directional "staircase"
+ * look without moving the chain's endpoints (topologically important: the
+ * first/last point is where the chain enters/exits the tile core or hits a
+ * sink, and must stay put) and without any lateral noise offset. This is
+ * deliberately *not* meandering (plan 181 Etap 7, see `meanderChainPoints`
+ * above) — it only reshapes the existing drainage path, never overrides its
+ * direction. Two passes rather than one: a single pass still leaves a visibly
+ * angular path at the 8m D8 cell spacing (plan 181 Etap 7: "zbyt kanciasty
+ * przebieg"); a second pass on the already-once-smoothed points removes most
+ * of the remaining kinks at a still-cheap 4x point-count cost.
  *
  * Applied here (once per tile, on the canonical pre-clip chain), not in the
  * chunk-facing geometry step — smoothing after per-chunk clipping would let
@@ -204,16 +312,20 @@ function lerpPoint(a: RiverPoint, b: RiverPoint, t: number): RiverPoint {
  * and reintroduce a seam; smoothing the canonical chain once keeps every
  * consumer clipping identical, already-smoothed data.
  */
-function smoothChainPoints(points: RiverPoint[]): RiverPoint[] {
-  if (points.length < 3) return points
-  const out: RiverPoint[] = [points[0]!]
-  for (let i = 0; i < points.length - 1; i++) {
-    const a = points[i]!
-    const b = points[i + 1]!
-    out.push(lerpPoint(a, b, 0.25), lerpPoint(a, b, 0.75))
+function smoothChainPoints(points: RiverPoint[], passes: number = CHAIKIN_PASSES): RiverPoint[] {
+  let current = points
+  for (let pass = 0; pass < passes; pass++) {
+    if (current.length < 3) break
+    const out: RiverPoint[] = [current[0]!]
+    for (let i = 0; i < current.length - 1; i++) {
+      const a = current[i]!
+      const b = current[i + 1]!
+      out.push(lerpPoint(a, b, 0.25), lerpPoint(a, b, 0.75))
+    }
+    out.push(current[current.length - 1]!)
+    current = out
   }
-  out.push(points[points.length - 1]!)
-  return out
+  return current
 }
 
 /**
@@ -233,5 +345,7 @@ export function computeRiverTile(
     sampleParams,
   )
   const classes = classifyStreams(region, thresholds)
-  return buildChains(region, classes, HALO_CELLS, HALO_CELLS + CORE_CELLS)
+  const coreRect = riverTileCoreRect(tile)
+  const meanderNoise = createNoise2D(createSeededRandom(sampleParams.seed ^ MEANDER_NOISE_SEED_XOR))
+  return buildChains(region, classes, HALO_CELLS, HALO_CELLS + CORE_CELLS, coreRect, meanderNoise)
 }
