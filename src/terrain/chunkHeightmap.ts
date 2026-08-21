@@ -285,6 +285,12 @@ type NoiseHandles = {
 const DETAIL_WARP_FREQ = 0.012
 const DETAIL_WARP_AMP = 6
 
+/** Damps local-detail amplitude in proportion to `mountainRidge` (plan 181): the
+ *  macro ridge/massif shape should read as continuous terrain, not a smooth ridge
+ *  with high-frequency noise spikes riding on top of it. Does not touch
+ *  `mountainGain`/ridge amplitude itself — only the fine detail layered on it. */
+const MOUNTAIN_DETAIL_DAMPING = 0.45
+
 /** Piecewise-linear continentalness → height bias, in the same normalized units as
  *  the detail FBM's `n` (roughly [0,1] before this bias). Built once at module scope. */
 const continentBiasSpline = new LinearSpline<number>((t, a, b) => a + (b - a) * t)
@@ -385,6 +391,10 @@ function sampleRawTexel(
       region.mountainThreshold + region.mountainThresholdWidth,
     ) * landWeight // no ridges below sea/coast
   const mountainRidge = ridge01 * mountainGate
+  // Suppress fine local detail on top of a strong ridge — this is what keeps the
+  // massif reading as continuous terrain instead of a field of sharp isolated
+  // spikes/pits stacked on the macro shape (see MOUNTAIN_DETAIL_DAMPING doc comment).
+  const ridgeDetailWeight = detailWeight * (1 - mountainRidge * MOUNTAIN_DETAIL_DAMPING)
 
   // Hierarchy: macro bias + mountain ridge, then medium hills/valleys, then
   // soft local surface detail. Hills stay generation-internal (no tile field).
@@ -397,7 +407,7 @@ function sampleRawTexel(
   const n = fbm01(noise.height, wxw / noiseScale, wzw / noiseScale, fbm)
 
   const nCombined =
-    n * detailWeight * detailAmplitude +
+    n * ridgeDetailWeight * detailAmplitude +
     regionBias +
     hillsTerm +
     mountainRidge * region.mountainGain

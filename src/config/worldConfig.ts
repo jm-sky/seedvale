@@ -189,9 +189,11 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         mountainScale: 1800,
         mountainFbm: { octaves: 2, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.2 },
         mountainThreshold: 0.62,
-        mountainThresholdWidth: 0.14,
-        worleyCellSize: 260,
-        ridgeSharpness: 2.0,
+        // Plan 181: widened blend band + broader/softer ridge spacing for large
+        // continuous massifs with natural foothills instead of a hard mountain edge.
+        mountainThresholdWidth: 0.2,
+        worleyCellSize: 400,
+        ridgeSharpness: 1.4,
         mountainGain: 0.88,
         oceanThreshold: 0.32,
         coastThreshold: 0.45,

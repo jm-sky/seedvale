@@ -73,6 +73,7 @@ Natural vegetation
 |------|---------|-----|--------|---------|
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja (nr 059 z 12.08); Etap A–G (relation levels, availability, effects, `animalId`, questy "groźny wilk" + "wilcza jama" + "zagubiona owca" + "drewno na naprawę" end-to-end, livestock `ownerHouseId`) zaimplementowane; lifecycle/identity gaps (event śmierci, `failed`/`invalidated`, dangerous wolf, `landmarkId`) domknięte przez plan `110` (done, kept as [recent context](#recent-context)); Etap H (drzewa/kopanie) i bandyci otwarte | 🔴 | XL | ~~015~~ ~~018~~ |
 | `2026-08-17--149--shader-program-first-use-hitch.md` | Phase 0 closed; Phase 1 B production PointLight budget **16** landed in ~~157~~. Phase 1 A (`compileAsync` loading-window prewarm) **implemented + real-GPU verified** ([review 025](../reviews/2026-08-19--025--plan-149-phase-1a-compileasync-prewarm.md)). Phase C leftover: `Green` / `MI_WindowGlass` / `Wood`. Plan not `done`. | 🔴 | M/L | — |
+| `2026-08-21--181--natural-mountains-and-rivers.md` | Etap 1 (mountain tuning: `worleyCellSize`/`ridgeSharpness`/`mountainThresholdWidth` + new detail-damping near ridges) + Etap 2–3 (pure D8 drainage prototype, `src/terrain/hydrology.ts`, numeric multi-seed evaluation via Vitest — no rendering) implemented, techniczna weryfikacja zielona (tsc/lint/build/test, 1434 testów) — see plan's "Implementation summary". Etap 4–7 (river network/cross-chunk continuity/channel geometry/water-shader integration) explicitly deferred, gated on prototype evaluation per implementation notes; bez testu w przeglądarce (mountain shape) i bez renderowanej reprezentacji hydrologii do sprawdzenia | 🔴 | M | - |
 
 ---
 
@@ -81,7 +82,6 @@ Natural vegetation
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
 | `2026-08-20--179--animal-attack-and-npc-defense.md` | Zwierzęta atakują NPC, NPC się broni. | 🔴 | M | ~~177~~ |
-| `2026-08-21--181--natural-mountains-and-rivers.md` | Wielkie pasma górskie i rzeki | 🔴 | M | - |
 | `2026-08-16--126--seed-planting.md` | Sadzenie nasion drzew (rozszerza istniejący `TreeLifecycle`) i cropów (nowy prosty `CropLifecycle`) przez gracza, integracja z inventory/garden gather/persistence; wstępny | 🟡 | L | ~~106~~ ~~122~~ |
 | `2026-08-20--174--player-garden-and-npc-need-sources.md` | Grządka budowana przez gracza (istniejący player-built placement, crop lifecycle z `172`/`126`) + generyczny `NeedSource` model, dzięki któremu NPC samodzielnie wykrywa i wybiera najbliższe dostępne źródło `hunger`/`thirst` (natural food z `159`, dojrzały crop grządki, studnia z `127`) przez istniejący needs/pressures/decision/action flow, bez `HelperAI`/`GardenAI`/global registry/per-frame scan; wstępny, do implementacji | 🟡 | L | ~~159~~ ~~172~~ ~~126~~ ~~127~~ |
 | `2026-08-20--176--garden-and-field-maintenance.md` | Wspólny mechanizm utrzymania grządek/pól: stan zadbania pogarsza się z czasem, wpływa na produktywność, długotrwałe zaniedbanie usuwa grządkę/pole; wspólne dla gracza i NPC, bez `GardenManager`/`FarmManager` | 🟡 | M | ~~174~~ ~~126~~ |

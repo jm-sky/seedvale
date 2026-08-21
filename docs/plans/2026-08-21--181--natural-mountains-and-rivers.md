@@ -1,7 +1,7 @@
 # Plan: Natural Mountains & Rivers
 
 **Created:** 2026-08-21
-**Status:** `planned` 📋
+**Status:** `in progress` 🔄 — Etap 1–3 implemented (see "Implementation summary"); Etap 4–7 (river network, cross-chunk continuity, channel geometry, water-shader integration) not started, gated on evaluating the drainage prototype
 **Priority:** high · **Effort:** M
 **Depends on:** unknown
 
@@ -310,5 +310,19 @@ Sprawdzić:
 * koszt generowania,
 * koszt renderowania,
 * browser verification wizualnego efektu.
+
+## Implementation summary (2026-08-21)
+
+Implemented in this session, per the implementation notes' explicit gating ("Do not start E–I until B/C produce a believable drainage network"):
+
+**Etap 1 — natural mountains** (`src/terrain/chunkHeightmap.ts`, `src/config/worldConfig.ts`): tuned the existing combination rather than adding a parallel generator. `RegionParams` defaults changed — `worleyCellSize: 260 → 400` (wider ridge spacing → larger continuous massifs), `ridgeSharpness: 2.0 → 1.4` (broader ridge crest, less knife-edge), `mountainThresholdWidth: 0.14 → 0.2` (softer hills→mountain gate, more natural foothills). `mountainThreshold`, `mountainGain`, `heightScale`, `hillsAmplitude`, `hillsScale` left unchanged to avoid shifting overall mountain coverage/amplitude (lower regression risk for settlement placement/road routing/vegetation/biome thresholds that key off those fields). A new local `MOUNTAIN_DETAIL_DAMPING` constant (not a `RegionParams` field — avoids `applyStoredTerrain`/test-fixture plumbing for an internal shaping knob, same precedent as `DETAIL_WARP_FREQ`/`DETAIL_WARP_AMP`) dampens local-detail amplitude in proportion to `mountainRidge`, addressing "ostre piki/doły" by suppressing fine noise riding on top of the ridge — not by flattening the ridge/mountain contribution itself (explicitly avoided per the notes).
+
+**Etap 2–3 — drainage prototype + multi-seed evaluation** (`src/terrain/hydrology.ts`, `src/terrain/hydrology.test.ts`): a pure D8 module (no ChunkManager/Three.js/worker) consuming only `sampleFloorAt`/`sampleHeightAt`. Fixed 8-neighbour order, distance-aware steepest-descent with deterministic tie-break, iterative (no recursion) descending-elevation accumulation pass over typed arrays (`Float32Array`/`Int8Array`/`Int32Array`/`Uint8Array`, no per-cell objects). Boundary cells whose flow exits the analysis window are flagged `BOUNDARY_EXIT` (not silently treated as an outlet); one extra `sampleHeightAt` just outside the window distinguishes `OCEAN_OUTLET` from an incomplete/unresolved path. `findSourceCandidates()` derives sources from drainage leaves + elevation/slope thresholds with deterministic local-maxima thinning (never random). `classifyStreams()`/`traceDownstreamPath()` round out the diagnostic surface for a future river-network builder.
+
+Evaluation (Etap 3) was done numerically rather than visually — a rendered river network doesn't exist yet to look at. `hydrology.test.ts` deterministically scans each seed for a mountain-heavy and a coast-heavy region (via `sampleMountainRidgeAt`/`sampleContinentalnessAt`, no hardcoded magic coordinates) and asserts: determinism, strict downhill descent per non-terminal cell, mass conservation (accumulation over terminal cells == cell count), and a bounded sink ratio. Measured across seeds `1/42/999` × mountain/coast regions (64×64 cells, 6 world units/cell): sink ratio ~2.6%–4.0%, source candidates 17–40 per region — low enough that naive-D8 closed depressions don't dominate the terrain, without a depression-resolution pass.
+
+**Not implemented (Etap 4–7, deferred)**: river network as compact sequential data, cross-chunk continuity/query, channel/meander geometry, `createWater.ts`/`waterMaterial.ts` integration, an interactive in-browser hydrology debug overlay. Tracked in [LOOSE-ENDS.md](./LOOSE-ENDS.md).
+
+**Verified**: `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, `pnpm run test` (1434 tests) all green. One golden snapshot (`grassPlacement.test.ts`, chunk `(-18,6)` — a low-count foothill-boundary chunk) shifted and was deliberately updated: a documented, expected interaction ("grass thins into mountain foothills") reacting to the mountain-gate/ridge tuning, not a regression. No browser/visual verification in this session — the user verifies mountain shape/foothills/passes manually; hydrology has no rendered representation yet to check.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
