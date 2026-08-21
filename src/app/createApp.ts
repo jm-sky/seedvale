@@ -2,6 +2,7 @@ import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { SaveData } from '../persistence/saveData'
 import type { TrapCaptureEvent } from '../world/createPlacedTraps'
+import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import { playActionChop, playActionDig, playActionMine, playActionWell } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
@@ -160,6 +161,15 @@ import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
 import { randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
+import {
+  isWellStageComplete,
+  WELL_FOOTPRINT_RADIUS,
+  WELL_PLACE_DURATION_SEC,
+  WELL_PLACE_REACH,
+  WELL_PLACEMENT_MESSAGE,
+  WELL_SEPARATION,
+  wellAdvanceCost,
+} from '../world/playerWell'
 import { createPointLightBudget } from '../world/pointLightBudget'
 import { createTimeSkip } from '../world/timeSkip'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
@@ -380,6 +390,14 @@ export async function createApp(
   // doesn't exist until after `bundle` is built.
   let onTrapBaitReturnedTarget: ((kind: ItemKind) => void) | null = null
   const onTrapBaitReturned = (kind: ItemKind): void => { onTrapBaitReturnedTarget?.(kind) }
+  // Plan 127 §10 — `bundle.playerWells` doesn't exist until just below, same
+  // "target assigned later" indirection as `onAnimalDeath`/`getPlayerSocial`
+  // above. Reads `bundle.playerWells` lazily (not captured), so it keeps
+  // working across `rebuildWorldBundle()` for free (see `worldBundle.ts`'s
+  // header comment).
+  let nearbyPlayerWellTarget: NearbyPlayerWellLookup | null = null
+  const getNearbyPlayerWell: NearbyPlayerWellLookup = (x, z, maxDistance) =>
+    nearbyPlayerWellTarget?.(x, z, maxDistance) ?? null
   const bundle = await createWorldBundle(
     scene,
     config,
@@ -392,6 +410,7 @@ export async function createApp(
     (initialSave?.placedTraps ?? []).map((t) => ({ ...t, baitKind: t.baitKind ?? null })),
     initialSave?.placedContainers ?? [],
     initialSave?.carriedContainer ?? null,
+    initialSave?.playerWells ?? [],
     treeLifecycle,
     getWorldDays,
     dayNight,
@@ -405,7 +424,9 @@ export async function createApp(
     onTrapBaitReturned,
     new Map((initialSave?.spawnPoints ?? []).map((s) => [s.id, s])),
     pointLightBudget,
+    getNearbyPlayerWell,
   )
+  nearbyPlayerWellTarget = (x, z, maxDistance) => bundle.playerWells.nearestCompleted(x, z, maxDistance)
   // Plan 159 §10 — fishing bait per spot (flat map, survives stream-out/in
   // for free) and a runtime-only per-spot cast counter feeding the
   // deterministic catch roll (same "not persisted, wild fauna isn't either"
@@ -785,6 +806,7 @@ export async function createApp(
         onTrapCapture,
         onTrapBaitReturned,
         pointLightBudget,
+        getNearbyPlayerWell,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
 
@@ -827,7 +849,7 @@ export async function createApp(
   }
 
   const buildSaveData = (): SaveData => ({
-    version: 22,
+    version: 23,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -890,6 +912,7 @@ export async function createApp(
     harvestedCropIds: [...removedCropIds],
     placedContainers: bundle.placedContainers.nodes().map((c) => ({ ...c })),
     carriedContainer: bundle.placedContainers.carriedNode(),
+    playerWells: bundle.playerWells.nodes().map((w) => ({ ...w })),
   })
 
   const saveNow = (): Promise<void> => writeSave(buildSaveData())
@@ -1301,6 +1324,69 @@ export async function createApp(
   inventoryScreenHandlers.onPlaceContainer = () => {
     inventoryScreen.close()
     placeContainerAtAim()
+  }
+
+  /** Places a new player-built well ahead of the player (plan 127 §5/§11) —
+   *  same busy-channel shape as pitching a tent/setting a trap: the shovel
+   *  is required but never consumed (plan §2), only the `pit` stage's
+   *  world-time clock starts here ("[E] Wykop dół" — see
+   *  `world/playerWell.ts`'s header doc). Materials are charged later, when
+   *  each subsequent stage actually starts (`advanceWellStage` below). */
+  const placeWellAtAim = (): void => {
+    if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const yaw = mouseLook.state.yaw
+    const x = player.mesh.position.x - Math.sin(yaw) * WELL_PLACE_REACH
+    const z = player.mesh.position.z - Math.cos(yaw) * WELL_PLACE_REACH
+    const reason = evaluateGroundPlacement({
+      x,
+      z,
+      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+      waterLevel: bundle.chunkManager.waterLevel,
+      blockers: tentBlockers(x, z),
+      peers: bundle.playerWells.nodes(),
+      footprintRadius: WELL_FOOTPRINT_RADIUS,
+      separation: WELL_SEPARATION,
+    })
+    if (reason !== 'ok') {
+      toast.show(WELL_PLACEMENT_MESSAGE[reason === 'occupied' ? 'well' : reason], 'error')
+      return
+    }
+    busy.start(WELL_PLACE_DURATION_SEC, 'Kopanie dołu pod studnię…', () => {
+      bundle.playerWells.place(x, z, yaw, dayNight.elapsedDays)
+      toast.show('Rozpoczęto kopanie studni.')
+    })
+  }
+
+  /** Advances a player-built well into its next construction stage (plan 127
+   *  §7/§9) — `[E]` on an unfinished well (`app/interactables.ts`'s
+   *  `playerWell` candidate). Validates the current stage's world-time clock
+   *  has elapsed and that stone/branch materials for the *next* stage are
+   *  available, consuming them atomically only once both checks pass. */
+  const advanceWellStage = (id: string): void => {
+    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
+    const well = bundle.playerWells.list().find((entry) => entry.id === id)
+    if (!well) return
+    if (!isWellStageComplete(well, dayNight.elapsedDays)) {
+      toast.show('Budowa jeszcze trwa. Wróć później.', 'error')
+      return
+    }
+    const cost = wellAdvanceCost(well)
+    if (!cost) return
+    const missing: string[] = []
+    if (cost.stone > 0 && !inventory.has('stone', cost.stone)) missing.push(`${cost.stone}× ${ITEM_DEFS.stone.label}`)
+    if (cost.branch > 0 && !inventory.has('branch', cost.branch)) missing.push(`${cost.branch}× ${ITEM_DEFS.branch.label}`)
+    if (missing.length > 0) {
+      toast.show(`Potrzebujesz: ${missing.join(', ')}.`, 'error')
+      return
+    }
+    if (cost.stone > 0) inventory.remove('stone', cost.stone)
+    if (cost.branch > 0) inventory.remove('branch', cost.branch)
+    if (cost.stone > 0 || cost.branch > 0) {
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      onInventoryChanged()
+    }
+    bundle.playerWells.advanceStage(id, dayNight.elapsedDays)
+    toast.show('Budowa postępuje.')
   }
 
   /** Sets the carried container back down in front of the player (plan 164
@@ -2216,6 +2302,7 @@ export async function createApp(
     onPlaceTent: placeTentAtAim,
     onPlaceTrap: placeTrapAtAim,
     onPutDownContainer: putDownContainerAtAim,
+    onBuildWell: placeWellAtAim,
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()
@@ -2416,6 +2503,7 @@ export async function createApp(
     harvestCrop: harvestCropAction,
     openContainer,
     pickUpContainer,
+    advanceWellStage,
     onSleepFinished,
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,

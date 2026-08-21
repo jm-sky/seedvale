@@ -107,6 +107,10 @@ type QuickActionsState = {
    *  `onPlaceTent`/inventory's `onPlaceContainer`. */
   hasCarriedContainer: boolean
   onPutDownContainer: (() => void) | null
+  /** Places a new player-built well ahead of the player (plan 127) — shown
+   *  alongside the other shovel actions, gated by `hasShovel` above (the
+   *  shovel is required to start the `pit` stage but never consumed). */
+  onBuildWell: (() => void) | null
   onOpen: (() => void) | null
   onClose: (() => void) | null
 }
@@ -290,7 +294,7 @@ export const ui = reactive({
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, lightBranch: false, lightWoodenTorch: false },
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
-    hasCarriedContainer: false, onPutDownContainer: null,
+    hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false } as TimeSkipState,
   merchant: { open: false, npc: null, counts: {}, groups: [], onBuyCoins: null, onBuyBarter: null, onSellCoins: null, onSellInstances: null } as MerchantState,

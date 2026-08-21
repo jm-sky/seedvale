@@ -1,7 +1,7 @@
 # Plan: Player-Built Well
 
 **Created:** 2026-08-16
-**Status:** `planned` 📋
+**Status:** `done` — implemented + technically verified (`tsc`/lint/build/test all green, save schema bumped to v23). Browser/manual verification not performed — see implementation notes below.
 **Priority:** 🟡 medium · **Effort:** M
 **Depends on:** ~~122~~
 **domain:** `items-player`
@@ -323,5 +323,32 @@ Nie implementować:
 - wieloetapowych konstrukcji innych niż studnia,
 - edytora konstrukcji,
 - zaawansowanego systemu placement grid.
+
+## Implementation summary (2026-08-21)
+
+**Implemented:**
+
+- Pure domain logic: `world/playerWell.ts` — `WellStage` (`pit`/`well`/`roof`), `PlayerWellRecord`, `WELL_STAGE_DURATION_DAYS` (1 / 1 / 0.5 days, matches §4), `WELL_STAGE_COST` (stone for `well`, `branch` for `well`+`roof`, matching §2's "kamienie for the well body, drewno for both body and roof"; `stone`/`branch` are the existing `ItemKind`s — no new "construction material" items), `isWellStageComplete`/`isWellCompleted` (lazy, evaluated whenever looked at — no per-frame timer), `wellAdvanceCost`, ground-placement reasons/messages (reuses `items/tentPlacement.ts`'s shared `evaluateGroundPlacement`), and `NearbyPlayerWellLookup` (the NPC discovery contract, §10).
+- Visuals: `world/playerWellProp.ts` — one procedural prop per stage; `pit` and `well` are new small procedural meshes (`docs/assets/MODELS.md` M54, no GLB planned), `roof` (completed) reuses the existing settlement `createWell()` fallback directly, so a finished player well looks like any other well.
+- World lifecycle: `world/createPlayerWells.ts` (`createPlayerWells`) — same "player chose the spot, whole record round-trips through the save" shape as `PlacedTents`/`PlacedTraps`; registers/replaces a collider through the existing `ColliderRegistry` (`chunkManager.registerColliders`/`clearColliders`, same mechanism settlement wells use) keyed by the well's own id, so a stage change or chunk/settlement rebuild never duplicates or leaks a collider (§12/§16). `nearestCompleted()` is the bounded, deterministic query `NpcAgent` uses (§10).
+- Placement: Quick Actions → "Zbuduj studnię" (shovel group, requires a shovel — never consumed) → `placeWellAtAim()` (`createApp.ts`) validates ground placement (slope/water/collision/spacing, same shared validator as tents/traps/containers) and starts a short busy channel; completing it creates the record in `pit` stage and starts that stage's world-time clock — this *is* the plan's "[E] Wykop dół" (the codebase's placement convention is a Quick Action + busy channel, not a gaze `[E]`, for every player-placed object; implemented to match the existing convention rather than the plan's illustrative keybind).
+- Stage advancement: a new `Interactable{kind:'playerWell'}` (`app/interactables.ts`, handled directly in `gameLoop.ts`/`createApp.ts`'s `advanceWellStage` since it needs `Inventory` access, same as `dig`/`tent`/`trap`) shows a progress prompt while the current stage's clock hasn't elapsed, or `[E] Buduj studnię` / `[E] Zbuduj daszek` once it has; pressing `[E]` validates + atomically consumes that next stage's materials, then calls `PlayerWells.advanceStage()`. Walking away and returning costs nothing — the persisted `stageStartedAt` is the only clock.
+- Completion & `WaterSource`: once `stage === 'roof'` and its own duration has elapsed, `buildInteractables()` stops emitting a `playerWell` candidate and instead emits a plain `{kind:'well', promptLabel: WATER_SOURCE_PROMPT}` — the *exact* existing settlement-well interaction path (`gameLoop.ts`'s `target.kind === 'well'` branch, `createWaterSource('well')`, `resolveInteraction`'s flavor line). No `PlayerWellWaterSystem`, no second `WaterSource`, no special "player well" prompt (§9, notes §4).
+- NPC discovery (§10): the actual plan-122 water-fetch implementation (`NpcAgent.beginNeed`) is not a generic multi-source resolver — it targets each settlement's own fixed `landmarks.well` (with an interaction queue). No such resolver existed to "extend" (implementation notes §5/§24 anticipated this and asked to verify before assuming). Added the smallest bounded extension that fits: `NpcAgent.resolveWaterWellTarget()` compares the settlement's own well against `getNearbyPlayerWell(home, PLAYER_WELL_WATER_SEARCH_RADIUS=60)` and prefers whichever is closer to the NPC's household home; a player well is used as a plain, queue-less destination through the same `kind:'drink'`/`kind:'deposit'` action chain — no `if (playerBuiltWell)` branch, no well-specific FSM. `getNearbyPlayerWell` is threaded through the existing `getPlayerSocial`-style optional-callback chain (`worldBundle.ts` → `SettlementsManager.ts` → `createSettlement.ts` → `NpcAgent`), resolved lazily against `bundle.playerWells` via the same "target assigned after `bundle` exists" indirection `onAnimalDeath`/`getPlayerSocial` already use — survives `rebuildWorldBundle()` for free.
+- Persistence: `SaveDataV23` (`playerWells: SavePlayerWell[]`), full migration chain from every older version; a pre-v23 save restores with no player-built wells. Streaming (chunk/settlement unload-load, in-session world rebuild) carries the record array through the same `nodes()`/dispose/recreate contract as `PlacedTents`/`PlacedTraps`/`PlacedContainers`.
+
+**Technically verified:** `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, `pnpm run test` all pass (1339 tests, including new `world/playerWell.test.ts` pure-logic coverage and `persistence/saveData.test.ts`'s v23 block).
+
+**Not done / deliberately deferred:**
+
+- No new GLB for the `pit`/`well`-body stages (procedural only, `docs/assets/MODELS.md` M54) — the completed well reuses the wired `well.glb`/`createWell` fallback (M32).
+- The player-well "queue" a completed well offers is unqueued (a plain destination point), unlike the settlement well's FIFO interaction queue — acceptable per §10/notes (no well-specific NPC controller); a real queue could be added later if multiple NPCs contending for one player well turns out to matter.
+
+**Browser/manual verification — not performed** (per repo convention, TS/lint/build/test passing is not proof of correct visual/gameplay behavior). Needs a manual pass in the running dev server, following the plan's §15/gameplay end-to-end scenario:
+
+- Placement preview/rejection (too steep, in water, too close to another well/object), shovel requirement, Quick Actions → "Zbuduj studnię".
+- `pit → well → roof` stage progression: prompt text while in progress, `[E]` advance once each stage's world-time duration elapses, material consumption (stone/branch) and toasts for missing materials.
+- Leaving and returning mid-stage (including a real save/load and a chunk unload/reload) preserves progress without duplicating the well/collider/interaction.
+- Completed well: `[E]` drink / `[R]` fill waterskin behave exactly like a normal well; NPC discovers a nearby completed player well (closer than their settlement well) and carries water back to household stock; multiple wells in one area; NPC pathing doesn't get stuck on the well collider.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

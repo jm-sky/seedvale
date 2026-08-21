@@ -299,6 +299,10 @@ export type GameLoopDeps = {
   /** Picks a placed container up (with contents) — carried state (plan 164
    *  §8/§15), not an inventory item. */
   pickUpContainer?: (id: string) => void
+  /** Advances a player-built well into its next construction stage (plan
+   *  127) — validates/consumes that stage's materials, or toasts an error
+   *  when the current stage's work isn't done yet or materials are missing. */
+  advanceWellStage?: (id: string) => void
   /** A full night's sleep (`fadeStrength === 1` skip) just finished — owner
    *  (`createApp.ts`) applies the rest outcome for whatever camp it resolved
    *  when the rest started, and awards any Survival XP (plan 128 §5-§7). */
@@ -350,7 +354,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop,
-    openContainer, pickUpContainer,
+    openContainer, pickUpContainer, advanceWellStage,
     onSleepFinished, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
@@ -645,6 +649,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.resourceDeposits,
         bundle.dryingRacks,
         bundle.hives,
+        bundle.playerWells,
         dayNight.elapsedDays,
         player.mesh.position,
         held,
@@ -1099,6 +1104,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'container') {
         if (interactPressed) openContainer?.(target.id)
         if (altInteractPressed) pickUpContainer?.(target.id)
+      } else if (target?.kind === 'playerWell') {
+        if (interactPressed) advanceWellStage?.(target.id)
       } else if (target?.kind === 'item') {
         if (interactPressed || altInteractPressed) {
           if (!inventory.canAdd(target.item.kind)) {

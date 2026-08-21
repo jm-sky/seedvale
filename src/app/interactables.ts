@@ -13,6 +13,7 @@ import type { Beehives } from '../world/createBeehives'
 import type { DryingRacks } from '../world/createDryingRacks'
 import type { PlacedContainers } from '../world/createPlacedContainers'
 import type { PlacedTraps } from '../world/createPlacedTraps'
+import type { PlayerWells } from '../world/createPlayerWells'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
@@ -28,6 +29,7 @@ import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
 import { honeyAvailable } from '../world/beehives'
 import { CROP_DEFS, type CropGrowthStage, type CropId } from '../world/cropLifecycle'
 import { isDryingComplete } from '../world/dryingRacks'
+import { isWellCompleted, wellPromptLabel } from '../world/playerWell'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource } from '../world/WaterSource'
 import type { Vector3 } from 'three'
@@ -235,6 +237,7 @@ export function buildInteractables(
   resourceDeposits: ResourceDeposits,
   dryingRacks: DryingRacks,
   hives: Beehives,
+  placedWells: PlayerWells,
   /** Current world day (plan 159) — drives drying-complete/honey-available
    *  prompt text. */
   nowDays: number,
@@ -338,6 +341,29 @@ export function buildInteractables(
       promptLabel,
       id: hive.id,
       burned: hive.burned,
+    })
+  }
+
+  // Plan 127 — a completed well (`roof`, its own duration elapsed) becomes a
+  // plain `well` candidate: same drink/fill interaction as any other well,
+  // no special-cased prompt (implementation notes §14). Still under
+  // construction, it exposes its own stage-advance prompt instead.
+  for (const well of placedWells.list()) {
+    if (!withinRange(well.x, well.z, playerPos, GAZE_RANGE)) continue
+    if (isWellCompleted(well, nowDays)) {
+      list.push({
+        kind: 'well',
+        position: { x: well.x, z: well.z },
+        promptLabel: WATER_SOURCE_PROMPT,
+      })
+      continue
+    }
+    list.push({
+      kind: 'playerWell',
+      position: { x: well.x, z: well.z },
+      promptLabel: wellPromptLabel(well, nowDays),
+      id: well.id,
+      stage: well.stage,
     })
   }
 

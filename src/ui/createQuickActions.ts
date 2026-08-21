@@ -37,6 +37,9 @@ export type QuickActionsHandlers = {
   /** Puts the carried container back down (plan 164 §8) — shown only while
    *  `hasCarriedContainer` is true. */
   onPutDownContainer?: () => void
+  /** Places a new player-built well ahead of the player (plan 127) — shown
+   *  alongside dig/level while `hasShovel` is true. */
+  onBuildWell?: () => void
   /** Initial shovel ownership for showing dig/level buttons. */
   hasShovel?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */

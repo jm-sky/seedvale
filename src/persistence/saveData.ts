@@ -7,6 +7,7 @@ import type { SkillId } from '../player/PlayerSkills'
 import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
 import type { TrapKind, TrapState } from '../world/animalTraps'
+import type { WellStage } from '../world/playerWell'
 import { isToolKind } from '../items/HeldTool'
 import { type ItemKind } from '../items/items'
 import { SNEAK_LEGACY_XP } from '../player/PlayerSkills'
@@ -390,8 +391,26 @@ export type SaveDataV22 = Omit<SaveDataV21, 'version'> & {
   carriedContainer: SaveCarriedContainer | null
 }
 
-/** Canonical save shape — always v22. `loadSaveData` migrates older saves up. */
-export type SaveData = SaveDataV22
+/** Persistent player-built well (plan 127) — mirrors
+ *  `world/playerWell.ts`'s `PlayerWellRecord`; the completed `WaterSource`
+ *  itself is never saved, only re-derived once `stage === 'roof'` and its
+ *  world-time duration has elapsed (implementation notes §3). */
+export type SavePlayerWell = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+  stage: WellStage
+  stageStartedAt: number
+}
+
+export type SaveDataV23 = Omit<SaveDataV22, 'version'> & {
+  version: 23
+  playerWells: SavePlayerWell[]
+}
+
+/** Canonical save shape — always v23. `loadSaveData` migrates older saves up. */
+export type SaveData = SaveDataV23
 
 function isSaveConfig(value: unknown): value is SaveConfig {
   if (!value || typeof value !== 'object') return false
@@ -995,13 +1014,40 @@ function isCarriedContainerField(value: unknown): value is SaveCarriedContainer 
   )
 }
 
-export function isSaveDataV22(value: unknown): value is SaveData {
+export function isSaveDataV22(value: unknown): value is SaveDataV22 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 22) return false
   if (!isSaveDataV21({ ...v, version: 21 })) return false
   if (!isPlacedContainersField(v.placedContainers)) return false
   if (!isCarriedContainerField(v.carriedContainer)) return false
+  return true
+}
+
+const WELL_STAGES: ReadonlySet<string> = new Set<WellStage>(['pit', 'roof', 'well'])
+
+function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const w = entry as Record<string, unknown>
+    return (
+      typeof w.id === 'string' &&
+      typeof w.x === 'number' &&
+      typeof w.z === 'number' &&
+      typeof w.yaw === 'number' &&
+      typeof w.stage === 'string' && WELL_STAGES.has(w.stage) &&
+      typeof w.stageStartedAt === 'number'
+    )
+  })
+}
+
+export function isSaveDataV23(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 23) return false
+  if (!isSaveDataV22({ ...v, version: 22 })) return false
+  if (!isPlayerWellsField(v.playerWells)) return false
   return true
 }
 
@@ -1211,7 +1257,7 @@ function toV21(v20: SaveDataV20): SaveDataV21 {
 
 /** Plan 164 — pre-v22 saves predate player storage entirely, so no container
  *  has ever been placed or carried. */
-function toV22(v21: SaveDataV21): SaveData {
+function toV22(v21: SaveDataV21): SaveDataV22 {
   const { version: _version, ...rest } = v21
   return {
     ...rest,
@@ -1221,20 +1267,32 @@ function toV22(v21: SaveDataV21): SaveData {
   }
 }
 
-/** Migrates any post-v16 save payload to the canonical v22 shape. */
-function upToCurrent(v16: SaveDataV16): SaveData {
-  return toV22(toV21(toV20(toV19(toV18(toV17(v16))))))
+/** Plan 127 — pre-v23 saves predate player-built wells entirely, so none
+ *  have ever been placed. */
+function toV23(v22: SaveDataV22): SaveData {
+  const { version: _version, ...rest } = v22
+  return {
+    ...rest,
+    version: 23,
+    playerWells: [],
+  }
 }
 
-/** Accepts a stored v1–v22 save and always returns the canonical v22 shape. */
+/** Migrates any post-v16 save payload to the canonical v23 shape. */
+function upToCurrent(v16: SaveDataV16): SaveData {
+  return toV23(toV22(toV21(toV20(toV19(toV18(toV17(v16)))))))
+}
+
+/** Accepts a stored v1–v23 save and always returns the canonical v23 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV22(value)) return value
-    if (isSaveDataV21(value)) return toV22(value)
-    if (isSaveDataV20(value)) return toV22(toV21(value))
-    if (isSaveDataV19(value)) return toV22(toV21(toV20(value)))
-    if (isSaveDataV18(value)) return toV22(toV21(toV20(toV19(value))))
-    if (isSaveDataV17(value)) return toV22(toV21(toV20(toV19(toV18(value)))))
+    if (isSaveDataV23(value)) return value
+    if (isSaveDataV22(value)) return toV23(value)
+    if (isSaveDataV21(value)) return toV23(toV22(value))
+    if (isSaveDataV20(value)) return toV23(toV22(toV21(value)))
+    if (isSaveDataV19(value)) return toV23(toV22(toV21(toV20(value))))
+    if (isSaveDataV18(value)) return toV23(toV22(toV21(toV20(toV19(value)))))
+    if (isSaveDataV17(value)) return toV23(toV22(toV21(toV20(toV19(toV18(value))))))
     if (isSaveDataV16(value)) return upToCurrent(value)
     if (isSaveDataV15(value)) return upToCurrent(toV16(value))
     if (isSaveDataV14(value)) return upToCurrent(toV16(toV15(value)))

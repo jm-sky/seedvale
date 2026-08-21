@@ -9,6 +9,7 @@ import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Collider } from '../world/collision'
+import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TerrainSamplers } from './settlementTerrain'
 import { disposeObject3D } from '../assets/loadGltf'
@@ -149,6 +150,10 @@ export async function createSettlementsManager(
   /** Plan 157 — forwarded into every `createSettlement` call, home and
    *  streamed-in alike, the same way `mining`/`isLandPlotOwned` are above. */
   pointLightBudget: PointLightBudget = createNullPointLightBudget(),
+  /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
+   *  — forwarded into every `createSettlement` call → every `NpcAgent`, the
+   *  same way `getPlayerSocial` is above. */
+  getNearbyPlayerWell?: NearbyPlayerWellLookup,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -214,6 +219,7 @@ export async function createSettlementsManager(
     mining,
     isLandPlotOwned,
     pointLightBudget,
+    getNearbyPlayerWell,
   )
 
   const entries = new Map<string, Entry>()
@@ -328,6 +334,7 @@ export async function createSettlementsManager(
         mining,
         isLandPlotOwned,
         pointLightBudget,
+        getNearbyPlayerWell,
       ))
       .then((settlement) => {
         const cur = entries.get(def.id)

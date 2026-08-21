@@ -12,6 +12,7 @@ import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Collider } from '../world/collision'
+import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { VillageSize } from './families'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
@@ -219,6 +220,10 @@ export async function createSettlement(
    *  stabilization (`src/world/pointLightBudget.ts`) sees them for as long
    *  as the settlement stays loaded. Defaults to a no-op. */
   pointLightBudget: PointLightBudget = createNullPointLightBudget(),
+  /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
+   *  — forwarded into every `NpcAgent.create` call below the same way
+   *  `getPlayerSocial` is above. */
+  getNearbyPlayerWell?: NearbyPlayerWellLookup,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
@@ -517,6 +522,7 @@ export async function createSettlement(
         household,
         getPlayerSocial,
         mining,
+        getNearbyPlayerWell,
       )
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

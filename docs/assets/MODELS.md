@@ -59,6 +59,7 @@ If the feature needs no new model, do nothing to this file.
 | M30 | Campfire burning (Quaternius) | Baked flame in mesh — not usable with fuel toggle | `in repo` | plan 101 (`campfire_burning_q.glb`) |
 | M31 | Campfire burning (Poly) | Higher-quality baked flame; CC-BY | `in repo` | plan 101 (`campfire_burning_poly.glb`) |
 | M53 | Storage chest | Player-placed container (`items.chest`); procedural box+lid fallback (`world/containerProp.ts`) wired now | `wired` (procedural) | [plan 164](../plans/2026-08-19--164--player-storage-and-container-system.md) |
+| M54 | Player-built well — pit / in-progress body | `pit`/`well` construction stages (`world/playerWellProp.ts`); procedural dirt hole + roofless stone ring, no GLB planned. `roof` (completed) stage reuses wired `well.glb`/`createWell` (M32) directly | `wired` (procedural) | [plan 127](../plans/2026-08-16--127--player-built-well.md) |
 | M32 | Village well GLB | Replaces procedural `createWell` (fallback kept) | `wired` | plan 101 (`settlement/well.glb`) |
 | M33 | Wood pile stockpile | Stacked beams; replaces wired `logs.glb` | `wired` | plan 101 (`settlement/wood_pile.glb`, CC-BY) |
 | M34 | Fantasy RTS logs | Former stockpile mesh | `in repo` | `settlement/logs.glb` |

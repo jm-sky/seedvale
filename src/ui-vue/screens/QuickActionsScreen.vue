@@ -69,6 +69,11 @@ function level(): void {
   ui.quickActions.onLevel?.()
 }
 
+function buildWell(): void {
+  closeQuickActions()
+  ui.quickActions.onBuildWell?.()
+}
+
 function onDocumentClick(event: MouseEvent): void {
   if (panel.value?.contains(event.target as Node)) return
   closeQuickActions()
@@ -104,6 +109,7 @@ const trapActions = computed<Action[]>(() => {
 const shovelActions: Action[] = [
   { label: 'Wykop dołek', cost: 'łopata', onClick: dig },
   { label: 'Wyrównaj', cost: 'łopata', onClick: level },
+  { label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell },
 ]
 </script>
 

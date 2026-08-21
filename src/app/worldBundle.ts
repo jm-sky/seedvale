@@ -8,6 +8,7 @@ import type { PlacedTrapRecord } from '../world/animalTraps'
 import type { BeehiveRecord } from '../world/beehives'
 import type { DayNightState } from '../world/dayNight'
 import type { DryingRackRecord } from '../world/dryingRacks'
+import type { NearbyPlayerWellLookup, PlayerWellRecord } from '../world/playerWell'
 import type { PointLightBudget } from '../world/pointLightBudget'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TreeLifecycle } from '../world/treeLifecycle'
@@ -43,6 +44,7 @@ import {
   type SaveCarriedContainer,
 } from '../world/createPlacedContainers'
 import { createPlacedTraps, type PlacedTraps, type PlacedTrapsHooks } from '../world/createPlacedTraps'
+import { createPlayerWells, type PlayerWells } from '../world/createPlayerWells'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
 import type { Scene } from 'three'
@@ -90,6 +92,7 @@ export type WorldBundle = {
   placedTents: PlacedTents
   placedTraps: PlacedTraps
   placedContainers: PlacedContainers
+  playerWells: PlayerWells
   largeCaves: LargeCaves
   dryingRacks: DryingRacks
   hives: Beehives
@@ -164,6 +167,10 @@ function buildSettlementsManager(
   getPlayerSocial?: PlayerSocialLookup,
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
   pointLightBudget?: PointLightBudget,
+  /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
+   *  — forwarded into every `createSettlement` call → every `NpcAgent`, the
+   *  same way `getPlayerSocial` is above. */
+  getNearbyPlayerWell?: NearbyPlayerWellLookup,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -190,6 +197,7 @@ function buildSettlementsManager(
     mining,
     isLandPlotOwned,
     pointLightBudget,
+    getNearbyPlayerWell,
   )
 }
 
@@ -297,6 +305,10 @@ export async function createWorldBundle(
   /** Plan 164 — the container currently in the player's hands (if any),
    *  same reset contract. */
   initialCarriedContainer: SaveCarriedContainer | null,
+  /** Plan 127 — persistent player-built wells, same "carried across rebuild,
+   *  reset only on a genuinely new world" contract as the placed-* arrays
+   *  above. */
+  initialPlayerWells: readonly PlayerWellRecord[],
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
   dayNight: DayNightState,
@@ -335,6 +347,10 @@ export async function createWorldBundle(
    *  threaded down into `createSettlementsManager`/`createPlacedFires` the
    *  same way `playAt` is above. */
   pointLightBudget?: PointLightBudget,
+  /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
+   *  — forwarded into `buildSettlementsManager` the same way `getPlayerSocial`
+   *  is above. */
+  getNearbyPlayerWell?: NearbyPlayerWellLookup,
 ): Promise<WorldBundle> {
   const waterMirror = createWaterMirror({
     waterLevel: config.terrain.waterLevel,
@@ -353,7 +369,7 @@ export async function createWorldBundle(
   const ocean = buildOcean(scene, config, waterMirror)
   const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
   const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
@@ -373,6 +389,14 @@ export async function createWorldBundle(
     chunkManager.sampleHeight,
     initialPlacedContainers,
     initialCarriedContainer,
+  )
+  const playerWells = createPlayerWells(
+    scene,
+    chunkManager.sampleHeight,
+    getWorldDays,
+    chunkManager.registerColliders,
+    chunkManager.clearColliders,
+    initialPlayerWells,
   )
   const largeCaves = createLargeCaves(
     scene,
@@ -395,7 +419,7 @@ export async function createWorldBundle(
     initialHives,
   )
 
-  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, placedContainers, largeCaves, dryingRacks, hives }
+  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, placedContainers, playerWells, largeCaves, dryingRacks, hives }
 }
 
 /** Disposes every member's current instance and mutates `bundle`'s fields in
@@ -433,6 +457,10 @@ export async function rebuildWorldBundle(
    *  itself (and its pad, added directly to `scene`) survives, matching
    *  `scene`'s own lifetime rather than the bundle's. */
   pointLightBudget?: PointLightBudget,
+  /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
+   *  — forwarded into `buildSettlementsManager` the same way `getPlayerSocial`
+   *  is above. */
+  getNearbyPlayerWell?: NearbyPlayerWellLookup,
 ): Promise<void> {
   // Snapshot before dispose() — a same-session rebuild (config change, not a
   // new seed) recreates `Fauna` from scratch just like every other bundle
@@ -456,6 +484,11 @@ export async function rebuildWorldBundle(
   const carriedContainerNodes = resetCollectedItems ? [] : [...bundle.placedContainers.nodes()]
   const carriedContainerHeld = resetCollectedItems ? null : bundle.placedContainers.carriedNode()
   bundle.placedContainers.dispose()
+  // Player-built wells are positioned by the player, not seed-derived — kept
+  // across an unrelated terrain-param rebuild, same reset contract as tents/
+  // traps/containers above.
+  const carriedPlayerWells = resetCollectedItems ? [] : [...bundle.playerWells.nodes()]
+  bundle.playerWells.dispose()
   const carriedDryingRacks = resetCollectedItems ? [] : [...bundle.dryingRacks.nodes()]
   bundle.dryingRacks.dispose()
   const carriedHives = resetCollectedItems ? [] : [...bundle.hives.nodes()]
@@ -497,7 +530,7 @@ export async function rebuildWorldBundle(
     queryNearest: bundle.resourceDeposits.queryNearest,
     mine: bundle.resourceDeposits.mine,
   }
-  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget)
+  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, carriedSpawnerState)
   await preloadItemGlbModels()
   await preloadHeldToolModels()
@@ -517,6 +550,14 @@ export async function rebuildWorldBundle(
     bundle.chunkManager.sampleHeight,
     carriedContainerNodes,
     carriedContainerHeld,
+  )
+  bundle.playerWells = createPlayerWells(
+    scene,
+    bundle.chunkManager.sampleHeight,
+    getWorldDays,
+    bundle.chunkManager.registerColliders,
+    bundle.chunkManager.clearColliders,
+    carriedPlayerWells,
   )
   bundle.largeCaves = createLargeCaves(
     scene,
@@ -548,6 +589,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.placedTents.dispose()
   bundle.placedTraps.dispose()
   bundle.placedContainers.dispose()
+  bundle.playerWells.dispose()
   bundle.largeCaves.dispose()
   bundle.dryingRacks.dispose()
   bundle.hives.dispose()

@@ -10,6 +10,7 @@ import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { DigProfile } from '../terrain/dig'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropGrowthStage, CropId } from '../world/cropLifecycle'
+import type { WellStage } from '../world/playerWell'
 import type { TreeGrowthStage, TreeSizeClass } from '../world/treeLifecycle'
 import type { WaterSource } from '../world/WaterSource'
 
@@ -110,3 +111,10 @@ export type Interactable =
    *  references; current contents are resolved fresh from `PlacedContainers`
    *  at interact time, never a cached snapshot. */
   | { kind: 'container', position: { x: number, z: number }, promptLabel: string, id: string }
+  /** Player-built well still under construction (plan 127) — `pit`/`well`
+   *  stage. `[E]` advances to the next stage once its world-time duration has
+   *  elapsed (consuming that stage's materials); otherwise just shows
+   *  progress. A completed well (`stage === 'roof'`, its own duration also
+   *  elapsed) becomes a plain `well` candidate instead — same drink/fill
+   *  interaction as any other well, no special-cased prompt. */
+  | { kind: 'playerWell', position: { x: number, z: number }, promptLabel: string, id: string, stage: WellStage }

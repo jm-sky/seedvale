@@ -7,6 +7,7 @@ import type { Household } from '../settlement/household'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
+import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import {
   disposeObject3D,
@@ -478,6 +479,11 @@ const FOOD_GATHER_AMOUNT = 2
 const WATER_FETCH_AMOUNT = 2
 /** How much stored household water one drink-at-home visit consumes. */
 const WATER_DRINK_FROM_STOCK_AMOUNT = 1
+/** How far (world units) from this NPC's household home a completed
+ *  player-built well is considered as an alternative to the settlement's own
+ *  well (plan 127 §10) — bounded so the choice stays local/deterministic,
+ *  not a world-wide search. See `resolveWaterWellTarget`. */
+const PLAYER_WELL_WATER_SEARCH_RADIUS = 60
 
 /** Ore gathering (plan 131) — `miner`'s `work` schedule block tries a real
  *  `ResourceDeposits` extraction before falling back to the pre-131 idle
@@ -753,6 +759,10 @@ export class NpcAgent {
    *  quest-agnostic (`QuestManager.getRelationLevel`/`getPlayerStanding`
    *  injected from `createApp.ts`, plan 117). */
   private readonly getPlayerSocial: PlayerSocialLookup
+  /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
+   *  — an alternative water-fetch destination to `landmarks.well` when
+   *  closer to this NPC's household home. See `resolveWaterWellTarget`. */
+  private readonly getNearbyPlayerWell?: NearbyPlayerWellLookup
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
@@ -786,6 +796,7 @@ export class NpcAgent {
     household: Household | null,
     getPlayerSocial: PlayerSocialLookup,
     mining: SettlementMiningHooks | null,
+    getNearbyPlayerWell?: NearbyPlayerWellLookup,
   ) {
     this.playAt = playAt
     this.forest = forest
@@ -796,6 +807,7 @@ export class NpcAgent {
     this.household = household
     this.mining = mining
     this.getPlayerSocial = getPlayerSocial
+    this.getNearbyPlayerWell = getNearbyPlayerWell
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
@@ -924,6 +936,7 @@ export class NpcAgent {
     household: Household | null = null,
     getPlayerSocial: PlayerSocialLookup = () => ({ relationLevel: 'stranger', standing: 0 }),
     mining: SettlementMiningHooks | null = null,
+    getNearbyPlayerWell?: NearbyPlayerWellLookup,
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -949,6 +962,7 @@ export class NpcAgent {
         household,
         getPlayerSocial,
         mining,
+        getNearbyPlayerWell,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -972,6 +986,7 @@ export class NpcAgent {
         household,
         getPlayerSocial,
         mining,
+        getNearbyPlayerWell,
       )
     }
   }
@@ -996,6 +1011,7 @@ export class NpcAgent {
     household: Household | null,
     getPlayerSocial: PlayerSocialLookup,
     mining: SettlementMiningHooks | null,
+    getNearbyPlayerWell?: NearbyPlayerWellLookup,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -1030,6 +1046,7 @@ export class NpcAgent {
       household,
       getPlayerSocial,
       mining,
+      getNearbyPlayerWell,
     )
   }
 
@@ -1752,6 +1769,22 @@ export class NpcAgent {
     if (this.phase === 'goSleep') this.prepareSleepDestination()
   }
 
+  /** Picks the water-fetch destination for `beginNeed`'s `water`/`waterDuty`
+   *  branches (plan 127 §10) — the settlement's own well, or a nearer
+   *  completed player-built well when one exists within
+   *  `PLAYER_WELL_WATER_SEARCH_RADIUS` of this NPC's household home. Called
+   *  only when a water action actually starts, never per frame; no
+   *  well-specific NPC behaviour beyond "prefer the closer usable source". */
+  private resolveWaterWellTarget(): { position: { x: number, y: number, z: number }, isVillageWell: boolean } {
+    const nearby = this.getNearbyPlayerWell?.(this.home.x, this.home.z, PLAYER_WELL_WATER_SEARCH_RADIUS)
+    if (nearby) {
+      const toNearby = Math.hypot(nearby.x - this.home.x, nearby.z - this.home.z)
+      const toVillage = Math.hypot(this.landmarks.well.x - this.home.x, this.landmarks.well.z - this.home.z)
+      if (toNearby < toVillage) return { position: nearby, isVillageWell: false }
+    }
+    return { position: this.landmarks.well, isVillageWell: true }
+  }
+
   /** `need` is `'water' | 'waterDuty' | 'food' | 'wood'` in practice —
    *  `'choose'` routes `'idle'` to `beginIdle` instead and already set
    *  `this.activeNeed`. */
@@ -1774,7 +1807,8 @@ export class NpcAgent {
         })
         return
       }
-      const queue = this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
+      const wellTarget = this.resolveWaterWellTarget()
+      const queue = wellTarget.isVillageWell && this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
       if (queue && this.wellQueueId) {
         // Leave any prior queue before joining so an agent is never in two.
         this.leaveActiveQueue()
@@ -1792,7 +1826,7 @@ export class NpcAgent {
       }
       this.startAction({
         kind: 'drink',
-        destination: copyVec3(this.landmarks.well),
+        destination: copyVec3(wellTarget.position),
         durationSec: 1.2 * this.waitMultiplier,
         onComplete: () => {
           this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
@@ -1808,7 +1842,8 @@ export class NpcAgent {
       // Reuses `kind: 'drink'` for the well leg so it gets the same
       // face-well rotation + draw SFX as a real drink (see `execute`/`goTo`).
       const household = this.household
-      const queue = this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
+      const wellTarget = this.resolveWaterWellTarget()
+      const queue = wellTarget.isVillageWell && this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
       const fetchStep = (destination: ReturnType<typeof copyVec3>, queueId?: string): NpcPlannedAction => ({
         kind: 'drink',
         destination,
@@ -1831,7 +1866,7 @@ export class NpcAgent {
         this.startAction(fetchStep(queue.worldDestination(this.id), this.wellQueueId))
         return
       }
-      this.startAction(fetchStep(copyVec3(this.landmarks.well)))
+      this.startAction(fetchStep(copyVec3(wellTarget.position)))
       return
     }
     if (need === 'food') {
