@@ -647,4 +647,33 @@ new manager            = none
 new worker              = none
 ```
 
+## 26. Follow-up fix (2026-08-21): frenzied wolf stopped ~10m before village buildings
+
+Reported after browser use of `setFrenzyWolf()`: the wolf beelined toward the
+settlement but stopped short of the buildings instead of entering and finding
+an NPC.
+
+Root cause: `AnimalAgent.update()`'s `sense.nearestFire` branch (unconditional
+flee from any lit campfire, `FIRE_AVOID_RADIUS = 11`) sits ahead of the
+`role === 'predator'` branch that holds both the frenzy beeline
+(`moveTowardStrategicVillage`) and `npcThreat` detection. This branch predates
+plan 179 and was never given a `frenzied` exception, unlike `pickPointNear()`'s
+existing village-avoidance bypass. A settlement's campfire sits near its
+buildings/center, and the wolf's NPC-notice radius (`playerNoticeRange = 10`
+for wolves) is *smaller* than `FIRE_AVOID_RADIUS` (11) — so the wolf gets
+flee-repelled by the fire before it can ever get close enough to notice an NPC,
+and oscillates just outside the fire radius, short of the village.
+
+Fix: `sense.nearestFire && !this.frenzied` in `AnimalAgent.ts`'s `update()` —
+a frenzied wolf ignores fire-fear for movement (mirrors the `pickPointNear()`
+`this.frenzied` bypass). `fireNearby`/`nearbyFireCount` as a
+`decidePredatorHumanIntent` scoring input (attack-vs-flee once already close to
+a human) is untouched — only the movement-blocking branch changed.
+
+No existing test covered this movement branch (`frenzyWolf.test.ts` only tests
+`pickNearestEligibleWolf()`; `npcAnimalThreat.test.ts` doesn't touch
+`AnimalAgent`/fire). typecheck/lint/build/test all pass. Browser verification
+(does the wolf now actually enter the village and reach an NPC) still pending —
+ask the user to confirm with `?debug` + `setFrenzyWolf()`.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

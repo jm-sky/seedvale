@@ -1178,7 +1178,14 @@ export class AnimalAgent {
         this.setIntent('flee', { x: npcThreat.x, z: npcThreat.z })
         this.fleeFrom(npcThreat.x, npcThreat.z, dt)
       }
-    } else if (sense.nearestFire) {
+    } else if (sense.nearestFire && !this.frenzied) {
+      // `!this.frenzied`: FIRE_AVOID_RADIUS (11) is bigger than a wolf's NPC-notice
+      // radius (playerNoticeRange, 10 — see senseNpcThreat), and a settlement's
+      // campfire sits right by its buildings. Without this bypass a frenzied wolf
+      // gets flee-repelled by the fire before it can ever notice an NPC (npcThreat,
+      // above) or finish its village beeline (moveTowardStrategicVillage, below) —
+      // it just oscillates outside the fire radius, short of the village (plan 179
+      // follow-up). Mirrors the existing `this.frenzied` bypass in `pickPointNear()`.
       this.threateningHuman = false
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
