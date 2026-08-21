@@ -1,4 +1,4 @@
-import type { ToolKind } from '../items/HeldTool'
+import type { ItemCapability } from '../items/itemCatalog'
 import type { GroundPlacementReason } from '../items/tentPlacement'
 
 /**
@@ -55,13 +55,14 @@ export const WELL_STAGE_COST: Record<WellStage, WellMaterialCost> = {
   roof: { stone: 0, branch: 4 },
 }
 
-/** Tool required to work each stage — checked (never consumed) before every
- *  work session, including resumes. `null` means no tool is required: no
- *  existing item fits "assemble stone/wood into a well body or roof," and
- *  inventing one would be an artificial requirement the design explicitly
- *  avoids. */
-export const WELL_STAGE_TOOL: Record<WellStage, ToolKind | null> = {
-  pit: 'shovel',
+/** Capability required to work each stage (plan 184 §15) — checked (never
+ *  consumed) before every work session, including resumes. Digging the pit is
+ *  a capability requirement, not a `shovel`-identity one: anything that can
+ *  move earth qualifies. `null` means no tool is required: no existing item
+ *  fits "assemble stone/wood into a well body or roof," and inventing one
+ *  would be an artificial requirement the design explicitly avoids. */
+export const WELL_STAGE_CAPABILITY: Record<WellStage, ItemCapability | null> = {
+  pit: 'soil_digging',
   well: null,
   roof: null,
 }

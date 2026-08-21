@@ -14,7 +14,7 @@ import {
 import { spawnerDestroyBusyLabel } from '../../fauna/createFauna'
 import { COOK_DURATION_SEC, findCookingRecipe } from '../../items/campfireCooking'
 import { getFreshnessStage } from '../../items/foodFreshness'
-import { isHarvestKnife, ITEM_CATALOG } from '../../items/itemCatalog'
+import { hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
 import {
   drinkWater as drinkWaterNeeds,
@@ -51,7 +51,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, worldAudio } = ctx
 
   const startBuryCorpse = (animal: AnimalAgent): void => {
-    if (heldTool.held() !== 'shovel' || isChannelBusy(ctx)) return
+    if (!hasItemCapability(heldTool.held(), 'soil_digging') || isChannelBusy(ctx)) return
     if (!animal.isDead() || animal.readyToRemove()) return
     playActionDig(worldAudio.playOnce)
     busy.start(BURY_DURATION_SEC, 'Zakopywanie…', () => {
@@ -66,17 +66,14 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
    *  just knife-gated and yielding item(s) instead of disposing the corpse. */
   const startHarvestMeat = (animal: AnimalAgent): void => {
     if (isActionBlocked(ctx)) return
-    if (!isHarvestKnife(heldTool.held())) {
+    if (!hasItemCapability(heldTool.held(), 'meat_harvesting')) {
       // Auto-equip from inventory (plan 153) — same pattern as
       // `lightWoodenTorch` in `userActions.ts`: only when the hand is free,
-      // never displacing another held tool. Prefer damascus_knife when both
-      // harvest knives are present (plan 160).
+      // never displacing another held tool. `findWithCapability` returns the
+      // best carried harvest tool, so a damascus knife still wins over a
+      // plain one (plan 160).
       if (heldTool.held() !== null) return
-      const knifeKind = inventory.holdsAny('damascus_knife')
-        ? 'damascus_knife'
-        : inventory.holdsAny('knife')
-          ? 'knife'
-          : null
+      const knifeKind = inventory.findWithCapability('meat_harvesting')
       if (!knifeKind || !heldTool.equip(knifeKind)) return
       ctx.syncHeldHud()
     }
@@ -112,7 +109,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
    *  through here. */
   const startIgniteFire = (fire: VillageFire): void => {
     if (isActionBlocked(ctx)) return
-    if (!inventory.has('firestarter', 1)) {
+    if (!inventory.hasCapability('fire_starting')) {
       toast.show('Potrzebujesz krzesiwa, żeby rozpalić ogień.', 'error')
       return
     }

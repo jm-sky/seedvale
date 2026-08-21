@@ -1,5 +1,6 @@
 import type { Inventory } from './Inventory'
 import type { ItemKind } from './items'
+import { HOLDABLE_KINDS } from './itemCatalog'
 import { isWeaponMaintenanceKind } from './itemInstances'
 
 /** Tool kinds that can occupy the single "in hand" slot. */
@@ -25,29 +26,10 @@ export type ToolKind = 'knife'
 | 'hunting_bow'
 | 'long_bow'
 
-const HELD_TOOL_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
-  'axe',
-  'battle_axe',
-  'damascus_knife',
-  'damascus_long_sword',
-  'damascus_short_sword',
-  'firestarter',
-  'fishing_rod',
-  'hunting_bow',
-  'knife',
-  'long_bow',
-  'long_sword',
-  'masterwork_sword',
-  'obsidian_sword',
-  'pickaxe',
-  'pitchfork',
-  'short_bow',
-  'short_sword',
-  'shovel',
-  'sickle',
-  'spear',
-  'wooden_torch',
-])
+/** Derived from `ITEM_CATALOG[kind].holdable` (plan 184) — no hand-written
+ *  second list; `itemCapabilities.test.ts` asserts it still matches the
+ *  `ToolKind` union above. */
+const HELD_TOOL_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>(HOLDABLE_KINDS)
 
 export function isToolKind(kind: ItemKind): kind is ToolKind {
   return HELD_TOOL_KINDS.has(kind)

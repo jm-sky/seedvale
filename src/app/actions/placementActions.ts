@@ -1,3 +1,4 @@
+import { CAPABILITY_NEED_LABEL } from '../../items/itemCatalog'
 import { isTrapItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../../items/tentPlacement'
@@ -20,8 +21,8 @@ import {
   WELL_PLACE_REACH,
   WELL_PLACEMENT_MESSAGE,
   WELL_SEPARATION,
+  WELL_STAGE_CAPABILITY,
   WELL_STAGE_COST,
-  WELL_STAGE_TOOL,
   WELL_STAGE_WORK_HOURS,
   WELL_WORK_LABEL,
   WELL_WORK_SESSION_SEC,
@@ -156,7 +157,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
    *  `world/playerWell.ts`'s header doc). Materials are charged later, when
    *  each subsequent stage actually starts (`advanceWellStage` below). */
   const placeWellAtAim = (): void => {
-    if (!inventory.has('shovel', 1) || isActionBlocked(ctx)) return
+    if (!inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
     const yaw = mouseLook.state.yaw
     const x = player.mesh.position.x - Math.sin(yaw) * WELL_PLACE_REACH
     const z = player.mesh.position.z - Math.cos(yaw) * WELL_PLACE_REACH
@@ -205,9 +206,9 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     if (!well) return
     const stage = activeWellStage(well)
     if (!stage) return
-    const tool = WELL_STAGE_TOOL[stage]
-    if (tool && !inventory.has(tool, 1)) {
-      toast.show(`Potrzebujesz: ${ITEM_DEFS[tool].label}.`, 'error')
+    const capability = WELL_STAGE_CAPABILITY[stage]
+    if (capability && !inventory.hasCapability(capability)) {
+      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL[capability]}.`, 'error')
       return
     }
     const startingNewStage = stage !== well.stage

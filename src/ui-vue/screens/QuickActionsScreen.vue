@@ -163,7 +163,7 @@ const shovelActions: Action[] = [
         />
       </QuickActionsGroup>
       <QuickActionsGroup
-        v-if="ui.quickActions.hasShovel"
+        v-if="ui.quickActions.hasDiggingTool"
         label="Łopata"
       >
         <QuickActionsButton

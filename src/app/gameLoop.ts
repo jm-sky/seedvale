@@ -61,7 +61,7 @@ import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
-import { ARROW_DAMAGE_BONUS, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
+import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
 import { isWeaponItemInstance } from '../items/itemInstances'
 import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
 import { createAcquiredInstance } from '../items/trade'
@@ -658,7 +658,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.mesh.position,
         held,
         landOwnership,
-        inventory.holdsAny('knife') || inventory.holdsAny('damascus_knife'),
+        inventory.hasCapability('meat_harvesting'),
         (kind) => questManager.activeSpotAnimalRange(kind),
       )
 
@@ -1111,7 +1111,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         }
         if (altInteractPressed) fillWaterskin?.()
       } else if (target?.kind === 'waterEdge') {
-        if (heldTool.held() === 'fishing_rod') {
+        if (hasItemCapability(heldTool.held(), 'fishing')) {
           if (interactPressed) startFishing?.(target.position.x, target.position.z)
           if (altInteractPressed) applyFishingBait?.(target.position.x, target.position.z)
         } else {
@@ -1161,7 +1161,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           } else {
             const outcome = resolveInteraction(target, questManager)
             if (treeInspectionCanYieldBranch(target.stage)) {
-              const branchChance = TREE_BRANCH_CHANCE + (inventory.holdsAny('knife') || inventory.holdsAny('damascus_knife') ? KNIFE_BRANCH_BONUS : 0)
+              const branchChance = TREE_BRANCH_CHANCE + (inventory.hasCapability('branch_trimming') ? KNIFE_BRANCH_BONUS : 0)
               if (Math.random() < branchChance && inventory.canAdd('branch')) {
                 inventory.add('branch')
                 playInventoryPickUp(worldAudio.playOnce)

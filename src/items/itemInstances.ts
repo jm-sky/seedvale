@@ -31,7 +31,10 @@ export type WeaponMaintenanceKind =
   | 'battle_axe'
   | 'masterwork_sword'
 
-export const WEAPON_MAINTENANCE_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
+/** Ordered list form of `WEAPON_MAINTENANCE_KINDS` — the single declaration
+ *  the set is built from, so callers that need to *iterate* the kinds (the
+ *  save migration in `weaponMaintenance.ts`) don't hand-maintain a copy. */
+export const WEAPON_MAINTENANCE_KIND_LIST: readonly WeaponMaintenanceKind[] = [
   'axe',
   'battle_axe',
   'damascus_knife',
@@ -45,7 +48,9 @@ export const WEAPON_MAINTENANCE_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>
   'short_sword',
   'sickle',
   'spear',
-])
+]
+
+export const WEAPON_MAINTENANCE_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>(WEAPON_MAINTENANCE_KIND_LIST)
 
 export function isWeaponMaintenanceKind(kind: ItemKind): kind is WeaponMaintenanceKind {
   return WEAPON_MAINTENANCE_KINDS.has(kind)

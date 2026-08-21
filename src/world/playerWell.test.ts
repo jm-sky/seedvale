@@ -5,8 +5,8 @@ import {
   isWellStageWorkComplete,
   nextWellStage,
   type PlayerWellRecord,
+  WELL_STAGE_CAPABILITY,
   WELL_STAGE_COST,
-  WELL_STAGE_TOOL,
   WELL_STAGE_WORK_HOURS,
   wellPromptLabel,
 } from './playerWell'
@@ -85,10 +85,10 @@ describe('playerWell active-work stage transitions', () => {
 })
 
 describe('playerWell stage contract (tool/materials/work-hours)', () => {
-  it('pit requires a shovel; well and roof require no tool', () => {
-    expect(WELL_STAGE_TOOL.pit).toBe('shovel')
-    expect(WELL_STAGE_TOOL.well).toBeNull()
-    expect(WELL_STAGE_TOOL.roof).toBeNull()
+  it('pit requires a digging tool; well and roof require none', () => {
+    expect(WELL_STAGE_CAPABILITY.pit).toBe('soil_digging')
+    expect(WELL_STAGE_CAPABILITY.well).toBeNull()
+    expect(WELL_STAGE_CAPABILITY.roof).toBeNull()
   })
 
   it('material costs match the plan (charged once, when a stage starts)', () => {

@@ -17,7 +17,7 @@ import type { PlayerWells } from '../world/createPlayerWells'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
-import { consumeVerbLabel, isChopTool, isHarvestKnife, ITEM_CATALOG } from '../items/itemCatalog'
+import { consumeVerbLabel, hasItemCapability, ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
 import { isPlayerPlacedFire, type PlacedFires } from '../settlement/PlacedFires'
@@ -262,10 +262,10 @@ export function buildInteractables(
   activeSpotAnimalRange?: (kind: AnimalKind) => number | null,
 ): Interactable[] {
   const list: Interactable[] = []
-  const axeHeld = isChopTool(heldTool)
-  const shovelHeld = heldTool === 'shovel'
-  const pickaxeHeld = heldTool === 'pickaxe'
-  const knifeHeld = isHarvestKnife(heldTool)
+  const axeHeld = hasItemCapability(heldTool, 'wood_chopping')
+  const shovelHeld = hasItemCapability(heldTool, 'soil_digging')
+  const pickaxeHeld = hasItemCapability(heldTool, 'rock_mining')
+  const knifeHeld = hasItemCapability(heldTool, 'meat_harvesting')
   const knifeAvailable = knifeHeld || (heldTool === null && inventoryHasFreeKnife)
 
   for (const pf of placedFires.list()) {
@@ -586,7 +586,7 @@ export function buildInteractables(
     list.push({
       kind: 'waterEdge',
       position: { x: playerPos.x, z: playerPos.z },
-      promptLabel: heldTool === 'fishing_rod' ? FISHING_PROMPT : WATER_SOURCE_PROMPT,
+      promptLabel: hasItemCapability(heldTool, 'fishing') ? FISHING_PROMPT : WATER_SOURCE_PROMPT,
       source: createWaterSource('lake'),
     })
   }
@@ -620,7 +620,7 @@ export function buildDigTarget(
   const z = playerPos.z - Math.cos(playerYaw) * DIG_REACH
   const rock = isRockGround(x, z, chunkManager)
 
-  if (heldTool === 'shovel') {
+  if (hasItemCapability(heldTool, 'soil_digging')) {
     const profile = getDigProfileAt(x, z, chunkManager)
     const canLevel = !rock && canLevelAt(x, z, chunkManager)
     if (!profile && !canLevel) return null
@@ -633,7 +633,7 @@ export function buildDigTarget(
     }
   }
 
-  if (heldTool === 'pickaxe') {
+  if (hasItemCapability(heldTool, 'rock_mining')) {
     const profile = getRockDigProfileAt(x, z, chunkManager)
     const canLevel = rock && canLevelAt(x, z, chunkManager)
     if (!profile && !canLevel) return null

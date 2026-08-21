@@ -28,6 +28,7 @@ import { shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
+import { hasItemCapability } from '../items/itemCatalog'
 import { isWeaponMaintenanceKind } from '../items/itemInstances'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { createAcquiredInstance } from '../items/trade'
@@ -363,7 +364,7 @@ export async function createApp(
   // run after `createApp`'s synchronous setup (including `getUserActions`)
   // has finished.
   const syncQuickActionAvailability = (): void => {
-    vueUi.setQuickActionsHasShovel(inventory.has('shovel', 1))
+    vueUi.setQuickActionsHasDiggingTool(inventory.hasCapability('soil_digging'))
     vueUi.setQuickActionsHasTent(inventory.has('tent', 1))
     vueUi.setQuickActionsTraps({
       simple: inventory.countInstances(TRAP_DEFS.simple.itemKind) > 0,
@@ -854,7 +855,7 @@ export async function createApp(
    *  camera look resumes without requiring an extra canvas click. */
   let restorePointerLockAfterQuickActions = false
   const quickActions = createQuickActions(container, {
-    hasShovel: inventory.has('shovel', 1),
+    hasDiggingTool: inventory.hasCapability('soil_digging'),
     hasTent: inventory.has('tent', 1),
     hasCarriedContainer: bundle.placedContainers.hasCarried(),
     nearTown: rest.isNearTown(),
@@ -1027,7 +1028,7 @@ export async function createApp(
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork: (mode, x, z) => {
-      if (heldTool.held() === 'pickaxe') {
+      if (hasItemCapability(heldTool.held(), 'rock_mining')) {
         if (mode === 'level') ground.startPickaxeLevelAt(x, z)
         else ground.startPickaxeDigAt(x, z)
       } else if (mode === 'level') ground.startLevelAt(x, z)

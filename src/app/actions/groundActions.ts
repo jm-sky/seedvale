@@ -1,6 +1,6 @@
 import { playActionChop, playActionDig, playActionMine } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
-import { isChopTool } from '../../items/itemCatalog'
+import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
 import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
 import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../../terrain/dig'
@@ -44,7 +44,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
   })
 
   const startDigAt = (x: number, z: number): void => {
-    if (!inventory.has('shovel', 1) || isActionBlocked(ctx)) return
+    if (!inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
     const profile = getDigProfileAt(x, z, bundle.chunkManager)
     if (!profile) {
       toast.show('Tu nie da się kopać.', 'error')
@@ -58,7 +58,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
   }
 
   const startPickaxeDigAt = (x: number, z: number): void => {
-    if (heldTool.held() !== 'pickaxe' || isActionBlocked(ctx)) return
+    if (!hasItemCapability(heldTool.held(), 'rock_mining') || isActionBlocked(ctx)) return
     const profile = getRockDigProfileAt(x, z, bundle.chunkManager)
     if (!profile) {
       toast.show('Tu nie da się kopać kilofem.', 'error')
@@ -72,7 +72,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
   }
 
   const startLevelAt = (x: number, z: number): void => {
-    if (!inventory.has('shovel', 1) || isActionBlocked(ctx)) return
+    if (!inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
     if (isRockGround(x, z, bundle.chunkManager)) {
       toast.show('Łopata nie bierze skały.', 'error')
       return
@@ -87,7 +87,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
   }
 
   const startPickaxeLevelAt = (x: number, z: number): void => {
-    if (heldTool.held() !== 'pickaxe' || isActionBlocked(ctx)) return
+    if (!hasItemCapability(heldTool.held(), 'rock_mining') || isActionBlocked(ctx)) return
     if (!isRockGround(x, z, bundle.chunkManager) || !canLevelAt(x, z, bundle.chunkManager)) {
       toast.show('Nie ma tu czego wyrównać.', 'error')
       return
@@ -98,7 +98,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
   }
 
   const startTreeChop = (treeId: string, x: number, z: number): void => {
-    if (!isChopTool(heldTool.held()) || isChannelBusy(ctx)) return
+    if (!hasItemCapability(heldTool.held(), 'wood_chopping') || isChannelBusy(ctx)) return
     // Pre-check choppability without mutating — advanceHarvest is the authority.
     const nearby = bundle.chunkManager.getNearbyTrees({ x, z }, 0.5)
     const target = nearby.find((t) => t.id === treeId)
@@ -156,7 +156,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
   }
 
   const startDepositMine = (depositId: string, x: number, z: number): void => {
-    if (heldTool.held() !== 'pickaxe' || isActionBlocked(ctx)) return
+    if (!hasItemCapability(heldTool.held(), 'rock_mining') || isActionBlocked(ctx)) return
     const target = bundle.resourceDeposits.queryNearest(x, z, 0.75)
     if (!target || target.id !== depositId || target.remaining <= 0) {
       toast.show('Tu nie ma już czego wydobywać.', 'error')

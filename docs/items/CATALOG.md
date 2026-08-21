@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-20
+**Last updated:** 2026-08-21
 
 ## Quick rules
 
@@ -13,7 +13,8 @@ implemented, and what is planned. Code source of truth for weights/labels:
 |---------|--------|
 | Inventory weight / label | `ITEM_DEFS` |
 | Gabarite / size (plan 164) | `ITEM_DEFS[kind].size` (`ItemSize`: `XS`\|`SM`\|`MD`\|`LG`\|`XL`) — independent of `weight`; `items/items.ts`'s `ITEM_SIZE_UNITS`/`itemSizeUnits()` convert to abstract capacity units checked by `Inventory.maxSize`/`totalSize()`/`canAdd()` and by container capacity (`items/container.ts`) |
-| Holdable (Weź) | `isToolKind` in `HeldTool.ts` — knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, spear, short_sword, pitchfork, sickle, damascus_knife, damascus_short_sword, damascus_long_sword, obsidian_sword, battle_axe, masterwork_sword, fishing_rod, short_bow, hunting_bow, long_bow |
+| Holdable (Weź) | `ITEM_CATALOG[kind].holdable` — the single source of truth; `HeldTool.ts`'s `isToolKind` reads the derived `HOLDABLE_KINDS` (plan 184). 21 kinds: knife, firestarter, shovel, axe, wooden_torch, pickaxe, long_sword, spear, short_sword, pitchfork, sickle, damascus_knife, damascus_short_sword, damascus_long_sword, obsidian_sword, battle_axe, masterwork_sword, fishing_rod, short_bow, hunting_bow, long_bow |
+| Tool capabilities (plan 184) | `ITEM_CATALOG[kind].capabilities` (`ItemCapability`) — the single source of truth for every "can this item do X?" gate, replacing `kind === 'shovel'` / `isChopTool()` / `isHarvestKnife()` checks. `wood_chopping` (axe, battle_axe) · `meat_harvesting` + `branch_trimming` (knife, damascus_knife) · `soil_digging` (shovel — dig/level soil, bury a corpse, well `pit` stage) · `rock_mining` (pickaxe — rock dig/level + ore deposits) · `fire_starting` (firestarter) · `fishing` (fishing_rod). Query with `hasItemCapability(kind, cap)` for the hand, `Inventory.hasCapability(cap)` for the bag, `Inventory.findWithCapability(cap)` (best-first) when a caller must auto-equip. `melee`/`ranged`/`defense`/`consumable`/`food.bait` stay their own configs — they already answer capability questions. |
 | Weapon maintenance (plan 161) | `items/itemInstances.ts`'s `WEAPON_MAINTENANCE_KINDS` (13 kinds: knife, short_sword, long_sword, spear, axe, pitchfork, sickle + the six plan-160 variants) are `ItemInstance`-backed with `durability`/`sharpness` (`[0,1]`, new = 1/1); `shovel`/`pickaxe` are explicitly excluded. `HeldTool.heldInstanceId()` tracks which concrete instance is in hand. `items/weaponMaintenance.ts` — `getSharpnessDamageModifier()` (100%→100%…0%→55%) feeds melee damage before the critical roll; sharpness/durability wear applies once per resolved hit via `Inventory.updateInstance()`. `whetstone` (stackable) + `sharpenWeapon()` restore sharpness only, never durability; no repair/broken lifecycle in v1. |
 | Ranged combat (plan 162) | `ITEM_CATALOG[kind].ranged` (`RangedConfig`) on `short_bow`/`hunting_bow`/`long_bow` — `player/playerRanged.ts` runs the draw→release→recovery lifecycle (same shape as melee); `combat/projectile.ts` is the lightweight swept-segment flight/collision model (no visual arrow mesh in v1); `combat/rangedAttack.ts` turns bow accuracy + `archery` skill into aim deviation, not a separate hit-roll. Ammo (`arrow`/`broadhead_arrow`/`war_arrow`) is ordinary stackable count, 1 consumed per shot, no per-arrow instance/recovery. |
 | Critical hits (plan 162) | `combat/criticalHit.ts`'s `resolveCriticalHit()` — shared deterministic modifier used by both ranged (`RangedConfig.criticalChance`/`criticalMultiplier`) and melee (flat `MELEE_CRITICAL_CHANCE`/`MELEE_CRITICAL_MULTIPLIER` baseline); evaluated after hit, before defense. |
@@ -86,7 +87,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | damascus_short_sword | krótki miecz damasceński | yes | 24 | none (Kupiec) | `items/damascus_short_sword.glb` (M45) | plan 160; teal/navy damascus, not gray |
 | damascus_long_sword | długi miecz damasceński | yes | 40 | none (quest grozny-wilk) | `items/damascus_long_sword.glb` (M46) | plan 160; teal/navy damascus; not Kupiec stock |
 | obsidian_sword | obsydianowy miecz | yes | 46 | none (quest wilcza-jama) | `items/obsidian_sword.glb` (M47) | plan 160; volcanic-glass purple/black, not gray steel; not Kupiec stock |
-| battle_axe | topór bojowy | yes | 28 | none (Kupiec) | `items/battle_axe.glb` (M48) | plan 160; chops trees like axe (`isChopTool`) |
+| battle_axe | topór bojowy | yes | 28 | none (Kupiec) | `items/battle_axe.glb` (M48) | plan 160; chops trees like axe (`wood_chopping`) |
 | masterwork_sword | mistrzowski miecz | yes | 34 | none (Kupiec) | `items/masterwork_sword.glb` (M49) | plan 160; gold Quaternius Sword_Golden, cheaper than damascus long |
 | berries | jagody | — | — | world chunk (flora pool) | procedural | plan 159; Zjedz (+8 hunger); freshens 1 day, plant bait |
 | apple | jabłko | — | — | renewable trees | procedural | plan 159; Zjedz (+10 hunger); freshens 2 days, plant bait |

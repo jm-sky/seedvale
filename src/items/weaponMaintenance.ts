@@ -10,6 +10,7 @@ import {
   clamp01,
   createItemInstanceId,
   isWeaponItemInstance,
+  WEAPON_MAINTENANCE_KIND_LIST,
   type WeaponItemInstance,
   type WeaponMaintenanceKind,
 } from './itemInstances'
@@ -119,9 +120,7 @@ export function sharpenWeapon(inventory: Inventory, instanceId: string, source: 
  *  so this is a no-op. Weight-neutral (remove then re-add the same kinds), so
  *  it can never push the carry limit over its cap. */
 export function migrateWeaponCountsToInstances(inventory: Inventory): void {
-  for (const kind of ['knife', 'short_sword', 'long_sword', 'spear', 'axe', 'pitchfork', 'sickle',
-    'damascus_knife', 'damascus_short_sword', 'damascus_long_sword',
-    'obsidian_sword', 'battle_axe', 'masterwork_sword'] as const) {
+  for (const kind of WEAPON_MAINTENANCE_KIND_LIST) {
     const count = inventory.count(kind)
     if (count <= 0) continue
     inventory.remove(kind, count)

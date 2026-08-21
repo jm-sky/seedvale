@@ -72,6 +72,47 @@ export type RangedConfig = {
   criticalMultiplier?: number
 }
 
+/** Declarative gameplay capability of an item kind — the answer to "can this
+ *  item perform this operation?" for operations that have **no per-item
+ *  tuning** (unlike `melee`/`ranged`/`defense`/`consumable`, which are already
+ *  capability-carrying *configs* and stay exactly as they are — plan 184 §7).
+ *
+ *  Each entry is an operation an existing gameplay system gates on, named
+ *  after the operation rather than after the tool that happens to perform it
+ *  today, so a future variant (`iron_shovel`, another chopping tool) only has
+ *  to declare the capability here instead of being added to scattered
+ *  `kind === 'shovel'` checks. */
+export type ItemCapability =
+  /** Fell/limb a world tree (`world/treeHarvest.ts`). */
+  | 'wood_chopping'
+  /** Butcher a dead animal for meat/hide (`fauna/AnimalAgent.ts`). */
+  | 'meat_harvesting'
+  /** Cut a branch off an inspected tree — the small-blade yield bonus in
+   *  `app/gameLoop.ts`. Same items as `meat_harvesting` today, different
+   *  operation: a chopping-only or butchering-only tool is plausible. */
+  | 'branch_trimming'
+  /** Move earth: dig/level soil, bury a corpse, dig a well pit. */
+  | 'soil_digging'
+  /** Break stone: dig/level mountain rock and extract ore from a deposit. */
+  | 'rock_mining'
+  /** Strike a flame (fires, torches) — never consumed. */
+  | 'fire_starting'
+  /** Cast at a lake shore (`world/fishing.ts`). */
+  | 'fishing'
+
+/** Genitive Polish phrase used after "Potrzebujesz …" when an action is
+ *  refused for a missing capability — keeps requirement messages capability-
+ *  worded instead of naming one specific tool the player might not own. */
+export const CAPABILITY_NEED_LABEL: Record<ItemCapability, string> = {
+  branch_trimming: 'noża',
+  fire_starting: 'krzesiwa',
+  fishing: 'wędki',
+  meat_harvesting: 'noża do oprawiania',
+  rock_mining: 'narzędzia do kucia w skale',
+  soil_digging: 'narzędzia do kopania',
+  wood_chopping: 'narzędzia do rąbania',
+}
+
 /** What a `consumable` item restores — `hunger`/`thirst` map to a
  *  `PlayerNeeds` pool, `health` heals `HealthState` directly (plan 153). */
 export type ConsumableNeed = 'hunger' | 'thirst' | 'health'
@@ -82,6 +123,10 @@ export type ItemCatalogEntry = {
   label: string
   /** Can occupy HeldTool slot + Weź in inventory. */
   holdable: boolean
+  /** Operations this kind can perform (plan 184). Absent/empty = none.
+   *  The single source of truth for every tool-requirement gate — see
+   *  `hasItemCapability` / `Inventory.hasCapability`. */
+  capabilities?: readonly ItemCapability[]
   /** Player melee vs animals while held (plan 123 — `player/playerMelee.ts`). */
   melee: MeleeConfig | null
   /** Optional block parameters while held (plan 150 — `combat/defenseResolver.ts`). */
@@ -193,6 +238,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'knife',
     label: 'nóż',
     holdable: true,
+    capabilities: ['branch_trimming', 'meat_harvesting'],
     melee: { damage: 12, range: 1.6, arcDot: 0.6, windUp: 0.12, hitWindow: 0.08, recovery: 0.18, staminaCost: 4 },
     defense: { canBlock: true, baseBlockChance: 0.12, partialReduction: 0.35 },
     spawn: 'starting',
@@ -234,6 +280,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'firestarter',
     label: 'krzesiwo',
     holdable: true,
+    capabilities: ['fire_starting'],
     melee: null,
     spawn: 'starting',
     modelUrl: null,
@@ -252,6 +299,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'shovel',
     label: 'łopata',
     holdable: true,
+    capabilities: ['soil_digging'],
     melee: { damage: 8, range: 2.0, arcDot: 0.45, windUp: 0.25, hitWindow: 0.1, recovery: 0.35, staminaCost: 8 },
     defense: { canBlock: true, baseBlockChance: 0.1, partialReduction: 0.25 },
     spawn: 'village_onetime',
@@ -262,6 +310,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'axe',
     label: 'siekiera',
     holdable: true,
+    capabilities: ['wood_chopping'],
     melee: { damage: 20, range: 2.0, arcDot: 0.4, windUp: 0.3, hitWindow: 0.12, recovery: 0.4, staminaCost: 10 },
     defense: { canBlock: true, baseBlockChance: 0.2, partialReduction: 0.45 },
     spawn: 'village_onetime',
@@ -304,6 +353,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'pickaxe',
     label: 'kilof',
     holdable: true,
+    capabilities: ['rock_mining'],
     melee: null,
     spawn: 'village_onetime',
     modelUrl: '/models/items/pickaxe.glb',
@@ -544,6 +594,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'damascus_knife',
     label: 'nóż damasceński',
     holdable: true,
+    capabilities: ['branch_trimming', 'meat_harvesting'],
     melee: { damage: 16, range: 1.6, arcDot: 0.6, windUp: 0.11, hitWindow: 0.08, recovery: 0.16, staminaCost: 4 },
     defense: { canBlock: true, baseBlockChance: 0.16, partialReduction: 0.4 },
     spawn: 'none',
@@ -584,11 +635,12 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'battle_axe',
     label: 'topór bojowy',
     holdable: true,
+    capabilities: ['wood_chopping'],
     melee: { damage: 28, range: 2.15, arcDot: 0.28, windUp: 0.38, hitWindow: 0.14, recovery: 0.5, staminaCost: 14 },
     defense: { canBlock: true, baseBlockChance: 0.24, partialReduction: 0.5 },
     spawn: 'none',
     modelUrl: '/models/items/battle_axe.glb',
-    notes: 'Plan 160 — Kupiec stock. Heavier axe that still chops trees (`isChopTool`). Quaternius Axe Double.',
+    notes: 'Plan 160 — Kupiec stock. Heavier axe that still chops trees (`wood_chopping` capability). Quaternius Axe Double.',
   },
   masterwork_sword: {
     kind: 'masterwork_sword',
@@ -702,6 +754,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'fishing_rod',
     label: 'wędka',
     holdable: true,
+    capabilities: ['fishing'],
     melee: null,
     spawn: 'none',
     modelUrl: null,
@@ -798,14 +851,45 @@ export function isRangedTool<K extends ItemKind | null | undefined>(kind: K): ki
   return kind != null && ITEM_CATALOG[kind]?.ranged != null
 }
 
-/** Tree-chop tools (plan 160) — battle_axe reuses the existing axe harvest flow. */
-export function isChopTool(kind: ItemKind | null | undefined): boolean {
-  return kind === 'axe' || kind === 'battle_axe'
-}
+/** Item kinds that hold the single "in hand" slot — derived from
+ *  `holdable` rather than hand-listed, so a new holdable kind never has to be
+ *  added to a second set (`items/HeldTool.ts`'s `isToolKind` reads this). */
+export const HOLDABLE_KINDS: readonly ItemKind[] = (Object.keys(ITEM_CATALOG) as ItemKind[])
+  .filter((kind) => ITEM_CATALOG[kind].holdable)
 
-/** Corpse-harvest knives (plan 160) — damascus_knife is a knife variant. */
-export function isHarvestKnife(kind: ItemKind | null | undefined): boolean {
-  return kind === 'knife' || kind === 'damascus_knife'
+/** Kinds declaring each capability, **best first**: higher melee damage wins
+ *  (the catalog's only quality signal between tool variants — it is what makes
+ *  `damascus_knife` "a better knife" than `knife`), ties broken by catalog key
+ *  order so the result is always deterministic. Callers that auto-pick a tool
+ *  (`Inventory.findWithCapability`) therefore keep plan 160's "prefer the
+ *  damascus knife" behaviour without a second hand-written knife list. */
+export const CAPABILITY_KINDS: Record<ItemCapability, readonly ItemKind[]> = (() => {
+  const out = {} as Record<ItemCapability, ItemKind[]>
+  const order = Object.keys(ITEM_CATALOG) as ItemKind[]
+  for (const kind of order) {
+    for (const capability of ITEM_CATALOG[kind].capabilities ?? []) {
+      (out[capability] ??= []).push(kind)
+    }
+  }
+  const rank = new Map(order.map((kind, index) => [kind, index]))
+  for (const list of Object.values(out)) {
+    list.sort((a, b) => {
+      const damage = (ITEM_CATALOG[b].melee?.damage ?? -1) - (ITEM_CATALOG[a].melee?.damage ?? -1)
+      return damage !== 0 ? damage : rank.get(a)! - rank.get(b)!
+    })
+  }
+  for (const capability of Object.keys(CAPABILITY_NEED_LABEL) as ItemCapability[]) {
+    out[capability] ??= []
+  }
+  return out
+})()
+
+/** Does this kind declare `capability`? The single tool-requirement query for
+ *  *held* checks (plan 184) — `Inventory.hasCapability` is its "anywhere in
+ *  the bag" counterpart. Null-tolerant so callers can pass `heldTool.held()`
+ *  straight through. */
+export function hasItemCapability(kind: ItemKind | null | undefined, capability: ItemCapability): boolean {
+  return kind != null && (ITEM_CATALOG[kind].capabilities?.includes(capability) ?? false)
 }
 
 /** Cross-cutting item systems not tied to a single kind (roadmap only). */

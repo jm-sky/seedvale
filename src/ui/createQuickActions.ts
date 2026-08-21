@@ -38,10 +38,10 @@ export type QuickActionsHandlers = {
    *  `hasCarriedContainer` is true. */
   onPutDownContainer?: () => void
   /** Places a new player-built well ahead of the player (plan 127) — shown
-   *  alongside dig/level while `hasShovel` is true. */
+   *  alongside dig/level while `hasDiggingTool` is true. */
   onBuildWell?: () => void
-  /** Initial shovel ownership for showing dig/level buttons. */
-  hasShovel?: boolean
+  /** Initial digging-capability ownership for showing dig/level buttons. */
+  hasDiggingTool?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */
   hasTent?: boolean
   /** Initial carried-container flag for showing "Odłóż skrzynię". */
@@ -72,8 +72,8 @@ export function createQuickActions(
   let disposed = false
   const getUi = () => getMountedVueUi()
   getUi()?.configureQuickActions(handlers)
-  if (typeof handlers.hasShovel === 'boolean') {
-    getUi()?.setQuickActionsHasShovel(handlers.hasShovel)
+  if (typeof handlers.hasDiggingTool === 'boolean') {
+    getUi()?.setQuickActionsHasDiggingTool(handlers.hasDiggingTool)
   }
   if (typeof handlers.hasTent === 'boolean') {
     getUi()?.setQuickActionsHasTent(handlers.hasTent)

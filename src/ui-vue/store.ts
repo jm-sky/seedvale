@@ -87,7 +87,9 @@ export type QuickActionsFireAvailability = {
 }
 type QuickActionsState = {
   open: boolean
-  hasShovel: boolean
+  /** Any carried item with the `soil_digging` capability (plan 184) — not
+   *  literally a shovel. */
+  hasDiggingTool: boolean
   nearTown: boolean
   fireAvailability: QuickActionsFireAvailability
   onBuildSimpleFire: (() => boolean) | null
@@ -108,8 +110,8 @@ type QuickActionsState = {
   hasCarriedContainer: boolean
   onPutDownContainer: (() => void) | null
   /** Places a new player-built well ahead of the player (plan 127) — shown
-   *  alongside the other shovel actions, gated by `hasShovel` above (the
-   *  shovel is required to start the `pit` stage but never consumed). */
+   *  alongside the other digging actions, gated by `hasDiggingTool` above (a
+   *  digging tool is required to start the `pit` stage but never consumed). */
   onBuildWell: (() => void) | null
   onOpen: (() => void) | null
   onClose: (() => void) | null
@@ -290,7 +292,7 @@ export const ui = reactive({
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, promptHighlighted: false, name: '', line: '' } as FlavorDialogState,
   quickActions: {
-    open: false, hasShovel: false, nearTown: false, hasTent: false,
+    open: false, hasDiggingTool: false, nearTown: false, hasTent: false,
     traps: { simple: false, good: false },
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, lightBranch: false, lightWoodenTorch: false },
     onBuildSimpleFire: null, onBuildFirePit: null, onLightBranch: null, onLightWoodenTorch: null,
@@ -617,7 +619,7 @@ export function closeContainerScreen(): void { ui.containerScreen.open = false }
 export function isContainerScreenOpen(): boolean { return ui.containerScreen.open }
 
 export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 'open'>>): void { Object.assign(ui.quickActions, handlers) }
-export function setQuickActionsHasShovel(hasShovel: boolean): void { ui.quickActions.hasShovel = hasShovel }
+export function setQuickActionsHasDiggingTool(hasDiggingTool: boolean): void { ui.quickActions.hasDiggingTool = hasDiggingTool }
 export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions.hasTent = hasTent }
 export function setQuickActionsHasCarriedContainer(hasCarriedContainer: boolean): void { ui.quickActions.hasCarriedContainer = hasCarriedContainer }
 export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }

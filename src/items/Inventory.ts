@@ -1,4 +1,5 @@
 import { canMergeFoodBatches, isFoodPerishable } from './foodFreshness'
+import { CAPABILITY_KINDS, type ItemCapability } from './itemCatalog'
 import {
   clamp01,
   cloneItemInstance,
@@ -223,6 +224,24 @@ export class Inventory {
    *  branch-yield bonus) don't need to know which storage a kind uses. */
   holdsAny(kind: ItemKind): boolean {
     return this.count(kind) > 0 || this.countInstances(kind) > 0
+  }
+
+  /** Does the carrier hold *any* item able to perform `capability`
+   *  (plan 184)? Replaces per-tool `has('shovel', 1)` /
+   *  `holdsAny('knife') || holdsAny('damascus_knife')` gates, so a new
+   *  compatible kind only has to declare the capability in `ITEM_CATALOG`. */
+  hasCapability(capability: ItemCapability): boolean {
+    return this.findWithCapability(capability) !== null
+  }
+
+  /** The best held item able to perform `capability`, or null — for callers
+   *  that must name the kind (auto-equip). "Best" is `CAPABILITY_KINDS`'
+   *  documented order, so e.g. a damascus knife wins over a plain one. */
+  findWithCapability(capability: ItemCapability): ItemKind | null {
+    for (const kind of CAPABILITY_KINDS[capability]) {
+      if (this.holdsAny(kind)) return kind
+    }
+    return null
   }
 
   getInstance(id: string): ItemInstance | null {

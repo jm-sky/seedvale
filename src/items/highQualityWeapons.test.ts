@@ -3,7 +3,7 @@ import { isMeleeTool } from '../fauna/faunaCombat'
 import { createHeldTool, isToolKind } from './HeldTool'
 import { HELD_GLB } from './heldToolVisual'
 import { Inventory } from './Inventory'
-import { isChopTool, isHarvestKnife, ITEM_CATALOG } from './itemCatalog'
+import { hasItemCapability, ITEM_CATALOG } from './itemCatalog'
 import { ITEM_GLB_SPECS } from './itemModels'
 import { hasItemKindCategory, ITEM_DEFS } from './items'
 import { isMerchantStock, merchantPrice, tradeValue } from './tradeCatalog'
@@ -46,17 +46,17 @@ describe('high-quality melee weapons (plan 160)', () => {
   it('treats battle_axe as a tool and a weapon that still chops trees', () => {
     expect(hasItemKindCategory('battle_axe', 'tool')).toBe(true)
     expect(hasItemKindCategory('battle_axe', 'weapon')).toBe(true)
-    expect(isChopTool('battle_axe')).toBe(true)
-    expect(isChopTool('axe')).toBe(true)
-    expect(isChopTool('long_sword')).toBe(false)
+    expect(hasItemCapability('battle_axe', 'wood_chopping')).toBe(true)
+    expect(hasItemCapability('axe', 'wood_chopping')).toBe(true)
+    expect(hasItemCapability('long_sword', 'wood_chopping')).toBe(false)
   })
 
   it('treats damascus_knife as a harvest knife', () => {
     expect(hasItemKindCategory('damascus_knife', 'tool')).toBe(true)
     expect(hasItemKindCategory('damascus_knife', 'weapon')).toBe(true)
-    expect(isHarvestKnife('damascus_knife')).toBe(true)
-    expect(isHarvestKnife('knife')).toBe(true)
-    expect(isHarvestKnife('short_sword')).toBe(false)
+    expect(hasItemCapability('damascus_knife', 'meat_harvesting')).toBe(true)
+    expect(hasItemCapability('knife', 'meat_harvesting')).toBe(true)
+    expect(hasItemCapability('short_sword', 'meat_harvesting')).toBe(false)
   })
 
   it('stocks four elite weapons at Kupiec and keeps the two rarest quest-only', () => {

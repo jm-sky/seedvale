@@ -33,7 +33,7 @@ const getUserActions = (
   // these closures outlive `rebuildWorldBundle()`, which replaces it — see
   // `WorldBundle`'s doc comment.
   const buildSimpleFire = (): boolean => {
-    if (!inventory.has('firestarter', 1) || !inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)) return false
+    if (!inventory.hasCapability('fire_starting') || !inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)) return false
     inventory.remove('branch', SIMPLE_FIRE_BRANCH_COST)
     bundle.placedFires.place(player.mesh.position.x, player.mesh.position.z, 'simple')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
@@ -50,7 +50,7 @@ const getUserActions = (
   /** Lit branch occupies the right hand — unequip any tool first. */
   const lightBranch = (): LightActionResult => {
     if (playerTorch.isLit()) return 'already-lit'
-    if (!inventory.has('firestarter', 1) || !inventory.has('branch', TORCH_BRANCH_COST)) return 'missing'
+    if (!inventory.hasCapability('fire_starting') || !inventory.has('branch', TORCH_BRANCH_COST)) return 'missing'
     inventory.remove('branch', TORCH_BRANCH_COST)
     heldTool.unequip()
     syncHeldHud()
@@ -62,7 +62,7 @@ const getUserActions = (
   /** Wooden torch must be held; firestarter required; item is not consumed. */
   const lightWoodenTorch = (): LightActionResult => {
     if (playerTorch.isLit()) return 'already-lit'
-    if (!inventory.has('firestarter', 1)) return 'missing'
+    if (!inventory.hasCapability('fire_starting')) return 'missing'
     if (heldTool.held() !== 'wooden_torch') {
       if (!inventory.has('wooden_torch', 1)) return 'missing'
       // Auto-equip when hand is free; refuse if another tool is held.
@@ -78,13 +78,13 @@ const getUserActions = (
   // clauses above, so Quick Actions / Pause→Akcje can hide an action instead
   // of always offering it and reporting failure after the click.
   const canBuildSimpleFire = (): boolean =>
-    inventory.has('firestarter', 1) && inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)
+    inventory.hasCapability('fire_starting') && inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)
   const canBuildFirePit = (): boolean => inventory.has('stone', FIRE_PIT_STONE_COST)
   const canLightBranch = (): boolean =>
-    !playerTorch.isLit() && inventory.has('firestarter', 1) && inventory.has('branch', TORCH_BRANCH_COST)
+    !playerTorch.isLit() && inventory.hasCapability('fire_starting') && inventory.has('branch', TORCH_BRANCH_COST)
   const canLightWoodenTorch = (): boolean => {
     if (playerTorch.isLit()) return false
-    if (!inventory.has('firestarter', 1)) return false
+    if (!inventory.hasCapability('fire_starting')) return false
     if (heldTool.held() === 'wooden_torch') return true
     return heldTool.held() === null && inventory.has('wooden_torch', 1)
   }

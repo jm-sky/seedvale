@@ -49,7 +49,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [PlayerSkills](../src/player/PlayerSkills.ts) — the five skills, their XP curve and the single award path.
 - [Inventory](../src/items/Inventory.ts) — item ownership (player *and* NPC), stacks, instances and food batches.
 - [HeldTool](../src/items/HeldTool.ts) — the single right-hand tool slot.
-- [Item catalog](../src/items/itemCatalog.ts) — the per-`ItemKind` gameplay flags (melee, ranged, consumable, …).
+- [Item catalog](../src/items/itemCatalog.ts) — the per-`ItemKind` gameplay flags (melee, ranged, consumable, `capabilities`, …) and the capability queries built on them (`hasItemCapability`, `CAPABILITY_KINDS`, `HOLDABLE_KINDS`).
 
 ## UI wiring
 
