@@ -2,7 +2,7 @@
 
 **Purpose:** describe the architecture that exists in the code today. This is an architectural map, not a product roadmap.
 
-**Last verified:** 2026-08-15
+**Last verified:** 2026-08-21
 
 ## Source of truth
 
@@ -23,17 +23,25 @@ The world systems that are rebuilt together are grouped in `src/app/worldBundle.
 
 ```text
 WorldBundle
-├── ChunkManager
+├── ChunkManager          terrain streaming + world sampling
 ├── WorldOcean
-├── SettlementsManager
-├── Fauna
-├── ItemSpawners
-├── ResourceDeposits
+├── SettlementsManager    settlements, NPCs, livestock, economy
+├── Fauna                 wild animals + habitat spawners
+├── ItemSpawners          renewable world pickups
+├── ResourceDeposits      ore / stone deposits
 ├── DroppedItems
-├── PlacedFires
+├── PlacedFires           player-lit fires and fire pits
 ├── PlacedTents
-└── LargeCaves
+├── PlacedTraps           animal traps (plan 141)
+├── PlacedContainers      player storage, placed or carried (plan 164)
+├── PlayerWells           player-built wells (plan 127)
+├── LargeCaves
+├── DryingRacks           settlement-landmark preservation (plan 159)
+└── Beehives              settlement-landmark wild hives (plan 159)
 ```
+
+`src/app/worldBundle.ts` is authoritative for this list; the annotations above
+are orientation, not a contract.
 
 `WorldBundle` is mutated in place during rebuild. Callers that need a live world reference should retain the bundle and read its fields when used; they must not capture a bundle field before a rebuild and expect it to remain current. Plan 054 audited long-lived closures against this rule and is done.
 
@@ -49,7 +57,10 @@ Application
     │       ├── Settlements / NPCs
     │       ├── Fauna
     │       ├── Natural resources
-    │       └── World items / fires / tents / large caves
+    │       ├── World items / dropped items
+    │       ├── Player-placed objects (fires, tents, traps, containers, wells)
+    │       ├── Settlement landmarks with state (drying racks, hives)
+    │       └── Large caves
     ├── Player
     │   ├── PlayerController
     │   ├── Inventory
@@ -124,7 +135,7 @@ NPC behaviour is built around needs/FSM/personality/dialogue/quest interactions.
 
 ## Items and interaction
 
-`Inventory` is owned by the application/player-facing layer. World-side item state such as dropped items, item spawners, placed fires and placed tents lives in `WorldBundle`. Interaction code connects player actions to those systems rather than moving all item state into the player controller.
+`Inventory` is owned by the application/player-facing layer. World-side item state — dropped items, item spawners and every player-placed object (fires, tents, traps, containers, wells) — lives in `WorldBundle`. Interaction code connects player actions to those systems rather than moving all item state into the player controller; the action modules under `src/app/actions/` are that connection layer.
 
 ## Simulation vs presentation
 
@@ -138,11 +149,11 @@ Seedvale is single-player today; there is no multiplayer, netcode or WebSocket l
 
 ## Persistence
 
-Persistence is orchestrated from `createApp.ts`, but ownership is split by responsibility:
+Persistence is orchestrated from the app layer, but ownership is split by responsibility:
 
-- `createApp.ts` decides when to save and assembles the current runtime state into `SaveData`.
+- `src/app/saveState.ts` assembles the current runtime state into `SaveData` and owns *when* it is written (explicit save, page-lifecycle events, interval autosave). `createApp.ts` gives it the live systems to read from.
 - `src/persistence/saveData.ts` owns the `SaveData` schema, validation/defaulting and migrations.
-- `src/persistence/saveDb.ts` owns the IndexedDB storage operations.
+- `src/persistence/saveDb.ts` owns the IndexedDB storage operations and the named save slots.
 
 The canonical save schema version and the full field list are documented in [docs/STATE.md](./STATE.md) ("Persistence") — do not restate the field list here, it drifts. NPC runtime state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
 
