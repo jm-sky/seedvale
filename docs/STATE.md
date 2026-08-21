@@ -83,6 +83,7 @@ Details and standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md).
 - Dropped items, item spawners, placed fires (`campfire_unlit.glb` body + `fx/fire.glb` flame on `CampfireFlame`; `simple` hides stones) and large walk-in caves (`world/largeCaves.ts`, empty of loot/mobs) exist.
 - Player footsteps are terrain-classified (`src/terrain/footstepSurface.ts` → `audio/playerMoveSounds.ts`, plan 121): beach **and** desert biome play sand (Anton Z default). Jump-land uses the same pack, not Kenney generics; slope walking sticks via `player/verticalMotion.ts` (plan 158) so a heightfield hill does not fire a false land thud. A/B packs: `?footsteps=anton|legacy|mayra` or lil-gui Audio.
 - Third-person camera boom (`src/player/cameraBoom.ts`, issue [032](./issues/2026-08-15--032--mobile-black-world-screen.md)) is pulled along the look-at → camera segment so the lens stays above the heightfield and outside house-sized plan-097 colliders. It does not teleport the player. URL `?camdebug=1` overlays pose / terrainY / draw stats (off by default).
+- Slope movement constraint (plan 183, `terrain/slopeConstraint.ts`): a pure, shared finite-difference slope probe scales down (35°–55°, smoothstep) and then fully removes the **uphill** component of a moving agent's per-frame XZ step; across-slope and downhill movement are never affected. Called once per moving frame from `PlayerController.update()`, `NpcAgent.steerTo()` and `AnimalAgent.steerToward()` — same mechanism for player, NPCs and fauna, no navmesh/new physics.
 
 ### Quests / progression
 

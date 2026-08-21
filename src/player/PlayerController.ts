@@ -23,6 +23,7 @@ import {
 } from '../items/heldToolVisual'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 import { isExhausted } from '../shared/StaminaState'
+import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
 import { type Collider, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
 import { computeEncumbrance } from './playerEncumbrance'
@@ -665,6 +666,18 @@ export class PlayerController {
       const baseSpeed = (this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED) * this.encumbranceSpeedMultiplier
       const speed = applySneakSpeedModifier(baseSpeed, this.skills.sneak.active)
       this.wish.normalize().multiplyScalar(speed * dt)
+      // Steep terrain scales down (and, past the max walkable angle, removes)
+      // the uphill component of the move — across-slope/downhill are
+      // untouched (plan 183).
+      const slopeWish = applySlopeMovementConstraint(
+        this.wish.x,
+        this.wish.z,
+        this.mesh.position.x,
+        this.mesh.position.z,
+        this.sampleHeight,
+      )
+      this.wish.x = slopeWish.x
+      this.wish.z = slopeWish.z
       // Sneak progresses from distance actually sneaked, not from frames with
       // the toggle on (plan 128 §1 "nie przyznawać XP co klatkę").
       if (this.skills.sneak.active) {
@@ -680,7 +693,11 @@ export class PlayerController {
       )
       this.mesh.position.x = resolved.x
       this.mesh.position.z = resolved.z
-      this.mesh.rotation.y = Math.atan2(this.wish.x, this.wish.z)
+      // A slope-blocked wish can collapse to zero — keep facing the last
+      // direction instead of snapping to atan2(0, 0).
+      if (this.wish.lengthSq() > 0) {
+        this.mesh.rotation.y = Math.atan2(this.wish.x, this.wish.z)
+      }
     }
 
     this.updateVerticalMotion(dt)

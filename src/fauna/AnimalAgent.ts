@@ -13,6 +13,7 @@ import {
   type DecisionContext,
   type PlannedAction,
 } from '../simulation'
+import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
 import { barsVisibleForDistance, labelOpacityForDistance } from '../ui/labelDistance'
 import { AGENT_RENDER_LAYER, assignRenderLayer, setSubtreeCastShadow } from '../world/waterMirror'
 import {
@@ -1761,10 +1762,20 @@ export class AnimalAgent {
     this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
     this.moving = true
 
-    const stepX = this.tmp.x * speed * dt
-    const stepZ = this.tmp.z * speed * dt
     const x = this.mesh.position.x
     const z = this.mesh.position.z
+    // Steep terrain scales down (and, past the max walkable angle, removes)
+    // the uphill component of the step — across-slope/downhill are
+    // untouched (plan 183).
+    const slopeStep = applySlopeMovementConstraint(
+      this.tmp.x * speed * dt,
+      this.tmp.z * speed * dt,
+      x,
+      z,
+      this.sampleHeight,
+    )
+    const stepX = slopeStep.x
+    const stepZ = slopeStep.z
     // Avoid water: slide along the shore rather than wading/chasing into it.
     if (this.isWalkable(x + stepX, z + stepZ)) {
       this.mesh.position.x += stepX

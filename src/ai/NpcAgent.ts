@@ -64,6 +64,7 @@ import {
   replaceActionLifecycle,
 } from '../simulation'
 import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
+import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
 import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer, setSubtreeCastShadow } from '../world/waterMirror'
@@ -2638,11 +2639,21 @@ export class NpcAgent {
     if (dist < ARRIVE) return true
     this.tmp.multiplyScalar(1 / dist)
     const speed = WALK_SPEED * this.healthSpeedMultiplier()
-    const stepX = this.tmp.x * speed * dt
-    const stepZ = this.tmp.z * speed * dt
-    this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
     const x = this.mesh.position.x
     const z = this.mesh.position.z
+    // Steep terrain scales down (and, past the max walkable angle, removes)
+    // the uphill component of the step — across-slope/downhill are
+    // untouched (plan 183).
+    const slopeStep = applySlopeMovementConstraint(
+      this.tmp.x * speed * dt,
+      this.tmp.z * speed * dt,
+      x,
+      z,
+      this.sampleHeight,
+    )
+    const stepX = slopeStep.x
+    const stepZ = slopeStep.z
+    this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
     if (this.isWalkable(x + stepX, z + stepZ)) {
       this.mesh.position.x += stepX
       this.mesh.position.z += stepZ
