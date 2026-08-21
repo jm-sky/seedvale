@@ -1,7 +1,7 @@
 # Plan: Natural Mountains & Rivers
 
 **Created:** 2026-08-21
-**Status:** `in progress` 🔄 — Etap 1–3 implemented (see "Implementation summary"); Etap 4–7 (river network, cross-chunk continuity, channel geometry, water-shader integration) not started, gated on evaluating the drainage prototype
+**Status:** `in progress` 🔄 — Etap 1–6 implemented (see "Implementation summary"); Etap 7 (meanders, waterfalls, full shader/rendering polish, worker offload) not started
 **Priority:** high · **Effort:** M
 **Depends on:** unknown
 
@@ -321,8 +321,33 @@ Implemented in this session, per the implementation notes' explicit gating ("Do 
 
 Evaluation (Etap 3) was done numerically rather than visually — a rendered river network doesn't exist yet to look at. `hydrology.test.ts` deterministically scans each seed for a mountain-heavy and a coast-heavy region (via `sampleMountainRidgeAt`/`sampleContinentalnessAt`, no hardcoded magic coordinates) and asserts: determinism, strict downhill descent per non-terminal cell, mass conservation (accumulation over terminal cells == cell count), and a bounded sink ratio. Measured across seeds `1/42/999` × mountain/coast regions (64×64 cells, 6 world units/cell): sink ratio ~2.6%–4.0%, source candidates 17–40 per region — low enough that naive-D8 closed depressions don't dominate the terrain, without a depression-resolution pass.
 
-**Not implemented (Etap 4–7, deferred)**: river network as compact sequential data, cross-chunk continuity/query, channel/meander geometry, `createWater.ts`/`waterMaterial.ts` integration, an interactive in-browser hydrology debug overlay. Tracked in [LOOSE-ENDS.md](./LOOSE-ENDS.md).
+## Implementation summary — Etap 4–6 (2026-08-21, follow-up session)
 
-**Verified**: `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, `pnpm run test` (1434 tests) all green. One golden snapshot (`grassPlacement.test.ts`, chunk `(-18,6)` — a low-count foothill-boundary chunk) shifted and was deliberately updated: a documented, expected interaction ("grass thins into mountain foothills") reacting to the mountain-gate/ridge tuning, not a regression. No browser/visual verification in this session — the user verifies mountain shape/foothills/passes manually; hydrology has no rendered representation yet to check.
+The user tried the Etap 1–3 build in the browser and confirmed mountains but (expectedly) no rivers, then asked for "the next stages." This session resolves the architectural problem the implementation notes flagged (D8 accumulation is regional, chunks are small) and ships real, rendered, cross-chunk-continuous rivers.
+
+**Key design decision — river tiles, not per-chunk analysis or source-tracing.** New `src/terrain/riverNetwork.ts` partitions the world into fixed, seed-independent 256m "river tiles" (`RIVER_TILE_SIZE`), each analyzed once over its own core + a 256m halo (`RIVER_TILE_HALO`, 8m cells, ~9,216-cell window — same order of magnitude as the Etap 2–3 test grids). The halo only improves accumulation accuracy near a tile's own edges; it never extends rendered geometry into a neighbour tile. Every world point's river data is owned by exactly one tile, computed identically regardless of which chunk triggers it — the actual fix for the "regional vs. per-chunk" mismatch.
+
+Rivers are built from **classified cells, not traced polylines from sources** (an earlier design considered tracing from `findSourceCandidates()` across the whole halo, which reintroduces cross-tile ownership ambiguity — rejected during implementation). Every core cell with `accumulation` above threshold is classified (`stream`/`river`/`majorRiver`); connected chains are built by walking consecutive classified cells via their single D8 downstream neighbour from each local head (no classified predecessor within the core) until an unclassified cell, a sink, or the core boundary. One pass of Chaikin corner-cutting (`smoothChainPoints`, endpoints fixed) smooths the D8 staircase look — applied once on the canonical pre-clip chain (not per-chunk after clipping), so two chunks always clip identical, already-smoothed data and never reintroduce a seam. This is deliberately smoothing, not meandering (no lateral noise offset — Etap 7).
+
+Classification thresholds (`DEFAULT_RIVER_THRESHOLDS: {stream: 15, river: 50, majorRiver: 200}`) and the minimum chain length (`MIN_CHAIN_POINTS = 8`) were calibrated empirically against real generation: naive low thresholds produced dozens of 1–2 cell noise blips per tile (terrain wrinkles briefly crossing an accumulation threshold, not real channels); the chosen values give ~2–4 real, reasonably long (~9–11 cell) chains per tile. Per-tile computation measured ~18ms average across seeds/tiles in a synthetic benchmark — acceptable for a one-time, per-tile (not per-chunk) synchronous main-thread cost.
+
+**Caching/integration** (`src/terrain/riverTileCache.ts`, `src/terrain/chunkManager.ts`): a tile is computed once (synchronous, main thread — no worker in V1, see "Performance" below) the first time any loaded chunk needs it, reference-counted by currently-loaded chunks overlapping it (same idea as `vegetationRegionBatcher.ts`'s chunk-membership reference counting, applied to tiles instead of chunk-groups), evicted when refcount hits zero. `ChunkRecord` gained `river?: WorldRiver | null` and `riverTiles?: RiverTileCoord[]`; `attachChunkMesh` resolves overlapping tiles (`overlappingRiverTiles`, at most 4 near a tile boundary) right after water attach, using the same `fallbackParams: RawSampleParams` already built for other raw-sampler call sites (no new plumbing); `unload()` disposes `record.river` and releases every retained tile, mirroring the existing `record.water?.dispose()` convention exactly.
+
+**Geometry + rendering** (`src/world/riverGeometry.ts`, `src/world/riverWaterMaterial.ts`, `src/world/createRiverWater.ts`): `clipChainToRect()` (Liang-Barsky segment clip) slices a tile's cached chain to one chunk's rectangle — since it only ever interpolates between the same cached original points, two adjacent chunks clipping the same chain agree exactly at the shared boundary (verified by a dedicated test). `buildRiverRibbonGeometry()` extrudes a simple quad-strip ribbon, width from `widthFromAccumulation()` (bounded, grows with flow), Y from the chain's already-sampled `elevation` (no duplicate terrain sampling) plus a small surface offset — mirrors `createWater.ts`'s "surface slightly above the sampled bed" approach. `createRiverWaterMaterial()` is a distinct, lightweight `ShaderMaterial` (no heightmap/`USE_CHUNK_MASK` — a ribbon isn't a chunk-covering plane) that reuses `tickWaterTime`/`setWaterDayNight` from `waterMaterial.ts` **unmodified**, by defining the same uniform names those functions already write to (`uTime`, the six day/night lake/ocean colors, `uSunDirection`) — only the lake palette is actually sampled in the fragment shader (a river reads as fresh water). `createChunkRiver()` mirrors `WorldWater`'s exact lifecycle shape (`{mesh, update, setDayNight, addTo, dispose}`).
+
+### Performance
+
+Synchronous main-thread tile computation was a deliberate choice over adding a new `'hydrology'` job kind to `chunkWorkerPool.ts` now — the Etap 1–3 notes explicitly said "profile before deciding whether worker execution is needed," and the existing tagged-`kind` pool (`'tile'`/`'grass'`) could take a `'hydrology'` kind later with modest changes if browser testing shows a real hitch. Not done in this session; see LOOSE-ENDS.
+
+### Known limitations (V1, documented rather than silently accepted)
+
+- River width/classification may show a small, cosmetic discontinuity exactly at a tile seam (accumulation computed from slightly different halo windows on each side). Flow direction/topology does not have this problem (local-neighbourhood-only, window-independent) — verified by a dedicated cross-chunk-boundary continuity test.
+- No meanders (lateral noise offset) or waterfalls — Etap 7.
+- No worker offload yet — synchronous main-thread tile computation.
+- Water surface is a simple ribbon, not full shader-parity with lake/ocean (no shore foam mask driven by real depth data, no reflection binding in V1).
+
+**Not implemented (Etap 7, deferred)**: meanders, waterfalls, full shader/rendering parity with lake/ocean (reflection binding, depth-based foam), LOD, worker offload, an interactive in-browser hydrology debug overlay. Tracked in [LOOSE-ENDS.md](./LOOSE-ENDS.md).
+
+**Verified**: `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, `pnpm run test` (1449 tests, up from 1434) all green — no existing test needed updating (rivers don't feed back into `sampleFloorAt`, unlike the Etap 1 mountain tuning). No browser/visual verification in this session — the user verifies actual river appearance/continuity/behavior manually.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

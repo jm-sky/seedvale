@@ -42,6 +42,7 @@ import {
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { type Collider, createColliderRegistry } from '../world/collision'
+import { createChunkRiver, type WorldRiver } from '../world/createRiverWater'
 import { createChunkWater, type WorldWater } from '../world/createWater'
 import {
   CROP_DEFS,
@@ -89,6 +90,8 @@ import {
 } from './chunkWorkerPool'
 import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
 import { createGrassSystem, type WorldGrassChunk } from './grass'
+import { overlappingRiverTiles, type RiverTileCoord } from './riverNetwork'
+import { createRiverTileCache } from './riverTileCache'
 import { createVegetationRegionBatcher } from './vegetationRegionBatcher'
 
 // Loaded once and reused across every chunk (GLTF loader also caches by URL, but
@@ -293,6 +296,10 @@ type ChunkRecord = {
   mesh?: THREE.Mesh
   meshDispose?: () => void
   water?: WorldWater | null
+  river?: WorldRiver | null
+  /** River tiles this chunk retained in `riverTileCache` — released in `unload`.
+   *  Empty/undefined for the common case of a chunk with no nearby river. */
+  riverTiles?: RiverTileCoord[]
   /** Non-living tree stage meshes (limbed/felled/stump) — few and mutated
    *  individually, so never instanced (plan 087 §2.3/§2.5). Also receives
    *  whatever `refreshTreeVisual` swaps a tree into afterward, including a
@@ -612,6 +619,10 @@ export function createChunkManager(
   // region granularity (plan 143) — purely a rendering-side grouping, no new
   // streaming/lifecycle unit; chunks stay the load/unload boundary.
   const vegetationRegionBatcher = createVegetationRegionBatcher(scene)
+  // Bounded, reference-counted cache of computed river tiles (plan 181, Etap
+  // 4-6) — a river tile is 256m/side, much coarser than a chunk, computed once
+  // and shared by every chunk overlapping it; never a global heightfield.
+  const riverTileCache = createRiverTileCache()
   // Kick GLB template loads off the chunk-finalize path (plan 119). Memoized
   // at module level, so a later world rebuild is already warm.
   preloadPropTemplates()
@@ -1107,6 +1118,19 @@ export function createChunkManager(
     if (rec.water) scene.add(rec.water.mesh)
     getMonitor().recordHitch('WATER', performance.now() - waterT0, 'chunk water')
 
+    const riverT0 = performance.now()
+    const chunkRect = {
+      minX: x - config.chunkSize / 2,
+      maxX: x + config.chunkSize / 2,
+      minZ: z - config.chunkSize / 2,
+      maxZ: z + config.chunkSize / 2,
+    }
+    rec.riverTiles = overlappingRiverTiles(chunkRect)
+    const riverChains = rec.riverTiles.flatMap((tile) => riverTileCache.retain(tile, fallbackParams))
+    rec.river = createChunkRiver(riverChains, chunkRect, x, z)
+    if (rec.river) scene.add(rec.river.mesh)
+    getMonitor().recordHitch('WATER', performance.now() - riverT0, 'chunk river')
+
     rec.state = 'ready'
     syncGrassForRecord(rec, lastPlayerChunk)
     getProgramCensus().recordChunkAttach('chunk-mesh-attach', rec.key, [rec.mesh])
@@ -1375,6 +1399,11 @@ export function createChunkManager(
     record.mesh?.removeFromParent()
     record.meshDispose?.()
     record.water?.dispose()
+    record.river?.dispose()
+    if (record.riverTiles) {
+      for (const tile of record.riverTiles) riverTileCache.release(tile)
+      record.riverTiles = undefined
+    }
     removeGrass(record)
     if (record.vegetationExtras) {
       disposeObject3D(record.vegetationExtras)
@@ -1841,6 +1870,7 @@ export function createChunkManager(
     dispose() {
       for (const record of [...chunks.values()]) unload(record)
       vegetationRegionBatcher.dispose()
+      riverTileCache.disposeAll()
       grassSystem.dispose()
       terrainMaterial.dispose()
     },
