@@ -1056,7 +1056,7 @@ export async function createApp(
     harvestCrop: gathering.harvestCrop,
     openContainer: containers.openContainer,
     pickUpContainer: containers.pickUpContainer,
-    advanceWellStage: placement.advanceWellStage,
+    workOnWell: placement.workOnWell,
     onSleepFinished: rest.onSleepFinished,
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,

@@ -69,7 +69,7 @@ describe('saveSlots', () => {
     expect(parsed).not.toBeNull()
     expect(parsed?.id).toBe('current')
     expect(parsed?.name).toBe('Anna')
-    expect(parsed?.data.version).toBe(23)
+    expect(parsed?.data.version).toBe(24)
     expect(parsed?.data.config.seed).toBe(7)
   })
 

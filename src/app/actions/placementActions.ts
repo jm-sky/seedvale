@@ -14,13 +14,17 @@ import {
   type TrapKind,
 } from '../../world/animalTraps'
 import {
-  isWellStageComplete,
+  activeWellStage,
   WELL_FOOTPRINT_RADIUS,
   WELL_PLACE_DURATION_SEC,
   WELL_PLACE_REACH,
   WELL_PLACEMENT_MESSAGE,
   WELL_SEPARATION,
-  wellAdvanceCost,
+  WELL_STAGE_COST,
+  WELL_STAGE_TOOL,
+  WELL_STAGE_WORK_HOURS,
+  WELL_WORK_LABEL,
+  WELL_WORK_SESSION_SEC,
 } from '../../world/playerWell'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
@@ -42,7 +46,7 @@ export type PlacementActions = {
   placeTentAtAim: () => void
   placeTrapAtAim: (kind: TrapKind) => void
   placeWellAtAim: () => void
-  advanceWellStage: (id: string) => void
+  workOnWell: (id: string) => void
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
@@ -171,42 +175,70 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       return
     }
     busy.start(WELL_PLACE_DURATION_SEC, 'Kopanie dołu pod studnię…', () => {
-      bundle.playerWells.place(x, z, yaw, dayNight.elapsedDays)
+      bundle.playerWells.place(x, z, yaw)
       toast.show('Rozpoczęto kopanie studni.')
     })
   }
 
-  /** Advances a player-built well into its next construction stage (plan 127
-   *  §7/§9) — `[E]` on an unfinished well (`app/interactables.ts`'s
-   *  `playerWell` candidate). Validates the current stage's world-time clock
-   *  has elapsed and that stone/branch materials for the *next* stage are
-   *  available, consuming them atomically only once both checks pass. */
-  const advanceWellStage = (id: string): void => {
+  /** Runs one active-work session ("bout") on a player-built well (plan 127,
+   *  revised — active work, not elapsed world time) — `[E]` on an unfinished
+   *  well (`app/interactables.ts`'s `playerWell` candidate). One unified
+   *  action handles every press:
+   *  1. `stage` = the record's own stage if its work isn't finished yet,
+   *     otherwise the next stage (about to be started in this same press).
+   *  2. Tool check (never consumed) — re-validated on every press, including
+   *     resumes.
+   *  3. If this press starts a *new* stage, validate + atomically consume
+   *     that stage's materials first (nothing is spent if anything is
+   *     missing), then transition the record into it (resets progress,
+   *     swaps mesh/collider).
+   *  4. Start one busy-channel work bout, capped at `WELL_WORK_SESSION_SEC`
+   *     — a stage's full requirement is reached over several repeated
+   *     presses, never one long frozen channel. The *measured* world-time
+   *     delta over the bout (not the precomputed cap) is what gets credited
+   *     to `workProgress`, on both natural completion and cancellation
+   *     (Escape) — so an interruption keeps exactly the work actually done,
+   *     never rolling back stage/materials. */
+  const workOnWell = (id: string): void => {
     if (isActionBlocked(ctx)) return
     const well = bundle.playerWells.list().find((entry) => entry.id === id)
     if (!well) return
-    if (!isWellStageComplete(well, dayNight.elapsedDays)) {
-      toast.show('Budowa jeszcze trwa. Wróć później.', 'error')
+    const stage = activeWellStage(well)
+    if (!stage) return
+    const tool = WELL_STAGE_TOOL[stage]
+    if (tool && !inventory.has(tool, 1)) {
+      toast.show(`Potrzebujesz: ${ITEM_DEFS[tool].label}.`, 'error')
       return
     }
-    const cost = wellAdvanceCost(well)
-    if (!cost) return
-    const missing: string[] = []
-    if (cost.stone > 0 && !inventory.has('stone', cost.stone)) missing.push(`${cost.stone}× ${ITEM_DEFS.stone.label}`)
-    if (cost.branch > 0 && !inventory.has('branch', cost.branch)) missing.push(`${cost.branch}× ${ITEM_DEFS.branch.label}`)
-    if (missing.length > 0) {
-      toast.show(`Potrzebujesz: ${missing.join(', ')}.`, 'error')
-      return
+    const startingNewStage = stage !== well.stage
+    if (startingNewStage) {
+      const cost = WELL_STAGE_COST[stage]
+      const missing: string[] = []
+      if (cost.stone > 0 && !inventory.has('stone', cost.stone)) missing.push(`${cost.stone}× ${ITEM_DEFS.stone.label}`)
+      if (cost.branch > 0 && !inventory.has('branch', cost.branch)) missing.push(`${cost.branch}× ${ITEM_DEFS.branch.label}`)
+      if (missing.length > 0) {
+        toast.show(`Potrzebujesz: ${missing.join(', ')}.`, 'error')
+        return
+      }
+      if (cost.stone > 0) inventory.remove('stone', cost.stone)
+      if (cost.branch > 0) inventory.remove('branch', cost.branch)
+      if (cost.stone > 0 || cost.branch > 0) {
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        ctx.onInventoryChanged()
+      }
+      bundle.playerWells.transitionTo(id, stage)
     }
-    if (cost.stone > 0) inventory.remove('stone', cost.stone)
-    if (cost.branch > 0) inventory.remove('branch', cost.branch)
-    if (cost.stone > 0 || cost.branch > 0) {
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      ctx.onInventoryChanged()
+    const workedSoFar = startingNewStage ? 0 : well.workProgress
+    const remainingHours = Math.max(0, WELL_STAGE_WORK_HOURS[stage] - workedSoFar)
+    const sessionHours = Math.min(WELL_WORK_SESSION_SEC / (dayNight.dayLengthSec / 24), remainingHours)
+    const sessionSec = sessionHours * (dayNight.dayLengthSec / 24)
+    const startDays = dayNight.elapsedDays
+    const commitProgress = (): void => {
+      const elapsedHours = Math.max(0, (dayNight.elapsedDays - startDays) * 24)
+      bundle.playerWells.addWork(id, elapsedHours)
     }
-    bundle.playerWells.advanceStage(id, dayNight.elapsedDays)
-    toast.show('Budowa postępuje.')
+    busy.start(sessionSec, WELL_WORK_LABEL[stage], commitProgress, { onCancel: commitProgress })
   }
 
-  return { tentAimPoint, tentBlockers, placeTentAtAim, placeTrapAtAim, placeWellAtAim, advanceWellStage }
+  return { tentAimPoint, tentBlockers, placeTentAtAim, placeTrapAtAim, placeWellAtAim, workOnWell }
 }

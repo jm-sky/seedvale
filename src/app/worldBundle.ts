@@ -393,7 +393,6 @@ export async function createWorldBundle(
   const playerWells = createPlayerWells(
     scene,
     chunkManager.sampleHeight,
-    getWorldDays,
     chunkManager.registerColliders,
     chunkManager.clearColliders,
     initialPlayerWells,
@@ -554,7 +553,6 @@ export async function rebuildWorldBundle(
   bundle.playerWells = createPlayerWells(
     scene,
     bundle.chunkManager.sampleHeight,
-    getWorldDays,
     bundle.chunkManager.registerColliders,
     bundle.chunkManager.clearColliders,
     carriedPlayerWells,

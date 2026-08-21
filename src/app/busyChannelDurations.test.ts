@@ -4,6 +4,7 @@ import { COOK_DURATION_SEC } from '../items/campfireCooking'
 import { TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
 import { IGNITE_DURATION_SEC } from '../settlement/VillageFire'
 import { DIG_DURATION_SEC } from '../terrain/dig'
+import { WELL_WORK_SESSION_SEC } from '../world/playerWell'
 import { CHOP_DURATION_SEC } from '../world/treeHarvest'
 
 /** Regression: harvest/ignite/cook were set to 120–300 real seconds of a
@@ -19,6 +20,7 @@ describe('busy-channel durations', () => {
       IGNITE_DURATION_SEC,
       COOK_DURATION_SEC,
       TENT_SETUP_DURATION_SEC,
+      WELL_WORK_SESSION_SEC,
     ]
     for (const duration of durations) {
       expect(duration).toBeGreaterThan(0)

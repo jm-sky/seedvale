@@ -525,4 +525,10 @@ Read these first and stop broad exploration once the concrete APIs are known:
 
 The implementation should fit into these existing boundaries. If an apparently necessary new abstraction does not fit one of them, first verify whether the current code already has the required capability before creating it.
 
+## 25. Addendum (2026-08-21) — §7/§8 superseded: active work, not elapsed time
+
+§7 ("Construction stages should be state transitions, not animations") and §8 ("Time calculation") above describe evaluating stage completion from `stageStartedAt` + elapsed world time — this turned out to be the wrong model and **no longer applies**. World time advances every frame regardless of the player, so an elapsed-time gate let a stage finish whether or not the player ever did anything. `stageStartedAt` has been removed from `PlayerWellRecord` entirely; there is no "construction clock" any more.
+
+The corrected model (see the plan's own "Revision (2026-08-21)" section for full detail): each stage carries a `workProgress` field (hours of *active* player work, only incremented while a well-work busy-channel session — `app/actions/placementActions.ts`'s `workOnWell` — is actually running). §9's "validate → consume atomically → start" ordering is unchanged and still correct, except "start" now means "start a work session," not "start a timer." §16's idempotent-by-id collider/mesh registration is unchanged.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

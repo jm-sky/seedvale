@@ -350,7 +350,7 @@ export function buildInteractables(
   // construction, it exposes its own stage-advance prompt instead.
   for (const well of placedWells.list()) {
     if (!withinRange(well.x, well.z, playerPos, GAZE_RANGE)) continue
-    if (isWellCompleted(well, nowDays)) {
+    if (isWellCompleted(well)) {
       list.push({
         kind: 'well',
         position: { x: well.x, z: well.z },
@@ -361,7 +361,7 @@ export function buildInteractables(
     list.push({
       kind: 'playerWell',
       position: { x: well.x, z: well.z },
-      promptLabel: wellPromptLabel(well, nowDays),
+      promptLabel: wellPromptLabel(well),
       id: well.id,
       stage: well.stage,
     })

@@ -1,47 +1,69 @@
+import type { ToolKind } from '../items/HeldTool'
 import type { GroundPlacementReason } from '../items/tentPlacement'
 
 /**
- * Player-built well — pure domain logic (plan 127). Deliberately free of
- * `THREE`/DOM: same split as `world/animalTraps.ts` vs
- * `world/createPlacedTraps.ts`/`world/trapProp.ts`. A well is a plain,
- * persistent world object — no reference to `PlayerController`, no manager.
+ * Player-built well — pure domain logic (plan 127, revised for active-work
+ * construction). Deliberately free of `THREE`/DOM: same split as
+ * `world/animalTraps.ts` vs `world/createPlacedTraps.ts`/`world/trapProp.ts`.
+ * A well is a plain, persistent world object — no reference to
+ * `PlayerController`, no manager.
  *
- * Three visible construction stages (`pit → well → roof`), each gated by
- * elapsed *world* time (`WELL_STAGE_DURATION_DAYS`), not a real-time timer.
- * Only `roof` reached its own duration exposes a completed `WaterSource` —
- * see `world/createPlayerWells.ts` and `app/interactables.ts`.
+ * Three visible construction stages (`pit → well → roof`). Each stage
+ * requires `WELL_STAGE_WORK_HOURS[stage]` of *active* player work —
+ * `PlayerWellRecord.workProgress` only increases while a well-work busy
+ * channel bout is actually running (`app/actions/placementActions.ts`'s
+ * `workOnWell`), never from elapsed world time alone. There is no
+ * `stageStartedAt`/timer — a stage cannot finish just because time passed.
  */
 export type WellStage = 'pit' | 'well' | 'roof'
 
 /** Persisted state of one player-built well. Intentionally excludes a
  *  `WaterSource`/quantity/`Object3D` reference — those are always derived
- *  from `stage`/`stageStartedAt` (implementation notes §3). */
+ *  from `stage`/`workProgress`. */
 export type PlayerWellRecord = {
   id: string
   x: number
   z: number
   yaw: number
   stage: WellStage
-  /** World-day (`dayNight.elapsedDays`) the *current* stage's work began. */
-  stageStartedAt: number
+  /** Hours of *active* work completed toward `WELL_STAGE_WORK_HOURS[stage]`.
+   *  Reset to 0 whenever `stage` advances. Only ever increases while a
+   *  well-work busy-channel bout for this well is running. */
+  workProgress: number
 }
 
-/** Initial values from the plan (§4): pit ~1 day, well ~1 day, roof ~0.5 day. */
-export const WELL_STAGE_DURATION_DAYS: Record<WellStage, number> = {
-  pit: 1,
-  well: 1,
-  roof: 0.5,
+/** Active-work hours required to finish each stage. `pit` is the value
+ *  given directly by the design ("~2h aktywnej pracy"); `well`/`roof` keep
+ *  the original plan's 1 : 1 : 0.5 proportions (pit : well : roof) scaled
+ *  onto active-work hours instead of elapsed-world-time days — chosen
+ *  values, not derived from other existing gameplay. */
+export const WELL_STAGE_WORK_HOURS: Record<WellStage, number> = {
+  pit: 2,
+  well: 2,
+  roof: 1,
 }
 
 export type WellMaterialCost = { stone: number, branch: number }
 
-/** Cost to *advance into* each stage — charged once, when that stage starts
- *  (implementation notes §9). `pit` costs nothing beyond the shovel used to
- *  dig it; `well` is the stone/wood body, `roof` is the wood daszek. */
+/** Cost to *start* each stage — charged once, atomically, the moment that
+ *  stage's first work session begins. `pit` costs nothing beyond the
+ *  shovel used to dig it; `well` is the stone/wood body, `roof` is the
+ *  wood daszek. */
 export const WELL_STAGE_COST: Record<WellStage, WellMaterialCost> = {
   pit: { stone: 0, branch: 0 },
   well: { stone: 6, branch: 3 },
   roof: { stone: 0, branch: 4 },
+}
+
+/** Tool required to work each stage — checked (never consumed) before every
+ *  work session, including resumes. `null` means no tool is required: no
+ *  existing item fits "assemble stone/wood into a well body or roof," and
+ *  inventing one would be an artificial requirement the design explicitly
+ *  avoids. */
+export const WELL_STAGE_TOOL: Record<WellStage, ToolKind | null> = {
+  pit: 'shovel',
+  well: null,
+  roof: null,
 }
 
 const WELL_NEXT_STAGE: Record<WellStage, WellStage | null> = {
@@ -54,28 +76,25 @@ export function nextWellStage(record: PlayerWellRecord): WellStage | null {
   return WELL_NEXT_STAGE[record.stage]
 }
 
-/** Materials required to advance out of `record`'s current stage — `null`
- *  once the well is already complete (nothing further to build). */
-export function wellAdvanceCost(record: PlayerWellRecord): WellMaterialCost | null {
-  const next = nextWellStage(record)
-  return next ? WELL_STAGE_COST[next] : null
+/** True once `record`'s current stage has accumulated enough active work. */
+export function isWellStageWorkComplete(record: PlayerWellRecord): boolean {
+  return record.workProgress >= WELL_STAGE_WORK_HOURS[record.stage]
 }
 
-export function wellStageElapsedDays(record: PlayerWellRecord, nowDays: number): number {
-  return Math.max(0, nowDays - record.stageStartedAt)
+/** Only `roof` reaching its own work requirement counts as a finished well —
+ *  the single place that decides whether a completed `WaterSource` exists. */
+export function isWellCompleted(record: PlayerWellRecord): boolean {
+  return record.stage === 'roof' && isWellStageWorkComplete(record)
 }
 
-/** True once the current stage's world-time duration has elapsed — evaluated
- *  lazily whenever the well is looked at (implementation notes §7), never a
- *  per-frame timer. */
-export function isWellStageComplete(record: PlayerWellRecord, nowDays: number): boolean {
-  return wellStageElapsedDays(record, nowDays) >= WELL_STAGE_DURATION_DAYS[record.stage]
-}
-
-/** Only `roof` reaching its own duration counts as a finished well — the
- *  single place that decides whether a completed `WaterSource` exists. */
-export function isWellCompleted(record: PlayerWellRecord, nowDays: number): boolean {
-  return record.stage === 'roof' && isWellStageComplete(record, nowDays)
+/** The stage a `[E]` press right now would work on: `record.stage` itself if
+ *  its work isn't finished yet, otherwise the next stage (about to be
+ *  started/transitioned into in the same press). `null` once the well is
+ *  fully completed — `app/interactables.ts` stops emitting a `playerWell`
+ *  candidate at that point, so callers shouldn't normally see `null`. */
+export function activeWellStage(record: PlayerWellRecord): WellStage | null {
+  if (!isWellStageWorkComplete(record)) return record.stage
+  return nextWellStage(record)
 }
 
 export type WellPlacementReason = GroundPlacementReason | 'well'
@@ -94,29 +113,46 @@ export const WELL_FOOTPRINT_RADIUS = 0.9
 export const WELL_SEPARATION = 4
 /** How far ahead of the player a well is placed — mirrors `TRAP_PLACE_REACH`. */
 export const WELL_PLACE_REACH = 1.8
-/** Busy-channel length for the placement action, which also starts the
- *  `pit` stage's world-time clock (§7's "[E] Wykop dół" happens here). */
+/** Busy-channel length for the placement action itself (creating the
+ *  record) — unrelated to the active-work hours a stage still needs. */
 export const WELL_PLACE_DURATION_SEC = 3
 
-/** `[E]` prompt once a stage's work is done and the next stage can start. */
-export const WELL_ADVANCE_PROMPT: Record<Exclude<WellStage, 'roof'>, string> = {
-  pit: '[E] Buduj studnię',
-  well: '[E] Zbuduj daszek',
+/** Length of one active-work "bout" (a single `[E]` press's busy channel),
+ *  capped like every other timed player action (`busyChannelDurations.test.ts`
+ *  enforces `≤ 8s` across the board — a stage's full work requirement is
+ *  reached over several repeated bouts, never one long frozen channel). */
+export const WELL_WORK_SESSION_SEC = 4
+
+/** `[E]` prompt to start (fresh) or resume/transition into a stage's work. */
+export const WELL_STAGE_START_PROMPT: Record<WellStage, string> = {
+  pit: '[E] Wykop dół',
+  well: '[E] Buduj studnię',
+  roof: '[E] Zbuduj daszek',
 }
 
-/** Prompt while a stage's world-time clock hasn't elapsed yet. */
-export const WELL_PROGRESS_PROMPT: Record<WellStage, string> = {
+/** Busy-overlay label shown while a work-session bout is actively running. */
+export const WELL_WORK_LABEL: Record<WellStage, string> = {
   pit: 'Kopanie dołu w toku…',
   well: 'Budowa studni w toku…',
   roof: 'Budowa daszku w toku…',
 }
 
+function formatHours(hours: number): string {
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
+}
+
 /** Prompt for an unfinished (not yet `roof`-complete) well — a completed well
- *  instead becomes a plain `well` `Interactable` (see `app/interactables.ts`). */
-export function wellPromptLabel(record: PlayerWellRecord, nowDays: number): string {
-  if (!isWellStageComplete(record, nowDays)) return WELL_PROGRESS_PROMPT[record.stage]
-  if (record.stage === 'roof') return WELL_PROGRESS_PROMPT.roof
-  return WELL_ADVANCE_PROMPT[record.stage]
+ *  instead becomes a plain `well` `Interactable` (see `app/interactables.ts`).
+ *  Appends the current progress fraction only while genuinely resuming an
+ *  already-started stage (not when the press would start a new one). */
+export function wellPromptLabel(record: PlayerWellRecord): string {
+  const stage = activeWellStage(record)
+  if (!stage) return WELL_STAGE_START_PROMPT.roof
+  const base = WELL_STAGE_START_PROMPT[stage]
+  if (stage === record.stage && record.workProgress > 0) {
+    return `${base} (${formatHours(record.workProgress)}/${formatHours(WELL_STAGE_WORK_HOURS[stage])} h)`
+  }
+  return base
 }
 
 /** Bounded lookup for a completed player-built well near `(x, z)`, used by

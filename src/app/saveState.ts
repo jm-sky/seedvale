@@ -20,7 +20,7 @@ import { pickActiveSaveId } from '../persistence/saveSlots'
 /** Current canonical save schema version. The field list and migration story
  *  live in `src/persistence/saveData.ts` and `docs/STATE.md` — this module
  *  only assembles the runtime state into that shape. */
-const SAVE_VERSION = 23
+const SAVE_VERSION = 24
 
 /** Assembles the live runtime state into a `SaveData` and owns *when* it gets
  *  written. The split from `src/persistence/` is unchanged by this extraction:

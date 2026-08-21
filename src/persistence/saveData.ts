@@ -391,26 +391,36 @@ export type SaveDataV22 = Omit<SaveDataV21, 'version'> & {
   carriedContainer: SaveCarriedContainer | null
 }
 
-/** Persistent player-built well (plan 127) — mirrors
- *  `world/playerWell.ts`'s `PlayerWellRecord`; the completed `WaterSource`
- *  itself is never saved, only re-derived once `stage === 'roof'` and its
- *  world-time duration has elapsed (implementation notes §3). */
+/** Persistent player-built well (plan 127, revised — active-work
+ *  construction, v24) — mirrors `world/playerWell.ts`'s `PlayerWellRecord`;
+ *  the completed `WaterSource` itself is never saved, only re-derived once
+ *  `stage === 'roof'` and its work requirement is met. `workProgress` is
+ *  hours of *active* player work toward the current stage — replaces v23's
+ *  `stageStartedAt` (an elapsed-world-time timestamp), which no longer
+ *  exists: a stage cannot finish just because time passed. */
 export type SavePlayerWell = {
   id: string
   x: number
   z: number
   yaw: number
   stage: WellStage
-  stageStartedAt: number
+  workProgress: number
 }
 
 export type SaveDataV23 = Omit<SaveDataV22, 'version'> & {
   version: 23
+  /** @deprecated superseded by v24's `SavePlayerWell` shape (`workProgress`
+   *  replaces `stageStartedAt`) — kept only for migration typing. */
+  playerWells: (Omit<SavePlayerWell, 'workProgress'> & { stageStartedAt: number })[]
+}
+
+export type SaveDataV24 = Omit<SaveDataV23, 'version' | 'playerWells'> & {
+  version: 24
   playerWells: SavePlayerWell[]
 }
 
-/** Canonical save shape — always v23. `loadSaveData` migrates older saves up. */
-export type SaveData = SaveDataV23
+/** Canonical save shape — always v24. `loadSaveData` migrates older saves up. */
+export type SaveData = SaveDataV24
 
 function isSaveConfig(value: unknown): value is SaveConfig {
   if (!value || typeof value !== 'object') return false
@@ -1026,7 +1036,9 @@ export function isSaveDataV22(value: unknown): value is SaveDataV22 {
 
 const WELL_STAGES: ReadonlySet<string> = new Set<WellStage>(['pit', 'roof', 'well'])
 
-function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
+/** @deprecated v23's `stageStartedAt`-shaped `playerWells` — kept only so
+ *  `isSaveDataV23`/`toV24` can validate/migrate old saves. */
+function isPlayerWellsFieldV23(value: unknown): value is SaveDataV23['playerWells'] {
   if (!Array.isArray(value)) return false
   return value.every((entry) => {
     if (!entry || typeof entry !== 'object') return false
@@ -1042,10 +1054,35 @@ function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
   })
 }
 
-export function isSaveDataV23(value: unknown): value is SaveData {
+function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const w = entry as Record<string, unknown>
+    return (
+      typeof w.id === 'string' &&
+      typeof w.x === 'number' &&
+      typeof w.z === 'number' &&
+      typeof w.yaw === 'number' &&
+      typeof w.stage === 'string' && WELL_STAGES.has(w.stage) &&
+      typeof w.workProgress === 'number'
+    )
+  })
+}
+
+export function isSaveDataV23(value: unknown): value is SaveDataV23 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 23) return false
+  if (!isSaveDataV22({ ...v, version: 22 })) return false
+  if (!isPlayerWellsFieldV23(v.playerWells)) return false
+  return true
+}
+
+export function isSaveDataV24(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 24) return false
   if (!isSaveDataV22({ ...v, version: 22 })) return false
   if (!isPlayerWellsField(v.playerWells)) return false
   return true
@@ -1269,7 +1306,7 @@ function toV22(v21: SaveDataV21): SaveDataV22 {
 
 /** Plan 127 — pre-v23 saves predate player-built wells entirely, so none
  *  have ever been placed. */
-function toV23(v22: SaveDataV22): SaveData {
+function toV23(v22: SaveDataV22): SaveDataV23 {
   const { version: _version, ...rest } = v22
   return {
     ...rest,
@@ -1278,21 +1315,44 @@ function toV23(v22: SaveDataV22): SaveData {
   }
 }
 
-/** Migrates any post-v16 save payload to the canonical v23 shape. */
-function upToCurrent(v16: SaveDataV16): SaveData {
-  return toV23(toV22(toV21(toV20(toV19(toV18(toV17(v16)))))))
+/** Plan 127 revision — v23's `stageStartedAt` (elapsed-world-time timestamp)
+ *  is replaced by `workProgress` (hours of active player work). There is no
+ *  way to recover how much *active* work a pre-v24 in-progress well already
+ *  had — a timestamp never tracked that — so every migrated well restarts
+ *  its current stage's work from 0. This is the only honest migration: it
+ *  neither auto-completes the stage nor fabricates progress. */
+function toV24(v23: SaveDataV23): SaveData {
+  const { version: _version, ...rest } = v23
+  return {
+    ...rest,
+    version: 24,
+    playerWells: v23.playerWells.map((w) => ({
+      id: w.id,
+      x: w.x,
+      z: w.z,
+      yaw: w.yaw,
+      stage: w.stage,
+      workProgress: 0,
+    })),
+  }
 }
 
-/** Accepts a stored v1–v23 save and always returns the canonical v23 shape. */
+/** Migrates any post-v16 save payload to the canonical v24 shape. */
+function upToCurrent(v16: SaveDataV16): SaveData {
+  return toV24(toV23(toV22(toV21(toV20(toV19(toV18(toV17(v16))))))))
+}
+
+/** Accepts a stored v1–v24 save and always returns the canonical v24 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV23(value)) return value
-    if (isSaveDataV22(value)) return toV23(value)
-    if (isSaveDataV21(value)) return toV23(toV22(value))
-    if (isSaveDataV20(value)) return toV23(toV22(toV21(value)))
-    if (isSaveDataV19(value)) return toV23(toV22(toV21(toV20(value))))
-    if (isSaveDataV18(value)) return toV23(toV22(toV21(toV20(toV19(value)))))
-    if (isSaveDataV17(value)) return toV23(toV22(toV21(toV20(toV19(toV18(value))))))
+    if (isSaveDataV24(value)) return value
+    if (isSaveDataV23(value)) return toV24(value)
+    if (isSaveDataV22(value)) return toV24(toV23(value))
+    if (isSaveDataV21(value)) return toV24(toV23(toV22(value)))
+    if (isSaveDataV20(value)) return toV24(toV23(toV22(toV21(value))))
+    if (isSaveDataV19(value)) return toV24(toV23(toV22(toV21(toV20(value)))))
+    if (isSaveDataV18(value)) return toV24(toV23(toV22(toV21(toV20(toV19(value))))))
+    if (isSaveDataV17(value)) return toV24(toV23(toV22(toV21(toV20(toV19(toV18(value)))))))
     if (isSaveDataV16(value)) return upToCurrent(value)
     if (isSaveDataV15(value)) return upToCurrent(toV16(value))
     if (isSaveDataV14(value)) return upToCurrent(toV16(toV15(value)))
