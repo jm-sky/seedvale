@@ -14,6 +14,7 @@ import {
 import { spawnerDestroyBusyLabel } from '../../fauna/createFauna'
 import { COOK_DURATION_SEC, findCookingRecipe } from '../../items/campfireCooking'
 import { getFreshnessStage } from '../../items/foodFreshness'
+import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
 import {
@@ -80,7 +81,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     if (!animal.canHarvestMeat()) return
     const meatKind = meatKindForAnimal(animal.def.kind)
     if (!inventory.canAdd(meatKind, 1)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
+      toast.show(inventoryFullToastText(inventory, meatKind, 1), 'error')
       return
     }
     animal.holdCorpse()
@@ -179,7 +180,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       return
     }
     if (!inventory.canAdd(recipe.output, recipe.count)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
+      toast.show(inventoryFullToastText(inventory, recipe.output, recipe.count), 'error')
       return
     }
     busy.start(COOK_DURATION_SEC, 'Pieczenie mięsa…', () => {
@@ -187,8 +188,9 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
         toast.show('Ogień zgasł.', 'error')
         return
       }
-      if (!inventory.canAdd(recipe.output, recipe.count) || !inventory.remove(recipe.input, 1)) {
-        toast.show('Ekwipunek jest za ciężki.', 'error')
+      const hasRoom = inventory.canAdd(recipe.output, recipe.count)
+      if (!hasRoom || !inventory.remove(recipe.input, 1)) {
+        toast.show(hasRoom ? 'Ekwipunek jest za ciężki.' : inventoryFullToastText(inventory, recipe.output, recipe.count), 'error')
         return
       }
       inventory.add(recipe.output, recipe.count, dayNight.elapsedDays)
@@ -218,8 +220,9 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       return
     }
     if (!inventory.add('waterskin_full', 1)) {
+      const toastText = inventoryFullToastText(inventory, 'waterskin_full', 1)
       inventory.add('waterskin_empty', 1)
-      toast.show('Ekwipunek jest za ciężki.', 'error')
+      toast.show(toastText, 'error')
       return
     }
     playActionWell(worldAudio.playAt, player.mesh.position)

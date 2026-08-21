@@ -7,6 +7,7 @@ import {
   CONTAINER_SETUP_DURATION_SEC,
   containerTotalWeight,
 } from '../../items/container'
+import { inventoryFullToastText } from '../../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../../items/inventoryView'
 import { evaluateGroundPlacement } from '../../items/tentPlacement'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
@@ -174,7 +175,7 @@ export function createContainerActions(
     onWithdraw: (kind, amount) => {
       if (!openContainerId) return
       if (!inventory.canAdd(kind, amount)) {
-        toast.show('Ekwipunek jest za ciężki albo za mały.', 'error')
+        toast.show(inventoryFullToastText(inventory, kind, amount), 'error')
         return
       }
       const entry = bundle.placedContainers.find(openContainerId)
@@ -202,8 +203,9 @@ export function createContainerActions(
     onWithdrawInstance: (instanceId) => {
       if (!openContainerId) return
       const instance = bundle.placedContainers.find(openContainerId)?.contents.getInstance(instanceId)
-      if (!instance || !inventory.canAddInstance(instance)) {
-        toast.show('Ekwipunek jest za ciężki albo za mały.', 'error')
+      if (!instance) return
+      if (!inventory.canAddInstance(instance)) {
+        toast.show(inventoryFullToastText(inventory, instance.kind, 1), 'error')
         return
       }
       const withdrawn = bundle.placedContainers.withdrawInstance(openContainerId, instanceId)

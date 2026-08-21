@@ -829,6 +829,8 @@ export async function createApp(
       inventoryCountsForUi(inventory),
       inventory.totalWeight(),
       inventory.maxWeight,
+      inventory.totalSize(),
+      inventory.maxSize,
       heldTool.held(),
       buildInventoryGroups(inventory),
     )

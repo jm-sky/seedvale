@@ -4,7 +4,6 @@ import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { isToolKind } from '../../items/HeldTool'
 import { type ConsumableNeed, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
-import { isInstanceBackedKind } from '../../items/itemInstances'
 import { hasItemCategory, ITEM_DEFS, type ItemCategory, type ItemKind, primaryItemCategory } from '../../items/items'
 import { trapKindForItem } from '../../world/animalTraps'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -87,6 +86,7 @@ function onPlaceContainer(): void { ui.inventory.onPlaceContainer?.() }
     </h1>
     <div class="mb-3 text-[13px] opacity-75">
       Waga: {{ formatWeight(ui.inventory.totalWeight) }} / {{ formatWeight(ui.inventory.maxWeight) }}
+      · Pojemność: {{ ui.inventory.totalSize }} / {{ ui.inventory.maxSize }}
       <span
         v-if="ui.inventory.heldTool"
         class="ml-2 opacity-90"
@@ -198,7 +198,6 @@ function onPlaceContainer(): void { ui.inventory.onPlaceContainer?.() }
           </div>
           <div class="flex items-center justify-end gap-2">
             <ItemsScreenItemButton
-              v-if="!isInstanceBackedKind(item.kind)"
               class="min-h-0 py-1"
               label="Wyrzuć"
               destructive

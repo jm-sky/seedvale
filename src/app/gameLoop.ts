@@ -13,7 +13,6 @@ import type { TouchControls } from '../input/createTouchControls'
 import type { createKeyboard } from '../input/Keyboard'
 import type { Interactable } from '../interaction/Interactable'
 import type { HeldTool } from '../items/HeldTool'
-import type { Inventory } from '../items/Inventory'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
@@ -61,6 +60,7 @@ import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
+import { type Inventory, inventoryFullToastText } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
 import { isWeaponItemInstance } from '../items/itemInstances'
 import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
@@ -1155,7 +1155,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'item') {
         if (interactPressed || altInteractPressed) {
           if (!inventory.canAdd(target.item.kind)) {
-            toast.show('Ekwipunek jest za ciężki.', 'error')
+            toast.show(inventoryFullToastText(inventory, target.item.kind), 'error')
           } else {
             const collected = collectItem(target.item, bundle.chunkManager, bundle.itemSpawners, bundle.droppedItems)
             if (collected) {

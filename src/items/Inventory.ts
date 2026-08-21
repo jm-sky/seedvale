@@ -24,7 +24,7 @@ const DEFAULT_MAX_WEIGHT = 20
  *  explicitly by `createApp.ts`, since the constructor's own default stays
  *  `Infinity` for every other caller — NPC carrying, container contents,
  *  pre-164 tests). */
-export const DEFAULT_MAX_SIZE = 40
+export const DEFAULT_MAX_SIZE = 60
 
 export type SaveItemInstance = {
   id: string
@@ -169,17 +169,25 @@ export class Inventory {
     return total
   }
 
+  /** Whether `n` more of `kind` would still fit under `maxWeight` alone. */
+  hasWeightRoom(kind: ItemKind, n = 1): boolean {
+    return this.totalWeight() + ITEM_DEFS[kind].weight * n <= this.maxWeight + 1e-9
+  }
+
+  /** Whether `n` more of `kind` would still fit under `maxSize` alone. */
+  hasSizeRoom(kind: ItemKind, n = 1): boolean {
+    return this.totalSize() + itemSizeUnits(kind) * n <= this.maxSize + 1e-9
+  }
+
   /** Whether `n` more of `kind` would still fit under both `maxWeight` and
    *  `maxSize` — independent constraints (plan 164 §10): a small heavy item
    *  can fail only the weight check, a large light one only the size check. */
   canAdd(kind: ItemKind, n = 1): boolean {
-    if (this.totalWeight() + ITEM_DEFS[kind].weight * n > this.maxWeight + 1e-9) return false
-    return this.totalSize() + itemSizeUnits(kind) * n <= this.maxSize + 1e-9
+    return this.hasWeightRoom(kind, n) && this.hasSizeRoom(kind, n)
   }
 
   canAddInstance(instance: ItemInstance): boolean {
-    if (this.totalWeight() + ITEM_DEFS[instance.kind].weight > this.maxWeight + 1e-9) return false
-    return this.totalSize() + itemSizeUnits(instance.kind) <= this.maxSize + 1e-9
+    return this.hasWeightRoom(instance.kind, 1) && this.hasSizeRoom(instance.kind, 1)
   }
 
   /** Adds `n` of `kind` if it fits under `maxWeight`; a no-op (returns false)
@@ -356,4 +364,15 @@ export class Inventory {
     }
     return out
   }
+}
+
+/** Toast text for a failed `canAdd`/`canAddInstance` — picks wording by
+ *  which cap actually blocked (weight/size are independent, plan 164 §10),
+ *  so callers stop always naming weight regardless of the real reason. */
+export function inventoryFullToastText(inventory: Inventory, kind: ItemKind, n = 1): string {
+  const weightOk = inventory.hasWeightRoom(kind, n)
+  const sizeOk = inventory.hasSizeRoom(kind, n)
+  if (!weightOk && !sizeOk) return 'Ekwipunek jest za ciężki albo za mały.'
+  if (!weightOk) return 'Ekwipunek jest za ciężki.'
+  return 'Ekwipunek jest za mały.'
 }

@@ -49,6 +49,8 @@ type InventoryState = {
   groups: readonly InventoryGroupView[]
   totalWeight: number
   maxWeight: number
+  totalSize: number
+  maxSize: number
   heldTool: ItemKind | null
   onDrop: ((kind: ItemKind) => void) | null
   onEquip: ((kind: ItemKind) => void) | null
@@ -281,7 +283,7 @@ export function emitUiClick(): void {
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
-  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null } as InventoryState,
+  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null, onRefresh: null,
@@ -486,6 +488,8 @@ export function openInventory(
   counts: Partial<Record<ItemKind, number>>,
   totalWeight: number,
   maxWeight: number,
+  totalSize: number,
+  maxSize: number,
   heldTool: ItemKind | null,
   groups: readonly InventoryGroupView[],
   onDrop: (kind: ItemKind) => void,
@@ -501,6 +505,8 @@ export function openInventory(
   ui.inventory.groups = groups
   ui.inventory.totalWeight = totalWeight
   ui.inventory.maxWeight = maxWeight
+  ui.inventory.totalSize = totalSize
+  ui.inventory.maxSize = maxSize
   ui.inventory.heldTool = heldTool
   ui.inventory.onDrop = onDrop
   ui.inventory.onEquip = onEquip
@@ -517,6 +523,8 @@ export function refreshInventory(
   counts: Partial<Record<ItemKind, number>>,
   totalWeight: number,
   maxWeight: number,
+  totalSize: number,
+  maxSize: number,
   heldTool: ItemKind | null,
   groups: readonly InventoryGroupView[],
 ): void {
@@ -524,6 +532,8 @@ export function refreshInventory(
   ui.inventory.groups = groups
   ui.inventory.totalWeight = totalWeight
   ui.inventory.maxWeight = maxWeight
+  ui.inventory.totalSize = totalSize
+  ui.inventory.maxSize = maxSize
   ui.inventory.heldTool = heldTool
 }
 export function closeInventory(): void {

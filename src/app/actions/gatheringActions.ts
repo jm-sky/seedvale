@@ -5,6 +5,7 @@ import type { FishingBaitState } from '../../world/fishing'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { ANIMAL_LABELS } from '../../fauna/AnimalAgent'
 import { BAIT_ITEM_PRIORITY } from '../../items/foodFreshness'
+import { inventoryFullToastText } from '../../items/Inventory'
 import { ITEM_DEFS } from '../../items/items'
 import { trapInstanceFromWorld } from '../../items/trapItemInstances'
 import { awardSkillXp, SKILL_XP_AWARD } from '../../player/PlayerSkills'
@@ -92,7 +93,7 @@ export function createGatheringActions(
     if (!trap || trap.state === 'active') return
     const instance = trapInstanceFromWorld(trap.id, trap.kind, trap.durability)
     if (!inventory.canAddInstance(instance)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
+      toast.show(inventoryFullToastText(inventory, instance.kind, 1), 'error')
       return
     }
     const removed = bundle.placedTraps.collect(id)
@@ -134,7 +135,7 @@ export function createGatheringActions(
   const startFishing = (x: number, z: number): void => {
     if (isActionBlocked(ctx)) return
     if (!inventory.canAdd('fish', 1)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
+      toast.show(inventoryFullToastText(inventory, 'fish', 1), 'error')
       return
     }
     const spotId = fishingSpotId(x, z)
@@ -147,7 +148,7 @@ export function createGatheringActions(
         return
       }
       if (!inventory.canAdd('fish', 1)) {
-        toast.show('Ekwipunek jest za ciężki.', 'error')
+        toast.show(inventoryFullToastText(inventory, 'fish', 1), 'error')
         return
       }
       inventory.add('fish', 1, dayNight.elapsedDays)
@@ -188,8 +189,9 @@ export function createGatheringActions(
         return
       }
       const output = rack.process.output[0]
-      if (!output || !inventory.canAdd(output.kind, output.count)) {
-        toast.show('Ekwipunek jest za ciężki.', 'error')
+      if (!output) return
+      if (!inventory.canAdd(output.kind, output.count)) {
+        toast.show(inventoryFullToastText(inventory, output.kind, output.count), 'error')
         return
       }
       bundle.dryingRacks.clearProcess(id)
@@ -225,7 +227,7 @@ export function createGatheringActions(
       return
     }
     if (!inventory.canAdd('honey', 1)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
+      toast.show(inventoryFullToastText(inventory, 'honey', 1), 'error')
       return
     }
     const amount = bundle.hives.collect(id, dayNight.elapsedDays)
@@ -275,7 +277,7 @@ export function createGatheringActions(
       return
     }
     if (!inventory.canAdd(expectedYield.kind, expectedYield.count)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
+      toast.show(inventoryFullToastText(inventory, expectedYield.kind, expectedYield.count), 'error')
       return
     }
     const outcome = bundle.chunkManager.harvestCrop(id)

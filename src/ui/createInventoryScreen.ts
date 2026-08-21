@@ -29,6 +29,8 @@ export type InventoryScreen = {
     counts: Partial<Record<ItemKind, number>>,
     totalWeight: number,
     maxWeight: number,
+    totalSize: number,
+    maxSize: number,
     heldTool: ItemKind | null,
     groups: readonly InventoryGroupView[],
   ) => void
@@ -45,6 +47,8 @@ export function createInventoryScreen(
   let groups: readonly InventoryGroupView[] = []
   let totalWeight = 0
   let maxWeight = 0
+  let totalSize = 0
+  let maxSize = 0
   let heldTool: ItemKind | null = null
 
   const getUi = () => getMountedVueUi()
@@ -56,6 +60,8 @@ export function createInventoryScreen(
       counts,
       totalWeight,
       maxWeight,
+      totalSize,
+      maxSize,
       heldTool,
       groups,
       (kind) => handlers.onDrop?.(kind),
@@ -83,15 +89,17 @@ export function createInventoryScreen(
       if (isOpen()) close()
       else open()
     },
-    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextHeldTool, nextGroups) {
+    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextTotalSize, nextMaxSize, nextHeldTool, nextGroups) {
       if (disposed) return
       counts = { ...nextCounts }
       groups = nextGroups
       totalWeight = nextTotalWeight
       maxWeight = nextMaxWeight
+      totalSize = nextTotalSize
+      maxSize = nextMaxSize
       heldTool = nextHeldTool
       if (isOpen()) {
-        getUi()?.refreshInventory(counts, totalWeight, maxWeight, heldTool, groups)
+        getUi()?.refreshInventory(counts, totalWeight, maxWeight, totalSize, maxSize, heldTool, groups)
       }
     },
     dispose() {

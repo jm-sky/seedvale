@@ -1,5 +1,6 @@
 import { playActionChop, playActionDig, playActionMine } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
+import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
 import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
@@ -107,8 +108,9 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
       return
     }
     const stepYield = yieldForChopStage(target.stage)
-    if (!stepYield || !inventory.canAdd(stepYield.kind, stepYield.count)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
+    if (!stepYield) return
+    if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
+      toast.show(inventoryFullToastText(inventory, stepYield.kind, stepYield.count), 'error')
       return
     }
     const busyLabel =
@@ -120,7 +122,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     playActionChop(worldAudio.playAt, { x, z })
     busy.start(CHOP_DURATION_SEC, busyLabel, () => {
       if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
-        toast.show('Ekwipunek jest za ciężki.', 'error')
+        toast.show(inventoryFullToastText(inventory, stepYield.kind, stepYield.count), 'error')
         return
       }
       const landmark = bundle.settlementsManager
@@ -164,13 +166,13 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     }
     const stepYield = yieldForOre(target.type)
     if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
+      toast.show(inventoryFullToastText(inventory, stepYield.kind, stepYield.count), 'error')
       return
     }
     playActionMine(worldAudio.playAt, { x, z })
     busy.start(MINE_DURATION_SEC, 'Wydobywanie…', () => {
       if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
-        toast.show('Ekwipunek jest za ciężki.', 'error')
+        toast.show(inventoryFullToastText(inventory, stepYield.kind, stepYield.count), 'error')
         return
       }
       const result = bundle.resourceDeposits.mine(depositId)

@@ -1,6 +1,7 @@
 import type { BusyOverlay } from '../../ui/createBusyOverlay'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import type { TimeSkipOverlay } from '../../ui/createTimeSkipOverlay'
+import { inventoryFullToastText } from '../../items/Inventory'
 import { canCancelRestProgress } from '../../items/items'
 import { tentRestPose } from '../../items/tentProp'
 import { restoreNeedsFromSleep } from '../../player/PlayerNeeds'
@@ -143,7 +144,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
   const packTent = (id: string): void => {
     if (isActionBlocked(ctx)) return
     if (!inventory.canAdd('tent')) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
+      toast.show(inventoryFullToastText(inventory, 'tent', 1), 'error')
       return
     }
     const packed = bundle.placedTents.pack(id)

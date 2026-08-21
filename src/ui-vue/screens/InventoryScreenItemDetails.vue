@@ -7,7 +7,6 @@ import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
 import { isToolKind } from '../../items/HeldTool'
 import { consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
-import { isInstanceBackedKind } from '../../items/itemInstances'
 import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind, primaryItemCategory } from '../../items/items'
 import { tradeValue } from '../../items/tradeCatalog'
 import { trapKindForItem } from '../../world/animalTraps'
@@ -276,7 +275,6 @@ function sharpenInstance(id: string): void {
         @click="onUnequip"
       />
       <ItemsScreenItemButton
-        v-if="!isInstanceBackedKind(item.kind)"
         label="Wyrzuć"
         destructive
         @click="onDrop(item.kind)"

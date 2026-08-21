@@ -116,12 +116,18 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
    *  player's feet, scattered slightly — the "Wyrzuć" action in
    *  `createInventoryScreen.ts`. Re-`refresh()`es the (already-open) screen
    *  immediately since world simulation is frozen while it's open (see the
-   *  tick loop's modal-gating in `gameLoop.ts`) — nothing else will update it. */
+   *  tick loop's modal-gating in `gameLoop.ts`) — nothing else will update it.
+   *  Instance-backed kinds (weapons/traps) drop as plain world items for now —
+   *  their per-instance durability/sharpness isn't carried over yet. */
   const dropItemStack = (kind: ItemKind): void => {
-    if (isInstanceBackedKind(kind)) return
-    const count = inventory.count(kind)
+    const instanceBacked = isInstanceBackedKind(kind)
+    const count = instanceBacked ? inventory.countInstances(kind) : inventory.count(kind)
     if (count <= 0) return
-    inventory.remove(kind, count)
+    if (instanceBacked) {
+      for (const instance of inventory.getInstances(kind)) inventory.removeInstance(instance.id)
+    } else {
+      inventory.remove(kind, count)
+    }
     heldTool.syncWithInventory()
     if (playerTorch.isLit() && playerTorch.source() === 'wooden_torch' && heldTool.held() !== 'wooden_torch') {
       playerTorch.extinguish()
