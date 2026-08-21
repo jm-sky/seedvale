@@ -7,6 +7,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 - **[VISION.md](./VISION.md)** — wizja i kontekst produktu (czytaj przed planowaniem nowych funkcji)
 - **[STATE.md](./STATE.md)** — factual current implementation state
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** — mapa architektury (WorldBundle, lifecycle, save)
+- **[CODE_INDEX.md](./CODE_INDEX.md)** — indeks kodu: gdzie w `src/` mieszka dany system (entry pointy)
 - **[SETTLEMENTS.md](./SETTLEMENTS.md)** — osady i życie NPC (stan + standing decisions)
 - **[GRAPHICS.md](./GRAPHICS.md)** — log decyzji / kontraktów graficznych
 - **[WATER.md](./WATER.md)** — woda (ocean + jeziora: stan, decyzje, historia)

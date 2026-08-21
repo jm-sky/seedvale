@@ -17,6 +17,8 @@
 
 `src/app/createApp.ts` is the application composition root. It creates the renderer/scene/camera, UI, audio, player, inventory, quests, day/night state and the world bundle, then wires the runtime loop and persistence together.
 
+It is a wiring layer, not an implementation layer: the detailed behaviour of each area lives in its own `src/app/` module (render-stack construction, graphics/quality handlers, inventory/trade wiring, the player-action families under `src/app/actions/`, `SaveData` assembly, and the rAF/resize/context-loss driver around the game loop). See [CODE_INDEX.md](./CODE_INDEX.md) for the file-level map. Those modules receive their dependencies from `createApp.ts` and do not own world lifetime.
+
 The world systems that are rebuilt together are grouped in `src/app/worldBundle.ts` as `WorldBundle`:
 
 ```text

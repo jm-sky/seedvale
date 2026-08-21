@@ -140,10 +140,18 @@ Before adding a new abstraction, check whether one of these already owns the res
 
 ## Important code entry points
 
+Broader "where does this system live" lookup: [CODE_INDEX.md](./CODE_INDEX.md).
+
 ```text
 src/app/createApp.ts
 src/app/gameLoop.ts
 src/app/worldBundle.ts
+src/app/renderStack.ts
+src/app/graphicsSettings.ts
+src/app/saveState.ts
+src/app/appRenderLoop.ts
+src/app/inventoryWiring.ts
+src/app/actions/
 src/config/worldConfig.ts
 src/terrain/chunkManager.ts
 src/terrain/chunkEnvironment.ts

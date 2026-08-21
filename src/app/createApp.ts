@@ -1,23 +1,15 @@
-import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { SaveData } from '../persistence/saveData'
 import type { TrapCaptureEvent } from '../world/createPlacedTraps'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
-import { playActionChop, playActionDig, playActionMine, playActionWell } from '../audio/actionSounds'
+import type { PlayerActionContext } from './actions/actionContext'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { createHouseDoorTracker } from '../audio/doorSounds'
 import { createFireAudio, playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
-import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { applyFootstepPackFromUrl } from '../audio/playerMoveSounds'
 import { createWeatherAudio } from '../audio/weatherSounds'
-import { saveAllDomains, saveGraphics, savePlayer, saveWorld } from '../config/persistConfig'
-import {
-  applyQualityPreset,
-  knobsFromConfig,
-  matchQualityPreset,
-  type QualityPreset,
-} from '../config/qualityProfiles'
+import { saveAllDomains, savePlayer, saveWorld } from '../config/persistConfig'
 import {
   applyStoredPlayer,
   applyStoredSettlements,
@@ -25,99 +17,48 @@ import {
   applyStoredTerrain,
   createWorldConfig,
 } from '../config/worldConfig'
-import { createCameraDebugOverlay } from '../debug/createCameraDebugOverlay'
-import { isCameraDebugMode, isDebugMode, isNoShadowsDebugMode, isRenderStateDebugMode, isSystemEnabled } from '../debug/debugMode'
+import { isDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { installNpcDebugApi } from '../debug/npcDebugApi'
 import { createNpcInspectTrigger } from '../debug/npcInspectTrigger'
-import { getRenderStateDebugText } from '../debug/renderStateDebug'
-import { ANIMAL_LABELS, type AnimalAgent, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../fauna/AnimalAgent'
-import { meatKindForAnimal } from '../fauna/animalMeat'
-import {
-  DESTROY_SPAWNER_DURATION_SEC,
-  type PreySpawner,
-  snapshotSpawnPointState,
-  SPAWNER_DESTROY_BRANCH_COST,
-} from '../fauna/AnimalSpawner'
-import { spawnerDestroyBusyLabel } from '../fauna/createFauna'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
-import { COOK_DURATION_SEC, findCookingRecipe } from '../items/campfireCooking'
-import {
-  CONTAINER_DEFS,
-  CONTAINER_PLACE_REACH,
-  CONTAINER_PLACEMENT_MESSAGE,
-  CONTAINER_SETUP_DURATION_SEC,
-  containerTotalWeight,
-} from '../items/container'
-import { BAIT_ITEM_PRIORITY, getFreshnessStage } from '../items/foodFreshness'
-import { askGuardForSword, shouldGrantQuestSword } from '../items/guardSword'
+import { shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
-import { isChopTool, isHarvestKnife, ITEM_CATALOG } from '../items/itemCatalog'
-import { isInstanceBackedKind, isTrapItemInstance, isWeaponMaintenanceKind } from '../items/itemInstances'
-import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
-import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
-import { TENT_LENGTH, tentRestPose } from '../items/tentProp'
-import { buyWithBarter, buyWithCoins, createAcquiredInstance, selectInstancesToSell, selectInstanceToPlace, sellForCoins, sellInstancesForCoins } from '../items/trade'
-import { resolveInstanceSellPrice, sellPrice } from '../items/tradeCatalog'
-import { trapInstanceFromWorld } from '../items/trapItemInstances'
-import { createWeaponInstance, migrateWeaponCountsToInstances, type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
+import { isWeaponMaintenanceKind } from '../items/itemInstances'
+import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { createAcquiredInstance } from '../items/trade'
+import { createWeaponInstance, migrateWeaponCountsToInstances } from '../items/weaponMaintenance'
 import {
   benchmarkScenarioFromUrl,
   createBenchmarkRunner,
   createPerfMonitor,
-  createProgramCensus,
   isPerfUrlEnabled,
-  isProgramCensusUrlEnabled,
-  pointLightBudgetFromUrl,
   setActiveMonitor,
   setActiveProgramCensus,
 } from '../perf'
 import {
   beginNewSave,
   createSave,
-  getActiveSaveId,
   listSaves,
   setActiveSaveId,
-  writeSave,
 } from '../persistence/saveDb'
-import { pickActiveSaveId } from '../persistence/saveSlots'
 import { PlayerController } from '../player/PlayerController'
 import {
-  drinkWater as drinkWaterNeeds,
-  eatFood,
   resetPlayerNeeds,
-  restoreNeedsFromSleep,
   restorePersistedNeeds,
 } from '../player/PlayerNeeds'
-import {
-  awardSkillXp,
-  restorePersistedSkills,
-  SKILL_XP_AWARD,
-  survivalDurationMultiplier,
-  survivalFoodMultiplier,
-  toggleSneak,
-} from '../player/PlayerSkills'
+import { restorePersistedSkills, toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { QuestManager } from '../quests/QuestManager'
 import { buildLandmarkQuests, QUESTS } from '../quests/quests'
-import { createPostProcessing } from '../render/createPostProcessing'
-import { createRenderer } from '../render/createRenderer'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
-import { MIN_RENDERER_SIZE, shouldApplyRendererResize } from '../render/rendererResize'
-import { createCamera } from '../scene/createCamera'
-import { createScene } from '../scene/createScene'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
-import { IGNITE_DURATION_SEC, type VillageFire } from '../settlement/VillageFire'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
-import { damageHealth, healHealth } from '../shared/HealthState'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
-import { MINE_DURATION_SEC, yieldForOre } from '../terrain/depositMining'
-import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
-import { applyDigAt, applyLevelAt } from '../terrain/digAction'
 import { sampleFootstepSurface } from '../terrain/footstepSurface'
 import { mountVueUi } from '../ui-vue/mount'
 import { configureAudioVolumes, configureNpcVoiceSounds, configureUiSounds } from '../ui-vue/store'
@@ -134,56 +75,34 @@ import { createQuestLog } from '../ui/createQuestLog'
 import { createQuickActions } from '../ui/createQuickActions'
 import { createTimeSkipOverlay } from '../ui/createTimeSkipOverlay'
 import { createToast } from '../ui/createToast'
-import {
-  TRAP_DEFS,
-  TRAP_FOOTPRINT_RADIUS,
-  TRAP_PLACE_REACH,
-  TRAP_PLACEMENT_MESSAGE,
-  TRAP_SEPARATION,
-  TRAP_SETUP_DURATION_SEC,
-  type TrapKind,
-} from '../world/animalTraps'
-import { type BeehiveRecord, HIVE_STING_DAMAGE, honeyAvailable, rollHiveSting } from '../world/beehives'
-import { createLights } from '../world/createLights'
-import { createSky } from '../world/createSky'
-import { CROP_DEFS, type CropGrowthStage, type CropId, resolveCropHarvest } from '../world/cropLifecycle'
+import { TRAP_DEFS } from '../world/animalTraps'
+import { type BeehiveRecord } from '../world/beehives'
 import { createDayNightState, parseTimeOfDayFromUrl } from '../world/dayNight'
-import { type DryingRackRecord, isDryingComplete, pickDryingRecipe, startDryingProcess } from '../world/dryingRacks'
-import {
-  applyFishingBait as applyFishingBaitToSpot,
-  FISHING_CAST_DURATION_SEC,
-  type FishingBaitState,
-  fishingSpotId,
-  isBaitActive,
-  rollFishingCatch,
-} from '../world/fishing'
+import { type DryingRackRecord } from '../world/dryingRacks'
+import { type FishingBaitState } from '../world/fishing'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
 import { randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
-import {
-  isWellStageComplete,
-  WELL_FOOTPRINT_RADIUS,
-  WELL_PLACE_DURATION_SEC,
-  WELL_PLACE_REACH,
-  WELL_PLACEMENT_MESSAGE,
-  WELL_SEPARATION,
-  wellAdvanceCost,
-} from '../world/playerWell'
-import { createPointLightBudget } from '../world/pointLightBudget'
 import { createTimeSkip } from '../world/timeSkip'
-import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../world/treeHarvest'
-import { createTreeLifecycle, isChoppableStage, parseTreeOverrides, yieldForChopStage } from '../world/treeLifecycle'
-import { AGENT_RENDER_LAYER, REFLECTION_DISTANT_LAYER, REFLECTION_SKIPPED_LAYER, WATER_RENDER_LAYER } from '../world/waterMirror'
-import { DRINK_THIRST_RELIEF, UNSAFE_WATER_WARNING, type WaterSource } from '../world/WaterSource'
+import { createTreeLifecycle, parseTreeOverrides } from '../world/treeLifecycle'
 import { createClimateState } from '../world/weather'
 import { createWeatherParticles } from '../world/weatherParticles'
 import { createWorldContext } from '../world/worldContext'
+import { createContainerActions } from './actions/containerActions'
+import { createGatheringActions } from './actions/gatheringActions'
+import { createGroundActions } from './actions/groundActions'
+import { createPlacementActions } from './actions/placementActions'
+import { createRestActions } from './actions/restActions'
+import { createSurvivalActions } from './actions/survivalActions'
+import { createAppRenderLoop } from './appRenderLoop'
 import { createBusyAction } from './busyAction'
-import { type CampRestContext, campRestQuality, hasTentNear, hasWarmFireNear } from './campRest'
 import { createGameLoop } from './gameLoop'
-import { DIG_REACH } from './interactables'
+import { createGraphicsSettings } from './graphicsSettings'
+import { createInventoryWiring } from './inventoryWiring'
+import { createRenderStack } from './renderStack'
 import { createRestCampSequence } from './restCampSequence'
+import { createSaveState } from './saveState'
 import { getUserActions } from './userActions'
 import { createWorldBundle, disposeWorldBundle, rebuildWorldBundle } from './worldBundle'
 
@@ -198,11 +117,6 @@ const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
   blanket: 1,
   wooden_torch: 1,
 }
-/** How close (world units) to a settlement's center counts as "in town" for
- *  the "Odpocznij w mieście" quick action — covers the default village
- *  extent (core + house ring, `ringMax + houseRadius*2 ≈ 39.6` at default
- *  `coreRadius`/`houseRadius`), not the much larger `HOME_RADIUS`. */
-const REST_IN_TOWN_RADIUS = 40
 /** Bound on `buildLandmarkQuests`' one-off world-setup search — chunk rings
  *  outward from the home settlement's center (plan 132). Generous enough
  *  that even the rarest landmark tier (~0.8% per chunk) is very likely to
@@ -228,6 +142,21 @@ function grantStartingLoadout(inventory: Inventory): void {
   }
 }
 
+/**
+ * Application composition root. It creates the long-lived systems (render
+ * stack, world bundle, player, quests, UI, audio, persistence), threads their
+ * dependencies together and configures the app lifecycle — the detailed
+ * behaviour of each area lives in its own module:
+ *
+ * - `renderStack.ts` — renderer/scene/camera/post/lights/sky construction.
+ * - `graphicsSettings.ts` — live graphics + quality-preset handlers.
+ * - `inventoryWiring.ts` — inventory screen + home-trader handlers.
+ * - `actions/` — the player's world interactions (dig/chop, placement,
+ *   survival, gathering, containers, rest).
+ * - `saveState.ts` — `SaveData` assembly and autosave lifecycle.
+ * - `gameLoop.ts` — one frame of simulation + render.
+ * - `appRenderLoop.ts` — rAF scheduling, resize and WebGL context loss.
+ */
 export async function createApp(
   container: HTMLElement,
   initialSave?: SaveData | null,
@@ -293,72 +222,23 @@ export async function createApp(
   )
   const getWorldDays = () => dayNight.elapsedDays
 
-  const renderer = createRenderer(container, config.postProcessing.pixelRatioCap)
-  if (isNoShadowsDebugMode()) {
-    renderer.shadowMap.enabled = false
+  const { renderer, labelRenderer, scene, camera, postProcessing, lights, sky, pointLightBudget, programCensus } =
+    createRenderStack(container, config)
+  setActiveProgramCensus(programCensus)
+  if (typeof window !== 'undefined') {
+    window.__seedvaleProgramCensus = programCensus
+    window.__seedvalePointLightBudget = pointLightBudget
   }
-  const labelRenderer = new CSS2DRenderer()
-  labelRenderer.setSize(container.clientWidth, container.clientHeight)
-  labelRenderer.domElement.style.position = 'absolute'
-  labelRenderer.domElement.style.inset = '0'
-  labelRenderer.domElement.style.pointerEvents = 'none'
-  // Below every UI overlay (lowest is .seedvale-hud at z-index:5, index.html) so
-  // NPC labels never draw over modals (pause menu, quest log, villagers, dialog).
-  labelRenderer.domElement.style.zIndex = '1'
-  container.appendChild(labelRenderer.domElement)
 
   // Vue/Tailwind UI overlay (plan 046) — dynamically imported so it doesn't
   // delay first paint (see `mountVueUi`'s doc comment).
   const vueUi = mountVueUi(container)
 
-  const scene = createScene()
-  // Plan 149 Phase 0 — dev/benchmark-only WebGLProgram/material census. `?benchmark=stream`
-  // enables it automatically; `?programCensus=1` enables it standalone. No-op renderer/scene
-  // change either way (`src/perf/programCensus.ts`).
-  const programCensus = createProgramCensus(
-    renderer,
-    scene,
-    benchmarkScenarioFromUrl() === 'stream' || isProgramCensusUrlEnabled(),
-  )
-  setActiveProgramCensus(programCensus)
-  if (typeof window !== 'undefined') window.__seedvaleProgramCensus = programCensus
-  const camera = createCamera(container.clientWidth / container.clientHeight)
-  camera.layers.enable(WATER_RENDER_LAYER)
-  camera.layers.enable(AGENT_RENDER_LAYER)
-  camera.layers.enable(REFLECTION_SKIPPED_LAYER)
-  camera.layers.enable(REFLECTION_DISTANT_LAYER)
   const worldAudio = createWorldAudio(camera)
   configureAudioVolumes(worldAudio.getVolumes(), (volumes) => {
     worldAudio.setVolumes(volumes)
   })
   applyFootstepPackFromUrl()
-
-  const postProcessing = createPostProcessing(
-    renderer,
-    scene,
-    camera,
-    container.clientWidth,
-    container.clientHeight,
-    config.postProcessing,
-  )
-
-  const lights = createLights(config.postProcessing.shadowMapSize)
-  lights.addTo(scene)
-
-  // Plan 157 — production NUM_POINT_LIGHTS stabilization. Registry + pad/cull
-  // at budget 16 by default (`src/perf/flags.ts`); `?pointLightBudget=off`
-  // disables the pad without tearing down registration. Lives here (not
-  // inside `WorldBundle`) because its pad is added directly to `scene`,
-  // which survives `rebuildWorldBundle()` — only the settlement/placed-fire
-  // *registrations* are rebuilt, via the same instance threaded through below.
-  const pointLightBudget = createPointLightBudget(scene, pointLightBudgetFromUrl())
-  if (typeof window !== 'undefined') {
-    window.__seedvalePointLightBudget = pointLightBudget
-  }
-
-  const sky = createSky(config.sky)
-  sky.addTo(scene)
-  sky.applySun(lights.sun)
 
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
   // Plan 172 — natural crop lifecycle: harvested/removed wild crops, same
@@ -383,7 +263,8 @@ export async function createApp(
     getPlayerSocialTarget?.(npcName) ?? { relationLevel: 'stranger', standing: 0 }
   // Same "target assigned later" indirection as `onAnimalDeath` above — the
   // trap system is built with the bundle, but awarding Traps XP / toasting
-  // the catch needs `player`/`toast`, which only exist further down.
+  // the catch needs `player`/`toast`, which only exist further down
+  // (`actions/gatheringActions.ts` owns both handlers).
   let onTrapCaptureTarget: ((event: TrapCaptureEvent) => void) | null = null
   const onTrapCapture = (event: TrapCaptureEvent): void => { onTrapCaptureTarget?.(event) }
   // Plan 159 §12 — same indirection: bait is returned to inventory, which
@@ -657,114 +538,94 @@ export async function createApp(
   hud.setExp(questManager.getExp())
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
 
+  // Assigned once `inventoryScreen` exists further down; every caller runs
+  // later, so the initial no-op is never the one that fires.
   let refreshInventoryScreen: () => void = () => {}
 
-  const merchantInventoryView = () => ({
-    counts: inventoryCountsForUi(inventory),
-    groups: buildInventoryGroups(inventory),
+  const inventoryWiring = createInventoryWiring({
+    bundle,
+    player,
+    inventory,
+    heldTool,
+    playerTorch,
+    hud,
+    toast,
+    vueUi,
+    questManager,
+    worldFlags,
+    playOnce: worldAudio.playOnce,
+    grantItem,
+    syncHeldHud: () => syncHeldHud(),
+    syncQuickActionAvailability,
+    refreshInventoryScreen: () => refreshInventoryScreen(),
   })
 
-  const syncMerchantIfOpen = (): void => {
-    if (vueUi.isMerchantOpen()) {
-      const view = merchantInventoryView()
-      vueUi.refreshMerchant(view.counts, view.groups)
-    }
+  const timeSkip = createTimeSkip(dayNight)
+  const timeSkipOverlay = createTimeSkipOverlay(container)
+  const busy = createBusyAction()
+  const busyOverlay = createBusyOverlay(container)
+  const restCamp = createRestCampSequence(scene, player, (x, z) => bundle.chunkManager.sampleHeight(x, z))
+
+  /** The single post-inventory-mutation sync every action/trade path calls —
+   *  held tool, HUD label, Quick Actions availability and an open merchant. */
+  const onInventoryChanged = (): void => {
+    heldTool.syncWithInventory()
+    syncHeldHud()
+    syncQuickActionAvailability()
+    inventoryWiring.syncMerchantIfOpen()
   }
 
-  const sellInventoryInstances = (instanceIds: readonly string[]) => {
-    const result = sellInstancesForCoins(inventory, instanceIds)
-    if (result.result === 'ok') {
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      heldTool.syncWithInventory()
-      syncHeldHud()
-      syncQuickActionAvailability()
-      syncMerchantIfOpen()
-      refreshInventoryScreen()
-      toast.show(`+${result.totalCoins} monet`, 'pickup')
-      return 'ok' as const
-    }
-    return result.result
+  const actionCtx: PlayerActionContext = {
+    bundle,
+    player,
+    inventory,
+    heldTool,
+    playerTorch,
+    hud,
+    toast,
+    busy,
+    timeSkip,
+    restCamp,
+    dayNight,
+    mouseLook,
+    worldAudio,
+    getTreeLifecycle: () => treeLifecycle,
+    onInventoryChanged,
+    syncQuickActionAvailability,
+    syncHeldHud: () => syncHeldHud(),
+    refreshInventoryScreen: () => refreshInventoryScreen(),
   }
 
-  const sharpenInventoryWeapon = (instanceId: string): SharpenResult => {
-    const result = sharpenWeapon(inventory, instanceId, 'whetstone')
-    if (result === 'ok') {
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      refreshInventoryScreen()
-      toast.show('Naostrzono broń.', 'pickup')
-    }
-    return result
-  }
+  const placement = createPlacementActions(actionCtx)
+  const containers = createContainerActions(actionCtx, { vueUi, tentBlockers: placement.tentBlockers })
+  const gathering = createGatheringActions(actionCtx, { fishingBait, fishingAttempts })
+  const survival = createSurvivalActions(actionCtx)
+  const ground = createGroundActions(actionCtx)
+  const rest = createRestActions(actionCtx, { timeSkipOverlay, busyOverlay })
 
-  vueUi.configureMerchant({
-    onBuyCoins: (kind) => {
-      const result = buyWithCoins(inventory, kind)
-      if (result === 'ok') {
-        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-        heldTool.syncWithInventory()
-        syncHeldHud()
-        syncQuickActionAvailability()
-        const view = merchantInventoryView()
-        vueUi.refreshMerchant(view.counts, view.groups)
-        toast.show(`+1 ${ITEM_DEFS[kind].label}`, 'pickup')
-      }
-      return result
-    },
-    onBuyBarter: (kind, offer) => {
-      const result = buyWithBarter(inventory, kind, offer)
-      if (result === 'ok') {
-        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-        heldTool.syncWithInventory()
-        syncHeldHud()
-        syncQuickActionAvailability()
-        const view = merchantInventoryView()
-        vueUi.refreshMerchant(view.counts, view.groups)
-        toast.show(`+1 ${ITEM_DEFS[kind].label}`, 'pickup')
-      }
-      return result
-    },
-    onSellCoins: (kind) => {
-      const expectedCoins = isInstanceBackedKind(kind)
-        ? (() => {
-            const ids = selectInstancesToSell(inventory.getInstances(kind), 1)
-            const inst = ids[0] ? inventory.getInstance(ids[0]) : null
-            return inst ? resolveInstanceSellPrice(inst) : null
-          })()
-        : sellPrice(kind)
-      const result = sellForCoins(inventory, kind)
-      if (result === 'ok') {
-        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-        heldTool.syncWithInventory()
-        syncHeldHud()
-        syncQuickActionAvailability()
-        const view = merchantInventoryView()
-        vueUi.refreshMerchant(view.counts, view.groups)
-        toast.show(`+${expectedCoins ?? sellPrice(kind)} monet`, 'pickup')
-      }
-      return result
-    },
-    onSellInstances: sellInventoryInstances,
-  })
-  vueUi.configureNpcDialogueMenu({
-    onAskSword: () => {
-      const result = askGuardForSword({
-        alreadyGifted: worldFlags.guardSwordGifted,
-        guardQuestComplete: questManager.getState('woda-dla-marka') === 'complete',
-        relation: questManager.getRelation('Marek'),
-        alreadyHasSword: inventory.holdsAny('long_sword'),
-      })
-      if (result.grant) {
-        worldFlags.guardSwordGifted = true
-        grantItem('long_sword', 1)
-        toast.show('+1 Miecz', 'pickup')
-      }
-      return result.line
-    },
-    getCanAskSword: () => !worldFlags.guardSwordGifted,
-    onOpenTrade: () => {
-      const view = merchantInventoryView()
-      vueUi.openMerchantFromDialogue(view.counts, view.groups)
-    },
+  onTrapCaptureTarget = gathering.onTrapCapture
+  onTrapBaitReturnedTarget = gathering.onTrapBaitReturned
+  vueUi.configureAbortRest(rest.abortRest)
+  vueUi.configureAbortBusy(rest.abortBusy)
+
+  const { buildSaveData, saveNow, refreshActiveSaveName, installAutoSave } = createSaveState({
+    config,
+    bundle,
+    player,
+    mouseLook,
+    inventory,
+    heldTool,
+    playerTorch,
+    questManager,
+    dayNight,
+    mapDiscovery,
+    landOwnership,
+    vueUi,
+    worldFlags,
+    fishingBait,
+    getCollectedItemIds: () => collectedItemIds,
+    getRemovedCropIds: () => removedCropIds,
+    getTreeLifecycle: () => treeLifecycle,
   })
 
   let rebuilding = false
@@ -848,165 +709,16 @@ export async function createApp(
     }
   }
 
-  const buildSaveData = (): SaveData => ({
-    version: 23,
-    config: {
-      seed: config.seed,
-      terrain: structuredClone(config.terrain),
-      sky: { ...config.sky },
-      player: { ...config.player },
-      settlements: { ...config.settlements },
-    },
-    player: {
-      x: player.mesh.position.x,
-      z: player.mesh.position.z,
-      yaw: mouseLook.state.yaw,
-      pitch: mouseLook.state.pitch,
-    },
-    savedAt: Date.now(),
-    quests: {
-      progress: questManager.exportProgress(),
-      exp: questManager.getExp(),
-      relations: questManager.exportRelations(),
-    },
-    inventory: inventory.toJSON(),
-    inventoryInstances: inventory.instancesToJSON(),
-    collectedItemIds: [...collectedItemIds],
-    droppedItems: bundle.droppedItems.nodes().map((item) => ({ ...item })),
-    placedFires: bundle.placedFires.nodes().map((fire) => ({ ...fire })),
-    timeOfDay: dayNight.timeOfDay,
-    elapsedDays: dayNight.elapsedDays,
-    heldTool: heldTool.held(),
-    treeOverrides: treeLifecycle.serializeOverrides(),
-    playerTorch: playerTorch.isLit() && playerTorch.source()
-      ? { source: playerTorch.source()!, fuelRemaining: playerTorch.fuelRemaining() }
-      : null,
-    placedTents: bundle.placedTents.nodes().map((tent) => ({ ...tent })),
-    placedTraps: bundle.placedTraps.nodes().map((trap) => ({ ...trap })),
-    worldFlags: { ...worldFlags },
-    map: { discoveredCells: mapDiscovery.serialize() },
-    settlementEconomies: bundle.settlementsManager.snapshotEconomies(),
-    playerNeeds: {
-      hunger: player.needs.hunger.current,
-      thirst: player.needs.thirst.current,
-      vigor: player.needs.vigor.current,
-    },
-    ownedLandPlots: landOwnership.toJSON(),
-    // Only XP round-trips — `value` is derived on load and `active` is
-    // runtime-only (plan 128 §2).
-    skills: {
-      sneak: { xp: player.skills.sneak.xp },
-      survival: { xp: player.skills.survival.xp },
-      traps: { xp: player.skills.traps.xp },
-      defense: { xp: player.skills.defense.xp },
-      archery: { xp: player.skills.archery.xp },
-    },
-    spawnPoints: bundle.fauna.getSpawners().map((s) => ({ id: s.id, ...snapshotSpawnPointState(s) })),
-    foodBatches: inventory.foodBatchesToJSON(),
-    dryingRacks: bundle.dryingRacks.nodes().map((rack) => ({
-      ...rack,
-      process: rack.process ? { ...rack.process, input: [...rack.process.input], output: [...rack.process.output] } : null,
-    })),
-    hives: bundle.hives.nodes().map((hive) => ({ ...hive })),
-    fishingBait: Object.fromEntries(fishingBait),
-    harvestedCropIds: [...removedCropIds],
-    placedContainers: bundle.placedContainers.nodes().map((c) => ({ ...c })),
-    carriedContainer: bundle.placedContainers.carriedNode(),
-    playerWells: bundle.playerWells.nodes().map((w) => ({ ...w })),
+  const graphics = createGraphicsSettings({
+    config,
+    bundle,
+    renderer,
+    postProcessing,
+    lights,
+    sky,
+    dayNight,
+    resyncDayNight: () => gameLoop.resyncDayNight(),
   })
-
-  const saveNow = (): Promise<void> => writeSave(buildSaveData())
-
-  const refreshActiveSaveName = async (): Promise<void> => {
-    const slots = await listSaves()
-    const id = pickActiveSaveId(getActiveSaveId(), slots)
-    const active = slots.find((slot) => slot.id === id)
-    vueUi.setPauseActiveSaveName(active?.name ?? '')
-  }
-
-  const updateSkyFromGui = () => {
-    dayNight.enabled = false
-    sky.setParams(config.sky, lights.sun)
-    saveWorld(config)
-  }
-
-  const syncQualityLabel = () => {
-    config.quality.preset = matchQualityPreset(knobsFromConfig(config))
-  }
-
-  const applyLiveGraphics = () => {
-    postProcessing.applyConfig(config.postProcessing)
-    bundle.ocean.setReflections(config.postProcessing.waterReflections)
-    bundle.chunkManager.setWaterReflections(config.postProcessing.waterReflections)
-    const pixelRatio = Math.min(window.devicePixelRatio, config.postProcessing.pixelRatioCap)
-    renderer.setPixelRatio(pixelRatio)
-    postProcessing.setPixelRatio(pixelRatio)
-    lights.setShadowMapSize(config.postProcessing.shadowMapSize)
-    bundle.chunkManager.setTerrainCastsShadow(config.postProcessing.terrainCastsShadow)
-    bundle.chunkManager.setLodScale(config.quality.lodScale)
-  }
-
-  const updatePostProcessingFromGui = () => {
-    postProcessing.applyConfig(config.postProcessing)
-    bundle.ocean.setReflections(config.postProcessing.waterReflections)
-    bundle.chunkManager.setWaterReflections(config.postProcessing.waterReflections)
-    syncQualityLabel()
-    saveGraphics(config)
-  }
-
-  // Separate from `updatePostProcessingFromGui`: this one reallocates the
-  // renderer's drawing buffer + every composer render target, so it must not
-  // run on every bloom/AO slider tick — only when the render-scale control
-  // itself changes (perf review A3.2).
-  const updateRenderQualityFromGui = () => {
-    const pixelRatio = Math.min(window.devicePixelRatio, config.postProcessing.pixelRatioCap)
-    renderer.setPixelRatio(pixelRatio)
-    postProcessing.setPixelRatio(pixelRatio)
-    syncQualityLabel()
-    saveGraphics(config)
-  }
-
-  // Separate from `updatePostProcessingFromGui`: applies to `ChunkManager`'s
-  // already-loaded chunk meshes, not the post-processing composer (perf
-  // review A2/#13). Reads `bundle.chunkManager` fresh each call rather than
-  // capturing it, since `rebuildWorld` replaces that field on the same
-  // `bundle` object (see `WorldBundle` lifecycle note in CLAUDE.md).
-  const updateTerrainShadowFromGui = () => {
-    bundle.chunkManager.setTerrainCastsShadow(config.postProcessing.terrainCastsShadow)
-    syncQualityLabel()
-    saveGraphics(config)
-  }
-
-  const updateShadowMapFromGui = () => {
-    lights.setShadowMapSize(config.postProcessing.shadowMapSize)
-    syncQualityLabel()
-    saveGraphics(config)
-  }
-
-  const updateLodScaleFromGui = () => {
-    bundle.chunkManager.setLodScale(config.quality.lodScale)
-    syncQualityLabel()
-    saveGraphics(config)
-  }
-
-  const applyNamedQualityPreset = (preset: Exclude<QualityPreset, 'Custom'>) => {
-    applyQualityPreset(config, preset)
-    applyLiveGraphics()
-    saveGraphics(config)
-  }
-
-  const onQualityPresetChange = (preset: QualityPreset) => {
-    if (preset === 'Custom') {
-      config.quality.preset = 'Custom'
-      saveGraphics(config)
-      return
-    }
-    applyNamedQualityPreset(preset)
-  }
-
-  const onDayNightChange = () => {
-    if (dayNight.enabled) gameLoop.resyncDayNight()
-  }
   // Shared with the World config screen (`ui-vue/screens/WorldConfigScreen.vue`)
   // via `configureWorldConfigScreen` below — same costly-rebuild handler as
   // debug GUI's seed/flat-shading controls, not a second implementation.
@@ -1024,7 +736,7 @@ export async function createApp(
     dayNight,
     player,
     monitor: perfMonitor,
-    applyQualityPreset: applyNamedQualityPreset,
+    applyQualityPreset: graphics.applyNamedQualityPreset,
     isolation: {
       scene,
       sun: lights.sun,
@@ -1057,30 +769,30 @@ export async function createApp(
 
   const gui = createDebugGui(config, dayNight, climate, renderer, {
     onTerrainChange,
-    onSkyChange: updateSkyFromGui,
-    onDayNightChange,
-    onPostProcessingChange: updatePostProcessingFromGui,
-    onRenderQualityChange: updateRenderQualityFromGui,
-    onTerrainShadowChange: updateTerrainShadowFromGui,
+    onSkyChange: graphics.updateSkyFromGui,
+    onDayNightChange: graphics.onDayNightChange,
+    onPostProcessingChange: graphics.updatePostProcessingFromGui,
+    onRenderQualityChange: graphics.updateRenderQualityFromGui,
+    onTerrainShadowChange: graphics.updateTerrainShadowFromGui,
     onDumpVillagePlan: () => {
       console.log(summarizeVillagePlan(bundle.settlementsManager.getHomeDef().plan))
     },
-    onQualityPresetChange,
-    onShadowMapSizeChange: updateShadowMapFromGui,
-    onLodScaleChange: updateLodScaleFromGui,
+    onQualityPresetChange: graphics.onQualityPresetChange,
+    onShadowMapSizeChange: graphics.updateShadowMapFromGui,
+    onLodScaleChange: graphics.updateLodScaleFromGui,
     onPerfTimingsToggle: (enabled) => { perfMonitor.setSource('gui', enabled) },
     onRunBenchmark: (id) => { void benchmark.run(id) },
   })
   if (config.showGui) gui.toggle()
   vueUi.configureWorldConfigScreen(config, dayNight, {
     onTerrainChange,
-    onDayNightChange,
-    onPostProcessingChange: updatePostProcessingFromGui,
-    onRenderQualityChange: updateRenderQualityFromGui,
-    onTerrainShadowChange: updateTerrainShadowFromGui,
-    onQualityPresetChange,
-    onShadowMapSizeChange: updateShadowMapFromGui,
-    onLodScaleChange: updateLodScaleFromGui,
+    onDayNightChange: graphics.onDayNightChange,
+    onPostProcessingChange: graphics.updatePostProcessingFromGui,
+    onRenderQualityChange: graphics.updateRenderQualityFromGui,
+    onTerrainShadowChange: graphics.updateTerrainShadowFromGui,
+    onQualityPresetChange: graphics.onQualityPresetChange,
+    onShadowMapSizeChange: graphics.updateShadowMapFromGui,
+    onLodScaleChange: graphics.updateLodScaleFromGui,
   })
 
   // Created before pauseMenu so their Escape listeners register first — see
@@ -1093,55 +805,21 @@ export async function createApp(
   const npcInspectTrigger = createNpcInspectTrigger(renderer.domElement)
   installNpcDebugApi(bundle, () => dayNight.timeOfDay)
 
-  /** Drops the whole carried stack of `kind` back into the world at the
-   *  player's feet, scattered slightly — the "Wyrzuć" action in
-   *  `createInventoryScreen.ts`. Re-`refresh()`es the (already-open) screen
-   *  immediately since world simulation is frozen while it's open (see the
-   *  tick loop's modal-gating below) — nothing else will update it. */
-  const dropItemStack = (kind: ItemKind): void => {
-    if (isInstanceBackedKind(kind)) return
-    const count = inventory.count(kind)
-    if (count <= 0) return
-    inventory.remove(kind, count)
-    heldTool.syncWithInventory()
-    if (playerTorch.isLit() && playerTorch.source() === 'wooden_torch' && heldTool.held() !== 'wooden_torch') {
-      playerTorch.extinguish()
-    }
-    for (let i = 0; i < count; i++) {
-      const angle = i * ((Math.PI * 2) / count)
-      bundle.droppedItems.drop(
-        kind,
-        player.mesh.position.x + Math.cos(angle) * 0.6,
-        player.mesh.position.z + Math.sin(angle) * 0.6,
-      )
-    }
-    playInventoryDrop(worldAudio.playOnce)
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    syncHeldHud()
-    syncQuickActionAvailability()
-    inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
-  }
-
-  const equipTool = (kind: ItemKind): void => {
-    if (playerTorch.isLit()) playerTorch.extinguish()
-    if (!heldTool.equip(kind)) return
-    syncHeldHud()
-    inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
-  }
-  const unequipTool = (): void => {
-    if (playerTorch.isLit()) playerTorch.extinguish()
-    heldTool.unequip()
-    syncHeldHud()
-    inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
-  }
-
   const inventoryScreenHandlers: InventoryScreenHandlers = {
-    onDrop: dropItemStack,
-    onEquip: equipTool,
-    onUnequip: unequipTool,
-    onConsume: (kind) => consumeItem(kind),
-    onSellInstances: sellInventoryInstances,
-    onSharpen: sharpenInventoryWeapon,
+    onDrop: inventoryWiring.dropItemStack,
+    onEquip: inventoryWiring.equipTool,
+    onUnequip: inventoryWiring.unequipTool,
+    onConsume: (kind) => survival.consumeItem(kind),
+    onSellInstances: inventoryWiring.sellInventoryInstances,
+    onSharpen: inventoryWiring.sharpenInventoryWeapon,
+    onPlaceTrap: (kind) => {
+      inventoryScreen.close()
+      placement.placeTrapAtAim(kind)
+    },
+    onPlaceContainer: () => {
+      inventoryScreen.close()
+      containers.placeContainerAtAim()
+    },
   }
   const inventoryScreen = createInventoryScreen(container, inventoryScreenHandlers)
 
@@ -1168,1076 +846,8 @@ export async function createApp(
     syncHeldHud,
   )
 
-  const timeSkip = createTimeSkip(dayNight)
-  const timeSkipOverlay = createTimeSkipOverlay(container)
-  const busy = createBusyAction()
-  const busyOverlay = createBusyOverlay(container)
-  const restCamp = createRestCampSequence(scene, player, (x, z) => bundle.chunkManager.sampleHeight(x, z))
-
-  /** Extracted out of the `createGameLoop` deps object literal so plan 106's
-   *  new consume/cook/harvest/fill actions (defined below, all outside the
-   *  game loop) can call the same post-inventory-mutation sync as everything
-   *  else — trade, tree chop, deposit mine, etc. */
-  const onInventoryChanged = (): void => {
-    heldTool.syncWithInventory()
-    syncHeldHud()
-    syncQuickActionAvailability()
-    syncMerchantIfOpen()
-  }
-
-  const tentAimPoint = (): { x: number, z: number, yaw: number } => {
-    const yaw = mouseLook.state.yaw
-    return {
-      x: player.mesh.position.x - Math.sin(yaw) * TENT_LENGTH,
-      z: player.mesh.position.z - Math.cos(yaw) * TENT_LENGTH,
-      yaw,
-    }
-  }
-
-  const tentBlockers = (x: number, z: number): { x: number, z: number, radius: number }[] => {
-    const blockers: { x: number, z: number, radius: number }[] = []
-    for (const tree of bundle.chunkManager.getNearbyTrees({ x, z }, 8)) {
-      blockers.push({ x: tree.x, z: tree.z, radius: 1.2 })
-    }
-    for (const settlement of bundle.settlementsManager.getLoaded()) {
-      blockers.push({
-        x: settlement.landmarks.well.x,
-        z: settlement.landmarks.well.z,
-        radius: 1.6,
-      })
-      for (const house of settlement.landmarks.houses) {
-        blockers.push({ x: house.position.x, z: house.position.z, radius: 2.2 })
-      }
-    }
-    return blockers
-  }
-
-  const placeTentAtAim = (): void => {
-    if (!inventory.has('tent', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const aim = tentAimPoint()
-    const reason = evaluateTentPlacement({
-      x: aim.x,
-      z: aim.z,
-      sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(aim.x, aim.z),
-      otherTents: bundle.placedTents.nodes(),
-    })
-    if (reason !== 'ok') {
-      toast.show(TENT_PLACEMENT_MESSAGE[reason], 'error')
-      return
-    }
-    // Survival shortens the setup channel; the tent itself is only spent when
-    // the channel completes, so Esc costs nothing (same as ignite/cook).
-    busy.start(
-      TENT_SETUP_DURATION_SEC * survivalDurationMultiplier(player.skills.survival.value),
-      'Rozstawianie namiotu…',
-      () => {
-        if (!inventory.remove('tent', 1)) return
-        bundle.placedTents.place(aim.x, aim.z, aim.yaw)
-        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-        syncQuickActionAvailability()
-        awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.pitchTent)
-        toast.show('Rozstawiono namiot.')
-      },
-    )
-  }
-
-  /** Sets a trap down in front of the player (plan 141 §3) — same busy-channel
-   *  shape as pitching a tent: the item is only spent when the channel
-   *  completes, and it lands `placed` (not armed), so arming stays a separate
-   *  `[E]` interaction. Reuses the shared ground-suitability check, just with
-   *  the trap's own footprint. */
-  const placeTrapAtAim = (kind: TrapKind): void => {
-    const def = TRAP_DEFS[kind]
-    const candidates = inventory.getInstances(def.itemKind).filter(isTrapItemInstance)
-    const selected = selectInstanceToPlace(candidates)
-    if (!selected || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const instanceId = selected.id
-    const yaw = mouseLook.state.yaw
-    const x = player.mesh.position.x - Math.sin(yaw) * TRAP_PLACE_REACH
-    const z = player.mesh.position.z - Math.cos(yaw) * TRAP_PLACE_REACH
-    const reason = evaluateGroundPlacement({
-      x,
-      z,
-      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(x, z),
-      peers: [...bundle.placedTraps.nodes(), ...bundle.placedTents.nodes()],
-      footprintRadius: TRAP_FOOTPRINT_RADIUS,
-      separation: TRAP_SEPARATION,
-    })
-    if (reason !== 'ok') {
-      toast.show(TRAP_PLACEMENT_MESSAGE[reason === 'occupied' ? 'trap' : reason], 'error')
-      return
-    }
-    busy.start(TRAP_SETUP_DURATION_SEC, 'Zastawianie pułapki…', () => {
-      const instance = inventory.getInstance(instanceId)
-      if (!instance || !isTrapItemInstance(instance) || instance.durability <= 0) return
-      if (!inventory.removeInstance(instanceId)) return
-      bundle.placedTraps.place(instance, x, z, yaw)
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      toast.show(`Zastawiono: ${def.label}.`)
-    })
-  }
-
-  inventoryScreenHandlers.onPlaceTrap = (kind) => {
-    inventoryScreen.close()
-    placeTrapAtAim(kind)
-  }
-
-  /** Sets a purchased, empty `chest` down in front of the player (plan 164
-   *  §4) — same busy-channel shape as pitching a tent/setting a trap: the
-   *  inventory item is only spent when the channel completes. `peers` is
-   *  containers only (not tents/traps) — `CONTAINER_PLACEMENT_MESSAGE`'s
-   *  `container` reason is specifically "another chest already stands here". */
-  const placeContainerAtAim = (): void => {
-    if (!inventory.has('chest', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const def = CONTAINER_DEFS.chest
-    const yaw = mouseLook.state.yaw
-    const x = player.mesh.position.x - Math.sin(yaw) * CONTAINER_PLACE_REACH
-    const z = player.mesh.position.z - Math.cos(yaw) * CONTAINER_PLACE_REACH
-    const reason = evaluateGroundPlacement({
-      x,
-      z,
-      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(x, z),
-      peers: bundle.placedContainers.nodes(),
-      footprintRadius: def.footprintRadius,
-      separation: def.separation,
-    })
-    if (reason !== 'ok') {
-      toast.show(CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason], 'error')
-      return
-    }
-    busy.start(CONTAINER_SETUP_DURATION_SEC, 'Stawianie skrzyni…', () => {
-      if (!inventory.remove('chest', 1)) return
-      bundle.placedContainers.place('chest', x, z, yaw)
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      toast.show('Postawiono skrzynię.')
-    })
-  }
-
-  inventoryScreenHandlers.onPlaceContainer = () => {
-    inventoryScreen.close()
-    placeContainerAtAim()
-  }
-
-  /** Places a new player-built well ahead of the player (plan 127 §5/§11) —
-   *  same busy-channel shape as pitching a tent/setting a trap: the shovel
-   *  is required but never consumed (plan §2), only the `pit` stage's
-   *  world-time clock starts here ("[E] Wykop dół" — see
-   *  `world/playerWell.ts`'s header doc). Materials are charged later, when
-   *  each subsequent stage actually starts (`advanceWellStage` below). */
-  const placeWellAtAim = (): void => {
-    if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const yaw = mouseLook.state.yaw
-    const x = player.mesh.position.x - Math.sin(yaw) * WELL_PLACE_REACH
-    const z = player.mesh.position.z - Math.cos(yaw) * WELL_PLACE_REACH
-    const reason = evaluateGroundPlacement({
-      x,
-      z,
-      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(x, z),
-      peers: bundle.playerWells.nodes(),
-      footprintRadius: WELL_FOOTPRINT_RADIUS,
-      separation: WELL_SEPARATION,
-    })
-    if (reason !== 'ok') {
-      toast.show(WELL_PLACEMENT_MESSAGE[reason === 'occupied' ? 'well' : reason], 'error')
-      return
-    }
-    busy.start(WELL_PLACE_DURATION_SEC, 'Kopanie dołu pod studnię…', () => {
-      bundle.playerWells.place(x, z, yaw, dayNight.elapsedDays)
-      toast.show('Rozpoczęto kopanie studni.')
-    })
-  }
-
-  /** Advances a player-built well into its next construction stage (plan 127
-   *  §7/§9) — `[E]` on an unfinished well (`app/interactables.ts`'s
-   *  `playerWell` candidate). Validates the current stage's world-time clock
-   *  has elapsed and that stone/branch materials for the *next* stage are
-   *  available, consuming them atomically only once both checks pass. */
-  const advanceWellStage = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const well = bundle.playerWells.list().find((entry) => entry.id === id)
-    if (!well) return
-    if (!isWellStageComplete(well, dayNight.elapsedDays)) {
-      toast.show('Budowa jeszcze trwa. Wróć później.', 'error')
-      return
-    }
-    const cost = wellAdvanceCost(well)
-    if (!cost) return
-    const missing: string[] = []
-    if (cost.stone > 0 && !inventory.has('stone', cost.stone)) missing.push(`${cost.stone}× ${ITEM_DEFS.stone.label}`)
-    if (cost.branch > 0 && !inventory.has('branch', cost.branch)) missing.push(`${cost.branch}× ${ITEM_DEFS.branch.label}`)
-    if (missing.length > 0) {
-      toast.show(`Potrzebujesz: ${missing.join(', ')}.`, 'error')
-      return
-    }
-    if (cost.stone > 0) inventory.remove('stone', cost.stone)
-    if (cost.branch > 0) inventory.remove('branch', cost.branch)
-    if (cost.stone > 0 || cost.branch > 0) {
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-    }
-    bundle.playerWells.advanceStage(id, dayNight.elapsedDays)
-    toast.show('Budowa postępuje.')
-  }
-
-  /** Sets the carried container back down in front of the player (plan 164
-   *  §8/§15) — the put-down counterpart of `placeContainerAtAim`; contents
-   *  travel with the same `PlacedContainerEntry`, never touching player
-   *  `Inventory`. Quick Actions' "Odłóż skrzynię" (only shown while
-   *  carrying) is the sole caller. */
-  const putDownContainerAtAim = (): void => {
-    const kind = bundle.placedContainers.carriedKind()
-    if (!kind || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const def = CONTAINER_DEFS[kind]
-    const yaw = mouseLook.state.yaw
-    const x = player.mesh.position.x - Math.sin(yaw) * CONTAINER_PLACE_REACH
-    const z = player.mesh.position.z - Math.cos(yaw) * CONTAINER_PLACE_REACH
-    const reason = evaluateGroundPlacement({
-      x,
-      z,
-      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(x, z),
-      peers: bundle.placedContainers.nodes(),
-      footprintRadius: def.footprintRadius,
-      separation: def.separation,
-    })
-    if (reason !== 'ok') {
-      toast.show(CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason], 'error')
-      return
-    }
-    busy.start(CONTAINER_SETUP_DURATION_SEC, 'Stawianie skrzyni…', () => {
-      if (!bundle.placedContainers.putDownCarried(x, z, yaw)) return
-      syncQuickActionAvailability()
-      toast.show('Odłożono skrzynię.')
-    })
-  }
-
-  const openContainer = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const entry = bundle.placedContainers.find(id)
-    if (!entry) return
-    openContainerId = id
-    const def = CONTAINER_DEFS[entry.kind]
-    vueUi.openContainerScreen(
-      def.label,
-      entry.contents.toJSON(),
-      buildInventoryGroups(entry.contents),
-      containerTotalWeight(def, entry.contents.totalWeight()),
-      def.capacityUnits,
-      inventoryCountsForUi(inventory),
-      buildInventoryGroups(inventory),
-      inventory.totalWeight(),
-      inventory.maxWeight,
-    )
-  }
-
-  const refreshContainerScreenFor = (id: string): void => {
-    const entry = bundle.placedContainers.find(id)
-    if (!entry || !vueUi.isContainerScreenOpen()) return
-    const def = CONTAINER_DEFS[entry.kind]
-    vueUi.refreshContainerScreen(
-      entry.contents.toJSON(),
-      buildInventoryGroups(entry.contents),
-      containerTotalWeight(def, entry.contents.totalWeight()),
-      def.capacityUnits,
-      inventoryCountsForUi(inventory),
-      buildInventoryGroups(inventory),
-      inventory.totalWeight(),
-      inventory.maxWeight,
-    )
-  }
-
-  /** The container currently shown by the transfer screen — set on open,
-   *  cleared when that same container is picked up, so `configureContainerScreen`'s
-   *  handlers (registered once, below) always act on the right
-   *  `PlacedContainerEntry` without the screen itself knowing container ids.
-   *  Opening a different container overwrites it; a stale id left behind by
-   *  an Esc/backdrop close is harmless since the transfer buttons are only
-   *  rendered while `ui.containerScreen.open` is true. */
-  let openContainerId: string | null = null
-
-  const pickUpContainer = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (!bundle.placedContainers.pickUp(id)) return
-    if (openContainerId === id) {
-      vueUi.closeContainerScreen()
-      openContainerId = null
-    }
-    syncQuickActionAvailability()
-    toast.show('Podniesiono skrzynię.')
-  }
-
-  vueUi.configureContainerScreen({
-    onDeposit: (kind, amount) => {
-      if (!openContainerId) return
-      const accepted = bundle.placedContainers.deposit(openContainerId, kind, amount, inventory.oldestAcquiredAtDays(kind) ?? undefined)
-      if (accepted <= 0) {
-        toast.show('Brak miejsca w skrzyni.', 'error')
-        return
-      }
-      if (!inventory.remove(kind, accepted)) return
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      refreshContainerScreenFor(openContainerId)
-    },
-    onWithdraw: (kind, amount) => {
-      if (!openContainerId) return
-      if (!inventory.canAdd(kind, amount)) {
-        toast.show('Ekwipunek jest za ciężki albo za mały.', 'error')
-        return
-      }
-      const entry = bundle.placedContainers.find(openContainerId)
-      const acquiredAtDays = entry?.contents.oldestAcquiredAtDays(kind) ?? undefined
-      const removed = bundle.placedContainers.withdraw(openContainerId, kind, amount)
-      if (removed <= 0) return
-      inventory.add(kind, removed, acquiredAtDays)
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      refreshContainerScreenFor(openContainerId)
-    },
-    onDepositInstance: (instanceId) => {
-      if (!openContainerId) return
-      const instance = inventory.getInstance(instanceId)
-      if (!instance) return
-      if (!bundle.placedContainers.depositInstance(openContainerId, instance)) {
-        toast.show('Brak miejsca w skrzyni.', 'error')
-        return
-      }
-      if (!inventory.removeInstance(instanceId)) return
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      refreshContainerScreenFor(openContainerId)
-    },
-    onWithdrawInstance: (instanceId) => {
-      if (!openContainerId) return
-      const instance = bundle.placedContainers.find(openContainerId)?.contents.getInstance(instanceId)
-      if (!instance || !inventory.canAddInstance(instance)) {
-        toast.show('Ekwipunek jest za ciężki albo za mały.', 'error')
-        return
-      }
-      const withdrawn = bundle.placedContainers.withdrawInstance(openContainerId, instanceId)
-      if (!withdrawn) return
-      if (!inventory.addInstance(withdrawn)) return
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      refreshContainerScreenFor(openContainerId)
-    },
-  })
-
-  const armTrap = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    // The Traps value is snapshotted here, once — the trap then works on its
-    // own, with no reference back to the player (implementation notes §2).
-    if (!bundle.placedTraps.activate(id, player.skills.traps.value, dayNight.elapsedDays)) return
-    // Plan 159 §12 — auto-bait from whatever bait-capable food the player
-    // already carries (cheapest first), atomically: remove one unit, then
-    // attach it. No separate "load bait" UI action in this pass.
-    const baitKind = BAIT_ITEM_PRIORITY.find((kind) => inventory.has(kind, 1))
-    if (baitKind && inventory.remove(baitKind, 1)) {
-      if (bundle.placedTraps.attachBait(id, baitKind)) {
-        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-        onInventoryChanged()
-        toast.show(`Pułapka uzbrojona i zanęcona (${ITEM_DEFS[baitKind].label}).`)
-        return
-      }
-      inventory.add(baitKind, 1, dayNight.elapsedDays)
-    }
-    toast.show('Pułapka uzbrojona.')
-  }
-
-  const disarmTrap = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    // Disarming never costs durability (plan 141 §3).
-    if (!bundle.placedTraps.deactivate(id)) return
-    toast.show('Pułapka rozbrojona.')
-  }
-
-  const collectTrap = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const trap = bundle.placedTraps.list().find((entry) => entry.id === id)
-    if (!trap || trap.state === 'active') return
-    const instance = trapInstanceFromWorld(trap.id, trap.kind, trap.durability)
-    if (!inventory.canAddInstance(instance)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
-      return
-    }
-    const removed = bundle.placedTraps.collect(id)
-    if (!removed) return
-    inventory.addInstance(trapInstanceFromWorld(removed.id, removed.kind, removed.durability))
-    if (removed.state === 'broken') {
-      toast.show('Zabrano zniszczoną pułapkę.')
-    } else {
-      toast.show(`Zabrano: ${TRAP_DEFS[removed.kind].label}.`)
-    }
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    onInventoryChanged()
-  }
-
-  onTrapBaitReturnedTarget = (kind) => {
-    if (inventory.add(kind, 1, dayNight.elapsedDays)) {
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-    } else {
-      bundle.droppedItems.drop(kind, player.mesh.position.x, player.mesh.position.z)
-    }
-  }
-
-  /** Plan 159 §9 — cast at a lake shore with `fishing_rod` held. Deterministic
-   *  catch roll (`world/fishing.ts`), boosted by the spot's active bait. */
-  const startFishing = (x: number, z: number): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (!inventory.canAdd('fish', 1)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
-      return
-    }
-    const spotId = fishingSpotId(x, z)
-    const attempt = (fishingAttempts.get(spotId) ?? 0) + 1
-    busy.start(FISHING_CAST_DURATION_SEC, 'Łowienie ryb…', () => {
-      fishingAttempts.set(spotId, attempt)
-      const hasBait = isBaitActive(fishingBait.get(spotId), dayNight.elapsedDays)
-      if (!rollFishingCatch(spotId, attempt, hasBait)) {
-        toast.show('Nic nie złapano.')
-        return
-      }
-      if (!inventory.canAdd('fish', 1)) {
-        toast.show('Ekwipunek jest za ciężki.', 'error')
-        return
-      }
-      inventory.add('fish', 1, dayNight.elapsedDays)
-      playInventoryPickUp(worldAudio.playOnce)
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      toast.show('+1 Ryba', 'pickup')
-    })
-  }
-
-  /** Plan 159 §10 — consumes one bait-capable food item and applies/refreshes
-   *  the cast spot's bait state. */
-  const applyFishingBaitAction = (x: number, z: number): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const kind = BAIT_ITEM_PRIORITY.find((k) => inventory.has(k, 1))
-    if (!kind) {
-      toast.show('Potrzebujesz przynęty — np. jagód lub mięsa.', 'error')
-      return
-    }
-    if (!inventory.remove(kind, 1)) return
-    const spotId = fishingSpotId(x, z)
-    fishingBait.set(spotId, applyFishingBaitToSpot(fishingBait.get(spotId) ?? null, kind, dayNight.elapsedDays))
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    onInventoryChanged()
-    toast.show('Zanęcono wodę.', 'pickup')
-  }
-
-  /** Plan 159 §8 — single `[E]` action on a drying rack: idle → start a
-   *  process from whatever raw meat/fish the player carries; complete →
-   *  collect the output; still running → progress toast. */
-  const interactDryingRack = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const rack = bundle.dryingRacks.list().find((entry) => entry.id === id)
-    if (!rack) return
-    if (rack.process) {
-      if (!isDryingComplete(rack.process, dayNight.elapsedDays)) {
-        toast.show('Suszy się…')
-        return
-      }
-      const output = rack.process.output[0]
-      if (!output || !inventory.canAdd(output.kind, output.count)) {
-        toast.show('Ekwipunek jest za ciężki.', 'error')
-        return
-      }
-      bundle.dryingRacks.clearProcess(id)
-      inventory.add(output.kind, output.count, dayNight.elapsedDays)
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      toast.show(`+${output.count} ${ITEM_DEFS[output.kind].label}`, 'pickup')
-      return
-    }
-    const recipe = pickDryingRecipe((kind) => inventory.has(kind, 1))
-    if (!recipe) {
-      toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
-      return
-    }
-    if (!inventory.remove(recipe.inputKind, 1)) return
-    bundle.dryingRacks.startProcess(id, startDryingProcess(`${id}:${Math.round(dayNight.elapsedDays * 1000)}`, recipe, dayNight.elapsedDays))
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    onInventoryChanged()
-    toast.show('Rozpoczęto suszenie.')
-  }
-
-  /** Plan 159 §11 — collects accrued honey; a deterministic per-day sting
-   *  chance reuses the existing `damageHealth` path, no new damage system. */
-  const collectHiveAction = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const hive = bundle.hives.list().find((entry) => entry.id === id)
-    if (!hive || hive.burned) {
-      toast.show('Ten ul jest spalony.', 'error')
-      return
-    }
-    if (honeyAvailable(hive, dayNight.elapsedDays) <= 0) {
-      toast.show('Ul jest jeszcze pusty.', 'error')
-      return
-    }
-    if (!inventory.canAdd('honey', 1)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
-      return
-    }
-    const amount = bundle.hives.collect(id, dayNight.elapsedDays)
-    if (amount <= 0) return
-    inventory.add('honey', amount)
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    onInventoryChanged()
-    if (rollHiveSting(id, dayNight.elapsedDays)) {
-      damageHealth(player.health, HIVE_STING_DAMAGE)
-      toast.show(`Użądlenie! +${amount} miodu`, 'error')
-    } else {
-      toast.show(`+${amount} miodu`, 'pickup')
-    }
-  }
-
-  /** Plan 159 §11 — one-time burn reward, only while a lit torch/branch is
-   *  held (reuses `PlayerTorch`, no new fire/detection system). */
-  const burnHiveAction = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (!playerTorch.isLit()) {
-      toast.show('Potrzebujesz zapalonej pochodni.', 'error')
-      return
-    }
-    const reward = bundle.hives.burn(id)
-    if (reward <= 0) {
-      toast.show('Nie można tego spalić.', 'error')
-      return
-    }
-    inventory.add('honey', reward)
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    onInventoryChanged()
-    toast.show(`Ul spłonął. +${reward} miodu`, 'pickup')
-  }
-
-  /** Plan 172 — single `[E]` harvest action for a naturally-generated wild
-   *  crop, reusing the existing gather/inventory flow. Mirrors the `item`
-   *  branch's mutation order (`gameLoop.ts`): the capacity check happens
-   *  *before* `ChunkManager.harvestCrop` removes anything from the world, so
-   *  a full inventory never destroys a crop for nothing. `cropId`/`stage`
-   *  come from the same-frame `Interactable` snapshot; `harvestCrop` still
-   *  re-validates the authoritative current stage itself. */
-  const harvestCropAction = (id: string, cropId: CropId, stage: CropGrowthStage): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const expectedYield = resolveCropHarvest(CROP_DEFS[cropId], stage)
-    if (!expectedYield) {
-      toast.show('Nie ma tu jeszcze nic do zebrania.', 'error')
-      return
-    }
-    if (!inventory.canAdd(expectedYield.kind, expectedYield.count)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
-      return
-    }
-    const outcome = bundle.chunkManager.harvestCrop(id)
-    if (!outcome.ok) {
-      toast.show('Ta roślina już zniknęła.', 'error')
-      return
-    }
-    inventory.add(outcome.yield.kind, outcome.yield.count, dayNight.elapsedDays)
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    onInventoryChanged()
-    playInventoryPickUp(worldAudio.playOnce)
-    toast.show(`+${outcome.yield.count} ${ITEM_DEFS[outcome.yield.kind].label}`, 'pickup')
-  }
-
-  // The single owner of a capture's player-facing consequences (implementation
-  // notes §18) — `PlacedTraps` only kills and leaves a corpse; XP and the
-  // toast are decided here, exactly once per catch.
-  onTrapCaptureTarget = (event) => {
-    awardSkillXp(player.skills, 'traps', SKILL_XP_AWARD.captureTrap)
-    const animalLabel = ANIMAL_LABELS[event.animalKind]
-    toast.show(
-      event.broken
-        ? `Pułapka złapała zwierzę (${animalLabel}) i się rozpadła.`
-        : `Pułapka złapała zwierzę (${animalLabel}).`,
-    )
-  }
-
-  /** Rest quality + XP for the sleep currently in flight (plan 128 §5-§7),
-   *  resolved once when rest starts and consumed when the 8h skip finishes.
-   *  Null means "no camp context" — a plain town bed, restored in full. */
-  let pendingRest: { quality: number, awardsSurvivalXp: boolean } | null = null
-
-  /** One-shot proximity lookup at rest start — never a per-frame scan. Only
-   *  player-built fires count as camp warmth; a village's own campfire belongs
-   *  to town rest, which is already a full night. */
-  const resolveCampContext = (hasBlanket: boolean, hasTent: boolean): CampRestContext => ({
-    hasBlanket,
-    hasTent: hasTent || hasTentNear(
-      bundle.placedTents.list(),
-      player.mesh.position.x,
-      player.mesh.position.z,
-    ),
-    hasWarmFire: hasWarmFireNear(
-      bundle.placedFires.list(),
-      player.mesh.position.x,
-      player.mesh.position.z,
-    ),
-  })
-
-  const beginCampRest = (context: CampRestContext): void => {
-    pendingRest = {
-      quality: campRestQuality(context, player.skills.survival.value),
-      awardsSurvivalXp: true,
-    }
-  }
-
-  /** Called by `gameLoop` when a `fadeStrength === 1` skip (i.e. a night's
-   *  sleep) finishes. Owns both halves of the rest outcome: how much the
-   *  night restored, and the Survival XP the camp earned. */
-  const onSleepFinished = (): void => {
-    const rest = pendingRest
-    pendingRest = null
-    restoreNeedsFromSleep(player.needs, rest?.quality ?? 1)
-    if (rest?.awardsSurvivalXp) awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.campRest)
-  }
-
-  const startTentRest = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const tent = bundle.placedTents.list().find((entry) => entry.id === id)
-    if (tent) {
-      const pose = tentRestPose(tent)
-      player.setPosition(pose.x, pose.z)
-      player.mesh.rotation.y = pose.yaw
-    }
-    restCamp.start({
-      variant: 'tent',
-      onSleepStart: () => {
-        // Resolved after the pose move so the fire/tent lookup uses where the
-        // player actually sleeps.
-        beginCampRest(resolveCampContext(inventory.has('blanket', 1), true))
-        timeSkip.start(8, { fadeStrength: 1, label: 'Odpoczywasz w namiocie...' })
-      },
-      onComplete: () => {},
-    })
-  }
-
-  const packTent = (id: string): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (!inventory.canAdd('tent')) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
-      return
-    }
-    const packed = bundle.placedTents.pack(id)
-    if (!packed) return
-    inventory.add('tent', 1)
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    syncQuickActionAvailability()
-    toast.show('+1 Namiot', 'pickup')
-  }
-
-  const abortRest = (): boolean => {
-    const resting = restCamp.isActive() || timeSkip.fadeStrength() === 1
-    if (!resting) return false
-    if (timeSkip.fadeStrength() === 1 && !canCancelRestProgress(timeSkip.progress())) return false
-    if (restCamp.isActive() && !timeSkip.isActive()) return false
-    // Aborted rest earns nothing and resolves no quality (plan 128 edge cases).
-    pendingRest = null
-    timeSkip.cancel()
-    timeSkipOverlay.hide()
-    busyOverlay.hide()
-    restCamp.cancel()
-    player.standUp()
-    return true
-  }
-  vueUi.configureAbortRest(abortRest)
-
-  /** Esc during a `busy` channel (fire-lighting, cooking, butchering, …) —
-   *  cancels without running `onComplete`, so nothing is consumed/produced. */
-  const abortBusy = (): boolean => {
-    if (!busy.isActive()) return false
-    busy.cancel()
-    busyOverlay.hide()
-    return true
-  }
-  vueUi.configureAbortBusy(abortBusy)
-
-  const isNearTown = (): boolean => bundle.settlementsManager
-    .getLoaded()
-    .some((s) => s.center.distanceTo(player.mesh.position) <= REST_IN_TOWN_RADIUS)
   const syncNearTownQuickActions = (): void => {
-    vueUi.setQuickActionsNearTown(isNearTown())
-  }
-
-  const digFeedback = () => ({
-    inventory,
-    droppedItems: bundle.droppedItems,
-    toast,
-    hud,
-    playOnce: worldAudio.playOnce,
-  })
-
-  const aimGroundPoint = (): { x: number, z: number } => ({
-    x: player.mesh.position.x - Math.sin(mouseLook.state.yaw) * DIG_REACH,
-    z: player.mesh.position.z - Math.cos(mouseLook.state.yaw) * DIG_REACH,
-  })
-
-  const startDigAt = (x: number, z: number): void => {
-    if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const profile = getDigProfileAt(x, z, bundle.chunkManager)
-    if (!profile) {
-      toast.show('Tu nie da się kopać.', 'error')
-      return
-    }
-    playActionDig(worldAudio.playOnce)
-    busy.start(DIG_DURATION_SEC, 'Kopanie…', () => {
-      applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
-      syncQuickActionAvailability()
-    })
-  }
-
-  const startPickaxeDigAt = (x: number, z: number): void => {
-    if (heldTool.held() !== 'pickaxe' || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const profile = getRockDigProfileAt(x, z, bundle.chunkManager)
-    if (!profile) {
-      toast.show('Tu nie da się kopać kilofem.', 'error')
-      return
-    }
-    playActionMine(worldAudio.playAt, { x, z })
-    busy.start(DIG_DURATION_SEC, 'Kucie…', () => {
-      applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
-      syncQuickActionAvailability()
-    })
-  }
-
-  const startLevelAt = (x: number, z: number): void => {
-    if (!inventory.has('shovel', 1) || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (isRockGround(x, z, bundle.chunkManager)) {
-      toast.show('Łopata nie bierze skały.', 'error')
-      return
-    }
-    if (!canLevelAt(x, z, bundle.chunkManager)) {
-      toast.show('Nie ma tu czego wyrównać.', 'error')
-      return
-    }
-    busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
-      applyLevelAt(bundle.chunkManager, x, z, toast)
-    })
-  }
-
-  const startPickaxeLevelAt = (x: number, z: number): void => {
-    if (heldTool.held() !== 'pickaxe' || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (!isRockGround(x, z, bundle.chunkManager) || !canLevelAt(x, z, bundle.chunkManager)) {
-      toast.show('Nie ma tu czego wyrównać.', 'error')
-      return
-    }
-    busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
-      applyLevelAt(bundle.chunkManager, x, z, toast)
-    })
-  }
-
-  const startBuryCorpse = (animal: AnimalAgent): void => {
-    if (heldTool.held() !== 'shovel' || busy.isActive() || timeSkip.isActive()) return
-    if (!animal.isDead() || animal.readyToRemove()) return
-    playActionDig(worldAudio.playOnce)
-    busy.start(BURY_DURATION_SEC, 'Zakopywanie…', () => {
-      if (!animal.isDead() || animal.readyToRemove()) return
-      animal.bury()
-      toast.show('Zwłoki zakopane.')
-    })
-  }
-
-  /** Knife-harvest meat from a corpse (plan 106; species-specific kind +
-   *  hide byproduct added in plan 134) — same shape as `startBuryCorpse`,
-   *  just knife-gated and yielding item(s) instead of disposing the corpse. */
-  const startHarvestMeat = (animal: AnimalAgent): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (!isHarvestKnife(heldTool.held())) {
-      // Auto-equip from inventory (plan 153) — same pattern as
-      // `lightWoodenTorch` in `userActions.ts`: only when the hand is free,
-      // never displacing another held tool. Prefer damascus_knife when both
-      // harvest knives are present (plan 160).
-      if (heldTool.held() !== null) return
-      const knifeKind = inventory.holdsAny('damascus_knife')
-        ? 'damascus_knife'
-        : inventory.holdsAny('knife')
-          ? 'knife'
-          : null
-      if (!knifeKind || !heldTool.equip(knifeKind)) return
-      syncHeldHud()
-    }
-    if (!animal.canHarvestMeat()) return
-    const meatKind = meatKindForAnimal(animal.def.kind)
-    if (!inventory.canAdd(meatKind, 1)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
-      return
-    }
-    animal.holdCorpse()
-    busy.start(HARVEST_MEAT_DURATION_SEC, 'Wycinanie mięsa…', () => {
-      try {
-        if (!animal.canHarvestMeat() || !inventory.canAdd(meatKind, 1)) return
-        animal.harvestMeat()
-        inventory.add(meatKind, 1, dayNight.elapsedDays)
-        let message = `+1 ${ITEM_DEFS[meatKind].label}`
-        if (inventory.canAdd('hide', 1)) {
-          inventory.add('hide', 1)
-          message += ', +1 skóra'
-        }
-        playInventoryPickUp(worldAudio.playOnce)
-        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-        onInventoryChanged()
-        toast.show(message, 'pickup')
-      } finally {
-        animal.releaseCorpseHold()
-      }
-    }, { blurred: true, onCancel: () => animal.releaseCorpseHold() })
-  }
-
-  /** Lights an unlit campfire (busy channel, blurred) — "dołóż gałąź" on an
-   *  already-lit fire stays instant/inline in `gameLoop.ts`, not routed
-   *  through here. */
-  const startIgniteFire = (fire: VillageFire): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (!inventory.has('firestarter', 1)) {
-      toast.show('Potrzebujesz krzesiwa, żeby rozpalić ogień.', 'error')
-      return
-    }
-    if (!inventory.has('branch', 1)) {
-      toast.show('Potrzebujesz gałęzi, żeby je zapalić.', 'error')
-      return
-    }
-    // Survival is read once, when the channel starts — a running channel is
-    // never retimed (plan 128 §3.1).
-    const duration = IGNITE_DURATION_SEC * survivalDurationMultiplier(player.skills.survival.value)
-    busy.start(duration, 'Rozpalanie ogniska…', () => {
-      if (fire.isLit() || !inventory.remove('branch', 1)) return
-      fire.light()
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.igniteFire)
-      toast.show('Ognisko zapłonęło.')
-    }, { blurred: true })
-  }
-
-  /** `[E] Zniszcz` on a `depleted` spawn point (plan 137) — busy channel with
-   *  progress bar; branches are spent only on complete (Esc is a no-op). */
-  const startDestroySpawner = (spawner: PreySpawner): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (spawner.state !== 'depleted') return
-    if (!inventory.has('branch', SPAWNER_DESTROY_BRANCH_COST)) {
-      toast.show('Potrzebujesz 4 gałęzi.', 'error')
-      return
-    }
-    busy.start(DESTROY_SPAWNER_DURATION_SEC, spawnerDestroyBusyLabel(spawner.type), () => {
-      if (spawner.state !== 'depleted') {
-        toast.show('Nie można już tego zniszczyć.', 'error')
-        return
-      }
-      if (!inventory.remove('branch', SPAWNER_DESTROY_BRANCH_COST)) {
-        toast.show('Potrzebujesz 4 gałęzi.', 'error')
-        return
-      }
-      if (!bundle.fauna.destroySpawner(spawner.id, dayNight.elapsedDays)) {
-        inventory.add('branch', SPAWNER_DESTROY_BRANCH_COST)
-        toast.show('Nie można już tego zniszczyć.', 'error')
-        return
-      }
-      // 4 consumed branches become the pit's fuel: `light` sets one branch of
-      // fuel, then three `addFuel` calls bring it to ~300 s (`FUEL_PER_BRANCH`).
-      const entry = bundle.placedFires.place(spawner.x, spawner.z, 'pit', { habitatBurn: true })
-      entry.fire.light('player')
-      entry.fire.addFuel()
-      entry.fire.addFuel()
-      entry.fire.addFuel()
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      toast.show('Siedlisko zniszczone.', 'pickup')
-    }, { blurred: true })
-  }
-
-  /** Cooks the first held recipe's input at a lit campfire (plan 106 §6). */
-  const startCookAt = (fire: VillageFire): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (!fire.isLit()) {
-      toast.show('Ognisko musi się palić.', 'error')
-      return
-    }
-    const recipe = findCookingRecipe(inventory)
-    if (!recipe) {
-      toast.show('Potrzebujesz surowego mięsa.', 'error')
-      return
-    }
-    if (!inventory.canAdd(recipe.output, recipe.count)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
-      return
-    }
-    busy.start(COOK_DURATION_SEC, 'Pieczenie mięsa…', () => {
-      if (!fire.isLit()) {
-        toast.show('Ogień zgasł.', 'error')
-        return
-      }
-      if (!inventory.canAdd(recipe.output, recipe.count) || !inventory.remove(recipe.input, 1)) {
-        toast.show('Ekwipunek jest za ciężki.', 'error')
-        return
-      }
-      inventory.add(recipe.output, recipe.count, dayNight.elapsedDays)
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      onInventoryChanged()
-      awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.cookMeat)
-      toast.show(`+${recipe.count} ${ITEM_DEFS[recipe.output].label}`, 'pickup')
-    }, { blurred: true })
-  }
-
-  /** Instant drink at a well/lake (plan 106 §4) — no busy channel, matching
-   *  other instant world actions (item pickup). */
-  const drinkFromWaterSource = (source: WaterSource): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    drinkWaterNeeds(player.needs, DRINK_THIRST_RELIEF)
-    playActionWell(worldAudio.playAt, player.mesh.position)
-    toast.show(source.quality === 'unsafe' ? UNSAFE_WATER_WARNING : 'Napito się wody.', source.quality === 'unsafe' ? 'error' : undefined)
-  }
-
-  /** Instant fill of a carried empty waterskin (plan 106 §4). Removes the
-   *  empty one first, then adds the full one — if the (heavier) full
-   *  waterskin doesn't fit, the empty one is refunded rather than lost. */
-  const fillWaterskin = (): void => {
-    if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    if (!inventory.remove('waterskin_empty', 1)) {
-      toast.show('Potrzebujesz pustego bukłaka.', 'error')
-      return
-    }
-    if (!inventory.add('waterskin_full', 1)) {
-      inventory.add('waterskin_empty', 1)
-      toast.show('Ekwipunek jest za ciężki.', 'error')
-      return
-    }
-    playActionWell(worldAudio.playAt, player.mesh.position)
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    onInventoryChanged()
-    toast.show('Napełniono bukłak.', 'pickup')
-  }
-
-  /** Inventory-screen "Zjedz"/"Wypij" (plan 106) — driven by
-   *  `ITEM_CATALOG[kind].consumable`, the same catalog entry the well/lake/
-   *  cooking paths' relief amounts come from. */
-  const consumeItem = (kind: ItemKind): void => {
-    const entry = ITEM_CATALOG[kind].consumable
-    if (!entry || !inventory.has(kind, 1)) return
-    // Plan 159 §3/§5 — spoiled food is non-consumable rather than acting
-    // like fresh food; checked against the batch that would actually be
-    // eaten (oldest first, same order `remove()` consumes in).
-    const acquiredAtDays = inventory.oldestAcquiredAtDays(kind)
-    if (acquiredAtDays != null && getFreshnessStage(kind, acquiredAtDays, dayNight.elapsedDays) === 'spoiled') {
-      toast.show('To jedzenie się zepsuło.', 'error')
-      return
-    }
-    if (!inventory.remove(kind, 1)) return
-    if (entry.resultKind) inventory.add(entry.resultKind, 1)
-    // Plan 128 §4 — Survival makes the *same* `roasted_meat` more nourishing;
-    // no roasted variants, no skill-dependent recipes.
-    const relief = kind === 'roasted_meat'
-      ? entry.relief * survivalFoodMultiplier(player.skills.survival.value)
-      : entry.relief
-    if (entry.need === 'hunger') eatFood(player.needs, relief)
-    else if (entry.need === 'thirst') drinkWaterNeeds(player.needs, relief)
-    else healHealth(player.health, relief)
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    onInventoryChanged()
-    inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
-    toast.show(entry.need === 'hunger' ? 'Zjedzono.' : entry.need === 'thirst' ? 'Wypito.' : 'Opatrzono rany.', 'pickup')
-  }
-
-  const startTreeChop = (treeId: string, x: number, z: number): void => {
-    if (!isChopTool(heldTool.held()) || busy.isActive() || timeSkip.isActive()) return
-    // Pre-check choppability without mutating — advanceHarvest is the authority.
-    const nearby = bundle.chunkManager.getNearbyTrees({ x, z }, 0.5)
-    const target = nearby.find((t) => t.id === treeId)
-    if (!target || !isChoppableStage(target.stage)) {
-      toast.show('To drzewo nie nadaje się do ścięcia.', 'error')
-      return
-    }
-    const stepYield = yieldForChopStage(target.stage)
-    if (!stepYield || !inventory.canAdd(stepYield.kind, stepYield.count)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
-      return
-    }
-    const busyLabel =
-      target.stage === 'mature' || target.stage === 'old'
-        ? 'Oczyszczanie…'
-        : target.stage === 'limbed'
-          ? 'Ścinanie…'
-          : 'Rąbanie…'
-    playActionChop(worldAudio.playAt, { x, z })
-    busy.start(CHOP_DURATION_SEC, busyLabel, () => {
-      if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
-        toast.show('Ekwipunek jest za ciężki.', 'error')
-        return
-      }
-      const landmark = bundle.settlementsManager
-        .getLoaded()
-        .flatMap((s) => s.landmarks.trees)
-        .find((t) => t.id === treeId)
-      const result = advanceWorldTreeHarvest(
-        treeLifecycle,
-        treeId,
-        dayNight.elapsedDays,
-        bundle.chunkManager.sampleTreeEnv(x, z),
-        landmark
-          ? { landmark }
-          : { refreshChunkVisual: (id) => bundle.chunkManager.refreshTreeVisual(id) },
-      )
-      if (!result.ok) {
-        toast.show(
-          result.reason === 'not-choppable' || result.reason === 'already-harvested'
-            ? 'To drzewo nie nadaje się do ścięcia.'
-            : 'Nie udało się ściąć drzewa.',
-          'error',
-        )
-        return
-      }
-      inventory.add(result.yield.kind, result.yield.count)
-      playInventoryPickUp(worldAudio.playOnce)
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      heldTool.syncWithInventory()
-      syncHeldHud()
-      syncQuickActionAvailability()
-      toast.show(`+${result.yield.count} Gałąź`, 'pickup')
-    })
-  }
-
-  const startDepositMine = (depositId: string, x: number, z: number): void => {
-    if (heldTool.held() !== 'pickaxe' || busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-    const target = bundle.resourceDeposits.queryNearest(x, z, 0.75)
-    if (!target || target.id !== depositId || target.remaining <= 0) {
-      toast.show('Tu nie ma już czego wydobywać.', 'error')
-      return
-    }
-    const stepYield = yieldForOre(target.type)
-    if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
-      toast.show('Ekwipunek jest za ciężki.', 'error')
-      return
-    }
-    playActionMine(worldAudio.playAt, { x, z })
-    busy.start(MINE_DURATION_SEC, 'Wydobywanie…', () => {
-      if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
-        toast.show('Ekwipunek jest za ciężki.', 'error')
-        return
-      }
-      const result = bundle.resourceDeposits.mine(depositId)
-      if (!result.ok) {
-        toast.show('Tu nie ma już czego wydobywać.', 'error')
-        return
-      }
-      inventory.add(result.yield.kind, result.yield.count)
-      playInventoryPickUp(worldAudio.playOnce)
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      heldTool.syncWithInventory()
-      syncHeldHud()
-      toast.show(`+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`, 'pickup')
-    })
+    vueUi.setQuickActionsNearTown(rest.isNearTown())
   }
 
   /** When quick actions opened under pointer lock, restore lock on close so
@@ -2247,7 +857,7 @@ export async function createApp(
     hasShovel: inventory.has('shovel', 1),
     hasTent: inventory.has('tent', 1),
     hasCarriedContainer: bundle.placedContainers.hasCarried(),
-    nearTown: isNearTown(),
+    nearTown: rest.isNearTown(),
     onOpen: () => {
       restorePointerLockAfterQuickActions = exitGamePointerLock(renderer.domElement)
       syncNearTownQuickActions()
@@ -2261,48 +871,20 @@ export async function createApp(
     onBuildFirePit: buildFirePit,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,
-    onWait: (hours) => {
-      if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return
-      timeSkip.start(hours, { fadeStrength: 0.5, label: `Czekasz... (${hours}h)` })
-    },
-    onRest: (variant) => {
-      if (busy.isActive() || timeSkip.isActive() || restCamp.isActive()) return 'ok'
-      if (!inventory.has('blanket', 1)) return 'no-blanket'
-      if (variant === 'town') {
-        if (!isNearTown()) return 'too-far'
-        player.lieDown()
-        timeSkip.start(8, {
-          fadeStrength: 1,
-          label: 'Odpoczywasz w mieście...',
-        })
-        return 'ok'
-      }
-      restCamp.start({
-        onSleepStart: () => {
-          // The quick action already required a blanket; the tent/fire halves
-          // of the camp come from what's actually pitched/lit around here.
-          beginCampRest(resolveCampContext(true, false))
-          timeSkip.start(8, {
-            fadeStrength: 1,
-            label: 'Rozbijasz obóz...',
-          })
-        },
-        onComplete: () => {},
-      })
-      return 'ok'
-    },
+    onWait: rest.startWait,
+    onRest: rest.startRest,
     onDig: () => {
-      const p = aimGroundPoint()
-      startDigAt(p.x, p.z)
+      const p = ground.aimGroundPoint()
+      ground.startDigAt(p.x, p.z)
     },
     onLevel: () => {
-      const p = aimGroundPoint()
-      startLevelAt(p.x, p.z)
+      const p = ground.aimGroundPoint()
+      ground.startLevelAt(p.x, p.z)
     },
-    onPlaceTent: placeTentAtAim,
-    onPlaceTrap: placeTrapAtAim,
-    onPutDownContainer: putDownContainerAtAim,
-    onBuildWell: placeWellAtAim,
+    onPlaceTent: placement.placeTentAtAim,
+    onPlaceTrap: placement.placeTrapAtAim,
+    onPutDownContainer: containers.putDownContainerAtAim,
+    onBuildWell: placement.placeWellAtAim,
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()
@@ -2335,7 +917,7 @@ export async function createApp(
   const openInventory = () => {
     exitGamePointerLock(renderer.domElement)
     inventoryScreen.open()
-    inventoryScreen.refresh(inventoryCountsForUi(inventory), inventory.totalWeight(), inventory.maxWeight, heldTool.held(), buildInventoryGroups(inventory))
+    refreshInventoryScreen()
   }
   const openSkills = () => {
     exitGamePointerLock(renderer.domElement)
@@ -2399,38 +981,26 @@ export async function createApp(
   }, () => vueUi.isNpcDialogueMenuOpen())
   void refreshActiveSaveName()
 
+  /** Guard against the ☰ / Quick Actions buttons opening their overlay on top
+   *  of another already-open full-screen modal (npc dialog/quest log/
+   *  villagers) — those don't disable the button the way they disable the rest
+   *  of the touch layer, since it now lives outside `.seedvale-touch`. */
+  const noFullScreenModalOpen = (): boolean =>
+    !npcDialog.isOpen() &&
+    !questLog.isOpen() &&
+    !vueUi.isVillagersOpen() &&
+    !inventoryScreen.isOpen() &&
+    !vueUi.isNpcDialogueMenuOpen() &&
+    !vueUi.isWorldConfigScreenOpen() &&
+    !vueUi.isNotesOpen()
+
   touchControls = isTouchDevice()
     ? createTouchControls(container, keyboard.state, mouseLook.state, {
-        // Guard against the ☰ button opening the pause overlay on top of
-        // another already-open full-screen modal (npc dialog/quest log/
-        // villagers) — those don't disable the button the way they disable
-        // the rest of the touch layer, since it now lives outside
-        // .seedvale-touch (see the top-right cluster below).
         onPauseToggle: () => {
-          if (
-            !npcDialog.isOpen() &&
-            !questLog.isOpen() &&
-            !vueUi.isVillagersOpen() &&
-            !inventoryScreen.isOpen() &&
-            !vueUi.isNpcDialogueMenuOpen() &&
-            !vueUi.isWorldConfigScreenOpen() &&
-            !vueUi.isNotesOpen()
-          ) {
-            pauseMenu.togglePause()
-          }
+          if (noFullScreenModalOpen()) pauseMenu.togglePause()
         },
         onQuickActions: () => {
-          if (
-            !npcDialog.isOpen() &&
-            !questLog.isOpen() &&
-            !vueUi.isVillagersOpen() &&
-            !inventoryScreen.isOpen() &&
-            !vueUi.isNpcDialogueMenuOpen() &&
-            !vueUi.isWorldConfigScreenOpen() &&
-            !vueUi.isNotesOpen()
-          ) {
-            quickActions.toggle()
-          }
+          if (noFullScreenModalOpen()) quickActions.toggle()
         },
       })
     : null
@@ -2448,24 +1018,7 @@ export async function createApp(
   // index.html + the manifest's display:standalone) — that path doesn't hit
   // this bug since it isn't the live Fullscreen API.
 
-  // `beforeunload` alone isn't enough on mobile: Android (and iOS) routinely
-  // suspend/kill a backgrounded PWA/tab without ever firing it — the reported
-  // failure mode ("collected items, reopened, gone") is exactly that. The
-  // reliable moment to persist is when the page is about to be hidden, not
-  // when it's about to close: `visibilitychange`→hidden fires the instant the
-  // user switches away (before the OS gets a chance to kill the process), and
-  // `pagehide` covers navigation/bfcache cases visibilitychange can miss.
-  // `beforeunload` stays too — free extra coverage on desktop.
-  window.addEventListener('beforeunload', saveNow)
-  const onVisibilityChange = () => {
-    if (document.hidden) saveNow()
-  }
-  document.addEventListener('visibilitychange', onVisibilityChange)
-  window.addEventListener('pagehide', saveNow)
-  // Defense in depth in case the app is killed with no lifecycle event at
-  // all (rare, but seen on some Android OEMs) — bounds how much progress a
-  // worst-case loss can cost.
-  const autoSaveInterval = window.setInterval(saveNow, 60_000)
+  const removeAutoSave = installAutoSave()
 
   const gameLoop = createGameLoop({
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
@@ -2475,36 +1028,36 @@ export async function createApp(
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork: (mode, x, z) => {
       if (heldTool.held() === 'pickaxe') {
-        if (mode === 'level') startPickaxeLevelAt(x, z)
-        else startPickaxeDigAt(x, z)
-      } else if (mode === 'level') startLevelAt(x, z)
-      else startDigAt(x, z)
+        if (mode === 'level') ground.startPickaxeLevelAt(x, z)
+        else ground.startPickaxeDigAt(x, z)
+      } else if (mode === 'level') ground.startLevelAt(x, z)
+      else ground.startDigAt(x, z)
     },
-    startTreeChop,
-    startDepositMine,
-    startBuryCorpse,
-    startHarvestMeat,
-    startCookAt,
-    startIgniteFire,
-    startDestroySpawner,
-    drinkFromWaterSource,
-    fillWaterskin,
-    consumeItem,
-    startTentRest,
-    packTent,
-    armTrap,
-    disarmTrap,
-    collectTrap,
-    startFishing,
-    applyFishingBait: applyFishingBaitAction,
-    interactDryingRack,
-    collectHive: collectHiveAction,
-    burnHive: burnHiveAction,
-    harvestCrop: harvestCropAction,
-    openContainer,
-    pickUpContainer,
-    advanceWellStage,
-    onSleepFinished,
+    startTreeChop: ground.startTreeChop,
+    startDepositMine: ground.startDepositMine,
+    startBuryCorpse: survival.startBuryCorpse,
+    startHarvestMeat: survival.startHarvestMeat,
+    startCookAt: survival.startCookAt,
+    startIgniteFire: survival.startIgniteFire,
+    startDestroySpawner: survival.startDestroySpawner,
+    drinkFromWaterSource: survival.drinkFromWaterSource,
+    fillWaterskin: survival.fillWaterskin,
+    consumeItem: survival.consumeItem,
+    startTentRest: rest.startTentRest,
+    packTent: rest.packTent,
+    armTrap: gathering.armTrap,
+    disarmTrap: gathering.disarmTrap,
+    collectTrap: gathering.collectTrap,
+    startFishing: gathering.startFishing,
+    applyFishingBait: gathering.applyFishingBait,
+    interactDryingRack: gathering.interactDryingRack,
+    collectHive: gathering.collectHive,
+    burnHive: gathering.burnHive,
+    harvestCrop: gathering.harvestCrop,
+    openContainer: containers.openContainer,
+    pickUpContainer: containers.pickUpContainer,
+    advanceWellStage: placement.advanceWellStage,
+    onSleepFinished: rest.onSleepFinished,
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,
     syncPointLightBudget: () => { pointLightBudget.sync(camera) },
@@ -2517,134 +1070,17 @@ export async function createApp(
   const programPrewarm = await prewarmRenderPrograms(renderer, scene, camera)
   if (typeof window !== 'undefined') window.__seedvaleProgramPrewarm = programPrewarm
 
-  let frameId = 0
-  let lastViewportWidth = -1
-  let lastViewportHeight = -1
-  let resizeScheduled = false
-  let webglContextLost = false
-  const cameraDebug = isCameraDebugMode() ? createCameraDebugOverlay(container) : null
-  // Sticky event log for the camdebug overlay — a live snapshot alone misses
-  // anything shorter than its 250ms refresh, which is exactly the failure
-  // mode we're trying to diagnose (issue 032: sporadic black-world blinks).
-  // No-op (never allocated/pushed to) when cameraDebug is null.
-  const MAX_DEBUG_EVENTS = 6
-  const debugEvents: string[] = []
-  let contextLostAt: number | null = null
-  let lastCameraStateInvalid = false
-  const pushDebugEvent = (label: string): void => {
-    if (!cameraDebug) return
-    const t = (performance.now() / 1000).toFixed(1)
-    debugEvents.push(`[${t}s] ${label}`)
-    if (debugEvents.length > MAX_DEBUG_EVENTS) debugEvents.shift()
-  }
-  // Issue 032 follow-up: EffectComposer + N8AO + UnrealBloomPass allocate ~15
-  // HalfFloatType/FloatType render targets. Rendering into them needs
-  // EXT_color_buffer_half_float / EXT_color_buffer_float; without it a mobile
-  // driver can leave the framebuffer incomplete (or silently downgrade the
-  // attachment) with no WebGL API error and no context loss — matching the
-  // reported symptom (black 3D canvas, UI intact, `gl error NONE`,
-  // `contextLost false`). Logged once so the next repro's `events:` section
-  // can confirm or rule this out.
-  if (cameraDebug) {
-    const halfFloatRt = renderer.extensions.has('EXT_color_buffer_half_float')
-    const floatRt = renderer.extensions.has('EXT_color_buffer_float')
-    pushDebugEvent(`float RT support: half=${halfFloatRt} full=${floatRt}`)
-  }
-
-  const applyViewportSize = (force = false) => {
-    let width = container.clientWidth
-    let height = container.clientHeight
-    if (width < MIN_RENDERER_SIZE || height < MIN_RENDERER_SIZE) {
-      pushDebugEvent(`invalid viewport ${width}x${height} (force=${force})`)
-      if (!force || lastViewportWidth < MIN_RENDERER_SIZE) return
-      width = lastViewportWidth
-      height = lastViewportHeight
-    }
-    if (!force && !shouldApplyRendererResize(width, height, lastViewportWidth, lastViewportHeight)) {
-      return
-    }
-    lastViewportWidth = Math.round(width)
-    lastViewportHeight = Math.round(height)
-    camera.aspect = width / height
-    camera.updateProjectionMatrix()
-    renderer.setSize(width, height)
-    labelRenderer.setSize(width, height)
-    postProcessing.setSize(width, height)
-  }
-  const requestResize = () => {
-    if (resizeScheduled) return
-    resizeScheduled = true
-    requestAnimationFrame(() => {
-      resizeScheduled = false
-      applyViewportSize()
-    })
-  }
-  window.addEventListener('resize', requestResize)
-  // Mobile browsers resize the *visual* viewport (address bar show/hide,
-  // on-screen keyboard) without always firing a plain window 'resize' — and
-  // orientation changes on some Android WebViews fire neither reliably.
-  // Covering both keeps the canvas from getting stuck at a stale size
-  // (reported: Chrome mobile rendering only into half the screen width after
-  // the initial address-bar layout settled).
-  // Coalesce + skip 0-size blips: visualViewport fires continuously while the
-  // address bar animates, and a 0-height composer target reads as a black
-  // world while the DOM UI keeps working.
-  window.addEventListener('orientationchange', requestResize)
-  window.visualViewport?.addEventListener('resize', requestResize)
-  const onOrientationSettled = () => { window.setTimeout(requestResize, 250) }
-  window.addEventListener('orientationchange', onOrientationSettled)
-  // Defensive re-measure a couple frames after first paint, in case the very
-  // first `container.clientWidth/clientHeight` read (used above to size the
-  // renderer/camera) happened before the mobile browser's chrome/address-bar
-  // layout had fully settled.
-  requestAnimationFrame(() => requestAnimationFrame(requestResize))
-
-  const canvas = renderer.domElement
-  const onWebglContextLost = () => {
-    webglContextLost = true
-    contextLostAt = performance.now()
-    pushDebugEvent('contextLost')
-    console.warn('[renderer] WebGL context lost')
-  }
-  const onWebglContextRestored = () => {
-    webglContextLost = false
-    const durationMs = contextLostAt !== null ? performance.now() - contextLostAt : -1
-    contextLostAt = null
-    pushDebugEvent(`contextRestored after ${durationMs.toFixed(0)}ms`)
-    console.warn(`[renderer] WebGL context restored after ${durationMs.toFixed(0)}ms — reallocating composer targets`)
-    applyViewportSize(true)
-  }
-  canvas.addEventListener('webglcontextlost', onWebglContextLost)
-  canvas.addEventListener('webglcontextrestored', onWebglContextRestored)
-
-  const tick = () => {
-    frameId = requestAnimationFrame(tick)
-    gameLoop.tick()
-    if (cameraDebug) {
-      const posFinite =
-        Number.isFinite(camera.position.x) &&
-        Number.isFinite(camera.position.y) &&
-        Number.isFinite(camera.position.z)
-      const aspectFinite = Number.isFinite(camera.aspect) && camera.aspect > 0
-      const invalid = !posFinite || !aspectFinite
-      if (invalid && !lastCameraStateInvalid) {
-        pushDebugEvent(
-          `camera invalid: pos=(${camera.position.x},${camera.position.y},${camera.position.z}) aspect=${camera.aspect}`,
-        )
-      }
-      lastCameraStateInvalid = invalid
-      cameraDebug.update({
-        camera,
-        renderer,
-        scene,
-        sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
-        contextLost: webglContextLost,
-        events: debugEvents,
-        renderStateText: isRenderStateDebugMode() ? getRenderStateDebugText() : null,
-      })
-    }
-  }
-  tick()
+  const renderLoop = createAppRenderLoop({
+    container,
+    renderer,
+    labelRenderer,
+    postProcessing,
+    camera,
+    scene,
+    sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
+    onTick: () => gameLoop.tick(),
+  })
+  renderLoop.start()
   loadingScreen.hide()
   if (typeof window !== 'undefined') {
     window.__seedvaleReady = true
@@ -2669,18 +1105,8 @@ export async function createApp(
   if (autoBench) void benchmark.run(autoBench)
 
   return () => {
-    cancelAnimationFrame(frameId)
-    window.removeEventListener('resize', requestResize)
-    window.removeEventListener('orientationchange', requestResize)
-    window.removeEventListener('orientationchange', onOrientationSettled)
-    window.visualViewport?.removeEventListener('resize', requestResize)
-    canvas.removeEventListener('webglcontextlost', onWebglContextLost)
-    canvas.removeEventListener('webglcontextrestored', onWebglContextRestored)
-    cameraDebug?.dispose()
-    window.removeEventListener('beforeunload', saveNow)
-    document.removeEventListener('visibilitychange', onVisibilityChange)
-    window.removeEventListener('pagehide', saveNow)
-    window.clearInterval(autoSaveInterval)
+    renderLoop.dispose()
+    removeAutoSave()
     vueUi.configureAbortRest(null)
     timeSkip.cancel()
     timeSkipOverlay.dispose()
@@ -2731,4 +1157,3 @@ export async function createApp(
     renderer.domElement.remove()
   }
 }
-

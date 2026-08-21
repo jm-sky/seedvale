@@ -71,6 +71,7 @@ In case of running benchmarks in browser - check `docs/performance/agent-browser
 |---|---|
 | Product vision | [docs/VISION.md](docs/VISION.md) |
 | Current implementation state | [docs/STATE.md](docs/STATE.md) |
+| Where a system lives in the code | [docs/CODE_INDEX.md](docs/CODE_INDEX.md) |
 | Settlements / NPC life | [docs/SETTLEMENTS.md](docs/SETTLEMENTS.md) |
 | Graphics decisions / visual contracts | [docs/GRAPHICS.md](docs/GRAPHICS.md) |
 | Water (ocean + lakes) | [docs/WATER.md](docs/WATER.md) |
