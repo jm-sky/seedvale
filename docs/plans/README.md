@@ -86,7 +86,6 @@ Natural vegetation
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-21--185--npc-role-based-carried-weapons.md` | Broń dla NPC do obrony przed wilkiem | 🔴 | S | ~~177~~ ~~179~~ ~~184~~ |
 | `2026-08-16--126--seed-planting.md` | Sadzenie nasion drzew (rozszerza istniejący `TreeLifecycle`) i cropów (nowy prosty `CropLifecycle`) przez gracza, integracja z inventory/garden gather/persistence; wstępny | 🟡 | L | ~~106~~ ~~122~~ |
 | `2026-08-20--174--player-garden-and-npc-need-sources.md` | Grządka budowana przez gracza + generyczny `NeedSource` model: NPC samodzielnie wykrywa i wybiera najbliższe dostępne źródło `hunger`/`thirst` przez istniejący needs/decision flow, bez `HelperAI`/`GardenAI`/global registry/per-frame scan | 🟡 | L | ~~159~~ ~~172~~ ~~126~~ ~~127~~ |
 | `2026-08-20--176--garden-and-field-maintenance.md` | Wspólny mechanizm utrzymania grządek/pól: stan zadbania pogarsza się z czasem, wpływa na produktywność, długotrwałe zaniedbanie usuwa grządkę/pole; wspólne dla gracza i NPC, bez `GardenManager`/`FarmManager` | 🟡 | M | ~~174~~ ~~126~~ |
@@ -151,6 +150,7 @@ Implementation complete; needs play/browser check. Do not treat as normal backlo
 | `2026-08-21--183--slope-movement-constraint.md` | | 🟡 | S | - |
 | `2026-08-20--177--npc-combat.md` | | 🔴 | M | ~~150~~ ~~162~~ |
 | `2026-08-21--189--river-channel-carving.md` | [implementation notes](./2026-08-21--189--river-channel-carving-implementation-notes.md) | 🔴 | M | ~~181~~ |
+| `2026-08-21--185--npc-role-based-carried-weapons.md` | [implementation notes](./2026-08-21--185--npc-role-based-carried-weapons-implementation-notes.md) | 🔴 | S | ~~177~~ ~~179~~ ~~184~~ |
 
 ---
 

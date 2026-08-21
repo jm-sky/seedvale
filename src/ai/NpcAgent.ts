@@ -114,6 +114,7 @@ import {
   resolveNpcMeleeWeapon,
   resolveNpcRangedWeapon,
 } from './npcCombat'
+import { seedDefaultRoleWeapon } from './npcLoadout'
 import {
   createMovementWatchdog,
   type MovementWatchdog,
@@ -907,6 +908,7 @@ export class NpcAgent {
     this.gender = character.gender
     this.voiceActor = voiceActorForIndex(this.gender, treeIndex)
     this.role = character.role
+    seedDefaultRoleWeapon(this.carried, this.role)
     this.traits = character.traits
     this.personality = character.personality
     this.relation = member.relation

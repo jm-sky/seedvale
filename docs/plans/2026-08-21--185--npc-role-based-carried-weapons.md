@@ -1,7 +1,7 @@
 # Plan: NPC Role-Based Carried Weapons
 
 **Created:** 2026-08-21  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** high · **Effort:** S  
 **Depends on:** ~~177~~ ~~179~~ ~~184~~
 
