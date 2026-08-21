@@ -94,6 +94,7 @@ Natural vegetation
 | `2026-08-20--175--cooking-vessels-grates-and-iron-rods.md` | Patelnia (do 2 kawałków mięsa) i ruszt (do 4) rozszerzają istniejący system gotowania; żelazny pręt jako nowy przedmiot świata/inventory (m.in. do budowy rusztu); bez nowego craftingu ani równoległego systemu gotowania | 🟡 | M | ~~106~~ |
 | `2026-08-20--176--garden-and-field-maintenance.md` | Wspólny mechanizm utrzymania grządek/pól: stan zadbania pogarsza się z czasem, wpływa na produktywność, długotrwałe zaniedbanie usuwa grządkę/pole; wspólne dla gracza i NPC, bez `GardenManager`/`FarmManager` | 🟡 | M | ~~174~~ ~~126~~ |
 | `2026-08-20--178--hunter-profession-and-household.md` | Profesja myśliwego + gospodarstwo wyspecjalizowane w polowaniu/produkcji łuków i strzał/przetwórstwie i sprzedaży; wykorzystuje istniejące NPC combat (`177`), fauna, inventory, household, storage, economy, cooking; bez równoległych systemów | 🟡 | L | ~~177~~ ~~162~~ ~~159~~ ~~175~~ |
+| `2026-08-21--180--npc-healing.md` | NPC używa opatrunków w razie obrażeń | 🟡 |M | ~~177~~ |
 
 ### Fresh new
 
