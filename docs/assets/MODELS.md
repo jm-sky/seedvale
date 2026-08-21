@@ -78,8 +78,8 @@ If the feature needs no new model, do nothing to this file.
 | M47 | Obsidian sword | Held melee; volcanic-glass purple/black (Claymore remint, not gray/red); quest `wilcza-jama` reward | `wired` | plan 160 (`items/obsidian_sword.glb`) |
 | M48 | Battle axe | Held melee + tree chop; Kupiec stock. Quaternius Axe Double | `wired` | plan 160 (`items/battle_axe.glb`) |
 | M49 | Masterwork sword | Held melee; Kupiec stock. Quaternius `Sword_Golden` | `wired` | plan 160 (`items/masterwork_sword.glb`) |
-| M50 | Bows (`short_bow`/`hunting_bow`/`long_bow`) | Held ranged weapons; Kupiec stock. Procedural torus-limb + string fallback in place and functional (`items/items.ts`'s `createItemMesh`), no GLB yet | `needed` | plan 162 |
-| M51 | Arrows (`arrow`/`broadhead_arrow`/`war_arrow`) | Stackable ammo pickup/inventory mesh; procedural shaft+head fallback in place and functional, no GLB yet | `needed` | plan 162 |
+| M50 | Bows (`short_bow`/`hunting_bow`/`long_bow`) | Held ranged weapons; Kupiec stock. Quaternius `Bow_Wooden`/`Bow_Wooden2`/`Bow_Golden` (Medieval Weapons Pack) wired ground + held; grip TRS in `HELD_ATTACH` reused from the procedural-fallback placeholder and not yet manually verified in-hand in the browser | `wired` | plan 162 (`items/short_bow.glb`, `hunting_bow.glb`, `long_bow.glb`) |
+| M51 | Arrows (`arrow`/`broadhead_arrow`/`war_arrow`) | Stackable ammo pickup/inventory mesh; not holdable. Quaternius `Arrow` (Medieval Weapons Pack), one shared GLB for all three arrow kinds (no visual damage-tier distinction in v1) | `wired` | plan 162 (`items/arrow.glb`) |
 | M52 | Whetstone | Stackable maintenance item; procedural box fallback in place and functional, no GLB yet | `needed` | plan 161 |
 
 ## Wired (reference — do not treat as open work)

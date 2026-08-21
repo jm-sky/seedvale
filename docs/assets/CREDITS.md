@@ -52,6 +52,10 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/items/spear.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Spear` — OBJ→GLB (`obj2gltf`) + `gltf-transform` meshopt (plan 134 / M38) |
 | `public/models/items/short_sword.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Sword` — same conversion; plain steel short sword (plan 134 / M38) |
 | `public/models/items/axe.glb` | CreativeTrio | [poly.pizza/m/OhZDdlrx29](https://poly.pizza/m/OhZDdlrx29) | CC0 1.0 | `Axe` — drop + held |
+| `public/models/items/short_bow.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Bow_Wooden` — OBJ→GLB (`obj2gltf`) + `gltf-transform` meshopt (plan 162 / M50) |
+| `public/models/items/hunting_bow.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Bow_Wooden2` — same conversion (plan 162 / M50) |
+| `public/models/items/long_bow.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Bow_Golden` — same conversion; gold/light-wood limbs, highest tier (plan 162 / M50) |
+| `public/models/items/arrow.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Arrow` — same conversion; shared by `arrow`/`broadhead_arrow`/`war_arrow` (plan 162 / M51) |
 | `public/models/settlement/hay.glb` | Quaternius | [poly.pizza/m/Yu8TOERkpw](https://poly.pizza/m/Yu8TOERkpw) | CC0 1.0 | `Hay` — clutter przy ogrodach (plan 082) |
 | `public/models/items/pickaxe.glb` | CreativeTrio | [poly.pizza/m/cJp88qPPLc](https://poly.pizza/m/cJp88qPPLc) | CC0 1.0 | `Pickaxe` — dekor przy stockpile; gameplay mining later (plan 082) |
 | `public/models/fauna/sheep.glb` | Quaternius | [poly.pizza/m/C39AUXUUes](https://poly.pizza/m/C39AUXUUes) | CC0 1.0 | `Sheep` — livestock wioski (plan 096) |

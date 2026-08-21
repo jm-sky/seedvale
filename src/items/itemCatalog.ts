@@ -720,7 +720,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     ranged: { damage: 14, range: 11, projectileSpeed: 26, drawTime: 0.32, recovery: 0.22, staminaCost: 6, accuracy: 0.72, ammoKinds: ['arrow', 'broadhead_arrow', 'war_arrow'] },
     spawn: 'none',
-    modelUrl: null,
+    modelUrl: '/models/items/short_bow.glb',
     notes: 'Plan 162 — Kupiec stock. Fast draw, short range, lowest damage of the three bows.',
   },
   hunting_bow: {
@@ -730,7 +730,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     ranged: { damage: 20, range: 15, projectileSpeed: 30, drawTime: 0.45, recovery: 0.3, staminaCost: 8, accuracy: 0.78, ammoKinds: ['arrow', 'broadhead_arrow', 'war_arrow'], criticalChance: 0.05 },
     spawn: 'none',
-    modelUrl: null,
+    modelUrl: '/models/items/hunting_bow.glb',
     notes: 'Plan 162 — Kupiec stock. Balanced range/damage/draw speed.',
   },
   long_bow: {
@@ -740,7 +740,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     ranged: { damage: 28, range: 20, projectileSpeed: 34, drawTime: 0.65, recovery: 0.4, staminaCost: 11, accuracy: 0.7, ammoKinds: ['arrow', 'broadhead_arrow', 'war_arrow'], criticalChance: 0.08 },
     spawn: 'none',
-    modelUrl: null,
+    modelUrl: '/models/items/long_bow.glb',
     notes: 'Plan 162 — Kupiec stock. Longest range/highest damage, slowest draw.',
   },
   arrow: {
@@ -749,7 +749,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     holdable: false,
     melee: null,
     spawn: 'none',
-    modelUrl: null,
+    modelUrl: '/models/items/arrow.glb',
     notes: 'Plan 162 — Kupiec stock. Base ammo for every bow; ordinary stackable count, no per-arrow instance/recovery.',
   },
   broadhead_arrow: {
@@ -758,7 +758,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     holdable: false,
     melee: null,
     spawn: 'none',
-    modelUrl: null,
+    modelUrl: '/models/items/arrow.glb',
     notes: 'Plan 162 — Kupiec stock. +damage ammo variant, same consumption/acquisition path as `arrow`.',
   },
   war_arrow: {
@@ -767,7 +767,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     holdable: false,
     melee: null,
     spawn: 'none',
-    modelUrl: null,
+    modelUrl: '/models/items/arrow.glb',
     notes: 'Plan 162 — Kupiec stock. Heaviest, highest-damage ammo variant.',
   },
   chest: {

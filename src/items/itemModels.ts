@@ -79,6 +79,28 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
     groundRotation: [0, 0, Math.PI / 2.4],
   },
   mushroom: { url: '/models/nature/mushroom_a.glb', maxSize: 0.3 },
+  // Quaternius Bow_Wooden/Bow_Wooden2/Bow_Golden (Medieval Weapons Pack) — plan 162.
+  // Authored Y-long like long_sword/spear/pitchfork; same Z-axis ground rotation.
+  short_bow: {
+    url: '/models/items/short_bow.glb',
+    maxSize: 1,
+    groundRotation: [0, 0, Math.PI / 2.2],
+  },
+  hunting_bow: {
+    url: '/models/items/hunting_bow.glb',
+    maxSize: 1.15,
+    groundRotation: [0, 0, Math.PI / 2.2],
+  },
+  long_bow: {
+    url: '/models/items/long_bow.glb',
+    maxSize: 1.35,
+    groundRotation: [0, 0, Math.PI / 2.2],
+  },
+  // Quaternius Arrow (Medieval Weapons Pack) — plan 162. Already authored lying
+  // along Z (no ground rotation needed); shared by all three arrow ItemKinds.
+  arrow: { url: '/models/items/arrow.glb', maxSize: 0.6 },
+  broadhead_arrow: { url: '/models/items/arrow.glb', maxSize: 0.6 },
+  war_arrow: { url: '/models/items/arrow.glb', maxSize: 0.6 },
 }
 
 const prepared = new Map<ItemKind, Group>()

@@ -157,9 +157,9 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     scale: 1,
     gripLocalOffset: [0, -0.25, 0],
   },
-  // Plan 162 — procedural mesh only (no GLB yet, see docs/assets/MODELS.md);
-  // same long-shaft family as fishing_rod/spear until a real grip is
-  // authored in the alignment browser.
+  // Quaternius Bow_Wooden/Bow_Wooden2/Bow_Golden (Medieval Weapons Pack, plan 162).
+  // Same long-shaft grip family as fishing_rod/spear; TRS not yet verified
+  // in-hand in the alignment browser (see docs/assets/MODELS.md M50).
   short_bow: {
     position: [-0.35, 0.13, -0.02],
     rotation: [Math.PI / 2, -Math.PI / 2, 0],
@@ -211,6 +211,10 @@ export const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }
   obsidian_sword: { url: '/models/items/obsidian_sword.glb', maxSize: 1.05 },
   battle_axe: { url: '/models/items/battle_axe.glb', maxSize: 0.65 },
   masterwork_sword: { url: '/models/items/masterwork_sword.glb', maxSize: 0.95 },
+  // Quaternius Bow_Wooden/Bow_Wooden2/Bow_Golden (Medieval Weapons Pack) — plan 162.
+  short_bow: { url: '/models/items/short_bow.glb', maxSize: 0.8 },
+  hunting_bow: { url: '/models/items/hunting_bow.glb', maxSize: 0.9 },
+  long_bow: { url: '/models/items/long_bow.glb', maxSize: 1.05 },
 }
 
 const HELD_ASSET_ID: Partial<Record<ToolKind, string>> = {
@@ -230,7 +234,17 @@ const HELD_ASSET_ID: Partial<Record<ToolKind, string>> = {
   obsidian_sword: 'held:obsidian_sword',
   battle_axe: 'held:battle_axe',
   masterwork_sword: 'held:masterwork_sword',
+  short_bow: 'held:short_bow',
+  hunting_bow: 'held:hunting_bow',
+  long_bow: 'held:long_bow',
 }
+
+/**
+ * Bows are authored Y-long (grip at origin, limbs along ±Y) like the
+ * wooden_torch stick; remap to the Z-forward axis `HELD_ATTACH` expects for
+ * the fishing_rod/spear/pitchfork grip family.
+ */
+const Y_TO_Z_HELD_KINDS = new Set<ToolKind>(['hunting_bow', 'long_bow', 'short_bow', 'wooden_torch'])
 
 export type HeldMountContext = {
   characterRoot: Object3D
@@ -255,8 +269,8 @@ export async function preloadHeldToolModels(): Promise<void> {
       const model = await loadGltf(spec.url)
       // No ground-lay rotation — grip orientation comes from HELD_ATTACH.
       preparePropFitMax(model, spec.maxSize)
-      // Wooden torch stick is Y-up like the branch; map to +Z for axe-style attach.
-      if (kind === 'wooden_torch') model.rotation.x = Math.PI / 2
+      // Wooden torch stick and bows are Y-up; map to +Z for axe-style attach.
+      if (Y_TO_Z_HELD_KINDS.has(kind)) model.rotation.x = Math.PI / 2
       heldTemplates.set(kind, model)
     } catch (err) {
       console.warn(`[held] failed to load ${spec.url}`, err)
@@ -274,7 +288,7 @@ export async function createHeldToolObject(kind: ToolKind): Promise<Object3D> {
       const spec = HELD_GLB[kind]!
       const model = await loadGltf(spec.url)
       preparePropFitMax(model, spec.maxSize)
-      if (kind === 'wooden_torch') model.rotation.x = Math.PI / 2
+      if (Y_TO_Z_HELD_KINDS.has(kind)) model.rotation.x = Math.PI / 2
       heldTemplates.set(kind, model)
       return cloneSkinned(model)
     } catch {
