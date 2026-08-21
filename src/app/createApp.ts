@@ -113,10 +113,11 @@ import { createWorldBundle, disposeWorldBundle, rebuildWorldBundle } from './wor
  *  simply dropped one — `count` only hits 0 there if they also never picked
  *  it back up, an acceptable v1 edge case for tools that never consume. */
 const STARTING_LOADOUT: Partial<Record<ItemKind, number>> = {
-  knife: 10,
+  knife: 1,
   firestarter: 1,
   blanket: 1,
   wooden_torch: 1,
+  coin: 10,
 }
 /** Bound on `buildLandmarkQuests`' one-off world-setup search — chunk rings
  *  outward from the home settlement's center (plan 132). Generous enough
@@ -138,7 +139,8 @@ function grantStartingLoadout(inventory: Inventory): void {
     if (isWeaponMaintenanceKind(kind)) {
       for (let i = 0; i < count; i++) inventory.addInstance(createWeaponInstance(kind))
     } else {
-      inventory.add(kind, count)
+      const effectiveCount = isDebugMode() && kind === 'coin' ? count * 100 : count
+      inventory.add(kind, effectiveCount)
     }
   }
 }
