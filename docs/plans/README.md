@@ -103,6 +103,8 @@ Natural vegetation
 
 > Place for plans links
 
+- `2026-08-21--186--building-resources-and-mountains.md` — Rozdzielenie `branch`/`beam`, harvest drzewa, materiały budowlane pobierane z ziemi oraz większe góry z monumentalnymi, ostrymi skalistymi szczytami; wykorzystuje istniejące item capabilities, building i terrain systems. | 🔴 | XL | 181 ~~184~~ ~~111~~
+
 ---
 
 ## Todo
@@ -125,7 +127,7 @@ Natural vegetation
 Implementation complete; needs play/browser check. Do not treat as normal backlog — a plan here is not "ready to build", it is "already built, waiting on confirmation" (or, for `111`, a known bug from a playtest that already happened). Status matches each plan's own `Status:` header, not just this table — when in doubt, open the plan.
 
 | File | Notes | Pri | Effort | Depends |
-|------|-------|-----|--------|---------|
+|------|---------|-----|--------|---------|
 | `2026-08-20--179--animal-attack-and-npc-defense.md` | [implementation notes](./2026-08-20--179--animal-attack-and-npc-defense-implementation-notes.md) | 🔴 | M | ~~177~~ |
 | `2026-08-21--184--item-capability-abstraction.md` | [implementation notes](./2026-08-21--184--item-capability-abstraction-implementation-notes.md) | 🟡 | M | - |
 | `2026-08-14--111--house-construction.md` | **known bug from 2026-08-18 playtest** — [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md) | 🔴 | XL | ~~109~~ |
@@ -168,7 +170,7 @@ Every `docs/plans/YYYY-MM-DD--NNN--*.md` in **this folder** (except `*-implement
 
 New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), a `domain:`/optional `tags` per [Plan domains](#plan-domains) above, then a row in the matching section. When a plan reaches `done` and nothing above still depends on it, it stays here until the next archive snapshot — do not move it to `archive/` yourself; that only happens as a deliberate periodic snapshot (see [archive/README.md](./archive/README.md)).
 
-**Keep `Summary` short — this file must stay small enough to load whole (e.g. into ChatGPT) as a planning map.** One sentence, or a few short clauses. Include only what a *future plan* needs as context: key architectural decisions (reuse vs new system, explicit scope exclusions/deferrals), SaveData version bumps, known bugs. Do not restate the filename/slug, list touched file or function names, quote test counts, or repeat the standard tech-verification sentence (already covered once under [Verification](#plans--current-planning-map) above) — that detail belongs in the plan's own `*-implementation-notes.md`/`*-review.md`, not in this index. If a row is ballooning past 2-3 sentences, cut it and move the detail to the plan file.
+**Keep `Summary` short — this file must stay small enough to load whole (e.g. into ChatGPT) as a planning map.** One sentence, or a few short clauses. Include only what a *future plan* needs as context: key architectural decisions (reuse vs new system, explicit scope exclusions/deferrals), SaveData version bumps, known bugs. Do not restate the filename/slug, list touched file or function names, quote test counts, or repeat the standard tech-verification sentence (already covered once under [Verification](#plans--current-planning-map) above) — that detail belongs in the plan's own `*-implementation-notes.md`/`*-review.md`, not in this index.
 
 **`Verification needed` is the exception: its column is `Notes`, not `Summary`, and stays empty by default.** Whoever verifies a plan there opens the plan file directly — the table only needs a link to `*-implementation-notes.md`/`*-review.md` when one exists, or a one-line flag for something a verifier must know before testing (e.g. a known bug from a prior playtest). No prose summary of what was built.
 
