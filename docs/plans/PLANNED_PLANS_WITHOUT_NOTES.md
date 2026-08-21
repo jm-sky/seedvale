@@ -1,14 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-21 20:40:50  
+> Date: 2026-08-21 20:55:53  
 
 ## PLANS
 
 - `2026-08-19--171--weapon-browser-observatory.md`
 - `2026-08-20--173--terrain-aware-procedural-placement.md`
 - `2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul.md`
-- `2026-08-21--187--building-resources-and-mountains.md`
 - `2026-08-21--188--fauna-and-dead-animal-lifecycle.md`
 - `2026-08-21--190--plans-automation.md`
 - `2026-08-21--191--mountain-peaks-and-massifs.md`
@@ -89,35 +88,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `2026-08-21--187--building-resources-and-mountains.md`
-
-Prompt:
-
-```
-Zrób review planu `2026-08-21--187--building-resources-and-mountains.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/2026-08-21--187--building-resources-and-mountains.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`2026-08-21--187--building-resources-and-mountains-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
