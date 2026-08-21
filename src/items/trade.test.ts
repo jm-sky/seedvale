@@ -149,6 +149,19 @@ describe('buyWithBarter', () => {
     expect(inv.countInstances('axe')).toBe(3)
     expect(inv.countInstances('long_sword')).toBe(0)
   })
+
+  it('refuses (without taking the offer) a trade that fits maxWeight but overflows maxSize', () => {
+    // A single `long_sword` (weight 2.5, size LG=4) covers 40 arrows in
+    // value; arrows are near-weightless (0.05 each, XS=1 size each), so the
+    // swap barely moves the weight total but blows a tight size cap. Before
+    // this fix `wouldFitAfter` only checked weight, so the sword would be
+    // handed over and `Inventory.add` would then silently no-op on the
+    // arrows — sword gone, no arrows received.
+    const inv = new Inventory(undefined, 1000, [createWeaponInstance('long_sword')], undefined, 10)
+    expect(buyWithBarter(inv, 'arrow', { long_sword: 1 }, 40)).toBe('full')
+    expect(inv.countInstances('long_sword')).toBe(1)
+    expect(inv.count('arrow')).toBe(0)
+  })
 })
 
 describe('sellForCoins', () => {

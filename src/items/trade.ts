@@ -7,7 +7,7 @@ import {
   type ItemInstance,
   type TrapItemInstance,
 } from './itemInstances'
-import { ITEM_DEFS, type ItemKind } from './items'
+import { ITEM_DEFS, type ItemKind, itemSizeUnits } from './items'
 import {
   merchantPrice,
   offerValue,
@@ -23,20 +23,34 @@ export type InstanceSellResult =
   | { result: 'ok', totalCoins: number, soldIds: readonly string[] }
   | { result: Exclude<TradeResult, 'ok'> }
 
+/** Weight and gabarite are independent caps (plan 164 §10) — a trade must
+ *  clear both after removing payment/offer and adding the purchased kind, or
+ *  `Inventory.add`/`addInstance` silently no-ops post-payment (coins/offer
+ *  already gone, nothing received). */
 function wouldFitAfter(
   inventory: Inventory,
   removeWeight: number,
+  removeSize: number,
   addKind: ItemKind,
   addCount = 1,
 ): boolean {
-  const next = inventory.totalWeight() - removeWeight + ITEM_DEFS[addKind].weight * addCount
-  return next <= inventory.maxWeight + 1e-9
+  const nextWeight = inventory.totalWeight() - removeWeight + ITEM_DEFS[addKind].weight * addCount
+  const nextSize = inventory.totalSize() - removeSize + itemSizeUnits(addKind) * addCount
+  return nextWeight <= inventory.maxWeight + 1e-9 && nextSize <= inventory.maxSize + 1e-9
 }
 
 function offerWeight(offer: Partial<Record<ItemKind, number>>): number {
   let total = 0
   for (const [kind, count] of Object.entries(offer) as [ItemKind, number][]) {
     if (count > 0) total += ITEM_DEFS[kind].weight * count
+  }
+  return total
+}
+
+function offerSize(offer: Partial<Record<ItemKind, number>>): number {
+  let total = 0
+  for (const [kind, count] of Object.entries(offer) as [ItemKind, number][]) {
+    if (count > 0) total += itemSizeUnits(kind) * count
   }
   return total
 }
@@ -146,7 +160,8 @@ export function buyWithCoins(inventory: Inventory, kind: ItemKind, count = 1): T
   const totalPrice = unitPrice * count
   if (!inventory.has('coin', totalPrice)) return 'cannot_afford'
   const paymentWeight = ITEM_DEFS.coin.weight * totalPrice
-  if (!wouldFitAfter(inventory, paymentWeight, kind, count)) return 'full'
+  const paymentSize = itemSizeUnits('coin') * totalPrice
+  if (!wouldFitAfter(inventory, paymentWeight, paymentSize, kind, count)) return 'full'
   inventory.remove('coin', totalPrice)
   addPurchased(inventory, kind, count)
   return 'ok'
@@ -166,7 +181,7 @@ export function buyWithBarter(
   if (unitPrice == null) return 'not_sold'
   if (!isValidOffer(inventory, offer)) return 'invalid_offer'
   if (offerValue(offer) < unitPrice * count) return 'cannot_afford'
-  if (!wouldFitAfter(inventory, offerWeight(offer), kind, count)) return 'full'
+  if (!wouldFitAfter(inventory, offerWeight(offer), offerSize(offer), kind, count)) return 'full'
   removeOffer(inventory, offer)
   addPurchased(inventory, kind, count)
   return 'ok'
@@ -183,7 +198,8 @@ export function sellForCoins(inventory: Inventory, kind: ItemKind): TradeResult 
   if (price == null) return 'not_sold'
   if (!inventory.has(kind, 1)) return 'invalid_offer'
   const removeWeight = ITEM_DEFS[kind].weight
-  if (!wouldFitAfter(inventory, removeWeight, 'coin', price)) return 'full'
+  const removeSize = itemSizeUnits(kind)
+  if (!wouldFitAfter(inventory, removeWeight, removeSize, 'coin', price)) return 'full'
   inventory.remove(kind, 1)
   inventory.add('coin', price)
   return 'ok'
@@ -199,6 +215,7 @@ export function sellInstancesForCoins(
   const instances: ItemInstance[] = []
   let totalCoins = 0
   let removeWeight = 0
+  let removeSize = 0
   for (const id of unique) {
     const instance = inventory.getInstance(id)
     if (!instance) return { result: 'invalid_offer' }
@@ -207,8 +224,9 @@ export function sellInstancesForCoins(
     instances.push(instance)
     totalCoins += price
     removeWeight += ITEM_DEFS[instance.kind].weight
+    removeSize += itemSizeUnits(instance.kind)
   }
-  if (!wouldFitAfter(inventory, removeWeight, 'coin', totalCoins)) {
+  if (!wouldFitAfter(inventory, removeWeight, removeSize, 'coin', totalCoins)) {
     return { result: 'full' }
   }
   for (const id of unique) {
