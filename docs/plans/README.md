@@ -81,7 +81,6 @@ Natural vegetation
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-21--181--natural-mountains-and-rivers.md` | Wielkie pasma górskie i rzeki | 🔴 | M | - |
 | `2026-08-16--126--seed-planting.md` | Sadzenie nasion drzew (rozszerza istniejący `TreeLifecycle`) i cropów (nowy prosty `CropLifecycle`) przez gracza, integracja z inventory/garden gather/persistence; wstępny | 🟡 | L | ~~106~~ ~~122~~ |
 | `2026-08-20--174--player-garden-and-npc-need-sources.md` | Grządka budowana przez gracza (istniejący player-built placement, crop lifecycle z `172`/`126`) + generyczny `NeedSource` model, dzięki któremu NPC samodzielnie wykrywa i wybiera najbliższe dostępne źródło `hunger`/`thirst` (natural food z `159`, dojrzały crop grządki, studnia z `127`) przez istniejący needs/pressures/decision/action flow, bez `HelperAI`/`GardenAI`/global registry/per-frame scan; wstępny, do implementacji | 🟡 | L | ~~159~~ ~~172~~ ~~126~~ ~~127~~ |
 | `2026-08-20--176--garden-and-field-maintenance.md` | Wspólny mechanizm utrzymania grządek/pól: stan zadbania pogarsza się z czasem, wpływa na produktywność, długotrwałe zaniedbanie usuwa grządkę/pole; wspólne dla gracza i NPC, bez `GardenManager`/`FarmManager` | 🟡 | M | ~~174~~ ~~126~~ |
