@@ -124,6 +124,19 @@ const FLEE_DISTANCE = 8
  *  (plan 080) instead of a flat radius, since `VillageSize` footprints range
  *  from 22 (`OUTPOST`) to 72 (`XL`) world units. */
 const VILLAGE_AVOID_MARGIN = 6
+/** Distance (world units) from a `strategicVillage`'s center at which a
+ *  frenzied wolf's beeline (`moveTowardStrategicVillage`) counts as arrived
+ *  and hands off to `updatePredator`/`wander()` — deliberately much tighter
+ *  than `VILLAGE_AVOID_MARGIN`/`isNearVillage`, which marks the *outer* edge
+ *  of the whole settlement footprint (radius up to 72 for `XL`) and, when
+ *  reused as this stop condition, handed off right as the wolf reached the
+ *  first buildings at the perimeter — to `wander()`, which is anchored to
+ *  the wolf's own (usually distant, off-settlement) `home`, not to the
+ *  village, so it never actually walked in among the houses (plan 179
+ *  follow-up). NPC detection doesn't depend on reaching this radius either:
+ *  `npcThreat` (`update()`'s `senseNpcThreat`) is evaluated every frame
+ *  independently of which movement branch is active. */
+const FRENZY_VILLAGE_ARRIVAL_RADIUS = 3
 /** Clearance (world units) *past* a village's real footprint over which the
  *  flee-direction village bias (`fleeFrom`) ramps in — beyond
  *  `radius + this`, fleeing wild/domestic animals behave the same (the
@@ -1196,7 +1209,7 @@ export class AnimalAgent {
       this.threateningHuman = false
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
-      if (this.frenzied && this.strategicVillage && !this.isNearVillage(this.mesh.position)) {
+      if (this.frenzied && this.strategicVillage && !this.arrivedAtStrategicVillage()) {
         this.moveTowardStrategicVillage(dt)
       } else {
         this.updatePredator(dt, others)
@@ -1375,13 +1388,28 @@ export class AnimalAgent {
     })
   }
 
-  /** Frenzied wolf beelines to its `strategicVillage` until it's within the
-   *  village's own footprint + avoidance margin (`isNearVillage`), then
-   *  `update()` falls back to normal `updatePredator`/wander — which, for a
-   *  frenzied wolf, is now allowed to actually wander inside the village
-   *  (see `pickPointNear`'s `this.frenzied` bypass) instead of skirting it
-   *  (plan 179 §3 — "kieruje się do wioski"). Not a new movement system —
-   *  same `steerToward` primitive every other movement branch uses. */
+  /** True once a frenzied wolf is within `FRENZY_VILLAGE_ARRIVAL_RADIUS` of
+   *  its `strategicVillage`'s actual center — see that constant's doc for
+   *  why this replaced the old `isNearVillage` (outer footprint edge) check
+   *  (plan 179 follow-up). `false` (never "arrived") if there's no
+   *  strategic village, so callers still need their own null check. */
+  private arrivedAtStrategicVillage(): boolean {
+    const village = this.strategicVillage
+    if (!village) return false
+    return Math.hypot(
+      this.mesh.position.x - village.x,
+      this.mesh.position.z - village.z,
+    ) < FRENZY_VILLAGE_ARRIVAL_RADIUS
+  }
+
+  /** Frenzied wolf beelines to its `strategicVillage`'s actual center — past
+   *  the settlement's outer footprint and in among its buildings, not just
+   *  up to the edge (see `FRENZY_VILLAGE_ARRIVAL_RADIUS`) — until it arrives
+   *  or `update()`'s independently-evaluated `npcThreat` fires first (plan
+   *  179 §3 — "kieruje się do wioski"). Not a new movement system — same
+   *  `steerToward` primitive every other movement branch uses; building
+   *  colliders (`isWalkable`) can still block/deflect the straight line, the
+   *  same as any other mover. */
   private moveTowardStrategicVillage(dt: number): void {
     const village = this.strategicVillage
     if (!village) return
