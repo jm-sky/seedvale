@@ -1,19 +1,20 @@
 import type { RangedConfig } from '../items/itemCatalog'
+import {
+  createRangedAttackLifecycle,
+  type RangedAttackTickResult,
+  type RangedState,
+} from '../combat/rangedLifecycle'
 import { drainStamina, type StaminaState } from '../shared/StaminaState'
 
 /** Universal ranged attack lifecycle (plan 162) — the ranged counterpart of
- *  `playerMelee.ts`'s `createPlayerMelee`, same ownership split: this owns
- *  only draw/release/recovery timing and the single `fireReady` edge;
+ *  `playerMelee.ts`'s `createPlayerMelee`, same ownership split (plan 177):
+ *  the draw/release/recovery timer is the neutral `combat/rangedLifecycle.ts`
+ *  seam; this module only layers player-only stamina gating on top.
  *  `app/gameLoop.ts` owns ammo lookup/consumption, projectile spawning and
  *  world-side consequences. */
-export type RangedState = 'idle' | 'draw' | 'release' | 'recovery'
+export type { RangedState } from '../combat/rangedLifecycle'
 
-export type RangedTickResult = {
-  /** True on the exact frame draw completes — the single point at which a
-   *  caller should spawn a projectile for this shot. */
-  fireReady: boolean
-  config: RangedConfig | null
-}
+export type RangedTickResult = RangedAttackTickResult
 
 export type PlayerRanged = {
   state: () => RangedState
@@ -29,71 +30,20 @@ export type PlayerRanged = {
   reset: () => void
 }
 
-const RELEASE_PHASE_DURATION = 0.06
-
-function phaseDuration(state: RangedState, config: RangedConfig): number {
-  switch (state) {
-    case 'draw': return config.drawTime
-    case 'recovery': return config.recovery
-    case 'release': return RELEASE_PHASE_DURATION
-    default: return 0
-  }
-}
-
 export function createPlayerRanged(): PlayerRanged {
-  let state: RangedState = 'idle'
-  let timer = 0
-  let config: RangedConfig | null = null
+  const lifecycle = createRangedAttackLifecycle()
 
   return {
-    state: () => state,
-    isDrawing: () => state !== 'idle',
-    phaseProgress: () => {
-      if (!config) return 0
-      const duration = phaseDuration(state, config)
-      return duration > 0 ? Math.min(1, timer / duration) : 1
-    },
+    state: lifecycle.state,
+    isDrawing: lifecycle.isDrawing,
+    phaseProgress: lifecycle.phaseProgress,
     requestDraw(cfg, stamina) {
-      if (state !== 'idle') return false
+      if (lifecycle.state() !== 'idle') return false
       if (stamina.current < cfg.staminaCost) return false
       drainStamina(stamina, cfg.staminaCost)
-      config = cfg
-      state = 'draw'
-      timer = 0
-      return true
+      return lifecycle.start(cfg)
     },
-    update(dt) {
-      if (state === 'idle' || !config) return { fireReady: false, config: null }
-      timer += dt
-      let fireReady = false
-      let fireConfig: RangedConfig | null = null
-      for (let guard = 0; guard < 4; guard++) {
-        if (state === 'draw' && timer >= config.drawTime) {
-          timer -= config.drawTime
-          state = 'release'
-          fireReady = true
-          fireConfig = config
-          continue
-        }
-        if (state === 'release' && timer >= RELEASE_PHASE_DURATION) {
-          timer -= RELEASE_PHASE_DURATION
-          state = 'recovery'
-          continue
-        }
-        if (state === 'recovery' && timer >= config.recovery) {
-          timer = 0
-          state = 'idle'
-          config = null
-          break
-        }
-        break
-      }
-      return { fireReady, config: fireReady ? fireConfig : null }
-    },
-    reset() {
-      state = 'idle'
-      timer = 0
-      config = null
-    },
+    update: lifecycle.update,
+    reset: lifecycle.reset,
   }
 }

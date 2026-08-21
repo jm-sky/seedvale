@@ -1,9 +1,10 @@
 import type { CombatTargetHandle } from '../combat/combatIntent'
+import type { Projectile } from '../combat/projectile'
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import { MELEE_CRITICAL_CHANCE, MELEE_CRITICAL_MULTIPLIER, resolveCriticalHit } from '../combat/criticalHit'
 import { isAttackFromDefensibleDirection, type ResolvedDefense, resolveDefense } from '../combat/defenseResolver'
-import { type DefenseConfig, ITEM_CATALOG, type MeleeConfig } from '../items/itemCatalog'
+import { type DefenseConfig, ITEM_CATALOG, type MeleeConfig, type RangedConfig } from '../items/itemCatalog'
 
 /**
  * NPC-specific combat glue (plan 177) — resolves an NPC's *own* carried
@@ -21,7 +22,14 @@ const MELEE_CAPABLE_KINDS: readonly ItemKind[] = (Object.keys(ITEM_CATALOG) as I
 const DEFENSE_CAPABLE_KINDS: readonly ItemKind[] = (Object.keys(ITEM_CATALOG) as ItemKind[])
   .filter((kind) => ITEM_CATALOG[kind].defense?.canBlock)
 
+/** Ranged-capable item kinds (bows), same deterministic catalog-key order as
+ *  `MELEE_CAPABLE_KINDS` (plan 177 §7 — NPC as another ranged source, not a
+ *  redesigned pipeline). */
+const RANGED_CAPABLE_KINDS: readonly ItemKind[] = (Object.keys(ITEM_CATALOG) as ItemKind[])
+  .filter((kind) => ITEM_CATALOG[kind].ranged != null)
+
 export type NpcMeleeWeapon = { kind: ItemKind, melee: MeleeConfig }
+export type NpcRangedWeapon = { kind: ItemKind, ranged: RangedConfig }
 
 /** Resolves the melee weapon an NPC currently carries (plan 177 §6/§11) —
  *  the first melee-capable kind found in `carried`. No fallback: an NPC with
@@ -33,6 +41,27 @@ export function resolveNpcMeleeWeapon(carried: Inventory): NpcMeleeWeapon | null
     if (melee) return { kind, melee }
   }
   return null
+}
+
+/** Resolves the bow an NPC currently carries (plan 177 §7) — mirrors
+ *  `resolveNpcMeleeWeapon`. Does **not** check ammo: a bow with no
+ *  compatible arrow currently carried still resolves here (matches every
+ *  melee-capable weapon's "config exists" contract); `NpcAgent.beginCombat`/
+ *  the `combat` phase separately require actual ammo before drawing. */
+export function resolveNpcRangedWeapon(carried: Inventory): NpcRangedWeapon | null {
+  for (const kind of RANGED_CAPABLE_KINDS) {
+    if (!carried.holdsAny(kind)) continue
+    const ranged = ITEM_CATALOG[kind].ranged
+    if (ranged) return { kind, ranged }
+  }
+  return null
+}
+
+/** Whether `carried` currently holds at least one unit of any ammo kind
+ *  `ranged.ammoKinds` accepts — the actual "can this NPC fire right now"
+ *  gate, kept separate from weapon resolution above. */
+export function resolveNpcAmmoKind(carried: Inventory, ranged: RangedConfig): ItemKind | null {
+  return ranged.ammoKinds.find((kind) => carried.has(kind, 1)) ?? null
 }
 
 /** Resolves the first carried item that can block, if any — same
@@ -65,6 +94,27 @@ export function applyNpcMeleeHit(
     attackerId,
     attackKey,
     attempt,
+  )
+  target.applyDamage(result.damage)
+  return result
+}
+
+/** One resolved ranged hit — same critical-roll/`applyDamage` shape as
+ *  `applyNpcMeleeHit`, reading damage/critical parameters off the already-
+ *  spawned `Projectile` (`combat/projectile.ts`) instead of a fresh
+ *  `MeleeConfig`, since that's where `gameLoop.ts`'s own player-fired
+ *  projectile resolution already reads them from. */
+export function applyNpcRangedHit(
+  target: CombatTargetHandle,
+  projectile: Projectile,
+): { critical: boolean, damage: number } {
+  const result = resolveCriticalHit(
+    projectile.damage,
+    projectile.criticalChance,
+    projectile.criticalMultiplier,
+    projectile.sourceId,
+    projectile.attackKey,
+    projectile.attempt,
   )
   target.applyDamage(result.damage)
   return result

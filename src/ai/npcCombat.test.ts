@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import type { CombatTargetHandle } from '../combat/combatIntent'
+import type { Projectile } from '../combat/projectile'
 import { Inventory } from '../items/Inventory'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import {
   applyNpcMeleeHit,
+  applyNpcRangedHit,
   resolveIncomingNpcDamage,
+  resolveNpcAmmoKind,
   resolveNpcDefenseConfig,
   resolveNpcMeleeWeapon,
+  resolveNpcRangedWeapon,
 } from './npcCombat'
 
 const KNIFE = ITEM_CATALOG.knife.melee!
+const SHORT_BOW = ITEM_CATALOG.short_bow.ranged!
 
 function fakeTarget(overrides: Partial<CombatTargetHandle> = {}): CombatTargetHandle & { damages: number[] } {
   const damages: number[] = []
@@ -36,6 +41,35 @@ describe('resolveNpcMeleeWeapon', () => {
     const weapon = resolveNpcMeleeWeapon(carried)
     expect(weapon?.kind).toBe('knife')
     expect(weapon?.melee).toBe(KNIFE)
+  })
+})
+
+describe('resolveNpcRangedWeapon', () => {
+  it('returns null when carrying no bow', () => {
+    const carried = new Inventory(undefined, 5)
+    carried.add('arrow', 5)
+    expect(resolveNpcRangedWeapon(carried)).toBeNull()
+  })
+
+  it('resolves a carried bow straight from ITEM_CATALOG, regardless of ammo', () => {
+    const carried = new Inventory(undefined, 5)
+    carried.add('short_bow', 1)
+    const weapon = resolveNpcRangedWeapon(carried)
+    expect(weapon?.kind).toBe('short_bow')
+    expect(weapon?.ranged).toBe(SHORT_BOW)
+  })
+})
+
+describe('resolveNpcAmmoKind', () => {
+  it('returns null when no compatible ammo is carried', () => {
+    const carried = new Inventory(undefined, 5)
+    expect(resolveNpcAmmoKind(carried, SHORT_BOW)).toBeNull()
+  })
+
+  it('resolves the first compatible ammo kind actually carried', () => {
+    const carried = new Inventory(undefined, 5)
+    carried.add('broadhead_arrow', 2)
+    expect(resolveNpcAmmoKind(carried, SHORT_BOW)).toBe('broadhead_arrow')
   })
 })
 
@@ -66,6 +100,42 @@ describe('applyNpcMeleeHit', () => {
   it('is deterministic for the same attacker/attackKey/attempt', () => {
     const a = applyNpcMeleeHit(fakeTarget(), KNIFE, 'npc:1', 'melee:target', 7)
     const b = applyNpcMeleeHit(fakeTarget(), KNIFE, 'npc:1', 'melee:target', 7)
+    expect(a).toEqual(b)
+  })
+})
+
+function fakeProjectile(overrides: Partial<Projectile> = {}): Projectile {
+  return {
+    id: 'proj:1',
+    sourceId: 'npc:1',
+    x: 0,
+    z: 0,
+    dirX: 0,
+    dirZ: -1,
+    speed: 20,
+    maxDistance: 10,
+    travelled: 0,
+    damage: SHORT_BOW.damage,
+    criticalChance: 0,
+    criticalMultiplier: 1.6,
+    attackKey: 'ranged:arrow',
+    attempt: 1,
+    ...overrides,
+  }
+}
+
+describe('applyNpcRangedHit', () => {
+  it('applies damage to the target exactly once', () => {
+    const target = fakeTarget()
+    const result = applyNpcRangedHit(target, fakeProjectile())
+    expect(target.damages).toHaveLength(1)
+    expect(target.damages[0]).toBe(result.damage)
+    expect(result.damage).toBeGreaterThanOrEqual(SHORT_BOW.damage)
+  })
+
+  it('is deterministic for the same sourceId/attackKey/attempt', () => {
+    const a = applyNpcRangedHit(fakeTarget(), fakeProjectile())
+    const b = applyNpcRangedHit(fakeTarget(), fakeProjectile())
     expect(a).toEqual(b)
   })
 })

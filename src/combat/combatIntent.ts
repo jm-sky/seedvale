@@ -23,10 +23,13 @@ export type CombatTargetHandle = {
 }
 
 /**
- * Combat execution intent (plan 177 §2/§3) — supplied by a caller (future
+ * Combat execution intent (plan 177 §2/§3/§7) — supplied by a caller (future
  * Hunter/animal-defense/bandit decision systems), never produced by combat
- * itself. `NpcAgent.beginCombat()` only executes it.
+ * itself. `NpcAgent.beginCombat()` only executes it. `mode` is explicit —
+ * the caller decides melee vs. ranged; combat never silently falls back from
+ * one weapon type to the other when the requested one isn't carried.
  */
 export type CombatIntent = {
   target: CombatTargetHandle
+  mode: 'melee' | 'ranged'
 }

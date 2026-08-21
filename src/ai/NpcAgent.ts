@@ -3,6 +3,8 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { CombatIntent } from '../combat/combatIntent'
 import type { ResolvedDefense } from '../combat/defenseResolver'
+import type { Projectile } from '../combat/projectile'
+import type { RangedAttackLifecycle } from '../combat/rangedLifecycle'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
 import type { Household } from '../settlement/household'
@@ -17,12 +19,16 @@ import {
   prepareProp,
 } from '../assets/loadGltf'
 import { playActionWell } from '../audio/actionSounds'
+import { MELEE_CRITICAL_MULTIPLIER } from '../combat/criticalHit'
 import {
   createMeleeAttackLifecycle,
   type MeleeAttackLifecycle,
   resolveMeleeHits,
   yawToward,
 } from '../combat/meleeAttack'
+import { advanceProjectile, sweptProjectileHit } from '../combat/projectile'
+import { rangedAccuracy, rangedDeviationRoll, resolveRangedDirection } from '../combat/rangedAttack'
+import { createRangedAttackLifecycle } from '../combat/rangedLifecycle'
 import { isDebugMode } from '../debug/debugMode'
 import { createNpcTraceBuffer, type NpcTraceBuffer, type NpcTraceEvent } from '../debug/npcTrace'
 import {
@@ -93,9 +99,13 @@ import {
 } from './npcColliderRim'
 import {
   applyNpcMeleeHit,
+  applyNpcRangedHit,
   type NpcMeleeWeapon,
+  type NpcRangedWeapon,
   resolveIncomingNpcDamage,
+  resolveNpcAmmoKind,
   resolveNpcMeleeWeapon,
+  resolveNpcRangedWeapon,
 } from './npcCombat'
 import {
   createMovementWatchdog,
@@ -692,18 +702,31 @@ export class NpcAgent {
   private actionLifecycle: ActionLifecycle = createActionLifecycle()
   /** Combat intent currently being executed (plan 177), or `null` outside
    *  `phase === 'combat'`. Never chosen by `NpcAgent` itself — see
-   *  `beginCombat()`. */
+   *  `beginCombat()`. `intent.mode` decides which of the two weapon/
+   *  lifecycle pairs below is actually driven each combat tick. */
   private combatIntent: CombatIntent | null = null
-  /** Weapon resolved from `carried` when `beginCombat()` started — cached so
-   *  a mid-combat inventory change can't silently swap the active weapon's
-   *  timing out from under an in-flight swing. */
-  private combatWeapon: NpcMeleeWeapon | null = null
+  /** Melee weapon resolved from `carried` when a `mode: 'melee'` combat
+   *  started — cached so a mid-combat inventory change can't silently swap
+   *  the active weapon's timing out from under an in-flight swing. */
+  private combatMeleeWeapon: NpcMeleeWeapon | null = null
+  /** Bow resolved from `carried` when a `mode: 'ranged'` combat started —
+   *  same caching reason as `combatMeleeWeapon`. */
+  private combatRangedWeapon: NpcRangedWeapon | null = null
   /** Shared windUp→hitWindow→recovery timer (`combat/meleeAttack.ts`, plan
    *  177) — the same neutral primitive `player/playerMelee.ts` wraps. */
   private readonly combatAttack: MeleeAttackLifecycle = createMeleeAttackLifecycle()
+  /** Shared draw→release→recovery timer (`combat/rangedLifecycle.ts`, plan
+   *  177) — the same neutral primitive `player/playerRanged.ts` wraps. */
+  private readonly combatRangedAttack: RangedAttackLifecycle = createRangedAttackLifecycle()
+  /** At most one in-flight arrow at a time (plan 177 §7) — simpler than the
+   *  player's `activeProjectiles` array: an NPC won't draw a second shot
+   *  while this one is still travelling (see the `combat` phase's ranged
+   *  branch), so there's never more than one to track. */
+  private combatProjectile: Projectile | null = null
   /** Monotonic per-agent counter — deterministic attack identity for
    *  `resolveCriticalHit`'s roll (plan 177 §Deterministic simulation),
-   *  never frame number/array index/object identity. */
+   *  never frame number/array index/object identity. Shared by melee and
+   *  ranged attempts (only one mode is ever active at once). */
   private combatAttackAttempt = 0
   /** Monotonic per-agent counter for `resolveDefense`'s incoming-damage roll
    *  (mirrors `PlayerController.nextDefenseAttempt`). */
@@ -1283,19 +1306,30 @@ export class NpcAgent {
   }
 
   /** Executes an already-decided combat intent (plan 177) — `NpcAgent` never
-   *  picks its own target or reason to fight; a future Hunter/animal-defense/
-   *  bandit decision system supplies both via `intent`. Interrupts whatever
-   *  this NPC was doing (same cleanup `beginCollapseSleep`/`interruptCurrentAction`
-   *  already do for their own transitions) and replaces the shared
-   *  `actionLifecycle`. Returns `false` without any side effect — no combat
-   *  starts — when the target is already invalid or this NPC has no
-   *  melee-capable carried weapon (plan 177 §6: "no melee config → combat
-   *  attack cannot start", never a silent fallback weapon). */
+   *  picks its own target, reason to fight or weapon mode; a future Hunter/
+   *  animal-defense/bandit decision system supplies all three via `intent`.
+   *  Interrupts whatever this NPC was doing (same cleanup
+   *  `beginCollapseSleep`/`interruptCurrentAction` already do for their own
+   *  transitions) and replaces the shared `actionLifecycle`. Returns `false`
+   *  without any side effect — no combat starts — when the target is
+   *  already invalid, or this NPC has no carried weapon matching
+   *  `intent.mode` (plan 177 §6/§7: "no config → combat attack cannot
+   *  start", never a silent fallback to the other mode). Ranged additionally
+   *  requires at least one compatible ammo unit already carried — a bow with
+   *  no arrows can't start a ranged combat either. */
   beginCombat(intent: CombatIntent): boolean {
     if (this.health.dead) return false
     if (!intent.target.isAlive() || !intent.target.getPosition()) return false
-    const weapon = resolveNpcMeleeWeapon(this.carried)
-    if (!weapon) return false
+
+    let meleeWeapon: NpcMeleeWeapon | null = null
+    let rangedWeapon: NpcRangedWeapon | null = null
+    if (intent.mode === 'melee') {
+      meleeWeapon = resolveNpcMeleeWeapon(this.carried)
+      if (!meleeWeapon) return false
+    } else {
+      rangedWeapon = resolveNpcRangedWeapon(this.carried)
+      if (!rangedWeapon || !resolveNpcAmmoKind(this.carried, rangedWeapon.ranged)) return false
+    }
 
     this.leaveActiveQueue()
     this.pendingAction = null
@@ -1308,12 +1342,190 @@ export class NpcAgent {
     resetMovementWatchdog(this.watchdog)
 
     this.combatIntent = intent
-    this.combatWeapon = weapon
+    this.combatMeleeWeapon = meleeWeapon
+    this.combatRangedWeapon = rangedWeapon
     this.combatAttack.reset()
+    this.combatRangedAttack.reset()
+    this.combatProjectile = null
     replaceActionLifecycle(this.actionLifecycle)
     this.phase = 'combat'
     this.trace.record({ simTime: this.simClock, type: 'combat.started', targetId: intent.target.ref.id })
     return true
+  }
+
+  /** Whether the currently active combat mode's own timer is between
+   *  attacks (idle) rather than mid-swing/mid-draw — `intent.mode` picks
+   *  which of the two independent lifecycles is authoritative. `true`
+   *  outside combat (nothing to be mid-attack in). */
+  private isCombatCycleIdle(): boolean {
+    if (!this.combatIntent) return true
+    return this.combatIntent.mode === 'melee'
+      ? this.combatAttack.state() === 'idle'
+      : this.combatRangedAttack.state() === 'idle' && !this.combatProjectile
+  }
+
+  /** Melee sub-branch of the `combat` phase (plan 177 §6) — approach if out
+   *  of weapon range, otherwise swing via the shared `combatAttack`
+   *  lifecycle and resolve the hit once at its `hitReady` edge. Target
+   *  existence/liveness/position are already validated by the caller. */
+  private tickMeleeCombat(dt: number, intent: CombatIntent, targetPos: { x: number, z: number }): void {
+    const weapon = this.combatMeleeWeapon
+    if (!weapon) {
+      this.endCombat('failed')
+      return
+    }
+
+    const dx = targetPos.x - this.mesh.position.x
+    const dz = targetPos.z - this.mesh.position.z
+    const dist = Math.hypot(dx, dz)
+    const inRange = dist <= weapon.melee.range
+    if (!inRange && this.combatAttack.state() === 'idle') {
+      this.tmp.set(targetPos.x, 0, targetPos.z)
+      this.steerTo(this.tmp, dt)
+    } else if (dist > 1e-4) {
+      this.mesh.rotation.y = Math.atan2(dx, dz)
+    }
+
+    // Hit resolution happens once, at the shared lifecycle's own `hitReady`
+    // edge — never per frame, never from render/animation state (plan 177
+    // — deterministic simulation).
+    const tick = this.combatAttack.update(dt)
+    if (tick.hitReady && tick.config) {
+      // Attack commits to the target's position at the exact hit-window
+      // edge, same "one attack, one yaw" contract `gameLoop.ts` uses for
+      // the player's locked-target swings.
+      const attackYaw = yawToward(this.mesh.position.x, this.mesh.position.z, targetPos.x, targetPos.z)
+      if (attackYaw != null) {
+        const hits = resolveMeleeHits(
+          this.mesh.position.x,
+          this.mesh.position.z,
+          attackYaw,
+          tick.config,
+          [{ id: intent.target.ref.id, x: targetPos.x, z: targetPos.z, alive: true }],
+        )
+        if (hits.length > 0) {
+          this.combatAttackAttempt += 1
+          applyNpcMeleeHit(intent.target, tick.config, this.id, `melee:${intent.target.ref.id}`, this.combatAttackAttempt)
+          this.trace.record({ simTime: this.simClock, type: 'combat.hit', targetId: intent.target.ref.id })
+          if (!intent.target.isAlive()) {
+            this.endCombat('complete')
+            return
+          }
+        }
+      }
+    }
+
+    if (inRange && this.combatAttack.state() === 'idle' && this.stamina.current >= weapon.melee.staminaCost) {
+      drainStamina(this.stamina, weapon.melee.staminaCost)
+      this.combatAttack.start(weapon.melee)
+    }
+  }
+
+  /** Ranged sub-branch of the `combat` phase (plan 177 §7) — reuses plan
+   *  162's `RangedConfig`/draw→release→recovery shape,
+   *  `combat/rangedAttack.ts`'s accuracy/deviation resolution and
+   *  `combat/projectile.ts`'s swept collision: the same pipeline
+   *  `gameLoop.ts` already drives for the player, not a redesign. The only
+   *  thing that differs is projectile *ownership* — an NPC tracks at most
+   *  one in-flight `combatProjectile` on itself (see the field doc) instead
+   *  of a shared world array, so this needs no separate projectile registry
+   *  and keeps working with no camera/player/gameLoop involved. `archery`
+   *  skill has no NPC equivalent yet, so accuracy uses the bow's own base
+   *  value (skill `0`) — the same "smallest existing-compatible value"
+   *  choice `applyIncomingCombatDamage` makes for defense skill. */
+  private tickRangedCombat(dt: number, intent: CombatIntent, targetPos: { x: number, z: number }): void {
+    const weapon = this.combatRangedWeapon
+    if (!weapon) {
+      this.endCombat('failed')
+      return
+    }
+
+    const dx = targetPos.x - this.mesh.position.x
+    const dz = targetPos.z - this.mesh.position.z
+    const dist = Math.hypot(dx, dz)
+    const inRange = dist <= weapon.ranged.range
+    if (!inRange && this.combatRangedAttack.state() === 'idle') {
+      this.tmp.set(targetPos.x, 0, targetPos.z)
+      this.steerTo(this.tmp, dt)
+    } else if (dist > 1e-4) {
+      this.mesh.rotation.y = Math.atan2(dx, dz)
+    }
+
+    const tick = this.combatRangedAttack.update(dt)
+    if (tick.fireReady && tick.config && !this.combatProjectile) {
+      // Ammo already confirmed present when the draw started
+      // (`beginCombat`/the draw-request gate below); re-resolved here in
+      // case it was somehow spent in between — a shot silently fizzles
+      // (draw spent, no arrow) rather than throwing on a missing kind.
+      const ammoKind = resolveNpcAmmoKind(this.carried, tick.config)
+      if (ammoKind) {
+        this.carried.remove(ammoKind, 1)
+        this.combatAttackAttempt += 1
+        // `yawToward` only returns `null` when the target sits exactly on
+        // this NPC's own position — `mesh.rotation.y` is a different (and
+        // wrong, for this purpose) yaw convention, see `resolveIncomingNpcDamage`'s
+        // comment, so the fallback converts it the same way rather than
+        // feeding it straight into `resolveRangedDirection`.
+        const aimYaw = yawToward(this.mesh.position.x, this.mesh.position.z, targetPos.x, targetPos.z)
+          ?? this.mesh.rotation.y + Math.PI
+        const accuracy = rangedAccuracy(tick.config, 0)
+        const deviationRoll = rangedDeviationRoll(this.id, this.combatAttackAttempt)
+        const { dirX, dirZ } = resolveRangedDirection(aimYaw, accuracy, deviationRoll)
+        this.combatProjectile = {
+          id: `${this.id}:proj:${this.combatAttackAttempt}`,
+          sourceId: this.id,
+          x: this.mesh.position.x,
+          z: this.mesh.position.z,
+          dirX,
+          dirZ,
+          speed: tick.config.projectileSpeed,
+          maxDistance: tick.config.range,
+          travelled: 0,
+          damage: tick.config.damage,
+          criticalChance: tick.config.criticalChance ?? 0,
+          criticalMultiplier: tick.config.criticalMultiplier ?? MELEE_CRITICAL_MULTIPLIER,
+          attackKey: `ranged:${ammoKind}`,
+          attempt: this.combatAttackAttempt,
+        }
+      }
+    }
+
+    if (this.combatProjectile) {
+      const prevX = this.combatProjectile.x
+      const prevZ = this.combatProjectile.z
+      const expired = advanceProjectile(this.combatProjectile, dt)
+      const hitId = sweptProjectileHit(
+        prevX, prevZ, this.combatProjectile.x, this.combatProjectile.z,
+        [{ id: intent.target.ref.id, x: targetPos.x, z: targetPos.z, alive: true }],
+      )
+      if (hitId) {
+        applyNpcRangedHit(intent.target, this.combatProjectile)
+        this.combatProjectile = null
+        this.trace.record({ simTime: this.simClock, type: 'combat.hit', targetId: intent.target.ref.id })
+        if (!intent.target.isAlive()) {
+          this.endCombat('complete')
+          return
+        }
+      } else if (expired) {
+        this.combatProjectile = null
+      }
+    }
+
+    if (
+      inRange
+      && this.combatRangedAttack.state() === 'idle'
+      && !this.combatProjectile
+      && this.stamina.current >= weapon.ranged.staminaCost
+    ) {
+      if (resolveNpcAmmoKind(this.carried, weapon.ranged)) {
+        drainStamina(this.stamina, weapon.ranged.staminaCost)
+        this.combatRangedAttack.start(weapon.ranged)
+      } else {
+        // Out of ammo entirely — no point staying in a combat that can
+        // never fire again; hands control back to the normal decision flow.
+        this.endCombat('failed')
+      }
+    }
   }
 
   /** Debug/external cancel — mirrors `requestReevaluation()`'s role for
@@ -1333,8 +1545,11 @@ export class NpcAgent {
     else if (outcome === 'failed') failActionLifecycle(this.actionLifecycle)
     else cancelActionLifecycle(this.actionLifecycle)
     this.combatIntent = null
-    this.combatWeapon = null
+    this.combatMeleeWeapon = null
+    this.combatRangedWeapon = null
     this.combatAttack.reset()
+    this.combatRangedAttack.reset()
+    this.combatProjectile = null
     this.trace.record({ simTime: this.simClock, type: 'combat.ended', outcome })
     this.phase = 'choose'
   }
@@ -1347,8 +1562,11 @@ export class NpcAgent {
     this.leaveActiveQueue()
     this.pendingAction = null
     this.combatIntent = null
-    this.combatWeapon = null
+    this.combatMeleeWeapon = null
+    this.combatRangedWeapon = null
     this.combatAttack.reset()
+    this.combatRangedAttack.reset()
+    this.combatProjectile = null
     if (this.actionLifecycle.status === 'active') failActionLifecycle(this.actionLifecycle)
     this.mixer.stopAllAction()
     this.mesh.rotation.z = Math.PI / 2
@@ -1394,11 +1612,12 @@ export class NpcAgent {
       drainStamina(this.stamina, rate * this.fatigueMult * dt)
     } else if (REST_PHASES.has(this.phase)) {
       restoreStamina(this.stamina, this.restRate * dt)
-    } else if (this.phase === 'combat' && this.combatAttack.state() === 'idle') {
-      // Only regens between swings (never mid-attack) — mirrors the lump
-      // `staminaCost` spend on `combatAttack.start()` below instead of a
-      // second continuous drain rate, so a stamina-exhausted NPC eventually
-      // recovers enough to keep fighting instead of softlocking in combat.
+    } else if (this.phase === 'combat' && this.isCombatCycleIdle()) {
+      // Only regens between swings/shots (never mid-attack) — mirrors the
+      // lump `staminaCost` spend on `combatAttack.start()`/
+      // `combatRangedAttack.start()` below instead of a second continuous
+      // drain rate, so a stamina-exhausted NPC eventually recovers enough to
+      // keep fighting instead of softlocking in combat.
       restoreStamina(this.stamina, this.restRate * 0.5 * dt)
     }
     if ((this.phase === 'goTo' || this.phase === 'execute') && isExhausted(this.stamina)) {
@@ -1489,8 +1708,7 @@ export class NpcAgent {
           break
         }
         const intent = this.combatIntent
-        const weapon = this.combatWeapon
-        if (!intent || !weapon) {
+        if (!intent) {
           this.endCombat('failed')
           break
         }
@@ -1506,49 +1724,10 @@ export class NpcAgent {
           break
         }
 
-        const dx = targetPos.x - this.mesh.position.x
-        const dz = targetPos.z - this.mesh.position.z
-        const dist = Math.hypot(dx, dz)
-        const inRange = dist <= weapon.melee.range
-        if (!inRange && this.combatAttack.state() === 'idle') {
-          this.tmp.set(targetPos.x, 0, targetPos.z)
-          this.steerTo(this.tmp, dt)
-        } else if (dist > 1e-4) {
-          this.mesh.rotation.y = Math.atan2(dx, dz)
-        }
-
-        // Hit resolution happens once, at the shared lifecycle's own
-        // `hitReady` edge — never per frame, never from render/animation
-        // state (plan 177 — deterministic simulation).
-        const tick = this.combatAttack.update(dt)
-        if (tick.hitReady && tick.config) {
-          // Attack commits to the target's position at the exact hit-window
-          // edge, same "one attack, one yaw" contract `gameLoop.ts` uses for
-          // the player's locked-target swings.
-          const attackYaw = yawToward(this.mesh.position.x, this.mesh.position.z, targetPos.x, targetPos.z)
-          if (attackYaw != null) {
-            const hits = resolveMeleeHits(
-              this.mesh.position.x,
-              this.mesh.position.z,
-              attackYaw,
-              tick.config,
-              [{ id: intent.target.ref.id, x: targetPos.x, z: targetPos.z, alive: true }],
-            )
-            if (hits.length > 0) {
-              this.combatAttackAttempt += 1
-              applyNpcMeleeHit(intent.target, tick.config, this.id, `melee:${intent.target.ref.id}`, this.combatAttackAttempt)
-              this.trace.record({ simTime: this.simClock, type: 'combat.hit', targetId: intent.target.ref.id })
-              if (!intent.target.isAlive()) {
-                this.endCombat('complete')
-                break
-              }
-            }
-          }
-        }
-
-        if (inRange && this.combatAttack.state() === 'idle' && this.stamina.current >= weapon.melee.staminaCost) {
-          drainStamina(this.stamina, weapon.melee.staminaCost)
-          this.combatAttack.start(weapon.melee)
+        if (intent.mode === 'melee') {
+          this.tickMeleeCombat(dt, intent, targetPos)
+        } else {
+          this.tickRangedCombat(dt, intent, targetPos)
         }
         break
       }
