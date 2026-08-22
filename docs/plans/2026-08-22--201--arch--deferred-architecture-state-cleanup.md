@@ -74,7 +74,7 @@ Jeżeli problem wymaga większej zmiany ownership, lifecycle, persistence albo s
 
 ## 4. Odłożone tematy wymagające osobnego planu
 
-Dla większych nadal aktualnych findings przygotować minimalny opis:
+Dla większych nadal aktualnych findings przygotować minimalny opis w `docs/plans/LOOSE-ENDS.md`:
 
 ```text
 problem
