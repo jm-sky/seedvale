@@ -14,6 +14,7 @@ export const MAX_HP: Record<AnimalKind, number> = {
   rabbit: 10,
   duck: 8,
   boar: 35,
+  bear: 150,
   horse: 80,
   donkey: 55,
   cow: 70,
@@ -25,6 +26,8 @@ export const MAX_HP: Record<AnimalKind, number> = {
 const DAMAGE_TABLE: Partial<Record<AnimalKind, Partial<Record<AnimalKind, number>>>> = {
   wolf: { deer: 15, stag: 12, boar: 10, sheep: 14, donkey: 14, chicken: 20 },
   fox: { deer: 10, stag: 6, rabbit: 20, duck: 18, chicken: 20 },
+  // Large omnivorous predator — hits harder than wolf across the board (plan 188).
+  bear: { deer: 26, stag: 22, boar: 20, sheep: 24, donkey: 22, cow: 20, chicken: 28 },
 }
 
 const DEFAULT_DAMAGE = 8
@@ -34,6 +37,7 @@ const DEFAULT_DAMAGE = 8
 const HUMAN_DAMAGE: Partial<Record<AnimalKind, number>> = {
   wolf: 12,
   fox: 6,
+  bear: 22,
 }
 
 /** Held tools that can hit an animal on `[E]` (sword > axe > pitchfork > knife = sickle > shovel).

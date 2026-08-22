@@ -182,6 +182,74 @@ export async function createHarvestedRemainsAsync(
   return composeGlbRemains(tpl, kind, modelHeight)
 }
 
+/** Bones-only composition — the natural (unharvested) decay endpoint (plan
+ *  188), sharing `RemainsTemplates`/scale/bone-count with the harvested case
+ *  above but skipping the hide and meat scraps that only make sense for a
+ *  player knife-harvest. Not a world pickup, same as harvested remains. */
+function composeNaturalRemains(
+  tpl: RemainsTemplates,
+  kind: AnimalKind,
+  modelHeight: number,
+): THREE.Group {
+  const scale = remainsScale(modelHeight)
+  const group = new THREE.Group()
+  group.name = 'natural-remains'
+
+  const pile = tpl.pile.clone()
+  pile.scale.multiplyScalar(scale)
+  group.add(pile)
+
+  const boneCount = largeBoneCount(kind)
+  const boneA = tpl.bone.clone()
+  boneA.scale.multiplyScalar(scale)
+  boneA.position.set(0.32 * scale, 0, -0.14 * scale)
+  boneA.rotation.y = 0.55
+  group.add(boneA)
+  if (boneCount > 1) {
+    const boneB = tpl.bone.clone()
+    boneB.scale.multiplyScalar(scale * 0.9)
+    boneB.position.set(-0.28 * scale, 0, 0.2 * scale)
+    boneB.rotation.y = -1.05
+    group.add(boneB)
+  }
+
+  return group
+}
+
+/**
+ * Sync procedural fallback for the natural decay endpoint — bones only, no
+ * hide/meat scraps (plan 188; see {@link createHarvestedRemains} for the
+ * player-harvest case, which keeps those). Used by tests and as the GLB
+ * load fallback.
+ */
+export function createNaturalRemains(kind: AnimalKind, modelHeight: number): THREE.Group {
+  const scale = remainsScale(modelHeight)
+  const group = new THREE.Group()
+  group.name = 'natural-remains'
+
+  addBone(group, 0.42 * scale, 0.028 * scale, 0.08 * scale, 0.02 * scale, 0.35)
+  addBone(group, 0.34 * scale, 0.022 * scale, -0.12 * scale, -0.06 * scale, -0.7)
+  addBone(group, 0.22 * scale, 0.018 * scale, 0.02 * scale, 0.14 * scale, 1.1)
+  if (largeBoneCount(kind) > 1) {
+    addBone(group, 0.28 * scale, 0.02 * scale, -0.05 * scale, 0.1 * scale, 2.2)
+  }
+
+  return group
+}
+
+/** GLB pile + large bone(s), no hide/meat — end of the natural (unharvested)
+ *  decay lifecycle (plan 188), sharing the same cached templates and
+ *  {@link disposeHarvestedRemains} dispose path as the harvested case. Falls
+ *  back to {@link createNaturalRemains} when the templates fail to load. */
+export async function createNaturalRemainsAsync(
+  kind: AnimalKind,
+  modelHeight: number,
+): Promise<THREE.Group> {
+  const tpl = await ensureTemplates()
+  if (!tpl) return createNaturalRemains(kind, modelHeight)
+  return composeNaturalRemains(tpl, kind, modelHeight)
+}
+
 export function disposeHarvestedRemains(remains: THREE.Object3D | null): void {
   if (!remains) return
   remains.removeFromParent()

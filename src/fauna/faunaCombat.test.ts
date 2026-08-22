@@ -30,6 +30,7 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
       rabbit: 10,
       duck: 8,
       boar: 35,
+      bear: 150,
       horse: 80,
       donkey: 55,
       cow: 70,
@@ -48,6 +49,12 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
     expect(damageVsHuman('wolf')).toBe(12)
     expect(damageVsHuman('fox')).toBe(6)
     expect(damageVsHuman('boar')).toBe(8) // no table entry -> DEFAULT_DAMAGE
+  })
+
+  it('gives bear (plan 188) higher HP and damage than wolf, the previous strongest predator', () => {
+    expect(MAX_HP.bear).toBeGreaterThan(MAX_HP.wolf)
+    expect(damageFor('bear', 'deer')).toBeGreaterThan(damageFor('wolf', 'deer'))
+    expect(damageVsHuman('bear')).toBeGreaterThan(damageVsHuman('wolf'))
   })
 
   it('flags melee-capable tools via ITEM_CATALOG (plan 123 — damage/timing assertions moved to playerMelee.test.ts)', () => {

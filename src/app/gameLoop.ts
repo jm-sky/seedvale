@@ -44,7 +44,7 @@ import type { RestCampSequence } from './restCampSequence'
 import type { WorldBundle } from './worldBundle'
 import { NPC_SHADOW_DISTANCE } from '../ai/NpcAgent'
 import { playActionBowDraw, playActionBowRelease, playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audio/actionSounds'
-import { playAnimalSound } from '../audio/animalSounds'
+import { playAnimalAggroSound, playAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { MELEE_CRITICAL_CHANCE, MELEE_CRITICAL_MULTIPLIER, resolveCriticalHit } from '../combat/criticalHit'
 import { advanceProjectile, type Projectile, sweptProjectileHit } from '../combat/projectile'
@@ -1648,6 +1648,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               return
             }
           },
+          (kind, x, z) => playAnimalAggroSound(kind, worldAudio.playAt, { x, z }),
         )
       })
       // Traps run inside the fauna pass's own cadence (plan 141 §11): the

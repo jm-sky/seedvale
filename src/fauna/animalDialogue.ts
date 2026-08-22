@@ -31,6 +31,10 @@ const ANIMAL_FLAVOR_LINES: Record<AnimalKind, string[]> = {
     'Dzik prycha cicho i grzebie ryjem w ściółce.',
     'Mierzy Cię wzrokiem spod krzaczastych brwi.',
   ],
+  bear: [
+    'Niedźwiedź mierzy Cię ciężkim spojrzeniem, warcząc cicho.',
+    'Potężny grzbiet napina się, gdy zwierzę węszy w powietrzu.',
+  ],
   horse: [
     'Koń parska cicho i wraca do skubania trawy.',
     'Merda ogonem, wyraźnie oswojony z ludźmi.',

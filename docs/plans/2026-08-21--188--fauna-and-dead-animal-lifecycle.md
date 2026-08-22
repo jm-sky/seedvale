@@ -1,7 +1,7 @@
 # Plan: Fauna and Dead Animal Lifecycle
 
 **Created:** 2026-08-21  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~138~~ ~~177~~ ~~179~~
 
@@ -396,5 +396,39 @@ Sprawdzić:
 - cave → bear spawn,
 - bear combat/audio,
 - off-screen/hybrid lifecycle.
+
+## 18. Implementation status (2026-08-22)
+
+**Implemented + technically verified** (`npx tsc --noEmit`, `pnpm lint:fix`, `pnpm run test` — 1559/1559 green, `pnpm run build`). Browser/gameplay verification is **not done in this pass** — left to manual testing per the task instructions.
+
+### Corpse lifecycle
+
+- Extended `AnimalAgent`'s existing dead/corpse state — no second `CorpseManager`. `corpsePhaseFromElapsed()` (pure, tested) subdivides the *existing* `CORPSE_LINGER_SECONDS = 60` unharvested-corpse window into `fresh` (0–20s) → `rotting` (20–40s) → `bones` (40–60s); `corpseLingerSeconds(false) === 60` and the final `readyToRemove()` contract are unchanged (existing test still green).
+- `rotting`: `tintPropMaterials` recolor (reused from `markDangerous()`'s technique) + a small distance-gated particle/fog group (`fauna/corpseDecayFx.ts`, new local module — not a global particle framework).
+- `bones`: reuses `harvestedRemains.ts`'s cached GLB templates/dispose path via a new `createNaturalRemainsAsync()` (pile + bone(s), deliberately **no** hide/meat scraps — that stays specific to the player-harvest path). Not a `corpseBones.ts`.
+- Harvest (`harvestMeat()`) and bury (`bury()`) both explicitly leave the natural-decay path (dispose any rot FX/natural remains already produced) — the 90s harvested-remains TTL and instant-bury removal are untouched.
+- `isCarcassEdible()`'s two call sites now also treat `rotting`/`bones` as inedible, not just the final `readyToRemove()` instant — a decomposing carcass was previously (bug) still scavengeable up to 60s.
+- V1 proximity negative-effect hook: while `rotting`, a bounded loop over the already-passed local `others` array drains a small amount of nearby live fauna's existing `AnimalLifeState.stamina` — no disease/status-effect system, no full-world scan.
+- Lifecycle timers advance every tick regardless of observer distance; only the FX group creation/animation is gated by `rotFxRelevant()` (pure, tested).
+
+### Bear
+
+- Added as a fully data-driven `AnimalKind`/`ANIMAL_DEFS` entry (predator/wild, larger/tougher than wolf) — no `BearAgent`/`BearAI`/`BearCombat`. Combat stats (`MAX_HP`, `DAMAGE_TABLE`, `HUMAN_DAMAGE`) are plain table entries in `faunaCombat.ts`.
+- Model wired through the existing `FAUNA_URLS`/`loadGltfAsset`/`prepareProp` pipeline (falls back to the existing generic capsule if the GLB is missing, same as any other fauna kind).
+- Growl wired as a new `ANIMAL_AGGRO_SOUND_URLS` lookup in the existing `audio/animalSounds.ts` module (mirrors `ANIMAL_SOUND_URLS`, not a new manager), triggered by a new `Fauna`/`AnimalAgent` `onAggro` callback fired once on the rising edge of a predator committing to a human chase — reuses the existing per-`update()`-call callback idiom (`onHumanHit`/`onNpcHit`).
+
+### Cave habitat — multiple instances, not a singleton
+
+Reconnaissance found `PreySpawner.id` was computed as `${settlementId}:${spec.type}` — safe only because there was exactly one `SPAWNER_SPECS` entry per `type`. Adding a second `cave`-type entry for bear as-is would have silently collided ids (two physical caves overwriting one `spawnerById`/`spawnerMeshById` slot). Fixed by `spawnerId()`: the first spawner of a given `type` keeps the pre-188 id (save-compatible), a later spawner of the same `type` gets `${settlementId}:${type}:${kind}`. `SPAWNER_SPECS` now has **two** `cave` entries (wolf den, bear den) — two distinct physical `PreySpawner` instances/world locations, each with its own id/position/`kind`/occupancy cap (`maxPreyCount: 1` for the bear den), going through the exact same generic placement/lifecycle/save-restore code as every other habitat. No `BearCaveSpawner`/`BearDenManager`/second habitat registry.
+
+**Known scope boundary carried forward, not introduced by this plan:** `createFauna()`/`Fauna` is currently built once, anchored to the *home* settlement only (`worldBundle.ts`'s `buildFauna`) — wild fauna (including habitat spawners) does not yet exist per-settlement across the whole streamed world. So in this build there is exactly one wolf cave + one bear cave in the world, not "many caves across many settlements." The data model and id scheme now support an arbitrary number of same-type habitat instances (per settlement, and per additional `SPAWNER_SPECS` entries) with no further code changes; extending fauna building to every settlement is a separate, unrelated architectural change and out of scope here.
+
+### Assets — not sourced in this pass
+
+`public/models/fauna/bear.glb` and `public/sounds/bear-growl.ogg` are registered in [MODELS.md](../assets/MODELS.md) (M61) / [SOUNDS.md](../assets/SOUNDS.md) (S24) as `needed`, matching the plan's own reconnaissance ("W codebase nie znaleziono jeszcze `bear.glb` ani `bear-growl.ogg`"). Until supplied: bear renders as the existing capsule fallback, and the growl hook is wired but silent (`ANIMAL_AGGRO_SOUND_URLS` no-ops when a kind has no URL). This does not block gameplay — same graceful-degradation pattern every other fauna GLB already uses.
+
+### Follow-up for manual browser verification
+
+Sections 13/14 of this plan (steps 1–17) still need real-game verification — corpse phase visuals/FX/proximity effect, bear spawn from its cave, model/growl once assets are supplied, and off-screen lifecycle continuing without expensive FX.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

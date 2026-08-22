@@ -28,3 +28,28 @@ export function playAnimalSound(
   if (!url) return
   playAt(url, position, ANIMAL_SFX_VOLUME[kind] ?? DEFAULT_ANIMAL_SFX_VOLUME)
 }
+
+/** Aggression/alert one-shots (plan 188) — a separate trigger from the `[E]`
+ *  interact sound above: `Fauna`'s `onAnimalAggro` hook fires this once a
+ *  predator commits to chasing a human, not on interact. Kinds without a
+ *  configured growl are silent, same "data lookup, no species branch" shape
+ *  as `ANIMAL_SOUND_URLS`. */
+export const ANIMAL_AGGRO_SOUND_URLS: Partial<Record<AnimalKind, string>> = {
+  bear: '/sounds/bear-growl.ogg',
+}
+
+const ANIMAL_AGGRO_SFX_VOLUME: Partial<Record<AnimalKind, number>> = {
+  bear: 0.5,
+}
+
+const DEFAULT_ANIMAL_AGGRO_VOLUME = 0.4
+
+export function playAnimalAggroSound(
+  kind: AnimalKind,
+  playAt: PlayAt,
+  position: WorldSoundPosition,
+): void {
+  const url = ANIMAL_AGGRO_SOUND_URLS[kind]
+  if (!url) return
+  playAt(url, position, ANIMAL_AGGRO_SFX_VOLUME[kind] ?? DEFAULT_ANIMAL_AGGRO_VOLUME)
+}

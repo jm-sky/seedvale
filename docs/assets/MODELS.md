@@ -87,6 +87,7 @@ If the feature needs no new model, do nothing to this file.
 | M58 | Pan (`pan`) | Inventory item that raises cooking capacity to 2; procedural cylinder+handle fallback in place and functional, no GLB yet | `needed` | plan 175 |
 | M59 | Cooking grate | Built, one-time upgrade attached to a player-built fire; procedural iron-frame fallback in place and functional (`settlement/campfireProps.ts`'s `createGrateVisual`), no GLB yet | `needed` | plan 175 |
 | M60 | Iron rod (`iron_rod`) | Small stackable construction material (grate cost); procedural rod fallback in place and functional, no GLB yet | `needed` | plan 175 |
+| M61 | Bear (fauna) | Cave predator species wired through the same `FAUNA_URLS`/GLTF pipeline as wolf/fox/deer/stag; capsule fallback in place and functional until the GLB lands | `needed` | plan 188 (`fauna/bear.glb`) |
 
 ## Wired (reference — do not treat as open work)
 

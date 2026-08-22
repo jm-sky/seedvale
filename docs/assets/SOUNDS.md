@@ -75,6 +75,7 @@ If the feature needs no new sound, do nothing to this file.
 | S21 | Snow ambience (wind flurry) | Weather = `snow` (plan 040 Etap 1) | `needed` | No asset yet — snow stays visual-only (`world/weatherParticles.ts`) until acquired |
 | S22 | Bow draw / release (twang) | Ranged attack draw start / arrow release (plan 162) | `wired` | `public/sounds/bow-draw.ogg`/`bow-release.ogg` via `playActionBowDraw`/`playActionBowRelease` (`src/audio/actionSounds.ts`) — draw plays on a successful `requestDraw()`, release plays on the frame the shot actually fires (not on an early-release cancel). Arrow hit/kill still reuses `playActionMeleeHit`/`playActionMeleeKill` (S-none — no dedicated arrow-impact clip) |
 | S23 | Whetstone sharpening (scrape) | Inventory "Naostrz" action (plan 161) | `needed` | Currently silent |
+| S24 | Bear growl (aggro) | Plays once a bear commits to chasing a human (`animalSounds.ts`'s `playAnimalAggroSound`, wired through `Fauna`'s `onAnimalAggro`) | `needed` | plan 188 (`sounds/bear-growl.ogg`), silent until the clip is wired in |
 
 ## Acquisition rules
 

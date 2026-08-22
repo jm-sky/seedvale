@@ -79,6 +79,10 @@ export type Fauna = {
     nearbyNpcs?: readonly NearbyNpcCandidate[],
     /** Fauna→NPC damage callback (plan 179 §9/§11), mirrors `onHumanHit`. */
     onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number) => void,
+    /** Aggression/alert audio hook (plan 188 §11) — forwarded to each
+     *  `AnimalAgent.update()`, fired once per predator on the rising edge of
+     *  committing to a human chase (see `AnimalAgent`'s own doc). */
+    onAnimalAggro?: (kind: AnimalKind, x: number, z: number) => void,
   ) => void
   dispose: () => void
   getAgents: () => AnimalAgent[]
@@ -212,13 +216,18 @@ export function measureSlope(
 }
 
 /** Habitat spawners — see docs/plans/archive/2026-08-07--predator-prey-system.md.
- *  Caves are predator dens (wolf now; bear when that species exists);
- *  thickets are deer cover. `wolfDen` (plan 093 Etap E) piggybacks on the
- *  same list/shape for a labeled quest den — `respawnIntervalDays: Infinity`
- *  keeps `updateSpawners` from ever repopulating it; its initial pack is
- *  spawned once, tagged with `spawnPointId` so a cleared den can deplete
- *  and be burned. Cave/thicket intervals are game-days (plan 139). */
-const SPAWNER_SPECS: {
+ *  Caves are predator dens (wolf, and now bear — plan 188: each is its own
+ *  physical `PreySpawner` instance/world location, a cave is not a singleton
+ *  "the bear cave" resource, see `spawnerId` below); thickets are deer cover.
+ *  `wolfDen` (plan 093 Etap E) piggybacks on the same list/shape for a
+ *  labeled quest den — `respawnIntervalDays: Infinity` keeps `updateSpawners`
+ *  from ever repopulating it; its initial pack is spawned once, tagged with
+ *  `spawnPointId` so a cleared den can deplete and be burned. Cave/thicket
+ *  intervals are game-days (plan 139). Multiple entries of the same `type`
+ *  are supported (see `spawnerId` below) — a bear cave doesn't turn the
+ *  existing wolf cave into a multi-species spawner, it's simply a second
+ *  `cave`-type habitat placed independently by the same generic loop. */
+export const SPAWNER_SPECS: {
   type: PreySpawner['type']
   kind: AnimalKind
   respawnIntervalDays: number
@@ -227,7 +236,18 @@ const SPAWNER_SPECS: {
   { type: 'cave', kind: 'wolf', respawnIntervalDays: 2, maxPreyCount: 2 },
   { type: 'thicket', kind: 'deer', respawnIntervalDays: 1, maxPreyCount: 3 },
   { type: 'wolfDen', kind: 'wolf', respawnIntervalDays: Infinity, maxPreyCount: 2 },
+  // Bear den — solitary occupant, slower respawn than the wolf cave.
+  { type: 'cave', kind: 'bear', respawnIntervalDays: 3, maxPreyCount: 1 },
 ]
+
+/** Stable id for a `SPAWNER_SPECS` entry (plan 188) — `${settlementId}:${type}`
+ *  for the first spawner of a given `type` (unchanged from pre-188 saves, which
+ *  only ever had one spawner per `type`), `${settlementId}:${type}:${kind}` for
+ *  any later spawner sharing that `type` (e.g. the bear cave alongside the
+ *  wolf cave) so two physical caves never collide on one save-restorable id. */
+export function spawnerId(settlementId: string, type: PreySpawner['type'], kind: AnimalKind, seenOfType: number): string {
+  return seenOfType === 0 ? `${settlementId}:${type}` : `${settlementId}:${type}:${kind}`
+}
 
 export const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
   cave: 'jaskinia',
@@ -266,6 +286,7 @@ export const FAUNA_URLS: Partial<Record<AnimalKind, string>> = {
   fox: '/models/fauna/fox.glb',
   deer: '/models/fauna/deer.glb',
   stag: '/models/fauna/stag.glb',
+  bear: '/models/fauna/bear.glb',
 }
 
 /** Primitive-built visuals (`proceduralAnimals.ts`) for species with no GLB —
@@ -620,9 +641,15 @@ export async function createFauna(
     })
   }
   const [spawnerMinOffset, spawnerMaxOffset] = SPAWNER_RING_OFFSET
+  /** Per-`type` counter feeding `spawnerId()` — lets a second `cave`-type
+   *  entry (e.g. the bear den) get its own stable id instead of colliding
+   *  with the first (plan 188). */
+  const spawnerTypeSeen = new Map<PreySpawner['type'], number>()
   // `animals` also gates habitat spawners (cave/thicket/wolfDen) — when off, no
   // respawn/replenishment can occur either.
   for (const spec of isSystemEnabled('animals') ? SPAWNER_SPECS : []) {
+    const seenOfType = spawnerTypeSeen.get(spec.type) ?? 0
+    spawnerTypeSeen.set(spec.type, seenOfType + 1)
     // Thicket also prefers some forest cover so it doesn't land on open sand/meadow shore.
     const baseFilter = spec.type === 'thicket'
       ? (x: number, z: number) => spawnerSiteOk(x, z) && sampleForestFactor(x, z) > 0.28
@@ -661,7 +688,7 @@ export async function createFauna(
     const spawner: PreySpawner = {
       ...pos,
       ...spec,
-      id: `${settlementId}:${spec.type}`,
+      id: spawnerId(settlementId, spec.type, spec.kind, seenOfType),
       daysSinceLastRespawn: 0,
       state: 'active',
       deathsThisCycle: 0,
@@ -777,6 +804,7 @@ export async function createFauna(
       playerStealth,
       nearbyNpcs,
       onNpcHit,
+      onAnimalAggro,
     ) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       for (const a of agents) {
@@ -794,6 +822,7 @@ export async function createFauna(
           playerStealth,
           nearbyNpcs,
           onNpcHit,
+          onAnimalAggro,
         )
       }
 
