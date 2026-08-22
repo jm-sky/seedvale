@@ -27,7 +27,12 @@ type TerrainProbe = {
 
 export type BenchmarkHost = {
   config: WorldConfig
-  chunkManager: TerrainProbe
+  // Accessor, not a value — `bundle.chunkManager` is replaced wholesale on a
+  // `WorldBundle` rebuild (terrain-config change, New Game); a captured value
+  // would silently keep probing a disposed instance (plan 195 data-consistency
+  // audit, finding A). Read live at each call site, matching the rest of the
+  // codebase's `WorldContext`/`bundle.x` accessor convention.
+  chunkManager: () => TerrainProbe
   home: () => { x: number; z: number }
   dayNight: DayNightState
   player: { setPosition: (x: number, z: number) => void; mesh: { position: { x: number; z: number } } }
@@ -86,7 +91,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
 
   async function waitSettled(x: number, z: number): Promise<void> {
     const { chunkSize, loadRadius } = host.config.terrain
-    await host.chunkManager.waitForChunks(loadRing(x, z, chunkSize, loadRadius))
+    await host.chunkManager().waitForChunks(loadRing(x, z, chunkSize, loadRadius))
     await sleep(SETTLE_MS)
   }
 
@@ -95,7 +100,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
     async run(id, durationSec = DEFAULT_DURATION_SEC) {
       if (inFlight) return null
       inFlight = true
-      const { chunkManager, player, dayNight, config, monitor } = host
+      const { player, dayNight, config, monitor } = host
       const saved = {
         x: player.mesh.position.x,
         z: player.mesh.position.z,
@@ -111,11 +116,11 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
           x = home.x
           z = home.z
         } else if (id === 'forest' || id === 'stress') {
-          const found = seekForest(chunkManager, home.x, home.z)
+          const found = seekForest(host.chunkManager(), home.x, home.z)
           x = found.x
           z = found.z
         } else if (id === 'water') {
-          const found = seekWater(chunkManager, home.x, home.z)
+          const found = seekWater(host.chunkManager(), home.x, home.z)
           x = found.x
           z = found.z
         }

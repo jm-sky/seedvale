@@ -469,6 +469,20 @@ export function applyStoredPostProcessing(
 }
 
 /**
+ * A fresh, hardcoded-default terrain config — no seed/localStorage/save
+ * influence. `applyStoredTerrain` promises that a field missing from its
+ * source "keeps target's current default"; callers restoring an older save
+ * must merge onto *this*, not onto a `WorldConfig['terrain']` that already
+ * carries `createWorldConfig()`'s localStorage overlay (which may reflect a
+ * different, more recently played world) — otherwise a field the save
+ * predates silently inherits that other world's tuning instead of the game's
+ * true default (plan 195 data-consistency audit, finding C2).
+ */
+export function defaultTerrainConfig(resolution: number): WorldConfig['terrain'] {
+  return baseConfig(0, resolution).terrain
+}
+
+/**
  * Priority: URL query (`seed`, `res`, `gui`) > localStorage domains > defaults.
  */
 export function createWorldConfig(): WorldConfig {

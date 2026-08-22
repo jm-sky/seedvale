@@ -16,6 +16,7 @@ import {
   applyStoredSky,
   applyStoredTerrain,
   createWorldConfig,
+  defaultTerrainConfig,
 } from '../config/worldConfig'
 import { isDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { installNpcDebugApi } from '../debug/npcDebugApi'
@@ -192,8 +193,13 @@ export async function createApp(
     // Merge field-by-field rather than replacing `config.terrain` wholesale —
     // an older save can predate `RegionParams` fields added since (e.g.
     // `moistureRegionScale`), and a wholesale replace would leave those
-    // `undefined` instead of keeping the fresh defaults `createWorldConfig`
-    // already applied.
+    // `undefined` instead of keeping the game's hardcoded default. Ground the
+    // merge in a fresh `defaultTerrainConfig`, not `config.terrain` as it
+    // stands here — `createWorldConfig()` already overlaid *localStorage's*
+    // cached terrain (from whichever world was last played) onto it, and a
+    // field this save predates must fall back to the true default, not that
+    // other world's tuning (plan 195 data-consistency audit, finding C2).
+    config.terrain = defaultTerrainConfig(config.terrain.resolution)
     applyStoredTerrain(config.terrain, initialSave.config.terrain)
     if (typeof initialSave.config.terrain.resolution === 'number') {
       config.terrain.resolution = initialSave.config.terrain.resolution
@@ -755,7 +761,7 @@ export async function createApp(
 
   const benchmark = createBenchmarkRunner({
     config,
-    chunkManager: bundle.chunkManager,
+    chunkManager: () => bundle.chunkManager,
     home: () => {
       const def = bundle.settlementsManager.getHomeDef()
       return { x: def.x, z: def.z }
