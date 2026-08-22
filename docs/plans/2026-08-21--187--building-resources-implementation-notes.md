@@ -1,8 +1,8 @@
 # Implementation notes — plan 187: Building Resources
 
 **Created:** 2026-08-21
-**Plan:** [2026-08-21--187--building-resources-and-mountains.md](./2026-08-21--187--building-resources-and-mountains.md)
-**Status:** `planned` 📋
+**Plan:** [2026-08-21--187--building-resources.md](./2026-08-21--187--building-resources.md)
+**Status:** `verification needed` 📋
 
 ## 1. Review conclusion
 
