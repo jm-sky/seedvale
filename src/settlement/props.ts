@@ -190,6 +190,7 @@ export {
 } from './campfireProps'
 
 export {
+  type CemeterySize,
   type CemeteryTemplates,
   createBush,
   createCactus,
@@ -211,6 +212,7 @@ export {
   createThicket,
   createTree,
   createTreeStump,
+  type TerrainPlacementContext,
 } from './decorProps'
 export {
   createHouseLight,

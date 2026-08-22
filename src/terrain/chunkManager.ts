@@ -1388,13 +1388,32 @@ export function createChunkManager(
     const envT0 = performance.now()
     const proceduralEnvPlacements = tile.environment.filter((p) => !GLB_ENV_KINDS.has(p.kind))
     rec.environment = buildPlacementGroup('chunk-environment', proceduralEnvPlacements, (placement) => {
-      const prop =
-        placement.kind === 'cemetery'
-          ? createCemetery(placement.scale, placement.variant, {
-              plot: cemeteryPlot,
-              graves: graveTemplates,
-            })
-          : createProceduralEnvironmentProp(placement.kind, placement.scale, placement.variant)
+      // stoneCircle/cemetery bake `rotationY` into each element's offset
+      // themselves (plan 173) — their individual stones/graves need their
+      // true world position to sample terrain correctly, so the yaw can't be
+      // left as a `prop.rotation.y` applied on the whole group afterward.
+      if (placement.kind === 'cemetery') {
+        const prop = createCemetery(
+          placement.scale,
+          placement.variant,
+          { plot: cemeteryPlot, graves: graveTemplates },
+          placement.cemeterySize ?? 'SM',
+          { worldX: placement.x, worldZ: placement.z, rotationY: placement.rotationY, sampleHeight: sampleTileHeight },
+        )
+        placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
+        return prop
+      }
+      if (placement.kind === 'stoneCircle') {
+        const prop = createStoneCircle(placement.scale, placement.variant, {
+          worldX: placement.x,
+          worldZ: placement.z,
+          rotationY: placement.rotationY,
+          sampleHeight: sampleTileHeight,
+        })
+        placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
+        return prop
+      }
+      const prop = createProceduralEnvironmentProp(placement.kind, placement.scale, placement.variant)
       prop.rotation.y = placement.rotationY
       placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
       return prop

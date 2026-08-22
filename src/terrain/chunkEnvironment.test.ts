@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { createSeededRandom } from '../world/parseSeed'
 import {
   cemeteryFitsVillageFringe,
   deriveLandmarkId,
   LANDMARK_BIAS_MAX,
   LANDMARK_BIAS_MIN,
   landmarkChanceBias,
+  rollCemeterySize,
 } from './chunkEnvironment'
 
 const PLAINS = {
@@ -100,5 +102,22 @@ describe('deriveLandmarkId', () => {
 
   it('differs across world seed for the same chunk/kind', () => {
     expect(deriveLandmarkId(123, 4, -7, 'monolith', 0)).not.toBe(deriveLandmarkId(456, 4, -7, 'monolith', 0))
+  })
+})
+
+describe('rollCemeterySize', () => {
+  it('is deterministic for identical seeded random streams', () => {
+    const rollFrom = (seed: number) => rollCemeterySize(createSeededRandom(seed))
+    expect(rollFrom(42)).toBe(rollFrom(42))
+  })
+
+  it('only ever returns SM/MD/LG and covers all three across many seeds', () => {
+    const seen = new Set<string>()
+    for (let seed = 0; seed < 500; seed++) {
+      const size = rollCemeterySize(createSeededRandom(seed))
+      expect(['SM', 'MD', 'LG']).toContain(size)
+      seen.add(size)
+    }
+    expect(seen).toEqual(new Set(['LG', 'MD', 'SM']))
   })
 })

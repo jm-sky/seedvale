@@ -1,7 +1,7 @@
 # Plan: Terrain-aware procedural placement
 
 **Created:** 2026-08-20  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none
 
@@ -154,3 +154,16 @@ Sprawdzić na:
 Szczególnie sprawdzić, czy żaden pojedynczy element proceduralnej struktury nie pozostaje zawieszony nad terenem.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+## Implementacja (2026-08-22)
+
+Zakres zawężony zgodnie z implementation notes: tylko `stoneCircle` i `cemetery`. Domy/drogi/pola pozostają odłożone.
+
+- `src/settlement/propUtils.ts` — nowe współdzielone narzędzia: `sampleLocalTerrain` (wysokość + normalna z próbek centralnej różnicy), `applyTerrainTilt` (przechylenie z clampem), `rotateOffsetY`. `evaluateGroundPlacement()`/`placeOnGround()` nie zostały zmienione.
+- `src/settlement/decorProps.ts` — `createStoneCircle`/`createCemetery` przyjmują opcjonalny `TerrainPlacementContext`; każdy kamień/nagrobek próbkuje teren w swojej dokładnej pozycji świata zamiast dziedziczyć jedną wysokość grupy. Yaw całej struktury jest teraz wypiekany w offsety elementów (nie w `group.rotation.y`), bo elementy muszą znać prawdziwą pozycję świata przed próbkowaniem. Clamp przechylenia: kamienie 20°, nagrobki 12°.
+- Nowy `CemeterySize` (`SM`/`MD`/`LG`) — realny układ blok/rząd/kolumna/alejka (`CEMETERY_LAYOUTS`), nie skalowanie jednego layoutu. SM 1 blok 3×3, MD 2 bloki 3×3 z alejką, LG 3 bloki 4×3 z alejkami. Rozmiar losowany deterministycznie per chunk (`rollCemeterySize`, wagi 50/35/15%) w `chunkEnvironment.ts`, z osobnym marginesem od krawędzi chunka na rozmiar (6/9/14).
+- `src/terrain/chunkManager.ts` — `stoneCircle`/`cemetery` idą teraz osobną ścieżką przekazującą `sampleTileHeight`/`rotationY`/pozycję świata do konstruktorów zamiast jednego `prop.rotation.y` + `placeOnGround` na całą grupę.
+
+**Techniczna weryfikacja:** `tsc --noEmit`, `lint:fix`, `build`, `test` (182 pliki, 1606 testów) — zielone. Nowe testy: `src/settlement/decorProps.test.ts` (grounding każdego elementu we własnej pozycji świata, determinizm, wzrost footprintu/liczby grobów SM<MD<LG), `rollCemeterySize` w `chunkEnvironment.test.ts`.
+
+**Weryfikacja wizualna/manualna:** nie wykonana w tej sesji (brak dostępu do przeglądarki) — do sprawdzenia przez użytkownika na żywym dev serverze: kamienny krąg i cmentarze SM/MD/LG na płaskim terenie, łagodnym i mocniejszym zboczu, kilka seedów, granice chunków, brak zawieszonych/zapadniętych elementów.

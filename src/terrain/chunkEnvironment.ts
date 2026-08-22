@@ -1,3 +1,4 @@
+import type { CemeterySize } from '../settlement/props'
 import type { ChunkCoord } from './chunkGrid'
 import type { VegetationPlacement } from './chunkVegetation'
 import { createSeededRandom } from '../world/parseSeed'
@@ -40,6 +41,11 @@ export type EnvironmentPlacement = {
    *  for the purely decorative kinds (rock/log/campfire), which have no
    *  identity need. See `deriveLandmarkId`. */
   id?: string
+  /** Cemetery layout size (plan 173) — SM/MD/LG differ in footprint, grave
+   *  count, spacing and aisle layout (`createCemetery` in
+   *  `settlement/decorProps.ts`), not just a scale multiplier. Present only
+   *  for `kind === 'cemetery'`. */
+  cemeterySize?: CemeterySize
 }
 
 const ROCK_CANDIDATES_PER_CHUNK = 4
@@ -77,7 +83,17 @@ const SLOPE_REJECT_LANDMARK = 0.6
 const MONOLITH_MARGIN = 1.2
 const STONE_CIRCLE_MARGIN = 4
 const SMALL_RUINS_MARGIN = 2.5
-const CEMETERY_MARGIN = 6
+/** Per-size cemetery margin (plan 173) — keeps the whole grave-grid footprint
+ *  inside its own chunk (see `createCemetery`'s `CEMETERY_LAYOUTS`); LG's
+ *  wider block/aisle layout needs more clearance from the chunk edge than SM. */
+const CEMETERY_MARGIN_BY_SIZE: Record<CemeterySize, number> = { SM: 6, MD: 9, LG: 14 }
+/** Weighted roll for cemetery size (plan 173) — most cemeteries stay small;
+ *  LG is a deliberately rarer, bigger village-fringe landmark. */
+const CEMETERY_SIZE_WEIGHTS: readonly [CemeterySize, number][] = [
+  ['SM', 0.5],
+  ['MD', 0.35],
+  ['LG', 0.15],
+]
 /** Cemetery sits on the village smoothing-disk fringe, past house clearings. */
 export const CEMETERY_INNER_FRAC = 0.55
 export const CEMETERY_OUTER_FRAC = 1.05
@@ -174,6 +190,19 @@ export function cemeteryFitsVillageFringe(
     }
   }
   return true
+}
+
+/** Deterministic weighted cemetery-size roll (plan 173) — consumes one call
+ *  from the caller's seeded RNG stream, same "no `Math.random()`" contract
+ *  as every other roll in this file. */
+export function rollCemeterySize(random: () => number): CemeterySize {
+  const r = random()
+  let acc = 0
+  for (const [size, weight] of CEMETERY_SIZE_WEIGHTS) {
+    acc += weight
+    if (r <= acc) return size
+  }
+  return 'LG'
 }
 
 function hashChunk(cx: number, cz: number, salt: number): number {
@@ -402,11 +431,13 @@ export function computeChunkEnvironment(
     }
   }
 
-  // --- Cemetery: rare village-fringe landmark (plan 049) ---
+  // --- Cemetery: rare village-fringe landmark (plan 049), SM/MD/LG (plan 173) ---
   const cemeteryRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 7) ^ 0x6a18d)
   {
-    const wx = coord.cx * chunkSize + (cemeteryRandom() * 2 - 1) * (half - CEMETERY_MARGIN)
-    const wz = coord.cz * chunkSize + (cemeteryRandom() * 2 - 1) * (half - CEMETERY_MARGIN)
+    const cemeterySize = rollCemeterySize(cemeteryRandom)
+    const margin = CEMETERY_MARGIN_BY_SIZE[cemeterySize]
+    const wx = coord.cx * chunkSize + (cemeteryRandom() * 2 - 1) * (half - margin)
+    const wz = coord.cz * chunkSize + (cemeteryRandom() * 2 - 1) * (half - margin)
     const h = sample(tile.heights, wx, wz)
     if (
       h > waterLevel + 0.3 &&
@@ -422,6 +453,7 @@ export function computeChunkEnvironment(
         scale: 0.9 + cemeteryRandom() * 0.3,
         rotationY: cemeteryRandom() * Math.PI * 2,
         variant: cemeteryRandom(),
+        cemeterySize,
         id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'cemetery', 0),
       })
     }

@@ -26,6 +26,64 @@ export function tintPropMaterials(root: THREE.Object3D, hex: number): void {
   })
 }
 
+export type TerrainSampler = (x: number, z: number) => number
+
+/** Local surface sample for terrain-aware procedural composition (plan 173)
+ *  — ground height plus a normalized world-space normal from a small
+ *  central-difference stencil. Distinct from `evaluateGroundPlacement()`'s
+ *  slope-rejection contract in `items/tentPlacement.ts`: this is for
+ *  adapting individual elements *within* an already-accepted landmark
+ *  (stone-circle stones, cemetery graves), not for deciding whether a
+ *  placement is allowed at all. */
+export type LocalTerrainSample = {
+  height: number
+  normal: THREE.Vector3
+}
+
+const TILT_UP = new THREE.Vector3(0, 1, 0)
+
+export function sampleLocalTerrain(
+  sampleHeight: TerrainSampler,
+  x: number,
+  z: number,
+  step = 0.4,
+): LocalTerrainSample {
+  const height = sampleHeight(x, z)
+  const hL = sampleHeight(x - step, z)
+  const hR = sampleHeight(x + step, z)
+  const hD = sampleHeight(x, z - step)
+  const hU = sampleHeight(x, z + step)
+  const normal = new THREE.Vector3(hL - hR, 2 * step, hD - hU).normalize()
+  return { height, normal }
+}
+
+/** Tilts `mesh` toward a terrain `normal`, clamped to `maxTiltRad` so a
+ *  visually minor slope can't produce an obviously artificial lean (plan 173
+ *  implementation notes, "Terrain orientation"). Applied as a world-space
+ *  rotation on top of whatever yaw the caller already set on `mesh.rotation.y`
+ *  — a no-op when the terrain is already flat or the clamp is 0. */
+export function applyTerrainTilt(mesh: THREE.Object3D, normal: THREE.Vector3, maxTiltRad: number): void {
+  if (maxTiltRad <= 0) return
+  const tilt = TILT_UP.angleTo(normal)
+  if (tilt < 1e-4) return
+  const axis = new THREE.Vector3().crossVectors(TILT_UP, normal)
+  if (axis.lengthSq() < 1e-8) return
+  axis.normalize()
+  const clamped = Math.min(tilt, maxTiltRad)
+  mesh.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axis, clamped))
+}
+
+/** Rotates a local `(x, z)` offset around Y by `rotationY` — same convention
+ *  as `Object3D.rotation.y`. A landmark's individual elements need to know
+ *  their true world position to sample terrain correctly, so the overall
+ *  yaw must be baked into each element's offset before sampling rather than
+ *  left as a parent-group transform applied afterward (plan 173). */
+export function rotateOffsetY(x: number, z: number, rotationY: number): { x: number, z: number } {
+  const cos = Math.cos(rotationY)
+  const sin = Math.sin(rotationY)
+  return { x: x * cos + z * sin, z: -x * sin + z * cos }
+}
+
 export function placeOnGround(
   mesh: THREE.Object3D,
   x: number,
