@@ -124,6 +124,14 @@ New issue/plan/review/research files use `YYYY-MM-DD--NNN--slug.md` with an inde
 
 Entry points: the canonical, kept-current list is [docs/STATE.md](docs/STATE.md) — "Important code entry points".
 
+### Architecture invariants that are easy to miss
+
+- **Authoritative state is not runtime representation.** Streaming/rebuild must reconstruct runtime objects from authoritative state; runtime objects must not become a second owner.
+- **Entity identity survives runtime lifecycle.** Unload/reload/rebuild must preserve stable entity identity rather than treating a new runtime object as a new entity.
+- **Time-skip uses the same simulation semantics.** Do not add a separate accelerated simulation path that bypasses normal state transitions.
+- **Persistence is currently save v1 only.** Do not add legacy save-version compatibility or migration unless explicitly planned.
+- **Large files are not problems because of LOC alone.** Split by real responsibility/ownership boundaries; a coherent large coordinator may remain large.
+
 ## Current configuration / stack facts
 
 - Three.js + WebGL2, Vite, TypeScript.
