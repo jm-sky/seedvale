@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RegionParams } from './chunkHeightmap'
-import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
+import { biomeWeightsAt, forestBiomeAt, forestDensityAt } from './biomeRegions'
 
 // Same default values as `config/worldConfig.ts`'s `baseConfig` — copied
 // locally so this test doesn't depend on config internals.
@@ -125,5 +125,62 @@ describe('forestDensityAt', () => {
     const swampy = forestDensityAt(0.85, 0.05, LAND, NO_RIDGE, REGION)
     expect(biomeWeightsAt(0.85, 0.05, REGION).swamp).toBeGreaterThan(0.5)
     expect(swampy).toBeLessThan(0.15)
+  })
+})
+
+describe('forestBiomeAt', () => {
+  it('classifies open below the open threshold', () => {
+    expect(forestBiomeAt(0)).toBe('open')
+    expect(forestBiomeAt(0.1)).toBe('open')
+    expect(forestBiomeAt(0.34)).toBe('open')
+  })
+
+  it('classifies forest in the mid band', () => {
+    expect(forestBiomeAt(0.35)).toBe('forest')
+    expect(forestBiomeAt(0.5)).toBe('forest')
+    expect(forestBiomeAt(0.71)).toBe('forest')
+  })
+
+  it('classifies deepForest only at high density', () => {
+    expect(forestBiomeAt(0.72)).toBe('deepForest')
+    expect(forestBiomeAt(0.9)).toBe('deepForest')
+    expect(forestBiomeAt(1)).toBe('deepForest')
+  })
+
+  it('is deterministic for identical input', () => {
+    expect(forestBiomeAt(0.55)).toBe(forestBiomeAt(0.55))
+  })
+
+  it('clamps out-of-range input instead of throwing', () => {
+    expect(forestBiomeAt(-0.4)).toBe('open')
+    expect(forestBiomeAt(1.4)).toBe('deepForest')
+  })
+
+  it('reaches deepForest only in humid temperate lowland conditions actually produced by forestDensityAt', () => {
+    const dense = forestDensityAt(0.55, LOWLAND, LAND, NO_RIDGE, REGION)
+    expect(forestBiomeAt(dense)).toBe('deepForest')
+  })
+
+  it('water/desert/swamp/high-ridge conditions never classify as deepForest', () => {
+    expect(forestBiomeAt(forestDensityAt(0.55, 0, LAND, NO_RIDGE, REGION))).not.toBe('deepForest')
+    expect(forestBiomeAt(forestDensityAt(0.2, LOWLAND, LAND, NO_RIDGE, REGION))).not.toBe('deepForest')
+    expect(forestBiomeAt(forestDensityAt(0.85, 0.05, LAND, NO_RIDGE, REGION))).not.toBe('deepForest')
+    expect(forestBiomeAt(forestDensityAt(0.55, LOWLAND, LAND, 0.35, REGION))).not.toBe('deepForest')
+  })
+
+  it('has no discontinuity around its own thresholds beyond forestDensityAt\'s own continuity', () => {
+    // forestBiomeAt itself is a hard classifier (by design, for a stable
+    // world query), but the underlying forestDensityAt it classifies never
+    // jumps — walking through both thresholds should pass through 'forest'
+    // rather than skip it.
+    const seen = new Set<string>()
+    for (let i = 0; i <= 40; i++) {
+      const moisture = 0.35 + (i / 40) * 0.35
+      const fd = forestDensityAt(moisture, LOWLAND, LAND, NO_RIDGE, REGION)
+      seen.add(forestBiomeAt(fd))
+    }
+    expect(seen.has('open')).toBe(true)
+    expect(seen.has('forest')).toBe(true)
+    expect(seen.has('deepForest')).toBe(true)
   })
 })

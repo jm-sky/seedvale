@@ -2,7 +2,7 @@ import type { CemeterySize } from '../settlement/props'
 import type { ChunkCoord } from './chunkGrid'
 import type { VegetationPlacement } from './chunkVegetation'
 import { createSeededRandom } from '../world/parseSeed'
-import { biomeWeightsAt } from './biomeRegions'
+import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import {
   apronOriginWorld,
   type ChunkTileData,
@@ -319,9 +319,16 @@ export function computeChunkEnvironment(
 
     const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
     const moistureRegion = sample(tile.moistureRegion, wx, wz)
-    const biome = biomeWeightsAt(moistureRegion, altitude, region)
+    const continentalness = sample(tile.continentalness, wx, wz)
+    const ridge = sample(tile.mountainRidge, wx, wz)
+    // Continuous forest density (same signal `chunkVegetation.ts` densifies
+    // trees with, plan 182 §8) rather than the coarse desert/swamp-remainder
+    // `biome.forest` — deadwood frequency now actually tracks how deep the
+    // surrounding forest reads (open ≈ rare, deep forest ≈ clearly present),
+    // not "any non-desert/swamp land".
+    const forestDensity = forestDensityAt(moistureRegion, altitude, continentalness, ridge, region)
     const treeClose = nearTree(vegetation, wx, wz, TREE_PROXIMITY_RADIUS)
-    const chance = biome.forest * (treeClose ? 0.5 : 0.12)
+    const chance = forestDensity * (treeClose ? 0.6 : 0.16)
     if (logRandom() > chance) continue
 
     placements.push({

@@ -124,3 +124,32 @@ export function forestDensityAt(
 
   return MathUtils.clamp(macroTendency * land * altitudeSuit * ridgeSuit, 0, 1)
 }
+
+/** Explicit forest-density classification (plan 182) — a discrete label other
+ *  systems (quests, fauna, environment tuning) can query without re-deriving
+ *  thresholds from `forestDensityAt()` themselves. Purely a read of the
+ *  existing continuous signal: no parallel noise field, no per-chunk state. */
+export type ForestBiome = 'open' | 'forest' | 'deepForest'
+
+/** Below this `forestDensityAt()` value, land reads as open/scattered trees. */
+const FOREST_BIOME_OPEN_MAX = 0.35
+/** At/above this value, land reads as Deep Forest — chosen from the value
+ *  distribution around `forestDensityAt()`'s canopy-core plateau (moisture
+ *  ≈0.53–0.58 at ideal lowland/no-ridge conditions reaches 1.0; ≈0.72 keeps
+ *  the deepForest band narrower than the full `forest` band so it forms a
+ *  core inside ordinary forest rather than swallowing it). */
+const FOREST_BIOME_DEEP_MIN = 0.72
+
+/**
+ * Classifies a continuous `forestDensityAt()` reading into the discrete
+ * `open`/`forest`/`deepForest` biome (plan 182). Deterministic and pure —
+ * same `forestDensity` always yields the same label, independent of chunk
+ * coordinates or load order, since it depends only on the world-position
+ * value already produced by `forestDensityAt()`.
+ */
+export function forestBiomeAt(forestDensity: number): ForestBiome {
+  const fd = MathUtils.clamp(forestDensity, 0, 1)
+  if (fd >= FOREST_BIOME_DEEP_MIN) return 'deepForest'
+  if (fd >= FOREST_BIOME_OPEN_MAX) return 'forest'
+  return 'open'
+}

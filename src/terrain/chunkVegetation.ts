@@ -1,4 +1,5 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
+import { MathUtils } from 'three'
 import type { ChunkCoord } from './chunkGrid'
 import { createSeededRandom } from '../world/parseSeed'
 import {
@@ -62,6 +63,42 @@ const OPEN_TREE_BASELINE = 0.10
 /** Altitude band (fraction of `heightScale` above `waterLevel`) treated as
  *  "wet shoreline" for reed placement near any lake, not only swamp biome. */
 const WATERLINE_ALTITUDE_BAND = 0.06
+
+/** Deep Forest age/size skew (plan 182) — exponent applied to a fresh 0..1
+ *  roll so it favours the "large"/"old" end of `rollSizeClass`/`rollLivingAge`
+ *  as `forestDensity` climbs toward the deepForest core, without touching
+ *  their shared global weights (which stay the baseline for open/weak-forest
+ *  land, exponent ≈1). Continuous in `forestDensity`, not a `forestBiomeAt`
+ *  step, so the size/age silhouette still thickens gradually into a deep
+ *  forest rather than jumping at the classification boundary. */
+const DEEP_SIZE_BIAS_MAX = 1.8
+const DEEP_AGE_BIAS_MAX = 1.6
+
+/** Skews `random01` toward 1 (biases `rollSizeClass` toward `large`) as
+ *  `bias` grows past 1; `bias === 1` is a no-op (identity). */
+function biasHigh(random01: number, bias: number): number {
+  return 1 - (1 - random01) ** bias
+}
+
+/** Skews `random01` toward 0 (biases `rollLivingAge`'s `oldRoll` — smaller
+ *  values are more likely `old`, see `rollLivingAge`) as `bias` grows past 1. */
+function biasLow(random01: number, bias: number): number {
+  return random01 ** bias
+}
+
+/** Forest density above which the existing `meadowNoise` field (shared with
+ *  `flowerMeadowPatches`) also starts softly thinning *tree* candidates —
+ *  irregular, world-space, cross-chunk clearings inside dense/deep forest
+ *  (plan 182 §7), not a new noise field or a hard tree-removal mask. Ordinary
+ *  open/weak-forest land (below the gate) is unaffected — meadow noise there
+ *  still only drives flower patches, unchanged. */
+const DEEP_CLEARING_FOREST_GATE_START = 0.4
+const DEEP_CLEARING_FOREST_GATE_FULL = 0.65
+const DEEP_CLEARING_MEADOW_START = 0.4
+const DEEP_CLEARING_MEADOW_FULL = 0.78
+/** Max fraction of tree-acceptance density a clearing can remove — a strong
+ *  thinning, never a full hole (irregular/gradual per plan §7, not chunk-hard). */
+const DEEP_CLEARING_MAX_THIN = 0.65
 
 /** Per-chunk hash so nearby chunks don't get correlated candidate layouts. */
 function hashChunk(cx: number, cz: number): number {
@@ -218,11 +255,28 @@ export function computeChunkVegetation(
     // stays high enough in deep forest that most candidates land as trees
     // (~6–7 m mean spacing), not a thinned park.
     const local = 0.72 + clumpValue * 0.45
-    const density =
+    let density =
       (OPEN_TREE_BASELINE + forestDensity * (1.05 - OPEN_TREE_BASELINE)) *
       (1 - biome.desert * 0.65) *
       local *
       (0.85 + moisture * 0.15)
+
+    // Soft, irregular clearings inside dense/deep forest (plan 182 §7) —
+    // reuses `meadowNoise` (same field `flowerMeadowPatches` reads) as a
+    // density modifier rather than a hard tree-removal mask, gated so
+    // open/weak-forest land is untouched.
+    const clearingGate = MathUtils.smoothstep(
+      forestDensity,
+      DEEP_CLEARING_FOREST_GATE_START,
+      DEEP_CLEARING_FOREST_GATE_FULL,
+    )
+    if (clearingGate > 0) {
+      const meadowValue = fieldAt(meadowNoise, wx, wz, MEADOW_NOISE_FREQ)
+      const clearingStrength =
+        clearingGate * MathUtils.smoothstep(meadowValue, DEEP_CLEARING_MEADOW_START, DEEP_CLEARING_MEADOW_FULL)
+      density *= 1 - clearingStrength * DEEP_CLEARING_MAX_THIN
+    }
+
     if (random() > Math.min(1, density)) continue
 
     // Wet shoreline band just above the underwater/shore cutoff — any lake
@@ -265,12 +319,18 @@ export function computeChunkVegetation(
     } else if (kind === 'tree') {
       const saplingChance = 0.22 - forestDensity * 0.14
       const youngChance = 0.18 - forestDensity * 0.06
-      sizeClass = rollSizeClass(random())
+      // Deep Forest silhouette (plan 182 §5): as forestDensity climbs toward
+      // the deepForest core, skew the sizeClass/old rolls toward large/old
+      // instead of touching `SIZE_CLASS_WEIGHTS`/`OLD_SPAWN_CHANCE` globally —
+      // open/weak-forest land keeps today's unbiased distribution (bias ≈1).
+      const sizeBias = 1 + forestDensity * DEEP_SIZE_BIAS_MAX
+      const ageBias = 1 + forestDensity * DEEP_AGE_BIAS_MAX
+      sizeClass = rollSizeClass(biasHigh(random(), sizeBias))
       sizeJitter = random()
       growthStage = rollLivingAge({
         sizeClass,
         ageRoll: random(),
-        oldRoll: random(),
+        oldRoll: biasLow(random(), ageBias),
         saplingChance,
         youngChance,
       })

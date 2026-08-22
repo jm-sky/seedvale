@@ -1,7 +1,7 @@
 # Plan: Deep Forest Biome & Forest Generation Overhaul
 
 **Created:** 2026-08-21
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented against the [implementation notes](./2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul-implementation-notes.md); `tsc`/lint/build/test all green. No browser/gameplay verification yet.
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~063~~
 

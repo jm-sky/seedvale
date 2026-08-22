@@ -4,7 +4,7 @@
 
 **Not:** a rendering/visual-contract log (that's [GRAPHICS.md](../GRAPHICS.md) — shader/material *why*), the ocean/lake/river domain (that's [WATER.md](../WATER.md)), a plan (that's [plans/](../plans/README.md)), or the whole-codebase snapshot (that's [STATE.md](../STATE.md)).
 
-**Last verified:** 2026-08-21
+**Last verified:** 2026-08-22
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -16,7 +16,7 @@ When this file and the code disagree, the code wins — update this file.
 - `ChunkManager.update()` spends one finalize slot per frame on either a terrain mesh or vegetation/environment content (mesh takes priority) so streaming doesn't spike the main thread; `CHUNKS_STARTED_PER_FRAME` caps how many new chunk generations can start per frame (it does not cap finalization).
 - GLB prop templates preload when `ChunkManager` is constructed, so template parsing happens off the streaming hot path.
 - Shore sand band varies in world space; grass thins into mountain foothills; road corridors are a soft tint + dirt micro-contrast baked onto the terrain mesh (grass soft-fades in a corridor, never a hard bald cut — see [GRAPHICS.md](../GRAPHICS.md) G9).
-- `forestDensityAt` (`ChunkManager.sampleForestFactor`) is a single continuous function driving both tree density and fauna habitat — there is no separate forest manager.
+- `forestDensityAt` (`ChunkManager.sampleForestFactor`) is a single continuous function driving both tree density and fauna habitat — there is no separate forest manager. `forestBiomeAt(forestDensity)` (plan 182) classifies that same continuous reading into `open`/`forest`/`deepForest` (thresholds 0.35/0.72) as one shared discrete world query (`ChunkManager.sampleForestBiome` / `WorldContext.sampleForestBiome`) — not a parallel biome system or a stored per-chunk label.
 
 ## Mountains
 
@@ -37,6 +37,7 @@ When this file and the code disagree, the code wins — update this file.
 - Forest-floor undergrowth (`VegetationKind: 'fern'`, own instanced bucket) seeds sparse clusters in dense forest/swamp with a nearby-pine bonus, never a hard requirement.
 - Harvested trees' final `stump` stage prefers a GLB stump model over the procedural fallback (mandatory fallback if the GLB fails to load).
 - `TreeLifecycle` (`src/world/treeLifecycle.ts`) owns growth/multi-stage-chop/regrowth via sparse per-tree overrides + lazy growth computed from `elapsedDays` — not a per-tree ticking simulation. Player seed planting (plan 126, see [player-systems.md](./player-systems.md)) anchors a new tree into this same lifecycle rather than creating a second one.
+- Procedural sizeClass/living-age rolls (`chunkVegetation.ts`) skew toward `large`/`old` as `forestDensity` climbs toward the deepForest range (plan 182) — an exponent applied to the roll input, not a change to `rollSizeClass`'s/`rollLivingAge`'s own global weights, so open/weak-forest land keeps the original unbiased distribution. `meadowNoise` (the same field driving flower patches) also softly thins tree-acceptance density inside dense/deep forest, forming irregular clearings without a new noise field. `chunkEnvironment.ts`'s `fallenLog` chance now scales with `forestDensityAt`, not the coarse `biomeWeightsAt(...).forest` remainder.
 
 ## Weather & seasons
 

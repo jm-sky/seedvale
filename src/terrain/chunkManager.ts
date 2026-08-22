@@ -58,7 +58,7 @@ import { makePlantedTreeId, pickPlantedTreeSpecies, type PlantedTreeRecord } fro
 import { coastalFactor, rollSizeClass, type TreeSizeClass } from '../world/treeLifecycle'
 import { createTreeStageMesh, preloadTreeStumpTemplate, tagTreeMesh } from '../world/treeVisuals'
 import { assignRenderLayer, REFLECTION_DISTANT_LAYER, REFLECTION_SKIPPED_LAYER, type WaterMirror } from '../world/waterMirror'
-import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
+import { biomeWeightsAt, type ForestBiome, forestBiomeAt, forestDensityAt } from './biomeRegions'
 import { buildChunkGeometry, createTerrainMaterial } from './buildChunkGeometry'
 import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind } from './chunkEnvironment'
 import {
@@ -384,6 +384,11 @@ export type ChunkManager = {
    *  `chunkVegetation.ts` uses for tree-density modulation. Runtime bridge
    *  for fauna (`createFauna.ts`) and other habitat consumers (plan 063). */
   sampleForestFactor: (x: number, z: number) => number
+  /** Discrete `open`/`forest`/`deepForest` classification (plan 182) of the
+   *  same `sampleForestFactor` reading via `forestBiomeAt` — the one shared
+   *  source of truth for "is this Deep Forest" world queries (quests, etc.),
+   *  instead of every consumer re-deriving thresholds from the raw density. */
+  sampleForestBiome: (x: number, z: number) => ForestBiome
   /** World-generated pickup items (`terrain/chunkItems.ts`) within `radius` of
    *  `pos` among currently loaded chunks — sufficient given `radius` is only
    *  ever the small interact range, and the player's own chunk is always loaded. */
@@ -1797,6 +1802,19 @@ export function createChunkManager(
         readField('continentalness', x, z),
         readField('mountainRidge', x, z),
         config.region,
+      )
+    },
+    sampleForestBiome: (x, z) => {
+      const h = readField('heights', x, z)
+      const altitude01 = Math.max(0, (h - config.waterLevel) / Math.max(config.heightScale, 0.001))
+      return forestBiomeAt(
+        forestDensityAt(
+          readField('moistureRegion', x, z),
+          altitude01,
+          readField('continentalness', x, z),
+          readField('mountainRidge', x, z),
+          config.region,
+        ),
       )
     },
     sampleTreeEnv,

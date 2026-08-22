@@ -2,7 +2,21 @@
 
 **Plan:** [182 — Deep Forest Biome & Forest Generation Overhaul](./2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul.md)
 **Reviewed:** 2026-08-22
-**Status:** review complete — implementation not started
+**Status:** implemented 2026-08-22 — `tsc`/lint/build/test green; no browser/gameplay verification yet
+
+## 0. Implementation record (2026-08-22)
+
+What actually landed, against the "recommended implementation order" in §14 below:
+
+1. **Shared classification** — `ForestBiome` (`'open' | 'forest' | 'deepForest'`) + `forestBiomeAt(forestDensity)` added next to `forestDensityAt()` in `src/terrain/biomeRegions.ts`. Thresholds (`open` < 0.35, `deepForest` >= 0.72) picked from the actual `forestDensityAt()` value distribution (checked numerically — its canopy-core plateau sits at moisture ≈0.54–0.58 under ideal lowland/no-ridge conditions), not copied from the plan. Unit tests added to `biomeRegions.test.ts` (classification bands, determinism, clamping, water/desert/swamp/ridge never reaching `deepForest`, continuity of the underlying signal through both thresholds).
+2. **Runtime world query** — `ChunkManager.sampleForestBiome(x, z)` (delegates to `forestBiomeAt(sampleForestFactor(x, z))`) and `WorldContext.sampleForestBiome` added as the one shared query seam. Fauna (`sampleForestFactor`) is untouched, per the notes.
+3. **Tree density/shape tuning** (`chunkVegetation.ts`) — candidate budget (`16 + 90·fd`) is untouched. Added: (a) a continuous size/age skew — `biasHigh`/`biasLow` reshape the `rollSizeClass`/`rollLivingAge` random inputs by an exponent that grows with `forestDensity` (bias ≈1, a no-op, at `fd≈0`; up to 2.8/2.6 at `fd≈1`) instead of touching `SIZE_CLASS_WEIGHTS`/`OLD_SPAWN_CHANCE` globally; (b) soft, irregular clearings — `meadowNoise` (already used by `flowerMeadowPatches`) now also multiplies tree-acceptance `density` down (up to 65%) once `forestDensity` clears ~0.4, gated by the same field so ordinary open/weak-forest land is unaffected.
+4. **Natural clearings** — done as part of §3(b) above; no new noise field.
+5. **Deadwood** — `chunkEnvironment.ts`'s `fallenLog` chance now reads `forestDensityAt(...)` instead of the coarse `biomeWeightsAt(...).forest` remainder, so frequency actually tracks open→forest→deepForest instead of "any non-desert/swamp land".
+6. **Visual canopy** — not touched beyond the larger/older tree distribution from §3(a); no shader/material change, per the plan's explicit "no per-tree light simulation".
+7. **Benchmark/tuning** — not run in this session (no browser access here); left for manual verification (see the plan's own checklist).
+
+Explicitly **not** done, matching this file's own guidance below: no `VeryOld` living age, no fourth `BiomeWeights` axis, no new noise field, no `naturalResources.ts`/fauna changes (existing `biome.forest`/`sampleForestFactor` consumers were left as-is — no concrete gameplay requirement surfaced during implementation to justify touching them), no per-chunk deep-forest state, no new deadwood placement pipeline.
 
 ## 1. Review outcome
 
