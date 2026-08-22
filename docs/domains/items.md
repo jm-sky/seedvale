@@ -1,0 +1,26 @@
+# Items Domain Roadmap
+
+**Status:** evolving target vision
+
+## Purpose
+
+Items should represent tangible goods, tools and equipment shared by player, NPC and economic systems.
+
+## Target state
+
+- Item definitions provide the common semantics for tools, goods, weapons and consumables.
+- Capabilities determine what actions an item enables.
+- Ownership and transfer work consistently across player, NPC, household and settlement contexts.
+- Items can participate in gathering, production, storage, consumption and trade.
+- Tool and equipment lifecycle can create meaningful maintenance and replacement pressures.
+- Item data remains separate from agent behaviour and world ownership.
+
+## Future evolution
+
+1. Complete missing item lifecycles and production chains.
+2. Expand equipment and durability where gameplay benefits.
+3. Connect item flows more deeply to economy and settlement logistics.
+
+## Boundaries
+
+Keep item definitions and capabilities centralized. Avoid handwritten per-system item requirement checks.
