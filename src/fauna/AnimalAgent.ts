@@ -1063,6 +1063,27 @@ export class AnimalAgent {
     return this.health.dead && !this.corpseHeld && this.timeSinceDeath >= linger
   }
 
+  /** Minimal deterministic time-skip catch-up (plan 196) — called once by
+   *  `Fauna.resolveTimeSkip` on `skip.justFinished`, never per-frame.
+   *  Deliberately does **not** replay movement/behaviour/combat/corpse-FX —
+   *  `update()` itself is gated off entirely while a skip is active (see
+   *  `gameLoop.ts`), so this only advances the two purely-additive, linear
+   *  pieces of state that must still reflect the skipped World Time exactly
+   *  once: a live agent's hunger/thirst/stamina (`tickAnimalLife` is pure
+   *  math, safe to call once with a large `elapsedSeconds` instead of many
+   *  small steps), and a corpse's `timeSinceDeath` — bumping that alone is
+   *  enough, because the very next normal `update()` call recomputes
+   *  `corpsePhaseFromElapsed`/`readyToRemove()` fresh and will apply the
+   *  right tint/bones/removal itself, with no separate visual catch-up
+   *  needed here. */
+  resolveTimeSkip(elapsedSeconds: number): void {
+    if (this.health.dead) {
+      if (!this.corpseHeld) this.timeSinceDeath += elapsedSeconds
+      return
+    }
+    tickAnimalLife(this.life, elapsedSeconds, false)
+  }
+
   /** Player shovel-bury: mark corpse for disposal on the next fauna/settlement
    *  tick. Also stops natural decay immediately (plan 188) — a buried corpse
    *  must never later produce a natural bones pile. */

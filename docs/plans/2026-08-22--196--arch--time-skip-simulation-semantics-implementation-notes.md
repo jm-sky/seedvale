@@ -1,6 +1,33 @@
 # Implementation notes — 196 — Time-Skip Simulation Semantics
 
-**Status of this file:** checkpoint written mid-implementation (research/design done, **no code edits made yet**). Next session: read this file fully before touching code, then go straight to "Next steps" below.
+**Status: implemented + technically verified.** Everything under "Next steps" (as of the previous checkpoint) has been applied. `tsc`/lint/build/test are all green (1620 tests passed, +1 new). Browser verification has **not** been done (not run by the agent per `CLAUDE.md`) — see the plan's own "Weryfikacja" → "Browser verification" section for the 8 manual checks.
+
+## What actually shipped
+
+- `src/app/gameLoop.ts`: `bundle.settlementsManager.update`, `bundle.fauna.update`, and `bundle.placedTraps.update` (plus the `villages`/`nearbyNpcCandidates`/`nearbyHumanCount`/`threateningAnimals` values only they consume) now run inside `if (!timeSkip.isActive())`, called with plain `dt` (previously the accelerated `worldDt`, unconditionally). Player needs/starvation/regen/downed still use the existing scaled `worldDt` — unchanged, per plan §1's explicit "existing contract" carve-out. `bundle.fauna.resolveTimeSkip(skip.hours, dayNight.dayLengthSec)` was added next to the pre-existing `bundle.settlementsManager.resolveTimeSkip(...)` call on `skip.justFinished`. Both stale/contradictory comments (the `worldDt` block comment in `gameLoop.ts`, and `world/timeSkip.ts`'s file-header comment) were rewritten to describe the real, now-correct model.
+- `src/fauna/AnimalAgent.ts`: new `resolveTimeSkip(elapsedSeconds: number)` method, right after `readyToRemove()`. Dead+not-held agents: bump `timeSinceDeath` only (no FX/tint work — the next normal `update()` call recomputes `corpsePhaseFromElapsed`/`readyToRemove()` fresh and self-corrects for free). Live agents: one `tickAnimalLife(this.life, elapsedSeconds, false)` call — deliberately no movement/behavior/combat/need-resolution, matching plan §3's "no full off-screen simulation engine".
+- `src/fauna/createFauna.ts`: `Fauna` type gained `resolveTimeSkip: (hours: number, dayLengthSec: number) => void`; implementation converts `hours` → real seconds via `gameHoursToRealSeconds` (same helper `NpcAgent.resolveTimeSkip` already uses) and calls each agent's new method. New import of `gameHoursToRealSeconds` from `../world/timeConversion`.
+- `src/fauna/AnimalLife.test.ts`: added a regression test proving a single large-`dt` `tickAnimalLife` call matches many small steps summing to the same total (8 simulated hours, 1s steps) — the mathematical justification for the one-shot fauna catch-up, and the concrete form of the plan's "same World Time period ⇒ same logical effect regardless of frame count" invariant for fauna's needs.
+- `docs/ARCHITECTURE.md`: "Time model" → "Simulation Time" bullet now documents the time-skip exception (freeze NPC/fauna/traps, scaled-`worldDt` exception for player needs, one-shot deterministic catch-up on `justFinished`).
+- `docs/plans/LOOSE-ENDS.md`: the 2026-08-22 "NPC needs double-tick during time-skip" entry (the one this plan was created to close, broadened by plans 193/194's audits) marked `[x]` with a resolution note.
+- Plan file's own `Status:` header and acceptance-criteria checklist updated (all checked except browser verification).
+
+## Why no test was added for the `gameLoop.ts` gating itself or for `NpcAgent`/`SettlementsManager` double-processing
+
+Checked first: no existing test in this repo constructs a real `AnimalAgent`, `NpcAgent`, or `SettlementsManager` instance (all require live THREE scene/GLTF assets) — every fauna/NPC test file tests pure exported functions only (`corpsePhaseFromElapsed`, `tickAnimalLife`, `tickVigorForSimulatedStep`, etc.), and there is no `gameLoop.test.ts` at all (it's an integration-level closure, not a testable unit in this codebase's current structure). Building that harness would be a large, out-of-scope infrastructure addition the plan doesn't ask for ("Nie tworzyć... nowej abstrakcji tylko dla time-skip" / stay scoped). The `gameLoop.ts` gating change itself is mechanical and was verified by direct code reading (confirmed `villages`/`nearbyNpcCandidates`/`nearbyHumanCount`/`threateningAnimals` are consumed nowhere else in the function before moving their declarations inside the gate). The plan's own Verification section anticipates this gap and asks for browser verification instead (8 numbered checks) — that's the intended verification path for this class of change, not a missing test.
+
+## Still open / for the next session
+
+1. **Browser verification** — run the 8 checks in the plan's "Weryfikacja" → "Browser verification" list against the dev server (`npm run dev`, port 5577). Ask the user to do this per `CLAUDE.md` ("do not launch headless Chrome yourself"); give them concrete repro steps (e.g. start an 8h rest skip near a wolf den/livestock, confirm no death/damage happens invisibly, confirm household/economy stock doesn't inflate beyond one period's worth, confirm a fresh corpse doesn't reach `bones`/get disposed within the skip's few real seconds).
+2. ~~`docs/plans/README.md`~~ — done: row added to the "Verification needed" table (line ~159), "Next plan ID" bumped to `197`.
+3. **`docs/STATE.md`** — was read in full earlier; contains nothing time-skip-specific that needed correcting (its "Persistence"/"UI" sections mention time-skip only in passing, factually unaffected by this change). No edit needed there, but worth a final skim if the next session wants to double-check.
+4. **Git commit + push to `main`** — required by the plan's closing line ("Zrób git commit i push do main, rebase jeżeli trzeba"). Not yet done as of this checkpoint. Check `git status`/`git diff` for the full file list before committing (expect: `src/app/gameLoop.ts`, `src/fauna/AnimalAgent.ts`, `src/fauna/createFauna.ts`, `src/fauna/AnimalLife.test.ts`, `src/world/timeSkip.ts`, `docs/ARCHITECTURE.md`, `docs/plans/LOOSE-ENDS.md`, this plan's `.md` + `-implementation-notes.md`, and whatever `docs/plans/README.md` edit item 2 above still needs). Pull `--rebase origin main` first per `CLAUDE.md`'s git workflow rules.
+
+---
+
+## Original research checkpoint (kept for reference — the design decisions below were carried out as described)
+
+**Status of this file (superseded by the "implemented" banner above):** checkpoint written mid-implementation (research/design done, **no code edits made yet**). Next session: read this file fully before touching code, then go straight to "Next steps" below.
 
 ---
 

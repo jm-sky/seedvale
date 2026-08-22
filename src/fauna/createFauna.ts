@@ -16,6 +16,7 @@ import { isCoastalPlacement } from '../terrain/coastPlacement'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
+import { gameHoursToRealSeconds } from '../world/timeConversion'
 import {
   ANIMAL_DEFS,
   AnimalAgent,
@@ -85,6 +86,13 @@ export type Fauna = {
     onAnimalAggro?: (kind: AnimalKind, x: number, z: number) => void,
   ) => void
   dispose: () => void
+  /** Deterministic time-skip catch-up (plan 196) — called once by
+   *  `gameLoop.ts` on `skip.justFinished`, mirroring `SettlementsManager.
+   *  resolveTimeSkip`. `update()` itself is gated off entirely while a skip
+   *  is active, so this is the sole place fauna state advances for that
+   *  period — see `AnimalAgent.resolveTimeSkip`'s own doc for why a single
+   *  one-shot call (not a stepped replay like NPC's) is sufficient here. */
+  resolveTimeSkip: (hours: number, dayLengthSec: number) => void
   getAgents: () => AnimalAgent[]
   getSpawners: () => readonly PreySpawner[]
   /** True once every wolf originally spawned by the wolf den (`WOLF_DEN_ID`,
@@ -877,6 +885,10 @@ export async function createFauna(
         entry.lastOpacity = opacity
         entry.el.style.opacity = String(opacity)
       }
+    },
+    resolveTimeSkip(hours, dayLengthSec) {
+      const elapsedSeconds = gameHoursToRealSeconds(hours, dayLengthSec)
+      for (const a of agents) a.resolveTimeSkip(elapsedSeconds)
     },
     dispose() {
       for (const a of agents) disposeAgent(a)

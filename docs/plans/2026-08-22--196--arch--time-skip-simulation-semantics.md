@@ -1,7 +1,7 @@
 # Plan: Time-Skip Simulation Semantics
 
 **Created:** 2026-08-22  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test green); browser verification not yet done, see [implementation notes](./2026-08-22--196--arch--time-skip-simulation-semantics-implementation-notes.md).  
 **Priority:** critical · **Effort:** M  
 **Depends on:** ~~192~~ ~~193~~
 
@@ -250,17 +250,17 @@ Zweryfikować co najmniej:
 
 ## Kryteria akceptacji
 
-- [ ] Jeden okres time-skip jest przetwarzany dokładnie raz.
-- [ ] NPC nie wykonują normalnego accelerated tick + catch-up dla tego samego czasu.
-- [ ] Fauna nie wykonuje accelerated live simulation.
-- [ ] Time-skip nie powoduje ukrytego accelerated combat.
-- [ ] Corpse lifecycle zachowuje poprawną semantykę czasu.
-- [ ] Household i Settlement Economy nie otrzymują podwójnych mutacji.
-- [ ] Catch-up jest deterministyczny i nie wymaga symulowania godzin klatka po klatce.
-- [ ] Normalna symulacja poza time-skip pozostaje bez niepotrzebnych zmian.
-- [ ] Nie powstaje nowy globalny manager symulacji.
-- [ ] Kod i dokumentacja opisują ten sam kontrakt.
-- [ ] Testy przechodzą.
-- [ ] Zachowanie zostało zweryfikowane w przeglądarce.
+- [x] Jeden okres time-skip jest przetwarzany dokładnie raz.
+- [x] NPC nie wykonują normalnego accelerated tick + catch-up dla tego samego czasu.
+- [x] Fauna nie wykonuje accelerated live simulation.
+- [x] Time-skip nie powoduje ukrytego accelerated combat.
+- [x] Corpse lifecycle zachowuje poprawną semantykę czasu.
+- [x] Household i Settlement Economy nie otrzymują podwójnych mutacji.
+- [x] Catch-up jest deterministyczny i nie wymaga symulowania godzin klatka po klatce.
+- [x] Normalna symulacja poza time-skip pozostaje bez niepotrzebnych zmian.
+- [x] Nie powstaje nowy globalny manager symulacji.
+- [x] Kod i dokumentacja opisują ten sam kontrakt.
+- [x] Testy przechodzą.
+- [ ] Zachowanie zostało zweryfikowane w przeglądarce. — nie wykonane w tej sesji (agent nie uruchamia przeglądarki per `CLAUDE.md`); patrz implementation notes, sekcja "Browser verification" w planie poniżej dla konkretnych kroków dla użytkownika.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

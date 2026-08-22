@@ -91,6 +91,17 @@ describe('AnimalLife', () => {
     expect(life.thirst).toBe(0)
   })
 
+  it('a single one-shot call over a long span (time-skip catch-up) matches many small steps summing to the same total — plan 196\'s regression invariant', () => {
+    const skipped = createAnimalLifeState(0)
+    const stepped = createAnimalLifeState(0)
+    const totalSeconds = 8 * 60 * 60
+    tickAnimalLife(skipped, totalSeconds, false)
+    for (let i = 0; i < totalSeconds; i += 1) tickAnimalLife(stepped, 1, false)
+    expect(skipped.hunger).toBeCloseTo(stepped.hunger, 6)
+    expect(skipped.thirst).toBeCloseTo(stepped.thirst, 6)
+    expect(skipped.stamina.current).toBeCloseTo(stepped.stamina.current, 6)
+  })
+
   it('consumeFood/drinkWater apply below the elevated threshold too — relief is only valid after a real completed action, not gated on need level', () => {
     const life = createAnimalLifeState(0)
     life.hunger = NEED_ELEVATED_THRESHOLD - 0.1

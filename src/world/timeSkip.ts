@@ -46,18 +46,23 @@ export type TimeSkip = {
  * A "wait N hours" / "rest N hours" mechanism shared by both Quick Actions
  * flavors (`createQuickActions.ts`) — advances the clock by temporarily
  * boosting `dayNight.timeMultiplier` for `hours * SECONDS_PER_SKIPPED_HOUR`
- * real seconds, then restoring it. Deliberately does *not* scale `dt` for
- * anything else (NPC/fauna movement would fly off into the void at a large
- * multiplier) — the world keeps simulating at its normal real-time pace
- * underneath; only the sky/clock visibly races ahead while the skip is in
- * flight. `hours`/`startTimeOfDay` on the `justFinished` result let the
- * caller replay the skipped period afterward instead — see
- * `NpcAgent.resolveTimeSkip` / `SettlementsManager.resolveTimeSkip`
- * (`docs/plans/archive/2026-08-12--075--time-skip-npc-catchup.md`), which catch NPC
- * needs/stamina/position up to where they'd be after that many hours of
- * normal play, then teleport instead of walking. `app/createApp.ts` is
- * responsible for blocking player input while active and for not gating this
- * out of the per-frame world-update block (the clock needs to keep ticking).
+ * real seconds, then restoring it. This module only ever touches the clock
+ * itself; it does not scale anyone else's `dt`. `gameLoop.ts` is the one
+ * that decides what each system does with `dayNight.timeMultiplier` while a
+ * skip is active — today that's: NPC/fauna/traps are not ticked at all
+ * (fully frozen, not merely slowed or sped up — see the `worldDt`/gating
+ * comment in `gameLoop.ts`'s `tick()`), while player needs keep live-ticking
+ * through a scaled `worldDt` (plan 165 §5). `hours`/`startTimeOfDay` on the
+ * `justFinished` result let the caller replay the skipped period afterward
+ * instead — see `NpcAgent.resolveTimeSkip` / `SettlementsManager.
+ * resolveTimeSkip` / `Fauna.resolveTimeSkip`
+ * (`docs/plans/archive/2026-08-12--075--time-skip-npc-catchup.md`,
+ * `docs/plans/2026-08-22--196--arch--time-skip-simulation-semantics.md`),
+ * which apply each system's needs/stamina/position/corpse-lifecycle effect
+ * for that period exactly once, deterministically, instead of a live
+ * per-frame tick. `app/createApp.ts` is responsible for blocking player
+ * input while active and for not gating this out of the per-frame
+ * world-update block (the clock needs to keep ticking).
  */
 export function createTimeSkip(dayNight: DayNightState): TimeSkip {
   let active: {

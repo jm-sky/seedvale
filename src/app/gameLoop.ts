@@ -549,6 +549,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           player.standUp()
         }
         bundle.settlementsManager.resolveTimeSkip(skip.startTimeOfDay, skip.hours, dayNight.dayLengthSec)
+        // Fauna never live-ticks during a skip (see the `worldDt`/gating
+        // comment below) — this is its sole catch-up for the skipped period,
+        // mirroring the NPC catch-up above (plan 196).
+        bundle.fauna.resolveTimeSkip(skip.hours, dayNight.dayLengthSec)
         // Player needs already progressed through the skip via `worldDt`
         // below (plan 165 — scaled by `dayNight.timeMultiplier` instead of
         // frozen, so no separate lump catch-up is needed here). `fadeStrength
@@ -1423,17 +1427,22 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         }
         questManager.clearDirty()
       }
-      // While a `timeSkip` is in flight, NPCs/fauna freeze instead of
-      // continuing to walk/steer in real time underneath the label/filter —
-      // `NpcAgent.resolveTimeSkip` (called above on `skip.justFinished`)
-      // catches them up to the new schedule/needs/position in one shot, so
-      // nothing is lost by not ticking them meanwhile. `dt` below (for the
-      // clock itself) stays real — the sky/clock still has to race ahead.
-      // Player needs (`worldDt`) instead keep ticking through the skip,
-      // scaled by the same `dayNight.timeMultiplier` the clock itself races
-      // ahead by, so Hunger/Thirst/Vigor — and the HUD bars reflecting them —
-      // progress visibly across a rest/sleep skip instead of jumping only
-      // once it finishes (plan 165 §5).
+      // While a `timeSkip` is in flight, NPC/fauna/trap simulation is gated
+      // off entirely below (`if (!timeSkip.isActive())`, plan 196) — not fed
+      // an accelerated `worldDt`, not ticked at all, so nothing walks/steers/
+      // fights/decays in hidden fast-forward underneath the label/filter.
+      // `settlementsManager.resolveTimeSkip`/`fauna.resolveTimeSkip` (called
+      // above on `skip.justFinished`) apply the skipped period's effect
+      // exactly once, deterministically, instead of a live per-frame tick.
+      // `dt` for the clock itself stays real — the sky/clock still has to
+      // race ahead. Player needs (`worldDt`) instead keep ticking through
+      // the skip, scaled by the same `dayNight.timeMultiplier` the clock
+      // itself races ahead by, so Hunger/Thirst/Vigor — and the HUD bars
+      // reflecting them — progress visibly across a rest/sleep skip instead
+      // of jumping only once it finishes (plan 165 §5); this is a
+      // deliberate, unchanged exception to the freeze-and-catch-up rule
+      // above; see `NpcAgent.resolveTimeSkip` / `Fauna.resolveTimeSkip`
+      // (`docs/plans/2026-08-22--196--arch--time-skip-simulation-semantics.md`).
       const worldDt = timeSkip.isActive() ? dt * dayNight.timeMultiplier : dt
       tickDayNight(dayNight, dt)
       // Cheap: `tickClimate` only recomputes `weather` from the deterministic
@@ -1556,105 +1565,114 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       if (playerTorch.isLit()) {
         litFires.push({ x: player.mesh.position.x, z: player.mesh.position.z })
       }
-      const villages = loaded.map((s) => ({
-        x: s.center.x,
-        z: s.center.z,
-        radius: villageSizeConfig(s.size).footprintRadius,
-      }))
-      const nearbyNpcCandidates = loaded.flatMap((s) =>
-        s.npcs
-          .filter((npc) => !npc.health.dead)
-          .map((npc) => ({ id: npc.id, x: npc.mesh.position.x, z: npc.mesh.position.z })),
-      )
-      const nearbyHumanCount = countNearbyHumans(
-        player.mesh.position.x,
-        player.mesh.position.z,
-        nearbyNpcCandidates,
-      )
-      // Bounded/local (plan 179 §7/§9/§10/§20): typically empty — only a
-      // predator whose own throttled decision is currently `attack` (see
-      // `AnimalAgent.isThreateningHuman()`) shows up here, never every
-      // loaded animal. `combatTargetForAnimal` is the same 177 target seam
-      // NPC defense uses, so a `defend` decision can hand it straight to
-      // `beginCombat()` with no second animal lookup.
-      const threateningAnimals = bundle.fauna.getAgents()
-        .filter((a) => a.isThreateningHuman())
-        .map((a) => ({ animalId: a.animalId, kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z, target: combatTargetForAnimal(a) }))
-      withCategory(monitor, 'NPC', () => {
-        bundle.settlementsManager.update(
-          worldDt,
-          player.mesh.position,
-          mouseLook.state.yaw,
-          dayNight.timeOfDay,
-          dayFactor,
-          litFires,
-          villages,
-          dayNight.dayLengthSec,
-          threateningAnimals,
-        )
-      })
       bundle.resourceDeposits.update(
         player.mesh.position.x,
         player.mesh.position.z,
         loaded.map((s) => ({ x: s.center.x, z: s.center.z })),
       )
-      withCategory(monitor, 'FAUNA', () => {
-        bundle.fauna.update(
-          worldDt,
-          player.mesh.position,
-          dayNight.timeOfDay,
-          dayNight.elapsedDays,
-          litFires,
-          villages,
-          nearbyHumanCount,
-          (amount, attackerX, attackerZ) => {
-            const dmg = applyPlayerDamage({
-              player,
-              amount,
-              attackerX,
-              attackerZ,
-              attackerKey: 'fauna',
-              heldTool: heldTool.held(),
-              defenseSkillValue: player.skills.defense.value,
-              playerYaw: mouseLook.state.yaw,
-              onCombatHit: () => {
-                playerCombat.enter()
-                playerCombat.noteActivity()
-                onPlayerDamaged()
-              },
-            })
-            if (dmg.enteredDowned) {
-              playerMelee.reset()
-              player.endMeleeAttack()
-              player.setMeleeSwing(null)
-              attackYaw = null
-              playerRanged.reset()
-              player.endRangedDraw()
-              rangedTargetId = null
-              stopBowDrawSound()
-            }
-          },
-          {
-            sneakValue: player.skills.sneak.value,
-            sneakActive: player.skills.sneak.active,
-            movement: player.movementState(),
-          },
-          nearbyNpcCandidates,
-          (targetId, amount, attackerX, attackerZ) => {
-            for (const settlement of loaded) {
-              const target = settlement.npcs.find((npc) => npc.id === targetId)
-              if (!target) continue
-              target.applyIncomingCombatDamage({ amount, attackerX, attackerZ, attackerKey: 'fauna' })
-              return
-            }
-          },
-          (kind, x, z) => playAnimalAggroSound(kind, worldAudio.playAt, { x, z }),
+      // NPC/fauna/trap simulation is gated off entirely during an active
+      // time-skip (plan 196) — see the `worldDt` comment above. Nothing in
+      // this block runs faster or slower than real time; it simply does not
+      // run at all while `timeSkip.isActive()`, and `worldDt === dt` here in
+      // every case it does run (the ternary above only ever diverges while a
+      // skip is active), so `dt` is used directly to make that explicit.
+      if (!timeSkip.isActive()) {
+        const villages = loaded.map((s) => ({
+          x: s.center.x,
+          z: s.center.z,
+          radius: villageSizeConfig(s.size).footprintRadius,
+        }))
+        const nearbyNpcCandidates = loaded.flatMap((s) =>
+          s.npcs
+            .filter((npc) => !npc.health.dead)
+            .map((npc) => ({ id: npc.id, x: npc.mesh.position.x, z: npc.mesh.position.z })),
         )
-      })
-      // Traps run inside the fauna pass's own cadence (plan 141 §11): the
-      // system throttles itself and early-outs when nothing is armed, and it
-      // reuses the agent list fauna just updated instead of a second query.
-      bundle.placedTraps.update(worldDt, dayNight.elapsedDays, bundle.fauna.getAgents())
+        const nearbyHumanCount = countNearbyHumans(
+          player.mesh.position.x,
+          player.mesh.position.z,
+          nearbyNpcCandidates,
+        )
+        // Bounded/local (plan 179 §7/§9/§10/§20): typically empty — only a
+        // predator whose own throttled decision is currently `attack` (see
+        // `AnimalAgent.isThreateningHuman()`) shows up here, never every
+        // loaded animal. `combatTargetForAnimal` is the same 177 target seam
+        // NPC defense uses, so a `defend` decision can hand it straight to
+        // `beginCombat()` with no second animal lookup.
+        const threateningAnimals = bundle.fauna.getAgents()
+          .filter((a) => a.isThreateningHuman())
+          .map((a) => ({ animalId: a.animalId, kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z, target: combatTargetForAnimal(a) }))
+        withCategory(monitor, 'NPC', () => {
+          bundle.settlementsManager.update(
+            dt,
+            player.mesh.position,
+            mouseLook.state.yaw,
+            dayNight.timeOfDay,
+            dayFactor,
+            litFires,
+            villages,
+            dayNight.dayLengthSec,
+            threateningAnimals,
+          )
+        })
+        withCategory(monitor, 'FAUNA', () => {
+          bundle.fauna.update(
+            dt,
+            player.mesh.position,
+            dayNight.timeOfDay,
+            dayNight.elapsedDays,
+            litFires,
+            villages,
+            nearbyHumanCount,
+            (amount, attackerX, attackerZ) => {
+              const dmg = applyPlayerDamage({
+                player,
+                amount,
+                attackerX,
+                attackerZ,
+                attackerKey: 'fauna',
+                heldTool: heldTool.held(),
+                defenseSkillValue: player.skills.defense.value,
+                playerYaw: mouseLook.state.yaw,
+                onCombatHit: () => {
+                  playerCombat.enter()
+                  playerCombat.noteActivity()
+                  onPlayerDamaged()
+                },
+              })
+              if (dmg.enteredDowned) {
+                playerMelee.reset()
+                player.endMeleeAttack()
+                player.setMeleeSwing(null)
+                attackYaw = null
+                playerRanged.reset()
+                player.endRangedDraw()
+                rangedTargetId = null
+                stopBowDrawSound()
+              }
+            },
+            {
+              sneakValue: player.skills.sneak.value,
+              sneakActive: player.skills.sneak.active,
+              movement: player.movementState(),
+            },
+            nearbyNpcCandidates,
+            (targetId, amount, attackerX, attackerZ) => {
+              for (const settlement of loaded) {
+                const target = settlement.npcs.find((npc) => npc.id === targetId)
+                if (!target) continue
+                target.applyIncomingCombatDamage({ amount, attackerX, attackerZ, attackerKey: 'fauna' })
+                return
+              }
+            },
+            (kind, x, z) => playAnimalAggroSound(kind, worldAudio.playAt, { x, z }),
+          )
+        })
+        // Traps run inside the fauna pass's own cadence (plan 141 §11): the
+        // system throttles itself and early-outs when nothing is armed, and
+        // it reuses the agent list fauna just updated instead of a second
+        // query — frozen alongside fauna during a skip for the same reason.
+        bundle.placedTraps.update(dt, dayNight.elapsedDays, bundle.fauna.getAgents())
+      }
       bundle.itemSpawners.update(dt, player.mesh.position, dayFactor)
       bundle.droppedItems.tick(dt)
       bundle.placedFires.update(dt)
