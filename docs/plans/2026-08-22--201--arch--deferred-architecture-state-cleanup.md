@@ -130,7 +130,26 @@ Nie używać `LOOSE-ENDS.md` jako listy przypadkowych pomysłów.
 
 ---
 
-## 7. Dokumentacja architektury
+## 7. Save format — hard cut to v1
+
+Uporządkować `src/persistence/saveData.ts` poprzez **całkowite odcięcie od historycznych wersji save data**.
+
+Po implementacji:
+
+* pozostawić wyłącznie aktualny format **v1**,
+* usunąć obsługę migracji/compatibility dla starszych wersji,
+* usunąć stare typy, wersje, fallbacki i kod potrzebny wyłącznie do obsługi legacy saves,
+* nie utrzymywać backward compatibility ze starymi zapisami,
+* aktualny save/load ma operować wyłącznie na jednym kontrakcie v1,
+* możliwe jest wersjonowanie i migracje w przyszłości - my ucinamy przeszłość.
+
+Nie implementować migracji `v0 → v1`, `v1 → v2` itd.
+
+**Uwaga:** nie usuwać danych/state wymaganych przez aktualny v1 — usuwamy wyłącznie **historyczną kompatybilność**, nie obecny persistence contract.
+
+---
+
+## 8. Dokumentacja architektury
 
 Po reconciliation zweryfikować:
 
@@ -143,7 +162,7 @@ Nie przepisywać dokumentacji dla samego cleanupu.
 
 ---
 
-## 8. Focused final consistency check
+## 9. Focused final consistency check
 
 Wykonać krótki check najważniejszych granic całego pakietu:
 
