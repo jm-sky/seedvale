@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
 import { tintPropMaterials } from '../settlement/props'
@@ -14,8 +13,16 @@ import {
   type PlannedAction,
 } from '../simulation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
-import { barsVisibleForDistance, labelOpacityForDistance } from '../ui/labelDistance'
-import { AGENT_RENDER_LAYER, assignRenderLayer, setSubtreeCastShadow } from '../world/waterMirror'
+import {
+  applyBarPercent,
+  computeBarPercent,
+  createAgentLabel,
+  createLabelBar,
+  INITIAL_LABEL_DISTANCE_STATE,
+  type LabelDistanceState,
+  updateAgentLabelDistanceState,
+} from '../ui/agentStatusLabel'
+import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import {
   type AnimalLifeState,
   BIAS_STRENGTH,
@@ -50,6 +57,7 @@ import {
   type PredatorHumanIntent,
   PROVOCATION_SECONDS,
 } from './predatorHumanDecision'
+import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
 const WATER_MARGIN = 0.3
@@ -704,13 +712,11 @@ export class AnimalAgent {
   private readonly staminaFillEl: HTMLDivElement
   private readonly satietyFillEl: HTMLDivElement
   private readonly hydrationFillEl: HTMLDivElement
-  private lastLabelOpacity = -1
+  private labelDistanceState: LabelDistanceState = INITIAL_LABEL_DISTANCE_STATE
   private lastHpPercent = -1
   private lastStaminaPercent = -1
   private lastSatietyPercent = -1
   private lastHydrationPercent = -1
-  private lastBarsVisible: boolean | null = null
-  private lastShadowCasting: boolean | null = null
   readonly health: HealthState
   readonly life: AnimalLifeState
   private attackCooldown = 0
@@ -912,50 +918,24 @@ export class AnimalAgent {
       this.gallopAction = null
     }
 
-    this.labelEl = document.createElement('div')
-    this.labelEl.className = 'npc-label'
-
-    this.labelNameEl = document.createElement('div')
-    this.labelNameEl.className = 'npc-label__name'
-    this.labelNameEl.textContent = ANIMAL_LABELS[def.kind]
-
-    this.labelBarsEl = document.createElement('div')
-    this.labelBarsEl.className = 'npc-label__bars'
-
-    const hpBar = document.createElement('div')
-    hpBar.className = 'npc-label__bar npc-label__bar--hp'
-    this.hpFillEl = document.createElement('div')
-    this.hpFillEl.className = 'npc-label__bar-fill'
-    this.hpFillEl.style.width = '100%'
-    hpBar.appendChild(this.hpFillEl)
-
-    const staminaBar = document.createElement('div')
-    staminaBar.className = 'npc-label__bar npc-label__bar--stamina'
-    this.staminaFillEl = document.createElement('div')
-    this.staminaFillEl.className = 'npc-label__bar-fill'
-    this.staminaFillEl.style.width = '100%'
-    staminaBar.appendChild(this.staminaFillEl)
-
+    const hpBar = createLabelBar('hp')
+    const staminaBar = createLabelBar('stamina')
     // Satiety / hydration are inverted needs: full bar = well fed / hydrated.
-    const satietyBar = document.createElement('div')
-    satietyBar.className = 'npc-label__bar npc-label__bar--satiety'
-    this.satietyFillEl = document.createElement('div')
-    this.satietyFillEl.className = 'npc-label__bar-fill'
-    this.satietyFillEl.style.width = `${Math.round((1 - this.life.hunger) * 100)}%`
-    satietyBar.appendChild(this.satietyFillEl)
-
-    const hydrationBar = document.createElement('div')
-    hydrationBar.className = 'npc-label__bar npc-label__bar--hydration'
-    this.hydrationFillEl = document.createElement('div')
-    this.hydrationFillEl.className = 'npc-label__bar-fill'
-    this.hydrationFillEl.style.width = `${Math.round((1 - this.life.thirst) * 100)}%`
-    hydrationBar.appendChild(this.hydrationFillEl)
-
-    this.labelBarsEl.append(hpBar, staminaBar, satietyBar, hydrationBar)
-    this.labelEl.append(this.labelNameEl, this.labelBarsEl)
-
-    this.label = new CSS2DObject(this.labelEl)
-    this.label.position.set(0, this.labelHeight(), 0)
+    const satietyBar = createLabelBar('satiety', Math.round((1 - this.life.hunger) * 100))
+    const hydrationBar = createLabelBar('hydration', Math.round((1 - this.life.thirst) * 100))
+    this.hpFillEl = hpBar.fill
+    this.staminaFillEl = staminaBar.fill
+    this.satietyFillEl = satietyBar.fill
+    this.hydrationFillEl = hydrationBar.fill
+    const labelDom = createAgentLabel(
+      ANIMAL_LABELS[def.kind],
+      [hpBar, staminaBar, satietyBar, hydrationBar],
+      this.labelHeight(),
+    )
+    this.labelEl = labelDom.el
+    this.labelNameEl = labelDom.nameEl
+    this.labelBarsEl = labelDom.barsEl
+    this.label = labelDom.label
     this.mesh.add(this.label)
 
     assignRenderLayer(this.mesh, AGENT_RENDER_LAYER)
@@ -1432,52 +1412,37 @@ export class AnimalAgent {
     tickAnimalLife(this.life, dt, this.sprinting, {
       hungerThirstRate: this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
     })
-    // Compared/stored as the same rounded percent that's actually written to
-    // the DOM — the raw ratio drifts by a hair every frame during
-    // regen/drain, which would defeat a guard keyed on the raw value.
-    const hpPercent = this.health.maxHp > 0 ? Math.round((this.health.currentHp / this.health.maxHp) * 100) : 0
-    if (hpPercent !== this.lastHpPercent) {
-      this.lastHpPercent = hpPercent
-      this.hpFillEl.style.width = `${hpPercent}%`
-    }
-    const staminaPercent = this.life.stamina.max > 0
-      ? Math.round((this.life.stamina.current / this.life.stamina.max) * 100)
-      : 0
-    if (staminaPercent !== this.lastStaminaPercent) {
-      this.lastStaminaPercent = staminaPercent
-      this.staminaFillEl.style.width = `${staminaPercent}%`
-    }
-    const satietyPercent = Math.round((1 - this.life.hunger) * 100)
-    if (satietyPercent !== this.lastSatietyPercent) {
-      this.lastSatietyPercent = satietyPercent
-      this.satietyFillEl.style.width = `${satietyPercent}%`
-    }
-    const hydrationPercent = Math.round((1 - this.life.thirst) * 100)
-    if (hydrationPercent !== this.lastHydrationPercent) {
-      this.lastHydrationPercent = hydrationPercent
-      this.hydrationFillEl.style.width = `${hydrationPercent}%`
-    }
-    const dist = this.mesh.position.distanceTo(observerPos)
-    const showBars = barsVisibleForDistance(dist)
-    if (showBars !== this.lastBarsVisible) {
-      this.lastBarsVisible = showBars
-      this.labelBarsEl.style.display = showBars ? '' : 'none'
-    }
-    const shadowCasting = dist <= FAUNA_SHADOW_DISTANCE
-    if (shadowCasting !== this.lastShadowCasting) {
-      this.lastShadowCasting = shadowCasting
-      setSubtreeCastShadow(this.mesh, shadowCasting)
-    }
-    // Quantized before comparing — `dist` changes by a hair every frame while
-    // the player moves, so an unrounded guard never catches a repeat.
-    const opacity = Math.round(labelOpacityForDistance(dist) * 32) / 32
-    if (opacity !== this.lastLabelOpacity) {
-      this.lastLabelOpacity = opacity
-      this.labelEl.style.opacity = String(opacity)
-      // At full visibility bars sit at 80%; once the shared label fades, inherit
-      // the parent opacity without an extra dimming factor.
-      this.labelBarsEl.style.opacity = opacity === 1 ? '0.8' : '1'
-    }
+    this.lastHpPercent = applyBarPercent(
+      this.hpFillEl,
+      computeBarPercent(this.health.currentHp, this.health.maxHp),
+      this.lastHpPercent,
+    )
+    this.lastStaminaPercent = applyBarPercent(
+      this.staminaFillEl,
+      computeBarPercent(this.life.stamina.current, this.life.stamina.max),
+      this.lastStaminaPercent,
+    )
+    // Satiety / hydration are inverted needs (full bar = well fed/hydrated),
+    // not a current/max pair, so they round inline instead of going through
+    // `computeBarPercent`.
+    this.lastSatietyPercent = applyBarPercent(
+      this.satietyFillEl,
+      Math.round((1 - this.life.hunger) * 100),
+      this.lastSatietyPercent,
+    )
+    this.lastHydrationPercent = applyBarPercent(
+      this.hydrationFillEl,
+      Math.round((1 - this.life.thirst) * 100),
+      this.lastHydrationPercent,
+    )
+    this.labelDistanceState = updateAgentLabelDistanceState(
+      this.labelEl,
+      this.labelBarsEl,
+      this.mesh,
+      this.mesh.position.distanceTo(observerPos),
+      FAUNA_SHADOW_DISTANCE,
+      this.labelDistanceState,
+    )
     this.mixer?.update(dt)
   }
 

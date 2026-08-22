@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { CombatIntent } from '../combat/combatIntent'
 import type { ResolvedDefense } from '../combat/defenseResolver'
@@ -67,10 +66,19 @@ import {
 } from '../simulation'
 import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
-import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
+import {
+  applyBarPercent,
+  computeBarPercent,
+  createAgentLabel,
+  createLabelBar,
+  INITIAL_LABEL_DISTANCE_STATE,
+  type LabelDistanceState,
+  updateAgentLabelDistanceState,
+} from '../ui/agentStatusLabel'
+import { gazeOpacityFactor } from '../ui/labelDistance'
 import { gameHoursToRealSeconds } from '../world/timeConversion'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
-import { AGENT_RENDER_LAYER, assignRenderLayer, setSubtreeCastShadow } from '../world/waterMirror'
+import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import {
   type CharacterDef,
   genderForName,
@@ -151,6 +159,7 @@ import {
   type ScheduleActivity,
   type ScheduleTemplate,
 } from './schedule'
+import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 function randRange([min, max]: [number, number]): number {
   return min + Math.random() * (max - min)
@@ -806,6 +815,7 @@ export class NpcAgent {
   private readonly hpFillEl: HTMLDivElement
   private readonly staminaFillEl: HTMLDivElement
   private readonly vigorFillEl: HTMLDivElement
+  private labelDistanceState: LabelDistanceState = INITIAL_LABEL_DISTANCE_STATE
   /** Debug-only diagnostic line (`?debug=1`) — phase/action/stamina/rescue
    *  state, per the movement-resilience plan's instrumentation requirement. */
   private readonly debugEl: HTMLDivElement
@@ -865,13 +875,10 @@ export class NpcAgent {
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
-  private lastLabelOpacity = -1
   private lastHpPercent = -1
   private lastStaminaPercent = -1
   private lastVigorPercent = -1
-  private lastBarsVisible: boolean | null = null
   private lastDebugText = ''
-  private lastShadowCasting: boolean | null = null
 
   private constructor(
     root: THREE.Object3D,
@@ -974,48 +981,24 @@ export class NpcAgent {
     this.needMarker.position.set(0, NPC_HEIGHT + 0.25, 0)
     this.mesh.add(this.needMarker)
 
-    this.labelEl = document.createElement('div')
-    this.labelEl.className = 'npc-label'
-
-    this.labelNameEl = document.createElement('div')
-    this.labelNameEl.className = 'npc-label__name'
-    this.labelNameEl.textContent = this.displayName
     this.lastLabelText = this.displayName
-
-    this.labelBarsEl = document.createElement('div')
-    this.labelBarsEl.className = 'npc-label__bars'
-
-    const hpBar = document.createElement('div')
-    hpBar.className = 'npc-label__bar npc-label__bar--hp'
-    this.hpFillEl = document.createElement('div')
-    this.hpFillEl.className = 'npc-label__bar-fill'
-    this.hpFillEl.style.width = '100%'
-    hpBar.appendChild(this.hpFillEl)
-
-    const staminaBar = document.createElement('div')
-    staminaBar.className = 'npc-label__bar npc-label__bar--stamina'
-    this.staminaFillEl = document.createElement('div')
-    this.staminaFillEl.className = 'npc-label__bar-fill'
-    this.staminaFillEl.style.width = '100%'
-    staminaBar.appendChild(this.staminaFillEl)
-
-    const vigorBar = document.createElement('div')
-    vigorBar.className = 'npc-label__bar npc-label__bar--vigor'
-    this.vigorFillEl = document.createElement('div')
-    this.vigorFillEl.className = 'npc-label__bar-fill'
-    this.vigorFillEl.style.width = '100%'
-    vigorBar.appendChild(this.vigorFillEl)
-
-    this.labelBarsEl.append(hpBar, staminaBar, vigorBar)
+    const hpBar = createLabelBar('hp')
+    const staminaBar = createLabelBar('stamina')
+    const vigorBar = createLabelBar('vigor')
+    this.hpFillEl = hpBar.fill
+    this.staminaFillEl = staminaBar.fill
+    this.vigorFillEl = vigorBar.fill
+    const labelDom = createAgentLabel(this.displayName, [hpBar, staminaBar, vigorBar], NPC_HEIGHT + 0.55)
+    this.labelEl = labelDom.el
+    this.labelNameEl = labelDom.nameEl
+    this.labelBarsEl = labelDom.barsEl
+    this.label = labelDom.label
 
     this.debugEl = document.createElement('div')
     this.debugEl.className = 'npc-label__debug'
     this.debugEl.style.display = 'none'
+    this.labelEl.append(this.debugEl)
 
-    this.labelEl.append(this.labelNameEl, this.labelBarsEl, this.debugEl)
-
-    this.label = new CSS2DObject(this.labelEl)
-    this.label.position.set(0, NPC_HEIGHT + 0.55, 0)
     this.mesh.add(this.label)
     assignRenderLayer(this.mesh, AGENT_RENDER_LAYER)
 
@@ -2047,51 +2030,36 @@ export class NpcAgent {
       this.lastLabelText = labelText
       this.labelNameEl.textContent = labelText
     }
-    // Compared/stored as the same rounded percent that's actually written to
-    // the DOM — the raw ratio drifts by a hair every frame during
-    // regen/drain, which would defeat a guard keyed on the raw value.
-    const hpPercent = this.health.maxHp > 0 ? Math.round((this.health.currentHp / this.health.maxHp) * 100) : 0
-    if (hpPercent !== this.lastHpPercent) {
-      this.lastHpPercent = hpPercent
-      this.hpFillEl.style.width = `${hpPercent}%`
-    }
-    const staminaPercent = this.stamina.max > 0 ? Math.round((this.stamina.current / this.stamina.max) * 100) : 0
-    if (staminaPercent !== this.lastStaminaPercent) {
-      this.lastStaminaPercent = staminaPercent
-      this.staminaFillEl.style.width = `${staminaPercent}%`
-    }
-    const vigorPercent = this.vigor.max > 0 ? Math.round((this.vigor.current / this.vigor.max) * 100) : 0
-    if (vigorPercent !== this.lastVigorPercent) {
-      this.lastVigorPercent = vigorPercent
-      this.vigorFillEl.style.width = `${vigorPercent}%`
-    }
+    this.lastHpPercent = applyBarPercent(
+      this.hpFillEl,
+      computeBarPercent(this.health.currentHp, this.health.maxHp),
+      this.lastHpPercent,
+    )
+    this.lastStaminaPercent = applyBarPercent(
+      this.staminaFillEl,
+      computeBarPercent(this.stamina.current, this.stamina.max),
+      this.lastStaminaPercent,
+    )
+    this.lastVigorPercent = applyBarPercent(
+      this.vigorFillEl,
+      computeBarPercent(this.vigor.current, this.vigor.max),
+      this.lastVigorPercent,
+    )
     this.updateDebugLabel()
     const gaze = gazeOpacityFactor(
       this.mesh.position.x - observerPos.x,
       this.mesh.position.z - observerPos.z,
       observerYaw,
     )
-    const dist = this.mesh.position.distanceTo(observerPos)
-    const showBars = barsVisibleForDistance(dist)
-    if (showBars !== this.lastBarsVisible) {
-      this.lastBarsVisible = showBars
-      this.labelBarsEl.style.display = showBars ? '' : 'none'
-    }
-    const shadowCasting = dist <= NPC_SHADOW_DISTANCE
-    if (shadowCasting !== this.lastShadowCasting) {
-      this.lastShadowCasting = shadowCasting
-      setSubtreeCastShadow(this.mesh, shadowCasting)
-    }
-    // Quantized before comparing — `dist`/`gaze` change by a hair every frame
-    // while the player moves, so an unrounded guard never catches a repeat.
-    const opacity = Math.round(labelOpacityForDistance(dist) * gaze * 32) / 32
-    if (opacity !== this.lastLabelOpacity) {
-      this.lastLabelOpacity = opacity
-      this.labelEl.style.opacity = String(opacity)
-      // At full visibility bars sit at 80%; once the shared label fades, inherit
-      // the parent opacity without an extra dimming factor.
-      this.labelBarsEl.style.opacity = opacity === 1 ? '0.8' : '1'
-    }
+    this.labelDistanceState = updateAgentLabelDistanceState(
+      this.labelEl,
+      this.labelBarsEl,
+      this.mesh,
+      this.mesh.position.distanceTo(observerPos),
+      NPC_SHADOW_DISTANCE,
+      this.labelDistanceState,
+      gaze,
+    )
     this.mixer.update(dt)
   }
 
