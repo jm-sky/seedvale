@@ -1,0 +1,28 @@
+# Settlements Domain Roadmap
+
+**Status:** evolving target vision
+
+## Purpose
+
+Settlements should be dynamic communities shaped by population, geography, resources, infrastructure, economy and the people who live there.
+
+## Target state
+
+- Settlement layout and identity reflect local geography and available resources.
+- Households, workplaces, homes and shared places form a coherent community.
+- Population and household changes affect settlement needs and development.
+- Resources, production, storage and consumption visibly influence settlement life.
+- Infrastructure grows or changes in response to persistent needs and opportunities.
+- Settlements have relationships and eventually meaningful movement, trade and exchange with other settlements.
+- Problems and opportunities can produce emergent events, quests and long-term changes.
+
+## Future evolution
+
+1. Complete household and daily-life foundations.
+2. Connect settlement production, logistics and infrastructure.
+3. Add stronger identity and development over time.
+4. Connect multiple settlements through movement, trade and relationships.
+
+## Boundaries
+
+Settlement systems should reuse NPC, economy, resource, world and place concepts rather than maintaining parallel representations.
