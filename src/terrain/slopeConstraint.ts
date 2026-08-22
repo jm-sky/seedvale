@@ -88,3 +88,40 @@ export function applySlopeMovementConstraint(
 ): { x: number, z: number } {
   return constrainToSlope(wishX, wishZ, sampleSlope(x, z, sampleHeight))
 }
+
+/**
+ * One slope-constrained movement step with the shared 3-tier collision
+ * fallback (`NpcAgent.steerTo` / `AnimalAgent.steerToward`, plan 202): try
+ * the full diagonal step, then X-only, then Z-only, so a mover sliding along
+ * an obstacle still makes partial progress instead of stopping dead. `dirX`/
+ * `dirZ` must already be a unit vector — this only scales by `speed * dt`
+ * and applies the slope constraint, it does not normalize. Returns the
+ * resulting position and whether it actually changed (a fully-blocked or
+ * fully slope-cancelled step reports `moved: false`); callers that need
+ * their own "moving" flag semantics (e.g. `AnimalAgent`, which sets it
+ * unconditionally before attempting the step) can ignore `moved`.
+ */
+export function stepWithSlopeAndCollision(params: {
+  x: number
+  z: number
+  dirX: number
+  dirZ: number
+  speed: number
+  dt: number
+  sampleHeight: HeightSampler
+  isWalkable: (x: number, z: number) => boolean
+}): { x: number, z: number, moved: boolean } {
+  const { x, z, dirX, dirZ, speed, dt, sampleHeight, isWalkable } = params
+  const step = applySlopeMovementConstraint(dirX * speed * dt, dirZ * speed * dt, x, z, sampleHeight)
+  let nx = x
+  let nz = z
+  if (isWalkable(x + step.x, z + step.z)) {
+    nx = x + step.x
+    nz = z + step.z
+  } else if (isWalkable(x + step.x, z)) {
+    nx = x + step.x
+  } else if (isWalkable(x, z + step.z)) {
+    nz = z + step.z
+  }
+  return { x: nx, z: nz, moved: nx !== x || nz !== z }
+}

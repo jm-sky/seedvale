@@ -66,7 +66,7 @@ import {
   replaceActionLifecycle,
 } from '../simulation'
 import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
-import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
+import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
 import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
 import { gameHoursToRealSeconds } from '../world/timeConversion'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
@@ -2826,30 +2826,24 @@ export class NpcAgent {
     if (dist < ARRIVE) return true
     this.tmp.multiplyScalar(1 / dist)
     const speed = WALK_SPEED * this.healthSpeedMultiplier()
-    const x = this.mesh.position.x
-    const z = this.mesh.position.z
+    this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
     // Steep terrain scales down (and, past the max walkable angle, removes)
     // the uphill component of the step — across-slope/downhill are
-    // untouched (plan 183).
-    const slopeStep = applySlopeMovementConstraint(
-      this.tmp.x * speed * dt,
-      this.tmp.z * speed * dt,
-      x,
-      z,
-      this.sampleHeight,
-    )
-    const stepX = slopeStep.x
-    const stepZ = slopeStep.z
-    this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
-    if (this.isWalkable(x + stepX, z + stepZ)) {
-      this.mesh.position.x += stepX
-      this.mesh.position.z += stepZ
-    } else if (this.isWalkable(x + stepX, z)) {
-      this.mesh.position.x += stepX
-    } else if (this.isWalkable(x, z + stepZ)) {
-      this.mesh.position.z += stepZ
-    }
-    this.moving = this.mesh.position.x !== x || this.mesh.position.z !== z
+    // untouched (plan 183). 3-tier collision fallback shared with
+    // `AnimalAgent.steerToward` (plan 202).
+    const result = stepWithSlopeAndCollision({
+      x: this.mesh.position.x,
+      z: this.mesh.position.z,
+      dirX: this.tmp.x,
+      dirZ: this.tmp.z,
+      speed,
+      dt,
+      sampleHeight: this.sampleHeight,
+      isWalkable: (x, z) => this.isWalkable(x, z),
+    })
+    this.mesh.position.x = result.x
+    this.mesh.position.z = result.z
+    this.moving = result.moved
     return false
   }
 
