@@ -16,7 +16,7 @@ import type { QuickActionsCropSeeds, QuickActionsTraps, RestOutcome, RestVariant
 import type { ToastVariant } from '../ui/createToast'
 import type { TrapKind } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
-import { pickNpcConfirmationSound, pickNpcFarewellSound, pickNpcGreetingSound } from '../ai/NpcAgent'
+import { pickNpcConfirmationSound, pickNpcFarewellSound, pickNpcGreetingSound } from '../ai/npcVoiceLines'
 import {
   type AudioVolumeKey,
   type AudioVolumes,
