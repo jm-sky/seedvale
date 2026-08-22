@@ -3,7 +3,7 @@
 **Created:** 2026-08-22  
 **Status:** `planned` 📋  
 **Priority:** high · **Effort:** M  
-**Depends on:** ~~194~~ ~~197~~ ~~198~~
+**Depends on:** ~~194~~ ~~197~~
 
 ## Cel
 
@@ -18,6 +18,8 @@ Plan obejmuje trzy potwierdzone obszary:
 Docelowy invariant:
 
 > **Streaming, rebuild, dispose ani transfer runtime representation nie może zmienić tego, które entity reprezentuje trwała referencja.**
+
+Plan **nie zależy od resource deposit continuity z 198**. Jeżeli podczas implementacji okaże się, że konkretna ścieżka dropped-item korzysta z mechanizmu 198, należy wykorzystać istniejący mechanizm, ale nie jest to dependency architektoniczne planu.
 
 ---
 
@@ -53,40 +55,15 @@ Nie generować nowej identity podczas transferu, jeżeli istniejący `itemInstan
 
 Nie tworzyć nowego item identity systemu.
 
----
+### Streaming boundary
 
-## 2. Dropped items a streaming
+Sprawdzić tylko te streaming/rebuild paths, które faktycznie obejmują dropped items.
 
-Zweryfikować przypadki:
-
-```text
-drop
- ↓
-chunk unload/load
-```
-
-i:
-
-```text
-drop
- ↓
-WorldBundle rebuild
-```
-
-Jeżeli dropped item jest obecnie objęty streaming/rebuild lifecycle, jego runtime representation musi po reconstruction wskazywać tę samą `ItemInstance`.
-
-Zabezpieczyć przed:
-
-- duplikacją,
-- utratą itemu,
-- ponownym wygenerowaniem itemu,
-- zmianą identity.
-
-Jeżeli obecny system świadomie nie utrzymuje dropped items przez określoną granicę lifecycle, udokumentować tę granicę zamiast wprowadzać pełną persistence warstwę.
+Jeżeli obecny system **nie obiecuje** persistence dropped items przez konkretną granicę lifecycle, nie rozszerzać 199 o pełną dropped-item persistence. Udokumentować istniejący kontrakt i pozostawić szerszy problem poza zakresem.
 
 ---
 
-## 3. Quest references do NPC
+## 2. Quest references do NPC
 
 Zidentyfikować questy, które przechowują NPC przez:
 
@@ -117,11 +94,11 @@ current NpcAgent
 
 musi rozwiązywać się do tego samego NPC.
 
-Nie migrować mechanicznie wszystkich questów, jeżeli część z nich celowo opisuje kategorię zamiast konkretnego entity.
+Nie migrować questów, które celowo opisują kategorię zamiast konkretnego entity.
 
 ---
 
-## 4. Minimalne resolution NPC
+## 3. Minimalne resolution NPC
 
 Ujednolicić istniejący sposób uzyskania aktualnej runtime representation z `NpcId`.
 
@@ -149,28 +126,50 @@ Nie tworzyć globalnego `EntityManager` ani ogólnego lookup frameworka.
 
 ---
 
-## 5. Fauna jako konkretny quest target
+## 4. Quest target semantics — specific entity vs category
 
-Rozdzielić dwa istniejące semantycznie różne przypadki:
+Przed zmianami sklasyfikować istniejące quest targets jako:
 
 ```text
-kill / interact with any animal of type X
+specific entity
+```
+
+albo:
+
+```text
+category / predicate
+```
+
+Przykładowo:
+
+```text
+"kill this animal"
+→ stable animal identity
 ```
 
 vs.
 
 ```text
-kill / interact with this specific animal
+"kill an animal of type X"
+→ type/category predicate
 ```
 
-Dla drugiego przypadku quest musi posiadać stabilną identity konkretnego zwierzęcia.
+Nie zastępować category targetów stable IDs tylko dlatego, że system posiada identity entity.
+
+Zmiana ma dotyczyć wyłącznie przypadków, w których semantyka questa wymaga konkretnego entity.
+
+---
+
+## 5. Fauna jako konkretny quest target
+
+Dla questów wymagających konkretnego zwierzęcia zapewnić stabilną identity targetu.
 
 Zweryfikować:
 
 - fauna spawn/identity,
 - quest target creation,
 - runtime reconstruction,
-- streaming,
+- streaming, jeżeli fauna jest przez niego objęta,
 - death,
 - corpse/removal,
 - quest completion.
@@ -203,7 +202,9 @@ Animal B spawns
 Quest must NOT silently target B.
 ```
 
-Wykorzystać lifecycle semantics z **197** i **198**.
+Wykorzystać lifecycle semantics z **197**.
+
+Nie tworzyć nowego fauna lifecycle systemu w 199.
 
 ---
 
@@ -239,7 +240,8 @@ Nie wykonywać generalnego refaktoru identity całego projektu.
 - globalny `EntityManager`,
 - migracja wszystkich entity na UUID,
 - nowy quest framework,
-- pełna przebudowa item systemu.
+- pełna przebudowa item systemu,
+- generalna persistence dropped items poza istniejącym lifecycle.
 
 ---
 
@@ -247,13 +249,13 @@ Nie wykonywać generalnego refaktoru identity całego projektu.
 
 ### Testy
 
-Dodać/rozszerzyć testy dla:
+Dodać/rozszerzyć testy dla faktycznie zmienianych ścieżek:
 
 - inventory → drop → pickup,
-- dropped item reconstruction,
+- dropped item reconstruction, jeżeli jest obecnie wspierana,
 - NPC quest reference po unload/reload,
 - NPC quest reference po `WorldBundle` rebuild,
-- fauna-specific quest target,
+- specific fauna quest target,
 - dead/removed target,
 - rozróżnienie specific entity vs category target.
 
@@ -264,7 +266,7 @@ ItemInstance A
  ↓
 drop
  ↓
-rebuild / reload
+rebuild / reload (jeżeli objęte lifecycle)
  ↓
 pickup
  ↓
@@ -293,38 +295,35 @@ Animal B spawns
 quest must NOT target B
 ```
 
----
-
 ### Browser verification
 
 Zweryfikować:
 
-1. upuścić konkretny item,
-2. wymusić odpowiednią granicę streamingu/rebuild,
-3. podnieść item,
-4. potwierdzić brak duplikacji i zachowanie identity,
-5. rozpocząć quest związany z konkretnym NPC,
-6. wymusić unload/reload lub rebuild,
-7. potwierdzić poprawnego quest target/givera,
-8. rozpocząć quest związany z konkretnym zwierzęciem,
-9. wymusić reconstruction/streaming,
-10. potwierdzić poprawnego targetu,
-11. sprawdzić zachowanie po śmierci/usunięciu targetu.
+1. upuścić konkretny item i sprawdzić transfer identity,
+2. jeżeli dropped items są objęte streamingiem — wymusić odpowiednią granicę i potwierdzić brak duplikacji/utraty,
+3. rozpocząć quest związany z konkretnym NPC,
+4. wymusić unload/reload lub rebuild,
+5. potwierdzić poprawnego quest target/givera,
+6. rozpocząć quest związany z konkretnym zwierzęciem,
+7. wymusić reconstruction/streaming, jeżeli fauna jest nim objęta,
+8. potwierdzić poprawnego targetu,
+9. sprawdzić zachowanie po śmierci/usunięciu targetu.
 
 ---
 
 ## Kryteria akceptacji
 
 - [ ] `ItemInstance` zachowuje identity przez drop/pickup.
-- [ ] Obowiązujące granice streamingu/rebuild nie zmieniają identity dropped itemów.
+- [ ] Jeżeli dropped items są objęte streaming/rebuild lifecycle, reconstruction nie zmienia ich identity.
 - [ ] Quest references do konkretnych NPC używają stabilnej identity.
 - [ ] NPC quest target resolution działa po runtime reconstruction.
+- [ ] Specific-entity questy i category/predicate questy zachowują odrębną semantykę.
 - [ ] Fauna-specific quest target zachowuje identity konkretnego zwierzęcia.
-- [ ] Nowe entity tego samego typu nie mogą przejąć starego quest targetu.
-- [ ] Specific-entity quest i category quest zachowują odrębną semantykę.
+- [ ] Nowe entity tego samego typu nie mogą przejąć starego specific quest targetu.
 - [ ] Death/removal targetu ma deterministyczne zachowanie.
-- [ ] Istniejące mechanizmy identity/lifecycle z 197/198 są wykorzystywane zamiast duplikowane.
+- [ ] Istniejący NPC identity/lifecycle mechanism z 197 jest wykorzystywany zamiast duplikacji.
 - [ ] Nie powstaje globalny Entity Manager ani drugi system lifecycle/persistence.
+- [ ] Nie rozszerzono zakresu o pełną dropped-item persistence bez potwierdzonego wymagania.
 - [ ] Testy przechodzą.
 - [ ] Zachowanie zostało zweryfikowane w przeglądarce.
 
