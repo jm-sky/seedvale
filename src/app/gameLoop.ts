@@ -64,9 +64,9 @@ import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { resolveInteraction } from '../interaction/resolveInteraction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
-import { type Inventory, inventoryFullToastText } from '../items/Inventory'
+import { Inventory, inventoryFullToastText, type SaveItemInstance, toSaveItemInstance } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
-import { isWeaponItemInstance } from '../items/itemInstances'
+import { isInstanceBackedKind, isWeaponItemInstance } from '../items/itemInstances'
 import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
 import { createAcquiredInstance } from '../items/trade'
 import { applySharpnessWear, getSharpnessDamageModifier, getWeaponMaintenanceProfile } from '../items/weaponMaintenance'
@@ -1222,7 +1222,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           } else {
             const collected = collectItem(target.item, bundle.chunkManager, bundle.itemSpawners, bundle.droppedItems)
             if (collected) {
-              const acquiredInstance = createAcquiredInstance(collected.kind)
+              // Plan 199 — a dropped instance-backed item carries its own
+              // durability/sharpness; only mint a fresh default instance when
+              // this pickup never had one (world-generated/spawner items).
+              const restoredInstance = collected.instance
+                ? Inventory.instancesFromJSON([collected.instance])[0] ?? null
+                : null
+              const acquiredInstance = restoredInstance ?? createAcquiredInstance(collected.kind)
               if (acquiredInstance) inventory.addInstance(acquiredInstance)
               else inventory.add(collected.kind, 1, dayNight.elapsedDays)
               playInventoryPickUp(worldAudio.playOnce)
@@ -1386,12 +1392,25 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         let dropOffset = 0
         const itemKinds = Object.keys(ITEM_DEFS) as ItemKind[]
         for (const kind of itemKinds) {
-          if (!inventory.remove(kind, 1)) continue
+          // Plan 199 — instance-backed kinds (traps/weapons) aren't tracked in
+          // `counts`, so `remove()` always no-ops for them; drop one carried
+          // instance (with its identity/condition) instead of silently
+          // skipping the kind.
+          let instance: SaveItemInstance | undefined
+          if (isInstanceBackedKind(kind)) {
+            const held = inventory.getInstances(kind)[0]
+            if (!held) continue
+            inventory.removeInstance(held.id)
+            instance = toSaveItemInstance(held)
+          } else if (!inventory.remove(kind, 1)) {
+            continue
+          }
           const angle = dropOffset * ((Math.PI * 2) / itemKinds.length)
           bundle.droppedItems.drop(
             kind,
             player.mesh.position.x + Math.cos(angle) * 0.6,
             player.mesh.position.z + Math.sin(angle) * 0.6,
+            instance,
           )
           dropOffset++
         }

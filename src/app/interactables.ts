@@ -5,6 +5,7 @@ import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemSpawners } from '../items/createItemSpawners'
 import type { PlacedTents } from '../items/createPlacedTents'
 import type { ToolKind } from '../items/HeldTool'
+import type { SaveItemInstance } from '../items/Inventory'
 import type { Settlement } from '../settlement/createSettlement'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { ChunkManager } from '../terrain/chunkManager'
@@ -728,7 +729,7 @@ export function collectItem(
   chunkManager: ChunkManager,
   itemSpawners: ItemSpawners,
   droppedItems: DroppedItems,
-): { kind: ItemKind, x: number, z: number } | null {
+): { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance } | null {
   switch (ref.source) {
     case 'dropped':
       return droppedItems.collect(ref.id)

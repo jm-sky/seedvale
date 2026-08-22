@@ -1,9 +1,11 @@
 # Plan: Entity Identity & Transfer Continuity
 
 **Created:** 2026-08-22  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented, technically verified, no browser verification yet  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~194~~ ~~197~~
+
+Implementation notes: [2026-08-22--199--arch--entity-identity-transfer-continuity-implementation-notes.md](./2026-08-22--199--arch--entity-identity-transfer-continuity-implementation-notes.md)
 
 ## Cel
 
@@ -313,18 +315,18 @@ Zweryfikować:
 
 ## Kryteria akceptacji
 
-- [ ] `ItemInstance` zachowuje identity przez drop/pickup.
-- [ ] Jeżeli dropped items są objęte streaming/rebuild lifecycle, reconstruction nie zmienia ich identity.
-- [ ] Quest references do konkretnych NPC używają stabilnej identity.
-- [ ] NPC quest target resolution działa po runtime reconstruction.
-- [ ] Specific-entity questy i category/predicate questy zachowują odrębną semantykę.
-- [ ] Fauna-specific quest target zachowuje identity konkretnego zwierzęcia.
-- [ ] Nowe entity tego samego typu nie mogą przejąć starego specific quest targetu.
-- [ ] Death/removal targetu ma deterministyczne zachowanie.
-- [ ] Istniejący NPC identity/lifecycle mechanism z 197 jest wykorzystywany zamiast duplikacji.
-- [ ] Nie powstaje globalny Entity Manager ani drugi system lifecycle/persistence.
-- [ ] Nie rozszerzono zakresu o pełną dropped-item persistence bez potwierdzonego wymagania.
-- [ ] Testy przechodzą.
+- [x] `ItemInstance` zachowuje identity przez drop/pickup.
+- [x] Jeżeli dropped items są objęte streaming/rebuild lifecycle, reconstruction nie zmienia ich identity. (already correct pre-plan — `nodes()`/carry-across-rebuild passes the full record through unchanged; verified, not modified)
+- [x] Quest references do konkretnych NPC używają stabilnej identity. (name uniqueness restored at the source — see implementation notes for why a full `NpcId` migration of `QuestDef`/relations wasn't needed)
+- [x] NPC quest target resolution działa po runtime reconstruction. (verified already satisfied by plan 197's `NpcStateRegistry`; see implementation notes §3)
+- [x] Specific-entity questy i category/predicate questy zachowują odrębną semantykę. (audited, documented in implementation notes — no code change needed)
+- [x] Fauna-specific quest target zachowuje identity konkretnego zwierzęcia.
+- [x] Nowe entity tego samego typu nie mogą przejąć starego specific quest targetu.
+- [x] Death/removal targetu ma deterministyczne zachowanie. (already correct pre-plan for fauna — verified, not modified)
+- [x] Istniejący NPC identity/lifecycle mechanism z 197 jest wykorzystywany zamiast duplikacji.
+- [x] Nie powstaje globalny Entity Manager ani drugi system lifecycle/persistence.
+- [x] Nie rozszerzono zakresu o pełną dropped-item persistence bez potwierdzonego wymagania.
+- [x] Testy przechodzą.
 - [ ] Zachowanie zostało zweryfikowane w przeglądarce.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

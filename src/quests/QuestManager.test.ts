@@ -406,6 +406,52 @@ describe('QuestManager save/load restore of animal-bound quests', () => {
   })
 })
 
+// Plan 199 — `WorldBundle` rebuild resets fauna's per-kind id counter, so a
+// bound wild-fauna `animalId` can silently collide with an unrelated new
+// animal unless the mid-session rebuild path also invalidates it (the
+// constructor-only path above only covers save/load restore).
+describe('QuestManager invalidateStaleAnimalTargets (mid-session rebuild)', () => {
+  it('invalidates an active wild-fauna-kind (wolf) binding instead of leaving a stale id bound', () => {
+    const qm = makeManager([wolfQuest], () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState('wolf')).toBe('active')
+
+    qm.invalidateStaleAnimalTargets()
+    expect(qm.getState('wolf')).toBe('invalidated')
+
+    // A post-rebuild animal that coincidentally reused the same id string
+    // must not be able to complete the now-invalidated quest.
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })).toBeNull()
+    expect(qm.getState('wolf')).toBe('invalidated')
+  })
+
+  it('rebinds an active livestock-kind (sheep) binding to a freshly resolved id instead of invalidating', () => {
+    let resolved = 'sheep-house0-0'
+    const qm = makeManager([sheepQuest], () => resolved)
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState('sheep')).toBe('active')
+
+    // Rebuild reissues livestock ids too — the resolver now returns a
+    // different (but still deterministically re-derivable) id.
+    resolved = 'sheep-house0-1'
+    qm.invalidateStaleAnimalTargets()
+    expect(qm.getState('sheep')).toBe('active')
+
+    expect(qm.onInteractObjective({ type: 'animal_found', animalId: 'sheep-house0-0' })).toBeNull()
+    const override = qm.onInteractObjective({ type: 'animal_found', animalId: 'sheep-house0-1' })
+    expect(override?.line).toBe('find sheep')
+    expect(qm.getState('sheep')).toBe('ready_to_report')
+  })
+
+  it('is a no-op for quests with no active animal binding', () => {
+    const qm = makeManager([simpleQuest])
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState('simple')).toBe('active')
+    qm.invalidateStaleAnimalTargets()
+    expect(qm.getState('simple')).toBe('active')
+  })
+})
+
 describe('QuestManager dangerous trait binding', () => {
   const dangerousWolfQuest: QuestDef = {
     id: 'dangerous-wolf',

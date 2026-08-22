@@ -322,6 +322,34 @@ export class QuestManager {
     if (url) this.playSound(url, QUEST_COMPLETE_SOUND_VOLUME)
   }
 
+  /** Plan 199 — invalidates or rebinds any `active` wild-fauna
+   *  `kill_target_animal`/`find_animal` quest after a same-session
+   *  `WorldBundle` rebuild. Fauna is fully disposed and recreated on rebuild
+   *  with each kind's id counter restarting from 0 (`createFauna.ts`), so a
+   *  stale `animalTargets` entry risks silently binding to an unrelated new
+   *  animal that happens to reuse the same id string — the same "Animal A
+   *  dies → Animal B spawns → quest must not silently target B" invariant
+   *  this plan requires, just reached via a rebuild instead of a death.
+   *  Mirrors the constructor's save/load-restore handling of the identical
+   *  case above; livestock stays exempt (deterministically re-derivable via
+   *  `homePlaceId`, see `AnimalTargetResolver`) and is rebound instead of
+   *  invalidated. Caller: `rebuildWorld()` only when it *doesn't* already
+   *  call `reset()` (a genuinely new seed clears `animalTargets` anyway). */
+  invalidateStaleAnimalTargets(): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active' || !this.animalTargets.has(def.id)) continue
+      const objective = this.currentStage(def, s.stageIndex)?.objective
+      if (objective?.type !== 'kill_target_animal' && objective?.type !== 'find_animal') continue
+      this.animalTargets.delete(def.id)
+      if (!LIVESTOCK_KINDS.has(objective.kind)) {
+        this.setQuestState(def.id, { state: 'invalidated', stageIndex: s.stageIndex })
+        continue
+      }
+      this.bindAnimalTargetIfNeeded(def, s.stageIndex)
+    }
+  }
+
   /** Binds `stageIndex`'s objective to one concrete `animalId` if it's a
    *  `kill_target_animal`/`find_animal` stage and isn't bound yet — a no-op
    *  otherwise (including when `resolveAnimalTarget` has no live candidate

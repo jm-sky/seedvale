@@ -28,7 +28,7 @@ import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
 import { shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
-import { DEFAULT_MAX_SIZE, Inventory } from '../items/Inventory'
+import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
 import { hasItemCapability } from '../items/itemCatalog'
 import { isWeaponMaintenanceKind } from '../items/itemInstances'
@@ -502,7 +502,14 @@ export async function createApp(
       const instance = createAcquiredInstance(kind)
       const added = instance ? inventory.addInstance(instance) : inventory.add(kind)
       if (!added) {
-        bundle.droppedItems.drop(kind, player.mesh.position.x, player.mesh.position.z)
+        // Plan 199 — an overflow drop still carries the instance identity
+        // that was just minted for it, so a later pickup doesn't reset it.
+        bundle.droppedItems.drop(
+          kind,
+          player.mesh.position.x,
+          player.mesh.position.z,
+          instance ? toSaveItemInstance(instance) : undefined,
+        )
       }
     }
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
@@ -712,6 +719,12 @@ export async function createApp(
         resourceDepletion,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
+
+      // Plan 199 — a same-seed rebuild recreates fauna with fresh per-kind
+      // id counters; `reset()` below already clears `animalTargets` on a
+      // genuinely new world, so this only needs to run for the in-session
+      // terrain-param rebuild path.
+      if (!resetCollectedItems) questManager.invalidateStaleAnimalTargets()
 
       if (resetCollectedItems) {
         inventory.clear()

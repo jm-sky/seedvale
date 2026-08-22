@@ -34,6 +34,20 @@ export type SaveItemInstance = {
   sharpness?: number
 }
 
+/** `ItemInstance` → its persisted-row shape — the single conversion used by
+ *  `instancesToJSON()` and by anywhere else (dropped-item world records,
+ *  plan 199) that needs to hand an instance's condition across a boundary
+ *  that only speaks plain data, not live class instances. */
+export function toSaveItemInstance(instance: ItemInstance): SaveItemInstance {
+  const row: SaveItemInstance = { id: instance.id, kind: instance.kind }
+  if (isTrapItemInstance(instance)) row.durability = instance.durability
+  if (isWeaponItemInstance(instance)) {
+    row.durability = instance.durability
+    row.sharpness = instance.sharpness
+  }
+  return row
+}
+
 /** Plan 159 — a stack-level freshness batch for one perishable `ItemKind`.
  *  Freshness belongs to the stack, not to an individual food unit: a kind's
  *  total `count` (still tracked in `counts` for every existing caller) is
@@ -337,17 +351,7 @@ export class Inventory {
   }
 
   instancesToJSON(): SaveItemInstance[] {
-    const out: SaveItemInstance[] = []
-    for (const instance of this.instances.values()) {
-      const row: SaveItemInstance = { id: instance.id, kind: instance.kind }
-      if (isTrapItemInstance(instance)) row.durability = instance.durability
-      if (isWeaponItemInstance(instance)) {
-        row.durability = instance.durability
-        row.sharpness = instance.sharpness
-      }
-      out.push(row)
-    }
-    return out
+    return [...this.instances.values()].map(toSaveItemInstance)
   }
 
   static instancesFromJSON(rows: readonly SaveItemInstance[]): ItemInstance[] {

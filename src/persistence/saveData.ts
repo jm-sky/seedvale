@@ -35,7 +35,10 @@ export type SaveQuests = {
   relations: Record<string, number>
 }
 
-export type SaveDroppedItem = { id: string, kind: ItemKind, x: number, z: number }
+/** `instance` (plan 199) — set only when this drop came from an
+ *  `ItemInstance` (traps, weapon-maintenance kinds); optional so every save
+ *  before this plan simply lacks it, same idiom as `SavePlacedFire.grate`. */
+export type SaveDroppedItem = { id: string, kind: ItemKind, x: number, z: number, instance?: SaveItemInstance }
 
 /** `kind` added in v6 (`docs/plans/archive/2026-08-09--050`) — `'pit'` (stone-ring,
  *  longer burn) vs `'simple'` (branches only, shorter burn). Older saves

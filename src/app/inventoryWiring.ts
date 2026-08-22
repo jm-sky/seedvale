@@ -13,6 +13,7 @@ import type { Toast } from '../ui/createToast'
 import type { WorldBundle } from './worldBundle'
 import { playInventoryDrop } from '../audio/inventorySounds'
 import { askGuardForSword } from '../items/guardSword'
+import { toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
 import { isInstanceBackedKind } from '../items/itemInstances'
 import { ITEM_DEFS } from '../items/items'
@@ -117,14 +118,16 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
    *  `createInventoryScreen.ts`. Re-`refresh()`es the (already-open) screen
    *  immediately since world simulation is frozen while it's open (see the
    *  tick loop's modal-gating in `gameLoop.ts`) — nothing else will update it.
-   *  Instance-backed kinds (weapons/traps) drop as plain world items for now —
-   *  their per-instance durability/sharpness isn't carried over yet. */
+   *  Instance-backed kinds (weapons/traps) each carry their own identity and
+   *  durability/sharpness across the drop, same as a plain world pickup
+   *  (plan 199). */
   const dropItemStack = (kind: ItemKind): void => {
     const instanceBacked = isInstanceBackedKind(kind)
-    const count = instanceBacked ? inventory.countInstances(kind) : inventory.count(kind)
+    const instances = instanceBacked ? inventory.getInstances(kind) : []
+    const count = instanceBacked ? instances.length : inventory.count(kind)
     if (count <= 0) return
     if (instanceBacked) {
-      for (const instance of inventory.getInstances(kind)) inventory.removeInstance(instance.id)
+      for (const instance of instances) inventory.removeInstance(instance.id)
     } else {
       inventory.remove(kind, count)
     }
@@ -138,6 +141,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
         kind,
         player.mesh.position.x + Math.cos(angle) * 0.6,
         player.mesh.position.z + Math.sin(angle) * 0.6,
+        instanceBacked ? toSaveItemInstance(instances[i]!) : undefined,
       )
     }
     playInventoryDrop(playOnce)

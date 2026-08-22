@@ -1,5 +1,14 @@
 import type { NpcGender } from './characters'
 import { createSeededRandom } from '../world/parseSeed'
+import { RESERVED_CHARACTERS } from './characters'
+
+/** Plan 199 — the 4 quest-critical reserved first names (`characters.ts`)
+ *  must stay unique so `QuestManager`/dialogue/label-marker code, which
+ *  identifies the giver/target purely by `NpcAgent.name`, can't be fooled by
+ *  an unrelated procedurally generated NPC rolling the same name elsewhere
+ *  in the world — several of them (`Anna`, `Piotr`, `Kasia`, `Marek`) are
+ *  otherwise ordinary entries in `NAME_POOLS.polish`. */
+const RESERVED_NAMES: ReadonlySet<string> = new Set(RESERVED_CHARACTERS.map((c) => c.name))
 
 /** A settlement's dominant "name character" — which cultural name pool most
  *  of its NPCs are drawn from. Purely a display/flavor trait: doesn't touch
@@ -115,6 +124,6 @@ export function generateNpcName(
   const otherCultures = NAME_CULTURES.filter((c) => c !== dominantCulture)
   const culture =
     random() < OFF_CULTURE_CHANCE ? otherCultures[Math.floor(random() * otherCultures.length)]! : dominantCulture
-  const pool = namesForCulture(culture, gender)
+  const pool = namesForCulture(culture, gender).filter((name) => !RESERVED_NAMES.has(name))
   return pool[Math.floor(random() * pool.length)]!
 }

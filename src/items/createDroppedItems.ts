@@ -1,5 +1,6 @@
 import { type Object3D, type Scene } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
+import type { SaveItemInstance } from './Inventory'
 import { disposeObject3D } from '../assets/loadGltf'
 import { placeOnGround } from '../settlement/props'
 import { createItemMesh, type ItemKind } from './items'
@@ -9,16 +10,23 @@ export type DroppedItem = {
   kind: ItemKind
   x: number
   z: number
+  /** Plan 199 — set only when this drop came from an `ItemInstance` (traps,
+   *  weapon-maintenance kinds), so pickup restores the same instance id and
+   *  condition instead of minting a fresh default one. Absent for plain
+   *  stackable kinds. */
+  instance?: SaveItemInstance
 }
 
 export type DroppedItems = {
   nodes: () => readonly DroppedItem[]
   /** Places one unit of `kind` at (x, z) as a new pickup, world-persistent
    *  (unlike the renewable spawner pool, dropped items don't respawn — once
-   *  collected they're gone for good, same as world-generated ones). */
-  drop: (kind: ItemKind, x: number, z: number) => void
+   *  collected they're gone for good, same as world-generated ones). Pass
+   *  `instance` when `kind` came from a concrete `ItemInstance` so its
+   *  identity/condition survives the drop→pickup round trip (plan 199). */
+  drop: (kind: ItemKind, x: number, z: number, instance?: SaveItemInstance) => void
   /** Removes a dropped item's mesh and record; null if `id` isn't known. */
-  collect: (id: string) => { kind: ItemKind, x: number, z: number } | null
+  collect: (id: string) => { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance } | null
   /** Advances items still in flight (plan 097 phase 2.1). Landed items cost
    *  nothing — only entries in `falling` are touched. */
   tick: (dt: number) => void
@@ -63,8 +71,8 @@ export function createDroppedItems(
 
   return {
     nodes: () => items,
-    drop(kind, x, z) {
-      const item: DroppedItem = { id: `drop:${Date.now()}:${nextDropId++}`, kind, x, z }
+    drop(kind, x, z, instance) {
+      const item: DroppedItem = { id: `drop:${Date.now()}:${nextDropId++}`, kind, x, z, instance }
       items.push(item)
       spawnMesh(item, DROP_SPAWN_HEIGHT)
       falling.set(item.id, { vy: 0 })
@@ -80,7 +88,7 @@ export function createDroppedItems(
         meshes.delete(id)
       }
       falling.delete(id)
-      return { kind: item!.kind, x: item!.x, z: item!.z }
+      return { kind: item!.kind, x: item!.x, z: item!.z, instance: item!.instance }
     },
     tick(dt) {
       if (falling.size === 0) return

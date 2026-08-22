@@ -10,10 +10,12 @@ export type QuestState =
   /** The stage's bound world entity can no longer be completed (e.g. a
    *  `find_animal` target died before being found) — terminal, no reward. */
   | 'failed'
-  /** Set only on save/load restore when the quest's world binding can't be
-   *  trusted to still refer to the same entity (e.g. an `active` quest bound
-   *  to a wild-fauna `animalId`, which isn't stable across a reload) —
-   *  terminal, no reward. See `QuestManager`'s constructor. */
+  /** Set on save/load restore, or on a same-session `WorldBundle` rebuild
+   *  (plan 199), when the quest's world binding can't be trusted to still
+   *  refer to the same entity (e.g. an `active` quest bound to a wild-fauna
+   *  `animalId`, which isn't stable across either boundary) — terminal, no
+   *  reward. See `QuestManager`'s constructor and
+   *  `invalidateStaleAnimalTargets()`. */
   | 'invalidated'
   | 'not_offered'
   | 'offered'
