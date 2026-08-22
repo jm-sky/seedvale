@@ -13,7 +13,7 @@ Paths below are files in this folder unless noted. Implementation notes / review
 
 ## Next plan ID
 
-`192`
+`193`
 
 ## Plan domains
 
@@ -102,6 +102,7 @@ Natural vegetation
 | `2026-08-21--188--fauna-and-dead-animal-lifecycle.md` | Rozszerzyć istniejący system fauny o wspólny lifecycle martwego zwierzęcia oraz dodać niedźwiedzia jako kolejny gatunek korzystający z istniejących mechanizmów fauny, habitatów, AI, combat i audio. | 🔴 | M | ~~138~~ ~~177~~ ~~179~~ |
 | `2026-08-21--190--plans-automation.md` | Zautomatyzować utrzymanie pomocniczych informacji w `docs/plans/README.md` oraz `PLANNED_PLANS_WITHOUT_NOTES.md`. | 🟡 | S | - |
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | Stworzyć system generowania górskich masywów i charakterystycznych szczytów, który kształtuje większe fragmenty krajobrazu — tworząc pasma, doliny, przełęcze i dominanty wysokościowe — zamiast generować pojedyncze niezależne wzniesienia. | 🟡 | L | 181 |
+| `2026-08-22--192--arch--time-and-simulation-consistency.md` | Ujednolicić obsługę czasu w Seedvale bez tworzenia globalnego `TimeManager` i bez zmiany istniejącego gameplay tuningu. | 🔴 | M | - |
 
 ### Fresh new
 
