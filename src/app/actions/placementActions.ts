@@ -33,6 +33,16 @@ import {
   TREE_PLANT_SEPARATION,
 } from '../../world/plantedTrees'
 import {
+  GARDEN_CAPABILITY,
+  GARDEN_COST,
+  GARDEN_FOOTPRINT_RADIUS,
+  GARDEN_PLACE_DURATION_SEC,
+  GARDEN_PLACE_REACH,
+  GARDEN_PLACEMENT_MESSAGE,
+  GARDEN_SEPARATION,
+  PLAYER_GARDEN_PLANT_RADIUS,
+} from '../../world/playerGarden'
+import {
   activeWellStage,
   WELL_FOOTPRINT_RADIUS,
   WELL_PLACE_DURATION_SEC,
@@ -66,6 +76,10 @@ export type PlacementActions = {
   placeTrapAtAim: (kind: TrapKind) => void
   placeWellAtAim: () => void
   workOnWell: (id: string) => void
+  /** Places a new player-built garden plot ahead of the player (plan 174 §1)
+   *  — a single-stage placement (unlike a well), immediately usable as a
+   *  planting anchor once built. */
+  placeGardenAtAim: () => void
   /** Plants a `tree_seed` from inventory ahead of the player (plan 126). */
   plantTreeAtAim: () => void
   /** Plants a crop seed of `cropId` ahead of the player — only valid near a
@@ -273,6 +287,56 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     busy.start(sessionSec, WELL_WORK_LABEL[stage], commitProgress, { onCancel: commitProgress })
   }
 
+  /** Places a new player-built garden plot ahead of the player (plan 174 §1)
+   *  — same shared-placement shape as a tent/trap/well, but single-stage:
+   *  the shovel is required (never consumed, same as a well's `pit`) and the
+   *  wood/stone cost is charged atomically when the placement channel
+   *  completes, from inventory or nearby dropped items (plan 187's
+   *  `constructionMaterials.ts`, the same construction-material seam a
+   *  well's `well`/`roof` stages use) — no parallel material system. */
+  const placeGardenAtAim = (): void => {
+    if (!inventory.hasCapability(GARDEN_CAPABILITY) || isActionBlocked(ctx)) return
+    const yaw = mouseLook.state.yaw
+    const x = player.mesh.position.x - Math.sin(yaw) * GARDEN_PLACE_REACH
+    const z = player.mesh.position.z - Math.cos(yaw) * GARDEN_PLACE_REACH
+    const reason = evaluateGroundPlacement({
+      x,
+      z,
+      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+      waterLevel: bundle.chunkManager.waterLevel,
+      blockers: tentBlockers(x, z),
+      peers: bundle.playerGardens.nodes(),
+      footprintRadius: GARDEN_FOOTPRINT_RADIUS,
+      separation: GARDEN_SEPARATION,
+    })
+    if (reason !== 'ok') {
+      toast.show(GARDEN_PLACEMENT_MESSAGE[reason === 'occupied' ? 'garden' : reason], 'error')
+      return
+    }
+    const requirements: MaterialRequirement[] = []
+    if (GARDEN_COST.stone > 0) requirements.push({ kind: 'stone', count: GARDEN_COST.stone })
+    if (GARDEN_COST.branch > 0) requirements.push({ kind: 'branch', count: GARDEN_COST.branch })
+    const missing = requirements.filter(
+      (r) => !hasMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r),
+    )
+    if (missing.length > 0) {
+      toast.show(
+        `Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+        'error',
+      )
+      return
+    }
+    busy.start(GARDEN_PLACE_DURATION_SEC, 'Budowa grządki…', () => {
+      for (const r of requirements) {
+        if (!consumeMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
+      }
+      bundle.playerGardens.place(x, z, yaw)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show('Zbudowano grządkę.')
+    })
+  }
+
   /** Plants a tree seed ahead of the player (plan 126 §1.2/§1.3): validates
    *  against nearby trees (procedural + already-planted — `getNearbyTrees`
    *  covers both, since a planted tree registers into the same
@@ -315,17 +379,20 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   }
 
   /** Plants a crop seed ahead of the player (plan 126 §2.3) — only within
-   *  reach of a settlement garden (implementation notes §12: keep placement
-   *  narrow/garden-based, not general farmland). Otherwise the same
-   *  validate-then-busy-channel shape as `plantTreeAtAim`. */
+   *  reach of a settlement garden, or a player-built garden plot (plan 174
+   *  §2: same `isNearAnyGarden` mechanism, just a second, tighter-radius
+   *  call — a player plot is one small bed, not a whole clearing). Otherwise
+   *  the same validate-then-busy-channel shape as `plantTreeAtAim`. */
   const plantCropAtAim = (cropId: CropId): void => {
     const seedKind = CROP_SEED_ITEM[cropId]
     if (!inventory.has(seedKind, 1) || isActionBlocked(ctx)) return
     const yaw = mouseLook.state.yaw
     const x = player.mesh.position.x - Math.sin(yaw) * CROP_PLANT_REACH
     const z = player.mesh.position.z - Math.cos(yaw) * CROP_PLANT_REACH
-    const gardens = bundle.settlementsManager.getLoaded().flatMap((s) => s.landmarks.gardens)
-    if (!isNearAnyGarden(x, z, gardens)) {
+    const settlementGardens = bundle.settlementsManager.getLoaded().flatMap((s) => s.landmarks.gardens)
+    const nearGarden = isNearAnyGarden(x, z, settlementGardens)
+      || isNearAnyGarden(x, z, bundle.playerGardens.nodes(), PLAYER_GARDEN_PLANT_RADIUS)
+    if (!nearGarden) {
       toast.show(CROP_PLANT_MESSAGE.noGarden, 'error')
       return
     }
@@ -365,6 +432,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     placeTrapAtAim,
     placeWellAtAim,
     workOnWell,
+    placeGardenAtAim,
     plantTreeAtAim,
     plantCropAtAim,
   }

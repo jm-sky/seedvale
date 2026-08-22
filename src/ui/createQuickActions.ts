@@ -47,6 +47,9 @@ export type QuickActionsHandlers = {
   /** Places a new player-built well ahead of the player (plan 127) — shown
    *  alongside dig/level while `hasDiggingTool` is true. */
   onBuildWell?: () => void
+  /** Places a new player-built garden plot ahead of the player (plan 174) —
+   *  shown alongside dig/level/well the same way, gated by `hasDiggingTool`. */
+  onBuildGarden?: () => void
   /** Plants a `tree_seed` from inventory ahead of the player (plan 126). */
   onPlantTree?: () => void
   /** Plants a crop seed of `cropId` ahead of the player (plan 126). */

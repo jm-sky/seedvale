@@ -123,6 +123,10 @@ type QuickActionsState = {
    *  alongside the other digging actions, gated by `hasDiggingTool` above (a
    *  digging tool is required to start the `pit` stage but never consumed). */
   onBuildWell: (() => void) | null
+  /** Places a new player-built garden plot ahead of the player (plan 174) —
+   *  shown alongside the other digging actions, same `hasDiggingTool` gate
+   *  as `onBuildWell` above. */
+  onBuildGarden: (() => void) | null
   /** Initial tree-seed ownership for showing "Zasadź drzewo" (plan 126). */
   hasTreeSeed: boolean
   /** Which crop seed kinds the player currently carries (plan 126). */
@@ -315,7 +319,7 @@ export const ui = reactive({
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, buildGrate: false, lightBranch: false, lightWoodenTorch: false },
     onBuildSimpleFire: null, onBuildFirePit: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
-    hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null,
+    hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null,
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
   } as QuickActionsState,

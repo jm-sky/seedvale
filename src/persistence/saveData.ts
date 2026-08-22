@@ -456,8 +456,24 @@ export type SaveDataV25 = Omit<SaveDataV24, 'version'> & {
   plantedCrops: SavePlantedCrop[]
 }
 
-/** Canonical save shape — always v25. `loadSaveData` migrates older saves up. */
-export type SaveData = SaveDataV25
+/** Persistent player-built garden plot (plan 174) — mirrors
+ *  `world/playerGarden.ts`'s `PlayerGardenRecord`. Identity/placement only —
+ *  a plot has no construction stages or growth state of its own (crops
+ *  planted on it are separate `SavePlantedCrop` records). */
+export type SavePlayerGarden = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+}
+
+export type SaveDataV26 = Omit<SaveDataV25, 'version'> & {
+  version: 26
+  playerGardens: SavePlayerGarden[]
+}
+
+/** Canonical save shape — always v26. `loadSaveData` migrates older saves up. */
+export type SaveData = SaveDataV26
 
 function isSaveConfig(value: unknown): value is SaveConfig {
   if (!value || typeof value !== 'object') return false
@@ -1160,13 +1176,36 @@ function isPlantedCropsField(value: unknown): value is SavePlantedCrop[] {
   })
 }
 
-export function isSaveDataV25(value: unknown): value is SaveData {
+export function isSaveDataV25(value: unknown): value is SaveDataV25 {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (v.version !== 25) return false
   if (!isSaveDataV24({ ...v, version: 24 })) return false
   if (!isPlantedTreesField(v.plantedTrees)) return false
   if (!isPlantedCropsField(v.plantedCrops)) return false
+  return true
+}
+
+function isPlayerGardensField(value: unknown): value is SavePlayerGarden[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const g = entry as Record<string, unknown>
+    return (
+      typeof g.id === 'string' &&
+      typeof g.x === 'number' &&
+      typeof g.z === 'number' &&
+      typeof g.yaw === 'number'
+    )
+  })
+}
+
+export function isSaveDataV26(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.version !== 26) return false
+  if (!isSaveDataV25({ ...v, version: 25 })) return false
+  if (!isPlayerGardensField(v.playerGardens)) return false
   return true
 }
 
@@ -1421,7 +1460,7 @@ function toV24(v23: SaveDataV23): SaveDataV24 {
 
 /** Plan 126 — pre-v25 saves predate player planting entirely, so none have
  *  ever been planted. */
-function toV25(v24: SaveDataV24): SaveData {
+function toV25(v24: SaveDataV24): SaveDataV25 {
   const { version: _version, ...rest } = v24
   return {
     ...rest,
@@ -1431,23 +1470,35 @@ function toV25(v24: SaveDataV24): SaveData {
   }
 }
 
-/** Migrates any post-v16 save payload to the canonical v25 shape. */
-function upToCurrent(v16: SaveDataV16): SaveData {
-  return toV25(toV24(toV23(toV22(toV21(toV20(toV19(toV18(toV17(v16)))))))))
+/** Plan 174 — pre-v26 saves predate player garden plots entirely, so none
+ *  have ever been built. */
+function toV26(v25: SaveDataV25): SaveData {
+  const { version: _version, ...rest } = v25
+  return {
+    ...rest,
+    version: 26,
+    playerGardens: [],
+  }
 }
 
-/** Accepts a stored v1–v25 save and always returns the canonical v25 shape. */
+/** Migrates any post-v16 save payload to the canonical v26 shape. */
+function upToCurrent(v16: SaveDataV16): SaveData {
+  return toV26(toV25(toV24(toV23(toV22(toV21(toV20(toV19(toV18(toV17(v16))))))))))
+}
+
+/** Accepts a stored v1–v26 save and always returns the canonical v26 shape. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
-    if (isSaveDataV25(value)) return value
-    if (isSaveDataV24(value)) return toV25(value)
-    if (isSaveDataV23(value)) return toV25(toV24(value))
-    if (isSaveDataV22(value)) return toV25(toV24(toV23(value)))
-    if (isSaveDataV21(value)) return toV25(toV24(toV23(toV22(value))))
-    if (isSaveDataV20(value)) return toV25(toV24(toV23(toV22(toV21(value)))))
-    if (isSaveDataV19(value)) return toV25(toV24(toV23(toV22(toV21(toV20(value))))))
-    if (isSaveDataV18(value)) return toV25(toV24(toV23(toV22(toV21(toV20(toV19(value)))))))
-    if (isSaveDataV17(value)) return toV25(toV24(toV23(toV22(toV21(toV20(toV19(toV18(value))))))))
+    if (isSaveDataV26(value)) return value
+    if (isSaveDataV25(value)) return toV26(value)
+    if (isSaveDataV24(value)) return toV26(toV25(value))
+    if (isSaveDataV23(value)) return toV26(toV25(toV24(value)))
+    if (isSaveDataV22(value)) return toV26(toV25(toV24(toV23(value))))
+    if (isSaveDataV21(value)) return toV26(toV25(toV24(toV23(toV22(value)))))
+    if (isSaveDataV20(value)) return toV26(toV25(toV24(toV23(toV22(toV21(value))))))
+    if (isSaveDataV19(value)) return toV26(toV25(toV24(toV23(toV22(toV21(toV20(value)))))))
+    if (isSaveDataV18(value)) return toV26(toV25(toV24(toV23(toV22(toV21(toV20(toV19(value))))))))
+    if (isSaveDataV17(value)) return toV26(toV25(toV24(toV23(toV22(toV21(toV20(toV19(toV18(value)))))))))
     if (isSaveDataV16(value)) return upToCurrent(value)
     if (isSaveDataV15(value)) return upToCurrent(toV16(value))
     if (isSaveDataV14(value)) return upToCurrent(toV16(toV15(value)))

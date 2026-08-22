@@ -87,7 +87,6 @@ Natural vegetation
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-20--174--player-garden-and-npc-need-sources.md` | Grządka budowana przez gracza + generyczny `NeedSource` model: NPC samodzielnie wykrywa i wybiera najbliższe dostępne źródło `hunger`/`thirst` przez istniejący needs/decision flow, bez `HelperAI`/`GardenAI`/global registry/per-frame scan | 🟡 | L | ~~159~~ ~~172~~ ~~126~~ ~~127~~ |
 | `2026-08-20--176--garden-and-field-maintenance.md` | Wspólny mechanizm utrzymania grządek/pól: stan zadbania pogarsza się z czasem, wpływa na produktywność, długotrwałe zaniedbanie usuwa grządkę/pole; wspólne dla gracza i NPC, bez `GardenManager`/`FarmManager` | 🟡 | M | ~~174~~ ~~126~~ |
 | `2026-08-19--168--settlement-lodging-and-sleep.md` | Nocowanie w osadzie: wybór łóżka, przyjaciela, płatnego noclegu lub siana; „Nocuj w mieście” prowadzi gracza do miejsca i dopiero wtedy uruchamia sen | 🔴 | L | ~~165~~ |
 | `2026-08-19--169--house-interior-furniture-and-bed-anchors.md` | Wyposażenie domów w łóżko, stół, lampę i skrzynię z authorowaniem placementu przez Asset Alignment Browser; łóżko dostarcza miejsce noclegu dla planu 168 | 🟡 | L | ~~168~~ ~~111~~ |
@@ -152,6 +151,7 @@ Implementation complete; needs play/browser check. Do not treat as normal backlo
 | `2026-08-21--186--combat-and-player-interactions.md` | [implementation notes](./2026-08-21--186--combat-and-player-interactions-implementation-notes.md) | 🔴 | L | - |
 | `2026-08-21--187--building-resources-and-mountains.md` | Resources/construction scope only (mountains split to `191` before implementation) — `beam` `ItemKind` + bonus yield on the felled→harvested tree-bucking step, `beam`/`branch` as shared campfire fuel, generic world-item construction material resolver (`items/constructionMaterials.ts`) wired into the player-built well. [implementation notes](./2026-08-21--187--building-resources-and-mountains-implementation-notes.md) | 🔴 | L | 181 ~~184~~ ~~111~~ |
 | `2026-08-20--175--cooking-vessels-grates-and-iron-rods.md` | [implementation notes](./2026-08-20--175--cooking-vessels-grates-and-iron-rods-implementation-notes.md) | 🟡 | M | ~~106~~ |
+| `2026-08-20--174--player-garden-and-npc-need-sources.md` | Player garden plot (single-stage, `constructionMaterials.ts` cost) widens `plantedCrops.ts`'s `isNearAnyGarden`; generic `NeedSource` resolver (`world/foodSources.ts`) lets a hungry NPC discover/select a real natural-food item or mature crop before falling back to the pre-existing abstract settlement-garden gather — thirst's well-source discovery was already done by plan 127, untouched here. No `HelperAI`/`GardenAI`/global registry/per-frame scan. [implementation notes](./2026-08-20--174--player-garden-and-npc-need-sources-implementation-notes.md) | 🟡 | L | ~~159~~ ~~172~~ ~~126~~ ~~127~~ |
 
 ---
 

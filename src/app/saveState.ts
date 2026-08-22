@@ -22,7 +22,7 @@ import { pickActiveSaveId } from '../persistence/saveSlots'
 /** Current canonical save schema version. The field list and migration story
  *  live in `src/persistence/saveData.ts` and `docs/STATE.md` — this module
  *  only assembles the runtime state into that shape. */
-const SAVE_VERSION = 25
+const SAVE_VERSION = 26
 
 /** Assembles the live runtime state into a `SaveData` and owns *when* it gets
  *  written. The split from `src/persistence/` is unchanged by this extraction:
@@ -138,6 +138,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     playerWells: bundle.playerWells.nodes().map((w) => ({ ...w })),
     plantedTrees: deps.getPlantedTrees().map((t) => ({ ...t })),
     plantedCrops: deps.getPlantedCrops().map((c) => ({ ...c })),
+    playerGardens: bundle.playerGardens.nodes().map((g) => ({ ...g })),
   })
 
   const saveNow = (): Promise<void> => writeSave(buildSaveData())
