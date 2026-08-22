@@ -9,6 +9,7 @@ import {
   hungerSevereDurationSec,
   isTakingDeprivationDamage,
   restoreNeedsFromSleep,
+  restorePersistedNeeds,
   thirstSevereDurationSec,
   tickHealthRegen,
   tickPlayerMovementVigor,
@@ -195,5 +196,28 @@ describe('restoreNeedsFromSleep', () => {
     restoreNeedsFromSleep(needs, 0.5)
     expect(needs.vigor.current).toBe(50)
     expect(needs.stamina.current).toBe(100)
+  })
+})
+
+describe('restorePersistedNeeds (plan 200 — save continuity)', () => {
+  it('restores starvation/dehydration duration from a save, not just hunger/thirst/vigor', () => {
+    const needs = createPlayerNeeds()
+    restorePersistedNeeds(needs, {
+      hunger: 40, thirst: 30, vigor: 60, starvationDuration: 5400, dehydrationDuration: 900,
+    })
+    expect(needs.hunger.current).toBe(40)
+    expect(needs.thirst.current).toBe(30)
+    expect(needs.vigor.current).toBe(60)
+    expect(needs.starvationDuration).toBe(5400)
+    expect(needs.dehydrationDuration).toBe(900)
+  })
+
+  it('clamps negative duration values defensively, like the existing pool clamps', () => {
+    const needs = createPlayerNeeds()
+    restorePersistedNeeds(needs, {
+      hunger: 100, thirst: 100, vigor: 100, starvationDuration: -5, dehydrationDuration: -1,
+    })
+    expect(needs.starvationDuration).toBe(0)
+    expect(needs.dehydrationDuration).toBe(0)
   })
 })

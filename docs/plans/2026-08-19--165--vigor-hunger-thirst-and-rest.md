@@ -204,4 +204,8 @@ Implemented directly in `src/player/PlayerNeeds.ts` (owner, per the implementati
 - **Tests**: new `src/player/PlayerNeeds.test.ts` — idle 24h-drain magnitude, drain independent of tick-size splitting, movement/sprint extra cost, duration accumulation/reset (including via `eatFood`/`drinkWater`), duration-gated Vigor/Stamina penalty and HP damage, HP-regen suppression, and that `restoreNeedsFromSleep` is unaffected by the plan 165 changes.
 - Not changed: `restoreNeedsFromSleep()`'s contract (quality-capped Vigor floor + full Stamina restore), `campRest.ts` quality calculation, `VigorState`/`StaminaState` generic primitives, NPC needs (`ai/Needs.ts`, `ai/npcVigor.ts` — untouched, plan 165 is player-only per its own scope).
 
+## Addendum (2026-08-22) — §"Deviation" superseded: now persisted (plan 200)
+
+Plan `2026-08-22--200--arch--persistence-gaps-authoritative-state.md` added `starvationDuration`/`dehydrationDuration` to `SavePlayerNeeds` (save v27) and `restorePersistedNeeds`. The deviation above is historical only — both counters now round-trip through save/load like `hunger.current`/`thirst.current`; pre-v27 saves migrate with both defaulted to `0`.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

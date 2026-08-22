@@ -22,7 +22,7 @@ import { pickActiveSaveId } from '../persistence/saveSlots'
 /** Current canonical save schema version. The field list and migration story
  *  live in `src/persistence/saveData.ts` and `docs/STATE.md` — this module
  *  only assembles the runtime state into that shape. */
-const SAVE_VERSION = 26
+const SAVE_VERSION = 27
 
 /** Assembles the live runtime state into a `SaveData` and owns *when* it gets
  *  written. The split from `src/persistence/` is unchanged by this extraction:
@@ -113,6 +113,8 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       hunger: player.needs.hunger.current,
       thirst: player.needs.thirst.current,
       vigor: player.needs.vigor.current,
+      starvationDuration: player.needs.starvationDuration,
+      dehydrationDuration: player.needs.dehydrationDuration,
     },
     ownedLandPlots: landOwnership.toJSON(),
     // Only XP round-trips — `value` is derived on load and `active` is

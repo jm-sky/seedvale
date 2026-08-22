@@ -65,7 +65,7 @@ Predator/prey roles with chase/flee behaviour, player-awareness (probabilistic d
 
 ### Persistence
 
-IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical save schema is **v26** — the full version-by-version history and migration behaviour is in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md#save-schema-version-history), not here. NPC runtime state is **not** a full simulation snapshot (needs/AI/vigor are not persisted; tree lifecycle uses sparse overrides + lazy growth from `elapsedDays`) — `Continue` is not equivalent to serializing the complete living world. `localStorage` is split by device-preference domain (graphics/player/world/audio), independent of the chosen save slot's world state.
+IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical save schema is **v27** — the full version-by-version history and migration behaviour is in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md#save-schema-version-history), not here. NPC runtime state is **not** a full simulation snapshot (needs/AI/vigor are not persisted; tree lifecycle uses sparse overrides + lazy growth from `elapsedDays`) — `Continue` is not equivalent to serializing the complete living world. `localStorage` is split by device-preference domain (graphics/player/world/audio), independent of the chosen save slot's world state.
 
 ### UI / input
 

@@ -1,7 +1,7 @@
 # Plan: Persistence Gaps & Authoritative State Completion
 
 **Created:** 2026-08-22
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test green); not browser-verified — see [implementation notes](./2026-08-22--200--arch--persistence-gaps-authoritative-state-implementation-notes.md)
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~195~~ ~~196~~ ~~197~~
 

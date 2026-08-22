@@ -145,16 +145,18 @@ function deprivationSeverity(duration: number, severeDurationSec: number): numbe
   return Math.max(0, Math.min(1, duration / severeDurationSec))
 }
 
-/** Restores a save's persisted hunger/thirst/vigor onto a fresh pool (stamina
- *  stays transient — plan §8). Clamps defensively in case of a hand-edited
- *  save. */
+/** Restores a save's persisted hunger/thirst/vigor and deprivation-duration
+ *  counters onto a fresh pool (stamina stays transient — plan §8). Clamps
+ *  defensively in case of a hand-edited save. */
 export function restorePersistedNeeds(
   needs: PlayerNeeds,
-  saved: { hunger: number, thirst: number, vigor: number },
+  saved: { hunger: number, thirst: number, vigor: number, starvationDuration: number, dehydrationDuration: number },
 ): void {
   needs.hunger.current = Math.max(0, Math.min(needs.hunger.max, saved.hunger))
   needs.thirst.current = Math.max(0, Math.min(needs.thirst.max, saved.thirst))
   needs.vigor.current = Math.max(0, Math.min(needs.vigor.max, saved.vigor))
+  needs.starvationDuration = Math.max(0, saved.starvationDuration)
+  needs.dehydrationDuration = Math.max(0, saved.dehydrationDuration)
 }
 
 /** Coarse per-tick drain — called every frame with `worldDt` (`gameLoop.ts`

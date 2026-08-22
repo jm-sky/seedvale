@@ -170,7 +170,7 @@ When changing `SaveData`, preserve compatibility with older saves and use the ex
 
 ### Save schema version history
 
-Current schema version: **v26**. Versions before v14 predate this table (see the migration chain in `saveData.ts` for their exact history); each row below is a version bump, what it added, and what happens when an older save is loaded.
+Current schema version: **v27**. Versions before v14 predate this table (see the migration chain in `saveData.ts` for their exact history); each row below is a version bump, what it added, and what happens when an older save is loaded.
 
 | Version | Plan | Added | Pre-version save migrates to |
 |---|---|---|---|
@@ -187,6 +187,7 @@ Current schema version: **v26**. Versions before v14 predate this table (see the
 | v24 | 127 (revision) | `SavePlayerWell` shape change: `stageStartedAt` (elapsed-time timestamp) → `workProgress` (hours of active work) | each well keeps its `stage` but `workProgress` resets to 0 — a timestamp can't retroactively recover "active work" |
 | v25 | 126 | `plantedTrees`/`plantedCrops` (identity/placement only — a planted tree's stage is already covered by `treeOverrides`) | both empty |
 | v26 | 174 | `playerGardens` (identity/placement only — planted crops on a plot are separate `SavePlantedCrop` records) | none built |
+| v27 | 200 | `SavePlayerNeeds` shape change: adds `starvationDuration`/`dehydrationDuration` (plan 165 simulation-time deprivation counters, gate real HP loss in `playerDamage.ts`) | both default to `0`, same as a fresh `createPlayerNeeds()` |
 
 Weather/seasons (plan 040) deliberately add **no** save field — `Season`/`WeatherState` are pure functions of `(seed, elapsedDays)`, both already persisted.
 
