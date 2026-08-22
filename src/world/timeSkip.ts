@@ -1,4 +1,5 @@
 import type { DayNightState } from './dayNight'
+import { gameHoursToRealSeconds } from './timeConversion'
 
 /** Real seconds held per skipped game-hour — 1h skip ≈ 1s, 8h skip ≈ 8s. */
 const SECONDS_PER_SKIPPED_HOUR = 1
@@ -87,7 +88,7 @@ export function createTimeSkip(dayNight: DayNightState): TimeSkip {
         hours,
         startTimeOfDay: dayNight.timeOfDay,
       }
-      dayNight.timeMultiplier = dayNight.dayLengthSec / (24 * SECONDS_PER_SKIPPED_HOUR)
+      dayNight.timeMultiplier = gameHoursToRealSeconds(1, dayNight.dayLengthSec) / SECONDS_PER_SKIPPED_HOUR
     },
     tick(dt) {
       if (!active) return null

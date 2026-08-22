@@ -67,6 +67,7 @@ import {
 import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
 import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
 import { barsVisibleForDistance, gazeOpacityFactor, labelOpacityForDistance } from '../ui/labelDistance'
+import { gameHoursToRealSeconds } from '../world/timeConversion'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer, setSubtreeCastShadow } from '../world/waterMirror'
 import {
@@ -2108,7 +2109,7 @@ export class NpcAgent {
       // (non-skipped) play — the same conversion `dayNight.ts`'s
       // `tickDayNight` uses in reverse (`dayLengthSec` real seconds / 24 per
       // game hour) — so needs/stamina/vigor accrue at their usual rate.
-      const stepDt = (step * dayLengthSec) / 24
+      const stepDt = gameHoursToRealSeconds(step, dayLengthSec)
       const sleeping = activity === 'sleep' || napping || shouldCollapseSleep(this.vigor)
       tickNeeds(this.needs, stepDt, dayLengthSec, {
         hungerThirstRate: sleeping ? SLEEP_HUNGER_THIRST_RATE : 1,

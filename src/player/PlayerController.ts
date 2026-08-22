@@ -642,7 +642,7 @@ export class PlayerController {
     this.jumpRequested = true
   }
 
-  update(dt: number): void {
+  update(dt: number, dayLengthSec: number): void {
     if (this.downed) {
       tickPlayerStamina(this.needs.stamina, dt, false)
       this.syncCamera()
@@ -671,7 +671,7 @@ export class PlayerController {
     this.moving = this.wish.lengthSq() > 0
     this.sprinting = this.moving && this.keys.sprint && !isExhausted(this.needs.stamina)
     tickPlayerStamina(this.needs.stamina, dt, this.sprinting)
-    if (this.moving) tickPlayerMovementVigor(this.needs.vigor, dt, this.sprinting)
+    if (this.moving) tickPlayerMovementVigor(this.needs.vigor, dt, this.sprinting, dayLengthSec)
     if (!this.skills.sneak.active) this.sneakUseDistance = 0
     if (this.moving) {
       const baseSpeed = (this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED) * this.encumbranceSpeedMultiplier

@@ -114,4 +114,17 @@ describe('tickNeeds', () => {
     expect(asleep.thirst).toBeLessThan(awake.thirst)
     expect(asleep.hunger).toBeLessThan(awake.hunger)
   })
+
+  it('needs take the same number of game-hours to fill regardless of dayLengthSec (plan 192)', () => {
+    // thirst is tuned to fill (0->1) over 8 game hours: ticking for exactly
+    // that many real/sim seconds (8h worth of dayLengthSec) should fully
+    // fill it at any day length.
+    for (const dayLengthSec of [480, 600, 240]) {
+      const needs = createNeedState(0)
+      needs.thirst = 0
+      const eightGameHoursInRealSeconds = (8 / 24) * dayLengthSec
+      tickNeeds(needs, eightGameHoursInRealSeconds, dayLengthSec)
+      expect(needs.thirst).toBeCloseTo(1, 6)
+    }
+  })
 })

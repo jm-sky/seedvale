@@ -1,5 +1,6 @@
 import { Color } from 'three'
 import type { SkyParams } from './createSky'
+import { realSecondsToGameDays } from './timeConversion'
 
 const NIGHT_FOG = new Color(0x1a2233)
 const DUSK_FOG = new Color(0xc4876a)
@@ -53,7 +54,7 @@ export function tickDayNight(state: DayNightState, dt: number): void {
   if (!state.enabled) return
   const len = Math.max(30, state.dayLengthSec)
   const mult = Math.max(0, state.timeMultiplier)
-  const advance = (dt * mult) / len
+  const advance = realSecondsToGameDays(dt * mult, len)
   state.elapsedDays += advance
   state.timeOfDay = (state.timeOfDay + advance) % 1
 }

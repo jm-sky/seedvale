@@ -10,10 +10,10 @@ import { ITEM_CATALOG } from '../items/itemCatalog'
 import { healHealth, type HealthState } from '../shared/HealthState'
 import {
   DEHYDRATION_HP_PER_SEC,
-  HUNGER_SEVERE_DURATION_SEC,
+  hungerSevereDurationSec,
   type PlayerNeeds,
   STARVATION_HP_PER_SEC,
-  THIRST_SEVERE_DURATION_SEC,
+  thirstSevereDurationSec,
 } from './PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD } from './PlayerSkills'
 
@@ -128,11 +128,12 @@ export function tickPlayerStarvationDamage(
   dt: number,
   heldTool: ToolKind | null,
   playerYaw: number,
+  dayLengthSec: number,
   onCombatHit?: () => void,
 ): void {
   let perSec = 0
-  if (needs.starvationDuration >= HUNGER_SEVERE_DURATION_SEC) perSec += STARVATION_HP_PER_SEC
-  if (needs.dehydrationDuration >= THIRST_SEVERE_DURATION_SEC) perSec += DEHYDRATION_HP_PER_SEC
+  if (needs.starvationDuration >= hungerSevereDurationSec(dayLengthSec)) perSec += STARVATION_HP_PER_SEC
+  if (needs.dehydrationDuration >= thirstSevereDurationSec(dayLengthSec)) perSec += DEHYDRATION_HP_PER_SEC
   if (perSec <= 0 || dt <= 0) return
   applyPlayerDamage({
     player,

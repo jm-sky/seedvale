@@ -1480,14 +1480,14 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // order of cost as the HUD weight readout already updated on every
       // inventory mutation) rather than threaded through every mutation site.
       player.setEncumbrance(inventory.totalWeight() + bundle.placedContainers.carriedWeightKg(), inventory.maxWeight)
-      withCategory(monitor, 'PHYSICS', () => { player.update(dt) })
+      withCategory(monitor, 'PHYSICS', () => { player.update(dt, dayNight.dayLengthSec) })
       // Hunger/thirst/vigor progress on `worldDt` (scaled during a time-skip,
       // see above) — stamina keeps ticking inside `player.update(dt)` on raw
       // `dt` (tied to sprint) regardless of any skip.
-      tickPlayerNeeds(player.needs, worldDt)
+      tickPlayerNeeds(player.needs, worldDt, dayNight.dayLengthSec)
       if (!player.isDowned()) {
-        tickPlayerStarvationDamage(player, player.needs, worldDt, heldTool.held(), mouseLook.state.yaw, onPlayerDamaged)
-        tickHealthRegen(player.needs, player.health, worldDt)
+        tickPlayerStarvationDamage(player, player.needs, worldDt, heldTool.held(), mouseLook.state.yaw, dayNight.dayLengthSec, onPlayerDamaged)
+        tickHealthRegen(player.needs, player.health, worldDt, dayNight.dayLengthSec)
       }
       if (player.tickDowned(worldDt)) {
         applyDownedRecovery(player.health)
