@@ -13,7 +13,7 @@ Paths below are files in this folder unless noted. Implementation notes / review
 
 ## Next plan ID
 
-`202`
+`204`
 
 ## Plan domains
 
@@ -104,6 +104,7 @@ Natural vegetation
 | `2026-08-22--195--arch--data-state-consistency.md` | Przeprowadzić focused audit spójności danych i state w Seedvale. | 🔴 | M | ~~193~~ ~~194~~ |
 | `2026-08-22--200--arch--persistence-gaps-authoritative-state.md` | Findings matrix (192–195 persistence/continuity findings vs. 196–199 coverage) confirms only one still-open finding meets the plan's fix condition: `PlayerNeeds.starvationDuration`/`.dehydrationDuration` (plan 165) not persisted in `SavePlayerNeeds`, silently pausing the HP-drain grace period on a save/reload mid-crisis. Fixed: save schema v27 (`SavePlayerNeedsV27`, `toV27` migration defaulting both to `0`), `saveState.ts`/`restorePersistedNeeds` round-trip both fields. [implementation notes](./2026-08-22--200--arch--persistence-gaps-authoritative-state-implementation-notes.md) | 🔍 | M | ~~195~~ ~~196~~ ~~197~~ |
 | `2026-08-22--201--arch--deferred-architecture-state-cleanup.md` | Domknąć pozostałe, świadomie odłożone findings z audytów 192–195 po wykonaniu planów 196–200. | ⚪ | M | ~~192~~ ~~193~~ ~~194~~ ~~195~~ ~~196~~ ~~197~~ ~~198~~ ~~199~~ ~~200~~ |
+| `2026-08-22--203--well-depth-groundwater-and-protection.md` | Rozwinąć istniejący system **Player-Built Well** o: | 🟡 | M | ~~127~~ |
 
 ### Fresh new
 
