@@ -2,7 +2,7 @@
 
 **Created:** 2026-08-22
 **Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test green); browser verification not yet done, see [implementation notes](./2026-08-22--196--arch--time-skip-simulation-semantics-implementation-notes.md).
-**Priority:** critical · **Effort:** M
+**Priority:** high · **Effort:** M
 **Depends on:** ~~192~~ ~~193~~
 
 ## Cel

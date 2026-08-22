@@ -2,7 +2,7 @@
 
 **Created:** 2026-08-22  
 **Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test green); not browser-verified — see [implementation notes](./2026-08-22--197--arch--npc-runtime-state-lifecycle-continuity-implementation-notes.md)  
-**Priority:** critical · **Effort:** L  
+**Priority:** high · **Effort:** L  
 **Depends on:** ~~194~~ ~~196~~
 
 ## Cel
