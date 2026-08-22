@@ -28,7 +28,6 @@ describe('PlannedAction / DecisionContext shapes', () => {
 
   it('accepts a composable decision snapshot', () => {
     const ctx: DecisionContext = {
-      entity: { id: 'npc-1', kind: 'npc' },
       needs: { thirst: 0.9, hunger: 0.2 },
       scheduleActivity: 'work',
       nearbyHumanCount: 1,

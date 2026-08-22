@@ -161,37 +161,20 @@ Seedvale is single-player today; there is no multiplayer, netcode or WebSocket l
 Persistence is orchestrated from the app layer, but ownership is split by responsibility:
 
 - `src/app/saveState.ts` assembles the current runtime state into `SaveData` and owns *when* it is written (explicit save, page-lifecycle events, interval autosave). `createApp.ts` gives it the live systems to read from.
-- `src/persistence/saveData.ts` owns the `SaveData` schema, validation/defaulting and migrations.
+- `src/persistence/saveData.ts` owns the `SaveData` schema and its validation/defaulting.
 - `src/persistence/saveDb.ts` owns the IndexedDB storage operations and the named save slots.
 
 NPC runtime state is not fully persisted; a `Continue` is therefore not equivalent to serializing the complete living world.
 
-When changing `SaveData`, preserve compatibility with older saves and use the existing migration/defaulting patterns in the config and persistence code. `loadSaveData` (`src/persistence/saveData.ts`) migrates any older version up to the current one; `src/persistence/saveData.ts` is authoritative for the exact shape — this section is a summary, not a restatement of the field list.
+`SaveData` is a single-contract schema with **no** migration/compatibility story for older saves (plan `2026-08-22--201--arch--deferred-architecture-state-cleanup.md` — a deliberate hard cut). `loadSaveData` (`src/persistence/saveData.ts`) validates against the current shape only and returns `null` for anything that doesn't match; a save from before the hard cut simply fails to load, there is no `v0 → v1`-style migration path. Versioning/migration can be reintroduced later if the format changes again — do not preserve compatibility with a prior shape as a matter of course; that historical-compatibility burden is exactly what plan 201 removed. `src/persistence/saveData.ts` is authoritative for the exact field list; this section is a summary, not a restatement of it.
 
-### Save schema version history
+### Save schema
 
-Current schema version: **v27**. Versions before v14 predate this table (see the migration chain in `saveData.ts` for their exact history); each row below is a version bump, what it added, and what happens when an older save is loaded.
+Current schema version: **v1** — a reset, not "the first version ever": everything the game currently persists (config, player, inventory, quests, world objects, settlement/economy state, skills, etc.) is folded into this one contract with no prior-version baggage. The full field list lives in `src/persistence/saveData.ts`'s `SaveData` type; a few non-obvious points:
 
-| Version | Plan | Added | Pre-version save migrates to |
-|---|---|---|---|
-| v14 | 129 | Owned land plots | none owned |
-| v15 | 124/128 | Skill XP (`xp` only — `value` is re-derived, `active` is never restored) | Sneak at the legacy 0.5, Survival at zero |
-| v16 | 141 | Placed animal traps (id/kind/position/state/durability/`skillAtActivation`/`weatherCheckedAtDay`) | no traps, fresh `traps` skill |
-| v17 | 125 | Fauna spawn-point lifecycle (`spawnPoints`: id/state/deathsThisCycle/disabledAtDay, keyed by the deterministic `PreySpawner.id`) | no entries — every spawn point starts `active` |
-| v18 | 150 | Version bump (combat mode/downed state landed in this plan) | — |
-| v19 | 155 | `inventoryInstances` (generic `ItemInstance` model) | — |
-| v20 | 159 | `foodBatches`, `dryingRacks`, `hives`, `fishingBait`; `placedTraps` gains optional `baitKind` | all four empty/none; existing perishable stacks behave as always-fresh until removed and re-added |
-| v21 | 172 | `harvestedCropIds` (same sparse-id contract as `collectedItemIds`) | none harvested |
-| v22 | 164 | `placedContainers`/`carriedContainer` | none placed/carried |
-| v23 | 127 | `playerWells` | none built |
-| v24 | 127 (revision) | `SavePlayerWell` shape change: `stageStartedAt` (elapsed-time timestamp) → `workProgress` (hours of active work) | each well keeps its `stage` but `workProgress` resets to 0 — a timestamp can't retroactively recover "active work" |
-| v25 | 126 | `plantedTrees`/`plantedCrops` (identity/placement only — a planted tree's stage is already covered by `treeOverrides`) | both empty |
-| v26 | 174 | `playerGardens` (identity/placement only — planted crops on a plot are separate `SavePlantedCrop` records) | none built |
-| v27 | 200 | `SavePlayerNeeds` shape change: adds `starvationDuration`/`dehydrationDuration` (plan 165 simulation-time deprivation counters, gate real HP loss in `playerDamage.ts`) | both default to `0`, same as a fresh `createPlayerNeeds()` |
-
-Weather/seasons (plan 040) deliberately add **no** save field — `Season`/`WeatherState` are pure functions of `(seed, elapsedDays)`, both already persisted.
-
-`QuestManager`'s `questId → animalId` binding is never persisted: on restore, an active `kill_target_animal`/`find_animal` quest re-derives its binding — livestock kinds (deterministic `animalId` per settlement/house seed) rebind via the normal resolver; wild-fauna kinds (unseeded per-session `animalId` counter) become `invalidated` instead of silently retargeting a different individual, because fauna/livestock HP/death/corpse state is not persisted at all (killed animals resurrect on reload).
+- `QuestManager`'s `questId → animalId` binding is never persisted: on restore, an active `kill_target_animal`/`find_animal` quest re-derives its binding — livestock kinds (deterministic `animalId` per settlement/house seed) rebind via the normal resolver; wild-fauna kinds (unseeded per-session `animalId` counter) become `invalidated` instead of silently retargeting a different individual, because fauna/livestock HP/death/corpse state is not persisted at all (killed animals resurrect on reload).
+- Weather/seasons (plan 040) deliberately add **no** save field — `Season`/`WeatherState` are pure functions of `(seed, elapsedDays)`, both already persisted.
+- `ResourceDeposits`' mining-hits-remaining (`SaveData.resourceDeposits`, plan 198/201) is a sparse `id → remaining` map — an absent id restores as untouched (deterministic initial from richness), `0` means depleted.
 
 Named save slots (plan 166): the `saves` store holds `{ name, data: SaveData }` keyed by `slot_*` ids, not a single `'current'` — up to 8 named games, active id in localStorage. A leftover raw `SaveData` under `'current'` migrates on first list/read.
 
@@ -217,7 +200,7 @@ Before adding a subsystem, answer:
 3. Does it need to survive a `WorldBundle` rebuild?
 4. If a replaceable world dependency changes, will this system be recreated or explicitly rebound?
 5. What existing environment/simulation API should it consume instead of duplicating logic?
-6. Does it need persistence? If yes, what is the compatibility story for old saves?
+6. Does it need persistence? If yes, add the field directly to `SaveData` v1 — there is no old-save compatibility story to design around (see "Save schema" above).
 7. Does it belong to simulation, world generation, interaction, or presentation?
 8. Is its state representable independently of the client/renderer, so a future server-authoritative split wouldn't require a rewrite?
 

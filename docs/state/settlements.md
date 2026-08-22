@@ -53,7 +53,7 @@ Multiplayer nie jest planowany teraz i nie projektujemy go tutaj. Ale S3/S7 poka
 - Każda załadowana osada ma `SettlementEconomy`: cele popytu, niedobór/nadwyżka.
 - Drwal: ścinka → depozyt na stosie. Drugi, mniejszy stos (woodshed) jest płatny raz z nadwyżki drewna.
 - Farmer / rybak / górnik wołają wspólny production hook — **puste wyjścia**, wciąż plan 071 (069 nie dodaje łańcuchów produkcyjnych).
-- Stock przeżywa stream-out/in w rejestrze `SettlementsManager`; persystowany w `SaveData.settlementEconomies` od save v12, i przenoszony przez in-session rebuild `WorldBundle` (`carriedEconomies`). W przeciwieństwie do `Household` (§Gospodarstwa) — patrz tam.
+- Stock przeżywa stream-out/in w rejestrze `SettlementsManager`; persystowany w `SaveData.settlementEconomies` (od save v12, dziś część jednokontraktowego v1 — plan 201), i przenoszony przez in-session rebuild `WorldBundle` (`carriedEconomies`). `Household` (§Gospodarstwa) ma od planu 197 ten sam in-session carry-mechanizm; jedyna pozostała różnica to `SaveData` — `Household` tam nadal nie jest.
 
 ### Gospodarstwa (plan 069)
 

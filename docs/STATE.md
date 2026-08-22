@@ -2,7 +2,7 @@
 
 **Purpose:** a short, current snapshot of the implemented architecture — enough to start a plan without reading every prior plan first. This document describes what exists now, not the desired future state, and not *how* any given plan implemented it.
 
-**Last verified:** 2026-08-21
+**Last verified:** 2026-08-22
 
 ## Read this first
 
@@ -65,7 +65,7 @@ Predator/prey roles with chase/flee behaviour, player-awareness (probabilistic d
 
 ### Persistence
 
-IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical save schema is **v27** — the full version-by-version history and migration behaviour is in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md#save-schema-version-history), not here. NPC runtime state is **not** a full simulation snapshot (needs/AI/vigor are not persisted; tree lifecycle uses sparse overrides + lazy growth from `elapsedDays`) — `Continue` is not equivalent to serializing the complete living world. `localStorage` is split by device-preference domain (graphics/player/world/audio), independent of the chosen save slot's world state.
+IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical save schema is **v1** — a hard cut (plan 201) with no migration/compatibility story for older saves; the exact field list is in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md#save-schema), not here. NPC runtime state is **not** a full simulation snapshot (needs/AI/vigor are not persisted; tree lifecycle uses sparse overrides + lazy growth from `elapsedDays`) — `Continue` is not equivalent to serializing the complete living world. `localStorage` is split by device-preference domain (graphics/player/world/audio), independent of the chosen save slot's world state.
 
 ### UI / input
 
@@ -85,7 +85,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `WaterSource` — shared well/lake drink/fill abstraction (`src/world/WaterSource.ts`); future river/polluted/treated sources should reuse it.
 - Shared simulation contracts — `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `pickHighestScore` in `src/simulation/`. NPC + fauna adapters; predator scoring in `src/fauna/predatorHumanDecision.ts`.
 - `SettlementEconomy` — settlement-owned bulk stock (`src/economy/`). Not player `Inventory`. Persisted since save v12 (`SaveData.settlementEconomies`); carried across an in-session `WorldBundle` rebuild too.
-- `Household` — one family's own food/wood/water stock (`src/settlement/household.ts`), sitting between NPC carrying and `SettlementEconomy`. Not in save data (unlike `SettlementEconomy`), and — unlike `SettlementEconomy` — not carried across an in-session `WorldBundle` rebuild either; both are known gaps, see plan `195`'s audit notes.
+- `Household` — one family's own food/wood/water stock (`src/settlement/household.ts`), sitting between NPC carrying and `SettlementEconomy`. Not in save data (unlike `SettlementEconomy`, a deliberate, still-open gap) — but, since plan 197, is carried across an in-session `WorldBundle` rebuild the same way `SettlementEconomy` already was (`carriedHouseholds`, mirroring `carriedEconomies`).
 - `NpcAgent` / `AnimalAgent` — central behaviour integration points. `NpcAgent` also carries a small generic `Inventory` as a brief hold between extracting a world resource and delivering it.
 - `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot; `Inventory` itself is generic (player + NPC).
 - `TreeLifecycle` / `harvestWorldTree*` — tree growth + multi-stage chop (`src/world/treeLifecycle.ts`, `treeHarvest.ts`).

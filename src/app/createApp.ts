@@ -263,11 +263,11 @@ export async function createApp(
   // stage anchor for trees; position/cropId/stage anchor for crops).
   let plantedTrees = parsePlantedTrees(initialSave?.plantedTrees)
   let plantedCrops = parsePlantedCrops(initialSave?.plantedCrops)
-  // Plan 198 — authoritative ore-deposit mining-hits-remaining, sparse and
-  // keyed by `NaturalResource.id`: same "carried across rebuild, reset only
-  // on a genuinely new world" contract as the ids/arrays above. Not part of
-  // `SaveData` yet — in-session continuity only (plan 198 §8).
-  let resourceDepletion: ResourceDepletionState = new Map()
+  // Plan 198/201 — authoritative ore-deposit mining-hits-remaining, sparse
+  // and keyed by `NaturalResource.id`: same "carried across rebuild, reset
+  // only on a genuinely new world" contract as the ids/arrays above, and
+  // persisted the same way (`SaveData.resourceDeposits`).
+  let resourceDepletion: ResourceDepletionState = new Map(Object.entries(initialSave?.resourceDeposits ?? {}))
   // Persistent player land ownership (plan 129) — sparse, doesn't need the
   // `bundle`-rebuild indirection `onAnimalDeath`/`getPlayerSocial` use below
   // (it never depends on `questManager`), so it's threaded straight through.
@@ -669,6 +669,7 @@ export async function createApp(
     getPlantedTrees: () => plantedTrees,
     getPlantedCrops: () => plantedCrops,
     getTreeLifecycle: () => treeLifecycle,
+    getResourceDepletion: () => resourceDepletion,
   })
 
   let rebuilding = false

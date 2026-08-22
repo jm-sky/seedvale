@@ -24,6 +24,7 @@ const config = {
   terrain: { chunkSize: 64 },
   sky: { inclination: 0.5 },
   player: { name: 'Anna' },
+  settlements: {},
 } as SaveConfig
 
 const v1 = {
@@ -31,6 +32,44 @@ const v1 = {
   config,
   player: { x: 1, z: 2, yaw: 0, pitch: 0 },
   savedAt: 100,
+  quests: { progress: [], exp: 0, relations: {} },
+  inventory: {},
+  inventoryInstances: [],
+  collectedItemIds: [],
+  droppedItems: [],
+  placedFires: [],
+  timeOfDay: 0.32,
+  elapsedDays: 0,
+  heldTool: null,
+  treeOverrides: {},
+  playerTorch: null,
+  placedTents: [],
+  placedTraps: [],
+  worldFlags: {},
+  map: { discoveredCells: [] },
+  settlementEconomies: {},
+  playerNeeds: { hunger: 100, thirst: 100, vigor: 100, starvationDuration: 0, dehydrationDuration: 0 },
+  ownedLandPlots: [],
+  skills: {
+    sneak: { xp: 0 },
+    survival: { xp: 0 },
+    traps: { xp: 0 },
+    defense: { xp: 0 },
+    archery: { xp: 0 },
+  },
+  spawnPoints: [],
+  foodBatches: {},
+  dryingRacks: [],
+  hives: [],
+  fishingBait: {},
+  harvestedCropIds: [],
+  placedContainers: [],
+  carriedContainer: null,
+  playerWells: [],
+  plantedTrees: [],
+  plantedCrops: [],
+  playerGardens: [],
+  resourceDeposits: {},
 }
 
 function loaded(extra?: Partial<{ savedAt: number, seed: number, playerName: string, elapsedDays: number }>): SaveData {
@@ -69,7 +108,7 @@ describe('saveSlots', () => {
     expect(parsed).not.toBeNull()
     expect(parsed?.id).toBe('current')
     expect(parsed?.name).toBe('Anna')
-    expect(parsed?.data.version).toBe(27)
+    expect(parsed?.data.version).toBe(1)
     expect(parsed?.data.config.seed).toBe(7)
   })
 

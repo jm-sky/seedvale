@@ -125,6 +125,10 @@ Prefer the smallest architecture that keeps the main thread responsive and scale
 
 Seedvale is single-player; no multiplayer, netcode or WebSocket layer exists or is planned now. The simulation/presentation split above, however, is deliberately the same shape a future server-authoritative model would need: simulation state that is serializable and evaluable independent of Three.js objects is state that could later be evaluated off the client entirely, not just off the main thread. Keep that separation intact when adding new systems; do not design networking now.
 
+## Fauna simulation granularity
+
+Fauna has no chunk-based streaming: `Fauna` keeps every wild/livestock `AnimalAgent` in one flat array and simulates all of them every frame regardless of distance from the player, unlike NPC settlements (load/unload by distance) or terrain (chunk streaming). This is a deliberate, if undocumented-until-now, tradeoff — it's what makes off-screen corpse decay and behavior correct without a separate off-screen simulation path. A future distance-based culling optimization for fauna would need to preserve that "still ticks off-screen" property (e.g. a coarser off-screen update, not a frozen one) rather than silently stopping simulation for out-of-range animals.
+
 ## Related systems
 
 This principle applies particularly to:

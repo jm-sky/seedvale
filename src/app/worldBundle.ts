@@ -395,10 +395,10 @@ export async function createWorldBundle(
    *  rebuild, reset only on a genuinely new world" contract as
    *  `initialPlayerWells` above. */
   initialPlayerGardens: readonly PlayerGardenRecord[] = [],
-  /** Plan 198 — authoritative ore-deposit mining-hits-remaining, sparse and
-   *  keyed by `NaturalResource.id`; same "carried across rebuild, reset only
-   *  on a genuinely new world" contract as `collectedItemIds`. Not part of
-   *  `SaveData` yet (in-session continuity only — see plan 198 §8). */
+  /** Plan 198/201 — authoritative ore-deposit mining-hits-remaining, sparse
+   *  and keyed by `NaturalResource.id`; same "carried across rebuild, reset
+   *  only on a genuinely new world" contract as `collectedItemIds`, and
+   *  persisted the same way (`SaveData.resourceDeposits`). */
   resourceDepletion: ResourceDepletionState = new Map(),
 ): Promise<WorldBundle> {
   const waterMirror = createWaterMirror({

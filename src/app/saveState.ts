@@ -7,6 +7,7 @@ import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
+import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { VueUi } from '../ui-vue/mount'
 import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
@@ -19,10 +20,10 @@ import { snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { getActiveSaveId, listSaves, writeSave } from '../persistence/saveDb'
 import { pickActiveSaveId } from '../persistence/saveSlots'
 
-/** Current canonical save schema version. The field list and migration story
- *  live in `src/persistence/saveData.ts` and `docs/STATE.md` — this module
- *  only assembles the runtime state into that shape. */
-const SAVE_VERSION = 27
+/** Current canonical save schema version. The field list lives in
+ *  `src/persistence/saveData.ts` and `docs/STATE.md` — this module only
+ *  assembles the runtime state into that shape. */
+const SAVE_VERSION = 1
 
 /** Assembles the live runtime state into a `SaveData` and owns *when* it gets
  *  written. The split from `src/persistence/` is unchanged by this extraction:
@@ -63,6 +64,9 @@ export type SaveStateDeps = {
   getPlantedTrees: () => readonly PlantedTreeRecord[]
   getPlantedCrops: () => readonly CropPlacement[]
   getTreeLifecycle: () => TreeLifecycle
+  /** Same live-accessor contract as the ids/arrays above (plan 198/201) —
+   *  `createApp` replaces the underlying `Map` on a genuinely new world. */
+  getResourceDepletion: () => ResourceDepletionState
 }
 
 export function createSaveState(deps: SaveStateDeps): SaveState {
@@ -141,6 +145,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     plantedTrees: deps.getPlantedTrees().map((t) => ({ ...t })),
     plantedCrops: deps.getPlantedCrops().map((c) => ({ ...c })),
     playerGardens: bundle.playerGardens.nodes().map((g) => ({ ...g })),
+    resourceDeposits: Object.fromEntries(deps.getResourceDepletion()),
   })
 
   const saveNow = (): Promise<void> => writeSave(buildSaveData())

@@ -37,15 +37,12 @@ export type SimulationEntityRef = {
  * Fields are optional and composable — do not force NPC and fauna into one schema.
  */
 export type DecisionContext = {
-  entity?: SimulationEntityRef
   /** Need pressures keyed by domain id (typically 0–1). */
   needs?: Readonly<Record<string, number>>
   /** Current schedule activity label when the agent has a schedule. */
   scheduleActivity?: string
   nearbyHumanCount?: number
   nearbyFireCount?: number
-  /** Escape hatch for domain-specific signals without a shared framework. */
-  extras?: Readonly<Record<string, unknown>>
 }
 
 /**

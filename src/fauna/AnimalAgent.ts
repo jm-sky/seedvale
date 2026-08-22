@@ -1502,12 +1502,6 @@ export class AnimalAgent {
       },
       nearbyHumanCount,
       nearbyFireCount: sense.fireNearby ? 1 : 0,
-      extras: {
-        role: this.def.role,
-        kind: this.def.kind,
-        playerDistance: sense.playerDistance,
-        playerActive: sense.playerActive,
-      },
     }
   }
 

@@ -2299,11 +2299,6 @@ export class NpcAgent {
       },
       scheduleActivity,
       nearbyHumanCount: nearbyNpcCount,
-      extras: {
-        activeNeed: this.activeNeed,
-        staminaRatio: this.stamina.max > 0 ? this.stamina.current / this.stamina.max : 0,
-        vigorRatio: this.vigor.max > 0 ? this.vigor.current / this.vigor.max : 0,
-      },
     }
   }
 
@@ -2550,8 +2545,7 @@ export class NpcAgent {
       durationSec: MINE_DURATION_SEC * this.waitMultiplier,
       onComplete: () => {
         const result = mining.mine(target.id)
-        if (result.ok) {
-          this.carried.add(result.yield.kind, result.yield.count)
+        if (result.ok && this.carried.add(result.yield.kind, result.yield.count)) {
           minedCount = result.yield.count
         }
       },
