@@ -1,7 +1,7 @@
 # Plan: God Files & Responsibility Boundaries
 
 **Created:** 2026-08-22  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — [implementation notes](./2026-08-22--202--arch--god-files-responsibility-boundaries-implementation-notes.md)  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~201~~
 
@@ -211,20 +211,20 @@ Jeżeli analiza ujawni większy problem poza zakresem 202, udokumentować go zam
 
 ## Kryteria akceptacji
 
-- [ ] Wszystkie 6 plików przeanalizowane.
-- [ ] Responsibility boundaries są jasno określone.
-- [ ] Podziały wykonano tylko tam, gdzie są uzasadnione.
-- [ ] Refaktor wykonano inkrementalnie.
-- [ ] Shared helpers wydzielono tam, gdzie mają rzeczywiście wspólną semantykę.
-- [ ] Nie powstał `utils.ts` jako dumping ground.
-- [ ] Nie powstały nowe God Managers.
-- [ ] Authoritative state i lifecycle boundaries pozostały poprawne.
-- [ ] Nie zmieniono simulation/persistence semantics.
-- [ ] Nie zmieniono gameplay behaviour.
-- [ ] Typecheck przechodzi.
-- [ ] Testy przechodzą.
-- [ ] Build przechodzi.
-- [ ] Final assessment sześciu plików przygotowany.
-- [ ] Manual browser verification pozostawiona użytkownikowi.
+- [x] Wszystkie 6 plików przeanalizowane.
+- [x] Responsibility boundaries są jasno określone.
+- [x] Podziały wykonano tylko tam, gdzie są uzasadnione.
+- [x] Refaktor wykonano inkrementalnie.
+- [x] Shared helpers wydzielono tam, gdzie mają rzeczywiście wspólną semantykę.
+- [x] Nie powstał `utils.ts` jako dumping ground.
+- [x] Nie powstały nowe God Managers.
+- [x] Authoritative state i lifecycle boundaries pozostały poprawne.
+- [x] Nie zmieniono simulation/persistence semantics.
+- [x] Nie zmieniono gameplay behaviour.
+- [x] Typecheck przechodzi.
+- [x] Testy przechodzą.
+- [x] Build przechodzi.
+- [x] Final assessment sześciu plików przygotowany.
+- [x] Manual browser verification pozostawiona użytkownikowi.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
