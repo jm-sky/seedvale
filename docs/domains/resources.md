@@ -1,0 +1,28 @@
+# Resources Domain Roadmap
+
+**Status:** evolving target vision
+
+## Purpose
+
+Natural and produced resources should form shared world assets that drive gathering, work, economy, settlement development and player activity.
+
+## Target state
+
+- Resources have coherent ownership, availability, renewal and lifecycle rules.
+- Geography and environment influence where resources exist.
+- Gathering is performed by players and NPCs through shared capabilities.
+- Resources can be transported, stored, consumed, processed or traded.
+- Renewable resources recover through world and time processes where appropriate.
+- Resource shortages create pressure for households, settlements and wildlife.
+- Resource discoveries and depletion can change settlement behaviour and world history.
+
+## Future evolution
+
+1. Unify resource lifecycle and harvesting semantics.
+2. Expand renewal and environmental dependencies.
+3. Strengthen logistics and storage.
+4. Connect resources more deeply to production, settlements and trade.
+
+## Boundaries
+
+Reuse existing resource, item, water-source and world-query mechanisms instead of creating resource-specific parallel abstractions.
