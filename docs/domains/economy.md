@@ -1,0 +1,29 @@
+# Economy Domain Roadmap
+
+**Status:** evolving target vision
+
+## Purpose
+
+The economy should emerge from real resources, labour, production, storage, consumption, shortages and exchange.
+
+## Target state
+
+- Resources enter economic flows through gathering and production.
+- NPC and household labour produces useful goods.
+- Households and settlements consume and store goods.
+- Surplus and shortage influence priorities and decisions.
+- Trade moves goods between actors and settlements where appropriate.
+- Prices or exchange values emerge from supply, demand and local circumstances where useful.
+- Player and NPC economic activity uses shared item and resource concepts.
+- Economic changes create persistent consequences for settlements and people.
+
+## Future evolution
+
+1. Strengthen household and settlement logistics.
+2. Expand production chains and goods.
+3. Add local trade and market behaviour.
+4. Connect multiple settlements through trade and resource flows.
+
+## Boundaries
+
+Do not create a separate player economy. Extend existing settlement, household, inventory, item and resource mechanisms.
