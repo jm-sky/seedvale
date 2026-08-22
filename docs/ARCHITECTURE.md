@@ -143,6 +143,14 @@ The game loop is the runtime coordination point for simulation updates and inter
 
 Modal UI can gate parts of simulation/input. Changes to modal behaviour should therefore be checked against the game loop and all relevant UI entry points, not only the component being changed.
 
+## Time model
+
+Three time categories exist, deliberately not unified into a single `TimeManager` (plan `docs/plans/2026-08-22--192--arch--time-and-simulation-consistency.md`):
+
+- **World Time** — `DayNightState.elapsedDays`/`timeOfDay`/`dayLengthSec` (`world/dayNight.ts`), the single owner of the game clock; `tickDayNight()` is the only place that advances it. Lazy systems keyed off `elapsedDays` directly (tree/crop growth, `items/timedProcess.ts`, weather/seasons) resolve state on demand from an anchor (e.g. `startedAtDays + durationDays`) instead of ticking every frame — they survive time-skip and chunk unload for free and need no second clock.
+- **Simulation Time** — the `dt`/`worldDt` passed into an actively-updating agent (NPC/fauna/player) each frame. Gameplay tuning expressed in game-days/game-hours (e.g. "hunger empties in 3 game-days") must convert against the *live* `dayNight.dayLengthSec`, not a hardcoded assumption of its default (480s) — use `world/timeConversion.ts`'s stateless helpers (`gameDaysToRealSeconds`, `realSecondsToGameHours`, etc.), which take `dayLengthSec: number` directly rather than the whole `DayNightState`, so a system that only needs the ratio doesn't depend on the day/night module's full state shape.
+- **Real-Time Actions** — short cooldowns/animations/action durations (combat swing/draw timing, busy channels — `app/busyAction.ts`) that are genuinely real-time regardless of day length. Do not mechanically convert these to game-time units.
+
 ## Multiplayer readiness (not implemented)
 
 Seedvale is single-player today; there is no multiplayer, netcode or WebSocket layer, and none is planned in the near term. That said, keep architectural decisions from foreclosing a later move to a small (~2–5 player) shared world with server-authoritative simulation. The simulation/presentation split this document already assumes — world state that is representable and evaluable independent of Three.js objects — is the same shape that split would need. Do not design networking now; just avoid coupling world/NPC/economy state so tightly to the client or to rendering objects that such a split becomes a rewrite.

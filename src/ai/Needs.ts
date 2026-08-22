@@ -1,4 +1,5 @@
 import { pickActionKind } from '../simulation'
+import { realSecondsToGameHours } from '../world/timeConversion'
 
 export type NeedId = 'food' | 'idle' | 'water' | 'waterDuty' | 'wood'
 
@@ -40,12 +41,12 @@ export type TickNeedsOptions = {
 /** Tick needs upward over time (0–1). */
 export function tickNeeds(needs: NeedState, dt: number, dayLengthSec: number, options: TickNeedsOptions = {}): void {
   const hungerThirstRate = options.hungerThirstRate ?? 1
-  const hoursPerRealSecond = 24 / dayLengthSec
+  const hoursElapsed = realSecondsToGameHours(dt, dayLengthSec)
 
-  needs.thirst = Math.min(1, needs.thirst + dt * hoursPerRealSecond / NEED_FULL_HOURS.thirst * hungerThirstRate)
-  needs.woodDuty = Math.min(1, needs.woodDuty + dt * hoursPerRealSecond / NEED_FULL_HOURS.woodDuty)
-  needs.waterDuty = Math.min(1, needs.waterDuty + dt * hoursPerRealSecond / NEED_FULL_HOURS.waterDuty)
-  needs.hunger = Math.min(1, needs.hunger + dt * hoursPerRealSecond / NEED_FULL_HOURS.hunger * hungerThirstRate)
+  needs.thirst = Math.min(1, needs.thirst + hoursElapsed / NEED_FULL_HOURS.thirst * hungerThirstRate)
+  needs.woodDuty = Math.min(1, needs.woodDuty + hoursElapsed / NEED_FULL_HOURS.woodDuty)
+  needs.waterDuty = Math.min(1, needs.waterDuty + hoursElapsed / NEED_FULL_HOURS.waterDuty)
+  needs.hunger = Math.min(1, needs.hunger + hoursElapsed / NEED_FULL_HOURS.hunger * hungerThirstRate)
 }
 
 export type PickNeedOptions = {

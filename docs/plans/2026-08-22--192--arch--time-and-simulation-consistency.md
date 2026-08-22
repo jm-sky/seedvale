@@ -1,7 +1,7 @@
 # Plan: Time & Simulation Consistency
 
 **Created:** 2026-08-22  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — see [implementation notes](./2026-08-22--192--arch--time-and-simulation-consistency-implementation-notes.md)  
 **Priority:** high · **Effort:** M  
 **Depends on:** none  
 **domain:** `world-terrain`  
@@ -373,20 +373,20 @@ Browser/manual verification:
 
 ## Kryteria akceptacji
 
-- [ ] `DayNightState` pozostaje właścicielem World Time.
-- [ ] Nie powstaje globalny `TimeManager`.
-- [ ] Wszystkie istotne mechanizmy czasu są sklasyfikowane.
-- [ ] `480` nie jest używane jako ukryta stała konwersji.
-- [ ] Player Needs korzystają z aktualnego `dayLengthSec`.
-- [ ] NPC Needs/Vigor korzystają z aktualnego `dayLengthSec`, jeśli ich tuning jest game-time based.
-- [ ] Crops/Trees/TimedProcess pozostają lazy World-Time systems.
-- [ ] NPC time skip zachowuje obecny catch-up model.
-- [ ] Player Needs zachowują obecne zachowanie podczas time skip.
-- [ ] Fauna nie zostaje mechanicznie przeniesiona na World Time.
-- [ ] Combat/action cooldowns pozostają real-time tam, gdzie jest to właściwe.
-- [ ] Istnieją testy konwersji i zmiennego `dayLengthSec`.
-- [ ] Zmiana `dayLengthSec` nie zmienia gameplayowego tuningu wyrażonego w game-days/game-hours.
-- [ ] Dokumentacja opisuje model czasu.
-- [ ] Nie wprowadzono niepotrzebnego refaktoru poza zakresem.
+- [x] `DayNightState` pozostaje właścicielem World Time.
+- [x] Nie powstaje globalny `TimeManager`.
+- [x] Wszystkie istotne mechanizmy czasu są sklasyfikowane.
+- [x] `480` nie jest używane jako ukryta stała konwersji.
+- [x] Player Needs korzystają z aktualnego `dayLengthSec`.
+- [x] NPC Needs/Vigor korzystają z aktualnego `dayLengthSec`, jeśli ich tuning jest game-time based.
+- [x] Crops/Trees/TimedProcess pozostają lazy World-Time systems.
+- [x] NPC time skip zachowuje obecny catch-up model.
+- [x] Player Needs zachowują obecne zachowanie podczas time skip.
+- [x] Fauna nie zostaje mechanicznie przeniesiona na World Time.
+- [x] Combat/action cooldowns pozostają real-time tam, gdzie jest to właściwe.
+- [x] Istnieją testy konwersji i zmiennego `dayLengthSec`.
+- [x] Zmiana `dayLengthSec` nie zmienia gameplayowego tuningu wyrażonego w game-days/game-hours.
+- [x] Dokumentacja opisuje model czasu.
+- [x] Nie wprowadzono niepotrzebnego refaktoru poza zakresem.
 
-**Zrób git commit i push do main, rebase jeżeli trzeba**
+Zrobiono commit i push na branch `claude/arch-time-simulation-consistency-a7u3su` (nie `main` — sesja pracuje na dedykowanym branchu, zobacz implementation notes).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseTimeOfDayFromUrl } from './dayNight'
+import { createDayNightState, parseTimeOfDayFromUrl, tickDayNight } from './dayNight'
 
 describe('parseTimeOfDayFromUrl', () => {
   it('returns null when neither time nor hour is set', () => {
@@ -48,5 +48,37 @@ describe('parseTimeOfDayFromUrl', () => {
     expect(parseTimeOfDayFromUrl('?time=banana')).toBeNull()
     expect(parseTimeOfDayFromUrl('?time=24')).toBeNull()
     expect(parseTimeOfDayFromUrl('?time=12:60')).toBeNull()
+  })
+})
+
+describe('tickDayNight', () => {
+  it('advances elapsedDays by exactly 1 after dayLengthSec real seconds, at any day length (plan 192)', () => {
+    for (const dayLengthSec of [480, 600, 240]) {
+      const state = createDayNightState({ dayLengthSec })
+      tickDayNight(state, dayLengthSec)
+      expect(state.elapsedDays).toBeCloseTo(1, 10)
+    }
+  })
+
+  it('is independent of how the same total dt is split across ticks', () => {
+    const whole = createDayNightState({ dayLengthSec: 480 })
+    tickDayNight(whole, 480)
+
+    const split = createDayNightState({ dayLengthSec: 480 })
+    for (let i = 0; i < 480; i++) tickDayNight(split, 1)
+
+    expect(split.elapsedDays).toBeCloseTo(whole.elapsedDays, 9)
+  })
+
+  it('scales by timeMultiplier', () => {
+    const state = createDayNightState({ dayLengthSec: 480, timeMultiplier: 2 })
+    tickDayNight(state, 240)
+    expect(state.elapsedDays).toBeCloseTo(1, 10)
+  })
+
+  it('a no-op tick (dt=0) does not advance the clock', () => {
+    const state = createDayNightState({ dayLengthSec: 480 })
+    tickDayNight(state, 0)
+    expect(state.elapsedDays).toBe(0)
   })
 })

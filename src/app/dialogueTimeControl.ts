@@ -39,7 +39,7 @@ NpcAgent.prototype.update = function (
 }
 
 const originalPlayerUpdate = PlayerController.prototype.update
-PlayerController.prototype.update = function (dt): void {
+PlayerController.prototype.update = function (dt, dayLengthSec): void {
   if (isNpcEngagementOpen(engagementState())) return
-  originalPlayerUpdate.call(this, dt)
+  originalPlayerUpdate.call(this, dt, dayLengthSec)
 }

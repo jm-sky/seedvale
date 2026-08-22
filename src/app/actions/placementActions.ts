@@ -55,6 +55,7 @@ import {
   WELL_WORK_LABEL,
   WELL_WORK_SESSION_SEC,
 } from '../../world/playerWell'
+import { gameHoursToRealSeconds, realSecondsToGameHours } from '../../world/timeConversion'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
 /** A world object the player can put down in front of themselves — the shared
@@ -277,8 +278,8 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     }
     const workedSoFar = startingNewStage ? 0 : well.workProgress
     const remainingHours = Math.max(0, WELL_STAGE_WORK_HOURS[stage] - workedSoFar)
-    const sessionHours = Math.min(WELL_WORK_SESSION_SEC / (dayNight.dayLengthSec / 24), remainingHours)
-    const sessionSec = sessionHours * (dayNight.dayLengthSec / 24)
+    const sessionHours = Math.min(realSecondsToGameHours(WELL_WORK_SESSION_SEC, dayNight.dayLengthSec), remainingHours)
+    const sessionSec = gameHoursToRealSeconds(sessionHours, dayNight.dayLengthSec)
     const startDays = dayNight.elapsedDays
     const commitProgress = (): void => {
       const elapsedHours = Math.max(0, (dayNight.elapsedDays - startDays) * 24)
