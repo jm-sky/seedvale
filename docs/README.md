@@ -5,11 +5,12 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 ## Główne dokumenty
 
 - **[STATE.md](./STATE.md)** — factual current implementation state
-- **[state/](./state/README.md)** — dodatkowe domain-state docs
-- **[state/WATER.md](./state/water.md)** — woda (ocean + jeziora + rzeki: stan, decyzje, historia)
-- **[state/SETTLEMENTS.md](./state/settlements.md)** — osady i życie NPC (stan + standing decisions)
+- **[state/](./state/README.md)** — szczegółowy opis aktualnego stanu domen/systemów
+- **[state/water.md](./state/water.md)** — woda (ocean + jeziora + rzeki: stan, decyzje, historia)
+- **[state/settlements.md](./state/settlements.md)** — osady i życie NPC (stan + standing decisions)
 - **[VISION.md](./VISION.md)** — wizja i kontekst produktu (czytaj przed planowaniem nowych funkcji)
-- **[vision/](./vision/README.md)** - docelowe wizje domen
+- **[vision/](./vision/README.md)** - Docelowe wizje poszczególnych domen. Opisują, co chcemy osiągnąć, niezależnie od aktualnego stanu implementacji.
+- **[architecture/](./architecture/README.md)** — Architektura, kontrakty, ownership, lifecycle i decyzje techniczne.
 - **[architecture/ARCHITECTURE.md](./architecture/ARCHITECTURE.md)** — mapa architektury (WorldBundle, lifecycle, save)
 - **[architecture/GRAPHICS.md](./architecture/GRAPHICS.md)** — log decyzji / kontraktów graficznych
 - **[CODE_INDEX.md](./CODE_INDEX.md)** — indeks kodu: gdzie w `src/` mieszka dany system (entry pointy)
@@ -17,7 +18,7 @@ Ten katalog zawiera dokumentację projektu **Seedvale** (Three.js — procedural
 - **[performance/](./performance/README.md)** - Performance & Rendering Strategy
 - **[../CLAUDE.md](../CLAUDE.md)** — reguły dla agentów
 
-## Workflow (issues, reviews, research, plans, assets)
+## Supporting documentation
 
 | Katalog | Przeznaczenie |
 |---------|---------------|
@@ -50,6 +51,18 @@ Sesje przeglądu — indeks w [reviews/README.md](./reviews/README.md).
 
 ### `prompts/`
 Meta-prompty do powtarzalnych zadań (struktura docs, review, itd.).
+
+## Relacja dokumentów
+
+```
+VISION / vision/
+    ↓
+ROADMAP / roadmap/  <-- docelowo
+    ↓
+plans/
+    ↓
+STATE / state/
+```
 
 ---
 
