@@ -1,0 +1,30 @@
+# NPC Domain Roadmap
+
+**Status:** evolving target vision
+
+## Purpose
+
+NPCs should behave as inhabitants whose needs, goals, relationships, work and circumstances produce behaviour and persistent consequences.
+
+## Target state
+
+- Needs, problems, goals and pressures remain distinct concepts.
+- Decisions select strategies and actions from explicit world state.
+- Personality, abilities, relationships and life circumstances modify decisions.
+- Work, routines, households and social roles are connected rather than scripted independently.
+- NPCs use real world resources and places to satisfy needs.
+- NPC actions change settlements, economy, relationships and the environment.
+- NPCs can continue meaningful activity without the player being present.
+- Dialogue and quests reflect actual NPC and world state.
+
+## Future evolution
+
+1. Complete daily-life and resource logistics.
+2. Deepen households, relationships and lifecycle.
+3. Improve long-term goals, pressures and strategies.
+4. Increase off-screen simulation continuity.
+5. Connect NPC life more strongly to settlement development and inter-settlement systems.
+
+## Boundaries
+
+Deterministic simulation remains authoritative. Dialogue or future LLM assistance must not replace simulation state or decision systems.
