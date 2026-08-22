@@ -1,0 +1,27 @@
+# Quests Domain Roadmap
+
+**Status:** evolving target vision
+
+## Purpose
+
+Quests should expose meaningful opportunities created by the living world rather than function primarily as a list of authored errands.
+
+## Target state
+
+- Quest opportunities emerge from NPC, household, settlement, resource, fauna and world problems.
+- Objectives bind to real world entities and state where appropriate.
+- Dialogue and quest availability reflect current relationships and circumstances.
+- Completing or failing a quest changes the world or relationships when meaningful.
+- Quest history preserves consequences and can influence future opportunities.
+- Authored structures provide reliable gameplay framing while world state supplies the circumstances.
+
+## Future evolution
+
+1. Expand world-problem quest sources.
+2. Add more persistent consequences and chains.
+3. Connect settlement and economic events to quest generation.
+4. Improve discovery of opportunities without making the player the centre of simulation.
+
+## Boundaries
+
+Quest logic must remain deterministic and grounded in authoritative world state. LLMs must not replace the simulation or authoritative quest state.
