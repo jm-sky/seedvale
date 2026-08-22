@@ -13,7 +13,7 @@ Paths below are files in this folder unless noted. Implementation notes / review
 
 ## Next plan ID
 
-`195`
+`196`
 
 ## Plan domains
 
@@ -105,6 +105,7 @@ Natural vegetation
 | `2026-08-22--192--arch--time-and-simulation-consistency.md` | Ujednolicić obsługę czasu w Seedvale bez tworzenia globalnego `TimeManager` i bez zmiany istniejącego gameplay tuningu. | 🔴 | M | - |
 | `2026-08-22--193--arch--simulation-architecture-consistency.md` | Przeprowadzić focused audit architektury symulacji Seedvale na podstawie aktualnego codebase i istniejącej dokumentacji architektury. | 🔴 | M | ~~192~~ |
 | `2026-08-22--194--arch--entity-identity-lifecycle.md` | Przeprowadzić focused audit architektury identity i lifecycle encji w Seedvale. | 🔴 | M | ~~193~~ |
+| `2026-08-22--195--arch--data-state-consistency.md` | Przeprowadzić focused audit spójności danych i state w Seedvale. | 🔴 | M | ~~193~~ ~~194~~ |
 
 ### Fresh new
 
