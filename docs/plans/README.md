@@ -100,6 +100,8 @@ Natural vegetation
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | - | 🟡 | L | 181 |
 | `2026-08-22--202--arch--god-files-responsibility-boundaries.md` | - | 🟡 | M | ~~201~~ |
 | `2026-08-22--203--well-depth-groundwater-and-protection.md` |- | 🟡 | M | ~~127~~ |
+| `2026-08-21--190--plans-automation.md` | Zautomatyzować utrzymanie pomocniczych informacji w `docs/plans/README.md` oraz `PLANNED_PLANS_WITHOUT_NOTES.md`. | 🟡 | S | - |
+| `2026-08-22--195--arch--data-state-consistency.md` | Przeprowadzić focused audit spójności danych i state w Seedvale. | 🔴 | M | ~~193~~ ~~194~~ |
 
 ### Fresh new
 
