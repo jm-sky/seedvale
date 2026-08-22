@@ -71,8 +71,6 @@ IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical sav
 
 Keyboard/mouse plus mobile touch (joystick + look-drag, vanilla). Vue 3 + Tailwind v4 + `lucide-vue-next` mounts under `#vue-ui` after world boot; migration is incremental — start screen, pause, quest log, inventory, quick actions, time-skip, busy overlay, world config, notes, HUD, minimap, world map, toast, merchant, skills and touch chrome are Vue, with `src/ui/create*.ts` as thin facades for the rest. Minimap is heading-up with permanent discovery (radius 48); `M` opens the north-up world map. Home-trader `MerchantScreen` is two columns (stock | player bag) with category/price/sort filters. lil-gui is hidden by default (Ustawienia → Panel debug, or `?debug=1`/`?gui=1`). `?time=`/`?hour=` force and freeze the clock for session debugging only (no save-schema field).
 
-Not yet browser-verified: Vue Fazy 0–4 desktop+touch pass, most plan-tagged features flagged "no browser verification yet" throughout this document's linked domain docs and `docs/plans/README.md`.
-
 ## Important shared concepts
 
 Prefer extending existing shared mechanisms instead of creating parallel systems.
