@@ -30,7 +30,7 @@ Weapon condition (durability/sharpness) is a separate, orthogonal system — `it
 
 `ITEM_CATALOG[kind].ranged` (`RangedConfig`) is the ranged counterpart of `MeleeConfig`, on the three bows. `player/playerRanged.ts` is the draw→release→recovery machine; on `fireReady` a lightweight `combat/projectile.ts` `Projectile` is spawned (no `Object3D`, no visual arrow mesh) consuming one compatible ammo unit. `combat/rangedAttack.ts`'s `resolveRangedDirection()` turns bow accuracy + the `archery` skill into an aim-deviation cone (not a separate hit-roll); the projectile is ticked every frame via swept segment-to-point collision (`sweptProjectileHit`, no per-arrow `Raycaster`).
 
-Aim commitment (plan 186): `player/playerCombat.ts`'s `resolveRangedAimYaw()` is the single source for a player draw's committed direction (soft-locked target → live `yawToward()` recomputed every frame; otherwise live mouse-look yaw), read by both the player's visual facing and the fired shot, so they can never diverge. A minimal reticle shows only while drawing.
+Aim commitment (plan 186): `player/playerCombat.ts`'s `resolveRangedAimYaw()` is the single source for a player draw's committed direction (soft-locked target → live `yawToward()` recomputed every frame; otherwise live mouse-look yaw), read by both the player's visual facing and the fired shot, so they can never diverge. A minimal reticle shows only while drawing. Reticle *position* is a presentation-only follow-up: `combat/rangedReticle.ts` reprojects the soft-locked target's world-space aim point (a chest-height offset above its mesh origin) through the camera every frame into a viewport-fraction screen position (`app/gameLoop.ts`, `ui-vue/store.ts`'s `hud.aimTargetScreen`); Free Aim (no soft lock) instead renders at a fixed screen-space offset above center (`HudScreen.vue`) so the reticle doesn't sit on the third-person player model. Never feeds back into `resolveRangedAimYaw()`/accuracy/the fired direction.
 
 A shot that reaches `maxDistance` without a hit becomes an ordinary dropped-item pickup of its ammo kind (`bundle.droppedItems.drop`) rather than disappearing; a hit still consumes the arrow permanently. There is no arrow-recovery-from-corpse mechanic and no 3D projectile visual — both are deliberately out of scope.
 
@@ -71,6 +71,7 @@ src/combat/combatIntent.ts
 src/combat/criticalHit.ts
 src/combat/projectile.ts
 src/combat/rangedAttack.ts
+src/combat/rangedReticle.ts
 src/combat/defenseResolver.ts
 src/player/playerMelee.ts
 src/player/playerRanged.ts

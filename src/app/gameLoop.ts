@@ -49,6 +49,11 @@ import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds
 import { MELEE_CRITICAL_CHANCE, MELEE_CRITICAL_MULTIPLIER, resolveCriticalHit } from '../combat/criticalHit'
 import { advanceProjectile, type Projectile, sweptProjectileHit } from '../combat/projectile'
 import { rangedAccuracy, rangedDeviationRoll, resolveRangedDirection } from '../combat/rangedAttack'
+import {
+  clampToViewportMargin,
+  projectToViewportFraction,
+  RANGED_RETICLE_TARGET_HEIGHT,
+} from '../combat/rangedReticle'
 import { isCameraMeshDebugMode, isDebugMode } from '../debug/debugMode'
 import { setCameraMeshHit } from '../debug/renderStateDebug'
 import { ANIMAL_LABELS, FAUNA_SHADOW_DISTANCE } from '../fauna/AnimalAgent'
@@ -627,7 +632,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.endRangedDraw()
         rangedTargetId = null
         stopBowDrawSound()
-        hud.setAiming(false)
+        hud.setAiming(false, null)
       }
 
       switch (modal) {
@@ -833,7 +838,24 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (playerRanged.state() === 'idle') {
         player.endRangedDraw()
       }
-      hud.setAiming(playerRanged.state() === 'draw')
+      // Soft-lock reticle screen position (reticle-positioning follow-up to
+      // plan 186 §1) — reprojects the same `rangedTargetId`/`rangedCandidates`
+      // aim resolves from, every frame the target may have moved. `null`
+      // (no lock, or the lock is behind the camera) falls back to the HUD's
+      // fixed Free Aim position — presentation only, never touches
+      // `resolveRangedAimYaw()`/accuracy/the fired direction.
+      const drawing = playerRanged.state() === 'draw'
+      let aimTargetScreen: { x: number, y: number } | null = null
+      if (drawing && rangedTargetId) {
+        const locked = rangedCandidates.find((c) => c.id === rangedTargetId)
+        if (locked) {
+          const projected = projectToViewportFraction(
+            locked.x, RANGED_RETICLE_TARGET_HEIGHT, locked.z, camera,
+          )
+          aimTargetScreen = projected ? clampToViewportMargin(projected) : null
+        }
+      }
+      hud.setAiming(drawing, aimTargetScreen)
       if (releaseTick.fireReady && releaseTick.config) {
         const config = releaseTick.config
         const ammoKind = config.ammoKinds.find((k) => inventory.has(k, 1)) ?? null

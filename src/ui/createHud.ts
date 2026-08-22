@@ -13,9 +13,11 @@ export type Hud = {
   setHeldTool: (label: string) => void
   /** Ratios (0-1) for the HUD bars (plan 106 + issue 034). `hp` is HealthState. */
   setPlayerNeeds: (needs: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }) => void
-  /** Shows/hides the center-screen ranged-aim reticle (plan 186 §1) — true
-   *  only while `playerRanged.state() === 'draw'`. */
-  setAiming: (aiming: boolean) => void
+  /** Shows/hides the ranged-aim reticle (plan 186 §1) — true only while
+   *  `playerRanged.state() === 'draw'`. `targetScreen` is the soft-locked
+   *  target's projected viewport position (fractions 0-1, y from the top);
+   *  `null` renders the Free Aim fixed screen-space position instead. */
+  setAiming: (aiming: boolean, targetScreen?: { x: number, y: number } | null) => void
   /** Raw current/max for the Character screen (plan 105) — the HUD bars above
    *  only need ratios, but the Character screen also shows absolute values. */
   setCharacterStats: (stats: CharacterStats) => void
@@ -33,7 +35,7 @@ export function createHud(_parent: HTMLElement): Hud {
     setInventoryWeight: (current, max) => { if (!disposed) getUi()?.setHudInventoryWeight(current, max) },
     setHeldTool: (label) => { if (!disposed) getUi()?.setHudHeldTool(label) },
     setPlayerNeeds: (needs) => { if (!disposed) getUi()?.setHudPlayerNeeds(needs) },
-    setAiming: (aiming) => { if (!disposed) getUi()?.setHudAiming(aiming) },
+    setAiming: (aiming, targetScreen) => { if (!disposed) getUi()?.setHudAiming(aiming, targetScreen ?? null) },
     setCharacterStats: (stats) => { if (!disposed) getUi()?.setCharacterStats(stats) },
     dispose: () => { disposed = true },
   }

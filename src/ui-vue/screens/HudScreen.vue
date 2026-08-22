@@ -5,6 +5,20 @@ import { ui } from '../store'
 
 const touchDevice = isTouchDevice()
 
+/** Free Aim reticle offset (plan 186 follow-up: reticle positioning) — the
+ *  third-person camera looks at the player's chest/eye point (`PlayerController`
+ *  `lookAtHeight`), which sits at screen center, so a reticle left at dead
+ *  center renders on top of the player model. Nudging it up by a small,
+ *  fixed screen-space amount clears the model without introducing a
+ *  world-space aim point for Free Aim. */
+const FREE_AIM_RETICLE_OFFSET_PX = 56
+
+const reticleStyle = computed(() => {
+  const target = ui.hud.aimTargetScreen
+  if (target) return { left: `${target.x * 100}%`, top: `${target.y * 100}%` }
+  return { left: '50%', top: `calc(50% - ${FREE_AIM_RETICLE_OFFSET_PX}px)` }
+})
+
 /** Plan 106 + issue 034 — colors match the existing NPC/animal label bars
  *  (`.npc-label__bar--{hp,stamina,vigor,satiety,hydration}`, index.html) so the
  *  player's own bars read as the same visual language. */
@@ -57,13 +71,17 @@ const needBars = computed(() => [
   </div>
 
   <!-- Ranged-aim reticle (plan 186 §1) — visible only while drawing a bow.
-       Presentation only: never touches accuracy/deviation, which stay
-       entirely in `combat/rangedAttack.ts`. -->
+       Free Aim sits at a fixed screen-space offset from center; a soft lock
+       reprojects the target's world-space aim point every frame instead
+       (`ui.hud.aimTargetScreen`, set from `app/gameLoop.ts`). Presentation
+       only: never touches accuracy/deviation, which stay entirely in
+       `combat/rangedAttack.ts`. -->
   <div
     v-if="ui.hud.aiming"
-    class="pointer-events-none fixed inset-0 z-[5] flex items-center justify-center"
+    class="pointer-events-none fixed z-[5]"
+    :style="reticleStyle"
   >
-    <div class="relative h-9 w-9">
+    <div class="relative h-9 w-9 -translate-x-1/2 -translate-y-1/2">
       <div class="absolute inset-0 rounded-full border border-ink/70" />
       <div class="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink/90" />
     </div>
