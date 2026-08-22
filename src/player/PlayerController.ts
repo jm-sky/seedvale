@@ -24,6 +24,7 @@ import {
 import { createHealthState, type HealthState } from '../shared/HealthState'
 import { isExhausted } from '../shared/StaminaState'
 import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
+import { applyBarPercent, computeBarPercent, createAgentLabel, createLabelBar } from '../ui/agentStatusLabel'
 import { type Collider, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
 import { computeEncumbrance } from './playerEncumbrance'
@@ -160,7 +161,7 @@ export class PlayerController {
   private readonly labelEl: HTMLDivElement
   private readonly labelNameEl: HTMLDivElement
   private readonly hpFillEl: HTMLDivElement
-  private lastHpRatio = -1
+  private lastHpPercent = -1
   /** Quaternius `WristR` (or null on capsule fallback / missing bone). */
   private readonly rightWrist: THREE.Object3D | null
   private heldToolObject: THREE.Object3D | null = null
@@ -227,26 +228,12 @@ export class PlayerController {
       this.rangedReleaseAction = null
     }
 
-    this.labelEl = document.createElement('div')
-    this.labelEl.className = 'npc-label'
-
-    this.labelNameEl = document.createElement('div')
-    this.labelNameEl.className = 'npc-label__name'
-    this.labelNameEl.textContent = PLAYER_LABEL
-
-    const labelBarsEl = document.createElement('div')
-    labelBarsEl.className = 'npc-label__bars'
-    const hpBar = document.createElement('div')
-    hpBar.className = 'npc-label__bar npc-label__bar--hp'
-    this.hpFillEl = document.createElement('div')
-    this.hpFillEl.className = 'npc-label__bar-fill'
-    this.hpFillEl.style.width = '100%'
-    hpBar.appendChild(this.hpFillEl)
-    labelBarsEl.appendChild(hpBar)
-
-    this.labelEl.append(this.labelNameEl, labelBarsEl)
-    this.label = new CSS2DObject(this.labelEl)
-    this.label.position.set(0, PLAYER_HEIGHT + 0.55, 0)
+    const hpBar = createLabelBar('hp')
+    this.hpFillEl = hpBar.fill
+    const labelDom = createAgentLabel(PLAYER_LABEL, [hpBar], PLAYER_HEIGHT + 0.55)
+    this.labelEl = labelDom.el
+    this.labelNameEl = labelDom.nameEl
+    this.label = labelDom.label
     this.mesh.add(this.label)
 
     this.snapToGround()
@@ -729,10 +716,8 @@ export class PlayerController {
   }
 
   private syncHpBar(): void {
-    const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
-    if (hpRatio === this.lastHpRatio) return
-    this.lastHpRatio = hpRatio
-    this.hpFillEl.style.width = `${Math.round(hpRatio * 100)}%`
+    const percent = computeBarPercent(this.health.currentHp, this.health.maxHp)
+    this.lastHpPercent = applyBarPercent(this.hpFillEl, percent, this.lastHpPercent)
   }
 
   dispose(): void {
