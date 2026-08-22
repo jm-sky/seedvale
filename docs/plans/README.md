@@ -13,7 +13,7 @@ Paths below are files in this folder unless noted. Implementation notes / review
 
 ## Next plan ID
 
-`193`
+`194`
 
 ## Plan domains
 
@@ -103,6 +103,7 @@ Natural vegetation
 | `2026-08-21--190--plans-automation.md` | Zautomatyzować utrzymanie pomocniczych informacji w `docs/plans/README.md` oraz `PLANNED_PLANS_WITHOUT_NOTES.md`. | 🟡 | S | - |
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | Stworzyć system generowania górskich masywów i charakterystycznych szczytów, który kształtuje większe fragmenty krajobrazu — tworząc pasma, doliny, przełęcze i dominanty wysokościowe — zamiast generować pojedyncze niezależne wzniesienia. | 🟡 | L | 181 |
 | `2026-08-22--192--arch--time-and-simulation-consistency.md` | Ujednolicić obsługę czasu w Seedvale bez tworzenia globalnego `TimeManager` i bez zmiany istniejącego gameplay tuningu. | 🔴 | M | - |
+| `2026-08-22--193--arch--simulation-architecture-consistency.md` | Przeprowadzić focused audit architektury symulacji Seedvale na podstawie aktualnego codebase i istniejącej dokumentacji architektury. | 🔴 | M | ~~192~~ |
 
 ### Fresh new
 
