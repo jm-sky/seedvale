@@ -13,9 +13,12 @@ import {
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createSeededRandom } from '../world/parseSeed'
 import {
-  hitsForRichness,
+  isDepleted,
   type MineableOre,
   ORE_YIELD_LABEL,
+  recordMined,
+  resolveRemaining,
+  type ResourceDepletionState,
   yieldForOre,
 } from './depositMining'
 import { type NaturalResource, type ResourceEnv, resourcesNear } from './naturalResources'
@@ -131,11 +134,20 @@ export type SettlementMiningHooks = {
  * loaded instance. Main-thread, radius-based streaming — mirrors
  * `SettlementsManager`'s load/unload-by-distance shape, not the chunk-worker
  * pipeline.
+ *
+ * `depletionState` is the authoritative hits-remaining record (plan 198) —
+ * owned by the caller, surviving this function's own dispose/recreate
+ * (streaming despawn/respawn and `rebuildWorldBundle`). This module never
+ * treats a live `DepositInstance.remaining` as the source of truth; it's
+ * always hydrated from — and written back to — `depletionState`.
  */
-export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: number): ResourceDeposits {
+export function createResourceDeposits(
+  scene: Scene,
+  env: ResourceEnv,
+  seed: number,
+  depletionState: ResourceDepletionState,
+): ResourceDeposits {
   const instances = new Map<string, DepositInstance>()
-  /** Session-only — depleted piles do not respawn until world rebuild (like dig holes). */
-  const depletedIds = new Set<string>()
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
   /** Forces a `recheck` when the interest-point set itself changes (e.g. a
@@ -182,7 +194,7 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
 
   function spawnSync(resource: NaturalResource, oreTemplates: OreTemplates): void {
     if (disposed || !isVisibleOre(resource.type)) return
-    if (depletedIds.has(resource.id) || instances.has(resource.id)) return
+    if (isDepleted(depletionState, resource.id) || instances.has(resource.id)) return
     const random = createSeededRandom(hashId(resource.id))
     const group = new Group()
     group.name = `resourceDeposit:${resource.id}`
@@ -205,7 +217,7 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
     }
     scene.add(group)
 
-    const remaining = hitsForRichness(resource.richness)
+    const remaining = resolveRemaining(depletionState, resource.id, resource.richness)
     const labelEl = document.createElement('div')
     labelEl.className = 'npc-label'
     const label = new CSS2DObject(labelEl)
@@ -219,7 +231,7 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
   }
 
   function spawn(resource: NaturalResource): void {
-    if (disposed || !isVisibleOre(resource.type) || depletedIds.has(resource.id)) return
+    if (disposed || !isVisibleOre(resource.type) || isDepleted(depletionState, resource.id)) return
     if (instances.has(resource.id) || pendingIds.has(resource.id)) return
     if (templates) {
       spawnSync(resource, templates)
@@ -256,7 +268,7 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
     for (const anchor of anchors) {
       const nearby = resourcesNear(anchor.x, anchor.z, LOAD_RADIUS, seed, env)
       for (const resource of nearby) {
-        if (!isVisibleOre(resource.type) || depletedIds.has(resource.id)) continue
+        if (!isVisibleOre(resource.type) || isDepleted(depletionState, resource.id)) continue
         wanted.add(resource.id)
         if (!instances.has(resource.id)) spawn(resource)
       }
@@ -311,8 +323,8 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
       }
       instance.remaining -= 1
       const mined = yieldForOre(type)
+      recordMined(depletionState, id, instance.remaining)
       if (instance.remaining <= 0) {
-        depletedIds.add(id)
         despawn(id)
       } else {
         setLabel(instance)
@@ -322,7 +334,6 @@ export function createResourceDeposits(scene: Scene, env: ResourceEnv, seed: num
     dispose() {
       disposed = true
       pendingIds.clear()
-      depletedIds.clear()
       for (const id of [...instances.keys()]) despawn(id)
     },
   }

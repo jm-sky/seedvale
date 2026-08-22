@@ -1,5 +1,6 @@
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { SaveData } from '../persistence/saveData'
+import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { TrapCaptureEvent } from '../world/createPlacedTraps'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { PlayerActionContext } from './actions/actionContext'
@@ -262,6 +263,11 @@ export async function createApp(
   // stage anchor for trees; position/cropId/stage anchor for crops).
   let plantedTrees = parsePlantedTrees(initialSave?.plantedTrees)
   let plantedCrops = parsePlantedCrops(initialSave?.plantedCrops)
+  // Plan 198 — authoritative ore-deposit mining-hits-remaining, sparse and
+  // keyed by `NaturalResource.id`: same "carried across rebuild, reset only
+  // on a genuinely new world" contract as the ids/arrays above. Not part of
+  // `SaveData` yet — in-session continuity only (plan 198 §8).
+  let resourceDepletion: ResourceDepletionState = new Map()
   // Persistent player land ownership (plan 129) — sparse, doesn't need the
   // `bundle`-rebuild indirection `onAnimalDeath`/`getPlayerSocial` use below
   // (it never depends on `questManager`), so it's threaded straight through.
@@ -326,6 +332,7 @@ export async function createApp(
     pointLightBudget,
     getNearbyPlayerWell,
     initialSave?.playerGardens ?? [],
+    resourceDepletion,
   )
   nearbyPlayerWellTarget = (x, z, maxDistance) => bundle.playerWells.nearestCompleted(x, z, maxDistance)
   // Plan 159 §10 — fishing bait per spot (flat map, survives stream-out/in
@@ -676,6 +683,7 @@ export async function createApp(
         removedCropIds = new Set()
         plantedTrees = []
         plantedCrops = []
+        resourceDepletion = new Map()
         dayNight.elapsedDays = 0
         treeLifecycle = createTreeLifecycle(config.seed, {})
         landOwnership.clear()
@@ -701,6 +709,7 @@ export async function createApp(
         onTrapBaitReturned,
         pointLightBudget,
         getNearbyPlayerWell,
+        resourceDepletion,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
 

@@ -29,6 +29,36 @@ export function hitsForRichness(richness: number): number {
   return 3 + Math.round(t * 4)
 }
 
+/** Authoritative mining-hits-remaining override, keyed by `NaturalResource.id`
+ *  (plan 198) — sparse and caller-owned (same "survives its runtime
+ *  representation's dispose/recreate, reset only on a genuinely new world"
+ *  contract as `collectedItemIds`/`removedCropIds` in `worldBundle.ts`), so a
+ *  `ResourceDeposits` runtime instance never re-derives an already-mined
+ *  deposit's initial hit count from scratch. No entry means "use the
+ *  deterministic `hitsForRichness` initial value"; an entry of `0` means the
+ *  deposit is depleted — those two states must stay distinguishable. */
+export type ResourceDepletionState = Map<string, number>
+
+/** Hits remaining for `id` — an existing override (including `0`, meaning
+ *  depleted) wins over the deterministic initial value from `richness`. */
+export function resolveRemaining(
+  state: ResourceDepletionState,
+  id: string,
+  richness: number,
+): number {
+  return state.get(id) ?? hitsForRichness(richness)
+}
+
+export function isDepleted(state: ResourceDepletionState, id: string): boolean {
+  return state.get(id) === 0
+}
+
+/** Record a mining hit's result — call this at the same place `remaining` is
+ *  decremented, never separately, so the two can't drift apart. */
+export function recordMined(state: ResourceDepletionState, id: string, remaining: number): void {
+  state.set(id, remaining)
+}
+
 export function yieldForOre(type: MineableOre): { kind: ItemKind, count: number } {
   return { kind: ORE_ITEM[type], count: 1 }
 }

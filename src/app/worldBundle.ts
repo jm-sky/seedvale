@@ -6,6 +6,7 @@ import type { Settlement } from '../settlement/createSettlement'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { ChunkCoord } from '../terrain/chunkGrid'
+import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { PlacedTrapRecord } from '../world/animalTraps'
 import type { BeehiveRecord } from '../world/beehives'
 import type { CropPlacement } from '../world/cropLifecycle'
@@ -307,13 +308,16 @@ function buildItemSpawners(
  *  `createWorldBundle`/`rebuildWorldBundle` — this `ResourceDeposits`
  *  instance's lifetime is already tied 1:1 to the `chunkManager` it closes
  *  over (both disposed/rebuilt together by `rebuildWorldBundle`), so there's
- *  no reassignment for it to survive. */
+ *  no reassignment for it to survive. `resourceDepletion` is what actually
+ *  survives (plan 198) — same "caller-owned, mutated in place, carried across
+ *  rebuild" contract as `collectedItemIds`/`removedCropIds`. */
 function buildResourceDeposits(
   scene: Scene,
   worldContext: WorldContext,
   seed: number,
+  resourceDepletion: ResourceDepletionState,
 ): ResourceDeposits {
-  return createResourceDeposits(scene, worldContext, seed)
+  return createResourceDeposits(scene, worldContext, seed, resourceDepletion)
 }
 
 export async function createWorldBundle(
@@ -391,6 +395,11 @@ export async function createWorldBundle(
    *  rebuild, reset only on a genuinely new world" contract as
    *  `initialPlayerWells` above. */
   initialPlayerGardens: readonly PlayerGardenRecord[] = [],
+  /** Plan 198 — authoritative ore-deposit mining-hits-remaining, sparse and
+   *  keyed by `NaturalResource.id`; same "carried across rebuild, reset only
+   *  on a genuinely new world" contract as `collectedItemIds`. Not part of
+   *  `SaveData` yet (in-session continuity only — see plan 198 §8). */
+  resourceDepletion: ResourceDepletionState = new Map(),
 ): Promise<WorldBundle> {
   const waterMirror = createWaterMirror({
     waterLevel: config.terrain.waterLevel,
@@ -407,7 +416,7 @@ export async function createWorldBundle(
     sampleEnv: worldContext.sampleTreeEnv,
   }
   const ocean = buildOcean(scene, config, waterMirror)
-  const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
+  const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed, resourceDepletion)
   const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
   const foodSources = createFoodSourceHooks(chunkManager)
   const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources)
@@ -511,6 +520,9 @@ export async function rebuildWorldBundle(
    *  — forwarded into `buildSettlementsManager` the same way `getPlayerSocial`
    *  is above. */
   getNearbyPlayerWell?: NearbyPlayerWellLookup,
+  /** Plan 198 — same reset contract as `collectedItemIds`: `resetCollectedItems`
+   *  governs both (caller passes a fresh empty `Map` alongside it). */
+  resourceDepletion: ResourceDepletionState = new Map(),
 ): Promise<void> {
   // Snapshot before dispose() — a same-session rebuild (config change, not a
   // new seed) recreates `Fauna` from scratch just like every other bundle
@@ -584,7 +596,7 @@ export async function rebuildWorldBundle(
     sampleEnv: worldContext.sampleTreeEnv,
   }
   bundle.ocean = buildOcean(scene, config, waterMirror)
-  bundle.resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed)
+  bundle.resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed, resourceDepletion)
   const mining: SettlementMiningHooks = {
     queryNearest: bundle.resourceDeposits.queryNearest,
     mine: bundle.resourceDeposits.mine,

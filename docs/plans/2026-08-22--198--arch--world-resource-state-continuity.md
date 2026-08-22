@@ -1,7 +1,7 @@
 # Plan: World Resource State Continuity
 
 **Created:** 2026-08-22  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — see [implementation notes](./2026-08-22--198--arch--world-resource-state-continuity-implementation-notes.md)  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~195~~
 
