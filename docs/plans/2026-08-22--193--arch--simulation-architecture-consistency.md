@@ -1,7 +1,7 @@
 # Plan: Simulation Architecture Consistency
 
 **Created:** 2026-08-22  
-**Status:** `planned` 📋  
+**Status:** `done` ✅ — see [implementation notes](./2026-08-22--193--arch--simulation-architecture-consistency-implementation-notes.md)  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~192~~
 
@@ -575,23 +575,23 @@ Jeżeli audit ujawni rozbieżność między `docs/ARCHITECTURE.md` a kodem, wska
 
 # Kryteria akceptacji
 
-- [ ] Rzeczywisty simulation tick jest udokumentowany.
-- [ ] Główne systemy mają określony contract: input/output/state/time/phase.
-- [ ] Najważniejszy mutable state ma jednoznacznego ownera.
-- [ ] Najważniejsze mutation boundaries są znane.
-- [ ] `gameLoop.ts` ma rozpisane cohesive responsibilities.
-- [ ] `createApp.ts` ma potwierdzoną granicę composition root.
-- [ ] `WorldBundle` ma potwierdzony ownership/lifecycle boundary.
-- [ ] `src/simulation/` ma określoną rzeczywistą rolę.
-- [ ] Główne zależności i coupling points są udokumentowane.
-- [ ] Time skip ma rzeczywisty execution map.
-- [ ] Ordering/determinism risks są sklasyfikowane.
-- [ ] Duplicate sources of truth są zidentyfikowane.
-- [ ] Performance boundaries zostały sprawdzone.
-- [ ] Problemy mają priorytety P0–P3.
-- [ ] Każdy problem ma decyzję: fix now / follow-up / acceptable.
-- [ ] Powstała lista konkretnych refactor candidates.
-- [ ] Nie wykonano dużego refaktoru bez osobnej decyzji.
-- [ ] Ewentualne kolejne plany wynikają bezpośrednio z ustaleń audytu.
+- [x] Rzeczywisty simulation tick jest udokumentowany.
+- [x] Główne systemy mają określony contract: input/output/state/time/phase.
+- [x] Najważniejszy mutable state ma jednoznacznego ownera.
+- [x] Najważniejsze mutation boundaries są znane.
+- [x] `gameLoop.ts` ma rozpisane cohesive responsibilities.
+- [x] `createApp.ts` ma potwierdzoną granicę composition root.
+- [x] `WorldBundle` ma potwierdzony ownership/lifecycle boundary.
+- [x] `src/simulation/` ma określoną rzeczywistą rolę.
+- [x] Główne zależności i coupling points są udokumentowane.
+- [x] Time skip ma rzeczywisty execution map.
+- [x] Ordering/determinism risks są sklasyfikowane.
+- [x] Duplicate sources of truth są zidentyfikowane.
+- [x] Performance boundaries zostały sprawdzone.
+- [x] Problemy mają priorytety P0–P3.
+- [x] Każdy problem ma decyzję: fix now / follow-up / acceptable.
+- [x] Powstała lista konkretnych refactor candidates.
+- [x] Nie wykonano dużego refaktoru bez osobnej decyzji.
+- [x] Ewentualne kolejne plany wynikają bezpośrednio z ustaleń audytu.
 
-**Zrób git commit i push do main, rebase jeżeli trzeba**
+Zrobiono commit i push na dedykowany branch (nie `main`) — patrz [implementation notes](./2026-08-22--193--arch--simulation-architecture-consistency-implementation-notes.md).

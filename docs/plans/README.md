@@ -100,7 +100,6 @@ Natural vegetation
 | `2026-08-21--188--fauna-and-dead-animal-lifecycle.md` | Corpse decay (`fresh`→`rotting`→`bones`→removed, extends existing `AnimalAgent` lifecycle, reuses `harvestedRemains.ts` templates) + `bear` as a data-driven `AnimalKind` spawning from its own cave `PreySpawner` (multiple same-type habitat instances now supported, id collision fixed) implemented; technical verification green (`tsc`/lint/build/test). `bear.glb`/`bear-growl.ogg` not sourced yet (capsule fallback / silent growl); no browser/gameplay verification yet | 🔴 | M | ~~138~~ ~~177~~ ~~179~~ |
 | `2026-08-21--190--plans-automation.md` | Zautomatyzować utrzymanie pomocniczych informacji w `docs/plans/README.md` oraz `PLANNED_PLANS_WITHOUT_NOTES.md`. | 🟡 | S | - |
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | Stworzyć system generowania górskich masywów i charakterystycznych szczytów, który kształtuje większe fragmenty krajobrazu — tworząc pasma, doliny, przełęcze i dominanty wysokościowe — zamiast generować pojedyncze niezależne wzniesienia. | 🟡 | L | 181 |
-| `2026-08-22--193--arch--simulation-architecture-consistency.md` | Przeprowadzić focused audit architektury symulacji Seedvale na podstawie aktualnego codebase i istniejącej dokumentacji architektury. | 🔴 | M | ~~192~~ |
 | `2026-08-22--194--arch--entity-identity-lifecycle.md` | Przeprowadzić focused audit architektury identity i lifecycle encji w Seedvale. | 🔴 | M | ~~193~~ |
 | `2026-08-22--195--arch--data-state-consistency.md` | Przeprowadzić focused audit spójności danych i state w Seedvale. | 🔴 | M | ~~193~~ ~~194~~ |
 
@@ -176,6 +175,7 @@ Done plans kept visible here (not archived) because a current plan above still d
 | `2026-08-18--156--npc-household-and-settlement-storage-logistics.md` | Fizyczny household/settlement crate + `[E]` stock — dependency of `152`, `159` |
 | `2026-08-18--160--high-quality-melee-weapons.md` | Sześć HQ broni białych, Kupiec + quest rewards — dependency of `161` |
 | `2026-08-19--166--named-save-slots.md` | Nazwane sloty IndexedDB; browser verified 2026-08-19 — kept until the next archive snapshot |
+| `2026-08-22--193--arch--simulation-architecture-consistency.md` | Audit-only (no refactor), docs-only change (one `ARCHITECTURE.md` sentence). Full tick/contract/ownership/mutation/coupling maps in [implementation notes](./2026-08-22--193--arch--simulation-architecture-consistency-implementation-notes.md). Headline new finding (P0, not previously logged): fauna's full behavior tree (movement/predator-prey combat/player-NPC damage) runs unthrottled at up to ~20× and with zero catch-up during an active time-skip, contradicting both `gameLoop.ts`'s and `timeSkip.ts`'s own doc comments — can silently kill livestock/NPCs or hit the player during a "safe" rest skip. Also broadens the already-logged NPC-needs time-skip double-count (192/195) to confirm it duplicates real household/economy resource quantities, not just need bars. New P1: `NpcAgent.die()` has no death-propagation hook (unlike livestock's `onAnimalDeath`). Follow-ups logged to `LOOSE-ENDS.md` — dependency of `194`/`195` |
 
 ---
 

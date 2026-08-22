@@ -93,7 +93,7 @@ createApp
   │
   └── rebuildWorldBundle(...)
           ├── dispose current world systems
-          ├── clear module-level road caches
+          ├── clear module-level road caches and the tree-lifecycle presence/override caches
           ├── create a new ChunkManager
           └── recreate dependent world systems against the new manager
 ```
