@@ -103,6 +103,7 @@ Natural vegetation
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | Stworzyć system generowania górskich masywów i charakterystycznych szczytów, który kształtuje większe fragmenty krajobrazu — tworząc pasma, doliny, przełęcze i dominanty wysokościowe — zamiast generować pojedyncze niezależne wzniesienia. | 🟡 | L | 181 |
 | `2026-08-22--193--arch--simulation-architecture-consistency.md` | Przeprowadzić focused audit architektury symulacji Seedvale na podstawie aktualnego codebase i istniejącej dokumentacji architektury. | 🔴 | M | ~~192~~ |
 | `2026-08-22--194--arch--entity-identity-lifecycle.md` | Przeprowadzić focused audit architektury identity i lifecycle encji w Seedvale. | 🔴 | M | ~~193~~ |
+| `2026-08-22--195--arch--data-state-consistency.md` | Przeprowadzić focused audit spójności danych i state w Seedvale. | 🔴 | M | ~~193~~ ~~194~~ |
 
 ### Fresh new
 
