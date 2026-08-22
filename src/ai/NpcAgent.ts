@@ -2097,6 +2097,7 @@ export class NpcAgent {
    *  by `SettlementsManager.resolveTimeSkip`, never per-frame.
    *  See `docs/plans/archive/2026-08-12--075--time-skip-npc-catchup.md`. */
   resolveTimeSkip(startTimeOfDay: number, hours: number, dayLengthSec: number): void {
+    if (this.health.dead) return
     let finalActivity: ScheduleActivity | null = null
     let elapsed = 0
     let napping = this.sleepReason === 'collapse' || shouldCollapseSleep(this.vigor)

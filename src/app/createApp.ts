@@ -734,7 +734,16 @@ export async function createApp(
         bundle.chunkManager.collidersNear,
         (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
       )
-      player.setPosition(bundle.settlementsManager.home.spawn.x, bundle.settlementsManager.home.spawn.z)
+      // Only a genuinely new world (new seed / New Game) relocates the player
+      // to home spawn — an in-session terrain-param rebuild on the same seed
+      // must leave the player's actual position alone; `setGround` above
+      // already re-snapped it to the rebuilt terrain's height via
+      // `snapToGround()` (plan 194 §12 finding: this used to run
+      // unconditionally, silently teleporting the player home on e.g. a
+      // flat-shading toggle).
+      if (resetCollectedItems) {
+        player.setPosition(bundle.settlementsManager.home.spawn.x, bundle.settlementsManager.home.spawn.z)
+      }
       pauseMenu.setSeed(config.seed)
     } finally {
       gui.setBusy(false)

@@ -1,7 +1,7 @@
 # Plan: Entity Identity & Lifecycle Architecture
 
 **Created:** 2026-08-22  
-**Status:** `planned` 📋  
+**Status:** `done` ✅ — see [implementation notes](./2026-08-22--194--arch--entity-identity-lifecycle-implementation-notes.md)  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~193~~
 
