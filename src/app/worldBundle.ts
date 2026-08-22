@@ -3,6 +3,8 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
 import type { Settlement } from '../settlement/createSettlement'
+import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
+import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { PlacedTrapRecord } from '../world/animalTraps'
 import type { BeehiveRecord } from '../world/beehives'
@@ -189,6 +191,14 @@ function buildSettlementsManager(
    *  (plan 174) — forwarded into every `createSettlement` call → every
    *  `NpcAgent`, the same way `mining` is above. */
   foodSources?: SettlementFoodSourceHooks,
+  /** Carried across an in-session `rebuildWorldBundle` (plan 197 §8) — not
+   *  part of `SaveData`, so `createWorldBundle`'s own call site below never
+   *  passes this (a genuinely fresh bundle has nothing to carry). */
+  initialHouseholds?: Record<HouseholdId, HouseholdSnapshot>,
+  /** Carried across an in-session `rebuildWorldBundle` the same way as
+   *  `initialHouseholds` above (plan 197 §7) — also never passed by
+   *  `createWorldBundle`, for the same reason. */
+  initialNpcStates?: Record<NpcId, NpcStateSnapshot>,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -217,6 +227,8 @@ function buildSettlementsManager(
     pointLightBudget,
     getNearbyPlayerWell,
     foodSources,
+    initialHouseholds,
+    initialNpcStates,
   )
 }
 
@@ -536,6 +548,11 @@ export async function rebuildWorldBundle(
   const carriedHives = resetCollectedItems ? [] : [...bundle.hives.nodes()]
   bundle.hives.dispose()
   const carriedEconomies = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotEconomies()
+  // Households (plan 197 §8) and NPC authoritative state (plan 197 §7) get
+  // the same same-seed-only carry contract as `carriedEconomies` above —
+  // reset to fresh on a genuinely new world, reused on an in-session rebuild.
+  const carriedHouseholds = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotHouseholds()
+  const carriedNpcStates = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotNpcStates()
   bundle.largeCaves.dispose()
   bundle.resourceDeposits.dispose()
   bundle.settlementsManager.dispose()
@@ -573,7 +590,7 @@ export async function rebuildWorldBundle(
     mine: bundle.resourceDeposits.mine,
   }
   const foodSources = createFoodSourceHooks(bundle.chunkManager)
-  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources)
+  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, carriedHouseholds, carriedNpcStates)
   bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, carriedSpawnerState)
   await preloadItemGlbModels()
   await preloadHeldToolModels()

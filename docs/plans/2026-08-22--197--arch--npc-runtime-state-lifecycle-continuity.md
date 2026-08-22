@@ -1,7 +1,7 @@
 # Plan: NPC Runtime State & Lifecycle Continuity
 
 **Created:** 2026-08-22  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test green); not browser-verified — see [implementation notes](./2026-08-22--197--arch--npc-runtime-state-lifecycle-continuity-implementation-notes.md)  
 **Priority:** critical · **Effort:** L  
 **Depends on:** ~~194~~ ~~196~~
 
@@ -339,18 +339,18 @@ Zweryfikować rzeczywisty gameplay:
 
 ## Kryteria akceptacji
 
-- [ ] Identity NPC jest niezależna od lifetime `NpcAgent`.
-- [ ] Authoritative NPC state ma jasno określonego ownera.
-- [ ] `NpcAgent` może zostać zniszczony i odtworzony bez resetowania entity state.
-- [ ] Settlement unload/load zachowuje NPC state.
-- [ ] `WorldBundle` rebuild zachowuje NPC state.
-- [ ] Śmierć NPC jest authoritative lifecycle transition.
-- [ ] Martwy NPC nie może zostać odtworzony jako żywy.
-- [ ] Death consequences są zastosowane do odpowiednich domen.
-- [ ] Household continuity zostaje naprawione bez tworzenia ogólnego persistence frameworka.
-- [ ] Lifecycle nie zależy od NPC name ani runtime object reference.
-- [ ] Nie powstaje globalny Entity/State Manager ani drugi system persistence.
-- [ ] Testy przechodzą.
+- [x] Identity NPC jest niezależna od lifetime `NpcAgent`. (stabilne `npc.id`, niezmienione — `NpcStateRegistry` keyed po tym samym id)
+- [x] Authoritative NPC state ma jasno określonego ownera. (`NpcStateRegistry` na `SettlementsManager`)
+- [x] `NpcAgent` może zostać zniszczony i odtworzony bez resetowania entity state.
+- [x] Settlement unload/load zachowuje NPC state.
+- [x] `WorldBundle` rebuild zachowuje NPC state.
+- [x] Śmierć NPC jest authoritative lifecycle transition. (`health.dead` na współdzielonym obiekcie, nie na `NpcAgent`)
+- [x] Martwy NPC nie może zostać odtworzony jako żywy.
+- [x] Death consequences są zastosowane do odpowiednich domen. (patrz implementation notes §6 — audyt bez nowego hooka; konkretna naprawiona konsekwencja: dialog z martwym NPC)
+- [x] Household continuity zostaje naprawione bez tworzenia ogólnego persistence frameworka. (mirror `EconomyRegistry`)
+- [x] Lifecycle nie zależy od NPC name ani runtime object reference.
+- [x] Nie powstaje globalny Entity/State Manager ani drugi system persistence.
+- [x] Testy przechodzą.
 - [ ] Continuity została zweryfikowana w przeglądarce.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

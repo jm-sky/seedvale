@@ -115,4 +115,29 @@ describe('createHouseholdRegistry', () => {
     a.deposit('wood', 5)
     expect(b.stock.query('wood')).not.toBe(a.stock.query('wood'))
   })
+
+  it('serializes into plain data that seeds a fresh registry with matching (but distinct) stock — WorldBundle rebuild carry (plan 197 §8)', () => {
+    const id = householdIdFor('0_0', 0)
+    const before = createHouseholdRegistry()
+    const household = before.getOrCreate(id, '0_0', '0_0:home:0')
+    household.deposit('wood', 3)
+    household.water.add(2)
+    const woodBefore = household.stock.query('wood')
+    const waterBefore = household.water.current
+
+    const snapshot = before.serialize()
+    const after = createHouseholdRegistry(snapshot)
+    const hydrated = after.getOrCreate(id, '0_0', '0_0:home:0')
+
+    expect(hydrated).not.toBe(household)
+    expect(hydrated.stock.query('wood')).toBe(woodBefore)
+    expect(hydrated.water.current).toBe(waterBefore)
+  })
+
+  it('a genuinely new household id not present in a carried snapshot gets the usual fresh jittered reserve', () => {
+    const registry = createHouseholdRegistry({})
+    const id = householdIdFor('0_0', 0)
+    const household = registry.getOrCreate(id, '0_0', '0_0:home:0')
+    expect(household.stock.query('food')).toBeGreaterThan(0)
+  })
 })

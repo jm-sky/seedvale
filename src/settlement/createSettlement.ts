@@ -17,6 +17,7 @@ import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { VillageSize } from './families'
+import type { NpcStateRegistry } from './npcState'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { disposeObject3D } from '../assets/loadGltf'
@@ -196,6 +197,10 @@ export async function createSettlement(
   def: SettlementDef,
   economy: SettlementEconomy,
   householdRegistry: HouseholdRegistry,
+  /** Authoritative NPC state (health/needs/stamina/vigor), keyed by stable
+   *  npc id (plan 197) — lives on `SettlementsManager`, not this settlement,
+   *  for the same reuse-across-stream-out/in reason as `householdRegistry`. */
+  npcStateRegistry: NpcStateRegistry,
   collidersNear: ColliderSource,
   /** Registers this settlement's static colliders (well + houses +
    *  stockpile/wagon/horse/village fire) under `def.id` so they participate
@@ -510,6 +515,13 @@ export async function createSettlement(
   const agents = await Promise.all(
     flatMembers.map(async ({ home, household, member, familyMembers }, i) => {
       const workplace = workplaceFor(def.id, member.character.role, landmarks, i)
+      const npcId = `${def.id}:npc:${i}`
+      const needOffset = i / Math.max(1, flatMembers.length - 1)
+      // Hydrates from the same HP/needs/stamina/vigor object every time this
+      // id has been seen before (agent dispose/recreate on settlement
+      // unload/reload) — a genuinely new id gets the usual fresh state
+      // (plan 197).
+      const npcState = npcStateRegistry.getOrCreate(npcId, needOffset)
       const agent = await NpcAgent.create(
         sampleHeight,
         waterLevel,
@@ -518,17 +530,18 @@ export async function createSettlement(
         home,
         workplace,
         i,
-        i / Math.max(1, flatMembers.length - 1),
+        needOffset,
         member,
         familyMembers,
         playAt,
         undefined,
         forest,
-        `${def.id}:npc:${i}`,
+        npcId,
         queues,
         wellQid,
         economy,
         household,
+        npcState,
         getPlayerSocial,
         mining,
         getNearbyPlayerWell,
@@ -609,7 +622,12 @@ export async function createSettlement(
             nearbyNpcCounts[i]!++
             nearbyNpcCounts[j]!++
           }
-          if (dist < NPC_SEPARATION_RADIUS) {
+          // A dead NPC now stays in `agents` for the settlement's whole
+          // lifetime (plan 197 — death is authoritative, not erased by the
+          // next stream-out/reload) rather than vanishing within a few
+          // frames as it effectively used to; exclude it from the physical
+          // push so a corpse doesn't shove living NPCs around or get shoved.
+          if (dist < NPC_SEPARATION_RADIUS && !ai.health.dead && !aj.health.dead) {
             const overlap = NPC_SEPARATION_RADIUS - dist
             const nx = dist > 1e-4 ? dx / dist : 1
             const nz = dist > 1e-4 ? dz / dist : 0

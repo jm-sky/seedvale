@@ -20,7 +20,8 @@ import { type ChunkCoord, worldToChunk } from '../terrain/chunkGrid'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { createSettlement, type Settlement } from './createSettlement'
-import { createHouseholdRegistry } from './household'
+import { createHouseholdRegistry, type HouseholdId, type HouseholdSnapshot } from './household'
+import { createNpcStateRegistry, type NpcId, type NpcStateSnapshot } from './npcState'
 import { createSignpost, placeOnGround } from './props'
 import {
   type MidpointSignpost,
@@ -114,6 +115,12 @@ export type SettlementsManager = {
   /** Stock-only snapshot of every settlement economy created so far (loaded
    *  or previously streamed out) — see `EconomyRegistry.serialize`. */
   snapshotEconomies: () => Record<string, Partial<Record<EconomicKind, number>>>
+  /** Stock-only snapshot of every household created so far — see
+   *  `HouseholdRegistry.serialize` (plan 197 §8). */
+  snapshotHouseholds: () => Record<HouseholdId, HouseholdSnapshot>
+  /** Snapshot of every NPC's authoritative state created so far — see
+   *  `NpcStateRegistry.serialize` (plan 197 §7). */
+  snapshotNpcStates: () => Record<NpcId, NpcStateSnapshot>
   dispose: () => void
 }
 
@@ -164,6 +171,18 @@ export async function createSettlementsManager(
    *  (plan 174) — forwarded into every `createSettlement` call the same way
    *  `mining` is above. */
   foodSources?: SettlementFoodSourceHooks,
+  /** Carried across a `WorldBundle` rebuild (plan 197 §8) — same
+   *  "same-manager-lifetime registry, stock-only carry snapshot on rebuild"
+   *  contract as `initialEconomies` above, applied to `Household` (the
+   *  confirmed gap: unlike `SettlementEconomy`, household stock used to
+   *  reset on every in-session rebuild). */
+  initialHouseholds?: Record<HouseholdId, HouseholdSnapshot>,
+  /** Carried across a `WorldBundle` rebuild the same way as
+   *  `initialHouseholds` above (plan 197 §7) — NOT part of `SaveData`
+   *  (plan 197 explicitly excludes full NPC save/load; this registry's
+   *  lifetime is the running session, from first construction through any
+   *  number of settlement unload/reload cycles and in-session rebuilds). */
+  initialNpcStates?: Record<NpcId, NpcStateSnapshot>,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -203,7 +222,13 @@ export async function createSettlementsManager(
 
   // Households (plan 069) live here, not per-`Settlement` — same reason as
   // `economies`: streaming a settlement out/in must reuse the same stock.
-  const households = createHouseholdRegistry()
+  const households = createHouseholdRegistry(initialHouseholds)
+
+  // NPC authoritative state (plan 197) — same reason/lifetime as `households`/
+  // `economies` above: an `NpcAgent` disposed and recreated (settlement
+  // unload/reload) must hydrate from the same HP/needs/stamina/vigor object,
+  // not a fresh default one.
+  const npcStates = createNpcStateRegistry(initialNpcStates)
 
   const homeDef = defFor({ gx: 0, gz: 0 })
   if (!homeDef) {
@@ -218,6 +243,7 @@ export async function createSettlementsManager(
     homeDef,
     economyFor(homeDef),
     households,
+    npcStates,
     collidersNear,
     registerColliders,
     clearColliders,
@@ -334,6 +360,7 @@ export async function createSettlementsManager(
         def,
         economyFor(def),
         households,
+        npcStates,
         collidersNear,
         registerColliders,
         clearColliders,
@@ -448,6 +475,8 @@ export async function createSettlementsManager(
     getHomeDef: () => homeDef,
     peekDef: (cell) => defFor(cell),
     snapshotEconomies: () => economies.serialize(),
+    snapshotHouseholds: () => households.serialize(),
+    snapshotNpcStates: () => npcStates.serialize(),
     dispose() {
       for (const entry of entries.values()) entry.settlement?.dispose()
       for (const instances of midpoints.values()) {
@@ -457,6 +486,7 @@ export async function createSettlementsManager(
       entries.clear()
       economies.clear()
       households.clear()
+      npcStates.clear()
     },
   }
 }

@@ -8,8 +8,10 @@ import type { RangedAttackLifecycle } from '../combat/rangedLifecycle'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
 import type { Household } from '../settlement/household'
+import type { NpcAuthoritativeState } from '../settlement/npcState'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
+import type { VigorState } from '../shared/VigorState'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
@@ -40,16 +42,15 @@ import {
   WOODCUTTING_PRODUCTION,
 } from '../economy'
 import { Inventory } from '../items/Inventory'
-import { createHealthState, damageHealth, type HealthState } from '../shared/HealthState'
+import { createNpcAuthoritativeState } from '../settlement/npcState'
+import { damageHealth, type HealthState } from '../shared/HealthState'
 import {
-  createStaminaState,
   drainStamina,
   getStaminaRatio,
   isExhausted,
   restoreStamina,
   type StaminaState,
 } from '../shared/StaminaState'
-import { createVigorState, type VigorState } from '../shared/VigorState'
 import {
   type ActionLifecycle,
   type ActionLifecycleStatus,
@@ -85,7 +86,6 @@ import {
   pickDialogueLine,
 } from './dialogue'
 import {
-  createNeedState,
   needColor,
   type NeedId,
   type NeedState,
@@ -130,7 +130,6 @@ import {
   applySleepVigor,
   applyWorkVigor,
   isHeavyWorkKind,
-  MAX_VIGOR,
   preferHomeSleep,
   shouldCollapseSleep,
   shouldStayAsleep,
@@ -598,8 +597,6 @@ const IDLE_WANDER_SPREAD = 4
  *  same order of magnitude as the resource-action waits above (0.8-1.6). */
 const WORK_DURATION_RANGE: [number, number] = [2, 4]
 
-const MAX_HP = 100
-const MAX_STAMINA = 100
 /** stamina/sec while walking toward a task (`goTo`) — deliberately low so
  *  ordinary errands (house → well → workplace → storage) don't meaningfully
  *  dent stamina; only sustained heavy work should. */
@@ -886,7 +883,6 @@ export class NpcAgent {
     home: Place,
     workplace: Place | null,
     treeIndex: number,
-    needOffset: number,
     member: FamilyMember,
     familyMembers: readonly FamilyMemberRef[],
     playAt: PlayAt,
@@ -896,6 +892,10 @@ export class NpcAgent {
     wellQueueId: string | null,
     economy: SettlementEconomy | null,
     household: Household | null,
+    /** Authoritative HP/needs/stamina/vigor (plan 197) — the same object
+     *  every reconstruction of this npc id hydrates from; see
+     *  `settlement/npcState.ts`. */
+    npcState: NpcAuthoritativeState,
     getPlayerSocial: PlayerSocialLookup,
     mining: SettlementMiningHooks | null,
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
@@ -927,9 +927,9 @@ export class NpcAgent {
     this.traits = character.traits
     this.personality = character.personality
     this.relation = member.relation
-    this.health = createHealthState(MAX_HP)
-    this.stamina = createStaminaState(MAX_STAMINA)
-    this.vigor = createVigorState(MAX_VIGOR)
+    this.health = npcState.health
+    this.stamina = npcState.stamina
+    this.vigor = npcState.vigor
     this.workplace = workplace
     this.schedule = effectiveScheduleFor(
       SCHEDULE_TEMPLATES[character.role],
@@ -944,7 +944,7 @@ export class NpcAgent {
     this.restRate = BASE_REST_RATE * (energetic ? ENERGETIC_REST_MULT : 1)
     this.waitMultiplier = this.traits.includes('fast_worker') ? FAST_WORKER_WAIT_MULT : 1
     this.treeIndex = treeIndex % Math.max(1, landmarks.trees.length)
-    this.needs = createNeedState(needOffset)
+    this.needs = npcState.needs
 
     prepareProp(root, NPC_HEIGHT)
     const wrapper = new THREE.Group()
@@ -1018,6 +1018,13 @@ export class NpcAgent {
     this.label.position.set(0, NPC_HEIGHT + 0.55, 0)
     this.mesh.add(this.label)
     assignRenderLayer(this.mesh, AGENT_RENDER_LAYER)
+
+    // Hydrating an npc id whose authoritative state is already dead
+    // (settlement unload/reload, `WorldBundle` rebuild) must not resurrect
+    // it — reflect the dead pose immediately instead of leaving the
+    // fresh-alive setup above in place (plan 197 §5). Safe to reuse `die()`
+    // here: every field it touches is still at its just-constructed default.
+    if (this.health.dead) this.die()
   }
 
   static async create(
@@ -1039,6 +1046,11 @@ export class NpcAgent {
     wellQueueId: string | null = null,
     economy: SettlementEconomy | null = null,
     household: Household | null = null,
+    /** Authoritative HP/needs/stamina/vigor (plan 197). Defaults to a fresh
+     *  state for callers with no `SettlementsManager`-backed registry to
+     *  hand in — same "isolated fallback" idiom as `economy`/`household`
+     *  defaulting to `null`. */
+    npcState: NpcAuthoritativeState = createNpcAuthoritativeState(npcId, needOffset),
     getPlayerSocial: PlayerSocialLookup = () => ({ relationLevel: 'stranger', standing: 0 }),
     mining: SettlementMiningHooks | null = null,
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
@@ -1056,7 +1068,6 @@ export class NpcAgent {
         home,
         workplace,
         treeIndex,
-        needOffset,
         member,
         familyMembers,
         playAt,
@@ -1066,6 +1077,7 @@ export class NpcAgent {
         wellQueueId,
         economy,
         household,
+        npcState,
         getPlayerSocial,
         mining,
         getNearbyPlayerWell,
@@ -1081,7 +1093,6 @@ export class NpcAgent {
         home,
         workplace,
         treeIndex,
-        needOffset,
         member,
         familyMembers,
         playAt,
@@ -1091,6 +1102,7 @@ export class NpcAgent {
         wellQueueId,
         economy,
         household,
+        npcState,
         getPlayerSocial,
         mining,
         getNearbyPlayerWell,
@@ -1107,7 +1119,6 @@ export class NpcAgent {
     home: Place,
     workplace: Place | null,
     treeIndex: number,
-    needOffset: number,
     member: FamilyMember,
     familyMembers: readonly FamilyMemberRef[],
     playAt: PlayAt,
@@ -1117,6 +1128,7 @@ export class NpcAgent {
     wellQueueId: string | null,
     economy: SettlementEconomy | null,
     household: Household | null,
+    npcState: NpcAuthoritativeState,
     getPlayerSocial: PlayerSocialLookup,
     mining: SettlementMiningHooks | null,
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
@@ -1143,7 +1155,6 @@ export class NpcAgent {
       home,
       workplace,
       treeIndex,
-      needOffset,
       member,
       familyMembers,
       playAt,
@@ -1153,6 +1164,7 @@ export class NpcAgent {
       wellQueueId,
       economy,
       household,
+      npcState,
       getPlayerSocial,
       mining,
       getNearbyPlayerWell,

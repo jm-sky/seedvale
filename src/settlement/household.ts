@@ -91,6 +91,17 @@ function createWaterReserve(initial: number): WaterReserve {
   }
 }
 
+/** Plain-data carry snapshot — mirrors `SettlementEconomy.snapshot()`. Used
+ *  to seed a freshly-constructed `HouseholdRegistry` across a `WorldBundle`
+ *  rebuild (plan 197 §8), the same `initial*`/`serialize()` idiom
+ *  `EconomyRegistry` already uses for the settlement-level stock it sits
+ *  next to. Not part of `SaveData` — plan 197 scopes this to the confirmed
+ *  in-session rebuild gap only, not full household persistence. */
+export type HouseholdSnapshot = {
+  stock: Partial<Record<HouseholdResourceKind, number>>
+  water: number
+}
+
 export type Household = {
   readonly id: HouseholdId
   readonly settlementId: string
@@ -111,6 +122,7 @@ export type Household = {
    * plan 069 §3/§6 (full household -> village storage).
    */
   deposit: (kind: HouseholdResourceKind, amount: number, economy?: SettlementEconomy | null) => void
+  snapshot: () => HouseholdSnapshot
 }
 
 export function householdIdFor(settlementId: string, familyIndex: number): HouseholdId {
@@ -138,9 +150,19 @@ function initialHouseholdStock(id: HouseholdId): Partial<Record<HouseholdResourc
   return out
 }
 
-export function createHousehold(id: HouseholdId, settlementId: string, homeId: string): Household {
-  const stock = new EconomicStock(initialHouseholdStock(id))
-  const water = createWaterReserve(INITIAL_HOUSEHOLD_STOCK.water + (hashString(`${id}:water`) % INITIAL_HOUSEHOLD_RANDOM_OFFSET.water))
+export function createHousehold(
+  id: HouseholdId,
+  settlementId: string,
+  homeId: string,
+  /** Carried across a `WorldBundle` rebuild (plan 197 §8) — a genuinely new
+   *  household (first-ever construction) gets the usual jittered starting
+   *  reserve instead. */
+  initial?: HouseholdSnapshot,
+): Household {
+  const stock = new EconomicStock(initial?.stock ?? initialHouseholdStock(id))
+  const water = createWaterReserve(
+    initial?.water ?? INITIAL_HOUSEHOLD_STOCK.water + (hashString(`${id}:water`) % INITIAL_HOUSEHOLD_RANDOM_OFFSET.water),
+  )
   return {
     id,
     settlementId,
@@ -159,6 +181,7 @@ export function createHousehold(id: HouseholdId, settlementId: string, homeId: s
       const overflow = amount - toHousehold
       if (overflow > 0 && economy) economy.add(kind, overflow)
     },
+    snapshot: () => ({ stock: stock.toJSON(), water: water.current }),
   }
 }
 
@@ -172,15 +195,18 @@ export type HouseholdRegistry = {
   getOrCreate: (id: HouseholdId, settlementId: string, homeId: string) => Household
   get: (id: HouseholdId) => Household | undefined
   clear: () => void
+  /** Stock-only snapshot of every household created so far — see
+   *  `HouseholdSnapshot`'s doc comment. */
+  serialize: () => Record<HouseholdId, HouseholdSnapshot>
 }
 
-export function createHouseholdRegistry(): HouseholdRegistry {
+export function createHouseholdRegistry(initial?: Record<HouseholdId, HouseholdSnapshot>): HouseholdRegistry {
   const byId = new Map<HouseholdId, Household>()
   return {
     getOrCreate(id, settlementId, homeId) {
       const existing = byId.get(id)
       if (existing) return existing
-      const created = createHousehold(id, settlementId, homeId)
+      const created = createHousehold(id, settlementId, homeId, initial?.[id])
       byId.set(id, created)
       return created
     },
@@ -189,6 +215,11 @@ export function createHouseholdRegistry(): HouseholdRegistry {
     },
     clear() {
       byId.clear()
+    },
+    serialize() {
+      const out: Record<HouseholdId, HouseholdSnapshot> = {}
+      for (const [id, household] of byId) out[id] = household.snapshot()
+      return out
     },
   }
 }
