@@ -320,6 +320,151 @@ function buildResourceDeposits(
   return createResourceDeposits(scene, worldContext, seed, resourceDepletion)
 }
 
+/** Every already-resolved input `buildWorldSystems` needs to construct all 15
+ *  `WorldBundle` members in one pass — shared shape between `createWorldBundle`
+ *  (values sourced from `SaveData`/fresh defaults) and `rebuildWorldBundle`
+ *  (values sourced from a live snapshot of the bundle being replaced). See
+ *  each exported function below for the semantic contract of each field —
+ *  not restated here to avoid doc drift between the two. */
+type WorldSystemsSeed = {
+  scene: Scene
+  config: WorldConfig
+  collectedItemIds: Set<string>
+  removedCropIds: Set<string>
+  plantedTrees: PlantedTreeRecord[]
+  plantedCrops: CropPlacement[]
+  playAt: PlayAt
+  treeLifecycle: TreeLifecycle
+  getWorldDays: () => number
+  dayNight: DayNightState
+  droppedItems: readonly DroppedItem[]
+  placedFires: readonly PlacedFire[]
+  placedTents: readonly PlacedTent[]
+  placedTraps: readonly PlacedTrapRecord[]
+  placedContainers: readonly PlacedContainerRecord[]
+  carriedContainer: SaveCarriedContainer | null
+  playerWells: readonly PlayerWellRecord[]
+  playerGardens: readonly PlayerGardenRecord[]
+  dryingRacks: readonly DryingRackRecord[]
+  hives: readonly BeehiveRecord[]
+  economies?: Record<string, Partial<Record<EconomicKind, number>>>
+  households?: Record<HouseholdId, HouseholdSnapshot>
+  npcStates?: Record<NpcId, NpcStateSnapshot>
+  spawnerState?: ReadonlyMap<string, SavedSpawnPointState>
+  resourceDepletion: ResourceDepletionState
+  onAnimalDeath?: (animalId: string) => void
+  getPlayerSocial?: PlayerSocialLookup
+  isLandPlotOwned?: (settlementId: string, plotId: string) => boolean
+  onTrapCapture?: PlacedTrapsHooks['onCapture']
+  onTrapBaitReturned?: PlacedTrapsHooks['onBaitReturned']
+  pointLightBudget?: PointLightBudget
+  getNearbyPlayerWell?: NearbyPlayerWellLookup
+}
+
+/** Constructs all 15 `WorldBundle` members, in dependency order, from an
+ *  already-resolved seed. The single body shared by `createWorldBundle`
+ *  (fresh values) and `rebuildWorldBundle` (a snapshot of the bundle it is
+ *  about to replace) — previously duplicated in full between the two. */
+async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
+  const {
+    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops,
+    playAt, treeLifecycle, getWorldDays, dayNight,
+    droppedItems: initialDroppedItems,
+    placedFires: initialPlacedFires,
+    placedTents: initialPlacedTents,
+    placedTraps: initialPlacedTraps,
+    placedContainers: initialPlacedContainers,
+    carriedContainer: initialCarriedContainer,
+    playerWells: initialPlayerWells,
+    playerGardens: initialPlayerGardens,
+    dryingRacks: initialDryingRacks,
+    hives: initialHives,
+    economies: initialEconomies,
+    households: initialHouseholds,
+    npcStates: initialNpcStates,
+    spawnerState: initialSpawnerState,
+    resourceDepletion,
+    onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
+    pointLightBudget, getNearbyPlayerWell,
+  } = seed
+
+  const waterMirror = createWaterMirror({
+    waterLevel: config.terrain.waterLevel,
+    enabled: config.postProcessing.waterReflections,
+  })
+  const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, treeLifecycle, getWorldDays, waterMirror)
+  chunkManager.update(0, 0)
+  await chunkManager.waitForChunks(homeChunks())
+
+  const worldContext = createWorldContext(() => chunkManager, config, dayNight)
+  const forest: SettlementForestHooks = {
+    lifecycle: treeLifecycle,
+    getWorldDays,
+    sampleEnv: worldContext.sampleTreeEnv,
+  }
+  const ocean = buildOcean(scene, config, waterMirror)
+  const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed, resourceDepletion)
+  const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
+  const foodSources = createFoodSourceHooks(chunkManager)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, initialHouseholds, initialNpcStates)
+  const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
+  await preloadItemGlbModels()
+  await preloadHeldToolModels()
+  const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
+  const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
+  const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt, pointLightBudget)
+  const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
+  const placedTraps = createPlacedTraps(
+    scene,
+    chunkManager.sampleHeight,
+    config.seed,
+    { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
+    initialPlacedTraps,
+  )
+  const placedContainers = createPlacedContainers(
+    scene,
+    chunkManager.sampleHeight,
+    initialPlacedContainers,
+    initialCarriedContainer,
+  )
+  const playerWells = createPlayerWells(
+    scene,
+    chunkManager.sampleHeight,
+    chunkManager.registerColliders,
+    chunkManager.clearColliders,
+    initialPlayerWells,
+  )
+  const playerGardens = createPlayerGardens(
+    scene,
+    chunkManager.sampleHeight,
+    chunkManager.registerColliders,
+    chunkManager.clearColliders,
+    initialPlayerGardens,
+  )
+  const largeCaves = createLargeCaves(
+    scene,
+    chunkManager,
+    config.seed,
+    villageSizeConfig(settlementsManager.home.size).footprintRadius,
+    config.terrain.region.coastThreshold,
+  )
+  const dryingRacks = createDryingRacks(
+    scene,
+    chunkManager.sampleHeight,
+    settlementsManager.home.landmarks.stockpile,
+    initialDryingRacks,
+  )
+  const hives = createBeehives(
+    scene,
+    chunkManager.sampleHeight,
+    settlementsManager.home.landmarks.trees.map((t) => t.position),
+    config.seed,
+    initialHives,
+  )
+
+  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, placedContainers, playerWells, playerGardens, largeCaves, dryingRacks, hives }
+}
+
 export async function createWorldBundle(
   scene: Scene,
   config: WorldConfig,
@@ -401,81 +546,25 @@ export async function createWorldBundle(
    *  persisted the same way (`SaveData.resourceDeposits`). */
   resourceDepletion: ResourceDepletionState = new Map(),
 ): Promise<WorldBundle> {
-  const waterMirror = createWaterMirror({
-    waterLevel: config.terrain.waterLevel,
-    enabled: config.postProcessing.waterReflections,
+  return buildWorldSystems({
+    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, playAt,
+    treeLifecycle, getWorldDays, dayNight,
+    droppedItems: initialDroppedItems,
+    placedFires: initialPlacedFires,
+    placedTents: initialPlacedTents,
+    placedTraps: initialPlacedTraps,
+    placedContainers: initialPlacedContainers,
+    carriedContainer: initialCarriedContainer,
+    playerWells: initialPlayerWells,
+    playerGardens: initialPlayerGardens,
+    dryingRacks: initialDryingRacks,
+    hives: initialHives,
+    economies: initialEconomies,
+    spawnerState: initialSpawnerState,
+    resourceDepletion,
+    onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
+    pointLightBudget, getNearbyPlayerWell,
   })
-  const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, treeLifecycle, getWorldDays, waterMirror)
-  chunkManager.update(0, 0)
-  await chunkManager.waitForChunks(homeChunks())
-
-  const worldContext = createWorldContext(() => chunkManager, config, dayNight)
-  const forest: SettlementForestHooks = {
-    lifecycle: treeLifecycle,
-    getWorldDays,
-    sampleEnv: worldContext.sampleTreeEnv,
-  }
-  const ocean = buildOcean(scene, config, waterMirror)
-  const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed, resourceDepletion)
-  const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
-  const foodSources = createFoodSourceHooks(chunkManager)
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources)
-  const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
-  await preloadItemGlbModels()
-  await preloadHeldToolModels()
-  const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
-  const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
-  const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt, pointLightBudget)
-  const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
-  const placedTraps = createPlacedTraps(
-    scene,
-    chunkManager.sampleHeight,
-    config.seed,
-    { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
-    initialPlacedTraps,
-  )
-  const placedContainers = createPlacedContainers(
-    scene,
-    chunkManager.sampleHeight,
-    initialPlacedContainers,
-    initialCarriedContainer,
-  )
-  const playerWells = createPlayerWells(
-    scene,
-    chunkManager.sampleHeight,
-    chunkManager.registerColliders,
-    chunkManager.clearColliders,
-    initialPlayerWells,
-  )
-  const playerGardens = createPlayerGardens(
-    scene,
-    chunkManager.sampleHeight,
-    chunkManager.registerColliders,
-    chunkManager.clearColliders,
-    initialPlayerGardens,
-  )
-  const largeCaves = createLargeCaves(
-    scene,
-    chunkManager,
-    config.seed,
-    villageSizeConfig(settlementsManager.home.size).footprintRadius,
-    config.terrain.region.coastThreshold,
-  )
-  const dryingRacks = createDryingRacks(
-    scene,
-    chunkManager.sampleHeight,
-    settlementsManager.home.landmarks.stockpile,
-    initialDryingRacks,
-  )
-  const hives = createBeehives(
-    scene,
-    chunkManager.sampleHeight,
-    settlementsManager.home.landmarks.trees.map((t) => t.position),
-    config.seed,
-    initialHives,
-  )
-
-  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, placedContainers, playerWells, playerGardens, largeCaves, dryingRacks, hives }
 }
 
 /** Disposes every member's current instance and mutates `bundle`'s fields in
@@ -581,82 +670,32 @@ export async function rebuildWorldBundle(
   treeLifecycle.clearPresence()
   if (resetCollectedItems) treeLifecycle.clearOverrides()
 
-  const waterMirror = createWaterMirror({
-    waterLevel: config.terrain.waterLevel,
-    enabled: config.postProcessing.waterReflections,
+  const fresh = await buildWorldSystems({
+    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, playAt,
+    treeLifecycle, getWorldDays, dayNight,
+    droppedItems: carriedDrops,
+    placedFires: carriedFires,
+    placedTents: carriedTents,
+    placedTraps: carriedTraps,
+    placedContainers: carriedContainerNodes,
+    carriedContainer: carriedContainerHeld,
+    playerWells: carriedPlayerWells,
+    playerGardens: carriedPlayerGardens,
+    dryingRacks: carriedDryingRacks,
+    hives: carriedHives,
+    economies: carriedEconomies,
+    households: carriedHouseholds,
+    npcStates: carriedNpcStates,
+    spawnerState: carriedSpawnerState,
+    resourceDepletion,
+    onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
+    pointLightBudget, getNearbyPlayerWell,
   })
-  bundle.chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, treeLifecycle, getWorldDays, waterMirror)
-  bundle.chunkManager.update(0, 0)
-  await bundle.chunkManager.waitForChunks(homeChunks())
-
-  const worldContext = createWorldContext(() => bundle.chunkManager, config, dayNight)
-  const forest: SettlementForestHooks = {
-    lifecycle: treeLifecycle,
-    getWorldDays,
-    sampleEnv: worldContext.sampleTreeEnv,
-  }
-  bundle.ocean = buildOcean(scene, config, waterMirror)
-  bundle.resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed, resourceDepletion)
-  const mining: SettlementMiningHooks = {
-    queryNearest: bundle.resourceDeposits.queryNearest,
-    mine: bundle.resourceDeposits.mine,
-  }
-  const foodSources = createFoodSourceHooks(bundle.chunkManager)
-  bundle.settlementsManager = await buildSettlementsManager(scene, bundle.chunkManager, config.seed, playAt, config, forest, worldContext, mining, carriedEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, carriedHouseholds, carriedNpcStates)
-  bundle.fauna = await buildFauna(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, carriedSpawnerState)
-  await preloadItemGlbModels()
-  await preloadHeldToolModels()
-  bundle.itemSpawners = buildItemSpawners(scene, bundle.chunkManager, bundle.settlementsManager.home, config.seed)
-  bundle.droppedItems = createDroppedItems(scene, bundle.chunkManager.sampleHeight, carriedDrops)
-  bundle.placedFires = createPlacedFires(scene, bundle.chunkManager.sampleHeight, carriedFires, playAt, pointLightBudget)
-  bundle.placedTents = createPlacedTents(scene, bundle.chunkManager.sampleHeight, carriedTents)
-  bundle.placedTraps = createPlacedTraps(
-    scene,
-    bundle.chunkManager.sampleHeight,
-    config.seed,
-    { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
-    carriedTraps,
-  )
-  bundle.placedContainers = createPlacedContainers(
-    scene,
-    bundle.chunkManager.sampleHeight,
-    carriedContainerNodes,
-    carriedContainerHeld,
-  )
-  bundle.playerWells = createPlayerWells(
-    scene,
-    bundle.chunkManager.sampleHeight,
-    bundle.chunkManager.registerColliders,
-    bundle.chunkManager.clearColliders,
-    carriedPlayerWells,
-  )
-  bundle.playerGardens = createPlayerGardens(
-    scene,
-    bundle.chunkManager.sampleHeight,
-    bundle.chunkManager.registerColliders,
-    bundle.chunkManager.clearColliders,
-    carriedPlayerGardens,
-  )
-  bundle.largeCaves = createLargeCaves(
-    scene,
-    bundle.chunkManager,
-    config.seed,
-    villageSizeConfig(bundle.settlementsManager.home.size).footprintRadius,
-    config.terrain.region.coastThreshold,
-  )
-  bundle.dryingRacks = createDryingRacks(
-    scene,
-    bundle.chunkManager.sampleHeight,
-    bundle.settlementsManager.home.landmarks.stockpile,
-    carriedDryingRacks,
-  )
-  bundle.hives = createBeehives(
-    scene,
-    bundle.chunkManager.sampleHeight,
-    bundle.settlementsManager.home.landmarks.trees.map((t) => t.position),
-    config.seed,
-    carriedHives,
-  )
+  // `bundle` itself must stay the same object reference (see this file's
+  // `WorldBundle` doc comment / ARCHITECTURE.md's rebuild invariants) — this
+  // reassigns every field in place, in one synchronous step, rather than
+  // replacing `bundle`.
+  Object.assign(bundle, fresh)
 }
 
 export function disposeWorldBundle(bundle: WorldBundle): void {
