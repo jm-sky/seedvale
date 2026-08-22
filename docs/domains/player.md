@@ -1,0 +1,27 @@
+# Player Domain Roadmap
+
+**Status:** evolving target vision
+
+## Purpose
+
+The player is a participant in the same world systems as NPCs rather than the centre of a player-only progression system.
+
+## Target state
+
+- The player can explore, observe, work, gather, produce and participate in settlement life.
+- Player needs and actions use shared world concepts where practical.
+- Player-owned systems connect to the same resources, items, places and economy used by NPCs.
+- Player choices create persistent consequences in the world.
+- Housing, farming, production and trade can become meaningful forms of participation without turning Seedvale into a conventional survival RPG.
+- Quests and dialogue emerge increasingly from actual world state.
+
+## Future evolution
+
+1. Complete core participation and interaction loops.
+2. Expand home, farming and production participation.
+3. Deepen trade and settlement integration.
+4. Improve long-term consequences and world relationships.
+
+## Boundaries
+
+Avoid player-only versions of simulation systems that already exist for NPCs or settlements.
