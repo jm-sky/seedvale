@@ -256,7 +256,7 @@ grouping decision.
      "nearest member chunk wins" rule from §4 holds).
    - `refreshTreeVisual()`: redirect its `removeByKey` call through the
      batcher (resolve region from `rec.coord`).
-4. **Docs**: update [ARCHITECTURE.md](../ARCHITECTURE.md) / `STATE.md` if
+4. **Docs**: update [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) / `STATE.md` if
    this changes the "important code entry points" list (add
    `vegetationRegionBatcher.ts`), per repo convention.
 

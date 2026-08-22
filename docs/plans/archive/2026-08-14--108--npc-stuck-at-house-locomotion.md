@@ -1,10 +1,10 @@
 # Plan 108: NPC utyka przy / w domku — locomotion, nie stamina
 
-**Status:** `done` ✅ — playtest accepted 2026-08-18  
-**Created:** 2026-08-14  
-**Priority:** 🔴 high  
-**Effort:** `M`  
-**Depends on:** ~~097~~ (kolizje + łatka wyjścia z domu)  
+**Status:** `done` ✅ — playtest accepted 2026-08-18
+**Created:** 2026-08-14
+**Priority:** 🔴 high
+**Effort:** `M`
+**Depends on:** ~~097~~ (kolizje + łatka wyjścia z domu)
 **Prompt:** [docs/prompts/2026-08-14--005--npc-stuck-at-house-locomotion.md](../../prompts/2026-08-14--005--npc-stuck-at-house-locomotion.md)
 
 Playtest po watchdogu (S8 / commit `b99b248`) i gospodarstwach (069 / `d50a3fd`). Nie kodować z samego tytułu — ten dokument jest review + kontraktem naprawy.
@@ -30,7 +30,7 @@ Mapowanie dialogu: `currentActivityLine` / `NEED_ACTIVITY_LABEL` (`src/ai/dialog
 | `b99b248` (S8, bez numerowanego planu) | Watchdog `repath → escape → abandon → teleport`; stamina walk vs work; `?debug=1` | Symptom manager na złym kontrakcie locomotion. Testy pokrywają czysty FSM, nie `isWalkable` / `steerTo`. |
 | `d50a3fd` (069) | Jedzenie z zapasu gospodarstwa **w domu** (`destination = home`) | Więcej celów w środku collidera. Woda w domu (`HOME_WATER_CHANCE = 0.45`) była już wcześniej. Drewno nadal: drzewo → stos. |
 
-S8 w [SETTLEMENTS.md](../../SETTLEMENTS.md) opisuje watchdog jako rozwiązanie utknięcia. Playtest pokazuje, że **nie uwalnia** NPC przy dysku domu.
+S8 w [SETTLEMENTS.md](../../state/settlements.md) opisuje watchdog jako rozwiązanie utknięcia. Playtest pokazuje, że **nie uwalnia** NPC przy dysku domu.
 
 ---
 
@@ -148,7 +148,7 @@ src/ai/NpcAgent.ts                 # cel na obręczy; moving; teleport; isWalkab
 src/ai/npcMovementWatchdog.ts      # bez zmian kontraktu FSM, chyba że strike = brak postępu ku celowi
 src/ai/npcMovementWatchdog.test.ts # + testy: probe nie akceptuje wnętrza; home nie jest kandydatem teleportu
 src/world/collision.ts             # reuse Collider; bez nowego systemu
-docs/SETTLEMENTS.md                # S8: watchdog ≠ rozwiązanie domu (wskazanie tego planu)
+docs/state/settlements.md                # S8: watchdog ≠ rozwiązanie domu (wskazanie tego planu)
 ```
 
 Czysta funkcja `destinationOnColliderRim(pos, dest, colliders) → dest` — testowalna bez Three.js, jak watchdog.

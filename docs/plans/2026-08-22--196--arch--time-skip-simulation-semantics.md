@@ -1,8 +1,8 @@
 # Plan: Time-Skip Simulation Semantics
 
-**Created:** 2026-08-22  
-**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test green); browser verification not yet done, see [implementation notes](./2026-08-22--196--arch--time-skip-simulation-semantics-implementation-notes.md).  
-**Priority:** critical · **Effort:** M  
+**Created:** 2026-08-22
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test green); browser verification not yet done, see [implementation notes](./2026-08-22--196--arch--time-skip-simulation-semantics-implementation-notes.md).
+**Priority:** critical · **Effort:** M
 **Depends on:** ~~192~~ ~~193~~
 
 ## Cel
@@ -188,7 +188,7 @@ Nie tworzyć:
 
 Zaktualizować dokumentację tak, aby opisywała **rzeczywisty** model:
 
-- `docs/ARCHITECTURE.md`,
+- `docs/architecture/ARCHITECTURE.md`,
 - `docs/STATE.md`,
 - odpowiednią dokumentację time/simulation, jeśli istnieje.
 

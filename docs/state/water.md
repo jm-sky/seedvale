@@ -2,7 +2,7 @@
 
 **Purpose:** źródło prawdy dla wody (ocean + jeziora / cieki śródlądowe): stan techniczny i wizualny, decyzje, historia poprawek.
 
-**Nie jest:** planem implementacji ([plans/](./plans/README.md)), logiem całej grafiki ([GRAPHICS.md](./GRAPHICS.md) — tam zostają kontrakty G4–G6), ani katalogiem assetów.
+**Nie jest:** planem implementacji ([plans/](./plans/README.md)), logiem całej grafiki ([GRAPHICS.md](./architecture/GRAPHICS.md) — tam zostają kontrakty G4–G6), ani katalogiem assetów.
 
 **Last verified:** 2026-08-21 (rzeki: plany 181/189 zaimplementowane, browser check jeszcze nie zrobiony — reszta sekcji verified 2026-08-13, plan 098 fazy 1–3 + wanna mesha, browser ✅)
 
@@ -13,7 +13,7 @@ Gdy ten plik rozjeżdża się z kodem — **wygrywa kod**, potem aktualizujemy t
 ## Jak używać
 
 1. Przed zmianą oceanu, jezior, brzegu, `waterLevel` albo `bodyScale` — przeczytaj **Standing decisions** i **Stan obecny**.
-2. Kontrakty renderu (depthWrite, mirror RT, foliage) zostają w [GRAPHICS.md](./GRAPHICS.md) G4–G6; szczegóły domeny wody są tutaj.
+2. Kontrakty renderu (depthWrite, mirror RT, foliage) zostają w [GRAPHICS.md](./architecture/GRAPHICS.md) G4–G6; szczegóły domeny wody są tutaj.
 3. Po decyzji użytkownika albo zweryfikowanym fixie — dopisz wpis w **Historii** (najnowszy na górze) i zaktualizuj stan / decyzje.
 4. Issue/plan mogą szczegółować pracę; trwała reguła ląduje tutaj.
 
@@ -322,7 +322,7 @@ Nierozwiązane z [review 001](./reviews/2026-08-07--001--water-quality.md):
 
 ## Powiązane
 
-- [GRAPHICS.md](./GRAPHICS.md) — G3–G6, log 2026-08-12
+- [GRAPHICS.md](./architecture/GRAPHICS.md) — G3–G6, log 2026-08-12
 - [state/terrain-and-world-generation.md](./state/terrain-and-world-generation.md) — teren/chunki/mountains (rzeki żyją tutaj, nie tam)
 - [STATE.md](./STATE.md) — WorldBundle.ocean, skrót ocean/jeziora
 - [reviews/2026-08-07--001--water-quality.md](./reviews/2026-08-07--001--water-quality.md)

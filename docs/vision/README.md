@@ -36,6 +36,7 @@ Do not use a domain roadmap as an implementation-status tracker. Verify implemen
 
 - [Agriculture](./agriculture.md)
 - [Combat](./combat.md)
+- [`Companions`](./companions.md)
 - [Economy](./economy.md)
 - [Fauna](./fauna.md)
 - [Items](./items.md)

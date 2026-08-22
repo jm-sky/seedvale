@@ -2,11 +2,11 @@
 
 **Purpose:** jeden source of truth dla decyzji, kontraktów i uwag o grafice / renderze / materiałach wizualnych.
 
-**Nie jest:** listą assetów ([assets/](./assets/README.md)), stanem implementacji ([STATE.md](./STATE.md)), domeną wody ([WATER.md](./WATER.md)), ani planem ([plans/](./plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
+**Nie jest:** listą assetów ([assets/](./assets/README.md)), stanem implementacji ([STATE.md](./STATE.md)), domeną wody ([WATER.md](./state/water.md)), ani planem ([plans/](./plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
 
 **Last updated:** 2026-08-19
 
-Domena wody (stan, historia, kolejność poprawek): [WATER.md](./WATER.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
+Domena wody (stan, historia, kolejność poprawek): [WATER.md](./state/water.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
 
 ## Jak używać
 
@@ -165,7 +165,7 @@ Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight
 ### 2026-08-13 — Wanna terenu pod wodą (`floorHeights`) ✅
 
 - Mesh chunka: Y / normalne / kolor z `floorHeights`, nie z clampowanego `heights`. Koniec zielonej tafli `SEABED` na powierzchni wody.
-- `heights` nadal clamp dla maski wody, trawy, `sampleHeight`. Szczegóły: [WATER.md](./WATER.md).
+- `heights` nadal clamp dla maski wody, trawy, `sampleHeight`. Szczegóły: [WATER.md](./state/water.md).
 - Browser: użytkownik 2026-08-13.
 
 ### 2026-08-13 — Faza 3: wspólne lustro wody 256² + toggle Vue ✅
@@ -189,11 +189,11 @@ Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight
 
 - W8 zaakceptowane. Target: jeden shader (jezioro jaśniejsze / ocean ciemniejszy+swell), depth fade, brzeg fade+piana+mokry piasek.
 - Lustro sceny na obu, **jeden** RT 256², wyłącznik Pauza → Świat; off = sky+spec bez passu.
-- G5/G6: geometria zostaje; Water.js i discard `vBodyScale` to stan kodu, nie cel. Szczegóły: [WATER.md](./WATER.md).
+- G5/G6: geometria zostaje; Water.js i discard `vBodyScale` to stan kodu, nie cel. Szczegóły: [WATER.md](./state/water.md).
 
 ### 2026-08-13 — SoT wody; dual-material na śródlądziu 📝
 
-- Nowy [WATER.md](./WATER.md) — stan techniczny/wizualny, decyzje W1–W7, historia.
+- Nowy [WATER.md](./state/water.md) — stan techniczny/wizualny, decyzje W1–W7, historia.
 - Screen: śródlądowy staw jednocześnie jako jezioro i ocean (`vBodyScale > 0.9` → discard → Water.js bez maski).
 - W8 wtedy jako propozycja; wieczorem zaakceptowane (wpis powyżej). Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md).
 
@@ -232,7 +232,7 @@ Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight
 | Temat | Status | Link |
 |-------|--------|------|
 | Soft shore fade ocean ↔ ląd | `done` (browser 2026-08-13) | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md), plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 |
-| Śródlądzie = dwa materiały wody | `done` | [WATER.md](./WATER.md) W8, issue [028](./issues/2026-08-13--028--inland-water-dual-material.md), plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1 |
+| Śródlądzie = dwa materiały wody | `done` | [WATER.md](./state/water.md) W8, issue [028](./issues/2026-08-13--028--inland-water-dual-material.md), plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1 |
 | Lustro wody + toggle Vue | `verification needed` | W9, plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 3 |
 | Droga/trawa ground cover (#1–#3) | `done` | issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
 | God rays whiteout (fix) | `done` | issue [016](./issues/2026-08-11--016--god-rays-mountain-whiteout.md) |

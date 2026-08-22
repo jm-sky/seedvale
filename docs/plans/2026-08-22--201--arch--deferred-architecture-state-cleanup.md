@@ -1,8 +1,8 @@
 # Plan: Deferred Architecture & State Cleanup
 
-**Created:** 2026-08-22  
-**Status:** `planned` 📋  
-**Priority:** low · **Effort:** M  
+**Created:** 2026-08-22
+**Status:** `planned` 📋
+**Priority:** low · **Effort:** M
 **Depends on:** ~~192~~ ~~193~~ ~~194~~ ~~195~~ ~~196~~ ~~197~~ ~~198~~ ~~199~~ ~~200~~
 
 ## Cel
@@ -135,7 +135,7 @@ Nie używać `LOOSE-ENDS.md` jako listy przypadkowych pomysłów.
 Po reconciliation zweryfikować:
 
 - `docs/STATE.md`,
-- `docs/ARCHITECTURE.md`.
+- `docs/architecture/ARCHITECTURE.md`.
 
 Aktualizować wyłącznie miejsca, które są niezgodne z rzeczywistym kodem lub nowym ownership/lifecycle contract wynikającym z 196–200.
 

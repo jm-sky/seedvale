@@ -2,7 +2,7 @@
 
 **Purpose:** current-state reference for how the procedural terrain, its streaming/instancing pipeline, and the world-time systems anchored to it (weather/seasons, surface wetness/snow) work today.
 
-**Not:** a rendering/visual-contract log (that's [GRAPHICS.md](../GRAPHICS.md) — shader/material *why*), the ocean/lake/river domain (that's [WATER.md](../WATER.md)), a plan (that's [plans/](../plans/README.md)), or the whole-codebase snapshot (that's [STATE.md](../STATE.md)).
+**Not:** a rendering/visual-contract log (that's [GRAPHICS.md](../architecture/GRAPHICS.md) — shader/material *why*), the ocean/lake/river domain (that's [WATER.md](../state/water.md)), a plan (that's [plans/](../plans/README.md)), or the whole-codebase snapshot (that's [STATE.md](../STATE.md)).
 
 **Last verified:** 2026-08-22
 
@@ -15,14 +15,14 @@ When this file and the code disagree, the code wins — update this file.
 - Procedurally chunked terrain (macro continental bias + ridges, hills/valleys, softened detail FBM), generated on a worker pool with load/unload radii and pinned home chunks.
 - `ChunkManager.update()` spends one finalize slot per frame on either a terrain mesh or vegetation/environment content (mesh takes priority) so streaming doesn't spike the main thread; `CHUNKS_STARTED_PER_FRAME` caps how many new chunk generations can start per frame (it does not cap finalization).
 - GLB prop templates preload when `ChunkManager` is constructed, so template parsing happens off the streaming hot path.
-- Shore sand band varies in world space; grass thins into mountain foothills; road corridors are a soft tint + dirt micro-contrast baked onto the terrain mesh (grass soft-fades in a corridor, never a hard bald cut — see [GRAPHICS.md](../GRAPHICS.md) G9).
+- Shore sand band varies in world space; grass thins into mountain foothills; road corridors are a soft tint + dirt micro-contrast baked onto the terrain mesh (grass soft-fades in a corridor, never a hard bald cut — see [GRAPHICS.md](../architecture/GRAPHICS.md) G9).
 - `forestDensityAt` (`ChunkManager.sampleForestFactor`) is a single continuous function driving both tree density and fauna habitat — there is no separate forest manager. `forestBiomeAt(forestDensity)` (plan 182) classifies that same continuous reading into `open`/`forest`/`deepForest` (thresholds 0.35/0.72) as one shared discrete world query (`ChunkManager.sampleForestBiome` / `WorldContext.sampleForestBiome`) — not a parallel biome system or a stored per-chunk label.
 
 ## Mountains
 
 - Mountain massifs are shaped in `chunkHeightmap.ts`'s `sampleRawTexel()`, tuned (plan 181) toward wider, continuous massifs with softer foothills and fewer sharp noise-driven peaks/pits — overall mountain coverage/amplitude (`mountainGain`/`heightScale`) is unchanged. Exact tuning constants live in `worldConfig.ts`'s `RegionParams` and are not restated here; see plan 181 for the tuning history.
 - Waterfalls and full shader/rendering parity between rivers and lake/ocean are not implemented yet ([LOOSE-ENDS](../plans/LOOSE-ENDS.md)).
-- Rivers themselves (hydrology, tiling, ribbon geometry, channel carving) are documented in [WATER.md](../WATER.md), not here — they're a water feature, not a terrain-shape one, even though carving does lower the heightmap.
+- Rivers themselves (hydrology, tiling, ribbon geometry, channel carving) are documented in [WATER.md](../state/water.md), not here — they're a water feature, not a terrain-shape one, even though carving does lower the heightmap.
 
 ## Vegetation & rocks
 
@@ -46,7 +46,7 @@ When this file and the code disagree, the code wins — update this file.
   - `computeWeather` — per-season weighted odds, hashed per fixed-length weather "cycle" (`WEATHER_CYCLE_DAYS`).
   - `computeClimate` composes both into `WorldClimateState`.
 - `ClimateState`/`tickClimate` is a small mutable runtime cache around those pure functions (mirrors `DayNightState`'s shape): it only recomputes `weather` when `elapsedDays` crosses into a new cycle, plus a debug-only `forced` override (lil-gui) that is never persisted.
-- Visuals: `world/weatherVisuals.ts` dims sun/ambient/hemi and adjusts fog on top of day/night. `world/weatherParticles.ts` renders rain/snow as GPU-driven `THREE.Points` (per-particle fall/drift computed in a shared shader from a fixed-at-creation attribute + `uTime`; JS only updates a few uniforms) — density follows weather intensity and the `quality.lodScale` graphics preset. The rain/snow shape contract (thin vertical streak vs. full sprite) is [GRAPHICS.md](../GRAPHICS.md) G13, not restated here. Weather → NPC/fauna/resource coupling is not implemented.
+- Visuals: `world/weatherVisuals.ts` dims sun/ambient/hemi and adjusts fog on top of day/night. `world/weatherParticles.ts` renders rain/snow as GPU-driven `THREE.Points` (per-particle fall/drift computed in a shared shader from a fixed-at-creation attribute + `uTime`; JS only updates a few uniforms) — density follows weather intensity and the `quality.lodScale` graphics preset. The rain/snow shape contract (thin vertical streak vs. full sprite) is [GRAPHICS.md](../architecture/GRAPHICS.md) G13, not restated here. Weather → NPC/fauna/resource coupling is not implemented.
 
 ## Surface weather effects (wetness/snow)
 
@@ -74,4 +74,4 @@ src/world/weatherParticles.ts
 src/config/worldConfig.ts
 ```
 
-Rivers/hydrology entry points live in [WATER.md](../WATER.md).
+Rivers/hydrology entry points live in [WATER.md](../state/water.md).

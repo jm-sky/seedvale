@@ -1,6 +1,6 @@
 # Seedvale — Code Index
 
-**Purpose:** a lookup table from "system" to "the file to open first". It answers *where does this live?*, not *what is implemented?* (that's [STATE.md](./STATE.md)) or *how do the layers fit together?* (that's [ARCHITECTURE.md](./ARCHITECTURE.md)).
+**Purpose:** a lookup table from "system" to "the file to open first". It answers *where does this live?*, not *what is implemented?* (that's [STATE.md](./STATE.md)) or *how do the layers fit together?* (that's [ARCHITECTURE.md](./architecture/ARCHITECTURE.md)).
 
 **Scope:** this is the **first, minimal version**, seeded from the `src/app/` composition-root split. It is not a full repository map yet — sections are added as areas get touched. An area missing here is not a claim that it doesn't exist.
 

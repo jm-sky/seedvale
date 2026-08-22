@@ -28,4 +28,4 @@
 
 ## SoT
 
-[GRAPHICS.md](../GRAPHICS.md) — standing G9 + log 2026-08-12.
+[GRAPHICS.md](../architecture/GRAPHICS.md) — standing G9 + log 2026-08-12.

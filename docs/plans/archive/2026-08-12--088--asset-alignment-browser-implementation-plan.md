@@ -49,7 +49,7 @@ Confirmed by reading the code, not the docs:
 
 Two consequences worth stating up front:
 
-- **`docs/GRAPHICS.md` drift:** it lists `src/render/filmGradeShader.ts`, which no longer exists — the grade
+- **`docs/architecture/GRAPHICS.md` drift:** it lists `src/render/filmGradeShader.ts`, which no longer exists — the grade
   lives in `createGradedOutputPass()` (`src/render/gradedOutputPass.ts`). Fix that line while touching the
   render docs (§13).
 - **`createFauna.ts` calls `prepareProp(asset.root, …)` on the shared cache root.** The viewer must only
@@ -791,7 +791,7 @@ During implementation:
   the `SV_` GLB convention, the axis convention table (D1), the two spaces (D3), the validation issue list
   (D4), how to author an anchor in Blender and export it, and a per-asset status table of which assets have
   authored anchors. Link it from `docs/assets/README.md`.
-- **`docs/GRAPHICS.md`** — add a standing decision that the alignment browser's Game-like mode must reuse
+- **`docs/architecture/GRAPHICS.md`** — add a standing decision that the alignment browser's Game-like mode must reuse
   `createRenderer` / `createLights` / `createSky` / `skyParamsFromTime` rather than a parallel rig, and note
   the single-view-only composer constraint. Fix the stale `filmGradeShader.ts` row (now
   `gradedOutputPass.ts`).
@@ -899,5 +899,5 @@ test — §10 item 10 (game regression pass) is the safety net for the runtime t
 - [074 — house catalog, scale, lamps, debug](./2026-08-12--074--house-catalog-scale-lamps-debug.md) — owns the lamp-mount data and the `[house:lamp]` paste workflow this plan generalizes.
 - [085 — handheld lights and village torches](./2026-08-12--085--handheld-lights-and-village-torches.md) — owns the held-tool/torch grip data and is the first Phase 6 migration candidate.
 - [079 — interaction queue / well drink](./2026-08-12--079--interaction-queue-well-drink.md) — future `interaction` anchor consumer.
-- [GRAPHICS.md](../GRAPHICS.md) — G1/G2/G3/G4/G7/G8 constrain the viewer's rendering choices.
+- [GRAPHICS.md](../architecture/GRAPHICS.md) — G1/G2/G3/G4/G7/G8 constrain the viewer's rendering choices.
 - [assets/MODELS.md](../assets/MODELS.md) — reviewed; no new assets required for MVP.

@@ -2,7 +2,7 @@
 
 **Purpose:** current-state reference for how melee/ranged combat works — the state-machine/system layer, shared between player, NPCs and fauna.
 
-**Not:** the per-item stat tables (damage/range/timings — that's [items/WEAPONS.md](../items/WEAPONS.md) and [items/CATALOG.md](../items/CATALOG.md)), NPC life/economy outside of combat (that's [SETTLEMENTS.md](../SETTLEMENTS.md)), or a plan. Combat spans the `items-player`, `settlements-npcs` and `fauna` plan domains at once, which is why it lives here rather than folded into one of them.
+**Not:** the per-item stat tables (damage/range/timings — that's [items/WEAPONS.md](../items/WEAPONS.md) and [items/CATALOG.md](../items/CATALOG.md)), NPC life/economy outside of combat (that's [SETTLEMENTS.md](../state/settlements.md)), or a plan. Combat spans the `items-player`, `settlements-npcs` and `fauna` plan domains at once, which is why it lives here rather than folded into one of them.
 
 **Last verified:** 2026-08-21
 

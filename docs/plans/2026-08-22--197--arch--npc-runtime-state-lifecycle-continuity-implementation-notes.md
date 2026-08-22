@@ -110,7 +110,7 @@ No change — `npc.id` was already the stable key used for interaction queues an
 - `src/ai/NpcAgent.ts` — `create()`/`createCapsuleFallback()`/constructor take `npcState: NpcAuthoritativeState`; `health`/`stamina`/`vigor`/`needs` are now references into it instead of freshly constructed; constructor hydrates the dead pose immediately when needed; removed the now-dead `needOffset` constructor param and the local `MAX_HP`/`MAX_STAMINA` constants (moved into `npcState.ts`).
 - `src/app/worldBundle.ts` — `buildSettlementsManager`/`createWorldBundle`/`rebuildWorldBundle` thread `initialHouseholds`/`initialNpcStates` (rebuild path only) through to `createSettlementsManager`.
 - `src/app/interactables.ts` — excludes a dead NPC from dialogue gaze targeting (death consequence, §6).
-- `docs/SETTLEMENTS.md` — documented the new `NpcStateRegistry` and the closed `HouseholdRegistry` rebuild-carry gap.
+- `docs/state/settlements.md` — documented the new `NpcStateRegistry` and the closed `HouseholdRegistry` rebuild-carry gap.
 - `docs/plans/LOOSE-ENDS.md` — closed the three loose ends this plan folds together (NPC streaming continuity, household rebuild carry, death-propagation hook decision).
 
 ## Verification

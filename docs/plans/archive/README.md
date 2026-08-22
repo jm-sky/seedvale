@@ -2,7 +2,7 @@
 
 Historia planowania Seedvale, przeniesiona z [docs/plans/](../README.md) w dwóch snapshotach, gdy plany osiągnęły `done` albo `verification needed` i przestały być potrzebne w bieżącej mapie planowania. Zobacz [Snapshot 1](#snapshot-1--2026-08-07--2026-08-14) i [Snapshot 2](#snapshot-2--2026-08-14--2026-08-19) niżej.
 
-**Nie** source of truth dla „jak jest teraz”. Trwałe reguły: [STATE.md](../../STATE.md), [SETTLEMENTS.md](../../SETTLEMENTS.md), [WATER.md](../../WATER.md), [GRAPHICS.md](../../GRAPHICS.md), [ARCHITECTURE.md](../../ARCHITECTURE.md).
+**Nie** source of truth dla „jak jest teraz”. Trwałe reguły: [STATE.md](../../STATE.md), [SETTLEMENTS.md](../../state/settlements.md), [WATER.md](../../state/water.md), [GRAPHICS.md](../../architecture/GRAPHICS.md), [ARCHITECTURE.md](../../architecture/ARCHITECTURE.md).
 
 Nowych planów tu **nie przenosimy** ręcznie przy każdym `done`. Plany zostają w [docs/plans/](../README.md) niezależnie od statusu, dopóki kolejny snapshot nie przeniesie tych, które przestały być potrzebne jako current context — zobacz "Recent context vs archive" w [docs/plans/README.md](../README.md).
 

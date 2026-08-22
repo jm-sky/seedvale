@@ -1,7 +1,7 @@
 # Seedvale — napraw locomotion NPC przy dysku domu (plan 108)
 
-**Status:** `verification needed`  
-**Created:** 2026-08-14  
+**Status:** `verification needed`
+**Created:** 2026-08-14
 **Plan (wiążący):** [docs/plans/archive/2026-08-14--108--npc-stuck-at-house-locomotion.md](../plans/archive/2026-08-14--108--npc-stuck-at-house-locomotion.md)
 
 ## Cel
@@ -15,7 +15,7 @@ To jest **locomotion**, nie stamina. Watchdog (S8) już jest — nie pisz drugie
 1. `CLAUDE.md`
 2. `docs/STATE.md`
 3. **Cały** `docs/plans/archive/2026-08-14--108--npc-stuck-at-house-locomotion.md` — findings F1–F7 i P0/P1 są kontraktem, nie tłem.
-4. `docs/SETTLEMENTS.md` — S8 (już wskazuje 108).
+4. `docs/state/settlements.md` — S8 (już wskazuje 108).
 5. Kod: `src/ai/NpcAgent.ts` (`isWalkable`, `steerTo`, `steerWithRescue`, `resolveSteerTarget`, `attemptRepath`, `attemptLocalEscape`, `abandonStuckAction`, `emergencyTeleport`, `beginNeed`, `goSleep`, `wanderNear`), `src/ai/npcMovementWatchdog.ts` + test, `src/world/collision.ts`, `src/settlement/createSettlement.ts` (rejestr colliderów domów).
 
 ## Stan, którego nie zgaduj
@@ -59,7 +59,7 @@ Browser — **nie** odpalaj headless. Podaj kroki na już działający `npm run 
 3. Konsola: `[npc:rescue] emergency teleport` rzadkie; gdy jest, `x,z` ≠ środek domu.
 4. Sen o zmierzchu: z zewnątrz dochodzi do obręczy domu i śpi, nie tkwi w `goSleep` przy ścianie.
 
-Po implementacji: status planu 108 → `verification needed`; krótka notatka w planie (co weszło z P0/P1). Zaktualizuj S8 w `docs/SETTLEMENTS.md` tak, żeby mówiło prawdę (watchdog + rim destination). Nie oznaczaj playtestu jako zrobionego.
+Po implementacji: status planu 108 → `verification needed`; krótka notatka w planie (co weszło z P0/P1). Zaktualizuj S8 w `docs/state/settlements.md` tak, żeby mówiło prawdę (watchdog + rim destination). Nie oznaczaj playtestu jako zrobionego.
 
 ## Definition of done
 

@@ -1,8 +1,8 @@
 # Plan: Simulation Architecture Consistency
 
-**Created:** 2026-08-22  
-**Status:** `done` ✅ — see [implementation notes](./2026-08-22--193--arch--simulation-architecture-consistency-implementation-notes.md)  
-**Priority:** high · **Effort:** M  
+**Created:** 2026-08-22
+**Status:** `done` ✅ — see [implementation notes](./2026-08-22--193--arch--simulation-architecture-consistency-implementation-notes.md)
+**Priority:** high · **Effort:** M
 **Depends on:** ~~192~~
 
 ## Cel
@@ -33,7 +33,7 @@ Nie implementować dużego refaktoru w ramach tego planu.
 
 Przed audytem sprawdzić:
 
-- `docs/ARCHITECTURE.md`
+- `docs/architecture/ARCHITECTURE.md`
 - `docs/STATE.md`
 - `CLAUDE.md`
 - `src/app/gameLoop.ts`
@@ -48,7 +48,7 @@ Przed audytem sprawdzić:
 
 Jeżeli dokumentacja różni się od kodu, za prawdę uznać aktualny kod.
 
-Nie przepisywać do wyniku audytu informacji, które są już poprawnie opisane w `docs/ARCHITECTURE.md`, chyba że audit ujawni rozbieżność.
+Nie przepisywać do wyniku audytu informacji, które są już poprawnie opisane w `docs/architecture/ARCHITECTURE.md`, chyba że audit ujawni rozbieżność.
 
 ---
 
@@ -569,7 +569,7 @@ Po ewentualnych zmianach pomocniczych wykonać standardową weryfikację projekt
 
 Jeżeli audit ujawni problem wymagający implementacji, nie oznaczać go jako rozwiązany — utworzyć odpowiedni follow-up plan.
 
-Jeżeli audit ujawni rozbieżność między `docs/ARCHITECTURE.md` a kodem, wskazać ją i przygotować propozycję aktualizacji dokumentacji.
+Jeżeli audit ujawni rozbieżność między `docs/architecture/ARCHITECTURE.md` a kodem, wskazać ją i przygotować propozycję aktualizacji dokumentacji.
 
 ---
 

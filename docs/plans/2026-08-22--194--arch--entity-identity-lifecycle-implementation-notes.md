@@ -114,7 +114,7 @@ Every transition funnel in every family traced to a single owner function, with 
 Both are small, isolated, one-directional guards with no design decision attached — matching the plan's "fix now" bar (distinct from the several P0/P1 findings below that need a dedicated follow-up plan because they touch save schema, a new registry, or balance judgment).
 
 1. **`src/ai/NpcAgent.ts`'s `resolveTimeSkip()`** — added `if (this.health.dead) return` at the top, mirroring the identical guard `update()` already has (`:1712`). Before this fix, a rest/wait time-skip performed after any NPC died would teleport that NPC's corpse (still tipped on its side) to its scheduled destination and reset `phase` to `'choose'` — inert again on the next `update()` call, so not a resurrection, but a reproducible visual bug. Sub-audit finding: plan 194 §9/§12 (NPC/Settlements sub-audit, Finding 2).
-2. **`src/app/createApp.ts`'s `rebuildWorld()`** — `player.setPosition(...)` (teleport to home spawn) is now gated behind `if (resetCollectedItems)`, matching every other "this is a genuinely new world" reset in the same function. Before this fix, any in-session terrain-param rebuild on the *same* seed (e.g. the World Config screen's flat-shading toggle, or any debug-GUI terrain control) unconditionally teleported the player back to the home settlement's spawn point, discarding their actual position — contradicting `docs/ARCHITECTURE.md`'s documented "`PlayerController` ... survives a terrain rebuild" contract. `player.setGround(...)`, called immediately above, already re-snaps the player's height at their *existing* x/z via `snapToGround()`, so no additional height-resample call was needed for the `false` branch. Sub-audit finding: plan 194 §12 (NPC/Settlements sub-audit, Finding 5) — code was brought into compliance with the already-correct documented contract rather than updating the doc.
+2. **`src/app/createApp.ts`'s `rebuildWorld()`** — `player.setPosition(...)` (teleport to home spawn) is now gated behind `if (resetCollectedItems)`, matching every other "this is a genuinely new world" reset in the same function. Before this fix, any in-session terrain-param rebuild on the *same* seed (e.g. the World Config screen's flat-shading toggle, or any debug-GUI terrain control) unconditionally teleported the player back to the home settlement's spawn point, discarding their actual position — contradicting `docs/architecture/ARCHITECTURE.md`'s documented "`PlayerController` ... survives a terrain rebuild" contract. `player.setGround(...)`, called immediately above, already re-snaps the player's height at their *existing* x/z via `snapToGround()`, so no additional height-resample call was needed for the `false` branch. Sub-audit finding: plan 194 §12 (NPC/Settlements sub-audit, Finding 5) — code was brought into compliance with the already-correct documented contract rather than updating the doc.
 
 No other code was changed. Everything else below is recorded as a finding with an explicit follow-up/acceptable classification, per the plan's "Nie implementować dużego refaktoru w ramach audytu" scope limit.
 
@@ -184,7 +184,7 @@ No shared `EntityLifecycle`, no common `Entity` base class, no ECS, no global li
 
 ## 9. Documentation
 
-No `docs/ARCHITECTURE.md` correction was needed for the player-teleport discrepancy found during the audit (sub-audit A's Finding 5) — the code was brought into compliance with the doc's already-correct stated contract instead (§6 above). The one remaining doc gap from this audit (`ResourceDeposits`' rebuild-carry contract, Finding 7) is left for whichever follow-up plan implements Findings 6/7, so the doc update and the behavior it describes land together rather than documenting an intentionally-temporary state.
+No `docs/architecture/ARCHITECTURE.md` correction was needed for the player-teleport discrepancy found during the audit (sub-audit A's Finding 5) — the code was brought into compliance with the doc's already-correct stated contract instead (§6 above). The one remaining doc gap from this audit (`ResourceDeposits`' rebuild-carry contract, Finding 7) is left for whichever follow-up plan implements Findings 6/7, so the doc update and the behavior it describes land together rather than documenting an intentionally-temporary state.
 
 ---
 
@@ -216,7 +216,7 @@ follow-up plan:
     ResourceDeposits needs both an own-streaming-radius-survives-despawn snapshot
     (the farming-exploit-severity finding) and a rebuildWorldBundle carry snapshot
     (the settings-toggle-severity finding) — same underlying gap, one small plan,
-    update docs/ARCHITECTURE.md's WorldBundle rebuild-invariants section as part of it.
+    update docs/architecture/ARCHITECTURE.md's WorldBundle rebuild-invariants section as part of it.
 
   - arch--timeskip-simulation-gating (already recommended by plan 193; Finding 5 above
     adds the corpse-disposal-severity detail — no new plan needed, just richer scope)

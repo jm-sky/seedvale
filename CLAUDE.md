@@ -24,7 +24,7 @@ Before making a non-trivial change:
 - Do not mark visual Three.js work as fully verified solely because TypeScript/lint/build pass.
 - Shader GLSL lives inside JS/TS template literals. Never put backticks or markdown in comments inside those strings: a backtick closes the template literal and is a syntax error.
 - **Performance is an architectural constraint.** Keep the main thread responsive; prefer event-driven/batched simulation and use workers for CPU-heavy, data-oriented work when the cost of worker communication is justified. See [Performance & Simulation Architecture](docs/architecture/performance-and-workers.md).
-- **Seedvale is single-player today; do not build multiplayer, netcode or WebSockets.** But keep decisions from foreclosing a later move to a small (~2–5 player) shared world with server-authoritative simulation: keep simulation state representable independently of Three.js/rendering objects and avoid baking in an implicit single-client owner of world state. See [Performance & Simulation Architecture](docs/architecture/performance-and-workers.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- **Seedvale is single-player today; do not build multiplayer, netcode or WebSockets.** But keep decisions from foreclosing a later move to a small (~2–5 player) shared world with server-authoritative simulation: keep simulation state representable independently of Three.js/rendering objects and avoid baking in an implicit single-client owner of world state. See [Performance & Simulation Architecture](docs/architecture/performance-and-workers.md) and [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
 
 ## Development
 
@@ -72,9 +72,9 @@ In case of running benchmarks in browser - check `docs/performance/agent-browser
 | Product vision | [docs/VISION.md](docs/VISION.md) |
 | Current implementation state | [docs/STATE.md](docs/STATE.md) |
 | Where a system lives in the code | [docs/CODE_INDEX.md](docs/CODE_INDEX.md) |
-| Settlements / NPC life | [docs/SETTLEMENTS.md](docs/SETTLEMENTS.md) |
-| Graphics decisions / visual contracts | [docs/GRAPHICS.md](docs/GRAPHICS.md) |
-| Water (ocean + lakes + rivers) | [docs/WATER.md](docs/WATER.md) |
+| Settlements / NPC life | [docs/state/settlements.md](docs/state/settlements.md) |
+| Graphics decisions / visual contracts | [docs/architecture/GRAPHICS.md](docs/architecture/GRAPHICS.md) |
+| Water (ocean + lakes + rivers) | [docs/state/water.md](docs/state/water.md) |
 | Terrain/world generation (chunking, vegetation, mountains, weather) | [docs/state/terrain-and-world-generation.md](docs/state/terrain-and-world-generation.md) |
 | Combat (melee/ranged, NPC combat, animal defense) | [docs/state/combat.md](docs/state/combat.md) |
 | Player survival/world-object systems (needs, skills, wells, traps, planting) | [docs/state/player-systems.md](docs/state/player-systems.md) |
@@ -83,7 +83,7 @@ In case of running benchmarks in browser - check `docs/performance/agent-browser
 | Loose ends found mid-plan (blockers, spun-off ideas, unfinished threads) | [docs/plans/LOOSE-ENDS.md](docs/plans/LOOSE-ENDS.md) |
 | Implementation plans | [docs/plans/](docs/plans/) |
 | Archived plans (frozen batch) | [docs/plans/archive/](docs/plans/archive/) |
-| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/architecture/](docs/architecture/) |
+| Architecture | [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md), [docs/architecture/](docs/architecture/) |
 | Issues | [docs/issues/README.md](docs/issues/README.md) |
 | Reviews | [docs/reviews/README.md](docs/reviews/README.md) |
 | Research | [docs/research/README.md](docs/research/README.md) |
@@ -119,7 +119,7 @@ New issue/plan/review/research files use `YYYY-MM-DD--NNN--slug.md` with an inde
 
 ## Important architecture
 
-`WorldBundle` (`src/app/worldBundle.ts`) is the core world lifetime/rebuild boundary. The authoritative rebuild/lifetime rule (don't capture a replaceable bundle field in a stale closure) lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — "World lifecycle" / "Rebuild / lifetime invariants". Read it there; it is not restated here.
+`WorldBundle` (`src/app/worldBundle.ts`) is the core world lifetime/rebuild boundary. The authoritative rebuild/lifetime rule (don't capture a replaceable bundle field in a stale closure) lives in [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) — "World lifecycle" / "Rebuild / lifetime invariants". Read it there; it is not restated here.
 
 Entry points: the canonical, kept-current list is [docs/STATE.md](docs/STATE.md) — "Important code entry points".
 

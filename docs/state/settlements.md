@@ -2,7 +2,7 @@
 
 **Purpose:** źródło prawdy dla generacji osad i życia NPC *jak jest zaimplementowane*.
 
-**Nie jest:** indeksem planów ([plans/README.md](./plans/README.md)), katalogiem GLB ([assets/](./assets/README.md)), kontraktem renderu ([GRAPHICS.md](./GRAPHICS.md)), ani snapshotem całego codebase ([STATE.md](./STATE.md)).
+**Nie jest:** indeksem planów ([plans/README.md](./plans/README.md)), katalogiem GLB ([assets/](./assets/README.md)), kontraktem renderu ([GRAPHICS.md](./architecture/GRAPHICS.md)), ani snapshotem całego codebase ([STATE.md](./STATE.md)).
 
 **Last verified:** 2026-08-14
 

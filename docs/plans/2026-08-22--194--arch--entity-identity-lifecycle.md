@@ -1,8 +1,8 @@
 # Plan: Entity Identity & Lifecycle Architecture
 
-**Created:** 2026-08-22  
-**Status:** `done` ✅ — see [implementation notes](./2026-08-22--194--arch--entity-identity-lifecycle-implementation-notes.md)  
-**Priority:** high · **Effort:** M  
+**Created:** 2026-08-22
+**Status:** `done` ✅ — see [implementation notes](./2026-08-22--194--arch--entity-identity-lifecycle-implementation-notes.md)
+**Priority:** high · **Effort:** M
 **Depends on:** ~~193~~
 
 ## Cel
@@ -692,7 +692,7 @@ Po ewentualnych zmianach pomocniczych wykonać standardową weryfikację zgodnie
 
 Nie oznaczać finding jako rozwiązany bez implementacji i odpowiedniej weryfikacji.
 
-Jeżeli audit ujawni rozbieżność z `docs/ARCHITECTURE.md`, wskazać ją osobno i przygotować propozycję aktualizacji dokumentacji.
+Jeżeli audit ujawni rozbieżność z `docs/architecture/ARCHITECTURE.md`, wskazać ją osobno i przygotować propozycję aktualizacji dokumentacji.
 
 ---
 

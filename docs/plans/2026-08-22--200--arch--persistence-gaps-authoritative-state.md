@@ -1,8 +1,8 @@
 # Plan: Persistence Gaps & Authoritative State Completion
 
-**Created:** 2026-08-22  
-**Status:** `planned` 📋  
-**Priority:** medium · **Effort:** M  
+**Created:** 2026-08-22
+**Status:** `planned` 📋
+**Priority:** medium · **Effort:** M
 **Depends on:** ~~195~~ ~~196~~ ~~197~~
 
 ## Cel
@@ -199,7 +199,7 @@ Nie zakładać, że każdy state musi przeżyć każdą z tych granic.
 Po implementacji zaktualizować tylko dokumenty, których kontrakt faktycznie się zmienił:
 
 - `docs/STATE.md`,
-- `docs/ARCHITECTURE.md`, jeśli zmienił się ownership/lifecycle contract,
+- `docs/architecture/ARCHITECTURE.md`, jeśli zmienił się ownership/lifecycle contract,
 - `docs/plans/LOOSE-ENDS.md`.
 
 W `LOOSE-ENDS.md` usunąć findings rozwiązane przez 196–200 i pozostawić tylko rzeczywiście otwarte tematy.

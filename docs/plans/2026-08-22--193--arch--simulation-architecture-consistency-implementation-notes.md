@@ -273,7 +273,7 @@ Scope: only architectural proposals from this audit that could regress the curre
 | 11 | Fauna→player-damage callback embeds ~25 lines of player-melee/ranged-reset logic inline at the `fauna.update` call site instead of a named helper | `gameLoop.ts:1610-1636` |
 | 12 | `AnimalAgent.update`/`Fauna.update` large positional-parameter signatures (13/12 args) | `AnimalAgent.ts:1280-1306`, `createFauna.ts:795-826` |
 | 13 | One-frame lag between NPC decision pass and fauna→NPC damage application | `gameLoop.ts:1584` vs. `1647` |
-| 14 | `docs/ARCHITECTURE.md`'s rebuild-lifecycle description omits the `treeLifecycle` cache-clear step | `worldBundle.ts:552-553` — **fixed directly**, see §16 |
+| 14 | `docs/architecture/ARCHITECTURE.md`'s rebuild-lifecycle description omits the `treeLifecycle` cache-clear step | `worldBundle.ts:552-553` — **fixed directly**, see §16 |
 | 15 | `src/fauna/foodWaterTargeting.test.ts` has no matching `foodWaterTargeting.ts` — it tests functions exported directly from `AnimalAgent.ts` | file listing |
 | 16 | `NpcAgent`'s public `readonly health`/`stamina`/`vigor` fields expose mutable inner objects — convention-enforced boundary, not type-enforced | `NpcAgent.ts:680-682` |
 
@@ -301,7 +301,7 @@ Not proposed (per plan's explicit exclusions): a global `SimulationManager`, an 
 
 ## 16. Documentation fix made this session
 
-`docs/ARCHITECTURE.md`'s "World lifecycle" section (`rebuildWorldBundle` bullet list) now also names the `treeLifecycle` presence/override cache clear alongside the road-network cache clear, matching Finding 14 (§6). No other documentation or code was changed — this is a pure audit per the plan's explicit "not yet a refactor" scope.
+`docs/architecture/ARCHITECTURE.md`'s "World lifecycle" section (`rebuildWorldBundle` bullet list) now also names the `treeLifecycle` presence/override cache clear alongside the road-network cache clear, matching Finding 14 (§6). No other documentation or code was changed — this is a pure audit per the plan's explicit "not yet a refactor" scope.
 
 ---
 
@@ -309,7 +309,7 @@ Not proposed (per plan's explicit exclusions): a global `SimulationManager`, an 
 
 ```text
 fix now:
-  - docs/ARCHITECTURE.md rebuild-lifecycle wording (Finding 14) — done, see §16
+  - docs/architecture/ARCHITECTURE.md rebuild-lifecycle wording (Finding 14) — done, see §16
 
 follow-up plan:
   - arch--timeskip-simulation-gating (or similar)
@@ -347,4 +347,4 @@ Names are illustrative, per plan's own instruction — not created as separate n
 
 ## 18. Verification
 
-Audit-only plan — no gameplay/simulation code was changed, only one documentation sentence (`docs/ARCHITECTURE.md`). Per `CLAUDE.md`, `.md`-only changes in `docs/` do not require `tsc`/lint/build/test. No browser/manual verification is applicable to this session's output (the findings above describe what a *future* fix would need to verify, not what this audit itself changed).
+Audit-only plan — no gameplay/simulation code was changed, only one documentation sentence (`docs/architecture/ARCHITECTURE.md`). Per `CLAUDE.md`, `.md`-only changes in `docs/` do not require `tsc`/lint/build/test. No browser/manual verification is applicable to this session's output (the findings above describe what a *future* fix would need to verify, not what this audit itself changed).

@@ -1,13 +1,13 @@
 # Plan: Woda — jedna rodzina shadera, brzeg, lustro z wyłącznikiem
 
-**Status:** `done` ✅ — fazy 1–3 (browser 2026-08-13)  
-**Created:** 2026-08-13  
-**Priority:** 🟡 medium  
-**Effort:** XL (faza 1 = S; fazy 2–3 = L–XL)  
-**Depends on:** ~~022~~ (depthWrite / foliage), ~~001~~ (kolor brzegu terenu)  
-**Źródło:** [WATER.md](../WATER.md) W1–W12; issue [028](../issues/2026-08-13--028--inland-water-dual-material.md); issue [003](../issues/2026-08-07--003--ocean-shoreline-artifacts.md)
+**Status:** `done` ✅ — fazy 1–3 (browser 2026-08-13)
+**Created:** 2026-08-13
+**Priority:** 🟡 medium
+**Effort:** XL (faza 1 = S; fazy 2–3 = L–XL)
+**Depends on:** ~~022~~ (depthWrite / foliage), ~~001~~ (kolor brzegu terenu)
+**Źródło:** [WATER.md](../state/water.md) W1–W12; issue [028](../issues/2026-08-13--028--inland-water-dual-material.md); issue [003](../issues/2026-08-07--003--ocean-shoreline-artifacts.md)
 
-SoT decyzji i stanu kodu: **[WATER.md](../WATER.md)**. Ten plik jest planem implementacji, nie drugim źródłem prawdy. Gdy kod i plan się rozjadą — zaufaj kodowi, zaktualizuj plan.
+SoT decyzji i stanu kodu: **[WATER.md](../state/water.md)**. Ten plik jest planem implementacji, nie drugim źródłem prawdy. Gdy kod i plan się rozjadą — zaufaj kodowi, zaktualizuj plan.
 
 **Assety:** bez nowych modeli ani dźwięków.
 
@@ -36,7 +36,7 @@ Pół-realistyczna, lekko przezroczysta woda bez ciężkiego GPU:
 
 ## Stan kodu (skrót)
 
-Pełna tabela: [WATER.md — Stan obecny](../WATER.md#stan-obecny).
+Pełna tabela: [WATER.md — Stan obecny](../state/water.md#stan-obecny).
 
 | Fakt | Plik |
 |------|------|
@@ -248,8 +248,8 @@ Nie oznaczać fazy `done` na samym `tsc`.
 
 | Plik | Co |
 |------|----|
-| [WATER.md](../WATER.md) | Historia; architektura = kod; W1/W5 „target” → implemented |
-| [GRAPHICS.md](../GRAPHICS.md) | G5/G6 zgodne z kodem; wpis logu |
+| [WATER.md](../state/water.md) | Historia; architektura = kod; W1/W5 „target” → implemented |
+| [GRAPHICS.md](../architecture/GRAPHICS.md) | G5/G6 zgodne z kodem; wpis logu |
 | [STATE.md](../STATE.md) | Ocean bez Water.js; `waterReflections` |
 | Issue 028, 003 | status |
 | Ten plan | checklist + notes jeśli coś odbiegło |
@@ -258,8 +258,8 @@ Nie oznaczać fazy `done` na samym `tsc`.
 
 ## Powiązane
 
-- [WATER.md](../WATER.md)
-- [GRAPHICS.md](../GRAPHICS.md) G2–G6
+- [WATER.md](../state/water.md)
+- [GRAPHICS.md](../architecture/GRAPHICS.md) G2–G6
 - [reviews/2026-08-07--001--water-quality.md](../reviews/2026-08-07--001--water-quality.md)
 - [architecture/performance-and-workers.md](../architecture/performance-and-workers.md)
 - `src/world/createOcean.ts`, `createWater.ts`, `src/terrain/waterBodies.ts`, `chunkHeightmap.ts`, `chunkManager.ts`, `buildChunkGeometry.ts`, `src/app/worldBundle.ts`, `gameLoop.ts`, `src/config/worldConfig.ts`, `persistConfig.ts`, `src/ui-vue/screens/WorldConfigScreen.vue`, `src/ui/createDebugGui.ts`

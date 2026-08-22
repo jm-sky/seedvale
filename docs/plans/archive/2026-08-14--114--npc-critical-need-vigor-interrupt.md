@@ -12,7 +12,7 @@ Plan 060 (`docs/plans/archive/2026-08-11--060--npc-schedule-actions-and-trait-ov
 
 > Nie dodawaj przerywania trwającej akcji przez zwykłą zmianę godziny. Przerwania dla krytycznych potrzeb są osobnym przyszłym projektem.
 
-`docs/STATE.md` (przed tym planem) i `docs/SETTLEMENTS.md` wciąż opisywały to jako otwartą, celową lukę.
+`docs/STATE.md` (przed tym planem) i `docs/state/settlements.md` wciąż opisywały to jako otwartą, celową lukę.
 
 Zadanie tej sesji sprawdzało, czy istniejący system needs/FSM/schedule/vigor/traits realizuje już taki przepływ:
 
@@ -77,7 +77,7 @@ Zachowanie na poziomie `NpcAgent` (call site throttle, same metody `tickCritical
 ### 4. Dokumentacja
 
 - `docs/STATE.md` — zaktualizowany opis luki NPC daily routine.
-- `docs/SETTLEMENTS.md` — nowy wiersz standing decision S9 + rozszerzony punkt „Harmonogram".
+- `docs/state/settlements.md` — nowy wiersz standing decision S9 + rozszerzony punkt „Harmonogram".
 - `docs/plans/README.md` — nowy wiersz w sekcji Planned.
 
 ## Ryzyka / mitigacje

@@ -4,7 +4,7 @@
 **Created:** 2026-08-12
 **Updated:** 2026-08-12
 **Źródło:** screen użytkownika — niebieskie fale oceanu widoczne na pierwszym planie przez czerwone liście klonu
-**Potwierdzenie:** browser OK 2026-08-12. Trwałe reguły: [GRAPHICS.md](../GRAPHICS.md) G3–G5.
+**Potwierdzenie:** browser OK 2026-08-12. Trwałe reguły: [GRAPHICS.md](../architecture/GRAPHICS.md) G3–G5.
 
 ## Problem
 

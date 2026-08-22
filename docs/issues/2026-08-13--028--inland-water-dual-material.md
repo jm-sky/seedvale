@@ -4,7 +4,7 @@
 **Created:** 2026-08-13
 **Updated:** 2026-08-13
 **Plan:** [098](../plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) (fazy 1–2)
-**Źródło:** screen użytkownika — staw/ciek przy piaszczystym brzegu; SoT [WATER.md](../WATER.md)
+**Źródło:** screen użytkownika — staw/ciek przy piaszczystym brzegu; SoT [WATER.md](../state/water.md)
 
 ## Problem
 
@@ -28,7 +28,7 @@ BFS nie widzi, że ciek ciągnie się przez sąsiadów — ten sam basen może b
 
 ## Kierunek (zaakceptowany 2026-08-13)
 
-[WATER.md](../WATER.md) **W8**: ocean tylko morze/wybrzeże; śródlądzie zawsze na rodzinie shadera jezior, niezależnie od pola w chunku.
+[WATER.md](../state/water.md) **W8**: ocean tylko morze/wybrzeże; śródlądzie zawsze na rodzinie shadera jezior, niezależnie od pola w chunku.
 
 Docelowo ta sama rodzina materiału co ocean (W1) — nie dwa silniki, nie trzeci shader. Lustro sceny to osobny wspólny pass (W9), nie powód żeby staw dostał Water.js.
 

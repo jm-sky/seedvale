@@ -70,7 +70,7 @@ Kolejność z research 020 §5:
    - `unload()` — trzy bloki dispose zamienić na jedno `vegetationRegionBatcher.clearChunkPlacements(record.key)`.
    - `syncInstancedLodForRecord()` → przejść na batcher (`syncLod`), wołane z tych samych miejsc co dziś (`recheck()`, `setLodScale()`).
    - `refreshTreeVisual()` — `removeByKey` przez batcher (region z `rec.coord`).
-4. **Dokumentacja** — jeśli zmienia się lista "important code entry points", zaktualizować [STATE.md](../../STATE.md) / [ARCHITECTURE.md](../../ARCHITECTURE.md) (dodać `vegetationRegionBatcher.ts`).
+4. **Dokumentacja** — jeśli zmienia się lista "important code entry points", zaktualizować [STATE.md](../../STATE.md) / [ARCHITECTURE.md](../../architecture/ARCHITECTURE.md) (dodać `vegetationRegionBatcher.ts`).
 
 ### Ważne
 

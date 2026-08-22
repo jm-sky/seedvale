@@ -28,7 +28,7 @@
 
 ## Current Architecture (as read from code, not docs)
 
-`createApp.ts` composes the renderer/scene/camera/UI/audio/player/quests/day-night state, then wires `WorldBundle` (`ChunkManager`, `WorldOcean`, `SettlementsManager`, `Fauna`, item/resource/fire/tent/cave systems) and the game loop together. `WorldBundle` is mutated in place on rebuild; this matches `docs/ARCHITECTURE.md`'s stated invariant and nothing in the last 20 commits violates it.
+`createApp.ts` composes the renderer/scene/camera/UI/audio/player/quests/day-night state, then wires `WorldBundle` (`ChunkManager`, `WorldOcean`, `SettlementsManager`, `Fauna`, item/resource/fire/tent/cave systems) and the game loop together. `WorldBundle` is mutated in place on rebuild; this matches `docs/architecture/ARCHITECTURE.md`'s stated invariant and nothing in the last 20 commits violates it.
 
 Per-frame flow (`gameLoop.ts`), confirmed by reading the loop body directly:
 

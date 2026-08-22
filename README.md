@@ -29,7 +29,7 @@ pnpm run lint:fix   # ESLint
 | What exists in the code right now? | [docs/STATE.md](docs/STATE.md) |
 | What is Seedvale trying to be? | [docs/VISION.md](docs/VISION.md) |
 | Where is the project headed? | [docs/ROADMAP.md](docs/ROADMAP.md) |
-| How is it architected? | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| How is it architected? | [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) |
 | What's being worked on? | [docs/plans/README.md](docs/plans/README.md) |
 | Full documentation hub | [docs/README.md](docs/README.md) |
 

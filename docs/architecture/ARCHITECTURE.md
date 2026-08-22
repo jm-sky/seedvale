@@ -8,7 +8,7 @@
 
 - `CLAUDE.md` — how agents should work.
 - `docs/STATE.md` — what is currently implemented.
-- `docs/SETTLEMENTS.md` — settlements and NPC life as implemented.
+- `docs/state/settlements.md` — settlements and NPC life as implemented.
 - `docs/ROADMAP.md` — product direction.
 - `docs/plans/README.md` — plan/status index.
 - Source code — authoritative when documentation conflicts with implementation.

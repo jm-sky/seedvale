@@ -2,7 +2,7 @@
 
 **Purpose:** define why Seedvale exists, what kind of world it is meant to become, and the principles that should guide major design decisions. This document describes the vision and long-term direction, not the current implementation status.
 
-Current implementation state belongs in [STATE.md](./STATE.md). Architecture belongs in [ARCHITECTURE.md](./ARCHITECTURE.md). Concrete priorities and plans belong in [ROADMAP.md](./ROADMAP.md) and [plans/README.md](./plans/README.md). Agent workflow belongs in [CLAUDE.md](../CLAUDE.md).
+Current implementation state belongs in [STATE.md](./STATE.md). Architecture belongs in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md). Concrete priorities and plans belong in [ROADMAP.md](./ROADMAP.md) and [plans/README.md](./plans/README.md). Agent workflow belongs in [CLAUDE.md](../CLAUDE.md).
 
 ## 1. What Seedvale is
 

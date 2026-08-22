@@ -2,7 +2,7 @@
 
 **Purpose:** current-state reference for the player's own survival loop (needs, skills, rest) and the world objects/actions built around it (busy channels, wells, traps, planting, fishing/preservation).
 
-**Not:** item-by-item catalog data (that's [items/CATALOG.md](../items/CATALOG.md)), combat mechanics (that's [combat.md](./combat.md)), or NPC/settlement systems (that's [SETTLEMENTS.md](../SETTLEMENTS.md)).
+**Not:** item-by-item catalog data (that's [items/CATALOG.md](../items/CATALOG.md)), combat mechanics (that's [combat.md](./combat.md)), or NPC/settlement systems (that's [SETTLEMENTS.md](../state/settlements.md)).
 
 **Last verified:** 2026-08-21
 

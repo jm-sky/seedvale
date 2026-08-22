@@ -20,7 +20,7 @@ This file is a snapshot, not the authoritative status tracker for plans (that's 
 
 Seedvale is a browser 3D sandbox built with **Three.js + WebGL2 + Vite + TypeScript**. The game/simulation layer remains vanilla Three.js; the overlay UI is a hybrid of vanilla DOM modules and Vue 3 + Tailwind v4.
 
-`src/app/createApp.ts` is the composition root. The world systems that are rebuilt together live in `src/app/worldBundle.ts` as `WorldBundle` — the full field list and the rebuild/lifetime invariants are canonical in [ARCHITECTURE.md](./ARCHITECTURE.md), not restated here. File-level map: [CODE_INDEX.md](./CODE_INDEX.md).
+`src/app/createApp.ts` is the composition root. The world systems that are rebuilt together live in `src/app/worldBundle.ts` as `WorldBundle` — the full field list and the rebuild/lifetime invariants are canonical in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md), not restated here. File-level map: [CODE_INDEX.md](./CODE_INDEX.md).
 
 ## Major systems
 
@@ -31,15 +31,15 @@ Each subsection below is a short current-state summary. Domain documents hold th
 Procedurally chunked, streamed terrain with instanced vegetation/rocks, tree lifecycle, weather/seasons as deterministic functions of `(seed, elapsedDays)`, mountains, and rivers with their own hydrology/geometry. Ocean, lakes, day/night, fog and post-processing are implemented.
 
 - Generation/streaming/vegetation/mountains/weather: [state/terrain-and-world-generation.md](./state/terrain-and-world-generation.md)
-- Ocean, lakes and rivers: [WATER.md](./WATER.md)
-- Visual/shader contracts (why something renders the way it does): [GRAPHICS.md](./GRAPHICS.md)
+- Ocean, lakes and rivers: [WATER.md](./state/water.md)
+- Visual/shader contracts (why something renders the way it does): [GRAPHICS.md](./architecture/GRAPHICS.md)
 - Still not implemented: waterfalls, full river/lake shader parity, clouds and distant background mountains, cube-sphere/spherical world.
 
 ### Settlements / NPCs
 
 Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, NPC needs/FSM/schedule/personality, household + settlement bulk economy, dialogue v2, home-trader screen. NPCs can now fight: an `NpcAgent` combat phase, role-based default weapons, and an animal-attack/NPC-defense decision layer exist, reusing the same melee/ranged mechanics as the player.
 
-- Generation, streaming, economy, households, NPC daily life, standing decisions: [SETTLEMENTS.md](./SETTLEMENTS.md)
+- Generation, streaming, economy, households, NPC daily life, standing decisions: [SETTLEMENTS.md](./state/settlements.md)
 - Combat (NPC combat phase, animal attack & defense, role loadouts): [state/combat.md](./state/combat.md)
 - Still not implemented: Social Place assignment for the `sociable` schedule overlay, inter-settlement trade, full NPC simulation persistence.
 
@@ -61,11 +61,11 @@ Predator/prey roles with chase/flee behaviour, player-awareness (probabilistic d
 
 ### Quests / progression
 
-`QuestManager` with definitions, objectives, stages and multi-stage world interactions. Relation levels (`stranger`/`acquainted`/`friendly`/`trusted`) gate quest availability; `QuestDef.effects` overrides the flat relation/EXP reward. World-problem quests exist end-to-end (bound to a specific `AnimalAgent`/livestock/wolf-den instance via an injected resolver — `QuestManager` never imports fauna to scan it itself; it does import `AnimalKind` as a type-only reference for the resolver contract). Terminal states include `failed` (a stage's bound world entity can no longer be completed) and `invalidated` (set only on save/load restore, when a quest's bound animal identity can't be safely re-derived — see [ARCHITECTURE.md](./ARCHITECTURE.md#save-schema-version-history)). Procedural landmarks carry a stable, save-free derived id and back a `interact_landmark` objective. Bandit objectives remain unimplemented. Quest progress, EXP and NPC relations persist; LLM quest generation is not implemented.
+`QuestManager` with definitions, objectives, stages and multi-stage world interactions. Relation levels (`stranger`/`acquainted`/`friendly`/`trusted`) gate quest availability; `QuestDef.effects` overrides the flat relation/EXP reward. World-problem quests exist end-to-end (bound to a specific `AnimalAgent`/livestock/wolf-den instance via an injected resolver — `QuestManager` never imports fauna to scan it itself; it does import `AnimalKind` as a type-only reference for the resolver contract). Terminal states include `failed` (a stage's bound world entity can no longer be completed) and `invalidated` (set only on save/load restore, when a quest's bound animal identity can't be safely re-derived — see [ARCHITECTURE.md](./architecture/ARCHITECTURE.md#save-schema-version-history)). Procedural landmarks carry a stable, save-free derived id and back a `interact_landmark` objective. Bandit objectives remain unimplemented. Quest progress, EXP and NPC relations persist; LLM quest generation is not implemented.
 
 ### Persistence
 
-IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical save schema is **v26** — the full version-by-version history and migration behaviour is in [ARCHITECTURE.md](./ARCHITECTURE.md#save-schema-version-history), not here. NPC runtime state is **not** a full simulation snapshot (needs/AI/vigor are not persisted; tree lifecycle uses sparse overrides + lazy growth from `elapsedDays`) — `Continue` is not equivalent to serializing the complete living world. `localStorage` is split by device-preference domain (graphics/player/world/audio), independent of the chosen save slot's world state.
+IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical save schema is **v26** — the full version-by-version history and migration behaviour is in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md#save-schema-version-history), not here. NPC runtime state is **not** a full simulation snapshot (needs/AI/vigor are not persisted; tree lifecycle uses sparse overrides + lazy growth from `elapsedDays`) — `Continue` is not equivalent to serializing the complete living world. `localStorage` is split by device-preference domain (graphics/player/world/audio), independent of the chosen save slot's world state.
 
 ### UI / input
 
@@ -77,7 +77,7 @@ Not yet browser-verified: Vue Fazy 0–4 desktop+touch pass, most plan-tagged fe
 
 Prefer extending existing shared mechanisms instead of creating parallel systems.
 
-- `WorldBundle` — lifetime/rebuild boundary for the world systems ([ARCHITECTURE.md](./ARCHITECTURE.md)).
+- `WorldBundle` — lifetime/rebuild boundary for the world systems ([ARCHITECTURE.md](./architecture/ARCHITECTURE.md)).
 - `HealthState` — shared health/damage/death (`src/shared/HealthState.ts`) used by fauna, NPCs and the player.
 - `StaminaState` — shared physical-effort capacity (`src/shared/StaminaState.ts`) used by fauna and NPCs.
 - `VigorState` — NPC daily physiological budget (`src/shared/VigorState.ts`); collapse gates sleep through the existing NPC FSM. Not used by fauna.
@@ -158,7 +158,7 @@ src/ui-vue/
 
 - **World visual overhaul** — plants done in part; sky/clouds and distant mountains remain.
 - **UI** — Vue Fazy 0–4 implemented, browser verification pending across most of it. A new Character screen (HP/hunger/thirst/vigor) exists. Do not assume every future UI belongs in Vue; extend the existing facade + store pattern when migrating.
-- **NPC daily routine** — Place + executable schedule + vigor are implemented; household resource layer is implemented (see [SETTLEMENTS.md](./SETTLEMENTS.md)). Vigor collapse and a critical need interrupt a schedule-driven action already in flight; ordinary schedule/time-of-day changes still do not. No social landmark yet — intentional gap.
+- **NPC daily routine** — Place + executable schedule + vigor are implemented; household resource layer is implemented (see [SETTLEMENTS.md](./state/settlements.md)). Vigor collapse and a critical need interrupt a schedule-driven action already in flight; ordinary schedule/time-of-day changes still do not. No social landmark yet — intentional gap.
 
 ## Verification state
 

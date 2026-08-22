@@ -431,5 +431,5 @@ Te mechanizmy mogą później korzystać z architektury, ale nie są wymagane do
 - `2026-08-10--056--hungry-predator-human-aggression.md`
 - `2026-08-10--053--createapp-refactor.md`
 - `2026-08-10--054--world-bundle-reference-safety-and-small-refactors.md`
-- `docs/ARCHITECTURE.md`
+- `docs/architecture/ARCHITECTURE.md`
 - `docs/architecture/performance-and-workers.md`
