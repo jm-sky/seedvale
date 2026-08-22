@@ -32,3 +32,61 @@ Agriculture should extend existing resource, item, NPC, settlement, weather and 
 ## Roadmap gaps
 
 Detailed future mechanics should be added here as the target system becomes clearer.
+
+## Vision details
+
+### Crops
+
+> **Source:** 2026-08-22 @ ChatGPT session  
+> **Related docs:**
+> - `docs/plans/2026-08-16--126--seed-planting-implementation-notes.md`
+> - `docs/plans/2026-08-20--174--player-garden-and-npc-need-sources.md`
+> - `docs/plans/2026-08-20--176--garden-and-field-maintenance.md`
+
+**Etap 0 — obecny fix**
+
+* Nasiona reprezentują **garść nasion**, nie pojedyncze nasiono.
+* Jedna garść zawiera orientacyjnie **~20 nasion**.
+* Jedna grządka ma ograniczoną pojemność — trzeba ustalić przelicznik.
+* Jedna garść daje **wielokrotnie większy plon** niż obecne `1 → 1`.
+* Nie tworzymy osobnej encji dla każdego nasiona — używamy agregacji.
+
+**Etap 1 — podstawowa uprawa**
+
+* Rolnik sieje, podlewa, pielęgnuje i zbiera.
+* Nawodnienie pola `0–100%`, naturalnie spada.
+* Pole może być podlewane przez NPC lub deszcz.
+* `0%` → uprawa umiera.
+* Chwasty rozwijają się przy odpowiednim nawodnieniu.
+* Rolnik usuwa chwasty.
+* Plon trafia do gospodarki wioski.
+
+**Etap 2 — różne uprawy**
+
+* Każde warzywo ma własne parametry.
+* Różne czasy dojrzewania i sposoby plonowania.
+* Różne wymagania dotyczące wody/sezonu.
+* Niektóre rośliny mogą być wielosezonowe.
+
+**Etap 3 — gospodarstwo i rodzina rolnika**
+
+* Rolnik jako zawód/rola konkretnego gospodarstwa domowego.
+* Rolnik zarządza cyklem upraw.
+* Opiekuje się również zwierzętami gospodarstwa.
+* Krowa otrzymuje własne źródło wody — **koryto**.
+* Gospodarstwo korzysta ze wspólnej infrastruktury i magazynowania.
+
+**Etap 4 — gospodarka rolna**
+
+* Wspólne skrzynie/beczki/magazyny wioski.
+* Produkcja → magazynowanie → konsumpcja → handel.
+* Niedobór nasion, wody lub pracy wpływa na produkcję żywności.
+* Rolnik podejmuje decyzje zależne od potrzeb i warunków.
+
+**Etap 5 — zaawansowane rolnictwo**
+
+* Jakość gleby, nawożenie, płodozmian.
+* Choroby i szkodniki.
+* Pogoda i warunki sezonowe wpływające na plony.
+* Szklarnie.
+* Uprawy wieloletnie i bardziej złożone cykle produkcyjne.
