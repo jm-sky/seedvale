@@ -18,7 +18,7 @@ export function vec3(x: number, y: number, z: number): Vec3 {
 }
 
 /** Copy any `{x,y,z}` into a plain `Vec3` (e.g. from `THREE.Vector3`). */
-export function copyVec3(source: { x: number, y: number, z: number }): Vec3 {
+export function copyVec3(source: { x: number; y: number; z: number }): Vec3 {
   return { x: source.x, y: source.y, z: source.z }
 }
 
@@ -35,6 +35,13 @@ export type SimulationEntityRef = {
 /**
  * Snapshot of inputs available to a decision policy.
  * Fields are optional and composable — do not force NPC and fauna into one schema.
+ *
+ * FUTURE AI:
+ * This is the natural decision boundary for NPCs. Keep world-state inputs here,
+ * while the policy evolves from direct need→action selection toward:
+ * needs/problems/opportunities → pressures → strategy → plan.
+ * Big Five personality, role, traits, relationships, abilities and risk should
+ * eventually influence strategy scoring here rather than individual actions.
  */
 export type DecisionContext = {
   /** Need pressures keyed by domain id (typically 0–1). */
@@ -51,6 +58,12 @@ export type DecisionContext = {
  *
  * World effects stay in consumer callbacks (`onComplete` on NPC adapters) —
  * this type does not own inventory, health, or harvest APIs.
+ *
+ * FUTURE AI:
+ * `next` is currently a short action chain. A persistent NPC plan may
+ * eventually own longer sequences and retain unfinished work across
+ * interruption, partial completion and re-evaluation. Do not move world
+ * mutations into the plan layer; actions should remain executable steps.
  */
 export type PlannedAction<TKind extends string = string> = {
   kind: TKind
