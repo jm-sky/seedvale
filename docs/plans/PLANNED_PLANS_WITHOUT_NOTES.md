@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-23 17:04:20  
+> Date: 2026-08-23 17:17:58  
 
 ## PLANS
 
@@ -11,6 +11,7 @@
 - `2026-08-22--203--well-depth-groundwater-and-protection.md`
 - `ai-001-npc-pressure-layer.md`
 - `ai-002-npc-personality-decisions.md`
+- `npc-001-npc-physical-stats-sex-and-age.md`
 
 --------------------------------
 ## PROMPTS
@@ -175,6 +176,35 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `ai-002-npc-personality-decisions-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `npc-001-npc-physical-stats-sex-and-age.md`
+
+Prompt:
+
+```
+Zrób review planu `npc-001-npc-physical-stats-sex-and-age.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/npc-001-npc-physical-stats-sex-and-age.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`npc-001-npc-physical-stats-sex-and-age-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
