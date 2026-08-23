@@ -12,7 +12,7 @@ const FORWARDED_FNS = [
   'configurePauseMenu', 'setPauseSeed', 'setPauseActiveSaveName', 'openPauseMenu', 'closePauseMenu', 'togglePause', 'isPauseMenuOpen',
   'openQuestLog', 'refreshQuestLog', 'closeQuestLog', 'isQuestLogOpen',
   'openFlavorDialog', 'setFlavorPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',
-  'configureQuickActions', 'setQuickActionsHasDiggingTool', 'setQuickActionsHasTent', 'setQuickActionsHasCarriedContainer', 'setQuickActionsNearTown', 'setQuickActionsTraps', 'setQuickActionsFireAvailability', 'setQuickActionsHasTreeSeed', 'setQuickActionsCropSeeds', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
+  'configureQuickActions', 'setQuickActionsHasDiggingTool', 'setQuickActionsHasTent', 'setQuickActionsHasCarriedContainer', 'setQuickActionsNearTown', 'setQuickActionsLodgingConfirm', 'setQuickActionsTraps', 'setQuickActionsFireAvailability', 'setQuickActionsHasTreeSeed', 'setQuickActionsCropSeeds', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
   'configureAbortRest', 'abortRest',
   'configureAbortBusy', 'abortBusy',
   'showTimeSkip', 'hideTimeSkip', 'updateTimeSkipRestUi',

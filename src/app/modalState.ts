@@ -38,6 +38,9 @@ export function activeModal(
   timeSkip: TimeSkip,
   busy: { isActive: () => boolean },
   restCamp?: { isActive: () => boolean },
+  /** Plan 168 — walking to a resolved lodging target blocks other input the
+   *  same way `restCamp` does. */
+  lodging?: { isActive: () => boolean },
 ): ActiveModal {
   if (pauseMenu.isPaused()) return 'menu'
   if (vueUi.isNpcDialogueMenuOpen()) return 'npcDialogueMenu'
@@ -50,6 +53,7 @@ export function activeModal(
   if (timeSkip.isActive()) return 'timeSkip'
   if (busy.isActive()) return 'busy'
   if (restCamp?.isActive()) return 'busy'
+  if (lodging?.isActive()) return 'busy'
   if (vueUi.isWorldConfigScreenOpen()) return 'worldConfig'
   if (vueUi.isNotesOpen()) return 'notes'
   if (vueUi.isSkillsScreenOpen()) return 'skills'

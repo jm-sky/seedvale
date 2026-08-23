@@ -316,6 +316,13 @@ export type GameLoopDeps = {
    *  (`createApp.ts`) applies the rest outcome for whatever camp it resolved
    *  when the rest started, and awards any Survival XP (plan 128 §5-§7). */
   onSleepFinished: () => void
+  /** Per-frame: walks the player to the resolved "Nocuj w mieście" lodging
+   *  target and starts Sleep on arrival (plan 168) — ticked the same way
+   *  `restCamp.tick` is. */
+  tickLodging: () => void
+  /** True while walking to a resolved lodging target (plan 168) — folded
+   *  into `activeModal` the same way `restCamp.isActive()` is. */
+  isLodgingActive: () => boolean
   /** A long activity (rest/sleep/wait skip, or a busy channel — dig/chop/
    *  well work bout/etc.) is still active while the player takes damage
    *  (combat hit or starvation/dehydration) — cancels it through the same
@@ -371,7 +378,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop,
     openContainer, pickUpContainer, workOnWell,
-    onSleepFinished, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
+    onSleepFinished, tickLodging, isLodgingActive, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
   renderer.shadowMap.autoUpdate = false
@@ -599,11 +606,20 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       keyboard.state.sprint = false
     }
 
+    // Plan 168 — steers the player toward the resolved lodging target by
+    // forcing `keyboard.state.forward`/`mouseLook.state.yaw`, the same
+    // `KeyState`/`LookState` objects `player.update()` below already reads;
+    // no second movement pipeline. Mutually exclusive with restCamp/busy
+    // (`restActions.ts`'s `startRest` won't arm a walk while either is
+    // active), so it never fights their key-clearing above.
+    tickLodging()
+
     const modal = activeModal(
       pauseMenu, npcDialog, questLog, vueUi, inventoryScreen, quickActions, timeSkip, busy, restCamp,
+      { isActive: isLodgingActive },
     )
     touchControls?.setInputEnabled(
-      modal === null && !timeSkip.isActive() && !busy.isActive() && !restCamp.isActive(),
+      modal === null && !timeSkip.isActive() && !busy.isActive() && !restCamp.isActive() && !isLodgingActive(),
     )
 
     if (modal !== null) {

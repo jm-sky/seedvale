@@ -56,7 +56,7 @@ Predator/prey roles with chase/flee behaviour, player-awareness (probabilistic d
 
 - Item flags, per-item stats, weapon numbers, gameplay roadmap: [items/CATALOG.md](./items/CATALOG.md), [items/WEAPONS.md](./items/WEAPONS.md)
 - Combat mechanics (melee/ranged/critical hits/NPC combat): [state/combat.md](./state/combat.md)
-- Player survival needs, skills, busy channels, camp rest, wells, traps, planting, fishing/preservation, cooking capacity/grate: [state/player-systems.md](./state/player-systems.md)
+- Player survival needs, skills, busy channels, camp rest, settlement lodging, wells, traps, planting, fishing/preservation, cooking capacity/grate: [state/player-systems.md](./state/player-systems.md)
 - Still not implemented: player-vs-NPC melee damage, weapon repair/broken lifecycle, general tool durability (shovel/pickaxe), bow durability, arrow recovery, 3D projectile visuals, full Vue-side crafting, iron_rod smelting/production.
 
 ### Quests / progression

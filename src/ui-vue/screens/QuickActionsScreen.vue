@@ -19,9 +19,10 @@ const touchDevice = isTouchDevice()
 useOverlayScreen('quick-actions', isQuickActionsOpen, closeQuickActions)
 useTouchScroll(panel)
 
-const restStatusText: Record<Exclude<RestOutcome, 'ok'>, string> = {
+const restStatusText: Record<Exclude<RestOutcome, 'ok' | 'confirm'>, string> = {
   'too-far': 'Musisz być bliżej wioski',
   'no-blanket': 'Potrzebujesz koca',
+  'no-lodging': 'Nie znaleziono noclegu',
 }
 
 const fireActions = computed(() => visibleFireActions(ui.quickActions.fireAvailability, ui.quickActions))
@@ -38,11 +39,21 @@ function wait(hours: number): void {
 
 function rest(variant: RestVariant): void {
   const result = ui.quickActions.onRest?.(variant) ?? (variant === 'camp' ? 'no-blanket' : 'too-far')
+  if (result === 'confirm') return
   if (result !== 'ok') {
     showToast(restStatusText[result], 'error')
     return
   }
   closeQuickActions()
+}
+
+function confirmLodging(): void {
+  ui.quickActions.onConfirmLodging?.()
+  closeQuickActions()
+}
+
+function cancelLodging(): void {
+  ui.quickActions.onCancelLodging?.()
 }
 
 function placeTent(): void {
@@ -262,10 +273,23 @@ const plantActions = computed<Action[]>(() => {
           @click="rest('camp')"
         />
         <QuickActionsButton
-          v-if="ui.quickActions.nearTown"
-          label="Odpocznij w mieście (8h)"
+          v-if="ui.quickActions.nearTown && !ui.quickActions.lodgingConfirm"
+          label="Nocuj w mieście"
           @click="rest('town')"
         />
+        <template v-if="ui.quickActions.lodgingConfirm">
+          <div class="w-full basis-full text-sm text-ink/80">
+            {{ ui.quickActions.lodgingConfirm.placeLabel }} — {{ ui.quickActions.lodgingConfirm.price }}× moneta
+          </div>
+          <QuickActionsButton
+            label="Potwierdź"
+            @click="confirmLodging"
+          />
+          <QuickActionsButton
+            label="Anuluj"
+            @click="cancelLodging"
+          />
+        </template>
       </QuickActionsGroup>
     </div>
   </Teleport>
