@@ -96,6 +96,13 @@ export function pickNeed(needs: NeedState, options: PickNeedOptions = {}): NeedI
   // running best on a strict improvement, so the first-listed of any tied
   // candidates wins — same precedence the old if-chain (water/wood/food,
   // idle only as the implicit fallback) encoded explicitly.
+  //
+  // FUTURE AI:
+  // These scores currently combine need intensity with a few coarse world
+  // shortage modifiers. This is the natural pressure-arbitration seam for a
+  // future model where Needs, Problems and Opportunities become explicit
+  // pressures and Big Five/role/traits modify strategy choice. Keep critical
+  // physiological needs able to dominate personality preferences.
   return pickActionKind<NeedId>([
     { kind: 'water', score: waterScore },
     { kind: 'wood', score: woodScore },
