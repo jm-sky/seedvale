@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-22 22:38:58  
+> Date: 2026-08-23 16:38:37  
 
 ## PLANS
 
@@ -9,6 +9,8 @@
 - `2026-08-21--190--plans-automation.md`
 - `2026-08-21--191--mountain-peaks-and-massifs.md`
 - `2026-08-22--203--well-depth-groundwater-and-protection.md`
+- `ai-001-npc-pressure-layer.md`
+- `ai-002-npc-personality-decisions.md`
 
 --------------------------------
 ## PROMPTS
@@ -115,6 +117,64 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `2026-08-22--203--well-depth-groundwater-and-protection-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `ai-001-npc-pressure-layer.md`
+
+Prompt:
+
+```
+Zrób review planu `ai-001-npc-pressure-layer.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/ai-001-npc-pressure-layer.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`ai-001-npc-pressure-layer-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `ai-002-npc-personality-decisions.md`
+
+Prompt:
+
+```
+Zrób review planu `ai-002-npc-personality-decisions.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/ai-002-npc-personality-decisions.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`ai-002-npc-personality-decisions-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
