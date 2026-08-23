@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Define the target physical-state model for NPCs: health, stamina, vigor, age, sex, physical differences, injuries, illnesses and hereditary appearance/physical traits.
+Define the target physical-state model for NPCs: health, stamina, vigor, age, sex, physical differences, physical capabilities, injuries, illnesses and hereditary appearance/physical traits.
 
 This document describes the planned domain model, not the implementation or final numeric balance.
 
@@ -21,7 +21,7 @@ The model should support:
 - illnesses and treatment,
 - age-related differences,
 - sex-related biological differences,
-- individual physical traits,
+- individual physical traits and capabilities,
 - appearance and character generation,
 - family inheritance,
 - NPC decision making.
@@ -41,6 +41,8 @@ NPC
 ├── Physical profile
 │   ├── height
 │   ├── build
+│   ├── strength
+│   ├── agility
 │   ├── physical traits
 │   └── inherited physical tendencies
 │
@@ -60,6 +62,46 @@ NPC
 ```
 
 The stable profile determines capabilities and limits; runtime state describes what is happening to the NPC now.
+
+The physical profile is intentionally extensible. `strength` and `agility` are the first planned explicit physical capabilities beyond the existing health/energy model. Additional capabilities may be introduced later if they are justified by simulation needs rather than as a generic RPG stat list.
+
+## Physical capabilities
+
+Physical capabilities describe relatively stable individual differences in what an NPC can physically do. They are part of the physical profile, not runtime conditions.
+
+### Strength
+
+Strength represents an NPC's general physical force-producing capacity.
+
+It may influence:
+
+- heavy physical work,
+- carrying and lifting capacity,
+- pushing or pulling,
+- melee combat effectiveness,
+- physical interactions with the environment,
+- other activities where force is a meaningful constraint.
+
+Strength should not be treated as a universal multiplier for every physical action. Relevant actions should explicitly decide whether and how strength matters.
+
+### Agility
+
+Agility represents an NPC's coordination, mobility and ability to perform quick or precise physical actions.
+
+It may influence:
+
+- movement and acceleration,
+- turning and evasive movement,
+- reaction-demanding actions,
+- precision-oriented physical work,
+- selected combat actions,
+- other activities where coordination or mobility is a meaningful constraint.
+
+Agility should not simply become a generic movement-speed multiplier. Relevant actions should explicitly decide whether and how agility matters.
+
+### Future capabilities
+
+The physical profile may later include additional capabilities when a real simulation system needs them. Candidate capabilities should be evaluated by whether they create meaningful differences in world behaviour, work, combat, survival or interaction rather than by completeness of a character-stat system.
 
 ## HP
 
@@ -115,11 +157,13 @@ age + sex + build + height + physical traits
                          ↓
                  physical profile
                          ↓
-              HP / stamina / vigor
+      strength / agility / HP / stamina / vigor
               recovery / capacity
 ```
 
 The exact formulas and numerical modifiers should be calibrated during implementation rather than fixed in this vision document.
+
+Strength and agility should therefore emerge from the complete physical profile rather than being simple independent rolls. Age, sex, build, height, inherited tendencies and individual traits may all contribute where biologically or simulation-wise appropriate.
 
 ### Age
 
@@ -321,7 +365,7 @@ Examples:
 - low stamina can influence whether an NPC continues a demanding task,
 - physical recovery can become a problem/pressure in its own right.
 
-The physical-state system should provide facts/modifiers; NPC AI remains responsible for deciding what to do about them.
+Physical capabilities such as strength and agility should similarly be exposed as facts/modifiers to the decision/action systems. The AI decides what to do with those capabilities; the physical-state system does not prescribe behaviour.
 
 ## Appearance phenotype
 
@@ -436,8 +480,6 @@ NPC decision / recovery
 
 The shared combat system should continue to use the common health/damage concepts. Injury generation and recovery should remain reusable by other world systems such as accidents, wildlife interactions or future hazards.
 
-The existing NPC combat plan explicitly treats healing as something handled by normal NPC decision/action flow after combat rather than by the combat lifecycle itself.
-
 ## Simulation and performance
 
 Physical state must remain cheap enough to support many NPCs.
@@ -465,7 +507,7 @@ Current implementation already provides reusable primitives for:
 - NPC combat damage/death,
 - NPC healing flow.
 
-However, the current model does not yet provide a complete biological/physical profile that derives maximum HP, stamina and vigor from age, sex, build, height and individual traits.
+However, the current model does not yet provide a complete biological/physical profile that derives maximum HP, stamina, vigor, strength and agility from age, sex, build, height and individual traits.
 
 The current NPC character definition contains sex, role, personality and traits, while age and full physical phenotype are not yet first-class simulation properties.
 
@@ -481,7 +523,7 @@ These should be resolved before implementation:
 - continuous versus categorical height/build representation,
 - exact influence of sex and age on physical distributions,
 - which traits affect physical capabilities,
-- exact formulas for max HP/stamina/vigor,
+- exact formulas for max HP/stamina/vigor/strength/agility,
 - whether injuries use body locations,
 - injury severity and duration model,
 - illness taxonomy and transmission model,
