@@ -161,6 +161,86 @@ Concrete operations that change the world: travel, gather, hunt, carry, deposit,
 
 Actions remain responsible for validating current world state and applying world mutations.
 
+## Decision model
+
+### Candidate strategies
+
+A pressure should generate a set of viable candidate strategies rather than directly selecting an action.
+
+```text
+food shortage
+  ↓
+possible strategies:
+  stored food / hunt / farm / forage / trade / ask for help
+```
+
+Candidate generation should consider what the NPC can currently know and access. The system should not assume knowledge of resources or opportunities the NPC has no reason to know about.
+
+### Hard constraints and prerequisites
+
+Hard constraints remove strategies that cannot currently be executed. They should not automatically mean that the underlying goal is impossible.
+
+For example:
+
+```text
+Goal: collect wood
+Strategy: chop trees
+Requirement: axe
+Current state: no axe
+```
+
+The strategy can be unavailable now while still being potentially achievable through a prerequisite:
+
+```text
+collect wood
+  ↓
+missing axe
+  ↓
+obtain axe
+  ↓
+resume wood plan
+```
+
+This is a form of multi-stage / hierarchical planning. The first implementation does not need to support arbitrary prerequisite planning; it may simply reject, defer or postpone unavailable strategies. The vision leaves room for later sub-plans.
+
+### Strategy scoring
+
+After hard constraints and currently unsupported prerequisites are considered, viable strategies can be scored through explicit factors rather than one opaque global formula.
+
+Conceptually:
+
+```text
+strategy score
+  = pressure relevance
+  + role suitability
+  + resource availability
+  + relationship factors
+  + personality preferences
+  + trait / ability modifiers
+  + opportunity value
+  - risk
+  - distance / travel cost
+  - other relevant costs
+```
+
+The exact scoring model is implementation detail and may evolve. Individual contributions should remain inspectable for diagnostics.
+
+Example:
+
+```text
+Hunt deer
+  pressure relevance   +0.80
+  hunter role          +0.30
+  conscientiousness    +0.10
+  risk                 -0.15
+  distance             -0.05
+  availability         +0.20
+  ---------------------------
+  final                 1.20
+```
+
+This fits the existing diagnostic direction: an NPC should eventually be able to explain why one strategy won over another.
+
 ## Personality — Big Five
 
 Big Five is the source-of-truth personality model for NPCs. Personality should influence how an NPC evaluates strategies, not directly dictate individual actions.
@@ -196,6 +276,36 @@ Personality is only one influence. The decision model should also consider:
 - relevant memory.
 
 No single input should become a hidden global priority system.
+
+## Decision commitment and re-evaluation
+
+A decision should not necessarily be reconsidered every simulation tick. Re-evaluation frequency can depend partly on an NPC's cognitive ability / cleverness (`bystrość`).
+
+Conceptually:
+
+```text
+less capable NPC
+  → longer normal re-evaluation interval
+  → greater tendency to stay with the current plan
+  → lower CPU cost
+
+more capable NPC
+  → shorter normal re-evaluation interval
+  → more frequent consideration of changing circumstances
+  → potentially more adaptive behaviour
+```
+
+This is both a behavioural difference and a simulation-performance mechanism.
+
+Normal re-evaluation should be adaptive and bounded. Important events can bypass the interval and force immediate evaluation, for example:
+
+- critical need,
+- immediate danger,
+- plan invalidation,
+- major world change directly affecting the current goal,
+- important social event.
+
+A smarter NPC should not simply think every frame. The simulation should still use explicit update intervals and event-driven invalidation to control CPU cost.
 
 ## Planning and unfinished work
 
@@ -233,6 +343,30 @@ inventory full
 ```
 
 The NPC should remember the unfinished goal/task because it remains relevant, not because every action is stored indefinitely.
+
+## Frustration and unresolved plans
+
+An important unresolved or repeatedly blocked plan can create frustration and reduce satisfaction.
+
+Conceptually:
+
+```text
+planned goal
+  ↓
+unexecuted / blocked work
+  ↓
+frustration increases
+  ↓
+pressure toward resolving the goal increases
+  ↓
+satisfaction decreases while unresolved
+```
+
+Frustration should be bounded, decay when the problem is resolved or abandoned, and should not become an unbounded permanent priority.
+
+Personality can influence the response. For example, conscientious NPCs may place more importance on completing obligations, while less conscientious NPCs may abandon or tolerate unfinished work more readily.
+
+This creates a useful feedback loop without requiring a separate hard-coded emotional state for every situation.
 
 ## Interruption and re-evaluation
 
@@ -279,7 +413,11 @@ Needs / Problems / Opportunities
         ↓
     Pressures
         ↓
- DecisionContext
+ Candidate Strategies
+        ↓
+ Hard Constraints / Prerequisites
+        ↓
+ Strategy Scoring
         + Big Five / Traits / Role / Relationships / Abilities
         ↓
      Decision
@@ -289,6 +427,12 @@ Needs / Problems / Opportunities
        Plan
         ↓
  existing PlannedAction execution
+        ↓
+ partial completion / interruption
+        ↓
+ frustration / satisfaction / memory
+        ↓
+ adaptive re-evaluation
 ```
 
 Natural future integration points include `choose()`, `DecisionContext`, `pickNeed()`, `beginNeed()`, `PlannedAction.next`, action completion/re-evaluation and role-specific decision branches.
