@@ -1,77 +1,243 @@
-# Seedvale Domain Roadmaps
+Seedvale — Vision
 
-Domain roadmaps describe the **target state** of individual Seedvale domains.
-They answer what a domain should become as a coherent system, not what is currently implemented.
+> Plant the seed. Watch the world grow.
 
-## Purpose
 
-A domain roadmap sits between the product roadmap and implementation plans:
 
-```text
-VISION
-  ↓
-ROADMAP.md
-  ↓
-Domain Roadmap
-  ↓
-Plan / Epic
-  ↓
-Implementation
-  ↓
-STATE.md
-```
+Seedvale is a browser-based 3D sandbox simulation built around a living world rather than a player-centred campaign.
 
-The roadmap is a living design document. It should be updated as the vision becomes clearer, systems evolve, or new interactions are discovered.
+The player is part of the world. Settlements, households, NPCs, animals, resources and the environment continue to operate when the player is absent or not observing them.
 
-## Domain roadmap vs. current state
+The goal is not to simulate everything at maximum fidelity. The goal is to create a small number of interconnected deterministic systems that produce believable, persistent and sometimes surprising consequences.
 
-- `docs/STATE.md` and documents under `docs/state/` describe what actually exists now.
-- `docs/ROADMAP.md` describes product-level direction and major themes.
-- `docs/domains/` describes the desired long-term shape of a specific domain.
-- `docs/plans/` contains concrete implementation work that moves the code toward a domain roadmap.
+Core Principles
 
-Do not use a domain roadmap as an implementation-status tracker. Verify implementation against the code and current-state documentation.
+The world exists without the player
 
-## Domain roadmaps
+The player can influence the world, but does not drive its simulation. Settlements have their own needs, problems and development. NPCs work, rest, form relationships and respond to changing circumstances. Animals live within habitats and food chains. Resources are consumed and renewed. Weather and seasons alter conditions.
 
-- [Agriculture](./agriculture.md)
-- [Combat](./combat.md)
-- [`Companions`](./companions.md)
-- [Economy](./economy.md)
-- [Fauna](./fauna.md)
-- [Items](./items.md)
-- [NPCs](./npc.md)
-- [Player](./player.md)
-- [Quests](./quests.md)
-- [Resources](./resources.md)
-- [Settlements](./settlements.md)
-- [Weather & Seasons](./weather.md)
-- [World](./world.md)
+Systems over scripts
 
-## Required relationship with plans
+Prefer reusable systems and world state over isolated scripted behaviours. A feature should strengthen existing interactions rather than create a parallel mechanism.
 
-Every new implementation plan must belong to a domain and use that domain's roadmap as an anchor. The plan should identify the roadmap area it advances, rather than introducing an isolated feature with no place in the domain's target state.
+Deterministic simulation
 
-Plan filenames use the domain prefix:
+Important world behaviour is driven by explicit state, rules and decisions. LLMs may eventually augment dialogue, quests or characterisation, but they must not replace deterministic simulation.
 
-`YYYY-MM-DD--NNN--<domain>--<name>.md`
+Persistent consequences
 
-Example:
+Actions should change the world in ways that can outlast the action itself. A shortage can alter work and trade. A damaged building can affect a household. A relationship can change future cooperation. A dead animal can become part of the ecosystem. A discovered place can create new opportunities.
 
-`2026-08-22--205--npc--new-feature.md`
+Shared world rules
 
-A domain roadmap may contain future work that has no plan yet. Plans may also reveal gaps or missing interactions; update the roadmap when that changes the intended target state.
+The player, NPCs and animals should use the same underlying world concepts wherever practical. Avoid player-only versions of systems that already exist for inhabitants of the world.
 
-## Scope
+Adaptive simulation
 
-Domain roadmaps should focus on:
+Simulation fidelity should depend on importance, distance and observation. Important or nearby situations may be simulated in detail while remote or low-impact situations may use aggregation or lower update frequency. Simplification must preserve continuity and meaningful consequences.
 
-- desired capabilities and behaviours,
-- important entities and state,
-- relationships between systems,
-- player and NPC participation,
-- persistent consequences and emergent behaviour,
-- boundaries and principles that should guide implementation,
-- major future phases where useful.
+The Living World
 
-They should not become detailed technical implementation specifications. Those belong in plans and code.
+Seedvale should emerge from a continuous loop:
+
+world and environment
+        ↓
+resources, places and opportunities
+        ↓
+settlements, households and individuals
+        ↓
+needs, problems, goals and pressures
+        ↓
+decisions and strategies
+        ↓
+actions and work
+        ↓
+world changes
+        ↓
+consumption, production, relationships and history
+        ↓
+new opportunities, shortages, conflicts and problems
+
+No single system owns this loop. Different domains contribute state and behaviour to it.
+
+Simulation Model
+
+The simulation distinguishes several concepts that should remain separate:
+
+Needs — states requiring satisfaction.
+
+Problems — undesirable situations requiring a response.
+
+Goals — desired future states.
+
+Pressures — priorities that influence decisions.
+
+Strategies — approaches used to pursue goals or solve problems.
+
+Actions — concrete changes made in the world.
+
+
+For NPCs, the intended direction is:
+
+state + pressures + traits + relationships + goals
+                    ↓
+                 decision
+                    ↓
+                strategy
+                    ↓
+                  actions
+                    ↓
+              world changes
+
+This model should remain understandable and testable. More sophisticated behaviour should emerge by enriching state, pressures and available strategies rather than replacing the simulation with opaque reasoning.
+
+Domains
+
+1. World
+
+The physical and environmental foundation of Seedvale: terrain, biomes, vegetation, forests, water, rivers, resources, places, weather and seasons.
+
+World systems should provide opportunities and constraints for other domains rather than existing only for visual generation.
+
+World
+
+2. Settlements
+
+Settlements are living communities composed of households, buildings, infrastructure, resources and social relationships. Their condition should change over time according to population, environment, economy and local problems.
+
+Settlements
+
+3. NPCs
+
+NPCs are inhabitants rather than quest dispensers. Their behaviour combines needs, problems, goals, pressures, personality, abilities, schedules, relationships and available opportunities.
+
+NPCs
+
+4. Fauna
+
+Animals form an ecosystem rather than a collection of decorative agents. Habitat, food, predators, reproduction, population, seasons and settlement activity should influence wildlife and domestic animals.
+
+Fauna
+
+5. Agriculture & Food
+
+Food is produced, gathered, processed, stored and consumed through interconnected world systems. Gardens, fields, fishing, hunting, preservation and cooking should participate in household and settlement economies.
+
+Agriculture
+
+6. Economy & Resources
+
+Resources flow through gathering, work, production, storage, consumption and trade. Shortages and surpluses should create real pressures for households, settlements and individuals.
+
+Economy · Resources
+
+7. Player
+
+The player is another participant in the world. Survival, exploration, construction, skills, relationships and economic activity should use the same world state and create consequences for other inhabitants.
+
+Player
+
+8. Items & Combat
+
+Items represent tangible capabilities and possessions. Combat is a shared system used by the player, NPCs and relevant animals, with execution separated from decision-making.
+
+Items · Combat
+
+9. Quests & Progression
+
+Quests should increasingly emerge from actual world state: NPC and household problems, settlement conflicts, shortages, relationships, discoveries and environmental events. Progression should reflect participation in the living world rather than a separate campaign layer.
+
+Quests
+
+Cross-Cutting Systems
+
+Some systems support every domain and should not become isolated gameplay domains:
+
+Simulation architecture — update scheduling, ownership, deterministic state and adaptive/off-screen simulation.
+
+Persistence — saving and restoring meaningful world state.
+
+Rendering — terrain, vegetation, water, characters and other visual representation.
+
+Performance — batching, update frequency, memory, workers and main-thread responsiveness.
+
+UI and input — presenting world state and available interactions without becoming a parallel game model.
+
+Multiplayer readiness — avoid architectural assumptions that would make future shared simulation unnecessarily difficult, without treating multiplayer as an immediate requirement.
+
+
+Emergent Behaviour
+
+The most important interactions are cross-domain.
+
+Examples:
+
+forest resources
+    → NPC gathering
+    → household fuel
+    → settlement stock
+    → shortage
+    → changed NPC pressures
+    → different work decisions
+
+weather / season
+    → crops and wildlife
+    → food availability
+    → household needs
+    → settlement economy
+    → trade or migration pressure
+
+NPC relationship
+    → cooperation or conflict
+    → changed action
+    → household / settlement consequences
+    → future relationship state
+
+player action
+    → world state change
+    → NPC / fauna response
+    → new problem or opportunity
+    → history / relationship / quest
+
+These chains are more important than the number of individual features implemented.
+
+Long-Term Direction
+
+Seedvale should gradually move from a collection of functioning systems toward a coherent living simulation.
+
+The desired progression is:
+
+1. World foundation — physical environment, resources and places behave consistently.
+
+
+2. Autonomous inhabitants — settlements, households, NPCs and fauna operate independently.
+
+
+3. Interconnected economy and ecology — work, food, resources and environment influence one another.
+
+
+4. Decision-driven behaviour — NPCs respond to pressures, problems, goals, personality and relationships.
+
+
+5. Persistent history — actions create consequences, memories, relationships and changing world conditions.
+
+
+6. Emergent gameplay — quests, conflicts, opportunities and stories increasingly arise from simulation state.
+
+
+
+This is a direction, not a promise that every system will eventually be simulated at maximum complexity.
+
+Domain Roadmaps
+
+The domain documents describe the target state of individual systems. They should explain capabilities, important state, system relationships, boundaries and major future directions.
+
+They are not implementation-status trackers. For current implementation state, use docs/STATE.md and docs/state/. For concrete implementation work, use docs/plans/.
+
+Backlog
+
+This section is reserved for short design ideas that are not yet concrete enough to become implementation plans.
+
+Backlog items are not commitments and must not be presented as implemented behaviour. When an idea becomes sufficiently defined, it should move into an appropriate implementation plan or be incorporated into the relevant domain roadmap.
+
+Future ideas may be recorded here while the project is still refining its long-term direction.
