@@ -11,9 +11,62 @@ Verification: unless a row says otherwise, it has passed `tsc`/lint/build/test b
 
 Paths below are files in this folder unless noted. Implementation notes / reviews stay next to the plan (`*-implementation-notes.md`, `*-review.md`) and are not indexed separately.
 
-## Next plan ID
+## Plan naming
 
-`204`
+New plans use the following filename format:
+
+"<domain>-<id>-<title>.md"
+
+Examples:
+
+- "ai-002-npc-personality-decisions.md"
+- "world-015-natural-mountains-and-rivers.md"
+- "fauna-004-animal-attack-and-npc-defense.md"
+- "settlements-012-household-economy.md"
+
+## Domain prefixes
+
+Plan domains use short, stable prefixes:
+
+Prefix| Domain
+"world"| World, terrain, environment, places
+"settlements"| Settlements, households, buildings and community systems
+"ai"| NPC AI, decisions, behaviour and simulation intelligence
+"fauna"| Wildlife and animal simulation
+"agriculture"| Agriculture, food production and food lifecycle
+"economy"| Economy, resources, production, storage and trade
+"player"| Player-specific participation and progression
+"items"| Items, inventory and combat
+"quests"| Quests, progression, relations and reputation
+"persistence"| Save/load and persistent state
+"rendering"| Rendering and visual systems
+"performance"| Performance, profiling and optimization
+"ui"| UI and input
+"architecture"| Cross-cutting architecture and system boundaries
+"multiplayer"| Multiplayer readiness and related architecture
+
+The prefix identifies the plan's primary domain. Secondary domains should normally be expressed through "tags", not by adding multiple prefixes to the filename.
+
+## Domain-local IDs
+
+The numeric ID is unique within its domain, not globally.
+
+For example:
+
+- "ai-001-*"
+- "ai-002-*"
+- "world-001-*"
+- "world-002-*"
+
+"ai-002" and "world-002" are therefore two different plan IDs.
+
+Plan dependencies use the complete domain-local ID, for example:
+
+"Depends on: ~~ai-001~~ ~~world-003~~"
+
+IDs are never reused within a domain, even after a plan is archived.
+
+The old date-based/global-ID naming scheme remains valid for historical plans. Existing plans are not renamed solely to adopt the new convention. All newly created plans use the domain-local naming scheme.
 
 ## Plan domains
 
@@ -190,7 +243,7 @@ Done plans kept visible here (not archived) because a current plan above still d
 
 Every `docs/plans/YYYY-MM-DD--NNN--*.md` in **this folder** (except `*-implementation-notes.md`, `*-review.md`, `README.md`, `NEXT-IDEAS.md`, `LOOSE-ENDS.md`, `archive/`) belongs in exactly one section above (`In progress` / `Planned` / `Todo` / `Verification needed` / `Recent context`), regardless of status.
 
-New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN), a `domain:`/optional `tags` per [Plan domains](#plan-domains) above, then a row in the matching section. When a plan reaches `done` and nothing above still depends on it, it stays here until the next archive snapshot — do not move it to `archive/` yourself; that only happens as a deliberate periodic snapshot (see [archive/README.md](./archive/README.md)).
+~~New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN)~~, a `domain:`/optional `tags` per [Plan domains](#plan-domains) above, then a row in the matching section. When a plan reaches `done` and nothing above still depends on it, it stays here until the next archive snapshot — do not move it to `archive/` yourself; that only happens as a deliberate periodic snapshot (see [archive/README.md](./archive/README.md)).
 
 **Keep `Summary` short — this file must stay small enough to load whole (e.g. into ChatGPT) as a planning map.** One sentence, or a few short clauses. Include only what a *future plan* needs as context: key architectural decisions (reuse vs new system, explicit scope exclusions/deferrals), SaveData version bumps, known bugs. Do not restate the filename/slug, list touched file or function names, quote test counts, or repeat the standard tech-verification sentence (already covered once under [Verification](#plans--current-planning-map) above) — that detail belongs in the plan's own `*-implementation-notes.md`/`*-review.md`, not in this index.
 
