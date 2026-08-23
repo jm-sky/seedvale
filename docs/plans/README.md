@@ -68,6 +68,10 @@ IDs are never reused within a domain, even after a plan is archived.
 
 The old date-based/global-ID naming scheme remains valid for historical plans. Existing plans are not renamed solely to adopt the new convention. All newly created plans use the domain-local naming scheme.
 
+## Next plan ID
+
+`204`
+
 ## Plan domains
 
 New plans should declare a primary `domain:` in frontmatter (and, if the plan genuinely spans more than one area, optional `tags:` for the secondary domain(s)). This is **not retroactive** — existing plans (live + archived) are not being touched.
