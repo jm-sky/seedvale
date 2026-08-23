@@ -28,7 +28,7 @@ This document is the **index for the NPC domain**. Detailed models belong in foc
 
 ### Physical state
 
-- [`npc-physical-state.md`](./npc-physical-state.md) — planned model for HP, stamina, vigor and physical differences across age/sex.
+- [`npc-physical-state.md`](./npc-physical-state.md) — planned model for HP, stamina, vigor and physical differences across age/sex, including future physical capabilities such as strength and agility.
 
 ### Current implementation
 
