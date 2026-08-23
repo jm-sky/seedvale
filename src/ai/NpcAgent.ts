@@ -748,8 +748,12 @@ export class NpcAgent {
   private frozen = false
   /** Settlement-owned bulk stock (plan 071). Null only in isolated fallbacks. */
   private readonly economy: SettlementEconomy | null
-  /** This NPC's family stock (plan 069). Null only in isolated fallbacks. */
-  private readonly household: Household | null
+  /** This NPC's family stock (plan 069). Null only in isolated fallbacks.
+   *  Public (not `private`) so plan 168's lodging resolver can read whose
+   *  household a "friend" candidate belongs to — the same object dialogue/
+   *  home-trading already reads from `createSettlement.ts`, not a second
+   *  ownership graph. */
+  readonly household: Household | null
   /** NPC ore-mining hooks over `ResourceDeposits` (plan 131). Null when this
    *  settlement wasn't built with one (isolated fallback, same as `economy`/
    *  `household`) — the miner role then falls back to the pre-131 idle

@@ -629,6 +629,8 @@ export async function createApp(
     restCamp,
     dayNight,
     mouseLook,
+    keyboard,
+    getPlayerSocial,
     worldAudio,
     getTreeLifecycle: () => treeLifecycle,
     onInventoryChanged,
@@ -642,7 +644,11 @@ export async function createApp(
   const gathering = createGatheringActions(actionCtx, { fishingBait, fishingAttempts })
   const survival = createSurvivalActions(actionCtx)
   const ground = createGroundActions(actionCtx)
-  const rest = createRestActions(actionCtx, { timeSkipOverlay, busyOverlay })
+  const rest = createRestActions(actionCtx, {
+    timeSkipOverlay,
+    busyOverlay,
+    setLodgingConfirm: (payload) => vueUi.setQuickActionsLodgingConfirm(payload),
+  })
 
   onTrapCaptureTarget = gathering.onTrapCapture
   onTrapBaitReturnedTarget = gathering.onTrapBaitReturned
@@ -951,6 +957,8 @@ export async function createApp(
     onLightWoodenTorch: lightWoodenTorch,
     onWait: rest.startWait,
     onRest: rest.startRest,
+    onConfirmLodging: rest.confirmLodgingPayment,
+    onCancelLodging: rest.cancelLodgingConfirm,
     onDig: () => {
       const p = ground.aimGroundPoint()
       ground.startDigAt(p.x, p.z)
@@ -1144,6 +1152,8 @@ export async function createApp(
     pickUpContainer: containers.pickUpContainer,
     workOnWell: placement.workOnWell,
     onSleepFinished: rest.onSleepFinished,
+    tickLodging: rest.tickLodging,
+    isLodgingActive: rest.isLodgingActive,
     interruptLongActivityOnDamage: () => rest.interruptRestForDamage() || rest.abortBusy(),
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,

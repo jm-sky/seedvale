@@ -1,4 +1,6 @@
+import type { PlayerSocialLookup } from '../../ai/reactionChance'
 import type { createWorldAudio } from '../../audio/createWorldAudio'
+import type { createKeyboard } from '../../input/Keyboard'
 import type { createMouseLook } from '../../input/MouseLook'
 import type { HeldTool } from '../../items/HeldTool'
 import type { Inventory } from '../../items/Inventory'
@@ -37,6 +39,15 @@ export type PlayerActionContext = {
   restCamp: RestCampSequence
   dayNight: DayNightState
   mouseLook: ReturnType<typeof createMouseLook>
+  /** Same shared `KeyState` `PlayerController` reads — plan 168's lodging
+   *  walk steers the player through it (forced `forward` + look yaw) rather
+   *  than a second movement pipeline; also used to detect a manual movement
+   *  press as the player's cancel signal. */
+  keyboard: ReturnType<typeof createKeyboard>
+  /** Relation level + player standing lookup, by NPC name (plan 117) — plan
+   *  168's lodging resolver reuses this for "friend" candidates instead of a
+   *  second friendship registry. */
+  getPlayerSocial: PlayerSocialLookup
   worldAudio: ReturnType<typeof createWorldAudio>
   /** Live accessor — `createApp` replaces the `TreeLifecycle` instance when a
    *  genuinely new world is started, so this must not be captured by value. */

@@ -1,4 +1,5 @@
 import type { LightActionResult } from '../app/userActions'
+import type { LodgingConfirmView } from '../settlement/lodging'
 import type { TrapKind } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import { getMountedVueUi } from '../ui-vue/mount'
@@ -12,7 +13,12 @@ export type QuickActionsTraps = Record<TrapKind, boolean>
 export type QuickActionsCropSeeds = Record<CropId, boolean>
 
 export type RestVariant = 'camp' | 'town'
-export type RestOutcome = 'ok' | 'too-far' | 'no-blanket'
+/** `'confirm'` — a paid lodging offer was found; the player must confirm via
+ *  `onConfirmLodging`/`onCancelLodging` before payment/movement start (plan
+ *  168). `'no-lodging'` — near a settlement, but the resolver found no bed,
+ *  friend, paid or hay option at all (should be rare: a loaded settlement
+ *  always offers hay). */
+export type RestOutcome = 'ok' | 'too-far' | 'no-blanket' | 'no-lodging' | 'confirm'
 
 export type QuickActionsHandlers = {
   /** Same handlers passed to `createPauseMenu`'s fire/torch buttons — these
@@ -28,12 +34,24 @@ export type QuickActionsHandlers = {
   /** Starts a "wait" time skip (1/3/6h, visible fast-forward) — see
    *  `world/timeSkip.ts`. */
   onWait?: (hours: number) => void
-  /** Starts an 8h "rest" time skip. Both variants require a blanket in the
-   *  inventory — returns `'no-blanket'` (consumes nothing) if missing;
-   *  `'town'` additionally requires the player to be near a settlement —
-   *  returns `'too-far'` (consumes nothing) if not. The town button is also
-   *  hidden via `nearTown` when far. */
+  /** `'camp'` starts an 8h rest time skip and requires a blanket — returns
+   *  `'no-blanket'` (consumes nothing) if missing. `'town'` ("Nocuj w
+   *  mieście", plan 168) requires the player to be near a settlement —
+   *  returns `'too-far'` if not, `'no-lodging'` if the resolver still found
+   *  nothing — then walks the player to the best resolved lodging (bed >
+   *  friend > paid > hay) and only starts Sleep on arrival; `'confirm'`
+   *  means a paid offer is awaiting `onConfirmLodging`/`onCancelLodging`
+   *  before anything is charged or the player starts walking. The town
+   *  button is also hidden via `nearTown` when far. */
   onRest?: (variant: RestVariant) => RestOutcome
+  /** Commits payment (exactly once) for the paid lodging offer `onRest`
+   *  reported as `'confirm'`, then arms movement to it (plan 168). */
+  onConfirmLodging?: () => void
+  /** Declines the pending paid lodging offer without charging or moving. */
+  onCancelLodging?: () => void
+  /** Set (non-null) while a paid lodging offer awaits confirmation — the
+   *  place/price/quality to show, never re-derived by the UI itself. */
+  lodgingConfirm?: LodgingConfirmView | null
   /** Shovel dig / level when the player owns a shovel (HUD only when held). */
   onDig?: () => void
   onLevel?: () => void
@@ -101,6 +119,9 @@ export function createQuickActions(
   }
   if (typeof handlers.nearTown === 'boolean') {
     getUi()?.setQuickActionsNearTown(handlers.nearTown)
+  }
+  if (handlers.lodgingConfirm !== undefined) {
+    getUi()?.setQuickActionsLodgingConfirm(handlers.lodgingConfirm)
   }
   if (handlers.traps) {
     getUi()?.setQuickActionsTraps(handlers.traps)

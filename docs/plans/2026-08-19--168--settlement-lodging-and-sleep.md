@@ -1,7 +1,7 @@
 # Plan: Settlement Lodging and Sleep
 
 **Created:** 2026-08-19
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + `tsc`/lint/build/test 2026-08-23; browser/gameplay verification pending
 **Priority:** 🔴 high · **Effort:** L
 **Depends on:** ~~165~~
 **Domain:** `items-player`

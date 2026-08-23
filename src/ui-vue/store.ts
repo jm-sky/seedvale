@@ -11,6 +11,7 @@ import type { SharpenResult } from '../items/weaponMaintenance'
 import type { CreateSaveResult, SaveSlotInfo } from '../persistence/saveDb'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
+import type { LodgingConfirmView } from '../settlement/lodging'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
 import type { QuickActionsCropSeeds, QuickActionsTraps, RestOutcome, RestVariant } from '../ui/createQuickActions'
 import type { ToastVariant } from '../ui/createToast'
@@ -108,6 +109,12 @@ type QuickActionsState = {
   onLightWoodenTorch: (() => LightActionResult) | null
   onWait: ((hours: number) => void) | null
   onRest: ((variant: RestVariant) => RestOutcome) | null
+  /** Plan 168 — confirms/declines the paid lodging offer `onRest` reported
+   *  as `'confirm'`. */
+  onConfirmLodging: (() => void) | null
+  onCancelLodging: (() => void) | null
+  /** Set while a paid lodging offer awaits confirmation (plan 168). */
+  lodgingConfirm: LodgingConfirmView | null
   onDig: (() => void) | null
   onLevel: (() => void) | null
   onPlaceTent: (() => void) | null
@@ -322,7 +329,8 @@ export const ui = reactive({
     traps: { simple: false, good: false },
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, buildGrate: false, lightBranch: false, lightWoodenTorch: false },
     onBuildSimpleFire: null, onBuildFirePit: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
-    onWait: null, onRest: null, onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
+    onWait: null, onRest: null, onConfirmLodging: null, onCancelLodging: null, lodgingConfirm: null,
+    onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
     hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null,
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
@@ -662,6 +670,7 @@ export function setQuickActionsHasDiggingTool(hasDiggingTool: boolean): void { u
 export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions.hasTent = hasTent }
 export function setQuickActionsHasCarriedContainer(hasCarriedContainer: boolean): void { ui.quickActions.hasCarriedContainer = hasCarriedContainer }
 export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }
+export function setQuickActionsLodgingConfirm(lodgingConfirm: LodgingConfirmView | null): void { ui.quickActions.lodgingConfirm = lodgingConfirm }
 export function setQuickActionsTraps(traps: QuickActionsTraps): void {
   const current = ui.quickActions.traps
   if (current.simple === traps.simple && current.good === traps.good) return

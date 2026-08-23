@@ -33,6 +33,19 @@ export function homePlaceId(settlementId: string, index: number): string {
   return `${settlementId}:home:${index}`
 }
 
+/** Inverse of `homePlaceId` — the home index a `Household.homeId` encodes for
+ *  `settlementId`, or `null` when `homeId` isn't one of that settlement's
+ *  numbered homes (the no-huts `:home:fallback` id, or a different
+ *  settlement's id entirely). Lets plan 168's lodging resolver look up the
+ *  physical `landmarks.houses[i]` a household's `homeId` refers to without a
+ *  second id scheme. */
+export function homeIndexFromPlaceId(settlementId: string, homeId: string): number | null {
+  const prefix = `${settlementId}:home:`
+  if (!homeId.startsWith(prefix)) return null
+  const index = Number(homeId.slice(prefix.length))
+  return Number.isInteger(index) && index >= 0 ? index : null
+}
+
 /**
  * Per-role workplace — hybrid per the 2026-08-09 decision: roles that
  * already have a matching communal landmark reuse it as-is (no new world
