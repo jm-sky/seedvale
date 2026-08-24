@@ -79,7 +79,7 @@ Next IDs are tracked separately for each canonical domain. Until the first new p
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `001`
-- settlements-npcs: `001`
+- settlements-npcs: `003`
 - tools: `003`
 - ui-input: `003`
 - world: `001`
@@ -156,6 +156,7 @@ Natural vegetation
 | `ui-input-002-ui-ux-interaction-and-action-system-polish.md` 💡 | - | 🟡 | L | - |
 | `tools-001-performance-benchmark-determinism-and-reliability.md` ◼️ | - | 🔴 | M | - |
 | `tools-002-trace-analyzer-application-cpu-attribution.md` ◼️ | - | 🔴 | M | - |
+| `settlements-npcs-002-cultivation-hydration-and-watering.md` ◼️ | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
 
 ### Fresh new
 
