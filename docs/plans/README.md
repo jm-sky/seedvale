@@ -31,7 +31,17 @@ The `<id>` is a three-digit number local to the domain. New plans do not use the
 
 ## Next plan ID
 
-`204`
+- ai: `003`
+- fauna: `001`
+- items-player: `001`
+- npc: `002`
+- persistence: `001`
+- quests-progression: `001`
+- settlements: `001`
+- settlements-npcs: `001`
+- ui-input: `001`
+- world: `001`
+- world-terrain: `003`
 
 ## Plan domains
 
