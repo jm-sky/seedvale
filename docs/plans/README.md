@@ -24,15 +24,20 @@ Existing legacy plans keep their current date/global-ID names and are not rename
 
 New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only for genuinely secondary domains.
 
-| Domain               | Covers                                                      |
-| -------------------- | ----------------------------------------------------------- |
-| `world-terrain`      | Terrain, chunks, ocean, environment, landmarks              |
-| `settlements-npcs`   | Settlements, NPCs, households, schedules, economy, dialogue |
-| `fauna`              | Wildlife, predators/prey, herds                             |
-| `items-player`       | Inventory, tools, player needs, world items                 |
-| `quests-progression` | Quests, relations, EXP                                      |
-| `persistence`        | SaveData, IndexedDB, persistence                            |
-| `ui-input`           | UI, HUD, input, interaction                                 |
+| Domain | Covers |
+|--------|--------|
+| `ai` | AI-assisted dialogue, characterisation and related AI systems |
+| `fauna` | Wildlife, predators/prey, herds, ecosystem simulation |
+| `items-player` | Inventory, tools, player needs, world items |
+| `npc` | NPC behaviour, needs, goals, traits, decisions and actions |
+| `persistence` | SaveData, IndexedDB, persistence |
+| `quests-progression` | Quests, relationships, EXP and progression |
+| `settlements` | Settlements, buildings, population, resources and development |
+| `settlements-npcs` | Settlements + NPCs, households, schedules, economy, dialogue |
+| `tools` | Development/debugging tools and utilities |
+| `ui-input` | UI, HUD, input and player interaction |
+| `world` | World state, resources, places, time, weather and global systems |
+| `world-terrain` | Terrain, chunks, ocean, environment and landmarks |
 
 `domain` means "where to look first". Use `tags` sparingly.
 
