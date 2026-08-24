@@ -78,7 +78,30 @@ const CRITICAL_WOOD_THRESHOLD = 0.85
 const CRITICAL_WATER_DUTY_THRESHOLD = 0.85
 const CRITICAL_FOOD_THRESHOLD = 0.7
 
-export function pickNeed(needs: NeedState, options: PickNeedOptions = {}): NeedId {
+/** A single need-driven arbitration pressure (plan ai-001) — the explicit
+ *  form of the scores `pickNeed()` used to compute inline. `source` names
+ *  the originating need/duty meter; `target` is the `NeedId` it competes
+ *  for; `value` is the same normalized score `pickActionKind` arbitrates
+ *  over. Plain/immutable data — safe to copy into diagnostics or a trace
+ *  event without exposing live NPC state. */
+export type NpcPressure = {
+  source: string
+  target: NeedId
+  value: number
+}
+
+/** Pure pressure generator (plan ai-001) — the single source of truth for
+ *  need-arbitration scores. Reproduces `pickNeed()`'s previous inline
+ *  threshold/multiplier semantics exactly; `pickNeed()` and diagnostics
+ *  both consume this rather than recomputing scores independently.
+ *
+ * FUTURE AI:
+ * These scores currently combine need intensity with a few coarse world
+ * shortage modifiers. This is the natural pressure-arbitration seam for a
+ * future model where Needs, Problems and Opportunities become explicit
+ * pressures and Big Five/role/traits modify strategy choice. Keep critical
+ * physiological needs able to dominate personality preferences. */
+export function generateNeedPressures(needs: NeedState, options: PickNeedOptions = {}): NpcPressure[] {
   const waterThreshold = options.critical ? CRITICAL_WATER_THRESHOLD : 0.35
   const waterScore = needs.thirst > waterThreshold ? needs.thirst * 1.35 : 0
   const woodThreshold = options.critical ? CRITICAL_WOOD_THRESHOLD : options.woodShortage ? 0.22 : 0.3
@@ -96,20 +119,26 @@ export function pickNeed(needs: NeedState, options: PickNeedOptions = {}): NeedI
   // running best on a strict improvement, so the first-listed of any tied
   // candidates wins — same precedence the old if-chain (water/wood/food,
   // idle only as the implicit fallback) encoded explicitly.
-  //
-  // FUTURE AI:
-  // These scores currently combine need intensity with a few coarse world
-  // shortage modifiers. This is the natural pressure-arbitration seam for a
-  // future model where Needs, Problems and Opportunities become explicit
-  // pressures and Big Five/role/traits modify strategy choice. Keep critical
-  // physiological needs able to dominate personality preferences.
-  return pickActionKind<NeedId>([
-    { kind: 'water', score: waterScore },
-    { kind: 'wood', score: woodScore },
-    { kind: 'waterDuty', score: waterDutyScore },
-    { kind: 'food', score: foodScore },
-    { kind: 'idle', score: idleScore },
-  ], 'idle')
+  return [
+    { source: 'need.thirst', target: 'water', value: waterScore },
+    { source: 'need.woodDuty', target: 'wood', value: woodScore },
+    { source: 'need.waterDuty', target: 'waterDuty', value: waterDutyScore },
+    { source: 'need.hunger', target: 'food', value: foodScore },
+    { source: 'need.idle', target: 'idle', value: idleScore },
+  ]
+}
+
+/** Thin arbitration step (plan ai-001) over already-generated pressures —
+ *  reuses `pickActionKind`'s deterministic strict-`>` tie behaviour. */
+export function pickFromPressures(pressures: readonly NpcPressure[], fallback: NeedId = 'idle'): NeedId {
+  return pickActionKind<NeedId>(
+    pressures.map((pressure) => ({ kind: pressure.target, score: pressure.value })),
+    fallback,
+  )
+}
+
+export function pickNeed(needs: NeedState, options: PickNeedOptions = {}): NeedId {
+  return pickFromPressures(generateNeedPressures(needs, options))
 }
 
 export function needColor(need: NeedId): number {

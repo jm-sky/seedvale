@@ -1,4 +1,4 @@
-import type { NeedId } from '../ai/Needs'
+import type { NeedId, NpcPressure } from '../ai/Needs'
 import type { ActionId, Phase } from '../ai/NpcAgent'
 
 /**
@@ -8,7 +8,9 @@ import type { ActionId, Phase } from '../ai/NpcAgent'
  * tick. Format only at the UI/console boundary.
  */
 export type NpcTraceEvent =
-  | { simTime: number; type: 'need.selected'; need: NeedId }
+  /** `pressures` (plan ai-001) — the full candidate list arbitration ran
+   *  over for this decision, not just the winner; plain-data copy. */
+  | { simTime: number; type: 'need.selected'; need: NeedId; pressures: readonly NpcPressure[] }
   | { simTime: number; type: 'action.planned'; action: ActionId; queueId: string | null }
   | { simTime: number; type: 'action.completed'; action: ActionId }
   /** `reason: 'invalid'` — `goTo` lost its `pendingAction` (defensive safety

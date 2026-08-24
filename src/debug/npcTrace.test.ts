@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createNpcTraceBuffer, type NpcTraceEvent } from './npcTrace'
 
 function needEvent(simTime: number): NpcTraceEvent {
-  return { simTime, type: 'need.selected', need: 'water' }
+  return { simTime, type: 'need.selected', need: 'water', pressures: [] }
 }
 
 describe('createNpcTraceBuffer', () => {

@@ -2,7 +2,19 @@
 
 **Plan:** `docs/plans/ai-001-npc-pressure-layer.md`
 **Reviewed:** 2026-08-24
-**Status:** `planned`
+**Status:** `verification needed`
+
+## Implementation summary
+
+Implemented as scoped: `src/ai/Needs.ts` now exports `NpcPressure`/`generateNeedPressures()` as the single source of truth for the water/wood/waterDuty/food/idle scores, plus `pickFromPressures()` as a thin `pickHighestScore()`-based arbitration step; `pickNeed()` is now `pickFromPressures(generateNeedPressures(needs, options))` — same threshold/multiplier/tie-breaking semantics, verified unchanged by the existing `Needs.test.ts` suite.
+
+`src/simulation/types.ts` gained a generic `DecisionPressure` shape and an optional `DecisionContext.pressures` field, kept domain-agnostic (NPC code supplies concrete `NpcPressure` values, not imported into `src/simulation`).
+
+`NpcAgent.choose()` generates pressures once per decision, stores them (`lastPressures`), feeds them into `DecisionContext.pressures`, and records them on the existing `need.selected` trace event. `NpcInspectionSnapshot`/`NpcWhy`/`projectNpcWhy()` were extended with a `pressures` field sourced from that same snapshot — no second scoring implementation in diagnostics. `beginNeed()`/`PlannedAction`/action execution were not touched.
+
+Added `generateNeedPressures` tests (zero/threshold/shortage-multiplier/skipWood/determinism/agreement-with-`pickNeed`) in `src/ai/Needs.test.ts`; updated snapshot builders in `npcWhy.test.ts`, `npcDebugApi.test.ts`, `npcInspector.test.ts`, `npcTrace.test.ts` for the new required fields.
+
+Technically verified: `pnpm lint:fix`, `npx tsc --noEmit`, full `pnpm run test` (1757 tests passed), `pnpm run build`. Browser/gameplay verification not performed — pending manual check per the plan's verification section.
 
 ## Review summary
 

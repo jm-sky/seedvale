@@ -33,6 +33,19 @@ export type SimulationEntityRef = {
 }
 
 /**
+ * A single arbitration pressure (plan ai-001) — domain-agnostic shape so
+ * `src/simulation` stays free of NPC-specific types. `source` and `target`
+ * are open strings; domain code (e.g. `src/ai/Needs.ts`'s `NpcPressure`)
+ * assigns their concrete meaning. `value` is normalized to the same 0–1-ish
+ * scoring domain the consuming arbitration step uses.
+ */
+export type DecisionPressure = {
+  source: string
+  target: string
+  value: number
+}
+
+/**
  * Snapshot of inputs available to a decision policy.
  * Fields are optional and composable — do not force NPC and fauna into one schema.
  *
@@ -46,6 +59,10 @@ export type SimulationEntityRef = {
 export type DecisionContext = {
   /** Need pressures keyed by domain id (typically 0–1). */
   needs?: Readonly<Record<string, number>>
+  /** Pressures that fed the current/last arbitration (plan ai-001) — a
+   *  snapshot for diagnostics and future strategy scoring, not a second
+   *  copy of ownership over the underlying need/shortage state. */
+  pressures?: readonly DecisionPressure[]
   /** Current schedule activity label when the agent has a schedule. */
   scheduleActivity?: string
   nearbyHumanCount?: number

@@ -96,9 +96,12 @@ import {
   pickDialogueLine,
 } from './dialogue'
 import {
+  generateNeedPressures,
   needColor,
   type NeedId,
   type NeedState,
+  type NpcPressure,
+  pickFromPressures,
   pickNeed,
   type PickNeedOptions,
   SLEEP_HUNGER_THIRST_RATE,
@@ -321,6 +324,9 @@ export type NpcInspectionSnapshot = {
   activity: CurrentActivity
   needs: NeedState
   activeNeed: NeedId
+  /** Pressures generated for the last `choose()` arbitration (plan ai-001)
+   *  — a plain-data copy, not a live reference into NPC state. */
+  pressures: readonly NpcPressure[]
   action: {
     kind: ActionId
     destination: { x: number, y: number, z: number }
@@ -351,6 +357,9 @@ export type NpcInspectionSnapshot = {
  *  derived from the queue's own reported state, never guessed. */
 export type NpcWhy = {
   need: { id: NeedId, value: number | null }
+  /** Pressures that fed the last `choose()` arbitration (plan ai-001) — the
+   *  same list `createInspectionSnapshot()` reports, not recomputed here. */
+  pressures: readonly NpcPressure[]
   phase: Phase
   action: { kind: ActionId, target: string | null } | null
   queue: { id: string, position: number, serving: boolean } | null
@@ -390,6 +399,7 @@ export function classifyPendingActivity(
 export function projectNpcWhy(snapshot: NpcInspectionSnapshot, needValue: number | null): NpcWhy {
   return {
     need: { id: snapshot.activeNeed, value: needValue },
+    pressures: snapshot.pressures,
     phase: snapshot.phase,
     action: snapshot.action ? { kind: snapshot.action.kind, target: snapshot.action.queueId } : null,
     queue: snapshot.queue,
@@ -630,6 +640,10 @@ export class NpcAgent {
   private readonly needMarker: THREE.Mesh
   private phase: Phase = 'choose'
   private activeNeed: NeedId = 'idle'
+  /** Pressures generated for the last `choose()` arbitration (plan ai-001)
+   *  — a plain-data snapshot for diagnostics, not a second copy of need
+   *  ownership. Empty until the first `choose()` tick. */
+  private lastPressures: NpcPressure[] = []
   /** Set by `startAction()`, consumed by the `goTo`/`execute` phases — the
    *  generic "walk there, do this" step currently in flight. `null` only
    *  outside those two phases. */
@@ -1101,6 +1115,7 @@ export class NpcAgent {
       activity: this.getCurrentActivity(timeOfDay),
       needs: { ...this.needs },
       activeNeed: this.activeNeed,
+      pressures: this.lastPressures,
       action: this.pendingAction
         ? {
             kind: this.pendingAction.kind,
@@ -1730,16 +1745,19 @@ export class NpcAgent {
 
     switch (this.phase) {
       case 'choose': {
-        // Shared DecisionContext snapshot (plan 055) — policy remains inline
-        // (`pickNeed` then effective schedule); scoring arrives in Phase 5.
-        const decisionContext = this.buildDecisionContext(scheduledActivity, nearbyNpcCount)
         if (shouldCollapseSleep(this.vigor)) {
           this.beginCollapseSleep()
           break
         }
-        const need = pickNeed(this.needs, this.needPickOptions())
+        // Pressure layer (plan ai-001) — pure, deterministic scores over the
+        // current needs/shortage inputs; `lastPressures` feeds both the
+        // shared DecisionContext snapshot (plan 055) and diagnostics.
+        const pressures = generateNeedPressures(this.needs, this.needPickOptions())
+        const need = pickFromPressures(pressures)
+        this.lastPressures = pressures
         this.activeNeed = need
-        this.trace.record({ simTime: this.simClock, type: 'need.selected', need })
+        this.trace.record({ simTime: this.simClock, type: 'need.selected', need, pressures })
+        const decisionContext = this.buildDecisionContext(scheduledActivity, nearbyNpcCount)
         if (need !== 'idle') {
           this.beginNeed(need)
           break
@@ -2187,6 +2205,7 @@ export class NpcAgent {
         waterDuty: this.needs.waterDuty,
         hunger: this.needs.hunger,
       },
+      pressures: this.lastPressures,
       scheduleActivity,
       nearbyHumanCount: nearbyNpcCount,
     }
