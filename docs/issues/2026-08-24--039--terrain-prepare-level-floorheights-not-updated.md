@@ -1,6 +1,6 @@
 # 039 — Wyrównaj / Przygotuj teren (i zwykłe kopanie) nie zmieniają wizualnie terenu — `floorHeights` nie jest aktualizowane
 
-**Status:** `verification needed`
+**Status:** `done`
 **Created:** 2026-08-24
 **Źródło:** playtest po planie [world-terrain-002](../plans/world-terrain-002-terrain-modification-and-land-preparation.md)
 
@@ -23,10 +23,8 @@ w obu miejscach opisanych w "Miejsca do poprawy":
 przypadków `'dig'` i `'prepare'` (nowy helper `floorHeightAtWorld`), żeby regresja
 nie mogła wrócić bez czerwonego testu.
 
-Techniczne checki (`tsc`/`lint`/`build`/`test`) przechodzą. **Nadal wymagana
-weryfikacja w przeglądarce** (zgodnie z `CLAUDE.md` — nie headless): `Wyrównaj`,
-`Przygotuj teren`, `Wykop dołek`, `Zrób górkę`, oraz depresja wejścia jaskini z
-issue 026.
+Techniczne checki (`tsc`/`lint`/`build`/`test`) przechodzą. Zweryfikowano w
+przeglądarce (użytkownik) — działa.
 
 ## Objaw / prośba
 
