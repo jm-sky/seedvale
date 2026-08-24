@@ -99,57 +99,6 @@ const matchOne = (
   return match[1]
 }
 
-const extractFrontmatterValue = (
-  content: string,
-  key: string,
-  file: string,
-): string => {
-  const match = content.match(
-    new RegExp(`^${key}:\\s*(.+?)\\s*$`, 'm'),
-  )
-
-  if (!match) {
-    throw new Error(`Cannot find "${key}:" in ${file}`)
-  }
-
-  return match[1].trim()
-}
-
-const truncate = (text: string, max: number): string => {
-  if (text.length <= max) return text
-
-  const cut = text.slice(0, max)
-  const lastSpace = cut.lastIndexOf(' ')
-
-  return `${cut.slice(0, lastSpace > 0 ? lastSpace : max)}…`
-}
-
-const extractSummary = (content: string, file: string): string => {
-  const headingMatch = content.match(
-    /^##\s+(?:\d+\.\s*)?(?:Cel|Goal)\s*$/m,
-  )
-
-  const fallback =
-    content.match(/^#\s+Plan:\s*(.+)$/m)?.[1]?.trim() ?? file
-
-  if (!headingMatch || headingMatch.index === undefined) {
-    return fallback
-  }
-
-  const afterHeading = content.slice(
-    headingMatch.index + headingMatch[0].length,
-  )
-
-  const body = afterHeading.replace(/^\s+/, '')
-  const paragraphEnd = body.search(/\n\s*\n/)
-  const paragraph =
-    paragraphEnd === -1 ? body : body.slice(0, paragraphEnd)
-
-  const oneLine = paragraph.replace(/\s+/g, ' ').trim()
-
-  return oneLine ? truncate(oneLine, 400) : fallback
-}
-
 const buildRow = (file: string, content: string, hasNotes: boolean): string => {
   const headerBlock = extractHeaderBlock(content)
 
