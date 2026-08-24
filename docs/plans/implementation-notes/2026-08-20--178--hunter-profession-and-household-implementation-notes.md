@@ -1,373 +1,528 @@
 # Implementation Notes: Hunter Profession & Household
 
 **Plan:** `2026-08-20--178--hunter-profession-and-household.md`
-**Reviewed:** 2026-08-21
-**Status:** review / implementation guidance
+**Reviewed:** 2026-08-24
+**Status:** `implementation guidance`
 
-## 1. Review summary
+## Purpose
 
-The plan is directionally compatible with the current architecture, but it is **not directly implementable as written** without reconciling several important differences between the plan and the current code.
+Ten dokument uzupełnia plan 178.
 
-The biggest issue is that the current `Household` is a small economic reserve, not an item-instance storage/container. It stores only `food` and `wood` plus a separate water reserve. Bows, arrows, knives, hides and produced meat therefore cannot simply be deposited into `Household.stock` as the plan currently implies.
+Plan definiuje **co i dlaczego** należy zaimplementować.
 
-The second major gap is that `hunter` is not currently a `Role`. `Role` is a closed union and `SCHEDULE_TEMPLATES` is a `Record<Role, ...>`, so adding the profession requires extending the existing role/schedule machinery rather than introducing a hunter-specific scheduler.
+Ten dokument definiuje przede wszystkim:
 
-NPC Combat is already substantially implemented, including melee and ranged lifecycle integration. Hunter should be the first real caller that creates combat intent and target selection; do not modify combat architecture merely to accommodate Hunter.
+- gdzie szukać istniejących mechanizmów;
+- co już jest dostępne;
+- które granice architektury są istotne;
+- gdzie spodziewać się braków;
+- jak uniknąć niepotrzebnego reworku.
 
-## 2. Current architecture to reuse
+**Codebase is the source of truth.**
 
-### NPC role / schedule
+Jeżeli plan lub notes nie odpowiadają aktualnemu kodowi, zaufaj kodowi i dostosuj implementację.
 
-- `src/ai/characters.ts` owns `Role`, deterministic role generation and character definitions.
-- `src/ai/schedule.ts` owns role schedules and `effectiveScheduleFor()` trait overlays.
-- `NpcAgent` consumes the effective schedule and existing decision/action lifecycle.
-- There is no `HunterSystem` and there should not be one.
+---
 
-Adding Hunter should therefore mean:
+## 1. Existing code to reuse
 
-1. add `'hunter'` to `Role`,
-2. decide how Hunter households are deterministically assigned during settlement/family generation,
-3. add a role schedule in `SCHEDULE_TEMPLATES`,
-4. implement Hunter-specific work through the existing NPC decision/action path,
-5. let needs, sleep, eating, thirst, social/home behaviour continue to pre-empt work normally.
+| Area | Relevant code / concept | Action |
+|---|---|---|
+| NPC roles | `src/ai/characters.ts` | extend `Role` |
+| NPC schedule | `src/ai/schedule.ts` | extend existing templates |
+| Decisions | existing pressure/decision pipeline | integrate `hunter` |
+| Personality | existing role/personality modifiers | reuse |
+| NPC combat | `src/combat/*`, `src/ai/npcCombat.ts` | reuse ranged path |
+| Combat intent | `src/combat/combatIntent.ts` | create normal `CombatIntent` |
+| NPC inventory | `NpcAgent` / `Inventory` | reuse |
+| Items | `src/items/itemCatalog.ts`, item definitions | reuse |
+| Fauna | `AnimalAgent` / spawn-point systems | reuse |
+| Animal death | existing fauna lifecycle | reuse |
+| Harvest | existing harvest path | reuse/extract generic operation |
+| Household | existing `Household` / `Family` | reuse |
+| Cooking | existing cooking system | reuse |
+| Preservation | existing preservation system | reuse |
+| Production | existing production/recipe system | extend generically if needed |
+| Trade | existing economy/trading | extend generically if needed |
 
-Do not add a second scheduler or a hunter update loop.
+Do not create Hunter-specific versions of these systems.
 
-### NPC combat
+---
 
-Current NPC Combat already has the intended seams:
+## 2. Role / generation
 
-- `CombatIntent` / `CombatTargetHandle` in `src/combat/combatIntent.ts`,
-- shared melee lifecycle in `src/combat/meleeAttack.ts`,
-- shared ranged lifecycle/projectile code,
-- NPC-specific weapon/ammo resolution in `src/ai/npcCombat.ts`,
-- `NpcAgent.beginCombat()` / `cancelCombat()` and combat phase,
-- NPC damage/defense through the shared HealthState/defense pipeline.
+`Role` is a closed union and role handling is spread across the AI/schedule/generation code.
 
-`NpcAgent` reads carried equipment rather than having a separate NPC equipment system. Hunter should prepare carried equipment before leaving home and pass a target handle to `beginCombat()`.
+Required:
 
-Do not add `HunterCombat`, `HunterSystem`, a target manager, or a second projectile/melee pipeline.
+1. add `hunter`;
+2. fix exhaustive role handling;
+3. add the existing schedule entry;
+4. integrate deterministic Hunter generation where required by the plan;
+5. preserve reserved NPC generation.
 
-### Items
+Do not implement Hunter generation by bypassing the existing settlement/family generation architecture.
 
-`src/items/items.ts` already contains the relevant item kinds, including:
+---
 
-- `raw_meat`, `deer_meat`, `wolf_meat`, `boar_meat`, `rabbit_meat`,
-- `hide`,
-- `bandage`,
-- `short_bow`, `hunting_bow`, `long_bow`,
-- `arrow`, `broadhead_arrow`, `war_arrow`.
+## 3. Decision architecture
 
-`src/items/itemCatalog.ts` is the gameplay/AI-facing catalog and already owns `MeleeConfig`, `RangedConfig`, defense configuration and item flags. Use it as the source of truth. Do not create Hunter weapon stats elsewhere.
-
-## 3. Important mismatch: household storage
-
-Current `src/settlement/household.ts` defines:
-
-- `Household.stock: EconomicStock`,
-- `HouseholdResourceKind = 'food' | 'wood'`,
-- a separate water reserve,
-- small deterministic household capacities.
-
-This means the plan's statements about a "real trade stock" of bows/arrows/hide/meat cannot currently be implemented by putting arbitrary items into `Household.stock`.
-
-### Recommended boundary
-
-Use the existing household/storage work rather than widening `EconomicStock` into a generic item container.
-
-The correct ownership model should remain:
+The current decision model is:
 
 ```text
-NPC carried Inventory
-        ↕
-household storage / container system
-        ↕
-household
-        ↕
-settlement economy / trade
+state
+→ needs / problems / goals
+→ pressures
+→ role/personality modifiers
+→ decision
 ```
 
-The item-instance storage/logistics plan should remain the owner of generic household item storage. Hunter should consume that mechanism once available, not invent a hunter-specific stock map.
+Hunter must plug into this pipeline.
 
-If the required storage implementation is not yet present in the current branch, Hunter should either depend on it explicitly or be implemented in stages with the storage boundary kept clear. Do **not** silently overload `Household.stock` with weapon/ammo/hide quantities.
+Use existing pressure and personality mechanisms to make hunting more attractive when appropriate.
 
-## 4. Hunter role assignment
-
-`characterForSeed()` currently generates only from `RANDOM_ROLES`, which contains:
-
-`woodcutter | farmer | guard | miner | fisher`
-
-Adding `hunter` to the union alone is insufficient. The deterministic generation/settlement-family path must be reviewed so Hunter households are neither overrepresented nor absent.
-
-Prefer a deterministic role-selection rule integrated with the existing family/settlement generation mechanism. If the design requires one specialised hunter household per suitable settlement, encode that as a settlement-generation rule rather than random per-NPC AI.
-
-Preserve the existing reserved characters (`Anna`, `Piotr`, `Kasia`, `Marek`). Do not disturb quest-critical reserved seeds.
-
-## 5. Hunter schedule and work lifecycle
-
-A useful role schedule can provide long work blocks for preparation/hunting, but the schedule should not encode the whole hunting algorithm.
-
-Suggested conceptual flow:
+Do not implement:
 
 ```text
-schedule says: work
-        ↓
-existing NPC decision/action flow
-        ↓
-hunter work decision
-        ├─ prepare equipment
-        ├─ leave / travel
-        ├─ hunt
-        ├─ return
-        └─ process/store/sell
+role === 'hunter' → hunt()
 ```
 
-Needs remain higher-priority than routine work. A hunter should still stop for sleep, hunger, thirst, injury, household needs and other existing interruptions.
+Do not add:
 
-A hunting trip is an action/activity with world time, not an instantaneous profession tick.
+- Hunter-specific AI;
+- Hunter-specific utility scoring;
+- Hunter-specific pressure system;
+- Hunter-specific decision arbiter.
 
-## 6. Hunting target selection
-
-The plan's population protection rule should be implemented against the existing fauna/spawn-point state, not by adding a new ecosystem counter.
-
-Current fauna already provides:
-
-- stable `AnimalAgent.animalId`,
-- `spawnPointId`,
-- managed spawn-point population state,
-- death callbacks into the owning spawner,
-- depleted/disabled/recovering lifecycle.
-
-Hunter target selection should therefore query nearby/live fauna through the existing fauna access path and inspect the animal's existing spawn-point relationship where needed.
-
-Do not maintain a second `hunterPopulation` or `remainingAnimals` state.
-
-The "exactly one living animal => 50% skip" rule should be deterministic where the rest of simulation decisions are deterministic. Avoid introducing `Math.random()` into a new simulation decision if the surrounding NPC decision system already has a seeded/random source available.
-
-Target selection should be bounded/local. Never scan the entire fauna population every NPC tick.
-
-## 7. Hunting combat flow
-
-Hunter should become the first real producer of `CombatIntent` for NPC-vs-animal:
+The important distinction is:
 
 ```text
-Hunter decision
-  ↓
-select live animal
-  ↓
-verify carried bow + compatible arrows
-  ↓
-beginCombat({ target })
-  ↓
-shared NPC ranged combat
-  ↓
-AnimalAgent.applyDamage()
-  ↓
-existing animal death/corpse/spawn-point lifecycle
+food pressure
+→ hunter role modifier
+→ hunting becomes a good decision
 ```
 
-Prefer ranged combat with a bow. The knife is preparation/harvest equipment, not the primary attack weapon.
+not:
 
-Do not make `NpcAgent` decide that a hunter should attack. `NpcAgent.beginCombat()` already intentionally accepts the decision from an external caller.
+```text
+hunter
+→ always hunt
+```
 
-## 8. Hunting preparation / carried state
+---
 
-The plan specifies bow, 10–20 arrows, knife, water, food and bandage. Treat this as a logistics/action problem, not a new equipment abstraction.
+## 4. Ranged combat
 
-Use the existing `Inventory` and carried state. Preparation should move existing item instances from the appropriate household storage/source into the NPC's carried inventory using the existing transfer mechanisms.
+Plan 177 already provides the NPC ranged-combat foundation.
+
+Inspect before changing anything:
+
+```text
+src/combat/combatIntent.ts
+src/ai/npcCombat.ts
+NpcAgent.beginCombat()
+NpcAgent.cancelCombat()
+```
+
+Hunter should only provide:
+
+```text
+valid target
+→ existing CombatIntent
+→ existing NPC ranged combat
+```
+
+Reuse:
+
+- bow item definitions;
+- arrow item definitions;
+- `RangedConfig`;
+- projectile lifecycle;
+- existing damage/death handling.
+
+Do not redesign combat.
 
 Do not create:
 
-- `HunterEquipment`,
-- `HunterLoadout`,
-- `HunterStorage`,
-- a parallel ammo count outside Inventory.
-
-The ammo count must be represented by actual arrow item quantities/instances according to the current Inventory model, and NPC ranged combat should continue to consume the compatible ammo defined by `RangedConfig`.
-
-The exact choice among `hunting_bow` / other bows should come from the item catalog and existing carried-item resolution rather than a hard-coded Hunter weapon table.
-
-## 9. Hunt completion and loot
-
-The existing fauna lifecycle already has death, corpse and knife-harvest mechanics. Reuse those mechanisms.
-
-The plan's "meat + hide" result must be reconciled with the current implementation rather than adding a second loot path.
-
-In particular, current fauna already distinguishes animal-specific meat and `hide`, and the knife harvest path produces harvested remains. Hunter should use the same canonical death/harvest/loot pipeline where possible.
-
-If NPC harvesting currently has no action equivalent to player knife harvest, add a small reusable harvest operation at the appropriate world/fauna layer rather than reproducing the player harvest logic inside Hunter.
-
-Do not make the Hunter directly mutate animal health and then manually manufacture loot if the existing fauna death/harvest path can own those consequences.
-
-## 10. Meat processing
-
-The plan references roasting, drying and preservation. These should be expressed through the existing cooking/preservation systems and their actions/recipes.
-
-Do not create "hunter cooking AI".
-
-The wife's work should be normal household work that reacts to available food and existing cooking/preservation mechanisms. If current household AI does not yet support these exact actions, extend the generic household/work action mechanism rather than branching on `role === 'hunter'` throughout cooking code.
-
-The same principle applies to vegetables: the hunter family should use the existing shared village garden and existing gathering mechanism.
-
-## 11. Cooking / plan 175 integration
-
-The plan explicitly depends on the cooking-vessel/grate work. Before implementation, confirm the actual current cooking action API and ownership of the grate/fireplace state.
-
-The Hunter plan should only provide the household/world setup needed for the normal cooking system to see the grate. It must not add a hunter-specific cooking recipe, action or interaction.
-
-## 12. Drying / preservation / plan 159 integration
-
-The current item catalog already has food freshness/bait metadata, and the plan 159 preservation system is the intended owner of drying/preservation.
-
-Use the existing preservation action/recipe and item transformations. Do not duplicate freshness calculations or introduce a hunter-only dried-meat timer.
-
-## 13. Bow and arrow production
-
-This is the most likely area where the plan currently assumes more generic crafting support than is guaranteed by the current state.
-
-Before implementation, identify the actual production/crafting mechanism used by existing NPC professions. If there is already a generic recipe/production definition, add bow/arrow recipes there.
-
-Do not encode:
-
 ```text
-if hunter then create bow
+HunterCombat
+HunterProjectile
+HunterTargetManager
 ```
 
-inside `NpcAgent`.
+If a concrete reusable gap is discovered, fix the generic combat mechanism rather than adding Hunter-specific code.
 
-Instead model production as normal work:
+---
+
+## 5. Hunting target selection
+
+Use existing fauna and spawn-point state.
+
+Relevant concepts include:
 
 ```text
-wood/material availability
-        ↓
-recipe/production action
-        ↓
-item instances
-        ↓
-household storage
-        ↓
-minimum hunting reserve
-        ↓
-surplus available to trade
+AnimalAgent
+animalId
+spawnPointId
+spawn population state
+animal death lifecycle
 ```
 
-If current economy only supports scalar `EconomicKind` production and not item-instance production, that is a real dependency/gap. Do not fake bow inventory with an economy integer.
+Preferred species are defined by the plan.
 
-## 14. Trade
+Target selection must be:
 
-The plan's "surplus bows/arrows/hide/meat" requires item-aware trade/storage if these are to be actual item instances.
+- deterministic;
+- bounded;
+- activity/decision driven.
 
-Use the existing economy/trading system for the economic transaction, but keep ownership of item quantities in the canonical inventory/storage representation.
+Do not scan the entire fauna population every NPC tick.
 
-The minimum-reserve rule should be evaluated before releasing items for sale:
+When a current target becomes invalid, select another through the same bounded mechanism.
+
+### Single-animal protection
+
+The plan specifies:
+
+- if a spawn point has exactly one living animal, 50% chance to skip it;
+- try another valid target;
+- if none exists, the hunt may end without a kill.
+
+Use the existing seeded/deterministic simulation RNG.
+
+Never use `Math.random()` for this persistent simulation decision.
+
+Do not create additional population state.
+
+---
+
+## 6. Animal death / harvest
+
+Use the existing fauna lifecycle:
+
+```text
+CombatIntent
+→ animal damage
+→ existing animal death
+→ existing corpse/dead-animal lifecycle
+→ harvest
+→ normal item/resource result
+```
+
+The Hunter must not directly delete animals or manufacture an independent hunting-loot result.
+
+If harvesting currently exists only as player interaction:
+
+1. inspect the existing implementation;
+2. extract the smallest reusable generic harvest operation;
+3. call it from Hunter.
+
+Do not duplicate player harvest logic.
+
+---
+
+## 7. Inventory / household boundary
+
+This is the most important architectural constraint.
+
+`Household.stock` / `EconomicStock` represents economic quantities and is **not** a generic item-instance container.
+
+Do not put:
+
+- bows;
+- arrows;
+- hides;
+- bandages;
+- arbitrary item instances
+
+into scalar economic stock.
+
+Expected ownership:
+
+```text
+NPC Inventory
+↕
+household item storage / logistics
+↕
+Household
+↕
+economy / trade
+```
+
+Before implementing delivery, inspect the current generic item-storage/logistics mechanism.
+
+If it already exists, use it.
+
+If it does not exist, implement the smallest **generic** missing capability.
+
+Do not create:
+
+```text
+HunterInventory
+HunterStorage
+HunterStock
+huntedFood
+```
+
+or direct Hunter-specific mutation of household economic counters.
+
+---
+
+## 8. Household / spouse
+
+Use the existing:
+
+```text
+Family
+→ Household
+→ NPC members
+```
+
+Hunter's household is not a special household type.
+
+The spouse remains a normal NPC with:
+
+- role;
+- needs;
+- personality;
+- schedule;
+- decisions.
+
+Do not create `HunterHousehold` or `HunterWifeAI`.
+
+If a guaranteed Hunter + spouse configuration is required, extend the existing family/settlement generation mechanism.
+
+---
+
+## 9. Cooking / preservation
+
+Reuse the current cooking and preservation systems.
+
+Expected ownership:
+
+```text
+meat
+→ household item storage
+→ existing cooking / preservation
+→ food
+```
+
+Relevant dependencies:
+
+- cooking/grate: plan 175;
+- preservation/drying: plan 159.
+
+Inspect their current APIs before implementation.
+
+Do not create:
+
+```text
+HunterCooking
+HunterDrying
+HunterFoodTimer
+```
+
+The spouse should use normal NPC activities.
+
+---
+
+## 10. Bow / arrow production
+
+First inspect the current generic production and recipe systems.
+
+Desired flow:
+
+```text
+resources
+→ generic production
+→ bow / arrows
+→ household item storage
+→ required reserve
+→ surplus
+→ trade
+```
+
+If bows/arrows already work with generic production, add normal recipes/configuration.
+
+If they do not, extend the generic production mechanism.
+
+Do not implement crafting directly in `NpcAgent` or Hunter logic.
+
+Do not create:
+
+```text
+if hunter then createBow()
+```
+
+---
+
+## 11. Trade
+
+Use the existing economy/trading system.
+
+Potential Hunter-household surplus:
+
+- meat;
+- preserved meat;
+- hide;
+- bows;
+- arrows.
+
+Required distinction:
 
 ```text
 household item stock
-  ├─ reserve required for next hunt
-  └─ surplus → trade
+├─ required reserve
+└─ surplus → trade
 ```
 
-Avoid a second `hunterTradeStock` map.
+If the current trade system only supports scalar economic quantities, identify whether generic item-aware trade is already available.
 
-If current trader infrastructure only trades selected `EconomicKind`s rather than arbitrary ItemKind values, extend that generic trade capability as needed. Do not add a Hunter-only seller.
+If not, extend the generic trade boundary rather than creating Hunter-specific trade state.
 
-## 15. Bandages
+Do not create `HunterTradeStock` or a Hunter-only seller.
 
-The initial five bandages should be real item quantities in the household/storage/inventory system, not a private Hunter counter.
+---
 
-The plan explicitly says later replenishment is outside scope. Therefore implement only the initial seeded stock and the normal transfer/use path.
+## 12. Initial supplies
 
-Do not implement a wife/doctor/herbalist bandage production system here.
+The plan specifies:
 
-## 16. Household identity / wife
+```text
+5 × bandage
+```
 
-The hunter family should remain a normal `Family` / `Household` relationship.
+These should use the normal item/inventory/storage representation.
 
-Do not create `HunterHousehold` as a subtype or parallel registry.
+Do not implement bandage production in this plan.
 
-The wife should have normal NPC state, needs, personality and schedule. Her role should be selected through existing role/work mechanisms where possible. Avoid making the spouse's behaviour a hidden side effect of the husband's role.
+---
 
-If the plan needs a guaranteed hunter + spouse pairing, implement this at family generation/settlement generation, not by dynamically spawning a wife from Hunter AI.
+## 13. Performance / simulation
 
-## 17. Home props
+Hunter must work independently of:
 
-The plan requires a fire and grate. Use the existing settlement/home landmark and cooking-vessel mechanisms.
+- player input;
+- camera;
+- rendering;
+- player proximity.
 
-Do not add Hunter-specific prop ownership or a Hunter-specific fireplace system.
+Target discovery must not become an O(all fauna) operation for every Hunter every tick.
 
-The house should remain a normal settlement `Place` with additional props/configuration where the generic home generation supports it.
+Prefer:
 
-## 18. Likely implementation order
+```text
+decision/activity
+→ bounded target query
+```
 
-Recommended order:
+over:
 
-1. Reconcile role model and deterministic Hunter household generation.
-2. Add Hunter schedule through existing `SCHEDULE_TEMPLATES`.
-3. Verify generic NPC action/work extension point for profession-specific work.
-4. Verify household item storage/logistics dependency; do not misuse `Household.stock`.
-5. Add Hunter preparation/transfer of real item instances into carried inventory.
-6. Add bounded deterministic animal target selection using existing fauna/spawn-point state.
-7. Connect Hunter decision to existing `CombatIntent` + ranged NPC Combat.
-8. Add NPC harvesting/return handling using existing fauna loot/harvest lifecycle.
-9. Integrate existing cooking/preservation actions for household food.
-10. Integrate generic production/recipe support for bows/arrows if currently available; otherwise record the exact dependency instead of inventing a local system.
-11. Integrate item-aware household surplus/trading using existing storage/economy boundaries.
-12. Add the initial five bandages through the same item storage path.
-13. Add the generic home/grate configuration required by plan 175.
-14. Verify save/stream/rebuild behaviour for the new household state and any item storage.
+```text
+every NPC tick
+→ scan all fauna
+```
 
-## 19. Potential traps
+Persistent Hunter/household state belongs to the simulation/domain layer, not rendering objects.
 
-- **Closed `Role` union:** adding Hunter in one file will leave schedule/generation switches incomplete.
-- **Household ≠ item storage:** current household stock cannot represent bows, arrows, hide or arbitrary item instances.
-- **Don't duplicate combat:** NPC Combat is already implemented; Hunter should be a caller.
-- **Don't duplicate fauna loot:** animal death/harvest already owns important consequences.
-- **Don't use global fauna scans:** target queries must be local/bounded.
-- **Don't use nondeterministic `Math.random()` for persistent simulation decisions.**
-- **Don't bypass Inventory:** ammo, food, knife, bow and bandages should be real inventory quantities/items.
-- **Don't make the wife a Hunter-specific AI class.**
-- **Don't create private gardens or storage.**
-- **Don't turn `EconomicStock` into a generic item bag just for this plan.**
-- **Don't assume the plan's dependency numbers mean the implementation is unchanged:** verify current code first.
-- **Streaming:** household state is registry-owned and must survive settlement streaming/rebuild; any new item-storage state must follow the same ownership/lifetime rules.
-- **Off-screen simulation:** a hunt must have a coherent state/action representation even when the NPC is not rendered. Avoid camera/gameLoop dependencies.
+---
 
-## 20. Architectural decisions
+## 14. Implementation order
 
-1. **Hunter is a Role, not a subsystem.**
-2. **Hunting is a normal NPC work/action flow, not a dedicated scheduler.**
-3. **Combat remains in `src/combat` + `NpcAgent`; Hunter supplies intent and target.**
-4. **Fauna remains authoritative for animal lifecycle and population consequences.**
-5. **Inventory remains authoritative for carried item quantities.**
-6. **Household storage/logistics remains the owner of persistent household item stock; do not overload `EconomicStock`.**
-7. **Cooking/preservation remain generic systems.**
-8. **Economy/trading remains generic; Hunter only creates a supply pattern.**
-9. **Deterministic, bounded target selection is preferred over global scanning/random AI.**
-10. **No new global Hunter manager.**
+Use this order to minimise rework:
 
-## 21. Verification focus
+1. Inspect role, schedule and deterministic generation.
+2. Add `hunter` and update exhaustive role handling.
+3. Integrate Hunter into existing pressure/decision modifiers.
+4. Inspect and resolve the generic household item-storage boundary.
+5. Implement bounded deterministic prey selection.
+6. Connect Hunter to existing ranged `CombatIntent`.
+7. Connect death → harvest → inventory.
+8. Connect inventory → household storage.
+9. Reuse/extend generic cooking, preservation, production and trade.
+10. Add initial supplies/home configuration.
+11. Run focused automated tests.
+12. Perform browser/gameplay verification.
 
-At minimum verify:
+If a missing generic capability is discovered, resolve that capability before continuing with Hunter-specific code.
 
-- deterministic Hunter role/family generation,
-- role schedule and normal need pre-emption,
-- equipment transfer home → carried → return,
-- arrow consumption through existing ranged combat,
-- animal target selection and the one-animal population protection rule,
-- animal death/loot/harvest integration,
-- household storage persistence across settlement streaming/rebuild/save/load,
-- cooking/preservation using existing systems,
-- bow/arrow production using generic production mechanisms,
-- surplus vs minimum hunting reserve,
-- generic trade integration,
-- no second combat/scheduler/storage system introduced.
+---
 
-Browser verification is particularly useful once the full hunt lifecycle is active because it exercises NPC movement, combat animation/projectiles, animal death and household/world integration.
+## 15. Known architectural traps
 
-## 22. Bottom line
+Avoid these unless the existing code proves they are genuinely required:
 
-The plan should be implemented as a **composition of existing NPC, inventory, fauna, combat, household, cooking, preservation and economy systems**.
+- Hunter-specific AI;
+- second scheduler;
+- second combat pipeline;
+- Hunter-specific inventory/storage;
+- item instances inside `EconomicStock`;
+- `Math.random()` in simulation;
+- global fauna scans per NPC tick;
+- duplicated animal death/loot logic;
+- Hunter-specific cooking/preservation;
+- Hunter-specific trade;
+- spouse behaviour derived directly from husband's profession;
+- player/camera-dependent hunting;
+- temporary Hunter-specific workarounds for missing generic systems.
 
-The implementation should first close the architectural gap around **item-aware household storage/logistics** if that capability is not already available. That is more important than adding Hunter-specific code. Once storage and generic work/action seams are confirmed, Hunter itself should be relatively thin: role + schedule + deterministic hunt decision + preparation/return actions + integration with existing combat and world consequences.
+---
 
-The plan's desired closed loop is sound; the main risk is accidentally creating parallel storage, crafting, cooking, trade or combat mechanisms because the current generic infrastructure is narrower than the plan assumes.
+## 16. Focused verification
+
+Do not repeat the entire plan's verification checklist.
+
+Focus implementation checks on the risky integration boundaries:
+
+### AI
+
+- `hunter` participates in normal pressure/decision arbitration;
+- hunting does not bypass higher-priority needs;
+- deterministic target selection works.
+
+### Combat
+
+- Hunter creates the existing ranged `CombatIntent`;
+- arrows are consumed through normal inventory/item logic;
+- animal death remains owned by fauna lifecycle.
+
+### Items / household
+
+- harvest result becomes normal item/resource state;
+- NPC inventory → household transfer uses generic storage;
+- scalar `EconomicStock` is not abused for arbitrary item instances.
+
+### Economy
+
+- production uses generic recipes/mechanisms;
+- household reserve is preserved;
+- only surplus enters trade.
+
+### Simulation
+
+- no global fauna scan per NPC tick;
+- works without player/camera;
+- state survives relevant streaming/rebuild paths.
+
+---
+
+## 17. Final rule
+
+Implement Hunter as **composition of existing Seedvale systems**.
+
+When something is missing:
+
+```text
+missing generic capability
+→ extend generic system
+→ use it from Hunter
+```
+
+Never:
+
+```text
+missing generic capability
+→ create Hunter-specific workaround
+```
+
+Keep the implementation focused on plan 178 and avoid unrelated refactors.
