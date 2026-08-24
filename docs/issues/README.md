@@ -54,7 +54,8 @@ Tracked work items (bugs, improvements) live here — not in GitHub Issues.
 | 036 | [2026-08-19--036--settlement-prop-colliders.md](./2026-08-19--036--settlement-prop-colliders.md) | Koń kupca, wóz i sterta drewna bez kolizji — dyski w `ColliderRegistry` | `verification needed` |
 | 037 | [2026-08-19--037--village-campfire-flat-pad.md](./2026-08-19--037--village-campfire-flat-pad.md) | Ognisko wioskowe bez równego kawałka terenu | `todo` |
 | 038 | `2026-08-20--038--npc-labels-and-sound-query-param.md` | Ukryć dalsze NPC labels; dodać `noSound=true` query param | `todo` |
+| 039 | [2026-08-24--039--terrain-prepare-level-floorheights-not-updated.md](./2026-08-24--039--terrain-prepare-level-floorheights-not-updated.md) | Wyrównaj/Przygotuj teren (i zwykłe kopanie) nie zmieniają wizualnie terenu — `applyModificationToTile` pisze tylko do `tile.heights`, mesh czyta `tile.floorHeights` | `todo` |
 
 When adding a new issue, create `YYYY-MM-DD--NNN--short-slug.md` and add a row to this table.
 
-**Next ID:** `038`
+**Next ID:** `040`
