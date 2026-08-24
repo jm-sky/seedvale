@@ -1,7 +1,7 @@
 # Plan: NPC Personality-aware Decisions
 
 **Created:** 2026-08-23  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~ai-001~~
 **Domain:** `ai`
@@ -148,5 +148,18 @@ Test representative NPCs with deliberately different Big Five profiles in equiva
 Check that normal NPC activity remains stable and no personality modifier causes invalid or impossible actions.
 
 This plan does not claim browser verification until it is actually performed.
+
+## Implementation (2026-08-24)
+
+**Implemented:**
+
+- `src/ai/decisionModifiers.ts` (new) — `scoreNeedCandidates()`, a pure function composing `conscientiousness` (duty preference) and `role === 'woodcutter'` bonuses onto `Needs.ts`'s already-generated `wood`/`waterDuty` pressures. Only applied when the underlying pressure is already active (`base > 0`), so personality/role can re-rank valid candidates but never manufacture one. `openness`/`extraversion`/`agreeableness` are left unused at this seam — no meaningful alternative/social/cooperative candidate exists in the current `choose()` arbitration to bias.
+- `src/ai/npcAnimalThreat.ts` — `neuroticism` (optional, defaults to neutral 0.5) now biases the existing `defend`/`flee` scoring in `scoreAnimalThreatIntents`/`decideAnimalThreatResponse`, the existing risk/threat candidate. Bounded well under the health-driven swing so an unarmed/badly-hurt NPC still flees regardless of personality.
+- `src/ai/NpcAgent.ts` — `choose()` now scores need pressures through `scoreNeedCandidates()` before picking (`pickActionKind`), and `reactToAnimalThreat()` passes `this.personality.neuroticism` through. `role`/`traits` stay separate inputs from `BigFivePersonality`, per the implementation notes; no new trait modifier was added at this seam (traits already have runtime meaning elsewhere — `fast_worker`/`night_owl`/`sociable`/`curious`/`energetic` — and duplicating those wasn't in scope).
+- Diagnostics: `NpcInspectionSnapshot.candidates` / `NpcTraceEvent`'s `need.selected.candidates` (both optional, additive) expose the base/modifier/final breakdown `choose()` actually used. `createNpcInspector.ts`'s "Decision / Why" panel renders the winning candidate's modifiers.
+
+**Technically verified:** `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, `pnpm run test` (full suite) all pass. New deterministic unit tests: `src/ai/decisionModifiers.test.ts` (neutral personality is a no-op, conscientiousness biases only already-active duty candidates, woodcutter role bonus only affects `wood`, inactive candidates stay inactive, water/food/idle stay untouched, duty bonuses stay small enough that an urgent physiological need still outranks them) and additions to `src/ai/npcAnimalThreat.test.ts` (omitting/neutral `neuroticism` reproduces prior behaviour exactly; high/low neuroticism tips a genuine tie; an unarmed NPC still can't be pushed into defending).
+
+**Browser/gameplay verification:** not yet performed — see the Verification section above.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

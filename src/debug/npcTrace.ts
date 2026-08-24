@@ -1,3 +1,4 @@
+import type { ScoredNeedCandidate } from '../ai/decisionModifiers'
 import type { NeedId, NpcPressure } from '../ai/Needs'
 import type { ActionId, Phase } from '../ai/NpcAgent'
 
@@ -9,8 +10,16 @@ import type { ActionId, Phase } from '../ai/NpcAgent'
  */
 export type NpcTraceEvent =
   /** `pressures` (plan ai-001) — the full candidate list arbitration ran
-   *  over for this decision, not just the winner; plain-data copy. */
-  | { simTime: number; type: 'need.selected'; need: NeedId; pressures: readonly NpcPressure[] }
+   *  over for this decision, not just the winner; plain-data copy.
+   *  `candidates` (plan ai-002) — the same list with personality/role
+   *  modifiers applied; optional so pre-ai-002 event literals stay valid. */
+  | {
+      simTime: number
+      type: 'need.selected'
+      need: NeedId
+      pressures: readonly NpcPressure[]
+      candidates?: readonly ScoredNeedCandidate[]
+    }
   | { simTime: number; type: 'action.planned'; action: ActionId; queueId: string | null }
   | { simTime: number; type: 'action.completed'; action: ActionId }
   /** `reason: 'invalid'` — `goTo` lost its `pendingAction` (defensive safety

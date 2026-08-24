@@ -62,6 +62,7 @@ import {
   failActionLifecycle,
   finishActionLifecycle,
   type InteractionQueue,
+  pickActionKind,
   type PlannedAction,
   replaceActionLifecycle,
 } from '../simulation'
@@ -88,6 +89,7 @@ import {
   type Role,
   type Trait,
 } from './characters'
+import { type ScoredNeedCandidate, scoreNeedCandidates } from './decisionModifiers'
 import {
   nearestArchetype,
   pausePersonalityParams,
@@ -101,7 +103,6 @@ import {
   type NeedId,
   type NeedState,
   type NpcPressure,
-  pickFromPressures,
   pickNeed,
   type PickNeedOptions,
   SLEEP_HUNGER_THIRST_RATE,
@@ -327,6 +328,11 @@ export type NpcInspectionSnapshot = {
   /** Pressures generated for the last `choose()` arbitration (plan ai-001)
    *  — a plain-data copy, not a live reference into NPC state. */
   pressures: readonly NpcPressure[]
+  /** Same arbitration with personality/role modifiers applied (plan ai-002)
+   *  — the base/modifier/final breakdown `choose()` actually picked from.
+   *  Optional so older synthetic snapshots (tests) stay valid; always
+   *  populated by `createInspectionSnapshot()`. */
+  candidates?: readonly ScoredNeedCandidate[]
   action: {
     kind: ActionId
     destination: { x: number, y: number, z: number }
@@ -644,6 +650,10 @@ export class NpcAgent {
    *  — a plain-data snapshot for diagnostics, not a second copy of need
    *  ownership. Empty until the first `choose()` tick. */
   private lastPressures: NpcPressure[] = []
+  /** Same arbitration, with the personality/role modifiers actually applied
+   *  (plan ai-002) — the exact base/modifier/final breakdown `choose()` used
+   *  to pick `activeNeed`, for diagnostics only. See `scoreNeedCandidates`. */
+  private lastDecisionCandidates: readonly ScoredNeedCandidate[] = []
   /** Set by `startAction()`, consumed by the `goTo`/`execute` phases — the
    *  generic "walk there, do this" step currently in flight. `null` only
    *  outside those two phases. */
@@ -1116,6 +1126,7 @@ export class NpcAgent {
       needs: { ...this.needs },
       activeNeed: this.activeNeed,
       pressures: this.lastPressures,
+      candidates: this.lastDecisionCandidates,
       action: this.pendingAction
         ? {
             kind: this.pendingAction.kind,
@@ -1525,6 +1536,7 @@ export class NpcAgent {
       hasMeleeCapability: meleeWeapon != null,
       hasRangedCapability: hasRanged,
       healthRatio: this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0,
+      neuroticism: this.personality.neuroticism,
     })
     if (decision === 'defend') {
       const mode: CombatIntent['mode'] = hasRanged ? 'ranged' : 'melee'
@@ -1753,10 +1765,19 @@ export class NpcAgent {
         // current needs/shortage inputs; `lastPressures` feeds both the
         // shared DecisionContext snapshot (plan 055) and diagnostics.
         const pressures = generateNeedPressures(this.needs, this.needPickOptions())
-        const need = pickFromPressures(pressures)
+        // Personality/role preference layer (plan ai-002) — re-scores the
+        // same candidates `generateNeedPressures` produced; it cannot add or
+        // remove one. Kept out of `Needs.ts` so base pressure semantics stay
+        // reusable without a personality input (see the ai-002 implementation notes).
+        const candidates = scoreNeedCandidates(pressures, { personality: this.personality, role: this.role })
+        const need = pickActionKind<NeedId>(
+          candidates.map((c) => ({ kind: c.target, score: c.final })),
+          'idle',
+        )
         this.lastPressures = pressures
+        this.lastDecisionCandidates = candidates
         this.activeNeed = need
-        this.trace.record({ simTime: this.simClock, type: 'need.selected', need, pressures })
+        this.trace.record({ simTime: this.simClock, type: 'need.selected', need, pressures, candidates })
         const decisionContext = this.buildDecisionContext(scheduledActivity, nearbyNpcCount)
         if (need !== 'idle') {
           this.beginNeed(need)

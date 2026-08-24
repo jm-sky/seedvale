@@ -37,7 +37,7 @@ Procedurally chunked, streamed terrain with instanced vegetation/rocks, tree lif
 
 ### Settlements / NPCs
 
-Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, NPC needs/FSM/schedule/personality, household + settlement bulk economy, dialogue v2, home-trader screen. NPCs can now fight: an `NpcAgent` combat phase, role-based default weapons, and an animal-attack/NPC-defense decision layer exist, reusing the same melee/ranged mechanics as the player.
+Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, NPC needs/FSM/schedule/personality, household + settlement bulk economy, dialogue v2, home-trader screen. NPCs can now fight: an `NpcAgent` combat phase, role-based default weapons, and an animal-attack/NPC-defense decision layer exist, reusing the same melee/ranged mechanics as the player. `NpcAgent.choose()`'s need-pressure arbitration (`Needs.ts`, plan ai-001) is now personality/role-aware (`ai/decisionModifiers.ts`, plan ai-002): Big Five conscientiousness biases already-active duty pressures (`wood`/`waterDuty`), a `woodcutter` role adds a small extra bump on `wood`, and neuroticism biases the existing animal-threat defend/flee scoring — a preference layer, never a second candidate generator.
 
 - Generation, streaming, economy, households, NPC daily life, standing decisions: [SETTLEMENTS.md](./state/settlements.md)
 - Combat (NPC combat phase, animal attack & defense, role loadouts): [state/combat.md](./state/combat.md)

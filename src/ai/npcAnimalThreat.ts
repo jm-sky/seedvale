@@ -70,21 +70,31 @@ export type AnimalThreatDecisionInput = {
   hasRangedCapability: boolean
   /** 0–1 current HP ratio. */
   healthRatio: number
+  /** 0–1 Big Five neuroticism (plan ai-002) — sensitivity to this already-
+   *  existing risk/threat signal. Optional, defaults to 0.5 (neutral, no
+   *  bias) so every existing caller/test keeps its exact prior behaviour. */
+  neuroticism?: number
 }
 
 const DEFEND_BASELINE = 0.5
 const DEFEND_HEALTH_WEIGHT = 0.4
 const FLEE_BASELINE = 0.3
 const FLEE_HEALTH_WEIGHT = 0.6
+/** How far neuroticism can shift `defend` vs `flee` around the 0.5 neutral
+ *  point — modest next to the health-driven swing above so a badly-hurt or
+ *  unarmed NPC still flees regardless of personality, and a healthy armed
+ *  one still defends unless neuroticism is meaningfully above average. */
+const NEUROTICISM_RISK_WEIGHT = 0.5
 
 export function scoreAnimalThreatIntents(
   input: AnimalThreatDecisionInput,
 ): ScoredAction<AnimalThreatResponse>[] {
   const canFight = input.hasMeleeCapability || input.hasRangedCapability
+  const riskBias = ((input.neuroticism ?? 0.5) - 0.5) * NEUROTICISM_RISK_WEIGHT
   // No usable weapon → defend is not a real option at all (`-Infinity`, not
-  // just a low score) so `flee` always wins regardless of health.
-  const defendScore = canFight ? DEFEND_BASELINE + input.healthRatio * DEFEND_HEALTH_WEIGHT : -Infinity
-  const fleeScore = FLEE_BASELINE + (1 - input.healthRatio) * FLEE_HEALTH_WEIGHT + (canFight ? 0 : 1)
+  // just a low score) so `flee` always wins regardless of health/personality.
+  const defendScore = canFight ? DEFEND_BASELINE + input.healthRatio * DEFEND_HEALTH_WEIGHT - riskBias : -Infinity
+  const fleeScore = FLEE_BASELINE + (1 - input.healthRatio) * FLEE_HEALTH_WEIGHT + (canFight ? 0 : 1) + riskBias
   return [
     { kind: 'defend', score: defendScore },
     { kind: 'flee', score: fleeScore },

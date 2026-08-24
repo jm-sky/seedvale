@@ -71,3 +71,41 @@ describe('decideAnimalThreatResponse (plan 179 §8/§14/§15)', () => {
     ).toBe('defend')
   })
 })
+
+describe('decideAnimalThreatResponse neuroticism bias (plan ai-002)', () => {
+  // healthRatio 0.4 is the exact defend/flee tie point of the existing
+  // health-only formula (0.5 + 0.4·hr === 0.3 + 0.6·(1 - hr)) — the closest
+  // call the pre-ai-002 scoring could produce, and so the clearest place to
+  // show personality tipping a *legitimate* tie rather than overriding a
+  // clear-cut health-driven outcome.
+  const TIE_INPUT = { hasMeleeCapability: true, hasRangedCapability: false, healthRatio: 0.4 }
+
+  it('omitting neuroticism reproduces the pre-ai-002 tie-break (defend wins)', () => {
+    expect(decideAnimalThreatResponse(TIE_INPUT)).toBe('defend')
+  })
+
+  it('neutral neuroticism (0.5) matches omitting it exactly', () => {
+    expect(decideAnimalThreatResponse({ ...TIE_INPUT, neuroticism: 0.5 })).toBe(
+      decideAnimalThreatResponse(TIE_INPUT),
+    )
+  })
+
+  it('high neuroticism tips a tied, capable NPC toward flee', () => {
+    expect(decideAnimalThreatResponse({ ...TIE_INPUT, neuroticism: 1 })).toBe('flee')
+  })
+
+  it('low neuroticism reinforces defend on the same tie', () => {
+    expect(decideAnimalThreatResponse({ ...TIE_INPUT, neuroticism: 0 })).toBe('defend')
+  })
+
+  it('does not let neuroticism make an unarmed NPC defend', () => {
+    expect(
+      decideAnimalThreatResponse({
+        hasMeleeCapability: false,
+        hasRangedCapability: false,
+        healthRatio: 1,
+        neuroticism: 0,
+      }),
+    ).toBe('flee')
+  })
+})
