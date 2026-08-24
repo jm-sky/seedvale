@@ -182,6 +182,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-22--201--arch--deferred-architecture-state-cleanup.md` | [notes](./implementation-notes/2026-08-22--201--arch--deferred-architecture-state-cleanup-implementation-notes.md) |
 | `2026-08-20--176--garden-and-field-maintenance.md` | [notes](./implementation-notes/2026-08-20--176--garden-and-field-maintenance-implementation-notes.md) |
 | `2026-08-19--168--settlement-lodging-and-sleep.md` | [notes](./implementation-notes/2026-08-19--168--settlement-lodging-and-sleep-implementation-notes.md) |
+| `2026-08-19--169--house-interior-furniture-and-bed-anchors.md` | [notes](./implementation-notes/2026-08-19--169--house-interior-furniture-and-bed-anchors-implementation-notes.md) |
 
 ---
 
