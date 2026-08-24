@@ -78,6 +78,7 @@ const main = async () => {
       '- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.',
       '',
       'Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.',
+      'Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.',
       '',
       'Plik dodaj na branch `main` w repozytorium.',
       '```',
