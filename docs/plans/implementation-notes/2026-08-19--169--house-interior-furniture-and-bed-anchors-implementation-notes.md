@@ -448,8 +448,19 @@ What actually landed, and where it differs from the sketch above. Scope: **one**
 - **Tests** — `houseBuilder.test.ts`: bed/table resolve through the *real* `ConstructionCatalog` (not just the test's dummy-part context), and a furnished `COTTAGE_4X4_A` assembly exposes both `'sleep'`/`'storage'` points alongside door/entrance. `lodgingResolver.test.ts`: the bed-provider cases plan 168 specified but couldn't test before (`collectBedCandidates` producing a correct high-quality candidate, no candidate when a house has no bed, bed outranking a friendly NPC in the same settlement). `constructionCatalog.test.ts`'s old single "176 MegaKit GLB = 176 catalog parts" assertion split into three (MegaKit count, furniture count, catalog total = both).
 
 **Not done / open:**
-- No live Asset Browser verification session — dimensions came from the audit script + `gltf-transform inspect` only. Bed/table/chest/lamp placement in `COTTAGE_4X4_A` (clearance-checked against the definition's own footprint/door-swing math, not against a rendered scene) and bed/lamp orientation need an actual look in the running dev server.
+- No live Asset Browser verification session — dimensions came from the audit script + `gltf-transform inspect` only.
 - "Nocuj w mieście" resolving to the new bed, walking there, and sleeping at the correct facing/quality — exercised by reading the code path (the same contract plan 168's paid-lodging path already relied on being ready-without-changes), not by playing it.
-- Only `COTTAGE_4X4_A` is furnished. Extending to the other 5 cottage variants and 5 medium-house variants (3 footprint families total) is explicitly deferred to a follow-up, per the plan's own phased scope.
+- `COTTAGE_6X4_A/B/C` and `HOUSE_8X6_A/B/C` (the remaining 2 footprint families) are still unfurnished — a follow-up if wanted.
+
+## Extended to 4×4 B/C and 6×6 A/B (2026-08-24, same session)
+
+After browser-checking `COTTAGE_4X4_A` (user-confirmed: furniture visible, looked correct — the first real browser verification this plan got), the user asked to extend furniture to the other 4×4 cottages and the 6×6 houses.
+
+- `cottage4x4aFurniture()` renamed `cottage4x4Furniture()` — reused **as-is** by `COTTAGE_4X4_C` (identical door module to `_A`; different window positions don't matter, windows aren't floor obstacles) and via a new `mirrorFurnitureX()` helper for `COTTAGE_4X4_B` (door on the opposite half of the front wall). The mirror negates every position's local X and every `rotationY`/`facing` — a *whole-layout* reflection, not a per-mesh mirror; valid specifically because every plan 169 asset (bed/table/lamp per `furnitureAudit.generated.json`, procedural chest per `containerProp.ts`) is X-symmetric, so reflecting the arrangement renders identically to authoring a true mirrored layout by hand.
+- New `house6x6Furniture()` (roomier layout, not a scaled copy of the 4×4 one) reused **as-is** by both `HOUSE_6X6_A` and `HOUSE_6X6_B` — checked by hand against each definition's actual `wallLocalTransform`/`chimneyAt` output (door position, window positions, brick-kit chimney corner) that neither's specifics collide with this layout's furniture footprints or the door swing zone.
+- No new placement type/mechanism — every addition is either the existing `cottage4x4Furniture()` call, `mirrorFurnitureX()` of it, or the new `house6x6Furniture()`, wired the same way `COTTAGE_4X4_A` already was (`{ ...plasterHouse({...}), furniture: ... }`).
+- Reverted a local, uncommitted `poolForSize()` tweak the user had made to force cottage-only village generation for testing — restored to the original `HOME_HOUSE_DEFINITIONS`/`COTTAGE_DEFINITIONS`/`HOUSE_6X6_A`/`HOUSE_6X6_B` pools now that finding a furnished house doesn't require biasing generation (5 of 11 house variants are furnished, and `village(id).houses()` in the debug API finds them directly).
+- New tests (`houseBuilder.test.ts`): all five furnished variants assemble with `'sleep'`/`'storage'` interaction points; `COTTAGE_4X4_B`'s bed/chest are confirmed to be `COTTAGE_4X4_A`'s mirrored across X.
+- Still only `COTTAGE_4X4_A` has had an actual browser look — `_B`/`_C`/6×6 A/B are derived/extrapolated from it and not yet individually eyeballed.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

@@ -203,15 +203,45 @@ function lampOnTable(table: { position: HouseVec3, rotationY: number }): HouseVe
 }
 
 /**
- * First furnished house (plan 169 "pierwszy zakres") — `COTTAGE_4X4_A` only.
- * Placement checked against the definition's own footprint/openings math
- * (`wallLocalTransform`) for wall/door clearance; final visual fit (bed/lamp
- * orientation in particular — the source asset's own forward axis was not
- * independently confirmed) still needs a browser look per plan 169's
- * alignment-browser rule and `CLAUDE.md`'s "do not mark visual work verified
- * without browser confirmation."
+ * Mirrors a furniture layout across the house's own Z axis (negates local X
+ * everywhere: furniture position, furniture-local interaction-point position
+ * and `facing` delta). Whole-layout reflection, not a per-mesh mirror — valid
+ * because every plan 169 asset is X-symmetric (`furnitureAudit.generated.json`
+ * for bed/table/lamp; the procedural chest, `world/containerProp.ts`, is
+ * X-symmetric by construction). Used for house variants whose door sits on
+ * the opposite half of the same wall (e.g. `COTTAGE_4X4_B` vs `_A`) so the
+ * layout still clears the door swing without a second hand-authored set of
+ * numbers — still an explicit, checked transform per variant, not a general
+ * furniture solver.
  */
-function cottage4x4aFurniture(): HouseFurniturePlacement[] {
+function mirrorFurnitureX(furniture: readonly HouseFurniturePlacement[]): HouseFurniturePlacement[] {
+  return furniture.map((f) => ({
+    ...f,
+    position: { ...f.position, x: -f.position.x },
+    rotationY: -f.rotationY,
+    interactionPoints: f.interactionPoints?.map((p) => ({
+      ...p,
+      position: { ...p.position, x: -p.position.x },
+      ...(p.facing != null ? { facing: -p.facing } : {}),
+    })),
+  }))
+}
+
+/**
+ * First furnished house (plan 169 "pierwszy zakres") — `COTTAGE_4X4_A`.
+ * Reused as-is by `COTTAGE_4X4_C` (same door module, only window placement
+ * differs — windows are wall fixtures, not floor obstacles) and mirrored
+ * (`mirrorFurnitureX`) for `COTTAGE_4X4_B`, whose door sits on the opposite
+ * half of the front wall. Placement checked against each definition's own
+ * footprint/openings math (`wallLocalTransform`) for wall/door-swing
+ * clearance; final visual fit (bed/lamp orientation in particular — the
+ * source asset's own forward axis was not independently confirmed) still
+ * needs a browser look per plan 169's alignment-browser rule and
+ * `CLAUDE.md`'s "do not mark visual work verified without browser
+ * confirmation" — browser-checked 2026-08-24 for `COTTAGE_4X4_A` (looked
+ * correct); `_B`/`_C` and the 6×6 houses below not yet individually checked.
+ */
+function cottage4x4Furniture(): HouseFurniturePlacement[] {
   const bed: HouseFurniturePlacement = {
     assetId: FURNITURE_BED,
     position: { x: -0.5, y: 0, z: 1.4 },
@@ -236,6 +266,49 @@ function cottage4x4aFurniture(): HouseFurniturePlacement[] {
   const chest: HouseFurniturePlacement = {
     assetId: FURNITURE_CHEST_SENTINEL,
     position: { x: -1.65, y: 0, z: 0.6 },
+    rotationY: Math.PI / 2,
+    role: 'chest',
+    interactionPoints: [
+      { kind: 'storage', position: { x: 0, y: 0, z: 0.5 } },
+    ],
+  }
+  const lamp: HouseFurniturePlacement = {
+    assetId: FURNITURE_LAMP_SENTINEL,
+    position: lampOnTable(table),
+    rotationY: 0,
+    role: 'lamp',
+  }
+  return [bed, table, chest, lamp]
+}
+
+/**
+ * 6×6 m house furniture — `HOUSE_6X6_A`/`HOUSE_6X6_B`. More floor than the
+ * 4×4 cottage, so the layout is roomier rather than a scaled copy. Reused
+ * as-is by both variants: `_A`'s door is centred (module1) and `_B`'s is at
+ * the far left (module0), but neither's door-swing zone (front wall, near
+ * the hinge) nor either's window/chimney placement overlaps this layout —
+ * checked against both definitions' `wallLocalTransform`/`chimneyAt` output,
+ * not assumed. Not yet browser-verified (see `cottage4x4Furniture`'s note).
+ */
+function house6x6Furniture(): HouseFurniturePlacement[] {
+  const bed: HouseFurniturePlacement = {
+    assetId: FURNITURE_BED,
+    position: { x: -1.3, y: 0, z: 2.255 },
+    rotationY: 0,
+    role: 'bed',
+    interactionPoints: [
+      { kind: 'sleep', position: { x: 0, y: 0, z: -0.845 }, facing: 0 },
+    ],
+  }
+  const table: HouseFurniturePlacement = {
+    assetId: FURNITURE_TABLE,
+    position: { x: 1.3, y: 0, z: -0.3 },
+    rotationY: 0,
+    role: 'table',
+  }
+  const chest: HouseFurniturePlacement = {
+    assetId: FURNITURE_CHEST_SENTINEL,
+    position: { x: -2.35, y: 0, z: 0.6 },
     rotationY: Math.PI / 2,
     role: 'chest',
     interactionPoints: [
@@ -504,7 +577,7 @@ export const TEST_HOUSE_02: HouseDefinition = plasterHouse({
 
 /**
  * 4×4 m — small one-room cottage (~16 m²). `roof_roundtiles_4x4` cap. Plan 169's
- * first furnished house — see `cottage4x4aFurniture()`.
+ * first furnished house — see `cottage4x4Furniture()`.
  */
 export const COTTAGE_4X4_A: HouseDefinition = {
   ...plasterHouse({
@@ -521,23 +594,28 @@ export const COTTAGE_4X4_A: HouseDefinition = {
     examine: 'Niewielka tynkowana chatka pod dachówką — jedna izba, drzwi i okno od drogi.',
     sizeClass: 'cottage',
   }),
-  furniture: cottage4x4aFurniture(),
+  furniture: cottage4x4Furniture(),
 }
 
-export const COTTAGE_4X4_B: HouseDefinition = plasterHouse({
-  id: 'cottage-4x4-b',
-  width: 4,
-  depth: 4,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 1 },
-    { type: 'window', side: 'left', moduleIndex: 0 },
-    { type: 'window', side: 'back', moduleIndex: 0 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_4X4, GABLE_4, { width: 4, depth: 4 }, 'frontBack'),
-  label: 'Chatka',
-  examine: 'Mała chatka z oknem od ogrodu i wejściem z boku frontu.',
-  sizeClass: 'cottage',
-})
+export const COTTAGE_4X4_B: HouseDefinition = {
+  ...plasterHouse({
+    id: 'cottage-4x4-b',
+    width: 4,
+    depth: 4,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 1 },
+      { type: 'window', side: 'left', moduleIndex: 0 },
+      { type: 'window', side: 'back', moduleIndex: 0 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_4X4, GABLE_4, { width: 4, depth: 4 }, 'frontBack'),
+    label: 'Chatka',
+    examine: 'Mała chatka z oknem od ogrodu i wejściem z boku frontu.',
+    sizeClass: 'cottage',
+  }),
+  // Door on the opposite half of the front wall vs `COTTAGE_4X4_A` (module 1,
+  // not 0) — mirrored layout so it still clears the door swing.
+  furniture: mirrorFurnitureX(cottage4x4Furniture()),
+}
 
 /** 6×4 m — typical village cottage (~24 m²). Cap rotated so the long axis covers the 6 m front. */
 export const COTTAGE_6X4_A: HouseDefinition = plasterHouse({
@@ -573,23 +651,26 @@ export const COTTAGE_6X4_B: HouseDefinition = plasterHouse({
 })
 
 /** 6×6 m — medium square house (~36 m²). */
-export const HOUSE_6X6_A: HouseDefinition = plasterHouse({
-  id: 'house-6x6-a',
-  width: 6,
-  depth: 6,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 1 },
-    { type: 'window', side: 'front', moduleIndex: 0 },
-    { type: 'window', side: 'front', moduleIndex: 2 },
-    { type: 'window', side: 'right', moduleIndex: 1 },
-    { type: 'window', side: 'left', moduleIndex: 1 },
-    { type: 'window', side: 'back', moduleIndex: 1 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_6, { width: 6, depth: 6 }, 'frontBack'),
-  label: 'Dom',
-  examine: 'Średni tynkowany dom pod szeroką dachówką — gospodarstwo jednej rodziny.',
-  sizeClass: 'house',
-})
+export const HOUSE_6X6_A: HouseDefinition = {
+  ...plasterHouse({
+    id: 'house-6x6-a',
+    width: 6,
+    depth: 6,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 1 },
+      { type: 'window', side: 'front', moduleIndex: 0 },
+      { type: 'window', side: 'front', moduleIndex: 2 },
+      { type: 'window', side: 'right', moduleIndex: 1 },
+      { type: 'window', side: 'left', moduleIndex: 1 },
+      { type: 'window', side: 'back', moduleIndex: 1 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_6, { width: 6, depth: 6 }, 'frontBack'),
+    label: 'Dom',
+    examine: 'Średni tynkowany dom pod szeroką dachówką — gospodarstwo jednej rodziny.',
+    sizeClass: 'house',
+  }),
+  furniture: house6x6Furniture(),
+}
 
 /** 8×6 m — medium farmstead (~48 m²). */
 export const HOUSE_8X6_A: HouseDefinition = plasterHouse({
@@ -630,23 +711,28 @@ export const HOUSE_8X6_B: HouseDefinition = plasterHouse({
   sizeClass: 'house',
 })
 
-export const COTTAGE_4X4_C: HouseDefinition = plasterHouse({
-  id: 'cottage-4x4-c',
-  width: 4,
-  depth: 4,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 0 },
-    { type: 'window', side: 'left', moduleIndex: 1 },
-    { type: 'window', side: 'right', moduleIndex: 1 },
-    { type: 'window', side: 'back', moduleIndex: 1 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_4X4, GABLE_4, { width: 4, depth: 4 }, 'frontBack'),
-  label: 'Chatka',
-  examine: 'Drewniana kratownica na tynku i komin w narożniku — mała chatka z oknami na trzy strony.',
-  sizeClass: 'cottage',
-  kit: KIT_WOODGRID,
-  decorations: [chimneyAt({ width: 4, depth: 4 })],
-})
+export const COTTAGE_4X4_C: HouseDefinition = {
+  ...plasterHouse({
+    id: 'cottage-4x4-c',
+    width: 4,
+    depth: 4,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 0 },
+      { type: 'window', side: 'left', moduleIndex: 1 },
+      { type: 'window', side: 'right', moduleIndex: 1 },
+      { type: 'window', side: 'back', moduleIndex: 1 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_4X4, GABLE_4, { width: 4, depth: 4 }, 'frontBack'),
+    label: 'Chatka',
+    examine: 'Drewniana kratownica na tynku i komin w narożniku — mała chatka z oknami na trzy strony.',
+    sizeClass: 'cottage',
+    kit: KIT_WOODGRID,
+    decorations: [chimneyAt({ width: 4, depth: 4 })],
+  }),
+  // Same door module as `COTTAGE_4X4_A` (0) — corner chimney at (1.3, 1.3)
+  // doesn't overlap this layout's bed/table/chest footprints.
+  furniture: cottage4x4Furniture(),
+}
 
 export const COTTAGE_6X4_C: HouseDefinition = plasterHouse({
   id: 'cottage-6x4-c',
@@ -667,26 +753,32 @@ export const COTTAGE_6X4_C: HouseDefinition = plasterHouse({
   decorations: [chimneyAt({ width: 6, depth: 4 })],
 })
 
-export const HOUSE_6X6_B: HouseDefinition = plasterHouse({
-  id: 'house-6x6-b',
-  width: 6,
-  depth: 6,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 0 },
-    { type: 'window', side: 'front', moduleIndex: 2 },
-    { type: 'window', side: 'right', moduleIndex: 0 },
-    { type: 'window', side: 'right', moduleIndex: 2 },
-    { type: 'window', side: 'left', moduleIndex: 0 },
-    { type: 'window', side: 'back', moduleIndex: 0 },
-    { type: 'window', side: 'back', moduleIndex: 2 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_6, { width: 6, depth: 6 }, 'frontBack'),
-  label: 'Dom',
-  examine: 'Ceglany dom z kominem — okna na podwórze i wejście z boku frontu.',
-  sizeClass: 'house',
-  kit: KIT_BRICK,
-  decorations: [chimneyAt({ width: 6, depth: 6 })],
-})
+export const HOUSE_6X6_B: HouseDefinition = {
+  ...plasterHouse({
+    id: 'house-6x6-b',
+    width: 6,
+    depth: 6,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 0 },
+      { type: 'window', side: 'front', moduleIndex: 2 },
+      { type: 'window', side: 'right', moduleIndex: 0 },
+      { type: 'window', side: 'right', moduleIndex: 2 },
+      { type: 'window', side: 'left', moduleIndex: 0 },
+      { type: 'window', side: 'back', moduleIndex: 0 },
+      { type: 'window', side: 'back', moduleIndex: 2 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_6, { width: 6, depth: 6 }, 'frontBack'),
+    label: 'Dom',
+    examine: 'Ceglany dom z kominem — okna na podwórze i wejście z boku frontu.',
+    sizeClass: 'house',
+    kit: KIT_BRICK,
+    decorations: [chimneyAt({ width: 6, depth: 6 })],
+  }),
+  // Door at the far-left front module (0) and a back-right chimney (2.3, 2.3)
+  // — neither overlaps this layout's furniture footprints (checked against
+  // this door's swing zone and the chimney position, not assumed).
+  furniture: house6x6Furniture(),
+}
 
 export const HOUSE_8X6_C: HouseDefinition = plasterHouse({
   id: 'house-8x6-c',

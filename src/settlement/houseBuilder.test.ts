@@ -3,7 +3,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { buildConstructionCatalog } from '../assets/constructionCatalog'
 import {
   COTTAGE_4X4_A,
+  COTTAGE_4X4_B,
+  COTTAGE_4X4_C,
   HOME_HOUSE_DEFINITIONS,
+  HOUSE_6X6_A,
+  HOUSE_6X6_B,
   HOUSE_8X6_A,
   HOUSE_MODULE_M,
   pickHouseDefinition,
@@ -366,6 +370,27 @@ describe('village house definitions', () => {
     const localFacing = bed.interactionPoints!.find((p) => p.kind === 'sleep')!.facing!
     expect(sleep!.facing).toBeCloseTo(bed.rotationY + localFacing)
     assembly.dispose()
+  })
+
+  it('plan 169 — all five furnished variants (4×4 a/b/c, 6×6 a/b) assemble with sleep/storage points', () => {
+    for (const def of [COTTAGE_4X4_A, COTTAGE_4X4_B, COTTAGE_4X4_C, HOUSE_6X6_A, HOUSE_6X6_B]) {
+      const assembly = buildHouse(def, contextFor(def))
+      expect(assembly.interactionPoints.some((p) => p.kind === 'sleep'), def.id).toBe(true)
+      expect(assembly.interactionPoints.some((p) => p.kind === 'storage'), def.id).toBe(true)
+      assembly.dispose()
+    }
+  })
+
+  it('plan 169 — COTTAGE_4X4_B is COTTAGE_4X4_A\'s furniture mirrored across X (opposite-side door)', () => {
+    const bedA = COTTAGE_4X4_A.furniture!.find((f) => f.role === 'bed')!
+    const bedB = COTTAGE_4X4_B.furniture!.find((f) => f.role === 'bed')!
+    expect(bedB.position.x).toBeCloseTo(-bedA.position.x)
+    expect(bedB.position.z).toBeCloseTo(bedA.position.z)
+
+    const chestA = COTTAGE_4X4_A.furniture!.find((f) => f.role === 'chest')!
+    const chestB = COTTAGE_4X4_B.furniture!.find((f) => f.role === 'chest')!
+    expect(chestB.position.x).toBeCloseTo(-chestA.position.x)
+    expect(chestB.rotationY).toBeCloseTo(-chestA.rotationY)
   })
 
   it('village homes mix plaster, woodgrid and brick wall kits', () => {
