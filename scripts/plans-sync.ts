@@ -18,10 +18,8 @@ const REVIEW_SUFFIX = '-review.md'
 const PLANNED_STATUS_MARKER = '**Status:** `planned` 📋'
 const PLANNED_HEADING = '## Planned'
 const TABLE_HEADER = '| File | Summary | Pri | Effort | Depends |'
-const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
 const NEXT_PLAN_ID_SUBHEADING = 'Next IDs are tracked separately for each canonical domain. Until the first new plan is created in a domain, its next ID is `001`.'
 const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
-const PLAN_DOMAINS_HEADING = '## Plan domains'
 
 const PRIORITY_EMOJI: Record<string, string> = {
   high: '🔴',
@@ -38,6 +36,7 @@ const CANONICAL_DOMAINS = new Set([
   'quests-progression',
   'settlements',
   'settlements-npcs',
+  'tools',
   'ui-input',
   'world',
   'world-terrain'

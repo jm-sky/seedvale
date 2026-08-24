@@ -5,8 +5,8 @@
 **Priority:** high · **Effort:** M
 **Depends on:** none
 
-domain: ui-input
-tags: [world-terrain, settlements-npcs]
+**domain:** `ui-input`
+**tags:** [world-terrain, settlements-npcs]
 
 ## Cel
 

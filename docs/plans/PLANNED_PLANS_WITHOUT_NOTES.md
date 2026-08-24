@@ -13,8 +13,8 @@
 - `ai-002-npc-personality-decisions.md`
 - `npc-001-npc-physical-stats-sex-and-age.md`
 - `ui-input-001-developer-debug-api.md`
-- `world-terrain-002-performance-benchmark-determinism-and-reliability.md`
-- `world-terrain-003-terrain-modification-and-land-preparation.md`
+- `tools-002-performance-benchmark-determinism-and-reliability.md`
+- `world-terrain-002-terrain-modification-and-land-preparation.md`
 
 --------------------------------
 ## PROMPTS
@@ -251,16 +251,16 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Plik dodaj na branch `main` w repozytorium.
 ```
 
-### `world-terrain-002-performance-benchmark-determinism-and-reliability.md`
+### `tools-002-performance-benchmark-determinism-and-reliability.md`
 
 Prompt:
 
 ```
-Zrób review planu `world-terrain-002-performance-benchmark-determinism-and-reliability.md`
+Zrób review planu `tools-002-performance-benchmark-determinism-and-reliability.md`
 
 Wczytaj:
 - `docs/STATE.md`
-- `docs/plans/world-terrain-002-performance-benchmark-determinism-and-reliability.md`
+- `docs/plans/tools-002-performance-benchmark-determinism-and-reliability.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
@@ -280,16 +280,16 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Plik dodaj na branch `main` w repozytorium.
 ```
 
-### `world-terrain-003-terrain-modification-and-land-preparation.md`
+### `world-terrain-002-terrain-modification-and-land-preparation.md`
 
 Prompt:
 
 ```
-Zrób review planu `world-terrain-003-terrain-modification-and-land-preparation.md`
+Zrób review planu `world-terrain-002-terrain-modification-and-land-preparation.md`
 
 Wczytaj:
 - `docs/STATE.md`
-- `docs/plans/world-terrain-003-terrain-modification-and-land-preparation.md`
+- `docs/plans/world-terrain-002-terrain-modification-and-land-preparation.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
