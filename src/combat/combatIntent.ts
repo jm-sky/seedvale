@@ -32,4 +32,10 @@ export type CombatTargetHandle = {
 export type CombatIntent = {
   target: CombatTargetHandle
   mode: 'melee' | 'ranged'
+  /** Runs once, after `target` is confirmed dead and combat's own bookkeeping
+   *  has finished (`NpcAgent.endCombat('complete')`) — the generic seam a
+   *  caller uses to react to a kill (e.g. Hunter's post-kill harvest) without
+   *  combat itself knowing anything about loot/harvest. Never invoked for a
+   *  `cancelled`/`failed` outcome. */
+  onKill?: () => void
 }

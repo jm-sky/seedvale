@@ -6,6 +6,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
 import type { VillageInfo } from '../fauna/AnimalAgent'
+import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
@@ -152,6 +153,10 @@ export async function createSettlementsManager(
    *  (plan 174) — forwarded into every `createSettlement` call the same way
    *  `mining` is above. */
   foodSources?: SettlementFoodSourceHooks,
+  /** Hunter target discovery + harvest hooks over the live `Fauna` (plan 178)
+   *  — forwarded into every `createSettlement` call the same way `mining`/
+   *  `foodSources` are above. */
+  hunting?: SettlementHuntingHooks,
   /** Carried across a `WorldBundle` rebuild (plan 197 §8) — same
    *  "same-manager-lifetime registry, stock-only carry snapshot on rebuild"
    *  contract as `initialEconomies` above, applied to `Household` (the
@@ -238,6 +243,7 @@ export async function createSettlementsManager(
     pointLightBudget,
     getNearbyPlayerWell,
     foodSources,
+    hunting,
   )
 
   const entries = new Map<string, Entry>()
@@ -355,6 +361,7 @@ export async function createSettlementsManager(
         pointLightBudget,
         getNearbyPlayerWell,
         foodSources,
+        hunting,
       ))
       .then((settlement) => {
         const cur = entries.get(def.id)

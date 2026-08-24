@@ -2,7 +2,7 @@
 
 **Purpose:** a short, current snapshot of the implemented architecture — enough to start a plan without reading every prior plan first. This document describes what exists now, not the desired future state, and not *how* any given plan implemented it.
 
-**Last verified:** 2026-08-22
+**Last verified:** 2026-08-24
 
 ## Read this first
 
@@ -37,7 +37,7 @@ Procedurally chunked, streamed terrain with instanced vegetation/rocks, tree lif
 
 ### Settlements / NPCs
 
-Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, NPC needs/FSM/schedule/personality, household + settlement bulk economy, dialogue v2, home-trader screen. NPCs can now fight: an `NpcAgent` combat phase, role-based default weapons, and an animal-attack/NPC-defense decision layer exist, reusing the same melee/ranged mechanics as the player. `NpcAgent.choose()`'s need-pressure arbitration (`Needs.ts`, plan ai-001) is now personality/role-aware (`ai/decisionModifiers.ts`, plan ai-002): Big Five conscientiousness biases already-active duty pressures (`wood`/`waterDuty`), a `woodcutter` role adds a small extra bump on `wood`, and neuroticism biases the existing animal-threat defend/flee scoring — a preference layer, never a second candidate generator.
+Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, NPC needs/FSM/schedule/personality, household + settlement bulk economy, dialogue v2, home-trader screen. NPCs can now fight: an `NpcAgent` combat phase, role-based default weapons, and an animal-attack/NPC-defense decision layer exist, reusing the same melee/ranged mechanics as the player. `NpcAgent.choose()`'s need-pressure arbitration (`Needs.ts`, plan ai-001) is now personality/role-aware (`ai/decisionModifiers.ts`, plan ai-002): Big Five conscientiousness biases already-active duty pressures (`wood`/`waterDuty`), a `woodcutter` role adds a small extra bump on `wood`, a `hunter` role adds one on `food` (plan 178), and neuroticism biases the existing animal-threat defend/flee scoring — a preference layer, never a second candidate generator. `hunter` (plan 178) is the 7th `Role`, rolled the same way as any other; a hungry hunter with no household food on hand tries a real hunting expedition (bounded/deterministic fauna target selection with single-animal population protection, existing NPC ranged `CombatIntent`, then knife-harvest) before falling back to the abstract garden gather — meat/hide land in a new generic `Household.items` (an `Inventory`, distinct from `Household.stock`'s scalar food/wood), and the household's own `wood` stock funds arrow crafting during the hunter's `work` block.
 
 - Generation, streaming, economy, households, NPC daily life, standing decisions: [SETTLEMENTS.md](./state/settlements.md)
 - Combat (NPC combat phase, animal attack & defense, role loadouts): [state/combat.md](./state/combat.md)

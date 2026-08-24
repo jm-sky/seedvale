@@ -526,3 +526,104 @@ missing generic capability
 ```
 
 Keep the implementation focused on plan 178 and avoid unrelated refactors.
+
+---
+
+## 18. What was actually built (2026-08-24)
+
+Implemented, technically verified (`tsc`/`vue-tsc`/`lint`/`build`/`test` all
+green), browser/gameplay verification still pending:
+
+- `hunter` added to `Role` (and `RANDOM_ROLES` — a normal randomly-rolled
+  role like `woodcutter`/`farmer`, not a forced pairing; see §2 below for why),
+  `SCHEDULE_TEMPLATES`, `workplaceFor` (reuses `landmarks.well`, same as
+  `guard`), `DEFAULT_WEAPON_BY_ROLE` (`hunting_bow`), and a new
+  `seedHunterSupplies()` (knife + starting arrows).
+- `decisionModifiers.ts` gained a `HUNTER_FOOD_ROLE_BONUS`, mirroring
+  `WOODCUTTER_DUTY_ROLE_BONUS`'s shape exactly — re-scores an already-active
+  `food` pressure, never invents one.
+- `NpcAgent.beginNeed('food')` tries `beginHuntExpedition()` (hunter-only,
+  when household has no food on hand) before `beginRealFoodGathering()`.
+  `beginHuntExpedition`/`attemptHuntKill`/`onHuntKill`/`deliverHuntYieldHome`
+  implement the 1-3-kills-per-trip loop entirely through repeated
+  `beginCombat()` calls — no expedition-AI object.
+- `CombatIntent` gained an optional `onKill?: () => void`, invoked once from
+  `endCombat('complete')` — the generic seam Hunter's harvest hooks into;
+  reusable by any future kill-reactive caller, not Hunter-specific.
+- `src/fauna/animalHarvest.ts`'s `harvestAnimalIntoInventory()` is the single
+  extracted harvest core, used by **both** the player's `startHarvestMeat`
+  (refactored to call it) and Hunter's kill harvest — no duplicated logic.
+- `src/fauna/huntingHooks.ts`'s `createHuntingHooks()` builds
+  `SettlementHuntingHooks` (`queryTarget`/`harvest`) over a late-bound `Fauna`
+  accessor — late-bound because `Fauna` is constructed *after*
+  `SettlementsManager`/every `NpcAgent` in `worldBundle.ts`. Target selection
+  is a bounded scan over `fauna.getAgents()` (small, already-loaded
+  population — same cost class as `ResourceDeposits.queryNearest`), with
+  preferred-species ranking and the single-animal 50% population-protection
+  roll, seeded via `createSeededRandom`/FNV-1a hash (never `Math.random()`).
+- `Household` gained `items: Inventory` (unbounded weight/size — a house, not
+  a backpack) plus `HouseholdSnapshot.items` for in-session `WorldBundle`
+  rebuild carry. `createHousehold`'s new `hasHunter` param seeds 5 starting
+  bandages once, only on a genuinely first construction of a household
+  containing a hunter (computed in `createSettlement.ts` from
+  `family.members`).
+- Hunt yield (meat + hide) delivers from `carried` into `household.items` via
+  a `kind: 'deposit'` chained action, mirroring the wood/ore chop→deposit
+  shape.
+- Arrow production: `beginArrowCrafting()` (hunter's `work` schedule block,
+  same "try real work before idle stand" shape as `beginOreGathering`)
+  consumes the household's own `wood` `EconomicStock` (already replenished by
+  the ordinary `wood`-duty chop→deposit chain every non-trader NPC runs) into
+  `household.items`' `arrow` count, capped at `HUNTER_ARROW_STOCK_CAP`.
+- Diagnostics: the existing `?debug=1` per-NPC label gained a hunter-only
+  segment (arrows carried, carried-but-undelivered yield, current hunt target
+  id while in `combat`) plus a household `arr<N>` count — reused the existing
+  mechanism, no new diagnostics surface.
+- Tests added: `characters.test.ts` (hunter is a valid rolled role, reserved
+  NPCs unchanged), `schedule.test.ts` (hunter template added to the generic
+  per-role checks), `decisionModifiers.test.ts` (hunter food bonus),
+  `npcLoadout.test.ts` (hunter default bow + starting supplies),
+  `household.test.ts` (`items`/`hasHunter`/snapshot round-trip),
+  `huntingHooks.test.ts` (preference ranking, population-protection
+  determinism/variance/dead-animal handling). `families.test.ts`'s pinned
+  seed-7 role-roll snapshot was re-pinned (expected: `RANDOM_ROLES` gaining a
+  member shifts every subsequent roll in that deterministic stream — not a
+  regression).
+
+### Two deliberate scope cuts (not silently dropped)
+
+1. **Bow production and a household→trade bridge are not implemented.**
+   Bows have no durability/breakage in this codebase (confirmed
+   deliberately out of scope elsewhere — see `docs/state/combat.md`), so a
+   hunter's starting `hunting_bow` never needs replacing; only *arrows* are
+   actually consumed per shot and need an ongoing supply, which
+   `beginArrowCrafting()` provides. Building bow crafting *and* a bridge that
+   lets a household's item surplus (bows/arrows/hide/dried meat) actually
+   enter the merchant's sellable stock would be a new generic capability no
+   other resource has today either — `SettlementEconomy`'s `wood`/`iron`/
+   `coal`/`gold` don't feed the merchant's stock, and the merchant's own
+   `tradeCatalog.ts`/`trade.ts` is an infinite abstract price list, not a
+   depletable pool tied to any settlement/household stock. Plan §10's "uses
+   the existing economy/trading system" is satisfied at the same level every
+   other resource already sits at: hide/bow/arrow/dried_meat are already
+   player-sellable via the existing item-instance-aware `trade.ts` (plan
+   162), unchanged. A live household-surplus → merchant-stock bridge is a
+   cross-cutting economy feature bigger than this plan's scope; flagged in
+   `docs/plans/LOOSE-ENDS.md` as a follow-up rather than built here.
+2. **NPC-triggered cooking/drying is not implemented** (the spouse does not
+   walk to the grate/drying rack and act on `household.items`' meat).
+   `COOKING_RECIPES`/`campfireCooking.ts` and `dryingRacks.ts` are, before
+   and after this plan, 100% player-input-triggered — no NPC role has ever
+   called them, so wiring one in would mean building a brand-new generic
+   "NPC performs a timed action at a world object against a household's item
+   store" capability from nothing, not a small extension. That's legitimate
+   future work but is disproportionate to add as a side effect of this plan.
+   Hunted meat and hide land in `household.items` and stay there (available
+   to a future cooking/drying/trade plan, and already visible via the
+   `arrows`/hunt-yield debug diagnostics) rather than being auto-consumed.
+   Flagged in `docs/plans/LOOSE-ENDS.md`.
+
+Both cuts keep the plan's core "expected result" loop intact end-to-end
+(fauna → hunting decision → expedition → ranged combat → meat/hide →
+household → storage) while avoiding building parallel/oversized generic
+systems the plan's own notes explicitly warn against (§17).

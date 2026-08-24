@@ -1,7 +1,7 @@
 # Plan: Hunter Profession and Household
 
 **Created:** 2026-08-20
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (type-check/lint/build/test); browser/gameplay verification pending. See [implementation notes §18](./implementation-notes/2026-08-20--178--hunter-profession-and-household-implementation-notes.md#18-what-was-actually-built-2026-08-24) for the as-built scope, including two deliberate cuts (bow production/trade bridge, NPC-triggered cooking/drying).
 **Priority:** medium · **Effort:** M
 **Depends on:** 177 · 188 · 155 · 161 · 162 · 175
 **Domain:** settlements-npcs

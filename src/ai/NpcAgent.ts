@@ -4,6 +4,8 @@ import type { CombatIntent } from '../combat/combatIntent'
 import type { ResolvedDefense } from '../combat/defenseResolver'
 import type { Projectile } from '../combat/projectile'
 import type { RangedAttackLifecycle } from '../combat/rangedLifecycle'
+import type { HuntTarget, SettlementHuntingHooks } from '../fauna/huntingHooks'
+import type { ItemKind } from '../items/items'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
 import type { Household } from '../settlement/household'
@@ -130,7 +132,7 @@ import {
   resolveNpcMeleeWeapon,
   resolveNpcRangedWeapon,
 } from './npcCombat'
-import { seedDefaultRoleWeapon } from './npcLoadout'
+import { seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
 import {
   createMovementWatchdog,
   type MovementWatchdog,
@@ -476,6 +478,37 @@ const NPC_CARRY_MAX_WEIGHT = 5
  *  settlement-garden gather. */
 const FOOD_SOURCE_SEARCH_RADIUS = 60
 
+/** Hunting expedition (plan 178) — search radius reaches beyond the
+ *  settlement footprint into `AnimalSpawner`'s ring of habitat spawn points,
+ *  a larger order of magnitude than `FOOD_SOURCE_SEARCH_RADIUS`/
+ *  `ORE_SEARCH_RADIUS` (chosen, not derived — those search *within* the
+ *  settlement, this searches the wilds around it). */
+const HUNT_SEARCH_RADIUS = 140
+/** A hunt attempt tops carried arrows up to this many from the household's
+ *  own crafted stock (`beginArrowCrafting`) before checking whether it can
+ *  actually fire — bounded so one resupply can't strip the whole household
+ *  stock into a single carry trip. */
+const HUNT_RESUPPLY_ARROW_TARGET = 8
+/** One expedition yields at most this many kills (plan §2) — carry weight
+ *  (`NPC_CARRY_MAX_WEIGHT`) already caps it in practice most of the time via
+ *  `harvestAnimalIntoInventory`'s own `canAdd` gate; this is the explicit
+ *  hard ceiling the plan asks for regardless of carry room. */
+const HUNT_MAX_KILLS_PER_TRIP = 3
+/** Household item kinds a completed hunt delivers home (plan §6/§7) — meat +
+ *  hide only; equipment (bow/arrows/knife) stays with the hunter. */
+const HUNT_YIELD_KINDS: readonly ItemKind[] = [
+  'raw_meat', 'deer_meat', 'wolf_meat', 'boar_meat', 'rabbit_meat', 'beef', 'hide',
+]
+/** Arrow crafting (plan 178 §9) — consumes the household's own `wood`
+ *  economic stock (already replenished by the normal `wood`-duty chop→
+ *  deposit chain every non-trader NPC, hunter included, already runs) rather
+ *  than inventing a new raw-material item kind. Capped so a hunter doesn't
+ *  craft arrows forever once the household is well-stocked — beyond the cap,
+ *  the household's arrow count is itself the sellable surplus (plan §9/§10). */
+const ARROW_CRAFT_WOOD_COST = 1
+const ARROW_CRAFT_YIELD = 4
+const HUNTER_ARROW_STOCK_CAP = 24
+
 /** Plan 176 §6.1 gates — an NPC only considers tidying a garden plot it has
  *  already arrived at for its own hunger, and only when its own critical
  *  needs and physical condition are fine. Chosen, not derived: same "tuning
@@ -509,6 +542,20 @@ function depositWoodHarvest(household: Household | null, economy: SettlementEcon
  *  eating did not touch any resource pool. */
 function depositFoodHarvest(household: Household | null, economy: SettlementEconomy | null): void {
   household?.deposit('food', FOOD_GATHER_AMOUNT, economy)
+}
+
+/** Hunt-yield delivery (plan 178 §6/§7) — moves every `HUNT_YIELD_KINDS`
+ *  count from `carried` into the household's generic item storage. Unlike
+ *  `depositWoodHarvest`/`depositFoodHarvest` there's no capacity cap/economy
+ *  overflow here: `Household.items` (an `Inventory`, not `EconomicStock`) is
+ *  unbounded, same as any other physical storage building. */
+function depositHuntYield(carried: Inventory, household: Household): void {
+  for (const kind of HUNT_YIELD_KINDS) {
+    const n = carried.count(kind)
+    if (n <= 0) continue
+    carried.remove(kind, n)
+    household.items.add(kind, n)
+  }
 }
 
 /** Game-time step used by `resolveTimeSkip` to replay a `timeSkip.ts`
@@ -707,6 +754,12 @@ export class NpcAgent {
    *  fresh every frame; only the defend/flee re-scoring is throttled, same
    *  cadence idiom as `AnimalAgent`'s `humanDecisionTimer`. */
   private threatReactionCooldown = 0
+  /** Kills already taken this hunting expedition (plan 178 §2) — reset at
+   *  `beginHuntExpedition()`, capped by `HUNT_MAX_KILLS_PER_TRIP` in
+   *  `onHuntKill()`. Not a persisted/authoritative field — a trip that's
+   *  interrupted (combat cancelled/failed, settlement unload) simply starts
+   *  a fresh count next time `beginHuntExpedition()` runs. */
+  private huntKillsThisTrip = 0
   /** Destination for the `wander` phase only — resource/work destinations
    *  now live in `pendingAction.destination` instead. */
   private target = new THREE.Vector3()
@@ -811,6 +864,11 @@ export class NpcAgent {
    *  below when a real, closer food source is available. Null in isolated
    *  fallbacks, same as `mining`. See `beginNeed`'s `'food'` branch. */
   private readonly foodSources: SettlementFoodSourceHooks | null
+  /** Hunter target discovery + harvest hooks over the live `Fauna` (plan 178)
+   *  — null in isolated fallbacks and for any settlement built before fauna
+   *  exists, same as `mining`/`foodSources`. Only ever read by a `hunter`
+   *  role NPC (`beginHuntExpedition`); every other role ignores it. */
+  private readonly hunting: SettlementHuntingHooks | null
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
@@ -846,6 +904,7 @@ export class NpcAgent {
     mining: SettlementMiningHooks | null,
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
     foodSources?: SettlementFoodSourceHooks,
+    hunting?: SettlementHuntingHooks,
   ) {
     this.playAt = playAt
     this.forest = forest
@@ -858,6 +917,7 @@ export class NpcAgent {
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
     this.foodSources = foodSources ?? null
+    this.hunting = hunting ?? null
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
@@ -870,6 +930,7 @@ export class NpcAgent {
     this.voiceActor = voiceActorForIndex(this.gender, treeIndex)
     this.role = character.role
     seedDefaultRoleWeapon(this.carried, this.role)
+    if (this.role === 'hunter') seedHunterSupplies(this.carried)
     this.traits = character.traits
     this.personality = character.personality
     this.relation = member.relation
@@ -984,6 +1045,7 @@ export class NpcAgent {
     mining: SettlementMiningHooks | null = null,
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
     foodSources?: SettlementFoodSourceHooks,
+    hunting?: SettlementHuntingHooks,
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -1011,6 +1073,7 @@ export class NpcAgent {
         mining,
         getNearbyPlayerWell,
         foodSources,
+        hunting,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -1036,6 +1099,7 @@ export class NpcAgent {
         mining,
         getNearbyPlayerWell,
         foodSources,
+        hunting,
       )
     }
   }
@@ -1062,6 +1126,7 @@ export class NpcAgent {
     mining: SettlementMiningHooks | null,
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
     foodSources?: SettlementFoodSourceHooks,
+    hunting?: SettlementHuntingHooks,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -1098,6 +1163,7 @@ export class NpcAgent {
       mining,
       getNearbyPlayerWell,
       foodSources,
+      hunting,
     )
   }
 
@@ -1596,6 +1662,7 @@ export class NpcAgent {
     if (outcome === 'complete') finishActionLifecycle(this.actionLifecycle)
     else if (outcome === 'failed') failActionLifecycle(this.actionLifecycle)
     else cancelActionLifecycle(this.actionLifecycle)
+    const onKill = outcome === 'complete' ? this.combatIntent?.onKill : undefined
     this.combatIntent = null
     this.combatMeleeWeapon = null
     this.combatRangedWeapon = null
@@ -1604,6 +1671,11 @@ export class NpcAgent {
     this.combatProjectile = null
     this.trace.record({ simTime: this.simClock, type: 'combat.ended', outcome })
     this.phase = 'choose'
+    // Runs last, after every combat field is reset and `phase` defaults to
+    // `choose` — a caller's `onKill` (e.g. Hunter's harvest→deliver chain)
+    // may still override `phase` via `startAction()`, same as any other
+    // `choose`-phase decision would.
+    onKill?.()
   }
 
   /** One-time death consequence (plan 177 §9/§13) — stops the NPC in place
@@ -2151,9 +2223,19 @@ export class NpcAgent {
     const staminaPercent = Math.round(getStaminaRatio(this.stamina) * 100)
     const householdText = this.household
       ? ` · hh f${this.household.stock.query('food')} w${this.household.stock.query('wood')} h2o${this.household.water.current}`
+        + (this.role === 'hunter' ? ` arr${this.household.items.count('arrow')}` : '')
+      : ''
+    // Hunter-only diagnostics (plan 178 §14) — equipment/ammo carried, the
+    // current hunt target (while mid-combat, so it's traceable from the same
+    // `phase`/`combatIntent` state the rest of this line already reads), and
+    // any carried-but-not-yet-delivered harvest. Reuses the existing debug
+    // line/`?debug=1` mechanism rather than a separate diagnostics surface.
+    const huntText = this.role === 'hunter'
+      ? ` · arrows ${this.carried.count('arrow')} yield ${HUNT_YIELD_KINDS.reduce((n, kind) => n + this.carried.count(kind), 0)}`
+        + (this.phase === 'combat' && this.combatIntent ? ` target ${this.combatIntent.target.ref.id}` : '')
       : ''
     const text = `${this.phase} · ${this.pendingAction?.kind ?? '-'} · dist ${distText} · `
-      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})${householdText}`
+      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})${householdText}${huntText}`
     if (text !== this.lastDebugText) {
       this.lastDebugText = text
       this.debugEl.textContent = text
@@ -2375,6 +2457,7 @@ export class NpcAgent {
       // priority over the abstract settlement-garden gather below. Falls
       // through to it when none is in range, exactly like a miner NPC with
       // no loaded ore falls back to `beginUnscheduledIdle`.
+      if (this.role === 'hunter' && this.beginHuntExpedition(household)) return
       if (this.beginRealFoodGathering(household)) return
       this.startAction({
         kind: 'eat',
@@ -2538,6 +2621,120 @@ export class NpcAgent {
   }
 
   /**
+   * Hunter's food-need alternative to the abstract garden gather (plan 178)
+   * — tried before `beginRealFoodGathering` when this NPC's role is `hunter`
+   * (see `beginNeed`'s `food` branch). Resets the per-trip kill counter and
+   * delegates to `attemptHuntKill` — the counter (not a separate "expedition"
+   * object) is what lets one trip take 1-3 animals (plan §2) through the
+   * same `beginCombat`/`onKill` seam repeated, rather than a new
+   * expedition-AI framework the plan explicitly rules out.
+   */
+  private beginHuntExpedition(household: Household | null): boolean {
+    if (!this.hunting) return false
+    this.huntKillsThisTrip = 0
+    return this.attemptHuntKill(household)
+  }
+
+  /**
+   * One hunt-and-kill cycle (plan 178 §2/§3/§4): resupply arrows from the
+   * household if low, resolve a bounded/deterministic target
+   * (`SettlementHuntingHooks.queryTarget` — population-protected, never a
+   * full fauna scan, plan §3/§13), then hand it to the existing ranged
+   * `CombatIntent` (plan 177) with an `onKill` that harvests and decides
+   * whether to hunt again or head home. Returns `false` without starting
+   * anything when there's no weapon/ammo/target — the caller falls back to
+   * the next existing food source, same "profession is a preference" pattern
+   * as `beginOreGathering` (plan §4: "no target/ammo → existing decision flow
+   * resumes", not a stuck NPC).
+   */
+  private attemptHuntKill(household: Household | null): boolean {
+    const hunting = this.hunting
+    if (!hunting) return false
+    if (household && this.carried.count('arrow') < HUNT_RESUPPLY_ARROW_TARGET) {
+      const need = HUNT_RESUPPLY_ARROW_TARGET - this.carried.count('arrow')
+      const available = Math.min(need, household.items.count('arrow'))
+      if (available > 0 && household.items.remove('arrow', available)) {
+        this.carried.add('arrow', available)
+      }
+    }
+    const rangedWeapon = resolveNpcRangedWeapon(this.carried)
+    if (!rangedWeapon || !resolveNpcAmmoKind(this.carried, rangedWeapon.ranged)) return false
+    const target = hunting.queryTarget(this.mesh.position.x, this.mesh.position.z, HUNT_SEARCH_RADIUS)
+    if (!target) return false
+    return this.beginCombat({
+      target: target.target,
+      mode: 'ranged',
+      onKill: () => this.onHuntKill(target, household),
+    })
+  }
+
+  /**
+   * Runs once a hunted animal is confirmed dead (`CombatIntent.onKill`,
+   * called from `endCombat('complete')`) — harvest is re-validated here
+   * (plan 178 §5/§6: the existing fauna death/corpse lifecycle owns the
+   * animal, this only ever reads its already-resolved state via
+   * `SettlementHuntingHooks.harvest`, never assumes a yield just because
+   * combat reported a kill). A successful harvest feeds this NPC's own
+   * hunger and, while under `HUNT_MAX_KILLS_PER_TRIP` and another target is
+   * available, tries one more kill before heading home; otherwise the trip
+   * ends and any carried yield is delivered to the household.
+   */
+  private onHuntKill(target: HuntTarget, household: Household | null): void {
+    const result = this.hunting?.harvest(target, this.carried) ?? null
+    if (result) {
+      this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+      this.huntKillsThisTrip += 1
+    }
+    if (result && this.huntKillsThisTrip < HUNT_MAX_KILLS_PER_TRIP && this.attemptHuntKill(household)) return
+    this.deliverHuntYieldHome(household)
+  }
+
+  /**
+   * Walks the hunt yield home and moves it from `carried` into the
+   * household's generic item storage (plan 178 §6/§7) — mirrors the wood/ore
+   * chop→deposit chain's shape, just triggered from a kill instead of a
+   * scheduled action. No-op (stays on `choose`, already set by `endCombat`)
+   * when there's nothing to deliver.
+   */
+  private deliverHuntYieldHome(household: Household | null): void {
+    if (!household || !HUNT_YIELD_KINDS.some((kind) => this.carried.count(kind) > 0)) return
+    this.startAction({
+      kind: 'deposit',
+      destination: copyVec3(this.home),
+      durationSec: 1.0 * this.waitMultiplier,
+      onComplete: () => depositHuntYield(this.carried, household),
+    })
+  }
+
+  /**
+   * Arrow production (plan 178 §9) — `hunter`'s `work` schedule block tries
+   * this before falling back to the pre-178 idle workplace stand, mirroring
+   * `beginOreGathering`'s "real work before idle stand" shape exactly.
+   * Consumes the household's own `wood` economic stock (already replenished
+   * by the ordinary `wood`-duty chop→deposit chain any non-trader NPC runs,
+   * hunter included) rather than inventing a new raw-material item — see
+   * `ARROW_CRAFT_WOOD_COST`'s doc comment. Returns `false` (idle stand
+   * instead) when the household has no `wood` to spend or is already at
+   * `HUNTER_ARROW_STOCK_CAP`, so a hunter never crafts forever.
+   */
+  private beginArrowCrafting(): boolean {
+    const household = this.household
+    if (!household || !this.workplace) return false
+    if (household.items.count('arrow') >= HUNTER_ARROW_STOCK_CAP) return false
+    if (!household.stock.has('wood', ARROW_CRAFT_WOOD_COST)) return false
+    this.startAction({
+      kind: 'work',
+      destination: copyVec3(this.workplace.position),
+      durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
+      onComplete: () => {
+        if (!household.stock.remove('wood', ARROW_CRAFT_WOOD_COST)) return
+        household.items.add('arrow', ARROW_CRAFT_YIELD)
+      },
+    })
+    return true
+  }
+
+  /**
    * Plan 176 §6/§6.1/§15 — a chance to tidy a neglected garden plot, only
    * ever evaluated right after this NPC already arrived at a crop it was
    * harvesting for its own hunger (never an independent search for
@@ -2570,6 +2767,7 @@ export class NpcAgent {
     const intent = idleIntentFor(scheduledActivity)
     if (intent === 'work' && this.workplace) {
       if (this.role === 'miner' && this.beginOreGathering()) return
+      if (this.role === 'hunter' && this.beginArrowCrafting()) return
       this.startAction({
         kind: 'work',
         destination: copyVec3(this.workplace.position),

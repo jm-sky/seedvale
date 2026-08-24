@@ -88,6 +88,50 @@ describe('household water reserve (plan 122)', () => {
   })
 })
 
+describe('household.items (plan 178) — generic item storage alongside scalar stock', () => {
+  it('starts empty for a household with no hunter', () => {
+    const household = createHousehold('h', 's', 'home')
+    expect(household.items.isEmpty()).toBe(true)
+  })
+
+  it('seeds 5 starting bandages only when hasHunter is true, on first construction', () => {
+    const withHunter = createHousehold('h1', 's', 'home', undefined, true)
+    expect(withHunter.items.count('bandage')).toBe(5)
+    const withoutHunter = createHousehold('h2', 's', 'home', undefined, false)
+    expect(withoutHunter.items.count('bandage')).toBe(0)
+  })
+
+  it('holds arbitrary item kinds (hunted meat/hide, crafted arrows) independent of scalar stock', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.add('deer_meat', 2)
+    household.items.add('hide', 1)
+    household.items.add('arrow', 4)
+    expect(household.items.count('deer_meat')).toBe(2)
+    expect(household.items.count('hide')).toBe(1)
+    expect(household.items.count('arrow')).toBe(4)
+    // Unrelated to the scalar EconomicStock food/wood counters.
+    expect(household.stock.query('food')).not.toBe(0)
+  })
+
+  it('round-trips through snapshot()/createHousehold(initial) — WorldBundle rebuild carry', () => {
+    const before = createHousehold('h', 's', 'home', undefined, true)
+    before.items.add('deer_meat', 3)
+    before.items.remove('bandage', 2)
+    const snapshot = before.snapshot()
+    const after = createHousehold('h', 's', 'home', snapshot)
+    expect(after.items.count('deer_meat')).toBe(3)
+    expect(after.items.count('bandage')).toBe(3)
+  })
+
+  it('a carried snapshot never re-seeds starting bandages even when hasHunter is passed again', () => {
+    const before = createHousehold('h', 's', 'home', undefined, true)
+    before.items.remove('bandage', 5)
+    const snapshot = before.snapshot()
+    const after = createHousehold('h', 's', 'home', snapshot, true)
+    expect(after.items.count('bandage')).toBe(0)
+  })
+})
+
 describe('householdIdFor', () => {
   it('is stable and namespaced per settlement/family', () => {
     expect(householdIdFor('0_0', 0)).toBe(householdIdFor('0_0', 0))
@@ -139,5 +183,19 @@ describe('createHouseholdRegistry', () => {
     const id = householdIdFor('0_0', 0)
     const household = registry.getOrCreate(id, '0_0', '0_0:home:0')
     expect(household.stock.query('food')).toBeGreaterThan(0)
+  })
+
+  it('forwards hasHunter to a genuinely new household (plan 178 §11)', () => {
+    const registry = createHouseholdRegistry()
+    const household = registry.getOrCreate(householdIdFor('0_0', 0), '0_0', '0_0:home:0', true)
+    expect(household.items.count('bandage')).toBe(5)
+  })
+
+  it('ignores hasHunter when the household already exists (getOrCreate reuses it as-is)', () => {
+    const registry = createHouseholdRegistry()
+    const id = householdIdFor('0_0', 0)
+    registry.getOrCreate(id, '0_0', '0_0:home:0', false)
+    const again = registry.getOrCreate(id, '0_0', '0_0:home:0', true)
+    expect(again.items.count('bandage')).toBe(0)
   })
 })

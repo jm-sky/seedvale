@@ -16,6 +16,7 @@ const DEFAULT_WEAPON_BY_ROLE: Partial<Record<Role, ItemKind>> = {
   woodcutter: 'axe',
   guard: 'long_sword',
   farmer: 'knife',
+  hunter: 'hunting_bow',
 }
 
 export function defaultWeaponForRole(role: Role): ItemKind | null {
@@ -36,4 +37,20 @@ export function seedDefaultRoleWeapon(carried: Inventory, role: Role): void {
   } else {
     carried.add(kind, 1)
   }
+}
+
+/** Starting ammo a fresh `hunter` carries alongside `hunting_bow` (plan 178
+ *  §2) — enough for one expedition without an immediate household resupply.
+ *  `HUNT_RESUPPLY_ARROW_TARGET` in `NpcAgent.ts` tops this back up from the
+ *  household's own arrow stock (produced via `beginArrowCrafting`) once low. */
+const HUNTER_STARTING_ARROWS = 6
+
+/** Seeds `hunter`'s starting knife (needed for `meat_harvesting`, plan 178 §2)
+ *  and a small arrow stock, once, at construction — same idempotency contract
+ *  as `seedDefaultRoleWeapon` (a no-op once already carried). A separate step
+ *  from `seedDefaultRoleWeapon` since a hunter carries *two* starting items
+ *  (a ranged weapon and a harvesting tool), not one. */
+export function seedHunterSupplies(carried: Inventory): void {
+  if (!carried.holdsAny('knife')) carried.addInstance(createWeaponInstance('knife'))
+  if (carried.count('arrow') === 0) carried.add('arrow', HUNTER_STARTING_ARROWS)
 }

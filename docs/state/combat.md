@@ -4,7 +4,7 @@
 
 **Not:** the per-item stat tables (damage/range/timings — that's [items/WEAPONS.md](../items/WEAPONS.md) and [items/CATALOG.md](../items/CATALOG.md)), NPC life/economy outside of combat (that's [SETTLEMENTS.md](../state/settlements.md)), or a plan. Combat spans the `items-player`, `settlements-npcs` and `fauna` plan domains at once, which is why it lives here rather than folded into one of them.
 
-**Last verified:** 2026-08-21
+**Last verified:** 2026-08-24
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -50,7 +50,11 @@ NPC role-based carried weapons (plan 185): `src/ai/npcLoadout.ts`'s `defaultWeap
 
 `AnimalAgent` gained runtime-only `frenzied`/`strategicVillage` state (`setFrenzied()`, debug-only trigger — no new species/FSM/save field). Frenzy feeds the existing predator-human decision as `provoked: provokedTimer > 0 || frenzied`, reusing the same retaliation branch a player-provoked wolf already uses; a frenzied predator can also target a nearby NPC through the same scoring function.
 
-On the NPC side, `src/ai/npcAnimalThreat.ts` (`senseImmediateAnimalThreat()`/`decideAnimalThreatResponse()`) is a small threat→`defend`/`flee` decision from carried-weapon capability + health, wired ahead of `NpcAgent.update()`'s phase switch so an NPC reacts *before* taking damage. `defend` calls `beginCombat()` with `fauna/faunaCombat.ts`'s `combatTargetForAnimal()`; `flee` reuses the existing wander/movement pipeline. This animal-defense path is the first live caller of `beginCombat()` — Hunter/bandit AI remain future callers with no decision framework yet.
+On the NPC side, `src/ai/npcAnimalThreat.ts` (`senseImmediateAnimalThreat()`/`decideAnimalThreatResponse()`) is a small threat→`defend`/`flee` decision from carried-weapon capability + health, wired ahead of `NpcAgent.update()`'s phase switch so an NPC reacts *before* taking damage. `defend` calls `beginCombat()` with `fauna/faunaCombat.ts`'s `combatTargetForAnimal()`; `flee` reuses the existing wander/movement pipeline. This animal-defense path was the first live caller of `beginCombat()`; Hunter (plan 178, below) is the second — bandit AI remains a future caller with no decision framework yet.
+
+## Hunter ranged combat (plan 178)
+
+`NpcAgent.beginHuntExpedition()`/`attemptHuntKill()` are the second caller of `beginCombat()` (offensive, not defensive): a hungry `hunter` NPC with no household food on hand resolves a bounded/deterministic target via `fauna/huntingHooks.ts`'s `SettlementHuntingHooks.queryTarget()` (small live-fauna scan, preferred species, seeded single-animal population-protection roll) and calls `beginCombat({ target, mode: 'ranged', onKill })` — `onKill` is a small new optional field on `CombatIntent` (`combat/combatIntent.ts`), invoked once from `endCombat('complete')` after every combat-field reset, the generic seam a caller uses to react to a kill without combat itself knowing about loot/harvest. No new combat pipeline: same `NpcAgent` ranged draw→release→recovery, same `resolveNpcRangedWeapon`/`resolveNpcAmmoKind`, same projectile/hit resolution as animal-defense and the player. Post-kill harvest reuses `fauna/animalHarvest.ts`'s `harvestAnimalIntoInventory()` — the same function the player's own knife-harvest action calls, not a duplicate. See [SETTLEMENTS.md](./settlements.md)'s "Gospodarstwa" section for the hunt→harvest→household-delivery chain past the kill itself.
 
 ## Combat interruption (plan 186)
 
@@ -59,7 +63,7 @@ Taking damage (combat or starvation/dehydration) interrupts an active `rest`/`wa
 ## Not implemented / deliberately out of scope
 
 - Full combat system for the player: player-vs-NPC melee damage is not wired (a player can soft-lock/Tab-cycle an NPC as a target, but the melee hit resolution only ever applies damage to `animal` candidates).
-- `ArcherAI`/any attack-decision framework for Hunter or bandit NPCs — ranged/melee execution exists, nothing decides to trigger it outside animal-defense.
+- `ArcherAI`/any attack-decision framework for bandit NPCs — ranged/melee execution exists, nothing decides to trigger it outside animal-defense and Hunter (plan 178).
 - Weapon repair/broken lifecycle, general tool durability (`shovel`/`pickaxe`), bow durability/sharpness, arrow recovery from a corpse/ground, 3D projectile visuals.
 
 ## Entry points
@@ -81,6 +85,8 @@ src/ai/npcAnimalThreat.ts
 src/ai/npcLoadout.ts
 src/fauna/faunaCombat.ts
 src/fauna/predatorHumanDecision.ts
+src/fauna/huntingHooks.ts
+src/fauna/animalHarvest.ts
 src/shared/HealthState.ts
 src/items/weaponMaintenance.ts
 ```

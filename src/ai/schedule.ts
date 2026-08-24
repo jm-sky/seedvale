@@ -98,6 +98,18 @@ export const SCHEDULE_TEMPLATES: Record<Role, ScheduleTemplate> = {
     { hour: 18, activity: 'home' },
     { hour: 21.5, activity: 'sleep' },
   ],
+  /** Same shape as `woodcutter`/`farmer` — the `work` block itself doesn't
+   *  hunt (that's pressure-driven off the `food` need, see `NpcAgent`'s
+   *  `beginHuntExpedition`); it only sends an idle hunter to maintain arrow
+   *  stock at the workplace `beginIdle` resolves for this role. */
+  hunter: [
+    { hour: 6, activity: 'wake' },
+    { hour: 7, activity: 'work' },
+    { hour: 12, activity: 'eat' },
+    { hour: 13, activity: 'work' },
+    { hour: 18, activity: 'home' },
+    { hour: 22, activity: 'sleep' },
+  ],
   /** Stall hours are longer than other roles: short evening at home, same
    *  1 h midday meal and 8 h sleep. `night_owl` (Kasia) still shifts +2 h. */
   trader: [

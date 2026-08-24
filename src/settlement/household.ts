@@ -1,6 +1,9 @@
 import type { EconomicKind } from '../economy/kinds'
 import type { SettlementEconomy } from '../economy/settlementEconomy'
+import type { SaveItemInstance } from '../items/Inventory'
+import type { ItemKind } from '../items/items'
 import { EconomicStock } from '../economy/stock'
+import { Inventory } from '../items/Inventory'
 
 /**
  * NPC household resource layer (plan 069). One family/home has one
@@ -100,7 +103,18 @@ function createWaterReserve(initial: number): WaterReserve {
 export type HouseholdSnapshot = {
   stock: Partial<Record<HouseholdResourceKind, number>>
   water: number
+  /** Generic item storage (plan 178) — arbitrary `ItemKind`s a household
+   *  holds (hunted meat/hide, arrows, bandages, …), distinct from `stock`'s
+   *  scalar food/wood economic counters. Optional so older in-session
+   *  snapshots without it still hydrate (a fresh empty `Inventory`). */
+  items?: { counts: Partial<Record<ItemKind, number>>, instances: readonly SaveItemInstance[] }
 }
+
+/** Household starting supply (plan 178 §11) — only ever seeded once, on a
+ *  household's genuinely first construction, for a household containing a
+ *  `hunter` (see `createSettlement.ts`'s `hasHunter` computation). Not a
+ *  general household starting-item mechanism. */
+const HUNTER_STARTING_BANDAGES = 5
 
 export type Household = {
   readonly id: HouseholdId
@@ -111,6 +125,13 @@ export type Household = {
   /** Water reserve backing this household's `WaterBarrel`/`AnimalTrough`
    *  (plan 122) — separate from `stock` since water is not an `EconomicKind`. */
   readonly water: WaterReserve
+  /** Generic item storage (plan 178) — reuses the same `Inventory` class as
+   *  player/NPC carrying, unbounded weight/size (a house, not a backpack).
+   *  Owns arbitrary discrete items (hunted meat/hide, crafted arrows,
+   *  bandages) that `stock`'s scalar `EconomicStock` was deliberately never
+   *  meant to represent (implementation notes §7 — do not add item-instance
+   *  fields to `stock`, this is the generic seam for that instead). */
+  readonly items: Inventory
   has: (kind: EconomicKind, amount: number) => boolean
   /** > 0 when stock is below the resource's minimum (urgent). */
   shortage: (kind: HouseholdResourceKind) => number
@@ -158,17 +179,28 @@ export function createHousehold(
    *  household (first-ever construction) gets the usual jittered starting
    *  reserve instead. */
   initial?: HouseholdSnapshot,
+  /** True when this household contains a `hunter` member (plan 178 §11) —
+   *  only consulted on a genuinely first construction (`!initial`), same as
+   *  the jittered starting stock above; a carried household never re-seeds. */
+  hasHunter = false,
 ): Household {
   const stock = new EconomicStock(initial?.stock ?? initialHouseholdStock(id))
   const water = createWaterReserve(
     initial?.water ?? INITIAL_HOUSEHOLD_STOCK.water + (hashString(`${id}:water`) % INITIAL_HOUSEHOLD_RANDOM_OFFSET.water),
   )
+  const items = new Inventory(
+    initial?.items?.counts,
+    Infinity,
+    initial?.items ? Inventory.instancesFromJSON(initial.items.instances) : undefined,
+  )
+  if (!initial && hasHunter) items.add('bandage', HUNTER_STARTING_BANDAGES)
   return {
     id,
     settlementId,
     homeId,
     stock,
     water,
+    items,
     has: (kind, amount) => stock.has(kind, amount),
     shortage: (kind) => Math.max(0, HOUSEHOLD_POLICY[kind].minimum - stock.query(kind)),
     shouldAcquire: (kind) => stock.query(kind) < HOUSEHOLD_POLICY[kind].target,
@@ -181,7 +213,11 @@ export function createHousehold(
       const overflow = amount - toHousehold
       if (overflow > 0 && economy) economy.add(kind, overflow)
     },
-    snapshot: () => ({ stock: stock.toJSON(), water: water.current }),
+    snapshot: () => ({
+      stock: stock.toJSON(),
+      water: water.current,
+      items: { counts: items.toJSON(), instances: items.instancesToJSON() },
+    }),
   }
 }
 
@@ -192,7 +228,7 @@ export function createHousehold(
  * does not reset (plan 069 §22).
  */
 export type HouseholdRegistry = {
-  getOrCreate: (id: HouseholdId, settlementId: string, homeId: string) => Household
+  getOrCreate: (id: HouseholdId, settlementId: string, homeId: string, hasHunter?: boolean) => Household
   get: (id: HouseholdId) => Household | undefined
   clear: () => void
   /** Stock-only snapshot of every household created so far — see
@@ -203,10 +239,10 @@ export type HouseholdRegistry = {
 export function createHouseholdRegistry(initial?: Record<HouseholdId, HouseholdSnapshot>): HouseholdRegistry {
   const byId = new Map<HouseholdId, Household>()
   return {
-    getOrCreate(id, settlementId, homeId) {
+    getOrCreate(id, settlementId, homeId, hasHunter) {
       const existing = byId.get(id)
       if (existing) return existing
-      const created = createHousehold(id, settlementId, homeId, initial?.[id])
+      const created = createHousehold(id, settlementId, homeId, initial?.[id], hasHunter)
       byId.set(id, created)
       return created
     },

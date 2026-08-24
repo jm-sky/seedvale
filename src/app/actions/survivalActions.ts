@@ -6,6 +6,7 @@ import type { WaterSource } from '../../world/WaterSource'
 import { playActionDig, playActionWell } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../../fauna/AnimalAgent'
+import { harvestAnimalIntoInventory } from '../../fauna/animalHarvest'
 import { meatKindForAnimal } from '../../fauna/animalMeat'
 import {
   DESTROY_SPAWNER_DURATION_SEC,
@@ -87,14 +88,10 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     animal.holdCorpse()
     busy.start(HARVEST_MEAT_DURATION_SEC, 'Wycinanie mięsa…', () => {
       try {
-        if (!animal.canHarvestMeat() || !inventory.canAdd(meatKind, 1)) return
-        animal.harvestMeat()
-        inventory.add(meatKind, 1, dayNight.elapsedDays)
-        let message = `+1 ${ITEM_DEFS[meatKind].label}`
-        if (inventory.canAdd('hide', 1)) {
-          inventory.add('hide', 1)
-          message += ', +1 skóra'
-        }
+        const result = harvestAnimalIntoInventory(animal, inventory, dayNight.elapsedDays)
+        if (!result) return
+        let message = `+1 ${ITEM_DEFS[result.meatKind].label}`
+        if (result.hide) message += ', +1 skóra'
         playInventoryPickUp(worldAudio.playOnce)
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         ctx.onInventoryChanged()

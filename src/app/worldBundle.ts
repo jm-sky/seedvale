@@ -2,6 +2,7 @@ import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
+import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { Settlement } from '../settlement/createSettlement'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
@@ -22,6 +23,7 @@ import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
+import { createHuntingHooks } from '../fauna/huntingHooks'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
 import { createPlacedTents, type PlacedTent, type PlacedTents } from '../items/createPlacedTents'
@@ -201,6 +203,13 @@ function buildSettlementsManager(
    *  (plan 174) — forwarded into every `createSettlement` call → every
    *  `NpcAgent`, the same way `mining` is above. */
   foodSources?: SettlementFoodSourceHooks,
+  /** Hunter target discovery + harvest hooks over the live `Fauna` (plan 178)
+   *  — forwarded into every `createSettlement` call → every `NpcAgent`, the
+   *  same way `mining`/`foodSources` are above. Late-bound by the caller
+   *  (see `buildWorldSystems`): `Fauna` itself is only constructed *after*
+   *  `SettlementsManager`/every `NpcAgent`, so this closes over an accessor
+   *  rather than a direct `Fauna` reference. */
+  hunting?: SettlementHuntingHooks,
   /** Carried across an in-session `rebuildWorldBundle` (plan 197 §8) — not
    *  part of `SaveData`, so `createWorldBundle`'s own call site below never
    *  passes this (a genuinely fresh bundle has nothing to carry). */
@@ -237,6 +246,7 @@ function buildSettlementsManager(
     pointLightBudget,
     getNearbyPlayerWell,
     foodSources,
+    hunting,
     initialHouseholds,
     initialNpcStates,
   )
@@ -431,8 +441,19 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
     getWorldDays(),
   )
   const foodSources = createFoodSourceHooks(chunkManager, playerGardens, getWorldDays)
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, initialHouseholds, initialNpcStates)
+  // Late-bound (plan 178): `Fauna` itself is only constructed *after*
+  // `settlementsManager`/every `NpcAgent` below (it needs the home
+  // settlement's center), so `hunting` closes over a mutable accessor
+  // instead of a direct `Fauna` reference — `faunaForHunting` is assigned
+  // once `buildFauna` resolves. A hunter that acts before that (impossible
+  // in practice; both are awaited in the same synchronous build sequence
+  // before any NPC's `update()` ever runs) would just see "no fauna yet",
+  // the same no-op `mining`/`foodSources` already fall back to when unset.
+  let faunaForHunting: Fauna | null = null
+  const hunting = createHuntingHooks(() => faunaForHunting, getWorldDays)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
+  faunaForHunting = fauna
   await preloadItemGlbModels()
   await preloadHeldToolModels()
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)

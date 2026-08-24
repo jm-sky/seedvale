@@ -107,7 +107,6 @@ Natural vegetation
 | `2026-08-18--152--npc-player-food-drink-help.md`                    | NPC pomoc graczowi jedzeniem/piciem | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ ~~156 |
 | `2026-08-19--167--npc-helper-resource-delivery.md`                  | NPC gathers food for player | 🟡 | M | ~~164~~ |
 | `2026-08-21--180--npc-healing.md`                                   | NPC używa opatrunków | 🟡 | M | ~~177~~ |
-| `2026-08-20--178--hunter-profession-and-household.md`               | Profesja myśliwego + gospodarstwo | 🟡 | L | ~~177~~ ~~162~~ ~~159~~ 175 |
 | `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | `2026-08-19--171--weapon-browser-observatory.md`                    | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
@@ -183,6 +182,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-22--200--arch--persistence-gaps-authoritative-state.md` | [notes](./implementation-notes/2026-08-22--200--arch--persistence-gaps-authoritative-state-implementation-notes.md) |
 | `2026-08-22--201--arch--deferred-architecture-state-cleanup.md` | [notes](./implementation-notes/2026-08-22--201--arch--deferred-architecture-state-cleanup-implementation-notes.md) |
 | `2026-08-20--176--garden-and-field-maintenance.md` | [notes](./implementation-notes/2026-08-20--176--garden-and-field-maintenance-implementation-notes.md) |
+| `2026-08-20--178--hunter-profession-and-household.md` | [notes](./implementation-notes/2026-08-20--178--hunter-profession-and-household-implementation-notes.md) — bow crafting/trade bridge and NPC-triggered cooking/drying deliberately out of scope, see notes §18 |
 | `2026-08-19--168--settlement-lodging-and-sleep.md` | [notes](./implementation-notes/2026-08-19--168--settlement-lodging-and-sleep-implementation-notes.md) |
 | `2026-08-19--169--house-interior-furniture-and-bed-anchors.md` | [notes](./implementation-notes/2026-08-19--169--house-interior-furniture-and-bed-anchors-implementation-notes.md) |
 | `world-terrain-002-terrain-modification-and-land-preparation.md` | [notes](./implementation-notes/world-terrain-002-terrain-modification-and-land-preparation-implementation-notes.md) |

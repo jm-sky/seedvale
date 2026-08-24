@@ -49,6 +49,27 @@ describe('scoreNeedCandidates', () => {
     expect(woodcutterWaterDuty.final).toBeCloseTo(farmerWaterDuty.final)
   })
 
+  it('gives the hunter role an extra bump on an already-active food candidate only (plan 178)', () => {
+    const pressures = generateNeedPressures({ thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0.5 })
+    const farmer = scoreNeedCandidates(pressures, { personality: NEUTRAL, role: 'farmer' })
+    const hunter = scoreNeedCandidates(pressures, { personality: NEUTRAL, role: 'hunter' })
+    const farmerFood = farmer.find((c) => c.target === 'food')!
+    const hunterFood = hunter.find((c) => c.target === 'food')!
+    const farmerWater = farmer.find((c) => c.target === 'water')!
+    const hunterWater = hunter.find((c) => c.target === 'water')!
+    expect(hunterFood.final).toBeGreaterThan(farmerFood.final)
+    expect(hunterWater.final).toBeCloseTo(farmerWater.final)
+  })
+
+  it('never gives a hunter a food bonus when hunger has not crossed its own threshold', () => {
+    const pressures = generateNeedPressures({ thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 })
+    const hunter = scoreNeedCandidates(pressures, { personality: NEUTRAL, role: 'hunter' })
+    const food = hunter.find((c) => c.target === 'food')!
+    expect(food.base).toBe(0)
+    expect(food.final).toBe(0)
+    expect(food.modifiers).toEqual([])
+  })
+
   it('never turns an inactive (below-threshold) candidate into an active one', () => {
     const pressures = generateNeedPressures({ thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 })
     const candidates = scoreNeedCandidates(pressures, {

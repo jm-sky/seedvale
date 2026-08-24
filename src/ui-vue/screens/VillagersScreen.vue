@@ -18,6 +18,7 @@ const ROLE_LABEL: Record<Role, string> = {
   trader: 'Kupiec',
   miner: 'Górnik',
   fisher: 'Rybak',
+  hunter: 'Myśliwy',
 }
 
 const PERSONALITY_LABEL: Record<Personality, string> = {

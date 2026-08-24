@@ -8,6 +8,7 @@ import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { AnimalAgent, VillageInfo } from '../fauna/AnimalAgent'
+import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
@@ -239,6 +240,10 @@ export async function createSettlement(
    *  (plan 174) — forwarded into every `NpcAgent.create` call below the same
    *  way `mining` is above. */
   foodSources?: SettlementFoodSourceHooks,
+  /** Hunter target discovery + harvest hooks over the live `Fauna` (plan 178)
+   *  — forwarded into every `NpcAgent.create` call below the same way
+   *  `mining`/`foodSources` are above. */
+  hunting?: SettlementHuntingHooks,
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
@@ -333,9 +338,10 @@ export async function createSettlement(
   // shares that family's home place and household stock. `households` stays
   // index-aligned with `def.families` — the registry itself lives on
   // `SettlementsManager` so stream-out/stream-in reuses the same stock.
-  const households: Household[] = def.families.map((_family, familyIndex) => {
+  const households: Household[] = def.families.map((family, familyIndex) => {
     const home = homePlaces[familyIndex % homePlaces.length]!
-    return householdRegistry.getOrCreate(householdIdFor(def.id, familyIndex), def.id, home.id)
+    const hasHunter = family.members.some((m) => m.character.role === 'hunter')
+    return householdRegistry.getOrCreate(householdIdFor(def.id, familyIndex), def.id, home.id, hasHunter)
   })
   // Household storage container binding (plan 156) — same
   // `familyIndex % homePlaces.length` indexing as `households` above so a
@@ -554,6 +560,7 @@ export async function createSettlement(
         mining,
         getNearbyPlayerWell,
         foodSources,
+        hunting,
       )
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

@@ -284,23 +284,26 @@ describe('generateFamilies', () => {
     it('adding ages does not change existing name/role/trait rolls for a fixed seed', () => {
       // Pinned against the pre-age-generation output for seed 7/LG (verified
       // by diffing before/after this feature) so the new, isolated age RNG
-      // stream provably doesn't perturb the existing one.
+      // stream provably doesn't perturb the existing one. Re-pinned for plan
+      // 178 (`hunter` joined `RANDOM_ROLES`, shifting every subsequent roll
+      // in this deterministic stream) — the roles below are the new correct
+      // output, not a behavior regression.
       const families = generateFamilies(7, 'LG', false, 'polish')
       const roles = families.flatMap((f) => f.members.map((m) => `${m.name}:${m.character.role}`))
       expect(roles).toEqual([
         'Sławomir:fisher',
-        'Magdalena:guard',
-        'Barbara:fisher',
-        'Paweł:fisher',
-        'Ola:miner',
-        'Jan:fisher',
-        'Sławomir:guard',
+        'Magdalena:miner',
+        'Barbara:hunter',
+        'Paweł:hunter',
+        'Ola:fisher',
+        'Jan:hunter',
+        'Sławomir:miner',
         'Katarzyna:farmer',
         'Tomasz:farmer',
-        'Helena:woodcutter',
-        'Stanisław:woodcutter',
-        'Krystyna:guard',
-        'Barbara:guard',
+        'Helena:farmer',
+        'Stanisław:farmer',
+        'Krystyna:miner',
+        'Barbara:miner',
       ])
     })
   })

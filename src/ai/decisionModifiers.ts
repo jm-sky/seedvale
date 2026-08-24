@@ -44,6 +44,16 @@ const CONSCIENTIOUSNESS_DUTY_WEIGHT = 0.2
  *  `beginIdle` already sends this role to. */
 const WOODCUTTER_DUTY_ROLE_BONUS = 0.12
 
+/** `hunter` (plan 178) — same fixed-bump idiom as `WOODCUTTER_DUTY_ROLE_BONUS`,
+ *  but on `food` rather than a duty target: hunting is this role's main
+ *  livelihood, so once hunger has already crossed `generateNeedPressures`'
+ *  own threshold, a hunter should lean toward it a little harder than a
+ *  farmer/miner in the same hungry state. `NpcAgent.beginNeed`'s `food`
+ *  branch still decides *how* the need is satisfied (household stock →
+ *  hunt attempt → real food source → abstract garden gather) — this only
+ *  ever re-ranks an already-active candidate, never invents one. */
+const HUNTER_FOOD_ROLE_BONUS = 0.1
+
 /** Duty-shaped candidates conscientiousness biases — `water`/`food` stay
  *  untouched: they are personal physiological needs, not a preference over
  *  duties/preparation/persistence (plan ai-002 scope). `idle` is the
@@ -73,6 +83,9 @@ export function scoreNeedCandidates(
       if (pressure.target === 'wood' && input.role === 'woodcutter') {
         modifiers.push({ source: 'role.woodcutter', value: WOODCUTTER_DUTY_ROLE_BONUS })
       }
+    }
+    if (pressure.value > 0 && pressure.target === 'food' && input.role === 'hunter') {
+      modifiers.push({ source: 'role.hunter', value: HUNTER_FOOD_ROLE_BONUS })
     }
     const final = pressure.value + modifiers.reduce((sum, m) => sum + m.value, 0)
     return { target: pressure.target, base: pressure.value, modifiers, final }

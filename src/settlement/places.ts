@@ -62,6 +62,10 @@ export function homeIndexFromPlaceId(settlementId: string, homeId: string): numb
  *   deposit query API exists yet, see `naturalResources.ts`/plan 032).
  * - `fisher` → `landmarks.dock` when the settlement has one (near-coast
  *   only), else falls back to `landmarks.well` like `guard`.
+ * - `hunter` → `landmarks.well`, same as `guard`/`fisher`'s fallback — a
+ *   hunting expedition targets live fauna, not a fixed landmark (plan 178),
+ *   so this only anchors the idle `work` stand/arrow-crafting stand, not
+ *   where hunting itself happens.
  *
  * Returns `null` only when the role's landmark genuinely doesn't exist for
  * this settlement (e.g. a `woodcutter` in a settlement with no trees yet).
@@ -80,6 +84,7 @@ export function workplaceFor(
         ? { id: `${settlementId}:workplace:dock`, type: 'workplace', position: landmarks.dock }
         : { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
     case 'guard':
+    case 'hunter':
       return { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
     case 'miner':
       return { id: `${settlementId}:workplace:stockpile`, type: 'workplace', position: landmarks.stockpile }

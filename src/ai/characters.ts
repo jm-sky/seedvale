@@ -10,7 +10,7 @@ export type NpcGender = 'male' | 'female'
  *  significant iron/gold/fish deposit gets one forced into its role
  *  (`terrain/naturalResources.ts`'s `RESOURCE_ROLE`), but either can also
  *  come up on any regular family via the normal random roll below. */
-export type Role = 'woodcutter' | 'farmer' | 'guard' | 'trader' | 'miner' | 'fisher'
+export type Role = 'woodcutter' | 'farmer' | 'guard' | 'trader' | 'miner' | 'fisher' | 'hunter'
 
 /** Closed pool of lightweight, deterministic modifiers — execution effects
  *  live in `NpcAgent` (wait times, stamina, PAUSE_PARAMS); schedule overlays
@@ -33,7 +33,7 @@ export type CharacterDef = {
 
 /** Random family members never roll `trader` — plan 090 wants exactly one
  *  Kupiec (reserved Kasia in the home settlement), none elsewhere. */
-const RANDOM_ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'miner', 'fisher']
+const RANDOM_ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'miner', 'fisher', 'hunter']
 const TRAITS: readonly Trait[] = ['curious', 'energetic', 'fast_worker', 'night_owl', 'sociable']
 
 type ReservedSeed = Omit<CharacterDef, 'personality'>
