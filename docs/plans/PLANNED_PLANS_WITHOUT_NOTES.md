@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-24 11:41:36  
+> Date: 2026-08-24 12:09:56  
 
 ## PLANS
 
@@ -9,7 +9,7 @@
 - `2026-08-21--190--plans-automation.md`
 - `ai-001-npc-pressure-layer.md`
 - `ai-002-npc-personality-decisions.md`
-- `settlements-npcs-002-cultivation-hydration-and-watering.md`
+- `settlements-npcs-001-cultivation-hydration-and-watering.md`
 - `tools-001-performance-benchmark-determinism-and-reliability.md`
 - `tools-002-trace-analyzer-application-cpu-attribution.md`
 
@@ -136,21 +136,21 @@ Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywisty
 Plik dodaj na branch `main` w repozytorium.
 ```
 
-### `settlements-npcs-002-cultivation-hydration-and-watering.md`
+### `settlements-npcs-001-cultivation-hydration-and-watering.md`
 
 Prompt:
 
 ```
-Zrób review planu `settlements-npcs-002-cultivation-hydration-and-watering.md`
+Zrób review planu `settlements-npcs-001-cultivation-hydration-and-watering.md`
 
 Wczytaj:
 - `docs/STATE.md`
-- `docs/plans/settlements-npcs-002-cultivation-hydration-and-watering.md`
+- `docs/plans/settlements-npcs-001-cultivation-hydration-and-watering.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-002-cultivation-hydration-and-watering-implementation-notes.md`
+`docs/plans/implementation-notes/settlements-npcs-001-cultivation-hydration-and-watering-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

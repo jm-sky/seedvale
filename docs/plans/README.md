@@ -45,7 +45,7 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `001`
-- settlements-npcs: `003`
+- settlements-npcs: `002`
 - tools: `003`
 - ui-input: `003`
 - world: `001`
@@ -64,27 +64,27 @@ Current dependency chains and architectural threads. Not a replacement for `Depe
 
 ```text
 Combat & weapons
-  (155 inventory instances) → (160 HQ melee) → (161 weapon maintenance, verification needed)
-  (150 combat mode) + (155) → (162 bows/ranged, verification needed) → (177 NPC combat melee+ranged, verification needed — no live AI trigger yet) → 179 animal attack & NPC defense [verification needed]
+  (155 inventory instances) → (160 HQ melee) → (161 weapon maintenance)
+  (150 combat mode) + (155) → (162 bows/ranged) → (177 NPC combat melee+ranged — no live AI trigger yet) → 179 animal attack & NPC defense
 
 Household economy & storage
   (106 food/cooking) + (069 household resources) + (122 water distribution) → (156 storage logistics)
       → 152 NPC food/drink help
       → 159 fishing/preservation/bait
-  (122) → 126 seed planting, (127 player-built well, verification needed)
+  (122) → (126 seed planting), (127 player-built well)
 
 World-driven quests
   (049) + 093 + (110) → 132
 
 Rendering performance
-  (157 PointLight budget 16, archived) → 149 shader program first-use hitch [in progress]
+  (157 PointLight budget 16) → 149 shader program first-use hitch
 
 Construction & lodging
   (109) → (111) → 169
   (165) → (168) → 169
 
 Natural vegetation
-  (140 landscape flora) → (172 natural crop lifecycle, verification needed) → (126 seed planting, verification needed)
+  (140 landscape flora) → (172 natural crop lifecycle) → (126 seed planting)
 ```
 
 ---
@@ -94,7 +94,7 @@ Natural vegetation
 | File                                                      | Summary                                                               | Pri | Effort | Depends         |
 | --------------------------------------------------------- | --------------------------------------------------------------------- | --- | ------ | --------------- |
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Etap H: drzewa/kopanie + bandyci                                      | 🔴  | XL     | ~~015~~ ~~018~~ |
-| `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | —               |
+| `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
 | `2026-08-21--181--natural-mountains-and-rivers.md`        | Etap 7: meanders, waterfalls, shader/rendering parity, worker offload | 🔴  | M      | -               |
 
 ---
@@ -119,7 +119,7 @@ Natural vegetation
 | `ui-input-002-ui-ux-interaction-and-action-system-polish.md` 💡 | - | 🟡 | L | - |
 | `tools-001-performance-benchmark-determinism-and-reliability.md` ◼️ | - | 🔴 | M | - |
 | `tools-002-trace-analyzer-application-cpu-attribution.md` ◼️ | - | 🔴 | M | - |
-| `settlements-npcs-002-cultivation-hydration-and-watering.md` ◼️ | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
+| `settlements-npcs-001-cultivation-hydration-and-watering.md` ◼️ | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
 
 ### Fresh new
 
@@ -131,8 +131,8 @@ Natural vegetation
 
 | File                                         | Summary                       | Pri | Effort | Depends                                      |
 | -------------------------------------------- | ----------------------------- | --- | ------ | -------------------------------------------- |
-| `2026-08-11--070--world-observatory.md`      | Panel obserwacji życia świata | ⚪   | XL     | 071 (archived, verification needed), ~~069~~ |
-| `2026-08-08--037--npc-genealogy-lineages.md` | Rody NPC                      | ⚪   | L      | ~~022~~ ~~031~~                              |
+| `2026-08-11--070--world-observatory.md`      | Panel obserwacji życia świata | ⚪  | XL     | 071 (archived, verification needed), ~~069~~ |
+| `2026-08-08--037--npc-genealogy-lineages.md` | Rody NPC                      | ⚪  | L      | ~~022~~ ~~031~~                              |
 
 ### Issues without plans
 
@@ -148,9 +148,9 @@ Implementation is complete; only browser/manual verification remains unless note
 
 | File        | Notes              |
 | ----------- | ------------------ |
-| `world-terrain-001-clouds.md` ◼️ | browser verification |
-| `2026-08-20--179--animal-attack-and-npc-defense.md` | [notes](./2026-08-20--179--animal-attack-and-npc-defense-implementation-notes.md) |
-| `2026-08-21--184--item-capability-abstraction.md` | [notes](./2026-08-21--184--item-capability-abstraction-implementation-notes.md) |
+| `world-terrain-001-clouds.md` | browser verification |
+| `2026-08-20--179--animal-attack-and-npc-defense.md` | [notes](./implementation-notes/2026-08-20--179--animal-attack-and-npc-defense-implementation-notes.md) |
+| `2026-08-21--184--item-capability-abstraction.md` | [notes](./implementation-notes/2026-08-21--184--item-capability-abstraction-implementation-notes.md) |
 | `2026-08-14--111--house-construction.md` | known assembly bug |
 | `2026-08-16--129--coins-and-land-sales.md` | - |
 | `2026-08-16--132--landmark-quests.md` | - |
@@ -163,26 +163,26 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-19--164--player-storage-and-container-system.md` | - |
 | `2026-08-21--183--slope-movement-constraint.md` | - |
 | `2026-08-20--177--npc-combat.md` | - |
-| `2026-08-21--189--river-channel-carving.md` | [notes](./2026-08-21--189--river-channel-carving-implementation-notes.md) |
-| `2026-08-21--185--npc-role-based-carried-weapons.md` | [notes](./2026-08-21--185--npc-role-based-carried-weapons-implementation-notes.md) |
-| `2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul.md` | [notes](./2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul-implementation-notes.md) |
-| `2026-08-21--186--combat-and-player-interactions.md` | [notes](./2026-08-21--186--combat-and-player-interactions-implementation-notes.md) |
-| `2026-08-21--187--building-resources.md` | [notes](./2026-08-21--187--building-resources-implementation-notes.md) |
+| `2026-08-21--189--river-channel-carving.md` | [notes](./implementation-notes/2026-08-21--189--river-channel-carving-implementation-notes.md) |
+| `2026-08-21--185--npc-role-based-carried-weapons.md` | [notes](./implementation-notes/2026-08-21--185--npc-role-based-carried-weapons-implementation-notes.md) |
+| `2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul.md` | [notes](./implementation-notes/2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul-implementation-notes.md) |
+| `2026-08-21--186--combat-and-player-interactions.md` | [notes](./implementation-notes/2026-08-21--186--combat-and-player-interactions-implementation-notes.md) |
+| `2026-08-21--187--building-resources.md` | [notes](./implementation-notes/2026-08-21--187--building-resources-implementation-notes.md) |
 | `2026-08-21--188--fauna-and-dead-animal-lifecycle.md` | - |
-| `2026-08-20--175--cooking-vessels-grates-and-iron-rods.md` | [notes](./2026-08-20--175--cooking-vessels-grates-and-iron-rods-implementation-notes.md) |
-| `2026-08-20--174--player-garden-and-npc-need-sources.md` | [notes](./2026-08-20--174--player-garden-and-npc-need-sources-implementation-notes.md) |
-| `2026-08-22--192--arch--time-and-simulation-consistency.md` | [notes](./2026-08-22--192--arch--time-and-simulation-consistency-implementation-notes.md) |
-| `2026-08-20--173--terrain-aware-procedural-placement.md` | [notes](./2026-08-20--173--terrain-aware-procedural-placement-implementation-notes.md) |
-| `2026-08-22--194--arch--entity-identity-lifecycle.md` | [notes](./2026-08-22--194--arch--entity-identity-lifecycle-implementation-notes.md) |
-| `2026-08-22--195--arch--data-state-consistency.md` | [notes](./2026-08-22--195--arch--data-state-consistency-implementation-notes.md) |
-| `2026-08-22--196--arch--time-skip-simulation-semantics.md` | [notes](./2026-08-22--196--arch--time-skip-simulation-semantics-implementation-notes.md) |
-| `2026-08-22--197--arch--npc-runtime-state-lifecycle-continuity.md` | [notes](./2026-08-22--197--arch--npc-runtime-state-lifecycle-continuity-implementation-notes.md) |
-| `2026-08-22--198--arch--world-resource-state-continuity.md` | [notes](./2026-08-22--198--arch--world-resource-state-continuity-implementation-notes.md) |
-| `2026-08-22--199--arch--entity-identity-transfer-continuity.md` | [notes](./2026-08-22--199--arch--entity-identity-transfer-continuity.md) |
-| `2026-08-22--200--arch--persistence-gaps-authoritative-state.md` | [notes](./2026-08-22--200--arch--persistence-gaps-authoritative-state-implementation-notes.md) |
-| `2026-08-22--201--arch--deferred-architecture-state-cleanup.md` | [notes](./2026-08-22--201--arch--deferred-architecture-state-cleanup-implementation-notes.md) |
-| `2026-08-20--176--garden-and-field-maintenance.md` | [notes](./2026-08-20--176--garden-and-field-maintenance-implementation-notes.md) |
-| `2026-08-19--168--settlement-lodging-and-sleep.md` | [notes](./2026-08-19--168--settlement-lodging-and-sleep-implementation-notes.md) |
+| `2026-08-20--175--cooking-vessels-grates-and-iron-rods.md` | [notes](./implementation-notes/2026-08-20--175--cooking-vessels-grates-and-iron-rods-implementation-notes.md) |
+| `2026-08-20--174--player-garden-and-npc-need-sources.md` | [notes](./implementation-notes/2026-08-20--174--player-garden-and-npc-need-sources-implementation-notes.md) |
+| `2026-08-22--192--arch--time-and-simulation-consistency.md` | [notes](./implementation-notes/2026-08-22--192--arch--time-and-simulation-consistency-implementation-notes.md) |
+| `2026-08-20--173--terrain-aware-procedural-placement.md` | [notes](./implementation-notes/2026-08-20--173--terrain-aware-procedural-placement-implementation-notes.md) |
+| `2026-08-22--194--arch--entity-identity-lifecycle.md` | [notes](./implementation-notes/2026-08-22--194--arch--entity-identity-lifecycle-implementation-notes.md) |
+| `2026-08-22--195--arch--data-state-consistency.md` | [notes](./implementation-notes/2026-08-22--195--arch--data-state-consistency-implementation-notes.md) |
+| `2026-08-22--196--arch--time-skip-simulation-semantics.md` | [notes](./implementation-notes/2026-08-22--196--arch--time-skip-simulation-semantics-implementation-notes.md) |
+| `2026-08-22--197--arch--npc-runtime-state-lifecycle-continuity.md` | [notes](./implementation-notes/2026-08-22--197--arch--npc-runtime-state-lifecycle-continuity-implementation-notes.md) |
+| `2026-08-22--198--arch--world-resource-state-continuity.md` | [notes](./implementation-notes/2026-08-22--198--arch--world-resource-state-continuity-implementation-notes.md) |
+| `2026-08-22--199--arch--entity-identity-transfer-continuity.md` | [notes](./implementation-notes/2026-08-22--199--arch--entity-identity-transfer-continuity.md) |
+| `2026-08-22--200--arch--persistence-gaps-authoritative-state.md` | [notes](./implementation-notes/2026-08-22--200--arch--persistence-gaps-authoritative-state-implementation-notes.md) |
+| `2026-08-22--201--arch--deferred-architecture-state-cleanup.md` | [notes](./implementation-notes/2026-08-22--201--arch--deferred-architecture-state-cleanup-implementation-notes.md) |
+| `2026-08-20--176--garden-and-field-maintenance.md` | [notes](./implementation-notes/2026-08-20--176--garden-and-field-maintenance-implementation-notes.md) |
+| `2026-08-19--168--settlement-lodging-and-sleep.md` | [notes](./implementation-notes/2026-08-19--168--settlement-lodging-and-sleep-implementation-notes.md) |
 
 ---
 

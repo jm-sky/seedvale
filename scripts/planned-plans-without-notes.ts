@@ -145,7 +145,7 @@ const main = async () => {
 
   console.log(output.join('\n'))
 
-  await updateFile(OUTPUT_PATH, output)
+  await updateFile(OUTPUT_PATH)
 }
 
 main()

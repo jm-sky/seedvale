@@ -23,6 +23,7 @@ const PLANNED_HEADING = '## Planned'
 const TABLE_HEADER = '| File | Summary | Pri | Effort | Depends |'
 const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
 const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
+const TODO_HEADING = '## TODO'
 
 const PRIORITY_EMOJI: Record<string, string> = {
   high: '🔴',
@@ -111,6 +112,7 @@ const matchOne = (
 
 const buildRow = (file: string, content: string, hasNotes: boolean): string => {
   const headerBlock = extractHeaderBlock(content)
+  const isPlanned = content.includes(PLANNED_STATUS_MARKER)
 
   const priorityWord = matchOne(
     headerBlock,
@@ -140,8 +142,8 @@ const buildRow = (file: string, content: string, hasNotes: boolean): string => {
   ).trim()
 
   const depends = dependsRaw.toLowerCase() === 'none' ? '-' : dependsRaw
-
-  const title = `\`${file}\` ${hasNotes ? '💡' : '◼️'}`
+  const marker = !isPlanned ? '' : (hasNotes ? ' 💡' : ' ◼️')
+  const title = `\`${file}\`${marker}`
 
   return `| ${title.padEnd(40)} | - | ${priorityEmoji} | ${effort} | ${depends} |`
 }
@@ -314,11 +316,13 @@ const syncImplementationNotesMarkers = (
   implementationNotesFiles: string[],
 ): string[] => {
   const planFiles = new Set(plans.map(plan => plan.file))
+  const startIdx = lines.findIndex(line => line.trim() === PLANNED_HEADING)
+  const endIdx = lines.findIndex(line => line.trim() === TODO_HEADING)
 
-  return lines.map(line => {
-    const match = line.match(
-      /^\|\s*`([^`]+\.md)`\s*(💡|◼️)?\s*\|/,
-    )
+  return lines.map((line, idx) => {
+    if (idx < startIdx || idx > endIdx) return line
+
+    const match = line.match(/^\|\s*`([^`]+\.md)`\s*(💡|◼️)?\s*\|/)
 
     if (!match) return line
 
@@ -433,13 +437,13 @@ const getSourceFiles = async () => {
   const allFiles: string[] = await readdir(PLANS_PATH)
 
   const implementationNotesFiles: string[] = (await readdir(NOTES_PATH))
-    .filter(file => file.endsWith(NOTES_SUFFIX))
+    .filter((file: string) => file.endsWith(NOTES_SUFFIX))
 
   const plans = allFiles
-    .map(parsePlanFile)
+    .map((file: string) => parsePlanFile(file))
     .filter((plan: PlanInfo | null): plan is PlanInfo => plan !== null)
 
-  const legacyPlans = allFiles.filter(isLegacyPlanFile)
+  const legacyPlans = allFiles.filter((file: string) => isLegacyPlanFile(file))
 
   return {
     allFiles,
