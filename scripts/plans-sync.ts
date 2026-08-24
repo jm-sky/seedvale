@@ -16,6 +16,7 @@ const UPDATED_REVIEW_SUFFIX = '--updated-review.md'
 const REVIEW_SUFFIX = '-review.md'
 
 const PLANNED_STATUS_MARKER = '**Status:** `planned` 📋'
+const PLANNED_STATUS_RE = /^\*\*Status:\*\*\s*`([^`]+)`/m
 const PLANNED_HEADING = '## Planned'
 const TABLE_HEADER = '| File | Summary | Pri | Effort | Depends |'
 const NEXT_PLAN_ID_SUBHEADING = 'Next IDs are tracked separately for each canonical domain. Until the first new plan is created in a domain, its next ID is `001`.'
@@ -149,7 +150,7 @@ const extractSummary = (content: string, file: string): string => {
   return oneLine ? truncate(oneLine, 400) : fallback
 }
 
-const buildRow = (file: string, content: string): string => {
+const buildRow = (file: string, content: string, hasNotes: boolean): string => {
   const headerBlock = extractHeaderBlock(content)
 
   const priorityWord = matchOne(
@@ -182,7 +183,7 @@ const buildRow = (file: string, content: string): string => {
   const depends =
     dependsRaw.toLowerCase() === 'none' ? '-' : dependsRaw
 
-  return `| \`${file}\` | - | ${priorityEmoji} | ${effort} | ${depends} |`
+  return `| \`${file}\` ${hasNotes ? '💡' : '◼️'} | - | ${priorityEmoji} | ${effort} | ${depends} |`
 }
 
 const validatePlan = async (plan: PlanInfo): Promise<void> => {
@@ -330,14 +331,15 @@ const getExistingFiles = (lines: string[], lastRowIdx: number, separatorIdx: num
   return existingFiles
 }
 
-const handleMissingPlans = async (missing: string[], lines: string[], lastRowIdx: number): Promise<string[]> => {
+const handleMissingPlans = async (missing: string[], implementationNotesFiles: string[], lines: string[], lastRowIdx: number): Promise<string[]> => {
   if (missing.length > 0) {
     const newRows: string[] = []
 
     for (const file of missing) {
       const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
+      const hasNotes = implementationNotesFiles.some(notesFile => notesFile.startsWith(file.replace(NOTES_SUFFIX, '')))
 
-      newRows.push(buildRow(file, content))
+      newRows.push(buildRow(file, content, hasNotes))
     }
 
     lines.splice(lastRowIdx + 1, 0, ...newRows)
@@ -346,7 +348,39 @@ const handleMissingPlans = async (missing: string[], lines: string[], lastRowIdx
   return lines
 }
 
-const PLANNED_STATUS_RE = /^\*\*Status:\*\*\s*`([^`]+)`/m
+const syncImplementationNotesMarkers = (
+  lines: string[],
+  plans: PlanInfo[],
+  implementationNotesFiles: string[],
+): string[] => {
+  const planFiles = new Set(plans.map(plan => plan.file))
+
+  return lines.map(line => {
+    const match = line.match(
+      /^\|\s*`([^`]+\.md)`\s*(💡|◼️)?\s*\|/,
+    )
+
+    if (!match) return line
+
+    const file = match[1]
+
+    if (!planFiles.has(file)) return line
+
+    const baseName = file.slice(0, -'.md'.length)
+
+    const hasNotes = implementationNotesFiles.some(
+      notesFile =>
+        notesFile === `${baseName}${NOTES_SUFFIX}`,
+    )
+
+    const marker = hasNotes ? '💡' : '◼️'
+
+    return line.replace(
+      /^\|\s*`([^`]+\.md)`\s*(💡|◼️)?\s*\|/,
+      `| \`${file}\` ${marker} |`,
+    )
+  })
+}
 
 const removeCompletedPlansFromPlannedSection = async (
   lines: string[],
@@ -366,17 +400,13 @@ const removeCompletedPlansFromPlannedSection = async (
     try {
       content = await readFile(planPath, 'utf8')
     } catch {
-      throw new Error(
-        `Planned README entry points to missing file: ${file}`,
-      )
+      throw new Error(`Planned README entry points to missing file: ${file}`)
     }
 
     const statusMatch = content.match(PLANNED_STATUS_RE)
 
     if (!statusMatch) {
-      throw new Error(
-        `Cannot find "**Status:**" in planned plan ${file}`,
-      )
+      throw new Error(`Cannot find "**Status:**" in planned plan ${file}`)
     }
 
     const status = statusMatch[1]
@@ -444,14 +474,31 @@ const updateNextPlanIds = (
   return lines
 }
 
-const main = async () => {
-  const allFiles = await readdir(PLANS_PATH)
+const getSourceFiles = async () => {
+  const allFiles: string[] = await readdir(PLANS_PATH)
+
+  const implementationNotesFiles: string[] = allFiles.filter(file => file.endsWith(NOTES_SUFFIX))
 
   const plans = allFiles
     .map(parsePlanFile)
     .filter((plan: PlanInfo | null): plan is PlanInfo => plan !== null)
 
   const legacyPlans = allFiles.filter(isLegacyPlanFile)
+
+  return {
+    allFiles,
+    implementationNotesFiles,
+    plans,
+    legacyPlans,
+  }
+}
+
+const main = async () => {
+  const {
+    implementationNotesFiles,
+    plans,
+    legacyPlans,
+  } = await getSourceFiles()
 
   if (legacyPlans.length > 0) {
     console.log(`Ignoring ${legacyPlans.length} legacy plan file(s).`)
@@ -470,9 +517,10 @@ const main = async () => {
 
   const missing = plannedFiles.filter(file => !existingFiles.has(file))
 
-  lines = await handleMissingPlans(missing, lines, lastRowIdx)
+  lines = await handleMissingPlans(missing, implementationNotesFiles, lines, lastRowIdx)
   lines = await removeCompletedPlansFromPlannedSection(lines)
   lines = await updateNextPlanIds(lines, plans)
+  lines = syncImplementationNotesMarkers(lines, plans, implementationNotesFiles)
 
   const nextContent = lines.join('\n')
 
