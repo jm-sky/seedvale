@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-24 09:20:39  
+> Date: 2026-08-24 09:50:06  
 
 ## PLANS
 
@@ -13,6 +13,7 @@
 - `ai-002-npc-personality-decisions.md`
 - `npc-001-npc-physical-stats-sex-and-age.md`
 - `world-terrain-002-performance-benchmark-determinism-and-reliability.md`
+- `world-terrain-003-terrain-modification-and-land-preparation.md`
 
 --------------------------------
 ## PROMPTS
@@ -235,6 +236,35 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `world-terrain-002-performance-benchmark-determinism-and-reliability-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `world-terrain-003-terrain-modification-and-land-preparation.md`
+
+Prompt:
+
+```
+Zrób review planu `world-terrain-003-terrain-modification-and-land-preparation.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/world-terrain-003-terrain-modification-and-land-preparation.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`world-terrain-003-terrain-modification-and-land-preparation-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

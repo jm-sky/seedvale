@@ -82,7 +82,7 @@ Next IDs are tracked separately for each canonical domain. Until the first new p
 - settlements-npcs: `001`
 - ui-input: `001`
 - world: `001`
-- world-terrain: `003`
+- world-terrain: `004`
 
 This ids section is maintained automatically from the plan files.
 
@@ -155,6 +155,7 @@ Natural vegetation
 | `ai-002-npc-personality-decisions.md` | - | 🔴 | M | ~~ai-001~~ |
 | `npc-001-npc-physical-stats-sex-and-age.md` | - | 🟡 | M | - |
 | `world-terrain-002-performance-benchmark-determinism-and-reliability.md` | - | 🔴 | M | - |
+| `world-terrain-003-terrain-modification-and-land-preparation.md` | - | 🟡 | L | - |
 
 ### Fresh new
 
