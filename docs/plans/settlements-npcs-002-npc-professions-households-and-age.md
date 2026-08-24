@@ -5,119 +5,44 @@
 **Priority:** high · **Effort:** L
 **Depends on:** 178 ~~069~~ ~~184~~ ~~185~~
 **Domain:** `settlements-npcs`
-**Tags:** [economy, items-player, npc, households]
 
 ## 1. Cel
 
 Wprowadzić spójny model profesji NPC, ich związku z gospodarstwem domowym, wieku oraz generowania obsady profesji w osadach.
 
-Zakładamy, że **plan 178 — Hunter Profession & Household zostanie wcześniej zrealizowany** i jego implementacja jest punktem odniesienia. Nie projektować drugiego modelu Hunter/Household.
+Zakładamy, że **plan 178 — Hunter Profession & Household zostanie wcześniej zrealizowany** i jest punktem odniesienia. Nie tworzyć drugiego modelu Hunter/Household.
 
-Recon potwierdził, że obecny kod już ma większość fundamentów: `Role`, per-role `Schedule`, `NpcAgent` z `PlannedAction`/FSM, `Household`, settlement economy, inventory oraz item capabilities. Implementacja ma je rozszerzyć, a nie tworzyć równoległy system.
+Recon potwierdził istniejące fundamenty: `Role`, per-role `Schedule`, `NpcAgent` z `PlannedAction`/FSM, `Household`, settlement economy, inventory, item capabilities oraz weapon maintenance. Implementacja ma je rozszerzyć, a nie tworzyć równoległe systemy.
 
-## 2. Najważniejsze ustalenia z codebase reconnaissance
+## 2. Codebase reconnaissance
 
-### NPC role model
+### Role
 
-`src/ai/characters.ts` definiuje obecnie:
-
-```text
-woodcutter
-farmer
-guard
-trader
-miner
-fisher
-```
-
-`CharacterDef.role` jest już częścią danych NPC. `trader` jest obecnie rolą zarezerwowaną dla domowego Kupca (`Kasia`), a losowe rodziny wybierają spośród `woodcutter`, `farmer`, `guard`, `miner`, `fisher`.
-
-Nie tworzyć drugiego typu `Profession` niezależnego od `Role`. Najpierw rozszerzyć istniejący `Role` o brakujące profesje, w tym `hunter` zgodnie z założeniem, że plan 178 jest wykonany.
+`src/ai/characters.ts` posiada obecnie role `woodcutter`, `farmer`, `guard`, `trader`, `miner`, `fisher`. `CharacterDef.role` jest istniejącą daną NPC. Nie tworzyć osobnego typu `Profession`; rozszerzyć istniejący model `Role`.
 
 ### Schedule
 
-`src/ai/schedule.ts` już posiada per-role `SCHEDULE_TEMPLATES` oraz:
+`src/ai/schedule.ts` posiada `SCHEDULE_TEMPLATES`, `activityAt()`, `nextBoundary()` i `effectiveScheduleFor()` oraz trait overlays. Guard ma już nocną zmianę. Nie tworzyć nowego schedulera. Profesje mają być realizowane przez istniejący `work` intent/action flow.
 
-- `activityAt()`;
-- `nextBoundary()`;
-- `effectiveScheduleFor()`;
-- trait overlays `fast_worker`, `night_owl`, `sociable`.
+`social` istnieje w schedule, ale Social Place assignment pozostaje osobnym zakresem planu 151.
 
-Obecne role mają już harmonogramy. `guard` ma już nocną zmianę:
+### Actions
 
-```text
-17 wake
-18 work
-00 eat
-01 work
-06 home
-08 sleep
-```
+`NpcAgent` korzysta z `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `InteractionQueue` i wspólnego `goTo → execute`. Istnieją m.in. `chop`, `deposit`, `mine`, `work`. Nie tworzyć osobnego profession FSM.
 
-To jest zgodne z docelowym nocnym patrolem Guarda. Nie tworzyć nowego schedulera. Trzeba rozszerzyć istniejący `work` intent o właściwe akcje profesji oraz dopracować dzienny odpoczynek Guarda.
+### Resources / economy
 
-`social` jest już częścią typu schedule, ale w aktualnym runtime brak Social Place assignment; `social` może fallbackować do `home`. Plan 151 pozostaje osobnym zakresem.
+Istnieją ścieżki `commitRoleWork()`, `commitWoodcutterDeposit()`, `WOODCUTTING_PRODUCTION`, mining hooks, settlement economy, food-source hooks i forest hooks. Wykorzystać je zamiast tworzyć równoległą produkcję.
 
-### Actions / simulation
-
-`NpcAgent` używa wspólnego `PlannedAction`, `ActionLifecycle`, `DecisionContext`, `InteractionQueue` i własnego adaptera NPC.
-
-Aktualne `ActionId` obejmują m.in.:
-
-```text
-chop
-deposit
-drink
-eat
-mine
-work
-```
-
-`NpcAgent` ma już genericzny przepływ `goTo → execute`, a `work` jest istniejącym punktem integracji z profesją. Nie tworzyć osobnego profession-action FSM.
-
-### Existing work/economy paths
-
-Kod `NpcAgent` już importuje m.in.:
-
-- `commitRoleWork()`;
-- `commitWoodcutterDeposit()`;
-- `WOODCUTTING_PRODUCTION`;
-- `SettlementEconomy`;
-- mining hooks;
-- settlement food-source hooks;
-- forest hooks.
-
-To oznacza, że Woodcutter i Miner nie powinny dostać nowych równoległych systemów produkcji. Nowe profesje powinny zostać podłączone do istniejącego `work`/economy path.
-
-### Household / economy
-
-`Household` (`src/settlement/household.ts`) jest warstwą pomiędzy NPC carrying a `SettlementEconomy`. `SettlementEconomy` jest trwałym stockiem osady; Household jest obecnie utrzymywany podczas in-session `WorldBundle` rebuild, ale nie jest jeszcze zapisany w SaveData.
-
-Plan 069 jest istniejącym fundamentem zasobów gospodarstw. Nie tworzyć nowego magazynu profesji.
+`Household` jest warstwą pomiędzy NPC carrying a `SettlementEconomy`. Nie tworzyć osobnych profession storages.
 
 ### Inventory / items
 
-`Inventory` jest współdzielonym mechanizmem dla player/NPC. `NpcAgent.carried` jest obecnie małym inventory do krótkiego przenoszenia zasobów, z limitem około 5 kg. Nie tworzyć drugiego inventory ani osobnego equipment managera.
+`Inventory` jest wspólnym mechanizmem player/NPC. `NpcAgent.carried` służy do krótkiego przenoszenia.
 
-`src/items/itemCatalog.ts` jest źródłem prawdy dla gameplay metadata. `ItemCapability` obejmuje obecnie:
+`src/items/itemCatalog.ts` jest źródłem prawdy dla item metadata. Istnieją capability m.in. `wood_chopping`, `meat_harvesting`, `branch_trimming`, `soil_digging`, `rock_mining`, `fire_starting`, `fishing`; `melee`, `ranged`, `defense` są osobnymi konfiguracjami.
 
-```text
-wood_chopping
-meat_harvesting
-branch_trimming
-soil_digging
-rock_mining
-fire_starting
-fishing
-```
-
-`melee`, `ranged`, `defense` pozostają osobnymi konfiguracjami itemów, a nie stringami `ItemCapability`.
-
-`src/items/HeldTool.ts` i `heldToolVisual.ts` obsługują held-item model. Nie tworzyć osobnego systemu narzędzi profesji.
-
-### Existing profession tools
-
-`docs/items/CATALOG.md` potwierdza obecne narzędzia:
+Istnieją m.in.:
 
 ```text
 shovel       → soil_digging
@@ -128,15 +53,46 @@ pitchfork    → melee
 sickle       → melee
 ```
 
-`pitchfork` i `sickle` już istnieją jako holdable village tools. `sickle` jest naturalnym istniejącym narzędziem rolniczym, ale wymaganie tego planu pozostaje: **dodać osobną kosę (`scythe`) jako tool + weapon**, jeżeli codebase nie ma jej jeszcze pod inną nazwą.
+Nie dodawać ponownie istniejących narzędzi.
 
-Weapon maintenance obejmuje już `axe`, `pitchfork`, `sickle` i miecze; `shovel`/`pickaxe` są wyłączone z maintenance. Dla nowej kosy trzeba świadomie zdecydować, czy dołącza do istniejącego `WEAPON_MAINTENANCE_KINDS` — nie zakładać tego automatycznie.
+### Weapon maintenance
+
+Weapon maintenance jest **już zaimplementowane** w `src/items/weaponMaintenance.ts`.
+
+Istnieją:
+- per-instance `sharpness` i `durability`,
+- zużywanie po trafieniu,
+- `getSharpnessDamageModifier()`,
+- `sharpenWeapon()`,
+- sharpening przez `whetstone`,
+- atomowe zużycie whetstone,
+- migracja starszych stackowanych broni.
+
+Nie tworzyć nowego systemu maintenance/durability/sharpness.
+
+### Workplace / props
+
+Recon nie wykazał gotowego generycznego `WorkplaceSystem` ani interaktywnego `sharpening station / grindstone`.
+
+Dlatego Blacksmith dostaje **konkretne stanowisko — kamień szlifierski / grindstone — przy swoim domu**, bez tworzenia przedwcześnie ogólnego frameworka workplace.
+
+Docelowo:
+
+```text
+Blacksmith household
+        ↓
+house + assigned grindstone
+        ↓
+NPC idzie do stanowiska
+        ↓
+sharpenWeapon(..., 'whetstone')
+```
+
+Jeśli kolejne profesje będą potrzebowały podobnych stanowisk, dopiero wtedy rozważyć wspólną abstrakcję.
 
 ## 3. Profesje v1
 
 ### Farmer
-
-Główna działalność gospodarstwa:
 
 - uprawa pól i ogrodów,
 - sadzenie,
@@ -145,30 +101,28 @@ Główna działalność gospodarstwa:
 - zbieranie plonów,
 - opieka nad zwierzętami gospodarstwa.
 
-Farmer i jego żona wspólnie zajmują się rolnictwem i zwierzętami. `Herder` nie jest osobną profesją.
-
-W implementacji należy wykorzystać istniejące `CropLifecycle`, planting/garden/maintenance oraz household/resource mechanisms. Nie zakładać nowych czynności rolniczych, których codebase jeszcze nie posiada.
+Farmer i jego żona wspólnie zajmują się uprawą i zwierzętami. `Herder` nie jest osobną profesją. Wykorzystać istniejące crop/garden/animal mechanisms; nie wymyślać nowych czynności.
 
 ### Woodcutter
 
 - ścinanie drzew,
 - pozyskiwanie drewna.
 
-Wykorzystać istniejące `TreeLifecycle` / `treeHarvest` oraz `commitWoodcutterDeposit()` / `WOODCUTTING_PRODUCTION`.
+Wykorzystać istniejące tree lifecycle/harvest oraz production/deposit hooks.
 
 ### Fisher
 
 - łowienie ryb.
 
-Istnieje już `world/fishing.ts`, `fishing_rod` i capability `fishing`. Fishing nie ma osobnych agentów ryb; jest to istniejący world interaction. Profesja ma więc uruchamiać istniejącą aktywność, nie tworzyć nowy fishing system.
+Wykorzystać istniejący `world/fishing.ts`, `fishing_rod` i capability `fishing`. Nie tworzyć nowego fishing system.
 
 ### Trader
 
 - prowadzenie handlu w osadzie,
-- przebywanie głównie przy istniejącym miejscu handlu / centrum osady,
+- głównie przebywanie przy miejscu handlu / centrum osady,
 - pomoc innym NPC, gdy nie ma klientów.
 
-Obecny `trader` jest specjalnym/reserved NPC. Istnieje `tradeCatalog.ts` i Merchant/Home-Trader screen. Nie tworzyć nowej ekonomii handlu.
+Wykorzystać istniejący merchant/trade flow i `tradeCatalog`. Nie tworzyć nowej ekonomii handlu.
 
 ### Guard
 
@@ -180,14 +134,13 @@ Obecny `trader` jest specjalnym/reserved NPC. Istnieje `tradeCatalog.ts` i Merch
 - zapalanie pochodni,
 - nocny patrol z pochodnią.
 
-Obecny schedule Guarda już jest nocną zmianą. Plan powinien wykorzystać go zamiast tworzyć specjalny scheduler.
+Wykorzystać istniejący nocny schedule Guarda. `HelpCall` jest poza zakresem.
 
 Docelowy rytm:
 
 ```text
 dzień
-→ sleep/rest/home/private life
-→ ewentualna pomoc
+→ odpoczynek / życie prywatne / pomoc
 
 wieczór
 → przygotowanie oświetlenia
@@ -196,19 +149,13 @@ noc
 → patrol + pochodnia + obrona
 ```
 
-Mechanizm lokalnego `HelpCall` zostaje poza zakresem tego planu.
-
 ### Miner
-
-Na obecnym etapie:
 
 - kopanie / wydobywanie surowców ze złóż.
 
-Istnieją już `SettlementMiningHooks`, `depositMining` i `mine` action. Nie rozszerzać teraz o kopanie studni/równanie terenu — to przyszły zakres istniejących mechanizmów terrain modification.
+Wykorzystać istniejące `mine` action i mining hooks. Kopanie studni oraz równanie terenu pozostają przyszłym zakresem.
 
 ### Blacksmith
-
-Docelowo:
 
 - ostrzenie mieczy / broni,
 - wytwarzanie metalowych przedmiotów,
@@ -216,12 +163,21 @@ Docelowo:
 - skup rud i węgla,
 - zapotrzebowanie gospodarstwa na drewno i wodę.
 
-Recon wykazał, że **pełny system produkcji Blacksmitha nie jest obecnie gotowy**. Nie wolno więc udawać, że istnieje. Ten plan ma przede wszystkim przygotować profesję/household i podłączyć ją do istniejącego inventory/economy/item framework; konkretna produkcja metalowych przedmiotów może wymagać osobnego planu, jeśli brakuje forge/recipe/production primitives.
+#### Ostrzenie
+
+Weapon maintenance jest gotowe. Blacksmith ma korzystać z istniejącego `sharpenWeapon()` oraz `whetstone`.
+
+Przy domu Blacksmitha powinien znajdować się **kamień szlifierski / grindstone**. Ostrzenie jest akcją wykonywaną przy tym stanowisku.
+
+Nie tworzyć nowego sharpening/maintenance system.
+
+#### Produkcja
+
+Recon nie potwierdził kompletnego forge/recipe/metal-production systemu. Nie udawać, że istnieje. Jeżeli obecne primitives nie wystarczą do produkcji metalowych przedmiotów, wydzielić ją do osobnego planu.
 
 ### Healer / Herbalist
 
 Osobny przyszły plan:
-
 - zioła,
 - jagody,
 - grzyby,
@@ -233,9 +189,7 @@ Nie implementować tutaj nowych mechanizmów zbierania i leczenia.
 
 ### Hunter
 
-Zakres zgodnie z planem `2026-08-20--178--hunter-profession-and-household.md`.
-
-Zakładamy jego realizację przed tym planem. Hunter ma korzystać z istniejących NPC Combat, fauna, inventory, household, storage, cooking i economy. Nie tworzyć drugiego modelu Hunter/Household.
+Zakres zgodnie z `2026-08-20--178--hunter-profession-and-household.md`. Zakładamy realizację 178 przed tym planem. Nie tworzyć drugiego modelu Hunter/Household.
 
 ## 4. Profesja jako główny wkład NPC
 
@@ -249,25 +203,18 @@ state + needs + pressures + age + traits + personality
         ↓
      strategy
         ↓
-      PlannedAction
+   PlannedAction
         ↓
  world / household / economy changes
 ```
 
 Wykorzystać istniejący `NpcAgent` decision/work/action flow. Nie tworzyć `ProfessionAI`, `ProfessionScheduler` ani równoległego FSM.
 
-NPC może poza pracą:
-
-- odpoczywać,
-- spacerować,
-- spotykać innych,
-- korzystać z Social Places, gdy plan 151 będzie dostępny,
-- łowić ryby,
-- pomagać innym.
+Poza pracą NPC może odpoczywać, spacerować, spotykać innych, korzystać z Social Places po planie 151, łowić ryby i pomagać innym.
 
 ## 5. Gospodarstwo i wspólna praca
 
-Profesja może być wykonywana przez gospodarstwo, niekoniecznie wyłącznie przez właściciela profesji.
+Profesja może być wykonywana przez gospodarstwo, nie tylko przez właściciela profesji.
 
 ```text
 profession
@@ -280,71 +227,51 @@ household
  shared work / resources
 ```
 
-Przykład: Farmer i jego żona wspólnie zajmują się polem i zwierzętami. Blacksmith może otrzymywać drewno/wodę od rodziny lub z istniejącego obiegu zasobów. Nie tworzyć osobnych „profession storages”.
+Farmer i jego żona wspólnie zajmują się polem i zwierzętami. Blacksmith może otrzymywać drewno/wodę od rodziny lub z istniejącego obiegu zasobów.
 
 ## 6. Wiek a intensywność pracy
 
-`FamilyMember.age` jest już pierwszoklasową daną wieku (`0..100`) w `src/settlement/families.ts`. Obecne generowanie ma:
-
-```text
-adult: 18–70
-child: 0–17
-```
-
-Nie trzeba tworzyć nowego systemu age.
-
-Docelowa warstwa pracy:
+`FamilyMember.age` już istnieje. Nie tworzyć nowego systemu age.
 
 ### Małe dzieci
-
 - tylko zabawa, chodzenie, obserwowanie,
 - 0% pracy.
 
 ### Duże dzieci
-
 - nadal dużo zabawy,
 - pomagają rodzicom,
 - około **25–50% czasu pracy rodzica**,
-- pomoc ograniczona do istniejących, bezpiecznych czynności danej profesji.
-
-Nie tworzyć osobnego „child profession AI”; ograniczenie powinno działać na istniejącym schedule/decision/action flow.
+- pomoc ograniczona do istniejących i bezpiecznych czynności danej profesji.
 
 ### Dorośli
-
 - normalna profesja,
 - ~100% udziału.
 
 ### Starzy
-
 - prawie normalna profesja,
 - ~80–100% orientacyjnego udziału,
 - więcej odpoczynku, spacerów i łowienia ryb.
 
 ### Bardzo starzy
-
 - głównie chodzenie, spokojne aktywności i łowienie,
 - tylko lekka/okazjonalna pomoc.
 
-Dokładne progi „małe/duże/stary/bardzo stary” trzeba wyprowadzić z istniejącego age modelu po recon, zamiast tworzyć arbitralne równoległe enumy.
+Dokładne progi wieku należy wyprowadzić z istniejącego age modelu.
 
 ## 7. Dziedziczenie profesji
 
-Dziecko może przejąć profesję rodzica.
-
-`families.ts` już tworzy rodziny i ma `FamilyMember.character.role`, więc implementacja powinna rozszerzyć istniejące family generation.
+Dziecko może przejąć profesję rodzica. Wykorzystać istniejący `families.ts` i `FamilyMember.character.role`.
 
 Do ustalenia podczas implementacji:
-
-- co robi dziecko przy rodzicach o różnych profesjach,
-- czy wybiera jedną z profesji rodziców deterministycznie,
-- jak działa brak odpowiedniej profesji rodzica,
-- jak profesja pozostaje po osiągnięciu dorosłości.
+- profesja przy rodzicach o różnych profesjach,
+- deterministyczny wybór profesji,
+- zachowanie profesji po osiągnięciu dorosłości.
 
 Nie tworzyć niezależnego systemu genealogii/profession inheritance.
 
 ## 8. Generowanie profesji i wielkość osady
 
-Recon potwierdził obecne rozmiary:
+Obecne rozmiary:
 
 ```text
 OUTPOST → 1 rodzina
@@ -354,11 +281,7 @@ LG      → 5–7 rodzin
 XL      → 7–9 rodzin
 ```
 
-To jest **rodziny**, nie bezpośrednio liczba NPC. Obecne `SOLO_CHANCE` i `COUPLE_WITH_CHILD_CHANCE` dodatkowo wpływają na populację.
-
-Obecny `characterForSeed()` losuje role z zamkniętego `RANDOM_ROLES`, a `generateFamilies()` może wymuszać role wynikające z istotnych zasobów (`RESOURCE_ROLE`). Obecnie `trader` jest reserved.
-
-To oznacza, że obecny generator nie gwarantuje jeszcze kompletnego zestawu profesji. Implementacja powinna przejść z czystego losowania do **minimalnych wymagań obsady**, ale zachować istniejący deterministyczny generation model.
+Obecny generator losuje role i może wymuszać role wynikające z istotnych zasobów. Nie gwarantuje kompletnego zestawu profesji.
 
 Docelowo:
 
@@ -376,56 +299,42 @@ families + NPC roles
 
 Nie każda profesja musi występować w każdej osadzie.
 
-Przykładowe zależności środowiskowe:
-
 ```text
 woda / jezioro → Fisher
 las             → Woodcutter
-złoża            → Miner
-Hunter           → zgodnie z planem 178 + fauna/environment
-większa osada    → Trader / Blacksmith / więcej specjalistów
+złoża           → Miner
+większa osada   → Trader / Blacksmith / więcej specjalistów
 ```
 
-Dolne limity `SM`/`MD` mogą wymagać podniesienia, jeżeli minimalny zestaw profesji nie mieści się w obecnej populacji. **Nie zmieniać liczb w ciemno** — najpierw policzyć realną populację generowanych rodzin i zaproponować minima.
+Dolne limity SM/MD mogą wymagać podniesienia. Najpierw policzyć realną populację rodzin, potem ustalić minima.
 
 ## 9. Redundancja profesji
 
-Model powinien rozróżniać:
-
+Rozróżnić:
 - minimalną obsadę,
 - docelową liczbę,
 - dodatkowe zapotrzebowanie.
 
-Nie zakładać „1 NPC = 1 profesja”. Przykładowo Farmer może występować wielokrotnie, a Trader/Blacksmith znacznie rzadziej.
-
-W przyszłości brak profesji może stać się problemem/pressure osady, ale nie tworzyć tego mechanizmu w tym planie.
+Nie zakładać `1 NPC = 1 profesja`. Brak profesji może w przyszłości stać się problemem/pressure osady, ale nie implementować tego teraz.
 
 ## 10. Przedmioty profesji
 
 ### Kosa (`scythe`)
 
-Dodać nowy normalny item tylko po potwierdzeniu, że nie istnieje już pod inną nazwą.
+Dodać nowy item tylko po potwierdzeniu, że nie istnieje już pod inną nazwą.
 
 Kosa ma być:
-
-- kategorią `tool`,
-- kategorią `weapon`,
+- `tool`,
+- `weapon`,
 - holdable,
-- capability rolniczą dopasowaną do rzeczywistej operacji, **bez dodawania capability tylko po to, aby mieć etykietę `farmer`**,
-- istniejącą konfiguracją `melee`,
-- podłączona do istniejącego NPC/player combat resolvera przez `ITEM_CATALOG[kind].melee`.
+- podłączona do istniejącej konfiguracji `melee`,
+- wyposażona w capability tylko wtedy, gdy istniejąca akcja rolnicza rzeczywiście jej potrzebuje.
 
-Jeżeli zbieranie plonów obecnie nie wymaga narzędzia, nie należy tworzyć sztucznego gate'a tylko dla kosy. Najpierw wskazać konkretną istniejącą akcję, którą kosa ma wykonywać.
+Jeżeli kosa ma być objęta maintenance, dodać ją do istniejącego `WEAPON_MAINTENANCE_KIND_LIST` i używać istniejącego `sharpenWeapon()`/`whetstone`.
 
-Kosa powinna zostać sprawdzona względem istniejącego weapon maintenance (`sharpness`/`durability`). Nie implementować osobnej durability kosy.
+Nie tworzyć osobnego durability system.
 
-### Inne narzędzia
-
-Recon pokazał, że podstawowe narzędzia już istnieją: axe, shovel, pickaxe, fishing_rod, sickle, pitchfork, wooden_torch, firestarter.
-
-Dlatego nie dodawać automatycznie nowych itemów dla każdej profesji. Najpierw mapować istniejące itemy do konkretnych działań.
-
-## 11. Profesja a ekonomia
+## 11. Ekonomia
 
 Wykorzystać istniejący przepływ:
 
@@ -443,84 +352,63 @@ SettlementEconomy / trade
 
 Nie tworzyć osobnej ekonomii profesji.
 
-Dla Woodcuttera i Minera wykorzystać istniejące production/resource hooks. Dla Fishera wykorzystać istniejące fishing. Dla Huntera — model 178. Dla Blacksmitha najpierw ustalić, które elementy produkcji już istnieją.
-
 ## 12. Implementacja — kolejność
 
-### Phase 0 — reconnaissance completed
+### Phase 0 — reconnaissance
 
-Potwierdzone punkty wejścia:
-
-- `src/ai/characters.ts` — `Role`, `CharacterDef`, role generation;
-- `src/ai/schedule.ts` — role schedules + overlays;
-- `src/ai/NpcAgent.ts` — FSM, `PlannedAction`, work actions, carried Inventory;
-- `src/settlement/families.ts` — family/age/role generation;
-- `src/settlement/household.ts` — household stock;
-- `src/economy/` — settlement economy;
-- `src/items/Inventory.ts` — shared inventory;
-- `src/items/itemCatalog.ts` — item capabilities/combat configs;
-- `src/items/HeldTool.ts` — held tool ownership;
-- `src/items/weaponMaintenance.ts` — weapon sharpness/durability;
-- `src/terrain/depositMining.ts` / mining hooks — Miner;
-- `src/world/treeLifecycle.ts` / `treeHarvest.ts` — Woodcutter;
-- `src/world/fishing.ts` — Fisher;
-- `src/world/plantedCrops.ts` / `CropLifecycle` and garden systems — Farmer;
-- `src/items/tradeCatalog.ts` — Trader;
-- `src/ai/npcCombat.ts` / role weapon loading — combat integration.
+Recon wykonany dla role, schedule, actions, households, economy, inventory, item catalog, weapon maintenance, mining, trees, fishing i profession flows.
 
 ### Phase 1 — role/profession model
 
-- rozszerzyć istniejący `Role`, nie tworzyć `Profession` parallel type;
-- dodać `hunter` zgodnie z założeniem realizacji 178;
-- dodać `blacksmith` i `healer/herbalist` jako role tylko wtedy, gdy planowana implementacja potrzebuje ich już na runtime; jeżeli Healer pozostaje odroczony, nie wprowadzać pustej aktywnej profesji;
-- rozdzielić reserved-role generation od random role generation bez łamania quest-critical reserved NPCs.
+- rozszerzyć istniejący `Role`,
+- zintegrować `hunter` zgodnie z 178,
+- dodać aktywne profesje wymagane przez implementację,
+- nie tworzyć parallel profession model.
 
 ### Phase 2 — profession schedules/actions
 
-Rozszerzyć `SCHEDULE_TEMPLATES` i istniejący `work` decision path.
-
-Nie tworzyć nowych schedulerów.
-
+Rozszerzyć istniejący `SCHEDULE_TEMPLATES` i `work` decision path:
 - Farmer → istniejące cultivation/animal actions;
 - Woodcutter → istniejące chop/wood production;
-- Fisher → existing fishing action/path;
-- Miner → existing mine action;
-- Trader → existing merchant/workplace behaviour;
-- Guard → existing combat + fire/torch actions, nocny schedule;
-- Blacksmith → tylko istniejące produkcyjne primitives, resztę oznaczyć jako zależność/osobny plan;
+- Fisher → existing fishing path;
+- Miner → existing mine path;
+- Trader → existing merchant/work flow;
+- Guard → existing combat + lighting actions, nocny schedule;
+- Blacksmith → existing sharpening + grindstone workplace; produkcja metalu tylko jeśli istniejące primitives pozwalają;
 - Hunter → zgodnie z 178.
 
 ### Phase 3 — household participation + age
 
 - rozszerzyć istniejący household/member model;
-- zastosować age-based work intensity w decyzji o `work`, zamiast mnożyć osobne schedule templates;
-- duże dzieci: około 25–50% pracy rodzica;
-- starzy: ~80–100%, ale większa częstotliwość rest/leisure/fishing;
-- bardzo starzy: lekka pomoc + leisure/fishing;
-- zachować potrzeby/interruptions istniejącego NPC FSM.
+- zastosować age-based work intensity w istniejącym decision/schedule flow;
+- duże dzieci: 25–50%;
+- starzy: ~80–100%, więcej rest/leisure/fishing;
+- bardzo starzy: lekka pomoc + leisure/fishing.
 
 ### Phase 4 — profession generation
 
-- rozszerzyć `generateFamilies()` / role generation;
+- rozszerzyć family/role generation;
 - zachować deterministic seeded generation;
 - wprowadzić minimalne profession requirements per village size;
-- uwzględnić `RESOURCE_ROLE`/terrain resources;
-- policzyć realną populację rodzin przed ustaleniem nowych dolnych limitów;
-- nie łamać reserved NPCs i istniejących quest assumptions.
+- uwzględnić environment/resource modifiers;
+- policzyć realną populację rodzin przed zmianą dolnych limitów;
+- nie łamać reserved NPCs.
 
-### Phase 5 — items
+### Phase 5 — items & Blacksmith workplace
 
-- dodać `scythe` do `ItemKind`/`ITEM_DEFS`/`ITEM_CATALOG` oraz odpowiednich katalogów/spawnerów tylko po potwierdzeniu braku istniejącego odpowiednika;
-- ustawić `tool + weapon`, holdable i `melee`;
-- dobrać capability do realnej operacji rolniczej;
-- rozważyć istniejący weapon maintenance, bez nowego durability systemu;
-- nie dodawać innych nowych itemów bez konkretnej istniejącej akcji, która ich potrzebuje.
+- dodać `scythe` tylko jeśli brak odpowiednika;
+- ustawić `tool + weapon`, holdable i istniejące `melee`;
+- capability tylko dla realnej akcji;
+- opcjonalnie dołączyć kosę do istniejącego maintenance setu;
+- dodać prosty **grindstone/sharpening station przy domu Blacksmitha**;
+- podłączyć akcję ostrzenia do istniejącego `sharpenWeapon()` i `whetstone`;
+- nie tworzyć generalnego WorkplaceSystem, dopóki kolejna profesja go realnie nie potrzebuje.
 
 ## 13. Poza zakresem
 
-- `HelpCall` / lokalne wezwanie pomocy dla Guard;
+- `HelpCall` / lokalne wezwanie pomocy;
 - pełny Healer / Herbalist;
-- produkcja metalowych przedmiotów Blacksmitha, jeśli wymaga nowych forge/recipe/production primitives — osobny plan po recon;
+- pełna produkcja metalowych przedmiotów Blacksmitha, jeśli wymaga nowych forge/recipe/production primitives;
 - Miner → studnie/równanie terenu;
 - pełny Social Places — plan 151;
 - nowa ekonomia / storage / inventory;
@@ -532,17 +420,19 @@ Nie tworzyć nowych schedulerów.
 
 ### Automated
 
-- testy role/profession mapping;
+- role/profession mapping;
 - deterministic profession generation;
-- minimal profession coverage per village size;
+- minimum profession coverage per village size;
 - age → work intensity;
 - profession inheritance;
 - item catalog/capability/melee mapping dla kosy;
-- istniejące work/action/economy tests;
+- weapon maintenance integration;
+- Blacksmith sharpening uses existing `whetstone` correctly;
+- existing work/action/economy tests;
 - typecheck;
 - lint;
 - build;
-- pełny test suite.
+- full test suite.
 
 ### Browser/gameplay
 
@@ -560,10 +450,9 @@ Sprawdzić świeży świat z małą, średnią i dużą osadą:
 10. Miner realnie kopie;
 11. Trader pozostaje przy handlu;
 12. Guard ma aktywną nocną zmianę i światło/pochodnię zgodnie z implementacją;
-13. kosa jest poprawnie wyposażana/używana jako tool + weapon;
-14. Blacksmith nie odwołuje się do nieistniejącej produkcji;
-15. Hunter działa zgodnie z 178.
-
-Nie uznawać zachowania Three.js/gameplay za zweryfikowane bez browser playtestu.
+13. Blacksmith korzysta z grindstone i istniejącego weapon maintenance;
+14. kosa jest poprawnie wyposażana/używana jako tool + weapon;
+15. Blacksmith nie odwołuje się do nieistniejącej produkcji;
+16. Hunter działa zgodnie z 178.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
