@@ -1,7 +1,7 @@
 # Plan: House Interior Furniture and Bed Anchors
 
 **Created:** 2026-08-19
-**Status:** `verification needed` 🔍 — implemented for 5 house variants (`COTTAGE_4X4_A/B/C`, `HOUSE_6X6_A/B`) + `tsc`/lint/build/test 2026-08-24; `COTTAGE_4X4_A` browser-checked (user-confirmed furniture visible/correct), others not yet individually checked; "Nocuj w mieście" bed-lodging flow still pending a live check
+**Status:** `verification needed` 🔍 — implemented for all 11 village house definitions + `tsc`/lint/build/test 2026-08-24; `COTTAGE_4X4_A` browser-checked (user-confirmed furniture visible/correct), the other 10 not yet individually checked; "Nocuj w mieście" bed-lodging flow still pending a live check
 **Priority:** 🟡 medium · **Effort:** L
 **Depends on:** ~~168~~ ~~111~~
 **Domain:** `settlements-npcs`

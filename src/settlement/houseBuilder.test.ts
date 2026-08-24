@@ -4,10 +4,7 @@ import { buildConstructionCatalog } from '../assets/constructionCatalog'
 import {
   COTTAGE_4X4_A,
   COTTAGE_4X4_B,
-  COTTAGE_4X4_C,
   HOME_HOUSE_DEFINITIONS,
-  HOUSE_6X6_A,
-  HOUSE_6X6_B,
   HOUSE_8X6_A,
   HOUSE_MODULE_M,
   pickHouseDefinition,
@@ -372,8 +369,8 @@ describe('village house definitions', () => {
     assembly.dispose()
   })
 
-  it('plan 169 — all five furnished variants (4×4 a/b/c, 6×6 a/b) assemble with sleep/storage points', () => {
-    for (const def of [COTTAGE_4X4_A, COTTAGE_4X4_B, COTTAGE_4X4_C, HOUSE_6X6_A, HOUSE_6X6_B]) {
+  it('plan 169 — every village house definition assembles with sleep/storage points', () => {
+    for (const def of HOME_HOUSE_DEFINITIONS) {
       const assembly = buildHouse(def, contextFor(def))
       expect(assembly.interactionPoints.some((p) => p.kind === 'sleep'), def.id).toBe(true)
       expect(assembly.interactionPoints.some((p) => p.kind === 'storage'), def.id).toBe(true)

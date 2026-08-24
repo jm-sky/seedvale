@@ -325,6 +325,89 @@ function house6x6Furniture(): HouseFurniturePlacement[] {
 }
 
 /**
+ * 6×4 m cottage furniture — `COTTAGE_6X4_A/B/C`. All three variants' doors
+ * sit on the front wall (z = -depth/2) and every door-swing arc stays within
+ * roughly 1 m of that wall; every furniture item here has its nearest edge
+ * at least that far from the front wall (bed/table/chest all at local
+ * z ≥ -0.85 vs. the front wall at z = -2), so door module position doesn't
+ * matter and all three variants reuse this layout unmodified — checked
+ * against each definition's actual openings/chimney, not assumed.
+ */
+function cottage6x4Furniture(): HouseFurniturePlacement[] {
+  const bed: HouseFurniturePlacement = {
+    assetId: FURNITURE_BED,
+    position: { x: -1.5, y: 0, z: 1.255 },
+    rotationY: 0,
+    role: 'bed',
+    interactionPoints: [
+      { kind: 'sleep', position: { x: 0, y: 0, z: -0.845 }, facing: 0 },
+    ],
+  }
+  const table: HouseFurniturePlacement = {
+    assetId: FURNITURE_TABLE,
+    position: { x: 1.3, y: 0, z: -0.2 },
+    rotationY: 0,
+    role: 'table',
+  }
+  const chest: HouseFurniturePlacement = {
+    assetId: FURNITURE_CHEST_SENTINEL,
+    position: { x: 2.4, y: 0, z: -0.2 },
+    rotationY: Math.PI / 2,
+    role: 'chest',
+    interactionPoints: [
+      { kind: 'storage', position: { x: 0, y: 0, z: 0.5 } },
+    ],
+  }
+  const lamp: HouseFurniturePlacement = {
+    assetId: FURNITURE_LAMP_SENTINEL,
+    position: lampOnTable(table),
+    rotationY: 0,
+    role: 'lamp',
+  }
+  return [bed, table, chest, lamp]
+}
+
+/**
+ * 8×6 m farmstead furniture — `HOUSE_8X6_A/B/C`. Same "stay clear of the
+ * front-wall door-swing band" reasoning as `cottage6x4Furniture`, scaled up
+ * for the larger footprint; all three variants' doors/chimney checked
+ * against this layout, not assumed.
+ */
+function house8x6Furniture(): HouseFurniturePlacement[] {
+  const bed: HouseFurniturePlacement = {
+    assetId: FURNITURE_BED,
+    position: { x: -2, y: 0, z: 2.205 },
+    rotationY: 0,
+    role: 'bed',
+    interactionPoints: [
+      { kind: 'sleep', position: { x: 0, y: 0, z: -0.845 }, facing: 0 },
+    ],
+  }
+  const table: HouseFurniturePlacement = {
+    assetId: FURNITURE_TABLE,
+    position: { x: 1, y: 0, z: -0.5 },
+    rotationY: 0,
+    role: 'table',
+  }
+  const chest: HouseFurniturePlacement = {
+    assetId: FURNITURE_CHEST_SENTINEL,
+    position: { x: 3.3, y: 0, z: 0.5 },
+    rotationY: Math.PI / 2,
+    role: 'chest',
+    interactionPoints: [
+      { kind: 'storage', position: { x: 0, y: 0, z: 0.5 } },
+    ],
+  }
+  const lamp: HouseFurniturePlacement = {
+    assetId: FURNITURE_LAMP_SENTINEL,
+    position: lampOnTable(table),
+    rotationY: 0,
+    role: 'lamp',
+  }
+  return [bed, table, chest, lamp]
+}
+
+/**
  * Two opposite `wooden_2x1` slope runs along X plus ridge `_middle` plates.
  * Positions are explicit (review 011): do not infer them from AABB face midpoints.
  */
@@ -618,37 +701,43 @@ export const COTTAGE_4X4_B: HouseDefinition = {
 }
 
 /** 6×4 m — typical village cottage (~24 m²). Cap rotated so the long axis covers the 6 m front. */
-export const COTTAGE_6X4_A: HouseDefinition = plasterHouse({
-  id: 'cottage-6x4-a',
-  width: 6,
-  depth: 4,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 1 },
-    { type: 'window', side: 'front', moduleIndex: 0 },
-    { type: 'window', side: 'front', moduleIndex: 2 },
-    { type: 'window', side: 'right', moduleIndex: 0 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_4X6, GABLE_4, { width: 6, depth: 4 }, 'leftRight', Math.PI / 2),
-  label: 'Chata',
-  examine: 'Wiejska chata z dwojgiem okien przy drzwiach — dość miejsca na jedną rodzinę.',
-  sizeClass: 'cottage',
-})
+export const COTTAGE_6X4_A: HouseDefinition = {
+  ...plasterHouse({
+    id: 'cottage-6x4-a',
+    width: 6,
+    depth: 4,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 1 },
+      { type: 'window', side: 'front', moduleIndex: 0 },
+      { type: 'window', side: 'front', moduleIndex: 2 },
+      { type: 'window', side: 'right', moduleIndex: 0 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_4X6, GABLE_4, { width: 6, depth: 4 }, 'leftRight', Math.PI / 2),
+    label: 'Chata',
+    examine: 'Wiejska chata z dwojgiem okien przy drzwiach — dość miejsca na jedną rodzinę.',
+    sizeClass: 'cottage',
+  }),
+  furniture: cottage6x4Furniture(),
+}
 
-export const COTTAGE_6X4_B: HouseDefinition = plasterHouse({
-  id: 'cottage-6x4-b',
-  width: 6,
-  depth: 4,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 0 },
-    { type: 'window', side: 'front', moduleIndex: 2 },
-    { type: 'window', side: 'left', moduleIndex: 1 },
-    { type: 'window', side: 'back', moduleIndex: 1 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_4X6, GABLE_4, { width: 6, depth: 4 }, 'leftRight', Math.PI / 2),
-  label: 'Chata',
-  examine: 'Chata z oknem na ogród i wejściem z boku elewacji.',
-  sizeClass: 'cottage',
-})
+export const COTTAGE_6X4_B: HouseDefinition = {
+  ...plasterHouse({
+    id: 'cottage-6x4-b',
+    width: 6,
+    depth: 4,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 0 },
+      { type: 'window', side: 'front', moduleIndex: 2 },
+      { type: 'window', side: 'left', moduleIndex: 1 },
+      { type: 'window', side: 'back', moduleIndex: 1 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_4X6, GABLE_4, { width: 6, depth: 4 }, 'leftRight', Math.PI / 2),
+    label: 'Chata',
+    examine: 'Chata z oknem na ogród i wejściem z boku elewacji.',
+    sizeClass: 'cottage',
+  }),
+  furniture: cottage6x4Furniture(),
+}
 
 /** 6×6 m — medium square house (~36 m²). */
 export const HOUSE_6X6_A: HouseDefinition = {
@@ -673,43 +762,49 @@ export const HOUSE_6X6_A: HouseDefinition = {
 }
 
 /** 8×6 m — medium farmstead (~48 m²). */
-export const HOUSE_8X6_A: HouseDefinition = plasterHouse({
-  id: 'house-8x6-a',
-  width: 8,
-  depth: 6,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 1 },
-    { type: 'window', side: 'front', moduleIndex: 3 },
-    { type: 'window', side: 'right', moduleIndex: 0 },
-    { type: 'window', side: 'right', moduleIndex: 2 },
-    { type: 'window', side: 'left', moduleIndex: 1 },
-    { type: 'window', side: 'back', moduleIndex: 1 },
-    { type: 'window', side: 'back', moduleIndex: 3 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack'),
-  label: 'Gospodarstwo',
-  examine: 'Szerszy dom wiejski — izby przy drodze i oknami na podwórze.',
-  sizeClass: 'house',
-})
+export const HOUSE_8X6_A: HouseDefinition = {
+  ...plasterHouse({
+    id: 'house-8x6-a',
+    width: 8,
+    depth: 6,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 1 },
+      { type: 'window', side: 'front', moduleIndex: 3 },
+      { type: 'window', side: 'right', moduleIndex: 0 },
+      { type: 'window', side: 'right', moduleIndex: 2 },
+      { type: 'window', side: 'left', moduleIndex: 1 },
+      { type: 'window', side: 'back', moduleIndex: 1 },
+      { type: 'window', side: 'back', moduleIndex: 3 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack'),
+    label: 'Gospodarstwo',
+    examine: 'Szerszy dom wiejski — izby przy drodze i oknami na podwórze.',
+    sizeClass: 'house',
+  }),
+  furniture: house8x6Furniture(),
+}
 
-export const HOUSE_8X6_B: HouseDefinition = plasterHouse({
-  id: 'house-8x6-b',
-  width: 8,
-  depth: 6,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 2 },
-    { type: 'window', side: 'front', moduleIndex: 0 },
-    { type: 'window', side: 'left', moduleIndex: 0 },
-    { type: 'window', side: 'left', moduleIndex: 2 },
-    { type: 'window', side: 'right', moduleIndex: 1 },
-    { type: 'window', side: 'back', moduleIndex: 0 },
-    { type: 'window', side: 'back', moduleIndex: 2 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack'),
-  label: 'Gospodarstwo',
-  examine: 'Gospodarstwo z wejściem bliżej środka elewacji i oknami na obie strony podwórza.',
-  sizeClass: 'house',
-})
+export const HOUSE_8X6_B: HouseDefinition = {
+  ...plasterHouse({
+    id: 'house-8x6-b',
+    width: 8,
+    depth: 6,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 2 },
+      { type: 'window', side: 'front', moduleIndex: 0 },
+      { type: 'window', side: 'left', moduleIndex: 0 },
+      { type: 'window', side: 'left', moduleIndex: 2 },
+      { type: 'window', side: 'right', moduleIndex: 1 },
+      { type: 'window', side: 'back', moduleIndex: 0 },
+      { type: 'window', side: 'back', moduleIndex: 2 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack'),
+    label: 'Gospodarstwo',
+    examine: 'Gospodarstwo z wejściem bliżej środka elewacji i oknami na obie strony podwórza.',
+    sizeClass: 'house',
+  }),
+  furniture: house8x6Furniture(),
+}
 
 export const COTTAGE_4X4_C: HouseDefinition = {
   ...plasterHouse({
@@ -734,24 +829,28 @@ export const COTTAGE_4X4_C: HouseDefinition = {
   furniture: cottage4x4Furniture(),
 }
 
-export const COTTAGE_6X4_C: HouseDefinition = plasterHouse({
-  id: 'cottage-6x4-c',
-  width: 6,
-  depth: 4,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 2 },
-    { type: 'window', side: 'front', moduleIndex: 0 },
-    { type: 'window', side: 'left', moduleIndex: 0 },
-    { type: 'window', side: 'back', moduleIndex: 0 },
-    { type: 'window', side: 'back', moduleIndex: 2 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_4X6, GABLE_4, { width: 6, depth: 4 }, 'leftRight', Math.PI / 2),
-  label: 'Chata',
-  examine: 'Chata z kratownicą, kominem i wejściem z prawej strony elewacji.',
-  sizeClass: 'cottage',
-  kit: KIT_WOODGRID,
-  decorations: [chimneyAt({ width: 6, depth: 4 })],
-})
+export const COTTAGE_6X4_C: HouseDefinition = {
+  ...plasterHouse({
+    id: 'cottage-6x4-c',
+    width: 6,
+    depth: 4,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 2 },
+      { type: 'window', side: 'front', moduleIndex: 0 },
+      { type: 'window', side: 'left', moduleIndex: 0 },
+      { type: 'window', side: 'back', moduleIndex: 0 },
+      { type: 'window', side: 'back', moduleIndex: 2 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_4X6, GABLE_4, { width: 6, depth: 4 }, 'leftRight', Math.PI / 2),
+    label: 'Chata',
+    examine: 'Chata z kratownicą, kominem i wejściem z prawej strony elewacji.',
+    sizeClass: 'cottage',
+    kit: KIT_WOODGRID,
+    decorations: [chimneyAt({ width: 6, depth: 4 })],
+  }),
+  // Corner chimney at (2.3, 1.3) — clear of this layout's chest (z ≤ 0.25).
+  furniture: cottage6x4Furniture(),
+}
 
 export const HOUSE_6X6_B: HouseDefinition = {
   ...plasterHouse({
@@ -780,27 +879,31 @@ export const HOUSE_6X6_B: HouseDefinition = {
   furniture: house6x6Furniture(),
 }
 
-export const HOUSE_8X6_C: HouseDefinition = plasterHouse({
-  id: 'house-8x6-c',
-  width: 8,
-  depth: 6,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 0 },
-    { type: 'window', side: 'front', moduleIndex: 1 },
-    { type: 'window', side: 'front', moduleIndex: 3 },
-    { type: 'window', side: 'right', moduleIndex: 1 },
-    { type: 'window', side: 'left', moduleIndex: 0 },
-    { type: 'window', side: 'left', moduleIndex: 2 },
-    { type: 'window', side: 'back', moduleIndex: 1 },
-    { type: 'window', side: 'back', moduleIndex: 2 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack'),
-  label: 'Gospodarstwo',
-  examine: 'Ceglane gospodarstwo z kominem i wejściem z lewej strony drogi.',
-  sizeClass: 'house',
-  kit: KIT_BRICK,
-  decorations: [chimneyAt({ width: 8, depth: 6 })],
-})
+export const HOUSE_8X6_C: HouseDefinition = {
+  ...plasterHouse({
+    id: 'house-8x6-c',
+    width: 8,
+    depth: 6,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 0 },
+      { type: 'window', side: 'front', moduleIndex: 1 },
+      { type: 'window', side: 'front', moduleIndex: 3 },
+      { type: 'window', side: 'right', moduleIndex: 1 },
+      { type: 'window', side: 'left', moduleIndex: 0 },
+      { type: 'window', side: 'left', moduleIndex: 2 },
+      { type: 'window', side: 'back', moduleIndex: 1 },
+      { type: 'window', side: 'back', moduleIndex: 2 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack'),
+    label: 'Gospodarstwo',
+    examine: 'Ceglane gospodarstwo z kominem i wejściem z lewej strony drogi.',
+    sizeClass: 'house',
+    kit: KIT_BRICK,
+    decorations: [chimneyAt({ width: 8, depth: 6 })],
+  }),
+  // Corner chimney at (3.3, 2.3) — clear of this layout's chest (z ≤ 0.95).
+  furniture: house8x6Furniture(),
+}
 
 export const COTTAGE_DEFINITIONS: readonly HouseDefinition[] = [
   COTTAGE_4X4_A,

@@ -447,10 +447,10 @@ What actually landed, and where it differs from the sketch above. Scope: **one**
 - **Plan 168 bed provider** — `SettlementHouseBed` (new, `props.ts`): `{ position, approach, facing }` in world space, computed once per house (only inside `if (builderReady)`) from `assembly.interactionPoints`'s `'sleep'` point (→ `approach`/`facing`) and the bed furniture entry's own position (→ `position`) via a small local `toWorld()` closure (same rotate-scale-translate math as `transformHouseCollidersToWorld`, kept local to `props.ts` since it also needs the Y axis). Stored on `SettlementHouseLandmark.bed` (`null` for every house without one, including the legacy catalog-GLB fallback path — that path builds from a different `HouseCatalogEntry`, not `HouseDefinition`, so it structurally can't have furniture). `LodgingSettlementInput.houses` (`lodgingResolver.ts`) now carries this same `bed` field; `collectBedCandidates()` (previously an explicit stub returning `[]`) maps each house with a bed to one `LodgingOption` (`id: \`${settlementId}:bed:${index}\``, `type: 'bed'`, `quality: 'high'`) — `resolveBestLodging`'s API is untouched, exactly as plan 168's implementation notes §6/§13 required.
 - **Tests** — `houseBuilder.test.ts`: bed/table resolve through the *real* `ConstructionCatalog` (not just the test's dummy-part context), and a furnished `COTTAGE_4X4_A` assembly exposes both `'sleep'`/`'storage'` points alongside door/entrance. `lodgingResolver.test.ts`: the bed-provider cases plan 168 specified but couldn't test before (`collectBedCandidates` producing a correct high-quality candidate, no candidate when a house has no bed, bed outranking a friendly NPC in the same settlement). `constructionCatalog.test.ts`'s old single "176 MegaKit GLB = 176 catalog parts" assertion split into three (MegaKit count, furniture count, catalog total = both).
 
-**Not done / open:**
+**Not done / open (as of the 4×4/6×6 extension):**
 - No live Asset Browser verification session — dimensions came from the audit script + `gltf-transform inspect` only.
 - "Nocuj w mieście" resolving to the new bed, walking there, and sleeping at the correct facing/quality — exercised by reading the code path (the same contract plan 168's paid-lodging path already relied on being ready-without-changes), not by playing it.
-- `COTTAGE_6X4_A/B/C` and `HOUSE_8X6_A/B/C` (the remaining 2 footprint families) are still unfurnished — a follow-up if wanted.
+- `COTTAGE_6X4_A/B/C` and `HOUSE_8X6_A/B/C` (the remaining 2 footprint families) were still unfurnished at that point — closed below.
 
 ## Extended to 4×4 B/C and 6×6 A/B (2026-08-24, same session)
 
@@ -462,5 +462,14 @@ After browser-checking `COTTAGE_4X4_A` (user-confirmed: furniture visible, looke
 - Reverted a local, uncommitted `poolForSize()` tweak the user had made to force cottage-only village generation for testing — restored to the original `HOME_HOUSE_DEFINITIONS`/`COTTAGE_DEFINITIONS`/`HOUSE_6X6_A`/`HOUSE_6X6_B` pools now that finding a furnished house doesn't require biasing generation (5 of 11 house variants are furnished, and `village(id).houses()` in the debug API finds them directly).
 - New tests (`houseBuilder.test.ts`): all five furnished variants assemble with `'sleep'`/`'storage'` interaction points; `COTTAGE_4X4_B`'s bed/chest are confirmed to be `COTTAGE_4X4_A`'s mirrored across X.
 - Still only `COTTAGE_4X4_A` has had an actual browser look — `_B`/`_C`/6×6 A/B are derived/extrapolated from it and not yet individually eyeballed.
+
+## Extended to all remaining variants — 6×4 A/B/C and 8×6 A/B/C (2026-08-24, same session)
+
+User asked why the other houses weren't covered — answer: no technical blocker, just conservative scoping to exactly what was asked (4×4/6×6). Finished the remaining two footprint families so all 11 `HOME_HOUSE_DEFINITIONS` are now furnished.
+
+- New `cottage6x4Furniture()` (`COTTAGE_6X4_A/B/C`) and `house8x6Furniture()` (`HOUSE_8X6_A/B/C`), each reused **as-is** by all three variants in its family — no mirroring needed. The reasoning that made this safe: every door in this codebase sits on the front wall, and a door's swing arc (the leaf rotating open) stays within roughly 1 m of that wall regardless of which module the door is in. Both new layouts keep every furniture item's nearest edge at least that far from the front wall, so the door's specific X position becomes irrelevant to collision — the only genuinely per-variant checks that remained were window positions (never a floor obstacle) and chimney position (a real decoration, checked by hand against each `KIT_WOODGRID`/`KIT_BRICK` variant's `chimneyAt()` output for `COTTAGE_6X4_C`/`HOUSE_8X6_C`).
+- Same wiring pattern as every other variant: `{ ...plasterHouse({...}), furniture: cottage6x4Furniture() }` / `house8x6Furniture()`.
+- `houseBuilder.test.ts`'s five-variant list generalized to `for (const def of HOME_HOUSE_DEFINITIONS)` now that coverage is complete — every village house definition assembles with `'sleep'`/`'storage'` interaction points.
+- Verification status unchanged: still only `COTTAGE_4X4_A` has an actual browser look. The other 10 variants share the same two building blocks (two canonical layouts + one mirror), so a visual problem, if any, is more likely systemic (wrong bed/lamp orientation, wrong anchor offset) than variant-specific — worth a browser pass across a few different footprints, not just re-confirming `_A` again.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
