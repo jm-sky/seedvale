@@ -21,7 +21,7 @@ const PLANNED_STATUS_MARKER = '**Status:** `planned` 📋'
 const PLANNED_STATUS_RE = /^\*\*Status:\*\*\s*`([^`]+)`/m
 const PLANNED_HEADING = '## Planned'
 const TABLE_HEADER = '| File | Summary | Pri | Effort | Depends |'
-const NEXT_PLAN_ID_SUBHEADING = 'Next IDs are tracked separately for each canonical domain. Until the first new plan is created in a domain, its next ID is `001`.'
+const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
 const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
 
 const PRIORITY_EMOJI: Record<string, string> = {
@@ -139,10 +139,11 @@ const buildRow = (file: string, content: string, hasNotes: boolean): string => {
     'Depends on',
   ).trim()
 
-  const depends =
-    dependsRaw.toLowerCase() === 'none' ? '-' : dependsRaw
+  const depends = dependsRaw.toLowerCase() === 'none' ? '-' : dependsRaw
 
-  return `| \`${file}\` ${hasNotes ? '💡' : '◼️'} | - | ${priorityEmoji} | ${effort} | ${depends} |`
+  const title = `\`${file}\` ${hasNotes ? '💡' : '◼️'}`
+
+  return `| ${title.padEnd(40)} | - | ${priorityEmoji} | ${effort} | ${depends} |`
 }
 
 const validatePlan = async (plan: PlanInfo): Promise<void> => {
@@ -392,7 +393,7 @@ const updateNextPlanIds = (
   const nextPlanIds = computeNextPlanIds(plans)
 
   const startIdx = lines.findIndex(
-    line => line.trim() === NEXT_PLAN_ID_SUBHEADING,
+    line => line.trim() === NEXT_PLAN_ID_HEADING,
   )
 
   const endIdx = lines.findIndex(
@@ -402,7 +403,7 @@ const updateNextPlanIds = (
   )
 
   if (startIdx === -1) {
-    throw new Error(`"${NEXT_PLAN_ID_SUBHEADING}" section not found`)
+    throw new Error(`"${NEXT_PLAN_ID_HEADING}" section not found`)
   }
 
   if (endIdx === -1) {
