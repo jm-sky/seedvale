@@ -15,68 +15,25 @@ Paths below are files in this folder unless noted. Implementation notes / review
 
 New plans use the following filename format:
 
-"<domain>-<id>-<title>.md"
+`<domain>-<id>-<title>.md`
 
 Examples:
 
-- "ai-002-npc-personality-decisions.md"
-- "world-015-natural-mountains-and-rivers.md"
-- "fauna-004-animal-attack-and-npc-defense.md"
-- "settlements-012-household-economy.md"
+- `world-terrain-001-natural-mountains-and-rivers.md`
+- `settlements-npcs-001-household-economy.md`
+- `fauna-001-animal-attack-and-npc-defense.md`
+- `items-player-001-inventory-item-instances.md`
+- `quests-progression-001-world-problems-and-reputation.md`
+- `persistence-001-save-state.md`
+- `ui-input-001-mobile-input-improvements.md`
 
-## Domain prefixes
-
-Plan domains use short, stable prefixes:
-
-Prefix| Domain
-"world"| World, terrain, environment, places
-"settlements"| Settlements, households, buildings and community systems
-"ai"| NPC AI, decisions, behaviour and simulation intelligence
-"fauna"| Wildlife and animal simulation
-"agriculture"| Agriculture, food production and food lifecycle
-"economy"| Economy, resources, production, storage and trade
-"player"| Player-specific participation and progression
-"items"| Items, inventory and combat
-"quests"| Quests, progression, relations and reputation
-"persistence"| Save/load and persistent state
-"rendering"| Rendering and visual systems
-"performance"| Performance, profiling and optimization
-"ui"| UI and input
-"architecture"| Cross-cutting architecture and system boundaries
-"multiplayer"| Multiplayer readiness and related architecture
-
-The prefix identifies the plan's primary domain. Secondary domains should normally be expressed through "tags", not by adding multiple prefixes to the filename.
-
-## Domain-local IDs
-
-The numeric ID is unique within its domain, not globally.
-
-For example:
-
-- "ai-001-*"
-- "ai-002-*"
-- "world-001-*"
-- "world-002-*"
-
-"ai-002" and "world-002" are therefore two different plan IDs.
-
-Plan dependencies use the complete domain-local ID, for example:
-
-"Depends on: ~~ai-001~~ ~~world-003~~"
-
-IDs are never reused within a domain, even after a plan is archived.
-
-The old date-based/global-ID naming scheme remains valid for historical plans. Existing plans are not renamed solely to adopt the new convention. All newly created plans use the domain-local naming scheme.
-
-## Next plan ID
-
-`204`
+The `<id>` is a three-digit number local to the domain. New plans do not use the old global numeric sequence.
 
 ## Plan domains
 
-New plans should declare a primary `domain:` in frontmatter (and, if the plan genuinely spans more than one area, optional `tags:` for the secondary domain(s)). This is **not retroactive** — existing plans (live + archived) are not being touched.
+New plans should declare a primary `domain:` in frontmatter. If a plan genuinely spans more than one area, use optional `tags:` for the secondary domain(s).
 
-Canonical domains (match [docs/STATE.md](../STATE.md)'s section headers, so a domain always maps onto exactly one part of the current-state doc):
+Canonical domains match [docs/STATE.md](../STATE.md)'s section headers, so a domain always maps onto exactly one part of the current-state doc:
 
 | Domain | Covers |
 |---|---|
@@ -89,6 +46,43 @@ Canonical domains (match [docs/STATE.md](../STATE.md)'s section headers, so a do
 | `ui-input` | Vanilla + Vue UI, input, HUD |
 
 `domain` is "where to look first" — pick one, even for a plan that touches several systems. Use `tags` for a second domain only when the plan is genuinely about both (e.g. a quest wired to a specific fauna mechanic is `domain: quests-progression`, `tags: [fauna]`). Don't tag every domain a plan happens to touch a file in.
+
+## Domain-local IDs
+
+The numeric ID is unique within its domain, not globally.
+
+For example:
+
+- `world-terrain-001-*`
+- `world-terrain-002-*`
+- `fauna-001-*`
+- `fauna-002-*`
+
+`world-terrain-002` and `fauna-002` are therefore two different plan IDs.
+
+Plan dependencies use the complete domain-local ID for new plans, for example:
+
+`Depends on: ~~world-terrain-001~~ ~~fauna-002~~`
+
+IDs are never reused within a domain, even after a plan is archived.
+
+Existing plans keep the historical date-based/global-ID naming scheme. They are **not renamed solely to adopt the new convention**. Their existing numeric IDs remain valid references. All newly created plans use the domain-local naming scheme.
+
+## Next plan IDs
+
+Next IDs are tracked separately for each canonical domain. Until the first new plan is created in a domain, its next ID is `001`.
+
+| Domain | Next ID |
+|---|---:|
+| `world-terrain` | `001` |
+| `settlements-npcs` | `001` |
+| `fauna` | `001` |
+| `items-player` | `001` |
+| `quests-progression` | `001` |
+| `persistence` | `001` |
+| `ui-input` | `001` |
+
+This section is maintained automatically from the plan files.
 
 Next ideas backlog is in [docs/plans/NEXT-IDEAS.md](./NEXT-IDEAS.md). Loose ends (blockers/spun-off ideas found mid-plan) are in [docs/plans/LOOSE-ENDS.md](./LOOSE-ENDS.md).
 
@@ -245,12 +239,12 @@ Done plans kept visible here (not archived) because a current plan above still d
 
 ## Index completeness
 
-Every `docs/plans/YYYY-MM-DD--NNN--*.md` in **this folder** (except `*-implementation-notes.md`, `*-review.md`, `README.md`, `NEXT-IDEAS.md`, `LOOSE-ENDS.md`, `archive/`) belongs in exactly one section above (`In progress` / `Planned` / `Todo` / `Verification needed` / `Recent context`), regardless of status.
+Every base plan file in **this folder** belongs in exactly one section above (`In progress` / `Planned` / `Todo` / `Verification needed` / `Recent context`), regardless of status. Base plan files use either the legacy `YYYY-MM-DD--NNN--*.md` format or the new `<domain>-<id>-*.md` format. Implementation notes/reviews, `README.md`, `NEXT-IDEAS.md`, `LOOSE-ENDS.md`, and `archive/` are excluded.
 
-~~New plan: `YYYY-MM-DD--{NNN}--slug.md` (next sequential NNN)~~, a `domain:`/optional `tags` per [Plan domains](#plan-domains) above, then a row in the matching section. When a plan reaches `done` and nothing above still depends on it, it stays here until the next archive snapshot — do not move it to `archive/` yourself; that only happens as a deliberate periodic snapshot (see [archive/README.md](./archive/README.md)).
+New plan: `<domain>-<id>-slug.md` with a primary `domain:` and optional `tags:` per [Plan domains](#plan-domains). The ID is the next unused three-digit number within that domain. Existing legacy plans are not renamed as part of this transition.
 
-**Keep `Summary` short — this file must stay small enough to load whole (e.g. into ChatGPT) as a planning map.** One sentence, or a few short clauses. Include only what a *future plan* needs as context: key architectural decisions (reuse vs new system, explicit scope exclusions/deferrals), SaveData version bumps, known bugs. Do not restate the filename/slug, list touched file or function names, quote test counts, or repeat the standard tech-verification sentence (already covered once under [Verification](#plans--current-planning-map) above) — that detail belongs in the plan's own `*-implementation-notes.md`/`*-review.md`, not in this index.
+When a plan reaches `done` and nothing above still depends on it, it stays here until the next archive snapshot — do not move it to `archive/` yourself; that only happens as a deliberate periodic snapshot (see [archive/README.md](./archive/README.md)).
+
+**Keep `Summary` short — this file must stay small enough to load whole (e.g. into ChatGPT) as a planning map.** One sentence, or a few short clauses. Include only what a *future plan* needs as context: key architectural decisions (reuse vs new system, explicit scope exclusions/deferrals), SaveData version bumps, known bugs. Do not restate the filename/slug, list touched file or function names, quote test counts, or repeat the standard tech-verification sentence (already covered once under [Verification](#plans--current-planning-map) above) — that detail belongs in the plan's own `*-implementation-notes.md`/`*-review.md`.
 
 **`Verification needed` is the exception: its column is `Notes`, not `Summary`, and stays empty by default.** Whoever verifies a plan there opens the plan file directly — the table only needs a link to `*-implementation-notes.md`/`*-review.md` when one exists, or a one-line flag for something a verifier must know before testing (e.g. a known bug from a prior playtest). No prose summary of what was built.
-
----
