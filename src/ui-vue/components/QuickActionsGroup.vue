@@ -12,7 +12,7 @@ defineProps<{
       v-if="label"
       :label
     />
-    <div class="flex gap-2">
+    <div class="flex gap-2 flex-wrap">
       <slot />
     </div>
   </div>

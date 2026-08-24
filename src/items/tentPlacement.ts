@@ -39,7 +39,7 @@ export type TentPlacementInput = Omit<
  *  ground placement already uses, not a second water-margin constant. */
 export const WATER_MARGIN = 0.8
 const SLOPE_SAMPLE = 1.6
-const SLOPE_MAX_DELTA = 0.45
+const SLOPE_MAX_DELTA = 0.75 // .45 -> .75 after browser manual test
 const TENT_SEPARATION = TENT_FOOTPRINT_RADIUS * 2.2
 
 function maxSlopeDelta(

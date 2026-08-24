@@ -584,7 +584,12 @@ export function applyModificationToTile(
       // sample always matches within float tolerance.
       if (Math.abs(o.x + ix * o.step - sample.x) > o.step * 1e-3) continue
       if (Math.abs(o.z + iz * o.step - sample.z) > o.step * 1e-3) continue
-      tile.heights[iz * o.apronRes + ix] = sample.height
+      const idx = iz * o.apronRes + ix
+      tile.heights[idx] = sample.height
+      // Worked/leveled ground doesn't keep its grass — same road-corridor
+      // grass-reject `tile.roadTint` scorch already bumps, but to a flat
+      // full exclusion (an exact sample, not a radial falloff).
+      if (tile.roadTint) tile.roadTint[idx] = 1
       touchedPrepare = true
     }
     return touchedPrepare
@@ -2104,6 +2109,11 @@ export function createChunkManager(
         if (!touched) continue
         touchedAny = true
         buildAndAttachMesh(rec, rec.tile)
+        // Same "grass was placed against the pre-modification roadTint,
+        // rebuild so worked ground actually thins blades" reasoning as
+        // `scorchTerrain` above.
+        removeGrass(rec)
+        if (config.grass.enabled) ensureGrass(rec)
       }
       return touchedAny
     },

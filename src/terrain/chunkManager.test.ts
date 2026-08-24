@@ -132,6 +132,61 @@ describe('applyModificationToTile', () => {
     const iz = Math.round((0 - o.z) / o.step)
     expect(tile.roadTint[iz * o.apronRes + ix]).toBe(1)
   })
+
+  it('prepare sets exact sample heights and clears grass eligibility (roadTint) at those samples only', () => {
+    const tile = fakeTile(7)
+    const o = apronOriginWorld(0, 0, CHUNK_SIZE, RESOLUTION)
+    const mod: TerrainModification = {
+      x: 0,
+      z: 0,
+      radius: 0,
+      depth: 0,
+      mode: 'prepare',
+      id: 'prep:1',
+      samples: [{ x: 0, z: 0, height: 12 }],
+    }
+    const touched = applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod)
+    expect(touched).toBe(true)
+    expect(heightAtWorld(tile, 0, 0, 0, 0)).toBe(12)
+    const centerIx = Math.round((0 - o.x) / o.step)
+    const centerIz = Math.round((0 - o.z) / o.step)
+    expect(tile.roadTint[centerIz * o.apronRes + centerIx]).toBe(1)
+    // An untouched neighboring sample keeps its original height and roadTint.
+    expect(heightAtWorld(tile, 0, 0, 8, 0)).toBe(10)
+    const otherIx = Math.round((8 - o.x) / o.step)
+    expect(tile.roadTint[centerIz * o.apronRes + otherIx]).toBe(0)
+  })
+
+  it('prepare replacing the same id with new samples does not leave the old height write in place elsewhere', () => {
+    const tile = fakeTile(7)
+    const first: TerrainModification = { x: 0, z: 0, radius: 0, depth: 0, mode: 'prepare', id: 'prep:1', samples: [{ x: 0, z: 0, height: 11 }] }
+    applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, first)
+    expect(heightAtWorld(tile, 0, 0, 0, 0)).toBe(11)
+    // A second application with different samples (simulating a later
+    // progress tick) only touches its own samples — the grid write itself
+    // is not "undone," matching how `ChunkManager.applyExactHeights` always
+    // re-derives the complete current sample set from the immutable
+    // original, never a delta.
+    const second: TerrainModification = { x: 0, z: 0, radius: 0, depth: 0, mode: 'prepare', id: 'prep:1', samples: [{ x: 0, z: 0, height: 12.5 }] }
+    applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, second)
+    expect(heightAtWorld(tile, 0, 0, 0, 0)).toBe(12.5)
+  })
+
+  it('prepare ignores a sample that does not land on this chunk grid', () => {
+    const tile = fakeTile(7)
+    const mod: TerrainModification = {
+      x: 0,
+      z: 0,
+      radius: 0,
+      depth: 0,
+      mode: 'prepare',
+      id: 'prep:1',
+      samples: [{ x: 0.37, z: 0, height: 99 }],
+    }
+    const touched = applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod)
+    expect(touched).toBe(false)
+    expect(heightAtWorld(tile, 0, 0, 0, 0)).toBe(10)
+  })
 })
 
 describe('pickNearestQueuedKey', () => {

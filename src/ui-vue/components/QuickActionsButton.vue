@@ -17,7 +17,7 @@ const emit = defineEmits<{
   <button
     type="button"
     :class="cn(
-      'inline-flex w-auto min-w-10 max-w-50 flex-1 cursor-pointer items-center justify-between flex-wrap gap-2 rounded-lg border border-white/20 bg-panel px-3.5 py-2.5 text-left text-sm text-ink shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:bg-panel/30 hover:backdrop-blur-md',
+      'inline-flex w-auto min-w-fit max-w-50 flex-1 cursor-pointer items-center justify-between flex-wrap gap-2 rounded-lg border border-white/20 bg-panel px-3.5 py-2.5 text-left text-sm text-ink shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:bg-panel/30 hover:backdrop-blur-md',
       props.class)"
     @click="emit('click')"
   >
