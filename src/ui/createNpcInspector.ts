@@ -80,6 +80,7 @@ function buildInspectorText(
 
   lines.push('', 'Decision / Why')
   lines.push(`  need: ${whyResult.need.id}${whyResult.need.value !== null ? ` (${whyResult.need.value.toFixed(2)})` : ''}`)
+  lines.push(`  modifiers: ${formatWinningModifiers(snapshot, whyResult.need.id)}`)
   lines.push(`  phase: ${whyResult.phase}`)
   lines.push(`  action: ${whyResult.action ? `${whyResult.action.kind}${whyResult.action.target ? ` → ${whyResult.action.target}` : ''}` : '-'}`)
   lines.push(`  blocked: ${whyResult.blocked ?? '-'}`)
@@ -120,6 +121,15 @@ function buildInspectorText(
   }
 
   return lines.join('\n')
+}
+
+/** Personality/role breakdown behind the winning need (plan ai-002) — reads
+ *  `snapshot.candidates`, never recomputes a score. Empty modifiers (e.g.
+ *  `idle`, or a duty this NPC's role/traits don't touch) render as `-`. */
+function formatWinningModifiers(snapshot: NpcInspectionSnapshot, needId: string): string {
+  const candidate = snapshot.candidates?.find((c) => c.target === needId)
+  if (!candidate || candidate.modifiers.length === 0) return '-'
+  return candidate.modifiers.map((m) => `${m.source} ${m.value >= 0 ? '+' : ''}${m.value.toFixed(2)}`).join(', ')
 }
 
 function formatEvent(event: NpcTraceEvent): string {
@@ -254,6 +264,7 @@ export function createNpcInspector(
     const whyResult = npc.why(getTimeOfDay())
     why.replaceChildren()
     row(why, 'need', `${whyResult.need.id}${whyResult.need.value !== null ? ` (${whyResult.need.value.toFixed(2)})` : ''}`)
+    row(why, 'modifiers', formatWinningModifiers(snapshot, whyResult.need.id))
     row(why, 'phase', whyResult.phase)
     row(why, 'action', whyResult.action ? `${whyResult.action.kind}${whyResult.action.target ? ` → ${whyResult.action.target}` : ''}` : '-')
     row(why, 'blocked', whyResult.blocked ?? '-')

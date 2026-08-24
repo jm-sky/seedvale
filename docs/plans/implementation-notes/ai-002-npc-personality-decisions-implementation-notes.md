@@ -2,7 +2,7 @@
 
 **Plan:** `docs/plans/ai-002-npc-personality-decisions.md`
 **Reviewed:** 2026-08-24
-**Status:** `planned`
+**Status:** `verification needed` — implemented + technically verified 2026-08-24, browser verification pending
 
 ## Review summary
 
