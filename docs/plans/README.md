@@ -80,7 +80,7 @@ Next IDs are tracked separately for each canonical domain. Until the first new p
 - quests-progression: `001`
 - settlements: `001`
 - settlements-npcs: `001`
-- tools: `002`
+- tools: `003`
 - ui-input: `002`
 - world: `001`
 - world-terrain: `003`
@@ -158,6 +158,7 @@ Natural vegetation
 | `tools-001-performance-benchmark-determinism-and-reliability.md` | - | 🔴 | M | - |
 | `world-terrain-002-terrain-modification-and-land-preparation.md` | - | 🟡 | L | - |
 | `ui-input-001-developer-debug-api.md` | - | 🔴 | M | - |
+| `tools-002-trace-analyzer-application-cpu-attribution.md` | - | 🔴 | M | - |
 
 ### Fresh new
 

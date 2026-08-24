@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-24 09:53:31  
+> Date: 2026-08-24 10:00:53  
 
 ## PLANS
 
@@ -12,8 +12,9 @@
 - `ai-001-npc-pressure-layer.md`
 - `ai-002-npc-personality-decisions.md`
 - `npc-001-npc-physical-stats-sex-and-age.md`
+- `tools-001-performance-benchmark-determinism-and-reliability.md`
+- `tools-002-trace-analyzer-application-cpu-attribution.md`
 - `ui-input-001-developer-debug-api.md`
-- `tools-002-performance-benchmark-determinism-and-reliability.md`
 - `world-terrain-002-terrain-modification-and-land-preparation.md`
 
 --------------------------------
@@ -222,6 +223,64 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Plik dodaj na branch `main` w repozytorium.
 ```
 
+### `tools-001-performance-benchmark-determinism-and-reliability.md`
+
+Prompt:
+
+```
+Zrób review planu `tools-001-performance-benchmark-determinism-and-reliability.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/tools-001-performance-benchmark-determinism-and-reliability.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`tools-001-performance-benchmark-determinism-and-reliability-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `tools-002-trace-analyzer-application-cpu-attribution.md`
+
+Prompt:
+
+```
+Zrób review planu `tools-002-trace-analyzer-application-cpu-attribution.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/tools-002-trace-analyzer-application-cpu-attribution.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`tools-002-trace-analyzer-application-cpu-attribution-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
 ### `ui-input-001-developer-debug-api.md`
 
 Prompt:
@@ -251,35 +310,6 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Plik dodaj na branch `main` w repozytorium.
 ```
 
-### `tools-002-performance-benchmark-determinism-and-reliability.md`
-
-Prompt:
-
-```
-Zrób review planu `tools-002-performance-benchmark-determinism-and-reliability.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/tools-002-performance-benchmark-determinism-and-reliability.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`world-terrain-002-performance-benchmark-determinism-and-reliability-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
 ### `world-terrain-002-terrain-modification-and-land-preparation.md`
 
 Prompt:
@@ -294,7 +324,7 @@ Wczytaj:
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`world-terrain-003-terrain-modification-and-land-preparation-implementation-notes.md`
+`world-terrain-002-terrain-modification-and-land-preparation-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
