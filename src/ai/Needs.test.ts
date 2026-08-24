@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createNeedState, pickNeed, SLEEP_HUNGER_THIRST_RATE, tickNeeds } from './Needs'
+import { createNeedState, generateNeedPressures, pickNeed, SLEEP_HUNGER_THIRST_RATE, tickNeeds } from './Needs'
 
 const DAY_LENGTH_SEC = 480
 
@@ -85,6 +85,50 @@ describe('pickNeed critical mode', () => {
       { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0.5 },
       { critical: true, foodShortage: true },
     )).toBe('idle')
+  })
+})
+
+describe('generateNeedPressures', () => {
+  it('returns a zero-value pressure per need below threshold, plus the constant idle pressure', () => {
+    const pressures = generateNeedPressures({ thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 })
+    expect(pressures).toEqual([
+      { source: 'need.thirst', target: 'water', value: 0 },
+      { source: 'need.woodDuty', target: 'wood', value: 0 },
+      { source: 'need.waterDuty', target: 'waterDuty', value: 0 },
+      { source: 'need.hunger', target: 'food', value: 0 },
+      { source: 'need.idle', target: 'idle', value: 0.12 },
+    ])
+  })
+
+  it('scores a crossed need as value * multiplier, matching pickNeed thresholds', () => {
+    const pressures = generateNeedPressures({ thirst: 0.9, woodDuty: 0, waterDuty: 0, hunger: 0 })
+    const water = pressures.find((p) => p.target === 'water')
+    expect(water?.value).toBeCloseTo(0.9 * 1.35)
+  })
+
+  it('applies the shortage multiplier to the affected pressure only', () => {
+    const base = generateNeedPressures({ thirst: 0, woodDuty: 0.25, waterDuty: 0, hunger: 0 })
+    const shortage = generateNeedPressures({ thirst: 0, woodDuty: 0.25, waterDuty: 0, hunger: 0 }, { woodShortage: true })
+    expect(base.find((p) => p.target === 'wood')?.value).toBe(0)
+    expect(shortage.find((p) => p.target === 'wood')?.value).toBeCloseTo(0.25 * 1.35)
+    expect(shortage.find((p) => p.target === 'water')?.value).toBe(0)
+  })
+
+  it('zeroes the wood pressure when skipWood is set (trader)', () => {
+    const pressures = generateNeedPressures({ thirst: 0, woodDuty: 0.9, waterDuty: 0, hunger: 0 }, { skipWood: true })
+    expect(pressures.find((p) => p.target === 'wood')?.value).toBe(0)
+  })
+
+  it('is deterministic for identical input', () => {
+    const needs = { thirst: 0.4, woodDuty: 0.3, waterDuty: 0.2, hunger: 0.1 }
+    expect(generateNeedPressures(needs)).toEqual(generateNeedPressures(needs))
+  })
+
+  it('produces the same winner pickNeed would derive from these pressures', () => {
+    const needs = { thirst: 0.5, woodDuty: 0.5, waterDuty: 0.5, hunger: 0.5 }
+    const pressures = generateNeedPressures(needs)
+    const best = pressures.reduce((a, b) => (b.value > a.value ? b : a))
+    expect(best.target).toBe(pickNeed(needs))
   })
 })
 

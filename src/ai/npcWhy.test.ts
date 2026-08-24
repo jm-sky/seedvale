@@ -16,6 +16,7 @@ function baseSnapshot(overrides: Partial<NpcInspectionSnapshot> = {}): NpcInspec
     activity: { kind: 'idle' },
     needs: { thirst: 0.1, woodDuty: 0.1, waterDuty: 0.1, hunger: 0.1 },
     activeNeed: 'idle',
+    pressures: [],
     action: null,
     queue: null,
     watchdog: { rescueStage: 'none', lowProgressStrikes: 0, recentRescueCount: 0 },
@@ -33,6 +34,7 @@ describe('projectNpcWhy', () => {
     const why = projectNpcWhy(baseSnapshot(), null)
     expect(why).toEqual({
       need: { id: 'idle', value: null },
+      pressures: [],
       phase: 'choose',
       action: null,
       queue: null,

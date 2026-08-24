@@ -112,7 +112,6 @@ Natural vegetation
 | `2026-08-19--171--weapon-browser-observatory.md`                    | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
 | `2026-08-22--203--well-depth-groundwater-and-protection.md`         | - | 🟡 | M | ~~127~~ |
-| `ai-001-npc-pressure-layer.md` ◼️                                   | NPC pressure layer | 🔴 | M      | - |
 | `ai-002-npc-personality-decisions.md` ◼️                            | Personality-driven decisions | 🔴 | M      | ~~ai-001~~ |
 | `ui-input-002-ui-ux-interaction-and-action-system-polish.md` 💡     | - | 🟡 | L | - |
 | `tools-001-performance-benchmark-determinism-and-reliability.md` ◼️ | - | 🔴 | M | - |
@@ -170,6 +169,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-20--175--cooking-vessels-grates-and-iron-rods.md` | [notes](./implementation-notes/2026-08-20--175--cooking-vessels-grates-and-iron-rods-implementation-notes.md) |
 | `2026-08-20--174--player-garden-and-npc-need-sources.md` | [notes](./implementation-notes/2026-08-20--174--player-garden-and-npc-need-sources-implementation-notes.md) |
 | `2026-08-22--192--arch--time-and-simulation-consistency.md` | [notes](./implementation-notes/2026-08-22--192--arch--time-and-simulation-consistency-implementation-notes.md) |
+| `ai-001-npc-pressure-layer.md` | [notes](./implementation-notes/ai-001-npc-pressure-layer-implementation-notes.md) |
 | `2026-08-20--173--terrain-aware-procedural-placement.md` | [notes](./implementation-notes/2026-08-20--173--terrain-aware-procedural-placement-implementation-notes.md) |
 | `2026-08-22--194--arch--entity-identity-lifecycle.md` | [notes](./implementation-notes/2026-08-22--194--arch--entity-identity-lifecycle-implementation-notes.md) |
 | `2026-08-22--195--arch--data-state-consistency.md` | [notes](./implementation-notes/2026-08-22--195--arch--data-state-consistency-implementation-notes.md) |
