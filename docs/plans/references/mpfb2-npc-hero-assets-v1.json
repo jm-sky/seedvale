@@ -1,0 +1,230 @@
+{
+  "project": "Seedvale",
+  "version": "v1",
+  "asset_source": "MPFB2",
+  "principle": "Modular assets instead of separate models for each NPC",
+  "categories": {
+    "body": {
+      "status": "deferred",
+      "note": "Use MPFB2 body types and morphs; no separate assets for v1."
+    },
+    "hair": {
+      "male": [
+        "short",
+        "medium",
+        "bald"
+      ],
+      "female": [
+        "shoulder_length",
+        "waist_length",
+        "braid"
+      ]
+    },
+    "beard": [
+      "none",
+      "short",
+      "short_with_moustache",
+      "moustache",
+      "medium_with_moustache",
+      "long_with_moustache"
+    ],
+    "face": {
+      "male": 4,
+      "female": 4,
+      "total": 8,
+      "note": "Age and proportions are handled by MPFB2/morphs."
+    },
+    "headwear": [
+      "none",
+      "hat",
+      "female_headscarf"
+    ],
+    "base": {
+      "male": [
+        "male_base"
+      ],
+      "female": [
+        "female_base"
+      ]
+    },
+    "clothing": {
+      "universal_male": [
+        {
+          "asset": "shirt",
+          "location": "upper_body"
+        },
+        {
+          "asset": "trousers",
+          "location": "lower_body"
+        },
+        {
+          "asset": "tunic",
+          "location": "upper_body_and_lower_body"
+        },
+        {
+          "asset": "vest",
+          "location": "upper_body"
+        },
+        {
+          "asset": "belt",
+          "location": "waist"
+        },
+        {
+          "asset": "boots",
+          "location": "feet"
+        },
+        {
+          "asset": "shoes",
+          "location": "feet"
+        },
+        {
+          "asset": "cloak",
+          "location": "full_body"
+        }
+      ],
+      "universal_female": [
+        {
+          "asset": "blouse",
+          "location": "upper_body"
+        },
+        {
+          "asset": "skirt",
+          "location": "lower_body"
+        },
+        {
+          "asset": "dress",
+          "location": "upper_body_and_lower_body"
+        },
+        {
+          "asset": "apron",
+          "location": "front_upper_body_and_lower_body"
+        },
+        {
+          "asset": "shoes",
+          "location": "feet"
+        },
+        {
+          "asset": "cloak",
+          "location": "full_body"
+        }
+      ],
+      "hero": {
+        "male": [
+          "tunic",
+          "trousers",
+          "vest",
+          "boots",
+          "cloak"
+        ],
+        "female": [
+          "dress",
+          "blouse",
+          "skirt",
+          "boots",
+          "cloak"
+        ]
+      },
+      "profession_specific": {
+        "farmer": [
+          {
+            "asset": "work_hat",
+            "location": "head"
+          }
+        ],
+        "guard": [
+          {
+            "asset": "gambeson",
+            "location": "upper_body_and_hips"
+          },
+          {
+            "asset": "guard_belt",
+            "location": "waist"
+          }
+        ],
+        "hunter": [
+          {
+            "asset": "fur_vest",
+            "location": "upper_body"
+          }
+        ],
+        "woodcutter": [],
+        "merchant": [],
+        "blacksmith": [
+          {
+            "asset": "smith_apron",
+            "location": "front_upper_body_and_lower_body"
+          },
+          {
+            "asset": "heavy_gloves",
+            "location": "hands"
+          }
+        ]
+      },
+      "wives": {
+        "clothing": "universal_female",
+        "profession_specific_outfits": false
+      }
+    },
+    "equipment": {
+      "status": "separate_category",
+      "planned": true
+    },
+    "weapons": {
+      "status": "separate_category",
+      "note": "Some weapons already exist in Seedvale."
+    },
+    "containers": {
+      "status": "deferred"
+    },
+    "seasonal": {
+      "status": "deferred"
+    },
+    "children": {
+      "status": "deferred"
+    },
+    "materials_and_colors": {
+      "status": "variants",
+      "materials": [
+        "cloth",
+        "leather",
+        "wool",
+        "metal"
+      ],
+      "note": "Prefer material/color variants over separate models."
+    }
+  },
+  "professions": [
+    "villager",
+    "hero",
+    "farmer",
+    "guard",
+    "hunter",
+    "woodcutter",
+    "merchant",
+    "blacksmith"
+  ],
+  "modular_example": {
+    "npc": [
+      "body",
+      "face",
+      "hair",
+      "beard",
+      "headwear",
+      "base",
+      "universal_clothing",
+      "profession_piece",
+      "equipment"
+    ],
+    "example_hunter": [
+      "male_body",
+      "male_face_3",
+      "short_hair",
+      "short_beard",
+      "tunic",
+      "trousers",
+      "boots",
+      "fur_vest",
+      "bow"
+    ]
+  }
+}
