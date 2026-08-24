@@ -45,7 +45,7 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `001`
-- settlements-npcs: `002`
+- settlements-npcs: `003`
 - tools: `003`
 - ui-input: `003`
 - world: `001`
@@ -117,6 +117,7 @@ Natural vegetation
 | `tools-001-performance-benchmark-determinism-and-reliability.md` ◼️ | - | 🔴 | M | - |
 | `tools-002-trace-analyzer-application-cpu-attribution.md` ◼️        | - | 🔴 | M | - |
 | `settlements-npcs-001-cultivation-hydration-and-watering.md` ◼️     | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
+| `settlements-npcs-002-npc-professions-households-and-age.md` ◼️ | - | 🔴 | L | ~~178~~ ~~069~~ ~~184~~ ~~185~~ |
 
 ### Fresh new
 
