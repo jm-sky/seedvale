@@ -152,14 +152,14 @@ Natural vegetation
 | `2026-08-19--171--weapon-browser-observatory.md` | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | - | 🟡 | L | 181 |
 | `2026-08-22--203--well-depth-groundwater-and-protection.md` |- | 🟡 | M | ~~127~~ |
-| `ai-001-npc-pressure-layer.md` | - | 🔴 | M | - |
-| `ai-002-npc-personality-decisions.md` | - | 🔴 | M | ~~ai-001~~ |
-| `npc-001-npc-physical-stats-sex-and-age.md` | - | 🟡 | M | - |
-| `tools-001-performance-benchmark-determinism-and-reliability.md` | - | 🔴 | M | - |
-| `world-terrain-002-terrain-modification-and-land-preparation.md` | - | 🟡 | L | - |
-| `ui-input-001-developer-debug-api.md` | - | 🔴 | M | - |
-| `tools-002-trace-analyzer-application-cpu-attribution.md` | - | 🔴 | M | - |
-| `ui-input-002-ui-ux-interaction-and-action-system-polish.md` | - | 🟡 | L | - |
+| `ai-001-npc-pressure-layer.md` ◼️ | - | 🔴 | M | - |
+| `ai-002-npc-personality-decisions.md` ◼️ | - | 🔴 | M | ~~ai-001~~ |
+| `npc-001-npc-physical-stats-sex-and-age.md` 💡 | - | 🟡 | M | - |
+| `tools-001-performance-benchmark-determinism-and-reliability.md` ◼️ | - | 🔴 | M | - |
+| `world-terrain-002-terrain-modification-and-land-preparation.md` ◼️ | - | 🟡 | L | - |
+| `ui-input-001-developer-debug-api.md` ◼️ | - | 🔴 | M | - |
+| `tools-002-trace-analyzer-application-cpu-attribution.md` ◼️ | - | 🔴 | M | - |
+| `ui-input-002-ui-ux-interaction-and-action-system-polish.md` ◼️ | - | 🟡 | L | - |
 
 ### Fresh new
 
@@ -189,7 +189,7 @@ Implementation complete; needs play/browser check. Do not treat as normal backlo
 
 | File | Notes | Pri | Effort | Depends |
 |------|-------|-----|--------|---------|
-| `world-terrain-001-clouds.md` | New `world/clouds.ts` (`createClouds`): bounded pool of 28 `THREE.Sprite` billboards from the existing `public/images/clouds/*.png`, XZ-follows the player, wind-drift wraps outside `camera.far` (no destroy/recreate). Weather-driven coverage/tint via pure `cloudAppearanceFor` (mirrors `weatherVisuals.ts`'s `applyWeatherOverlay`, lerped by `weather.intensity`), unit-tested in `clouds.test.ts`. New shared `assets/loadTexture.ts` cache (`loadGltf.ts`'s cache-the-promise pattern, adapted for `TextureLoader`). Owned/lifecycled next to `sky`/`weatherParticles` in `createApp.ts`/`gameLoop.ts`, not `WorldBundle`. `tsc`/lint/build/test green (1640 tests); no browser verification yet | 🟡 | M | - |
+| `world-terrain-001-clouds.md` ◼️ | New `world/clouds.ts` (`createClouds`): bounded pool of 28 `THREE.Sprite` billboards from the existing `public/images/clouds/*.png`, XZ-follows the player, wind-drift wraps outside `camera.far` (no destroy/recreate). Weather-driven coverage/tint via pure `cloudAppearanceFor` (mirrors `weatherVisuals.ts`'s `applyWeatherOverlay`, lerped by `weather.intensity`), unit-tested in `clouds.test.ts`. New shared `assets/loadTexture.ts` cache (`loadGltf.ts`'s cache-the-promise pattern, adapted for `TextureLoader`). Owned/lifecycled next to `sky`/`weatherParticles` in `createApp.ts`/`gameLoop.ts`, not `WorldBundle`. `tsc`/lint/build/test green (1640 tests); no browser verification yet | 🟡 | M | - |
 | `2026-08-20--179--animal-attack-and-npc-defense.md` | [implementation notes](./2026-08-20--179--animal-attack-and-npc-defense-implementation-notes.md) | 🔴 | M | ~~177~~ |
 | `2026-08-21--184--item-capability-abstraction.md` | [implementation notes](./2026-08-21--184--item-capability-abstraction-implementation-notes.md) | 🟡 | M | - |
 | `2026-08-14--111--house-construction.md` | **known bug from 2026-08-18 playtest** — [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md) | 🔴 | XL | ~~109~~ |

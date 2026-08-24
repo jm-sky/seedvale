@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-24 10:06:55  
+> Date: 2026-08-24 10:15:42  
 
 ## PLANS
 
@@ -45,6 +45,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
@@ -74,6 +75,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
@@ -103,6 +105,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
@@ -132,6 +135,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
@@ -161,6 +165,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
@@ -190,6 +195,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
@@ -219,6 +225,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
@@ -248,6 +255,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
@@ -277,6 +285,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
@@ -306,6 +315,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
@@ -335,6 +345,7 @@ Umieść w nim:
 - inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
 
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Plik dodaj na branch `main` w repozytorium.
 ```
