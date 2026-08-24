@@ -29,6 +29,10 @@ Examples:
 
 The `<id>` is a three-digit number local to the domain. New plans do not use the old global numeric sequence.
 
+## Next plan ID
+
+`204`
+
 ## Plan domains
 
 New plans should declare a primary `domain:` in frontmatter. If a plan genuinely spans more than one area, use optional `tags:` for the secondary domain(s).
