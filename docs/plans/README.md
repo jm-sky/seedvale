@@ -38,7 +38,7 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 
 ## Next plan IDs
 
-- ai: `003`
+- ai: `004`
 - fauna: `001`
 - items-player: `001`
 - npc: `002`
@@ -118,6 +118,7 @@ Natural vegetation
 | `tools-002-trace-analyzer-application-cpu-attribution.md` ◼️        | - | 🔴 | M | - |
 | `settlements-npcs-001-cultivation-hydration-and-watering.md` ◼️     | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
 | `settlements-npcs-002-npc-professions-households-and-age.md` ◼️ | - | 🔴 | L | ~~178~~ ~~069~~ ~~184~~ ~~185~~ |
+| `ai-003-npc-candidate-strategies.md` ◼️  | - | 🟡 | M | ~~ai-001~~ ~~ai-002~~ |
 
 ### Fresh new
 
