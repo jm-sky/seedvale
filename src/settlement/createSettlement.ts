@@ -38,6 +38,7 @@ import { buildAssemblyCollidersWorld, type HouseAssembly } from './houseBuilder'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
+import { generatePhysicalProfile } from './npcPhysicalProfile'
 import { homePlaceId, type Place, workplaceFor } from './places'
 import {
   buildSettlementProps,
@@ -517,11 +518,18 @@ export async function createSettlement(
       const workplace = workplaceFor(def.id, member.character.role, landmarks, i)
       const npcId = `${def.id}:npc:${i}`
       const needOffset = i / Math.max(1, flatMembers.length - 1)
+      // Deterministic max HP/stamina/vigor from sex + age (plan npc-001) —
+      // own seed stream (settlement seed + flat member index), independent
+      // of `needOffset`/name/role rolls. Only used the first time `npcId` is
+      // ever seen by `npcStateRegistry` below; hydration of an existing id
+      // ignores it (a settlement doesn't re-roll an NPC's body on reload).
+      const physicalSeed = settlementSeed ^ Math.imul(i + 1, 0x51ed270b) ^ 0x50485953
+      const physicalProfile = generatePhysicalProfile(physicalSeed, member.character.gender, member.age)
       // Hydrates from the same HP/needs/stamina/vigor object every time this
       // id has been seen before (agent dispose/recreate on settlement
       // unload/reload) — a genuinely new id gets the usual fresh state
-      // (plan 197).
-      const npcState = npcStateRegistry.getOrCreate(npcId, needOffset)
+      // (plan 197), seeded with this NPC's generated maxima.
+      const npcState = npcStateRegistry.getOrCreate(npcId, needOffset, physicalProfile)
       const agent = await NpcAgent.create(
         sampleHeight,
         waterLevel,

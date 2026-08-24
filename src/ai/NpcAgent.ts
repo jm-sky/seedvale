@@ -41,6 +41,7 @@ import {
   WOODCUTTING_PRODUCTION,
 } from '../economy'
 import { Inventory } from '../items/Inventory'
+import { generatePhysicalProfile } from '../settlement/npcPhysicalProfile'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import {
@@ -937,8 +938,15 @@ export class NpcAgent {
     /** Authoritative HP/needs/stamina/vigor (plan 197). Defaults to a fresh
      *  state for callers with no `SettlementsManager`-backed registry to
      *  hand in — same "isolated fallback" idiom as `economy`/`household`
-     *  defaulting to `null`. */
-    npcState: NpcAuthoritativeState = createNpcAuthoritativeState(npcId, needOffset),
+     *  defaulting to `null`. Still derives real per-member maxima from
+     *  `member`'s own sex/age (plan npc-001) rather than a hidden flat
+     *  100/100/100 — `treeIndex` stands in for the settlement seed this
+     *  isolated path doesn't have. */
+    npcState: NpcAuthoritativeState = createNpcAuthoritativeState(
+      npcId,
+      needOffset,
+      generatePhysicalProfile(treeIndex, member.character.gender, member.age),
+    ),
     getPlayerSocial: PlayerSocialLookup = () => ({ relationLevel: 'stranger', standing: 0 }),
     mining: SettlementMiningHooks | null = null,
     getNearbyPlayerWell?: NearbyPlayerWellLookup,

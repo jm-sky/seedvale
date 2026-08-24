@@ -152,6 +152,11 @@ export type FamilyMember = {
   /** Model scale — 1 for adults. Children get a smaller stand-in scale (see
    *  `CHILD_SCALE_RANGE`) since there's no dedicated child model yet. */
   scale: number
+  /** Integer age in `[0, 100]` (plan npc-001) — real first-class demographic
+   *  data, not derived from `relation`/`scale`. Generated from a dedicated
+   *  age seed (`familyAgeSeed`), isolated from this family's own role/trait/
+   *  name RNG stream so adding ages doesn't reshuffle existing rolls. */
+  age: number
 }
 
 export type FamilyDef = {
@@ -226,27 +231,89 @@ function familySeed(seed: number, familyIndex: number): number {
   return (seed ^ Math.imul(familyIndex + 1, 0x9e3779b1) ^ 0x46414d) >>> 0
 }
 
+/** Dedicated per-family age seed (plan npc-001 §7) — deliberately a separate
+ *  stream from `familySeed`'s `random`/`characterForSeed` rolls so adding
+ *  ages never reshuffles existing roles/traits/names/personalities across
+ *  the world. Same xor-magic-number idiom, different magic number. */
+function familyAgeSeed(seed: number, familyIndex: number): number {
+  return (seed ^ Math.imul(familyIndex + 1, 0x27d4eb2f) ^ 0x41474553) >>> 0
+}
+
+/** Adult ages roll uniformly in this window (plan npc-001 §7) — wide enough
+ *  to span young adults through elderly parents/singles, and its floor
+ *  doubles as `MIN_PARENT_AGE_AT_CHILD` below so a child's age always has
+ *  room to resolve to a valid non-negative value. */
+const ADULT_AGE_RANGE: readonly [number, number] = [18, 70]
+
+/** Spouses roll within this many years of each other so couples don't come
+ *  out wildly mismatched, while still allowing real variation. */
+const MAX_SPOUSE_AGE_GAP = 15
+
+/** A child's age leaves at least this many years between them and their
+ *  younger parent — the minimum plausible parent age at that child's birth.
+ *  Equal to `ADULT_AGE_RANGE`'s floor so the worst case (both parents at the
+ *  minimum adult age) still resolves to a valid child age of 0, never
+ *  negative. */
+const MIN_PARENT_AGE_AT_CHILD = 18
+
+const CHILD_AGE_MAX = 17
+
+function generateAdultAge(random: () => number): number {
+  const [min, max] = ADULT_AGE_RANGE
+  return min + Math.floor(random() * (max - min + 1))
+}
+
+/** Second spouse's age, within `MAX_SPOUSE_AGE_GAP` years of the first and
+ *  still inside `ADULT_AGE_RANGE`. */
+function generateSpouseAge(random: () => number, firstAge: number): number {
+  const [rangeMin, rangeMax] = ADULT_AGE_RANGE
+  const min = Math.max(rangeMin, firstAge - MAX_SPOUSE_AGE_GAP)
+  const max = Math.min(rangeMax, firstAge + MAX_SPOUSE_AGE_GAP)
+  return min + Math.floor(random() * (max - min + 1))
+}
+
+/** Child's age, constrained by both parents' ages via `MIN_PARENT_AGE_AT_CHILD`
+ *  (plan npc-001 §7 — "actual ages", younger than parents by a real margin). */
+function generateChildAge(random: () => number, parentAgeA: number, parentAgeB: number): number {
+  const youngestParentAge = Math.min(parentAgeA, parentAgeB)
+  const maxChildAge = Math.max(0, Math.min(CHILD_AGE_MAX, youngestParentAge - MIN_PARENT_AGE_AT_CHILD))
+  return Math.floor(random() * (maxChildAge + 1))
+}
+
 /** The 2 reserved families reproducing today's home-settlement roster 1:1 —
  *  Anna+Piotr and Kasia+Marek as married couples, same role/traits/
  *  personality as `RESERVED_CHARACTERS`. Always present in the home
  *  settlement's family list (see `generateFamilies`'s `isHome` floor) so the
  *  hardcoded quest names in `quests/quests.ts` keep working regardless of
  *  what `VillageSize` the home settlement rolls. */
-function reservedHomeFamilies(): FamilyDef[] {
+function reservedHomeFamilies(seed: number): FamilyDef[] {
   const [anna, piotr, kasia, marek] = RESERVED_CHARACTERS
+
+  // Ages generated the same deterministic way as procedural families (own
+  // dedicated `familyAgeSeed` stream, familyIndex 0/1 — these two families
+  // are always families 0/1 of the home settlement, see `generateFamilies`).
+  // Not a hardcoded default like `25`: these are family demographic state,
+  // not part of `RESERVED_CHARACTERS`'s identity/role definitions.
+  const ageRandom0 = createSeededRandom(familyAgeSeed(seed, 0))
+  const piotrAge = generateAdultAge(ageRandom0)
+  const annaAge = generateSpouseAge(ageRandom0, piotrAge)
+  const ageRandom1 = createSeededRandom(familyAgeSeed(seed, 1))
+  const marekAge = generateAdultAge(ageRandom1)
+  const kasiaAge = generateSpouseAge(ageRandom1, marekAge)
+
   return [
     {
       id: 'family-reserved-0',
       members: [
-        { name: piotr!.name, lastName: piotr!.lastName!, relation: 'husband', character: piotr!, scale: 1 },
-        { name: anna!.name, lastName: anna!.lastName!, relation: 'wife', character: anna!, scale: 1 },
+        { name: piotr!.name, lastName: piotr!.lastName!, relation: 'husband', character: piotr!, scale: 1, age: piotrAge },
+        { name: anna!.name, lastName: anna!.lastName!, relation: 'wife', character: anna!, scale: 1, age: annaAge },
       ],
     },
     {
       id: 'family-reserved-1',
       members: [
-        { name: marek!.name, lastName: marek!.lastName!, relation: 'husband', character: marek!, scale: 1 },
-        { name: kasia!.name, lastName: kasia!.lastName!, relation: 'wife', character: kasia!, scale: 1 },
+        { name: marek!.name, lastName: marek!.lastName!, relation: 'husband', character: marek!, scale: 1, age: marekAge },
+        { name: kasia!.name, lastName: kasia!.lastName!, relation: 'wife', character: kasia!, scale: 1, age: kasiaAge },
       ],
     },
   ]
@@ -278,12 +345,16 @@ function generateFamily(
 ): { family: FamilyDef, nextIndex: number } {
   const fseed = familySeed(seed, familyIndex)
   const random = createSeededRandom(fseed ^ 0x1f3c5a)
+  // Own isolated stream — see `familyAgeSeed`'s doc comment. Must not draw
+  // from `random` above, or ages would reshuffle every existing role/trait/
+  // name roll across the whole world.
+  const ageRandom = createSeededRandom(familyAgeSeed(seed, familyIndex))
   const baseSurname = generateFamilySurname(fseed, nameCulture)
   const members: FamilyMember[] = []
   let idx = npcIndex
   let roleForced = false
 
-  const addMember = (gender: NpcGender, relation: FamilyRelation, scale: number) => {
+  const addMember = (gender: NpcGender, relation: FamilyRelation, scale: number, age: number) => {
     const name = generateNpcName(seed, idx, gender, nameCulture)
     const lastName = surnameForGender(baseSurname, nameCulture, gender)
     let character = characterForSeed(fseed ^ Math.imul(idx + 1, 0x2545f491), gender)
@@ -291,17 +362,20 @@ function generateFamily(
       character = { ...character, role: forcedRole }
       roleForced = true
     }
-    members.push({ name, lastName, relation, character: { ...character, name, lastName }, scale })
+    members.push({ name, lastName, relation, character: { ...character, name, lastName }, scale, age })
     idx++
   }
 
   if (forceSingle || random() < SOLO_CHANCE) {
-    addMember(random() < 0.5 ? 'male' : 'female', 'single', 1)
+    addMember(random() < 0.5 ? 'male' : 'female', 'single', 1, generateAdultAge(ageRandom))
   } else {
-    addMember('male', 'husband', 1)
-    addMember('female', 'wife', 1)
+    const husbandAge = generateAdultAge(ageRandom)
+    const wifeAge = generateSpouseAge(ageRandom, husbandAge)
+    addMember('male', 'husband', 1, husbandAge)
+    addMember('female', 'wife', 1, wifeAge)
     if (random() < COUPLE_WITH_CHILD_CHANCE) {
-      addMember(random() < 0.5 ? 'male' : 'female', 'child', childScale(random))
+      const childAge = generateChildAge(ageRandom, husbandAge, wifeAge)
+      addMember(random() < 0.5 ? 'male' : 'female', 'child', childScale(random), childAge)
     }
   }
 
@@ -339,7 +413,7 @@ export function generateFamilies(
     return [family]
   }
 
-  const families: FamilyDef[] = isHome ? reservedHomeFamilies() : []
+  const families: FamilyDef[] = isHome ? reservedHomeFamilies(seed) : []
   const targetCount = Math.max(familyCountForSize(size, seed), families.length)
 
   let npcIndex = families.reduce((n, f) => n + f.members.length, 0)

@@ -6,8 +6,11 @@ import { createVigorState, type VigorState } from '../shared/VigorState'
 
 export type NpcId = string
 
-const MAX_HP = 100
-const MAX_STAMINA = 100
+/** Baseline/fallback capacities — real NPC construction paths pass generated
+ *  `NpcPhysicalMaxima` instead (plan npc-001's `generatePhysicalProfile`).
+ *  Exported for the isolated-fallback default in `NpcAgent.create()`. */
+export const MAX_HP = 100
+export const MAX_STAMINA = 100
 
 /**
  * Authoritative NPC entity state (plan 197) — everything an `NpcAgent`
@@ -52,15 +55,34 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot): NpcAuthoritativeSt
   }
 }
 
+/** Max HP/stamina/vigor for a newly created `NpcAuthoritativeState` — the
+ *  `maxHp`/`maxStamina`/`maxVigor` subset of `npcPhysicalProfile.ts`'s
+ *  `PhysicalProfile` (kept as its own narrow type here so this module
+ *  doesn't need to import that standalone generator). */
+export type NpcPhysicalMaxima = {
+  maxHp: number
+  maxStamina: number
+  maxVigor: number
+}
+
+const DEFAULT_MAXIMA: NpcPhysicalMaxima = { maxHp: MAX_HP, maxStamina: MAX_STAMINA, maxVigor: MAX_VIGOR }
+
 /** Also used directly as `NpcAgent.create()`'s isolated-fallback default
  *  (no `SettlementsManager`-backed registry available), mirroring how
- *  `economy`/`household` default to `null` there. */
-export function createNpcAuthoritativeState(id: NpcId, needOffset: number): NpcAuthoritativeState {
+ *  `economy`/`household` default to `null` there. `maxima` defaults to the
+ *  flat 100/100/100 baseline only for callers with no physical profile to
+ *  hand in; every real NPC construction path (`createSettlement.ts`) passes
+ *  a generated one so this default is never silently relied upon there. */
+export function createNpcAuthoritativeState(
+  id: NpcId,
+  needOffset: number,
+  maxima: NpcPhysicalMaxima = DEFAULT_MAXIMA,
+): NpcAuthoritativeState {
   return {
     id,
-    health: createHealthState(MAX_HP),
-    stamina: createStaminaState(MAX_STAMINA),
-    vigor: createVigorState(MAX_VIGOR),
+    health: createHealthState(maxima.maxHp),
+    stamina: createStaminaState(maxima.maxStamina),
+    vigor: createVigorState(maxima.maxVigor),
     needs: createNeedState(needOffset),
   }
 }
@@ -73,11 +95,11 @@ export function createNpcAuthoritativeState(id: NpcId, needOffset: number): NpcA
  * HP/needs/stamina/vigor (and death) survive (plan 197).
  */
 export type NpcStateRegistry = {
-  /** `needOffset` only matters the first time a given `id` is ever seen in
-   *  this registry (true initial creation, no carried snapshot either) —
-   *  every later call (agent dispose/recreate, settlement unload/reload)
-   *  returns the same object regardless of what's passed. */
-  getOrCreate: (id: NpcId, needOffset: number) => NpcAuthoritativeState
+  /** `needOffset`/`maxima` only matter the first time a given `id` is ever
+   *  seen in this registry (true initial creation, no carried snapshot
+   *  either) — every later call (agent dispose/recreate, settlement
+   *  unload/reload) returns the same object regardless of what's passed. */
+  getOrCreate: (id: NpcId, needOffset: number, maxima?: NpcPhysicalMaxima) => NpcAuthoritativeState
   get: (id: NpcId) => NpcAuthoritativeState | undefined
   clear: () => void
   /** Plain-data snapshot of every NPC state created so far — see
@@ -88,11 +110,11 @@ export type NpcStateRegistry = {
 export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>): NpcStateRegistry {
   const byId = new Map<NpcId, NpcAuthoritativeState>()
   return {
-    getOrCreate(id, needOffset) {
+    getOrCreate(id, needOffset, maxima) {
       const existing = byId.get(id)
       if (existing) return existing
       const seed = initial?.[id]
-      const created = seed ? fromSnapshot(id, seed) : createNpcAuthoritativeState(id, needOffset)
+      const created = seed ? fromSnapshot(id, seed) : createNpcAuthoritativeState(id, needOffset, maxima)
       byId.set(id, created)
       return created
     },

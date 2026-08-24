@@ -124,3 +124,20 @@ Add a small distribution/property-style test over many deterministic seeds to ca
 Do not introduce physical appearance, body morphs, height/build, heredity, strength/agility, injuries or illnesses here. The vision explicitly treats the physical profile as extensible, but those systems are future layers. fileciteturn23file0L2-L2
 
 Do not refactor `NpcAgent`/family architecture beyond the seams needed to pass age/profile data through the existing construction path.
+
+## Implementation summary (2026-08-24)
+
+**Implemented:**
+
+- `src/settlement/npcPhysicalProfile.ts` — new standalone pure module: age clamping (`clampAge`, `[0,100]`), `lifeStageForAge` (plan §1 table), `ageMultiplierForAge` (piecewise-linear interpolation over anchor points placed at each life-stage bucket's own low/high range value, so the curve is continuous across bucket boundaries except the one deliberate 0.85→0.90 jump at age 17→18 that the plan's own table specifies), sex modifiers (plan §2, exact male/female HP/stamina/vigor multipliers), three independent ±10% variation samples (`hpVariation`/`staminaVariation`/`vigorVariation`, each from its own seed offset), and `generatePhysicalProfile(seed, sex, age)` combining `base × sexModifier × ageModifier × variation`, rounded to a positive integer.
+- `src/settlement/families.ts` — added `age: number` to `FamilyMember`. New dedicated `familyAgeSeed()` stream (own magic number, isolated from `familySeed`'s existing role/trait/name RNG) drives `generateAdultAge`/`generateSpouseAge`/`generateChildAge`. Constraints chosen and documented in code: adults roll in `[18, 70]`; spouses stay within 15 years of each other; a child's age leaves at least 18 years to their younger parent (so age is always in `[0, 17]` and never invalid). `reservedHomeFamilies()` now takes the world `seed` and generates Anna/Piotr/Kasia/Marek's ages the same way (familyIndex 0/1) instead of a hardcoded default.
+- `src/settlement/npcState.ts` — `createNpcAuthoritativeState()` and `NpcStateRegistry.getOrCreate()` now accept an optional `NpcPhysicalMaxima` (`{maxHp, maxStamina, maxVigor}`), defaulting to the flat 100/100/100 baseline only when omitted. `getOrCreate()` still ignores the passed maxima whenever the `npcId` already has state (plan 197 lifecycle continuity — verified by test).
+- `src/settlement/createSettlement.ts` — computes a per-member physical seed (`settlementSeed` + flat member index, own magic number — not a hash of `npcId`), calls `generatePhysicalProfile(seed, member.character.gender, member.age)`, and passes the result into `npcStateRegistry.getOrCreate()`.
+- `src/ai/NpcAgent.ts` — the isolated-fallback `npcState` default parameter (no `SettlementsManager`-backed registry) now also derives real maxima from `member.character.gender`/`member.age` via `generatePhysicalProfile(treeIndex, ...)` instead of silently defaulting to 100/100/100.
+- No existing stamina/vigor/health mechanics changed — only the constructed `max` values differ.
+
+**Technically verified:** `npx tsc --noEmit`, `pnpm run lint:fix` (clean except 2 pre-existing unrelated errors in `scripts/plans-sync.ts`, confirmed via `git log`/`git stash` to predate this change), `pnpm run test` (1664/1664 passing, including new `npcPhysicalProfile.test.ts` and extended `families.test.ts`/`npcState.test.ts`), `pnpm run build`.
+
+Verified by diffing before/after (`git stash`) that the new isolated age RNG stream produces byte-identical name/role/trait rolls for a fixed seed — pinned as a regression test in `families.test.ts`.
+
+**Not browser/manually verified:** this plan changes deterministic simulation data (max HP/stamina/vigor), not rendering — per the plan's own "Verification" section, browser verification is not the primary target here.

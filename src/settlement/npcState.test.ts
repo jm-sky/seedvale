@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { damageHealth } from '../shared/HealthState'
-import { createNpcStateRegistry } from './npcState'
+import { createNpcAuthoritativeState, createNpcStateRegistry } from './npcState'
 
 describe('createNpcStateRegistry', () => {
   it('hydrates the same state object when an npc id is seen again (agent dispose/recreate)', () => {
@@ -70,5 +70,34 @@ describe('createNpcStateRegistry', () => {
     registry.clear()
     const again = registry.getOrCreate('0_0:npc:0', 0)
     expect(again.health.dead).toBe(false)
+  })
+
+  it('defaults to the flat 100/100/100 baseline when no physical maxima is given', () => {
+    const state = createNpcAuthoritativeState('npc:0', 0)
+    expect(state.health.maxHp).toBe(100)
+    expect(state.stamina.max).toBe(100)
+    expect(state.vigor.max).toBe(100)
+  })
+
+  it('uses generated physical-profile maxima for a genuinely new npc id (plan npc-001)', () => {
+    const registry = createNpcStateRegistry()
+    const maxima = { maxHp: 88, maxStamina: 77, maxVigor: 66 }
+    const state = registry.getOrCreate('0_0:npc:0', 0, maxima)
+    expect(state.health.maxHp).toBe(88)
+    expect(state.health.currentHp).toBe(88)
+    expect(state.stamina.max).toBe(77)
+    expect(state.stamina.current).toBe(77)
+    expect(state.vigor.max).toBe(66)
+    expect(state.vigor.current).toBe(66)
+  })
+
+  it('hydration of an already-known npc id ignores newly supplied maxima (plan 197 lifecycle continuity)', () => {
+    const registry = createNpcStateRegistry()
+    const first = registry.getOrCreate('0_0:npc:0', 0, { maxHp: 88, maxStamina: 77, maxVigor: 66 })
+    const rehydrated = registry.getOrCreate('0_0:npc:0', 0, { maxHp: 40, maxStamina: 40, maxVigor: 40 })
+    expect(rehydrated).toBe(first)
+    expect(rehydrated.health.maxHp).toBe(88)
+    expect(rehydrated.stamina.max).toBe(77)
+    expect(rehydrated.vigor.max).toBe(66)
   })
 })

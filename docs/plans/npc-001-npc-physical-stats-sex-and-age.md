@@ -1,7 +1,7 @@
 # Plan: NPC Physical Stats — Sex & Age
 
 **Created:** 2026-08-23  
-**Status:** `planned` 📋  
+**Status:** `done` ✅  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none  
 **Domain:** `npc`

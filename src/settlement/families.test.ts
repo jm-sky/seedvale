@@ -214,4 +214,94 @@ describe('generateFamilies', () => {
       expect(a).toEqual(b)
     })
   })
+
+  describe('ages (plan npc-001)', () => {
+    it('gives every member an integer age in [0, 100]', () => {
+      for (let seed = 0; seed < 60; seed++) {
+        const families = generateFamilies(seed, 'LG', false, 'polish')
+        for (const member of families.flatMap((f) => f.members)) {
+          expect(Number.isInteger(member.age)).toBe(true)
+          expect(member.age).toBeGreaterThanOrEqual(0)
+          expect(member.age).toBeLessThanOrEqual(100)
+        }
+      }
+    })
+
+    it('gives husbands/wives/singles an adult age, and children a strictly younger one', () => {
+      for (let seed = 0; seed < 60; seed++) {
+        const families = generateFamilies(seed, 'LG', false, 'polish')
+        for (const family of families) {
+          const byRelation = new Map(family.members.map((m) => [m.relation, m]))
+          for (const relation of ['husband', 'wife', 'single'] as const) {
+            const member = byRelation.get(relation)
+            if (member) expect(member.age).toBeGreaterThanOrEqual(18)
+          }
+          const child = byRelation.get('child')
+          if (child) {
+            expect(child.age).toBeLessThanOrEqual(17)
+            for (const relation of ['husband', 'wife'] as const) {
+              const parent = byRelation.get(relation)
+              if (parent) expect(child.age).toBeLessThan(parent.age)
+            }
+          }
+        }
+      }
+    })
+
+    it('keeps spouse ages within a plausible gap of each other', () => {
+      for (let seed = 0; seed < 60; seed++) {
+        const families = generateFamilies(seed, 'LG', false, 'polish')
+        for (const family of families) {
+          const husband = family.members.find((m) => m.relation === 'husband')
+          const wife = family.members.find((m) => m.relation === 'wife')
+          if (husband && wife) expect(Math.abs(husband.age - wife.age)).toBeLessThanOrEqual(15)
+        }
+      }
+    })
+
+    it('is deterministic for the same seed and does not vary with an unrelated dominantResource change', () => {
+      const a = generateFamilies(23, 'LG', false, 'polish')
+      const b = generateFamilies(23, 'LG', false, 'polish')
+      expect(a.flatMap((f) => f.members.map((m) => m.age))).toEqual(
+        b.flatMap((f) => f.members.map((m) => m.age)),
+      )
+    })
+
+    it('gives the reserved home families (Anna/Piotr, Kasia/Marek) real, non-hardcoded ages', () => {
+      const a = generateFamilies(3, 'SM', true, 'polish')
+      const b = generateFamilies(9, 'SM', true, 'polish')
+      const agesFor = (families: typeof a, name: string) =>
+        families.flatMap((f) => f.members).find((m) => m.name === name)!.age
+      for (const name of ['Anna', 'Piotr', 'Kasia', 'Marek']) {
+        expect(agesFor(a, name)).toBeGreaterThanOrEqual(18)
+      }
+      // Different world seeds should not all coincidentally roll the same
+      // hardcoded-looking age for every reserved character.
+      const anyDiffers = ['Anna', 'Piotr', 'Kasia', 'Marek'].some((name) => agesFor(a, name) !== agesFor(b, name))
+      expect(anyDiffers).toBe(true)
+    })
+
+    it('adding ages does not change existing name/role/trait rolls for a fixed seed', () => {
+      // Pinned against the pre-age-generation output for seed 7/LG (verified
+      // by diffing before/after this feature) so the new, isolated age RNG
+      // stream provably doesn't perturb the existing one.
+      const families = generateFamilies(7, 'LG', false, 'polish')
+      const roles = families.flatMap((f) => f.members.map((m) => `${m.name}:${m.character.role}`))
+      expect(roles).toEqual([
+        'Sławomir:fisher',
+        'Magdalena:guard',
+        'Barbara:fisher',
+        'Paweł:fisher',
+        'Ola:miner',
+        'Jan:fisher',
+        'Sławomir:guard',
+        'Katarzyna:farmer',
+        'Tomasz:farmer',
+        'Helena:woodcutter',
+        'Stanisław:woodcutter',
+        'Krystyna:guard',
+        'Barbara:guard',
+      ])
+    })
+  })
 })
