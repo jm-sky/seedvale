@@ -1,13 +1,12 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-24 12:09:56  
+> Date: 2026-08-24 15:44:46  
 
 ## PLANS
 
 - `2026-08-19--171--weapon-browser-observatory.md`
 - `2026-08-21--190--plans-automation.md`
-- `ai-001-npc-pressure-layer.md`
 - `ai-002-npc-personality-decisions.md`
 - `settlements-npcs-001-cultivation-hydration-and-watering.md`
 - `tools-001-performance-benchmark-determinism-and-reliability.md`
@@ -61,36 +60,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/2026-08-21--190--plans-automation-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `ai-001-npc-pressure-layer.md`
-
-Prompt:
-
-```
-Zrób review planu `ai-001-npc-pressure-layer.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/ai-001-npc-pressure-layer.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/ai-001-npc-pressure-layer-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
