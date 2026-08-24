@@ -80,6 +80,7 @@ import { createTimeSkipOverlay } from '../ui/createTimeSkipOverlay'
 import { createToast } from '../ui/createToast'
 import { TRAP_DEFS } from '../world/animalTraps'
 import { type BeehiveRecord } from '../world/beehives'
+import { createClouds } from '../world/clouds'
 import { createDayNightState, parseTimeOfDayFromUrl } from '../world/dayNight'
 import { type DryingRackRecord } from '../world/dryingRacks'
 import { type FishingBaitState } from '../world/fishing'
@@ -352,6 +353,8 @@ export async function createApp(
   const weatherAudio = createWeatherAudio(worldAudio)
   const weatherParticles = createWeatherParticles({ getLodScale: () => config.quality.lodScale })
   weatherParticles.addTo(scene)
+  const clouds = createClouds()
+  clouds.addTo(scene)
   const houseDoors = createHouseDoorTracker()
   configureUiSounds(worldAudio.playOnce)
   configureNpcVoiceSounds(worldAudio.playAt)
@@ -1116,7 +1119,7 @@ export async function createApp(
 
   const gameLoop = createGameLoop({
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
-    climate, weatherParticles, weatherAudio, getSeed: () => config.seed,
+    climate, clouds, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
@@ -1232,6 +1235,7 @@ export async function createApp(
     fireAudio.dispose()
     weatherAudio.dispose()
     weatherParticles.dispose()
+    clouds.dispose()
     configureUiSounds(null)
     configureNpcVoiceSounds(null)
     configureAudioVolumes(worldAudio.getVolumes(), null)

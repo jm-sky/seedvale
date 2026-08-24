@@ -30,6 +30,7 @@ import type { QuestLog } from '../ui/createQuestLog'
 import type { QuickActions } from '../ui/createQuickActions'
 import type { TimeSkipOverlay } from '../ui/createTimeSkipOverlay'
 import type { Toast } from '../ui/createToast'
+import type { CloudSystem } from '../world/clouds'
 import type { WorldLights } from '../world/createLights'
 import type { WorldSky } from '../world/createSky'
 import type { CropGrowthStage, CropId } from '../world/cropLifecycle'
@@ -209,6 +210,7 @@ export type GameLoopDeps = {
   postProcessing: PostProcessing
   dayNight: DayNightState
   climate: ClimateState
+  clouds: CloudSystem
   weatherParticles: WeatherParticles
   weatherAudio: WeatherAudio
   /** Current world seed — weather is a pure function of `(seed, elapsedDays)`
@@ -369,7 +371,7 @@ export type GameLoop = {
 export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
-    climate, weatherParticles, weatherAudio, getSeed,
+    climate, clouds, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
@@ -1510,6 +1512,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         dt, climate.weather, player.mesh.position.x, player.mesh.position.y, player.mesh.position.z,
         camera.fov, renderer.domElement.clientHeight,
       )
+      clouds.update(dt, climate.weather, player.mesh.position.x, player.mesh.position.z)
       weatherAudio.update(climate.weather)
       ambientAudio.update(
         dt,

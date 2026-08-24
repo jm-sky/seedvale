@@ -1,7 +1,7 @@
 # Plan: Cloud System
 
 **Created:** 2026-08-24
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 
