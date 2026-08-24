@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-24 10:32:51  
+> Date: 2026-08-24 11:19:37  
 
 ## PLANS
 
@@ -29,7 +29,7 @@ Wczytaj:
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`2026-08-19--171--weapon-browser-observatory-implementation-notes.md`
+`docs/plans/implementation-notes/2026-08-19--171--weapon-browser-observatory-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -59,7 +59,7 @@ Wczytaj:
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`2026-08-21--190--plans-automation-implementation-notes.md`
+`docs/plans/implementation-notes/2026-08-21--190--plans-automation-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -89,7 +89,7 @@ Wczytaj:
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`ai-001-npc-pressure-layer-implementation-notes.md`
+`docs/plans/implementation-notes/ai-001-npc-pressure-layer-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -119,7 +119,7 @@ Wczytaj:
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`ai-002-npc-personality-decisions-implementation-notes.md`
+`docs/plans/implementation-notes/ai-002-npc-personality-decisions-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -149,7 +149,7 @@ Wczytaj:
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`tools-001-performance-benchmark-determinism-and-reliability-implementation-notes.md`
+`docs/plans/implementation-notes/tools-001-performance-benchmark-determinism-and-reliability-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -179,7 +179,7 @@ Wczytaj:
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`tools-002-trace-analyzer-application-cpu-attribution-implementation-notes.md`
+`docs/plans/implementation-notes/tools-002-trace-analyzer-application-cpu-attribution-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

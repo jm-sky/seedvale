@@ -1,7 +1,7 @@
 # Plan: Developer Debug API
 
 **Created:** 2026-08-24
-**Status:** `verification needed` 🔍 — implemented 2026-08-24. Technical verification green (`tsc`/lint/build/test, 1704 tests); no browser/gameplay verification yet. See "Implementation summary" and the [implementation notes](./ui-input-001-developer-debug-api-implementation-notes.md) for the scope adaptations made against the real codebase.
+**Status:** `verification needed` 🔍 — implemented 2026-08-24. Technical verification green (`tsc`/lint/build/test, 1704 tests); no browser/gameplay verification yet. See "Implementation summary" and the [implementation notes](./implementation-notes/ui-input-001-developer-debug-api-implementation-notes.md) for the scope adaptations made against the real codebase.
 **Priority:** high · **Effort:** M
 **Depends on:** none
 

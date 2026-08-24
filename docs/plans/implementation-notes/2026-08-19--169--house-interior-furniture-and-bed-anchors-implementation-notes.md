@@ -412,7 +412,7 @@ The plan itself should remain unchanged. These notes clarify how to execute it:
 - `docs/assets/ANCHORS.md`
 - `docs/plans/2026-08-19--168--settlement-lodging-and-sleep.md`
 - `docs/plans/2026-08-14--111--house-construction.md`
-- `docs/plans/2026-08-14--111--house-construction-implementation-notes.md`
+- `docs/plans/implementation-notes/2026-08-14--111--house-construction-implementation-notes.md`
 - `docs/reviews/2026-08-14--011--megakit-construction-browser-verification.md`
 
 ## Important existing House Builder facts

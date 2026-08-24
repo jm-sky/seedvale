@@ -1,7 +1,7 @@
 # Plan: Seed Planting — Trees & Crops
 
 **Created:** 2026-08-16
-**Status:** `verification needed` 🔍 — implemented 2026-08-21. Technical verification green (`tsc`/lint/build/test, 1514 tests); no browser/gameplay verification yet. See "Implementation summary" (§7) and the [implementation notes](./2026-08-16--126--seed-planting-implementation-notes.md)/[updated review](./2026-08-16--126--seed-planting--updated-review.md) for the scope adaptations made against the real codebase.
+**Status:** `verification needed` 🔍 — implemented 2026-08-21. Technical verification green (`tsc`/lint/build/test, 1514 tests); no browser/gameplay verification yet. See "Implementation summary" (§7) and the [implementation notes](./2026-08-16--126--seed-planting-implementation-notes.md)/[updated review](./reviews/2026-08-16--126--seed-planting--updated-review.md) for the scope adaptations made against the real codebase.
 **Priority:** 🟡 medium · **Effort:** L
 **Depends on:** ~~106~~ ~~122~~
 **domain:** `world-terrain`

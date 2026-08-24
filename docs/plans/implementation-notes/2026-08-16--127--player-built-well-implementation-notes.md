@@ -513,7 +513,7 @@ Also test:
 Read these first and stop broad exploration once the concrete APIs are known:
 
 1. `docs/plans/2026-08-15--122--natural-resource-gathering-and-water-distribution.md`
-2. `docs/plans/2026-08-15--122--natural-resource-gathering-and-water-distribution-implementation-notes.md`
+2. `docs/plans/implementation-notes/2026-08-15--122--natural-resource-gathering-and-water-distribution-implementation-notes.md`
 3. `src/world/WaterSource.ts`
 4. `src/app/interactables.ts`
 5. `src/app/gameLoop.ts`

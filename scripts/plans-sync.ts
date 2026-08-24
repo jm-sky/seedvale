@@ -7,6 +7,8 @@ const ROOT_DIR = resolve(SCRIPT_DIR, '..')
 const PLANS_DIR = 'docs/plans'
 const PLANS_PATH = resolve(ROOT_DIR, PLANS_DIR)
 const README_PATH = resolve(PLANS_PATH, 'README.md')
+const NOTES_DIR = 'implementation-notes'
+const NOTES_PATH = resolve(PLANS_PATH, NOTES_DIR)
 
 const PLAN_FILE_RE = /^([a-z0-9-]+)-(\d{3})-.+\.md$/
 const LEGACY_PLAN_FILE_RE = /^\d{4}-\d{2}-\d{2}--\d{3}--.+\.md$/
@@ -47,6 +49,14 @@ type PlanInfo = {
   file: string
   domain: string
   id: number
+}
+
+const hasImplementationNotes = (
+  planFile: string,
+  implementationNotesFiles: string[],
+): boolean => {
+  const baseName = planFile.slice(0, -'.md'.length)
+  return implementationNotesFiles.includes(`${baseName}${NOTES_SUFFIX}`)
 }
 
 const isSupportFile = (file: string): boolean =>
@@ -286,7 +296,7 @@ const handleMissingPlans = async (missing: string[], implementationNotesFiles: s
 
     for (const file of missing) {
       const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
-      const hasNotes = implementationNotesFiles.some(notesFile => notesFile.startsWith(file.replace(NOTES_SUFFIX, '')))
+      const hasNotes = hasImplementationNotes(file, implementationNotesFiles)
 
       newRows.push(buildRow(file, content, hasNotes))
     }
@@ -315,12 +325,7 @@ const syncImplementationNotesMarkers = (
 
     if (!planFiles.has(file)) return line
 
-    const baseName = file.slice(0, -'.md'.length)
-
-    const hasNotes = implementationNotesFiles.some(
-      notesFile =>
-        notesFile === `${baseName}${NOTES_SUFFIX}`,
-    )
+    const hasNotes = hasImplementationNotes(file, implementationNotesFiles)
 
     const marker = hasNotes ? '💡' : '◼️'
 
@@ -426,7 +431,8 @@ const updateNextPlanIds = (
 const getSourceFiles = async () => {
   const allFiles: string[] = await readdir(PLANS_PATH)
 
-  const implementationNotesFiles: string[] = allFiles.filter(file => file.endsWith(NOTES_SUFFIX))
+  const implementationNotesFiles: string[] = (await readdir(NOTES_PATH))
+    .filter(file => file.endsWith(NOTES_SUFFIX))
 
   const plans = allFiles
     .map(parsePlanFile)

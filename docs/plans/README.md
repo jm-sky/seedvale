@@ -9,7 +9,7 @@ Verification: unless a row says otherwise, it has passed `tsc`/lint/build/test b
 
 **Depends on** = implementation prerequisites (plan IDs). ~~done~~ is crossed out. A plan is ready when every dependency is struck. Thematic overlap is not a dependency.
 
-Paths below are files in this folder unless noted. Implementation notes / reviews stay next to the plan (`*-implementation-notes.md`, `*-review.md`) and are not indexed separately.
+Paths below are files in this folder unless noted. Implementation notes live in [implementation-notes/](./implementation-notes/) (`*-implementation-notes.md`), updated reviews in [reviews/](./reviews/) (`*--updated-review.md`); neither is indexed separately. Archived plans (in [archive/](./archive/)) keep their companion notes/reviews next to the plan file — the split subfolders only apply to this folder.
 
 ## Plan naming
 
@@ -154,7 +154,6 @@ Natural vegetation
 | `ai-001-npc-pressure-layer.md` ◼️ | - | 🔴 | M | - |
 | `ai-002-npc-personality-decisions.md` ◼️ | - | 🔴 | M | ~~ai-001~~ |
 | `world-terrain-002-terrain-modification-and-land-preparation.md` 💡 | - | 🟡 | L | - |
-| `ui-input-001-developer-debug-api.md` 💡 | - | 🔴 | M | - |
 | `ui-input-002-ui-ux-interaction-and-action-system-polish.md` 💡 | - | 🟡 | L | - |
 | `tools-001-performance-benchmark-determinism-and-reliability.md` ◼️ | - | 🔴 | M | - |
 | `tools-002-trace-analyzer-application-cpu-attribution.md` ◼️ | - | 🔴 | M | - |

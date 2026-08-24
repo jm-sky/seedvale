@@ -5,7 +5,7 @@
 **Priority:** medium · **Effort:** L
 **Depends on:** ~~069~~ ~~122~~ ~~131~~
 
-> Check also: `docs/plans/2026-08-18--156--npc-household-and-settlement-storage-logistics-implementation-notes.md`
+> Check also: `docs/plans/implementation-notes/2026-08-18--156--npc-household-and-settlement-storage-logistics-implementation-notes.md`
 
 ## Cel
 

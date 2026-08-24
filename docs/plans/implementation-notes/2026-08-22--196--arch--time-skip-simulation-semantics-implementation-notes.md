@@ -119,6 +119,6 @@ Wire this as `Fauna.resolveTimeSkip(hours: number, dayLengthSec: number)` in `cr
 
 ## Prior audits already read in full (don't re-read unless verifying a specific claim)
 
-- `docs/plans/2026-08-22--193--arch--simulation-architecture-consistency-implementation-notes.md` — the primary source for the root-cause analysis above (§10 "Time Skip Execution Map", §14 Finding 0/1/2/3/9).
-- `docs/plans/2026-08-22--192--arch--time-and-simulation-consistency-implementation-notes.md` — referenced but not re-read in full this session; mentioned in 193's notes as the first place the NPC-needs double-count was logged (narrower scope than 193's).
+- `docs/plans/implementation-notes/2026-08-22--193--arch--simulation-architecture-consistency-implementation-notes.md` — the primary source for the root-cause analysis above (§10 "Time Skip Execution Map", §14 Finding 0/1/2/3/9).
+- `docs/plans/implementation-notes/2026-08-22--192--arch--time-and-simulation-consistency-implementation-notes.md` — referenced but not re-read in full this session; mentioned in 193's notes as the first place the NPC-needs double-count was logged (narrower scope than 193's).
 - `docs/STATE.md`, `docs/plans/README.md` — read in full for orientation; nothing else time-skip-specific found there beyond what's summarized above.

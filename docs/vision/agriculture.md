@@ -39,7 +39,7 @@ Detailed future mechanics should be added here as the target system becomes clea
 
 > **Source:** 2026-08-22 @ ChatGPT session  
 > **Related docs:**
-> - `docs/plans/2026-08-16--126--seed-planting-implementation-notes.md`
+> - `docs/plans/implementation-notes/2026-08-16--126--seed-planting-implementation-notes.md`
 > - `docs/plans/2026-08-20--174--player-garden-and-npc-need-sources.md`
 > - `docs/plans/2026-08-20--176--garden-and-field-maintenance.md`
 

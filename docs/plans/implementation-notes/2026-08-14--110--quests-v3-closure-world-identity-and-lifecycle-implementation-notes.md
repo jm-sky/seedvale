@@ -79,5 +79,5 @@ Patrz plan §Weryfikacja dla pełnej listy kroków. Kluczowe pytania bez odpowie
 
 - `docs/STATE.md` — sekcja Quests/progression i Persistence.
 - `docs/plans/README.md` — nowy wiersz dla planu 110 (w „Verification needed"), zaktualizowany wiersz planu 093.
-- `docs/plans/2026-08-13--093--quests-v3-world-problems-reputation-implementation-notes.md` — addendum §16 wskazujący na plan 110.
+- `docs/plans/implementation-notes/2026-08-13--093--quests-v3-world-problems-reputation-implementation-notes.md` — addendum §16 wskazujący na plan 110.
 - `docs/assets/MODELS.md`/`SOUNDS.md` — bez zmian (żaden nowy model/dźwięk nie był potrzebny — reuse istniejącego `wolf.glb` + `tintPropMaterials`).
