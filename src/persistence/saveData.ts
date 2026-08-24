@@ -214,14 +214,17 @@ export type SavePlantedCrop = {
 }
 
 /** Persistent player-built garden plot — mirrors `world/playerGarden.ts`'s
- *  `PlayerGardenRecord`. Identity/placement only — a plot has no
- *  construction stages or growth state of its own (crops planted on it are
- *  separate `SavePlantedCrop` records). */
+ *  `PlayerGardenRecord`. A plot has no construction stages of its own (crops
+ *  planted on it are separate `SavePlantedCrop` records), but does carry
+ *  maintenance state (plan 176): `care`/`lastMaintainedAtDays` together
+ *  round-trip the lazy degradation anchor — see `resolveCultivationCare`. */
 export type SavePlayerGarden = {
   id: string
   x: number
   z: number
   yaw: number
+  care: number
+  lastMaintainedAtDays: number
 }
 
 /** Canonical (and, for now, only) save contract. Versioning/migration can be
@@ -649,7 +652,9 @@ function isPlayerGardensField(value: unknown): value is SavePlayerGarden[] {
       typeof g.id === 'string' &&
       typeof g.x === 'number' &&
       typeof g.z === 'number' &&
-      typeof g.yaw === 'number'
+      typeof g.yaw === 'number' &&
+      typeof g.care === 'number' &&
+      typeof g.lastMaintainedAtDays === 'number'
     )
   })
 }

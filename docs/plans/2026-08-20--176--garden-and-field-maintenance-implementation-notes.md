@@ -1,7 +1,7 @@
 # Plan: Garden and Field Maintenance — Implementation Notes
 
 **Created:** 2026-08-21
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented 2026-08-24, see the plan's own §14 "Implementation summary"
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~174~~ ~~126~~
 

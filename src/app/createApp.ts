@@ -1162,6 +1162,7 @@ export async function createApp(
     collectHive: gathering.collectHive,
     burnHive: gathering.burnHive,
     harvestCrop: gathering.harvestCrop,
+    tidyGardenPlot: placement.tidyGardenPlot,
     openContainer: containers.openContainer,
     pickUpContainer: containers.pickUpContainer,
     workOnWell: placement.workOnWell,

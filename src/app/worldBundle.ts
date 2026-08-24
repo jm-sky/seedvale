@@ -405,7 +405,20 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
   const ocean = buildOcean(scene, config, waterMirror)
   const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed, resourceDepletion)
   const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
-  const foodSources = createFoodSourceHooks(chunkManager)
+  // Built ahead of `foodSources`/`settlementsManager` (plan 176) — the food
+  // source hooks need a live `PlayerGardens` to resolve which crops belong
+  // to a garden plot for the yield-productivity modifier and the NPC
+  // maintenance hook, unlike `playerWells` below which is only reachable
+  // through `createApp.ts`'s live `getNearbyPlayerWell` accessor.
+  const playerGardens = createPlayerGardens(
+    scene,
+    chunkManager.sampleHeight,
+    chunkManager.registerColliders,
+    chunkManager.clearColliders,
+    initialPlayerGardens,
+    getWorldDays(),
+  )
+  const foodSources = createFoodSourceHooks(chunkManager, playerGardens, getWorldDays)
   const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, initialHouseholds, initialNpcStates)
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
   await preloadItemGlbModels()
@@ -433,13 +446,6 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
     chunkManager.registerColliders,
     chunkManager.clearColliders,
     initialPlayerWells,
-  )
-  const playerGardens = createPlayerGardens(
-    scene,
-    chunkManager.sampleHeight,
-    chunkManager.registerColliders,
-    chunkManager.clearColliders,
-    initialPlayerGardens,
   )
   const largeCaves = createLargeCaves(
     scene,

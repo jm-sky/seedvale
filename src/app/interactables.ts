@@ -14,6 +14,7 @@ import type { Beehives } from '../world/createBeehives'
 import type { DryingRacks } from '../world/createDryingRacks'
 import type { PlacedContainers } from '../world/createPlacedContainers'
 import type { PlacedTraps } from '../world/createPlacedTraps'
+import type { PlayerGardens } from '../world/createPlayerGardens'
 import type { PlayerWells } from '../world/createPlayerWells'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
@@ -30,6 +31,7 @@ import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
 import { honeyAvailable } from '../world/beehives'
 import { CROP_DEFS, type CropGrowthStage, type CropId } from '../world/cropLifecycle'
 import { isDryingComplete } from '../world/dryingRacks'
+import { gardenMaintenancePromptLabel, resolveCultivationCare } from '../world/playerGarden'
 import { isWellCompleted, wellPromptLabel } from '../world/playerWell'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource } from '../world/WaterSource'
@@ -249,6 +251,7 @@ export function buildInteractables(
   dryingRacks: DryingRacks,
   hives: Beehives,
   placedWells: PlayerWells,
+  playerGardens: PlayerGardens,
   /** Current world day (plan 159) — drives drying-complete/honey-available
    *  prompt text. */
   nowDays: number,
@@ -375,6 +378,19 @@ export function buildInteractables(
       promptLabel: wellPromptLabel(well),
       id: well.id,
       stage: well.stage,
+    })
+  }
+
+  // Plan 176 — always offered, even while fully maintained (plan §4).
+  for (const garden of playerGardens.list()) {
+    if (!withinRange(garden.x, garden.z, playerPos, GAZE_RANGE)) continue
+    const care = resolveCultivationCare(garden, nowDays)
+    list.push({
+      kind: 'gardenPlot',
+      position: { x: garden.x, z: garden.z },
+      promptLabel: gardenMaintenancePromptLabel(care),
+      id: garden.id,
+      care,
     })
   }
 

@@ -77,6 +77,7 @@ import {
   updateAgentLabelDistanceState,
 } from '../ui/agentStatusLabel'
 import { gazeOpacityFactor } from '../ui/labelDistance'
+import { CARE_MAINTAINED_THRESHOLD } from '../world/playerGarden'
 import { gameHoursToRealSeconds } from '../world/timeConversion'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
@@ -458,6 +459,14 @@ const NPC_CARRY_MAX_WEIGHT = 5
  *  checks its immediate surroundings before falling back to the abstract
  *  settlement-garden gather. */
 const FOOD_SOURCE_SEARCH_RADIUS = 60
+
+/** Plan 176 §6.1 gates — an NPC only considers tidying a garden plot it has
+ *  already arrived at for its own hunger, and only when its own critical
+ *  needs and physical condition are fine. Chosen, not derived: same "tuning
+ *  constant, not a formula" status as `FOOD_SOURCE_SEARCH_RADIUS`. */
+const NPC_GARDEN_MAINTENANCE_MIN_HEALTH_RATIO = 0.5
+const NPC_GARDEN_MAINTENANCE_MIN_STAMINA_RATIO = 0.4
+const NPC_GARDEN_MAINTENANCE_CHANCE = 0.35
 
 /** Chop → deposit completion, household-aware. A household caps how much of
  *  the harvest it keeps (see `Household.deposit`); anything over that still
@@ -2474,12 +2483,39 @@ export class NpcAgent {
         // reduction" — the next `beginNeed` call re-queries from scratch).
         const result = foodSources.harvest(target)
         if (!result) return
+        // Plan 176 §6.1 — the NPC is already standing at this crop's spot
+        // (never a special search); evaluated regardless of `result.count`
+        // so a heavily-neglected plot (which can legitimately yield 0, plan
+        // §14) still gets a chance at being tidied.
+        if (target.kind === 'crop') this.maybeMaintainNearbyGarden(target.x, target.z)
+        if (result.count <= 0) return
         household?.deposit('food', result.count, this.economy)
         household?.stock.remove('food', Math.min(1, household.stock.query('food')))
         this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
       },
     })
     return true
+  }
+
+  /**
+   * Plan 176 §6/§6.1/§15 — a chance to tidy a neglected garden plot, only
+   * ever evaluated right after this NPC already arrived at a crop it was
+   * harvesting for its own hunger (never an independent search for
+   * neglected fields). Reuses the existing critical-need gate
+   * (`pickNeed({ critical: true })`, the same check `tickCriticalInterrupt`
+   * uses) plus health/stamina ratios, so a hungry-but-otherwise-fine NPC can
+   * do a little extra work without a new priority system.
+   */
+  private maybeMaintainNearbyGarden(x: number, z: number): void {
+    const foodSources = this.foodSources
+    if (!foodSources) return
+    if (this.health.currentHp / this.health.maxHp < NPC_GARDEN_MAINTENANCE_MIN_HEALTH_RATIO) return
+    if (getStaminaRatio(this.stamina) < NPC_GARDEN_MAINTENANCE_MIN_STAMINA_RATIO) return
+    if (pickNeed(this.needs, { critical: true }) !== 'idle') return
+    const garden = foodSources.gardenNear(x, z)
+    if (!garden || garden.care >= CARE_MAINTAINED_THRESHOLD) return
+    if (Math.random() >= NPC_GARDEN_MAINTENANCE_CHANCE) return
+    foodSources.maintainGarden(garden.id)
   }
 
   /** No active need (`pickNeed` returned `'idle'`) — follow the effective

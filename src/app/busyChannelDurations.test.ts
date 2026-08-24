@@ -4,6 +4,7 @@ import { COOK_DURATION_SEC } from '../items/campfireCooking'
 import { TENT_SETUP_DURATION_SEC } from '../items/tentPlacement'
 import { IGNITE_DURATION_SEC } from '../settlement/VillageFire'
 import { DIG_DURATION_SEC } from '../terrain/dig'
+import { MAINTENANCE_BASE_DURATION_SEC, MAINTENANCE_TOOL_DURATION_SEC } from '../world/playerGarden'
 import { WELL_WORK_SESSION_SEC } from '../world/playerWell'
 import { CHOP_DURATION_SEC } from '../world/treeHarvest'
 
@@ -21,6 +22,8 @@ describe('busy-channel durations', () => {
       COOK_DURATION_SEC,
       TENT_SETUP_DURATION_SEC,
       WELL_WORK_SESSION_SEC,
+      MAINTENANCE_BASE_DURATION_SEC,
+      MAINTENANCE_TOOL_DURATION_SEC,
     ]
     for (const duration of durations) {
       expect(duration).toBeGreaterThan(0)

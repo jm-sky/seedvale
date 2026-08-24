@@ -301,7 +301,10 @@ export type GameLoopDeps = {
    *  straight from the `Interactable` snapshot so the capacity check can
    *  happen before any world mutation, same "check before you cut" order as
    *  the `item` branch below. */
-  harvestCrop?: (id: string, cropId: CropId, stage: CropGrowthStage) => void
+  harvestCrop?: (id: string, cropId: CropId, stage: CropGrowthStage, x: number, z: number) => void
+  /** "Zrób porządek" on a player garden plot (plan 176 §4/§10) — restores
+   *  care after a short busy channel, shortened by a held shovel/pitchfork. */
+  tidyGardenPlot?: (id: string) => void
   /** Opens the generic container transfer screen for a placed `chest`
    *  (plan 164 §7). */
   openContainer?: (id: string) => void
@@ -378,7 +381,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
-    startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop,
+    startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot,
     openContainer, pickUpContainer, workOnWell,
     onSleepFinished, tickLodging, isLodgingActive, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
@@ -709,6 +712,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.dryingRacks,
         bundle.hives,
         bundle.playerWells,
+        bundle.playerGardens,
         dayNight.elapsedDays,
         player.mesh.position,
         held,
@@ -1227,7 +1231,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (interactPressed) collectHive?.(target.id)
         if (altInteractPressed) burnHive?.(target.id)
       } else if (target?.kind === 'crop') {
-        if (interactPressed) harvestCrop?.(target.id, target.cropId, target.stage)
+        if (interactPressed) harvestCrop?.(target.id, target.cropId, target.stage, target.position.x, target.position.z)
+      } else if (target?.kind === 'gardenPlot') {
+        if (interactPressed) tidyGardenPlot?.(target.id)
       } else if (target?.kind === 'container') {
         if (interactPressed) openContainer?.(target.id)
         if (altInteractPressed) pickUpContainer?.(target.id)
@@ -1714,6 +1720,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       bundle.itemSpawners.update(dt, player.mesh.position, dayFactor)
       bundle.droppedItems.tick(dt)
       bundle.placedFires.update(dt)
+      // Plan 176 §6/§20 — bounded to however many plots the player has
+      // actually built (never a world-wide field scan); removal is a lazy
+      // world-object mutation, not a per-frame maintenance tick.
+      bundle.playerGardens.pruneDecayed(dayNight.elapsedDays)
       playerTorch.update(dt)
       withCategory(monitor, 'WATER', () => { bundle.chunkManager.tickWater(dt) })
       withCategory(monitor, 'GRASS', () => { bundle.chunkManager.tickGrass(dt) })

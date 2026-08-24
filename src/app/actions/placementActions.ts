@@ -40,6 +40,7 @@ import {
   GARDEN_PLACE_REACH,
   GARDEN_PLACEMENT_MESSAGE,
   GARDEN_SEPARATION,
+  maintenanceDurationSec,
   PLAYER_GARDEN_PLANT_RADIUS,
 } from '../../world/playerGarden'
 import {
@@ -81,6 +82,11 @@ export type PlacementActions = {
    *  — a single-stage placement (unlike a well), immediately usable as a
    *  planting anchor once built. */
   placeGardenAtAim: () => void
+  /** "Zrób porządek" on a player garden plot (plan 176 §4/§10) — restores
+   *  ~50 care points (capped at 100) after a short busy channel, shortened
+   *  by a held shovel/pitchfork. Mutation only applied on completion, after
+   *  revalidating the plot still exists. */
+  tidyGardenPlot: (id: string) => void
   /** Plants a `tree_seed` from inventory ahead of the player (plan 126). */
   plantTreeAtAim: () => void
   /** Plants a crop seed of `cropId` ahead of the player — only valid near a
@@ -89,7 +95,7 @@ export type PlacementActions = {
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
-  const { bundle, player, inventory, hud, toast, busy, dayNight, mouseLook } = ctx
+  const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook } = ctx
 
   const tentAimPoint = (): { x: number, z: number, yaw: number } => {
     const yaw = mouseLook.state.yaw
@@ -331,10 +337,27 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       for (const r of requirements) {
         if (!consumeMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
       }
-      bundle.playerGardens.place(x, z, yaw)
+      bundle.playerGardens.place(x, z, yaw, dayNight.elapsedDays)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show('Zbudowano grządkę.')
+    })
+  }
+
+  /** "Zrób porządek" on a player garden plot (plan 176 §4/§10) — same
+   *  revalidate-at-completion shape as `interactDryingRack`: the plot may
+   *  have decayed away (`pruneDecayed`) while the busy channel was running,
+   *  so `applyMaintenance` re-checks existence instead of trusting `id`. */
+  const tidyGardenPlot = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    if (!bundle.playerGardens.list().some((g) => g.id === id)) return
+    busy.start(maintenanceDurationSec(heldTool.held()), 'Porządkowanie grządki…', () => {
+      const care = bundle.playerGardens.applyMaintenance(id, dayNight.elapsedDays)
+      if (care === null) {
+        toast.show('Grządka już zniknęła.', 'error')
+        return
+      }
+      toast.show('Grządka uporządkowana.')
     })
   }
 
@@ -434,6 +457,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     placeWellAtAim,
     workOnWell,
     placeGardenAtAim,
+    tidyGardenPlot,
     plantTreeAtAim,
     plantCropAtAim,
   }

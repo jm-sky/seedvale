@@ -1,7 +1,9 @@
 import type { ItemKind } from '../items/items'
 import type { ChunkManager } from '../terrain/chunkManager'
+import type { PlayerGardens } from './createPlayerGardens'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { CROP_DEFS, type CropGrowthStage, type CropId, resolveCropHarvest } from './cropLifecycle'
+import { cultivationYieldCount, findNearestGarden, resolveCultivationCare } from './playerGarden'
 
 /**
  * A concrete, actionable hunger source found by a bounded local scan (plan
@@ -26,8 +28,21 @@ export type SettlementFoodSourceHooks = {
   queryNearest: (x: number, z: number, range: number) => FoodSourceTarget | null
   /** Re-validates and harvests `target` — null if it's gone (already
    *  collected/harvested by another NPC or the player since discovery), in
-   *  which case the caller must not grant any hunger relief. */
+   *  which case the caller must not grant any hunger relief. A crop harvested
+   *  from within a player garden plot's radius has its yield scaled by the
+   *  plot's resolved care (plan 176 §13) — `count` can legitimately be `0`
+   *  for a heavily-neglected plot; the harvest itself (crop removal from the
+   *  world) still happened. */
   harvest: (target: FoodSourceTarget) => { count: number } | null
+  /** Nearest player-built garden plot within reach of `(x, z)` (plan 176
+   *  §6.1's "NPC already at the field" condition) — only ever called right
+   *  after `harvest` succeeded for a `crop` target, never as an independent
+   *  search. `null` when no plot owns that position (a wild crop or a
+   *  settlement-garden crop, neither of which carries maintenance state). */
+  gardenNear: (x: number, z: number) => { id: string, care: number } | null
+  /** Re-validates `id` still exists and applies maintenance — `false` if the
+   *  plot was removed (decayed away) since `gardenNear` found it. */
+  maintainGarden: (id: string) => boolean
 }
 
 /**
@@ -72,10 +87,14 @@ export function nearestFoodSource(
 }
 
 /** Binds `nearestFoodSource` + harvest re-validation to a live `ChunkManager`
- *  — the `SettlementFoodSourceHooks` instance threaded into every `NpcAgent`
- *  (plan 174), same construction shape as `mining`/`forest` in
- *  `app/worldBundle.ts`. */
-export function createFoodSourceHooks(chunkManager: ChunkManager): SettlementFoodSourceHooks {
+ *  and `PlayerGardens` — the `SettlementFoodSourceHooks` instance threaded
+ *  into every `NpcAgent` (plan 174/176), same construction shape as
+ *  `mining`/`forest` in `app/worldBundle.ts`. */
+export function createFoodSourceHooks(
+  chunkManager: ChunkManager,
+  playerGardens: PlayerGardens,
+  getWorldDays: () => number,
+): SettlementFoodSourceHooks {
   return {
     queryNearest(x, z, range) {
       const items = chunkManager.getNearbyItems({ x, z }, range)
@@ -87,7 +106,19 @@ export function createFoodSourceHooks(chunkManager: ChunkManager): SettlementFoo
         return chunkManager.collectItem(target.id) ? { count: 1 } : null
       }
       const outcome = chunkManager.harvestCrop(target.id)
-      return outcome.ok ? { count: outcome.yield.count } : null
+      if (!outcome.ok) return null
+      const garden = findNearestGarden(playerGardens.list(), target.x, target.z)
+      const count = garden
+        ? cultivationYieldCount(outcome.yield.count, resolveCultivationCare(garden, getWorldDays()))
+        : outcome.yield.count
+      return { count }
+    },
+    gardenNear(x, z) {
+      const garden = findNearestGarden(playerGardens.list(), x, z)
+      return garden ? { id: garden.id, care: resolveCultivationCare(garden, getWorldDays()) } : null
+    },
+    maintainGarden(id) {
+      return playerGardens.applyMaintenance(id, getWorldDays()) !== null
     },
   }
 }

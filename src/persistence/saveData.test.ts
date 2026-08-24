@@ -55,7 +55,7 @@ const validSave: SaveData = {
   playerWells: [{ id: 'well:1', x: 5, z: -3, yaw: 0.4, stage: 'well', workProgress: 1.25 }],
   plantedTrees: [{ id: 'planted:1', x: 5, z: 5, speciesIndex: 2, sizeClass: 'small', sizeJitter: 0.3, rotationY: 1.1 }],
   plantedCrops: [{ id: 'planted-crop:1', x: 6, z: 6, cropId: 'carrot', stageStartedAt: 4.2 }],
-  playerGardens: [{ id: 'garden:1', x: 7, z: 8, yaw: 0.4 }],
+  playerGardens: [{ id: 'garden:1', x: 7, z: 8, yaw: 0.4, care: 82, lastMaintainedAtDays: 3.5 }],
   resourceDeposits: { 'resource_1_2': 0, 'resource_3_4': 5 },
 }
 

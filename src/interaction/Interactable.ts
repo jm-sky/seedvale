@@ -118,3 +118,8 @@ export type Interactable =
    *  elapsed) becomes a plain `well` candidate instead — same drink/fill
    *  interaction as any other well, no special-cased prompt. */
   | { kind: 'playerWell', position: { x: number, z: number }, promptLabel: string, id: string, stage: WellStage }
+  /** Player-built garden plot (plan 176) — `[E] Zrób porządek` restores its
+   *  maintenance state; always offered, even while fully maintained. `care`
+   *  is a per-frame resolved snapshot for the prompt only — the action
+   *  re-resolves + revalidates at completion, never trusts this value. */
+  | { kind: 'gardenPlot', position: { x: number, z: number }, promptLabel: string, id: string, care: number }

@@ -21,6 +21,7 @@ import {
   isBaitActive,
   rollFishingCatch,
 } from '../../world/fishing'
+import { cultivationYieldCount, findNearestGarden, resolveCultivationCare } from '../../world/playerGarden'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
 /** Food/resource gathering the player does on already-existing world objects:
@@ -42,7 +43,7 @@ export type GatheringActions = {
   interactDryingRack: (id: string) => void
   collectHive: (id: string) => void
   burnHive: (id: string) => void
-  harvestCrop: (id: string, cropId: CropId, stage: CropGrowthStage) => void
+  harvestCrop: (id: string, cropId: CropId, stage: CropGrowthStage, x: number, z: number) => void
 }
 
 export type GatheringActionDeps = {
@@ -269,7 +270,7 @@ export function createGatheringActions(
    *  a full inventory never destroys a crop for nothing. `cropId`/`stage`
    *  come from the same-frame `Interactable` snapshot; `harvestCrop` still
    *  re-validates the authoritative current stage itself. */
-  const harvestCrop = (id: string, cropId: CropId, stage: CropGrowthStage): void => {
+  const harvestCrop = (id: string, cropId: CropId, stage: CropGrowthStage, x: number, z: number): void => {
     if (isActionBlocked(ctx)) return
     const expectedYield = resolveCropHarvest(CROP_DEFS[cropId], stage)
     if (!expectedYield) {
@@ -285,11 +286,22 @@ export function createGatheringActions(
       toast.show('Ta roślina już zniknęła.', 'error')
       return
     }
-    inventory.add(outcome.yield.kind, outcome.yield.count, dayNight.elapsedDays)
+    // Plan 176 §13 — a crop inside a player garden plot's radius has its
+    // yield scaled by the plot's resolved care; a crop nowhere near a plot
+    // (wild, or on a settlement's decorative garden) keeps its full yield.
+    const garden = findNearestGarden(bundle.playerGardens.list(), x, z)
+    const count = garden
+      ? cultivationYieldCount(outcome.yield.count, resolveCultivationCare(garden, dayNight.elapsedDays))
+      : outcome.yield.count
+    if (count <= 0) {
+      toast.show('Zbiory zniszczone przez zaniedbanie grządki.', 'error')
+      return
+    }
+    inventory.add(outcome.yield.kind, count, dayNight.elapsedDays)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()
     playInventoryPickUp(worldAudio.playOnce)
-    toast.show(`+${outcome.yield.count} ${ITEM_DEFS[outcome.yield.kind].label}`, 'pickup')
+    toast.show(`+${count} ${ITEM_DEFS[outcome.yield.kind].label}`, 'pickup')
   }
 
   return {
