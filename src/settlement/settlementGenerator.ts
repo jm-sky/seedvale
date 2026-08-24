@@ -127,6 +127,21 @@ export function worldToCell(x: number, z: number): SettlementCell {
   }
 }
 
+/** Exact inverse of `cellKey` — resolves a `SettlementDef.id` back to the
+ *  grid cell it was derived from (e.g. for `debug/villageInspector.ts`'s
+ *  `village(id)` lookup). `null` for a malformed id rather than throwing, so
+ *  callers can treat an unrecognized id the same way as "no such village". */
+export function cellFromId(id: string): SettlementCell | null {
+  const parts = id.split('_')
+  if (parts.length !== 2) return null
+  const [gxStr, gzStr] = parts
+  if (!gxStr || !gzStr) return null
+  const gx = Number(gxStr)
+  const gz = Number(gzStr)
+  if (!Number.isInteger(gx) || !Number.isInteger(gz)) return null
+  return { gx, gz }
+}
+
 /** All grid cells within Chebyshev `radius` of `center` (inclusive). */
 export function cellsWithinRadius(center: SettlementCell, radius: number): SettlementCell[] {
   const cells: SettlementCell[] = []

@@ -1,7 +1,7 @@
 # Plan: Developer Debug API
 
 **Created:** 2026-08-24
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented 2026-08-24. Technical verification green (`tsc`/lint/build/test, 1704 tests); no browser/gameplay verification yet. See "Implementation summary" and the [implementation notes](./ui-input-001-developer-debug-api-implementation-notes.md) for the scope adaptations made against the real codebase.
 **Priority:** high · **Effort:** M
 **Depends on:** none
 
@@ -230,5 +230,15 @@ Zweryfikować również działanie po streamingu/rebuildzie świata.
 ## Kryterium sukcesu
 
 Developer może z DevTools szybko znaleźć NPC, osadę lub charakterystyczne miejsce świata i teleportować tam gracza, korzystając wyłącznie z aktualnego stanu Seedvale i bez znajomości wewnętrznych mechanizmów streamingu.
+
+## Implementation summary (2026-08-24)
+
+Implemented end-to-end following the implementation notes' review findings against the real codebase (authoritative account of scope adaptation — this is a compact index, not a restatement).
+
+- **Files**: new `src/debug/locationSearch.ts` (pure, generic `searchNearest` + `worldRingSteps`/`cellRingSteps` — the one shared deterministic ring-search policy for all five `locations.*` queries), `src/debug/locationQueries.ts` (the five `mountainNearest`/`deepForestNearest`/`riverNearest`/`villageNearest`/`oceanNearest` implementations), `src/debug/villageInspector.ts` (`findVillageDef`, id→def resolution). Extended `src/debug/npcDebugApi.ts` (`SeedvaleDebugApi` grows `village`/`villages`/`locations`/`teleportTo`/`help`; `installNpcDebugApi` grows `worldContext`/`config`/`getPlayerPosition`/`teleport` params) and `src/app/createApp.ts`'s single call site.
+- **Reuse over new code**: mountain uses the already-exported `MOUNTAIN_RIDGE_THRESHOLD` from `settlementTerrain.ts` (now exported, was module-private); deep forest uses `WorldContext.sampleForestBiome` directly (already the canonical classifier, no re-derivation); ocean uses continentalness vs `region.oceanThreshold`, never `WorldOcean` (a render-only follow-player plane); river calls the pure `computeRiverTile` directly (never `riverTileCache.retain`/`release`, which is ref-counted and chunk-lifecycle-bound) and reuses the existing `rawSampleParamsFromWorld` helper from `world/map/mapProjection.ts` instead of writing a second `WorldConfig → RawSampleParams` mapper; village uses `SettlementsManager.peekDef` (cached, never loads meshes). `chunksNear` moved from a `SettlementsManager.ts`-private function to an exported `terrain/chunkGrid.ts` helper so `createApp.ts`'s teleport wiring reuses the identical "ensure destination terrain is generated" primitive `SettlementsManager.ensureLoaded` already uses, via `ChunkManager.waitForChunks`.
+- **Villages**: `villages()` is loaded-only (`getLoaded()`) — never force-loads settlements from a synchronous console call; `village(id)` resolves any id via a new `cellFromId` (exact inverse of `cellKey`, added to `settlementGenerator.ts`) whether or not the settlement is currently streamed in. `npcs()` on any village handle delegates to the existing `queryNpcs(bundle, timeOfDay, {settlementId})` — no second NPC projection — which naturally returns `[]` for an unloaded settlement.
+- **Teleport**: `createApp.ts` passes a narrow `getPlayerPosition: () => {x,z}` and an async `teleport: (x,z) => Promise<void>` callback (built from `player.setPosition` + `bundle.chunkManager.waitForChunks`) — the debug module never imports `PlayerController`. `PlayerController.setPosition`'s existing `snapToGround` already handles ground/water clamping, so no extra offset logic was needed for river/ocean/mountain destinations, confirming the plan's implementation-notes assumption.
+- **Verification**: `npx tsc --noEmit`, `pnpm lint:fix`, `pnpm run build`, `pnpm run test` (1704 tests, incl. new `src/debug/locationSearch.test.ts`, `src/debug/locationQueries.test.ts`, `src/debug/villageInspector.test.ts`, `src/debug/npcDebugApi.test.ts`) are all green. No `jsdom`/`happy-dom` was added — `npcDebugApi.test.ts`'s gating tests stub a minimal `window` object directly via `vi.stubGlobal`, since `isDebugMode()` only reads `window.location.search`. No browser/gameplay verification yet — see plan's "Testy i weryfikacja" section for the manual `?debug=1` DevTools checklist still open (each `locations.*`/`teleportTo.*` call, determinism across repeated calls, behavior after a world rebuild, and behavior after a settlement streams out/back in).
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

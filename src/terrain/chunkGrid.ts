@@ -22,6 +22,20 @@ export function chebyshevDistance(a: ChunkCoord, b: ChunkCoord): number {
   return Math.max(Math.abs(a.cx - b.cx), Math.abs(a.cz - b.cz))
 }
 
+/** The 3×3 block of chunks centered on the chunk containing `(x, z)` — used
+ *  wherever something needs its immediate terrain neighborhood generated
+ *  before building on top of it (see `SettlementsManager.ensureLoaded`'s use,
+ *  and `debug/npcDebugApi.ts`'s teleport wiring, which reuses this same
+ *  helper instead of duplicating it). */
+export function chunksNear(x: number, z: number, chunkSize: number): ChunkCoord[] {
+  const center = worldToChunk(x, z, chunkSize)
+  const coords: ChunkCoord[] = []
+  for (let dz = -1; dz <= 1; dz++) {
+    for (let dx = -1; dx <= 1; dx++) coords.push({ cx: center.cx + dx, cz: center.cz + dz })
+  }
+  return coords
+}
+
 export type RegionCoord = { rx: number; rz: number }
 
 /** Groups chunks into fixed-size, world-space-aligned regions (plan 143) —

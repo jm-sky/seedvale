@@ -22,8 +22,10 @@ const SAMPLE_OFFSETS: readonly { dx: number, dz: number }[] = [
 ]
 
 /** mountainRidge is 0 off-ridge, ramping toward 1 on a crest — this is a low
- *  bar so a settlement merely in the foothills still reads as "mountain". */
-const MOUNTAIN_RIDGE_THRESHOLD = 0.15
+ *  bar so a settlement merely in the foothills still reads as "mountain".
+ *  Exported so `debug/locationQueries.ts`'s `mountainNearest()` reuses the
+ *  exact same bar instead of redefining it. */
+export const MOUNTAIN_RIDGE_THRESHOLD = 0.15
 
 /**
  * Classifies the terrain around a settlement site for naming purposes, by

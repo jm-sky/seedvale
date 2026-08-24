@@ -61,6 +61,7 @@ import { buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
+import { chunksNear } from '../terrain/chunkGrid'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { sampleFootstepSurface } from '../terrain/footstepSurface'
 import { mountVueUi } from '../ui-vue/mount'
@@ -877,7 +878,17 @@ export async function createApp(
   // Ctrl+click listener, no `window.seedvale.debug` outside `?debug`.
   const npcInspector = isDebugMode() ? createNpcInspector(container, bundle, () => dayNight.timeOfDay) : undefined
   const npcInspectTrigger = createNpcInspectTrigger(renderer.domElement)
-  installNpcDebugApi(bundle, () => dayNight.timeOfDay)
+  installNpcDebugApi(
+    bundle,
+    worldContext,
+    config,
+    () => dayNight.timeOfDay,
+    () => ({ x: player.mesh.position.x, z: player.mesh.position.z }),
+    async (x, z) => {
+      await bundle.chunkManager.waitForChunks(chunksNear(x, z, config.terrain.chunkSize))
+      player.setPosition(x, z)
+    },
+  )
 
   const inventoryScreenHandlers: InventoryScreenHandlers = {
     onDrop: inventoryWiring.dropItemStack,
