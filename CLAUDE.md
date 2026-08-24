@@ -90,6 +90,7 @@ In case of running benchmarks in browser - check `docs/performance/agent-browser
 | Required models / sounds | [docs/assets/MODELS.md](docs/assets/MODELS.md), [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) |
 | Item catalog (hold/melee/spawn) | [docs/items/CATALOG.md](docs/items/CATALOG.md) |
 | Weapon stats / prices | [docs/items/WEAPONS.md](docs/items/WEAPONS.md) |
+| Blender / MPFB2 AI character pipeline | [docs/blender/README.md](docs/blender/README.md) |
 
 Statuses are: `todo` · `planned` · `in progress` · `done` · `verification needed`.
 
