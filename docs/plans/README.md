@@ -114,7 +114,6 @@ Natural vegetation
 | `2026-08-22--203--well-depth-groundwater-and-protection.md`         | - | 🟡 | M | ~~127~~ |
 | `ai-001-npc-pressure-layer.md` ◼️                                   | NPC pressure layer | 🔴 | M      | - |
 | `ai-002-npc-personality-decisions.md` ◼️                            | Personality-driven decisions | 🔴 | M      | ~~ai-001~~ |
-| `world-terrain-002-terrain-modification-and-land-preparation.md` 💡 | - | 🟡 | L | - |
 | `ui-input-002-ui-ux-interaction-and-action-system-polish.md` 💡     | - | 🟡 | L | - |
 | `tools-001-performance-benchmark-determinism-and-reliability.md` ◼️ | - | 🔴 | M | - |
 | `tools-002-trace-analyzer-application-cpu-attribution.md` ◼️        | - | 🔴 | M | - |
@@ -183,6 +182,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-20--176--garden-and-field-maintenance.md` | [notes](./implementation-notes/2026-08-20--176--garden-and-field-maintenance-implementation-notes.md) |
 | `2026-08-19--168--settlement-lodging-and-sleep.md` | [notes](./implementation-notes/2026-08-19--168--settlement-lodging-and-sleep-implementation-notes.md) |
 | `2026-08-19--169--house-interior-furniture-and-bed-anchors.md` | [notes](./implementation-notes/2026-08-19--169--house-interior-furniture-and-bed-anchors-implementation-notes.md) |
+| `world-terrain-002-terrain-modification-and-land-preparation.md` | [notes](./implementation-notes/world-terrain-002-terrain-modification-and-land-preparation-implementation-notes.md) |
 
 ---
 

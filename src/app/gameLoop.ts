@@ -317,6 +317,25 @@ export type GameLoopDeps = {
    *  busy channel that credits `workProgress` for however long it actually
    *  runs before completing or being cancelled. */
   workOnWell?: (id: string) => void
+  /** Terrain-preparation preview mode (plan `world-terrain-002` §2) — called
+   *  unconditionally, before the gaze/interact dispatch, so a confirming
+   *  `[E]` press is consumed here rather than falling through to it. No-ops
+   *  when the preview isn't active. */
+  tickTerrainPreparationPreview?: () => void
+  /** `[E]` on an active preparation's marker — starts/resumes its work
+   *  session (plan `world-terrain-002` §8). */
+  resumeTerrainPreparationWork?: (id: string) => void
+  /** Per-frame progressive-deformation tick for the active preparation work
+   *  session — called unconditionally, alongside `tickLodging()`, regardless
+   *  of `modal` state (mirrors `timeSkip.tick()`'s own "the clock keeps
+   *  advancing" contract). No-ops when no session is running. */
+  tickTerrainPreparationWork?: () => void
+  /** The active `timeSkip` finished naturally — owner applies the
+   *  preparation's final exact heights/XP if the finished skip belongs to an
+   *  active preparation-work session (no-ops otherwise, same "only acts if
+   *  it recognizes the finished skip as its own" contract as
+   *  `onSleepFinished`). */
+  onTerrainPreparationWorkFinished?: () => void
   /** A full night's sleep (`fadeStrength === 1` skip) just finished — owner
    *  (`createApp.ts`) applies the rest outcome for whatever camp it resolved
    *  when the rest started, and awards any Survival XP (plan 128 §5-§7). */
@@ -383,6 +402,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot,
     openContainer, pickUpContainer, workOnWell,
+    tickTerrainPreparationPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
@@ -545,6 +565,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     // player input is blocked below; world simulation stays on its normal
     // per-frame path (see world/timeSkip.ts for why dt itself isn't scaled).
     const skip = timeSkip.tick(dt)
+    // Progressive terrain deformation (plan `world-terrain-002` §6) — ticks
+    // every frame the skip is active, independent of which flavor (wait/
+    // sleep/lodging/terrain-prep) is actually running; no-ops unless the
+    // running skip belongs to an active preparation-work session.
+    tickTerrainPreparationWork?.()
     if (skip) {
       timeSkipOverlay.show(skip.label, skip.fadeStrength)
       if (skip.fadeStrength === 1) {
@@ -573,6 +598,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         // already applied — how much depends on the camp, which
         // `onSleepFinished` owns.
         if (skip.fadeStrength === 1) onSleepFinished()
+        onTerrainPreparationWorkFinished?.()
       }
       keyboard.state.forward = false
       keyboard.state.backward = false
@@ -697,6 +723,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           break
       }
     } else {
+      // Consumes a confirming `[E]` press itself when the preview is active,
+      // before the gaze/interact dispatch below gets a chance to see it
+      // (plan `world-terrain-002` §2).
+      tickTerrainPreparationPreview?.()
       const held = heldTool.held()
       const interactables = buildInteractables(
         bundle.settlementsManager.getLoaded(),
@@ -713,6 +743,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.hives,
         bundle.playerWells,
         bundle.playerGardens,
+        bundle.terrainPreparations,
         dayNight.elapsedDays,
         player.mesh.position,
         held,
@@ -1239,6 +1270,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (altInteractPressed) pickUpContainer?.(target.id)
       } else if (target?.kind === 'playerWell') {
         if (interactPressed) workOnWell?.(target.id)
+      } else if (target?.kind === 'terrainPreparation') {
+        if (interactPressed) resumeTerrainPreparationWork?.(target.id)
       } else if (target?.kind === 'item') {
         if (interactPressed || altInteractPressed) {
           if (!inventory.canAdd(target.item.kind)) {

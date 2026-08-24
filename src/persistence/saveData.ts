@@ -6,6 +6,7 @@ import type { SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
+import type { PreparationSize } from '../terrain/terrainPreparation'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import type { WellStage } from '../world/playerWell'
@@ -188,6 +189,24 @@ export type SavePlayerWell = {
   workProgress: number
 }
 
+/** Active `Przygotuj teren` work (plan `world-terrain-002` §9) — mirrors
+ *  `terrain/terrainPreparation.ts`'s `TerrainPreparationRecord` minus the
+ *  runtime-only `status` (always `'active'` whenever a record is persisted —
+ *  completion deletes it outright, same convention as `active` on
+ *  `SaveSkill`). `originalHeights` is the immutable baseline every
+ *  progressive height is re-derived from; it must round-trip exactly for
+ *  save/load to reproduce the same terrain deterministically. */
+export type SaveTerrainPreparation = {
+  id: string
+  x: number
+  z: number
+  size: PreparationSize
+  targetHeight: number
+  originalHeights: { x: number, z: number, height: number }[]
+  requiredWork: number
+  completedWork: number
+}
+
 /** Persistent planted-tree record — mirrors `world/plantedTrees.ts`'s
  *  `PlantedTreeRecord`. Identity/placement only; current growth stage lives in
  *  `treeOverrides`. */
@@ -286,6 +305,7 @@ export type SaveData = {
   placedContainers: SavePlacedContainer[]
   carriedContainer: SaveCarriedContainer | null
   playerWells: SavePlayerWell[]
+  terrainPreparations: SaveTerrainPreparation[]
   plantedTrees: SavePlantedTree[]
   plantedCrops: SavePlantedCrop[]
   playerGardens: SavePlayerGarden[]
@@ -603,6 +623,35 @@ function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
   })
 }
 
+const PREPARATION_SIZES: ReadonlySet<number> = new Set<PreparationSize>([2, 3, 4])
+
+function isHeightSamplesField(value: unknown): value is { x: number, z: number, height: number }[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const s = entry as Record<string, unknown>
+    return typeof s.x === 'number' && typeof s.z === 'number' && typeof s.height === 'number'
+  })
+}
+
+function isTerrainPreparationsField(value: unknown): value is SaveTerrainPreparation[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const p = entry as Record<string, unknown>
+    return (
+      typeof p.id === 'string' &&
+      typeof p.x === 'number' &&
+      typeof p.z === 'number' &&
+      typeof p.size === 'number' && PREPARATION_SIZES.has(p.size) &&
+      typeof p.targetHeight === 'number' &&
+      isHeightSamplesField(p.originalHeights) &&
+      typeof p.requiredWork === 'number' &&
+      typeof p.completedWork === 'number'
+    )
+  })
+}
+
 const TREE_SIZE_CLASSES: ReadonlySet<string> = new Set<TreeSizeClass>(['large', 'medium', 'small'])
 const CROP_IDS_SET: ReadonlySet<string> = new Set<CropId>(['cabbage', 'carrot', 'potato'])
 
@@ -694,6 +743,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlacedContainersField(v.placedContainers)) return false
   if (!isCarriedContainerField(v.carriedContainer)) return false
   if (!isPlayerWellsField(v.playerWells)) return false
+  if (!isTerrainPreparationsField(v.terrainPreparations)) return false
   if (!isPlantedTreesField(v.plantedTrees)) return false
   if (!isPlantedCropsField(v.plantedCrops)) return false
   if (!isPlayerGardensField(v.playerGardens)) return false

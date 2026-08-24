@@ -16,19 +16,21 @@ import PauseMenu from './screens/PauseMenu.vue'
 import QuestLogScreen from './screens/QuestLogScreen.vue'
 import QuickActionsScreen from './screens/QuickActionsScreen.vue'
 import SkillsScreen from './screens/SkillsScreen.vue'
+import TerrainPreparationOverlay from './screens/TerrainPreparationOverlay.vue'
 import TimeSkipOverlay from './screens/TimeSkipOverlay.vue'
 import ToastStack from './screens/ToastStack.vue'
 import TouchChrome from './screens/TouchChrome.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
 import WorldConfigScreen from './screens/WorldConfigScreen.vue'
 import WorldMapScreen from './screens/WorldMapScreen.vue'
-import { abortBusy, abortRest, closeTopOverlay, togglePause, ui } from './store'
+import { abortBusy, abortRest, abortTerrainPreparation, closeTopOverlay, togglePause, ui } from './store'
 
 const touchDevice = isTouchDevice()
 
 function onKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
   if (abortRest()) return
+  if (abortTerrainPreparation()) return
   if (abortBusy()) return
   if (ui.openStack.length > 0) closeTopOverlay()
   else togglePause()
@@ -67,5 +69,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
          showing while the player also has the pause menu open. -->
     <TimeSkipOverlay />
     <BusyOverlay />
+    <TerrainPreparationOverlay />
   </div>
 </template>

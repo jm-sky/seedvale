@@ -102,6 +102,7 @@ import { createGroundActions } from './actions/groundActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createRestActions } from './actions/restActions'
 import { createSurvivalActions } from './actions/survivalActions'
+import { createTerrainPreparationActions } from './actions/terrainPreparationActions'
 import { createAppRenderLoop } from './appRenderLoop'
 import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
@@ -335,6 +336,16 @@ export async function createApp(
     getNearbyPlayerWell,
     initialSave?.playerGardens ?? [],
     resourceDepletion,
+    (initialSave?.terrainPreparations ?? []).map((p) => ({
+      id: p.id,
+      center: { x: p.x, z: p.z },
+      size: p.size,
+      targetHeight: p.targetHeight,
+      originalHeights: p.originalHeights,
+      requiredWork: p.requiredWork,
+      completedWork: p.completedWork,
+      status: 'active' as const,
+    })),
   )
   nearbyPlayerWellTarget = (x, z, maxDistance) => bundle.playerWells.nearestCompleted(x, z, maxDistance)
   // Plan 159 §10 — fishing bait per spot (flat map, survives stream-out/in
@@ -653,11 +664,20 @@ export async function createApp(
     busyOverlay,
     setLodgingConfirm: (payload) => vueUi.setQuickActionsLodgingConfirm(payload),
   })
+  const terrainPrep = createTerrainPreparationActions(actionCtx, {
+    scene,
+    timeSkipOverlay,
+    wheelTarget: renderer.domElement,
+    blockersNear: placement.tentBlockers,
+    showPreview: (view) => vueUi.showTerrainPreparationPreview(view),
+    hidePreview: () => vueUi.hideTerrainPreparationPreview(),
+  })
 
   onTrapCaptureTarget = gathering.onTrapCapture
   onTrapBaitReturnedTarget = gathering.onTrapBaitReturned
   vueUi.configureAbortRest(rest.abortRest)
   vueUi.configureAbortBusy(rest.abortBusy)
+  vueUi.configureAbortTerrainPreparation(terrainPrep.cancelActive)
 
   const { buildSaveData, saveNow, refreshActiveSaveName, installAutoSave } = createSaveState({
     config,
@@ -981,6 +1001,11 @@ export async function createApp(
       const p = ground.aimGroundPoint()
       ground.startLevelAt(p.x, p.z)
     },
+    onMound: () => {
+      const p = ground.aimGroundPoint()
+      ground.startMoundAt(p.x, p.z)
+    },
+    onPrepareTerrain: terrainPrep.startPreview,
     onPlaceTent: placement.placeTentAtAim,
     onPlaceTrap: placement.placeTrapAtAim,
     onPutDownContainer: containers.putDownContainerAtAim,
@@ -1166,10 +1191,14 @@ export async function createApp(
     openContainer: containers.openContainer,
     pickUpContainer: containers.pickUpContainer,
     workOnWell: placement.workOnWell,
+    tickTerrainPreparationPreview: terrainPrep.tickPreview,
+    resumeTerrainPreparationWork: terrainPrep.resumeWork,
+    tickTerrainPreparationWork: terrainPrep.tickWork,
+    onTerrainPreparationWorkFinished: terrainPrep.onWorkSkipFinished,
     onSleepFinished: rest.onSleepFinished,
     tickLodging: rest.tickLodging,
     isLodgingActive: rest.isLodgingActive,
-    interruptLongActivityOnDamage: () => rest.interruptRestForDamage() || rest.abortBusy(),
+    interruptLongActivityOnDamage: () => rest.interruptRestForDamage() || terrainPrep.interruptForDamage() || rest.abortBusy(),
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,
     syncPointLightBudget: () => { pointLightBudget.sync(camera) },

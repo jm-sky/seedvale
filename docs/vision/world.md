@@ -23,6 +23,10 @@ The world should provide a coherent, persistent environment whose geography, tim
 3. Improve hybrid/off-screen simulation continuity.
 4. Add deeper environmental storytelling and world-scale interactions.
 
+## Terrain modification as a foundation (plan `world-terrain-002`)
+
+Player-driven terrain shaping — local shovel deformation (`Wyrównaj`/`Zrób górkę`) and the larger world-space `Przygotuj teren` land-preparation job — establishes terrain shape as something the player can deliberately reshape, not only something the world generates. This is intentionally a foundation, not a finished vertical: later construction, garden beds/fields, houses/buildings, roads and other structures whose placement should depend on prepared/flattened ground can build on the same terrain-sampling/modification/persistence seam rather than inventing their own. This plan does not implement any of those consumers itself.
+
 ## Boundaries
 
 Do not rewrite the world representation speculatively. Architectural changes must be justified by real product limitations.

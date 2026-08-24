@@ -123,3 +123,7 @@ export type Interactable =
    *  is a per-frame resolved snapshot for the prompt only — the action
    *  re-resolves + revalidates at completion, never trusts this value. */
   | { kind: 'gardenPlot', position: { x: number, z: number }, promptLabel: string, id: string, care: number }
+  /** Active terrain-preparation work-site marker (plan `world-terrain-002`
+   *  §8) — `[E]` starts/resumes its work session. Removed once the
+   *  preparation reaches 100% (no permanent `PreparedTerrain` marker). */
+  | { kind: 'terrainPreparation', position: { x: number, z: number }, promptLabel: string, id: string }

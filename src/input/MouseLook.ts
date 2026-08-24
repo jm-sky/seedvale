@@ -5,6 +5,10 @@ export type LookState = {
   yaw: number
   pitch: number
   distance: number
+  /** Suppresses wheel-driven camera zoom while a mode that repurposes the
+   *  wheel for its own stepping is active (terrain-preparation preview size,
+   *  plan `world-terrain-002`) — set/cleared by that mode itself. */
+  zoomLocked: boolean
 }
 
 const SENSITIVITY = 0.0022
@@ -68,6 +72,7 @@ export function createMouseLook(target: HTMLElement, keys: KeyState): {
     yaw: 0,
     pitch: 0.35,
     distance: CAMERA_DISTANCE_DEFAULT,
+    zoomLocked: false,
   }
 
   const onClick = () => {
@@ -84,6 +89,10 @@ export function createMouseLook(target: HTMLElement, keys: KeyState): {
   }
 
   const onWheel = (event: WheelEvent) => {
+    if (state.zoomLocked) {
+      event.preventDefault()
+      return
+    }
     state.distance = clamp(
       state.distance + event.deltaY * ZOOM_SPEED * state.distance,
       CAMERA_DISTANCE_MIN,

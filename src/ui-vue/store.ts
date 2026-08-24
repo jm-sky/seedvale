@@ -117,6 +117,10 @@ type QuickActionsState = {
   lodgingConfirm: LodgingConfirmView | null
   onDig: (() => void) | null
   onLevel: (() => void) | null
+  /** "Zrób górkę" (plan `world-terrain-002` §1). */
+  onMound: (() => void) | null
+  /** "Przygotuj teren" (plan `world-terrain-002` §2) — enters the preview mode. */
+  onPrepareTerrain: (() => void) | null
   onPlaceTent: (() => void) | null
   onPlaceTrap: ((kind: TrapKind) => void) | null
   hasTent: boolean
@@ -179,6 +183,15 @@ type ContainerScreenState = {
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number; progress: number; canCancelRest: boolean }
 type BusyState = { visible: boolean; label: string; blurred: boolean; progress: number | null }
+/** `Przygotuj teren` preview HUD (plan `world-terrain-002` §2) — mirrors
+ *  `TerrainPreparationActions.tickPreview`'s per-frame view. */
+type TerrainPreparationPreviewState = {
+  visible: boolean
+  sizeLabel: string
+  heightLabel: string
+  valid: boolean
+  reasonLabel: string
+}
 /** `config`/`dayNight` are the *same* mutable objects `createApp.ts` already
  *  holds (see plan 005 — "Nie duplikować stanu"), assigned once via
  *  `configureWorldConfigScreen`, not copied per-open. Vue's `reactive()`
@@ -330,12 +343,13 @@ export const ui = reactive({
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, buildGrate: false, lightBranch: false, lightWoodenTorch: false },
     onBuildSimpleFire: null, onBuildFirePit: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null, onConfirmLodging: null, onCancelLodging: null, lodgingConfirm: null,
-    onDig: null, onLevel: null, onPlaceTrap: null, onOpen: null, onClose: null,
+    onDig: null, onLevel: null, onMound: null, onPrepareTerrain: null, onPlaceTrap: null, onOpen: null, onClose: null,
     hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null,
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false } as TimeSkipState,
+  terrainPreparationPreview: { visible: false, sizeLabel: '', heightLabel: '', valid: false, reasonLabel: '' } as TerrainPreparationPreviewState,
   merchant: { open: false, npc: null, counts: {}, groups: [], onBuyCoins: null, onBuyBarter: null, onSellCoins: null, onSellInstances: null } as MerchantState,
   containerScreen: {
     open: false, label: '', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
@@ -758,6 +772,33 @@ export function configureAbortBusy(handler: (() => boolean) | null): void {
 }
 export function abortBusy(): boolean {
   return abortBusyHandler?.() ?? false
+}
+
+/** Esc during the `Przygotuj teren` preview or an active preparation-work
+ *  session (plan `world-terrain-002`) — checked between `abortRest` and
+ *  `abortBusy` in `App.vue`'s Esc chain. Mirrors `abortRest`/`abortBusy`. */
+let abortTerrainPreparationHandler: (() => boolean) | null = null
+export function configureAbortTerrainPreparation(handler: (() => boolean) | null): void {
+  abortTerrainPreparationHandler = handler
+}
+export function abortTerrainPreparation(): boolean {
+  return abortTerrainPreparationHandler?.() ?? false
+}
+
+export function showTerrainPreparationPreview(view: {
+  sizeLabel: string
+  heightLabel: string
+  valid: boolean
+  reasonLabel: string
+}): void {
+  ui.terrainPreparationPreview.visible = true
+  ui.terrainPreparationPreview.sizeLabel = view.sizeLabel
+  ui.terrainPreparationPreview.heightLabel = view.heightLabel
+  ui.terrainPreparationPreview.valid = view.valid
+  ui.terrainPreparationPreview.reasonLabel = view.reasonLabel
+}
+export function hideTerrainPreparationPreview(): void {
+  ui.terrainPreparationPreview.visible = false
 }
 
 export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: {

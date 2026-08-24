@@ -7,6 +7,7 @@ import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { ResourceDepletionState } from '../terrain/depositMining'
+import type { TerrainPreparationRecord } from '../terrain/terrainPreparation'
 import type { PlacedTrapRecord } from '../world/animalTraps'
 import type { BeehiveRecord } from '../world/beehives'
 import type { CropPlacement } from '../world/cropLifecycle'
@@ -53,6 +54,7 @@ import {
 import { createPlacedTraps, type PlacedTraps, type PlacedTrapsHooks } from '../world/createPlacedTraps'
 import { createPlayerGardens, type PlayerGardens } from '../world/createPlayerGardens'
 import { createPlayerWells, type PlayerWells } from '../world/createPlayerWells'
+import { createTerrainPreparations, type TerrainPreparations } from '../world/createTerrainPreparations'
 import { createFoodSourceHooks } from '../world/foodSources'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
@@ -103,6 +105,7 @@ export type WorldBundle = {
   placedContainers: PlacedContainers
   playerWells: PlayerWells
   playerGardens: PlayerGardens
+  terrainPreparations: TerrainPreparations
   largeCaves: LargeCaves
   dryingRacks: DryingRacks
   hives: Beehives
@@ -345,6 +348,7 @@ type WorldSystemsSeed = {
   carriedContainer: SaveCarriedContainer | null
   playerWells: readonly PlayerWellRecord[]
   playerGardens: readonly PlayerGardenRecord[]
+  terrainPreparations: readonly TerrainPreparationRecord[]
   dryingRacks: readonly DryingRackRecord[]
   hives: readonly BeehiveRecord[]
   economies?: Record<string, Partial<Record<EconomicKind, number>>>
@@ -377,6 +381,7 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
     carriedContainer: initialCarriedContainer,
     playerWells: initialPlayerWells,
     playerGardens: initialPlayerGardens,
+    terrainPreparations: initialTerrainPreparations,
     dryingRacks: initialDryingRacks,
     hives: initialHives,
     economies: initialEconomies,
@@ -447,6 +452,12 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
     chunkManager.clearColliders,
     initialPlayerWells,
   )
+  const terrainPreparations = createTerrainPreparations(
+    scene,
+    chunkManager,
+    chunkManager.sampleHeight,
+    initialTerrainPreparations,
+  )
   const largeCaves = createLargeCaves(
     scene,
     chunkManager,
@@ -468,7 +479,7 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
     initialHives,
   )
 
-  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, placedContainers, playerWells, playerGardens, largeCaves, dryingRacks, hives }
+  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, placedContainers, playerWells, playerGardens, terrainPreparations, largeCaves, dryingRacks, hives }
 }
 
 export async function createWorldBundle(
@@ -551,6 +562,10 @@ export async function createWorldBundle(
    *  only on a genuinely new world" contract as `collectedItemIds`, and
    *  persisted the same way (`SaveData.resourceDeposits`). */
   resourceDepletion: ResourceDepletionState = new Map(),
+  /** Plan `world-terrain-002` — persistent active terrain-preparation work
+   *  sites, same "carried across rebuild, reset only on a genuinely new
+   *  world" contract as `initialPlayerWells`/`initialPlayerGardens` above. */
+  initialTerrainPreparations: readonly TerrainPreparationRecord[] = [],
 ): Promise<WorldBundle> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, playAt,
@@ -563,6 +578,7 @@ export async function createWorldBundle(
     carriedContainer: initialCarriedContainer,
     playerWells: initialPlayerWells,
     playerGardens: initialPlayerGardens,
+    terrainPreparations: initialTerrainPreparations,
     dryingRacks: initialDryingRacks,
     hives: initialHives,
     economies: initialEconomies,
@@ -650,6 +666,11 @@ export async function rebuildWorldBundle(
   // — same carry-across-rebuild contract as `playerWells` above.
   const carriedPlayerGardens = resetCollectedItems ? [] : [...bundle.playerGardens.nodes()]
   bundle.playerGardens.dispose()
+  // Active terrain-preparation work sites are positioned by the player, not
+  // seed-derived — same carry-across-rebuild contract as `playerWells`/
+  // `playerGardens` above.
+  const carriedTerrainPreparations = resetCollectedItems ? [] : [...bundle.terrainPreparations.nodes()]
+  bundle.terrainPreparations.dispose()
   const carriedDryingRacks = resetCollectedItems ? [] : [...bundle.dryingRacks.nodes()]
   bundle.dryingRacks.dispose()
   const carriedHives = resetCollectedItems ? [] : [...bundle.hives.nodes()]
@@ -687,6 +708,7 @@ export async function rebuildWorldBundle(
     carriedContainer: carriedContainerHeld,
     playerWells: carriedPlayerWells,
     playerGardens: carriedPlayerGardens,
+    terrainPreparations: carriedTerrainPreparations,
     dryingRacks: carriedDryingRacks,
     hives: carriedHives,
     economies: carriedEconomies,
@@ -714,6 +736,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.placedContainers.dispose()
   bundle.playerWells.dispose()
   bundle.playerGardens.dispose()
+  bundle.terrainPreparations.dispose()
   bundle.largeCaves.dispose()
   bundle.dryingRacks.dispose()
   bundle.hives.dispose()

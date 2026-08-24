@@ -14,10 +14,8 @@ export const STONE_CHANCE_ROCK = 0.8
 /** Chance that a found stone is noticed and goes to inventory (when there is
  *  capacity); otherwise it drops beside the hole. */
 export const STONE_NOTICE_CHANCE = 0.65
-/** Real-time seconds for dig / level channel before terrain + loot apply. */
+/** Real-time seconds for dig / level / mound channel before terrain applies. */
 export const DIG_DURATION_SEC = 2
-/** Minimum depression vs procedural base before "Wyrównaj" is offered. */
-export const LEVEL_EPS = 0.04
 
 /** `sampleMountainRidge` above this reads as bare mountain rock (see
  *  `biomeColors.ts`'s `applyMountainRock` — starts blending toward `ROCK`/
@@ -43,13 +41,6 @@ export type DigEnv = {
   waterLevel: number
   /** World seed — same value coloring/grass use for `sandBandAt`. */
   seed: number
-}
-
-/** Env that can compare runtime height against procedural base — used for
- *  "Wyrównaj" eligibility. */
-export type LevelEnv = {
-  sampleHeight: HeightSampler
-  sampleBaseHeight: HeightSampler
 }
 
 /** True when `(x, z)` is bare mountain rock — the same ridge signal shovel
@@ -81,12 +72,6 @@ export function getRockDigProfileAt(x: number, z: number, env: DigEnv): DigProfi
   if (height < env.waterLevel + WATER_MARGIN) return null
   if (!isRockGround(x, z, env)) return null
   return { depth: DIG_DEPTH_ROCK, stoneChance: STONE_CHANCE_ROCK, surface: 'rock' }
-}
-
-/** True when the runtime surface sits meaningfully below the procedural base
- *  (i.e. there is a dig depression worth leveling). */
-export function canLevelAt(x: number, z: number, env: LevelEnv): boolean {
-  return env.sampleHeight(x, z) < env.sampleBaseHeight(x, z) - LEVEL_EPS
 }
 
 export type DigStoneOutcome =

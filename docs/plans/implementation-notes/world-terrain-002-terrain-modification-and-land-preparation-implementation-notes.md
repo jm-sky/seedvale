@@ -1,7 +1,22 @@
 # Plan: Terrain Modification & Land Preparation — Implementation Notes
 
 **Created:** 2026-08-24  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
+
+## Implementation summary (2026-08-24)
+
+Implemented per plan, following this file's recommended order. Key decisions worth recording for a future session:
+
+- **Long-running work primitive**: reused `world/timeSkip.ts` (the same "wait"/"sleep" mechanism), not the well-style repeated-`busy`-bout pattern. `world/timeSkip.ts` already exposes a per-frame `progress()` fraction while active, which is exactly what continuous progressive deformation needs; the well pattern doesn't animate visually between bouts. A new `app/actions/terrainPreparationActions.ts` module owns a local `activeWork` pointer (mirroring `restActions.ts`'s `pendingRest`/`pendingLodgingQuality` pattern) so it recognizes "this finished skip is mine" without any change to `TimeSkip`'s public contract.
+- **`requiredWork`/`hours` relationship**: `requiredWork` is expressed in "hours at base tool speed"; `hours = remaining / toolMultiplier` is what's actually passed to `timeSkip.start()`. This keeps `completedWork = requiredWork * timeSkip.progress()` exact and keeps a faster tool finish sooner (fewer real/game hours) without a second unit system.
+- **New `ChunkManager.applyExactHeights(id, samples)`** — one new `TerrainModification` variant (`mode: 'prepare'`) reusing the existing `modifications` list/reapply-on-chunk-load pipeline, not a parallel terrain-mutation system. Used by both `Wyrównaj` (one-shot, fresh id per call) and active preparation work (same id, replaced every tick).
+- **`Wyrównaj` eligibility simplified**: removed `canLevelAt`/`LevelEnv`/`LEVEL_EPS` (procedural-base-depression check) entirely — dead once the plan's new semantics don't compare against `sampleBaseHeight`. `Wyrównaj`/`Wykop skałę` are now offered under the exact same condition as the matching dig (`profile !== null`), not a second gate.
+- **Esc/damage interruption**: added `terrainPrep.cancelActive()`/`interruptForDamage()` as a third link in the existing `abortRest → abortBusy` chain (`App.vue`'s Esc handler; `createApp.ts`'s `interruptLongActivityOnDamage` composite) — same pattern already used twice, not a new cancellation path. "Exhaustion/fatigue"/"hunger" interrupting work (plan §7) is *not* a new vigor-threshold mechanism — the player has none today (vigor only slows regen/gates sprint); severe/prolonged hunger or thirst already produces real HP loss (`playerDamage.ts`), which already reaches the same damage-interrupt entry point. This reuses what exists rather than inventing a parallel "low vigor forces X" system.
+- **Persistence gap discovered, scoped out**: `ChunkManager`'s `modifications` list (dig/level/scorch marks) was never part of `SaveData` at all (confirmed in code, not just the doc comment) — a full save/load (app restart) already loses ordinary dig holes today, a pre-existing plan-052 scoping decision. This plan persists only the *active* `TerrainPreparationRecord` (immutable `originalHeights` + progress) and reconstructs its current terrain via `applyExactHeights` on load — satisfying the plan's own requirement — but does **not** retroactively fix general terrain-modification persistence; a *completed* preparation's baked shape reverts to procedural terrain after an app restart, same as an ordinary dig hole. Recorded in `LOOSE-ENDS.md`.
+- **Preview aim**: this game has no free-moving cursor (pointer-locked FPS camera) — "grid following the mouse position" resolves the same way every other aimed action already does, from `mouseLook.state.yaw` at a fixed reach, not a screen-space raycast.
+- **Not yet browser-verified** — see the plan's own Verification section; all listed technical checks (`tsc`, `lint`, `build`, `test`) pass, including new unit tests in `src/terrain/terrainPreparation.test.ts`.
+
+
 
 ## Review verdict
 

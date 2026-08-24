@@ -4,7 +4,7 @@
 
 **Not:** item-by-item catalog data (that's [items/CATALOG.md](../items/CATALOG.md)), combat mechanics (that's [combat.md](./combat.md)), or NPC/settlement systems (that's [SETTLEMENTS.md](../state/settlements.md)).
 
-**Last verified:** 2026-08-21
+**Last verified:** 2026-08-24
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -44,6 +44,14 @@ Timed player actions (dig/chop/mine/bury/harvest/ignite/cook/tent-setup/destroy-
 
 `world/playerWell.ts` + `world/createPlayerWells.ts` use an **active-work** model: Quick Actions places a persistent record in the `pit` stage with zero progress, and each construction stage (`pit`/`well`/`roof`) only advances from hours of *active* player work (`workProgress`) — never from elapsed world time, so leaving the game does not finish a well. A `[E]` press runs one short busy-channel work bout; the measured world-time delta of that bout (not an assumed value) is credited to `workProgress` on both natural completion and Escape-cancellation, so an interruption keeps exactly the work done and resumes from there. The first bout of a new stage validates its tool requirement and atomically consumes that stage's material cost; resuming the same stage re-checks the tool but never re-charges materials. Once the `roof` stage's work is done, the well becomes a plain `well`-kind water source — the exact settlement-well drink/fill path, no parallel water system. NPCs may also target a completed player well for their own water-fetch when it's closer than the settlement's own well.
 
+## Terrain modification & land preparation (plan `world-terrain-002`)
+
+Shovel `Wyrównaj` levels the nearest 3×3 terrain grid samples to the central sample's own current runtime height (never the procedural base) — a one-shot exact-height write through `ChunkManager.applyExactHeights`, the same primitive active `Przygotuj teren` work uses. `Zrób górkę` is the literal inverse of `Wykop dołek`: the same radial `modifyTerrain` deformation with a negated depth, same limits, no stone yield. Both live in `terrain/digAction.ts`/`app/actions/groundActions.ts`.
+
+`Przygotuj teren` is a larger, world-space (2×2/3×3/4×4 m) flattening job. Quick Actions enters a preview mode (`app/actions/terrainPreparationActions.ts`) — a world-space grid follows the player's aim (mouse wheel/`+`/`-` resize, `,`/`.` target-height step of 0.25 m), validated every frame against the immutable-once-confirmed sample snapshot: water margin, the 3 m per-sample deformation cap, mountain-rock requiring a pickaxe, and the shared `evaluateGroundPlacement` ground-suitability check. Confirming (`[E]`) creates a compact `TerrainPreparationRecord` (`terrain/terrainPreparation.ts`) — `id`/`center`/`size`/`targetHeight`/immutable `originalHeights`/`requiredWork`/`completedWork` — and a temporary marker (`world/createTerrainPreparations.ts`), no permanent `PreparedTerrain` state.
+
+Work itself reuses `world/timeSkip.ts` as a generic "work N hours" primitive (the same mechanism "Czekaj"/sleep already use), started by `[E]` on the marker: `requiredWork = max(1 game-hour, area × avgAbsHeightDelta × workScale)`, tool speed is additive (shovel mandatory, +5% knife, +10% pickaxe) and shortens the actual hours skipped. Every frame the skip is active, `completedWork`/terrain heights are re-derived from the immutable `originalHeights` via `progressiveHeight()` — never accumulated, so interruption (Esc, damage/starvation — reusing the existing `interruptLongActivityOnDamage` entry point, no new vigor-threshold interrupt) and resume, or a save/load mid-work, reproduce identical terrain deterministically. `createTerrainPreparations`'s constructor re-seeds `ChunkManager.applyExactHeights` for every restored active record so partially-modified terrain is correct immediately after load, before any chunk streams in. Completion sets exact target heights, deletes the record/marker, and awards capped Survival XP — no new skill.
+
 ## Animal traps (plan 141)
 
 `src/world/animalTraps.ts` + `createPlacedTraps.ts` are player-placed world objects in `WorldBundle`, the same persisted-record shape as tents/fires — there is no separate trap manager. Bought from the home trader, set down through the shared ground-placement evaluator, then `[E]` arms/disarms and `[R]` picks up. Detection is a pure function of the trap's quality (higher → lower detection floor) rolled against a deterministic per-`(trap, animal, attempt)` roll; an evasion sets a runtime-only cooldown, not persisted (wild fauna isn't persisted either). Only a fixed set of species can be caught. A catch only kills through the existing `AnimalAgent` damage/collapse/death path and deactivates the trap — it leaves an ordinary, un-harvested corpse; the player still knife-harvests it normally. Weather wears down an *armed* trap lazily, charged per completed weather cycle, not per frame. Bait (plan 159) is an optional food item consumed on arm for a detection-chance bonus, returned on disarm/collect before a catch. Per-item stats (durability, detection floor, price) are in [CATALOG.md](../items/CATALOG.md).
@@ -76,6 +84,12 @@ src/app/actions/restActions.ts
 src/app/actions/placementActions.ts
 src/app/actions/gatheringActions.ts
 src/app/actions/survivalActions.ts
+src/app/actions/groundActions.ts
+src/app/actions/terrainPreparationActions.ts
+src/terrain/dig.ts
+src/terrain/digAction.ts
+src/terrain/terrainPreparation.ts
+src/world/createTerrainPreparations.ts
 src/items/campfireCooking.ts
 src/settlement/VillageFire.ts
 src/settlement/PlacedFires.ts

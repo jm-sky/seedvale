@@ -1,7 +1,7 @@
 # Plan: Terrain Modification & Land Preparation
 
 **Created:** 2026-08-24  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** L  
 **Depends on:** none
 

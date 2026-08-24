@@ -81,6 +81,16 @@ function level(): void {
   ui.quickActions.onLevel?.()
 }
 
+function mound(): void {
+  closeQuickActions()
+  ui.quickActions.onMound?.()
+}
+
+function prepareTerrain(): void {
+  closeQuickActions()
+  ui.quickActions.onPrepareTerrain?.()
+}
+
 function buildWell(): void {
   closeQuickActions()
   ui.quickActions.onBuildWell?.()
@@ -136,6 +146,8 @@ const trapActions = computed<Action[]>(() => {
 const shovelActions: Action[] = [
   { label: 'Wykop dołek', cost: 'łopata', onClick: dig },
   { label: 'Wyrównaj', cost: 'łopata', onClick: level },
+  { label: 'Zrób górkę', cost: 'łopata', onClick: mound },
+  { label: 'Przygotuj teren', cost: 'łopata', onClick: prepareTerrain },
   { label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell },
   { label: 'Zbuduj grządkę', cost: 'łopata', onClick: buildGarden },
 ]

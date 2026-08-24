@@ -5,11 +5,11 @@ import type { Toast } from '../ui/createToast'
 import type { ChunkManager } from './chunkManager'
 import { playInventoryPickUp } from '../audio/inventorySounds'
 import {
-  DIG_DEPTH_SOIL,
   DIG_RADIUS,
   type DigProfile,
   resolveDigStone,
 } from './dig'
+import { nearestGridPoint, resolveLevelSamples } from './terrainPreparation'
 
 export type DigFeedback = {
   inventory: Inventory
@@ -55,13 +55,43 @@ export function applyDigAt(
   )
 }
 
-/** Raises terrain toward the procedural base at `(x, z)`. */
+/** "Wyrównaj" (plan `world-terrain-002` §1) — levels the 3×3 nearest terrain
+ *  samples around `(x, z)` to the central sample's own current height (never
+ *  the procedural base). A one-shot exact-height write through the same
+ *  `applyExactHeights` primitive active terrain-preparation work uses, keyed
+ *  by a fresh id each call since this never needs to be replaced/resumed. */
 export function applyLevelAt(
   chunkManager: ChunkManager,
   x: number,
   z: number,
   toast: Toast,
 ): void {
-  const raised = chunkManager.levelTerrain(x, z, DIG_RADIUS, DIG_DEPTH_SOIL)
-  toast.show(raised ? 'Wyrównano teren.' : 'Nie ma tu czego wyrównać.')
+  const samples = resolveLevelSamples(x, z, chunkManager.chunkSize, chunkManager.resolution)
+  const center = nearestGridPoint(x, z, chunkManager.chunkSize, chunkManager.resolution)
+  const targetHeight = chunkManager.sampleHeight(center.x, center.z)
+  const heights = samples
+    .filter((s) => Math.abs(chunkManager.sampleHeight(s.x, s.z) - targetHeight) > 1e-4)
+    .map((s) => ({ x: s.x, z: s.z, height: targetHeight }))
+  if (heights.length === 0) {
+    toast.show('Teren jest już wyrównany.')
+    return
+  }
+  chunkManager.applyExactHeights(`level:${Date.now()}:${Math.random()}`, heights)
+  toast.show('Wyrównano teren.')
+}
+
+/** "Zrób górkę" (plan `world-terrain-002` §1) — the inverse of "Wykop
+ *  dołek": the same radial deformation `modifyTerrain` already applies for a
+ *  dig, just raising instead of lowering (a negative depth), so it shares
+ *  the exact same single-deformation limits/mechanism. Never yields stone —
+ *  raising ground doesn't unearth anything. */
+export function applyMoundAt(
+  chunkManager: ChunkManager,
+  x: number,
+  z: number,
+  depth: number,
+  toast: Toast,
+): void {
+  chunkManager.modifyTerrain(x, z, DIG_RADIUS, -depth)
+  toast.show('Usypano górkę.')
 }

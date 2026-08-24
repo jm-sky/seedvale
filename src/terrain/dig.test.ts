@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  canLevelAt,
   DIG_DEPTH_ROCK,
   type DigEnv,
   getDigProfileAt,
@@ -82,16 +81,6 @@ describe('isRockGround', () => {
   it('matches the shovel-reject ridge threshold', () => {
     expect(isRockGround(0, 0, env({ sampleMountainRidge: () => 0.3 }))).toBe(false)
     expect(isRockGround(0, 0, env({ sampleMountainRidge: () => 0.31 }))).toBe(true)
-  })
-})
-
-describe('canLevelAt', () => {
-  it('is true when runtime height is below base by more than LEVEL_EPS', () => {
-    expect(canLevelAt(0, 0, { sampleHeight: () => 9.5, sampleBaseHeight: () => 10 })).toBe(true)
-  })
-
-  it('is false when nearly at base', () => {
-    expect(canLevelAt(0, 0, { sampleHeight: () => 9.98, sampleBaseHeight: () => 10 })).toBe(false)
   })
 })
 

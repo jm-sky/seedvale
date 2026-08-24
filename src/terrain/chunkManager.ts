@@ -466,9 +466,17 @@ export type ChunkManager = {
    *  modification list as `modifyTerrain` (reapplied on chunk reload). Also
    *  rebuilds grass on touched chunks so blades don't linger in the scorch. */
   scorchTerrain: (x: number, z: number, radius: number, depth: number) => boolean
-  /** Raises terrain toward the procedural base (never above it) — "Wyrównaj".
-   *  Same runtime overlay as `modifyTerrain`; returns false if nothing changed. */
-  levelTerrain: (x: number, z: number, radius: number, maxRaise: number) => boolean
+  /** Sets an explicit list of exact, grid-aligned sample heights (plan
+   *  `world-terrain-002`) — used by `Wyrównaj`'s 3×3 leveling (a fresh `id`
+   *  each call, applied once) and by active terrain-preparation work (the
+   *  *same* `id` every progress tick, replacing its own previous entry
+   *  in-place rather than accumulating). Reapplied to any chunk that
+   *  (re)generates later, same "walking away and back doesn't lose it"
+   *  contract as `modifyTerrain` — including not persisted across saves on
+   *  its own (a caller that needs cross-session persistence, like an active
+   *  preparation, restores by calling this again after load). Returns false
+   *  if no loaded chunk was affected. */
+  applyExactHeights: (id: string, samples: readonly { x: number, z: number, height: number }[]) => boolean
   /** Seed-derived analytic height at `(x, z)` — ignores runtime dig/level mods. */
   sampleBaseHeight: HeightSampler
   /** Environment inputs for tree growth at a world point. */
@@ -482,6 +490,11 @@ export type ChunkManager = {
   ) => readonly (TreePresence & { stage: TreeGrowthStage })[]
   /** World seed — shared with shore/dig helpers (`sandBandAt`). */
   seed: number
+  /** Terrain-grid step inputs (plan `world-terrain-002`) — lets a caller
+   *  resolve exact sample-grid points/footprints (`terrain/terrainPreparation.ts`)
+   *  without reaching into `ChunkManagerConfig` internals. */
+  chunkSize: number
+  resolution: number
   waterLevel: number
   /** Ocean/coast continentalness thresholds — lets a caller distinguish an
    *  inland lake shoreline from the ocean shore via `oceanMixAt`
@@ -522,8 +535,19 @@ export type TerrainModification = {
   depth: number
   /** `'dig'` lowers; `'level'` raises toward `sampleBase` and never above it;
    *  `'scorch'` is a shallow dip plus a `roadTint` / charcoal-color burn patch
-   *  (plan 137). */
-  mode: 'dig' | 'level' | 'scorch'
+   *  (plan 137); `'prepare'` sets an explicit list of exact grid-sample
+   *  heights (plan `world-terrain-002`) instead of a radial falloff — used by
+   *  `Wyrównaj`'s 3×3 exact leveling and by active terrain-preparation work.
+   *  `x`/`z`/`radius`/`depth` are unused for `'prepare'`. */
+  mode: 'dig' | 'level' | 'scorch' | 'prepare'
+  /** `mode: 'prepare'` only — identifies this modification so a later call
+   *  with the same `id` replaces it in place (terrain-preparation work writes
+   *  progressively, every tick) instead of appending a growing list. */
+  id?: string
+  /** `mode: 'prepare'` only — exact world-space, grid-aligned sample heights
+   *  to write. Each `{x,z}` must already sit on the terrain's own sample grid
+   *  (`apronOriginWorld`'s step) — this mode does not interpolate/snap. */
+  samples?: readonly { x: number, z: number, height: number }[]
 }
 
 /** Writes one modification's radial falloff directly into `tile.heights`
@@ -547,6 +571,25 @@ export function applyModificationToTile(
   sampleBase?: HeightSampler,
 ): boolean {
   const o = apronOriginWorld(coord.cx, coord.cz, chunkSize, resolution)
+
+  if (mod.mode === 'prepare') {
+    let touchedPrepare = false
+    for (const sample of mod.samples ?? []) {
+      const ix = Math.round((sample.x - o.x) / o.step)
+      const iz = Math.round((sample.z - o.z) / o.step)
+      if (ix < 0 || ix >= o.apronRes || iz < 0 || iz >= o.apronRes) continue
+      // The sample must actually land on this chunk's grid, not just round
+      // into bounds — a chunk's own step/origin are identical everywhere
+      // (`apronOriginWorld`'s shared global phase), so a genuine grid-aligned
+      // sample always matches within float tolerance.
+      if (Math.abs(o.x + ix * o.step - sample.x) > o.step * 1e-3) continue
+      if (Math.abs(o.z + iz * o.step - sample.z) > o.step * 1e-3) continue
+      tile.heights[iz * o.apronRes + ix] = sample.height
+      touchedPrepare = true
+    }
+    return touchedPrepare
+  }
+
   const minIx = Math.max(0, Math.floor((mod.x - mod.radius - o.x) / o.step))
   const maxIx = Math.min(o.apronRes - 1, Math.ceil((mod.x + mod.radius - o.x) / o.step))
   const minIz = Math.max(0, Math.floor((mod.z - mod.radius - o.z) / o.step))
@@ -2049,21 +2092,15 @@ export function createChunkManager(
       }
       return touchedAny
     },
-    levelTerrain(x, z, radius, maxRaise) {
-      const mod: TerrainModification = { x, z, radius, depth: maxRaise, mode: 'level' }
-      modifications.push(mod)
-      const sampleBase: HeightSampler = (wx, wz) => sampleHeightAt(wx, wz, fallbackParams)
+    applyExactHeights(id, samples) {
+      const mod: TerrainModification = { x: 0, z: 0, radius: 0, depth: 0, mode: 'prepare', id, samples }
+      const existingIndex = modifications.findIndex((m) => m.mode === 'prepare' && m.id === id)
+      if (existingIndex >= 0) modifications[existingIndex] = mod
+      else modifications.push(mod)
       let touchedAny = false
       for (const rec of chunks.values()) {
         if (rec.state !== 'ready' || !rec.tile) continue
-        const touched = applyModificationToTile(
-          rec.tile,
-          rec.coord,
-          config.chunkSize,
-          config.resolution,
-          mod,
-          sampleBase,
-        )
+        const touched = applyModificationToTile(rec.tile, rec.coord, config.chunkSize, config.resolution, mod)
         if (!touched) continue
         touchedAny = true
         buildAndAttachMesh(rec, rec.tile)
@@ -2072,6 +2109,8 @@ export function createChunkManager(
     },
     sampleBaseHeight: (x, z) => sampleHeightAt(x, z, fallbackParams),
     seed: config.seed,
+    chunkSize: config.chunkSize,
+    resolution: config.resolution,
     waterLevel: config.waterLevel,
     region: config.region,
     loadedChunkCount: () => chunks.size,

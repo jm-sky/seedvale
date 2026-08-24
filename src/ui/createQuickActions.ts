@@ -55,6 +55,11 @@ export type QuickActionsHandlers = {
   /** Shovel dig / level when the player owns a shovel (HUD only when held). */
   onDig?: () => void
   onLevel?: () => void
+  /** "Zrób górkę" (plan `world-terrain-002` §1) — inverse of `onDig`. */
+  onMound?: () => void
+  /** "Przygotuj teren" (plan `world-terrain-002` §2) — enters the preview
+   *  mode; confirm/cancel happen in-world, not through this panel. */
+  onPrepareTerrain?: () => void
   onPlaceTent?: () => void
   /** Sets an animal trap down in front of the player (plan 141) — the same
    *  inventory → world placement shape as `onPlaceTent`. */

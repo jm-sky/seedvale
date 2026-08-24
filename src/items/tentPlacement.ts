@@ -34,7 +34,10 @@ export type TentPlacementInput = Omit<
   otherTents: readonly { x: number, z: number }[]
 }
 
-const WATER_MARGIN = 0.8
+/** Exported for `terrain/terrainPreparation.ts`'s per-sample water rejection
+ *  (plan `world-terrain-002`) — the same shoreline clearance every other
+ *  ground placement already uses, not a second water-margin constant. */
+export const WATER_MARGIN = 0.8
 const SLOPE_SAMPLE = 1.6
 const SLOPE_MAX_DELTA = 0.45
 const TENT_SEPARATION = TENT_FOOTPRINT_RADIUS * 2.2

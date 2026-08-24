@@ -4,8 +4,8 @@ import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
 import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
-import { canLevelAt, DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../../terrain/dig'
-import { applyDigAt, applyLevelAt } from '../../terrain/digAction'
+import { DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt } from '../../terrain/dig'
+import { applyDigAt, applyLevelAt, applyMoundAt } from '../../terrain/digAction'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../../world/treeHarvest'
 import { bonusYieldForChopStage, isChoppableStage, yieldForChopStage } from '../../world/treeLifecycle'
 import { DIG_REACH } from '../interactables'
@@ -24,6 +24,8 @@ export type GroundActions = {
   startPickaxeDigAt: (x: number, z: number) => void
   startLevelAt: (x: number, z: number) => void
   startPickaxeLevelAt: (x: number, z: number) => void
+  /** "Zrób górkę" (plan `world-terrain-002` §1) — inverse of `startDigAt`. */
+  startMoundAt: (x: number, z: number) => void
   startTreeChop: (treeId: string, x: number, z: number) => void
   startDepositMine: (depositId: string, x: number, z: number) => void
 }
@@ -74,11 +76,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
 
   const startLevelAt = (x: number, z: number): void => {
     if (!inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
-    if (isRockGround(x, z, bundle.chunkManager)) {
-      toast.show('Łopata nie bierze skały.', 'error')
-      return
-    }
-    if (!canLevelAt(x, z, bundle.chunkManager)) {
+    if (!getDigProfileAt(x, z, bundle.chunkManager)) {
       toast.show('Nie ma tu czego wyrównać.', 'error')
       return
     }
@@ -89,12 +87,28 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
 
   const startPickaxeLevelAt = (x: number, z: number): void => {
     if (!hasItemCapability(heldTool.held(), 'rock_mining') || isActionBlocked(ctx)) return
-    if (!isRockGround(x, z, bundle.chunkManager) || !canLevelAt(x, z, bundle.chunkManager)) {
+    if (!getRockDigProfileAt(x, z, bundle.chunkManager)) {
       toast.show('Nie ma tu czego wyrównać.', 'error')
       return
     }
     busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
       applyLevelAt(bundle.chunkManager, x, z, toast)
+    })
+  }
+
+  /** "Zrób górkę" (plan `world-terrain-002` §1) — inverse of `startDigAt`:
+   *  same shovel/rock/water eligibility, same busy-channel shape, but raises
+   *  instead of lowering. */
+  const startMoundAt = (x: number, z: number): void => {
+    if (!inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
+    const profile = getDigProfileAt(x, z, bundle.chunkManager)
+    if (!profile) {
+      toast.show('Tu nie da się usypać górki.', 'error')
+      return
+    }
+    playActionDig(worldAudio.playOnce)
+    busy.start(DIG_DURATION_SEC, 'Usypywanie…', () => {
+      applyMoundAt(bundle.chunkManager, x, z, profile.depth, toast)
     })
   }
 
@@ -209,6 +223,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     startPickaxeDigAt,
     startLevelAt,
     startPickaxeLevelAt,
+    startMoundAt,
     startTreeChop,
     startDepositMine,
   }

@@ -31,6 +31,19 @@ export type KeyState = {
   /** Edge-triggered: set true on Tab keydown, cleared by consumeCycleTarget()
    *  — cycles among multiple interaction candidates (plan 153). */
   cycleTarget: boolean
+  /** Edge-triggered: set true on `+`/NumpadAdd keydown, cleared by
+   *  consumePlus() — meaningless outside the terrain-preparation preview
+   *  (plan `world-terrain-002`), which is the only consumer. */
+  plus: boolean
+  /** Edge-triggered: set true on `-`/NumpadSubtract keydown, cleared by
+   *  consumeMinus() — same single consumer as `plus` above. */
+  minus: boolean
+  /** Edge-triggered: set true on `,` keydown, cleared by consumeComma() —
+   *  same single consumer as `plus` above. */
+  comma: boolean
+  /** Edge-triggered: set true on `.` keydown, cleared by consumePeriod() —
+   *  same single consumer as `plus` above. */
+  period: boolean
 }
 
 const KEY_MAP: Record<string, keyof KeyState> = {
@@ -55,11 +68,17 @@ const KEY_MAP: Record<string, keyof KeyState> = {
   KeyC: 'character',
   Space: 'jump',
   Tab: 'cycleTarget',
+  Equal: 'plus',
+  NumpadAdd: 'plus',
+  Minus: 'minus',
+  NumpadSubtract: 'minus',
+  Comma: 'comma',
+  Period: 'period',
 }
 
 /** Actions that latch true on keydown and are cleared by the consumer, not by keyup —
  *  so a tap registers exactly once regardless of how long the key stays down. */
-const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'character', 'cycleTarget', 'drop', 'interact', 'inventory', 'jump', 'minimap', 'questLog', 'quickActions', 'skills'])
+const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'character', 'comma', 'cycleTarget', 'drop', 'interact', 'inventory', 'jump', 'minimap', 'minus', 'period', 'plus', 'questLog', 'quickActions', 'skills'])
 
 /** True while the event is headed for a text field — the pause menu's Character
  *  name input is the live case. Without this, `KEY_MAP` letters (w/a/s/d/e/l/g)
@@ -101,6 +120,14 @@ export function createKeyboard(): {
   consumeJump: () => boolean
   /** Reads and clears the pending interaction-cycle press (`Tab`, plan 153). */
   consumeCycleTarget: () => boolean
+  /** Reads and clears the pending `+` press — terrain-preparation preview size up. */
+  consumePlus: () => boolean
+  /** Reads and clears the pending `-` press — terrain-preparation preview size down. */
+  consumeMinus: () => boolean
+  /** Reads and clears the pending `,` press — terrain-preparation preview target height down. */
+  consumeComma: () => boolean
+  /** Reads and clears the pending `.` press — terrain-preparation preview target height up. */
+  consumePeriod: () => boolean
   dispose: () => void
 } {
   const state: KeyState = {
@@ -121,6 +148,10 @@ export function createKeyboard(): {
     character: false,
     jump: false,
     cycleTarget: false,
+    plus: false,
+    minus: false,
+    comma: false,
+    period: false,
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -147,7 +178,7 @@ export function createKeyboard(): {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
 
-  const consume = (key: 'interact' | 'interactReleased' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'jump' | 'cycleTarget'): boolean => {
+  const consume = (key: 'interact' | 'interactReleased' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'jump' | 'cycleTarget' | 'plus' | 'minus' | 'comma' | 'period'): boolean => {
     if (!state[key]) return false
     state[key] = false
     return true
@@ -167,6 +198,10 @@ export function createKeyboard(): {
     consumeCharacter: () => consume('character'),
     consumeJump: () => consume('jump'),
     consumeCycleTarget: () => consume('cycleTarget'),
+    consumePlus: () => consume('plus'),
+    consumeMinus: () => consume('minus'),
+    consumeComma: () => consume('comma'),
+    consumePeriod: () => consume('period'),
     dispose: () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)

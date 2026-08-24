@@ -16,6 +16,7 @@ import type { PlacedContainers } from '../world/createPlacedContainers'
 import type { PlacedTraps } from '../world/createPlacedTraps'
 import type { PlayerGardens } from '../world/createPlayerGardens'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
@@ -25,7 +26,7 @@ import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
 import { isPlayerPlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { LANDMARK_LABELS } from '../terrain/chunkEnvironment'
 import { ORE_YIELD_LABEL } from '../terrain/depositMining'
-import { canLevelAt, getDigProfileAt, getRockDigProfileAt, isRockGround } from '../terrain/dig'
+import { getDigProfileAt, getRockDigProfileAt } from '../terrain/dig'
 import { oceanMixAt } from '../terrain/waterBodies'
 import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
 import { honeyAvailable } from '../world/beehives'
@@ -252,6 +253,7 @@ export function buildInteractables(
   hives: Beehives,
   placedWells: PlayerWells,
   playerGardens: PlayerGardens,
+  terrainPreparations: TerrainPreparations,
   /** Current world day (plan 159) — drives drying-complete/honey-available
    *  prompt text. */
   nowDays: number,
@@ -391,6 +393,20 @@ export function buildInteractables(
       promptLabel: gardenMaintenancePromptLabel(care),
       id: garden.id,
       care,
+    })
+  }
+
+  // Plan `world-terrain-002` §8 — active preparation work sites, same
+  // "always-offered [E]" shape as `playerWell`/`gardenPlot` above.
+  for (const prep of terrainPreparations.list()) {
+    if (!withinRange(prep.center.x, prep.center.z, playerPos, GAZE_RANGE)) continue
+    const done = prep.completedWork.toFixed(1)
+    const total = prep.requiredWork.toFixed(1)
+    list.push({
+      kind: 'terrainPreparation',
+      position: { x: prep.center.x, z: prep.center.z },
+      promptLabel: `[E] Przygotuj teren (${done}/${total} h)`,
+      id: prep.id,
     })
   }
 
@@ -651,11 +667,14 @@ export function buildDigTarget(
 ): Interactable | null {
   const x = playerPos.x - Math.sin(playerYaw) * DIG_REACH
   const z = playerPos.z - Math.cos(playerYaw) * DIG_REACH
-  const rock = isRockGround(x, z, chunkManager)
 
   if (hasItemCapability(heldTool, 'soil_digging')) {
     const profile = getDigProfileAt(x, z, chunkManager)
-    const canLevel = !rock && canLevelAt(x, z, chunkManager)
+    // "Wyrównaj" (plan `world-terrain-002`) now levels the surrounding 3×3
+    // grid samples to the center's own height rather than raising toward a
+    // procedural-base depression — it's offered on exactly the same ground
+    // digging already is, not a separately-gated depression check.
+    const canLevel = profile !== null
     if (!profile && !canLevel) return null
     return {
       kind: 'dig',
@@ -668,7 +687,7 @@ export function buildDigTarget(
 
   if (hasItemCapability(heldTool, 'rock_mining')) {
     const profile = getRockDigProfileAt(x, z, chunkManager)
-    const canLevel = rock && canLevelAt(x, z, chunkManager)
+    const canLevel = profile !== null
     if (!profile && !canLevel) return null
     return {
       kind: 'dig',
