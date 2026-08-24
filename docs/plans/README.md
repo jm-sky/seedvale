@@ -130,10 +130,9 @@ Natural vegetation
 
 | File | Summary | Pri | Effort | Depends |
 |------|---------|-----|--------|---------|
-| `2026-08-13--093--quests-v3-world-problems-reputation.md` | Questy z problemów świata + reputacja; Etap A–G (relation levels, availability, effects, 4 world-problem questy end-to-end) zaimplementowane; lifecycle/identity gaps domknięte przez plan `110`. Etap H (drzewa/kopanie) i bandyci otwarte | 🔴 | XL | ~~015~~ ~~018~~ |
-| `2026-08-17--149--shader-program-first-use-hitch.md` | Phase 0 closed; Phase 1 B production PointLight budget **16** landed in ~~157~~. Phase 1 A (`compileAsync` loading-window prewarm) **implemented + real-GPU verified** ([review 025](../reviews/2026-08-19--025--plan-149-phase-1a-compileasync-prewarm.md)). Phase C leftover: `Green` / `MI_WindowGlass` / `Wood`. Plan not `done`. | 🔴 | M/L | — |
-| `2026-08-21--181--natural-mountains-and-rivers.md` | Etap 1–6: mountain tuning + pure D8 drainage prototype + river network as fixed 256m tiles with a halo (chunk-boundary-continuous ribbon geometry, own lightweight water material reusing `waterMaterial.ts`'s day/night uniforms unmodified) — rivers now render in the world. Etap 7 (meanders, waterfalls, full shader/rendering parity, worker offload) explicitly deferred | 🔴 | M | - |
-| `2026-08-16--126--seed-planting.md` | Sadzenie nasion drzew (`tree_seed`, species z lokalnej przydatności siedliska) i cropów (`seed_carrot`/`seed_potato`/`seed_cabbage`, tylko przy ogródku osady) przez gracza — Quick Actions, `evaluateGroundPlacement` + krótki busy channel; drzewo wchodzi w istniejący `TreeLifecycle` jako `sapling` zakotwiczony w momencie sadzenia (`TreeLifecycle.setOverride`, nowa metoda), crop korzysta z `CropLifecycle` (plan 172) bez zmian. `SaveData` v25 (`plantedTrees`/`plantedCrops`). Technical verification green (`tsc`/lint/build/test, 1514 tests); no browser/gameplay verification yet | 🟡 | L | ~~106~~ ~~122~~ |
+| `2026-08-13--093--quests-v3-world-problems-reputation.md` | Zostało: Etap H (drzewa/kopanie) i bandyci | 🔴 | XL | ~~015~~ ~~018~~ |
+| `2026-08-17--149--shader-program-first-use-hitch.md` | Zostało: Phase C (`Green` / `MI_WindowGlass` / `Wood`) | 🔴 | M/L | — |
+| `2026-08-21--181--natural-mountains-and-rivers.md` | Zostało: Etap 7 (meanders, waterfalls, full shader/rendering parity, worker offload) | 🔴 | M | - |
 
 ---
 
