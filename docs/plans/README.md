@@ -29,20 +29,6 @@ Examples:
 
 The `<id>` is a three-digit number local to the domain. New plans do not use the old global numeric sequence.
 
-## Next plan ID
-
-- ai: `003`
-- fauna: `001`
-- items-player: `001`
-- npc: `002`
-- persistence: `001`
-- quests-progression: `001`
-- settlements: `001`
-- settlements-npcs: `001`
-- ui-input: `001`
-- world: `001`
-- world-terrain: `003`
-
 ## Plan domains
 
 New plans should declare a primary `domain:` in frontmatter. If a plan genuinely spans more than one area, use optional `tags:` for the secondary domain(s).
@@ -86,17 +72,19 @@ Existing plans keep the historical date-based/global-ID naming scheme. They are 
 
 Next IDs are tracked separately for each canonical domain. Until the first new plan is created in a domain, its next ID is `001`.
 
-| Domain | Next ID |
-|---|---:|
-| `world-terrain` | `001` |
-| `settlements-npcs` | `001` |
-| `fauna` | `001` |
-| `items-player` | `001` |
-| `quests-progression` | `001` |
-| `persistence` | `001` |
-| `ui-input` | `001` |
+- ai: `003`
+- fauna: `001`
+- items-player: `001`
+- npc: `002`
+- persistence: `001`
+- quests-progression: `001`
+- settlements: `001`
+- settlements-npcs: `001`
+- ui-input: `001`
+- world: `001`
+- world-terrain: `003`
 
-This section is maintained automatically from the plan files.
+This ids section is maintained automatically from the plan files.
 
 Next ideas backlog is in [docs/plans/NEXT-IDEAS.md](./NEXT-IDEAS.md). Loose ends (blockers/spun-off ideas found mid-plan) are in [docs/plans/LOOSE-ENDS.md](./LOOSE-ENDS.md).
 

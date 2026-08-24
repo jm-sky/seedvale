@@ -18,7 +18,9 @@ const REVIEW_SUFFIX = '-review.md'
 const PLANNED_STATUS_MARKER = '**Status:** `planned` 📋'
 const PLANNED_HEADING = '## Planned'
 const TABLE_HEADER = '| File | Summary | Pri | Effort | Depends |'
-const NEXT_PLAN_ID_HEADING = '## Next plan ID'
+const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
+const NEXT_PLAN_ID_SUBHEADING = 'Next IDs are tracked separately for each canonical domain. Until the first new plan is created in a domain, its next ID is `001`.'
+const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
 const PLAN_DOMAINS_HEADING = '## Plan domains'
 
 const PRIORITY_EMOJI: Record<string, string> = {
@@ -407,21 +409,21 @@ const updateNextPlanIds = (
   const nextPlanIds = computeNextPlanIds(plans)
 
   const startIdx = lines.findIndex(
-    line => line.trim() === NEXT_PLAN_ID_HEADING,
+    line => line.trim() === NEXT_PLAN_ID_SUBHEADING,
   )
 
   const endIdx = lines.findIndex(
     (line, index) =>
       index > startIdx &&
-      line.trim() === PLAN_DOMAINS_HEADING,
+      line.trim() === NEXT_PLAN_ID_END_TAG,
   )
 
   if (startIdx === -1) {
-    throw new Error(`"${NEXT_PLAN_ID_HEADING}" section not found`)
+    throw new Error(`"${NEXT_PLAN_ID_SUBHEADING}" section not found`)
   }
 
   if (endIdx === -1) {
-    throw new Error(`"${PLAN_DOMAINS_HEADING}" heading not found`)
+    throw new Error(`"${NEXT_PLAN_ID_END_TAG}" heading not found`)
   }
 
   const rows = [...CANONICAL_DOMAINS]
