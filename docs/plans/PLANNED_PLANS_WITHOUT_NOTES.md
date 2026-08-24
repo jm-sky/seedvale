@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-24 08:03:11  
+> Date: 2026-08-24 09:20:39  
 
 ## PLANS
 
@@ -12,7 +12,6 @@
 - `ai-001-npc-pressure-layer.md`
 - `ai-002-npc-personality-decisions.md`
 - `npc-001-npc-physical-stats-sex-and-age.md`
-- `world-terrain-001-clouds.md`
 - `world-terrain-002-performance-benchmark-determinism-and-reliability.md`
 
 --------------------------------
@@ -207,35 +206,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `npc-001-npc-physical-stats-sex-and-age-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `world-terrain-001-clouds.md`
-
-Prompt:
-
-```
-Zrób review planu `world-terrain-001-clouds.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/world-terrain-001-clouds.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`world-terrain-001-clouds-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
