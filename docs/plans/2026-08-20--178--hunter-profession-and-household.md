@@ -1,283 +1,380 @@
-# Plan: Hunter Profession & Household
+# Plan: Hunter Profession and Household
 
 **Created:** 2026-08-20
 **Status:** `planned` 📋
-**Priority:** medium · **Effort:** L
-**Depends on:** ~~177~~ ~~162~~ ~~159~~ 175
+**Priority:** medium · **Effort:** M
+**Depends on:** 177 · 188 · 155 · 161 · 162 · 175
+**Domain:** settlements-npcs
+**Tags:** [fauna, economy, items-player, food]
 
-domain: settlements-npcs
-tags: [fauna, economy, items-player, food]
+## Goal
 
-## 1. Cel
+Dodać profesję `hunter` oraz gospodarstwo, którego głównym źródłem utrzymania jest polowanie.
 
-Dodać profesję **myśliwego** oraz gospodarstwo domowe wyspecjalizowane w polowaniu, produkcji łuków i strzał oraz przetwarzaniu i sprzedaży pozyskanych zasobów.
+Hunter ma korzystać z istniejących systemów:
 
-Plan zakłada dostępność systemu NPC Combat z planu 177. Myśliwy wykorzystuje istniejące mechanizmy NPC, fauna, inventory, household, storage, economy i cooking.
+- NPC roles / schedule / decisions,
+- DecisionPressure + personality/role modifiers,
+- NPC Combat,
+- fauna i dead-animal lifecycle,
+- inventory / item instances,
+- household,
+- storage,
+- cooking / preservation,
+- production,
+- economy / trading.
 
-Nie tworzyć równoległych systemów dla tych funkcji.
+Nie tworzyć równoległych systemów dla tych mechanizmów.
 
-## 2. Profesja `hunter`
+Główny cykl:
 
-Profesja określa główny wkład NPC w gospodarkę:
+```text
+world / household state
+→ pressure
+→ hunter decision
+→ hunting expedition
+→ ranged combat
+→ animal death
+→ harvest
+→ inventory
+→ household
+→ food / storage / trade
+→ production / preparation
+→ kolejna wyprawa
+```
 
-1. polowanie,
-2. przygotowanie wypraw,
-3. produkcja łuków i strzał,
-4. przetwarzanie i zagospodarowanie zdobyczy,
-5. sprzedaż nadwyżek,
-6. pomocnicze prace gospodarcze.
+## 1. Profession `hunter`
 
-Profesja nie wyłącza potrzeb osobistych NPC. Myśliwy nadal musi jeść, pić, odpoczywać, realizować relacje itd.
+Dodać `hunter` do istniejącego modelu `Role` oraz deterministycznej generacji NPC.
 
-Może również wykonywać pomocniczo:
-- zbieranie drewna potrzebnego do produkcji,
-- zbieranie warzyw ze wspólnego ogrodu,
-- podstawowe czynności gospodarstwa.
+Hunter pozostaje normalnym NPC. Profesja wpływa na jego decyzje i główny wkład w gospodarkę, ale nie zastępuje normalnych potrzeb, relacji, odpoczynku ani innych aktywności.
 
-Nie tworzyć osobnego `HunterSystem` ani schedulera.
+Hunter powinien preferować polowanie, gdy istniejące pressures i stan świata uzasadniają taką decyzję.
 
-## 3. Wyprawa na polowanie
+Wykorzystać istniejący:
 
-Myśliwy podejmuje wyprawę jako rzeczywistą aktywność NPC, zajmującą czas świata.
+```text
+state
+→ needs / problems / goals
+→ pressures
+→ role/personality modifiers
+→ decision
+```
 
-Przed wyprawą przygotowuje:
+Nie tworzyć `HunterSystem`, osobnego AI ani osobnego schedulera.
+
+## 2. Hunting expedition
+
+Polowanie jest rzeczywistą aktywnością NPC zajmującą czas świata.
+
+Przed wyprawą Hunter powinien przygotować wymagane wyposażenie i podstawowe zapasy:
 
 - łuk,
-- **10–20 strzał**,
+- strzały,
 - nóż,
-- bukłak z wodą,
+- wodę,
 - prowiant,
 - opatrunek.
 
-Wyprawa korzysta z istniejącego inventory, potrzeb, ruchu i NPC Combat.
+Wykorzystać istniejący NPC inventory i mechanizmy potrzeb.
 
-Preferowane cele:
+Domyślne preferowane cele:
 
 - zając,
 - sarna,
 - jeleń,
 - dzik.
 
-Myśliwy może pozyskać **maksymalnie 1–3 zwierzęta podczas jednej wyprawy**.
+Jedna wyprawa może zakończyć się pozyskaniem maksymalnie **1–3 zwierząt**.
 
-Może zakończyć wyprawę wcześniej, np. po osiągnięciu wystarczającej zdobyczy lub gdy dalsza wyprawa nie jest możliwa.
+Hunter może zakończyć wyprawę wcześniej, np. po uzyskaniu wystarczającej zdobyczy albo gdy dalsze polowanie nie jest możliwe.
 
-## 4. Ochrona populacji
+Nie wymaga to osobnego systemu „expedition AI”; jest to aktywność zbudowana na istniejących mechanizmach NPC.
 
-Wybór celu wykorzystuje istniejący stan populacji spawn pointów.
+## 3. Target selection and population protection
 
-Jeżeli dany spawn point ma **dokładnie jedno żywe zwierzę**:
+Wybór celu wykorzystuje istniejący stan fauny i spawn point population limits.
 
-- istnieje **50% szans na pominięcie tego celu**,
-- myśliwy próbuje znaleźć alternatywny cel,
-- jeżeli nie ma odpowiedniej alternatywy, może zakończyć wyprawę bez zabicia zwierzęcia.
+Jeżeli spawn point posiada dokładnie jedno żywe zwierzę:
 
-Mechanizm nie tworzy nowego systemu ekologicznego. Wykorzystuje istniejący stan populacji zwierząt.
+- istnieje 50% szans na pominięcie tego celu,
+- Hunter powinien spróbować znaleźć alternatywę,
+- jeżeli odpowiedniej alternatywy nie ma, wyprawa może zakończyć się bez zabicia zwierzęcia.
 
-## 5. Rezultaty polowania
+Mechanizm ma wykorzystywać istniejący stan populacji, bez tworzenia osobnego systemu ekologicznego.
 
-Polowanie może dostarczyć:
+Target selection nie może wykonywać globalnego skanu całej fauny każdego ticka.
+
+## 4. NPC ranged combat
+
+Hunter korzysta z istniejącego NPC ranged combat z planu 177.
+
+Nie implementować nowego combat systemu.
+
+Hunter powinien:
+
+- używać istniejącego `CombatIntent`,
+- używać istniejącego projectile lifecycle,
+- używać zwykłych item instances dla łuku i strzał,
+- zużywać amunicję zgodnie z istniejącym systemem.
+
+Należy obsłużyć istniejące przypadki przerwania:
+
+- brak amunicji,
+- brak/utrata broni,
+- nieprawidłowy cel,
+- ucieczka celu,
+- brak możliwości dotarcia do celu,
+- obrażenia / ważniejsza potrzeba NPC.
+
+Po przerwaniu Hunter wraca do normalnego decision flow.
+
+## 5. Animal death and harvest
+
+Po udanym ataku:
+
+```text
+ranged combat
+→ existing animal death lifecycle
+→ dead animal / carcass
+→ existing harvesting
+→ loot/resources
+```
+
+Nie usuwać zwierzęcia bezpośrednio po zabiciu i nie tworzyć osobnego „hunting loot” lifecycle.
+
+Podstawowe rezultaty polowania:
 
 - mięso,
-- skórę.
+- skóra.
 
-Skóra staje się normalnym zasobem/inventory itemem.
+Skóra jest zwykłym itemem/resource i może być przechowywana lub sprzedawana.
 
-Na tym etapie:
-- może być przechowywana,
-- może być sprzedawana,
-- nie ma jeszcze zastosowania produkcyjnego.
+Dalsze zastosowania skóry pozostają poza zakresem.
 
-Przyszłe wykorzystanie skóry nie należy do tego planu.
+## 6. Hunter inventory and household
 
-## 6. Gospodarstwo i dom
+Rezultaty polowania trafiają najpierw do istniejącego NPC inventory.
 
-Myśliwy i żona tworzą normalne gospodarstwo domowe.
+Następnie są dostarczane do household/storage zgodnie z istniejącymi mechanizmami.
 
-Dom myśliwego posiada:
+```text
+animal
+→ harvest
+→ NPC inventory
+→ household/storage
+→ consumption / processing / trade
+```
 
-- **ognisko**,
-- **ruszt**.
+Nie tworzyć:
 
-Ruszt wykorzystuje mechanizmy planu **175 — Cooking Vessels, Grates and Iron Rods**.
+- `HunterInventory`,
+- `huntedFood`,
+- osobnego household storage dla Huntera.
 
-Nie tworzyć osobnego systemu gotowania dla myśliwych.
+Gospodarstwo Huntera jest normalnym household i może zawierać NPC o różnych rolach.
 
-## 7. Żona myśliwego
+## 7. Hunter household
 
-Żona jest zwykłym NPC z własnymi potrzebami i zachowaniami.
+Hunter i jego żona tworzą normalne gospodarstwo domowe.
+
+Dom korzysta z istniejących elementów infrastruktury, w szczególności:
+
+- ogniska,
+- rusztu.
+
+Ruszt i gotowanie wykorzystują mechanizmy z planu 175.
+
+Żona pozostaje zwykłym NPC z własnymi potrzebami, decyzjami i aktywnościami.
 
 W ramach gospodarstwa może:
 
+- przygotowywać żywność,
 - piec mięso,
 - suszyć mięso,
-- przygotowywać żywność,
-- zarządzać pracami gospodarstwa,
-- zbierać warzywa ze wspólnego ogrodu.
+- wykonywać normalne prace gospodarcze,
+- korzystać ze wspólnego ogrodu wioski.
 
-Pieczenie korzysta z rusztu i istniejącego systemu gotowania.
+Nie tworzyć „Hunter Wife AI” ani prywatnego ogrodu.
 
-Suszenie korzysta z mechanizmów planu **159 — Natural Food, Fishing, Preservation and Bait**.
-
-### Ogród
-
-Nie tworzyć prywatnego ogrodu gospodarstwa.
-
-Rodzina korzysta z **istniejącego wspólnego ogrodu wioski**, tak jak inni mieszkańcy.
-
-## 8. Produkcja łuków i strzał
-
-Myśliwy produkuje łuki i strzały z drewna.
-
-Produkcja ma dwa cele:
-
-1. zapewnienie gospodarstwu wyposażenia potrzebnego do polowania,
-2. wytworzenie nadwyżki przeznaczonej na sprzedaż.
-
-Gospodarstwo utrzymuje **minimalny zapas potrzebny do własnych wypraw**. Produkcja ponad ten poziom trafia do sprzedaży.
-
-Dzięki temu produkcja myśliwego regularnie generuje towary handlowe, zamiast być wyłącznie produkcją na własny użytek.
-
-Wykorzystać istniejące mechanizmy itemów, inventory, craftingu/produkcji i handlu.
-
-## 9. Przetwarzanie mięsa
+## 8. Food processing
 
 Przepływ mięsa:
 
 ```text
-polowanie
+hunting
   ↓
-mięso
-  ├─→ świeże jedzenie
-  ├─→ pieczenie na ruszcie
-  ├─→ suszenie
-  ├─→ zapasy gospodarstwa
-  └─→ sprzedaż nadwyżki
+meat
+  ├─→ fresh food
+  ├─→ cooking on grate
+  ├─→ preservation / drying
+  ├─→ household storage
+  └─→ surplus → trade
 ```
 
-Żona nie otrzymuje specjalnego „hunter cooking AI”. Korzysta z istniejących mechanizmów gotowania i household.
+Gotowanie korzysta z istniejącego systemu cooking.
 
-## 10. Sprzedaż
+Suszenie/preservation korzysta z istniejącego systemu z planu 159.
 
-Gospodarstwo może regularnie dostarczać do handlu:
+Nie tworzyć specjalnych mechanizmów gotowania dla gospodarstwa Huntera.
+
+## 9. Bow and arrow production
+
+Gospodarstwo Huntera powinno móc produkować łuki i strzały z istniejących materiałów oraz istniejącego systemu produkcji.
+
+Produkcja ma dwa cele:
+
+1. utrzymanie własnego wyposażenia,
+2. sprzedaż nadwyżki.
+
+Gospodarstwo utrzymuje minimalny zapas potrzebny do własnych wypraw.
+
+Produkcja ponad ten poziom tworzy rzeczywistą nadwyżkę handlową.
+
+Wykorzystać istniejące:
+
+- item instances,
+- inventory,
+- production/crafting,
+- storage,
+- trading.
+
+Jeżeli któryś element produkcji łuku/strzał nie istnieje, rozszerzyć istniejący system minimalnie zamiast tworzyć Hunter-specific production system.
+
+## 10. Economy and trade
+
+Gospodarstwo może dostarczać do handlu:
 
 - mięso,
 - przetworzone/suszone mięso,
+- skóry,
 - łuki,
-- strzały,
-- skóry.
+- strzały.
 
-Sprzedaż korzysta z istniejącego systemu handlu i ekonomii.
+Sprzedaż korzysta z istniejącego systemu economy/trading.
 
-Nie tworzyć osobnego systemu sprzedaży myśliwego.
+Nie tworzyć osobnego systemu handlu dla Huntera.
 
-Nadwyżka produkcji łuków i strzał powinna być utrzymywana jako rzeczywisty zapas handlowy gospodarstwa.
+## 11. Supplies
 
-## 11. Opatrunki
+Na początku gospodarstwo może otrzymać istniejący item `bandage` w ilości:
 
-Na początku gospodarstwo myśliwego otrzymuje:
+**5 × bandage**
 
-**5 × opatrunek**
+Hunter może zabierać je na wyprawę.
 
-Myśliwy zabiera opatrunek na wyprawę.
+Nie implementować w tym planie produkcji opatrunków przez żonę, zielarza ani lekarza.
 
-Późniejsze uzupełnianie zapasu nie jest specjalnym mechanizmem tego planu.
+Uzupełnianie zapasów powinno docelowo korzystać z normalnej ekonomii/handlu.
 
-W przyszłości źródłem opatrunków mogą być:
+## 12. Schedule and simulation
 
-```text
-Kupiec → zakup
+Hunter korzysta z istniejącego schedule i activity availability.
 
-lub
+Nie hard-code'ować pełnego harmonogramu Huntera.
 
-zioła → żona / zielarz / lekarz → opatrunek
-```
+Polowanie powinno działać również:
 
-Ten plan nie implementuje jeszcze produkcji opatrunków przez żonę, zielarza ani lekarza.
+- bez obecności gracza,
+- poza kamerą,
+- w normalnej symulacji off-screen.
 
-## 12. Główny cykl życia
+Nie wprowadzać player-centric warunków wykonywania polowania.
 
-```text
-                 GOSPODARSTWO MYŚLIWEGO
-                          │
-             ┌────────────┴────────────┐
-             │                         │
-          MYŚLIWY                     ŻONA
-             │                         │
-       przygotowanie               gospodarstwo
-       wyprawy                         │
-             │                         ├─→ gotowanie
-             ▼                         ├─→ suszenie
-         POLOWANIE                     └─→ warzywa
-             │
-       ┌─────┴─────┐
-       ▼           ▼
-     mięso        skóra
-       │           │
-       │           └─→ sprzedaż
-       │
-       ├─→ świeże jedzenie
-       ├─→ ruszt
-       ├─→ suszenie
-       ├─→ zapasy
-       └─→ sprzedaż
+## 13. Performance
 
-drewno
-  ↓
-łuki / strzały
-  ├─→ zapas własny
-  └─→ nadwyżka → sprzedaż
-```
+Target discovery musi być ograniczone i wykonywane podczas decyzji/aktywności, a nie globalnie co tick.
 
-## 13. Integracja z istniejącymi systemami
+Nie skanować całej populacji fauny dla każdego Huntera.
 
-Plan powinien rozszerzać istniejące mechanizmy:
+Rozwiązanie musi być kompatybilne z istniejącą adaptive/off-screen simulation.
 
-- NPC profession / Schedule / FSM,
-- NPC needs,
-- household,
-- inventory / item instances,
-- NPC Combat z planu 177,
-- fauna i spawn points,
-- hunting loot,
-- storage,
-- cooking,
-- food preservation,
-- village garden,
-- economy / trading.
+## 14. Diagnostics
 
-Nie tworzyć równoległych wersji tych systemów.
+Rozszerzyć istniejące diagnostyki NPC tak, aby można było sprawdzić:
 
-## 14. Poza zakresem
+- `role = hunter`,
+- wybraną pressure/decision,
+- cel polowania,
+- combat state/intent,
+- equipment/ammunition,
+- rezultat harvest,
+- delivery do household.
 
-- implementacja NPC Combat,
-- nowy system fauna/populacji,
-- osobny system Hunter AI,
-- osobny scheduler myśliwych,
-- prywatny ogród gospodarstwa,
-- nowy system gotowania,
-- nowy storage,
+Wykorzystać istniejące mechanizmy diagnostyczne.
+
+## 15. Verification
+
+### Automated
+
+Zweryfikować:
+
+- `hunter` jest poprawną wartością `Role`,
+- generacja jest deterministyczna,
+- istniejące reserved NPC nie zmieniają się,
+- Hunter korzysta z istniejącego pressure/decision system,
+- ranged combat wykorzystuje istniejący NPC combat,
+- ammo/inventory działa poprawnie,
+- animal death korzysta z istniejącego lifecycle,
+- harvest produkuje prawidłowe itemy/resources,
+- rezultat może trafić do household/storage,
+- cooking/preservation wykorzystują istniejące mechanizmy,
+- production/trade wykorzystują istniejącą ekonomię,
+- target selection nie wykonuje nieograniczonego skanu co tick.
+
+### Browser / gameplay
+
+Zweryfikować rzeczywisty cykl:
+
+1. Hunter istnieje jako NPC settlementu.
+2. Posiada wymagane wyposażenie.
+3. Podejmuje decyzję o polowaniu.
+4. Wyrusza na wyprawę.
+5. Znajduje prawidłowy cel.
+6. Atakuje dystansowo.
+7. Zwierzę przechodzi normalny death/carcass lifecycle.
+8. Hunter pozyskuje mięso/skórę.
+9. Rezultat trafia do household/storage.
+10. Żona może wykorzystać mięso przez istniejące cooking/preservation.
+11. Nadwyżki mogą wejść do handlu.
+12. Łuki/strzały mogą być produkowane i utrzymywane jako własny zapas + nadwyżka.
+13. Hunter poprawnie reaguje na brak celu, amunicji lub przerwanie aktywności.
+14. Cykl działa również bez udziału gracza.
+
+## 16. Out of scope
+
+- advanced tracking / stealth,
+- traps,
+- group hunting,
+- species-specific hunting skills,
+- Hunter skill tree,
+- nowy combat system,
+- nowy inventory/storage system,
 - nowa ekonomia,
 - leatherworking,
-- dalsze zastosowanie skóry,
-- pełny system produkcji opatrunków,
-- system zielarza/lekarza,
-- nowe mechanizmy handlu.
+- dalsze zastosowania skóry,
+- produkcja opatrunków,
+- zielarz/lekarz,
+- prywatny ogród,
+- LLM-driven hunting decisions.
 
-## 15. Kryterium sukcesu
+## Expected result
 
-Wioska może posiadać gospodarstwo myśliwego, którego działalność naturalnie tworzy zamknięty łańcuch:
+Hunter jest zwykłym mieszkańcem Seedvale, którego profesja tworzy rzeczywisty łańcuch ekonomiczny:
 
-**przygotowanie → wyprawa → polowanie → mięso/skóra → powrót → przechowywanie/przetwarzanie → konsumpcja/sprzedaż → produkcja łuków i strzał → uzupełnienie własnego zapasu + stała nadwyżka handlowa → kolejna wyprawa.**
+```text
+fauna
+→ hunting decision
+→ expedition
+→ ranged combat
+→ meat / hide
+→ household
+→ cooking / preservation / storage
+→ consumption / trade
+```
 
-Rodzina nadal korzysta ze wspólnych zasobów wioski i uczestniczy w normalnym życiu NPC, ale **polowanie pozostaje głównym wkładem zawodowym myśliwego**.
+Jednocześnie gospodarstwo produkuje łuki i strzały, utrzymuje własny zapas wyposażenia i generuje nadwyżkę handlową.
 
-## 16. Verification
+Całość korzysta z istniejących systemów NPC, fauna, inventory, household, production, cooking i economy zamiast tworzyć ich równoległe wersje.
 
-Po implementacji należy wykonać standardowe sprawdzenia projektu zgodnie z `CLAUDE.md`, w szczególności testy, typecheck/lint/build odpowiednie dla zmienionych systemów.
-
-Należy zweryfikować integrację Hunter z NPC action/combat lifecycle, inventory, fauna, household, cooking i economy.
-
-Jeżeli zmiany obejmują zachowanie Three.js/animacji, potrzebna będzie również odpowiednia weryfikacja browser/gameplay.
-
-> Zrób git commit i push do main, rebase jeżeli trzeba
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
