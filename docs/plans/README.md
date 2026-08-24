@@ -47,7 +47,7 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 - settlements: `001`
 - settlements-npcs: `003`
 - tools: `003`
-- ui-input: `003`
+- ui-input: `004`
 - world: `001`
 - world-terrain: `003`
 
@@ -119,6 +119,7 @@ Natural vegetation
 | `settlements-npcs-001-cultivation-hydration-and-watering.md` ◼️     | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
 | `settlements-npcs-002-npc-professions-households-and-age.md` ◼️ | - | 🔴 | L | ~~178~~ ~~069~~ ~~184~~ ~~185~~ |
 | `ai-003-npc-candidate-strategies.md` ◼️  | - | 🟡 | M | ~~ai-001~~ ~~ai-002~~ |
+| `ui-input-003-merchant-trade-ui-ux-redesign.md` ◼️ | - | 🟡 | M | - |
 
 ### Fresh new
 
