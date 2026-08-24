@@ -13,7 +13,7 @@
 - `ai-002-npc-personality-decisions.md`
 - `npc-001-npc-physical-stats-sex-and-age.md`
 - `world-terrain-001-clouds.md`
-- `world-terrain-001-performance-benchmark-determinism-and-reliability.md`
+- `world-terrain-002-performance-benchmark-determinism-and-reliability.md`
 
 --------------------------------
 ## PROMPTS
@@ -250,21 +250,21 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Plik dodaj na branch `main` w repozytorium.
 ```
 
-### `world-terrain-001-performance-benchmark-determinism-and-reliability.md`
+### `world-terrain-002-performance-benchmark-determinism-and-reliability.md`
 
 Prompt:
 
 ```
-Zrób review planu `world-terrain-001-performance-benchmark-determinism-and-reliability.md`
+Zrób review planu `world-terrain-002-performance-benchmark-determinism-and-reliability.md`
 
 Wczytaj:
 - `docs/STATE.md`
-- `docs/plans/world-terrain-001-performance-benchmark-determinism-and-reliability.md`
+- `docs/plans/world-terrain-002-performance-benchmark-determinism-and-reliability.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`world-terrain-001-performance-benchmark-determinism-and-reliability-implementation-notes.md`
+`world-terrain-002-performance-benchmark-determinism-and-reliability-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

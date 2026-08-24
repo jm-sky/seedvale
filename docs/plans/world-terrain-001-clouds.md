@@ -6,7 +6,7 @@
 **Depends on:** none
 
 **domain:** `world-terrain`
-**tags:** `[weather]`
+**Tags:** `[weather]`
 
 ## Goal
 

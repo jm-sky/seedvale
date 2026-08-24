@@ -4,8 +4,8 @@
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** M
 **Depends on:** none
-**domain:** `world-terrain`
-**tags:** `performance`, `benchmarking`, `rendering`, `streaming`
+**Domain:** `world-terrain`
+**Tags:** `performance`, `benchmarking`, `rendering`, `streaming`
 
 ## Cel
 

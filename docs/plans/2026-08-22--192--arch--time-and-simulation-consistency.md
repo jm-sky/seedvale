@@ -5,7 +5,7 @@
 **Priority:** high · **Effort:** M  
 **Depends on:** none  
 **domain:** `world-terrain`  
-**tags:** [architecture, audit, time, simulation, consistency]
+**Tags:** [architecture, audit, time, simulation, consistency]
 
 ## Cel
 

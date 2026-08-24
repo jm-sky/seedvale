@@ -5,7 +5,7 @@
 **Priority:** high · **Effort:** L
 **Depends on:** none
 **domain:** `items-player`
-**tags:** `[ui-input, quests-progression]`
+**Tags:** `[ui-input, quests-progression]`
 
 ## Cel
 

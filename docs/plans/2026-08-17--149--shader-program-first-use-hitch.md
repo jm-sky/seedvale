@@ -5,7 +5,7 @@
 **Priority:** high · **Effort:** M/L
 **Depends on:** none
 **domain:** `world-terrain`
-**tags:** `performance`, `rendering`, `streaming`
+**Tags:** `performance`, `rendering`, `streaming`
 
 ---
 

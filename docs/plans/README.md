@@ -152,10 +152,12 @@ Natural vegetation
 | `2026-08-14--104--underground-caves.md` | Prawdziwe jaskinie podziemne (`CaveVolume`, siatka 500 m); wstępny, do review | 🟡 | XL | ~~097~~ |
 | `2026-08-19--171--weapon-browser-observatory.md` | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | - | 🟡 | L | 181 |
-| `2026-08-22--202--arch--god-files-responsibility-boundaries.md` | - | 🟡 | M | ~~201~~ |
 | `2026-08-22--203--well-depth-groundwater-and-protection.md` |- | 🟡 | M | ~~127~~ |
-| `2026-08-21--190--plans-automation.md` | Zautomatyzować utrzymanie pomocniczych informacji w `docs/plans/README.md` oraz `PLANNED_PLANS_WITHOUT_NOTES.md`. | 🟡 | S | - |
-| `2026-08-22--195--arch--data-state-consistency.md` | Przeprowadzić focused audit spójności danych i state w Seedvale. | 🔴 | M | ~~193~~ ~~194~~ |
+| `ai-001-npc-pressure-layer.md` | - | 🔴 | M | - |
+| `ai-002-npc-personality-decisions.md` | - | 🔴 | M | ~~ai-001~~ |
+| `npc-001-npc-physical-stats-sex-and-age.md` | - | 🟡 | M | - |
+| `world-terrain-001-clouds.md` | - | 🟡 | M | - |
+| `world-terrain-002-performance-benchmark-determinism-and-reliability.md` | - | 🔴 | M | - |
 
 ### Fresh new
 
@@ -245,7 +247,7 @@ Done plans kept visible here (not archived) because a current plan above still d
 
 Every base plan file in **this folder** belongs in exactly one section above (`In progress` / `Planned` / `Todo` / `Verification needed` / `Recent context`), regardless of status. Base plan files use either the legacy `YYYY-MM-DD--NNN--*.md` format or the new `<domain>-<id>-*.md` format. Implementation notes/reviews, `README.md`, `NEXT-IDEAS.md`, `LOOSE-ENDS.md`, and `archive/` are excluded.
 
-New plan: `<domain>-<id>-slug.md` with a primary `domain:` and optional `tags:` per [Plan domains](#plan-domains). The ID is the next unused three-digit number within that domain. Existing legacy plans are not renamed as part of this transition.
+New plan: `<domain>-<id>-slug.md` with a primary `Domain:` and optional `Tags:` per [Plan domains](#plan-domains). The ID is the next unused three-digit number within that domain. Existing legacy plans are not renamed as part of this transition.
 
 When a plan reaches `done` and nothing above still depends on it, it stays here until the next archive snapshot — do not move it to `archive/` yourself; that only happens as a deliberate periodic snapshot (see [archive/README.md](./archive/README.md)).
 

@@ -5,7 +5,7 @@
 **Priority:** 🔴 high · **Effort:** L
 **Depends on:** ~~184~~ ~~111~~
 **domain:** `items-player`
-**tags:** [settlements-npcs]
+**Tags:** [settlements-npcs]
 
 ## Cel
 

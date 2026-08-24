@@ -5,7 +5,7 @@
 **Priority:** medium · **Effort:** L
 **Depends on:** 181
 **domain:** `world-terrain`
-**tags:** [terrain, mountains, world-generation]
+**Tags:** [terrain, mountains, world-generation]
 
 ## Cel
 

@@ -5,7 +5,7 @@
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **domain:** `persistence`
-**tags:** `[ui-input]`
+**Tags:** `[ui-input]`
 
 ## Cel
 

@@ -12,7 +12,7 @@
 
 **domain:** `world-terrain`
 
-**tags:** `settlements-npcs`, `performance`, `rendering`, `streaming`
+**Tags:** `settlements-npcs`, `performance`, `rendering`, `streaming`
 
 ---
 

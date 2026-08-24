@@ -9,7 +9,7 @@
 
 **domain:** settlements-npcs
 
-**tags:** [items-player, quests-progression]
+**Tags:** [items-player, quests-progression]
 
 ## Cel
 

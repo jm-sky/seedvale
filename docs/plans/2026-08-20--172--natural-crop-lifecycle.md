@@ -5,7 +5,7 @@
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~140~~  
 **domain:** `world-terrain`  
-**tags:** [items-player]
+**Tags:** [items-player]
 
 ## Cel
 

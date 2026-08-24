@@ -4,6 +4,7 @@
 **Status:** `planned` 📋  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~ai-001~~
+**Domain:** `ai`
 
 ## Goal
 
