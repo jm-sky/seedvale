@@ -67,6 +67,7 @@ const v1 = {
   carriedContainer: null,
   playerWells: [],
   terrainPreparations: [],
+  terrainModifications: [],
   plantedTrees: [],
   plantedCrops: [],
   playerGardens: [],

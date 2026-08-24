@@ -278,6 +278,16 @@ export type ChunkManagerConfig = {
    *  simply removed from this array (unlike a procedural crop, which needs
    *  `removedCropIds` to stop its deterministic generator from recreating it). */
   plantedCrops: CropPlacement[]
+  /** Runtime terrain-deformation records (dig/scorch/prepare) — same
+   *  "caller-owned array, mutated in place, survives chunk unload/reload"
+   *  convention as `plantedTrees`/`plantedCrops` above. Owning it here
+   *  (rather than as `createChunkManager`'s own closure-local state) is what
+   *  lets `createApp.ts` read it back for `SaveData.terrainModifications`
+   *  and carries it across an in-session `rebuildWorldBundle` for free — the
+   *  same array reference is simply threaded through again. Reset to `[]`
+   *  only on a genuinely new world (new seed), not on unrelated terrain-param
+   *  rebuilds — same reset contract as `plantedTrees`. */
+  modifications: TerrainModification[]
   grass: {
     enabled: boolean
     /** Chunks (Chebyshev distance) that get grass — deliberately smaller than
@@ -458,23 +468,31 @@ export type ChunkManager = {
    *  reapplied to any chunk that (re)generates later, so walking away and
    *  back doesn't lose a dig. Returns `false` if no loaded chunk was affected
    *  (in practice this shouldn't happen — the dig site is wherever the player
-   *  is currently standing near, always loaded). Not persisted across saves
-   *  (plan 052 explicitly scopes persistence out). */
-  modifyTerrain: (x: number, z: number, radius: number, depth: number) => boolean
+   *  is currently standing near, always loaded).
+   *
+   *  `source` (plan `world-terrain-save`) — `'player'` entries are persisted
+   *  (`SaveData.terrainModifications`, via `ChunkManagerConfig.modifications`
+   *  being the same caller-owned array `saveState.ts` reads back); `'system'`
+   *  entries (deterministic world-gen effects like cave carving) never are,
+   *  since they're already reproduced from scratch on every world build —
+   *  persisting and replaying them too would double-apply their cumulative
+   *  depth. Every call site must declare which it is; there is no default. */
+  modifyTerrain: (x: number, z: number, radius: number, depth: number, source: 'player' | 'system') => boolean
   /** Burned-ground overlay (plan 137) — shallow dip + `roadTint` bump so grass
    *  thins, plus charcoal vertex tint on the next mesh rebuild. Same runtime
-   *  modification list as `modifyTerrain` (reapplied on chunk reload). Also
-   *  rebuilds grass on touched chunks so blades don't linger in the scorch. */
-  scorchTerrain: (x: number, z: number, radius: number, depth: number) => boolean
+   *  modification list as `modifyTerrain` (reapplied on chunk reload, same
+   *  `source` persistence contract). Also rebuilds grass on touched chunks so
+   *  blades don't linger in the scorch. */
+  scorchTerrain: (x: number, z: number, radius: number, depth: number, source: 'player' | 'system') => boolean
   /** Sets an explicit list of exact, grid-aligned sample heights (plan
-   *  `world-terrain-002`) — used by `Wyrównaj`'s 3×3 leveling (a fresh `id`
-   *  each call, applied once) and by active terrain-preparation work (the
-   *  *same* `id` every progress tick, replacing its own previous entry
-   *  in-place rather than accumulating). Reapplied to any chunk that
-   *  (re)generates later, same "walking away and back doesn't lose it"
-   *  contract as `modifyTerrain` — including not persisted across saves on
-   *  its own (a caller that needs cross-session persistence, like an active
-   *  preparation, restores by calling this again after load). Returns false
+   *  `world-terrain-002`) — used by `Wyrównaj`'s 3×3 leveling (a stable,
+   *  location-derived `id`, replaced in place on repeat presses at the same
+   *  spot rather than accumulating) and by active terrain-preparation work
+   *  (the *same* `id` every progress tick, same replace-in-place). Reapplied
+   *  to any chunk that (re)generates later, same "walking away and back
+   *  doesn't lose it" contract as `modifyTerrain`. Always `source: 'player'`
+   *  — every caller is player-driven, so this needs no explicit parameter.
+   *  Returns false
    *  if no loaded chunk was affected. */
   applyExactHeights: (id: string, samples: readonly { x: number, z: number, height: number }[]) => boolean
   /** Seed-derived analytic height at `(x, z)` — ignores runtime dig/level mods. */
@@ -533,21 +551,31 @@ export type TerrainModification = {
   z: number
   radius: number
   depth: number
-  /** `'dig'` lowers; `'level'` raises toward `sampleBase` and never above it;
-   *  `'scorch'` is a shallow dip plus a `roadTint` / charcoal-color burn patch
-   *  (plan 137); `'prepare'` sets an explicit list of exact grid-sample
-   *  heights (plan `world-terrain-002`) instead of a radial falloff — used by
-   *  `Wyrównaj`'s 3×3 exact leveling and by active terrain-preparation work.
-   *  `x`/`z`/`radius`/`depth` are unused for `'prepare'`. */
-  mode: 'dig' | 'level' | 'scorch' | 'prepare'
+  /** `'dig'` lowers (also used for "Zrób górkę" mounding, via a negative
+   *  `depth`); `'scorch'` is a shallow dip plus a `roadTint` / charcoal-color
+   *  burn patch (plan 137); `'prepare'` sets an explicit list of exact
+   *  grid-sample heights (plan `world-terrain-002`) instead of a radial
+   *  falloff — used by `Wyrównaj`'s 3×3 exact leveling and by active
+   *  terrain-preparation work. `x`/`z`/`radius`/`depth` are unused for
+   *  `'prepare'`. */
+  mode: 'dig' | 'scorch' | 'prepare'
   /** `mode: 'prepare'` only — identifies this modification so a later call
    *  with the same `id` replaces it in place (terrain-preparation work writes
-   *  progressively, every tick) instead of appending a growing list. */
+   *  progressively, every tick, and `Wyrównaj` reuses a location-derived id
+   *  on repeat presses) instead of appending a growing list. */
   id?: string
   /** `mode: 'prepare'` only — exact world-space, grid-aligned sample heights
    *  to write. Each `{x,z}` must already sit on the terrain's own sample grid
    *  (`apronOriginWorld`'s step) — this mode does not interpolate/snap. */
   samples?: readonly { x: number, z: number, height: number }[]
+  /** `'player'` entries are persisted (`SaveData.terrainModifications`);
+   *  `'system'` entries (deterministic world-gen effects — cave carving,
+   *  fauna spawn-point burn replay) never are, since they're already
+   *  reproduced from scratch on every world build. Optional only so pure
+   *  `applyModificationToTile` unit tests don't need to care — every real
+   *  producer (`modifyTerrain`/`scorchTerrain`/`applyExactHeights`) always
+   *  sets it. */
+  source?: 'player' | 'system'
 }
 
 /** Writes one modification's radial falloff directly into `tile.heights`
@@ -560,15 +588,13 @@ export type TerrainModification = {
  *  — the seam this apron trick already exists to avoid stays intact. Returns
  *  whether it touched any texel (false = this chunk's grid doesn't overlap
  *  the modification at all). Exported for `chunkManager.test.ts` — pure grid
- *  math, no scene/worker dependency, unlike the rest of this module.
- *  `sampleBase` is required for `mode: 'level'` (procedural height clamp). */
+ *  math, no scene/worker dependency, unlike the rest of this module. */
 export function applyModificationToTile(
   tile: ChunkTileResult,
   coord: ChunkCoord,
   chunkSize: number,
   resolution: number,
   mod: TerrainModification,
-  sampleBase?: HeightSampler,
 ): boolean {
   const o = apronOriginWorld(coord.cx, coord.cz, chunkSize, resolution)
 
@@ -586,6 +612,11 @@ export function applyModificationToTile(
       if (Math.abs(o.z + iz * o.step - sample.z) > o.step * 1e-3) continue
       const idx = iz * o.apronRes + ix
       tile.heights[idx] = sample.height
+      // Visual mesh Y reads `floorHeights`, a separate field from the
+      // collision/query `heights` (issue 039) — write the same absolute
+      // height there too, or the rendered terrain never visibly flattens
+      // even though `sampleHeight`/progress tracking are already correct.
+      if (tile.floorHeights) tile.floorHeights[idx] = sample.height
       // Worked/leveled ground doesn't keep its grass — same road-corridor
       // grass-reject `tile.roadTint` scorch already bumps, but to a flat
       // full exclusion (an exact sample, not a radial falloff).
@@ -611,24 +642,19 @@ export function applyModificationToTile(
       const falloff = 1 - THREE.MathUtils.smoothstep(dist, 0, mod.radius)
       const idx = iz * o.apronRes + ix
       const prev = tile.heights[idx]!
-      if (mod.mode === 'level') {
-        if (!sampleBase) continue
-        const base = sampleBase(wx, wz)
-        const next = Math.min(prev + mod.depth * falloff, base)
-        if (next <= prev + 1e-6) continue
-        tile.heights[idx] = next
-      } else {
-        tile.heights[idx] = prev - mod.depth * falloff
-        if (mod.mode === 'scorch') {
-          // Visual mesh Y reads `floorHeights`; bump it too so the dip shows.
-          if (tile.floorHeights) {
-            tile.floorHeights[idx] = tile.floorHeights[idx]! - mod.depth * falloff
-          }
-          // Reuse the road-corridor grass fade (`ROAD_TINT_FADE_*`) so scorched
-          // ground thins blades without a second grass-reject path.
-          if (tile.roadTint) {
-            tile.roadTint[idx] = Math.max(tile.roadTint[idx]!, falloff)
-          }
+      tile.heights[idx] = prev - mod.depth * falloff
+      // Visual mesh Y reads `floorHeights`, a separate field from the
+      // collision/query `heights` above (issue 039) — every radial mode
+      // (`dig`, `scorch`) needs the same delta there, not just `scorch`,
+      // or an ordinary dig/mound never visibly shows.
+      if (tile.floorHeights) {
+        tile.floorHeights[idx] = tile.floorHeights[idx]! - mod.depth * falloff
+      }
+      if (mod.mode === 'scorch') {
+        // Reuse the road-corridor grass fade (`ROAD_TINT_FADE_*`) so scorched
+        // ground thins blades without a second grass-reject path.
+        if (tile.roadTint) {
+          tile.roadTint[idx] = Math.max(tile.roadTint[idx]!, falloff)
         }
       }
       touched = true
@@ -699,7 +725,10 @@ export function createChunkManager(
   config: ChunkManagerConfig,
 ): ChunkManager {
   const chunks = new Map<string, ChunkRecord>()
-  const modifications: TerrainModification[] = []
+  // Caller-owned (see `ChunkManagerConfig.modifications`'s doc comment) —
+  // this is an alias, not a fresh array, so it survives this `ChunkManager`
+  // instance's own disposal.
+  const modifications = config.modifications
   const grassSystem = createGrassSystem()
   // Single collision index for the whole world (plan 097 §2.2) — terrain
   // chunks register/clear their own colliders keyed by `chunkKey` below;
@@ -1196,14 +1225,7 @@ export function createChunkManager(
   function attachChunkMesh(rec: ChunkRecord, tile: ChunkTileResult): void {
     const coord = rec.coord
     for (const mod of modifications) {
-      applyModificationToTile(
-        tile,
-        coord,
-        config.chunkSize,
-        config.resolution,
-        mod,
-        (wx, wz) => sampleHeightAt(wx, wz, fallbackParams),
-      )
+      applyModificationToTile(tile, coord, config.chunkSize, config.resolution, mod)
     }
     const streamT0 = performance.now()
     buildAndAttachMesh(rec, tile)
@@ -2067,8 +2089,8 @@ export function createChunkManager(
       rec.crops.add(cropMesh)
       return { id }
     },
-    modifyTerrain(x, z, radius, depth) {
-      const mod: TerrainModification = { x, z, radius, depth, mode: 'dig' }
+    modifyTerrain(x, z, radius, depth, source) {
+      const mod: TerrainModification = { x, z, radius, depth, mode: 'dig', source }
       modifications.push(mod)
       let touchedAny = false
       for (const rec of chunks.values()) {
@@ -2080,8 +2102,8 @@ export function createChunkManager(
       }
       return touchedAny
     },
-    scorchTerrain(x, z, radius, depth) {
-      const mod: TerrainModification = { x, z, radius, depth, mode: 'scorch' }
+    scorchTerrain(x, z, radius, depth, source) {
+      const mod: TerrainModification = { x, z, radius, depth, mode: 'scorch', source }
       modifications.push(mod)
       let touchedAny = false
       for (const rec of chunks.values()) {
@@ -2098,7 +2120,7 @@ export function createChunkManager(
       return touchedAny
     },
     applyExactHeights(id, samples) {
-      const mod: TerrainModification = { x: 0, z: 0, radius: 0, depth: 0, mode: 'prepare', id, samples }
+      const mod: TerrainModification = { x: 0, z: 0, radius: 0, depth: 0, mode: 'prepare', id, samples, source: 'player' }
       const existingIndex = modifications.findIndex((m) => m.mode === 'prepare' && m.id === id)
       if (existingIndex >= 0) modifications[existingIndex] = mod
       else modifications.push(mod)

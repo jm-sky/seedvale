@@ -32,12 +32,28 @@ function heightAtWorld(tile: ChunkTileResult, cx: number, cz: number, wx: number
   return tile.heights[iz * o.apronRes + ix]!
 }
 
+/** Issue 039 — the rendered mesh reads `floorHeights`, a separate field from
+ *  the collision/query `heights` above; every mode must keep both in sync. */
+function floorHeightAtWorld(tile: ChunkTileResult, cx: number, cz: number, wx: number, wz: number): number {
+  const o = apronOriginWorld(cx, cz, CHUNK_SIZE, RESOLUTION)
+  const ix = Math.round((wx - o.x) / o.step)
+  const iz = Math.round((wz - o.z) / o.step)
+  return tile.floorHeights[iz * o.apronRes + ix]!
+}
+
 describe('applyModificationToTile', () => {
   it('lowers the center by approximately depth', () => {
     const tile = fakeTile(7)
     const mod: TerrainModification = { x: 0, z: 0, radius: 10, depth: 1, mode: 'dig' }
     applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod)
     expect(heightAtWorld(tile, 0, 0, 0, 0)).toBeCloseTo(10 - 1, 5)
+  })
+
+  it('issue 039 — dig also lowers floorHeights (the rendered mesh Y), not just heights', () => {
+    const tile = fakeTile(7)
+    const mod: TerrainModification = { x: 0, z: 0, radius: 10, depth: 1, mode: 'dig' }
+    applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod)
+    expect(floorHeightAtWorld(tile, 0, 0, 0, 0)).toBeCloseTo(10 - 1, 5)
   })
 
   it('leaves height unchanged at/beyond the radius', () => {
@@ -96,21 +112,6 @@ describe('applyModificationToTile', () => {
     expect(heightAtWorld(tileA, 0, 0, 24, 0)).toBeCloseTo(heightAtWorld(tileB, 1, 0, 24, 0), 5)
   })
 
-  it('raises toward base on level and never exceeds it', () => {
-    const tile = fakeTile(7, 9)
-    const mod: TerrainModification = { x: 0, z: 0, radius: 10, depth: 2, mode: 'level' }
-    applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod, () => 10)
-    expect(heightAtWorld(tile, 0, 0, 0, 0)).toBeCloseTo(10, 5)
-  })
-
-  it('does not raise when already at base', () => {
-    const tile = fakeTile(7, 10)
-    const mod: TerrainModification = { x: 0, z: 0, radius: 10, depth: 2, mode: 'level' }
-    const touched = applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod, () => 10)
-    expect(touched).toBe(false)
-    expect(heightAtWorld(tile, 0, 0, 0, 0)).toBe(10)
-  })
-
   it('scorch lowers the center and bumps roadTint toward 1', () => {
     const tile = fakeTile(7)
     const mod: TerrainModification = { x: 0, z: 0, radius: 10, depth: 0.15, mode: 'scorch' }
@@ -148,6 +149,8 @@ describe('applyModificationToTile', () => {
     const touched = applyModificationToTile(tile, { cx: 0, cz: 0 }, CHUNK_SIZE, RESOLUTION, mod)
     expect(touched).toBe(true)
     expect(heightAtWorld(tile, 0, 0, 0, 0)).toBe(12)
+    // Issue 039 — the rendered mesh reads floorHeights, not heights.
+    expect(floorHeightAtWorld(tile, 0, 0, 0, 0)).toBe(12)
     const centerIx = Math.round((0 - o.x) / o.step)
     const centerIz = Math.round((0 - o.z) / o.step)
     expect(tile.roadTint[centerIz * o.apronRes + centerIx]).toBe(1)

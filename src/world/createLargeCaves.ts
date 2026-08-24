@@ -26,6 +26,10 @@ const TUNNEL_DEPTH = 2.8
 const END_RADIUS = 1.5
 const END_DEPTH = 2.2
 
+/** Deterministic from `site` (itself derived from `pickLargeCaveSites`+seed)
+ *  — redone from scratch on every world build (fresh load *and* rebuild), so
+ *  every carve here is `'system'`: never persisted, never replayed from a
+ *  saved modification (plan `world-terrain-save`). */
 function carveSite(chunkManager: ChunkManager, site: LargeCaveSite): void {
   const out = openingDirection(site.yaw)
   const into = tunnelDirection(site.yaw)
@@ -35,8 +39,9 @@ function carveSite(chunkManager: ChunkManager, site: LargeCaveSite): void {
     site.z + out.dz * 2.2,
     APPROACH_RADIUS,
     APPROACH_DEPTH,
+    'system',
   )
-  chunkManager.modifyTerrain(site.x, site.z, MOUTH_RADIUS, MOUTH_DEPTH)
+  chunkManager.modifyTerrain(site.x, site.z, MOUTH_RADIUS, MOUTH_DEPTH, 'system')
 
   const steps = Math.max(5, Math.round(site.length / 2))
   for (let s = 1; s <= steps; s++) {
@@ -48,6 +53,7 @@ function carveSite(chunkManager: ChunkManager, site: LargeCaveSite): void {
       site.z + into.dz * along,
       TUNNEL_RADIUS + (1 - t) * 0.25,
       depth,
+      'system',
     )
   }
   chunkManager.modifyTerrain(
@@ -55,6 +61,7 @@ function carveSite(chunkManager: ChunkManager, site: LargeCaveSite): void {
     site.z + into.dz * site.length,
     END_RADIUS,
     END_DEPTH,
+    'system',
   )
 }
 

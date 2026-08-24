@@ -1,8 +1,32 @@
 # 039 — Wyrównaj / Przygotuj teren (i zwykłe kopanie) nie zmieniają wizualnie terenu — `floorHeights` nie jest aktualizowane
 
-**Status:** `todo`
+**Status:** `verification needed`
 **Created:** 2026-08-24
 **Źródło:** playtest po planie [world-terrain-002](../plans/world-terrain-002-terrain-modification-and-land-preparation.md)
+
+## Fix (2026-08-24)
+
+`applyModificationToTile` (`src/terrain/chunkManager.ts`) teraz pisze do `tile.floorHeights`
+w obu miejscach opisanych w "Miejsca do poprawy":
+
+- gałąź `'prepare'` — dopisuje `tile.floorHeights[idx] = sample.height` (wartość
+  bezwzględna, tak jak dla `heights`), obok istniejącego zapisu do `heights`.
+- gałąź radialna (`'dig'`/`'scorch'`) — zapis `tile.floorHeights[idx] -= mod.depth *
+  falloff` przeniesiony poza warunek `mode === 'scorch'`, więc działa dla każdego
+  wywołania (w tym zwykłego kopania/kopca), nie tylko dla scorch. `roadTint` bump
+  zostaje jedynym, faktycznie scorch-specyficznym zachowaniem pod tym warunkiem.
+- `mode === 'level'` nie istnieje już w kodzie (usunięty jako martwy kod w tej samej
+  sesji, przy okazji planu `world-terrain-save`) — punkt 3 z listy "Miejsca do
+  poprawy" jest nieaktualny.
+
+`src/terrain/chunkManager.test.ts` — dodano asercje na `tile.floorHeights` dla
+przypadków `'dig'` i `'prepare'` (nowy helper `floorHeightAtWorld`), żeby regresja
+nie mogła wrócić bez czerwonego testu.
+
+Techniczne checki (`tsc`/`lint`/`build`/`test`) przechodzą. **Nadal wymagana
+weryfikacja w przeglądarce** (zgodnie z `CLAUDE.md` — nie headless): `Wyrównaj`,
+`Przygotuj teren`, `Wykop dołek`, `Zrób górkę`, oraz depresja wejścia jaskini z
+issue 026.
 
 ## Objaw / prośba
 

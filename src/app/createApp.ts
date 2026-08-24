@@ -1,5 +1,6 @@
 import type { PlayerSocialLookup } from '../ai/reactionChance'
-import type { SaveData } from '../persistence/saveData'
+import type { SaveData, SaveTerrainModification } from '../persistence/saveData'
+import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { TrapCaptureEvent } from '../world/createPlacedTraps'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
@@ -152,6 +153,21 @@ function grantStartingLoadout(inventory: Inventory): void {
   }
 }
 
+/** Restores persisted terrain modifications (plan `world-terrain-save`) —
+ *  everything in `SaveData.terrainModifications` is, by construction, player-
+ *  caused (`saveState.ts`'s `buildSaveData()` only ever serializes
+ *  `source: 'player'` entries), so every restored entry is tagged `'player'`
+ *  here without re-deriving it. `'prepare'`-mode entries carry no `x`/`z`/
+ *  `radius`/`depth` in the save shape (unused for that mode); the `0`
+ *  placeholders mirror `ChunkManager.applyExactHeights`'s own convention. */
+function terrainModificationsFromSave(saved: readonly SaveTerrainModification[]): TerrainModification[] {
+  return saved.map((m) => (
+    m.mode === 'prepare'
+      ? { x: 0, z: 0, radius: 0, depth: 0, mode: 'prepare' as const, id: m.id, samples: m.samples, source: 'player' as const }
+      : { x: m.x, z: m.z, radius: m.radius, depth: m.depth, mode: m.mode, source: 'player' as const }
+  ))
+}
+
 /**
  * Application composition root. It creates the long-lived systems (render
  * stack, world bundle, player, quests, UI, audio, persistence), threads their
@@ -266,6 +282,10 @@ export async function createApp(
   // stage anchor for trees; position/cropId/stage anchor for crops).
   let plantedTrees = parsePlantedTrees(initialSave?.plantedTrees)
   let plantedCrops = parsePlantedCrops(initialSave?.plantedCrops)
+  // Plan `world-terrain-save` — runtime terrain-deformation records (dig/
+  // scorch/prepare), same "carried across rebuild, reset only on a
+  // genuinely new world" contract as `plantedTrees`/`plantedCrops` above.
+  let modifications: TerrainModification[] = terrainModificationsFromSave(initialSave?.terrainModifications ?? [])
   // Plan 198/201 — authoritative ore-deposit mining-hits-remaining, sparse
   // and keyed by `NaturalResource.id`: same "carried across rebuild, reset
   // only on a genuinely new world" contract as the ids/arrays above, and
@@ -312,6 +332,7 @@ export async function createApp(
     removedCropIds,
     plantedTrees,
     plantedCrops,
+    modifications,
     worldAudio.playAt,
     initialSave?.droppedItems ?? [],
     (initialSave?.placedFires ?? []).map((f) => ({ ...f, grate: f.grate === true })),
@@ -698,6 +719,7 @@ export async function createApp(
     getRemovedCropIds: () => removedCropIds,
     getPlantedTrees: () => plantedTrees,
     getPlantedCrops: () => plantedCrops,
+    getModifications: () => modifications,
     getTreeLifecycle: () => treeLifecycle,
     getResourceDepletion: () => resourceDepletion,
   })
@@ -721,6 +743,7 @@ export async function createApp(
         removedCropIds = new Set()
         plantedTrees = []
         plantedCrops = []
+        modifications = []
         resourceDepletion = new Map()
         dayNight.elapsedDays = 0
         treeLifecycle = createTreeLifecycle(config.seed, {})
@@ -736,6 +759,7 @@ export async function createApp(
         removedCropIds,
         plantedTrees,
         plantedCrops,
+        modifications,
         worldAudio.playAt,
         treeLifecycle,
         getWorldDays,

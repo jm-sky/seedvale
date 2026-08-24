@@ -189,6 +189,19 @@ export type SavePlayerWell = {
   workProgress: number
 }
 
+/** Persistent runtime terrain deformation (plan `world-terrain-save`) —
+ *  mirrors `terrain/chunkManager.ts`'s `TerrainModification`, minus `source`:
+ *  only `'player'`-caused entries are ever serialized (`saveState.ts`'s
+ *  `buildSaveData()` filters them out) — deterministic `'system'` effects
+ *  (cave carving, fauna spawn-point burn replay) are reproduced from scratch
+ *  on every world build and must never also be replayed from a save, or
+ *  their cumulative depth would double up. `'dig'`/`'scorch'` carry the
+ *  radial-falloff fields; `'prepare'` (`Wyrównaj`/land-preparation) carries
+ *  exact grid-sample heights instead. */
+export type SaveTerrainModification =
+  | { mode: 'dig' | 'scorch', x: number, z: number, radius: number, depth: number }
+  | { mode: 'prepare', id: string, samples: { x: number, z: number, height: number }[] }
+
 /** Active `Przygotuj teren` work (plan `world-terrain-002` §9) — mirrors
  *  `terrain/terrainPreparation.ts`'s `TerrainPreparationRecord` minus the
  *  runtime-only `status` (always `'active'` whenever a record is persisted —
@@ -306,6 +319,7 @@ export type SaveData = {
   carriedContainer: SaveCarriedContainer | null
   playerWells: SavePlayerWell[]
   terrainPreparations: SaveTerrainPreparation[]
+  terrainModifications: SaveTerrainModification[]
   plantedTrees: SavePlantedTree[]
   plantedCrops: SavePlantedCrop[]
   playerGardens: SavePlayerGarden[]
@@ -652,6 +666,33 @@ function isTerrainPreparationsField(value: unknown): value is SaveTerrainPrepara
   })
 }
 
+const TERRAIN_MODIFICATION_RADIAL_MODES: ReadonlySet<string> = new Set(['dig', 'scorch'])
+
+/** First true per-branch discriminated-union validator in this file — every
+ *  other array field here has one shape per entry. `'dig'`/`'scorch'` need
+ *  the radial fields; `'prepare'` needs `id`/`samples` instead (reusing
+ *  `isHeightSamplesField`). */
+function isTerrainModificationsField(value: unknown): value is SaveTerrainModification[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const m = entry as Record<string, unknown>
+    if (typeof m.mode !== 'string') return false
+    if (TERRAIN_MODIFICATION_RADIAL_MODES.has(m.mode)) {
+      return (
+        typeof m.x === 'number' &&
+        typeof m.z === 'number' &&
+        typeof m.radius === 'number' &&
+        typeof m.depth === 'number'
+      )
+    }
+    if (m.mode === 'prepare') {
+      return typeof m.id === 'string' && isHeightSamplesField(m.samples)
+    }
+    return false
+  })
+}
+
 const TREE_SIZE_CLASSES: ReadonlySet<string> = new Set<TreeSizeClass>(['large', 'medium', 'small'])
 const CROP_IDS_SET: ReadonlySet<string> = new Set<CropId>(['cabbage', 'carrot', 'potato'])
 
@@ -744,6 +785,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isCarriedContainerField(v.carriedContainer)) return false
   if (!isPlayerWellsField(v.playerWells)) return false
   if (!isTerrainPreparationsField(v.terrainPreparations)) return false
+  if (!isTerrainModificationsField(v.terrainModifications)) return false
   if (!isPlantedTreesField(v.plantedTrees)) return false
   if (!isPlantedCropsField(v.plantedCrops)) return false
   if (!isPlayerGardensField(v.playerGardens)) return false

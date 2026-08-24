@@ -63,6 +63,11 @@ const validSave: SaveData = {
     requiredWork: 2,
     completedWork: 0.5,
   }],
+  terrainModifications: [
+    { mode: 'dig', x: 1, z: 2, radius: 1.4, depth: 0.28 },
+    { mode: 'scorch', x: 3, z: 4, radius: 3, depth: 0.15 },
+    { mode: 'prepare', id: 'level:1:2', samples: [{ x: 1, z: 2, height: 10.5 }] },
+  ],
   plantedTrees: [{ id: 'planted:1', x: 5, z: 5, speciesIndex: 2, sizeClass: 'small', sizeJitter: 0.3, rotationY: 1.1 }],
   plantedCrops: [{ id: 'planted-crop:1', x: 6, z: 6, cropId: 'carrot', stageStartedAt: 4.2 }],
   playerGardens: [{ id: 'garden:1', x: 7, z: 8, yaw: 0.4, care: 82, lastMaintainedAtDays: 3.5 }],

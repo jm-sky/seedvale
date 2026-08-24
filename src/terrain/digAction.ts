@@ -28,7 +28,7 @@ export function applyDigAt(
   feedback: DigFeedback,
   random: () => number = Math.random,
 ): void {
-  chunkManager.modifyTerrain(x, z, DIG_RADIUS, profile.depth)
+  chunkManager.modifyTerrain(x, z, DIG_RADIUS, profile.depth, 'player')
   const outcome = resolveDigStone(profile.stoneChance, feedback.inventory.canAdd('stone'), random)
   if (outcome.kind === 'none') {
     feedback.toast.show(profile.surface === 'rock' ? 'Wykuto skałę.' : 'Wykopano dołek.')
@@ -59,7 +59,9 @@ export function applyDigAt(
  *  samples around `(x, z)` to the central sample's own current height (never
  *  the procedural base). A one-shot exact-height write through the same
  *  `applyExactHeights` primitive active terrain-preparation work uses, keyed
- *  by a fresh id each call since this never needs to be replaced/resumed. */
+ *  by a *stable*, location-derived id (the grid-snapped center point) so
+ *  repeat-leveling the same spot replaces its own prior entry instead of
+ *  appending a growing list forever (plan `world-terrain-save`). */
 export function applyLevelAt(
   chunkManager: ChunkManager,
   x: number,
@@ -76,7 +78,7 @@ export function applyLevelAt(
     toast.show('Teren jest już wyrównany.')
     return
   }
-  chunkManager.applyExactHeights(`level:${Date.now()}:${Math.random()}`, heights)
+  chunkManager.applyExactHeights(`level:${center.x}:${center.z}`, heights)
   toast.show('Wyrównano teren.')
 }
 
@@ -92,6 +94,6 @@ export function applyMoundAt(
   depth: number,
   toast: Toast,
 ): void {
-  chunkManager.modifyTerrain(x, z, DIG_RADIUS, -depth)
+  chunkManager.modifyTerrain(x, z, DIG_RADIUS, -depth, 'player')
   toast.show('Usypano górkę.')
 }

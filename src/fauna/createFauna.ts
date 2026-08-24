@@ -380,8 +380,8 @@ export async function createFauna(
     coastThreshold: number
   },
   terrainCarving?: {
-    modifyTerrain: (x: number, z: number, radius: number, depth: number) => boolean
-    scorchTerrain?: (x: number, z: number, radius: number, depth: number) => boolean
+    modifyTerrain: (x: number, z: number, radius: number, depth: number, source: 'player' | 'system') => boolean
+    scorchTerrain?: (x: number, z: number, radius: number, depth: number, source: 'player' | 'system') => boolean
     sampleMountainRidge: (x: number, z: number) => number
   },
   /** Reports any wild-fauna death (any cause) by `animalId` — forwarded into
@@ -714,7 +714,9 @@ export async function createFauna(
         terrainCarving
         && terrainCarving.sampleMountainRidge(pos.x, pos.z) <= CAVE_ROCK_MOUNTAIN_RIDGE_THRESHOLD
       ) {
-        terrainCarving.modifyTerrain(pos.x, pos.z, CAVE_DEPRESSION_RADIUS, CAVE_DEPRESSION_DEPTH)
+        // Deterministic from seed/settlement placement, redone from scratch
+        // on every world build — never persisted (plan `world-terrain-save`).
+        terrainCarving.modifyTerrain(pos.x, pos.z, CAVE_DEPRESSION_RADIUS, CAVE_DEPRESSION_DEPTH, 'system')
       }
       const mouth = createCaveMouth(1, random())
       mouth.position.set(pos.x, groundY, pos.z)
@@ -764,14 +766,17 @@ export async function createFauna(
     }
     // A restored `disabled`/`recovering` point looks freshly-burned again on
     // reload/rebuild instead of a mismatched pristine prop — same visual as
-    // `destroySpawner()` below, reapplied rather than duplicated.
+    // `destroySpawner()` below, reapplied rather than duplicated. This replay
+    // is driven entirely by the already-separately-persisted
+    // `SavedSpawnPointState`, so it's `'system'` (never itself persisted) —
+    // `destroySpawner()`'s own scorch below is the genuine player-caused one.
     if (spawner.state === 'disabled' || spawner.state === 'recovering') {
       const mesh = spawnerMeshById.get(spawner.id)
       if (mesh) tintPropMaterials(mesh, BURNED_SPAWNER_TINT_HEX)
       if (terrainCarving?.scorchTerrain) {
-        terrainCarving.scorchTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH)
+        terrainCarving.scorchTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH, 'system')
       } else {
-        terrainCarving?.modifyTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH)
+        terrainCarving?.modifyTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH, 'system')
       }
     }
 
@@ -929,10 +934,12 @@ export async function createFauna(
       spawner.disabledAtDay = nowDays
       const mesh = spawnerMeshById.get(spawnerId)
       if (mesh) tintPropMaterials(mesh, BURNED_SPAWNER_TINT_HEX)
+      // The genuine player action ("[E] Zniszcz") — persisted, unlike the
+      // restore-replay above.
       if (terrainCarving?.scorchTerrain) {
-        terrainCarving.scorchTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH)
+        terrainCarving.scorchTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH, 'player')
       } else {
-        terrainCarving?.modifyTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH)
+        terrainCarving?.modifyTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH, 'player')
       }
       return true
     },

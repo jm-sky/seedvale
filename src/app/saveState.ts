@@ -2,11 +2,12 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { createMouseLook } from '../input/MouseLook'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
-import type { SaveData } from '../persistence/saveData'
+import type { SaveData, SaveTerrainModification } from '../persistence/saveData'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
+import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { VueUi } from '../ui-vue/mount'
 import type { CropPlacement } from '../world/cropLifecycle'
@@ -63,6 +64,8 @@ export type SaveStateDeps = {
    *  a New Game" contract as the two above. */
   getPlantedTrees: () => readonly PlantedTreeRecord[]
   getPlantedCrops: () => readonly CropPlacement[]
+  /** Same live-accessor contract as the two above (plan `world-terrain-save`). */
+  getModifications: () => readonly TerrainModification[]
   getTreeLifecycle: () => TreeLifecycle
   /** Same live-accessor contract as the ids/arrays above (plan 198/201) —
    *  `createApp` replaces the underlying `Map` on a genuinely new world. */
@@ -152,6 +155,17 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       requiredWork: p.requiredWork,
       completedWork: p.completedWork,
     })),
+    // Only `'player'`-caused entries — `'system'` ones (cave carving, fauna
+    // spawn-point burn replay) are deterministically reproduced on every
+    // world build and must never also be replayed from a save (plan
+    // `world-terrain-save`).
+    terrainModifications: deps.getModifications()
+      .filter((m) => m.source === 'player')
+      .map((m): SaveTerrainModification => (
+        m.mode === 'prepare'
+          ? { mode: 'prepare', id: m.id!, samples: m.samples!.map((s) => ({ ...s })) }
+          : { mode: m.mode, x: m.x, z: m.z, radius: m.radius, depth: m.depth }
+      )),
     plantedTrees: deps.getPlantedTrees().map((t) => ({ ...t })),
     plantedCrops: deps.getPlantedCrops().map((c) => ({ ...c })),
     playerGardens: bundle.playerGardens.nodes().map((g) => ({ ...g })),

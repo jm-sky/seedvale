@@ -35,6 +35,7 @@ import {
   type ChunkManager,
   type ChunkManagerConfig,
   createChunkManager,
+  type TerrainModification,
 } from '../terrain/chunkManager'
 import {
   createResourceDeposits,
@@ -121,6 +122,10 @@ function buildChunkManager(
    *  `removedCropIds` above. */
   plantedTrees: PlantedTreeRecord[],
   plantedCrops: CropPlacement[],
+  /** Runtime terrain-deformation records (plan `world-terrain-save`) — same
+   *  "caller-owned, mutated in place, carried across rebuild" contract as
+   *  `plantedTrees`/`plantedCrops` above. */
+  modifications: TerrainModification[],
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
   waterMirror: WaterMirror,
@@ -148,6 +153,7 @@ function buildChunkManager(
     removedCropIds,
     plantedTrees,
     plantedCrops,
+    modifications,
     grass: config.terrain.grass,
     detailNormal: config.terrain.detailNormal,
     terrainCastsShadow: config.postProcessing.terrainCastsShadow,
@@ -336,6 +342,7 @@ type WorldSystemsSeed = {
   removedCropIds: Set<string>
   plantedTrees: PlantedTreeRecord[]
   plantedCrops: CropPlacement[]
+  modifications: TerrainModification[]
   playAt: PlayAt
   treeLifecycle: TreeLifecycle
   getWorldDays: () => number
@@ -371,7 +378,7 @@ type WorldSystemsSeed = {
  *  about to replace) — previously duplicated in full between the two. */
 async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
   const {
-    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops,
+    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications,
     playAt, treeLifecycle, getWorldDays, dayNight,
     droppedItems: initialDroppedItems,
     placedFires: initialPlacedFires,
@@ -397,7 +404,7 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
     waterLevel: config.terrain.waterLevel,
     enabled: config.postProcessing.waterReflections,
   })
-  const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, treeLifecycle, getWorldDays, waterMirror)
+  const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, treeLifecycle, getWorldDays, waterMirror)
   chunkManager.update(0, 0)
   await chunkManager.waitForChunks(homeChunks())
 
@@ -495,6 +502,10 @@ export async function createWorldBundle(
    *  `removedCropIds` above. */
   plantedTrees: PlantedTreeRecord[],
   plantedCrops: CropPlacement[],
+  /** Runtime terrain-deformation records (plan `world-terrain-save`) — same
+   *  "carried across rebuild, reset only on a genuinely new world" contract
+   *  as `plantedTrees`/`plantedCrops` above. */
+  modifications: TerrainModification[],
   playAt: PlayAt,
   initialDroppedItems: readonly DroppedItem[],
   initialPlacedFires: readonly PlacedFire[],
@@ -568,7 +579,7 @@ export async function createWorldBundle(
   initialTerrainPreparations: readonly TerrainPreparationRecord[] = [],
 ): Promise<WorldBundle> {
   return buildWorldSystems({
-    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, playAt,
+    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
     treeLifecycle, getWorldDays, dayNight,
     droppedItems: initialDroppedItems,
     placedFires: initialPlacedFires,
@@ -613,6 +624,9 @@ export async function rebuildWorldBundle(
   /** Same reset contract as `collectedItemIds`/`removedCropIds` above (plan 126). */
   plantedTrees: PlantedTreeRecord[],
   plantedCrops: CropPlacement[],
+  /** Same reset contract as `collectedItemIds`/`plantedTrees` above (plan
+   *  `world-terrain-save`). */
+  modifications: TerrainModification[],
   playAt: PlayAt,
   treeLifecycle: TreeLifecycle,
   getWorldDays: () => number,
@@ -698,7 +712,7 @@ export async function rebuildWorldBundle(
   if (resetCollectedItems) treeLifecycle.clearOverrides()
 
   const fresh = await buildWorldSystems({
-    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, playAt,
+    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
     treeLifecycle, getWorldDays, dayNight,
     droppedItems: carriedDrops,
     placedFires: carriedFires,
