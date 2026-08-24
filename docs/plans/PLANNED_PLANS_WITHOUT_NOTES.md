@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-24 10:20:47  
+> Date: 2026-08-24 10:22:37  
 
 ## PLANS
 
@@ -13,7 +13,6 @@
 - `ai-002-npc-personality-decisions.md`
 - `tools-001-performance-benchmark-determinism-and-reliability.md`
 - `tools-002-trace-analyzer-application-cpu-attribution.md`
-- `ui-input-002-ui-ux-interaction-and-action-system-polish.md`
 
 --------------------------------
 ## PROMPTS
@@ -243,36 +242,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `tools-002-trace-analyzer-application-cpu-attribution-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `ui-input-002-ui-ux-interaction-and-action-system-polish.md`
-
-Prompt:
-
-```
-Zrób review planu `ui-input-002-ui-ux-interaction-and-action-system-polish.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/ui-input-002-ui-ux-interaction-and-action-system-polish.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`ui-input-002-ui-ux-interaction-and-action-system-polish-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
