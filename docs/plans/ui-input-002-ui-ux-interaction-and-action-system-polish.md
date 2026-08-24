@@ -4,10 +4,7 @@
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** L
 **Depends on:** none
-
-## Domain
-
-`ui-input`
+**Domain:** ui-input
 
 ## Goal
 
@@ -15,7 +12,9 @@ Ujednolicić interakcje i akcje gracza oraz poprawić czytelność najczęściej
 
 ## Context
 
-Istniejący audyt UI/UX (Review 007 / plan 105) potwierdził m.in. problemy z Quick Actions, feedbackiem błędów, duplikacją akcji oraz mobilnym layoutem. Obecny `MerchantScreen` jest już ekranem Vue i ma układ stock | player bag z filtrami, więc jego UX należy poprawić na istniejącej bazie.
+Istniejący audyt UI/UX (Review 007 / plan 105) potwierdził m.in. problemy z Quick Actions, feedbackiem błędów, duplikacją akcji oraz mobilnym layoutem. Obecny `MerchantScreen` jest już ekranem Vue i ma układ stock | player bag z filtrami.
+
+Merchant UX został wydzielony do osobnego planu `ui-input-003-merchant-trade-ui-ux-redesign.md`, który zawiera szczegółowy projekt C1 desktop, M1 mobile landscape oraz A2 selection. Ten plan pozostaje odpowiedzialny za ogólny audyt i integrację UI, ale nie definiuje ponownie szczegółowego Merchant UX.
 
 Current-state entry points: `src/ui/`, `src/ui-vue/`, `src/app/actions/`, `src/app/inventoryWiring.ts` oraz istniejące mechanizmy interaction/construction/merchant.
 
@@ -31,7 +30,7 @@ Przejrzeć przed zmianami:
 - interaction actions i komunikaty,
 - construction UI,
 - inventory/equipment,
-- merchant/trader,
+- merchant/trader integration,
 - toast, modal/overlay i stacking/z-index,
 - istniejące duplikacje między HUD, pause i Quick Actions.
 
@@ -89,22 +88,23 @@ Dodać szybki dostęp do:
 
 Wykorzystać istniejący `Inventory` / equipment / weapon state. Nie tworzyć osobnego stanu wyposażenia tylko dla UI.
 
-### 7. Merchant UX
+### 7. Merchant integration
 
-Przeprowadzić krótki research wzorców ekranów handlu w grach, ze szczególnym uwzględnieniem:
+Merchant UX jest osobnym zakresem projektowym w `ui-input-003-merchant-trade-ui-ux-redesign.md`.
 
-- rozróżnienia kupno/sprzedaż,
-- podglądu przedmiotu przed transakcją,
-- statystyk przedmiotu (np. obrażenia, waga),
-- ceny i ilości,
-- czytelnego stanu pieniędzy/stocku,
-- feedbacku po transakcji,
-- obsługi małych ekranów.
+W ramach tego planu należy jedynie:
 
-Następnie poprawić istniejący `MerchantScreen`, zachowując istniejący model danych i merchant logic. Nie projektować nowej ekonomii handlu w ramach tego planu.
+- zweryfikować istniejące entry points i facades Merchant UI,
+- zapewnić reuse istniejących item/inventory/merchant data sources,
+- podłączyć finalny Merchant UX do istniejących mechanizmów trade,
+- zachować istniejący model danych i merchant logic,
+- usunąć potwierdzone po audycie duplikacje/martwe ścieżki związane z integracją.
+
+Nie wykonywać osobnego redesignu MerchantScreen w tym planie.
 
 ## Explicitly out of scope
 
+- szczegółowy redesign MerchantScreen — `ui-input-003`,
 - zmiana mechaniki ekonomii,
 - nowe typy itemów lub broni,
 - nowe systemy interakcji w symulacji,
@@ -121,7 +121,7 @@ Następnie poprawić istniejący `MerchantScreen`, zachowując istniejący model
 4. Uporządkować Quick Actions wokół istniejącego katalogu akcji i wybranego wzorca grupowania/drill-down.
 5. Podłączyć construction do tego samego wzorca panelu.
 6. Dodać weapon shortcuts przez istniejący equipment state.
-7. Przeprojektować MerchantScreen na podstawie researchu i istniejących danych.
+7. Zintegrować MerchantScreen z rozwiązaniem określonym w `ui-input-003`, bez ponownego projektowania trade UX.
 8. Usunąć tylko potwierdzone po audycie duplikacje/martwe ścieżki związane z zakresem planu.
 
 ## Verification
@@ -143,7 +143,7 @@ Sprawdzić co najmniej:
 - Quick Actions na desktopie i małym landscape/mobile viewport,
 - brak duplikacji/konfliktów między Quick Actions i Pause → Actions,
 - primary melee/ranged weapon shortcuts,
-- kupno i sprzedaż u handlarza z podglądem przedmiotu i feedbackiem transakcji,
+- MerchantScreen korzystający z istniejącego trade modelu i finalnego UX z `ui-input-003`,
 - Escape/back/close behaviour i focus/overlay stacking.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
