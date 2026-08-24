@@ -155,7 +155,7 @@ Natural vegetation
 | `ai-001-npc-pressure-layer.md` ◼️ | - | 🔴 | M | - |
 | `ai-002-npc-personality-decisions.md` ◼️ | - | 🔴 | M | ~~ai-001~~ |
 | `npc-001-npc-physical-stats-sex-and-age.md` 💡 | - | 🟡 | M | - |
-| `world-terrain-002-terrain-modification-and-land-preparation.md` ◼️ | - | 🟡 | L | - |
+| `world-terrain-002-terrain-modification-and-land-preparation.md` 💡 | - | 🟡 | L | - |
 | `ui-input-001-developer-debug-api.md` ◼️ | - | 🔴 | M | - |
 | `ui-input-002-ui-ux-interaction-and-action-system-polish.md` ◼️ | - | 🟡 | L | - |
 | `tools-001-performance-benchmark-determinism-and-reliability.md` ◼️ | - | 🔴 | M | - |
