@@ -54,6 +54,20 @@ const HUT_D_LAMP_MOUNT: AssetAnchorDef = {
   authoredFor: { mode: 'height', value: 8.2 },
 }
 
+/** Plan 169 — furniture table (`public/models/settlement/furniture/table.glb`,
+ *  measured `src/assets/furnitureAudit.generated.json`: footprint 1.106 × 1.016 m,
+ *  top surface y ≈ 0.618). Back-right corner of the tabletop, in from the edge
+ *  far enough that the lamp's own footprint doesn't overhang. Native MegaKit-style
+ *  construction parts have no `prepareProp` fit (plan 111), hence `mode: 'none'`. */
+const FURNITURE_TABLE_LAMP_MOUNT: AssetAnchorDef = {
+  name: 'lamp_mount',
+  type: 'mount',
+  space: 'assetLocal',
+  position: [0.3, 0.618, -0.3],
+  rotation: [0, 0, 0],
+  authoredFor: { mode: 'none' },
+}
+
 /**
  * Tool `grip` anchors (Phase 6). Add one tool at a time after browser verification.
  * When present, `mountHeldToolOnSocket` uses `mountByAnchorPair` instead of `HELD_ATTACH`.
@@ -78,6 +92,7 @@ export const ASSET_ANCHORS: Record<string, readonly AssetAnchorDef[]> = {
   'house:hut_b': [floorCenterLampMount(8.0)],
   'house:hut_c': [floorCenterLampMount(6.5)],
   'house:hut_d': [HUT_D_LAMP_MOUNT],
+  'parked:settlement/furniture/table': [FURNITURE_TABLE_LAMP_MOUNT],
 }
 
 export function anchorsForAsset(id: string): readonly AssetAnchorDef[] {

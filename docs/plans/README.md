@@ -80,8 +80,8 @@ Rendering performance
   (157 PointLight budget 16) → 149 shader program first-use hitch
 
 Construction & lodging
-  (109) → (111) → 169
-  (165) → (168) → 169
+  (109) → (111) → (169)
+  (165) → (168) → (169)
 
 Natural vegetation
   (140 landscape flora) → (172 natural crop lifecycle) → (126 seed planting)
@@ -103,7 +103,6 @@ Natural vegetation
 
 | File | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------- | --------- | --- | --- | --- |
-| `2026-08-19--169--house-interior-furniture-and-bed-anchors.md`      | Meble + fizyczne miejsca noclegowe | 🟡 | L | ~~168~~ ~~111~~ |
 | `2026-08-18--151--social-places-and-social-behaviour.md`            | Settlement social place + NPC↔NPC conversation | 🟡 | M | ~~020~~ |
 | `2026-08-18--152--npc-player-food-drink-help.md`                    | NPC pomoc graczowi jedzeniem/piciem | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ ~~156 |
 | `2026-08-19--167--npc-helper-resource-delivery.md`                  | NPC gathers food for player | 🟡 | M | ~~164~~ |

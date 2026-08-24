@@ -120,3 +120,11 @@ export const LANTERN_FLOOR_MAX = 0.28
  *  small in-game — see `createHouseLight` notes in `houseLighting.ts`. */
 export const LANTERN_WALL_MAX = 0.45
 export const VILLAGE_TORCH_HEIGHT = 1.55
+
+/** Plan 169 house interior table lamp (Quaternius Furniture Pack, converted
+ *  `FBX2glTF` → `gltfpack -cc`). Native longest axis ≈1.04 m (a floor/standing
+ *  lamp shape, not a small table lamp) — `furnitureAudit.generated.json`.
+ *  Fit down to a plausible small table-lamp height via `preparePropFitMax`,
+ *  same technique/precedent as `LANTERN_FLOOR_MAX`/`LANTERN_WALL_MAX`. */
+export const TABLE_LAMP_URL = '/models/settlement/furniture/lamp.glb'
+export const TABLE_LAMP_FIT_MAX = 0.35

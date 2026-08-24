@@ -15,6 +15,7 @@ import {
   HOUSE_MODULE_M,
   type HouseCornerSide,
   type HouseDefinition,
+  type HouseFurnitureRole,
   type HouseInteractionPoint,
   type HouseOpening,
   type HouseRoofPart,
@@ -265,7 +266,18 @@ export function houseDefinitionAssetIds(def: HouseDefinition): string[] {
   for (const part of def.roof.parts ?? []) ids.push(part.assetId)
   if (def.roof.assetId) ids.push(def.roof.assetId)
   for (const deco of def.decorations ?? []) ids.push(deco.assetId)
+  for (const furniture of def.furniture ?? []) {
+    if (isCatalogFurnitureRole(furniture.role)) ids.push(furniture.assetId)
+  }
   return [...new Set(ids)]
+}
+
+/** `bed`/`table` resolve through `ConstructionCatalog` like any other house
+ *  part; `chest`/`lamp` have no catalog GLB and are placed directly by
+ *  `settlement/props.ts` (procedural chest visual, existing house-lighting
+ *  pipeline) — see `HouseFurniturePlacement`'s doc comment. */
+function isCatalogFurnitureRole(role: HouseFurnitureRole): boolean {
+  return role === 'bed' || role === 'table'
 }
 
 export async function loadHousePartTemplates(
@@ -546,6 +558,37 @@ function derivedInteractionPoints(
   return points
 }
 
+/**
+ * Plan 169 — furniture-relative interaction points (bed `'sleep'`, chest
+ * `'storage'`), transformed from furniture-local into house-local space by
+ * the same rotate-then-translate convention `wallLocalTransform`/
+ * `cornerLocalPosition` use. Always appended alongside door/entrance points
+ * (authored or derived) — a house does not need an authored
+ * `interactionPoints` array just to get furniture points.
+ */
+function furnitureInteractionPoints(def: HouseDefinition): HouseInteractionPoint[] {
+  const points: HouseInteractionPoint[] = []
+  for (const furniture of def.furniture ?? []) {
+    if (!furniture.interactionPoints) continue
+    const cos = Math.cos(furniture.rotationY)
+    const sin = Math.sin(furniture.rotationY)
+    for (const local of furniture.interactionPoints) {
+      const lx = local.position.x
+      const lz = local.position.z
+      points.push({
+        kind: local.kind,
+        position: {
+          x: furniture.position.x + lx * cos - lz * sin,
+          y: furniture.position.y + local.position.y,
+          z: furniture.position.z + lx * sin + lz * cos,
+        },
+        ...(local.facing != null ? { facing: furniture.rotationY + local.facing } : {}),
+      })
+    }
+  }
+  return points
+}
+
 export function buildHouse(def: HouseDefinition, ctx: HouseBuildContext): HouseAssembly {
   for (const assetId of houseDefinitionAssetIds(def)) requirePart(ctx, assetId)
 
@@ -604,6 +647,19 @@ export function buildHouse(def: HouseDefinition, ctx: HouseBuildContext): HouseA
     })
   }
 
+  for (const furniture of def.furniture ?? []) {
+    if (!isCatalogFurnitureRole(furniture.role)) continue
+    staticSpecs.push({
+      assetId: furniture.assetId,
+      pose: {
+        x: furniture.position.x,
+        y: furniture.position.y,
+        z: furniture.position.z,
+        rotationY: furniture.rotationY,
+      },
+    })
+  }
+
   const doors: HouseDoor[] = []
 
   for (const opening of def.openings) {
@@ -635,7 +691,10 @@ export function buildHouse(def: HouseDefinition, ctx: HouseBuildContext): HouseA
   instantiateStatics(staticGroup, staticSpecs, ctx)
   root.scale.setScalar(HOUSE_ASSEMBLY_SCALE)
 
-  const interactionPoints = derivedInteractionPoints(def, def.interactionPoints)
+  const interactionPoints = [
+    ...derivedInteractionPoints(def, def.interactionPoints),
+    ...furnitureInteractionPoints(def),
+  ]
   const census = censusAssembly(staticGroup, interactiveGroup)
 
   return {

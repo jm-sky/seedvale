@@ -3,6 +3,7 @@ import { buildAssetIndex } from './assetIndex'
 import {
   buildConstructionCatalog,
   CONSTRUCTION_RULES,
+  furnitureUrls,
   megakitUrls,
 } from './constructionCatalog'
 import { HOME_HOUSE_DEFINITIONS, TEST_HOUSE_01, TEST_HOUSE_02 } from './houseDefinitionExample'
@@ -12,7 +13,14 @@ describe('constructionCatalog: discovery', () => {
 
   it('covers all 176 MegaKit GLB', () => {
     expect(megakitUrls()).toHaveLength(176)
-    expect(catalog.parts).toHaveLength(176)
+  })
+
+  it('covers the plan 169 furniture GLB (bed/table/lamp)', () => {
+    expect(furnitureUrls()).toHaveLength(3)
+  })
+
+  it('catalog parts = MegaKit + furniture', () => {
+    expect(catalog.parts).toHaveLength(megakitUrls().length + furnitureUrls().length)
   })
 
   it('classifies known files into the right construction kind', () => {

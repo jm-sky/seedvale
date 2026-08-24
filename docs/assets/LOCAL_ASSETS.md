@@ -34,6 +34,14 @@ gltf-transform
 gltfpack -cc
 ```
 
+None of `FBX2glTF`/`gltf-transform`/`gltfpack`/Blender/assimp may be preinstalled and `sudo apt install` may not be available (no password). Working fallback (plan 169): download the official static Linux binary directly —
+
+```text
+https://github.com/facebookincubator/FBX2glTF/releases/download/v0.9.7/FBX2glTF-linux-x64
+```
+
+`chmod +x` and run standalone (`FBX2glTF -i <src>.fbx -o <name> --binary`). `gltf-transform`/`gltfpack` both run fine via `npx` without adding them as project dependencies.
+
 Credits and runtime model documentation:
 
 * `docs/assets/CREDITS.md`

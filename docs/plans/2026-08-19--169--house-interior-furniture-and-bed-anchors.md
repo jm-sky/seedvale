@@ -1,7 +1,7 @@
 # Plan: House Interior Furniture and Bed Anchors
 
 **Created:** 2026-08-19
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented (one house, `COTTAGE_4X4_A`) + `tsc`/lint/build/test 2026-08-24; browser/gameplay verification pending
 **Priority:** 🟡 medium · **Effort:** L
 **Depends on:** ~~168~~ ~~111~~
 **Domain:** `settlements-npcs`

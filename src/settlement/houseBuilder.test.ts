@@ -345,6 +345,29 @@ describe('village house definitions', () => {
     expect(large.some((d) => d.footprint.width >= 6)).toBe(true)
   })
 
+  it('plan 169 — bed/table furniture resolve through the real ConstructionCatalog', () => {
+    const bed = COTTAGE_4X4_A.furniture!.find((f) => f.role === 'bed')!
+    const table = COTTAGE_4X4_A.furniture!.find((f) => f.role === 'table')!
+    expect(catalog.byAssetId.has(bed.assetId)).toBe(true)
+    expect(catalog.byAssetId.has(table.assetId)).toBe(true)
+  })
+
+  it('plan 169 — furnished cottage exposes sleep/storage interaction points', () => {
+    const assembly = buildHouse(COTTAGE_4X4_A, contextFor(COTTAGE_4X4_A))
+    const sleep = assembly.interactionPoints.find((p) => p.kind === 'sleep')
+    const storage = assembly.interactionPoints.find((p) => p.kind === 'storage')
+    expect(sleep).toBeDefined()
+    expect(storage).toBeDefined()
+    // Door/entrance derivation still runs alongside furniture points.
+    expect(assembly.interactionPoints.some((p) => p.kind === 'door')).toBe(true)
+    expect(assembly.interactionPoints.some((p) => p.kind === 'entrance')).toBe(true)
+
+    const bed = COTTAGE_4X4_A.furniture!.find((f) => f.role === 'bed')!
+    const localFacing = bed.interactionPoints!.find((p) => p.kind === 'sleep')!.facing!
+    expect(sleep!.facing).toBeCloseTo(bed.rotationY + localFacing)
+    assembly.dispose()
+  })
+
   it('village homes mix plaster, woodgrid and brick wall kits', () => {
     const walls = new Set(
       HOME_HOUSE_DEFINITIONS.flatMap((def) => def.walls.map((w) => w.assetId)),

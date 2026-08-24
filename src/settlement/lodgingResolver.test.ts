@@ -69,11 +69,15 @@ function settlement(overrides: Partial<LodgingSettlementInput>): LodgingSettleme
   }
 }
 
+function house(overrides: { x: number, z: number, bed?: LodgingSettlementInput['houses'][number]['bed'] }) {
+  return { bed: null, ...overrides }
+}
+
 describe('collectLodgingCandidates — friend lodging', () => {
   it('produces a candidate for a friendly NPC with an available household home', () => {
     const s = settlement({
       npcs: [{ name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }],
-      houses: [{ x: 5, z: 7 }],
+      houses: [house({ x: 5, z: 7 })],
     })
     const candidates = collectLodgingCandidates([s], {
       getPlayerSocial: () => ({ relationLevel: 'friendly', standing: 0 }),
@@ -85,7 +89,7 @@ describe('collectLodgingCandidates — friend lodging', () => {
   it('produces no candidate for a stranger', () => {
     const s = settlement({
       npcs: [{ name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }],
-      houses: [{ x: 5, z: 7 }],
+      houses: [house({ x: 5, z: 7 })],
     })
     const candidates = collectLodgingCandidates([s], {
       getPlayerSocial: () => ({ relationLevel: 'stranger', standing: 0 }),
@@ -94,7 +98,7 @@ describe('collectLodgingCandidates — friend lodging', () => {
   })
 
   it('produces no candidate for an NPC without a household', () => {
-    const s = settlement({ npcs: [{ name: 'Anna', household: null }], houses: [{ x: 5, z: 7 }] })
+    const s = settlement({ npcs: [{ name: 'Anna', household: null }], houses: [house({ x: 5, z: 7 })] })
     const candidates = collectLodgingCandidates([s], {
       getPlayerSocial: () => ({ relationLevel: 'trusted', standing: 0 }),
     })
@@ -105,12 +109,57 @@ describe('collectLodgingCandidates — friend lodging', () => {
     const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
     const s = settlement({
       npcs: [{ name: 'Anna', household }, { name: 'Piotr', household }],
-      houses: [{ x: 5, z: 7 }],
+      houses: [house({ x: 5, z: 7 })],
     })
     const candidates = collectLodgingCandidates([s], {
       getPlayerSocial: () => ({ relationLevel: 'trusted', standing: 0 }),
     })
     expect(candidates).toHaveLength(1)
+  })
+})
+
+describe('collectLodgingCandidates — bed lodging (plan 169 provider)', () => {
+  it('produces a high-quality bed candidate for a house with a bed', () => {
+    const s = settlement({
+      houses: [house({
+        x: 5,
+        z: 7,
+        bed: { position: { x: 5.2, z: 7.1 }, approach: { x: 5.5, z: 7.4 }, facing: 1.2 },
+      })],
+    })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => ({ relationLevel: 'stranger', standing: 0 }) })
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]).toMatchObject({
+      id: 'settlement-1:bed:0',
+      type: 'bed',
+      quality: 'high',
+      position: { x: 5.2, z: 7.1 },
+      approachPoint: { x: 5.5, z: 7.4 },
+      facing: 1.2,
+    })
+  })
+
+  it('produces no bed candidate for a house without one', () => {
+    const s = settlement({ houses: [house({ x: 5, z: 7 })] })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => ({ relationLevel: 'stranger', standing: 0 }) })
+    expect(candidates).toHaveLength(0)
+  })
+
+  it('a bed beats a friendly NPC in the same settlement (class priority)', () => {
+    const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
+    const s = settlement({
+      npcs: [{ name: 'Anna', household }],
+      houses: [house({
+        x: 5,
+        z: 7,
+        bed: { position: { x: 5, z: 7 }, approach: { x: 5, z: 7 }, facing: null },
+      })],
+    })
+    const candidates = collectLodgingCandidates([s], {
+      getPlayerSocial: () => ({ relationLevel: 'friendly', standing: 0 }),
+    })
+    const best = resolveBestLodging(candidates, { x: 0, z: 0 })
+    expect(best?.type).toBe('bed')
   })
 })
 

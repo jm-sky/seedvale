@@ -5,13 +5,14 @@ import type { FoodSourceType } from './settlementGenerator'
 import type { ClearingLayout } from './villageClearing'
 import type { VillageLandmarkPlan, VillagePlan } from './villagePlan'
 import { buildConstructionCatalog } from '../assets/constructionCatalog'
-import { pickHouseDefinition } from '../assets/houseDefinitionExample'
+import { type HouseVec3, pickHouseDefinition } from '../assets/houseDefinitionExample'
 import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../assets/loadGltf'
 import { isDebugMode } from '../debug/debugMode'
 import { createHorseModel } from '../fauna/proceduralAnimals'
 import { distanceToSegment } from '../math/segment'
 import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
+import { createPlacedContainerProp } from '../world/containerProp'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { type CampfireFlame, createLitCampfireVisual, preloadCampfireTemplates } from './campfireProps'
@@ -54,6 +55,8 @@ import {
   LANTERN_FLOOR_MAX,
   LANTERN_URL,
   LANTERN_WALL_MAX,
+  TABLE_LAMP_FIT_MAX,
+  TABLE_LAMP_URL,
   TREE_SPECS,
   VILLAGE_TORCH_HEIGHT,
   VILLAGE_TORCH_URL,
@@ -102,6 +105,21 @@ export type SettlementHouseLandmark = {
   /** Local lamp mount used at build time (for debug gaze / catalog paste). */
   lampMount: HouseLampMount | null
   lampMountSource: string | null
+  /** World-space bed lodging source (plan 168/169) — set only for houses built
+   *  through the `HouseBuilder` assembly path with a `'sleep'` interaction
+   *  point (currently `COTTAGE_4X4_A` only). `null` for every other house,
+   *  including the legacy catalog-GLB fallback. */
+  bed: SettlementHouseBed | null
+}
+
+/** World-space physical basis for plan 168's `bed` `LodgingOption` — derived
+ *  from `HouseAssembly.interactionPoints`' `'sleep'` point, not stored/authored
+ *  in world space anywhere. */
+export type SettlementHouseBed = {
+  position: { x: number, z: number }
+  approach: { x: number, z: number }
+  /** World-space yaw the sleeper should face, or `null` to keep facing as-is. */
+  facing: number | null
 }
 
 export type SettlementLandmarks = {
@@ -750,6 +768,18 @@ export async function buildSettlementProps(
     console.warn('[settlement] lantern.glb unavailable — procedural house lamps', err)
   }
 
+  // Plan 169 interior table lamp — same load/prepare/fallback pattern as the
+  // exterior lantern above, own GLB (Quaternius Furniture Pack `lamp.glb`).
+  // `null` on failure just means furnished houses skip the lamp visual+light
+  // this session (only `COTTAGE_4X4_A` uses it) — not fatal.
+  let lanternTable: THREE.Object3D | null = null
+  try {
+    const tableLamp = await loadGltf(TABLE_LAMP_URL)
+    lanternTable = preparePropFitMax(tableLamp, TABLE_LAMP_FIT_MAX)
+  } catch (err) {
+    console.warn('[settlement] furniture/lamp.glb unavailable — house interiors skip table lamp', err)
+  }
+
   let torchPostTemplate: THREE.Object3D = createProceduralTorchPost()
   try {
     torchPostTemplate = await loadPropOrFallback(
@@ -813,9 +843,11 @@ export async function buildSettlementProps(
           source: 'definitionDefault',
         }
 
+    let builtAssembly: HouseAssembly | null = null
     if (builderReady) {
       const assembly = buildHouse(def, builderReady)
       hut = assembly.root
+      builtAssembly = assembly
       houseAssemblies.push(assembly)
     } else {
       const entry = pickHomeHouse(size, i, seed)
@@ -858,6 +890,71 @@ export async function buildSettlementProps(
       area.z,
     )
     landmarks.homes.push(foot)
+
+    // Plan 169 — interior furniture, only for houses built through the
+    // HouseBuilder assembly path with authored `def.furniture`
+    // (`COTTAGE_4X4_A` this session). `hut` is already placed in world
+    // space (`hut.rotation.y`/`placeOnGround` above), so furniture-local
+    // points only need the same rotate-then-scale-then-translate `hut`
+    // itself already carries — same cos/sin convention
+    // `houseBuilder.ts`'s `transformHouseCollidersToWorld` uses, kept local
+    // here since it also needs the Y axis (unrotated, just scaled+offset).
+    const toWorld = (local: HouseVec3): HouseVec3 => {
+      const cos = Math.cos(hut.rotation.y)
+      const sin = Math.sin(hut.rotation.y)
+      const sx = local.x * hut.scale.x
+      const sz = local.z * hut.scale.z
+      return {
+        x: hut.position.x + sx * cos - sz * sin,
+        y: hut.position.y + local.y * hut.scale.y,
+        z: hut.position.z + sx * sin + sz * cos,
+      }
+    }
+    let bed: SettlementHouseBed | null = null
+    if (builtAssembly) {
+      const sleepPoint = builtAssembly.interactionPoints.find((p) => p.kind === 'sleep')
+      const bedFurniture = def.furniture?.find((f) => f.role === 'bed')
+      if (sleepPoint && bedFurniture) {
+        const approach = toWorld(sleepPoint.position)
+        const bedWorld = toWorld(bedFurniture.position)
+        bed = {
+          position: { x: bedWorld.x, z: bedWorld.z },
+          approach: { x: approach.x, z: approach.z },
+          facing: sleepPoint.facing != null ? hut.rotation.y + sleepPoint.facing : null,
+        }
+      }
+
+      // Chest — procedural visual (no GLB, `world/containerProp.ts`), and the
+      // interior table lamp (light + GLB) — both placed as house-local
+      // children of `hut` directly (not through `buildHouse()`'s
+      // `ConstructionCatalog`-backed static path), so they need the same
+      // world-size compensation the exterior lamp already applies below
+      // (`invHouseScale`) to cancel out `HOUSE_ASSEMBLY_SCALE`.
+      const invHouseScaleFurniture = 1 / Math.max(Math.abs(hut.scale.x), 1e-6)
+      const chestFurniture = def.furniture?.find((f) => f.role === 'chest')
+      if (chestFurniture) {
+        const chest = createPlacedContainerProp()
+        chest.position.set(chestFurniture.position.x, chestFurniture.position.y, chestFurniture.position.z)
+        chest.rotation.y = chestFurniture.rotationY
+        chest.scale.multiplyScalar(invHouseScaleFurniture)
+        hut.add(chest)
+      }
+      // Static mesh only — no independent PointLight. The house's existing
+      // exterior-lamp `createHouseLight()` call (below) already adds one
+      // unshadowed interior fill light per house; a second `createHouseLight`
+      // call here would silently double that (it always bundles its own
+      // fill light, see `attachHouseInnerLight` in `houseLighting.ts`) for no
+      // visible benefit — not the smallest integration plan 169 asks for.
+      const lampFurniture = def.furniture?.find((f) => f.role === 'lamp')
+      if (lampFurniture && lanternTable) {
+        const lampMesh = lanternTable.clone(true)
+        lampMesh.position.set(lampFurniture.position.x, lampFurniture.position.y, lampFurniture.position.z)
+        lampMesh.rotation.y = lampFurniture.rotationY
+        lampMesh.scale.multiplyScalar(invHouseScaleFurniture)
+        hut.add(lampMesh)
+      }
+    }
+
     landmarks.houses.push({
       position: foot.clone(),
       houseId,
@@ -868,6 +965,7 @@ export async function buildSettlementProps(
       footprintRadius,
       lampMount: { x: lampMount.x, y: lampMount.y, z: lampMount.z },
       lampMountSource: lampMount.source,
+      bed,
     })
 
     const lanternTpl = lampStyle === 'wall' ? lanternWall : lanternFloor

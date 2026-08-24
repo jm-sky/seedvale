@@ -1,5 +1,6 @@
 import type { VillageSize } from '../settlement/families'
 import { createSeededRandom } from '../world/parseSeed'
+import { anchorsForAsset } from './assetAnchorData'
 import { parkedIdFromUrl } from './assetIndex'
 
 /**
@@ -13,7 +14,7 @@ export const HOUSE_MODULE_M = 2
 
 export type HouseWallSide = 'front' | 'back' | 'left' | 'right'
 export type HouseCornerSide = 'frontLeft' | 'frontRight' | 'backLeft' | 'backRight'
-export type HouseInteractionKind = 'door' | 'entrance' | 'work' | 'storage'
+export type HouseInteractionKind = 'door' | 'entrance' | 'work' | 'storage' | 'sleep'
 
 export type HouseVec3 = { x: number, y: number, z: number }
 
@@ -78,9 +79,39 @@ export type HouseDecoration = {
 export type HouseInteractionPoint = {
   kind: HouseInteractionKind
   position: HouseVec3
+  /** House-local yaw (radians) the player should face at this point. Only
+   *  meaningful for `'sleep'` today (plan 168's `LodgingOption.facing`);
+   *  omitted elsewhere. */
+  facing?: number
 }
 
 export type HouseLampMount = { x: number, y: number, z: number }
+
+export type HouseFurnitureRole = 'bed' | 'table' | 'chest' | 'lamp'
+
+/**
+ * Static interior furniture (plan 169). `bed`/`table` resolve through
+ * `ConstructionCatalog` like every other house part (real GLBs under
+ * `public/models/settlement/furniture/`). `chest` has no GLB (reuses the
+ * existing procedural chest visual, `world/containerProp.ts`) and `lamp` is
+ * a light source (existing `houseLighting.ts` mount/fallback pipeline) — both
+ * are placed directly by `settlement/props.ts`, not through the catalog/static
+ * batch path; their `assetId` here is a documentation-only sentinel, not a
+ * resolvable catalog id.
+ */
+export type HouseFurniturePlacement = {
+  assetId: string
+  position: HouseVec3
+  rotationY: number
+  role: HouseFurnitureRole
+  /**
+   * Local to this furniture item (relative to its own `position`, before its
+   * own `rotationY` is applied — same convention `houseBuilder.ts` uses
+   * everywhere else). `facing`, if set, is a yaw *delta* added to this
+   * furniture's `rotationY` to produce the final absolute house-local facing.
+   */
+  interactionPoints?: readonly HouseInteractionPoint[]
+}
 
 export type HouseDefinition = {
   id: string
@@ -96,6 +127,9 @@ export type HouseDefinition = {
   decorations?: readonly HouseDecoration[]
   /** Local interaction points (door / entrance / …). Builder also derives door/entrance when omitted. */
   interactionPoints?: readonly HouseInteractionPoint[]
+  /** Interior furniture (plan 169) — bed/table/chest/lamp. Additive: does not
+   *  replace `interactionPoints`' door/entrance derivation. */
+  furniture?: readonly HouseFurniturePlacement[]
   /** Settlement examine / lamp metadata — not used by the builder itself. */
   label?: string
   examine?: string
@@ -108,6 +142,7 @@ export type HouseDefinition = {
 }
 
 const pk = (name: string): string => parkedIdFromUrl(`/models/settlement/megakit/${name}.glb`)
+const fk = (name: string): string => parkedIdFromUrl(`/models/settlement/furniture/${name}.glb`)
 
 /** Measured plaster-wall height (review 009 / catalog) — roof origin sits at wall-top, not y=0. */
 export const PLASTER_WALL_TOP_Y = 3.12
@@ -132,6 +167,89 @@ const ROOF_CAP_6X6 = pk('roof_roundtiles_6x6')
 const GABLE_4 = pk('roof_front_brick4')
 const GABLE_6 = pk('roof_front_brick6')
 const GABLE_8 = pk('roof_front_brick8')
+
+/**
+ * Plan 169 interior furniture — measured `src/assets/furnitureAudit.generated.json`
+ * (Quaternius Furniture Pack, `FBX2glTF` → `gltfpack -cc`,
+ * `public/models/settlement/furniture/`). `bed`/`table` resolve through
+ * `ConstructionCatalog` like any other house part (`fk()`, same convention as
+ * MegaKit's `pk()`). `chest`/`lamp` have no catalog GLB — `settlement/props.ts`
+ * places them directly (procedural chest visual, existing house-lighting
+ * pipeline for the lamp) — these two sentinel ids are documentation only.
+ */
+const FURNITURE_BED = fk('bed')
+const FURNITURE_TABLE = fk('table')
+const FURNITURE_CHEST_SENTINEL = 'procedural:chest'
+const FURNITURE_LAMP_SENTINEL = 'procedural:lamp'
+
+/**
+ * Lamp position derived from the table's `mount` anchor (`assetAnchorData.ts`
+ * `'lamp_mount'` on `FURNITURE_TABLE`) rather than an independent coordinate —
+ * "mounted relative to the table," per plan 169. Anchor `position` is
+ * `assetLocal` (table-local metres); rotated by the table's own `rotationY`
+ * and translated by its `position`, same 2D-rotation convention
+ * `houseBuilder.ts` uses everywhere else (e.g. `wallLocalTransform`).
+ */
+function lampOnTable(table: { position: HouseVec3, rotationY: number }): HouseVec3 {
+  const anchor = anchorsForAsset(FURNITURE_TABLE).find((a) => a.name === 'lamp_mount')
+  const [lx, ly, lz] = anchor?.position ?? [0, 0.618, 0]
+  const cos = Math.cos(table.rotationY)
+  const sin = Math.sin(table.rotationY)
+  return {
+    x: table.position.x + lx * cos - lz * sin,
+    y: table.position.y + ly,
+    z: table.position.z + lx * sin + lz * cos,
+  }
+}
+
+/**
+ * First furnished house (plan 169 "pierwszy zakres") — `COTTAGE_4X4_A` only.
+ * Placement checked against the definition's own footprint/openings math
+ * (`wallLocalTransform`) for wall/door clearance; final visual fit (bed/lamp
+ * orientation in particular — the source asset's own forward axis was not
+ * independently confirmed) still needs a browser look per plan 169's
+ * alignment-browser rule and `CLAUDE.md`'s "do not mark visual work verified
+ * without browser confirmation."
+ */
+function cottage4x4aFurniture(): HouseFurniturePlacement[] {
+  const bed: HouseFurniturePlacement = {
+    assetId: FURNITURE_BED,
+    position: { x: -0.5, y: 0, z: 1.4 },
+    rotationY: 0,
+    role: 'bed',
+    interactionPoints: [
+      {
+        kind: 'sleep',
+        // ~0.4 m out from the bed's room-facing long side, into the open floor.
+        position: { x: 0, y: 0, z: -0.845 },
+        // Face into the room, away from the back wall the bed is pushed against.
+        facing: 0,
+      },
+    ],
+  }
+  const table: HouseFurniturePlacement = {
+    assetId: FURNITURE_TABLE,
+    position: { x: 0.7, y: 0, z: -0.4 },
+    rotationY: 0,
+    role: 'table',
+  }
+  const chest: HouseFurniturePlacement = {
+    assetId: FURNITURE_CHEST_SENTINEL,
+    position: { x: -1.65, y: 0, z: 0.6 },
+    rotationY: Math.PI / 2,
+    role: 'chest',
+    interactionPoints: [
+      { kind: 'storage', position: { x: 0, y: 0, z: 0.5 } },
+    ],
+  }
+  const lamp: HouseFurniturePlacement = {
+    assetId: FURNITURE_LAMP_SENTINEL,
+    position: lampOnTable(table),
+    rotationY: 0,
+    role: 'lamp',
+  }
+  return [bed, table, chest, lamp]
+}
 
 /**
  * Two opposite `wooden_2x1` slope runs along X plus ridge `_middle` plates.
@@ -384,21 +502,27 @@ export const TEST_HOUSE_02: HouseDefinition = plasterHouse({
   sizeClass: 'cottage',
 })
 
-/** 4×4 m — small one-room cottage (~16 m²). `roof_roundtiles_4x4` cap. */
-export const COTTAGE_4X4_A: HouseDefinition = plasterHouse({
-  id: 'cottage-4x4-a',
-  width: 4,
-  depth: 4,
-  openings: [
-    { type: 'door', side: 'front', moduleIndex: 0 },
-    { type: 'window', side: 'front', moduleIndex: 1 },
-    { type: 'window', side: 'right', moduleIndex: 0 },
-  ],
-  roof: capRoofWithGables(ROOF_CAP_4X4, GABLE_4, { width: 4, depth: 4 }, 'frontBack'),
-  label: 'Chatka',
-  examine: 'Niewielka tynkowana chatka pod dachówką — jedna izba, drzwi i okno od drogi.',
-  sizeClass: 'cottage',
-})
+/**
+ * 4×4 m — small one-room cottage (~16 m²). `roof_roundtiles_4x4` cap. Plan 169's
+ * first furnished house — see `cottage4x4aFurniture()`.
+ */
+export const COTTAGE_4X4_A: HouseDefinition = {
+  ...plasterHouse({
+    id: 'cottage-4x4-a',
+    width: 4,
+    depth: 4,
+    openings: [
+      { type: 'door', side: 'front', moduleIndex: 0 },
+      { type: 'window', side: 'front', moduleIndex: 1 },
+      { type: 'window', side: 'right', moduleIndex: 0 },
+    ],
+    roof: capRoofWithGables(ROOF_CAP_4X4, GABLE_4, { width: 4, depth: 4 }, 'frontBack'),
+    label: 'Chatka',
+    examine: 'Niewielka tynkowana chatka pod dachówką — jedna izba, drzwi i okno od drogi.',
+    sizeClass: 'cottage',
+  }),
+  furniture: cottage4x4aFurniture(),
+}
 
 export const COTTAGE_4X4_B: HouseDefinition = plasterHouse({
   id: 'cottage-4x4-b',

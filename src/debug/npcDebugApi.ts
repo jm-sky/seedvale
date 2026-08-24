@@ -56,6 +56,10 @@ export type VillageDebugHandle = {
   /** Re-resolves the village fresh at call time before teleporting — never
    *  reuses a def/position captured when the handle was created. */
   teleportHere: () => Promise<boolean>
+  /** Per-house `HouseDefinition` id + whether it has a plan 168/169 bed
+   *  lodging source — `null` while the settlement isn't currently loaded
+   *  (same "streamed in" caveat as `npcs()`). */
+  houses: () => { definitionId: string, hasBed: boolean }[] | null
 }
 
 export type LocationsDebugApi = {
@@ -110,6 +114,7 @@ const HELP_TEXT = [
   'npc(id) / npcs(filter?) — inspect a live NPC by id / query all loaded NPCs',
   'village(id) — resolves by id even if the village is currently unloaded (npcs() is [] then)',
   'villages() — lists currently loaded villages only',
+  'village(id).houses() / villages()[i].houses() — per-house definitionId + hasBed; null while unloaded',
   'locations.{mountainNearest,deepForestNearest,riverNearest,villageNearest,oceanNearest}() — bounded deterministic nearest-feature search from the player; null if none found within budget',
   'teleportTo(locationResult) / teleportTo.{mountainNearest,deepForestNearest,riverNearest,villageNearest,oceanNearest}() — teleport to a location query result; awaits terrain load first, resolves false if no such location exists',
   'setFrenzyWolf() — debug combat trigger',
@@ -167,6 +172,11 @@ export function installNpcDebugApi(
       size: identity.size,
       position: { x: identity.x, z: identity.z },
       npcs: () => queryNpcs(bundle, getTimeOfDay(), { settlementId: identity.id }),
+      houses: () => {
+        const loaded = bundle.settlementsManager.getLoaded().find((s) => s.id === identity.id)
+        if (!loaded) return null
+        return loaded.landmarks.houses.map((h) => ({ definitionId: h.definitionId, hasBed: h.bed != null }))
+      },
       teleportHere: async () => {
         const fresh = findVillageDef(bundle.settlementsManager, identity.id)
         if (!fresh) return false

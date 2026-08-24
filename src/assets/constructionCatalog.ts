@@ -4,6 +4,7 @@ import {
   buildAssetIndex,
   mergeParkedManifest,
 } from './assetIndex'
+import furnitureAuditRaw from './furnitureAudit.generated.json'
 import megakitAuditRaw from './megakitAudit.generated.json'
 
 /**
@@ -82,8 +83,13 @@ type MegakitAuditEntry = {
 }
 
 const megakitAudit = megakitAuditRaw as unknown as Record<string, MegakitAuditEntry>
+/** Plan 169 — same audit shape as `megakitAudit`, produced by the sibling
+ *  `scripts/audit-furniture.mjs` over `public/models/settlement/furniture/`
+ *  (bed/table/lamp), not a second measurement tool. */
+const furnitureAudit = furnitureAuditRaw as unknown as Record<string, MegakitAuditEntry>
 
 const MEGAKIT_URL_PREFIX = '/models/settlement/megakit/'
+const FURNITURE_URL_PREFIX = '/models/settlement/furniture/'
 
 /** MegaKit `kind` (from `assetIndex.ts` filename prefixes) → construction category. Unlisted kinds are `decoration`. */
 const KIND_TO_CONSTRUCTION: Readonly<Record<string, ConstructionPartKind>> = {
@@ -162,6 +168,11 @@ export function megakitUrls(): string[] {
   return Object.keys(megakitAudit).map((name) => `${MEGAKIT_URL_PREFIX}${name}.glb`)
 }
 
+/** Plan 169 furniture file list (bed/table/lamp), same convention as `megakitUrls`. */
+export function furnitureUrls(): string[] {
+  return Object.keys(furnitureAudit).map((name) => `${FURNITURE_URL_PREFIX}${name}.glb`)
+}
+
 /**
  * `buildConstructionCatalog(assetIndex)` — layers construction semantics over the index.
  * Parked MegaKit entries are produced via `mergeParkedManifest` (same convention plan 107
@@ -171,29 +182,50 @@ export function megakitUrls(): string[] {
 export function buildConstructionCatalog(
   wired: readonly AssetIndexEntry[] = buildAssetIndex(),
 ): ConstructionCatalog {
-  const merged = mergeParkedManifest(wired, megakitUrls())
+  const merged = mergeParkedManifest(wired, [...megakitUrls(), ...furnitureUrls()])
   const parts: ConstructionPart[] = []
 
   for (const entry of merged) {
-    if (entry.pack !== 'megakit') continue
-    const name = basenameFromUrl(entry.url)
-    const audit = megakitAudit[name]
-    if (!audit) continue
+    if (entry.pack === 'megakit') {
+      const name = basenameFromUrl(entry.url)
+      const audit = megakitAudit[name]
+      if (!audit) continue
 
-    const kind = constructionKindOf(entry.kind)
-    const dimensions = { x: audit.dimensions[0], y: audit.dimensions[1], z: audit.dimensions[2] }
+      const kind = constructionKindOf(entry.kind)
+      const dimensions = { x: audit.dimensions[0], y: audit.dimensions[1], z: audit.dimensions[2] }
 
-    parts.push({
-      assetId: entry.id,
-      url: entry.url,
-      kind,
-      variant: variantOf(name, entry.kind),
-      materials: audit.materials,
-      dimensions,
-      module: detectModule(kind, dimensions),
-      anchors: faceAnchors(audit.min, audit.max),
-      gridReliable: isGridReliable(kind, audit),
-    })
+      parts.push({
+        assetId: entry.id,
+        url: entry.url,
+        kind,
+        variant: variantOf(name, entry.kind),
+        materials: audit.materials,
+        dimensions,
+        module: detectModule(kind, dimensions),
+        anchors: faceAnchors(audit.min, audit.max),
+        gridReliable: isGridReliable(kind, audit),
+      })
+    } else if (entry.pack === 'furniture') {
+      // Plan 169 — house furniture (bed/table/lamp). Static, non-modular
+      // decorations, same defaults `chimney`/other MegaKit decorations get.
+      const name = basenameFromUrl(entry.url)
+      const audit = furnitureAudit[name]
+      if (!audit) continue
+
+      const dimensions = { x: audit.dimensions[0], y: audit.dimensions[1], z: audit.dimensions[2] }
+
+      parts.push({
+        assetId: entry.id,
+        url: entry.url,
+        kind: 'decoration',
+        variant: name,
+        materials: audit.materials,
+        dimensions,
+        module: { axis: null, size: null },
+        anchors: faceAnchors(audit.min, audit.max),
+        gridReliable: false,
+      })
+    }
   }
 
   const byKind = new Map<ConstructionPartKind, ConstructionPart[]>()

@@ -1,0 +1,71 @@
+{
+  "bed": {
+    "dimensions": [
+      1.43,
+      0.49,
+      0.89
+    ],
+    "min": [
+      -0.733,
+      -0.004,
+      -0.445
+    ],
+    "max": [
+      0.697,
+      0.486,
+      0.445
+    ],
+    "materials": [
+      "White"
+    ],
+    "symmetricX": true,
+    "symmetricZ": true,
+    "originAtBaseY": true
+  },
+  "lamp": {
+    "dimensions": [
+      0.231,
+      1.038,
+      0.245
+    ],
+    "min": [
+      -0.116,
+      0,
+      -0.121
+    ],
+    "max": [
+      0.116,
+      1.039,
+      0.124
+    ],
+    "materials": [
+      "Top.001"
+    ],
+    "symmetricX": true,
+    "symmetricZ": true,
+    "originAtBaseY": true
+  },
+  "table": {
+    "dimensions": [
+      1.106,
+      0.623,
+      1.016
+    ],
+    "min": [
+      -0.553,
+      -0.005,
+      -0.508
+    ],
+    "max": [
+      0.553,
+      0.618,
+      0.508
+    ],
+    "materials": [
+      "DarkWood.012"
+    ],
+    "symmetricX": true,
+    "symmetricZ": true,
+    "originAtBaseY": true
+  }
+}

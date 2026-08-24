@@ -2,6 +2,7 @@ import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { RelationLevel } from '../quests/quests'
 import type { Settlement } from './createSettlement'
 import type { LodgingOption } from './lodging'
+import type { SettlementHouseBed } from './props'
 import { homeIndexFromPlaceId } from './places'
 
 /**
@@ -19,7 +20,14 @@ export type LodgingSettlementInput = {
   /** Index-aligned with the settlement's home `Place` index — same
    *  `landmarks.houses[i]` ↔ `homePlaceId(settlementId, i)` pairing
    *  `createSettlement.ts` already relies on. */
-  houses: readonly { x: number, z: number }[]
+  houses: readonly {
+    x: number
+    z: number
+    /** Plan 169 — physical bed lodging source, `null` for houses with none
+     *  (every house except this session's furnished `COTTAGE_4X4_A`, and the
+     *  legacy catalog-GLB fallback house). */
+    bed: SettlementHouseBed | null
+  }[]
   /** A real settlement landmark to anchor the hay fallback on (the garden pad
    *  hay bales are actually placed near — see `props.ts`'s `hayGardens`).
    *  `null` only if the settlement genuinely has none. */
@@ -33,18 +41,32 @@ export function settlementLodgingInput(settlement: Settlement): LodgingSettlemen
       name: npc.name,
       household: npc.household ? { id: npc.household.id, homeId: npc.household.homeId } : null,
     })),
-    houses: settlement.landmarks.houses.map((house) => ({ x: house.position.x, z: house.position.z })),
+    houses: settlement.landmarks.houses.map((house) => ({
+      x: house.position.x,
+      z: house.position.z,
+      bed: house.bed,
+    })),
     haySpot: settlement.landmarks.garden ? { x: settlement.landmarks.garden.x, z: settlement.landmarks.garden.z } : null,
   }
 }
 
 const FRIEND_RELATION_LEVELS: ReadonlySet<RelationLevel> = new Set(['friendly', 'trusted'])
 
-function collectBedCandidates(_settlement: LodgingSettlementInput): LodgingOption[] {
-  // No physical bed provider exists yet — plan 169 registers real beds
-  // through this same `LodgingOption` contract without needing a resolver
-  // API change (implementation notes §6).
-  return []
+function collectBedCandidates(settlement: LodgingSettlementInput): LodgingOption[] {
+  const out: LodgingOption[] = []
+  settlement.houses.forEach((house, index) => {
+    if (!house.bed) return
+    out.push({
+      id: `${settlement.id}:bed:${index}`,
+      type: 'bed',
+      settlementId: settlement.id,
+      position: house.bed.position,
+      approachPoint: house.bed.approach,
+      facing: house.bed.facing,
+      quality: 'high',
+    })
+  })
+  return out
 }
 
 function collectFriendCandidates(
