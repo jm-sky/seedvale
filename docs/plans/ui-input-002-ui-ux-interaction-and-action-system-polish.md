@@ -146,4 +146,26 @@ Sprawdzić co najmniej:
 - MerchantScreen korzystający z istniejącego trade modelu i finalnego UX z `ui-input-003`,
 - Escape/back/close behaviour i focus/overlay stacking.
 
+## Recent playtest UI/UX findings
+
+Uwagi z aktualnego playtestu wymagające uwzględnienia w ramach tego planu:
+
+### Prepare Terrain controls
+
+- `Przygotuj teren` nie ma na mobile widocznych przycisków `+` / `-` oraz `,` / `.` odpowiadających obecnym akcjom/sterowaniu.
+- Dodać jawne przyciski UI również na desktopie, aby podstawowe akcje nie wymagały znajomości skrótów klawiaturowych.
+- Przyciski powinny korzystać z istniejącego mechanizmu akcji/sterowania, bez tworzenia równoległej logiki tylko dla UI.
+
+### Quick Actions — mobile scrolling
+
+- Przy większej liczbie Quick Actions poziomy scroll jest niewygodny na telefonie.
+- Poprawić obsługę poziomego przewijania gestem oraz czytelność/affordance przewijanej listy.
+- Rozwiązanie powinno współgrać z docelowym porządkowaniem Quick Actions opisanym w sekcji `Quick Actions scalability`.
+
+### Quick Actions / Merchant stacking
+
+- Na ekranie Handlu Quick Actions mają obecnie zbyt wysoki `z-index` i mogą przykrywać elementy Merchant UI.
+- Uporządkować stacking context tak, aby MerchantScreen i jego aktywne elementy były interaktywne, a Quick Actions nie zasłaniały ich bez uzasadnienia.
+- Uwzględnić ten przypadek w ogólnej zasadzie hierarchii overlayów, zamiast dodawać lokalny hack dla MerchantScreen.
+
 **Zrób git commit i push do main, rebase jeżeli trzeba**
