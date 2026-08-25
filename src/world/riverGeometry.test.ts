@@ -68,4 +68,30 @@ describe('buildRiverRibbonGeometry', () => {
     expect(geometry!.getAttribute('position').count).toBe(run.length * 2)
     expect(geometry!.getIndex()!.count).toBe((run.length - 1) * 6)
   })
+
+  it('marks gentle-slope points as zero waterfall factor', () => {
+    const run = [
+      { x: 0, z: 0, elevation: 10, accumulation: 20 },
+      { x: 8, z: 0, elevation: 9.9, accumulation: 20 },
+      { x: 16, z: 0, elevation: 9.8, accumulation: 20 },
+    ]
+    const geometry = buildRiverRibbonGeometry([run], 0, 0, () => 0)
+    const aFall = geometry!.getAttribute('aFall')
+    for (let i = 0; i < aFall.count; i++) expect(aFall.getX(i)).toBe(0)
+  })
+
+  it('gives a steep drop between consecutive points a positive, bounded waterfall factor', () => {
+    const run = [
+      { x: 0, z: 0, elevation: 20, accumulation: 20 },
+      { x: 8, z: 0, elevation: 5, accumulation: 20 }, // ~1.9 rise/run — well past the threshold
+    ]
+    const geometry = buildRiverRibbonGeometry([run], 0, 0, () => 0)
+    const aFall = geometry!.getAttribute('aFall')
+    // Each point contributes 2 vertices (ribbon edges). The first point in the
+    // run has no predecessor to compare against, so its pair stays 0.
+    expect(aFall.getX(0)).toBe(0)
+    expect(aFall.getX(1)).toBe(0)
+    expect(aFall.getX(2)).toBe(1)
+    expect(aFall.getX(3)).toBe(1)
+  })
 })

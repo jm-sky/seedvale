@@ -101,6 +101,28 @@ function tangentAt(points: RiverPoint[], i: number): { tx: number; tz: number } 
   return { tx: dx / len, tz: dz / len }
 }
 
+// Waterfalls (plan 181, Etap 4/6: "wodospady przy odpowiednio dużym spadku") are
+// deliberately not a second geometry/object system — the chain's own cached
+// `elevation` already carries a real drop wherever the underlying D8 path is
+// steep (and river channel carving, plan 189, already carves the bed to match).
+// This only derives a per-vertex "how much whitewater" signal from the local
+// rise-over-run between consecutive points already in the run, so the existing
+// ribbon reads as churning/foaming there instead of flat water sliding downhill.
+// Below `WATERFALL_SLOPE_MIN` a segment is ordinary flow; above
+// `WATERFALL_SLOPE_MAX` it reads as a full waterfall.
+const WATERFALL_SLOPE_MIN = 0.6
+const WATERFALL_SLOPE_MAX = 1.6
+
+function waterfallFactor(prev: RiverPoint | null, p: RiverPoint): number {
+  if (!prev) return 0
+  const dist = Math.hypot(p.x - prev.x, p.z - prev.z) || 1
+  const drop = prev.elevation - p.elevation
+  const slope = drop / dist
+  if (slope <= WATERFALL_SLOPE_MIN) return 0
+  const t = (slope - WATERFALL_SLOPE_MIN) / (WATERFALL_SLOPE_MAX - WATERFALL_SLOPE_MIN)
+  return t > 1 ? 1 : t
+}
+
 /**
  * Builds a simple extruded ribbon (perpendicular offset by flow-derived
  * half-width) from already-clipped, chunk-local runs. Y comes from each
@@ -122,11 +144,13 @@ export function buildRiverRibbonGeometry(
   const positions: number[] = []
   const uvs: number[] = []
   const flows: number[] = []
+  const falls: number[] = []
   const indices: number[] = []
 
   for (const run of usableRuns) {
     const base = positions.length / 3
     let arcLength = 0
+    let prevPoint: RiverPoint | null = null
     for (let i = 0; i < run.length; i++) {
       const p = run[i]!
       const { tx, tz } = tangentAt(run, i)
@@ -138,6 +162,7 @@ export function buildRiverRibbonGeometry(
       // large rivers confident (plan 181 Etap 7). Same curve `widthFromAccumulation`
       // itself is built on, so a point's width and its shader "bigness" agree.
       const flow = flowFactor(p.accumulation)
+      const fall = waterfallFactor(prevPoint, p)
 
       const x = p.x - chunkOriginX
       const z = p.z - chunkOriginZ
@@ -146,6 +171,7 @@ export function buildRiverRibbonGeometry(
       positions.push(x - px * halfWidth, y, z - pz * halfWidth)
       positions.push(x + px * halfWidth, y, z + pz * halfWidth)
       flows.push(flow, flow)
+      falls.push(fall, fall)
 
       if (i > 0) {
         const prev = run[i - 1]!
@@ -158,6 +184,7 @@ export function buildRiverRibbonGeometry(
         const a = base + i * 2
         indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2)
       }
+      prevPoint = p
     }
   }
 
@@ -165,6 +192,7 @@ export function buildRiverRibbonGeometry(
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
   geometry.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2))
   geometry.setAttribute('aFlow', new BufferAttribute(new Float32Array(flows), 1))
+  geometry.setAttribute('aFall', new BufferAttribute(new Float32Array(falls), 1))
   geometry.setIndex(indices)
   return geometry
 }

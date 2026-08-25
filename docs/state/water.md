@@ -4,7 +4,7 @@
 
 **Nie jest:** planem implementacji ([plans/](./plans/README.md)), logiem całej grafiki ([GRAPHICS.md](./architecture/GRAPHICS.md) — tam zostają kontrakty G4–G6), ani katalogiem assetów.
 
-**Last verified:** 2026-08-21 (rzeki: plany 181/189 zaimplementowane, browser check jeszcze nie zrobiony — reszta sekcji verified 2026-08-13, plan 098 fazy 1–3 + wanna mesha, browser ✅)
+**Last verified:** 2026-08-25 (rzeki: plany 181/189 zaimplementowane w tym wodospady, browser check jeszcze nie zrobiony — reszta sekcji verified 2026-08-13, plan 098 fazy 1–3 + wanna mesha, browser ✅)
 
 Gdy ten plik rozjeżdża się z kodem — **wygrywa kod**, potem aktualizujemy ten dokument.
 
@@ -143,7 +143,7 @@ Pure `src/terrain/hydrology.ts` (D8 flow direction + iterative accumulation nad 
 
 River channel carving (plan 189) dodaje trzeci `computeChunkTile` terrain-modifier stage (`chunkHeightmap.ts`'s `applyRiverChannel`, po roads/clearings) — `riverNetwork.ts`'s `riverChannelSegmentsNear` zamienia ten sam kanoniczny, już-zmeandrowany łańcuch (który renderuje wstążka wody) na `RiverChannelSegment[]` (half-width z `widthFromAccumulation`, depth z nowego bounded `depthFromAccumulation` na tej samej `flowFactor` krzywej). Channel bed height jest ściśle malejące w dół rzeki z konstrukcji (D8 elevation ściśle maleje, accumulation nigdy nie maleje — udowodnione w testach), więc nie potrzeba osobnego passu korekcji monotoniczności. Carving tylko obniża teren (`Math.min(bedH, floorH)`), nigdy nie podnosi; istniejąca wstążka już sampluje realny renderowany teren Y, więc automatycznie podąża za wyrzeźbionym kanałem — bez zmian po stronie wody.
 
-Rzeki **nie** karmią z powrotem `sampleFloorAt`/gameplay terrain poza samym carvingiem powyżej. Waterfalls, pełny shader/rendering parity z jeziorem/oceanem i worker offload są świadomie odłożone (patrz [plans/LOOSE-ENDS.md](./plans/LOOSE-ENDS.md)). Browser verification jeszcze nie zrobiony.
+Rzeki **nie** karmią z powrotem `sampleFloorAt`/gameplay terrain poza samym carvingiem powyżej. Wodospady (plan 181, Etap 7 dokończenie 2026-08-25) są renderowane bez osobnej geometrii/systemu: `riverGeometry.ts`'s `waterfallFactor()` liczy per-vertex rise-over-run między kolejnymi punktami tej samej już-wyciętej per-chunk `run` (z ich własnej cached `elevation`, bez dodatkowego samplowania), zapisywane jako nowy `aFall` attribute obok `aFlow`; `riverWaterMaterial.ts` miesza wstążkę w stronę prawie-opaque piany + szybszy, wielokierunkowy wzór "mgły" przy stromym spadku. Pełny shader/rendering parity z jeziorem/oceanem (reflection binding, depth-based foam) i worker offload dla hydrologii pozostają świadomie odłożone bez pomiarowego uzasadnienia (patrz [plans/LOOSE-ENDS.md](./plans/LOOSE-ENDS.md)). Browser verification jeszcze nie zrobiony.
 
 Wejścia kodu:
 
@@ -199,13 +199,17 @@ Plan: [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflecti
 
 ### P2 — później
 
-7. Nurt rzek — geometria/materiał rzeki zaimplementowane (plany 181/189, zob. §Rzeki wyżej); waterfalls i pełna shader/rendering parity z jeziorem/oceanem zostają odłożone.
+7. Nurt rzek — geometria/materiał rzeki i wodospady zaimplementowane (plany 181/189, zob. §Rzeki wyżej); pełna shader/rendering parity z jeziorem/oceanem zostaje odłożona.
 8. Mesh per basen (review 001 C) — osobna geometria jeziora. **Wanna w meshu terenu** (finding 2) jest zrobiona: `buildChunkGeometry` czyta `floorHeights`.
 9. SSR, refrakcja, caustics, mirror > 256² — **nie**.
 
 ---
 
 ## Historia poprawek
+
+### 2026-08-25 — Rzeki: wodospady (plan 181, Etap 7 dokończenie) 🔧
+
+Per-vertex `aFall` attribute na istniejącej river ribbon (`riverGeometry.ts`'s `waterfallFactor()`, z już-cached point `elevation`, bez nowej geometrii/network data); `riverWaterMaterial.ts` miesza w stronę piany + szybszy "mgła" pattern przy stromym lokalnym spadku. Plan 181 zamknięty (`verification needed`). Pełny opis: §Rzeki (Stan obecny) wyżej.
 
 ### 2026-08-21 — Rzeki: hydrologia, geometria, channel carving (plany 181/189) 🔧
 
@@ -316,7 +320,7 @@ Nierozwiązane z [review 001](./reviews/2026-08-07--001--water-quality.md):
 | Artefakty oceanu na telefonie | notatka | [plans/README.md](./plans/README.md) Quick notes; wyłączenie odbić (W9) |
 | Fauna pije wodę (symulacja) | `todo` | plan [094](./plans/archive/2026-08-13--094--fauna-food-water-for-satiety-hydration.md) |
 | Rzeki: browser/perf verification | `verification needed` | plany [181](./plans/2026-08-21--181--natural-mountains-and-rivers.md) / [189](./plans/2026-08-21--189--river-channel-carving.md) |
-| Rzeki: waterfalls, pełna parytetowość z jeziorem/oceanem, worker offload | `todo`, świadomie odłożone | [plans/LOOSE-ENDS.md](./plans/LOOSE-ENDS.md) |
+| Rzeki: pełna parytetowość z jeziorem/oceanem, worker offload dla hydrologii | `todo`, świadomie odłożone bez pomiarowego uzasadnienia | [plans/LOOSE-ENDS.md](./plans/LOOSE-ENDS.md) |
 
 ---
 
