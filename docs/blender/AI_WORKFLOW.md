@@ -1,63 +1,43 @@
 # AI Workflow — Seedvale Blender + MPFB2
 
-## Purpose
+**Target:** Blender 5.2 + current MPFB2 2.x.
 
-This document defines how an AI agent should work with Blender MCP, Blender 5.2 and MPFB2 for Seedvale character assets.
-
-## Operating model
+## Pipeline
 
 ```text
-Claude Code
+Seedvale NPC spec
+  -> Claude Code
   -> Blender MCP
-  -> Blender 5.2
-  -> bpy / MPFB2
+  -> Blender 5.2 / bpy + MPFB2
   -> Seedvale helpers
-  -> validation
+  -> validate
+  -> optimize / LOD
   -> GLB
 ```
 
-Blender MCP is the transport/control layer. MPFB2 remains a Blender addon. Do not invent a separate MPFB2 MCP layer when `bpy` and MPFB2 services/API can perform the operation.
+Blender MCP is the control/transport layer. MPFB2 is a Blender addon. Do not create a separate MPFB2 MCP layer when Blender Python + MPFB2 API/services are sufficient.
 
 ## Rules
 
-1. Inspect the current Blender scene before modifying it.
-2. Never assume object names, selected objects, active collections, active armatures or MPFB2-generated names.
-3. Prefer MPFB2 services/API or Seedvale helpers over UI automation and fragile operator sequences.
-4. Use Blender context-dependent operators only when there is no appropriate data/API operation, and establish the required context explicitly.
-5. Never destructively modify a reusable MPFB2 source character when a derived/export copy can be used.
-6. Keep character generation parameters separate from Blender runtime objects.
-7. Keep Seedvale semantics separate from MPFB2 implementation details.
-8. Validate the generated character before export: geometry, materials, armature, asset attachments, transforms and expected LOD state.
-9. Do not claim a procedure is verified because it is documented. Verification requires an actual Blender test.
-10. Record Blender and MPFB2 versions for verified procedures.
-11. Prefer deterministic seeds/parameters for reproducible generated NPCs.
-12. Keep generated intermediates separate from final export assets.
-13. Do not add dependencies merely to automate a Blender operation that `bpy`/MPFB2 already supports.
-14. Keep batch generation deterministic and bounded; do not generate hundreds of characters in one interactive operation without an explicit batch plan.
-15. Preserve a clear path from Seedvale NPC specification to exported asset metadata.
+1. Inspect the current Blender scene before changing it.
+2. Inspect the installed MPFB2 version before relying on its API.
+3. Never assume object names, selection, active context or old tutorial APIs.
+4. Prefer direct `bpy.data`, MPFB2 services/API and Seedvale helpers over UI automation.
+5. Use `bpy.ops` only when appropriate; establish its required context explicitly.
+6. Keep source, generated and export objects/collections separate.
+7. Do not destructively modify reusable source characters.
+8. Keep Seedvale NPC data independent from Blender object names and scene structure.
+9. Use deterministic character seeds/specifications.
+10. Validate before export: meshes, tris, materials, assets, rig, transforms and LODs.
+11. Export with explicit settings; never depend on accidental Blender UI state.
+12. Do not guess an MPFB2 API signature. Inspect the installed source/docs.
+13. Do not fix MPFB2 clothing/rig problems with arbitrary parenting before checking the supported asset/rig workflow.
+14. Keep batch generation bounded and deterministic; isolate/quarantine failures.
+15. Record versions for verified procedures.
 
-## Recommended abstraction
+## Character spec
 
-Seedvale helpers should eventually expose a small, explicit API such as:
-
-```text
-create_character(spec)
-set_body(character, spec)
-set_appearance(character, spec)
-add_asset(character, asset_spec)
-equip_item(character, item_spec)
-setup_rig(character, rig_spec)
-optimize_character(character, optimization_spec)
-create_lods(character, lod_spec)
-validate_character(character)
-export_glb(character, export_spec)
-```
-
-These are target helper concepts, not claims that the functions already exist.
-
-## Character specification
-
-The simulation should describe intent, not Blender internals:
+The simulation describes intent, not Blender implementation:
 
 ```text
 sex
@@ -69,24 +49,33 @@ hair
 beard
 clothing
 profession
- equipment
+equipment[]
 seed
 ```
 
-The Blender pipeline translates this into MPFB2 parameters/assets and then into an optimized GLB.
+## Helper boundary
 
-## Verification levels
+Proposed helper concepts:
 
-### Researched
+```text
+create_character(spec)
+set_body(character, spec)
+set_appearance(character, spec)
+add_asset(character, asset)
+equip_item(character, item)
+setup_rig(character, rig)
+optimize_character(character, profile)
+create_lods(character, profile)
+validate_character(character)
+export_glb(character, export_spec)
+```
 
-The procedure is supported by current Blender/MPFB2 documentation or source inspection.
+These are not existing APIs until implemented and verified.
 
-### Verified
+## Verification
 
-The exact procedure has been executed successfully in the stated environment.
+- `researched` — supported by current source/docs.
+- `verified` — executed successfully in target Blender/MPFB2.
+- `Seedvale-verified` — also passes the Seedvale asset/runtime contract.
 
-### Seedvale-verified
-
-The result also passes Seedvale-specific geometry, material, rig and export validation.
-
-Never collapse these levels into one.
+Documentation alone is never verification.
