@@ -143,7 +143,7 @@ const buildRow = (file: string, content: string, hasNotes: boolean): string => {
 
   const depends = dependsRaw.toLowerCase() === 'none' ? '-' : dependsRaw
   const marker = !isPlanned ? '' : (hasNotes ? ' 💡' : ' ◼️')
-  const title = `\`${file}\`${marker}`
+  const title = `${marker} \`${file}\``
 
   return `| ${title.padEnd(40)} | - | ${priorityEmoji} | ${effort} | ${depends} |`
 }
@@ -322,7 +322,7 @@ const syncImplementationNotesMarkers = (
   return lines.map((line, idx) => {
     if (idx < startIdx || idx > endIdx) return line
 
-    const match = line.match(/^\|\s*`([^`]+\.md)`\s*(💡|◼️)?\s*\|/)
+    const match = line.match(/^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/)
 
     if (!match) return line
 
@@ -335,8 +335,8 @@ const syncImplementationNotesMarkers = (
     const marker = hasNotes ? '💡' : '◼️'
 
     return line.replace(
-      /^\|\s*`([^`]+\.md)`\s*(💡|◼️)?\s*\|/,
-      `| \`${file}\` ${marker} |`,
+      /^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/,
+      `| ${marker} \`${file}\` |`,
     )
   })
 }
