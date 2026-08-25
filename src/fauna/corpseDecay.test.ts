@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ANIMAL_DEFS, corpsePhaseFromElapsed, rotFxRelevant } from './AnimalAgent'
+import { ANIMAL_DEFS, canHarvestMeatFrom, corpsePhaseFromElapsed, rotFxRelevant } from './AnimalAgent'
 import { MAX_HP } from './faunaCombat'
 import { createHarvestedRemains, createNaturalRemains } from './harvestedRemains'
 
@@ -49,6 +49,43 @@ describe('createNaturalRemains (plan 188 — natural decay endpoint, no hide/mea
     const natural = createNaturalRemains('deer', 1.1)
     const harvested = createHarvestedRemains('deer', 1.1)
     expect(natural.children.length).toBeLessThan(harvested.children.length)
+  })
+})
+
+describe('canHarvestMeatFrom (plan 188 follow-up — meat only from fresh corpses)', () => {
+  const alive = { dead: false, meatHarvested: false, buried: false, corpsePhase: 'fresh' as const }
+
+  it('allows harvest on a fresh, dead, unharvested, unburied corpse', () => {
+    expect(canHarvestMeatFrom({ ...alive, dead: true })).toBe(true)
+  })
+
+  it('blocks harvest once the corpse is rotting', () => {
+    expect(canHarvestMeatFrom({ ...alive, dead: true, corpsePhase: 'rotting' })).toBe(false)
+  })
+
+  it('blocks harvest once the corpse has decomposed to bones', () => {
+    expect(canHarvestMeatFrom({ ...alive, dead: true, corpsePhase: 'bones' })).toBe(false)
+  })
+
+  it('blocks harvest on a live animal regardless of phase', () => {
+    expect(canHarvestMeatFrom({ ...alive, dead: false })).toBe(false)
+  })
+
+  it('blocks harvest already taken', () => {
+    expect(canHarvestMeatFrom({ ...alive, dead: true, meatHarvested: true })).toBe(false)
+  })
+
+  it('blocks harvest on a buried corpse even if still nominally fresh', () => {
+    expect(canHarvestMeatFrom({ ...alive, dead: true, buried: true })).toBe(false)
+  })
+
+  it('composes with corpsePhaseFromElapsed across the death → fresh → rotting timeline', () => {
+    const justDied = corpsePhaseFromElapsed(0)
+    const stillFresh = corpsePhaseFromElapsed(19.9)
+    const rotted = corpsePhaseFromElapsed(20)
+    expect(canHarvestMeatFrom({ ...alive, dead: true, corpsePhase: justDied })).toBe(true)
+    expect(canHarvestMeatFrom({ ...alive, dead: true, corpsePhase: stillFresh })).toBe(true)
+    expect(canHarvestMeatFrom({ ...alive, dead: true, corpsePhase: rotted })).toBe(false)
   })
 })
 

@@ -119,6 +119,21 @@ export function rotFxRelevant(phase: CorpsePhase, distanceToObserver: number): b
   return phase === 'rotting' && distanceToObserver <= CORPSE_FX_DISTANCE
 }
 
+/** Whether a corpse can still yield a knife-harvest — meat is only good
+ *  while `fresh`; once natural decay has moved it into `rotting`/`bones` (or
+ *  it's been buried, or already harvested), it's a lost source (plan 188
+ *  follow-up: "meat only from fresh corpses"). Pure/exported so
+ *  `AnimalAgent.canHarvestMeat()`'s rule is unit-testable without Three.js,
+ *  same technique as `corpsePhaseFromElapsed`/`isCarcassEdible` above. */
+export function canHarvestMeatFrom(opts: {
+  dead: boolean
+  meatHarvested: boolean
+  buried: boolean
+  corpsePhase: CorpsePhase
+}): boolean {
+  return opts.dead && !opts.meatHarvested && !opts.buried && opts.corpsePhase === 'fresh'
+}
+
 /** "Groźny wilk" (plan 110) — `markDangerous()` tuning. A visible, tougher
  *  individual, not a separate animal type or model. */
 const DANGEROUS_HP_MULTIPLIER = 2
@@ -1074,17 +1089,27 @@ export class AnimalAgent {
     this.timeSinceDeath = HARVESTED_REMAINS_LINGER_SECONDS
   }
 
-  /** Plan 106 — a dead, not-yet-harvested corpse can yield `raw_meat`. */
+  /** Plan 106/188 — a dead, not-yet-harvested, unburied corpse can yield
+   *  `raw_meat`, but only while still `fresh`: once natural decay has moved
+   *  it into `rotting`/`bones`, the meat is a lost source (plan 188 follow-up). */
   canHarvestMeat(): boolean {
-    return this.health.dead && !this.meatHarvested
+    return canHarvestMeatFrom({
+      dead: this.health.dead,
+      meatHarvested: this.meatHarvested,
+      buried: this.buried,
+      corpsePhase: this.corpsePhaseValue,
+    })
   }
 
   /** Player knife-harvest: marks this corpse's meat as taken and swaps the
    *  living mesh for harvested remains (plan 137/138). State/TTL is
    *  synchronous; the GLB pile attaches asynchronously like the blood splat.
-   *  Once only — callers check `canHarvestMeat()` first. */
+   *  Once only — callers check `canHarvestMeat()` first, but this re-checks
+   *  it itself as the final invariant guard (plan 188 follow-up), since a
+   *  corpse can rot between a caller's check and this call (e.g. across a
+   *  multi-second harvest channel). */
   harvestMeat(): void {
-    if (!this.health.dead || this.meatHarvested) return
+    if (!this.canHarvestMeat()) return
     this.meatHarvested = true
     this.timeSinceDeath = 0
     // Leave the natural decay path (plan 188) — any rotting FX/bones already
