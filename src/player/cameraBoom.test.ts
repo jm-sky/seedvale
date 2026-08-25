@@ -61,7 +61,7 @@ describe('resolveCameraBoom', () => {
       camY: 3,
       camZ: 12,
       sampleHeight: flat,
-      colliders: [{ x: 0, z: 6, radius: 2 }],
+      colliders: [{ type: 'circle', x: 0, z: 6, radius: 2 }],
     })
     expect(result.t).toBeLessThan(1)
     expect(result.z).toBeLessThan(6)
@@ -77,7 +77,7 @@ describe('resolveCameraBoom', () => {
       camY: 3,
       camZ: 12,
       sampleHeight: flat,
-      colliders: [{ x: 0, z: 6, radius: 0.4 }],
+      colliders: [{ type: 'circle', x: 0, z: 6, radius: 0.4 }],
     })
     expect(result.t).toBe(1)
     expect(result.z).toBeCloseTo(12)
@@ -92,7 +92,7 @@ describe('resolveCameraBoom', () => {
       camY: CAMERA_OCCLUDER_HEIGHT + 2,
       camZ: 12,
       sampleHeight: flat,
-      colliders: [{ x: 0, z: 6, radius: 2 }],
+      colliders: [{ type: 'circle', x: 0, z: 6, radius: 2 }],
     })
     expect(result.t).toBe(1)
     expect(result.z).toBeCloseTo(12)
@@ -123,7 +123,7 @@ describe('resolveCameraBoom', () => {
       camY: 1.2,
       camZ: 0.4,
       sampleHeight: () => 10,
-      colliders: [{ x: 0, z: 0, radius: 8 }],
+      colliders: [{ type: 'circle', x: 0, z: 0, radius: 8 }],
     })
     const dist = Math.hypot(0, 0.2, 0.4)
     const along = Math.hypot(result.x, result.y - 1, result.z)

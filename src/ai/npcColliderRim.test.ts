@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Collider } from '../world/collision'
+import type { CircleCollider } from '../world/collision'
 import {
   COLLIDER_RIM_MARGIN,
   destinationOnColliderRim,
@@ -13,8 +13,8 @@ import {
  * Plan 108 — destinations on a foreign disk's rim, rescue probes that reject
  * interior points, emergency teleport that never picks house-center `home`.
  */
-const house: Collider = { x: 0, z: 0, radius: 2 }
-const well: Collider = { x: 10, z: 0, radius: 1 }
+const house: CircleCollider = { type: 'circle', x: 0, z: 0, radius: 2 }
+const well: CircleCollider = { type: 'circle', x: 10, z: 0, radius: 1 }
 
 describe('destinationOnColliderRim', () => {
   it('leaves a destination that is already outside every disk unchanged', () => {

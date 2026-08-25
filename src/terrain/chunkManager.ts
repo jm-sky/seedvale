@@ -1575,7 +1575,7 @@ export function createChunkManager(
     const colliders: Collider[] = []
     for (const p of record.tile.environment) {
       const radius = ENVIRONMENT_COLLISION_RADIUS[p.kind]
-      if (radius > 0) colliders.push({ x: p.x, z: p.z, radius: radius * p.scale })
+      if (radius > 0) colliders.push({ type: 'circle', x: p.x, z: p.z, radius: radius * p.scale })
     }
     for (const id of record.treeIds ?? []) {
       const presence = config.treeLifecycle.getPresence(id)
@@ -1586,7 +1586,7 @@ export function createChunkManager(
         config.getWorldDays(),
       )
       if (resolved.visual === 'living') {
-        colliders.push({ x: presence.x, z: presence.z, radius: TREE_COLLISION_RADIUS })
+        colliders.push({ type: 'circle', x: presence.x, z: presence.z, radius: TREE_COLLISION_RADIUS })
       }
     }
     colliderRegistry.setColliders(record.key, colliders)

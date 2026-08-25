@@ -1,4 +1,4 @@
-import type { Collider } from '../world/collision'
+import type { CircleCollider, Collider } from '../world/collision'
 
 /** Keep the third-person boom this far above `sampleHeight` (metres). */
 export const CAMERA_GROUND_CLEARANCE = 0.45
@@ -64,6 +64,10 @@ export function resolveCameraBoom(input: CameraBoomInput): CameraBoomResult {
   if (terrainHit !== null && terrainHit < hitT) hitT = terrainHit
 
   for (const collider of input.colliders) {
+    // House walls/doors are thin OBBs (plan settlements-001) — camera
+    // occlusion stays circle-only, matching their previous sub-threshold
+    // 0.95 m circle radius (never occluded the boom either).
+    if (collider.type !== 'circle') continue
     if (collider.radius < CAMERA_OCCLUDER_MIN_RADIUS) continue
     const roofY = input.sampleHeight(collider.x, collider.z) + CAMERA_OCCLUDER_HEIGHT
     const colliderHit = firstCylinderHitT(
@@ -124,7 +128,7 @@ function firstCylinderHitT(
   dx: number,
   dy: number,
   dz: number,
-  collider: Collider,
+  collider: CircleCollider,
   roofY: number,
 ): number | null {
   const interval = segmentCircleOverlapT(

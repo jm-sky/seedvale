@@ -59,7 +59,7 @@ export function createPlayerWells(
   const wells: PlayerWellEntry[] = []
 
   const registerCollider = (record: PlayerWellRecord): void => {
-    registerColliders(colliderKey(record.id), [{ x: record.x, z: record.z, radius: WELL_FOOTPRINT_RADIUS }])
+    registerColliders(colliderKey(record.id), [{ type: 'circle', x: record.x, z: record.z, radius: WELL_FOOTPRINT_RADIUS }])
   }
 
   const spawn = (record: PlayerWellRecord): PlayerWellEntry => {

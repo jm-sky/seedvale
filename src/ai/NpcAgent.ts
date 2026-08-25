@@ -80,6 +80,7 @@ import {
   updateAgentLabelDistanceState,
 } from '../ui/agentStatusLabel'
 import { gazeOpacityFactor } from '../ui/labelDistance'
+import { colliderContainsPoint, colliderRimPoint, colliderSignedDistance } from '../world/collision'
 import { CARE_MAINTAINED_THRESHOLD } from '../world/playerGarden'
 import { gameHoursToRealSeconds } from '../world/timeConversion'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
@@ -2929,24 +2930,22 @@ export class NpcAgent {
     if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
     const dest = this.pendingAction?.destination
     for (const collider of this.collidersNear(x, z)) {
-      const dist = Math.hypot(x - collider.x, z - collider.z)
-      if (dist >= collider.radius) continue
-      const distFromCurrent = Math.hypot(
-        this.mesh.position.x - collider.x,
-        this.mesh.position.z - collider.z,
-      )
+      if (!colliderContainsPoint(collider, x, z)) continue
       // Already inside this collider (e.g. spawned at home, home == collider
       // center) — let it leave instead of trapping it; blocking only applies
       // to entering from outside.
-      if (distFromCurrent < collider.radius) continue
-      const approachAllow = collider.radius + NPC_COLLIDER_APPROACH_BUFFER
+      if (colliderContainsPoint(collider, this.mesh.position.x, this.mesh.position.z)) continue
       const destNearCollider =
         !!dest
-        && Math.hypot(dest.x - collider.x, dest.z - collider.z) <= approachAllow
+        && colliderSignedDistance(collider, dest.x, dest.z) <= NPC_COLLIDER_APPROACH_BUFFER
       // Final approach to a destination right next to this collider (well
       // serving stand, a workplace) may clip its outer ring; never its core.
+      // House wall/door OBBs (plan settlements-001) have no such soft
+      // approach zone — any penetration blocks, they're a hard barrier.
       if (!destNearCollider) return false
-      if (dist < collider.radius * NPC_COLLIDER_CORE_FRACTION) return false
+      const depth = -colliderSignedDistance(collider, x, z)
+      const coreDepth = collider.type === 'circle' ? collider.radius * (1 - NPC_COLLIDER_CORE_FRACTION) : 0
+      if (depth > coreDepth) return false
     }
     return true
   }
@@ -3003,11 +3002,8 @@ export class NpcAgent {
     const px = this.mesh.position.x
     const pz = this.mesh.position.z
     for (const collider of this.collidersNear(px, pz)) {
-      const distFromCurrent = Math.hypot(px - collider.x, pz - collider.z)
-      if (distFromCurrent < collider.radius) continue
-
-      const destDist = Math.hypot(dest.x - collider.x, dest.z - collider.z)
-      if (destDist <= collider.radius + NPC_COLLIDER_APPROACH_BUFFER) continue
+      if (colliderContainsPoint(collider, px, pz)) continue
+      if (colliderSignedDistance(collider, dest.x, dest.z) <= NPC_COLLIDER_APPROACH_BUFFER) continue
 
       const abx = dest.x - px
       const abz = dest.z - pz
@@ -3020,18 +3016,11 @@ export class NpcAgent {
       t = Math.max(0, Math.min(1, t))
       const cx = px + abx * t
       const cz = pz + abz * t
-      const dx = cx - collider.x
-      const dz = cz - collider.z
-      const d = Math.hypot(dx, dz)
-      if (d >= collider.radius) continue
+      if (!colliderContainsPoint(collider, cx, cz)) continue
 
-      const rim = collider.radius * 1.2
-      if (d > 1e-4) {
-        this.tmpAvoid.set(collider.x + (dx / d) * rim, dest.y, collider.z + (dz / d) * rim)
-      } else {
-        const len = Math.sqrt(abLen2)
-        this.tmpAvoid.set(collider.x + (-abz / len) * rim, dest.y, collider.z + (abx / len) * rim)
-      }
+      const extent = collider.type === 'circle' ? collider.radius : Math.max(collider.halfWidth, collider.halfDepth)
+      const rim = colliderRimPoint(collider, cx, cz, extent * 0.2)
+      this.tmpAvoid.set(rim.x, dest.y, rim.z)
       return this.tmpAvoid
     }
     return dest

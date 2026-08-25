@@ -1,62 +1,57 @@
 /**
- * House/well disks are solid (no doors). Destinations that sit in a foreign
+ * House/well colliders (circle or, since plan settlements-001, house wall/
+ * door OBBs) have no doors of their own here — this module treats any
+ * `Collider` as a solid obstacle. Destinations that sit in a foreign
  * collider's core are unreachable from outside (`ARRIVE` vs core fraction),
  * and rescue probes that reuse `isWalkable`'s "already inside → allowed"
  * exception hop deeper into the trap (plan 108).
  *
- * Pure, Three.js-free helpers — same shape as `npcMovementWatchdog.ts`.
+ * Pure, Three.js-free helpers — same shape as `npcMovementWatchdog.ts`. All
+ * shape math (circle/OBB) lives in `world/collision.ts`; this module only
+ * adds the NPC-specific rescue/rim semantics on top.
  */
 
-import type { Collider } from '../world/collision'
+import {
+  type Collider,
+  colliderContainsPoint,
+  colliderRimPoint,
+  colliderSignedDistance,
+  isInsideAnyCollider,
+} from '../world/collision'
 
 export type Point2 = { x: number, z: number }
 
-/** Stand this far outside a collider's recorded radius so the point is
- *  unambiguously exterior (on-boundary `dist === radius` is already
- *  walkable, but a small margin survives float error and grazing). */
+/** Stand this far outside a collider's boundary so the point is
+ *  unambiguously exterior (on-boundary is already walkable, but a small
+ *  margin survives float error and grazing). */
 export const COLLIDER_RIM_MARGIN = 0.2
 
-const DEGENERATE_EPSILON = 1e-4
-
 export function pointInsideCollider(x: number, z: number, collider: Collider): boolean {
-  return Math.hypot(x - collider.x, z - collider.z) < collider.radius
+  return colliderContainsPoint(collider, x, z)
 }
 
-export function isInsideAnyCollider(x: number, z: number, colliders: readonly Collider[]): boolean {
-  for (const collider of colliders) {
-    if (pointInsideCollider(x, z, collider)) return true
-  }
-  return false
-}
+export { isInsideAnyCollider }
 
 /** Rescue / wander probe without the 097 "already inside → allowed" exit
- *  patch: a point inside *any* disk is not a valid recovery target. */
+ *  patch: a point inside *any* collider is not a valid recovery target. */
 export function isExteriorPoint(x: number, z: number, colliders: readonly Collider[]): boolean {
   return !isInsideAnyCollider(x, z, colliders)
 }
 
-/** Point on `collider`'s rim (`radius + margin`) facing `(fromX, fromZ)`.
- *  Degenerate (standing on the center) falls back to +X. */
+/** Point on `collider`'s rim (boundary + margin) facing `(fromX, fromZ)`.
+ *  Degenerate (standing on the collider's center) falls back to +X. */
 export function rimPointFacing(
   collider: Collider,
   fromX: number,
   fromZ: number,
   margin = COLLIDER_RIM_MARGIN,
 ): Point2 {
-  const dx = fromX - collider.x
-  const dz = fromZ - collider.z
-  const dist = Math.hypot(dx, dz)
-  const rim = collider.radius + margin
-  if (dist < DEGENERATE_EPSILON) return { x: collider.x + rim, z: collider.z }
-  return {
-    x: collider.x + (dx / dist) * rim,
-    z: collider.z + (dz / dist) * rim,
-  }
+  return colliderRimPoint(collider, fromX, fromZ, margin)
 }
 
 /**
  * If `dest` lies inside a collider that `pos` is **not** standing in, snap
- * dest to that collider's rim on the side facing the NPC. Occupied disks
+ * dest to that collider's rim on the side facing the NPC. Occupied colliders
  * are left alone so an NPC already inside can still walk out (097).
  */
 export function destinationOnColliderRim(
@@ -66,16 +61,16 @@ export function destinationOnColliderRim(
   margin = COLLIDER_RIM_MARGIN,
 ): Point2 {
   for (const collider of colliders) {
-    if (!pointInsideCollider(dest.x, dest.z, collider)) continue
-    if (pointInsideCollider(pos.x, pos.z, collider)) continue
-    return rimPointFacing(collider, pos.x, pos.z, margin)
+    if (!colliderContainsPoint(collider, dest.x, dest.z)) continue
+    if (colliderContainsPoint(collider, pos.x, pos.z)) continue
+    return colliderRimPoint(collider, pos.x, pos.z, margin)
   }
   return dest
 }
 
 /**
- * Local-escape hop distances. When the NPC is inside a disk, the first ring
- * is far enough to land outside that disk (`> remaining distance to rim`)
+ * Local-escape hop distances. When the NPC is inside a collider, the first
+ * ring is far enough to land outside it (`> remaining distance to the rim`)
  * instead of sampling 1.5 m hops that stay in the core.
  */
 export function localEscapeRadii(
@@ -85,9 +80,9 @@ export function localEscapeRadii(
 ): readonly number[] {
   let maxExit = 0
   for (const collider of colliders) {
-    const dist = Math.hypot(pos.x - collider.x, pos.z - collider.z)
-    if (dist >= collider.radius) continue
-    const exit = collider.radius - dist + margin
+    const depth = -colliderSignedDistance(collider, pos.x, pos.z)
+    if (depth <= 0) continue
+    const exit = depth + margin
     if (exit > maxExit) maxExit = exit
   }
   if (maxExit <= 0) return [1.5, 3]
@@ -96,9 +91,10 @@ export function localEscapeRadii(
 }
 
 /**
- * Emergency-teleport picker: snap each candidate to a foreign-disk rim,
- * then keep the first exterior walkable point. Never returns a point inside
- * any supplied collider (so a house-center `home` candidate is rejected).
+ * Emergency-teleport picker: snap each candidate to a foreign collider's
+ * rim, then keep the first exterior walkable point. Never returns a point
+ * inside any supplied collider (so a house-center `home` candidate is
+ * rejected).
  */
 export function pickEmergencyTeleportPoint(
   pos: Point2,

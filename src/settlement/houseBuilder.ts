@@ -41,10 +41,43 @@ export const DOOR_OPEN_ANGLE = Math.PI / 2
 export const DOOR_ANIM_SPEED = 4
 /** Uniform world scale on the assembled house — native MegaKit metres × this. */
 export const HOUSE_ASSEMBLY_SCALE = 1
-/** Circle radius for each 2 m wall-module collider (local metres, pre-scale). */
-export const HOUSE_WALL_COLLIDER_RADIUS = 0.95
-/** Closed door leaf — blocks the doorway opening (local metres, pre-scale). */
-export const HOUSE_DOOR_COLLIDER_RADIUS = 0.45
+
+/**
+ * Verified real MegaKit wall module footprint in the XZ plane
+ * (`megakitAudit.generated.json`'s `wall_plaster_straight`: dimensions
+ * `[2, 3.125, 0.407]`) — local metres, pre-scale. Wall height doesn't matter
+ * for 2D collision. Plan settlements-001: collision must match this real
+ * footprint, not an oversized circle.
+ */
+export const HOUSE_WALL_LENGTH_M = HOUSE_MODULE_M
+export const HOUSE_WALL_THICKNESS_M = 0.41
+const WALL_HALF_WIDTH = HOUSE_WALL_LENGTH_M / 2
+const WALL_HALF_DEPTH = HOUSE_WALL_THICKNESS_M / 2
+
+/**
+ * `wall_plaster_door_flat`'s real pre-cut opening — measured directly from
+ * the GLB's Plaster-material vertex positions (module-local space, the same
+ * space `wallLocalTransform` places modules in): no Plaster vertices exist
+ * between x ≈ -0.648 and x ≈ +0.648 at any height from the floor to the
+ * header. Rounded up slightly to a clean 0.65 m so the collider opening is
+ * never narrower than the real cutout. This is *not* derived from the
+ * `door_1_flat` leaf's own 1.118 m width (review 2026-08-25 — the leaf width
+ * is not proof of the wall cutout width).
+ */
+export const HOUSE_DOOR_OPENING_HALF_WIDTH_M = 0.65
+
+/**
+ * `door_1_flat`'s own closed-leaf footprint (local metres, pre-scale),
+ * measured from `megakitAudit.generated.json`'s `door_1_flat` entry
+ * (dimensions `[1.118, 2.1, 0.121]`, min/max `x` of `-0.046`/`1.072`).
+ * `CENTER_OFFSET_X` is the leaf's own geometric center relative to its mesh
+ * origin (the min/max midpoint) — added on top of the existing hinge offset
+ * so the collider swings from the same single pose the visual leaf uses,
+ * not a second door-position calculation.
+ */
+const DOOR_1_FLAT_LEAF_HALF_WIDTH = 0.559
+const DOOR_1_FLAT_LEAF_HALF_DEPTH = 0.061
+const DOOR_1_FLAT_LEAF_CENTER_OFFSET_X = 0.513
 
 const Y_AXIS = new Vector3(0, 1, 0)
 const _pos = new Vector3()
@@ -468,22 +501,72 @@ function doorWallKeys(def: HouseDefinition): Set<string> {
   return keys
 }
 
-/** Per-wall-module circles in the house's local frame (no doorway modules). */
+/** One wall-module-sized OBB piece, offset `centerOffsetX` (module-local
+ *  metres, along the wall's own local x-axis) from the module's center pose. */
+function wallPieceCollider(pose: HouseLocalPose, centerOffsetX: number, halfWidth: number): Collider {
+  const cos = Math.cos(pose.rotationY)
+  const sin = Math.sin(pose.rotationY)
+  return {
+    type: 'obb',
+    x: pose.x + centerOffsetX * cos,
+    z: pose.z + centerOffsetX * sin,
+    halfWidth,
+    halfDepth: WALL_HALF_DEPTH,
+    rotationY: pose.rotationY,
+  }
+}
+
+/** A door wall module split into two wall pieces flanking the real opening
+ *  (`HOUSE_DOOR_OPENING_HALF_WIDTH_M`) — the opening itself gets no
+ *  collider. */
+function doorWallPieceColliders(pose: HouseLocalPose): Collider[] {
+  const pieceHalfWidth = (WALL_HALF_WIDTH - HOUSE_DOOR_OPENING_HALF_WIDTH_M) / 2
+  if (pieceHalfWidth <= 0) return []
+  const pieceOffset = (WALL_HALF_WIDTH + HOUSE_DOOR_OPENING_HALF_WIDTH_M) / 2
+  return [
+    wallPieceCollider(pose, -pieceOffset, pieceHalfWidth),
+    wallPieceCollider(pose, pieceOffset, pieceHalfWidth),
+  ]
+}
+
+/** Per-wall-module OBBs in the house's local frame. A door's wall module is
+ *  split into two pieces around the real opening instead of being skipped
+ *  entirely; a window's wall module stays a single full-length OBB (the
+ *  window isn't a passage). */
 export function buildHouseWallCollidersLocal(def: HouseDefinition): Collider[] {
-  const skip = doorWallKeys(def)
+  const doorWalls = doorWallKeys(def)
   const colliders: Collider[] = []
   for (const wall of def.walls) {
-    if (skip.has(wallModuleKey(wall.side, wall.moduleIndex))) continue
-    const pose = addVec(
-      wall.transform?.position,
-      wallLocalTransform(def.footprint, wall.side, wall.moduleIndex),
-    )
-    colliders.push({ x: pose.x, z: pose.z, radius: HOUSE_WALL_COLLIDER_RADIUS })
+    const pose = wallModulePose(def, wall)
+    if (doorWalls.has(wallModuleKey(wall.side, wall.moduleIndex))) {
+      colliders.push(...doorWallPieceColliders(pose))
+    } else {
+      colliders.push(wallPieceCollider(pose, 0, WALL_HALF_WIDTH))
+    }
   }
   return colliders
 }
 
-/** Doorway circles for closed leaves — one per door opening index. */
+/** Closed-leaf OBB for one door opening — anchored to `openingLocalPose()`
+ *  plus the existing hinge offset plus the leaf's own geometric center, the
+ *  same single pose the visual leaf uses (not a second door-position
+ *  calculation). */
+function doorLeafColliderLocal(def: HouseDefinition, opening: HouseOpening): Collider {
+  const pose = openingLocalPose(def, opening)
+  const cos = Math.cos(pose.rotationY)
+  const sin = Math.sin(pose.rotationY)
+  const localOffsetX = DOOR_1_FLAT_HINGE_OFFSET_X + DOOR_1_FLAT_LEAF_CENTER_OFFSET_X
+  return {
+    type: 'obb',
+    x: pose.x + localOffsetX * cos,
+    z: pose.z + localOffsetX * sin,
+    halfWidth: DOOR_1_FLAT_LEAF_HALF_WIDTH,
+    halfDepth: DOOR_1_FLAT_LEAF_HALF_DEPTH,
+    rotationY: pose.rotationY,
+  }
+}
+
+/** Closed-leaf OBBs — one per door opening index, only while that door is closed. */
 export function buildHouseDoorCollidersLocal(
   def: HouseDefinition,
   closedDoors: readonly boolean[],
@@ -496,59 +579,8 @@ export function buildHouseDoorCollidersLocal(
       doorIndex++
       continue
     }
-    const pose = openingLocalPose(def, opening)
-    colliders.push({ x: pose.x, z: pose.z, radius: HOUSE_DOOR_COLLIDER_RADIUS })
+    colliders.push(doorLeafColliderLocal(def, opening))
     doorIndex++
-  }
-  return colliders
-}
-
-/**
- * Jamb offset/radius (local metres, pre-scale) — sized so that, once a
- * player-sized entity's own collision radius (`PLAYER_COLLISION_RADIUS`,
- * `player/PlayerController.ts` = 0.35 m) is added on top by `resolvePosition`,
- * the *effective* blocked span is what actually matters, not the raw circle:
- *
- * - inner edge (`offset - radius - entityRadius`) sits at ≈0.55 m — matching
- *   half the real `door_1_flat` leaf width (1.118 m, `megakitAudit.generated.json`),
- *   so the walkable corridor isn't narrower than the visual doorway.
- * - outer edge (`offset + radius + entityRadius`) reaches ≈1.55 m — past the
- *   2 m module's own edge (1.0 m from the opening center), so the jamb alone
- *   (not relying on a neighboring wall module, which may not exist if the
- *   door sits at a wall's end next to a corner post) fully closes the gap.
- *
- * A naive derivation that ignores the entity radius (as an earlier version of
- * this constant did) under- or over-shoots badly: offset/radius chosen to
- * "just touch" the door disk and neighbor wall by their raw radii alone
- * produced a blocked span wide enough to seal almost the entire doorway.
- */
-export const HOUSE_DOOR_JAMB_OFFSET = 1.05
-/** See `HOUSE_DOOR_JAMB_OFFSET` — comparable to the real doorframe casing's
- *  own thickness (~0.11 m, `doorframe_flat_wooddark` vs `door_1_flat` width). */
-export const HOUSE_DOOR_JAMB_RADIUS = 0.15
-
-/**
- * Frame/jamb circles flanking every door opening, present regardless of
- * open/closed state (unlike `buildHouseDoorCollidersLocal`'s leaf disk).
- * `buildHouseWallCollidersLocal` skips a door's wall module entirely so the
- * frame/leaf can render there, which otherwise leaves that whole ~2 m module
- * with no collider beyond the leaf disk's ~0.45 m — enough for a player
- * (radius 0.35 m) to walk in beside a closed door instead of through it.
- */
-export function buildHouseDoorJambCollidersLocal(def: HouseDefinition): Collider[] {
-  const colliders: Collider[] = []
-  for (const opening of def.openings) {
-    if (opening.type !== 'door') continue
-    const pose = openingLocalPose(def, opening)
-    const cos = Math.cos(pose.rotationY)
-    const sin = Math.sin(pose.rotationY)
-    for (const side of [-1, 1]) {
-      colliders.push({
-        x: pose.x + side * HOUSE_DOOR_JAMB_OFFSET * cos,
-        z: pose.z + side * HOUSE_DOOR_JAMB_OFFSET * sin,
-        radius: HOUSE_DOOR_JAMB_RADIUS,
-      })
-    }
   }
   return colliders
 }
@@ -562,18 +594,26 @@ export function transformHouseCollidersToWorld(
 ): Collider[] {
   const cos = Math.cos(yaw)
   const sin = Math.sin(yaw)
-  return localColliders.map((collider) => {
+  return localColliders.map((collider): Collider => {
     const lx = collider.x * scale
     const lz = collider.z * scale
+    const x = worldX + lx * cos - lz * sin
+    const z = worldZ + lx * sin + lz * cos
+    if (collider.type === 'circle') {
+      return { type: 'circle', x, z, radius: collider.radius * scale }
+    }
     return {
-      x: worldX + lx * cos - lz * sin,
-      z: worldZ + lx * sin + lz * cos,
-      radius: collider.radius * scale,
+      type: 'obb',
+      x,
+      z,
+      halfWidth: collider.halfWidth * scale,
+      halfDepth: collider.halfDepth * scale,
+      rotationY: collider.rotationY + yaw,
     }
   })
 }
 
-/** Wall segments, door jambs, plus optional closed-door disks in world space. */
+/** Wall pieces plus optional closed-door leaf OBBs in world space. */
 export function buildHouseCollidersWorld(
   def: HouseDefinition,
   worldX: number,
@@ -584,7 +624,6 @@ export function buildHouseCollidersWorld(
 ): Collider[] {
   const local = [
     ...buildHouseWallCollidersLocal(def),
-    ...buildHouseDoorJambCollidersLocal(def),
     ...buildHouseDoorCollidersLocal(def, closedDoors),
   ]
   return transformHouseCollidersToWorld(local, worldX, worldZ, yaw, scale)

@@ -10,7 +10,7 @@ describe('settlementPropColliders', () => {
   it('always includes the primary wood pile', () => {
     const colliders = settlementPropColliders({ stockpile: { x: 10, z: 20 } })
     expect(colliders).toEqual([
-      { x: 10, z: 20, radius: WOOD_PILE_COLLISION_RADIUS },
+      { type: 'circle', x: 10, z: 20, radius: WOOD_PILE_COLLISION_RADIUS },
     ])
   })
 
@@ -21,11 +21,13 @@ describe('settlementPropColliders', () => {
       merchantHorse: { x: 6, z: 1 },
     })
     expect(colliders).toContainEqual({
+      type: 'circle',
       x: 4,
       z: 1,
       radius: MERCHANT_WAGON_RADIUS,
     })
     expect(colliders).toContainEqual({
+      type: 'circle',
       x: 6,
       z: 1,
       radius: MERCHANT_HORSE_RADIUS,
@@ -39,11 +41,13 @@ describe('settlementPropColliders', () => {
       campfire: { position: { x: 1, z: 3 } },
     })
     expect(colliders).toContainEqual({
+      type: 'circle',
       x: 8,
       z: -2,
       radius: WOOD_PILE_COLLISION_RADIUS,
     })
     expect(colliders).toContainEqual({
+      type: 'circle',
       x: 1,
       z: 3,
       radius: VILLAGE_CAMPFIRE_COLLISION_RADIUS,

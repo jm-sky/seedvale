@@ -4,21 +4,26 @@ import { buildConstructionCatalog } from '../assets/constructionCatalog'
 import {
   COTTAGE_4X4_A,
   COTTAGE_4X4_B,
+  COTTAGE_6X4_A,
+  COTTAGE_6X4_B,
   HOME_HOUSE_DEFINITIONS,
+  HOUSE_6X6_A,
+  HOUSE_6X6_B,
   HOUSE_8X6_A,
+  HOUSE_8X6_B,
   HOUSE_MODULE_M,
+  type HouseDefinition,
   pickHouseDefinition,
   TEST_HOUSE_01,
   TEST_HOUSE_02,
 } from '../assets/houseDefinitionExample'
 import { disposeObject3D } from '../assets/loadGltf'
-import { resolvePosition } from '../world/collision'
+import { type Collider, colliderContainsPoint, resolvePosition } from '../world/collision'
 import {
   buildAssemblyCollidersWorld,
   buildHouse,
   buildHouseCollidersWorld,
   buildHouseDoorCollidersLocal,
-  buildHouseDoorJambCollidersLocal,
   buildHouseWallCollidersLocal,
   censusAssembly,
   cornerLocalPosition,
@@ -28,10 +33,9 @@ import {
   fillOffsetFor,
   floorTilePositions,
   HOUSE_ASSEMBLY_SCALE,
-  HOUSE_DOOR_COLLIDER_RADIUS,
-  HOUSE_DOOR_JAMB_OFFSET,
-  HOUSE_DOOR_JAMB_RADIUS,
-  HOUSE_WALL_COLLIDER_RADIUS,
+  HOUSE_DOOR_OPENING_HALF_WIDTH_M,
+  HOUSE_WALL_LENGTH_M,
+  HOUSE_WALL_THICKNESS_M,
   type HouseBuildContext,
   houseDefinitionAssetIds,
   houseFootprintRadius,
@@ -243,30 +247,59 @@ describe('house static batch', () => {
 })
 
 describe('house colliders', () => {
-  it('skips doorway wall modules but keeps straight walls and windows', () => {
-    const walls = buildHouseWallCollidersLocal(TEST_HOUSE_01)
-    const doorWall = matchingWallPlacement(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
-    const doorPose = wallLocalTransform(TEST_HOUSE_01.footprint, doorWall.side, doorWall.moduleIndex)
-    expect(walls.some((c) => c.x === doorPose.x && c.z === doorPose.z)).toBe(false)
-    expect(walls.length).toBe(TEST_HOUSE_01.walls.length - 1)
-    expect(walls.every((c) => c.radius === HOUSE_WALL_COLLIDER_RADIUS)).toBe(true)
-
-    const withWindow = buildHouseWallCollidersLocal(TEST_HOUSE_02)
-    const windowWall = matchingWallPlacement(TEST_HOUSE_02, TEST_HOUSE_02.openings[1]!)
-    const windowPose = wallLocalTransform(TEST_HOUSE_02.footprint, windowWall.side, windowWall.moduleIndex)
-    expect(withWindow.some((c) => c.x === windowPose.x && c.z === windowPose.z)).toBe(true)
+  it('represents a normal (non-door) wall module as a single OBB matching the real 2.00×0.41 m footprint', () => {
+    // TEST_HOUSE_02's window wall stays a full wall collider (windows aren't
+    // a passage) — use it as a normal-wall reference pose via the same
+    // `openingLocalPose` the builder itself uses.
+    const walls = buildHouseWallCollidersLocal(TEST_HOUSE_02)
+    const windowPose = openingLocalPose(TEST_HOUSE_02, TEST_HOUSE_02.openings[1]!)
+    const wall = walls.find((c) => Math.abs(c.x - windowPose.x) < 1e-6 && Math.abs(c.z - windowPose.z) < 1e-6)
+    if (!wall) throw new Error('expected a wall collider at the window pose')
+    if (wall.type !== 'obb') throw new Error('unreachable')
+    expect(wall.halfWidth).toBeCloseTo(HOUSE_WALL_LENGTH_M / 2)
+    expect(wall.halfDepth).toBeCloseTo(HOUSE_WALL_THICKNESS_M / 2)
+    expect(wall.rotationY).toBe(windowPose.rotationY)
   })
 
-  it('adds a doorway disk only while the door is closed', () => {
+  it('splits a door wall module into two OBB wall pieces around the real opening, not a full module', () => {
+    const walls = buildHouseWallCollidersLocal(TEST_HOUSE_01)
+    // 6 wall modules total, 1 is the door module split into 2 pieces.
+    expect(walls).toHaveLength(TEST_HOUSE_01.walls.length + 1)
+    expect(walls.every((c) => c.type === 'obb')).toBe(true)
+
+    const pose = openingLocalPose(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
+    // No wall collider covers the opening's own center.
+    expect(walls.some((c) => colliderContainsPoint(c, pose.x, pose.z))).toBe(false)
+    // Both flanking pieces exist, on either side of the opening, same yaw/depth.
+    const doorPieces = walls.filter((c) => c.type === 'obb' && Math.abs(c.z - pose.z) < 1e-6 && c.rotationY === pose.rotationY && c.x !== pose.x)
+    const flanking = doorPieces.filter((c) => Math.abs(Math.abs(c.x - pose.x) - (HOUSE_WALL_LENGTH_M / 2 + HOUSE_DOOR_OPENING_HALF_WIDTH_M) / 2) < 1e-6)
+    expect(flanking).toHaveLength(2)
+  })
+
+  it('leaves a window wall module as one full OBB, not split', () => {
+    const withWindow = buildHouseWallCollidersLocal(TEST_HOUSE_02)
+    const windowPose = openingLocalPose(TEST_HOUSE_02, TEST_HOUSE_02.openings[1]!)
+    const atWindow = withWindow.filter((c) => Math.abs(c.x - windowPose.x) < 1e-6 && Math.abs(c.z - windowPose.z) < 1e-6)
+    expect(atWindow).toHaveLength(1)
+  })
+
+  it('adds a closed-leaf OBB only while the door is closed, sized to the real door_1_flat leaf', () => {
     expect(buildHouseDoorCollidersLocal(TEST_HOUSE_01, [false])).toHaveLength(0)
     const closed = buildHouseDoorCollidersLocal(TEST_HOUSE_01, [true])
     expect(closed).toHaveLength(1)
-    expect(closed[0]!.radius).toBe(HOUSE_DOOR_COLLIDER_RADIUS)
+    const leaf = closed[0]!
+    expect(leaf.type).toBe('obb')
+    if (leaf.type !== 'obb') throw new Error('unreachable')
+    expect(leaf.halfWidth).toBeLessThan(HOUSE_DOOR_OPENING_HALF_WIDTH_M) // leaf narrower than the opening (frame clearance)
+    expect(leaf.halfDepth).toBeLessThan(HOUSE_WALL_THICKNESS_M / 2)
     const doorPose = openingLocalPose(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
-    expect(closed[0]).toMatchObject({ x: doorPose.x, z: doorPose.z })
+    // Leaf swings closed centered on the opening (hinge offset + the leaf's
+    // own geometric center cancel out to ≈0), not at some other position.
+    expect(leaf.x).toBeCloseTo(doorPose.x, 1)
+    expect(leaf.z).toBeCloseTo(doorPose.z, 1)
   })
 
-  it('door collider stays anchored to the same opening pose as the visual door leaf', () => {
+  it('door leaf collider stays anchored to the same opening pose as the visual door leaf', () => {
     // Regression for the door_1_flat hinge offset drifting away from its
     // collider: both the door root (hinge parent) and the closed-door
     // collider must come from `openingLocalPose`, not two independent
@@ -282,73 +315,74 @@ describe('house colliders', () => {
     expect(door.hinge.position.x).toBeCloseTo(DOOR_1_FLAT_HINGE_OFFSET_X)
 
     const closed = buildHouseDoorCollidersLocal(TEST_HOUSE_01, [true])[0]!
-    expect(closed.x).toBeCloseTo(doorRoot.position.x)
-    expect(closed.z).toBeCloseTo(doorRoot.position.z)
+    expect(closed.x).toBeCloseTo(doorRoot.position.x, 1)
+    expect(closed.z).toBeCloseTo(doorRoot.position.z, 1)
     assembly.dispose()
   })
 
-  it('door jambs flank the opening and stay present whether the door is open or closed', () => {
-    const jambs = buildHouseDoorJambCollidersLocal(TEST_HOUSE_01)
-    expect(jambs).toHaveLength(2)
-    const pose = openingLocalPose(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
-    const xs = jambs.map((j) => j.x).sort((a, b) => a - b)
-    expect(xs).toEqual([pose.x - HOUSE_DOOR_JAMB_OFFSET, pose.x + HOUSE_DOOR_JAMB_OFFSET])
-    expect(jambs.every((j) => j.z === pose.z)).toBe(true)
-    expect(jambs.every((j) => j.radius === HOUSE_DOOR_JAMB_RADIUS)).toBe(true)
-
-    const closedTotal = buildHouseCollidersWorld(TEST_HOUSE_01, 0, 0, 0, [true])
-    const openTotal = buildHouseCollidersWorld(TEST_HOUSE_01, 0, 0, 0, [false])
-    // Only the closed-door leaf disk should differ between open/closed — the
-    // jambs are frame, not leaf, and stay regardless of door state.
-    expect(closedTotal.length).toBe(openTotal.length + 1)
-  })
-
-  it('closing the collider gap beside a door: a point beside the doorway is no longer walkable (regression)', () => {
-    // Before the jamb fix, a door's whole 2 m wall module had zero wall
-    // collider (skipped so the frame/leaf render there) and the closed-door
-    // disk only covered ~0.45 m around the center — leaving ~0.55 m of
-    // completely open space on each side, wide enough for the player
-    // (radius 0.35 m) to walk in beside the door instead of through it.
+  it('no jamb-circle workaround remains: only wall/door OBBs, no leftover small circles', () => {
     const world = buildHouseCollidersWorld(TEST_HOUSE_01, 0, 0, 0, [true])
-    const jamb = buildHouseDoorJambCollidersLocal(TEST_HOUSE_01)[0]!
-    const playerRadius = 0.35
-    const resolved = resolvePosition(jamb.x, jamb.z, playerRadius, world)
-    const pushedDistance = Math.hypot(resolved.x - jamb.x, resolved.z - jamb.z)
-    expect(pushedDistance).toBeCloseTo(jamb.radius + playerRadius)
+    expect(world.every((c) => c.type === 'obb')).toBe(true)
   })
 
-  it('the doorway itself stays walkable — jambs must not seal off the whole opening (regression)', () => {
-    // A first pass at the jamb fix sized offset/radius by summing raw radii
-    // (ignoring the player's own collision radius, which `resolvePosition`
-    // adds to every collider it tests against). That accidentally sealed the
-    // entire ~1 m doorway shut — a point standing right at the opening's
-    // center got pushed out by both jambs at once. This guards the actual
-    // walkable corridor width, not just "some point near the door is
-    // blocked" (the previous test).
+  it('closing the collider gap beside a door: a point beside the doorway (in the flanking wall piece) is blocked', () => {
+    // Before this fix, a door's whole 2 m wall module had zero wall collider
+    // (skipped so the frame/leaf render there) — a player could walk in
+    // beside the door instead of through it. The flanking wall piece alone
+    // (door open, no leaf) must now block that gap.
+    const openWorld = buildHouseCollidersWorld(TEST_HOUSE_01, 0, 0, 0, [false])
+    const pose = openingLocalPose(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
+    const pieceOffset = (HOUSE_WALL_LENGTH_M / 2 + HOUSE_DOOR_OPENING_HALF_WIDTH_M) / 2
+    const besideDoor = {
+      x: pose.x + pieceOffset * Math.cos(pose.rotationY),
+      z: pose.z + pieceOffset * Math.sin(pose.rotationY),
+    }
+    const playerRadius = 0.35
+    const resolved = resolvePosition(besideDoor.x, besideDoor.z, playerRadius, openWorld)
+    const pushedDistance = Math.hypot(resolved.x - besideDoor.x, resolved.z - besideDoor.z)
+    expect(pushedDistance).toBeGreaterThan(0.3)
+  })
+
+  it('the doorway itself stays walkable — the real ~1.30 m opening must not be blocked', () => {
     const playerRadius = 0.35
     const pose = openingLocalPose(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
     const openWorld = buildHouseCollidersWorld(TEST_HOUSE_01, 0, 0, 0, [false])
-    // Real door_1_flat leaf is 1.118 m wide — walking in through the center
-    // of the opening must not be pushed away by the frame/jambs.
     const center = resolvePosition(pose.x, pose.z, playerRadius, openWorld)
     expect(center.x).toBeCloseTo(pose.x)
     expect(center.z).toBeCloseTo(pose.z)
-    // Roughly the leaf's own half-width off-center (still inside the
-    // opening) must also stay clear.
-    const offCenter = resolvePosition(pose.x + 0.4, pose.z, playerRadius, openWorld)
-    expect(offCenter.x).toBeCloseTo(pose.x + 0.4)
+    // Off-center but still inside the real opening: a player-radius disk
+    // centered here (0.25 m off) stays within the 0.65 m opening half-width
+    // with margin to spare (0.25 + 0.35 = 0.6 < 0.65).
+    const offCenter = resolvePosition(pose.x + 0.25, pose.z, playerRadius, openWorld)
+    expect(offCenter.x).toBeCloseTo(pose.x + 0.25)
     expect(offCenter.z).toBeCloseTo(pose.z)
   })
 
-  it('transforms local colliders with house yaw and assembly scale', () => {
-    const local = [{ x: 1, z: 0, radius: 1 }]
+  it('transforms an OBB with house yaw and assembly scale', () => {
+    const local: Collider[] = [{ type: 'obb', x: 1, z: 0, halfWidth: 1, halfDepth: 0.2, rotationY: 0 }]
     const world = transformHouseCollidersToWorld(local, 10, 20, Math.PI / 2, HOUSE_ASSEMBLY_SCALE)
-    expect(world[0]!.x).toBeCloseTo(10)
-    expect(world[0]!.z).toBeCloseTo(20 + 1)
-    expect(world[0]!.radius).toBeCloseTo(1)
+    const obb = world[0]!
+    expect(obb.type).toBe('obb')
+    if (obb.type !== 'obb') throw new Error('unreachable')
+    expect(obb.x).toBeCloseTo(10)
+    expect(obb.z).toBeCloseTo(21)
+    expect(obb.halfWidth).toBeCloseTo(1)
+    expect(obb.halfDepth).toBeCloseTo(0.2)
+    expect(obb.rotationY).toBeCloseTo(Math.PI / 2)
   })
 
-  it('buildAssemblyCollidersWorld omits the doorway when the door is open', () => {
+  it('transforms a circle collider with house yaw and assembly scale (unchanged semantics)', () => {
+    const local: Collider[] = [{ type: 'circle', x: 1, z: 0, radius: 1 }]
+    const world = transformHouseCollidersToWorld(local, 10, 20, Math.PI / 2, HOUSE_ASSEMBLY_SCALE)
+    const circle = world[0]!
+    expect(circle.type).toBe('circle')
+    if (circle.type !== 'circle') throw new Error('unreachable')
+    expect(circle.x).toBeCloseTo(10)
+    expect(circle.z).toBeCloseTo(21)
+    expect(circle.radius).toBeCloseTo(1)
+  })
+
+  it('buildAssemblyCollidersWorld drops the closed-door leaf when the door is open', () => {
     const assembly = buildHouse(TEST_HOUSE_01, contextFor())
     assembly.root.position.set(5, 0, 5)
     assembly.root.rotation.y = 0
@@ -366,6 +400,94 @@ describe('house colliders', () => {
     const open = buildHouseCollidersWorld(COTTAGE_4X4_A, 0, 0, 0, [false])
     expect(open.length).toBe(closed.length - 1)
   })
+
+  it('adjacent wall pieces overlap at the exact footprint corner — no gap needing a corner collider', () => {
+    // Plan settlements-001 §4: don't add a corner collider unless a real gap
+    // is proven. Each wall OBB spans its full nominal module length flush to
+    // the shared corner coordinate, and the two perpendicular walls' 0.41 m
+    // thickness bands overlap right at that corner, so a point just inside
+    // the wall thickness on either side of the corner is always covered by
+    // at least one wall piece. (The true diagonal exterior nook just past
+    // the corner — outside both walls' thickness — is legitimately open
+    // yard, not a leak into the interior; full visual confirmation is a
+    // browser-verification step, not something this point-sample proves on
+    // its own.)
+    for (const def of [TEST_HOUSE_01, COTTAGE_4X4_A, HOUSE_6X6_A]) {
+      const halfW = def.footprint.width / 2
+      const halfD = def.footprint.depth / 2
+      const world = buildHouseCollidersWorld(def, 0, 0, 0, [false])
+      // 0.1 m in from the corner along the front wall's outer face, and
+      // symmetrically along the right wall's outer face — both must be
+      // covered by a wall collider (front wall covers the first, right wall
+      // the second), confirming the two walls' coverage is flush to the
+      // shared corner with no seam.
+      expect(world.some((c) => colliderContainsPoint(c, halfW - 0.1, -halfD - 0.1))).toBe(true)
+      expect(world.some((c) => colliderContainsPoint(c, halfW + 0.1, -halfD + 0.1))).toBe(true)
+    }
+  })
+})
+
+describe('real doorway corridor regression', () => {
+  // Plan settlements-001: the original bug was never the door offset — it
+  // was that the whole collision geometry didn't match the real footprint.
+  // These check an actual player-sized (radius 0.35 m) traversal through the
+  // real opening, not just isolated collider math, across several house
+  // footprints and door positions (start/middle/end of the front wall).
+  const playerRadius = 0.35
+
+  function doorPoseAndAxes(def: HouseDefinition) {
+    const opening = def.openings.find((o) => o.type === 'door')!
+    const pose = openingLocalPose(def, opening)
+    const outward = { x: Math.sin(pose.rotationY), z: -Math.cos(pose.rotationY) }
+    const tangent = { x: Math.cos(pose.rotationY), z: Math.sin(pose.rotationY) }
+    return { pose, outward, tangent }
+  }
+
+  const houses: readonly [string, HouseDefinition][] = [
+    ['TEST_HOUSE_01 (4×2, door start)', TEST_HOUSE_01],
+    ['COTTAGE_4X4_A (door start)', COTTAGE_4X4_A],
+    ['COTTAGE_4X4_B (door middle)', COTTAGE_4X4_B],
+    ['COTTAGE_6X4_A (door middle)', COTTAGE_6X4_A],
+    ['COTTAGE_6X4_B (door start)', COTTAGE_6X4_B],
+    ['HOUSE_6X6_A (door middle)', HOUSE_6X6_A],
+    ['HOUSE_6X6_B (door start)', HOUSE_6X6_B],
+    ['HOUSE_8X6_A (door near-start)', HOUSE_8X6_A],
+    ['HOUSE_8X6_B (door middle)', HOUSE_8X6_B],
+  ]
+
+  for (const [label, def] of houses) {
+    it(`${label}: outside → through the opening → inside is walkable, open door`, () => {
+      const { pose, outward } = doorPoseAndAxes(def)
+      const world = buildHouseCollidersWorld(def, 0, 0, 0, [false])
+      for (const step of [-0.5, 0, 0.5]) {
+        const p = { x: pose.x + outward.x * step, z: pose.z + outward.z * step }
+        const resolved = resolvePosition(p.x, p.z, playerRadius, world)
+        expect(resolved.x, `step ${step} x`).toBeCloseTo(p.x, 3)
+        expect(resolved.z, `step ${step} z`).toBeCloseTo(p.z, 3)
+      }
+    })
+
+    it(`${label}: closed door blocks the opening, open door doesn't`, () => {
+      const { pose } = doorPoseAndAxes(def)
+      const closedWorld = buildHouseCollidersWorld(def, 0, 0, 0, [true])
+      const closedResolved = resolvePosition(pose.x, pose.z, playerRadius, closedWorld)
+      expect(Math.hypot(closedResolved.x - pose.x, closedResolved.z - pose.z)).toBeGreaterThan(0.1)
+
+      const openWorld = buildHouseCollidersWorld(def, 0, 0, 0, [false])
+      const openResolved = resolvePosition(pose.x, pose.z, playerRadius, openWorld)
+      expect(openResolved.x).toBeCloseTo(pose.x, 3)
+      expect(openResolved.z).toBeCloseTo(pose.z, 3)
+    })
+
+    it(`${label}: the wall beside the opening blocks passage — no gap from a skipped door module`, () => {
+      const { pose, tangent } = doorPoseAndAxes(def)
+      const pieceOffset = (HOUSE_WALL_LENGTH_M / 2 + HOUSE_DOOR_OPENING_HALF_WIDTH_M) / 2
+      const besideDoor = { x: pose.x + tangent.x * pieceOffset, z: pose.z + tangent.z * pieceOffset }
+      const world = buildHouseCollidersWorld(def, 0, 0, 0, [false])
+      const resolved = resolvePosition(besideDoor.x, besideDoor.z, playerRadius, world)
+      expect(Math.hypot(resolved.x - besideDoor.x, resolved.z - besideDoor.z)).toBeGreaterThan(0.3)
+    })
+  }
 })
 
 describe('houseFootprintRadius', () => {

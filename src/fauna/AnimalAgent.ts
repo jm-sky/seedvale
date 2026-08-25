@@ -22,6 +22,7 @@ import {
   type LabelDistanceState,
   updateAgentLabelDistanceState,
 } from '../ui/agentStatusLabel'
+import { colliderContainsPoint } from '../world/collision'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import {
   type AnimalLifeState,
@@ -2194,7 +2195,7 @@ export class AnimalAgent {
   private isWalkable(x: number, z: number): boolean {
     if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
     for (const collider of this.collidersNear(x, z)) {
-      if (Math.hypot(x - collider.x, z - collider.z) < collider.radius) return false
+      if (colliderContainsPoint(collider, x, z)) return false
     }
     return true
   }

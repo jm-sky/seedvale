@@ -137,3 +137,29 @@ Technical verification should distinguish:
 ## 12. Scope discipline
 
 The current plan is `M`, not `L`, if implementation stays within the shared collision layer + house builder + existing shape-aware consumers/debug/tests. Do not turn this into a general collision architecture rewrite.
+
+## 13. Browser verification result (2026-08-25) — FAILED, not fixed yet
+
+Implemented (`src/world/collision.ts` OBB support, `src/settlement/houseBuilder.ts` real wall/door OBBs, NPC/fauna/debug-view consumers) and all technical checks passed (`tsc`, `lint`, full `vitest` suite incl. new circle/OBB math tests and a real-doorway-traversal regression across 9 house definitions, `vite build`). User's manual browser check on the running dev server:
+
+> Dalej mogę przejść przez ścianę, a nie przez drzwi. (Still walking through the wall; not through the door.)
+
+i.e. the wall is **not** blocking the player, while a closed door **does** block — the opposite pairing of what the fix targets (real wall OBB should block; the real ~1.30 m opening should be walkable when the door is open).
+
+### What's already ruled out
+
+- Pure collision math: `collision.ts`'s circle/OBB `resolvePosition`, `colliderContainsPoint`, `colliderSignedDistance` etc. are unit-tested directly (exact hand-verified numeric assertions for front/back/side/corner/rotated/inside-OBB cases) — all pass.
+- House-collider generation: `buildHouseWallCollidersLocal` / `buildHouseDoorCollidersLocal` / `buildHouseCollidersWorld` are unit-tested against real `HouseDefinition`s (`TEST_HOUSE_01`, `COTTAGE_4X4_A/B`, `COTTAGE_6X4_A/B`, `HOUSE_6X6_A/B`, `HOUSE_8X6_A/B`) including a traversal regression (outside → through opening → inside walkable; wall piece next to the opening blocks; closed door blocks, open door doesn't) — all pass.
+- `PlayerController.update()`'s movement resolution and `gapClose()` are unmodified call sites (`resolvePosition(candidateX, candidateZ, PLAYER_COLLISION_RADIUS, this.collidersNear(...))`) — same shape as before this plan, not a new wiring path.
+- `createSettlement.ts`'s `registerSettlementColliders()` still registers wall+door colliders together, from the same `buildHouseCollidersWorld` call, into the same `ColliderRegistry` under `def.id` — walls and the door leaf are not on separate registration paths, so a wiring/timing bug should affect both, not just one.
+
+That last point is the interesting one: since the door leaf is *also* an OBB, built by the same `resolveObbPush`/registration pipeline, and it visibly blocks in the browser, the OBB math and the collider-registry pipeline are proven reachable and working end-to-end for at least one OBB. The bug is most likely specific to **wall-piece generation or wall-piece registration**, not the shared OBB math — but this has not been confirmed by an actual browser-side inspection, only inferred.
+
+### Not yet tried / next steps for whoever picks this up
+
+1. **Rule out a stale dev server / HMR issue first** — this refactor touched the `Collider` type across ~18 files including several registration call sites; a full dev-server restart (not just a browser refresh) hasn't been confirmed. Cheapest possible explanation, check it first.
+2. **`?debugColliders=1` visual check** — not yet done. This is the fastest real diagnostic: does the overlay draw a wall-shaped orange box for the house walls at all? If nothing is drawn, it's a generation/registration bug (`buildHouseWallCollidersLocal` never running for that house, or `houseAssemblies[i]` misaligned/undefined so `settlementHouseColliders` falls into the `footprintRadius` circle fallback — though that fallback should block the whole house including the door, which doesn't match what was observed, so this is a weaker candidate). If a box *is* drawn in the right place but the player still walks through it, the bug is in `resolvePosition`'s consumption of it at runtime, not generation — worth double-checking `collider.type` actually survives however colliders are threaded through `ColliderRegistry`/`collidersNear` (e.g. a stale cached array, or something upstream spreading/cloning collider objects and dropping the `type` discriminant field).
+3. If the debug overlay shows correctly-placed wall boxes and the player still passes through, add a one-off `console.log` in `PlayerController`'s `resolvePosition` call site (or a temporary assertion) to confirm the OBB collider objects reaching it actually have `type: 'obb'` and sane `halfWidth`/`halfDepth`/`rotationY` values for that specific house instance.
+4. Double check `HouseAssembly`'s `root.rotation.y`/`root.position` actually match the *visual* wall mesh placement used by `buildHouse()` at the moment `buildAssemblyCollidersWorld(assembly)` reads them (async GLTF loading — is it possible colliders are captured from the root's transform *before* the settlement/village placement code finishes positioning the house, i.e. a snapshot-timing issue independent of the door-registration retrigger on open/close?).
+
+Do not re-derive the wall/opening geometry constants (`HOUSE_WALL_LENGTH_M`/`HOUSE_WALL_THICKNESS_M`/`HOUSE_DOOR_OPENING_HALF_WIDTH_M` in `houseBuilder.ts`) without new evidence — those were measured directly from the real GLB vertex data (see the constants' doc comments) and are not implicated by the symptom above.

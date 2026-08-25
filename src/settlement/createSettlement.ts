@@ -123,6 +123,7 @@ function settlementHouseColliders(
       colliders.push(...buildAssemblyCollidersWorld(assembly))
     } else {
       colliders.push({
+        type: 'circle',
         x: house.position.x,
         z: house.position.z,
         radius: house.footprintRadius,
@@ -288,7 +289,7 @@ export async function createSettlement(
 
   const registerSettlementColliders = (): void => {
     registerColliders(def.id, [
-      { x: landmarks.well.x, z: landmarks.well.z, radius: WELL_COLLISION_RADIUS },
+      { type: 'circle', x: landmarks.well.x, z: landmarks.well.z, radius: WELL_COLLISION_RADIUS },
       ...settlementHouseColliders(landmarks.houses, houseAssemblies),
       ...settlementPropColliders(landmarks),
     ])

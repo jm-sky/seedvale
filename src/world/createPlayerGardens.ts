@@ -63,7 +63,7 @@ export function createPlayerGardens(
     mesh.rotation.y = record.yaw
     placeOnGround(mesh, record.x, record.z, sampleHeight)
     scene.add(mesh)
-    registerColliders(colliderKey(record.id), [{ x: record.x, z: record.z, radius: GARDEN_FOOTPRINT_RADIUS }])
+    registerColliders(colliderKey(record.id), [{ type: 'circle', x: record.x, z: record.z, radius: GARDEN_FOOTPRINT_RADIUS }])
     const entry: PlayerGardenEntry = { ...record, mesh }
     gardens.push(entry)
     return entry
