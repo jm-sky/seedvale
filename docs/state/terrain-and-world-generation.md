@@ -4,7 +4,7 @@
 
 **Not:** a rendering/visual-contract log (that's [GRAPHICS.md](../architecture/GRAPHICS.md) — shader/material *why*), the ocean/lake/river domain (that's [WATER.md](../state/water.md)), a plan (that's [plans/](../plans/README.md)), or the whole-codebase snapshot (that's [STATE.md](../STATE.md)).
 
-**Last verified:** 2026-08-22
+**Last verified:** 2026-08-25
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -21,7 +21,7 @@ When this file and the code disagree, the code wins — update this file.
 ## Mountains
 
 - Mountain massifs are shaped in `chunkHeightmap.ts`'s `sampleRawTexel()`, tuned (plan 181) toward wider, continuous massifs with softer foothills and fewer sharp noise-driven peaks/pits — overall mountain coverage/amplitude (`mountainGain`/`heightScale`) is unchanged. Exact tuning constants live in `worldConfig.ts`'s `RegionParams` and are not restated here; see plan 181 for the tuning history.
-- Waterfalls and full shader/rendering parity between rivers and lake/ocean are not implemented yet ([LOOSE-ENDS](../plans/LOOSE-ENDS.md)).
+- Waterfalls are implemented (plan 181, Etap 7 completion, 2026-08-25) as a per-vertex rendering signal on the existing river ribbon — no separate geometry/system. Full shader/rendering parity between rivers and lake/ocean, and hydrology worker offload, remain deliberately deferred ([LOOSE-ENDS](../plans/LOOSE-ENDS.md)).
 - Rivers themselves (hydrology, tiling, ribbon geometry, channel carving) are documented in [WATER.md](../state/water.md), not here — they're a water feature, not a terrain-shape one, even though carving does lower the heightmap.
 
 ## Vegetation & rocks

@@ -25,14 +25,17 @@ const VERTEX_SHADER = /* glsl */ `
   #include <fog_pars_vertex>
 
   attribute float aFlow;
+  attribute float aFall;
 
   varying vec2 vUv;
   varying vec3 vViewDir;
   varying float vFlow;
+  varying float vFall;
 
   void main() {
     vUv = uv;
     vFlow = aFlow;
+    vFall = aFall;
     vec4 world = modelMatrix * vec4(position, 1.0);
     vViewDir = normalize(cameraPosition - world.xyz);
     vec4 mvPosition = viewMatrix * world;
@@ -57,6 +60,7 @@ const FRAGMENT_SHADER = /* glsl */ `
   varying vec2 vUv;
   varying vec3 vViewDir;
   varying float vFlow;
+  varying float vFall;
 
   void main() {
     // Ribbon is roughly horizontal — a fixed up-normal is a fine approximation
@@ -94,6 +98,17 @@ const FRAGMENT_SHADER = /* glsl */ `
     // Baseline alpha also scales with flow so a barely-classified trickle
     // reads as translucent, not a solid bright-blue stripe.
     float alpha = mix(0.35, 0.8, fresnel) * mix(0.5, 1.0, vFlow) * bankFade;
+
+    // Waterfalls (plan 181 Etap 4/6): vFall (0 = ordinary flow, 1 = a steep
+    // drop) drives the same ribbon toward churning whitewater instead of a new
+    // geometry/object — a faster, multi-directional mist pattern on top of the
+    // existing directional flow streak, blended toward near-opaque foam.
+    float mist = fract(vUv.x * 3.0 + vUv.y * 0.4 - uTime * 1.6);
+    float mistBand = smoothstep(0.7, 1.0, mist) * vFall;
+    col += uLakeFoam * mistBand * 0.6;
+    col = mix(col, uLakeFoam, vFall * 0.6);
+    alpha = mix(alpha, 0.92, vFall);
+
     gl_FragColor = vec4(col, alpha);
     #include <fog_fragment>
   }

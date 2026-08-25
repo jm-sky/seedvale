@@ -100,7 +100,6 @@ Natural vegetation
 | --------------------------------------------------------- | --------------------------------------------------------------------- | --- | ------ | --------------- |
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Etap H: drzewa/kopanie + bandyci                                      | 🔴  | XL     | ~~015~~ ~~018~~ |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
-| `2026-08-21--181--natural-mountains-and-rivers.md`        | Etap 7: meanders, waterfalls, shader/rendering parity, worker offload | 🔴  | M      | -               |
 
 ---
 
@@ -167,6 +166,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-21--183--slope-movement-constraint.md` | - |
 | `2026-08-20--177--npc-combat.md` | - |
 | `2026-08-21--189--river-channel-carving.md` | [notes](./implementation-notes/2026-08-21--189--river-channel-carving-implementation-notes.md) |
+| `2026-08-21--181--natural-mountains-and-rivers.md` | Etap 1–7 complete including waterfalls; full lake/ocean shader parity + hydrology worker offload deliberately deferred pending measured need, see plan's Etap 7 completion summary |
 | `2026-08-21--185--npc-role-based-carried-weapons.md` | [notes](./implementation-notes/2026-08-21--185--npc-role-based-carried-weapons-implementation-notes.md) |
 | `2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul.md` | [notes](./implementation-notes/2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul-implementation-notes.md) |
 | `2026-08-21--186--combat-and-player-interactions.md` | [notes](./implementation-notes/2026-08-21--186--combat-and-player-interactions-implementation-notes.md) |

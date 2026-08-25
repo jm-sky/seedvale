@@ -1,7 +1,7 @@
 # Plan: Natural Mountains & Rivers
 
 **Created:** 2026-08-21
-**Status:** `in progress` 🔄 — Etap 1–6 implemented (see "Implementation summary"); Etap 7 rendering polish (meandering, width/flow-based shading) implemented — waterfalls, full lake/ocean shader parity, and worker offload remain open (see "Implementation summary — Etap 7")
+**Status:** `verification needed` 🔍 — Etap 1–7 implemented (see "Implementation summary" sections below, including "Etap 7 completion"); full lake/ocean shader parity (reflection binding, depth-based foam) and worker offload for hydrology remain deliberately deferred pending measured need — see "Implementation summary — Etap 7 completion" and [LOOSE-ENDS.md](./LOOSE-ENDS.md). Browser/manual verification of the full river network (including waterfalls) still open.
 **Priority:** high · **Effort:** M
 **Depends on:** unknown
 
@@ -410,5 +410,81 @@ offload, interactive hydrology debug overlay.
 `pnpm run test` (1463 tests) all green — no existing river/hydrology test
 needed changing. No browser/visual verification in this session — the user
 verifies actual river appearance across seeds/terrain types manually.
+
+## Implementation summary — Etap 7 completion: waterfalls (2026-08-25, follow-up session)
+
+Closes the last concrete gap the plan text itself required ("wodospady przy
+odpowiednio dużym spadku" — plan §4/§6, verification checklist §10). Everything
+else already implemented (Etap 1–7 meandering/width/shading) is unchanged.
+
+**Design decision — no second geometry/object system for falls.** A waterfall
+is not a new mesh, particle system, or network-data concept. River channel
+carving (plan 189, already implemented and out of scope here) carves the
+terrain bed to each chain point's own `elevation`, so wherever the underlying
+D8 path is genuinely steep, the carved terrain *already* has a real physical
+drop — Chaikin smoothing subdivides an edge without flattening its net slope
+(verified by inspection: `smoothChainPoints` interpolates strictly between the
+two original endpoints of each edge, so a steep edge's rise-over-run survives
+subdivision unchanged), and meandering only nudges points laterally, never
+vertically. What was missing was purely a *rendering* signal: the existing
+ribbon had no way to visually distinguish "flowing downhill" from "falling
+down a cliff."
+
+**Implementation** (`src/world/riverGeometry.ts`, `src/world/riverWaterMaterial.ts`):
+`buildRiverRibbonGeometry()` now computes, per vertex, the local rise-over-run
+between a point and its immediate predecessor *within the same already-clipped
+run* (`waterfallFactor()`), using each point's own cached `elevation` — no new
+sampling call, no change to `RiverPoint`/`RiverChain`/hydrology/network data.
+Below `WATERFALL_SLOPE_MIN` (0.6) a segment reads as ordinary flow; above
+`WATERFALL_SLOPE_MAX` (1.6) it's a full waterfall; between, a linear blend.
+Written as a new per-vertex `aFall` attribute, mirroring the existing `aFlow`
+attribute's shape exactly. `riverWaterMaterial.ts`'s fragment shader reads it
+(`vFall`) to blend the ribbon toward near-opaque whitewater foam (`uLakeFoam`)
+and layer a faster, multi-directional "mist" pattern on top of the existing
+directional flow streak — churning turbulence instead of a directional current,
+without any new texture or geometry.
+
+**Known limitation (documented, not silently accepted):** the first point of
+each *clipped, chunk-local run* has no predecessor to compare against (a
+per-chunk clipping artifact, same category as the existing tile-seam width
+discontinuity already documented below) — its own `aFall` starts at 0 even if
+the true upstream point (in the unclipped chain, just across the chunk
+boundary) was falling steeply into it. Cosmetic only: the very next vertex
+along the same run picks the correct value, so a real waterfall spanning a
+chunk boundary just loses at most one vertex-pair's worth of whitewater
+shading at the seam, not the whole feature.
+
+**Not implemented, deliberately deferred pending measured need (see
+[LOOSE-ENDS.md](./LOOSE-ENDS.md)):**
+
+- Full lake/ocean shader parity for river water (reflection binding,
+  depth-based foam) — Etap 7 "rendering polish" was always scoped as
+  optional/nice-to-have beyond what the plan's own checklist required; the
+  river material already reuses the shared day/night palette and
+  `tickWaterTime`/`setWaterDayNight` from `waterMaterial.ts` unmodified.
+- Worker offload for per-tile hydrology computation — the Etap 1–3 notes and
+  plan 189 (a later, related plan) both explicitly gate this on measured
+  profiling data ("Profile before deciding whether worker execution is
+  needed" / "nie dodawać workerów bez uzasadnienia pomiarem"). No such
+  profiling has been done; synchronous main-thread tile computation
+  (~18ms/tile, synthetic benchmark) remains in place. Adding worker
+  infrastructure without a measured hitch would be exactly the kind of
+  parallel/speculative system this plan and CLAUDE.md's performance section
+  warn against.
+- Interactive in-browser hydrology debug overlay — the plan's diagnostic goal
+  (§3: evaluate the drainage network across seeds "bez konieczności tworzenia
+  finalnej geometrii Three.js") was already satisfied by the Etap 2–3
+  numerical, multi-seed test suite (`hydrology.test.ts`) before any rendered
+  river existed. Now that rivers are actually rendered and visually
+  inspectable in the running game, a separate non-gameplay debug overlay adds
+  a new, unrequested standalone tool rather than completing an open plan
+  requirement.
+
+**Verified:** `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`,
+`pnpm run test` (1890 tests) all green, including two new
+`riverGeometry.test.ts` cases for `aFall` (zero on gentle slope, bounded
+positive on a steep drop). No browser/visual verification in this session —
+per user instruction, the user verifies actual waterfall appearance across
+seeds/terrain types manually.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

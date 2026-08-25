@@ -33,7 +33,7 @@ Procedurally chunked, streamed terrain with instanced vegetation/rocks, tree lif
 - Generation/streaming/vegetation/mountains/weather: [state/terrain-and-world-generation.md](./state/terrain-and-world-generation.md)
 - Ocean, lakes and rivers: [WATER.md](./state/water.md)
 - Visual/shader contracts (why something renders the way it does): [GRAPHICS.md](./architecture/GRAPHICS.md)
-- Still not implemented: waterfalls, full river/lake shader parity, clouds and distant background mountains, cube-sphere/spherical world.
+- Still not implemented: full river/lake shader parity, hydrology worker offload, clouds and distant background mountains, cube-sphere/spherical world.
 
 ### Settlements / NPCs
 
