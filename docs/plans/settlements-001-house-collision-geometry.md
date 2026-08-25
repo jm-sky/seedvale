@@ -7,21 +7,6 @@
 **Domain:** `settlements`
 **Tags:** `world`, `npc`, `fauna`
 
-| Domain | Covers |
-|---|---|
-| `ai` | AI-assisted dialogue, characterisation and related AI systems |
-| `fauna` | Wildlife, predators/prey, herds, ecosystem simulation |
-| `items-player` | Inventory, tools, player needs, world items |
-| `npc` | NPC behaviour, needs, goals, traits, decisions and actions |
-| `persistence` | SaveData, IndexedDB, persistence |
-| `quests-progression` | Quests, relationships, EXP and progression |
-| `settlements` | Settlements, buildings, population, resources and development |
-| `settlements-npcs` | Settlements + NPCs, households, schedules, economy, dialogue |
-| `tools` | Development/debugging tools and utilities |
-| `ui-input` | UI, HUD, input and player interaction |
-| `world` | World state, resources, places, time, weather and global systems |
-| `world-terrain` | Terrain, chunks, ocean, environment and landmarks |
-
 ## 1. Cel
 
 Naprawić kolizje składanych domów tak, aby odpowiadały rzeczywistej geometrii ścian i otworów drzwiowych.
