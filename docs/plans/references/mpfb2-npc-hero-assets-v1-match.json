@@ -1,0 +1,432 @@
+{
+  "project": "Seedvale",
+  "source": "MPFB2",
+  "generated": "2026-08-25T09:35:10.820606",
+  "matcher": {
+    "algorithm": "fuzzy",
+    "match_threshold": 0.9,
+    "review_threshold": 0.7,
+    "max_matches": 5
+  },
+  "paths": {
+    "requirements": "\\\\wsl.localhost\\Ubuntu-20.04\\home\\madeyskij\\projects\\private\\seedvale\\docs\\plans\\references\\mpfb2-npc-hero-assets-v1.json",
+    "inventory": "\\\\wsl.localhost\\Ubuntu-20.04\\home\\madeyskij\\projects\\private\\seedvale\\docs\\plans\\references\\mpfb2-asset-inventory.json",
+    "output": "\\\\wsl.localhost\\Ubuntu-20.04\\home\\madeyskij\\projects\\private\\seedvale\\docs\\plans\\references\\mpfb2-npc-hero-assets-v1-match.json"
+  },
+  "summary": {
+    "requirements": 50,
+    "inventory_assets": 6652,
+    "match": 0,
+    "review": 1,
+    "missing": 49
+  },
+  "results": [
+    {
+      "requirement": "short",
+      "path": "categories.hair.male[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "medium",
+      "path": "categories.hair.male[1]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "bald",
+      "path": "categories.hair.male[2]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "shoulder_length",
+      "path": "categories.hair.female[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "waist_length",
+      "path": "categories.hair.female[1]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "braid",
+      "path": "categories.hair.female[2]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "none",
+      "path": "categories.beard[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "short_with_moustache",
+      "path": "categories.beard[2]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "moustache",
+      "path": "categories.beard[3]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "medium_with_moustache",
+      "path": "categories.beard[4]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "long_with_moustache",
+      "path": "categories.beard[5]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "hat",
+      "path": "categories.headwear[1]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "female_headscarf",
+      "path": "categories.headwear[2]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "male_base",
+      "path": "categories.base.male[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "female_base",
+      "path": "categories.base.female[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "tunic",
+      "path": "categories.clothing.hero.male[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "trousers",
+      "path": "categories.clothing.hero.male[1]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "vest",
+      "path": "categories.clothing.hero.male[2]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "boots",
+      "path": "categories.clothing.hero.male[3]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "cloak",
+      "path": "categories.clothing.hero.male[4]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "dress",
+      "path": "categories.clothing.hero.female[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "blouse",
+      "path": "categories.clothing.hero.female[1]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "skirt",
+      "path": "categories.clothing.hero.female[2]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "cloth",
+      "path": "categories.materials_and_colors.materials[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "leather",
+      "path": "categories.materials_and_colors.materials[1]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "wool",
+      "path": "categories.materials_and_colors.materials[2]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "metal",
+      "path": "categories.materials_and_colors.materials[3]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "villager",
+      "path": "professions[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "hero",
+      "path": "professions[1]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "farmer",
+      "path": "professions[2]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "guard",
+      "path": "professions[3]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "hunter",
+      "path": "professions[4]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "woodcutter",
+      "path": "professions[5]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "merchant",
+      "path": "professions[6]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "blacksmith",
+      "path": "professions[7]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "body",
+      "path": "modular_example.npc[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "face",
+      "path": "modular_example.npc[1]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "hair",
+      "path": "modular_example.npc[2]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "beard",
+      "path": "modular_example.npc[3]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "headwear",
+      "path": "modular_example.npc[4]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "base",
+      "path": "modular_example.npc[5]",
+      "location": null,
+      "classification": "REVIEW",
+      "best_score": 0.7417,
+      "matches": [
+        {
+          "asset": "base.obj",
+          "score": 0.7417,
+          "classification": "REVIEW",
+          "inventory_path": "files[0].name"
+        }
+      ]
+    },
+    {
+      "requirement": "universal_clothing",
+      "path": "modular_example.npc[6]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "profession_piece",
+      "path": "modular_example.npc[7]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "equipment",
+      "path": "modular_example.npc[8]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "male_body",
+      "path": "modular_example.example_hunter[0]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "male_face_3",
+      "path": "modular_example.example_hunter[1]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "short_hair",
+      "path": "modular_example.example_hunter[2]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "short_beard",
+      "path": "modular_example.example_hunter[3]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "fur_vest",
+      "path": "modular_example.example_hunter[7]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    },
+    {
+      "requirement": "bow",
+      "path": "modular_example.example_hunter[8]",
+      "location": null,
+      "classification": "MISSING",
+      "best_score": 0.0,
+      "matches": []
+    }
+  ]
+}
