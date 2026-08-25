@@ -44,32 +44,50 @@ from aliases import (
     SINGULAR_FORMS,
 )
 
+
 # ============================================================
 # CONSTANTS
 # ============================================================
 
-STRUCTURAL_REQUIREMENTS = {
-    "body",
-    "face",
+# The requirements document is a schema, not a bag of strings.
+# Only these category values represent concrete asset candidates.
+ASSET_VALUE_CATEGORIES = {
     "hair",
     "beard",
     "headwear",
-    "universal_clothing",
-    "profession_piece",
-    "equipment",
+    "base",
 }
 
+# Clothing is represented by explicit {"asset": ..., ...} records.
+ASSET_RECORD_CATEGORIES = {
+    "clothing",
+}
+
+# Values that describe the requirements document itself or simulation/design
+# rules must never become asset requirements.
 IGNORED_REQUIREMENT_KEYS = {
+    "project",
+    "version",
+    "asset_source",
+    "principle",
+    "categories",
+    "professions",
+    "modular_example",
     "status",
     "note",
     "location",
     "asset",
     "planned",
-    "clothing",
-    "profession_specific",
-    "wives",
-    "materials",
     "total",
+    "materials",
+    "materials_and_colors",
+    "wives",
+    "profession_specific_outfits",
+}
+
+# These values describe the absence of an asset, not an asset to find.
+IGNORED_ASSET_VALUES = {
+    "none",
 }
 
 STOP_WORDS = {
@@ -230,18 +248,13 @@ def get_aliases(requirement):
         ALIASES.get(requirement, [])
     )
 
-    # Normalize and remove duplicates.
     result = []
-
     seen = set()
 
     for alias in aliases:
         alias = normalize(alias)
 
-        if not alias:
-            continue
-
-        if alias in seen:
+        if not alias or alias in seen:
             continue
 
         seen.add(alias)
@@ -315,19 +328,10 @@ def semantic_context_score(requirement, candidate):
 
     score = 0.0
 
-    # Gender/context consistency.
     for group in ("male", "female"):
-        hints = set(
-            CONTEXT_HINTS.get(group, [])
-        )
-
-        req_has = bool(
-            requirement_tokens & hints
-        )
-
-        candidate_has = bool(
-            candidate_tokens & hints
-        )
+        hints = set(CONTEXT_HINTS.get(group, []))
+        req_has = bool(requirement_tokens & hints)
+        candidate_has = bool(candidate_tokens & hints)
 
         if req_has and candidate_has:
             score += 0.08
@@ -335,28 +339,18 @@ def semantic_context_score(requirement, candidate):
         if req_has and not candidate_has:
             score -= 0.03
 
-    # General semantic context.
     for group, hints in CONTEXT_HINTS.items():
         if group in {"male", "female"}:
             continue
 
         hints = set(hints)
-
-        req_has = bool(
-            requirement_tokens & hints
-        )
-
-        candidate_has = bool(
-            candidate_tokens & hints
-        )
+        req_has = bool(requirement_tokens & hints)
+        candidate_has = bool(candidate_tokens & hints)
 
         if req_has and candidate_has:
             score += 0.03
 
-    return max(
-        -0.10,
-        min(0.15, score),
-    )
+    return max(-0.10, min(0.15, score))
 
 
 def generic_token_penalty(candidate):
@@ -365,17 +359,12 @@ def generic_token_penalty(candidate):
     if not tokens:
         return 0.0
 
-    generic_count = len(
-        tokens & GENERIC_TOKENS
-    )
+    generic_count = len(tokens & GENERIC_TOKENS)
 
     if generic_count == 0:
         return 0.0
 
-    return min(
-        0.12,
-        generic_count * 0.025,
-    )
+    return min(0.12, generic_count * 0.025)
 
 
 def score_pair(requirement, candidate):
@@ -388,36 +377,15 @@ def score_pair(requirement, candidate):
     if requirement == candidate:
         return 1.0
 
-    aliases = get_aliases(requirement)
-
     best = 0.0
 
-    for alias in aliases:
-        seq = sequence_score(
-            alias,
-            candidate,
-        )
+    for alias in get_aliases(requirement):
+        seq = sequence_score(alias, candidate)
+        tokens = token_score(alias, candidate)
+        containment = containment_score(alias, candidate)
+        semantic = semantic_context_score(alias, candidate)
+        penalty = generic_token_penalty(candidate)
 
-        tokens = token_score(
-            alias,
-            candidate,
-        )
-
-        containment = containment_score(
-            alias,
-            candidate,
-        )
-
-        semantic = semantic_context_score(
-            alias,
-            candidate,
-        )
-
-        penalty = generic_token_penalty(
-            candidate
-        )
-
-        # Main score.
         score = (
             seq * 0.45
             + tokens * 0.25
@@ -426,16 +394,12 @@ def score_pair(requirement, candidate):
             - penalty
         )
 
-        # Exact alias should win immediately.
         if alias == candidate:
             score = 1.0
 
         best = max(best, score)
 
-    return max(
-        0.0,
-        min(1.0, best),
-    )
+    return max(0.0, min(1.0, best))
 
 
 # ============================================================
@@ -443,12 +407,7 @@ def score_pair(requirement, candidate):
 # ============================================================
 
 def extract_strings(value, path=""):
-    """
-    Recursively extract candidate asset names from inventory JSON.
-
-    The scanner intentionally accepts multiple inventory shapes.
-    """
-
+    """Recursively extract candidate asset names from inventory JSON."""
     results = []
 
     if isinstance(value, str):
@@ -465,23 +424,12 @@ def extract_strings(value, path=""):
 
     if isinstance(value, list):
         for index, item in enumerate(value):
-            child_path = (
-                f"{path}[{index}]"
-                if path
-                else f"[{index}]"
-            )
-
-            results.extend(
-                extract_strings(
-                    item,
-                    child_path,
-                )
-            )
+            child_path = f"{path}[{index}]" if path else f"[{index}]"
+            results.extend(extract_strings(item, child_path))
 
         return results
 
     if isinstance(value, dict):
-        # Prefer explicit asset-like fields.
         asset_fields = (
             "name",
             "asset",
@@ -494,52 +442,25 @@ def extract_strings(value, path=""):
             "source",
         )
 
-        used_asset_field = False
+        used_asset_fields = set()
 
         for field in asset_fields:
-            if field not in value:
-                continue
+            field_value = value.get(field)
 
-            field_value = value[field]
+            if isinstance(field_value, str) and field_value.strip():
+                results.append({
+                    "name": field_value.strip(),
+                    "path": f"{path}.{field}" if path else field,
+                    "source": field,
+                })
+                used_asset_fields.add(field)
 
-            if isinstance(field_value, str):
-                text = field_value.strip()
-
-                if text:
-                    results.append({
-                        "name": text,
-                        "path": (
-                            f"{path}.{field}"
-                            if path
-                            else field
-                        ),
-                        "source": field,
-                    })
-
-                    used_asset_field = True
-
-        # Continue recursively to find nested assets.
         for key, child in value.items():
-            child_path = (
-                f"{path}.{key}"
-                if path
-                else key
-            )
-
-            # Avoid duplicating explicit string fields.
-            if (
-                used_asset_field
-                and key in asset_fields
-                and isinstance(child, str)
-            ):
+            if key in used_asset_fields:
                 continue
 
-            results.extend(
-                extract_strings(
-                    child,
-                    child_path,
-                )
-            )
+            child_path = f"{path}.{key}" if path else key
+            results.extend(extract_strings(child, child_path))
 
         return results
 
@@ -552,26 +473,18 @@ def deduplicate_inventory(entries):
 
     for entry in entries:
         name = entry.get("name", "")
-
         normalized = normalize(name)
 
         if not normalized:
             continue
 
-        key = (
-            normalized,
-            entry.get("path", ""),
-        )
+        key = (normalized, entry.get("path", ""))
 
         if key in seen:
             continue
 
         seen.add(key)
-
-        result.append({
-            **entry,
-            "normalized": normalized,
-        })
+        result.append({**entry, "normalized": normalized})
 
     return result
 
@@ -580,176 +493,164 @@ def deduplicate_inventory(entries):
 # REQUIREMENT EXTRACTION
 # ============================================================
 
-def is_asset_requirement(
-    name,
-    value=None,
-    parent_key=None,
-):
-    normalized = normalize(name)
+def add_requirement(results, value, path, requirement_type="asset", location=None):
+    """Add one concrete asset requirement unless it is an explicit absence."""
+    if not isinstance(value, str):
+        return
 
-    if not normalized:
-        return False
+    value = value.strip()
+    normalized = normalize(value)
 
-    if normalized in IGNORED_REQUIREMENT_KEYS:
-        return False
+    if not normalized or normalized in IGNORED_ASSET_VALUES:
+        return
+
+    entry = {
+        "requirement": value,
+        "path": path,
+        "type": requirement_type,
+    }
+
+    if location is not None:
+        entry["location"] = location
+
+    results.append(entry)
+
+
+def extract_asset_values(value, path, results, requirement_type="variant"):
+    """Extract strings from an explicitly asset-valued category."""
+    if isinstance(value, str):
+        add_requirement(results, value, path, requirement_type)
+        return
+
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            child_path = f"{path}[{index}]"
+            extract_asset_values(item, child_path, results, requirement_type)
+        return
 
     if isinstance(value, dict):
-        return False
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            extract_asset_values(child, child_path, results, requirement_type)
 
-    if normalized in STRUCTURAL_REQUIREMENTS:
-        return True
 
-    return True
+def extract_asset_records(value, path, results):
+    """Extract only explicit {asset: ...} records from a category."""
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            child_path = f"{path}[{index}]"
+            extract_asset_records(item, child_path, results)
+        return
+
+    if isinstance(value, dict):
+        if isinstance(value.get("asset"), str):
+            add_requirement(
+                results,
+                value["asset"],
+                f"{path}.asset",
+                "asset",
+                value.get("location"),
+            )
+            return
+
+        for key, child in value.items():
+            # metadata / rules are not asset requirements
+            if key in IGNORED_REQUIREMENT_KEYS:
+                continue
+
+            child_path = f"{path}.{key}"
+            extract_asset_records(child, child_path, results)
 
 
 def extract_requirements(value, path=""):
     """
-    Extract concrete asset-like strings from requirements JSON.
+    Schema-aware extraction for mpfb2-npc-hero-assets-v1.json.
 
-    Lists of strings are treated as asset requirements.
-    Objects with an explicit "asset" field are treated as assets.
-    Structural category names are retained separately.
+    Important: this intentionally does NOT recursively treat every string
+    in the JSON as an asset requirement. The document contains metadata,
+    design principles, categories, professions and composition examples.
+    Only concrete asset-bearing category values are extracted.
     """
-
     results = []
 
-    if isinstance(value, str):
-        text = value.strip()
-
-        if text and is_asset_requirement(text):
-            results.append({
-                "requirement": text,
-                "path": path,
-                "type": "string",
-            })
-
+    if not isinstance(value, dict):
         return results
 
-    if isinstance(value, list):
-        for index, item in enumerate(value):
-            child_path = (
-                f"{path}[{index}]"
-                if path
-                else f"[{index}]"
-            )
+    categories = value.get("categories")
 
-            results.extend(
-                extract_requirements(
-                    item,
-                    child_path,
-                )
-            )
-
+    if not isinstance(categories, dict):
         return results
 
-    if isinstance(value, dict):
-        # Explicit asset definition:
-        #
-        # {
-        #   "asset": "shirt",
-        #   "location": "upper_body"
-        # }
-        #
-        if isinstance(value.get("asset"), str):
-            asset = value["asset"].strip()
+    # MPFB2 body/face are generated by MPFB2/morphs in v1, so there is no
+    # concrete asset to scan for in these categories.
+    for category in ASSET_VALUE_CATEGORIES:
+        if category not in categories:
+            continue
 
-            if asset:
-                results.append({
-                    "requirement": asset,
-                    "path": (
-                        f"{path}.asset"
-                        if path
-                        else "asset"
-                    ),
-                    "type": "asset",
-                    "location": value.get("location"),
-                })
+        extract_asset_values(
+            categories[category],
+            f"categories.{category}",
+            results,
+            "variant",
+        )
 
-        for key, child in value.items():
-            child_path = (
-                f"{path}.{key}"
-                if path
-                else key
-            )
+    # Clothing uses explicit asset records. This includes universal,
+    # hero and profession-specific clothing, but ignores the wives metadata
+    # and other descriptive fields.
+    clothing = categories.get("clothing")
 
-            if key == "asset":
-                continue
-
+    if isinstance(clothing, dict):
+        for key, child in clothing.items():
             if key in IGNORED_REQUIREMENT_KEYS:
                 continue
 
-            if isinstance(child, dict):
-                # Keep structural categories.
-                if normalize(key) in STRUCTURAL_REQUIREMENTS:
-                    results.append({
-                        "requirement": key,
-                        "path": child_path,
-                        "type": "category",
-                    })
-
-                results.extend(
-                    extract_requirements(
-                        child,
-                        child_path,
-                    )
-                )
-
-            elif isinstance(child, list):
-                results.extend(
-                    extract_requirements(
-                        child,
-                        child_path,
-                    )
-                )
-
-            elif isinstance(child, str):
-                if is_asset_requirement(
-                    key,
-                    child,
-                    parent_key=path,
-                ):
-                    results.append({
-                        "requirement": child,
-                        "path": child_path,
-                        "type": "string",
-                    })
-
-        return results
+            extract_asset_records(
+                child,
+                f"categories.clothing.{key}",
+                results,
+            )
 
     return results
 
 
 def deduplicate_requirements(entries):
+    """Deduplicate by actual asset identity, not by JSON path."""
     result = []
-    seen = set()
+    by_normalized = {}
 
     for entry in entries:
-        requirement = entry.get(
-            "requirement",
-            "",
-        )
-
-        normalized = normalize(
-            requirement
-        )
+        requirement = entry.get("requirement", "")
+        normalized = normalize(requirement)
 
         if not normalized:
             continue
 
-        key = (
-            normalized,
-            entry.get("path", ""),
-        )
+        existing = by_normalized.get(normalized)
 
-        if key in seen:
+        if existing is None:
+            normalized_entry = {
+                **entry,
+                "normalized": normalized,
+            }
+            by_normalized[normalized] = normalized_entry
+            result.append(normalized_entry)
             continue
 
-        seen.add(key)
+        # Preserve the most specific metadata when the same asset occurs in
+        # multiple places (e.g. boots in universal + hero clothing).
+        if not existing.get("location") and entry.get("location"):
+            existing["location"] = entry["location"]
 
-        result.append({
-            **entry,
-            "normalized": normalized,
-        })
+        paths = existing.setdefault("paths", [existing.get("path")])
+        if entry.get("path") not in paths:
+            paths.append(entry.get("path"))
+
+    for entry in result:
+        paths = entry.pop("paths", None)
+        if paths:
+            entry["path"] = paths[0]
+            if len(paths) > 1:
+                entry["paths"] = paths
 
     return result
 
@@ -768,22 +669,13 @@ def classify_score(score):
     return "MISSING"
 
 
-def match_requirement(
-    requirement,
-    inventory,
-):
+def match_requirement(requirement, inventory):
     matches = []
 
     for candidate in inventory:
-        candidate_name = candidate.get(
-            "name",
-            "",
-        )
+        candidate_name = candidate.get("name", "")
 
-        score = score_pair(
-            requirement,
-            candidate_name,
-        )
+        score = score_pair(requirement, candidate_name)
 
         if score <= 0:
             continue
@@ -800,10 +692,7 @@ def match_requirement(
         })
 
     matches.sort(
-        key=lambda item: (
-            item["score"],
-            len(item["asset"]),
-        ),
+        key=lambda item: (item["score"], len(item["asset"])),
         reverse=True,
     )
 
@@ -816,33 +705,22 @@ def match_requirement(
 
 def print_match(requirement, matches):
     if not matches:
-        log(
-            f"MISSING 0.000 {requirement}"
-        )
+        log(f"MISSING 0.000 {requirement}")
         return
 
     best = matches[0]
-
-    status = classify_score(
-        best["score"]
-    )
+    status = classify_score(best["score"])
 
     log(
-        f"{status:<8} "
-        f"{best['score']:.3f} "
-        f"{requirement} "
-        f"-> {best['asset']}"
+        f"{status:<8} {best['score']:.3f} "
+        f"{requirement} -> {best['asset']}"
     )
 
     for alternative in matches[1:]:
         if alternative["score"] < REVIEW_THRESHOLD:
             continue
 
-        log(
-            f"         "
-            f"{alternative['score']:.3f} "
-            f"-> {alternative['asset']}"
-        )
+        log(f"         {alternative['score']:.3f} -> {alternative['asset']}")
 
 
 # ============================================================
@@ -850,9 +728,7 @@ def print_match(requirement, matches):
 # ============================================================
 
 def run_scan():
-    started_at = datetime.now(
-        timezone.utc
-    )
+    started_at = datetime.now(timezone.utc)
 
     log("=" * 70)
     log("SEEDVALE / MPFB2 ASSET MATCH SCANNER")
@@ -865,181 +741,89 @@ def run_scan():
     log(f"Output:       {OUTPUT_JSON}")
     log()
 
-    # --------------------------------------------------------
-    # Load
-    # --------------------------------------------------------
-
-    requirements_data = load_json(
-        REQUIREMENTS_JSON
-    )
-
-    inventory_data = load_json(
-        INVENTORY_JSON
-    )
-
-    # --------------------------------------------------------
-    # Extract
-    # --------------------------------------------------------
+    requirements_data = load_json(REQUIREMENTS_JSON)
+    inventory_data = load_json(INVENTORY_JSON)
 
     requirements = deduplicate_requirements(
-        extract_requirements(
-            requirements_data
-        )
+        extract_requirements(requirements_data)
     )
 
     inventory = deduplicate_inventory(
-        extract_strings(
-            inventory_data
-        )
+        extract_strings(inventory_data)
     )
 
     log("[INPUT]")
-    log(
-        f"Requirements: {len(requirements)}"
-    )
-    log(
-        f"Inventory candidates: {len(inventory)}"
-    )
+    log(f"Requirements: {len(requirements)}")
+    log(f"Inventory candidates: {len(inventory)}")
     log()
 
-    # --------------------------------------------------------
-    # Match
-    # --------------------------------------------------------
-
     results = []
-
-    statistics = {
-        "match": 0,
-        "review": 0,
-        "missing": 0,
-    }
+    statistics = {"match": 0, "review": 0, "missing": 0}
 
     log("[MATCHING]")
 
     for requirement_entry in requirements:
-        requirement = requirement_entry[
-            "requirement"
-        ]
+        requirement = requirement_entry["requirement"]
+        matches = match_requirement(requirement, inventory)
+        best_score = matches[0]["score"] if matches else 0.0
+        status = classify_score(best_score)
 
-        matches = match_requirement(
-            requirement,
-            inventory,
-        )
-
-        best_score = (
-            matches[0]["score"]
-            if matches
-            else 0.0
-        )
-
-        status = classify_score(
-            best_score
-        )
-
-        statistics[
-            status.lower()
-        ] += 1
-
-        print_match(
-            requirement,
-            matches,
-        )
+        statistics[status.lower()] += 1
+        print_match(requirement, matches)
 
         results.append({
             "requirement": requirement,
-            "normalized": requirement_entry[
-                "normalized"
-            ],
-            "path": requirement_entry.get(
-                "path"
-            ),
-            "type": requirement_entry.get(
-                "type"
-            ),
-            "location": requirement_entry.get(
-                "location"
-            ),
+            "normalized": requirement_entry["normalized"],
+            "path": requirement_entry.get("path"),
+            "paths": requirement_entry.get("paths"),
+            "type": requirement_entry.get("type"),
+            "location": requirement_entry.get("location"),
             "status": status,
-            "score": round(
-                best_score,
-                4,
-            ),
+            "score": round(best_score, 4),
             "matches": matches,
         })
 
-    # --------------------------------------------------------
-    # Output
-    # --------------------------------------------------------
-
-    finished_at = datetime.now(
-        timezone.utc
-    )
+    finished_at = datetime.now(timezone.utc)
 
     output = {
         "scanner": {
             "name": "seedvale-mpfb2-scanner",
-            "version": "1.0",
+            "version": "1.1",
             "generated_at": finished_at.isoformat(),
             "started_at": started_at.isoformat(),
         },
-
         "blender": {
             "version": bpy.app.version_string,
-            "version_tuple": list(
-                bpy.app.version
-            ),
+            "version_tuple": list(bpy.app.version),
         },
-
         "configuration": {
             "match_threshold": MATCH_THRESHOLD,
             "review_threshold": REVIEW_THRESHOLD,
             "max_matches": MAX_MATCHES,
         },
-
         "sources": {
             "requirements": REQUIREMENTS_JSON,
             "inventory": INVENTORY_JSON,
         },
-
         "statistics": {
-            "requirements": len(
-                requirements
-            ),
-            "inventory_candidates": len(
-                inventory
-            ),
+            "requirements": len(requirements),
+            "inventory_candidates": len(inventory),
             "match": statistics["match"],
             "review": statistics["review"],
             "missing": statistics["missing"],
         },
-
         "results": results,
     }
 
-    save_json(
-        OUTPUT_JSON,
-        output,
-    )
-
-    # --------------------------------------------------------
-    # Summary
-    # --------------------------------------------------------
+    save_json(OUTPUT_JSON, output)
 
     log()
     log("[SUMMARY]")
-    log(
-        f"MATCH:   {statistics['match']}"
-    )
-    log(
-        f"REVIEW:  {statistics['review']}"
-    )
-    log(
-        f"MISSING: {statistics['missing']}"
-    )
+    log(f"MATCH:   {statistics['match']}")
+    log(f"REVIEW:  {statistics['review']}")
+    log(f"MISSING: {statistics['missing']}")
     log()
-    log(
-        f"Saved: {OUTPUT_JSON}"
-    )
+    log(f"Saved: {OUTPUT_JSON}")
 
     return output
 
@@ -1051,12 +835,10 @@ def run_scan():
 if __name__ == "__main__":
     try:
         run_scan()
-
     except Exception as exc:
         log()
         log("=" * 70)
         log("ERROR")
         log("=" * 70)
         log(str(exc))
-
         raise
