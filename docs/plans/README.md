@@ -49,7 +49,7 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 - npc: `002`
 - persistence: `001`
 - quests-progression: `001`
-- settlements: `002`
+- settlements: `001`
 - settlements-npcs: `003`
 - tools: `003`
 - ui-input: `004`
