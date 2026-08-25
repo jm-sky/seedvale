@@ -4,7 +4,7 @@
 
 **Nie jest:** indeksem planów ([plans/README.md](./plans/README.md)), katalogiem GLB ([assets/](./assets/README.md)), kontraktem renderu ([GRAPHICS.md](./architecture/GRAPHICS.md)), ani snapshotem całego codebase ([STATE.md](./STATE.md)).
 
-**Last verified:** 2026-08-24
+**Last verified:** 2026-08-25
 
 Gdy ten plik rozjeżdża się z kodem — **wygrywa kod**, potem aktualizujemy ten dokument.
 
@@ -20,7 +20,7 @@ Historia zakresu: zarchiwizowane plany [047](./plans/archive/2026-08-09--047--vi
 | S2 | Komórki otwartego oceanu są **pomijane** (bez mokrego fallbacku). Osada domowa poszerza poszukiwanie, gdy spawn jest mokry. | issue [029](./issues/2026-08-13--029--village-in-open-ocean.md) |
 | S3 | `SettlementEconomy` to **hurtowy stock osady** (`wood` / `food` / `water` / `iron` / `coal` / `gold` jako `EconomicKind`, ale `water` tu bez producenta/konsumenta — inertny stat z planu 071; `iron`/`coal`/`gold` — plan 131 — mają stock ale bez `SettlementDemand` celu, więc `shortage`/`hasShortage` zawsze 0 dla nich), nie `Inventory` gracza i nie ekwipunek NPC. `Household` (plan 069) to osobna, mniejsza warstwa pod nią — jedna rodzina = jedno gospodarstwo, `stock` (`EconomicStock`) obejmuje tylko `food`/`wood` (`HouseholdResourceKind` jest od planu 131 **niezależnym** literałem `'food' | 'wood'`, nie pochodną `EconomicKind`, żeby ruda nie trafiała do gospodarstwa automatycznie). Woda gospodarstwa (plan 122) to osobny, mniejszy `WaterReserve` (`household.water`) — świadomie **nie** `EconomicKind`/`EconomicStock` (notatki 122 §4: brak produkcji/handlu wodą), jedno źródło prawdy dla `WaterBarrel` (NPC) i `AnimalTrough` (zwierzęta domowe). | `src/economy/`, `src/settlement/household.ts` |
 | S4 | Picie ze studni idzie przez wspólny per-osada `InteractionQueue` (FIFO, jedna obsługa naraz). Picie w domu omija kolejkę. | ten sam typ kolejki jest do ponownego użycia przy ogrodzie/straganie |
-| S5 | Dzienny rytm = szablon roli + overlay cech (`effectiveScheduleFor`). Pilne potrzeby wygrywają w `choose()`. | brak social Place — overlay `sociable` nie ma producenta |
+| S5 | Dzienny rytm = szablon roli + overlay cech (`effectiveScheduleFor`). Pilne potrzeby wygrywają w `choose()`. | od planu 151: overlay `sociable` ma producenta — ognisko osady (§Social poniżej) |
 | S6 | `VigorState` ≠ `StaminaState`. Wigor to budżet dnia; zwykły odpoczynek odnawia tylko staminę. Collapse → istniejący `goSleep`/`sleep`. | fauna nie używa wigoru |
 | S7 | Runtime NPC (needs, AI, vigor) **nie** jest w save. Continue nie przywraca pełnej symulacji. | vigor startuje pełny przy spawnie |
 | S8 | Ruch NPC ma watchdog utknięcia — brak postępu pozycji eskaluje `repath` → `local escape` → `abandon` → (przy powtarzającym się utknięciu) emergency teleport. Cel w obcym dysku (dom, studnia, sterta drewna, wóz kupca) jest snapowany na obręcz od strony NPC (`destinationOnColliderRim`); rescue próbuje tylko punkty **na zewnątrz** zajętego collidera; teleport nie wraca na środek domu. Drenaż staminy zależy od tego, co NPC robi (chodzenie tanie, ciężka `execute` drogie), nie samej fazy. `stamina === 0` w `goTo`/`execute` → faza `exhausted` (odpoczynek w miejscu, ta sama akcja wznawia się po odzyskaniu progu). | `src/ai/npcMovementWatchdog.ts`, `src/ai/npcColliderRim.ts`; emergency teleport zawsze loguje `console.warn('[npc:rescue] emergency teleport', ...)` |
@@ -82,9 +82,19 @@ Multiplayer nie jest planowany teraz i nie projektujemy go tutaj. Ale S3/S7 poka
 - `?debug=1` dorzuca do etykiety NPC linię diagnostyczną (faza, akcja, dystans, stamina, stan watchdoga).
 - Dialog v2 = ekran Vue. W osadzie domowej: handel u kupca (dwie kolumny, kupno/sprzedaż/barter); strażnik może oddać miecz.
 
+### Social (plan 151)
+
+- Każde ognisko osady (`landmarks.campfire`, istniało od dawna) jest teraz `Place` typu `social` (`places.ts`'s `socialPlaceFor`) — bez nowego generatora, bez klonowania płomienia/wizualu. NPC dostaje wyłącznie ognisko **własnej** osady; osady bez ogniska (SM/OUTPOST) nie mają Social Place, więc `sociable` po staremu zostaje przy `home`.
+- Istniejący `ScheduleActivity: 'social'` i `effectiveScheduleFor(..., { hasSocialPlace })` (od dawna w kodzie, wcześniej bez producenta — zob. S5) teraz dostają realny `hasSocialPlace = socialPlace != null`, liczony raz przy konstrukcji `NpcAgent`, nie co klatkę.
+- `NpcAgent.beginIdle()`'s `social` branch reużywa istniejącą parę `goTo`/`execute` (`kind: 'social'` — jednorazowe "osiądź przy ognisku", potem zwykłe `wanderNear` jak przy `eat`/`home`) — bez nowej fazy FSM.
+- Partner: `NpcAgent.socialCandidate()` (throttled przez `nextSocialAttemptSim`, częstotliwość skalowana `extraversion` — tylko częstotliwość próby, nie wybór partnera) + czysta `findConversationPartner` (`ai/socialBehaviour.ts`) — to samo ognisko + dostępny + nie ja, deterministyczny tie-break (najniższe id), bez rankingu personality/traits/role/relacji.
+- Parowanie: `advanceSocialPairing` (`ai/socialBehaviour.ts`) woła settlement's own `agents` w istniejącej `Settlement.update()` pętli (bez globalnego rejestru) — atomowa rezerwacja obu uczestników w jednym przebiegu, jeden wygenerowany czas rozmowy (2-5 minut czasu świata → realne sekundy przez `gameHoursToRealSeconds`, ten sam dla obu stron), jeden closure z wynikiem (`applyOutcomeOnce`, bezpieczny na podwójne wywołanie).
+- `conversation` to nowy `ActionId`, wykonywany przez każdego uczestnika osobno przez zwykły `goTo`/`execute` (mapuje się na istniejący `CurrentActivityKind: 'talking'`, ten sam co gracz-facing `lookAtPlayer`). Przerwanie w locie (krytyczna potrzeba/kolaps wigoru/śmierć/utknięcie) zwalnia partnera przez `releaseConversationPartner()` — bez naliczenia relacji.
+- Relacja NPC↔NPC: nowy, generyczny, symetryczny store `settlement/npcRelationships.ts` (`createNpcRelationships`), osobny od `QuestManager`'s relacji gracz↔NPC (inne kluczowanie: para NPC vs jedno imię względem gracza). Jeden egzemplarz na `SettlementsManager`, wątkowany do `createSettlement` tak jak `households`/`economies` — przetrwa stream-out/in osady w tej samej sesji; **nie** jest jeszcze w `SaveData` (ten sam, świadomie otwarty gap co `Household`).
+- Świadomie nie ma: inne Social Places poza ogniskiem, ognisko innej osady, rozmowy grupowe, inne typy interakcji poza `conversation`, ranking partnera po personality/traits/role/relacji/rodzinie/zainteresowaniach/pamięci, nowe wpisy memory z rozmowy.
+
 ### Świadomie nie ma
 
-- Social Place (typ istnieje, brak producenta).
 - Pełny snapshot NPC w save (household — plan 069 — również nie jest w `SaveData`, patrz §Gospodarstwa).
 - Handel między osadami.
 - Łańcuchy produkcyjne/rolnictwo, rezerwacje zasobów gospodarstwa, fizyczny budynek magazynu (069 §33, dalszy zakres to plan 071/przyszłe plany).
@@ -102,8 +112,10 @@ src/economy/
 src/ai/NpcAgent.ts
 src/ai/Needs.ts
 src/ai/schedule.ts
+src/ai/socialBehaviour.ts
 src/ai/npcMovementWatchdog.ts
 src/ai/npcColliderRim.ts
+src/settlement/npcRelationships.ts
 src/shared/VigorState.ts
 src/shared/StaminaState.ts
 ```

@@ -1,7 +1,7 @@
 # Plan: Social Places and Social Behaviour
 
 **Created:** 2026-08-18  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~020~~ ~~ai-002~~
 

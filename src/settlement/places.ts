@@ -47,6 +47,22 @@ export function homeIndexFromPlaceId(settlementId: string, homeId: string): numb
 }
 
 /**
+ * The settlement's own campfire as a Social Place (plan 151) — `null` when
+ * the settlement has no campfire (`landmarks.campfire` only exists for
+ * MD+/`infra.campfires > 0` settlements, see `props.ts`). Does not create or
+ * clone anything: the flame/visual stays owned by `landmarks.campfire`
+ * itself, this is purely a stable `Place` wrapper around its position so the
+ * existing `Schedule`/`NpcAgent` Place machinery can route NPCs to it the
+ * same way `workplaceFor` already does for `work`. An NPC only ever receives
+ * its own settlement's campfire — there is no cross-settlement/world social
+ * place lookup.
+ */
+export function socialPlaceFor(settlementId: string, landmarks: SettlementLandmarks): Place | null {
+  if (!landmarks.campfire) return null
+  return { id: `${settlementId}:social:campfire`, type: 'social', position: landmarks.campfire.position }
+}
+
+/**
  * Per-role workplace — hybrid per the 2026-08-09 decision: roles that
  * already have a matching communal landmark reuse it as-is (no new world
  * content); only `trader` gets a dedicated new prop (`landmarks.market`,

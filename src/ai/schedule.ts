@@ -7,9 +7,9 @@ import type { Role, Trait } from './characters'
  * Per-role daily plan. `NpcAgent` stores the **effective** per-NPC schedule
  * (`effectiveScheduleFor` of this template + traits) and consumes it at
  * `choose`: `sleep` → `goSleep`, `work` → workplace action, `eat` → garden
- * eat action, `home`/`wake`/`social` → stay near home (social place is not
- * generated yet, so `social` falls back to home). Needs (`pickNeed`) win
- * over the schedule at the decision point.
+ * eat action, `home`/`wake` → stay near home, `social` → the settlement
+ * campfire when this NPC has one (plan 151; falls back to home otherwise).
+ * Needs (`pickNeed`) win over the schedule at the decision point.
  *
  * Role templates below are the global base. Trait overlays never mutate them.
  */
@@ -29,8 +29,9 @@ export type ScheduleTemplate = readonly ScheduleEntry[]
 export type EffectiveScheduleOptions = {
   /**
    * When true, `sociable` may replace the start of a `home` block with
-   * `social`. Current settlements have no social Place, so runtime passes
-   * false and `sociable` leaves `home` unchanged.
+   * `social`. `NpcAgent` passes `this.socialPlace != null` (plan 151) — a
+   * settlement without a campfire (SM/OUTPOST) has no Social Place, so
+   * `sociable` leaves `home` unchanged there.
    */
   hasSocialPlace?: boolean
 }

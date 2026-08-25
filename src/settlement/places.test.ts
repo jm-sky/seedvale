@@ -1,7 +1,8 @@
 import { Object3D, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
+import type { CampfireFlame } from './campfireProps'
 import type { SettlementLandmarks, SettlementTreeLandmark } from './props'
-import { homePlaceId, workplaceFor } from './places'
+import { homePlaceId, socialPlaceFor, workplaceFor } from './places'
 
 function makeTree(id: string, x: number, z: number): SettlementTreeLandmark {
   return {
@@ -83,5 +84,21 @@ describe('homePlaceId', () => {
   it('namespaces by settlement id and index, matching the existing home Place id format', () => {
     expect(homePlaceId('0_0', 2)).toBe('0_0:home:2')
     expect(homePlaceId('1_-2', 0)).toBe('1_-2:home:0')
+  })
+})
+
+describe('socialPlaceFor', () => {
+  it('null when the settlement has no campfire', () => {
+    expect(socialPlaceFor('s1', makeLandmarks())).toBeNull()
+  })
+
+  it('wraps the existing campfire position as a social Place, no new position/visual', () => {
+    const campfirePosition = new Vector3(7, 0, 7)
+    const landmarks = makeLandmarks({
+      campfire: { position: campfirePosition, flame: {} as CampfireFlame },
+    })
+    const place = socialPlaceFor('village_a', landmarks)
+    expect(place).toEqual({ id: 'village_a:social:campfire', type: 'social', position: campfirePosition })
+    expect(place?.position).toBe(campfirePosition)
   })
 })

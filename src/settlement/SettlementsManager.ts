@@ -22,6 +22,7 @@ import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { createSettlement, type Settlement } from './createSettlement'
 import { createHouseholdRegistry, type HouseholdId, type HouseholdSnapshot } from './household'
+import { createNpcRelationships } from './npcRelationships'
 import { createNpcStateRegistry, type NpcId, type NpcStateSnapshot } from './npcState'
 import { createSignpost, placeOnGround } from './props'
 import {
@@ -216,6 +217,13 @@ export async function createSettlementsManager(
   // not a fresh default one.
   const npcStates = createNpcStateRegistry(initialNpcStates)
 
+  // Symmetric NPC↔NPC relation store (plan 151) — one instance for the
+  // world's lifetime, same reasoning as `households`/`npcStates` above
+  // (a settlement that streams out and back in must keep its NPCs'
+  // relations, not reset them). Not part of `SaveData` yet, same confirmed
+  // gap as `Household` — see `npcRelationships.ts`.
+  const npcRelationships = createNpcRelationships()
+
   const homeDef = defFor({ gx: 0, gz: 0 })
   if (!homeDef) {
     throw new Error('[SettlementsManager] home settlement (0,0) failed to generate')
@@ -244,6 +252,7 @@ export async function createSettlementsManager(
     getNearbyPlayerWell,
     foodSources,
     hunting,
+    npcRelationships,
   )
 
   const entries = new Map<string, Entry>()
@@ -362,6 +371,7 @@ export async function createSettlementsManager(
         getNearbyPlayerWell,
         foodSources,
         hunting,
+        npcRelationships,
       ))
       .then((settlement) => {
         const cur = entries.get(def.id)

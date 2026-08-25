@@ -21,6 +21,7 @@ import type { VillageSize } from './families'
 import type { NpcStateRegistry } from './npcState'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
+import { advanceSocialPairing } from '../ai/socialBehaviour'
 import { disposeObject3D } from '../assets/loadGltf'
 import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { isSystemEnabled } from '../debug/debugMode'
@@ -40,7 +41,8 @@ import { type Household, householdIdFor, type HouseholdRegistry } from './househ
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
 import { generatePhysicalProfile } from './npcPhysicalProfile'
-import { homePlaceId, type Place, workplaceFor } from './places'
+import { createNpcRelationships, type NpcRelationships } from './npcRelationships'
+import { homePlaceId, type Place, socialPlaceFor, workplaceFor } from './places'
 import {
   buildSettlementProps,
   cloneProp,
@@ -245,6 +247,13 @@ export async function createSettlement(
    *  — forwarded into every `NpcAgent.create` call below the same way
    *  `mining`/`foodSources` are above. */
   hunting?: SettlementHuntingHooks,
+  /** Symmetric NPC↔NPC relation store (plan 151) — same "one registry owned
+   *  by `SettlementsManager`, threaded through" pattern as `households`/
+   *  `npcStateRegistry` above, not a per-`NpcAgent.create` hook (only this
+   *  settlement's own `update()` needs it, for the social-pairing pass
+   *  below). Defaults to a fresh, isolated store for callers/tests that
+   *  don't pass one in. */
+  relations: NpcRelationships = createNpcRelationships(),
 ): Promise<Settlement> {
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
@@ -334,6 +343,11 @@ export async function createSettlement(
     landmarks.homes.length > 0
       ? landmarks.homes.map((position, i) => ({ id: homePlaceId(def.id, i), type: 'home', position }))
       : [{ id: `${def.id}:home:fallback`, type: 'home', position: landmarks.well.clone() }]
+
+  // Social Place v1 (plan 151) — the settlement's own campfire, or `null`
+  // for a settlement without one (SM/OUTPOST). No new campfire generator:
+  // `socialPlaceFor` only wraps the existing `landmarks.campfire`.
+  const socialPlace: Place | null = socialPlaceFor(def.id, landmarks)
 
   // 1 family = 1 household = 1 house (plan 069 §5): every member of a family
   // shares that family's home place and household stock. `households` stays
@@ -544,6 +558,7 @@ export async function createSettlement(
         landmarks,
         home,
         workplace,
+        socialPlace,
         i,
         needOffset,
         member,
@@ -660,6 +675,10 @@ export async function createSettlement(
         agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCounts[i]!, dayLengthSec, nearbyAnimalThreats)
         if (pushX[i] !== 0 || pushZ[i] !== 0) agent.applySeparation(pushX[i]!, pushZ[i]!)
       }
+      // Social Place conversation pairing (plan 151) — reuses this
+      // settlement's own already-updated `agents` list (no global registry);
+      // a no-op pass when nobody is currently settled at the campfire.
+      advanceSocialPairing(agents, relations, dayLengthSec)
       // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef`
       // has `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-
       // modified branch of `isPlayerNoticed()` is structurally unreachable

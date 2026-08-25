@@ -2,7 +2,7 @@
 
 **Purpose:** a short, current snapshot of the implemented architecture — enough to start a plan without reading every prior plan first. This document describes what exists now, not the desired future state, and not *how* any given plan implemented it.
 
-**Last verified:** 2026-08-24
+**Last verified:** 2026-08-25
 
 ## Read this first
 
@@ -37,11 +37,11 @@ Procedurally chunked, streamed terrain with instanced vegetation/rocks, tree lif
 
 ### Settlements / NPCs
 
-Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, NPC needs/FSM/schedule/personality, household + settlement bulk economy, dialogue v2, home-trader screen. NPCs can now fight: an `NpcAgent` combat phase, role-based default weapons, and an animal-attack/NPC-defense decision layer exist, reusing the same melee/ranged mechanics as the player. `NpcAgent.choose()`'s need-pressure arbitration (`Needs.ts`, plan ai-001) is now personality/role-aware (`ai/decisionModifiers.ts`, plan ai-002): Big Five conscientiousness biases already-active duty pressures (`wood`/`waterDuty`), a `woodcutter` role adds a small extra bump on `wood`, a `hunter` role adds one on `food` (plan 178), and neuroticism biases the existing animal-threat defend/flee scoring — a preference layer, never a second candidate generator. `hunter` (plan 178) is the 7th `Role`, rolled the same way as any other; a hungry hunter with no household food on hand tries a real hunting expedition (bounded/deterministic fauna target selection with single-animal population protection, existing NPC ranged `CombatIntent`, then knife-harvest) before falling back to the abstract garden gather — meat/hide land in a new generic `Household.items` (an `Inventory`, distinct from `Household.stock`'s scalar food/wood), and the household's own `wood` stock funds arrow crafting during the hunter's `work` block.
+Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, NPC needs/FSM/schedule/personality, household + settlement bulk economy, dialogue v2, home-trader screen. NPCs can now fight: an `NpcAgent` combat phase, role-based default weapons, and an animal-attack/NPC-defense decision layer exist, reusing the same melee/ranged mechanics as the player. `NpcAgent.choose()`'s need-pressure arbitration (`Needs.ts`, plan ai-001) is now personality/role-aware (`ai/decisionModifiers.ts`, plan ai-002): Big Five conscientiousness biases already-active duty pressures (`wood`/`waterDuty`), a `woodcutter` role adds a small extra bump on `wood`, a `hunter` role adds one on `food` (plan 178), and neuroticism biases the existing animal-threat defend/flee scoring — a preference layer, never a second candidate generator. `hunter` (plan 178) is the 7th `Role`, rolled the same way as any other; a hungry hunter with no household food on hand tries a real hunting expedition (bounded/deterministic fauna target selection with single-animal population protection, existing NPC ranged `CombatIntent`, then knife-harvest) before falling back to the abstract garden gather — meat/hide land in a new generic `Household.items` (an `Inventory`, distinct from `Household.stock`'s scalar food/wood), and the household's own `wood` stock funds arrow crafting during the hunter's `work` block. A settlement's own campfire is now a Social Place (plan 151): the `sociable` overlay's `social` schedule block routes an idle NPC there through the existing `goTo`/`execute` path, where it periodically tries (throttled, `extraversion`-scaled retry frequency) to pair with another available NPC at the same campfire for a shared, atomically-reserved `conversation` action (one generated 2-5 game-minute duration for both sides); the outcome applies one symmetric delta to a new NPC↔NPC relation store (`settlement/npcRelationships.ts`, separate from `QuestManager`'s player-facing relations).
 
 - Generation, streaming, economy, households, NPC daily life, standing decisions: [SETTLEMENTS.md](./state/settlements.md)
 - Combat (NPC combat phase, animal attack & defense, role loadouts): [state/combat.md](./state/combat.md)
-- Still not implemented: Social Place assignment for the `sociable` schedule overlay, inter-settlement trade, full NPC simulation persistence.
+- Still not implemented: inter-settlement trade, full NPC simulation persistence, Social Places beyond a settlement's own campfire, conversation partner ranking by personality/traits/role/relationship.
 
 ### Fauna
 
@@ -156,7 +156,7 @@ src/ui-vue/
 
 - **World visual overhaul** — plants done in part; sky/clouds and distant mountains remain.
 - **UI** — Vue Fazy 0–4 implemented, browser verification pending across most of it. A new Character screen (HP/hunger/thirst/vigor) exists. Do not assume every future UI belongs in Vue; extend the existing facade + store pattern when migrating.
-- **NPC daily routine** — Place + executable schedule + vigor are implemented; household resource layer is implemented (see [SETTLEMENTS.md](./state/settlements.md)). Vigor collapse and a critical need interrupt a schedule-driven action already in flight; ordinary schedule/time-of-day changes still do not. No social landmark yet — intentional gap.
+- **NPC daily routine** — Place + executable schedule + vigor are implemented; household resource layer is implemented (see [SETTLEMENTS.md](./state/settlements.md)). Vigor collapse and a critical need interrupt a schedule-driven action already in flight; ordinary schedule/time-of-day changes still do not. The settlement campfire is now a Social Place (plan 151); other Social Place kinds remain an intentional gap.
 
 ## Verification state
 
@@ -167,7 +167,7 @@ Do not treat a passing build as proof that a visual Three.js feature is correct.
 ## Not implemented / intentionally deferred
 
 - Full NPC simulation persistence across saves.
-- Social Place assignment for `sociable` schedule overlays.
+- Social Places beyond a settlement's own campfire; conversation partner selection/ranking by personality/traits/role/relationship; group conversations; social interaction memory entries.
 - LLM/AI-generated quests.
 - Inter-settlement trade and player crafting.
 - Full combat system for the player — see [state/combat.md](./state/combat.md) for exactly what exists vs. what's missing.

@@ -186,6 +186,7 @@ import {
   type ScheduleActivity,
   type ScheduleTemplate,
 } from './schedule'
+import { conversationAttemptCooldownSec } from './socialBehaviour'
 import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 function randRange([min, max]: [number, number]): number {
@@ -281,7 +282,12 @@ export type Phase =
   | 'sleep'
   | 'wander'
 
-export type ActionId = 'chop' | 'deposit' | 'drink' | 'eat' | 'mine' | 'work'
+/** `conversation` and `social` (plan 151) reuse this same generic `goTo` →
+ *  `execute` pair instead of a dedicated social FSM — `social` is a brief
+ *  "settle at the campfire" marker (mirrors `eat`'s arrival step), and
+ *  `conversation` is the shared timed interaction two NPCs execute in
+ *  parallel, each through their own normal `execute` phase. */
+export type ActionId = 'chop' | 'conversation' | 'deposit' | 'drink' | 'eat' | 'mine' | 'social' | 'work'
 
 /**
  * NPC adapter over the shared `PlannedAction` contract: destination and
@@ -410,6 +416,11 @@ export function classifyPendingActivity(
   const chainKind = pending.chainKind ?? pending.kind
   if (chainKind === 'work' || chainKind === 'mine') return 'work'
   if (pending.kind === 'eat' && activeNeed === 'idle') return 'eat'
+  // Plan 151 — walking to/settling at the campfire reads as ordinary idle;
+  // the shared interaction itself reuses the existing player-facing
+  // `talking` kind (implementation notes §11), not a new one.
+  if (chainKind === 'conversation') return 'talking'
+  if (pending.kind === 'social' && activeNeed === 'idle') return 'idle'
   return 'need'
 }
 
@@ -678,6 +689,11 @@ export class NpcAgent {
    *  (e.g. a `woodcutter` with no trees yet) — see `places.ts`'s
    *  `workplaceFor`. Consumed by `beginIdle()`'s `work` scheduled activity. */
   readonly workplace: Place | null
+  /** The settlement's own campfire as a Social Place (plan 151), or `null`
+   *  when the settlement has none — see `places.ts`'s `socialPlaceFor`.
+   *  Consumed by `beginIdle()`'s `social` scheduled activity, same shape as
+   *  `workplace` above. */
+  readonly socialPlace: Place | null
   /** Effective per-NPC schedule (`effectiveScheduleFor` of the role template
    *  + traits). Computed once at construction. Drives `choose` and
    *  `getScheduledActivity` / dialogue boundaries. */
@@ -731,6 +747,25 @@ export class NpcAgent {
    *  activity until the effective schedule moves on — avoids restarting the
    *  same meal every `choose` cycle. */
   private settledIdleActivity: ScheduleActivity | null = null
+  /** Plan 151 — the other NPC id this one is currently reserved with for a
+   *  `conversation`, or `null`. Set by `beginConversation()`, cleared on
+   *  natural completion or early release; `socialCandidate()` treats a
+   *  non-null value as unavailable, preventing a third NPC from reserving
+   *  either participant mid-conversation. */
+  private conversationPartnerId: string | null = null
+  /** Callback into the current conversation partner's own
+   *  `releaseConversationPartner()` (plan 151) — invoked once by
+   *  `releaseConversationIfAny()` if *this* NPC leaves the conversation
+   *  early (critical need/vigor collapse/death), so the partner tears down
+   *  its own half instead of waiting out a duration nobody is still sharing.
+   *  `null` outside an active conversation. */
+  private onConversationEarlyExit: (() => void) | null = null
+  /** Earliest `simClock` at which `socialCandidate()` will return non-null
+   *  again (plan 151) — reset on every call (success or failure) to
+   *  `conversationAttemptCooldownSec(extraversion)`, so a settled NPC is
+   *  only ever considered for pairing at that throttled cadence, never every
+   *  frame (implementation notes §3/§9). */
+  private nextSocialAttemptSim = 0
   /** Shared action lifecycle for the in-flight `PlannedAction` **or** the
    *  in-flight `combat` intent (plan 177) — the same single field either
    *  way, since only one of the two is ever active at once. */
@@ -908,6 +943,7 @@ export class NpcAgent {
     landmarks: SettlementLandmarks,
     home: Place,
     workplace: Place | null,
+    socialPlace: Place | null,
     treeIndex: number,
     member: FamilyMember,
     familyMembers: readonly FamilyMemberRef[],
@@ -960,10 +996,11 @@ export class NpcAgent {
     this.stamina = npcState.stamina
     this.vigor = npcState.vigor
     this.workplace = workplace
+    this.socialPlace = socialPlace
     this.schedule = effectiveScheduleFor(
       SCHEDULE_TEMPLATES[character.role],
       character.traits,
-      { hasSocialPlace: false },
+      { hasSocialPlace: socialPlace != null },
     )
     this.familyMembers = familyMembers
     this.dialogueArchetype = nearestArchetype(this.personality)
@@ -1039,6 +1076,7 @@ export class NpcAgent {
     landmarks: SettlementLandmarks,
     home: Place,
     workplace: Place | null,
+    socialPlace: Place | null,
     treeIndex: number,
     needOffset: number,
     member: FamilyMember,
@@ -1080,6 +1118,7 @@ export class NpcAgent {
         landmarks,
         home,
         workplace,
+        socialPlace,
         treeIndex,
         member,
         familyMembers,
@@ -1106,6 +1145,7 @@ export class NpcAgent {
         landmarks,
         home,
         workplace,
+        socialPlace,
         treeIndex,
         member,
         familyMembers,
@@ -1133,6 +1173,7 @@ export class NpcAgent {
     landmarks: SettlementLandmarks,
     home: Place,
     workplace: Place | null,
+    socialPlace: Place | null,
     treeIndex: number,
     member: FamilyMember,
     familyMembers: readonly FamilyMemberRef[],
@@ -1170,6 +1211,7 @@ export class NpcAgent {
       landmarks,
       home,
       workplace,
+      socialPlace,
       treeIndex,
       member,
       familyMembers,
@@ -1317,6 +1359,7 @@ export class NpcAgent {
         const kind = classifyPendingActivity(this.pendingAction ?? undefined, this.activeNeed)
         if (kind === 'work' || kind === 'eat') return { kind, endHour }
         if (kind === 'need') return { kind, need: this.activeNeed }
+        if (kind === 'talking') return { kind: 'talking' }
         return { kind: 'idle' }
       }
       case 'followPath':
@@ -1707,6 +1750,7 @@ export class NpcAgent {
    *  system, which stays out of this plan's scope. `update()` no-ops for a
    *  dead NPC from the next tick on. */
   private die(): void {
+    this.releaseConversationIfAny()
     this.leaveActiveQueue()
     this.pendingAction = null
     this.combatIntent = null
@@ -2183,10 +2227,17 @@ export class NpcAgent {
         ? this.workplace.position
         : finalActivity === 'eat'
           ? this.landmarks.garden
-          : this.home
+          : finalActivity === 'social' && this.socialPlace
+            ? this.socialPlace.position
+            : this.home
     this.mesh.position.set(target.x, this.sampleHeight(target.x, target.z), target.z)
     this.leaveActiveQueue()
     this.pendingAction = null
+    // A conversation reservation can't survive a time-skip catch-up (the
+    // partner NPC is independently reset the same way) — clear it here too
+    // so `socialCandidate()` isn't left permanently blocked (plan 151).
+    this.conversationPartnerId = null
+    this.onConversationEarlyExit = null
     this.settledIdleActivity = null
     this.wait = 0
     this.pathWaypoints = []
@@ -2831,9 +2882,10 @@ export class NpcAgent {
 
   /** No active need (`pickNeed` returned `'idle'`) — follow the effective
    *  schedule through the existing generic `goTo`/`execute`/`wander` path.
-   *  `wake` maps to staying home; `social` currently has no Place so it
-   *  also stays home. Ordinary schedule changes do not interrupt an action
-   *  already in flight — this runs only from `choose`. */
+   *  `wake` maps to staying home; `social` goes to the settlement campfire
+   *  when this NPC has one (plan 151), otherwise also falls back to home.
+   *  Ordinary schedule changes do not interrupt an action already in flight
+   *  — this runs only from `choose`. */
   private beginIdle(scheduledActivity: ScheduleActivity): void {
     if (this.settledIdleActivity !== null && this.settledIdleActivity !== scheduledActivity) {
       this.settledIdleActivity = null
@@ -2870,6 +2922,19 @@ export class NpcAgent {
       this.wanderNear(this.landmarks.garden)
       return
     }
+    if (intent === 'social' && this.socialPlace) {
+      if (this.settledIdleActivity !== 'social') {
+        this.startAction({
+          kind: 'social',
+          destination: copyVec3(this.socialPlace.position),
+          durationSec: 1.0 * this.waitMultiplier,
+          onComplete: () => { this.settledIdleActivity = 'social' },
+        })
+        return
+      }
+      this.wanderNear(this.socialPlace.position)
+      return
+    }
     if (intent === 'home' || intent === 'social') {
       this.wanderNear(this.home)
       return
@@ -2880,6 +2945,90 @@ export class NpcAgent {
       return
     }
     this.beginUnscheduledIdle()
+  }
+
+  /**
+   * Plan 151 — the one entry point `advanceSocialPairing` (`socialBehaviour
+   * .ts`) uses to discover this NPC as a conversation candidate. Non-null
+   * only when this NPC is actually settled at its own Social Place (not
+   * still walking there), unreserved, alive, and its extraversion-scaled
+   * retry cooldown has elapsed.
+   *
+   * Calling this *is* the throttle: any call — whether or not it returns
+   * non-null — reschedules `nextSocialAttemptSim`, so the settlement-wide
+   * pairing pass can call it every frame for every settled NPC without
+   * re-running the same candidate's check every frame (implementation notes
+   * §3/§9). `extraversion` only ever changes this cooldown's length, never
+   * which candidate `findConversationPartner` picks.
+   */
+  socialCandidate(): { id: string, placeId: string } | null {
+    if (!this.socialPlace) return null
+    if (this.health.dead) return null
+    if (this.conversationPartnerId != null) return null
+    if (this.settledIdleActivity !== 'social' || this.phase !== 'wander') return null
+    if (this.simClock < this.nextSocialAttemptSim) return null
+    this.nextSocialAttemptSim = this.simClock + conversationAttemptCooldownSec(this.personality.extraversion)
+    return { id: this.id, placeId: this.socialPlace.id }
+  }
+
+  /**
+   * Starts this NPC's own half of a shared `conversation` (plan 151) —
+   * reuses the existing `goTo`/`execute` action lifecycle (`kind:
+   * 'conversation'`) rather than a dedicated FSM phase. `durationSec` must
+   * be the same value passed to the partner's own `beginConversation` call
+   * (see `advanceSocialPairing`) so both finish together; `applyOutcomeOnce`
+   * is the shared, already-decided relationship-delta closure, safe to call
+   * from either side. `onEarlyExit` is remembered so this NPC can notify the
+   * partner if *it* leaves the conversation early (see
+   * `releaseConversationIfAny`).
+   */
+  beginConversation(
+    partnerId: string,
+    durationSec: number,
+    applyOutcomeOnce: () => void,
+    onEarlyExit: () => void,
+  ): void {
+    if (!this.socialPlace) return
+    this.conversationPartnerId = partnerId
+    this.onConversationEarlyExit = onEarlyExit
+    this.startAction({
+      kind: 'conversation',
+      destination: copyVec3(this.socialPlace.position),
+      durationSec,
+      onComplete: () => {
+        applyOutcomeOnce()
+        this.conversationPartnerId = null
+        this.onConversationEarlyExit = null
+        this.nextSocialAttemptSim = this.simClock + conversationAttemptCooldownSec(this.personality.extraversion)
+      },
+    })
+  }
+
+  /**
+   * Called on this NPC by its conversation *partner* when that partner
+   * leaves early (`releaseConversationIfAny`) — tears down this NPC's own
+   * reservation/action without applying any relationship delta (the
+   * conversation did not finish) and without calling back into the partner
+   * again (`interruptCurrentAction` below only notifies when
+   * `onConversationEarlyExit` is still set).
+   */
+  releaseConversationPartner(): void {
+    if (this.conversationPartnerId == null) return
+    this.conversationPartnerId = null
+    this.onConversationEarlyExit = null
+    if (this.pendingAction?.kind === 'conversation') this.interruptCurrentAction()
+  }
+
+  /** Shared by `interruptCurrentAction`/`abandonStuckAction`/`die` — notifies
+   *  an in-flight conversation partner exactly once that this NPC is leaving
+   *  early, before the caller's own generic action-fail cleanup runs. A
+   *  no-op outside an active `conversation` action. */
+  private releaseConversationIfAny(): void {
+    if (this.pendingAction?.kind !== 'conversation') return
+    const onEarlyExit = this.onConversationEarlyExit
+    this.conversationPartnerId = null
+    this.onConversationEarlyExit = null
+    onEarlyExit?.()
   }
 
   /** Dock-path / wander-near-home fallback used when the schedule has no
@@ -3140,6 +3289,7 @@ export class NpcAgent {
    *  minus the stuck-specific abandoned-destination/escalation bookkeeping,
    *  which doesn't apply to a healthy NPC that's simply needed elsewhere. */
   private interruptCurrentAction(): void {
+    this.releaseConversationIfAny()
     const actionKind = this.pendingAction?.kind ?? null
     failActionLifecycle(this.actionLifecycle)
     this.leaveActiveQueue()
@@ -3201,6 +3351,7 @@ export class NpcAgent {
    *  safety net, not a new mechanism). Escalates to an emergency teleport
    *  when this has happened repeatedly within `RECENT_RESCUE_WINDOW_SEC`. */
   private abandonStuckAction(): void {
+    this.releaseConversationIfAny()
     const actionKind = this.pendingAction?.kind ?? null
     const dest = this.pendingAction?.destination
     if (dest) {

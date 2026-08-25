@@ -34,6 +34,14 @@ describe('classifyPendingActivity / promoteChainKind', () => {
     expect(classifyPendingActivity({ kind: 'drink' }, 'water')).toBe('need')
   })
 
+  it('reports talking for an in-flight conversation (plan 151)', () => {
+    expect(classifyPendingActivity({ kind: 'conversation' }, 'idle')).toBe('talking')
+  })
+
+  it('reports idle for the social settle-at-campfire marker', () => {
+    expect(classifyPendingActivity({ kind: 'social' }, 'idle')).toBe('idle')
+  })
+
   it('reports idle when there is no pending action', () => {
     expect(classifyPendingActivity(undefined, 'idle')).toBe('idle')
   })

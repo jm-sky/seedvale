@@ -108,7 +108,6 @@ Natural vegetation
 
 | File | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------- | --------- | --- | --- | --- |
-| 💡 `2026-08-18--151--social-places-and-social-behaviour.md`            | Settlement social place + NPC↔NPC conversation | 🟡 | M | ~~020~~ |
 | 💡 `2026-08-18--152--npc-player-food-drink-help.md`                    | NPC pomoc graczowi jedzeniem/piciem | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ ~~156 |
 | 💡 `2026-08-19--167--npc-helper-resource-delivery.md`                  | NPC gathers food for player | 🟡 | M | ~~164~~ |
 | 💡 `2026-08-21--180--npc-healing.md`                                   | NPC używa opatrunków | 🟡 | M | ~~177~~ |
@@ -151,6 +150,7 @@ Implementation is complete; only browser/manual verification remains unless note
 
 | File        | Notes              |
 | ----------- | ------------------ |
+| `2026-08-18--151--social-places-and-social-behaviour.md` | [notes](./implementation-notes/2026-08-18--151--social-places-and-social-behaviour-implementation-notes.md) |
 | `world-terrain-001-clouds.md` | browser verification |
 | `2026-08-20--179--animal-attack-and-npc-defense.md` | [notes](./implementation-notes/2026-08-20--179--animal-attack-and-npc-defense-implementation-notes.md) |
 | `2026-08-21--184--item-capability-abstraction.md` | [notes](./implementation-notes/2026-08-21--184--item-capability-abstraction-implementation-notes.md) |
