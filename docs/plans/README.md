@@ -121,7 +121,7 @@ Natural vegetation
 | `tools-001-performance-benchmark-determinism-and-reliability.md` ◼️ | - | 🔴 | M | - |
 | `tools-002-trace-analyzer-application-cpu-attribution.md` ◼️        | - | 🔴 | M | - |
 | `settlements-npcs-001-cultivation-hydration-and-watering.md` ◼️     | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
-| `settlements-npcs-002-npc-professions-households-and-age.md` ◼️ | - | 🔴 | L | ~~178~~ ~~069~~ ~~184~~ ~~185~~ |
+| `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` ◼️ | - | 🔴 | L | ~~178~~ ~~069~~ ~~184~~ ~~185~~ |
 | `ai-003-npc-candidate-strategies.md` ◼️  | - | 🟡 | M | ~~ai-001~~ ~~ai-002~~ |
 | `ui-input-003-merchant-trade-ui-ux-redesign.md` ◼️ | - | 🟡 | M | - |
 | `settlements-001-house-collision-geometry.md` ◼️ | - | 🔴 | L | 111 |
