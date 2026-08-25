@@ -107,21 +107,21 @@ Natural vegetation
 ## Planned
 
 | File | Summary | Pri | Effort | Depends |
-| ------------------------------------------------------------------- | --------- | --- | --- | --- |
+| ---------------------------------------------------------------------- | --------- | --- | --- | --- |
 | 💡 `2026-08-18--152--npc-player-food-drink-help.md`                    | NPC pomoc graczowi jedzeniem/piciem | 🟡 | M | ~~106~~ ~~069~~ ~~122~~ ~~156 |
 | 💡 `2026-08-19--167--npc-helper-resource-delivery.md`                  | NPC gathers food for player | 🟡 | M | ~~164~~ |
 | 💡 `2026-08-21--180--npc-healing.md`                                   | NPC używa opatrunków | 🟡 | M | ~~177~~ |
+| 💡 `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` | - | 🔴 | L | ~~178~~ ~~184~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
-| ◼️ `2026-08-19--171--weapon-browser-observatory.md`                    | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
 | 💡 `2026-08-22--203--well-depth-groundwater-and-protection.md`         | - | 🟡 | M | ~~127~~ |
-| 💡 `ui-input-002-ui-ux-interaction-and-action-system-polish.md`      | - | 🟡 | L | - |
-| ◼️ `ui-input-003-merchant-trade-ui-ux-redesign.md` | - | 🟡 | M | - |
-| ◼️ `tools-001-performance-benchmark-determinism-and-reliability.md` | - | 🔴 | M | - |
-| ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`         | - | 🔴 | M | - |
-| 💡 `settlements-001-house-collision-geometry.md` | - | 🔴 | L | 111 |
-| ◼️ `settlements-npcs-001-cultivation-hydration-and-watering.md`      | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
-| 💡 `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` | - | 🔴 | L | ~~178~~ ~~184~~ |
+| ◼️ `2026-08-19--171--weapon-browser-observatory.md`                    | Weapon Browser w Observatory/Admin | 🟡 | M | - |
+| ◼️ `settlements-npcs-001-cultivation-hydration-and-watering.md`        | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
+| 💡 `settlements-001-house-collision-geometry.md`                       | - | 🔴 | L | 111 |
+| 💡 `ui-input-002-ui-ux-interaction-and-action-system-polish.md`        | - | 🟡 | L | - |
+| ◼️ `ui-input-003-merchant-trade-ui-ux-redesign.md`                     | - | 🟡 | M | - |
+| ◼️ `tools-001-performance-benchmark-determinism-and-reliability.md`    | - | 🔴 | M | - |
+| ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
 
 ### Fresh new
 
