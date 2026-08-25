@@ -118,7 +118,6 @@ Natural vegetation
 | ◼️ `settlements-npcs-001-cultivation-hydration-and-watering.md`        | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
 | 💡 `settlements-001-house-collision-geometry.md`                       | - | 🔴 | L | 111 |
 | 💡 `ui-input-002-ui-ux-interaction-and-action-system-polish.md`        | - | 🟡 | L | - |
-| ◼️ `ui-input-003-merchant-trade-ui-ux-redesign.md`                     | - | 🟡 | M | - |
 | ◼️ `tools-001-performance-benchmark-determinism-and-reliability.md`    | - | 🔴 | M | - |
 | ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
 
