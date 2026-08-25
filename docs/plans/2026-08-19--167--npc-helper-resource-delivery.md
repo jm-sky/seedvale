@@ -3,513 +3,467 @@
 **Created:** 2026-08-19
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
-**Depends on:** 164
+**Depends on:** ~~164~~ ~~ai-002~~ ~~ai-003~~
+**Domain:** `settlements-npcs`
 
 ## Cel
 
-Umożliwić istniejącemu NPC pomaganie graczowi poprzez dostarczanie wybranych zasobów do jego storage.
+Umożliwić istniejącemu NPC pomaganie graczowi poprzez dostarczanie wybranych zasobów do jego `Container`.
 
-Pierwszym zastosowaniem jest:
+Pierwszy przypadek:
 
-> NPC zbiera jedzenie i dostarcza je do skrzyni gracza.
+```text
+NPC
+ ↓
+existing pressure / goal
+ ↓
+NeedId
+ ↓
+candidate strategies
+ ↓
+player-storage delivery strategy
+ ↓
+existing PlannedAction chain
+ ↓
+resource → NPC Inventory → player Container
+```
 
-NPC **nie staje się Companionem**.
+NPC **nie staje się Companionem**. Pozostaje członkiem swojego householdu i zachowuje potrzeby, profesję, schedule, relacje, personality, traits i normalne życie.
 
-Pozostaje członkiem swojego householdu, zachowuje własne potrzeby, profesję, schedule, relacje i normalne życie.
-
-Jest to niezależna rola **Helper / Supplier**, która może pozostać w grze niezależnie od późniejszego systemu Companion.
+Plan wykorzystuje istniejące mechanizmy `ai-002` i `ai-003`; nie tworzy osobnego Helper AI.
 
 ---
 
 ## 1. Zakres pierwszej wersji
 
-Pierwsza wersja powinna obsługiwać:
+Pierwsza wersja obsługuje:
 
-```text
-NPC
- ↓
-decyzja o pomocy
- ↓
-pozyskanie jedzenia
- ↓
-transport
- ↓
-player storage
-```
+- istniejącego NPC przypisanego do player storage,
+- dostarczanie jedzenia,
+- wybór istniejącej strategii pomocy przez normalny decision cycle,
+- transport przez istniejący `PlannedAction` / `ActionLifecycle`,
+- wykorzystanie istniejącego `Inventory` jako tymczasowego nośnika,
+- zapis stabilnego `targetContainerId`, jeżeli assignment jest trwały,
+- powrót NPC do normalnego życia po dostawie.
 
-Minimalny przypadek:
-
-- NPC ma przypisany player storage jako cel,
-- NPC może zbierać jedzenie,
-- NPC transportuje jedzenie do storage,
-- zasób trafia do kontenera,
-- NPC wraca do swojego normalnego życia.
-
-Woda może zostać dodana w tym samym mechanizmie, jeżeli istniejące systemy zasobów i transportu pozwalają na jej bezpośrednie wykorzystanie.
-
-Jeżeli implementacja wymaga dodatkowego systemu dla wody, nie należy rozszerzać tego planu poza niezbędne fundamenty.
+Woda może zostać dodana tylko wtedy, gdy istniejący model zasobów pozwala użyć tego samego mechanizmu bez tworzenia osobnego systemu.
 
 ---
 
-## 2. Helper jako rola / zadanie NPC
+## 2. Miejsce Helpera w aktualnej architekturze AI
 
-Nie tworzyć osobnego `CompanionAI` ani `HelperAI`.
+Helper nie jest trybem NPC ani osobnym systemem AI.
 
-Helper powinien być reprezentowany przez istniejące mechanizmy NPC:
-
-```text
-NPC state
-+
-needs
-+
-problems
-+
-goals
-+
-pressures
-+
-relationships
-+
-profession
-+
-schedule
-```
-
-które prowadzą do decyzji:
+Aktualny przepływ powinien pozostać:
 
 ```text
-decision
- ↓
-strategy
- ↓
-actions
+state
++ needs
++ problems
++ goals
++ pressures
++ relationships
++ profession / role
++ personality / traits
+        ↓
+ai-002 candidate scoring
+        ↓
+NeedId
+        ↓
+ai-003 candidate strategies
+        ↓
+strategy selection
+        ↓
+existing PlannedAction
 ```
 
-Pomoc graczowi powinna być jednym z możliwych celów / źródeł presji NPC.
+Pomoc graczowi powinna być reprezentowana jako **dostępna strategia rozwiązania istniejącej potrzeby/celu lub aktywnego helper assignment**, a nie przez `HelperAI`, `HelperNeed` ani osobny priority system.
+
+Nie omijać `scoreNeedCandidates()` ani mechanizmu candidate strategies.
 
 ---
 
-## 3. Player Storage jako cel
+## 3. Helper Delivery jako strategia
 
-Helper musi mieć możliwość wskazania konkretnego storage gracza jako celu dostawy.
+Nie tworzyć nowego Need tylko dlatego, że NPC może pomagać graczowi.
 
-Przykład:
+Docelowy model powinien być zbliżony do:
+
+```text
+food
+ ├── household food
+ ├── nearby real food source
+ ├── settlement garden
+ └── player storage delivery
+```
+
+`player storage delivery` jest dostępne tylko wtedy, gdy istnieje aktywny assignment oraz spełnione są jego ograniczenia.
+
+Strategia musi zostać odrzucona przed selection, jeżeli np.:
+
+- assignment jest nieaktywny,
+- target container nie istnieje,
+- resource nie jest dostępny,
+- target nie może przyjąć zasobu.
+
+Nie tworzyć równoległego availability/scoring engine.
+
+---
+
+## 4. Personality, traits i relacja z graczem
+
+`ai-002` pozostaje źródłem istniejącego personality/role scoring.
+
+W szczególności pomoc jest potencjalnym miejscem dla `agreeableness`, ale nie należy tworzyć osobnego `helper.relationshipScore` ani hardcode'ować progów typu `agreeableness > 0.7`.
+
+Jeżeli personality ma wpływać na wybór helper strategy, rozszerzyć istniejący modifier/scoring seam.
+
+Rozdzielić:
+
+```text
+relationship → dlaczego NPC może chcieć pomagać
+assignment  → co NPC ma/ może dostarczyć i dokąd
+strategy    → sposób realizacji celu
+```
+
+Nie tworzyć `HelperRelationship`.
+
+---
+
+## 5. Player Storage jako cel
+
+Helper wskazuje konkretny istniejący `Container` jako target.
+
+Preferowany model:
 
 ```text
 Helper assignment
     ↓
-target = Player Chest #123
+targetContainerId
 ```
 
-Nie należy tworzyć specjalnego:
+Nie tworzyć:
 
 ```text
 HelperStorage
-```
-
-ani:
-
-```text
 CompanionStorage
 ```
 
-NPC korzysta z istniejącego `Container` / storage.
+Nie zapisywać pozycji ani `Object3D` jako trwałej referencji.
+
+Plan 164 jest hard dependency i dostarcza finalny kontrakt `Container`, `containerId`, capacity, item acceptance i persistence.
+
+Dokładne API należy pobrać z **implementacji 164**, a nie zgadywać na podstawie tego planu.
 
 ---
 
-## 4. Relacja NPC → Player
+## 6. Źródło zasobu i food ownership
 
-Helper powinien być powiązany z graczem istniejącym mechanizmem relacji, jeśli taki mechanizm już obsługuje odpowiedni przypadek.
+Helper korzysta z istniejących źródeł jedzenia i istniejącej polityki household.
 
-Nie tworzyć osobnego systemu:
+Istotne jest, że zwykłe NPC food gathering obecnie trafia do `Household.stock`, podczas gdy inne transportowane zasoby wykorzystują tymczasowy `NpcAgent` `Inventory`.
+
+Nie zmieniać normalnego food pipeline tylko po to, aby helper mógł dostarczać jedzenie.
+
+Dla helpera należy minimalnie rozszerzyć istniejący przepływ:
 
 ```text
-HelperRelationship
+food source / available surplus
+        ↓
+NPC Inventory
+        ↓
+player Container
 ```
 
-Relacja może dostarczać podstawy do decyzji, czy NPC chce lub może pomagać graczowi.
+NPC nie powinien przekazywać całego jedzenia householdu. Ilość dostępna do pomocy musi respektować istniejące potrzeby, reserve/capacity i ownership householdu.
 
-Dokładna logika zależy od istniejącego systemu relationships/decision making.
+Nie tworzyć drugiego modelu food ownership ani magicznych progów w `NpcAgent`.
 
 ---
 
-## 5. Źródło zasobu
+## 7. Transport
 
-NPC powinien korzystać z istniejących źródeł jedzenia.
-
-Przepływ powinien wykorzystywać istniejące mechanizmy:
+Wykorzystać istniejący model:
 
 ```text
-resource source
+goTo → execute → next
+```
+
+oraz istniejące `PlannedAction`, `ActionLifecycle`, interruption i failure handling.
+
+Docelowy chain:
+
+```text
+select strategy
+ ↓
+goTo resource source
  ↓
 gather / collect
  ↓
-NPC inventory
+carry in existing NPC Inventory
  ↓
-transport
+goTo Container
  ↓
-player storage
+deposit
+ ↓
+complete
 ```
 
-Nie tworzyć specjalnej logiki:
+Nie tworzyć:
 
 ```text
-HelperFoodGathering
+HelperAction
+HelperTransport
+HelperDeliveryAction
+HelperAI
 ```
 
-jeżeli istniejące NPC actions mogą zostać rozszerzone o nowy target.
+Helper-specific ma być przede wszystkim **powód wyboru strategii i target**, a nie nowy sposób wykonywania ruchu/akcji.
 
 ---
 
-## 6. Własne potrzeby NPC mają pierwszeństwo
+## 8. Capacity i atomic transfer
 
-Helper nadal jest normalnym NPC.
+Transfer musi korzystać z kontraktu `Container` z planu 164.
 
-Pomoc graczowi nie może powodować ignorowania jego podstawowych potrzeb.
+Uwzględnić istniejące:
 
-Przykładowo:
+- `ItemSize`,
+- capacity,
+- weight restrictions, jeśli dotyczą danego API,
+- stacking,
+- accepted quantity.
+
+Preferowany model:
+
+```text
+requested amount
+ ↓
+container capacity
+ ↓
+accepted amount
+ ↓
+atomic transfer
+```
+
+Przy częściowym transferze NPC zachowuje nieprzeniesioną ilość.
+
+Przy zerowym transferze akcja musi zakończyć się/failować przez istniejący lifecycle i wrócić do decision cycle. Nie tworzyć pętli retry w helperze.
+
+Zachować invariant:
+
+```text
+source + carried + target = previous total
+```
+
+---
+
+## 9. Własne potrzeby NPC mają pierwszeństwo
+
+Helper pozostaje normalnym NPC.
+
+Nie hardcode'ować hierarchii priorytetów w tym planie. Należy wykorzystać aktualny pressure/candidate scoring i istniejące critical-need interruption.
+
+W szczególności:
 
 ```text
 critical own need
-    >
-household responsibility
-    >
-profession / normal work
-    >
-help player
+        ↓
+existing interruption
+        ↓
+helper action recovery
 ```
 
-Nie należy jednak hardcode'ować powyższej hierarchii bez sprawdzenia istniejącego systemu `pressures` i `decision making`.
+nie może powstać specjalny helper interrupt path.
 
-Celem jest dodanie nowej presji/goal, a nie stworzenie osobnego priority system.
-
----
-
-## 7. Ilość dostarczanego jedzenia
-
-NPC nie powinien bezwarunkowo oddawać całego dostępnego jedzenia.
-
-Powinien zachować ilość potrzebną do:
-
-- własnego spożycia,
-- własnego householdu, jeżeli wynika to z jego aktualnej roli,
-- innych istniejących obowiązków.
-
-Dostawa powinna dotyczyć **nadwyżki** lub ilości wynikającej z aktualnego celu.
-
-Dokładny model należy dopasować do istniejącego inventory/resource ownership/household storage.
+Jeżeli NPC ma już zebraną żywność i zostanie przerwany, carried resources muszą pozostać poprawnie rozliczone.
 
 ---
 
-## 8. Transport
+## 10. Assignment
 
-Helper powinien używać istniejącego modelu transportu przedmiotów.
+Przed dodaniem nowego typu należy sprawdzić aktualny system NPC goals/assignments/interactions.
 
-Nie tworzyć osobnego systemu transportu tylko dla helperów.
-
-Przykładowy przebieg:
+Jeżeli nie istnieje odpowiedni mechanizm, dodać minimalny data-only assignment, np. koncepcyjnie:
 
 ```text
-NPC
- ↓
-select resource
- ↓
-move to source
- ↓
-gather
- ↓
-carry item(s)
- ↓
-move to target container
- ↓
-store
- ↓
-return to normal schedule
+resource delivery assignment
+  targetContainerId
+  resourceKind
+  enabled
 ```
 
-Jeżeli istniejące NPC actions już obsługują część tego przepływu, należy je rozszerzyć zamiast tworzyć nowe równoległe akcje.
+Opcjonalne `playerId` należy dodać tylko jeśli aktualny model świata tego wymaga.
 
----
-
-## 9. Storage Capacity
-
-Próba dostarczenia zasobu musi uwzględniać ograniczenia kontenera:
-
-- `ItemSize`,
-- available capacity,
-- ewentualne ograniczenia weight,
-- stackowanie.
-
-Jeżeli storage jest pełne:
-
-- NPC nie powinien próbować bez końca dostarczać tego samego zasobu,
-- powinien zakończyć lub zmienić zadanie,
-- decyzja powinna wrócić do normalnego systemu NPC.
-
-Nie tworzyć specjalnego `HelperStorageFullState`, jeśli istniejący system action failure / decision recovery może obsłużyć ten przypadek.
-
----
-
-## 10. Zachowanie po dostawie
-
-Po udanej dostawie NPC powinien:
-
-1. zaktualizować swój stan/inventory,
-2. zakończyć akcję transportową,
-3. wrócić do swojej normalnej rutyny,
-4. ponownie ocenić swoje potrzeby i cele przy kolejnym decision cycle.
-
-NPC nie powinien pozostawać przy skrzyni tylko dlatego, że jest helperem.
-
----
-
-## 11. Powtarzalność
-
-Helper powinien móc wielokrotnie wykonywać zadanie.
-
-Nie powinno to jednak oznaczać:
+Nie tworzyć:
 
 ```text
-while helper:
-    gather food
-    deliver food
+NpcCommandManager
+NpcOrderSystem
+NpcTaskBoard
+NpcAssignmentFramework
 ```
 
-bez udziału systemu decyzji.
+Assignment nie jest relationship i nie powinien być mieszany z personality.
 
-Lepszy model:
+---
+
+## 11. Persistence
+
+Jeżeli assignment jest trwały, save/load musi zachować:
+
+- NPC identity,
+- assignment,
+- `targetContainerId`,
+- resource/goal,
+- stan potrzebny do bezpiecznego wznowienia lub anulowania delivery.
+
+Container zachowuje własny stan niezależnie.
+
+Po load/rebuild:
 
 ```text
-normal NPC decision cycle
-        ↓
-player-help pressure active?
-        ↓
-yes
-        ↓
-select delivery goal
-        ↓
-execute actions
-        ↓
-delivery complete
-        ↓
-normal decision cycle
+assignment
+ ↓
+targetContainerId
+ ↓
+container lookup
+ ↓
+current target
 ```
 
-Dzięki temu późniejsze cele mogą konkurować z pomocą graczowi.
+Brak targetu nie może powodować permanentnie zablokowanego NPC.
+
+Nie tworzyć helper-specific save systemu.
 
 ---
 
-## 12. Wiele helperów
+## 12. Multiple helpers
 
-System powinien działać również wtedy, gdy kilku NPC pomaga temu samemu graczowi.
+Kilku NPC może niezależnie wybrać ten sam Container.
 
-Nie implementować jeszcze specjalnego coordinatora/helper managera.
+Nie tworzyć coordinatora.
 
-Każdy NPC powinien niezależnie:
+Wykorzystać istniejące resource reservations/logistics, jeżeli istnieją. Bez specjalnego `HelperReservationManager`.
 
-- podejmować decyzję,
-- wybierać zasób,
-- wybierać storage,
-- wykonywać transport.
-
-Jeżeli pojawi się problem z konkurencją o ten sam zasób lub storage, powinien zostać rozwiązany przez istniejące mechanizmy resource reservation/logistics/decision making.
+Najważniejszy jest brak utraty/duplikacji zasobów przy konkurencyjnym transferze.
 
 ---
 
-## 13. UI / konfiguracja
+## 13. Off-screen simulation
 
-Jeżeli istnieje już odpowiedni UI do relacji lub wydawania NPC poleceń, należy go rozszerzyć.
+Helper nie może zależeć od:
 
-Nie tworzyć osobnego dużego „Companion Management UI”.
+- kamery,
+- widoczności,
+- player proximity,
+- interaction prompt,
+- obecności rendered `Object3D`.
+
+Wykorzystać istniejący model hybrydowej symulacji NPC.
+
+Nie tworzyć helper-specific frame loop ani specjalnej off-screen symulacji.
+
+---
+
+## 14. UI / konfiguracja
+
+Jeżeli istnieje UI relacji, interakcji lub NPC assignment, rozszerzyć je minimalnie.
 
 Minimalna konfiguracja powinna umożliwić określenie:
 
 ```text
 NPC:
-  role = helper
-  target = player storage
+  helper assignment = enabled
+  target = player Container
   resource = food
 ```
 
-Sposób prezentacji powinien zostać dopasowany do aktualnej architektury UI.
-
-Jeżeli istniejący system nie posiada jeszcze mechanizmu konfiguracji NPC goals/assignments, plan powinien dodać minimalny mechanizm potrzebny do tego przypadku, bez budowania kompletnego systemu rozkazów dla NPC.
+Nie tworzyć osobnego Companion Management UI ani pełnego command systemu.
 
 ---
 
-## 14. Woda
+## 15. Woda
 
-Po poprawnym działaniu jedzenia ten sam mechanizm powinien umożliwić:
+Po poprawnym działaniu food delivery ten sam mechanizm może obsłużyć water, jeśli aktualny resource/item model na to pozwala.
+
+Nie tworzyć osobnego:
 
 ```text
-resource = water
+deliverWaterToPlayer()
 ```
 
-bez tworzenia osobnej implementacji helpera.
-
-Docelowo:
-
-```text
-Helper assignment
- ├── food
- ├── water
- └── other resources
-```
-
-Jeżeli istniejący model zasobów pozwala obsłużyć oba przypadki jednym mechanizmem, należy to wykorzystać.
+Jeżeli woda wymaga nowego modelu item/resource ownership, pozostaje poza zakresem pierwszej wersji.
 
 ---
 
-## 15. Persistence
-
-Stan przypisania helpera powinien być zachowany, jeżeli helper assignment jest trwałą relacją/rolą NPC.
-
-Po save/load należy zachować:
-
-- NPC,
-- relację z graczem,
-- target storage,
-- ustawiony resource/goal,
-- stan wymagany do kontynuowania zadania.
-
-Nie tworzyć osobnego save systemu.
-
-Jeżeli target storage posiada stabilny ID, należy zapisywać jego ID, a nie pozycję skrzyni jako substytut referencji.
-
----
-
-## 16. Off-screen Simulation
-
-Helper nie może wymagać obecności gracza lub kamery.
-
-Gdy NPC i storage są poza aktywnym obszarem:
-
-- system powinien nadal zachować ciągłość stanu,
-- nie należy wymuszać pełnej symulacji klatka po klatce,
-- mechanizm powinien być kompatybilny z istniejącą hybrydową symulacją NPC.
-
-Na pierwszym etapie nie należy jednak budować specjalnego off-screen helper simulation.
-
-Wykorzystać istniejący model symulacji.
-
----
-
-## 17. Przyszłe rozszerzenia
-
-Ten mechanizm powinien umożliwiać późniejsze:
-
-- dostarczanie wody,
-- dostarczanie drewna,
-- dostarczanie materiałów,
-- transport określonych przedmiotów,
-- okresowe dostawy,
-- różne priorytety,
-- limity ilościowe,
-- różne storage targets,
-- wiele storage,
-- role specjalizowane.
-
-Nie implementować ich, jeżeli nie są wymagane do pierwszej wersji.
-
----
-
-## 18. Relacja z Companion
-
-Ten plan **nie implementuje Companion**.
-
-Pomocnik i Companion są niezależnymi rolami:
-
-```text
-NPC
- ├── Helper / Supplier
- │     └── pozostaje w swoim household
- │
- └── Companion
-       └── może żyć przy graczu
-```
-
-Helper może istnieć przez całą grę bez kiedykolwiek stania się Companionem.
-
-Przyszły Companion może natomiast korzystać z tych samych mechanizmów dostarczania zasobów.
-
----
-
-## 19. Poza zakresem
+## 16. Poza zakresem
 
 Nie implementować:
 
-- opuszczania household przez NPC,
-- przeprowadzki do obozu gracza,
+- Companion,
+- opuszczania household,
+- przeprowadzki do gracza,
 - follow,
-- obrony gracza,
 - party management,
-- Companion UI,
-- nowych combat mechanics,
-- specjalnego Helper AI,
-- specjalnego transport system,
+- obrony gracza,
+- HelperAI,
+- helper-specific transport,
+- helper-specific inventory/storage,
+- nowego logistics managera,
+- GOAP/planner'a,
 - LLM-driven decisions.
 
 ---
 
-## 20. Weryfikacja
+## 17. Weryfikacja
 
-### Podstawowy przepływ
+### Automated
 
-- można przypisać istniejącego NPC jako helpera,
-- można wskazać player storage,
-- NPC wybiera jedzenie,
-- NPC zbiera jedzenie,
-- NPC dostarcza je do storage,
-- zawartość skrzyni zwiększa się,
-- NPC wraca do normalnego życia.
+- candidate strategy generation respektuje assignment i availability;
+- niedostępny target nie jest wybierany;
+- personality/role modifiers nie tworzą niemożliwych działań;
+- istniejące critical needs pozostają authoritative;
+- food transfer zachowuje conservation invariant;
+- partial/full Container działa poprawnie;
+- interruption nie gubi carried resources;
+- assignment persistence działa;
+- dwa helpery nie powodują duplikacji/utraty zasobów;
+- istniejące testy AI/NPC pozostają zielone.
 
-### Autonomia NPC
+### Browser/gameplay
 
-- NPC nadal realizuje własne potrzeby,
-- NPC nadal wykonuje profesję,
-- NPC nadal wykonuje schedule,
-- pomoc graczowi nie tworzy permanentnej pętli,
-- NPC może przerwać pomoc na rzecz ważniejszych potrzeb.
+- można przypisać istniejącego NPC;
+- można wskazać player Container;
+- NPC wybiera helper delivery przez normalny decision flow;
+- NPC pozyskuje food;
+- NPC dostarcza food do Container;
+- Container zwiększa zawartość;
+- NPC wraca do normalnego życia;
+- ważniejsza potrzeba może przerwać delivery;
+- pełny Container nie powoduje pętli;
+- save/load zachowuje assignment;
+- zachowanie nie zależy od renderowania ani kamery.
 
-### Storage
-
-- pełna skrzynia jest poprawnie obsługiwana,
-- `ItemSize` jest respektowany,
-- istniejące ograniczenia storage działają,
-- helper nie gubi przedmiotów przy nieudanej dostawie.
-
-### Persistence
-
-- assignment przetrwa save/load,
-- target storage zostanie poprawnie odnaleziony,
-- NPC będzie mógł kontynuować pracę po odtworzeniu świata.
-
-### Multiple NPCs
-
-- dwóch helperów może dostarczać do tej samej skrzyni,
-- nie dochodzi do utraty przedmiotów,
-- istniejące mechanizmy konfliktów/rezerwacji są respektowane.
-
-### Off-screen
-
-- helper nie wymaga obecności gracza,
-- zachowanie nie zależy od renderowania,
-- nie wprowadzono helper-specific frame loop.
+Nie uznawać browser verification za wykonane bez faktycznego testu.
 
 ---
 
-## 21. Kryterium ukończenia
+## 18. Kryterium ukończenia
 
-Istniejący NPC może zostać pomocnikiem gracza i w ramach swojej normalnej autonomii:
+Istniejący NPC może, w ramach swojej normalnej autonomii:
 
-1. otrzymać cel dostarczania zasobu,
-2. pozyskać jedzenie,
-3. przetransportować je do player storage,
-4. umieścić je w kontenerze,
-5. zachować wystarczające zasoby dla siebie i swoich obowiązków,
-6. wrócić do normalnego życia,
-7. powtórzyć proces przy kolejnej decyzji.
+1. otrzymać aktywny helper assignment;
+2. uwzględnić go w istniejącym decision/strategy flow;
+3. wybrać dostępną strategię dostawy;
+4. pozyskać nadwyżkowe jedzenie;
+5. przenieść je przez istniejący `Inventory`;
+6. dostarczyć je do wskazanego `Container`;
+7. zachować własne zasoby i obowiązki;
+8. przerwać działanie przy ważniejszej potrzebie;
+9. wrócić do normalnego decision cycle;
+10. powtórzyć proces tylko wtedy, gdy kolejna decyzja ponownie wybierze tę strategię.
 
-Mechanizm działa przez istniejące systemy NPC, storage i logistics, bez tworzenia osobnego `HelperAI`.
+Mechanizm korzysta z `ai-002`, `ai-003`, planu 164 oraz istniejących NPC action/logistics systems bez tworzenia równoległego Helper AI.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
