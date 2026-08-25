@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ShoppingCartIcon } from 'lucide-vue-next'
 import { ref } from 'vue'
 import UiButton from '@/components/UiButton.vue'
 import type { ItemKind } from '../../items/items'
@@ -104,10 +105,12 @@ function clear(): void {
         +
       </button>
       <UiButton
-        class="ml-auto min-h-9 px-2.5 py-1 text-xs"
+        class="ml-auto min-h-9 px-3 py-0.5 text-xs"
         label="Dodaj"
         @click="add"
-      />
+      >
+        <ShoppingCartIcon class="size-3" />
+      </UiButton>
     </div>
   </div>
 </template>
