@@ -1,66 +1,40 @@
 # MPFB2 Reference
 
-**Target:** current MPFB2 2.x with Blender 5.2.
+**Target:** Blender 5.2 + current MPFB2 2.x.
 
-## Architecture
+## Mental model
 
-MPFB2 is a Blender addon. Automation should therefore happen through Blender Python and MPFB2's own services/API where possible.
+MPFB2 is a Blender addon. Automate it through Blender Python and MPFB2's supported services/API.
 
-Important service concepts documented by MPFB2 include:
+Important service areas:
 
-- `HumanService` — human/character operations.
-- `AssetService` — asset discovery/management.
-- `MaterialService` — materials and skin/material operations.
+- `HumanService` — character/human operations.
+- `AssetService` — asset discovery/loading.
 - `TargetService` — body/phenotype/target operations.
-- `RigService` — rig creation and rig-related operations.
-- `ClothesService` — clothing and related asset operations.
+- `MaterialService` — materials.
+- `RigService` — rig generation.
+- `ClothesService` — clothing operations.
 
-Exact callable names and signatures must be checked against the installed MPFB2 version/source before writing production helpers. Do not infer an API signature from an old tutorial.
+Exact signatures are version-sensitive. Inspect the installed MPFB2 source/API before implementing production helpers.
 
-## Asset model
+## Assets
 
-MPFB2 uses MakeHuman asset concepts for character components. Clothes and several body/appearance components are handled through the MHCLO asset mechanism. Hair, clothes and other attached assets should therefore be treated as assets with a common discovery/attachment pipeline where appropriate, rather than inventing unrelated mechanisms for every asset type.
+MPFB2 uses MakeHuman asset concepts and MHCLO-based fitting for clothing and related attached assets. Hair/clothes/body assets should use the supported asset/fitting path rather than arbitrary mesh parenting.
 
-## Character variation
+## Variation
 
-Current MPFB2 supports controlled character randomization and batch generation. Random generation can be seed-based and can cover areas such as phenotype, details, skin, hair, body parts and clothing.
-
-For Seedvale, prefer deterministic generation from a Seedvale character seed/specification. This allows the same NPC appearance to be reproduced after regeneration.
+MPFB2 supports controlled/random character generation and batch workflows. Seedvale should provide a deterministic character seed/specification so an NPC appearance can be reproduced.
 
 ## Rigging
 
-MPFB2 provides multiple rig options. A game-oriented rig is relevant to export pipelines. Do not assume that a rig used for authoring/control is automatically the best runtime skeleton for Seedvale.
+Choose the runtime rig from the Seedvale animation/export contract. Do not assume an authoring rig is the correct runtime rig. Do not introduce Rigify unless there is a concrete Seedvale requirement and the MPFB2-supported workflow is understood.
 
-Rig choice must ultimately be driven by the Seedvale animation/export contract.
+## Version policy
 
-Do not automatically introduce Rigify. If Rigify is used, follow MPFB2's supported generation path so equipped/attached assets remain compatible.
+Record the exact installed MPFB2 version in verified notes. At knowledge-base creation, **2.0.17** was the latest release and **2.0.18** was development work. Re-check before implementation.
 
-## Clothing and attached assets
+## Official sources
 
-Clothing should be treated as part of the character asset pipeline:
-
-```text
-character
-  -> asset selection
-  -> asset loading
-  -> fitting/attachment
-  -> material handling
-  -> rig compatibility
-  -> validation
-```
-
-Do not assume that simply parenting an arbitrary mesh to the armature is equivalent to fitting an MPFB2 clothing asset.
-
-## Source-code rule
-
-When an operation matters to the production pipeline, inspect the installed MPFB2 source or current official documentation first. MPFB2 internals and examples can change between releases.
-
-## Current version policy
-
-Record the exact MPFB2 version in verified notes. At the time this knowledge base was prepared, MPFB2 2.0.17 was the current released version and 2.0.18 was development work. Re-check before implementing against the addon.
-
-## Sources
-
-- MPFB2 documentation: https://static.makehumancommunity.org/mpfb/
+- MPFB2 docs: https://static.makehumancommunity.org/mpfb/
 - MPFB2 source: https://github.com/makehumancommunity/mpfb2
 - MPFB2 script samples: https://github.com/makehumancommunity/mpfb2/tree/master/script_samples
