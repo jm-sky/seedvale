@@ -12,11 +12,13 @@ import {
   TEST_HOUSE_02,
 } from '../assets/houseDefinitionExample'
 import { disposeObject3D } from '../assets/loadGltf'
+import { resolvePosition } from '../world/collision'
 import {
   buildAssemblyCollidersWorld,
   buildHouse,
   buildHouseCollidersWorld,
   buildHouseDoorCollidersLocal,
+  buildHouseDoorJambCollidersLocal,
   buildHouseWallCollidersLocal,
   censusAssembly,
   cornerLocalPosition,
@@ -27,11 +29,14 @@ import {
   floorTilePositions,
   HOUSE_ASSEMBLY_SCALE,
   HOUSE_DOOR_COLLIDER_RADIUS,
+  HOUSE_DOOR_JAMB_OFFSET,
+  HOUSE_DOOR_JAMB_RADIUS,
   HOUSE_WALL_COLLIDER_RADIUS,
   type HouseBuildContext,
   houseDefinitionAssetIds,
   houseFootprintRadius,
   matchingWallPlacement,
+  openingLocalPose,
   resolveRoofParts,
   transformHouseCollidersToWorld,
   WALL_YAW,
@@ -257,17 +262,90 @@ describe('house colliders', () => {
     const closed = buildHouseDoorCollidersLocal(TEST_HOUSE_01, [true])
     expect(closed).toHaveLength(1)
     expect(closed[0]!.radius).toBe(HOUSE_DOOR_COLLIDER_RADIUS)
-    const doorWall = matchingWallPlacement(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
-    const doorPose = wallLocalTransform(TEST_HOUSE_01.footprint, doorWall.side, doorWall.moduleIndex)
+    const doorPose = openingLocalPose(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
     expect(closed[0]).toMatchObject({ x: doorPose.x, z: doorPose.z })
+  })
+
+  it('door collider stays anchored to the same opening pose as the visual door leaf', () => {
+    // Regression for the door_1_flat hinge offset drifting away from its
+    // collider: both the door root (hinge parent) and the closed-door
+    // collider must come from `openingLocalPose`, not two independent
+    // wall-center computations that could diverge.
+    const assembly = buildHouse(TEST_HOUSE_01, contextFor())
+    const door = assembly.doors[0]!
+    const doorRoot = door.hinge.parent!
+    const opening = TEST_HOUSE_01.openings[0]!
+    const pose = openingLocalPose(TEST_HOUSE_01, opening)
+
+    expect(doorRoot.position.x).toBeCloseTo(pose.x)
+    expect(doorRoot.position.z).toBeCloseTo(pose.z)
+    expect(door.hinge.position.x).toBeCloseTo(DOOR_1_FLAT_HINGE_OFFSET_X)
+
+    const closed = buildHouseDoorCollidersLocal(TEST_HOUSE_01, [true])[0]!
+    expect(closed.x).toBeCloseTo(doorRoot.position.x)
+    expect(closed.z).toBeCloseTo(doorRoot.position.z)
+    assembly.dispose()
+  })
+
+  it('door jambs flank the opening and stay present whether the door is open or closed', () => {
+    const jambs = buildHouseDoorJambCollidersLocal(TEST_HOUSE_01)
+    expect(jambs).toHaveLength(2)
+    const pose = openingLocalPose(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
+    const xs = jambs.map((j) => j.x).sort((a, b) => a - b)
+    expect(xs).toEqual([pose.x - HOUSE_DOOR_JAMB_OFFSET, pose.x + HOUSE_DOOR_JAMB_OFFSET])
+    expect(jambs.every((j) => j.z === pose.z)).toBe(true)
+    expect(jambs.every((j) => j.radius === HOUSE_DOOR_JAMB_RADIUS)).toBe(true)
+
+    const closedTotal = buildHouseCollidersWorld(TEST_HOUSE_01, 0, 0, 0, [true])
+    const openTotal = buildHouseCollidersWorld(TEST_HOUSE_01, 0, 0, 0, [false])
+    // Only the closed-door leaf disk should differ between open/closed — the
+    // jambs are frame, not leaf, and stay regardless of door state.
+    expect(closedTotal.length).toBe(openTotal.length + 1)
+  })
+
+  it('closing the collider gap beside a door: a point beside the doorway is no longer walkable (regression)', () => {
+    // Before the jamb fix, a door's whole 2 m wall module had zero wall
+    // collider (skipped so the frame/leaf render there) and the closed-door
+    // disk only covered ~0.45 m around the center — leaving ~0.55 m of
+    // completely open space on each side, wide enough for the player
+    // (radius 0.35 m) to walk in beside the door instead of through it.
+    const world = buildHouseCollidersWorld(TEST_HOUSE_01, 0, 0, 0, [true])
+    const jamb = buildHouseDoorJambCollidersLocal(TEST_HOUSE_01)[0]!
+    const playerRadius = 0.35
+    const resolved = resolvePosition(jamb.x, jamb.z, playerRadius, world)
+    const pushedDistance = Math.hypot(resolved.x - jamb.x, resolved.z - jamb.z)
+    expect(pushedDistance).toBeCloseTo(jamb.radius + playerRadius)
+  })
+
+  it('the doorway itself stays walkable — jambs must not seal off the whole opening (regression)', () => {
+    // A first pass at the jamb fix sized offset/radius by summing raw radii
+    // (ignoring the player's own collision radius, which `resolvePosition`
+    // adds to every collider it tests against). That accidentally sealed the
+    // entire ~1 m doorway shut — a point standing right at the opening's
+    // center got pushed out by both jambs at once. This guards the actual
+    // walkable corridor width, not just "some point near the door is
+    // blocked" (the previous test).
+    const playerRadius = 0.35
+    const pose = openingLocalPose(TEST_HOUSE_01, TEST_HOUSE_01.openings[0]!)
+    const openWorld = buildHouseCollidersWorld(TEST_HOUSE_01, 0, 0, 0, [false])
+    // Real door_1_flat leaf is 1.118 m wide — walking in through the center
+    // of the opening must not be pushed away by the frame/jambs.
+    const center = resolvePosition(pose.x, pose.z, playerRadius, openWorld)
+    expect(center.x).toBeCloseTo(pose.x)
+    expect(center.z).toBeCloseTo(pose.z)
+    // Roughly the leaf's own half-width off-center (still inside the
+    // opening) must also stay clear.
+    const offCenter = resolvePosition(pose.x + 0.4, pose.z, playerRadius, openWorld)
+    expect(offCenter.x).toBeCloseTo(pose.x + 0.4)
+    expect(offCenter.z).toBeCloseTo(pose.z)
   })
 
   it('transforms local colliders with house yaw and assembly scale', () => {
     const local = [{ x: 1, z: 0, radius: 1 }]
     const world = transformHouseCollidersToWorld(local, 10, 20, Math.PI / 2, HOUSE_ASSEMBLY_SCALE)
     expect(world[0]!.x).toBeCloseTo(10)
-    expect(world[0]!.z).toBeCloseTo(20 + 1.1)
-    expect(world[0]!.radius).toBeCloseTo(1.1)
+    expect(world[0]!.z).toBeCloseTo(20 + 1)
+    expect(world[0]!.radius).toBeCloseTo(1)
   })
 
   it('buildAssemblyCollidersWorld omits the doorway when the door is open', () => {
@@ -327,8 +405,9 @@ describe('village house definitions', () => {
     expect(gables.map((p) => p.rotationY).sort()).toEqual([0, Math.PI])
   })
 
-  it('scales the assembled house by 10%', () => {
+  it('keeps the assembled house at native MegaKit scale', () => {
     const assembly = buildHouse(TEST_HOUSE_01, contextFor())
+    expect(HOUSE_ASSEMBLY_SCALE).toBe(1)
     expect(assembly.root.scale.x).toBeCloseTo(HOUSE_ASSEMBLY_SCALE)
     expect(assembly.root.scale.y).toBeCloseTo(HOUSE_ASSEMBLY_SCALE)
     expect(assembly.root.scale.z).toBeCloseTo(HOUSE_ASSEMBLY_SCALE)

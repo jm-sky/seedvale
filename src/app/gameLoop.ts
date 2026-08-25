@@ -55,7 +55,8 @@ import {
   projectToViewportFraction,
   RANGED_RETICLE_TARGET_HEIGHT,
 } from '../combat/rangedReticle'
-import { isCameraMeshDebugMode, isDebugMode } from '../debug/debugMode'
+import { createColliderDebugView } from '../debug/colliderDebugView'
+import { isCameraMeshDebugMode, isColliderDebugMode, isDebugMode } from '../debug/debugMode'
 import { setCameraMeshHit } from '../debug/renderStateDebug'
 import { ANIMAL_LABELS, FAUNA_SHADOW_DISTANCE } from '../fauna/AnimalAgent'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
@@ -428,6 +429,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   /** Pull-based, fail-open shadow-map update budget (plan 145 R1) — see
    *  `render/shadowBudget.ts`. */
   const shadowBudgetState = createShadowBudgetState(player.mesh.position.x, player.mesh.position.z)
+  /** `?debugColliders=1` — zero runtime presence outside that flag, same
+   *  pattern as `npcInspector` above. Lives for the app session (no
+   *  `GameLoop.dispose`, mirroring the other debug-only deps here). */
+  const colliderDebugView = isColliderDebugMode() ? createColliderDebugView(scene) : null
 
   /** `true` if any NPC (from a loaded settlement) or fauna agent is currently
    *  within its own per-agent shadow-casting distance of the player
@@ -1628,6 +1633,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       })
       lights.follow(player.mesh.position.x, player.mesh.position.z)
       bundle.ocean.follow(player.mesh.position.x, player.mesh.position.z)
+      colliderDebugView?.update(player.mesh.position.x, player.mesh.position.z, bundle.chunkManager.collidersNear)
       // Computed before `settlementsManager.update` (not after, as before
       // livestock existed) so its per-settlement livestock `update()` calls
       // can also use them — neither depends on `update()`'s effect this same

@@ -40,7 +40,7 @@ export const DOOR_1_FLAT_HINGE_OFFSET_X = -0.51
 export const DOOR_OPEN_ANGLE = Math.PI / 2
 export const DOOR_ANIM_SPEED = 4
 /** Uniform world scale on the assembled house — native MegaKit metres × this. */
-export const HOUSE_ASSEMBLY_SCALE = 1.1
+export const HOUSE_ASSEMBLY_SCALE = 1
 /** Circle radius for each 2 m wall-module collider (local metres, pre-scale). */
 export const HOUSE_WALL_COLLIDER_RADIUS = 0.95
 /** Closed door leaf — blocks the doorway opening (local metres, pre-scale). */
@@ -227,6 +227,22 @@ export function matchingWallPlacement(def: HouseDefinition, opening: HouseOpenin
     throw new Error(`HouseBuilder: no wall matching opening ${opening.wallAssetId}`)
   }
   return wall
+}
+
+/** Local pose of a wall module — shared by wall instantiation and openings. */
+function wallModulePose(def: HouseDefinition, wall: HouseWallPlacement): HouseLocalPose {
+  return addVec(wall.transform?.position, wallLocalTransform(def.footprint, wall.side, wall.moduleIndex))
+}
+
+/**
+ * Local pose of an opening (door/window) — the single source of truth for the
+ * door frame/fill placement, the door leaf/hinge parent, the closed-door
+ * collider, and the derived door/entrance interaction points. All of these
+ * must stay anchored to this same pose so the visual opening and its
+ * collider cannot drift apart.
+ */
+export function openingLocalPose(def: HouseDefinition, opening: HouseOpening): HouseLocalPose {
+  return wallModulePose(def, matchingWallPlacement(def, opening))
 }
 
 function wallTopY(def: HouseDefinition, catalog: ConstructionCatalog): number {
@@ -480,13 +496,59 @@ export function buildHouseDoorCollidersLocal(
       doorIndex++
       continue
     }
-    const wall = matchingWallPlacement(def, opening)
-    const pose = addVec(
-      wall.transform?.position,
-      wallLocalTransform(def.footprint, wall.side, wall.moduleIndex),
-    )
+    const pose = openingLocalPose(def, opening)
     colliders.push({ x: pose.x, z: pose.z, radius: HOUSE_DOOR_COLLIDER_RADIUS })
     doorIndex++
+  }
+  return colliders
+}
+
+/**
+ * Jamb offset/radius (local metres, pre-scale) — sized so that, once a
+ * player-sized entity's own collision radius (`PLAYER_COLLISION_RADIUS`,
+ * `player/PlayerController.ts` = 0.35 m) is added on top by `resolvePosition`,
+ * the *effective* blocked span is what actually matters, not the raw circle:
+ *
+ * - inner edge (`offset - radius - entityRadius`) sits at ≈0.55 m — matching
+ *   half the real `door_1_flat` leaf width (1.118 m, `megakitAudit.generated.json`),
+ *   so the walkable corridor isn't narrower than the visual doorway.
+ * - outer edge (`offset + radius + entityRadius`) reaches ≈1.55 m — past the
+ *   2 m module's own edge (1.0 m from the opening center), so the jamb alone
+ *   (not relying on a neighboring wall module, which may not exist if the
+ *   door sits at a wall's end next to a corner post) fully closes the gap.
+ *
+ * A naive derivation that ignores the entity radius (as an earlier version of
+ * this constant did) under- or over-shoots badly: offset/radius chosen to
+ * "just touch" the door disk and neighbor wall by their raw radii alone
+ * produced a blocked span wide enough to seal almost the entire doorway.
+ */
+export const HOUSE_DOOR_JAMB_OFFSET = 1.05
+/** See `HOUSE_DOOR_JAMB_OFFSET` — comparable to the real doorframe casing's
+ *  own thickness (~0.11 m, `doorframe_flat_wooddark` vs `door_1_flat` width). */
+export const HOUSE_DOOR_JAMB_RADIUS = 0.15
+
+/**
+ * Frame/jamb circles flanking every door opening, present regardless of
+ * open/closed state (unlike `buildHouseDoorCollidersLocal`'s leaf disk).
+ * `buildHouseWallCollidersLocal` skips a door's wall module entirely so the
+ * frame/leaf can render there, which otherwise leaves that whole ~2 m module
+ * with no collider beyond the leaf disk's ~0.45 m — enough for a player
+ * (radius 0.35 m) to walk in beside a closed door instead of through it.
+ */
+export function buildHouseDoorJambCollidersLocal(def: HouseDefinition): Collider[] {
+  const colliders: Collider[] = []
+  for (const opening of def.openings) {
+    if (opening.type !== 'door') continue
+    const pose = openingLocalPose(def, opening)
+    const cos = Math.cos(pose.rotationY)
+    const sin = Math.sin(pose.rotationY)
+    for (const side of [-1, 1]) {
+      colliders.push({
+        x: pose.x + side * HOUSE_DOOR_JAMB_OFFSET * cos,
+        z: pose.z + side * HOUSE_DOOR_JAMB_OFFSET * sin,
+        radius: HOUSE_DOOR_JAMB_RADIUS,
+      })
+    }
   }
   return colliders
 }
@@ -511,7 +573,7 @@ export function transformHouseCollidersToWorld(
   })
 }
 
-/** Wall segments plus optional closed-door disks in world space. */
+/** Wall segments, door jambs, plus optional closed-door disks in world space. */
 export function buildHouseCollidersWorld(
   def: HouseDefinition,
   worldX: number,
@@ -522,6 +584,7 @@ export function buildHouseCollidersWorld(
 ): Collider[] {
   const local = [
     ...buildHouseWallCollidersLocal(def),
+    ...buildHouseDoorJambCollidersLocal(def),
     ...buildHouseDoorCollidersLocal(def, closedDoors),
   ]
   return transformHouseCollidersToWorld(local, worldX, worldZ, yaw, scale)
@@ -547,7 +610,7 @@ function derivedInteractionPoints(
   for (const opening of def.openings) {
     if (opening.type !== 'door') continue
     const wall = matchingWallPlacement(def, opening)
-    const pose = addVec(wall.transform?.position, wallLocalTransform(def.footprint, wall.side, wall.moduleIndex))
+    const pose = wallModulePose(def, wall)
     const outward = WALL_OUTWARD[wall.side]
     points.push({ kind: 'door', position: { x: pose.x, y: 0, z: pose.z } })
     points.push({
@@ -663,8 +726,7 @@ export function buildHouse(def: HouseDefinition, ctx: HouseBuildContext): HouseA
   const doors: HouseDoor[] = []
 
   for (const opening of def.openings) {
-    const wall = matchingWallPlacement(def, opening)
-    const pose = addVec(wall.transform?.position, wallLocalTransform(def.footprint, wall.side, wall.moduleIndex))
+    const pose = openingLocalPose(def, opening)
     if (opening.frameAssetId) {
       staticSpecs.push({ assetId: opening.frameAssetId, pose: { ...pose } })
     }

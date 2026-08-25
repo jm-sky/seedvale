@@ -158,7 +158,7 @@ function attachHouseInnerLight(group: THREE.Group): THREE.PointLight {
  * - Overwriting the clone's `position` with the mount dropped the FitMax
  *   foot/center offset. Most of the mesh sat inside the wall (sliver outside).
  *   Pivot at the mount + keep FitMax translation on the clone.
- * - `hut.add(lamp)` inherits `hut.scale` (MegaKit `HOUSE_ASSEMBLY_SCALE` 1.1;
+ * - `hut.add(lamp)` inherits `hut.scale` (MegaKit `HOUSE_ASSEMBLY_SCALE`;
  *   catalog GLB `prepareProp` can be ~0.1). Compensating the whole lamp group
  *   also moves the mount (hut-local metres). `props.ts` scales each child
  *   instead. Inner fill at (0, 1.5, 0) is hut-local because the lamp group

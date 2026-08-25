@@ -7,6 +7,8 @@
 **Depends on:** ~~109~~ MegaKit Construction Catalog  
 **Related:** [review 009](../reviews/2026-08-14--009--megakit-construction-audit.md), [review 011](../reviews/2026-08-14--011--megakit-construction-browser-verification.md), [review 012](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md), [plan 109](./2026-08-14--109--megakit-construction-catalog.md), [implementation notes](./2026-08-14--111--house-construction-implementation-notes.md)
 
+> **2026-08-25 update:** `HOUSE_ASSEMBLY_SCALE` is now `1` (was `1.1`) and the closed-door collider is derived from the same `openingLocalPose()` used for the door frame/leaf, instead of an independently recomputed wall-module center. See the implementation notes' 2026-08-25 entry.
+
 ## Cel
 
 Zastąpić obecne pojedyncze modele domów z `houseCatalog.ts` składanym z MegaKit domu, używając istniejącego `ConstructionCatalog` i kształtu `HouseDefinition` z `src/assets/houseDefinitionExample.ts`.

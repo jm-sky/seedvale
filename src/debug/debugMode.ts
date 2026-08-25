@@ -46,6 +46,14 @@ export function isRenderStateDebugMode(): boolean {
   return urlFlag('debugRenderState')
 }
 
+/** `?debugColliders=1` — renders every nearby `Collider` (player/NPC/fauna
+ *  circle-collision primitive, `world/collision.ts`) as a translucent orange
+ *  cylinder in the world, so collision gaps (e.g. a doorway with no jamb
+ *  collider) are visible instead of only discoverable by walking into them. */
+export function isColliderDebugMode(): boolean {
+  return urlFlag('debugColliders')
+}
+
 /** Major rendered subsystems that can be independently switched off for
  *  perf/mobile/isolation testing (issue 032 diagnostic follow-up) — visual
  *  only, simulation state keeps running underneath. One name added here per
