@@ -10,7 +10,7 @@
 - `2026-08-24--mpfb2-npc-hero-character-pipeline.md`
 - `settlements-001-house-collision-geometry.md`
 - `settlements-npcs-001-cultivation-hydration-and-watering.md`
-- `settlements-npcs-002-npc-professions-households-and-age.md`
+- `settlements-npcs-002-npc-professions-complete-profession-work-integration.md`
 - `tools-001-performance-benchmark-determinism-and-reliability.md`
 - `tools-002-trace-analyzer-application-cpu-attribution.md`
 - `ui-input-003-merchant-trade-ui-ux-redesign.md`
@@ -168,16 +168,16 @@ Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywisty
 Plik dodaj na branch `main` w repozytorium.
 ```
 
-### `settlements-npcs-002-npc-professions-households-and-age.md`
+### `settlements-npcs-002-npc-professions-complete-profession-work-integration.md`
 
 Prompt:
 
 ```
-Zrób review planu `settlements-npcs-002-npc-professions-households-and-age.md`
+Zrób review planu `settlements-npcs-002-npc-professions-complete-profession-work-integration.md`
 
 Wczytaj:
 - `docs/STATE.md`
-- `docs/plans/settlements-npcs-002-npc-professions-households-and-age.md`
+- `docs/plans/settlements-npcs-002-npc-professions-complete-profession-work-integration.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 

@@ -1,10 +1,6 @@
 # Plan: NPC Professions, Households & Age Activity
 
 **Created:** 2026-08-24
-**Status:** `planned` 📋
-**Priority:** high · **Effort:** L
-**Depends on:** 178 ~~069~~ ~~184~~ ~~185~~
-**Domain:** `settlements-npcs`
 
 ## 1. Cel
 
@@ -415,44 +411,3 @@ Rozszerzyć istniejący `SCHEDULE_TEMPLATES` i `work` decision path:
 - osobny profession AI/scheduler/FSM;
 - LLM-driven simulation;
 - przebudowa Huntera poza integracją wynikającą z 178.
-
-## 14. Verification
-
-### Automated
-
-- role/profession mapping;
-- deterministic profession generation;
-- minimum profession coverage per village size;
-- age → work intensity;
-- profession inheritance;
-- item catalog/capability/melee mapping dla kosy;
-- weapon maintenance integration;
-- Blacksmith sharpening uses existing `whetstone` correctly;
-- existing work/action/economy tests;
-- typecheck;
-- lint;
-- build;
-- full test suite.
-
-### Browser/gameplay
-
-Sprawdzić świeży świat z małą, średnią i dużą osadą:
-
-1. wymagane profesje są generowane;
-2. nie występuje nadmierne skupienie jednej profesji;
-3. Farmer i household pracują razem;
-4. duże dzieci pomagają przez ograniczoną część czasu;
-5. dorośli pracują normalnie;
-6. starzy częściej odpoczywają/spacerują/łowią;
-7. bardzo starzy wykonują tylko lekką pomoc;
-8. Woodcutter realnie pozyskuje drewno;
-9. Fisher realnie łowi;
-10. Miner realnie kopie;
-11. Trader pozostaje przy handlu;
-12. Guard ma aktywną nocną zmianę i światło/pochodnię zgodnie z implementacją;
-13. Blacksmith korzysta z grindstone i istniejącego weapon maintenance;
-14. kosa jest poprawnie wyposażana/używana jako tool + weapon;
-15. Blacksmith nie odwołuje się do nieistniejącej produkcji;
-16. Hunter działa zgodnie z 178.
-
-> **Zrób git commit i push do main, rebase jeżeli trzeba**
