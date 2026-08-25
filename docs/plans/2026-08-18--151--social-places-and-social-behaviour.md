@@ -3,7 +3,7 @@
 **Created:** 2026-08-18  
 **Status:** `planned` 📋  
 **Priority:** medium · **Effort:** M  
-**Depends on:** ~~020~~
+**Depends on:** ~~020~~ ~~ai-002~~
 
 domain: settlements-npcs
 
@@ -49,9 +49,19 @@ Czas pojedynczej rozmowy: **2–5 minut czasu świata**.
 
 Pierwsza wersja wybiera partnera wyłącznie spośród NPC obecnych przy tym samym campfire.
 
-W późniejszym rozszerzeniu wybór może być ważony przez personality, traits, profession/role, istniejącą relację, rodzinę oraz wspólne zainteresowania lub doświadczenia.
+Nie tworzyć pełnego partner-ranking systemu. Wybór pozostaje prosty:
 
-Nie implementować tego rozszerzenia w tym planie ponad minimalny mechanizm wyboru obecnego partnera.
+```text
+same campfire
++ arrived
++ available
++ not self
+→ candidate
+```
+
+`personality`, `traits`, `profession/role`, istniejąca relacja, rodzina, zainteresowania i pamięć pozostają poza rankingiem partnerów w tym planie.
+
+Istniejący model personality może natomiast zostać użyty jako **lekki modifier częstotliwości próby rozpoczęcia rozmowy**, w szczególności `extraversion`. Nie tworzyć do tego drugiego scoring engine. `extraversion` odpowiada za skłonność do podjęcia próby, nie za pełny wybór „najlepszego” partnera.
 
 ### Conversation
 
@@ -69,35 +79,47 @@ Wynik rozmowy może być pozytywny albo negatywny:
 - pozytywny → relacja NPC ↔ NPC rośnie;
 - negatywny → relacja NPC ↔ NPC maleje.
 
-Na tym etapie wynik może być prostym losowaniem w ramach ustalonych predyspozycji; szczegółowe wagi należy dobrać podczas implementacji na podstawie istniejącego modelu charakteru i relacji.
+Pierwsza wersja może używać prostego deterministycznego/losowego wyniku opartego na istniejących danych postaci i relacji. Nie tworzyć pełnego systemu compatibility ani nowego personality modifier framework.
 
 Zmiana jest **symetryczna** — ta sama rozmowa modyfikuje relację A ↔ B po obu stronach.
 
 Nie rozszerzać w tym planie systemu memory o nowe wpisy związane z rozmową.
 
-## Integracja z istniejącymi systemami
+## Integracja z AI
+
+Plan 151 korzysta z nowych warstw AI, ale nie powinien ich sztucznie scalać.
+
+`ai-002` wprowadza personality/role-aware scoring istniejących need candidates. Dzięki temu `extraversion` może znaleźć pierwszy sensowny seam w social behaviour, ale nie należy kopiować logiki `decisionModifiers` do nowego systemu social scoring.
+
+`ai-003` wprowadza jawny wybór strategii dla **rozwiązywania Need**. `social` jest tutaj aktywnością Schedule, a `conversation` interakcją wykonywaną wewnątrz tej aktywności. Nie modelować rozmowy jako `NeedStrategy` tylko po to, aby użyć `ai-003`.
+
+Docelowy przepływ pozostaje:
 
 ```text
-existing settlement campfire
-        ↓
-Place(type: social)
-        ↓
-Schedule(activity: social)
-        ↓
-NpcAgent / existing FSM
-        ↓
-goTo(campfire)
-        ↓
-social activity
-        ↓
-find available NPC at same campfire
-        ↓
-shared conversation action
-        ↓
-relationship + / -
+Pressure / Need
+    ↓
+personality-aware decision
+    ↓
+strategy selection (where applicable)
+    ↓
+existing PlannedAction
+
+or, when idle:
+
+idle
+    ↓
+Schedule activity
+    ↓
+social
+    ↓
+Social Place
+    ↓
+conversation interaction
+    ↓
+relationship change
 ```
 
-Potrzeby i ich priorytet pozostają nadrzędne wobec Schedule zgodnie z istniejącą architekturą. Social behaviour nie powinno omijać ani zastępować istniejącego mechanizmu potrzeb, presji ani FSM.
+Potrzeby i ich priorytet pozostają nadrzędne wobec Schedule zgodnie z istniejącą architekturą. Social behaviour nie powinno omijać ani zastępować istniejącego mechanizmu potrzeb, presji, strategy selection ani FSM.
 
 ## Relationship architecture
 
@@ -113,7 +135,7 @@ Dokładne nazwy i granice zmian należy potwierdzić przed implementacją na akt
 
 - model `Place` / `PlaceType` i resolver miejsc;
 - istniejąca settlement infrastructure dla campfire;
-- `Schedule`, w szczególności aktywność `social`;
+- `Schedule`, w szczególności aktywność `social` i `hasSocialPlace`;
 - `NpcAgent` i FSM/action execution;
 - istniejący model relationships NPC;
 - testy jednostkowe Place/Schedule/FSM/relationships oraz nowych reguł social interaction.
@@ -131,7 +153,8 @@ Nie tworzyć nowych globalnych managerów, jeśli istniejące właściciele stan
 - dialogue UI/audio jako warunku wykonania rozmowy;
 - LLM-driven social behaviour;
 - osobnego social AI / social scheduler'a;
-- nowych settlement campfire'ów.
+- nowych settlement campfire'ów;
+- modelowania `conversation` jako `NeedStrategy` lub tworzenia osobnego strategy systemu dla social behaviour.
 
 ## Verification
 
@@ -152,6 +175,7 @@ Testy powinny pokryć co najmniej:
 - nie można rozpocząć drugiej rozmowy z zajętym NPC;
 - conversation kończy się po swoim czasie;
 - relacja zmienia się symetrycznie w górę lub dół;
+- `extraversion` wpływa wyłącznie na skłonność do próby, jeśli zostanie użyty w V1;
 - NPC może rozpocząć kolejną rozmowę podczas dalszego pobytu.
 
 ### Browser / gameplay
@@ -175,6 +199,7 @@ Weryfikacja wizualna powinna potwierdzić, że zachowanie wykorzystuje istnieją
 - rozmowy grupowe;
 - memory wynikające z ważnych interakcji;
 - inne Social Places;
-- wykorzystanie relacji społecznych do decyzji, problemów, questów i innych konsekwencji świata.
+- wykorzystanie relacji społecznych do decyzji, problemów, questów i innych konsekwencji świata;
+- dalsze wykorzystanie `Strategy Selection`, jeżeli przyszłe social behaviour rzeczywiście będzie rozwiązywało Need/Problem i będzie tego wymagało.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
