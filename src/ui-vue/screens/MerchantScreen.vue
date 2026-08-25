@@ -1,214 +1,190 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
-import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
+import { ITEM_CATALOG, type ItemCapability } from '../../items/itemCatalog'
 import { isInstanceBackedKind } from '../../items/itemInstances'
-import { hasItemKindCategory, ITEM_DEFS, type ItemCategory, type ItemKind } from '../../items/items'
-import { MERCHANT_STOCK, merchantPrice, offerValue, sellPrice } from '../../items/tradeCatalog'
+import { hasItemKindCategory, ITEM_DEFS, type ItemKind } from '../../items/items'
+import { previewTransactionNetCoins } from '../../items/trade'
+import { MERCHANT_STOCK, merchantPrice, tradeValue } from '../../items/tradeCatalog'
+import MerchantFilterBar from '../components/MerchantFilterBar.vue'
+import MerchantItemDetailsModal from '../components/MerchantItemDetailsModal.vue'
+import MerchantItemRow from '../components/MerchantItemRow.vue'
+import MerchantTransactionPanel, { type TransactionLine } from '../components/MerchantTransactionPanel.vue'
+import { useCompactMerchantLayout } from '../composables/useCompactMerchantLayout'
+import { useMerchantTradeState } from '../composables/useMerchantTradeState'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { closeMerchant, isMerchantOpen, showToast, ui } from '../store'
 
 useOverlayScreen('merchant', isMerchantOpen, closeMerchant)
 
-type CategoryFilter = 'all' | ItemCategory
-type PriceFilter = 'all' | 'low' | 'mid' | 'high'
-type SortMode = 'name' | 'price-asc' | 'price-desc'
+const drawerOpen = ref(false)
+useOverlayScreen('merchant-drawer', () => drawerOpen.value, () => { drawerOpen.value = false })
 
-const { categoryLabel } = useItemCategoryLabels()
+const detailsKind = ref<ItemKind | null>(null)
+useOverlayScreen('merchant-item-details', () => detailsKind.value !== null, () => { detailsKind.value = null })
+
+const {
+  buyFilters, offerFilters, transaction, resetAll,
+  setPurchaseCount, setOfferCount,
+  matchesCategory, matchesCapability, matchesPrice, matchesSearch, sortRows,
+} = useMerchantTradeState()
+const { isCompact } = useCompactMerchantLayout()
+
+const activeContext = ref<'buy' | 'offer'>('buy')
+
 const merchantBody = ref<HTMLElement | null>(null)
-const sellerPanel = ref<HTMLElement | null>(null)
-const buyerPanel = ref<HTMLElement | null>(null)
-const filtersOpen = ref(false)
 useTouchScroll(merchantBody)
-useTouchScroll(sellerPanel)
-useTouchScroll(buyerPanel)
-
-const barterKind = ref<ItemKind | null>(null)
-const offer = ref<Partial<Record<ItemKind, number>>>({})
-const buyCount = ref<Partial<Record<ItemKind, number>>>({})
-const categoryFilter = ref<CategoryFilter>('all')
-const priceFilter = ref<PriceFilter>('all')
-const sortMode = ref<SortMode>('name')
 
 watch(() => ui.merchant.open, (open) => {
   if (!open) return
-  barterKind.value = null
-  offer.value = {}
-  buyCount.value = {}
-  categoryFilter.value = 'all'
-  priceFilter.value = 'all'
-  sortMode.value = 'name'
-  filtersOpen.value = false
+  resetAll()
+  activeContext.value = 'buy'
+  drawerOpen.value = false
+  detailsKind.value = null
 })
 
 const coins = computed(() => ui.merchant.counts.coin ?? 0)
 
-const categoryChips: { id: CategoryFilter; label: string }[] = [
-  { id: 'all', label: 'Wszystkie' },
-  { id: 'weapon', label: categoryLabel.weapon },
-  { id: 'resource', label: categoryLabel.resource },
-  { id: 'tool', label: categoryLabel.tool },
-  { id: 'utility', label: categoryLabel.utility },
-  { id: 'food', label: categoryLabel.food },
+const BUY_SORT_OPTIONS = [
+  { id: 'name' as const, label: 'Nazwa' },
+  { id: 'price-asc' as const, label: 'Cena ↑' },
+  { id: 'price-desc' as const, label: 'Cena ↓' },
+  { id: 'weight' as const, label: 'Waga' },
 ]
-const priceChips: { id: PriceFilter; label: string }[] = [
-  { id: 'all', label: 'Każda cena' },
-  { id: 'low', label: '≤10' },
-  { id: 'mid', label: '11–25' },
-  { id: 'high', label: '>25' },
-]
-const sortChips: { id: SortMode; label: string }[] = [
-  { id: 'name', label: 'Nazwa' },
-  { id: 'price-asc', label: 'Cena ↑' },
-  { id: 'price-desc', label: 'Cena ↓' },
+const OFFER_SORT_OPTIONS = [
+  ...BUY_SORT_OPTIONS,
+  { id: 'condition' as const, label: 'Stan' },
 ]
 
-const activeFilterSummary = computed(() => {
-  const parts: string[] = []
-  const cat = categoryChips.find((c) => c.id === categoryFilter.value)?.label
-  if (cat) parts.push(cat)
-  const price = priceChips.find((c) => c.id === priceFilter.value)?.label
-  if (price) parts.push(price)
-  const sort = sortChips.find((c) => c.id === sortMode.value)?.label
-  if (sort) parts.push(sort)
-  return parts.join(' · ')
+const buyCapabilities = computed<ItemCapability[]>(() => {
+  const set = new Set<ItemCapability>()
+  for (const kind of MERCHANT_STOCK) {
+    for (const cap of ITEM_CATALOG[kind].capabilities ?? []) set.add(cap)
+  }
+  return [...set]
 })
 
-const buyerSubtitle = computed(() => (
-  barterKind.value
-    ? `Wymiana na: ${ITEM_DEFS[barterKind.value].label} (${neededValue.value} · oferujesz ${offeredValue.value})`
-    : 'Sprzedaj za monety albo wybierz towar z lewej, by wymienić.'
-))
+const offerableKinds = computed<ItemKind[]>(() => (Object.keys(ITEM_DEFS) as ItemKind[]).filter((kind) => {
+  if (kind === 'shell' || kind === 'coin') return false
+  return (ui.merchant.counts[kind] ?? 0) > 0
+}))
 
-function matchesCategory(kind: ItemKind): boolean {
-  if (categoryFilter.value === 'all') return true
-  return hasItemKindCategory(kind, categoryFilter.value)
-}
-
-function matchesPrice(price: number): boolean {
-  if (priceFilter.value === 'all') return true
-  if (priceFilter.value === 'low') return price <= 10
-  if (priceFilter.value === 'mid') return price >= 11 && price <= 25
-  return price > 25
-}
-
-function sortRows<T extends { label: string; price: number }>(rows: T[]): T[] {
-  const copy = [...rows]
-  if (sortMode.value === 'name') {
-    copy.sort((a, b) => a.label.localeCompare(b.label, 'pl'))
-  } else if (sortMode.value === 'price-asc') {
-    copy.sort((a, b) => a.price - b.price || a.label.localeCompare(b.label, 'pl'))
-  } else {
-    copy.sort((a, b) => b.price - a.price || a.label.localeCompare(b.label, 'pl'))
+const offerCapabilities = computed<ItemCapability[]>(() => {
+  const set = new Set<ItemCapability>()
+  for (const kind of offerableKinds.value) {
+    for (const cap of ITEM_CATALOG[kind].capabilities ?? []) set.add(cap)
   }
-  return copy
+  return [...set]
+})
+
+function conditionForOffer(kind: ItemKind): number | null {
+  if (!isInstanceBackedKind(kind)) return null
+  const group = ui.merchant.groups.find((entry) => entry.kind === kind)
+  if (!group || group.instances.length === 0) return null
+  if (group.condition === 'uniform') return group.uniformConditionPercent
+  return group.instances.reduce((sum, inst) => sum + inst.conditionPercent, 0) / group.instances.length
 }
 
-const stock = computed(() => {
+const buyRows = computed(() => {
   const rows = MERCHANT_STOCK.flatMap((kind) => {
     const price = merchantPrice(kind) ?? 0
-    if (!matchesCategory(kind) || !matchesPrice(price)) return []
-    return [{ kind, label: ITEM_DEFS[kind].label, price }]
+    if (!matchesCategory(kind, buyFilters, hasItemKindCategory)) return []
+    if (!matchesCapability(ITEM_CATALOG[kind].capabilities, buyFilters)) return []
+    if (!matchesPrice(price, buyFilters)) return []
+    if (!matchesSearch(ITEM_DEFS[kind].label, buyFilters)) return []
+    return [{ kind, label: ITEM_DEFS[kind].label, price, weight: ITEM_DEFS[kind].weight, conditionPercent: null as number | null }]
   })
-  return sortRows(rows)
+  return sortRows(rows, buyFilters.sort)
 })
 
-function autoSellDisplayPrice(kind: ItemKind): number {
-  if (!isInstanceBackedKind(kind)) return sellPrice(kind) ?? 0
-  const group = ui.merchant.groups.find((entry) => entry.kind === kind)
-  if (!group || group.instances.length === 0) return sellPrice(kind) ?? 0
-  const sorted = [...group.instances].sort(
-    (a, b) => a.conditionPercent - b.conditionPercent || a.id.localeCompare(b.id),
-  )
-  return sorted[0]?.sellPrice ?? 0
-}
-
-const offerKinds = computed(() => {
-  const kinds = (Object.keys(ITEM_DEFS) as ItemKind[]).filter((kind) => {
-    if (kind === 'shell' || kind === 'coin') return false
-    if ((ui.merchant.counts[kind] ?? 0) <= 0) return false
-    const price = autoSellDisplayPrice(kind)
-    return matchesCategory(kind) && matchesPrice(price)
+const offerRows = computed(() => {
+  const rows = offerableKinds.value.flatMap((kind) => {
+    const price = tradeValue(kind)
+    if (!matchesCategory(kind, offerFilters, hasItemKindCategory)) return []
+    if (!matchesCapability(ITEM_CATALOG[kind].capabilities, offerFilters)) return []
+    if (!matchesPrice(price, offerFilters)) return []
+    if (!matchesSearch(ITEM_DEFS[kind].label, offerFilters)) return []
+    return [{
+      kind,
+      label: ITEM_DEFS[kind].label,
+      price,
+      weight: ITEM_DEFS[kind].weight,
+      conditionPercent: conditionForOffer(kind),
+    }]
   })
-  const rows = kinds.map((kind) => ({
-    kind,
-    label: ITEM_DEFS[kind].label,
-    price: autoSellDisplayPrice(kind),
-    count: ui.merchant.counts[kind] ?? 0,
-  }))
-  return sortRows(rows)
+  return sortRows(rows, offerFilters.sort)
 })
 
-const offeredValue = computed(() => offerValue(offer.value))
-const neededValue = computed(() => (
-  barterKind.value ? (merchantPrice(barterKind.value) ?? 0) * effectiveBuyCount(barterKind.value) : 0
-))
-const canBarter = computed(() => barterKind.value != null && offeredValue.value >= neededValue.value)
-
-function effectiveBuyCount(kind: ItemKind): number {
-  return Math.max(1, buyCount.value[kind] ?? 0)
+function ownedCount(kind: ItemKind): number {
+  return ui.merchant.counts[kind] ?? 0
 }
 
-function setBuyCount(kind: ItemKind, next: number): void {
-  const count = Math.max(0, Math.floor(next))
-  const copy = { ...buyCount.value }
-  if (count <= 0) delete copy[kind]
-  else copy[kind] = count
-  buyCount.value = copy
+function onCommitPurchase(kind: ItemKind, quantity: number): void {
+  setPurchaseCount(kind, quantity)
+}
+function onClearPurchase(kind: ItemKind): void {
+  setPurchaseCount(kind, 0)
+}
+function onCommitOffer(kind: ItemKind, quantity: number): void {
+  setOfferCount(kind, quantity, ownedCount(kind))
+}
+function onClearOffer(kind: ItemKind): void {
+  setOfferCount(kind, 0)
 }
 
-function buy(kind: ItemKind): void {
-  const result = ui.merchant.onBuyCoins?.(kind, effectiveBuyCount(kind)) ?? 'not_sold'
-  if (result === 'ok') return
-  if (result === 'cannot_afford') showToast('Za mało monet.', 'error')
-  else if (result === 'full') showToast('Ekwipunek jest za ciężki.', 'error')
-  else showToast('Nie da się tego kupić.', 'error')
+const purchaseLines = computed<TransactionLine[]>(() => (Object.entries(transaction.purchases) as [ItemKind, number][])
+  .filter(([, count]) => count > 0)
+  .map(([kind, count]) => ({ kind, label: ITEM_DEFS[kind].label, count, totalValue: (merchantPrice(kind) ?? 0) * count })))
+
+const offerLines = computed<TransactionLine[]>(() => (Object.entries(transaction.offer) as [ItemKind, number][])
+  .filter(([, count]) => count > 0)
+  .map(([kind, count]) => ({ kind, label: ITEM_DEFS[kind].label, count, totalValue: tradeValue(kind) * count })))
+
+const netCoins = computed(() => previewTransactionNetCoins(transaction.purchases, transaction.offer))
+const canTrade = computed(() => purchaseLines.value.length > 0 || offerLines.value.length > 0)
+
+function clampStaleTransaction(): boolean {
+  let changed = false
+  const nextPurchases: Partial<Record<ItemKind, number>> = {}
+  for (const [kind, count] of Object.entries(transaction.purchases) as [ItemKind, number][]) {
+    if (merchantPrice(kind) == null) { changed = true; continue }
+    nextPurchases[kind] = count
+  }
+  const nextOffer: Partial<Record<ItemKind, number>> = {}
+  for (const [kind, count] of Object.entries(transaction.offer) as [ItemKind, number][]) {
+    const owned = ownedCount(kind)
+    if (owned <= 0) { changed = true; continue }
+    const clamped = Math.min(owned, count)
+    if (clamped !== count) changed = true
+    nextOffer[kind] = clamped
+  }
+  if (changed) {
+    transaction.purchases = nextPurchases
+    transaction.offer = nextOffer
+  }
+  return changed
 }
 
-function sell(kind: ItemKind): void {
-  const result = ui.merchant.onSellCoins?.(kind) ?? 'not_sold'
-  if (result === 'ok') {
-    const next = { ...offer.value }
-    const owned = (ui.merchant.counts[kind] ?? 1) - 1
-    if ((next[kind] ?? 0) > owned) {
-      if (owned <= 0) delete next[kind]
-      else next[kind] = owned
-      offer.value = next
-    }
-  } else if (result === 'invalid_offer') showToast('Nie masz tego przedmiotu.', 'error')
-  else if (result === 'full') showToast('Ekwipunek jest za ciężki.', 'error')
-  else if (result === 'not_sold') showToast('Kupiec tego nie kupi.', 'error')
-}
-
-function setOfferCount(kind: ItemKind, next: number): void {
-  const max = ui.merchant.counts[kind] ?? 0
-  const count = Math.max(0, Math.min(max, Math.floor(next)))
-  const copy = { ...offer.value }
-  if (count <= 0) delete copy[kind]
-  else copy[kind] = count
-  offer.value = copy
-}
-
-function barter(): void {
-  if (!barterKind.value) return
-  const result = ui.merchant.onBuyBarter?.(barterKind.value, { ...offer.value }, effectiveBuyCount(barterKind.value)) ?? 'invalid_offer'
-  if (result === 'ok') {
-    offer.value = {}
+function onTrade(): void {
+  if (clampStaleTransaction()) {
+    showToast('Oferta się zmieniła — sprawdź transakcję ponownie.', 'error')
     return
   }
-  if (result === 'cannot_afford') showToast('Za niska wartość wymiany.', 'error')
+  const result = ui.merchant.onSettleTransaction?.(transaction.purchases, transaction.offer) ?? 'not_sold'
+  if (result === 'ok') {
+    transaction.purchases = {}
+    transaction.offer = {}
+    if (isCompact.value) drawerOpen.value = false
+    return
+  }
+  if (result === 'cannot_afford') showToast('Za mało monet.', 'error')
   else if (result === 'full') showToast('Ekwipunek jest za ciężki.', 'error')
-  else showToast('Nie da się wymienić.', 'error')
+  else showToast('Nie da się przeprowadzić tej transakcji.', 'error')
 }
 
-function selectBarter(kind: ItemKind): void {
-  barterKind.value = barterKind.value === kind ? null : kind
-}
-
-function chipClass(active: boolean): string {
-  return active ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'
+function openDetails(kind: ItemKind): void {
+  detailsKind.value = kind
 }
 </script>
 
@@ -219,7 +195,7 @@ function chipClass(active: boolean): string {
     @click.self="closeMerchant"
   >
     <UiPanel
-      class="flex h-[min(720px,calc(100dvh-32px))] w-[min(920px,calc(100vw-32px))] max-w-4xl flex-col !overflow-hidden !p-5 max-md:h-[calc(100dvh-16px)] max-md:max-h-none max-md:w-full max-md:!p-3"
+      class="flex h-[min(760px,calc(100dvh-32px))] w-[min(1200px,calc(100vw-32px))] max-w-6xl flex-col !overflow-hidden !p-5 max-md:h-[calc(100dvh-16px)] max-md:max-h-none max-md:w-full max-md:!p-3"
     >
       <div class="mb-2 flex shrink-0 flex-wrap items-baseline justify-between gap-2 max-md:mb-1.5">
         <h2 class="text-base font-semibold tracking-wide max-md:text-sm">
@@ -230,6 +206,14 @@ function chipClass(active: boolean): string {
             Monety: {{ coins }}
           </p>
           <button
+            v-if="isCompact"
+            type="button"
+            class="text-[12px] opacity-90 rounded-md px-2 py-1 border border-white/20 max-md:px-1.5 max-md:py-0.5 max-md:text-[11px]"
+            @click="drawerOpen = true"
+          >
+            Transakcja{{ canTrade ? ` (${purchaseLines.length + offerLines.length})` : '' }}
+          </button>
+          <button
             type="button"
             class="text-[12px] opacity-75 rounded-md px-2 py-1 border border-white/10 max-md:px-1.5 max-md:py-0.5 max-md:text-[11px]"
             @click="closeMerchant"
@@ -239,56 +223,26 @@ function chipClass(active: boolean): string {
         </div>
       </div>
 
-      <div class="shrink-0">
+      <div
+        v-if="isCompact"
+        class="mb-2 flex shrink-0 gap-1"
+      >
         <button
           type="button"
-          class="mb-1.5 flex w-full items-center justify-between gap-2 rounded-md bg-white/5 px-2 py-1.5 text-left text-xs md:hidden"
-          @click="filtersOpen = !filtersOpen"
+          class="flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs"
+          :class="activeContext === 'buy' ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'"
+          @click="activeContext = 'buy'"
         >
-          <span class="font-medium">Filtry</span>
-          <span class="min-w-0 truncate opacity-60">{{ activeFilterSummary }}</span>
-          <span class="shrink-0 opacity-60">{{ filtersOpen ? '▲' : '▼' }}</span>
+          BUY
         </button>
-        <div
-          class="mb-2 space-y-1.5 max-md:mb-1.5"
-          :class="filtersOpen ? '' : 'max-md:hidden'"
+        <button
+          type="button"
+          class="flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs"
+          :class="activeContext === 'offer' ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'"
+          @click="activeContext = 'offer'"
         >
-          <div class="flex flex-wrap gap-1">
-            <button
-              v-for="chip in categoryChips"
-              :key="chip.id"
-              type="button"
-              class="cursor-pointer rounded-md px-2 py-1 text-xs max-md:px-1.5 max-md:py-0.5 max-md:text-[11px]"
-              :class="chipClass(categoryFilter === chip.id)"
-              @click="categoryFilter = chip.id"
-            >
-              {{ chip.label }}
-            </button>
-          </div>
-          <div class="flex flex-wrap items-center gap-1">
-            <button
-              v-for="chip in priceChips"
-              :key="chip.id"
-              type="button"
-              class="cursor-pointer rounded-md px-2 py-1 text-xs max-md:px-1.5 max-md:py-0.5 max-md:text-[11px]"
-              :class="chipClass(priceFilter === chip.id)"
-              @click="priceFilter = chip.id"
-            >
-              {{ chip.label }}
-            </button>
-            <span class="mx-0.5 hidden opacity-30 md:inline">|</span>
-            <button
-              v-for="chip in sortChips"
-              :key="chip.id"
-              type="button"
-              class="cursor-pointer rounded-md px-2 py-1 text-xs max-md:px-1.5 max-md:py-0.5 max-md:text-[11px]"
-              :class="chipClass(sortMode === chip.id)"
-              @click="sortMode = chip.id"
-            >
-              {{ chip.label }}
-            </button>
-          </div>
-        </div>
+          OFFER
+        </button>
       </div>
 
       <div
@@ -296,146 +250,139 @@ function chipClass(active: boolean): string {
         class="min-h-0 flex-1 max-md:overflow-y-auto md:flex md:flex-col md:overflow-hidden"
         style="touch-action: pan-y"
       >
-        <div class="grid grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:grid-cols-2 md:gap-4 md:overflow-hidden">
-          <section class="flex min-w-0 flex-col md:min-h-0">
-            <div class="mb-2 flex items-baseline gap-2 max-md:mb-1.5">
-              <h3 class="shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
-                Sprzedawca
-              </h3>
-              <p class="min-w-0 flex-1 truncate text-right text-[12px] opacity-60 max-md:text-[11px]">
-                Tu możesz kupić towary od sprzedawcy.
-              </p>
-            </div>
-            <div
-              ref="sellerPanel"
-              class="flex flex-col gap-1.5 max-md:overflow-visible md:min-h-0 md:flex-1 md:overflow-y-auto"
-              style="touch-action: pan-y"
-            >
+        <div
+          class="grid grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:gap-4 md:overflow-hidden"
+          :class="isCompact ? '' : 'md:grid-cols-3'"
+        >
+          <section
+            v-if="!isCompact || activeContext === 'buy'"
+            class="flex min-w-0 flex-col gap-2 md:min-h-0"
+          >
+            <h3 class="shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
+              BUY
+            </h3>
+            <MerchantFilterBar
+              :model-value="buyFilters"
+              :available-capabilities="buyCapabilities"
+              :sort-options="BUY_SORT_OPTIONS"
+              @update:model-value="Object.assign(buyFilters, $event)"
+            />
+            <div class="flex flex-col gap-1.5 md:min-h-0 md:flex-1 md:overflow-y-auto">
               <div
-                v-if="stock.length === 0"
-                class="text-[12px] opacity-60 max-md:text-[11px]"
+                v-if="buyRows.length === 0"
+                class="text-[12px] opacity-60"
               >
                 Brak towarów w tej kategorii.
               </div>
-              <div
-                v-for="item in stock"
-                :key="item.kind"
-                class="flex items-center gap-2 rounded-md border border-transparent bg-white/5 px-3 py-2 hover:border-white/30 max-md:px-2 max-md:py-1.5"
-                :class="barterKind === item.kind ? 'ring-1 ring-white/30' : ''"
-              >
-                <button
-                  type="button"
-                  class="min-w-0 flex-1 cursor-pointer text-left text-sm hover:opacity-90 max-md:text-[13px]"
-                  @click="selectBarter(item.kind)"
-                >
-                  <span class="font-medium capitalize">{{ item.label }}</span>
-                  <span class="ml-2 text-[12px] opacity-70 max-md:text-[11px]">{{ item.price }} monet</span>
-                </button>
-                <div class="flex shrink-0 items-center gap-1">
-                  <button
-                    type="button"
-                    class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
-                    @click="setBuyCount(item.kind, (buyCount[item.kind] ?? 0) - 1)"
-                  >
-                    −
-                  </button>
-                  <span class="w-6 text-center text-xs">{{ buyCount[item.kind] ?? 0 }}</span>
-                  <button
-                    type="button"
-                    class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
-                    @click="setBuyCount(item.kind, (buyCount[item.kind] ?? 0) + 1)"
-                  >
-                    +
-                  </button>
-                  <UiButton
-                    class="min-h-11 shrink-0 px-2.5 py-1 text-xs max-md:min-h-9"
-                    :disabled="item.price > coins"
-                    @click="buy(item.kind)"
-                  >
-                    Kup
-                  </UiButton>
-                </div>
-              </div>
+              <MerchantItemRow
+                v-for="row in buyRows"
+                :key="row.kind"
+                :kind="row.kind"
+                :label="row.label"
+                :price="row.price"
+                price-suffix="monet"
+                :committed-count="transaction.purchases[row.kind] ?? 0"
+                :max-count="null"
+                @commit="onCommitPurchase"
+                @clear="onClearPurchase"
+                @open-details="openDetails"
+              />
             </div>
           </section>
 
-          <section class="flex min-w-0 flex-col md:min-h-0">
-            <div class="mb-2 flex items-baseline gap-2 max-md:mb-1.5">
-              <h3 class="shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
-                Kupujący
-              </h3>
-              <p class="min-w-0 flex-1 truncate text-right text-[12px] opacity-60 max-md:text-[11px]">
-                {{ buyerSubtitle }}
-              </p>
-            </div>
-            <div
-              ref="buyerPanel"
-              class="flex flex-col gap-1 max-md:overflow-visible md:min-h-0 md:flex-1 md:overflow-y-auto"
-              style="touch-action: pan-y"
-            >
+          <section
+            v-if="!isCompact || activeContext === 'offer'"
+            class="flex min-w-0 flex-col gap-2 md:min-h-0"
+          >
+            <h3 class="shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
+              OFFER
+            </h3>
+            <MerchantFilterBar
+              :model-value="offerFilters"
+              :available-capabilities="offerCapabilities"
+              :sort-options="OFFER_SORT_OPTIONS"
+              @update:model-value="Object.assign(offerFilters, $event)"
+            />
+            <div class="flex flex-col gap-1.5 md:min-h-0 md:flex-1 md:overflow-y-auto">
               <div
-                v-if="offerKinds.length === 0"
-                class="text-[12px] opacity-60 max-md:text-[11px]"
+                v-if="offerRows.length === 0"
+                class="text-[12px] opacity-60"
               >
-                {{ (Object.keys(ITEM_DEFS) as ItemKind[]).some((k) => k !== 'shell' && k !== 'coin' && (ui.merchant.counts[k] ?? 0) > 0)
-                  ? 'Brak towarów w tej kategorii.'
-                  : 'Ekwipunek jest pusty.' }}
+                {{ offerableKinds.length === 0 ? 'Ekwipunek jest pusty.' : 'Brak towarów w tej kategorii.' }}
               </div>
-              <div
-                v-for="item in offerKinds"
-                :key="item.kind"
-                class="flex items-center justify-between gap-2 rounded-md bg-white/5 px-3 py-1.5 text-sm max-md:px-2 max-md:py-1"
-              >
-                <span class="min-w-0 truncate">
-                  {{ item.label }} ×{{ item.count }}
-                  <span class="opacity-60">({{ item.price }})</span>
-                </span>
-                <div class="flex shrink-0 items-center gap-1">
-                  <template v-if="barterKind">
-                    <button
-                      type="button"
-                      class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
-                      @click="setOfferCount(item.kind, (offer[item.kind] ?? 0) - 1)"
-                    >
-                      −
-                    </button>
-                    <span class="w-6 text-center text-xs">{{ offer[item.kind] ?? 0 }}</span>
-                    <button
-                      type="button"
-                      class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
-                      @click="setOfferCount(item.kind, (offer[item.kind] ?? 0) + 1)"
-                    >
-                      +
-                    </button>
-                  </template>
-                  <UiButton
-                    class="min-h-11 px-2.5 py-1 text-xs max-md:min-h-9"
-                    @click="sell(item.kind)"
-                  >
-                    Sprzedaj
-                  </UiButton>
-                </div>
-              </div>
+              <MerchantItemRow
+                v-for="row in offerRows"
+                :key="row.kind"
+                :kind="row.kind"
+                :label="row.label"
+                :price="row.price"
+                price-suffix="monet"
+                :committed-count="transaction.offer[row.kind] ?? 0"
+                :max-count="ownedCount(row.kind)"
+                @commit="onCommitOffer"
+                @clear="onClearOffer"
+                @open-details="openDetails"
+              />
             </div>
-            <UiButton
-              class="mt-3 w-full max-md:mt-2"
-              :disabled="!canBarter"
-              :class="canBarter ? '' : 'opacity-50'"
-              @click="barter"
-            >
-              Wymień
-            </UiButton>
           </section>
-        </div>
 
-        <div class="mt-3 text-[11px] opacity-60 max-md:mt-2 max-md:text-[10px] md:hidden">
-          Esc — zamknij
+          <section
+            v-if="!isCompact"
+            class="flex min-w-0 flex-col md:min-h-0"
+          >
+            <MerchantTransactionPanel
+              :purchases="purchaseLines"
+              :offer-items="offerLines"
+              :net-coins="netCoins"
+              :coins="coins"
+              :can-trade="canTrade"
+              @trade="onTrade"
+              @remove-purchase="onClearPurchase"
+              @remove-offer="onClearOffer"
+            />
+          </section>
         </div>
       </div>
 
-      <div class="mt-3 hidden shrink-0 text-[11px] opacity-60 md:block">
+      <div class="mt-3 shrink-0 text-[11px] opacity-60">
         Esc — zamknij
       </div>
     </UiPanel>
+
+    <div
+      v-if="isCompact && drawerOpen"
+      class="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
+      @click.self="drawerOpen = false"
+    >
+      <div class="flex max-h-[calc(100dvh-32px)] w-[min(520px,calc(100vw-32px))] flex-col rounded-[10px] bg-panel p-4 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
+        <div class="mb-2 flex items-center justify-between">
+          <h2 class="text-sm font-semibold">
+            Transakcja
+          </h2>
+          <button
+            type="button"
+            class="cursor-pointer rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10"
+            @click="drawerOpen = false"
+          >
+            Zamknij
+          </button>
+        </div>
+        <MerchantTransactionPanel
+          :purchases="purchaseLines"
+          :offer-items="offerLines"
+          :net-coins="netCoins"
+          :coins="coins"
+          :can-trade="canTrade"
+          @trade="onTrade"
+          @remove-purchase="onClearPurchase"
+          @remove-offer="onClearOffer"
+        />
+      </div>
+    </div>
+
+    <MerchantItemDetailsModal
+      :kind="detailsKind"
+      @close="detailsKind = null"
+    />
   </div>
 </template>

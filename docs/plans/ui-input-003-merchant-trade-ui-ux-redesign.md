@@ -1,7 +1,7 @@
 # Plan: Merchant Trade UI/UX Redesign
 
 **Created:** 2026-08-24
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔎
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** ui-input

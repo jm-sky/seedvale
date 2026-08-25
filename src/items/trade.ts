@@ -9,10 +9,11 @@ import {
 } from './itemInstances'
 import { ITEM_DEFS, type ItemKind, itemSizeUnits } from './items'
 import {
+  canSell,
   merchantPrice,
   offerValue,
   resolveInstanceSellPrice,
-  sellPrice,
+  tradeValue,
 } from './tradeCatalog'
 import { createTrapInstance, trapConditionRatio } from './trapItemInstances'
 import { createWeaponInstance } from './weaponMaintenance'
@@ -39,20 +40,42 @@ function wouldFitAfter(
   return nextWeight <= inventory.maxWeight + 1e-9 && nextSize <= inventory.maxSize + 1e-9
 }
 
-function offerWeight(offer: Partial<Record<ItemKind, number>>): number {
+/** Total weight/size carried by a kind→count record (an offer or a purchase
+ *  list) — shared by `wouldFitAfterTransaction` for both directions. */
+function recordWeight(record: Partial<Record<ItemKind, number>>): number {
   let total = 0
-  for (const [kind, count] of Object.entries(offer) as [ItemKind, number][]) {
+  for (const [kind, count] of Object.entries(record) as [ItemKind, number][]) {
     if (count > 0) total += ITEM_DEFS[kind].weight * count
   }
   return total
 }
 
-function offerSize(offer: Partial<Record<ItemKind, number>>): number {
+function recordSize(record: Partial<Record<ItemKind, number>>): number {
   let total = 0
-  for (const [kind, count] of Object.entries(offer) as [ItemKind, number][]) {
+  for (const [kind, count] of Object.entries(record) as [ItemKind, number][]) {
     if (count > 0) total += itemSizeUnits(kind) * count
   }
   return total
+}
+
+/** Generalized `wouldFitAfter` for `settleTransaction` — nets weight/size
+ *  deltas across every offer removal, every purchase addition and the coin
+ *  settlement in one pass, instead of one remove-kind/one-add-kind. */
+function wouldFitAfterTransaction(
+  inventory: Inventory,
+  offer: Partial<Record<ItemKind, number>>,
+  purchases: Partial<Record<ItemKind, number>>,
+  netCoins: number,
+): boolean {
+  const coinRecord: Partial<Record<ItemKind, number>> = netCoins > 0 ? { coin: netCoins } : {}
+  const receivedCoinRecord: Partial<Record<ItemKind, number>> = netCoins < 0 ? { coin: -netCoins } : {}
+  const removeWeight = recordWeight(offer) + recordWeight(coinRecord)
+  const removeSize = recordSize(offer) + recordSize(coinRecord)
+  const addWeight = recordWeight(purchases) + recordWeight(receivedCoinRecord)
+  const addSize = recordSize(purchases) + recordSize(receivedCoinRecord)
+  const nextWeight = inventory.totalWeight() - removeWeight + addWeight
+  const nextSize = inventory.totalSize() - removeSize + addSize
+  return nextWeight <= inventory.maxWeight + 1e-9 && nextSize <= inventory.maxSize + 1e-9
 }
 
 /** `inventory.has()`'s stack-count check misses instance-backed kinds (knives,
@@ -153,55 +176,92 @@ function addPurchased(inventory: Inventory, kind: ItemKind, count: number): void
   inventory.add(kind, count)
 }
 
-/** Pay `price × count` coins for `count` unit(s) of `kind`. Atomic: verify, then remove+add. */
-export function buyWithCoins(inventory: Inventory, kind: ItemKind, count = 1): TradeResult {
-  const unitPrice = merchantPrice(kind)
-  if (unitPrice == null) return 'not_sold'
-  const totalPrice = unitPrice * count
-  if (!inventory.has('coin', totalPrice)) return 'cannot_afford'
-  const paymentWeight = ITEM_DEFS.coin.weight * totalPrice
-  const paymentSize = itemSizeUnits('coin') * totalPrice
-  if (!wouldFitAfter(inventory, paymentWeight, paymentSize, kind, count)) return 'full'
-  inventory.remove('coin', totalPrice)
-  addPurchased(inventory, kind, count)
-  return 'ok'
+/** Splits an offer's barter value (see `offerValue`) into the portion that
+ *  came from coin-sellable kinds vs. barter-only kinds (`canSell() === false`,
+ *  e.g. `shell` — "barter token... does not buy or sell shells for coins",
+ *  `tradeCatalog.ts`). Only the sellable portion may ever become cash. */
+function splitOfferValue(offer: Partial<Record<ItemKind, number>>): { sellable: number, nonSellable: number } {
+  let sellable = 0
+  let nonSellable = 0
+  for (const [kind, count] of Object.entries(offer) as [ItemKind, number][]) {
+    if (count <= 0) continue
+    const value = tradeValue(kind) * count
+    if (canSell(kind)) sellable += value
+    else nonSellable += value
+  }
+  return { sellable, nonSellable }
 }
 
 /**
- * Swap offered items for `count` unit(s) of `kind` when combined `tradeValue`
- * covers `price × count`. Atomic: verify counts + value + weight, then remove+add.
+ * Settles one mixed transaction: `purchases` (bought at `merchantPrice`) and
+ * `offer` (items given up, valued at full `tradeValue` up to however much of
+ * `purchases`' cost they cover — the rest, if any, is credited at half value,
+ * matching `sellPrice`'s coin-sell rate, and only for kinds `canSell()`
+ * allows to become coins at all) netted into a single coin delta. Atomic:
+ * validate the whole transaction, then remove offer + add purchases + settle
+ * coins in one pass. Supersedes the old single-target `buyWithCoins`/
+ * `buyWithBarter`/`sellForCoins` (plan ui-input-003) — those never gave
+ * change on an over-valued offer; this is the generalized replacement.
  */
-export function buyWithBarter(
-  inventory: Inventory,
-  kind: ItemKind,
-  offer: Partial<Record<ItemKind, number>>,
-  count = 1,
-): TradeResult {
-  const unitPrice = merchantPrice(kind)
-  if (unitPrice == null) return 'not_sold'
-  if (!isValidOffer(inventory, offer)) return 'invalid_offer'
-  if (offerValue(offer) < unitPrice * count) return 'cannot_afford'
-  if (!wouldFitAfter(inventory, offerWeight(offer), offerSize(offer), kind, count)) return 'full'
-  removeOffer(inventory, offer)
-  addPurchased(inventory, kind, count)
-  return 'ok'
+/** Shared coin-settlement arithmetic between `settleTransaction` (authoritative,
+ *  called with a strictly-validated `totalBuyCost`) and `previewTransactionNetCoins`
+ *  (UI display only, called with a leniently-summed one) — one formula, two
+ *  totalBuyCost computations with different validation strictness. */
+function computeNetCoins(totalBuyCost: number, offer: Partial<Record<ItemKind, number>>): number {
+  const offerBarterValue = offerValue(offer)
+  if (offerBarterValue <= totalBuyCost) return totalBuyCost - offerBarterValue
+  // Barter-only value (e.g. shells) pays down the purchase cost first — it
+  // can never become cash anyway — then sellable value covers the rest of
+  // the cost; only sellable value left over after that becomes "You
+  // receive" coins, at half rate.
+  const { sellable, nonSellable } = splitOfferValue(offer)
+  const remainingAfterNonSellable = Math.max(0, totalBuyCost - nonSellable)
+  const leftoverSellable = Math.max(0, sellable - remainingAfterNonSellable)
+  return -Math.floor(leftoverSellable * 0.5)
 }
 
-/** Sell one `kind` to the merchant for `sellPrice` coins. Atomic. */
-export function sellForCoins(inventory: Inventory, kind: ItemKind): TradeResult {
-  if (isInstanceBackedKind(kind)) {
-    const ids = selectInstancesToSell(inventory.getInstances(kind), 1)
-    if (ids.length === 0) return 'invalid_offer'
-    return sellInstancesForCoins(inventory, ids).result
+/** UI-preview-only net coin delta (positive = "To pay", negative = "You
+ *  receive") for a not-yet-committed basket — reuses `computeNetCoins` (the
+ *  same formula `settleTransaction` commits with) so the transaction summary
+ *  never drifts from what `[TRADE]` will actually do. Unknown/unstocked
+ *  purchase kinds count as free rather than failing, since this is display
+ *  math, not a commit path — `settleTransaction` remains the authoritative
+ *  validator. */
+export function previewTransactionNetCoins(
+  purchases: Partial<Record<ItemKind, number>>,
+  offer: Partial<Record<ItemKind, number>>,
+): number {
+  let totalBuyCost = 0
+  for (const [kind, count] of Object.entries(purchases) as [ItemKind, number][]) {
+    if (count > 0) totalBuyCost += (merchantPrice(kind) ?? 0) * count
   }
-  const price = sellPrice(kind)
-  if (price == null) return 'not_sold'
-  if (!inventory.has(kind, 1)) return 'invalid_offer'
-  const removeWeight = ITEM_DEFS[kind].weight
-  const removeSize = itemSizeUnits(kind)
-  if (!wouldFitAfter(inventory, removeWeight, removeSize, 'coin', price)) return 'full'
-  inventory.remove(kind, 1)
-  inventory.add('coin', price)
+  return computeNetCoins(totalBuyCost, offer)
+}
+
+export function settleTransaction(
+  inventory: Inventory,
+  purchases: Partial<Record<ItemKind, number>>,
+  offer: Partial<Record<ItemKind, number>>,
+): TradeResult {
+  const purchaseEntries = (Object.entries(purchases) as [ItemKind, number][]).filter(([, count]) => count > 0)
+  const offerHasEntries = (Object.entries(offer) as [ItemKind, number][]).some(([, count]) => count > 0)
+  if (purchaseEntries.length === 0 && !offerHasEntries) return 'invalid_offer'
+  let totalBuyCost = 0
+  for (const [kind, count] of purchaseEntries) {
+    if (!Number.isInteger(count)) return 'not_sold'
+    const unitPrice = merchantPrice(kind)
+    if (unitPrice == null) return 'not_sold'
+    totalBuyCost += unitPrice * count
+  }
+  if (offerHasEntries && !isValidOffer(inventory, offer)) return 'invalid_offer'
+  const netCoins = computeNetCoins(totalBuyCost, offer)
+  if (purchaseEntries.length === 0 && netCoins === 0) return 'not_sold'
+  if (netCoins > 0 && !inventory.has('coin', netCoins)) return 'cannot_afford'
+  if (!wouldFitAfterTransaction(inventory, offer, purchases, netCoins)) return 'full'
+  removeOffer(inventory, offer)
+  for (const [kind, count] of purchaseEntries) addPurchased(inventory, kind, count)
+  if (netCoins > 0) inventory.remove('coin', netCoins)
+  else if (netCoins < 0) inventory.add('coin', -netCoins)
   return 'ok'
 }
 

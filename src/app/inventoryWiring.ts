@@ -16,9 +16,7 @@ import { askGuardForSword } from '../items/guardSword'
 import { toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
 import { isInstanceBackedKind } from '../items/itemInstances'
-import { ITEM_DEFS } from '../items/items'
-import { buyWithBarter, buyWithCoins, selectInstancesToSell, sellForCoins, sellInstancesForCoins } from '../items/trade'
-import { resolveInstanceSellPrice, sellPrice } from '../items/tradeCatalog'
+import { sellInstancesForCoins, settleTransaction } from '../items/trade'
 import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 
 export type MerchantInventoryView = {
@@ -177,34 +175,11 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   }
 
   vueUi.configureMerchant({
-    onBuyCoins: (kind, count = 1) => {
-      const result = buyWithCoins(inventory, kind, count)
+    onSettleTransaction: (purchases, offer) => {
+      const result = settleTransaction(inventory, purchases, offer)
       if (result === 'ok') {
         afterTrade()
-        toast.show(`+${count} ${ITEM_DEFS[kind].label}`, 'pickup')
-      }
-      return result
-    },
-    onBuyBarter: (kind, offer, count = 1) => {
-      const result = buyWithBarter(inventory, kind, offer, count)
-      if (result === 'ok') {
-        afterTrade()
-        toast.show(`+${count} ${ITEM_DEFS[kind].label}`, 'pickup')
-      }
-      return result
-    },
-    onSellCoins: (kind) => {
-      const expectedCoins = isInstanceBackedKind(kind)
-        ? (() => {
-            const ids = selectInstancesToSell(inventory.getInstances(kind), 1)
-            const inst = ids[0] ? inventory.getInstance(ids[0]) : null
-            return inst ? resolveInstanceSellPrice(inst) : null
-          })()
-        : sellPrice(kind)
-      const result = sellForCoins(inventory, kind)
-      if (result === 'ok') {
-        afterTrade()
-        toast.show(`+${expectedCoins ?? sellPrice(kind)} monet`, 'pickup')
+        toast.show('Transakcja zakończona.', 'pickup')
       }
       return result
     },

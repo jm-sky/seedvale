@@ -84,3 +84,18 @@
 Browser verification is especially important for: independent BUY/OFFER state, selection surviving filtering/context changes, mixed transaction failure/atomicity, instance-backed item details, long transaction lists with fixed summary/action area, short landscape viewport, drawer/modal stacking, Escape/back behaviour, and inventory weight+size rejection. Technical checks from the plan remain appropriate.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+## Implementation summary (2026-08-25)
+
+**Implemented:**
+
+- `src/items/trade.ts`: new `settleTransaction(inventory, purchases, offer)` — atomic mixed BUY+OFFER basket settlement, generalized `wouldFitAfterTransaction` capacity check, `previewTransactionNetCoins` (UI-preview-only, shares the `computeNetCoins` formula with the commit path). Removed `buyWithCoins`/`buyWithBarter`/`sellForCoins` (fully superseded; confirmed via audit to have zero callers outside `MerchantScreen.vue`/`inventoryWiring.ts`/their own unit tests). `sellInstancesForCoins`/`InventoryState.onSellInstances` (player Inventory screen's per-instance quick-sell) were left untouched — unrelated code path.
+- Pricing rule actually implemented: OFFER value counts at full `tradeValue` up to BUY cost (barter parity); value beyond that is credited at half rate (`sellPrice` parity) — but only for `canSell()`-able kinds. Barter-only kinds (`shell`) pay down the purchase cost first (never wasted) but never produce "You receive" change, matching `shell`/`coin` never being directly sellable today. A pure-offer basket that nets to exactly 0 (nothing purchased, nothing cashable) returns `not_sold` rather than silently succeeding.
+- `src/ui-vue/store.ts` / `src/app/inventoryWiring.ts`: `MerchantState.onBuyCoins/onBuyBarter/onSellCoins` replaced by one `onSettleTransaction`.
+- New Vue: `useMerchantTradeState.ts` (independent BUY/OFFER filter/sort state + persistent transaction basket), `useCompactMerchantLayout.ts` (touch-device-or-short-viewport → M1), `MerchantFilterBar.vue`, `MerchantItemRow.vue` (A2 selection: row stays in list, dimmed + ✓ + quantity once added, a distinct "Dodaj" commits the stepper value), `MerchantTransactionPanel.vue` (shared between the C1 inline column and the M1 drawer), `MerchantItemDetailsModal.vue` (adapted from `InventoryScreenItemDetails.vue`'s info-section layout, read-only).
+- `MerchantScreen.vue` rewritten: C1 three-column desktop layout vs. M1 single-context-toggle + transaction drawer, switched by `useCompactMerchantLayout`. Drawer and Item Details modal each register their own id on the existing `registerOverlay`/`openStack` (no second Escape stack). Pre-commit staleness check (`clampStaleTransaction`) reclamps the basket against current `ui.merchant.counts`/`merchantPrice` availability and blocks the trade with a toast if anything had to change, instead of silently committing a different transaction than what was displayed.
+- Test migration: `src/items/trade.test.ts` and `src/items/trapInstanceTrade.test.ts` rewritten onto `settleTransaction`, plus new cases for the shopping-list/half-value/barter-only-shell paths.
+
+**Technically verified:** `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build` (vue-tsc + vite), `pnpm run test` (201 files / 1888 tests) all pass.
+
+**Not yet browser/manual verified** — needs a pass on the running dev server per the Verification section above (C1/M1 layouts, A2 selection feel, mixed-basket math end-to-end, Item Details modal and drawer Escape/stacking, toasts for each `TradeResult`, actual short-landscape viewport behavior).

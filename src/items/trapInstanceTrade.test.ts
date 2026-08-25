@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { Inventory } from './Inventory'
 import { isTrapItemInstance } from './itemInstances'
 import {
-  buyWithCoins,
   selectInstancesToSell,
-  sellForCoins,
   sellInstancesForCoins,
+  settleTransaction,
 } from './trade'
 import { BROKEN_SELL_MULTIPLIER, resolveInstanceSellPrice, tradeValue } from './tradeCatalog'
 import { createTrapInstance } from './trapItemInstances'
@@ -13,7 +12,7 @@ import { createTrapInstance } from './trapItemInstances'
 describe('trap instance trade (plan 155)', () => {
   it('buying trap_simple creates one instance with max durability', () => {
     const inv = new Inventory({ coin: 100 })
-    expect(buyWithCoins(inv, 'trap_simple')).toBe('ok')
+    expect(settleTransaction(inv, { trap_simple: 1 }, {})).toBe('ok')
     expect(inv.count('trap_simple')).toBe(0)
     const instances = inv.getInstances('trap_simple')
     expect(instances).toHaveLength(1)
@@ -26,9 +25,9 @@ describe('trap instance trade (plan 155)', () => {
 
   it('buying three traps creates three distinct ids', () => {
     const inv = new Inventory({ coin: 100 })
-    expect(buyWithCoins(inv, 'trap_simple')).toBe('ok')
-    expect(buyWithCoins(inv, 'trap_simple')).toBe('ok')
-    expect(buyWithCoins(inv, 'trap_simple')).toBe('ok')
+    expect(settleTransaction(inv, { trap_simple: 1 }, {})).toBe('ok')
+    expect(settleTransaction(inv, { trap_simple: 1 }, {})).toBe('ok')
+    expect(settleTransaction(inv, { trap_simple: 1 }, {})).toBe('ok')
     const ids = inv.getInstances('trap_simple').map((inst) => inst.id)
     expect(new Set(ids).size).toBe(3)
   })
@@ -77,14 +76,14 @@ describe('trap instance trade (plan 155)', () => {
     expect(inv.countInstances('trap_simple')).toBe(2)
   })
 
-  it('sellForCoins removes a concrete instance for trap kinds', () => {
+  it('settleTransaction sells a concrete instance for trap kinds (supersedes sellForCoins)', () => {
     const inv = new Inventory({ coin: 0 })
     const a = createTrapInstance('trap_simple')
     const b = createTrapInstance('trap_simple')
     b.durability = 1
     inv.addInstance(a)
     inv.addInstance(b)
-    expect(sellForCoins(inv, 'trap_simple')).toBe('ok')
+    expect(settleTransaction(inv, {}, { trap_simple: 1 })).toBe('ok')
     expect(inv.getInstance(b.id)).toBeNull()
     expect(inv.getInstance(a.id)).not.toBeNull()
   })

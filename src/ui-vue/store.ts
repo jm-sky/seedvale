@@ -152,9 +152,12 @@ type MerchantState = {
   npc: NpcAgent | null
   counts: Partial<Record<ItemKind, number>>
   groups: readonly InventoryGroupView[]
-  onBuyCoins: ((kind: ItemKind, count?: number) => TradeResult) | null
-  onBuyBarter: ((kind: ItemKind, offer: Partial<Record<ItemKind, number>>, count?: number) => TradeResult) | null
-  onSellCoins: ((kind: ItemKind) => TradeResult) | null
+  /** Settles one mixed BUY+OFFER basket atomically (plan ui-input-003) —
+   *  supersedes the old single-target onBuyCoins/onBuyBarter/onSellCoins. */
+  onSettleTransaction: ((
+    purchases: Partial<Record<ItemKind, number>>,
+    offer: Partial<Record<ItemKind, number>>,
+  ) => TradeResult) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
 }
 /** Generic container transfer screen (plan 164 §7) — same "seller/buyer
@@ -350,7 +353,7 @@ export const ui = reactive({
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false } as TimeSkipState,
   terrainPreparationPreview: { visible: false, sizeLabel: '', heightLabel: '', valid: false, reasonLabel: '' } as TerrainPreparationPreviewState,
-  merchant: { open: false, npc: null, counts: {}, groups: [], onBuyCoins: null, onBuyBarter: null, onSellCoins: null, onSellInstances: null } as MerchantState,
+  merchant: { open: false, npc: null, counts: {}, groups: [], onSettleTransaction: null, onSellInstances: null } as MerchantState,
   containerScreen: {
     open: false, label: '', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
     playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0,
@@ -595,7 +598,7 @@ export function closeInventory(): void {
 }
 export function isInventoryOpen(): boolean { return ui.inventory.open }
 
-export function configureMerchant(handlers: Pick<MerchantState, 'onBuyCoins' | 'onBuyBarter' | 'onSellCoins' | 'onSellInstances'>): void {
+export function configureMerchant(handlers: Pick<MerchantState, 'onSettleTransaction' | 'onSellInstances'>): void {
   Object.assign(ui.merchant, handlers)
 }
 export function openMerchant(
