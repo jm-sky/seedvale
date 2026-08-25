@@ -1,69 +1,47 @@
 # Blender / MPFB2 Troubleshooting
 
-Only confirmed fixes should be marked `verified`. Until then, record symptoms and hypotheses without presenting them as facts.
+Only confirmed fixes are `verified`. Do not turn a hypothesis into a fix.
 
 ## `set up rigging is enabled, but could not find a rig to attach to`
 
-### Meaning
+Check in this order:
 
-The operation expects an available/compatible rig but cannot find one in the current MPFB2/Blender state.
+1. Is an armature actually present?
+2. Is it the intended MPFB2 rig for this character?
+3. Is the correct character/root active?
+4. Is the asset an MPFB2 asset requiring its supported fitting/rigging path?
+5. What does the installed MPFB2 `RigService`/asset code expect?
 
-### Investigation
+Do not blindly parent the mesh to an armature.
 
-1. Inspect the character objects and armature objects.
-2. Check whether a rig was actually generated.
-3. Check the active character/root object.
-4. Check whether the clothing/asset is an MPFB2 asset requiring MPFB2's fitting/rigging path.
-5. Check the installed MPFB2 version and its current rig service implementation.
-6. Reproduce with a minimal character before changing the pipeline.
+**Status:** researched; Seedvale fix not yet verified.
 
-Do not fix this by blindly parenting the clothing mesh to an armature.
+## Old tutorial/API mismatch
 
-**Status:** researched; exact Seedvale fix requires verification in the current installation.
+Symptoms: missing service/property/operator or different behaviour.
 
-## API mismatch from old tutorial
+Action:
 
-### Symptoms
+```text
+installed MPFB2 source/API
+  + Blender 5.2 API
+  + current script samples
+  -> determine actual API
+```
 
-A script references a service, operator or property that does not exist or behaves differently.
+Do not guess property/function names.
 
-### Response
+## Character too heavy
 
-- inspect the installed MPFB2 source/API;
-- check the Blender 5.2 API;
-- prefer current script samples;
-- update the recipe with the exact version tested.
+Measure evaluated/export geometry first. Check body, hair, clothing, accessories, modifiers and duplicate meshes. Then apply a Seedvale optimization profile.
 
-Never patch around an API mismatch by guessing property names.
+Do not choose a generic decimation ratio before identifying the expensive components.
 
-## Excessive polygon count
+## GLB contains unwanted objects
 
-### Symptoms
-
-A generated character is too expensive for Seedvale.
-
-### Response
-
-Measure the actual evaluated/export geometry first. Then identify the largest contributors:
-
-- body mesh;
-- hair;
-- clothing;
-- accessories;
-- modifiers;
-- duplicate/hidden meshes.
-
-Apply a Seedvale optimization profile rather than a generic decimation ratio.
-
-## GLB unexpectedly contains extra objects
-
-### Response
-
-Inspect the export collection and explicit glTF export selection. Do not rely on the current viewport selection or hidden state unless the export configuration intentionally uses it.
+Check the export collection and explicit glTF export selection/settings. Do not depend on accidental viewport selection or hidden state.
 
 ## Verification record
-
-When a problem is solved, append:
 
 ```text
 Problem:
