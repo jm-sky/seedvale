@@ -116,15 +116,12 @@ Natural vegetation
 | `2026-08-19--171--weapon-browser-observatory.md`                    | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
 | `2026-08-22--203--well-depth-groundwater-and-protection.md`         | - | 🟡 | M | ~~127~~ |
-| `ai-002-npc-personality-decisions.md` ◼️                            | Personality-driven decisions | 🔴 | M      | ~~ai-001~~ |
 | `ui-input-002-ui-ux-interaction-and-action-system-polish.md` 💡     | - | 🟡 | L | - |
+| `ui-input-003-merchant-trade-ui-ux-redesign.md` ◼️ | - | 🟡 | M | - |
 | `tools-001-performance-benchmark-determinism-and-reliability.md` ◼️ | - | 🔴 | M | - |
 | `tools-002-trace-analyzer-application-cpu-attribution.md` ◼️        | - | 🔴 | M | - |
-| `settlements-npcs-001-cultivation-hydration-and-watering.md` ◼️     | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
-| `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` ◼️ | - | 🔴 | L | ~~178~~ ~~069~~ ~~184~~ ~~185~~ |
-| `ai-003-npc-candidate-strategies.md` ◼️  | - | 🟡 | M | ~~ai-001~~ ~~ai-002~~ |
-| `ui-input-003-merchant-trade-ui-ux-redesign.md` ◼️ | - | 🟡 | M | - |
 | `settlements-001-house-collision-geometry.md` ◼️ | - | 🔴 | L | 111 |
+| `settlements-npcs-001-cultivation-hydration-and-watering.md` ◼️     | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
 | `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` ◼️ | - | 🔴 | L | ~~178~~ ~~184~~ |
 
 ### Fresh new
