@@ -27,6 +27,8 @@ function baseSnapshot(id: string, overrides: Partial<NpcInspectionSnapshot> = {}
     needs: { thirst: 0.1, woodDuty: 0.1, waterDuty: 0.1, hunger: 0.1 },
     activeNeed: 'idle',
     pressures: [],
+    strategyCandidates: [],
+    selectedStrategy: null,
     action: null,
     queue: null,
     watchdog: { rescueStage: 'none', lowProgressStrikes: 0, recentRescueCount: 0 },

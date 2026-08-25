@@ -85,6 +85,16 @@ function buildInspectorText(
   lines.push(`  action: ${whyResult.action ? `${whyResult.action.kind}${whyResult.action.target ? ` → ${whyResult.action.target}` : ''}` : '-'}`)
   lines.push(`  blocked: ${whyResult.blocked ?? '-'}`)
 
+  lines.push('', 'Strategy')
+  if (snapshot.strategyCandidates.length > 0) {
+    for (const candidate of snapshot.strategyCandidates) {
+      const marker = candidate.id === snapshot.selectedStrategy ? ' ← selected' : ''
+      lines.push(`  ${candidate.id}: ${candidate.available ? 'available' : 'unavailable'}${marker}`)
+    }
+  } else {
+    lines.push('  -')
+  }
+
   lines.push('', 'Current action')
   if (snapshot.action) {
     lines.push(`  kind: ${snapshot.action.kind}`)
@@ -151,6 +161,7 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'queue.joined': return `${t}s queue.joined → ${event.queueId}`
     case 'queue.left': return `${t}s queue.left → ${event.queueId}`
     case 'queue.served': return `${t}s queue.served → ${event.queueId}`
+    case 'strategy.selected': return `${t}s strategy.selected → ${event.selected ?? '-'} (${event.need})`
   }
 }
 

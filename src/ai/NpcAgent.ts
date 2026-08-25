@@ -142,6 +142,15 @@ import {
   tickMovementWatchdog,
 } from './npcMovementWatchdog'
 import {
+  getFoodStrategyCandidates,
+  getWaterDutyStrategyCandidates,
+  getWaterStrategyCandidates,
+  getWoodStrategyCandidates,
+  type NpcStrategyCandidate,
+  type NpcStrategyId,
+  selectStrategy,
+} from './npcStrategies'
+import {
   applyDamageVigor,
   applySleepVigor,
   applyWorkVigor,
@@ -335,6 +344,10 @@ export type NpcInspectionSnapshot = {
    *  Optional so older synthetic snapshots (tests) stay valid; always
    *  populated by `createInspectionSnapshot()`. */
   candidates?: readonly ScoredNeedCandidate[]
+  /** Candidate ways to satisfy `activeNeed` and which one was picked (plan
+   *  ai-003) — the same values `beginNeed()` used, never recomputed here. */
+  strategyCandidates: readonly NpcStrategyCandidate[]
+  selectedStrategy: NpcStrategyId | null
   action: {
     kind: ActionId
     destination: { x: number, y: number, z: number }
@@ -701,6 +714,14 @@ export class NpcAgent {
    *  (plan ai-002) — the exact base/modifier/final breakdown `choose()` used
    *  to pick `activeNeed`, for diagnostics only. See `scoreNeedCandidates`. */
   private lastDecisionCandidates: readonly ScoredNeedCandidate[] = []
+  /** Candidate ways to satisfy the selected `activeNeed` (plan ai-003) — the
+   *  explicit seam between need arbitration and `beginNeed()`'s existing
+   *  execution branches. Diagnostics only, same as `lastPressures`/
+   *  `lastDecisionCandidates`; `beginNeed()` still owns actual execution. */
+  private lastStrategyCandidates: readonly NpcStrategyCandidate[] = []
+  /** The strategy `selectStrategy()` picked for the current `beginNeed()`
+   *  call — `null` only when every candidate was unavailable. */
+  private selectedStrategy: NpcStrategyId | null = null
   /** Set by `startAction()`, consumed by the `goTo`/`execute` phases — the
    *  generic "walk there, do this" step currently in flight. `null` only
    *  outside those two phases. */
@@ -1193,6 +1214,8 @@ export class NpcAgent {
       activeNeed: this.activeNeed,
       pressures: this.lastPressures,
       candidates: this.lastDecisionCandidates,
+      strategyCandidates: this.lastStrategyCandidates,
+      selectedStrategy: this.selectedStrategy,
       action: this.pendingAction
         ? {
             kind: this.pendingAction.kind,
@@ -2350,6 +2373,21 @@ export class NpcAgent {
     return { position: this.landmarks.well, isVillageWell: true }
   }
 
+  /** Candidate strategies → selection (plan ai-003) — the explicit seam
+   *  between the already-selected `need` and `beginNeed()`'s existing
+   *  execution branches below. Records the exact candidate list and pick
+   *  into diagnostics/trace; `beginNeed()`'s own conditions (unchanged)
+   *  still own what actually executes, so a candidate marked "available"
+   *  here that turns out stale by execution time (another actor consumed
+   *  the source) safely falls through the same way it always has. */
+  private selectAndTraceStrategy(need: NeedId, candidates: NpcStrategyCandidate[]): NpcStrategyId | null {
+    const selected = selectStrategy(candidates)
+    this.lastStrategyCandidates = candidates
+    this.selectedStrategy = selected
+    this.trace.record({ simTime: this.simClock, type: 'strategy.selected', need, candidates, selected })
+    return selected
+  }
+
   /** `need` is `'water' | 'waterDuty' | 'food' | 'wood'` in practice —
    *  `'choose'` routes `'idle'` to `beginIdle` instead and already set
    *  `this.activeNeed`. */
@@ -2360,6 +2398,9 @@ export class NpcAgent {
       // `food` branch below. Otherwise fall back to the well (queued when
       // this settlement has one), same as before households owned water.
       const household = this.household
+      this.selectAndTraceStrategy('water', getWaterStrategyCandidates({
+        householdHasWater: household?.water.has(WATER_DRINK_FROM_STOCK_AMOUNT) ?? false,
+      }))
       if (household?.water.has(WATER_DRINK_FROM_STOCK_AMOUNT)) {
         this.startAction({
           kind: 'drink',
@@ -2407,6 +2448,7 @@ export class NpcAgent {
       // Reuses `kind: 'drink'` for the well leg so it gets the same
       // face-well rotation + draw SFX as a real drink (see `execute`/`goTo`).
       const household = this.household
+      this.selectAndTraceStrategy('waterDuty', getWaterDutyStrategyCandidates())
       const wellTarget = this.resolveWaterWellTarget()
       const queue = wellTarget.isVillageWell && this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
       const fetchStep = (destination: ReturnType<typeof copyVec3>, queueId?: string): NpcPlannedAction => ({
@@ -2439,6 +2481,7 @@ export class NpcAgent {
       // any (quick, at home); otherwise walk to the garden, gather a little
       // food into the household, and eat from that.
       const household = this.household
+      this.selectAndTraceStrategy('food', this.computeFoodStrategyCandidates(household))
       if (household?.has('food', 1)) {
         this.startAction({
           kind: 'eat',
@@ -2470,6 +2513,11 @@ export class NpcAgent {
         },
       })
       return
+    }
+    if (need === 'wood') {
+      this.selectAndTraceStrategy('wood', getWoodStrategyCandidates({
+        available: this.role !== 'trader' && this.landmarks.trees.length > 0,
+      }))
     }
     if (need === 'wood' && this.role !== 'trader' && this.landmarks.trees.length > 0) {
       const forest = this.forest
@@ -2574,6 +2622,31 @@ export class NpcAgent {
       },
     })
     return true
+  }
+
+  /**
+   * Builds `food`'s candidate strategy list (plan ai-003) — read-only checks
+   * against the same hooks/conditions `beginNeed`'s `food` branch and
+   * `beginHuntExpedition`/`beginRealFoodGathering` already gate on
+   * (household stock, `SettlementHuntingHooks.queryTarget`,
+   * `SettlementFoodSourceHooks.queryNearest`). Never mutates world state —
+   * the hunt-target query in particular skips `attemptHuntKill`'s arrow
+   * resupply/weapon resolution, so `hunt` being "available" here is a
+   * decision-time preview, re-validated for real when `beginHuntExpedition`
+   * actually runs.
+   */
+  private computeFoodStrategyCandidates(household: Household | null): NpcStrategyCandidate[] {
+    const isHunter = this.role === 'hunter'
+    const huntTargetAvailable = isHunter && this.hunting != null
+      && this.hunting.queryTarget(this.mesh.position.x, this.mesh.position.z, HUNT_SEARCH_RADIUS) != null
+    const nearbyFoodSourceAvailable = this.foodSources != null
+      && this.foodSources.queryNearest(this.mesh.position.x, this.mesh.position.z, FOOD_SOURCE_SEARCH_RADIUS) != null
+    return getFoodStrategyCandidates({
+      householdHasFood: household?.has('food', 1) ?? false,
+      isHunter,
+      huntTargetAvailable,
+      nearbyFoodSourceAvailable,
+    })
   }
 
   /**

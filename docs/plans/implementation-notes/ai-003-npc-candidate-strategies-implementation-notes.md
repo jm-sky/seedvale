@@ -2,7 +2,7 @@
 
 **Plan:** `docs/plans/ai-003-npc-candidate-strategies.md`
 **Reviewed:** 2026-08-25
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 
 ## Review verdict
 
@@ -196,5 +196,52 @@ existing action pipeline
 ```
 
 This gives ai-003 the intended `Pressure → Strategy → Action` seam while preserving the current ownership model and leaving a future `Strategy → Plan → Actions` step possible without prematurely designing it.
+
+## What was actually built (2026-08-25)
+
+Implemented, technically verified (`tsc`/`lint`/`build`/`test` all green),
+browser/gameplay verification still pending:
+
+- New `src/ai/npcStrategies.ts` — pure, Three.js-free candidate generation:
+  `NpcStrategyId`, `NpcStrategyCandidate`, `getFoodStrategyCandidates()`
+  (`householdFood` → `hunt`, hunter-only → `nearbyFoodSource` →
+  `gardenGather`, the last always available), `getWaterStrategyCandidates()`
+  (`householdWater` → `well`), `getWaterDutyStrategyCandidates()` (single
+  `fetchDeposit`), `getWoodStrategyCandidates()` (single `chopDeposit`, its
+  availability computed by the caller), and `selectStrategy()`
+  (first-available-wins, no scoring engine).
+- `NpcAgent.beginNeed()` calls a new `selectAndTraceStrategy(need, candidates)`
+  at the top of each of the four branches — builds the candidate list from
+  read-only queries mirroring the branch's own existing conditions
+  (`household.has/water.has`, `foodSources.queryNearest`,
+  `hunting.queryTarget`, `landmarks.trees.length`), records
+  `lastStrategyCandidates`/`selectedStrategy` and a `strategy.selected` trace
+  event, then falls into the **unchanged** original execution code. Execution
+  was deliberately left byte-identical rather than branching on the selected
+  id, so a candidate that reads "available" at decision time but declines by
+  execution time (concurrent world mutation) still falls through exactly the
+  way it always has — no second execution path, no regression risk in the
+  existing household/hunt/food-source/garden or well/wood cascades.
+- `NpcAgent.computeFoodStrategyCandidates()` is the one branch with real
+  wiring: it re-queries `hunting.queryTarget`/`foodSources.queryNearest`
+  read-only (no arrow resupply, no harvest) purely to preview availability;
+  the actual `beginHuntExpedition`/`beginRealFoodGathering` calls re-query
+  and re-validate independently, same double-query pattern the plan notes
+  call out as expected ("must still be revalidated... A candidate becoming
+  invalid... is normal").
+- `NpcTraceEvent` gained `'strategy.selected'` (`need`, `candidates`,
+  `selected`); `NpcInspectionSnapshot` gained `strategyCandidates`/
+  `selectedStrategy`, populated by `createInspectionSnapshot()` from the same
+  fields `beginNeed()` set — no recomputation. `src/ui/createNpcInspector.ts`
+  renders a new "Strategy" section (candidate list + `← selected` marker) and
+  formats the new trace event.
+- New `src/ai/npcStrategies.test.ts` covers candidate generation/selection
+  per the plan's test list (hunter-only `hunt`, unavailable-before-selection,
+  deterministic output, always-available fallbacks). `NpcInspectionSnapshot`
+  test fixtures (`npcWhy.test.ts`, `npcInspector.test.ts`, `npcDebugApi.test.ts`)
+  updated for the two new required fields.
+- Left untouched per the notes: `Needs.ts`, `decisionModifiers.ts`,
+  `PlannedAction`, `DecisionContext` — no strategy-scoring engine, no new
+  FSM, no second action model.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

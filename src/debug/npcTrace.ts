@@ -1,6 +1,7 @@
 import type { ScoredNeedCandidate } from '../ai/decisionModifiers'
 import type { NeedId, NpcPressure } from '../ai/Needs'
 import type { ActionId, Phase } from '../ai/NpcAgent'
+import type { NpcStrategyCandidate, NpcStrategyId } from '../ai/npcStrategies'
 
 /**
  * Bounded per-NPC trace ring buffer (plan 170 — NPC simulation inspector and
@@ -19,6 +20,18 @@ export type NpcTraceEvent =
       need: NeedId
       pressures: readonly NpcPressure[]
       candidates?: readonly ScoredNeedCandidate[]
+    }
+  /** Strategy candidates + selection (plan ai-003) — recorded right after
+   *  `need.selected`, before `beginNeed()`'s existing execution branch runs,
+   *  so the trace shows the causal chain `need.selected` → `strategy.selected`
+   *  → `action.planned`. `selected` is `null` only when every candidate for
+   *  this need is unavailable (falls through to `beginUnscheduledIdle`). */
+  | {
+      simTime: number
+      type: 'strategy.selected'
+      need: NeedId
+      candidates: readonly NpcStrategyCandidate[]
+      selected: NpcStrategyId | null
     }
   | { simTime: number; type: 'action.planned'; action: ActionId; queueId: string | null }
   | { simTime: number; type: 'action.completed'; action: ActionId }

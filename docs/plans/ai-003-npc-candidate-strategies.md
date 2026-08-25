@@ -1,7 +1,7 @@
 # Plan: NPC Candidate Strategies
 
 **Created:** 2026-08-24  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~ai-001~~ ~~ai-002~~  
 **Domain:** NPC AI / Decision Making
