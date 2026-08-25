@@ -1,40 +1,43 @@
 # Seedvale Blender / MPFB2 Knowledge Base
 
-AI-oriented knowledge base for the Seedvale character production pipeline.
+Compact AI knowledge base for the Seedvale character asset pipeline.
 
-## Scope
+**Target:** Blender 5.2 + current MPFB2 2.x.
 
-- Blender 5.2 Python/API usage relevant to character production.
-- MPFB2 character generation and asset handling.
-- Seedvale-specific character rules and pipeline conventions.
-- Recipes for repeatable Blender/MPFB2 operations.
-- Troubleshooting and verified discoveries.
+## Read order
+
+1. `AI_QUICK_REFERENCE.md` — minimal context; read first.
+2. `AI_WORKFLOW.md` — operating rules.
+3. Relevant recipe/rules file.
+4. `MPFB2_REFERENCE.md` / `BLENDER_5_2_REFERENCE.md` only when technical detail is needed.
+5. `TROUBLESHOOTING.md` when something fails.
+6. `VERIFIED/` for procedures actually tested in Blender.
+
+## Files
+
+- `AI_QUICK_REFERENCE.md` — high-signal facts and rules for the agent.
+- `AI_WORKFLOW.md` — how the agent should operate.
+- `MPFB2_REFERENCE.md` — concise MPFB2 architecture/API map.
+- `MPFB2_RECIPES.md` — repeatable procedures.
+- `BLENDER_5_2_REFERENCE.md` — Blender 5.2 automation/export rules.
+- `SEEDVALE_CHARACTER_RULES.md` — Seedvale-specific contract and budgets.
+- `TROUBLESHOOTING.md` — known problems; only confirmed fixes become verified.
+- `VERIFIED/` — tested procedures only.
 
 ## Source priority
 
-1. Current Seedvale code and helper implementations.
-2. Blender 5.2 official API/documentation.
-3. Current MPFB2 source and official MPFB2 documentation.
-4. Verified Seedvale Blender sessions.
-5. Community examples/tutorials.
+1. Current Seedvale code.
+2. Installed Blender 5.2 API/behaviour.
+3. Installed MPFB2 source/API.
+4. Official Blender/MPFB2 documentation.
+5. Community tutorials/examples.
 
-When sources disagree, prefer the higher-priority source and record the discrepancy instead of guessing.
+Old tutorials are references, not API truth.
 
-## Documents
+## Status
 
-- `AI_WORKFLOW.md` — operating rules for Claude Code + Blender MCP.
-- `BLENDER_5_2_REFERENCE.md` — Blender 5.2 API/export notes.
-- `MPFB2_REFERENCE.md` — MPFB2 architecture and API concepts.
-- `MPFB2_RECIPES.md` — repeatable operations and recipes.
-- `SEEDVALE_CHARACTER_RULES.md` — Seedvale-specific asset and optimization contracts.
-- `TROUBLESHOOTING.md` — known failures and fixes.
-- `VERIFIED/` — procedures explicitly tested in Blender/MPFB2.
-
-## Status vocabulary
-
-- `researched` — supported by current documentation/source research.
-- `verified` — tested in the stated Blender/MPFB2 environment.
-- `assumption` — useful working hypothesis; must not be treated as fact.
-- `obsolete` — retained only to explain a superseded approach.
-
-Do not promote `researched` or `assumption` material to `verified` without actually testing it in Blender.
+- `researched` — supported by current source/docs research.
+- `verified` — tested in the target environment.
+- `Seedvale-verified` — tested and accepted through the Seedvale pipeline.
+- `assumption` — hypothesis; never present as fact.
+- `obsolete` — superseded information retained for history.
