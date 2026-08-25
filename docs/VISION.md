@@ -4,6 +4,24 @@
 
 Current implementation state belongs in [STATE.md](./STATE.md). Architecture belongs in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md). Concrete priorities and plans belong in [ROADMAP.md](./ROADMAP.md) and [plans/README.md](./plans/README.md). Agent workflow belongs in [CLAUDE.md](../CLAUDE.md).
 
+## Domain vision documents
+
+Detailed domain-level vision is maintained in [`vision/`](./vision/).
+
+These documents expand the principles of this document for individual systems and domains, including:
+
+- NPCs and NPC AI,
+- settlements,
+- fauna,
+- economy and resources,
+- player systems,
+- items,
+- quests,
+- agriculture,
+- weather and world systems.
+
+`VISION.md` remains the top-level vision. Domain documents should refine it, not contradict its core principles.
+
 ## 1. What Seedvale is
 
 Seedvale is a browser-based 3D sandbox built around a **procedurally generated, living world**.
