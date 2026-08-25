@@ -1,116 +1,103 @@
 # MPFB2 Recipes
 
-These recipes describe intended repeatable operations. A recipe is not `verified` until tested in the target Blender/MPFB2 installation.
+Recipes are repeatable procedures, not verification. Mark a recipe verified only after executing it in the target Blender/MPFB2 environment.
 
-## Create a character
+## Create character
 
 ```text
-1. Inspect the current scene and installed MPFB2 version.
-2. Create/select an isolated character context.
-3. Create the MPFB2 human through its supported API/service.
-4. Apply deterministic Seedvale parameters.
-5. Apply appearance/body targets.
-6. Add required assets.
-7. Create the selected game rig.
-8. Validate.
+inspect scene + MPFB2 version
+  -> isolated character context
+  -> create human via supported MPFB2 API
+  -> apply deterministic Seedvale spec
+  -> add required assets
+  -> create runtime rig
+  -> validate
 ```
 
 ## Deterministic variation
 
-Use a Seedvale character seed as the stable input. Avoid relying on Blender global randomness or UI state.
-
 ```text
-Seedvale NPC identity
-  -> stable appearance seed
-  -> MPFB2 random/target parameters
-  -> deterministic generated appearance
+Seedvale NPC
+  -> stable appearance seed/spec
+  -> MPFB2 targets/randomization
+  -> reproducible appearance
 ```
+
+Do not rely on Blender global randomness or UI state.
 
 ## Add hair / beard / clothing
 
-Treat these as MPFB2 assets where supported:
-
 ```text
-resolve asset
+resolve installed asset
   -> load asset
-  -> attach/fitting operation
-  -> verify generated object(s)
+  -> use MPFB2 fitting/attachment mechanism
+  -> verify generated objects
   -> verify rig compatibility
 ```
 
-Do not assume an asset's display name is a stable internal identifier. Resolve against the installed asset library and record the selected asset path/id in generated metadata.
+Do not assume display names are stable IDs. Resolve against the installed asset library.
 
 ## Profession outfit
 
-Seedvale should resolve profession to an asset specification before Blender execution:
+Profession is resolved by Seedvale before Blender execution:
 
 ```text
-hunter
-  -> clothing: hunter set
-  -> equipment: bow + knife
-
-farmer
-  -> clothing: simple/work set
-  -> equipment: scythe
-
-woodcutter
-  -> clothing: work set
-  -> equipment: axe
+profession
+  -> outfit profile
+  -> asset IDs
+  -> equipment IDs
+  -> MPFB2 asset resolution
 ```
 
-The exact asset names are data, not hard-coded MPFB2 API semantics.
-
-## Optimize
-
-Recommended order:
+Examples:
 
 ```text
-remove unused authoring objects
-  -> consolidate/remove unnecessary materials
-  -> apply justified modifiers
-  -> simplify geometry
-  -> create LODs
-  -> validate each LOD
+hunter    -> hunter clothes + bow + knife
+farmer    -> simple/work clothes + scythe
+woodcutter -> work clothes + axe
 ```
 
-Never optimize before establishing a reproducible source character. Keep the source and export representations distinguishable.
+Exact asset IDs belong to Seedvale data, not MPFB2 API code.
 
 ## Rig
 
 ```text
-select game/runtime rig contract
-  -> generate through MPFB2-supported path
-  -> ensure attached assets follow the rig
-  -> validate bone hierarchy
-  -> validate skinning
+Seedvale runtime rig contract
+  -> MPFB2-supported rig generation
+  -> attached assets follow rig
+  -> validate bones + skinning
 ```
 
-Do not solve rigging errors by arbitrary parenting until the MPFB2 rig/asset mechanism has been inspected.
+Do not solve rigging errors with arbitrary parenting before inspecting the MPFB2 workflow.
+
+## Optimize / LOD
+
+```text
+reproducible source
+  -> remove authoring-only content
+  -> simplify geometry/materials where justified
+  -> create LODs
+  -> validate each LOD
+```
+
+Use Seedvale optimization profiles, not generic tutorial ratios.
 
 ## Export GLB
 
 ```text
-validate source/export collection
-  -> select intended export objects
-  -> configure glTF exporter explicitly
+validate export collection
+  -> explicit glTF settings
   -> export .glb
-  -> inspect file/import in Seedvale
+  -> inspect/import through Seedvale
 ```
 
-Export settings must be explicit in the helper. Do not depend on whatever settings happen to be active in the Blender UI.
+Do not depend on current Blender UI export state.
 
-## Batch generation
+## Batch
 
-For batches:
+Use deterministic specs/seeds. Generate in controlled batches, validate every result and quarantine failures. Clean temporary data between characters where safe.
 
-1. use a deterministic list of character specifications/seeds;
-2. create one isolated character at a time or use a controlled MPFB2 batch mechanism;
-3. validate each result;
-4. write a per-character result record;
-5. stop or quarantine failures instead of silently exporting broken characters;
-6. clean temporary Blender data between characters when safe.
-
-## Planned Seedvale helper layer
+## Proposed helper API
 
 ```text
 create_character(spec)
@@ -125,4 +112,4 @@ validate_character(character)
 export_glb(character, export_spec)
 ```
 
-These are proposed interfaces only. Implement them after inspecting the installed MPFB2 API and testing the required operations.
+These names are proposed interfaces, not existing APIs.
