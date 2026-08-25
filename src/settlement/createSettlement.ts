@@ -78,7 +78,7 @@ export type { SettlementForestHooks }
  * buffer; the serving stand sits farther out (`servingOffset` below) so
  * queued drinks never need the blocked disk.
  */
-const WELL_COLLISION_RADIUS = 1.0
+const WELL_COLLISION_RADIUS = 0.9
 
 /** `setDayNight`'s `t` (0 day .. 1 full night) above this triggers the
  *  settlement fire's dusk-ignition roll (see `nightIndex`/`setDayNight`

@@ -17,8 +17,8 @@ export type MerchantWagonPose = {
 export const MERCHANT_WAGON_PREFERRED_YAW = Math.atan2(-0.5, 2.8)
 export const MERCHANT_WAGON_STALL_DIST = Math.hypot(2.8, 0.5)
 export const MERCHANT_WAGON_HORSE_DIST = 1.6
-export const MERCHANT_WAGON_RADIUS = 2
-export const MERCHANT_HORSE_RADIUS = 1
+export const MERCHANT_WAGON_RADIUS = 1.2
+export const MERCHANT_HORSE_RADIUS = 0.75
 /** Crate + nearby barrel — small enough that the preferred stall distance stays clear. */
 export const MERCHANT_STALL_RADIUS = 0.75
 
