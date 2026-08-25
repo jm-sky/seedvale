@@ -1,33 +1,32 @@
 # Seedvale Character Rules
 
-This is the Seedvale contract layered above Blender and MPFB2.
+This is the contract between Seedvale simulation and the Blender/MPFB2 asset pipeline.
 
-## Separation of concerns
+## Ownership
 
-Seedvale simulation owns:
+Seedvale owns:
 
 - NPC identity;
 - sex/age/body intent;
 - profession/social role;
 - equipment semantics;
 - deterministic appearance seed;
-- references to the resulting asset.
+- resulting asset reference.
 
 Blender/MPFB2 owns:
 
-- human mesh generation;
-- appearance targets;
-- hair/beard/clothing assets;
+- mesh/appearance generation;
+- hair, beard and clothing assets;
 - rig generation;
-- mesh processing;
+- mesh optimization;
 - LOD construction;
 - GLB export.
 
-The simulation must not depend on MPFB2 object names or Blender scene structure.
+Simulation code must not depend on Blender object names or scene structure.
 
-## Character specification
+## Character spec
 
-The eventual generator input should be data-oriented and serializable, for example:
+The generator input should be serializable and use stable IDs:
 
 ```text
 sex
@@ -43,72 +42,55 @@ equipment[]
 seed
 ```
 
-Use IDs for assets/professions rather than free-form Blender object names.
+Asset/profession/equipment IDs are data. Blender object names are implementation details.
 
 ## Profession mapping
 
-Profession determines an outfit/equipment specification. It should not directly manipulate Blender objects.
-
 ```text
 profession
-  -> Seedvale outfit profile
+  -> outfit profile
   -> asset IDs
   -> equipment IDs
   -> Blender/MPFB2 asset resolution
 ```
 
-## Runtime constraints
+## Runtime budgets
 
-The exact geometry budgets are intentionally not filled in here until measured against Seedvale's current rendering/runtime budget.
+Do not invent these values yet. Fill them only after measuring Seedvale runtime needs:
 
-When established, record:
+```text
+LOD0 tris = TBD
+LOD1 tris = TBD
+LOD2 tris = TBD
+max material slots = TBD
+texture policy = TBD
+runtime skeleton = TBD
+hair policy = TBD
+clothing policy = TBD
+```
 
-- LOD0 triangle target;
-- LOD1 triangle target;
-- LOD2 triangle target;
-- maximum material slots;
-- texture resolution policy;
-- skeleton/bone contract;
-- animation compatibility;
-- hair policy;
-- clothing policy.
+Never copy generic budgets from tutorials.
 
-Do not import arbitrary budgets from generic game-development tutorials.
-
-## Export contract
-
-A production character should have:
-
-- a known runtime skeleton;
-- only intended export meshes;
-- intended materials/textures;
-- no authoring helpers;
-- validated transforms;
-- deterministic asset identifiers/metadata;
-- LODs when the profile requires them;
-- a reproducible GLB export configuration.
-
-## Quality gates
-
-Before accepting an asset:
+## Export quality gate
 
 ```text
 character generated
-  -> assets present
-  -> clothing fitted/attached correctly
-  -> rig valid
+  -> required assets present
+  -> clothing/assets correctly fitted
+  -> rig + skinning valid
   -> geometry within profile
-  -> materials within profile
+  -> materials/textures within profile
   -> LODs valid
-  -> GLB exported
-  -> Seedvale import/runtime checked where visual correctness matters
+  -> explicit GLB export
+  -> Seedvale import/runtime verified when visual correctness matters
 ```
 
-## Versioning
+## Reproducibility
 
-Every verified asset-generation recipe should record:
+Verified procedures record:
 
 - Blender version;
 - MPFB2 version;
-- relevant Seedvale helper version/commit;
-- asset library/source version if applicable.
+- Seedvale commit;
+- relevant asset library/source version;
+- procedure/result.
