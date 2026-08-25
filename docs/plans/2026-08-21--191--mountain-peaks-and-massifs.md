@@ -13,6 +13,40 @@ Stworzyć system generowania górskich masywów i charakterystycznych szczytów,
 
 Wykorzystać istniejący terrain/chunk generation oraz rozwiązania z planu 181. Nie tworzyć równoległego `MountainSystem` ani globalnego generatora gór.
 
+---
+
+# Current State / Scope Adjustment
+
+> **Updated:** 2026-08-25
+
+Plan 191 was originally written as a broader mountain-composition plan, but the mountain portion of plan 181 is now implemented.
+
+The current game already generates:
+
+* large connected mountain ranges and massifs,
+* valleys and lower terrain between mountain structures,
+* passes and varied mountain elevations,
+* deterministic world-space mountain terrain,
+* continuous terrain across chunk boundaries.
+
+Therefore, **plan 191 must not re-implement mountain ranges, massifs, valleys or the underlying mountain generator**.
+
+The remaining purpose of plan 191 is to extend the existing mountain terrain with a stronger **elevation hierarchy and distinctive peaks**:
+
+* dominant peaks within existing massifs,
+* different peak scales and profiles,
+* asymmetric and irregular silhouettes,
+* stronger distinction between major peaks and subordinate ridges,
+* natural transitions from peaks through rocky slopes into lower mountain terrain.
+
+Implementation must extend the existing analytic terrain function and reuse the current `mountain`, `mountainRidge`, `hills` and Worley ridge mechanisms.
+
+The goal is therefore **peak hierarchy and mountain character**, not another mountain-generation system.
+
+Before implementing any item from the original scope, compare it against the current 181 implementation and skip or narrow anything already provided by the existing terrain.
+
+---
+
 ## Zakres
 
 ### 1. Mountain Massifs
