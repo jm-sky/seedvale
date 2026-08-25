@@ -2,23 +2,28 @@
 
 ## Review summary
 
-Plan 151 is well aligned with the current architecture, but the implementation needs to be careful about one important boundary: `social` already exists as a `PlaceType` and as a `ScheduleActivity`, while the current settlement runtime does not yet expose the settlement campfire as a `Place`. The existing NPC runtime is also intentionally centralized in `NpcAgent`, with schedule arbitration and execution already flowing through the existing FSM/action lifecycle.
+Plan 151 remains well aligned with the current architecture, but its implementation notes must reflect the AI work completed after the original plan was written.
 
-The implementation should therefore extend those seams rather than introduce a social subsystem.
+The important new boundaries are:
+
+- `ai-002` makes NPC need arbitration personality/role-aware while preserving the existing candidate generator.
+- `ai-003` introduces explicit candidate strategy selection for resolving existing Needs.
+- `social` is a Schedule activity, not a Need strategy.
+- `conversation` is a temporary shared interaction performed inside the `social` activity.
+
+The implementation should extend existing seams rather than introduce a social subsystem.
 
 Repository evidence reviewed:
 
-- `src/settlement/places.ts` already defines `PlaceType = 'home' | 'workplace' | 'food' | 'social'`; `social` is currently only a reserved type and has no producer. fileciteturn6file0L2-L2
-- `src/ai/schedule.ts` already defines `social` and `effectiveScheduleFor(..., { hasSocialPlace })`; the `sociable` trait currently only converts part of a `home` block when a social place is available. fileciteturn11file0L2-L2
-- `SettlementLandmarks` already contains the settlement's own `campfire?: { position, flame }`, so the world content does not need a new campfire generator. fileciteturn14file0L2-L2
-- `NpcAgent` already owns the FSM, schedule, planned-action lifecycle and current-activity representation. The existing phase model uses generic `goTo`/`execute` rather than activity-specific navigation phases. fileciteturn9file0L2-L2
-- Plan 060's implementation notes establish the intended architecture: needs arbitrate first, then effective schedule, then the existing FSM/action system; no second scheduler or FSM should be introduced. fileciteturn16file0L2-L2
-
-The plan itself should remain unchanged. These notes are implementation guidance only.
+- `src/settlement/places.ts` already defines `PlaceType = 'home' | 'workplace' | 'food' | 'social'`; `social` is currently reserved and has no producer.
+- `src/ai/schedule.ts` already defines `social` and `effectiveScheduleFor(..., { hasSocialPlace })`; the `sociable` trait can already convert part of a `home` block to `social` when a Social Place exists.
+- `SettlementLandmarks` already owns the settlement's campfire, so no new campfire generator is required.
+- `NpcAgent` remains the owner of NPC FSM, schedule arbitration, planned-action lifecycle and current activity.
+- Existing AI flow remains needs first, then schedule when idle. `ai-002` adds personality/role-aware modifiers to the existing need candidates; `ai-003` adds strategy selection for Need resolution.
 
 ## Main implementation principle
 
-Treat a social interaction as an extension of the existing NPC activity/action pipeline:
+Treat social behaviour as an extension of the existing NPC activity/action pipeline:
 
 ```text
 settlement.landmarks.campfire
@@ -53,15 +58,56 @@ Do not introduce:
 - a second NPC update loop;
 - a social-specific FSM;
 - a global list of all social participants;
-- a second relationship model.
+- a second relationship model;
+- a social-specific strategy engine.
 
-The existing `Settlement`/`NpcAgent` ownership boundaries should remain authoritative.
+The existing Settlement/NpcAgent ownership boundaries remain authoritative.
+
+## AI integration boundary
+
+The original notes predate `ai-002` and `ai-003`; do not treat the old statement that the plan itself should remain unchanged as an architectural constraint.
+
+### ai-002
+
+`ai-002` owns personality/role-aware scoring of existing **Need candidates**. Do not duplicate `decisionModifiers` or create another general-purpose personality scoring engine for social behaviour.
+
+Plan 151 creates one useful social seam for `extraversion`: it may influence the **frequency/probability of attempting to start a conversation** while an NPC is already in the social activity.
+
+Keep this deliberately small:
+
+```text
+social activity
+    ↓
+shouldAttemptConversation(personality, local activity state)
+    ↓
+partner discovery
+```
+
+`extraversion` should not become a full partner-ranking mechanism in V1.
+
+### ai-003
+
+`ai-003` makes Strategy Selection explicit for Need resolution. Do not force Plan 151 through that layer.
+
+The distinction is:
+
+```text
+Need → candidate strategies → selected strategy → PlannedAction
+```
+
+versus:
+
+```text
+idle → Schedule activity → social → conversation interaction
+```
+
+`conversation` is not a `NeedStrategy` merely because it is a way an NPC spends time. If future social behaviour starts solving an explicit Need/Problem, it can use Strategy Selection then.
 
 ## 1. Settlement campfire → Place
 
-The existing settlement campfire is already materialized through `SettlementLandmarks.campfire`. It is explicitly distinct from decorative world campfires. fileciteturn14file0L2-L2
+The existing settlement campfire is already materialized through `SettlementLandmarks.campfire`.
 
-Add the smallest resolver possible, preferably in `src/settlement/places.ts`, for example conceptually:
+Add the smallest resolver possible, preferably in `src/settlement/places.ts`, conceptually:
 
 ```ts
 socialPlaceFor(settlementId, landmarks): Place | null
@@ -71,70 +117,48 @@ Expected behaviour:
 
 - return `null` when `landmarks.campfire` is absent;
 - otherwise return a `Place` with `type: 'social'`;
-- derive a stable id from the settlement id, e.g. `${settlementId}:social:campfire`;
+- derive a stable id such as `${settlementId}:social:campfire`;
 - use the existing campfire position directly;
 - do not create or clone the campfire visual;
-- do not make the `Place` own the flame or other presentation state.
+- do not make `Place` own the flame or presentation state.
 
-The exact helper name can follow the existing naming conventions. The important part is that `Place` remains a lightweight location descriptor while `SettlementLandmarks` remains the source of settlement presentation/world landmarks.
+When NPCs are created, wire the Social Place from the same settlement landmarks used for existing home/workplace wiring.
 
-### Settlement wiring
-
-When `createSettlement.ts` creates an NPC, resolve the social place from the same settlement landmarks already used for its workplace/home wiring.
-
-The NPC must receive the campfire belonging to **its own settlement only**.
-
-Do not search nearby settlements, world campfires, chunks or interactables to find a social place. This is explicitly outside plan 151.
-
-A useful invariant for tests is:
-
-```text
-NPC settlementId === socialPlace settlement namespace
-```
-
-There should be no runtime fallback from one settlement to another.
+An NPC must receive the campfire belonging to **its own settlement only**. Do not search nearby settlements, world campfires, chunks or generic interactables.
 
 ## 2. Schedule integration
 
-`ScheduleActivity` already contains `social`, and `effectiveScheduleFor()` already supports a `hasSocialPlace` option. fileciteturn11file0L2-L2
+`ScheduleActivity` already contains `social`, and `effectiveScheduleFor()` already supports `hasSocialPlace`.
 
-Do not add another schedule type or another schedule representation.
+Do not add another schedule type or representation.
 
-The key change is runtime availability:
+Use the existing schedule transformer. The runtime capability should be equivalent to:
 
 ```text
-hasSocialPlace = npc.socialPlace !== null
+hasSocialPlace = npc.socialPlace != null
 ```
 
-The effective schedule should be created using the existing schedule transformer, not by adding a special `if (sociable)` branch inside `NpcAgent.choose()`.
+The `sociable` overlay remains the mechanism that can turn part of a `home` block into `social`.
 
-The current `sociable` overlay converts the first part of a `home` block to `social` when a social place exists. That is exactly the seam plan 151 needs. Preserve the existing deterministic overlay mechanism rather than adding social-specific schedule mutation.
+If the schedule is constructed once, compute it after the place capability is known. Do not recalculate it every frame.
 
-If the current constructor already computes `NpcAgent.schedule` once, recompute it only when the place capability is known. Do not recalculate the schedule every frame.
+Important distinction:
 
-### Important distinction
+> `social` is a scheduled activity meaning "go to / remain at the settlement campfire". A `conversation` is a temporary shared action occurring inside that activity.
 
-`social` is a scheduled **activity**, not a conversation.
+## 3. Social activity in NpcAgent
 
-A social activity means:
+`NpcAgent` remains the correct owner for local NPC decision/execution state.
 
-> go to / remain at the settlement campfire and periodically attempt a social interaction.
+Do not add `goSocial`, `conversationApproach`, `conversationTalk` or `conversationFinish` FSM phases.
 
-A conversation is a temporary shared **action** occurring inside that activity.
-
-Keeping these distinct prevents the FSM from becoming a collection of special-case social states.
-
-## 3. Social activity in `NpcAgent`
-
-The existing `NpcAgent` is already the correct owner for the local NPC decision/execution state. The current architecture uses phases such as `choose`, `goTo`, `execute`, `sleep`, and `wander`; do not add `goSocial` or `conversation` FSM phases merely to represent the new behaviour. fileciteturn9file0L2-L2
-
-The recommended structure is:
+Recommended flow:
 
 ```text
 choose()
   ↓
 pickNeed()
-  ├─ need → existing need action
+  ├─ need → existing need behaviour
   └─ idle
        ↓
     activityAt(schedule, timeOfDay)
@@ -148,55 +172,43 @@ pickNeed()
  social-at-place behaviour
 ```
 
-At the campfire, the NPC remains part of the normal `social` activity. It should not continuously recreate a movement/action lifecycle after every failed partner search.
+At the campfire, the NPC remains part of the normal social activity. It should not recreate movement/action lifecycles after every failed partner search.
 
-Use a small cooldown/next-attempt timestamp as local activity state if necessary. This is **not** a scheduler: it only throttles repeated partner discovery while the NPC is already in the same scheduled activity.
+Use a small cooldown/next-attempt timestamp if necessary. This is local activity state, not a scheduler.
 
-Avoid checking for a partner every simulation frame.
-
-A sensible first implementation is an attempt interval measured in world seconds/minutes, with the exact value chosen to make several NPCs naturally interact without producing constant pairing churn.
+Avoid partner checks every simulation frame.
 
 ## 4. Finding NPCs at the same campfire
 
-The plan requires partner discovery among NPCs already present at the same campfire.
-
 Do not introduce a global social registry.
 
-Prefer an existing settlement-local collection already used to update NPCs. During a settlement update, the settlement already has access to its NPC agents. Use that existing collection to query candidates when an NPC needs a partner.
+Prefer the existing settlement-local NPC collection already used by the settlement update.
 
-The candidate predicate should be approximately:
+Candidate predicate:
 
 ```text
 candidate !== self
 candidate belongs to same settlement
-candidate is currently executing / occupying this social place
+candidate is at the same Social Place
+candidate has arrived / is available
 candidate has no active conversation reservation
-candidate is not otherwise unavailable
 ```
 
-The exact runtime test should be derived from existing `NpcAgent` state rather than duplicating state.
-
-### Avoid position-only matching
-
-Do not define "same campfire" as `distance < arbitrary radius` if the NPC already has a current `Place` or current destination representing the campfire.
-
-Prefer stable place identity:
+Prefer stable Place identity:
 
 ```text
 candidate.socialPlace?.id === self.socialPlace?.id
 ```
 
-Then use distance/arrival state only to determine whether the NPC has actually arrived and is available for interaction.
+Use existing arrival/distance semantics only to determine whether the NPC has actually reached the place.
 
-This prevents two nearby campfires or two nearby settlement areas from accidentally becoming one social group.
+V1 partner selection stays intentionally simple and reproducible. Do not rank by personality, traits, profession, family, relationship, interests or memory.
 
-## 5. Conversation reservation is the critical race-prevention point
+## 5. Conversation reservation
 
-The plan correctly requires atomic reservation of both participants.
+Reservation is the critical race-prevention point and must happen before either NPC starts the conversation action.
 
-This must happen **before** either NPC starts a conversation action.
-
-Avoid this unsafe sequence:
+Unsafe:
 
 ```text
 A finds B
@@ -205,182 +217,118 @@ B later discovers C
 B starts conversation with C
 ```
 
-Instead, use a shared, explicit reservation state owned by the participants' existing runtime state.
-
-Conceptually:
-
-```ts
-conversationPartnerId: NpcId | null
-```
-
-or an equivalent action/interaction token already supported by the existing simulation contracts.
-
-The reservation operation should behave like:
+Required semantics:
 
 ```text
 tryReserveConversation(A, B)
   if A unavailable → false
   if B unavailable → false
-  if A already reserved → false
-  if B already reserved → false
-  reserve A ↔ B
+  if A reserved → false
+  if B reserved → false
+  reserve A ↔ B atomically
   return true
 ```
 
-The operation must not expose a half-reserved state to later candidate searches.
-
-### Ownership
-
-Prefer keeping this state on the NPC agents if that is consistent with the existing `NpcAgent` state model. Do not create a manager whose only purpose is to coordinate two NPCs.
-
-If a shared interaction token is cleaner, it should be an ordinary simulation/action value owned by the existing action lifecycle, not a new social subsystem.
+Keep the reservation on the participants or in an ordinary simulation/action value owned by the existing action lifecycle. Do not create a manager whose only purpose is to coordinate two NPCs.
 
 ## 6. Shared conversation action
 
-The conversation should be represented as one logical interaction with two participants, even though the existing FSM is per NPC.
+Represent one logical interaction with two participants, even though the FSM remains per NPC.
 
-Recommended mental model:
+A dedicated `ConversationSession` is optional. Use it only if the existing `PlannedAction`/interaction lifecycle cannot represent the shared state cleanly.
 
-```text
-ConversationSession
-  participantA
-  participantB
-  remainingSec
-  result
-```
-
-Whether this exact type is needed depends on the existing action model. Do not introduce it if the existing `PlannedAction`/interaction lifecycle can represent the state cleanly.
-
-The important invariant is that both NPCs share the **same end condition**.
-
-Do not let A randomly choose `180s` and B randomly choose `240s`.
-
-Generate the duration once when the conversation is created:
+If a session is needed, it should own only the shared simulation state, for example:
 
 ```text
-2–5 world minutes
+participantA
+participantB
+endTime / remainingSec
+result
 ```
 
-and make both participants reference the same duration/end time.
+Both participants must use the same generated duration. Generate **2–5 world minutes** once; never let each participant independently sample a duration.
 
-This can be a deterministic/random value generated by the initiating decision, provided it is stored in the shared conversation state rather than independently sampled by each participant.
+Keep:
+
+```text
+Conversation shared state = synchronization
+NpcAgent phase            = existing FSM execution
+```
 
 ## 7. Conversation execution without a new FSM
 
-Do not add:
+Adapt the existing generic action mechanism so both NPCs execute a conversation interaction through their normal `execute` path.
 
-```text
-conversationApproach
-conversationTalk
-conversationFinish
-```
+Do not create social-specific FSM phases or a second execution loop.
 
-phases.
+When the conversation ends:
 
-Instead, adapt the existing generic action mechanism so both NPCs can execute a conversation action whose domain effect is local to the NPC relationship state.
-
-If the existing `PlannedAction` contract is intentionally one-NPC-owned, the minimal implementation can use a shared conversation token/session plus two ordinary `execute` states. The session owns the synchronization; `NpcAgent` still owns execution.
-
-The important separation is:
-
-```text
-Conversation state = shared simulation data
-NpcAgent phase     = existing per-agent FSM execution
-```
-
-This preserves the architecture's current ownership model.
-
-## 8. Returning to social activity
-
-When the shared conversation ends:
-
-1. calculate the single conversation outcome;
-2. apply the relationship change symmetrically;
+1. calculate one outcome;
+2. apply one symmetric relationship delta;
 3. clear both reservations;
-4. leave both NPCs in the scheduled `social` activity;
-5. allow a later partner-attempt cooldown to expire;
+4. leave both NPCs in the scheduled social activity;
+5. start/continue a local retry cooldown;
 6. do not immediately force another conversation.
 
-This prevents a group of NPCs from producing an endless chain of instant conversations.
+If the schedule boundary changes during the conversation, preserve existing action interruption semantics. Needs and established interrupt rules remain authoritative.
 
-If the schedule boundary changes during the conversation, follow the existing arbitration rule: do not interrupt an in-flight action merely because a lower-priority schedule boundary was crossed. Existing needs/interrupt semantics remain authoritative.
+## 8. Relationship integration
 
-## 9. Relationship integration
+Locate the canonical relationship owner before implementation.
 
-The plan is right to reuse the existing relationship architecture rather than copy the NPC↔player relationship mechanism.
-
-Before implementation, locate the canonical relationship state and determine whether NPC↔NPC is already represented. If the current model only accepts player relationships, extend that model generically instead of introducing `SocialRelationshipManager`.
+If the current model only supports NPC↔player, extend it generically rather than adding `SocialRelationshipManager`.
 
 Required properties:
 
 - stable NPC-to-NPC keying;
-- one authoritative owner for relationship state;
+- one authoritative owner;
 - symmetric update for this interaction;
-- no duplicate A→B and B→A state unless the existing model explicitly requires directed relations;
-- values remain compatible with future social behaviour.
+- no duplicate relation model;
+- compatibility with future social behaviour.
 
-For a symmetric scalar model, the conversation outcome should conceptually perform:
+For a symmetric scalar model:
 
 ```text
 relation(A, B) += delta
 relation(B, A) += delta
 ```
 
-where `delta` is positive or negative.
+Do not add conversation memory entries in Plan 151.
 
-Do not add memory entries in plan 151.
+### Conversation outcome
 
-### Outcome generation
+Keep V1 deliberately small.
 
-Keep the first version deliberately small.
-
-The plan allows a simple positive/negative roll influenced by existing character data. Do not build a full compatibility/ranking system.
-
-A good implementation seam is a pure helper such as:
+A pure helper may be appropriate if it makes the result testable, conceptually:
 
 ```text
 conversationOutcome(personalityA, personalityB, existingRelation, rng)
 ```
 
-but only introduce such a helper if it keeps the relationship mutation code testable.
+Use canonical personality/trait data. Do not duplicate personality definitions or create a general compatibility engine.
 
-Do not duplicate personality definitions. Use the canonical `CharacterDef.personality` and existing trait data.
+The outcome may be positive or negative and should remain deterministic for the same simulation inputs/random stream.
 
-## 10. Partner selection should stay intentionally simple
+## 9. Extraversion integration
 
-The plan explicitly postpones weighted matching.
+This is the main new AI integration introduced by the update to these notes.
 
-V1 should therefore be:
+`ai-002` intentionally did not need to use every Big Five trait. Plan 151 gives `extraversion` a meaningful first seam.
+
+Recommended V1 semantics:
 
 ```text
-same campfire
-+ arrived
-+ available
-+ not self
-→ pick one candidate
+low extraversion  → fewer attempts to initiate
+high extraversion → more attempts to initiate
 ```
 
-A deterministic/stable candidate order is preferable to iterating an unordered structure if the simulation's reproducibility matters.
+This should affect **whether/when an attempt is made**, not which candidate is selected.
 
-Do not add weights for:
+Do not copy the Need decision modifier pipeline into social interaction. If a small pure helper is required, keep it local to the social behaviour and test it independently.
 
-- personality;
-- traits;
-- profession;
-- family;
-- relationship;
-- interests;
-- memory.
+## 10. NPC availability and Needs remain authoritative
 
-Those are future extensions.
-
-One small exception: existing availability rules such as sleeping, being in a need action, or already being reserved must still apply. These are execution constraints, not social matching intelligence.
-
-## 11. NPC availability and needs remain authoritative
-
-The plan explicitly states that needs and their priority remain above Schedule.
-
-Preserve the existing pattern:
+Preserve:
 
 ```text
 pickNeed()
@@ -391,64 +339,58 @@ else:
     schedule behaviour
 ```
 
-A conversation must not suppress a high-priority need simply because the NPC is socially engaged.
+A conversation must not suppress a high-priority Need.
 
 Likewise, do not add a social-specific override that bypasses the normal FSM decision point.
 
-For an already-running conversation, follow the existing action interruption semantics. If the codebase currently allows only decision-point changes, do not invent continuous need polling that forcefully tears down the conversation.
+For an already-running conversation, use the existing action interruption semantics rather than inventing continuous need polling that forcefully tears down the interaction.
 
-## 12. Current activity / debug representation
+## 11. Current activity / diagnostics
 
-`NpcAgent` already exposes a stable current-activity summary, including `talking`. The current activity model should be reused rather than introducing a second social/debug state.
+Reuse the existing current-activity/debug representation.
 
-Useful target semantics:
+Target semantics:
 
 ```text
-at campfire, waiting for partner → idle / social-compatible state
-conversation active              → talking
 walking to campfire              → existing movement/activity state
+at campfire, waiting             → social-compatible idle/activity state
+conversation active              → talking
 ```
 
-If `talking` already exists but is currently used only for player-facing dialogue, make its meaning explicit before reusing it. Do not silently overload a presentation-only state if callers assume it means player dialogue.
+If an existing `talking` value is presentation-specific, do not silently change its meaning. Extend the current activity contract minimally if required rather than introducing a second social/debug API.
 
-If necessary, extend the existing `CurrentActivityKind` contract minimally, but avoid adding a second `socialActivity` API.
+Diagnostics should make it possible to see the social path without creating a new diagnostics system:
 
-## 13. Campfire position and movement
+```text
+schedule: social
+socialPlace: settlement:social:campfire
+conversation: none | npc-id
+```
 
-The campfire position comes from settlement landmarks. Do not create a second interaction anchor unless the existing movement/collider system requires a safe approach point.
+Use the existing NPC trace/debug mechanisms where available.
 
-The NPC should use the same movement/pathing infrastructure as other places.
+## 12. Campfire position and movement
 
-If the campfire itself is collidable, reuse the existing destination-on-collider-rim/approach logic already used by `NpcAgent` rather than special-casing campfire movement.
+Use the settlement landmark position directly.
 
-The social interaction radius should be based on actual arrival/availability semantics, not on a visual effect radius.
+Do not create a second interaction anchor unless the existing movement/collider system requires a safe approach point.
 
-## 14. Suggested state invariants
+Reuse existing movement/pathing and arrival semantics. The social interaction radius should not be derived from the visual flame radius.
 
-Add tests around invariants rather than only implementation details.
+## 13. Suggested invariants
 
 ### Place
 
 ```text
-campfire exists
-→ exactly one social Place for that settlement
-```
-
-```text
-no settlement campfire
-→ no social Place
+campfire exists → exactly one social Place for that settlement
+no campfire    → no social Place
 ```
 
 ### Schedule
 
 ```text
-social place available
-→ existing sociable overlay may produce social
-```
-
-```text
-social place unavailable
-→ social does not become an executable destination
+social place available → existing sociable overlay may produce social
+social place unavailable → social is not an executable destination
 ```
 
 ### Candidate discovery
@@ -456,7 +398,7 @@ social place unavailable
 ```text
 same campfire + available → eligible
 other campfire             → ineligible
-same campfire + reserved   → ineligible
+reserved                   → ineligible
 self                       → ineligible
 not arrived                → ineligible
 ```
@@ -465,14 +407,13 @@ not arrived                → ineligible
 
 ```text
 A reserves B → B cannot reserve A/C again
-A/B conversation ends → both become available
+A/B ends     → both become available
 ```
 
 ### Conversation
 
 ```text
-one duration
-→ both finish together
+one generated duration → both finish together
 ```
 
 ### Relationship
@@ -482,125 +423,96 @@ positive outcome → equal positive delta on both sides
 negative outcome → equal negative delta on both sides
 ```
 
-## 15. Tests and likely test locations
-
-Prefer extending existing tests next to the owning modules.
-
-Suggested locations:
-
-- `src/settlement/places.test.ts` — campfire → social `Place` resolver;
-- `src/ai/schedule.test.ts` — existing `social`/`sociable` schedule behaviour;
-- `src/ai/NpcAgent.test.ts` or the existing NPC FSM test suite — arrival, social state, reservation and action completion;
-- relationship tests next to the existing relationship implementation;
-- settlement tests where campfire landmarks/NPC construction are already covered.
-
-Do not create a single large `social.test.ts` that becomes a second ownership boundary.
-
-## 16. Browser verification focus
-
-The gameplay verification should specifically distinguish these cases:
-
-1. **Single NPC:** arrives at its settlement campfire and remains there when no partner exists.
-2. **Two NPCs:** both arrive at the same campfire and eventually form one conversation.
-3. **Three NPCs:** one conversation occupies two NPCs; the third must not steal either participant.
-4. **After conversation:** both remain in social activity and can later talk again.
-5. **Different settlements:** NPCs never form a conversation across settlement campfires.
-6. **Need pressure:** an NPC with a stronger need continues to use the existing need path instead of social behaviour.
-7. **Schedule boundary:** social activity ends according to the normal schedule boundary without a parallel scheduler.
-8. **Relationship:** repeated conversations visibly/observably modify the NPC↔NPC relationship value.
-
-For visual verification, the important result is not a new social UI. It is that NPCs visibly travel using the existing navigation/FSM, gather at the existing settlement campfire, remain there naturally, and pair off without third-party contention.
-
-## 17. Performance guidance
-
-The social query can become expensive if every NPC scans every NPC every update.
-
-Do not implement:
+### AI boundary
 
 ```text
-for every NPC every frame:
-    scan every NPC
+Need resolution → ai-002 / ai-003 path
+idle schedule   → social activity path
 ```
 
-Instead:
+The second path must not introduce a parallel Need/Strategy system.
 
-- only attempt partner selection while an NPC is in the `social` activity;
-- throttle attempts with a cooldown;
-- query the settlement-local NPC collection;
-- optionally prefilter by the current social place id before checking detailed availability;
-- keep the first implementation simple before adding spatial indexing.
+## 14. Tests
 
-For typical settlement populations, a throttled local scan is preferable to introducing a global social spatial index prematurely.
+Prefer extending tests next to the owning modules.
 
-If future population scale proves problematic, the existing settlement update/partitioning architecture is the place to optimize it; do not pre-build a `SocialManager` for hypothetical scale.
+Suggested coverage:
 
-## 18. Implementation order
+- `src/settlement/places.test.ts` — campfire → social Place resolver;
+- `src/ai/schedule.test.ts` — existing social/`hasSocialPlace`/sociable behaviour;
+- pure social candidate/reservation/outcome helpers — candidate filtering, atomic reservation and symmetric outcome;
+- NPC tests — social activity uses the existing FSM/action path;
+- AI tests — existing ai-002/ai-003 tests remain green and social behaviour does not alter Need candidate generation or Strategy Selection semantics.
 
-Recommended order for the agent:
+At minimum verify:
 
-1. Inspect the exact current relationship ownership/model.
-2. Add the campfire → social `Place` resolver.
-3. Wire the settlement's own social `Place` into each NPC.
-4. Feed social-place availability into the existing effective schedule path.
-5. Make `social` resolve to the existing campfire movement/activity path.
-6. Add local, throttled partner discovery.
-7. Add atomic two-participant reservation.
-8. Add the shared conversation duration/state using the existing action lifecycle where possible.
-9. Apply the symmetric relationship result on completion.
-10. Add focused unit tests.
-11. Run typecheck/lint/tests/build.
-12. Perform browser/gameplay verification for 1/2/3-NPC and interruption cases.
+- same-campfire filtering;
+- no self/other-settlement candidates;
+- unavailable/reserved candidates are rejected;
+- reservation is atomic;
+- one shared duration is used;
+- conversation ends for both participants;
+- relationship delta is symmetric;
+- retry cooldown prevents immediate pairing churn;
+- `extraversion` affects initiation tendency only if implemented in V1.
 
-Keep each step small. Do not refactor unrelated NPC code while implementing this plan.
+## 15. Verification
 
-## 19. Review conclusions / risks
-
-### Low risk
-
-- `PlaceType: 'social'` already exists.
-- `ScheduleActivity: 'social'` already exists.
-- `effectiveScheduleFor()` already has the social-place capability seam.
-- settlement campfire already exists as a landmark.
-- generic NPC movement/action execution already exists.
-
-### Main risk
-
-The main architectural risk is implementing conversation as a new subsystem instead of treating it as a synchronized extension of the existing per-NPC action lifecycle.
-
-The second risk is relationship duplication: if the current relationship model is extended incorrectly, the project could end up with separate NPC↔player and NPC↔NPC relationship stores that later become difficult to reconcile.
-
-### Scope guard
-
-Do not expand this plan into:
-
-- group conversations;
-- dialogue text generation;
-- dialogue audio;
-- memory entries;
-- weighted compatibility ranking;
-- other social places;
-- cross-settlement socialization;
-- social needs;
-- LLM-driven behaviour;
-- a social manager/scheduler;
-- new campfire generation.
-
-Those are future systems and should remain outside this implementation.
-
-## Final guidance for the implementation agent
-
-The simplest correct implementation should feel like an ordinary extension of the existing NPC architecture:
+Run:
 
 ```text
-Place
-  → Schedule
-  → choose / needs arbitration
-  → existing FSM
-  → existing movement/action lifecycle
-  → small local social interaction state
-  → existing relationship model
+npx tsc --noEmit
+npm run lint
+npm run test
+npm run build
 ```
 
-If an implementation step starts requiring a manager, registry, scheduler, new FSM phase family, or parallel NPC update loop, stop and re-check the existing ownership boundaries first. Plan 151 is specifically intended to demonstrate that social behaviour can emerge from the systems already present rather than becoming a separate AI subsystem.
+Then browser/gameplay verification is required because this feature changes visible Three.js NPC behaviour.
+
+Verify at least:
+
+- NPCs with a social schedule go to their settlement campfire;
+- several NPCs gather naturally;
+- a lone NPC remains at the campfire without constantly recreating actions;
+- two NPCs converse without a third NPC stealing either participant;
+- both participants finish together;
+- they return to the social activity and can later converse again;
+- relationships change symmetrically;
+- a higher-priority Need still wins at the normal decision boundary;
+- no second scheduler, social manager or social FSM has appeared.
+
+## Architectural guardrails
+
+The implementation should preserve these boundaries:
+
+```text
+Needs / Pressures
+    ↓
+ai-002 personality-aware candidate scoring
+    ↓
+ai-003 strategy selection where applicable
+    ↓
+existing PlannedAction
+```
+
+and separately:
+
+```text
+idle
+    ↓
+Schedule
+    ↓
+social
+    ↓
+Social Place
+    ↓
+conversation interaction
+    ↓
+relationship change
+```
+
+Do not collapse these into one generic social/strategy framework prematurely.
+
+The goal of Plan 151 is a small, observable vertical slice that strengthens the existing Place/Schedule/FSM/relationship systems and provides a real social seam for future personality-driven behaviour.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
