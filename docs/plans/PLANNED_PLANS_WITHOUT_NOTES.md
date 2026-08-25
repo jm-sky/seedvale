@@ -1,14 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-25 08:29:08  
+> Date: 2026-08-25 08:30:05  
 
 ## PLANS
 
 - `2026-08-19--171--weapon-browser-observatory.md`
 - `2026-08-21--190--plans-automation.md`
 - `2026-08-24--mpfb2-npc-hero-character-pipeline.md`
-- `ai-003-npc-candidate-strategies.md`
 - `settlements-001-house-collision-geometry.md`
 - `settlements-npcs-001-cultivation-hydration-and-watering.md`
 - `settlements-npcs-002-npc-professions-households-and-age.md`
@@ -94,36 +93,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/2026-08-24--mpfb2-npc-hero-character-pipeline-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `ai-003-npc-candidate-strategies.md`
-
-Prompt:
-
-```
-Zrób review planu `ai-003-npc-candidate-strategies.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/ai-003-npc-candidate-strategies.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/ai-003-npc-candidate-strategies-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
