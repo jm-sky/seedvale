@@ -2,145 +2,77 @@
 
 **Created:** 2026-08-25
 **Status:** `planned` 📋
-**Priority:** high · **Effort:** L
-**Depends on:** 111, 097
+**Priority:** high · **Effort:** M
+**Depends on:** 111
 **Domain:** `settlements`
-**Tags:** `world`, `npc`, `fauna`
 
-## 1. Cel
+## Cel
 
-Naprawić kolizje składanych domów tak, aby odpowiadały rzeczywistej geometrii ścian i otworów drzwiowych.
+Naprawić kolizje składanych domów tak, aby collision geometry odpowiadała rzeczywistym ścianom, narożnikom i otworom drzwiowym.
 
-Obecny problem nie jest pojedynczym błędnym offsetem drzwi. `HouseBuilder` reprezentuje każdy 2 m moduł ściany jako koło `radius = 0.95`, mimo że audyt MegaKit potwierdza rzeczywistą geometrię modułu jako **2.00 × 3.12 × 0.41 m**. Dla gracza o promieniu `0.35 m` daje to efektywną strefę blokowania o promieniu `1.30 m` wokół środka modułu, czyli ogromnie większą niż grubość ściany.
+Obecny problem nie jest błędnym offsetem drzwi. `HouseBuilder` reprezentuje każdy 2 m moduł ściany jako koło `radius = 0.95`, mimo że zweryfikowany moduł MegaKit ma footprint **2.00 × 0.41 m** w rzucie XZ. Dla gracza `radius = 0.35` daje to efektywną blokadę `1.30 m` od środka ściany.
 
-Dodatkowo moduł z drzwiami jest całkowicie pomijany, a brak ściany jest obecnie uzupełniany przez:
+Moduł z drzwiami jest całkowicie pomijany, a luka jest obecnie łatana przez:
 
-- zamknięte drzwi jako koło `radius = 0.45`;
-- dwa zawsze aktywne koła jambów `offset = 1.05`, `radius = 0.15`.
+- zamknięte drzwi jako circle `radius = 0.45`;
+- dwa zawsze aktywne jamb circles `offset = 1.05`, `radius = 0.15`.
 
-To jest workaround na ograniczenie bazowego collision primitive, a nie reprezentacja domu.
+To tworzy duże, nachodzące na siebie koła widoczne przez `?debugColliders=1`, blokuje wnętrze domu i nie opisuje rzeczywistego otworu.
 
-### Zweryfikowany skutek
+Celem nie jest kolejny patch offsetów, tylko **minimalne rozszerzenie istniejącego collision systemu o właściwy prostokątny collider dla ścian**.
 
-Dla domu 4×4 z drzwiami na przednim module 0 ścieżka przez środek drzwi może być blokowana już **wewnątrz domu przez boczny wall-circle**. Przykładowo środek gracza przechodzący z drzwi w głąb domu znajduje się w odległości mniejszej niż `0.95 + 0.35` od środka sąsiedniego bocznego modułu ściany. Dlatego „drzwi są w dobrym miejscu” nie wystarcza — obecna geometria ścian fizycznie zamyka wnętrze.
+## 1. Stan faktyczny i źródła prawdy
 
-Jednocześnie pominięcie całego modułu drzwiowego tworzy sztuczne obszary bez kolizji przy ścianie. Debug `?debugColliders=1` słusznie pokazuje te koliste plamy, ponieważ overlay renderuje dokładnie te same collidery, które są używane przez ruch.
+Przed implementacją Claude Code ma zweryfikować aktualny `main`; poniższe ustalenia wynikają z obecnego codebase i wcześniejszego audytu MegaKit.
 
-## 2. Zweryfikowany stan obecnego kodu
+### HouseBuilder
 
-### 2.1 Bazowy collision system
+`src/settlement/houseBuilder.ts` obecnie:
 
-`src/world/collision.ts` ma obecnie jeden prymityw:
+- używa `HOUSE_WALL_COLLIDER_RADIUS = 0.95` dla ścian;
+- pomija cały wall module zawierający opening;
+- używa `HOUSE_DOOR_COLLIDER_RADIUS = 0.45` dla zamkniętego leaf;
+- dodaje `HOUSE_DOOR_JAMB_OFFSET = 1.05` / `HOUSE_DOOR_JAMB_RADIUS = 0.15`;
+- transformuje lokalne collidery do świata przez root assembly;
+- korzysta z `openingLocalPose()` jako wspólnego źródła pozycji openingu.
 
-```ts
-export type Collider = {
-  x: number
-  z: number
-  radius: number
-}
-```
+`HOUSE_ASSEMBLY_SCALE = 1`.
 
-`resolvePosition()`:
+### House geometry
 
-- sprawdza circle-vs-circle;
-- wybiera jeden najgłębszy overlap;
-- wypycha punkt poza collider;
-- nie iteruje drugiego collidera po rozwiązaniu pierwszego.
+Zweryfikowany `wall_plaster_straight` ma footprint **2.00 × 0.41 m**; wysokość 3.12 m nie ma znaczenia dla 2D collision.
 
-To zachowanie należy zachować. Plan nie buduje physics engine ani nowego solvera wielociałowego.
+`door_1_flat` ma native width **1.118 m**, ale jest to szerokość skrzydła, nie dowód, że dokładnie taka sama jest szerokość wycięcia w `wall_plaster_door_flat`. **Nie wolno bez ponownej weryfikacji traktować 1.118 m jako szerokości openingu.**
 
-`ColliderRegistry` indeksuje collidery po środku w gridzie 3×3 sąsiednich bucketów. Przy wymiarach domowych ~2 m i istniejącym rozmiarze chunka nie wymaga to osobnego systemu indeksowania dla OBB.
+`door_1_flat` ma pivot na zawiasie; istniejący `DOOR_1_FLAT_HINGE_OFFSET_X = -0.51` jest poprawnym offsetem wizualnym i nie należy go zmieniać.
 
-### 2.2 HouseBuilder
+`doorframe_flat_wooddark` jest wizualną ramą openingu, nie źródłem collision geometry.
 
-`src/settlement/houseBuilder.ts` obecnie posiada:
+### Collision lifecycle
 
-- `HOUSE_WALL_COLLIDER_RADIUS = 0.95`;
-- `HOUSE_DOOR_COLLIDER_RADIUS = 0.45`;
-- `HOUSE_DOOR_JAMB_OFFSET = 1.05`;
-- `HOUSE_DOOR_JAMB_RADIUS = 0.15`;
-- `buildHouseWallCollidersLocal()` — koła ścian, pomijające moduły drzwi;
-- `buildHouseDoorJambCollidersLocal()` — workaround jambów;
-- `buildHouseDoorCollidersLocal()` — koło zamkniętego skrzydła;
-- `transformHouseCollidersToWorld()` — transform środka + promienia;
-- `buildAssemblyCollidersWorld()` — korzysta z transformu root assembly.
+`src/settlement/createSettlement.ts` rejestruje house colliders razem z pozostałymi colliderami settlementu. Zmiana stanu drzwi powoduje ponowną rejestrację przez istniejący `doorColliderSignature`.
 
-`openingLocalPose()` jest już wspólnym źródłem pozycji wizualnego openingu, drzwi, zamkniętego door collidera i interaction points. Tego kontraktu nie należy rozbijać.
+Ten lifecycle zachować. Nie tworzyć drugiego systemu rejestracji.
 
-`HOUSE_ASSEMBLY_SCALE = 1`, a `buildAssemblyCollidersWorld()` bierze pozycję i yaw bezpośrednio z `assembly.root`, więc pozycja/yaw domu nie jest obecnie głównym problemem.
+Fallback domu bez `HouseAssembly` nadal może używać istniejącego `footprintRadius` circle.
 
-### 2.3 Settlement lifecycle
+### Konsumenci Collider
 
-`src/settlement/createSettlement.ts` rejestruje jeden zestaw colliderów osady pod `def.id`:
+Recon wykazał, że `Collider` nie jest używany wyłącznie przez playera:
 
-```text
-well
-+ house colliders
-+ settlement prop colliders
-```
+- `src/world/collision.ts` — solver;
+- `src/ai/NpcAgent.ts` — walkability / steering względem colliderów;
+- `src/ai/npcColliderRim.ts` — inside/rim/escape/teleport helpers;
+- `src/fauna/AnimalAgent.ts` — bezpośrednie circle checks;
+- `src/debug/colliderDebugView.ts` — wizualizacja.
 
-Zmiana stanu drzwi powoduje ponowną rejestrację całego zestawu przez istniejący `doorColliderSignature`.
+Nie oznacza to przebudowy tych systemów. Oznacza, że **geometria musi mieć wspólne helpery**, a istniejące konsumenty muszą zostać dostosowane tylko tam, gdzie bezpośrednio zakładają `radius`.
 
-Tego lifecycle nie zmieniać.
+`ColliderRegistry` nie wymaga nowego spatial indexu: broad-phase może pozostać oparty o istniejący bucket/center query, o ile OBB zostanie poprawnie objęty przez query radius/bounds.
 
-Fallback dla domu bez poprawnie zbudowanego `HouseAssembly` nadal używa `house.footprintRadius` jako jednego koła i powinien pozostać.
+## 2. Decyzja geometryczna: 2D OBB
 
-### 2.4 NPC / fauna używające Collider
-
-Zmiana `Collider` nie może zakończyć się wyłącznie na playerze.
-
-`src/ai/NpcAgent.ts` bezpośrednio zakłada obecnie circle geometry w:
-
-- `isWalkable()`;
-- `resolveSteerTarget()` — obliczanie przecięcia odcinka ruchu z kołem i punktu omijania.
-
-`src/fauna/AnimalAgent.ts` również bezpośrednio sprawdza `Math.hypot(...) < collider.radius`.
-
-`src/ai/npcColliderRim.ts` zakłada circle geometry w:
-
-- `pointInsideCollider()`;
-- `rimPointFacing()`;
-- `localEscapeRadii()`;
-- `destinationOnColliderRim()`;
-- `pickEmergencyTeleportPoint()`.
-
-To są rzeczywiste konsumenty wspólnego typu i muszą zostać uwzględnione w planie.
-
-## 3. Decyzja geometryczna: OBB, nie capsule
-
-Dla ścian domów użyć **2D OBB w płaszczyźnie XZ**:
-
-```text
-Collider
-├── circle   — istniejące props / drzewa / studnie itd.
-└── obb      — prostokąt w XZ + rotationY
-```
-
-### Dlaczego OBB
-
-Audyt MegaKit potwierdza, że rodzina `wall_*` ma wspólny prostokątny footprint **2.00 × 0.41 m** w X/Z. Domy mogą być obracane, więc potrzebny jest oriented rectangle, nie tylko AABB.
-
-Capsule byłby lepszy niż obecne koło, ale nadal byłby przybliżeniem z zaokrąglonymi końcami. Co ważniejsze, przy otworze drzwiowym pozostałe fragmenty modułu mają tylko około `0.441 m` szerokości wzdłuż ściany (`(2.0 - 1.118) / 2`), więc capsule o promieniu odpowiadającym grubości ściany nie odwzorowałby tych bocznych fragmentów poprawnie.
-
-OBB pozwala odwzorować dokładnie:
-
-```text
-normal wall
-┌────────────────────────┐
-│                        │  2.00 × 0.41 m
-└────────────────────────┘
-
-wall with door
-┌──────┐              ┌──────┐
-│      │    1.118 m   │      │
-└──────┘              └──────┘
-```
-
-Nie dodawać capsule tylko dlatego, że jest prostsza matematycznie.
-
-## 4. Nowy wspólny Collider contract
-
-Rozszerzyć `src/world/collision.ts` do jawnego discriminated union:
+Dla ścian użyć prostokąta zorientowanego w płaszczyźnie XZ:
 
 ```ts
 export type Collider =
@@ -160,482 +92,353 @@ export type Collider =
     }
 ```
 
-Nie wprowadzać trzeciego prymitywu w tym planie.
+Nazwa i szczegóły typu mogą zostać dopasowane do istniejącego stylu kodu, ale nie wprowadzać physics engine ani kolejnego rodzaju prymitywu.
 
-### Wspólne helpery
+### Dlaczego OBB, a nie capsule
 
-W `collision.ts` umieścić czyste helpery, aby NPC/fauna/debug nie implementowały własnej geometrii:
+Domy mogą mieć dowolny `yaw`, więc AABB nie wystarcza. Capsule poprawiłby obecną sytuację, ale zaokrągla końce ściany i nie opisuje precyzyjnie krótkich fragmentów po obu stronach drzwi. OBB odpowiada naturalnie footprintowi modułu 2.00 × 0.41 m i można go obracać razem z domem.
 
-- `colliderContainsPoint(x, z, collider)`;
-- `colliderBoundingRadius(collider)` — circle: `radius`; OBB: `Math.hypot(halfWidth, halfDepth)`; używane wyłącznie tam, gdzie istniejący NPC rescue/approach potrzebuje konserwatywnego promienia nawigacyjnego;
-- helper najbliższego punktu / odległości potrzebny przez `resolvePosition()` i NPC avoidance;
-- helper wyznaczający punkt/rim dla danego kierunku, potrzebny przez `npcColliderRim` i `NpcAgent`.
+## 3. Wspólna geometria collision
 
-Nazwy i dokładny podział helperów mogą zostać dobrane zgodnie z istniejącym stylem `collision.ts`, ale **jedna implementacja geometrii ma być współdzielona**.
+W `src/world/collision.ts` dodać mały zestaw współdzielonych helperów, zamiast implementować geometrię osobno w NPC/faunie:
 
-Nie kopiować wzorów circle/OBB do `NpcAgent`, `AnimalAgent` i `npcColliderRim` osobno.
+- `colliderContainsPoint(...)`;
+- najbliższy punkt / dystans do collidera;
+- helper do wyznaczenia punktu na obwodzie/rimie w zadanym kierunku;
+- `resolvePosition()` z dispatch dla circle/circle i circle/OBB;
+- opcjonalnie helper konserwatywnego bounding radius, jeżeli istniejący kod NPC rescue/avoidance rzeczywiście go potrzebuje.
 
-## 5. Circle collision — zachować semantykę
+Nie kopiować matematyki OBB do `NpcAgent`, `AnimalAgent` ani `npcColliderRim`.
 
-Istniejące circle collidery świata muszą zachować dotychczasowe zachowanie.
+### Circle zachowuje dotychczasową semantykę
 
-`resolvePosition()` powinien dispatchować:
+Circle collidery świata muszą działać tak jak obecnie.
 
-```text
-circle vs circle
-circle vs OBB
-```
+`resolvePosition()` nadal:
+
+- rozwiązuje jeden najgłębszy overlap;
+- nie staje się iterative physics solverem;
+- zachowuje obecne zachowanie circle/circle.
 
 ### Circle vs OBB
 
-Dla punktu gracza/NPC o promieniu `entityRadius`:
+Dla encji reprezentowanej przez punkt + `entityRadius`:
 
-1. przekształcić punkt do lokalnego układu OBB przez `-rotationY`;
-2. znaleźć closest point na prostokącie przez clamp do `[-halfWidth, halfWidth]` / `[-halfDepth, halfDepth]`;
-3. jeżeli punkt jest na zewnątrz — overlap = `entityRadius - distanceToRect`;
-4. jeżeli punkt jest wewnątrz — wybrać najbliższą ścianę prostokąta i wypchnąć przez tę ścianę o `entityRadius + penetrationToFace`;
-5. przekształcić wynik z powrotem do świata;
-6. przy przypadku degeneracyjnym wybrać deterministycznie +localX, analogicznie do obecnego fallbacku circle.
+1. obrócić punkt do lokalnego układu OBB;
+2. znaleźć closest point prostokąta przez clamp;
+3. dla punktu zewnętrznego użyć dystansu do closest point;
+4. dla punktu wewnętrznego wypchnąć przez najbliższą krawędź;
+5. wynik obrócić z powrotem do świata;
+6. przypadki degeneracyjne muszą być deterministyczne i nie mogą generować NaN.
 
-Zachować istniejącą zasadę: **rozwiązywany jest jeden najgłębszy overlap**, bez wprowadzania nowego iterative solvera.
+Testy solvera muszą obejmować środek, każdą stronę, narożnik, rotację i punkt wewnątrz OBB.
 
-Dodać testy dla:
+## 4. House wall colliders
 
-- punktu na zewnątrz OBB;
-- overlapu od strony front/back;
-- overlapu od strony left/right;
-- punktu wewnątrz OBB;
-- narożnika OBB;
-- rotacji OBB;
-- degeneracyjnego przypadku.
+### Normal wall
 
-## 6. House wall geometry
-
-### 6.1 Normal wall
-
-`buildHouseWallCollidersLocal()` ma generować OBB dla każdego wall module bez drzwi.
-
-Stałe wynikające z audytu MegaKit:
-
-- module length: `2.00 m` (`HOUSE_MODULE_M`);
-- wall thickness: `0.41 m`;
-- OBB: `halfWidth = 1.0`, `halfDepth = 0.205`;
-- center: istniejący `wallLocalTransform()`;
-- rotation: istniejący `WALL_YAW[side]` + ewentualny jawny `wall.transform.rotationY`.
-
-Nie pobierać AABB z GLB podczas runtime tylko po to, aby zbudować collider. Wymiary są częścią zweryfikowanego kontraktu MegaKit.
-
-### 6.2 Door wall
-
-Moduł ściany z drzwiami **nie jest pomijany jako całość**.
-
-Zamiast tego zostaje podzielony na dwa OBB:
+`buildHouseWallCollidersLocal()` ma generować jeden OBB dla zwykłego wall module:
 
 ```text
-left wall piece | 1.118 m opening | right wall piece
+length = 2.00 m
+thickness = 0.41 m
+halfWidth = 1.00 m
+halfDepth = 0.205 m
 ```
 
-Dla v1 użyć zweryfikowanej szerokości `door_1_flat = 1.118 m`, która jest już obecnym kontraktem testu walkable doorway corridor i odpowiada szerokości rzeczywistego leaf.
+Center i rotation mają wynikać z istniejącego `wallLocalTransform()` / `WALL_YAW` / `wall.transform`, a nie z nowych offsetów.
 
-Wyliczenie:
+Nie odczytywać AABB GLB podczas runtime. Zweryfikowane wymiary MegaKit są stałym kontraktem collision geometry.
+
+### Door wall
+
+Moduł `wall_plaster_door_flat` nie może być pomijany jako całość.
+
+Najpierw podczas implementacji należy **zweryfikować rzeczywistą szerokość i położenie pre-cut openingu** w assetcie / audycie MegaKit. Szerokość skrzydła `door_1_flat = 1.118 m` nie może automatycznie pełnić roli tej wartości.
+
+Po ustaleniu openingu moduł ma być podzielony na dwa OBB:
 
 ```text
-module = 2.000 m
-opening = 1.118 m
-remaining = 0.882 m
-side piece width = 0.441 m
-side piece halfWidth = 0.2205 m
-center offset from module center = 0.7795 m
-wall halfDepth = 0.205 m
+wall piece | real opening | wall piece
 ```
 
-Oba OBB muszą mieć ten sam wall yaw co moduł i być przesunięte wzdłuż jego lokalnej osi X.
+Oba zachowują grubość `0.41 m` i yaw modułu. Ich długości i lokalne środki mają wynikać bezpośrednio z granic openingu.
 
-Nie używać `HOUSE_DOOR_JAMB_OFFSET` jako geometrii kolizji.
+**Nie używać `HOUSE_DOOR_JAMB_OFFSET` ani `HOUSE_DOOR_JAMB_RADIUS` do wyliczania tych fragmentów.**
 
-### 6.3 Windows
+### Windows
 
-Wall module z oknem pozostaje **pełnym OBB**. Okno nie jest przejściem.
+Wall z oknem pozostaje jednym pełnym OBB. Okno nie jest przejściem i nie wymaga osobnego collidera.
 
-Nie dodawać specjalnego „window collider”.
+### Corners
 
-### 6.4 Corners
+Nie dodawać od razu collidera dla `def.corners`.
 
-Nie dodawać osobnych circle colliderów dla `def.corners`.
+Po przejściu ścian na OBB zweryfikować, czy wall segments zamykają narożniki poprawnie dla wszystkich footprintów. `corner_exterior_wood` jest wizualnym słupkiem, nie należy automatycznie robić z niego physics mesh.
 
-Po przejściu ścian na OBB sąsiednie wall segments dochodzą do footprint extrema i same zamykają narożniki. To jest bardziej zgodne z rzeczywistą ścianą niż obecny przypadkowy brak/pośrednie pokrycie przez duże wall circles.
+Jeżeli browser verification wykaże rzeczywistą lukę, dopiero wtedy dobrać najmniejszy odpowiedni collider narożnika i udokumentować konkretny przypadek.
 
-Nie używać geometrii `corner_exterior_wood` jako osobnego physics mesh.
+## 5. Door collider
 
-## 7. Door collider
+Zamknięte skrzydło drzwi ma być osobnym OBB. Jego szerokość i głębokość mają odpowiadać zweryfikowanej geometrii `door_1_flat`.
 
-`buildHouseDoorCollidersLocal()` ma generować OBB tylko dla **zamkniętych** drzwi.
+Dla obecnego assetu znane jest:
 
-Dane v1:
+```text
+leaf width  = 1.118 m
+leaf depth  = 0.121 m
+```
 
-- center: istniejące `openingLocalPose()`;
-- width along wall: `1.118 m`;
-- depth: `0.121 m` z audytu `door_1_flat`;
-- `halfWidth = 0.559`;
-- `halfDepth = 0.0605`;
-- rotation: matching wall yaw.
+Pozycja musi pochodzić z istniejącego `openingLocalPose()` + istniejącego hinge offsetu. Nie tworzyć drugiego obliczenia pozycji drzwi.
 
 Stan:
 
 ```text
-open   → brak door OBB
-closed → jeden door OBB
+closed → door OBB istnieje
+open   → door OBB nie istnieje
 ```
 
-Nie dodawać jambów jako colliderów.
+Frame nie dostaje osobnego collidera.
 
-`openingLocalPose()` nadal pozostaje jedynym źródłem pozycji openingu. Nie przeliczać osobno pozycji drzwi dla kolizji.
+## 6. Usunięcie workaroundu
 
-Istniejący `HouseDoor` może nadal natychmiast zmieniać stan kolizji po `setOpen()`; wizualna animacja zawiasu pozostaje bez zmian.
-
-## 8. Usunięcie obecnego workaroundu
-
-Po wdrożeniu OBB usunąć:
+Po przejściu house collision na OBB usunąć:
 
 - `HOUSE_WALL_COLLIDER_RADIUS`;
 - `HOUSE_DOOR_COLLIDER_RADIUS`;
 - `HOUSE_DOOR_JAMB_OFFSET`;
 - `HOUSE_DOOR_JAMB_RADIUS`;
 - `buildHouseDoorJambCollidersLocal()`;
-- testy zabezpieczające wyłącznie te koła;
-- komentarze opisujące jamby jako sposób domykania 2 m doorway module.
+- testy i komentarze, które istnieją wyłącznie dla jamb-circle workaroundu.
 
-Nie pozostawiać równolegle starego circle pipeline'u dla domów.
+Nie utrzymywać dwóch równoległych modeli kolizji dla domów.
 
-## 9. World transform OBB
+## 7. Transform do świata
 
-Rozszerzyć `transformHouseCollidersToWorld()` tak, aby:
+`transformHouseCollidersToWorld()` należy rozszerzyć tak, aby dla OBB:
 
-- transformował center X/Z jak dziś;
-- skalował `halfWidth` / `halfDepth` przez `HOUSE_ASSEMBLY_SCALE`;
-- dodawał house yaw do `rotationY` OBB;
-- dla circle zachowywał dotychczasową transformację promienia.
+- transformował center X/Z tak jak dziś;
+- uwzględniał `HOUSE_ASSEMBLY_SCALE` dla half extents;
+- dodawał yaw assembly do `rotationY`;
+- pozostawiał istniejący circle transform bez zmiany semantyki.
 
-`buildAssemblyCollidersWorld()` nadal bierze transform z `assembly.root`.
+Nie zmieniać ogólnego ownership colliderów ani lifecycle settlementu.
 
-Dodać regresję dla domu z niezerowym yaw oraz syntetycznego `wall.transform.rotationY`, żeby wizualny wall i collider nie mogły się rozjechać przy przyszłym wariancie.
+## 8. NPC / fauna — minimalna adaptacja
 
-## 10. NPC collision compatibility
+Nie przebudowywać AI movement.
 
-### 10.1 `AnimalAgent`
+Najpierw sprawdzić, czy każdy istniejący call-site może zostać oparty o nowe helpery `collision.ts`.
 
-Zastąpić bezpośrednie:
+### `NpcAgent.ts`
 
-```ts
-Math.hypot(x - collider.x, z - collider.z) < collider.radius
-```
+Zastąpić bezpośrednie założenia `collider.radius` wspólną geometrią tylko w miejscach, gdzie collider jest traktowany jako przeszkoda:
 
-przez wspólny `colliderContainsPoint()`.
+- walkability;
+- steering / obstacle intersection.
 
-Nie zmieniać systemu pathfindingu ani zachowania zwierząt poza obsługą nowego shape type.
+Zachować obecny model steeringu i fallbacków. OBB ma jedynie dostarczyć poprawny test/odległość.
 
-### 10.2 `NpcAgent.isWalkable()`
+### `npcColliderRim.ts`
 
-Zastąpić circle-only containment przez `colliderContainsPoint()`.
+Przepiąć:
 
-Istniejąca semantyka „NPC już stoi wewnątrz collidera → może próbować wyjść” musi zostać zachowana.
+- point-inside;
+- rim point;
+- escape radius / point;
+- destination-on-rim;
 
-Istniejące `NPC_COLLIDER_APPROACH_BUFFER` / `NPC_COLLIDER_CORE_FRACTION` nie powinny zostać automatycznie usunięte tylko dlatego, że domy zmieniają kształt. Jeżeli potrzebują shape-aware helpera, użyć wspólnego `colliderBoundingRadius()` i zachować dotychczasową konserwatywną semantykę nawigacyjną.
+na wspólne helpery collision.
 
-Nie robić w tym planie nowego NPC pathfindera.
+Nie tworzyć osobnej geometrii NPC.
 
-### 10.3 `NpcAgent.resolveSteerTarget()`
+### `AnimalAgent.ts`
 
-To jest ważny konsument, ponieważ obecny kod:
+Dostosować tylko bezpośrednie circle assumptions, jeżeli dotyczą colliderów house/settlement. Zachować dotychczasowe zachowanie dla circle colliderów.
 
-- testuje przecięcie odcinka ruchu z circle;
-- wylicza punkt unikania przez `collider.radius`.
+Jeżeli konkretny call-site okaże się nieużywany dla OBB house colliders, nie zmieniać go „na zapas”.
 
-Zastąpić circle-only matematykę wspólnym helperem shape-aware.
+## 9. Broad phase / ColliderRegistry
 
-Wymagania:
+Nie tworzyć drugiego spatial indexu.
 
-- circle zachowuje obecny wynik możliwie 1:1;
-- OBB może być przecięty przez odcinek ruchu i musi wtedy wygenerować deterministyczny punkt unikania poza OBB;
-- brak pathfindingu wieloetapowego;
-- nadal korzystać z istniejącego 3-tier movement fallback (`full → X-only → Z-only`);
-- punkt unikania ma być na zewnętrznej stronie OBB z istniejącym marginesem, a nie w środku ściany.
+Sprawdzić istniejące `collidersNear()` pod kątem OBB:
 
-Jeżeli potrzebny jest helper typu `segmentIntersectsCollider()` / `closestPointOnCollider()`, umieścić go w `world/collision.ts`, nie w `NpcAgent.ts`.
+- jeśli query używa wyłącznie stałego promienia wokół środka, zapewnić, że największy house OBB może zostać znaleziony;
+- preferować istniejący mechanizm i minimalną zmianę parametrów/helpera;
+- nie przenosić OBB do osobnego registry.
 
-## 11. NPC rim / rescue
+## 10. Debug visualization
 
-`src/ai/npcColliderRim.ts` musi być shape-aware, ale pozostać czystym helperem bez Three.js.
+Rozszerzyć istniejący `?debugColliders=1`.
 
-Zastąpić circle-only:
+`src/debug/colliderDebugView.ts` ma pokazywać:
 
-- `pointInsideCollider()` → wspólny `colliderContainsPoint()`;
-- `rimPointFacing()` → wspólny shape-aware rim point;
-- `localEscapeRadii()` → używać `colliderBoundingRadius()` tylko jako konserwatywnego promienia escape, jeśli dokładny OBB extent nie jest potrzebny;
-- `destinationOnColliderRim()` → dla OBB snapować do prawdziwego brzegu OBB + `COLLIDER_RIM_MARGIN`;
-- `pickEmergencyTeleportPoint()` → bez zmiany kontraktu.
+- circle jako circle/cylinder;
+- OBB jako cienki prostokątny volume zgodny z `halfWidth`, `halfDepth`, `rotationY`.
 
-Zachować istniejące gwarancje planu 108:
+Nie tworzyć nowego debug systemu.
 
-- cel w obcym colliderze nie staje się środkiem przeszkody;
-- NPC już wewnątrz może wyjść;
-- rescue nie wybiera punktu wewnątrz collidera;
-- emergency teleport nie wraca na środek domu.
+Debug view musi umożliwić wizualne potwierdzenie:
 
-Ważne: po przejściu domu z dysku footprintu na ściany OBB **środek domu przestaje być wewnątrz house wall colliders**. To jest celowa zmiana zachowania — NPC ma móc rzeczywiście wejść do domu przez drzwi, zamiast traktować cały dom jako pełny zakazany dysk.
+- prostych ścian;
+- narożników;
+- światła drzwi;
+- closed door;
+- open door.
 
-## 12. Debug collider view
+## 11. Testy
 
-Rozszerzyć istniejący `src/debug/colliderDebugView.ts`.
+Wykorzystać istniejącą infrastrukturę testową. Nie tworzyć nowego frameworka.
 
-Obecny jeden `InstancedMesh` z cylindrem nie potrafi pokazać OBB.
+### `collision.ts`
 
-Użyć dwóch istniejących-style instanced debug meshes:
+- circle/circle regression;
+- circle/OBB front/back/left/right;
+- OBB corner;
+- OBB rotation;
+- point inside OBB;
+- degenerate case bez NaN;
+- contains/distance/rim helper regression.
+
+### `houseBuilder.test.ts`
+
+Dla zwykłej ściany:
+
+- dokładnie jeden OBB zamiast dużego circle;
+- extents odpowiadają 2.00 × 0.41 m;
+- yaw odpowiada wall placement.
+
+Dla wall z drzwiami:
+
+- cały 2 m module nie jest jednym colliderem;
+- istnieją dwa wall OBB;
+- opening nie ma wall collidera;
+- closed door dodaje door OBB;
+- open door nie dodaje door OBB;
+- nie istnieją jamb circles.
+
+### Real doorway regression
+
+Zachować/rozszerzyć istniejący test walkable corridor, ale testować **rzeczywisty przejazd przez opening**, a nie tylko pojedynczy punkt:
 
 ```text
-circle → cylinder
-obb    → thin box / rectangular prism
+outside
+  ↓
+through door opening
+  ↓
+inside house
 ```
 
-Oba nadal:
+Dodatkowo:
 
-- mają ten sam pomarańczowy debug material;
-- są tylko wizualizacją;
-- czytają live `collidersNear()`;
-- nie modyfikują registry;
-- są aktualizowane raz na frame tylko gdy debug overlay jest aktywny.
+- próba wejścia przez ścianę obok drzwi musi zostać zablokowana;
+- zamknięte drzwi muszą blokować przejście;
+- otwarte drzwi muszą pozwalać przejść;
+- nie może istnieć boczna luka wynikająca z pominięcia całego wall module.
 
-Debug view musi wyraźnie pokazać, że ściana jest cienkim prostokątem, a nie kołem.
+Sprawdzić co najmniej:
 
-Nie tworzyć osobnego debug systemu.
+- `TEST_HOUSE_01`;
+- 4×4;
+- 6×4;
+- 6×6;
+- 8×6;
+- drzwi na początku/środku/końcu wall sequence, jeśli takie warianty występują w aktualnych definitions.
 
-## 13. HouseBuilder tests
+### NPC / fauna regression
 
-Rozszerzyć `src/settlement/houseBuilder.test.ts`.
+Tylko call-site'y zmienione przez OBB powinny dostać testy regresyjne. Nie rozszerzać test coverage mechanicznie na całe AI.
 
-Usunąć testy zależne od jamb circles i zastąpić je testami geometrii.
+## 12. Browser verification
 
-### Minimalny zestaw
+Po testach technicznych uruchomić aplikację i użyć `?debugColliders=1`.
 
-1. Normalny wall module tworzy jeden OBB `2.0 × 0.41`.
-2. Door wall module tworzy dwa OBB zamiast skipowania całego modułu.
-3. Door opening ma dokładnie `1.118 m` clear width.
-4. Window wall nadal ma pełny OBB.
-5. Closed door tworzy jeden door OBB.
-6. Open door nie tworzy door OBB.
-7. Door OBB jest zakotwiczony przez `openingLocalPose()`.
-8. Wall/door OBB rotation odpowiada side + house yaw.
-9. `wall.transform.rotationY` nie rozjeżdża collidera.
-10. Wszystkie obecne village definitions (`4×4`, `6×4`, `6×6`, `8×6`) generują poprawne collidery.
-11. `TEST_HOUSE_01` i `TEST_HOUSE_02` pozostają poprawne.
-12. `buildAssemblyCollidersWorld()` respektuje root transform.
-13. Fallback house collider w `createSettlement.ts` pozostaje kołem.
+Sprawdzić:
 
-### Regresja właściwego problemu
+1. zwykłe ściany — cienkie prostokątne collidery zamiast dużych kół;
+2. narożniki — brak dużych kolistych blokad i brak widocznych luk;
+3. drzwi zamknięte — wall pieces + door OBB dokładnie zamykają opening;
+4. drzwi otwarte — światło drzwi jest wolne;
+5. player przechodzi przez środek openingu;
+6. player nie przechodzi przez ścianę obok openingu;
+7. player nie może przejść bokiem obok zamkniętych drzwi;
+8. obrót domu nie zmienia poprawności colliderów;
+9. NPC nadal omija ściany i nie dostaje NaN/stuck behaviour;
+10. kilka footprintów domu działa tak samo.
 
-Dodać test oparty na `resolvePosition()` dla rzeczywistego domu:
+Nie uznawać samych testów jednostkowych za dowód poprawności wizualnej Three.js.
 
-- gracz `radius = 0.35`;
-- drzwi otwarte;
-- start przed frontem;
-- przejście przez środek drzwi do wnętrza;
-- wynik nie jest wypychany przez sąsiednią boczną ścianę.
+## 13. Zakres zmian
 
-Dodać także odwrotny test:
+### Oczekiwane pliki
 
-- próba wejścia przez pełną ścianę poza openingiem musi zostać zablokowana.
+Najprawdopodobniej:
 
-To jest ważniejsze niż test „liczba colliderów = X”.
+```text
+src/world/collision.ts
+src/world/collision.test.ts          (jeśli istnieje / właściwy istniejący test)
+src/settlement/houseBuilder.ts
+src/settlement/houseBuilder.test.ts
+src/ai/NpcAgent.ts                    (tylko bezpośrednie circle assumptions)
+src/ai/npcColliderRim.ts
+src/fauna/AnimalAgent.ts              (tylko jeśli recon potwierdzi potrzebę)
+src/debug/colliderDebugView.ts
+```
 
-## 14. Collision tests
+Nie zmieniać bez potrzeby:
 
-Rozszerzyć `src/world/collision.test.ts` o:
+```text
+src/settlement/createSettlement.ts
+src/world/colliderRegistry.ts
+src/player/PlayerController.ts
+src/settlement/props.ts
+HouseDefinition ownership/lifecycle
+```
 
-- circle regression — wszystkie obecne testy pozostają;
-- OBB outside / inside / edge / corner;
-- OBB rotated;
-- circle-vs-OBB with entity radius;
-- deterministic degenerate fallback;
-- helper `colliderContainsPoint()` dla circle + OBB;
-- `colliderBoundingRadius()`;
-- segment/closest-point helper, jeżeli zostanie dodany do wspólnego modułu.
+Jeżeli implementacja wykaże, że któryś z oczekiwanych plików nie wymaga zmiany, nie modyfikować go tylko dlatego, że znajduje się na liście.
 
-Testy mają pozostać czystą matematyką bez Three.js runtime.
-
-## 15. NPC / fauna tests
-
-`src/ai/npcColliderRim.test.ts` rozszerzyć o OBB:
-
-- inside/outside;
-- rim facing from front/back/side;
-- rescue escape from inside;
-- emergency teleport never returns an OBB interior point.
-
-Nie trzeba tworzyć ciężkich testów `NpcAgent`/`AnimalAgent`, jeżeli wspólne helpery geometrii są pokryte czystymi testami. Wystarczy upewnić się technicznie, że ich shape-aware call sites kompilują i istniejące testy nadal przechodzą.
-
-## 16. Settlement integration
-
-`src/settlement/createSettlement.ts` pozostaje właścicielem rejestracji colliderów.
-
-Nie zmieniać:
-
-- `registerColliders(def.id, ...)`;
-- `clearColliders(def.id)`;
-- `doorColliderSignature`;
-- momentu rejestracji po `buildSettlementProps()`;
-- house/household/Place ownership;
-- `landmarks.houses` / `landmarks.homes`.
-
-Zmiana ma być wyłącznie w shape danych zwracanych przez `buildHouseCollidersWorld()`.
-
-## 17. `HouseDefinition` / state docs
-
-Nie dodawać nowego parallelnego formatu domu.
-
-Na tym etapie nie ma potrzeby dodawania `collision` do `HouseDefinition`, ponieważ v1 używa zweryfikowanych wspólnych wymiarów MegaKit wall family i jednego door contract (`door_1_flat`).
-
-Jeżeli podczas implementacji okaże się, że któryś obecny wall asset ma inną collision geometrię mimo wspólnego audytowanego footprintu, **nie dodawać wyjątku w builderze bez weryfikacji**. Wtedy dopiero rozszerzyć `HouseWallPlacement` / `HouseOpening` o jawne data-only collision metadata i opisać to w implementation notes.
-
-Po implementacji zaktualizować:
-
-- `docs/state/settlements.md` — domy używają geometrycznych wall/door colliders, nie pełnych circle disks;
-- `docs/plans/implementation-notes/2026-08-14--111--house-construction-implementation-notes.md` — dodać wpis o rozwiązaniu obecnego pre-existing collider bug i usunięciu jamb workaround;
-- `docs/plans/README.md` — status planu po implementacji/verification.
-
-Nie zmieniać dokumentacji przed implementacją poza samym planem.
-
-## 18. Poza zakresem
+## 14. Poza zakresem
 
 Nie robić:
 
-- Rapier/Cannon/Ammo ani innego physics engine;
-- mesh collision / BVH dla domów;
-- automatycznego generowania colliderów z GLB vertices;
-- capsule jako kolejnego shape type;
-- OBB dla wszystkich propsów świata — tylko wspólny primitive support + domy jako pierwszy konsument;
-- pełnego navmeshu/pathfindingu NPC;
-- przebudowy `PlayerController`;
-- zmian door animation;
-- zmian lodging/sleep/household systems;
-- zmian house assembly/renderingu poza debug overlay;
-- ogólnego refaktoru `ColliderRegistry`;
-- multiplayer/networking.
+- physics engine;
+- mesh collision / collision z GLB runtime;
+- 3D OBB z bibliotek Three.js;
+- nowego spatial indexu;
+- iterative multi-collider solvera;
+- przebudowy pathfindingu;
+- przebudowy NPC movement;
+- osobnego systemu collision dla fauna;
+- colliderów dla wszystkich wizualnych elementów domu;
+- zmian `Place`, household, lodging lub ownership;
+- ogólnego refaktoru `houseBuilder.ts` niezwiązanego z collision.
 
-## 19. Kolejność implementacji
+## 15. Weryfikacja techniczna
 
-1. Zmienić `Collider` na circle/OBB union i dodać wspólne geometry helpers.
-2. Rozszerzyć `resolvePosition()` o circle-vs-OBB.
-3. Dodać testy matematyczne collision systemu.
-4. Przepisać house wall colliders z circles na OBB.
-5. Podzielić door wall module na dwa wall OBB z realnym openingiem `1.118 m`.
-6. Zastąpić closed-door circle przez door OBB i usunąć jamb workaround.
-7. Rozszerzyć world transform OBB.
-8. Zaktualizować `NpcAgent`, `AnimalAgent` i `npcColliderRim` na wspólne shape helpers.
-9. Zaktualizować `NpcAgent.resolveSteerTarget()` na shape-aware obstacle check.
-10. Rozszerzyć debug collider overlay o OBB.
-11. Zaktualizować `houseBuilder.test.ts`, `npcColliderRim.test.ts` i collision tests.
-12. Uruchomić `tsc`, lint, build, test.
-13. Wykonać browser verification z `?debugColliders=1`.
-14. Dopiero po browser verification zaktualizować implementation notes/state i oznaczyć plan zgodnie z rzeczywistym stanem.
+Uruchomić zgodnie z aktualnym `CLAUDE.md` i `package.json` właściwe testy/lint/typecheck/build. Nie zakładać nazw skryptów — sprawdzić je w repo przed wykonaniem.
 
-## 20. Browser verification
+Wyniki raportować osobno:
 
-Zgodnie z `CLAUDE.md` nie uruchamiać headless browsera jako substytutu manualnej weryfikacji. Po technicznych checkach poprosić użytkownika o test na działającym `pnpm run dev`.
+- implemented;
+- technically verified;
+- browser/manual verified.
 
-### Scenariusz A — collider shape
+## Definition of Done
 
-Uruchomić:
-
-```text
-?debugColliders=1
-```
-
-Sprawdzić:
-
-- ściany są cienkimi prostokątami;
-- nie ma dużych pomarańczowych kół wokół ścian;
-- narożniki są domknięte przez ściany;
-- opening drzwi jest widoczną przerwą dokładnie w miejscu drzwi;
-- closed door ma własny prostokątny collider;
-- open door usuwa tylko collider skrzydła;
-- okna nie tworzą przejścia.
-
-### Scenariusz B — wejście do domu
-
-Dla co najmniej:
-
-- `COTTAGE_4X4_A`;
-- `COTTAGE_6X4_A`;
-- `HOUSE_6X6_A`;
-- `HOUSE_8X6_A`.
-
-Sprawdzić:
-
-1. podejście prosto do drzwi;
-2. otwarcie drzwi;
-3. wejście przez środek otworu;
-4. przejście co najmniej ~1 m do wnętrza;
-5. brak wypychania przez boczną ścianę;
-6. wyjście tą samą drogą;
-7. zamknięcie drzwi;
-8. próba przejścia przez ścianę obok drzwi — ma być zablokowana;
-9. próba obejścia domu przez narożnik — ma być zablokowana.
-
-### Scenariusz C — NPC
-
-Obserwować NPC w osadzie:
-
-- NPC może wejść do domu przez opening, jeśli jego cel jest wewnątrz;
-- NPC nie przechodzi przez ścianę;
-- NPC nie zostaje uwięziony w ścianie;
-- rescue/watchdog nie teleportuje NPC do środka domu jako efekt uboczny nowego shape type.
-
-### Scenariusz D — fauna
-
-Sprawdzić co najmniej livestock przy domu:
-
-- nie przechodzi przez ścianę;
-- może przebywać wewnątrz domu, jeśli jego istniejący cel/ruch tak prowadzi;
-- brak nowych blokad w normalnym ruchu.
-
-## 21. Kryteria akceptacji
-
-Plan jest zakończony dopiero gdy:
-
-- wall colliders nie są circle `r=0.95`;
-- wall collision odpowiada ~2.00 × 0.41 m;
+- ściany domów nie są już reprezentowane jako `circle radius = 0.95`;
+- wall OBB odpowiada rzeczywistemu footprintowi 2.00 × 0.41 m;
 - door wall nie jest pomijany jako cały 2 m moduł;
-- opening ma jeden jawny, testowany clear width `1.118 m`;
-- closed door blokuje opening jako OBB;
-- open door pozwala wejść;
-- jamb circles nie istnieją;
-- player nie może przejść przez ścianę;
-- player może przejść przez drzwi i wejść do wnętrza;
-- circle colliders świata nadal zachowują dotychczasowe zachowanie;
-- NPC i fauna rozumieją nowy shape type bez osobnych systemów geometrii;
-- NPC rim/rescue zachowuje gwarancje planu 108;
-- debug overlay pokazuje rzeczywisty kształt circle/OBB;
+- opening ma rzeczywistą przerwę w collision geometry;
+- closed door blokuje opening jako osobny collider;
+- open door nie blokuje openingu;
+- jamb-circle workaround został usunięty;
+- corner collision jest potwierdzone jako poprawne bez dodatkowego collidera albo ma minimalny, udokumentowany collider tylko jeśli testy wykażą potrzebę;
+- istniejące circle colliders świata zachowują dotychczasowe zachowanie;
+- NPC/fauna używają wspólnej geometrii bez duplikowania OBB math;
+- debug overlay pokazuje rzeczywisty kształt colliderów;
 - testy automatyczne przechodzą;
-- browser/manual verification potwierdza co najmniej cztery warianty domów;
-- dokumentacja opisuje nowy stan zamiast starego workaroundu.
-
-## 22. Weryfikacja techniczna
-
-Uruchomić:
-
-```text
-npx tsc --noEmit
-pnpm run lint:fix
-pnpm run build
-pnpm run test
-```
-
-Nie oznaczać browser verification jako wykonanej na podstawie powyższych komend.
-
-Wynik końcowy raportować osobno:
-
-- `implemented`;
-- `technically verified`;
-- `browser/manual verified`.
+- browser verification potwierdza wejście do domu i brak przejścia przez ścianę;
+- nie wprowadzono równoległego systemu kolizji ani niepotrzebnej architektury.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
