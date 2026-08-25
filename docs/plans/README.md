@@ -49,7 +49,7 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 - npc: `002`
 - persistence: `001`
 - quests-progression: `001`
-- settlements: `001`
+- settlements: `002`
 - settlements-npcs: `003`
 - tools: `003`
 - ui-input: `004`
@@ -124,6 +124,7 @@ Natural vegetation
 | `settlements-npcs-002-npc-professions-households-and-age.md` ◼️ | - | 🔴 | L | ~~178~~ ~~069~~ ~~184~~ ~~185~~ |
 | `ai-003-npc-candidate-strategies.md` ◼️  | - | 🟡 | M | ~~ai-001~~ ~~ai-002~~ |
 | `ui-input-003-merchant-trade-ui-ux-redesign.md` ◼️ | - | 🟡 | M | - |
+| `settlements-001-house-collision-geometry.md` ◼️ | - | 🔴 | L | 111 |
 
 ### Fresh new
 
