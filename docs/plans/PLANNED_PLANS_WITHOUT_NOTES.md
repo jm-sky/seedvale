@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-25 08:50:45  
+> Date: 2026-08-25 08:53:32  
 
 ## PLANS
 
@@ -9,7 +9,6 @@
 - `2026-08-21--190--plans-automation.md`
 - `2026-08-24--mpfb2-npc-hero-character-pipeline.md`
 - `settlements-npcs-001-cultivation-hydration-and-watering.md`
-- `settlements-npcs-002-npc-professions-complete-profession-work-integration.md`
 - `tools-001-performance-benchmark-determinism-and-reliability.md`
 - `tools-002-trace-analyzer-application-cpu-attribution.md`
 - `ui-input-003-merchant-trade-ui-ux-redesign.md`
@@ -122,36 +121,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/settlements-npcs-001-cultivation-hydration-and-watering-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `settlements-npcs-002-npc-professions-complete-profession-work-integration.md`
-
-Prompt:
-
-```
-Zrób review planu `settlements-npcs-002-npc-professions-complete-profession-work-integration.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/settlements-npcs-002-npc-professions-complete-profession-work-integration.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-002-npc-professions-complete-profession-work-integration-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
