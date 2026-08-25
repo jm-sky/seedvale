@@ -396,7 +396,7 @@ Rozszerzyć istniejący `SCHEDULE_TEMPLATES` i `work` decision path:
 
 ### Phase 5 — items & Blacksmith workplace
 
-- dodać `scythe` tylko jeśli brak odpowiednika;
+- dodać `scythe` tylko jeśli brak odpowiednika (model is in place `public/models/items/scythe.glb`);
 - ustawić `tool + weapon`, holdable i istniejące `melee`;
 - capability tylko dla realnej akcji;
 - opcjonalnie dołączyć kosę do istniejącego maintenance setu;
