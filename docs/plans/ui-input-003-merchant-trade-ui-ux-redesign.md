@@ -28,7 +28,11 @@ Główny ekran koncentruje się na jednym kontekście BUY/OFFER, natomiast TRANS
 
 ## Reference
 
-![Merchant Trade UI/UX Reference](./references/ui-input-003-merchant-trade-ui-ux-reference.svg)
+![Merchant Trade UI/UX Reference 3](./references/ui-input-003-merchant-trade-ui-ux-reference-03.svg)
+
+![Merchant Trade UI/UX Reference 2 - older](./references/ui-input-003-merchant-trade-ui-ux-reference-02.png)
+
+![Merchant Trade UI/UX Reference 1 - older](./references/ui-input-003-merchant-trade-ui-ux-reference-01.png)
 
 Reference board przedstawia C1 Desktop, M1 Mobile Landscape Drawer oraz A2 Selection. Jest materiałem projektowym, nie źródłem implementacyjnej prawdy.
 
