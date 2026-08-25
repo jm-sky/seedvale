@@ -1,0 +1,15 @@
+Free Medieval 3D People Low Poly Pack — craftpix.net
+Source: https://craftpix.net/file-licenses/ (general CraftPix free-file license page;
+the pack itself only links here, no pack-specific license file is included in the zip)
+
+Summary (fetched 2026-08-25):
+- Commercial use: permitted — "use the resources in any number of personal and
+  commercial projects" and "sell and distribute games with our assets."
+- Attribution: not required ("No attribution or link back to this site is
+  required, however any credit will be highly appreciated.")
+- Raw file redistribution: forbidden — cannot resell or redistribute the
+  source art files (FBX/PNG/etc.) or a lightly modified version standalone;
+  cannot make the raw art files usable to another end user via the app.
+  Shipping the converted, embedded .glb inside the compiled game is the
+  intended use case, not a violation of this clause.
+- Other: assets may not be used for AI/ML training, fine-tuning, or similar.
