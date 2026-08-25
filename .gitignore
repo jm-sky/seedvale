@@ -5,6 +5,7 @@ CLAUDE.local.md
 .DS_Store
 .env
 _temp/
+_tools/
 docs/refs/
 trace_processor
 __pycache__/
