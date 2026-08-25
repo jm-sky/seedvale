@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-25 08:30:05  
+> Date: 2026-08-25 08:43:29  
 
 ## PLANS
 
@@ -182,7 +182,7 @@ Wczytaj:
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-002-npc-professions-households-and-age-implementation-notes.md`
+`docs/plans/implementation-notes/settlements-npcs-002-npc-professions-complete-profession-work-integration-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

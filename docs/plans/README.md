@@ -125,6 +125,7 @@ Natural vegetation
 | `ai-003-npc-candidate-strategies.md` ◼️  | - | 🟡 | M | ~~ai-001~~ ~~ai-002~~ |
 | `ui-input-003-merchant-trade-ui-ux-redesign.md` ◼️ | - | 🟡 | M | - |
 | `settlements-001-house-collision-geometry.md` ◼️ | - | 🔴 | L | 111 |
+| `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` ◼️ | - | 🔴 | L | ~~178~~ ~~184~~ |
 
 ### Fresh new
 
