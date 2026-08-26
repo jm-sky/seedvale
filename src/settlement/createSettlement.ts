@@ -190,6 +190,12 @@ export type Settlement = {
    *  invoked on the same throttled day/night tick as `applyDayNight`
    *  (`app/createApp.ts`), not every frame. */
   setDayNight: (t: number) => void
+  /** Ticks this settlement's own campfire only — split out of `update()`
+   *  (plan playtest fixes §2) so `gameLoop.ts` can burn fuel against the
+   *  same `worldDt` player needs use (scaled during a rest/sleep time-skip),
+   *  while `update()` itself stays gated off entirely during a skip (NPCs/
+   *  livestock keep the freeze-and-catch-up behaviour, plan 196). */
+  tickFire: (dt: number) => void
   dispose: () => void
 }
 
@@ -698,7 +704,6 @@ export async function createSettlement(
         livestock.length = 0
         livestock.push(...kept)
       }
-      fire?.update(dt)
       placeWoodshedIfComplete()
       for (const torch of villageTorches) torch.update(dt)
       for (const assembly of houseAssemblies) {
@@ -761,6 +766,9 @@ export async function createSettlement(
       }
       nightFactor = t
       for (const light of houseLights) light.setNightIntensity(t)
+    },
+    tickFire(dt) {
+      fire?.update(dt)
     },
     dispose() {
       pointLightBudget.unregisterSubtree(group)

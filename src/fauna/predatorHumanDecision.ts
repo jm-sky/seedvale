@@ -7,7 +7,12 @@ import { pickHighestScore, type ScoredAction } from '../simulation/scoreActions'
  * (including the injected `aggressionRoll`).
  */
 
-export type PredatorHumanIntent = 'attack' | 'flee'
+/** `'ignore'` (playtest fixes plan §3) — a bold predator (bear) noticing a
+ *  distant, non-threatening human neither flees nor attacks; it just keeps
+ *  doing whatever it was already doing. Never returned for a species without
+ *  a `CALM_SCORE_THRESHOLD` entry (wolf/fox keep their exact prior
+ *  attack-vs-flee behaviour). */
+export type PredatorHumanIntent = 'attack' | 'flee' | 'ignore'
 
 export type PredatorHumanDecisionInput = {
   /** 0–1 from `AnimalLifeState.hunger`. */
@@ -40,11 +45,40 @@ const FLEE_BASELINE = 0.28
 const FIRE_FEAR = 0.55
 const CROWD_FEAR_PER_EXTRA = 0.22
 
-/** Species bias added to attack score (negative = more cautious). */
+/** Species bias added to attack score (negative = more cautious). Bear is
+ *  deliberately more cautious than wolf here (playtest fixes plan §3) —
+ *  it isn't a hunger-driven hunter of humans; its own aggression comes from
+ *  the close/retaliation roll branches below instead. */
 const ATTACK_BIAS: Record<string, number> = {
   wolf: 0.12,
   fox: -0.08,
+  bear: -0.3,
 }
+
+/** Species bias added to flee score (negative = bolder, less skittish).
+ *  Only bear opts in (playtest fixes plan §3 — "zbyt łatwe płoszenie
+ *  niedźwiedzia"): wolf/fox keep the shared `FLEE_BASELINE` unmodified. */
+const FLEE_BIAS: Record<string, number> = {
+  bear: -0.55,
+}
+
+/** A species opts in by having its winning score fall below this — instead
+ *  of the usual binary attack/flee pick, `decidePredatorHumanIntent` returns
+ *  `'ignore'` (playtest fixes plan §3). Left unset (`-Infinity` fallback) for
+ *  every other species, so wolf/fox never see this branch: their weakest
+ *  possible flee score (`FLEE_BASELINE`, no proximity/fire/crowd) already
+ *  sits at 0.28, comfortably above any threshold that would still make sense
+ *  for a genuinely nervous species. */
+const CALM_SCORE_THRESHOLD: Record<string, number> = {
+  bear: 0.05,
+}
+
+/** Species that get the close-range/retaliation roll branches below, instead
+ *  of pure score comparison — originally wolf-only; bear opts in too
+ *  (playtest fixes plan §3) so "player very close" / "just hit it" resolves
+ *  to the same defend-or-flee roll a cornered/provoked wolf already uses,
+ *  rather than a second bespoke mechanic. */
+const CLOSE_AGGRESSION_SPECIES = new Set(['bear', 'wolf'])
 
 /** Wolf close territorial attack chance when inside panic range. */
 export const CLOSE_ATTACK_CHANCE = 0.3
@@ -94,8 +128,9 @@ export function scorePredatorHumanIntents(
   const fire = input.fireNearby ? FIRE_FEAR : 0
   const hunger = hungerAttackPressure(input.hunger)
   const bias = ATTACK_BIAS[input.kind] ?? 0
+  const fleeBias = FLEE_BIAS[input.kind] ?? 0
 
-  const fleeScore = FLEE_BASELINE + proximity * 0.72 + fire + crowd
+  const fleeScore = FLEE_BASELINE + proximity * 0.72 + fire + crowd + fleeBias
   const attackScore = hunger * 0.95 + bias - proximity * 0.2 - fire * 0.5 - crowd
 
   return [
@@ -114,17 +149,27 @@ export function decidePredatorHumanIntent(
 ): PredatorHumanIntent {
   const roll = clamp01(input.aggressionRoll)
   const suppressed = isAttackRollSuppressed(input)
-  const isWolf = input.kind === 'wolf'
+  const hasCloseAggression = CLOSE_AGGRESSION_SPECIES.has(input.kind)
 
-  if (isWolf && input.provoked && !suppressed) {
+  if (hasCloseAggression && input.provoked && !suppressed) {
     if (input.selfHpRatio < PROVOKED_FLEE_HP_RATIO) return 'flee'
     return roll < RETALIATION_ATTACK_CHANCE ? 'attack' : 'flee'
   }
 
-  const scored = pickHighestScore(scorePredatorHumanIntents(input))?.kind ?? 'flee'
+  const best = pickHighestScore(scorePredatorHumanIntents(input))
+  const scored = best?.kind ?? 'flee'
+
+  // Calm/bold species (bear — playtest fixes plan §3): a winning score this
+  // weak means neither flee nor attack pressure is actually meaningful yet
+  // (far/uninterested), so it just keeps doing whatever it was doing instead
+  // of a binary attack-vs-flee pick forcing a reaction it doesn't have.
+  const calmThreshold = CALM_SCORE_THRESHOLD[input.kind]
+  if (calmThreshold !== undefined && (best?.score ?? -Infinity) < calmThreshold) {
+    return 'ignore'
+  }
 
   if (
-    isWolf
+    hasCloseAggression
     && !input.provoked
     && !suppressed
     && input.humanDistance <= input.playerPanicRange

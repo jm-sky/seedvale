@@ -218,6 +218,69 @@ describe('decidePredatorHumanIntent', () => {
   })
 })
 
+describe('bear playtest fixes (plan §3 — less skittish, close/provoked defends)', () => {
+  it('ignores a distant, non-hungry human instead of fleeing', () => {
+    expect(
+      decidePredatorHumanIntent({
+        ...base,
+        kind: 'bear',
+        hunger: 0.3,
+        humanDistance: 9,
+      }),
+    ).toBe('ignore')
+  })
+
+  it('reacts (flee or the close-aggression roll) once the human is very close', () => {
+    const closeIntent = decidePredatorHumanIntent({
+      ...base,
+      kind: 'bear',
+      hunger: 0.3,
+      humanDistance: 2,
+      aggressionRoll: CLOSE_ATTACK_CHANCE,
+    })
+    expect(closeIntent).not.toBe('ignore')
+    const aggressiveRoll = decidePredatorHumanIntent({
+      ...base,
+      kind: 'bear',
+      hunger: 0.3,
+      humanDistance: 2,
+      aggressionRoll: CLOSE_ATTACK_CHANCE - 0.01,
+    })
+    expect(aggressiveRoll).toBe('attack')
+  })
+
+  it('a hit bear retaliates by roll like a provoked wolf', () => {
+    const provoked = {
+      ...base,
+      kind: 'bear',
+      hunger: 0.3,
+      humanDistance: 8,
+      provoked: true,
+      selfHpRatio: 0.8,
+    }
+    expect(
+      decidePredatorHumanIntent({ ...provoked, aggressionRoll: RETALIATION_ATTACK_CHANCE - 0.01 }),
+    ).toBe('attack')
+    expect(
+      decidePredatorHumanIntent({ ...provoked, aggressionRoll: RETALIATION_ATTACK_CHANCE }),
+    ).toBe('flee')
+  })
+
+  it('a badly hurt provoked bear always flees, never ignores', () => {
+    expect(
+      decidePredatorHumanIntent({
+        ...base,
+        kind: 'bear',
+        hunger: 0.3,
+        humanDistance: 8,
+        provoked: true,
+        selfHpRatio: PROVOKED_FLEE_HP_RATIO - 0.1,
+        aggressionRoll: 0,
+      }),
+    ).toBe('flee')
+  })
+})
+
 describe('countNearbyHumans', () => {
   it('always counts the player as 1 with no NPCs', () => {
     expect(countNearbyHumans(0, 0, [])).toBe(1)

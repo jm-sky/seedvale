@@ -53,7 +53,7 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 - settlements-npcs: `003`
 - tools: `003`
 - ui-input: `004`
-- world: `001`
+- world: `002`
 - world-terrain: `003`
 
 This ids section is maintained automatically from the plan files.
@@ -173,6 +173,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-21--188--fauna-and-dead-animal-lifecycle.md` | - |
 | `2026-08-20--175--cooking-vessels-grates-and-iron-rods.md` | [notes](./implementation-notes/2026-08-20--175--cooking-vessels-grates-and-iron-rods-implementation-notes.md) |
 | `2026-08-20--174--player-garden-and-npc-need-sources.md` | [notes](./implementation-notes/2026-08-20--174--player-garden-and-npc-need-sources-implementation-notes.md) |
+| `world-001-playtest-gameplay-fixes-stamina-fire-timeskip-bear.md` | - |
 | `2026-08-22--192--arch--time-and-simulation-consistency.md` | [notes](./implementation-notes/2026-08-22--192--arch--time-and-simulation-consistency-implementation-notes.md) |
 | `ai-001-npc-pressure-layer.md` | [notes](./implementation-notes/ai-001-npc-pressure-layer-implementation-notes.md) |
 | `2026-08-20--173--terrain-aware-procedural-placement.md` | [notes](./implementation-notes/2026-08-20--173--terrain-aware-procedural-placement-implementation-notes.md) |

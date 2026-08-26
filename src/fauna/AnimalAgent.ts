@@ -1374,6 +1374,13 @@ export class AnimalAgent {
         if (this.cachedHumanIntent === 'attack') {
           this.setIntent('attack', copyVec3(observerPos))
           this.chaseHuman(observerPos, dt, onHumanHit)
+        } else if (this.cachedHumanIntent === 'ignore') {
+          // A bold predator (bear, playtest fixes plan §3) noticing a distant,
+          // non-threatening human just keeps doing what it was doing instead
+          // of panicking — same "no reaction" shape as `updatePredator`'s
+          // no-prey-found wander, not a new idle mechanic.
+          this.setIntent('wander')
+          this.wander(dt)
         } else {
           this.setIntent('flee', copyVec3(observerPos))
           this.fleeFrom(observerPos.x, observerPos.z, dt)
@@ -1395,6 +1402,9 @@ export class AnimalAgent {
       if (this.cachedHumanIntent === 'attack') {
         this.setIntent('attack', { x: npcThreat.x, z: npcThreat.z })
         this.chaseNpc(npcThreat, dt, onNpcHit)
+      } else if (this.cachedHumanIntent === 'ignore') {
+        this.setIntent('wander')
+        this.wander(dt)
       } else {
         this.setIntent('flee', { x: npcThreat.x, z: npcThreat.z })
         this.fleeFrom(npcThreat.x, npcThreat.z, dt)

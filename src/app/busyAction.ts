@@ -16,6 +16,13 @@ export type BusyStartOptions = {
   /** Runs on `cancel()` only — never on a successful complete. Used to
    *  release holds (e.g. a corpse pinned for harvest). */
   onCancel?: () => void
+  /** Continuous Stamina cost for the duration of this channel (playtest
+   *  fixes plan §1) — drained every `tick(dt)` as `staminaCostPerSec * dt`,
+   *  same proportional-to-elapsed-time shape as an Esc-cancelled well-work
+   *  bout crediting only the work actually done. Omit for actions that
+   *  shouldn't cost Stamina (most of them — only long physical terrain/
+   *  construction work opts in). */
+  staminaCostPerSec?: number
 }
 
 export type BusyAction = {
@@ -36,6 +43,7 @@ type ActiveBusy = {
   onComplete: () => void
   onCancel: (() => void) | null
   blurred: boolean
+  staminaCostPerSec: number
 }
 
 function progressOf(active: ActiveBusy): number {
@@ -44,8 +52,12 @@ function progressOf(active: ActiveBusy): number {
 }
 
 /** Short timed "channel" (dig, level, …) that blocks player input via
- *  `activeModal(..., busy)` without advancing day/night like `timeSkip`. */
-export function createBusyAction(): BusyAction {
+ *  `activeModal(..., busy)` without advancing day/night like `timeSkip`.
+ *  `drainStamina` (playtest fixes plan §1) is a callback rather than a direct
+ *  `PlayerNeeds` dependency, matching this module's existing decoupling from
+ *  the player — `createApp.ts` wires it to the real `StaminaState`, tests
+ *  omit it and get a no-op. */
+export function createBusyAction(drainStamina: (amount: number) => void = () => {}): BusyAction {
   let active: ActiveBusy | null = null
 
   return {
@@ -59,11 +71,13 @@ export function createBusyAction(): BusyAction {
         onComplete,
         onCancel: options?.onCancel ?? null,
         blurred: options?.blurred ?? false,
+        staminaCostPerSec: options?.staminaCostPerSec ?? 0,
       }
     },
     tick(dt) {
       if (!active) return null
       active.remainingSec -= dt
+      if (active.staminaCostPerSec > 0) drainStamina(active.staminaCostPerSec * dt)
       const { label, onComplete, blurred } = active
       if (active.remainingSec > 0) {
         return { label, justFinished: false, blurred, progress: progressOf(active) }

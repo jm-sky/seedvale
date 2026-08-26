@@ -63,6 +63,15 @@ const VIGOR_SPRINT_EXTRA_DRAIN_MULTIPLIER = 1.5
 const STAMINA_SPRINT_DRAIN_PER_SEC = 20
 const STAMINA_REGEN_PER_SEC = 12
 
+/** Continuous Stamina cost for a long physical `BusyAction` channel (playtest
+ *  fixes plan §1 — terrain prep / well work had no Stamina cost at all).
+ *  Flat real-seconds rate, same "twitchy short-term pool" framing as the
+ *  sprint drain above: a single dig/level/mound (`DIG_DURATION_SEC` = 2s)
+ *  costs a modest ~12% of the pool, while a full well-work bout
+ *  (`WELL_WORK_SESSION_SEC` = 8s) costs a clearly-felt ~48% — proportional to
+ *  the actual elapsed work time, never a lump sum on start. */
+export const BUSY_ACTION_STAMINA_COST_PER_SEC = 6
+
 /** How long Hunger/Thirst must stay continuously critical (plan 165 §2/§3)
  *  before slow HP loss begins — before this, the only consequence is the
  *  growing Vigor/Stamina penalty below. Thirst's window is deliberately

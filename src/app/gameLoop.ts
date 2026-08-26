@@ -1758,7 +1758,14 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       }
       bundle.itemSpawners.update(dt, player.mesh.position, dayFactor)
       bundle.droppedItems.tick(dt)
-      bundle.placedFires.update(dt)
+      // Fire fuel burns against `worldDt` (scaled during a rest/sleep
+      // time-skip, same as player needs above) rather than raw `dt` — ticked
+      // unconditionally, unlike `settlementsManager.update()`/`fauna.update()`
+      // above, which stay fully frozen during a skip and catch up once via
+      // `resolveTimeSkip`. Settlement fires split their tick out into
+      // `tickFire()` for exactly this reason (see its doc comment).
+      for (const s of loaded) s.tickFire(worldDt)
+      bundle.placedFires.update(worldDt)
       // Plan 176 §6/§20 — bounded to however many plots the player has
       // actually built (never a world-wide field scan); removal is a lazy
       // world-object mutation, not a per-frame maintenance tick.

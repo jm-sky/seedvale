@@ -3,6 +3,7 @@ import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
+import { BUSY_ACTION_STAMINA_COST_PER_SEC } from '../../player/PlayerNeeds'
 import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
 import { DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt } from '../../terrain/dig'
 import { applyDigAt, applyLevelAt, applyMoundAt } from '../../terrain/digAction'
@@ -57,7 +58,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     busy.start(DIG_DURATION_SEC, 'Kopanie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
       ctx.syncQuickActionAvailability()
-    })
+    }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
   }
 
   const startPickaxeDigAt = (x: number, z: number): void => {
@@ -71,7 +72,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     busy.start(DIG_DURATION_SEC, 'Kucie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
       ctx.syncQuickActionAvailability()
-    })
+    }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
   }
 
   const startLevelAt = (x: number, z: number): void => {
@@ -82,7 +83,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     }
     busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
       applyLevelAt(bundle.chunkManager, x, z, toast)
-    })
+    }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
   }
 
   const startPickaxeLevelAt = (x: number, z: number): void => {
@@ -93,7 +94,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     }
     busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
       applyLevelAt(bundle.chunkManager, x, z, toast)
-    })
+    }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
   }
 
   /** "Zrób górkę" (plan `world-terrain-002` §1) — inverse of `startDigAt`:
@@ -109,7 +110,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     playActionDig(worldAudio.playOnce)
     busy.start(DIG_DURATION_SEC, 'Usypywanie…', () => {
       applyMoundAt(bundle.chunkManager, x, z, profile.depth, toast)
-    })
+    }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
   }
 
   const startTreeChop = (treeId: string, x: number, z: number): void => {

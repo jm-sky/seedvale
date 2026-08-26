@@ -6,6 +6,7 @@ import { ITEM_DEFS } from '../../items/items'
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../../items/tentPlacement'
 import { TENT_LENGTH } from '../../items/tentProp'
 import { selectInstanceToPlace } from '../../items/trade'
+import { BUSY_ACTION_STAMINA_COST_PER_SEC } from '../../player/PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD, survivalDurationMultiplier } from '../../player/PlayerSkills'
 import {
   TRAP_DEFS,
@@ -291,7 +292,10 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       const elapsedHours = Math.max(0, (dayNight.elapsedDays - startDays) * 24)
       bundle.playerWells.addWork(id, elapsedHours)
     }
-    busy.start(sessionSec, WELL_WORK_LABEL[stage], commitProgress, { onCancel: commitProgress })
+    busy.start(sessionSec, WELL_WORK_LABEL[stage], commitProgress, {
+      onCancel: commitProgress,
+      staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC,
+    })
   }
 
   /** Places a new player-built garden plot ahead of the player (plan 174 §1)
