@@ -16,7 +16,7 @@ export const useBootMark = (group: string = 'global') => {
 
   const bootMarkEnd = (name: string) => {
     if (!isBootMarkMode()) return
-    const mark: BootMark | undefined = bootMarks.find(({ name }) => name === name)
+    const mark: BootMark | undefined = bootMarks.find(mark => mark.name === name && mark.group === group)
     const time: number = mark ? performance.now() - mark.time : 0
     console.log(`[BootMark][${group}] ${name}: ${time.toFixed(0)} ms`)
   }
