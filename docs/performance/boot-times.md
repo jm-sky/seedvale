@@ -13,10 +13,10 @@
 > ```
 
 - `createApp`
-  - `createRenderStack` - 6964 ms
-  - `createWorldBundle` - 6991 ms
-  - `buildWorldSystems`
-    - `buildChunkManager` - 6991 ms
-    - `waitForChunks` - 7588 ms
-    - `buildSettlementsManager` - 9402 ms
-    - `buildFauna` - 10996 ms
+  - `createRenderStack` - 19 ms
+  - `createWorldBundle` - 6474 ms
+  - `rebuildWorld -> buildWorldSystems`
+    - `buildChunkManager` - 131 ms
+    - `waitForChunks` - 1725 ms
+    - `buildSettlementsManager` - 1510 ms
+    - `buildFauna` - 1026 ms
