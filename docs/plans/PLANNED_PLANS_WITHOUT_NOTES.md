@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-26 11:19:14  
+> Date: 2026-08-26 11:20:39  
 
 ## PLANS
 
@@ -9,6 +9,7 @@
 - `2026-08-21--190--plans-automation.md`
 - `2026-08-24--mpfb2-npc-hero-character-pipeline.md`
 - `fauna-001-rabies-and-animal-infection.md`
+- `settlements-002-house-browser.md`
 - `tools-001-performance-benchmark-determinism-and-reliability.md`
 - `tools-002-trace-analyzer-application-cpu-attribution.md`
 - `world-003-faster-application-startup.md`
@@ -121,6 +122,36 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/fauna-001-rabies-and-animal-infection-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `settlements-002-house-browser.md`
+
+Prompt:
+
+```
+Zrób review planu `settlements-002-house-browser.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/settlements-002-house-browser.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/settlements-002-house-browser-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
