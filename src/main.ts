@@ -1,6 +1,7 @@
 import './app/dialogueTimeControl'
 import { createApp } from './app/createApp'
-import { isModelTestMode } from './debug/debugMode'
+import { createHouseTestScene } from './debug/createHouseTestScene'
+import { isHouseTestMode, isModelTestMode } from './debug/debugMode'
 import { benchmarkScenarioFromUrl, isPerfUrlEnabled } from './perf/flags'
 import {
   beginNewSave,
@@ -19,6 +20,13 @@ if (!root) {
 }
 
 async function boot(container: HTMLElement): Promise<void> {
+  // `?houseTest` takes precedence over `?modelTest` and bypasses `createApp()`
+  // entirely — see `src/debug/createHouseTestScene.ts`.
+  if (isHouseTestMode()) {
+    void createHouseTestScene(container)
+    return
+  }
+
   if (isModelTestMode()) {
     void createApp(container, undefined, { modelTest: true })
     return

@@ -1,7 +1,7 @@
 # Plan: House Browser
 
 **Created:** 2026-08-26  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test all green, 1904 tests); browser/manual verification (§9) not yet performed.  
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~111~~  
 **Domain:** `settlements`

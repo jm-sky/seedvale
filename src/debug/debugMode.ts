@@ -1,3 +1,5 @@
+import { HOME_HOUSE_DEFINITIONS, type HouseDefinition } from '../assets/houseDefinitionExample'
+
 /** Lightweight debug switches — URL-driven, no world-config rebuild. */
 
 function urlFlag(name: string): boolean {
@@ -11,6 +13,21 @@ function urlFlag(name: string): boolean {
     return v !== '0' && v !== 'false' && v !== 'no'
   } catch {
     return false
+  }
+}
+
+/** Trimmed value of `?name=...`, or `null` if the param is absent or empty
+ *  (e.g. bare `?houseTest`, distinct from `urlFlag`'s boolean-only reading). */
+function urlParamValue(name: string): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const params = new URLSearchParams(window.location.search)
+    if (!params.has(name)) return null
+    const raw = params.get(name)
+    if (raw === null || raw.trim() === '') return null
+    return raw.trim()
+  } catch {
+    return null
   }
 }
 
@@ -29,6 +46,39 @@ export function isDebugMode(): boolean {
  *  normal world/save/UI bootstrap entirely. */
 export function isModelTestMode(): boolean {
   return urlFlag('modelTest')
+}
+
+/** `?houseTest` — standalone `HouseDefinition`/`HouseBuilder` preview scene
+ *  (renderer/camera/light/one `HouseAssembly` only), bypassing the normal
+ *  world/save/UI bootstrap entirely. Takes precedence over `?modelTest`. */
+export function isHouseTestMode(): boolean {
+  return urlFlag('houseTest')
+}
+
+export type HouseDefinitionLookup =
+  | { ok: true, definition: HouseDefinition }
+  | { ok: false, error: string }
+
+/** Resolves `?houseTest=ID` (or bare `?houseTest` for the first available
+ *  definition) against the same `HOME_HOUSE_DEFINITIONS` the settlement
+ *  runtime picks houses from — no separate registry. Unknown IDs come back
+ *  as a readable error listing the available definitions instead of
+ *  throwing, so the caller can end the debug scene cleanly. */
+export function houseDefinitionFromUrl(): HouseDefinitionLookup {
+  const available = HOME_HOUSE_DEFINITIONS
+  const id = urlParamValue('houseTest')
+
+  if (id === null) {
+    const first = available[0]
+    if (!first) return { ok: false, error: 'No house definitions available.' }
+    return { ok: true, definition: first }
+  }
+
+  const match = available.find((def) => def.id === id)
+  if (match) return { ok: true, definition: match }
+
+  const list = available.map((def) => def.id).join('\n')
+  return { ok: false, error: `Unknown house definition: ${id}\n\nAvailable:\n${list}` }
 }
 
 /** `?camdebug=1` — camera/renderer overlay for the mobile black-world diagnosis.
