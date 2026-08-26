@@ -142,10 +142,10 @@ const buildRow = (file: string, content: string, hasNotes: boolean): string => {
   ).trim()
 
   const depends = dependsRaw.toLowerCase() === 'none' ? '-' : dependsRaw
-  const marker = !isPlanned ? '' : (hasNotes ? ' 💡' : ' ◼️')
+  const marker = !isPlanned ? '' : (hasNotes ? '💡' : '◼️')
   const title = `${marker} \`${file}\``
 
-  return `| ${title.padEnd(40)} | - | ${priorityEmoji} | ${effort} | ${depends} |`
+  return `| ${title.padEnd(60)} | - | ${priorityEmoji} | ${effort} | ${depends} |`
 }
 
 const validatePlan = async (plan: PlanInfo): Promise<void> => {
