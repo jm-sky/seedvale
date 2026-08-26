@@ -3,7 +3,7 @@
 **Status:** `done`  
 **Created:** 2026-08-07  
 **Updated:** 2026-08-07  
-**Źródło:** `/home/madeyskij/projects/private/3d-portfolio` (szczególnie `src/library/`)
+**Źródło:** `/home/MY_USERNAME/projects/private/3d-portfolio` (szczególnie `src/library/`)
 
 ## Question
 

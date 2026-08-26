@@ -9,9 +9,9 @@
     "max_matches": 5
   },
   "paths": {
-    "requirements": "\\\\wsl.localhost\\Ubuntu-20.04\\home\\madeyskij\\projects\\private\\seedvale\\docs\\plans\\references\\mpfb2-npc-hero-assets-v1.json",
-    "inventory": "\\\\wsl.localhost\\Ubuntu-20.04\\home\\madeyskij\\projects\\private\\seedvale\\docs\\plans\\references\\mpfb2-asset-inventory.json",
-    "output": "\\\\wsl.localhost\\Ubuntu-20.04\\home\\madeyskij\\projects\\private\\seedvale\\docs\\plans\\references\\mpfb2-npc-hero-assets-v1-match.json"
+    "requirements": "\\\\wsl.localhost\\Ubuntu-20.04\\home\\MY_USERNAME\\projects\\private\\seedvale\\docs\\plans\\references\\mpfb2-npc-hero-assets-v1.json",
+    "inventory": "\\\\wsl.localhost\\Ubuntu-20.04\\home\\MY_USERNAME\\projects\\private\\seedvale\\docs\\plans\\references\\mpfb2-asset-inventory.json",
+    "output": "\\\\wsl.localhost\\Ubuntu-20.04\\home\\MY_USERNAME\\projects\\private\\seedvale\\docs\\plans\\references\\mpfb2-npc-hero-assets-v1-match.json"
   },
   "summary": {
     "requirements": 50,

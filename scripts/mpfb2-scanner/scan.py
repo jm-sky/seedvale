@@ -14,7 +14,7 @@ from datetime import timezone
 
 SCANNER_DIR = (
     r"\\wsl.localhost\Ubuntu-20.04"
-    r"\home\madeyskij\projects\private\seedvale"
+    r"\home\MY_USERNAME\projects\private\seedvale"
     r"\scripts\mpfb2-scanner"
 )
 

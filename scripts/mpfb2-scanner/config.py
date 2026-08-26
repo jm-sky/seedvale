@@ -7,7 +7,7 @@ import os
 
 WSL_DISTRO = "Ubuntu-20.04"
 
-WSL_REPO_PATH = "/home/madeyskij/projects/private/seedvale"
+WSL_REPO_PATH = "/home/MY_USERNAME/projects/private/seedvale"
 
 WSL_REPO = rf"\\wsl.localhost\{WSL_DISTRO}{WSL_REPO_PATH.replace('/', '\\')}"
 

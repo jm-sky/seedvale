@@ -7,17 +7,17 @@
   },
   "mpfb": {
     "module": "bl_ext.extensions_blender_org.mpfb",
-    "root": "C:\\Users\\madeyskij\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb"
+    "root": "C:\\Users\\MY_USERNAME\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb"
   },
   "resource_directories": [
-    "C:\\Users\\madeyskij\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\data",
-    "C:\\Users\\madeyskij\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\data\\poses",
-    "C:\\Users\\madeyskij\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\data\\rigs",
-    "C:\\Users\\madeyskij\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\data\\targets",
-    "C:\\Users\\madeyskij\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\entities\\clothes",
-    "C:\\Users\\madeyskij\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\entities\\material",
-    "C:\\Users\\madeyskij\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\ui\\presets",
-    "C:\\Users\\madeyskij\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\entities\\nodemodel\\v2\\materials"
+    "C:\\Users\\MY_USERNAME\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\data",
+    "C:\\Users\\MY_USERNAME\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\data\\poses",
+    "C:\\Users\\MY_USERNAME\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\data\\rigs",
+    "C:\\Users\\MY_USERNAME\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\data\\targets",
+    "C:\\Users\\MY_USERNAME\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\entities\\clothes",
+    "C:\\Users\\MY_USERNAME\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\entities\\material",
+    "C:\\Users\\MY_USERNAME\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\ui\\presets",
+    "C:\\Users\\MY_USERNAME\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\extensions_blender_org\\mpfb\\entities\\nodemodel\\v2\\materials"
   ],
   "summary": {
     "other": 38,
