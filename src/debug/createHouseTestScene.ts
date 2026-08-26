@@ -13,6 +13,7 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { buildConstructionCatalog } from '../assets/constructionCatalog'
+import { HOME_HOUSE_DEFINITIONS } from '../assets/houseDefinitionExample'
 import { createRenderer } from '../render/createRenderer'
 import {
   buildHouse,
@@ -30,6 +31,74 @@ function showError(container: HTMLElement, message: string): void {
   pre.style.cssText =
     'color:#fff;background:#402020;padding:16px;margin:0;white-space:pre-wrap;font:14px monospace;'
   container.appendChild(pre)
+}
+
+function createSelectHousePanel(container: HTMLElement): void {
+  const panel = document.createElement('div')
+  const css = `
+  .select-house-panel {
+    position:absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    width: 200px;
+    height: 200px;
+    color: #fff;
+    font-size: 1rem;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #000;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    z-index: 1000;
+    overflow: hidden;
+  }
+  .select-house-panel-content {
+    max-height: 100%;
+    overflow: auto;
+  }
+  .select-house-panel-content-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    padding: 0;
+    line-height: 1;
+  }
+  .select-house-panel-content-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .select-house-panel-content-list-item {
+    display: block;
+    padding: 0.5rem;
+    border-bottom: 1px solid #fffa;
+  }
+  .select-house-panel-content-list-item-link {
+    color: #fff;
+    text-decoration: none;
+  }
+  .select-house-panel-content-list-item-link:hover {
+    color: #ccc;
+    text-decoration: none;
+  }
+  `
+
+  const style = document.createElement('style')
+  style.textContent = css
+  document.head.appendChild(style)
+
+  const links = HOME_HOUSE_DEFINITIONS.map((def) =>
+    `<li class="select-house-panel-content-list-item"><a href="?houseTest=${def.id}" class="select-house-panel-content-list-item-link">${def.id}</a></li>`
+  ).join('')
+
+  panel.className = 'select-house-panel'
+  panel.innerHTML = `
+    <div class="select-house-panel-content">
+      <h1 class="select-house-panel-content-title">Select a house</h1>
+      <ul class="select-house-panel-content-list">
+        ${links}
+      </ul>
+    </div>
+  `
+  container.appendChild(panel)
 }
 
 /**
@@ -122,6 +191,8 @@ export async function createHouseTestScene(container: HTMLElement): Promise<() =
     requestAnimationFrame(tick)
   }
   requestAnimationFrame(tick)
+
+  createSelectHousePanel(container)
 
   return () => {
     running = false

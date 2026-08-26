@@ -468,10 +468,11 @@ export function capRoofWithGables(
   ends: HouseGableEnds,
   capRotationY = 0,
   wallTopY = PLASTER_WALL_TOP_Y,
+  roofOffsetY = 0,
 ): HouseRoof {
   return {
     parts: [
-      ...(capRoof(capAssetId, wallTopY, capRotationY).parts ?? []),
+      ...(capRoof(capAssetId, wallTopY+roofOffsetY, capRotationY).parts ?? []),
       ...gableParts(footprint, gableAssetId, ends, wallTopY),
     ],
   }
@@ -776,7 +777,7 @@ export const HOUSE_8X6_A: HouseDefinition = {
       { type: 'window', side: 'back', moduleIndex: 1 },
       { type: 'window', side: 'back', moduleIndex: 3 },
     ],
-    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack'),
+    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack', 0, PLASTER_WALL_TOP_Y, 0.75),
     label: 'Gospodarstwo',
     examine: 'Szerszy dom wiejski — izby przy drodze i oknami na podwórze.',
     sizeClass: 'house',
@@ -798,7 +799,7 @@ export const HOUSE_8X6_B: HouseDefinition = {
       { type: 'window', side: 'back', moduleIndex: 0 },
       { type: 'window', side: 'back', moduleIndex: 2 },
     ],
-    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack'),
+    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack', 0, PLASTER_WALL_TOP_Y, 0.75),
     label: 'Gospodarstwo',
     examine: 'Gospodarstwo z wejściem bliżej środka elewacji i oknami na obie strony podwórza.',
     sizeClass: 'house',
@@ -894,7 +895,7 @@ export const HOUSE_8X6_C: HouseDefinition = {
       { type: 'window', side: 'back', moduleIndex: 1 },
       { type: 'window', side: 'back', moduleIndex: 2 },
     ],
-    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack'),
+    roof: capRoofWithGables(ROOF_CAP_6X6, GABLE_8, { width: 8, depth: 6 }, 'frontBack', 0, PLASTER_WALL_TOP_Y, 0.75),
     label: 'Gospodarstwo',
     examine: 'Ceglane gospodarstwo z kominem i wejściem z lewej strony drogi.',
     sizeClass: 'house',

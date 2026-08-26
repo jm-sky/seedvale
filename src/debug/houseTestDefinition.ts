@@ -22,6 +22,7 @@ export type HouseDefinitionLookup =
 export function houseDefinitionFromUrl(): HouseDefinitionLookup {
   const available = HOME_HOUSE_DEFINITIONS
   const id = urlParamValue('houseTest')
+  const normalizeId = (id: string) => id.replace('_', '-').toLowerCase()
 
   if (id === null) {
     const first = available[0]
@@ -29,7 +30,7 @@ export function houseDefinitionFromUrl(): HouseDefinitionLookup {
     return { ok: true, definition: first }
   }
 
-  const match = available.find((def) => def.id === id)
+  const match = available.find((def) => normalizeId(def.id) === normalizeId(id))
   if (match) return { ok: true, definition: match }
 
   const list = available.map((def) => def.id).join('\n')
