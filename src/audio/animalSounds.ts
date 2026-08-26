@@ -3,10 +3,12 @@
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { PlayAt, WorldSoundPosition } from './createWorldAudio'
 
-export const ANIMAL_SOUND_URLS: Partial<Record<AnimalKind, string>> = {
-  chicken: '/sounds/animal-chicken-01.ogg',
-  cow: '/sounds/animal-cow-01.ogg',
-  wolf: '/sounds/animal-wolf-01.ogg',
+export const ANIMAL_SOUND_URLS: Partial<Record<AnimalKind, string[]>> = {
+  chicken: ['/sounds/animal-chicken-01.ogg', '/sounds/animal-chicken-02.ogg'],
+  cow: ['/sounds/animal-cow-01.ogg', '/sounds/animal-cow-02.ogg'],
+  wolf: ['/sounds/animal-wolf-01.ogg'],
+  horse: ['/sounds/animal-horse-01.ogg'],
+  sheep: ['/sounds/animal-sheep-01.ogg'],
 }
 
 /** Quiet enough under dialogue/ambient; chicken bed is long so keep it softer. */
@@ -24,7 +26,8 @@ export function playAnimalSound(
   playAt: PlayAt,
   position: WorldSoundPosition,
 ): void {
-  const url = ANIMAL_SOUND_URLS[kind]
+  const urls = ANIMAL_SOUND_URLS[kind] ?? []
+  const url = urls[Math.floor(Math.random() * urls.length)]
   if (!url) return
   playAt(url, position, ANIMAL_SFX_VOLUME[kind] ?? DEFAULT_ANIMAL_SFX_VOLUME)
 }
