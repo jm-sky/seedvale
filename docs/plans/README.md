@@ -44,7 +44,7 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 ## Next plan IDs
 
 - ai: `004`
-- fauna: `001`
+- fauna: `002`
 - items-player: `001`
 - npc: `002`
 - persistence: `001`
@@ -53,7 +53,7 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 - settlements-npcs: `003`
 - tools: `003`
 - ui-input: `004`
-- world: `002`
+- world: `004`
 - world-terrain: `003`
 
 This ids section is maintained automatically from the plan files.
@@ -120,6 +120,8 @@ Natural vegetation
 | 💡 `ui-input-002-ui-ux-interaction-and-action-system-polish.md`        | - | 🟡 | L | - |
 | ◼️ `tools-001-performance-benchmark-determinism-and-reliability.md`    | - | 🔴 | M | - |
 | ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
+|  ◼️ `fauna-001-rabies-and-animal-infection.md` | - | 🟡 | M | ~~188~~ |
+|  ◼️ `world-003-faster-application-startup.md` | - | 🔴 | M | - |
 
 ### Fresh new
 
