@@ -33,6 +33,7 @@ import { villageSizeConfig } from '../settlement/families'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
+import { useBootMark } from '../shared/bootMark'
 import {
   type ChunkManager,
   type ChunkManagerConfig,
@@ -387,6 +388,8 @@ type WorldSystemsSeed = {
  *  (fresh values) and `rebuildWorldBundle` (a snapshot of the bundle it is
  *  about to replace) — previously duplicated in full between the two. */
 async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
+  const { bootMark, bootMarkEnd } = useBootMark('buildWorldSystems')
+
   const {
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications,
     playAt, treeLifecycle, getWorldDays, dayNight,
@@ -414,9 +417,16 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
     waterLevel: config.terrain.waterLevel,
     enabled: config.postProcessing.waterReflections,
   })
+
+  bootMark('buildChunkManager')
   const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, treeLifecycle, getWorldDays, waterMirror)
+  bootMarkEnd('buildChunkManager')
+
   chunkManager.update(0, 0)
+
+  bootMark('waitForChunks')
   await chunkManager.waitForChunks(homeChunks())
+  bootMarkEnd('waitForChunks')
 
   const worldContext = createWorldContext(() => chunkManager, config, dayNight)
   const forest: SettlementForestHooks = {
@@ -451,11 +461,20 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
   // the same no-op `mining`/`foodSources` already fall back to when unset.
   let faunaForHunting: Fauna | null = null
   const hunting = createHuntingHooks(() => faunaForHunting, getWorldDays)
+
+  bootMark('buildSettlementsManager')
   const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates)
+  bootMarkEnd('buildSettlementsManager')
+
+  bootMark('buildFauna')
   const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
+  bootMarkEnd('buildFauna')
+
   faunaForHunting = fauna
+
   await preloadItemGlbModels()
   await preloadHeldToolModels()
+
   const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
   const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt, pointLightBudget)

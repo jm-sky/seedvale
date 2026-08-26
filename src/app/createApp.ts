@@ -63,6 +63,7 @@ import { buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
+import { useBootMark } from '../shared/bootMark'
 import { chunksNear } from '../terrain/chunkGrid'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { sampleFootstepSurface } from '../terrain/footstepSurface'
@@ -189,6 +190,8 @@ export async function createApp(
   initialSave?: SaveData | null,
   options?: { newGame?: boolean, modelTest?: boolean },
 ): Promise<() => void> {
+  const { bootMark, bootMarkEnd, bootMarksSummary } = useBootMark('createApp')
+
   // `?modelTest` — ultra-minimal NPC/player model+animation preview. Bails out
   // before any world/save/UI bootstrap below; see `createModelTestScene.ts`.
   if (options?.modelTest) {
@@ -260,9 +263,13 @@ export async function createApp(
   )
   const getWorldDays = () => dayNight.elapsedDays
 
-  const { renderer, labelRenderer, scene, camera, postProcessing, lights, sky, pointLightBudget, programCensus } =
-    createRenderStack(container, config)
+
+  bootMark('createRenderStack')
+  const { renderer, labelRenderer, scene, camera, postProcessing, lights, sky, pointLightBudget, programCensus } = createRenderStack(container, config)
+  bootMarkEnd('createRenderStack')
+
   setActiveProgramCensus(programCensus)
+
   if (typeof window !== 'undefined') {
     window.__seedvaleProgramCensus = programCensus
     window.__seedvalePointLightBudget = pointLightBudget
@@ -330,8 +337,9 @@ export async function createApp(
   // working across `rebuildWorldBundle()` for free (see `worldBundle.ts`'s
   // header comment).
   let nearbyPlayerWellTarget: NearbyPlayerWellLookup | null = null
-  const getNearbyPlayerWell: NearbyPlayerWellLookup = (x, z, maxDistance) =>
-    nearbyPlayerWellTarget?.(x, z, maxDistance) ?? null
+  const getNearbyPlayerWell: NearbyPlayerWellLookup = (x, z, maxDistance) => nearbyPlayerWellTarget?.(x, z, maxDistance) ?? null
+
+  bootMark('createWorldBundle')
   const bundle = await createWorldBundle(
     scene,
     config,
@@ -375,6 +383,8 @@ export async function createApp(
       status: 'active' as const,
     })),
   )
+  bootMarkEnd('createWorldBundle')
+
   nearbyPlayerWellTarget = (x, z, maxDistance) => bundle.playerWells.nearestCompleted(x, z, maxDistance)
   // Plan 159 §10 — fishing bait per spot (flat map, survives stream-out/in
   // for free) and a runtime-only per-spot cast counter feeding the
@@ -1270,11 +1280,16 @@ export async function createApp(
     geometries: renderer.info.memory.geometries,
     textures: renderer.info.memory.textures,
   }))
+
   const autoBench = benchmarkScenarioFromUrl()
+
   if (typeof window !== 'undefined') {
     window.__seedvaleRunBenchmark = (id, durationSec) => benchmark.run(id, durationSec)
   }
+
   if (autoBench) void benchmark.run(autoBench)
+
+  bootMarksSummary()
 
   return () => {
     renderLoop.dispose()

@@ -15,6 +15,11 @@ function urlFlag(name: string): boolean {
 }
 
 /** True when the URL has `?debug` / `?debug=1` (not `?debug=0`). */
+export function isBootMarkMode(): boolean {
+  return urlFlag('bootMark')
+}
+
+/** True when the URL has `?debug` / `?debug=1` (not `?debug=0`). */
 export function isDebugMode(): boolean {
   return urlFlag('debug')
 }
