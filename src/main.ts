@@ -1,5 +1,6 @@
 import './app/dialogueTimeControl'
 import { createApp } from './app/createApp'
+import { isModelTestMode } from './debug/debugMode'
 import { benchmarkScenarioFromUrl, isPerfUrlEnabled } from './perf/flags'
 import {
   beginNewSave,
@@ -18,6 +19,11 @@ if (!root) {
 }
 
 async function boot(container: HTMLElement): Promise<void> {
+  if (isModelTestMode()) {
+    void createApp(container, undefined, { modelTest: true })
+    return
+  }
+
   const slots = await listSaves()
   const unattended = Boolean(benchmarkScenarioFromUrl() || isPerfUrlEnabled())
   if (unattended) {

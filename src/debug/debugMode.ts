@@ -19,6 +19,13 @@ export function isDebugMode(): boolean {
   return urlFlag('debug')
 }
 
+/** `?modelTest` — ultra-minimal NPC/player model+animation test scene
+ *  (renderer/camera/light/one model/one flat plane only), bypassing the
+ *  normal world/save/UI bootstrap entirely. */
+export function isModelTestMode(): boolean {
+  return urlFlag('modelTest')
+}
+
 /** `?camdebug=1` — camera/renderer overlay for the mobile black-world diagnosis.
  *  Off in production; not wired into the normal HUD. */
 export function isCameraDebugMode(): boolean {

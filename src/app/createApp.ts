@@ -20,6 +20,7 @@ import {
   createWorldConfig,
   defaultTerrainConfig,
 } from '../config/worldConfig'
+import { createModelTestScene } from '../debug/createModelTestScene'
 import { isDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { installNpcDebugApi } from '../debug/npcDebugApi'
 import { createNpcInspectTrigger } from '../debug/npcInspectTrigger'
@@ -186,8 +187,14 @@ function terrainModificationsFromSave(saved: readonly SaveTerrainModification[])
 export async function createApp(
   container: HTMLElement,
   initialSave?: SaveData | null,
-  options?: { newGame?: boolean },
+  options?: { newGame?: boolean, modelTest?: boolean },
 ): Promise<() => void> {
+  // `?modelTest` — ultra-minimal NPC/player model+animation preview. Bails out
+  // before any world/save/UI bootstrap below; see `createModelTestScene.ts`.
+  if (options?.modelTest) {
+    return createModelTestScene(container)
+  }
+
   // NB: must NOT be `seedvale-touch` — that's the touch-overlay component's own
   // block class (`.seedvale-touch { position:absolute; inset:0; z-index:7;
   // pointer-events:none }` in index.html). Putting it on <body> made the whole
