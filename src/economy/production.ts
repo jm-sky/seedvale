@@ -1,4 +1,5 @@
 import type { Role } from '../ai/characters'
+import type { Inventory, ItemAmount } from '../items/Inventory'
 import type { StockAmount } from './stock'
 
 /**
@@ -11,6 +12,14 @@ export type ProductionDef = {
   role?: Role
   inputs: readonly StockAmount[]
   outputs: readonly StockAmount[]
+  /** Item-based inputs/outputs (settlements-npcs-003) — for recipes whose
+   *  materials/products are plain `Inventory` items (household-held
+   *  branch/beam/arrow) rather than settlement `EconomicKind` stock. Applied
+   *  via `Inventory.applyRecipe`/`produceFirstAvailableItemRecipe` below,
+   *  never `SettlementEconomy`. Optional so every existing stock-only
+   *  `ProductionDef` is unaffected. */
+  itemInputs?: readonly ItemAmount[]
+  itemOutputs?: readonly ItemAmount[]
 }
 
 /** Wood source → woodcutter chop/deposit → wood stock. */
@@ -44,6 +53,57 @@ export const MINING_PRODUCTION: ProductionDef = {
   role: 'miner',
   inputs: [],
   outputs: [],
+}
+
+/**
+ * Hunter arrow production (settlements-npcs-003, completing plan 178's
+ * `beginArrowCrafting`) — item-for-item recipes against `Household.items`,
+ * not `EconomicStock`: `branch`/`beam`/`arrow` are `ItemKind`s, not
+ * `EconomicKind`s (plan 187 split `branch`/`beam` out of the old wood
+ * model). Two alternative recipes rather than one `BY_ROLE` entry because
+ * the hunter must prefer branch over beam (§9) — see
+ * `produceFirstAvailableItemRecipe`.
+ */
+export const ARROWS_FROM_BRANCH_PRODUCTION: ProductionDef = {
+  id: 'hunter.arrows.branch',
+  role: 'hunter',
+  inputs: [],
+  outputs: [],
+  itemInputs: [{ kind: 'branch', amount: 1 }],
+  itemOutputs: [{ kind: 'arrow', amount: 1 }],
+}
+
+export const ARROWS_FROM_BEAM_PRODUCTION: ProductionDef = {
+  id: 'hunter.arrows.beam',
+  role: 'hunter',
+  inputs: [],
+  outputs: [],
+  itemInputs: [{ kind: 'beam', amount: 1 }],
+  itemOutputs: [{ kind: 'arrow', amount: 8 }],
+}
+
+/** Priority order (branch before beam) — deterministic, no random pick. */
+export const HUNTER_ARROW_PRODUCTIONS: readonly ProductionDef[] = [
+  ARROWS_FROM_BRANCH_PRODUCTION,
+  ARROWS_FROM_BEAM_PRODUCTION,
+]
+
+/**
+ * Applies the first recipe in `defs` whose item inputs are available in
+ * `inventory`, atomically consuming inputs and producing outputs via
+ * `Inventory.applyRecipe`. Returns the applied def, or null when none of
+ * them can run. Generic priority-ordered item production — not hunter/arrow
+ * specific, so a future item recipe with more than one viable material can
+ * reuse it directly.
+ */
+export function produceFirstAvailableItemRecipe(
+  inventory: Inventory,
+  defs: readonly ProductionDef[],
+): ProductionDef | null {
+  for (const def of defs) {
+    if (inventory.applyRecipe(def.itemInputs ?? [], def.itemOutputs ?? [])) return def
+  }
+  return null
 }
 
 const BY_ROLE: Partial<Record<Role, ProductionDef>> = {

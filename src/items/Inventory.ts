@@ -26,6 +26,11 @@ const DEFAULT_MAX_WEIGHT = 20
  *  pre-164 tests). */
 export const DEFAULT_MAX_SIZE = 60
 
+/** Plain item quantity — the `Inventory` counterpart of `economy/stock.ts`'s
+ *  `StockAmount`, for recipes whose inputs/outputs are held items rather than
+ *  settlement `EconomicKind` stock (settlements-npcs-003). */
+export type ItemAmount = { kind: ItemKind, amount: number }
+
 export type SaveItemInstance = {
   id: string
   kind: ItemKind
@@ -316,6 +321,20 @@ export class Inventory {
       if (n > 0) return false
     }
     return this.instances.size === 0
+  }
+
+  /** Atomic item recipe (settlements-npcs-003) — mirrors
+   *  `EconomicStock.applyRecipe`'s all-or-nothing shape, but against this
+   *  plain-item inventory instead of settlement stock: false and unchanged
+   *  when any input is short, otherwise every input is removed and every
+   *  output added. Generic — not arrow/hunter specific. */
+  applyRecipe(inputs: readonly ItemAmount[], outputs: readonly ItemAmount[]): boolean {
+    for (const { kind, amount } of inputs) {
+      if (!this.has(kind, amount)) return false
+    }
+    for (const { kind, amount } of inputs) this.remove(kind, amount)
+    for (const { kind, amount } of outputs) this.add(kind, amount)
+    return true
   }
 
   remove(kind: ItemKind, n: number): boolean {

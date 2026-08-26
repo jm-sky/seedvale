@@ -265,3 +265,35 @@ describe('Inventory gabarite capacity (plan 164)', () => {
     expect(inv.addInstance(trap)).toBe(false)
   })
 })
+
+describe('Inventory.applyRecipe (settlements-npcs-003)', () => {
+  it('consumes every input and produces every output atomically', () => {
+    const inv = new Inventory({ branch: 1 }, Infinity)
+    expect(inv.applyRecipe([{ kind: 'branch', amount: 1 }], [{ kind: 'arrow', amount: 1 }])).toBe(true)
+    expect(inv.count('branch')).toBe(0)
+    expect(inv.count('arrow')).toBe(1)
+  })
+
+  it('a single recipe can produce more than one output unit (1 beam -> 8 arrows)', () => {
+    const inv = new Inventory({ beam: 1 }, Infinity)
+    expect(inv.applyRecipe([{ kind: 'beam', amount: 1 }], [{ kind: 'arrow', amount: 8 }])).toBe(true)
+    expect(inv.count('beam')).toBe(0)
+    expect(inv.count('arrow')).toBe(8)
+  })
+
+  it('leaves the inventory unchanged when an input is short', () => {
+    const inv = new Inventory({}, Infinity)
+    expect(inv.applyRecipe([{ kind: 'branch', amount: 1 }], [{ kind: 'arrow', amount: 1 }])).toBe(false)
+    expect(inv.count('arrow')).toBe(0)
+  })
+
+  it('does not partially consume a multi-input recipe', () => {
+    const inv = new Inventory({ branch: 1 }, Infinity)
+    expect(inv.applyRecipe(
+      [{ kind: 'branch', amount: 1 }, { kind: 'beam', amount: 1 }],
+      [{ kind: 'arrow', amount: 1 }],
+    )).toBe(false)
+    expect(inv.count('branch')).toBe(1)
+    expect(inv.count('arrow')).toBe(0)
+  })
+})

@@ -1,7 +1,7 @@
 # Plan: Hunter Arrow Production
 
 **Created:** 2026-08-26  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test); browser/gameplay not yet verified. See [implementation notes](./implementation-notes/settlements-npcs-003-hunter-arrow-production-implementation-notes.md).
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~178~~ ~~184~~ ~~187~~  
 **Domain:** `settlements-npcs`
@@ -399,21 +399,21 @@ i dokumentację/implementację planu 184 oraz 187.
 
 ## 16. Definition of Done
 
-- [ ] `branch` jest używany jako materiał do produkcji strzał.
-- [ ] `beam` jest używany jako alternatywny materiał.
-- [ ] `1 branch → 1 arrow`.
-- [ ] `1 beam → 8 arrows`.
-- [ ] Branch ma priorytet nad beam.
-- [ ] Produkcja korzysta z istniejącego/generycznego production mechanism.
-- [ ] Nie istnieje równoległy Hunter-specific crafting system.
-- [ ] Strzały trafiają do `Household.items`.
-- [ ] Materiał wejściowy jest zużywany.
-- [ ] `HUNTER_ARROW_STOCK_CAP` działa jako próg rozpoczęcia produkcji.
-- [ ] Pojedyncza receptura może przekroczyć cap.
-- [ ] Hunter produkuje podczas normalnej pracy.
-- [ ] Ranged combat nadal prawidłowo zużywa strzały.
-- [ ] Istnieją testy jednostkowe/integracyjne.
-- [ ] Testy, lint, typecheck i build przechodzą.
+- [x] `branch` jest używany jako materiał do produkcji strzał.
+- [x] `beam` jest używany jako alternatywny materiał.
+- [x] `1 branch → 1 arrow`.
+- [x] `1 beam → 8 arrows`.
+- [x] Branch ma priorytet nad beam.
+- [x] Produkcja korzysta z istniejącego/generycznego production mechanism (`ProductionDef` rozszerzony o `itemInputs`/`itemOutputs`, `Inventory.applyRecipe`).
+- [x] Nie istnieje równoległy Hunter-specific crafting system.
+- [x] Strzały trafiają do `Household.items`.
+- [x] Materiał wejściowy jest zużywany.
+- [x] `HUNTER_ARROW_STOCK_CAP` działa jako próg rozpoczęcia produkcji.
+- [x] Pojedyncza receptura może przekroczyć cap.
+- [x] Hunter produkuje podczas normalnej pracy.
+- [x] Ranged combat nadal prawidłowo zużywa strzały (niezmienione).
+- [x] Istnieją testy jednostkowe/integracyjne.
+- [x] Testy, lint, typecheck i build przechodzą.
 - [ ] Browser/gameplay verification wykonane.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
