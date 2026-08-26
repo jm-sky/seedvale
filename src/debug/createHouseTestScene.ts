@@ -21,7 +21,7 @@ import {
   houseDefinitionAssetIds,
   loadHousePartTemplates,
 } from '../settlement/houseBuilder'
-import { houseDefinitionFromUrl } from './debugMode'
+import { houseDefinitionFromUrl } from './houseTestDefinition'
 
 function showError(container: HTMLElement, message: string): void {
   console.error('[houseTest]', message)
