@@ -122,7 +122,6 @@ Natural vegetation
 | ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
 | ◼️ `fauna-001-rabies-and-animal-infection.md`                          | - | 🟡 | M | ~~188~~ |
 | ◼️ `world-003-faster-application-startup.md`                           | - | 🔴 | M | - |
-| ◼️ `settlements-002-house-browser.md`                                  | - | 🟡 | S | ~~111~~ |
 
 ### Fresh new
 
