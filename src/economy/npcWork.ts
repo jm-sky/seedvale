@@ -1,7 +1,13 @@
 import type { Role } from '../ai/characters'
+import type { Household } from '../settlement/household'
 import type { SettlementEconomy } from './settlementEconomy'
 import { WOODSHED_DEVELOPMENT } from './development'
-import { productionForRole, WOODCUTTING_PRODUCTION } from './production'
+import {
+  HUNTER_ARROW_PRODUCTIONS,
+  produceFirstAvailableItemRecipe,
+  productionForRole,
+  WOODCUTTING_PRODUCTION,
+} from './production'
 
 /**
  * Chop → deposit completion. Tree harvest stays in `NpcAgent`; this is the
@@ -23,6 +29,17 @@ export function commitRoleWork(economy: SettlementEconomy, role: Role): boolean 
   if (!def) return false
   if (def.id === WOODCUTTING_PRODUCTION.id) return false
   return economy.produce(def)
+}
+
+/**
+ * Hunter arrow production completion (settlements-npcs-003) — a thin adapter
+ * from `NpcAgent`'s `work` completion to the generic item-recipe mechanism,
+ * so `NpcAgent` doesn't need to know the branch/beam recipe details. Tries
+ * `household.items`'s branch recipe before beam (§9); returns false when
+ * neither material is available.
+ */
+export function commitHunterArrowProduction(household: Household): boolean {
+  return produceFirstAvailableItemRecipe(household.items, HUNTER_ARROW_PRODUCTIONS) !== null
 }
 
 /** Reserve then pay the woodshed once stock can cover it. Idempotent. */

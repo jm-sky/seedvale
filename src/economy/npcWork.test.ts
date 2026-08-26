@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { createHousehold } from '../settlement/household'
 import { WOODSHED_DEVELOPMENT } from './development'
-import { commitRoleWork, commitWoodcutterDeposit } from './npcWork'
+import { commitHunterArrowProduction, commitRoleWork, commitWoodcutterDeposit } from './npcWork'
 import { FARMING_PRODUCTION } from './production'
 import { createSettlementEconomy } from './settlementEconomy'
 
@@ -49,5 +50,38 @@ describe('commitRoleWork', () => {
     const eco = createSettlementEconomy('s1', { wood: 1 }, DEMANDS)
     expect(commitRoleWork(eco, 'guard')).toBe(false)
     expect(commitRoleWork(eco, 'trader')).toBe(false)
+  })
+})
+
+describe('commitHunterArrowProduction (settlements-npcs-003)', () => {
+  it('produces arrows into Household.items and consumes the household branch', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.add('branch', 1)
+    expect(commitHunterArrowProduction(household)).toBe(true)
+    expect(household.items.count('branch')).toBe(0)
+    expect(household.items.count('arrow')).toBe(1)
+  })
+
+  it('falls back to beam once branch is exhausted', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.add('beam', 1)
+    expect(commitHunterArrowProduction(household)).toBe(true)
+    expect(household.items.count('beam')).toBe(0)
+    expect(household.items.count('arrow')).toBe(8)
+  })
+
+  it('returns false without touching Household.items when neither material is available', () => {
+    const household = createHousehold('h', 's', 'home')
+    expect(commitHunterArrowProduction(household)).toBe(false)
+    expect(household.items.count('arrow')).toBe(0)
+  })
+
+  it('a normal (non-hunter) household is unaffected — no arrow recipe runs implicitly', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.add('branch', 2)
+    // Regular role-work dispatch (commitRoleWork) never touches Household.items.
+    expect(commitRoleWork(createSettlementEconomy('s', {}, []), 'farmer')).toBe(true)
+    expect(household.items.count('branch')).toBe(2)
+    expect(household.items.count('arrow')).toBe(0)
   })
 })

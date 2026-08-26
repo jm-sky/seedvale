@@ -2,14 +2,19 @@ export { type DevelopmentDef, type DevelopmentStatus, WOODSHED_DEVELOPMENT } fro
 export { demandsFor, initialStockFor, type SettlementEconomySeed } from './initial'
 export { ECONOMIC_KINDS, type EconomicKind, isEconomicKind } from './kinds'
 export {
+  commitHunterArrowProduction,
   commitRoleWork,
   commitWoodcutterDeposit,
   tryAdvanceDevelopment,
 } from './npcWork'
 export {
+  ARROWS_FROM_BEAM_PRODUCTION,
+  ARROWS_FROM_BRANCH_PRODUCTION,
   FARMING_PRODUCTION,
   FISHING_PRODUCTION,
+  HUNTER_ARROW_PRODUCTIONS,
   MINING_PRODUCTION,
+  produceFirstAvailableItemRecipe,
   type ProductionDef,
   productionForRole,
   WOODCUTTING_PRODUCTION,

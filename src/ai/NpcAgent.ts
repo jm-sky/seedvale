@@ -36,6 +36,7 @@ import { createRangedAttackLifecycle } from '../combat/rangedLifecycle'
 import { isDebugMode } from '../debug/debugMode'
 import { createNpcTraceBuffer, type NpcTraceBuffer, type NpcTraceEvent } from '../debug/npcTrace'
 import {
+  commitHunterArrowProduction,
   commitRoleWork,
   commitWoodcutterDeposit,
   type SettlementEconomy,
@@ -524,14 +525,13 @@ const HUNT_MAX_KILLS_PER_TRIP = 3
 const HUNT_YIELD_KINDS: readonly ItemKind[] = [
   'raw_meat', 'deer_meat', 'wolf_meat', 'boar_meat', 'rabbit_meat', 'beef', 'hide',
 ]
-/** Arrow crafting (plan 178 §9) — consumes the household's own `wood`
- *  economic stock (already replenished by the normal `wood`-duty chop→
- *  deposit chain every non-trader NPC, hunter included, already runs) rather
- *  than inventing a new raw-material item kind. Capped so a hunter doesn't
- *  craft arrows forever once the household is well-stocked — beyond the cap,
- *  the household's arrow count is itself the sellable surplus (plan §9/§10). */
-const ARROW_CRAFT_WOOD_COST = 1
-const ARROW_CRAFT_YIELD = 4
+/** Arrow crafting (settlements-npcs-003, completing plan 178 §9) — the
+ *  recipe itself (branch/beam → arrow, priority order) lives in
+ *  `economy/production.ts`'s `HUNTER_ARROW_PRODUCTIONS`; this cap is only
+ *  the *threshold to start* another production cycle, not a hard output
+ *  limit — a single recipe may legitimately push the stock above it
+ *  (§7: `1 beam → 8 arrows` can take `9/24` to `17/24`). Beyond the cap, the
+ *  household's arrow count is itself the sellable surplus (plan 178 §9/§10). */
 const HUNTER_ARROW_STOCK_CAP = 24
 
 /** Plan 176 §6.1 gates — an NPC only considers tidying a garden plot it has
@@ -2832,28 +2832,27 @@ export class NpcAgent {
   }
 
   /**
-   * Arrow production (plan 178 §9) — `hunter`'s `work` schedule block tries
-   * this before falling back to the pre-178 idle workplace stand, mirroring
-   * `beginOreGathering`'s "real work before idle stand" shape exactly.
-   * Consumes the household's own `wood` economic stock (already replenished
-   * by the ordinary `wood`-duty chop→deposit chain any non-trader NPC runs,
-   * hunter included) rather than inventing a new raw-material item — see
-   * `ARROW_CRAFT_WOOD_COST`'s doc comment. Returns `false` (idle stand
-   * instead) when the household has no `wood` to spend or is already at
-   * `HUNTER_ARROW_STOCK_CAP`, so a hunter never crafts forever.
+   * Arrow production (settlements-npcs-003, completing plan 178 §9) —
+   * `hunter`'s `work` schedule block tries this before falling back to the
+   * idle workplace stand, mirroring `beginOreGathering`'s "real work before
+   * idle stand" shape exactly. A thin adapter to the generic item-recipe
+   * mechanism (`commitHunterArrowProduction`/`HUNTER_ARROW_PRODUCTIONS`) —
+   * this method holds no recipe details itself. Returns `false` (idle stand
+   * instead) when the household is already at `HUNTER_ARROW_STOCK_CAP` or
+   * has neither `branch` nor `beam` to spend, so a hunter never crafts
+   * forever nor starts a work action that can't produce anything.
    */
   private beginArrowCrafting(): boolean {
     const household = this.household
     if (!household || !this.workplace) return false
     if (household.items.count('arrow') >= HUNTER_ARROW_STOCK_CAP) return false
-    if (!household.stock.has('wood', ARROW_CRAFT_WOOD_COST)) return false
+    if (!household.items.has('branch', 1) && !household.items.has('beam', 1)) return false
     this.startAction({
       kind: 'work',
       destination: copyVec3(this.workplace.position),
       durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
       onComplete: () => {
-        if (!household.stock.remove('wood', ARROW_CRAFT_WOOD_COST)) return
-        household.items.add('arrow', ARROW_CRAFT_YIELD)
+        commitHunterArrowProduction(household)
       },
     })
     return true
