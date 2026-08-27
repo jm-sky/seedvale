@@ -58,8 +58,20 @@ const EAGER_NEIGHBOR_COUNT = 2
 export type SettlementsManager = {
   /** Settlement at grid cell (0,0) — always loaded, where the player spawns.
    *  Fauna/item spawners anchor to this one only (v1 scope: no per-settlement
-   *  resource distribution, see multi-settlements plan). */
-  home: Settlement
+   *  resource distribution, see multi-settlements plan). `null` until
+   *  `homeReady` resolves (world-003 "faster application startup") — home is
+   *  built the same way a streamed-in neighbor is (`ensureLoaded`), just
+   *  kicked off immediately instead of waiting for the player to wander into
+   *  range. A live read (not a value snapshotted at manager-creation time),
+   *  same "read through the reference" convention as `WorldBundle`. Callers
+   *  that only need the site position/id/size before the full settlement is
+   *  built should use `getHomeDef()` instead of waiting on this. */
+  home: Settlement | null
+  /** Resolves once `home` above is non-null — the single explicit readiness
+   *  signal for consumers (`app/worldBundle.ts`'s deferred item spawners/
+   *  drying racks/hives) that actually need the built settlement (landmarks/
+   *  NPCs/livestock), not just its site/id/size. */
+  homeReady: Promise<Settlement>
   /** Streams settlements in/out by distance and ticks every loaded one's NPCs
    *  (and owned livestock, see `createSettlement.ts`). `timeOfDay`/`dayFactor`/
    *  `litFires`/`villages` are forwarded straight through to each loaded
@@ -224,11 +236,38 @@ export async function createSettlementsManager(
   // gap as `Household` — see `npcRelationships.ts`.
   const npcRelationships = createNpcRelationships()
 
+  const entries = new Map<string, Entry>()
+
+  // Remembered so a settlement that streams in later (or finishes its async
+  // build after `setDayNight` already ran for this tick) starts its house
+  // lights at the current time of day instead of the door default.
+  let lastDayNight = 0
+
+  // Set by `dispose()` — guards the home-settlement continuation below the
+  // same way `ensureLoaded`'s "player wandered back out of range" check does
+  // for a streamed-in neighbor (see its `.then()` further down): without
+  // this, a manager torn down while home is still building would have its
+  // continuation add a freshly-built `Settlement` (meshes, NPCs) to a scene
+  // that's already gone.
+  let disposed = false
+
   const homeDef = defFor({ gx: 0, gz: 0 })
   if (!homeDef) {
     throw new Error('[SettlementsManager] home settlement (0,0) failed to generate')
   }
-  const homeSettlement = await createSettlement(
+  // Built the same way a streamed-in neighbor is below (`ensureLoaded`) —
+  // kicked off immediately rather than waiting for the player to wander into
+  // range, but NOT awaited before this function returns (world-003 "faster
+  // application startup" §3): the home settlement's full build (houses/
+  // NPCs/livestock, `buildSettlementProps`) is the single largest piece of
+  // `createWorldBundle`'s critical path, but nothing about the player's own
+  // spawn/movement needs it — only `homeDef`'s site/id/size (already
+  // synchronous, see `getHomeDef()`) do. A caller that genuinely needs the
+  // built settlement (landmarks/NPCs/livestock — `app/worldBundle.ts`'s
+  // deferred item spawners/drying racks/hives) awaits `homeReady` instead of
+  // reading `home` directly.
+  let homeSettlement: Settlement | null = null
+  const homeReadyPromise: Promise<Settlement> = createSettlement(
     scene,
     sampleHeight,
     waterLevel,
@@ -253,15 +292,27 @@ export async function createSettlementsManager(
     foodSources,
     hunting,
     npcRelationships,
-  )
-
-  const entries = new Map<string, Entry>()
-  entries.set(homeDef.id, { def: homeDef, settlement: homeSettlement, pendingPromise: null })
-
-  // Remembered so a settlement that streams in later (or finishes its async
-  // build after `setDayNight` already ran for this tick) starts its house
-  // lights at the current time of day instead of the door default.
-  let lastDayNight = 0
+  ).then((settlement) => {
+    if (disposed) {
+      settlement.dispose()
+      throw new Error('[SettlementsManager] disposed before home settlement finished building')
+    }
+    homeSettlement = settlement
+    const entry = entries.get(homeDef.id)
+    if (entry) entry.settlement = settlement
+    else entries.set(homeDef.id, { def: homeDef, settlement, pendingPromise: null })
+    settlement.setDayNight(lastDayNight)
+    syncMidpoints()
+    return settlement
+  })
+  entries.set(homeDef.id, {
+    def: homeDef,
+    settlement: null,
+    pendingPromise: homeReadyPromise.then(
+      () => undefined,
+      () => undefined,
+    ),
+  })
 
   // Midpoint road signposts (roads-and-paths plan, part 2) don't belong to
   // either settlement's own group/lifecycle — a pair only needs *some* known
@@ -425,7 +476,10 @@ export async function createSettlementsManager(
   }
 
   return {
-    home: homeSettlement,
+    get home() {
+      return homeSettlement
+    },
+    homeReady: homeReadyPromise,
     setDayNight(t) {
       lastDayNight = t
       for (const entry of entries.values()) entry.settlement?.setDayNight(t)
@@ -476,6 +530,7 @@ export async function createSettlementsManager(
     snapshotHouseholds: () => households.serialize(),
     snapshotNpcStates: () => npcStates.serialize(),
     dispose() {
+      disposed = true
       for (const entry of entries.values()) entry.settlement?.dispose()
       for (const instances of midpoints.values()) {
         for (const inst of instances) disposeMidpointInstance(inst)

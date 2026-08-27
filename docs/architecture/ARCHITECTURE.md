@@ -46,6 +46,8 @@ are orientation, not a contract.
 
 `WorldBundle` is mutated in place during rebuild. Callers that need a live world reference should retain the bundle and read its fields when used; they must not capture a bundle field before a rebuild and expect it to remain current. Plan 054 audited long-lived closures against this rule and is done.
 
+`createWorldBundle()`'s initial boot (not `rebuildWorldBundle()`) applies this same "mutate fields on the stable object" mechanism to its own return, not just to a later rebuild (plan `world-003`): it resolves as soon as the systems needed for the player to spawn/move/interact are ready, handing back `Fauna`/`ItemSpawners`/`DryingRacks`/`Beehives` as inert stubs (see `worldBundle.ts`'s `createEmpty*`) that get replaced in place once its `backgroundReady` promise resolves. `SettlementsManager.home` is `Settlement | null` for the same reason — the home settlement's own full build (houses/NPCs/livestock) is kicked off immediately but not awaited before `SettlementsManager` returns; a caller that needs the built settlement (not just its site/id/size, already available synchronously via `getHomeDef()`) awaits `SettlementsManager.homeReady`. `rebuildWorldBundle()` awaits both before returning, so it keeps its original fully-synchronous contract — only a fresh boot's caller (`createApp.ts`) sees the gap.
+
 ## Major subsystems
 
 ```text

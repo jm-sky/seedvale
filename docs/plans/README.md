@@ -119,7 +119,6 @@ Natural vegetation
 | ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`               | - | 🟡 | S | ~~151~~ |
 | 💡 `settlements-001-house-collision-geometry.md`                       | - | 🔴 | L | 111 |
 | ◼️ `fauna-001-rabies-and-animal-infection.md`                          | - | 🟡 | M | ~~188~~ |
-| ◼️ `world-003-faster-application-startup.md`                           | - | 🔴 | M | - |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
 | ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
 | 💡 `ui-input-002-ui-ux-interaction-and-action-system-polish.md`        | - | 🟡 | L | - |
@@ -197,6 +196,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-19--168--settlement-lodging-and-sleep.md` | [notes](./implementation-notes/2026-08-19--168--settlement-lodging-and-sleep-implementation-notes.md) |
 | `2026-08-19--169--house-interior-furniture-and-bed-anchors.md` | [notes](./implementation-notes/2026-08-19--169--house-interior-furniture-and-bed-anchors-implementation-notes.md) |
 | `world-terrain-002-terrain-modification-and-land-preparation.md` | [notes](./implementation-notes/world-terrain-002-terrain-modification-and-land-preparation-implementation-notes.md) |
+| `world-003-faster-application-startup.md` | [notes](./implementation-notes/world-003-faster-application-startup-implementation-notes.md) |
 
 ---
 

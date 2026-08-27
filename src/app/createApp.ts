@@ -61,6 +61,7 @@ import { createPlayerTorch } from '../player/PlayerTorch'
 import { QuestManager } from '../quests/QuestManager'
 import { buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
+import { settlementSpawnPoint } from '../settlement/createSettlement'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { useBootMark } from '../shared/bootMark'
@@ -340,8 +341,18 @@ export async function createApp(
   let nearbyPlayerWellTarget: NearbyPlayerWellLookup | null = null
   const getNearbyPlayerWell: NearbyPlayerWellLookup = (x, z, maxDistance) => nearbyPlayerWellTarget?.(x, z, maxDistance) ?? null
 
+  // World-003 "faster application startup" — bumped by the rebuild handler
+  // and by this function's own teardown below, so a `createWorldBundle()`
+  // background phase (fauna/item spawners/drying racks/hives, still
+  // building when this changes) knows to dispose what it built instead of
+  // assigning it onto a `bundle` a rebuild has already replaced, or that's
+  // already torn down. See `worldBundle.ts`'s `buildWorldSystems` doc
+  // comment for the full mechanism.
+  let worldGeneration = 0
+  const initialWorldGeneration = worldGeneration
+
   bootMark('createWorldBundle')
-  const bundle = await createWorldBundle(
+  const { bundle, backgroundReady: worldBundleBackgroundReady } = await createWorldBundle(
     scene,
     config,
     collectedItemIds,
@@ -383,8 +394,13 @@ export async function createApp(
       completedWork: p.completedWork,
       status: 'active' as const,
     })),
+    () => worldGeneration !== initialWorldGeneration,
   )
   bootMarkEnd('createWorldBundle')
+  // Already logged inside `worldBundle.ts` on failure — nothing else to do
+  // here. On success, `bundle`'s stub fauna/item spawners/drying racks/
+  // hives have already been replaced in place by the time this resolves.
+  worldBundleBackgroundReady.catch(() => {})
 
   nearbyPlayerWellTarget = (x, z, maxDistance) => bundle.playerWells.nearestCompleted(x, z, maxDistance)
   // Plan 159 §10 — fishing bait per spot (flat map, survives stream-out/in
@@ -486,7 +502,15 @@ export async function createApp(
     restorePersistedNeeds(player.needs, initialSave.playerNeeds)
     restorePersistedSkills(player.skills, initialSave.skills)
   } else {
-    player.setPosition(bundle.settlementsManager.home.spawn.x, bundle.settlementsManager.home.spawn.z)
+    // Computed straight from `homeDef` (site position, sync the moment
+    // `SettlementsManager` resolves it) rather than waiting on
+    // `bundle.settlementsManager.home` — the home settlement's full build
+    // (houses/NPCs/livestock) is deferred to the background (world-003
+    // "faster application startup" §3) and isn't needed for the player's
+    // spawn point, which `settlementSpawnPoint` computes identically to
+    // `createSettlement.ts`'s own `spawn` field.
+    const homeSpawn = settlementSpawnPoint(bundle.settlementsManager.getHomeDef(), bundle.chunkManager.sampleHeight)
+    player.setPosition(homeSpawn.x, homeSpawn.z)
   }
   player.setName(config.player.name)
   player.setMoveAudio(worldAudio.playAt)
@@ -577,14 +601,20 @@ export async function createApp(
   // chunk/terrain-agnostic) — landmarks never change once generated, so
   // there's nothing to re-resolve at runtime, unlike `kill_target_animal`/
   // `find_animal`'s live `AnimalTargetResolver` below (plan 132).
-  const landmarkQuests = buildLandmarkQuests((kind) =>
-    bundle.chunkManager.findLandmarkNear(
+  const landmarkQuests = buildLandmarkQuests((kind) => {
+    // `getHomeDef()` (not `.home.center`) — always available, independent of
+    // whether the home settlement's background build (world-003 §3) has
+    // finished; `homeDef.x/z` is the same value `Settlement.center` resolves
+    // to (see `createSettlement.ts`'s `center: new Vector3(site.x, site.y,
+    // site.z)`).
+    const homeDef = bundle.settlementsManager.getHomeDef()
+    return bundle.chunkManager.findLandmarkNear(
       kind,
-      bundle.settlementsManager.home.center.x,
-      bundle.settlementsManager.home.center.z,
+      homeDef.x,
+      homeDef.z,
       LANDMARK_QUEST_SEARCH_CHUNK_RADIUS,
-    )?.id,
-  )
+    )?.id
+  })
   const questManager = new QuestManager(
     [...QUESTS, ...landmarkQuests],
     worldAudio.playOnce,
@@ -768,6 +798,11 @@ export async function createApp(
         landOwnership.clear()
       }
 
+      // Marks the initial `createWorldBundle()` boot's own background phase
+      // (fauna/item spawners/drying racks/hives) stale if it's somehow still
+      // in flight — see this file's `worldGeneration` doc comment above.
+      worldGeneration++
+      const thisRebuildGeneration = worldGeneration
       await rebuildWorldBundle(
         bundle,
         scene,
@@ -790,6 +825,7 @@ export async function createApp(
         pointLightBudget,
         getNearbyPlayerWell,
         resourceDepletion,
+        () => worldGeneration !== thisRebuildGeneration,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
 
@@ -837,7 +873,8 @@ export async function createApp(
       // unconditionally, silently teleporting the player home on e.g. a
       // flat-shading toggle).
       if (resetCollectedItems) {
-        player.setPosition(bundle.settlementsManager.home.spawn.x, bundle.settlementsManager.home.spawn.z)
+        const homeSpawn = settlementSpawnPoint(bundle.settlementsManager.getHomeDef(), bundle.chunkManager.sampleHeight)
+        player.setPosition(homeSpawn.x, homeSpawn.z)
       }
       pauseMenu.setSeed(config.seed)
     } finally {
@@ -1328,6 +1365,9 @@ export async function createApp(
     configureNpcVoiceSounds(null)
     configureAudioVolumes(worldAudio.getVolumes(), null)
     worldAudio.dispose()
+    // Marks a still-in-flight initial-boot background phase stale before
+    // tearing down — see this file's `worldGeneration` doc comment above.
+    worldGeneration++
     disposeWorldBundle(bundle)
     setActiveMonitor(null)
     setActiveProgramCensus(null)

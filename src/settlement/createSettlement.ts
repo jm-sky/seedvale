@@ -199,6 +199,20 @@ export type Settlement = {
   dispose: () => void
 }
 
+/** Pure function of `def` + terrain height — deliberately independent of
+ *  `buildSettlementProps`/NPCs/livestock, so a caller that only needs the
+ *  player's spawn point (`app/createApp.ts`, world-003 "faster application
+ *  startup") can compute it without waiting for the rest of `createSettlement`
+ *  to finish. Kept here (not duplicated) so the two call sites can never
+ *  drift apart. */
+export function settlementSpawnPoint(def: SettlementDef, sampleHeight: HeightSampler): Vector3 {
+  return new Vector3(
+    def.x + 3.5,
+    sampleHeight(def.x + 3.5, def.z - 3),
+    def.z - 3,
+  )
+}
+
 export async function createSettlement(
   scene: Scene,
   sampleHeight: HeightSampler,
@@ -589,11 +603,7 @@ export async function createSettlement(
     }),
   )
 
-  const spawn = new Vector3(
-    site.x + 3.5,
-    sampleHeight(site.x + 3.5, site.z - 3),
-    site.z - 3,
-  )
+  const spawn = settlementSpawnPoint(def, sampleHeight)
 
   const fire = landmarks.campfire
     ? createVillageFire(landmarks.campfire.position, landmarks.campfire.flame, FUEL_PER_BRANCH, {

@@ -1,7 +1,7 @@
 # Plan: Faster Application Startup
 
 **Created:** 2026-08-26  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** high · **Effort:** M  
 **Depends on:** none  
 **domain:** `world`  

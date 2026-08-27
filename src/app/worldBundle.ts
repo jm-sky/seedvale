@@ -1,3 +1,4 @@
+import { type Scene, Vector3 } from 'three'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
@@ -6,6 +7,7 @@ import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { Settlement } from '../settlement/createSettlement'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
+import type { SettlementDef } from '../settlement/settlementGenerator'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { TerrainPreparationRecord } from '../terrain/terrainPreparation'
@@ -62,7 +64,6 @@ import { createTerrainPreparations, type TerrainPreparations } from '../world/cr
 import { createFoodSourceHooks } from '../world/foodSources'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
-import type { Scene } from 'three'
 
 /** Fixed radius (world units) for settlement/fauna spatial logic — deliberately
  *  independent of the streamed terrain's loaded region, so the village and its
@@ -253,10 +254,18 @@ function buildSettlementsManager(
   )
 }
 
+/** Takes `homeDef` (site/id/size — synchronous the moment `SettlementsManager`
+ *  computes it) rather than the fully-built `Settlement` it used to: fauna's
+ *  only real dependency on the home settlement is its center/id/size, all of
+ *  which live on `SettlementDef` already — never its landmarks/NPCs/livestock.
+ *  Decoupling this (world-003 "faster application startup" §4) lets fauna
+ *  build concurrently with the home settlement's own (much slower)
+ *  `buildSettlementProps`/NPC pipeline instead of waiting for it, via
+ *  `Promise.all` in `buildWorldSystems` below. */
 function buildFauna(
   scene: Scene,
   chunkManager: ChunkManager,
-  settlement: Settlement,
+  homeDef: SettlementDef,
   seed: number,
   coastThreshold: number,
   onAnimalDeath?: (animalId: string) => void,
@@ -264,15 +273,16 @@ function buildFauna(
    *  `createFauna`'s `initialSpawnerState` doc. */
   initialSpawnerState?: ReadonlyMap<string, SavedSpawnPointState>,
 ): Promise<Fauna> {
-  const footprintRadius = villageSizeConfig(settlement.size).footprintRadius
+  const footprintRadius = villageSizeConfig(homeDef.size).footprintRadius
   // Spawner ring now reaches `footprintRadius + SPAWNER_RING_OFFSET[1]` (plan
   // 080 — was a flat 45–65 m from home); size the query so its half-extent
   // covers that reach plus a road halfWidth clearance margin, same 10 m
   // margin the original fixed 150 (→ half 75, ring max 65) already implied.
   const spawnerMaxReach = footprintRadius + SPAWNER_RING_OFFSET[1]
+  const center = new Vector3(homeDef.x, homeDef.y, homeDef.z)
   const roadSegments = chunkManager.roadCorridorsNear(
-    settlement.center.x,
-    settlement.center.z,
+    center.x,
+    center.z,
     (spawnerMaxReach + 10) * 2,
   )
   return createFauna(
@@ -282,8 +292,8 @@ function buildFauna(
     chunkManager.waterLevel,
     chunkManager.collidersNear,
     HOME_RADIUS,
-    settlement.center,
-    settlement.id,
+    center,
+    homeDef.id,
     seed,
     footprintRadius,
     roadSegments,
@@ -383,11 +393,89 @@ type WorldSystemsSeed = {
   getNearbyPlayerWell?: NearbyPlayerWellLookup
 }
 
+/** Inert stand-ins for the `WorldBundle` members deferred off the critical
+ *  path below (world-003 "faster application startup") — every consumer of
+ *  `bundle.fauna`/`itemSpawners`/`dryingRacks`/`hives` either reads them
+ *  through a closure invoked later during gameplay (never synchronously
+ *  during `createApp.ts` setup — verified by inspection, not just belief:
+ *  every direct read outside `worldBundle.ts` itself is inside a `gameLoop.ts`
+ *  per-frame callback, a `QuestManager` resolver, a user-triggered action, or
+ *  `saveState.ts`'s `buildSaveData()`) or a `dispose()`/`nodes()` call from
+ *  `rebuildWorldBundle`/`disposeWorldBundle` below, which these support as a
+ *  harmless no-op. Real instances replace these in place (`Object.assign`,
+ *  same mechanism `rebuildWorldBundle` already used for a full rebuild)
+ *  once the deferred background phase finishes — see `buildWorldSystems`. */
+function createEmptyFauna(): Fauna {
+  return {
+    update: () => {},
+    dispose: () => {},
+    resolveTimeSkip: () => {},
+    getAgents: () => [],
+    getSpawners: () => [],
+    isWolfDenCleared: () => false,
+    setSpawnerMarker: () => {},
+    destroySpawner: () => false,
+  }
+}
+
+function createEmptyItemSpawners(): ItemSpawners {
+  return {
+    nodes: () => [],
+    collect: () => null,
+    update: () => {},
+    dispose: () => {},
+  }
+}
+
+function createEmptyDryingRacks(): DryingRacks {
+  return {
+    list: () => [],
+    nodes: () => [],
+    startProcess: () => false,
+    clearProcess: () => null,
+    dispose: () => {},
+  }
+}
+
+function createEmptyBeehives(): Beehives {
+  return {
+    list: () => [],
+    nodes: () => [],
+    collect: () => 0,
+    burn: () => 0,
+    dispose: () => {},
+  }
+}
+
+export type BuiltWorldSystems = {
+  bundle: WorldBundle
+  /** Resolves once the fields deferred off the initial critical path above
+   *  (fauna, item spawners, drying racks, hives) have replaced their stub
+   *  placeholders on `bundle` in place — the same "mutate fields on the
+   *  stable object, never replace it" mechanism `rebuildWorldBundle` already
+   *  uses for a full rebuild, just applied to the tail of the initial build
+   *  too. `rebuildWorldBundle` awaits this itself before returning, so only
+   *  `createWorldBundle`'s caller (a fresh boot) ever sees the gap. */
+  backgroundReady: Promise<void>
+}
+
 /** Constructs all 15 `WorldBundle` members, in dependency order, from an
  *  already-resolved seed. The single body shared by `createWorldBundle`
  *  (fresh values) and `rebuildWorldBundle` (a snapshot of the bundle it is
- *  about to replace) — previously duplicated in full between the two. */
-async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
+ *  about to replace) — previously duplicated in full between the two.
+ *
+ *  Returns as soon as the systems required for the player to spawn/move/
+ *  interact are ready — `fauna`/`itemSpawners`/`dryingRacks`/`hives` are
+ *  handed back as inert stubs (see `createEmpty*` above), replaced in place
+ *  once `backgroundReady` resolves (world-003 "faster application startup").
+ *  `isStale` is checked right before that in-place replacement — pass one
+ *  that reports `true` once whatever's holding `bundle` no longer wants this
+ *  particular background result (a later rebuild superseded it, or the app
+ *  tore down); the freshly-built systems are disposed instead of kept. */
+async function buildWorldSystems(
+  seed: WorldSystemsSeed,
+  isStale: () => boolean = () => false,
+): Promise<BuiltWorldSystems> {
   const { bootMark, bootMarkEnd } = useBootMark('buildWorldSystems')
 
   const {
@@ -413,10 +501,12 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
     pointLightBudget, getNearbyPlayerWell,
   } = seed
 
+  bootMark('createWaterMirror')
   const waterMirror = createWaterMirror({
     waterLevel: config.terrain.waterLevel,
     enabled: config.postProcessing.waterReflections,
   })
+  bootMarkEnd('createWaterMirror')
 
   bootMark('buildChunkManager')
   const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, treeLifecycle, getWorldDays, waterMirror)
@@ -428,20 +518,30 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
   await chunkManager.waitForChunks(homeChunks())
   bootMarkEnd('waitForChunks')
 
+  bootMark('createWorldContext')
   const worldContext = createWorldContext(() => chunkManager, config, dayNight)
+  bootMarkEnd('createWorldContext')
   const forest: SettlementForestHooks = {
     lifecycle: treeLifecycle,
     getWorldDays,
     sampleEnv: worldContext.sampleTreeEnv,
   }
+
+  bootMark('buildOcean')
   const ocean = buildOcean(scene, config, waterMirror)
+  bootMarkEnd('buildOcean')
+
+  bootMark('buildResourceDeposits')
   const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed, resourceDepletion)
+  bootMarkEnd('buildResourceDeposits')
   const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
+
   // Built ahead of `foodSources`/`settlementsManager` (plan 176) — the food
   // source hooks need a live `PlayerGardens` to resolve which crops belong
   // to a garden plot for the yield-productivity modifier and the NPC
   // maintenance hook, unlike `playerWells` below which is only reachable
   // through `createApp.ts`'s live `getNearbyPlayerWell` accessor.
+  bootMark('createPlayerGardens')
   const playerGardens = createPlayerGardens(
     scene,
     chunkManager.sampleHeight,
@@ -450,32 +550,34 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
     initialPlayerGardens,
     getWorldDays(),
   )
-  const foodSources = createFoodSourceHooks(chunkManager, playerGardens, getWorldDays)
-  // Late-bound (plan 178): `Fauna` itself is only constructed *after*
-  // `settlementsManager`/every `NpcAgent` below (it needs the home
-  // settlement's center), so `hunting` closes over a mutable accessor
-  // instead of a direct `Fauna` reference — `faunaForHunting` is assigned
-  // once `buildFauna` resolves. A hunter that acts before that (impossible
-  // in practice; both are awaited in the same synchronous build sequence
-  // before any NPC's `update()` ever runs) would just see "no fauna yet",
-  // the same no-op `mining`/`foodSources` already fall back to when unset.
-  let faunaForHunting: Fauna | null = null
-  const hunting = createHuntingHooks(() => faunaForHunting, getWorldDays)
+  bootMarkEnd('createPlayerGardens')
 
+  bootMark('createFoodSourceHooks')
+  const foodSources = createFoodSourceHooks(chunkManager, playerGardens, getWorldDays)
+  bootMarkEnd('createFoodSourceHooks')
+
+  // Late-bound (plan 178, now also world-003 §4): `Fauna` is only built in
+  // the background phase below, so `hunting` closes over a mutable accessor
+  // instead of a direct `Fauna` reference — `faunaForHunting` is assigned
+  // once the background `buildFauna` resolves. A hunter that acts before
+  // that just sees "no fauna yet", the same no-op `mining`/`foodSources`
+  // already fall back to when unset.
+  let faunaForHunting: Fauna | null = null
+  bootMark('createHuntingHooks')
+  const hunting = createHuntingHooks(() => faunaForHunting, getWorldDays)
+  bootMarkEnd('createHuntingHooks')
+
+  // Now fast: returns as soon as `homeDef` (the home site's position/id/size
+  // — a pure function of seed+terrain) is resolved and the home settlement's
+  // own full build (houses/NPCs/livestock) has been kicked off in the
+  // background, not awaited here (world-003 §3) — see
+  // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
   const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates)
   bootMarkEnd('buildSettlementsManager')
+  const homeDef = settlementsManager.getHomeDef()
 
-  bootMark('buildFauna')
-  const fauna = await buildFauna(scene, chunkManager, settlementsManager.home, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
-  bootMarkEnd('buildFauna')
-
-  faunaForHunting = fauna
-
-  await preloadItemGlbModels()
-  await preloadHeldToolModels()
-
-  const itemSpawners = buildItemSpawners(scene, chunkManager, settlementsManager.home, config.seed)
+  bootMark('droppedItems+placed+wells+terrainPrep')
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
   const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt, pointLightBudget)
   const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
@@ -505,28 +607,94 @@ async function buildWorldSystems(seed: WorldSystemsSeed): Promise<WorldBundle> {
     chunkManager.sampleHeight,
     initialTerrainPreparations,
   )
+  bootMarkEnd('droppedItems+placed+wells+terrainPrep')
+
+  // Only needs `homeDef.size` (sync, see §4's `buildFauna` doc above) — kept
+  // on the critical path rather than deferred, unlike `itemSpawners`/
+  // `dryingRacks`/`hives` below, which need the home settlement's built
+  // `landmarks` and so must wait for `homeReady` regardless.
+  bootMark('createLargeCaves')
   const largeCaves = createLargeCaves(
     scene,
     chunkManager,
     config.seed,
-    villageSizeConfig(settlementsManager.home.size).footprintRadius,
+    villageSizeConfig(homeDef.size).footprintRadius,
     config.terrain.region.coastThreshold,
   )
-  const dryingRacks = createDryingRacks(
-    scene,
-    chunkManager.sampleHeight,
-    settlementsManager.home.landmarks.stockpile,
-    initialDryingRacks,
-  )
-  const hives = createBeehives(
-    scene,
-    chunkManager.sampleHeight,
-    settlementsManager.home.landmarks.trees.map((t) => t.position),
-    config.seed,
-    initialHives,
-  )
+  bootMarkEnd('createLargeCaves')
 
-  return { chunkManager, ocean, settlementsManager, fauna, itemSpawners, resourceDeposits, droppedItems, placedFires, placedTents, placedTraps, placedContainers, playerWells, playerGardens, terrainPreparations, largeCaves, dryingRacks, hives }
+  const bundle: WorldBundle = {
+    chunkManager,
+    ocean,
+    settlementsManager,
+    fauna: createEmptyFauna(),
+    itemSpawners: createEmptyItemSpawners(),
+    resourceDeposits,
+    droppedItems,
+    placedFires,
+    placedTents,
+    placedTraps,
+    placedContainers,
+    playerWells,
+    playerGardens,
+    terrainPreparations,
+    largeCaves,
+    dryingRacks: createEmptyDryingRacks(),
+    hives: createEmptyBeehives(),
+  }
+
+  // Deferred: fauna (§4), item preloads (§5), item spawners/drying racks/
+  // hives (need the home settlement's built `landmarks`, so wait on
+  // `homeReady` regardless — see `buildWorldSystems`'s doc comment). Fauna
+  // only needs `homeDef`, so it (and the preloads) run concurrently with the
+  // home settlement's own build instead of serially after it.
+  const backgroundReady = (async () => {
+    let fauna: Fauna | undefined
+    let itemSpawners: ItemSpawners | undefined
+    let dryingRacks: DryingRacks | undefined
+    let hives: Beehives | undefined
+    try {
+      bootMark('background:fauna+preloads')
+      ;[fauna] = await Promise.all([
+        buildFauna(scene, chunkManager, homeDef, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState),
+        preloadItemGlbModels(),
+        preloadHeldToolModels(),
+      ])
+      bootMarkEnd('background:fauna+preloads')
+
+      bootMark('background:homeReady')
+      const home = await settlementsManager.homeReady
+      bootMarkEnd('background:homeReady')
+
+      bootMark('background:itemSpawners+dryingRacks+hives')
+      itemSpawners = buildItemSpawners(scene, chunkManager, home, config.seed)
+      dryingRacks = createDryingRacks(scene, chunkManager.sampleHeight, home.landmarks.stockpile, initialDryingRacks)
+      hives = createBeehives(scene, chunkManager.sampleHeight, home.landmarks.trees.map((t) => t.position), config.seed, initialHives)
+      bootMarkEnd('background:itemSpawners+dryingRacks+hives')
+    } catch (err) {
+      console.error('[worldBundle] background world-system init failed', err)
+      fauna?.dispose()
+      itemSpawners?.dispose()
+      dryingRacks?.dispose()
+      hives?.dispose()
+      throw err
+    }
+
+    if (isStale()) {
+      // Superseded by a rebuild (or the app tore down) while this was still
+      // building — same cancellation as `SettlementsManager`'s own
+      // `ensureLoaded`/home-build guards; never touch `bundle`.
+      fauna.dispose()
+      itemSpawners.dispose()
+      dryingRacks.dispose()
+      hives.dispose()
+      return
+    }
+    faunaForHunting = fauna
+    Object.assign(bundle, { fauna, itemSpawners, dryingRacks, hives })
+  })()
+
+  return { bundle, backgroundReady }
 }
 
 export async function createWorldBundle(
@@ -617,7 +785,13 @@ export async function createWorldBundle(
    *  sites, same "carried across rebuild, reset only on a genuinely new
    *  world" contract as `initialPlayerWells`/`initialPlayerGardens` above. */
   initialTerrainPreparations: readonly TerrainPreparationRecord[] = [],
-): Promise<WorldBundle> {
+  /** World-003 "faster application startup" — reports `true` once the
+   *  caller no longer wants this build's deferred background result (a
+   *  rebuild superseded it, or the app tore down before it finished); see
+   *  `buildWorldSystems`'s doc comment. Defaults to "never stale" for
+   *  existing callers/tests. */
+  isStale?: () => boolean,
+): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
     treeLifecycle, getWorldDays, dayNight,
@@ -637,7 +811,7 @@ export async function createWorldBundle(
     resourceDepletion,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
-  })
+  }, isStale)
 }
 
 /** Disposes every member's current instance and mutates `bundle`'s fields in
@@ -688,6 +862,16 @@ export async function rebuildWorldBundle(
   /** Plan 198 — same reset contract as `collectedItemIds`: `resetCollectedItems`
    *  governs both (caller passes a fresh empty `Map` alongside it). */
   resourceDepletion: ResourceDepletionState = new Map(),
+  /** World-003 "faster application startup" — forwarded into
+   *  `buildWorldSystems` the same way `createWorldBundle`'s own `isStale` is;
+   *  guards this rebuild's *own* deferred background phase (fauna/item
+   *  spawners/drying racks/hives) against the app tearing down mid-rebuild.
+   *  Not needed to guard against a *second* rebuild superseding this one —
+   *  this function already fully awaits its background phase (see
+   *  `await backgroundReady` below) before returning, so there's never a
+   *  dangling background result left over from a rebuild the way there can
+   *  be from the initial `createWorldBundle`. */
+  isStale?: () => boolean,
 ): Promise<void> {
   // Snapshot before dispose() — a same-session rebuild (config change, not a
   // new seed) recreates `Fauna` from scratch just like every other bundle
@@ -751,7 +935,7 @@ export async function rebuildWorldBundle(
   treeLifecycle.clearPresence()
   if (resetCollectedItems) treeLifecycle.clearOverrides()
 
-  const fresh = await buildWorldSystems({
+  const { bundle: fresh, backgroundReady } = await buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
     treeLifecycle, getWorldDays, dayNight,
     droppedItems: carriedDrops,
@@ -772,7 +956,12 @@ export async function rebuildWorldBundle(
     resourceDepletion,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
-  })
+  }, isStale)
+  // A rebuild keeps its historical fully-synchronous contract — callers
+  // (`app/createApp.ts`) still see every system, including fauna/item
+  // spawners/drying racks/hives, ready by the time this resolves. Only a
+  // fresh `createWorldBundle()` boot returns before `backgroundReady`.
+  await backgroundReady
   // `bundle` itself must stay the same object reference (see this file's
   // `WorldBundle` doc comment / ARCHITECTURE.md's rebuild invariants) — this
   // reassigns every field in place, in one synchronous step, rather than
