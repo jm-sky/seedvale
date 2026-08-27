@@ -34,16 +34,16 @@ function lerp(a: number, b: number, t: number): number {
 /** Most NPCs ignore the Hero entirely — see plan 117 §2 ("baseChance =
  *  0.03–0.05"). Upper end so the extreme-case ceiling below reaches the
  *  plan's 80–100% target once every bonus is maxed. */
-const BASE_REACTION_CHANCE = 0.05
+const BASE_REACTION_CHANCE = 0.03
 
 /** Interest bonus from openness/extraversion, same 50/50 weighting as
  *  `pausePersonalityParams`'s `triggerDistance` (`dialogue.ts`) — a
  *  closed/introverted NPC still gets a small bonus, never zero. */
-const PERSONALITY_BONUS_MIN = 0.02
-const PERSONALITY_BONUS_MAX = 0.20
+const PERSONALITY_BONUS_MIN = 0.00
+const PERSONALITY_BONUS_MAX = 0.08
 
-/** `curious` trait bonus — upper end of the plan's "+10–15%" example. */
-const CURIOUS_TRAIT_BONUS = 0.15
+/** Curious NPCs are more likely to initiate spontaneous reactions. */
+const CURIOUS_TRAIT_BONUS = 0.05
 
 /** Plan 117 §2's relation table. `acquainted` is a single example value in
  *  the plan (not a range); `friendly`/`trusted` use their range's midpoint
@@ -51,13 +51,13 @@ const CURIOUS_TRAIT_BONUS = 0.15
 const RELATION_BONUS: Record<RelationLevel, number> = {
   stranger: 0,
   acquainted: 0.05,
-  friendly: 0.125,
-  trusted: 0.25,
+  friendly: 0.15,
+  trusted: 0.3,
 }
 
 /** Reputation bonus ceiling — matches `RELATION_BONUS.trusted` so being
  *  widely known can matter as much as being personally known. */
-const REPUTATION_BONUS_MAX = 0.25
+const REPUTATION_BONUS_MAX = 0.10
 
 /** Final probability (0..1) that an NPC reacts to a nearby Hero, before
  *  group suppression is applied (plan 117 §5) — the caller still multiplies
