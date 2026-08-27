@@ -143,8 +143,6 @@ const main = async () => {
 
   fillOutput(plansWithoutNotes, prompts)
 
-  console.log(output.join('\n'))
-
   await updateFile(OUTPUT_PATH)
 }
 

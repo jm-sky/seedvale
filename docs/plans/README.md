@@ -53,7 +53,7 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 - settlements-npcs: `005`
 - tools: `004`
 - ui-input: `004`
-- world: `004`
+- world: `005`
 - world-terrain: `003`
 
 This ids section is maintained automatically from the plan files.
@@ -112,18 +112,18 @@ Natural vegetation
 | 💡 `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` | - | 🔴 | L | ~~178~~ ~~184~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
-| 💡 `2026-08-22--203--well-depth-groundwater-and-protection.md`         | - | 🟡 | M | ~~127~~ |
 | ◼️ `2026-08-19--171--weapon-browser-observatory.md`                    | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `settlements-npcs-001-cultivation-hydration-and-watering.md`        | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
+| ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`               | - | 🟡 | S | ~~151~~ |
 | 💡 `settlements-001-house-collision-geometry.md`                       | - | 🔴 | L | 111 |
+| ◼️ `fauna-001-rabies-and-animal-infection.md`                          | - | 🟡 | M | ~~188~~ |
+| ◼️ `world-003-faster-application-startup.md`                           | - | 🔴 | M | - |
+| 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
+| ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
 | 💡 `ui-input-002-ui-ux-interaction-and-action-system-polish.md`        | - | 🟡 | L | - |
 | ◼️ `tools-001-performance-benchmark-determinism-and-reliability.md`    | - | 🔴 | M | - |
 | ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
-| ◼️ `fauna-001-rabies-and-animal-infection.md`                          | - | 🟡 | M | ~~188~~ |
-| ◼️ `world-003-faster-application-startup.md`                           | - | 🔴 | M | - |
-| ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`     | - | 🟡 | S | ~~151~~ |
-| ◼️ `tools-003-house-browser-and-tools-menu.md`               | - | 🟡 | M | ~~111~~ |
-| ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`           | - | 🔴 | L | - |
+| ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
 
 ### Fresh new
 
@@ -187,7 +187,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-22--196--arch--time-skip-simulation-semantics.md` | [notes](./implementation-notes/2026-08-22--196--arch--time-skip-simulation-semantics-implementation-notes.md) |
 | `2026-08-22--197--arch--npc-runtime-state-lifecycle-continuity.md` | [notes](./implementation-notes/2026-08-22--197--arch--npc-runtime-state-lifecycle-continuity-implementation-notes.md) |
 | `2026-08-22--198--arch--world-resource-state-continuity.md` | [notes](./implementation-notes/2026-08-22--198--arch--world-resource-state-continuity-implementation-notes.md) |
-| `2026-08-22--199--arch--entity-identity-transfer-continuity.md` | [notes](./implementation-notes/2026-08-22--199--arch--entity-identity-transfer-continuity.md) |
+| `2026-08-22--199--arch--entity-identity-transfer-continuity.md` | [notes](./implementation-notes/2026-08-22--199--arch--entity-identity-transfer-continuity-implementation-notes.md) |
 | `2026-08-22--200--arch--persistence-gaps-authoritative-state.md` | [notes](./implementation-notes/2026-08-22--200--arch--persistence-gaps-authoritative-state-implementation-notes.md) |
 | `2026-08-22--201--arch--deferred-architecture-state-cleanup.md` | [notes](./implementation-notes/2026-08-22--201--arch--deferred-architecture-state-cleanup-implementation-notes.md) |
 | `2026-08-20--176--garden-and-field-maintenance.md` | [notes](./implementation-notes/2026-08-20--176--garden-and-field-maintenance-implementation-notes.md) |

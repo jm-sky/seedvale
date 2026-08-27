@@ -95,7 +95,7 @@ Profession generation should eventually distinguish between minimum staffing, ta
 
 ### Current implementation
 
-- [`../roadmap/00-current-state.md`](../roadmap/00-current-state.md) — current implementation state and implemented NPC systems.
+- [`../roadmap/archive/00-current-state.md`](../roadmap/archive/00-current-state.md) — current implementation state and implemented NPC systems.
 
 ## Domain boundaries
 

@@ -2,7 +2,7 @@
 
 **Status:** `done`
 **Created:** 2026-08-07
-**Priority:** niski — pomysł na boku, nie blokuje ani nie jest blokowany przez [terrain-worker-pool](./2026-08-07--006--terrain-worker-pool.md) / [world-visual-overhaul](../2026-08-07--024--world-visual-overhaul.md); zero styku plików z tym, co dziś w toku (nowy plik + wpięcie w `chunkManager.ts` dopiero przy implementacji)
+**Priority:** niski — pomysł na boku, nie blokuje ani nie jest blokowany przez [terrain-worker-pool](./2026-08-07--006--terrain-worker-pool.md) / [world-visual-overhaul](../archive/2026-08-07--024--world-visual-overhaul.md); zero styku plików z tym, co dziś w toku (nowy plik + wpięcie w `chunkManager.ts` dopiero przy implementacji)
 
 ## Stan implementacji (2026-08-07)
 

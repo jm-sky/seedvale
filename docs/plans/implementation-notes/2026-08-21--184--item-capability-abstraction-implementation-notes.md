@@ -1,6 +1,6 @@
 # Implementation notes — plan 184: Item Capability Abstraction
 
-**Implemented:** 2026-08-21 · **Plan:** [2026-08-21--184--item-capability-abstraction.md](./2026-08-21--184--item-capability-abstraction.md)
+**Implemented:** 2026-08-21 · **Plan:** [2026-08-21--184--item-capability-abstraction.md](../archive/2026-08-21--184--item-capability-abstraction.md)
 
 ## 1. Audit (verified against the code, not the plan text)
 

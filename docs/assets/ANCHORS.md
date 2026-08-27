@@ -1,6 +1,6 @@
 # Seedvale anchor convention
 
-Anchors are named transform frames on assets. They live in the asset domain (`src/assets/`) and are consumed by gameplay code and the [asset alignment browser](/asset-browser.html).
+Anchors are named transform frames on assets. They live in the asset domain (`src/assets/`) and are consumed by gameplay code and the [asset alignment browser](../../asset-browser.html).
 
 ## Naming
 

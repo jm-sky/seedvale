@@ -2,7 +2,7 @@
 
 **Status:** `done`
 **Date:** 2026-08-14
-**Scope:** visual check of the four Construction Catalog assumptions that review [009](./2026-08-14--009--megakit-construction-audit.md) could not confirm from GLB AABB. Prompt: [2026-08-14--006](../prompts/2026-08-14--006--verify-mega-kit-and-assets-browsers-for-houses.md). Plan: [109](../plans/2026-08-14--109--megakit-construction-catalog.md).
+**Scope:** visual check of the four Construction Catalog assumptions that review [009](./2026-08-14--009--megakit-construction-audit.md) could not confirm from GLB AABB. Prompt: [2026-08-14--006](../prompts/2026-08-14--006--verify-mega-kit-and-assets-browsers-for-houses.md). Plan: [109](../plans/archive/2026-08-14--109--megakit-construction-catalog.md).
 **Not in scope:** `HouseBuilder`, architecture changes, re-audit of all 176 GLB, NPC/world/performance tests.
 **Tool:** `/asset-browser.html` on Vite `:5577`, Cursor browser. Pairs loaded via `referenceUrl` + `url` (prepare `none`), overlay at identity, quad views + report native AABB.
 

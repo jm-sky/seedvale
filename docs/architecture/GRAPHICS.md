@@ -2,11 +2,11 @@
 
 **Purpose:** jeden source of truth dla decyzji, kontraktów i uwag o grafice / renderze / materiałach wizualnych.
 
-**Nie jest:** listą assetów ([assets/](./assets/README.md)), stanem implementacji ([STATE.md](./STATE.md)), domeną wody ([WATER.md](./state/water.md)), ani planem ([plans/](./plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
+**Nie jest:** listą assetów ([assets/](../assets/README.md)), stanem implementacji ([STATE.md](../STATE.md)), domeną wody ([WATER.md](../state/water.md)), ani planem ([plans/](../plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
 
 **Last updated:** 2026-08-19
 
-Domena wody (stan, historia, kolejność poprawek): [WATER.md](./state/water.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
+Domena wody (stan, historia, kolejność poprawek): [WATER.md](../state/water.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
 
 ## Jak używać
 
@@ -25,18 +25,18 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | ID | Decyzja | Skutek |
 |----|---------|--------|
 | G1 | Symulacja / świat = **vanilla Three.js + WebGL2**. Bez React/R3F / drugiej abstrakcji renderu, dopóki nie ma osobnego planu. | `src/` game layer |
-| G2 | **Performance jest constraint architektury** — nie dokładamy passów, mirror RT ani per-frame CPU „dla ładniejszej wody/liści” bez świadomej ceny. | [architecture/performance-and-workers.md](./architecture/performance-and-workers.md) |
-| G3 | Liście / kwiaty z GLTF `alphaMode: BLEND` → przy loadzie **opaque `alphaTest` cutout** (`hardenFoliageAlpha`). Korony piszą depth. | `src/world/foliageWind.ts`, issue [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) |
+| G2 | **Performance jest constraint architektury** — nie dokładamy passów, mirror RT ani per-frame CPU „dla ładniejszej wody/liści” bez świadomej ceny. | [architecture/performance-and-workers.md](../architecture/performance-and-workers.md) |
+| G3 | Liście / kwiaty z GLTF `alphaMode: BLEND` → przy loadzie **opaque `alphaTest` cutout** (`hardenFoliageAlpha`). Korony piszą depth. | `src/world/foliageWind.ts`, issue [022](../issues/2026-08-12--022--ocean-through-tree-foliage.md) |
 | G4 | Woda transparentna: ocean i jeziora mają **`depthWrite: false`**. Nie łączyć `transparent` + `depthWrite: true` + wysokiego `renderOrder` — to maluje wodę przez korony. | `createOcean.ts`, `createWater.ts` |
 | G5 | Ocean = **jeden** plane (follow gracza), nie per-chunk. Shader = rodzina jezior (`waterMaterial.ts`). Lustro sceny = jeden RT **128²** @ 30 Hz (`waterMirror.ts`), wyłącznik Vue; NPC/fauna poza lustrem (`AGENT_RENDER_LAYER`), trawa i drobne pickupy poza lustrem (`REFLECTION_SKIPPED_LAYER`). | `createOcean.ts` |
-| G5a | Wkład lustra w kolor wody jest **≤18 %** (`reflectance` clamp 0.4 × `mix(mirrorSample, body, 0.55)`) i ~1 % pod typowym kątem. To jest budżet, w którym wolno wycinać detal z reflection passa — i powód, dla którego nie wolno traktować lustra jako passa „jakościowego”. | `waterMaterial.ts`, research [019](./research/2026-08-17--019--rendering-optimizations.md) §1.1 |
+| G5a | Wkład lustra w kolor wody jest **≤18 %** (`reflectance` clamp 0.4 × `mix(mirrorSample, body, 0.55)`) i ~1 % pod typowym kątem. To jest budżet, w którym wolno wycinać detal z reflection passa — i powód, dla którego nie wolno traktować lustra jako passa „jakościowego”. | `waterMaterial.ts`, research [019](../research/2026-08-17--019--rendering-optimizations.md) §1.1 |
 | G6 | Jeziora = per-chunk ten sam shader, maska heightmap + głębokość z `floorHeights`. `bodyScale` 1 stroi ocean, nie discarduje piksela. | `createWater.ts`, `waterMaterial.ts`, `waterBodies.ts` |
 | G7 | Post-process: EffectComposer + N8AO + SMAA (+ bloom / god rays / film grade). Hardware MSAA wyłączone (i tak bez efektu na targetach composera). **N8AO on/off idzie tylko z presetu/GUI** — nie gasić passa z czasu klatki (oscylator jasna/ciemna na trawie). | `createPostProcessing.ts`, `createRenderer.ts` |
 | G8 | Weryfikacja wizualna = **przeglądarka**, nie sam `tsc`/lint/build. | `CLAUDE.md` |
-| G9 | Droga = tint korytarza na meshu terenu (nie osobny mesh). Miękki brzeg + ziarno dirtu; trawa **soft-fade** w korytarzu, nie hard bald cut. Extra gęstość łąki = **near-field filler LOD**, nie globalny bump `grass.density`. | `chunkHeightmap` / `biomeColors` / `grass` / `chunkManager`, issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
-| G10 | Asset alignment browser **Game-like** mode reuses `createRenderer` / `createLights` / `createSky` / `skyParamsFromTime` — no parallel preview rig. Post-processing composer runs in **single-view only** (not 4-up). | `src/tools/assetBrowser/`, plan [088](./plans/archive/2026-08-12--088--asset-alignment-browser.md) |
-| G11 | Profile jakości Low/Medium/High/Custom sterują **tylko gałkami live** (pixel ratio, AO/bloom/god rays, odbicia, shadow map, LOD scale). Nie zastępują optymalizacji architektury i nie rebuildują świata. | `src/config/qualityProfiles.ts`, plan [103](./plans/archive/2026-08-13--103--performance-diagnostics-benchmark.md) |
-| G12 | Third-person kamera zostaje **poza heightfieldem i dużymi colliderami** (domy): boom jest skracany wzdłuż odcinka look-at → desired, bez teleportu gracza i bez osobnego raycastu sceny. | `src/player/cameraBoom.ts`, issue [032](./issues/2026-08-15--032--mobile-black-world-screen.md) |
+| G9 | Droga = tint korytarza na meshu terenu (nie osobny mesh). Miękki brzeg + ziarno dirtu; trawa **soft-fade** w korytarzu, nie hard bald cut. Extra gęstość łąki = **near-field filler LOD**, nie globalny bump `grass.density`. | `chunkHeightmap` / `biomeColors` / `grass` / `chunkManager`, issue [023](../issues/2026-08-12--023--road-grass-ground-cover.md) |
+| G10 | Asset alignment browser **Game-like** mode reuses `createRenderer` / `createLights` / `createSky` / `skyParamsFromTime` — no parallel preview rig. Post-processing composer runs in **single-view only** (not 4-up). | `src/tools/assetBrowser/`, plan [088](../plans/archive/2026-08-12--088--asset-alignment-browser.md) |
+| G11 | Profile jakości Low/Medium/High/Custom sterują **tylko gałkami live** (pixel ratio, AO/bloom/god rays, odbicia, shadow map, LOD scale). Nie zastępują optymalizacji architektury i nie rebuildują świata. | `src/config/qualityProfiles.ts`, plan [103](../plans/archive/2026-08-13--103--performance-diagnostics-benchmark.md) |
+| G12 | Third-person kamera zostaje **poza heightfieldem i dużymi colliderami** (domy): boom jest skracany wzdłuż odcinka look-at → desired, bez teleportu gracza i bez osobnego raycastu sceny. | `src/player/cameraBoom.ts`, issue [032](../issues/2026-08-15--032--mobile-black-world-screen.md) |
 | G13 | Deszcz = **wąska pionowa kreska** (`uWidthFrac = 0.35` w `gl_PointCoord.x`); śnieg = **pełny kwadrat sprite'a** (`uWidthFrac = 1`). Wysokość/długość zostaje `gl_PointSize` — nie zwężać deszczu przez `RAIN_SIZE`. Wspólny shader rain/snow. | `src/world/weatherParticles.ts` |
 | G14 | `PointLight`'s `distance` (3. arg konstruktora) to **tylko hard cutoff**, nie dźwignia zasięgu. Przy `decay: 2` (fizyczny inverse-square — używany wszędzie w projekcie) jasność w danym punkcie to już ~`intensity / distance²` na długo przed cutoffem. Podbicie `distance` bez podbicia `intensity` **nie zmienia nic widocznego**. Dźwignia "świeci dalej" = **intensity**. | `src/settlement/houseLighting.ts`, `src/player/torchLightPresets.ts`, `src/settlement/campfireProps.ts` |
 | G15 | Materiał GLB z `loadGltf.ts` cache'u jest **jeden obiekt na URL, dzielony przez referencję** między wszystkimi klonami (`sharedGpu`). JS-side override (`material.transparent = true` itp.) w runtime realnie działa, ale subtelna wartość (np. `opacity: 0.7` na jasnym emissive materiale, na tle nocnego nieba) potrafi wizualnie nie różnić się od opaque. Dla efektu, który ma być **jednolity na każdym klonie danego assetu**, wypiecz zmianę w samym GLB (`alphaMode: BLEND`, `baseColorFactor` alpha, `emissiveFactor`) zamiast patchować w JS — patrz log 2026-08-19 po recepturę edycji binarnej bez zewnętrznych narzędzi. | `public/models/settlement/torch.glb`, `src/settlement/houseLighting.ts` |
@@ -57,7 +57,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | Niebo / światło / dzień-noc | `src/world/createSky.ts`, `createLights.ts`, `dayNight.ts` |
 | Teren / trawa / drogi (tint) | `src/terrain/buildChunkGeometry.ts`, `grass.ts`, `chunkHeightmap.ts`, `biomeColors.ts` |
 | Deszcz / śnieg (GPU points) | `src/world/weatherParticles.ts` |
-| Modele / kredyty | [assets/](./assets/README.md) |
+| Modele / kredyty | [assets/](../assets/README.md) |
 
 ---
 
@@ -90,7 +90,7 @@ Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight
 
 - Cursor browser, Intel Arc 140V, 1068×906 dpr 1, seed 42 / res 193 / High. Baseline `cfdb83a` → 148 S `68e1bf4` → 144 S `c834210`. **Two runs** (`current`/`water`; `stream` only in run 1).
 - Grass census identical both runs: `current` 8.54 M → 4.53 M (−47%), `water` 1.36 M → 0.58 M. FPS/RENDER not improved on the quiet run; run 2 FPS drifted with host load.
-- 144 S mirror draws on `current` 206→197 in run 1, **no drop in run 2**. Lake `water` 30→25 / 30→23. No visual check. [Review 020](./reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
+- 144 S mirror draws on `current` 206→197 in run 1, **no drop in run 2**. Lake `water` 30→25 / 30→23. No visual check. [Review 020](../reviews/2026-08-18--020--water-grass-gpu-benchmark.md).
 
 ### 2026-08-17 — Habitat-destroy fire is spectacle, not a palenisko 🔧
 
@@ -122,7 +122,7 @@ Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight
 - Both uniforms are pure derived values from `world/weather.ts`'s new `computeSurfaceWeather(seed, elapsedDays)` — a bounded (~12-cycle-lookback) forward simulation over the existing deterministic `computeWeather()`, not a second weather/simulation system and not a new save field.
 - New varying `vSlopeUp = objectNormal.y` for flatness masking: terrain chunks only ever translate (no rotation/scale), so the vertex-shader object-space normal is already world-space — zero-cost, no new per-vertex attribute needed. Puddle/snow breakup reuse the existing `terrainValueNoise()` (low-frequency, no new texture).
 - `customProgramCacheKey()` bumped `v4` → `v5` so three.js can't reuse a pre-plan-133 compiled program.
-- Known gap: desert/beach aren't separately suppressed from road/dirt puddle response — `vBareGround` folds all three into one scalar; adding a split would need a new per-vertex attribute, out of scope. See [plan 133 implementation notes](./plans/archive/2026-08-16--133--weather-surface-effects-implementation-notes.md).
+- Known gap: desert/beach aren't separately suppressed from road/dirt puddle response — `vBareGround` folds all three into one scalar; adding a split would need a new per-vertex attribute, out of scope. See [plan 133 implementation notes](../plans/archive/2026-08-16--133--weather-surface-effects-implementation-notes.md).
 - Not verified: browser/perf check (fragment cost clear vs rain vs snow, visual read on slopes/roads/beach/desert).
 
 ### 2026-08-15 — Czarny świat 3D na mobile (issue 032) 🔧
@@ -138,14 +138,14 @@ Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight
 - Cap 30 Hz lustra działał tylko powyżej 30 FPS (bramka wall-clock). Poniżej — dodatkowo co druga klatka (`shouldRenderMirror`, unit-tested). **Trade-off czasowy:** przy 23 FPS odbicie odświeża się ~11,5 Hz zamiast ~23 Hz.
 - God rays wypadają z chaina, gdy `intensity == 0` (większość doby) — wcześniej płaciły pełnoekranowy read/write half-float + swap composera za skopiowanie wejścia. Wyjście bit-identyczne.
 - `mirrorCamera.far = camera.far` usunięte: nie wpływało na culling (frustum liczony z `projectionMatrix`, nie z `far`).
-- **Nie zmierzone w przeglądarce.** Baseline i przewidywania: research [019](./research/2026-08-17--019--rendering-optimizations.md).
+- **Nie zmierzone w przeglądarce.** Baseline i przewidywania: research [019](../research/2026-08-17--019--rendering-optimizations.md).
 
 ### 2026-08-15 — GPU weather renderer (plan 040 Etap 3) 🔧
 
 - `world/weatherParticles.ts`: rain/snow moved from CPU `THREE.Points` (per-particle `BufferAttribute` update every frame) to a shared vertex/fragment `ShaderMaterial`; particle fall/drift computed procedurally from a fixed-at-creation per-particle attribute + `uTime`, no per-particle JS loop.
 - Same `fog_pars_*`/`fog_vertex`/`fog_fragment` chunk pattern as `waterMaterial.ts` (`fog: true` + `UniformsLib.fog`) — no parallel fog handling.
 - Density (weather intensity) and a mobile cap (`WorldConfig.quality.lodScale`) both gate visibility via one `uVisibleFraction` uniform; gated-out particles are pushed outside the clip volume in the vertex shader rather than looped/hidden on the CPU.
-- Not measured: no `?benchmark=` pass comparing old CPU vs new GPU frame cost. See [plan 040 implementation notes](./plans/archive/2026-08-08--040--seasons-weather-implementation-notes.md).
+- Not measured: no `?benchmark=` pass comparing old CPU vs new GPU frame cost. See [plan 040 implementation notes](../plans/archive/2026-08-08--040--seasons-weather-implementation-notes.md).
 
 ### 2026-08-15 — Rendering budget P0/P1 (plan 113) 🔧
 
@@ -165,7 +165,7 @@ Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight
 ### 2026-08-13 — Wanna terenu pod wodą (`floorHeights`) ✅
 
 - Mesh chunka: Y / normalne / kolor z `floorHeights`, nie z clampowanego `heights`. Koniec zielonej tafli `SEABED` na powierzchni wody.
-- `heights` nadal clamp dla maski wody, trawy, `sampleHeight`. Szczegóły: [WATER.md](./state/water.md).
+- `heights` nadal clamp dla maski wody, trawy, `sampleHeight`. Szczegóły: [WATER.md](../state/water.md).
 - Browser: użytkownik 2026-08-13.
 
 ### 2026-08-13 — Faza 3: wspólne lustro wody 256² + toggle Vue ✅
@@ -183,26 +183,26 @@ Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight
 ### 2026-08-13 — W8 faza 1: inland nie jest oceanem ✅
 
 - `computeBodyScale`: ocean = niska kontynentalność; jeziora cap `LAKE_SCALE_MAX` 0.85 (poniżej discard 0.9). Usunięte `isLarge` / 35% chunka.
-- Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md) — `done`. Plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1.
+- Issue [028](../issues/2026-08-13--028--inland-water-dual-material.md) — `done`. Plan [098](../plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1.
 
 ### 2026-08-13 — Kierunek wody: jedna rodzina, W8, lustro z Vue 📝
 
 - W8 zaakceptowane. Target: jeden shader (jezioro jaśniejsze / ocean ciemniejszy+swell), depth fade, brzeg fade+piana+mokry piasek.
 - Lustro sceny na obu, **jeden** RT 256², wyłącznik Pauza → Świat; off = sky+spec bez passu.
-- G5/G6: geometria zostaje; Water.js i discard `vBodyScale` to stan kodu, nie cel. Szczegóły: [WATER.md](./state/water.md).
+- G5/G6: geometria zostaje; Water.js i discard `vBodyScale` to stan kodu, nie cel. Szczegóły: [WATER.md](../state/water.md).
 
 ### 2026-08-13 — SoT wody; dual-material na śródlądziu 📝
 
-- Nowy [WATER.md](./state/water.md) — stan techniczny/wizualny, decyzje W1–W7, historia.
+- Nowy [WATER.md](../state/water.md) — stan techniczny/wizualny, decyzje W1–W7, historia.
 - Screen: śródlądowy staw jednocześnie jako jezioro i ocean (`vBodyScale > 0.9` → discard → Water.js bez maski).
-- W8 wtedy jako propozycja; wieczorem zaakceptowane (wpis powyżej). Issue [028](./issues/2026-08-13--028--inland-water-dual-material.md).
+- W8 wtedy jako propozycja; wieczorem zaakceptowane (wpis powyżej). Issue [028](../issues/2026-08-13--028--inland-water-dual-material.md).
 
 ### 2026-08-12 — Droga + łąka: ziarno, soft edge, near-field filler ✅
 
 - **#1 Droga:** `CORRIDOR_INNER_FRACTION` 0.6→0.32; `applyRoadTint` soft onset + micro contrast; fragment bare-ground grit; trawa soft-fade w `roadTint` zamiast hard reject.
 - **#2 Łąka:** mocniejsza wariacja zieleni w macro color shaderze (między kępkami).
 - **#3 Filler:** osobny bucket krótkich blades (~28% kandydatów), rysowany tylko przy `chebyshev ≤ 1`.
-- **Issue:** [023](./issues/2026-08-12--023--road-grass-ground-cover.md) (`done`).
+- **Issue:** [023](../issues/2026-08-12--023--road-grass-ground-cover.md) (`done`).
 - **Koszt:** brak nowego passu; filler off poza near field; build chunka +~28% grass candidates (main thread, raz przy load).
 
 ### 2026-08-12 — Ocean przez drzewa + prawdziwa przezroczystość wody ✅
@@ -211,19 +211,19 @@ Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight
 - **Fix liście:** `hardenFoliageAlpha` — BLEND → `alphaTest` cutout, `depthWrite: true`.
 - **Fix woda:** ocean `transparent: true`, `depthWrite: false`, alpha fresnel (z góry rzadsza, edge-on gęstsza); jeziora `depthWrite: false`.
 - **FPS:** mirror oceanu 512² → **256²** (jedyny ciężki pass Water.js tańszy ~4× w pikselach). Bez dodatkowego passu / heightmapy na oceanie.
-- **Issue:** [022](./issues/2026-08-12--022--ocean-through-tree-foliage.md) (`done`).
-- **Nadal otwarte:** miękki brzeg ocean/ląd — [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md).
+- **Issue:** [022](../issues/2026-08-12--022--ocean-through-tree-foliage.md) (`done`).
+- **Nadal otwarte:** miękki brzeg ocean/ląd — [003](../issues/2026-08-07--003--ocean-shoreline-artifacts.md).
 
 ### 2026-08-10 — Ocean: blotches w odbiciu
 
 - Gęste „chmurowe” plamy w mirrorze Water.js — aliasing drobnej normal-mapy terenu w niskim RT lustra.
 - Cofnięto zagęszczenie detail normals; amplituda zostawiona niższa.
-- **Issue:** [009](./issues/2026-08-10--009--ocean-normal-map-reflection-blotches.md).
+- **Issue:** [009](../issues/2026-08-10--009--ocean-normal-map-reflection-blotches.md).
 
 ### 2026-08-07 — Ocean vs jeziora (architektura)
 
 - Duże zbiorniki → singleton reflective ocean; małe → chunk water z `vCover` / `bodyScale`.
-- Brzeg ocean/ląd bez soft maski na globalnym plane → ostre krawędzie ([003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md)).
+- Brzeg ocean/ląd bez soft maski na globalnym plane → ostre krawędzie ([003](../issues/2026-08-07--003--ocean-shoreline-artifacts.md)).
 
 ---
 
@@ -231,14 +231,14 @@ Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight
 
 | Temat | Status | Link |
 |-------|--------|------|
-| Soft shore fade ocean ↔ ląd | `done` (browser 2026-08-13) | issue [003](./issues/2026-08-07--003--ocean-shoreline-artifacts.md), plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 |
-| Śródlądzie = dwa materiały wody | `done` | [WATER.md](./state/water.md) W8, issue [028](./issues/2026-08-13--028--inland-water-dual-material.md), plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1 |
-| Lustro wody + toggle Vue | `verification needed` | W9, plan [098](./plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 3 |
-| Droga/trawa ground cover (#1–#3) | `done` | issue [023](./issues/2026-08-12--023--road-grass-ground-cover.md) |
-| God rays whiteout (fix) | `done` | issue [016](./issues/2026-08-11--016--god-rays-mountain-whiteout.md) |
-| Terrain detail normal „camo” (G vs B) | `verification needed` | issue [014](./issues/2026-08-10--014--terrain-detail-normal-map-green-channel.md) |
-| Tree size/age visual overhaul | `planned` | plan [073](./plans/archive/2026-08-12--073--tree-types-height-age-overhaul.md) |
-| World visual overhaul (rośliny, niebo, góry) | `in progress` | plan [024](./plans/2026-08-07--024--world-visual-overhaul.md) |
+| Soft shore fade ocean ↔ ląd | `done` (browser 2026-08-13) | issue [003](../issues/2026-08-07--003--ocean-shoreline-artifacts.md), plan [098](../plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 2 |
+| Śródlądzie = dwa materiały wody | `done` | [WATER.md](../state/water.md) W8, issue [028](../issues/2026-08-13--028--inland-water-dual-material.md), plan [098](../plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 1 |
+| Lustro wody + toggle Vue | `verification needed` | W9, plan [098](../plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) faza 3 |
+| Droga/trawa ground cover (#1–#3) | `done` | issue [023](../issues/2026-08-12--023--road-grass-ground-cover.md) |
+| God rays whiteout (fix) | `done` | issue [016](../issues/2026-08-11--016--god-rays-mountain-whiteout.md) |
+| Terrain detail normal „camo” (G vs B) | `verification needed` | issue [014](../issues/2026-08-10--014--terrain-detail-normal-map-green-channel.md) |
+| Tree size/age visual overhaul | `planned` | plan [073](../plans/archive/2026-08-12--073--tree-types-height-age-overhaul.md) |
+| World visual overhaul (rośliny, niebo, góry) | `in progress` | plan [024](../plans/archive/2026-08-07--024--world-visual-overhaul.md) |
 
 ---
 

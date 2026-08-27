@@ -94,7 +94,7 @@ Roadmap Seedvale: skończona dolina, nie infinite world — chunki **nie są pri
 | Większa mapa | jedna PlaneGeometry | chunk manager jako wzorzec (później) |
 | AI / osada / fauna | roadmap v0.2+ | **brak** w `3d-portfolio` |
 
-Powiązane: [2026-08-06-threejs-terrain-ai-tech-research.md](./2026-08-06-threejs-terrain-ai-tech-research.md) (SimonDev), [ROADMAP.md](../ROADMAP.md).
+Powiązane: [2026-08-07--001--threejs-terrain-ai-tech-research.md](./2026-08-07--001--threejs-terrain-ai-tech-research.md) (SimonDev), [ROADMAP.md](../ROADMAP.md).
 
 ## Verdict
 
