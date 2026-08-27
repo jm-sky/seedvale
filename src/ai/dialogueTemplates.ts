@@ -49,6 +49,7 @@ const ROLE_LABEL: Record<Role, string> = {
   miner: 'górnikiem',
   fisher: 'rybakiem',
   hunter: 'myśliwym',
+  blacksmith: 'kowalem',
 }
 
 const RELATION_LABEL: Record<FamilyRelation, string> = {

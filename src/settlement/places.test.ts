@@ -24,6 +24,7 @@ function makeLandmarks(overrides: Partial<SettlementLandmarks> = {}): Settlement
     garden,
     gardens: [garden],
     market: new Vector3(4, 0, 4),
+    blacksmith: new Vector3(6, 0, 6),
     homes: [],
     houses: [],
     trees: [],
@@ -54,6 +55,11 @@ describe('workplaceFor', () => {
   it('miner -> stockpile', () => {
     const landmarks = makeLandmarks()
     expect(workplaceFor('s1', 'miner', landmarks, 0)?.position).toBe(landmarks.stockpile)
+  })
+
+  it('blacksmith -> anvil/grind workbench landmark', () => {
+    const landmarks = makeLandmarks()
+    expect(workplaceFor('s1', 'blacksmith', landmarks, 0)?.position).toBe(landmarks.blacksmith)
   })
 
   it('fisher -> dock when present, else falls back to well', () => {

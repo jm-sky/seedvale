@@ -112,7 +112,6 @@ Natural vegetation
 | File | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | --------- | --- | --- | --- |
 | 💡 `npc-002-npc-healing.md`                                            | NPC używa opatrunków | 🟡 | M | ~~177~~ |
-| 💡 `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` | - | 🔴 | L | ~~178~~ ~~184~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
 | ◼️ `settlements-npcs-001-cultivation-hydration-and-watering.md`        | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
@@ -156,6 +155,7 @@ Implementation is complete; only browser/manual verification remains unless note
 
 | File        | Notes              |
 | ----------- | ------------------ |
+| `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` | [notes](./implementation-notes/settlements-npcs-002-npc-professions-complete-profession-work-integration-implementation-notes.md); new blacksmith prop placement + all 5 new profession behaviours need browser verification |
 | `2026-08-18--151--social-places-and-social-behaviour.md` | [notes](./implementation-notes/2026-08-18--151--social-places-and-social-behaviour-implementation-notes.md) |
 | `2026-08-18--152--npc-player-food-drink-help.md` | [notes](./implementation-notes/2026-08-18--152--npc-player-food-drink-help-implementation-notes.md) |
 | `world-terrain-001-clouds.md` | browser verification |

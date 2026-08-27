@@ -2,7 +2,9 @@ import type { ItemKind } from '../items/items'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { PlayerGardens } from './createPlayerGardens'
 import { ITEM_CATALOG } from '../items/itemCatalog'
+import { evaluateGroundPlacement } from '../items/tentPlacement'
 import { CROP_DEFS, type CropGrowthStage, type CropId, resolveCropHarvest } from './cropLifecycle'
+import { CROP_PLANT_FOOTPRINT_RADIUS, CROP_PLANT_SEPARATION } from './plantedCrops'
 import { cultivationYieldCount, findNearestGarden, resolveCultivationCare } from './playerGarden'
 
 /**
@@ -43,7 +45,35 @@ export type SettlementFoodSourceHooks = {
   /** Re-validates `id` still exists and applies maintenance — `false` if the
    *  plot was removed (decayed away) since `gardenNear` found it. */
   maintainGarden: (id: string) => boolean
+  /** Farmer work (plan settlements-npcs-002 §3/§5) — nearest crop within
+   *  `range` of `(x, z)` that is actually harvestable right now (`mature` or
+   *  a `spoiledItem`-bearing `spoiled`), unlike `queryNearest` which also
+   *  returns natural food items a farmer's proactive work shouldn't gather.
+   *  Feed the result straight back into `harvest` — same re-validation
+   *  contract as any other `FoodSourceTarget`. */
+  queryHarvestableCrop: (x: number, z: number, range: number) => FoodSourceTarget | null
+  /** A free, plantable spot within `radius` of a garden centre — deterministic
+   *  fixed-offset search (never random), rejecting anything too close to an
+   *  existing crop (`CROP_PLANT_SEPARATION`) or otherwise unsuitable ground
+   *  (water/slope/object, the same `evaluateGroundPlacement` the player's own
+   *  `plantCropAtAim` uses). `null` when nothing nearby qualifies. */
+  findPlantSpot: (gardenX: number, gardenZ: number, radius: number) => { x: number, z: number } | null
+  /** Plants `cropId` at `(x, z)` — thin wrapper over `ChunkManager.plantCrop`,
+   *  re-validated at the call site (chunk must be loaded/ready, no existing
+   *  planted crop at the exact quantized spot). `false` on failure — the
+   *  caller must not have already consumed the seed it would plant. */
+  plant: (x: number, z: number, cropId: CropId) => boolean
 }
+
+/** Deterministic ring of offsets (world units) tried around a garden centre
+ *  by `findPlantSpot` — fixed, not random, so two farmers scanning the same
+ *  garden in the same tick get the same candidate order (plan §13:
+ *  determinism for persistent profession decisions). */
+const FARM_PLANT_OFFSETS: readonly (readonly [number, number])[] = [
+  [1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5],
+  [1.2, 1.2], [-1.2, 1.2], [1.2, -1.2], [-1.2, -1.2],
+  [2.4, 0], [-2.4, 0], [0, 2.4], [0, -2.4],
+]
 
 /**
  * Deterministic nearest-available food source among `items`/`crops` within
@@ -73,6 +103,34 @@ export function nearestFoodSource(
     best = { kind: 'item', id: item.id, itemKind: item.kind, x: item.x, z: item.z }
     bestDistSq = distSq
   }
+  for (const crop of crops) {
+    if (!resolveCropHarvest(CROP_DEFS[crop.cropId], crop.stage)) continue
+    const dx = crop.x - x
+    const dz = crop.z - z
+    const distSq = dx * dx + dz * dz
+    if (distSq > bestDistSq) continue
+    if (best && distSq === bestDistSq && crop.id >= best.id) continue
+    best = { kind: 'crop', id: crop.id, cropId: crop.cropId, x: crop.x, z: crop.z, stage: crop.stage }
+    bestDistSq = distSq
+  }
+  return best
+}
+
+/**
+ * Deterministic nearest *actually harvestable* crop among `crops` within
+ * `radius` of (x, z) — farmer work's crop-only counterpart to
+ * `nearestFoodSource` (which also returns natural food items a farmer's
+ * proactive work shouldn't gather). Same stable id tie-break. Pure/bounded,
+ * same contract as `nearestFoodSource`.
+ */
+export function nearestHarvestableCrop(
+  x: number,
+  z: number,
+  crops: readonly { id: string, cropId: CropId, x: number, z: number, stage: CropGrowthStage }[],
+  radius: number,
+): FoodSourceTarget | null {
+  let best: FoodSourceTarget | null = null
+  let bestDistSq = radius * radius
   for (const crop of crops) {
     if (!resolveCropHarvest(CROP_DEFS[crop.cropId], crop.stage)) continue
     const dx = crop.x - x
@@ -119,6 +177,32 @@ export function createFoodSourceHooks(
     },
     maintainGarden(id) {
       return playerGardens.applyMaintenance(id, getWorldDays()) !== null
+    },
+    queryHarvestableCrop(x, z, range) {
+      return nearestHarvestableCrop(x, z, chunkManager.getNearbyCrops({ x, z }, range), range)
+    },
+    findPlantSpot(gardenX, gardenZ, radius) {
+      const peers = chunkManager.getNearbyCrops({ x: gardenX, z: gardenZ }, radius + CROP_PLANT_SEPARATION)
+      for (const [dx, dz] of FARM_PLANT_OFFSETS) {
+        if (Math.hypot(dx, dz) > radius) continue
+        const x = gardenX + dx
+        const z = gardenZ + dz
+        const reason = evaluateGroundPlacement({
+          x,
+          z,
+          sampleHeight: chunkManager.sampleHeight,
+          waterLevel: chunkManager.waterLevel,
+          blockers: [],
+          peers,
+          footprintRadius: CROP_PLANT_FOOTPRINT_RADIUS,
+          separation: CROP_PLANT_SEPARATION,
+        })
+        if (reason === 'ok') return { x, z }
+      }
+      return null
+    },
+    plant(x, z, cropId) {
+      return chunkManager.plantCrop(x, z, cropId) != null
     },
   }
 }

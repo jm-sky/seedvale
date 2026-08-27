@@ -164,6 +164,60 @@ export function createCrate(scale = 1): THREE.Group {
   return crate
 }
 
+/** Fallback if `parked/anvil.glb` fails to load (plan settlements-npcs-002)
+ *  — a simple stepped iron block on a stump, same flat-shaded low-poly style
+ *  as the other structure fallbacks. */
+export function createAnvil(): THREE.Group {
+  const anvil = new THREE.Group()
+  const stumpMat = new THREE.MeshStandardMaterial({ color: 0x5a4530, flatShading: true })
+  const ironMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3e, flatShading: true, roughness: 0.4 })
+
+  const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.42, 8), stumpMat)
+  stump.position.y = 0.21
+  stump.castShadow = true
+  anvil.add(stump)
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.22), ironMat)
+  body.position.y = 0.53
+  body.castShadow = true
+  anvil.add(body)
+
+  const horn = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.32, 8), ironMat)
+  horn.rotation.z = Math.PI / 2
+  horn.position.set(0.38, 0.53, 0)
+  horn.castShadow = true
+  anvil.add(horn)
+
+  return anvil
+}
+
+/** Fallback if `parked/workbench-grind.glb` fails to load (plan
+ *  settlements-npcs-002) — a plain bench with a disc-shaped grindstone. */
+export function createGrindWorkbench(): THREE.Group {
+  const bench = new THREE.Group()
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6e4f30, flatShading: true })
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x8a8a86, flatShading: true, roughness: 0.8 })
+
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.45), woodMat)
+  top.position.y = 0.55
+  top.castShadow = true
+  bench.add(top)
+
+  for (const [dx, dz] of [[-0.38, -0.18], [0.38, -0.18], [-0.38, 0.18], [0.38, 0.18]] as const) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.55, 0.06), woodMat)
+    leg.position.set(dx, 0.275, dz)
+    bench.add(leg)
+  }
+
+  const grindstone = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.08, 14), stoneMat)
+  grindstone.rotation.x = Math.PI / 2
+  grindstone.position.set(0, 0.72, 0)
+  grindstone.castShadow = true
+  bench.add(grindstone)
+
+  return bench
+}
+
 export function createStockpile(): THREE.Group {
   const pile = new THREE.Group()
   const mat = new THREE.MeshStandardMaterial({

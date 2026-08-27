@@ -17,6 +17,14 @@ describe('characterForSeed', () => {
     // trader stays reserved-only (plan 090) — never rolled by the random pool.
     expect(roles.has('trader')).toBe(false)
   })
+
+  it('can roll blacksmith as a normal random role (plan settlements-npcs-002)', () => {
+    const roles = new Set<Role>()
+    for (let seed = 0; seed < 500; seed++) {
+      roles.add(characterForSeed(seed, seed % 2 === 0 ? 'male' : 'female').role)
+    }
+    expect(roles.has('blacksmith')).toBe(true)
+  })
 })
 
 describe('RESERVED_CHARACTERS (plan 178 must not change these)', () => {

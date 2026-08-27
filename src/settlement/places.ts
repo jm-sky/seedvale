@@ -82,6 +82,8 @@ export function socialPlaceFor(settlementId: string, landmarks: SettlementLandma
  *   hunting expedition targets live fauna, not a fixed landmark (plan 178),
  *   so this only anchors the idle `work` stand/arrow-crafting stand, not
  *   where hunting itself happens.
+ * - `blacksmith` → `landmarks.blacksmith` (anvil + grind workbench, plan
+ *   settlements-npcs-002) — a real maintenance workplace, not a stand-in.
  *
  * Returns `null` only when the role's landmark genuinely doesn't exist for
  * this settlement (e.g. a `woodcutter` in a settlement with no trees yet).
@@ -93,6 +95,8 @@ export function workplaceFor(
   treeIndex: number,
 ): Place | null {
   switch (role) {
+    case 'blacksmith':
+      return { id: `${settlementId}:workplace:blacksmith`, type: 'workplace', position: landmarks.blacksmith }
     case 'farmer':
       return { id: `${settlementId}:workplace:garden`, type: 'workplace', position: landmarks.garden }
     case 'fisher':

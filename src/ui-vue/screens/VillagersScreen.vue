@@ -19,6 +19,7 @@ const ROLE_LABEL: Record<Role, string> = {
   miner: 'Górnik',
   fisher: 'Rybak',
   hunter: 'Myśliwy',
+  blacksmith: 'Kowal',
 }
 
 const PERSONALITY_LABEL: Record<Personality, string> = {

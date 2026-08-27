@@ -73,9 +73,11 @@ import {
   WALL_HALF_LENGTH,
 } from './settlementPalisade'
 import {
+  createAnvil,
   createBarrel,
   createCrate,
   createGarden,
+  createGrindWorkbench,
   createHayBale,
   createHut,
   createStockpile,
@@ -142,6 +144,11 @@ export type SettlementLandmarks = {
    *  decision). Built unconditionally, like well/garden/stockpile, whether
    *  or not this settlement's families happen to roll a trader. */
   market: THREE.Vector3
+  /** Blacksmith's `workplace` (`places.ts`'s `workplaceFor`) — anvil + grind
+   *  workbench (plan settlements-npcs-002), same "built unconditionally like
+   *  well/garden/stockpile/market" treatment regardless of whether this
+   *  settlement's families happen to roll a blacksmith. */
+  blacksmith: THREE.Vector3
   /** Foot positions for homes — same order as `houses` (compat for places/livestock). */
   homes: THREE.Vector3[]
   /** Per-house catalog identity for examine / debug (issue 018). */
@@ -618,6 +625,7 @@ export async function buildSettlementProps(
     garden: new THREE.Vector3(),
     gardens: [],
     market: new THREE.Vector3(),
+    blacksmith: new THREE.Vector3(),
     homes: [],
     houses: [],
     trees: [],
@@ -754,6 +762,24 @@ export async function buildSettlementProps(
   placeOnGround(marketBarrel, marketX + 0.7, marketZ + 0.3, sampleHeight)
   group.add(marketBarrel)
   landmarks.market.set(marketX, sampleHeight(marketX, marketZ), marketZ)
+
+  // Blacksmith's forge (`landmarks.blacksmith`, see `places.ts`'s
+  // `workplaceFor`) — anvil + grind workbench (plan settlements-npcs-002),
+  // built unconditionally like well/garden/stockpile/market, whether or not
+  // this settlement's families happen to roll a blacksmith. Parked assets
+  // (`docs/assets/MODELS.md`) promoted to active use here.
+  const { x: forgeX, z: forgeZ } = placeFromLandmark(
+    site, undefined, -2, -5, sampleHeight, waterLevel, coreRandom,
+  )
+  const anvil = await loadPropOrFallback('/models/parked/anvil.glb', 0.75, () => createAnvil())
+  anvil.rotation.y = coreRandom() * Math.PI * 2
+  placeOnGround(anvil, forgeX, forgeZ, sampleHeight)
+  group.add(anvil)
+  const grindWorkbench = await loadPropOrFallback('/models/parked/workbench-grind.glb', 0.95, () => createGrindWorkbench())
+  grindWorkbench.rotation.y = coreRandom() * Math.PI * 2
+  placeOnGround(grindWorkbench, forgeX + 1, forgeZ + 0.4, sampleHeight)
+  group.add(grindWorkbench)
+  landmarks.blacksmith.set(forgeX, sampleHeight(forgeX, forgeZ), forgeZ)
 
   const houseLights: HouseLight[] = []
   const villageTorches: VillageTorch[] = []

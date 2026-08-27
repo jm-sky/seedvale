@@ -285,25 +285,26 @@ describe('generateFamilies', () => {
       // Pinned against the pre-age-generation output for seed 7/LG (verified
       // by diffing before/after this feature) so the new, isolated age RNG
       // stream provably doesn't perturb the existing one. Re-pinned for plan
-      // 178 (`hunter` joined `RANDOM_ROLES`, shifting every subsequent roll
-      // in this deterministic stream) — the roles below are the new correct
-      // output, not a behavior regression.
+      // 178 (`hunter` joined `RANDOM_ROLES`) and again for plan
+      // settlements-npcs-002 (`blacksmith` joined `RANDOM_ROLES`), each time
+      // shifting every subsequent roll in this deterministic stream — the
+      // roles below are the new correct output, not a behavior regression.
       const families = generateFamilies(7, 'LG', false, 'polish')
       const roles = families.flatMap((f) => f.members.map((m) => `${m.name}:${m.character.role}`))
       expect(roles).toEqual([
-        'Sławomir:fisher',
+        'Sławomir:hunter',
         'Magdalena:miner',
-        'Barbara:hunter',
-        'Paweł:hunter',
-        'Ola:fisher',
-        'Jan:hunter',
+        'Barbara:blacksmith',
+        'Paweł:blacksmith',
+        'Ola:hunter',
+        'Jan:blacksmith',
         'Sławomir:miner',
-        'Katarzyna:farmer',
+        'Katarzyna:guard',
         'Tomasz:farmer',
         'Helena:farmer',
         'Stanisław:farmer',
         'Krystyna:miner',
-        'Barbara:miner',
+        'Barbara:fisher',
       ])
     })
   })

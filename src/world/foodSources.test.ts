@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nearestFoodSource } from './foodSources'
+import { nearestFoodSource, nearestHarvestableCrop } from './foodSources'
 
 describe('nearestFoodSource', () => {
   it('picks the nearest hunger-relevant item', () => {
@@ -52,5 +52,28 @@ describe('nearestFoodSource', () => {
     ]
     const found = nearestFoodSource(0, 0, items, [], 50)
     expect(found?.id).toBe('a')
+  })
+})
+
+describe('nearestHarvestableCrop (farmer work, plan settlements-npcs-002)', () => {
+  it('picks the nearest mature crop, ignoring young/spoiled ones', () => {
+    const crops = [
+      { id: 'young', cropId: 'carrot' as const, x: 1, z: 0, stage: 'young' as const },
+      { id: 'far-mature', cropId: 'potato' as const, x: 10, z: 0, stage: 'mature' as const },
+      { id: 'near-mature', cropId: 'cabbage' as const, x: 2, z: 0, stage: 'mature' as const },
+    ]
+    const found = nearestHarvestableCrop(0, 0, crops, 50)
+    expect(found).toEqual({ kind: 'crop', id: 'near-mature', cropId: 'cabbage', x: 2, z: 0, stage: 'mature' })
+  })
+
+  it('never returns a natural food item — crop-only, unlike nearestFoodSource', () => {
+    const crops = [{ id: 'crop:1', cropId: 'carrot' as const, x: 4, z: 0, stage: 'mature' as const }]
+    const found = nearestHarvestableCrop(0, 0, crops, 50)
+    expect(found?.kind).toBe('crop')
+  })
+
+  it('returns null when nothing is harvestable nearby', () => {
+    const crops = [{ id: 'crop:1', cropId: 'carrot' as const, x: 4, z: 0, stage: 'young' as const }]
+    expect(nearestHarvestableCrop(0, 0, crops, 50)).toBeNull()
   })
 })

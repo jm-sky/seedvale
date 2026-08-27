@@ -1,7 +1,7 @@
 # Plan: NPC professions — complete profession work integration
 
 **Created:** 2026-08-25
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified 2026-08-27, browser/gameplay verification pending
 **Priority:** high · **Effort:** L
 **Depends on:** ~~178~~ ~~184~~
 **Domain:** `settlements-npcs`
@@ -628,5 +628,30 @@ Profession system uznajemy za wykonany, gdy:
 * Blacksmith wykorzystuje rzeczywiste workplace assets,
 * testy przechodzą,
 * gameplay został zweryfikowany w browserze.
+
+---
+
+# 18. Implementation summary (2026-08-27)
+
+**Implemented** (technically verified — `tsc`/lint/tests/build all pass):
+
+* `blacksmith` added as the 8th `Role` (`characters.ts`, `RANDOM_ROLES`, `SCHEDULE_TEMPLATES`, `dialogueTemplates.ts`, `VillagersScreen.vue`, `workplaceFor`) — a normal random role like `hunter` before it, no dedicated/forced assignment.
+* Blacksmith workplace: anvil + grind workbench (`public/models/parked/anvil.glb`/`workbench-grind.glb`, promoted from parked; procedural fallbacks in `settlementStructures.ts`) built unconditionally per settlement (`landmarks.blacksmith`), same pattern as the market stall.
+* `NpcAgent.beginIdle()`'s `work` schedule block gained 5 new role dispatch checks (`beginFarmWork`/`beginFishingWork`/`beginGuardPatrol`/`beginTraderWork`/`beginBlacksmithWork`), each falling back to the pre-existing generic idle work stand — same shape as the existing `miner`/`hunter` checks, no `resolveProfessionWork` dispatch table (not warranted at this size).
+* **Farmer**: harvests the nearest real mature/spoiled-yielding crop near the settlement garden (new `SettlementFoodSourceHooks.queryHarvestableCrop`, reusing the exact existing `harvest()` re-validation), depositing the real yield into `Household`/`SettlementEconomy`. Falls back to planting (new `findPlantSpot`/`plant` hooks, deterministic offset ring + `evaluateGroundPlacement`) only when the household already holds a real seed item.
+* **Fisher**: casts at the settlement's real dock (`landmarks.dock`) using the exact deterministic `(spot, attempt)` catch rule from `world/fishing.ts` (no bait — that stays player-only bait-map state), delivering `fish` to `Household.items` via the generalized `depositCarriedItems()` (was `depositHuntYield`, now shared with the hunter's meat/hide delivery). No dock → normal idle fallback, never fishes at the well.
+* **Guard**: cycles a fixed 3-point patrol (home / well / market) during `work` instead of standing still. Threat detection/response needed no new code — the existing `senseImmediateAnimalThreat`/`decideAnimalThreatResponse` critical-interrupt already applies to every NPC regardless of role.
+* **Trader**: moves its own household's real `food`/`wood` surplus into `SettlementEconomy` when the settlement has a matching shortage — a bounded, local economic effect (see loose-ends below for why this doesn't reach other households).
+* **Blacksmith**: finds a `WeaponItemInstance` below a sharpness threshold in its own household's item storage and runs the existing `sharpenWeapon()` — no new maintenance math.
+* `ActionId` gained `fish`/`harvest`/`plant`/`sharpen` (classified as `work` activity, like `mine`).
+
+**Deliberately not implemented** (see `docs/plans/LOOSE-ENDS.md`, entries dated 2026-08-27):
+
+* Watering/hydration — the plan text's "dry → water" branch has no counterpart in the actual crop model (`world/cropLifecycle.ts`, plan 172, has no hydration state); that's a separate, still-`planned` plan (`settlements-npcs-001-cultivation-hydration-and-watering.md`).
+* Farmer's plant path and Blacksmith's sharpen path are both wired correctly but effectively dormant in a normal playthrough — no gameplay path deposits seeds or whetstones into a household today.
+* Trader only redistributes its own household's surplus, not other households' (would need a new cross-household hook).
+* Miner/Woodcutter/Hunter were not touched — already real per the implementation notes, and re-verified passing.
+
+**Not yet done:** browser/gameplay verification (new blacksmith prop placement/scale/collision, all 5 new profession behaviours observed live). Technical verification only so far.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

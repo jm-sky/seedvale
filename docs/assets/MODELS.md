@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-08-24 (plan 169 — house interior furniture and bed anchors)
+**Last updated:** 2026-08-27 (plan settlements-npcs-002 — NPC profession work integration)
 
 ## How to use
 
@@ -92,6 +92,8 @@ If the feature needs no new model, do nothing to this file.
 | M63 | House interior table | All 11 furnished house variants; also the mount anchor origin for M64 | `wired` | plan 169 (`settlement/furniture/table.glb`) |
 | M64 | House interior table lamp | Native asset is a ~1 m floor/standing lamp shape, not a small table lamp — fit down via `preparePropFitMax(TABLE_LAMP_FIT_MAX)` (0.35 m), same technique as `LANTERN_FLOOR_MAX`/`LANTERN_WALL_MAX`. Static mesh only (no independent `PointLight` — the house's existing exterior-lamp `createHouseLight()` call already adds one interior fill light per house; a second one would double it for no visible benefit) | `wired` | plan 169 (`settlement/furniture/lamp.glb`) |
 | M65 | Free Medieval 3D People Low Poly Pack (craftpix.net, 14 postaci) | Statyczne (bez animacji, T-pose/idle) tło: `king`, `queen`, `peasant_1..6`, `city_dwellers_1..2`, `rich_citizens_1..4` — kandydaci na dekorację tronu/rynku/tłum, **nie** zamiennik Modular Men/Women (te mają `Idle`/`Walk` itd., wymagane przez `NpcAgent`'s `findAction`). Skonwertowane `FBX2glTF --binary` → `gltfpack -cc` z wariantu `fbx/unral_better_export/*` (ma poprawną względną ścieżkę do tekstury; `fbx/people_unity/*` ma tylko ścieżkę absolutną Windows i wychodzi bez tekstury/czarny). Brak wiring do gameplay/`NPC_MODEL_URLS` | `in repo` | [CREDITS](./CREDITS.md), `public/models/characters/medieval/` |
+| M66 | Anvil | Blacksmith workplace prop (`landmarks.blacksmith`), built unconditionally per settlement like well/garden/market; procedural stepped-iron-on-stump fallback in place and functional if the GLB fails to load | `wired` | plan settlements-npcs-002 (`public/models/parked/anvil.glb`) |
+| M67 | Grind workbench | Blacksmith workplace prop next to the anvil; procedural bench+grindstone fallback in place and functional if the GLB fails to load | `wired` | plan settlements-npcs-002 (`public/models/parked/workbench-grind.glb`) |
 
 ## Wired (reference — do not treat as open work)
 
@@ -102,7 +104,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Characters | Modular men/women NPCs, Adventurer player |
 | Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
 | Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed, rock/log, ore piles, cemetery / gravestones |
-| Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+), interior furniture bed/table/lamp (all 11 village house definitions, plan 169) |
+| Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+), interior furniture bed/table/lamp (all 11 village house definitions, plan 169), blacksmith anvil + grind workbench (plan settlements-npcs-002) |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; spear; short sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork) |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
 | FX | fire tip (handheld, village torch, campfire flame); blood splat (animal death); harvested remains (pile / large bone / hide) |
