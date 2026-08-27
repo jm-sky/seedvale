@@ -46,8 +46,8 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `004`
-- fauna: `002`
-- items-player: `001`
+- fauna: `004`
+- items-player: `002`
 - npc: `002`
 - persistence: `001`
 - quests-progression: `001`
@@ -118,7 +118,10 @@ Natural vegetation
 | ◼️ `settlements-npcs-001-cultivation-hydration-and-watering.md`        | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
 | ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`               | - | 🟡 | S | ~~151~~ |
 | 💡 `settlements-001-house-collision-geometry.md`                       | - | 🔴 | L | 111 |
+| ◼️ `items-player-001-containers-waterskins-and-copper-items.md`        | - | 🟡 | S | `none` |
 | ◼️ `fauna-001-rabies-and-animal-infection.md`                          | - | 🟡 | M | ~~188~~ |
+| ◼️ `fauna-002-livestock-food-production.md`                            | - | 🟡 | M | `items-player-001` |
+| ◼️ `fauna-003-horse-riding.md`                                         | - | 🟡 | M | - |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
 | ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
 | 💡 `ui-input-002-ui-ux-interaction-and-action-system-polish.md`        | - | 🟡 | L | - |
