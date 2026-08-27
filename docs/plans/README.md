@@ -22,7 +22,7 @@ Existing legacy plans keep their current date/global-ID names and are not rename
 
 ## Plan domains
 
-New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only for genuinely secondary domains.
+New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only for genuinely secondary domains.
 
 | Domain | Covers |
 |--------|--------|
@@ -39,7 +39,9 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 | `world` | World state, resources, places, time, weather and global systems |
 | `world-terrain` | Terrain, chunks, ocean, environment and landmarks |
 
-`domain` means "where to look first". Use `tags` sparingly.
+`Ddomain` means "where to look first". Use `Tags` sparingly.
+
+`Roadmap` is optional, and should point to a file in `docs/roadmap` folder.
 
 ## Next plan IDs
 

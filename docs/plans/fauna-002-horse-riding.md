@@ -1,10 +1,11 @@
 # Plan: Jazda konna
 
-**Created:** 2026-08-27
-**Status:** `planned` 📋
-**Priority:** medium · **Effort:** M
-**Depends on:** none
-**Domain:** `fauna`
+**Created:** 2026-08-27  
+**Status:** `planned` 📋  
+**Priority:** medium · **Effort:** M  
+**Depends on:** none  
+**Domain:** `fauna`  
+**Roadmap:** `horse-and-riding.md`  
 
 ## 1. Cel
 
