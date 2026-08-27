@@ -79,6 +79,8 @@ Przeanalizować i wdrożyć odpowiedni wzorzec, np.:
 
 Wspólny katalog/źródło akcji powinno nadal definiować availability, label, cost i wykonanie, tak aby Quick Actions i inne wejścia nie duplikowały logiki.
 
+Scroll powinien być wygodny na mobile.
+
 ### 6. Equipment shortcuts
 
 Dodać szybki dostęp do:
