@@ -656,9 +656,30 @@ async function buildWorldSystems(
     try {
       bootMark('background:fauna+preloads')
       ;[fauna] = await Promise.all([
-        buildFauna(scene, chunkManager, homeDef, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState),
-        preloadItemGlbModels(),
-        preloadHeldToolModels(),
+        (async () => {
+          bootMark('background:buildFauna')
+          try {
+            return await buildFauna(scene, chunkManager, homeDef, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
+          } finally {
+            bootMarkEnd('background:buildFauna')
+          }
+        })(),
+        (async () => {
+          bootMark('background:preloadItemGlbModels')
+          try {
+            await preloadItemGlbModels()
+          } finally {
+            bootMarkEnd('background:preloadItemGlbModels')
+          }
+        })(),
+        (async () => {
+          bootMark('background:preloadHeldToolModels')
+          try {
+            await preloadHeldToolModels()
+          } finally {
+            bootMarkEnd('background:preloadHeldToolModels')
+          }
+        })(),
       ])
       bootMarkEnd('background:fauna+preloads')
 
