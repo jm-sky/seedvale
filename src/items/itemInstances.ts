@@ -56,6 +56,33 @@ export function isWeaponMaintenanceKind(kind: ItemKind): kind is WeaponMaintenan
   return WEAPON_MAINTENANCE_KINDS.has(kind)
 }
 
+/** What a liquid-container instance (plan items-player-001) can hold. */
+export type LiquidContent = 'water' | 'milk'
+
+/** Kinds backed by `LiquidContainerItemInstance` — three waterskin sizes
+ *  (water only) and two buckets (water or milk); `ITEM_CATALOG[kind].container`
+ *  carries capacity/allowed-content rules (`items/liquidContainer.ts`). */
+export type LiquidContainerKind =
+  | 'waterskin_small'
+  | 'waterskin_medium'
+  | 'waterskin_large'
+  | 'wooden_bucket'
+  | 'copper_bucket'
+
+export const LIQUID_CONTAINER_KIND_LIST: readonly LiquidContainerKind[] = [
+  'waterskin_small',
+  'waterskin_medium',
+  'waterskin_large',
+  'wooden_bucket',
+  'copper_bucket',
+]
+
+export const LIQUID_CONTAINER_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>(LIQUID_CONTAINER_KIND_LIST)
+
+export function isLiquidContainerKind(kind: ItemKind): kind is LiquidContainerKind {
+  return LIQUID_CONTAINER_KINDS.has(kind)
+}
+
 /** `durability`/`sharpness` are `[0,1]`, `1` on a fresh instance. `durability`
  *  is tracked but v1 has no repair/broken lifecycle (plan 161) — a weapon
  *  keeps working at any durability. */
@@ -67,6 +94,19 @@ export type WeaponItemInstance = ItemInstance & {
 
 export function isWeaponItemInstance(instance: ItemInstance): instance is WeaponItemInstance {
   return isWeaponMaintenanceKind(instance.kind)
+}
+
+/** `liquid` null + `amountLitres` 0 = empty; `amountLitres` is always within
+ *  `[0, capacityLiters]` for the instance's kind
+ *  (`ITEM_CATALOG[kind].container`, enforced by `items/liquidContainer.ts`). */
+export type LiquidContainerItemInstance = ItemInstance & {
+  kind: LiquidContainerKind
+  liquid: LiquidContent | null
+  amountLitres: number
+}
+
+export function isLiquidContainerInstance(instance: ItemInstance): instance is LiquidContainerItemInstance {
+  return isLiquidContainerKind(instance.kind)
 }
 
 let nextInstanceId = 0
@@ -81,6 +121,7 @@ export const INSTANCE_BACKED_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
   'trap_good',
   'trap_simple',
   ...WEAPON_MAINTENANCE_KINDS,
+  ...LIQUID_CONTAINER_KINDS,
 ])
 
 export function isInstanceBackedKind(kind: ItemKind): boolean {
@@ -113,6 +154,15 @@ export function cloneItemInstance(instance: ItemInstance): ItemInstance {
       sharpness: instance.sharpness,
     }
     return weapon
+  }
+  if (isLiquidContainerInstance(instance)) {
+    const container: LiquidContainerItemInstance = {
+      id: instance.id,
+      kind: instance.kind,
+      liquid: instance.liquid,
+      amountLitres: instance.amountLitres,
+    }
+    return container
   }
   return { id: instance.id, kind: instance.kind }
 }

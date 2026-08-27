@@ -101,7 +101,6 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     },
     inventory: inventory.toJSON(),
     inventoryInstances: inventory.instancesToJSON(),
-    inventoryLiquids: inventory.liquidsToJSON(),
     collectedItemIds: [...deps.getCollectedItemIds()],
     droppedItems: bundle.droppedItems.nodes().map((item) => ({ ...item })),
     placedFires: bundle.placedFires.nodes().map((fire) => ({ ...fire })),

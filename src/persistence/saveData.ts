@@ -2,7 +2,7 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
 import type { ContainerKind } from '../items/container'
-import type { LiquidState, SaveItemInstance } from '../items/Inventory'
+import type { SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { QuestState } from '../quests/quests'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
@@ -269,12 +269,11 @@ export type SaveData = {
   savedAt: number
   quests: SaveQuests
   inventory: Partial<Record<ItemKind, number>>
-  /** Per-instance item state (durability/sharpness) for instance-backed kinds
-   *  (`items/Inventory.ts`'s `SaveItemInstance`). */
+  /** Per-instance item state — durability/sharpness for weapons/traps, held
+   *  liquid (`liquid`/`amountLitres`, plan items-player-001) for waterskins/
+   *  buckets — for every instance-backed kind (`items/Inventory.ts`'s
+   *  `SaveItemInstance`). */
   inventoryInstances: SaveItemInstance[]
-  /** Held liquid-container state (plan items-player-001) — see
-   *  `items/Inventory.ts`'s `LiquidState`. */
-  inventoryLiquids: Partial<Record<ItemKind, LiquidState>>
   /** Ids of world-generated items (`terrain/chunkItems.ts`) already picked up —
    *  see `ChunkManagerConfig.collectedItemIds`. */
   collectedItemIds: string[]
@@ -509,6 +508,13 @@ function isSaveItemInstancesField(value: unknown): value is SaveItemInstance[] {
     }
     if (row.durability !== undefined && typeof row.durability !== 'number') return false
     if (row.sharpness !== undefined && typeof row.sharpness !== 'number') return false
+    // Plan items-player-001 — liquid-container rows (`liquid`/`amountLitres`),
+    // both optional (an empty container omits them); when present, `liquid`
+    // must be a real content and `amountLitres` a finite non-negative number.
+    // Capacity clamping against the kind's actual `container.capacityLiters`
+    // happens in `Inventory.instancesFromJSON`, not here.
+    if (row.liquid !== undefined && row.liquid !== 'water' && row.liquid !== 'milk') return false
+    if (row.amountLitres !== undefined && (typeof row.amountLitres !== 'number' || !Number.isFinite(row.amountLitres) || row.amountLitres < 0)) return false
     return true
   })
 }
@@ -525,17 +531,6 @@ function isSaveFoodBatchArray(value: unknown): value is SaveFoodBatch[] {
 function isFoodBatchesField(value: unknown): value is Partial<Record<ItemKind, SaveFoodBatch[]>> {
   if (!value || typeof value !== 'object') return false
   return Object.values(value as Record<string, unknown>).every(isSaveFoodBatchArray)
-}
-
-function isSaveLiquidState(value: unknown): value is LiquidState {
-  if (!value || typeof value !== 'object') return false
-  const s = value as Record<string, unknown>
-  return (s.content === 'water' || s.content === 'milk') && typeof s.liters === 'number' && Number.isFinite(s.liters)
-}
-
-function isInventoryLiquidsField(value: unknown): value is Partial<Record<ItemKind, LiquidState>> {
-  if (!value || typeof value !== 'object') return false
-  return Object.values(value as Record<string, unknown>).every(isSaveLiquidState)
 }
 
 function isTimedProcessField(value: unknown): value is SaveTimedProcess | null {
@@ -773,7 +768,6 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!v.quests || typeof v.quests !== 'object') return false
   if (!v.inventory || typeof v.inventory !== 'object') return false
   if (!isSaveItemInstancesField(v.inventoryInstances)) return false
-  if (!isInventoryLiquidsField(v.inventoryLiquids)) return false
   if (!Array.isArray(v.collectedItemIds)) return false
   if (!Array.isArray(v.droppedItems)) return false
   if (!Array.isArray(v.placedFires)) return false

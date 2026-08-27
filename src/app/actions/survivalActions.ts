@@ -15,9 +15,17 @@ import {
 import { spawnerDestroyBusyLabel } from '../../fauna/createFauna'
 import { COOK_DURATION_SEC, findCookingBatch, resolveCookingCapacity } from '../../items/campfireCooking'
 import { getFreshnessStage } from '../../items/foodFreshness'
-import { inventoryFullToastText, LIQUID_DRINK_PORTION_LITERS } from '../../items/Inventory'
-import { hasItemCapability, isLiquidContainerKind, ITEM_CATALOG } from '../../items/itemCatalog'
+import { inventoryFullToastText } from '../../items/Inventory'
+import { hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
+import { isLiquidContainerInstance, isLiquidContainerKind, type LiquidContainerItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
+import {
+  canDrinkFromLiquidContainer,
+  canFillLiquidContainer,
+  drinkFromLiquidContainer,
+  fillLiquidContainer,
+  liquidContainerCapacity,
+} from '../../items/liquidContainer'
 import {
   drinkWater as drinkWaterNeeds,
   eatFood,
@@ -237,21 +245,30 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
    *  future bucket/barrel fill action would reuse. */
   const WATERSKIN_KINDS: readonly ItemKind[] = ['waterskin_small', 'waterskin_medium', 'waterskin_large']
 
+  /** All carried waterskin instances, smallest capacity first. */
+  function carriedWaterskins(): LiquidContainerItemInstance[] {
+    return WATERSKIN_KINDS.flatMap((kind) => inventory.getInstances(kind))
+      .filter(isLiquidContainerInstance)
+      .sort((a, b) => liquidContainerCapacity(a.kind) - liquidContainerCapacity(b.kind))
+  }
+
   /** Instant fill of a carried waterskin at a well/lake (plan 106 §4, updated
    *  by plan items-player-001 for partial content): tops up the smallest
-   *  carried waterskin that isn't already full of water, in one instant
-   *  action — no separate empty/full `ItemKind` swap any more. */
+   *  carried waterskin instance that isn't already full of water, in one
+   *  instant action — no separate empty/full `ItemKind` swap any more. */
   const fillWaterskin = (): void => {
     if (isActionBlocked(ctx)) return
-    const target = WATERSKIN_KINDS.find((kind) => inventory.count(kind) > 0 && inventory.fillLiquid(kind, 'water'))
+    const carried = carriedWaterskins()
+    const target = carried.find((inst) => canFillLiquidContainer(inst, 'water'))
     if (target) {
+      inventory.updateInstance(target.id, (inst) => fillLiquidContainer(inst as LiquidContainerItemInstance, 'water')!)
       playActionWell(worldAudio.playAt, player.mesh.position)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show('Napełniono bukłak.', 'pickup')
       return
     }
-    const carriesAny = WATERSKIN_KINDS.some((kind) => inventory.count(kind) > 0)
-    toast.show(carriesAny ? 'Bukłak jest już pełny.' : 'Potrzebujesz bukłaka.', 'error')
+    toast.show(carried.length > 0 ? 'Bukłak jest już pełny.' : 'Potrzebujesz bukłaka.', 'error')
   }
 
   /** Inventory-screen "Zjedz"/"Wypij" (plan 106) — driven by
@@ -259,16 +276,20 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
    *  cooking paths' relief amounts come from. */
   const consumeItem = (kind: ItemKind): void => {
     const entry = ITEM_CATALOG[kind].consumable
-    if (!entry || !inventory.has(kind, 1)) return
-    // Plan items-player-001 — a waterskin is one drink portion off its held
-    // liquid (`Inventory.drinkLiquid`), not a whole-item remove/resultKind
-    // swap: it stays the same carried item, empty or not.
+    if (!entry || !inventory.holdsAny(kind)) return
+    // Plan items-player-001 — a waterskin drinks one portion off a concrete
+    // `LiquidContainerItemInstance` (`items/liquidContainer.ts`), not a
+    // whole-item remove/resultKind swap: the same carried instance stays
+    // present, empty or not.
     if (isLiquidContainerKind(kind)) {
-      if (!inventory.drinkLiquid(kind, LIQUID_DRINK_PORTION_LITERS)) {
+      const target = inventory.getInstances(kind).filter(isLiquidContainerInstance).find((inst) => canDrinkFromLiquidContainer(inst))
+      if (!target) {
         toast.show('Bukłak jest pusty.', 'error')
         return
       }
+      inventory.updateInstance(target.id, (inst) => drinkFromLiquidContainer(inst as LiquidContainerItemInstance)!)
       drinkWaterNeeds(player.needs, entry.relief)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       ctx.refreshInventoryScreen()
       toast.show('Wypito.', 'pickup')

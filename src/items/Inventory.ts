@@ -1,16 +1,21 @@
 import { canMergeFoodBatches, isFoodPerishable } from './foodFreshness'
-import { CAPABILITY_KINDS, ITEM_CATALOG, type ItemCapability, type LiquidContent } from './itemCatalog'
+import { CAPABILITY_KINDS, ITEM_CATALOG, type ItemCapability } from './itemCatalog'
 import {
   clamp01,
   cloneItemInstance,
+  isLiquidContainerInstance,
+  isLiquidContainerKind,
   isTrapItemInstance,
   isWeaponItemInstance,
   isWeaponMaintenanceKind,
   type ItemInstance,
+  type LiquidContainerItemInstance,
+  type LiquidContent,
   type TrapItemInstance,
   type WeaponItemInstance,
 } from './itemInstances'
 import { ITEM_DEFS, type ItemKind, itemSizeUnits } from './items'
+import { LIQUID_DENSITY_KG_PER_LITRE } from './liquidContainer'
 
 /** Default carry limit (kg) — see plan `2026-08-08--043`. Not persisted (the
  *  plan keeps weight/limit derived from config/definitions, not save data);
@@ -37,6 +42,10 @@ export type SaveItemInstance = {
   durability?: number
   /** Plan 161 — weapon-maintenance kinds only; absent/invalid → `1`. */
   sharpness?: number
+  /** Plan items-player-001 — liquid-container kinds only. Absent/`0`
+   *  `amountLitres` means empty; `liquid` is meaningless (and omitted) then. */
+  liquid?: LiquidContent
+  amountLitres?: number
 }
 
 /** `ItemInstance` → its persisted-row shape — the single conversion used by
@@ -50,6 +59,10 @@ export function toSaveItemInstance(instance: ItemInstance): SaveItemInstance {
     row.durability = instance.durability
     row.sharpness = instance.sharpness
   }
+  if (isLiquidContainerInstance(instance) && instance.liquid && instance.amountLitres > 0) {
+    row.liquid = instance.liquid
+    row.amountLitres = instance.amountLitres
+  }
   return row
 }
 
@@ -60,16 +73,6 @@ export function toSaveItemInstance(instance: ItemInstance): SaveItemInstance {
  *  incompatible ages stay distinguishable without ever creating one
  *  `ItemInstance` per food unit. */
 export type FoodBatch = { count: number, acquiredAtDays: number }
-
-/** One drink action's worth of liquid (plan items-player-001 §2.2/§3.2) —
- *  shared by every `container` kind (waterskins, buckets). */
-export const LIQUID_DRINK_PORTION_LITERS = 1
-
-/** A liquid-container kind's held state — one aggregate `liters` total per
- *  `ItemKind` stack, not per physical unit (see `itemCatalog.ts`'s
- *  `container` doc for the known gap). `liters` is always `> 0` while an
- *  entry exists; an empty stack simply has no entry. */
-export type LiquidState = { content: LiquidContent, liters: number }
 
 /** Generic item carrier: counters + a weight limit. Originally player-only;
  *  reused by `NpcAgent` (plan 131) as a brief hold between extracting a
@@ -84,9 +87,6 @@ export class Inventory {
   /** Only populated for kinds with `ItemCatalogEntry.food.freshness` — see
    *  `isFoodPerishable()`. Every entry's batches always sum to `counts.get(kind)`. */
   private readonly foodBatches = new Map<ItemKind, FoodBatch[]>()
-  /** Only populated for `container` kinds (plan items-player-001) currently
-   *  holding some liquid — see `LiquidState`. */
-  private readonly liquids = new Map<ItemKind, LiquidState>()
   private readonly baseMaxWeight: number
   /** Gabarite capacity (plan 164), independent of `maxWeight` — see
    *  `ItemSize`/`itemSizeUnits`. `Infinity` (the default for every caller
@@ -100,7 +100,6 @@ export class Inventory {
     initialInstances?: readonly ItemInstance[],
     initialFoodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>,
     maxSize = Infinity,
-    initialLiquids?: Partial<Record<ItemKind, LiquidState>>,
   ) {
     this.baseMaxWeight = maxWeight
     this.maxSize = maxSize
@@ -122,12 +121,6 @@ export class Inventory {
           .filter((b) => b.count > 0)
           .map((b) => ({ count: b.count, acquiredAtDays: b.acquiredAtDays }))
         if (clamped.length > 0) this.foodBatches.set(kind, clamped)
-      }
-    }
-    if (initialLiquids) {
-      for (const [kind, state] of Object.entries(initialLiquids) as [ItemKind, LiquidState | undefined][]) {
-        if (!state || !(state.liters > 0)) continue
-        this.liquids.set(kind, { content: state.content, liters: state.liters })
       }
     }
   }
@@ -202,11 +195,16 @@ export class Inventory {
     return batches.reduce((min, b) => Math.min(min, b.acquiredAtDays), Infinity)
   }
 
+  /** Held liquid mass (plan items-player-001 §13, resolved now that content
+   *  is real per-instance state) adds on top of a liquid container's own
+   *  `ITEM_DEFS.weight` — a full 10 l bucket is meaningfully heavier than an
+   *  empty one, not "faked away" by leaving `ITEM_DEFS.weight` static. */
   totalWeight(): number {
     let total = 0
     for (const [kind, n] of this.counts) total += ITEM_DEFS[kind].weight * n
     for (const instance of this.instances.values()) {
       total += ITEM_DEFS[instance.kind].weight
+      if (isLiquidContainerInstance(instance)) total += instance.amountLitres * LIQUID_DENSITY_KG_PER_LITRE
     }
     return total
   }
@@ -362,7 +360,6 @@ export class Inventory {
     if (current < n) return false
     this.counts.set(kind, current - n)
     if (isFoodPerishable(kind)) this.removeFoodBatch(kind, n)
-    this.clampLiquidToCapacity(kind)
     return true
   }
 
@@ -370,89 +367,14 @@ export class Inventory {
     return this.instances.delete(id)
   }
 
-  /** Combined liter capacity for `kind` right now — its `container` capacity
-   *  (plan items-player-001) times how many units of `kind` are held. `0` for
-   *  non-container kinds or when none are held. */
-  liquidCapacity(kind: ItemKind): number {
-    const container = ITEM_CATALOG[kind].container
-    if (!container) return 0
-    return container.capacityLiters * this.count(kind)
-  }
-
-  /** Losing containers (sell/drop) shrinks capacity — clamp down rather than
-   *  let held liters exceed what's still physically carried. */
-  private clampLiquidToCapacity(kind: ItemKind): void {
-    const state = this.liquids.get(kind)
-    if (!state) return
-    const capacity = this.liquidCapacity(kind)
-    if (capacity <= 0) {
-      this.liquids.delete(kind)
-      return
-    }
-    if (state.liters > capacity) state.liters = capacity
-  }
-
-  /** Read-only snapshot of `kind`'s currently held liquid, or null when empty
-   *  / not a container kind. */
-  getLiquid(kind: ItemKind): LiquidState | null {
-    const state = this.liquids.get(kind)
-    if (!state || !(state.liters > 0)) return null
-    return { ...state }
-  }
-
-  /** Tops up every held unit of `kind` with `content` up to their combined
-   *  capacity — the "instant fill" behaviour carried over from plan 106's
-   *  well/lake `[R]` waterskin fill. False when `kind` isn't a container,
-   *  doesn't allow `content`, none are held, or the stack already holds a
-   *  different content (call `emptyLiquid` first) or is already full. */
-  fillLiquid(kind: ItemKind, content: LiquidContent): boolean {
-    const container = ITEM_CATALOG[kind].container
-    if (!container || !container.allowedContents.includes(content)) return false
-    const capacity = this.liquidCapacity(kind)
-    if (capacity <= 0) return false
-    const current = this.liquids.get(kind)
-    if (current && current.content !== content) return false
-    if (current && current.liters >= capacity) return false
-    this.liquids.set(kind, { content, liters: capacity })
-    return true
-  }
-
-  /** Consumes one drink portion from `kind`'s held liquid (default
-   *  `LIQUID_DRINK_PORTION_LITERS`). False when there isn't enough held. */
-  drinkLiquid(kind: ItemKind, liters: number = LIQUID_DRINK_PORTION_LITERS): boolean {
-    const current = this.liquids.get(kind)
-    if (!current || current.liters < liters) return false
-    const remaining = current.liters - liters
-    if (remaining <= 0) this.liquids.delete(kind)
-    else current.liters = remaining
-    return true
-  }
-
-  /** Manually dumps `kind`'s held liquid (plan items-player-001 §8's "empty"
-   *  action) — same end state as drinking it dry, explicit entry point. */
-  emptyLiquid(kind: ItemKind): void {
-    this.liquids.delete(kind)
-  }
-
   clear(): void {
     this.counts.clear()
     this.instances.clear()
     this.foodBatches.clear()
-    this.liquids.clear()
   }
 
   toJSON(): Partial<Record<ItemKind, number>> {
     return Object.fromEntries(this.counts) as Partial<Record<ItemKind, number>>
-  }
-
-  /** Persists only kinds currently holding some liquid (plan
-   *  items-player-001) — see `LiquidState`. */
-  liquidsToJSON(): Partial<Record<ItemKind, LiquidState>> {
-    const out: Partial<Record<ItemKind, LiquidState>> = {}
-    for (const [kind, state] of this.liquids) {
-      if (state.liters > 0) out[kind] = { ...state }
-    }
-    return out
   }
 
   /** Persists only what can't be re-derived: perishable kinds' batch counts +
@@ -491,6 +413,20 @@ export class Inventory {
           sharpness: typeof row.sharpness === 'number' ? clamp01(row.sharpness) : 1,
         }
         out.push(weapon)
+        continue
+      }
+      if (isLiquidContainerKind(row.kind)) {
+        const capacity = ITEM_CATALOG[row.kind].container?.capacityLiters ?? 0
+        const rawLitres = typeof row.amountLitres === 'number' && Number.isFinite(row.amountLitres) ? row.amountLitres : 0
+        const amountLitres = Math.max(0, Math.min(capacity, rawLitres))
+        const liquid = amountLitres > 0 && (row.liquid === 'water' || row.liquid === 'milk') ? row.liquid : null
+        const container: LiquidContainerItemInstance = {
+          id: row.id,
+          kind: row.kind,
+          liquid,
+          amountLitres: liquid ? amountLitres : 0,
+        }
+        out.push(container)
         continue
       }
       out.push({ id: row.id, kind: row.kind })

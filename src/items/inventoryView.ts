@@ -2,10 +2,13 @@ import type { Inventory } from './Inventory'
 import type { ItemKind } from './items'
 import {
   INSTANCE_BACKED_KINDS,
+  isLiquidContainerInstance,
   isTrapItemInstance,
   isWeaponItemInstance,
   type ItemInstance,
+  type LiquidContainerItemInstance,
 } from './itemInstances'
+import { liquidContainerCapacity } from './liquidContainer'
 import { resolveInstanceSellPrice } from './tradeCatalog'
 import { trapConditionPercent } from './trapItemInstances'
 import { weaponDurabilityPercent, weaponSharpnessPercent } from './weaponMaintenance'
@@ -72,12 +75,45 @@ function buildWeaponGroup(kind: ItemKind, instances: readonly ItemInstance[]): I
   }
 }
 
+/** Percent-full reading used as a liquid container's `conditionPercent` — the
+ *  closest existing UI concept ("stan X%") to "how full is it", so
+ *  waterskins/buckets get a visible fill indicator for free through the same
+ *  instance-grouping UI traps/weapons already use, no new UI needed. */
+function liquidFillPercent(instance: LiquidContainerItemInstance): number {
+  const capacity = liquidContainerCapacity(instance.kind)
+  if (capacity <= 0) return 0
+  return Math.round((instance.amountLitres / capacity) * 100)
+}
+
+/** Plan items-player-001 — mirrors `buildTrapGroup`; `conditionPercent` reads
+ *  as fill percentage (`sharpnessPercent` stays null, not applicable). */
+function buildLiquidContainerGroup(kind: ItemKind, instances: readonly ItemInstance[]): InventoryGroupView | null {
+  const containers = instances.filter(isLiquidContainerInstance)
+  if (containers.length === 0) return null
+  const rows: InventoryInstanceRow[] = containers.map((inst) => ({
+    id: inst.id,
+    conditionPercent: liquidFillPercent(inst),
+    sharpnessPercent: null,
+    sellPrice: resolveInstanceSellPrice(inst) ?? 0,
+  }))
+  const percents = rows.map((r) => r.conditionPercent)
+  const allSame = percents.every((p) => p === percents[0])
+  return {
+    kind,
+    count: rows.length,
+    condition: allSame ? 'uniform' : 'mixed',
+    uniformConditionPercent: allSame ? percents[0]! : null,
+    instances: rows,
+  }
+}
+
 /** Derived presentation for inventory UI — not persisted. */
 export function buildInventoryGroups(inventory: Inventory): InventoryGroupView[] {
   const groups: InventoryGroupView[] = []
 
   for (const kind of INSTANCE_BACKED_KINDS) {
-    const group = buildTrapGroup(kind, inventory.getInstances(kind)) ?? buildWeaponGroup(kind, inventory.getInstances(kind))
+    const instances = inventory.getInstances(kind)
+    const group = buildTrapGroup(kind, instances) ?? buildWeaponGroup(kind, instances) ?? buildLiquidContainerGroup(kind, instances)
     if (group) groups.push(group)
   }
 

@@ -33,6 +33,15 @@ describe('depositMining (plan 090)', () => {
     expect(isMineableOre('fish')).toBe(false)
   })
 
+  it('mines copper ore through the same pipeline as iron/coal/gold (plan items-player-001)', () => {
+    expect(isMineableOre('copper_ore')).toBe(true)
+    expect(ORE_ITEM.copper_ore).toBe('copper_ore')
+    expect(yieldForOre('copper_ore')).toEqual({ kind: 'copper_ore', count: 1 })
+    const kind = oreEconomicKind('copper_ore')
+    expect(kind).toBe('copper_ore')
+    expect(ECONOMIC_KINDS).toContain(kind)
+  })
+
   it('scales hits with richness into 3–7', () => {
     expect(hitsForRichness(0)).toBe(3)
     expect(hitsForRichness(1)).toBe(7)

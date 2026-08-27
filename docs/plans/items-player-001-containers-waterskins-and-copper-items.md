@@ -1,7 +1,7 @@
 # Plan: Containers, Waterskins & Copper Items
 
 **Created:** 2026-08-27  
-**Status:** `verification needed` 🔍 — implemented, technical checks pass; browser/manual verification pending. See [implementation notes](./implementation-notes/items-player-001-containers-waterskins-and-copper-items-implementation-notes.md) for deviations (backpack already existed; partial content is an `Inventory`-level aggregate, not `ItemInstance`; buckets are domain-only, no wired interaction yet).  
+**Status:** `verification needed` 🔍 — implemented per the review notes below, technical checks pass; browser/manual verification pending. See [implementation notes](./implementation-notes/items-player-001-containers-waterskins-and-copper-items-implementation-notes.md) — §1-18 are the pre-implementation review, §19 documents what was actually built.  
 **Priority:** medium · **Effort:** S  
 **Depends on:** `none`  
 **Domain:** `items-player`
@@ -584,7 +584,7 @@ Nie implementować:
 ## Pojemniki
 
 - [x] pojemniki mają określoną maksymalną pojemność,
-- [x] możliwa jest częściowa zawartość (aggregate liters per `ItemKind`, not per physical unit — see implementation notes §2),
+- [x] możliwa jest częściowa zawartość (per-instance `LiquidContainerItemInstance` — two carried units of the same kind can hold different amounts, see implementation notes §19),
 - [x] stan zawartości nie tworzy osobnych `ItemKind`,
 - [x] woda może być przechowywana w bukłakach,
 - [x] woda może być przechowywana w wiadrach,
@@ -601,7 +601,7 @@ Nie implementować:
 ## Integracja
 
 - [x] `ItemKind`, `ITEM_DEFS` i `ITEM_CATALOG` są spójne,
-- [ ] istniejące inventory/save pozostają kompatybilne — **hard cut**: `waterskin_empty`/`waterskin_full` no longer exist; an old save carrying either will keep an orphaned `ItemKind` entry (consistent with save v1's "no migration" policy, `CLAUDE.md`),
+- [x] istniejące inventory/save pozostają kompatybilne — legacy `waterskin_empty`/`waterskin_full` kept as valid `ItemKind`s and converted to `waterskin_medium` instances on load (`migrateLegacyWaterskinsToInstances`), same pattern as plan 161's weapon-instance migration,
 - [x] wykorzystane są istniejące mechanizmy itemów,
 - [x] nie powstaje drugi system itemów,
 - [x] nie powstaje drugi system placementu,

@@ -1,6 +1,7 @@
 import type { Inventory } from './Inventory'
 import {
   isInstanceBackedKind,
+  isLiquidContainerKind,
   isTrapItemInstance,
   isWeaponItemInstance,
   isWeaponMaintenanceKind,
@@ -8,6 +9,7 @@ import {
   type TrapItemInstance,
 } from './itemInstances'
 import { ITEM_DEFS, type ItemKind, itemSizeUnits } from './items'
+import { createLiquidContainerInstance } from './liquidContainer'
 import {
   canSell,
   merchantPrice,
@@ -124,6 +126,7 @@ function removeOffer(inventory: Inventory, offer: Partial<Record<ItemKind, numbe
 export function createAcquiredInstance(kind: ItemKind): ItemInstance | null {
   if (kind === 'trap_simple' || kind === 'trap_good') return createTrapInstance(kind)
   if (isWeaponMaintenanceKind(kind)) return createWeaponInstance(kind)
+  if (isLiquidContainerKind(kind)) return createLiquidContainerInstance(kind)
   return null
 }
 

@@ -17,7 +17,6 @@ const validSave: SaveData = {
   quests: { progress: [], exp: 0, relations: {} },
   inventory: {},
   inventoryInstances: [],
-  inventoryLiquids: {},
   collectedItemIds: [],
   droppedItems: [],
   placedFires: [],
@@ -119,6 +118,28 @@ describe('loadSaveData v1 contract', () => {
   it('rejects malformed inventory instances', () => {
     expect(loadSaveData({ ...validSave, inventoryInstances: [{ id: 'x', kind: 'trap_simple' }] })).toBeNull()
     expect(loadSaveData({ ...validSave, inventoryInstances: 'nope' })).toBeNull()
+  })
+
+  it('accepts empty, partial and full liquid-container instance rows (plan items-player-001)', () => {
+    expect(loadSaveData({
+      ...validSave,
+      inventoryInstances: [
+        { id: 'a', kind: 'wooden_bucket' },
+        { id: 'b', kind: 'waterskin_small', liquid: 'water', amountLitres: 1 },
+        { id: 'c', kind: 'copper_bucket', liquid: 'milk', amountLitres: 10 },
+      ],
+    })).not.toBeNull()
+  })
+
+  it('rejects an invalid liquid content or a negative amountLitres', () => {
+    expect(loadSaveData({
+      ...validSave,
+      inventoryInstances: [{ id: 'x', kind: 'waterskin_small', liquid: 'wine', amountLitres: 1 }],
+    })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      inventoryInstances: [{ id: 'x', kind: 'waterskin_small', liquid: 'water', amountLitres: -1 }],
+    })).toBeNull()
   })
 
   it('rejects malformed food/drying/hive/fishing fields', () => {

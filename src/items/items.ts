@@ -34,6 +34,11 @@ export type ItemKind =
   | 'raw_meat'
   | 'roasted_meat'
   | 'bread'
+  /** Legacy plan-106 waterskin — no longer acquirable; kept only so an old
+   *  save's counts still parse (`items/liquidContainer.ts`'s
+   *  `migrateLegacyWaterskinsToInstances` converts them away on load). */
+  | 'waterskin_empty'
+  | 'waterskin_full'
   | 'waterskin_small'
   | 'waterskin_medium'
   | 'waterskin_large'
@@ -422,6 +427,24 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'SM',
     color: 0xc99a52,
     description: 'Bochenek chleba. Dobrze się przechowuje — przydatny na czarną godzinę.'
+  },
+  waterskin_empty: {
+    kind: 'waterskin_empty',
+    label: 'bukłak (pusty)',
+    categories: ['utility'],
+    weight: 0.3,
+    size: 'SM',
+    color: 0x6b5a3a,
+    description: 'Legacy — migrowany do instancji `waterskin_medium` przy wczytaniu (plan items-player-001).'
+  },
+  waterskin_full: {
+    kind: 'waterskin_full',
+    label: 'bukłak (pełny)',
+    categories: ['utility'],
+    weight: 1.3,
+    size: 'SM',
+    color: 0x4a9fd8,
+    description: 'Legacy — migrowany do instancji `waterskin_medium` przy wczytaniu (plan items-player-001).'
   },
   waterskin_small: {
     kind: 'waterskin_small',

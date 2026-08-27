@@ -1,3 +1,4 @@
+import type { LiquidContent } from './itemInstances'
 import type { ItemKind } from './items'
 /**
  * Machine-readable item catalog for Seedvale.
@@ -118,9 +119,6 @@ export const CAPABILITY_NEED_LABEL: Record<ItemCapability, string> = {
  *  `PlayerNeeds` pool, `health` heals `HealthState` directly (plan 153). */
 export type ConsumableNeed = 'hunger' | 'thirst' | 'health'
 
-/** What a `container` entry (plan items-player-001) can hold. */
-export type LiquidContent = 'water' | 'milk'
-
 /** `backpack`'s `carryCapacityBonus` (plan 186) — a meaningful jump over the
  *  player's `DEFAULT_MAX_WEIGHT` (20 kg, `Inventory.ts`) without trivializing
  *  the existing overload thresholds (`player/playerEncumbrance.ts`). */
@@ -169,21 +167,12 @@ export type ItemCatalogEntry = {
    *  over held counts. Absent/0 for every kind that isn't a capacity item. */
   carryCapacityBonus?: number
   /** Plan items-player-001 §7 — the shared container model for waterskins/
-   *  buckets (and later a barrel). `capacityLiters` is per physical unit;
-   *  `Inventory.liquidCapacity()` multiplies it by how many of `kind` are
-   *  actually held. Content/amount is tracked as one aggregate liters total
-   *  per `ItemKind` stack (`Inventory`'s `liquids` map), not per physical
-   *  unit — carrying two of the same container size and filling only one
-   *  isn't distinguishable yet; a real per-unit split would need promoting
-   *  these kinds to `ItemInstance` (deliberately not done here, see plan
-   *  §7's own "don't build the full architecture if not needed yet"). */
+   *  buckets (and later a barrel). `capacityLiters` is the per-instance
+   *  capacity; `kind` is one of `LiquidContainerKind` (`itemInstances.ts`) and
+   *  its actual held content/amount lives on the concrete
+   *  `LiquidContainerItemInstance`, not here — this is only the static
+   *  per-kind definition (`items/liquidContainer.ts` reads it). */
   container?: { capacityLiters: number, allowedContents: readonly LiquidContent[] }
-}
-
-/** Whether `kind` is one of the shared liquid containers (plan
- *  items-player-001) — waterskins/buckets today. */
-export function isLiquidContainerKind(kind: ItemKind): boolean {
-  return ITEM_CATALOG[kind].container !== undefined
 }
 
 /** Single source of truth for the inventory/world-prompt action verb per
@@ -470,7 +459,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'none',
     modelUrl: null,
-    notes: 'Plan items-player-001 §5.2 — buy from Kupiec, same "no smelting yet" shortcut as `iron_rod`: a minimal source for future crafting inputs without building copper_ore→copper processing.',
+    notes: 'Plan items-player-001 §5.2/§11 — future `copper_ore` smelting output, not implemented. Not Kupiec stock (unlike `iron_rod`\'s "no smelting, buy the bar" shortcut) — deliberately unobtainable until that processing step exists, per the plan\'s own review notes.',
   },
   iron_rod: {
     kind: 'iron_rod',
@@ -533,6 +522,24 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     notes: 'Plan 106 — buy from Kupiec (`tradeCatalog.ts`); prepared for future/emergency use per the plan.',
     consumable: { need: 'hunger', relief: 30 },
   },
+  waterskin_empty: {
+    kind: 'waterskin_empty',
+    label: 'bukłak (pusty)',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Legacy (plan 106) — no longer Kupiec stock. Not obtainable in a fresh game; only ever seen in an old save, converted to a `waterskin_medium` instance by `migrateLegacyWaterskinsToInstances()` before gameplay ever reads it.',
+  },
+  waterskin_full: {
+    kind: 'waterskin_full',
+    label: 'bukłak (pełny)',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Legacy (plan 106) — same migrated-away status as `waterskin_empty`, converted to a full-of-water `waterskin_medium` instance.',
+  },
   waterskin_small: {
     kind: 'waterskin_small',
     label: 'mały bukłak',
@@ -541,7 +548,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     container: { capacityLiters: 2, allowedContents: ['water'] },
-    notes: 'Plan items-player-001 — leather, buy from Kupiec (future leatherworker source); fill to full at a well/lake `[R]`. Replaces plan 106\'s binary waterskin_empty/waterskin_full — one kind now covers empty through full via `Inventory.fillLiquid`/`drinkLiquid` (see `container` doc). Not a `HeldTool` slot item.',
+    notes: 'Plan items-player-001 — leather, buy from Kupiec (future leatherworker source); fill to full at a well/lake `[R]`. Instance-backed (`items/liquidContainer.ts`) — replaces plan 106\'s binary waterskin_empty/waterskin_full swap with one kind covering empty through full via its own `LiquidContainerItemInstance` state. Not a `HeldTool` slot item.',
     consumable: { need: 'thirst', relief: DRINK_THIRST_RELIEF },
   },
   waterskin_medium: {
@@ -574,7 +581,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     container: { capacityLiters: 10, allowedContents: ['water', 'milk'] },
-    notes: 'Plan items-player-001 — wood, buy from Kupiec (no recipe yet). Domain container only: milking/drink-from-bucket world interactions are deferred to the future interaction-window plan (§9); `Inventory.fillLiquid`/`drinkLiquid`/`emptyLiquid` are ready for it.',
+    notes: 'Plan items-player-001 — wood, buy from Kupiec (no recipe yet). Instance-backed (`items/liquidContainer.ts`), same as the waterskins. Domain container only: milking/drink-from-bucket world interactions are deferred to the future interaction-window plan (§9).',
   },
   copper_bucket: {
     kind: 'copper_bucket',
@@ -584,7 +591,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     container: { capacityLiters: 10, allowedContents: ['water', 'milk'] },
-    notes: 'Plan items-player-001 — copper, buy from Kupiec (future blacksmith source, no recipe yet). Same deferred interactions as `wooden_bucket`.',
+    notes: 'Plan items-player-001 §5/§11 — copper, future blacksmith smithing/crafting output. Not Kupiec stock yet (unlike `wooden_bucket`) — copper items stay acquisition-less until copper processing/smithing exists, same as `copper` itself. Same deferred interactions as `wooden_bucket`.',
   },
   deer_meat: {
     kind: 'deer_meat',

@@ -36,6 +36,7 @@ import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryVi
 import { hasItemCapability } from '../items/itemCatalog'
 import { isWeaponMaintenanceKind } from '../items/itemInstances'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { migrateLegacyWaterskinsToInstances } from '../items/liquidContainer'
 import { createPrimaryWeaponSelection } from '../items/primaryWeapons'
 import { createAcquiredInstance } from '../items/trade'
 import { createWeaponInstance, migrateWeaponCountsToInstances } from '../items/weaponMaintenance'
@@ -450,13 +451,17 @@ export async function createApp(
     initialSave ? Inventory.instancesFromJSON(initialSave.inventoryInstances ?? []) : undefined,
     initialSave?.foodBatches,
     DEFAULT_MAX_SIZE,
-    initialSave?.inventoryLiquids,
   )
 
   // Plan 161 — pre-existing count-based weapons (starting knife, older saves)
   // have no recoverable condition; every unit becomes a fresh full-condition
   // instance. Idempotent, so safe to run unconditionally on every load.
   migrateWeaponCountsToInstances(inventory)
+  // Plan items-player-001 — pre-existing plan-106 waterskin_empty/
+  // waterskin_full counts predate the sized/partial-content model; every unit
+  // becomes a fresh `waterskin_medium` instance. Idempotent (a fresh game or
+  // an already-migrated save has zero count for these legacy kinds).
+  migrateLegacyWaterskinsToInstances(inventory)
   grantStartingLoadout(inventory)
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
   const primaryWeapons = createPrimaryWeaponSelection()
