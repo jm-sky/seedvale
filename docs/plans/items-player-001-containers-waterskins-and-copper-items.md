@@ -8,7 +8,7 @@
 
 ## 1. Cel
 
-Dodać do Seedvale podstawowe pojemniki potrzebne do dalszego rozwoju:
+Dodać do Seedvale podstawowe pojemniki i przedmioty potrzebne do dalszego rozwoju:
 
 - gospodarki wodą,
 - dojenia i mleka,
@@ -16,7 +16,7 @@ Dodać do Seedvale podstawowe pojemniki potrzebne do dalszego rozwoju:
 - transportu płynów,
 - wyposażenia gracza i NPC.
 
-Na tym etapie dodajemy **itemy, ich definicje, pojemności, materiały, podstawowe dane domenowe oraz przygotowanie pod interakcje**.
+Na tym etapie dodajemy **itemy, ich definicje, pojemności, materiały, podstawowe dane domenowe oraz przygotowanie pod przyszłe interakcje i crafting**.
 
 **Nie implementujemy jeszcze procesu wytwarzania.**
 
@@ -24,9 +24,7 @@ System okien interakcji będzie realizowany w osobnym planie i powinien istnieć
 
 ---
 
-# 2. Zakres itemów
-
-## 2.1. Bukłaki
+# 2. Bukłaki
 
 Dodać trzy rozmiary:
 
@@ -38,20 +36,26 @@ Dodać trzy rozmiary:
 
 Istniejący bukłak należy odpowiednio zmienić/rozszerzyć zamiast tworzyć równoległy system.
 
-### Zawartość
+## 2.1. Zawartość
 
 Bukłak jest przeznaczony do **wody**.
 
-Docelowy stan:
+Stan przechowywania powinien być częściowy, np.:
 
-```
+```text
 water: 2 / 5 l
 water: 4 / 10 l
 ```
 
-Nie tworzyć osobnych itemów dla różnych ilości wody.
+Nie tworzyć osobnych `ItemKind` dla różnych ilości wody.
 
-### Picie
+Pusty bukłak pozostaje tym samym przedmiotem:
+
+```text
+water: 0 / 5 l
+```
+
+## 2.2. Picie
 
 Jedna porcja picia zużywa:
 
@@ -59,16 +63,10 @@ Jedna porcja picia zużywa:
 
 Przykład:
 
-```
+```text
 5 / 5 l
 → picie
 → 4 / 5 l
-```
-
-Pusty bukłak pozostaje tym samym przedmiotem:
-
-```
-0 / 5 l
 ```
 
 ---
@@ -86,16 +84,16 @@ Oba wiadra powinny korzystać z tego samego modelu domenowego pojemnika.
 
 Różnica materiału jest właściwością itemu, a nie osobnym systemem.
 
-## 3.1. Zastosowania wiadra
+## 3.1. Zastosowania
 
-Wiadro jest pojemnikiem dla:
+Wiadro może zawierać:
 
-- wody,
-- mleka.
+- wodę,
+- mleko.
 
-Docelowo powinno obsługiwać:
+Docelowy stan:
 
-```
+```text
 empty
 water: X / 10 l
 milk: X / 10 l
@@ -103,41 +101,131 @@ milk: X / 10 l
 
 Przykład:
 
-```
+```text
 Drewniane wiadro
 Mleko: 6 / 10 l
 ```
 
+## 3.2. Picie
+
+Wodę i mleko można pić bezpośrednio z wiadra.
+
+Jedna porcja picia zużywa:
+
+**1 l**
+
+Przykład:
+
+```text
+milk: 7 / 10 l
+→ picie
+→ milk: 6 / 10 l
+```
+
+## 3.3. Dojenie
+
+Wiadro jest podstawowym pojemnikiem przewidzianym do dojenia krów.
+
+Docelowy przepływ:
+
+```text
+krowa
+ ↓
+dojenie
+ ↓
+wiadro
+ ↓
+milk: X / 10 l
+```
+
+Bukłaki **nie są przeznaczone do mleka**.
+
 ---
 
-# 4. Dodatkowe naczynia
+# 4. Wyroby ze skóry
 
-### Kubek — NIE dodajemy na tym etapie
+Żona Huntera jako przyszła leatherworker będzie mogła wytwarzać podstawowe przedmioty ze skóry.
 
-Ponieważ przyjmujemy, że można:
+Na tym etapie dodajemy definicje itemów i przygotowujemy je pod późniejszy crafting. Proces wytwarzania nie jest jeszcze implementowany.
 
-- pić wodę bezpośrednio z wiadra,
-- pić mleko bezpośrednio z wiadra,
+## 4.1. Plecak
 
-`copper_cup` nie ma obecnie wystarczającego zastosowania mechanicznego.
+### `backpack`
 
-Nie dodawać go tylko jako dekoracyjnego itemu.
+**Nazwa:** Plecak  
+**Materiał:** skóra
 
-Można wrócić do niego w przyszłości, gdy pojawi się mechanika:
+Przeznaczenie:
 
-- porcji napojów,
-- serwowania jedzenia,
-- karczm,
-- przygotowywania napojów,
-- podawania mleka.
+- zwiększenie pojemności ekwipunku,
+- późniejszy element wyposażenia gracza/NPC.
+
+Plecak jest pojedynczym itemem wyposażenia.
+
+Dokładna mechanika zwiększania pojemności inventory zostanie ustalona przy implementacji wyposażenia.
+
+Przyszłe źródła:
+
+- leatherworker / żona Huntera,
+- kupiec.
+
+Nie dodawać randomowego world spawnu.
+
+## 4.2. Juki
+
+### `saddlebags`
+
+**Nazwa:** Juki  
+**Materiał:** skóra
+
+Przeznaczenie:
+
+- zwiększenie możliwości transportowych zwierzęcia,
+- przewożenie przedmiotów przez konia lub osła.
+
+Juki powinny być wyposażeniem zwierzęcia, a nie zwykłym rozszerzeniem inventory gracza.
+
+Docelowo:
+
+```text
+horse + saddlebags
+        ↓
+większa pojemność transportowa
+```
+
+oraz:
+
+```text
+donkey + saddlebags
+        ↓
+większa pojemność transportowa
+```
+
+Juki powinny być możliwe do założenia na zwierzę, które obsługuje transport.
+
+Nie implementować jeszcze:
+
+- mechaniki zakładania juków,
+- inventory zwierzęcia,
+- zwiększania pojemności,
+- UI wyposażenia zwierzęcia.
+
+Te elementy zostaną połączone z przyszłym systemem wyposażenia/transportu zwierząt.
+
+Przyszłe źródła:
+
+- leatherworker / żona Huntera,
+- kupiec.
+
+Nie dodawać randomowego world spawnu.
 
 ---
 
 # 5. Miedź
 
-Na tym etapie wprowadzamy **miedź jako jedyny nowy metal**.
+Na tym etapie wprowadzamy **miedź jako podstawowy nowy metal**.
 
-## `copper_ore`
+## 5.1. `copper_ore`
 
 **Nazwa:** Ruda miedzi
 
@@ -145,66 +233,42 @@ Reprezentuje wydobywaną rudę.
 
 Powinna zostać zintegrowana z istniejącym systemem zasobów/minerałów.
 
-## `copper`
+Nie tworzyć osobnego systemu dla miedzi.
+
+## 5.2. `copper`
 
 **Nazwa:** Miedź
 
-Materiał wykorzystywany przez późniejszy crafting.
+Materiał wykorzystywany przez przyszły crafting.
 
 Na tym etapie **nie implementować pełnego procesu przetwarzania rudy**.
 
-Jeżeli istniejący system wymaga minimalnego źródła `copper`, należy wykorzystać istniejące mechanizmy zamiast tworzyć osobny system metalurgii.
+Jeżeli obecny system wymaga minimalnego źródła `copper`, należy wykorzystać istniejące mechanizmy zamiast tworzyć osobny system metalurgii.
 
 ---
 
-# 6. Mleko
+# 6. Dodatkowe naczynia
 
-Ten plan przygotowuje itemy pod przyszły system mleka.
+## 6.1. Kubek — NIE dodajemy
 
-Docelowy przepływ:
+Kubek nie jest potrzebny na tym etapie, ponieważ przyjmujemy, że:
 
-```
-krowa
- ↓
-dojenie
- ↓
-odpowiedni pojemnik
- ↓
-milk: X / 10 l
-```
+- wodę można pić bezpośrednio z wiadra,
+- mleko można pić bezpośrednio z wiadra.
 
-Przykład:
+Nie dodawać `copper_cup` tylko jako dekoracyjnego itemu.
 
-```
-wooden_bucket
-milk: 7 / 10 l
-```
+Do tematu kubka można wrócić później, gdy pojawi się konkretna mechanika, np.:
 
-### Dojenie
-
-**Wiadro nie musi być jedynym możliwym typem naczynia w abstrakcyjnym systemie.**
-
-Na obecnym etapie jednak to ono jest podstawowym przewidzianym pojemnikiem do dojenia.
-
-Bukłaki **nie są przeznaczone do mleka**.
-
-### Picie
-
-Mleko można pić bezpośrednio z wiadra.
-
-Jedno picie:
-
-```
-7 / 10 l
-→
-6 / 10 l
-```
-
-Szczegółowa akcja interakcji będzie podłączona do systemu interakcji z osobnego planu.
+- porcje napojów,
+- serwowanie jedzenia,
+- karczmy,
+- przygotowywanie napojów,
+- podawanie mleka.
 
 ---
 
-# 7. System pojemników
+# 7. Wspólny model pojemników
 
 Nie tworzyć osobnego `BucketSystem`.
 
@@ -216,51 +280,53 @@ Jeżeli obecna architektura tego wymaga, należy wprowadzić **minimalny, wspól
 
 Koncepcyjnie:
 
-```
+```text
 Container
 ├── capacity
 ├── content type
 └── content amount
 ```
 
-Przykłady:
+Przykład:
 
-```
+```text
 waterskin_small
 capacity: 2 l
 content: water
 amount: 1 l
 ```
 
-```
+```text
 copper_bucket
 capacity: 10 l
 content: milk
 amount: 6 l
 ```
 
-Nie należy jednak wprowadzać pełnej architektury `ItemInstance`, jeśli nie jest ona jeszcze potrzebna. Jeżeli obecne `Inventory` (`ItemKind → count`) uniemożliwia poprawną reprezentację częściowej zawartości, należy zastosować **minimalne rozwiązanie zgodne z istniejącą architekturą** i odnotować ewentualną potrzebę przyszłego `ItemInstance` w dokumentacji.
+Nie należy jednak wprowadzać pełnej architektury `ItemInstance`, jeśli nie jest ona jeszcze potrzebna.
+
+Jeżeli obecne `Inventory` (`ItemKind → count`) uniemożliwia poprawną reprezentację częściowej zawartości, należy zastosować **minimalne rozwiązanie zgodne z istniejącą architekturą** i odnotować ewentualną potrzebę przyszłego `ItemInstance` w dokumentacji.
 
 ---
 
 # 8. Przyszłe akcje domenowe
 
-Plan powinien przygotować przedmioty pod następujące akcje:
+Przedmioty powinny być przygotowane pod następujące akcje.
 
-### Bukłak
+## 8.1. Bukłak
 
-```
+```text
 fill water
 drink
 empty
 ```
 
-### Wiadro
+## 8.2. Wiadro
 
-```
+```text
 fill water
 drink water
-fill milk / milk cow
+milk cow
 drink milk
 empty
 ```
@@ -275,11 +341,18 @@ Akcje powinny być możliwe do wywołania przez przyszły system interakcji.
 
 **Poza zakresem tego planu.**
 
-System okien interakcji zostanie przygotowany wcześniej w osobnym planie.
+System okien interakcji zostanie przygotowany w osobnym planie.
 
-Docelowo powinien umożliwiać sytuację:
+Docelowo powinien umożliwiać kontekstowe akcje zależne od:
 
-```
+- obiektu, z którym gracz wchodzi w interakcję,
+- posiadanych przedmiotów,
+- stanu tych przedmiotów,
+- warunków wykonania akcji.
+
+Przykład:
+
+```text
 [E] Interakcja z krową
 
 ┌─────────────────────────────────┐
@@ -293,7 +366,7 @@ Docelowo powinien umożliwiać sytuację:
 └─────────────────────────────────┘
 ```
 
-System domenowy powinien dostarczać **dane/warunki akcji**, a system UX będzie odpowiedzialny za:
+System domenowy powinien dostarczać **dane i warunki akcji**, a system UX będzie odpowiedzialny za:
 
 - prezentowanie akcji,
 - filtrowanie niedostępnych akcji,
@@ -301,21 +374,22 @@ System domenowy powinien dostarczać **dane/warunki akcji**, a system UX będzie
 - komunikaty,
 - wejście `[E]`.
 
-Po zakończeniu planu UX należy uzupełnić ten plan o konkretne punkty integracyjne.
+Po implementacji systemu UX należy wrócić do tego planu i uzupełnić konkretne punkty integracji.
 
 ---
 
-# 10. Lokacje i źródła itemów
+# 10. Źródła i lokacje przedmiotów
 
-## Bukłaki
+## 10.1. Bukłaki
 
-Przyszłe źródło:
+Przyszłe źródła:
 
-**Leatherworker / żona Huntera**
+- leatherworker / żona Huntera,
+- kupiec.
 
 Docelowo:
 
-```
+```text
 hide
  ↓
 leatherworking
@@ -323,17 +397,31 @@ leatherworking
 waterskin_small / medium / large
 ```
 
-Na tym etapie **bez craftingu**.
+Na tym etapie bez craftingu.
 
-Możliwe późniejsze źródło:
+Nie dodawać losowego world spawnu.
 
+## 10.2. Plecak
+
+Przyszłe źródła:
+
+- leatherworker / żona Huntera,
 - kupiec.
 
 Nie dodawać losowego world spawnu.
 
-## Drewniane wiadro
+## 10.3. Juki
 
-Przyszłe źródło:
+Przyszłe źródła:
+
+- leatherworker / żona Huntera,
+- kupiec.
+
+Nie dodawać losowego world spawnu.
+
+## 10.4. Drewniane wiadro
+
+Przyszłe źródła:
 
 - produkcja z drewna,
 - odpowiedni NPC/profesja,
@@ -341,26 +429,26 @@ Przyszłe źródło:
 
 Na tym etapie bez receptury.
 
-## Miedziane wiadro
+## 10.5. Miedziane wiadro
 
-Przyszłe źródło:
+Przyszłe źródła:
 
 - kowal,
 - kupiec.
 
 Na tym etapie bez receptury.
 
-## Ruda miedzi
+## 10.6. Ruda miedzi
 
 Źródło:
 
 - złoża miedzi w świecie.
 
-Należy wykorzystać istniejący system generowania/zbierania minerałów.
+Należy wykorzystać istniejący system generowania i zbierania minerałów.
 
 Nie tworzyć osobnego systemu placementu tylko dla miedzi.
 
-## Miedź
+## 10.7. Miedź
 
 Źródło:
 
@@ -375,6 +463,8 @@ Nowe przedmioty **nie powinny być automatycznie rozmieszczane losowo w świecie
 W szczególności:
 
 - bukłaki → nie jako random pickup,
+- plecaki → nie jako random pickup,
+- juki → nie jako random pickup,
 - wiadra → nie jako random pickup,
 - miedziane wiadra → nie jako random pickup.
 
@@ -400,9 +490,11 @@ Potrzebne docelowo modele:
 - średni bukłak,
 - duży bukłak,
 - drewniane wiadro,
-- miedziane wiadro.
+- miedziane wiadro,
+- plecak,
+- juki.
 
-Jeżeli odpowiednie GLB nie istnieje:
+Jeżeli odpowiedni GLB nie istnieje:
 
 - item nadal ma działać,
 - wykorzystać istniejący proceduralny fallback,
@@ -434,7 +526,7 @@ Zaktualizować:
 
 - `docs/items/CATALOG.md`
 
-Dla każdego itemu opisać:
+Dla każdego nowego itemu opisać:
 
 - `ItemKind`,
 - nazwę,
@@ -462,8 +554,6 @@ Nie implementować:
 - ❌ stanowiska kowala,
 - ❌ stanowiska leatherworkera,
 - ❌ pancerza skórzanego,
-- ❌ plecaka,
-- ❌ juków,
 - ❌ sztućców,
 - ❌ kubka,
 - ❌ beczki,
@@ -478,18 +568,20 @@ Nie implementować:
 
 # 16. Weryfikacja
 
-### Itemy
+## Itemy
 
 - [ ] `waterskin_small` — 2 l
 - [ ] `waterskin_medium` — 5 l
 - [ ] `waterskin_large` — 10 l
 - [ ] `wooden_bucket` — 10 l
 - [ ] `copper_bucket` — 10 l
+- [ ] `backpack`
+- [ ] `saddlebags`
 - [ ] `copper_ore`
 - [ ] `copper`
 - [ ] brak `copper_cup`
 
-### Pojemniki
+## Pojemniki
 
 - [ ] pojemniki mają określoną maksymalną pojemność,
 - [ ] możliwa jest częściowa zawartość,
@@ -499,14 +591,14 @@ Nie implementować:
 - [ ] mleko może być przechowywane w wiadrach,
 - [ ] bukłaki nie są pojemnikami na mleko.
 
-### Picie
+## Picie
 
 - [ ] jedna porcja = 1 l,
 - [ ] można pić tylko przy dostępnej zawartości,
 - [ ] picie zmniejsza zawartość pojemnika,
 - [ ] pusty pojemnik pozostaje dostępny do ponownego użycia.
 
-### Integracja
+## Integracja
 
 - [ ] `ItemKind`, `ITEM_DEFS` i `ITEM_CATALOG` są spójne,
 - [ ] istniejące inventory/save pozostają kompatybilne,
@@ -515,32 +607,28 @@ Nie implementować:
 - [ ] nie powstaje drugi system placementu,
 - [ ] ruda miedzi korzysta z istniejącego systemu zasobów.
 
-### UX — późniejsza integracja
+## UX — późniejsza integracja
 
 - [ ] plan UX/interactions istnieje przed integracją,
 - [ ] akcje pojemników mogą być wystawione jako akcje kontekstowe,
 - [ ] lista akcji może zależeć od posiadanych itemów i ich stanu,
-- [ ] ten plan zostanie uzupełniony po implementacji systemu okien interakcji.
+- [ ] ten plan zostanie uzupełniony po implementacji systemu interakcji.
 
-### Techniczne
+## Techniczne
 
 - [ ] `npx tsc --noEmit`
-- [ ] `npm run lint`
-- [ ] `npm run build`
-- [ ] `npm run test`
+- [ ] `pnpm run lint:fix`
+- [ ] `pnpm run build`
+- [ ] `pnpm run test`
 - [ ] browser/manual verification dla zmian widocznych w grze.
 
 ---
 
 # 17. Następny etap
 
-Po zakończeniu tego planu osobny plan powinien zająć się:
+Kolejny etap powinien zająć się **procesem wytwarzania** nowych przedmiotów, w szczególności:
 
-**Leatherworker + Blacksmith Crafting**
-
-obejmując:
-
-```
+```text
 surowce
  ↓
 receptura
@@ -554,8 +642,16 @@ czas produkcji
 gotowy item
 ```
 
-oraz integrację z istniejącymi NPC, gospodarką i settlementami.
+W pierwszej kolejności dotyczy to:
 
-Po zakończeniu wcześniejszego planu UX/interactions należy wrócić do sekcji 9 i uzupełnić ją o konkretne punkty integracji.
+- leatherworker / żony Huntera,
+- kowala,
+- bukłaków,
+- plecaka,
+- juków,
+- drewnianych wiader,
+- miedzianych wiader.
+
+Proces powinien zostać zintegrowany z istniejącymi NPC, gospodarką, profesjami i settlementami.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
