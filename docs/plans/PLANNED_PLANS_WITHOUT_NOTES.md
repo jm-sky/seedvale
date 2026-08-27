@@ -5,7 +5,7 @@
 
 ## PLANS
 
-- `2026-08-19--171--weapon-browser-observatory.md`
+- `tools-000-weapon-browser-observatory.md`
 - `fauna-001-rabies-and-animal-infection.md`
 - `fauna-002-livestock-food-production.md`
 - `fauna-003-horse-riding.md`
@@ -19,16 +19,16 @@
 --------------------------------
 ## PROMPTS
 
-### `2026-08-19--171--weapon-browser-observatory.md`
+### `tools-000-weapon-browser-observatory.md`
 
 Prompt:
 
 ```
-Zrób review planu `2026-08-19--171--weapon-browser-observatory.md`
+Zrób review planu `tools-000-weapon-browser-observatory.md`
 
 Wczytaj:
 - `docs/STATE.md`
-- `docs/plans/2026-08-19--171--weapon-browser-observatory.md`
+- `docs/plans/tools-000-weapon-browser-observatory.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 

@@ -1,7 +1,7 @@
 # Plan 180 — Implementation Notes: NPC Healing
 
 **Reviewed:** 2026-08-21  
-**Plan:** `2026-08-21--180--npc-healing.md`  
+**Plan:** `npc-002-npc-healing.md`  
 **Status:** `implementation notes`  
 **Source of truth:** current code + tests + build configuration. The plan is treated as intent, not as a description of the current implementation.
 

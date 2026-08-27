@@ -48,7 +48,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `004`
 - fauna: `004`
 - items-player: `002`
-- npc: `002`
+- npc: `003`
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `003`
@@ -109,12 +109,10 @@ Natural vegetation
 
 | File | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | --------- | --- | --- | --- |
-| 💡 `2026-08-19--167--npc-helper-resource-delivery.md`                  | NPC gathers food for player | 🟡 | M | ~~164~~ |
-| 💡 `2026-08-21--180--npc-healing.md`                                   | NPC używa opatrunków | 🟡 | M | ~~177~~ |
+| 💡 `npc-002-npc-healing.md`                                            | NPC używa opatrunków | 🟡 | M | ~~177~~ |
 | 💡 `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` | - | 🔴 | L | ~~178~~ ~~184~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
-| ◼️ `2026-08-19--171--weapon-browser-observatory.md`                    | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `settlements-npcs-001-cultivation-hydration-and-watering.md`        | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
 | ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`               | - | 🟡 | S | ~~151~~ |
 | 💡 `settlements-001-house-collision-geometry.md`                       | - | 🔴 | L | 111 |
@@ -128,6 +126,7 @@ Natural vegetation
 | ◼️ `tools-001-performance-benchmark-determinism-and-reliability.md`    | - | 🔴 | M | - |
 | ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
 | ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
+| ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 
 ### Fresh new
 
