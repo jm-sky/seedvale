@@ -1,6 +1,6 @@
 # Plan: Cultivation Hydration & Watering — Implementation Notes
 
-**Created:** 2026-08-25
+**Created:** 2026-08-28
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~174~~ ~~126~~ ~~176~~
@@ -8,31 +8,39 @@
 
 ## Review verdict
 
-Plan 001 fits the current architecture, but should be implemented against the actual code rather than its generic terminology.
+Plan 001 is compatible with the current architecture, but parts of its terminology are now stale.
 
-The current authoritative cultivation object is `PlayerGardenRecord` in `src/world/playerGarden.ts`. It already owns `care` and `lastMaintainedAtDays` and uses lazy resolution. Hydration should extend this same record. Do not introduce `CultivationHydrationRegistry`, `WateringManager` or a second farming state store.
+All listed dependencies are already implemented. The authoritative cultivation object is **`PlayerGardenRecord`** in `src/world/playerGarden.ts`; it already owns `care` and lazy maintenance state. Hydration belongs on this same record.
 
-Current important boundaries:
+Do **not** introduce a farming registry, `WateringManager`, irrigation service, separate hydration store or farming-specific weather system.
 
-- `src/world/playerGarden.ts` is the shared cultivation/maintenance domain.
-- `src/world/cropLifecycle.ts` currently models **natural/wild** crops. Do not add hydration to `CropPlacement` or make the lifecycle farming-specific.
-- `src/world/plantedCrops.ts` contains planted-crop placement/save helpers; use the planted-crop contract established by plan 126 rather than creating another one.
-- `src/world/WaterSource.ts` is already the shared water-source abstraction.
-- Player timed actions use the existing `busy`/action-context system.
-- `NpcAgent` already uses generic `PlannedAction`/`ActionLifecycle` and decision/strategy systems.
+## 1. Current implementation seams to extend
 
-## 1. Hydration state
+Use these existing owners:
 
-Extend `PlayerGardenRecord` with the minimum state required by the plan, e.g.:
+- `src/world/playerGarden.ts` — persistent player cultivation record, nearest-garden query, lazy `care` resolution and cultivation yield modifier.
+- `src/world/plantedCrops.ts` — planted-crop placement/save contract from plan 126.
+- `src/world/cropLifecycle.ts` — existing lazy crop stage/harvest rules. It currently also serves natural crops; do not make the whole lifecycle hydration-aware.
+- `src/world/weather.ts` — deterministic weather from `(seed, elapsedDays)`; `computeWeather()` exposes rain type/intensity.
+- `src/world/WaterSource.ts` — shared well/lake water abstraction.
+- `src/items/itemInstances.ts` + `src/items/liquidContainer.ts` — current per-instance liquid-container model.
+- `src/app/actions/survivalActions.ts` — existing player water-source/container action path.
+- `src/ai/NpcAgent.ts` + `src/simulation/` — existing NPC decision/action lifecycle.
+- `src/persistence/saveData.ts` — canonical save-v1 validation and garden persistence.
+- `WorldBundle` / garden runtime wiring — preserve the existing authoritative garden state across rebuilds; runtime meshes must remain projections.
+
+## 2. Hydration state
+
+Extend `PlayerGardenRecord`, not a parallel object:
 
 ```ts
 hydration: number
 lastHydrationUpdateAtDays: number
 ```
 
-Keep hydration and care as independent site state:
+Keep:
 
-```text
+```
 PlayerGardenRecord
 ├── care
 ├── lastMaintainedAtDays
@@ -40,216 +48,252 @@ PlayerGardenRecord
 └── lastHydrationUpdateAtDays
 ```
 
-Use pure/lazy functions analogous to `resolveCultivationCare()`.
+Use the same lazy/pure pattern as `resolveCultivationCare()`.
 
-Before every hydration mutation:
+Every mutation must first resolve the stale value:
 
-```text
+```
 stored hydration
-  → elapsed time + deterministic rain
-  → resolved hydration
-  → watering/rain update
-  → new hydration + timestamp
+→ elapsed world time / rain
+→ current hydration
+→ watering or other contribution
+→ new hydration + timestamp
 ```
 
-Never simply add `+40` to stale stored hydration.
+Clamp centrally to `0..100`.
 
-## 2. Rain integration
+Do not tick hydration from `gameLoop.ts`, render frames or chunk updates.
 
-`src/world/weather.ts` is deterministic from `(seed, elapsedDays)` and exposes `WeatherState.type` and `intensity`. There is no weather history to persist/replay.
+## 3. Rain: important architectural constraint
 
-Do not add farming-specific weather state, listeners or a rain manager.
+`WeatherState` is **global and deterministic**, not spatial. There is currently no per-location rainfall field. Therefore v1 should not invent one.
 
-Rain contribution must be resolved lazily from the existing weather generator. Do not iterate through an arbitrarily long time skip cycle-by-cycle. Hydration is bounded to `0..100` and drying is `20/day`, so the implementation needs a bounded strategy for old intervals while remaining deterministic.
+Rain contribution should be resolved from `computeWeather(seed, elapsedDays, ...)` / existing climate functions and remain deterministic across time-skip/save-load.
 
-Keep the complete rain integration in one pure cultivation-hydration resolver so player, NPC, save/load and tests use identical semantics.
+The difficult part is long gaps between hydration resolutions: replaying every 0.3-day weather cycle since the last update can become unbounded. Do not blindly implement a cycle loop proportional to world age.
 
-If weather needs a generic interval helper, extend `weather.ts`; do not duplicate its cycle logic in farming code.
+Prefer a bounded, deterministic interval resolver analogous to `computeSurfaceWeather()`. If exact historical rain accumulation cannot be reconstructed cheaply, define the bounded rain lookback explicitly in the hydration domain and keep it centralized/tested. Do not silently approximate in individual callers.
 
-## 3. Crop lifecycle boundary
+Also keep drying deterministic: `-20 hydration/world day`.
 
-Current `src/world/cropLifecycle.ts` provides `CropGrowthStage`, `CropDefinition`, `resolveCropStage()` and `resolveCropHarvest()`. It is intentionally lazy and currently serves natural crops.
+## 4. Crop lifecycle boundary
 
-Hydration must be a cultivation-site condition, not a second crop lifecycle:
+Hydration is a **cultivation-site condition**, not another crop lifecycle.
 
-```text
+Use:
+
+```
 crop lifecycle → stage
-cultivation site → hydration/stress
-                    ↓
-               planted crop result
+cultivation site → hydration + drought stress
+                       ↓
+                 planted crop result
 ```
 
-Do not create `HydratedCropLifecycle` or modify natural crop timing globally.
+Do not change natural crop behaviour globally.
 
-For planted crops, integrate hydration at the existing plan-126 harvest/growth boundary.
+For planted crops, integrate hydration at the existing plan-126/harvest boundary. The current planted crop record contains only `id/x/z/cropId/stageStartedAt`; do not duplicate hydration per crop when the plan explicitly makes hydration site-owned.
 
-## 4. Drought stress
+Important consequence: a garden can exist without a planted crop, and hydration must still resolve correctly.
 
-Prefer deriving drought stress from the cultivation hydration state rather than ticking it every hour/frame.
+## 5. Drought stress needs an explicit anchor
 
-The important design check is persistence: current hydration + one update timestamp may not be enough to reconstruct how long hydration stayed below 30% once deterministic rain is involved. If necessary, persist the **smallest additional anchor/value** that makes stress deterministic. Do not store a hydration/rain event history.
+The plan's two-field hydration state is sufficient for drying, but **not necessarily sufficient for exact drought-stress reconstruction** when hydration crosses below/above 30% multiple times because of rain.
 
-Rules remain:
+Do not store a full history.
 
-```text
-hydration = 0      → crop dies
-0 < hydration < 30 → growth paused + stress
-hydration >= 30     → normal growth
+Use the smallest additional persisted anchor required by the chosen resolver, e.g. accumulated sub-30% duration / last stress anchor. Make the state deterministic and reset it when the crop lifecycle for that cultivation site is reset/harvested.
+
+Rules:
+
+- `0%` → crop dies; resolve before harvest yield.
+- `1..29%` → growth paused and drought stress accumulates.
+- `>=30%` → normal growth and no further stress accumulation.
+- Rewatering does **not** erase already accumulated stress.
+- Stress caps at `-50%`.
+
+Do not make hydration alter `young → mature → spoiled` timing in v1.
+
+## 6. Yield integration
+
+Current `CropDefinition.yieldCount` is an integer and current crop harvest resolution is shared with natural crops.
+
+Do not change `resolveCropHarvest()` so that wild crops acquire cultivation rules.
+
+Instead, apply the drought modifier in the existing planted-crop/cultivation productivity boundary, together with the already-existing `cultivationYieldCount()` care modifier.
+
+There must be one deterministic rounding point. Avoid applying care and drought percentages in separate integer-rounding steps.
+
+A crop at `0%` must be treated as dead, not as a zero-yield mature crop.
+
+## 7. Weeds / care
+
+Reuse the existing maintenance model from plan 176.
+
+Keep the ownership split:
+
 ```
-
-`0%` must be handled before yield calculation.
-
-Drought stress affects final planted-crop yield only; it must not silently change `young → mature → spoiled` timing in v1.
-
-## 5. Yield and weeds
-
-Current crop yields are integer counts (`CropDefinition.yieldCount`). Apply the drought modifier at one authoritative harvest/productivity boundary and define deterministic rounding there.
-
-Do not modify `resolveCropHarvest()` in a way that changes wild crop behaviour unless the API is explicitly generalized without coupling it to cultivation.
-
-Hydration-based weed pressure should reuse the existing cultivation/maintenance concept from plan 176. Keep:
-
-```text
-care      → maintenance
-hydration → water availability / weed pressure
+care      → maintenance state / existing cultivation yield modifier
+hydration → water availability / weed pressure / drought
 ```
 
 Watering must not increase `care`; maintenance must not increase hydration.
 
-## 6. Container: reuse existing waterskin system
+Do not create a second weed lifecycle. If the current weed representation is only pressure/maintenance state, extend that calculation rather than introducing another persistent simulation.
 
-The plan says `bucket`, but the code already has `waterskin_empty` and `waterskin_full` in `ItemKind`, and `createSurvivalActions().fillWaterskin()` already implements empty→full using `WaterSource`.
+## 8. Containers: plan wording is stale
 
-Do **not** automatically introduce `bucket_empty`/`bucket_full`. First reuse/generalize the existing container path. A new item pair is justified only if the current item model genuinely cannot represent the intended gameplay.
+The plan says `bucket` as if empty/full were separate item kinds. That is no longer the current model.
 
-Do not create `WateringContainer` or another equipment system.
+Plan items-player-001 already introduced:
 
-The current fill action is instant. Do not create a second fill mechanism merely to satisfy wording in the plan; if timing is required, extend the existing fill action consistently.
+- `wooden_bucket` — 10 L, water or milk;
+- `copper_bucket` — 10 L, water or milk;
+- waterskin instances with 2/5/10 L capacities.
 
-## 7. Player watering action
+Liquid state is an **item instance**:
 
-Use the existing busy/action lifecycle:
+```LiquidContainerItemInstance
+→ liquid
+→ amountLitres
+```
 
-```text
-validate site + full container
-→ start busy action
-→ completion revalidates site/container
+Use `liquidContainer.ts` domain operations and `Inventory.updateInstance()`.
+
+Do not add `bucket_empty` / `bucket_full` unless a concrete current-system limitation proves that the instance model cannot support the interaction.
+
+The plan's "1 charge → 1 watering" should be adapted to the current model. The cleanest interpretation is **one watering consumes one litre**, leaving the physical container partially filled. Do not throw away the remaining 9 L of a full bucket.
+
+If v1 intentionally wants one full bucket to equal one watering despite its 10 L capacity, that needs an explicit design decision before implementation; otherwise it contradicts the existing liquid-container semantics.
+
+## 9. Player water actions
+
+Reuse the existing `WaterSource` + liquid-container action path in `survivalActions.ts`.
+
+The current liquid-container fill operation is instant. Do not create a parallel timed fill system just because the old plan described a timed action.
+
+For watering, use the existing busy/action context if a timed player interaction is introduced:
+
+```
+validate garden + usable water container
+→ start existing busy action
+→ completion revalidates
 → resolve hydration
-→ +40, clamped
-→ consume container
+→ apply watering amount
+→ update container instance
 ```
 
-If interrupted before completion:
+Mutation happens only on successful completion. Interrupted actions leave both garden and container unchanged.
 
-```text
-hydration unchanged
-container unchanged
+Do not mutate hydration at interaction-start.
+
+## 10. NPC watering
+
+`NpcAgent` already consumes cultivation information (including `CARE_MAINTAINED_THRESHOLD`) and already has the generic decision/action machinery.
+
+Add watering as another strategy/action in that flow, not a special AI subsystem.
+
+Prefer local context already available to the NPC (settlement garden / relevant cultivation source) rather than:
+
+```
+for every NPC
+  scan every garden
 ```
 
-Apply the mutation only on successful completion. Do not add timers to `PlayerGardenRecord` or `gameLoop.ts`.
+If NPCs need to carry water, use their existing generic `Inventory` and the same liquid-container instances. If filling/using a container requires a missing generic action seam, extend that seam rather than directly changing garden hydration from NPC code.
 
-The interaction target must be the real persistent garden record, not decorative crop meshes or a global crop scan.
+The NPC should not bypass the action lifecycle by calling a garden hydration mutator directly from decision code.
 
-## 8. NPC watering
+## 11. Persistence and rebuild
 
-`NpcAgent` already imports `CARE_MAINTAINED_THRESHOLD` from `playerGarden.ts`, so NPCs already consume the shared cultivation domain.
+Save v1 is a hard-cut schema. Adding hydration fields therefore requires updating the normal `SaveData` shape, serializer/restore wiring and `isSaveData()` validation. Do not add a migration layer.
 
-Follow the same pattern for hydration:
-
-```text
-NPC already at cultivation/work context
-→ resolve hydration
-→ low hydration pressure
-→ existing decision/strategy scoring
-→ existing PlannedAction/ActionLifecycle
-```
-
-Do not implement global `NPC → all gardens` searches and do not create `WateringAI`, `FarmAI`, `GardenAI` or `IrrigationManager`.
-
-Use the generic NPC `Inventory` if carrying a water container is needed. Do not add `NpcHeldWater` or another NPC inventory.
-
-If NPCs cannot yet fill a container through the existing action/resource contracts, extend those generic contracts rather than directly mutating hydration.
-
-## 9. Persistence and world rebuild
-
-Hydration belongs in the same persistence path as `PlayerGardenRecord` and must survive:
+Hydration must survive:
 
 - save/load;
 - time skip;
-- chunk unload/load;
-- `WorldBundle` rebuild.
+- world rebuild;
+- garden runtime reconstruction.
 
-The current save schema is v1/hard-cut per `docs/STATE.md`; do not invent a migration layer unless the actual save code requires it.
+Chunk unload/load should reconstruct the garden from authoritative state; hydration must not live only on the rendered garden/crop mesh.
 
-No second hydration persistence store.
+Do not persist weather history.
 
-## 10. Performance
+## 12. Interaction / rendering
 
-Mandatory:
+The interaction target must be the actual garden record / cultivation domain object, not a decorative crop mesh and not a global crop search.
 
-- no per-frame hydration tick;
-- no global garden scan on rain;
-- no global NPC→garden scan;
-- no worker;
-- no `WateringManager`;
-- no farming-specific weather simulation;
-- lazy deterministic resolution.
+If hydration status is exposed in UI or debug text, resolve it lazily at read time. Do not maintain a second cached percentage unless there is an existing rendering cache that can safely be derived from authoritative state.
 
-## 11. Tests
+No new asset is required by this plan.
 
-Focus first on pure domain functions:
+## 13. Performance
 
-- drying and `0..100` clamp;
-- watering `+40`;
-- deterministic rain/intensity contribution;
-- long time-skip/bounded resolution;
-- `0%` death;
-- `<30%` growth pause;
-- drought-stress thresholds and `-50%` cap;
-- deterministic yield rounding;
-- weed pressure by hydration;
-- container empty/full transition;
+Keep the implementation:
+
+- lazy;
+- deterministic;
+- data-only where possible;
+- independent of render frame rate.
+
+Avoid:
+
+- per-frame hydration updates;
+- global garden scans during rain;
+- global NPC→garden scans;
+- new worker;
+- `WateringManager`;
+- farming-specific weather state;
+- history arrays of rain/watering events.
+
+The number of cultivation sites may grow, so any resolver should be O(1) or bounded by a small deterministic interval, not proportional to world age.
+
+## 14. Tests worth writing
+
+Prioritize pure domain tests:
+
+- hydration drying;
+- `0..100` clamp;
+- watering amount;
+- deterministic rain contribution;
+- long time-skip / bounded rain resolution;
+- crossing the 30% threshold;
+- `0%` crop death;
+- drought-stress accumulation/reset/cap;
+- deterministic final yield rounding with care + drought;
+- hydration-based weed pressure;
+- liquid-container fill/consume/empty semantics;
 - interrupted watering;
-- save/load and world rebuild.
+- save validation/round-trip;
+- world rebuild continuity.
 
-## 12. Files to reuse
+Do not duplicate existing liquid-container tests unless the new watering path exposes a new invariant.
 
-- `src/world/playerGarden.ts` — cultivation record + lazy care model.
-- `src/world/cropLifecycle.ts` — existing crop lifecycle.
-- `src/world/plantedCrops.ts` — planted crop placement/save helpers.
-- `src/world/WaterSource.ts` — shared water abstraction.
-- `src/world/weather.ts` — deterministic climate/rain.
-- `src/app/actions/survivalActions.ts` — existing container/water actions.
-- `src/items/items.ts` — existing waterskin item kinds.
-- `src/items/itemCatalog.ts` — central item metadata/capabilities.
-- `src/ai/NpcAgent.ts` — NPC decision/action integration.
-- `src/simulation/` — generic action lifecycle contracts.
-- `src/persistence/saveData.ts` — save schema and garden persistence wiring.
+## 15. Main traps
 
-## Main implementation trap
+1. **Do not build a new farming subsystem.** `PlayerGardenRecord` is already the cultivation owner.
+2. **Do not make `cropLifecycle.ts` farming-specific.** Natural crops use it too.
+3. **Do not model current buckets as empty/full item kinds.** The repository now uses liquid-container instances.
+4. **Do not consume an entire 10 L bucket for one watering without an explicit design decision.**
+5. **Do not replay unbounded weather history on save/load/time-skip.**
+6. **Do not assume rainfall is spatially varying.** Current weather is global.
+7. **Do not calculate drought stress from only the final hydration value if rain can cross the threshold during the elapsed interval.**
+8. **Do not let care and hydration mutate each other.**
+9. **Do not bypass `NpcAgent`'s existing decision/action lifecycle.**
 
-The biggest risk is implementing the plan literally as a new farming subsystem. The existing seams are already sufficient:
+## 16. Relevant current files
 
-```text
-PlayerGardenRecord + hydration
-        ↓
-planted crop integration
-        ↓
-existing crop lifecycle / harvest
-
-WaterSource
-        ↓
-existing Inventory/container actions
-
-NpcAgent
-        ↓
-existing decision + PlannedAction/ActionLifecycle
-
-WeatherState
-        ↓
-deterministic lazy hydration resolution
-```
-
-Extend these systems; do not create parallel mechanisms.
+- `src/world/playerGarden.ts`
+- `src/world/plantedCrops.ts`
+- `src/world/cropLifecycle.ts`
+- `src/world/weather.ts`
+- `src/world/WaterSource.ts`
+- `src/items/itemInstances.ts`
+- `src/items/liquidContainer.ts`
+- `src/items/itemCatalog.ts`
+- `src/app/actions/survivalActions.ts`
+- `src/ai/NpcAgent.ts`
+- `src/simulation/`
+- `src/persistence/saveData.ts`
+- `src/app/worldBundle.ts`
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
