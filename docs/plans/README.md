@@ -107,6 +107,8 @@ Natural vegetation
 
 ## Planned
 
+> 💡 - plan have `-implementation-notes.md`, ◼️ - have not
+
 | File | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | --------- | --- | --- | --- |
 | 💡 `npc-002-npc-healing.md`                                            | NPC używa opatrunków | 🟡 | M | ~~177~~ |
