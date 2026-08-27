@@ -414,7 +414,10 @@ export async function createApp(
   // bundle.chunkManager/config.terrain are current across `rebuildWorld()`
   // mutating `bundle`'s fields in place — see `worldBundle.ts`'s `WorldBundle`
   // doc comment.
+  bootMark('createWorldContext')
   const worldContext = createWorldContext(() => bundle.chunkManager, config, dayNight)
+  bootMarkEnd('createWorldContext')
+
   const ambientAudio = createAmbientAudio(worldAudio, worldContext)
   const fireAudio = createFireAudio(worldAudio)
   const weatherAudio = createWeatherAudio(worldAudio)
@@ -446,6 +449,7 @@ export async function createApp(
     initialSave?.foodBatches,
     DEFAULT_MAX_SIZE,
   )
+
   // Plan 161 — pre-existing count-based weapons (starting knife, older saves)
   // have no recoverable condition; every unit becomes a fresh full-condition
   // instance. Idempotent, so safe to run unconditionally on every load.
@@ -484,6 +488,8 @@ export async function createApp(
 
   const keyboard = createKeyboard()
   const mouseLook = createMouseLook(renderer.domElement, keyboard.state)
+
+  bootMark('PlayerController.create')
   const player = await PlayerController.create(
     camera,
     keyboard.state,
@@ -494,6 +500,8 @@ export async function createApp(
     bundle.chunkManager.collidersNear,
     (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
   )
+  bootMarkEnd('PlayerController.create')
+
   if (initialSave) {
     // Set look before position — setPosition() calls syncCamera(), which reads yaw/pitch.
     mouseLook.state.yaw = initialSave.player.yaw
@@ -512,6 +520,7 @@ export async function createApp(
     const homeSpawn = settlementSpawnPoint(bundle.settlementsManager.getHomeDef(), bundle.chunkManager.sampleHeight)
     player.setPosition(homeSpawn.x, homeSpawn.z)
   }
+
   player.setName(config.player.name)
   player.setMoveAudio(worldAudio.playAt)
   scene.add(player.mesh)
@@ -596,7 +605,10 @@ export async function createApp(
     syncQuickActionAvailability()
   }
 
+  bootMark('createMinimap')
   const minimap = createMinimap(container)
+  bootMarkEnd('createMinimap')
+
   // Resolved once here (not injected into `QuestManager`, which stays
   // chunk/terrain-agnostic) — landmarks never change once generated, so
   // there's nothing to re-resolve at runtime, unlike `kill_target_animal`/
@@ -615,6 +627,7 @@ export async function createApp(
       LANDMARK_QUEST_SEARCH_CHUNK_RADIUS,
     )?.id
   })
+
   const questManager = new QuestManager(
     [...QUESTS, ...landmarkQuests],
     worldAudio.playOnce,
@@ -651,6 +664,7 @@ export async function createApp(
       bundle.fauna.getAgents().find((a) => a.animalId === animalId)?.markDangerous()
     },
   )
+
   // Now that `questManager` exists, the closures passed into `createWorldBundle`
   // above can actually reach it — see those call sites' comments.
   getPlayerSocialTarget = (npcName) => ({
@@ -776,6 +790,7 @@ export async function createApp(
   /** Pass `resetCollectedItems: true` only for a genuinely new world (new seed,
    *  e.g. "New Game") — an unrelated terrain-param rebuild on the same seed
    *  should keep it, since item ids are seed-derived and stay meaningful. */
+  bootMark('rebuildWorld')
   const rebuildWorld = async (resetCollectedItems = false) => {
     if (rebuilding) return
     rebuilding = true
@@ -882,6 +897,7 @@ export async function createApp(
       rebuilding = false
     }
   }
+  bootMarkEnd('rebuildWorld')
 
   const graphics = createGraphicsSettings({
     config,
@@ -893,6 +909,7 @@ export async function createApp(
     dayNight,
     resyncDayNight: () => gameLoop.resyncDayNight(),
   })
+
   // Shared with the World config screen (`ui-vue/screens/WorldConfigScreen.vue`)
   // via `configureWorldConfigScreen` below — same costly-rebuild handler as
   // debug GUI's seed/flat-shading controls, not a second implementation.
@@ -957,6 +974,7 @@ export async function createApp(
     onPerfTimingsToggle: (enabled) => { perfMonitor.setSource('gui', enabled) },
     onRunBenchmark: (id) => { void benchmark.run(id) },
   })
+
   if (config.showGui) gui.toggle()
   vueUi.configureWorldConfigScreen(config, dayNight, {
     onTerrainChange,
@@ -1005,6 +1023,7 @@ export async function createApp(
       containers.placeContainerAtAim()
     },
   }
+
   const inventoryScreen = createInventoryScreen(container, inventoryScreenHandlers)
 
   refreshInventoryScreen = () => {
@@ -1113,6 +1132,7 @@ export async function createApp(
       questManager.getRelation(name),
     )
   }
+
   const openVillagers = () => {
     vueUi.openVillagers()
     vueUi.refreshVillagers(
@@ -1232,6 +1252,7 @@ export async function createApp(
 
   const removeAutoSave = installAutoSave()
 
+  bootMark('createGameLoop')
   const gameLoop = createGameLoop({
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, clouds, weatherParticles, weatherAudio, getSeed: () => config.seed,
@@ -1282,6 +1303,8 @@ export async function createApp(
     setFrameTiming: gui.setFrameTiming,
     syncPointLightBudget: () => { pointLightBudget.sync(camera) },
   })
+  bootMarkEnd('createGameLoop')
+
   gameLoop.resyncDayNight()
   // Plan 149 Phase 1 A — compile the already-built home-scene program
   // families before gameplay streaming starts. `tick()` has not run yet, so
@@ -1300,6 +1323,7 @@ export async function createApp(
     sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
     onTick: () => gameLoop.tick(),
   })
+
   renderLoop.start()
   loadingScreen.hide()
   if (typeof window !== 'undefined') {
