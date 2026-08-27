@@ -1,4 +1,17 @@
-### Co ustaliliśmy
+# Delete outfit
+
+## Files
+
+```
+├── README.md
+├── blender-delete-group-addon-v1.py
+├── blender-delete-group-addon-v2.py
+├── diag-file-search.md
+├── diag-native-delete-implementation.md
+└── diag-readme.md
+```
+
+### Co ustaliliśmy (older version)
 
 1. **Problem**
 
