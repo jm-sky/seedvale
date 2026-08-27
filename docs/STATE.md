@@ -2,7 +2,7 @@
 
 **Purpose:** a short, current snapshot of the implemented architecture — enough to start a plan without reading every prior plan first. This document describes what exists now, not the desired future state, and not *how* any given plan implemented it.
 
-**Last verified:** 2026-08-27
+**Last verified:** 2026-08-28
 
 ## Read this first
 
@@ -20,7 +20,7 @@ This file is a snapshot, not the authoritative status tracker for plans (that's 
 
 Seedvale is a browser 3D sandbox built with **Three.js + WebGL2 + Vite + TypeScript**. The game/simulation layer remains vanilla Three.js; the overlay UI is a hybrid of vanilla DOM modules and Vue 3 + Tailwind v4.
 
-`src/app/createApp.ts` is the composition root. The world systems that are rebuilt together live in `src/app/worldBundle.ts` as `WorldBundle` — the full field list and the rebuild/lifetime invariants are canonical in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md), not restated here. File-level map: [CODE_INDEX.md](./CODE_INDEX.md).
+`src/app/createApp.ts` is the composition root. The world systems that are rebuilt together live in `src/app/worldBundle.ts` as `WorldBundle`. It currently has 18 fields covering terrain/ocean, settlements/fauna, renewable resources/items, player-placed fires/tents/traps/containers/wells/gardens, terrain preparations, caves, drying racks and beehives. The full field list and rebuild/lifetime invariants are canonical in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md), not restated here. Fresh boot can return with a few background systems still represented by inert stubs; they are replaced in place when background initialization completes. File-level map: [CODE_INDEX.md](./CODE_INDEX.md).
 
 ## Major systems
 
@@ -65,7 +65,7 @@ Predator/prey roles with chase/flee behaviour, player-awareness (probabilistic d
 
 ### Persistence
 
-IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical save schema is **v1** — a hard cut (plan 201) with no migration/compatibility story for older saves; the exact field list is in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md#save-schema), not here. NPC runtime state is **not** a full simulation snapshot (needs/AI/vigor are not persisted; tree lifecycle uses sparse overrides + lazy growth from `elapsedDays`) — `Continue` is not equivalent to serializing the complete living world. `localStorage` is split by device-preference domain (graphics/player/world/audio), independent of the chosen save slot's world state.
+IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical save schema is **v1** — a hard cut (plan 201) with no migration/compatibility story for older saves. Current persistence includes player gardens, resource-depletion state, player terrain modifications and fauna spawn-point lifecycle state in addition to the older player/world/quest/settlement data. The exact field list is in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md#save-schema), not here. NPC runtime state is **not** a full simulation snapshot (needs/AI/vigor are not persisted; tree lifecycle uses sparse overrides + lazy growth from `elapsedDays`) — `Continue` is not equivalent to serializing the complete living world. `localStorage` is split by device-preference domain (graphics/player/world/audio), independent of the chosen save slot's world state.
 
 ### UI / input
 
@@ -156,7 +156,7 @@ src/ui-vue/
 
 - **World visual overhaul** — plants done in part; sky/clouds and distant mountains remain.
 - **UI** — Vue Fazy 0–4 implemented, browser verification pending across most of it. A new Character screen (HP/hunger/thirst/vigor) exists. Do not assume every future UI belongs in Vue; extend the existing facade + store pattern when migrating.
-- **NPC daily routine** — Place + executable schedule + vigor are implemented; household resource layer is implemented (see [SETTLEMENTS.md](./state/settlements.md)). Vigor collapse and a critical need interrupt a schedule-driven action already in flight; ordinary schedule/time-of-day changes still do not. The settlement campfire is now a Social Place (plan 151); other Social Place kinds remain an intentional gap.
+- **NPC daily routine** — Place + executable schedule + vigor are implemented; household resource layer is implemented (see [SETTLEMENTS.md](./state/settlements.md)). Vigor collapse and a critical need interrupt a schedule-driven action already in flight; ordinary schedule/time-of-day changes still do not. The settlement campfire is now a Social Place (plan 151); other Social Place kinds remain an intentional gap. NPC runtime continuity across an ordinary settlement unload/reload remains incomplete; do not treat in-session rebuild continuity as full persistence.
 
 ## Verification state
 
