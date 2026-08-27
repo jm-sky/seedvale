@@ -94,7 +94,9 @@ In case of running benchmarks in browser - check `docs/performance/agent-browser
 
 Statuses are: `todo` · `planned` · `in progress` · `done` · `verification needed`.
 
-New issue/plan/review/research files use `YYYY-MM-DD--NNN--slug.md` with an independent sequence per document type. New plans stay in `docs/plans/` regardless of status; `docs/plans/archive/` is a one-time freeze of the 2026-08-07–2026-08-14 batch.
+New plans files use `<domain>-<id>-<title>.md` with an independent sequence per domain.
+New issue/review/research files use `YYYY-MM-DD--NNN--slug.md` with an independent sequence per document type.
+New plans stay in `docs/plans/` regardless of status; `docs/plans/archive/` is a one-time freeze of the 2026-08-07–2026-08-14 batch.
 
 ## Plan execution rules
 

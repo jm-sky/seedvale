@@ -13,10 +13,16 @@
 YYYY-MM-DD--NNN--kebab-tytul.md
 ```
 
-### reviews, research, plans
+### reviews, research
 
 ```
 YYYY-MM-DD-kebab-tytul.md
+```
+
+### plans
+
+```
+<domain>-<id>-<title>.md
 ```
 
 ## Statusy
