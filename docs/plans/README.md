@@ -124,6 +124,7 @@ Natural vegetation
 | ◼️ `world-003-faster-application-startup.md`                           | - | 🔴 | M | - |
 | ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`     | - | 🟡 | S | ~~151~~ |
 | ◼️ `tools-003-house-browser-and-tools-menu.md`               | - | 🟡 | M | ~~111~~ |
+| ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`           | - | 🔴 | L | - |
 
 ### Fresh new
 
