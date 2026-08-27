@@ -1,212 +1,266 @@
-# MPFB2 → Mixamo → GLB Export — Current Status
+# MPFB2 → Mixamo → GLB — Delete Groups & Export
 
 ## Status
 
-🟡 **Delete groups are generated correctly, but the final GLB still exposes the Human body through clothing.**
+**Status:** 🟡 In progress — Delete Groups działają, problem pozostał na etapie GLB export/renderingu.
 
-The native MPFB2 Delete-group generation has been successfully reproduced and verified.
+### Działający workflow
 
----
-
-## Working pipeline
-
-Current asset preparation flow:
-
-1. Create the base character in MPFB2.
-2. Add Mixamo rig.
-3. Prepare animations:
-   - export reduced doll from Mixamo,
-   - upload to Mixamo,
-   - export animations,
-   - import animations,
-   - Snap to Mixamo,
-   - Bake,
-   - rename Actions.
-4. Configure MPFB2 Asset Library:
-   - `GameEngine (PBR)`
-   - `Material Instances` disabled.
-5. Add:
-   - skin,
-   - eyes,
-   - clothing.
-6. Generate MPFB2 `Delete.*` groups.
-7. Create an MPFB2 `Export copy`.
-8. Export the Export copy to GLB.
+1. **Bazowa postać MPFB2**
+2. **Dodanie rig Mixamo**
+3. **Przygotowanie animacji**
+   - export Mixamo reduced doll
+   - import na Mixamo Web
+   - export animacji
+   - import animacji
+   - Snap to Mixamo
+   - Bake
+   - rename Action
+4. **Assets / Library Settings**
+   - `GameEngine (PBR)` ✅
+   - `Material Instances` ❌
+5. **Dodanie skóry, oczu i ubrań**
+6. **Wygenerowanie MPFB2 Delete Groups** ✅
+7. **MPFB2 Export Copy** ✅
+8. **Eksport Export Copy do GLB** ✅
+9. **Zewnętrzna inspekcja GLB** ✅
 
 ---
 
-## Delete-group generation
+## Delete Groups
 
-The custom diagnostic/generation script now successfully uses MPFB2 native classes.
-
-Important findings:
-
-- `GeneralObjectProperties` is located under:
-
-```text
-mpfb.entities.objectproperties
-```
-
-not:
-
-```text
-mpfb.services.properties
-```
-
-- `LocationService` was not available at the previously assumed path and is not currently required.
-- The clothing object can have its `ARMATURE` modifier applied on a temporary copy.
-- The `SUBDIVISION` modifier is left untouched.
-- `MeshCrossRef` successfully builds the basemesh and clothing cross-references.
-- `VertexMatch` successfully processes all clothing vertices.
-- `ClothesService.create_new_delete_group(...)` successfully creates the Delete group.
-
-Example successful result:
+MPFB2 poprawnie tworzy osobne grupy na basemesh:
 
 ```text
 Human
 └── Vertex Groups
-    ├── Delete.viking_sth_tunic
-    └── Delete.viking_pants
+    ├── Delete.rehmanpolanski_viking_tunic
+    └── Delete.rehmanpolanski_viking_pants
 ```
 
-The naming convention is:
+Nazwa grupy jest generowana jako:
 
 ```python
 group_name = f"Delete.{clothes.name.split('.')[-1]}"
 ```
 
----
-
-## Latest test
-
-Two clothing items were processed:
-
-- tunic
-- pants
-
-Both generated their own `Delete.*` group on `Human`.
-
-An `Export copy` was then created through MPFB2.
-
-The objects from the Export copy were exported to GLB.
-
-### Result
-
-❌ The GLB still contains visible Human/body geometry underneath the clothing.
-
-The attached screenshot shows significant skin/body geometry visible through the outfit.
-
----
-
-## What is currently proven
-
-### Proven ✅
-
-- MPFB2 native API is available.
-- `ObjectService.object_is_basemesh()` works.
-- `ClothesService.get_reference_scale()` works.
-- `MeshCrossRef` works.
-- `VertexMatch` works.
-- Native `ClothesService.create_new_delete_group()` works.
-- Multiple clothing items can have separate `Delete.*` groups.
-- The Delete groups are present on the Human object.
-
-### Not yet proven ❓
-
-We do not yet know whether:
-
-1. the generated Delete groups contain the expected vertices,
-2. MPFB2 `Export copy` actually consumes all `Delete.*` groups,
-3. the Export copy has the expected body geometry removed,
-4. another MPFB2 export setting affects Delete-group processing,
-5. the GLB exporter is exporting geometry that should have been removed,
-6. modifiers / evaluated meshes / vertex-group state interfere with the deletion,
-7. the Delete groups need to be processed at a different stage of the MPFB2 pipeline.
-
----
-
-## Next investigation
-
-Do **not** change the Delete-group generation yet.
-
-First inspect the pipeline immediately after:
-
-```text
-Create Delete.* groups
-        ↓
-MPFB2 Export copy
-```
-
-The key diagnostic question is:
-
-> **Does the MPFB2 Export copy already have the body geometry removed?**
-
-### Test A — inspect Export copy
-
-Create the Export copy but do **not** export GLB.
-
-Inspect the Human/body mesh in the Export copy.
-
-Expected:
-
-```text
-Body covered by tunic/pants
-        ↓
-corresponding body vertices removed
-```
-
-If the body is already clean, the problem is in the GLB export stage.
-
-If the body is still visible, the problem is in MPFB2 Export copy generation / Delete-group consumption.
-
-### Test B — inspect Delete groups
-
-For each group:
-
-```text
-Delete.viking_sth_tunic
-Delete.viking_pants
-```
-
-verify:
-
-- vertex count,
-- affected body regions,
-- whether the expected vertices are actually weighted,
-- whether the groups survive creation of the Export copy.
-
-### Test C — compare source vs Export copy
-
-Compare:
+Następnie na `Human` tworzone są odpowiadające maski:
 
 ```text
 Human
-        ↓
-Human in Export copy
+└── Modifiers
+    ├── Armature
+    ├── Hide helpers
+    ├── Delete.rehmanpolanski_viking_tunic
+    └── Delete.rehmanpolanski_viking_pants
 ```
 
-including:
+Maski mają:
 
-- vertex count,
-- polygon count,
-- vertex groups,
-- modifiers,
-- evaluated geometry.
+```text
+Delete.* → Vertex Group odpowiadający ubraniu
+Invert → True
+```
 
-This should identify exactly where the unwanted body geometry survives.
+Dzięki temu skóra znajdująca się pod ubraniem jest poprawnie ukrywana.
 
 ---
 
-## Important constraint
+# Aktualny problem
 
-The current Delete-group generator should be considered **working** until evidence shows otherwise.
+Po wykonaniu:
 
-Avoid replacing the native:
-
-```python
-ClothesService.create_new_delete_group(...)
+```text
+MPFB2 Export Copy
+        ↓
+GLB Export
+        ↓
+Seedvale / GLB viewer
 ```
 
-with a custom deletion algorithm.
+postać nadal renderuje się niepoprawnie.
 
-The next step should be to determine why correctly generated MPFB2 `Delete.*` groups do not produce the expected final geometry.
+### Objawy w GLB
+
+- ubranie wygląda jak częściowo przezroczyste,
+- przez ubranie można zobaczyć geometrię znajdującą się z tyłu,
+- włosy / elementy z alpha prześwitują,
+- przez skórę twarzy można zobaczyć gałkę oczną.
+
+**Istotne:** problem występuje dopiero w wyeksportowanym GLB. `Export copy` w Blenderze jest poprawna.
+
+---
+
+# Inspekcja GLB
+
+Zewnętrzny inspektor wykazał:
+
+### Materiały opaque
+
+Tunika:
+
+```text
+Human.rehmanpolanski_viking_tunic
+PNG RGB
+has alpha: False
+alphaMode: BLEND
+```
+
+Spodnie:
+
+```text
+Human.rehmanpolanski_viking_pants
+PNG RGB
+has alpha: False
+alphaMode: BLEND
+```
+
+Buty:
+
+```text
+Human.rehmanpolanski_viking_boots
+PNG RGB
+has alpha: False
+alphaMode: BLEND
+```
+
+Skóra:
+
+```text
+Human.body
+PNG RGB
+has alpha: False
+alphaMode: BLEND
+```
+
+### Materiały rzeczywiście używające Alpha
+
+Broda:
+
+```text
+Human.culturalibre_faun_beard
+PNG RGBA
+transparent: 91.12%
+alphaMode: BLEND
+```
+
+Pozostałe elementy włosów również mają RGBA i znaczną część pikseli transparentnych.
+
+---
+
+# Wniosek
+
+GLB zawiera obecnie:
+
+```text
+Human.body                         → BLEND ❌
+viking_tunic                       → BLEND ❌
+viking_pants                       → BLEND ❌
+viking_boots                       → BLEND ❌
+
+faun_beard                         → BLEND ✅
+hair / alpha materials             → BLEND ✅
+```
+
+Czyli **nie możemy po prostu wyłączyć `BLEND` globalnie**.
+
+Potrzebujemy rozdzielić:
+
+```text
+OPAQUE materials
+        ↓
+OPAQUE
+
+Alpha materials
+        ↓
+BLEND / MASK
+```
+
+---
+
+# Co trzeba teraz ustalić
+
+Nie wiemy jeszcze, **dlaczego Blender glTF exporter eksportuje materiały RGB bez Alpha jako `alphaMode: BLEND`.**
+
+Należy sprawdzić materiał **przed eksportem**, w `Export copy`.
+
+Dla:
+
+```text
+Human.body
+Human.rehmanpolanski_viking_tunic
+Human.rehmanpolanski_viking_pants
+Human.rehmanpolanski_viking_boots
+Human.culturalibre_faun_beard
+Human.short02.001
+Human.short04
+```
+
+trzeba odczytać:
+
+```text
+Material
+└── Node Tree
+    └── Principled BSDF
+        ├── Base Color
+        └── Alpha
+```
+
+oraz ustawienia materiału związane z transparency / surface render method.
+
+---
+
+# Następny krok
+
+Przygotować **read-only Blender Python inspector**, który dla wszystkich materiałów `Export copy` wypisze:
+
+```text
+material name
+surface/render method
+Principled BSDF
+Base Color connection
+Alpha connection
+Alpha default value
+Base Color texture
+texture color space
+texture channels
+```
+
+Nie modyfikuje sceny.
+
+Celem jest ustalenie dokładnego łańcucha:
+
+```text
+MPFB2 material
+      ↓
+Blender Material / Node Tree
+      ↓
+glTF exporter
+      ↓
+alphaMode: BLEND
+      ↓
+niepoprawny rendering GLB
+```
+
+Dopiero po tym należy zdecydować, czy problem naprawiamy:
+
+- w ustawieniach materiałów MPFB2,
+- w `Export copy`,
+- w konfiguracji eksportera glTF,
+- czy potrzebny jest mały preprocessing przed eksportem.
+
+---
+
+## Ważne ustalenia
+
+- ❌ Problem nie leży w `Delete.*` groups.
+- ❌ Problem nie leży w `Export copy`.
+- ❌ Nie należy na razie ręcznie poprawiać GLB.
+- ❌ Nie należy globalnie ustawiać wszystkich materiałów na `OPAQUE`.
+- ✅ Delete Groups są generowane poprawnie.
+- ✅ MPFB2 `ClothesService.create_new_delete_group(...)` działa.
+- ✅ Export Copy poprawnie ukrywa skórę pod ubraniem.
+- ✅ GLB zawiera poprawne osobne materiały dla ubrań.
+- 🔎 Do ustalenia pozostaje źródło niepoprawnego `alphaMode: BLEND`.
+
+**Cel:** uzyskać GLB, w którym materiały skóry i zwykłych ubrań są rzeczywiście opaque, a materiały wymagające alpha (np. włosy) zachowują prawidłową przezroczystość.
