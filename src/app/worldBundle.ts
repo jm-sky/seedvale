@@ -273,18 +273,30 @@ function buildFauna(
    *  `createFauna`'s `initialSpawnerState` doc. */
   initialSpawnerState?: ReadonlyMap<string, SavedSpawnPointState>,
 ): Promise<Fauna> {
-  const footprintRadius = villageSizeConfig(homeDef.size).footprintRadius
-  // Spawner ring now reaches `footprintRadius + SPAWNER_RING_OFFSET[1]` (plan
-  // 080 — was a flat 45–65 m from home); size the query so its half-extent
-  // covers that reach plus a road halfWidth clearance margin, same 10 m
-  // margin the original fixed 150 (→ half 75, ring max 65) already implied.
-  const spawnerMaxReach = footprintRadius + SPAWNER_RING_OFFSET[1]
-  const center = new Vector3(homeDef.x, homeDef.y, homeDef.z)
-  const roadSegments = chunkManager.roadCorridorsNear(
-    center.x,
-    center.z,
-    (spawnerMaxReach + 10) * 2,
-  )
+  const { bootMark, bootMarkEnd } = useBootMark('buildFauna')
+
+  bootMark('prepareRoadQuery')
+  let footprintRadius: number
+  let center: Vector3
+  let roadSegments: ReturnType<ChunkManager['roadCorridorsNear']>
+  try {
+    footprintRadius = villageSizeConfig(homeDef.size).footprintRadius
+    // Spawner ring now reaches `footprintRadius + SPAWNER_RING_OFFSET[1]` (plan
+    // 080 — was a flat 45–65 m from home); size the query so its half-extent
+    // covers that reach plus a road halfWidth clearance margin, same 10 m
+    // margin the original fixed 150 (→ half 75, ring max 65) already implied.
+    const spawnerMaxReach = footprintRadius + SPAWNER_RING_OFFSET[1]
+    center = new Vector3(homeDef.x, homeDef.y, homeDef.z)
+    roadSegments = chunkManager.roadCorridorsNear(
+      center.x,
+      center.z,
+      (spawnerMaxReach + 10) * 2,
+    )
+  } finally {
+    bootMarkEnd('prepareRoadQuery')
+  }
+
+  bootMark('createFauna')
   return createFauna(
     scene,
     chunkManager.sampleHeight,
@@ -308,7 +320,7 @@ function buildFauna(
     },
     onAnimalDeath,
     initialSpawnerState,
-  )
+  ).finally(() => bootMarkEnd('createFauna'))
 }
 
 function buildItemSpawners(

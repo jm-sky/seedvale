@@ -12,6 +12,7 @@ import {
 import { isSystemEnabled } from '../debug/debugMode'
 import { distanceToSegment } from '../math/segment'
 import { createCaveMouth, createThicket, tintPropMaterials } from '../settlement/props'
+import { useBootMark } from '../shared/bootMark'
 import { isCoastalPlacement } from '../terrain/coastPlacement'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { skyParamsFromTime } from '../world/dayNight'
@@ -395,6 +396,8 @@ export async function createFauna(
    *  point" (defaults already set by the constructor below). */
   initialSpawnerState?: ReadonlyMap<string, SavedSpawnPointState>,
 ): Promise<Fauna> {
+  const { bootMark, bootMarkEnd } = useBootMark('createFauna')
+
   const random = createSeededRandom(seed ^ 0xfa11)
   let agents: AnimalAgent[] = []
   /** `animalId`s of the wolf den's initial pack (plan 093 Etap E) — set once
@@ -402,7 +405,13 @@ export async function createFauna(
    *  to find a valid site (`isWolfDenCleared()` then always reports `false`,
    *  never a false "cleared"). */
   const denWolfAnimalIds = new Set<string>()
-  const templates = await loadFaunaTemplates()
+  bootMark('loadFaunaTemplates')
+  let templates: Partial<Record<AnimalKind, FaunaTemplate>>
+  try {
+    templates = await loadFaunaTemplates()
+  } finally {
+    bootMarkEnd('loadFaunaTemplates')
+  }
   const spawnerMeshes: Object3D[] = []
   /** Managed spawn-point lifecycle state (plan 125), keyed by the stable
    *  `PreySpawner.id` — same objects also live in the `spawners` array below;
@@ -561,6 +570,8 @@ export async function createFauna(
     )
   }
 
+  bootMark('ringSpawns')
+  try {
   for (const spec of isSystemEnabled('animals') ? SPAWNS : []) {
     const [minOffset, maxOffset] = SPAWN_RING_OFFSET[spec.profile]
     const habitatFilter = habitatFilterFor(spec.profile)
@@ -628,6 +639,9 @@ export async function createFauna(
       agents.push(agent)
     }
   }
+  } finally {
+    bootMarkEnd('ringSpawns')
+  }
 
   const spawners: PreySpawner[] = []
   const spawnerLabels: {
@@ -655,6 +669,8 @@ export async function createFauna(
   const spawnerTypeSeen = new Map<PreySpawner['type'], number>()
   // `animals` also gates habitat spawners (cave/thicket/wolfDen) — when off, no
   // respawn/replenishment can occur either.
+  bootMark('habitatSpawners')
+  try {
   for (const spec of isSystemEnabled('animals') ? SPAWNER_SPECS : []) {
     const seenOfType = spawnerTypeSeen.get(spec.type) ?? 0
     spawnerTypeSeen.set(spec.type, seenOfType + 1)
@@ -792,6 +808,9 @@ export async function createFauna(
     label.position.set(pos.x, groundY + labelH, pos.z)
     scene.add(label)
     spawnerLabels.push({ type: spec.type, object: label, el, marker: null, lastOpacity: -1 })
+  }
+  } finally {
+    bootMarkEnd('habitatSpawners')
   }
 
   /** Last in-game day (floored) recovery was checked — guards the
