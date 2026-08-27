@@ -1,8 +1,8 @@
 # Plan: NPC pomoc graczowi w jedzeniu i piciu
 
 **Created:** 2026-08-18  
-**Updated:** 2026-08-25  
-**Status:** `planned` 📋  
+**Updated:** 2026-08-27  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** S  
 **Depends on:** 165  
 **Related:** 167, ai-002, ai-003

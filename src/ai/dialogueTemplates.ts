@@ -193,3 +193,22 @@ const GOODBYE: Record<Personality, readonly string[]> = {
 export function goodbyeLine(archetype: Personality): string {
   return pick(GOODBYE[archetype])
 }
+
+// --- "Poproś o jedzenie/picie" (plan 152) ---
+
+/** `outcome`'s shape is written out inline rather than importing
+ *  `AssistanceOutcome` from `ai/npcAssistance`, so this stays a pure module
+ *  with no `NpcAgent`/decision-logic import — see the file doc comment. Flat
+ *  lines regardless of archetype, same simplicity as `askGuardForSword`'s
+ *  sword-request lines. */
+export function requestAssistanceLine(
+  requestKind: 'food' | 'water',
+  outcome: 'given' | 'no_item' | 'unwilling' | 'inventory_full',
+): string {
+  if (outcome === 'given') return requestKind === 'food' ? 'Trzymaj, częstuj się.' : 'Trzymaj, napij się.'
+  if (outcome === 'no_item') {
+    return requestKind === 'food' ? 'Nie mam przy sobie nic do jedzenia.' : 'Nie mam przy sobie nic do picia.'
+  }
+  if (outcome === 'inventory_full') return 'Nie masz już miejsca w ekwipunku.'
+  return 'Wybacz, ale nie chcę się tym dzielić.'
+}

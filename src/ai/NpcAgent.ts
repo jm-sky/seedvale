@@ -118,6 +118,7 @@ import {
   senseImmediateAnimalThreat,
   type ThreateningAnimalCandidate,
 } from './npcAnimalThreat'
+import { type AssistanceRequestKind, type AssistanceResult, resolveNpcAssistance } from './npcAssistance'
 import {
   destinationOnColliderRim,
   isExteriorPoint,
@@ -1340,6 +1341,29 @@ export class NpcAgent {
 
   getDialogueLine(): string {
     return pickDialogueLine(this.dialogueArchetype, this.activeNeed, this.isBusyPhase())
+  }
+
+  /** Plan 152 — resolves the player's "request food/water" dialogue action
+   *  against this NPC's own carried `Inventory`, social relation/standing and
+   *  own-needs state. Decision only: does not remove anything from `carried`
+   *  (see `takeCarriedConsumable`) so the dialogue wiring can still refuse to
+   *  complete the transfer if the player's own inventory has no room. */
+  resolveAssistanceRequest(kind: AssistanceRequestKind): AssistanceResult {
+    const social = this.getPlayerSocial(this.name)
+    const ownNeedValue = kind === 'food' ? this.needs.hunger : this.needs.thirst
+    return resolveNpcAssistance(kind, this.carried, ownNeedValue, {
+      personality: this.personality,
+      relationLevel: social.relationLevel,
+      standing: social.standing,
+    })
+  }
+
+  /** Removes one carried unit of `kind` — the actual transfer mutation for a
+   *  successful `resolveAssistanceRequest`, called only after the caller has
+   *  confirmed the player's inventory can receive it (plan 152 "Inventory
+   *  atomicity"). */
+  takeCarriedConsumable(kind: ItemKind): boolean {
+    return this.carried.remove(kind, 1)
   }
 
   /** Dialogue-facing summary of what this NPC is doing right now — maps the

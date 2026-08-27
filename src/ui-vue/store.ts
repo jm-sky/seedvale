@@ -44,6 +44,10 @@ type NpcDialogueMenuState = {
   getCanAskSword: (() => boolean) | null
   onAskSword: (() => string) | null
   onOpenTrade: (() => void) | null
+  /** "Poproś o jedzenie"/"Poproś o wodę" (plan 152) — resolved immediately
+   *  against the currently-open `npc`, same shape as `onAskSword`. */
+  onRequestFood: ((npc: NpcAgent) => string) | null
+  onRequestWater: ((npc: NpcAgent) => string) | null
 }
 type InventoryState = {
   open: boolean
@@ -328,7 +332,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null } as InventoryState,
   pauseMenu: {
@@ -531,10 +535,14 @@ export function configureNpcDialogueMenu(handlers: {
   onAskSword: () => string
   onOpenTrade: () => void
   getCanAskSword: () => boolean
+  onRequestFood: (npc: NpcAgent) => string
+  onRequestWater: (npc: NpcAgent) => string
 }): void {
   ui.npcDialogueMenu.onAskSword = handlers.onAskSword
   ui.npcDialogueMenu.onOpenTrade = handlers.onOpenTrade
   ui.npcDialogueMenu.getCanAskSword = handlers.getCanAskSword
+  ui.npcDialogueMenu.onRequestFood = handlers.onRequestFood
+  ui.npcDialogueMenu.onRequestWater = handlers.onRequestWater
 }
 
 export function openInventory(

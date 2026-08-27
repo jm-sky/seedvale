@@ -1,3 +1,4 @@
+import type { NpcAgent } from '../ai/NpcAgent'
 import type { createWorldAudio } from '../audio/createWorldAudio'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
@@ -11,11 +12,13 @@ import type { VueUi } from '../ui-vue/mount'
 import type { Hud } from '../ui/createHud'
 import type { Toast } from '../ui/createToast'
 import type { WorldBundle } from './worldBundle'
+import { requestAssistanceLine } from '../ai/dialogueTemplates'
 import { playInventoryDrop } from '../audio/inventorySounds'
 import { askGuardForSword } from '../items/guardSword'
 import { toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
 import { isInstanceBackedKind } from '../items/itemInstances'
+import { ITEM_DEFS } from '../items/items'
 import { sellInstancesForCoins, settleTransaction } from '../items/trade'
 import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 
@@ -186,6 +189,24 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     onSellInstances: sellInventoryInstances,
   })
 
+  /** Plan 152 — "Poproś o jedzenie"/"Poproś o wodę". `npc.resolveAssistanceRequest`
+   *  only decides (reading the NPC's own carried `Inventory`/relation/needs);
+   *  the actual transfer happens here, only once the player's inventory can
+   *  actually receive the item (plan's "Inventory atomicity" ordering). */
+  const resolveAssistanceDialogue = (npc: NpcAgent, kind: 'food' | 'water'): string => {
+    const result = npc.resolveAssistanceRequest(kind)
+    if (result.outcome !== 'given' || !result.itemKind) return requestAssistanceLine(kind, result.outcome)
+    const itemKind = result.itemKind
+    if (!inventory.canAdd(itemKind, 1)) return requestAssistanceLine(kind, 'inventory_full')
+    if (!npc.takeCarriedConsumable(itemKind)) return requestAssistanceLine(kind, 'no_item')
+    inventory.add(itemKind, 1)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    deps.syncHeldHud()
+    deps.syncQuickActionAvailability()
+    toast.show(`+1 ${ITEM_DEFS[itemKind].label}`, 'pickup')
+    return requestAssistanceLine(kind, 'given')
+  }
+
   vueUi.configureNpcDialogueMenu({
     onAskSword: () => {
       const result = askGuardForSword({
@@ -206,6 +227,8 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       const view = merchantInventoryView()
       vueUi.openMerchantFromDialogue(view.counts, view.groups)
     },
+    onRequestFood: (npc) => resolveAssistanceDialogue(npc, 'food'),
+    onRequestWater: (npc) => resolveAssistanceDialogue(npc, 'water'),
   })
 
   return {

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import type { NpcAgent } from '../ai/NpcAgent'
 import { nearestArchetype } from '../ai/dialogue'
 import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } from '../ai/dialogueTemplates'
 import { useOverlayScreen } from './composables/useOverlayScreen'
 import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, ui } from './store'
 
-type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword'
+type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword' | 'requestFood' | 'requestWater'
 const state = ui.npcDialogueMenu
 const topic = ref<Topic | null>(null)
 useOverlayScreen('npc-dialogue', isNpcDialogueMenuOpen, closeNpcDialogueMenu)
@@ -14,6 +15,8 @@ const hasOffer = computed(() => state.helpResult?.offer != null)
 const isHomeTrader = computed(() => state.npc?.role === 'trader' && state.settlement?.isHome === true)
 const isHomeGuard = computed(() => state.npc?.role === 'guard' && state.settlement?.isHome === true)
 const swordLine = ref('')
+const foodLine = ref('')
+const waterLine = ref('')
 const responseText = computed(() => {
   if (!state.npc || topic.value === null) return ''
   switch (topic.value) {
@@ -23,10 +26,12 @@ const responseText = computed(() => {
     case 'currentActivity': return currentActivityLine(state.npc.getCurrentActivity(state.timeOfDay), archetype.value)
     case 'goodbye': return goodbyeLine(archetype.value)
     case 'help': return state.helpResult?.line ?? ''
+    case 'requestFood': return foodLine.value
+    case 'requestWater': return waterLine.value
     default: return ''
   }
 })
-function resetMenu(): void { topic.value = null; swordLine.value = '' }
+function resetMenu(): void { topic.value = null; swordLine.value = ''; foodLine.value = ''; waterLine.value = '' }
 function backToTopics(): void { emitUiClick(); resetMenu() }
 function selectTopic(next: Topic): void { emitUiClick(); topic.value = next }
 function askSword(): void {
@@ -34,6 +39,18 @@ function askSword(): void {
   swordLine.value = state.onAskSword?.() ?? ''
   topic.value = 'askSword'
   state.canAskSword = state.getCanAskSword?.() ?? false
+}
+function requestFood(): void {
+  emitUiClick()
+  const npc = state.npc as NpcAgent | null
+  if (npc) foodLine.value = state.onRequestFood?.(npc) ?? ''
+  topic.value = 'requestFood'
+}
+function requestWater(): void {
+  emitUiClick()
+  const npc = state.npc as NpcAgent | null
+  if (npc) waterLine.value = state.onRequestWater?.(npc) ?? ''
+  topic.value = 'requestWater'
 }
 function openTrade(): void {
   emitUiClick()
@@ -76,6 +93,20 @@ watch(() => state.open, (open) => { if (open) resetMenu() })
           @click="askSword"
         >
           Poproś o miecz
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="requestFood"
+        >
+          Poproś o jedzenie
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="requestWater"
+        >
+          Poproś o wodę
         </button>
         <button
           v-for="item in ([['help', 'Może w czymś ci pomóc?'], ['aboutSelf', 'Powiedz coś o sobie.'], ['currentActivity', 'Co teraz robisz?'], ['aboutVillage', 'Powiedz coś o wiosce.'], ['goodbye', 'Nic, miłego dnia!']] as const)"
