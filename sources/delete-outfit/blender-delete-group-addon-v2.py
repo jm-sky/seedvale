@@ -288,7 +288,8 @@ def main():
         log("")
         log("CREATING DELETE GROUP...")
 
-        group_name = "Delete"
+        # group_name = f"Delete.{clothes.name.split('.')[-1]}"
+        group_name = f"Delete.{clothes.name.removeprefix('Human.')}"
 
         ClothesService.create_new_delete_group(
             basemesh,
@@ -300,9 +301,9 @@ def main():
         group = basemesh.vertex_groups.get(group_name)
 
         if group:
-            log("SUCCESS: Delete group created")
+            log(f"SUCCESS: Delete group '{group_name}' created")
         else:
-            log("ERROR: Delete group NOT created")
+            log(f"ERROR: Delete group'{group_name}' NOT created")
 
     finally:
 
