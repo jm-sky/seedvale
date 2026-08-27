@@ -17,6 +17,7 @@ import {
   applyStoredSettlements,
   applyStoredSky,
   applyStoredTerrain,
+  createBenchmarkWorldConfig,
   createWorldConfig,
   defaultTerrainConfig,
 } from '../config/worldConfig'
@@ -41,6 +42,7 @@ import { createPrimaryWeaponSelection } from '../items/primaryWeapons'
 import { createAcquiredInstance } from '../items/trade'
 import { createWeaponInstance, migrateWeaponCountsToInstances } from '../items/weaponMaintenance'
 import {
+  type BenchmarkFixture,
   benchmarkScenarioFromUrl,
   createBenchmarkRunner,
   createPerfMonitor,
@@ -193,7 +195,7 @@ function terrainModificationsFromSave(saved: readonly SaveTerrainModification[])
 export async function createApp(
   container: HTMLElement,
   initialSave?: SaveData | null,
-  options?: { newGame?: boolean, modelTest?: boolean },
+  options?: { newGame?: boolean, modelTest?: boolean, benchmarkFixture?: BenchmarkFixture },
 ): Promise<() => void> {
   const { bootMark, bootMarkEnd, bootMarksSummary } = useBootMark('createApp')
 
@@ -215,11 +217,20 @@ export async function createApp(
 
   const loadingScreen = createLoadingScreen(container)
 
-  const config = createWorldConfig()
+  const fixture = options?.benchmarkFixture
+  // A canonical `?benchmark=` run must not inherit the user's save or
+  // localStorage-derived world/graphics preferences — `createBenchmarkWorldConfig`
+  // builds straight from the fixture, bypassing `createWorldConfig()`'s URL/
+  // localStorage overlay entirely (plan tools-001; a fresh save alone is not
+  // enough, since `createWorldConfig()` reads localStorage independently of
+  // any save).
+  const config = fixture
+    ? createBenchmarkWorldConfig(fixture)
+    : createWorldConfig()
   const perfMonitor = createPerfMonitor()
   setActiveMonitor(perfMonitor)
   if (isPerfUrlEnabled()) perfMonitor.setSource('url', true)
-  if (!initialSave && options?.newGame) {
+  if (!initialSave && !fixture && options?.newGame) {
     config.seed = randomSeed()
     syncSeedInUrl(config.seed)
   }
@@ -243,19 +254,23 @@ export async function createApp(
     applyStoredPlayer(config.player, initialSave.config.player)
     applyStoredSettlements(config.settlements, initialSave.config.settlements)
   }
-  saveAllDomains(config)
+  // A benchmark fixture must not mutate the user's saved world/graphics
+  // preferences (plan tools-001 trap #14).
+  if (!fixture) saveAllDomains(config)
 
   const timeOverride = parseTimeOfDayFromUrl()
   const dayNight = createDayNightState(
-    initialSave
-      ? {
-          timeOfDay: timeOverride ?? initialSave.timeOfDay,
-          elapsedDays: initialSave.elapsedDays,
-          ...(timeOverride != null ? { enabled: false } : {}),
-        }
-      : timeOverride != null
-        ? { timeOfDay: timeOverride, enabled: false }
-        : undefined,
+    fixture
+      ? { timeOfDay: timeOverride ?? fixture.timeOfDay, elapsedDays: fixture.elapsedDays, enabled: false }
+      : initialSave
+        ? {
+            timeOfDay: timeOverride ?? initialSave.timeOfDay,
+            elapsedDays: initialSave.elapsedDays,
+            ...(timeOverride != null ? { enabled: false } : {}),
+          }
+        : timeOverride != null
+          ? { timeOfDay: timeOverride, enabled: false }
+          : undefined,
   )
   // Climate (season + weather) is a pure function of (seed, elapsedDays) —
   // no save field, "restored" for free by re-deriving from the values above
@@ -1280,7 +1295,10 @@ export async function createApp(
   // index.html + the manifest's display:standalone) — that path doesn't hit
   // this bug since it isn't the live Fullscreen API.
 
-  const removeAutoSave = installAutoSave()
+  // A benchmark fixture boots with no active save slot pinned to it — periodic
+  // autosave would write the fresh benchmark world over whatever save was last
+  // active (plan tools-001 trap #14), so it stays off for a fixture run.
+  const removeAutoSave = fixture ? (() => {}) : installAutoSave()
 
   bootMark('createGameLoop')
   const gameLoop = createGameLoop({
@@ -1372,6 +1390,14 @@ export async function createApp(
     loadRadius: config.terrain.loadRadius,
     geometries: renderer.info.memory.geometries,
     textures: renderer.info.memory.textures,
+    // Reproducibility fields (plan tools-001 §4) — only meaningful/populated
+    // for a `?benchmark=` fixture run; `elapsedDays`/season/weather still
+    // apply to a `?perf=1` gameplay session too, since they're cheap and
+    // already tracked live.
+    fixtureVersion: fixture?.version,
+    elapsedDays: dayNight.elapsedDays,
+    season: climate.season,
+    weather: climate.weather.type,
   }))
 
   const autoBench = benchmarkScenarioFromUrl()

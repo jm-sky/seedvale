@@ -19,6 +19,9 @@ export function buildReport(input: {
   context?: PerfContext
   scene?: SceneCensus
   isolation?: IsolationProbeRow[]
+  /** False only for `current` (plan tools-001 §2) — no fixed anchor, so it
+   *  can't be trusted in an automated baseline comparison. Defaults true. */
+  canonical?: boolean
 }): PerfReportJson {
   const { totals, durationSec, scenario } = input
   const n = Math.max(1, totals.frames)
@@ -61,16 +64,38 @@ export function buildReport(input: {
     }))
     .sort((a, b) => b.maxMs - a.maxMs)
 
+  const frameMaxMs = totals.frameMsMax === Infinity ? 0 : totals.frameMsMax
+  const largestHitchMs = hitches.reduce((max, h) => Math.max(max, h.maxMs), 0)
+  const unattributedMs = Math.max(0, frameMaxMs - largestHitchMs)
+  const p95Ms = percentile(sorted, sorted.length, 95)
+
   const top = ranked[0]
-  const recommendation = top
-    ? `${top.name} is the primary sustained bottleneck.`
-    : 'No CPU system stood out; cost may be GPU fill-rate inside RENDER.'
+  const second = ranked[1]
+  let recommendation: string
+  // A single frame far above p95, with no labelled hitch to match it, is a
+  // spike the report can't explain — do not credit it to the top CPU
+  // category (plan tools-001 §5: sustained cost vs. frame spikes vs. no
+  // attribution are distinct claims).
+  if (frameMaxMs > 50 && unattributedMs > 0 && unattributedMs > p95Ms * 2) {
+    recommendation = `Largest frame (${round1(frameMaxMs)} ms) is not explained by labelled hitches (largest ${round1(largestHitchMs)} ms) — unattributed frame spike, not a category bottleneck.`
+  } else if (!top) {
+    recommendation = 'No CPU system stood out; cost may be GPU fill-rate inside RENDER.'
+  } else if (top.name === 'RENDER') {
+    // EffectComposer submission can include GPU wait, so a high RENDER
+    // average is not proof of CPU cost — isolation probes distinguish this.
+    recommendation = 'RENDER is the largest sustained CPU-measured category, but composer submission time can include GPU wait — not confirmed as a CPU bottleneck without isolation probes.'
+  } else if (second && top.ms < second.ms * 1.3) {
+    recommendation = `No single system dominates sustained cost — ${ranked.slice(0, 3).map((r) => r.name).join(', ')} are comparable.`
+  } else {
+    recommendation = `${top.name} is the primary sustained bottleneck.`
+  }
 
   return {
     durationSec,
     quality: ctx.quality,
     pixelRatio: ctx.pixelRatio,
     scenario,
+    canonical: input.canonical ?? true,
     fps: {
       avg: round1(fpsAvg),
       min: Math.round(fpsMin),
@@ -95,6 +120,11 @@ export function buildReport(input: {
     systems,
     bottlenecks,
     spikes,
+    attribution: {
+      frameMaxMs: round1(frameMaxMs),
+      largestHitchMs: round1(largestHitchMs),
+      unattributedMs: round1(unattributedMs),
+    },
     recommendation,
     context: ctx,
   }
@@ -122,13 +152,31 @@ export function formatReport(report: PerfReportJson): string {
   const isolationLines = (report.isolation ?? [])
     .map((row) => `  ${row.id.padEnd(18)} render=${row.renderMsAvg.toFixed(1)} ms draws=${row.drawCallsAvg} tris=${formatTriangles(row.trianglesAvg)}`)
     .join('\n')
+  const ctx = report.context
+  const reproLines = [
+    ctx.fixtureVersion ? `  fixture: ${ctx.fixtureVersion}` : null,
+    ctx.seed != null ? `  seed: ${ctx.seed}` : null,
+    ctx.elapsedDays != null ? `  elapsedDays: ${ctx.elapsedDays}` : null,
+    ctx.timeOfDay != null ? `  timeOfDay: ${ctx.timeOfDay.toFixed(3)}` : null,
+    ctx.season ? `  season: ${ctx.season}` : null,
+    ctx.weather ? `  weather: ${ctx.weather}` : null,
+    ctx.terrainResolution != null ? `  terrainResolution: ${ctx.terrainResolution}` : null,
+    ctx.loadRadius != null ? `  loadRadius: ${ctx.loadRadius}` : null,
+    ctx.viewportWidth != null && ctx.viewportHeight != null ? `  viewport: ${ctx.viewportWidth}x${ctx.viewportHeight}` : null,
+    ctx.scenarioAnchor ? `  anchor: (${round1(ctx.scenarioAnchor.x)}, ${round1(ctx.scenarioAnchor.z)})` : null,
+    ctx.route ? `  route: start=(${round1(ctx.route.startX)}, ${round1(ctx.route.startZ)}) speed=${ctx.route.speedMps} m/s duration=${ctx.route.durationSec}s` : null,
+  ].filter((line): line is string => line !== null)
+
   return [
     '[Seedvale Benchmark]',
     '',
-    `Scenario: ${report.scenario}`,
+    `Scenario: ${report.scenario}${report.canonical ? '' : ' (non-canonical)'}`,
     `Duration: ${report.durationSec}s`,
     `Quality: ${report.quality}`,
     `Pixel ratio: ${report.pixelRatio}`,
+    '',
+    'Reproducibility:',
+    reproLines.join('\n') || '  (no fixture context)',
     '',
     'FPS:',
     `  avg: ${report.fps.avg}`,
@@ -164,6 +212,11 @@ export function formatReport(report: PerfReportJson): string {
     '',
     'Isolation probes:',
     isolationLines || '  (not run)',
+    '',
+    'Frame attribution:',
+    `  frame max: ${report.attribution.frameMaxMs} ms`,
+    `  largest labelled hitch: ${report.attribution.largestHitchMs} ms`,
+    `  unattributed: ${report.attribution.unattributedMs} ms`,
     '',
     'Recommendation:',
     report.recommendation,

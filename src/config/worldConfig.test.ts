@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WorldConfig } from './worldConfig'
-import { applyStoredTerrain } from './worldConfig'
+import { applyStoredTerrain, createBenchmarkWorldConfig } from './worldConfig'
 
 /** Minimal terrain with current roadNetwork defaults — enough for merge tests. */
 function terrainWithRoadDefaults(): WorldConfig['terrain'] {
@@ -106,5 +106,24 @@ describe('applyStoredTerrain', () => {
     expect(rn.potholeThreshold).toBe(0.72)
     expect(rn.meanderAmplitude).toBe(2)
     expect(rn.meanderScale).toBe(0.04)
+  })
+})
+
+describe('createBenchmarkWorldConfig', () => {
+  it('builds a config from the fixture alone — same seed always yields the same knobs', () => {
+    const fixture = { seed: 42, terrainResolution: 193, loadRadius: 3 }
+    const a = createBenchmarkWorldConfig(fixture)
+    const b = createBenchmarkWorldConfig(fixture)
+    expect(a).toEqual(b)
+    expect(a.seed).toBe(42)
+    expect(a.terrain.resolution).toBe(193)
+    expect(a.terrain.loadRadius).toBe(3)
+  })
+
+  it('pins the High quality preset knobs rather than guessing from defaults', () => {
+    const config = createBenchmarkWorldConfig({ seed: 42, terrainResolution: 193, loadRadius: 3 })
+    expect(config.quality.preset).toBe('High')
+    expect(config.postProcessing.pixelRatioCap).toBe(2)
+    expect(config.showGui).toBe(false)
   })
 })

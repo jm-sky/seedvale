@@ -2,6 +2,7 @@ import './app/dialogueTimeControl'
 import { createApp } from './app/createApp'
 import { createHouseTestScene } from './debug/createHouseTestScene'
 import { isHouseTestMode, isModelTestMode } from './debug/debugMode'
+import { BENCHMARK_FIXTURE } from './perf/benchmarkFixture'
 import { benchmarkScenarioFromUrl, isPerfUrlEnabled } from './perf/flags'
 import {
   beginNewSave,
@@ -32,8 +33,18 @@ async function boot(container: HTMLElement): Promise<void> {
     return
   }
 
+  // `?benchmark=<scenario>` boots through the deterministic fixture, not the
+  // user's save — loading a save first and only overwriting time/position
+  // inside benchmark.ts left the run dependent on whatever world/localStorage
+  // state happened to be active (plan tools-001).
+  const autoBenchmarkId = benchmarkScenarioFromUrl()
+  if (autoBenchmarkId) {
+    void createApp(container, undefined, { benchmarkFixture: BENCHMARK_FIXTURE })
+    return
+  }
+
   const slots = await listSaves()
-  const unattended = Boolean(benchmarkScenarioFromUrl() || isPerfUrlEnabled())
+  const unattended = isPerfUrlEnabled()
   if (unattended) {
     const save = await readSave()
     void createApp(container, save ?? undefined)

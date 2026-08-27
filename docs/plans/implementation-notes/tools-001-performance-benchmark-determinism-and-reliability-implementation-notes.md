@@ -208,6 +208,23 @@ Run at least three identical runs for a representative scenario before declaring
 
 For stream inspect both labelled chunk/streaming hitches and frame-level max/p95. If frame.max remains much larger than labelled hitches, report it as unattributed rather than claiming chunk mesh caused the whole spike.
 
+## Implementation summary (2026-08-28)
+
+Implemented:
+
+- `src/perf/benchmarkFixture.ts` — canonical `BENCHMARK_FIXTURE` (seed 42, elapsedDays 0, timeOfDay 07:00, terrain resolution 193, loadRadius 3) with a `version` field for report comparability.
+- `src/config/worldConfig.ts` — `createBenchmarkWorldConfig(fixture)`: builds straight from `baseConfig`, no URL/localStorage overlay, quality pinned via `applyQualityPreset(config, 'High')`.
+- `src/main.ts` — `?benchmark=<scenario>` now boots through the fixture (`createApp(container, undefined, { benchmarkFixture: BENCHMARK_FIXTURE })`) instead of `readSave()`. `?perf=1` alone (no `?benchmark=`) is unchanged — it's a manual-play live-inspection flag, not an automated comparison, so it still loads the current save on purpose.
+- `src/app/createApp.ts` — when `options.benchmarkFixture` is set: config comes from the fixture (not `createWorldConfig()`), `saveAllDomains()` is skipped, `dayNight` seeds from the fixture (URL `?time=`/`?hour=` can still override for ad-hoc diagnostics), and `installAutoSave()` is skipped entirely — a fixture run has no save slot pinned to it, so periodic autosave would otherwise overwrite whichever save was last active (trap #14). `PerfContext` now also carries `fixtureVersion`, `elapsedDays`, `season`, `weather`.
+- `src/perf/benchmark.ts` — explicit phases (setup anchor → preload chunks → warm-up → measured session → restore); `stream` position is now derived from elapsed wall-clock time each tick instead of an accumulated per-tick step, so `setInterval` delivery jitter no longer drifts the travelled distance; `seekWater` now requires the candidate to be dry land within a small margin above `waterLevel` *and* have a submerged sample nearby, rather than just minimizing `|h - waterLevel|`; report `context` gains `scenarioAnchor`/`route`/viewport; `current` is flagged `canonical: false`.
+- `src/perf/report.ts` / `types.ts` — `PerfReportJson.canonical` and a new `attribution: { frameMaxMs, largestHitchMs, unattributedMs }`. `recommendation` no longer always names the top-ranked category as "the bottleneck": it distinguishes an unattributed frame spike (frame max far above both p95 and the largest labelled hitch), a RENDER-is-largest case (explicit GPU-wait caveat), a no-single-system-dominates case (top two categories within 30% of each other), and the previous plain "primary sustained bottleneck" case.
+
+Deliberate deviation from the notes' literal wording: the notes suggest running `seekForest`/`seekWater` once out-of-band and hardcoding the resulting world-space coordinates into the fixture. That requires driving the real chunk/terrain pipeline (worker-backed field generation), which isn't reachable from a plain Node script and per this repo's browser-verification rule isn't something to do via a self-launched headless browser either. Since `forest`/`water`/`stress`/`stream` anchors are now derived from `host.home()`, and `home` is itself a pure function of the fixture's `(seed, terrain config)`, `seekForest`/`seekWater` already return the same coordinate for the same fixture on every run — the determinism goal is met without needing a literal hardcoded number. `context.scenarioAnchor` on every report makes this checkable: three runs of the same scenario against the same fixture version should show the same anchor.
+
+Technically verified: `npx tsc --noEmit`, `pnpm lint:fix`, `pnpm run test` (full suite, 1970 tests including new coverage in `report.test.ts` and `worldConfig.test.ts`), `pnpm run build`.
+
+Not verified here (manual, per plan §8 "Benchmark"): running `?benchmark=<scenario>` three times and diffing `context.scenarioAnchor`/`context.seed`/loaded-chunk counts/FPS distributions in the browser.
+
 ## Scope guard
 
 This plan should answer: "did this change make the same workload faster/more stable?"

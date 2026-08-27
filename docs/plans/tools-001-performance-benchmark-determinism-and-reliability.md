@@ -1,7 +1,7 @@
 # Plan: Performance Benchmark Determinism & Reliability
 
 **Created:** 2026-08-24
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** none
 **Domain:** `tools`

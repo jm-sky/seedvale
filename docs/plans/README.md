@@ -122,7 +122,6 @@ Natural vegetation
 | ◼️ `fauna-003-horse-riding.md`                                         | - | 🟡 | M | - |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
 | ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
-| ◼️ `tools-001-performance-benchmark-determinism-and-reliability.md`    | - | 🔴 | M | - |
 | ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
 | ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
@@ -201,6 +200,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-19--169--house-interior-furniture-and-bed-anchors.md` | [notes](./implementation-notes/2026-08-19--169--house-interior-furniture-and-bed-anchors-implementation-notes.md) |
 | `world-terrain-002-terrain-modification-and-land-preparation.md` | [notes](./implementation-notes/world-terrain-002-terrain-modification-and-land-preparation-implementation-notes.md) |
 | `world-003-faster-application-startup.md` | [notes](./implementation-notes/world-003-faster-application-startup-implementation-notes.md) |
+| `tools-001-performance-benchmark-determinism-and-reliability.md` | [notes](./implementation-notes/tools-001-performance-benchmark-determinism-and-reliability-implementation-notes.md); repeated-run stability (§8) needs manual `?benchmark=` browser verification |
 
 ---
 

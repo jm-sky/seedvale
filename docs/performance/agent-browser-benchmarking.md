@@ -16,7 +16,7 @@ Don't guess at CLI flags — `agent-browser eval --help` etc. are cheap to check
 
 ## The app's benchmark API
 
-`?benchmark=<id>` **does** auto-start once the world is up (`createApp.ts` calls `benchmark.run(autoBench)`). That path is also **unattended**: `src/main.ts` skips the Kontynuuj / Nowa gra menu and continues the IndexedDB save if one exists for this origin (see Pitfall 6). You can still start a run by hand after load:
+`?benchmark=<id>` **does** auto-start once the world is up (`createApp.ts` calls `benchmark.run(autoBench)`). That path is also **unattended**: `src/main.ts` skips the Kontynuuj / Nowa gra menu — since plan tools-001 it boots straight through the deterministic `BENCHMARK_FIXTURE` (`src/perf/benchmarkFixture.ts`: seed 42, res 193, loadRadius 3, day 0, 07:00), **not** whatever save/localStorage state this origin last had. Pitfall 6 below is now historical for `?benchmark=` specifically — it still applies to plain `?perf=1` (no `?benchmark=`), which is a manual-play live-inspection flag and still continues the real save on purpose. You can still start a run by hand after load:
 
 ```js
 window.__seedvaleReady               // true once the world/scene exist
@@ -31,9 +31,11 @@ window.__seedvalePerfReports         // side-channel: array of every report this
 - `systems.RENDER` (CPU ms for the render system)
 - `rendering.{drawCallsAvg,trianglesAvg}`
 - `scene.<bucket>` for `bucket` in `terrain|grass|vegetation|environment|settlement|water|npc|fauna|items|other` — each `{meshes,instancedMeshes,instances,drawCalls,triangles}`. This is the one that actually shows a geometry-LOD-style change (raw triangle count for the `grass` bucket, etc.) — `rendering.trianglesAvg` alone won't isolate a specific system.
-- `context.{loadedChunks,npcCount,faunaCount,quality,seed,terrainResolution}`
+- `context.{loadedChunks,npcCount,faunaCount,quality,seed,terrainResolution,fixtureVersion,elapsedDays,season,weather,scenarioAnchor,route}`
+- `canonical` — false only for `current` (no fixed anchor; excluded from automated baseline comparisons)
+- `attribution.{frameMaxMs,largestHitchMs,unattributedMs}` — whether the frame-level max is actually explained by a labelled hitch
 
-Open with world params in the URL, e.g. `http://localhost:5577/?seed=42&res=193` (matches the plan's own benchmark protocol — `seed`/`res` apply on **New Game**, not on **Continue** of an existing save, see below).
+Open with `http://localhost:5577/?benchmark=<id>`. `seed`/`res` URL params are **ignored** for `?benchmark=` runs since plan tools-001 — the fixture is the sole source of truth (`context.fixtureVersion` on the report confirms which fixture version produced it). They still matter for ordinary manual play / `?perf=1`.
 
 ## Pitfall 1 — the start menu appears once a save exists, and clicking through it can hang
 
@@ -42,12 +44,12 @@ First-ever navigation to a fresh Chrome profile (no IndexedDB save yet) skips st
 **Fix:** use a brand-new `agent-browser --session <name>` (fresh Chrome profile, no persisted save) for every navigation you want to land directly in-world. Don't reuse a session that has already played through a `Nowa gra`/`Kontynuuj` cycle — open a new one instead. This is cheap; sessions are just separate `user-data-dir`s.
 
 ```bash
-agent-browser --session bench1 open "http://localhost:5577/?seed=42&res=193"
+agent-browser --session bench1 open "http://localhost:5577/?benchmark=stream"
 ```
 
 If you do land on the menu unexpectedly, don't fight it — `agent-browser --session <name> close` cleanly kills even a fully CDP-unresponsive tab, then open a fresh session.
 
-`?benchmark=` / `?perf=1` skip this menu on purpose (unattended continue). That avoids the hang, but it **silently continues** the previous save — including time of day (Pitfall 6).
+`?benchmark=` / `?perf=1` both skip this menu (unattended boot), for different reasons: `?benchmark=` builds a fresh fixture world and never touches the save; `?perf=1` alone still **continues** the previous save — including time of day (Pitfall 6, still relevant to that flag only).
 
 ## Pitfall 2 — `eval` has no `--timeout` flag; CDP itself caps around 25–30s
 
@@ -118,19 +120,21 @@ This is the one that actually cost the most time in practice — more than Pitfa
 - Prefer **reusing one session across a full page reload** (`agent-browser open <url>` again, same session/tab) over minting a new named session per navigation — a reload resets the page's JS module state (clears `inFlight`, etc., see Pitfall 3) without spawning a new OS process, and only revisits Pitfall 1's menu screen if that *specific* origin already has a save (a different port/origin is a different profile-storage bucket, so switching between two dev-server ports on the same session doesn't reintroduce the menu).
 - If things do go sideways, recover with `pkill -9 -f "agent-browser/browsers"` (kills every agent-browser Chrome instance) rather than trying to close sessions individually while the host is already struggling to respond.
 
-## Pitfall 6 — Continue drifts in-game time, weather, and lighting between runs
+## Pitfall 6 — Continue drifts in-game time, weather, and lighting between runs (historical for `?benchmark=`; still applies to plain `?perf=1`)
 
-Unattended `?benchmark=stream&seed=42` on an origin that already has a save **continues** that save. `seed`/`res` in the URL apply on **New Game only**. The persisted fields that keep moving are `timeOfDay` and `elapsedDays`.
+**Since plan tools-001, `?benchmark=<id>` no longer continues a save at all** — `main.ts` boots it through the fixed `BENCHMARK_FIXTURE` (seed 42, day 0, 07:00) every time, on any origin/port, whether or not a save exists there. Multiple `?benchmark=` runs on the *same* origin now start from the same clock/season/weather every time — a fresh port/origin is no longer required to avoid drift for this flag. The rest of this pitfall (kept for history, and because it still fully applies to `?perf=1` without `?benchmark=`, which is a manual live-inspection flag that intentionally continues the real save):
+
+Unattended `?perf=1` on an origin that already has a save **continues** that save. The persisted fields that keep moving are `timeOfDay` and `elapsedDays`.
 
 Default `dayLengthSec` is **480** (`src/world/dayNight.ts`) — eight real minutes per in-game day. A 30 s `stream` sprint is ~1.5 in-game hours, plus hitch stalls (real `dt` still advances the clock). Three cold reloads on the same origin easily walk morning → afternoon → night. Season/weather are a pure function of `(worldSeed, elapsedDays)` (`src/world/weather.ts`), so the later runs are not the same climate either.
 
 This is fatal for lighting comparisons. House lamps stay in the scene at `intensity === 0` during the day; at night they light up. Review 024 (plan 149) started budget-8 on the baseline origin and screenshotted **22:47 / noc** with 9 of 17 point lights culled — not comparable to the 09:31 daytime baseline. Overflow counts also grew 15 → 21 as the clock advanced.
 
-**Fix:**
+**Fix (for `?perf=1` manual sessions):**
 - One **unused port / origin per variant** (not just per machine). `:5577` / `:5588` / `:5590` are separate IndexedDB buckets. Reviews 021–024 already do this to avoid save leak; it also resets the clock.
 - Confirm the HUD clock (`09:31 dzień` vs `22:47 noc`) on the first screenshot of every variant. If it is not morning, you continued someone else's save — pick a new port and redo New Game.
 - Runs 2–3 of the *same* variant may still drift ~1.5 h each. For lighting/weather-sensitive work that is usually acceptable within a variant; it is **not** acceptable across baseline vs pin vs budget-8.
-- `?benchmark=night` forces `timeOfDay = 0.05` for that run only, then restores the saved clock in `finally`. It does not freeze the world clock for later `stream` runs.
+- `?benchmark=night` forces `timeOfDay = 0.05` for that run only, then restores the pre-run clock in `finally`. It does not freeze the world clock for later `stream` runs.
 
 ## Pitfall 7 — hitch-starved first runs eat the 30 s session
 
@@ -147,15 +151,15 @@ Cursor-browser real-GPU protocol uses `Emulation.setDeviceMetricsOverride` → 1
 1. `git worktree add <scratch-path> <baseline-commit>` — check out the pre-change commit into a separate directory. Don't touch the main working tree.
 2. `ln -s <main-repo>/node_modules <scratch-path>/node_modules` — safe **only if** `package.json`/the lockfile are unchanged between the two commits (verify with `git diff <baseline>..HEAD -- package.json pnpm-lock.yaml` or equivalent first). If they differ, do a real `npm install` in the worktree instead.
 3. `PORT=<other-port> npm run dev` in the worktree (background it) — `vite.config.ts` reads `PORT` and uses `strictPort: true`, so pick a free port explicitly rather than letting Vite fall back silently.
-4. Benchmark each server **solo** (Pitfall 4), same scenario id, same `seed`/`res` URL params, same `durationSec`. For lighting / weather / day-night work, also use a **fresh origin per variant** (Pitfall 6) and re-apply viewport emulation after every reload (Pitfall 8).
+4. Benchmark each server **solo** (Pitfall 4), same scenario id, same `durationSec`, and check both reports carry the same `context.fixtureVersion` (a bump there means the two runs are not comparable — re-check the fixture, not just the code under test). Re-apply viewport emulation after every reload (Pitfall 8). Fresh-origin-per-variant (Pitfall 6) is no longer needed for `?benchmark=` itself, but still matters if the comparison also drives any `?perf=1` manual observation on the side.
 5. Compare `scene.<bucket>` triangle/draw-call counts (the bucket your change actually touches) plus the whole-scene `fps`/`frameTime`/`RENDER` numbers — a bucket-level win can be swamped by unrelated buckets in the whole-scene totals (see plan 143's notes for a worked example: vegetation/environment draw calls dropped 18–21% with the whole-scene draw-call total barely moving, because grass/settlement/mirror dominate the total).
 6. Tear down the worktree (`git worktree remove <scratch-path>`) and stop the extra dev server once done — it's scratch state, not something to leave behind for the next session.
 
 ## Quick reference — what actually worked in this session
 
 ```bash
-# Fresh session, land straight in-world:
-agent-browser --session b1 open "http://localhost:5577/?seed=42&res=193"
+# Fresh session, land straight in-world on the deterministic fixture:
+agent-browser --session b1 open "http://localhost:5577/?benchmark=stream"
 agent-browser --session b1 eval "window.__seedvaleReady === true"   # poll a few times, spaced out; don't trust `wait --fn` blindly here
 
 # Fire-and-forget a run:

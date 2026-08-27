@@ -532,6 +532,27 @@ export function createWorldConfig(): WorldConfig {
   return config
 }
 
+/**
+ * A deterministic `WorldConfig` for `?benchmark=` runs (plan tools-001) —
+ * `baseConfig` only, no URL/localStorage overlay, so the fixture is the sole
+ * source of truth and a canonical run can never inherit whatever world/
+ * graphics preferences the user last saved. Quality is pinned to `High`
+ * (`applyQualityPreset`, not just `preset` — that also sets the AO/bloom/
+ * shadow/pixelRatioCap knobs the preset owns) rather than left to
+ * `matchQualityPreset`'s knob-guessing.
+ */
+export function createBenchmarkWorldConfig(fixture: {
+  seed: number
+  terrainResolution: number
+  loadRadius: number
+}): WorldConfig {
+  const config = baseConfig(fixture.seed, fixture.terrainResolution)
+  config.terrain.loadRadius = fixture.loadRadius
+  applyQualityPreset(config, 'High')
+  config.showGui = false
+  return config
+}
+
 export function triangleCount(resolution: number): number {
   const seg = Math.max(1, resolution - 1)
   return 2 * seg * seg

@@ -59,6 +59,16 @@ export type HitchEvent = {
   label?: string
 }
 
+export type ScenarioAnchor = { x: number; z: number }
+
+export type ScenarioRoute = {
+  startX: number
+  startZ: number
+  speedMps: number
+  updateMs: number
+  durationSec: number
+}
+
 export type PerfContext = {
   loadedChunks: number
   npcCount: number
@@ -70,6 +80,18 @@ export type PerfContext = {
   loadRadius?: number
   geometries?: number
   textures?: number
+  /** Reproducibility fields (plan tools-001) — only populated for a
+   *  `?benchmark=` run built from `BENCHMARK_FIXTURE`; absent for ordinary
+   *  gameplay/`?perf=1` sessions. */
+  fixtureVersion?: string
+  elapsedDays?: number
+  timeOfDay?: number
+  season?: string
+  weather?: string
+  viewportWidth?: number
+  viewportHeight?: number
+  scenarioAnchor?: ScenarioAnchor
+  route?: ScenarioRoute
 }
 
 export type HitchReportRow = {
@@ -133,11 +155,25 @@ export type PerfLogEvent = {
   detection?: PerfDetection
 }
 
+/** Frame-level vs. category/hitch evidence (plan tools-001 §5) — keeps the
+ *  report from crediting an isolated, unattributed frame spike to whichever
+ *  CPU category happened to average highest. `withCategory()` measures
+ *  category time but does not itself create a hitch, so `frameMaxMs` can be
+ *  much larger than `largestHitchMs`; the gap is `unattributedMs`. */
+export type PerfAttribution = {
+  frameMaxMs: number
+  largestHitchMs: number
+  unattributedMs: number
+}
+
 export type PerfReportJson = {
   durationSec: number
   quality: string
   pixelRatio: number
   scenario: string
+  /** false for `current` (no fixed anchor) — excluded from automated
+   *  baseline comparisons, still useful as an ad-hoc/debug run. */
+  canonical: boolean
   fps: { avg: number; min: number; p1: number }
   frameTime: { avg: number; p95: number; max: number }
   rendering: {
@@ -154,6 +190,7 @@ export type PerfReportJson = {
   systems: Partial<Record<PerfCategory, number>>
   bottlenecks: string[]
   spikes: { category: string; count: number }[]
+  attribution: PerfAttribution
   recommendation: string
   context: PerfContext
 }

@@ -10,8 +10,21 @@ import { runIsolationProbes } from './isolationProbe'
 import { buildReport, formatReport } from './report'
 import { censusScene } from './sceneCensus'
 
-const SETTLE_MS = 1000
+/** Post-preload settle window (plan tools-001 §3) — lets lazy
+ *  initialization/first-use costs that `waitForChunks()` doesn't cover (GC,
+ *  first-frame allocations) fall outside the measured session. Not a
+ *  cold-start eliminator; a separate cold-start mode would be a distinct,
+ *  explicitly-named benchmark, not a weaker version of this one. */
+const WARMUP_MS = 1000
 const DEFAULT_DURATION_SEC = 30
+/** `stream` scenario route (plan tools-001 §2) — encoded here so a report's
+ *  `context.route` reflects the actual constants used, not just "some
+ *  interval". */
+const STREAM_SPEED_MPS = 8 * 1.8
+const STREAM_UPDATE_MS = 100
+/** Shore margin for `seekWater` (plan tools-001 §2) — a candidate must stand
+ *  this close above `waterLevel` (dry) to count as "at the water's edge". */
+const WATER_SHORE_MARGIN = 1.5
 
 export type BenchmarkRunner = {
   running: () => boolean
@@ -71,28 +84,43 @@ function seekForest(probe: TerrainProbe, originX: number, originZ: number): { x:
   return best
 }
 
+/** Finds a scene that is actually water-adjacent, not just close in height
+ *  to `waterLevel` (plan tools-001 §2 — proximity-to-waterLevel alone can
+ *  land on dry high ground that merely happens to sit near that elevation).
+ *  A candidate must be dry land within `WATER_SHORE_MARGIN` above
+ *  `waterLevel`, with at least one sample a few units away that is actually
+ *  submerged — i.e. visibly at the water's edge. */
 function seekWater(probe: TerrainProbe, originX: number, originZ: number): { x: number; z: number } {
   const waterLevel = probe.waterLevel
-  let best = { x: originX, z: originZ, score: Infinity }
+  let best: { x: number; z: number; score: number } | null = null
   for (let r = 16; r <= 384; r += 16) {
     for (let a = 0; a < 16; a++) {
       const x = originX + Math.cos((a / 16) * Math.PI * 2) * r
       const z = originZ + Math.sin((a / 16) * Math.PI * 2) * r
       const h = probe.sampleHeight(x, z)
-      const score = Math.abs(h - waterLevel)
-      if (score < best.score) best = { x, z, score }
+      if (h < waterLevel || h > waterLevel + WATER_SHORE_MARGIN) continue
+      const nearWater = [0, 90, 180, 270].some((deg) => {
+        const rad = (deg / 180) * Math.PI
+        const hx = x + Math.cos(rad) * 6
+        const hz = z + Math.sin(rad) * 6
+        return probe.sampleHeight(hx, hz) < waterLevel
+      })
+      if (!nearWater) continue
+      const score = h - waterLevel
+      if (!best || score < best.score) best = { x, z, score }
     }
   }
-  return best
+  return best ?? { x: originX, z: originZ }
 }
 
 export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
   let inFlight = false
 
-  async function waitSettled(x: number, z: number): Promise<void> {
+  // Phase: required chunk preload, ahead of the measured session (plan
+  // tools-001 §3 — `setup → required chunk preload → warm-up → measured run`).
+  async function preloadChunks(x: number, z: number): Promise<void> {
     const { chunkSize, loadRadius } = host.config.terrain
     await host.chunkManager().waitForChunks(loadRing(x, z, chunkSize, loadRadius))
-    await sleep(SETTLE_MS)
   }
 
   return {
@@ -108,43 +136,61 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         preset: config.quality.preset,
       }
       try {
+        // Phase: setup — resolve the scenario anchor from the (deterministic,
+        // fixture-derived) home settlement position, not from wherever the
+        // player/camera happened to be before the run. `current` is the one
+        // exception: it deliberately keeps the pre-run position and is
+        // reported as non-canonical (plan tools-001 §2).
         const home = host.home()
         let x = saved.x
         let z = saved.z
         let timeOfDay = saved.timeOfDay
+        let anchor: { x: number; z: number } | undefined
         if (id === 'settlement') {
           x = home.x
           z = home.z
+          anchor = { x, z }
         } else if (id === 'forest' || id === 'stress') {
           const found = seekForest(host.chunkManager(), home.x, home.z)
           x = found.x
           z = found.z
+          anchor = found
         } else if (id === 'water') {
           const found = seekWater(host.chunkManager(), home.x, home.z)
           x = found.x
           z = found.z
+          anchor = found
+        } else if (id === 'stream') {
+          x = home.x
+          z = home.z
+          anchor = { x, z }
         }
         if (id === 'night' || id === 'stress') timeOfDay = 0.05
         host.applyQualityPreset('High')
-        if (id === 'stream') {
-          x = home.x
-          z = home.z
-        }
 
         if (x !== saved.x || z !== saved.z) player.setPosition(x, z)
         dayNight.timeOfDay = timeOfDay
-        await waitSettled(x, z)
 
+        // Phase: required chunk preload.
+        await preloadChunks(x, z)
+        // Phase: warm-up — outside the measured session (see WARMUP_MS doc).
+        await sleep(WARMUP_MS)
+
+        // Stream route is derived from elapsed wall-clock time each tick,
+        // not accumulated per-tick — `setInterval`'s delivered delay isn't
+        // exactly `STREAM_UPDATE_MS`, and a fixed per-tick step would drift
+        // the actual distance travelled away from `STREAM_SPEED_MPS ×
+        // durationSec` (plan tools-001 §2/traps §10).
         let streamTimer = 0
+        const streamStart = performance.now()
         if (id === 'stream') {
-          const sprintMps = 8 * 1.8
-          let streamX = x
           streamTimer = window.setInterval(() => {
-            streamX += sprintMps * 0.1
-            player.setPosition(streamX, z)
-          }, 100)
+            const elapsedSec = (performance.now() - streamStart) / 1000
+            player.setPosition(x + STREAM_SPEED_MPS * elapsedSec, z)
+          }, STREAM_UPDATE_MS)
         }
 
+        // Phase: measured session.
         monitor.setSource('benchmark', true)
         monitor.beginSession()
         await sleep(durationSec * 1000)
@@ -157,11 +203,22 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
           : await runIsolationProbes(host.isolation, monitor)
         monitor.setSource('benchmark', false)
 
+        const baseContext = monitor.getContext()
         const report = buildReport({
           durationSec,
           scenario: id,
           totals,
-          context: monitor.getContext(),
+          canonical: id !== 'current',
+          context: {
+            ...baseContext,
+            timeOfDay,
+            scenarioAnchor: anchor,
+            route: id === 'stream'
+              ? { startX: x, startZ: z, speedMps: STREAM_SPEED_MPS, updateMs: STREAM_UPDATE_MS, durationSec }
+              : undefined,
+            viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
+            viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined,
+          },
           scene,
           isolation,
         })

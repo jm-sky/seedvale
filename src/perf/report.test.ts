@@ -85,9 +85,74 @@ describe('buildReport', () => {
     expect(report.bottlenecks[0]).toBe('RENDER')
     expect(report.rendering.drawCallsAvg).toBe(1000)
     expect(report.rendering.trianglesAvg).toBe(1_000_000)
+    expect(report.canonical).toBe(true)
+    // RENDER can include GPU wait — not a confirmed CPU bottleneck on its own.
+    expect(report.recommendation).toContain('GPU wait')
     const text = formatReport(report)
     expect(text).toContain('[Seedvale Benchmark]')
     expect(text).toContain('Recommendation:')
     expect(text.split('[Seedvale Benchmark]').length).toBe(2)
+  })
+
+  it('marks current as non-canonical', () => {
+    const report = buildReport({
+      durationSec: 30,
+      scenario: 'current',
+      canonical: false,
+      totals: {
+        frames: 10,
+        frameMsSum: 170,
+        frameMsMin: 14,
+        frameMsMax: 22,
+        frameMs: [14, 15, 16, 16, 17, 17, 18, 18, 19, 22],
+        drawCallsSum: 10000,
+        drawCallsMax: 1200,
+        trianglesSum: 10_000_000,
+        categoryMsSum: new Float64Array(PERF_CATEGORY_COUNT),
+        spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchByLabel: new Map(),
+        mirrorDrawCallsSum: 0,
+        geometriesLast: 0,
+        texturesLast: 0,
+      },
+    })
+    expect(report.canonical).toBe(false)
+    expect(formatReport(report)).toContain('non-canonical')
+  })
+
+  it('reports a large unattributed frame spike instead of blaming a CPU category', () => {
+    const categoryMsSum = new Float64Array(PERF_CATEGORY_COUNT)
+    categoryMsSum[7] = 20 // STREAMING — small sustained cost
+    const frameMs = new Array(29).fill(16)
+    frameMs.push(800) // one huge, unexplained frame (evidence from real stream runs)
+    const report = buildReport({
+      durationSec: 30,
+      scenario: 'stream',
+      totals: {
+        frames: frameMs.length,
+        frameMsSum: frameMs.reduce((a, b) => a + b, 0),
+        frameMsMin: 16,
+        frameMsMax: 800,
+        frameMs,
+        drawCallsSum: 3000,
+        drawCallsMax: 200,
+        trianglesSum: 1_000_000,
+        categoryMsSum,
+        spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        // Largest labelled hitch (chunk-mesh, ~52 ms) is far below the 800 ms frame.
+        hitchByLabel: new Map([
+          ['STREAMING:chunk mesh', { category: 'STREAMING' as const, label: 'chunk mesh', count: 3, sumMs: 120, maxMs: 52 }],
+        ]),
+        mirrorDrawCallsSum: 0,
+        geometriesLast: 0,
+        texturesLast: 0,
+      },
+    })
+    expect(report.attribution.frameMaxMs).toBe(800)
+    expect(report.attribution.largestHitchMs).toBe(52)
+    expect(report.attribution.unattributedMs).toBeCloseTo(748, 0)
+    expect(report.recommendation).toContain('unattributed')
   })
 })

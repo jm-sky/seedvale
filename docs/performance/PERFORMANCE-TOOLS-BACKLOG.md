@@ -27,13 +27,13 @@
 
 ### High priority
 
-- [ ] **Deterministic world state** — every benchmark starts from the same fixture: fixed seed, `timeOfDay = 07:00`, fixed `elapsedDays` / season, deterministic weather and fixed world parameters.
-- [ ] **No persisted-state drift** — benchmark must not depend on an existing `Continue` save or accumulated in-game time between runs.
-- [ ] **Deterministic scenario placement** — `forest`, `water`, `settlement` and other scenarios must resolve to reproducible positions and comparable scene conditions for the same seed.
-- [ ] **Benchmark context** — record enough state to reproduce a run: seed, time/day/season, weather, position, scenario, quality, terrain resolution, viewport and duration.
+- [x] **Deterministic world state** — every benchmark starts from the same fixture: fixed seed, `timeOfDay = 07:00`, fixed `elapsedDays` / season, deterministic weather and fixed world parameters. (plan tools-001 — `src/perf/benchmarkFixture.ts` + `createBenchmarkWorldConfig`.)
+- [x] **No persisted-state drift** — benchmark must not depend on an existing `Continue` save or accumulated in-game time between runs. (plan tools-001 — `?benchmark=` no longer loads a save at all; autosave is disabled for a fixture run.)
+- [x] **Deterministic scenario placement** — `forest`, `water`, `settlement` and other scenarios must resolve to reproducible positions and comparable scene conditions for the same seed. (plan tools-001 — anchors derive from the fixture-fixed home settlement, not the pre-run player position; `seekWater` now requires actual shore-adjacency, not just closeness in height. `current` is excluded from canonical comparisons, kept as a debug scenario.)
+- [x] **Benchmark context** — record enough state to reproduce a run: seed, time/day/season, weather, position, scenario, quality, terrain resolution, viewport and duration. (plan tools-001 — `PerfContext` gained `fixtureVersion`/`elapsedDays`/`season`/`weather`/`viewportWidth`/`viewportHeight`/`scenarioAnchor`/`route`.)
 
 ### Medium priority
 
-- [ ] **Cold vs warm runs** — define explicit warm-up and measured phases; keep cold-start compilation/loading hitches separate from steady-state performance.
-- [ ] **Stream scenario** — make route, direction, duration and chunk workload deterministic; correlate streaming hitches with the work that caused them.
-- [ ] **Before/after comparability** — guarantee identical world state, camera/viewport, quality, resolution, scenario, route and measurement duration between baseline and optimized runs.
+- [x] **Cold vs warm runs** — define explicit warm-up and measured phases; keep cold-start compilation/loading hitches separate from steady-state performance. (plan tools-001 — explicit `preload → warm-up → measured session` phases in `benchmark.ts`. A distinct cold-start mode remains unimplemented — out of scope, would be a separate explicitly-named mode.)
+- [ ] **Stream scenario** — make route, direction, duration and chunk workload deterministic; correlate streaming hitches with the work that caused them. Route/direction/duration are now fixed and drift-free (plan tools-001 — position derives from elapsed time, not accumulated per-tick steps). Correlating hitches with cause is trace-analyzer territory — still open, see tools-002.
+- [x] **Before/after comparability** — guarantee identical world state, camera/viewport, quality, resolution, scenario, route and measurement duration between baseline and optimized runs. (plan tools-001 — `context.fixtureVersion` on the report is the check: two reports are only comparable if it matches.)
