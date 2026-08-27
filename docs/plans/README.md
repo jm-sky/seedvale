@@ -50,8 +50,8 @@ New plans declare a primary `domain:` in frontmatter. Use optional `tags:` only 
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `003`
-- settlements-npcs: `003`
-- tools: `003`
+- settlements-npcs: `005`
+- tools: `004`
 - ui-input: `004`
 - world: `004`
 - world-terrain: `003`
@@ -122,6 +122,8 @@ Natural vegetation
 | ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
 | ◼️ `fauna-001-rabies-and-animal-infection.md`                          | - | 🟡 | M | ~~188~~ |
 | ◼️ `world-003-faster-application-startup.md`                           | - | 🔴 | M | - |
+| ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`     | - | 🟡 | S | ~~151~~ |
+| ◼️ `tools-003-house-browser-and-tools-menu.md`               | - | 🟡 | M | ~~111~~ |
 
 ### Fresh new
 
