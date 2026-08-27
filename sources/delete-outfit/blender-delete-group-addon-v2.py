@@ -300,10 +300,29 @@ def main():
 
         group = basemesh.vertex_groups.get(group_name)
 
-        if group:
-            log(f"SUCCESS: Delete group '{group_name}' created")
-        else:
-            log(f"ERROR: Delete group'{group_name}' NOT created")
+        if not group:
+            raise RuntimeError(
+                f"Delete group was NOT created: {group_name}"
+            )
+
+        log(f"SUCCESS: Delete group created: {group_name}")
+
+        # --------------------------------------------------------
+        # Add MASK modifier used by MPFB2 to hide the deleted body
+        # --------------------------------------------------------
+
+        modifier = basemesh.modifiers.new(
+            name=group_name,
+            type="MASK",
+        )
+
+        modifier.vertex_group = group_name
+        modifier.invert_vertex_group = True
+
+        log(
+            f"SUCCESS: MASK modifier created: "
+            f"{group_name} (invert=True)"
+        )
 
     finally:
 

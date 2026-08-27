@@ -325,6 +325,8 @@ Po zakończeniu przygotowania postaci używamy funkcji MPFB2:
 Export copy
 ```
 
+### Options
+
 - Mask -> `Bake mask modifiers`
 - Subdiv -> `Make subdiv modifiers`
 - [x] Bake modelling shapekeys
@@ -333,7 +335,7 @@ Export copy
 
 Nie eksportujemy bezpośrednio roboczej postaci.
 
-Workflow:
+### Workflow:
 
 ```text
 MPFB2 Human
@@ -367,6 +369,56 @@ Export copy eksportujemy jako:
 ```text
 .glb
 ```
+
+### Options
+
+- Include 🔽
+  - [x] Selected Objects
+- Transform 🔽
+  - [x] +Y Up
+- Data 🔽
+  - Scene Grapth 🔽
+  - Mesh 🔽
+    - [ ] Apply Modifiers
+    - [x] UVs
+    - [x] Normals
+    - [ ] Tangenets
+    - [ ] Attributes
+    - [ ] Loose Edges
+    - [ ] Loose Points
+    - [ ] Shared Accessors
+  - Material 🔽
+    - Materials: `Export`
+    - Images: `Automatic`
+    - Image Quality: `75`
+  - [x] Shape Keys 🔽
+    - [x] Shape Key Normals
+    - [ ] Shake Key Tangents
+    - Optimize Shape Keys 🔽
+  - Armature 🔽
+    - [x] Use Rest Position Armeture
+    - [ ] Export Deformation Bones Only
+    - [ ] Remove Armature Object
+    - [ ] Flatten Bone Hierarchy
+  - [x] Skinning 🔽
+    - Bone Influences: `4`
+    - [ ] Include All Bone Influences
+  - Lighting 🔽
+    - Lighting Mode: `Standard`
+  - [ ] Draco Compression 🔽
+  - [ ] Meshopt Compression 🔽
+- [x] Animation 🔽
+  - Animation Mode: `Actions`
+  - Bake & Merge 🔽
+    - [ ] Bake All Objects Animations
+  - Rest & Ranges 🔽
+  - Armature 🔽
+  - [x] Shape Keys Animation 🔽
+  - [x] Sampling Animations 🔽
+  - Optimize Animations 🔽
+  - Extra Animations 🔽
+  - [ ] Action filter 🔽
+
 
 Finalny asset powinien zawierać:
 
