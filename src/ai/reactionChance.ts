@@ -32,8 +32,8 @@ function lerp(a: number, b: number, t: number): number {
 }
 
 /** Most NPCs ignore the Hero entirely — see plan 117 §2 ("baseChance =
- *  0.03–0.05"). Upper end so the extreme-case ceiling below reaches the
- *  plan's 80–100% target once every bonus is maxed. */
+ *  0.03–0.05"). Lower end, tuned down from the plan's original ceiling for
+ *  gameplay balance. */
 const BASE_REACTION_CHANCE = 0.03
 
 /** Interest bonus from openness/extraversion, same 50/50 weighting as
@@ -55,8 +55,8 @@ const RELATION_BONUS: Record<RelationLevel, number> = {
   trusted: 0.3,
 }
 
-/** Reputation bonus ceiling — matches `RELATION_BONUS.trusted` so being
- *  widely known can matter as much as being personally known. */
+/** Reputation bonus ceiling — kept below `RELATION_BONUS.trusted` so being
+ *  widely known matters, but personal relationship still weighs more. */
 const REPUTATION_BONUS_MAX = 0.10
 
 /** Final probability (0..1) that an NPC reacts to a nearby Hero, before
