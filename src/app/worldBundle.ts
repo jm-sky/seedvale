@@ -17,6 +17,7 @@ import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
 import type { DryingRackRecord } from '../world/dryingRacks'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
+import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { PlantedTreeRecord } from '../world/plantedTrees'
 import type { PlayerGardenRecord } from '../world/playerGarden'
 import type { NearbyPlayerWellLookup, PlayerWellRecord } from '../world/playerWell'
@@ -62,6 +63,7 @@ import { createPlayerGardens, type PlayerGardens } from '../world/createPlayerGa
 import { createPlayerWells, type PlayerWells } from '../world/createPlayerWells'
 import { createTerrainPreparations, type TerrainPreparations } from '../world/createTerrainPreparations'
 import { createFoodSourceHooks } from '../world/foodSources'
+import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
 
@@ -220,6 +222,10 @@ function buildSettlementsManager(
    *  `initialHouseholds` above (plan 197 §7) — also never passed by
    *  `createWorldBundle`, for the same reason. */
   initialNpcStates?: Record<NpcId, NpcStateSnapshot>,
+  /** Helper resource-delivery target hooks over the player's placed
+   *  `Container`s (plan 167) — forwarded into every `createSettlement` call
+   *  → every `NpcAgent`, the same way `foodSources`/`hunting` are above. */
+  helperDelivery?: HelperDeliveryHooks,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -251,6 +257,7 @@ function buildSettlementsManager(
     hunting,
     initialHouseholds,
     initialNpcStates,
+    helperDelivery,
   )
 }
 
@@ -579,13 +586,27 @@ async function buildWorldSystems(
   const hunting = createHuntingHooks(() => faunaForHunting, getWorldDays)
   bootMarkEnd('createHuntingHooks')
 
+  // Built ahead of `settlementsManager` (plan 167) — every `NpcAgent`'s
+  // `helperDelivery` hooks need a live `PlacedContainers` to resolve a helper
+  // assignment's target, the same "built before settlementsManager, forwarded
+  // in" shape as `foodSources`/`hunting` above.
+  bootMark('createPlacedContainers')
+  const placedContainers = createPlacedContainers(
+    scene,
+    chunkManager.sampleHeight,
+    initialPlacedContainers,
+    initialCarriedContainer,
+  )
+  bootMarkEnd('createPlacedContainers')
+  const helperDelivery = createHelperDeliveryHooks(placedContainers)
+
   // Now fast: returns as soon as `homeDef` (the home site's position/id/size
   // — a pure function of seed+terrain) is resolved and the home settlement's
   // own full build (houses/NPCs/livestock) has been kicked off in the
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
 
@@ -599,12 +620,6 @@ async function buildWorldSystems(
     config.seed,
     { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
     initialPlacedTraps,
-  )
-  const placedContainers = createPlacedContainers(
-    scene,
-    chunkManager.sampleHeight,
-    initialPlacedContainers,
-    initialCarriedContainer,
   )
   const playerWells = createPlayerWells(
     scene,

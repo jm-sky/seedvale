@@ -15,8 +15,10 @@ import type { SettlementLandmarks } from '../settlement/props'
 import type { VigorState } from '../shared/VigorState'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
+import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
+import type { HelperAssignment } from './helperAssignment'
 import {
   disposeObject3D,
   loadGltfAnimated,
@@ -102,6 +104,7 @@ import {
   pickDialogueLine,
 } from './dialogue'
 import {
+  FOOD_THRESHOLD_NORMAL,
   generateNeedPressures,
   needColor,
   type NeedId,
@@ -504,6 +507,17 @@ const NPC_CARRY_MAX_WEIGHT = 5
  *  checks its immediate surroundings before falling back to the abstract
  *  settlement-garden gather. */
 const FOOD_SOURCE_SEARCH_RADIUS = 60
+
+/** Helper resource delivery (plan 167) — the concrete `ItemKind` a
+ *  household's abstract `EconomicStock` `food` surplus converts into while
+ *  carried/deposited (household stock itself has no concrete item identity,
+ *  see the plan's §6 "food ma inną ścieżkę"). `bread` already exists as a
+ *  plain, non-species-specific staple (catalog notes: "prepared for future/
+ *  emergency use"), so this reuses it rather than adding a new `ItemKind`.
+ *  One trip moves at most `HELPER_DELIVERY_MAX_CARRY` units — comfortably
+ *  under `NPC_CARRY_MAX_WEIGHT` alongside this NPC's role weapon. */
+const HELPER_DELIVERY_ITEM_KIND: ItemKind = 'bread'
+const HELPER_DELIVERY_MAX_CARRY = 3
 
 /** Hunting expedition (plan 178) — search radius reaches beyond the
  *  settlement footprint into `AnimalSpawner`'s ring of habitat spawn points,
@@ -927,6 +941,16 @@ export class NpcAgent {
    *  exists, same as `mining`/`foodSources`. Only ever read by a `hunter`
    *  role NPC (`beginHuntExpedition`); every other role ignores it. */
   private readonly hunting: SettlementHuntingHooks | null
+  /** Helper resource-delivery target lookup/transfer hooks over the player's
+   *  own placed `Container`s (plan 167) — null in isolated fallbacks, same as
+   *  `mining`/`foodSources`/`hunting`. Only ever consulted when this NPC has
+   *  an active `helperAssignment` (see `npcState`'s doc). */
+  private readonly helperDelivery: HelperDeliveryHooks | null
+  /** Authoritative HP/needs/stamina/vigor/helper-assignment (plan 197/167) —
+   *  kept as a whole reference (not just the destructured `health`/`needs`/
+   *  etc. below) so `helperAssignment` reads/writes go straight to the one
+   *  object every reconstruction of this npc id shares, no second copy. */
+  private readonly npcState: NpcAuthoritativeState
   /** Last text/opacity/bar widths written to the label DOM — writes invalidate
    *  CSS2D label layout, so skip them when nothing changed. */
   private lastLabelText = ''
@@ -964,6 +988,7 @@ export class NpcAgent {
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
     foodSources?: SettlementFoodSourceHooks,
     hunting?: SettlementHuntingHooks,
+    helperDelivery?: HelperDeliveryHooks,
   ) {
     this.playAt = playAt
     this.forest = forest
@@ -972,11 +997,13 @@ export class NpcAgent {
     this.wellQueueId = wellQueueId
     this.economy = economy
     this.household = household
+    this.npcState = npcState
     this.mining = mining
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
     this.foodSources = foodSources ?? null
     this.hunting = hunting ?? null
+    this.helperDelivery = helperDelivery ?? null
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
@@ -1107,6 +1134,7 @@ export class NpcAgent {
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
     foodSources?: SettlementFoodSourceHooks,
     hunting?: SettlementHuntingHooks,
+    helperDelivery?: HelperDeliveryHooks,
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -1136,6 +1164,7 @@ export class NpcAgent {
         getNearbyPlayerWell,
         foodSources,
         hunting,
+        helperDelivery,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -1163,6 +1192,7 @@ export class NpcAgent {
         getNearbyPlayerWell,
         foodSources,
         hunting,
+        helperDelivery,
       )
     }
   }
@@ -1191,6 +1221,7 @@ export class NpcAgent {
     getNearbyPlayerWell?: NearbyPlayerWellLookup,
     foodSources?: SettlementFoodSourceHooks,
     hunting?: SettlementHuntingHooks,
+    helperDelivery?: HelperDeliveryHooks,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -1229,11 +1260,30 @@ export class NpcAgent {
       getNearbyPlayerWell,
       foodSources,
       hunting,
+      helperDelivery,
     )
   }
 
   getActiveNeed(): NeedId {
     return this.activeNeed
+  }
+
+  /** Current helper resource-delivery assignment (plan 167), or `null` — read
+   *  by the Villagers screen to render assignment state per NPC. */
+  get helperAssignment(): HelperAssignment | null {
+    return this.npcState.helperAssignment
+  }
+
+  /** Sets/clears this NPC's helper assignment (plan 167 §14 — the minimal
+   *  Villagers-screen UI). `targetContainerId: null` clears it; a non-null id
+   *  always (re)assigns food delivery, enabled, since `resourceKind` has only
+   *  one value in the food vertical slice. Written straight onto the shared
+   *  `npcState` object so it survives this `NpcAgent` instance being
+   *  disposed/recreated (settlement unload/reload, `WorldBundle` rebuild). */
+  setHelperAssignment(targetContainerId: string | null): void {
+    this.npcState.helperAssignment = targetContainerId
+      ? { targetContainerId, resourceKind: 'food', enabled: true }
+      : null
   }
 
   /** Bounded recent semantic history (plan 170) — oldest first, capped at
@@ -2393,6 +2443,13 @@ export class NpcAgent {
       woodShortage: (this.economy?.hasShortage('wood') ?? false) || (this.household?.shortage('wood') ?? 0) > 0,
       foodShortage: (this.economy?.hasShortage('food') ?? false) || (this.household?.shortage('food') ?? 0) > 0,
       waterShortage: (this.household?.water.shortage() ?? 0) > 0,
+      // Cheap gate only — whether this NPC has an active helper assignment
+      // at all, so `food` gets a chance to be picked even while this NPC
+      // isn't genuinely hungry. Real eligibility (surplus, target, room) is
+      // computed by `computeFoodStrategyCandidates`/`computeDeliveryAvailable`
+      // once `food` is actually selected, never here.
+      helperDeliveryAvailable: (this.household != null) && (this.helperDelivery != null)
+        && (this.npcState.helperAssignment?.enabled ?? false),
     }
   }
 
@@ -2558,6 +2615,13 @@ export class NpcAgent {
       // food into the household, and eat from that.
       const household = this.household
       this.selectAndTraceStrategy('food', this.computeFoodStrategyCandidates(household))
+      // Helper resource delivery (plan 167) — tried first, but only ever
+      // available (see `computeDeliveryAvailable`) when this NPC isn't
+      // genuinely hungry, so real hunger always keeps priority over
+      // donating surplus (plan §9). Falls through to normal eating/gathering
+      // below when there's no active assignment, no surplus, or no room in
+      // the target container.
+      if (this.beginPlayerStorageDelivery(household)) return
       if (household?.has('food', 1)) {
         this.startAction({
           kind: 'eat',
@@ -2722,7 +2786,81 @@ export class NpcAgent {
       isHunter,
       huntTargetAvailable,
       nearbyFoodSourceAvailable,
+      deliveryAvailable: this.computeDeliveryAvailable(household),
     })
+  }
+
+  /**
+   * Helper resource delivery availability (plan 167) — read-only, mirrors
+   * `computeFoodStrategyCandidates`'s hunt/nearbyFoodSource checks above:
+   * an active/enabled assignment, this NPC not genuinely hungry right now
+   * (own real hunger stays authoritative, plan §9 — `FOOD_THRESHOLD_NORMAL`
+   * is the same bar `generateNeedPressures` uses for "worth eating over"
+   * absent any shortage/duty bias), real household surplus to give away
+   * (plan §6/§7 — never the household's own reserve), and a target
+   * `Container` that currently exists and has room. Never mutates world
+   * state; `beginPlayerStorageDelivery` re-validates for real when it runs.
+   */
+  private computeDeliveryAvailable(household: Household | null): boolean {
+    const helperDelivery = this.helperDelivery
+    const assignment = this.npcState.helperAssignment
+    if (!helperDelivery || !household || !assignment?.enabled) return false
+    if (this.needs.hunger > FOOD_THRESHOLD_NORMAL) return false
+    if (household.surplus('food') <= 0) return false
+    if (!helperDelivery.findTarget(assignment.targetContainerId)) return false
+    return helperDelivery.hasRoom(assignment.targetContainerId, HELPER_DELIVERY_ITEM_KIND)
+  }
+
+  /**
+   * Helper resource delivery (plan 167) — the `food` need's highest-priority
+   * strategy when `computeDeliveryAvailable` says so. Reuses the existing
+   * `goTo → execute → next` chain exactly like `wood`'s chop→deposit and
+   * `waterDuty`'s fetch→deposit above: gather the household's real surplus
+   * at home (converting the abstract `EconomicStock` amount into concrete
+   * `HELPER_DELIVERY_ITEM_KIND` units carried in `this.carried`, plan §6),
+   * then walk to the target `Container` and deposit. Both steps re-validate
+   * at completion time (another actor may have consumed the surplus, picked
+   * up the container, or filled it in the meantime) so a stale "available"
+   * read never grants a free transfer. A partial/zero accept at deposit time
+   * leaves the untransferred amount with this NPC (plan §8) — the next
+   * decision cycle re-evaluates from scratch, never a retry loop here.
+   */
+  private beginPlayerStorageDelivery(household: Household | null): boolean {
+    if (!this.computeDeliveryAvailable(household)) return false
+    const helperDelivery = this.helperDelivery
+    const assignment = this.npcState.helperAssignment
+    if (!helperDelivery || !household || !assignment) return false
+    const target = helperDelivery.findTarget(assignment.targetContainerId)
+    if (!target) return false
+    const containerId = assignment.targetContainerId
+    const requested = Math.min(household.surplus('food'), HELPER_DELIVERY_MAX_CARRY)
+    if (requested <= 0 || !this.carried.canAdd(HELPER_DELIVERY_ITEM_KIND, requested)) return false
+
+    let gathered = 0
+    this.startAction({
+      kind: 'eat',
+      destination: copyVec3(this.home),
+      durationSec: 1.2 * this.waitMultiplier,
+      onComplete: () => {
+        const take = Math.min(household.surplus('food'), requested)
+        if (take <= 0) return
+        household.stock.remove('food', take)
+        if (this.carried.add(HELPER_DELIVERY_ITEM_KIND, take)) gathered = take
+      },
+      next: {
+        kind: 'deposit',
+        destination: copyVec3({ x: target.x, y: this.sampleHeight(target.x, target.z), z: target.z }),
+        durationSec: 0.8 * this.waitMultiplier,
+        onComplete: () => {
+          if (gathered <= 0) return
+          const carriedAmount = this.carried.count(HELPER_DELIVERY_ITEM_KIND)
+          if (carriedAmount <= 0) return
+          const accepted = helperDelivery.deposit(containerId, HELPER_DELIVERY_ITEM_KIND, carriedAmount)
+          if (accepted > 0) this.carried.remove(HELPER_DELIVERY_ITEM_KIND, accepted)
+        },
+      },
+    })
+    return true
   }
 
   /**

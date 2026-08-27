@@ -137,6 +137,11 @@ export type Household = {
   shortage: (kind: HouseholdResourceKind) => number
   /** True while stock is below the resource's target (worth acquiring, not urgent). */
   shouldAcquire: (kind: HouseholdResourceKind) => boolean
+  /** > 0 when stock is above the resource's target — genuinely spare amount
+   *  a helper NPC (plan 167) may deliver elsewhere without touching the
+   *  household's own reserve. Distinct from `capacity` overflow (plan 069
+   *  §3), which only ever matters at gather time. */
+  surplus: (kind: HouseholdResourceKind) => number
   /**
    * Deposits gathered resource, capped at the household's capacity. Any
    * remainder is routed to `economy` when given, otherwise dropped — mirrors
@@ -204,6 +209,7 @@ export function createHousehold(
     has: (kind, amount) => stock.has(kind, amount),
     shortage: (kind) => Math.max(0, HOUSEHOLD_POLICY[kind].minimum - stock.query(kind)),
     shouldAcquire: (kind) => stock.query(kind) < HOUSEHOLD_POLICY[kind].target,
+    surplus: (kind) => Math.max(0, stock.query(kind) - HOUSEHOLD_POLICY[kind].target),
     deposit: (kind, amount, economy) => {
       if (amount <= 0) return
       const capacity = HOUSEHOLD_POLICY[kind].capacity

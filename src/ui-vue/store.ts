@@ -34,6 +34,11 @@ export type VillagerEntry = { npc: Raw<NpcAgent>; settlementName: string; foodSo
 type VillagerRefreshEntry = { npc: NpcAgent; settlementName: string; foodSourceType: FoodSourceType }
 export const VILLAGERS_PAGE_SIZE = 10
 
+/** A player-placed `Container` the Villagers screen can offer as a helper
+ *  delivery target (plan 167 §14) — just enough to render/select one, not
+ *  the full `PlacedContainerEntry` (world position/mesh stay app-layer). */
+export type VillagerContainerOption = { id: string, label: string }
+
 type NpcDialogueMenuState = {
   open: boolean
   npc: NpcAgent | null
@@ -333,7 +338,7 @@ export function emitUiClick(): void {
 
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null } as NpcDialogueMenuState,
-  villagers: { open: false, entries: [] as VillagerEntry[], page: 0 },
+  villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
@@ -492,7 +497,13 @@ export function isFlavorDialogOpen(): boolean { return ui.flavorDialog.open }
 export function openVillagers(): void { ui.villagers.open = true; ui.villagers.page = 0 }
 export function closeVillagers(): void { ui.villagers.open = false }
 export function toggleVillagers(): void { if (ui.villagers.open) closeVillagers(); else openVillagers() }
-export function refreshVillagers(entries: readonly VillagerRefreshEntry[]): void { ui.villagers.entries = entries.map((e) => ({ ...e, npc: markRaw(e.npc) })) }
+export function refreshVillagers(
+  entries: readonly VillagerRefreshEntry[],
+  containers: readonly VillagerContainerOption[] = [],
+): void {
+  ui.villagers.entries = entries.map((e) => ({ ...e, npc: markRaw(e.npc) }))
+  ui.villagers.containers = [...containers]
+}
 export function isVillagersOpen(): boolean { return ui.villagers.open }
 export function setVillagersPage(page: number): void { ui.villagers.page = page }
 

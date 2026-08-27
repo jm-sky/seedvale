@@ -14,6 +14,7 @@ describe('getFoodStrategyCandidates', () => {
       isHunter: false,
       huntTargetAvailable: true,
       nearbyFoodSourceAvailable: false,
+      deliveryAvailable: false,
     })
     expect(candidates.some((c) => c.id === 'hunt')).toBe(false)
   })
@@ -24,12 +25,14 @@ describe('getFoodStrategyCandidates', () => {
       isHunter: true,
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: false,
+      deliveryAvailable: false,
     })
     const withTarget = getFoodStrategyCandidates({
       householdHasFood: false,
       isHunter: true,
       huntTargetAvailable: true,
       nearbyFoodSourceAvailable: false,
+      deliveryAvailable: false,
     })
     expect(noTarget.find((c) => c.id === 'hunt')?.available).toBe(false)
     expect(withTarget.find((c) => c.id === 'hunt')?.available).toBe(true)
@@ -41,6 +44,7 @@ describe('getFoodStrategyCandidates', () => {
       isHunter: false,
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: false,
+      deliveryAvailable: false,
     })
     expect(candidates.find((c) => c.id === 'householdFood')?.available).toBe(false)
   })
@@ -51,6 +55,7 @@ describe('getFoodStrategyCandidates', () => {
       isHunter: false,
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: true,
+      deliveryAvailable: false,
     })
     expect(candidates.find((c) => c.id === 'nearbyFoodSource')?.available).toBe(true)
   })
@@ -61,6 +66,7 @@ describe('getFoodStrategyCandidates', () => {
       isHunter: true,
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: false,
+      deliveryAvailable: false,
     })
     expect(candidates.find((c) => c.id === 'gardenGather')?.available).toBe(true)
   })
@@ -71,8 +77,32 @@ describe('getFoodStrategyCandidates', () => {
       isHunter: true,
       huntTargetAvailable: true,
       nearbyFoodSourceAvailable: true,
+      deliveryAvailable: false,
     }
     expect(getFoodStrategyCandidates(ctx)).toEqual(getFoodStrategyCandidates(ctx))
+  })
+
+  it('omits playerStorageDelivery when unavailable', () => {
+    const candidates = getFoodStrategyCandidates({
+      householdHasFood: true,
+      isHunter: false,
+      huntTargetAvailable: false,
+      nearbyFoodSourceAvailable: false,
+      deliveryAvailable: false,
+    })
+    expect(candidates.some((c) => c.id === 'playerStorageDelivery')).toBe(false)
+  })
+
+  it('lists playerStorageDelivery first, ahead of householdFood, when available', () => {
+    const candidates = getFoodStrategyCandidates({
+      householdHasFood: true,
+      isHunter: false,
+      huntTargetAvailable: false,
+      nearbyFoodSourceAvailable: false,
+      deliveryAvailable: true,
+    })
+    expect(candidates[0]).toEqual({ id: 'playerStorageDelivery', available: true })
+    expect(selectStrategy(candidates)).toBe('playerStorageDelivery')
   })
 })
 
@@ -87,6 +117,7 @@ describe('selectStrategy', () => {
       isHunter: false,
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: true,
+      deliveryAvailable: false,
     })
     expect(selectStrategy(candidates)).toBe('nearbyFoodSource')
   })
@@ -97,6 +128,7 @@ describe('selectStrategy', () => {
       isHunter: true,
       huntTargetAvailable: true,
       nearbyFoodSourceAvailable: true,
+      deliveryAvailable: false,
     })
     expect(selectStrategy(candidates)).toBe('householdFood')
   })
@@ -107,6 +139,7 @@ describe('selectStrategy', () => {
       isHunter: false,
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: false,
+      deliveryAvailable: false,
     })
     expect(selectStrategy(candidates)).toBe('gardenGather')
   })

@@ -73,6 +73,16 @@ function hpPercent(npc: NpcAgent): number {
   return Math.round((npc.health.currentHp / npc.health.maxHp) * 100)
 }
 
+/** Helper resource delivery (plan 167 §14) — minimal assignment control:
+ *  pick a placed `Container` (or "brak" to clear). `NpcAgent` is the live,
+ *  authoritative object already referenced by this row (see `hpPercent`
+ *  above reading `npc.health` directly), so this calls straight into it —
+ *  no extra store plumbing needed for the assignment itself. */
+function onAssignmentChange(npc: NpcAgent, event: Event): void {
+  const value = (event.target as HTMLSelectElement).value
+  npc.setHelperAssignment(value || null)
+}
+
 function prevPage(): void {
   if (state.page > 0) setVillagersPage(state.page - 1)
 }
@@ -158,6 +168,28 @@ function nextPage(): void {
             :key="t"
             class="rounded bg-white/10 px-1.5 py-0.5 text-[11px]"
           >{{ TRAIT_LABEL[t] }}</span>
+        </div>
+        <div
+          v-if="state.containers.length > 0"
+          class="mt-2 flex items-center gap-2 text-xs"
+        >
+          <span class="opacity-70">Pomocnik (jedzenie):</span>
+          <select
+            class="cursor-pointer rounded-md bg-white/10 px-1.5 py-1 text-xs"
+            :value="npc.helperAssignment?.targetContainerId ?? ''"
+            @change="onAssignmentChange(npc, $event)"
+          >
+            <option value="">
+              brak
+            </option>
+            <option
+              v-for="c in state.containers"
+              :key="c.id"
+              :value="c.id"
+            >
+              {{ c.label }}
+            </option>
+          </select>
         </div>
       </div>
 

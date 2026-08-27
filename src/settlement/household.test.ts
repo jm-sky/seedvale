@@ -48,6 +48,30 @@ describe('createHousehold', () => {
   })
 })
 
+describe('household.surplus (plan 167)', () => {
+  it('is zero at or below the resource target', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.stock.remove('food', household.stock.query('food'))
+    household.deposit('food', 3) // target
+    expect(household.surplus('food')).toBe(0)
+  })
+
+  it('is the amount above target, capped by capacity, once stock exceeds it', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.stock.remove('food', household.stock.query('food'))
+    household.deposit('food', 6) // target 3, capacity 7
+    expect(household.stock.query('food')).toBe(6)
+    expect(household.surplus('food')).toBe(3)
+  })
+
+  it('never touches the reserve below target — surplus stays 0 while shortage', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.stock.remove('food', household.stock.query('food'))
+    expect(household.surplus('food')).toBe(0)
+    expect(household.shortage('food')).toBeGreaterThan(0)
+  })
+})
+
 describe('household water reserve (plan 122)', () => {
   it('starts with a small deterministic reserve, same idiom as food/wood', () => {
     const a = createHousehold(householdIdFor('0_0', 0), '0_0', '0_0:home:0')

@@ -17,6 +17,7 @@ export type NpcStrategyId =
   | 'hunt'
   | 'nearbyFoodSource'
   | 'gardenGather'
+  | 'playerStorageDelivery'
   | 'householdWater'
   | 'well'
   | 'fetchDeposit'
@@ -39,18 +40,31 @@ export type FoodStrategyContext = {
   huntTargetAvailable: boolean
   /** A real nearby food source currently exists (`SettlementFoodSourceHooks.queryNearest`). */
   nearbyFoodSourceAvailable: boolean
+  /** Helper resource delivery (plan 167) is available this decision: an
+   *  active/enabled assignment, a resolvable target `Container` with room,
+   *  real household surplus to give away, and — the caller's
+   *  responsibility, not this module's — this NPC isn't genuinely hungry
+   *  right now (own needs stay authoritative, plan §9). Listed first,
+   *  ahead of `householdFood`: household stock having *any* food is the
+   *  common case (target 3/capacity 7), so placing delivery after it would
+   *  make it practically unreachable — the point of a "surplus" strategy is
+   *  to fire precisely when the household is comfortably stocked, not when
+   *  it's running low. */
+  deliveryAvailable: boolean
 }
 
 /**
- * Food's vertical slice (ai-003 §2): `householdFood` → `hunt` (hunters only)
- * → `nearbyFoodSource` → `gardenGather`. `gardenGather` is always available —
- * it is the existing unconditional abstract-garden fallback, never a source
- * that can be "out of food".
+ * Food's vertical slice (ai-003 §2, extended by plan 167):
+ * `playerStorageDelivery` (only when eligible, see `FoodStrategyContext`
+ * above) → `householdFood` → `hunt` (hunters only) → `nearbyFoodSource` →
+ * `gardenGather`. `gardenGather` is always available — it is the existing
+ * unconditional abstract-garden fallback, never a source that can be "out of
+ * food".
  */
 export function getFoodStrategyCandidates(ctx: FoodStrategyContext): NpcStrategyCandidate[] {
-  const candidates: NpcStrategyCandidate[] = [
-    { id: 'householdFood', available: ctx.householdHasFood },
-  ]
+  const candidates: NpcStrategyCandidate[] = []
+  if (ctx.deliveryAvailable) candidates.push({ id: 'playerStorageDelivery', available: true })
+  candidates.push({ id: 'householdFood', available: ctx.householdHasFood })
   if (ctx.isHunter) candidates.push({ id: 'hunt', available: ctx.huntTargetAvailable })
   candidates.push({ id: 'nearbyFoodSource', available: ctx.nearbyFoodSourceAvailable })
   candidates.push({ id: 'gardenGather', available: true })

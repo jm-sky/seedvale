@@ -15,6 +15,7 @@ import type { NaturalResource } from '../terrain/naturalResources'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Collider } from '../world/collision'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
+import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { VillageSize } from './families'
@@ -268,6 +269,10 @@ export async function createSettlement(
    *  — forwarded into every `NpcAgent.create` call below the same way
    *  `mining`/`foodSources` are above. */
   hunting?: SettlementHuntingHooks,
+  /** Helper resource-delivery target hooks over the player's placed
+   *  `Container`s (plan 167) — forwarded into every `NpcAgent.create` call
+   *  below the same way `foodSources`/`hunting` are above. */
+  helperDelivery?: HelperDeliveryHooks,
   /** Symmetric NPC↔NPC relation store (plan 151) — same "one registry owned
    *  by `SettlementsManager`, threaded through" pattern as `households`/
    *  `npcStateRegistry` above, not a per-`NpcAgent.create` hook (only this
@@ -621,6 +626,7 @@ export async function createSettlement(
         getNearbyPlayerWell,
         foodSources,
         hunting,
+        helperDelivery,
       )
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

@@ -41,6 +41,11 @@ describe('pickNeed', () => {
     expect(pickNeed({ thirst: 0, woodDuty: 0, waterDuty: 0.25, hunger: 0 })).toBe('idle')
     expect(pickNeed({ thirst: 0, woodDuty: 0, waterDuty: 0.25, hunger: 0 }, { waterShortage: true })).toBe('waterDuty')
   })
+
+  it('an active helper assignment promotes food the same way foodShortage does (plan 167)', () => {
+    expect(pickNeed({ thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0.28 })).toBe('idle')
+    expect(pickNeed({ thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0.28 }, { helperDeliveryAvailable: true })).toBe('food')
+  })
 })
 
 describe('pickNeed critical mode', () => {

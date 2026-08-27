@@ -28,6 +28,7 @@ import { createTouchControls, type TouchControls } from '../input/createTouchCon
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
+import { CONTAINER_DEFS } from '../items/container'
 import { shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
@@ -1139,6 +1140,10 @@ export async function createApp(
       bundle.settlementsManager
         .getLoaded()
         .flatMap((s) => s.npcs.map((npc) => ({ npc, settlementName: s.name, foodSourceType: s.foodSourceType }))),
+      // Helper assignment targets (plan 167 §14) — every player-placed chest,
+      // labelled by its def so a player with more than one can tell them
+      // apart without a full container-naming feature.
+      bundle.placedContainers.list().map((c) => ({ id: c.id, label: CONTAINER_DEFS[c.kind].label })),
     )
   }
   const openInventory = () => {

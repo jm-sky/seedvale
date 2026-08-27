@@ -12,6 +12,7 @@ import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Collider } from '../world/collision'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
+import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TerrainSamplers } from './settlementTerrain'
@@ -182,6 +183,10 @@ export async function createSettlementsManager(
    *  lifetime is the running session, from first construction through any
    *  number of settlement unload/reload cycles and in-session rebuilds). */
   initialNpcStates?: Record<NpcId, NpcStateSnapshot>,
+  /** Helper resource-delivery target hooks over the player's placed
+   *  `Container`s (plan 167) — forwarded into every `createSettlement` call
+   *  the same way `foodSources`/`hunting` are above. */
+  helperDelivery?: HelperDeliveryHooks,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -291,6 +296,7 @@ export async function createSettlementsManager(
     getNearbyPlayerWell,
     foodSources,
     hunting,
+    helperDelivery,
     npcRelationships,
   ).then((settlement) => {
     if (disposed) {
@@ -422,6 +428,7 @@ export async function createSettlementsManager(
         getNearbyPlayerWell,
         foodSources,
         hunting,
+        helperDelivery,
         npcRelationships,
       ))
       .then((settlement) => {

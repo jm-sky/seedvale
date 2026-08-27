@@ -1,3 +1,4 @@
+import type { HelperAssignment } from '../ai/helperAssignment'
 import { createNeedState, type NeedState } from '../ai/Needs'
 import { MAX_VIGOR } from '../ai/npcVigor'
 import { createHealthState, type HealthState } from '../shared/HealthState'
@@ -32,6 +33,13 @@ export type NpcAuthoritativeState = {
   readonly stamina: StaminaState
   readonly vigor: VigorState
   readonly needs: NeedState
+  /** Helper resource-delivery assignment (plan 167) — `null` when this NPC
+   *  has none. Mutable in place (assigned/cleared from the Villagers screen),
+   *  the same "shared object, no snapshot copy" pattern as the other fields
+   *  here. Carried across an in-session `WorldBundle` rebuild via
+   *  `NpcStateSnapshot` below; not part of `SaveData` — no NPC runtime state
+   *  is (see this file's module doc). */
+  helperAssignment: HelperAssignment | null
 }
 
 /** Plain-data carry snapshot — mirrors `SettlementEconomy.snapshot()` /
@@ -43,6 +51,7 @@ export type NpcStateSnapshot = {
   stamina: { current: number, max: number }
   vigor: { current: number, max: number }
   needs: NeedState
+  helperAssignment?: HelperAssignment | null
 }
 
 function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot): NpcAuthoritativeState {
@@ -52,6 +61,7 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot): NpcAuthoritativeSt
     stamina: { max: snapshot.stamina.max, current: snapshot.stamina.current },
     vigor: { max: snapshot.vigor.max, current: snapshot.vigor.current },
     needs: { ...snapshot.needs },
+    helperAssignment: snapshot.helperAssignment ?? null,
   }
 }
 
@@ -84,6 +94,7 @@ export function createNpcAuthoritativeState(
     stamina: createStaminaState(maxima.maxStamina),
     vigor: createVigorState(maxima.maxVigor),
     needs: createNeedState(needOffset),
+    helperAssignment: null,
   }
 }
 
@@ -132,6 +143,7 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
           stamina: { current: state.stamina.current, max: state.stamina.max },
           vigor: { current: state.vigor.current, max: state.vigor.max },
           needs: { ...state.needs },
+          helperAssignment: state.helperAssignment,
         }
       }
       return out

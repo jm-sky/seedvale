@@ -59,6 +59,15 @@ export type PickNeedOptions = {
   foodShortage?: boolean
   /** Household water reserve below target — same light bias as `woodShortage`. */
   waterShortage?: boolean
+  /** An active helper resource-delivery assignment (plan 167) wants this NPC
+   *  to consider the `food` need even before real hunger — same light bias
+   *  as `foodShortage` (same threshold/multiplier), so an assigned NPC's
+   *  hunger doesn't have to reach the normal bar just to get a chance at
+   *  delivering surplus. `NpcAgent.computeFoodStrategyCandidates` still
+   *  gates the actual `playerStorageDelivery` candidate on real hunger via
+   *  `FOOD_THRESHOLD_NORMAL` — this only affects whether `food` is picked as
+   *  the active need at all. */
+  helperDeliveryAvailable?: boolean
   /** Use the stricter `CRITICAL_*_THRESHOLD`s instead of the normal ones —
    *  "genuinely urgent enough to interrupt an in-flight action", not just
    *  "worth doing next" (plan 114, `NpcAgent.tickCriticalInterrupt`).
@@ -77,6 +86,13 @@ const CRITICAL_WATER_THRESHOLD = 0.75
 const CRITICAL_WOOD_THRESHOLD = 0.85
 const CRITICAL_WATER_DUTY_THRESHOLD = 0.85
 const CRITICAL_FOOD_THRESHOLD = 0.7
+
+/** The non-shortage/non-critical `food` threshold below — exported so
+ *  `NpcAgent.computeFoodStrategyCandidates` (plan 167) can tell "genuinely
+ *  hungry" apart from "only picked `food` because a helper assignment lowered
+ *  the bar" without duplicating the number. Own real hunger above this must
+ *  still win over delivering surplus to a player `Container` (plan §9). */
+export const FOOD_THRESHOLD_NORMAL = 0.32
 
 /** A single need-driven arbitration pressure (plan ai-001) — the explicit
  *  form of the scores `pickNeed()` used to compute inline. `source` names
@@ -110,8 +126,9 @@ export function generateNeedPressures(needs: NeedState, options: PickNeedOptions
   const waterDutyThreshold = options.critical ? CRITICAL_WATER_DUTY_THRESHOLD : options.waterShortage ? 0.22 : 0.3
   const waterDutyMult = options.critical ? 1.1 : options.waterShortage ? 1.35 : 1.1
   const waterDutyScore = needs.waterDuty > waterDutyThreshold ? needs.waterDuty * waterDutyMult : 0
-  const foodThreshold = options.critical ? CRITICAL_FOOD_THRESHOLD : options.foodShortage ? 0.24 : 0.32
-  const foodMult = options.critical ? 1.2 : options.foodShortage ? 1.4 : 1.2
+  const foodBiased = options.foodShortage || options.helperDeliveryAvailable
+  const foodThreshold = options.critical ? CRITICAL_FOOD_THRESHOLD : foodBiased ? 0.24 : FOOD_THRESHOLD_NORMAL
+  const foodMult = options.critical ? 1.2 : foodBiased ? 1.4 : 1.2
   const foodScore = needs.hunger > foodThreshold ? needs.hunger * foodMult : 0
   const idleScore = 0.12
 
