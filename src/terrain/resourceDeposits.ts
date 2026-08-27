@@ -28,17 +28,19 @@ import { type NaturalResource, type ResourceEnv, resourcesNear } from './natural
  *  stays a data-only signal for settlement generation, same as before this
  *  module existed. Deliberately small, matching the "surface just a few
  *  resources visually, not everything" ask. */
-type VisibleOreType = 'coal' | 'gold' | 'iron'
+type VisibleOreType = 'coal' | 'copper_ore' | 'gold' | 'iron'
 
 const ORE_COLOR: Record<VisibleOreType, number> = {
   // Rust/hematite red-brown — reads as "iron ore", not generic gray rock.
   iron: 0x8a4a30,
   coal: 0x1c1c1c,
   gold: 0xd4af37,
+  // Oxidized copper-orange, distinct from iron's darker rust-brown.
+  copper_ore: 0xb5651d,
 }
 
 function isVisibleOre(type: NaturalResource['type']): type is VisibleOreType {
-  return type === 'iron' || type === 'coal' || type === 'gold'
+  return type === 'iron' || type === 'coal' || type === 'gold' || type === 'copper_ore'
 }
 
 /** How far from the player deposits get instantiated/kept — deliberately

@@ -26,9 +26,9 @@ describe('findCarriedConsumableKind', () => {
     expect(findCarriedConsumableKind(carried, 'hunger')).toBe('bread')
   })
 
-  it('finds a carried waterskin_full for thirst', () => {
-    const carried = new Inventory({ waterskin_full: 1 })
-    expect(findCarriedConsumableKind(carried, 'thirst')).toBe('waterskin_full')
+  it('finds a carried waterskin for thirst (by mere possession — plan items-player-001\'s known gap: this doesn\'t check whether it actually holds water)', () => {
+    const carried = new Inventory({ waterskin_small: 1 })
+    expect(findCarriedConsumableKind(carried, 'thirst')).toBe('waterskin_small')
   })
 
   it('returns null when nothing carried matches the need', () => {

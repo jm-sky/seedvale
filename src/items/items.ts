@@ -34,8 +34,14 @@ export type ItemKind =
   | 'raw_meat'
   | 'roasted_meat'
   | 'bread'
-  | 'waterskin_empty'
-  | 'waterskin_full'
+  | 'waterskin_small'
+  | 'waterskin_medium'
+  | 'waterskin_large'
+  | 'wooden_bucket'
+  | 'copper_bucket'
+  | 'saddlebags'
+  | 'copper_ore'
+  | 'copper'
   | 'deer_meat'
   | 'wolf_meat'
   | 'boar_meat'
@@ -417,23 +423,77 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0xc99a52,
     description: 'Bochenek chleba. Dobrze się przechowuje — przydatny na czarną godzinę.'
   },
-  waterskin_empty: {
-    kind: 'waterskin_empty',
-    label: 'bukłak (pusty)',
+  waterskin_small: {
+    kind: 'waterskin_small',
+    label: 'mały bukłak',
     categories: ['utility'],
-    weight: 0.3,
+    weight: 0.25,
+    size: 'XS',
+    color: 0x6b5a3a,
+    description: 'Skórzany bukłak na 2 litry wody. Napełnij go przy studni lub jeziorze.'
+  },
+  waterskin_medium: {
+    kind: 'waterskin_medium',
+    label: 'średni bukłak',
+    categories: ['utility'],
+    weight: 0.35,
     size: 'SM',
     color: 0x6b5a3a,
-    description: 'Skórzany bukłak na wodę. Pusty — napełnij go przy studni lub jeziorze.'
+    description: 'Skórzany bukłak na 5 litrów wody. Napełnij go przy studni lub jeziorze.'
   },
-  waterskin_full: {
-    kind: 'waterskin_full',
-    label: 'bukłak (pełny)',
+  waterskin_large: {
+    kind: 'waterskin_large',
+    label: 'duży bukłak',
     categories: ['utility'],
-    weight: 1.3,
+    weight: 0.5,
     size: 'SM',
-    color: 0x4a9fd8,
-    description: 'Skórzany bukłak pełen wody. Ugasi pragnienie.'
+    color: 0x6b5a3a,
+    description: 'Skórzany bukłak na 10 litrów wody. Napełnij go przy studni lub jeziorze.'
+  },
+  wooden_bucket: {
+    kind: 'wooden_bucket',
+    label: 'drewniane wiadro',
+    categories: ['utility'],
+    weight: 1.0,
+    size: 'MD',
+    color: 0x6b4a2f,
+    description: 'Drewniane wiadro na 10 litrów. Mieści wodę lub mleko.'
+  },
+  copper_bucket: {
+    kind: 'copper_bucket',
+    label: 'miedziane wiadro',
+    categories: ['utility'],
+    weight: 3.0,
+    size: 'MD',
+    color: 0xb87333,
+    description: 'Miedziane wiadro na 10 litrów. Mieści wodę lub mleko.'
+  },
+  saddlebags: {
+    kind: 'saddlebags',
+    label: 'juki',
+    categories: ['utility'],
+    weight: 3,
+    size: 'LG',
+    color: 0x5a4632,
+    description: 'Skórzane juki do przewozu towarów na koniu lub ośle.'
+  },
+  copper_ore: {
+    kind: 'copper_ore',
+    label: 'ruda miedzi',
+    categories: ['resource'],
+    weight: 1.5,
+    size: 'SM',
+    color: 0xa85a3a,
+    description: 'Ruda o zielonkawo-rdzawym odcieniu. Surowiec do wytopu miedzi.'
+  },
+  copper: {
+    kind: 'copper',
+    label: 'miedź',
+    categories: ['resource'],
+    weight: 1.2,
+    size: 'SM',
+    color: 0xb87333,
+    description: 'Miedź gotowa do dalszej obróbki.'
   },
   deer_meat: {
     kind: 'deer_meat',
@@ -1168,26 +1228,50 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.castShadow = true
     return mesh
   }
-  if (kind === 'waterskin_empty' || kind === 'waterskin_full') {
+  if (kind === 'waterskin_small' || kind === 'waterskin_medium' || kind === 'waterskin_large') {
+    const scale = kind === 'waterskin_small' ? 0.75 : kind === 'waterskin_medium' ? 1 : 1.3
     const group = new THREE.Group()
     const body = new THREE.Mesh(
-      new THREE.SphereGeometry(0.14, 8, 6),
+      new THREE.SphereGeometry(0.14 * scale, 8, 6),
       new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),
     )
     body.scale.set(0.85, 1.15, 0.85)
-    body.position.y = 0.14
+    body.position.y = 0.14 * scale
     body.castShadow = true
     group.add(body)
     const neck = new THREE.Mesh(
       new THREE.CylinderGeometry(0.03, 0.04, 0.08, 6),
       new THREE.MeshStandardMaterial({ color: 0x4a3324, flatShading: true }),
     )
-    neck.position.y = 0.26
+    neck.position.y = 0.26 * scale
     neck.castShadow = true
     group.add(neck)
     return group
   }
-  if (kind === 'coal' || kind === 'iron' || kind === 'gold') {
+  if (kind === 'wooden_bucket' || kind === 'copper_bucket') {
+    const group = new THREE.Group()
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.11, 0.09, 0.18, 10),
+      new THREE.MeshStandardMaterial({
+        color: ITEM_DEFS[kind].color,
+        flatShading: true,
+        metalness: kind === 'copper_bucket' ? 0.5 : 0,
+      }),
+    )
+    body.position.y = 0.09
+    body.castShadow = true
+    group.add(body)
+    const handle = new THREE.Mesh(
+      new THREE.TorusGeometry(0.1, 0.008, 4, 10, Math.PI),
+      new THREE.MeshStandardMaterial({ color: 0x3a3a3a, flatShading: true, metalness: 0.4 }),
+    )
+    handle.rotation.z = Math.PI
+    handle.position.y = 0.19
+    handle.castShadow = true
+    group.add(handle)
+    return group
+  }
+  if (kind === 'coal' || kind === 'iron' || kind === 'gold' || kind === 'copper_ore') {
     const mesh = new THREE.Mesh(
       new THREE.DodecahedronGeometry(0.12, 0),
       new THREE.MeshStandardMaterial({
@@ -1197,6 +1281,15 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
       }),
     )
     mesh.position.y = 0.09
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'copper') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.045, 0.06),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.copper.color, flatShading: true, metalness: 0.6 }),
+    )
+    mesh.position.y = 0.025
     mesh.castShadow = true
     return mesh
   }

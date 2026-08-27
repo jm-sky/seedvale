@@ -15,8 +15,8 @@ import {
 import { spawnerDestroyBusyLabel } from '../../fauna/createFauna'
 import { COOK_DURATION_SEC, findCookingBatch, resolveCookingCapacity } from '../../items/campfireCooking'
 import { getFreshnessStage } from '../../items/foodFreshness'
-import { inventoryFullToastText } from '../../items/Inventory'
-import { hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
+import { inventoryFullToastText, LIQUID_DRINK_PORTION_LITERS } from '../../items/Inventory'
+import { hasItemCapability, isLiquidContainerKind, ITEM_CATALOG } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
 import {
   drinkWater as drinkWaterNeeds,
@@ -232,25 +232,26 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     toast.show(source.quality === 'unsafe' ? UNSAFE_WATER_WARNING : 'Napito się wody.', source.quality === 'unsafe' ? 'error' : undefined)
   }
 
-  /** Instant fill of a carried empty waterskin (plan 106 §4). Removes the
-   *  empty one first, then adds the full one — if the (heavier) full
-   *  waterskin doesn't fit, the empty one is refunded rather than lost. */
+  /** Waterskin kinds tried smallest-first when filling at a well/lake
+   *  (plan items-player-001 §2/§7) — the same shared `container` model a
+   *  future bucket/barrel fill action would reuse. */
+  const WATERSKIN_KINDS: readonly ItemKind[] = ['waterskin_small', 'waterskin_medium', 'waterskin_large']
+
+  /** Instant fill of a carried waterskin at a well/lake (plan 106 §4, updated
+   *  by plan items-player-001 for partial content): tops up the smallest
+   *  carried waterskin that isn't already full of water, in one instant
+   *  action — no separate empty/full `ItemKind` swap any more. */
   const fillWaterskin = (): void => {
     if (isActionBlocked(ctx)) return
-    if (!inventory.remove('waterskin_empty', 1)) {
-      toast.show('Potrzebujesz pustego bukłaka.', 'error')
+    const target = WATERSKIN_KINDS.find((kind) => inventory.count(kind) > 0 && inventory.fillLiquid(kind, 'water'))
+    if (target) {
+      playActionWell(worldAudio.playAt, player.mesh.position)
+      ctx.onInventoryChanged()
+      toast.show('Napełniono bukłak.', 'pickup')
       return
     }
-    if (!inventory.add('waterskin_full', 1)) {
-      const toastText = inventoryFullToastText(inventory, 'waterskin_full', 1)
-      inventory.add('waterskin_empty', 1)
-      toast.show(toastText, 'error')
-      return
-    }
-    playActionWell(worldAudio.playAt, player.mesh.position)
-    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    ctx.onInventoryChanged()
-    toast.show('Napełniono bukłak.', 'pickup')
+    const carriesAny = WATERSKIN_KINDS.some((kind) => inventory.count(kind) > 0)
+    toast.show(carriesAny ? 'Bukłak jest już pełny.' : 'Potrzebujesz bukłaka.', 'error')
   }
 
   /** Inventory-screen "Zjedz"/"Wypij" (plan 106) — driven by
@@ -259,6 +260,20 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
   const consumeItem = (kind: ItemKind): void => {
     const entry = ITEM_CATALOG[kind].consumable
     if (!entry || !inventory.has(kind, 1)) return
+    // Plan items-player-001 — a waterskin is one drink portion off its held
+    // liquid (`Inventory.drinkLiquid`), not a whole-item remove/resultKind
+    // swap: it stays the same carried item, empty or not.
+    if (isLiquidContainerKind(kind)) {
+      if (!inventory.drinkLiquid(kind, LIQUID_DRINK_PORTION_LITERS)) {
+        toast.show('Bukłak jest pusty.', 'error')
+        return
+      }
+      drinkWaterNeeds(player.needs, entry.relief)
+      ctx.onInventoryChanged()
+      ctx.refreshInventoryScreen()
+      toast.show('Wypito.', 'pickup')
+      return
+    }
     // Plan 159 §3/§5 — spoiled food is non-consumable rather than acting
     // like fresh food; checked against the batch that would actually be
     // eaten (oldest first, same order `remove()` consumes in).

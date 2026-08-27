@@ -58,6 +58,7 @@ function formatSettlementStorage(economy: SettlementEconomy): string {
     `Żelazo: ${economy.query('iron')}`,
     `Węgiel: ${economy.query('coal')}`,
     `Złoto: ${economy.query('gold')}`,
+    `Ruda miedzi: ${economy.query('copper_ore')}`,
   ].join('\n')
 }
 

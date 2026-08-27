@@ -149,6 +149,7 @@ const FOOD_SOURCE_LABEL: Record<FoodSourceType, string> = {
 const RESOURCE_LABEL: Record<ResourceType, string> = {
   clay: 'glinę',
   coal: 'węgiel',
+  copper_ore: 'rudę miedzi',
   fertile_soil: 'żyzną ziemię',
   fish: 'ryby',
   gold: 'złoto',

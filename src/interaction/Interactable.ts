@@ -67,7 +67,7 @@ export type Interactable =
   | { kind: 'spawner', position: { x: number, z: number }, promptLabel: string, spawner: PreySpawner }
   | { kind: 'item', position: { x: number, z: number }, promptLabel: string, item: WorldItemRef }
   /** Ore deposit — pickaxe `[E] Wydobądź` (plan 090). */
-  | { kind: 'deposit', position: { x: number, z: number }, promptLabel: string, id: string, oreType: 'coal' | 'gold' | 'iron' }
+  | { kind: 'deposit', position: { x: number, z: number }, promptLabel: string, id: string, oreType: 'coal' | 'copper_ore' | 'gold' | 'iron' }
   /** Synthetic target for shovel (soil/sand) or pickaxe (mountain rock)
    *  ground work. Built from the aimed ground point (`buildDigTarget`).
    *  `profile` non-null → `[E]` dig; `canLevel` → `[R]` level. */

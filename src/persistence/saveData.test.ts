@@ -17,6 +17,7 @@ const validSave: SaveData = {
   quests: { progress: [], exp: 0, relations: {} },
   inventory: {},
   inventoryInstances: [],
+  inventoryLiquids: {},
   collectedItemIds: [],
   droppedItems: [],
   placedFires: [],

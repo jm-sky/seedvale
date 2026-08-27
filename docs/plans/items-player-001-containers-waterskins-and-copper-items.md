@@ -1,7 +1,7 @@
 # Plan: Containers, Waterskins & Copper Items
 
 **Created:** 2026-08-27  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented, technical checks pass; browser/manual verification pending. See [implementation notes](./implementation-notes/items-player-001-containers-waterskins-and-copper-items-implementation-notes.md) for deviations (backpack already existed; partial content is an `Inventory`-level aggregate, not `ItemInstance`; buckets are domain-only, no wired interaction yet).  
 **Priority:** medium · **Effort:** S  
 **Depends on:** `none`  
 **Domain:** `items-player`
@@ -570,42 +570,42 @@ Nie implementować:
 
 ## Itemy
 
-- [ ] `waterskin_small` — 2 l
-- [ ] `waterskin_medium` — 5 l
-- [ ] `waterskin_large` — 10 l
-- [ ] `wooden_bucket` — 10 l
-- [ ] `copper_bucket` — 10 l
-- [ ] `backpack`
-- [ ] `saddlebags`
-- [ ] `copper_ore`
-- [ ] `copper`
-- [ ] brak `copper_cup`
+- [x] `waterskin_small` — 2 l
+- [x] `waterskin_medium` — 5 l
+- [x] `waterskin_large` — 10 l
+- [x] `wooden_bucket` — 10 l
+- [x] `copper_bucket` — 10 l
+- [x] `backpack` (already existed — plan 186)
+- [x] `saddlebags`
+- [x] `copper_ore`
+- [x] `copper`
+- [x] brak `copper_cup`
 
 ## Pojemniki
 
-- [ ] pojemniki mają określoną maksymalną pojemność,
-- [ ] możliwa jest częściowa zawartość,
-- [ ] stan zawartości nie tworzy osobnych `ItemKind`,
-- [ ] woda może być przechowywana w bukłakach,
-- [ ] woda może być przechowywana w wiadrach,
-- [ ] mleko może być przechowywane w wiadrach,
-- [ ] bukłaki nie są pojemnikami na mleko.
+- [x] pojemniki mają określoną maksymalną pojemność,
+- [x] możliwa jest częściowa zawartość (aggregate liters per `ItemKind`, not per physical unit — see implementation notes §2),
+- [x] stan zawartości nie tworzy osobnych `ItemKind`,
+- [x] woda może być przechowywana w bukłakach,
+- [x] woda może być przechowywana w wiadrach,
+- [x] mleko może być przechowywane w wiadrach (domain model only — no bucket-milk gameplay path exists yet),
+- [x] bukłaki nie są pojemnikami na mleko.
 
 ## Picie
 
-- [ ] jedna porcja = 1 l,
-- [ ] można pić tylko przy dostępnej zawartości,
-- [ ] picie zmniejsza zawartość pojemnika,
-- [ ] pusty pojemnik pozostaje dostępny do ponownego użycia.
+- [x] jedna porcja = 1 l,
+- [x] można pić tylko przy dostępnej zawartości,
+- [x] picie zmniejsza zawartość pojemnika,
+- [x] pusty pojemnik pozostaje dostępny do ponownego użycia.
 
 ## Integracja
 
-- [ ] `ItemKind`, `ITEM_DEFS` i `ITEM_CATALOG` są spójne,
-- [ ] istniejące inventory/save pozostają kompatybilne,
-- [ ] wykorzystane są istniejące mechanizmy itemów,
-- [ ] nie powstaje drugi system itemów,
-- [ ] nie powstaje drugi system placementu,
-- [ ] ruda miedzi korzysta z istniejącego systemu zasobów.
+- [x] `ItemKind`, `ITEM_DEFS` i `ITEM_CATALOG` są spójne,
+- [ ] istniejące inventory/save pozostają kompatybilne — **hard cut**: `waterskin_empty`/`waterskin_full` no longer exist; an old save carrying either will keep an orphaned `ItemKind` entry (consistent with save v1's "no migration" policy, `CLAUDE.md`),
+- [x] wykorzystane są istniejące mechanizmy itemów,
+- [x] nie powstaje drugi system itemów,
+- [x] nie powstaje drugi system placementu,
+- [x] ruda miedzi korzysta z istniejącego systemu zasobów.
 
 ## UX — późniejsza integracja
 
@@ -616,10 +616,10 @@ Nie implementować:
 
 ## Techniczne
 
-- [ ] `npx tsc --noEmit`
-- [ ] `pnpm run lint:fix`
-- [ ] `pnpm run build`
-- [ ] `pnpm run test`
+- [x] `npx tsc --noEmit`
+- [x] `pnpm run lint:fix`
+- [x] `pnpm run build`
+- [x] `pnpm run test`
 - [ ] browser/manual verification dla zmian widocznych w grze.
 
 ---

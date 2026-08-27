@@ -1,3 +1,4 @@
+import type { ItemKind } from './items'
 /**
  * Machine-readable item catalog for Seedvale.
  * Prefer this (or docs/items/CATALOG.md) over grepping scattered ITEM_DEFS / spawners.
@@ -5,7 +6,7 @@
  * Source of truth for *labels/weights* remains `ITEM_DEFS` in `items.ts`.
  * This file adds gameplay/AI-facing flags (hold, melee, spawn, assets, roadmap).
  */
-import type { ItemKind } from './items'
+import { DRINK_THIRST_RELIEF } from '../world/WaterSource'
 
 export type ItemSpawnKind =
   | 'none'
@@ -117,6 +118,9 @@ export const CAPABILITY_NEED_LABEL: Record<ItemCapability, string> = {
  *  `PlayerNeeds` pool, `health` heals `HealthState` directly (plan 153). */
 export type ConsumableNeed = 'hunger' | 'thirst' | 'health'
 
+/** What a `container` entry (plan items-player-001) can hold. */
+export type LiquidContent = 'water' | 'milk'
+
 /** `backpack`'s `carryCapacityBonus` (plan 186) — a meaningful jump over the
  *  player's `DEFAULT_MAX_WEIGHT` (20 kg, `Inventory.ts`) without trivializing
  *  the existing overload thresholds (`player/playerEncumbrance.ts`). */
@@ -164,6 +168,22 @@ export type ItemCatalogEntry = {
    *  capacity/equipment system; `Inventory`'s `maxWeight` getter sums this
    *  over held counts. Absent/0 for every kind that isn't a capacity item. */
   carryCapacityBonus?: number
+  /** Plan items-player-001 §7 — the shared container model for waterskins/
+   *  buckets (and later a barrel). `capacityLiters` is per physical unit;
+   *  `Inventory.liquidCapacity()` multiplies it by how many of `kind` are
+   *  actually held. Content/amount is tracked as one aggregate liters total
+   *  per `ItemKind` stack (`Inventory`'s `liquids` map), not per physical
+   *  unit — carrying two of the same container size and filling only one
+   *  isn't distinguishable yet; a real per-unit split would need promoting
+   *  these kinds to `ItemInstance` (deliberately not done here, see plan
+   *  §7's own "don't build the full architecture if not needed yet"). */
+  container?: { capacityLiters: number, allowedContents: readonly LiquidContent[] }
+}
+
+/** Whether `kind` is one of the shared liquid containers (plan
+ *  items-player-001) — waterskins/buckets today. */
+export function isLiquidContainerKind(kind: ItemKind): boolean {
+  return ITEM_CATALOG[kind].container !== undefined
 }
 
 /** Single source of truth for the inventory/world-prompt action verb per
@@ -434,6 +454,24 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Pickaxe yield from iron deposits (plan 090).',
   },
+  copper_ore: {
+    kind: 'copper_ore',
+    label: 'ruda miedzi',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-001 — pickaxe yield from copper deposits, same `terrain/resourceDeposits.ts` pipeline as iron/coal/gold.',
+  },
+  copper: {
+    kind: 'copper',
+    label: 'miedź',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-001 §5.2 — buy from Kupiec, same "no smelting yet" shortcut as `iron_rod`: a minimal source for future crafting inputs without building copper_ore→copper processing.',
+  },
   iron_rod: {
     kind: 'iron_rod',
     label: 'żelazny pręt',
@@ -495,24 +533,58 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     notes: 'Plan 106 — buy from Kupiec (`tradeCatalog.ts`); prepared for future/emergency use per the plan.',
     consumable: { need: 'hunger', relief: 30 },
   },
-  waterskin_empty: {
-    kind: 'waterskin_empty',
-    label: 'bukłak (pusty)',
+  waterskin_small: {
+    kind: 'waterskin_small',
+    label: 'mały bukłak',
     holdable: false,
     melee: null,
     spawn: 'none',
     modelUrl: null,
-    notes: 'Plan 106 — buy from Kupiec; fill at a well/lake `[R]` (becomes waterskin_full). Not a `HeldTool` slot item.',
+    container: { capacityLiters: 2, allowedContents: ['water'] },
+    notes: 'Plan items-player-001 — leather, buy from Kupiec (future leatherworker source); fill to full at a well/lake `[R]`. Replaces plan 106\'s binary waterskin_empty/waterskin_full — one kind now covers empty through full via `Inventory.fillLiquid`/`drinkLiquid` (see `container` doc). Not a `HeldTool` slot item.',
+    consumable: { need: 'thirst', relief: DRINK_THIRST_RELIEF },
   },
-  waterskin_full: {
-    kind: 'waterskin_full',
-    label: 'bukłak (pełny)',
+  waterskin_medium: {
+    kind: 'waterskin_medium',
+    label: 'średni bukłak',
     holdable: false,
     melee: null,
     spawn: 'none',
     modelUrl: null,
-    notes: 'Plan 106 — filled at a well/lake; drink via inventory "Wypij" (becomes waterskin_empty) or it empties automatically when drunk from the world prompt.',
-    consumable: { need: 'thirst', relief: 45, resultKind: 'waterskin_empty' },
+    container: { capacityLiters: 5, allowedContents: ['water'] },
+    notes: 'Plan items-player-001 — leather, buy from Kupiec (future leatherworker source); fill to full at a well/lake `[R]`.',
+    consumable: { need: 'thirst', relief: DRINK_THIRST_RELIEF },
+  },
+  waterskin_large: {
+    kind: 'waterskin_large',
+    label: 'duży bukłak',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    container: { capacityLiters: 10, allowedContents: ['water'] },
+    notes: 'Plan items-player-001 — leather, buy from Kupiec (future leatherworker source); fill to full at a well/lake `[R]`.',
+    consumable: { need: 'thirst', relief: DRINK_THIRST_RELIEF },
+  },
+  wooden_bucket: {
+    kind: 'wooden_bucket',
+    label: 'drewniane wiadro',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    container: { capacityLiters: 10, allowedContents: ['water', 'milk'] },
+    notes: 'Plan items-player-001 — wood, buy from Kupiec (no recipe yet). Domain container only: milking/drink-from-bucket world interactions are deferred to the future interaction-window plan (§9); `Inventory.fillLiquid`/`drinkLiquid`/`emptyLiquid` are ready for it.',
+  },
+  copper_bucket: {
+    kind: 'copper_bucket',
+    label: 'miedziane wiadro',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    container: { capacityLiters: 10, allowedContents: ['water', 'milk'] },
+    notes: 'Plan items-player-001 — copper, buy from Kupiec (future blacksmith source, no recipe yet). Same deferred interactions as `wooden_bucket`.',
   },
   deer_meat: {
     kind: 'deer_meat',
@@ -882,6 +954,15 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     carryCapacityBonus: BACKPACK_CAPACITY_BONUS_KG,
     notes: 'Plan 186 — Kupiec stock. Ordinary carried item, not equipment: simply holding it in `Inventory` raises `Inventory.maxWeight` by `carryCapacityBonus` (stacks if more than one is carried). Must fit under the *pre-bonus* capacity to be picked up in the first place.',
+  },
+  saddlebags: {
+    kind: 'saddlebags',
+    label: 'juki',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-001 §4.2 — leather, buy from Kupiec (future leatherworker source). Inert carried item today: the animal-equip/transport-capacity mechanic (fitting these to a horse/donkey) is a future plan, not this one.',
   },
   tree_seed: {
     kind: 'tree_seed',

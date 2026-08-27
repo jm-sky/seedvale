@@ -10,9 +10,9 @@
  * (`items/items.ts`) so an NPC's carried ore maps to economy stock by
  * identity, no lookup table needed.
  */
-export type EconomicKind = 'coal' | 'food' | 'gold' | 'iron' | 'water' | 'wood'
+export type EconomicKind = 'coal' | 'copper_ore' | 'food' | 'gold' | 'iron' | 'water' | 'wood'
 
-export const ECONOMIC_KINDS: readonly EconomicKind[] = ['food', 'water', 'wood', 'iron', 'coal', 'gold']
+export const ECONOMIC_KINDS: readonly EconomicKind[] = ['food', 'water', 'wood', 'iron', 'coal', 'gold', 'copper_ore']
 
 export function isEconomicKind(value: string): value is EconomicKind {
   return (ECONOMIC_KINDS as readonly string[]).includes(value)

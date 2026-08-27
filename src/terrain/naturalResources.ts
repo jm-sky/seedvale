@@ -23,6 +23,7 @@ import { biomeWeightsAt } from './biomeRegions'
 export type ResourceType =
   | 'clay'
   | 'coal'
+  | 'copper_ore'
   | 'fertile_soil'
   | 'fish'
   | 'gold'
@@ -32,7 +33,7 @@ export type ResourceType =
   | 'salt'
 
 export const RESOURCE_TYPES: readonly ResourceType[] = [
-  'iron', 'coal', 'gold', 'fish', 'fertile_soil', 'clay', 'salt', 'resin', 'herbs',
+  'iron', 'coal', 'gold', 'copper_ore', 'fish', 'fertile_soil', 'clay', 'salt', 'resin', 'herbs',
 ]
 
 export type NaturalResource = {
@@ -64,6 +65,7 @@ export const RESOURCE_ROLE: Partial<Record<ResourceType, Role>> = {
   iron: 'miner',
   coal: 'miner',
   gold: 'miner',
+  copper_ore: 'miner',
   fish: 'fisher',
   fertile_soil: 'farmer',
 }
@@ -163,6 +165,10 @@ function resourceWeights(
     // mountain-adjacent niche as iron, biased lower.
     coal: 0.15 + mountainRidge * 0.7 + (1 - MathUtils.smoothstep(altitude01, 0.35, 0.8)) * 0.3,
     gold: 0.05 + mountainRidge * 0.65 + (nearWater ? 0.3 : 0),
+    // Copper favors lower, more accessible foothills than iron — a milder
+    // mountain-ridge dependence and a bias toward lower altitude, so it isn't
+    // just "iron with a different color" in where it turns up.
+    copper_ore: 0.15 + mountainRidge * 0.5 + (1 - altitude01) * 0.2,
     fish: nearWater ? 0.9 : 0.02,
     fertile_soil: (nearWater ? 0.75 : 0.08) * (0.3 + biome.forest * 0.7),
     clay: (nearWater ? 0.6 : 0.08) * (0.35 + biome.swamp * 0.65),

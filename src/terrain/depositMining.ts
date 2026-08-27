@@ -1,26 +1,29 @@
 import type { EconomicKind } from '../economy/kinds'
 import type { ItemKind } from '../items/items'
 
-/** Visible ore piles streamed by `ResourceDeposits` (plan 090). */
-export type MineableOre = 'coal' | 'gold' | 'iron'
+/** Visible ore piles streamed by `ResourceDeposits` (plan 090; `copper_ore`
+ *  added by plan items-player-001). */
+export type MineableOre = 'coal' | 'copper_ore' | 'gold' | 'iron'
 
 export const ORE_ITEM: Record<MineableOre, ItemKind> = {
   coal: 'coal',
   gold: 'gold',
   iron: 'iron',
+  copper_ore: 'copper_ore',
 }
 
 export const ORE_YIELD_LABEL: Record<MineableOre, string> = {
   coal: 'Węgiel',
   gold: 'Złoto',
   iron: 'Żelazo',
+  copper_ore: 'Ruda miedzi',
 }
 
 /** Real-time seconds for the player pickaxe channel (plan 090). */
 export const MINE_DURATION_SEC = 1.6
 
 export function isMineableOre(type: string): type is MineableOre {
-  return type === 'coal' || type === 'gold' || type === 'iron'
+  return type === 'coal' || type === 'gold' || type === 'iron' || type === 'copper_ore'
 }
 
 /** 3–7 hits from deposit richness (0..1). */

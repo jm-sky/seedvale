@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-21 (plan 187 — building resources: `beam`, world-item construction materials; plan 175 — cooking vessels, grates & iron rods)
+**Last updated:** 2026-08-27 (plan items-player-001 — waterskins split into small/medium/large with partial content, wooden/copper buckets, saddlebags, copper ore/copper)
 
 ## Quick rules
 
@@ -35,6 +35,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Cooking capacity / grate (plan 175) | `items/campfireCooking.ts`'s `resolveCookingCapacity`/`findCookingBatch` — bare fire 1, carried `pan` 2, a fire with a built grate 4 (grate wins outright, never adds to the pan). The grate is a one-time upgrade of one specific fire instance (`settlement/VillageFire.ts`'s `hasGrate`/`setGrate`, persisted on `settlement/PlacedFires.ts`'s `PlacedFire.grate`), not a `firepit`-only mechanic — built via the "Zbuduj ruszt" quick action for `GRATE_COST` (`app/userActions.ts`: 2× branch, 2× stone, 2× iron_rod) at a nearby player-built fire that doesn't already have one. |
 | Species meat + hide (plan 134) | `createApp.ts`'s `startHarvestMeat` maps `AnimalAgent.def.kind` → item kind (`deer`→`deer_meat`, `wolf`→`wolf_meat`, `boar`→`boar_meat`, `rabbit`→`rabbit_meat`, `cow`→`beef`; other species keep the generic `raw_meat`) and always tries to add 1 `hide` alongside the meat |
 | Carry capacity (plan 186) | `ITEM_CATALOG[kind].carryCapacityBonus` — kg added to `Inventory.maxWeight` per unit of that kind actually held; only `backpack` sets it today. `Inventory.maxWeight` is a derived getter (`baseMaxWeight` + the sum over held counts), never persisted — same "recompute after load" contract `maxWeight` already had before this plan. Feeds the existing `player/playerEncumbrance.ts`/`PlayerController.setEncumbrance()` overload calc unchanged — no second capacity/equipment system. |
+| Liquid containers (plan items-player-001) | `ITEM_CATALOG[kind].container` (`{ capacityLiters, allowedContents: ('water'\|'milk')[] }`) on the 3 waterskins + 2 buckets — the shared `Container: capacity / content type / content amount` model, ready for a future barrel. Content/amount lives on `Inventory` as one aggregate `liters` total per `ItemKind` stack (`getLiquid`/`fillLiquid`/`drinkLiquid`/`emptyLiquid`, `liquidCapacity`), **not per physical unit** — carrying two of the same container and filling only one isn't distinguishable yet (a real per-unit split would need promoting these kinds to `ItemInstance`, deliberately not done). Liquid mass is never added to `Inventory.totalWeight()` — only the empty container's own `ITEM_DEFS.weight` counts. Waterskins are wired to the existing well/lake `[R]` fill and inventory "Wypij" (`app/actions/survivalActions.ts`); buckets carry the same domain model but no wired fill/drink/milking interaction yet (`§9` — deferred to the future interaction-window plan). |
 | Merchant price / trade value | `items/tradeCatalog.ts` — `MERCHANT_PRICES`/`MERCHANT_STOCK` (buy from Kupiec in `coin`, issue [035](../issues/2026-08-19--035--playtest-coins-placement-inventory.md)), `sellPrice()` = half `tradeValue` (player → Kupiec; not `shell`/`coin`), and `tradeValue()` (barter fallback, shown as "Wartość" in `InventoryScreenItemDetails.vue`, plan 134). Shells remain barter-only. |
 | Weapon combat + prices | [WEAPONS.md](./WEAPONS.md) — melee timings, block, weight, Kupiec/sell/quest value |
 | Freshness (plan 159) | `ITEM_CATALOG[kind].food.freshness` (`items/foodFreshness.ts`'s `getFreshnessStage`) — Fresh → Medium → Spoiled, derived from a stack's `acquiredAtDays` + world day; spoiled food cannot be consumed. Perishable stacks are tracked as `Inventory`'s `FoodBatch[]` (age-compatible batches merge, oldest consumed first) — kinds with no `freshness` entry (e.g. `honey`) never spoil. |
@@ -71,12 +72,18 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | coal | węgiel | — | — | pickaxe yield | procedural | plan 090 |
 | iron | żelazo | — | — | pickaxe yield | procedural | plan 090 |
 | gold | złoto | — | — | pickaxe yield | procedural | plan 090 |
+| copper_ore | ruda miedzi | — | — | pickaxe yield | procedural (M71 needed) | plan items-player-001; same `terrain/resourceDeposits.ts` pipeline as iron/coal/gold; settlement economy stock `copper_ore` |
+| copper | miedź | — | — | none (Kupiec) | procedural (M71 needed) | plan items-player-001 §5.2; no smelting yet — same "buy the material" shortcut as `iron_rod` |
 | tomato | pomidor | — | — | renewable garden | procedural | plan 106; Zjedz (+12 hunger) |
 | raw_meat | surowe mięso | — | — | corpse harvest (knife) | procedural | plan 106; Zjedz (+15 hunger, less than roasted) |
 | roasted_meat | pieczone mięso | — | — | campfire cooking | procedural | plan 106; Zjedz (+35 hunger) |
 | bread | chleb | — | — | none (Kupiec) | procedural | plan 106; Zjedz (+30 hunger) |
-| waterskin_empty | bukłak (pusty) | — | — | none (Kupiec) | procedural | plan 106; `[R]` fill at well/lake → waterskin_full |
-| waterskin_full | bukłak (pełny) | — | — | well/lake fill | procedural | plan 106; Wypij (+45 thirst) → back to waterskin_empty |
+| waterskin_small | mały bukłak | — | — | none (Kupiec) | procedural (M68 needed) | plan items-player-001; leather, 2 l capacity; `[R]` at well/lake fills to full, Wypij drinks 1 l — replaces plan 106's binary waterskin_empty/waterskin_full |
+| waterskin_medium | średni bukłak | — | — | none (Kupiec) | procedural (M68 needed) | plan items-player-001; leather, 5 l capacity; same fill/drink as waterskin_small |
+| waterskin_large | duży bukłak | — | — | none (Kupiec) | procedural (M68 needed) | plan items-player-001; leather, 10 l capacity; same fill/drink as waterskin_small |
+| wooden_bucket | drewniane wiadro | — | — | none (Kupiec, no recipe) | procedural (M69 needed) | plan items-player-001; wood, 10 l, holds water or milk; domain container only — milking/drink-from-bucket interactions deferred to a future interaction-window plan |
+| copper_bucket | miedziane wiadro | — | — | none (Kupiec, no recipe) | procedural (M69 needed) | plan items-player-001; copper, 10 l, holds water or milk; same deferred interactions as wooden_bucket |
+| saddlebags | juki | — | — | none (Kupiec) | procedural (M70 needed) | plan items-player-001 §4.2; leather; inert carried item — animal-equip/transport-capacity mechanic is future work |
 | spear | dzida | yes | 20 | none (Kupiec) | `items/spear.glb` (M38) | plan 134; longest range, narrow thrust arc |
 | short_sword | krótki miecz | yes | 18 | none (Kupiec) | `items/short_sword.glb` (M38) | plan 134; lighter/faster than long_sword |
 | deer_meat | mięso sarny | — | — | corpse harvest (knife, sarna) | procedural | plan 134; Zjedz (+16 hunger); cooks to roasted_meat |

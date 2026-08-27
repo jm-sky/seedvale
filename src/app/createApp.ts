@@ -450,6 +450,7 @@ export async function createApp(
     initialSave ? Inventory.instancesFromJSON(initialSave.inventoryInstances ?? []) : undefined,
     initialSave?.foodBatches,
     DEFAULT_MAX_SIZE,
+    initialSave?.inventoryLiquids,
   )
 
   // Plan 161 — pre-existing count-based weapons (starting knife, older saves)
