@@ -107,7 +107,33 @@ type PlayerPose = 'stand' | 'crouch' | 'lie'
       - eat
       - drink
 
-  Current animations:
+  Current Adventurer animations:
+  - `Death`
+  - `Gun_Shoot`
+  - `HitRecieve`
+  - `HitRecieve_2`
+  - `Idle`
+  - `Idle_Gun`
+  - `Idle_Gun_Pointing`
+  - `Idle_Gun_Shoot`
+  - `Idle_Neutral`
+  - `Idle_Sword`
+  - `Interact`
+  - `Kick_Left`
+  - `Kick_Right`
+  - `Punch_Left`
+  - `Punch_Right`
+  - `Roll`
+  - `Run`
+  - `Run_Back`
+  - `Run_Left`
+  - `Run_Right`
+  - `Run_Shoot`
+  - `Sword_Slash`
+  - `Walk`
+  - `Wave`
+
+  Current Hero animations:
   - `Idle`
   - `Walk`
   - `Bow.shoot`
@@ -117,7 +143,7 @@ type PlayerPose = 'stand' | 'crouch' | 'lie'
 */
 
 /** Quaternius Ultimate Modular Men — distinct from the NPC roster. */
-export const PLAYER_MODEL_URL = '/models/characters/Hero.glb'
+export const PLAYER_MODEL_URL = '/models/characters/Adventurer.glb'
 
 export type HeightSampler = (x: number, z: number) => number
 /** `ChunkManager.collidersNear` (plan 097 §2.2) — kept as its own alias
