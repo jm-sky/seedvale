@@ -1,53 +1,23 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-27 12:20:13  
+> Date: 2026-08-27 12:56:23  
 
 ## PLANS
 
-- `tools-000-weapon-browser-observatory.md`
 - `fauna-001-rabies-and-animal-infection.md`
 - `fauna-002-livestock-food-production.md`
 - `fauna-003-horse-riding.md`
 - `items-player-001-containers-waterskins-and-copper-items.md`
 - `npc-000--mpfb2-npc-hero-character-pipeline.md`
 - `settlements-npcs-004-animal-and-npc-social-audio.md`
+- `tools-000-weapon-browser-observatory.md`
 - `tools-001-performance-benchmark-determinism-and-reliability.md`
 - `tools-002-trace-analyzer-application-cpu-attribution.md`
 - `tools-003-house-browser-and-tools-menu.md`
 
 --------------------------------
 ## PROMPTS
-
-### `tools-000-weapon-browser-observatory.md`
-
-Prompt:
-
-```
-Zrób review planu `tools-000-weapon-browser-observatory.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/tools-000-weapon-browser-observatory.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/2026-08-19--171--weapon-browser-observatory-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
 
 ### `fauna-001-rabies-and-animal-infection.md`
 
@@ -214,6 +184,36 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/settlements-npcs-004-animal-and-npc-social-audio-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `tools-000-weapon-browser-observatory.md`
+
+Prompt:
+
+```
+Zrób review planu `tools-000-weapon-browser-observatory.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/tools-000-weapon-browser-observatory.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/tools-000-weapon-browser-observatory-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
