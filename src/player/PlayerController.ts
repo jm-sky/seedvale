@@ -108,7 +108,7 @@ type PlayerPose = 'stand' | 'crouch' | 'lie'
 */
 
 /** Quaternius Ultimate Modular Men — distinct from the NPC roster. */
-export const PLAYER_MODEL_URL = '/models/characters/Hero.glb'
+export const PLAYER_MODEL_URL = '/models/characters/Adventurer.glb'
 
 export type HeightSampler = (x: number, z: number) => number
 /** `ChunkManager.collidersNear` (plan 097 §2.2) — kept as its own alias
