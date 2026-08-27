@@ -318,6 +318,9 @@ export type GameLoopDeps = {
    *  busy channel that credits `workProgress` for however long it actually
    *  runs before completing or being cancelled. */
   workOnWell?: (id: string) => void
+  /** Read-only preview backing the well's interaction/construction panel
+   *  (plan `ui-input-002` §3) — see `placementActions.ts`'s `WellWorkView`. */
+  describeWellWork?: (id: string) => { title: string, description: string, canWork: boolean, reasonLabel: string } | null
   /** Terrain-preparation preview mode (plan `world-terrain-002` §2) — called
    *  unconditionally, before the gaze/interact dispatch, so a confirming
    *  `[E]` press is consumed here rather than falling through to it. No-ops
@@ -402,7 +405,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot,
-    openContainer, pickUpContainer, workOnWell,
+    openContainer, pickUpContainer, workOnWell, describeWellWork,
     tickTerrainPreparationPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
@@ -1274,7 +1277,21 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (interactPressed) openContainer?.(target.id)
         if (altInteractPressed) pickUpContainer?.(target.id)
       } else if (target?.kind === 'playerWell') {
+        // `[E]` keeps firing/continuing the work session directly (unchanged
+        // repeated-press loop — plan ui-input-002 §3 keeps the "existing
+        // flow" for build/continue). `[R]` opens a read-only panel showing
+        // the same requirements/availability `workOnWell` itself checks, for
+        // players who want to review before committing.
         if (interactPressed) workOnWell?.(target.id)
+        if (altInteractPressed) {
+          const wellId = target.id
+          const view = describeWellWork?.(wellId)
+          if (view) {
+            vueUi.openFlavorDialog(view.title, view.description, [
+              { label: view.title, enabled: view.canWork, reasonLabel: view.reasonLabel, run: () => workOnWell?.(wellId) },
+            ])
+          }
+        }
       } else if (target?.kind === 'terrainPreparation') {
         if (interactPressed) resumeTerrainPreparationWork?.(target.id)
       } else if (target?.kind === 'item') {

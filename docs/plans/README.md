@@ -124,7 +124,6 @@ Natural vegetation
 | ◼️ `fauna-003-horse-riding.md`                                         | - | 🟡 | M | - |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
 | ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
-| 💡 `ui-input-002-ui-ux-interaction-and-action-system-polish.md`        | - | 🟡 | L | - |
 | ◼️ `tools-001-performance-benchmark-determinism-and-reliability.md`    | - | 🔴 | M | - |
 | ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
 | ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
@@ -178,6 +177,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-21--181--natural-mountains-and-rivers.md` | Etap 1–7 complete including waterfalls; full lake/ocean shader parity + hydrology worker offload deliberately deferred pending measured need, see plan's Etap 7 completion summary |
 | `2026-08-21--185--npc-role-based-carried-weapons.md` | [notes](./implementation-notes/2026-08-21--185--npc-role-based-carried-weapons-implementation-notes.md) |
 | `2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul.md` | [notes](./implementation-notes/2026-08-21--182--deep-forest-biome-and-forest-generation-overhaul-implementation-notes.md) |
+| `ui-input-002-ui-ux-interaction-and-action-system-polish.md` | [notes](./implementation-notes/ui-input-002-ui-ux-interaction-and-action-system-polish-implementation-notes.md) |
 | `2026-08-21--186--combat-and-player-interactions.md` | [notes](./implementation-notes/2026-08-21--186--combat-and-player-interactions-implementation-notes.md) |
 | `2026-08-21--187--building-resources.md` | [notes](./implementation-notes/2026-08-21--187--building-resources-implementation-notes.md) |
 | `2026-08-21--188--fauna-and-dead-animal-lifecycle.md` | - |

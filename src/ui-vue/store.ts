@@ -88,7 +88,22 @@ type PauseMenuState = {
   saveStatus: string
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
-type FlavorDialogState = { open: boolean; prompt: string | null; promptHighlighted: boolean; progress: number | null; name: string; line: string }
+/** One button in the shared contextual interaction panel (plan `ui-input-002`
+ *  §2/§3) — `reasonLabel` explains a disabled action (e.g. missing
+ *  materials/capability). `run` is the real domain callback (e.g.
+ *  `workOnWell`); Vue never re-derives it from the interaction kind. */
+export type InteractionPanelAction = { label: string; enabled: boolean; reasonLabel: string; run: () => void }
+type FlavorDialogState = {
+  open: boolean
+  prompt: string | null
+  promptHighlighted: boolean
+  progress: number | null
+  name: string
+  line: string
+  /** Extra actions beyond the implicit Esc/E-close (plan `ui-input-002`) —
+   *  empty for the plain flavor-text case, which renders exactly as before. */
+  actions: readonly InteractionPanelAction[]
+}
 /** Whether each fire action's resource/state guard currently passes (review
  *  007 C4) — kept live by `createApp.ts`'s `syncQuickActionAvailability`, not
  *  recomputed here (Quick Actions / Pause→Akcje are presentation only). */
@@ -283,6 +298,11 @@ type HudState = {
    *  0-1, y from the top) — `null` for Free Aim, which renders at a fixed
    *  screen-space offset instead (plan 186 follow-up: reticle positioning). */
   aimTargetScreen: { x: number, y: number } | null
+  /** Primary melee/ranged weapon shortcut labels (plan `ui-input-002` §6) —
+   *  empty string hides the corresponding HUD button, same convention as
+   *  `held`. Backed by `items/primaryWeapons.ts`, not a separate UI model. */
+  primaryMeleeLabel: string
+  primaryRangedLabel: string
 }
 type AudioSettingsState = { volumes: AudioVolumes }
 type MinimapState = { collapsed: boolean }
@@ -348,7 +368,7 @@ export const ui = reactive({
     saveStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
-  flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '' } as FlavorDialogState,
+  flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', actions: [] } as FlavorDialogState,
   quickActions: {
     open: false, hasDiggingTool: false, nearTown: false, hasTent: false,
     traps: { simple: false, good: false },
@@ -407,6 +427,8 @@ export const ui = reactive({
     playerNeeds: { hp: 1, stamina: 1, vigor: 1, hunger: 1, thirst: 1 },
     aiming: false,
     aimTargetScreen: null,
+    primaryMeleeLabel: '',
+    primaryRangedLabel: '',
   } as HudState,
   audio: { volumes: { ...DEFAULT_AUDIO_VOLUMES } } as AudioSettingsState,
   minimap: { collapsed: false } as MinimapState,
@@ -483,7 +505,15 @@ export function refreshQuestLog(entries: readonly QuestListEntry[], exp: number,
 export function closeQuestLog(): void { ui.questLog.open = false }
 export function isQuestLogOpen(): boolean { return ui.questLog.open }
 
-export function openFlavorDialog(name: string, line: string): void { ui.flavorDialog.prompt = null; ui.flavorDialog.progress = null; ui.flavorDialog.name = name; ui.flavorDialog.line = line; ui.flavorDialog.open = true; emitUiOpen() }
+export function openFlavorDialog(name: string, line: string, actions: readonly InteractionPanelAction[] = []): void {
+  ui.flavorDialog.prompt = null
+  ui.flavorDialog.progress = null
+  ui.flavorDialog.name = name
+  ui.flavorDialog.line = line
+  ui.flavorDialog.actions = actions
+  ui.flavorDialog.open = true
+  emitUiOpen()
+}
 export function setFlavorPrompt(text: string | null, highlighted = false, progress: number | null = null): void {
   if (!ui.flavorDialog.open) {
     ui.flavorDialog.prompt = text
@@ -807,6 +837,38 @@ export function abortTerrainPreparation(): boolean {
   return abortTerrainPreparationHandler?.() ?? false
 }
 
+/** Explicit size/height/confirm buttons for the `Przygotuj teren` preview
+ *  (plan `ui-input-002` — desktop and mobile both lacked any UI for
+ *  `[+/-]`/`[,/.]`/`[E]`). Thin wrappers over the same
+ *  `TerrainPreparationActions` functions the keyboard path already calls —
+ *  no parallel resize/confirm logic. */
+export type TerrainPreparationControls = {
+  grow: () => void
+  shrink: () => void
+  raise: () => void
+  lower: () => void
+  confirm: () => void
+}
+let terrainPreparationControlsHandler: TerrainPreparationControls | null = null
+export function configureTerrainPreparationControls(handler: TerrainPreparationControls | null): void {
+  terrainPreparationControlsHandler = handler
+}
+export function growTerrainPreparation(): void {
+  terrainPreparationControlsHandler?.grow()
+}
+export function shrinkTerrainPreparation(): void {
+  terrainPreparationControlsHandler?.shrink()
+}
+export function raiseTerrainPreparation(): void {
+  terrainPreparationControlsHandler?.raise()
+}
+export function lowerTerrainPreparation(): void {
+  terrainPreparationControlsHandler?.lower()
+}
+export function confirmTerrainPreparation(): void {
+  terrainPreparationControlsHandler?.confirm()
+}
+
 export function showTerrainPreparationPreview(view: {
   sizeLabel: string
   heightLabel: string
@@ -963,6 +1025,24 @@ export function setHudHeldTool(label: string): void {
   const text = label ? `w ręce: ${label}` : ''
   if (ui.hud.held === text) return
   ui.hud.held = text
+}
+/** Primary melee/ranged weapon shortcut buttons — empty label hides the
+ *  button. `label` is `''` when no weapon of that kind has been equipped
+ *  yet, or it's no longer in inventory (`primaryWeapons.ts`). */
+export function setHudPrimaryWeapons(meleeLabel: string, rangedLabel: string): void {
+  ui.hud.primaryMeleeLabel = meleeLabel
+  ui.hud.primaryRangedLabel = rangedLabel
+}
+export type PrimaryWeaponShortcuts = { equipMelee: () => void, equipRanged: () => void }
+let primaryWeaponShortcutsHandler: PrimaryWeaponShortcuts | null = null
+export function configurePrimaryWeaponShortcuts(handler: PrimaryWeaponShortcuts | null): void {
+  primaryWeaponShortcutsHandler = handler
+}
+export function equipPrimaryMelee(): void {
+  primaryWeaponShortcutsHandler?.equipMelee()
+}
+export function equipPrimaryRanged(): void {
+  primaryWeaponShortcutsHandler?.equipRanged()
 }
 export function setHudPlayerNeeds(needs: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }): void {
   const p = ui.hud.playerNeeds

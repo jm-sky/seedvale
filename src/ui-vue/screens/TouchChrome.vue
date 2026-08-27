@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Crosshair, Zap } from 'lucide-vue-next'
+import { BowArrow, Crosshair, Sword, Zap } from 'lucide-vue-next'
 import { isTouchDevice } from '../../input/isTouchDevice'
-import { ui } from '../store'
+import { equipPrimaryMelee, equipPrimaryRanged, ui } from '../store'
 
 const touch = isTouchDevice()
 </script>
@@ -25,6 +25,26 @@ const touch = isTouchDevice()
         @click="ui.touch.onCycleTarget?.()"
       >
         <Crosshair :size="20" />
+      </button>
+      <button
+        v-if="ui.hud.primaryRangedLabel"
+        type="button"
+        class="pointer-events-auto flex size-11 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(20,24,28,0.6)] text-ink [-webkit-tap-highlight-color:transparent]"
+        :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
+        :aria-label="`Broń dystansowa: ${ui.hud.primaryRangedLabel}`"
+        @click="equipPrimaryRanged"
+      >
+        <BowArrow :size="18" />
+      </button>
+      <button
+        v-if="ui.hud.primaryMeleeLabel"
+        type="button"
+        class="pointer-events-auto flex size-11 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(20,24,28,0.6)] text-ink [-webkit-tap-highlight-color:transparent]"
+        :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
+        :aria-label="`Broń biała: ${ui.hud.primaryMeleeLabel}`"
+        @click="equipPrimaryMelee"
+      >
+        <Sword :size="18" />
       </button>
       <button
         type="button"

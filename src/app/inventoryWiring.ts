@@ -4,6 +4,7 @@ import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
+import type { PrimaryWeaponSelection } from '../items/primaryWeapons'
 import type { TradeResult } from '../items/trade'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
@@ -46,6 +47,10 @@ export type InventoryWiring = {
   dropItemStack: (kind: ItemKind) => void
   equipTool: (kind: ItemKind) => void
   unequipTool: () => void
+  /** HUD primary-weapon shortcuts (plan `ui-input-002` §6) — equip whichever
+   *  weapon `primaryWeapons` currently remembers, no-op if none is set. */
+  equipPrimaryMeleeWeapon: () => void
+  equipPrimaryRangedWeapon: () => void
 }
 
 export type InventoryWiringDeps = {
@@ -53,6 +58,7 @@ export type InventoryWiringDeps = {
   player: PlayerController
   inventory: Inventory
   heldTool: HeldTool
+  primaryWeapons: PrimaryWeaponSelection
   playerTorch: PlayerTorch
   hud: Hud
   toast: Toast
@@ -73,7 +79,7 @@ export type InventoryWiringDeps = {
 
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
-    bundle, player, inventory, heldTool, playerTorch, hud, toast, vueUi,
+    bundle, player, inventory, heldTool, primaryWeapons, playerTorch, hud, toast, vueUi,
     questManager, worldFlags, playOnce, grantItem,
   } = deps
 
@@ -155,6 +161,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   const equipTool = (kind: ItemKind): void => {
     if (playerTorch.isLit()) playerTorch.extinguish()
     if (!heldTool.equip(kind)) return
+    primaryWeapons.noteEquipped(kind, heldTool.heldInstanceId())
     deps.syncHeldHud()
     deps.refreshInventoryScreen()
   }
@@ -165,6 +172,16 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     deps.syncHeldHud()
     deps.refreshInventoryScreen()
   }
+
+  const equipPrimary = (choice: ReturnType<PrimaryWeaponSelection['primaryMelee']>): void => {
+    if (!choice) return
+    if (playerTorch.isLit()) playerTorch.extinguish()
+    if (!heldTool.equip(choice.kind, choice.instanceId ?? undefined)) return
+    deps.syncHeldHud()
+    deps.refreshInventoryScreen()
+  }
+  const equipPrimaryMeleeWeapon = (): void => equipPrimary(primaryWeapons.primaryMelee())
+  const equipPrimaryRangedWeapon = (): void => equipPrimary(primaryWeapons.primaryRanged())
 
   /** Shared by every merchant buy/sell path: weight/held-tool/quick-action
    *  resync plus a full merchant re-render. */
@@ -239,5 +256,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     dropItemStack,
     equipTool,
     unequipTool,
+    equipPrimaryMeleeWeapon,
+    equipPrimaryRangedWeapon,
   }
 }

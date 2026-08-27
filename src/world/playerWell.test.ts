@@ -106,19 +106,20 @@ describe('playerWell stage contract (tool/materials/work-hours)', () => {
 
 describe('playerWell prompt label', () => {
   it('prompts the fresh-start verb at zero progress', () => {
-    expect(wellPromptLabel(record({ stage: 'pit', workProgress: 0 }))).toBe('[E] Wykop dół')
+    expect(wellPromptLabel(record({ stage: 'pit', workProgress: 0 }))).toBe('[E] Wykop dół · [R] wymagania')
   })
 
   it('appends the progress fraction while resuming an in-progress stage', () => {
     const label = wellPromptLabel(record({ stage: 'pit', workProgress: 1 }))
     expect(label).toContain('[E] Wykop dół')
     expect(label).toContain(`1/${WELL_STAGE_WORK_HOURS.pit}`)
+    expect(label).toContain('[R] wymagania')
   })
 
   it('prompts the next stage verb immediately once the current stage is done, without a fraction', () => {
     const doneDigging = record({ stage: 'pit', workProgress: WELL_STAGE_WORK_HOURS.pit })
-    expect(wellPromptLabel(doneDigging)).toBe('[E] Buduj studnię')
+    expect(wellPromptLabel(doneDigging)).toBe('[E] Buduj studnię · [R] wymagania')
     const doneBuilding = record({ stage: 'well', workProgress: WELL_STAGE_WORK_HOURS.well })
-    expect(wellPromptLabel(doneBuilding)).toBe('[E] Zbuduj daszek')
+    expect(wellPromptLabel(doneBuilding)).toBe('[E] Zbuduj daszek · [R] wymagania')
   })
 })

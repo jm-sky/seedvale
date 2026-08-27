@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Zap } from 'lucide-vue-next'
+import { BowArrow, Sword, Zap } from 'lucide-vue-next'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import QuickActionsGroup from '@/components/QuickActionsGroup.vue'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
@@ -11,7 +11,15 @@ import SkillsHudButton from '../components/SkillsHudButton.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { visibleFireActions } from '../playerQuickActions'
-import { closeQuickActions, isQuickActionsOpen, showToast, toggleQuickActions, ui } from '../store'
+import {
+  closeQuickActions,
+  equipPrimaryMelee,
+  equipPrimaryRanged,
+  isQuickActionsOpen,
+  showToast,
+  toggleQuickActions,
+  ui,
+} from '../store'
 
 const panel = ref<HTMLElement | null>(null)
 const touchDevice = isTouchDevice()
@@ -179,6 +187,24 @@ const plantActions = computed<Action[]>(() => {
   >
     <SkillsHudButton />
     <button
+      v-if="ui.hud.primaryRangedLabel"
+      type="button"
+      class="pointer-events-auto flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-white/25 bg-black/40 text-ink hover:bg-black/60"
+      :aria-label="`Broń dystansowa: ${ui.hud.primaryRangedLabel}`"
+      @click="equipPrimaryRanged"
+    >
+      <BowArrow :size="20" />
+    </button>
+    <button
+      v-if="ui.hud.primaryMeleeLabel"
+      type="button"
+      class="pointer-events-auto flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-white/25 bg-black/40 text-ink hover:bg-black/60"
+      :aria-label="`Broń biała: ${ui.hud.primaryMeleeLabel}`"
+      @click="equipPrimaryMelee"
+    >
+      <Sword :size="20" />
+    </button>
+    <button
       type="button"
       class="pointer-events-auto flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-white/25 bg-black/40 text-ink hover:bg-black/60"
       aria-label="Szybkie działania"
@@ -187,122 +213,120 @@ const plantActions = computed<Action[]>(() => {
       <Zap :size="22" />
     </button>
   </div>
-  <Teleport to="body">
-    <div
-      v-if="ui.quickActions.open"
-      ref="panel"
-      class="border border-white/20 pointer-events-auto fixed z-10 flex flex-col flex-wrap lg:flex-nowrap content-start gap-2 overflow-y-auto rounded-lg p-2 backdrop-blur-xs"
-      :class="touchDevice ? '' : 'max-h-[calc(100dvh-220px)] w-[min(420px,calc(100vw-40px))]'"
-      :style="touchDevice
-        ? {
-          top: 'max(12px, env(safe-area-inset-top))',
-          left: 'max(12px, env(safe-area-inset-left))',
-          right: 'max(12px, env(safe-area-inset-right))',
-          bottom: 'max(12px, calc(env(safe-area-inset-bottom) + 100px))',
-          touchAction: 'pan-y',
-        }
-        : {
-          top: 'max(12px, env(safe-area-inset-top))',
-          bottom: 'max(168px, calc(env(safe-area-inset-bottom) + 148px))',
-          right: 'max(20px, env(safe-area-inset-right))',
-          touchAction: 'pan-y',
-        }"
+  <div
+    v-if="ui.quickActions.open"
+    ref="panel"
+    class="border border-white/20 pointer-events-auto fixed z-9 flex flex-col flex-nowrap content-start gap-2 overflow-x-hidden overflow-y-auto overscroll-contain rounded-lg p-2 backdrop-blur-xs"
+    :class="touchDevice ? '' : 'max-h-[calc(100dvh-220px)] w-[min(420px,calc(100vw-40px))]'"
+    :style="touchDevice
+      ? {
+        top: 'max(12px, env(safe-area-inset-top))',
+        left: 'max(12px, env(safe-area-inset-left))',
+        right: 'max(12px, env(safe-area-inset-right))',
+        bottom: 'max(12px, calc(env(safe-area-inset-bottom) + 100px))',
+        touchAction: 'pan-y',
+      }
+      : {
+        top: 'max(12px, env(safe-area-inset-top))',
+        bottom: 'max(168px, calc(env(safe-area-inset-bottom) + 148px))',
+        right: 'max(20px, env(safe-area-inset-right))',
+        touchAction: 'pan-y',
+      }"
+  >
+    <QuickActionsGroup
+      v-if="fireActions.length"
+      label="Ogień"
     >
-      <QuickActionsGroup
-        v-if="fireActions.length"
-        label="Ogień"
-      >
+      <QuickActionsButton
+        v-for="action in fireActions"
+        :key="action.id"
+        :label="action.label"
+        :cost="action.cost"
+        @click="runFireAction(action.run)"
+      />
+    </QuickActionsGroup>
+    <QuickActionsGroup
+      v-if="ui.quickActions.hasDiggingTool"
+      label="Łopata"
+    >
+      <QuickActionsButton
+        v-for="action in shovelActions"
+        :key="action.label"
+        :label="action.label"
+        :cost="action.cost"
+        @click="action.onClick"
+      />
+    </QuickActionsGroup>
+    <QuickActionsGroup
+      v-if="trapActions.length"
+      label="Pułapki"
+    >
+      <QuickActionsButton
+        v-for="action in trapActions"
+        :key="action.label"
+        :label="action.label"
+        :cost="action.cost"
+        @click="action.onClick"
+      />
+    </QuickActionsGroup>
+    <QuickActionsGroup
+      v-if="plantActions.length"
+      label="Sadzenie"
+    >
+      <QuickActionsButton
+        v-for="action in plantActions"
+        :key="action.label"
+        :label="action.label"
+        :cost="action.cost"
+        @click="action.onClick"
+      />
+    </QuickActionsGroup>
+    <QuickActionsGroup label="Czekaj">
+      <QuickActionsButton
+        v-for="hours in [1, 2, 4, 6]"
+        :key="hours"
+        :label="`${hours}h`"
+        @click="wait(hours)"
+      />
+    </QuickActionsGroup>
+    <QuickActionsGroup
+      v-if="ui.quickActions.hasCarriedContainer"
+      label="Skrzynia"
+    >
+      <QuickActionsButton
+        label="Odłóż skrzynię"
+        @click="putDownContainer"
+      />
+    </QuickActionsGroup>
+    <QuickActionsGroup label="Odpoczynek">
+      <QuickActionsButton
+        v-if="ui.quickActions.hasTent"
+        label="Rozstaw namiot"
+        cost="1× namiot"
+        @click="placeTent"
+      />
+      <QuickActionsButton
+        label="Rozbij obóz (8h)"
+        @click="rest('camp')"
+      />
+      <QuickActionsButton
+        v-if="ui.quickActions.nearTown && !ui.quickActions.lodgingConfirm"
+        label="Nocuj w mieście"
+        @click="rest('town')"
+      />
+      <template v-if="ui.quickActions.lodgingConfirm">
+        <div class="w-full basis-full text-sm text-ink/80">
+          {{ ui.quickActions.lodgingConfirm.placeLabel }} — {{ ui.quickActions.lodgingConfirm.price }}× moneta
+        </div>
         <QuickActionsButton
-          v-for="action in fireActions"
-          :key="action.id"
-          :label="action.label"
-          :cost="action.cost"
-          @click="runFireAction(action.run)"
-        />
-      </QuickActionsGroup>
-      <QuickActionsGroup
-        v-if="ui.quickActions.hasDiggingTool"
-        label="Łopata"
-      >
-        <QuickActionsButton
-          v-for="action in shovelActions"
-          :key="action.label"
-          :label="action.label"
-          :cost="action.cost"
-          @click="action.onClick"
-        />
-      </QuickActionsGroup>
-      <QuickActionsGroup
-        v-if="trapActions.length"
-        label="Pułapki"
-      >
-        <QuickActionsButton
-          v-for="action in trapActions"
-          :key="action.label"
-          :label="action.label"
-          :cost="action.cost"
-          @click="action.onClick"
-        />
-      </QuickActionsGroup>
-      <QuickActionsGroup
-        v-if="plantActions.length"
-        label="Sadzenie"
-      >
-        <QuickActionsButton
-          v-for="action in plantActions"
-          :key="action.label"
-          :label="action.label"
-          :cost="action.cost"
-          @click="action.onClick"
-        />
-      </QuickActionsGroup>
-      <QuickActionsGroup label="Czekaj">
-        <QuickActionsButton
-          v-for="hours in [1, 2, 4, 6]"
-          :key="hours"
-          :label="`${hours}h`"
-          @click="wait(hours)"
-        />
-      </QuickActionsGroup>
-      <QuickActionsGroup
-        v-if="ui.quickActions.hasCarriedContainer"
-        label="Skrzynia"
-      >
-        <QuickActionsButton
-          label="Odłóż skrzynię"
-          @click="putDownContainer"
-        />
-      </QuickActionsGroup>
-      <QuickActionsGroup label="Odpoczynek">
-        <QuickActionsButton
-          v-if="ui.quickActions.hasTent"
-          label="Rozstaw namiot"
-          cost="1× namiot"
-          @click="placeTent"
+          label="Potwierdź"
+          @click="confirmLodging"
         />
         <QuickActionsButton
-          label="Rozbij obóz (8h)"
-          @click="rest('camp')"
+          label="Anuluj"
+          @click="cancelLodging"
         />
-        <QuickActionsButton
-          v-if="ui.quickActions.nearTown && !ui.quickActions.lodgingConfirm"
-          label="Nocuj w mieście"
-          @click="rest('town')"
-        />
-        <template v-if="ui.quickActions.lodgingConfirm">
-          <div class="w-full basis-full text-sm text-ink/80">
-            {{ ui.quickActions.lodgingConfirm.placeLabel }} — {{ ui.quickActions.lodgingConfirm.price }}× moneta
-          </div>
-          <QuickActionsButton
-            label="Potwierdź"
-            @click="confirmLodging"
-          />
-          <QuickActionsButton
-            label="Anuluj"
-            @click="cancelLodging"
-          />
-        </template>
-      </QuickActionsGroup>
-    </div>
-  </Teleport>
+      </template>
+    </QuickActionsGroup>
+  </div>
 </template>

@@ -935,6 +935,14 @@ export function isRangedTool<K extends ItemKind | null | undefined>(kind: K): ki
   return kind != null && ITEM_CATALOG[kind]?.ranged != null
 }
 
+/** Melee-capable held tools — the items-domain mirror of `isMeleeTool`
+ *  (`fauna/faunaCombat.ts`, which additionally narrows to `MeleeToolKind` for
+ *  combat code). Kept here too so items-domain callers (e.g. primary-weapon
+ *  shortcuts) don't need to reach into `fauna/` for a plain capability check. */
+export function isMeleeToolKind<K extends ItemKind | null | undefined>(kind: K): kind is Extract<K, ItemKind> {
+  return kind != null && ITEM_CATALOG[kind]?.melee != null
+}
+
 /** Item kinds that hold the single "in hand" slot — derived from
  *  `holdable` rather than hand-listed, so a new holdable kind never has to be
  *  added to a second set (`items/HeldTool.ts`'s `isToolKind` reads this). */

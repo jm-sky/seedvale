@@ -36,6 +36,7 @@ import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryVi
 import { hasItemCapability } from '../items/itemCatalog'
 import { isWeaponMaintenanceKind } from '../items/itemInstances'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
+import { createPrimaryWeaponSelection } from '../items/primaryWeapons'
 import { createAcquiredInstance } from '../items/trade'
 import { createWeaponInstance, migrateWeaponCountsToInstances } from '../items/weaponMaintenance'
 import {
@@ -457,6 +458,7 @@ export async function createApp(
   migrateWeaponCountsToInstances(inventory)
   grantStartingLoadout(inventory)
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
+  const primaryWeapons = createPrimaryWeaponSelection()
   // Renamed from `syncShovelQuickActions` — now the single post-inventory-
   // mutation refresh for every Quick Actions / Pause→Akcje availability flag
   // (review 007 C4), not just shovel/tent. `canBuild*`/`canLight*` come from
@@ -559,6 +561,11 @@ export async function createApp(
     }
     hud.setHeldTool(held ? ITEM_DEFS[held].label : '')
     player.setHeldTool(held)
+    primaryWeapons.syncWithInventory(inventory)
+    hud.setPrimaryWeapons(
+      primaryWeapons.primaryMelee() ? ITEM_DEFS[primaryWeapons.primaryMelee()!.kind].label : '',
+      primaryWeapons.primaryRanged() ? ITEM_DEFS[primaryWeapons.primaryRanged()!.kind].label : '',
+    )
   }
   syncHeldHud()
 
@@ -687,6 +694,7 @@ export async function createApp(
     player,
     inventory,
     heldTool,
+    primaryWeapons,
     playerTorch,
     hud,
     toast,
@@ -698,6 +706,10 @@ export async function createApp(
     syncHeldHud: () => syncHeldHud(),
     syncQuickActionAvailability,
     refreshInventoryScreen: () => refreshInventoryScreen(),
+  })
+  vueUi.configurePrimaryWeaponShortcuts({
+    equipMelee: inventoryWiring.equipPrimaryMeleeWeapon,
+    equipRanged: inventoryWiring.equipPrimaryRangedWeapon,
   })
 
   const timeSkip = createTimeSkip(dayNight)
@@ -762,6 +774,13 @@ export async function createApp(
   vueUi.configureAbortRest(rest.abortRest)
   vueUi.configureAbortBusy(rest.abortBusy)
   vueUi.configureAbortTerrainPreparation(terrainPrep.cancelActive)
+  vueUi.configureTerrainPreparationControls({
+    grow: terrainPrep.growSize,
+    shrink: terrainPrep.shrinkSize,
+    raise: terrainPrep.raiseHeight,
+    lower: terrainPrep.lowerHeight,
+    confirm: terrainPrep.confirmPreview,
+  })
 
   const { buildSaveData, saveNow, refreshActiveSaveName, installAutoSave } = createSaveState({
     config,
@@ -1296,6 +1315,7 @@ export async function createApp(
     openContainer: containers.openContainer,
     pickUpContainer: containers.pickUpContainer,
     workOnWell: placement.workOnWell,
+    describeWellWork: placement.describeWellWork,
     tickTerrainPreparationPreview: terrainPrep.tickPreview,
     resumeTerrainPreparationWork: terrainPrep.resumeWork,
     tickTerrainPreparationWork: terrainPrep.tickWork,

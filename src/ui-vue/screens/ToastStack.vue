@@ -3,8 +3,12 @@ import { ui } from '../store'
 </script>
 
 <template>
+  <!-- Deliberately above every other stacking tier (modals z-10/11, busy/
+       time-skip/terrain-prep z-[12], MerchantScreen's compact drawer z-20)
+       so a transient toast is never hidden behind whatever overlay happens
+       to be open — plan ui-input-002 §4. Non-modal: not in `openStack`. -->
   <div
-    class="pointer-events-none fixed left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1.5"
+    class="pointer-events-none fixed left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-1.5"
     style="top: max(16px, env(safe-area-inset-top))"
   >
     <div

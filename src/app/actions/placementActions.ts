@@ -67,6 +67,13 @@ import { isActionBlocked, type PlayerActionContext } from './actionContext'
  *  Esc costs nothing. */
 export type PlacementBlocker = { x: number, z: number, radius: number }
 
+export type WellWorkView = {
+  title: string
+  description: string
+  canWork: boolean
+  reasonLabel: string
+}
+
 export type PlacementActions = {
   /** Where a tent placed right now would land (its far end is `TENT_LENGTH`
    *  ahead of the player, along the current look yaw). */
@@ -79,6 +86,12 @@ export type PlacementActions = {
   placeTrapAtAim: (kind: TrapKind) => void
   placeWellAtAim: () => void
   workOnWell: (id: string) => void
+  /** Read-only preview of what pressing `[E]` on this well would require/do
+   *  right now — same checks `workOnWell` runs, without mutating anything.
+   *  Backs the interaction panel's construction view (plan `ui-input-002`
+   *  §3); `workOnWell` itself remains the only place that actually spends
+   *  materials or starts work. */
+  describeWellWork: (id: string) => WellWorkView | null
   /** Places a new player-built garden plot ahead of the player (plan 174 §1)
    *  — a single-stage placement (unlike a well), immediately usable as a
    *  planting anchor once built. */
@@ -298,6 +311,42 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     })
   }
 
+  const describeWellWork = (id: string): WellWorkView | null => {
+    const well = bundle.playerWells.list().find((entry) => entry.id === id)
+    if (!well) return null
+    const stage = activeWellStage(well)
+    if (!stage) return null
+    const title = WELL_WORK_LABEL[stage]
+    const capability = WELL_STAGE_CAPABILITY[stage]
+    if (capability && !inventory.hasCapability(capability)) {
+      return { title, description: '', canWork: false, reasonLabel: `Potrzebujesz ${CAPABILITY_NEED_LABEL[capability]}.` }
+    }
+    const startingNewStage = stage !== well.stage
+    if (startingNewStage) {
+      const cost = WELL_STAGE_COST[stage]
+      const requirements: MaterialRequirement[] = []
+      if (cost.stone > 0) requirements.push({ kind: 'stone', count: cost.stone })
+      if (cost.branch > 0) requirements.push({ kind: 'branch', count: cost.branch })
+      const description = requirements.length > 0
+        ? `Wymagane surowce: ${requirements.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`
+        : ''
+      const missing = requirements.filter(
+        (r) => !hasMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+      )
+      if (missing.length > 0) {
+        return {
+          title,
+          description,
+          canWork: false,
+          reasonLabel: `Brakuje: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+        }
+      }
+      return { title, description, canWork: true, reasonLabel: '' }
+    }
+    const remainingHours = Math.max(0, WELL_STAGE_WORK_HOURS[stage] - well.workProgress)
+    return { title, description: `Pozostało: ${remainingHours.toFixed(1)} h pracy.`, canWork: true, reasonLabel: '' }
+  }
+
   /** Places a new player-built garden plot ahead of the player (plan 174 §1)
    *  — same shared-placement shape as a tent/trap/well, but single-stage:
    *  the shovel is required (never consumed, same as a well's `pit`) and the
@@ -460,6 +509,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     placeTrapAtAim,
     placeWellAtAim,
     workOnWell,
+    describeWellWork,
     placeGardenAtAim,
     tidyGardenPlot,
     plantTreeAtAim,

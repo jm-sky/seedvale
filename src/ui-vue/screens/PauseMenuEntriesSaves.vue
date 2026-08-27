@@ -43,8 +43,10 @@ function formatMeta(slot: SaveSlotInfo): string {
 async function saveAs(): Promise<void> {
   emitUiClick()
   if (slots.value.length >= MAX_SAVES) {
-    error.value = saveErrorMessage('limit')
-    showToast(error.value, 'error')
+    // Transient failure — toast only (plan `ui-input-002` §4); `error` stays
+    // reserved for the persistent inline name-validation message below.
+    error.value = ''
+    showToast(saveErrorMessage('limit'), 'error')
     return
   }
   busy.value = true
@@ -52,8 +54,8 @@ async function saveAs(): Promise<void> {
   busy.value = false
   if (!result) return
   if (!result.ok) {
-    error.value = saveErrorMessage(result.error)
-    showToast(error.value, 'error')
+    error.value = ''
+    showToast(saveErrorMessage(result.error), 'error')
     return
   }
   error.value = ''
@@ -74,8 +76,8 @@ function loadSlot(id: string): void {
 function startNewGame(): void {
   emitUiClick()
   if (slots.value.length >= MAX_SAVES) {
-    error.value = saveErrorMessage('limit')
-    showToast(error.value, 'error')
+    error.value = ''
+    showToast(saveErrorMessage('limit'), 'error')
     return
   }
   const check = validateSaveName(name.value, slots.value.map((slot) => slot.name))

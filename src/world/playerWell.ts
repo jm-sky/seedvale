@@ -148,12 +148,12 @@ function formatHours(hours: number): string {
  *  already-started stage (not when the press would start a new one). */
 export function wellPromptLabel(record: PlayerWellRecord): string {
   const stage = activeWellStage(record)
-  if (!stage) return WELL_STAGE_START_PROMPT.roof
+  if (!stage) return `${WELL_STAGE_START_PROMPT.roof} · [R] wymagania`
   const base = WELL_STAGE_START_PROMPT[stage]
   if (stage === record.stage && record.workProgress > 0) {
-    return `${base} (${formatHours(record.workProgress)}/${formatHours(WELL_STAGE_WORK_HOURS[stage])} h)`
+    return `${base} (${formatHours(record.workProgress)}/${formatHours(WELL_STAGE_WORK_HOURS[stage])} h) · [R] wymagania`
   }
-  return base
+  return `${base} · [R] wymagania`
 }
 
 /** Bounded lookup for a completed player-built well near `(x, z)`, used by

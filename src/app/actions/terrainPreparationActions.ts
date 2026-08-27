@@ -90,6 +90,15 @@ export type TerrainPreparationActions = {
    *  confirming `[E]` press doesn't also fall through to it. No-ops when the
    *  preview isn't active. */
   tickPreview: () => void
+  /** Size/height/confirm controls also reachable from `[+/-]`/`[,/.]`/`[E]` —
+   *  exposed so the UI can offer explicit buttons for players who don't know
+   *  the shortcuts, without duplicating the resize/confirm logic. No-ops
+   *  when the preview isn't active. */
+  growSize: () => void
+  shrinkSize: () => void
+  raiseHeight: () => void
+  lowerHeight: () => void
+  confirmPreview: () => void
   /** `[E]` on an active preparation's marker — starts/resumes its work
    *  session. */
   resumeWork: (id: string) => void
@@ -129,6 +138,18 @@ export function createTerrainPreparationActions(
     lastAppliedProgress: number
   } | null = null
 
+  /** Cached result of `tickPreview`'s per-frame validity computation, so a
+   *  button-triggered `confirmPreview()` (called outside the tick, e.g. from
+   *  a Vue click handler) can reuse the same validity/target data the `[E]`
+   *  keyboard path already computed this frame instead of recomputing it. */
+  let lastPreviewState: {
+    valid: boolean
+    reasonLabel: string
+    center: GridSample
+    targetHeight: number
+    originalHeights: readonly HeightSample[]
+  } | null = null
+
   const onWheel = (event: WheelEvent): void => {
     if (!preview) return
     event.preventDefault()
@@ -149,6 +170,7 @@ export function createTerrainPreparationActions(
   const exitPreview = (): void => {
     if (!preview) return
     preview = null
+    lastPreviewState = null
     wheelAccum = 0
     mouseLook.state.zoomLocked = false
     wheelTarget.removeEventListener('wheel', onWheel)
@@ -184,16 +206,43 @@ export function createTerrainPreparationActions(
     toast.show('Rozpoczęto przygotowanie terenu — podejdź do znacznika, by pracować.')
   }
 
+  const growSize = (): void => {
+    if (!preview) return
+    preview.size = nextSize(preview.size, 1)
+  }
+  const shrinkSize = (): void => {
+    if (!preview) return
+    preview.size = nextSize(preview.size, -1)
+  }
+  const raiseHeight = (): void => {
+    if (!preview) return
+    preview.heightOffset += HEIGHT_STEP
+  }
+  const lowerHeight = (): void => {
+    if (!preview) return
+    preview.heightOffset -= HEIGHT_STEP
+  }
+
+  const confirmPreview = (): void => {
+    if (!preview || !lastPreviewState) return
+    const { valid, reasonLabel, center, targetHeight, originalHeights } = lastPreviewState
+    if (!valid) {
+      toast.show(reasonLabel || 'Nie można tu przygotować terenu.', 'error')
+      return
+    }
+    confirmPreparation(center, preview.size, targetHeight, originalHeights)
+  }
+
   const tickPreview = (): void => {
     if (!preview) return
     if (isActionBlocked(ctx)) {
       exitPreview()
       return
     }
-    if (keyboard.consumePlus()) preview.size = nextSize(preview.size, 1)
-    if (keyboard.consumeMinus()) preview.size = nextSize(preview.size, -1)
-    if (keyboard.consumeComma()) preview.heightOffset -= HEIGHT_STEP
-    if (keyboard.consumePeriod()) preview.heightOffset += HEIGHT_STEP
+    if (keyboard.consumePlus()) growSize()
+    if (keyboard.consumeMinus()) shrinkSize()
+    if (keyboard.consumeComma()) lowerHeight()
+    if (keyboard.consumePeriod()) raiseHeight()
 
     const chunkManager = bundle.chunkManager
     const aimX = player.mesh.position.x - Math.sin(mouseLook.state.yaw) * TERRAIN_PREP_REACH
@@ -239,14 +288,9 @@ export function createTerrainPreparationActions(
       valid,
       reasonLabel,
     })
+    lastPreviewState = { valid, reasonLabel, center, targetHeight, originalHeights }
 
-    if (keyboard.consumeInteract()) {
-      if (!valid) {
-        toast.show(reasonLabel || 'Nie można tu przygotować terenu.', 'error')
-        return
-      }
-      confirmPreparation(center, preview.size, targetHeight, originalHeights)
-    }
+    if (keyboard.consumeInteract()) confirmPreview()
   }
 
   const applyWorkProgress = (work: NonNullable<typeof activeWork>, progress: number): void => {
@@ -331,6 +375,11 @@ export function createTerrainPreparationActions(
     startPreview,
     isPreviewActive,
     tickPreview,
+    growSize,
+    shrinkSize,
+    raiseHeight,
+    lowerHeight,
+    confirmPreview,
     resumeWork,
     tickWork,
     onWorkSkipFinished,

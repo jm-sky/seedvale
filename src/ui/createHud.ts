@@ -11,6 +11,9 @@ export type Hud = {
   setInventoryWeight: (current: number, max: number) => void
   /** Label for the held tool slot — empty string hides it. */
   setHeldTool: (label: string) => void
+  /** Primary melee/ranged weapon shortcut labels (plan `ui-input-002` §6) —
+   *  empty string hides the corresponding shortcut button. */
+  setPrimaryWeapons: (meleeLabel: string, rangedLabel: string) => void
   /** Ratios (0-1) for the HUD bars (plan 106 + issue 034). `hp` is HealthState. */
   setPlayerNeeds: (needs: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }) => void
   /** Shows/hides the ranged-aim reticle (plan 186 §1) — true only while
@@ -34,6 +37,7 @@ export function createHud(_parent: HTMLElement): Hud {
     setExp: (exp) => { if (!disposed) getUi()?.setHudExp(exp) },
     setInventoryWeight: (current, max) => { if (!disposed) getUi()?.setHudInventoryWeight(current, max) },
     setHeldTool: (label) => { if (!disposed) getUi()?.setHudHeldTool(label) },
+    setPrimaryWeapons: (meleeLabel, rangedLabel) => { if (!disposed) getUi()?.setHudPrimaryWeapons(meleeLabel, rangedLabel) },
     setPlayerNeeds: (needs) => { if (!disposed) getUi()?.setHudPlayerNeeds(needs) },
     setAiming: (aiming, targetScreen) => { if (!disposed) getUi()?.setHudAiming(aiming, targetScreen ?? null) },
     setCharacterStats: (stats) => { if (!disposed) getUi()?.setCharacterStats(stats) },

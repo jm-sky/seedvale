@@ -26,6 +26,27 @@ useTouchScroll(panel)
       <p class="text-sm leading-relaxed opacity-90">
         {{ ui.flavorDialog.line }}
       </p>
+      <div
+        v-if="ui.flavorDialog.actions.length"
+        class="mt-3 flex flex-col gap-1.5"
+      >
+        <button
+          v-for="action in ui.flavorDialog.actions"
+          :key="action.label"
+          type="button"
+          class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-left text-[13px] hover:bg-white/20 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-white/10"
+          :disabled="!action.enabled"
+          @click="closeFlavorDialog(); action.run()"
+        >
+          {{ action.label }}
+          <span
+            v-if="!action.enabled && action.reasonLabel"
+            class="block text-[11px] text-red-300"
+          >
+            {{ action.reasonLabel }}
+          </span>
+        </button>
+      </div>
       <div class="mt-3 text-[11px] opacity-60">
         Esc / E — zamknij
       </div>

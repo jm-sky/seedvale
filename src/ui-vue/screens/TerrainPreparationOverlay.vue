@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { ui } from '../store'
+import {
+  abortTerrainPreparation,
+  confirmTerrainPreparation,
+  growTerrainPreparation,
+  lowerTerrainPreparation,
+  raiseTerrainPreparation,
+  shrinkTerrainPreparation,
+  ui,
+} from '../store'
 </script>
 
 <template>
@@ -7,16 +15,69 @@ import { ui } from '../store'
     v-if="ui.terrainPreparationPreview.visible"
     class="pointer-events-none fixed inset-x-0 bottom-24 z-[12] flex justify-center"
   >
-    <div class="relative flex flex-col items-center gap-1 rounded-lg bg-panel px-4.5 py-2 text-[15px] text-ink [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
+    <div class="pointer-events-auto relative flex flex-col items-center gap-1.5 rounded-lg bg-panel px-4.5 py-2 text-[15px] text-ink [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
       <div class="flex items-center gap-3">
-        <span>Rozmiar: {{ ui.terrainPreparationPreview.sizeLabel }}</span>
-        <span>Wysokość: {{ ui.terrainPreparationPreview.heightLabel }}</span>
+        <span class="flex items-center gap-1">
+          Rozmiar: {{ ui.terrainPreparationPreview.sizeLabel }}
+          <button
+            type="button"
+            class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-2 text-[13px] leading-6 hover:bg-white/20"
+            aria-label="Zmniejsz rozmiar"
+            @click="shrinkTerrainPreparation"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-2 text-[13px] leading-6 hover:bg-white/20"
+            aria-label="Zwiększ rozmiar"
+            @click="growTerrainPreparation"
+          >
+            +
+          </button>
+        </span>
+        <span class="flex items-center gap-1">
+          Wysokość: {{ ui.terrainPreparationPreview.heightLabel }}
+          <button
+            type="button"
+            class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-2 text-[13px] leading-6 hover:bg-white/20"
+            aria-label="Obniż"
+            @click="lowerTerrainPreparation"
+          >
+            ,
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-2 text-[13px] leading-6 hover:bg-white/20"
+            aria-label="Podwyższ"
+            @click="raiseTerrainPreparation"
+          >
+            .
+          </button>
+        </span>
       </div>
       <div
         v-if="!ui.terrainPreparationPreview.valid && ui.terrainPreparationPreview.reasonLabel"
         class="text-[13px] text-red-300"
       >
         {{ ui.terrainPreparationPreview.reasonLabel }}
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-3 py-1 text-[13px] hover:bg-white/20 disabled:cursor-default disabled:opacity-40"
+          :disabled="!ui.terrainPreparationPreview.valid"
+          @click="confirmTerrainPreparation"
+        >
+          Zatwierdź [E]
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-3 py-1 text-[13px] hover:bg-white/20"
+          @click="abortTerrainPreparation"
+        >
+          Anuluj [Esc]
+        </button>
       </div>
       <div class="text-[12px] text-ink/70">
         [Scroll]/[+/-] rozmiar · [,/.] wysokość · [E] zatwierdź · [Esc] anuluj

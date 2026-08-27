@@ -5,7 +5,7 @@ import { abortRest, finishTimeSkipHide, ui } from '../store'
 <template>
   <div
     v-if="ui.timeSkip.visible"
-    class="pointer-events-none fixed inset-0 flex items-center justify-center"
+    class="pointer-events-none fixed inset-0 z-[12] flex items-center justify-center"
   >
     <div
       class="pointer-events-none absolute inset-0 bg-black/10 opacity-0 backdrop-blur-[2px] backdrop-grayscale backdrop-brightness-90 transition-opacity duration-400 ease-in-out"
