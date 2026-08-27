@@ -1,199 +1,279 @@
-# World-003 — Background Initialization Timing Discovery
+# World-003 — GLTF Loading Contention Discovery
 
 **Date:** 2026-08-27  
 **Related plan:** `docs/plans/world-003-faster-application-startup.md`  
-**Commit:** `e3b183d79600fafc14ac64507b1963633ca6cb6d`
+**Related:** `docs/plans/implementation-notes/world-003-faster-application-startup-implementation-notes.md`
 
 ## Discovery
 
-After implementing the deferred world initialization from `world-003`, the boot-time instrumentation was extended to measure the three background operations independently:
+The large background initialization cost initially appeared to be caused by fauna creation and home settlement initialization.
 
-- `buildFauna()`
-- `preloadHeldToolModels()`
-- `preloadItemGlbModels()`
-
-The new browser measurement shows that the initial playable path is now substantially shorter, but all three background operations take approximately **23 seconds**.
-
-## Measured results
-
-### Critical path
+Additional instrumentation narrowed the cost to:
 
 ```text
-[BootMark][createApp] createRenderStack: 17 ms
-
-[BootMark][buildWorldSystems] createWaterMirror: 0 ms
-[BootMark][buildWorldSystems] buildChunkManager: 124 ms
-[BootMark][buildWorldSystems] waitForChunks: 1198 ms
-[BootMark][buildWorldSystems] createWorldContext: 0 ms
-[BootMark][buildWorldSystems] buildOcean: 1 ms
-[BootMark][buildWorldSystems] buildResourceDeposits: 0 ms
-[BootMark][buildWorldSystems] createPlayerGardens: 0 ms
-[BootMark][buildWorldSystems] createFoodSourceHooks: 0 ms
-[BootMark][buildWorldSystems] createHuntingHooks: 0 ms
-[BootMark][buildWorldSystems] buildSettlementsManager: 375 ms
-[BootMark][buildWorldSystems] droppedItems+placed+wells+terrainPrep: 1 ms
-[BootMark][buildWorldSystems] createLargeCaves: 337 ms
-
-[BootMark][createApp] createWorldBundle: 2455 ms
-[BootMark][createApp] createWorldContext: 0 ms
-[BootMark][createApp] PlayerController.create: 466 ms
-[BootMark][createApp] createMinimap: 0 ms
+createFauna
+└── loadFaunaTemplates
+    └── loadGltfAsset
+        └── loadCached
+            └── GLTFLoader.loadAsync()
 ```
 
-The new `createWorldBundle` critical phase takes:
+The important finding is that the cost does **not** appear to be caused by the specific bear model.
 
-**2455 ms**
-
-`PlayerController.create()` adds another:
-
-**466 ms**
-
-The world is therefore reaching the playable stage in roughly **2.5–3 seconds**, rather than waiting for the full world initialization.
-
-## Background phase
-
-A later measurement reports:
+## Evidence: first bear model
 
 ```text
-[BootMark][buildWorldSystems] background:buildFauna: 22754 ms
-[BootMark][buildWorldSystems] background:preloadHeldToolModels: 22954 ms
-[BootMark][buildWorldSystems] background:preloadItemGlbModels: 22966 ms
-[BootMark][buildWorldSystems] background:fauna+preloads: 22970 ms
-[BootMark][buildWorldSystems] background:homeReady: 2278 ms
-[BootMark][buildWorldSystems] background:itemSpawners+dryingRacks+hives: 3 ms
+[BootMark][loadFaunaTemplates] loadGltfAsset:/models/fauna/bear.glb: 24436 ms
 ```
 
-### Summary
-
-| Operation | Time |
-|---|---:|
-| `createWorldBundle` critical path | **2455 ms** |
-| `waitForChunks` | 1198 ms |
-| `buildSettlementsManager` | 375 ms |
-| `createLargeCaves` | 337 ms |
-| `PlayerController.create` | 466 ms |
-| `buildFauna` | **22.75 s** |
-| `preloadHeldToolModels` | **22.95 s** |
-| `preloadItemGlbModels` | **22.97 s** |
-| `background:fauna+preloads` | **22.97 s** |
-| `homeReady` | 2.28 s |
-| item spawners/racks/hives | 3 ms |
-
-## Interpretation
-
-The `world-003` scheduling change appears to have achieved its primary goal: the approximately 23-second background work is no longer blocking initial world availability.
-
-The current critical path is approximately:
+Further instrumentation showed:
 
 ```text
-createWorldBundle
-    ~2.5 s
-        ↓
-PlayerController.create
-    ~0.5 s
-        ↓
-playable world
+[BootMark][loadFaunaTemplates] loadGltfAsset:/models/fauna/bear.glb: ~24.4 s
 ```
 
-The previous `createWorldBundle` baseline was approximately **6.5 seconds**, so the deferred initialization removed several seconds of work from the boot critical path.
-
-## Important observation
-
-The three expensive background operations finish almost simultaneously:
+The file itself is small:
 
 ```text
-buildFauna                  22.754 s
-preloadHeldToolModels       22.954 s
-preloadItemGlbModels        22.966 s
-background cluster           22.970 s
+bear.glb: 704 KB
 ```
 
-This is significant.
-
-Because the operations are started concurrently through `Promise.all()`, the measurements do **not** indicate that one of these operations simply blocks the other two.
-
-Instead, the nearly identical ~23-second durations suggest that they may share a common expensive dependency or resource, or that several expensive operations are competing for the same underlying resources.
-
-At this point there is not enough evidence to identify the root cause.
-
-Possible areas include:
-
-- GLB/model loading or decoding,
-- shared asset/cache initialization,
-- browser/network/cache behavior,
-- CPU contention,
-- work performed internally by `buildFauna()`,
-- shared terrain or spawn-point processing,
-- interaction between fauna initialization and model loading.
-
-These are hypotheses only and must not be treated as established causes.
-
-## What is not the bottleneck
-
-The following measurements do not currently justify further optimization:
+`gltf-transform inspect` reported:
 
 ```text
-homeReady                         2.278 s
-itemSpawners+dryingRacks+hives        3 ms
+generator: obj2gltf
+extensionsUsed: none
+
+vertices: 1,334
+indices: u16
+mesh size: 46.68 KB
+
+texture:
+  2048 × 2048
+  PNG
+  671.79 KB
+
+animations: none
 ```
 
-The home settlement is no longer a major critical-path cost.
+There is nothing in the asset size or geometry that obviously explains a ~24–31 second load.
 
-The item spawner/drying rack/beehive phase is effectively negligible once `homeReady` completes.
+## Evidence: second bear model
 
-Similarly, the currently measured critical-path constructors such as:
+A completely different bear model was substituted:
 
 ```text
-createWorldContext
-buildOcean
-buildResourceDeposits
-createPlayerGardens
-createFoodSourceHooks
-createHuntingHooks
+/models/fauna/bear-2.glb
 ```
 
-are effectively free at the measured resolution.
-
-## Current conclusion
-
-**Do not optimize the ~23-second background work blindly.**
-
-The next investigation should focus first on `buildFauna()` and establish where its **22.75 seconds** are actually spent.
-
-Add focused instrumentation inside `buildFauna()` to distinguish at least:
+The result was:
 
 ```text
-buildFauna
-├── preparation / population calculation
-├── asset/model loading
-├── animal creation
-├── terrain / spawn-point processing
-└── remaining work
+[BootMark][loadFaunaTemplates] loadGltfAsset:/models/fauna/bear-2.glb: 25772 ms
+[BootMark][loadFaunaTemplates] prepareProp:/models/fauna/bear-2.glb: 0 ms
 ```
 
-The exact breakdown should follow the actual implementation rather than introducing artificial categories.
+Therefore:
 
-After that, separately investigate why:
+> Replacing the bear model does not remove the ~25 second delay.
+
+This strongly reduces the likelihood that the original `bear.glb` itself is corrupt or unusually expensive.
+
+## `loadGltfAsset()` analysis
+
+The function itself performs almost no work:
+
+```ts
+export async function loadGltfAsset(url: string): Promise<GltfAsset> {
+  const asset = await loadCached(url)
+  return {
+    root: asset.root,
+    animations: asset.animations,
+    clone: () => cloneSkinned(asset.root) as Group,
+  }
+}
+```
+
+The actual asynchronous operation is inside:
+
+```ts
+pending = loader.loadAsync(url).then((gltf) => {
+  ...
+})
+```
+
+The loader is configured as:
+
+```ts
+const loader = new GLTFLoader()
+loader.setMeshoptDecoder(MeshoptDecoder)
+```
+
+The bear asset does not use Meshopt, so Meshopt decoding is not currently considered the primary explanation for the bear delay.
+
+## Network observation
+
+Browser DevTools showed that the GLB itself transfers quickly.
+
+After another asset such as:
 
 ```text
-preloadHeldToolModels()   ≈ 23 s
-preloadItemGlbModels()    ≈ 23 s
+wood_pile.glb
 ```
 
-also take approximately the same amount of time.
+many:
 
-## Decision
+```text
+blob:http://localhost:5577/...
+```
 
-Do **not**:
+resources appear.
 
-- change `waitForChunks(homeChunks())` yet;
-- change the deferred initialization architecture;
-- remove the model preloads yet;
-- rewrite fauna initialization;
-- add workers;
-- introduce timers or arbitrary delays;
-- make speculative optimizations.
+Individual blob operations are fast, but there are long pauses between them.
 
-First obtain a finer-grained measurement of `buildFauna()`.
+This suggests that the ~25 second measurement is not simply HTTP transfer time.
 
-The current evidence indicates that **world boot responsiveness has already improved significantly**, while the remaining ~23-second cost is now an asynchronous background-performance investigation rather than a startup critical-path problem.
+The delay is occurring during the browser-side GLTF loading / decoding / asset processing pipeline, or because that pipeline is competing with other work on the main thread.
+
+## Concurrent initialization
+
+At the same time, `loadFaunaTemplates()` loads all fauna concurrently:
+
+```ts
+Promise.all(
+  Object.entries(FAUNA_URLS).map(...)
+)
+```
+
+The world startup also starts other asset-heavy background work concurrently:
+
+```text
+fauna
+preloadHeldToolModels
+preloadItemGlbModels
+homeReady
+```
+
+The measurements show that these operations frequently finish at approximately the same time:
+
+```text
+buildFauna                    ~25.9 s
+preloadHeldToolModels        ~26.1 s
+preloadItemGlbModels         ~26.1 s
+fauna+preloads               ~26.1 s
+```
+
+This is suspicious because the operations are independent at the application level but ultimately rely on browser/main-thread asset processing.
+
+## Settlement measurements
+
+The settlement markers also showed apparently large times:
+
+```text
+buildSettlementProps: 28776 ms
+buildSettlementProps: 29222 ms
+buildSettlementProps: 29620 ms
+```
+
+while the complete home initialization was only:
+
+```text
+background:homeReady: 2723 ms
+```
+
+This demonstrates that individual elapsed-time markers can overlap when multiple asynchronous tasks are running concurrently.
+
+Therefore the large `buildSettlementProps` measurements should **not** be interpreted as 29 seconds of exclusive settlement CPU time.
+
+The same principle applies to the fauna measurements.
+
+## Current hypothesis
+
+The current leading hypothesis is:
+
+> Multiple GLTF/asset loading operations are competing for browser/main-thread resources, causing long elapsed times for individual `loadAsync()` promises even though the assets themselves are small and transfer quickly.
+
+The exact source of the contention is not yet proven.
+
+Possible mechanisms include:
+
+- image decoding,
+- GLTF parsing,
+- browser Blob/Image processing,
+- GPU texture preparation,
+- synchronous work performed by Three.js loaders,
+- multiple simultaneous asset loads,
+- main-thread contention with settlement/world initialization.
+
+These are hypotheses, not confirmed causes.
+
+## Important conclusion
+
+The investigation has ruled out:
+
+- large `bear.glb` file size,
+- excessive bear geometry,
+- `prepareProp()`,
+- the original bear model being uniquely responsible.
+
+The remaining ~25 second delay is associated with:
+
+```text
+GLTFLoader.loadAsync()
+```
+
+under the current highly concurrent startup workload.
+
+## Next diagnostic experiment
+
+The next test is an A/B comparison.
+
+### A — current implementation
+
+Fauna remains loaded concurrently:
+
+```text
+Promise.all(...)
+```
+
+Measure:
+
+```text
+loadFaunaTemplates
+individual animal loads
+background preload operations
+homeReady
+```
+
+### B — sequential fauna loading
+
+Temporarily load fauna one animal at a time:
+
+```text
+bear
+→ deer
+→ wolf
+→ ...
+```
+
+No loader, cache, asset or world-system changes should be made for this experiment.
+
+The purpose is to determine whether reducing GLTF concurrency changes the observed timings.
+
+### Interpretation
+
+If sequential loading significantly reduces individual `loadGltfAsset()` times or allows other background tasks to complete much earlier, this will provide strong evidence for **asset-loading contention**.
+
+If the timings remain approximately the same, investigation should move deeper into the `GLTFLoader` / browser decoding path.
+
+## Status
+
+**Diagnosis:** narrowed to GLTF asset loading / runtime contention.
+
+**Confirmed:** the bear model itself is not the primary explanation.
+
+**Not yet confirmed:** the exact operation responsible for the ~25 second delay.
+
+**Next step:** controlled parallel-vs-sequential GLTF loading experiment.
+
+No optimization should be committed until this experiment identifies the actual bottleneck.

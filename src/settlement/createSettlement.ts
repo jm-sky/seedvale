@@ -26,6 +26,7 @@ import { disposeObject3D } from '../assets/loadGltf'
 import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { isSystemEnabled } from '../debug/debugMode'
 import { type SettlementEconomy, WOODSHED_DEVELOPMENT } from '../economy'
+import { useBootMark } from '../shared/bootMark'
 import {
   copyVec3,
   createInteractionQueue,
@@ -275,6 +276,8 @@ export async function createSettlement(
    *  don't pass one in. */
   relations: NpcRelationships = createNpcRelationships(),
 ): Promise<Settlement> {
+  const { bootMark, bootMarkEnd } = useBootMark('createSettlement')
+
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
   // livestock spawn below and the night-fire ignition roll further down need
@@ -288,27 +291,34 @@ export async function createSettlement(
   const roadSegments = def.isHome && roadCtx
     ? segmentsNear(site.x, site.z, localRadius * 2, roadCtx)
     : []
-  const { group, landmarks, houseLights, villageTorches, houseAssemblies } = await buildSettlementProps(
-    site,
-    sampleHeight,
-    waterLevel,
-    localRadius,
-    seed,
-    def.clearings,
-    def.size,
-    def.isHome,
-    def.foodSourceType,
-    roadSegments,
-    def.plan,
-    roadCtx
-      ? {
-          sampleHeight,
-          waterLevel,
-          sampleContinentalness: roadCtx.terrainSamplers.sampleContinentalness,
-          coastThreshold: roadCtx.region.coastThreshold,
-        }
-      : { sampleHeight, waterLevel },
-  )
+  bootMark('buildSettlementProps')
+  let propsResult: Awaited<ReturnType<typeof buildSettlementProps>>
+  try {
+    propsResult = await buildSettlementProps(
+      site,
+      sampleHeight,
+      waterLevel,
+      localRadius,
+      seed,
+      def.clearings,
+      def.size,
+      def.isHome,
+      def.foodSourceType,
+      roadSegments,
+      def.plan,
+      roadCtx
+        ? {
+            sampleHeight,
+            waterLevel,
+            sampleContinentalness: roadCtx.terrainSamplers.sampleContinentalness,
+            coastThreshold: roadCtx.region.coastThreshold,
+          }
+        : { sampleHeight, waterLevel },
+    )
+  } finally {
+    bootMarkEnd('buildSettlementProps')
+  }
+  const { group, landmarks, houseLights, villageTorches, houseAssemblies } = propsResult
   scene.add(group)
   // Plan 157 — one bounded walk of this settlement's own root, not the whole
   // scene: captures every house lamp, village torch, and the settlement's
@@ -396,22 +406,36 @@ export async function createSettlement(
   // same way `ownerHouseId` already is (`homePlaceId(def.id, i)`).
   const householdByHomeId = new Map(households.map((h) => [h.homeId, h]))
 
-  const livestock = await spawnLivestock(
-    scene,
-    sampleHeight,
-    waterLevel,
-    collidersNear,
-    landmarks.homes,
-    def.size,
-    settlementSeed,
-    def.id,
-    onAnimalDeath,
-    householdByHomeId,
-  )
+  bootMark('spawnLivestock')
+  let livestock: Awaited<ReturnType<typeof spawnLivestock>>
+  try {
+    livestock = await spawnLivestock(
+      scene,
+      sampleHeight,
+      waterLevel,
+      collidersNear,
+      landmarks.homes,
+      def.size,
+      settlementSeed,
+      def.id,
+      onAnimalDeath,
+      householdByHomeId,
+    )
+  } finally {
+    bootMarkEnd('spawnLivestock')
+  }
 
   type SignpostInstance = { labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
   const signposts: SignpostInstance[] = []
+  // Sale-plot "NA SPRZEDAŻ" signs (plan 129) — one per unowned `landmarks
+  // .landPlots` entry, same signpost prop + CSS2D label idiom as the
+  // namepost/directional signs below. Skipped entirely for an already-owned
+  // plot so it never comes back after a stream-out/stream-in (plan 129 §14.1).
+  type LandPlotSignInstance = SignpostInstance & { plotId: string, prop: Group }
+  const landPlotSigns: LandPlotSignInstance[] = []
 
+  bootMark('signposts')
+  try {
   // Name plaque by the well — reuses signpost label fade/dispose path.
   {
     const nameX = landmarks.well.x + 1.35
@@ -475,12 +499,6 @@ export async function createSettlement(
     }
   }
 
-  // Sale-plot "NA SPRZEDAŻ" signs (plan 129) — one per unowned `landmarks
-  // .landPlots` entry, same signpost prop + CSS2D label idiom as the
-  // namepost/directional signs above. Skipped entirely for an already-owned
-  // plot so it never comes back after a stream-out/stream-in (plan 129 §14.1).
-  type LandPlotSignInstance = SignpostInstance & { plotId: string, prop: Group }
-  const landPlotSigns: LandPlotSignInstance[] = []
   for (const plot of landmarks.landPlots) {
     if (isLandPlotOwned?.(def.id, plot.plotId)) continue
     const prop = createSignpost()
@@ -502,6 +520,9 @@ export async function createSettlement(
       label,
       position: plot.position.clone(),
     })
+  }
+  } finally {
+    bootMarkEnd('signposts')
   }
 
   // Interaction queues (plan 079): well drink first; garden/stall later reuse
@@ -554,7 +575,10 @@ export async function createSettlement(
     }))
   })
 
-  const agents = await Promise.all(
+  bootMark('npcCreation')
+  let agents: NpcAgent[]
+  try {
+  agents = await Promise.all(
     flatMembers.map(async ({ home, household, member, familyMembers }, i) => {
       const workplace = workplaceFor(def.id, member.character.role, landmarks, i)
       const npcId = `${def.id}:npc:${i}`
@@ -602,6 +626,9 @@ export async function createSettlement(
       return agent
     }),
   )
+  } finally {
+    bootMarkEnd('npcCreation')
+  }
 
   const spawn = settlementSpawnPoint(def, sampleHeight)
 

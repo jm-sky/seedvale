@@ -312,11 +312,16 @@ type FaunaTemplate = GltfAsset
 async function loadFaunaTemplates(): Promise<
   Partial<Record<AnimalKind, FaunaTemplate>>
 > {
+  const { bootMark, bootMarkEnd } = useBootMark('loadFaunaTemplates')
   const entries = await Promise.all(
     (Object.entries(FAUNA_URLS) as [AnimalKind, string][]).map(async ([kind, url]) => {
       try {
+        bootMark(`loadGltfAsset:${url}`)
         const asset = await loadGltfAsset(url)
+        bootMarkEnd(`loadGltfAsset:${url}`)
+        bootMark(`prepareProp:${url}`)
         prepareProp(asset.root, ANIMAL_DEFS[kind].modelHeight)
+        bootMarkEnd(`prepareProp:${url}`)
         return [kind, asset] as const
       } catch (err) {
         console.warn(`[fauna] failed to load ${url}, capsule fallback`, err)
