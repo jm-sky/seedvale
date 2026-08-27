@@ -74,8 +74,41 @@ const FOOTSTEP_SPRINT_INTERVAL = 0.28
 
 type PlayerPose = 'stand' | 'crouch' | 'lie'
 
+/*
+  Idle:
+   - normal
+   - tired
+   - with torch
+   - with melee weapon
+   - with bow
+
+  Walk:
+   - normal
+   - run
+   - crouch
+   - with torch
+   - with melee weapon
+   - with bow
+
+  Combat:
+    - sword slash
+    - bow aim
+    - bow release
+
+  Other:
+    - jump
+    - fall
+    - lay down
+    - stand up
+    - lying down
+    - die
+    - swim
+    - eat
+    - drink
+*/
+
 /** Quaternius Ultimate Modular Men — distinct from the NPC roster. */
-export const PLAYER_MODEL_URL = '/models/characters/Adventurer.glb'
+export const PLAYER_MODEL_URL = '/models/characters/Hero.glb'
 
 export type HeightSampler = (x: number, z: number) => number
 /** `ChunkManager.collidersNear` (plan 097 §2.2) — kept as its own alias
@@ -735,7 +768,7 @@ export class PlayerController {
   ): THREE.AnimationAction | null {
     if (!this.mixer) return null
     for (const name of names) {
-      const clip = animations.find((c) => c.name === name)
+      const clip = animations.find((c) => c.name.toLocaleLowerCase() === name.toLocaleLowerCase())
       if (clip) return this.mixer.clipAction(clip)
     }
     return null
