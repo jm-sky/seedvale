@@ -108,7 +108,7 @@ def main():
         ObjectService,
     )
 
-    from bl_ext.extensions_blender_org.mpfb.services.properties import (
+    from bl_ext.extensions_blender_org.mpfb.entities.objectproperties import (
         GeneralObjectProperties,
     )
 
