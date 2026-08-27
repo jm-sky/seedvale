@@ -1,11 +1,19 @@
+# Python
+.venv/
+__pycache__/
+
+# Temp & Tools
+_temp/
+_tools/
+trace_processor
+docs/refs/
+
+# JavaScript
 node_modules
 dist
 *.local
-CLAUDE.local.md
 .DS_Store
+
+# Other
 .env
-_temp/
-_tools/
-docs/refs/
-trace_processor
-__pycache__/
+CLAUDE.local.md
