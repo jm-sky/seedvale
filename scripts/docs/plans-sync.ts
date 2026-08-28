@@ -65,6 +65,9 @@ const isSupportFile = (file: string): boolean =>
   file.endsWith(UPDATED_REVIEW_SUFFIX) ||
   file.endsWith(REVIEW_SUFFIX)
 
+const isLegacyPlanFile = (file: string): boolean =>
+  LEGACY_PLAN_FILE_RE.test(file) && !isSupportFile(file)
+
 const parsePlanFile = (file: string): PlanInfo | null => {
   if (isSupportFile(file) || isLegacyPlanFile(file)) return null
 
@@ -86,9 +89,6 @@ const parsePlanFile = (file: string): PlanInfo | null => {
     id: Number(id),
   }
 }
-
-const isLegacyPlanFile = (file: string): boolean =>
-  LEGACY_PLAN_FILE_RE.test(file) && !isSupportFile(file)
 
 const extractHeaderBlock = (content: string): string => {
   const idx = content.search(/^##\s/m)
@@ -283,8 +283,7 @@ const getExistingFiles = (lines: string[], lastRowIdx: number, separatorIdx: num
   const existingFiles = new Set<string>()
 
   for (let i = separatorIdx + 1; i <= lastRowIdx; i++) {
-    const match = lines[i].match(/`([^`]+\.md)`/)
-
+    const match = lines[i].match(/\`([^\`]+\.md)\`/)
     if (match) {
       existingFiles.add(match[1])
     }
@@ -322,20 +321,19 @@ const syncImplementationNotesMarkers = (
   return lines.map((line, idx) => {
     if (idx < startIdx || idx > endIdx) return line
 
-    const match = line.match(/^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/)
+    const match = line.match(/^\|\s*(💡|◼️)?\s*`([^\`]+\.md)`\s*\|/)
 
     if (!match) return line
 
-    const file = match[1]
+    const file = match[2]
 
     if (!planFiles.has(file)) return line
 
     const hasNotes = hasImplementationNotes(file, implementationNotesFiles)
-
     const marker = hasNotes ? '💡' : '◼️'
 
     return line.replace(
-      /^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/,
+      /^\|\s*(💡|◼️)?\s*`([^\`]+\.md)`\s*\|/,
       `| ${marker} \`${file}\` |`,
     )
   })
@@ -347,7 +345,7 @@ const removeCompletedPlansFromPlannedSection = async (
   const { separatorIdx, lastRowIdx } = findPlannedTableRange(lines)
 
   for (let i = lastRowIdx; i > separatorIdx; i--) {
-    const match = lines[i].match(/^\|\s*`([^`]+\.md)`\s*\|/)
+    const match = lines[i].match(/^\|\s*(?:💡|◼️)?\s*`([^\`]+\.md)`\s*\|/)
 
     if (!match) continue
 
@@ -418,7 +416,6 @@ const updateNextPlanIds = (
     .toSorted()
     .map(domain => {
       const nextId = nextPlanIds.get(domain)
-
       return `- ${domain}: \`${String(nextId).padStart(3, '0')}\``
     })
 
@@ -472,9 +469,7 @@ const main = async () => {
   let lines = readmeContent.split('\n')
 
   const { lastRowIdx, separatorIdx } = findPlannedTableRange(lines)
-
   const existingFiles = getExistingFiles(lines, lastRowIdx, separatorIdx)
-
   const missing = plannedFiles.filter(file => !existingFiles.has(file))
 
   lines = await handleMissingPlans(missing, implementationNotesFiles, lines, lastRowIdx)
@@ -486,7 +481,6 @@ const main = async () => {
 
   if (nextContent !== readmeContent) {
     await writeFile(README_PATH, nextContent)
-
     console.log(`Updated ${README_PATH}: +${missing.length} planned row(s)`)
   } else {
     console.log(`${README_PATH} already up to date`)
