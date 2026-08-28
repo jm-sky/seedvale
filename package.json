@@ -15,6 +15,8 @@
     "plans:without-notes": "tsx scripts/docs/planned-plans-without-notes.ts",
     "plans:sync": "tsx scripts/docs/plans-sync.ts",
     "assets:report": "tsx scripts/docs/generate-local-assets-report.ts",
+    "docs:map-audit": "tsx scripts/docs/docs-map-audit.ts",
+    "docs:navigation-candidates": "tsx scripts/docs/docs-navigation-candidates.ts",
     "docs:readme-index": "tsx scripts/docs/docs-readme-index.ts",
     "docs:symbol-index": "tsx scripts/docs/docs-symbol-index.ts",
     "docs:dependency-map": "tsx scripts/docs/docs-dependency-map.ts",
