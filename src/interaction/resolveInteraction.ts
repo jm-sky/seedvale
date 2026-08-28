@@ -83,14 +83,16 @@ function capitalize(text: string): string {
  *  (plan 176), its maintenance action also handled directly in
  *  `gameLoop.ts`/`placementActions.ts`; `terrainPreparation` (plan
  *  `world-terrain-002`), same `Inventory`-access reason as `playerWell`,
- *  handled directly in `gameLoop.ts`/`terrainPreparationActions.ts`) to the right
- *  `QuestManager` call, falling back to flavor text when no active quest
- *  cares. `well` still goes through here for its flavor line/quest hook —
- *  `gameLoop.ts` additionally handles its own drink/fill mechanics (plan 106)
- *  alongside the call. A *completed* player-built well becomes a plain
+ *  handled directly in `gameLoop.ts`/`terrainPreparationActions.ts`; `hay`
+ *  (plan 168 follow-up), same reason — sleeping needs `RestActions`/movement
+ *  access this module doesn't have, handled directly in `gameLoop.ts`) to the
+ *  right `QuestManager` call, falling back to flavor text when no active
+ *  quest cares. `well` still goes through here for its flavor line/quest hook
+ *  — `gameLoop.ts` additionally handles its own drink/fill mechanics (plan
+ *  106) alongside the call. A *completed* player-built well becomes a plain
  *  `well` candidate (see `app/interactables.ts`), so it goes through here too. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

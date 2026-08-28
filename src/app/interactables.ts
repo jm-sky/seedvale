@@ -459,6 +459,19 @@ export function buildInteractables(
       })
     }
 
+    // Plan 168 follow-up — the settlement's hay fallback as a real `[E]`
+    // target, anchored on the exact same garden landmark the lodging
+    // resolver's `collectHayCandidate` already uses (never a second
+    // coordinate for "where the hay is").
+    if (withinRange(settlement.landmarks.garden.x, settlement.landmarks.garden.z, playerPos, GAZE_RANGE)) {
+      list.push({
+        kind: 'hay',
+        position: { x: settlement.landmarks.garden.x, z: settlement.landmarks.garden.z },
+        promptLabel: '[E] Nocuj w sianie',
+        settlementId: settlement.id,
+      })
+    }
+
     for (const house of settlement.landmarks.houses) {
       if (!withinRange(house.position.x, house.position.z, playerPos, GAZE_RANGE)) continue
       list.push({

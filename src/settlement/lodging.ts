@@ -72,11 +72,32 @@ export function lodgingPlaceLabel(option: LodgingOption): string {
     : LODGING_TYPE_LABEL[option.type]
 }
 
-/** What the paid-lodging confirmation UI needs — never the raw
- *  `LodgingOption` itself, so the Vue side can't be tempted to re-derive
- *  price/availability on its own (implementation notes §18). */
-export type LodgingConfirmView = {
-  placeLabel: string
-  price: number
-  quality: LodgingQuality
+/** True when a candidate needs the existing pay-then-arm-movement flow
+ *  (`restActions.ts`'s confirm step) rather than arming movement directly —
+ *  the one place this money gate is decided (implementation notes §11). */
+export function lodgingRequiresPayment(option: LodgingOption): boolean {
+  return option.type === 'paid' && (option.price ?? 0) > 0
+}
+
+const LODGING_QUALITY_LABEL: Record<LodgingQuality, string> = {
+  high: 'Wysoka jakość',
+  normal: 'Normalna jakość',
+  low: 'Niska jakość',
+}
+
+/** Button label for the "Nocuj w mieście" choice panel (plan 168 follow-up)
+ *  — place name plus either its price (paid) or quality (everything else). */
+export function lodgingChoiceLabel(option: LodgingOption): string {
+  const place = lodgingPlaceLabel(option)
+  return lodgingRequiresPayment(option)
+    ? `${place} — ${option.price}× moneta`
+    : `${place} — ${LODGING_QUALITY_LABEL[option.quality]}`
+}
+
+/** Stable id for a settlement's hay-fallback `LodgingOption` — shared by the
+ *  resolver (`collectHayCandidate`) and the hay bale's direct `[E]`
+ *  interaction (`RestActions.sleepInHay`) so both resolve to the exact same
+ *  candidate, never a second id scheme. */
+export function hayLodgingId(settlementId: string): string {
+  return `${settlementId}:hay`
 }

@@ -287,6 +287,10 @@ export type GameLoopDeps = {
   consumeItem?: (kind: ItemKind) => void
   startTentRest: (id: string) => void
   packTent: (id: string) => void
+  /** `[E]` on a hay bale (plan 168 follow-up) — sleeps directly in it via
+   *  the same lodging commit path "Nocuj w mieście" uses, skipping Quick
+   *  Actions entirely. */
+  sleepInHay?: (settlementId: string) => void
   /** Arm / disarm / pick up a placed animal trap (plan 141 §9). */
   armTrap: (id: string) => void
   disarmTrap: (id: string) => void
@@ -413,7 +417,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
-    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
+    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, pickUpContainer, workOnWell, describeWellWork,
     tickTerrainPreparationPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, onTerrainPreparationWorkFinished,
@@ -1239,6 +1243,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'tent') {
         if (interactPressed) startTentRest(target.id)
         if (altInteractPressed) packTent(target.id)
+      } else if (target?.kind === 'hay') {
+        if (interactPressed) sleepInHay?.(target.settlementId)
       } else if (target?.kind === 'trap') {
         if (interactPressed) {
           if (target.state === 'active') disarmTrap(target.id)

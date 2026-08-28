@@ -3,6 +3,7 @@ import type { RelationLevel } from '../quests/quests'
 import type { Settlement } from './createSettlement'
 import type { LodgingOption } from './lodging'
 import type { SettlementHouseBed } from './props'
+import { hayLodgingId, lodgingRequiresPayment } from './lodging'
 import { homeIndexFromPlaceId } from './places'
 
 /**
@@ -108,7 +109,7 @@ function collectPaidCandidates(_settlement: LodgingSettlementInput): LodgingOpti
 function collectHayCandidate(settlement: LodgingSettlementInput): LodgingOption | null {
   if (!settlement.haySpot) return null
   return {
-    id: `${settlement.id}:hay`,
+    id: hayLodgingId(settlement.id),
     type: 'hay',
     settlementId: settlement.id,
     position: settlement.haySpot,
@@ -183,4 +184,27 @@ export function resolveBestLodging(
     }
   }
   return best
+}
+
+export type LodgingSelection =
+  | { kind: 'unavailable' }
+  | { kind: 'confirm', option: LodgingOption }
+  | { kind: 'walk', option: LodgingOption }
+
+/**
+ * Pure classifier for a player's pick from the "Nocuj w mieście" choice
+ * panel (or the hay bale's direct `[E]`, plan 168 follow-up) — always
+ * evaluated against a freshly collected candidate list, never a stale
+ * snapshot from when the panel was built (implementation notes §4/§8/§11).
+ * `restActions.ts` is the only caller that actually commits state; kept pure
+ * here so the classification itself stays unit-testable without a
+ * `PlayerActionContext`.
+ */
+export function selectLodgingFromCandidates(
+  candidates: readonly LodgingOption[],
+  optionId: string,
+): LodgingSelection {
+  const option = candidates.find((c) => c.id === optionId)
+  if (!option) return { kind: 'unavailable' }
+  return lodgingRequiresPayment(option) ? { kind: 'confirm', option } : { kind: 'walk', option }
 }

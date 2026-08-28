@@ -1,4 +1,4 @@
-import type { LodgingConfirmView, LodgingOption } from '../../settlement/lodging'
+import type { LodgingOption } from '../../settlement/lodging'
 import type { BusyOverlay } from '../../ui/createBusyOverlay'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import type { TimeSkipOverlay } from '../../ui/createTimeSkipOverlay'
@@ -7,10 +7,22 @@ import { canCancelRestProgress } from '../../items/items'
 import { tentRestPose } from '../../items/tentProp'
 import { restoreNeedsFromSleep } from '../../player/PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD } from '../../player/PlayerSkills'
-import { LODGING_ARRIVE_TOLERANCE, lodgingPlaceLabel, lodgingRestQuality } from '../../settlement/lodging'
-import { collectLodgingCandidates, resolveBestLodging, settlementLodgingInput } from '../../settlement/lodgingResolver'
+import {
+  hayLodgingId,
+  LODGING_ARRIVE_TOLERANCE,
+  lodgingChoiceLabel,
+  lodgingPlaceLabel,
+  lodgingRestQuality,
+} from '../../settlement/lodging'
+import { collectLodgingCandidates, selectLodgingFromCandidates, settlementLodgingInput } from '../../settlement/lodgingResolver'
 import { type CampRestContext, campRestQuality, hasTentNear, hasWarmFireNear } from '../campRest'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
+
+/** One button in the generic contextual interaction panel
+ *  (`InteractionPanelAction`/`openFlavorDialog`) — mirrored here rather than
+ *  imported from `ui-vue/store.ts` so this module stays free of a Vue-layer
+ *  dependency, same convention as the rest of `app/actions/`. */
+export type LodgingChoiceAction = { label: string, enabled: boolean, reasonLabel: string, run: () => void }
 
 /** How close (world units) to a settlement's center counts as "in town" for
  *  the "Nocuj w mieście" quick action (plan 168) — covers the default
@@ -29,7 +41,11 @@ export type RestActions = {
    *  town bed? Also drives the Quick Actions availability flag. */
   isNearTown: () => boolean
   startWait: (hours: number) => void
-  /** Quick Actions "Rozbij obóz" / "Nocuj w mieście" (plan 168). */
+  /** Quick Actions "Rozbij obóz" / "Nocuj w mieście" (plan 168). `'town'`
+   *  opens the "Nocuj w mieście" choice panel (`'choose'`) listing every
+   *  available `LodgingOption` rather than auto-picking one (plan 168
+   *  follow-up) — picking an option (or cancelling out of a paid confirm) is
+   *  a `run()` callback on the panel, not a further call to `startRest`. */
   startRest: (variant: RestVariant) => RestOutcome
   startTentRest: (id: string) => void
   packTent: (id: string) => void
@@ -44,11 +60,11 @@ export type RestActions = {
    *  damage (plan 186 §3) — see the implementation's own doc for how this
    *  differs from `abortRest`. */
   interruptRestForDamage: () => boolean
-  /** Commits payment (exactly once) for the paid lodging offer `startRest`
-   *  reported via `'confirm'`, then arms the walk to it (plan 168). */
-  confirmLodgingPayment: () => void
-  /** Declines the pending paid lodging offer without charging or moving. */
-  cancelLodgingConfirm: () => void
+  /** Direct `[E]` on a hay bale (plan 168 follow-up) — the same commit path
+   *  as picking "Stóg siana" from the "Nocuj w mieście" panel, without going
+   *  through Quick Actions. No-ops (silently, like re-pressing `startRest`
+   *  while already resting) if blocked or already lodging/confirming. */
+  sleepInHay: (settlementId: string) => void
   /** Per-frame: walks the player to the resolved lodging option and starts
    *  Sleep on arrival — called from `gameLoop.ts` the same way `restCamp.tick`
    *  is (plan 168). */
@@ -61,14 +77,18 @@ export type RestActions = {
 export type RestActionDeps = {
   timeSkipOverlay: TimeSkipOverlay
   busyOverlay: BusyOverlay
-  /** Plan 168 — pushes the pending paid-lodging confirmation payload into the
-   *  Quick Actions UI (`null` clears it). */
-  setLodgingConfirm: (payload: LodgingConfirmView | null) => void
+  /** Opens the generic contextual interaction panel (`FlavorDialog` /
+   *  `openFlavorDialog`) for a lodging step (plan 168 follow-up) — both the
+   *  "Nocuj w mieście" place list and the paid-lodging confirm step reuse
+   *  this one dependency/mechanism instead of a second lodging UI. This
+   *  module builds the `title`/`description`/`actions`; Vue only renders
+   *  them. */
+  openLodgingPanel: (title: string, description: string, actions: readonly LodgingChoiceAction[]) => void
 }
 
 export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps): RestActions {
   const { bundle, player, inventory, hud, toast, busy, timeSkip, restCamp, keyboard, mouseLook, getPlayerSocial } = ctx
-  const { timeSkipOverlay, busyOverlay, setLodgingConfirm } = deps
+  const { timeSkipOverlay, busyOverlay, openLodgingPanel } = deps
 
   /** Rest quality + XP for the sleep currently in flight (plan 128 §5-§7),
    *  resolved once when rest starts and consumed when the 8h skip finishes.
@@ -134,23 +154,21 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     timeSkip.start(hours, { fadeStrength: 0.5, label: `Czekasz... (${hours}h)` })
   }
 
-  /** Plan 168 — one resolve per "Nocuj w mieście" request/arrival check,
-   *  never cached across frames (implementation notes §4/§8). Only loaded
-   *  settlements can be walked to. */
-  const resolveLodgingOption = (): LodgingOption | null => {
+  /** Every currently available lodging option near a loaded settlement (plan
+   *  168 follow-up) — the same collection that backs both the "Nocuj w
+   *  mieście" choice panel and every revalidation (selection, arrival). Only
+   *  loaded settlements can be walked to. Re-collected fresh every call,
+   *  never cached across frames (implementation notes §4/§8). */
+  const collectNearbyLodgingOptions = (): LodgingOption[] => {
     const settlements = bundle.settlementsManager.getLoaded().map(settlementLodgingInput)
-    const candidates = collectLodgingCandidates(settlements, { getPlayerSocial })
-    return resolveBestLodging(candidates, { x: player.mesh.position.x, z: player.mesh.position.z })
+    return collectLodgingCandidates(settlements, { getPlayerSocial })
   }
 
   /** Re-derived from authoritative state at arrival — never trusts a cached
    *  `available` flag from when the option was first resolved (implementation
    *  notes §4/§14). */
-  const isLodgingOptionStillAvailable = (option: LodgingOption): boolean => {
-    const settlements = bundle.settlementsManager.getLoaded().map(settlementLodgingInput)
-    const candidates = collectLodgingCandidates(settlements, { getPlayerSocial })
-    return candidates.some((c) => c.id === option.id)
-  }
+  const isLodgingOptionStillAvailable = (option: LodgingOption): boolean =>
+    collectNearbyLodgingOptions().some((c) => c.id === option.id)
 
   const armLodgingWalk = (option: LodgingOption): void => {
     lodgingWalkTarget = option
@@ -164,15 +182,12 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
   }
 
   const cancelLodgingConfirm = (): void => {
-    if (!lodgingConfirmTarget) return
     lodgingConfirmTarget = null
-    setLodgingConfirm(null)
   }
 
   const confirmLodgingPayment = (): void => {
     const option = lodgingConfirmTarget
     lodgingConfirmTarget = null
-    setLodgingConfirm(null)
     if (!option) return
     const price = option.price ?? 0
     if (!inventory.has('coin', price)) {
@@ -182,6 +197,46 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     inventory.remove('coin', price)
     ctx.onInventoryChanged()
     armLodgingWalk(option)
+  }
+
+  /** Opens the paid-lodging confirm step as a second `openLodgingPanel` call
+   *  (implementation notes §18's "smallest existing dialog pattern", now
+   *  literally `FlavorDialog` for both steps) — never charges or arms
+   *  movement until the player presses "Potwierdź". */
+  const openLodgingConfirm = (option: LodgingOption): void => {
+    lodgingConfirmTarget = option
+    const priceLabel = `Cena: ${option.price ?? 0}× moneta`
+    openLodgingPanel(lodgingPlaceLabel(option), priceLabel, [
+      { label: 'Potwierdź', enabled: true, reasonLabel: '', run: () => confirmLodgingPayment() },
+      { label: 'Anuluj', enabled: true, reasonLabel: '', run: () => cancelLodgingConfirm() },
+    ])
+  }
+
+  /** Commits the player's pick from the "Nocuj w mieście" panel (or the hay
+   *  bale's direct `[E]`, via `sleepInHay`) to one specific `LodgingOption` —
+   *  always re-validated against a freshly collected candidate list, never
+   *  the snapshot the panel/prompt was built from (implementation notes
+   *  §4/§8/§9). A stale/unavailable pick just toasts; it never silently
+   *  falls back to a different option (plan 168 follow-up §8/§9). */
+  const commitLodgingSelection = (optionId: string): void => {
+    if (isActionBlocked(ctx) || lodgingWalkTarget || lodgingConfirmTarget) return
+    const selection = selectLodgingFromCandidates(collectNearbyLodgingOptions(), optionId)
+    if (selection.kind === 'unavailable') {
+      toast.show('To miejsce jest już niedostępne', 'error')
+      return
+    }
+    if (selection.kind === 'confirm') {
+      openLodgingConfirm(selection.option)
+      return
+    }
+    armLodgingWalk(selection.option)
+  }
+
+  /** Direct `[E]` on a hay bale (plan 168 follow-up) — resolves to the exact
+   *  same `LodgingOption` id the resolver's hay fallback would (`hayLodgingId`),
+   *  so it's the same commit path as picking "Stóg siana" from the panel. */
+  const sleepInHay = (settlementId: string): void => {
+    commitLodgingSelection(hayLodgingId(settlementId))
   }
 
   const tickLodging = (): void => {
@@ -221,15 +276,15 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     if (lodgingWalkTarget || lodgingConfirmTarget) return 'ok'
     if (variant === 'town') {
       if (!isNearTown()) return 'too-far'
-      const option = resolveLodgingOption()
-      if (!option) return 'no-lodging'
-      if (option.type === 'paid' && (option.price ?? 0) > 0) {
-        lodgingConfirmTarget = option
-        setLodgingConfirm({ placeLabel: lodgingPlaceLabel(option), price: option.price ?? 0, quality: option.quality })
-        return 'confirm'
-      }
-      armLodgingWalk(option)
-      return 'ok'
+      const options = collectNearbyLodgingOptions()
+      if (options.length === 0) return 'no-lodging'
+      openLodgingPanel('Nocleg w osadzie', '', options.map((option) => ({
+        label: lodgingChoiceLabel(option),
+        enabled: true,
+        reasonLabel: '',
+        run: () => commitLodgingSelection(option.id),
+      })))
+      return 'choose'
     }
     if (!inventory.has('blanket', 1)) return 'no-blanket'
     restCamp.start({
@@ -338,8 +393,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     abortRest,
     abortBusy,
     interruptRestForDamage,
-    confirmLodgingPayment,
-    cancelLodgingConfirm,
+    sleepInHay,
     tickLodging,
     isLodgingActive,
   }

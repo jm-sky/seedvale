@@ -799,7 +799,7 @@ export async function createApp(
   const rest = createRestActions(actionCtx, {
     timeSkipOverlay,
     busyOverlay,
-    setLodgingConfirm: (payload) => vueUi.setQuickActionsLodgingConfirm(payload),
+    openLodgingPanel: (title, description, actions) => vueUi.openFlavorDialog(title, description, actions),
   })
   const terrainPrep = createTerrainPreparationActions(actionCtx, {
     scene,
@@ -1151,8 +1151,6 @@ export async function createApp(
     onLightWoodenTorch: lightWoodenTorch,
     onWait: rest.startWait,
     onRest: rest.startRest,
-    onConfirmLodging: rest.confirmLodgingPayment,
-    onCancelLodging: rest.cancelLodgingConfirm,
     onDig: () => {
       const p = ground.aimGroundPoint()
       ground.startDigAt(p.x, p.z)
@@ -1347,6 +1345,7 @@ export async function createApp(
     consumeItem: survival.consumeItem,
     startTentRest: rest.startTentRest,
     packTent: rest.packTent,
+    sleepInHay: rest.sleepInHay,
     armTrap: gathering.armTrap,
     disarmTrap: gathering.disarmTrap,
     collectTrap: gathering.collectTrap,

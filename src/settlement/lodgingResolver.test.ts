@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { LodgingOption } from './lodging'
+import { hayLodgingId } from './lodging'
 import {
   collectLodgingCandidates,
   type LodgingSettlementInput,
   resolveBestLodging,
+  selectLodgingFromCandidates,
 } from './lodgingResolver'
 
 function option(overrides: Partial<LodgingOption> & Pick<LodgingOption, 'id' | 'type' | 'quality'>): LodgingOption {
@@ -175,5 +177,55 @@ describe('collectLodgingCandidates — hay fallback', () => {
     const s = settlement({})
     const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => ({ relationLevel: 'trusted', standing: 0 }) })
     expect(candidates).toHaveLength(0)
+  })
+
+  it('uses the same id `RestActions.sleepInHay` resolves against', () => {
+    const s = settlement({ id: 'village-a', haySpot: { x: 3, z: 4 } })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => ({ relationLevel: 'stranger', standing: 0 }) })
+    expect(candidates[0]?.id).toBe(hayLodgingId('village-a'))
+  })
+})
+
+describe('collectLodgingCandidates — multiple sources for the choice panel', () => {
+  it('returns every available option, not just the resolver\'s pick — bed, friend and hay all appear', () => {
+    const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
+    const s = settlement({
+      npcs: [{ name: 'Anna', household }],
+      houses: [
+        house({ x: 5, z: 7, bed: { position: { x: 5, z: 7 }, approach: { x: 5, z: 7 }, facing: null } }),
+        house({ x: 9, z: 9 }),
+      ],
+      haySpot: { x: 1, z: 1 },
+    })
+    const candidates = collectLodgingCandidates([s], {
+      getPlayerSocial: () => ({ relationLevel: 'friendly', standing: 0 }),
+    })
+    expect(candidates.map((c) => c.type).sort()).toEqual(['bed', 'friend', 'hay'])
+  })
+})
+
+describe('selectLodgingFromCandidates', () => {
+  const bed = option({ id: 'bed', type: 'bed', quality: 'high' })
+  const paid = option({ id: 'paid', type: 'paid', quality: 'normal', price: 5 })
+  const freePaid = option({ id: 'free-paid', type: 'paid', quality: 'normal', price: 0 })
+
+  it('classifies a free option as an immediate walk', () => {
+    expect(selectLodgingFromCandidates([bed], 'bed')).toEqual({ kind: 'walk', option: bed })
+  })
+
+  it('classifies a priced paid option as needing confirmation', () => {
+    expect(selectLodgingFromCandidates([paid], 'paid')).toEqual({ kind: 'confirm', option: paid })
+  })
+
+  it('classifies a zero-price paid option as an immediate walk', () => {
+    expect(selectLodgingFromCandidates([freePaid], 'free-paid')).toEqual({ kind: 'walk', option: freePaid })
+  })
+
+  it('reports unavailable for an id no longer among fresh candidates (stale panel/prompt)', () => {
+    expect(selectLodgingFromCandidates([bed], 'gone')).toEqual({ kind: 'unavailable' })
+  })
+
+  it('reports unavailable against an empty candidate list', () => {
+    expect(selectLodgingFromCandidates([], 'bed')).toEqual({ kind: 'unavailable' })
   })
 })
