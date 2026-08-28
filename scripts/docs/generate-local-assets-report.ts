@@ -3,7 +3,7 @@ import { dirname, extname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
-const ROOT_DIR = resolve(SCRIPT_DIR, '..')
+const ROOT_DIR = resolve(SCRIPT_DIR, '../..')
 const ASSETS_DIR = resolve(ROOT_DIR, '_temp')
 const REPORT_FILE = resolve(ROOT_DIR, 'docs/assets/LOCAL_ASSETS.md')
 

@@ -89,7 +89,25 @@ This model should remain understandable and testable. More sophisticated behavio
 
 ## Files
 
-<!-- AUTO-GENERATED:FILES -->
+<!-- AUTO-GENERATED:START -->
+| File |
+|---|
+| `agriculture.md` |
+| `combat.md` |
+| `companions.md` |
+| `economy.md` |
+| `fauna.md` |
+| `items.md` |
+| `npc-ai.md` |
+| `npc-physical-state.md` |
+| `npc.md` |
+| `player.md` |
+| `quests.md` |
+| `resources.md` |
+| `settlements.md` |
+| `weather.md` |
+| `world.md` |
+<!-- AUTO-GENERATED:END -->
 
 ## Domains
 
@@ -243,23 +261,3 @@ This section is reserved for short design ideas that are not yet concrete enough
 Backlog items are not commitments and must not be presented as implemented behaviour. When an idea becomes sufficiently defined, it should move into an appropriate implementation plan or be incorporated into the relevant domain roadmap.
 
 - Future ideas may be recorded here while the project is still refining its long-term direction.
-
-<!-- AUTO-GENERATED:START -->
-| File |
-|---|
-| `agriculture.md` |
-| `combat.md` |
-| `companions.md` |
-| `economy.md` |
-| `fauna.md` |
-| `items.md` |
-| `npc-ai.md` |
-| `npc-physical-state.md` |
-| `npc.md` |
-| `player.md` |
-| `quests.md` |
-| `resources.md` |
-| `settlements.md` |
-| `weather.md` |
-| `world.md` |
-<!-- AUTO-GENERATED:END -->
