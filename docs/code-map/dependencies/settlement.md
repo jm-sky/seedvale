@@ -627,7 +627,6 @@ Generated from TypeScript imports.
 - `assets/houseDefinitionExample.ts`
 - `assets/loadGltf.ts`
 - `debug/debugMode.ts`
-- `fauna/proceduralAnimals.ts`
 - `math/segment.ts`
 - `render/instancedProps.ts`
 - `settlement/campfireProps.ts`

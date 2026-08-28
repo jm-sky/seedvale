@@ -425,6 +425,7 @@ export async function createSettlement(
       def.id,
       onAnimalDeath,
       householdByHomeId,
+      landmarks.merchantHorseSpawn,
     )
   } finally {
     bootMarkEnd('spawnLivestock')

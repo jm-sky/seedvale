@@ -370,7 +370,6 @@ Generated from TypeScript imports.
 
 - `fauna/createFauna.ts`
 - `settlement/livestock.ts`
-- `settlement/props.ts`
 
 ## `fauna/spawnerLabels.test.ts`
 

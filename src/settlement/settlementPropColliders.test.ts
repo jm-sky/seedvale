@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MERCHANT_HORSE_RADIUS, MERCHANT_WAGON_RADIUS } from './merchantWagon'
+import { MERCHANT_WAGON_RADIUS } from './merchantWagon'
 import {
   VILLAGE_CAMPFIRE_COLLISION_RADIUS,
   WOOD_PILE_COLLISION_RADIUS,
@@ -14,23 +14,16 @@ describe('settlementPropColliders', () => {
     ])
   })
 
-  it('adds wagon and horse only when those landmarks are set', () => {
+  it('adds the wagon only when that landmark is set', () => {
     const colliders = settlementPropColliders({
       stockpile: { x: 0, z: 0 },
       merchantWagon: { x: 4, z: 1 },
-      merchantHorse: { x: 6, z: 1 },
     })
     expect(colliders).toContainEqual({
       type: 'circle',
       x: 4,
       z: 1,
       radius: MERCHANT_WAGON_RADIUS,
-    })
-    expect(colliders).toContainEqual({
-      type: 'circle',
-      x: 6,
-      z: 1,
-      radius: MERCHANT_HORSE_RADIUS,
     })
   })
 

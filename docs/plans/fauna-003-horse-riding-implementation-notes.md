@@ -376,3 +376,16 @@ No riding clip exists on the Adventurer player rig (confirmed from its clip list
 ### Donkey compatibility result
 
 Confirmed structurally: `donkey`'s `AnimalDef.mount` is the only donkey-specific code added anywhere in this plan (a `MountPointConfig` value, `src/fauna/AnimalAgent.ts`). Every other file in this plan is written against `AnimalAgent`/`AnimalDef` generically — no `if (kind === 'horse')`/`'donkey'` branch exists anywhere in the new riding code. Not yet browser-confirmed.
+
+## 18. Follow-up (2026-08-28): merchant wagon horse
+
+The Kupiec wagon's horse (`settlement/props.ts`) was still a decorative `Object3D` (GLB or `createHorseModel()` procedural fallback), never an `AnimalAgent` — so it couldn't be mounted despite `horse` already being `mountable`. Fixed by making it a real livestock agent, reusing the existing spawn path instead of adding a second one:
+
+- `settlement/props.ts` — no longer builds a horse mesh at all; `SettlementLandmarks.merchantHorse?: THREE.Vector3` (a static-prop position) became `merchantHorseSpawn?: { x, z, yaw }` (a spawn point/facing for `spawnLivestock()` to use).
+- `settlement/livestock.ts` — `spawnLivestock()` gained one more optional parameter, `merchantHorseSpawn`; when present, it constructs exactly one extra `AnimalAgent(ANIMAL_DEFS.horse, 'merchant-horse-<settlementId>', …)` through the same construction path as house-owned livestock (same `visualFor('horse')` template/animations, same `LIVESTOCK_WANDER_RADIUS`), with no `ownerHouseId`/`household` (it isn't owned by a specific house). Appended to the same returned `AnimalAgent[]` that becomes `settlement.livestock`.
+- `settlement/createSettlement.ts` — one new argument at the existing `spawnLivestock(...)` call site: `landmarks.merchantHorseSpawn`.
+- `settlement/settlementPropColliders.ts` (+ its test) — removed the now-dead `merchantHorse` static-collider branch/field; a live wandering `AnimalAgent` needs no synthetic collider, same as every other livestock animal (none of them have one either).
+
+No changes to `mountActions.ts`, `interactables.ts`, `PlayerController.ts`, riding UI/camera/stamina/stability, or donkey riding — the merchant horse automatically gets `Dosiądź: koń`, mount/dismount, movement, needs, and lifecycle for free, because it's now just another entry in `settlement.livestock`, which every one of those systems already iterates generically.
+
+**Verification:** `npx tsc --noEmit`, `pnpm run lint`, `pnpm run build` all pass; `pnpm run test` — 207 files / 1988 tests pass (same counts as before this follow-up — no regressions, no new tests added since the change is a straightforward spawn-path rewire with no new branching logic). Browser/manual verification not performed (same rule as above) — check in the running dev server: exactly one horse mesh stands by the Kupiec wagon, gazing at it shows `Dosiądź: koń`, `[E]` mounts it, it can be ridden/dismounted exactly like a house-owned horse, and normal (non-merchant) livestock spawns/behaves unchanged.

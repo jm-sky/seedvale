@@ -1,11 +1,15 @@
 /**
- * Static settlement prop disks (issue 036) — wood piles, Kupiec wagon/horse,
- * village campfire. Houses and the well stay in `createSettlement.ts`.
- * Pure: landmarks only need `{ x, z }`.
+ * Static settlement prop disks (issue 036) — wood piles, Kupiec wagon,
+ * village campfire. Houses and the well stay in `createSettlement.ts`. The
+ * merchant's horse is no longer a static prop here (plan fauna-003
+ * follow-up) — it's a live `AnimalAgent` spawned via `spawnLivestock()`,
+ * same as any other livestock, so it needs no synthetic collider (nothing
+ * does for ordinary wandering fauna either). Pure: landmarks only need
+ * `{ x, z }`.
  */
 
 import type { Collider } from '../world/collision'
-import { MERCHANT_HORSE_RADIUS, MERCHANT_WAGON_RADIUS } from './merchantWagon'
+import { MERCHANT_WAGON_RADIUS } from './merchantWagon'
 import {
   VILLAGE_CAMPFIRE_COLLISION_RADIUS,
   WOOD_PILE_COLLISION_RADIUS,
@@ -15,7 +19,6 @@ export type SettlementPropColliderLandmarks = {
   stockpile: { x: number, z: number }
   stockpileSecondary?: { x: number, z: number }
   merchantWagon?: { x: number, z: number }
-  merchantHorse?: { x: number, z: number }
   campfire?: { position: { x: number, z: number } }
 }
 
@@ -44,14 +47,6 @@ export function settlementPropColliders(
       x: landmarks.merchantWagon.x,
       z: landmarks.merchantWagon.z,
       radius: MERCHANT_WAGON_RADIUS,
-    })
-  }
-  if (landmarks.merchantHorse) {
-    colliders.push({
-      type: 'circle',
-      x: landmarks.merchantHorse.x,
-      z: landmarks.merchantHorse.z,
-      radius: MERCHANT_HORSE_RADIUS,
     })
   }
   if (landmarks.campfire) {

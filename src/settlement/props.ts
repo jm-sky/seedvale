@@ -8,7 +8,6 @@ import { buildConstructionCatalog } from '../assets/constructionCatalog'
 import { type HouseVec3, pickHouseDefinition } from '../assets/houseDefinitionExample'
 import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../assets/loadGltf'
 import { isDebugMode } from '../debug/debugMode'
-import { createHorseModel } from '../fauna/proceduralAnimals'
 import { distanceToSegment } from '../math/segment'
 import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
@@ -133,8 +132,12 @@ export type SettlementLandmarks = {
   stockpileSecondary?: THREE.Vector3
   /** Kupiec wagon (home forest villages only) — set only if the GLB loaded. */
   merchantWagon?: THREE.Vector3
-  /** Decorative horse at the wagon hitch — GLB or procedural stand-in. */
-  merchantHorse?: THREE.Vector3
+  /** Spawn point (position + facing) for the merchant's horse at the wagon
+   *  hitch (plan fauna-003 follow-up) — this is *not* a static prop; the
+   *  live `AnimalAgent` it seeds is spawned by `spawnLivestock()` in
+   *  `createSettlement.ts`, same as any other livestock, so it's a normal
+   *  mountable/wandering animal rather than a decorative mesh. */
+  merchantHorseSpawn?: { x: number, z: number, yaw: number }
   garden: THREE.Vector3
   /** All garden pads (plan 077); `garden` mirrors the primary (index 0). */
   gardens: THREE.Vector3[]
@@ -1240,24 +1243,10 @@ export async function buildSettlementProps(
     } catch (err) {
       console.warn('[settlement] wagon.glb unavailable', err)
     }
-    try {
-      const horse = await loadGltf('/models/fauna/horse.glb')
-      prepareProp(horse, 1.55)
-      placeOnGround(horse, pose.horseX, pose.horseZ, sampleHeight)
-      horse.rotation.y = pose.yaw
-      group.add(horse)
-    } catch (err) {
-      console.warn('[settlement] horse.glb unavailable — procedural stand-in', err)
-      const horse = createHorseModel()
-      placeOnGround(horse, pose.horseX, pose.horseZ, sampleHeight)
-      horse.rotation.y = pose.yaw
-      group.add(horse)
-    }
-    landmarks.merchantHorse = new THREE.Vector3(
-      pose.horseX,
-      sampleHeight(pose.horseX, pose.horseZ),
-      pose.horseZ,
-    )
+    // The merchant's horse is a live `AnimalAgent` (plan fauna-003 follow-up),
+    // spawned by `spawnLivestock()` in `createSettlement.ts` — not a
+    // decorative mesh built here. Only the spawn point/facing is recorded.
+    landmarks.merchantHorseSpawn = { x: pose.horseX, z: pose.horseZ, yaw: pose.yaw }
   }
 
   await plantEntrancePalisade(group, site, size, sampleHeight, waterLevel, plan, coast, pathCorridors)

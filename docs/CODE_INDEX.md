@@ -63,3 +63,90 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Save schema](../src/persistence/saveData.ts) — the `SaveData` shape, validation/defaulting and version migrations.
 - [Save storage](../src/persistence/saveDb.ts) — IndexedDB slots and the active-save id.
 - [Config persistence](../src/config/persistConfig.ts) — the localStorage graphics / player / world domains (device preferences, not save data).
+
+<!-- AI_NAVIGATION_INDEX_START -->
+## AI navigation index
+
+<!-- AUTO-GENERATED. DO NOT EDIT. -->
+
+### player
+
+- [PlayerController](../src/player/PlayerController.ts) — primary player controller; open first for runtime control and state.
+
+### fauna
+
+- [AnimalAgent](../src/fauna/AnimalAgent.ts) — primary fauna agent; open first for runtime behaviour and agent state.
+
+### ai
+
+- [NpcAgent](../src/ai/NpcAgent.ts) — primary ai agent; open first for runtime behaviour and agent state.
+
+### items
+
+- [Inventory](../src/items/Inventory.ts) — primary items domain module; open first for shared domain state and operations.
+
+### settlement
+
+- [settlementGenerator](../src/settlement/settlementGenerator.ts) — primary settlement generator; open first for creation and initial domain state.
+
+### terrain
+
+- [chunkManager](../src/terrain/chunkManager.ts) — primary terrain manager; open first for domain coordination.
+
+### world
+
+- [treeLifecycle](../src/world/treeLifecycle.ts) — primary world lifecycle; open first for state transitions over time.
+
+### config
+
+- [worldConfig](../src/config/worldConfig.ts) — primary config domain module; open first for shared domain state and operations.
+
+### audio
+
+- [createWorldAudio](../src/audio/createWorldAudio.ts) — audio construction entry point; open first when tracing creation or wiring.
+
+### quests
+
+- [QuestManager](../src/quests/QuestManager.ts) — primary quests manager; open first for domain coordination.
+
+### ui-vue
+
+- [mount](../src/ui-vue/mount.ts) — primary ui-vue domain module; open first for shared domain state and operations.
+
+### render
+
+- [createPostProcessing](../src/render/createPostProcessing.ts) — render construction entry point; open first when tracing creation or wiring.
+
+### ui
+
+- [createQuickActions](../src/ui/createQuickActions.ts) — ui construction entry point; open first when tracing creation or wiring.
+
+### economy
+
+- [settlementEconomy](../src/economy/settlementEconomy.ts) — primary economy domain module; open first for shared domain state and operations.
+
+### app
+
+- [createApp](../src/app/createApp.ts) — app construction entry point; open first when tracing creation or wiring.
+
+### tools
+
+- [createAssetSlot](../src/tools/assetBrowser/viewer/createAssetSlot.ts) — tools construction entry point; open first when tracing creation or wiring.
+
+### input
+
+- [createTouchControls](../src/input/createTouchControls.ts) — input construction entry point; open first when tracing creation or wiring.
+
+### persistence
+
+- [saveData](../src/persistence/saveData.ts) — primary persistence domain module; open first for shared domain state and operations.
+
+### debug
+
+- [createHouseTestScene](../src/debug/createHouseTestScene.ts) — debug construction entry point; open first when tracing creation or wiring.
+
+### combat
+
+- [defenseResolver](../src/combat/defenseResolver.ts) — primary combat resolver; open first for domain outcome resolution.
+
+<!-- AI_NAVIGATION_INDEX_END -->

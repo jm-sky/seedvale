@@ -176,7 +176,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `disposeLivestock` — function — line 242
+- `disposeLivestock` — function — line 268
 - `LIVESTOCK_KINDS` — const — line 38
 - `LIVESTOCK_URLS` — const — line 27
 - `spawnLivestock` — function — line 180
@@ -274,13 +274,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `buildSettlementProps` — function — line 572
-- `disposeSettlementGroup` — function — line 1610
-- `SettlementHouseBed` — type — line 120
-- `SettlementHouseLandmark` — type — line 91
-- `SettlementLandmarks` — type — line 127
-- `SettlementLandPlot` — type — line 187
-- `SettlementTreeLandmark` — type — line 194
+- `buildSettlementProps` — function — line 575
+- `disposeSettlementGroup` — function — line 1599
+- `SettlementHouseBed` — type — line 119
+- `SettlementHouseLandmark` — type — line 90
+- `SettlementLandmarks` — type — line 126
+- `SettlementLandPlot` — type — line 190
+- `SettlementTreeLandmark` — type — line 197
 
 ## `settlement/propSpecs.ts`
 
@@ -389,8 +389,8 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPropColliders.ts`
 
-- `SettlementPropColliderLandmarks` — type — line 14
-- `settlementPropColliders` — function — line 22
+- `SettlementPropColliderLandmarks` — type — line 18
+- `settlementPropColliders` — function — line 25
 
 ## `settlement/SettlementsManager.ts`
 

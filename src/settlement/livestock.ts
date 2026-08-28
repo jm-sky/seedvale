@@ -195,6 +195,14 @@ export async function spawnLivestock(
    *  search. `undefined`/missing entries fall back to the pre-122 shoreline
    *  behaviour (same as wild fauna). */
   householdByHomeId?: ReadonlyMap<string, Household>,
+  /** Merchant wagon's horse spawn point (`props.ts`'s
+   *  `landmarks.merchantHorseSpawn`, plan fauna-003 follow-up) — `undefined`
+   *  for a settlement with no merchant wagon. Spawned through this same
+   *  factory (not a decorative mesh, not a separate spawn path) so it's a
+   *  normal `AnimalAgent('horse')`: mountable, wandering, with its own
+   *  needs/lifecycle, just like any house-owned horse. Not tied to a house
+   *  (`ownerHouseId`/`household` stay unset, same as wild fauna). */
+  merchantHorseSpawn?: { x: number, z: number, yaw: number },
 ): Promise<AnimalAgent[]> {
   if (!isSystemEnabled('animals')) return []
   await ensureLivestockTemplates()
@@ -234,6 +242,24 @@ export async function spawnLivestock(
       agents.push(agent)
     }
   })
+  if (merchantHorseSpawn) {
+    const { visual, animations } = visualFor('horse')
+    const agent = new AnimalAgent(
+      ANIMAL_DEFS.horse,
+      `merchant-horse-${settlementId}`,
+      sampleHeight,
+      waterLevel,
+      collidersNear,
+      merchantHorseSpawn.x,
+      merchantHorseSpawn.z,
+      visual,
+      animations,
+      LIVESTOCK_WANDER_RADIUS,
+    )
+    agent.mesh.rotation.y = merchantHorseSpawn.yaw
+    scene.add(agent.mesh)
+    agents.push(agent)
+  }
   return agents
 }
 
