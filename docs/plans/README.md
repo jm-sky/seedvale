@@ -54,7 +54,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements: `003`
 - settlements-npcs: `006`
 - tools: `004`
-- ui-input: `004`
+- ui-input: `005`
 - world: `006`
 - world-terrain: `003`
 
@@ -125,6 +125,7 @@ Natural vegetation
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `world-005-new-game-time-reset.md`                        | - | 🟡 | S | - |
 | ◼️ `settlements-npcs-005-local-resource-exchange.md`         | - | 🔴 | M | ~~156~~ ~~002~~ |
+| ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
 
 ### Fresh new
 
