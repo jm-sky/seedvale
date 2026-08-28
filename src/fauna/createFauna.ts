@@ -860,6 +860,7 @@ export async function createFauna(
           nearbyNpcs,
           onNpcHit,
           onAnimalAggro,
+          worldDays,
         )
       }
 

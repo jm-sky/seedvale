@@ -98,13 +98,19 @@ const FISHING_PROMPT = '[E] Łów rybę · [R] Zanęć'
  *  `WATER_SOURCE_PROMPT`. */
 const CAMPFIRE_LIT_PROMPT = '[E] Dołóż gałąź · [R] Upiecz mięso'
 
-function animalPromptLabel(kind: AnimalKind, heldTool: ToolKind | null): string {
+/** `canMilk` (plan fauna-002) is the caller's precomputed "player carries a
+ *  bucket with room for milk" check — only meaningful for a `cow`/`sheep`
+ *  whose own milking cooldown (`animal.canBeMilked(nowDays)`) has cleared;
+ *  every other combination falls through to the existing prompts unchanged. */
+function animalPromptLabel(animal: AnimalAgent, heldTool: ToolKind | null, canMilk: boolean, nowDays: number): string {
+  const kind = animal.def.kind
   const label = ANIMAL_LABELS[kind]
   if (isMeleeTool(heldTool) || isRangedTool(heldTool)) return `Atakuj: ${label}`
   // Any animal carrying a `mount` config is mountable (plan fauna-003 §5) —
   // no ownership/taming gate yet, so the prompt is unconditional whenever no
   // weapon is held.
   if (ANIMAL_DEFS[kind].mount) return `Dosiądź: ${label}`
+  if (canMilk && animal.canBeMilked(nowDays)) return `Wydój: ${label}`
   return `Obserwuj: ${label}`
 }
 
@@ -309,6 +315,11 @@ export function buildInteractables(
    *  convention as `heldTool`/`landOwnership` above). `null`/undefined
    *  result means "no override, use the normal range". */
   activeSpotAnimalRange?: (kind: AnimalKind) => number | null,
+  /** Player carries a liquid container with room for milk right now (plan
+   *  fauna-002) — precomputed the same way `inventoryHasFreeKnife` is, so
+   *  this module stays inventory-agnostic. Defaults to false for existing
+   *  callers/tests. */
+  hasMilkContainer = false,
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = hasItemCapability(heldTool, 'wood_chopping')
@@ -473,7 +484,7 @@ export function buildInteractables(
       list.push({
         kind: 'animal',
         position: animal.mesh.position,
-        promptLabel: animalPromptLabel(animal.def.kind, heldTool),
+        promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays),
         animal,
         interactRange: rangeOverride ?? undefined,
       })
@@ -616,7 +627,7 @@ export function buildInteractables(
     list.push({
       kind: 'animal',
       position: animal.mesh.position,
-      promptLabel: animalPromptLabel(animal.def.kind, heldTool),
+      promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays),
       animal,
       interactRange: rangeOverride ?? undefined,
     })
@@ -803,7 +814,7 @@ export function buildCombatTarget(
   return {
     kind: 'animal',
     position: animal.mesh.position,
-    promptLabel: animalPromptLabel(animal.def.kind, heldTool),
+    promptLabel: animalPromptLabel(animal, heldTool, false, 0),
     animal,
   }
 }

@@ -48,3 +48,32 @@ describe('createDroppedItems instance identity (plan 199)', () => {
     expect(dropped.collect(nodeB!.id)?.instance).toEqual(b)
   })
 })
+
+// Plan fauna-002 — a producer (e.g. a chicken's egg-laying cycle) needs to
+// know when its own drop is actually picked up, so it can gate starting a
+// new cycle on real collection instead of a blind timer.
+describe('createDroppedItems onCollected hook (plan fauna-002)', () => {
+  it('fires onCollected exactly once when collect() finds the item', () => {
+    const dropped = createDroppedItems(new Scene(), sampleHeight)
+    let collectedCount = 0
+    dropped.drop('egg', 3, 4, undefined, () => { collectedCount++ })
+    const [node] = dropped.nodes()
+    expect(dropped.collect(node!.id)).toEqual({ kind: 'egg', x: 3, z: 4, instance: undefined })
+    expect(collectedCount).toBe(1)
+  })
+
+  it('never fires onCollected for an id that was never dropped', () => {
+    const dropped = createDroppedItems(new Scene(), sampleHeight)
+    let collectedCount = 0
+    dropped.drop('egg', 0, 0, undefined, () => { collectedCount++ })
+    expect(dropped.collect('not-a-real-id')).toBeNull()
+    expect(collectedCount).toBe(0)
+  })
+
+  it('does not require onCollected — plain drops still collect fine', () => {
+    const dropped = createDroppedItems(new Scene(), sampleHeight)
+    dropped.drop('egg', 0, 0)
+    const [node] = dropped.nodes()
+    expect(dropped.collect(node!.id)).toEqual({ kind: 'egg', x: 0, z: 0, instance: undefined })
+  })
+})

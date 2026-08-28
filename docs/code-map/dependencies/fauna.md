@@ -12,6 +12,7 @@ Generated from TypeScript imports.
 - `fauna/faunaCombat.ts`
 - `fauna/harvestedRemains.ts`
 - `fauna/herdCohesion.ts`
+- `fauna/livestockProduction.ts`
 - `fauna/playerAwareness.ts`
 - `fauna/predatorHumanDecision.ts`
 - `player/PlayerController.ts`
@@ -53,6 +54,7 @@ Generated from TypeScript imports.
 - `fauna/herdCohesion.ts`
 - `fauna/huntingHooks.test.ts`
 - `fauna/huntingHooks.ts`
+- `fauna/livestockProduction.test.ts`
 - `fauna/villageAvoidance.test.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
@@ -319,6 +321,26 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `app/worldBundle.ts`
 - `fauna/huntingHooks.test.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+
+## `fauna/livestockProduction.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/livestockProduction.ts`
+
+## `fauna/livestockProduction.ts`
+
+**Imports**
+
+- `items/items.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/livestockProduction.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 

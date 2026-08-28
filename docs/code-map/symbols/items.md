@@ -37,7 +37,7 @@ Generated from exported TypeScript symbols.
 
 ## `items/createDroppedItems.ts`
 
-- `createDroppedItems` — function — line 52
+- `createDroppedItems` — function — line 57
 - `DroppedItem` — type — line 8
 - `DroppedItems` — type — line 20
 
@@ -112,24 +112,24 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1014
-- `CAPABILITY_KINDS` — const — line 1045
+- `ARROW_DAMAGE_BONUS` — const — line 1025
+- `CAPABILITY_KINDS` — const — line 1056
 - `CAPABILITY_NEED_LABEL` — const — line 108
 - `ConsumableNeed` — type — line 120
 - `consumeNeedNoun` — function — line 189
 - `consumeVerbLabel` — function — line 180
 - `DefenseConfig` — type — line 40
-- `hasItemCapability` — function — line 1070
-- `HOLDABLE_KINDS` — const — line 1036
-- `isMeleeToolKind` — function — line 1029
-- `isRangedTool` — function — line 1021
+- `hasItemCapability` — function — line 1081
+- `HOLDABLE_KINDS` — const — line 1047
+- `isMeleeToolKind` — function — line 1040
+- `isRangedTool` — function — line 1032
 - `ITEM_CATALOG` — const — line 197
-- `ITEM_SYSTEM_ROADMAP` — const — line 1075
+- `ITEM_SYSTEM_ROADMAP` — const — line 1086
 - `ItemCapability` — type — line 87
 - `ItemCatalogEntry` — type — line 127
 - `ItemSpawnKind` — type — line 12
 - `MeleeConfig` — type — line 23
-- `NON_ITEM_PROPS` — const — line 1081
+- `NON_ITEM_PROPS` — const — line 1092
 - `RangedConfig` — type — line 51
 
 ## `items/itemInstances.ts`
@@ -166,22 +166,22 @@ Generated from exported TypeScript symbols.
 
 ## `items/items.ts`
 
-- `canCancelRestNow` — function — line 178
-- `canCancelRestProgress` — function — line 149
-- `createItemMesh` — function — line 926
-- `hasItemCategory` — function — line 128
-- `hasItemKindCategory` — function — line 132
-- `ITEM_DEFS` — const — line 182
-- `ITEM_SIZE_UNITS` — const — line 101
-- `ItemCategory` — type — line 92
-- `ItemDef` — type — line 114
+- `canCancelRestNow` — function — line 179
+- `canCancelRestProgress` — function — line 150
+- `createItemMesh` — function — line 936
+- `hasItemCategory` — function — line 129
+- `hasItemKindCategory` — function — line 133
+- `ITEM_DEFS` — const — line 183
+- `ITEM_SIZE_UNITS` — const — line 102
+- `ItemCategory` — type — line 93
+- `ItemDef` — type — line 115
 - `ItemKind` — type — line 6
-- `ItemSize` — type — line 97
-- `itemSizeUnits` — function — line 110
-- `primaryItemCategory` — function — line 139
-- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 147
-- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 159
-- `restCancelAllowedByStartVigor` — function — line 166
+- `ItemSize` — type — line 98
+- `itemSizeUnits` — function — line 111
+- `primaryItemCategory` — function — line 140
+- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 148
+- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 160
+- `restCancelAllowedByStartVigor` — function — line 167
 
 ## `items/ItemSpawner.ts`
 
@@ -190,17 +190,18 @@ Generated from exported TypeScript symbols.
 
 ## `items/liquidContainer.ts`
 
-- `canDrinkFromLiquidContainer` — function — line 68
+- `addLiquidToContainer` — function — line 64
+- `canDrinkFromLiquidContainer` — function — line 87
 - `canFillLiquidContainer` — function — line 38
 - `createLiquidContainerInstance` — function — line 34
-- `drinkFromLiquidContainer` — function — line 79
-- `emptyLiquidContainer` — function — line 90
+- `drinkFromLiquidContainer` — function — line 98
+- `emptyLiquidContainer` — function — line 109
 - `fillLiquidContainer` — function — line 48
-- `hasLiquidContent` — function — line 60
+- `hasLiquidContent` — function — line 79
 - `LIQUID_DENSITY_KG_PER_LITRE` — const — line 25
 - `LIQUID_DRINK_PORTION_LITRES` — const — line 20
 - `liquidContainerCapacity` — function — line 27
-- `migrateLegacyWaterskinsToInstances` — function — line 109
+- `migrateLegacyWaterskinsToInstances` — function — line 128
 
 ## `items/primaryWeapons.ts`
 

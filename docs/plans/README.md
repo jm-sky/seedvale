@@ -117,7 +117,6 @@ Natural vegetation
 | ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`               | - | 🟡 | S | ~~151~~ |
 | 💡 `settlements-001-house-collision-geometry.md`                       | - | 🔴 | L | 111 |
 | ◼️ `fauna-001-rabies-and-animal-infection.md`                          | - | 🟡 | M | ~~188~~ |
-| ◼️ `fauna-002-livestock-food-production.md`                            | - | 🟡 | M | `items-player-001` |
 | ◼️ `fauna-003-horse-riding.md`                                         | - | 🟡 | M | - |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
 | ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
@@ -155,6 +154,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | File        | Notes              |
 | ----------- | ------------------ |
 | `items-player-001-containers-waterskins-and-copper-items.md` | [notes](./implementation-notes/items-player-001-containers-waterskins-and-copper-items-implementation-notes.md); new waterskin sizes/fill/drink, buckets, saddlebags, copper ore/copper need browser verification |
+| `fauna-002-livestock-food-production.md` | [notes](./implementation-notes/fauna-002-livestock-food-production-implementation-notes.md); egg laying/collection, milking (both bucket kinds, capacity clamp, cooldown) need browser verification |
 | `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` | [notes](./implementation-notes/settlements-npcs-002-npc-professions-complete-profession-work-integration-implementation-notes.md); new blacksmith prop placement + all 5 new profession behaviours need browser verification |
 | `2026-08-18--151--social-places-and-social-behaviour.md` | [notes](./implementation-notes/2026-08-18--151--social-places-and-social-behaviour-implementation-notes.md) |
 | `2026-08-18--152--npc-player-food-drink-help.md` | [notes](./implementation-notes/2026-08-18--152--npc-player-food-drink-help-implementation-notes.md) |

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from './Inventory'
 import {
+  addLiquidToContainer,
   canDrinkFromLiquidContainer,
   canFillLiquidContainer,
   createLiquidContainerInstance,
@@ -61,6 +62,28 @@ describe('fillLiquidContainer / canFillLiquidContainer', () => {
     expect(fillLiquidContainer(waterBucket, 'milk')).toBeNull()
     const emptied = emptyLiquidContainer(waterBucket)
     expect(canFillLiquidContainer(emptied, 'milk')).toBe(true)
+  })
+})
+
+describe('addLiquidToContainer (plan fauna-002 milking yield)', () => {
+  it('pours the full requested amount when there is enough room', () => {
+    const empty = createLiquidContainerInstance('wooden_bucket')
+    const result = addLiquidToContainer(empty, 'milk', 5)
+    expect(result).toEqual({ instance: { id: empty.id, kind: 'wooden_bucket', liquid: 'milk', amountLitres: 5 }, poured: 5 })
+  })
+
+  it('caps the poured amount at remaining capacity instead of overflowing', () => {
+    const partial = { ...createLiquidContainerInstance('wooden_bucket'), liquid: 'milk' as const, amountLitres: 8 }
+    const result = addLiquidToContainer(partial, 'milk', 5)
+    expect(result).toEqual({ instance: { ...partial, amountLitres: 10 }, poured: 2 })
+  })
+
+  it('returns null for content the container cannot accept at all', () => {
+    expect(addLiquidToContainer(createLiquidContainerInstance('waterskin_small'), 'milk', 2)).toBeNull()
+    const waterBucket = { ...createLiquidContainerInstance('wooden_bucket'), liquid: 'water' as const, amountLitres: 3 }
+    expect(addLiquidToContainer(waterBucket, 'milk', 2)).toBeNull()
+    const full = { ...createLiquidContainerInstance('wooden_bucket'), liquid: 'milk' as const, amountLitres: 10 }
+    expect(addLiquidToContainer(full, 'milk', 1)).toBeNull()
   })
 })
 

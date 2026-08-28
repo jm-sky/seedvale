@@ -9,6 +9,7 @@ import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { AnimalAgent, VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
+import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
@@ -186,6 +187,15 @@ export type Settlement = {
     /** Bounded/local currently-threatening animals (plan 179 §7/§10) —
      *  forwarded straight to each `NpcAgent.update`. */
     nearbyAnimalThreats?: readonly ThreateningAnimalCandidate[],
+    /** Drops a livestock-produced world item (plan fauna-002) — called for a
+     *  `chicken` in this settlement's own `livestock` once its production
+     *  cycle completes (`AnimalAgent.readyToLayEgg`). */
+    dropLivestockProduct?: DropLivestockProductHook,
+    /** `dayNight.elapsedDays` (plan fauna-002) — forwarded to each livestock
+     *  `AnimalAgent.update()`'s day-anchor production readiness check.
+     *  Defaults to 0 so existing callers/tests that never touch livestock
+     *  production are unaffected. */
+    nowDays?: number,
   ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
@@ -648,6 +658,13 @@ export async function createSettlement(
     })
     : undefined
 
+  /** Most recent `update()` call's `nowDays` — read by a chicken's
+   *  `onCollected` closure (plan fauna-002), which can fire an arbitrary
+   *  number of frames/days after the egg was laid (whenever the player
+   *  actually picks it up), so it can't capture a frozen `nowDays` value
+   *  from lay time. Mutable-outer-variable-in-closure, same idiom as
+   *  `nightFactor` below. */
+  let currentNowDays = 0
   let nightFactor = 0
   /** Bumped each time `nightFactor` crosses `NIGHT_FIRE_THRESHOLD` upward —
    *  feeds the ignition roll's seed so the same night (even across a
@@ -688,7 +705,8 @@ export async function createSettlement(
     households,
     householdStorages,
     fire,
-    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = []) {
+    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0) {
+      currentNowDays = nowDays
       const nearbyNpcCounts = new Array<number>(agents.length).fill(0)
       const pushX = new Array<number>(agents.length).fill(0)
       const pushZ = new Array<number>(agents.length).fill(0)
@@ -733,7 +751,20 @@ export async function createSettlement(
       // has `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-
       // modified branch of `isPlayerNoticed()` is structurally unreachable
       // for these kinds regardless of the value passed.
-      for (const animal of livestock) animal.update(dt, livestock, observerPos, dayFactor, 0, litFires, villages)
+      for (const animal of livestock) {
+        animal.update(
+          dt, livestock, observerPos, dayFactor, 0, litFires, villages,
+          undefined, undefined, undefined, undefined, undefined, undefined, nowDays,
+        )
+        // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item
+        // the instant its cycle completes, at wherever it's currently
+        // standing; the animal only learns it was collected via the
+        // `onCollected` hook, never by polling.
+        if (animal.readyToLayEgg(nowDays) && dropLivestockProduct) {
+          dropLivestockProduct('egg', animal.mesh.position.x, animal.mesh.position.z, () => animal.notifyEggCollected(currentNowDays))
+          animal.markEggLaid()
+        }
+      }
       if (livestock.some((a) => a.readyToRemove())) {
         const kept: AnimalAgent[] = []
         for (const animal of livestock) {

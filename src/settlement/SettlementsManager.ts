@@ -7,6 +7,7 @@ import type { HomeVillageSize } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
 import type { VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
+import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
@@ -91,6 +92,11 @@ export type SettlementsManager = {
      *  forwarded straight to each loaded `Settlement.update`/`NpcAgent.update`.
      *  Defaults to none so existing callers/tests are unaffected. */
     nearbyAnimalThreats?: readonly ThreateningAnimalCandidate[],
+    /** Forwarded straight to each loaded `Settlement.update` (plan fauna-002). */
+    dropLivestockProduct?: DropLivestockProductHook,
+    /** `dayNight.elapsedDays`, forwarded straight to each loaded
+     *  `Settlement.update` (plan fauna-002). */
+    nowDays?: number,
   ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the
@@ -497,7 +503,7 @@ export async function createSettlementsManager(
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
     },
-    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats) {
+    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)
       }
@@ -512,6 +518,8 @@ export async function createSettlementsManager(
           villages,
           dayLengthSec,
           nearbyAnimalThreats,
+          dropLivestockProduct,
+          nowDays,
         )
       }
       for (const instances of midpoints.values()) {

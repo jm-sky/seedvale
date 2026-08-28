@@ -53,6 +53,25 @@ export function fillLiquidContainer(
   return { ...instance, liquid: content, amountLitres: liquidContainerCapacity(instance.kind) }
 }
 
+/** Adds up to `litres` of `content` to `instance`, capped by remaining
+ *  capacity — the "pour a specific amount" counterpart to
+ *  `fillLiquidContainer`'s "top up to full" (plan fauna-002's milking
+ *  yield, which is a fixed per-species litre amount that may exceed a
+ *  partially-full bucket's remaining room). `null` when `instance` can't
+ *  accept any of it at all (wrong/mixed content, already full, or not a
+ *  container kind); otherwise the amount actually poured is
+ *  `min(litres, remaining capacity)`, never more than what's asked for. */
+export function addLiquidToContainer(
+  instance: LiquidContainerItemInstance,
+  content: LiquidContent,
+  litres: number,
+): { instance: LiquidContainerItemInstance, poured: number } | null {
+  if (!canFillLiquidContainer(instance, content)) return null
+  const capacity = liquidContainerCapacity(instance.kind)
+  const poured = Math.min(litres, capacity - instance.amountLitres)
+  return { instance: { ...instance, liquid: content, amountLitres: instance.amountLitres + poured }, poured }
+}
+
 /** Does `instance` hold at least `litres` of specifically `content` — unlike
  *  `canDrinkFromLiquidContainer`, which accepts any liquid, this is for
  *  actions that need a specific one (e.g. watering a garden needs water, not

@@ -53,6 +53,7 @@ export type ItemKind =
   | 'boar_meat'
   | 'rabbit_meat'
   | 'beef'
+  | 'egg'
   | 'hide'
   | 'cheese'
   | 'dried_meat'
@@ -593,6 +594,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'SM',
     color: 0xa14840,
     description: 'Kawał wołowiny z krowy. Najbardziej sycąca z surowych mięs.'
+  },
+  egg: {
+    kind: 'egg',
+    label: 'jajko',
+    categories: ['food'],
+    weight: 0.06,
+    size: 'XS',
+    color: 0xf2e8c9,
+    description: 'Świeże jajko kurze.'
   },
   hide: {
     kind: 'hide',

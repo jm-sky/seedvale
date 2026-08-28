@@ -5,7 +5,7 @@ import type { VillageFire } from '../../settlement/VillageFire'
 import type { WaterSource } from '../../world/WaterSource'
 import { playActionDig, playActionWell } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
-import { BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../../fauna/AnimalAgent'
+import { ANIMAL_LABELS, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../../fauna/AnimalAgent'
 import { harvestAnimalIntoInventory } from '../../fauna/animalHarvest'
 import { meatKindForAnimal } from '../../fauna/animalMeat'
 import {
@@ -15,11 +15,12 @@ import {
 import { spawnerDestroyBusyLabel } from '../../fauna/createFauna'
 import { COOK_DURATION_SEC, findCookingBatch, resolveCookingCapacity } from '../../items/campfireCooking'
 import { getFreshnessStage } from '../../items/foodFreshness'
-import { inventoryFullToastText } from '../../items/Inventory'
+import { type Inventory, inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
 import { isLiquidContainerInstance, isLiquidContainerKind, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
 import {
+  addLiquidToContainer,
   canDrinkFromLiquidContainer,
   canFillLiquidContainer,
   drinkFromLiquidContainer,
@@ -55,6 +56,27 @@ export type SurvivalActions = {
   drinkFromWaterSource: (source: WaterSource) => void
   fillWaterskin: () => void
   consumeItem: (kind: ItemKind) => void
+  /** Milks a live `cow`/`sheep` into a carried bucket (busy channel, plan
+   *  fauna-002 §3/§4). */
+  startMilkAnimal: (animal: AnimalAgent) => void
+}
+
+/** Real-time seconds per litre of milk drawn — the shared rate behind
+ *  `startMilkAnimal`'s busy-channel duration, so a cow's larger yield takes
+ *  proportionally longer than a sheep's (plan fauna-002 §3.2/§4.2) without
+ *  hardcoding either species' duration directly in the interaction logic. */
+const MILK_SECONDS_PER_LITRE = 3
+
+/** All carried liquid-container instances that could accept at least some
+ *  milk right now (empty, or already partway full of milk) — smallest
+ *  capacity first, same "use the smallest suitable container" convention as
+ *  `survivalActions.ts`'s own `carriedWaterContainers`. Exported so
+ *  `interactables.ts` can gate the "Wydój" prompt on the same check the
+ *  action itself uses, without duplicating the filter. */
+export function hasCarriedMilkContainer(inventory: Inventory): boolean {
+  return LIQUID_CONTAINER_KIND_LIST.some((kind) =>
+    inventory.getInstances(kind).some((inst) => isLiquidContainerInstance(inst) && canFillLiquidContainer(inst, 'milk')),
+  )
 }
 
 export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions {
@@ -270,6 +292,53 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     toast.show(carried.length > 0 ? 'Pojemnik jest już pełny.' : 'Potrzebujesz pojemnika na wodę.', 'error')
   }
 
+  /** Carried liquid-container instances that could hold at least some milk
+   *  right now — same shape as `carriedWaterContainers`, filtered for the
+   *  `milk`-specific rules (`canFillLiquidContainer` already refuses a
+   *  container currently holding water). */
+  function carriedMilkContainers(): LiquidContainerItemInstance[] {
+    return LIQUID_CONTAINER_KIND_LIST.flatMap((kind) => inventory.getInstances(kind))
+      .filter(isLiquidContainerInstance)
+      .filter((inst) => canFillLiquidContainer(inst, 'milk'))
+      .sort((a, b) => liquidContainerCapacity(a.kind) - liquidContainerCapacity(b.kind))
+  }
+
+  /** Milks a live `cow`/`sheep` into the smallest carried bucket with room
+   *  for it (plan fauna-002 §3/§4) — a busy channel (existing "activity in
+   *  time" mechanism) whose duration scales with the species' configured
+   *  yield (`AnimalDef.production.amount`), so a sheep's smaller yield
+   *  finishes faster than a cow's. Esc-cancelling the channel (existing busy
+   *  cancel path) grants no milk at all, same "no partial credit" shape as
+   *  `startHarvestMeat`/`startIgniteFire`. */
+  const startMilkAnimal = (animal: AnimalAgent): void => {
+    if (isActionBlocked(ctx)) return
+    const production = animal.def.production
+    if (!production || production.product !== 'milk' || !animal.canBeMilked(dayNight.elapsedDays)) return
+    const target = carriedMilkContainers()[0]
+    if (!target) {
+      toast.show('Potrzebujesz pustego wiadra.', 'error')
+      return
+    }
+    const label = ANIMAL_LABELS[animal.def.kind]
+    busy.start(production.amount * MILK_SECONDS_PER_LITRE, `Dojenie: ${label}…`, () => {
+      // Re-checked fresh at completion, not the snapshot from when the
+      // channel started — the action can take several real seconds.
+      if (!animal.canBeMilked(dayNight.elapsedDays)) return
+      let poured = 0
+      const applied = inventory.updateInstance(target.id, (current) => {
+        const result = addLiquidToContainer(current as LiquidContainerItemInstance, 'milk', production.amount)
+        if (!result) return current
+        poured = result.poured
+        return result.instance
+      })
+      if (!applied || poured <= 0) return
+      animal.startMilkCooldown(dayNight.elapsedDays)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show(`+${poured} l mleka`, 'pickup')
+    }, { blurred: true })
+  }
+
   /** Inventory-screen "Zjedz"/"Wypij" (plan 106) — driven by
    *  `ITEM_CATALOG[kind].consumable`, the same catalog entry the well/lake/
    *  cooking paths' relief amounts come from. */
@@ -327,5 +396,6 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     drinkFromWaterSource,
     fillWaterskin,
     consumeItem,
+    startMilkAnimal,
   }
 }

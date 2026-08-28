@@ -40,6 +40,7 @@ Generated from TypeScript imports.
 - `economy/kinds.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/huntingHooks.ts`
+- `fauna/livestockProduction.ts`
 - `player/PlayerController.ts`
 - `settlement/createSettlement.ts`
 - `settlement/household.ts`
@@ -122,6 +123,7 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/huntingHooks.ts`
+- `fauna/livestockProduction.ts`
 - `player/PlayerController.ts`
 - `settlement/VillageFire.ts`
 - `settlement/families.ts`
