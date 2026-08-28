@@ -52,7 +52,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `003`
-- settlements-npcs: `006`
+- settlements-npcs: `008`
 - tools: `004`
 - ui-input: `005`
 - world: `006`
