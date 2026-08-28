@@ -273,7 +273,6 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: '/models/items/knife.glb',
     notes: 'Starting loadout; held visual on Wrist.R; melee on animals. Fast/narrow (plan 123).',
   },
-  // TODO: Add long_sword to the game, review all configs.
   long_sword: {
     kind: 'long_sword',
     label: 'miecz',
