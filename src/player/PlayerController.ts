@@ -150,6 +150,12 @@ export type HeightSampler = (x: number, z: number) => number
  *  instead of importing `ChunkManager` here, same reasoning as `HeightSampler`. */
 export type ColliderSource = (x: number, z: number) => readonly Collider[]
 
+/**
+ * @domain items-player
+ * @system player-controller
+ * @role Owns player movement, animation and runtime transform state.
+ * @simulation tick
+ */
 export class PlayerController {
   /** Wrapper group; feet sit at local y=0, world y is set in snapToGround. */
   readonly mesh: THREE.Object3D

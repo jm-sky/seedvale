@@ -721,6 +721,13 @@ export type CropHarvestOutcome =
   | { ok: true, yield: { kind: ItemKind, count: number } }
   | { ok: false, reason: 'unknown-crop' | 'no-yield' }
 
+/**
+ * @domain world-terrain
+ * @system chunk-manager
+ * @role Owns terrain chunk streaming, sampling and environment-facing world queries.
+ * @simulation on-demand
+ * @performance nearby-only
+ */
 export function createChunkManager(
   scene: THREE.Scene,
   config: ChunkManagerConfig,

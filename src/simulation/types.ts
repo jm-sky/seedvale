@@ -4,6 +4,11 @@
  * These types are domain-agnostic and Three.js-free. NPC and fauna keep their
  * own decision policies and world-effect callbacks; they share only the shapes
  * for planned actions, action lifecycle, and decision context snapshots.
+ *
+ * @domain shared
+ * @system simulation-contracts
+ * @role Domain-agnostic shapes (`PlannedAction`, `DecisionContext`, `ActionLifecycle`) shared by NPC and fauna decision/action code.
+ * @uses (none — deliberately Three.js- and domain-free)
  */
 
 /** Plain world position — never a Three.js object. */

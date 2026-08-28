@@ -17,12 +17,12 @@ Generated from exported TypeScript symbols.
 
 ## `combat/defenseResolver.ts`
 
-- `DEFENSE_FRONT_ARC_DOT` — const — line 5
-- `defenseBlockRoll` — function — line 24
-- `DefenseOutcome` — type — line 7
-- `isAttackFromDefensibleDirection` — function — line 43
-- `ResolvedDefense` — type — line 9
-- `resolveDefense` — function — line 73
+- `DEFENSE_FRONT_ARC_DOT` — const — line 12
+- `defenseBlockRoll` — function — line 31
+- `DefenseOutcome` — type — line 14
+- `isAttackFromDefensibleDirection` — function — line 50
+- `ResolvedDefense` — type — line 16
+- `resolveDefense` — function — line 80
 
 ## `combat/meleeAttack.ts`
 

@@ -14,7 +14,7 @@ Generated from exported TypeScript symbols.
 - `QuestDialogOverride` — type — line 28
 - `QuestItemGrant` — type — line 56
 - `QuestListEntry` — type — line 37
-- `QuestManager` — class — line 122
+- `QuestManager` — class — line 129
 - `QuestManagerInitial` — type — line 50
 - `QuestProgressEntry` — type — line 48
 

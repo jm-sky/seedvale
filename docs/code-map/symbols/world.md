@@ -176,13 +176,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/dayNight.ts`
 
-- `createDayNightState` — function — line 40
-- `DayNightState` — type — line 26
-- `formatClock` — function — line 191
-- `parseTimeOfDayFromUrl` — function — line 175
-- `phaseName` — function — line 198
-- `skyParamsFromTime` — function — line 63
-- `tickDayNight` — function — line 53
+- `createDayNightState` — function — line 43
+- `DayNightState` — type — line 29
+- `DEFAULT_TIME_OF_DAY` — const — line 27
+- `formatClock` — function — line 194
+- `parseTimeOfDayFromUrl` — function — line 178
+- `phaseName` — function — line 201
+- `skyParamsFromTime` — function — line 66
+- `tickDayNight` — function — line 56
 
 ## `world/dryingRacks.ts`
 
@@ -479,55 +480,55 @@ Generated from exported TypeScript symbols.
 
 ## `world/treeLifecycle.ts`
 
-- `advanceStage` — function — line 377
-- `bonusYieldForChopStage` — function — line 178
-- `canopyGrowthFactor` — function — line 358
-- `canReachOld` — function — line 163
-- `CHOP_SCALE_MULT` — const — line 115
-- `CHOP_YIELDS` — const — line 129
-- `clamp01` — function — line 228
-- `coastalFactor` — function — line 316
-- `createTreeLifecycle` — function — line 498
-- `envGrowthFactor` — function — line 326
-- `FELLING_BEAM_YIELD` — const — line 146
-- `HARVEST_YIELD` — const — line 137
-- `HarvestYield` — type — line 124
-- `HEIGHT_RANGE_M` — const — line 77
-- `isCanopyStage` — function — line 159
-- `isChoppableStage` — function — line 155
-- `lerp` — function — line 232
-- `livingHeightM` — function — line 242
-- `makeTreeId` — function — line 487
-- `OLD_SPAWN_CHANCE` — const — line 102
-- `parseTreeOverrides` — function — line 781
-- `PINE_SPECIES_INDICES` — const — line 112
-- `quantizeTreeCoord` — function — line 479
-- `ResolvedTreeState` — type — line 219
-- `rollLivingAge` — function — line 289
-- `rollSizeClass` — function — line 278
-- `SIZE_CLASS_T` — const — line 85
-- `SIZE_CLASS_WEIGHTS` — const — line 92
-- `SIZE_JITTER_HALF` — const — line 99
-- `sizeT` — function — line 237
-- `speciesPrefs` — function — line 304
-- `STAGE_DURATION_DAYS` — const — line 67
-- `templateHeightM` — function — line 251
-- `TREE_SPECIES_PREFS` — const — line 195
-- `TREE_TEMPLATE_HEIGHT_M` — const — line 108
-- `TreeEnvSample` — type — line 33
-- `TreeGrowthStage` — type — line 5
-- `TreeHarvestStepResult` — type — line 409
-- `TreeId` — type — line 23
-- `TreeLifecycle` — type — line 413
-- `TreeLivingAge` — type — line 15
-- `TreePresence` — type — line 207
-- `TreeSizeClass` — type — line 18
-- `TreeSpeciesPrefs` — type — line 53
-- `TreeStateOverride` — type — line 27
-- `treeVisualKind` — function — line 182
-- `TreeVisualKind` — type — line 21
-- `visualScaleForTree` — function — line 259
-- `yieldForChopStage` — function — line 167
+- `advanceStage` — function — line 385
+- `bonusYieldForChopStage` — function — line 186
+- `canopyGrowthFactor` — function — line 366
+- `canReachOld` — function — line 171
+- `CHOP_SCALE_MULT` — const — line 123
+- `CHOP_YIELDS` — const — line 137
+- `clamp01` — function — line 236
+- `coastalFactor` — function — line 324
+- `createTreeLifecycle` — function — line 506
+- `envGrowthFactor` — function — line 334
+- `FELLING_BEAM_YIELD` — const — line 154
+- `HARVEST_YIELD` — const — line 145
+- `HarvestYield` — type — line 132
+- `HEIGHT_RANGE_M` — const — line 85
+- `isCanopyStage` — function — line 167
+- `isChoppableStage` — function — line 163
+- `lerp` — function — line 240
+- `livingHeightM` — function — line 250
+- `makeTreeId` — function — line 495
+- `OLD_SPAWN_CHANCE` — const — line 110
+- `parseTreeOverrides` — function — line 789
+- `PINE_SPECIES_INDICES` — const — line 120
+- `quantizeTreeCoord` — function — line 487
+- `ResolvedTreeState` — type — line 227
+- `rollLivingAge` — function — line 297
+- `rollSizeClass` — function — line 286
+- `SIZE_CLASS_T` — const — line 93
+- `SIZE_CLASS_WEIGHTS` — const — line 100
+- `SIZE_JITTER_HALF` — const — line 107
+- `sizeT` — function — line 245
+- `speciesPrefs` — function — line 312
+- `STAGE_DURATION_DAYS` — const — line 75
+- `templateHeightM` — function — line 259
+- `TREE_SPECIES_PREFS` — const — line 203
+- `TREE_TEMPLATE_HEIGHT_M` — const — line 116
+- `TreeEnvSample` — type — line 41
+- `TreeGrowthStage` — type — line 13
+- `TreeHarvestStepResult` — type — line 417
+- `TreeId` — type — line 31
+- `TreeLifecycle` — type — line 421
+- `TreeLivingAge` — type — line 23
+- `TreePresence` — type — line 215
+- `TreeSizeClass` — type — line 26
+- `TreeSpeciesPrefs` — type — line 61
+- `TreeStateOverride` — type — line 35
+- `treeVisualKind` — function — line 190
+- `TreeVisualKind` — type — line 29
+- `visualScaleForTree` — function — line 267
+- `yieldForChopStage` — function — line 175
 
 ## `world/treeVisuals.ts`
 
@@ -578,11 +579,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/WaterSource.ts`
 
-- `createWaterSource` — function — line 22
-- `DRINK_THIRST_RELIEF` — const — line 16
-- `UNSAFE_WATER_WARNING` — const — line 20
-- `WaterQuality` — type — line 7
-- `WaterSource` — type — line 9
+- `createWaterSource` — function — line 27
+- `DRINK_THIRST_RELIEF` — const — line 21
+- `UNSAFE_WATER_WARNING` — const — line 25
+- `WaterQuality` — type — line 12
+- `WaterSource` — type — line 14
 
 ## `world/weather.ts`
 

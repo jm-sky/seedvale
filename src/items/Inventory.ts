@@ -81,7 +81,14 @@ export type FoodBatch = { count: number, acquiredAtDays: number }
  *  player's own instance is in-memory + persisted via `toJSON()`/the
  *  constructor's `initial` param — see `persistence/saveData.ts`.
  *  `maxWeight` itself is never persisted (derived on every load) — see plan
- *  `043` §3/§11. */
+ *  `043` §3/§11.
+ *
+ * @domain items-player
+ * @system inventory
+ * @role Owns item ownership: stack counts, item instances and perishable food batches.
+ * @owns FoodBatch
+ * @produces SaveItemInstance
+ */
 export class Inventory {
   private readonly counts = new Map<ItemKind, number>()
   private readonly instances = new Map<string, ItemInstance>()

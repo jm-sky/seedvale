@@ -97,7 +97,14 @@ export function homeChunks(): ChunkCoord[] {
  *  `createApp.ts`, the game loop) holds this same object reference, so it
  *  must keep seeing the live world through field reads (`bundle.chunkManager`),
  *  never by capturing a field's value up front. Only `rebuildWorldBundle`
- *  reassigns fields — nothing else should. */
+ *  reassigns fields — nothing else should.
+ *
+ * @system world-bundle
+ * @role Owns the lifetime/rebuild boundary for all world systems (terrain,
+ *  settlements, fauna, items, player-placed structures).
+ * @owns WorldBundle
+ * @lifecycle rebuild
+ */
 export type WorldBundle = {
   chunkManager: ChunkManager
   ocean: WorldOcean

@@ -6,7 +6,7 @@ Generated from exported TypeScript symbols.
 
 - `ANIMAL_DEFS` — const — line 492
 - `ANIMAL_LABELS` — const — line 410
-- `AnimalAgent` — class — line 721
+- `AnimalAgent` — class — line 729
 - `AnimalDef` — type — line 426
 - `AnimalKind` — type — line 395
 - `AnimalLifeStage` — type — line 392

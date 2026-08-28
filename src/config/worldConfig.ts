@@ -40,6 +40,11 @@ export type DetailNormalConfig = {
  * **resolution** = vertices along one edge of the terrain mesh.
  * More vertices ⇒ denser mesh ⇒ more triangles (≈ 2 × (res−1)²).
  * Default: **193** (High). Presets: 65 … 769 (Insane — wolniejszy rebuild).
+ *
+ * @domain world
+ * @system world-config
+ * @role Owns terrain/graphics/gameplay tunables shared by the debug GUI, world-config screen and benchmark runner.
+ * @owns WorldConfig
  */
 export type WorldConfig = {
   seed: number

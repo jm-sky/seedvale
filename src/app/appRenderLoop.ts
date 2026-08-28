@@ -16,7 +16,13 @@ const MAX_DEBUG_EVENTS = 6
  *  scheduling, viewport/DPR resizing (including the mobile visual-viewport and
  *  orientation cases), WebGL context loss/restore, and the optional camera
  *  debug overlay. It owns no simulation state — `gameLoop.ts` still does one
- *  frame's worth of work per `onTick`. */
+ *  frame's worth of work per `onTick`.
+ *
+ * @system app-render-loop
+ * @role Drives `requestAnimationFrame` scheduling, viewport/DPR resize and WebGL context loss/restore around the game loop.
+ * @uses GameLoop
+ * @lifecycle frame-scheduling
+ */
 export type AppRenderLoop = {
   /** Starts the `requestAnimationFrame` chain. */
   start: () => void

@@ -4,12 +4,12 @@ Generated from exported TypeScript symbols.
 
 ## `persistence/saveData.ts`
 
-- `isSaveData` — function — line 792
-- `loadSaveData` — function — line 839
+- `isSaveData` — function — line 798
+- `loadSaveData` — function — line 845
 - `QuestProgressEntry` — type — line 40
 - `SaveCarriedContainer` — type — line 186
 - `SaveConfig` — type — line 20
-- `SaveData` — type — line 286
+- `SaveData` — type — line 292
 - `SaveDroppedItem` — type — line 50
 - `SaveDryingRack` — type — line 145
 - `SaveFishingBait` — type — line 168
@@ -39,18 +39,18 @@ Generated from exported TypeScript symbols.
 
 ## `persistence/saveDb.ts`
 
-- `beginNewSave` — function — line 115
-- `createSave` — function — line 218
-- `CreateSaveResult` — type — line 23
-- `deleteSave` — function — line 262
-- `getActiveSaveId` — function — line 88
-- `getPendingNewSaveName` — function — line 106
-- `listSaves` — function — line 155
-- `readSave` — function — line 170
-- `renameSave` — function — line 239
-- `setActiveSaveId` — function — line 97
-- `setPendingNewSaveName` — function — line 110
-- `writeSave` — function — line 191
+- `beginNewSave` — function — line 121
+- `createSave` — function — line 224
+- `CreateSaveResult` — type — line 29
+- `deleteSave` — function — line 268
+- `getActiveSaveId` — function — line 94
+- `getPendingNewSaveName` — function — line 112
+- `listSaves` — function — line 161
+- `readSave` — function — line 176
+- `renameSave` — function — line 245
+- `setActiveSaveId` — function — line 103
+- `setPendingNewSaveName` — function — line 116
+- `writeSave` — function — line 197
 
 ## `persistence/saveSlots.ts`
 

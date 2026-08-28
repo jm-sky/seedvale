@@ -58,7 +58,13 @@ export type HeldTool = {
  *  counts/instances; this only tracks which tool (if any) is currently "in
  *  hand" for UX gates like shovel dig prompts and, for weapon-maintenance
  *  kinds, which concrete instance's durability/sharpness combat should read
- *  (plan 161). */
+ *  (plan 161).
+ *
+ * @domain items-player
+ * @system held-tool
+ * @role Tracks which single tool/weapon instance is currently equipped in hand.
+ * @uses Inventory
+ */
 export function createHeldTool(
   inventory: Inventory,
   initial: ItemKind | null = null,

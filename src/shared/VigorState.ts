@@ -1,3 +1,9 @@
+/**
+ * @domain shared
+ * @system vigor
+ * @role NPC daily physiological budget; collapse gates sleep through the NPC FSM. Not used by fauna.
+ * @owns VigorState
+ */
 export type VigorState = {
   max: number
   current: number

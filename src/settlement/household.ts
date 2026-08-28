@@ -9,6 +9,12 @@ import { Inventory } from '../items/Inventory'
  * NPC household resource layer (plan 069). One family/home has one
  * household; households sit between NPC carrying and `SettlementEconomy` —
  * see the implementation notes next to plan 069 for the ownership model.
+ *
+ * @domain settlements-npcs
+ * @system household
+ * @role Owns one family's own food/wood/water stock, between NPC carrying and `SettlementEconomy`.
+ * @owns Household
+ * @uses SettlementEconomy
  */
 export type HouseholdId = string
 

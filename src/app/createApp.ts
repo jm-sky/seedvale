@@ -193,6 +193,13 @@ function terrainModificationsFromSave(saved: readonly SaveTerrainModification[])
  * - `saveState.ts` — `SaveData` assembly and autosave lifecycle.
  * - `gameLoop.ts` — one frame of simulation + render.
  * - `appRenderLoop.ts` — rAF scheduling, resize and WebGL context loss.
+ *
+ * @system app-composition
+ * @role Composition root: builds every long-lived system, threads their
+ *  dependencies and owns app-level lifecycle (boot, rebuild, dispose).
+ * @owns WorldBundle GameLoop AppRenderLoop
+ * @lifecycle boot
+ * @integration Wires world, player, UI, persistence and audio systems together.
  */
 export async function createApp(
   container: HTMLElement,

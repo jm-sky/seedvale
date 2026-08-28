@@ -75,7 +75,7 @@ Generated from exported TypeScript symbols.
 
 ## `items/HeldTool.ts`
 
-- `createHeldTool` — function — line 62
+- `createHeldTool` — function — line 68
 - `HeldTool` — type — line 38
 - `isToolKind` — function — line 34
 - `ToolKind` — type — line 7
@@ -97,8 +97,8 @@ Generated from exported TypeScript symbols.
 
 - `DEFAULT_MAX_SIZE` — const — line 33
 - `FoodBatch` — type — line 76
-- `Inventory` — class — line 85
-- `inventoryFullToastText` — function — line 442
+- `Inventory` — class — line 92
+- `inventoryFullToastText` — function — line 449
 - `ItemAmount` — type — line 38
 - `SaveItemInstance` — type — line 40
 - `toSaveItemInstance` — function — line 56
@@ -112,24 +112,24 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1025
-- `CAPABILITY_KINDS` — const — line 1056
+- `ARROW_DAMAGE_BONUS` — const — line 1031
+- `CAPABILITY_KINDS` — const — line 1062
 - `CAPABILITY_NEED_LABEL` — const — line 108
 - `ConsumableNeed` — type — line 120
 - `consumeNeedNoun` — function — line 189
 - `consumeVerbLabel` — function — line 180
 - `DefenseConfig` — type — line 40
-- `hasItemCapability` — function — line 1081
-- `HOLDABLE_KINDS` — const — line 1047
-- `isMeleeToolKind` — function — line 1040
-- `isRangedTool` — function — line 1032
-- `ITEM_CATALOG` — const — line 197
-- `ITEM_SYSTEM_ROADMAP` — const — line 1086
+- `hasItemCapability` — function — line 1087
+- `HOLDABLE_KINDS` — const — line 1053
+- `isMeleeToolKind` — function — line 1046
+- `isRangedTool` — function — line 1038
+- `ITEM_CATALOG` — const — line 203
+- `ITEM_SYSTEM_ROADMAP` — const — line 1092
 - `ItemCapability` — type — line 87
 - `ItemCatalogEntry` — type — line 127
 - `ItemSpawnKind` — type — line 12
 - `MeleeConfig` — type — line 23
-- `NON_ITEM_PROPS` — const — line 1092
+- `NON_ITEM_PROPS` — const — line 1098
 - `RangedConfig` — type — line 51
 
 ## `items/itemInstances.ts`

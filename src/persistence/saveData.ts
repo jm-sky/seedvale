@@ -282,7 +282,13 @@ export type SavePlayerGarden = {
 
 /** Canonical (and, for now, only) save contract. Versioning/migration can be
  *  reintroduced later if the format changes again — this module intentionally
- *  carries no history of prior schemas. */
+ *  carries no history of prior schemas.
+ *
+ * @domain persistence
+ * @system save-schema
+ * @role Owns the SaveData shape and its validation/defaulting.
+ * @owns SaveData
+ */
 export type SaveData = {
   version: 1
   config: SaveConfig

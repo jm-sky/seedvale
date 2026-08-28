@@ -718,6 +718,14 @@ export function pickNearestEligibleWolf(
   return best
 }
 
+/**
+ * @domain fauna
+ * @system animal-agent
+ * @role Central per-animal behaviour integration point: predator/prey AI,
+ *  needs, health, production (livestock) and riding (mounts).
+ * @uses HealthState StaminaState
+ * @simulation tick
+ */
 export class AnimalAgent {
   /** Visual root (GLB group or capsule mesh). */
   readonly mesh: THREE.Object3D

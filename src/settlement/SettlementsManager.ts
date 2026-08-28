@@ -126,6 +126,13 @@ export type SettlementsManager = {
   dispose: () => void
 }
 
+/**
+ * @domain settlements
+ * @system settlements-manager
+ * @role Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
+ * @owns SettlementEconomy Household
+ * @lifecycle streaming
+ */
 export async function createSettlementsManager(
   scene: Scene,
   sampleHeight: HeightSampler,

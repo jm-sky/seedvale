@@ -3,7 +3,12 @@
  *  instead of separate per-source implementations. Deliberately data-only:
  *  the actual `Inventory`/`PlayerNeeds` mutation happens in `app/gameLoop.ts`
  *  (same reasoning as `campfire`/`item`/`corpse` — those need `Inventory`
- *  access the generic `resolveInteraction.ts` dispatcher doesn't have). */
+ *  access the generic `resolveInteraction.ts` dispatcher doesn't have).
+ *
+ * @domain world
+ * @system water-source
+ * @role Shared well/lake drink/fill abstraction; future river/polluted/treated sources should reuse it.
+ */
 export type WaterQuality = 'safe' | 'unsafe'
 
 export type WaterSource = {

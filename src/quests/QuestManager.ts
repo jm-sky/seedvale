@@ -118,7 +118,14 @@ function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, bound
 }
 
 /** Drives multi-stage quests. Kept out of `NpcAgent`/world objects so they stay
- *  quest-agnostic — callers pass the resulting line/marker in as data. */
+ *  quest-agnostic — callers pass the resulting line/marker in as data.
+ *
+ * @domain quests-progression
+ * @system quest-manager
+ * @role Owns quest progress, objective/stage evaluation and NPC relation levels.
+ * @owns QuestProgressEntry
+ * @integration Bound to world entities (fauna, wells, spawners) via injected resolvers, never by importing them directly.
+ */
 export class QuestManager {
   private readonly defs: readonly QuestDef[]
   private readonly inventory: Inventory

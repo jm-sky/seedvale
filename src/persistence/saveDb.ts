@@ -15,6 +15,12 @@ import {
   wrapSave,
 } from './saveSlots'
 
+/**
+ * @domain persistence
+ * @system save-storage
+ * @role Owns IndexedDB save slots and the active-save id.
+ * @uses SaveData
+ */
 const DB_NAME = 'seedvale'
 const DB_VERSION = 1
 const STORE_NAME = 'saves'
