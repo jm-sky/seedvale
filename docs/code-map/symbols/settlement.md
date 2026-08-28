@@ -17,9 +17,9 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 218
-- `Settlement` — type — line 140
-- `settlementSpawnPoint` — function — line 210
+- `createSettlement` — function — line 228
+- `Settlement` — type — line 141
+- `settlementSpawnPoint` — function — line 220
 
 ## `settlement/decorProps.ts`
 
@@ -406,8 +406,8 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 123
-- `SettlementsManager` — type — line 59
+- `createSettlementsManager` — function — line 129
+- `SettlementsManager` — type — line 60
 
 ## `settlement/settlementStructures.ts`
 

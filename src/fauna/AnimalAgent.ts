@@ -51,6 +51,11 @@ import {
   MOTHER_FOLLOW_RADIUS,
   pickHerdLeader,
 } from './herdCohesion'
+import {
+  initialLivestockProductionReadyAtDays,
+  livestockProductionReady,
+  nextLivestockProductionReadyAtDays,
+} from './livestockProduction'
 import { detectionRoll, isPlayerNoticed, type PlayerStealthState, sneakDetectionMultiplier } from './playerAwareness'
 import {
   decidePredatorHumanIntent,
@@ -449,6 +454,10 @@ export type AnimalDef = {
    *  no separate boolean, so a future mountable species only ever needs to
    *  add this block, never a species branch in the riding code itself. */
   mount?: MountPointConfig
+  /** Presence of this field IS the livestock-production capability (plan
+   *  fauna-002) — same "no separate boolean, no per-species branch" shape
+   *  as `mount` above. Absent for every wild `AnimalKind`. */
+  production?: LivestockProductionConfig
 }
 
 /** Rider seat placement for a mountable `AnimalDef` (plan fauna-003 §6) —
@@ -459,6 +468,25 @@ export type MountPointConfig = {
   seatHeight: number
   /** Seat offset (m) along the animal's forward facing, + toward the head. */
   seatForwardOffset: number
+}
+
+export type LivestockProductKind = 'egg' | 'milk'
+
+/** Per-species production tuning (plan fauna-002 §5) — the single config
+ *  block every farm-animal kind's production timer/yield reads, instead of
+ *  a parallel `ChickenEggSystem`/`CowMilkSystem`/`SheepMilkSystem`.
+ *  `amount` is a count for `egg` (always 1) or litres for `milk`.
+ *  `intervalDays` is a world-time (`elapsedDays`) duration — the time
+ *  between one egg being collected and the next becoming ready (`egg`), or
+ *  the cooldown after milking before the animal can be milked again
+ *  (`milk`) — deliberately days, not real seconds: settlement livestock
+ *  streams out/in and must resolve correctly regardless of how long it was
+ *  unloaded, so readiness is a lazy `nowDays` comparison
+ *  (`livestockProductionReady`), never a per-frame decrementing timer. */
+export type LivestockProductionConfig = {
+  product: LivestockProductKind
+  amount: number
+  intervalDays: number
 }
 
 export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
@@ -617,6 +645,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 8,
     playerNoticeRange: 0,
     playerPanicRange: 0,
+    production: { product: 'milk', amount: 5, intervalDays: 0.5 },
   },
   sheep: {
     kind: 'sheep',
@@ -631,6 +660,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 12,
     playerNoticeRange: 0,
     playerPanicRange: 0,
+    production: { product: 'milk', amount: 2, intervalDays: 0.35 },
   },
   chicken: {
     kind: 'chicken',
@@ -645,6 +675,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 10,
     playerNoticeRange: 0,
     playerPanicRange: 0,
+    production: { product: 'egg', amount: 1, intervalDays: 1 },
   },
 }
 
@@ -756,6 +787,19 @@ export class AnimalAgent {
   private lastHydrationPercent = -1
   readonly health: HealthState
   readonly life: AnimalLifeState
+  /** Absolute `elapsedDays` anchor at which this animal's next production
+   *  event — a fresh egg becoming ready (`chicken`) or the milking cooldown
+   *  clearing (`cow`/`sheep`) — is ready; `null` until the first real
+   *  `update()` tick lazily seeds it with a staggered offset (plan fauna-002
+   *  §5/§6: state lives per-animal, no global `nextChickenEggTime`-style
+   *  timer, and no per-frame decrementing — see `livestockProduction.ts`).
+   *  Meaningless (never read) for kinds without `def.production`. */
+  private productionReadyAtDays: number | null = null
+  /** `egg` only — true from the moment this cycle's egg has been dropped
+   *  into the world until it's actually collected (`notifyEggCollected`);
+   *  blocks starting a new cycle so a chicken never has more than one
+   *  outstanding egg (plan fauna-002 §2.1). */
+  private eggPending = false
   private attackCooldown = 0
   private timeSinceDeath = 0
   private isNight = false
@@ -1428,6 +1472,57 @@ export class AnimalAgent {
     this.rotFx = null
   }
 
+  /** Lazily seeds `productionReadyAtDays` on the very first real tick — a
+   *  no-op for any kind without `def.production`, and a no-op once already
+   *  seeded (every later call just falls through to the readiness checks
+   *  below, which compare `nowDays` directly against the stored anchor; see
+   *  `livestockProduction.ts`'s module doc for why this needs no per-frame
+   *  work). Mirrors `tickMaturity`'s call site. */
+  private tickProduction(nowDays: number): void {
+    const production = this.def.production
+    if (!production || this.productionReadyAtDays !== null) return
+    this.productionReadyAtDays = initialLivestockProductionReadyAtDays(nowDays, production.intervalDays, Math.random())
+  }
+
+  /** True the instant this chicken's current cycle is done and no egg is
+   *  already waiting to be picked up — `createSettlement.ts`'s livestock
+   *  loop checks this once per frame per chicken and, if true, drops a real
+   *  `egg` world item and calls `markEggLaid()` (plan fauna-002 §2). */
+  readyToLayEgg(nowDays: number): boolean {
+    return this.def.production?.product === 'egg' && !this.eggPending
+      && livestockProductionReady(this.productionReadyAtDays, nowDays)
+  }
+
+  /** Marks this cycle's egg as dropped into the world — blocks
+   *  `readyToLayEgg()` until `notifyEggCollected()` fires. */
+  markEggLaid(): void {
+    this.eggPending = true
+  }
+
+  /** Called once, when the world item this chicken laid is actually picked
+   *  up (`items/createDroppedItems.ts`'s `onCollected` hook) — starts the
+   *  next production cycle. */
+  notifyEggCollected(nowDays: number): void {
+    this.eggPending = false
+    const intervalDays = this.def.production?.intervalDays ?? 0
+    this.productionReadyAtDays = nextLivestockProductionReadyAtDays(nowDays, intervalDays)
+  }
+
+  /** True while a `cow`/`sheep`'s milking cooldown has cleared — gates the
+   *  player's `[E] Wydój` action (`app/actions/survivalActions.ts`'s
+   *  `startMilkAnimal`). */
+  canBeMilked(nowDays: number): boolean {
+    return this.def.production?.product === 'milk' && livestockProductionReady(this.productionReadyAtDays, nowDays)
+  }
+
+  /** Called once a milking action actually completes — starts the next
+   *  cooldown (plan fauna-002 §3/§4). */
+  startMilkCooldown(nowDays: number): void {
+    const production = this.def.production
+    if (!production || production.product !== 'milk') return
+    this.productionReadyAtDays = nextLivestockProductionReadyAtDays(nowDays, production.intervalDays)
+  }
+
   update(
     dt: number,
     others: AnimalAgent[],
@@ -1454,6 +1549,12 @@ export class AnimalAgent {
     /** Aggression/alert audio hook (plan 188 §11) — fired once on the rising
      *  edge of this predator committing to a human chase, not every frame. */
     onAggro?: (kind: AnimalKind, x: number, z: number) => void,
+    /** `dayNight.elapsedDays` (plan fauna-002) — only meaningful for a
+     *  livestock kind with `def.production`; drives the day-anchor
+     *  production readiness check (`tickProduction`/`livestockProduction.ts`).
+     *  Defaults to 0 so existing wild-fauna/test callers that never touch
+     *  production are unaffected. */
+    nowDays = 0,
   ): void {
     if (this.health.dead) {
       if (!this.corpseHeld) {
@@ -1478,6 +1579,7 @@ export class AnimalAgent {
     this.currentVillages = villages
     this.currentOthers = others
     this.tickMaturity(dt)
+    this.tickProduction(nowDays)
     const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires, playerStealth)
     // Only a frenzied predator considers an NPC target, and only once the
     // player isn't the active threat (plan 179 §5/§8) — cheap bounded scan,

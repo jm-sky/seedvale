@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-28 (plan settlements-npcs-001 — buckets wired to the well/lake `[R]` fill action and to watering a player garden plot)
+**Last updated:** 2026-08-28 (plan fauna-002 — new `egg` item; buckets wired to milking a cow/sheep)
 
 ## Quick rules
 
@@ -81,8 +81,8 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | waterskin_small | mały bukłak | — | — | none (Kupiec) | procedural (M68 needed) | plan items-player-001; leather, 2 l capacity; `[R]` at well/lake fills to full, Wypij drinks 1 l — replaces plan 106's binary waterskin_empty/waterskin_full |
 | waterskin_medium | średni bukłak | — | — | none (Kupiec) | procedural (M68 needed) | plan items-player-001; leather, 5 l capacity; same fill/drink as waterskin_small |
 | waterskin_large | duży bukłak | — | — | none (Kupiec) | procedural (M68 needed) | plan items-player-001; leather, 10 l capacity; same fill/drink as waterskin_small |
-| wooden_bucket | drewniane wiadro | — | — | none (Kupiec, no recipe) | procedural (M69 needed) | plan items-player-001; wood, 10 l, holds water or milk; fills at well/lake and waters a garden plot (plan settlements-npcs-001) — drink-from-bucket/milking still deferred |
-| copper_bucket | miedziane wiadro | — | — | none | procedural (M69 needed) | plan items-player-001 §11; copper, 10 l, holds water or milk; future blacksmith smithing/crafting output — not Kupiec stock yet (unlike wooden_bucket); same fill/watering wiring as wooden_bucket, same deferred drink/milking |
+| wooden_bucket | drewniane wiadro | — | — | none (Kupiec, no recipe) | procedural (M69 needed) | plan items-player-001; wood, 10 l, holds water or milk; fills at well/lake, waters a garden plot (plan settlements-npcs-001), and now takes a cow/sheep's milking yield (plan fauna-002) — drink-from-bucket still deferred |
+| copper_bucket | miedziane wiadro | — | — | none | procedural (M69 needed) | plan items-player-001 §11; copper, 10 l, holds water or milk; future blacksmith smithing/crafting output — not Kupiec stock yet (unlike wooden_bucket); same fill/watering/milking wiring as wooden_bucket, same deferred drink |
 | saddlebags | juki | — | — | none (Kupiec) | procedural (M70 needed) | plan items-player-001 §4.2; leather; inert carried item — animal-equip/transport-capacity mechanic is future work |
 | spear | dzida | yes | 20 | none (Kupiec) | `items/spear.glb` (M38) | plan 134; longest range, narrow thrust arc |
 | short_sword | krótki miecz | yes | 18 | none (Kupiec) | `items/short_sword.glb` (M38) | plan 134; lighter/faster than long_sword |
@@ -91,6 +91,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | boar_meat | mięso dzika | — | — | corpse harvest (knife, dzik) | procedural | plan 134; Zjedz (+17 hunger); cooks to roasted_meat |
 | rabbit_meat | mięso królika | — | — | corpse harvest (knife, królik) | procedural | plan 134; Zjedz (+10 hunger); cooks to roasted_meat |
 | beef | wołowina | — | — | corpse harvest (knife, krowa) | procedural | plan 134; Zjedz (+20 hunger); cooks to roasted_meat |
+| egg | jajko | — | — | none — laid by a live chicken, dropped in the world | procedural | plan fauna-002; Zjedz raw (+12 hunger); spoils like other food (3 days); no cooking/processing |
 | hide | skóra | — | — | corpse harvest byproduct (any species) | procedural | plan 134; sellable via barter or to Kupiec at `sellPrice` (`tradeValue` / 2) |
 | cheese | ser | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+20 hunger) |
 | dried_meat | suszone mięso | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+25 hunger); light, long-lasting |

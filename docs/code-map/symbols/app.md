@@ -49,8 +49,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 60
-- `SurvivalActions` — type — line 49
+- `createSurvivalActions` — function — line 82
+- `hasCarriedMilkContainer` — function — line 76
+- `SurvivalActions` — type — line 50
 
 ## `app/actions/terrainPreparationActions.ts`
 
@@ -87,9 +88,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 416
-- `GameLoop` — type — line 390
-- `GameLoopDeps` — type — line 203
+- `createGameLoop` — function — line 419
+- `GameLoop` — type — line 393
+- `GameLoopDeps` — type — line 204
 
 ## `app/graphicsSettings.ts`
 
@@ -99,10 +100,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 767
-- `buildDigTarget` — function — line 714
-- `buildInteractables` — function — line 274
-- `collectItem` — function — line 814
+- `buildCombatTarget` — function — line 778
+- `buildDigTarget` — function — line 725
+- `buildInteractables` — function — line 280
+- `collectItem` — function — line 825
 - `COMBAT_TARGET_CONE_DOT` — const — line 80
 - `COMBAT_TARGET_RANGE` — const — line 65
 - `CombatAimMode` — type — line 70
@@ -111,7 +112,7 @@ Generated from exported TypeScript symbols.
 - `INTERACT_MIN_DOT` — const — line 46
 - `INTERACT_RANGE` — const — line 43
 - `KNIFE_BRANCH_BONUS` — const — line 55
-- `resolveHaySpot` — function — line 224
+- `resolveHaySpot` — function — line 230
 - `TREE_BRANCH_CHANCE` — const — line 52
 
 ## `app/inventoryWiring.ts`

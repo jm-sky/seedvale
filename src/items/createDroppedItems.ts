@@ -23,8 +23,13 @@ export type DroppedItems = {
    *  (unlike the renewable spawner pool, dropped items don't respawn — once
    *  collected they're gone for good, same as world-generated ones). Pass
    *  `instance` when `kind` came from a concrete `ItemInstance` so its
-   *  identity/condition survives the drop→pickup round trip (plan 199). */
-  drop: (kind: ItemKind, x: number, z: number, instance?: SaveItemInstance) => void
+   *  identity/condition survives the drop→pickup round trip (plan 199).
+   *  `onCollected` (plan fauna-002) fires once, the moment this exact drop
+   *  is picked up via `collect()` — never persisted (a runtime-only
+   *  producer callback, e.g. a chicken resetting its egg cycle), so it's
+   *  silently lost across a reload the same way other non-persisted runtime
+   *  state already is. */
+  drop: (kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, onCollected?: () => void) => void
   /** Removes a dropped item's mesh and record; null if `id` isn't known. */
   collect: (id: string) => { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance } | null
   /** Advances items still in flight (plan 097 phase 2.1). Landed items cost
@@ -56,6 +61,8 @@ export function createDroppedItems(
 ): DroppedItems {
   const items: DroppedItem[] = []
   const meshes = new Map<string, Object3D>()
+  // Runtime-only, not persisted — see `drop()`'s `onCollected` doc.
+  const collectedCallbacks = new Map<string, () => void>()
   // Items still airborne — landed items (the common case) aren't tracked here
   // and cost nothing per tick, same as today. Flight isn't persisted: `x/z`
   // don't change while falling (no throw arc in v1) and a save mid-flight
@@ -76,11 +83,12 @@ export function createDroppedItems(
 
   return {
     nodes: () => items,
-    drop(kind, x, z, instance) {
+    drop(kind, x, z, instance, onCollected) {
       const item: DroppedItem = { id: `drop:${Date.now()}:${nextDropId++}`, kind, x, z, instance }
       items.push(item)
       spawnMesh(item, DROP_SPAWN_HEIGHT)
       falling.set(item.id, { vy: 0 })
+      if (onCollected) collectedCallbacks.set(item.id, onCollected)
     },
     collect(id) {
       const index = items.findIndex((item) => item.id === id)
@@ -93,6 +101,9 @@ export function createDroppedItems(
         meshes.delete(id)
       }
       falling.delete(id)
+      const onCollected = collectedCallbacks.get(id)
+      collectedCallbacks.delete(id)
+      onCollected?.()
       return { kind: item!.kind, x: item!.x, z: item!.z, instance: item!.instance }
     },
     settleNear(x, z, radius) {
@@ -130,6 +141,7 @@ export function createDroppedItems(
       meshes.clear()
       items.length = 0
       falling.clear()
+      collectedCallbacks.clear()
     },
   }
 }

@@ -200,6 +200,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `app/gameLoop.ts`
 
 ## `app/actions/terrainPreparationActions.ts`
 
@@ -405,6 +406,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `app/actions/mountActions.ts`
+- `app/actions/survivalActions.ts`
 - `app/busyAction.ts`
 - `app/interactables.ts`
 - `app/modalState.ts`

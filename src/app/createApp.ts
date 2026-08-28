@@ -1346,6 +1346,7 @@ export async function createApp(
     startDepositMine: ground.startDepositMine,
     startBuryCorpse: survival.startBuryCorpse,
     startHarvestMeat: survival.startHarvestMeat,
+    startMilkAnimal: survival.startMilkAnimal,
     startCookAt: survival.startCookAt,
     startIgniteFire: survival.startIgniteFire,
     startDestroySpawner: survival.startDestroySpawner,

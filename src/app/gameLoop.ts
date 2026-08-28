@@ -120,6 +120,7 @@ import { updateFoliageWind } from '../world/foliageWind'
 import { createWaterSource } from '../world/WaterSource'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
 import { applyWeatherOverlay } from '../world/weatherVisuals'
+import { hasCarriedMilkContainer } from './actions/survivalActions'
 import {
   buildCombatTarget,
   buildDigTarget,
@@ -271,6 +272,8 @@ export type GameLoopDeps = {
   startBuryCorpse: (animal: AnimalAgent) => void
   /** Knife-harvest raw_meat from a dead animal corpse (busy channel, plan 106). */
   startHarvestMeat?: (animal: AnimalAgent) => void
+  /** Milks a live `cow`/`sheep` into a carried bucket (busy channel, plan fauna-002). */
+  startMilkAnimal?: (animal: AnimalAgent) => void
   /** Busy-channel `[E] Zniszcz` on a `depleted` spawn point (plan 137). */
   startDestroySpawner: (spawner: PreySpawner) => void
   /** Cook the first held recipe's input at a lit campfire (busy channel, plan 106 §6). */
@@ -420,7 +423,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
-    startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
+    startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
@@ -755,6 +758,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // (plan `world-terrain-002` §2).
       tickTerrainPreparationPreview?.()
       const held = heldTool.held()
+      const hasMilkContainer = hasCarriedMilkContainer(inventory)
       const interactables = buildInteractables(
         bundle.settlementsManager.getLoaded(),
         bundle.fauna,
@@ -777,6 +781,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         landOwnership,
         inventory.hasCapability('meat_harvesting'),
         (kind) => questManager.activeSpotAnimalRange(kind),
+        hasMilkContainer,
       )
 
       // Universal melee tick (plan 123) — runs every frame regardless of
@@ -1449,6 +1454,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             }
           } else if (target.animal.isMountable()) {
             mount.tryMount(target.animal)
+          } else if (target.animal.canBeMilked(dayNight.elapsedDays) && hasMilkContainer) {
+            startMilkAnimal?.(target.animal)
           } else {
             const outcome = resolveInteraction(target, questManager)
             playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
@@ -1749,6 +1756,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             villages,
             dayNight.dayLengthSec,
             threateningAnimals,
+            (kind, x, z, onCollected) => bundle.droppedItems.drop(kind, x, z, undefined, onCollected),
+            dayNight.elapsedDays,
           )
         })
         withCategory(monitor, 'FAUNA', () => {

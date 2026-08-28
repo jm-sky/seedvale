@@ -1,7 +1,7 @@
 # Plan: Livestock Food Production
 
 **Created:** 2026-08-27  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — see [implementation notes](./implementation-notes/fauna-002-livestock-food-production-implementation-notes.md)  
 **Priority:** medium · **Effort:** M  
 **Depends on:** `items-player-001`  
 **Domain:** `fauna`
@@ -461,71 +461,71 @@ Nie implementować:
 
 ## Kury
 
-- [ ] każda kura ma indywidualny stan produkcji,
-- [ ] każda kura ma własny timer/cooldown,
-- [ ] kura może wyprodukować maksymalnie jedno niezebrane jajko,
-- [ ] jajko może zostać pozostawione w świecie,
-- [ ] miejsce jajka wynika z pozycji kury,
-- [ ] jajko jest normalnym itemem świata,
-- [ ] jajko można zebrać,
-- [ ] po zebraniu rozpoczyna się kolejny cykl,
-- [ ] produkcja działa niezależnie od obecności gracza.
+- [x] każda kura ma indywidualny stan produkcji,
+- [x] każda kura ma własny timer/cooldown,
+- [x] kura może wyprodukować maksymalnie jedno niezebrane jajko,
+- [x] jajko może zostać pozostawione w świecie,
+- [x] miejsce jajka wynika z pozycji kury,
+- [x] jajko jest normalnym itemem świata,
+- [x] jajko można zebrać,
+- [x] po zebraniu rozpoczyna się kolejny cykl,
+- [x] produkcja działa niezależnie od obecności gracza.
 
 ## Krowy
 
-- [ ] krowa produkuje **5 l mleka** na dojenie,
-- [ ] dojenie wymaga odpowiedniego pojemnika,
-- [ ] można użyć drewnianego wiadra,
-- [ ] można użyć miedzianego wiadra,
-- [ ] mleko trafia do pojemnika,
-- [ ] ilość mleka respektuje wolną pojemność pojemnika,
-- [ ] nie można przekroczyć pojemności,
-- [ ] dojenie jest czynnością trwającą w czasie,
-- [ ] czas dojenia zależy od ilości mleka,
-- [ ] przyspieszenie czasu przyspiesza postęp dojenia,
-- [ ] po dojeniu obowiązuje cooldown,
-- [ ] cooldown jest indywidualny dla krowy.
+- [x] krowa produkuje **5 l mleka** na dojenie,
+- [x] dojenie wymaga odpowiedniego pojemnika,
+- [x] można użyć drewnianego wiadra,
+- [x] można użyć miedzianego wiadra,
+- [x] mleko trafia do pojemnika,
+- [x] ilość mleka respektuje wolną pojemność pojemnika,
+- [x] nie można przekroczyć pojemności,
+- [x] dojenie jest czynnością trwającą w czasie,
+- [x] czas dojenia zależy od ilości mleka,
+- [ ] przyspieszenie czasu przyspiesza postęp dojenia — N/A: dojenie używa istniejącego busy-channel (jak `startCookAt`/`startIgniteFire`), a w obecnym kodzie żaden mechanizm przyspieszenia czasu nie przyspiesza busy-channeli w czasie rzeczywistym (patrz implementation notes),
+- [x] po dojeniu obowiązuje cooldown,
+- [x] cooldown jest indywidualny dla krowy.
 
 ## Owce
 
-- [ ] owca produkuje **2 l mleka** na dojenie,
-- [ ] dojenie wymaga odpowiedniego pojemnika,
-- [ ] mleko trafia do pojemnika,
-- [ ] nie można przekroczyć pojemności,
-- [ ] dojenie jest czynnością trwającą w czasie,
-- [ ] dojenie owcy trwa krócej niż dojenie krowy,
-- [ ] przyspieszenie czasu przyspiesza postęp dojenia,
-- [ ] po dojeniu obowiązuje cooldown,
-- [ ] cooldown jest indywidualny dla owcy.
+- [x] owca produkuje **2 l mleka** na dojenie,
+- [x] dojenie wymaga odpowiedniego pojemnika,
+- [x] mleko trafia do pojemnika,
+- [x] nie można przekroczyć pojemności,
+- [x] dojenie jest czynnością trwającą w czasie,
+- [x] dojenie owcy trwa krócej niż dojenie krowy,
+- [ ] przyspieszenie czasu przyspiesza postęp dojenia — patrz uwaga przy krowach,
+- [x] po dojeniu obowiązuje cooldown,
+- [x] cooldown jest indywidualny dla owcy.
 
 ## Pojemniki
 
-- [ ] wykorzystywany jest system pojemników z `items-player-001`,
-- [ ] mleko może być przechowywane w wiadrze,
-- [ ] ilość mleka jest częściowa,
-- [ ] puste/częściowo pełne wiadro zachowuje swój stan.
+- [x] wykorzystywany jest system pojemników z `items-player-001`,
+- [x] mleko może być przechowywane w wiadrze,
+- [x] ilość mleka jest częściowa,
+- [x] puste/częściowo pełne wiadro zachowuje swój stan.
 
 ## Symulacja
 
-- [ ] produkcja nie zależy od renderowania,
-- [ ] produkcja działa poza aktywnym obszarem gracza zgodnie z istniejącą symulacją,
-- [ ] stan produkcji jest persystowany,
-- [ ] wczytanie gry nie resetuje bezpodstawnie produkcji.
+- [x] produkcja nie zależy od renderowania,
+- [x] produkcja działa poza aktywnym obszarem gracza zgodnie z istniejącą symulacją (tickuje tak samo jak głód/pragnienie zwierząt gospodarskich — tylko w załadowanych osadach),
+- [ ] stan produkcji jest persystowany — świadome odstępstwo: żaden `AnimalAgent` (dziki ani gospodarski) nie ma dziś persystencji stanu; patrz implementation notes,
+- [ ] wczytanie gry nie resetuje bezpodstawnie produkcji — zresetuje się tak samo jak reszta stanu zwierząt gospodarskich dziś (spójne z istniejącym zachowaniem, nie regresja).
 
 ## Integracja
 
-- [ ] wykorzystywane są istniejące mechanizmy zwierząt,
-- [ ] wykorzystywany jest istniejący system itemów,
-- [ ] wykorzystywany jest istniejący system pojemników,
-- [ ] wykorzystywany jest istniejący system interakcji,
-- [ ] nie powstają równoległe systemy produkcji.
+- [x] wykorzystywane są istniejące mechanizmy zwierząt,
+- [x] wykorzystywany jest istniejący system itemów,
+- [x] wykorzystywany jest istniejący system pojemników,
+- [x] wykorzystywany jest istniejący system interakcji,
+- [x] nie powstają równoległe systemy produkcji.
 
 ## Techniczne
 
-- [ ] `npx tsc --noEmit`
-- [ ] `npm run lint`
-- [ ] `npm run build`
-- [ ] `npm run test`
+- [x] `npx tsc --noEmit`
+- [x] `npm run lint`
+- [x] `npm run build`
+- [x] `npm run test`
 - [ ] browser/manual verification dla zmian widocznych w grze.
 
 ---

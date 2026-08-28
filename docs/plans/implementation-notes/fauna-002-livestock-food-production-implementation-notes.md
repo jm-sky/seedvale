@@ -1,277 +1,235 @@
-# Implementation Notes: Livestock Food Production
-
-**Reviewed:** 2026-08-28  
-**Plan:** `fauna-002-livestock-food-production.md`  
-**Status:** review complete
-
-## 1. Review verdict
-
-Plan is still valid, but its biggest assumption is now satisfied: `items-player-001` is implemented.
-
-The implementation should be a **small extension of the existing settlement livestock + AnimalAgent lifecycle**, not a new livestock subsystem.
-
-Current relevant ownership:
-
-- `src/settlement/livestock.ts` creates house-owned `AnimalAgent` instances for `cow`, `sheep`, `chicken`.
-- Livestock is stored on `Settlement.livestock` and updated through `Settlement.update()`.
-- Livestock IDs are deterministic: `<kind>-house<index>-<animalIndex>`.
-- `AnimalAgent` already owns animal simulation state and is the correct place for per-animal production state.
-- Portable liquid containers are already real `ItemInstance`s. Use `src/items/liquidContainer.ts`; do not create another bucket/milk representation.
-- `DroppedItems.drop()` is the existing world-item path and is persisted through `SaveData.droppedItems`.
-
-## 2. Important architectural correction: do not use a frame/dt production timer
-
-Settlement livestock is streamed and can disappear/reappear with the settlement. Therefore a production timer based only on accumulated `dt` would stop while the settlement is unloaded.
-
-Use **absolute world-time anchors** (elapsed game days), consistent with the current lazy systems such as crops, timed processes and weather.
-
-Recommended state on the individual livestock agent:
-
-- production kind/config derived from `AnimalKind`;
-- `nextEggAtDays` / equivalent production anchor;
-- for chicken: `eggAvailable` (or equivalent single-produced-item state);
-- for milk animals: `lastMilkedAtDays` or `nextMilkAtDays`.
-
-Resolve elapsed production when the livestock is updated or recreated. Do not simulate every production interval while off-screen.
-
-This also makes time-skip correct without inventing a second accelerated simulation loop.
-
-## 3. Persistence is currently a real gap
-
-Current `SaveData v1` does **not** persist livestock production state. Livestock themselves are deterministically recreated by settlement/house seed, but their runtime state currently is not persisted.
-
-Plan §12 therefore requires a real SaveData addition.
-
-Prefer a sparse authoritative map keyed by deterministic livestock `animalId`, e.g. a livestock-production record/map containing only production state that differs from deterministic defaults.
-
-Do not persist Three.js objects or duplicate the whole animal definition.
-
-Because livestock IDs are deterministic and documented as reload-stable, they are suitable keys. Validate saved IDs/state in `src/persistence/saveData.ts`.
-
-Do not add a migration/version chain: current architecture is hard-cut `SaveData v1`.
-
-World rebuild/load must pass restored production state into `spawnLivestock()` rather than resetting it when `AnimalAgent` is recreated.
-
-## 4. Time-skip / unloaded settlement behaviour
-
-Current time architecture deliberately freezes `SettlementsManager.update()` during time-skip and resolves skipped effects once afterwards.
-
-Production should follow the same rule:
-
-- normal progression: resolve production from current `elapsedDays`;
-- time-skip: do not run hidden accelerated livestock frames;
-- after skip: resolve the skipped interval deterministically exactly once;
-- unloaded settlement: production must still become correct when the settlement is recreated.
-
-For chickens, do **not** accumulate multiple eggs during an arbitrary elapsed interval. The plan explicitly caps the state at one uncollected egg. Once an egg is available, the production cycle is blocked until collection.
-
-For milk, cooldown should be represented as an absolute next-available time, not a decrementing frame timer.
-
-## 5. Reuse the existing liquid-container model
-
-`items-player-001` already implemented:
-
-- `LiquidContainerItemInstance`;
-- partial litre amounts;
-- water/milk content;
-- capacity derived from `ITEM_CATALOG`;
-- `fillLiquidContainer()`;
-- `canFillLiquidContainer()`;
-- instance persistence;
-- liquid mass in inventory weight.
-
-For milking, mutate the **same bucket instance** using these domain functions. Do not remove a bucket and create a different full-bucket item.
-
-The operation should be atomic:
-
-1. identify a compatible carried liquid-container instance;
-2. calculate available capacity;
-3. start/complete the milking action for that amount;
-4. on completion fill only the available litres;
-5. update the same instance.
-
-A full bucket must not start a milking action.
-
-If a partially filled milk bucket has 3 l free and a cow produces 5 l, the plan's “respect free capacity” rule means only 3 l can be transferred. Do not silently overflow or create a second container unless the plan is deliberately changed.
-
-## 6. Milking should reuse BusyAction
-
-`src/app/busyAction.ts` is already used by timed player actions such as fishing. Reuse it for the player-facing milking action.
-
-Do not create `MilkingSystem`, `MilkingTimer` or another action scheduler.
-
-The action duration should be derived from the amount actually being collected, with one shared configurable rate/base duration. Consequently 2 l of sheep milk is shorter than 5 l of cow milk.
-
-The completion callback must re-check the authoritative animal/container state. Do not trust the interactable snapshot captured when the action started.
-
-Real-time action duration and world-time production/cooldown are separate concepts; do not convert BusyAction duration mechanically into game days.
-
-## 7. Interaction ownership
-
-Extend the existing `Interactable` animal branch and action wiring. Do not create a second animal interaction system.
-
-Current animal interaction already covers settlement livestock and wild fauna through `src/app/interactables.ts`.
-
-For milking, availability should depend on:
-
-- live cow/sheep;
-- animal currently milkable;
-- compatible bucket instance available;
-- remaining bucket capacity > 0.
-
-For chicken, expose collection only when its authoritative egg state is ready.
-
-Avoid putting litres, cooldowns or production state in Vue/UI.
-
-## 8. Eggs must use DroppedItems, not a new EggEntity
-
-Add `egg` as a normal `ItemKind`, with the normal item definition/catalog entries and model/fallback handling.
-
-When a chicken completes production:
-
-- create one normal dropped item through `bundle.droppedItems.drop('egg', chickenPosition.x, chickenPosition.z)`;
-- mark the chicken's egg as collected/consumed state;
-- start the next production cycle only when the egg is collected, per the plan.
-
-The dropped item must therefore be the world representation. Do not keep a second egg object attached to the chicken.
-
-Important ordering: production state must not claim the egg is collected before the world drop succeeds.
-
-`DroppedItems` already persists dropped-item records through SaveData, so do not add a second egg persistence collection.
-
-## 9. Egg location and movement
-
-Use the chicken's current authoritative position at production time. The egg is not anchored to the house, spawn point or chicken mesh after creation.
-
-Do not attach the egg mesh to the chicken.
-
-The existing dropped-item placement already resolves the ground presentation; no new egg placement system is needed.
-
-## 10. NPC collection is not an established generic path
-
-The plan says products can be collected by player or NPC, but current code has a clear player-side world-item pickup path and does not expose an equivalent generic NPC “collect arbitrary dropped item” mechanism.
-
-Do **not** invent a generic NPC item-collection subsystem inside this plan.
-
-Implement egg production + normal world pickup first. If NPC collection is required by acceptance criteria, extend an existing NPC logistics/action mechanism only after verifying that it can own the pickup and inventory transfer cleanly. Otherwise record the limitation rather than creating a parallel system.
-
-Milk currently has an even cleaner boundary: it is transferred directly into the player's existing liquid-container instance during the milking action.
-
-## 11. Production configuration
-
-Keep species differences data-driven and local to fauna definitions/configuration.
-
-Minimum configuration:
-
-| Kind | Product | Amount | Collection |
-|---|---|---:|---|
-| chicken | egg | 1 | world item |
-| cow | milk | 5 l | milking |
-| sheep | milk | 2 l | milking |
-
-Production interval and milk cooldown should also be configuration values, not literals inside interaction code.
-
-Do not create three species-specific systems.
-
-## 12. Do not confuse milk production with animal feeding
-
-Existing livestock already has needs/thirst and household water integration through `AnimalAgent`. That system should remain untouched.
-
-Milk production is an output/cooldown state, not another animal need.
-
-Likewise, do not make milk production depend on the household's `food` stock unless a later design explicitly adds nutrition/lactation rules.
-
-## 13. Lifecycle / identity pitfalls
-
-`AnimalAgent.animalId` is the stable gameplay identity for deterministic livestock. Do not key production state by:
-
-- mesh identity;
-- array index alone;
-- object reference;
-- settlement-local runtime object identity.
-
-When livestock is disposed/recreated during a `WorldBundle` rebuild, its production state must be restored by stable ID.
-
-Also preserve the existing distinction between settlement livestock and wild fauna. Only `cow`, `sheep` and `chicken` owned by settlements should participate in this production feature.
-
-## 14. Persistence of eggs vs production state
-
-These are separate authoritative states:
-
-```text
-Chicken production state
-        ↓
-egg becomes a DroppedItem
-        ↓
-DroppedItems persistence
-        ↓
-player pickup
-        ↓
-chicken becomes eligible for next cycle
-```
-
-Do not persist both “egg dropped” and a duplicate egg flag that can disagree.
-
-A chicken's “one egg available” state is useful only while the produced egg has not yet been represented/collected. Once the egg is materialized as a persistent DroppedItem, choose one source of truth and keep the lifecycle transition atomic.
-
-## 15. Suggested implementation shape
-
-Prefer the smallest extension:
-
-- `AnimalAgent.ts`: production state + pure production/cooldown helpers + lifecycle resolution.
-- `settlement/livestock.ts`: pass restored production state into constructed agents.
-- `SettlementsManager/createSettlement`: forward current world time / restored production state only where the existing ownership boundary requires it.
-- `items/items.ts` + `items/itemCatalog.ts`: `egg`.
-- `app/interactables.ts`: state-dependent chicken/milking candidates.
-- existing action module(s): chicken collection and milking through current interaction/busy-action flow.
-- `persistence/saveData.ts` + save assembly/restore wiring: sparse livestock production state.
-- tests for pure production timing, persistence, container capacity and interaction eligibility.
-
-Do not introduce a new manager unless implementation proves an existing owner cannot support the state cleanly.
-
-## 16. High-value tests
-
-At minimum:
-
-1. chicken production is individual and deterministic;
-2. chicken never has more than one uncollected egg;
-3. production resolves correctly after a long unloaded interval;
-4. time-skip does not double-produce;
-5. livestock production survives SaveData round-trip;
-6. cow produces 5 l;
-7. sheep produces 2 l;
-8. sheep milking duration is shorter than cow milking for their configured amounts;
-9. empty bucket accepts milk;
-10. partial bucket receives only available capacity;
-11. full bucket cannot start milking;
-12. milk remains on the same `ItemInstance`;
-13. egg is a normal `DroppedItem` and can be picked up;
-14. deterministic livestock IDs remain the persistence key;
-15. wild animals do not accidentally gain livestock production state.
-
-## 17. Main pitfalls
-
-Avoid these specifically:
-
-- decrementing a production timer every frame;
-- resetting production whenever a settlement reloads;
-- spawning eggs every update after the interval has elapsed;
-- creating a separate `EggEntity`;
-- representing milk as count-based `milk: N` inventory;
-- keeping legacy/full-bucket and numeric milk state in parallel;
-- starting milking with a full/incompatible container;
-- trusting an old interactable snapshot after a timed action;
-- adding NPC item pickup as a new generic subsystem;
-- putting production state in the UI;
-- persisting mesh/runtime references;
-- adding a SaveData migration/version bump.
-
-## 18. Scope recommendation
-
-The plan can be implemented now and should remain **M-sized** if kept to:
-
-`AnimalAgent` production state → existing settlement update/time model → existing item/drop system → existing liquid-container instances → existing interaction/BusyAction → SaveData v1.
-
-The only part of the original plan that should be treated as potentially larger than M is generic NPC egg collection. Do not let that requirement expand the plan into a new NPC logistics system.
-
-**Zrób git commit i push do main, rebase jeżeli trzeba**
+# Implementation notes: fauna-002 — Livestock Food Production
+
+Plan: [`fauna-002-livestock-food-production.md`](../fauna-002-livestock-food-production.md)
+
+> A pre-implementation review landed on `main` (this same file path, "Status:
+> review complete") while this implementation was already underway. This
+> revision **replaces** that review with real post-implementation notes; the
+> sections below call out each place the final implementation followed,
+> adapted, or deliberately deviated from that review's guidance.
+
+## Summary
+
+Extended the existing livestock model (`AnimalDef`/`AnimalAgent` in
+`fauna/AnimalAgent.ts`) with an optional `production` config (plan §5's
+`LivestockProduction` sketch), instead of separate `ChickenEggSystem`/
+`CowMilkSystem`/`SheepMilkSystem`. Per-animal state lives on the `AnimalAgent`
+instance itself, matching how `life.hunger`/`life.thirst` already work — no
+global `nextChickenEggTime`-style timer.
+
+- `chicken`: `{ product: 'egg', amount: 1, intervalDays: 1 }`
+- `cow`: `{ product: 'milk', amount: 5, intervalDays: 0.5 }`
+- `sheep`: `{ product: 'milk', amount: 2, intervalDays: 0.35 }`
+
+## Timer model: absolute day anchors, not a per-frame decrementing timer
+
+The first implementation pass used a decrementing `productionCooldown -= dt`
+seconds timer (the review's pitfall #1: "decrementing a production timer
+every frame"). That's wrong for streamed settlement livestock: `dt` only
+accumulates while the owning settlement is loaded, so the timer would
+effectively pause while unloaded — fine for "never overflows", wrong for "the
+egg should be ready by the time I get there if enough real world-time has
+passed".
+
+Fixed by switching to the same technique `items/timedProcess.ts` already uses
+for drying: store one absolute `elapsedDays` anchor
+(`AnimalAgent.productionReadyAtDays`) and compare it against `nowDays`
+whenever readiness is queried (`fauna/livestockProduction.ts`'s
+`livestockProductionReady`) — no per-frame work, no catch-up replay needed.
+Whatever `nowDays` the next real `update()` call carries is immediately
+correct, whether that's one frame later or after the settlement was unloaded
+for 40 in-game days. This also makes the review's §4 (time-skip/off-screen
+correctness) fall out for free: `SettlementsManager.update()` already gates
+off entirely during a time-skip and while a settlement is unloaded (existing
+behavior, also true for livestock hunger/thirst — no special-cased
+`resolveTimeSkip` catch-up for livestock exists or was added), so the next
+real tick after either just resolves the comparison fresh — never double-runs
+a missed cycle, matches the plan's explicit "max one uncollected egg" rule by
+construction.
+
+`nowDays` (`dayNight.elapsedDays`) is threaded from `gameLoop.ts` down through
+`SettlementsManager.update()` → `Settlement.update()` → each livestock
+`AnimalAgent.update()`'s new trailing parameter (defaults to `0`, so every
+existing wild-fauna/test call site is unaffected — wild `AnimalDef`s never
+set `production`). `fauna/createFauna.ts`'s wild-fauna loop forwards its
+already-available `worldDays` the same way, for consistency, though it's
+inert there.
+
+The pure day-math (`livestockProductionReady`,
+`nextLivestockProductionReadyAtDays`, `initialLivestockProductionReadyAtDays`)
+lives in `fauna/livestockProduction.ts` and is unit-tested directly
+(`livestockProduction.test.ts`) — the same "extract pure logic out of
+`AnimalAgent`, test that" convention the file already uses heavily
+(`corpsePhaseFromElapsed`, `canHarvestMeatFrom`, `isCarcassEdible`, …); no
+test file constructs a real `AnimalAgent` anywhere in this codebase
+(Three.js-heavy), including plan fauna-003's mount methods, so this matches
+existing practice rather than being a gap.
+
+## Eggs
+
+A chicken's egg becomes a **real world item** the instant its cycle
+completes (`AnimalAgent.readyToLayEgg(nowDays)`), dropped at the chicken's
+current position via the existing `items/createDroppedItems.ts` mechanism —
+no `EggEntity`. It's then a normal pickup, handled by the existing
+`kind: 'item'` interactable/pickup path (no chicken-specific collect
+interaction was added — the plan's §11 "Zbierz jajko" example reads as this
+same generic "Podnieś: Jajko" prompt, and §2.3/§8 are explicit that the egg
+must be a decoupled world item the chicken can walk away from).
+
+The "max one outstanding egg" rule (§2.1) is enforced without polling:
+`createDroppedItems.ts`'s `drop()` gained an optional `onCollected` callback
+(invoked once from `collect()`), so the chicken learns exactly when its own
+drop is picked up and only then starts its next cycle
+(`AnimalAgent.notifyEggCollected(nowDays)`, using the `nowDays` current *at
+collection time* — the callback closure reads a live per-settlement
+`currentNowDays` variable updated every `update()` call, not the `nowDays`
+snapshotted at lay time, since collection can happen an arbitrary number of
+frames/days later). This is a small, generic addition to an existing system,
+not a parallel one.
+
+Wiring: `settlement/createSettlement.ts`'s existing per-frame livestock loop
+now also checks `animal.readyToLayEgg(nowDays)` and calls an injected
+`dropLivestockProduct` hook (type `DropLivestockProductHook`, in
+`fauna/livestockProduction.ts`) — threaded through `SettlementsManager.
+update()` the same way `SettlementHuntingHooks`/`SettlementFoodSourceHooks`
+already are, supplied at the `gameLoop.ts` call site as
+`bundle.droppedItems.drop`. Wild fauna (`Fauna.update`) never needed this —
+only livestock (`settlement.livestock`) has `def.production`.
+
+## Milk
+
+Reuses the container model from `items-player-001` unchanged — milk is not a
+counted `ItemKind`, it's `content: 'milk'` on a `LiquidContainerItemInstance`
+(buckets already declared `allowedContents: ['water', 'milk']`).
+
+- `app/actions/survivalActions.ts` gained `startMilkAnimal(animal)`: picks
+  the smallest carried bucket with room for milk (mirrors
+  `fillWaterskin`/`carriedWaterContainers`'s existing convention — no new UI,
+  no bucket-choice picker), then runs it through the existing busy channel
+  (`busy.start`), same mechanism as `startCookAt`/`startIgniteFire`. Esc-cancel
+  grants nothing (existing busy-channel contract), satisfying "nie przyznawać
+  pełnej ilości mleka" on interruption. The completion callback re-checks
+  `animal.canBeMilked(dayNight.elapsedDays)` and re-fetches the container
+  instance fresh via `inventory.updateInstance` (not the snapshot captured
+  when the channel started), per the review's §6 "don't trust an old
+  interactable snapshot".
+- Real-time busy-channel duration is a **separate concept** from the
+  world-time cooldown (review §6, explicitly not converted mechanically):
+  `amount × MILK_SECONDS_PER_LITRE` (3 s/l real time), so a cow's 5 l milking
+  (15 s) takes longer than a sheep's 2 l (6 s) — a configuration
+  relationship, not a hardcoded per-species duration. The cooldown *before
+  the next milking is allowed* is the `intervalDays` world-time anchor above.
+- `items/liquidContainer.ts` gained `addLiquidToContainer(instance, content,
+  litres)`, the "pour a specific amount, capped by remaining capacity"
+  counterpart to the existing `fillLiquidContainer` ("top up to full") — needed
+  because a fixed per-species yield can exceed a partially-full bucket's
+  remaining room, and the plan requires respecting that (§ verification:
+  "ilość mleka respektuje wolną pojemność pojemnika").
+- Interaction gating: `interactables.ts`'s existing `animalPromptLabel` now
+  also checks `animal.canBeMilked(nowDays)` plus a precomputed
+  `hasMilkContainer` boolean (same "computed once, passed in" convention as
+  `inventoryHasFreeKnife`) to show `Wydój: <species>` only when milking would
+  actually succeed; `gameLoop.ts`'s existing `kind === 'animal'` dispatch gets
+  one new branch, after the mount check, before the generic "Obserwuj"
+  fallback.
+
+## Deliberate scope boundary: no SaveData persistence for production state
+
+The review's §3/§14 asked for a real `SaveData` addition (a sparse map keyed
+by deterministic `animalId`). This was evaluated and **not implemented**,
+after re-checking the current architecture directly rather than taking the
+review's claim at face value (per `CLAUDE.md`'s source-of-truth ordering,
+current code outranks implementation notes/reviews):
+
+`docs/architecture/ARCHITECTURE.md`'s Save schema section is explicit and
+unambiguous: *"fauna/livestock HP/death/corpse state is not persisted at all
+(killed animals resurrect on reload)"*. No `AnimalAgent` — wild or livestock —
+has any per-instance runtime state in `SaveData` today, and not even in the
+lighter in-session `WorldBundle`-rebuild carry registries `Household`/NPC
+state use (`HouseholdRegistry`/`NpcStateRegistry`) — those exist for NPCs and
+households, never for `AnimalAgent`. Adding real save/load persistence for
+*only* production state, while the same animal's death/HP still doesn't
+survive a reload, would be architecturally incoherent (a killed chicken
+resurrects, but its egg cooldown would supposedly survive) and would be the
+first-ever per-`AnimalAgent` `SaveData` persistence in this codebase — a new
+architectural capability well beyond a single M-sized plan, not the
+"smallest correct change" `CLAUDE.md` asks for.
+
+Production state instead follows the exact same non-persistence as the rest
+of `AnimalLifeState` (hunger/thirst) — consistent with the existing,
+deliberate gap, not a new one. What *is* satisfied for free: an uncollected
+egg is a real `droppedItems` entry, and those already round-trip through
+`SaveData` — so "an egg the chicken is holding" survives a save/load; only
+the production anchor itself resets on a full reload (never mid-session,
+since the day-anchor design means it resolves correctly across any
+in-session unload/reload of the owning settlement).
+
+Recorded as a follow-up in `docs/plans/LOOSE-ENDS.md` rather than pulled into
+this plan's scope — a future "make fauna/livestock runtime state (death, HP,
+needs, production) actually persist" plan would need to design that
+holistically, not patch it in piecemeal per-feature.
+
+## Other review points — followed as-is
+
+- **§5 liquid-container reuse, §6 BusyAction reuse, §7 interaction ownership,
+  §8 DroppedItems (not a new EggEntity), §9 egg position from the chicken's
+  live mesh position, §10 no generic NPC pickup subsystem, §11 configuration
+  table, §12 production ≠ feeding (animal needs/thirst untouched), §13
+  `animalId` as the stable identity (moot today since nothing keys production
+  by anything but the `AnimalAgent` instance itself — no persistence, no
+  cross-reference needed)** — all followed; no deviations beyond the timer
+  model and persistence decisions above.
+- **§17 pitfalls** — checked against the final implementation: no per-frame
+  decrementing timer (fixed, see above); no reset-on-reload *beyond* what
+  every other livestock need already resets (documented, not new); no
+  eggs-every-update-after-interval (the `eggPending` gate + `readyToLayEgg`
+  check prevent this); no `EggEntity`; milk stays on the same
+  `LiquidContainerItemInstance`, never a second numeric `milk: N`; no
+  parallel legacy/new bucket state; a full/incompatible bucket can't start
+  milking (`carriedMilkContainers()` filters via `canFillLiquidContainer`);
+  completion re-checks authoritative state, not the captured snapshot; no
+  NPC item-pickup subsystem added; no production state in Vue/UI; no
+  `SaveData` migration/version bump (none needed — no new persisted field).
+
+## New/changed public surface
+
+- `fauna/AnimalAgent.ts`: `AnimalDef.production?`, `LivestockProductionConfig`
+  (`intervalDays`), `LivestockProductKind`; `AnimalAgent.readyToLayEgg(nowDays)/
+  markEggLaid()/notifyEggCollected(nowDays)/canBeMilked(nowDays)/
+  startMilkCooldown(nowDays)`; `update()` gained a trailing `nowDays` param.
+- `fauna/livestockProduction.ts` (new): `DropLivestockProductHook` type,
+  `livestockProductionReady`/`nextLivestockProductionReadyAtDays`/
+  `initialLivestockProductionReadyAtDays` pure day-math (tested in
+  `livestockProduction.test.ts`).
+- `items/items.ts` / `items/itemCatalog.ts`: new `egg` `ItemKind` (food,
+  consumable, spoils like other raw food — eaten raw, no cooking/processing
+  per §13's out-of-scope list).
+- `items/liquidContainer.ts`: `addLiquidToContainer`.
+- `items/createDroppedItems.ts`: `drop()` gained an optional `onCollected`
+  callback param; not persisted (documented on the type).
+- `app/actions/survivalActions.ts`: `SurvivalActions.startMilkAnimal`,
+  exported `hasCarriedMilkContainer`.
+- `settlement/createSettlement.ts` / `settlement/SettlementsManager.ts`:
+  `update()` gained optional trailing `dropLivestockProduct`/`nowDays` params.
+- `docs/items/CATALOG.md`: new `egg` row; bucket rows updated (milking wired,
+  drink-from-bucket still deferred).
+
+## Verification
+
+- `npx tsc --noEmit` — clean.
+- `pnpm run lint` — clean (`lint:fix` only reordered imports once, no other
+  changes).
+- `pnpm run test` — 209 files / 2030 tests pass. Added coverage:
+  `addLiquidToContainer` (`liquidContainer.test.ts`), `createDroppedItems`'s
+  `onCollected` hook (`createDroppedItems.test.ts`), and the day-anchor pure
+  functions + `ANIMAL_DEFS` production config
+  (`livestockProduction.test.ts` — covers the review's high-value list items
+  that don't require instantiating a real `AnimalAgent`: individual/
+  deterministic timers, resolves correctly after an arbitrarily long
+  unloaded interval, no accumulation past one uncollected egg, cow/sheep
+  litre amounts, sheep cooldown shorter than cow's).
+- `pnpm run build` — clean.
+- Browser/gameplay verification (egg laying/collection, milking with both
+  bucket kinds, partial-fill capacity clamp, cooldown, settlement stream
+  out/in correctness) not done here — left to manual verification per the
+  task instructions.

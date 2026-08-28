@@ -647,6 +647,17 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     consumable: { need: 'hunger', relief: 20 },
     food: { freshness: { freshDurationDays: 1, mediumDurationDays: 1 }, bait: 'meat' },
   },
+  egg: {
+    kind: 'egg',
+    label: 'jajko',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan fauna-002 — laid by a live chicken (`fauna/AnimalAgent.ts`\'s per-animal production timer) and dropped into the world at its position (`items/createDroppedItems.ts`); picked up through the normal item-pickup path, no dedicated egg entity. Eaten raw — cooking/processing eggs is out of scope for plan fauna-002.',
+    consumable: { need: 'hunger', relief: 12 },
+    food: { freshness: { freshDurationDays: 3, mediumDurationDays: 3 } },
+  },
   hide: {
     kind: 'hide',
     label: 'skóra',
