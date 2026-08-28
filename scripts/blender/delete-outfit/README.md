@@ -502,7 +502,7 @@ Do dalszego sprawdzenia:
 # Files
 
 ```text
-sources/delete-outfit/
+scripts/blender/delete-outfit/
 ├── README.md
 └── blender-delete-group-addon-v2.py
 ```

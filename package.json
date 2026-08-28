@@ -12,10 +12,14 @@
     "preview": "vite preview",
     "test": "vitest run",
     "assets:report": "tsx scripts/generate-local-assets-report.ts",
-    "plans:without-notes": "tsx scripts/planned-plans-without-notes.ts",
-    "plans:sync": "tsx scripts/plans-sync.ts",
-    "docs:sync": "tsx scripts/plans-sync.ts && tsx scripts/planned-plans-without-notes.ts",
-    "trace:analyze": "./scripts/analyze_trace.sh"
+    "trace:analyze": "./scripts/analyze_trace.sh",
+    "plans:without-notes": "tsx scripts/docs/planned-plans-without-notes.ts",
+    "plans:sync": "tsx scripts/docs/plans-sync.ts",
+    "docs:readme-index": "tsx scripts/docs/docs-readme-index.ts",
+    "docs:symbol-index": "tsx scripts/docs/docs-symbol-index.ts",
+    "docs:dependency-map": "tsx scripts/docs/docs-dependency-map.ts",
+    "docs:code-index": "tsx scripts/docs/docs-code-index.ts",
+    "docs:sync": "tsx scripts/docs/plans-sync.ts && tsx scripts/docs/planned-plans-without-notes.ts"
   },
   "dependencies": {
     "@lucide/vue": "^1.31.0",

@@ -12,7 +12,7 @@ const REVIEWS_DIR = 'reviews'
 const REVIEWS_PATH = resolve(PLANS_PATH, REVIEWS_DIR)
 const NOTES_TOKEN = 'implementation-notes'
 const UPDATED_REVIEW_TOKEN = '--updated-review'
-const OUTPUT_PATH = resolve(ROOT_DIR, PLANS_DIR, 'PLANNED_PLANS_WITHOUT_NOTES.md')
+const OUTPUT_PATH = resolve(ROOT_DIR, PLANS_DIR, 'PLANS-WITHOUT-NOTES.md')
 
 const output: string[] = []
 

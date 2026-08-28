@@ -119,7 +119,7 @@ New plans stay in `docs/plans/` regardless of status; `docs/plans/archive/` is a
 - Before pushing, sync with the remote (`git pull --rebase origin main`, or the current branch's upstream) rather than pushing on top of stale local history.
 - Never use `git reset --hard` or force-push to resolve a rejected push or a conflict. Rebase, resolve conflicts normally, and keep other agents'/contributors' changes — do not silently overwrite them.
 - If a push is rejected because `main` moved, rebase, re-resolve, re-run the relevant technical checks, then push again.
-- Expect commits from Github workflow that update `docs/plans/README.md` and/or `docs/plans/PLANNED_PLANS_WITHOUT_NOTES.md`
+- Expect commits from Github workflow that update `docs/plans/README.md` and/or `docs/plans/PLANS-WITHOUT-NOTES.md`
 
 ## Important architecture
 

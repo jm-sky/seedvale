@@ -8,7 +8,7 @@
 
 ## Cel
 
-Zautomatyzować utrzymanie pomocniczych informacji w `docs/plans/README.md` oraz `PLANNED_PLANS_WITHOUT_NOTES.md`.
+Zautomatyzować utrzymanie pomocniczych informacji w `docs/plans/README.md` oraz `PLANS-WITHOUT-NOTES.md`.
 
 Automatyzacja ma wykorzystywać rzeczywiste pliki planów jako źródło prawdy i nie zmieniać ręcznie utrzymywanej treści poza określonym zakresem.
 
@@ -54,7 +54,7 @@ Automat powinien wyliczać `max(existing plan IDs) + 1` na podstawie rzeczywisty
 
 Implementation notes oraz inne pliki pomocnicze nie powinny być traktowane jako osobne plany, jeżeli mają ten sam numer bazowego planu.
 
-### 4. `PLANNED_PLANS_WITHOUT_NOTES.md`
+### 4. `PLANS-WITHOUT-NOTES.md`
 
 Po synchronizacji planów uruchamiać istniejący skrypt:
 
@@ -64,7 +64,7 @@ pnpm plans:without-notes
 
 Wykorzystać istniejący `scripts/planned-plans-without-notes.ts`. Nie duplikować jego logiki.
 
-Wynik pozostaje w `docs/plans/PLANNED_PLANS_WITHOUT_NOTES.md`.
+Wynik pozostaje w `docs/plans/PLANS-WITHOUT-NOTES.md`.
 
 ### 5. Skrypt synchronizujący
 
@@ -99,7 +99,7 @@ Jeżeli powstanie nowy skrypt synchronizujący, dodać komendę `pnpm plans:sync
 
 ## Źródło prawdy
 
-Źródłem informacji o planach pozostają pliki `docs/plans/*.md`. `README.md` jest indeksem pomocniczym, a `PLANNED_PLANS_WITHOUT_NOTES.md` jest plikiem generowanym.
+Źródłem informacji o planach pozostają pliki `docs/plans/*.md`. `README.md` jest indeksem pomocniczym, a `PLANS-WITHOUT-NOTES.md` jest plikiem generowanym.
 
 ## Weryfikacja
 
