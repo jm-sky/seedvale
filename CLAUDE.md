@@ -100,6 +100,16 @@ If the indexes are insufficient, search the source directly.
 
 ---
 
+## Pre-implementation context
+
+Before implementing a non-trivial plan, run the repository context preflight:
+
+```text
+pnpm claude:preflight <plan-id-or-filename>
+```
+
+The preflight reads the plan, implementation notes, current-state documentation, code/dependency maps and current source matches, then emits a bounded briefing. Use it to avoid broad document/source reads. Treat current source code as authoritative and inspect only targeted files/lines when the briefing identifies uncertainty.
+
 ## Plans
 
 Plans describe intended work, not current implementation.
