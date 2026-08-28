@@ -39,6 +39,11 @@ export function isDebugMode(): boolean {
   return urlFlag('debug')
 }
 
+/** True when the URL has `?admin` / `?admin=1` (not `?admin=0`). */
+export function isAdminMode(): boolean {
+  return urlFlag('admin')
+}
+
 /** `?modelTest` — ultra-minimal NPC/player model+animation test scene
  *  (renderer/camera/light/one model/one flat plane only), bypassing the
  *  normal world/save/UI bootstrap entirely. */

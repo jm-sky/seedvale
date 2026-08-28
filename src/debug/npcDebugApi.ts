@@ -5,7 +5,7 @@ import type { VillageSize } from '../settlement/families'
 import type { WorldContext } from '../world/worldContext'
 import type { WorldPoint } from './locationSearch'
 import type { NpcTraceEvent } from './npcTrace'
-import { isDebugMode } from './debugMode'
+import { isAdminMode, isDebugMode } from './debugMode'
 import {
   deepForestNearest,
   type LocationResult,
@@ -138,7 +138,7 @@ export function installNpcDebugApi(
   getPlayerPosition: () => WorldPoint,
   teleport: (x: number, z: number) => Promise<void>,
 ): void {
-  if (!isDebugMode()) return
+  if (!isDebugMode() && !isAdminMode()) return
 
   async function teleportToLocation(location: LocationResult | null): Promise<boolean> {
     if (!location) return false
