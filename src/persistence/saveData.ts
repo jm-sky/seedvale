@@ -69,6 +69,10 @@ export type SavePlacedTent = { id: string, x: number, z: number, yaw: number }
 export type SaveWorldFlags = {
   /** Strażnik already gifted a long_sword (quest or dialogue, plan 090). */
   guardSwordGifted?: boolean
+  /** Hidden-treasure easter egg (quick task) already revealed — blocks a
+   *  second reward chest from spawning after all 3 flower markers are dug
+   *  again post-reload. */
+  hiddenTreasureFound?: boolean
 }
 
 export type SaveMap = { discoveredCells: string[] }
@@ -421,6 +425,7 @@ function isWorldFlagsField(value: unknown): value is SaveWorldFlags {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const flags = value as Record<string, unknown>
   if (flags.guardSwordGifted !== undefined && typeof flags.guardSwordGifted !== 'boolean') return false
+  if (flags.hiddenTreasureFound !== undefined && typeof flags.hiddenTreasureFound !== 'boolean') return false
   return true
 }
 

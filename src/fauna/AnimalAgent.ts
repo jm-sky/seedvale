@@ -587,7 +587,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 10,
     playerNoticeRange: 0,
     playerPanicRange: 0,
-    mount: { seatHeight: 1.28, seatForwardOffset: 0.05 },
+    mount: { seatHeight: 0.5, seatForwardOffset: 0.05 },
   },
   donkey: {
     kind: 'donkey',
@@ -602,7 +602,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 9,
     playerNoticeRange: 0,
     playerPanicRange: 0,
-    mount: { seatHeight: 0.98, seatForwardOffset: 0.02 },
+    mount: { seatHeight: 0.3, seatForwardOffset: 0.02 },
   },
   cow: {
     kind: 'cow',

@@ -54,7 +54,7 @@ export type SaveStateDeps = {
   mapDiscovery: MapDiscovery
   landOwnership: LandOwnershipRegistry
   vueUi: VueUi
-  worldFlags: { guardSwordGifted: boolean }
+  worldFlags: { guardSwordGifted: boolean, hiddenTreasureFound: boolean }
   fishingBait: Map<string, FishingBaitState>
   /** Live accessors — `createApp` replaces these three on a New Game, so they
    *  must not be captured by value. */

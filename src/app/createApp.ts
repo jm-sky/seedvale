@@ -613,6 +613,7 @@ export async function createApp(
 
   const worldFlags = {
     guardSwordGifted: initialSave?.worldFlags?.guardSwordGifted ?? false,
+    hiddenTreasureFound: initialSave?.worldFlags?.hiddenTreasureFound ?? false,
   }
 
   const grantItem = (kind: ItemKind, count: number): void => {
@@ -768,6 +769,7 @@ export async function createApp(
     worldAudio,
     getTreeLifecycle: () => treeLifecycle,
     onInventoryChanged,
+    grantItem,
     syncQuickActionAvailability,
     syncHeldHud: () => syncHeldHud(),
     refreshInventoryScreen: () => refreshInventoryScreen(),
@@ -795,7 +797,7 @@ export async function createApp(
   const containers = createContainerActions(actionCtx, { vueUi, tentBlockers: placement.tentBlockers })
   const gathering = createGatheringActions(actionCtx, { fishingBait, fishingAttempts })
   const survival = createSurvivalActions(actionCtx)
-  const ground = createGroundActions(actionCtx)
+  const ground = createGroundActions(actionCtx, { worldFlags })
   const rest = createRestActions(actionCtx, {
     timeSkipOverlay,
     busyOverlay,
@@ -920,6 +922,8 @@ export async function createApp(
         mapDiscovery.clear()
         playerTorch.extinguish()
         worldFlags.guardSwordGifted = false
+        worldFlags.hiddenTreasureFound = false
+        ground.resetTreasureProgress()
         resetPlayerNeeds(player.needs)
         fishingBait.clear()
         fishingAttempts.clear()

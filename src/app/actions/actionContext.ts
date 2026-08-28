@@ -4,6 +4,7 @@ import type { createKeyboard } from '../../input/Keyboard'
 import type { createMouseLook } from '../../input/MouseLook'
 import type { HeldTool } from '../../items/HeldTool'
 import type { Inventory } from '../../items/Inventory'
+import type { ItemKind } from '../../items/items'
 import type { PlayerController } from '../../player/PlayerController'
 import type { PlayerTorch } from '../../player/PlayerTorch'
 import type { Hud } from '../../ui/createHud'
@@ -54,6 +55,10 @@ export type PlayerActionContext = {
   getTreeLifecycle: () => TreeLifecycle
   /** Post-inventory-mutation sync shared with trade/chop/mine/etc. */
   onInventoryChanged: () => void
+  /** Same reward-granting path quest completions use (`createApp.ts`):
+   *  per-unit `Inventory.add`/`addInstance`, overflow spills to
+   *  `bundle.droppedItems` at the player's feet instead of being lost. */
+  grantItem: (kind: ItemKind, count: number) => void
   syncQuickActionAvailability: () => void
   syncHeldHud: () => void
   refreshInventoryScreen: () => void

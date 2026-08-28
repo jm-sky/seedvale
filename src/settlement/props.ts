@@ -23,6 +23,7 @@ import {
   gardenPlotRadius,
   type GardenScale,
 } from './gardenScale'
+import { hiddenTreasureMarkerPositions } from './hiddenTreasure'
 import {
   buildHouse,
   createHouseStaticBatch,
@@ -64,7 +65,7 @@ import {
   WOOD_PILE_HEIGHT,
   WOOD_PILE_URL,
 } from './propSpecs'
-import { cloneProp, loadPropOrFallback, loadPropTemplates, placeOnGround } from './propUtils'
+import { cloneProp, clonePropWithYaw, loadPropOrFallback, loadPropTemplates, placeOnGround } from './propUtils'
 import {
   PALISADE_GATE_HALF_ANGLE,
   plantEntrancePalisade,
@@ -184,6 +185,13 @@ export type SettlementLandmarks = {
   /** One settlement-wide storage container position (plan 156), next to the
    *  wood stockpile. Presentation only — `SettlementEconomy` owns the stock. */
   settlementStorage: THREE.Vector3
+  /** Hidden-treasure dig markers (quick task, home settlement only, see
+   *  `plantForest` below) — world position of each of the 3 flower clumps a
+   *  shovel dig must land within `HIDDEN_TREASURE_DIG_TOLERANCE` of
+   *  (`hiddenTreasure.ts`). The flowers themselves are decorative-only, added
+   *  to `group` alongside the forest belt; undefined for every non-home
+   *  settlement. */
+  hiddenTreasureMarkers?: THREE.Vector3[]
 }
 
 /** One settlement sale plot's materialized (non-persistent) data — plan 129. */
@@ -1403,6 +1411,28 @@ export async function buildSettlementProps(
     const random = createSeededRandom(seed ^ 0x7e3d)
     const treeTemplates = await loadPropTemplates(TREE_SPECS, () => createTree(1))
     const bushTemplates = await loadPropTemplates(BUSH_SPECS, () => createBush(1))
+
+    // Hidden-treasure marker flowers (quick task) — 3 fixed flower_clump_1
+    // clumps (`BUSH_SPECS` index 2, same GLB the world's own flower meadows
+    // use), just past the plaza edge near the well/campfire (not in the
+    // middle of the packed-dirt square), doubling as invisible shovel-dig
+    // markers (`groundActions.ts` checks `landmarks.hiddenTreasureMarkers`).
+    // Purely decorative: no collider, no `Interactable`, home settlement only
+    // (`plantForest` is only ever true for `def.isHome`, see this function's
+    // doc comment).
+    {
+      const markerSpots = hiddenTreasureMarkerPositions({ core: clearings.core, campfire: landmarks.campfire })
+      const markers: THREE.Vector3[] = []
+      for (let i = 0; i < markerSpots.length; i++) {
+        const spot = markerSpots[i]!
+        markers.push(new THREE.Vector3(spot.x, sampleHeight(spot.x, spot.z), spot.z))
+        const flower = clonePropWithYaw(bushTemplates, 2, 0.8, (i * Math.PI) / 3)
+        placeOnGround(flower, spot.x, spot.z, sampleHeight)
+        group.add(flower)
+      }
+      landmarks.hiddenTreasureMarkers = markers
+    }
+
     const treeCounter = { n: 0 }
     const bushCounter = { n: 0 }
     const bushPlacements: PropPlacement[] = []

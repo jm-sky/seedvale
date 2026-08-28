@@ -1,9 +1,11 @@
+import type { ItemKind } from '../../items/items'
 import { playActionChop, playActionDig, playActionMine } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
 import { BUSY_ACTION_STAMINA_COST_PER_SEC } from '../../player/PlayerNeeds'
+import { HIDDEN_TREASURE_MARKER_COUNT, hiddenTreasureDigHit } from '../../settlement/hiddenTreasure'
 import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
 import { DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt } from '../../terrain/dig'
 import { applyDigAt, applyLevelAt, applyMoundAt } from '../../terrain/digAction'
@@ -11,6 +13,18 @@ import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../../world/treeHarv
 import { bonusYieldForChopStage, isChoppableStage, yieldForChopStage } from '../../world/treeLifecycle'
 import { DIG_REACH } from '../interactables'
 import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './actionContext'
+
+/** Hidden-treasure reward (quick task) — ground drop is the buried loot's
+ *  visual reveal; kept as a `chest` (existing container mechanism) rather
+ *  than ~250 individual dropped coin meshes, which `droppedItems` was never
+ *  meant to spawn at that volume (see `CLAUDE.md`'s performance rules). */
+const HIDDEN_TREASURE_COIN_MIN = 200
+const HIDDEN_TREASURE_COIN_MAX = 300
+const HIDDEN_TREASURE_SWORD_KINDS: readonly ItemKind[] = [
+  'obsidian_sword',
+  'damascus_short_sword',
+  'damascus_long_sword',
+]
 
 /** Terrain/resource extraction actions: shovel dig + level, their pickaxe
  *  counterparts, the multi-stage tree chop and ore-deposit mining. They share
@@ -29,10 +43,21 @@ export type GroundActions = {
   startMoundAt: (x: number, z: number) => void
   startTreeChop: (treeId: string, x: number, z: number) => void
   startDepositMine: (depositId: string, x: number, z: number) => void
+  /** Clears the in-session "which flower markers have already been dug"
+   *  progress (New Game only — a discovered treasure's own one-shot flag
+   *  lives in `worldFlags`, not here). */
+  resetTreasureProgress: () => void
 }
 
-export function createGroundActions(ctx: PlayerActionContext): GroundActions {
+export type GroundActionsDeps = {
+  /** Same persisted one-shot bag `inventoryWiring.ts`'s guard-sword gift
+   *  uses — `hiddenTreasureFound` blocks a second reward chest after reload. */
+  worldFlags: { hiddenTreasureFound: boolean }
+}
+
+export function createGroundActions(ctx: PlayerActionContext, deps: GroundActionsDeps): GroundActions {
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook, worldAudio } = ctx
+  const { worldFlags } = deps
 
   const digFeedback = () => ({
     inventory,
@@ -47,6 +72,42 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     z: player.mesh.position.z - Math.cos(mouseLook.state.yaw) * DIG_REACH,
   })
 
+  // Hidden-treasure marker progress (quick task) — which of the 3 flower
+  // spots have already been dug this session. The home settlement never
+  // streams out, so this stays valid for as long as `worldFlags` does; a New
+  // Game clears both together via `resetTreasureProgress`.
+  const dugTreasureMarkers = new Set<number>()
+
+  const checkHiddenTreasureDig = (x: number, z: number): void => {
+    if (worldFlags.hiddenTreasureFound) return
+    const markers = bundle.settlementsManager.home?.landmarks.hiddenTreasureMarkers
+    if (!markers || markers.length === 0) return
+    const hitIndex = hiddenTreasureDigHit(markers, x, z)
+    if (hitIndex === -1) return
+    dugTreasureMarkers.add(hitIndex)
+    if (dugTreasureMarkers.size < HIDDEN_TREASURE_MARKER_COUNT) return
+    worldFlags.hiddenTreasureFound = true
+    const cx = markers.reduce((sum, m) => sum + m.x, 0) / markers.length
+    const cz = markers.reduce((sum, m) => sum + m.z, 0) / markers.length
+    const record = bundle.placedContainers.place('chest', cx, cz, mouseLook.state.yaw)
+    const coinCount = HIDDEN_TREASURE_COIN_MIN + Math.floor(
+      Math.random() * (HIDDEN_TREASURE_COIN_MAX - HIDDEN_TREASURE_COIN_MIN + 1),
+    )
+    const swordKind = HIDDEN_TREASURE_SWORD_KINDS[Math.floor(Math.random() * HIDDEN_TREASURE_SWORD_KINDS.length)]!
+    // Sword first, so it always claims its space before coins fill the rest
+    // of the chest's gabarite capacity (`items/container.ts` — 24 units,
+    // never a "whole stack is one slot" exemption). Coins beyond that don't
+    // fit physically in one chest; the remainder goes straight to the player
+    // the same way a quest reward that overflows the player's own inventory
+    // already does (`grantItem` — spills any leftover as individual ground
+    // drops rather than losing it).
+    bundle.placedContainers.deposit(record.id, swordKind, 1)
+    const depositedCoins = bundle.placedContainers.deposit(record.id, 'coin', coinCount)
+    const remainingCoins = coinCount - depositedCoins
+    if (remainingCoins > 0) ctx.grantItem('coin', remainingCoins)
+    toast.show('Odkopano ukryty skarb!', 'pickup')
+  }
+
   const startDigAt = (x: number, z: number): void => {
     if (!inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
     const profile = getDigProfileAt(x, z, bundle.chunkManager)
@@ -57,6 +118,7 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     playActionDig(worldAudio.playOnce)
     busy.start(DIG_DURATION_SEC, 'Kopanie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
+      checkHiddenTreasureDig(x, z)
       ctx.syncQuickActionAvailability()
     }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
   }
@@ -227,5 +289,6 @@ export function createGroundActions(ctx: PlayerActionContext): GroundActions {
     startMoundAt,
     startTreeChop,
     startDepositMine,
+    resetTreasureProgress: () => dugTreasureMarkers.clear(),
   }
 }
