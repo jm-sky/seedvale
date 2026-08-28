@@ -1,9 +1,10 @@
-import { Dirent, mkdir, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import {
   CODE_MAP_DIR,
   repoRelative,
 } from './utils.js'
+import type { Dirent } from 'node:fs'
 
 async function main(): Promise<void> {
   const symbolsDir = resolve(
@@ -13,7 +14,7 @@ async function main(): Promise<void> {
 
   await mkdir(CODE_MAP_DIR, { recursive: true })
 
-  const domains: Dirent[] = (await readdir(symbolsDir, { withFileTypes: true }))
+  const domains: string[] = (await readdir(symbolsDir, { withFileTypes: true }))
     .filter(
       (entry: Dirent) =>
         entry.isFile() &&

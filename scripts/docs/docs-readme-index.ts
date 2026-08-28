@@ -1,5 +1,4 @@
 import {
-  Dirent,
   readdir,
   readFile,
 } from 'node:fs/promises'
@@ -9,6 +8,7 @@ import {
   repoRelative,
   updateGeneratedSection,
 } from './utils.js'
+import type { Dirent } from 'node:fs'
 
 const INDEXED_READMES = [
   'state/README.md',
