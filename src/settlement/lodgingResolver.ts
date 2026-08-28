@@ -35,7 +35,34 @@ export type LodgingSettlementInput = {
   haySpot: { x: number, z: number } | null
 }
 
-export function settlementLodgingInput(settlement: Settlement): LodgingSettlementInput {
+/** Nearest of `points` to `from`, or the first entry when `from` is omitted
+ *  (a settlement can have up to two physical hay-bale placements, plan 168
+ *  hay-range bugfix) — `null` for an empty list. */
+function nearestPoint(
+  points: readonly { x: number, z: number }[] | undefined,
+  from?: { x: number, z: number },
+): { x: number, z: number } | null {
+  if (!points || points.length === 0) return null
+  if (!from) return { x: points[0]!.x, z: points[0]!.z }
+  let best = points[0]!
+  let bestDist = Math.hypot(best.x - from.x, best.z - from.z)
+  for (const p of points.slice(1)) {
+    const dist = Math.hypot(p.x - from.x, p.z - from.z)
+    if (dist < bestDist) {
+      best = p
+      bestDist = dist
+    }
+  }
+  return { x: best.x, z: best.z }
+}
+
+/** `playerPosition` (optional — only known once a real world is loaded)
+ *  picks the *nearest* of a settlement's physical hay-bale placements as the
+ *  `hay` fallback's walk-to target, rather than always the first one. */
+export function settlementLodgingInput(
+  settlement: Settlement,
+  playerPosition?: { x: number, z: number },
+): LodgingSettlementInput {
   return {
     id: settlement.id,
     npcs: settlement.npcs.map((npc) => ({
@@ -47,11 +74,24 @@ export function settlementLodgingInput(settlement: Settlement): LodgingSettlemen
       z: house.position.z,
       bed: house.bed,
     })),
-    haySpot: settlement.landmarks.garden ? { x: settlement.landmarks.garden.x, z: settlement.landmarks.garden.z } : null,
+    // Walk-to target for the resolver's hay fallback — the actual physical
+    // hay-bale prop, nearest to the player when position is known, not the
+    // garden pad center (see `app/interactables.ts`'s matching fix for why
+    // the two differ).
+    haySpot: nearestPoint(settlement.landmarks.haySpots, playerPosition)
+      ?? { x: settlement.landmarks.garden.x, z: settlement.landmarks.garden.z },
   }
 }
 
 const FRIEND_RELATION_LEVELS: ReadonlySet<RelationLevel> = new Set(['friendly', 'trusted'])
+
+/** The existing physical-place identity a `bed`/`friend` option resolves to:
+ *  the settlement's own house index (index-aligned with `landmarks.houses`,
+ *  same one `homeIndexFromPlaceId` already derives from a household's
+ *  `homeId`) — not a second id scheme. */
+function housePlaceId(settlementId: string, houseIndex: number): string {
+  return `${settlementId}:house:${houseIndex}`
+}
 
 function collectBedCandidates(settlement: LodgingSettlementInput): LodgingOption[] {
   const out: LodgingOption[] = []
@@ -61,6 +101,7 @@ function collectBedCandidates(settlement: LodgingSettlementInput): LodgingOption
       id: `${settlement.id}:bed:${index}`,
       type: 'bed',
       settlementId: settlement.id,
+      placeId: housePlaceId(settlement.id, index),
       position: house.bed.position,
       approachPoint: house.bed.approach,
       facing: house.bed.facing,
@@ -88,6 +129,7 @@ function collectFriendCandidates(
       id: `${settlement.id}:friend:${household.id}`,
       type: 'friend',
       settlementId: settlement.id,
+      placeId: houseIndex != null ? housePlaceId(settlement.id, houseIndex) : undefined,
       position: house,
       approachPoint: house,
       facing: null,
@@ -135,11 +177,41 @@ export function collectLodgingCandidates(
     const hay = collectHayCandidate(settlement)
     if (hay) out.push(hay)
   }
-  return out
+  return dedupeByPhysicalPlace(out)
 }
 
 const TYPE_PRIORITY: Record<LodgingOption['type'], number> = { bed: 4, friend: 3, paid: 2, hay: 1 }
 const QUALITY_RANK: Record<LodgingOption['quality'], number> = { high: 3, normal: 2, low: 1 }
+
+/** Two internal representations (`bed`/`friend` today) can point at the same
+ *  real house — a player shouldn't see the same physical place twice in the
+ *  "Nocuj w mieście" panel. Keeps the single best option per `placeId`
+ *  (resolver's own bed > friend > paid > hay priority, same as
+ *  `resolveBestLodging`), and passes through every option with no `placeId`
+ *  (`hay`/`paid` — no known physical-place collision today) unchanged. */
+function dedupeByPhysicalPlace(candidates: readonly LodgingOption[]): LodgingOption[] {
+  const bestByPlace = new Map<string, LodgingOption>()
+  const withoutPlace: LodgingOption[] = []
+  for (const option of candidates) {
+    if (!option.placeId) {
+      withoutPlace.push(option)
+      continue
+    }
+    const existing = bestByPlace.get(option.placeId)
+    if (!existing || isHigherPriorityLodging(option, existing)) {
+      bestByPlace.set(option.placeId, option)
+    }
+  }
+  return [...bestByPlace.values(), ...withoutPlace]
+}
+
+function isHigherPriorityLodging(a: LodgingOption, b: LodgingOption): boolean {
+  const typeDelta = TYPE_PRIORITY[a.type] - TYPE_PRIORITY[b.type]
+  if (typeDelta !== 0) return typeDelta > 0
+  const qualityDelta = QUALITY_RANK[a.quality] - QUALITY_RANK[b.quality]
+  if (qualityDelta !== 0) return qualityDelta > 0
+  return a.id < b.id
+}
 
 function distanceTo(option: LodgingOption, playerPosition: { x: number, z: number }): number {
   return Math.hypot(option.approachPoint.x - playerPosition.x, option.approachPoint.z - playerPosition.z)

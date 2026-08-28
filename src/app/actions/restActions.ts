@@ -1,9 +1,10 @@
+import type { Settlement } from '../../settlement/createSettlement'
 import type { LodgingOption } from '../../settlement/lodging'
 import type { BusyOverlay } from '../../ui/createBusyOverlay'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import type { TimeSkipOverlay } from '../../ui/createTimeSkipOverlay'
 import { inventoryFullToastText } from '../../items/Inventory'
-import { canCancelRestProgress } from '../../items/items'
+import { canCancelRestNow, restCancelAllowedByStartVigor } from '../../items/items'
 import { tentRestPose } from '../../items/tentProp'
 import { restoreNeedsFromSleep } from '../../player/PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD } from '../../player/PlayerSkills'
@@ -15,6 +16,7 @@ import {
   lodgingRestQuality,
 } from '../../settlement/lodging'
 import { collectLodgingCandidates, selectLodgingFromCandidates, settlementLodgingInput } from '../../settlement/lodgingResolver'
+import { getVigorRatio } from '../../shared/VigorState'
 import { type CampRestContext, campRestQuality, hasTentNear, hasWarmFireNear } from '../campRest'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
@@ -72,6 +74,16 @@ export type RestActions = {
   /** True while walking to a resolved lodging option (not yet asleep) — used
    *  to gate other input the same way `restCamp.isActive()` does. */
   isLodgingActive: () => boolean
+  /** True while the active rest/sleep (`fadeStrength === 1` skip) can be
+   *  cancelled with `Esc` right now — high starting vigor grants this from
+   *  the first frame, otherwise it unlocks late via
+   *  `canCancelRestProgress`/`REST_CANCEL_PROGRESS_THRESHOLD` (plan 168
+   *  hay/rest UX bugfix). The single source `abortRest` gates on and
+   *  `gameLoop.ts` reads for the HUD prompt — never diverges from what
+   *  `Esc` will actually do. Meaningless (returns the stale progress-only
+   *  fallback) outside an active `fadeStrength === 1` skip; callers already
+   *  only consult it while one is active. */
+  canCancelRest: () => boolean
 }
 
 export type RestActionDeps = {
@@ -104,6 +116,18 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
   let lodgingWalkTarget: LodgingOption | null = null
   /** A paid lodging offer awaiting `confirmLodgingPayment`/`cancelLodgingConfirm`. */
   let lodgingConfirmTarget: LodgingOption | null = null
+
+  /** Captured once, the instant the current rest/sleep actually begins
+   *  (camp, tent or lodging — never `startWait`'s fadeStrength-0.5 skip):
+   *  true when the player's vigor ratio was already above
+   *  `REST_CANCEL_VIGOR_THRESHOLD` at that moment, granting `Esc` from the
+   *  very start instead of waiting on `canCancelRestProgress`. Deliberately
+   *  a one-time snapshot, not re-evaluated as vigor recovers mid-sleep. */
+  let restCancelAllowedByVigor = false
+
+  const captureRestCancelVigorGate = (): void => {
+    restCancelAllowedByVigor = restCancelAllowedByStartVigor(getVigorRatio(player.needs.vigor))
+  }
 
   /** One-shot proximity lookup at rest start — never a per-frame scan. Only
    *  player-built fires count as camp warmth; a village's own campfire belongs
@@ -145,23 +169,46 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     if (rest?.awardsSurvivalXp) awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.campRest)
   }
 
-  const isNearTown = (): boolean => bundle.settlementsManager
-    .getLoaded()
-    .some((s) => s.center.distanceTo(player.mesh.position) <= REST_IN_TOWN_RADIUS)
+  /** The one settlement "Nocuj w mieście" actually offers lodging for right
+   *  now — whichever loaded settlement's center is both within
+   *  `REST_IN_TOWN_RADIUS` and nearest to the player, or `null` outside any
+   *  of them. Two settlements can both be `getLoaded()` near a settlement
+   *  boundary; the panel must never mix both settlements' options into one
+   *  list, only the one the player is actually standing in/next to. */
+  const nearestSettlementInRange = (): Settlement | null => {
+    let best: Settlement | null = null
+    let bestDist = Infinity
+    for (const s of bundle.settlementsManager.getLoaded()) {
+      const dist = s.center.distanceTo(player.mesh.position)
+      if (dist <= REST_IN_TOWN_RADIUS && dist < bestDist) {
+        best = s
+        bestDist = dist
+      }
+    }
+    return best
+  }
+
+  const isNearTown = (): boolean => nearestSettlementInRange() !== null
 
   const startWait = (hours: number): void => {
     if (isActionBlocked(ctx)) return
     timeSkip.start(hours, { fadeStrength: 0.5, label: `Czekasz... (${hours}h)` })
   }
 
-  /** Every currently available lodging option near a loaded settlement (plan
-   *  168 follow-up) — the same collection that backs both the "Nocuj w
-   *  mieście" choice panel and every revalidation (selection, arrival). Only
-   *  loaded settlements can be walked to. Re-collected fresh every call,
+  /** Every currently available lodging option for the one settlement the
+   *  player is actually near (plan 168 follow-up; scoped to a single
+   *  settlement as a bugfix — an adjacent settlement's beds/friends/hay must
+   *  never leak into this list just because it's also `getLoaded()`) — the
+   *  same collection that backs both the "Nocuj w mieście" choice panel and
+   *  every revalidation (selection, arrival). Re-collected fresh every call,
    *  never cached across frames (implementation notes §4/§8). */
   const collectNearbyLodgingOptions = (): LodgingOption[] => {
-    const settlements = bundle.settlementsManager.getLoaded().map(settlementLodgingInput)
-    return collectLodgingCandidates(settlements, { getPlayerSocial })
+    const settlement = nearestSettlementInRange()
+    if (!settlement) return []
+    return collectLodgingCandidates(
+      [settlementLodgingInput(settlement, player.mesh.position)],
+      { getPlayerSocial },
+    )
   }
 
   /** Re-derived from authoritative state at arrival — never trusts a cached
@@ -261,6 +308,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
       }
       if (option.facing != null) player.mesh.rotation.y = option.facing
       pendingLodgingQuality = lodgingRestQuality(option.quality)
+      captureRestCancelVigorGate()
       player.lieDown()
       timeSkip.start(8, { fadeStrength: 1, label: `Nocujesz (${lodgingPlaceLabel(option)})...` })
       return
@@ -292,6 +340,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
         // The quick action already required a blanket; the tent/fire halves
         // of the camp come from what's actually pitched/lit around here.
         beginCampRest(resolveCampContext(true, false))
+        captureRestCancelVigorGate()
         timeSkip.start(8, {
           fadeStrength: 1,
           label: 'Rozbijasz obóz...',
@@ -316,6 +365,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
         // Resolved after the pose move so the fire/tent lookup uses where the
         // player actually sleeps.
         beginCampRest(resolveCampContext(inventory.has('blanket', 1), true))
+        captureRestCancelVigorGate()
         timeSkip.start(8, { fadeStrength: 1, label: 'Odpoczywasz w namiocie...' })
       },
       onComplete: () => {},
@@ -343,6 +393,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
   const cancelRest = (): void => {
     pendingRest = null
     pendingLodgingQuality = null
+    restCancelAllowedByVigor = false
     cancelLodgingWalk(true)
     cancelLodgingConfirm()
     timeSkip.cancel()
@@ -352,11 +403,21 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     player.standUp()
   }
 
+  /** The one authoritative "can `Esc` cancel the active rest/sleep right
+   *  now" check (plan 168 hay/rest UX bugfix) — high vigor at rest start
+   *  (`restCancelAllowedByVigor`) grants it immediately; otherwise falls
+   *  back to the existing late-progress unlock. Both `abortRest` (the actual
+   *  gate) and the HUD (`gameLoop.ts`'s `updateTimeSkipRestUi`) call this
+   *  single function so the Esc prompt never shows something `abortRest`
+   *  wouldn't actually honor. */
+  const canCancelRest = (): boolean =>
+    canCancelRestNow(timeSkip.progress(), restCancelAllowedByVigor)
+
   const abortRest = (): boolean => {
     const resting = restCamp.isActive() || timeSkip.fadeStrength() === 1
       || lodgingWalkTarget !== null || lodgingConfirmTarget !== null
     if (!resting) return false
-    if (timeSkip.fadeStrength() === 1 && !canCancelRestProgress(timeSkip.progress())) return false
+    if (timeSkip.fadeStrength() === 1 && !canCancelRest()) return false
     if (restCamp.isActive() && !timeSkip.isActive()) return false
     cancelRest()
     return true
@@ -396,5 +457,6 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     sleepInHay,
     tickLodging,
     isLodgingActive,
+    canCancelRest,
   }
 }

@@ -1372,6 +1372,7 @@ export async function createApp(
     onSleepFinished: rest.onSleepFinished,
     tickLodging: rest.tickLodging,
     isLodgingActive: rest.isLodgingActive,
+    canCancelRest: rest.canCancelRest,
     interruptLongActivityOnDamage: () => rest.interruptRestForDamage() || terrainPrep.interruptForDamage() || rest.abortBusy(),
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,

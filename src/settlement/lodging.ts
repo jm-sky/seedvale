@@ -20,6 +20,13 @@ export type LodgingOption = {
   id: string
   type: LodgingType
   settlementId: string
+  /** Identity of the *physical* place this option sleeps at — the existing
+   *  house index (`${settlementId}:house:${houseIndex}`), shared by `bed`
+   *  and `friend` when they resolve to the same house, so the resolver can
+   *  collapse duplicate internal representations of one real place into a
+   *  single panel entry (never set for `hay`/`paid`, which have no shared
+   *  physical-place collision today). */
+  placeId?: string
   /** World position of the lodging source itself (a house, the garden/hay
    *  spot, ...). Plan 169's beds will be the first source where this differs
    *  from `approachPoint`. */

@@ -70,7 +70,7 @@ import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { Inventory, inventoryFullToastText, type SaveItemInstance, toSaveItemInstance } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
 import { isInstanceBackedKind, isWeaponItemInstance } from '../items/itemInstances'
-import { canCancelRestProgress, ITEM_DEFS, type ItemKind } from '../items/items'
+import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { createAcquiredInstance } from '../items/trade'
 import { applySharpnessWear, getSharpnessDamageModifier, getWeaponMaintenanceProfile } from '../items/weaponMaintenance'
 import { getMonitor, getProgramCensus, withCategory, withProgramCensusStage } from '../perf'
@@ -365,6 +365,11 @@ export type GameLoopDeps = {
   /** True while walking to a resolved lodging target (plan 168) — folded
    *  into `activeModal` the same way `restCamp.isActive()` is. */
   isLodgingActive: () => boolean
+  /** True while the active rest/sleep can be cancelled with `Esc` right now
+   *  (plan 168 hay/rest UX bugfix) — the single source of truth `abortRest`
+   *  itself gates on; drives the HUD's Esc prompt (`updateTimeSkipRestUi`)
+   *  so it never shows something `abortRest` wouldn't actually honor. */
+  canCancelRest: () => boolean
   /** A long activity (rest/sleep/wait skip, or a busy channel — dig/chop/
    *  well work bout/etc.) is still active while the player takes damage
    *  (combat hit or starvation/dehydration) — cancels it through the same
@@ -421,7 +426,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, pickUpContainer, workOnWell, describeWellWork,
     tickTerrainPreparationPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, onTerrainPreparationWorkFinished,
-    onSleepFinished, tickLodging, isLodgingActive, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
+    onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
   renderer.shadowMap.autoUpdate = false
@@ -596,7 +601,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       timeSkipOverlay.show(skip.label, skip.fadeStrength)
       if (skip.fadeStrength === 1) {
         const progress = timeSkip.progress()
-        vueUi.updateTimeSkipRestUi(progress, canCancelRestProgress(progress))
+        vueUi.updateTimeSkipRestUi(progress, canCancelRest())
       } else {
         vueUi.updateTimeSkipRestUi(null, false)
       }

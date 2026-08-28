@@ -142,6 +142,15 @@ export type SettlementLandmarks = {
   garden: THREE.Vector3
   /** All garden pads (plan 077); `garden` mirrors the primary (index 0). */
   gardens: THREE.Vector3[]
+  /** World-space position(s) of the actual hay-bale prop(s) placed near a
+   *  garden pad (plan 168 follow-up hay bugfix) — offset from `garden`/
+   *  `gardens` by `gardenPlotRadius + ~1.4-2.6`, so `garden` itself is not a
+   *  safe stand-in for "where the hay bale visually is". The lodging
+   *  resolver's `hay` fallback and the `[E]`-on-hay interactable both anchor
+   *  on this instead. Always at least one entry once props finish building
+   *  (`hayGardens` always has ≥1 source); optional only so landmark fixtures
+   *  that predate this field (tests) don't need to supply it. */
+  haySpots?: THREE.Vector3[]
   /** Trader's `workplace` (`places.ts`'s `workplaceFor`) — crate + barrel
    *  market stall, the one role in the workplace hybrid that gets a
    *  dedicated new prop instead of reusing an existing landmark (2026-08-09
@@ -635,6 +644,7 @@ export async function buildSettlementProps(
     stockpile: new THREE.Vector3(),
     garden: new THREE.Vector3(),
     gardens: [],
+    haySpots: [],
     market: new THREE.Vector3(),
     blacksmith: new THREE.Vector3(),
     homes: [],
@@ -1147,6 +1157,7 @@ export async function buildSettlementProps(
       rotationY: coreRandom() * Math.PI * 2,
       scale: 0.9 + coreRandom() * 0.25,
     })
+    landmarks.haySpots!.push(new THREE.Vector3(hx, sampleHeight(hx, hz), hz))
   }
   const hayInstances = buildInstancedProps(hayTemplates, hayPlacements, 'settlement-hay')
   if (hayInstances) group.add(hayInstances.group)

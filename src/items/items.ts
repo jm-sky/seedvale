@@ -148,6 +148,35 @@ export function canCancelRestProgress(progress: number | null): boolean {
   return progress != null && progress > REST_CANCEL_PROGRESS_THRESHOLD
 }
 
+/** A player who starts a rest/sleep already this rested (vigor ratio, plan
+ *  168 hay/rest UX bugfix) doesn't need to earn cancel access through
+ *  `REST_CANCEL_PROGRESS_THRESHOLD` — `RestActions` grants `canCancelRest`
+ *  immediately when vigor strictly exceeds this fraction *at the moment the
+ *  rest starts*. Evaluated once at rest start, not re-checked as vigor
+ *  changes mid-sleep (`app/actions/restActions.ts` owns the capture). */
+export const REST_CANCEL_VIGOR_THRESHOLD = 0.5
+
+/** Whether a rest/sleep that started at `vigorRatio` (`getVigorRatio` at the
+ *  exact moment `timeSkip.start(..., {fadeStrength: 1})` fires) grants
+ *  immediate `Esc` access for its whole duration. Strictly-greater, per plan
+ *  168's `vigor > 50%` requirement — exactly 50% keeps the existing
+ *  progress-gated rule. */
+export function restCancelAllowedByStartVigor(vigorRatio: number): boolean {
+  return vigorRatio > REST_CANCEL_VIGOR_THRESHOLD
+}
+
+/** The one authoritative "can `Esc` cancel the active rest/sleep right now"
+ *  check (plan 168 hay/rest UX bugfix): a high-vigor start (captured once,
+ *  see `restCancelAllowedByStartVigor`) grants it for the whole rest;
+ *  otherwise falls back to the existing late-progress unlock
+ *  (`canCancelRestProgress`). `app/actions/restActions.ts`'s `canCancelRest`
+ *  is this applied to the live rest's own captured/current state — both
+ *  `abortRest` (the actual gate) and the HUD read that one function so the
+ *  Esc prompt never shows something `abortRest` wouldn't honor. */
+export function canCancelRestNow(progress: number | null, vigorAllowedAtStart: boolean): boolean {
+  return vigorAllowedAtStart || canCancelRestProgress(progress)
+}
+
 export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   shell: {
     kind: 'shell',

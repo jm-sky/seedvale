@@ -208,10 +208,38 @@ function itemPromptLabel(kind: ItemKind): string {
 }
 
 /** True if `(x, z)` is within `range` of `playerPos` (XZ plane, squared distance). */
-function withinRange(x: number, z: number, playerPos: Vector3, range: number): boolean {
+function withinRange(x: number, z: number, playerPos: { x: number, z: number }, range: number): boolean {
   const dx = x - playerPos.x
   const dz = z - playerPos.z
   return dx * dx + dz * dz <= range * range
+}
+
+/** Picks the settlement's actual physical hay-bale placement nearest the
+ *  player, among those within `range` (plan 168 hay-range bugfix) — pulled
+ *  out of `buildInteractables` as a small pure function so the "use the real
+ *  prop position, not the garden pad center" fix stays unit-testable without
+ *  a full `Settlement`. A settlement can place up to two hay bales; this
+ *  picks one, never both. Falls back to `garden` only for pre-fix landmark
+ *  fixtures that never populated `haySpots`. */
+export function resolveHaySpot(
+  haySpots: readonly { x: number, z: number }[] | undefined,
+  garden: { x: number, z: number },
+  playerPos: { x: number, z: number },
+  range: number,
+): { x: number, z: number } | null {
+  const spots = haySpots?.length ? haySpots : [garden]
+  let best: { x: number, z: number } | null = null
+  let bestDistSq = Infinity
+  for (const spot of spots) {
+    const dx = spot.x - playerPos.x
+    const dz = spot.z - playerPos.z
+    const distSq = dx * dx + dz * dz
+    if (distSq <= range * range && distSq < bestDistSq) {
+      best = spot
+      bestDistSq = distSq
+    }
+  }
+  return best
 }
 
 /** True when the player is standing at the edge of an inland (non-ocean) body
@@ -460,13 +488,18 @@ export function buildInteractables(
     }
 
     // Plan 168 follow-up — the settlement's hay fallback as a real `[E]`
-    // target, anchored on the exact same garden landmark the lodging
-    // resolver's `collectHayCandidate` already uses (never a second
-    // coordinate for "where the hay is").
-    if (withinRange(settlement.landmarks.garden.x, settlement.landmarks.garden.z, playerPos, GAZE_RANGE)) {
+    // target, anchored on the actual physical hay-bale placement(s)
+    // (`landmarks.haySpots`, plan 168 hay-range bugfix) rather than the
+    // garden pad center, which can sit several meters from where the hay
+    // prop itself was placed (`buildSettlementProps`'s `dist` offset) — using
+    // the garden center let `[E]` fire from well outside `INTERACT_RANGE` of
+    // the visible bale. Falls back to `garden` only for pre-fix landmark
+    // fixtures that never populated `haySpots`.
+    const haySpot = resolveHaySpot(settlement.landmarks.haySpots, settlement.landmarks.garden, playerPos, GAZE_RANGE)
+    if (haySpot) {
       list.push({
         kind: 'hay',
-        position: { x: settlement.landmarks.garden.x, z: settlement.landmarks.garden.z },
+        position: { x: haySpot.x, z: haySpot.z },
         promptLabel: '[E] Nocuj w sianie',
         settlementId: settlement.id,
       })

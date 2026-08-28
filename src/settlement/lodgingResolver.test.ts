@@ -188,7 +188,9 @@ describe('collectLodgingCandidates — hay fallback', () => {
 
 describe('collectLodgingCandidates — multiple sources for the choice panel', () => {
   it('returns every available option, not just the resolver\'s pick — bed, friend and hay all appear', () => {
-    const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
+    // Anna's household lives in house 1 (no bed) so bed/friend anchor on two
+    // distinct physical places here — house 0's bed candidate is unrelated.
+    const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:1' }
     const s = settlement({
       npcs: [{ name: 'Anna', household }],
       houses: [
@@ -201,6 +203,23 @@ describe('collectLodgingCandidates — multiple sources for the choice panel', (
       getPlayerSocial: () => ({ relationLevel: 'friendly', standing: 0 }),
     })
     expect(candidates.map((c) => c.type).sort()).toEqual(['bed', 'friend', 'hay'])
+  })
+
+  it('collapses a house that is both a bed and a friendly NPC\'s home into one panel entry', () => {
+    // Anna's household lives in house 0, which also has a physical bed — the
+    // same real place backs both the `bed` and `friend` internal candidates.
+    const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
+    const s = settlement({
+      npcs: [{ name: 'Anna', household }],
+      houses: [
+        house({ x: 5, z: 7, bed: { position: { x: 5, z: 7 }, approach: { x: 5, z: 7 }, facing: null } }),
+      ],
+    })
+    const candidates = collectLodgingCandidates([s], {
+      getPlayerSocial: () => ({ relationLevel: 'friendly', standing: 0 }),
+    })
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]).toMatchObject({ type: 'bed' })
   })
 })
 
