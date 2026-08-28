@@ -136,6 +136,10 @@ export function createMountActions(
   }
 
   function update(dt: number): void {
+    // Drained every frame regardless of mounted state so a `T` press while
+    // unmounted can't linger as a stale edge-triggered flag and fire the
+    // instant the player next mounts.
+    const dismountPressed = keyboard.consumeDismount()
     if (pendingRestoreId && !mount) {
       const resolved = resolveAnimal(pendingRestoreId)
       // Found-but-dead gives up immediately (a dead animal never becomes
@@ -149,6 +153,7 @@ export function createMountActions(
     if (!mount) return
     if (mount.isDead()) { exit('death'); return }
     if (player.isDowned()) { exit('downed'); return }
+    if (dismountPressed) { exit('player'); return }
     // A busy channel/time-skip/rest sequence can only start while not
     // mounted (`tryMount` checks `isActionBlocked`), but nothing currently
     // stops one from starting through an unrelated route (e.g. Quick

@@ -389,3 +389,17 @@ The Kupiec wagon's horse (`settlement/props.ts`) was still a decorative `Object3
 No changes to `mountActions.ts`, `interactables.ts`, `PlayerController.ts`, riding UI/camera/stamina/stability, or donkey riding — the merchant horse automatically gets `Dosiądź: koń`, mount/dismount, movement, needs, and lifecycle for free, because it's now just another entry in `settlement.livestock`, which every one of those systems already iterates generically.
 
 **Verification:** `npx tsc --noEmit`, `pnpm run lint`, `pnpm run build` all pass; `pnpm run test` — 207 files / 1988 tests pass (same counts as before this follow-up — no regressions, no new tests added since the change is a straightforward spawn-path rewire with no new branching logic). Browser/manual verification not performed (same rule as above) — check in the running dev server: exactly one horse mesh stands by the Kupiec wagon, gazing at it shows `Dosiądź: koń`, `[E]` mounts it, it can be ridden/dismounted exactly like a house-owned horse, and normal (non-merchant) livestock spawns/behaves unchanged.
+
+## 19. Follow-up (2026-08-28): `T` desktop dismount shortcut
+
+Added a desktop keyboard shortcut for the existing dismount action, per plan §10's "dedicated ... button" UI requirement — no new dismount logic, purely a second input path into the same `MountActions.dismount()`/`exit('player')` call the HUD button already uses.
+
+- `src/input/Keyboard.ts` — new edge-triggered `KeyState.dismount` field, `KeyT: 'dismount'` in `KEY_MAP`, `'dismount'` added to `EDGE_TRIGGERED`, `consumeDismount()` reader (mirrors the other single-purpose edge-triggered keys like `consumeMinimap`/`consumeSkills`). `KeyT` had no prior binding.
+- `src/app/actions/mountActions.ts` — `update()` now calls `keyboard.consumeDismount()` unconditionally at the top of every frame (mounted or not), so a `T` press while unmounted is drained rather than left latched to fire the instant the player next mounts. The result is only acted on inside the existing `if (!mount) return` guarded body: `if (dismountPressed) { exit('player'); return }`, placed after the death/downed checks and before the `isActionBlocked` freeze (matching the HUD button, which also isn't gated by `isActionBlocked`). No changes to `enter()`/`exit()`/stability/camera/animation.
+- `src/ui-vue/screens/HudScreen.vue` — Dismount button label gains a conditional `[T]` hint (desktop only, via the existing `touchDevice` check already in that component — mobile has no keyboard so the hint is omitted there).
+- `src/ui-vue/screens/NotesScreen.vue` — desktop `CONTROLS` hint string gains `T — zejdź z wierzchowca`, alongside the existing `E — interakcja` entry.
+- `docs/STATE.md` — riding bullet updated to mention the `T` shortcut.
+
+No changes to `AnimalAgent`, riding movement/stamina/stability, persistence, mount points, animation, or camera.
+
+**Verification:** `npx tsc --noEmit`, `pnpm run lint`, `pnpm run test` all pass (207 files / 2001 tests — count differs from the 1988 above only because later unrelated commits added tests; no test regressions). `pnpm run build` and browser/manual verification were **not performed this pass** (explicitly skipped per user instruction — lint/test only). Manual verification still needed before considering this fully done: mount a horse, press `T` → dismount; press `T` again while unmounted → no effect; re-mount; HUD button still works; no conflict with any other key (confirmed statically — `KeyT` had no prior binding in `KEY_MAP`).

@@ -44,6 +44,11 @@ export type KeyState = {
   /** Edge-triggered: set true on `.` keydown, cleared by consumePeriod() —
    *  same single consumer as `plus` above. */
   period: boolean
+  /** Edge-triggered: set true on KeyT keydown, cleared by consumeDismount() —
+   *  drained every frame by `mountActions.update()` regardless of mounted
+   *  state (plan fauna-003), so a stray press while unmounted can't linger
+   *  and fire on the next mount. */
+  dismount: boolean
 }
 
 const KEY_MAP: Record<string, keyof KeyState> = {
@@ -74,11 +79,12 @@ const KEY_MAP: Record<string, keyof KeyState> = {
   NumpadSubtract: 'minus',
   Comma: 'comma',
   Period: 'period',
+  KeyT: 'dismount',
 }
 
 /** Actions that latch true on keydown and are cleared by the consumer, not by keyup —
  *  so a tap registers exactly once regardless of how long the key stays down. */
-const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'character', 'comma', 'cycleTarget', 'drop', 'interact', 'inventory', 'jump', 'minimap', 'minus', 'period', 'plus', 'questLog', 'quickActions', 'skills'])
+const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'character', 'comma', 'cycleTarget', 'dismount', 'drop', 'interact', 'inventory', 'jump', 'minimap', 'minus', 'period', 'plus', 'questLog', 'quickActions', 'skills'])
 
 /** True while the event is headed for a text field — the pause menu's Character
  *  name input is the live case. Without this, `KEY_MAP` letters (w/a/s/d/e/l/g)
@@ -128,6 +134,8 @@ export function createKeyboard(): {
   consumeComma: () => boolean
   /** Reads and clears the pending `.` press — terrain-preparation preview target height up. */
   consumePeriod: () => boolean
+  /** Reads and clears the pending dismount press (`T`). */
+  consumeDismount: () => boolean
   dispose: () => void
 } {
   const state: KeyState = {
@@ -152,6 +160,7 @@ export function createKeyboard(): {
     minus: false,
     comma: false,
     period: false,
+    dismount: false,
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -178,7 +187,7 @@ export function createKeyboard(): {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
 
-  const consume = (key: 'interact' | 'interactReleased' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'jump' | 'cycleTarget' | 'plus' | 'minus' | 'comma' | 'period'): boolean => {
+  const consume = (key: 'interact' | 'interactReleased' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'jump' | 'cycleTarget' | 'plus' | 'minus' | 'comma' | 'period' | 'dismount'): boolean => {
     if (!state[key]) return false
     state[key] = false
     return true
@@ -202,6 +211,7 @@ export function createKeyboard(): {
     consumeMinus: () => consume('minus'),
     consumeComma: () => consume('comma'),
     consumePeriod: () => consume('period'),
+    consumeDismount: () => consume('dismount'),
     dispose: () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)

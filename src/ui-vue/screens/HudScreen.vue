@@ -83,7 +83,7 @@ const needBars = computed(() => [
       class="pointer-events-auto cursor-pointer rounded-full border border-white/20 bg-black/55 px-5 py-2.5 text-sm font-semibold tracking-wide text-ink shadow-lg backdrop-blur-sm transition-colors hover:bg-black/70 active:bg-black/80"
       @click="ui.hud.mounted.onDismount?.()"
     >
-      Zejdź z wierzchowca ({{ ui.hud.mounted.animalLabel }})
+      Zejdź z wierzchowca ({{ ui.hud.mounted.animalLabel }}){{ touchDevice ? '' : ' [T]' }}
     </button>
   </div>
 
