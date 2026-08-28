@@ -23,6 +23,9 @@ function fogColorFromElev(elev: number): number {
   return tmpFogColor.getHex()
 }
 
+/** Initial `timeOfDay` for a freshly created world / New Game. */
+export const DEFAULT_TIME_OF_DAY = 0.32
+
 export type DayNightState = {
   /** 0 = midnight, 0.25 ≈ dawn, 0.5 = noon, 0.75 ≈ dusk */
   timeOfDay: number
@@ -41,7 +44,7 @@ export function createDayNightState(
   overrides?: Partial<DayNightState>,
 ): DayNightState {
   return {
-    timeOfDay: 0.32,
+    timeOfDay: DEFAULT_TIME_OF_DAY,
     elapsedDays: 0,
     dayLengthSec: 480,
     timeMultiplier: 1,
