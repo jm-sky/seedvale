@@ -32,19 +32,26 @@ export type SettlementFoodSourceHooks = {
    *  collected/harvested by another NPC or the player since discovery), in
    *  which case the caller must not grant any hunger relief. A crop harvested
    *  from within a player garden plot's radius has its yield scaled by the
-   *  plot's resolved care (plan 176 §13) — `count` can legitimately be `0`
-   *  for a heavily-neglected plot; the harvest itself (crop removal from the
-   *  world) still happened. */
+   *  plot's resolved care (plan 176 §13) and hydration/drought stress (plan
+   *  settlements-npcs-001 §6/§7) — `count` can legitimately be `0` for a
+   *  heavily-neglected or hydration-dead plot; the harvest itself (crop
+   *  removal from the world) still happened. Also resets the plot's
+   *  accumulated drought stress (plan §6). */
   harvest: (target: FoodSourceTarget) => { count: number } | null
   /** Nearest player-built garden plot within reach of `(x, z)` (plan 176
    *  §6.1's "NPC already at the field" condition) — only ever called right
    *  after `harvest` succeeded for a `crop` target, never as an independent
    *  search. `null` when no plot owns that position (a wild crop or a
-   *  settlement-garden crop, neither of which carries maintenance state). */
-  gardenNear: (x: number, z: number) => { id: string, care: number } | null
+   *  settlement-garden crop, neither of which carries maintenance/hydration
+   *  state). */
+  gardenNear: (x: number, z: number) => { id: string, care: number, hydration: number } | null
   /** Re-validates `id` still exists and applies maintenance — `false` if the
    *  plot was removed (decayed away) since `gardenNear` found it. */
   maintainGarden: (id: string) => boolean
+  /** Re-validates `id` still exists and applies one watering action (plan
+   *  settlements-npcs-001 §13/§14) — `false` if the plot was removed since
+   *  `gardenNear` found it. */
+  waterGarden: (id: string) => boolean
   /** Farmer work (plan settlements-npcs-002 §3/§5) — nearest crop within
    *  `range` of `(x, z)` that is actually harvestable right now (`mature` or
    *  a `spoiledItem`-bearing `spoiled`), unlike `queryNearest` which also
@@ -166,17 +173,30 @@ export function createFoodSourceHooks(
       const outcome = chunkManager.harvestCrop(target.id)
       if (!outcome.ok) return null
       const garden = findNearestGarden(playerGardens.list(), target.x, target.z)
-      const count = garden
-        ? cultivationYieldCount(outcome.yield.count, resolveCultivationCare(garden, getWorldDays()))
-        : outcome.yield.count
+      let count = outcome.yield.count
+      if (garden) {
+        const care = resolveCultivationCare(garden, getWorldDays())
+        const hydrationState = playerGardens.hydrationOf(garden.id, getWorldDays())
+        count = cultivationYieldCount(count, care, hydrationState?.droughtStressDays ?? 0, (hydrationState?.hydration ?? 100) <= 0)
+        playerGardens.recordHarvest(garden.id, getWorldDays())
+      }
       return { count }
     },
     gardenNear(x, z) {
       const garden = findNearestGarden(playerGardens.list(), x, z)
-      return garden ? { id: garden.id, care: resolveCultivationCare(garden, getWorldDays()) } : null
+      if (!garden) return null
+      const hydrationState = playerGardens.hydrationOf(garden.id, getWorldDays())
+      return {
+        id: garden.id,
+        care: resolveCultivationCare(garden, getWorldDays()),
+        hydration: hydrationState?.hydration ?? garden.hydration,
+      }
     },
     maintainGarden(id) {
       return playerGardens.applyMaintenance(id, getWorldDays()) !== null
+    },
+    waterGarden(id) {
+      return playerGardens.water(id, getWorldDays()) !== null
     },
     queryHarvestableCrop(x, z, range) {
       return nearestHarvestableCrop(x, z, chunkManager.getNearbyCrops({ x, z }, range), range)

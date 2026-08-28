@@ -249,7 +249,10 @@ export type SavePlantedCrop = {
  *  `PlayerGardenRecord`. A plot has no construction stages of its own (crops
  *  planted on it are separate `SavePlantedCrop` records), but does carry
  *  maintenance state (plan 176): `care`/`lastMaintainedAtDays` together
- *  round-trip the lazy degradation anchor — see `resolveCultivationCare`. */
+ *  round-trip the lazy degradation anchor — see `resolveCultivationCare`.
+ *  `hydration`/`lastHydrationUpdateAtDays`/`droughtStressDays` (plan
+ *  settlements-npcs-001) round-trip the independent watering anchor — see
+ *  `resolveGardenHydration`. */
 export type SavePlayerGarden = {
   id: string
   x: number
@@ -257,6 +260,9 @@ export type SavePlayerGarden = {
   yaw: number
   care: number
   lastMaintainedAtDays: number
+  hydration: number
+  lastHydrationUpdateAtDays: number
+  droughtStressDays: number
 }
 
 /** Canonical (and, for now, only) save contract. Versioning/migration can be
@@ -753,7 +759,10 @@ function isPlayerGardensField(value: unknown): value is SavePlayerGarden[] {
       typeof g.z === 'number' &&
       typeof g.yaw === 'number' &&
       typeof g.care === 'number' &&
-      typeof g.lastMaintainedAtDays === 'number'
+      typeof g.lastMaintainedAtDays === 'number' &&
+      typeof g.hydration === 'number' &&
+      typeof g.lastHydrationUpdateAtDays === 'number' &&
+      typeof g.droughtStressDays === 'number'
     )
   })
 }

@@ -6,10 +6,14 @@ import { placeOnGround } from '../settlement/props'
 import { createGardenPlotProp } from './gardenPlotProp'
 import {
   applyCultivationMaintenance,
+  applyGardenWatering,
   CARE_REMOVAL_THRESHOLD,
   GARDEN_FOOTPRINT_RADIUS,
+  type GardenHydrationState,
   type PlayerGardenRecord,
   resolveCultivationCare,
+  resolveGardenHydration,
+  resolveGardenHydrationAfterHarvest,
 } from './playerGarden'
 
 export type PlayerGardenEntry = PlayerGardenRecord & { mesh: Object3D }
@@ -29,6 +33,18 @@ export type PlayerGardens = {
    *  care, or `null` if `id` no longer exists — the caller (a busy-channel
    *  completion) must revalidate before mutating, never trust a stale id. */
   applyMaintenance: (id: string, worldDays: number) => number | null
+  /** Resolved current hydration + accumulated drought stress (plan
+   *  settlements-npcs-001), or `null` if `id` no longer exists — a pure read,
+   *  same "never persists" contract as `careOf`. */
+  hydrationOf: (id: string, worldDays: number) => GardenHydrationState | null
+  /** Applies one watering action (plan §12) and persists the resolved
+   *  anchor, or `null` if `id` no longer exists — same revalidate-before-
+   *  mutate contract as `applyMaintenance`. */
+  water: (id: string, worldDays: number) => GardenHydrationState | null
+  /** Resolves + persists hydration and resets accumulated drought stress —
+   *  call once per successful harvest from within this plot's radius (plan
+   *  §6). No-op if `id` no longer exists. */
+  recordHarvest: (id: string, worldDays: number) => void
   /** Removes any plot whose resolved care has reached the removal threshold
    *  (plan 176 §6/§20) — bounded to this list's own size (player-built
    *  plots only), never a world-wide scan. */
@@ -55,6 +71,7 @@ export function createPlayerGardens(
   clearColliders: (ownerKey: string) => void,
   initial: readonly PlayerGardenRecord[] = [],
   worldDays = 0,
+  seed = 0,
 ): PlayerGardens {
   const gardens: PlayerGardenEntry[] = []
 
@@ -87,7 +104,9 @@ export function createPlayerGardens(
 
   return {
     list: () => gardens,
-    nodes: () => gardens.map(({ id, x, z, yaw, care, lastMaintainedAtDays }) => ({ id, x, z, yaw, care, lastMaintainedAtDays })),
+    nodes: () => gardens.map(({ id, x, z, yaw, care, lastMaintainedAtDays, hydration, lastHydrationUpdateAtDays, droughtStressDays }) => (
+      { id, x, z, yaw, care, lastMaintainedAtDays, hydration, lastHydrationUpdateAtDays, droughtStressDays }
+    )),
     place(x, z, yaw, placedAtDays) {
       const record: PlayerGardenRecord = {
         id: `garden:${Date.now()}:${nextGardenId++}`,
@@ -96,6 +115,11 @@ export function createPlayerGardens(
         yaw,
         care: 100,
         lastMaintainedAtDays: placedAtDays,
+        // A freshly-built plot isn't watered yet — starts at the "normal"
+        // weed-pressure tier (plan §8: 50-79%), not soaked or bone dry.
+        hydration: 50,
+        lastHydrationUpdateAtDays: placedAtDays,
+        droughtStressDays: 0,
       }
       spawn(record)
       return record
@@ -111,6 +135,27 @@ export function createPlayerGardens(
       entry.care = next.care
       entry.lastMaintainedAtDays = next.lastMaintainedAtDays
       return next.care
+    },
+    hydrationOf(id, days) {
+      const entry = gardens.find((g) => g.id === id)
+      return entry ? resolveGardenHydration(entry, seed, days) : null
+    },
+    water(id, days) {
+      const entry = gardens.find((g) => g.id === id)
+      if (!entry) return null
+      const next = applyGardenWatering(entry, seed, days)
+      entry.hydration = next.hydration
+      entry.lastHydrationUpdateAtDays = next.lastHydrationUpdateAtDays
+      entry.droughtStressDays = next.droughtStressDays
+      return next
+    },
+    recordHarvest(id, days) {
+      const entry = gardens.find((g) => g.id === id)
+      if (!entry) return
+      const next = resolveGardenHydrationAfterHarvest(entry, seed, days)
+      entry.hydration = next.hydration
+      entry.lastHydrationUpdateAtDays = next.lastHydrationUpdateAtDays
+      entry.droughtStressDays = next.droughtStressDays
     },
     pruneDecayed(days) {
       for (const entry of [...gardens]) {

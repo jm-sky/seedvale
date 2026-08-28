@@ -74,7 +74,7 @@ export function temperatureFor(season: Season, type: WeatherType): number {
  *  `computeWeather` hashes on, so any moment's weather can be derived
  *  directly (plan §7) instead of simulating/replaying intermediate
  *  transitions. ~2.4 real minutes at the default `dayLengthSec = 480`. */
-const WEATHER_CYCLE_DAYS = 0.3
+export const WEATHER_CYCLE_DAYS = 0.3
 
 /** Deterministic per-(seed, cycle, salt) hash → [0,1) — same Wang-style
  *  integer mix as `terrain/worleyNoise.ts`'s private `hash01`, reimplemented

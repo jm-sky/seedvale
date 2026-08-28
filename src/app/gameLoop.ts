@@ -306,6 +306,10 @@ export type GameLoopDeps = {
   /** "Zrób porządek" on a player garden plot (plan 176 §4/§10) — restores
    *  care after a short busy channel, shortened by a held shovel/pitchfork. */
   tidyGardenPlot?: (id: string) => void
+  /** "Podlej" on a player garden plot (plan settlements-npcs-001 §9/§11/§12)
+   *  — consumes one litre from a carried water container after a short busy
+   *  channel. */
+  waterGardenPlot?: (id: string) => void
   /** Opens the generic container transfer screen for a placed `chest`
    *  (plan 164 §7). */
   openContainer?: (id: string) => void
@@ -404,7 +408,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, armTrap, disarmTrap, collectTrap,
-    startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot,
+    startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, pickUpContainer, workOnWell, describeWellWork,
     tickTerrainPreparationPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
@@ -1273,6 +1277,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (interactPressed) harvestCrop?.(target.id, target.cropId, target.stage, target.position.x, target.position.z)
       } else if (target?.kind === 'gardenPlot') {
         if (interactPressed) tidyGardenPlot?.(target.id)
+        if (altInteractPressed) waterGardenPlot?.(target.id)
       } else if (target?.kind === 'container') {
         if (interactPressed) openContainer?.(target.id)
         if (altInteractPressed) pickUpContainer?.(target.id)

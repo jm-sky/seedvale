@@ -1,6 +1,7 @@
 import type { ToolKind } from '../items/HeldTool'
 import type { ItemCapability } from '../items/itemCatalog'
 import type { GroundPlacementReason } from '../items/tentPlacement'
+import { computeWeather, getSeason, WEATHER_CYCLE_DAYS } from './weather'
 
 /**
  * Player-built garden plot (plan 174) — pure domain logic, same split as
@@ -15,6 +16,13 @@ import type { GroundPlacementReason } from '../items/tentPlacement'
  * `FieldMaintenance`. Both fields are persisted (not just the anchor day)
  * because "restore ~50 points" is not equivalent to resetting the decay
  * clock to full — see `resolveCultivationCare`/`applyCultivationMaintenance`.
+ *
+ * `hydration`/`lastHydrationUpdateAtDays`/`droughtStressDays` (plan
+ * settlements-npcs-001) are this same record's watering state — independent
+ * of `care` (watering never restores `care`, maintenance never restores
+ * `hydration`). `droughtStressDays` is the minimal persisted anchor needed to
+ * reconstruct accumulated drought-yield penalty without a full hydration
+ * history — see `resolveGardenHydration`.
  */
 export type PlayerGardenRecord = {
   id: string
@@ -23,6 +31,14 @@ export type PlayerGardenRecord = {
   yaw: number
   care: number
   lastMaintainedAtDays: number
+  /** 0..100 — see `resolveGardenHydration`. */
+  hydration: number
+  lastHydrationUpdateAtDays: number
+  /** Accumulated world-days spent below `HYDRATION_DROUGHT_THRESHOLD` since
+   *  the last harvest from this plot, capped at `DROUGHT_STRESS_CAP_DAYS` —
+   *  rewatering above the threshold stops further accumulation but does not
+   *  erase what's already accrued (plan §6). */
+  droughtStressDays: number
 }
 
 /** Cost to build a plot — charged once, atomically, when the placement
@@ -118,13 +134,18 @@ export function getCultivationStatus(care: number): CultivationStatus {
 }
 
 /** Pure, lazy care resolver — no simulation history, just `(lastMaintainedAt,
- *  care-at-that-time, now)`. */
+ *  care-at-that-time, now)`. The decay rate is scaled by `record.hydration`'s
+ *  last-known snapshot (plan settlements-npcs-001 §8: wetter ground grows
+ *  weeds faster) — a v1 approximation using the stored value rather than the
+ *  continuously-varying resolved hydration across the whole elapsed span, to
+ *  keep this a single closed-form formula instead of a second weather walk. */
 export function resolveCultivationCare(
-  record: Pick<PlayerGardenRecord, 'care' | 'lastMaintainedAtDays'>,
+  record: Pick<PlayerGardenRecord, 'care' | 'lastMaintainedAtDays' | 'hydration'>,
   worldDays: number,
 ): number {
   const elapsedDays = Math.max(0, worldDays - record.lastMaintainedAtDays)
-  return Math.max(0, Math.min(100, record.care - elapsedDays * CARE_DEGRADATION_PER_DAY))
+  const rate = CARE_DEGRADATION_PER_DAY * weedGrowthMultiplier(record.hydration)
+  return Math.max(0, Math.min(100, record.care - elapsedDays * rate))
 }
 
 /** Points restored by one "Zrób porządek" action, capped at 100 (plan §4). */
@@ -134,7 +155,7 @@ export const MAINTENANCE_CARE_GAIN = 50
  *  `worldDays` — the single authoritative maintenance mutation. Never
  *  mutates `record`; callers persist the returned pair. */
 export function applyCultivationMaintenance(
-  record: Pick<PlayerGardenRecord, 'care' | 'lastMaintainedAtDays'>,
+  record: Pick<PlayerGardenRecord, 'care' | 'lastMaintainedAtDays' | 'hydration'>,
   worldDays: number,
 ): { care: number, lastMaintainedAtDays: number } {
   const current = resolveCultivationCare(record, worldDays)
@@ -163,6 +184,150 @@ export function maintenanceDurationSec(heldTool: ToolKind | null): number {
     : MAINTENANCE_BASE_DURATION_SEC
 }
 
+/**
+ * Hydration/watering (plan settlements-npcs-001) — shared by player and NPC
+ * watering actions and by the crop-productivity modifier, same "lives next
+ * to `PlayerGardenRecord`, no parallel registry" shape as the care section
+ * above. Deliberately lazy: no per-frame tick, no `WateringManager`.
+ */
+
+/** Natural drying — clamped at 0, never negative. */
+export const HYDRATION_DRY_RATE_PER_DAY = 20
+/** One watering action's hydration gain (plan §1/§12). */
+export const WATERING_HYDRATION_GAIN = 40
+/** One watering action's water cost — a fraction of any container's
+ *  capacity, not a whole 10 l bucket (implementation notes §8/§4). */
+export const WATERING_LITRES = 1
+/** Busy-channel length for "Podlej" (plan §12) — mirrors
+ *  `MAINTENANCE_BASE_DURATION_SEC`'s "short real-time cost" reasoning. */
+export const WATERING_DURATION_SEC = 4
+/** Rain's hydration gain per world-day at `WeatherState.intensity === 1`
+ *  (plan §4) — scaled down by the actual intensity/duration of each weather
+ *  cycle inside `resolveGardenHydration`. */
+export const HYDRATION_RAIN_GAIN_PER_DAY = 30
+/** Below this, growth pauses and drought stress accumulates; at/above it,
+ *  growth is normal and stress no longer accrues (plan §5/§6). */
+export const HYDRATION_DROUGHT_THRESHOLD = 30
+
+function clampHydration(hydration: number): number {
+  return Math.max(0, Math.min(100, hydration))
+}
+
+/** Bounded lookback for the rain-aware hydration resolver — long enough that
+ *  anything before this window has already been fully overwritten by natural
+ *  drying alone (`100 / HYDRATION_DRY_RATE_PER_DAY`), so a stale anchor never
+ *  costs more than a fixed number of simulated weather cycles regardless of
+ *  how long the actual gap is (mirrors `world/weather.ts`'s
+ *  `computeSurfaceWeather` fixed-window technique — implementation notes
+ *  §3/§13). */
+export const HYDRATION_SIM_WINDOW_DAYS = 100 / HYDRATION_DRY_RATE_PER_DAY
+
+export const DROUGHT_STRESS_STEP_DAYS = 6 / 24
+export const DROUGHT_STRESS_PERCENT_PER_STEP = 10
+export const DROUGHT_STRESS_MAX_STEPS = 5
+/** `30h` — the point beyond which further sub-threshold time no longer adds
+ *  penalty (plan §6). */
+export const DROUGHT_STRESS_CAP_DAYS = DROUGHT_STRESS_STEP_DAYS * DROUGHT_STRESS_MAX_STEPS
+
+/** Weed growth pressure by hydration tier (plan §8) — `50-79%` is "normal",
+ *  i.e. `resolveCultivationCare`'s unscaled `CARE_DEGRADATION_PER_DAY`. */
+export function weedGrowthMultiplier(hydration: number): number {
+  if (hydration < 20) return 0.25
+  if (hydration < 50) return 0.6
+  if (hydration < 80) return 1
+  return 1.5
+}
+
+/** Harvest-yield multiplier from accumulated drought stress (plan §6):
+ *  `0%` at `<6h`, `-10%` per further full `6h` step, capped at `-50%`. */
+export function droughtYieldMultiplier(droughtStressDays: number): number {
+  const steps = Math.min(DROUGHT_STRESS_MAX_STEPS, Math.floor(droughtStressDays / DROUGHT_STRESS_STEP_DAYS))
+  return 1 - (steps * DROUGHT_STRESS_PERCENT_PER_STEP) / 100
+}
+
+export type GardenHydrationState = {
+  hydration: number
+  lastHydrationUpdateAtDays: number
+  droughtStressDays: number
+}
+
+/**
+ * Pure, lazy, bounded-cost resolver combining natural drying and rain since
+ * `record.lastHydrationUpdateAtDays` — same "resolve on demand" shape as
+ * `resolveCultivationCare`, extended with a bounded weather-cycle walk since
+ * rain (unlike linear care decay) isn't a closed-form formula. Along the same
+ * walk it also tracks how much additional time the site spent below
+ * `HYDRATION_DROUGHT_THRESHOLD` (capped at `DROUGHT_STRESS_CAP_DAYS`), so
+ * drought stress stays deterministic without a full hydration history
+ * (implementation notes §5/§7).
+ *
+ * A gap larger than `HYDRATION_SIM_WINDOW_DAYS` means the stored value is
+ * already fully dominated by drying alone by the time the bounded window
+ * starts — the replay then starts from `0` hydration / capped stress instead
+ * of paying for the full unbounded gap (implementation notes §3).
+ */
+export function resolveGardenHydration(
+  record: Pick<PlayerGardenRecord, 'hydration' | 'lastHydrationUpdateAtDays' | 'droughtStressDays'>,
+  seed: number,
+  worldDays: number,
+): GardenHydrationState {
+  const elapsed = Math.max(0, worldDays - record.lastHydrationUpdateAtDays)
+  if (elapsed <= 0) {
+    return {
+      hydration: clampHydration(record.hydration),
+      lastHydrationUpdateAtDays: record.lastHydrationUpdateAtDays,
+      droughtStressDays: record.droughtStressDays,
+    }
+  }
+
+  const stale = elapsed > HYDRATION_SIM_WINDOW_DAYS
+  let hydration = stale ? 0 : record.hydration
+  let stressDays = stale ? DROUGHT_STRESS_CAP_DAYS : record.droughtStressDays
+  const windowDays = Math.min(elapsed, HYDRATION_SIM_WINDOW_DAYS)
+  const startDays = worldDays - windowDays
+
+  const startCycle = Math.floor(startDays / WEATHER_CYCLE_DAYS)
+  const endCycle = Math.floor(worldDays / WEATHER_CYCLE_DAYS)
+  for (let cycle = startCycle; cycle <= endCycle; cycle++) {
+    const cycleStart = cycle * WEATHER_CYCLE_DAYS
+    const stepStart = Math.max(cycleStart, startDays)
+    const stepEnd = Math.min(cycleStart + WEATHER_CYCLE_DAYS, worldDays)
+    const stepDays = stepEnd - stepStart
+    if (stepDays <= 0) continue
+    const weather = computeWeather(seed, cycleStart, getSeason(cycleStart))
+    hydration -= HYDRATION_DRY_RATE_PER_DAY * stepDays
+    if (weather.type === 'rain') hydration += HYDRATION_RAIN_GAIN_PER_DAY * weather.intensity * stepDays
+    hydration = clampHydration(hydration)
+    if (hydration < HYDRATION_DROUGHT_THRESHOLD) stressDays = Math.min(DROUGHT_STRESS_CAP_DAYS, stressDays + stepDays)
+  }
+
+  return { hydration, lastHydrationUpdateAtDays: worldDays, droughtStressDays: stressDays }
+}
+
+/** Resolves current hydration, then applies one watering action's gain
+ *  (plan §12) — rewatering never erases accumulated `droughtStressDays`
+ *  (plan §6). */
+export function applyGardenWatering(
+  record: Pick<PlayerGardenRecord, 'hydration' | 'lastHydrationUpdateAtDays' | 'droughtStressDays'>,
+  seed: number,
+  worldDays: number,
+): GardenHydrationState {
+  const resolved = resolveGardenHydration(record, seed, worldDays)
+  return { ...resolved, hydration: clampHydration(resolved.hydration + WATERING_HYDRATION_GAIN) }
+}
+
+/** Resolves current hydration and resets accumulated drought stress — call
+ *  once per successful harvest from within this plot's radius (plan §6:
+ *  "resetuje się po zakończeniu/zbiorze cropa"). */
+export function resolveGardenHydrationAfterHarvest(
+  record: Pick<PlayerGardenRecord, 'hydration' | 'lastHydrationUpdateAtDays' | 'droughtStressDays'>,
+  seed: number,
+  worldDays: number,
+): GardenHydrationState {
+  const resolved = resolveGardenHydration(record, seed, worldDays)
+  return { ...resolved, droughtStressDays: 0 }
+}
+
 /** Yield multiplier by cultivation status (plan §3/§13) — applied only to a
  *  crop harvested from within a garden plot's radius, never to wild crops
  *  (callers gate that with `findNearestGarden`). `neglected` deliberately
@@ -177,8 +342,20 @@ const CULTIVATION_YIELD_MULTIPLIER: Record<CultivationStatus, number> = {
   removed: 0,
 }
 
-export function cultivationYieldCount(baseCount: number, care: number): number {
-  return Math.max(0, Math.round(baseCount * CULTIVATION_YIELD_MULTIPLIER[getCultivationStatus(care)]))
+/** `hydrationDead` (plan §5/§7: "0% jest stanem śmiertelnym... rozstrzygany
+ *  przed samą kalkulacją yield") always wins over both `care` and
+ *  `droughtStressDays` — a crop at 0% hydration is dead, not a zero-yield
+ *  mature crop. Care and drought-stress percentages combine into a single
+ *  multiplier before the one rounding step (implementation notes §6). */
+export function cultivationYieldCount(
+  baseCount: number,
+  care: number,
+  droughtStressDays = 0,
+  hydrationDead = false,
+): number {
+  if (hydrationDead) return 0
+  const multiplier = CULTIVATION_YIELD_MULTIPLIER[getCultivationStatus(care)] * droughtYieldMultiplier(droughtStressDays)
+  return Math.max(0, Math.round(baseCount * multiplier))
 }
 
 const CULTIVATION_STATUS_LABEL: Record<CultivationStatus, string> = {
@@ -188,10 +365,10 @@ const CULTIVATION_STATUS_LABEL: Record<CultivationStatus, string> = {
   removed: 'Zniszczone',
 }
 
-/** `[E]` prompt for a garden plot's `gardenPlot` interactable — available
- *  regardless of `care` (plan §4: the action must stay offered even while
- *  fully maintained). */
-export function gardenMaintenancePromptLabel(care: number): string {
+/** `[E]`/`[R]` prompt for a garden plot's `gardenPlot` interactable — both
+ *  actions stay offered regardless of `care`/`hydration` (plan §4/§12: never
+ *  gate the prompt itself, only the action's own validation). */
+export function gardenPlotPromptLabel(care: number, hydration: number): string {
   const status = getCultivationStatus(care)
-  return `[E] Zrób porządek (${CULTIVATION_STATUS_LABEL[status]}, ${Math.round(care)}%)`
+  return `[E] Zrób porządek (${CULTIVATION_STATUS_LABEL[status]}, ${Math.round(care)}%) · [R] Podlej (Nawodnienie ${Math.round(hydration)}%)`
 }

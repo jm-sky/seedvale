@@ -568,6 +568,7 @@ async function buildWorldSystems(
     chunkManager.clearColliders,
     initialPlayerGardens,
     getWorldDays(),
+    config.seed,
   )
   bootMarkEnd('createPlayerGardens')
 

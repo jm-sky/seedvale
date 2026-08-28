@@ -1,7 +1,7 @@
 # Plan: Cultivation Hydration & Watering
 
 **Created:** 2026-08-24  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~174~~ ~~126~~ ~~176~~  
 **domain:** `settlements-npcs`  

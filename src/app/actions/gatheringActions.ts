@@ -286,15 +286,22 @@ export function createGatheringActions(
       toast.show('Ta roślina już zniknęła.', 'error')
       return
     }
-    // Plan 176 §13 — a crop inside a player garden plot's radius has its
-    // yield scaled by the plot's resolved care; a crop nowhere near a plot
-    // (wild, or on a settlement's decorative garden) keeps its full yield.
+    // Plan 176 §13 / settlements-npcs-001 §6/§7 — a crop inside a player
+    // garden plot's radius has its yield scaled by the plot's resolved care
+    // and hydration/drought stress; a crop nowhere near a plot (wild, or on
+    // a settlement's decorative garden) keeps its full yield.
     const garden = findNearestGarden(bundle.playerGardens.list(), x, z)
-    const count = garden
-      ? cultivationYieldCount(outcome.yield.count, resolveCultivationCare(garden, dayNight.elapsedDays))
-      : outcome.yield.count
+    let count = outcome.yield.count
+    let hydrationDead = false
+    if (garden) {
+      const care = resolveCultivationCare(garden, dayNight.elapsedDays)
+      const hydrationState = bundle.playerGardens.hydrationOf(garden.id, dayNight.elapsedDays)
+      hydrationDead = (hydrationState?.hydration ?? 100) <= 0
+      count = cultivationYieldCount(outcome.yield.count, care, hydrationState?.droughtStressDays ?? 0, hydrationDead)
+      bundle.playerGardens.recordHarvest(garden.id, dayNight.elapsedDays)
+    }
     if (count <= 0) {
-      toast.show('Zbiory zniszczone przez zaniedbanie grządki.', 'error')
+      toast.show(hydrationDead ? 'Roślina uschła z powodu suszy.' : 'Zbiory zniszczone przez zaniedbanie grządki.', 'error')
       return
     }
     inventory.add(outcome.yield.kind, count, dayNight.elapsedDays)

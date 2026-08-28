@@ -32,7 +32,7 @@ import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
 import { honeyAvailable } from '../world/beehives'
 import { CROP_DEFS, type CropGrowthStage, type CropId } from '../world/cropLifecycle'
 import { isDryingComplete } from '../world/dryingRacks'
-import { gardenMaintenancePromptLabel, resolveCultivationCare } from '../world/playerGarden'
+import { gardenPlotPromptLabel, resolveCultivationCare } from '../world/playerGarden'
 import { isWellCompleted, wellPromptLabel } from '../world/playerWell'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource } from '../world/WaterSource'
@@ -387,10 +387,11 @@ export function buildInteractables(
   for (const garden of playerGardens.list()) {
     if (!withinRange(garden.x, garden.z, playerPos, GAZE_RANGE)) continue
     const care = resolveCultivationCare(garden, nowDays)
+    const hydration = playerGardens.hydrationOf(garden.id, nowDays)?.hydration ?? garden.hydration
     list.push({
       kind: 'gardenPlot',
       position: { x: garden.x, z: garden.z },
-      promptLabel: gardenMaintenancePromptLabel(care),
+      promptLabel: gardenPlotPromptLabel(care, hydration),
       id: garden.id,
       care,
     })

@@ -1,7 +1,7 @@
 # Plan: Cultivation Hydration & Watering — Implementation Notes
 
 **Created:** 2026-08-28
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~174~~ ~~126~~ ~~176~~
 **Domain:** `settlements-npcs`
@@ -295,5 +295,60 @@ Do not duplicate existing liquid-container tests unless the new watering path ex
 - `src/simulation/`
 - `src/persistence/saveData.ts`
 - `src/app/worldBundle.ts`
+
+## 17. Implementation summary (2026-08-28)
+
+Implemented on `PlayerGardenRecord` (`src/world/playerGarden.ts`), exactly as
+this document prescribed. Technically verified (`tsc`, lint, full test
+suite, build); browser/gameplay verification is still open (plan §19).
+
+Notable deviations/clarifications made during implementation:
+
+- **Watering consumes 1 litre**, not a whole container (§8 concern resolved
+  in favor of the liquid-container model): `WATERING_LITRES = 1`,
+  `WATERING_HYDRATION_GAIN = 40` — a full 10 l bucket is 10 waterings.
+  `placementActions.ts`'s `waterGardenPlot` fills from any carried
+  `wooden_bucket`/`copper_bucket`/waterskin holding water via
+  `items/liquidContainer.ts`'s new `hasLiquidContent()`.
+- **Rain resolution** reuses `world/weather.ts`'s exported `WEATHER_CYCLE_DAYS`
+  + `computeWeather`/`getSeason` inside a new bounded-window step loop
+  (`resolveGardenHydration`, `HYDRATION_SIM_WINDOW_DAYS = 5` — the number of
+  days for natural drying alone to fully overwrite any stored value). A gap
+  larger than the window replays from `hydration = 0` /
+  `droughtStressDays = DROUGHT_STRESS_CAP_DAYS` instead of an unbounded walk.
+- **Drought stress anchor**: `droughtStressDays` (world-days spent below 30%,
+  capped at `DROUGHT_STRESS_CAP_DAYS = 1.25` = 30h) is accumulated inside the
+  same bounded step loop that resolves hydration, so no separate history is
+  stored. It resets to `0` only via `PlayerGardens.recordHarvest()`, called
+  from both the player (`gatheringActions.ts`) and NPC (`foodSources.ts`)
+  harvest boundaries, right where `cultivationYieldCount()` already applies
+  the `care` multiplier — both percentages combine before the one rounding
+  step (plan §7).
+- **0% hydration** is checked as a hard override at the same harvest boundary
+  (`cultivationYieldCount(..., hydrationDead)`) — always yields `0`
+  regardless of `care`/drought stress, never a "zero-yield mature crop".
+- **Growth pause (1-29%) is not implemented as a literal `CropLifecycle`
+  freeze** — per this document's §4/§5, hydration stays a cultivation-site
+  condition and `cropLifecycle.ts`'s pure `(seed, worldDays)` stage function
+  is untouched. The only mechanical consequence of low hydration in v1 is the
+  accumulating drought-stress yield penalty; "growth paused" is not otherwise
+  observable.
+- **Weeds** are not a new tracked state. `resolveCultivationCare()`'s existing
+  decay rate is scaled by a `weedGrowthMultiplier(hydration)` tier (plan §8's
+  four thresholds), read from the record's last-persisted hydration snapshot
+  (not a continuously re-integrated value, to keep care resolution a single
+  closed-form formula rather than a second weather walk).
+- **NPC watering** (`NpcAgent.maybeWaterNearbyGarden`) mirrors the existing
+  `maybeMaintainNearbyGarden` exactly, including going through `foodSources`
+  hooks from inside the harvest action's `onComplete` (never bypassing the
+  action lifecycle) and, like NPC maintenance, not requiring the NPC to carry
+  a water item — consistent with the existing precedent rather than building
+  new NPC container-carrying logic.
+- `PlayerGardens` (`createPlayerGardens.ts`) now takes `seed` as a
+  constructor parameter (from `worldBundle.ts`'s `config.seed`) so hydration
+  resolution stays encapsulated there; no other module threads `seed`
+  through for this feature.
+- Save v1 hard-cut, as expected: `SavePlayerGarden` gained the three new
+  required fields with no migration path.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

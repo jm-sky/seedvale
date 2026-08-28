@@ -114,7 +114,6 @@ Natural vegetation
 | 💡 `npc-002-npc-healing.md`                                            | NPC używa opatrunków | 🟡 | M | ~~177~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
-| ◼️ `settlements-npcs-001-cultivation-hydration-and-watering.md`        | - | 🟡 | M | ~~174~~ ~~126~~ ~~176~~ |
 | ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`               | - | 🟡 | S | ~~151~~ |
 | 💡 `settlements-001-house-collision-geometry.md`                       | - | 🔴 | L | 111 |
 | ◼️ `fauna-001-rabies-and-animal-infection.md`                          | - | 🟡 | M | ~~188~~ |
@@ -195,6 +194,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `2026-08-22--200--arch--persistence-gaps-authoritative-state.md` | [notes](./implementation-notes/2026-08-22--200--arch--persistence-gaps-authoritative-state-implementation-notes.md) |
 | `2026-08-22--201--arch--deferred-architecture-state-cleanup.md` | [notes](./implementation-notes/2026-08-22--201--arch--deferred-architecture-state-cleanup-implementation-notes.md) |
 | `2026-08-20--176--garden-and-field-maintenance.md` | [notes](./implementation-notes/2026-08-20--176--garden-and-field-maintenance-implementation-notes.md) |
+| `settlements-npcs-001-cultivation-hydration-and-watering.md` | [notes](./implementation-notes/settlements-npcs-001-cultivation-hydration-and-watering-implementation-notes.md); browser/gameplay verification per plan §19 |
 | `2026-08-20--178--hunter-profession-and-household.md` | [notes](./implementation-notes/2026-08-20--178--hunter-profession-and-household-implementation-notes.md) — bow crafting/trade bridge and NPC-triggered cooking/drying deliberately out of scope, see notes §18 |
 | `2026-08-19--168--settlement-lodging-and-sleep.md` | [notes](./implementation-notes/2026-08-19--168--settlement-lodging-and-sleep-implementation-notes.md) |
 | `2026-08-19--169--house-interior-furniture-and-bed-anchors.md` | [notes](./implementation-notes/2026-08-19--169--house-interior-furniture-and-bed-anchors-implementation-notes.md) |

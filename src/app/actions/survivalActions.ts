@@ -17,7 +17,7 @@ import { COOK_DURATION_SEC, findCookingBatch, resolveCookingCapacity } from '../
 import { getFreshnessStage } from '../../items/foodFreshness'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
-import { isLiquidContainerInstance, isLiquidContainerKind, type LiquidContainerItemInstance } from '../../items/itemInstances'
+import { isLiquidContainerInstance, isLiquidContainerKind, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
 import {
   canDrinkFromLiquidContainer,
@@ -240,35 +240,34 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     toast.show(source.quality === 'unsafe' ? UNSAFE_WATER_WARNING : 'Napito się wody.', source.quality === 'unsafe' ? 'error' : undefined)
   }
 
-  /** Waterskin kinds tried smallest-first when filling at a well/lake
-   *  (plan items-player-001 §2/§7) — the same shared `container` model a
-   *  future bucket/barrel fill action would reuse. */
-  const WATERSKIN_KINDS: readonly ItemKind[] = ['waterskin_small', 'waterskin_medium', 'waterskin_large']
-
-  /** All carried waterskin instances, smallest capacity first. */
-  function carriedWaterskins(): LiquidContainerItemInstance[] {
-    return WATERSKIN_KINDS.flatMap((kind) => inventory.getInstances(kind))
+  /** All carried liquid-container instances (waterskins and buckets, plan
+   *  items-player-001 §2/§7, extended to buckets by plan
+   *  settlements-npcs-001 §10/§11 so a bucket can actually be filled for
+   *  watering), smallest capacity first. */
+  function carriedWaterContainers(): LiquidContainerItemInstance[] {
+    return LIQUID_CONTAINER_KIND_LIST.flatMap((kind) => inventory.getInstances(kind))
       .filter(isLiquidContainerInstance)
       .sort((a, b) => liquidContainerCapacity(a.kind) - liquidContainerCapacity(b.kind))
   }
 
-  /** Instant fill of a carried waterskin at a well/lake (plan 106 §4, updated
-   *  by plan items-player-001 for partial content): tops up the smallest
-   *  carried waterskin instance that isn't already full of water, in one
-   *  instant action — no separate empty/full `ItemKind` swap any more. */
+  /** Instant fill of a carried waterskin/bucket at a well/lake (plan 106 §4,
+   *  updated by plan items-player-001 for partial content, extended to
+   *  buckets by plan settlements-npcs-001): tops up the smallest carried
+   *  container instance that isn't already full of water, in one instant
+   *  action — no separate empty/full `ItemKind` swap any more. */
   const fillWaterskin = (): void => {
     if (isActionBlocked(ctx)) return
-    const carried = carriedWaterskins()
+    const carried = carriedWaterContainers()
     const target = carried.find((inst) => canFillLiquidContainer(inst, 'water'))
     if (target) {
       inventory.updateInstance(target.id, (inst) => fillLiquidContainer(inst as LiquidContainerItemInstance, 'water')!)
       playActionWell(worldAudio.playAt, player.mesh.position)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
-      toast.show('Napełniono bukłak.', 'pickup')
+      toast.show('Napełniono pojemnik.', 'pickup')
       return
     }
-    toast.show(carried.length > 0 ? 'Bukłak jest już pełny.' : 'Potrzebujesz bukłaka.', 'error')
+    toast.show(carried.length > 0 ? 'Pojemnik jest już pełny.' : 'Potrzebujesz pojemnika na wodę.', 'error')
   }
 
   /** Inventory-screen "Zjedz"/"Wypij" (plan 106) — driven by

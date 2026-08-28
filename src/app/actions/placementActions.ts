@@ -1,8 +1,9 @@
 import type { CropId } from '../../world/cropLifecycle'
 import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial, type MaterialRequirement } from '../../items/constructionMaterials'
 import { CAPABILITY_NEED_LABEL } from '../../items/itemCatalog'
-import { isTrapItemInstance } from '../../items/itemInstances'
+import { isLiquidContainerInstance, isTrapItemInstance, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
+import { drinkFromLiquidContainer, hasLiquidContent } from '../../items/liquidContainer'
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../../items/tentPlacement'
 import { TENT_LENGTH } from '../../items/tentProp'
 import { selectInstanceToPlace } from '../../items/trade'
@@ -43,6 +44,8 @@ import {
   GARDEN_SEPARATION,
   maintenanceDurationSec,
   PLAYER_GARDEN_PLANT_RADIUS,
+  WATERING_DURATION_SEC,
+  WATERING_LITRES,
 } from '../../world/playerGarden'
 import {
   activeWellStage,
@@ -101,6 +104,11 @@ export type PlacementActions = {
    *  by a held shovel/pitchfork. Mutation only applied on completion, after
    *  revalidating the plot still exists. */
   tidyGardenPlot: (id: string) => void
+  /** "Podlej" on a player garden plot (plan settlements-npcs-001 §9/§11/§12)
+   *  — consumes `WATERING_LITRES` from a carried water-filled container
+   *  (waterskin or bucket) after a short busy channel; mutation only applied
+   *  on completion, after revalidating the plot still exists. */
+  waterGardenPlot: (id: string) => void
   /** Plants a `tree_seed` from inventory ahead of the player (plan 126). */
   plantTreeAtAim: () => void
   /** Plants a crop seed of `cropId` ahead of the player — only valid near a
@@ -414,6 +422,44 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     })
   }
 
+  /** Carried water-filled containers (waterskin or bucket) with at least
+   *  `WATERING_LITRES` — the same shared liquid-container model
+   *  `survivalActions.ts`'s waterskin fill/drink already uses, extended here
+   *  to buckets since watering needs whichever container is holding water. */
+  const carriedWaterContainers = (): LiquidContainerItemInstance[] =>
+    LIQUID_CONTAINER_KIND_LIST.flatMap((kind) => inventory.getInstances(kind))
+      .filter(isLiquidContainerInstance)
+      .filter((inst) => hasLiquidContent(inst, 'water', WATERING_LITRES))
+
+  /** "Podlej" on a player garden plot (plan settlements-npcs-001 §9/§11/§12)
+   *  — same revalidate-at-completion shape as `tidyGardenPlot`. Consumes
+   *  exactly `WATERING_LITRES` from a carried water container, never the
+   *  whole container (implementation notes §8), leaving the rest usable. */
+  const waterGardenPlot = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    if (!bundle.playerGardens.list().some((g) => g.id === id)) return
+    if (carriedWaterContainers().length === 0) {
+      toast.show('Potrzebujesz pojemnika z wodą.', 'error')
+      return
+    }
+    busy.start(WATERING_DURATION_SEC, 'Podlewanie…', () => {
+      if (!bundle.playerGardens.list().some((g) => g.id === id)) {
+        toast.show('Grządka już zniknęła.', 'error')
+        return
+      }
+      const container = carriedWaterContainers()[0]
+      if (!container) {
+        toast.show('Potrzebujesz pojemnika z wodą.', 'error')
+        return
+      }
+      inventory.updateInstance(container.id, (inst) => drinkFromLiquidContainer(inst as LiquidContainerItemInstance, WATERING_LITRES)!)
+      bundle.playerGardens.water(id, dayNight.elapsedDays)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show('Grządka podlana.')
+    })
+  }
+
   /** Plants a tree seed ahead of the player (plan 126 §1.2/§1.3): validates
    *  against nearby trees (procedural + already-planted — `getNearbyTrees`
    *  covers both, since a planted tree registers into the same
@@ -512,6 +558,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     describeWellWork,
     placeGardenAtAim,
     tidyGardenPlot,
+    waterGardenPlot,
     plantTreeAtAim,
     plantCropAtAim,
   }

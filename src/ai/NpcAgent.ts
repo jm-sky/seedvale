@@ -89,7 +89,7 @@ import { gazeOpacityFactor } from '../ui/labelDistance'
 import { colliderContainsPoint, colliderRimPoint, colliderSignedDistance } from '../world/collision'
 import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../world/fishing'
 import { CROP_SEED_ITEM } from '../world/plantedCrops'
-import { CARE_MAINTAINED_THRESHOLD } from '../world/playerGarden'
+import { CARE_MAINTAINED_THRESHOLD, HYDRATION_DROUGHT_THRESHOLD } from '../world/playerGarden'
 import { gameHoursToRealSeconds } from '../world/timeConversion'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
@@ -605,6 +605,9 @@ const HUNTER_ARROW_STOCK_CAP = 24
 const NPC_GARDEN_MAINTENANCE_MIN_HEALTH_RATIO = 0.5
 const NPC_GARDEN_MAINTENANCE_MIN_STAMINA_RATIO = 0.4
 const NPC_GARDEN_MAINTENANCE_CHANCE = 0.35
+/** Same gates/chance as garden maintenance (plan settlements-npcs-001 §13),
+ *  just checking hydration instead of care. */
+const NPC_GARDEN_WATERING_CHANCE = 0.35
 
 /** Chop → deposit completion, household-aware. A household caps how much of
  *  the harvest it keeps (see `Household.deposit`); anything over that still
@@ -2973,7 +2976,10 @@ export class NpcAgent {
         // (never a special search); evaluated regardless of `result.count`
         // so a heavily-neglected plot (which can legitimately yield 0, plan
         // §14) still gets a chance at being tidied.
-        if (target.kind === 'crop') this.maybeMaintainNearbyGarden(target.x, target.z)
+        if (target.kind === 'crop') {
+          this.maybeMaintainNearbyGarden(target.x, target.z)
+          this.maybeWaterNearbyGarden(target.x, target.z)
+        }
         if (result.count <= 0) return
         household?.deposit('food', result.count, this.economy)
         household?.stock.remove('food', Math.min(1, household.stock.query('food')))
@@ -3115,6 +3121,24 @@ export class NpcAgent {
     if (!garden || garden.care >= CARE_MAINTAINED_THRESHOLD) return
     if (Math.random() >= NPC_GARDEN_MAINTENANCE_CHANCE) return
     foodSources.maintainGarden(garden.id)
+  }
+
+  /**
+   * Plan settlements-npcs-001 §13/§14 — a chance to water a dry garden plot,
+   * same "only ever evaluated right after this NPC already arrived at a crop
+   * it was harvesting" shape and gates as `maybeMaintainNearbyGarden`. Never
+   * a global scan, never a special `WateringAI`.
+   */
+  private maybeWaterNearbyGarden(x: number, z: number): void {
+    const foodSources = this.foodSources
+    if (!foodSources) return
+    if (this.health.currentHp / this.health.maxHp < NPC_GARDEN_MAINTENANCE_MIN_HEALTH_RATIO) return
+    if (getStaminaRatio(this.stamina) < NPC_GARDEN_MAINTENANCE_MIN_STAMINA_RATIO) return
+    if (pickNeed(this.needs, { critical: true }) !== 'idle') return
+    const garden = foodSources.gardenNear(x, z)
+    if (!garden || garden.hydration >= HYDRATION_DROUGHT_THRESHOLD) return
+    if (Math.random() >= NPC_GARDEN_WATERING_CHANCE) return
+    foodSources.waterGarden(garden.id)
   }
 
   /**

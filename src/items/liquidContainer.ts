@@ -53,6 +53,18 @@ export function fillLiquidContainer(
   return { ...instance, liquid: content, amountLitres: liquidContainerCapacity(instance.kind) }
 }
 
+/** Does `instance` hold at least `litres` of specifically `content` — unlike
+ *  `canDrinkFromLiquidContainer`, which accepts any liquid, this is for
+ *  actions that need a specific one (e.g. watering a garden needs water, not
+ *  milk). */
+export function hasLiquidContent(
+  instance: LiquidContainerItemInstance,
+  content: LiquidContent,
+  litres = LIQUID_DRINK_PORTION_LITRES,
+): boolean {
+  return instance.liquid === content && instance.amountLitres >= litres
+}
+
 export function canDrinkFromLiquidContainer(
   instance: LiquidContainerItemInstance,
   litres = LIQUID_DRINK_PORTION_LITRES,
