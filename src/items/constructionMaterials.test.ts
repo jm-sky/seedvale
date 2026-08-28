@@ -24,6 +24,7 @@ function fakeDroppedItems(initial: readonly DroppedItem[]): DroppedItems {
       return { kind: item!.kind, x: item!.x, z: item!.z }
     },
     tick: () => {},
+    settleNear: () => {},
     dispose: () => {},
   }
 }

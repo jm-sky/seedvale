@@ -29,6 +29,10 @@ export function applyDigAt(
   random: () => number = Math.random,
 ): void {
   chunkManager.modifyTerrain(x, z, DIG_RADIUS, profile.depth, 'player')
+  // A previously-dropped stone resting where we just dug (e.g. from an
+  // earlier dig at the same spot) is now floating above the new depression —
+  // re-settle it onto the fresh height instead of leaving it stuck in place.
+  feedback.droppedItems.settleNear(x, z, DIG_RADIUS)
   const outcome = resolveDigStone(profile.stoneChance, feedback.inventory.canAdd('stone'), random)
   if (outcome.kind === 'none') {
     feedback.toast.show(profile.surface === 'rock' ? 'Wykuto skałę.' : 'Wykopano dołek.')

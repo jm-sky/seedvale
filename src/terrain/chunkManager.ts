@@ -650,9 +650,10 @@ export function applyModificationToTile(
       if (tile.floorHeights) {
         tile.floorHeights[idx] = tile.floorHeights[idx]! - mod.depth * falloff
       }
-      if (mod.mode === 'scorch') {
-        // Reuse the road-corridor grass fade (`ROAD_TINT_FADE_*`) so scorched
-        // ground thins blades without a second grass-reject path.
+      if (mod.mode === 'scorch' || mod.mode === 'dig') {
+        // Reuse the road-corridor grass fade (`ROAD_TINT_FADE_*`) so
+        // scorched/dug/mounded ground thins blades without a second
+        // grass-reject path.
         if (tile.roadTint) {
           tile.roadTint[idx] = Math.max(tile.roadTint[idx]!, falloff)
         }
@@ -2099,6 +2100,11 @@ export function createChunkManager(
         if (!touched) continue
         touchedAny = true
         buildAndAttachMesh(rec, rec.tile)
+        // Dug/mounded ground doesn't keep its grass — same roadTint-based
+        // grass-reject `scorchTerrain` below uses; rebuild so a fresh
+        // hole/mound doesn't still show blades growing over it.
+        removeGrass(rec)
+        if (config.grass.enabled) ensureGrass(rec)
       }
       return touchedAny
     },

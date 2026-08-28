@@ -30,6 +30,11 @@ export type DroppedItems = {
   /** Advances items still in flight (plan 097 phase 2.1). Landed items cost
    *  nothing — only entries in `falling` are touched. */
   tick: (dt: number) => void
+  /** Re-arms gravity (the same `falling` mechanism `drop()` uses) for every
+   *  landed item within `radius` of `(x, z)` — call after a terrain
+   *  modification (dig) so a stone that was already resting there settles
+   *  onto the new height instead of staying stuck at its pre-dig Y. */
+  settleNear: (x: number, z: number, radius: number) => void
   dispose: () => void
 }
 
@@ -89,6 +94,13 @@ export function createDroppedItems(
       }
       falling.delete(id)
       return { kind: item!.kind, x: item!.x, z: item!.z, instance: item!.instance }
+    },
+    settleNear(x, z, radius) {
+      for (const item of items) {
+        if (falling.has(item.id)) continue
+        if (Math.hypot(item.x - x, item.z - z) > radius) continue
+        falling.set(item.id, { vy: 0 })
+      }
     },
     tick(dt) {
       if (falling.size === 0) return
