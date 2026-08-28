@@ -20,13 +20,8 @@ export const SRC_DIR = resolve(ROOT_DIR, 'src')
 export const DOCS_DIR = resolve(ROOT_DIR, 'docs')
 export const CODE_MAP_DIR = resolve(DOCS_DIR, 'code-map')
 
-export const GENERATED_START =
-  '<!-- AUTO-GENERATED:START -->'
-export const GENERATED_END =
-  '<!-- AUTO-GENERATED:END -->'
-
-export const FILES_MARKER =
-  '<!-- AUTO-GENERATED:FILES -->'
+export const GENERATED_START = /<!--\s*AUTO-GENERATED:START(?:\s+columns:\s*.+?)?\s*-->/
+export const GENERATED_END = '<!-- AUTO-GENERATED:END -->'
 
 const TS_EXTENSIONS = new Set(['.ts', '.tsx'])
 
@@ -57,20 +52,15 @@ export type DependencyInfo = {
   importedBy: string[]
 }
 
-export const toPosix = (path: string): string =>
-  path.split(sep).join('/')
+export const toPosix = (path: string): string => path.split(sep).join('/')
 
-export const srcRelative = (path: string): string =>
-  toPosix(relative(SRC_DIR, path))
+export const srcRelative = (path: string): string => toPosix(relative(SRC_DIR, path))
 
-export const repoRelative = (path: string): string =>
-  toPosix(relative(ROOT_DIR, path))
+export const repoRelative = (path: string): string => toPosix(relative(ROOT_DIR, path))
 
-export const getDomain = (path: string): string =>
-  path.split('/')[0] ?? 'other'
+export const getDomain = (path: string): string => path.split('/')[0] ?? 'other'
 
-export const isTsFile = (name: string): boolean =>
-  TS_EXTENSIONS.has(extname(name))
+export const isTsFile = (name: string): boolean => TS_EXTENSIONS.has(extname(name))
 
 export async function walk(
   directory: string,
@@ -329,31 +319,30 @@ export function replaceGeneratedSection(
   content: string,
   generated: string,
 ): string {
-  const start = content.indexOf(GENERATED_START)
+  const startMatch = content.match(GENERATED_START)
+
+  const start = startMatch?.index ?? -1
+
   const end = content.indexOf(GENERATED_END)
 
   if (
-    start !== -1 &&
-    end !== -1 &&
-    end > start
+    start === -1 ||
+    end === -1 ||
+    end <= start
   ) {
-    return [
-      content.slice(0, start),
-      GENERATED_START,
-      generated,
-      GENERATED_END,
-      content.slice(end + GENERATED_END.length),
-    ].join('\n')
+    return content
   }
 
   return [
-    content.trimEnd(),
-    '',
-    GENERATED_START,
+    content.slice(
+      0,
+      start + (startMatch?.[0].length ?? 0),
+    ),
+    '\n',
     generated,
-    GENERATED_END,
-    '',
-  ].join('\n')
+    '\n',
+    content.slice(end),
+  ].join('')
 }
 
 export async function updateGeneratedSection(
