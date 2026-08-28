@@ -155,6 +155,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/restActions.ts`
 - `app/createApp.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
@@ -274,6 +275,17 @@ Generated from TypeScript imports.
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`
 - `world/plantedCrops.ts`
+
+## `settlement/hiddenTreasure.ts`
+
+**Imports**
+
+- `terrain/dig.ts`
+
+**Imported by**
+
+- `app/actions/groundActions.ts`
+- `settlement/props.ts`
 
 ## `settlement/houseBuilder.test.ts`
 
@@ -435,8 +447,6 @@ Generated from TypeScript imports.
 - `settlement/lodging.test.ts`
 - `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`
-- `ui-vue/store.ts`
-- `ui/createQuickActions.ts`
 
 ## `settlement/lodgingResolver.test.ts`
 
@@ -635,6 +645,7 @@ Generated from TypeScript imports.
 - `settlement/findSettlementSite.ts`
 - `settlement/frameYield.ts`
 - `settlement/gardenScale.ts`
+- `settlement/hiddenTreasure.ts`
 - `settlement/houseBuilder.ts`
 - `settlement/houseCatalog.ts`
 - `settlement/houseLighting.ts`

@@ -444,6 +444,7 @@ Generated from TypeScript imports.
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
 - `items/itemCatalog.ts`
+- `items/items.ts`
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
 - `items/trade.ts`
@@ -452,6 +453,7 @@ Generated from TypeScript imports.
 - `items/trapItemInstances.ts`
 - `items/weaponMaintenance.test.ts`
 - `items/weaponMaintenance.ts`
+- `persistence/saveData.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.ts`
 
@@ -474,6 +476,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
+- `items/itemInstances.ts`
 - `items/itemModels.ts`
 
 **Imported by**
@@ -482,6 +485,7 @@ Generated from TypeScript imports.
 - `ai/npcAssistance.ts`
 - `ai/npcCombat.ts`
 - `ai/npcLoadout.ts`
+- `app/actions/actionContext.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
@@ -680,6 +684,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`

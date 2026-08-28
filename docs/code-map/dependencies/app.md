@@ -15,6 +15,7 @@ Generated from TypeScript imports.
 - `input/MouseLook.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/items.ts`
 - `player/PlayerController.ts`
 - `player/PlayerTorch.ts`
 - `ui/createHud.ts`
@@ -41,6 +42,7 @@ Generated from TypeScript imports.
 
 - `app/actions/actionContext.ts`
 - `app/actions/placementActions.ts`
+- `input/MouseLook.ts`
 - `items/Inventory.ts`
 - `items/container.ts`
 - `items/inventoryView.ts`
@@ -87,7 +89,9 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
 - `items/items.ts`
+- `items/trade.ts`
 - `player/PlayerNeeds.ts`
+- `settlement/hiddenTreasure.ts`
 - `terrain/depositMining.ts`
 - `terrain/dig.ts`
 - `terrain/digAction.ts`
@@ -156,8 +160,10 @@ Generated from TypeScript imports.
 - `items/tentProp.ts`
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
+- `settlement/createSettlement.ts`
 - `settlement/lodging.ts`
 - `settlement/lodgingResolver.ts`
+- `shared/VigorState.ts`
 - `ui/createBusyOverlay.ts`
 - `ui/createQuickActions.ts`
 - `ui/createTimeSkipOverlay.ts`
@@ -504,6 +510,12 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 
+## `app/interactables.test.ts`
+
+**Imports**
+
+- `app/interactables.ts`
+
 ## `app/interactables.ts`
 
 **Imports**
@@ -550,6 +562,7 @@ Generated from TypeScript imports.
 
 - `app/actions/groundActions.ts`
 - `app/gameLoop.ts`
+- `app/interactables.test.ts`
 - `player/playerCombat.test.ts`
 - `player/playerCombat.ts`
 - `player/playerMelee.test.ts`

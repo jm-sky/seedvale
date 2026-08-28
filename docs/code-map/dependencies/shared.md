@@ -102,6 +102,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcVigor.test.ts`
 - `ai/npcVigor.ts`
+- `app/actions/restActions.ts`
 - `app/gameLoop.ts`
 - `player/PlayerNeeds.ts`
 - `settlement/npcState.ts`

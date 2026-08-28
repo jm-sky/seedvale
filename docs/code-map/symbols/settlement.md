@@ -88,6 +88,14 @@ Generated from exported TypeScript symbols.
 - `gardenUnitsFromHouses` — function — line 5
 - `packGardenScales` — function — line 15
 
+## `settlement/hiddenTreasure.ts`
+
+- `HIDDEN_TREASURE_DIG_TOLERANCE` — const — line 19
+- `HIDDEN_TREASURE_MARKER_COUNT` — const — line 10
+- `HiddenTreasureAnchorSource` — type — line 45
+- `hiddenTreasureDigHit` — function — line 76
+- `hiddenTreasureMarkerPositions` — function — line 54
+
 ## `settlement/houseBuilder.ts`
 
 - `buildAssemblyCollidersWorld` — function — line 632
@@ -183,21 +191,25 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/lodging.ts`
 
-- `LODGING_ARRIVE_TOLERANCE` — const — line 60
-- `LodgingConfirmView` — type — line 78
+- `hayLodgingId` — function — line 108
+- `LODGING_ARRIVE_TOLERANCE` — const — line 67
+- `lodgingChoiceLabel` — function — line 97
 - `LodgingOption` — type — line 16
-- `lodgingPlaceLabel` — function — line 69
+- `lodgingPlaceLabel` — function — line 76
 - `LodgingQuality` — type — line 14
-- `lodgingRestQuality` — function — line 52
+- `lodgingRequiresPayment` — function — line 85
+- `lodgingRestQuality` — function — line 59
 - `LodgingType` — type — line 12
 
 ## `settlement/lodgingResolver.ts`
 
-- `collectLodgingCandidates` — function — line 125
-- `LodgingCandidateContext` — type — line 121
-- `LodgingSettlementInput` — type — line 17
-- `resolveBestLodging` — function — line 153
-- `settlementLodgingInput` — function — line 37
+- `collectLodgingCandidates` — function — line 168
+- `LodgingCandidateContext` — type — line 164
+- `LodgingSelection` — type — line 261
+- `LodgingSettlementInput` — type — line 18
+- `resolveBestLodging` — function — line 226
+- `selectLodgingFromCandidates` — function — line 275
+- `settlementLodgingInput` — function — line 62
 
 ## `settlement/merchantWagon.ts`
 
@@ -274,13 +286,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `buildSettlementProps` — function — line 575
-- `disposeSettlementGroup` — function — line 1599
-- `SettlementHouseBed` — type — line 119
-- `SettlementHouseLandmark` — type — line 90
-- `SettlementLandmarks` — type — line 126
-- `SettlementLandPlot` — type — line 190
-- `SettlementTreeLandmark` — type — line 197
+- `buildSettlementProps` — function — line 592
+- `disposeSettlementGroup` — function — line 1640
+- `SettlementHouseBed` — type — line 120
+- `SettlementHouseLandmark` — type — line 91
+- `SettlementLandmarks` — type — line 127
+- `SettlementLandPlot` — type — line 207
+- `SettlementTreeLandmark` — type — line 214
 
 ## `settlement/propSpecs.ts`
 

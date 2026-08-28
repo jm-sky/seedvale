@@ -37,7 +37,7 @@ Generated from exported TypeScript symbols.
 
 ## `items/createDroppedItems.ts`
 
-- `createDroppedItems` — function — line 47
+- `createDroppedItems` — function — line 52
 - `DroppedItem` — type — line 8
 - `DroppedItems` — type — line 20
 
@@ -95,13 +95,13 @@ Generated from exported TypeScript symbols.
 
 ## `items/Inventory.ts`
 
-- `DEFAULT_MAX_SIZE` — const — line 32
-- `FoodBatch` — type — line 75
-- `Inventory` — class — line 84
-- `inventoryFullToastText` — function — line 441
-- `ItemAmount` — type — line 37
-- `SaveItemInstance` — type — line 39
-- `toSaveItemInstance` — function — line 55
+- `DEFAULT_MAX_SIZE` — const — line 33
+- `FoodBatch` — type — line 76
+- `Inventory` — class — line 85
+- `inventoryFullToastText` — function — line 442
+- `ItemAmount` — type — line 38
+- `SaveItemInstance` — type — line 40
+- `toSaveItemInstance` — function — line 56
 
 ## `items/inventoryView.ts`
 
@@ -112,49 +112,51 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1015
-- `CAPABILITY_KINDS` — const — line 1046
+- `ARROW_DAMAGE_BONUS` — const — line 1014
+- `CAPABILITY_KINDS` — const — line 1045
 - `CAPABILITY_NEED_LABEL` — const — line 108
 - `ConsumableNeed` — type — line 120
 - `consumeNeedNoun` — function — line 189
 - `consumeVerbLabel` — function — line 180
 - `DefenseConfig` — type — line 40
-- `hasItemCapability` — function — line 1071
-- `HOLDABLE_KINDS` — const — line 1037
-- `isMeleeToolKind` — function — line 1030
-- `isRangedTool` — function — line 1022
+- `hasItemCapability` — function — line 1070
+- `HOLDABLE_KINDS` — const — line 1036
+- `isMeleeToolKind` — function — line 1029
+- `isRangedTool` — function — line 1021
 - `ITEM_CATALOG` — const — line 197
-- `ITEM_SYSTEM_ROADMAP` — const — line 1076
+- `ITEM_SYSTEM_ROADMAP` — const — line 1075
 - `ItemCapability` — type — line 87
 - `ItemCatalogEntry` — type — line 127
 - `ItemSpawnKind` — type — line 12
 - `MeleeConfig` — type — line 23
-- `NON_ITEM_PROPS` — const — line 1082
+- `NON_ITEM_PROPS` — const — line 1081
 - `RangedConfig` — type — line 51
 
 ## `items/itemInstances.ts`
 
-- `clamp01` — function — line 135
-- `cloneItemInstance` — function — line 140
-- `createItemInstanceId` — function — line 115
-- `INSTANCE_BACKED_KINDS` — const — line 120
-- `isInstanceBackedKind` — function — line 127
-- `isLiquidContainerInstance` — function — line 108
-- `isLiquidContainerKind` — function — line 82
-- `isTrapItemInstance` — function — line 131
-- `isWeaponItemInstance` — function — line 95
-- `isWeaponMaintenanceKind` — function — line 55
+- `clamp01` — function — line 141
+- `cloneItemInstance` — function — line 146
+- `createItemInstanceId` — function — line 117
+- `INSTANCE_BACKED_KINDS` — const — line 122
+- `isInstanceBackedKind` — function — line 129
+- `isLiquidContainerInstance` — function — line 110
+- `isLiquidContainerKind` — function — line 84
+- `isTrapItemInstance` — function — line 137
+- `isTrapKind` — function — line 133
+- `isWeaponItemInstance` — function — line 97
+- `isWeaponMaintenanceKind` — function — line 57
 - `ItemInstance` — type — line 4
-- `LIQUID_CONTAINER_KIND_LIST` — const — line 72
-- `LIQUID_CONTAINER_KINDS` — const — line 80
-- `LiquidContainerItemInstance` — type — line 102
-- `LiquidContainerKind` — type — line 65
-- `LiquidContent` — type — line 60
-- `TrapItemInstance` — type — line 9
-- `WEAPON_MAINTENANCE_KIND_LIST` — const — line 37
-- `WEAPON_MAINTENANCE_KINDS` — const — line 53
-- `WeaponItemInstance` — type — line 89
-- `WeaponMaintenanceKind` — type — line 19
+- `LIQUID_CONTAINER_KIND_LIST` — const — line 74
+- `LIQUID_CONTAINER_KINDS` — const — line 82
+- `LiquidContainerItemInstance` — type — line 104
+- `LiquidContainerKind` — type — line 67
+- `LiquidContent` — type — line 62
+- `TrapItemInstance` — type — line 11
+- `TrapKind` — type — line 9
+- `WEAPON_MAINTENANCE_KIND_LIST` — const — line 39
+- `WEAPON_MAINTENANCE_KINDS` — const — line 55
+- `WeaponItemInstance` — type — line 91
+- `WeaponMaintenanceKind` — type — line 21
 
 ## `items/itemModels.ts`
 
@@ -164,19 +166,22 @@ Generated from exported TypeScript symbols.
 
 ## `items/items.ts`
 
-- `canCancelRestProgress` — function — line 147
-- `createItemMesh` — function — line 895
-- `hasItemCategory` — function — line 126
-- `hasItemKindCategory` — function — line 130
-- `ITEM_DEFS` — const — line 151
-- `ITEM_SIZE_UNITS` — const — line 100
-- `ItemCategory` — type — line 91
-- `ItemDef` — type — line 112
-- `ItemKind` — type — line 5
-- `ItemSize` — type — line 96
-- `itemSizeUnits` — function — line 108
-- `primaryItemCategory` — function — line 137
-- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 145
+- `canCancelRestNow` — function — line 178
+- `canCancelRestProgress` — function — line 149
+- `createItemMesh` — function — line 926
+- `hasItemCategory` — function — line 128
+- `hasItemKindCategory` — function — line 132
+- `ITEM_DEFS` — const — line 182
+- `ITEM_SIZE_UNITS` — const — line 101
+- `ItemCategory` — type — line 92
+- `ItemDef` — type — line 114
+- `ItemKind` — type — line 6
+- `ItemSize` — type — line 97
+- `itemSizeUnits` — function — line 110
+- `primaryItemCategory` — function — line 139
+- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 147
+- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 159
+- `restCancelAllowedByStartVigor` — function — line 166
 
 ## `items/ItemSpawner.ts`
 
@@ -238,14 +243,14 @@ Generated from exported TypeScript symbols.
 
 ## `items/trade.ts`
 
-- `createAcquiredInstance` — function — line 126
-- `InstanceSellResult` — type — line 25
-- `previewTransactionNetCoins` — function — line 233
-- `selectInstancesToSell` — function — line 142
-- `selectInstanceToPlace` — function — line 157
-- `sellInstancesForCoins` — function — line 272
-- `settleTransaction` — function — line 244
-- `TradeResult` — type — line 23
+- `createAcquiredInstance` — function — line 127
+- `InstanceSellResult` — type — line 26
+- `previewTransactionNetCoins` — function — line 234
+- `selectInstancesToSell` — function — line 143
+- `selectInstanceToPlace` — function — line 158
+- `sellInstancesForCoins` — function — line 273
+- `settleTransaction` — function — line 245
+- `TradeResult` — type — line 24
 
 ## `items/tradeCatalog.ts`
 

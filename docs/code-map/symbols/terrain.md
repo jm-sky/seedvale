@@ -118,12 +118,12 @@ Generated from exported TypeScript symbols.
 - `applyModificationToTile` — function — line 592
 - `ChunkManager` — type — line 374
 - `ChunkManagerConfig` — type — line 233
-- `createChunkManager` — function — line 723
-- `CropHarvestOutcome` — type — line 719
-- `drainByBudget` — function — line 709
+- `createChunkManager` — function — line 724
+- `CropHarvestOutcome` — type — line 720
+- `drainByBudget` — function — line 710
 - `FinalizeStage` — type — line 319
-- `pickNearestQueuedKey` — function — line 669
-- `pickNextFinalizeKey` — function — line 687
+- `pickNearestQueuedKey` — function — line 670
+- `pickNextFinalizeKey` — function — line 688
 - `ringChunkOffsets` — function — line 192
 - `TerrainModification` — type — line 549
 
@@ -190,8 +190,8 @@ Generated from exported TypeScript symbols.
 ## `terrain/digAction.ts`
 
 - `applyDigAt` — function — line 23
-- `applyLevelAt` — function — line 65
-- `applyMoundAt` — function — line 90
+- `applyLevelAt` — function — line 69
+- `applyMoundAt` — function — line 94
 - `DigFeedback` — type — line 14
 
 ## `terrain/distanceLod.ts`

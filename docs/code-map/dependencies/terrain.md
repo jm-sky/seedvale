@@ -417,6 +417,7 @@ Generated from TypeScript imports.
 - `app/busyChannelDurations.test.ts`
 - `app/interactables.ts`
 - `interaction/Interactable.ts`
+- `settlement/hiddenTreasure.ts`
 - `terrain/dig.test.ts`
 - `terrain/digAction.ts`
 - `terrain/footstepSurface.ts`

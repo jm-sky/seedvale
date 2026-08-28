@@ -4,15 +4,15 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 64
-- `isChannelBusy` — function — line 71
-- `PlayerActionContext` — type — line 29
+- `isActionBlocked` — function — line 69
+- `isChannelBusy` — function — line 76
+- `PlayerActionContext` — type — line 30
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 27
-- `ContainerActions` — type — line 20
-- `createContainerActions` — function — line 33
+- `ContainerActionDeps` — type — line 28
+- `ContainerActions` — type — line 21
+- `createContainerActions` — function — line 37
 
 ## `app/actions/gatheringActions.ts`
 
@@ -22,8 +22,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/groundActions.ts`
 
-- `createGroundActions` — function — line 34
-- `GroundActions` — type — line 19
+- `createGroundActions` — function — line 59
+- `GroundActions` — type — line 34
+- `GroundActionsDeps` — type — line 53
 
 ## `app/actions/mountActions.ts`
 
@@ -40,10 +41,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/restActions.ts`
 
-- `createRestActions` — function — line 69
-- `REST_IN_TOWN_RADIUS` — const — line 21
-- `RestActionDeps` — type — line 61
-- `RestActions` — type — line 27
+- `createRestActions` — function — line 101
+- `LodgingChoiceAction` — type — line 27
+- `REST_IN_TOWN_RADIUS` — const — line 35
+- `RestActionDeps` — type — line 89
+- `RestActions` — type — line 41
 
 ## `app/actions/survivalActions.ts`
 
@@ -85,8 +87,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 407
-- `GameLoop` — type — line 381
+- `createGameLoop` — function — line 416
+- `GameLoop` — type — line 390
 - `GameLoopDeps` — type — line 203
 
 ## `app/graphicsSettings.ts`
@@ -97,10 +99,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 721
-- `buildDigTarget` — function — line 668
-- `buildInteractables` — function — line 246
-- `collectItem` — function — line 768
+- `buildCombatTarget` — function — line 767
+- `buildDigTarget` — function — line 714
+- `buildInteractables` — function — line 274
+- `collectItem` — function — line 814
 - `COMBAT_TARGET_CONE_DOT` — const — line 80
 - `COMBAT_TARGET_RANGE` — const — line 65
 - `CombatAimMode` — type — line 70
@@ -109,6 +111,7 @@ Generated from exported TypeScript symbols.
 - `INTERACT_MIN_DOT` — const — line 46
 - `INTERACT_RANGE` — const — line 43
 - `KNIFE_BRANCH_BONUS` — const — line 55
+- `resolveHaySpot` — function — line 224
 - `TREE_BRANCH_CHANCE` — const — line 52
 
 ## `app/inventoryWiring.ts`

@@ -153,7 +153,6 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/userActions.ts`
-- `settlement/lodging.ts`
 - `ui-vue/mount.ts`
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`

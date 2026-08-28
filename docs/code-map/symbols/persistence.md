@@ -4,38 +4,38 @@ Generated from exported TypeScript symbols.
 
 ## `persistence/saveData.ts`
 
-- `isSaveData` — function — line 786
-- `loadSaveData` — function — line 833
-- `QuestProgressEntry` — type — line 39
-- `SaveCarriedContainer` — type — line 181
-- `SaveConfig` — type — line 19
-- `SaveData` — type — line 281
-- `SaveDroppedItem` — type — line 49
-- `SaveDryingRack` — type — line 140
-- `SaveFishingBait` — type — line 163
-- `SaveFoodBatch` — type — line 126
-- `SaveHive` — type — line 149
-- `SaveMap` — type — line 74
-- `SavePlacedContainer` — type — line 169
-- `SavePlacedFire` — type — line 53
-- `SavePlacedTent` — type — line 67
-- `SavePlacedTrap` — type — line 98
-- `SavePlantedCrop` — type — line 250
-- `SavePlantedTree` — type — line 236
-- `SavePlayer` — type — line 27
-- `SavePlayerGarden` — type — line 266
-- `SavePlayerNeeds` — type — line 79
-- `SavePlayerTorch` — type — line 61
-- `SavePlayerWell` — type — line 193
-- `SaveQuests` — type — line 41
-- `SaveSkill` — type — line 90
-- `SaveSkills` — type — line 91
-- `SaveSpawnPoint` — type — line 116
-- `SaveTerrainModification` — type — line 211
-- `SaveTerrainPreparation` — type — line 222
-- `SaveTimedProcess` — type — line 131
-- `SaveTreeOverride` — type — line 55
-- `SaveWorldFlags` — type — line 69
+- `isSaveData` — function — line 792
+- `loadSaveData` — function — line 839
+- `QuestProgressEntry` — type — line 40
+- `SaveCarriedContainer` — type — line 186
+- `SaveConfig` — type — line 20
+- `SaveData` — type — line 286
+- `SaveDroppedItem` — type — line 50
+- `SaveDryingRack` — type — line 145
+- `SaveFishingBait` — type — line 168
+- `SaveFoodBatch` — type — line 131
+- `SaveHive` — type — line 154
+- `SaveMap` — type — line 79
+- `SavePlacedContainer` — type — line 174
+- `SavePlacedFire` — type — line 54
+- `SavePlacedTent` — type — line 68
+- `SavePlacedTrap` — type — line 103
+- `SavePlantedCrop` — type — line 255
+- `SavePlantedTree` — type — line 241
+- `SavePlayer` — type — line 28
+- `SavePlayerGarden` — type — line 271
+- `SavePlayerNeeds` — type — line 84
+- `SavePlayerTorch` — type — line 62
+- `SavePlayerWell` — type — line 198
+- `SaveQuests` — type — line 42
+- `SaveSkill` — type — line 95
+- `SaveSkills` — type — line 96
+- `SaveSpawnPoint` — type — line 121
+- `SaveTerrainModification` — type — line 216
+- `SaveTerrainPreparation` — type — line 227
+- `SaveTimedProcess` — type — line 136
+- `SaveTreeOverride` — type — line 56
+- `SaveWorldFlags` — type — line 70
 
 ## `persistence/saveDb.ts`
 

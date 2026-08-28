@@ -122,7 +122,6 @@ Generated from TypeScript imports.
 - `persistence/saveDb.ts`
 - `quests/QuestManager.ts`
 - `settlement/createSettlement.ts`
-- `settlement/lodging.ts`
 - `settlement/settlementGenerator.ts`
 - `ui/createQuickActions.ts`
 - `ui/createToast.ts`

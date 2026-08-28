@@ -23,17 +23,18 @@ Generated from exported TypeScript symbols.
 
 ## `debug/debugMode.ts`
 
-- `DebugSystemName` — type — line 101
+- `DebugSystemName` — type — line 106
+- `isAdminMode` — function — line 43
 - `isBootMarkMode` — function — line 33
-- `isCameraDebugMode` — function — line 64
-- `isCameraMeshDebugMode` — function — line 77
-- `isColliderDebugMode` — function — line 93
+- `isCameraDebugMode` — function — line 69
+- `isCameraMeshDebugMode` — function — line 82
+- `isColliderDebugMode` — function — line 98
 - `isDebugMode` — function — line 38
-- `isHouseTestMode` — function — line 58
-- `isModelTestMode` — function — line 45
-- `isNoShadowsDebugMode` — function — line 71
-- `isRenderStateDebugMode` — function — line 85
-- `isSystemEnabled` — function — line 107
+- `isHouseTestMode` — function — line 63
+- `isModelTestMode` — function — line 50
+- `isNoShadowsDebugMode` — function — line 76
+- `isRenderStateDebugMode` — function — line 90
+- `isSystemEnabled` — function — line 112
 - `urlParamValue` — function — line 19
 
 ## `debug/houseTestDefinition.ts`
@@ -61,10 +62,11 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `installNpcDebugApi` — function — line 133
+- `HiddenTreasureDebugApi` — type — line 82
+- `installNpcDebugApi` — function — line 149
 - `LocationsDebugApi` — type — line 65
 - `NpcDebugHandle` — type — line 37
-- `SeedvaleDebugApi` — type — line 82
+- `SeedvaleDebugApi` — type — line 95
 - `TeleportToDebugApi` — type — line 73
 - `VillageDebugHandle` — type — line 48
 
